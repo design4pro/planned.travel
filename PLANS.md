@@ -120,6 +120,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - [ ] `git push -u origin main`
 
 ### Phase 1 — Core MVP (consumer)
+- [x] Auth UI — login/signup (email + social Google/Apple), session gating on `/app`, sign-out (Better Auth React client)
 - [ ] Trip + day-plan data model; drag-&-drop planner UI
 - [ ] MapLibre map; place search; POI pins; route visualization
 - [ ] Reservations + document manager (R2); PDF export (Browser Rendering)
