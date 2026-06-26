@@ -2,6 +2,7 @@
 import Layout from "../../../layouts/Layout.astro";
 import SignOutButton from "../../../components/auth/SignOutButton.tsx";
 import AddPlace from "../../../components/trips/AddPlace.tsx";
+import TripMap from "../../../components/trips/TripMap.tsx";
 import { getSessionUser } from "../../../lib/session";
 import { db } from "../../../lib/db";
 import { and, asc, eq, inArray } from "drizzle-orm";
@@ -58,6 +59,22 @@ for (const item of itemRows) {
     </div>
 
     <h1 class="mt-4 text-3xl font-bold">{trip.title}</h1>
+
+    {
+      placeRows.length > 0 && (
+        <div class="mt-6">
+          <TripMap
+            client:only="react"
+            places={placeRows.map((p) => ({
+              id: p.id,
+              name: p.name,
+              lat: p.lat,
+              lng: p.lng,
+            }))}
+          />
+        </div>
+      )
+    }
 
     <div class="mt-8">
       <AddPlace

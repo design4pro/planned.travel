@@ -123,8 +123,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - [x] Auth UI — login/signup (email + social Google/Apple), session gating on `/app`, sign-out (Better Auth React client)
 - [x] Trip data model + dashboard (list/create) wired to `/api/trips`; trip detail route
 - [x] Day-plan model + planner UI (days/items, add-place) — drag-&-drop reordering deferred
-- [ ] MapLibre map; place search; POI pins; route visualization
-- [ ] MapLibre map; place search; POI pins; route visualization
+- [x] MapLibre map + POI pins (key-free OSM tiles) on trip page; place search + route visualization — later
 - [ ] Reservations + document manager (R2); PDF export (Browser Rendering)
 - [ ] Costs / expense splitting (multi-currency)
 - [ ] Real-time collaboration (DO + Hibernation WS); invite links; roles
