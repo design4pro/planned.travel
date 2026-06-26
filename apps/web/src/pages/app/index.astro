@@ -1,7 +1,11 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import SignOutButton from "../../components/auth/SignOutButton.tsx";
+import CreateTrip from "../../components/trips/CreateTrip.tsx";
 import { getSessionUser } from "../../lib/session";
+import { db } from "../../lib/db";
+import { desc, eq } from "drizzle-orm";
+import { trips } from "@planned/db";
 import { getLangFromUrl, useTranslations } from "../../i18n/utils";
 
 const user = await getSessionUser(Astro.locals, Astro.request);
@@ -9,6 +13,14 @@ if (!user) return Astro.redirect("/login");
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
+
+const database = db(Astro.locals.runtime.env);
+const myTrips = await database
+  .select()
+  .from(trips)
+  .where(eq(trips.ownerId, user.id))
+  .orderBy(desc(trips.updatedAt))
+  .all();
 ---
 
 <Layout title="planned.travel — app">
@@ -23,9 +35,36 @@ const t = useTranslations(lang);
       <SignOutButton client:load label={t("nav.signout")} />
     </header>
 
-    <p class="mt-8 text-muted-foreground">
-      <!-- Trips list + create land in the next commit (Phase 1, chunk 2). -->
-      Authenticated. Trip planner coming next.
-    </p>
+    <section class="mt-10">
+      <h2 class="mb-3 text-lg font-semibold">{t("trips.heading")}</h2>
+      <CreateTrip
+        client:load
+        label={t("trips.create.label")}
+        placeholder={t("trips.create.placeholder")}
+        btn={t("trips.create.btn")}
+      />
+
+      {
+        myTrips.length === 0 ? (
+          <p class="mt-6 text-sm text-muted-foreground">{t("trips.empty")}</p>
+        ) : (
+          <ul class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {myTrips.map((trip) => (
+              <li>
+                <a
+                  href={`/app/trips/${trip.id}`}
+                  class="block rounded-lg border p-4 shadow-card bg-card hover:border-primary transition-colors"
+                >
+                  <p class="font-semibold">{trip.title}</p>
+                  <p class="mt-1 text-xs text-muted-foreground">
+                    {new Date(trip.updatedAt).toLocaleDateString()}
+                  </p>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </section>
   </main>
 </Layout>

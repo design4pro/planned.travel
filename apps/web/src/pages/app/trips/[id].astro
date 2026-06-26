@@ -1,0 +1,42 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import SignOutButton from "../../../components/auth/SignOutButton.tsx";
+import { getSessionUser } from "../../../lib/session";
+import { db } from "../../../lib/db";
+import { and, eq } from "drizzle-orm";
+import { trips } from "@planned/db";
+import { getLangFromUrl, useTranslations } from "../../../i18n/utils";
+
+const user = await getSessionUser(Astro.locals, Astro.request);
+if (!user) return Astro.redirect("/login");
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/app");
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+const database = db(Astro.locals.runtime.env);
+const [trip] = await database
+  .select()
+  .from(trips)
+  .where(and(eq(trips.id, id), eq(trips.ownerId, user.id)))
+  .limit(1);
+if (!trip) return Astro.redirect("/app");
+---
+
+<Layout title={`${trip.title} — planned.travel`}>
+  <main class="mx-auto max-w-5xl px-6 py-12">
+    <div class="flex items-center justify-between">
+      <a href="/app" class="text-sm text-muted-foreground hover:text-primary">
+        ← {t("trips.back")}
+      </a>
+      <SignOutButton client:load label={t("nav.signout")} />
+    </div>
+
+    <h1 class="mt-4 text-3xl font-bold">{trip.title}</h1>
+
+    <!-- Day planner + map land in the next chunk (Phase 1, chunk 3). -->
+    <p class="mt-8 text-muted-foreground">Day planner coming next.</p>
+  </main>
+</Layout>
