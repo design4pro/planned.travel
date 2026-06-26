@@ -1,0 +1,98 @@
+{
+  // ── planned.travel web Worker (Astro SSR + Static Assets) ──────────────────
+  // Docs: https://developers.cloudflare.com/workers/
+  //
+  // FIRST-RUN PROVISIONING (requires `npx wrangler login`):
+  //   npx wrangler d1      create planned-travel                                  # → database_id
+  //   npx wrangler kv      namespace create KV                                    # → id
+  //   npx wrangler r2      bucket   create planned-travel-media
+  //   npx wrangler vectorize create planned-travel-embeddings \
+  //       --dimensions 768 --metric cosine
+  // Then paste the generated IDs into the bindings below (search <REPLACE_*>).
+  //
+  // Bindings that need an exported Worker handler/class (Durable Objects,
+  // Queue consumers, Workflows, Email receive handlers) are added in later
+  // phases — see the "Phase 1+" section at the bottom.
+
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "planned-travel-web",
+  "main": "./dist/_worker.js/index.js",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+
+  "vars": {
+    "APP_URL": "http://localhost:4321"
+  },
+
+  // ── Core resource bindings (fill IDs after provisioning) ───────────────────
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "planned-travel",
+      "database_id": "<REPLACE_D1_ID>",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "kv_namespaces": [
+    { "binding": "KV", "id": "<REPLACE_KV_ID>" },
+    // "SESSION" is required by the @astrojs/cloudflare adapter for Astro Sessions.
+    { "binding": "SESSION", "id": "<REPLACE_KV_ID>" }
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "planned-travel-media" }
+  ],
+  "vectorize": [
+    { "binding": "VECTORIZE", "index_name": "planned-travel-embeddings" }
+  ],
+
+  // ── Bindings that need no provisioning ─────────────────────────────────────
+  "ai": { "binding": "AI" },
+  "images": { "binding": "IMAGES" },
+
+  // ── Secrets (set via: npx wrangler secret put <NAME>, or Secrets Store) ────
+  // BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID/SECRET, APPLE_CLIENT_ID/SECRET,
+  // STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 1+ bindings — enable when their Worker code lands. Documented here so
+  // the full target architecture is visible. (Uncommenting before the code
+  // exists will make `wrangler dev`/`deploy` fail with "class/handler not found".)
+  // ───────────────────────────────────────────────────────────────────────────
+  //
+  // // Realtime collaboration — one Durable Object per trip (src/workers/trip-room.ts)
+  // "durable_objects": {
+  //   "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }]
+  // },
+  // "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TripRoom"] }],
+  //
+  // // Background jobs
+  // "queues": {
+  //   "producers": [{ "binding": "JOBS", "queue": "planned-travel-jobs" }],
+  //   "consumers": [{ "queue": "planned-travel-jobs", "max_batch_size": 10 }]
+  // },
+  //
+  // // Durable multi-step flows (AI pipeline, booking ingestion, refunds)
+  // "workflows": [
+  //   { "name": "itinerary-generation", "binding": "ITINERARY_GEN" },
+  //   { "name": "booking-ingestion", "binding": "BOOKING_INGEST" }
+  // ],
+  //
+  // // Receive booking-confirmation emails for auto-ingestion
+  // "email_routing": { "enabled": true },
+  // "send_email": [
+  //   { "name": "NOTIFICATIONS", "destination_address": "mail@planned.travel" }
+  // ],
+  //
+  // // Scheduled jobs: digests, weather/price refresh, backup rotation
+  // "triggers": { "crons": ["0 7 * * *"] }
+}

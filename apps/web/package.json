@@ -1,0 +1,41 @@
+{
+  "name": "@planned/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "dev:wrangler": "wrangler dev",
+    "build": "astro build",
+    "preview": "wrangler dev",
+    "typecheck": "astro check",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "deploy": "astro build && wrangler deploy"
+  },
+  "dependencies": {
+    "@planned/api-client": "workspace:*",
+    "@planned/db": "workspace:*",
+    "@planned/shared": "workspace:*",
+    "@planned/ui-tokens": "workspace:*",
+    "@astrojs/cloudflare": "^12.0.2",
+    "@astrojs/react": "^4.2.0",
+    "astro": "^5.7.0",
+    "better-auth": "^1.2.7",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.6.14",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "drizzle-kit": "^0.31.4",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8",
+    "wrangler": "^4.0.0"
+  }
+}

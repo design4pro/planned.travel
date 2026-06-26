@@ -1,0 +1,28 @@
+{
+  "name": "planned-travel",
+  "private": true,
+  "version": "0.1.0",
+  "description": "planned.travel — AI-native collaborative travel-planning SaaS on Cloudflare + Astro.",
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "pnpm --filter @planned/db generate",
+    "db:migrate:local": "wrangler d1 migrations apply planned-travel --local",
+    "db:migrate": "wrangler d1 migrations apply planned-travel --remote",
+    "deploy": "turbo run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5.6.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "workerd", "better-sqlite3", "sharp"]
+  }
+}

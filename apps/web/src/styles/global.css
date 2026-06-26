@@ -1,0 +1,22 @@
+@import "tailwindcss";
+@import "@planned/ui-tokens/theme.css";
+
+:root {
+  color-scheme: light dark;
+}
+
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-foreground);
+}
+
+a {
+  color: var(--color-brand-600);
+}

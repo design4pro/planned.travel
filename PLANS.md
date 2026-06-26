@@ -1,0 +1,154 @@
+# planned.travel — Master Plan
+
+> Single source of truth for phases and tasks. Progress is tracked with `[ ]` / `[x]` checkboxes; this file is updated after every planning round. **Bugs are filed as GitHub issues**, not here.
+>
+> Reference product: [`mauriceboe/TREK`](https://github.com/mauriceboe/TREK) (AGPL-3.0) — used as a **feature/UX reference only**. planned.travel is a **clean-room rebuild** with its own proprietary license.
+
+---
+
+## 1. Context
+
+**planned.travel** is a professional SaaS for travel planning, built greenfield in this repo (`github.com/design4pro/planned.travel`). The target is a responsive **Astro** website hosted fully on **Cloudflare**, with an **Expo** mobile app to follow. All infrastructure — database, AI, vector search, image CDN, compute, realtime — runs on Cloudflare services.
+
+TREK defines the feature bar we are reimplementing (behavior, not code): a self-hosted, real-time collaborative travel planner with maps, budgets, packing lists, a journal, and AI built in.
+
+---
+
+## 2. Decisions locked
+
+- ✅ **Clean-room rebuild.** Reimplemented from scratch; TREK is a feature/UX/market reference only. planned.travel keeps a proprietary license. *Rationale:* TREK is AGPL-3.0 with a network-use clause — reusing its code in a hosted SaaS would force open-sourcing the entire product. The stack changes wholesale (NestJS/SQLite/WS → Astro/D1/Workers), so a code port saves little anyway.
+- ✅ **Consumer B2C + collaboration, freemium; extensible to B2B/white-label later.** Primary users: individual travelers + friends/family groups. Data model and auth are designed so an organization/B2B layer can be added without rework.
+- ✅ **Primary DB: D1 (SQLite) for v1, schema Postgres-portable via Drizzle.** Realtime = Durable Objects + Hibernation WebSockets; semantic search = Vectorize. Migrate to Postgres-via-Hyperdrive *only if* PostGIS / heavy FTS / write-hot scale demands it. Honors "all on Cloudflare."
+- ✅ **Auth: Better Auth** — official Astro + Expo (`@better-auth/expo`) support; D1 via Drizzle. Plugins: organizations, admin (RBAC), bearer + expo for mobile (token in SecureStore), passkey, TOTP, social Google+Apple. CF Workers gotchas handled: `nodejs_compat` flag, instantiate per-request, migrate via `@better-auth/cli generate` → `wrangler d1 migrations apply`. **Cloudflare Access** guards staff/admin surface only.
+- ✅ **ORM: Drizzle** (D1 + Postgres + edge-compatible).
+- ✅ **UI stack:** Web = Astro + **Tailwind v4 + shadcn/ui** islands. Mobile (later) = **Expo + NativeWind v5 + react-native-reusables**. Maps = **MapLibre GL JS** (web) + **maplibre-react-native** (Expo). Shared: one `@theme` token file, zod schemas, business logic, typed API client, map style/GeoJSON.
+- ✅ **Content & admin: internal, role-gated admin panel (not an external CMS).** Marketing/blog → Astro Content Collections. Staff routes also behind Cloudflare Access.
+- ✅ **MVP scope: full TREK parity at v1.** Every module reimplemented before public GA. Internal build sequenced in waves (Phases 1–3) converging on one v1 GA. *Large build — assumes sufficient team/runway.*
+- ✅ **Monetization: Free / Pro / Team.** Quotas gate AI usage, collab seats, exports, storage.
+- ✅ **Maps & places:** MapLibre + free OSM baseline (Overpass/Nominatim or Geoapify/Pelias); Google Places as an optional Pro/on-demand enhancement.
+- ✅ **Notifications:** Cloudflare Email Workers (send) + Email Routing (receive booking emails) + Expo Notifications (mobile push, later) + in-app center.
+- ✅ **PLANS.md working language: English.**
+- ✅ **Payments: Stripe** — Checkout + Customer Portal + webhooks → Workflows.
+- ✅ **Repo: pnpm + Turborepo** monorepo — `apps/web` (Astro), `apps/mobile` (Expo, future), `packages/{shared,db,ui-tokens,api-client}`.
+- ✅ **CI/CD: Cloudflare Workers Builds** — push to `main` deploys; per-branch previews.
+- ✅ **Domain:** `planned.travel` (prod) + `staging.planned.travel` + per-branch previews.
+- ✅ **AI provider mix: Workers AI only (all-Cloudflare)** for all inference; Vectorize for semantic search; AI Gateway in front for caching/fallback/observability; MCP server (OAuth 2.1). *Caveat: AI Gateway lets us route specific calls to OpenAI/Anthropic later if evals show quality gaps — no rewrite.*
+- ✅ **i18n launch languages: Polish + English** (Astro i18n + Paraglide), extensible toward TREK's 20.
+
+---
+
+## 3. What we're porting from TREK (the feature spec)
+
+- **Trip planning** — drag-&-drop day planner; interactive map (3D/terrain, clustering, route viz); place search; import of Google/Naver lists + GPX/KML/KMZ/GeoJSON; timestamped/icon day notes; route optimization; weather; category filters.
+- **Travel management** — reservations (flight/hotel/restaurant, status, confirmation #, files) **auto-parsed from booking emails & PDFs** (KDE Itinerary-style); **expense splitting** (Splitwise-style, multi-currency, settle-up); packing lists + bag-weight tracking; document manager; full-trip **PDF export**.
+- **Collaboration** — real-time sync; multi-user trips w/ roles; invite links (one-time/reusable/expiry); SSO (Google/Apple/OIDC); 2FA (TOTP); Passkeys (WebAuthn); group chat/notes/polls/check-ins.
+- **Add-on modules** — Lists, Costs, Documents, Collab, **Vacay** (vacation planner + country holidays), **Atlas** (visited-countries map, bucket list, stats/streaks), **Journey** (photo journal), **AirTrail** (flight sync), **MCP server** (OAuth 2.1, AI-assistant integration).
+- **Platform** — admin panel; i18n; dark mode; notifications (email/webhook/in-app); auto-backups; per-user preferences (units, time formats, tile sources).
+
+---
+
+## 4. Architecture
+
+### 4.1 Cloudflare service map (feature → service)
+
+| Concern | Cloudflare service | Notes |
+|---|---|---|
+| Host Astro SSR app | **Workers + Static Assets** + `@astrojs/cloudflare` | 2025/26 recommendation over Pages. |
+| API layer | **Workers + Hono** | Typed routing, Zod, middleware. Bindings via `runtime.env`. |
+| Primary relational DB | **D1** (SQLite) for v1 — Postgres-portable via Drizzle | Migrate to Postgres/Hyperdrive only if needed. |
+| Real-time collaboration | **Durable Objects + Hibernation WebSockets** | One DO per trip (`TripRoom`); hibernate when idle. |
+| Background jobs | **Queues** | Email, PDF render, notifications. |
+| Durable multi-step flows | **Workflows** | AI itinerary-gen pipeline, booking-email ingestion, refunds. |
+| Semantic search | **Vectorize** | "Trips like this", destination discovery, NL POI search. |
+| AI features | **Workers AI** + **AI Gateway** | Generation, summaries, embeddings, vision. |
+| Media (photos, PDFs, exports) | **R2** | Zero egress; S3-compatible. |
+| Image optimization/CDN | **Images** | On-demand resize/AVIF/WebP; R2 origin. |
+| PDF / OG-image / scraping | **Browser Rendering** | Trip-to-PDF, dynamic social cards. |
+| Bot protection | **Turnstile** | Auth/booking forms. |
+| Scheduled jobs | **Cron Triggers** | Reminder digests, weather/price refresh, backup rotation. |
+| Secrets | **Secrets Store** | API keys, DB creds, OAuth secrets. |
+| Transactional email | **Email Workers** (send) / **Email Routing** (receive) | Confirmations, reminders, booking inbox. |
+| Sessions / flags / rate-limit | **KV** | Short-TTL data, flags, idempotency. |
+| Staff/admin access control | **Cloudflare Access** (Zero Trust) | Verify `Cf-Access-Jwt-Assertion`. Not for consumer auth. |
+| Observability | **Workers Observability + Logpush + Analytics Engine + Web Analytics** | Logs, traces, custom metrics, RUM. |
+
+### 4.2 Frontend / UI strategy
+
+- **Web (now):** Astro (SSR via `@astrojs/cloudflare`) + **Tailwind v4** + **shadcn/ui** React islands.
+- **Mobile (later):** **Expo** + **NativeWind v5** (Tailwind v4) + **react-native-reusables**. *(Fallback: Tailwind v3 + NativeWind v4.)*
+- **Shared across web+mobile:** one Tailwind `@theme` token file; zod schemas; business logic; typed API client; MapLibre style JSON + GeoJSON.
+- **Maps:** **MapLibre GL JS** (web) + **maplibre-react-native** (Expo dev build).
+
+### 4.3 Auth
+
+- **Better Auth** (Astro + Expo; D1 via Drizzle). Plugins: organizations, admin (RBAC), bearer + `@better-auth/expo` (mobile), passkey, TOTP, Google+Apple.
+- `compatibility_flags = ["nodejs_compat"]`; instantiate per-request; `better-auth/cli generate` → `wrangler d1 migrations apply`.
+- **Cloudflare Access** protects staff/admin only.
+
+### 4.4 Content & admin
+
+- **Internal role-gated admin panel** for app data (destinations, POIs, curated lists, packing templates) with typed forms + AI assist.
+- **Astro Content Collections** (git-based) for marketing/blog.
+- Staff routes behind Cloudflare Access + role checks.
+
+---
+
+## 5. Competitive landscape & differentiation
+
+- **Consumer planners:** Wanderlog, Sygic Travel, TripIt, Roadtrippers, Kayak Trips, Atlas Obscura, Rome2Rio. *(Inspirock, Google Trips — shut down.)*
+- **AI-native entrants (2023–25):** Mindtrip, Vacay, iplan.ai, Wonderplan, Skoot; AI features inside Booking/Expedia/Wanderlog.
+- **Table stakes:** itinerary builder, map+pins, reservations/doc upload, sharing, offline, collaboration, budget, packing.
+- **Our moat (Cloudflare/AI-native):** AI itinerary generation + **conversational editing**; **semantic search** (Vectorize); **real-time multi-traveler collaboration** (DO+WS — most rivals are async/share-only); **smart reminders** (Cron + AI); auto-organized photo journals (vision); group voting; **offline-first mobile**; an **MCP server** so AI assistants manage a user's trips.
+
+---
+
+## 6. Roadmap (checkbox-tracked)
+
+### Phase 0 — Foundation & decisions
+- [x] Lock all planning decisions
+- [ ] Provision Cloudflare resources via `wrangler.jsonc` bindings: **D1**, **KV**, **R2**, **Durable Object** (`TripRoom`), **Queues** + **Workflows**, **Vectorize**, **Workers AI** + **AI Gateway**, **Images**, **Email** (send + route), **Secrets Store**; `compatibility_flags = ["nodejs_compat"]`
+- [ ] Monorepo scaffold (pnpm + Turborepo): `apps/web`, `apps/mobile` (stubbed), `packages/{shared,db,ui-tokens,api-client}`
+- [ ] `apps/web`: Astro + `@astrojs/cloudflare`; Tailwind v4 + shadcn/ui; Hono API; i18n (PL+EN) via Paraglide; `wrangler dev` with all bindings local
+- [ ] Drizzle schema (users, organizations/trips/memberships, places, days, reservations, costs, lists, docs, journal, atlas) + first D1 migration; **Better Auth** wired (organizations, admin, passkey, TOTP, Google+Apple, bearer/expo)
+- [ ] Stripe + Email Workers bindings; CI via **Workers Builds** on `main` (per-branch previews)
+
+### Phase 1 — Core MVP (consumer)
+- [ ] Trip + day-plan data model; drag-&-drop planner UI
+- [ ] MapLibre map; place search; POI pins; route visualization
+- [ ] Reservations + document manager (R2); PDF export (Browser Rendering)
+- [ ] Costs / expense splitting (multi-currency)
+- [ ] Real-time collaboration (DO + Hibernation WS); invite links; roles
+- [ ] Notifications (email); in-app center
+- [ ] Stripe billing (Free/Pro)
+
+### Phase 2 — AI-native differentiators
+- [ ] Workers AI + AI Gateway + Vectorize wiring
+- [ ] AI itinerary generation + conversational edit
+- [ ] Semantic destination/POI search
+- [ ] Booking-email/PDF ingestion (Workflows + reimpl. KDE Itinerary logic)
+- [ ] MCP server (OAuth 2.1)
+
+### Phase 3 — Depth modules
+- [ ] Packing lists + templates; Vacay; Atlas; Journey (photo journal, vision AI); AirTrail sync
+- [ ] i18n expansion; admin panel; Cloudflare Access for staff
+
+### Phase 4 — Mobile
+- [ ] Expo app (NativeWind + react-native-reusables + maplibre-react-native); shared tokens/logic/API client; push notifications; offline-first
+
+---
+
+## 7. Verification (how we know each phase works)
+- **Local dev:** `wrangler dev` runs `apps/web` with all bindings live locally; `pnpm dev` at root via Turborepo.
+- **Per-change gates (CI):** `pnpm typecheck && pnpm lint && pnpm test` (Vitest); `wrangler d1 migrations apply --local`; `@better-auth/cli generate` → migrate auth schema; `@astrojs/cloudflare` build succeeds.
+- **Deploy:** push to `main` → Workers Builds → production; feature branches → preview hostnames; verify on `staging.planned.travel`.
+- **E2E smoke (per phase):** sign-up / Google+Apple / passkey → create trip → add places via MapLibre → invite 2nd user → realtime edit via `TripRoom` DO → AI itinerary gen (Workers AI) → semantic search (Vectorize) → upload doc (R2 + Images) → PDF export (Browser Rendering) → Stripe Checkout + webhook → Workflow updates subscription. Phase 4: Expo build on iOS/Android with offline trip access.
+- **Observability:** Workers Observability + Logpush; Analytics Engine (AI cost/trip, search CTR); Web Analytics (Core Web Vitals); Cloudflare Access on admin.
+
+---
+
+## 8. How we work
+- **This file (`PLANS.md`)** tracks phases & tasks via checkboxes; updated after each planning round.
+- **Bugs** → GitHub issues on `design4pro/planned.travel`.
+- **Deploys** → Cloudflare Workers Builds from `main`.
+
+> **Implementation-level decisions to resolve as we build:** realtime conflict strategy (LWW via DO vs CRDT/Yjs for rich text); offline-first sync (web PWA Workbox; Expo SQLite + background sync); file-upload caps (docs ≤50 MB, backups ≤500 MB); D1 primary region for data residency/GDPR; design-system/tokens kickoff.
