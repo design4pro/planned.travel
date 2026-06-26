@@ -1,10 +1,11 @@
 ---
 import Layout from "../../../layouts/Layout.astro";
 import SignOutButton from "../../../components/auth/SignOutButton.tsx";
+import AddPlace from "../../../components/trips/AddPlace.tsx";
 import { getSessionUser } from "../../../lib/session";
 import { db } from "../../../lib/db";
-import { and, eq } from "drizzle-orm";
-import { trips } from "@planned/db";
+import { and, asc, eq, inArray } from "drizzle-orm";
+import { days, dayItems, places, trips } from "@planned/db";
 import { getLangFromUrl, useTranslations } from "../../../i18n/utils";
 
 const user = await getSessionUser(Astro.locals, Astro.request);
@@ -23,6 +24,28 @@ const [trip] = await database
   .where(and(eq(trips.id, id), eq(trips.ownerId, user.id)))
   .limit(1);
 if (!trip) return Astro.redirect("/app");
+
+const [dayRows, placeRows] = await Promise.all([
+  database.select().from(days).where(eq(days.tripId, trip.id)).orderBy(asc(days.dateIndex)).all(),
+  database.select().from(places).where(eq(places.tripId, trip.id)).all(),
+]);
+const dayIds = dayRows.map((d) => d.id);
+const itemRows = dayIds.length
+  ? await database
+      .select()
+      .from(dayItems)
+      .where(inArray(dayItems.dayId, dayIds))
+      .orderBy(asc(dayItems.orderIndex))
+      .all()
+  : [];
+
+const placesById = new Map(placeRows.map((p) => [p.id, p]));
+const itemsByDay = new Map<string, typeof itemRows>();
+for (const item of itemRows) {
+  const arr = itemsByDay.get(item.dayId) ?? [];
+  arr.push(item);
+  itemsByDay.set(item.dayId, arr);
+}
 ---
 
 <Layout title={`${trip.title} — planned.travel`}>
@@ -36,7 +59,59 @@ if (!trip) return Astro.redirect("/app");
 
     <h1 class="mt-4 text-3xl font-bold">{trip.title}</h1>
 
-    <!-- Day planner + map land in the next chunk (Phase 1, chunk 3). -->
-    <p class="mt-8 text-muted-foreground">Day planner coming next.</p>
+    <div class="mt-8">
+      <AddPlace
+        client:load
+        tripId={trip.id}
+        labels={{
+          title: t("planner.addPlace.title"),
+          name: t("planner.name"),
+          lat: t("planner.lat"),
+          lng: t("planner.lng"),
+          add: t("planner.add"),
+          error: t("planner.error"),
+        }}
+      />
+    </div>
+
+    <section class="mt-8 space-y-6">
+    {
+      dayRows.length === 0 ? (
+        <p class="text-sm text-muted-foreground">{t("planner.empty")}</p>
+      ) : (
+        dayRows.map((day, i) => (
+          <div class="rounded-lg border bg-card p-4 shadow-card">
+            <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("planner.day")} {i + 1}
+            </h2>
+            {(itemsByDay.get(day.id) ?? []).length === 0 ? (
+              <p class="text-sm text-muted-foreground">{t("planner.empty")}</p>
+            ) : (
+              <ul class="space-y-2">
+                {(itemsByDay.get(day.id) ?? []).map((item) => {
+                  const place = item.placeId ? placesById.get(item.placeId) : null;
+                  return (
+                    <li class="flex items-center gap-2 text-sm">
+                      <span class="text-muted-foreground">•</span>
+                      {place ? (
+                        <span>
+                          {place.name}
+                          <span class="ml-2 text-xs text-muted-foreground">
+                            {place.lat.toFixed(3)}, {place.lng.toFixed(3)}
+                          </span>
+                        </span>
+                      ) : (
+                        <span>{item.note}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        ))
+      )
+    }
+    </section>
   </main>
 </Layout>
