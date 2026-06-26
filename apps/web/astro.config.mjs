@@ -16,4 +16,13 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
+
+  // i18n: English (default, no prefix) + Polish (/pl).
+  // Messages live in src/i18n/ui.ts; Paraglide can replace it later without
+  // changing call sites (identical key structure).
+  i18n: {
+    defaultLocale: "en",
+    locales: ["en", "pl"],
+    routing: { prefixDefaultLocale: false },
+  },
 });

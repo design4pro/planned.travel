@@ -111,8 +111,10 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - [x] Drizzle schema (10 domain tables) + first D1 migration (`0000`); Better Auth factory (organizations, admin, twoFactor[+passkey], bearer) mounted at `/api/auth/*`
 - [x] `wrangler.jsonc` full binding map (D1/KV/R2/Vectorize/AI/Images active; DO/Queues/Workflows/Email documented for later phases); `nodejs_compat`
 - [x] Git remote `origin` → `design4pro/planned.travel` + initial commit (`3831bc8`)
-- [ ] **Next (needs `npx wrangler login`):** provision D1/KV/R2/Vectorize, paste IDs into `wrangler.jsonc`, then `pnpm db:migrate:local` + `pnpm --filter @planned/web dev`
-- [ ] shadcn/ui init + base components; Paraglide i18n (PL+EN); Hono API mount for typed routes
+- [x] Hono API mount — typed `/api/*` (Better Auth at `/api/auth/*`, `/api/health`, auth-gated **trips CRUD** over D1/Drizzle); Astro build verified
+- [x] shadcn/ui baseline — `components.json`, `cn()`, `Button`, demo island; semantic tokens mapped to brand palette; `@/` alias
+- [x] i18n (PL+EN) — Astro i18n routing + typed message catalog (`/` = EN, `/pl` = PL); Paraglide-ready key structure
+- [ ] **Next (needs `npx wrangler login`):** provision D1/KV/R2/Vectorize, paste IDs into `wrangler.jsonc`, then `pnpm db:migrate:local` + `pnpm --filter @planned/web dev`. *(Login is also required for `astro dev`/`wrangler dev` — the Workers AI binding proxies remotely.)*
 - [ ] Better Auth CLI migration applied to D1 (`@better-auth/cli generate` → `wrangler d1 migrations apply`)
 - [ ] Stripe + Email Workers bindings; CI via Workers Builds on `main` (per-branch previews)
 - [ ] `git push -u origin main`

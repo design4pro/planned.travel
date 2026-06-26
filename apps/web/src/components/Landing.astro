@@ -1,0 +1,85 @@
+---
+import Layout from "../layouts/Layout.astro";
+import CtaButtons from "./CtaButtons.tsx";
+import { useTranslations, localizePath } from "../i18n/utils";
+import { languages, type Lang } from "../i18n/ui";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+const stack = [
+  { label: "Astro + Cloudflare Workers", note: "SSR on the edge" },
+  { label: "D1 + Drizzle", note: "SQLite, Postgres-portable" },
+  { label: "Durable Objects", note: "realtime collaboration" },
+  { label: "Workers AI + Vectorize", note: "itinerary gen + semantic search" },
+  { label: "Better Auth", note: "Astro + Expo" },
+  { label: "MapLibre + Tailwind v4", note: "maps + design system" },
+];
+---
+
+<Layout title="planned.travel — AI-native collaborative travel planning">
+  <nav
+    class="mx-auto flex max-w-5xl items-center justify-end gap-1 px-6 pt-6 text-sm"
+    aria-label={t("lang.switch")}
+  >
+    {
+      (Object.entries(languages) as [Lang, string][]).map(([code, label]) => (
+        <a
+          href={localizePath("/", code)}
+          aria-current={code === lang ? "page" : undefined}
+          class:list={[
+            "rounded-md px-2 py-1",
+            code === lang
+              ? "bg-primary text-primary-foreground"
+              : "hover:bg-secondary",
+          ]}
+        >
+          {label}
+        </a>
+      ))
+    }
+  </nav>
+
+  <main class="mx-auto max-w-5xl px-6 py-12">
+    <header class="mb-12">
+      <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">
+        {t("badge")}
+      </p>
+      <h1
+        class="mt-2 text-4xl font-bold sm:text-5xl"
+        style="font-family: var(--font-display)"
+      >
+        {t("hero.titlePrefix")} <span class="text-brand-600">{t("hero.titleAccent")}</span>
+      </h1>
+      <p class="mt-4 max-w-2xl text-lg" style="color: var(--color-foreground-muted)">
+        {t("hero.subtitle")}
+      </p>
+      <CtaButtons
+        client:load
+        healthLabel={t("cta.health")}
+        githubLabel={t("cta.github")}
+      />
+    </header>
+
+    <section>
+      <h2 class="mb-4 text-lg font-semibold">{t("stack.heading")}</h2>
+      <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {
+          stack.map((s) => (
+            <li class="rounded-lg border p-4 shadow-card bg-card text-card-foreground">
+              <p class="font-semibold">{s.label}</p>
+              <p class="text-sm text-muted-foreground">{s.note}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <footer class="mt-16 text-sm text-muted-foreground">
+      {t("footer")}
+    </footer>
+  </main>
+</Layout>

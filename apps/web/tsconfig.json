@@ -5,6 +5,10 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "types": ["@cloudflare/workers-types"],
-    "verbatimModuleSyntax": false
+    "verbatimModuleSyntax": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   }
 }

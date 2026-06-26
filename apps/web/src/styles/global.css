@@ -1,5 +1,67 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 @import "@planned/ui-tokens/theme.css";
+
+/* shadcn semantic tokens mapped to our brand palette (from @planned/ui-tokens). */
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.625rem;
+
+  --background: var(--color-surface);
+  --foreground: var(--color-foreground);
+
+  --card: var(--color-surface);
+  --card-foreground: var(--color-foreground);
+
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-foreground);
+
+  --primary: var(--color-brand-600);
+  --primary-foreground: #ffffff;
+
+  --secondary: var(--color-surface-muted);
+  --secondary-foreground: var(--color-foreground);
+
+  --muted: var(--color-surface-muted);
+  --muted-foreground: var(--color-foreground-muted);
+
+  --accent: var(--color-accent-500);
+  --accent-foreground: #ffffff;
+
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: #ffffff;
+
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-brand-600);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
 
 :root {
   color-scheme: light dark;
@@ -13,8 +75,8 @@ html {
 
 body {
   margin: 0;
-  background: var(--color-surface);
-  color: var(--color-foreground);
+  background: var(--background);
+  color: var(--foreground);
 }
 
 a {
