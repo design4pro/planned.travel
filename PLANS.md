@@ -106,11 +106,16 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 
 ### Phase 0 — Foundation & decisions
 - [x] Lock all planning decisions
-- [ ] Provision Cloudflare resources via `wrangler.jsonc` bindings: **D1**, **KV**, **R2**, **Durable Object** (`TripRoom`), **Queues** + **Workflows**, **Vectorize**, **Workers AI** + **AI Gateway**, **Images**, **Email** (send + route), **Secrets Store**; `compatibility_flags = ["nodejs_compat"]`
-- [ ] Monorepo scaffold (pnpm + Turborepo): `apps/web`, `apps/mobile` (stubbed), `packages/{shared,db,ui-tokens,api-client}`
-- [ ] `apps/web`: Astro + `@astrojs/cloudflare`; Tailwind v4 + shadcn/ui; Hono API; i18n (PL+EN) via Paraglide; `wrangler dev` with all bindings local
-- [ ] Drizzle schema (users, organizations/trips/memberships, places, days, reservations, costs, lists, docs, journal, atlas) + first D1 migration; **Better Auth** wired (organizations, admin, passkey, TOTP, Google+Apple, bearer/expo)
-- [ ] Stripe + Email Workers bindings; CI via **Workers Builds** on `main` (per-branch previews)
+- [x] Monorepo scaffold (pnpm + Turborepo): `apps/{web,mobile}`, `packages/{shared,db,ui-tokens,api-client}` — installs clean, Astro build verified
+- [x] `apps/web` core: Astro + `@astrojs/cloudflare` adapter, Tailwind v4 + React islands, `/api/health` smoke route, landing page
+- [x] Drizzle schema (10 domain tables) + first D1 migration (`0000`); Better Auth factory (organizations, admin, twoFactor[+passkey], bearer) mounted at `/api/auth/*`
+- [x] `wrangler.jsonc` full binding map (D1/KV/R2/Vectorize/AI/Images active; DO/Queues/Workflows/Email documented for later phases); `nodejs_compat`
+- [x] Git remote `origin` → `design4pro/planned.travel` + initial commit (`3831bc8`)
+- [ ] **Next (needs `npx wrangler login`):** provision D1/KV/R2/Vectorize, paste IDs into `wrangler.jsonc`, then `pnpm db:migrate:local` + `pnpm --filter @planned/web dev`
+- [ ] shadcn/ui init + base components; Paraglide i18n (PL+EN); Hono API mount for typed routes
+- [ ] Better Auth CLI migration applied to D1 (`@better-auth/cli generate` → `wrangler d1 migrations apply`)
+- [ ] Stripe + Email Workers bindings; CI via Workers Builds on `main` (per-branch previews)
+- [ ] `git push -u origin main`
 
 ### Phase 1 — Core MVP (consumer)
 - [ ] Trip + day-plan data model; drag-&-drop planner UI
