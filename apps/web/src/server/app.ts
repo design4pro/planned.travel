@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { createAuth } from "../lib/auth";
 import { db as getDb } from "../lib/db";
-import { dayItems, days, places, trips } from "@planned/db";
+import { dayItems, days, expenses, expenseSplits, places, tripMembers, trips } from "@planned/db";
+import { equalSplit } from "@planned/shared";
 import type { CloudflareEnv } from "../lib/env";
 
 type Database = ReturnType<typeof getDb>;
@@ -29,6 +30,33 @@ export function createApp(env: CloudflareEnv) {
       .where(and(eq(trips.id, id), eq(trips.ownerId, userId)))
       .limit(1);
     return trip ?? null;
+  }
+
+  /** Idempotent: make sure the trip owner has a trip_member row (role owner). */
+  async function ensureOwnerMember(tripId: string, ownerId: string) {
+    const [existing] = await database
+      .select()
+      .from(tripMembers)
+      .where(and(eq(tripMembers.tripId, tripId), eq(tripMembers.userId, ownerId)))
+      .limit(1);
+    if (!existing) {
+      await database.insert(tripMembers).values({ tripId, userId: ownerId, role: "owner" });
+    }
+  }
+
+  type UserRow = { id: string; name: string | null; email: string };
+
+  /** Fetch display info (name/email) for a set of better_auth user ids. */
+  async function fetchUsers(userIds: string[]): Promise<Map<string, UserRow>> {
+    const out = new Map<string, UserRow>();
+    const ids = [...new Set(userIds)].filter(Boolean);
+    if (ids.length === 0) return out;
+    const placeholders = ids.map(() => "?").join(",");
+    const { results } = await env.DB.prepare(
+      `SELECT id, name, email FROM "user" WHERE id IN (${placeholders})`,
+    ).bind(...ids).all<UserRow>();
+    for (const u of results ?? []) out.set(u.id, u);
+    return out;
   }
 
   // ── Better Auth ────────────────────────────────────────────────────────────
@@ -70,6 +98,7 @@ export function createApp(env: CloudflareEnv) {
       .insert(trips)
       .values({ ownerId: user.id, title })
       .returning();
+    await database.insert(tripMembers).values({ tripId: created.id, userId: user.id, role: "owner" });
     return c.json(created, 201);
   });
 
@@ -181,6 +210,160 @@ export function createApp(env: CloudflareEnv) {
       .values({ dayId: dayRow.id, placeId, note, orderIndex: count })
       .returning();
     return c.json(item, 201);
+  });
+
+  // ── Members (list / add-by-email) ──────────────────────────────────────────
+  app.get("/api/trips/:id/members", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+    await ensureOwnerMember(trip.id, trip.ownerId);
+
+    const rows = await database
+      .select()
+      .from(tripMembers)
+      .where(eq(tripMembers.tripId, trip.id))
+      .all();
+    const users = await fetchUsers(rows.map((m) => m.userId));
+    return c.json(
+      rows.map((m) => ({
+        userId: m.userId,
+        role: m.role,
+        name: users.get(m.userId)?.name ?? null,
+        email: users.get(m.userId)?.email ?? null,
+      })),
+    );
+  });
+
+  app.post("/api/trips/:id/members", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+
+    const body = await c.req.json().catch(() => ({}));
+    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    if (!email) return c.json({ error: "email required" }, 400);
+
+    const target = await env.DB.prepare('SELECT id FROM "user" WHERE email = ?')
+      .bind(email)
+      .first<{ id: string }>();
+    if (!target) return c.json({ error: "user not found" }, 404);
+
+    // Don't double-insert the same member.
+    const [existing] = await database
+      .select()
+      .from(tripMembers)
+      .where(and(eq(tripMembers.tripId, trip.id), eq(tripMembers.userId, target.id)))
+      .limit(1);
+    if (existing) return c.json({ ok: true, already: true });
+
+    const [member] = await database
+      .insert(tripMembers)
+      .values({ tripId: trip.id, userId: target.id, role: "editor" })
+      .returning();
+    return c.json({ userId: member.userId, role: member.role }, 201);
+  });
+
+  // ── Expenses (list / create / delete) ──────────────────────────────────────
+  app.get("/api/trips/:id/expenses", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+
+    const expenseRows = await database
+      .select()
+      .from(expenses)
+      .where(eq(expenses.tripId, trip.id))
+      .orderBy(desc(expenses.createdAt))
+      .all();
+    const expenseIds = expenseRows.map((e) => e.id);
+    const splitRows = expenseIds.length
+      ? await database.select().from(expenseSplits).where(inArray(expenseSplits.expenseId, expenseIds)).all()
+      : [];
+    const splitsByExpense = new Map<string, typeof splitRows>();
+    for (const s of splitRows) {
+      const arr = splitsByExpense.get(s.expenseId) ?? [];
+      arr.push(s);
+      splitsByExpense.set(s.expenseId, arr);
+    }
+    return c.json(
+      expenseRows.map((e) => ({
+        ...e,
+        splits: (splitsByExpense.get(e.id) ?? []).map((s) => ({
+          userId: s.userId,
+          shareCents: s.shareCents,
+        })),
+      })),
+    );
+  });
+
+  app.post("/api/trips/:id/expenses", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+    await ensureOwnerMember(trip.id, trip.ownerId);
+
+    const body = await c.req.json().catch(() => ({}));
+    const amountCents = Math.round(Number(body?.amountCents));
+    const currency = typeof body?.currency === "string" ? body.currency.toUpperCase() : "";
+    if (!Number.isInteger(amountCents) || amountCents < 0 || currency.length !== 3)
+      return c.json({ error: "amountCents (int) and 3-letter currency required" }, 400);
+
+    // Participant set: provided → all trip members. Equal split among them.
+    const members = await database
+      .select()
+      .from(tripMembers)
+      .where(eq(tripMembers.tripId, trip.id))
+      .all();
+    const participantIds =
+      Array.isArray(body?.participantIds) && body.participantIds.length
+        ? ([...new Set(body.participantIds as string[])] as string[])
+        : members.map((m) => m.userId);
+    if (participantIds.length === 0) participantIds.push(user.id);
+    const splits = equalSplit(amountCents, participantIds);
+
+    const [expense] = await database
+      .insert(expenses)
+      .values({
+        tripId: trip.id,
+        paidByUserId: user.id,
+        amountCents,
+        currency,
+        category: typeof body?.category === "string" ? body.category : null,
+        description: typeof body?.description === "string" ? body.description.trim() || null : null,
+        date: Number.isInteger(body?.date) ? body.date : null,
+      })
+      .returning();
+    if (splits.length) {
+      await database
+        .insert(expenseSplits)
+        .values(splits.map((s) => ({ expenseId: expense.id, userId: s.userId, shareCents: s.shareCents })));
+    }
+    return c.json({ ...expense, splits }, 201);
+  });
+
+  app.delete("/api/expenses/:expenseId", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const expenseId = c.req.param("expenseId");
+
+    // Ownership check via the expense's trip.
+    const [row] = await database
+      .select({ tripId: expenses.tripId })
+      .from(expenses)
+      .where(eq(expenses.id, expenseId))
+      .limit(1);
+    if (!row) return c.json({ error: "not found" }, 404);
+    const trip = await getOwnedTrip(row.tripId, user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+
+    await database.delete(expenseSplits).where(eq(expenseSplits.expenseId, expenseId));
+    await database.delete(expenses).where(eq(expenses.id, expenseId));
+    return c.json({ ok: true });
   });
 
   return app;

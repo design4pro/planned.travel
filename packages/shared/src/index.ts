@@ -61,3 +61,7 @@ export const tripSchema = z.object({
   coverImageKey: z.string().optional(),
 });
 export type Trip = z.infer<typeof tripSchema>;
+
+/* ------------------------------- Costs ----------------------------------- */
+
+export * from "./costs";

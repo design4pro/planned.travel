@@ -125,7 +125,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - [x] Day-plan model + planner UI (days/items, add-place) — drag-&-drop reordering deferred
 - [x] MapLibre map + POI pins (key-free OSM tiles) on trip page; place search + route visualization — later
 - [ ] Reservations + document manager (R2); PDF export (Browser Rendering)
-- [ ] Costs / expense splitting (multi-currency)
+- [x] Costs / expense splitting (multi-currency)
 - [ ] Real-time collaboration (DO + Hibernation WS); invite links; roles
 - [ ] Notifications (email); in-app center
 - [ ] Stripe billing (Free/Pro)

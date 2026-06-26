@@ -55,7 +55,12 @@ for (const item of itemRows) {
       <a href="/app" class="text-sm text-muted-foreground hover:text-primary">
         ← {t("trips.back")}
       </a>
-      <SignOutButton client:load label={t("nav.signout")} />
+      <div class="flex items-center gap-4">
+        <a href={`/app/trips/${trip.id}/costs`} class="text-sm font-medium text-primary hover:underline">
+          {t("costs.tab")}
+        </a>
+        <SignOutButton client:load label={t("nav.signout")} />
+      </div>
     </div>
 
     <h1 class="mt-4 text-3xl font-bold">{trip.title}</h1>
