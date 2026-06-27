@@ -46,7 +46,7 @@ export default function CreateTrip({
       setError("Failed to create trip");
       return;
     }
-    const trip = await res.json();
+    const trip = (await res.json()) as { id: string };
     window.location.href = `/app/trips/${trip.id}`;
   }
 
