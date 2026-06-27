@@ -42,6 +42,30 @@ export const tripMembers = sqliteTable("trip_member", {
   createdAt: now(),
 });
 
+/* --------------------------- Trip invitations ---------------------------- */
+// Shareable invite links (one-time / reusable / expiring). A trip owner mints
+// a tokenized link; an authenticated user who accepts it is added (or upgraded)
+// to a trip_member with the invitation's role. See @planned/shared collab.ts.
+
+export const tripInvitations = sqliteTable("trip_invitation", {
+  id: id(),
+  tripId: text("trip_id")
+    .notNull()
+    .references(() => trips.id),
+  // Opaque, unguessable token carried in the share URL (/invite/<token>).
+  token: text("token").notNull().unique(),
+  role: text("role", { enum: ["editor", "viewer"] }).notNull().default("editor"),
+  createdBy: text("created_by").notNull(), // -> better_auth user.id
+  createdAt: now(),
+  // null = never expires. Epoch-ms otherwise.
+  expiresAt: integer("expires_at"),
+  // null = unlimited acceptances; otherwise the link is exhausted at maxUses.
+  maxUses: integer("max_uses"),
+  useCount: integer("use_count").notNull().default(0),
+  // Set (epoch-ms) when the owner revokes the link.
+  revokedAt: integer("revoked_at"),
+});
+
 /* ----------------------------- Places & plan ----------------------------- */
 
 export const places = sqliteTable("place", {
@@ -180,6 +204,7 @@ export const subscriptions = sqliteTable("subscription", {
 export const schema = {
   trips,
   tripMembers,
+  tripInvitations,
   places,
   days,
   dayItems,

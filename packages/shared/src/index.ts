@@ -73,3 +73,7 @@ export * from "./reservations";
 /* ----------------------------- Documents --------------------------------- */
 
 export * from "./documents";
+
+/* --------------------------- Collaboration ------------------------------- */
+
+export * from "./collab";
