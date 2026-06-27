@@ -20,6 +20,10 @@ export interface CloudflareEnv {
   AI: Ai;
   IMAGES: ImagesBinding;
 
+  // PDF / OG-image rendering (trip-to-PDF export). Optional at build time — the
+  // export endpoint 503s if the binding isn't provisioned in this environment.
+  BROWSER?: Fetcher;
+
   // Added in later phases:
   // TRIP_ROOM: DurableObjectNamespace;
   // JOBS: Queue<JobMessage>;

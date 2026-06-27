@@ -1,0 +1,41 @@
+---
+/**
+ * In-trip section navigation: Overview / Costs / Reservations / Documents.
+ * Rendered server-side; `active` highlights the current tab.
+ */
+interface Props {
+  tripId: string;
+  active: "overview" | "costs" | "reservations" | "documents";
+  labels: {
+    overview: string;
+    costs: string;
+    reservations: string;
+    documents: string;
+  };
+}
+const { tripId, active, labels } = Astro.props;
+
+const tabs = [
+  { key: "overview", href: `/app/trips/${tripId}`, label: labels.overview },
+  { key: "costs", href: `/app/trips/${tripId}/costs`, label: labels.costs },
+  { key: "reservations", href: `/app/trips/${tripId}/reservations`, label: labels.reservations },
+  { key: "documents", href: `/app/trips/${tripId}/documents`, label: labels.documents },
+] as const;
+---
+
+<nav class="mt-2 flex gap-1 border-b">
+  {
+    tabs.map((tab) => (
+      <a
+        href={tab.href}
+        class={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+          active === tab.key
+            ? "border-primary text-primary"
+            : "border-transparent text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        {tab.label}
+      </a>
+    ))
+  }
+</nav>

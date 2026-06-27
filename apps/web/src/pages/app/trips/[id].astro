@@ -3,6 +3,8 @@ import Layout from "../../../layouts/Layout.astro";
 import SignOutButton from "../../../components/auth/SignOutButton.tsx";
 import AddPlace from "../../../components/trips/AddPlace.tsx";
 import TripMap from "../../../components/trips/TripMap.tsx";
+import TripTabs from "../../../components/trips/TripTabs.astro";
+import ExportPdf from "../../../components/trips/ExportPdf.tsx";
 import { getSessionUser } from "../../../lib/session";
 import { db } from "../../../lib/db";
 import { and, asc, eq, inArray } from "drizzle-orm";
@@ -55,15 +57,30 @@ for (const item of itemRows) {
       <a href="/app" class="text-sm text-muted-foreground hover:text-primary">
         ← {t("trips.back")}
       </a>
-      <div class="flex items-center gap-4">
-        <a href={`/app/trips/${trip.id}/costs`} class="text-sm font-medium text-primary hover:underline">
-          {t("costs.tab")}
-        </a>
-        <SignOutButton client:load label={t("nav.signout")} />
-      </div>
+      <SignOutButton client:load label={t("nav.signout")} />
     </div>
 
-    <h1 class="mt-4 text-3xl font-bold">{trip.title}</h1>
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-3xl font-bold">{trip.title}</h1>
+      <ExportPdf
+        client:load
+        tripId={trip.id}
+        label={t("export.pdf")}
+        upgrade={t("export.upgrade")}
+        unavailable={t("export.unavailable")}
+      />
+    </div>
+
+    <TripTabs
+      tripId={trip.id}
+      active="overview"
+      labels={{
+        overview: t("tabs.overview"),
+        costs: t("tabs.costs"),
+        reservations: t("tabs.reservations"),
+        documents: t("tabs.documents"),
+      }}
+    />
 
     {
       placeRows.length > 0 && (

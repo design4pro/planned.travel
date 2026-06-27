@@ -1,6 +1,7 @@
 ---
 import Layout from "../../../../layouts/Layout.astro";
 import SignOutButton from "../../../../components/auth/SignOutButton.tsx";
+import TripTabs from "../../../../components/trips/TripTabs.astro";
 import ExpenseForm, {
   type MemberOption,
 } from "../../../../components/costs/ExpenseForm.tsx";
@@ -118,7 +119,18 @@ const categoryLabels = {
       <SignOutButton client:load label={t("nav.signout")} />
     </div>
 
-    <h1 class="mt-4 text-3xl font-bold">{t("costs.heading")}</h1>
+    <TripTabs
+      tripId={trip.id}
+      active="costs"
+      labels={{
+        overview: t("tabs.overview"),
+        costs: t("tabs.costs"),
+        reservations: t("tabs.reservations"),
+        documents: t("tabs.documents"),
+      }}
+    />
+
+    <h1 class="mt-6 text-3xl font-bold">{t("costs.heading")}</h1>
 
     {/* Participants */}
     <section class="mt-8">

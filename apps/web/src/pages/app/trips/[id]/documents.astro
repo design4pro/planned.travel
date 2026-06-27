@@ -1,0 +1,135 @@
+---
+import Layout from "../../../../layouts/Layout.astro";
+import SignOutButton from "../../../../components/auth/SignOutButton.tsx";
+import TripTabs from "../../../../components/trips/TripTabs.astro";
+import DocumentUpload from "../../../../components/documents/DocumentUpload.tsx";
+import DocumentList from "../../../../components/documents/DocumentList.tsx";
+import { getSessionUser } from "../../../../lib/session";
+import { db } from "../../../../lib/db";
+import { and, desc, eq } from "drizzle-orm";
+import { documents, reservations, trips } from "@planned/db";
+import { getLangFromUrl, useTranslations } from "../../../../i18n/utils";
+
+const user = await getSessionUser(Astro.locals, Astro.request);
+if (!user) return Astro.redirect("/login");
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/app");
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+const env = Astro.locals.runtime.env;
+const database = db(env);
+const [trip] = await database
+  .select()
+  .from(trips)
+  .where(and(eq(trips.id, id), eq(trips.ownerId, user.id)))
+  .limit(1);
+if (!trip) return Astro.redirect("/app");
+
+const [docRows, resRows] = await Promise.all([
+  database.select().from(documents).where(eq(documents.tripId, trip.id)).orderBy(desc(documents.createdAt)).all(),
+  database.select().from(reservations).where(eq(reservations.tripId, trip.id)).all(),
+]);
+
+// Display label for a reservation (title → type label → id).
+const resById = new Map(resRows.map((r) => [r.id, r]));
+const typeLabels = {
+  flight: t("reservations.types.flight"),
+  hotel: t("reservations.types.hotel"),
+  restaurant: t("reservations.types.restaurant"),
+  rental: t("reservations.types.rental"),
+  transport: t("reservations.types.transport"),
+  other: t("reservations.types.other"),
+};
+const resTypeLabel = (type: string) => typeLabels[type as keyof typeof typeLabels] ?? type;
+const resLabel = (rid: string) => {
+  const r = resById.get(rid);
+  if (!r) return null;
+  return r.title?.trim() || resTypeLabel(r.type);
+};
+const attachOptions = resRows.map((r) => ({
+  id: r.id,
+  label: r.title?.trim() || resTypeLabel(r.type),
+}));
+
+// Uploader display names (better_auth user rows via raw D1 query).
+const userIds = [...new Set(docRows.map((d) => d.uploadedByUserId).filter(Boolean))] as string[];
+const userPlaceholders = userIds.map(() => "?").join(",");
+const { results: userResults } = userIds.length
+  ? await env.DB.prepare(`SELECT id, name, email FROM "user" WHERE id IN (${userPlaceholders})`)
+      .bind(...userIds)
+      .all<{ id: string; name: string | null; email: string }>()
+  : { results: [] };
+const usersById = new Map((userResults ?? []).map((u) => [u.id, u]));
+const uploaderName = (uid: string | null) =>
+  uid ? usersById.get(uid)?.name ?? usersById.get(uid)?.email ?? uid.slice(0, 6) : null;
+
+const listRows = docRows.map((d) => ({
+  id: d.id,
+  name: d.name,
+  mimeType: d.mimeType,
+  sizeBytes: d.sizeBytes,
+  reservationLabel: d.reservationId ? resLabel(d.reservationId) : null,
+  uploadedByName: uploaderName(d.uploadedByUserId),
+  createdAt: d.createdAt,
+}));
+---
+
+<Layout title={`${trip.title} — ${t("docs.heading")} — planned.travel`}>
+  <main class="mx-auto max-w-3xl px-6 py-12">
+    <div class="flex items-center justify-between">
+      <a href="/app" class="text-sm text-muted-foreground hover:text-primary">
+        ← {trip.title}
+      </a>
+      <SignOutButton client:load label={t("nav.signout")} />
+    </div>
+
+    <TripTabs
+      tripId={trip.id}
+      active="documents"
+      labels={{
+        overview: t("tabs.overview"),
+        costs: t("tabs.costs"),
+        reservations: t("tabs.reservations"),
+        documents: t("tabs.documents"),
+      }}
+    />
+
+    <h1 class="mt-6 text-3xl font-bold">{t("docs.heading")}</h1>
+
+    <section class="mt-6">
+      <DocumentUpload
+        client:load
+        tripId={trip.id}
+        reservations={attachOptions}
+        labels={{
+          title: t("docs.upload"),
+          file: t("docs.file"),
+          pick: t("docs.pick"),
+          attach: t("docs.attach"),
+          none: t("docs.none"),
+          upload: t("docs.upload.btn"),
+          uploading: t("docs.uploading"),
+          error: t("docs.error"),
+          tooLarge: t("docs.tooLarge"),
+        }}
+      />
+    </section>
+
+    <section class="mt-6">
+      <DocumentList
+        client:load
+        documents={listRows}
+        labels={{
+          empty: t("docs.empty"),
+          download: t("docs.download"),
+          delete: t("docs.delete"),
+          deleted: t("docs.deleted"),
+          by: t("docs.by"),
+        }}
+      />
+    </section>
+  </main>
+</Layout>

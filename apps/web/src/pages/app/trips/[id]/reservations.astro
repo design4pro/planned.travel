@@ -1,0 +1,139 @@
+---
+import Layout from "../../../../layouts/Layout.astro";
+import SignOutButton from "../../../../components/auth/SignOutButton.tsx";
+import TripTabs from "../../../../components/trips/TripTabs.astro";
+import ReservationForm from "../../../../components/reservations/ReservationForm.tsx";
+import ReservationList from "../../../../components/reservations/ReservationList.tsx";
+import { getSessionUser } from "../../../../lib/session";
+import { db } from "../../../../lib/db";
+import { and, eq } from "drizzle-orm";
+import { documents, reservations, trips } from "@planned/db";
+import { sortReservations } from "@planned/shared";
+import { getLangFromUrl, useTranslations } from "../../../../i18n/utils";
+
+const user = await getSessionUser(Astro.locals, Astro.request);
+if (!user) return Astro.redirect("/login");
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/app");
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+const env = Astro.locals.runtime.env;
+const database = db(env);
+const [trip] = await database
+  .select()
+  .from(trips)
+  .where(and(eq(trips.id, id), eq(trips.ownerId, user.id)))
+  .limit(1);
+if (!trip) return Astro.redirect("/app");
+
+const [resRows, docRows] = await Promise.all([
+  database.select().from(reservations).where(eq(reservations.tripId, trip.id)).all(),
+  database.select().from(documents).where(eq(documents.tripId, trip.id)).all(),
+]);
+
+// Count attached documents per reservation.
+const docCountByRes = new Map<string, number>();
+for (const d of docRows) {
+  if (d.reservationId) docCountByRes.set(d.reservationId, (docCountByRes.get(d.reservationId) ?? 0) + 1);
+}
+
+const typeLabels = {
+  flight: t("reservations.types.flight"),
+  hotel: t("reservations.types.hotel"),
+  restaurant: t("reservations.types.restaurant"),
+  rental: t("reservations.types.rental"),
+  transport: t("reservations.types.transport"),
+  other: t("reservations.types.other"),
+};
+const stateLabels = {
+  planned: t("reservations.states.planned"),
+  confirmed: t("reservations.states.confirmed"),
+  cancelled: t("reservations.states.cancelled"),
+};
+
+const listRows = sortReservations(resRows).map((r) => ({
+  id: r.id,
+  type: r.type,
+  status: r.status,
+  title: r.title,
+  confirmationCode: r.confirmationCode,
+  startsAt: r.startsAt,
+  endsAt: r.endsAt,
+  notes: r.notes,
+  docCount: docCountByRes.get(r.id) ?? 0,
+}));
+---
+
+<Layout title={`${trip.title} — ${t("reservations.heading")} — planned.travel`}>
+  <main class="mx-auto max-w-3xl px-6 py-12">
+    <div class="flex items-center justify-between">
+      <a href="/app" class="text-sm text-muted-foreground hover:text-primary">
+        ← {trip.title}
+      </a>
+      <SignOutButton client:load label={t("nav.signout")} />
+    </div>
+
+    <TripTabs
+      tripId={trip.id}
+      active="reservations"
+      labels={{
+        overview: t("tabs.overview"),
+        costs: t("tabs.costs"),
+        reservations: t("tabs.reservations"),
+        documents: t("tabs.documents"),
+      }}
+    />
+
+    <h1 class="mt-6 text-3xl font-bold">{t("reservations.heading")}</h1>
+
+    <section class="mt-6">
+      <ReservationForm
+        client:load
+        tripId={trip.id}
+        labels={{
+          title: t("reservations.add.title"),
+          type: t("reservations.type"),
+          fieldTitle: t("reservations.fieldTitle"),
+          status: t("reservations.status"),
+          confirmation: t("reservations.confirmation"),
+          starts: t("reservations.starts"),
+          ends: t("reservations.ends"),
+          notes: t("reservations.notes"),
+          add: t("reservations.add"),
+          error: t("reservations.error"),
+          types: typeLabels,
+          states: stateLabels,
+        }}
+      />
+    </section>
+
+    <section class="mt-6">
+      <ReservationList
+        client:load
+        reservations={listRows}
+        labels={{
+          empty: t("reservations.empty"),
+          type: t("reservations.type"),
+          fieldTitle: t("reservations.fieldTitle"),
+          status: t("reservations.status"),
+          confirmation: t("reservations.confirmation"),
+          starts: t("reservations.starts"),
+          ends: t("reservations.ends"),
+          notes: t("reservations.notes"),
+          save: t("reservations.save"),
+          cancel: t("reservations.cancel"),
+          edit: t("reservations.edit"),
+          delete: t("reservations.delete"),
+          error: t("reservations.error"),
+          deleted: t("reservations.deleted"),
+          attached: t("reservations.attached"),
+          types: typeLabels,
+          states: stateLabels,
+        }}
+      />
+    </section>
+  </main>
+</Layout>
