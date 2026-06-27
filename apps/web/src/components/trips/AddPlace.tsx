@@ -38,7 +38,7 @@ export default function AddPlace({ tripId, labels }: Props) {
       setError(labels.error);
       return;
     }
-    const place = await pRes.json();
+    const place = (await pRes.json()) as { id: string };
     const iRes = await fetch(`/api/trips/${tripId}/items`, {
       method: "POST",
       headers: { "content-type": "application/json" },
