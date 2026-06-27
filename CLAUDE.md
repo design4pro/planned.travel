@@ -65,6 +65,7 @@ pnpm --filter @planned/web deploy # build + wrangler deploy
 - **API routes:** `apps/web/src/server/app.ts` (Hono, mounted at `/api/*` via `src/pages/api/[...path].ts`). Better Auth under `/api/auth/*`, app routes alongside.
 - **Auth config:** `apps/web/src/lib/auth.ts` (`createAuth(env)` factory).
 - **DB access:** `packages/db` (`createDb(d1)`), used via `apps/web/src/lib/db.ts`.
+- **Realtime collaboration:** `apps/web/src/server/trip-room.ts` (`TripRoom` Durable Object + `broadcastTripChange`); WebSocket upgrade at `/api/trips/:id/sync`. The DO class is exported via the custom worker entry `apps/web/src/worker.ts` (`@astrojs/cloudflare` `workerEntryPoint`). Trip access (owner/editor/viewer) helpers: `apps/web/src/lib/trip.ts` (SSR) + `getAccessibleTrip` in `app.ts` (API).
 - **Schema:** `packages/db/src/schema/index.ts` (domain tables; auth tables owned by Better Auth via CLI).
 - **Bindings/env types:** `apps/web/src/lib/env.ts` + `src/env.d.ts`.
 - **UI tokens / components:** `packages/ui-tokens/src/theme.css`, `apps/web/src/styles/global.css` (shadcn semantic tokens → brand), `apps/web/src/components/ui/*`.
