@@ -7,6 +7,7 @@ import ExpenseForm, {
 } from "../../../../components/costs/ExpenseForm.tsx";
 import ExpenseList from "../../../../components/costs/ExpenseList.tsx";
 import MemberAdd from "../../../../components/costs/MemberAdd.tsx";
+import CollabPresence from "../../../../components/collab/CollabPresence.tsx";
 import { getSessionUser } from "../../../../lib/session";
 import { db } from "../../../../lib/db";
 import { resolveTripAccess, canEditTrip } from "../../../../lib/trip";
@@ -134,6 +135,19 @@ const categoryLabels = {
     />
 
     <h1 class="mt-6 text-3xl font-bold">{t("costs.heading")}</h1>
+
+    <div class="mt-3">
+      <CollabPresence
+        client:load
+        tripId={trip.id}
+        currentUserId={user.id}
+        reloadOn={["expenses", "members"]}
+        labels={{
+          online: t("collab.presence.online"),
+          alone: t("collab.presence.alone"),
+        }}
+      />
+    </div>
 
     {/* Participants */}
     <section class="mt-8">

@@ -5,7 +5,7 @@ import CreateTrip from "../../components/trips/CreateTrip.tsx";
 import { getSessionUser } from "../../lib/session";
 import { db } from "../../lib/db";
 import { desc, eq } from "drizzle-orm";
-import { trips } from "@planned/db";
+import { trips, tripMembers } from "@planned/db";
 import { getLangFromUrl, useTranslations } from "../../i18n/utils";
 
 const user = await getSessionUser(Astro.locals, Astro.request);
@@ -15,12 +15,23 @@ const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 
 const database = db(Astro.locals.runtime.env);
-const myTrips = await database
-  .select()
-  .from(trips)
-  .where(eq(trips.ownerId, user.id))
-  .orderBy(desc(trips.updatedAt))
-  .all();
+// Trips the user owns OR is a member of (editor/viewer) — shared trips appear
+// alongside owned ones, mirroring GET /api/trips.
+const [owned, memberRows] = await Promise.all([
+  database.select().from(trips).where(eq(trips.ownerId, user.id)).orderBy(desc(trips.updatedAt)).all(),
+  database
+    .select({ trip: trips, role: tripMembers.role })
+    .from(tripMembers)
+    .innerJoin(trips, eq(trips.id, tripMembers.tripId))
+    .where(eq(tripMembers.userId, user.id))
+    .all(),
+]);
+const myTrips = [
+  ...owned.map((tr) => ({ ...tr, role: "owner" })),
+  ...memberRows
+    .filter((r) => r.trip.ownerId !== user.id)
+    .map((r) => ({ ...r.trip, role: r.role })),
+];
 ---
 
 <Layout title="planned.travel — app">
@@ -63,7 +74,16 @@ const myTrips = await database
                   href={`/app/trips/${trip.id}`}
                   class="block rounded-lg border p-4 shadow-card bg-card hover:border-primary transition-colors"
                 >
-                  <p class="font-semibold">{trip.title}</p>
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="font-semibold">{trip.title}</p>
+                    {trip.role !== "owner" && (
+                      <span class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                        {trip.role === "viewer"
+                          ? t("collab.members.role.viewer")
+                          : t("collab.members.role.editor")}
+                      </span>
+                    )}
+                  </div>
                   <p class="mt-1 text-xs text-muted-foreground">
                     {new Date(trip.updatedAt).toLocaleDateString()}
                   </p>

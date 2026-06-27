@@ -535,6 +535,41 @@ export function createApp(env: CloudflareEnv) {
     return c.json({ tripId: inv.tripId, role: inv.role });
   });
 
+  /** Preview an invitation (public — the token is the secret). */
+  app.get("/api/invitations/:token", async (c) => {
+    const token = c.req.param("token");
+    const [inv] = await database
+      .select()
+      .from(tripInvitations)
+      .where(eq(tripInvitations.token, token))
+      .limit(1);
+    if (!inv) return c.json({ valid: false, reason: "invalid" }, 404);
+    const now = Date.now();
+    if (
+      !isInvitationOpen({
+        revokedAt: inv.revokedAt,
+        expiresAt: inv.expiresAt,
+        maxUses: inv.maxUses,
+        useCount: inv.useCount,
+        now,
+      })
+    ) {
+      const reason =
+        inv.revokedAt != null
+          ? "revoked"
+          : inv.expiresAt != null && inv.expiresAt <= now
+            ? "expired"
+            : "exhausted";
+      return c.json({ valid: false, reason });
+    }
+    const [tripRow] = await database
+      .select({ title: trips.title })
+      .from(trips)
+      .where(eq(trips.id, inv.tripId))
+      .limit(1);
+    return c.json({ valid: true, tripId: inv.tripId, tripTitle: tripRow?.title ?? null, role: inv.role });
+  });
+
   // ── Realtime: WebSocket upgrade for a trip room ───────────────────────────
   // Browser opens `new WebSocket('/api/trips/:id/sync')`. Same-origin cookies
   // authenticate the handshake; access is resolved the same way as reads. The

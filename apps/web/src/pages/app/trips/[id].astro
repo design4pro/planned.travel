@@ -5,6 +5,9 @@ import AddPlace from "../../../components/trips/AddPlace.tsx";
 import TripMap from "../../../components/trips/TripMap.tsx";
 import TripTabs from "../../../components/trips/TripTabs.astro";
 import ExportPdf from "../../../components/trips/ExportPdf.tsx";
+import CollabPresence from "../../../components/collab/CollabPresence.tsx";
+import MembersPanel from "../../../components/collab/MembersPanel.tsx";
+import InviteManager from "../../../components/collab/InviteManager.tsx";
 import { getSessionUser } from "../../../lib/session";
 import { db } from "../../../lib/db";
 import { resolveTripAccess, canEditTrip } from "../../../lib/trip";
@@ -82,6 +85,20 @@ for (const item of itemRows) {
       }}
     />
 
+    {/* Real-time presence + live sync (reload when a collaborator edits). */}
+    <div class="mt-4">
+      <CollabPresence
+        client:load
+        tripId={trip.id}
+        currentUserId={user.id}
+        reloadOn={["plan", "places", "trip", "members"]}
+        labels={{
+          online: t("collab.presence.online"),
+          alone: t("collab.presence.alone"),
+        }}
+      />
+    </div>
+
     {
       placeRows.length > 0 && (
         <div class="mt-6">
@@ -118,6 +135,56 @@ for (const item of itemRows) {
         </p>
       )}
     </div>
+
+    {/* Owner only: manage collaborators + invite links. */}
+    {
+      role === "owner" && (
+        <section class="mt-8 space-y-4">
+          <MembersPanel
+            client:load
+            tripId={trip.id}
+            currentUserId={user.id}
+            labels={{
+              title: t("collab.members.title"),
+              roleOwner: t("collab.members.role.owner"),
+              roleEditor: t("collab.members.role.editor"),
+              roleViewer: t("collab.members.role.viewer"),
+              you: t("collab.members.you"),
+              remove: t("collab.members.remove"),
+              removed: t("collab.members.removed"),
+              roleSaved: t("collab.members.roleSaved"),
+            }}
+          />
+          <InviteManager
+            client:load
+            tripId={trip.id}
+            labels={{
+              title: t("collab.invite.title"),
+              role: t("collab.invite.role"),
+              roleEditor: t("collab.members.role.editor"),
+              roleViewer: t("collab.members.role.viewer"),
+              expiry: t("collab.invite.expiry"),
+              expiryNever: t("collab.invite.expiry.never"),
+              expiryDays: (n: number) => t("collab.invite.expiry.days").replace("{n}", String(n)),
+              maxUses: t("collab.invite.maxUses"),
+              maxUsesAny: t("collab.invite.maxUses.any"),
+              maxUsesN: (n: number) => t("collab.invite.maxUses.n").replace("{n}", String(n)),
+              create: t("collab.invite.create"),
+              empty: t("collab.invite.empty"),
+              copy: t("collab.invite.copy"),
+              copied: t("collab.invite.copied"),
+              revoke: t("collab.invite.revoke"),
+              revoked: t("collab.invite.revoked"),
+              statusOpen: t("collab.invite.status.open"),
+              statusUsed: t("collab.invite.status.used"),
+              statusExpired: t("collab.invite.status.expired"),
+              statusRevoked: t("collab.invite.status.revoked"),
+              uses: (used: number) => t("collab.invite.uses").replace("{used}", String(used)),
+            }}
+          />
+        </section>
+      )
+    }
 
     <section class="mt-8 space-y-6">
     {
