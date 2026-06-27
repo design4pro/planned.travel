@@ -24,8 +24,11 @@ export interface CloudflareEnv {
   // export endpoint 503s if the binding isn't provisioned in this environment.
   BROWSER?: Fetcher;
 
+  // Real-time collaboration: one Durable Object per trip (TripRoom). Optional at
+  // build time — the sync route 503s if the binding isn't provisioned.
+  TRIP_ROOM?: DurableObjectNamespace;
+
   // Added in later phases:
-  // TRIP_ROOM: DurableObjectNamespace;
   // JOBS: Queue<JobMessage>;
   // ITINERARY_GEN: Workflow;
   // BOOKING_INGEST: Workflow;

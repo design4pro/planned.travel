@@ -11,6 +11,12 @@ export default defineConfig({
   output: "server",
   adapter: cloudflare({
     platformProxy: { enabled: true },
+    // Custom worker entry: reuses the adapter's fetch handler and additionally
+    // exports the TripRoom Durable Object class (see src/worker.ts).
+    workerEntryPoint: {
+      path: "src/worker.ts",
+      namedExports: ["TripRoom"],
+    },
   }),
   integrations: [react()],
   vite: {

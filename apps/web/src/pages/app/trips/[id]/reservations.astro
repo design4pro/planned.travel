@@ -6,8 +6,9 @@ import ReservationForm from "../../../../components/reservations/ReservationForm
 import ReservationList from "../../../../components/reservations/ReservationList.tsx";
 import { getSessionUser } from "../../../../lib/session";
 import { db } from "../../../../lib/db";
-import { and, eq } from "drizzle-orm";
-import { documents, reservations, trips } from "@planned/db";
+import { resolveTripAccess, canEditTrip } from "../../../../lib/trip";
+import { eq } from "drizzle-orm";
+import { documents, reservations } from "@planned/db";
 import { sortReservations } from "@planned/shared";
 import { getLangFromUrl, useTranslations } from "../../../../i18n/utils";
 
@@ -22,12 +23,11 @@ const t = useTranslations(lang);
 
 const env = Astro.locals.runtime.env;
 const database = db(env);
-const [trip] = await database
-  .select()
-  .from(trips)
-  .where(and(eq(trips.id, id), eq(trips.ownerId, user.id)))
-  .limit(1);
-if (!trip) return Astro.redirect("/app");
+const access = await resolveTripAccess(database, id, user.id);
+if (!access) return Astro.redirect("/app");
+const { trip } = access;
+const role = access.role;
+const canEdit = canEditTrip(role);
 
 const [resRows, docRows] = await Promise.all([
   database.select().from(reservations).where(eq(reservations.tripId, trip.id)).all(),
@@ -90,24 +90,28 @@ const listRows = sortReservations(resRows).map((r) => ({
     <h1 class="mt-6 text-3xl font-bold">{t("reservations.heading")}</h1>
 
     <section class="mt-6">
-      <ReservationForm
-        client:load
-        tripId={trip.id}
-        labels={{
-          title: t("reservations.add.title"),
-          type: t("reservations.type"),
-          fieldTitle: t("reservations.fieldTitle"),
-          status: t("reservations.status"),
-          confirmation: t("reservations.confirmation"),
-          starts: t("reservations.starts"),
-          ends: t("reservations.ends"),
-          notes: t("reservations.notes"),
-          add: t("reservations.add"),
-          error: t("reservations.error"),
-          types: typeLabels,
-          states: stateLabels,
-        }}
-      />
+      {canEdit ? (
+        <ReservationForm
+          client:load
+          tripId={trip.id}
+          labels={{
+            title: t("reservations.add.title"),
+            type: t("reservations.type"),
+            fieldTitle: t("reservations.fieldTitle"),
+            status: t("reservations.status"),
+            confirmation: t("reservations.confirmation"),
+            starts: t("reservations.starts"),
+            ends: t("reservations.ends"),
+            notes: t("reservations.notes"),
+            add: t("reservations.add"),
+            error: t("reservations.error"),
+            types: typeLabels,
+            states: stateLabels,
+          }}
+        />
+      ) : (
+        <p class="rounded-lg border bg-card p-3 text-sm text-muted-foreground">{t("collab.readonly")}</p>
+      )}
     </section>
 
     <section class="mt-6">

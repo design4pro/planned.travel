@@ -7,4 +7,4 @@
  */
 
 export * from "./schema/index";
-export { createDb } from "./client";
+export { createDb, type Database } from "./client";

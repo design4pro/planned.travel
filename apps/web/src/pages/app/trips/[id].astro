@@ -7,8 +7,9 @@ import TripTabs from "../../../components/trips/TripTabs.astro";
 import ExportPdf from "../../../components/trips/ExportPdf.tsx";
 import { getSessionUser } from "../../../lib/session";
 import { db } from "../../../lib/db";
-import { and, asc, eq, inArray } from "drizzle-orm";
-import { days, dayItems, places, trips } from "@planned/db";
+import { resolveTripAccess, canEditTrip } from "../../../lib/trip";
+import { asc, eq, inArray } from "drizzle-orm";
+import { days, dayItems, places } from "@planned/db";
 import { getLangFromUrl, useTranslations } from "../../../i18n/utils";
 
 const user = await getSessionUser(Astro.locals, Astro.request);
@@ -21,12 +22,11 @@ const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 
 const database = db(Astro.locals.runtime.env);
-const [trip] = await database
-  .select()
-  .from(trips)
-  .where(and(eq(trips.id, id), eq(trips.ownerId, user.id)))
-  .limit(1);
-if (!trip) return Astro.redirect("/app");
+const access = await resolveTripAccess(database, id, user.id);
+if (!access) return Astro.redirect("/app");
+const { trip } = access;
+const role = access.role;
+const canEdit = canEditTrip(role);
 
 const [dayRows, placeRows] = await Promise.all([
   database.select().from(days).where(eq(days.tripId, trip.id)).orderBy(asc(days.dateIndex)).all(),
@@ -99,18 +99,24 @@ for (const item of itemRows) {
     }
 
     <div class="mt-8">
-      <AddPlace
-        client:load
-        tripId={trip.id}
-        labels={{
-          title: t("planner.addPlace.title"),
-          name: t("planner.name"),
-          lat: t("planner.lat"),
-          lng: t("planner.lng"),
-          add: t("planner.add"),
-          error: t("planner.error"),
-        }}
-      />
+      {canEdit ? (
+        <AddPlace
+          client:load
+          tripId={trip.id}
+          labels={{
+            title: t("planner.addPlace.title"),
+            name: t("planner.name"),
+            lat: t("planner.lat"),
+            lng: t("planner.lng"),
+            add: t("planner.add"),
+            error: t("planner.error"),
+          }}
+        />
+      ) : (
+        <p class="rounded-lg border bg-card p-3 text-sm text-muted-foreground">
+          {t("collab.readonly")}
+        </p>
+      )}
     </div>
 
     <section class="mt-8 space-y-6">

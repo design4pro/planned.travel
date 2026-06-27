@@ -9,8 +9,9 @@ import ExpenseList from "../../../../components/costs/ExpenseList.tsx";
 import MemberAdd from "../../../../components/costs/MemberAdd.tsx";
 import { getSessionUser } from "../../../../lib/session";
 import { db } from "../../../../lib/db";
+import { resolveTripAccess, canEditTrip } from "../../../../lib/trip";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
-import { expenses, expenseSplits, tripMembers, trips } from "@planned/db";
+import { expenses, expenseSplits, tripMembers } from "@planned/db";
 import { summarizeByCurrency, formatMoney, fillSettlement } from "@planned/shared";
 import { getLangFromUrl, useTranslations } from "../../../../i18n/utils";
 
@@ -25,21 +26,23 @@ const t = useTranslations(lang);
 
 const env = Astro.locals.runtime.env;
 const database = db(env);
-const [trip] = await database
-  .select()
-  .from(trips)
-  .where(and(eq(trips.id, id), eq(trips.ownerId, user.id)))
-  .limit(1);
-if (!trip) return Astro.redirect("/app");
+const access = await resolveTripAccess(database, id, user.id);
+if (!access) return Astro.redirect("/app");
+const { trip } = access;
+const role = access.role;
+const canEdit = canEditTrip(role);
+const isOwner = role === "owner";
 
-// Ensure the owner is a trip member (legacy trips may predate this invariant).
-const [ownerMember] = await database
-  .select()
-  .from(tripMembers)
-  .where(and(eq(tripMembers.tripId, trip.id), eq(tripMembers.userId, user.id)))
-  .limit(1);
-if (!ownerMember) {
-  await database.insert(tripMembers).values({ tripId: trip.id, userId: user.id, role: "owner" });
+// Ensure the owner has a trip_member row (legacy trips may predate this invariant).
+if (isOwner) {
+  const [ownerMember] = await database
+    .select()
+    .from(tripMembers)
+    .where(and(eq(tripMembers.tripId, trip.id), eq(tripMembers.userId, user.id)))
+    .limit(1);
+  if (!ownerMember) {
+    await database.insert(tripMembers).values({ tripId: trip.id, userId: user.id, role: "owner" });
+  }
 }
 
 const [memberRows, expenseRows] = await Promise.all([
@@ -145,16 +148,18 @@ const categoryLabels = {
         ))}
       </div>
       <div class="mt-3">
-        <MemberAdd
-          client:load
-          tripId={trip.id}
-          labels={{
-            title: t("costs.addMember.title"),
-            email: t("costs.addMember.email"),
-            add: t("costs.addMember.btn"),
-            error: t("costs.addMember.error"),
-          }}
-        />
+        {isOwner && (
+          <MemberAdd
+            client:load
+            tripId={trip.id}
+            labels={{
+              title: t("costs.addMember.title"),
+              email: t("costs.addMember.email"),
+              add: t("costs.addMember.btn"),
+              error: t("costs.addMember.error"),
+            }}
+          />
+        )}
       </div>
     </section>
 
@@ -200,25 +205,29 @@ const categoryLabels = {
 
     {/* Add expense */}
     <section class="mt-8">
-      <ExpenseForm
-        client:load
-        tripId={trip.id}
-        members={memberOptions}
-        currentUserId={user.id}
-        labels={{
-          title: t("costs.add.title"),
-          amount: t("costs.amount"),
-          currency: t("costs.currency"),
-          category: t("costs.category"),
-          description: t("costs.description"),
-          participants: t("costs.participants"),
-          all: t("costs.all"),
-          you: t("costs.you"),
-          add: t("costs.add"),
-          error: t("costs.error"),
-          categories: categoryLabels,
-        }}
-      />
+      {canEdit ? (
+        <ExpenseForm
+          client:load
+          tripId={trip.id}
+          members={memberOptions}
+          currentUserId={user.id}
+          labels={{
+            title: t("costs.add.title"),
+            amount: t("costs.amount"),
+            currency: t("costs.currency"),
+            category: t("costs.category"),
+            description: t("costs.description"),
+            participants: t("costs.participants"),
+            all: t("costs.all"),
+            you: t("costs.you"),
+            add: t("costs.add"),
+            error: t("costs.error"),
+            categories: categoryLabels,
+          }}
+        />
+      ) : (
+        <p class="rounded-lg border bg-card p-3 text-sm text-muted-foreground">{t("collab.readonly")}</p>
+      )}
     </section>
 
     {/* Expense list */}

@@ -6,8 +6,9 @@ import DocumentUpload from "../../../../components/documents/DocumentUpload.tsx"
 import DocumentList from "../../../../components/documents/DocumentList.tsx";
 import { getSessionUser } from "../../../../lib/session";
 import { db } from "../../../../lib/db";
-import { and, desc, eq } from "drizzle-orm";
-import { documents, reservations, trips } from "@planned/db";
+import { resolveTripAccess, canEditTrip } from "../../../../lib/trip";
+import { desc, eq } from "drizzle-orm";
+import { documents, reservations } from "@planned/db";
 import { getLangFromUrl, useTranslations } from "../../../../i18n/utils";
 
 const user = await getSessionUser(Astro.locals, Astro.request);
@@ -21,12 +22,11 @@ const t = useTranslations(lang);
 
 const env = Astro.locals.runtime.env;
 const database = db(env);
-const [trip] = await database
-  .select()
-  .from(trips)
-  .where(and(eq(trips.id, id), eq(trips.ownerId, user.id)))
-  .limit(1);
-if (!trip) return Astro.redirect("/app");
+const access = await resolveTripAccess(database, id, user.id);
+if (!access) return Astro.redirect("/app");
+const { trip } = access;
+const role = access.role;
+const canEdit = canEditTrip(role);
 
 const [docRows, resRows] = await Promise.all([
   database.select().from(documents).where(eq(documents.tripId, trip.id)).orderBy(desc(documents.createdAt)).all(),
@@ -100,22 +100,26 @@ const listRows = docRows.map((d) => ({
     <h1 class="mt-6 text-3xl font-bold">{t("docs.heading")}</h1>
 
     <section class="mt-6">
-      <DocumentUpload
-        client:load
-        tripId={trip.id}
-        reservations={attachOptions}
-        labels={{
-          title: t("docs.upload"),
-          file: t("docs.file"),
-          pick: t("docs.pick"),
-          attach: t("docs.attach"),
-          none: t("docs.none"),
-          upload: t("docs.upload.btn"),
-          uploading: t("docs.uploading"),
-          error: t("docs.error"),
-          tooLarge: t("docs.tooLarge"),
-        }}
-      />
+      {canEdit ? (
+        <DocumentUpload
+          client:load
+          tripId={trip.id}
+          reservations={attachOptions}
+          labels={{
+            title: t("docs.upload"),
+            file: t("docs.file"),
+            pick: t("docs.pick"),
+            attach: t("docs.attach"),
+            none: t("docs.none"),
+            upload: t("docs.upload.btn"),
+            uploading: t("docs.uploading"),
+            error: t("docs.error"),
+            tooLarge: t("docs.tooLarge"),
+          }}
+        />
+      ) : (
+        <p class="rounded-lg border bg-card p-3 text-sm text-muted-foreground">{t("collab.readonly")}</p>
+      )}
     </section>
 
     <section class="mt-6">

@@ -4,11 +4,14 @@ import type Stripe from "stripe";
 import { createAuth } from "../lib/auth";
 import { db as getDb } from "../lib/db";
 import { createStripe } from "../lib/stripe";
-import { dayItems, days, documents, expenses, expenseSplits, places, reservations, tripMembers, trips } from "@planned/db";
+import { dayItems, days, documents, expenses, expenseSplits, places, reservations, tripInvitations, tripMembers, trips } from "@planned/db";
 import {
+  canEdit,
+  createInvitationSchema,
   createReservationSchema,
   equalSplit,
   isAllowedUploadType,
+  isInvitationOpen,
   linkDocumentSchema,
   MAX_DOCUMENT_BYTES,
   sortReservations,
@@ -24,7 +27,10 @@ import {
   syncSubscriptionFromStripe,
   upsertCustomerId,
 } from "./billing";
+import { broadcastTripChange } from "./trip-room";
 import type { CloudflareEnv } from "../lib/env";
+
+type TripRole = "owner" | "editor" | "viewer";
 
 /**
  * Per-request Hono app. Mounted from the Astro catch-all at /api/*
@@ -49,6 +55,28 @@ export function createApp(env: CloudflareEnv) {
       .where(and(eq(trips.id, id), eq(trips.ownerId, userId)))
       .limit(1);
     return trip ?? null;
+  }
+
+  /**
+   * Resolve a trip a user can SEE: owner, or an explicit trip_member row
+   * (editor/viewer). Returns the trip + the effective role, or null. Replaces
+   * the old owner-only reads so collaborators can actually open shared trips.
+   */
+  async function getAccessibleTrip(id: string, userId: string) {
+    const [tripRow, memberRow] = await Promise.all([
+      database.select().from(trips).where(eq(trips.id, id)).limit(1),
+      database
+        .select({ role: tripMembers.role })
+        .from(tripMembers)
+        .where(and(eq(tripMembers.tripId, id), eq(tripMembers.userId, userId)))
+        .limit(1),
+    ]);
+    const trip = tripRow[0];
+    if (!trip) return null;
+    const role: TripRole | null =
+      trip.ownerId === userId ? "owner" : (memberRow[0]?.role as TripRole | undefined) ?? null;
+    if (!role) return null;
+    return { trip, role };
   }
 
   /** Idempotent: make sure the trip owner has a trip_member row (role owner). */
@@ -98,13 +126,28 @@ export function createApp(env: CloudflareEnv) {
   app.get("/api/trips", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const owned = await database
-      .select()
-      .from(trips)
-      .where(eq(trips.ownerId, user.id))
-      .orderBy(desc(trips.updatedAt))
-      .all();
-    return c.json(owned);
+    const [owned, memberRows] = await Promise.all([
+      database
+        .select()
+        .from(trips)
+        .where(eq(trips.ownerId, user.id))
+        .orderBy(desc(trips.updatedAt))
+        .all(),
+      database
+        .select({ trip: trips, role: tripMembers.role })
+        .from(tripMembers)
+        .innerJoin(trips, eq(trips.id, tripMembers.tripId))
+        .where(eq(tripMembers.userId, user.id))
+        .all(),
+    ]);
+    const out = [
+      ...owned.map((t) => ({ ...t, role: "owner" as const })),
+      // Skip rows where the user is also the owner (avoid dupes).
+      ...memberRows
+        .filter((r) => r.trip.ownerId !== user.id)
+        .map((r) => ({ ...r.trip, role: r.role as TripRole })),
+    ];
+    return c.json(out);
   });
 
   app.post("/api/trips", async (c) => {
@@ -134,8 +177,9 @@ export function createApp(env: CloudflareEnv) {
   app.get("/api/trips/:id", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const trip = await getOwnedTrip(c.req.param("id"), user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    const { trip } = access;
 
     const [dayRows, placeRows] = await Promise.all([
       database.select().from(days).where(eq(days.tripId, trip.id)).orderBy(asc(days.dateIndex)).all(),
@@ -158,8 +202,10 @@ export function createApp(env: CloudflareEnv) {
   app.post("/api/trips/:id/places", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const trip = await getOwnedTrip(c.req.param("id"), user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    if (!canEdit(access.role)) return c.json({ error: "forbidden" }, 403);
+    const { trip } = access;
 
     const body = await c.req.json().catch(() => ({}));
     const name = typeof body?.name === "string" ? body.name.trim() : "";
@@ -172,6 +218,7 @@ export function createApp(env: CloudflareEnv) {
       .insert(places)
       .values({ tripId: trip.id, name, lat, lng, category: body?.category, address: body?.address })
       .returning();
+    await broadcastTripChange(env, trip.id, "places", user.id);
     return c.json(place, 201);
   });
 
@@ -179,8 +226,10 @@ export function createApp(env: CloudflareEnv) {
   app.post("/api/trips/:id/days", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const trip = await getOwnedTrip(c.req.param("id"), user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    if (!canEdit(access.role)) return c.json({ error: "forbidden" }, 403);
+    const { trip } = access;
 
     const existing = await database
       .select()
@@ -190,6 +239,7 @@ export function createApp(env: CloudflareEnv) {
       .all();
     const nextIndex = (existing[0]?.dateIndex ?? -1) + 1;
     const [day] = await database.insert(days).values({ tripId: trip.id, dateIndex: nextIndex }).returning();
+    await broadcastTripChange(env, trip.id, "plan", user.id);
     return c.json(day, 201);
   });
 
@@ -197,8 +247,10 @@ export function createApp(env: CloudflareEnv) {
   app.post("/api/trips/:id/items", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const trip = await getOwnedTrip(c.req.param("id"), user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    if (!canEdit(access.role)) return c.json({ error: "forbidden" }, 403);
+    const { trip } = access;
 
     const body = await c.req.json().catch(() => ({}));
     const placeId: string | null = typeof body?.placeId === "string" ? body.placeId : null;
@@ -237,21 +289,22 @@ export function createApp(env: CloudflareEnv) {
       .insert(dayItems)
       .values({ dayId: dayRow.id, placeId, note, orderIndex: count })
       .returning();
+    await broadcastTripChange(env, trip.id, "plan", user.id);
     return c.json(item, 201);
   });
 
-  // ── Members (list / add-by-email) ──────────────────────────────────────────
+  // ── Members (list / add / role / remove) ───────────────────────────────────
   app.get("/api/trips/:id/members", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const trip = await getOwnedTrip(c.req.param("id"), user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
-    await ensureOwnerMember(trip.id, trip.ownerId);
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    await ensureOwnerMember(access.trip.id, access.trip.ownerId);
 
     const rows = await database
       .select()
       .from(tripMembers)
-      .where(eq(tripMembers.tripId, trip.id))
+      .where(eq(tripMembers.tripId, access.trip.id))
       .all();
     const users = await fetchUsers(rows.map((m) => m.userId));
     return c.json(
@@ -272,6 +325,8 @@ export function createApp(env: CloudflareEnv) {
 
     const body = await c.req.json().catch(() => ({}));
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    const role: TripRole =
+      body?.role === "viewer" ? "viewer" : body?.role === "owner" ? "owner" : "editor";
     if (!email) return c.json({ error: "email required" }, 400);
 
     const target = await env.DB.prepare('SELECT id FROM "user" WHERE email = ?')
@@ -289,17 +344,227 @@ export function createApp(env: CloudflareEnv) {
 
     const [member] = await database
       .insert(tripMembers)
-      .values({ tripId: trip.id, userId: target.id, role: "editor" })
+      .values({ tripId: trip.id, userId: target.id, role })
       .returning();
+    await broadcastTripChange(env, trip.id, "members", user.id);
     return c.json({ userId: member.userId, role: member.role }, 201);
+  });
+
+  /** Owner changes a member's role (editor ↔ viewer). Owners are immutable. */
+  app.patch("/api/trips/:id/members/:userId", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+    const targetUserId = c.req.param("userId");
+    if (targetUserId === trip.ownerId) return c.json({ error: "cannot_change_owner" }, 400);
+
+    const body = await c.req.json().catch(() => ({}));
+    const role: TripRole | null =
+      body?.role === "editor" ? "editor" : body?.role === "viewer" ? "viewer" : null;
+    if (!role) return c.json({ error: "role required (editor|viewer)" }, 400);
+
+    const [updated] = await database
+      .update(tripMembers)
+      .set({ role })
+      .where(and(eq(tripMembers.tripId, trip.id), eq(tripMembers.userId, targetUserId)))
+      .returning();
+    if (!updated) return c.json({ error: "not found" }, 404);
+    await broadcastTripChange(env, trip.id, "members", user.id);
+    return c.json({ userId: updated.userId, role: updated.role });
+  });
+
+  /** Owner removes a member (cannot remove the owner / themselves as owner). */
+  app.delete("/api/trips/:id/members/:userId", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+    const targetUserId = c.req.param("userId");
+    if (targetUserId === trip.ownerId) return c.json({ error: "cannot_remove_owner" }, 400);
+
+    await database
+      .delete(tripMembers)
+      .where(and(eq(tripMembers.tripId, trip.id), eq(tripMembers.userId, targetUserId)));
+    await broadcastTripChange(env, trip.id, "members", user.id);
+    return c.json({ ok: true });
+  });
+
+  // ── Invitations (owner: create / list / revoke; anyone authed: accept) ────
+  app.post("/api/trips/:id/invitations", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = createInvitationSchema.safeParse(body);
+    if (!parsed.success) return c.json({ error: "invalid", issues: parsed.error.flatten() }, 400);
+
+    const token = crypto.randomUUID();
+    const now = Date.now();
+    const expiresAt = parsed.data.expiresInDays
+      ? now + parsed.data.expiresInDays * 24 * 60 * 60 * 1000
+      : null;
+    const [inv] = await database
+      .insert(tripInvitations)
+      .values({
+        tripId: trip.id,
+        token,
+        role: parsed.data.role,
+        createdBy: user.id,
+        expiresAt,
+        maxUses: parsed.data.maxUses ?? null,
+      })
+      .returning();
+    return c.json(
+      {
+        id: inv.id,
+        token: inv.token,
+        url: `${env.APP_URL}/invite/${inv.token}`,
+        role: inv.role,
+        expiresAt: inv.expiresAt,
+        maxUses: inv.maxUses,
+      },
+      201,
+    );
+  });
+
+  app.get("/api/trips/:id/invitations", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+    const rows = await database
+      .select()
+      .from(tripInvitations)
+      .where(eq(tripInvitations.tripId, trip.id))
+      .orderBy(desc(tripInvitations.createdAt))
+      .all();
+    const now = Date.now();
+    return c.json(
+      rows.map((i) => ({
+        id: i.id,
+        token: i.token,
+        url: `${env.APP_URL}/invite/${i.token}`,
+        role: i.role,
+        createdAt: i.createdAt,
+        expiresAt: i.expiresAt,
+        maxUses: i.maxUses,
+        useCount: i.useCount,
+        revokedAt: i.revokedAt,
+        open: isInvitationOpen({
+          revokedAt: i.revokedAt,
+          expiresAt: i.expiresAt,
+          maxUses: i.maxUses,
+          useCount: i.useCount,
+          now,
+        }),
+      })),
+    );
+  });
+
+  /** Revoke an invitation (owner only). */
+  app.delete("/api/invitations/:invId", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const invId = c.req.param("invId");
+    const [inv] = await database
+      .select({ tripId: tripInvitations.tripId })
+      .from(tripInvitations)
+      .where(eq(tripInvitations.id, invId))
+      .limit(1);
+    if (!inv) return c.json({ error: "not found" }, 404);
+    const trip = await getOwnedTrip(inv.tripId, user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+    await database
+      .update(tripInvitations)
+      .set({ revokedAt: Date.now() })
+      .where(eq(tripInvitations.id, invId));
+    return c.json({ ok: true });
+  });
+
+  /** Accept an invitation (authenticated). Adds/upgrades the caller's membership. */
+  app.post("/api/invitations/:token/accept", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const token = c.req.param("token");
+    const [inv] = await database
+      .select()
+      .from(tripInvitations)
+      .where(eq(tripInvitations.token, token))
+      .limit(1);
+    if (!inv || inv.revokedAt != null) return c.json({ error: "invalid_or_revoked" }, 410);
+    const now = Date.now();
+    if (inv.expiresAt != null && inv.expiresAt <= now) return c.json({ error: "expired" }, 410);
+    if (inv.maxUses != null && inv.useCount >= inv.maxUses)
+      return c.json({ error: "exhausted" }, 410);
+
+    // Don't demote an owner; otherwise add or upgrade to the invitation's role.
+    const [tripRow] = await database
+      .select({ ownerId: trips.ownerId })
+      .from(trips)
+      .where(eq(trips.id, inv.tripId))
+      .limit(1);
+    if (!tripRow) return c.json({ error: "not found" }, 404);
+    if (tripRow.ownerId !== user.id) {
+      const [existing] = await database
+        .select()
+        .from(tripMembers)
+        .where(and(eq(tripMembers.tripId, inv.tripId), eq(tripMembers.userId, user.id)))
+        .limit(1);
+      // editor outranks viewer: only upgrade, never downgrade an existing role.
+      const role: TripRole =
+        existing && existing.role === "editor" ? "editor" : (inv.role as TripRole);
+      if (existing) {
+        await database
+          .update(tripMembers)
+          .set({ role })
+          .where(eq(tripMembers.id, existing.id));
+      } else {
+        await database
+          .insert(tripMembers)
+          .values({ tripId: inv.tripId, userId: user.id, role });
+      }
+    }
+    await database
+      .update(tripInvitations)
+      .set({ useCount: inv.useCount + 1 })
+      .where(eq(tripInvitations.id, inv.id));
+    await broadcastTripChange(env, inv.tripId, "members", user.id);
+    return c.json({ tripId: inv.tripId, role: inv.role });
+  });
+
+  // ── Realtime: WebSocket upgrade for a trip room ───────────────────────────
+  // Browser opens `new WebSocket('/api/trips/:id/sync')`. Same-origin cookies
+  // authenticate the handshake; access is resolved the same way as reads. The
+  // resolved presence is forwarded to the DO via x-trip-user.
+  app.get("/api/trips/:id/sync", async (c) => {
+    const upgrade = c.req.header("upgrade") ?? "";
+    if (!upgrade.toLowerCase().includes("websocket"))
+      return c.json({ error: "ws_required" }, 400);
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    if (!env.TRIP_ROOM) return c.json({ error: "realtime_unavailable" }, 503);
+
+    const headers = new Headers(c.req.raw.headers);
+    headers.set(
+      "x-trip-user",
+      JSON.stringify({ userId: user.id, name: user.name ?? null, role: access.role }),
+    );
+    const id = env.TRIP_ROOM.idFromName(access.trip.id);
+    return env.TRIP_ROOM.get(id).fetch(new Request(c.req.raw.url, { headers }));
   });
 
   // ── Expenses (list / create / delete) ──────────────────────────────────────
   app.get("/api/trips/:id/expenses", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const trip = await getOwnedTrip(c.req.param("id"), user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    const { trip } = access;
 
     const expenseRows = await database
       .select()
@@ -331,8 +596,10 @@ export function createApp(env: CloudflareEnv) {
   app.post("/api/trips/:id/expenses", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const trip = await getOwnedTrip(c.req.param("id"), user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    if (!canEdit(access.role)) return c.json({ error: "forbidden" }, 403);
+    const { trip } = access;
     await ensureOwnerMember(trip.id, trip.ownerId);
 
     const body = await c.req.json().catch(() => ({}));
@@ -371,6 +638,7 @@ export function createApp(env: CloudflareEnv) {
         .insert(expenseSplits)
         .values(splits.map((s) => ({ expenseId: expense.id, userId: s.userId, shareCents: s.shareCents })));
     }
+    await broadcastTripChange(env, trip.id, "expenses", user.id);
     return c.json({ ...expense, splits }, 201);
   });
 
@@ -379,18 +647,20 @@ export function createApp(env: CloudflareEnv) {
     if (!user) return c.json({ error: "unauthorized" }, 401);
     const expenseId = c.req.param("expenseId");
 
-    // Ownership check via the expense's trip.
+    // Access check via the expense's trip (editor+ may delete).
     const [row] = await database
       .select({ tripId: expenses.tripId })
       .from(expenses)
       .where(eq(expenses.id, expenseId))
       .limit(1);
     if (!row) return c.json({ error: "not found" }, 404);
-    const trip = await getOwnedTrip(row.tripId, user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(row.tripId, user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    if (!canEdit(access.role)) return c.json({ error: "forbidden" }, 403);
 
     await database.delete(expenseSplits).where(eq(expenseSplits.expenseId, expenseId));
     await database.delete(expenses).where(eq(expenses.id, expenseId));
+    await broadcastTripChange(env, access.trip.id, "expenses", user.id);
     return c.json({ ok: true });
   });
 
@@ -398,17 +668,19 @@ export function createApp(env: CloudflareEnv) {
   app.get("/api/trips/:id/reservations", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const trip = await getOwnedTrip(c.req.param("id"), user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
-    const rows = await database.select().from(reservations).where(eq(reservations.tripId, trip.id)).all();
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    const rows = await database.select().from(reservations).where(eq(reservations.tripId, access.trip.id)).all();
     return c.json(sortReservations(rows));
   });
 
   app.post("/api/trips/:id/reservations", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const trip = await getOwnedTrip(c.req.param("id"), user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    if (!canEdit(access.role)) return c.json({ error: "forbidden" }, 403);
+    const { trip } = access;
 
     const body = await c.req.json().catch(() => ({}));
     const parsed = createReservationSchema.safeParse(body);
@@ -421,6 +693,7 @@ export function createApp(env: CloudflareEnv) {
       .insert(reservations)
       .values({ tripId: trip.id, ...parsed.data })
       .returning();
+    await broadcastTripChange(env, trip.id, "reservations", user.id);
     return c.json(created, 201);
   });
 
@@ -430,8 +703,9 @@ export function createApp(env: CloudflareEnv) {
     const resId = c.req.param("resId");
     const [row] = await database.select({ tripId: reservations.tripId }).from(reservations).where(eq(reservations.id, resId)).limit(1);
     if (!row) return c.json({ error: "not found" }, 404);
-    const trip = await getOwnedTrip(row.tripId, user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(row.tripId, user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    if (!canEdit(access.role)) return c.json({ error: "forbidden" }, 403);
 
     const body = await c.req.json().catch(() => ({}));
     const parsed = updateReservationSchema.safeParse(body);
@@ -445,6 +719,7 @@ export function createApp(env: CloudflareEnv) {
       .set(parsed.data)
       .where(eq(reservations.id, resId))
       .returning();
+    await broadcastTripChange(env, access.trip.id, "reservations", user.id);
     return c.json(updated);
   });
 
@@ -454,12 +729,14 @@ export function createApp(env: CloudflareEnv) {
     const resId = c.req.param("resId");
     const [row] = await database.select({ tripId: reservations.tripId }).from(reservations).where(eq(reservations.id, resId)).limit(1);
     if (!row) return c.json({ error: "not found" }, 404);
-    const trip = await getOwnedTrip(row.tripId, user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(row.tripId, user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    if (!canEdit(access.role)) return c.json({ error: "forbidden" }, 403);
 
     // Null out any linked documents first (document.reservation_id FK → reservation).
     await database.update(documents).set({ reservationId: null }).where(eq(documents.reservationId, resId));
     await database.delete(reservations).where(eq(reservations.id, resId));
+    await broadcastTripChange(env, access.trip.id, "reservations", user.id);
     return c.json({ ok: true });
   });
 
@@ -467,12 +744,12 @@ export function createApp(env: CloudflareEnv) {
   app.get("/api/trips/:id/documents", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const trip = await getOwnedTrip(c.req.param("id"), user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
     const rows = await database
       .select()
       .from(documents)
-      .where(eq(documents.tripId, trip.id))
+      .where(eq(documents.tripId, access.trip.id))
       .orderBy(desc(documents.createdAt))
       .all();
     return c.json(rows);
@@ -481,8 +758,10 @@ export function createApp(env: CloudflareEnv) {
   app.post("/api/trips/:id/documents", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const trip = await getOwnedTrip(c.req.param("id"), user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    if (!canEdit(access.role)) return c.json({ error: "forbidden" }, 403);
+    const { trip } = access;
 
     const form = await c.req.raw.formData();
     const file = form.get("file");
@@ -527,6 +806,7 @@ export function createApp(env: CloudflareEnv) {
         sizeBytes: file.size,
       })
       .returning();
+    await broadcastTripChange(env, trip.id, "documents", user.id);
     return c.json(doc, 201);
   });
 
@@ -537,8 +817,9 @@ export function createApp(env: CloudflareEnv) {
     const docId = c.req.param("docId");
     const [doc] = await database.select({ tripId: documents.tripId }).from(documents).where(eq(documents.id, docId)).limit(1);
     if (!doc) return c.json({ error: "not found" }, 404);
-    const trip = await getOwnedTrip(doc.tripId, user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(doc.tripId, user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    if (!canEdit(access.role)) return c.json({ error: "forbidden" }, 403);
 
     const body = await c.req.json().catch(() => ({}));
     const parsed = linkDocumentSchema.safeParse(body);
@@ -547,7 +828,7 @@ export function createApp(env: CloudflareEnv) {
       const [r] = await database
         .select({ id: reservations.id })
         .from(reservations)
-        .where(and(eq(reservations.id, parsed.data.reservationId), eq(reservations.tripId, trip.id)))
+        .where(and(eq(reservations.id, parsed.data.reservationId), eq(reservations.tripId, access.trip.id)))
         .limit(1);
       if (!r) return c.json({ error: "reservation not found" }, 404);
     }
@@ -557,6 +838,7 @@ export function createApp(env: CloudflareEnv) {
       .set({ reservationId: parsed.data.reservationId })
       .where(eq(documents.id, docId))
       .returning();
+    await broadcastTripChange(env, access.trip.id, "documents", user.id);
     return c.json(updated);
   });
 
@@ -565,8 +847,8 @@ export function createApp(env: CloudflareEnv) {
     if (!user) return c.json({ error: "unauthorized" }, 401);
     const [doc] = await database.select().from(documents).where(eq(documents.id, c.req.param("docId"))).limit(1);
     if (!doc) return c.json({ error: "not found" }, 404);
-    const trip = await getOwnedTrip(doc.tripId, user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(doc.tripId, user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
 
     const obj = await env.MEDIA.get(doc.r2Key);
     if (!obj) return c.json({ error: "not found" }, 404);
@@ -588,11 +870,13 @@ export function createApp(env: CloudflareEnv) {
     const docId = c.req.param("docId");
     const [doc] = await database.select({ tripId: documents.tripId, r2Key: documents.r2Key }).from(documents).where(eq(documents.id, docId)).limit(1);
     if (!doc) return c.json({ error: "not found" }, 404);
-    const trip = await getOwnedTrip(doc.tripId, user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(doc.tripId, user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    if (!canEdit(access.role)) return c.json({ error: "forbidden" }, 403);
 
     await env.MEDIA.delete(doc.r2Key);
     await database.delete(documents).where(eq(documents.id, docId));
+    await broadcastTripChange(env, access.trip.id, "documents", user.id);
     return c.json({ ok: true });
   });
 
@@ -600,8 +884,9 @@ export function createApp(env: CloudflareEnv) {
   app.get("/api/trips/:id/export.pdf", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
-    const trip = await getOwnedTrip(c.req.param("id"), user.id);
-    if (!trip) return c.json({ error: "not found" }, 404);
+    const access = await getAccessibleTrip(c.req.param("id"), user.id);
+    if (!access) return c.json({ error: "not found" }, 404);
+    const { trip } = access;
 
     // Exports are a Pro feature (monetization decision: quota gates exports).
     const sub = await getOrCreateSubscription(database, user.id);

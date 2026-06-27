@@ -74,12 +74,13 @@
   // the full target architecture is visible. (Uncommenting before the code
   // exists will make `wrangler dev`/`deploy` fail with "class/handler not found".)
   // ───────────────────────────────────────────────────────────────────────────
-  //
-  // // Realtime collaboration — one Durable Object per trip (src/workers/trip-room.ts)
-  // "durable_objects": {
-  //   "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }]
-  // },
-  // "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TripRoom"] }],
+
+  // Realtime collaboration — one Durable Object per trip (src/server/trip-room.ts).
+  // The TripRoom class is exported from src/worker.ts (the custom worker entry).
+  "durable_objects": {
+    "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TripRoom"] }],
   //
   // // Background jobs
   // "queues": {
