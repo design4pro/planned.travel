@@ -114,10 +114,11 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - [x] Hono API mount — typed `/api/*` (Better Auth at `/api/auth/*`, `/api/health`, auth-gated **trips CRUD** over D1/Drizzle); Astro build verified
 - [x] shadcn/ui baseline — `components.json`, `cn()`, `Button`, demo island; semantic tokens mapped to brand palette; `@/` alias
 - [x] i18n (PL+EN) — Astro i18n routing + typed message catalog (`/` = EN, `/pl` = PL); Paraglide-ready key structure
-- [x] **Provisioned** D1/KV(×2)/R2/Vectorize, IDs pasted into `wrangler.jsonc`; `pnpm db:migrate:local` + `pnpm --filter @planned/web dev` verified (`/api/health` returns `bindings:{db,ai,vectorize:true}`). *(Remote D1 not yet migrated — run `pnpm db:migrate` before first deploy.)*
-- [x] Better Auth CLI migration generated (`@better-auth/cli` via `auth.cli.ts` introspection instance → drizzle-kit `0001_better_auth.sql`) and applied to local D1
-- [ ] Stripe + Email Workers bindings; CI via Workers Builds on `main` (per-branch previews)
-- [ ] `git push -u origin main`
+- [x] **Provisioned** D1/KV(×2)/R2/Vectorize on DESIGN4PRO, IDs pasted into `wrangler.jsonc`; migrations applied to **local + remote** D1; `pnpm --filter @planned/web dev` verified (`/api/health` → `bindings:{db,ai,vectorize:true}`)
+- [x] Better Auth CLI migration generated (`@better-auth/cli` via `auth.cli.ts` introspection instance → drizzle-kit `0001_better_auth.sql`) and applied to local + remote D1
+- [x] `git push -u origin main` (all commits pushed; tracking set)
+- [x] First deploy → `https://planned-travel-web.design4pro.workers.dev` (`.assetsignore` excludes `_worker.js/` from static assets; `BETTER_AUTH_SECRET` set; live signup → remote D1 verified)
+- [ ] **Remaining:** CI via Workers Builds on `main` (connect repo in CF dashboard, build cmd `pnpm --filter @planned/web run deploy`); `STRIPE_SECRET_KEY` secret (user-provided); `STRIPE_WEBHOOK_SECRET` + Email Workers bindings land with Phase 1 billing/notifications; `APP_URL` → custom domain `planned.travel` when wired
 
 ### Phase 1 — Core MVP (consumer)
 - [x] Auth UI — login/signup (email + social Google/Apple), session gating on `/app`, sign-out (Better Auth React client)
