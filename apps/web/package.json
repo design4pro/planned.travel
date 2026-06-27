@@ -31,10 +31,10 @@
     "maplibre-gl": "^5.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "stripe": "^22.3.0",
     "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
-    "@better-auth/cli": "^1.4.21",
     "@cloudflare/workers-types": "^4.20250101.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/react": "^19.0.0",

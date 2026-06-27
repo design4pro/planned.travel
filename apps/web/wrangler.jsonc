@@ -31,7 +31,10 @@
   },
 
   "vars": {
-    "APP_URL": "http://localhost:4321"
+    "APP_URL": "http://localhost:4321",
+    // Stripe Pro price IDs (test mode). Non-secret — client-visible in Checkout.
+    "STRIPE_PRICE_PRO_MONTHLY": "price_1TmvnDK3rdrulsRy6Bjrf9Bn",
+    "STRIPE_PRICE_PRO_ANNUAL": "price_1TmvnFK3rdrulsRyn7E89Ek5"
   },
 
   // ── Core resource bindings (fill IDs after provisioning) ───────────────────

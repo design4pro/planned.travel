@@ -1,0 +1,92 @@
+---
+import Layout from "../layouts/Layout.astro";
+import BillingButtons from "./billing/BillingButtons.tsx";
+import { getSessionUser } from "../lib/session";
+import { db } from "../lib/db";
+import { getOrCreateSubscription, isActivePro } from "../server/billing";
+import { useTranslations, localizePath } from "../i18n/utils";
+import { type Lang } from "../i18n/ui";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+// Pricing is public; show upgrade CTAs if signed in, else a sign-in link.
+const user = await getSessionUser(Astro.locals, Astro.request);
+let mode: "free" | "pro" = "free";
+if (user) {
+  const database = db(Astro.locals.runtime.env);
+  const sub = await getOrCreateSubscription(database, user.id);
+  mode = isActivePro(sub) ? "pro" : "free";
+}
+const signinHref = localizePath("/login", lang);
+const accountHref = "/app/account";
+---
+
+<Layout title={`planned.travel — ${t("pricing.title")}`}>
+  <main class="mx-auto max-w-4xl px-6 py-12">
+    <header class="mb-10">
+      <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">planned.travel</p>
+      <h1 class="mt-2 text-4xl font-bold" style="font-family: var(--font-display)">
+        {t("pricing.title")}
+      </h1>
+    </header>
+
+    <section class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+      {/* Free */}
+      <div class="rounded-lg border bg-card p-6 shadow-card">
+        <h2 class="text-lg font-semibold">{t("pricing.free.name")}</h2>
+        <p class="mt-1 text-sm text-muted-foreground">{t("pricing.free.tagline")}</p>
+        <p class="mt-4 text-3xl font-bold">{t("pricing.free.name")}</p>
+        <ul class="mt-4 space-y-1 text-sm">
+          <li>· {t("pricing.free.f1")}</li>
+          <li>· {t("pricing.free.f2")}</li>
+        </ul>
+      </div>
+
+      {/* Pro */}
+      <div class="relative rounded-lg border-2 border-primary bg-card p-6 shadow-card">
+        <h2 class="text-lg font-semibold">{t("pricing.pro.name")}</h2>
+        <p class="mt-1 text-sm text-muted-foreground">{t("pricing.pro.tagline")}</p>
+        <div class="mt-4 flex items-baseline gap-3">
+          <span class="text-3xl font-bold">{t("pricing.monthly")}</span>
+          <span class="text-sm text-muted-foreground">· {t("pricing.yearly")}</span>
+        </div>
+        <ul class="mt-4 space-y-1 text-sm">
+          <li>· {t("pricing.pro.f1")}</li>
+          <li>· {t("pricing.pro.f2")}</li>
+        </ul>
+
+        <div class="mt-6">
+          {user ? (
+            mode === "pro" ? (
+              <a href={accountHref} class="text-sm font-medium text-primary hover:underline">
+                {t("pricing.currentPlan")} →
+              </a>
+            ) : (
+              <BillingButtons
+                client:load
+                mode="free"
+                labels={{
+                  upgradeMonthly: t("pricing.upgradeMonthly"),
+                  upgradeYearly: t("pricing.upgradeYearly"),
+                  manage: t("account.manage"),
+                  error: t("billing.error"),
+                }}
+              />
+            )
+          ) : (
+            <a
+              href={signinHref}
+              class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              {t("pricing.signinToUpgrade")}
+            </a>
+          )}
+        </div>
+      </div>
+    </section>
+  </main>
+</Layout>

@@ -118,7 +118,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - [x] Better Auth CLI migration generated (`@better-auth/cli` via `auth.cli.ts` introspection instance → drizzle-kit `0001_better_auth.sql`) and applied to local + remote D1
 - [x] `git push -u origin main` (all commits pushed; tracking set)
 - [x] First deploy → `https://planned-travel-web.design4pro.workers.dev` (`.assetsignore` excludes `_worker.js/` from static assets; `BETTER_AUTH_SECRET` set; live signup → remote D1 verified)
-- [ ] **Remaining:** CI via Workers Builds on `main` (connect repo in CF dashboard, build cmd `pnpm --filter @planned/web run deploy`); `STRIPE_SECRET_KEY` secret (user-provided); `STRIPE_WEBHOOK_SECRET` + Email Workers bindings land with Phase 1 billing/notifications; `APP_URL` → custom domain `planned.travel` when wired
+- [ ] **Remaining:** CI via Workers Builds on `main` (connect repo in CF dashboard, build cmd `pnpm --filter @planned/web run deploy`); Email Workers bindings land with Phase 1 notifications; `APP_URL` → custom domain `planned.travel` when wired
 
 ### Phase 1 — Core MVP (consumer)
 - [x] Auth UI — login/signup (email + social Google/Apple), session gating on `/app`, sign-out (Better Auth React client)
@@ -129,7 +129,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - [x] Costs / expense splitting (multi-currency)
 - [ ] Real-time collaboration (DO + Hibernation WS); invite links; roles
 - [ ] Notifications (email); in-app center
-- [ ] Stripe billing (Free/Pro)
+- [x] Stripe billing (Free/Pro) — Checkout + Customer Portal + signature-verified webhook → subscription state; 3-trip Free quota (test mode, Product + 2 Prices created, webhook live). **Follow-up:** Customer Portal dashboard config, rotate `sk_test_` → restricted `rk_` key, set `APP_URL` to prod domain before going live
 
 ### Phase 2 — AI-native differentiators
 - [ ] Workers AI + AI Gateway + Vectorize wiring

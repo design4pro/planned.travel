@@ -32,7 +32,12 @@ const myTrips = await database
         </p>
         <h1 class="text-2xl font-bold">{user.email}</h1>
       </div>
-      <SignOutButton client:load label={t("nav.signout")} />
+      <div class="flex items-center gap-4">
+        <a href="/app/account" class="text-sm font-medium text-primary hover:underline">
+          {t("account.title")}
+        </a>
+        <SignOutButton client:load label={t("nav.signout")} />
+      </div>
     </header>
 
     <section class="mt-10">
@@ -42,6 +47,9 @@ const myTrips = await database
         label={t("trips.create.label")}
         placeholder={t("trips.create.placeholder")}
         btn={t("trips.create.btn")}
+        quotaError={t("billing.quota").replace("{limit}", "3")}
+        upgradeLabel={t("billing.upgrade")}
+        pricingHref="/pricing"
       />
 
       {

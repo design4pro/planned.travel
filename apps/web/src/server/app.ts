@@ -1,9 +1,19 @@
 import { Hono } from "hono";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import type Stripe from "stripe";
 import { createAuth } from "../lib/auth";
 import { db as getDb } from "../lib/db";
+import { createStripe } from "../lib/stripe";
 import { dayItems, days, expenses, expenseSplits, places, tripMembers, trips } from "@planned/db";
 import { equalSplit } from "@planned/shared";
+import {
+  FREE_TRIP_LIMIT,
+  getOrCreateSubscription,
+  isActivePro,
+  priceIntervalFromEnv,
+  syncSubscriptionFromStripe,
+  upsertCustomerId,
+} from "./billing";
 import type { CloudflareEnv } from "../lib/env";
 
 type Database = ReturnType<typeof getDb>;
@@ -17,6 +27,7 @@ export function createApp(env: CloudflareEnv) {
   const app = new Hono();
   const auth = createAuth(env);
   const database = getDb(env);
+  const stripe = createStripe(env);
 
   async function getUser(req: Request) {
     const session = await auth.api.getSession({ headers: req.headers });
@@ -94,6 +105,15 @@ export function createApp(env: CloudflareEnv) {
     const body = await c.req.json().catch(() => null);
     const title = typeof body?.title === "string" ? body.title.trim() : "";
     if (!title) return c.json({ error: "title required" }, 400);
+
+    // Free-tier quota: max FREE_TRIP_LIMIT trips unless on an active Pro plan.
+    const sub = await getOrCreateSubscription(database, user.id);
+    if (!isActivePro(sub)) {
+      const ownedCount = (await database.select().from(trips).where(eq(trips.ownerId, user.id)).all()).length;
+      if (ownedCount >= FREE_TRIP_LIMIT)
+        return c.json({ error: "plan_limit", limit: FREE_TRIP_LIMIT }, 402);
+    }
+
     const [created] = await database
       .insert(trips)
       .values({ ownerId: user.id, title })
@@ -364,6 +384,106 @@ export function createApp(env: CloudflareEnv) {
     await database.delete(expenseSplits).where(eq(expenseSplits.expenseId, expenseId));
     await database.delete(expenses).where(eq(expenses.id, expenseId));
     return c.json({ ok: true });
+  });
+
+  // ── Billing (plan / checkout / portal) ─────────────────────────────────────
+  app.get("/api/billing/plan", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const row = await getOrCreateSubscription(database, user.id);
+    const tripCount = (
+      await database.select().from(trips).where(eq(trips.ownerId, user.id)).all()
+    ).length;
+    const pro = isActivePro(row);
+    return c.json({
+      plan: row.plan,
+      status: row.status,
+      interval: row.interval,
+      cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+      currentPeriodEnd: row.currentPeriodEnd,
+      stripeCustomerId: row.stripeCustomerId,
+      tripCount,
+      tripLimit: pro ? null : FREE_TRIP_LIMIT,
+    });
+  });
+
+  app.post("/api/billing/checkout", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const body = await c.req.json().catch(() => ({}));
+    const interval = body?.interval === "year" ? "year" : "month";
+    const priceId = interval === "year" ? env.STRIPE_PRICE_PRO_ANNUAL : env.STRIPE_PRICE_PRO_MONTHLY;
+    if (!priceId || !priceId.startsWith("price_"))
+      return c.json({ error: "billing_not_configured" }, 500);
+
+    const row = await getOrCreateSubscription(database, user.id);
+    const params: Stripe.Checkout.SessionCreateParams = {
+      mode: "subscription",
+      // No payment_method_types — Stripe uses dynamic payment methods.
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${env.APP_URL}/app/account?checkout=success`,
+      cancel_url: `${env.APP_URL}/pricing?checkout=cancel`,
+      client_reference_id: user.id,
+      metadata: { userId: user.id },
+      subscription_data: { metadata: { userId: user.id } },
+    };
+    if (row.stripeCustomerId) params.customer = row.stripeCustomerId;
+    else params.customer_email = user.email;
+
+    const session = await stripe.checkout.sessions.create(params);
+    return c.json({ url: session.url });
+  });
+
+  app.post("/api/billing/portal", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const row = await getOrCreateSubscription(database, user.id);
+    if (!row.stripeCustomerId) return c.json({ error: "no_customer" }, 400);
+    const session = await stripe.billingPortal.sessions.create({
+      customer: row.stripeCustomerId,
+      return_url: `${env.APP_URL}/app/account`,
+    });
+    return c.json({ url: session.url });
+  });
+
+  // ── Stripe webhook (public — no session) ──────────────────────────────────
+  app.post("/api/webhooks/stripe", async (c) => {
+    const sig = c.req.header("stripe-signature");
+    if (!sig || !env.STRIPE_WEBHOOK_SECRET) return c.json({ error: "missing" }, 400);
+    const rawBody = await c.req.raw.text();
+    let event: Stripe.Event;
+    try {
+      event = await stripe.webhooks.constructEventAsync(rawBody, sig, env.STRIPE_WEBHOOK_SECRET);
+    } catch {
+      return c.json({ error: "invalid_signature" }, 400);
+    }
+
+    // Idempotency: Stripe may redeliver. Dedup on event.id via KV (30-day TTL).
+    const dedupKey = `stripe_evt:${event.id}`;
+    if (await env.KV.get(dedupKey)) return c.json({ received: true, duplicate: true });
+    await env.KV.put(dedupKey, "1", { expirationTtl: 60 * 60 * 24 * 30 });
+
+    const priceToInterval = priceIntervalFromEnv(env);
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = session.metadata?.userId ?? session.client_reference_id ?? null;
+        if (userId && typeof session.customer === "string") {
+          await upsertCustomerId(database, userId, session.customer);
+        }
+        break;
+      }
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription;
+        await syncSubscriptionFromStripe(database, sub, priceToInterval);
+        break;
+      }
+      default:
+        break;
+    }
+    return c.json({ received: true });
   });
 
   return app;

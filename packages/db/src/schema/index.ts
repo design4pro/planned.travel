@@ -150,6 +150,28 @@ export const notifications = sqliteTable("notification", {
   createdAt: now(),
 });
 
+/* ------------------------------ Billing ---------------------------------- */
+
+// One row per better_auth user (1:1 via userId). Created lazily with plan=free
+// on first contact; flipped by Stripe webhook events. Owns stripeCustomerId so
+// the same Customer is reused across Checkout sessions + Customer Portal.
+export const subscriptions = sqliteTable("subscription", {
+  id: id(),
+  userId: text("user_id").notNull().unique(), // -> better_auth user.id
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  priceId: text("price_id"),
+  plan: text("plan", { enum: ["free", "pro"] }).notNull().default("free"),
+  status: text("status", { enum: ["active", "trialing", "past_due", "canceled", "incomplete"] })
+    .notNull()
+    .default("active"),
+  interval: text("interval", { enum: ["month", "year"] }),
+  currentPeriodEnd: integer("current_period_end"), // epoch-ms
+  cancelAtPeriodEnd: integer("cancel_at_period_end", { mode: "boolean" }).default(false),
+  createdAt: now(),
+  updatedAt: integer("updated_at").notNull().$defaultFn(() => Date.now()),
+});
+
 export const schema = {
   trips,
   tripMembers,
@@ -161,6 +183,7 @@ export const schema = {
   expenseSplits,
   documents,
   notifications,
+  subscriptions,
 };
 
 export type Schema = typeof schema;

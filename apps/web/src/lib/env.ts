@@ -37,6 +37,10 @@ export interface CloudflareEnv {
   APPLE_CLIENT_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
+
+  // Stripe billing (non-secret Pro price IDs — from `vars`, test vs live differ)
+  STRIPE_PRICE_PRO_MONTHLY: string;
+  STRIPE_PRICE_PRO_ANNUAL: string;
 }
 
 export type Runtime = {

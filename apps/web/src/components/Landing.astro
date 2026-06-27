@@ -22,7 +22,13 @@ const stack = [
 
 <Layout title="planned.travel — AI-native collaborative travel planning">
   <nav class="mx-auto flex max-w-5xl items-center justify-between px-6 pt-6 text-sm">
-    <a href="/login" class="font-medium hover:text-primary">{t("nav.signin")}</a>
+    <div class="flex items-center gap-4">
+      <a href={localizePath("/", lang)} class="font-semibold">planned.travel</a>
+      <a href={localizePath("/pricing", lang)} class="text-muted-foreground hover:text-primary">
+        {t("pricing.title")}
+      </a>
+      <a href="/login" class="font-medium hover:text-primary">{t("nav.signin")}</a>
+    </div>
     <div class="flex gap-1" aria-label={t("lang.switch")}>
       {
         (Object.entries(languages) as [Lang, string][]).map(([code, label]) => (

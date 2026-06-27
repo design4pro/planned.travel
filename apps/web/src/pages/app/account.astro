@@ -1,0 +1,90 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import SignOutButton from "../../components/auth/SignOutButton.tsx";
+import BillingButtons from "../../components/billing/BillingButtons.tsx";
+import { getSessionUser } from "../../lib/session";
+import { db } from "../../lib/db";
+import { eq } from "drizzle-orm";
+import { trips } from "@planned/db";
+import { getOrCreateSubscription, isActivePro } from "../../server/billing";
+import { getLangFromUrl, useTranslations } from "../../i18n/utils";
+
+const user = await getSessionUser(Astro.locals, Astro.request);
+if (!user) return Astro.redirect("/login");
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+const database = db(Astro.locals.runtime.env);
+const [sub, myTrips] = await Promise.all([
+  getOrCreateSubscription(database, user.id),
+  database.select().from(trips).where(eq(trips.ownerId, user.id)).all(),
+]);
+const pro = isActivePro(sub);
+const tripCount = myTrips.length;
+const locale = lang === "pl" ? "pl-PL" : "en-US";
+
+const renewalLabel = sub.currentPeriodEnd
+  ? (sub.cancelAtPeriodEnd ? t("account.cancels") : t("account.renews")).replace(
+      "{date}",
+      new Date(sub.currentPeriodEnd).toLocaleDateString(locale),
+    )
+  : null;
+---
+
+<Layout title={`planned.travel — ${t("account.title")}`}>
+  <main class="mx-auto max-w-2xl px-6 py-12">
+    <div class="flex items-center justify-between">
+      <a href="/app" class="text-sm text-muted-foreground hover:text-primary">← {user.email}</a>
+      <SignOutButton client:load label={t("nav.signout")} />
+    </div>
+
+    <h1 class="mt-4 text-3xl font-bold">{t("account.title")}</h1>
+
+    <section class="mt-8 space-y-6">
+      {/* Plan */}
+      <div class="rounded-lg border bg-card p-5 shadow-card">
+        <p class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {t("account.plan")}
+        </p>
+        <p class="mt-1 text-xl font-bold">
+          {pro ? t("pricing.pro.name") : t("pricing.free.name")}
+        </p>
+        {pro && renewalLabel && (
+          <p class="mt-1 text-sm text-muted-foreground">{renewalLabel}</p>
+        )}
+        {pro && <p class="mt-1 text-sm text-brand-600">{t("account.thanks")}</p>}
+
+        <div class="mt-4">
+          <BillingButtons
+            client:load
+            mode={pro ? "pro" : "free"}
+            labels={{
+              upgradeMonthly: t("pricing.upgradeMonthly"),
+              upgradeYearly: t("pricing.upgradeYearly"),
+              manage: t("account.manage"),
+              error: t("billing.error"),
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Trip usage */}
+      <div class="rounded-lg border bg-card p-5 shadow-card">
+        <p class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {t("account.trips")}
+        </p>
+        <p class="mt-1 text-xl font-bold">
+          {pro
+            ? t("account.unlimited")
+            : t("account.usage").replace("{used}", String(tripCount)).replace("{limit}", String(3))}
+        </p>
+        {!pro && tripCount >= 3 && (
+          <a href="/pricing" class="mt-2 inline-block text-sm font-medium text-primary hover:underline">
+            {t("billing.upgrade")} →
+          </a>
+        )}
+      </div>
+    </section>
+  </main>
+</Layout>
