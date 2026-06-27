@@ -31,7 +31,9 @@
   },
 
   "vars": {
-    "APP_URL": "http://localhost:4321",
+    // APP_URL is a SECRET (not a var): local dev reads it from .dev.vars
+    // (http://localhost:4321); the deployed worker uses the real origin
+    // (set via `wrangler secret put APP_URL`). A var+secret can't share a name.
     // Stripe Pro price IDs (test mode). Non-secret — client-visible in Checkout.
     "STRIPE_PRICE_PRO_MONTHLY": "price_1TmvnDK3rdrulsRy6Bjrf9Bn",
     "STRIPE_PRICE_PRO_ANNUAL": "price_1TmvnFK3rdrulsRyn7E89Ek5"
