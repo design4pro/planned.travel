@@ -4,8 +4,18 @@ import type Stripe from "stripe";
 import { createAuth } from "../lib/auth";
 import { db as getDb } from "../lib/db";
 import { createStripe } from "../lib/stripe";
-import { dayItems, days, expenses, expenseSplits, places, tripMembers, trips } from "@planned/db";
-import { equalSplit } from "@planned/shared";
+import { dayItems, days, documents, expenses, expenseSplits, places, reservations, tripMembers, trips } from "@planned/db";
+import {
+  createReservationSchema,
+  equalSplit,
+  isAllowedUploadType,
+  linkDocumentSchema,
+  MAX_DOCUMENT_BYTES,
+  sortReservations,
+  summarizeByCurrency,
+  updateReservationSchema,
+} from "@planned/shared";
+import { buildTripHtml, renderTripPdf } from "./trip-pdf";
 import {
   FREE_TRIP_LIMIT,
   getOrCreateSubscription,
@@ -15,8 +25,6 @@ import {
   upsertCustomerId,
 } from "./billing";
 import type { CloudflareEnv } from "../lib/env";
-
-type Database = ReturnType<typeof getDb>;
 
 /**
  * Per-request Hono app. Mounted from the Astro catch-all at /api/*
@@ -384,6 +392,307 @@ export function createApp(env: CloudflareEnv) {
     await database.delete(expenseSplits).where(eq(expenseSplits.expenseId, expenseId));
     await database.delete(expenses).where(eq(expenses.id, expenseId));
     return c.json({ ok: true });
+  });
+
+  // ── Reservations (list / create / update / delete) ─────────────────────────
+  app.get("/api/trips/:id/reservations", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+    const rows = await database.select().from(reservations).where(eq(reservations.tripId, trip.id)).all();
+    return c.json(sortReservations(rows));
+  });
+
+  app.post("/api/trips/:id/reservations", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = createReservationSchema.safeParse(body);
+    if (!parsed.success) return c.json({ error: "invalid", issues: parsed.error.flatten() }, 400);
+    const { startsAt, endsAt } = parsed.data;
+    if (startsAt != null && endsAt != null && endsAt < startsAt)
+      return c.json({ error: "ends_before_starts" }, 400);
+
+    const [created] = await database
+      .insert(reservations)
+      .values({ tripId: trip.id, ...parsed.data })
+      .returning();
+    return c.json(created, 201);
+  });
+
+  app.patch("/api/reservations/:resId", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const resId = c.req.param("resId");
+    const [row] = await database.select({ tripId: reservations.tripId }).from(reservations).where(eq(reservations.id, resId)).limit(1);
+    if (!row) return c.json({ error: "not found" }, 404);
+    const trip = await getOwnedTrip(row.tripId, user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = updateReservationSchema.safeParse(body);
+    if (!parsed.success) return c.json({ error: "invalid", issues: parsed.error.flatten() }, 400);
+    const { startsAt, endsAt } = parsed.data;
+    if (startsAt != null && endsAt != null && endsAt < startsAt)
+      return c.json({ error: "ends_before_starts" }, 400);
+
+    const [updated] = await database
+      .update(reservations)
+      .set(parsed.data)
+      .where(eq(reservations.id, resId))
+      .returning();
+    return c.json(updated);
+  });
+
+  app.delete("/api/reservations/:resId", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const resId = c.req.param("resId");
+    const [row] = await database.select({ tripId: reservations.tripId }).from(reservations).where(eq(reservations.id, resId)).limit(1);
+    if (!row) return c.json({ error: "not found" }, 404);
+    const trip = await getOwnedTrip(row.tripId, user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+
+    // Null out any linked documents first (document.reservation_id FK → reservation).
+    await database.update(documents).set({ reservationId: null }).where(eq(documents.reservationId, resId));
+    await database.delete(reservations).where(eq(reservations.id, resId));
+    return c.json({ ok: true });
+  });
+
+  // ── Documents (list / upload / link / download / delete) ───────────────────
+  app.get("/api/trips/:id/documents", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+    const rows = await database
+      .select()
+      .from(documents)
+      .where(eq(documents.tripId, trip.id))
+      .orderBy(desc(documents.createdAt))
+      .all();
+    return c.json(rows);
+  });
+
+  app.post("/api/trips/:id/documents", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+
+    const form = await c.req.raw.formData();
+    const file = form.get("file");
+    if (!(file instanceof File)) return c.json({ error: "file required" }, 400);
+    if (file.size === 0) return c.json({ error: "empty_file" }, 400);
+    if (file.size > MAX_DOCUMENT_BYTES)
+      return c.json({ error: "file_too_large", limit: MAX_DOCUMENT_BYTES }, 413);
+    const mimeType = file.type || "application/octet-stream";
+    if (!isAllowedUploadType(mimeType)) return c.json({ error: "unsupported_type" }, 415);
+
+    const reservationIdRaw = form.get("reservationId");
+    const reservationId =
+      typeof reservationIdRaw === "string" && reservationIdRaw ? reservationIdRaw : null;
+    if (reservationId) {
+      const [r] = await database
+        .select({ id: reservations.id })
+        .from(reservations)
+        .where(and(eq(reservations.id, reservationId), eq(reservations.tripId, trip.id)))
+        .limit(1);
+      if (!r) return c.json({ error: "reservation not found" }, 404);
+    }
+
+    const docId = crypto.randomUUID();
+    const r2Key = `trips/${trip.id}/docs/${docId}`;
+    // Pass the File (Blob) directly — it carries a known length. A bare
+    // ReadableStream (file.stream()) is rejected by R2 as "unknown length".
+    await env.MEDIA.put(r2Key, file, {
+      httpMetadata: { contentType: mimeType },
+      customMetadata: { name: file.name, tripId: trip.id, uploadedBy: user.id },
+    });
+
+    const [doc] = await database
+      .insert(documents)
+      .values({
+        id: docId,
+        tripId: trip.id,
+        reservationId,
+        uploadedByUserId: user.id,
+        r2Key,
+        name: file.name || "document",
+        mimeType,
+        sizeBytes: file.size,
+      })
+      .returning();
+    return c.json(doc, 201);
+  });
+
+  /** Link/unlink a document to a reservation (both must belong to the trip). */
+  app.patch("/api/documents/:docId", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const docId = c.req.param("docId");
+    const [doc] = await database.select({ tripId: documents.tripId }).from(documents).where(eq(documents.id, docId)).limit(1);
+    if (!doc) return c.json({ error: "not found" }, 404);
+    const trip = await getOwnedTrip(doc.tripId, user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = linkDocumentSchema.safeParse(body);
+    if (!parsed.success) return c.json({ error: "invalid", issues: parsed.error.flatten() }, 400);
+    if (parsed.data.reservationId) {
+      const [r] = await database
+        .select({ id: reservations.id })
+        .from(reservations)
+        .where(and(eq(reservations.id, parsed.data.reservationId), eq(reservations.tripId, trip.id)))
+        .limit(1);
+      if (!r) return c.json({ error: "reservation not found" }, 404);
+    }
+
+    const [updated] = await database
+      .update(documents)
+      .set({ reservationId: parsed.data.reservationId })
+      .where(eq(documents.id, docId))
+      .returning();
+    return c.json(updated);
+  });
+
+  app.get("/api/documents/:docId/download", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const [doc] = await database.select().from(documents).where(eq(documents.id, c.req.param("docId"))).limit(1);
+    if (!doc) return c.json({ error: "not found" }, 404);
+    const trip = await getOwnedTrip(doc.tripId, user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+
+    const obj = await env.MEDIA.get(doc.r2Key);
+    if (!obj) return c.json({ error: "not found" }, 404);
+
+    // Set headers from the DB row rather than obj.writeHttpMetadata — the latter
+    // crosses the platformProxy/miniflare bridge in dev and trips a devalue
+    // serialization error on the Headers object. doc.mimeType/sizeBytes are
+    // always available and keep this portable across dev + prod.
+    const headers = new Headers();
+    headers.set("content-type", doc.mimeType);
+    headers.set("content-disposition", `attachment; filename="${encodeURIComponent(doc.name)}"`);
+    headers.set("content-length", String(doc.sizeBytes));
+    return new Response(obj.body, { headers });
+  });
+
+  app.delete("/api/documents/:docId", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const docId = c.req.param("docId");
+    const [doc] = await database.select({ tripId: documents.tripId, r2Key: documents.r2Key }).from(documents).where(eq(documents.id, docId)).limit(1);
+    if (!doc) return c.json({ error: "not found" }, 404);
+    const trip = await getOwnedTrip(doc.tripId, user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+
+    await env.MEDIA.delete(doc.r2Key);
+    await database.delete(documents).where(eq(documents.id, docId));
+    return c.json({ ok: true });
+  });
+
+  // ── PDF export (Browser Rendering; Pro-gated) ──────────────────────────────
+  app.get("/api/trips/:id/export.pdf", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const trip = await getOwnedTrip(c.req.param("id"), user.id);
+    if (!trip) return c.json({ error: "not found" }, 404);
+
+    // Exports are a Pro feature (monetization decision: quota gates exports).
+    const sub = await getOrCreateSubscription(database, user.id);
+    if (!isActivePro(sub)) return c.json({ error: "plan_required", plan: "pro" }, 402);
+    if (!env.BROWSER) return c.json({ error: "export_unavailable" }, 503);
+
+    const [dayRows, placeRows, resRows, memberRows, expenseRows] = await Promise.all([
+      database.select().from(days).where(eq(days.tripId, trip.id)).orderBy(asc(days.dateIndex)).all(),
+      database.select().from(places).where(eq(places.tripId, trip.id)).all(),
+      database.select().from(reservations).where(eq(reservations.tripId, trip.id)).all(),
+      database.select().from(tripMembers).where(eq(tripMembers.tripId, trip.id)).all(),
+      database.select().from(expenses).where(eq(expenses.tripId, trip.id)).all(),
+    ]);
+    const dayIds = dayRows.map((d) => d.id);
+    const itemRows = dayIds.length
+      ? await database.select().from(dayItems).where(inArray(dayItems.dayId, dayIds)).orderBy(asc(dayItems.orderIndex)).all()
+      : [];
+    const expenseIds = expenseRows.map((e) => e.id);
+    const splitRows = expenseIds.length
+      ? await database.select().from(expenseSplits).where(inArray(expenseSplits.expenseId, expenseIds)).all()
+      : [];
+
+    const summaries = summarizeByCurrency(
+      memberRows.map((m) => ({ userId: m.userId })),
+      expenseRows.map((e) => ({
+        id: e.id,
+        paidByUserId: e.paidByUserId,
+        amountCents: e.amountCents,
+        currency: e.currency,
+        splits: splitRows
+          .filter((s) => s.expenseId === e.id)
+          .map((s) => ({ userId: s.userId, shareCents: s.shareCents })),
+      })),
+    );
+
+    const userIds = [...new Set([trip.ownerId, ...memberRows.map((m) => m.userId)])];
+    const users = await fetchUsers(userIds);
+    const userNames = new Map<string, string>();
+    for (const [id, u] of users) userNames.set(id, u.name ?? u.email ?? id.slice(0, 6));
+
+    const html = buildTripHtml({
+      trip: {
+        title: trip.title,
+        startAt: trip.startAt,
+        endAt: trip.endAt,
+        description: trip.description,
+      },
+      days: dayRows.map((d) => ({ id: d.id, dateIndex: d.dateIndex })),
+      items: itemRows.map((it) => ({
+        dayId: it.dayId,
+        type: it.type,
+        note: it.type === "place" ? it.placeId : it.note,
+      })),
+      places: new Map(placeRows.map((p) => [p.id, { name: p.name }])),
+      reservations: resRows.map((r) => ({
+        type: r.type,
+        status: r.status,
+        title: r.title,
+        confirmationCode: r.confirmationCode,
+        startsAt: r.startsAt,
+        endsAt: r.endsAt,
+      })),
+      summaries: summaries.map((s) => ({
+        currency: s.currency,
+        totalCents: s.totalCents,
+        settlements: s.settlements.map((st) => ({
+          fromUserId: st.fromUserId,
+          toUserId: st.toUserId,
+          amountCents: st.amountCents,
+        })),
+      })),
+      userNames,
+      currentUserId: user.id,
+    });
+
+    // Browser Rendering can't run in local dev/miniflare (and may hit session
+    // limits in prod) — degrade to a graceful 503 instead of a 500.
+    let pdf: Uint8Array;
+    try {
+      pdf = await renderTripPdf(env.BROWSER, html);
+    } catch (err) {
+      console.error("PDF export failed", err);
+      return c.json({ error: "export_unavailable" }, 503);
+    }
+    const filename = `${trip.title.replace(/[^\w-]+/g, "_").slice(0, 60) || "trip"}.pdf`;
+    return new Response(pdf as BodyInit, {
+      headers: {
+        "content-type": "application/pdf",
+        "content-disposition": `attachment; filename="${filename}"`,
+      },
+    });
   });
 
   // ── Billing (plan / checkout / portal) ─────────────────────────────────────

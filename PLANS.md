@@ -125,7 +125,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - [x] Trip data model + dashboard (list/create) wired to `/api/trips`; trip detail route
 - [x] Day-plan model + planner UI (days/items, add-place) — drag-&-drop reordering deferred
 - [x] MapLibre map + POI pins (key-free OSM tiles) on trip page; place search + route visualization — later
-- [ ] Reservations + document manager (R2); PDF export (Browser Rendering)
+- [x] Reservations + document manager (R2); PDF export (Browser Rendering) — manual reservations CRUD (type/status/confirmation/dates/notes, inline edit), R2 document uploads (50 MB cap, attach to reservation, download/delete), trip-to-PDF via Browser Rendering (`@cloudflare/puppeteer`, Pro-gated, graceful 503). **Follow-up:** Browser Rendering can't run in local dev/miniflare — verify the PDF path on the deployed Worker; booking-email/PDF *auto-parsing* is Phase 2.
 - [x] Costs / expense splitting (multi-currency)
 - [ ] Real-time collaboration (DO + Hibernation WS); invite links; roles
 - [ ] Notifications (email); in-app center

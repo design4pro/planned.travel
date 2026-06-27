@@ -62,6 +62,9 @@
   "ai": { "binding": "AI" },
   "images": { "binding": "IMAGES" },
 
+  // PDF / OG-image rendering — trip-to-PDF export via @cloudflare/puppeteer.
+  "browser": { "binding": "BROWSER" },
+
   // ── Secrets (set via: npx wrangler secret put <NAME>, or Secrets Store) ────
   // BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID/SECRET, APPLE_CLIENT_ID/SECRET,
   // STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
