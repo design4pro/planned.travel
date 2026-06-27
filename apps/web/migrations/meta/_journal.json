@@ -22,6 +22,13 @@
       "when": 1782563092238,
       "tag": "0002_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1782571467344,
+      "tag": "0003_panoramic_lorna_dane",
+      "breakpoints": true
     }
   ]
 }

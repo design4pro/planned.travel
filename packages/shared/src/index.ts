@@ -65,3 +65,11 @@ export type Trip = z.infer<typeof tripSchema>;
 /* ------------------------------- Costs ----------------------------------- */
 
 export * from "./costs";
+
+/* --------------------------- Reservations -------------------------------- */
+
+export * from "./reservations";
+
+/* ----------------------------- Documents --------------------------------- */
+
+export * from "./documents";

@@ -94,10 +94,12 @@ export const reservations = sqliteTable("reservation", {
   status: text("status", { enum: ["planned", "confirmed", "cancelled"] })
     .notNull()
     .default("planned"),
+  title: text("title"),
   confirmationCode: text("confirmation_code"),
   startsAt: integer("starts_at"),
   endsAt: integer("ends_at"),
-  // Structured parsed booking data (KDE Itinerary-style), from email/PDF ingestion.
+  notes: text("notes"),
+  // Structured parsed booking data (KDE Itinerary-style), from email/PDF ingestion (Phase 2).
   parsedData: text("parsed_data", { mode: "json" }),
   createdAt: now(),
 });
@@ -134,6 +136,9 @@ export const documents = sqliteTable("document", {
   tripId: text("trip_id")
     .notNull()
     .references(() => trips.id),
+  // Optional link to a reservation (the e-ticket / booking PDF for it).
+  reservationId: text("reservation_id").references(() => reservations.id),
+  uploadedByUserId: text("uploaded_by_user_id"), // -> better_auth user.id
   r2Key: text("r2_key").notNull(),
   name: text("name").notNull(),
   mimeType: text("mime_type").notNull(),
