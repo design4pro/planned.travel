@@ -14,12 +14,13 @@
     "deploy": "astro build && wrangler deploy"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^12.0.2",
+    "@astrojs/react": "^4.2.0",
     "@planned/api-client": "workspace:*",
     "@planned/db": "workspace:*",
     "@planned/shared": "workspace:*",
     "@planned/ui-tokens": "workspace:*",
-    "@astrojs/cloudflare": "^12.0.2",
-    "@astrojs/react": "^4.2.0",
+    "@radix-ui/react-slot": "^1.1.1",
     "astro": "^5.7.0",
     "better-auth": "^1.2.7",
     "class-variance-authority": "^0.7.1",
@@ -30,14 +31,14 @@
     "maplibre-gl": "^5.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.5.5",
-    "@radix-ui/react-slot": "^1.1.1"
+    "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
+    "@better-auth/cli": "^1.4.21",
+    "@cloudflare/workers-types": "^4.20250101.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@cloudflare/workers-types": "^4.20250101.0",
     "drizzle-kit": "^0.31.4",
     "tailwindcss": "^4.0.0",
     "tw-animate-css": "^1.0.0",

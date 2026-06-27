@@ -164,3 +164,10 @@ export const schema = {
 };
 
 export type Schema = typeof schema;
+
+/* ------------------------------ Auth tables ------------------------------ */
+// Owned by Better Auth (user/session/account/verification/organization/member/
+// invitation/twoFactor). Generated via @better-auth/cli generate against
+// apps/web/src/lib/auth.cli.ts → merged here so drizzle-kit emits the SQL
+// migration alongside the domain tables. Regenerate after changing auth plugins.
+export * from "./auth";
