@@ -21,7 +21,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - ✅ **Primary DB: D1 (SQLite) for v1, schema Postgres-portable via Drizzle.** Realtime = Durable Objects + Hibernation WebSockets; semantic search = Vectorize. Migrate to Postgres-via-Hyperdrive *only if* PostGIS / heavy FTS / write-hot scale demands it. Honors "all on Cloudflare."
 - ✅ **Auth: Better Auth** — official Astro + Expo (`@better-auth/expo`) support; D1 via Drizzle. Plugins: organizations, admin (RBAC), bearer + expo for mobile (token in SecureStore), passkey, TOTP, social Google+Apple. CF Workers gotchas handled: `nodejs_compat` flag, instantiate per-request, migrate via `@better-auth/cli generate` → `wrangler d1 migrations apply`. **Cloudflare Access** guards staff/admin surface only.
 - ✅ **ORM: Drizzle** (D1 + Postgres + edge-compatible).
-- ✅ **UI stack:** Web = Astro + **Tailwind v4 + shadcn/ui** islands. Mobile (later) = **Expo + NativeWind v5 + react-native-reusables**. Maps = **MapLibre GL JS** (web) + **maplibre-react-native** (Expo). Shared: one `@theme` token file, zod schemas, business logic, typed API client, map style/GeoJSON.
+- ✅ **UI stack:** Web = Astro + **Tailwind v4 + HeroUI v3 (`@heroui/react`)** islands (React Aria, provider-less). Mobile (later) = **Expo + HeroUI Native** (Tailwind v4 via Uniwind). Maps = **MapLibre GL JS** (web) + **maplibre-react-native** (Expo). Shared: one `@theme`/HeroUI token set, zod schemas, business logic, typed API client, map style/GeoJSON. *(shadcn/ui is deprecated — kept only as interim for the existing `Button` until migrated.)*
 - ✅ **Content & admin: internal, role-gated admin panel (not an external CMS).** Marketing/blog → Astro Content Collections. Staff routes also behind Cloudflare Access.
 - ✅ **MVP scope: full TREK parity at v1.** Every module reimplemented before public GA. Internal build sequenced in waves (Phases 1–3) converging on one v1 GA. *Large build — assumes sufficient team/runway.*
 - ✅ **Monetization: Free / Pro / Team.** Quotas gate AI usage, collab seats, exports, storage.
@@ -74,8 +74,8 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 
 ### 4.2 Frontend / UI strategy
 
-- **Web (now):** Astro (SSR via `@astrojs/cloudflare`) + **Tailwind v4** + **shadcn/ui** React islands.
-- **Mobile (later):** **Expo** + **NativeWind v5** (Tailwind v4) + **react-native-reusables**. *(Fallback: Tailwind v3 + NativeWind v4.)*
+- **Web (now):** Astro (SSR via `@astrojs/cloudflare`) + **Tailwind v4** + **HeroUI v3** (`@heroui/react` + `@heroui/styles`; React Aria; provider-less) React islands.
+- **Mobile (later):** **Expo** + **HeroUI Native** (Tailwind v4 via Uniwind).
 - **Shared across web+mobile:** one Tailwind `@theme` token file; zod schemas; business logic; typed API client; MapLibre style JSON + GeoJSON.
 - **Maps:** **MapLibre GL JS** (web) + **maplibre-react-native** (Expo dev build).
 
@@ -112,7 +112,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - [x] `wrangler.jsonc` full binding map (D1/KV/R2/Vectorize/AI/Images active; DO/Queues/Workflows/Email documented for later phases); `nodejs_compat`
 - [x] Git remote `origin` → `design4pro/planned.travel` + initial commit (`3831bc8`)
 - [x] Hono API mount — typed `/api/*` (Better Auth at `/api/auth/*`, `/api/health`, auth-gated **trips CRUD** over D1/Drizzle); Astro build verified
-- [x] shadcn/ui baseline — `components.json`, `cn()`, `Button`, demo island; semantic tokens mapped to brand palette; `@/` alias
+- [x] shadcn/ui baseline — `components.json`, `cn()`, `Button`, demo island; semantic tokens mapped to brand palette; `@/` alias. **Superseded:** HeroUI is now the UI standard (§2/§4.2); shadcn is interim, removed once the last primitive migrates.
 - [x] i18n (PL+EN) — Astro i18n routing + typed message catalog (`/` = EN, `/pl` = PL); Paraglide-ready key structure
 - [x] **Provisioned** D1/KV(×2)/R2/Vectorize on DESIGN4PRO, IDs pasted into `wrangler.jsonc`; migrations applied to **local + remote** D1; `pnpm --filter @planned/web dev` verified (`/api/health` → `bindings:{db,ai,vectorize:true}`)
 - [x] Better Auth CLI migration generated (`@better-auth/cli` via `auth.cli.ts` introspection instance → drizzle-kit `0001_better_auth.sql`) and applied to local + remote D1
@@ -143,7 +143,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - [ ] i18n expansion; admin panel; Cloudflare Access for staff
 
 ### Phase 4 — Mobile
-- [ ] Expo app (NativeWind + react-native-reusables + maplibre-react-native); shared tokens/logic/API client; push notifications; offline-first
+- [ ] Expo app (**HeroUI Native** + maplibre-react-native); shared tokens/logic/API client; push notifications; offline-first
 
 ---
 

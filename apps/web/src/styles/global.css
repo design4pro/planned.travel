@@ -1,4 +1,11 @@
 @import "tailwindcss";
+/* HeroUI v3 styles (theme vars + components). Must follow Tailwind. Its theme
+ * vars are layered (@layer base / layer(theme)), so the unlayered brand :root
+ * below overrides the shared names (--primary, --background, --accent, …) and
+ * HeroUI picks up the brand palette. NB: --muted semantics differ between
+ * shadcn (surface) and HeroUI (mid-gray text) — full unification happens when
+ * the last shadcn primitive is removed. */
+@import "@heroui/styles";
 @import "tw-animate-css";
 @import "@planned/ui-tokens/theme.css";
 
