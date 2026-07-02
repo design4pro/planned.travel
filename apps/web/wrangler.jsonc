@@ -85,12 +85,24 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TripRoom"] }],
   //
   // Background jobs — notifications delivery. The queue() consumer is exported
-  // from src/worker.ts (see createExports). Producer binding JOBS. Create the
-  // queue once (`wrangler queues create planned-travel-jobs`) before deploy.
-  "queues": {
-    "producers": [{ "binding": "JOBS", "queue": "planned-travel-jobs" }],
-    "consumers": [{ "queue": "planned-travel-jobs", "max_batch_size": 10 }]
-  },
+  // from src/worker.ts (see createExports) + surfaced via astro.config.mjs
+  // `workerEntryPoint.namedExports: ["queue"]`.
+  //
+  // TEMPORARILY DISABLED: with @astrojs/cloudflare 12.6.x the adapter rewrites
+  // the entry as `const queue = _exports['queue']`, and workerd's static
+  // handler-detection does NOT register it as a queue handler — so registering
+  // the consumer fails with `queue_handler_missing` [code 11001] (DOs work only
+  // because they are DECLARED in `durable_objects.bindings`, not auto-detected).
+  // Until that's solved (candidate fix: postbuild patch to a static
+  // `export function queue`, or an adapter upgrade), notifications use the
+  // DIRECT-DELIVERY FALLBACK in enqueueNotification (env.JOBS absent → inline
+  // deliverNotification). They still deliver (in-app + email); just synchronously.
+  // The `planned-travel-jobs` queue is already provisioned — re-enable by
+  // uncommenting once the handler-detection issue is resolved.
+  // "queues": {
+  //   "producers": [{ "binding": "JOBS", "queue": "planned-travel-jobs" }],
+  //   "consumers": [{ "queue": "planned-travel-jobs", "max_batch_size": 10 }]
+  // },
   //
   // // Durable multi-step flows (AI pipeline, booking ingestion, refunds)
   // "workflows": [

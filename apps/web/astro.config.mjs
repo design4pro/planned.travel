@@ -12,10 +12,13 @@ export default defineConfig({
   adapter: cloudflare({
     platformProxy: { enabled: true },
     // Custom worker entry: reuses the adapter's fetch handler and additionally
-    // exports the TripRoom Durable Object class (see src/worker.ts).
+    // exports the TripRoom Durable Object class + the JOBS queue consumer (see
+    // src/worker.ts). The adapter forwards exactly: ["default", ...namedExports],
+    // so any non-fetch handler (queue/scheduled/email) MUST be listed here or the
+    // platform rejects the consumer with "handler is missing" [code 11001].
     workerEntryPoint: {
       path: "src/worker.ts",
-      namedExports: ["TripRoom"],
+      namedExports: ["TripRoom", "queue"],
     },
   }),
   integrations: [react()],
