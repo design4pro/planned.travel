@@ -82,11 +82,19 @@ export async function upsertCustomerId(database: Database, userId: string, custo
  * reverts the user to free (keeps stripeCustomerId so the Portal still works
  * for history / re-subscribe).
  */
+export interface SubscriptionSyncResult {
+  userId: string;
+  prevStatus: string | null;
+  newStatus: string;
+  interval: "month" | "year" | null;
+  currentPeriodEnd: number | null;
+}
+
 export async function syncSubscriptionFromStripe(
   database: Database,
   sub: Stripe.Subscription,
   priceToInterval: Record<string, "month" | "year">,
-) {
+): Promise<SubscriptionSyncResult | null> {
   const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
   let userId = sub.metadata?.userId;
   if (!userId && customerId) {
@@ -97,7 +105,7 @@ export async function syncSubscriptionFromStripe(
       .limit(1);
     userId = byCustomer?.userId;
   }
-  if (!userId) return; // unknown customer — nothing to reconcile
+  if (!userId) return null; // unknown customer — nothing to reconcile
 
   const priceObj = sub.items.data[0]?.price;
   const priceId = typeof priceObj === "string" ? priceObj : priceObj?.id;
@@ -129,10 +137,20 @@ export async function syncSubscriptionFromStripe(
     .from(subscriptions)
     .where(eq(subscriptions.userId, userId))
     .limit(1);
+  const prevStatus = existing?.status ?? null;
 
   if (existing) {
     await database.update(subscriptions).set(values).where(eq(subscriptions.userId, userId));
   } else {
     await database.insert(subscriptions).values({ ...values, createdAt: Date.now() });
   }
+
+  // Transition descriptor — the webhook turns this into 0..1 notification job(s).
+  return {
+    userId,
+    prevStatus,
+    newStatus: status,
+    interval: interval ?? null,
+    currentPeriodEnd: periodEnd ? periodEnd * 1000 : null,
+  };
 }

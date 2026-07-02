@@ -1,3 +1,5 @@
+import type { NotificationJob } from "@planned/shared";
+
 /**
  * Typed access to Cloudflare runtime bindings for the Astro app.
  *
@@ -28,8 +30,12 @@ export interface CloudflareEnv {
   // build time — the sync route 503s if the binding isn't provisioned.
   TRIP_ROOM?: DurableObjectNamespace;
 
+  // Notifications queue producer (JOBS). The consumer is the queue() export in
+  // src/worker.ts. Optional at build time — enqueueNotification falls back to
+  // direct delivery when the binding is absent (local dev).
+  JOBS?: Queue<NotificationJob>;
+
   // Added in later phases:
-  // JOBS: Queue<JobMessage>;
   // ITINERARY_GEN: Workflow;
   // BOOKING_INGEST: Workflow;
 
@@ -44,6 +50,13 @@ export interface CloudflareEnv {
   APPLE_CLIENT_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
+
+  // Notifications (Resend via EmailSender adapter). EMAIL_ENABLED defaults off;
+  // flip to "true" once RESEND_API_KEY + a verified sending domain are set, so
+  // the NoopEmailSender (default) is replaced by ResendEmailSender.
+  EMAIL_ENABLED?: string;
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
 
   // Stripe billing (non-secret Pro price IDs — from `vars`, test vs live differ)
   STRIPE_PRICE_PRO_MONTHLY: string;
