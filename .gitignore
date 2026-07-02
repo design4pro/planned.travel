@@ -47,3 +47,5 @@ pnpm-debug.log*
 *.mobileprovision
 ios/
 android/
+# heroui-agents-md
+.heroui-docs/
