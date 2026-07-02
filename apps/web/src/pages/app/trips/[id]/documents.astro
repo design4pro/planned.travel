@@ -1,6 +1,7 @@
 ---
 import Layout from "../../../../layouts/Layout.astro";
 import SignOutButton from "../../../../components/auth/SignOutButton.tsx";
+import NotificationBell from "../../../../components/notifications/NotificationBell.tsx";
 import TripTabs from "../../../../components/trips/TripTabs.astro";
 import CollabPresence from "../../../../components/collab/CollabPresence.tsx";
 import DocumentUpload from "../../../../components/documents/DocumentUpload.tsx";
@@ -84,7 +85,10 @@ const listRows = docRows.map((d) => ({
       <a href="/app" class="text-sm text-muted-foreground hover:text-primary">
         ← {trip.title}
       </a>
-      <SignOutButton client:load label={t("nav.signout")} />
+      <div class="flex items-center gap-4">
+        <NotificationBell client:load lang={lang} />
+        <SignOutButton client:load label={t("nav.signout")} />
+      </div>
     </div>
 
     <TripTabs

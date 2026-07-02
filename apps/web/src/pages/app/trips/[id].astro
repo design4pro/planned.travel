@@ -1,6 +1,7 @@
 ---
 import Layout from "../../../layouts/Layout.astro";
 import SignOutButton from "../../../components/auth/SignOutButton.tsx";
+import NotificationBell from "../../../components/notifications/NotificationBell.tsx";
 import AddPlace from "../../../components/trips/AddPlace.tsx";
 import TripMap from "../../../components/trips/TripMap.tsx";
 import TripTabs from "../../../components/trips/TripTabs.astro";
@@ -60,7 +61,10 @@ for (const item of itemRows) {
       <a href="/app" class="text-sm text-muted-foreground hover:text-primary">
         ← {t("trips.back")}
       </a>
-      <SignOutButton client:load label={t("nav.signout")} />
+      <div class="flex items-center gap-4">
+        <NotificationBell client:load lang={lang} />
+        <SignOutButton client:load label={t("nav.signout")} />
+      </div>
     </div>
 
     <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
