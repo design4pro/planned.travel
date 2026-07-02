@@ -9,7 +9,6 @@
  * Portability: types are kept Postgres-friendly (text PKs, epoch-ms integer
  * timestamps) so a later move to Postgres + Hyperdrive is mechanical.
  */
-import { sql } from "drizzle-orm";
 import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 const id = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());

@@ -11,7 +11,6 @@ export default function CtaButtons({ healthLabel = "Check health", githubLabel =
   async function checkHealth() {
     const res = await fetch("/api/health");
     const data = await res.json();
-    // eslint-disable-next-line no-console
     console.log("health:", data);
   }
 
