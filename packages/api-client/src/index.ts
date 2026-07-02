@@ -5,7 +5,7 @@
  * Worker origin with a Bearer token (Better Auth bearer plugin). The DTOs come
  * from @planned/shared so both clients stay in sync with the API contract.
  */
-import type { Trip } from "@planned/shared";
+import type { NotificationRow, Trip } from "@planned/shared";
 
 export interface ClientOptions {
   /** Base URL of the API. Defaults to same-origin (web). Mobile passes the deployed origin. */
@@ -48,6 +48,21 @@ export class PlannedClient {
       get: (id: string) => this.request<Trip>(`/api/trips/${id}`),
       create: (input: Pick<Trip, "title">) =>
         this.request<Trip>("/api/trips", { method: "POST", body: JSON.stringify(input) }),
+    };
+  }
+
+  notifications() {
+    return {
+      /** Newest-first; pass `limit` for a small recent slice (e.g. the bell). */
+      list: (limit?: number) =>
+        this.request<NotificationRow[]>(`/api/notifications${limit ? `?limit=${limit}` : ""}`),
+      unreadCount: () => this.request<{ count: number }>("/api/notifications/unread-count"),
+      markRead: (id: string) =>
+        this.request<{ ok: true }>(`/api/notifications/${encodeURIComponent(id)}/read`, {
+          method: "POST",
+        }),
+      markAllRead: () =>
+        this.request<{ ok: true }>("/api/notifications/read-all", { method: "POST" }),
     };
   }
 }

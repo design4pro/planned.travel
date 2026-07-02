@@ -28,7 +28,7 @@ Guidance for Claude Code working in this repository. Read this before making cha
 | AI | Workers AI + AI Gateway + MCP server |
 | Auth | **Better Auth** (Astro + Expo; organizations, admin, twoFactor[+passkey], bearer) |
 | Media | R2 + Images · Browser Rendering (PDFs) |
-| Notifications / billing | Email Workers · Stripe |
+| Notifications / billing | Resend (`EmailSender` adapter; CF Email Workers alt) · Queue (JOBS) · Stripe |
 | i18n | PL + EN at launch (Astro i18n + typed catalog; Paraglide-ready) |
 
 ## Monorepo layout
@@ -66,6 +66,7 @@ pnpm --filter @planned/web deploy # build + wrangler deploy
 - **Auth config:** `apps/web/src/lib/auth.ts` (`createAuth(env)` factory).
 - **DB access:** `packages/db` (`createDb(d1)`), used via `apps/web/src/lib/db.ts`.
 - **Realtime collaboration:** `apps/web/src/server/trip-room.ts` (`TripRoom` Durable Object + `broadcastTripChange`); WebSocket upgrade at `/api/trips/:id/sync`. The DO class is exported via the custom worker entry `apps/web/src/worker.ts` (`@astrojs/cloudflare` `workerEntryPoint`). Trip access (owner/editor/viewer) helpers: `apps/web/src/lib/trip.ts` (SSR) + `getAccessibleTrip` in `app.ts` (API).
+- **Notifications:** shared types/builders in `packages/shared/src/notifications.ts`; DB helpers + `enqueueNotification` producer (direct-delivery fallback) in `apps/web/src/lib/notifications.ts`; `deliverNotification` consumer in `apps/web/src/server/notifications-consumer.ts`; trigger routing in `apps/web/src/server/notifications-triggers.ts`; `EmailSender` adapter (Resend/Noop) + templates in `apps/web/src/lib/email.ts` + `email-templates.ts`. The JOBS queue consumer is the `queue()` export on `worker.ts` (alongside `TripRoom`); delivery is async via the queue, gated by `EMAIL_ENABLED` (off by default — `NoopEmailSender`). UI: `NotificationBell` + `/app/notifications`.
 - **Schema:** `packages/db/src/schema/index.ts` (domain tables; auth tables owned by Better Auth via CLI).
 - **Bindings/env types:** `apps/web/src/lib/env.ts` + `src/env.d.ts`.
 - **UI tokens / components:** `packages/ui-tokens/src/theme.css`, `apps/web/src/styles/global.css` (shadcn semantic tokens → brand), `apps/web/src/components/ui/*`.

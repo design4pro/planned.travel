@@ -84,11 +84,13 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TripRoom"] }],
   //
-  // // Background jobs
-  // "queues": {
-  //   "producers": [{ "binding": "JOBS", "queue": "planned-travel-jobs" }],
-  //   "consumers": [{ "queue": "planned-travel-jobs", "max_batch_size": 10 }]
-  // },
+  // Background jobs — notifications delivery. The queue() consumer is exported
+  // from src/worker.ts (see createExports). Producer binding JOBS. Create the
+  // queue once (`wrangler queues create planned-travel-jobs`) before deploy.
+  "queues": {
+    "producers": [{ "binding": "JOBS", "queue": "planned-travel-jobs" }],
+    "consumers": [{ "queue": "planned-travel-jobs", "max_batch_size": 10 }]
+  },
   //
   // // Durable multi-step flows (AI pipeline, booking ingestion, refunds)
   // "workflows": [

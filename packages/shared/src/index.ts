@@ -77,3 +77,7 @@ export * from "./documents";
 /* --------------------------- Collaboration ------------------------------- */
 
 export * from "./collab";
+
+/* ----------------------------- Notifications ----------------------------- */
+
+export * from "./notifications";

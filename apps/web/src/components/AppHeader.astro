@@ -1,0 +1,31 @@
+---
+import type { Lang } from "../i18n/ui";
+import { useTranslations } from "../i18n/utils";
+import SignOutButton from "./auth/SignOutButton.tsx";
+import NotificationBell from "./notifications/NotificationBell.tsx";
+
+/**
+ * Shared app-shell header: brand + signed-in user, notification bell, account
+ * link, sign-out. Used on /app + /app/notifications (roll out to the remaining
+ * /app pages as a follow-up).
+ */
+interface Props {
+  email: string;
+  lang: Lang;
+}
+const { email, lang } = Astro.props;
+const t = useTranslations(lang);
+---
+<header class="flex items-center justify-between">
+  <div>
+    <p class="text-sm font-semibold uppercase tracking-widest text-brand-600">planned.travel</p>
+    <h1 class="text-2xl font-bold">{email}</h1>
+  </div>
+  <div class="flex items-center gap-4">
+    <NotificationBell client:load lang={lang} />
+    <a href="/app/account" class="text-sm font-medium text-primary hover:underline">
+      {t("account.title")}
+    </a>
+    <SignOutButton client:load label={t("nav.signout")} />
+  </div>
+</header>

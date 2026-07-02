@@ -3,6 +3,13 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type Stripe from "stripe";
 import { createAuth } from "../lib/auth";
 import { db as getDb } from "../lib/db";
+import {
+  enqueueNotification,
+  listNotifications,
+  markAllRead,
+  markRead,
+  unreadCount,
+} from "../lib/notifications";
 import { createStripe } from "../lib/stripe";
 import { dayItems, days, documents, expenses, expenseSplits, places, reservations, tripInvitations, tripMembers, trips } from "@planned/db";
 import {
@@ -28,6 +35,17 @@ import {
   upsertCustomerId,
 } from "./billing";
 import { broadcastTripChange } from "./trip-room";
+import {
+  buildExpenseAddedJobs,
+  buildInviteAcceptedJobs,
+  buildInviteSentJobs,
+  buildMemberRemovedJobs,
+  buildReservationAddedJobs,
+  buildReservationConfirmedJobs,
+  buildRoleChangedJobs,
+  buildSubscriptionJobs,
+} from "./notifications-triggers";
+import type { NotificationJob } from "@planned/shared";
 import type { CloudflareEnv } from "../lib/env";
 
 type TripRole = "owner" | "editor" | "viewer";
@@ -46,6 +64,21 @@ export function createApp(env: CloudflareEnv) {
   async function getUser(req: Request) {
     const session = await auth.api.getSession({ headers: req.headers });
     return session?.user ?? null;
+  }
+
+  /** All trip-member userIds (the owner is a trip_member via ensureOwnerMember). */
+  async function getTripMemberUserIds(tripId: string): Promise<string[]> {
+    const rows = await database
+      .select({ userId: tripMembers.userId })
+      .from(tripMembers)
+      .where(eq(tripMembers.tripId, tripId))
+      .all();
+    return rows.map((r) => r.userId);
+  }
+
+  /** Enqueue a batch of notification jobs — best-effort, never throws. */
+  async function notifyAll(jobs: NotificationJob[]): Promise<void> {
+    await Promise.all(jobs.map((j) => enqueueNotification(env, j)));
   }
 
   async function getOwnedTrip(id: string, userId: string) {
@@ -347,6 +380,15 @@ export function createApp(env: CloudflareEnv) {
       .values({ tripId: trip.id, userId: target.id, role })
       .returning();
     await broadcastTripChange(env, trip.id, "members", user.id);
+    await notifyAll(
+      buildInviteSentJobs({
+        tripId: trip.id,
+        tripName: trip.title,
+        targetUserId: member.userId,
+        inviterName: user.name ?? null,
+        inviteEmail: email,
+      }),
+    );
     return c.json({ userId: member.userId, role: member.role }, 201);
   });
 
@@ -371,6 +413,15 @@ export function createApp(env: CloudflareEnv) {
       .returning();
     if (!updated) return c.json({ error: "not found" }, 404);
     await broadcastTripChange(env, trip.id, "members", user.id);
+    await notifyAll(
+      buildRoleChangedJobs({
+        tripId: trip.id,
+        tripName: trip.title,
+        targetUserId: targetUserId,
+        newRole: role as "editor" | "viewer",
+        changedByName: user.name ?? null,
+      }),
+    );
     return c.json({ userId: updated.userId, role: updated.role });
   });
 
@@ -387,6 +438,14 @@ export function createApp(env: CloudflareEnv) {
       .delete(tripMembers)
       .where(and(eq(tripMembers.tripId, trip.id), eq(tripMembers.userId, targetUserId)));
     await broadcastTripChange(env, trip.id, "members", user.id);
+    await notifyAll(
+      buildMemberRemovedJobs({
+        tripId: trip.id,
+        tripName: trip.title,
+        targetUserId: targetUserId,
+        removedByName: user.name ?? null,
+      }),
+    );
     return c.json({ ok: true });
   });
 
@@ -532,6 +591,22 @@ export function createApp(env: CloudflareEnv) {
       .set({ useCount: inv.useCount + 1 })
       .where(eq(tripInvitations.id, inv.id));
     await broadcastTripChange(env, inv.tripId, "members", user.id);
+    if (tripRow.ownerId !== user.id) {
+      const [t] = await database
+        .select({ title: trips.title })
+        .from(trips)
+        .where(eq(trips.id, inv.tripId))
+        .limit(1);
+      await notifyAll(
+        buildInviteAcceptedJobs({
+          tripId: inv.tripId,
+          tripName: t?.title ?? "",
+          ownerId: tripRow.ownerId,
+          accepterName: user.name ?? null,
+          role: inv.role as "editor" | "viewer",
+        }),
+      );
+    }
     return c.json({ tripId: inv.tripId, role: inv.role });
   });
 
@@ -674,6 +749,19 @@ export function createApp(env: CloudflareEnv) {
         .values(splits.map((s) => ({ expenseId: expense.id, userId: s.userId, shareCents: s.shareCents })));
     }
     await broadcastTripChange(env, trip.id, "expenses", user.id);
+    await notifyAll(
+      buildExpenseAddedJobs({
+        tripId: trip.id,
+        tripName: trip.title,
+        expenseId: expense.id,
+        amountCents,
+        currency,
+        description: expense.description,
+        paidByName: user.name ?? null,
+        participantIds,
+        actorUserId: user.id,
+      }),
+    );
     return c.json({ ...expense, splits }, 201);
   });
 
@@ -729,6 +817,19 @@ export function createApp(env: CloudflareEnv) {
       .values({ tripId: trip.id, ...parsed.data })
       .returning();
     await broadcastTripChange(env, trip.id, "reservations", user.id);
+    const memberIds = await getTripMemberUserIds(trip.id);
+    await notifyAll(
+      buildReservationAddedJobs({
+        tripId: trip.id,
+        tripName: trip.title,
+        reservationId: created.id,
+        type: created.type,
+        title: created.title,
+        addedByName: user.name ?? null,
+        memberUserIds: memberIds,
+        actorUserId: user.id,
+      }),
+    );
     return c.json(created, 201);
   });
 
@@ -755,6 +856,19 @@ export function createApp(env: CloudflareEnv) {
       .where(eq(reservations.id, resId))
       .returning();
     await broadcastTripChange(env, access.trip.id, "reservations", user.id);
+    if (parsed.data.status === "confirmed") {
+      const memberIds = await getTripMemberUserIds(access.trip.id);
+      await notifyAll(
+        buildReservationConfirmedJobs({
+          tripId: access.trip.id,
+          tripName: access.trip.title,
+          reservationId: updated.id,
+          type: updated.type,
+          title: updated.title,
+          memberUserIds: memberIds,
+        }),
+      );
+    }
     return c.json(updated);
   });
 
@@ -1075,6 +1189,45 @@ export function createApp(env: CloudflareEnv) {
     return c.json({ url: session.url });
   });
 
+  // ── Notifications (list / unread-count / mark-read / mark-all-read) ─────────
+  // All session-auth-gated and scoped to the caller — no cross-user access.
+  app.get("/api/notifications", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const limitRaw = Number(c.req.query("limit"));
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : undefined;
+    const beforeRaw = Number(c.req.query("before"));
+    const beforeCreatedAt = Number.isFinite(beforeRaw) && beforeRaw > 0 ? beforeRaw : undefined;
+    const rows = await listNotifications(database, user.id, { limit, beforeCreatedAt });
+    return c.json(rows);
+  });
+
+  app.get("/api/notifications/unread-count", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const count = await unreadCount(database, user.id);
+    return c.json({ count });
+  });
+
+  // POST routes from React islands send a same-origin Origin header in prod
+  // (same pattern as the collab POST routes above), so the Astro CSRF/Origin
+  // check passes. Localhost is exempt.
+  app.post("/api/notifications/:id/read", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    const id = c.req.param("id");
+    const updated = await markRead(database, id, user.id);
+    if (!updated) return c.json({ error: "not found" }, 404);
+    return c.json({ ok: true });
+  });
+
+  app.post("/api/notifications/read-all", async (c) => {
+    const user = await getUser(c.req.raw);
+    if (!user) return c.json({ error: "unauthorized" }, 401);
+    await markAllRead(database, user.id);
+    return c.json({ ok: true });
+  });
+
   // ── Stripe webhook (public — no session) ──────────────────────────────────
   app.post("/api/webhooks/stripe", async (c) => {
     const sig = c.req.header("stripe-signature");
@@ -1106,7 +1259,12 @@ export function createApp(env: CloudflareEnv) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
-        await syncSubscriptionFromStripe(database, sub, priceToInterval);
+        const transition = await syncSubscriptionFromStripe(database, sub, priceToInterval);
+        if (transition) {
+          await notifyAll(
+            buildSubscriptionJobs({ ...transition, eventType: event.type, now: Date.now() }),
+          );
+        }
         break;
       }
       default:
