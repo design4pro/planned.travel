@@ -76,9 +76,33 @@ export function createApp(env: CloudflareEnv) {
     return rows.map((r) => r.userId);
   }
 
-  /** Enqueue a batch of notification jobs — best-effort, never throws. */
+  /**
+   * Enqueue a batch of notification jobs — best-effort, never throws.
+   *
+   * Enriches each job with an `email` block by resolving recipients' emails from
+   * the Better Auth `user` table, so EVERY notification type can email when
+   * EMAIL_ENABLED flips on — not just invite_sent (which already carries the
+   * invite email). Locale defaults to "en" until a per-user preference column
+   * lands (account.astro already stubs a preferences UI); the consumer +
+   * templates already honor locale. Jobs with an existing email block keep it;
+   * jobs whose recipient can't be resolved stay in-app only.
+   */
   async function notifyAll(jobs: NotificationJob[]): Promise<void> {
-    await Promise.all(jobs.map((j) => enqueueNotification(env, j)));
+    if (jobs.length === 0) return;
+    const users = await fetchUsers(jobs.map((j) => j.userId)).catch(
+      () => new Map<string, UserRow>(),
+    );
+    await Promise.all(
+      jobs.map((j) => {
+        if (!j.email) {
+          const u = users.get(j.userId);
+          if (u?.email) {
+            j.email = { to: u.email, template: j.type, locale: "en" };
+          }
+        }
+        return enqueueNotification(env, j);
+      }),
+    );
   }
 
   async function getOwnedTrip(id: string, userId: string) {
