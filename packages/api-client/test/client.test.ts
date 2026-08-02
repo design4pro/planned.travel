@@ -2,6 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiError, PlannedClient, createPlannedTrpcClient } from "../src";
 
 describe("planned tRPC client transport", () => {
+  it("provides authenticated collaboration methods for mobile", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      expect(String(input)).toContain("/api/trips/trip-1/members");
+      expect(new Headers(init?.headers).get("authorization")).toBe("Bearer mobile-token");
+      return new Response(JSON.stringify([{ userId: "u1", role: "owner", name: "Ada", email: "ada@example.com" }]), { status: 200 });
+    });
+    const client = new PlannedClient({ baseUrl: "https://planned.travel", getToken: () => "mobile-token", fetch: fetchMock });
+    await expect(client.trips().members("trip-1")).resolves.toMatchObject([{ userId: "u1", role: "owner" }]);
+  });
+
   it("uses cookies for web requests and bearer tokens for mobile", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       expect(init?.credentials).toBe("include");

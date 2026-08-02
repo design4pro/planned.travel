@@ -144,6 +144,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 
 ### Phase 4 — Mobile
 - [x] Expo app foundation (React Native + Uniwind); SecureStore-backed Better Auth bearer sessions; authenticated/unauthenticated entry points; shared tRPC client and bearer/unauthorized contract tests
+- [x] Mobile trip parity slice — trip list/create/open, map-first itinerary bottom sheet, editor/viewer mutations, member and invitation controls, and TripRoom presence/change refreshes. Native WebSocket upgrades use the bearer session token as a query parameter because React Native cannot set handshake headers; the API converts it to an Authorization header before resolving access.
 - [ ] Native UI components + maplibre-react-native; push notifications; offline-first
 
 ---

@@ -762,7 +762,15 @@ export function createApp(env: CloudflareEnv) {
     const upgrade = c.req.header("upgrade") ?? "";
     if (!upgrade.toLowerCase().includes("websocket"))
       return c.json({ error: "ws_required" }, 400);
-    const user = await getUser(c.req.raw);
+    // React Native's WebSocket implementation cannot set arbitrary handshake
+    // headers. Accept the bearer token in the URL for this one upgrade route,
+    // then immediately convert it to a request header and never forward it to
+    // the Durable Object.
+    const accessToken = c.req.query("access_token");
+    const authRequest = accessToken
+      ? new Request(c.req.raw, { headers: new Headers({ ...Object.fromEntries(c.req.raw.headers), authorization: `Bearer ${accessToken}` }) })
+      : c.req.raw;
+    const user = await getUser(authRequest);
     if (!user) return c.json({ error: "unauthorized" }, 401);
     const access = await getAccessibleTrip(c.req.param("id"), user.id);
     if (!access) return c.json({ error: "not found" }, 404);

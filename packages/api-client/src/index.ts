@@ -7,7 +7,12 @@
  */
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import type { AppRouter } from "@planned/server";
-import type { NotificationRow, Trip, TripPlan } from "@planned/shared";
+import type {
+  InvitationCreated,
+  NotificationRow,
+  TripDto,
+  TripPlan,
+} from "@planned/shared";
 
 export interface TransportOptions {
   /** Same-origin by default for web; mobile supplies its deployed Worker origin. */
@@ -72,10 +77,26 @@ export class PlannedClient {
 
   trips() {
     return {
-      list: () => this.request<Trip[]>("/api/trips"),
+      list: () => this.request<TripDto[]>("/api/trips"),
       get: (id: string) => this.request<TripPlan>(`/api/trips/${id}`),
-      create: (input: Pick<Trip, "title">) =>
-        this.request<Trip>("/api/trips", { method: "POST", body: JSON.stringify(input) }),
+      create: (input: { title: string }) =>
+        this.request<TripDto>("/api/trips", { method: "POST", body: JSON.stringify(input) }),
+      members: (id: string) => this.request<Member[]>(`/api/trips/${encodeURIComponent(id)}/members`),
+      addMember: (id: string, input: { email: string; role: "editor" | "viewer" }) =>
+        this.request<{ userId: string; role: "editor" | "viewer" }>(`/api/trips/${encodeURIComponent(id)}/members`, {
+          method: "POST", body: JSON.stringify(input),
+        }),
+      updateMember: (id: string, userId: string, role: "editor" | "viewer") =>
+        this.request<{ userId: string; role: "editor" | "viewer" }>(`/api/trips/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, {
+          method: "PATCH", body: JSON.stringify({ role }),
+        }),
+      removeMember: (id: string, userId: string) =>
+        this.request<{ ok: true }>(`/api/trips/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, { method: "DELETE" }),
+      invitations: (id: string) => this.request<Invitation[]>(`/api/trips/${encodeURIComponent(id)}/invitations`),
+      createInvitation: (id: string, input: { role: "editor" | "viewer"; expiresInDays?: number; maxUses?: number }) =>
+        this.request<InvitationCreated>(`/api/trips/${encodeURIComponent(id)}/invitations`, { method: "POST", body: JSON.stringify(input) }),
+      acceptInvitation: (token: string) =>
+        this.request<{ tripId: string; role: "editor" | "viewer" }>(`/api/invitations/${encodeURIComponent(token)}/accept`, { method: "POST" }),
     };
   }
 
@@ -93,6 +114,21 @@ export class PlannedClient {
         this.request<{ ok: true }>("/api/notifications/read-all", { method: "POST" }),
     };
   }
+}
+
+export interface Member {
+  userId: string;
+  role: "owner" | "editor" | "viewer";
+  name: string | null;
+  email: string | null;
+}
+
+export interface Invitation extends InvitationCreated {
+  createdAt: number;
+  useCount: number;
+  revokedAt: number | null;
+  open: boolean;
+  status: "open" | "revoked" | "expired" | "exhausted";
 }
 
 export class ApiError extends Error {
