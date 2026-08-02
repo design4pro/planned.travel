@@ -7,7 +7,7 @@
  */
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import type { AppRouter } from "@planned/server";
-import type { NotificationRow, Trip } from "@planned/shared";
+import type { NotificationRow, Trip, TripPlan } from "@planned/shared";
 
 export interface TransportOptions {
   /** Same-origin by default for web; mobile supplies its deployed Worker origin. */
@@ -73,7 +73,7 @@ export class PlannedClient {
   trips() {
     return {
       list: () => this.request<Trip[]>("/api/trips"),
-      get: (id: string) => this.request<Trip>(`/api/trips/${id}`),
+      get: (id: string) => this.request<TripPlan>(`/api/trips/${id}`),
       create: (input: Pick<Trip, "title">) =>
         this.request<Trip>("/api/trips", { method: "POST", body: JSON.stringify(input) }),
     };

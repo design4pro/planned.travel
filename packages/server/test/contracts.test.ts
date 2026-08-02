@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { createTripInputSchema, tripDtoSchema } from "@planned/shared";
+import { createDayItemInputSchema, createTripInputSchema, tripDtoSchema, tripPlanSchema } from "@planned/shared";
 import { appRouter } from "../src/router";
 
 const caller = (user: { id: string } | null = null) =>
@@ -58,5 +58,20 @@ describe("tRPC contract", () => {
     expect(result.success).toBe(true);
     if (!result.success) throw new Error("expected a valid trip DTO");
     expect(result.data).not.toHaveProperty("ownerId");
+  });
+
+  it("models an empty itinerary without making days or places mandatory", () => {
+    const result = tripPlanSchema.safeParse({
+      trip: { id: "t1", title: "Lisbon", visibility: "private", createdAt: 1, updatedAt: 1, role: "viewer" },
+      days: [],
+      places: [],
+      items: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("requires a place or note when adding a day item", () => {
+    expect(createDayItemInputSchema.safeParse({ tripId: "t1" }).success).toBe(false);
+    expect(createDayItemInputSchema.safeParse({ tripId: "t1", note: "Dinner" }).success).toBe(true);
   });
 });
