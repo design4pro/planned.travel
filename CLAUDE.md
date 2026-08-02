@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repository. Read this before making cha
 
 ## What this is
 
-**planned.travel** — an AI-native, collaborative travel-planning SaaS. Web-first (Astro SSR on Cloudflare Workers), with an Expo mobile app to follow. All infrastructure runs on Cloudflare (D1, KV, R2, Durable Objects, Queues, Workflows, Vectorize, Workers AI, AI Gateway, Images, Email).
+**planned.travel** — an AI-native, collaborative travel-planning SaaS. Web-first (Astro SSR on Cloudflare Workers), with an Expo mobile client foundation. All infrastructure runs on Cloudflare (D1, KV, R2, Durable Objects, Queues, Workflows, Vectorize, Workers AI, AI Gateway, Images, Email).
 
 **The roadmap, phases, and task checkboxes live in [`PLANS.md`](./PLANS.md).** The design system lives in [`DESIGN.md`](./DESIGN.md). Keep both updated as you work (PLANS.md after each planning round; DESIGN.md whenever tokens change).
 
@@ -21,7 +21,7 @@ Guidance for Claude Code working in this repository. Read this before making cha
 | Layer | Choice |
 |---|---|
 | Web | Astro 5 (SSR) + `@astrojs/cloudflare` + Hono API |
-| Styling/UI | Tailwind v4 + **shadcn/ui** (web) · **React Native Reusables/shadcn-style components** (mobile, later) |
+| Styling/UI | Tailwind v4 + **shadcn/ui** (web) · **Uniwind/Tailwind v4** (mobile) |
 | Data | Cloudflare D1 + **Drizzle** (schema kept Postgres-portable) |
 | Realtime | Durable Objects + Hibernation WebSockets (`TripRoom`, Phase 1) |
 | Search | Vectorize (semantic) |
@@ -36,7 +36,7 @@ Guidance for Claude Code working in this repository. Read this before making cha
 ```
 apps/
   web/        Astro SSR Worker — UI, API (Hono), auth
-  mobile/     Expo app (Phase 4 — not yet scaffolded)
+  mobile/     Expo + React Native + Uniwind native client
 packages/
   shared/     zod schemas, types, pure business logic (web + mobile)
   db/         Drizzle schema + D1 client + migrations (generated into apps/web/migrations)

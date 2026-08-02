@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "types": ["react", "react-native", "@cloudflare/workers-types"]
+  },
+  "include": ["**/*.ts", "**/*.tsx", "uniwind-types.d.ts"]
+}

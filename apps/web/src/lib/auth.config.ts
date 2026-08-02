@@ -1,6 +1,7 @@
 import type { BetterAuthOptions } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, bearer, organization, twoFactor } from "better-auth/plugins";
+import { expo } from "@better-auth/expo";
 import { createDb } from "@planned/db";
 import type { CloudflareEnv } from "./env";
 
@@ -30,6 +31,7 @@ export function buildAuthOptions(env: CloudflareEnv): BetterAuthOptions {
         : {}),
     },
 
-    plugins: [organization(), admin(), twoFactor(), bearer()],
+    trustedOrigins: ["plannedtravel://", ...(env.APP_URL ? [env.APP_URL] : [])],
+    plugins: [organization(), admin(), twoFactor(), bearer(), expo()],
   };
 }

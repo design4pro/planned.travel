@@ -181,7 +181,7 @@ Component tokens (above) define the core set: `button-primary`, `button-accent`,
 This file is the **source of truth** for the design system. Implementation mirrors it in:
 - `packages/ui-tokens/src/theme.css` — Tailwind v4 `@theme` brand palette (raw colors, fonts, radii).
 - `apps/web/src/styles/global.css` — maps the brand palette onto shadcn semantic tokens (primary → horizon blue, secondary/muted → neutral surfaces, accent → warm sand).
-- (future) Expo — React Native Reusables/shadcn-style components, same brand values.
+- Expo — Uniwind/Tailwind v4 native components, same brand values. The mobile foundation lives in `apps/mobile/src/global.css` and mirrors these semantic colors.
 
 ### Component library: shadcn/ui
 

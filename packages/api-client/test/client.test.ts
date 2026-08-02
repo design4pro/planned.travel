@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createPlannedTrpcClient } from "../src";
+import { ApiError, PlannedClient, createPlannedTrpcClient } from "../src";
 
 describe("planned tRPC client transport", () => {
   it("uses cookies for web requests and bearer tokens for mobile", async () => {
@@ -32,5 +32,14 @@ describe("planned tRPC client transport", () => {
 
     await createPlannedTrpcClient({ fetch: fetchMock }).health.query();
     expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("preserves unauthorized responses as a stable client error", async () => {
+    const fetchMock = vi.fn(async () => new Response("Authentication required", { status: 401 }));
+    const client = new PlannedClient({ baseUrl: "https://planned.travel", getToken: () => "expired-token", fetch: fetchMock });
+
+    await expect(client.trips().list()).rejects.toBeInstanceOf(ApiError);
+    await expect(client.trips().list()).rejects.toMatchObject({ status: 401 });
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("authorization")).toBe("Bearer expired-token");
   });
 });

@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "planned.travel",
+    "slug": "planned-travel",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "plannedtravel",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": { "supportsTablet": true },
+    "android": { "package": "travel.planned.app" },
+    "web": { "bundler": "metro" }
+  }
+}

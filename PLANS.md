@@ -21,7 +21,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - ✅ **Primary DB: D1 (SQLite) for v1, schema Postgres-portable via Drizzle.** Realtime = Durable Objects + Hibernation WebSockets; semantic search = Vectorize. Migrate to Postgres-via-Hyperdrive *only if* PostGIS / heavy FTS / write-hot scale demands it. Honors "all on Cloudflare."
 - ✅ **Auth: Better Auth** — official Astro + Expo (`@better-auth/expo`) support; D1 via Drizzle. Plugins: organizations, admin (RBAC), bearer + expo for mobile (token in SecureStore), passkey, TOTP, social Google+Apple. CF Workers gotchas handled: `nodejs_compat` flag, instantiate per-request, migrate via `@better-auth/cli generate` → `wrangler d1 migrations apply`. **Cloudflare Access** guards staff/admin surface only.
 - ✅ **ORM: Drizzle** (D1 + Postgres + edge-compatible).
-- ✅ **UI stack:** Web = Astro + **Tailwind v4 + shadcn/ui** islands. Mobile (later) = **Expo + React Native Reusables/shadcn-style components**. Maps = **MapLibre GL JS** (web) + **maplibre-react-native** (Expo). Shared: one token set, zod schemas, business logic, typed API client, map style/GeoJSON.
+- ✅ **UI stack:** Web = Astro + **Tailwind v4 + shadcn/ui** islands. Mobile = **Expo + React Native + Uniwind**. Maps = **MapLibre GL JS** (web) + **maplibre-react-native** (Expo). Shared: one token set, zod schemas, business logic, typed API client, map style/GeoJSON.
 - ✅ **Content & admin: internal, role-gated admin panel (not an external CMS).** Marketing/blog → Astro Content Collections. Staff routes also behind Cloudflare Access.
 - ✅ **MVP scope: full TREK parity at v1.** Every module reimplemented before public GA. Internal build sequenced in waves (Phases 1–3) converging on one v1 GA. *Large build — assumes sufficient team/runway.*
 - ✅ **Monetization: Free / Pro / Team.** Quotas gate AI usage, collab seats, exports, storage.
@@ -75,7 +75,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 ### 4.2 Frontend / UI strategy
 
 - **Web (now):** Astro (SSR via `@astrojs/cloudflare`) + **Tailwind v4** + **shadcn/ui** React islands.
-- **Mobile (later):** **Expo** + React Native Reusables/shadcn-style components.
+- **Mobile:** **Expo** + React Native + Uniwind (Tailwind v4).
 - **Shared across web+mobile:** one Tailwind `@theme` token file; zod schemas; business logic; typed API client; MapLibre style JSON + GeoJSON.
 - **Maps:** **MapLibre GL JS** (web) + **maplibre-react-native** (Expo dev build).
 
@@ -143,7 +143,8 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 - [ ] i18n expansion; admin panel; Cloudflare Access for staff
 
 ### Phase 4 — Mobile
-- [ ] Expo app (React Native Reusables/shadcn-style components + maplibre-react-native); shared tokens/logic/API client; push notifications; offline-first
+- [x] Expo app foundation (React Native + Uniwind); SecureStore-backed Better Auth bearer sessions; authenticated/unauthenticated entry points; shared tRPC client and bearer/unauthorized contract tests
+- [ ] Native UI components + maplibre-react-native; push notifications; offline-first
 
 ---
 
