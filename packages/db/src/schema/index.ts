@@ -200,6 +200,12 @@ export const subscriptions = sqliteTable("subscription", {
   updatedAt: integer("updated_at").notNull().$defaultFn(() => Date.now()),
 });
 
+/** Stripe event ids already claimed by the webhook consumer. */
+export const stripeWebhookEvents = sqliteTable("stripe_webhook_event", {
+  eventId: text("event_id").primaryKey(),
+  createdAt: now(),
+});
+
 export const schema = {
   trips,
   tripMembers,
@@ -213,6 +219,7 @@ export const schema = {
   documents,
   notifications,
   subscriptions,
+  stripeWebhookEvents,
 };
 
 export type Schema = typeof schema;

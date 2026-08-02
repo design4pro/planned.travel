@@ -12,9 +12,11 @@ import {
   unreadCount,
 } from "../lib/notifications";
 import { createStripe } from "../lib/stripe";
-import { dayItems, days, documents, expenses, expenseSplits, places, reservations, tripInvitations, tripMembers, trips } from "@planned/db";
+import { dayItems, days, documents, expenses, expenseSplits, places, reservations, stripeWebhookEvents, tripInvitations, tripMembers, trips } from "@planned/db";
 import {
   canEdit,
+  billingPlanResponseSchema,
+  checkoutInputSchema,
   createInvitationSchema,
   createReservationSchema,
   equalSplit,
@@ -1262,23 +1264,25 @@ export function createApp(env: CloudflareEnv) {
       await database.select().from(trips).where(eq(trips.ownerId, user.id)).all()
     ).length;
     const pro = isActivePro(row);
-    return c.json({
+    return c.json(billingPlanResponseSchema.parse({
       plan: row.plan,
       status: row.status,
       interval: row.interval,
-      cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+      cancelAtPeriodEnd: !!row.cancelAtPeriodEnd,
       currentPeriodEnd: row.currentPeriodEnd,
       stripeCustomerId: row.stripeCustomerId,
       tripCount,
       tripLimit: pro ? null : FREE_TRIP_LIMIT,
-    });
+    }));
   });
 
   app.post("/api/billing/checkout", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
     const body = await c.req.json().catch(() => ({}));
-    const interval = body?.interval === "year" ? "year" : "month";
+    const parsedInput = checkoutInputSchema.safeParse(body);
+    if (!parsedInput.success) return c.json({ error: "invalid_interval" }, 400);
+    const { interval } = parsedInput.data;
     const priceId = interval === "year" ? env.STRIPE_PRICE_PRO_ANNUAL : env.STRIPE_PRICE_PRO_MONTHLY;
     if (!priceId || !priceId.startsWith("price_"))
       return c.json({ error: "billing_not_configured" }, 500);
@@ -1364,35 +1368,46 @@ export function createApp(env: CloudflareEnv) {
       return c.json({ error: "invalid_signature" }, 400);
     }
 
-    // Idempotency: Stripe may redeliver. Dedup on event.id via KV (30-day TTL).
-    const dedupKey = `stripe_evt:${event.id}`;
-    if (await env.KV.get(dedupKey)) return c.json({ received: true, duplicate: true });
-    await env.KV.put(dedupKey, "1", { expirationTtl: 60 * 60 * 24 * 30 });
+    // Idempotency is claimed by a D1 primary key, not a read-then-write KV
+    // check. That makes concurrent Stripe deliveries safe as well as retries.
+    const [claimed] = await database
+      .insert(stripeWebhookEvents)
+      .values({ eventId: event.id })
+      .onConflictDoNothing({ target: stripeWebhookEvents.eventId })
+      .returning({ eventId: stripeWebhookEvents.eventId });
+    if (!claimed) return c.json({ received: true, duplicate: true });
 
-    const priceToInterval = priceIntervalFromEnv(env);
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.metadata?.userId ?? session.client_reference_id ?? null;
-        if (userId && typeof session.customer === "string") {
-          await upsertCustomerId(database, userId, session.customer);
+    try {
+      const priceToInterval = priceIntervalFromEnv(env);
+      switch (event.type) {
+        case "checkout.session.completed": {
+          const session = event.data.object as Stripe.Checkout.Session;
+          const userId = session.metadata?.userId ?? session.client_reference_id ?? null;
+          if (userId && typeof session.customer === "string") {
+            await upsertCustomerId(database, userId, session.customer);
+          }
+          break;
         }
-        break;
-      }
-      case "customer.subscription.created":
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted": {
-        const sub = event.data.object as Stripe.Subscription;
-        const transition = await syncSubscriptionFromStripe(database, sub, priceToInterval);
-        if (transition) {
-          await notifyAll(
-            buildSubscriptionJobs({ ...transition, eventType: event.type, now: Date.now() }),
-          );
+        case "customer.subscription.created":
+        case "customer.subscription.updated":
+        case "customer.subscription.deleted": {
+          const sub = event.data.object as Stripe.Subscription;
+          const transition = await syncSubscriptionFromStripe(database, sub, priceToInterval);
+          if (transition) {
+            await notifyAll(
+              buildSubscriptionJobs({ ...transition, eventType: event.type, now: Date.now() }),
+            );
+          }
+          break;
         }
-        break;
+        default:
+          break;
       }
-      default:
-        break;
+    } catch (error) {
+      // Let Stripe retry transient failures instead of permanently claiming
+      // an event that did not finish processing.
+      await database.delete(stripeWebhookEvents).where(eq(stripeWebhookEvents.eventId, event.id));
+      throw error;
     }
     return c.json({ received: true });
   });

@@ -83,3 +83,4 @@ export * from "./collab";
 /* ----------------------------- Notifications ----------------------------- */
 
 export * from "./notifications";
+export * from "./billing";
