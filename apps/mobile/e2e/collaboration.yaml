@@ -2,22 +2,31 @@ appId: travel.planned.app
 ---
 - launchApp:
     clearState: true
+- runFlow:
+    when:
+      visible: "‹ Trips"
+    commands:
+      - tapOn: "‹ Trips"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Sign out"
+    commands:
+      - tapOn: "Sign out"
 - assertVisible: "Sign in"
-- tapOn: "Email"
+- tapOn:
+    id: sign-in-email
 - inputText: ${E2E_EMAIL}
-- tapOn: "Password"
+- tapOn:
+    id: sign-in-password
 - inputText: ${E2E_PASSWORD}
-- tapOn: "Sign in"
+- pressKey: ENTER
 - extendedWaitUntil:
     visible: "Your trips"
     timeout: 15000
 - tapOn: "Name a new trip"
 - inputText: ${E2E_COLLAB_TRIP_TITLE}
-- tapOn: "Create"
-- extendedWaitUntil:
-    visible: "Open trip →"
-    timeout: 15000
-- tapOn: "Open trip →"
+- pressKey: ENTER
 - extendedWaitUntil:
     visible: "Itinerary"
     timeout: 15000
@@ -35,11 +44,13 @@ appId: travel.planned.app
 - tapOn: "Done"
 - tapOn: "Sign out"
 - assertVisible: "Sign in"
-- tapOn: "Email"
+- tapOn:
+    id: sign-in-email
 - inputText: ${E2E_MEMBER_EMAIL}
-- tapOn: "Password"
+- tapOn:
+    id: sign-in-password
 - inputText: ${E2E_MEMBER_PASSWORD}
-- tapOn: "Sign in"
+- pressKey: ENTER
 - extendedWaitUntil:
     visible: "Your trips"
     timeout: 15000
@@ -50,16 +61,18 @@ appId: travel.planned.app
 - assertVisible: "Add a note"
 - tapOn: "Add a note"
 - inputText: "Editor collaboration note"
-- tapOn: "Add"
+- pressKey: ENTER
 - assertVisible: "Editor collaboration note"
 - tapOn: "‹ Trips"
 - tapOn: "Sign out"
 - assertVisible: "Sign in"
-- tapOn: "Email"
+- tapOn:
+    id: sign-in-email
 - inputText: ${E2E_EMAIL}
-- tapOn: "Password"
+- tapOn:
+    id: sign-in-password
 - inputText: ${E2E_PASSWORD}
-- tapOn: "Sign in"
+- pressKey: ENTER
 - extendedWaitUntil:
     visible: "Your trips"
     timeout: 15000
@@ -75,11 +88,13 @@ appId: travel.planned.app
 - tapOn: "Done"
 - tapOn: "Sign out"
 - assertVisible: "Sign in"
-- tapOn: "Email"
+- tapOn:
+    id: sign-in-email
 - inputText: ${E2E_MEMBER_EMAIL}
-- tapOn: "Password"
+- tapOn:
+    id: sign-in-password
 - inputText: ${E2E_MEMBER_PASSWORD}
-- tapOn: "Sign in"
+- pressKey: ENTER
 - extendedWaitUntil:
     visible: "Your trips"
     timeout: 15000

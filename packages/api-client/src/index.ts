@@ -78,9 +78,15 @@ export class PlannedClient {
   trips() {
     return {
       list: () => this.request<TripDto[]>("/api/trips"),
-      get: (id: string) => this.request<TripPlan>(`/api/trips/${id}`),
       create: (input: { title: string }) =>
         this.request<TripDto>("/api/trips", { method: "POST", body: JSON.stringify(input) }),
+      get: (id: string) => this.request<TripPlan>(`/api/trips/${id}`),
+      addPlace: (id: string, input: { name: string; lat: number; lng: number }) =>
+        this.request<TripPlan["places"][number]>(`/api/trips/${id}/places`, { method: "POST", body: JSON.stringify(input) }),
+      addDay: (id: string) =>
+        this.request<TripPlan["days"][number]>(`/api/trips/${id}/days`, { method: "POST" }),
+      addItem: (id: string, input: { dayId?: string; note?: string; placeId?: string }) =>
+        this.request<TripPlan["items"][number]>(`/api/trips/${id}/items`, { method: "POST", body: JSON.stringify(input) }),
       members: (id: string) => this.request<Member[]>(`/api/trips/${encodeURIComponent(id)}/members`),
       addMember: (id: string, input: { email: string; role: "editor" | "viewer" }) =>
         this.request<{ userId: string; role: "editor" | "viewer" }>(`/api/trips/${encodeURIComponent(id)}/members`, {

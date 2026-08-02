@@ -2,27 +2,39 @@ appId: travel.planned.app
 ---
 - launchApp:
     clearState: true
+- runFlow:
+    when:
+      visible: "‹ Trips"
+    commands:
+      - tapOn: "‹ Trips"
+- runFlow:
+    when:
+      visible: "Sign out"
+    commands:
+      - tapOn: "Sign out"
 - assertVisible: "Sign in"
-- tapOn: "Email"
+- tapOn:
+    id: sign-in-email
 - inputText: ${E2E_EMAIL}
-- tapOn: "Password"
+- tapOn:
+    id: sign-in-password
+- waitForAnimationToEnd
 - inputText: ${E2E_PASSWORD}
-- tapOn: "Sign in"
+- waitForAnimationToEnd
+- pressKey: ENTER
 - extendedWaitUntil:
     visible: "Your trips"
     timeout: 15000
 - tapOn: "Name a new trip"
 - inputText: ${E2E_TRIP_TITLE}
-- tapOn: "Create"
-- extendedWaitUntil:
-    visible: "Open trip →"
-    timeout: 15000
-- tapOn: "Open trip →"
+- pressKey: ENTER
 - extendedWaitUntil:
     visible: "Itinerary"
     timeout: 15000
 - assertVisible: "Map view"
 - tapOn: "Add a note"
 - inputText: "Mobile E2E note"
-- tapOn: "Add"
+- pressKey: ENTER
 - assertVisible: "Mobile E2E note"
+- tapOn: "‹ Trips"
+- tapOn: "Sign out"

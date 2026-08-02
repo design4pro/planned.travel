@@ -9,7 +9,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "e2e": "maestro test e2e",
+    "e2e": "sh -c 'set -a; . .env; set +a; for flow in e2e/*.yaml; do maestro test -e E2E_EMAIL=\"$E2E_EMAIL\" -e E2E_PASSWORD=\"$E2E_PASSWORD\" -e E2E_MEMBER_EMAIL=\"$E2E_MEMBER_EMAIL\" -e E2E_MEMBER_PASSWORD=\"$E2E_MEMBER_PASSWORD\" -e E2E_TRIP_TITLE=\"$E2E_TRIP_TITLE\" -e E2E_COLLAB_TRIP_TITLE=\"$E2E_COLLAB_TRIP_TITLE\" -e E2E_REALTIME_TRIP_TITLE=\"$E2E_REALTIME_TRIP_TITLE\" -e E2E_MAP_TRIP_TITLE=\"$E2E_MAP_TRIP_TITLE\" \"$flow\" || exit 1; done'",
     "build": "expo export --platform ios --platform android --no-bytecode",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --max-warnings=0",

@@ -11,6 +11,12 @@ export function createMobileAuthClient(options: { baseURL: string; storage: Secu
     // identical, so keep the boundary explicit here.
     plugins: [expoClient({ scheme: "plannedtravel", storagePrefix: "plannedtravel", storage: options.storage }) as unknown as BetterAuthClientPlugin],
     fetchOptions: {
+      customFetchImpl: async (input, init) => {
+        const response = await fetch(input, init);
+        const token = response.headers.get("set-auth-token");
+        if (token) await options.storage.setItem(SESSION_TOKEN_KEY, token);
+        return response;
+      },
       onSuccess: async ({ response }) => {
         const token = response.headers.get("set-auth-token");
         if (token) await options.storage.setItem(SESSION_TOKEN_KEY, token);
