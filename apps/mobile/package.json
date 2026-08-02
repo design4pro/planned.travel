@@ -23,20 +23,21 @@
     "expo-constants": "^57.0.8",
     "expo-linking": "^57.0.4",
     "expo-network": "^57.0.1",
-    "expo-secure-store": "^15.0.8",
-    "expo-status-bar": "^3.0.8",
+    "expo-secure-store": "^57.0.1",
+    "expo-status-bar": "^57.0.1",
+    "expo-system-ui": "~57.0.2",
     "expo-web-browser": "^57.0.2",
-    "react": "^19.2.0",
-    "react-native": "0.83.1",
+    "react": "^19.2.3",
+    "react-native": "0.86.2",
     "tailwindcss": "^4.1.12",
     "uniwind": "^1.10.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
     "@cloudflare/workers-types": "^4.20260626.1",
+    "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.2",
     "eslint": "^10.6.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.1",
     "vitest": "^2.1.8"
   }
