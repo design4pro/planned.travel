@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppTripsIdRouteImport } from './routes/app/trips/$id'
+import { Route as AppTripsIdExpensesRouteImport } from './routes/app/trips/$id.expenses'
 import { Route as AppTripsIdReservationsRouteImport } from './routes/app/trips/$id.reservations'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +36,11 @@ const AppTripsIdRoute = AppTripsIdRouteImport.update({
   path: '/trips/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTripsIdExpensesRoute = AppTripsIdExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
+  getParentRoute: () => AppTripsIdRoute,
+} as any)
 const AppTripsIdReservationsRoute = AppTripsIdReservationsRouteImport.update({
   id: '/reservations',
   path: '/reservations',
@@ -46,12 +52,14 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/app/trips/$id': typeof AppTripsIdRouteWithChildren
+  '/app/trips/$id/expenses': typeof AppTripsIdExpensesRoute
   '/app/trips/$id/reservations': typeof AppTripsIdReservationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppIndexRoute
   '/app/trips/$id': typeof AppTripsIdRouteWithChildren
+  '/app/trips/$id/expenses': typeof AppTripsIdExpensesRoute
   '/app/trips/$id/reservations': typeof AppTripsIdReservationsRoute
 }
 export interface FileRoutesById {
@@ -60,20 +68,32 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/app/': typeof AppIndexRoute
   '/app/trips/$id': typeof AppTripsIdRouteWithChildren
+  '/app/trips/$id/expenses': typeof AppTripsIdExpensesRoute
   '/app/trips/$id/reservations': typeof AppTripsIdReservationsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/app' | '/app/' | '/app/trips/$id' | '/app/trips/$id/reservations'
+    | '/'
+    | '/app'
+    | '/app/'
+    | '/app/trips/$id'
+    | '/app/trips/$id/expenses'
+    | '/app/trips/$id/reservations'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app' | '/app/trips/$id' | '/app/trips/$id/reservations'
+  to:
+    | '/'
+    | '/app'
+    | '/app/trips/$id'
+    | '/app/trips/$id/expenses'
+    | '/app/trips/$id/reservations'
   id:
     | '__root__'
     | '/'
     | '/app'
     | '/app/'
     | '/app/trips/$id'
+    | '/app/trips/$id/expenses'
     | '/app/trips/$id/reservations'
   fileRoutesById: FileRoutesById
 }
@@ -112,6 +132,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTripsIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/trips/$id/expenses': {
+      id: '/app/trips/$id/expenses'
+      path: '/expenses'
+      fullPath: '/app/trips/$id/expenses'
+      preLoaderRoute: typeof AppTripsIdExpensesRouteImport
+      parentRoute: typeof AppTripsIdRoute
+    }
     '/app/trips/$id/reservations': {
       id: '/app/trips/$id/reservations'
       path: '/reservations'
@@ -123,10 +150,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppTripsIdRouteChildren {
+  AppTripsIdExpensesRoute: typeof AppTripsIdExpensesRoute
   AppTripsIdReservationsRoute: typeof AppTripsIdReservationsRoute
 }
 
 const AppTripsIdRouteChildren: AppTripsIdRouteChildren = {
+  AppTripsIdExpensesRoute: AppTripsIdExpensesRoute,
   AppTripsIdReservationsRoute: AppTripsIdReservationsRoute,
 }
 

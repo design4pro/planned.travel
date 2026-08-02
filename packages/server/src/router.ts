@@ -1,11 +1,16 @@
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
-import { dayItems, days, documents, notifications, places, reservations, subscriptions, trips, tripMembers } from "@planned/db";
+import { dayItems, days, documents, expenseSplits, expenses, notifications, places, reservations, subscriptions, trips, tripMembers } from "@planned/db";
 import {
   createDayItemInputSchema,
   createPlaceInputSchema,
   createTripInputSchema,
   createReservationInputSchema,
+  createExpenseInputSchema,
+  expenseDtoSchema,
+  expensePlanSchema,
+  equalSplit,
+  summarizeByCurrency,
   reservationDtoSchema,
   reservationTripIdSchema,
   sortReservations,
@@ -64,6 +69,48 @@ export const appRouter = router({
         places: placeRows,
         items: itemRows,
       });
+    }),
+    expenses: router({
+      list: protectedProcedure.input(z.object({ tripId: z.string().min(1) })).query(async ({ ctx, input }) => {
+        const access = await requireTripAccess(ctx, input.tripId);
+        const rows = await ctx.db.select().from(expenses).where(eq(expenses.tripId, access.trip.id)).orderBy(desc(expenses.createdAt)).all();
+        const splits = rows.length ? await ctx.db.select().from(expenseSplits).where(inArray(expenseSplits.expenseId, rows.map((row) => row.id))).all() : [];
+        const splitMap = new Map<string, typeof splits>();
+        for (const split of splits) splitMap.set(split.expenseId, [...(splitMap.get(split.expenseId) ?? []), split]);
+        const expenseDtos = rows.map((row) => expenseDtoSchema.parse({ ...row, splits: (splitMap.get(row.id) ?? []).map(({ userId, shareCents }) => ({ userId, shareCents })) }));
+        const memberRows = await ctx.db.select({ userId: tripMembers.userId }).from(tripMembers).where(eq(tripMembers.tripId, access.trip.id)).all();
+        const members = [{ userId: access.trip.ownerId }, ...memberRows.filter(({ userId }) => userId !== access.trip.ownerId)];
+        return expensePlanSchema.parse({ expenses: expenseDtos, summaries: summarizeByCurrency(members, expenseDtos) });
+      }),
+      create: protectedProcedure.input(createExpenseInputSchema).mutation(async ({ ctx, input }) => {
+        const access = await requireTripAccess(ctx, input.tripId, ["owner", "editor"]);
+        const memberRows = await ctx.db.select({ userId: tripMembers.userId }).from(tripMembers).where(eq(tripMembers.tripId, access.trip.id)).all();
+        const memberIds = new Set([access.trip.ownerId, ...memberRows.map(({ userId }) => userId)]);
+        const participantIds = input.participantIds?.length ? [...new Set(input.participantIds)] : [...memberIds];
+        if (participantIds.length === 0) participantIds.push(ctx.user.id);
+        if (participantIds.some((userId) => !memberIds.has(userId) && userId !== ctx.user.id)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Participants must belong to this trip" });
+        }
+        const splits = equalSplit(input.amountCents, participantIds);
+        const [created] = await ctx.db.insert(expenses).values({
+          tripId: access.trip.id, paidByUserId: ctx.user.id, amountCents: input.amountCents, currency: input.currency,
+          category: input.category ?? null, description: input.description || null, date: input.date ?? null,
+        }).returning();
+        if (!created) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Expense was not created" });
+        if (splits.length) await ctx.db.insert(expenseSplits).values(splits.map((split) => ({ expenseId: created.id, ...split })));
+        await ctx.broadcastChange?.(access.trip.id, "expenses", ctx.user.id);
+        await ctx.onExpenseChange?.({ tripId: access.trip.id, tripName: access.trip.title, expenseId: created.id, amountCents: created.amountCents, currency: created.currency, description: created.description, participantIds, actorUserId: ctx.user.id, actorName: ctx.user.name });
+        return expenseDtoSchema.parse({ ...created, splits });
+      }),
+      remove: protectedProcedure.input(z.object({ id: z.string().min(1) })).mutation(async ({ ctx, input }) => {
+        const [existing] = await ctx.db.select().from(expenses).where(eq(expenses.id, input.id)).limit(1);
+        if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Expense not found" });
+        const access = await requireTripAccess(ctx, existing.tripId, ["owner", "editor"]);
+        await ctx.db.delete(expenseSplits).where(eq(expenseSplits.expenseId, input.id));
+        await ctx.db.delete(expenses).where(eq(expenses.id, input.id));
+        await ctx.broadcastChange?.(access.trip.id, "expenses", ctx.user.id);
+        return { ok: true as const };
+      }),
     }),
     reservations: router({
       list: protectedProcedure.input(reservationTripIdSchema).query(async ({ ctx, input }) => {

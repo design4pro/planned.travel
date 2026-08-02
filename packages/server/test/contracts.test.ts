@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { createDayItemInputSchema, createReservationInputSchema, createTripInputSchema, sortReservations, tripDtoSchema, tripPlanSchema, updateReservationSchema } from "@planned/shared";
+import { createDayItemInputSchema, createExpenseInputSchema, createReservationInputSchema, createTripInputSchema, equalSplit, sortReservations, tripDtoSchema, tripPlanSchema, updateReservationSchema } from "@planned/shared";
 import { appRouter } from "../src/router";
 import { createContext } from "../src/context";
 
@@ -110,5 +110,26 @@ describe("tRPC contract", () => {
 
   it("orders dated reservations first and keeps placeholders at the end", () => {
     expect(sortReservations([{ startsAt: null, id: "undated" }, { startsAt: 2_000, id: "late" }, { startsAt: 1_000, id: "early" }]).map((row) => row.id)).toEqual(["early", "late", "undated"]);
+  });
+
+  it("validates expense inputs as integer cents with normalized currencies", () => {
+    const parsed = createExpenseInputSchema.parse({ tripId: "t1", amountCents: 1_005, currency: " eur " });
+    expect(parsed).toMatchObject({ amountCents: 1_005, currency: "EUR" });
+    expect(createExpenseInputSchema.safeParse({ tripId: "t1", amountCents: 10.5, currency: "USD" }).success).toBe(false);
+    expect(createExpenseInputSchema.safeParse({ tripId: "t1", amountCents: 100, currency: "US" }).success).toBe(false);
+  });
+
+  it("rounds equal splits without losing a cent", () => {
+    expect(equalSplit(100, ["ada", "bea", "cy"])).toEqual([
+      { userId: "ada", shareCents: 34 },
+      { userId: "bea", shareCents: 33 },
+      { userId: "cy", shareCents: 33 },
+    ]);
+  });
+
+  it("requires authentication for expense reads and mutations", async () => {
+    await expect(caller().trips.expenses.list({ tripId: "t1" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(caller().trips.expenses.create({ tripId: "t1", amountCents: 100, currency: "USD" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(caller().trips.expenses.remove({ id: "e1" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });

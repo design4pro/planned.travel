@@ -24,6 +24,7 @@ export interface AppContext {
   /** Publish after a successful D1 mutation; the DO remains a change bus only. */
   broadcastChange?: (tripId: string, resource: ChangeResource, by: string | null) => Promise<void>;
   onReservationChange?: (event: ReservationChangeEvent) => Promise<void>;
+  onExpenseChange?: (event: ExpenseChangeEvent) => Promise<void>;
 }
 
 export interface ReservationChangeEvent {
@@ -37,12 +38,25 @@ export interface ReservationChangeEvent {
   actorName?: string | null;
 }
 
+export interface ExpenseChangeEvent {
+  tripId: string;
+  tripName: string;
+  expenseId: string;
+  amountCents: number;
+  currency: string;
+  description: string | null;
+  participantIds: string[];
+  actorUserId: string;
+  actorName?: string | null;
+}
+
 export async function createContext(options: {
   request: Request;
   env: ServerEnv;
   resolveUser: SessionResolver;
   broadcastChange?: AppContext["broadcastChange"];
   onReservationChange?: AppContext["onReservationChange"];
+  onExpenseChange?: AppContext["onExpenseChange"];
 }): Promise<AppContext> {
   return {
     request: options.request,
@@ -51,5 +65,6 @@ export async function createContext(options: {
     user: await options.resolveUser(options.request.headers),
     broadcastChange: options.broadcastChange,
     onReservationChange: options.onReservationChange,
+    onExpenseChange: options.onExpenseChange,
   };
 }

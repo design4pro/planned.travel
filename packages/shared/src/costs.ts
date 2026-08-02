@@ -46,6 +46,11 @@ export const createExpenseSchema = z.object({
 });
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 
+export const createExpenseInputSchema = createExpenseSchema.extend({
+  tripId: z.string().min(1),
+});
+export type CreateExpenseInputWithTrip = z.infer<typeof createExpenseInputSchema>;
+
 export interface Member {
   userId: string;
 }
@@ -65,6 +70,33 @@ export interface Expense {
   date?: number | null;
   splits: ExpenseSplit[];
 }
+
+export const expenseDtoSchema = z.object({
+  id: z.string(),
+  tripId: z.string(),
+  paidByUserId: z.string(),
+  amountCents: z.number().int().nonnegative(),
+  currency: currencySchema,
+  category: expenseCategorySchema.nullable(),
+  description: z.string().nullable(),
+  date: z.number().int().nonnegative().nullable(),
+  createdAt: z.number().int(),
+  splits: z.array(z.object({ userId: z.string(), shareCents: z.number().int().nonnegative() })),
+});
+export type ExpenseDto = z.infer<typeof expenseDtoSchema>;
+
+export const expensePlanSchema = z.object({
+  expenses: z.array(expenseDtoSchema),
+  summaries: z.array(z.object({
+    currency: currencySchema,
+    totalCents: z.number().int().nonnegative(),
+    balances: z.array(z.object({
+      userId: z.string(), paidCents: z.number().int(), shareCents: z.number().int(), netCents: z.number().int(),
+    })),
+    settlements: z.array(z.object({ fromUserId: z.string(), toUserId: z.string(), amountCents: z.number().int().positive() })),
+  })),
+});
+export type ExpensePlan = z.infer<typeof expensePlanSchema>;
 
 /* ------------------------------ Splitting -------------------------------- */
 

@@ -212,6 +212,9 @@ export function createApp(env: CloudflareEnv) {
                   }),
             );
           },
+          onExpenseChange: async (event) => {
+            await notifyAll(buildExpenseAddedJobs({ ...event, participantIds: event.participantIds, paidByName: event.actorName ?? null }));
+          },
         }),
     }),
   );
