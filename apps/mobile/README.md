@@ -25,10 +25,17 @@ native Expo app. Install Maestro, build/install the app with `pnpm ios` or
 ```bash
 export E2E_EMAIL='mobile-e2e@example.com'
 export E2E_PASSWORD='…'
+export E2E_MEMBER_EMAIL='mobile-member@example.com'
+export E2E_MEMBER_PASSWORD='…'
 export E2E_TRIP_TITLE="Mobile E2E $(date +%s)"
+export E2E_COLLAB_TRIP_TITLE="Mobile collaboration E2E $(date +%s)"
+export E2E_REALTIME_TRIP_TITLE="Mobile realtime E2E $(date +%s)"
+export E2E_MAP_TRIP_TITLE="Mobile map E2E $(date +%s)"
 pnpm --filter @planned/mobile e2e
 ```
 
-The flow covers sign-in, trip creation, opening the workspace, map-first
-presentation, and adding an itinerary note. It expects the API URL from
-`EXPO_PUBLIC_API_URL` (or the production default).
+The suite covers sign-in, trip creation/opening, editor and viewer
+permissions, member invitations, realtime connection/presence, map-first
+presentation, and itinerary mutations. Use a Pro test account or reset the
+test account between runs because the flows create separate trips. It expects
+the API URL from `EXPO_PUBLIC_API_URL` (or the production default).
