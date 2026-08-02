@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { createDayItemInputSchema, createTripInputSchema, tripDtoSchema, tripPlanSchema } from "@planned/shared";
+import { createDayItemInputSchema, createReservationInputSchema, createTripInputSchema, sortReservations, tripDtoSchema, tripPlanSchema, updateReservationSchema } from "@planned/shared";
 import { appRouter } from "../src/router";
 import { createContext } from "../src/context";
 
@@ -86,5 +86,29 @@ describe("tRPC contract", () => {
   it("requires a place or note when adding a day item", () => {
     expect(createDayItemInputSchema.safeParse({ tripId: "t1" }).success).toBe(false);
     expect(createDayItemInputSchema.safeParse({ tripId: "t1", note: "Dinner" }).success).toBe(true);
+  });
+
+  it("rejects reservation dates when the end precedes the start", () => {
+    const result = createReservationInputSchema.safeParse({
+      tripId: "t1",
+      type: "hotel",
+      startsAt: 2_000,
+      endsAt: 1_000,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["endsAt"]);
+    expect(updateReservationSchema.safeParse({ startsAt: 2_000, endsAt: 1_000 }).success).toBe(false);
+  });
+
+  it("requires authentication for reservation reads", async () => {
+    await expect(caller().trips.reservations.list({ tripId: "t1" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("validates reservation dates before an authenticated mutation reaches the database", async () => {
+    await expect(caller({ id: "u1" }).trips.reservations.create({ tripId: "t1", startsAt: 2_000, endsAt: 1_000 })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("orders dated reservations first and keeps placeholders at the end", () => {
+    expect(sortReservations([{ startsAt: null, id: "undated" }, { startsAt: 2_000, id: "late" }, { startsAt: 1_000, id: "early" }]).map((row) => row.id)).toEqual(["early", "late", "undated"]);
   });
 });

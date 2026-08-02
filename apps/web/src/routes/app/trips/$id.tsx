@@ -29,6 +29,7 @@ function TripDetailPage() {
   const submitNote = (event: React.FormEvent) => { event.preventDefault(); if (note.trim()) addItem.mutate({ tripId: id, note }); setNote(""); };
 
   return <main className="mx-auto max-w-6xl px-6 py-10"><header className="mb-8 flex flex-wrap items-center justify-between gap-4"><div><Link to="/app" className="text-sm text-muted-foreground underline">← All trips</Link><h1 className="mt-3 text-4xl font-bold">{trip.title}</h1><p className="mt-2 text-muted-foreground">{trip.role} access</p></div>{canEdit && <Button variant="outline" onPress={() => addDay.mutate({ id })} isPending={addDay.isPending}>Add day</Button>}</header>
+    <div className="mb-6 flex gap-4 text-sm"><Link to="/app/trips/$id/reservations" params={{ id }} className="text-primary underline">Reservations</Link></div>
     <TripRealtime tripId={id} />
     {places.length > 0 && <div className="mb-8 overflow-hidden rounded-xl border"><TripMap places={places.map((place) => ({ id: place.id, name: place.name, lat: place.lat, lng: place.lng }))} /></div>}
     {trip.role === "viewer" && <p className="mb-6 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">You’re viewing this trip. Editing is disabled.</p>}

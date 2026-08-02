@@ -41,11 +41,45 @@ export const createReservationSchema = z.object({
   startsAt: z.number().int().nonnegative().optional(),
   endsAt: z.number().int().nonnegative().optional(),
   notes: z.string().trim().max(4000).optional(),
-});
+}).superRefine(validateReservationDates);
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;
+export const createReservationInputSchema = createReservationSchema.and(z.object({ tripId: z.string().min(1) }));
 
-export const updateReservationSchema = createReservationSchema.partial();
+export const updateReservationSchema = z.object({
+  type: reservationTypeSchema.optional(),
+  status: reservationStateSchema.optional(),
+  title: z.string().trim().max(200).nullable().optional(),
+  confirmationCode: z.string().trim().max(200).nullable().optional(),
+  startsAt: z.number().int().nonnegative().nullable().optional(),
+  endsAt: z.number().int().nonnegative().nullable().optional(),
+  notes: z.string().trim().max(4000).nullable().optional(),
+}).superRefine(validateReservationDates);
 export type UpdateReservationInput = z.infer<typeof updateReservationSchema>;
+
+export const reservationDtoSchema = z.object({
+  id: z.string(),
+  tripId: z.string(),
+  type: reservationTypeSchema,
+  status: reservationStateSchema,
+  title: z.string().nullable(),
+  confirmationCode: z.string().nullable(),
+  startsAt: z.number().int().nullable(),
+  endsAt: z.number().int().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.number().int(),
+});
+export type ReservationDto = z.infer<typeof reservationDtoSchema>;
+
+export const reservationTripIdSchema = z.object({ tripId: z.string().min(1) });
+
+function validateReservationDates(
+  value: { startsAt?: number | null; endsAt?: number | null },
+  ctx: z.RefinementCtx,
+) {
+  if (value.startsAt != null && value.endsAt != null && value.endsAt < value.startsAt) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["endsAt"], message: "ends_before_starts" });
+  }
+}
 
 export interface Reservation {
   id: string;

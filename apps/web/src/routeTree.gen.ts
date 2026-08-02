@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppTripsIdRouteImport } from './routes/app/trips/$id'
+import { Route as AppTripsIdReservationsRouteImport } from './routes/app/trips/$id.reservations'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,31 +35,46 @@ const AppTripsIdRoute = AppTripsIdRouteImport.update({
   path: '/trips/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTripsIdReservationsRoute = AppTripsIdReservationsRouteImport.update({
+  id: '/reservations',
+  path: '/reservations',
+  getParentRoute: () => AppTripsIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/app/': typeof AppIndexRoute
-  '/app/trips/$id': typeof AppTripsIdRoute
+  '/app/trips/$id': typeof AppTripsIdRouteWithChildren
+  '/app/trips/$id/reservations': typeof AppTripsIdReservationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppIndexRoute
-  '/app/trips/$id': typeof AppTripsIdRoute
+  '/app/trips/$id': typeof AppTripsIdRouteWithChildren
+  '/app/trips/$id/reservations': typeof AppTripsIdReservationsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/app/': typeof AppIndexRoute
-  '/app/trips/$id': typeof AppTripsIdRoute
+  '/app/trips/$id': typeof AppTripsIdRouteWithChildren
+  '/app/trips/$id/reservations': typeof AppTripsIdReservationsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/app/' | '/app/trips/$id'
+  fullPaths:
+    '/' | '/app' | '/app/' | '/app/trips/$id' | '/app/trips/$id/reservations'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app' | '/app/trips/$id'
-  id: '__root__' | '/' | '/app' | '/app/' | '/app/trips/$id'
+  to: '/' | '/app' | '/app/trips/$id' | '/app/trips/$id/reservations'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/app/'
+    | '/app/trips/$id'
+    | '/app/trips/$id/reservations'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -96,17 +112,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTripsIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/trips/$id/reservations': {
+      id: '/app/trips/$id/reservations'
+      path: '/reservations'
+      fullPath: '/app/trips/$id/reservations'
+      preLoaderRoute: typeof AppTripsIdReservationsRouteImport
+      parentRoute: typeof AppTripsIdRoute
+    }
   }
 }
 
+interface AppTripsIdRouteChildren {
+  AppTripsIdReservationsRoute: typeof AppTripsIdReservationsRoute
+}
+
+const AppTripsIdRouteChildren: AppTripsIdRouteChildren = {
+  AppTripsIdReservationsRoute: AppTripsIdReservationsRoute,
+}
+
+const AppTripsIdRouteWithChildren = AppTripsIdRoute._addFileChildren(
+  AppTripsIdRouteChildren,
+)
+
 interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
-  AppTripsIdRoute: typeof AppTripsIdRoute
+  AppTripsIdRoute: typeof AppTripsIdRouteWithChildren
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
-  AppTripsIdRoute: AppTripsIdRoute,
+  AppTripsIdRoute: AppTripsIdRouteWithChildren,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

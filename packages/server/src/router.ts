@@ -1,10 +1,15 @@
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
-import { dayItems, days, notifications, places, subscriptions, trips, tripMembers } from "@planned/db";
+import { dayItems, days, documents, notifications, places, reservations, subscriptions, trips, tripMembers } from "@planned/db";
 import {
   createDayItemInputSchema,
   createPlaceInputSchema,
   createTripInputSchema,
+  createReservationInputSchema,
+  reservationDtoSchema,
+  reservationTripIdSchema,
+  sortReservations,
+  updateReservationSchema,
   tripDtoSchema,
   tripPlanSchema,
 } from "@planned/shared";
@@ -59,6 +64,61 @@ export const appRouter = router({
         places: placeRows,
         items: itemRows,
       });
+    }),
+    reservations: router({
+      list: protectedProcedure.input(reservationTripIdSchema).query(async ({ ctx, input }) => {
+        const access = await requireTripAccess(ctx, input.tripId);
+        const rows = await ctx.db
+          .select()
+          .from(reservations)
+          .where(eq(reservations.tripId, access.trip.id))
+          .orderBy(asc(reservations.startsAt))
+          .all();
+        return sortReservations(rows).map((row) => reservationDtoSchema.parse(row));
+      }),
+      create: protectedProcedure.input(createReservationInputSchema).mutation(async ({ ctx, input }) => {
+        const access = await requireTripAccess(ctx, input.tripId, ["owner", "editor"]);
+        const { tripId: _tripId, ...values } = input;
+        const [created] = await ctx.db.insert(reservations).values({ tripId: access.trip.id, ...values }).returning();
+        if (!created) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Reservation was not created" });
+        await ctx.broadcastChange?.(access.trip.id, "reservations", ctx.user.id);
+        await ctx.onReservationChange?.({
+          kind: "added",
+          tripId: access.trip.id,
+          tripName: access.trip.title,
+          reservationId: created.id,
+          type: created.type,
+          title: created.title,
+          actorUserId: ctx.user.id,
+          actorName: ctx.user.name,
+        });
+        return reservationDtoSchema.parse(created);
+      }),
+      update: protectedProcedure.input(z.object({ id: z.string().min(1), data: updateReservationSchema })).mutation(async ({ ctx, input }) => {
+        const [existing] = await ctx.db.select().from(reservations).where(eq(reservations.id, input.id)).limit(1);
+        if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Reservation not found" });
+        const access = await requireTripAccess(ctx, existing.tripId, ["owner", "editor"]);
+        const merged = { startsAt: input.data.startsAt === undefined ? existing.startsAt : input.data.startsAt, endsAt: input.data.endsAt === undefined ? existing.endsAt : input.data.endsAt };
+        if (merged.startsAt != null && merged.endsAt != null && merged.endsAt < merged.startsAt) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "ends_before_starts" });
+        }
+        const [updated] = await ctx.db.update(reservations).set(input.data).where(eq(reservations.id, input.id)).returning();
+        if (!updated) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Reservation was not updated" });
+        await ctx.broadcastChange?.(access.trip.id, "reservations", ctx.user.id);
+        if (existing.status !== "confirmed" && updated.status === "confirmed") {
+          await ctx.onReservationChange?.({ kind: "confirmed", tripId: access.trip.id, tripName: access.trip.title, reservationId: updated.id, type: updated.type, title: updated.title });
+        }
+        return reservationDtoSchema.parse(updated);
+      }),
+      remove: protectedProcedure.input(z.object({ id: z.string().min(1) })).mutation(async ({ ctx, input }) => {
+        const [existing] = await ctx.db.select().from(reservations).where(eq(reservations.id, input.id)).limit(1);
+        if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Reservation not found" });
+        const access = await requireTripAccess(ctx, existing.tripId, ["owner", "editor"]);
+        await ctx.db.update(documents).set({ reservationId: null }).where(eq(documents.reservationId, input.id));
+        await ctx.db.delete(reservations).where(eq(reservations.id, input.id));
+        await ctx.broadcastChange?.(access.trip.id, "reservations", ctx.user.id);
+        return { ok: true as const };
+      }),
     }),
     create: protectedProcedure.input(createTripInputSchema).mutation(async ({ ctx, input }) => {
       const [subscription] = await ctx.db.select().from(subscriptions)

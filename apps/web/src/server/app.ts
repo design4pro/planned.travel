@@ -187,6 +187,30 @@ export function createApp(env: CloudflareEnv) {
             return session?.user ?? null;
           },
           broadcastChange: (tripId, resource, by) => broadcastTripChange(env, tripId, resource, by),
+          onReservationChange: async (event) => {
+            const memberUserIds = await getTripMemberUserIds(event.tripId);
+            await notifyAll(
+              event.kind === "added"
+                ? buildReservationAddedJobs({
+                    tripId: event.tripId,
+                    tripName: event.tripName,
+                    reservationId: event.reservationId,
+                    type: event.type,
+                    title: event.title,
+                    addedByName: event.actorName ?? null,
+                    memberUserIds,
+                    actorUserId: event.actorUserId ?? "",
+                  })
+                : buildReservationConfirmedJobs({
+                    tripId: event.tripId,
+                    tripName: event.tripName,
+                    reservationId: event.reservationId,
+                    type: event.type,
+                    title: event.title,
+                    memberUserIds,
+                  }),
+            );
+          },
         }),
     }),
   );
