@@ -19,3 +19,11 @@ export function localizePath(path: string, lang: Lang): string {
   if (lang === defaultLang) return path === "/" ? "/" : path;
   return `/${lang}${path === "/" ? "" : path}`;
 }
+
+/** Return the current route with its locale prefix changed. */
+export function localizedUrlPath(url: URL, lang: Lang): string {
+  const segments = url.pathname.split("/").filter(Boolean);
+  if (segments[0] in ui) segments.shift();
+  const path = `/${segments.join("/")}` || "/";
+  return `${localizePath(path, lang)}${url.search}${url.hash}`;
+}

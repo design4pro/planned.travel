@@ -2,6 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import AuthForm from "../components/auth/AuthForm.tsx";
 import { getLangFromUrl, useTranslations } from "../i18n/utils";
+import { localizePath } from "../i18n/utils";
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
@@ -27,13 +28,14 @@ const social = [env.GOOGLE_CLIENT_ID && "google", env.APPLE_CLIENT_ID && "apple"
           password: t("auth.password"),
           submit: t("auth.signin.btn"),
           or: t("auth.or"),
+          genericError: t("auth.error.generic"),
         }}
       />
     </div>
 
     <p class="mt-6 text-center text-sm text-muted-foreground">
       {t("auth.noAccount")}
-      <a href="/signup" class="px-1 font-semibold">{t("auth.signup.btn")}</a>
+      <a href={localizePath("/signup", lang)} class="px-1 font-semibold">{t("auth.signup.btn")}</a>
     </p>
   </main>
 </Layout>

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
+import { Button, Input, Label, TextField } from "@heroui/react";
 
 interface Labels {
   email: string;
   password: string;
   submit: string;
   or: string;
+  genericError: string;
 }
 
 interface Props {
@@ -36,7 +37,7 @@ export default function AuthForm({ mode, social = [], labels }: Props) {
         : await authClient.signIn.email({ email, password });
     setBusy(false);
     if (res.error) {
-      setError(res.error.message ?? "Something went wrong");
+      setError(res.error.message ?? labels.genericError);
       return;
     }
     window.location.href = "/app";
@@ -51,33 +52,18 @@ export default function AuthForm({ mode, social = [], labels }: Props) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <label className="block text-sm font-medium">
-        {labels.email}
-        <input
-          type="email"
-          required
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </label>
-      <label className="block text-sm font-medium">
-        {labels.password}
-        <input
-          type="password"
-          required
-          minLength={8}
-          autoComplete={mode === "signup" ? "new-password" : "current-password"}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </label>
+      <TextField isRequired value={email} onChange={setEmail}>
+        <Label>{labels.email}</Label>
+        <Input type="email" autoComplete="email" />
+      </TextField>
+      <TextField isRequired value={password} onChange={setPassword}>
+        <Label>{labels.password}</Label>
+        <Input type="password" minLength={8} autoComplete={mode === "signup" ? "new-password" : "current-password"} />
+      </TextField>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
-      <Button type="submit" className="w-full" disabled={busy}>
+      <Button type="submit" className="w-full" isDisabled={busy}>
         {labels.submit}
       </Button>
 
@@ -91,6 +77,7 @@ export default function AuthForm({ mode, social = [], labels }: Props) {
                 type="button"
                 variant="outline"
                 className="w-full capitalize"
+                isDisabled={busy}
                 onClick={() => signInSocial(p)}
               >
                 {p}

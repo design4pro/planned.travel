@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { ui } from "../src/i18n/ui";
+import { localizedUrlPath } from "../src/i18n/utils";
 
 const NOTIF_TYPES = [
   "invite_sent",
@@ -44,4 +45,12 @@ describe("notification i18n completeness", () => {
       }
     });
   }
+});
+
+describe("localized route paths", () => {
+  it("switches locale without duplicating prefixes and preserves query strings", () => {
+    expect(localizedUrlPath(new URL("https://planned.travel/pl/login?next=%2Fapp"), "en")).toBe("/login?next=%2Fapp");
+    expect(localizedUrlPath(new URL("https://planned.travel/app?tab=trips"), "pl")).toBe("/pl/app?tab=trips");
+    expect(localizedUrlPath(new URL("https://planned.travel/"), "pl")).toBe("/pl");
+  });
 });

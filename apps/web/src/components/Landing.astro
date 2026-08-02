@@ -27,7 +27,7 @@ const stack = [
       <a href={localizePath("/pricing", lang)} class="text-muted-foreground hover:text-primary">
         {t("pricing.title")}
       </a>
-      <a href="/login" class="font-medium hover:text-primary">{t("nav.signin")}</a>
+      <a href={localizePath("/login", lang)} class="font-medium hover:text-primary">{t("nav.signin")}</a>
     </div>
     <div class="flex gap-1" aria-label={t("lang.switch")}>
       {

@@ -1,27 +1,56 @@
 ---
 import "../styles/global.css";
+import { languages, type Lang } from "../i18n/ui";
+import { getLangFromUrl, localizedUrlPath, useTranslations } from "../i18n/utils";
+import ThemeToggle from "../components/ThemeToggle.tsx";
 
 interface Props {
   title?: string;
   description?: string;
+  lang?: Lang;
 }
 
 const {
   title = "planned.travel — AI-native collaborative travel planning",
   description = "Plan trips together with AI, maps, budgets, and realtime collaboration.",
+  lang: requestedLang,
 } = Astro.props;
+const lang = requestedLang ?? getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title}</title>
+    <script is:inline>{`(() => {
+      const stored = localStorage.getItem("heroui-theme");
+      const theme = stored === "light" || stored === "dark" ? stored : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.classList.add(theme);
+      document.documentElement.dataset.theme = theme;
+    })();`}</script>
   </head>
-  <body>
+  <body class="min-h-screen bg-background text-foreground">
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:ring-2 focus:ring-ring">Skip to content</a>
+    <header class="border-b border-border/60">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+        <a href={lang === "pl" ? "/pl" : "/"} class="font-semibold tracking-tight">planned.travel</a>
+        <div class="flex items-center gap-3 text-sm">
+          {!Astro.url.pathname.startsWith("/app") && <nav aria-label={t("lang.switch")} class="flex items-center gap-1">
+            {(Object.entries(languages) as [Lang, string][]).map(([code, label]) => (
+              <a href={localizedUrlPath(Astro.url, code)} aria-current={code === lang ? "page" : undefined} class:list={["rounded-md px-2 py-1 hover:bg-secondary", code === lang && "bg-secondary font-medium"]}>{label}</a>
+            ))}
+          </nav>}
+          <ThemeToggle client:load label={t("theme.toggle")} />
+        </div>
+      </div>
+    </header>
+    <div id="main-content">
     <slot />
+    </div>
   </body>
 </html>
