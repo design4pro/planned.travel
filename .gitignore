@@ -1,3 +1,7 @@
+# AI
+.codex-home
+.a5c
+
 # dependencies
 node_modules/
 .pnpm-store/
@@ -8,7 +12,6 @@ dist/
 .astro/
 .turbo/
 *.tsbuildinfo
-.a5c
 
 # cloudflare / wrangler
 .wrangler/

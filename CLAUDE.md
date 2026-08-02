@@ -88,3 +88,17 @@ pnpm --filter @planned/web deploy # build + wrangler deploy
 - **Better Auth + D1 migrations:** `@better-auth/cli generate` produces SQL → apply via `wrangler d1 migrations apply` (can't run the CLI against the binding directly).
 - **Passkey** in better-auth 1.6 is part of the `twoFactor` plugin (no standalone `passkey` export).
 - **Astro Sessions:** the Cloudflare adapter requires a `SESSION` KV binding (declared in `wrangler.jsonc`); we use Better Auth DB sessions for app auth.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues for `design4pro/planned.travel`, using the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Uses the default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Uses a single-context layout with root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.
