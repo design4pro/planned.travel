@@ -5,6 +5,9 @@ import { healthResponse } from "./server/health";
 
 // Keep the Durable Object class statically exported for Wrangler.
 export { TripRoom };
+// Export the Queue handler by name as well as on the default module. This
+// keeps Wrangler/workerd's module handler discovery statically analyzable.
+export const queue = consumeJobs;
 
 // Keep Worker handlers on a plain, statically analyzable default export.
 export default {
@@ -16,5 +19,5 @@ export default {
     }
     return handler.fetch(...args);
   },
-  queue: consumeJobs,
+  queue,
 };
