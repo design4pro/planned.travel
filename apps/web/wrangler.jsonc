@@ -16,8 +16,8 @@
 
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "planned-travel-web",
-  "main": "./dist/_worker.js/index.js",
-  "compatibility_date": "2025-09-01",
+  "main": "src/server.ts",
+  "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
 
   "assets": {
@@ -78,31 +78,19 @@
   // ───────────────────────────────────────────────────────────────────────────
 
   // Realtime collaboration — one Durable Object per trip (src/server/trip-room.ts).
-  // The TripRoom class is exported from src/worker.ts (the custom worker entry).
+  // The TripRoom class is exported from src/server.ts.
   "durable_objects": {
     "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TripRoom"] }],
   //
-  // Background jobs — notifications delivery. The queue() consumer is exported
-  // from src/worker.ts (see createExports) + surfaced via astro.config.mjs
-  // `workerEntryPoint.namedExports: ["queue"]`.
-  //
-  // TEMPORARILY DISABLED: with @astrojs/cloudflare 12.6.x the adapter rewrites
-  // the entry as `const queue = _exports['queue']`, and workerd's static
-  // handler-detection does NOT register it as a queue handler — so registering
-  // the consumer fails with `queue_handler_missing` [code 11001] (DOs work only
-  // because they are DECLARED in `durable_objects.bindings`, not auto-detected).
-  // Until that's solved (candidate fix: postbuild patch to a static
-  // `export function queue`, or an adapter upgrade), notifications use the
-  // DIRECT-DELIVERY FALLBACK in enqueueNotification (env.JOBS absent → inline
-  // deliverNotification). They still deliver (in-app + email); just synchronously.
-  // The `planned-travel-jobs` queue is already provisioned — re-enable by
-  // uncommenting once the handler-detection issue is resolved.
-  // "queues": {
-  //   "producers": [{ "binding": "JOBS", "queue": "planned-travel-jobs" }],
-  //   "consumers": [{ "queue": "planned-travel-jobs", "max_batch_size": 10 }]
-  // },
+  // Background jobs — notifications delivery. The queue consumer is exported
+  // from src/server.ts. The direct-delivery fallback remains useful in tests
+  // and environments where the JOBS binding is intentionally absent.
+  "queues": {
+    "producers": [{ "binding": "JOBS", "queue": "planned-travel-jobs" }],
+    "consumers": [{ "queue": "planned-travel-jobs", "max_batch_size": 10 }]
+  },
   //
   // // Durable multi-step flows (AI pipeline, booking ingestion, refunds)
   // "workflows": [
