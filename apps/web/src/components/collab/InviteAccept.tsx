@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Card } from "@heroui/react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Preview {
   valid: boolean;
@@ -86,7 +88,7 @@ export default function InviteAccept({ token, authed, labels }: Props) {
 
   if (!preview.valid) {
     const reason = preview.reason === "revoked" ? labels.revoked : preview.reason === "expired" ? labels.expired : preview.reason === "exhausted" ? labels.exhausted : labels.invalid;
-    return <Alert status="danger"><Alert.Indicator /><Alert.Content><Alert.Title>{labels.error}</Alert.Title><Alert.Description>{reason}</Alert.Description></Alert.Content></Alert>;
+    return <Alert variant="destructive"><AlertTitle>{labels.error}</AlertTitle><AlertDescription>{reason}</AlertDescription></Alert>;
   }
 
   return (
@@ -102,12 +104,12 @@ export default function InviteAccept({ token, authed, labels }: Props) {
       <p className="text-sm text-muted-foreground">{labels.as(roleName(preview.role))}</p>
 
       {outcome === "accepted" && (
-        <Alert status="success"><Alert.Indicator /><Alert.Content><Alert.Title>{labels.accept} → {labels.open}…</Alert.Title></Alert.Content></Alert>
+        <Alert className="border-emerald-500/50 text-emerald-700"><AlertTitle>{labels.accept} → {labels.open}…</AlertTitle></Alert>
       )}
       {outcome === "already" && tripId && (
         <Button variant="outline" onPress={() => window.location.assign(`/app/trips/${tripId}`)}>{labels.already} — {labels.open}</Button>
       )}
-      {outcome === "error" && <Alert status="danger"><Alert.Indicator /><Alert.Content><Alert.Title>{labels.generic}</Alert.Title></Alert.Content></Alert>}
+      {outcome === "error" && <Alert variant="destructive"><AlertTitle>{labels.generic}</AlertTitle></Alert>}
 
       {outcome === null &&
         (authed ? (

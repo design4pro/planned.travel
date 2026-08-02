@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Button } from "@/components/ui/heroui";
+import { Button } from "@/components/ui/button";
 import TripMap from "./TripMap";
 
 export interface WorkspacePlace {
@@ -62,7 +62,7 @@ export default function TripWorkspace({ places, days, labels }: Props) {
           size="sm"
           variant="outline"
           aria-expanded={itineraryOpen}
-          onPress={() => setItineraryOpen((open) => !open)}
+          onClick={() => setItineraryOpen((open) => !open)}
         >
           {itineraryOpen ? labels.hideItinerary : labels.showItinerary}
         </Button>

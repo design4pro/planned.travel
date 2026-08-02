@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Label, ListBox, Select } from "@heroui/react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 
 type Role = "editor" | "viewer";
 
@@ -118,7 +119,7 @@ export default function InviteManager({ tripId, labels }: Props) {
         </Button>
       </form>
 
-      {error && <Alert className="mt-3" status="danger"><Alert.Indicator /><Alert.Content><Alert.Title>{error}</Alert.Title></Alert.Content></Alert>}
+      {error && <Alert className="mt-3" variant="destructive"><AlertTitle>{error}</AlertTitle></Alert>}
 
       <ul className="mt-3 space-y-2">
         {invites.length === 0 && <li className="text-sm text-muted-foreground">{labels.empty}</li>}
@@ -135,7 +136,7 @@ export default function InviteManager({ tripId, labels }: Props) {
             <Button size="sm" variant="outline" className="ml-auto" onPress={() => copy(inv)}>
               {copiedId === inv.id ? labels.copied : labels.copy}
             </Button>
-            {inv.open && <Button size="sm" variant="danger" onPress={() => revoke(inv.id)}>
+            {inv.open && <Button size="sm" variant="destructive" onPress={() => revoke(inv.id)}>
               {labels.revoke}
             </Button>}
           </li>
@@ -146,11 +147,7 @@ export default function InviteManager({ tripId, labels }: Props) {
 }
 
 function InviteSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: { id: string; label: string }[] }) {
-  return <Select className="w-36" value={value} onChange={(next) => onChange(String(next))}>
-    <Label>{label}</Label>
-    <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
-    <Select.Popover><ListBox>{options.map((option) => <ListBox.Item key={option.id} id={option.id} textValue={option.label}>{option.label}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
-  </Select>;
+  return <label className="flex w-36 flex-col gap-1 text-sm"><span className="font-medium">{label}</span><select className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={value} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>;
 }
 
 function StatusBadge({ inv, labels }: { inv: Invitation; labels: Labels }) {

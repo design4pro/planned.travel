@@ -180,20 +180,12 @@ Component tokens (above) define the core set: `button-primary`, `button-accent`,
 
 This file is the **source of truth** for the design system. Implementation mirrors it in:
 - `packages/ui-tokens/src/theme.css` — Tailwind v4 `@theme` brand palette (raw colors, fonts, radii).
-- `apps/web/src/styles/global.css` — imports `@heroui/styles`; maps the brand palette onto HeroUI's `oklch` theme variables (primary → horizon blue, secondary/muted → neutral surfaces, accent → warm sand). Legacy shadcn semantic tokens are kept alongside during the transition.
-- (future) Expo — HeroUI Native (Tailwind v4 via Uniwind), same brand values.
+- `apps/web/src/styles/global.css` — maps the brand palette onto shadcn semantic tokens (primary → horizon blue, secondary/muted → neutral surfaces, accent → warm sand).
+- (future) Expo — React Native Reusables/shadcn-style components, same brand values.
 
-### Component library: HeroUI
+### Component library: shadcn/ui
 
-The component layer is **HeroUI** — one design system across both platforms:
-- **Web:** HeroUI v3 (`@heroui/react` + `@heroui/styles`) on Tailwind v4 + React Aria. Provider-less (no `<HeroUIProvider>`); compound components (`<Card><Card.Header>`). Use the HeroUI semantic variants (`primary`/`secondary`/`tertiary`) mapped to the brand tokens above.
-- **Mobile (Phase 4):** HeroUI Native (`@heroui/native`) on Tailwind v4 via Uniwind.
-
-Brand → HeroUI mapping (authoritative values in this file's `colors:`):
-- HeroUI `primary` ← `#2572e7` (horizon blue) · `accent`/`tertiary` ← `#ff9f43` (warm sand) · surfaces ← `#ffffff` / `#f6f8fa` · foreground ← `#0b1220` · border ← `#e3e8ee`.
-- Map to HeroUI's `oklch` theme variables in `global.css` (convert the hex via the design-tokens export). DESIGN.md hex values remain the source of truth; the `oklch` is the runtime encoding.
-
-New UI must use HeroUI primitives. The legacy shadcn `Button` (`apps/web/src/components/ui/button.tsx`) is interim and is removed once migrated.
+The component layer is **shadcn/ui**: local, composable React components in `apps/web/src/components/ui`, built on Tailwind v4 and Radix primitives where appropriate. New UI must use these components and the semantic tokens defined below. Native HTML controls are acceptable when no shadcn component exists yet.
 
 Regenerate Tailwind v4 tokens from this file:
 ```bash

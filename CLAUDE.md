@@ -21,7 +21,7 @@ Guidance for Claude Code working in this repository. Read this before making cha
 | Layer | Choice |
 |---|---|
 | Web | Astro 5 (SSR) + `@astrojs/cloudflare` + Hono API |
-| Styling/UI | Tailwind v4 + **HeroUI v3** (`@heroui/react`, web) · **HeroUI Native** (mobile, later) |
+| Styling/UI | Tailwind v4 + **shadcn/ui** (web) · **React Native Reusables/shadcn-style components** (mobile, later) |
 | Data | Cloudflare D1 + **Drizzle** (schema kept Postgres-portable) |
 | Realtime | Durable Objects + Hibernation WebSockets (`TripRoom`, Phase 1) |
 | Search | Vectorize (semantic) |
@@ -69,15 +69,14 @@ pnpm --filter @planned/web deploy # build + wrangler deploy
 - **Notifications:** shared types/builders in `packages/shared/src/notifications.ts`; DB helpers + `enqueueNotification` producer (direct-delivery fallback) in `apps/web/src/lib/notifications.ts`; `deliverNotification` consumer in `apps/web/src/server/notifications-consumer.ts`; trigger routing in `apps/web/src/server/notifications-triggers.ts`; `EmailSender` adapter (Resend/Noop) + templates in `apps/web/src/lib/email.ts` + `email-templates.ts`. The JOBS queue consumer is the `queue()` export on `worker.ts` (alongside `TripRoom`); delivery is async via the queue, gated by `EMAIL_ENABLED` (off by default — `NoopEmailSender`). UI: `NotificationBell` + `/app/notifications`.
 - **Schema:** `packages/db/src/schema/index.ts` (domain tables; auth tables owned by Better Auth via CLI).
 - **Bindings/env types:** `apps/web/src/lib/env.ts` + `src/env.d.ts`.
-- **UI tokens / components:** `packages/ui-tokens/src/theme.css` (brand palette) + `apps/web/src/styles/global.css` (imports `@heroui/styles`; maps brand → HeroUI theme vars + legacy shadcn semantic tokens during the transition). HeroUI primitives via `@heroui/react`; legacy shadcn primitives in `apps/web/src/components/ui/*` (only `Button` remains — interim).
+- **UI tokens / components:** `packages/ui-tokens/src/theme.css` (brand palette) + `apps/web/src/styles/global.css` (maps brand → shadcn semantic tokens). Local shadcn primitives live in `apps/web/src/components/ui/*`.
 - **i18n:** `apps/web/src/i18n/{ui,utils}.ts`; locales `en` (default, no prefix) + `pl` (`/pl`).
 
 ## Conventions
 
 - **Schema portability:** text PKs (`crypto.randomUUID()`), epoch-ms integer timestamps — no SQLite-only types in hot paths.
-- **Tokens:** change brand values in `DESIGN.md` first, mirror into `packages/ui-tokens/src/theme.css`, keep `global.css` mapping in sync (HeroUI theme vars + legacy shadcn tokens map onto the brand palette).
-- **HeroUI (the UI standard):** new UI uses `@heroui/react` (Tailwind v4 + React Aria, provider-less — no `<HeroUIProvider>`). Consult component docs via the `heroui-react` skill or the `AGENTS.md` doc-index (`.heroui-docs/react`). Mobile (Phase 4) uses **HeroUI Native** (Tailwind v4 via Uniwind). `@/*` = `apps/web/src/*`.
-- **shadcn (deprecated, interim):** config in `apps/web/components.json`; only `Button` remains. Do not add new shadcn primitives — use HeroUI instead. Removed once the last primitive migrates.
+- **Tokens:** change brand values in `DESIGN.md` first, mirror into `packages/ui-tokens/src/theme.css`, and keep `global.css` mappings in sync.
+- **shadcn/ui:** new web UI uses local components from `apps/web/src/components/ui/*`, configured by `apps/web/components.json`. `@/*` = `apps/web/src/*`.
 - **i18n:** add keys to both `en` and `pl` in `src/i18n/ui.ts`; translate UI text via `useTranslations(lang)`.
 - **Secrets:** never hardcode — use `.dev.vars` (local) and `wrangler secret put` (prod). `.dev.vars.example` documents the list.
 - **Bug tracking:** GitHub issues on `design4pro/planned.travel`, not PLANS.md.

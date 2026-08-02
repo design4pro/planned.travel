@@ -18,8 +18,6 @@
     "@astrojs/cloudflare": "^12.0.2",
     "@astrojs/react": "^4.2.0",
     "@cloudflare/puppeteer": "^1.1.0",
-    "@heroui/react": "^3.2.1",
-    "@heroui/styles": "^3.2.1",
     "@planned/api-client": "workspace:*",
     "@planned/db": "workspace:*",
     "@planned/server": "workspace:*",

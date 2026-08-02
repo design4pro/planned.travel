@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
-import { Button, Input, Label, TextField } from "@heroui/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Labels {
   email: string;
@@ -52,18 +54,12 @@ export default function AuthForm({ mode, social = [], labels }: Props) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <TextField isRequired value={email} onChange={setEmail}>
-        <Label>{labels.email}</Label>
-        <Input type="email" autoComplete="email" />
-      </TextField>
-      <TextField isRequired value={password} onChange={setPassword}>
-        <Label>{labels.password}</Label>
-        <Input type="password" minLength={8} autoComplete={mode === "signup" ? "new-password" : "current-password"} />
-      </TextField>
+      <div className="space-y-2"><Label htmlFor="auth-email">{labels.email}</Label><Input id="auth-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div>
+      <div className="space-y-2"><Label htmlFor="auth-password">{labels.password}</Label><Input id="auth-password" type="password" minLength={8} autoComplete={mode === "signup" ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} required /></div>
 
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
 
-      <Button type="submit" className="w-full" isDisabled={busy}>
+      <Button type="submit" className="w-full" disabled={busy}>
         {labels.submit}
       </Button>
 
@@ -77,7 +73,7 @@ export default function AuthForm({ mode, social = [], labels }: Props) {
                 type="button"
                 variant="outline"
                 className="w-full capitalize"
-                isDisabled={busy}
+                disabled={busy}
                 onClick={() => signInSocial(p)}
               >
                 {p}

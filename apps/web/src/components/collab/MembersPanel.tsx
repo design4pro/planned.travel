@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Label, ListBox, Select } from "@heroui/react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 
 type Role = "owner" | "editor" | "viewer";
 
@@ -91,33 +92,13 @@ export default function MembersPanel({ tripId, currentUserId, labels }: Props) {
                     {roleLabel("owner", labels)}
                   </span>
                 ) : (
-                  <Select
-                    aria-label={`${display} role`}
-                    className="w-28"
-                    value={m.role}
-                    onChange={(value) => changeRole(m, value as "editor" | "viewer")}
-                  >
-                    <Label className="sr-only">{`${display} role`}</Label>
-                    <Select.Trigger>
-                      <Select.Value />
-                      <Select.Indicator />
-                    </Select.Trigger>
-                    <Select.Popover>
-                      <ListBox>
-                        <ListBox.Item id="editor" textValue={labels.roleEditor}>
-                          {labels.roleEditor}
-                          <ListBox.ItemIndicator />
-                        </ListBox.Item>
-                        <ListBox.Item id="viewer" textValue={labels.roleViewer}>
-                          {labels.roleViewer}
-                          <ListBox.ItemIndicator />
-                        </ListBox.Item>
-                      </ListBox>
-                    </Select.Popover>
-                  </Select>
+                  <>
+                    <label className="sr-only" htmlFor={`role-${m.userId}`}>{`${display} role`}</label>
+                    <select id={`role-${m.userId}`} aria-label={`${display} role`} className="h-9 w-28 rounded-md border border-input bg-background px-2 text-sm" value={m.role} onChange={(event) => changeRole(m, event.target.value as "editor" | "viewer")}><option value="editor">{labels.roleEditor}</option><option value="viewer">{labels.roleViewer}</option></select>
+                  </>
                 )}
                 {!isOwner && (
-                  <Button size="sm" variant="danger" onPress={() => remove(m)}>
+                    <Button size="sm" variant="destructive" onPress={() => remove(m)}>
                     {labels.remove}
                   </Button>
                 )}
@@ -127,12 +108,7 @@ export default function MembersPanel({ tripId, currentUserId, labels }: Props) {
         })}
       </ul>
       {error && (
-        <Alert className="mt-3" status="danger">
-          <Alert.Indicator />
-          <Alert.Content>
-            <Alert.Title>{error}</Alert.Title>
-          </Alert.Content>
-        </Alert>
+        <Alert className="mt-3" variant="destructive"><AlertTitle>{error}</AlertTitle></Alert>
       )}
     </div>
   );

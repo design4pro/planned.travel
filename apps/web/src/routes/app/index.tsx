@@ -1,4 +1,6 @@
-import { Button, Card, Input } from "@heroui/react";
+import { Button } from "../../components/ui/button";
+import { Card } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { trpc } from "../../lib/trpc";

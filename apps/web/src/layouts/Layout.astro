@@ -28,7 +28,7 @@ const t = useTranslations(lang);
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title}</title>
     <script is:inline>{`(() => {
-      const stored = localStorage.getItem("heroui-theme");
+      const stored = localStorage.getItem("theme");
       const theme = stored === "light" || stored === "dark" ? stored : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
       document.documentElement.classList.add(theme);
       document.documentElement.dataset.theme = theme;
