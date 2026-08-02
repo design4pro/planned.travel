@@ -18,7 +18,6 @@ import {
   createInvitationSchema,
   createReservationSchema,
   equalSplit,
-  isAllowedUploadType,
   isInvitationOpen,
   invitationStatus,
   linkDocumentSchema,
@@ -26,7 +25,9 @@ import {
   sortReservations,
   summarizeByCurrency,
   updateReservationSchema,
+  validateDocumentUpload,
 } from "@planned/shared";
+import { deleteDocumentWithRollback, putDocumentWithMetadata } from "./document-storage";
 import { buildTripHtml, renderTripPdf } from "./trip-pdf";
 import {
   FREE_TRIP_LIMIT,
@@ -1018,11 +1019,12 @@ export function createApp(env: CloudflareEnv) {
     const form = await c.req.raw.formData();
     const file = form.get("file");
     if (!(file instanceof File)) return c.json({ error: "file required" }, 400);
-    if (file.size === 0) return c.json({ error: "empty_file" }, 400);
-    if (file.size > MAX_DOCUMENT_BYTES)
-      return c.json({ error: "file_too_large", limit: MAX_DOCUMENT_BYTES }, 413);
-    const mimeType = file.type || "application/octet-stream";
-    if (!isAllowedUploadType(mimeType)) return c.json({ error: "unsupported_type" }, 415);
+    const mimeType = file.type;
+    const uploadError = validateDocumentUpload(file);
+    if (uploadError === "empty_file") return c.json({ error: uploadError }, 400);
+    if (uploadError === "file_too_large")
+      return c.json({ error: uploadError, limit: MAX_DOCUMENT_BYTES }, 413);
+    if (uploadError) return c.json({ error: uploadError }, 415);
 
     const reservationIdRaw = form.get("reservationId");
     const reservationId =
@@ -1040,24 +1042,31 @@ export function createApp(env: CloudflareEnv) {
     const r2Key = `trips/${trip.id}/docs/${docId}`;
     // Pass the File (Blob) directly — it carries a known length. A bare
     // ReadableStream (file.stream()) is rejected by R2 as "unknown length".
-    await env.MEDIA.put(r2Key, file, {
-      httpMetadata: { contentType: mimeType },
-      customMetadata: { name: file.name, tripId: trip.id, uploadedBy: user.id },
+    const doc = await putDocumentWithMetadata({
+      store: env.MEDIA,
+      key: r2Key,
+      file,
+      options: {
+        httpMetadata: { contentType: mimeType },
+        customMetadata: { name: file.name, tripId: trip.id, uploadedBy: user.id },
+      },
+      insert: async () => {
+        const [created] = await database
+          .insert(documents)
+          .values({
+            id: docId,
+            tripId: trip.id,
+            reservationId,
+            uploadedByUserId: user.id,
+            r2Key,
+            name: file.name || "document",
+            mimeType,
+            sizeBytes: file.size,
+          })
+          .returning();
+        return created;
+      },
     });
-
-    const [doc] = await database
-      .insert(documents)
-      .values({
-        id: docId,
-        tripId: trip.id,
-        reservationId,
-        uploadedByUserId: user.id,
-        r2Key,
-        name: file.name || "document",
-        mimeType,
-        sizeBytes: file.size,
-      })
-      .returning();
     await broadcastTripChange(env, trip.id, "documents", user.id);
     return c.json(doc, 201);
   });
@@ -1120,14 +1129,23 @@ export function createApp(env: CloudflareEnv) {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
     const docId = c.req.param("docId");
-    const [doc] = await database.select({ tripId: documents.tripId, r2Key: documents.r2Key }).from(documents).where(eq(documents.id, docId)).limit(1);
+    const [doc] = await database.select().from(documents).where(eq(documents.id, docId)).limit(1);
     if (!doc) return c.json({ error: "not found" }, 404);
     const access = await getAccessibleTrip(doc.tripId, user.id);
     if (!access) return c.json({ error: "not found" }, 404);
     if (!canEdit(access.role)) return c.json({ error: "forbidden" }, 403);
 
-    await env.MEDIA.delete(doc.r2Key);
-    await database.delete(documents).where(eq(documents.id, docId));
+    await deleteDocumentWithRollback({
+      store: env.MEDIA,
+      key: doc.r2Key,
+      remove: async () => {
+        await database.delete(documents).where(eq(documents.id, docId));
+        return doc;
+      },
+      restore: async (removed) => {
+        await database.insert(documents).values(removed);
+      },
+    });
     await broadcastTripChange(env, access.trip.id, "documents", user.id);
     return c.json({ ok: true });
   });

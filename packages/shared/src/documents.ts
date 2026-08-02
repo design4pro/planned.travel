@@ -36,6 +36,22 @@ export const ACCEPTED_DOCUMENT_TYPES = [
 /** MIME types we never store, regardless of file extension (XSS via R2). */
 export const BLOCKED_DOCUMENT_TYPES = ["text/html", "application/xhtml+xml"];
 
+export type DocumentUploadError =
+  | "empty_file"
+  | "file_too_large"
+  | "unsupported_type";
+
+/** Validate the metadata available before a file is written to R2. */
+export function validateDocumentUpload(file: {
+  size: number;
+  type: string;
+}): DocumentUploadError | null {
+  if (file.size <= 0) return "empty_file";
+  if (file.size > MAX_DOCUMENT_BYTES) return "file_too_large";
+  if (!isAllowedUploadType(file.type)) return "unsupported_type";
+  return null;
+}
+
 /* ------------------------------- DTO shapes ------------------------------ */
 // Mirror the @planned/db `document` table; single source of truth for the API
 // contract shared with the typed client + Expo app.
@@ -75,5 +91,8 @@ export function formatBytes(bytes: number, lang: "en" | "pl" = "en"): string {
 
 /** True if a MIME type may be uploaded (not block-listed). */
 export function isAllowedUploadType(mimeType: string): boolean {
-  return !BLOCKED_DOCUMENT_TYPES.includes(mimeType as (typeof BLOCKED_DOCUMENT_TYPES)[number]);
+  return (
+    ACCEPTED_DOCUMENT_TYPES.includes(mimeType as (typeof ACCEPTED_DOCUMENT_TYPES)[number]) &&
+    !BLOCKED_DOCUMENT_TYPES.includes(mimeType as (typeof BLOCKED_DOCUMENT_TYPES)[number])
+  );
 }
