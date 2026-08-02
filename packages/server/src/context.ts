@@ -1,4 +1,5 @@
 import { createDb, type Database } from "@planned/db";
+import type { ChangeResource } from "@planned/shared";
 
 export interface ServerEnv {
   DB: D1Database;
@@ -19,17 +20,21 @@ export interface AppContext {
   env: ServerEnv;
   db: Database;
   user: SessionUser | null;
+  /** Publish after a successful D1 mutation; the DO remains a change bus only. */
+  broadcastChange?: (tripId: string, resource: ChangeResource, by: string | null) => Promise<void>;
 }
 
 export async function createContext(options: {
   request: Request;
   env: ServerEnv;
   resolveUser: SessionResolver;
+  broadcastChange?: AppContext["broadcastChange"];
 }): Promise<AppContext> {
   return {
     request: options.request,
     env: options.env,
     db: createDb(options.env.DB),
     user: await options.resolveUser(options.request.headers),
+    broadcastChange: options.broadcastChange,
   };
 }

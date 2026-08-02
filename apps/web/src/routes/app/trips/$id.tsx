@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { trpc } from "../../../lib/trpc";
 import TripMap from "../../../components/trips/TripMap";
+import TripRealtime from "../../../components/collab/TripRealtime";
 
 export const Route = createFileRoute("/app/trips/$id")({ component: TripDetailPage });
 
@@ -28,6 +29,7 @@ function TripDetailPage() {
   const submitNote = (event: React.FormEvent) => { event.preventDefault(); if (note.trim()) addItem.mutate({ tripId: id, note }); setNote(""); };
 
   return <main className="mx-auto max-w-6xl px-6 py-10"><header className="mb-8 flex flex-wrap items-center justify-between gap-4"><div><Link to="/app" className="text-sm text-muted-foreground underline">← All trips</Link><h1 className="mt-3 text-4xl font-bold">{trip.title}</h1><p className="mt-2 text-muted-foreground">{trip.role} access</p></div>{canEdit && <Button variant="outline" onPress={() => addDay.mutate({ id })} isPending={addDay.isPending}>Add day</Button>}</header>
+    <TripRealtime tripId={id} />
     {places.length > 0 && <div className="mb-8 overflow-hidden rounded-xl border"><TripMap places={places.map((place) => ({ id: place.id, name: place.name, lat: place.lat, lng: place.lng }))} /></div>}
     {trip.role === "viewer" && <p className="mb-6 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">You’re viewing this trip. Editing is disabled.</p>}
     {canEdit && <div className="mb-8 grid gap-4 lg:grid-cols-2"><Card><Card.Header><Card.Title>Add a place</Card.Title></Card.Header><Card.Content><form onSubmit={submitPlace} className="grid gap-3 sm:grid-cols-3"><Input className="sm:col-span-3" aria-label="Place name" placeholder="Place name" value={name} onChange={(event) => setName(event.target.value)} required /><Input aria-label="Latitude" placeholder="Latitude" type="number" value={lat} onChange={(event) => setLat(event.target.value)} required /><Input aria-label="Longitude" placeholder="Longitude" type="number" value={lng} onChange={(event) => setLng(event.target.value)} required /><Button type="submit" className="sm:col-span-3" isPending={addPlace.isPending}>Add place</Button></form>{addPlace.isError && <p role="alert" className="mt-3 text-sm text-danger">{addPlace.error.message}</p>}</Card.Content></Card><Card><Card.Header><Card.Title>Add a note</Card.Title></Card.Header><Card.Content><form onSubmit={submitNote} className="flex gap-3"><Input aria-label="Note" placeholder="Dinner reservation…" value={note} onChange={(event) => setNote(event.target.value)} /><Button type="submit" isPending={addItem.isPending} isDisabled={!note.trim()}>Add</Button></form></Card.Content></Card></div>}

@@ -79,6 +79,7 @@ export const appRouter = router({
     addPlace: protectedProcedure.input(createPlaceInput).mutation(async ({ ctx, input }) => {
       const access = await requireTripAccess(ctx, input.tripId, ["owner", "editor"]);
       const [place] = await ctx.db.insert(places).values({ ...input, tripId: access.trip.id }).returning();
+      await ctx.broadcastChange?.(access.trip.id, "places", ctx.user.id);
       return place;
     }),
     addDay: protectedProcedure.input(tripIdInput).mutation(async ({ ctx, input }) => {
@@ -87,6 +88,7 @@ export const appRouter = router({
         .where(eq(days.tripId, access.trip.id)).orderBy(desc(days.dateIndex)).limit(1);
       const [day] = await ctx.db.insert(days)
         .values({ tripId: access.trip.id, dateIndex: (last?.dateIndex ?? -1) + 1 }).returning();
+      await ctx.broadcastChange?.(access.trip.id, "plan", ctx.user.id);
       return day;
     }),
     addItem: protectedProcedure.input(createDayItemInput).mutation(async ({ ctx, input }) => {
@@ -112,6 +114,7 @@ export const appRouter = router({
         dayId: targetDay.id, placeId: input.placeId ?? null, note: input.note ?? null, orderIndex: count,
         type: input.placeId ? "place" : "note",
       }).returning();
+      await ctx.broadcastChange?.(access.trip.id, "plan", ctx.user.id);
       return item;
     }),
   }),

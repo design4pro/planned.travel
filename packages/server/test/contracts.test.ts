@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { createDayItemInputSchema, createTripInputSchema, tripDtoSchema, tripPlanSchema } from "@planned/shared";
 import { appRouter } from "../src/router";
+import { createContext } from "../src/context";
 
 const caller = (user: { id: string } | null = null) =>
   appRouter.createCaller({
@@ -12,6 +13,18 @@ const caller = (user: { id: string } | null = null) =>
   });
 
 describe("tRPC contract", () => {
+  it("preserves the realtime publisher in request context", async () => {
+    const broadcastChange = async () => {};
+    const context = await createContext({
+      request: new Request("https://planned.test/api/trpc"),
+      env: { DB: undefined as never },
+      resolveUser: async () => ({ id: "u1" }),
+      broadcastChange,
+    });
+
+    expect(context.broadcastChange).toBe(broadcastChange);
+  });
+
   it("exposes a stable public health response", async () => {
     await expect(caller().health()).resolves.toEqual({ ok: true, service: "planned-travel" });
   });

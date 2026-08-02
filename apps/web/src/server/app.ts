@@ -186,6 +186,7 @@ export function createApp(env: CloudflareEnv) {
             const session = await auth.api.getSession({ headers });
             return session?.user ?? null;
           },
+          broadcastChange: (tripId, resource, by) => broadcastTripChange(env, tripId, resource, by),
         }),
     }),
   );
