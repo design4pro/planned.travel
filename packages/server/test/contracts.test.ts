@@ -132,4 +132,16 @@ describe("tRPC contract", () => {
     await expect(caller().trips.expenses.create({ tripId: "t1", amountCents: 100, currency: "USD" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller().trips.expenses.remove({ id: "e1" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
+
+  it("requires authentication for every notification operation", async () => {
+    await expect(caller().notifications.list({})).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(caller().notifications.unreadCount()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(caller().notifications.markRead({ id: "n1" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(caller().notifications.markAllRead()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("validates notification pagination before reaching the database", async () => {
+    await expect(caller({ id: "u1" }).notifications.list({ limit: 51 })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(caller({ id: "u1" }).notifications.markRead({ id: "" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
 });

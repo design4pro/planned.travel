@@ -29,7 +29,12 @@ export default function NotificationBell({ lang }: { lang: Lang }) {
   useEffect(() => {
     refreshCount();
     const id = setInterval(refreshCount, 60_000);
-    return () => clearInterval(id);
+    const onChanged = () => void refreshCount();
+    window.addEventListener("notifications:changed", onChanged);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("notifications:changed", onChanged);
+    };
   }, [refreshCount]);
 
   // Close on outside click.
@@ -67,6 +72,7 @@ export default function NotificationBell({ lang }: { lang: Lang }) {
         });
         setRecent((rs) => rs.map((r) => (r.id === item.id ? { ...r, readAt: Date.now() } : r)));
         setUnread((n) => Math.max(0, (n ?? 0) - 1));
+        window.dispatchEvent(new CustomEvent("notifications:changed"));
       } catch {
         /* still navigate */
       }

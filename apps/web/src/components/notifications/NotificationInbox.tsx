@@ -14,6 +14,8 @@ export default function NotificationInbox({ lang, initial }: { lang: Lang; initi
   const t = (k: string) => (ui[lang] as Record<string, string | undefined>)[k] ?? k;
   const [items, setItems] = useState<NotificationRow[]>(initial);
   const [busy, setBusy] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(initial.length === 100);
   const unread = items.filter((i) => i.readAt == null).length;
 
   async function openItem(item: NotificationRow) {
@@ -24,6 +26,7 @@ export default function NotificationInbox({ lang, initial }: { lang: Lang; initi
           credentials: "same-origin",
         });
         setItems((rs) => rs.map((r) => (r.id === item.id ? { ...r, readAt: Date.now() } : r)));
+        window.dispatchEvent(new CustomEvent("notifications:changed"));
       } catch {
         /* still navigate */
       }
@@ -42,11 +45,29 @@ export default function NotificationInbox({ lang, initial }: { lang: Lang; initi
       if (res.ok) {
         const now = Date.now();
         setItems((rs) => rs.map((r) => (r.readAt == null ? { ...r, readAt: now } : r)));
+        window.dispatchEvent(new CustomEvent("notifications:changed"));
       }
     } catch {
       /* best-effort */
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function loadMore() {
+    const oldest = items.at(-1);
+    if (!oldest || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/notifications?limit=100&before=${oldest.createdAt}`, {
+        credentials: "same-origin",
+      });
+      if (!res.ok) return;
+      const next = (await res.json()) as NotificationRow[];
+      setItems((current) => [...current, ...next]);
+      setHasMore(next.length === 100);
+    } finally {
+      setLoadingMore(false);
     }
   }
 
@@ -93,6 +114,11 @@ export default function NotificationInbox({ lang, initial }: { lang: Lang; initi
             );
           })}
         </ul>
+      )}
+      {hasMore && (
+        <Button className="mt-4 w-full" variant="outline" onClick={loadMore} disabled={loadingMore}>
+          {loadingMore ? t("notifications.loading") : t("notifications.loadMore")}
+        </Button>
       )}
     </section>
   );

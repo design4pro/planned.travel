@@ -177,6 +177,19 @@ export const notificationRowSchema = z.object({
 });
 export type NotificationRow = z.infer<typeof notificationRowSchema>;
 
+/** Inputs and output for the client-facing notification center contract. */
+export const notificationListInputSchema = z.object({
+  limit: z.number().int().min(1).max(50).default(20),
+  cursor: z.number().int().positive().optional(),
+});
+export type NotificationListInput = z.infer<typeof notificationListInputSchema>;
+
+export const notificationPageSchema = z.object({
+  items: z.array(notificationRowSchema),
+  nextCursor: z.number().int().positive().nullable(),
+});
+export type NotificationPage = z.infer<typeof notificationPageSchema>;
+
 /**
  * Input to the pure `buildNotification` helper — typed payload + recipient.
  * The payload is validated against the per-type schema before insertion.

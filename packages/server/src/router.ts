@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt } from "drizzle-orm";
 import { z } from "zod";
 import { dayItems, days, documents, expenseSplits, expenses, notifications, places, reservations, subscriptions, trips, tripMembers } from "@planned/db";
 import {
@@ -17,6 +17,9 @@ import {
   updateReservationSchema,
   tripDtoSchema,
   tripPlanSchema,
+  notificationListInputSchema,
+  notificationPageSchema,
+  notificationRowSchema,
 } from "@planned/shared";
 import { TRPCError } from "@trpc/server";
 import { requireTripAccess } from "./authorization";
@@ -226,10 +229,41 @@ export const appRouter = router({
     }),
   }),
   notifications: router({
+    list: protectedProcedure.input(notificationListInputSchema).query(async ({ ctx, input }) => {
+      const rows = await ctx.db.select().from(notifications)
+        .where(and(
+          eq(notifications.userId, ctx.user.id),
+          input.cursor ? lt(notifications.createdAt, input.cursor) : undefined,
+        ))
+        .orderBy(desc(notifications.createdAt))
+        .limit(input.limit + 1)
+        .all();
+      const hasMore = rows.length > input.limit;
+      const items = rows.slice(0, input.limit).map((row) => notificationRowSchema.parse(row));
+      return notificationPageSchema.parse({
+        items,
+        nextCursor: hasMore ? items.at(-1)?.createdAt ?? null : null,
+      });
+    }),
     unreadCount: protectedProcedure.query(async ({ ctx }) => {
       const rows = await ctx.db.select({ id: notifications.id }).from(notifications)
         .where(and(eq(notifications.userId, ctx.user.id), isNull(notifications.readAt))).all();
       return { count: rows.length };
+    }),
+    markRead: protectedProcedure.input(z.object({ id: z.string().min(1) })).mutation(async ({ ctx, input }) => {
+      const [updated] = await ctx.db.update(notifications)
+        .set({ readAt: Date.now() })
+        .where(and(eq(notifications.id, input.id), eq(notifications.userId, ctx.user.id)))
+        .returning({ id: notifications.id });
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "Notification not found" });
+      return { ok: true as const };
+    }),
+    markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+      const updated = await ctx.db.update(notifications)
+        .set({ readAt: Date.now() })
+        .where(and(eq(notifications.userId, ctx.user.id), isNull(notifications.readAt)))
+        .returning({ id: notifications.id });
+      return { ok: true as const, count: updated.length };
     }),
   }),
 });
