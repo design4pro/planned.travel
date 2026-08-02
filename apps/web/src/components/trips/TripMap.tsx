@@ -11,6 +11,8 @@ interface MapPlace {
 
 interface Props {
   places: MapPlace[];
+  focusPlaceId?: string | null;
+  onPlaceFocus?: (placeId: string) => void;
 }
 
 function escapeHtml(s: string) {
@@ -34,8 +36,10 @@ function escapeHtml(s: string) {
  * NOTE: tile.openstreetmap.org is fine for dev/demo; for production use a proper
  * tile provider (self-hosted, MapTiler, etc.) per OSM tile usage policy.
  */
-export default function TripMap({ places }: Props) {
+export default function TripMap({ places, focusPlaceId, onPlaceFocus }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markersRef = useRef(new Map<string, maplibregl.Marker>());
 
   useEffect(() => {
     if (!ref.current || places.length === 0) return;
@@ -58,14 +62,23 @@ export default function TripMap({ places }: Props) {
       center: [first.lng, first.lat],
       zoom: 6,
     });
+    mapRef.current = map;
 
-    const markers: maplibregl.Marker[] = [];
     places.forEach((p) => {
+      const markerElement = document.createElement("button");
+      markerElement.type = "button";
+      markerElement.className =
+        "size-7 rounded-full border-2 border-white bg-primary shadow-md transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+      markerElement.setAttribute("aria-label", `Focus ${p.name}`);
+      markerElement.addEventListener("click", () => onPlaceFocus?.(p.id));
       const popup = new maplibregl.Popup({ offset: 18 }).setHTML(
         `<strong>${escapeHtml(p.name)}</strong>`
       );
-      const marker = new maplibregl.Marker().setLngLat([p.lng, p.lat]).setPopup(popup).addTo(map);
-      markers.push(marker);
+      const marker = new maplibregl.Marker({ element: markerElement })
+        .setLngLat([p.lng, p.lat])
+        .setPopup(popup)
+        .addTo(map);
+      markersRef.current.set(p.id, marker);
     });
 
     if (places.length > 1) {
@@ -75,10 +88,30 @@ export default function TripMap({ places }: Props) {
     }
 
     return () => {
-      markers.forEach((m) => m.remove());
+      markersRef.current.forEach((marker) => marker.remove());
+      markersRef.current.clear();
+      mapRef.current = null;
       map.remove();
     };
-  }, [places]);
+  }, [places, onPlaceFocus]);
 
-  return <div ref={ref} className="h-[420px] w-full rounded-lg border" />;
+  useEffect(() => {
+    if (!focusPlaceId) return;
+    const place = places.find((candidate) => candidate.id === focusPlaceId);
+    const marker = markersRef.current.get(focusPlaceId);
+    const map = mapRef.current;
+    if (!place || !marker || !map) return;
+
+    map.flyTo({ center: [place.lng, place.lat], zoom: Math.max(map.getZoom(), 10) });
+    marker.getPopup()?.addTo(map);
+  }, [focusPlaceId, places]);
+
+  return (
+    <div
+      ref={ref}
+      className="h-[min(70vh,640px)] min-h-[360px] w-full rounded-lg border"
+      aria-label="Trip map"
+      role="application"
+    />
+  );
 }

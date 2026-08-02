@@ -3,7 +3,7 @@ import Layout from "../../../layouts/Layout.astro";
 import SignOutButton from "../../../components/auth/SignOutButton.tsx";
 import NotificationBell from "../../../components/notifications/NotificationBell.tsx";
 import AddPlace from "../../../components/trips/AddPlace.tsx";
-import TripMap from "../../../components/trips/TripMap.tsx";
+import TripWorkspace from "../../../components/trips/TripWorkspace.tsx";
 import TripTabs from "../../../components/trips/TripTabs.astro";
 import ExportPdf from "../../../components/trips/ExportPdf.tsx";
 import CollabPresence from "../../../components/collab/CollabPresence.tsx";
@@ -46,7 +46,6 @@ const itemRows = dayIds.length
       .all()
   : [];
 
-const placesById = new Map(placeRows.map((p) => [p.id, p]));
 const itemsByDay = new Map<string, typeof itemRows>();
 for (const item of itemRows) {
   const arr = itemsByDay.get(item.dayId) ?? [];
@@ -103,21 +102,29 @@ for (const item of itemRows) {
       />
     </div>
 
-    {
-      placeRows.length > 0 && (
-        <div class="mt-6">
-          <TripMap
-            client:only="react"
-            places={placeRows.map((p) => ({
-              id: p.id,
-              name: p.name,
-              lat: p.lat,
-              lng: p.lng,
-            }))}
-          />
-        </div>
-      )
-    }
+    <TripWorkspace
+      client:only="react"
+      places={placeRows.map((p) => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng }))}
+      days={dayRows.map((day) => ({
+        id: day.id,
+        dateIndex: day.dateIndex,
+        items: (itemsByDay.get(day.id) ?? []).map((item) => ({
+          id: item.id,
+          placeId: item.placeId,
+          note: item.note,
+        })),
+      }))}
+      labels={{
+        map: t("planner.map"),
+        itinerary: t("planner.itinerary"),
+        showItinerary: t("planner.showItinerary"),
+        hideItinerary: t("planner.hideItinerary"),
+        day: t("planner.day"),
+        empty: t("planner.empty"),
+        emptyMap: t("planner.emptyMap"),
+        place: t("planner.place"),
+      }}
+    />
 
     <div class="mt-8">
       {canEdit ? (
@@ -190,44 +197,5 @@ for (const item of itemRows) {
       )
     }
 
-    <section class="mt-8 space-y-6">
-    {
-      dayRows.length === 0 ? (
-        <p class="text-sm text-muted-foreground">{t("planner.empty")}</p>
-      ) : (
-        dayRows.map((day, i) => (
-          <div class="rounded-lg border bg-card p-4 shadow-card">
-            <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {t("planner.day")} {i + 1}
-            </h2>
-            {(itemsByDay.get(day.id) ?? []).length === 0 ? (
-              <p class="text-sm text-muted-foreground">{t("planner.empty")}</p>
-            ) : (
-              <ul class="space-y-2">
-                {(itemsByDay.get(day.id) ?? []).map((item) => {
-                  const place = item.placeId ? placesById.get(item.placeId) : null;
-                  return (
-                    <li class="flex items-center gap-2 text-sm">
-                      <span class="text-muted-foreground">•</span>
-                      {place ? (
-                        <span>
-                          {place.name}
-                          <span class="ml-2 text-xs text-muted-foreground">
-                            {place.lat.toFixed(3)}, {place.lng.toFixed(3)}
-                          </span>
-                        </span>
-                      ) : (
-                        <span>{item.note}</span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        ))
-      )
-    }
-    </section>
   </main>
 </Layout>
