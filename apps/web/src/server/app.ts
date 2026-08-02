@@ -20,6 +20,7 @@ import {
   equalSplit,
   isAllowedUploadType,
   isInvitationOpen,
+  invitationStatus,
   linkDocumentSchema,
   MAX_DOCUMENT_BYTES,
   sortReservations,
@@ -405,9 +406,10 @@ export function createApp(env: CloudflareEnv) {
 
     const body = await c.req.json().catch(() => ({}));
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
-    const role: TripRole =
-      body?.role === "viewer" ? "viewer" : body?.role === "owner" ? "owner" : "editor";
+    const role: "editor" | "viewer" | null =
+      body?.role === "viewer" ? "viewer" : body?.role === "editor" || body?.role == null ? "editor" : null;
     if (!email) return c.json({ error: "email required" }, 400);
+    if (!role) return c.json({ error: "role must be editor or viewer" }, 400);
 
     const target = await env.DB.prepare('SELECT id FROM "user" WHERE email = ?')
       .bind(email)
@@ -566,6 +568,13 @@ export function createApp(env: CloudflareEnv) {
           useCount: i.useCount,
           now,
         }),
+        status: invitationStatus({
+          revokedAt: i.revokedAt,
+          expiresAt: i.expiresAt,
+          maxUses: i.maxUses,
+          useCount: i.useCount,
+          now,
+        }),
       })),
     );
   });
@@ -613,6 +622,39 @@ export function createApp(env: CloudflareEnv) {
       .where(eq(trips.id, inv.tripId))
       .limit(1);
     if (!tripRow) return c.json({ error: "not found" }, 404);
+
+    // Claim a use atomically before changing membership. The initial read above
+    // is only an inexpensive error fast-path; this conditional update prevents
+    // concurrent accepts from exceeding a finite maxUses cap.
+    const claim = await env.DB
+      .prepare(
+        `UPDATE trip_invitation
+         SET use_count = use_count + 1
+         WHERE id = ?
+           AND revoked_at IS NULL
+           AND (expires_at IS NULL OR expires_at > ?)
+           AND (max_uses IS NULL OR use_count < max_uses)`,
+      )
+      .bind(inv.id, now)
+      .run();
+    if ((claim.meta.changes ?? 0) !== 1) {
+      const [latest] = await database
+        .select()
+        .from(tripInvitations)
+        .where(eq(tripInvitations.id, inv.id))
+        .limit(1);
+      const status = latest
+        ? invitationStatus({
+            revokedAt: latest.revokedAt,
+            expiresAt: latest.expiresAt,
+            maxUses: latest.maxUses,
+            useCount: latest.useCount,
+            now: Date.now(),
+          })
+        : "revoked";
+      return c.json({ error: status === "open" ? "invalid" : status }, 410);
+    }
+
     if (tripRow.ownerId !== user.id) {
       const [existing] = await database
         .select()
@@ -633,10 +675,6 @@ export function createApp(env: CloudflareEnv) {
           .values({ tripId: inv.tripId, userId: user.id, role });
       }
     }
-    await database
-      .update(tripInvitations)
-      .set({ useCount: inv.useCount + 1 })
-      .where(eq(tripInvitations.id, inv.id));
     await broadcastTripChange(env, inv.tripId, "members", user.id);
     if (tripRow.ownerId !== user.id) {
       const [t] = await database
@@ -667,22 +705,15 @@ export function createApp(env: CloudflareEnv) {
       .limit(1);
     if (!inv) return c.json({ valid: false, reason: "invalid" }, 404);
     const now = Date.now();
-    if (
-      !isInvitationOpen({
-        revokedAt: inv.revokedAt,
-        expiresAt: inv.expiresAt,
-        maxUses: inv.maxUses,
-        useCount: inv.useCount,
-        now,
-      })
-    ) {
-      const reason =
-        inv.revokedAt != null
-          ? "revoked"
-          : inv.expiresAt != null && inv.expiresAt <= now
-            ? "expired"
-            : "exhausted";
-      return c.json({ valid: false, reason });
+    const status = invitationStatus({
+      revokedAt: inv.revokedAt,
+      expiresAt: inv.expiresAt,
+      maxUses: inv.maxUses,
+      useCount: inv.useCount,
+      now,
+    });
+    if (status !== "open") {
+      return c.json({ valid: false, reason: status });
     }
     const [tripRow] = await database
       .select({ title: trips.title })

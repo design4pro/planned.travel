@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Alert, Button, Card } from "@heroui/react";
 
 interface Preview {
   valid: boolean;
@@ -19,6 +19,10 @@ interface Labels {
   signin: string;
   error: string;
   generic: string;
+  invalid: string;
+  revoked: string;
+  expired: string;
+  exhausted: string;
   roleEditor: string;
   roleViewer: string;
 }
@@ -61,6 +65,13 @@ export default function InviteAccept({ token, authed, labels }: Props) {
       } else {
         setOutcome("error");
       }
+    } else if (res.status === 410) {
+      const body = (await res.json().catch(() => ({}))) as { error?: Preview["reason"] };
+      if (body.error === "revoked" || body.error === "expired" || body.error === "exhausted") {
+        setPreview({ valid: false, reason: body.error });
+      } else {
+        setOutcome("error");
+      }
     } else {
       setOutcome("error");
     }
@@ -74,7 +85,8 @@ export default function InviteAccept({ token, authed, labels }: Props) {
   }
 
   if (!preview.valid) {
-    return <p className="text-sm text-destructive">{labels.error}</p>;
+    const reason = preview.reason === "revoked" ? labels.revoked : preview.reason === "expired" ? labels.expired : preview.reason === "exhausted" ? labels.exhausted : labels.invalid;
+    return <Alert status="danger"><Alert.Indicator /><Alert.Content><Alert.Title>{labels.error}</Alert.Title><Alert.Description>{reason}</Alert.Description></Alert.Content></Alert>;
   }
 
   return (
@@ -85,34 +97,26 @@ export default function InviteAccept({ token, authed, labels }: Props) {
       </div>
 
       {preview.tripTitle && (
-        <p className="rounded-lg border bg-card px-4 py-3 text-lg font-semibold">
-          {preview.tripTitle}
-        </p>
+        <Card><Card.Content><p className="text-lg font-semibold">{preview.tripTitle}</p></Card.Content></Card>
       )}
       <p className="text-sm text-muted-foreground">{labels.as(roleName(preview.role))}</p>
 
       {outcome === "accepted" && (
-        <p className="text-sm text-emerald-600">
-          {labels.accept} → {labels.open}…
-        </p>
+        <Alert status="success"><Alert.Indicator /><Alert.Content><Alert.Title>{labels.accept} → {labels.open}…</Alert.Title></Alert.Content></Alert>
       )}
       {outcome === "already" && tripId && (
-        <a className="text-sm text-primary underline" href={`/app/trips/${tripId}`}>
-          {labels.already} — {labels.open}
-        </a>
+        <Button variant="outline" onPress={() => window.location.assign(`/app/trips/${tripId}`)}>{labels.already} — {labels.open}</Button>
       )}
-      {outcome === "error" && <p className="text-sm text-destructive">{labels.generic}</p>}
+      {outcome === "error" && <Alert status="danger"><Alert.Indicator /><Alert.Content><Alert.Title>{labels.generic}</Alert.Title></Alert.Content></Alert>}
 
       {outcome === null &&
         (authed ? (
-          <Button onClick={accept} disabled={busy}>
+          <Button onPress={accept} isPending={busy}>
             {labels.accept}
           </Button>
         ) : (
           <div className="space-y-2">
-            <Button asChild>
-              <a href="/login">{labels.signin}</a>
-            </Button>
+            <Button onPress={() => window.location.assign("/login")}>{labels.signin}</Button>
           </div>
         ))}
     </div>

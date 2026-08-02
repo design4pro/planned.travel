@@ -129,3 +129,19 @@ export function isInvitationOpen(inv: {
   if (inv.maxUses != null && inv.useCount >= inv.maxUses) return false;
   return true;
 }
+
+export type InvitationStatus = "open" | "revoked" | "expired" | "exhausted";
+
+/** Return the stable lifecycle state used by both invitation APIs and UIs. */
+export function invitationStatus(inv: {
+  revokedAt: number | null;
+  expiresAt: number | null;
+  maxUses: number | null;
+  useCount: number;
+  now: number;
+}): InvitationStatus {
+  if (inv.revokedAt != null) return "revoked";
+  if (inv.expiresAt != null && inv.expiresAt <= inv.now) return "expired";
+  if (inv.maxUses != null && inv.useCount >= inv.maxUses) return "exhausted";
+  return "open";
+}

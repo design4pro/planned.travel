@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Alert, Button, Label, ListBox, Select } from "@heroui/react";
 
 type Role = "editor" | "viewer";
 
@@ -8,6 +8,7 @@ interface Invitation {
   url: string;
   role: Role;
   open: boolean;
+  status?: "open" | "revoked" | "expired" | "exhausted";
   revokedAt: number | null;
   expiresAt: number | null;
   maxUses: number | null;
@@ -50,8 +51,8 @@ const MAX_USES_OPTIONS = [0, 1, 5, 10] as const;
 export default function InviteManager({ tripId, labels }: Props) {
   const [invites, setInvites] = useState<Invitation[]>([]);
   const [role, setRole] = useState<Role>("editor");
-  const [expiresInDays, setExpiresInDays] = useState<number>(7);
-  const [maxUses, setMaxUses] = useState<number>(0);
+  const [expiresInDays, setExpiresInDays] = useState("7");
+  const [maxUses, setMaxUses] = useState("0");
   const [busy, setBusy] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,8 +73,8 @@ export default function InviteManager({ tripId, labels }: Props) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         role,
-        ...(expiresInDays > 0 ? { expiresInDays } : {}),
-        ...(maxUses > 0 ? { maxUses } : {}),
+        ...(Number(expiresInDays) > 0 ? { expiresInDays: Number(expiresInDays) } : {}),
+        ...(Number(maxUses) > 0 ? { maxUses: Number(maxUses) } : {}),
       }),
     });
     setBusy(false);
@@ -91,7 +92,7 @@ export default function InviteManager({ tripId, labels }: Props) {
       setError(labels.revoked);
       return;
     }
-    setInvites((prev) => prev.filter((i) => i.id !== id));
+    setInvites((prev) => prev.map((i) => (i.id === id ? { ...i, open: false, status: "revoked", revokedAt: Date.now() } : i)));
   }
 
   async function copy(inv: Invitation) {
@@ -108,52 +109,16 @@ export default function InviteManager({ tripId, labels }: Props) {
     <details className="rounded-lg border bg-card p-3" open={invites.length === 0}>
       <summary className="cursor-pointer text-sm font-medium">{labels.title}</summary>
 
-      <form onSubmit={create} className="mt-3 flex flex-wrap items-end gap-2">
-        <label className="text-xs text-muted-foreground">
-          {labels.role}
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as Role)}
-            className="mt-1 block rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-          >
-            <option value="editor">{labels.roleEditor}</option>
-            <option value="viewer">{labels.roleViewer}</option>
-          </select>
-        </label>
-        <label className="text-xs text-muted-foreground">
-          {labels.expiry}
-          <select
-            value={expiresInDays}
-            onChange={(e) => setExpiresInDays(Number(e.target.value))}
-            className="mt-1 block rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-          >
-            {EXPIRY_OPTIONS.map((d) => (
-              <option key={d} value={d}>
-                {d === 0 ? labels.expiryNever : labels.expiryDays(d)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs text-muted-foreground">
-          {labels.maxUses}
-          <select
-            value={maxUses}
-            onChange={(e) => setMaxUses(Number(e.target.value))}
-            className="mt-1 block rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-          >
-            {MAX_USES_OPTIONS.map((n) => (
-              <option key={n} value={n}>
-                {n === 0 ? labels.maxUsesAny : labels.maxUsesN(n)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button type="submit" disabled={busy}>
+      <form onSubmit={create} className="mt-3 flex flex-wrap items-end gap-3">
+        <InviteSelect label={labels.role} value={role} onChange={(value) => setRole(value as Role)} options={[{ id: "editor", label: labels.roleEditor }, { id: "viewer", label: labels.roleViewer }]} />
+        <InviteSelect label={labels.expiry} value={expiresInDays} onChange={setExpiresInDays} options={EXPIRY_OPTIONS.map((d) => ({ id: String(d), label: d === 0 ? labels.expiryNever : labels.expiryDays(d) }))} />
+        <InviteSelect label={labels.maxUses} value={maxUses} onChange={setMaxUses} options={MAX_USES_OPTIONS.map((n) => ({ id: String(n), label: n === 0 ? labels.maxUsesAny : labels.maxUsesN(n) }))} />
+        <Button type="submit" isPending={busy}>
           {labels.create}
         </Button>
       </form>
 
-      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+      {error && <Alert className="mt-3" status="danger"><Alert.Indicator /><Alert.Content><Alert.Title>{error}</Alert.Title></Alert.Content></Alert>}
 
       <ul className="mt-3 space-y-2">
         {invites.length === 0 && <li className="text-sm text-muted-foreground">{labels.empty}</li>}
@@ -167,20 +132,12 @@ export default function InviteManager({ tripId, labels }: Props) {
               {inv.role === "editor" ? labels.roleEditor : labels.roleViewer} · {labels.uses(inv.useCount)}
             </span>
             <code className="max-w-[12rem] truncate text-xs">{inv.url}</code>
-            <button
-              type="button"
-              onClick={() => copy(inv)}
-              className="ml-auto rounded-md border border-input px-2 py-1 text-xs hover:bg-accent"
-            >
+            <Button size="sm" variant="outline" className="ml-auto" onPress={() => copy(inv)}>
               {copiedId === inv.id ? labels.copied : labels.copy}
-            </button>
-            <button
-              type="button"
-              onClick={() => revoke(inv.id)}
-              className="rounded-md border border-input px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
-            >
+            </Button>
+            {inv.open && <Button size="sm" variant="danger" onPress={() => revoke(inv.id)}>
               {labels.revoke}
-            </button>
+            </Button>}
           </li>
         ))}
       </ul>
@@ -188,16 +145,24 @@ export default function InviteManager({ tripId, labels }: Props) {
   );
 }
 
+function InviteSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: { id: string; label: string }[] }) {
+  return <Select className="w-36" value={value} onChange={(next) => onChange(String(next))}>
+    <Label>{label}</Label>
+    <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+    <Select.Popover><ListBox>{options.map((option) => <ListBox.Item key={option.id} id={option.id} textValue={option.label}>{option.label}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+  </Select>;
+}
+
 function StatusBadge({ inv, labels }: { inv: Invitation; labels: Labels }) {
   let text = labels.statusOpen;
   let cls = "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
-  if (inv.revokedAt != null) {
+  if (inv.status === "revoked" || inv.revokedAt != null) {
     text = labels.statusRevoked;
     cls = "bg-muted text-muted-foreground";
-  } else if (inv.expiresAt != null && inv.expiresAt <= Date.now()) {
+  } else if (inv.status === "expired" || (inv.expiresAt != null && inv.expiresAt <= Date.now())) {
     text = labels.statusExpired;
     cls = "bg-muted text-muted-foreground";
-  } else if (inv.maxUses != null && inv.useCount >= inv.maxUses) {
+  } else if (inv.status === "exhausted" || (inv.maxUses != null && inv.useCount >= inv.maxUses)) {
     text = labels.statusUsed;
     cls = "bg-muted text-muted-foreground";
   } else if (!inv.open) {

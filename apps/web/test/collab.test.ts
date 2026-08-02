@@ -6,6 +6,7 @@ import {
   decodePresenceTag,
   encodePresenceTag,
   isInvitationOpen,
+  invitationStatus,
   isOwner,
   clientMessageSchema,
 } from "@planned/shared";
@@ -97,6 +98,23 @@ describe("isInvitationOpen", () => {
   it("an exhausted link is closed exactly at the cap", () => {
     expect(isInvitationOpen({ ...base, maxUses: 3, useCount: 3, now })).toBe(false);
     expect(isInvitationOpen({ ...base, maxUses: 3, useCount: 2, now })).toBe(true);
+  });
+});
+
+describe("invitationStatus", () => {
+  const now = 1_700_000_000_000;
+  const base = { revokedAt: null, expiresAt: null, maxUses: null, useCount: 0, now };
+
+  it.each([
+    ["revoked", { revokedAt: now - 1 }],
+    ["expired", { expiresAt: now - 1 }],
+    ["exhausted", { maxUses: 2, useCount: 2 }],
+  ] as const)("reports %s invitations distinctly", (status, overrides) => {
+    expect(invitationStatus({ ...base, ...overrides })).toBe(status);
+  });
+
+  it("reports an invitation as open before its expiry and use cap", () => {
+    expect(invitationStatus({ ...base, expiresAt: now + 1, maxUses: 2, useCount: 1 })).toBe("open");
   });
 });
 

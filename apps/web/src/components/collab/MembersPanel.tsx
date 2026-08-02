@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Alert, Button, Label, ListBox, Select } from "@heroui/react";
 
 type Role = "owner" | "editor" | "viewer";
 
@@ -90,30 +91,49 @@ export default function MembersPanel({ tripId, currentUserId, labels }: Props) {
                     {roleLabel("owner", labels)}
                   </span>
                 ) : (
-                  <select
+                  <Select
+                    aria-label={`${display} role`}
+                    className="w-28"
                     value={m.role}
-                    onChange={(e) => changeRole(m, e.target.value as "editor" | "viewer")}
-                    className="rounded-md border border-input bg-background px-2 py-1 text-xs"
+                    onChange={(value) => changeRole(m, value as "editor" | "viewer")}
                   >
-                    <option value="editor">{labels.roleEditor}</option>
-                    <option value="viewer">{labels.roleViewer}</option>
-                  </select>
+                    <Label className="sr-only">{`${display} role`}</Label>
+                    <Select.Trigger>
+                      <Select.Value />
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        <ListBox.Item id="editor" textValue={labels.roleEditor}>
+                          {labels.roleEditor}
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                        <ListBox.Item id="viewer" textValue={labels.roleViewer}>
+                          {labels.roleViewer}
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
                 )}
                 {!isOwner && (
-                  <button
-                    type="button"
-                    onClick={() => remove(m)}
-                    className="rounded-md border border-input px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
-                  >
+                  <Button size="sm" variant="danger" onPress={() => remove(m)}>
                     {labels.remove}
-                  </button>
+                  </Button>
                 )}
               </span>
             </li>
           );
         })}
       </ul>
-      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+      {error && (
+        <Alert className="mt-3" status="danger">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>{error}</Alert.Title>
+          </Alert.Content>
+        </Alert>
+      )}
     </div>
   );
 }
