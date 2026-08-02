@@ -62,6 +62,8 @@ export const tripSchema = z.object({
 });
 export type Trip = z.infer<typeof tripSchema>;
 
+export * from "./contracts";
+
 /* ------------------------------- Costs ----------------------------------- */
 
 export * from "./costs";

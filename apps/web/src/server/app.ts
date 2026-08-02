@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type Stripe from "stripe";
 import { createAuth } from "../lib/auth";
@@ -47,6 +48,7 @@ import {
 } from "./notifications-triggers";
 import type { NotificationJob } from "@planned/shared";
 import type { CloudflareEnv } from "../lib/env";
+import { appRouter, createContext } from "@planned/server";
 
 type TripRole = "owner" | "editor" | "viewer";
 
@@ -165,6 +167,27 @@ export function createApp(env: CloudflareEnv) {
 
   // ── Better Auth ────────────────────────────────────────────────────────────
   app.all("/api/auth/*", (c) => auth.handler(c.req.raw));
+
+  // ── tRPC transport ─────────────────────────────────────────────────────────
+  // The router and context live in @planned/server; this route is only the
+  // request-scoped Cloudflare/Auth adapter. REST remains available during the
+  // incremental migration.
+  app.all("/api/trpc/*", (c) =>
+    fetchRequestHandler({
+      endpoint: "/api/trpc",
+      req: c.req.raw,
+      router: appRouter,
+      createContext: () =>
+        createContext({
+          request: c.req.raw,
+          env,
+          resolveUser: async (headers) => {
+            const session = await auth.api.getSession({ headers });
+            return session?.user ?? null;
+          },
+        }),
+    }),
+  );
 
   // ── Health ─────────────────────────────────────────────────────────────────
   app.get("/api/health", (c) =>

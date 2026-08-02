@@ -5,15 +5,42 @@
  * Worker origin with a Bearer token (Better Auth bearer plugin). The DTOs come
  * from @planned/shared so both clients stay in sync with the API contract.
  */
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+import type { AppRouter } from "@planned/server";
 import type { NotificationRow, Trip } from "@planned/shared";
 
-export interface ClientOptions {
-  /** Base URL of the API. Defaults to same-origin (web). Mobile passes the deployed origin. */
+export interface TransportOptions {
+  /** Same-origin by default for web; mobile supplies its deployed Worker origin. */
   baseUrl?: string;
-  /** Returns the auth token (Better Auth bearer). Web reads the session cookie server-side; mobile reads SecureStore. */
+  /** Mobile token provider. Web relies on the session cookie. */
   getToken?: () => string | null | Promise<string | null>;
   fetch?: typeof fetch;
 }
+export type TrpcClientOptions = TransportOptions;
+
+/** Create the typed tRPC client without importing server implementation code. */
+export function createPlannedTrpcClient(options: TrpcClientOptions = {}) {
+  return createTRPCProxyClient<AppRouter>({
+    links: [
+      httpBatchLink({
+        url: `${options.baseUrl ?? ""}/api/trpc`,
+        fetch: async (url, init) => {
+          const token = options.getToken ? await options.getToken() : null;
+          return (options.fetch ?? fetch)(url, {
+            ...init,
+            credentials: "include",
+            headers: {
+              ...(init?.headers ?? {}),
+              ...(token ? { authorization: `Bearer ${token}` } : {}),
+            },
+          });
+        },
+      }),
+    ],
+  });
+}
+
+export type ClientOptions = TransportOptions;
 
 export class PlannedClient {
   private opts: ClientOptions;
@@ -29,6 +56,7 @@ export class PlannedClient {
 
     const res = await fetchImpl(url, {
       ...init,
+      credentials: "include",
       headers: {
         "content-type": "application/json",
         ...(token ? { authorization: `Bearer ${token}` } : {}),
