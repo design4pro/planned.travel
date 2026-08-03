@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate release contract
+        run: pnpm release:check
+
       - name: Apply migrations to a fresh local D1
         run: pnpm db:check
 

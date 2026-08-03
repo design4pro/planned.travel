@@ -92,3 +92,10 @@ lint, tests, builds, artifact upload, and TruffleHog secret scanning on pull req
 on `main`/`develop` pushes. Workers Builds remains the deployment mechanism;
 the GitHub workflow is the pre-deploy quality gate, not a second production
 deployment path.
+
+The `pnpm release:check` step also verifies the release contract itself: CI
+still contains every required gate and staging E2E target, the runbook retains
+the non-destructive rollback safeguards, migrations contain no destructive
+down-migration statements, and superseded Astro/Hono dependencies are absent
+from workspace manifests. This catches accidental weakening of release safety
+before the normal quality jobs run.
