@@ -106,4 +106,50 @@
   //
   // // Scheduled jobs: digests, weather/price refresh, backup rotation
   // "triggers": { "crons": ["0 7 * * *"] }
+
+  // Staging is deliberately isolated from the production D1/KV/R2/Queue and
+  // runs on its own workers.dev Worker. AI, Images, and Browser Rendering are
+  // account-level services with no application data storage; Vectorize is
+  // intentionally omitted until a separate staging index is provisioned.
+  "env": {
+    "staging": {
+      "name": "planned-travel-web-staging",
+      "workers_dev": true,
+      "vars": {
+        "STRIPE_PRICE_PRO_MONTHLY": "price_1TmvnDK3rdrulsRy6Bjrf9Bn",
+        "STRIPE_PRICE_PRO_ANNUAL": "price_1TmvnFK3rdrulsRyn7E89Ek5"
+      },
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "planned-travel-staging",
+          "database_id": "dd1d78b8-a16e-4132-881a-b2c8e33a5e64",
+          "migrations_dir": "./migrations"
+        }
+      ],
+      "kv_namespaces": [
+        { "binding": "KV", "id": "8dabb4c0cd8842eebfe358a652a6db97" },
+        { "binding": "SESSION", "id": "cfc1742b06804d06971917657d65378c" }
+      ],
+      "r2_buckets": [
+        { "binding": "MEDIA", "bucket_name": "planned-travel-staging-media" }
+      ],
+      "vectorize": [],
+      "ai": { "binding": "AI" },
+      "images": { "binding": "IMAGES" },
+      "browser": { "binding": "BROWSER" },
+      "durable_objects": {
+        "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }]
+      },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TripRoom"] }],
+      "queues": {
+        "producers": [{ "binding": "JOBS", "queue": "planned-travel-staging-jobs" }],
+        "consumers": [{ "queue": "planned-travel-staging-jobs", "max_batch_size": 10 }]
+      }
+    }
+  }
 }

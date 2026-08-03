@@ -20,6 +20,30 @@ safe to abort even when a dependent migration or service is unavailable.
 5. Verify that the previous Worker version, D1, KV, R2, and Durable Object
    resources remain available. Cutover must not delete or rename them.
 
+## Isolated staging
+
+The staging Worker is `planned-travel-web-staging` at
+`https://planned-travel-web-staging.design4pro.workers.dev`. It uses separate
+Cloudflare resources and must never receive production IDs:
+
+- D1: `planned-travel-staging` (`dd1d78b8-a16e-4132-881a-b2c8e33a5e64`)
+- KV: `PLANNED_TRAVEL_STAGING_KV` and `PLANNED_TRAVEL_STAGING_SESSION`
+- R2: `planned-travel-staging-media`
+- Queue: `planned-travel-staging-jobs`
+
+From `apps/web`, apply migrations and deploy with the staging environment
+selected at build time:
+
+```sh
+pnpm migrate:staging
+pnpm deploy:staging
+pnpm e2e:staging
+```
+
+The staging build deliberately has no Vectorize binding because a separate
+staging index has not been provisioned. Semantic search is not evidence for
+production cutover until that resource and its access permission are isolated.
+
 ## Cutover
 
 Deploy the already-tested commit through Workers Builds, then run the health

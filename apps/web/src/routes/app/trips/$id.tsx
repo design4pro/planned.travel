@@ -21,7 +21,7 @@ function TripDetailPage() {
   const [lng, setLng] = useState("");
   const [note, setNote] = useState("");
 
-  if (plan.isPending) return <main className="mx-auto max-w-6xl px-6 py-12" role="status">Loading trip…</main>;
+  if (plan.isPending) return <main className="mx-auto max-w-6xl px-6 py-12" role="status"><h1 className="text-2xl font-semibold">Loading trip…</h1></main>;
   if (plan.isError) return <main className="mx-auto max-w-3xl px-6 py-20"><h1 className="text-2xl font-semibold">Trip unavailable</h1><p className="mt-2 text-muted-foreground">You may not have access to this trip, or it no longer exists.</p><Link to="/app" className="mt-6 inline-block text-primary underline">Back to trips</Link></main>;
 
   const { trip, days, places, items } = plan.data;

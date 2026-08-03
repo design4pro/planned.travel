@@ -16,7 +16,8 @@ export interface CloudflareEnv {
   DB: D1Database;
   KV: KVNamespace;
   MEDIA: R2Bucket;
-  VECTORIZE: VectorizeIndex;
+  // Optional in isolated staging until a separate index is provisioned.
+  VECTORIZE?: VectorizeIndex;
 
   // AI / media
   AI: Ai;

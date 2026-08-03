@@ -20,7 +20,7 @@ function ExpensesPage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<ExpenseCategory | "">("");
 
-  if (plan.isPending || expenses.isPending) return <main className="mx-auto max-w-4xl px-6 py-12" role="status">Loading costs…</main>;
+  if (plan.isPending || expenses.isPending) return <main className="mx-auto max-w-4xl px-6 py-12" role="status"><h1 className="text-2xl font-semibold">Loading costs…</h1></main>;
   if (plan.isError || expenses.isError) return <main className="mx-auto max-w-3xl px-6 py-20"><h1 className="text-2xl font-semibold">Costs unavailable</h1><p className="mt-2 text-muted-foreground">You may not have access to this trip.</p><Link to="/app" className="mt-6 inline-block text-primary underline">Back to trips</Link></main>;
 
   const canEdit = plan.data.trip.role !== "viewer";

@@ -11,8 +11,18 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as AppAccountRouteImport } from './routes/app/account'
+import { Route as AppNotificationsRouteImport } from './routes/app/notifications'
+import { Route as PlIndexRouteImport } from './routes/pl/index'
+import { Route as PlLoginRouteImport } from './routes/pl/login'
+import { Route as PlPricingRouteImport } from './routes/pl/pricing'
+import { Route as PlSignupRouteImport } from './routes/pl/signup'
 import { Route as AppTripsIdRouteImport } from './routes/app/trips/$id'
+import { Route as AppTripsIdDocumentsRouteImport } from './routes/app/trips/$id.documents'
 import { Route as AppTripsIdExpensesRouteImport } from './routes/app/trips/$id.expenses'
 import { Route as AppTripsIdReservationsRouteImport } from './routes/app/trips/$id.reservations'
 
@@ -26,15 +36,65 @@ const AppRoute = AppRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAccountRoute = AppAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AppRoute,
+} as any)
+const PlIndexRoute = PlIndexRouteImport.update({
+  id: '/pl/',
+  path: '/pl/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlLoginRoute = PlLoginRouteImport.update({
+  id: '/pl/login',
+  path: '/pl/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlPricingRoute = PlPricingRouteImport.update({
+  id: '/pl/pricing',
+  path: '/pl/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlSignupRoute = PlSignupRouteImport.update({
+  id: '/pl/signup',
+  path: '/pl/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppTripsIdRoute = AppTripsIdRouteImport.update({
   id: '/trips/$id',
   path: '/trips/$id',
   getParentRoute: () => AppRoute,
+} as any)
+const AppTripsIdDocumentsRoute = AppTripsIdDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => AppTripsIdRoute,
 } as any)
 const AppTripsIdExpensesRoute = AppTripsIdExpensesRouteImport.update({
   id: '/expenses',
@@ -50,15 +110,35 @@ const AppTripsIdReservationsRoute = AppTripsIdReservationsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
+  '/signup': typeof SignupRoute
+  '/app/account': typeof AppAccountRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/pl/login': typeof PlLoginRoute
+  '/pl/pricing': typeof PlPricingRoute
+  '/pl/signup': typeof PlSignupRoute
   '/app/': typeof AppIndexRoute
+  '/pl/': typeof PlIndexRoute
   '/app/trips/$id': typeof AppTripsIdRouteWithChildren
+  '/app/trips/$id/documents': typeof AppTripsIdDocumentsRoute
   '/app/trips/$id/expenses': typeof AppTripsIdExpensesRoute
   '/app/trips/$id/reservations': typeof AppTripsIdReservationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
+  '/signup': typeof SignupRoute
+  '/app/account': typeof AppAccountRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/pl/login': typeof PlLoginRoute
+  '/pl/pricing': typeof PlPricingRoute
+  '/pl/signup': typeof PlSignupRoute
   '/app': typeof AppIndexRoute
+  '/pl': typeof PlIndexRoute
   '/app/trips/$id': typeof AppTripsIdRouteWithChildren
+  '/app/trips/$id/documents': typeof AppTripsIdDocumentsRoute
   '/app/trips/$id/expenses': typeof AppTripsIdExpensesRoute
   '/app/trips/$id/reservations': typeof AppTripsIdReservationsRoute
 }
@@ -66,8 +146,18 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/pricing': typeof PricingRoute
+  '/signup': typeof SignupRoute
+  '/app/account': typeof AppAccountRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/pl/login': typeof PlLoginRoute
+  '/pl/pricing': typeof PlPricingRoute
+  '/pl/signup': typeof PlSignupRoute
   '/app/': typeof AppIndexRoute
+  '/pl/': typeof PlIndexRoute
   '/app/trips/$id': typeof AppTripsIdRouteWithChildren
+  '/app/trips/$id/documents': typeof AppTripsIdDocumentsRoute
   '/app/trips/$id/expenses': typeof AppTripsIdExpensesRoute
   '/app/trips/$id/reservations': typeof AppTripsIdReservationsRoute
 }
@@ -76,23 +166,53 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/login'
+    | '/pricing'
+    | '/signup'
+    | '/app/account'
+    | '/app/notifications'
+    | '/pl/login'
+    | '/pl/pricing'
+    | '/pl/signup'
     | '/app/'
+    | '/pl/'
     | '/app/trips/$id'
+    | '/app/trips/$id/documents'
     | '/app/trips/$id/expenses'
     | '/app/trips/$id/reservations'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
+    | '/pricing'
+    | '/signup'
+    | '/app/account'
+    | '/app/notifications'
+    | '/pl/login'
+    | '/pl/pricing'
+    | '/pl/signup'
     | '/app'
+    | '/pl'
     | '/app/trips/$id'
+    | '/app/trips/$id/documents'
     | '/app/trips/$id/expenses'
     | '/app/trips/$id/reservations'
   id:
     | '__root__'
     | '/'
     | '/app'
+    | '/login'
+    | '/pricing'
+    | '/signup'
+    | '/app/account'
+    | '/app/notifications'
+    | '/pl/login'
+    | '/pl/pricing'
+    | '/pl/signup'
     | '/app/'
+    | '/pl/'
     | '/app/trips/$id'
+    | '/app/trips/$id/documents'
     | '/app/trips/$id/expenses'
     | '/app/trips/$id/reservations'
   fileRoutesById: FileRoutesById
@@ -100,6 +220,13 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  PricingRoute: typeof PricingRoute
+  SignupRoute: typeof SignupRoute
+  PlLoginRoute: typeof PlLoginRoute
+  PlPricingRoute: typeof PlPricingRoute
+  PlSignupRoute: typeof PlSignupRoute
+  PlIndexRoute: typeof PlIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -118,6 +245,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/': {
       id: '/app/'
       path: '/'
@@ -125,12 +273,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/account': {
+      id: '/app/account'
+      path: '/account'
+      fullPath: '/app/account'
+      preLoaderRoute: typeof AppAccountRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/notifications': {
+      id: '/app/notifications'
+      path: '/notifications'
+      fullPath: '/app/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/pl/': {
+      id: '/pl/'
+      path: '/pl'
+      fullPath: '/pl/'
+      preLoaderRoute: typeof PlIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pl/login': {
+      id: '/pl/login'
+      path: '/pl/login'
+      fullPath: '/pl/login'
+      preLoaderRoute: typeof PlLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pl/pricing': {
+      id: '/pl/pricing'
+      path: '/pl/pricing'
+      fullPath: '/pl/pricing'
+      preLoaderRoute: typeof PlPricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pl/signup': {
+      id: '/pl/signup'
+      path: '/pl/signup'
+      fullPath: '/pl/signup'
+      preLoaderRoute: typeof PlSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/trips/$id': {
       id: '/app/trips/$id'
       path: '/trips/$id'
       fullPath: '/app/trips/$id'
       preLoaderRoute: typeof AppTripsIdRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/app/trips/$id/documents': {
+      id: '/app/trips/$id/documents'
+      path: '/documents'
+      fullPath: '/app/trips/$id/documents'
+      preLoaderRoute: typeof AppTripsIdDocumentsRouteImport
+      parentRoute: typeof AppTripsIdRoute
     }
     '/app/trips/$id/expenses': {
       id: '/app/trips/$id/expenses'
@@ -150,11 +347,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppTripsIdRouteChildren {
+  AppTripsIdDocumentsRoute: typeof AppTripsIdDocumentsRoute
   AppTripsIdExpensesRoute: typeof AppTripsIdExpensesRoute
   AppTripsIdReservationsRoute: typeof AppTripsIdReservationsRoute
 }
 
 const AppTripsIdRouteChildren: AppTripsIdRouteChildren = {
+  AppTripsIdDocumentsRoute: AppTripsIdDocumentsRoute,
   AppTripsIdExpensesRoute: AppTripsIdExpensesRoute,
   AppTripsIdReservationsRoute: AppTripsIdReservationsRoute,
 }
@@ -164,11 +363,15 @@ const AppTripsIdRouteWithChildren = AppTripsIdRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAccountRoute: typeof AppAccountRoute
+  AppNotificationsRoute: typeof AppNotificationsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppTripsIdRoute: typeof AppTripsIdRouteWithChildren
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAccountRoute: AppAccountRoute,
+  AppNotificationsRoute: AppNotificationsRoute,
   AppIndexRoute: AppIndexRoute,
   AppTripsIdRoute: AppTripsIdRouteWithChildren,
 }
@@ -178,6 +381,13 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  LoginRoute: LoginRoute,
+  PricingRoute: PricingRoute,
+  SignupRoute: SignupRoute,
+  PlLoginRoute: PlLoginRoute,
+  PlPricingRoute: PlPricingRoute,
+  PlSignupRoute: PlSignupRoute,
+  PlIndexRoute: PlIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

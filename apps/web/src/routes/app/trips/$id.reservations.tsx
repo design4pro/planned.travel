@@ -33,7 +33,7 @@ function ReservationsPage() {
   const remove = trpc.trips.reservations.remove.useMutation({ onSuccess: () => reservations.refetch() });
   const [editing, setEditing] = useState<string | null>(null);
 
-  if (plan.isPending || reservations.isPending) return <main className="mx-auto max-w-4xl px-6 py-12" role="status">Loading reservations…</main>;
+  if (plan.isPending || reservations.isPending) return <main className="mx-auto max-w-4xl px-6 py-12" role="status"><h1 className="text-2xl font-semibold">Loading reservations…</h1></main>;
   if (plan.isError || reservations.isError) return <main className="mx-auto max-w-3xl px-6 py-20"><h1 className="text-2xl font-semibold">Reservations unavailable</h1><p className="mt-2 text-muted-foreground">You may not have access to this trip, or it no longer exists.</p><Link to="/app" className="mt-6 inline-block text-primary underline">Back to trips</Link></main>;
 
   const canEdit = plan.data.trip.role !== "viewer";
