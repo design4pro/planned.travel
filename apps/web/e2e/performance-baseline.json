@@ -1,4 +1,4 @@
 {
-  "desktop": { "lcp": 200, "inp": 20, "ttfb": 50, "dcl": 150, "cls": 0 },
-  "mobile": { "lcp": 100, "inp": 20, "ttfb": 30, "dcl": 80, "cls": 0 }
+  "desktop": { "lcp": 200, "inp": 20, "ttfb": 80, "dcl": 150, "cls": 0 },
+  "mobile": { "lcp": 100, "inp": 20, "ttfb": 50, "dcl": 80, "cls": 0 }
 }

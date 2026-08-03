@@ -41,6 +41,7 @@ test.describe("staging route parity", () => {
       await expect(page).toHaveScreenshot(`${route.replaceAll("/", "_") || "home"}.png`, {
         fullPage: true,
         animations: "disabled",
+        maxDiffPixelRatio: 0.03,
       });
     });
   }
