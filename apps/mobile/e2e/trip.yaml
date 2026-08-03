@@ -2,6 +2,7 @@ appId: travel.planned.app
 ---
 - launchApp:
     clearState: true
+- waitForAnimationToEnd
 - runFlow:
     when:
       visible: "‹ Trips"
@@ -12,7 +13,17 @@ appId: travel.planned.app
       visible: "Sign out"
     commands:
       - tapOn: "Sign out"
-- assertVisible: "Sign in"
+- runFlow:
+    when:
+      visible: "Your trips"
+    commands:
+      - scrollUntilVisible:
+          element: "Sign out"
+          direction: DOWN
+      - tapOn: "Sign out"
+- extendedWaitUntil:
+    visible: "Sign in"
+    timeout: 10000
 - tapOn:
     id: sign-in-email
 - inputText: ${E2E_EMAIL}
@@ -37,4 +48,7 @@ appId: travel.planned.app
 - pressKey: ENTER
 - assertVisible: "Mobile E2E note"
 - tapOn: "‹ Trips"
+- scrollUntilVisible:
+    element: "Sign out"
+    direction: DOWN
 - tapOn: "Sign out"
