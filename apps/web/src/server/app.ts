@@ -1299,6 +1299,8 @@ export function createApp(env: CloudflareEnv) {
     const priceId = interval === "year" ? env.STRIPE_PRICE_PRO_ANNUAL : env.STRIPE_PRICE_PRO_MONTHLY;
     if (!priceId || !priceId.startsWith("price_"))
       return c.json({ error: "billing_not_configured" }, 500);
+    if (!env.STRIPE_SECRET_KEY)
+      return c.json({ error: "billing_not_configured" }, 500);
 
     const row = await getOrCreateSubscription(database, user.id);
     const params: Stripe.Checkout.SessionCreateParams = {
@@ -1315,12 +1317,15 @@ export function createApp(env: CloudflareEnv) {
     else params.customer_email = user.email;
 
     const session = await getStripe().checkout.sessions.create(params);
+    if (!session.url) return c.json({ error: "billing_not_configured" }, 500);
     return c.json({ url: session.url });
   });
 
   app.post("/api/billing/portal", async (c) => {
     const user = await getUser(c.req.raw);
     if (!user) return c.json({ error: "unauthorized" }, 401);
+    if (!env.STRIPE_SECRET_KEY)
+      return c.json({ error: "billing_not_configured" }, 500);
     const row = await getOrCreateSubscription(database, user.id);
     if (!row.stripeCustomerId) return c.json({ error: "no_customer" }, 400);
     const session = await getStripe().billingPortal.sessions.create({
@@ -1373,6 +1378,7 @@ export function createApp(env: CloudflareEnv) {
   app.post("/api/webhooks/stripe", async (c) => {
     const sig = c.req.header("stripe-signature");
     if (!sig || !env.STRIPE_WEBHOOK_SECRET) return c.json({ error: "missing" }, 400);
+    if (!env.STRIPE_SECRET_KEY) return c.json({ error: "billing_not_configured" }, 500);
     const rawBody = await c.req.raw.text();
     let event: Stripe.Event;
     try {
