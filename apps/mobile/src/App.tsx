@@ -49,6 +49,7 @@ import {
   type AuthState,
 } from "./auth/state";
 import { useTripSync } from "./collab/useTripSync";
+import { projectPlace } from "./trip-map";
 import "./global.css";
 
 if (__DEV__) LogBox.ignoreAllLogs();
@@ -227,6 +228,7 @@ function HomeScreen({
       }),
     [storage],
   );
+  const getToken = useCallback(() => storage.getItem(SESSION_TOKEN_KEY), [storage]);
   const [trips, setTrips] = useState<TripDto[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -274,7 +276,7 @@ function HomeScreen({
       return (
         <TripWorkspace
           rest={rest}
-          getToken={() => storage.getItem(SESSION_TOKEN_KEY)}
+          getToken={getToken}
           trip={trip}
           user={user}
           onBack={() => {
@@ -416,6 +418,9 @@ function TripWorkspace({
   const [error, setError] = useState<string>();
   const [note, setNote] = useState("");
   const [place, setPlace] = useState("");
+  const [placeLat, setPlaceLat] = useState("");
+  const [placeLng, setPlaceLng] = useState("");
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string>();
   const [membersOpen, setMembersOpen] = useState(false);
   const [dayIndex, setDayIndex] = useState(0);
   const [section, setSection] = useState<"plan" | "reservations" | "costs" | "documents" | "notifications" | "billing">("plan");
@@ -447,10 +452,18 @@ function TripWorkspace({
   }
   async function addPlace() {
     if (!place.trim()) return;
+    const lat = Number.parseFloat(placeLat);
+    const lng = Number.parseFloat(placeLng);
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) {
+      setError("Enter a valid latitude (-90 to 90) and longitude (-180 to 180).");
+      return;
+    }
     await rest
       .trips()
-      .addPlace(trip.id, { name: place.trim(), lat: 0, lng: 0 });
+      .addPlace(trip.id, { name: place.trim(), lat, lng });
     setPlace("");
+    setPlaceLat("");
+    setPlaceLng("");
     void load();
   }
   async function addDay() {
@@ -499,7 +512,11 @@ function TripWorkspace({
         ))}
       </View>
       {section === "plan" ? <>
-      <MapSurface places={plan.places} />
+      <MapSurface
+        places={plan.places}
+        selectedPlaceId={selectedPlaceId}
+        onSelectPlace={setSelectedPlaceId}
+      />
       <View className="absolute inset-x-0 bottom-0 max-h-[62%] rounded-t-3xl border-t border-border bg-white px-5 pb-5 pt-3">
         <View
           className="mb-3 self-center rounded-full bg-slate-200"
@@ -587,6 +604,22 @@ function TripWorkspace({
                 onChangeText={setPlace}
                 className="min-w-0 flex-1 rounded-xl border border-border bg-muted px-3 py-2 text-ink"
               />
+              <TextInput
+                accessibilityLabel="Place latitude"
+                keyboardType="numbers-and-punctuation"
+                placeholder="Lat"
+                value={placeLat}
+                onChangeText={setPlaceLat}
+                className="w-20 rounded-xl border border-border bg-muted px-3 py-2 text-ink"
+              />
+              <TextInput
+                accessibilityLabel="Place longitude"
+                keyboardType="numbers-and-punctuation"
+                placeholder="Lng"
+                value={placeLng}
+                onChangeText={setPlaceLng}
+                className="w-20 rounded-xl border border-border bg-muted px-3 py-2 text-ink"
+              />
               <PrimaryButton onPress={addPlace}>Place</PrimaryButton>
             </View>
           ) : null}
@@ -614,30 +647,55 @@ function TripWorkspace({
   );
 }
 
-function MapSurface({ places }: { places: TripPlan["places"] }) {
+function MapSurface({
+  places,
+  selectedPlaceId,
+  onSelectPlace,
+}: {
+  places: TripPlan["places"];
+  selectedPlaceId?: string;
+  onSelectPlace: (placeId: string) => void;
+}) {
+  const selected = places.find((place) => place.id === selectedPlaceId);
   return (
-    <View accessibilityLabel="Trip map" className="flex-1 bg-[#dbe8df]">
+    <View
+      accessibilityLabel="Trip map"
+      accessibilityRole="adjustable"
+      className="flex-1 bg-[#dbe8df]"
+    >
       <View
         className="absolute inset-0 opacity-40"
         style={{ backgroundColor: "#b8d4c2" }}
       />
-      {places.map((place, index) => (
-        <View
+      {places.map((place, index) => {
+        const position = projectPlace(place);
+        return (
+          <Pressable
           key={place.id}
+          accessibilityLabel={`Show ${place.name} on map`}
+          accessibilityRole="button"
+          onPress={() => onSelectPlace(place.id)}
           className="absolute items-center"
-          style={{
-            left: `${20 + ((index * 31) % 70)}%`,
-            top: `${25 + ((index * 23) % 45)}%`,
-          }}
+          style={{ left: position.left, top: position.top }}
         >
-          <View className="h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-primary shadow">
+          <View className={`h-8 w-8 items-center justify-center rounded-full border-2 border-white shadow ${selectedPlaceId === place.id ? "bg-ink" : "bg-primary"}`}>
             <Text className="font-bold text-white">{index + 1}</Text>
           </View>
-          <Text className="mt-1 rounded bg-white/90 px-1 text-xs text-ink">
-            {place.name}
+          </Pressable>
+        );
+      })}
+      {selected ? (
+        <Pressable
+          accessibilityLabel={`Selected place ${selected.name}`}
+          onPress={() => onSelectPlace(selected.id)}
+          className="absolute bottom-5 left-5 right-5 rounded-2xl border border-border bg-white p-4 shadow"
+        >
+          <Text className="font-semibold text-ink">{selected.name}</Text>
+          <Text className="mt-1 text-sm text-muted-foreground">
+            {selected.lat.toFixed(5)}, {selected.lng.toFixed(5)}
           </Text>
-        </View>
-      ))}
+        </Pressable>
+      ) : null}
       <Text className="absolute left-5 top-5 rounded-full bg-white/90 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Map view
       </Text>

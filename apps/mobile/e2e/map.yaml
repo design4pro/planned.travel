@@ -47,9 +47,12 @@ appId: travel.planned.app
 - assertVisible: "Itinerary"
 - tapOn: "Add a place"
 - inputText: "Map-critical place"
-- pressKey: ENTER
+- tapOn: "Place latitude"
+- inputText: "38.7223"
+- tapOn: "Place longitude"
+- inputText: "-9.1393"
+- tapOn: "Place"
 - extendedWaitUntil:
     visible: "Map-critical place"
     timeout: 10000
 - assertVisible: "Map view"
-
