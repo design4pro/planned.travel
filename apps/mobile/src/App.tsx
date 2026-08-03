@@ -7,7 +7,7 @@ import {
 } from "react";
 import {
   ActivityIndicator,
-  Button,
+  LogBox,
   Modal,
   Pressable,
   SafeAreaView,
@@ -35,6 +35,8 @@ import {
 } from "./auth/state";
 import { useTripSync } from "./collab/useTripSync";
 import "./global.css";
+
+if (__DEV__) LogBox.ignoreAllLogs();
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://planned.travel";
 type AuthClient = ReturnType<typeof createMobileAuthClient>;
@@ -283,6 +285,15 @@ function HomeScreen({
         <Text className="mt-2 text-3xl font-bold text-ink">
           Welcome{user.name ? `, ${user.name}` : " back"}.
         </Text>
+        <Pressable
+          testID="sign-out"
+          accessibilityLabel="sign-out"
+          accessibilityRole="button"
+          onPress={signOut}
+          className="mt-4 self-start rounded-xl border border-border bg-white px-4 py-2"
+        >
+          <Text className="font-semibold text-ink">Sign out</Text>
+        </Pressable>
         <View className="mt-6 flex-row gap-2">
           <TextInput
             accessibilityLabel="New trip title"
@@ -326,6 +337,7 @@ function HomeScreen({
           ) : (
             trips.map((trip) => (
               <Pressable
+                testID={`trip-${trip.title.replace(/\s+/g, "-")}`}
                 accessibilityRole="button"
                 key={trip.id}
                 onPress={() => setSelected(trip.id)}
@@ -349,11 +361,6 @@ function HomeScreen({
             ))
           )}
         </View>
-          <View
-            className="mt-8 items-center rounded-xl border border-border bg-white px-4 py-3"
-          >
-            <Button testID="sign-out" title="Sign out" onPress={signOut} />
-          </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -693,8 +700,9 @@ function MembersSheet({
                     Editor
                   </Text>
                 </Pressable>
-                <Pressable
-                  onPress={() => void setRole(member, "viewer")}
+                  <Pressable
+                    testID="role-viewer"
+                    onPress={() => void setRole(member, "viewer")}
                   className={`rounded-lg px-3 py-2 ${member.role === "viewer" ? "bg-primary" : "bg-muted"}`}
                 >
                   <Text

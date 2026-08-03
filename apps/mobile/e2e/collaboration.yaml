@@ -17,20 +17,15 @@ appId: travel.planned.app
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "Sign out"
+      visible: "sign-out"
     commands:
-      - tapOn: "Sign out"
+      - tapOn: "sign-out"
 - runFlow:
     when:
       visible: "Your trips"
     commands:
-      - scrollUntilVisible:
-          element: "Sign out"
-          direction: DOWN
-          centerElement: true
-          visibilityPercentage: 1
-      - waitForAnimationToEnd
-      - tapOn: "Sign out"
+      - tapOn:
+          id: sign-out
 - extendedWaitUntil:
     visible: "Sign in"
     timeout: 10000
@@ -64,13 +59,8 @@ appId: travel.planned.app
     timeout: 10000
 - tapOn: "Done"
 - tapOn: "‹ Trips"
-- scrollUntilVisible:
-    element: "Sign out"
-    direction: DOWN
-    centerElement: true
-    visibilityPercentage: 1
-- waitForAnimationToEnd
-- tapOn: "Sign out"
+- tapOn:
+    id: sign-out
 - assertVisible: "Sign in"
 - tapOn:
     id: sign-in-email
@@ -82,7 +72,13 @@ appId: travel.planned.app
 - extendedWaitUntil:
     visible: "Your trips"
     timeout: 15000
-- tapOn: "Open trip →"
+- scrollUntilVisible:
+    element:
+      id: ${E2E_COLLAB_TRIP_ID}
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: ${E2E_COLLAB_TRIP_ID}
 - extendedWaitUntil:
     visible: "Itinerary"
     timeout: 15000
@@ -92,13 +88,8 @@ appId: travel.planned.app
 - pressKey: ENTER
 - assertVisible: "Editor collaboration note"
 - tapOn: "‹ Trips"
-- scrollUntilVisible:
-    element: "Sign out"
-    direction: DOWN
-    centerElement: true
-    visibilityPercentage: 1
-- waitForAnimationToEnd
-- tapOn: "Sign out"
+- tapOn:
+    id: sign-out
 - assertVisible: "Sign in"
 - tapOn:
     id: sign-in-email
@@ -110,7 +101,13 @@ appId: travel.planned.app
 - extendedWaitUntil:
     visible: "Your trips"
     timeout: 15000
-- tapOn: "Open trip →"
+- scrollUntilVisible:
+    element:
+      id: ${E2E_COLLAB_TRIP_ID}
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: ${E2E_COLLAB_TRIP_ID}
 - extendedWaitUntil:
     visible: "Itinerary"
     timeout: 15000
@@ -118,16 +115,15 @@ appId: travel.planned.app
 - extendedWaitUntil:
     visible: "Collaborators"
     timeout: 10000
-- tapOn: "Viewer"
+- tapOn:
+    id: role-viewer
+- extendedWaitUntil:
+    visible: "viewer"
+    timeout: 10000
 - tapOn: "Done"
 - tapOn: "‹ Trips"
-- scrollUntilVisible:
-    element: "Sign out"
-    direction: DOWN
-    centerElement: true
-    visibilityPercentage: 1
-- waitForAnimationToEnd
-- tapOn: "Sign out"
+- tapOn:
+    id: sign-out
 - assertVisible: "Sign in"
 - tapOn:
     id: sign-in-email
@@ -139,9 +135,14 @@ appId: travel.planned.app
 - extendedWaitUntil:
     visible: "Your trips"
     timeout: 15000
-- tapOn: "Open trip →"
+- scrollUntilVisible:
+    element:
+      id: ${E2E_COLLAB_TRIP_ID}
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: ${E2E_COLLAB_TRIP_ID}
 - extendedWaitUntil:
     visible: "View-only access"
     timeout: 15000
 - assertNotVisible: "Add a note"
-
