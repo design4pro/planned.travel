@@ -1,5 +1,19 @@
-import { describe, expect, it } from "vitest";
-import { buildTripHtml } from "../src/server/trip-pdf";
+import { describe, expect, it, vi } from "vitest";
+import { buildTripHtml, renderTripPdf } from "../src/server/trip-pdf";
+
+const pdf = new Uint8Array([37, 80, 68, 70, 45, 49, 46, 55]); // %PDF-1.7
+const setContent = vi.fn(async () => undefined);
+const closeBrowser = vi.fn(async () => undefined);
+const pagePdf = vi.fn(async () => pdf);
+
+vi.mock("@cloudflare/puppeteer", () => ({
+  default: {
+    launch: vi.fn(async () => ({
+      newPage: async () => ({ setContent, pdf: pagePdf }),
+      close: closeBrowser,
+    })),
+  },
+}));
 
 describe("trip PDF document", () => {
   it("builds a self-contained printable document and escapes trip content", () => {
@@ -20,5 +34,18 @@ describe("trip PDF document", () => {
     expect(html).not.toContain("<script>alert(1)</script>");
     expect(html).toContain("Dinner &amp; drinks");
     expect(html).toContain("@page");
+  });
+
+  it("returns the valid PDF bytes produced by Browser Rendering and closes the browser", async () => {
+    const result = await renderTripPdf({} as NonNullable<Parameters<typeof renderTripPdf>[0]>, "<html>trip</html>");
+
+    expect(result.slice(0, 5)).toEqual(new Uint8Array([37, 80, 68, 70, 45]));
+    expect(setContent).toHaveBeenCalledWith("<html>trip</html>", { waitUntil: "networkidle0" });
+    expect(pagePdf).toHaveBeenCalledWith({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "16mm", bottom: "16mm", left: "12mm", right: "12mm" },
+    });
+    expect(closeBrowser).toHaveBeenCalledOnce();
   });
 });
