@@ -5,6 +5,16 @@ appId: travel.planned.app
 - waitForAnimationToEnd
 - runFlow:
     when:
+      visible: "Nie teraz"
+    commands:
+      - tapOn: "Nie teraz"
+- runFlow:
+    when:
+      visible: "Not Now"
+    commands:
+      - tapOn: "Not Now"
+- runFlow:
+    when:
       visible: "Open debugger to view warnings."
     commands:
       - tapOn:
@@ -54,4 +64,3 @@ appId: travel.planned.app
 - tapOn: "‹ Trips"
 - tapOn:
     id: sign-out
-

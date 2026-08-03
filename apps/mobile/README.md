@@ -31,6 +31,7 @@ export E2E_TRIP_TITLE="Mobile E2E $(date +%s)"
 export E2E_COLLAB_TRIP_TITLE="Mobile collaboration E2E $(date +%s)"
 export E2E_REALTIME_TRIP_TITLE="Mobile realtime E2E $(date +%s)"
 export E2E_MAP_TRIP_TITLE="Mobile map E2E $(date +%s)"
+export E2E_DEVICE_ID="$(xcrun simctl list devices booted | sed -n 's/.*(\([^)]*\)).*/\1/p' | head -1)"
 pnpm --filter @planned/mobile e2e
 ```
 

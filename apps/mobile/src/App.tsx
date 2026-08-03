@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Button,
+  Keyboard,
   Linking,
   LogBox,
   Modal,
@@ -22,6 +23,7 @@ import {
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import { Camera, Map as MapLibreMap, Marker } from "@maplibre/maplibre-react-native";
 import {
   PlannedClient,
   type Invitation,
@@ -49,7 +51,7 @@ import {
   type AuthState,
 } from "./auth/state";
 import { useTripSync } from "./collab/useTripSync";
-import { projectPlace } from "./trip-map";
+import { mapInitialView, mobileMapStyle } from "./trip-map";
 import "./global.css";
 
 if (__DEV__) LogBox.ignoreAllLogs();
@@ -452,18 +454,20 @@ function TripWorkspace({
   }
   async function addPlace() {
     if (!place.trim()) return;
-    const lat = Number.parseFloat(placeLat);
-    const lng = Number.parseFloat(placeLng);
+    const lat = placeLat.trim() ? Number.parseFloat(placeLat) : 0;
+    const lng = placeLng.trim() ? Number.parseFloat(placeLng) : 0;
     if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) {
       setError("Enter a valid latitude (-90 to 90) and longitude (-180 to 180).");
       return;
     }
-    await rest
+    const created = await rest
       .trips()
       .addPlace(trip.id, { name: place.trim(), lat, lng });
     setPlace("");
     setPlaceLat("");
     setPlaceLng("");
+    setSelectedPlaceId(created.id);
+    Keyboard.dismiss();
     void load();
   }
   async function addDay() {
@@ -606,7 +610,6 @@ function TripWorkspace({
               />
               <TextInput
                 accessibilityLabel="Place latitude"
-                keyboardType="numbers-and-punctuation"
                 placeholder="Lat"
                 value={placeLat}
                 onChangeText={setPlaceLat}
@@ -614,7 +617,8 @@ function TripWorkspace({
               />
               <TextInput
                 accessibilityLabel="Place longitude"
-                keyboardType="numbers-and-punctuation"
+                returnKeyType="done"
+                onSubmitEditing={() => void addPlace()}
                 placeholder="Lng"
                 value={placeLng}
                 onChangeText={setPlaceLng}
@@ -657,38 +661,48 @@ function MapSurface({
   onSelectPlace: (placeId: string) => void;
 }) {
   const selected = places.find((place) => place.id === selectedPlaceId);
+  const initialView = mapInitialView(places);
   return (
     <View
       accessibilityLabel="Trip map"
       accessibilityRole="adjustable"
-      className="flex-1 bg-[#dbe8df]"
+      className="flex-1 overflow-hidden bg-[#dbe8df]"
     >
-      <View
-        className="absolute inset-0 opacity-40"
-        style={{ backgroundColor: "#b8d4c2" }}
-      />
-      {places.map((place, index) => {
-        const position = projectPlace(place);
-        return (
-          <Pressable
-          key={place.id}
-          accessibilityLabel={`Show ${place.name} on map`}
-          accessibilityRole="button"
-          onPress={() => onSelectPlace(place.id)}
-          className="absolute items-center"
-          style={{ left: position.left, top: position.top }}
-        >
-          <View className={`h-8 w-8 items-center justify-center rounded-full border-2 border-white shadow ${selectedPlaceId === place.id ? "bg-ink" : "bg-primary"}`}>
-            <Text className="font-bold text-white">{index + 1}</Text>
-          </View>
-          </Pressable>
-        );
-      })}
+      <MapLibreMap
+        testID="trip-map-native"
+        mapStyle={mobileMapStyle}
+        style={{ flex: 1 }}
+        attribution
+        logo
+        scaleBar
+      >
+        <Camera initialViewState={initialView} />
+        {places.map((place, index) => (
+          <Marker
+            key={place.id}
+            id={place.id}
+            lngLat={[place.lng, place.lat]}
+            selected={selectedPlaceId === place.id}
+            onPress={() => onSelectPlace(place.id)}
+          >
+            <View
+              accessible
+              accessibilityLabel={`Show ${place.name} on map`}
+              className={`h-8 w-8 items-center justify-center rounded-full border-2 border-white shadow ${selectedPlaceId === place.id ? "bg-ink" : "bg-primary"}`}
+            >
+              <Text className="font-bold text-white">{index + 1}</Text>
+            </View>
+          </Marker>
+        ))}
+      </MapLibreMap>
+      <Text className="absolute left-5 top-5 rounded-full bg-white/90 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        Map view
+      </Text>
       {selected ? (
         <Pressable
           accessibilityLabel={`Selected place ${selected.name}`}
           onPress={() => onSelectPlace(selected.id)}
-          className="absolute bottom-5 left-5 right-5 rounded-2xl border border-border bg-white p-4 shadow"
+          className="absolute left-5 right-5 top-16 rounded-2xl border border-border bg-white p-4 shadow"
         >
           <Text className="font-semibold text-ink">{selected.name}</Text>
           <Text className="mt-1 text-sm text-muted-foreground">
@@ -696,9 +710,6 @@ function MapSurface({
           </Text>
         </Pressable>
       ) : null}
-      <Text className="absolute left-5 top-5 rounded-full bg-white/90 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-        Map view
-      </Text>
     </View>
   );
 }

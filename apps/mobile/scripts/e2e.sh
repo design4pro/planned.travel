@@ -39,6 +39,15 @@ if ! metro_ready; then
   exit 1
 fi
 
+device_id="${E2E_DEVICE_ID:-}"
+if [[ -z "$device_id" ]] && command -v xcrun >/dev/null 2>&1; then
+  device_id="$(xcrun simctl list devices booted | sed -n 's/.*(\([^)]*\)).*/\1/p' | head -1)"
+fi
+device_args=()
+if [[ -n "$device_id" ]]; then
+  device_args=(--device "$device_id")
+fi
+
 e2e_run_id="$(date +%s)"
 export E2E_TRIP_TITLE="Mobile E2E $e2e_run_id"
 export E2E_COLLAB_TRIP_TITLE="Mobile collaboration E2E $e2e_run_id"
@@ -49,7 +58,7 @@ export E2E_MAP_TRIP_TITLE="Mobile map E2E $e2e_run_id"
 
 flow_pattern="${E2E_ONLY_FLOW:-*.yaml}"
 for flow in e2e/$flow_pattern; do
-  maestro test \
+  maestro "${device_args[@]}" test \
     -e E2E_EMAIL="$E2E_EMAIL" \
     -e E2E_PASSWORD="$E2E_PASSWORD" \
     -e E2E_MEMBER_EMAIL="$E2E_MEMBER_EMAIL" \

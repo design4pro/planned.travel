@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@better-auth/expo": "^1.6.25",
+    "@maplibre/maplibre-react-native": "^11.3.6",
     "@planned/api-client": "workspace:*",
     "@planned/shared": "workspace:*",
     "better-auth": "^1.6.25",
