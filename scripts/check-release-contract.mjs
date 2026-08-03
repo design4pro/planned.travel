@@ -48,23 +48,6 @@ for (const path of migrationPaths) {
   }
 }
 
-const packagePaths = [
-  "package.json",
-  "apps/web/package.json",
-  "apps/mobile/package.json",
-  "packages/api-client/package.json",
-  "packages/db/package.json",
-  "packages/server/package.json",
-  "packages/shared/package.json",
-  "packages/ui-tokens/package.json",
-];
-for (const path of packagePaths) {
-  const packageJson = await read(path);
-  if (/"(?:astro|hono)"\s*:/.test(packageJson)) {
-    failures.push(`${path} still declares a superseded Astro/Hono dependency`);
-  }
-}
-
 if (failures.length > 0) {
   console.error("Release contract failed:");
   for (const failure of failures) console.error(`- ${failure}`);

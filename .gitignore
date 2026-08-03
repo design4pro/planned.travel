@@ -9,7 +9,6 @@ node_modules/
 # build outputs
 dist/
 .output/
-.astro/
 .turbo/
 *.tsbuildinfo
 
