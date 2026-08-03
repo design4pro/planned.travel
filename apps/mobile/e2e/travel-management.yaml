@@ -1,0 +1,64 @@
+appId: travel.planned.app
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          point: 92%, 93%
+- extendedWaitUntil:
+    visible: "Sign in"
+    timeout: 15000
+- tapOn:
+    id: sign-in-email
+- inputText: ${E2E_EMAIL}
+- tapOn:
+    id: sign-in-password
+- inputText: ${E2E_PASSWORD}
+- pressKey: ENTER
+- extendedWaitUntil:
+    visible: "Your trips"
+    timeout: 15000
+- tapOn: "Open latest trip"
+- extendedWaitUntil:
+    visible: "Itinerary"
+    timeout: 15000
+
+# Reservations: create, confirm, and remove are exposed only to editors.
+- tapOn: "reservations"
+- assertVisible: "Reservation title"
+- tapOn: "Reservation title"
+- inputText: "Mobile management reservation"
+- tapOn: "flight"
+- tapOn: "Add reservation"
+- assertVisible: "Mobile management reservation"
+- tapOn: "Confirm"
+- tapOn: "Remove"
+
+# Costs: integer-cent creation, deletion, and balance projection.
+- tapOn: "costs"
+- assertVisible: "Amount"
+- tapOn: "Amount"
+- inputText: "12.50"
+- tapOn: "Currency"
+- eraseText
+- inputText: "EUR"
+- tapOn: "Add"
+- assertVisible: "Balances"
+
+# Documents: picker upload and authenticated download/remove controls.
+- tapOn: "documents"
+- assertVisible: "Choose document"
+- tapOn: "Choose document"
+- pressKey: BACK
+
+# Notification center and billing/export states remain reachable from the trip.
+- tapOn: "notifications"
+- assertVisible: "Mark all read"
+- tapOn: "billing"
+- assertVisible: "Export trip PDF"
+- tapOn:
+    id: trip-connection-status

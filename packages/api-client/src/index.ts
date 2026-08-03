@@ -17,6 +17,7 @@ import type {
   UpdateReservationInput,
   InvitationCreated,
   NotificationRow,
+  NotificationPage,
   TripDto,
   TripPlan,
 } from "@planned/shared";
@@ -127,8 +128,12 @@ export class PlannedClient {
   notifications() {
     return {
       /** Newest-first; pass `limit` for a small recent slice (e.g. the bell). */
-      list: (limit?: number) =>
-        this.request<NotificationRow[]>(`/api/notifications${limit ? `?limit=${limit}` : ""}`),
+      list: async (limit = 20, before?: number) => {
+        const params = new URLSearchParams({ limit: String(limit) });
+        if (before) params.set("before", String(before));
+        const items = await this.request<NotificationRow[]>(`/api/notifications?${params.toString()}`);
+        return { items, nextCursor: items.length === limit ? (items.at(-1)?.createdAt ?? null) : null } satisfies NotificationPage;
+      },
       unreadCount: () => this.request<{ count: number }>("/api/notifications/unread-count"),
       markRead: (id: string) =>
         this.request<{ ok: true }>(`/api/notifications/${encodeURIComponent(id)}/read`, {
