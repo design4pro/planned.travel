@@ -1,5 +1,5 @@
 /**
- * Subscription/billing helpers — shared by the Hono routes (app.ts) and the
+ * Subscription/billing helpers — shared by the HTTP routes (app.ts) and the
  * Stripe webhook handler. Pure data access + state mapping; no HTTP concerns.
  *
  * Subscription lifecycle: a `subscription` row (1:1 with the better_auth user)

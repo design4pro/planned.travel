@@ -1,4 +1,3 @@
-import { Hono } from "hono";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type Stripe from "stripe";
@@ -53,16 +52,17 @@ import {
 import type { NotificationJob } from "@planned/shared";
 import type { CloudflareEnv } from "../lib/env";
 import { appRouter, createContext } from "@planned/server";
+import { HttpRouter } from "./http-router";
 
 type TripRole = "owner" | "editor" | "viewer";
 
 /**
- * Per-request Hono app. Mounted from the Astro catch-all at /api/*
- * (src/pages/api/[...path].ts). Better Auth is delegated under /api/auth/*,
- * app routes live alongside. Everything reads bindings off `env`.
+ * Per-request HTTP router for `/api/*`. Better Auth is delegated under
+ * `/api/auth/*`, while tRPC and compatibility routes live alongside it.
+ * Everything reads bindings off `env`.
  */
 export function createApp(env: CloudflareEnv) {
-  const app = new Hono();
+  const app = new HttpRouter();
   const auth = createAuth(env);
   const database = getDb(env);
   const getStripe = () => {
@@ -94,7 +94,7 @@ export function createApp(env: CloudflareEnv) {
    * the Better Auth `user` table, so EVERY notification type can email when
    * EMAIL_ENABLED flips on — not just invite_sent (which already carries the
    * invite email). Locale defaults to "en" until a per-user preference column
-   * lands (account.astro already stubs a preferences UI); the consumer +
+   * lands (the account route currently stubs a preferences UI); the consumer +
    * templates already honor locale. Jobs with an existing email block keep it;
    * jobs whose recipient can't be resolved stay in-app only.
    */
@@ -1351,7 +1351,7 @@ export function createApp(env: CloudflareEnv) {
   });
 
   // POST routes from React islands send a same-origin Origin header in prod
-  // (same pattern as the collab POST routes above), so the Astro CSRF/Origin
+  // (same pattern as the collab POST routes above), so the CSRF/Origin
   // check passes. Localhost is exempt.
   app.post("/api/notifications/:id/read", async (c) => {
     const user = await getUser(c.req.raw);

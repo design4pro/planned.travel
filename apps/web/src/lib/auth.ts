@@ -3,7 +3,7 @@ import { buildAuthOptions } from "./auth.config";
 import type { CloudflareEnv } from "./env";
 
 /**
- * Better Auth, configured for Astro (web) + Expo (mobile), backed by D1.
+ * Better Auth, configured for TanStack Start (web) + Expo (mobile), backed by D1.
  *
  * INSTANTIATE PER REQUEST: the D1 binding only exists at request time, so call
  * `createAuth(env)` inside a handler — never at module scope. See PLANS.md §4.3.

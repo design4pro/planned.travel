@@ -1,4 +1,0 @@
-# Prevent wrangler from uploading the Astro Cloudflare adapter's server Worker
-# (dist/_worker.js/) as a public static asset — it would expose server-side code.
-# This file is copied to dist/ by Astro's public/ passthrough on every build.
-_worker.js

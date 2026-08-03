@@ -3,7 +3,7 @@
  * jobs to emit for a given event. No DB, no env, no I/O: hand them the resolved
  * facts (recipient ids, trip name, actor name, …) and they return the
  * `NotificationJob[]` to enqueue. This isolates the routing logic so it is
- * unit-testable without spinning up the Hono app.
+ * unit-testable without spinning up the HTTP router.
  *
  * Phase 1 policy: jobs are in-app only by default (no `email` block), EXCEPT
  * `invite_sent` (direct add-by-email), where the recipient's email is in hand —

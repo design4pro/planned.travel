@@ -67,8 +67,8 @@ schema changes. Restore data from the latest verified backup only if required.
 
 Record the trigger, timestamps, Worker versions, migration state, observed
 metrics, and the decision to retry or abandon the release. Remove superseded
-Astro/Hono runtime/configuration only after the rollback window is closed and
-the next release has passed the same staging checks.
+superseded compatibility routes and prototype assets only after the rollback
+window is closed and the next release has passed the same staging checks.
 
 ## CI contract
 

@@ -19,7 +19,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock the auth factory so the Hono app's `getUser` returns a controlled user
+// Mock the auth factory so the HTTP router's `getUser` returns a controlled user
 // for the API-route tests. Must be set before importing `createApp`.
 const SESSION_USER: { id: string; name: string | null; email: string } = {
   id: "user_a",
@@ -414,7 +414,7 @@ describe("DB helpers", () => {
 });
 
 /* ------------------------------ API routes ------------------------------- */
-// The Hono app is built via the real createApp(env) with a stub env; auth is
+// The HTTP router is built via the real createApp(env) with a stub env; auth is
 // mocked at the top of this file. `x-test-authed: 1` → SESSION_USER (user_a).
 
 function makeEnv(): any {

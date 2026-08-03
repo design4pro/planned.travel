@@ -1,21 +1,14 @@
-// Flat-config ESLint for the web workspace. Scope for launch: lint the TS/TSX
-// (where logic bugs live). .astro files are ignored here until eslint-plugin-astro
-// is added (mostly markup + already type-checked by `astro check`). Re-enable by
-// installing eslint-plugin-astro + astro-eslint-parser and a `.astro` block.
+// Flat-config ESLint for the TanStack Start web workspace.
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
     ignores: [
       "dist/**",
-      ".astro/**",
       ".wrangler/**",
       "node_modules/**",
       "migrations/**",
       "eslint.config.js",
-      "astro.config.mjs",
-      // Ambient declaration files use Astro's required triple-slash references
-      // (/// <reference path="../.astro/types.d.ts" />) — don't lint them.
       "**/*.d.ts",
     ],
   },
@@ -28,9 +21,7 @@ export default tseslint.config(
       },
     },
     rules: {
-      // Keep the gate functional without a large one-off cleanup. The TS
-      // compiler + astro check already cover types; eslint here catches the
-      // rest (dead code, foot-guns). Loosen the noisiest rules for launch.
+      // Keep the gate focused on runtime and UI code.
       "@typescript-eslint/no-unused-vars": [
         "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true },

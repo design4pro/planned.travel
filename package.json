@@ -2,7 +2,7 @@
   "name": "planned-travel",
   "private": true,
   "version": "0.1.0",
-  "description": "planned.travel — AI-native collaborative travel-planning SaaS on Cloudflare + Astro.",
+  "description": "planned.travel — AI-native collaborative travel-planning SaaS on Cloudflare + TanStack Start.",
   "packageManager": "pnpm@10.15.0",
   "engines": {
     "node": ">=20"

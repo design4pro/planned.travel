@@ -1,11 +1,11 @@
 import type { NotificationJob } from "@planned/shared";
 
 /**
- * Typed access to Cloudflare runtime bindings for the Astro app.
+ * Typed access to Cloudflare runtime bindings for the TanStack Start Worker.
  *
- * Bindings are attached by the @astrojs/cloudflare adapter to
- * `Astro.locals.runtime.env` at request time. They are NOT available at module
- * init — always read them inside a request handler.
+ * Bindings are supplied by Cloudflare to the Worker handler at request time.
+ * They are NOT available at module init — always read them inside a request
+ * handler.
  */
 
 export interface CloudflareEnv {
@@ -31,8 +31,8 @@ export interface CloudflareEnv {
   // build time — the sync route 503s if the binding isn't provisioned.
   TRIP_ROOM?: DurableObjectNamespace;
 
-  // Notifications queue producer (JOBS). The consumer is the queue() export in
-  // src/worker.ts. Optional at build time — enqueueNotification falls back to
+  // Notifications queue producer (JOBS). The consumer is the queue export in
+  // src/server.ts. Optional at build time — enqueueNotification falls back to
   // direct delivery when the binding is absent (local dev).
   JOBS?: Queue<NotificationJob>;
 
@@ -69,8 +69,3 @@ export type Runtime = {
   cf: IncomingRequestCfProperties;
   ctx: ExecutionContext;
 };
-
-/** Pull the typed env off Astro locals inside any endpoint/page. */
-export function getEnv(locals: App.Locals): CloudflareEnv {
-  return locals.runtime.env;
-}

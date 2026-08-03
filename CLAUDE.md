@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repository. Read this before making cha
 
 ## What this is
 
-**planned.travel** — an AI-native, collaborative travel-planning SaaS. Web-first (Astro SSR on Cloudflare Workers), with an Expo mobile client foundation. All infrastructure runs on Cloudflare (D1, KV, R2, Durable Objects, Queues, Workflows, Vectorize, Workers AI, AI Gateway, Images, Email).
+**planned.travel** — an AI-native, collaborative travel-planning SaaS. Web-first (TanStack Start SSR on Cloudflare Workers), with an Expo mobile client foundation. All infrastructure runs on Cloudflare (D1, KV, R2, Durable Objects, Queues, Workflows, Vectorize, Workers AI, AI Gateway, Images, Email).
 
 **The roadmap, phases, and task checkboxes live in [`PLANS.md`](./PLANS.md).** The design system lives in [`DESIGN.md`](./DESIGN.md). Keep both updated as you work (PLANS.md after each planning round; DESIGN.md whenever tokens change).
 
@@ -13,29 +13,29 @@ Guidance for Claude Code working in this repository. Read this before making cha
 - **Clean-room rebuild.** [`mauriceboe/TREK`](https://github.com/mauriceboe/TREK) is **AGPL-3.0** and is a **feature/UX reference only**. Never copy TREK source into this repo — reimplement behaviour from scratch. planned.travel is proprietary. If you're ever tempted to port TREK code, stop.
 - **Everything on Cloudflare.** Compute, data, AI, media, realtime all use Cloudflare services (see `apps/web/wrangler.jsonc`). External Postgres (Neon/Supabase) is only acceptable later via Hyperdrive if D1 hits a wall.
 - **`nodejs_compat` is required** (`compatibility_flags` in `wrangler.jsonc`) — Better Auth needs Node builtins on the edge.
-- **Bindings are runtime-only.** The D1 binding does not exist at module init. Instantiate Better Auth and the Drizzle client **per request** from `Astro.locals.runtime.env` (see `src/server/app.ts`). Never cache them at module scope.
+- **Bindings are runtime-only.** The D1 binding does not exist at module init. Instantiate Better Auth and the Drizzle client **per request** from the Worker handler `env` (see `src/server.ts` and `src/server/app.ts`). Never cache them at module scope.
 - **Commit/push:** commit when the user asks; branch off `main` for feature work. Pushing is the user's call (needs their credentials).
 
 ## Tech stack (locked — see PLANS.md §2 for the full decision log)
 
 | Layer | Choice |
 |---|---|
-| Web | Astro 5 (SSR) + `@astrojs/cloudflare` + Hono API |
+| Web | TanStack Start (SSR) + native Cloudflare Worker HTTP router + tRPC |
 | Styling/UI | Tailwind v4 + **shadcn/ui** (web) · **Uniwind/Tailwind v4** (mobile) |
 | Data | Cloudflare D1 + **Drizzle** (schema kept Postgres-portable) |
 | Realtime | Durable Objects + Hibernation WebSockets (`TripRoom`, Phase 1) |
 | Search | Vectorize (semantic) |
 | AI | Workers AI + AI Gateway + MCP server |
-| Auth | **Better Auth** (Astro + Expo; organizations, admin, twoFactor[+passkey], bearer) |
+| Auth | **Better Auth** (TanStack Start + Expo; organizations, admin, twoFactor[+passkey], bearer) |
 | Media | R2 + Images · Browser Rendering (PDFs) |
 | Notifications / billing | Resend (`EmailSender` adapter; CF Email Workers alt) · Queue (JOBS) · Stripe |
-| i18n | PL + EN at launch (Astro i18n + typed catalog; Paraglide-ready) |
+| i18n | PL + EN at launch (typed catalog; Paraglide-ready) |
 
 ## Monorepo layout
 
 ```
 apps/
-  web/        Astro SSR Worker — UI, API (Hono), auth
+  web/        TanStack Start SSR Worker — UI, API, auth
   mobile/     Expo + React Native + Uniwind native client
 packages/
   shared/     zod schemas, types, pure business logic (web + mobile)
@@ -51,7 +51,7 @@ pnpm install
 pnpm dev                          # all workspaces (Turborepo)
 pnpm --filter @planned/web dev    # web only (needs `npx wrangler login` for AI binding)
 pnpm --filter @planned/web build  # production build → dist/_worker.js
-pnpm typecheck                    # astro check + per-package tsc
+pnpm typecheck                    # per-package TypeScript checks
 pnpm db:generate                  # drizzle-kit generate → apps/web/migrations
 pnpm db:migrate:local             # wrangler d1 migrations apply --local
 pnpm db:migrate                   # wrangler d1 migrations apply --remote
@@ -62,12 +62,12 @@ pnpm --filter @planned/web deploy # build + wrangler deploy
 
 ## Where things live (quick map)
 
-- **API routes:** `apps/web/src/server/app.ts` (Hono, mounted at `/api/*` via `src/pages/api/[...path].ts`). Better Auth under `/api/auth/*`, app routes alongside.
+- **API routes:** `apps/web/src/server/app.ts` (native Worker HTTP router mounted at `/api/*`). Better Auth under `/api/auth/*`, tRPC and compatibility routes alongside.
 - **Auth config:** `apps/web/src/lib/auth.ts` (`createAuth(env)` factory).
 - **DB access:** `packages/db` (`createDb(d1)`), used via `apps/web/src/lib/db.ts`.
-- **Realtime collaboration:** `apps/web/src/server/trip-room.ts` (`TripRoom` Durable Object + `broadcastTripChange`); WebSocket upgrade at `/api/trips/:id/sync`. The DO class is exported via the custom worker entry `apps/web/src/worker.ts` (`@astrojs/cloudflare` `workerEntryPoint`). Trip access (owner/editor/viewer) helpers: `apps/web/src/lib/trip.ts` (SSR) + `getAccessibleTrip` in `app.ts` (API).
+- **Realtime collaboration:** `apps/web/src/server/trip-room.ts` (`TripRoom` Durable Object + `broadcastTripChange`); WebSocket upgrade at `/api/trips/:id/sync`. The DO class and queue handler are exported from `apps/web/src/server.ts`. Trip access (owner/editor/viewer) is enforced by `getAccessibleTrip` in `app.ts`.
 - **Mobile trip workspace:** `apps/mobile/src/App.tsx` owns the authenticated trip list and map-first itinerary bottom sheet; REST trip-plan methods live in `packages/api-client`, while `apps/mobile/src/collab/useTripSync.ts` connects to the same TripRoom protocol and refetches the REST plan after change events. The API accepts `access_token` only on the WebSocket upgrade because native WebSocket cannot set Authorization headers.
-- **Notifications:** shared types/builders and the paginated client contract in `packages/shared/src/notifications.ts`; protected tRPC reads/mutations in `packages/server/src/router.ts`; DB helpers + `enqueueNotification` producer (direct-delivery fallback) in `apps/web/src/lib/notifications.ts`; `deliverNotification` consumer in `apps/web/src/server/notifications-consumer.ts`; trigger routing in `apps/web/src/server/notifications-triggers.ts`; `EmailSender` adapter (Resend/Noop) + templates in `apps/web/src/lib/email.ts` + `email-templates.ts`. The JOBS queue consumer is the `queue()` export on `worker.ts` (alongside `TripRoom`); delivery is async via the queue, gated by `EMAIL_ENABLED` (off by default — `NoopEmailSender`). The legacy REST endpoints remain as a compatibility layer for the Astro notification islands. UI: `NotificationBell` + `/app/notifications`.
+- **Notifications:** shared types/builders and the paginated client contract in `packages/shared/src/notifications.ts`; protected tRPC reads/mutations in `packages/server/src/router.ts`; DB helpers + `enqueueNotification` producer (direct-delivery fallback) in `apps/web/src/lib/notifications.ts`; `deliverNotification` consumer in `apps/web/src/server/notifications-consumer.ts`; trigger routing in `apps/web/src/server/notifications-triggers.ts`; `EmailSender` adapter (Resend/Noop) + templates in `apps/web/src/lib/email.ts` + `email-templates.ts`. The JOBS queue consumer is the `queue` export on `server.ts` (alongside `TripRoom`); delivery is async via the queue, gated by `EMAIL_ENABLED` (off by default — `NoopEmailSender`). Compatibility REST endpoints remain for mobile and external clients. UI: `NotificationBell` + `/app/notifications`.
 - **Schema:** `packages/db/src/schema/index.ts` (domain tables; auth tables owned by Better Auth via CLI).
 - **Bindings/env types:** `apps/web/src/lib/env.ts` + `src/env.d.ts`.
 - **UI tokens / components:** `packages/ui-tokens/src/theme.css` (brand palette) + `apps/web/src/styles/global.css` (maps brand → shadcn semantic tokens). Local shadcn primitives live in `apps/web/src/components/ui/*`.
@@ -84,10 +84,10 @@ pnpm --filter @planned/web deploy # build + wrangler deploy
 
 ## Notes & gotchas
 
-- **Local dev needs `wrangler login`** — the Workers AI binding proxies remotely even in `wrangler dev`/`astro dev`. `astro build` works without login.
+- **Local dev needs `wrangler login`** — the Workers AI binding proxies remotely in `wrangler dev`. `vite build` works without login.
 - **Better Auth + D1 migrations:** `@better-auth/cli generate` produces SQL → apply via `wrangler d1 migrations apply` (can't run the CLI against the binding directly).
 - **Passkey** in better-auth 1.6 is part of the `twoFactor` plugin (no standalone `passkey` export).
-- **Astro Sessions:** the Cloudflare adapter requires a `SESSION` KV binding (declared in `wrangler.jsonc`); we use Better Auth DB sessions for app auth.
+- **Sessions:** the `SESSION` KV binding remains declared for compatibility; app authentication uses Better Auth DB sessions.
 
 ## Agent skills
 

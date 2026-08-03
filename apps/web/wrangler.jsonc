@@ -1,11 +1,11 @@
 {
-  // ── planned.travel web Worker (Astro SSR + Static Assets) ──────────────────
+  // ── planned.travel web Worker (TanStack Start SSR + Static Assets) ─────────
   // Docs: https://developers.cloudflare.com/workers/
   //
   // PROVISIONED on account DESIGN4PRO (D1 region EEUR):
   //   D1  planned-travel            → database_id below
   //   KV  PLANNED_TRAVEL_KV         → "KV" binding
-  //   KV  PLANNED_TRAVEL_SESSION    → "SESSION" binding (Astro Sessions)
+  //   KV  PLANNED_TRAVEL_SESSION    → "SESSION" binding for web sessions
   //   R2  planned-travel-media
   //   Vectorize planned-travel-embeddings (768-dim cosine)
   // Recreate with `npx wrangler login` + the commands above; IDs are account-scoped.
@@ -50,7 +50,7 @@
   ],
   "kv_namespaces": [
     { "binding": "KV", "id": "f4a5fd5969394463859aded48c36b451" },
-    // "SESSION" is required by the @astrojs/cloudflare adapter for Astro Sessions.
+    // "SESSION" is retained for web session compatibility.
     { "binding": "SESSION", "id": "1ac2186c669b4095aa6a772ef0fe566e" }
   ],
   "r2_buckets": [

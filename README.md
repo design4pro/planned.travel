@@ -1,16 +1,16 @@
 # planned.travel
 
-AI-native, collaborative travel-planning SaaS. Web-first (Astro on Cloudflare), with an Expo mobile app to follow. All infrastructure runs on Cloudflare.
+AI-native, collaborative travel-planning SaaS. Web-first (TanStack Start on Cloudflare), with an Expo mobile app to follow. All infrastructure runs on Cloudflare.
 
 > **Reference, not fork.** [`mauriceboe/TREK`](https://github.com/mauriceboe/TREK) (AGPL-3.0) is used as a **feature/UX reference only**. This codebase is a clean-room rebuild under a proprietary license — no TREK code is used.
 
 ## Stack
 
-- **Frontend:** Astro (SSR, `@astrojs/cloudflare`) + Tailwind v4 + shadcn/ui islands; Hono API.
+- **Frontend:** TanStack Start SSR + Tailwind v4 + shadcn/ui; native Cloudflare Worker HTTP router and tRPC.
 - **Mobile (later):** Expo + NativeWind + react-native-reusables + maplibre-react-native.
 - **Data:** Cloudflare D1 (Drizzle ORM) · Durable Objects (realtime) · Vectorize (semantic search).
 - **AI:** Workers AI + AI Gateway · MCP server.
-- **Auth:** Better Auth (Astro + Expo; organizations, RBAC, passkey, TOTP, Google+Apple).
+- **Auth:** Better Auth (TanStack Start + Expo; organizations, RBAC, passkey, TOTP, Google+Apple).
 - **Media:** R2 + Images · Browser Rendering (PDFs). **Notifications:** Email Workers.
 - **Billing:** Stripe. **Hosting:** Workers + Static Assets. **CI/CD:** Workers Builds.
 
@@ -18,7 +18,7 @@ AI-native, collaborative travel-planning SaaS. Web-first (Astro on Cloudflare), 
 
 ```
 apps/
-  web/        Astro SSR app (Cloudflare Worker + Static Assets)
+  web/        TanStack Start SSR app (Cloudflare Worker + Static Assets)
   mobile/     Expo app (future)
 packages/
   shared/     zod schemas, types, business logic (shared web+mobile)

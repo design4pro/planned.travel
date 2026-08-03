@@ -119,7 +119,7 @@ function parsePresenceHeader(header: string | null): Presence | null {
 
 /**
  * Tell a trip's room to broadcast a change to all connected clients. Called by
- * the Hono mutation routes after a successful DB write. No-ops gracefully if the
+ * the HTTP mutation routes after a successful DB write. No-ops gracefully if the
  * DO binding isn't provisioned (local build without the binding).
  */
 export async function broadcastTripChange(

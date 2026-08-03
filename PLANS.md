@@ -8,7 +8,7 @@
 
 ## 1. Context
 
-**planned.travel** is a professional SaaS for travel planning, built greenfield in this repo (`github.com/design4pro/planned.travel`). The target is a responsive **Astro** website hosted fully on **Cloudflare**, with an **Expo** mobile app to follow. All infrastructure — database, AI, vector search, image CDN, compute, realtime — runs on Cloudflare services.
+**planned.travel** is a professional SaaS for travel planning, built greenfield in this repo (`github.com/design4pro/planned.travel`). The current target is a responsive **TanStack Start** website hosted fully on **Cloudflare**, with an **Expo** mobile app. All infrastructure — database, AI, vector search, image CDN, compute, realtime — runs on Cloudflare services.
 
 TREK defines the feature bar we are reimplementing (behavior, not code): a self-hosted, real-time collaborative travel planner with maps, budgets, packing lists, a journal, and AI built in.
 
@@ -16,24 +16,24 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 
 ## 2. Decisions locked
 
-- ✅ **Clean-room rebuild.** Reimplemented from scratch; TREK is a feature/UX/market reference only. planned.travel keeps a proprietary license. *Rationale:* TREK is AGPL-3.0 with a network-use clause — reusing its code in a hosted SaaS would force open-sourcing the entire product. The stack changes wholesale (NestJS/SQLite/WS → Astro/D1/Workers), so a code port saves little anyway.
+- ✅ **Clean-room rebuild.** Reimplemented from scratch; TREK is a feature/UX/market reference only. planned.travel keeps a proprietary license. *Rationale:* TREK is AGPL-3.0 with a network-use clause — reusing its code in a hosted SaaS would force open-sourcing the entire product. The stack changes wholesale (NestJS/SQLite/WS → TanStack Start/D1/Workers), so a code port saves little anyway.
 - ✅ **Consumer B2C + collaboration, freemium; extensible to B2B/white-label later.** Primary users: individual travelers + friends/family groups. Data model and auth are designed so an organization/B2B layer can be added without rework.
 - ✅ **Primary DB: D1 (SQLite) for v1, schema Postgres-portable via Drizzle.** Realtime = Durable Objects + Hibernation WebSockets; semantic search = Vectorize. Migrate to Postgres-via-Hyperdrive *only if* PostGIS / heavy FTS / write-hot scale demands it. Honors "all on Cloudflare."
-- ✅ **Auth: Better Auth** — official Astro + Expo (`@better-auth/expo`) support; D1 via Drizzle. Plugins: organizations, admin (RBAC), bearer + expo for mobile (token in SecureStore), passkey, TOTP, social Google+Apple. CF Workers gotchas handled: `nodejs_compat` flag, instantiate per-request, migrate via `@better-auth/cli generate` → `wrangler d1 migrations apply`. **Cloudflare Access** guards staff/admin surface only.
+- ✅ **Auth: Better Auth** — TanStack Start + Expo (`@better-auth/expo`) support; D1 via Drizzle. Plugins: organizations, admin (RBAC), bearer + expo for mobile (token in SecureStore), passkey, TOTP, social Google+Apple. CF Workers gotchas handled: `nodejs_compat` flag, instantiate per-request, migrate via `@better-auth/cli generate` → `wrangler d1 migrations apply`. **Cloudflare Access** guards staff/admin surface only.
 - ✅ **ORM: Drizzle** (D1 + Postgres + edge-compatible).
-- ✅ **UI stack:** Web = Astro + **Tailwind v4 + shadcn/ui** islands. Mobile = **Expo + React Native + Uniwind**. Maps = **MapLibre GL JS** (web) + **maplibre-react-native** (Expo). Shared: one token set, zod schemas, business logic, typed API client, map style/GeoJSON.
-- ✅ **Content & admin: internal, role-gated admin panel (not an external CMS).** Marketing/blog → Astro Content Collections. Staff routes also behind Cloudflare Access.
+- ✅ **UI stack:** Web = TanStack Start + **Tailwind v4 + shadcn/ui**. Mobile = **Expo + React Native + Uniwind**. Maps = **MapLibre GL JS** (web) + **maplibre-react-native** (Expo). Shared: one token set, zod schemas, business logic, typed API client, map style/GeoJSON.
+- ✅ **Content & admin: internal, role-gated admin panel (not an external CMS).** Marketing/blog → git-based content modules. Staff routes also behind Cloudflare Access.
 - ✅ **MVP scope: full TREK parity at v1.** Every module reimplemented before public GA. Internal build sequenced in waves (Phases 1–3) converging on one v1 GA. *Large build — assumes sufficient team/runway.*
 - ✅ **Monetization: Free / Pro / Team.** Quotas gate AI usage, collab seats, exports, storage.
 - ✅ **Maps & places:** MapLibre + free OSM baseline (Overpass/Nominatim or Geoapify/Pelias); Google Places as an optional Pro/on-demand enhancement.
 - ✅ **Notifications:** **Resend** via a swappable `EmailSender` adapter (send; Cloudflare Email Workers remains a documented alt) + Email Routing (receive booking emails, Phase 2) + Expo Notifications (mobile push, later) + in-app center. Async delivery via a Cloudflare **Queue (JOBS)** with a direct-delivery fallback for local dev.
 - ✅ **PLANS.md working language: English.**
 - ✅ **Payments: Stripe** — Checkout + Customer Portal + webhooks → Workflows.
-- ✅ **Repo: pnpm + Turborepo** monorepo — `apps/web` (Astro), `apps/mobile` (Expo, future), `packages/{shared,db,ui-tokens,api-client}`.
+- ✅ **Repo: pnpm + Turborepo** monorepo — `apps/web` (TanStack Start), `apps/mobile` (Expo), `packages/{shared,db,ui-tokens,api-client}`.
 - ✅ **CI/CD: Cloudflare Workers Builds** — push to `main` deploys; per-branch previews.
 - ✅ **Domain:** `planned.travel` (prod) + `staging.planned.travel` + per-branch previews.
 - ✅ **AI provider mix: Workers AI only (all-Cloudflare)** for all inference; Vectorize for semantic search; AI Gateway in front for caching/fallback/observability; MCP server (OAuth 2.1). *Caveat: AI Gateway lets us route specific calls to OpenAI/Anthropic later if evals show quality gaps — no rewrite.*
-- ✅ **i18n launch languages: Polish + English** (Astro i18n + Paraglide), extensible toward TREK's 20.
+- ✅ **i18n launch languages: Polish + English** (typed catalog; Paraglide-ready), extensible toward TREK's 20.
 
 ---
 
@@ -53,8 +53,8 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 
 | Concern | Cloudflare service | Notes |
 |---|---|---|
-| Host Astro SSR app | **Workers + Static Assets** + `@astrojs/cloudflare` | 2025/26 recommendation over Pages. |
-| API layer | **Workers + Hono** | Typed routing, Zod, middleware. Bindings via `runtime.env`. |
+| Host TanStack Start SSR app | **Workers + Static Assets** + `@cloudflare/vite-plugin` | 2025/26 recommendation over Pages. |
+| API layer | **Workers + native HTTP router + tRPC** | Typed procedures, Zod, middleware. Bindings via request `env`. |
 | Primary relational DB | **D1** (SQLite) for v1 — Postgres-portable via Drizzle | Migrate to Postgres/Hyperdrive only if needed. |
 | Real-time collaboration | **Durable Objects + Hibernation WebSockets** | One DO per trip (`TripRoom`); hibernate when idle. |
 | Background jobs | **Queues** | Email, PDF render, notifications. |
@@ -74,21 +74,21 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 
 ### 4.2 Frontend / UI strategy
 
-- **Web (now):** Astro (SSR via `@astrojs/cloudflare`) + **Tailwind v4** + **shadcn/ui** React islands.
+- **Web (now):** TanStack Start (SSR via Vite) + **Tailwind v4** + **shadcn/ui** React routes.
 - **Mobile:** **Expo** + React Native + Uniwind (Tailwind v4).
 - **Shared across web+mobile:** one Tailwind `@theme` token file; zod schemas; business logic; typed API client; MapLibre style JSON + GeoJSON.
 - **Maps:** **MapLibre GL JS** (web) + **maplibre-react-native** (Expo dev build).
 
 ### 4.3 Auth
 
-- **Better Auth** (Astro + Expo; D1 via Drizzle). Plugins: organizations, admin (RBAC), bearer + `@better-auth/expo` (mobile), passkey, TOTP, Google+Apple.
+- **Better Auth** (TanStack Start + Expo; D1 via Drizzle). Plugins: organizations, admin (RBAC), bearer + `@better-auth/expo` (mobile), passkey, TOTP, Google+Apple.
 - `compatibility_flags = ["nodejs_compat"]`; instantiate per-request; `better-auth/cli generate` → `wrangler d1 migrations apply`.
 - **Cloudflare Access** protects staff/admin only.
 
 ### 4.4 Content & admin
 
 - **Internal role-gated admin panel** for app data (destinations, POIs, curated lists, packing templates) with typed forms + AI assist.
-- **Astro Content Collections** (git-based) for marketing/blog.
+- **Git-based content modules** for marketing/blog.
 - Staff routes behind Cloudflare Access + role checks.
 
 ---
