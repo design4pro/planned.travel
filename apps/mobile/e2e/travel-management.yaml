@@ -64,7 +64,8 @@ appId: travel.planned.app
     visible: "Balances"
     timeout: 10000
 
-# Documents: picker upload and authenticated download/remove controls.
+# Documents: authenticated picker entrypoint remains reachable. The native
+# system picker itself is intentionally outside the deterministic flow.
 - tapOn: "documents"
 - assertVisible: "Choose document"
 

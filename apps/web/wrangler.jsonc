@@ -110,8 +110,8 @@
 
   // Staging is deliberately isolated from the production D1/KV/R2/Queue and
   // runs on its own workers.dev Worker. AI, Images, and Browser Rendering are
-  // account-level services with no application data storage; Vectorize is
-  // intentionally omitted until a separate staging index is provisioned.
+  // account-level services with no application data storage; Vectorize uses
+  // the separate planned-travel-embeddings-staging index.
   "env": {
     "staging": {
       "name": "planned-travel-web-staging",
