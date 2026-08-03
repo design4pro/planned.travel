@@ -1,7 +1,7 @@
 /**
  * @planned/api-client — tiny typed fetch client shared by web + mobile.
  *
- * Web (Astro) calls same-origin /api routes; mobile (Expo) calls the deployed
+ * Web calls same-origin /api routes; mobile (Expo) calls the deployed
  * Worker origin with a Bearer token (Better Auth bearer plugin). The DTOs come
  * from @planned/shared so both clients stay in sync with the API contract.
  */

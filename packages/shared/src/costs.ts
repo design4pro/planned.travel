@@ -1,8 +1,8 @@
 /**
  * Cost-splitting domain logic — Splitwise-style expense sharing.
  *
- * Platform-agnostic (no DOM/Worker/Node imports) so it runs in the Astro SSR
- * page, the React islands, the Hono API, and the future Expo app alike.
+ * Platform-agnostic (no DOM/Worker/Node imports) so it runs in the web server,
+ * React components, API handlers, and the future Expo app alike.
  *
  * Money is stored as integer cents and settled per-currency: you can't net a
  * USD debt against an EUR one, so balances and settlements are grouped by

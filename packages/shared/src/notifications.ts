@@ -3,7 +3,7 @@
  * discriminated payload union, and a pure `buildNotification` row builder.
  *
  * Platform-agnostic (no DOM/Worker/Node imports) so the contract is shared by
- * the Hono API, the queue consumer, the React islands, and the future Expo app.
+ * the API handlers, queue consumer, React components, and future Expo app.
  *
  * The existing `notification` table (`packages/db/src/schema/index.ts`) is the
  * source of truth for columns: `{ id, userId, type, payload(json), readAt,

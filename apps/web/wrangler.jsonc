@@ -19,6 +19,7 @@
   "main": "src/server.ts",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
+  "preview_urls": true,
 
   "assets": {
     "directory": "./dist",
@@ -115,6 +116,7 @@
     "staging": {
       "name": "planned-travel-web-staging",
       "workers_dev": true,
+      "preview_urls": true,
       "vars": {
         "STRIPE_PRICE_PRO_MONTHLY": "price_1TmvnDK3rdrulsRy6Bjrf9Bn",
         "STRIPE_PRICE_PRO_ANNUAL": "price_1TmvnFK3rdrulsRyn7E89Ek5"

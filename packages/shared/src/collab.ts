@@ -2,8 +2,8 @@
  * Collaboration domain — real-time sync, presence, roles, and invite links.
  *
  * Platform-agnostic (no DOM/Worker/Node imports) so the WebSocket message
- * contract, role checks, and invite shapes are shared verbatim by the Astro
- * server (Hono routes + the TripRoom Durable Object), the React islands, and
+ * contract, role checks, and invite shapes are shared verbatim by the web
+ * server (HTTP routes + the TripRoom Durable Object), React components, and
  * the future Expo app.
  *
  * Sync model (Phase 1): the Durable Object is a *presence + change-bus*. Data

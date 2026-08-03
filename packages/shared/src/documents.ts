@@ -2,8 +2,8 @@
  * Document manager domain logic — trip files (PDFs, tickets, vouchers, photos)
  * stored in Cloudflare R2.
  *
- * Platform-agnostic (no DOM/Worker/Node imports) so it runs in the Astro SSR
- * page, the React islands, the Hono API, and the future Expo app alike.
+ * Platform-agnostic (no DOM/Worker/Node imports) so it runs in the web server,
+ * React components, API handlers, and the future Expo app alike.
  */
 import { z } from "zod";
 

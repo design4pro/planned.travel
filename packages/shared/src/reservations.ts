@@ -2,8 +2,8 @@
  * Reservation domain logic — manual booking entries (flight/hotel/restaurant/…)
  * with type, status, confirmation #, dates, and optional linked files.
  *
- * Platform-agnostic (no DOM/Worker/Node imports) so it runs in the Astro SSR
- * page, the React islands, the Hono API, and the future Expo app alike.
+ * Platform-agnostic (no DOM/Worker/Node imports) so it runs in the web server,
+ * React components, API handlers, and the future Expo app alike.
  *
  * Auto-parsing of booking emails/PDFs (KDE Itinerary-style → `parsedData`) is a
  * Phase 2 concern; here we only model the user-managed shape.

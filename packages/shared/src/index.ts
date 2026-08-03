@@ -1,6 +1,6 @@
 /**
  * @planned/shared — types, zod schemas, and pure business logic shared by
- * the Astro web app and the future Expo mobile app. Keep this package free
+ * the web app and the future Expo mobile app. Keep this package free
  * of platform-specific (DOM / Node / Worker) imports so it runs anywhere.
  */
 

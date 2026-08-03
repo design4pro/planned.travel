@@ -1,7 +1,7 @@
 /*
  * @planned/ui-tokens — Tailwind v4 @theme design tokens.
  *
- * This single file is shared by the Astro web app (Tailwind v4) and, later,
+ * This single file is shared by the web app (Tailwind v4) and, later,
  * the Expo app (NativeWind v5 — which also reads Tailwind v4 @theme config).
  * Changing a token here updates the design vocabulary on both platforms.
  *   web:    @import "tailwindcss"; @import "@planned/ui-tokens/theme.css";
