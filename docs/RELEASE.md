@@ -43,7 +43,7 @@ the next release has passed the same staging checks.
 ## CI contract
 
 The repository workflow runs install, fresh local-D1 migrations, typecheck,
-lint, tests, builds, artifact upload, and secret scanning on pull requests and
+lint, tests, builds, artifact upload, and TruffleHog secret scanning on pull requests and
 on `main`/`develop` pushes. Workers Builds remains the deployment mechanism;
 the GitHub workflow is the pre-deploy quality gate, not a second production
 deployment path.

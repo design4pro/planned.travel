@@ -151,7 +151,7 @@ TREK defines the feature bar we are reimplementing (behavior, not code): a self-
 
 ## 7. Verification (how we know each phase works)
 - **Local dev:** `wrangler dev` runs `apps/web` with all bindings live locally; `pnpm dev` at root via Turborepo.
-- **Per-change gates (CI):** GitHub Actions now enforces frozen install, a fresh local D1 migration, `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, build artifacts, and Gitleaks secret scanning. `@better-auth/cli generate` → migrate auth schema remains a deliberate schema-change step; `@astrojs/cloudflare` build succeeds in the build gate.
+- **Per-change gates (CI):** GitHub Actions now enforces frozen install, a fresh local D1 migration, `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, build artifacts, and TruffleHog secret scanning. `@better-auth/cli generate` → migrate auth schema remains a deliberate schema-change step; `@astrojs/cloudflare` build succeeds in the build gate.
 - **Deploy:** push to `main` → Workers Builds → production; feature branches → preview hostnames; verify on `staging.planned.travel`. The non-destructive cutover and rollback procedure is documented in [`docs/RELEASE.md`](docs/RELEASE.md).
 - **E2E smoke (per phase):** sign-up / Google+Apple / passkey → create trip → add places via MapLibre → invite 2nd user → realtime edit via `TripRoom` DO → AI itinerary gen (Workers AI) → semantic search (Vectorize) → upload doc (R2 + Images) → PDF export (Browser Rendering) → Stripe Checkout + webhook → Workflow updates subscription. Phase 4: Expo build on iOS/Android with offline trip access.
 - **Observability:** Workers Observability + Logpush; Analytics Engine (AI cost/trip, search CTR); Web Analytics (Core Web Vitals); Cloudflare Access on admin.
