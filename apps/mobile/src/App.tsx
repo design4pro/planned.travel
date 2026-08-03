@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   ActivityIndicator,
+  Button,
   Modal,
   Pressable,
   SafeAreaView,
@@ -275,7 +276,7 @@ function HomeScreen({
   }
   return (
     <SafeAreaView className="flex-1 bg-muted">
-      <ScrollView contentContainerClassName="px-5 pb-10 pt-8">
+      <ScrollView contentContainerClassName="px-5 pb-40 pt-8">
         <Text className="text-sm font-semibold uppercase tracking-widest text-primary">
           Your trips
         </Text>
@@ -348,14 +349,11 @@ function HomeScreen({
             ))
           )}
         </View>
-          <Pressable
-            testID="sign-out"
-            accessibilityRole="button"
-            onPressIn={signOut}
-          className="mt-8 items-center rounded-xl border border-border bg-white px-4 py-3"
-        >
-          <Text className="font-semibold text-ink">Sign out</Text>
-        </Pressable>
+          <View
+            className="mt-8 items-center rounded-xl border border-border bg-white px-4 py-3"
+          >
+            <Button testID="sign-out" title="Sign out" onPress={signOut} />
+          </View>
       </ScrollView>
     </SafeAreaView>
   );

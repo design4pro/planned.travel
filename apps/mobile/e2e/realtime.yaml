@@ -5,6 +5,12 @@ appId: travel.planned.app
 - waitForAnimationToEnd
 - runFlow:
     when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          point: 92%, 93%
+- runFlow:
+    when:
       visible: "‹ Trips"
     commands:
       - tapOn: "‹ Trips"
@@ -12,8 +18,7 @@ appId: travel.planned.app
     when:
       visible: "Sign out"
     commands:
-      - tapOn:
-          id: sign-out
+      - tapOn: "Sign out"
 - runFlow:
     when:
       visible: "Your trips"
@@ -21,6 +26,8 @@ appId: travel.planned.app
       - scrollUntilVisible:
           element: "Sign out"
           direction: DOWN
+          centerElement: true
+          visibilityPercentage: 1
       - waitForAnimationToEnd
       - tapOn: "Sign out"
 - extendedWaitUntil:
@@ -47,3 +54,4 @@ appId: travel.planned.app
 - inputText: "Realtime refresh note"
 - pressKey: ENTER
 - assertVisible: "Realtime refresh note"
+
