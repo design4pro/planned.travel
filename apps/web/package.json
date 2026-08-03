@@ -13,8 +13,8 @@
     "test": "vitest run",
     "e2e:staging": "playwright test",
     "build:staging": "CLOUDFLARE_ENV=staging vite build && tsc --noEmit",
-    "deploy": "pnpm run build && wrangler deploy",
-    "deploy:staging": "pnpm run build:staging && wrangler deploy",
+    "deploy": "pnpm run build && cd dist/server && wrangler deploy --config wrangler.json --keep-vars --env=\"\"",
+    "deploy:staging": "pnpm run build:staging && cd dist/server && wrangler deploy --config wrangler.json --keep-vars --env staging",
     "migrate:staging": "wrangler d1 migrations apply planned-travel-staging --remote --config wrangler.jsonc --env staging",
     "cf-typegen": "wrangler types"
   },
