@@ -9,12 +9,6 @@ appId: travel.planned.app
     commands:
       - tapOn: "‹ Trips"
       - waitForAnimationToEnd
-- repeat:
-    times: 20
-    commands:
-      - swipe:
-          direction: UP
-          duration: 500
 - runFlow:
     when:
       visible: "Sign out"
@@ -26,11 +20,10 @@ appId: travel.planned.app
       visible: "Your trips"
     commands:
       - scrollUntilVisible:
-          element:
-            id: sign-out
+          element: "Sign out"
           direction: DOWN
-      - tapOn:
-          id: sign-out
+      - waitForAnimationToEnd
+      - tapOn: "Sign out"
 - extendedWaitUntil:
     visible: "Sign in"
     timeout: 10000
@@ -64,8 +57,11 @@ appId: travel.planned.app
     timeout: 10000
 - tapOn: "Done"
 - tapOn: "‹ Trips"
-- tapOn:
-    id: sign-out
+- scrollUntilVisible:
+    element: "Sign out"
+    direction: DOWN
+- waitForAnimationToEnd
+- tapOn: "Sign out"
 - assertVisible: "Sign in"
 - tapOn:
     id: sign-in-email
@@ -87,8 +83,11 @@ appId: travel.planned.app
 - pressKey: ENTER
 - assertVisible: "Editor collaboration note"
 - tapOn: "‹ Trips"
-- tapOn:
-    id: sign-out
+- scrollUntilVisible:
+    element: "Sign out"
+    direction: DOWN
+- waitForAnimationToEnd
+- tapOn: "Sign out"
 - assertVisible: "Sign in"
 - tapOn:
     id: sign-in-email
@@ -111,8 +110,11 @@ appId: travel.planned.app
 - tapOn: "Viewer"
 - tapOn: "Done"
 - tapOn: "‹ Trips"
-- tapOn:
-    id: sign-out
+- scrollUntilVisible:
+    element: "Sign out"
+    direction: DOWN
+- waitForAnimationToEnd
+- tapOn: "Sign out"
 - assertVisible: "Sign in"
 - tapOn:
     id: sign-in-email
