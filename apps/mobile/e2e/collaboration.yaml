@@ -72,8 +72,12 @@ appId: travel.planned.app
 - extendedWaitUntil:
     visible: "Your trips"
     timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: ${E2E_COLLAB_TRIP_TEST_ID}
+    direction: DOWN
 - tapOn:
-    text: ${E2E_COLLAB_TRIP_TITLE}
+    id: ${E2E_COLLAB_TRIP_TEST_ID}
 - extendedWaitUntil:
     visible: "Itinerary"
     timeout: 15000
@@ -96,8 +100,12 @@ appId: travel.planned.app
 - extendedWaitUntil:
     visible: "Your trips"
     timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: ${E2E_COLLAB_TRIP_TEST_ID}
+    direction: DOWN
 - tapOn:
-    text: ${E2E_COLLAB_TRIP_TITLE}
+    id: ${E2E_COLLAB_TRIP_TEST_ID}
 - extendedWaitUntil:
     visible: "Itinerary"
     timeout: 15000
@@ -125,7 +133,11 @@ appId: travel.planned.app
 - extendedWaitUntil:
     visible: "Your trips"
     timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: ${E2E_COLLAB_TRIP_TEST_ID}
+    direction: DOWN
 - tapOn:
-    text: ${E2E_COLLAB_TRIP_TITLE}
+    id: ${E2E_COLLAB_TRIP_TEST_ID}
 - assertVisible:
     id: trip-role

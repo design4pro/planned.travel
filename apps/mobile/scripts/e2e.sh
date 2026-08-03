@@ -43,10 +43,12 @@ e2e_run_id="$(date +%s)"
 export E2E_TRIP_TITLE="Mobile E2E $e2e_run_id"
 export E2E_COLLAB_TRIP_TITLE="Mobile collaboration E2E $e2e_run_id"
 export E2E_COLLAB_TRIP_ID="trip-Mobile-collaboration-E2E-$e2e_run_id"
+export E2E_COLLAB_TRIP_TEST_ID="trip-Mobile-collaboration-E2E-$e2e_run_id"
 export E2E_REALTIME_TRIP_TITLE="Mobile realtime E2E $e2e_run_id"
 export E2E_MAP_TRIP_TITLE="Mobile map E2E $e2e_run_id"
 
-for flow in e2e/*.yaml; do
+flow_pattern="${E2E_ONLY_FLOW:-*.yaml}"
+for flow in e2e/$flow_pattern; do
   maestro test \
     -e E2E_EMAIL="$E2E_EMAIL" \
     -e E2E_PASSWORD="$E2E_PASSWORD" \
@@ -55,6 +57,7 @@ for flow in e2e/*.yaml; do
     -e E2E_TRIP_TITLE="$E2E_TRIP_TITLE" \
     -e E2E_COLLAB_TRIP_TITLE="$E2E_COLLAB_TRIP_TITLE" \
     -e E2E_COLLAB_TRIP_ID="$E2E_COLLAB_TRIP_ID" \
+    -e E2E_COLLAB_TRIP_TEST_ID="$E2E_COLLAB_TRIP_TEST_ID" \
     -e E2E_REALTIME_TRIP_TITLE="$E2E_REALTIME_TRIP_TITLE" \
     -e E2E_MAP_TRIP_TITLE="$E2E_MAP_TRIP_TITLE" \
     "$flow"

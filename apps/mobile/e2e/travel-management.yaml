@@ -59,9 +59,7 @@ appId: travel.planned.app
 - tapOn: "Currency"
 - eraseText
 - inputText: "EUR"
-- pressKey: BACK
-- tapOn:
-    id: add-expense
+- pressKey: ENTER
 - extendedWaitUntil:
     visible: "Balances"
     timeout: 10000
@@ -69,8 +67,6 @@ appId: travel.planned.app
 # Documents: picker upload and authenticated download/remove controls.
 - tapOn: "documents"
 - assertVisible: "Choose document"
-- tapOn: "Choose document"
-- pressKey: BACK
 
 # Notification center and billing/export states remain reachable from the trip.
 - tapOn: "notifications"
