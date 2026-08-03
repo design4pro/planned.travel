@@ -53,6 +53,20 @@ describe("planned tRPC client transport", () => {
     expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("authorization")).toBe("Bearer expired-token");
   });
 
+  it("notifies the mobile session when a bearer request is unauthorized", async () => {
+    const onUnauthorized = vi.fn();
+    const fetchMock = vi.fn(async () => new Response("Authentication required", { status: 401 }));
+    const client = new PlannedClient({
+      baseUrl: "https://planned.travel",
+      getToken: () => "expired-token",
+      onUnauthorized,
+      fetch: fetchMock,
+    });
+
+    await expect(client.trips().list()).rejects.toMatchObject({ status: 401 });
+    expect(onUnauthorized).toHaveBeenCalledOnce();
+  });
+
   it("exposes the travel-management operations through the bearer client", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const path = String(input);

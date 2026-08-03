@@ -27,6 +27,8 @@ export interface TransportOptions {
   baseUrl?: string;
   /** Mobile token provider. Web relies on the session cookie. */
   getToken?: () => string | null | Promise<string | null>;
+  /** Called when the server rejects the current bearer session. */
+  onUnauthorized?: () => void | Promise<void>;
   fetch?: typeof fetch;
 }
 export type TrpcClientOptions = TransportOptions;
@@ -78,6 +80,7 @@ export class PlannedClient {
     });
 
     if (!res.ok) {
+      if (res.status === 401) await this.opts.onUnauthorized?.();
       throw new ApiError(res.status, await res.text());
     }
     return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
@@ -90,7 +93,10 @@ export class PlannedClient {
       credentials: "include",
       headers: token ? { authorization: `Bearer ${token}` } : {},
     });
-    if (!res.ok) throw new ApiError(res.status, await res.text());
+    if (!res.ok) {
+      if (res.status === 401) await this.opts.onUnauthorized?.();
+      throw new ApiError(res.status, await res.text());
+    }
     return res.arrayBuffer();
   }
 

@@ -220,6 +220,10 @@ function HomeScreen({
       new PlannedClient({
         baseUrl: API_URL,
         getToken: () => storage.getItem(SESSION_TOKEN_KEY),
+        onUnauthorized: async () => {
+          await storage.deleteItem(SESSION_TOKEN_KEY);
+          onSignedOut();
+        },
       }),
     [storage],
   );
