@@ -7,6 +7,8 @@ import {
 } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   LogBox,
   Modal,
   Pressable,
@@ -16,12 +18,21 @@ import {
   TextInput,
   View,
 } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
 import {
   PlannedClient,
   type Invitation,
   type Member,
 } from "@planned/api-client";
-import type { TripDto, TripPlan } from "@planned/shared";
+import type {
+  BillingPlanResponse,
+  DocumentMeta,
+  ExpenseDto,
+  NotificationRow,
+  ReservationDto,
+  TripDto,
+  TripPlan,
+} from "@planned/shared";
 import { createMobileAuthClient } from "./auth/client";
 import {
   createSecureTokenStorage,
@@ -399,6 +410,7 @@ function TripWorkspace({
   const [place, setPlace] = useState("");
   const [membersOpen, setMembersOpen] = useState(false);
   const [dayIndex, setDayIndex] = useState(0);
+  const [section, setSection] = useState<"plan" | "reservations" | "costs" | "documents" | "notifications" | "billing">("plan");
   const load = useCallback(
     () =>
       rest
@@ -471,6 +483,14 @@ function TripWorkspace({
           </Text>
         </View>
       </View>
+      <View className="flex-row flex-wrap gap-2 border-b border-border bg-white px-5 py-3">
+        {(["plan", "reservations", "costs", "documents", "notifications", "billing"] as const).map((item) => (
+          <Pressable key={item} onPress={() => setSection(item)} className={`rounded-full px-3 py-2 ${section === item ? "bg-primary" : "bg-muted"}`}>
+            <Text className={`text-xs font-semibold capitalize ${section === item ? "text-white" : "text-ink"}`}>{item}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {section === "plan" ? <>
       <MapSurface places={plan.places} />
       <View className="absolute inset-x-0 bottom-0 max-h-[62%] rounded-t-3xl border-t border-border bg-white px-5 pb-5 pt-3">
         <View
@@ -564,6 +584,7 @@ function TripWorkspace({
           ) : null}
         </ScrollView>
       </View>
+      </> : <ManagementPanel rest={rest} trip={trip} section={section} canEdit={canEdit} />}
       <Modal
         visible={membersOpen}
         animationType="slide"
@@ -615,6 +636,144 @@ function MapSurface({ places }: { places: TripPlan["places"] }) {
     </View>
   );
 }
+
+type ManagementSection = "reservations" | "costs" | "documents" | "notifications" | "billing";
+
+function ManagementPanel({
+  rest,
+  trip,
+  section,
+  canEdit,
+}: {
+  rest: PlannedClient;
+  trip: TripDto;
+  section: ManagementSection;
+  canEdit: boolean;
+}) {
+  const [reservations, setReservations] = useState<ReservationDto[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseDto[]>([]);
+  const [documents, setDocuments] = useState<DocumentMeta[]>([]);
+  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
+  const [billing, setBilling] = useState<BillingPlanResponse>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const [title, setTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState("EUR");
+
+  const load = useCallback(async () => {
+    setError(undefined);
+    try {
+      if (section === "reservations") setReservations(await rest.reservations(trip.id).list());
+      if (section === "costs") setExpenses(await rest.expenses(trip.id).list());
+      if (section === "documents") setDocuments(await rest.documents(trip.id).list());
+      if (section === "notifications") setNotifications(await rest.notifications().list(30));
+      if (section === "billing") setBilling(await rest.billing().plan());
+    } catch {
+      setError("Could not load this section. Please try again.");
+    }
+  }, [rest, section, trip.id]);
+  useEffect(() => { void load(); }, [load]);
+
+  async function createReservation() {
+    if (!title.trim() || !canEdit) return;
+    setBusy(true);
+    try { await rest.reservations(trip.id).create({ title: title.trim(), type: "other", status: "planned" }); setTitle(""); await load(); }
+    catch { setError("Could not add the reservation."); }
+    finally { setBusy(false); }
+  }
+  async function createExpense() {
+    const cents = Math.round(Number(amount) * 100);
+    if (!Number.isFinite(cents) || cents < 0 || !canEdit) return;
+    setBusy(true);
+    try { await rest.expenses(trip.id).create({ amountCents: cents, currency }); setAmount(""); await load(); }
+    catch { setError("Could not add the expense."); }
+    finally { setBusy(false); }
+  }
+  async function confirmReservation(item: ReservationDto) {
+    if (!canEdit) return;
+    setBusy(true);
+    try { await rest.reservations(trip.id).update(item.id, { status: item.status === "confirmed" ? "planned" : "confirmed" }); await load(); }
+    catch { setError("Could not update the reservation."); }
+    finally { setBusy(false); }
+  }
+  async function removeReservation(id: string) {
+    if (!canEdit) return;
+    setBusy(true);
+    try { await rest.reservations(trip.id).remove(id); await load(); }
+    catch { setError("Could not remove the reservation."); }
+    finally { setBusy(false); }
+  }
+  async function removeExpense(id: string) {
+    if (!canEdit) return;
+    setBusy(true);
+    try { await rest.expenses(trip.id).remove(id); await load(); }
+    catch { setError("Could not remove the expense."); }
+    finally { setBusy(false); }
+  }
+  async function openBillingAction(action: "month" | "year" | "portal") {
+    setBusy(true);
+    try {
+      const result = action === "portal" ? await rest.billing().portal() : await rest.billing().checkout(action);
+      await Linking.openURL(result.url);
+    } catch { setError("Billing is unavailable right now."); }
+    finally { setBusy(false); }
+  }
+  async function exportPdf() {
+    setBusy(true);
+    try { await rest.billing().exportPdf(trip.id); Alert.alert("Export ready", "Your plan allows PDF export. Open the web app to download it."); }
+    catch (cause) { setError(cause instanceof Error && cause.message.includes("402") ? "PDF export requires Pro." : "PDF export is unavailable right now."); }
+    finally { setBusy(false); }
+  }
+  async function uploadDocument() {
+    if (!canEdit) return;
+    const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false });
+    if (result.canceled || !result.assets[0]) return;
+    const file = result.assets[0];
+    setBusy(true);
+    try { await rest.documents(trip.id).upload({ uri: file.uri, name: file.name, type: file.mimeType ?? "application/octet-stream" }); await load(); }
+    catch { setError("Could not upload that document. Check its type and size."); }
+    finally { setBusy(false); }
+  }
+  async function removeDocument(id: string) {
+    if (!canEdit) return;
+    setBusy(true);
+    try { await rest.documents(trip.id).remove(id); await load(); }
+    catch { setError("Could not remove that document."); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <ScrollView className="flex-1 bg-muted" contentContainerClassName="px-5 pb-12 pt-5">
+      <Text className="mb-4 text-2xl font-bold capitalize text-ink">{section}</Text>
+      {error ? <Text accessibilityRole="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-red-700">{error}</Text> : null}
+      {section === "reservations" ? <>
+        {canEdit ? <View className="mb-4 flex-row gap-2"><TextInput accessibilityLabel="Reservation title" placeholder="Reservation title" value={title} onChangeText={setTitle} className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-3 text-ink" /><PrimaryButton disabled={busy || !title.trim()} onPress={createReservation}>Add</PrimaryButton></View> : <ReadOnlyNotice />}
+        {reservations.length === 0 ? <EmptyState label="No reservations yet." /> : reservations.map((item) => <Row key={item.id} title={item.title ?? item.type} detail={`${item.status} · ${item.confirmationCode ?? "No confirmation code"}`} action={canEdit ? () => void confirmReservation(item) : undefined} actionLabel={item.status === "confirmed" ? "Mark planned" : "Confirm"} secondaryAction={canEdit ? () => void removeReservation(item.id) : undefined} secondaryActionLabel="Remove" />)}
+      </> : null}
+      {section === "costs" ? <>
+        {canEdit ? <View className="mb-4 flex-row gap-2"><TextInput accessibilityLabel="Expense amount" keyboardType="decimal-pad" placeholder="Amount" value={amount} onChangeText={setAmount} className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-3 text-ink" /><TextInput accessibilityLabel="Currency" autoCapitalize="characters" maxLength={3} value={currency} onChangeText={setCurrency} className="w-20 rounded-xl border border-border bg-white px-3 py-3 text-ink" /><PrimaryButton disabled={busy || !amount} onPress={createExpense}>Add</PrimaryButton></View> : <ReadOnlyNotice />}
+        {expenses.length === 0 ? <EmptyState label="No expenses yet." /> : expenses.map((item) => <Row key={item.id} title={`${(item.amountCents / 100).toFixed(2)} ${item.currency}`} detail={item.description ?? "Shared expense"} action={canEdit ? () => void removeExpense(item.id) : undefined} actionLabel="Remove" />)}
+      </> : null}
+      {section === "documents" ? <>
+        <Text className="mb-3 rounded-xl border border-border bg-white p-4 text-sm text-muted-foreground">Files are limited to 50 MiB and protected by trip permissions.</Text>
+        {canEdit ? <PrimaryButton disabled={busy} onPress={() => void uploadDocument()}>{busy ? "Uploading…" : "Choose document"}</PrimaryButton> : <ReadOnlyNotice />}
+        {documents.length === 0 ? <EmptyState label="No documents yet." /> : documents.map((item) => <View key={item.id} className="mb-2 rounded-xl border border-border bg-white p-4"><Text className="font-semibold text-ink">{item.name}</Text><Text className="mt-1 text-sm text-muted-foreground">{Math.ceil(item.sizeBytes / 1024)} KB · {item.mimeType}</Text>{canEdit ? <Pressable disabled={busy} onPress={() => void removeDocument(item.id)} className="mt-3 self-start"><Text className="text-sm font-semibold text-red-700">Remove</Text></Pressable> : null}</View>)}
+      </> : null}
+      {section === "notifications" ? <>
+        <PrimaryButton disabled={busy} onPress={async () => { setBusy(true); try { await rest.notifications().markAllRead(); await load(); } catch { setError("Could not update notifications."); } finally { setBusy(false); } }}>Mark all read</PrimaryButton>
+        <View className="mt-4">{notifications.length === 0 ? <EmptyState label="You're all caught up." /> : notifications.map((item) => <Pressable key={item.id} onPress={() => void rest.notifications().markRead(item.id).then(load)} className={`mb-2 rounded-xl border border-border p-4 ${item.readAt ? "bg-white" : "bg-primary/10"}`}><Text className="font-semibold text-ink">{item.type.replaceAll("_", " ")}</Text><Text className="mt-1 text-sm text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</Text></Pressable>)}</View>
+      </> : null}
+      {section === "billing" ? <>
+        {billing ? <View className="rounded-2xl border border-border bg-white p-5"><Text className="text-xl font-bold text-ink">{billing.plan === "pro" ? "Pro plan" : "Free plan"}</Text><Text className="mt-2 text-sm text-muted-foreground">{billing.tripLimit == null ? "Unlimited trips" : `${billing.tripCount} of ${billing.tripLimit} trips used`}</Text><View className="mt-4 gap-2">{billing.plan === "pro" ? <PrimaryButton disabled={busy} onPress={() => void openBillingAction("portal")}>Manage billing</PrimaryButton> : <><PrimaryButton disabled={busy} onPress={() => void openBillingAction("month")}>Upgrade monthly</PrimaryButton><PrimaryButton disabled={busy} onPress={() => void openBillingAction("year")}>Upgrade yearly</PrimaryButton></>}<PrimaryButton disabled={busy} onPress={() => void exportPdf()}>Export trip PDF</PrimaryButton></View></View> : <LoadingScreen />}
+      </> : null}
+    </ScrollView>
+  );
+}
+
+function Row({ title, detail, action, actionLabel, secondaryAction, secondaryActionLabel }: { title: string; detail: string; action?: () => void; actionLabel?: string; secondaryAction?: () => void; secondaryActionLabel?: string }) { return <View className="mb-2 rounded-xl border border-border bg-white p-4"><Text className="font-semibold text-ink">{title}</Text><Text className="mt-1 text-sm text-muted-foreground">{detail}</Text>{action ? <View className="mt-3 flex-row gap-4"><Pressable onPress={action}><Text className="text-sm font-semibold text-primary">{actionLabel}</Text></Pressable>{secondaryAction ? <Pressable onPress={secondaryAction}><Text className="text-sm font-semibold text-red-700">{secondaryActionLabel}</Text></Pressable> : null}</View> : null}</View>; }
+function EmptyState({ label }: { label: string }) { return <Text className="rounded-xl border border-border bg-white p-5 text-muted-foreground">{label}</Text>; }
+function ReadOnlyNotice() { return <Text className="mb-4 rounded-xl bg-white p-3 text-sm text-muted-foreground">View-only access</Text>; }
 
 function MembersSheet({
   rest,

@@ -8,6 +8,13 @@
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import type { AppRouter } from "@planned/server";
 import type {
+  BillingPlanResponse,
+  CreateExpenseInput,
+  CreateReservationInput,
+  DocumentMeta,
+  ExpenseDto,
+  ReservationDto,
+  UpdateReservationInput,
   InvitationCreated,
   NotificationRow,
   TripDto,
@@ -63,7 +70,7 @@ export class PlannedClient {
       ...init,
       credentials: "include",
       headers: {
-        "content-type": "application/json",
+        ...(!(init.body instanceof FormData) ? { "content-type": "application/json" } : {}),
         ...(token ? { authorization: `Bearer ${token}` } : {}),
         ...init.headers,
       },
@@ -73,6 +80,17 @@ export class PlannedClient {
       throw new ApiError(res.status, await res.text());
     }
     return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
+  }
+
+  private async requestBinary(path: string): Promise<ArrayBuffer> {
+    const fetchImpl = this.opts.fetch ?? fetch;
+    const token = this.opts.getToken ? await this.opts.getToken() : null;
+    const res = await fetchImpl(`${this.opts.baseUrl ?? ""}${path}`, {
+      credentials: "include",
+      headers: token ? { authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new ApiError(res.status, await res.text());
+    return res.arrayBuffer();
   }
 
   trips() {
@@ -118,6 +136,60 @@ export class PlannedClient {
         }),
       markAllRead: () =>
         this.request<{ ok: true }>("/api/notifications/read-all", { method: "POST" }),
+    };
+  }
+
+  reservations(tripId: string) {
+    const path = `/api/trips/${encodeURIComponent(tripId)}/reservations`;
+    return {
+      list: () => this.request<ReservationDto[]>(path),
+      create: (input: CreateReservationInput) => this.request<ReservationDto>(path, {
+        method: "POST", body: JSON.stringify(input),
+      }),
+      update: (id: string, input: UpdateReservationInput) => this.request<ReservationDto>(`/api/reservations/${encodeURIComponent(id)}`, {
+        method: "PATCH", body: JSON.stringify(input),
+      }),
+      remove: (id: string) => this.request<{ ok: true }>(`/api/reservations/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    };
+  }
+
+  expenses(tripId: string) {
+    const path = `/api/trips/${encodeURIComponent(tripId)}/expenses`;
+    return {
+      list: () => this.request<ExpenseDto[]>(path),
+      create: (input: Omit<CreateExpenseInput, "tripId">) => this.request<ExpenseDto>(path, {
+        method: "POST", body: JSON.stringify(input),
+      }),
+      remove: (id: string) => this.request<{ ok: true }>(`/api/expenses/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    };
+  }
+
+  documents(tripId: string) {
+    const path = `/api/trips/${encodeURIComponent(tripId)}/documents`;
+    return {
+      list: () => this.request<DocumentMeta[]>(path),
+      upload: (file: { uri: string; name: string; type: string }, reservationId?: string) => {
+        const body = new FormData();
+        body.append("file", file as unknown as Blob);
+        if (reservationId) body.append("reservationId", reservationId);
+        return this.request<DocumentMeta>(path, { method: "POST", body });
+      },
+      link: (id: string, reservationId: string | null) => this.request<DocumentMeta>(`/api/documents/${encodeURIComponent(id)}`, {
+        method: "PATCH", body: JSON.stringify({ reservationId }),
+      }),
+      remove: (id: string) => this.request<{ ok: true }>(`/api/documents/${encodeURIComponent(id)}`, { method: "DELETE" }),
+      downloadUrl: (id: string) => `${this.opts.baseUrl ?? ""}/api/documents/${encodeURIComponent(id)}/download`,
+    };
+  }
+
+  billing() {
+    return {
+      plan: () => this.request<BillingPlanResponse>("/api/billing/plan"),
+      checkout: (interval: "month" | "year") => this.request<{ url: string }>("/api/billing/checkout", {
+        method: "POST", body: JSON.stringify({ interval }),
+      }),
+      portal: () => this.request<{ url: string }>("/api/billing/portal", { method: "POST" }),
+      exportPdf: (tripId: string) => this.requestBinary(`/api/trips/${encodeURIComponent(tripId)}/export.pdf`),
     };
   }
 }

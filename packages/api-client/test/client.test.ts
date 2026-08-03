@@ -52,4 +52,22 @@ describe("planned tRPC client transport", () => {
     await expect(client.trips().list()).rejects.toMatchObject({ status: 401 });
     expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("authorization")).toBe("Bearer expired-token");
   });
+
+  it("exposes the travel-management operations through the bearer client", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path.includes("/reservations")) return new Response("[]", { status: 200 });
+      if (path.includes("/expenses")) return new Response("[]", { status: 200 });
+      if (path.includes("/documents")) return new Response("[]", { status: 200 });
+      return new Response(JSON.stringify({ plan: "free", status: "active", interval: null, cancelAtPeriodEnd: false, currentPeriodEnd: null, stripeCustomerId: null, tripCount: 0, tripLimit: 3 }), { status: 200 });
+    });
+    const client = new PlannedClient({ baseUrl: "https://planned.travel", getToken: () => "token", fetch: fetchMock });
+
+    await expect(client.reservations("trip/1").list()).resolves.toEqual([]);
+    await expect(client.expenses("trip/1").list()).resolves.toEqual([]);
+    await expect(client.documents("trip/1").list()).resolves.toEqual([]);
+    await expect(client.billing().plan()).resolves.toMatchObject({ plan: "free" });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("trip%2F1");
+  });
 });
