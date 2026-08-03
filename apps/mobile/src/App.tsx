@@ -457,9 +457,17 @@ function TripWorkspace({
           <View
             className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-500" : "bg-slate-300"}`}
           />
+          <Text
+            testID="trip-connection-status"
+            className="text-xs text-muted-foreground"
+          >
+            {connected ? "Live" : "Reconnecting…"}
+          </Text>
+          <Text testID="trip-presence" className="text-xs text-muted-foreground">
+            {presence.length} online
+          </Text>
           <Text testID="trip-role" className="text-xs text-muted-foreground">
-            {connected ? "Live" : "Reconnecting…"} · {presence.length} online ·{" "}
-            {trip.role}
+            · {trip.role}
           </Text>
         </View>
       </View>

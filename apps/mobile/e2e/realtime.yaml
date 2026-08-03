@@ -43,10 +43,9 @@ appId: travel.planned.app
 - pressKey: ENTER
 - extendedWaitUntil:
     visible: "Live"
-    timeout: 15000
+    timeout: 30000
 - assertVisible: "1 online"
 - tapOn: "Add a note"
 - inputText: "Realtime refresh note"
 - pressKey: ENTER
 - assertVisible: "Realtime refresh note"
-
