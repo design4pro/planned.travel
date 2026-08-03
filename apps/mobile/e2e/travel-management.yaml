@@ -82,6 +82,7 @@ appId: travel.planned.app
 # Notification center and billing/export states remain reachable from the trip.
 - tapOn: "notifications"
 - assertVisible: "Mark all read"
+- tapOn: "Mark all read"
 - tapOn: "billing"
 - assertVisible: "Export trip PDF"
 - tapOn:

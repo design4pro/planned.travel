@@ -7,7 +7,6 @@ import {
 } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Button,
   Keyboard,
   Linking,
@@ -51,6 +50,7 @@ import {
   type AuthState,
 } from "./auth/state";
 import { useTripSync } from "./collab/useTripSync";
+import { arrayBufferToBase64, safeFileName } from "./management";
 import { mapInitialView, mobileMapStyle } from "./trip-map";
 import "./global.css";
 
@@ -831,7 +831,21 @@ function ManagementPanel({
   }
   async function exportPdf() {
     setBusy(true);
-    try { await rest.billing().exportPdf(trip.id); Alert.alert("Export ready", "Your plan allows PDF export. Open the web app to download it."); }
+    try {
+      const bytes = await rest.billing().exportPdf(trip.id);
+      const target = `${FileSystem.cacheDirectory}${safeFileName(`${trip.title}.pdf`)}`;
+      await FileSystem.writeAsStringAsync(target, arrayBufferToBase64(bytes), {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(target, {
+          mimeType: "application/pdf",
+          dialogTitle: `${trip.title} PDF export`,
+        });
+      } else {
+        setError("Sharing exports is not available on this device.");
+      }
+    }
     catch (cause) { setError(cause instanceof Error && cause.message.includes("402") ? "PDF export requires Pro." : "PDF export is unavailable right now."); }
     finally { setBusy(false); }
   }
@@ -856,7 +870,7 @@ function ManagementPanel({
     setBusy(true);
     try {
       const token = await getToken();
-      const safeName = item.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const safeName = safeFileName(item.name, "document");
       const target = `${FileSystem.cacheDirectory}${safeName}`;
       const result = await FileSystem.downloadAsync(rest.documents(trip.id).downloadUrl(item.id), target, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
