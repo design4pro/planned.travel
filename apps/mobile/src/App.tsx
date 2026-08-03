@@ -276,6 +276,7 @@ function HomeScreen({
       setError("That invitation is no longer available.");
     }
   }
+  const latestTrip = trips[0];
   return (
     <SafeAreaView className="flex-1 bg-muted">
       <ScrollView contentContainerClassName="px-5 pb-40 pt-8">
@@ -330,6 +331,19 @@ function HomeScreen({
           </Text>
         ) : null}
         <View className="mt-6 gap-3">
+          {latestTrip ? (
+            <Pressable
+              testID="open-latest-trip"
+              accessibilityLabel="Open latest trip"
+              accessibilityRole="button"
+              onPress={() => setSelected(latestTrip.id)}
+              className="rounded-xl border border-primary bg-white px-4 py-3"
+            >
+              <Text className="text-center font-semibold text-primary">
+                Open latest trip
+              </Text>
+            </Pressable>
+          ) : null}
           {trips.length === 0 ? (
             <Text className="rounded-2xl border border-border bg-white p-5 text-muted-foreground">
               No trips yet. Create one to start planning.
@@ -443,7 +457,7 @@ function TripWorkspace({
           <View
             className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-500" : "bg-slate-300"}`}
           />
-          <Text className="text-xs text-muted-foreground">
+          <Text testID="trip-role" className="text-xs text-muted-foreground">
             {connected ? "Live" : "Reconnecting…"} · {presence.length} online ·{" "}
             {trip.role}
           </Text>
@@ -522,9 +536,9 @@ function TripWorkspace({
               <PrimaryButton onPress={addNote}>Add</PrimaryButton>
             </View>
           ) : (
-            <Text className="mt-2 text-sm text-muted-foreground">
-              View-only access
-            </Text>
+          <Text testID="view-only-access" className="mt-2 text-sm text-muted-foreground">
+            View-only access
+          </Text>
           )}
           {canEdit ? (
             <View className="mt-2 flex-row gap-2">
