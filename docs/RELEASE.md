@@ -54,15 +54,16 @@ credentials and a locally built Expo development client.
 
 ## Evidence recorded for issue #33
 
-- Staging build `fc43aa7e-3f9-4f6f-82e5-0b07c21a8387` built and deployed commit
-  `2f3200e` successfully; the deploy log confirms the staging D1, KV, R2,
+- Workers Build `c034ce08-abde-4407-b625-e666f545d5b8` built and deployed commit
+  `1913319` successfully; the deploy log confirms the staging D1, KV, R2,
   Queue, and `planned-travel-embeddings-staging` Vectorize binding.
 - The deployed staging Worker version is
-  `17cce863-0cdb-4fe6-8ae0-b8bed5ebc2ed`; earlier versions remain listed for
+  `16133a53-ad76-4318-a232-b2f1bbd79e91`; earlier versions remain listed for
   rollback.
-- GitHub CI run `30833319109` passed quality gates, secret scan, and Chromium
-  staging E2E. The local 18-test staging suite also passed with visual snapshot
-  comparisons and the performance budget.
+- GitHub CI run `30839282999` passed quality gates, fresh-D1 migrations,
+  artifacts, secret scan, and Chromium staging E2E. The local 18-test staging
+  suite and five Maestro mobile flows also passed with visual snapshot,
+  accessibility, responsive, keyboard, and performance evidence.
 
 ## Cutover
 
