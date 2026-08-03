@@ -52,7 +52,7 @@ Native mobile
 evidence is collected with Maestro on the iOS simulator; it requires staging
 credentials and a locally built Expo development client.
 
-## Evidence recorded for issue #33
+## Evidence recorded for issue #38
 
 - Workers Build `c034ce08-abde-4407-b625-e666f545d5b8` built and deployed commit
   `1913319` successfully; the deploy log confirms the staging D1, KV, R2,
@@ -64,6 +64,26 @@ credentials and a locally built Expo development client.
   artifacts, secret scan, and Chromium staging E2E. The local 18-test staging
   suite and five Maestro mobile flows also passed with visual snapshot,
   accessibility, responsive, keyboard, and performance evidence.
+
+## Production cutover and rollback closure
+
+On 2026-08-03, commit `632a493` was deployed directly through the generated
+TanStack Start Worker artifact after a successful dry run. The resulting
+production deployment is version
+`aec87012-3019-44ad-b1c2-51a484d6b42a`; it exposes both `fetch` and `queue`
+handlers and retains the production D1, KV, R2, Vectorize, Browser Rendering,
+AI, Images, Durable Object, and queue bindings.
+
+Post-deploy smoke checks against
+`https://planned-travel-web.design4pro.workers.dev` passed for `/api/health`,
+all EN/PL public routes, `/app`, and the unauthenticated `/api/trips` access
+gate (401).
+
+Rollback closure is complete. The immediately previous production version
+`0d0af063-cddf-4b9d-aeda-8dcd294f669c` remains deployed and available for
+rollback; no Worker, storage resource, or D1 migration was deleted or renamed,
+and no destructive down-migration was run. The release can therefore be
+rolled back without changing storage state.
 
 ## Cutover
 
