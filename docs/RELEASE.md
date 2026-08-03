@@ -44,6 +44,12 @@ The staging build deliberately has no Vectorize binding because a separate
 staging index has not been provisioned. Semantic search is not evidence for
 production cutover until that resource and its access permission are isolated.
 
+The current evidence gate also runs Axe accessibility checks, EN/PL language
+checks, dark-mode and 390px responsive checks, keyboard focus checks, and a
+five-sample p75 performance report for desktop and mobile. Native mobile
+evidence is collected with Maestro on the iOS simulator; it requires staging
+credentials and a locally built Expo development client.
+
 ## Cutover
 
 Deploy the already-tested commit through Workers Builds, then run the health

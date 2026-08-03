@@ -9,6 +9,17 @@ appId: travel.planned.app
     commands:
       - tapOn:
           point: 92%, 93%
+- runFlow:
+    when:
+      visible: "‹ Trips"
+    commands:
+      - tapOn: "‹ Trips"
+- runFlow:
+    when:
+      visible: "Your trips"
+    commands:
+      - tapOn:
+          id: sign-out
 - extendedWaitUntil:
     visible: "Sign in"
     timeout: 15000
@@ -46,8 +57,12 @@ appId: travel.planned.app
 - tapOn: "Currency"
 - eraseText
 - inputText: "EUR"
-- tapOn: "Add"
-- assertVisible: "Balances"
+- pressKey: BACK
+- tapOn:
+    text: "Add expense"
+- extendedWaitUntil:
+    visible: "Balances"
+    timeout: 10000
 
 # Documents: picker upload and authenticated download/remove controls.
 - tapOn: "documents"

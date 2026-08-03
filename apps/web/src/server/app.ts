@@ -65,7 +65,12 @@ export function createApp(env: CloudflareEnv) {
   const app = new Hono();
   const auth = createAuth(env);
   const database = getDb(env);
-  const stripe = createStripe(env);
+  const getStripe = () => {
+    if (!env.STRIPE_SECRET_KEY) {
+      throw new Error("Stripe is not configured for this environment");
+    }
+    return createStripe(env);
+  };
 
   async function getUser(req: Request) {
     const session = await auth.api.getSession({ headers: req.headers });
@@ -1309,7 +1314,7 @@ export function createApp(env: CloudflareEnv) {
     if (row.stripeCustomerId) params.customer = row.stripeCustomerId;
     else params.customer_email = user.email;
 
-    const session = await stripe.checkout.sessions.create(params);
+    const session = await getStripe().checkout.sessions.create(params);
     return c.json({ url: session.url });
   });
 
@@ -1318,7 +1323,7 @@ export function createApp(env: CloudflareEnv) {
     if (!user) return c.json({ error: "unauthorized" }, 401);
     const row = await getOrCreateSubscription(database, user.id);
     if (!row.stripeCustomerId) return c.json({ error: "no_customer" }, 400);
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: row.stripeCustomerId,
       return_url: `${env.APP_URL}/app/account`,
     });
@@ -1371,7 +1376,7 @@ export function createApp(env: CloudflareEnv) {
     const rawBody = await c.req.raw.text();
     let event: Stripe.Event;
     try {
-      event = await stripe.webhooks.constructEventAsync(rawBody, sig, env.STRIPE_WEBHOOK_SECRET);
+      event = await getStripe().webhooks.constructEventAsync(rawBody, sig, env.STRIPE_WEBHOOK_SECRET);
     } catch {
       return c.json({ error: "invalid_signature" }, 400);
     }
