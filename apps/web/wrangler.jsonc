@@ -140,7 +140,9 @@
       "r2_buckets": [
         { "binding": "MEDIA", "bucket_name": "planned-travel-staging-media" }
       ],
-      "vectorize": [],
+      "vectorize": [
+        { "binding": "VECTORIZE", "index_name": "planned-travel-embeddings-staging" }
+      ],
       "ai": { "binding": "AI" },
       "images": { "binding": "IMAGES" },
       "browser": { "binding": "BROWSER" },
