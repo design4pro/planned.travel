@@ -9,19 +9,28 @@ appId: travel.planned.app
     commands:
       - tapOn: "‹ Trips"
       - waitForAnimationToEnd
+- repeat:
+    times: 20
+    commands:
+      - swipe:
+          direction: UP
+          duration: 500
 - runFlow:
     when:
       visible: "Sign out"
     commands:
-      - tapOn: "Sign out"
+      - tapOn:
+          id: sign-out
 - runFlow:
     when:
       visible: "Your trips"
     commands:
       - scrollUntilVisible:
-          element: "Sign out"
+          element:
+            id: sign-out
           direction: DOWN
-      - tapOn: "Sign out"
+      - tapOn:
+          id: sign-out
 - extendedWaitUntil:
     visible: "Sign in"
     timeout: 10000
@@ -46,14 +55,17 @@ appId: travel.planned.app
     visible: "Collaborators"
     timeout: 10000
 - assertVisible: "owner"
-- tapOn: "Member email"
+- tapOn:
+    id: member-email
 - inputText: ${E2E_MEMBER_EMAIL}
-- tapOn: "Invite"
+- pressKey: ENTER
 - extendedWaitUntil:
     visible: ${E2E_MEMBER_EMAIL}
     timeout: 10000
 - tapOn: "Done"
-- tapOn: "Sign out"
+- tapOn: "‹ Trips"
+- tapOn:
+    id: sign-out
 - assertVisible: "Sign in"
 - tapOn:
     id: sign-in-email
@@ -75,7 +87,8 @@ appId: travel.planned.app
 - pressKey: ENTER
 - assertVisible: "Editor collaboration note"
 - tapOn: "‹ Trips"
-- tapOn: "Sign out"
+- tapOn:
+    id: sign-out
 - assertVisible: "Sign in"
 - tapOn:
     id: sign-in-email
@@ -97,7 +110,9 @@ appId: travel.planned.app
     timeout: 10000
 - tapOn: "Viewer"
 - tapOn: "Done"
-- tapOn: "Sign out"
+- tapOn: "‹ Trips"
+- tapOn:
+    id: sign-out
 - assertVisible: "Sign in"
 - tapOn:
     id: sign-in-email

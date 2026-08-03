@@ -8,19 +8,28 @@ appId: travel.planned.app
       visible: "‹ Trips"
     commands:
       - tapOn: "‹ Trips"
+- repeat:
+    times: 20
+    commands:
+      - swipe:
+          direction: UP
+          duration: 500
 - runFlow:
     when:
       visible: "Sign out"
     commands:
-      - tapOn: "Sign out"
+      - tapOn:
+          id: sign-out
 - runFlow:
     when:
       visible: "Your trips"
     commands:
       - scrollUntilVisible:
-          element: "Sign out"
+          element:
+            id: sign-out
           direction: DOWN
-      - tapOn: "Sign out"
+      - tapOn:
+          id: sign-out
 - extendedWaitUntil:
     visible: "Sign in"
     timeout: 10000
