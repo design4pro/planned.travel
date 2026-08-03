@@ -33,7 +33,9 @@ appId: travel.planned.app
 - extendedWaitUntil:
     visible: "Your trips"
     timeout: 15000
-- tapOn: "Open latest trip"
+- tapOn: "Name a new trip"
+- inputText: ${E2E_TRIP_TITLE}
+- pressKey: ENTER
 - extendedWaitUntil:
     visible: "Itinerary"
     timeout: 15000
@@ -59,7 +61,7 @@ appId: travel.planned.app
 - inputText: "EUR"
 - pressKey: BACK
 - tapOn:
-    text: "Add expense"
+    id: add-expense
 - extendedWaitUntil:
     visible: "Balances"
     timeout: 10000

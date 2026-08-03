@@ -73,7 +73,7 @@ appId: travel.planned.app
     visible: "Your trips"
     timeout: 15000
 - tapOn:
-    id: open-latest-trip
+    text: ${E2E_COLLAB_TRIP_TITLE}
 - extendedWaitUntil:
     visible: "Itinerary"
     timeout: 15000
@@ -97,7 +97,7 @@ appId: travel.planned.app
     visible: "Your trips"
     timeout: 15000
 - tapOn:
-    id: open-latest-trip
+    text: ${E2E_COLLAB_TRIP_TITLE}
 - extendedWaitUntil:
     visible: "Itinerary"
     timeout: 15000
@@ -126,6 +126,6 @@ appId: travel.planned.app
     visible: "Your trips"
     timeout: 15000
 - tapOn:
-    id: open-latest-trip
+    text: ${E2E_COLLAB_TRIP_TITLE}
 - assertVisible:
     id: trip-role

@@ -38,4 +38,6 @@ The suite covers sign-in, trip creation/opening, editor and viewer
 permissions, member invitations, realtime connection/presence, map-first
 presentation, and itinerary mutations. Use a Pro test account or reset the
 test account between runs because the flows create separate trips. It expects
-the API URL from `EXPO_PUBLIC_API_URL` (or the production default).
+the API URL from `EXPO_PUBLIC_API_URL` and refuses to run against production.
+For the current staging deployment use
+`https://planned-travel-web-staging.design4pro.workers.dev`.

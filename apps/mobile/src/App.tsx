@@ -714,10 +714,15 @@ function ManagementPanel({
     finally { setBusy(false); }
   }
   async function createExpense() {
-    const cents = Math.round(Number(amount) * 100);
-    if (!Number.isFinite(cents) || cents < 0 || !canEdit) return;
+    const cents = Math.round(Number.parseFloat(amount.replace(",", ".")) * 100);
+    const normalizedCurrency = currency.trim().toUpperCase();
+    if (!canEdit) return;
+    if (!Number.isFinite(cents) || cents < 0 || !/^[A-Z]{3}$/.test(normalizedCurrency)) {
+      setError("Enter an amount and a three-letter currency.");
+      return;
+    }
     setBusy(true);
-    try { await rest.expenses(trip.id).create({ amountCents: cents, currency }); setAmount(""); await load(); }
+    try { await rest.expenses(trip.id).create({ amountCents: cents, currency: normalizedCurrency }); setAmount(""); await load(); }
     catch { setError("Could not add the expense."); }
     finally { setBusy(false); }
   }
@@ -806,7 +811,7 @@ function ManagementPanel({
         {reservations.length === 0 ? <EmptyState label="No reservations yet." /> : reservations.map((item) => <Row key={item.id} title={item.title ?? item.type} detail={`${item.status} · ${item.confirmationCode ?? "No confirmation code"}`} action={canEdit ? () => void confirmReservation(item) : undefined} actionLabel={item.status === "confirmed" ? "Mark planned" : "Confirm"} secondaryAction={canEdit ? () => void removeReservation(item.id) : undefined} secondaryActionLabel="Remove" />)}
       </> : null}
       {section === "costs" ? <>
-        {canEdit ? <View className="mb-4 flex-row gap-2"><TextInput accessibilityLabel="Expense amount" keyboardType="decimal-pad" placeholder="Amount" value={amount} onChangeText={setAmount} className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-3 text-ink" /><TextInput accessibilityLabel="Currency" autoCapitalize="characters" maxLength={3} value={currency} onChangeText={setCurrency} className="w-20 rounded-xl border border-border bg-white px-3 py-3 text-ink" /><PrimaryButton testID="add-expense" accessibilityLabel="Add expense" disabled={busy || !amount} onPress={createExpense}>Add</PrimaryButton></View> : <ReadOnlyNotice />}
+        {canEdit ? <View className="mb-4 flex-row gap-2"><TextInput accessibilityLabel="Expense amount" keyboardType="decimal-pad" placeholder="Amount" value={amount} onChangeText={setAmount} className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-3 text-ink" /><TextInput accessibilityLabel="Currency" autoCapitalize="characters" maxLength={3} value={currency} onChangeText={setCurrency} className="w-20 rounded-xl border border-border bg-white px-3 py-3 text-ink" /><PrimaryButton testID="add-expense" accessibilityLabel="Add expense" disabled={busy || !amount.trim()} onPress={() => void createExpense()}>Add</PrimaryButton></View> : <ReadOnlyNotice />}
         {summaries.length === 0 ? <EmptyState label="No expenses yet." /> : <><Text className="mb-2 text-lg font-bold text-ink">Balances</Text>{summaries.map((summary) => <View key={summary.currency} className="mb-3 rounded-xl border border-border bg-white p-4"><Text className="font-bold text-ink">{summary.currency} · {formatMoney(summary.totalCents, summary.currency)}</Text>{summary.balances.map((balance) => <Text key={balance.userId} className="mt-1 text-sm text-muted-foreground">{balance.userId}: {formatMoney(balance.netCents, summary.currency)}</Text>)}{summary.settlements.map((settlement) => <Text key={`${settlement.fromUserId}-${settlement.toUserId}`} className="mt-2 text-sm text-primary">Settlement: {formatMoney(settlement.amountCents, summary.currency)}</Text>)}</View>)}<Text className="mb-2 text-lg font-bold text-ink">Expenses</Text>{expenses.map((item) => <Row key={item.id} title={`${(item.amountCents / 100).toFixed(2)} ${item.currency}`} detail={item.description ?? "Shared expense"} action={canEdit ? () => void removeExpense(item.id) : undefined} actionLabel="Remove" />)}</>}
       </> : null}
       {section === "documents" ? <>
