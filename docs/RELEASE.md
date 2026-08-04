@@ -67,10 +67,11 @@ credentials and a locally built Expo development client.
 
 ## Production cutover and rollback closure
 
-On 2026-08-03, commit `632a493` was deployed directly through the generated
-TanStack Start Worker artifact after a successful dry run. The resulting
+On 2026-08-04, commit `4afe731d7a43d8461b6e0117ebde2b235b363099` was deployed
+through the Workers Builds production trigger `Deploy default branch`. Build
+`e423e5f2-adc3-4ae6-9c0d-1e0800c4c77c` completed successfully. The resulting
 production deployment is version
-`aec87012-3019-44ad-b1c2-51a484d6b42a`; it exposes both `fetch` and `queue`
+`2fdd8c22-d193-4df5-9b26-78adf15e6384`; it exposes both `fetch` and `queue`
 handlers and retains the production D1, KV, R2, Vectorize, Browser Rendering,
 AI, Images, Durable Object, and queue bindings.
 
@@ -80,8 +81,9 @@ all EN/PL public routes, `/app`, and the unauthenticated `/api/trips` access
 gate (401).
 
 Rollback closure is complete. The immediately previous production version
-`0d0af063-cddf-4b9d-aeda-8dcd294f669c` remains deployed and available for
-rollback; no Worker, storage resource, or D1 migration was deleted or renamed,
+`aec87012-3019-44ad-b1c2-51a484d6b42a` remains deployed and available for
+rollback; earlier version `0d0af063-cddf-4b9d-aeda-8dcd294f669c` is also
+retained. No Worker, storage resource, or D1 migration was deleted or renamed,
 and no destructive down-migration was run. The release can therefore be
 rolled back without changing storage state.
 
