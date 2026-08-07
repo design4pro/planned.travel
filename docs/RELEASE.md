@@ -18,6 +18,10 @@ merge policy is squash merge for feature, fix, chore, docs, refactor, and test
 branches; release and hotfix pull requests use a merge commit; rebase merges
 are not part of the release process. Do not merge a release until the `Release E2E` check has passed against the exact
 pull-request SHA and the release owner has approved the release preparation.
+These review, merge-method, release-approval, tag, and backmerge requirements
+are human/repository governance steps: this pull request's policy script checks
+branch routing and ancestry, while GitHub rulesets and required-approval
+enforcement remain separately authorized and are not enabled by this change.
 
 Tags use the immutable SemVer format `vX.Y.Z` and are created only after the
 release pull request is merged. The repository-side release E2E builds the
@@ -29,7 +33,10 @@ The Multica event router is disabled unless the repository variable
 `MULTICA_AUTOMATION_ENABLED` is exactly `true` and the channel-specific secret
 is present. Required secret names are `MULTICA_REVIEW_WEBHOOK_URL`,
 `MULTICA_MERGE_WEBHOOK_URL`, and `MULTICA_RELEASE_WEBHOOK_URL`. Activation and
-secret provisioning are intentionally outside this pull request.
+secret provisioning are intentionally outside this pull request. The router
+only forwards the defined review-remediation, merge-eligibility, and release
+lifecycle signals; it does not grant approval, merge a pull request, create a
+tag, perform the mandatory backmerge, or deploy production.
 
 ## Before cutover
 
