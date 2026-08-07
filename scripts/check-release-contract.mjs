@@ -26,6 +26,45 @@ requireText(workflowPath, workflow, "trufflesecurity/trufflehog");
 requireText(workflowPath, workflow, "actions/upload-artifact@v4");
 requireText(workflowPath, workflow, "planned-travel-web-staging");
 
+const policyPath = "scripts/check-git-flow-policy.mjs";
+const policy = await read(policyPath);
+for (const phrase of [
+  "feature/",
+  "releasePattern",
+  "hotfixPattern",
+  "main backmerge",
+  "developAncestor",
+]) {
+  requireText(policyPath, policy, phrase);
+}
+
+const routerPath = ".github/workflows/multica-event-router.yml";
+const router = await read(routerPath);
+for (const phrase of [
+  "MULTICA_AUTOMATION_ENABLED",
+  "MULTICA_REVIEW_WEBHOOK_URL",
+  "MULTICA_MERGE_WEBHOOK_URL",
+  "MULTICA_RELEASE_WEBHOOK_URL",
+  "Idempotency-Key",
+  "github.event.sender.type != 'Bot'",
+]) {
+  requireText(routerPath, router, phrase);
+}
+
+const releaseE2ePath = ".github/workflows/release-e2e.yml";
+const releaseE2e = await read(releaseE2ePath);
+for (const phrase of [
+  "github.event.pull_request.head.sha",
+  "E2E_BASE_URL=http://127.0.0.1:4173",
+  "name: Release E2E",
+]) {
+  requireText(releaseE2ePath, releaseE2e, phrase);
+}
+
+requireText(".github/CODEOWNERS", await read(".github/CODEOWNERS"), "@rafalwolak");
+requireText(".github/ISSUE_TEMPLATE/product-engineering.md", await read(".github/ISSUE_TEMPLATE/product-engineering.md"), "## Definition of Done");
+requireText("CHANGELOG.md", await read("CHANGELOG.md"), "## [Unreleased]");
+
 const runbookPath = "docs/RELEASE.md";
 const runbook = await read(runbookPath);
 for (const phrase of [

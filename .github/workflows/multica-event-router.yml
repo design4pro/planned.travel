@@ -1,0 +1,72 @@
+name: Multica event router
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, closed]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened, reopened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+env:
+  AUTOMATION_ENABLED: ${{ vars.MULTICA_AUTOMATION_ENABLED }}
+
+jobs:
+  review-remediation:
+    name: Multica review remediation router
+    if: vars.MULTICA_AUTOMATION_ENABLED == 'true' && github.event.sender.type != 'Bot' && github.actor != 'github-actions[bot]' && ((github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested') || (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/review-remediation')))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send review-remediation signal
+        env:
+          WEBHOOK_URL: ${{ secrets.MULTICA_REVIEW_WEBHOOK_URL }}
+          IDEMPOTENCY_KEY: multica-review-${{ github.run_id }}-${{ github.run_attempt }}
+          EVENT_PAYLOAD: ${{ toJSON(github.event) }}
+        run: |
+          set -euo pipefail
+          if [ -z "$WEBHOOK_URL" ]; then echo "Review webhook is not configured; router remains inactive."; exit 0; fi
+          curl --fail --silent --show-error --request POST "$WEBHOOK_URL" \
+            --header 'Content-Type: application/json' \
+            --header "Idempotency-Key: $IDEMPOTENCY_KEY" \
+            --data-binary "$EVENT_PAYLOAD"
+
+  merge-eligibility:
+    name: Multica merge eligibility router
+    if: vars.MULTICA_AUTOMATION_ENABLED == 'true' && github.event.sender.type != 'Bot' && github.actor != 'github-actions[bot]' && github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize' || github.event.action == 'ready_for_review')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send merge-eligibility signal
+        env:
+          WEBHOOK_URL: ${{ secrets.MULTICA_MERGE_WEBHOOK_URL }}
+          IDEMPOTENCY_KEY: multica-merge-${{ github.run_id }}-${{ github.run_attempt }}
+          EVENT_PAYLOAD: ${{ toJSON(github.event) }}
+        run: |
+          set -euo pipefail
+          if [ -z "$WEBHOOK_URL" ]; then echo "Merge webhook is not configured; router remains inactive."; exit 0; fi
+          curl --fail --silent --show-error --request POST "$WEBHOOK_URL" \
+            --header 'Content-Type: application/json' \
+            --header "Idempotency-Key: $IDEMPOTENCY_KEY" \
+            --data-binary "$EVENT_PAYLOAD"
+
+  release-lifecycle:
+    name: Multica release lifecycle router
+    if: vars.MULTICA_AUTOMATION_ENABLED == 'true' && github.event.sender.type != 'Bot' && github.actor != 'github-actions[bot]' && ((github.event_name == 'issue_comment' && (startsWith(github.event.comment.body, '/release-preparation') || startsWith(github.event.comment.body, '/release prepare'))) || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && (startsWith(github.event.pull_request.head.ref, 'release/') || startsWith(github.event.pull_request.head.ref, 'hotfix/'))))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send release lifecycle signal
+        env:
+          WEBHOOK_URL: ${{ secrets.MULTICA_RELEASE_WEBHOOK_URL }}
+          IDEMPOTENCY_KEY: multica-release-${{ github.run_id }}-${{ github.run_attempt }}
+          EVENT_PAYLOAD: ${{ toJSON(github.event) }}
+        run: |
+          set -euo pipefail
+          if [ -z "$WEBHOOK_URL" ]; then echo "Release webhook is not configured; router remains inactive."; exit 0; fi
+          curl --fail --silent --show-error --request POST "$WEBHOOK_URL" \
+            --header 'Content-Type: application/json' \
+            --header "Idempotency-Key: $IDEMPOTENCY_KEY" \
+            --data-binary "$EVENT_PAYLOAD"

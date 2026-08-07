@@ -1,0 +1,67 @@
+name: Release E2E
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-e2e-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+
+jobs:
+  release-e2e:
+    name: Release E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the exact pull-request SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the exact pull-request SHA
+        run: pnpm --filter @planned/web build
+
+      - name: Install Chromium
+        run: pnpm --filter @planned/web exec playwright install --with-deps chromium
+
+      - name: Run local release E2E against this build
+        working-directory: apps/web
+        run: |
+          set -euo pipefail
+          pnpm preview --host 127.0.0.1 > "$RUNNER_TEMP/release-preview.log" 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          E2E_BASE_URL=http://127.0.0.1:4173 pnpm e2e:release
+
+      - name: Upload release E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-e2e-${{ github.event.pull_request.head.sha }}
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            apps/web/test-results
+            ${{ runner.temp }}/release-preview.log
