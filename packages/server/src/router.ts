@@ -20,6 +20,7 @@ import {
   notificationListInputSchema,
   notificationPageSchema,
   notificationRowSchema,
+  plannedPlaceResultSchema,
 } from "@planned/shared";
 import { TRPCError } from "@trpc/server";
 import { requireTripAccess } from "./authorization";
@@ -188,9 +189,65 @@ export const appRouter = router({
     }),
     addPlace: protectedProcedure.input(createPlaceInput).mutation(async ({ ctx, input }) => {
       const access = await requireTripAccess(ctx, input.tripId, ["owner", "editor"]);
-      const [place] = await ctx.db.insert(places).values({ ...input, tripId: access.trip.id }).returning();
-      await ctx.broadcastChange?.(access.trip.id, "places", ctx.user.id);
-      return place;
+      const requestedDay = input.dayId
+        ? (await ctx.db.select().from(days)
+          .where(and(eq(days.id, input.dayId), eq(days.tripId, access.trip.id))).limit(1))[0]
+        : undefined;
+      if (input.dayId && !requestedDay) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Day does not belong to this trip" });
+      }
+
+      const existingDay = requestedDay ?? (await ctx.db.select().from(days)
+        .where(eq(days.tripId, access.trip.id)).orderBy(asc(days.dateIndex)).limit(1))[0];
+      const now = Date.now();
+      const day = existingDay ?? {
+        id: crypto.randomUUID(),
+        tripId: access.trip.id,
+        dateIndex: 0,
+        date: null,
+        createdAt: now,
+      };
+      const place = {
+        id: crypto.randomUUID(),
+        tripId: access.trip.id,
+        name: input.name,
+        category: null,
+        lat: input.lat,
+        lng: input.lng,
+        address: null,
+        provider: "custom" as const,
+        providerId: null,
+        createdAt: now,
+      };
+      const orderIndex = existingDay
+        ? (await ctx.db.select({ id: dayItems.id }).from(dayItems)
+          .where(eq(dayItems.dayId, day.id)).all()).length
+        : 0;
+      const item = {
+        id: crypto.randomUUID(),
+        dayId: day.id,
+        placeId: place.id,
+        orderIndex,
+        type: "place" as const,
+        note: null,
+        createdAt: now,
+      };
+
+      if (existingDay) {
+        await ctx.db.batch([
+          ctx.db.insert(places).values(place),
+          ctx.db.insert(dayItems).values(item),
+        ]);
+      } else {
+        await ctx.db.batch([
+          ctx.db.insert(days).values(day),
+          ctx.db.insert(places).values(place),
+          ctx.db.insert(dayItems).values(item),
+        ]);
+      }
+
+      await ctx.broadcastChange?.(access.trip.id, "plan", ctx.user.id);
+      return plannedPlaceResultSchema.parse({ day, place, item });
     }),
     addDay: protectedProcedure.input(tripIdInput).mutation(async ({ ctx, input }) => {
       const access = await requireTripAccess(ctx, input.id, ["owner", "editor"]);

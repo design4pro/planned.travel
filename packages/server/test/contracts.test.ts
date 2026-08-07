@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { createDayItemInputSchema, createExpenseInputSchema, createReservationInputSchema, createTripInputSchema, equalSplit, sortReservations, tripDtoSchema, tripPlanSchema, updateReservationSchema } from "@planned/shared";
+import { createDayItemInputSchema, createExpenseInputSchema, createPlaceInputSchema, createReservationInputSchema, createTripInputSchema, equalSplit, sortReservations, tripDtoSchema, tripPlanSchema, updateReservationSchema } from "@planned/shared";
 import { appRouter } from "../src/router";
 import { createContext } from "../src/context";
 
@@ -86,6 +86,19 @@ describe("tRPC contract", () => {
   it("requires a place or note when adding a day item", () => {
     expect(createDayItemInputSchema.safeParse({ tripId: "t1" }).success).toBe(false);
     expect(createDayItemInputSchema.safeParse({ tripId: "t1", note: "Dinner" }).success).toBe(true);
+  });
+
+  it("normalizes place names and rejects invalid coordinates", () => {
+    expect(createPlaceInputSchema.parse({ tripId: "t1", name: "  Alfama  ", lat: 38.7, lng: -9.1 }).name)
+      .toBe("Alfama");
+    expect(createPlaceInputSchema.safeParse({ tripId: "t1", name: " ", lat: 38.7, lng: -9.1 }).success)
+      .toBe(false);
+    expect(createPlaceInputSchema.safeParse({ tripId: "t1", name: "x".repeat(121), lat: 38.7, lng: -9.1 }).success)
+      .toBe(false);
+    expect(createPlaceInputSchema.safeParse({ tripId: "t1", name: "Alfama", lat: 91, lng: -9.1 }).success)
+      .toBe(false);
+    expect(createPlaceInputSchema.safeParse({ tripId: "t1", name: "Alfama", lat: 38.7, lng: -181 }).success)
+      .toBe(false);
   });
 
   it("rejects reservation dates when the end precedes the start", () => {
