@@ -19,13 +19,13 @@ env:
 jobs:
   review-remediation:
     name: Multica review remediation router
-    if: vars.MULTICA_AUTOMATION_ENABLED == 'true' && github.event.sender.type != 'Bot' && github.actor != 'github-actions[bot]' && ((github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested') || (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/review-remediation')))
+    if: vars.MULTICA_AUTOMATION_ENABLED == 'true' && github.event.sender.type != 'Bot' && github.actor != 'github-actions[bot]' && ((github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested') || (github.event_name == 'issue_comment' && github.event.issue.pull_request != null && github.event.comment.body == '/review-remediation'))
     runs-on: ubuntu-latest
     steps:
       - name: Send review-remediation signal
         env:
           WEBHOOK_URL: ${{ secrets.MULTICA_REVIEW_WEBHOOK_URL }}
-          IDEMPOTENCY_KEY: multica-review-${{ github.run_id }}-${{ github.run_attempt }}
+          IDEMPOTENCY_KEY: ${{ github.event_name == 'pull_request_review' && format('multica-review-review-{0}', github.event.review.id) || format('multica-review-comment-{0}', github.event.comment.id) }}
           EVENT_PAYLOAD: ${{ toJSON(github.event) }}
         run: |
           set -euo pipefail
@@ -43,7 +43,7 @@ jobs:
       - name: Send merge-eligibility signal
         env:
           WEBHOOK_URL: ${{ secrets.MULTICA_MERGE_WEBHOOK_URL }}
-          IDEMPOTENCY_KEY: multica-merge-${{ github.run_id }}-${{ github.run_attempt }}
+          IDEMPOTENCY_KEY: ${{ format('multica-merge-pull-request-{0}-{1}-{2}', github.event.pull_request.id, github.event.action, github.event.pull_request.head.sha) }}
           EVENT_PAYLOAD: ${{ toJSON(github.event) }}
         run: |
           set -euo pipefail
@@ -55,13 +55,13 @@ jobs:
 
   release-lifecycle:
     name: Multica release lifecycle router
-    if: vars.MULTICA_AUTOMATION_ENABLED == 'true' && github.event.sender.type != 'Bot' && github.actor != 'github-actions[bot]' && ((github.event_name == 'issue_comment' && (startsWith(github.event.comment.body, '/release-preparation') || startsWith(github.event.comment.body, '/release prepare'))) || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && (startsWith(github.event.pull_request.head.ref, 'release/') || startsWith(github.event.pull_request.head.ref, 'hotfix/'))))
+    if: vars.MULTICA_AUTOMATION_ENABLED == 'true' && github.event.sender.type != 'Bot' && github.actor != 'github-actions[bot]' && ((github.event_name == 'issue_comment' && github.event.issue.pull_request != null && github.event.comment.body == '/release-preparation') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && (startsWith(github.event.pull_request.head.ref, 'release/') || startsWith(github.event.pull_request.head.ref, 'hotfix/'))))
     runs-on: ubuntu-latest
     steps:
       - name: Send release lifecycle signal
         env:
           WEBHOOK_URL: ${{ secrets.MULTICA_RELEASE_WEBHOOK_URL }}
-          IDEMPOTENCY_KEY: multica-release-${{ github.run_id }}-${{ github.run_attempt }}
+          IDEMPOTENCY_KEY: ${{ github.event_name == 'issue_comment' && format('multica-release-comment-{0}', github.event.comment.id) || format('multica-release-pull-request-{0}-{1}', github.event.pull_request.id, github.event.pull_request.merge_commit_sha) }}
           EVENT_PAYLOAD: ${{ toJSON(github.event) }}
         run: |
           set -euo pipefail

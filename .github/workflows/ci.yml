@@ -26,7 +26,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Validate branch routing and ancestry
-        run: node scripts/check-git-flow-policy.mjs --head-ref "${{ github.head_ref }}" --base-ref "${{ github.base_ref }}" --head-sha "${{ github.event.pull_request.head.sha }}"
+        env:
+          GIT_FLOW_HEAD_REF: ${{ github.head_ref }}
+          GIT_FLOW_BASE_REF: ${{ github.base_ref }}
+          GIT_FLOW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GIT_FLOW_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          GIT_FLOW_BASE_REPOSITORY: ${{ github.repository }}
+        run: node scripts/check-git-flow-policy.mjs
 
   quality:
     name: Quality gates

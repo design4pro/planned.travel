@@ -4,8 +4,22 @@ const branchPatterns = ["feature/", "fix/", "chore/", "docs/", "refactor/", "tes
 const releasePattern = /^release\/v\d+\.\d+\.\d+$/;
 const hotfixPattern = /^hotfix\/.+/;
 
-export function evaluateGitFlowPolicy({ headRef, baseRef, developAncestor = true, mainAncestor = true }) {
-  if (headRef === "main" && baseRef === "develop") return { valid: true, reason: "main backmerge" };
+export function evaluateGitFlowPolicy({
+  headRef,
+  baseRef,
+  headRepository,
+  baseRepository,
+  developAncestor = true,
+  mainAncestor = true,
+}) {
+  if (headRef === "main" && baseRef === "develop") {
+    if (headRepository !== baseRepository) {
+      return { valid: false, reason: "main backmerges must come from the base repository" };
+    }
+    return mainAncestor
+      ? { valid: true, reason: "main backmerge" }
+      : { valid: false, reason: "main backmerges must contain the main branch" };
+  }
 
   if (branchPatterns.some((prefix) => headRef.startsWith(prefix))) {
     return baseRef === "develop"
@@ -44,17 +58,25 @@ function argument(name) {
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
+function input(name) {
+  return process.env[`GIT_FLOW_${name}`] ?? argument(`--${name.toLowerCase().replaceAll("_", "-")}`);
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const headRef = argument("--head-ref");
-  const baseRef = argument("--base-ref");
-  const headSha = argument("--head-sha");
-  if (!headRef || !baseRef || !headSha) {
-    console.error("Usage: node scripts/check-git-flow-policy.mjs --head-ref <branch> --base-ref <branch> --head-sha <sha>");
+  const headRef = input("HEAD_REF");
+  const baseRef = input("BASE_REF");
+  const headSha = input("HEAD_SHA");
+  const headRepository = input("HEAD_REPOSITORY");
+  const baseRepository = input("BASE_REPOSITORY");
+  if (!headRef || !baseRef || !headSha || !headRepository || !baseRepository) {
+    console.error("Usage: node scripts/check-git-flow-policy.mjs --head-ref <branch> --base-ref <branch> --head-sha <sha> --head-repository <owner/repo> --base-repository <owner/repo>");
     process.exitCode = 2;
   } else {
     const result = evaluateGitFlowPolicy({
       headRef,
       baseRef,
+      headRepository,
+      baseRepository,
       developAncestor: gitAncestor("origin/develop", headSha),
       mainAncestor: gitAncestor("origin/main", headSha),
     });
