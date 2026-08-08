@@ -75,6 +75,8 @@ const releaseE2e = await read(releaseE2ePath);
 for (const phrase of [
   "github.event.pull_request.head.sha",
   "E2E_BASE_URL=http://127.0.0.1:4173",
+  "wait-for-release-preview.mjs",
+  "--strictPort",
   "name: Release E2E",
 ]) {
   requireText(releaseE2ePath, releaseE2e, phrase);
