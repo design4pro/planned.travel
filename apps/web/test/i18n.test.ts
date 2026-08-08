@@ -36,11 +36,33 @@ const KEYS = [
   ...NOTIF_TYPES.map((t) => `notif.${t}`),
 ];
 
+const PLACE_FORM_KEYS = [
+  "planner.addPlace.title",
+  "planner.name",
+  "planner.lat",
+  "planner.lng",
+  "planner.error",
+  "planner.day",
+  "planner.firstDay",
+  "planner.addToItinerary",
+];
+
 describe("notification i18n completeness", () => {
   for (const lang of Object.keys(ui) as Array<keyof typeof ui>) {
     it(`${lang}: every notification key is present and non-empty`, () => {
       const catalog = ui[lang] as Record<string, string | undefined>;
       for (const key of KEYS) {
+        expect(catalog[key], `missing/empty: ${lang}.${key}`).toBeTruthy();
+      }
+    });
+  }
+});
+
+describe("place form i18n completeness", () => {
+  for (const lang of Object.keys(ui) as Array<keyof typeof ui>) {
+    it(`${lang}: every place form key is present and non-empty`, () => {
+      const catalog = ui[lang] as Record<string, string | undefined>;
+      for (const key of PLACE_FORM_KEYS) {
         expect(catalog[key], `missing/empty: ${lang}.${key}`).toBeTruthy();
       }
     });
