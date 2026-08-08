@@ -46,6 +46,7 @@ function TripDetailPage() {
       setName("");
       setLat("");
       setLng("");
+      setDayId("");
     } catch {
       // The mutation exposes the server error below while preserving the form values.
     }

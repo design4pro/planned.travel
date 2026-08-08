@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, lt } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, max } from "drizzle-orm";
 import { z } from "zod";
 import { dayItems, days, documents, expenseSplits, expenses, notifications, places, reservations, subscriptions, trips, tripMembers } from "@planned/db";
 import {
@@ -220,8 +220,8 @@ export const appRouter = router({
         createdAt: now,
       };
       const orderIndex = existingDay
-        ? (await ctx.db.select({ id: dayItems.id }).from(dayItems)
-          .where(eq(dayItems.dayId, day.id)).all()).length
+        ? ((await ctx.db.select({ maxOrderIndex: max(dayItems.orderIndex) }).from(dayItems)
+          .where(eq(dayItems.dayId, day.id)).limit(1))[0]?.maxOrderIndex ?? -1) + 1
         : 0;
       const item = {
         id: crypto.randomUUID(),

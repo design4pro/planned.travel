@@ -100,6 +100,26 @@ describe("trip place planning flow", () => {
     expect(created.item.dayId).toBe("day-2");
   });
 
+  it("uses the next order index after the current maximum", async () => {
+    await seedTrip("trip-1", "owner");
+    await binding.prepare(
+      "INSERT INTO day (id, trip_id, date_index, created_at) VALUES ('day-1', 'trip-1', 0, 1)",
+    ).run();
+    await binding.prepare(
+      "INSERT INTO day_item (id, day_id, order_index, type, created_at) VALUES ('item-1', 'day-1', 0, 'note', 1), ('item-3', 'day-1', 3, 'note', 1)",
+    ).run();
+
+    const created = await caller("owner").trips.addPlace({
+      tripId: "trip-1",
+      dayId: "day-1",
+      name: "Alfama",
+      lat: 38.711,
+      lng: -9.13,
+    });
+
+    expect(created.item.orderIndex).toBe(4);
+  });
+
   it.each([
     ["viewer", "viewer"],
     ["outsider", "outsider"],
