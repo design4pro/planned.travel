@@ -29,6 +29,22 @@ exact SHA and tests a local preview, so it does not deploy or access staging or
 production resources. Production deployment, tag creation, and branch rulesets
 remain separately authorized operations.
 
+## Workers Builds routing
+
+Workers Builds is restricted to the environment's protected integration branch:
+
+- `planned-travel-web` builds only `main` and deploys with
+  `pnpm --filter @planned/web run deploy`.
+- `planned-travel-web-staging` builds only `develop` with
+  `pnpm --filter @planned/web build:staging` and deploys with
+  `pnpm --filter @planned/web run deploy:staging`.
+
+Feature branches do not have automatic Workers Builds triggers. This keeps
+preview commits from uploading versions or mutating either Worker. The staging
+deploy script selects the generated staging Wrangler configuration and the
+`planned-travel-web-staging` environment; do not replace it with a bare
+`wrangler versions upload` command.
+
 The Multica event router is disabled unless the repository variable
 `MULTICA_AUTOMATION_ENABLED` is exactly `true` and the channel-specific secret
 is present. Required secret names are `MULTICA_REVIEW_WEBHOOK_URL`,
