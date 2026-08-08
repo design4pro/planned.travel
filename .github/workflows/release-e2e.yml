@@ -46,13 +46,22 @@ jobs:
         working-directory: apps/web
         run: |
           set -euo pipefail
-          pnpm preview --host 127.0.0.1 > "$RUNNER_TEMP/release-preview.log" 2>&1 &
+          pnpm preview --host 127.0.0.1 --port 4173 --strictPort > "$RUNNER_TEMP/release-preview.log" 2>&1 &
           preview_pid=$!
           trap 'kill "$preview_pid"' EXIT
+          preview_ready=false
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:4173/ >/dev/null; then break; fi
+            if curl --fail --silent http://127.0.0.1:4173/ >/dev/null; then
+              preview_ready=true
+              break
+            fi
             sleep 1
           done
+          if [ "$preview_ready" != true ]; then
+            echo "Release preview did not start on port 4173."
+            cat "$RUNNER_TEMP/release-preview.log"
+            exit 1
+          fi
           E2E_BASE_URL=http://127.0.0.1:4173 pnpm e2e:release
 
       - name: Upload release E2E evidence

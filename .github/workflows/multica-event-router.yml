@@ -13,9 +13,6 @@ on:
 permissions:
   contents: read
 
-env:
-  AUTOMATION_ENABLED: ${{ vars.MULTICA_AUTOMATION_ENABLED }}
-
 jobs:
   review-remediation:
     name: Multica review remediation router

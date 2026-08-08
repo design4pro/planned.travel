@@ -25,6 +25,9 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
+      - name: Fetch protected branch refs for ancestry validation
+        run: git fetch --no-tags origin main develop
+
       - name: Validate branch routing and ancestry
         env:
           GIT_FLOW_HEAD_REF: ${{ github.head_ref }}
