@@ -187,6 +187,8 @@ This file is the **source of truth** for the design system. Implementation mirro
 
 The component layer is **shadcn/ui**: local, composable React components in `apps/web/src/components/ui`, built on Tailwind v4 and Radix primitives where appropriate. New UI must use these components and the semantic tokens defined below. Native HTML controls are acceptable when no shadcn component exists yet.
 
+The trip detail place form is the first itinerary-writing surface: editors choose a day (when days exist), enter a name and coordinates, and submit one primary "Add to itinerary" action. Failed submissions retain field values and show an inline alert; successful submissions clear the fields only after the refreshed itinerary is available.
+
 Regenerate Tailwind v4 tokens from this file:
 ```bash
 npx @google/design.md export --format css-tailwind DESIGN.md

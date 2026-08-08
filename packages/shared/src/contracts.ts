@@ -59,10 +59,18 @@ export type TripPlan = z.infer<typeof tripPlanSchema>;
 
 export const createPlaceInputSchema = z.object({
   tripId: z.string().min(1),
+  dayId: z.string().min(1).optional(),
   name: z.string().trim().min(1).max(120),
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
 });
+
+export const plannedPlaceResultSchema = z.object({
+  day: tripDaySchema,
+  place: tripPlaceSchema,
+  item: tripItemSchema,
+});
+export type PlannedPlaceResult = z.infer<typeof plannedPlaceResultSchema>;
 
 export const createDayItemInputSchema = z.object({
   tripId: z.string().min(1),
