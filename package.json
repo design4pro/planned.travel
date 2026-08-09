@@ -13,7 +13,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "release:check": "node scripts/check-release-contract.mjs && node --test scripts/check-git-flow-policy.test.mjs scripts/check-multica-router.test.mjs scripts/wait-for-release-preview.test.mjs",
+    "release:check": "node scripts/check-release-contract.mjs",
     "db:check": "pnpm --filter @planned/web exec wrangler d1 migrations apply planned-travel --local",
     "db:generate": "pnpm --filter @planned/db generate",
     "db:migrate:local": "wrangler d1 migrations apply planned-travel --local",

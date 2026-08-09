@@ -4,31 +4,6 @@ This runbook describes the non-destructive production cutover for the web
 Worker. It is intentionally separate from feature work: a release must be
 safe to abort even when a dependent migration or service is unavailable.
 
-## Git Flow and release contract
-
-Use `feature/*`, `fix/*`, `chore/*`, `docs/*`, `refactor/*`, and `test/*`
-branches for work targeting `develop`. A `release/vX.Y.Z` branch must be cut
-from `develop` and target `main`; a `hotfix/*` branch must be cut from `main`
-and target `main`. Direct development-branch pull requests to `main` fail the
-Git Flow policy check. After a release or hotfix reaches `main`, merge `main`
-back into `develop`.
-
-Pull requests require review by a separate person from the author. The allowed
-merge policy is squash merge for feature, fix, chore, docs, refactor, and test
-branches; release and hotfix pull requests use a merge commit; rebase merges
-are not part of the release process. Do not merge a release until the `Release E2E` check has passed against the exact
-pull-request SHA and the release owner has approved the release preparation.
-These review, merge-method, release-approval, tag, and backmerge requirements
-are human/repository governance steps: this pull request's policy script checks
-branch routing and ancestry, while GitHub rulesets and required-approval
-enforcement remain separately authorized and are not enabled by this change.
-
-Tags use the immutable SemVer format `vX.Y.Z` and are created only after the
-release pull request is merged. The repository-side release E2E builds the
-exact SHA and tests a local preview, so it does not deploy or access staging or
-production resources. Production deployment, tag creation, and branch rulesets
-remain separately authorized operations.
-
 ## Workers Builds routing
 
 Workers Builds is restricted to the environment's protected integration branch:
@@ -44,15 +19,6 @@ preview commits from uploading versions or mutating either Worker. The staging
 deploy script selects the generated staging Wrangler configuration and the
 `planned-travel-web-staging` environment; do not replace it with a bare
 `wrangler versions upload` command.
-
-The Multica event router is disabled unless the repository variable
-`MULTICA_AUTOMATION_ENABLED` is exactly `true` and the channel-specific secret
-is present. Required secret names are `MULTICA_REVIEW_WEBHOOK_URL`,
-`MULTICA_MERGE_WEBHOOK_URL`, and `MULTICA_RELEASE_WEBHOOK_URL`. Activation and
-secret provisioning are intentionally outside this pull request. The router
-only forwards the defined review-remediation, merge-eligibility, and release
-lifecycle signals; it does not grant approval, merge a pull request, create a
-tag, perform the mandatory backmerge, or deploy production.
 
 ## Before cutover
 

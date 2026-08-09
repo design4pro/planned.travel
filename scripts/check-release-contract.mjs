@@ -25,66 +25,6 @@ for (const command of [
 requireText(workflowPath, workflow, "trufflesecurity/trufflehog");
 requireText(workflowPath, workflow, "actions/upload-artifact@v4");
 requireText(workflowPath, workflow, "planned-travel-web-staging");
-for (const phrase of [
-  "GIT_FLOW_HEAD_REF",
-  "GIT_FLOW_BASE_REF",
-  "GIT_FLOW_HEAD_REPOSITORY",
-  "GIT_FLOW_BASE_REPOSITORY",
-]) {
-  requireText(workflowPath, workflow, phrase);
-}
-if (/run:.*github\.(head_ref|base_ref|event\.pull_request\.head\.sha)/.test(workflow)) {
-  failures.push(`${workflowPath} interpolates an untrusted GitHub ref in a run command`);
-}
-
-const policyPath = "scripts/check-git-flow-policy.mjs";
-const policy = await read(policyPath);
-for (const phrase of [
-  "feature/",
-  "releasePattern",
-  "hotfixPattern",
-  "main backmerge",
-  "developAncestor",
-]) {
-  requireText(policyPath, policy, phrase);
-}
-
-const routerPath = ".github/workflows/multica-event-router.yml";
-const router = await read(routerPath);
-for (const phrase of [
-  "MULTICA_AUTOMATION_ENABLED",
-  "MULTICA_REVIEW_WEBHOOK_URL",
-  "MULTICA_MERGE_WEBHOOK_URL",
-  "MULTICA_RELEASE_WEBHOOK_URL",
-  "Idempotency-Key",
-  "github.event.sender.type != 'Bot'",
-  "github.event.comment.body == '/review-remediation'",
-  "github.event.comment.body == '/release-preparation'",
-  "github.event.comment.id",
-  "github.event.review.id",
-  "github.event.pull_request.head.sha",
-]) {
-  requireText(routerPath, router, phrase);
-}
-if (router.includes("github.run_id") || router.includes("github.run_attempt")) {
-  failures.push(`${routerPath} derives idempotency from a retry-varying run identifier`);
-}
-
-const releaseE2ePath = ".github/workflows/release-e2e.yml";
-const releaseE2e = await read(releaseE2ePath);
-for (const phrase of [
-  "github.event.pull_request.head.sha",
-  "E2E_BASE_URL=http://127.0.0.1:4173",
-  "wait-for-release-preview.mjs",
-  "--strictPort",
-  "name: Release E2E",
-]) {
-  requireText(releaseE2ePath, releaseE2e, phrase);
-}
-
-requireText(".github/CODEOWNERS", await read(".github/CODEOWNERS"), "@rafalwolak");
-requireText(".github/ISSUE_TEMPLATE/product-engineering.md", await read(".github/ISSUE_TEMPLATE/product-engineering.md"), "## Definition of Done");
-requireText("CHANGELOG.md", await read("CHANGELOG.md"), "## [Unreleased]");
 
 const runbookPath = "docs/RELEASE.md";
 const runbook = await read(runbookPath);

@@ -10,11 +10,11 @@
 
 ### In Scope
 
-- 
+-
 
 ### Out of Scope
 
-- 
+-
 
 ## Repository and Areas Affected
 
@@ -25,9 +25,9 @@
 
 ## Acceptance Criteria
 
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
+- [ ]
 
 ## Definition of Done
 
@@ -82,19 +82,19 @@
 
 <!-- List technical, product, external, or team dependencies. -->
 
-- 
+-
 
 ## Risks and Limitations
 
 <!-- Record known risks, trade-offs, assumptions, or deferred work. -->
 
-- 
+-
 
 ## Implementation Notes
 
 <!-- Record important technical decisions and alternatives considered. -->
 
-- 
+-
 
 ## Squad Coordination Notes
 
@@ -151,11 +151,11 @@
 
 ### Known Limitations
 
-- None / 
+- None /
 
 ### Follow-up Work
 
-- None / 
+- None /
 
 ### Squad Leader Decision
 

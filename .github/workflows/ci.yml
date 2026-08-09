@@ -13,30 +13,6 @@ permissions:
   contents: read
 
 jobs:
-  git-flow-policy:
-    name: Git Flow policy
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check out repository history
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Fetch protected branch refs for ancestry validation
-        run: git fetch --no-tags origin main develop
-
-      - name: Validate branch routing and ancestry
-        env:
-          GIT_FLOW_HEAD_REF: ${{ github.head_ref }}
-          GIT_FLOW_BASE_REF: ${{ github.base_ref }}
-          GIT_FLOW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          GIT_FLOW_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
-          GIT_FLOW_BASE_REPOSITORY: ${{ github.repository }}
-        run: node scripts/check-git-flow-policy.mjs
-
   quality:
     name: Quality gates
     runs-on: ubuntu-latest

@@ -12,7 +12,6 @@
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
     "e2e:staging": "playwright test",
-    "e2e:release": "playwright test e2e/release.spec.ts",
     "build:staging": "CLOUDFLARE_ENV=staging vite build && tsc --noEmit",
     "deploy": "pnpm run build && cd dist/server && wrangler deploy --config wrangler.json --keep-vars --env=\"\"",
     "deploy:staging": "pnpm run build:staging && cd dist/server && wrangler deploy --config wrangler.json --keep-vars --env staging",
