@@ -73,6 +73,21 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05)
 }
 
+/**
+ * CIE L*, 0…100.
+ *
+ * The WCAG ratio is the right measure in the middle of the scale and a poor one
+ * at the ends: its +0.05 term swamps the difference between two near-blacks, so
+ * a dark hairline on a dark sea can score 1.00:1 while being perfectly visible —
+ * or perfectly invisible — and the number will not tell you which. L* is
+ * perceptually even, so it is what the near-black pairings are judged on.
+ */
+function lstar(hex: string): number {
+  const y = luminance(hex)
+  const f = y > (6 / 29) ** 3 ? Math.cbrt(y) : (y * (29 / 6) ** 2) / 3 + 4 / 29
+  return 116 * f - 16
+}
+
 /** Saturation as the plain RGB span — enough to tell a tint from a neutral. */
 function saturation(hex: string): number {
   const { r, g, b } = channels(hex)
@@ -200,6 +215,15 @@ function declaredValue(slice: string, token: string): string | undefined {
   return match === null ? undefined : match[1].trim()
 }
 
+/** `src/styles/styles.css`, read as text for the same reason. */
+function stylesheet(): string {
+  const here = dirname(fileURLToPath(import.meta.url))
+  return readFileSync(
+    join(here, '..', '..', '..', 'styles', 'styles.css'),
+    'utf8',
+  )
+}
+
 /** `visitedEdge` → `--color-country-visited-edge`. */
 function tokenFor(key: string): string {
   return `--color-country-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`
@@ -261,6 +285,22 @@ describe('the country group', () => {
     }
   })
 
+  it('stands a visited country at least 3:1 off the sea as well', () => {
+    // Land is not the only ground a country borders. Iceland, New Zealand, Fiji
+    // and Madagascar touch nothing but water, so a ramp checked against land
+    // alone can leave its faintest step illegible for exactly the countries a
+    // travel map is most often asked about.
+    for (const theme of THEMES) {
+      const { country, water } = MAP_PALETTES[theme]
+      for (const key of VISITED_TONES) {
+        expect(
+          contrast(country[key], water),
+          `${theme}.country.${key} vs water`,
+        ).toBeGreaterThanOrEqual(3)
+      }
+    }
+  })
+
   it('keeps the visited hairline distinguishable from every fill it borders', () => {
     for (const theme of THEMES) {
       const country = MAP_PALETTES[theme].country
@@ -269,6 +309,40 @@ describe('the country group', () => {
           contrast(country.visitedEdge, country[key]),
           `${theme}.country.visitedEdge vs ${key}`,
         ).toBeGreaterThanOrEqual(3)
+      }
+    }
+  })
+
+  it('keeps the visited hairline off the sea it runs along', () => {
+    // The dark hairline was once the same luminance as the ocean to three
+    // decimal places — 1.00:1 — so a coastal country had no outline at the
+    // coast and only its inland borders showed the seam. Judged in L*, because
+    // down there the ratio says nothing.
+    for (const theme of THEMES) {
+      const { country, water } = MAP_PALETTES[theme]
+      expect(
+        Math.abs(lstar(country.visitedEdge) - lstar(water)),
+        `${theme}.country.visitedEdge vs water, in L*`,
+      ).toBeGreaterThanOrEqual(6)
+    }
+  })
+
+  it('spaces the ramp evenly, the way the token file says it does', () => {
+    // tokens.css states 6.1–6.4 L* between adjacent steps in both themes, and
+    // that sentence is a measurement rather than a flourish.
+    for (const theme of THEMES) {
+      const country = MAP_PALETTES[theme].country
+      const steps = VISITED_TONES.map((key) => lstar(country[key]))
+      for (let i = 1; i < steps.length; i += 1) {
+        const gap = Math.abs(steps[i] - steps[i - 1])
+        expect(
+          gap,
+          `${theme} ${VISITED_TONES[i - 1]} → ${VISITED_TONES[i]}`,
+        ).toBeGreaterThanOrEqual(6.1)
+        expect(
+          gap,
+          `${theme} ${VISITED_TONES[i - 1]} → ${VISITED_TONES[i]}`,
+        ).toBeLessThanOrEqual(6.4)
       }
     }
   })
@@ -368,6 +442,26 @@ describe('the tokens.css mirror', () => {
     }
   })
 
+  it('exports the country ramp to Tailwind, so chrome need not use raw var()', () => {
+    // A legend swatch, a hovered list row and a selected country's chip are
+    // ordinary DOM, not MapLibre paint. Without the `@theme inline` re-export
+    // they would each have to write `bg-(--color-country-visited)`, and Tailwind
+    // emits nothing at all for a mistyped one — a silent miss rather than a
+    // build error.
+    const css = stylesheet()
+    const theme = css.slice(
+      css.indexOf('@theme inline {'),
+      css.indexOf('@utility duration-fast'),
+    )
+    expect(theme.length, '@theme inline block').toBeGreaterThan(0)
+    for (const key of COUNTRY_KEYS) {
+      const token = tokenFor(key)
+      expect(declaredValue(theme, token), `${token} in @theme inline`).toBe(
+        `var(${token})`,
+      )
+    }
+  })
+
   it('gives map chrome a stacking order of its own, under the app nav', () => {
     // A stacking order has no light and dark value, so it lives with the other
     // layout tokens rather than being declared three times for the look of it.
@@ -390,5 +484,14 @@ describe('the tokens.css mirror', () => {
       Number(overlay),
       'map chrome must sit under the app nav',
     ).toBeLessThan(Number(nav))
+  })
+
+  it('ships `z-map-overlay` as a utility, like every other z token', () => {
+    const css = stylesheet()
+    for (const name of ['map-overlay', 'nav', 'dropdown', 'overlay', 'modal']) {
+      expect(css, `@utility z-${name}`).toContain(
+        `@utility z-${name} {\n  z-index: var(--z-${name});\n}`,
+      )
+    }
   })
 })

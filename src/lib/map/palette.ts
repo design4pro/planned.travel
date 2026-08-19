@@ -91,11 +91,26 @@ export interface BoundaryPalette {
  * (`visitedDistant` → `visited` → `visitedRecent`) and two further steps
  * carrying attention (`visitedHover`, `visitedSelected`). A colour picked per
  * country by index would be decoration wearing the costume of data, and two
- * neighbours would collide for no reason at all.
+ * neighbours would collide for no reason at all. All five steps are evenly
+ * spaced — adjacent pairs sit 6.1–6.4 CIE L* apart in both themes.
  *
- * `visitedEdge` is the hairline between two adjacent visited countries: the page
- * knocked through the fill in light, the same page showing as a groove in dark.
+ * A visited country has two neighbours, not one. It borders unvisited land, and
+ * at every coast it borders {@link MapPalette.water} — which for an island such
+ * as Iceland, New Zealand, Fiji or Madagascar is the *only* thing it borders.
+ * Both pairings clear the 3:1 WCAG 1.4.11 floor for a graphical object, and the
+ * water pairing is the tighter of the two: it is what fixes the faint end of the
+ * ramp in light.
+ *
+ * `visitedEdge` is the hairline drawn around a visited country, and it separates
+ * two adjacent visited fills: the page knocked back through the fill in light,
+ * a mid-pine groove in dark.
+ *
  * `land*` is the unvisited world, which is the product's inset surface.
+ *
+ * Lightness on its own is not decodable into a date — adjacent recency steps are
+ * 1.2–1.3:1 apart — so any surface painted with this ramp has to ship a legend
+ * or per-country labels to satisfy WCAG 1.4.1. The colour is the shape of the
+ * data, never the only statement of it.
  *
  * Mirrors the `--color-country-*` group in `src/styles/tokens.css` value for
  * value; that file is the source of truth.
@@ -216,19 +231,23 @@ const LIGHT: MapPalette = {
     country: '#bcb6a6',
     region: '#d3ccbe',
   },
-  // Contrast against `land`, the measurement that decides whether the map reads:
-  // distant 3.47:1 · base 4.47:1 · recent 5.95:1 · hover 7.92:1 · selected
-  // 10.86:1. `visitedEdge` clears 3.65:1 against the faintest fill.
+  // The two measurements that decide whether the atlas reads. Against `land`:
+  // distant 3.76:1 · base 4.71:1 · recent 5.95:1 · hover 7.47:1 · selected
+  // 9.37:1. Against `water` above, the ground an island country borders and
+  // the tighter of the two: distant 3.23:1 · base 4.04:1 · recent 5.11:1 ·
+  // hover 6.42:1 · selected 8.04:1. `visitedEdge` clears 3.95:1 against the
+  // faintest fill; it is a knockout of the page, so on water it reads 1.22:1
+  // and stands down — at a coast the fill is already over 3:1 on the sea.
   country: {
     land: '#edebe6', // --color-country-land (= --color-surface-inset)
     landEdge: '#c8c1af', // --color-country-land-edge
     landHover: '#ded8c8', // --color-country-land-hover
-    visited: '#357669', // --color-country-visited
+    visited: '#2b7365', // --color-country-visited
     visitedRecent: '#256256', // --color-country-visited-recent (= --color-brand)
-    visitedDistant: '#48887a', // --color-country-visited-distant
+    visitedDistant: '#328474', // --color-country-visited-distant
     visitedEdge: '#e9f3ef', // --color-country-visited-edge
-    visitedHover: '#1c4e45', // --color-country-visited-hover
-    visitedSelected: '#0b3830', // --color-country-visited-selected
+    visitedHover: '#1f5248', // --color-country-visited-hover
+    visitedSelected: '#19423a', // --color-country-visited-selected
   },
   label: {
     country: '#403e36', // --color-ink-2
@@ -316,19 +335,27 @@ const DARK: MapPalette = {
     region: '#4a473f',
   },
   // The ramp runs the other way here: on a charcoal map recency reads as more
-  // light, not less, and the hairline between two visited countries becomes a
-  // groove rather than a knockout. Against `land`: distant 3.88:1 · base 4.89:1
-  // · recent 6.32:1 · hover 7.64:1 · selected 9.23:1.
+  // light, not less. Against `land`: distant 4.20:1 · base 5.18:1 · recent
+  // 6.32:1 · hover 7.64:1 · selected 9.16:1. Against `water`: distant 5.14:1 ·
+  // base 6.34:1 · recent 7.74:1 · hover 9.35:1 · selected 11.22:1.
+  //
+  // `visitedEdge` is a groove rather than a knockout down here, and it is a mid
+  // pine rather than the near-black it began as. Near-black measured 1.00:1 on
+  // this water — identical luminance — so the outline of a coastal country
+  // simply was not drawn where it mattered most. At L* 26 it holds 3.10:1
+  // against the faintest fill it separates while sitting 18.1 L* above the
+  // water (1.66:1) and 9.5 L* above unvisited land (1.35:1). As with the
+  // coastline above, L* is the honest measure at this end of the scale.
   country: {
     land: '#292926', // --color-country-land (= --color-surface-inset, dark)
     landEdge: '#454540', // --color-country-land-edge
     landHover: '#35352f', // --color-country-land-hover
-    visited: '#51a48c', // --color-country-visited
+    visited: '#54a990', // --color-country-visited
     visitedRecent: '#5fbba0', // --color-country-visited-recent (= --color-brand)
-    visitedDistant: '#3d927a', // --color-country-visited-distant
-    visitedEdge: '#0e1a17', // --color-country-visited-edge
+    visitedDistant: '#449880', // --color-country-visited-distant
+    visitedEdge: '#25433d', // --color-country-visited-edge
     visitedHover: '#79cbb2', // --color-country-visited-hover
-    visitedSelected: '#93dcc5', // --color-country-visited-selected
+    visitedSelected: '#93dbc6', // --color-country-visited-selected
   },
   label: {
     country: '#d8d6d0', // --color-ink-2

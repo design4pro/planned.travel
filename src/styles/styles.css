@@ -80,6 +80,21 @@
   --color-glass: var(--color-glass);
   --color-glass-edge: var(--color-glass-edge);
 
+  /* The atlas country ramp. MapLibre paints the polygons from the literal
+     mirror in `src/lib/map/palette.ts`, but the chrome around them — legend
+     swatches, the hovered list row, the selected country's chip — is ordinary
+     DOM and must be able to say `bg-country-visited` or
+     `border-country-visited-edge` rather than reach for an arbitrary value. */
+  --color-country-land: var(--color-country-land);
+  --color-country-land-edge: var(--color-country-land-edge);
+  --color-country-land-hover: var(--color-country-land-hover);
+  --color-country-visited: var(--color-country-visited);
+  --color-country-visited-recent: var(--color-country-visited-recent);
+  --color-country-visited-distant: var(--color-country-visited-distant);
+  --color-country-visited-edge: var(--color-country-visited-edge);
+  --color-country-visited-hover: var(--color-country-visited-hover);
+  --color-country-visited-selected: var(--color-country-visited-selected);
+
   /* ------------------------------------------------------------------ radius */
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
@@ -188,6 +203,10 @@
   transition-duration: var(--duration-slow);
 }
 
+/* Chrome floating over a full-bleed map — below the app nav, above the canvas. */
+@utility z-map-overlay {
+  z-index: var(--z-map-overlay);
+}
 @utility z-nav {
   z-index: var(--z-nav);
 }

@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import {
   UNMAPPED_COUNTRY_CODES,
+  UNMAPPED_TERRITORY_CODES,
   countryBounds,
   countryFeatures,
+  hasCountryOutline,
+  worldLandFeatures,
 } from '../countries'
 import { worldOutlines } from '../world'
 
@@ -22,6 +25,9 @@ type GeoJsonSourceData = NonNullable<
     { type: 'geojson' }
   >['data']
 >
+
+/** Every officially-assigned ISO2 code the bundled geometry cannot fill. */
+const UNMAPPED_CODES = [...UNMAPPED_COUNTRY_CODES, ...UNMAPPED_TERRITORY_CODES]
 
 describe('countryFeatures', () => {
   it('emits exactly one identified feature per bundled country', () => {
@@ -100,6 +106,49 @@ describe('countryFeatures', () => {
   })
 })
 
+describe('worldLandFeatures', () => {
+  it('merges every country into one anonymous feature', () => {
+    const { type, features } = worldLandFeatures()
+
+    expect(type).toBe('FeatureCollection')
+    expect(features.length).toBe(1)
+    expect(features[0].geometry.type).toBe('MultiPolygon')
+    expect(Object.keys(features[0].properties)).toEqual([])
+  })
+
+  it('holds one polygon per drawable ring', () => {
+    const expected = countryFeatures().features.reduce(
+      (total, feature) => total + feature.geometry.coordinates.length,
+      0,
+    )
+    expect(worldLandFeatures().features[0].geometry.coordinates.length).toBe(
+      expected,
+    )
+  })
+
+  it('shares its rings with the per-country view instead of copying them', () => {
+    // The whole point of the second view: 285 references, not another 8,937
+    // coordinate pairs retained for the life of the tab.
+    const polygons = new Set(
+      worldLandFeatures().features[0].geometry.coordinates,
+    )
+    for (const feature of countryFeatures().features) {
+      for (const polygon of feature.geometry.coordinates) {
+        expect(polygons.has(polygon), feature.properties.code).toBe(true)
+      }
+    }
+  })
+
+  it('builds once and hands back the same instance', () => {
+    expect(worldLandFeatures()).toBe(worldLandFeatures())
+  })
+
+  it('is a payload MapLibre will take as a geojson source', () => {
+    const data: GeoJsonSourceData = worldLandFeatures()
+    expect(data).toBe(worldLandFeatures())
+  })
+})
+
 describe('countryBounds', () => {
   it('frames an ordinary country tightly', () => {
     const bounds = countryBounds('JP')
@@ -157,30 +206,68 @@ describe('countryBounds', () => {
     expect(countryBounds('jp')).toBe(countryBounds('JP'))
   })
 
+  it('resolves every bundled code and nothing else', () => {
+    for (const code of worldOutlines().keys()) {
+      expect(countryBounds(code), code).not.toBeNull()
+    }
+    for (const code of UNMAPPED_CODES) {
+      expect(countryBounds(code), code).toBeNull()
+    }
+  })
+
   it('is null for a code the geometry does not carry', () => {
     expect(countryBounds('ZZ')).toBeNull()
     expect(countryBounds('SG')).toBeNull()
   })
+
+  it('answers hostile input without remembering it', () => {
+    // The table is built from `worldOutlines()`, never from the argument, so a
+    // search box typing into this cannot grow anything.
+    const before = countryBounds('JP')
+    for (let index = 0; index < 500; index += 1) {
+      expect(countryBounds(`unknown-${index}`)).toBeNull()
+    }
+    expect(countryBounds('')).toBeNull()
+    expect(countryBounds('JP')).toBe(before)
+  })
 })
 
-describe('UNMAPPED_COUNTRY_CODES', () => {
-  it('names only codes the bundled geometry really lacks', () => {
+describe('hasCountryOutline', () => {
+  it('agrees with what the features actually carry', () => {
+    for (const feature of countryFeatures().features) {
+      expect(hasCountryOutline(feature.properties.code)).toBe(true)
+    }
+    for (const code of UNMAPPED_CODES) {
+      expect(hasCountryOutline(code), code).toBe(false)
+    }
+  })
+
+  it('is case insensitive and safe for any string', () => {
+    expect(hasCountryOutline('jp')).toBe(true)
+    expect(hasCountryOutline('sg')).toBe(false)
+    expect(hasCountryOutline('')).toBe(false)
+    expect(hasCountryOutline('not a code')).toBe(false)
+  })
+})
+
+describe('unmapped code lists', () => {
+  it('name only codes the bundled geometry really lacks', () => {
     const outlines = worldOutlines()
-    for (const code of UNMAPPED_COUNTRY_CODES) {
+    for (const code of UNMAPPED_CODES) {
       expect(code).toMatch(/^[A-Z]{2}$/)
       expect(outlines.has(code), code).toBe(false)
     }
   })
 
-  it('is a sorted set with no duplicates', () => {
-    const sorted = [...UNMAPPED_COUNTRY_CODES].sort()
-    expect(UNMAPPED_COUNTRY_CODES).toEqual(sorted)
-    expect(new Set(UNMAPPED_COUNTRY_CODES).size).toBe(
-      UNMAPPED_COUNTRY_CODES.length,
-    )
+  it('are sorted sets with no duplicates and no overlap', () => {
+    for (const list of [UNMAPPED_COUNTRY_CODES, UNMAPPED_TERRITORY_CODES]) {
+      expect([...list]).toEqual([...list].sort())
+      expect(new Set(list).size).toBe(list.length)
+    }
+    expect(new Set(UNMAPPED_CODES).size).toBe(UNMAPPED_CODES.length)
   })
 
-  it('covers the states a traveller can plausibly visit and we cannot draw', () => {
+  it('cover the states a traveller can plausibly visit and we cannot draw', () => {
     for (const code of ['SG', 'MT', 'MV', 'MC', 'BH', 'MU']) {
       expect(UNMAPPED_COUNTRY_CODES).toContain(code)
     }
@@ -188,5 +275,26 @@ describe('UNMAPPED_COUNTRY_CODES', () => {
     // counts and the 166 of them Natural Earth's 1:110m cut keeps. Growing it
     // silently would mean a visited country vanished from the map instead.
     expect(UNMAPPED_COUNTRY_CODES.length).toBe(29)
+  })
+
+  it('cover the territories a traveller can plausibly visit too', () => {
+    // The gap the sovereign list alone leaves open: ordinary holidays.
+    for (const code of ['HK', 'GP', 'RE', 'KY', 'GU', 'FO', 'VI', 'MO']) {
+      expect(UNMAPPED_TERRITORY_CODES).toContain(code)
+    }
+    // The territories the 1:110m cut *does* keep must not be listed as missing.
+    for (const code of ['GL', 'PR', 'NC', 'FK', 'TF', 'EH', 'PS']) {
+      expect(UNMAPPED_TERRITORY_CODES).not.toContain(code)
+      expect(hasCountryOutline(code), code).toBe(true)
+    }
+    expect(UNMAPPED_TERRITORY_CODES.length).toBe(46)
+  })
+
+  it('account for every officially-assigned ISO2 code', () => {
+    // 249 officially-assigned alpha-2 codes; the bundled geometry draws 174 of
+    // them plus the user-assigned XK for Kosovo. If either list drifts, this is
+    // the sum that stops adding up.
+    const drawn = [...worldOutlines().keys()].filter((code) => code !== 'XK')
+    expect(drawn.length + UNMAPPED_CODES.length).toBe(249)
   })
 })

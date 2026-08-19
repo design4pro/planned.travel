@@ -109,29 +109,45 @@
      sheet every card in the product is inset into and the map belongs to the
      page rather than sitting on top of it.
 
-     Visited is *one* hue — the brand pine, OKLCH hue 178 — and the only thing
-     that moves along it is lightness, keyed to when you were last there:
-     `-distant` (longest ago) to the base to `-recent`, which is `--color-brand`
-     itself. A colour per country would be decoration pretending to be data, and
-     neighbours would collide at random. Interaction deepens the same pine one
-     step (`-hover`) and then another (`-selected`), so attention always reads as
-     "more of this country", never as "a different one". Adjacent steps sit
-     6–9 CIE L* apart in both themes, which is a difference you can see without
-     counting.
+     Visited is *one* hue — the brand pine, HSL 168° — and the only thing that
+     moves along it is lightness, keyed to when you were last there: `-distant`
+     (longest ago) through the dateless base to `-recent`, which is
+     `--color-brand` itself. A colour per country would be decoration pretending
+     to be data, and neighbours would collide at random. Interaction deepens the
+     same pine one step (`-hover`) and then another (`-selected`), so attention
+     always reads as "more of this country", never as "a different one". All five
+     steps are evenly spaced: adjacent pairs sit 6.1–6.4 CIE L* apart here and in
+     the dark block.
 
-     Measured against `--color-country-land`: distant 3.47:1, base 4.47:1,
-     recent 5.95:1, hover 7.92:1, selected 10.86:1. `-visited-edge` is the
-     hairline between two adjacent visited countries — the page knocked through
-     the fill — and holds 3.65:1 against the faintest of them. */
+     A visited country borders two grounds, and the ramp has to clear the 3:1
+     WCAG 1.4.11 floor for a graphical object against both. Against
+     `--color-country-land`: distant 3.76:1, base 4.71:1, recent 5.95:1, hover
+     7.47:1, selected 9.37:1. Against the basemap water it meets at every coast
+     (`MapPalette.water`, #ccdfda) — the only ground an island country such as
+     Iceland or New Zealand ever touches: distant 3.23:1, base 4.04:1, recent
+     5.11:1, hover 6.42:1, selected 8.04:1. Water is the binding constraint and
+     it is what fixes the faint end of the ramp.
+
+     `-visited-edge` is the hairline drawn around a visited country: here the
+     page knocked back through the fill, which is what separates two adjacent
+     visited countries (3.95:1 against the faintest of them). It is deliberately
+     *not* asked to carry a coastline — near-white on #ccdfda water is 1.22:1,
+     7.7 L* apart — because at a coast the fill already clears 3:1 on the water
+     by itself and a second hairline there would only fight the land edge.
+
+     Lightness alone cannot be decoded into a date: adjacent recency steps are
+     about 1.25:1 apart, which is a difference you can see but not read. Any surface
+     that paints with this ramp owes the reader a legend or a per-country label
+     (WCAG 1.4.1). */
   --color-country-land: #edebe6;
   --color-country-land-edge: #c8c1af;
   --color-country-land-hover: #ded8c8;
-  --color-country-visited: #357669;
+  --color-country-visited: #2b7365;
   --color-country-visited-recent: #256256;
-  --color-country-visited-distant: #48887a;
+  --color-country-visited-distant: #328474;
   --color-country-visited-edge: #e9f3ef;
-  --color-country-visited-hover: #1c4e45;
-  --color-country-visited-selected: #0b3830;
+  --color-country-visited-hover: #1f5248;
+  --color-country-visited-selected: #19423a;
 
   /* ------------------------------------------------------------ interaction
      Neutral washes for ghost buttons, menu items and rows. */
@@ -241,20 +257,34 @@
     /* Land stays `--color-surface-inset`, and the pine ramp runs the other way:
        on a charcoal map "more recent" reads as more *light*, not less. That
        makes this a dark cartography in its own right rather than the light ramp
-       inverted, and it turns the hairline between two visited countries into a
-       groove of the page instead of a knockout of it.
-       Against `--color-country-land`: distant 3.88:1, base 4.89:1, recent
-       6.32:1, hover 7.64:1, selected 9.23:1; the edge holds 4.74:1 against the
-       faintest fill. */
+       inverted. The five steps are spaced exactly as they are in light — 6.2–6.3
+       CIE L* between adjacent pairs — and `-recent` is `--color-brand` again.
+       Against `--color-country-land`: distant 4.20:1, base 5.18:1, recent
+       6.32:1, hover 7.64:1, selected 9.16:1. Against the basemap water
+       (`MapPalette.water`, #0c1a17), which is all an island country borders:
+       distant 5.14:1, base 6.34:1, recent 7.74:1, hover 9.35:1, selected
+       11.22:1.
+
+       `-visited-edge` is a groove rather than a knockout down here, and it is a
+       mid pine rather than the near-black it used to be. Near-black measured
+       1.00:1 against the ocean — the same luminance to three decimal places —
+       so a coastal country's outline simply stopped existing at the coast and
+       only its inland borders showed the intended seam. At L* 26 it holds
+       3.10:1 against the faintest fill it separates, and sits 18.1 L* above the
+       water (1.66:1) and 9.5 L* above unvisited land (1.35:1). Contrast ratio
+       badly understates a difference this far down the scale — the +0.05 term
+       in the WCAG formula swamps it — so L* is the number that decides whether
+       the line is there, exactly as it is for the coastline in
+       `src/lib/map/palette.ts`. */
     --color-country-land: #292926;
     --color-country-land-edge: #454540;
     --color-country-land-hover: #35352f;
-    --color-country-visited: #51a48c;
+    --color-country-visited: #54a990;
     --color-country-visited-recent: #5fbba0;
-    --color-country-visited-distant: #3d927a;
-    --color-country-visited-edge: #0e1a17;
+    --color-country-visited-distant: #449880;
+    --color-country-visited-edge: #25433d;
     --color-country-visited-hover: #79cbb2;
-    --color-country-visited-selected: #93dcc5;
+    --color-country-visited-selected: #93dbc6;
 
     --color-hover: rgb(255 255 255 / 0.06);
     --color-active: rgb(255 255 255 / 0.11);
@@ -337,12 +367,12 @@
   --color-country-land: #292926;
   --color-country-land-edge: #454540;
   --color-country-land-hover: #35352f;
-  --color-country-visited: #51a48c;
+  --color-country-visited: #54a990;
   --color-country-visited-recent: #5fbba0;
-  --color-country-visited-distant: #3d927a;
-  --color-country-visited-edge: #0e1a17;
+  --color-country-visited-distant: #449880;
+  --color-country-visited-edge: #25433d;
   --color-country-visited-hover: #79cbb2;
-  --color-country-visited-selected: #93dcc5;
+  --color-country-visited-selected: #93dbc6;
 
   --color-hover: rgb(255 255 255 / 0.06);
   --color-active: rgb(255 255 255 / 0.11);
@@ -487,8 +517,9 @@
      the zoom cluster. Above the WebGL canvas and everything the map paints into
      it, below `--z-nav`, so the app nav and every overlay tier above it still
      win. Theme-independent, like every other layout token in this block — a
-     stacking order has no light and dark value to declare. Reached from a
-     component as `z-(--z-map-overlay)`. */
+     stacking order has no light and dark value to declare. `styles.css` exports
+     it as `@utility z-map-overlay`, so a component writes `z-map-overlay`
+     exactly as it writes `z-nav`. */
   --z-map-overlay: 30;
   --z-nav: 40;
   --z-dropdown: 50;
