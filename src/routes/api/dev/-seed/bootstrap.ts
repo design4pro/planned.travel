@@ -10,12 +10,22 @@
  *
  * The collaborators are deliberately created without a credential account, so they exist as people in
  * the workspace — names, avatars, splits, votes — but cannot sign in. A demo dataset has no business
- * minting passwords.
+ * minting passwords for four people.
+ *
+ * The **owner** is the one exception, and only when a password is handed in. Without a signable
+ * account there is no way to reach an authenticated screen, which means the whole product behind the
+ * login page is unreachable to the e2e suite and to anyone opening the project for the first time.
+ * The account is minted through Better Auth's own sign-up API, so the password is hashed by the same
+ * code path a real registration uses, and the `user.create` hook provisions the personal organization
+ * exactly as it would for a real person. The seed endpoint that calls this is behind
+ * `import.meta.env.DEV`, so none of it exists in a production bundle.
  */
 
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
-import { user } from '#/server/db/auth-schema'
+import { hashPassword, verifyPassword } from 'better-auth/crypto'
+import { account, user } from '#/server/db/auth-schema'
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, getAuth } from '#/server/auth'
 import { authDb } from '#/server/auth/db'
 import { firstOrganizationIdFor, membershipRoleFor } from '#/server/auth/provisioning'
 import { addMember, createScope } from '#/server/repos'
@@ -27,6 +37,13 @@ import type { PersonKey } from './types'
 
 /** Better Auth generates 24-character ids; the demo users match so nothing looks foreign. */
 const ID_LENGTH = 24
+
+/** What Better Auth's credential provider writes into `account.provider_id` and `account.issuer`. */
+const CREDENTIAL_PROVIDER = 'credential'
+const CREDENTIAL_ISSUER = 'local:credential'
+
+/** Outcome of reconciling the owner's password, for the seed report. */
+export type CredentialOutcome = 'created' | 'reset' | 'unchanged' | 'left-alone'
 
 export class SeedBootstrapError extends Error {
   constructor(message: string) {
@@ -50,18 +67,142 @@ export interface ResolvedWorkspace {
   readonly ownerUserId: string
   readonly ownerRole: OrganizationRole
   readonly ownerScope: TenantScope
+  /** True when this run minted the owner's credential account rather than adopting one. */
+  readonly createdOwner: boolean
+  /** What happened to the owner's password: created, reset, already correct, or deliberately kept. */
+  readonly credential: CredentialOutcome
 }
 
-/** Resolves the workspace owner from their email address, or explains what is missing. */
-async function resolveOwner(email: string): Promise<{ userId: string; organizationId: string }> {
-  const db = authDb()
-  const rows = await db.select({ id: user.id }).from(user).where(eq(user.email, email)).limit(1)
-  const owner = rows.at(0)
-  if (owner === undefined) {
+/** The display name given to a freshly minted demo owner, matched to the dataset. */
+const OWNER_NAME = 'Rafal Wolak'
+
+/**
+ * Creates the demo owner's credential account through Better Auth.
+ *
+ * Deliberately the public sign-up API rather than a direct row insert: the password must be hashed
+ * by the same code the login form verifies against, and the `user.create.after` hook has to run so
+ * the personal organization is provisioned. Writing `user` and `account` by hand would produce an
+ * account that exists but cannot log in — the exact failure this function is here to prevent.
+ */
+async function createOwnerAccount(email: string, password: string): Promise<void> {
+  try {
+    await getAuth().api.signUpEmail({
+      body: { name: OWNER_NAME, email, password },
+    })
+  } catch (cause) {
+    const reason = cause instanceof Error ? cause.message : 'unknown'
     throw new SeedBootstrapError(
-      `No account found for ${email}. Register it first, then run the seed again.`,
+      `Could not create the demo account for ${email}: ${reason}. ` +
+        `The password must be ${MIN_PASSWORD_LENGTH}-${MAX_PASSWORD_LENGTH} characters.`,
     )
   }
+
+  // A demo owner should never meet a "verify your email" nag; there is no inbox
+  // behind the address and the queued verification mail goes nowhere.
+  await authDb()
+    .update(user)
+    .set({ emailVerified: true, updatedAt: new Date() })
+    .where(eq(user.email, email))
+}
+
+/**
+ * Makes the owner's password the one the seed was given, so a fixture workspace can actually be
+ * signed into.
+ *
+ * The common case is an account that already exists from an earlier manual registration, with a
+ * password nobody wrote down — which leaves the authenticated half of the product unreachable to the
+ * e2e suite. Reconciling it here is what makes "seed, then sign in" reliable.
+ *
+ * Idempotent, and deliberately reluctant: the stored hash is verified against the seed password
+ * first, so a database already in the right state is left untouched and re-running the seed is free.
+ * The hash is produced by `better-auth/crypto`, the same function the credential provider uses when
+ * no custom hasher is configured — writing our own would produce a row the login form rejects.
+ */
+async function ensureOwnerCredential(
+  userId: string,
+  password: string,
+  keepExisting: boolean,
+): Promise<CredentialOutcome> {
+  const db = authDb()
+  const rows = await db
+    .select({ id: account.id, password: account.password })
+    .from(account)
+    .where(and(eq(account.userId, userId), eq(account.providerId, CREDENTIAL_PROVIDER)))
+    .limit(1)
+  const existing = rows.at(0)
+  const now = new Date()
+
+  if (existing === undefined) {
+    await db.insert(account).values({
+      id: nanoid(ID_LENGTH),
+      issuer: CREDENTIAL_ISSUER,
+      accountId: nanoid(ID_LENGTH),
+      providerId: CREDENTIAL_PROVIDER,
+      userId,
+      password: await hashPassword(password),
+      createdAt: now,
+      updatedAt: now,
+    })
+    return 'created'
+  }
+
+  if (existing.password !== null && (await verifyPassword({ hash: existing.password, password }))) {
+    return 'unchanged'
+  }
+
+  if (keepExisting) {
+    return 'left-alone'
+  }
+
+  await db
+    .update(account)
+    .set({ password: await hashPassword(password), updatedAt: now })
+    .where(eq(account.id, existing.id))
+  return 'reset'
+}
+
+/**
+ * Resolves the workspace owner from their email address, creating the account first when a password
+ * is supplied and no account exists yet.
+ */
+async function resolveOwner(
+  email: string,
+  password: string | undefined,
+  keepExistingPassword: boolean,
+): Promise<{
+  userId: string
+  organizationId: string
+  createdOwner: boolean
+  credential: CredentialOutcome
+}> {
+  const db = authDb()
+  const find = async () =>
+    (await db.select({ id: user.id }).from(user).where(eq(user.email, email)).limit(1)).at(0)
+
+  let owner = await find()
+  let createdOwner = false
+
+  if (owner === undefined) {
+    if (password === undefined || password.length === 0) {
+      throw new SeedBootstrapError(
+        `No account found for ${email}. Register it first, or re-run the seed with a password ` +
+          `(--password, or the DEMO_PASSWORD environment variable) to have it created.`,
+      )
+    }
+    await createOwnerAccount(email, password)
+    createdOwner = true
+    owner = await find()
+    if (owner === undefined) {
+      throw new SeedBootstrapError(
+        `Signed ${email} up, but no user row appeared. The auth database may be pointing elsewhere.`,
+      )
+    }
+  }
+
+  const credential =
+    password === undefined || password.length === 0
+      ? 'left-alone'
+      : await ensureOwnerCredential(owner.id, password, keepExistingPassword)
 
   const organizationId = await firstOrganizationIdFor(db, owner.id)
   if (organizationId === null) {
@@ -70,7 +211,7 @@ async function resolveOwner(email: string): Promise<{ userId: string; organizati
     )
   }
 
-  return { userId: owner.id, organizationId }
+  return { userId: owner.id, organizationId, createdOwner, credential }
 }
 
 /**
@@ -145,8 +286,10 @@ async function ensureCollaboratorUsers(
 export async function resolveWorkspace(
   db: Database,
   ownerEmail: string,
+  ownerPassword?: string,
+  keepExistingPassword = false,
 ): Promise<ResolvedWorkspace> {
-  const owner = await resolveOwner(ownerEmail)
+  const owner = await resolveOwner(ownerEmail, ownerPassword, keepExistingPassword)
   const ownerRole = await membershipRoleFor(authDb(), {
     userId: owner.userId,
     organizationId: owner.organizationId,
@@ -161,6 +304,8 @@ export async function resolveWorkspace(
     organizationId: owner.organizationId,
     ownerUserId: owner.userId,
     ownerRole,
+    createdOwner: owner.createdOwner,
+    credential: owner.credential,
     ownerScope: createScope(db, {
       userId: owner.userId,
       organizationId: owner.organizationId,

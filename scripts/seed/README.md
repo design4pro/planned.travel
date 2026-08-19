@@ -103,7 +103,8 @@ produced byte-identical row counts across all 57 counters.
 
 ## The people
 
-`rafal@planned.travel` already exists and is resolved **by email**, never by a hardcoded id. Three
+`rafal@planned.travel` is the workspace owner and is resolved **by email**, never by a hardcoded id.
+The seed creates the account when it is absent, and reconciles its password when it is present. Three
 collaborators are created so splits, assignments, votes and chat have real names behind them:
 
 | | Name | Email | Role |
@@ -114,8 +115,38 @@ collaborators are created so splits, assignments, votes and chat have real names
 | | Priya Raman | `priya@planned.travel` | member |
 
 The three collaborators are created **without a credential account**, so they exist as people in the
-workspace but cannot sign in. A demo fixture has no business minting passwords. Only
+workspace but cannot sign in. A demo fixture has no business minting passwords for four people. Only
 `rafal@planned.travel` can log in.
+
+### The owner's password
+
+The owner is the one exception, because without a signable account the entire product behind the
+login page is unreachable — to you on a fresh clone, and to the Playwright suite.
+
+| | |
+| --- | --- |
+| Email | `rafal@planned.travel` |
+| Password | `planned-demo-2026` |
+
+That password is a **fixture for a local database, not a secret**: it is written down on purpose so
+`node scripts/seed/seed.mjs` is the only step between cloning and reaching `/dashboard`. Override it
+with `--password`, `$DEMO_PASSWORD` or `$E2E_PASSWORD`.
+
+What the seed does with it:
+
+| State | Result |
+| --- | --- |
+| No account | Created through Better Auth's own sign-up API, so the hash matches what the login form verifies and the `user.create` hook provisions the personal organization. Marked email-verified. |
+| Account exists, password already matches | Left untouched. The stored hash is verified first, so re-running the seed is free. |
+| Account exists, different password | Reset to the seed password, and reported as `reset`. Pass `--keep-password` to keep yours instead. |
+
+This reconciliation happens **before** the `demo.seed` marker check, so a run that writes no data
+still fixes the password — which is the run you will make most often.
+
+None of it exists in a production build: `/api/dev/seed` is behind `import.meta.env.DEV`, which Vite
+replaces with a literal, so the whole path is compiled out. The password is hashed by
+`better-auth/crypto`, the same function the credential provider uses when no custom hasher is
+configured — hand-rolling a hash would produce a row the login form rejects.
 
 The workspace is put on the **Crew** plan first — ten seats bought, four of them filled, billed
 monthly — because the Free plan seats one person and caps trips at two. Only the plan is declared in

@@ -90,6 +90,7 @@ import {
   visitedCountries,
   visitedRegions,
 } from './dataset'
+import type { CredentialOutcome } from './bootstrap'
 import type { TripApplyContext, TripCounts } from './apply-trip'
 import type { JsonRecord } from '#/server/db/schema'
 import type { Database } from '#/server/db/types'
@@ -113,6 +114,10 @@ export interface SeedReport {
   readonly organizationId: string
   readonly ownerUserId: string
   readonly ownerEmail: string
+  /** True when this run minted the owner's credential account rather than adopting an existing one. */
+  readonly createdOwner: boolean
+  /** What happened to the owner's password: `created`, `reset`, `unchanged` or `left-alone`. */
+  readonly credential: CredentialOutcome
   readonly usersCreated: number
   readonly members: number
   readonly categories: number
@@ -208,6 +213,14 @@ function publicToken(): string {
 
 export interface ApplySeedOptions {
   readonly ownerEmail?: string
+  /**
+   * Password for the owner's credential account, used only when no account exists yet. Supplying it
+   * lets the seed produce a workspace that can actually be signed into; omitting it keeps the old
+   * behaviour of failing with "register it first".
+   */
+  readonly ownerPassword?: string
+  /** Never overwrite a password that is already set, even when it is not the one supplied. */
+  readonly keepExistingPassword?: boolean
   /** Re-run even when the marker says this dataset version is already applied. */
   readonly force?: boolean
 }
@@ -219,14 +232,25 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
   const now = new Date()
   const ownerEmail = options.ownerEmail ?? DEFAULT_OWNER_EMAIL
 
-  const resolved = await resolveWorkspace(db, ownerEmail)
+  const resolved = await resolveWorkspace(
+    db,
+    ownerEmail,
+    options.ownerPassword,
+    options.keepExistingPassword === true,
+  )
   const owner = resolved.ownerScope
 
   const marker = await appSettingsStore.get(db, MARKER_KEY)
   const markerVersion = typeof marker?.value?.version === 'number' ? marker.value.version : null
   if (markerVersion === DATASET_VERSION && options.force !== true) {
     return {
-      ...emptyReport(resolved.organizationId, resolved.ownerUserId, ownerEmail),
+      ...emptyReport(
+        resolved.organizationId,
+        resolved.ownerUserId,
+        ownerEmail,
+        resolved.createdOwner,
+        resolved.credential,
+      ),
       skipped: true,
       durationMs: Date.now() - startedAt,
     }
@@ -680,6 +704,8 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
     organizationId: resolved.organizationId,
     ownerUserId: resolved.ownerUserId,
     ownerEmail,
+    createdOwner: resolved.createdOwner,
+    credential: resolved.credential,
     usersCreated: seedPeople.created,
     members: people.length,
     categories: categoryRows.length,
@@ -736,6 +762,8 @@ function emptyReport(
   organizationId: string,
   ownerUserId: string,
   ownerEmail: string,
+  createdOwner: boolean,
+  credential: CredentialOutcome,
 ): SeedReport {
   return {
     skipped: true,
@@ -743,6 +771,8 @@ function emptyReport(
     organizationId,
     ownerUserId,
     ownerEmail,
+    createdOwner,
+    credential,
     usersCreated: 0,
     members: people.length,
     categories: 0,

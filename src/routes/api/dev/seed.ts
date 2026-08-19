@@ -20,6 +20,15 @@ import { RepositoryError, appSettingsStore } from '#/server/repos'
  * - `email` — the workspace owner to seed. Defaults to `rafal@planned.travel`.
  * - `force=1` — re-seed even though the `demo.seed` marker says this dataset version is applied.
  *
+ * Optional JSON body:
+ * - `password` — the password the owner's account should have, so the seeded workspace can be signed
+ *   into. Read from the body rather than the query string so it does not end up in a request log.
+ *   Creates the account when there is none, and otherwise reconciles the existing password — which is
+ *   the case that matters, since an account registered by hand has a password nobody recorded. A
+ *   password that already works is left untouched.
+ * - `keepPassword` — never overwrite a password that is already set, even when it is not the one
+ *   supplied. Use it when you chose your own local password and want to keep it.
+ *
  * `GET` reports whether the marker is present, and writes nothing.
  */
 
@@ -38,6 +47,33 @@ function json(body: unknown, status = 200): Response {
   })
 }
 
+/**
+ * Reads the credential options out of an optional JSON body. A missing, empty or unparseable body is
+ * not an error — it simply means "seed the data and leave the account alone".
+ */
+async function ownerCredentialFrom(
+  request: Request,
+): Promise<{ password: string | null; keepPassword: boolean }> {
+  const none = { password: null, keepPassword: false }
+  try {
+    const raw = await request.text()
+    if (raw.length === 0) {
+      return none
+    }
+    const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null) {
+      return none
+    }
+    const body = parsed as { password?: unknown; keepPassword?: unknown }
+    return {
+      password: typeof body.password === 'string' && body.password.length > 0 ? body.password : null,
+      keepPassword: body.keepPassword === true,
+    }
+  } catch {
+    return none
+  }
+}
+
 async function post({ request }: { request: Request }): Promise<Response> {
   if (!import.meta.env.DEV) {
     return notFound()
@@ -47,10 +83,13 @@ async function post({ request }: { request: Request }): Promise<Response> {
   const url = new URL(request.url)
   const email = url.searchParams.get('email')
   const force = url.searchParams.get('force')
+  const { password, keepPassword } = await ownerCredentialFrom(request)
 
   try {
     const report = await applySeed(getDb(), {
       ...(email === null || email.length === 0 ? {} : { ownerEmail: email }),
+      ...(password === null ? {} : { ownerPassword: password }),
+      keepExistingPassword: keepPassword,
       force: force === '1' || force === 'true',
     })
     return json({ ok: true, ...report })

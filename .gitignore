@@ -40,3 +40,6 @@ todos.json
 # A/B screenshot pairs. The command definitions in .claude/ are tracked; only the
 # per-run scratch is not.
 .claude/ultrabuild
+
+# One cached demo session per e2e run, written by e2e/auth.setup.ts.
+e2e/.auth

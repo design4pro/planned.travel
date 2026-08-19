@@ -1,9 +1,12 @@
 import { expect, test } from '@playwright/test'
 import {
   APP_ROUTES,
+  DEMO_EMAIL,
   PUBLIC_ROUTES,
   THEMES,
+  hasSession,
   shoot,
+  useSession,
   visit,
   watchConsole,
 } from './helpers/shoot.ts'
@@ -34,27 +37,23 @@ test.describe('public routes', () => {
 })
 
 /**
- * Authenticated screens. `scripts/seed` deliberately creates users that cannot
- * sign in, so this block needs a real account: set E2E_EMAIL and E2E_PASSWORD
- * (a dedicated throwaway account against the local D1) to include it.
+ * Authenticated screens.
+ *
+ * `scripts/seed` used to create users that deliberately could not sign in, which left everything
+ * behind the login page uncovered. The seed now provisions the demo owner with a real credential, so
+ * this suite runs after `node scripts/seed/seed.mjs`.
+ *
+ * When that account cannot sign in the block skips with a reason rather than failing: an unseeded
+ * database is a missing fixture, not a design regression, and turning it into a red gate would block
+ * the /ultrabuild loop on something no builder can fix.
  */
-const email = process.env.E2E_EMAIL
-const password = process.env.E2E_PASSWORD
-
 test.describe('authenticated routes', () => {
-  test.skip(
-    !email || !password,
-    'set E2E_EMAIL and E2E_PASSWORD to cover the authenticated app',
-  )
-
-  test.use({ storageState: { cookies: [], origins: [] } })
-
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'domcontentloaded' })
-    await page.getByLabel(/email/i).fill(email as string)
-    await page.getByLabel(/password/i).fill(password as string)
-    await page.getByRole('button', { name: /sign in|log in/i }).click()
-    await page.waitForURL((url) => !url.pathname.startsWith('/login'))
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
   })
 
   for (const route of APP_ROUTES) {

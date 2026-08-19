@@ -101,6 +101,11 @@ Run these and fix what is trivially fixable before invoking the workflow.
   other than 3000. Do not assume 3000. Export the real one as `PLAYWRIGHT_BASE_URL` for every
   Playwright invocation this round — `playwright.config.ts` then targets it directly and skips its
   own `webServer` block, which otherwise waits on 3000 forever and hangs the whole round.
+- **Demo data and the demo session.** The authenticated half of the visual gate signs in as
+  `rafal@planned.travel`. Run `node scripts/seed/seed.mjs --url http://localhost:<port>` if the
+  authenticated specs report themselves as skipped — it provisions the workspace and reconciles the
+  account password, and is idempotent, so running it is always safe. Note the seed script's own port
+  probe only covers 3000-3005, so pass `--url` explicitly.
 - Baselines: if `e2e/__screenshots__` is empty, seed it once with
   `PLAYWRIGHT_BASE_URL=… pnpm exec playwright test --update-snapshots`. After that **never** pass
   `--update-snapshots` automatically — a gate that rewrites its own baseline cannot fail, and

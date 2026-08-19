@@ -1,5 +1,7 @@
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { expect } from '@playwright/test'
-import type { Page } from '@playwright/test'
+import type { BrowserContext, Page } from '@playwright/test'
 
 /**
  * Screenshot helpers for the visual gate.
@@ -11,6 +13,108 @@ import type { Page } from '@playwright/test'
  */
 
 export type Theme = 'light' | 'dark'
+
+/**
+ * The demo account the seed provisions.
+ *
+ * `scripts/seed/seed.mjs` creates this account when it is missing and reconciles its password when it
+ * is not, so `node scripts/seed/seed.mjs` is all that stands between a fresh clone and authenticated
+ * coverage. The password is a fixture for a local database, not a secret.
+ *
+ * Keep DEMO_PASSWORD in step with DEFAULT_DEMO_PASSWORD in `scripts/seed/seed.mjs` — they are
+ * deliberately duplicated because that script is plain `.mjs` with no exports, and a drift between
+ * them shows up as a skipped authenticated suite rather than a failure.
+ */
+export const DEMO_EMAIL = process.env.E2E_EMAIL ?? 'rafal@planned.travel'
+export const DEMO_PASSWORD = process.env.E2E_PASSWORD ?? 'planned-demo-2026'
+
+/**
+ * Sign in over the API rather than through the form.
+ *
+ * `page.request` shares the page's cookie jar, so the session cookie the endpoint sets is live in the
+ * browser context immediately — one request per test instead of a full form round trip, and a failure
+ * here is unambiguous rather than a mystery timeout on a selector. Better Auth enforces an Origin
+ * header on state-changing requests, hence the explicit one.
+ */
+export async function signIn(
+  page: Page,
+  baseURL: string | undefined,
+): Promise<boolean> {
+  const response = await page.request.post('/api/auth/sign-in/email', {
+    headers: { origin: baseURL ?? 'http://localhost:3000' },
+    data: { email: DEMO_EMAIL, password: DEMO_PASSWORD },
+    failOnStatusCode: false,
+  })
+  return response.ok()
+}
+
+/** Where the one authenticated session for a run is cached. Gitignored. */
+export const AUTH_STATE = 'e2e/.auth/demo.json'
+
+type StoredState = { cookies: Array<never>; origins: Array<never> }
+
+/**
+ * Signs in once and caches the session for the whole run.
+ *
+ * Signing in per test is not an option: `/sign-in/email` is rate limited to ten attempts a minute
+ * (see `rateLimit.customRules` in src/server/auth), and this suite has more tests than that, so the
+ * later ones were turned away with a 429 and skipped. One sign-in, cached cookies, no limit.
+ */
+export async function cacheSession(
+  page: Page,
+  baseURL: string | undefined,
+): Promise<boolean> {
+  await mkdir(dirname(AUTH_STATE), { recursive: true })
+  if (!(await signIn(page, baseURL))) {
+    await writeFile(
+      AUTH_STATE,
+      JSON.stringify({ cookies: [], origins: [] }),
+      'utf8',
+    )
+    return false
+  }
+  await page.context().storageState({ path: AUTH_STATE })
+  return true
+}
+
+/** The cached session, or null when there is none worth using. */
+export async function loadSession(): Promise<StoredState | null> {
+  try {
+    const parsed = JSON.parse(await readFile(AUTH_STATE, 'utf8')) as StoredState
+    return parsed.cookies.length > 0 ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Puts the cached session into this context, signing in once as a fallback when no cache exists —
+ * which keeps the suite working when it is run with a filter that excludes the setup project.
+ */
+export async function useSession(
+  context: BrowserContext,
+  page: Page,
+  baseURL: string | undefined,
+): Promise<boolean> {
+  const stored = await loadSession()
+  if (stored !== null) {
+    await context.addCookies(stored.cookies)
+    return true
+  }
+  return cacheSession(page, baseURL)
+}
+
+/** True when the browser context currently holds a usable session. */
+export async function hasSession(page: Page): Promise<boolean> {
+  const response = await page.request.get('/api/auth/get-session', {
+    failOnStatusCode: false,
+  })
+  if (!response.ok()) {
+    return false
+  }
+  const body: unknown = await response.json().catch(() => null)
+  return typeof body === 'object' && body !== null && 'user' in body
+}
 
 export const THEMES: ReadonlyArray<Theme> = ['light', 'dark']
 
@@ -68,8 +172,33 @@ export async function applyTheme(page: Page, theme: Theme): Promise<void> {
   await page.emulateMedia({ colorScheme: theme })
 }
 
-/** Wait until the frame is worth photographing. */
+/**
+ * Wait until the frame is worth photographing.
+ *
+ * Retried, because a route that hydrates into a redirect tears down the execution context underneath
+ * an in-flight `page.evaluate` — which surfaced as "Execution context was destroyed" on the atlas
+ * route. Re-running the sequence against the new document is the correct response; failing would have
+ * reported a navigation as a design defect.
+ */
 export async function settle(page: Page, ready: string): Promise<void> {
+  const ATTEMPTS = 3
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
+    try {
+      await settleOnce(page, ready)
+      return
+    } catch (error) {
+      const transient =
+        error instanceof Error &&
+        /Execution context was destroyed|navigation/i.test(error.message)
+      if (!transient || attempt === ATTEMPTS) {
+        throw error
+      }
+      await page.waitForLoadState('domcontentloaded')
+    }
+  }
+}
+
+async function settleOnce(page: Page, ready: string): Promise<void> {
   await page.locator(ready).first().waitFor({ state: 'visible' })
   await page.evaluate(() => document.fonts.ready.then(() => undefined))
   // Any <img> already in the DOM must have decoded, or the baseline captures a

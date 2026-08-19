@@ -13,6 +13,21 @@
  */
 
 const DEFAULT_PORTS = [3000, 3001, 3002, 3003, 3004, 3005]
+
+/**
+ * Password for the demo owner's account, used only when that account does not exist yet.
+ *
+ * This is a fixture credential for a local database, not a secret: it is committed on purpose so
+ * that a fresh clone can reach the authenticated screens with one command, and so the e2e suite has
+ * a deterministic account to sign in as. Override it with DEMO_PASSWORD (or E2E_PASSWORD) if you
+ * would rather it were not written down. Nothing reachable from a production build reads it —
+ * `/api/dev/seed` is compiled out by `import.meta.env.DEV`.
+ */
+const DEFAULT_DEMO_PASSWORD = 'planned-demo-2026'
+
+function demoPassword(explicit) {
+  return explicit ?? process.env.DEMO_PASSWORD ?? process.env.E2E_PASSWORD ?? DEFAULT_DEMO_PASSWORD
+}
 const ENDPOINT = '/api/dev/seed'
 const PROBE_TIMEOUT_MS = 1500
 const SEED_TIMEOUT_MS = 300_000
@@ -27,7 +42,14 @@ function fail(text) {
 }
 
 function parseArgs(argv) {
-  const options = { force: false, status: false, email: null, url: null }
+  const options = {
+    force: false,
+    status: false,
+    email: null,
+    url: null,
+    password: null,
+    keepPassword: false,
+  }
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]
     if (arg === '--force' || arg === '-f') {
@@ -37,6 +59,11 @@ function parseArgs(argv) {
     } else if (arg === '--email' || arg === '-e') {
       index += 1
       options.email = argv[index] ?? null
+    } else if (arg === '--keep-password') {
+      options.keepPassword = true
+    } else if (arg === '--password' || arg === '-p') {
+      index += 1
+      options.password = argv[index] ?? null
     } else if (arg === '--url' || arg === '-u') {
       index += 1
       options.url = argv[index] ?? null
@@ -97,11 +124,30 @@ function formatCounts(counts) {
   return rows.map(([key, value]) => `${key} ${value}`).join(' · ')
 }
 
+/** Plain English for what the seed did to the owner's password. */
+function describeCredential(report) {
+  if (report.createdOwner === true) return 'account created — sign in with the seed password'
+  switch (report.credential) {
+    case 'created':
+      return 'credential added to an existing account — sign in with the seed password'
+    case 'reset':
+      return 'reset to the seed password'
+    case 'unchanged':
+      return 'already the seed password'
+    default:
+      return 'left as it was (--keep-password, or no password supplied)'
+  }
+}
+
 function printReport(report) {
   if (report.skipped) {
     out('Already seeded — nothing to do.')
     out(`  dataset version  ${report.datasetVersion}`)
     out(`  organization     ${report.organizationId}`)
+    // The password is reconciled before the marker check, so it is up to date even
+    // on a run that wrote no data — which is the run people make most often.
+    out(`  owner            ${report.ownerEmail}`)
+    out(`  password         ${describeCredential(report)}`)
     out('')
     out('Re-run with --force to rebuild the demo workspace from the dataset.')
     return
@@ -111,6 +157,7 @@ function printReport(report) {
   out('')
   out(`  workspace        ${report.organizationId}`)
   out(`  owner            ${report.ownerEmail} (${report.ownerUserId})`)
+  out(`  password         ${describeCredential(report)}`)
   out(`  members          ${report.members} (${report.usersCreated} user rows created)`)
   out(`  categories       ${report.categories}`)
   out(`  moods            ${report.moods}`)
@@ -151,12 +198,19 @@ async function main() {
   const options = parseArgs(process.argv.slice(2))
 
   if (options.help === true) {
-    out('Usage: node scripts/seed/seed.mjs [--force] [--email <address>] [--url <origin>] [--status]')
+    out(
+      'Usage: node scripts/seed/seed.mjs [--force] [--email <address>] [--password <secret>]',
+    )
+    out('                [--keep-password] [--url <origin>] [--status]')
     out('')
-    out('  --force   Rebuild the demo workspace even if it has already been seeded.')
-    out('  --email   Workspace owner to seed. Defaults to rafal@planned.travel.')
-    out('  --url     Dev-server origin. Defaults to $SEED_URL, then localhost:3000-3005.')
-    out('  --status  Report whether the workspace is seeded, and write nothing.')
+    out('  --force     Rebuild the demo workspace even if it has already been seeded.')
+    out('  --email     Workspace owner to seed. Defaults to rafal@planned.travel.')
+    out('  --password  Password the owner account should have. Created when the account does not')
+    out('              exist, reconciled when it does, left alone when it already works. Defaults')
+    out('              to $DEMO_PASSWORD, then $E2E_PASSWORD, then the committed fixture.')
+    out('  --keep-password  Never overwrite a password that is already set.')
+    out('  --url       Dev-server origin. Defaults to $SEED_URL, then localhost:3000-3005.')
+    out('  --status    Report whether the workspace is seeded, and write nothing.')
     return
   }
 
@@ -179,7 +233,12 @@ async function main() {
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { accept: 'application/json' },
+      headers: { accept: 'application/json', 'content-type': 'application/json' },
+      // In the body, not the query string, so it stays out of request logs.
+      body: JSON.stringify({
+        password: demoPassword(options.password),
+        keepPassword: options.keepPassword,
+      }),
       signal: controller.signal,
     })
     body = await response.json()
