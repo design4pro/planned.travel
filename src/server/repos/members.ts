@@ -1,0 +1,314 @@
+/**
+ * Membership — the workspace itself, who is in it, and who has been invited.
+ *
+ * These three tables are written by Better Auth's organization plugin as well as by this repository
+ * (`src/server/db/auth-schema.ts`), so everything here is deliberately defensive: seat quota, "never
+ * remove the last owner", and role changes gated behind {@link assertCanAdminister}.
+ *
+ * `organization` is the one tenant table whose discriminator *is* its primary key, so its scoping
+ * predicate is `id = <scope>` rather than `organization_id = <scope>`. There is no code path that
+ * reads it without that predicate.
+ */
+
+import { and, asc, count, eq, inArray, ne } from 'drizzle-orm'
+import { z } from 'zod'
+import {
+  INVITATION_STATUSES,
+  ORGANIZATION_ROLES,
+  invitation,
+  member,
+  organization,
+  user,
+} from '#/server/db/auth-schema'
+import { newId } from '#/server/db/schema'
+import { allOf, assertQuota, createTenantRepository, tenantFilter } from './base'
+import { NotFoundError, RepositoryError, assertCanAdminister } from './context'
+import { definedOnly, idSchema, instantSchema, shortTextSchema, titleSchema } from './validation'
+import type { Invitation, Member, Organization, OrganizationRole } from '#/server/db/types'
+import type { TenantScope } from './base'
+
+export const membersRepository = createTenantRepository(member, 'member')
+export const invitationsRepository = createTenantRepository(invitation, 'invitation')
+
+/* -------------------------------------------------------------------------------------------------
+ * Inputs
+ * ---------------------------------------------------------------------------------------------- */
+
+const roleSchema = z.enum(ORGANIZATION_ROLES)
+
+export const updateOrganizationInput = z.object({
+  name: titleSchema.optional(),
+  logo: shortTextSchema.nullish(),
+  metadata: z.string().trim().max(4000).nullish(),
+})
+export type UpdateOrganizationInput = z.infer<typeof updateOrganizationInput>
+
+export const addMemberInput = z.object({
+  userId: idSchema,
+  role: roleSchema.optional(),
+})
+export type AddMemberInput = z.infer<typeof addMemberInput>
+
+export const createInvitationInput = z.object({
+  email: z.string().trim().min(3).max(320).toLowerCase(),
+  role: roleSchema.optional(),
+  expiresAt: instantSchema,
+})
+export type CreateInvitationInput = z.infer<typeof createInvitationInput>
+
+/* -------------------------------------------------------------------------------------------------
+ * The workspace
+ * ---------------------------------------------------------------------------------------------- */
+
+export async function getOrganization(scope: TenantScope): Promise<Organization> {
+  const rows = await scope.db
+    .select()
+    .from(organization)
+    // The tenant discriminator of this table is its primary key.
+    .where(eq(organization.id, scope.ctx.organizationId))
+    .limit(1)
+  const row = rows.at(0)
+  if (row === undefined) {
+    throw new NotFoundError('organization', scope.ctx.organizationId)
+  }
+  return row
+}
+
+export async function updateOrganization(
+  scope: TenantScope,
+  input: UpdateOrganizationInput,
+): Promise<Organization> {
+  assertCanAdminister(scope.ctx, 'rename the workspace')
+  const values = definedOnly(updateOrganizationInput.parse(input))
+  const rows = await scope.db
+    .update(organization)
+    .set({ ...values, updatedAt: new Date() })
+    .where(eq(organization.id, scope.ctx.organizationId))
+    .returning()
+  const row = rows.at(0)
+  if (row === undefined) {
+    throw new NotFoundError('organization', scope.ctx.organizationId)
+  }
+  return row
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Members
+ * ---------------------------------------------------------------------------------------------- */
+
+export async function listMembers(scope: TenantScope): Promise<Array<Member>> {
+  return membersRepository.findMany(scope, { orderBy: [asc(member.createdAt)] })
+}
+
+export interface MemberProfile {
+  readonly memberId: string
+  readonly userId: string
+  readonly role: OrganizationRole
+  readonly name: string
+  readonly email: string
+  readonly image: string | null
+  readonly joinedAt: Date
+}
+
+/**
+ * The member list with the profile fields the UI shows. `user` carries no tenant column of its own —
+ * the tenant predicate is applied to `member`, and the join can therefore only reach users who are in
+ * this workspace.
+ */
+export async function listMemberProfiles(scope: TenantScope): Promise<Array<MemberProfile>> {
+  const rows = await scope.db
+    .select({
+      memberId: member.id,
+      userId: member.userId,
+      role: member.role,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      joinedAt: member.createdAt,
+    })
+    .from(member)
+    .innerJoin(user, eq(user.id, member.userId))
+    .where(tenantFilter(scope, member))
+    .orderBy(asc(member.createdAt))
+
+  return rows.map((row) => ({
+    ...row,
+    role: roleSchema.catch('member').parse(row.role),
+  }))
+}
+
+export async function countMembers(scope: TenantScope): Promise<number> {
+  return membersRepository.count(scope)
+}
+
+export async function getMembership(
+  scope: TenantScope,
+  userId: string,
+): Promise<Member | null> {
+  return membersRepository.findOne(scope, eq(member.userId, idSchema.parse(userId)))
+}
+
+/** Adds someone straight to the workspace — used by the invitation-accept flow and by admins. */
+export async function addMember(scope: TenantScope, input: AddMemberInput): Promise<Member> {
+  assertCanAdminister(scope.ctx, 'add a member')
+  const values = addMemberInput.parse(input)
+
+  const existing = await getMembership(scope, values.userId)
+  if (existing) {
+    return existing
+  }
+  await assertQuota(scope, 'members', await countMembers(scope))
+
+  return membersRepository.insert(scope, {
+    id: newId(),
+    userId: values.userId,
+    role: values.role ?? 'member',
+    createdAt: new Date(),
+  })
+}
+
+/** Changes a role. The workspace must keep at least one owner. */
+export async function changeMemberRole(
+  scope: TenantScope,
+  memberId: string,
+  role: OrganizationRole,
+): Promise<Member> {
+  assertCanAdminister(scope.ctx, 'change a member role')
+  const next = roleSchema.parse(role)
+  const row = await membersRepository.requireById(scope, memberId)
+
+  if (row.role === 'owner' && next !== 'owner' && (await countOwners(scope, memberId)) === 0) {
+    throw new RepositoryError('A workspace needs at least one owner.', 'LAST_OWNER')
+  }
+  return membersRepository.requireUpdate(scope, memberId, { role: next })
+}
+
+/** Removes a member. The last owner cannot be removed. */
+export async function removeMember(scope: TenantScope, memberId: string): Promise<void> {
+  const row = await membersRepository.requireById(scope, memberId)
+  if (row.userId !== scope.ctx.userId) {
+    assertCanAdminister(scope.ctx, 'remove a member')
+  }
+  if (row.role === 'owner' && (await countOwners(scope, memberId)) === 0) {
+    throw new RepositoryError('A workspace needs at least one owner.', 'LAST_OWNER')
+  }
+  await membersRepository.requireRemove(scope, memberId)
+}
+
+/** Owners other than `exceptMemberId`. */
+async function countOwners(scope: TenantScope, exceptMemberId?: string): Promise<number> {
+  return membersRepository.count(
+    scope,
+    and(
+      eq(member.role, 'owner'),
+      exceptMemberId ? ne(member.id, exceptMemberId) : undefined,
+    ),
+  )
+}
+
+/** Profile lookups for a set of user ids — avatar stacks, expense balances, participant chips. */
+export async function listUserProfiles(
+  scope: TenantScope,
+  userIds: ReadonlyArray<string>,
+): Promise<Array<MemberProfile>> {
+  const wanted = new Set(z.array(idSchema).max(200).parse([...userIds]))
+  if (wanted.size === 0) {
+    return []
+  }
+  const rows = await scope.db
+    .select({
+      memberId: member.id,
+      userId: member.userId,
+      role: member.role,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      joinedAt: member.createdAt,
+    })
+    .from(member)
+    .innerJoin(user, eq(user.id, member.userId))
+    .where(tenantFilter(scope, member, inArray(member.userId, [...wanted])))
+
+  return rows.map((row) => ({ ...row, role: roleSchema.catch('member').parse(row.role) }))
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Invitations
+ * ---------------------------------------------------------------------------------------------- */
+
+export async function listInvitations(
+  scope: TenantScope,
+  options: { readonly status?: (typeof INVITATION_STATUSES)[number] } = {},
+): Promise<Array<Invitation>> {
+  return invitationsRepository.findMany(scope, {
+    where: options.status ? eq(invitation.status, options.status) : undefined,
+    orderBy: [asc(invitation.createdAt)],
+  })
+}
+
+export async function listPendingInvitations(scope: TenantScope): Promise<Array<Invitation>> {
+  return listInvitations(scope, { status: 'pending' })
+}
+
+/**
+ * Invites an email address. Seats are checked against members **plus** outstanding invitations, so a
+ * workspace cannot oversubscribe its plan by inviting more people than it can seat.
+ */
+export async function createInvitation(
+  scope: TenantScope,
+  input: CreateInvitationInput,
+): Promise<Invitation> {
+  assertCanAdminister(scope.ctx, 'invite a member')
+  const values = createInvitationInput.parse(input)
+
+  const existing = await invitationsRepository.findOne(
+    scope,
+    allOf(eq(invitation.email, values.email), eq(invitation.status, 'pending')),
+  )
+  if (existing) {
+    return existing
+  }
+
+  const [members, pending] = await Promise.all([
+    countMembers(scope),
+    invitationsRepository.count(scope, eq(invitation.status, 'pending')),
+  ])
+  await assertQuota(scope, 'members', members + pending)
+
+  return invitationsRepository.insert(scope, {
+    id: newId(),
+    email: values.email,
+    role: values.role ?? 'member',
+    status: 'pending',
+    inviterId: scope.ctx.userId,
+    expiresAt: values.expiresAt,
+    createdAt: new Date(),
+  })
+}
+
+export async function setInvitationStatus(
+  scope: TenantScope,
+  invitationId: string,
+  status: (typeof INVITATION_STATUSES)[number],
+): Promise<Invitation> {
+  return invitationsRepository.requireUpdate(scope, invitationId, {
+    status: z.enum(INVITATION_STATUSES).parse(status),
+  })
+}
+
+export async function cancelInvitation(
+  scope: TenantScope,
+  invitationId: string,
+): Promise<Invitation> {
+  assertCanAdminister(scope.ctx, 'cancel an invitation')
+  return setInvitationStatus(scope, invitationId, 'canceled')
+}
+
+/** Expired pending invitations, for the retention cron to mark. */
+export async function countPendingInvitations(scope: TenantScope): Promise<number> {
+  const rows = await scope.db
+    .select({ value: count() })
+    .from(invitation)
+    .where(tenantFilter(scope, invitation, eq(invitation.status, 'pending')))
+  return rows[0]?.value ?? 0
+}

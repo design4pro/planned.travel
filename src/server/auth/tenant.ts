@@ -1,0 +1,221 @@
+/**
+ * Tenant context derivation.
+ *
+ * Kept free of Worker bindings and request plumbing so the rules that decide
+ * "who is this, and which tenant may they touch" are unit-testable in isolation
+ * from the transport that supplies the session.
+ */
+import { ORGANIZATION_ROLES } from '#/server/db/auth-schema'
+import type { OrganizationRole } from '#/server/db/auth-schema'
+
+export type { OrganizationRole }
+
+/** The authenticated user, as the app needs it. */
+export type AuthUser = {
+  id: string
+  email: string
+  name: string
+  emailVerified: boolean
+  image: string | null
+  twoFactorEnabled: boolean
+}
+
+/** The active session, as the app needs it. */
+export type AuthSessionRecord = {
+  id: string
+  token: string
+  userId: string
+  activeOrganizationId: string | null
+  expiresAt: Date
+}
+
+export type AuthSession = {
+  user: AuthUser
+  session: AuthSessionRecord
+}
+
+/**
+ * The explicit tenant context every repository call takes
+ * (docs/SPEC.md §5: no query runs without one).
+ */
+export type TenantContext = {
+  organizationId: string
+  userId: string
+  role: OrganizationRole
+}
+
+/** Ordered most privileged first; index doubles as the privilege rank. */
+const ROLE_RANK: Record<OrganizationRole, number> = {
+  owner: 0,
+  admin: 1,
+  member: 2,
+}
+
+export function isOrganizationRole(value: unknown): value is OrganizationRole {
+  return (
+    typeof value === 'string' &&
+    (ORGANIZATION_ROLES as ReadonlyArray<string>).includes(value)
+  )
+}
+
+/**
+ * True when `role` is at least as privileged as `minimum`.
+ * `owner` satisfies every requirement, `member` only satisfies `member`.
+ */
+export function roleSatisfies(
+  role: OrganizationRole,
+  minimum: OrganizationRole,
+): boolean {
+  return ROLE_RANK[role] <= ROLE_RANK[minimum]
+}
+
+/** Why an auth requirement could not be met. */
+export type AuthFailureReason =
+  | 'unauthenticated'
+  | 'no-active-organization'
+  | 'not-a-member'
+  | 'insufficient-role'
+
+export class AuthRequirementError extends Error {
+  readonly reason: AuthFailureReason
+  readonly status: 401 | 403
+
+  constructor(reason: AuthFailureReason, message: string) {
+    super(message)
+    this.name = 'AuthRequirementError'
+    this.reason = reason
+    this.status = reason === 'unauthenticated' ? 401 : 403
+  }
+}
+
+export function isAuthRequirementError(
+  error: unknown,
+): error is AuthRequirementError {
+  return error instanceof AuthRequirementError
+}
+
+/** Narrows a session to its user, or explains why there isn't one. */
+export function requireUserFrom(session: AuthSession | null): AuthUser {
+  if (!session) {
+    throw new AuthRequirementError(
+      'unauthenticated',
+      'You need to sign in to continue.',
+    )
+  }
+  return session.user
+}
+
+export type RequireOrgOptions = {
+  /** Minimum role the caller must hold. Defaults to `member`. */
+  role?: OrganizationRole
+  /**
+   * Pin the context to one organization. When given, it must match the
+   * session's active organization — a mismatch is a tenancy violation, never a
+   * silent switch.
+   */
+  organizationId?: string
+}
+
+/**
+ * Builds the tenant context for the active organization, enforcing the minimum
+ * role. The role comes from the session's membership claim, which Better Auth's
+ * organization plugin keeps in step with the `member` table.
+ */
+export function requireOrgFrom(
+  session: AuthSession | null,
+  membershipRole: string | null,
+  options: RequireOrgOptions = {},
+): TenantContext {
+  const user = requireUserFrom(session)
+  const activeOrganizationId = session?.session.activeOrganizationId ?? null
+
+  if (!activeOrganizationId) {
+    throw new AuthRequirementError(
+      'no-active-organization',
+      'Choose a workspace before continuing.',
+    )
+  }
+
+  if (
+    options.organizationId &&
+    options.organizationId !== activeOrganizationId
+  ) {
+    throw new AuthRequirementError(
+      'not-a-member',
+      'You do not have access to that workspace.',
+    )
+  }
+
+  if (!isOrganizationRole(membershipRole)) {
+    throw new AuthRequirementError(
+      'not-a-member',
+      'You are not a member of this workspace.',
+    )
+  }
+
+  const minimum = options.role ?? 'member'
+  if (!roleSatisfies(membershipRole, minimum)) {
+    throw new AuthRequirementError(
+      'insufficient-role',
+      `This action needs the ${minimum} role.`,
+    )
+  }
+
+  return {
+    organizationId: activeOrganizationId,
+    userId: user.id,
+    role: membershipRole,
+  }
+}
+
+type RawSession = {
+  user: Record<string, unknown>
+  session: Record<string, unknown>
+} | null
+
+function asString(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null
+}
+
+function asDate(value: unknown): Date | null {
+  if (value instanceof Date) return value
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value)
+    return Number.isFinite(date.getTime()) ? date : null
+  }
+  return null
+}
+
+/**
+ * Normalises what Better Auth returns into the app's own session shape,
+ * returning `null` for anything that is not a complete, usable session.
+ */
+export function normaliseSession(raw: RawSession): AuthSession | null {
+  if (!raw) return null
+
+  const userId = asString(raw.user.id)
+  const email = asString(raw.user.email)
+  const sessionId = asString(raw.session.id)
+  const token = asString(raw.session.token)
+  const expiresAt = asDate(raw.session.expiresAt)
+
+  if (!userId || !email || !sessionId || !token || !expiresAt) return null
+
+  return {
+    user: {
+      id: userId,
+      email,
+      name: asString(raw.user.name) ?? email,
+      emailVerified: raw.user.emailVerified === true,
+      image: asString(raw.user.image),
+      twoFactorEnabled: raw.user.twoFactorEnabled === true,
+    },
+    session: {
+      id: sessionId,
+      token,
+      userId: asString(raw.session.userId) ?? userId,
+      activeOrganizationId: asString(raw.session.activeOrganizationId),
+      expiresAt,
+    },
+  }
+}

@@ -1,0 +1,590 @@
+/**
+ * Money, in one place.
+ *
+ * Every amount that crosses the wire is an integer in the minor unit of its own
+ * currency (`docs/SPEC.md` §6). Nothing in this module holds a float that a
+ * reader could later see: parsing rounds once, on the way in, and formatting
+ * divides once, on the way out.
+ *
+ * The locale is pinned rather than read from the browser. The server renders the
+ * costs screen first, and a locale that differed between the two would produce a
+ * hydration mismatch on every figure on the page.
+ *
+ * `currencyDisplay: 'narrowSymbol'` is not a cosmetic preference. `en-GB`
+ * disambiguates by default — `JP¥`, `US$`, `CA$` — and three glyphs of prefix in
+ * front of a 48px display numeral is what pushed the costs summary out of its own
+ * card in an earlier round. The trip names its own currency in the header, so the
+ * narrow symbol is unambiguous here.
+ */
+
+const LOCALE = 'en-GB'
+
+/** The rounding remainder is handed out in whole minor units, never fractions. */
+const MINOR_STEP = 1
+
+/** `'5'.charCodeAt(0)` — the half-up threshold on the first dropped digit. */
+const FIVE = 53
+
+/* -------------------------------------------------------------------------- */
+/* Currency codes                                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The currencies a traveller can log a receipt in.
+ *
+ * Deliberately a curated list rather than every ISO 4217 code: a picker with 180
+ * rows is a worse experience than one with the thirty currencies our trips are
+ * actually priced in, and any code outside it still renders correctly because
+ * formatting resolves through `Intl` rather than through this table.
+ */
+export const CURRENCY_OPTIONS: ReadonlyArray<{
+  readonly code: string
+  readonly name: string
+}> = [
+  { code: 'EUR', name: 'Euro' },
+  { code: 'GBP', name: 'Pound sterling' },
+  { code: 'USD', name: 'US dollar' },
+  { code: 'JPY', name: 'Japanese yen' },
+  { code: 'CHF', name: 'Swiss franc' },
+  { code: 'AUD', name: 'Australian dollar' },
+  { code: 'CAD', name: 'Canadian dollar' },
+  { code: 'NZD', name: 'New Zealand dollar' },
+  { code: 'SEK', name: 'Swedish krona' },
+  { code: 'NOK', name: 'Norwegian krone' },
+  { code: 'DKK', name: 'Danish krone' },
+  { code: 'PLN', name: 'Polish złoty' },
+  { code: 'CZK', name: 'Czech koruna' },
+  { code: 'HUF', name: 'Hungarian forint' },
+  { code: 'RON', name: 'Romanian leu' },
+  { code: 'ISK', name: 'Icelandic króna' },
+  { code: 'TRY', name: 'Turkish lira' },
+  { code: 'MAD', name: 'Moroccan dirham' },
+  { code: 'ZAR', name: 'South African rand' },
+  { code: 'AED', name: 'UAE dirham' },
+  { code: 'SGD', name: 'Singapore dollar' },
+  { code: 'HKD', name: 'Hong Kong dollar' },
+  { code: 'KRW', name: 'South Korean won' },
+  { code: 'CNY', name: 'Chinese yuan' },
+  { code: 'THB', name: 'Thai baht' },
+  { code: 'VND', name: 'Vietnamese dong' },
+  { code: 'IDR', name: 'Indonesian rupiah' },
+  { code: 'INR', name: 'Indian rupee' },
+  { code: 'MXN', name: 'Mexican peso' },
+  { code: 'BRL', name: 'Brazilian real' },
+  { code: 'ARS', name: 'Argentine peso' },
+  { code: 'CLP', name: 'Chilean peso' },
+]
+
+const CODE_PATTERN = /^[A-Z]{3}$/
+
+/** A three-letter code we are willing to hand to `Intl`. */
+export function currencyCode(currency: string | null | undefined): string {
+  const code = (currency ?? '').trim().toUpperCase()
+  return CODE_PATTERN.test(code) ? code : 'EUR'
+}
+
+/* -------------------------------------------------------------------------- */
+/* Formatters                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `Intl.NumberFormat` construction is the expensive part, and the costs screen
+ * formats every row three times. One cached instance per shape keeps a 200-row
+ * export from building six hundred formatters.
+ */
+const cache = new Map<string, Intl.NumberFormat>()
+
+function formatter(key: string, build: () => Intl.NumberFormat): Intl.NumberFormat {
+  const existing = cache.get(key)
+  if (existing !== undefined) {
+    return existing
+  }
+  const created = build()
+  cache.set(key, created)
+  return created
+}
+
+function currencyFormatter(code: string): Intl.NumberFormat {
+  return formatter(`c:${code}`, () =>
+    new Intl.NumberFormat(LOCALE, {
+      style: 'currency',
+      currency: code,
+      currencyDisplay: 'narrowSymbol',
+    }),
+  )
+}
+
+/**
+ * How many minor units the currency actually has: 2 for EUR, 0 for JPY, 3 for
+ * KWD. Resolved from `Intl` so a zero-decimal currency is never divided by a
+ * hundred it does not use.
+ */
+export function minorUnitDigits(currency: string | null | undefined): number {
+  const code = currencyCode(currency)
+  return currencyFormatter(code).resolvedOptions().minimumFractionDigits ?? 2
+}
+
+/** 10 ** the currency's minor-unit digits — the divisor between minor and major. */
+function minorUnitScale(currency: string | null | undefined): number {
+  return 10 ** minorUnitDigits(currency)
+}
+
+/** `464880` JPY → `¥464,880`. `238400` GBP → `£2,384.00`. */
+export function formatMoney(minor: number, currency: string | null | undefined): string {
+  const code = currencyCode(currency)
+  const digits = minorUnitDigits(code)
+  return currencyFormatter(code).format(minor / 10 ** digits)
+}
+
+/** The same figure with the symbol dropped, for a column that already names it. */
+export function formatMoneyPlain(minor: number, currency: string | null | undefined): string {
+  const digits = minorUnitDigits(currency)
+  return formatter(`p:${digits}`, () =>
+    new Intl.NumberFormat(LOCALE, {
+      style: 'decimal',
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }),
+  ).format(minor / 10 ** digits)
+}
+
+/**
+ * A balance, with its sign carried by a typographic minus rather than a hyphen.
+ *
+ * Zero is unsigned on purpose: a settled balance is a fact, not a direction, and
+ * `+¥0` reads as a rounding artefact.
+ */
+export function formatSignedMoney(minor: number, currency: string | null | undefined): string {
+  const magnitude = formatMoney(Math.abs(minor), currency)
+  if (minor === 0) {
+    return magnitude
+  }
+  return `${minor > 0 ? '+' : '−'}${magnitude}`
+}
+
+/**
+ * The conversion line the reference sets under a foreign receipt:
+ * `£2,384.00 → ¥464,880`.
+ *
+ * Returns `null` when there is nothing to convert — no source amount, no source
+ * currency, or a source currency that matches the trip's own, in which case the
+ * arrow would point at the same number twice.
+ */
+export function formatConversion(input: {
+  readonly originalAmountMinor: number | null
+  readonly originalCurrency: string | null
+  readonly amountMinor: number
+  readonly currency: string
+}): string | null {
+  const { originalAmountMinor, originalCurrency, amountMinor, currency } = input
+  if (originalAmountMinor === null || originalCurrency === null) {
+    return null
+  }
+  if (currencyCode(originalCurrency) === currencyCode(currency)) {
+    return null
+  }
+  return `${formatMoney(originalAmountMinor, originalCurrency)} → ${formatMoney(amountMinor, currency)}`
+}
+
+/**
+ * `1 GBP = 1.9500 JPY`, for the quiet line under a converted amount.
+ *
+ * Derived from the two amounts rather than from a stored rate, so it can never
+ * disagree with the figures printed beside it.
+ */
+export function formatExchangeRate(input: {
+  readonly originalAmountMinor: number | null
+  readonly originalCurrency: string | null
+  readonly amountMinor: number
+  readonly currency: string
+}): string | null {
+  const rate = impliedRate(input)
+  if (rate === null || input.originalCurrency === null) {
+    return null
+  }
+  const figure = formatter('rate', () =>
+    new Intl.NumberFormat(LOCALE, {
+      style: 'decimal',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    }),
+  ).format(rate)
+  return `1 ${currencyCode(input.originalCurrency)} = ${figure} ${currencyCode(input.currency)}`
+}
+
+/**
+ * Major units of the target currency per major unit of the source currency.
+ *
+ * `null` when either side is missing or the source amount is zero — dividing by
+ * a zero receipt would print `Infinity` at the reader.
+ */
+export function impliedRate(input: {
+  readonly originalAmountMinor: number | null
+  readonly originalCurrency: string | null
+  readonly amountMinor: number
+  readonly currency: string
+}): number | null {
+  const { originalAmountMinor, originalCurrency, amountMinor, currency } = input
+  if (originalAmountMinor === null || originalCurrency === null || originalAmountMinor === 0) {
+    return null
+  }
+  const source = originalAmountMinor / minorUnitScale(originalCurrency)
+  const target = amountMinor / minorUnitScale(currency)
+  const rate = target / source
+  return Number.isFinite(rate) && rate > 0 ? rate : null
+}
+
+/* -------------------------------------------------------------------------- */
+/* Parsing                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A typed major amount into minor units: `2,384.00` GBP → `238400`.
+ *
+ * Grouping separators and stray currency glyphs are discarded rather than
+ * rejected — a reader who pastes `¥ 54,705` out of a banking app should not be
+ * told off for it. Anything that is not a single non-negative decimal number
+ * returns `null`, and the caller decides what to say about it.
+ */
+export function parseMoney(text: string, currency: string | null | undefined): number | null {
+  // A minus sign of any flavour is rejected rather than stripped: an expense is
+  // never negative, and silently turning a negative figure positive is a lie.
+  if (/[-\u2212]/.test(text)) {
+    return null
+  }
+  const figure = text
+    // Spaces of every width, plus the separators a European locale groups with.
+    .replace(/[\s\u00a0\u202f,'\u2019]/g, '')
+    // A leading currency glyph, and a trailing code or glyph.
+    .replace(/^[^\d.]+/, '')
+    .replace(/[^\d.]+$/, '')
+
+  if (figure === '' || figure === '.' || !/^\d*\.?\d*$/.test(figure)) {
+    return null
+  }
+
+  // Scaled by moving the decimal point in the *string*, not by multiplying a
+  // float: `1.005 * 100` is `100.49999999999999` in IEEE 754, which would round a
+  // penny away. Money never touches floating point in this module.
+  const digits = minorUnitDigits(currency)
+  const [whole = '', fraction = ''] = figure.split('.')
+  const scaled = `${whole === '' ? '0' : whole}${fraction.padEnd(digits, '0').slice(0, digits)}`
+  const dropped = fraction.slice(digits)
+  const base = Number.parseInt(scaled, 10)
+  if (!Number.isSafeInteger(base)) {
+    return null
+  }
+  const roundUp = dropped !== '' && dropped.charCodeAt(0) >= FIVE
+  const minor = base + (roundUp ? MINOR_STEP : 0)
+  return Number.isSafeInteger(minor) ? minor : null
+}
+
+/**
+ * Minor units back into the string a text field should hold: `238400` GBP →
+ * `2384.00`. No grouping separators — they are noise inside an input the reader
+ * is about to edit.
+ */
+export function toAmountInput(minor: number, currency: string | null | undefined): string {
+  const digits = minorUnitDigits(currency)
+  return (minor / 10 ** digits).toFixed(digits)
+}
+
+/** A percentage typed into a field. `null` for anything outside 0–100. */
+export function parsePercentage(text: string): number | null {
+  const trimmed = text.trim().replace('%', '')
+  if (trimmed === '') {
+    return null
+  }
+  const value = Number.parseFloat(trimmed)
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
+    return null
+  }
+  return value
+}
+
+/** A share weight typed into a field. `null` for anything outside 0–1000. */
+export function parseWeight(text: string): number | null {
+  const trimmed = text.trim()
+  if (trimmed === '') {
+    return null
+  }
+  const value = Number.parseFloat(trimmed)
+  if (!Number.isFinite(value) || value < 0 || value > 1000) {
+    return null
+  }
+  return value
+}
+
+/* -------------------------------------------------------------------------- */
+/* Split arithmetic                                                           */
+/* -------------------------------------------------------------------------- */
+
+const SPLIT_METHOD_VALUES = ['equal', 'exact', 'shares', 'percentage'] as const
+
+export type SplitMethod = (typeof SPLIT_METHOD_VALUES)[number]
+
+export function isSplitMethod(value: string): value is SplitMethod {
+  return (SPLIT_METHOD_VALUES as ReadonlyArray<string>).includes(value)
+}
+
+/** One traveller's stake in an expense, in whichever unit the method uses. */
+export interface SplitInput {
+  readonly userId: string
+  /** Relative weight for `shares`. Ignored by the other methods. */
+  readonly weight?: number
+  /** Exact amount for `exact`, in the expense's minor unit. */
+  readonly shareMinor?: number
+  /** Whole or fractional percent for `percentage`. The set must add up to 100. */
+  readonly percentage?: number
+}
+
+export interface SplitRow {
+  readonly userId: string
+  readonly shareMinor: number
+}
+
+/**
+ * What the split editor needs to render, in one value.
+ *
+ * `balanced` is the gate on saving: a split that does not add up to the expense
+ * would be rejected by the repository anyway, and finding that out from a toast
+ * after a round trip is a worse experience than never being allowed to submit.
+ */
+export interface SplitPreview {
+  readonly rows: ReadonlyArray<SplitRow>
+  /** What the rows currently add up to. */
+  readonly allocatedMinor: number
+  /** `amountMinor − allocatedMinor`. Zero exactly when the split is settled. */
+  readonly remainderMinor: number
+  /** Sum of the editable unit: percent points for `percentage`, weights for `shares`. */
+  readonly weightTotal: number
+  readonly balanced: boolean
+  /** Reader-facing reason the split cannot be saved yet, or `null`. */
+  readonly error: string | null
+}
+
+function weightsFor(method: SplitMethod, participants: ReadonlyArray<SplitInput>): Array<number> {
+  return participants.map((part) => {
+    if (method === 'equal') {
+      return 1
+    }
+    if (method === 'percentage') {
+      return part.percentage ?? 0
+    }
+    return part.weight ?? 1
+  })
+}
+
+function sum(values: ReadonlyArray<number>): number {
+  return values.reduce((total, value) => total + value, 0)
+}
+
+/**
+ * Splits `amountMinor` proportionally to `weights`, then hands the rounding
+ * remainder out one minor unit at a time in order, so the rows always add up to
+ * exactly `amountMinor` and the same input always produces the same split.
+ *
+ * This mirrors `computeShares` in `src/server/repos/expenses.ts` deliberately:
+ * the repository stays the authority on what is stored, and this is what lets the
+ * editor show the reader the same numbers before they commit to them.
+ */
+function distribute(
+  amountMinor: number,
+  weights: ReadonlyArray<number>,
+  denominator: number,
+): Array<number> {
+  const raw = weights.map((weight) => Math.floor((amountMinor * weight) / denominator))
+  let remainder = amountMinor - sum(raw)
+  return raw.map((value) => {
+    const extra = remainder >= MINOR_STEP ? MINOR_STEP : 0
+    remainder -= extra
+    return value + extra
+  })
+}
+
+/**
+ * The split as it will be stored. Only ever called with a balanced input — the
+ * editor will not enable saving otherwise — so the rows always total the expense.
+ */
+export function splitShares(
+  amountMinor: number,
+  method: SplitMethod,
+  participants: ReadonlyArray<SplitInput>,
+): Array<SplitRow> {
+  if (participants.length === 0) {
+    return []
+  }
+  if (method === 'exact') {
+    return participants.map((part) => ({
+      userId: part.userId,
+      shareMinor: part.shareMinor ?? 0,
+    }))
+  }
+  const weights = weightsFor(method, participants)
+  const weightTotal = sum(weights)
+  if (weightTotal <= 0) {
+    return participants.map((part) => ({ userId: part.userId, shareMinor: 0 }))
+  }
+  const shares = distribute(amountMinor, weights, weightTotal)
+  return participants.map((part, index) => ({
+    userId: part.userId,
+    shareMinor: shares[index] ?? 0,
+  }))
+}
+
+/** Percentages are floats; comparing them to 100 needs a tolerance, not equality. */
+const PERCENT_EPSILON = 0.001
+
+/**
+ * The live preview under the split editor: every traveller's share, what the
+ * shares add up to, and how far that is from the expense total.
+ *
+ * An unbalanced split is previewed against its own nominal denominator rather
+ * than against the weights that happen to be typed so far — 40% of a ¥1,000
+ * receipt is ¥400 whether or not the other 60% has been entered yet. Handing the
+ * rounding remainder out in that state would quietly over-allocate the people at
+ * the top of the list, so it is held back until the split settles.
+ */
+export function splitPreview(
+  amountMinor: number,
+  method: SplitMethod,
+  participants: ReadonlyArray<SplitInput>,
+): SplitPreview {
+  if (participants.length === 0) {
+    return {
+      rows: [],
+      allocatedMinor: 0,
+      remainderMinor: amountMinor,
+      weightTotal: 0,
+      balanced: false,
+      error: 'Choose at least one traveller to split this between.',
+    }
+  }
+
+  if (method === 'exact') {
+    const rows = participants.map((part) => ({
+      userId: part.userId,
+      shareMinor: part.shareMinor ?? 0,
+    }))
+    const allocatedMinor = sum(rows.map((row) => row.shareMinor))
+    const remainderMinor = amountMinor - allocatedMinor
+    return {
+      rows,
+      allocatedMinor,
+      remainderMinor,
+      weightTotal: allocatedMinor,
+      balanced: remainderMinor === 0,
+      error:
+        remainderMinor === 0
+          ? null
+          : remainderMinor > 0
+            ? 'The exact amounts are short of the total.'
+            : 'The exact amounts add up to more than the total.',
+    }
+  }
+
+  const weights = weightsFor(method, participants)
+  const weightTotal = sum(weights)
+
+  if (weightTotal <= 0) {
+    return {
+      rows: participants.map((part) => ({ userId: part.userId, shareMinor: 0 })),
+      allocatedMinor: 0,
+      remainderMinor: amountMinor,
+      weightTotal,
+      balanced: false,
+      error:
+        method === 'percentage'
+          ? 'Percentages must add up to 100.'
+          : 'Give at least one traveller a share.',
+    }
+  }
+
+  if (method === 'percentage') {
+    const balanced = Math.abs(weightTotal - 100) <= PERCENT_EPSILON
+    const shares = balanced
+      ? distribute(amountMinor, weights, 100)
+      : weights.map((weight) => Math.floor((amountMinor * weight) / 100))
+    const rows = participants.map((part, index) => ({
+      userId: part.userId,
+      shareMinor: shares[index] ?? 0,
+    }))
+    const allocatedMinor = sum(shares)
+    return {
+      rows,
+      allocatedMinor,
+      remainderMinor: amountMinor - allocatedMinor,
+      weightTotal,
+      balanced,
+      error: balanced ? null : 'Percentages must add up to 100.',
+    }
+  }
+
+  const shares = distribute(amountMinor, weights, weightTotal)
+  const rows = participants.map((part, index) => ({
+    userId: part.userId,
+    shareMinor: shares[index] ?? 0,
+  }))
+  const allocatedMinor = sum(shares)
+  return {
+    rows,
+    allocatedMinor,
+    remainderMinor: amountMinor - allocatedMinor,
+    weightTotal,
+    balanced: true,
+    error: null,
+  }
+}
+
+/**
+ * The shortest set of transfers that clears a set of balances: greedily match the
+ * largest debtor against the largest creditor until every balance is zero, which
+ * needs at most `people − 1` transfers.
+ *
+ * Mirrors `suggestSettlements` in the expenses repository so the panel can keep
+ * showing the right transfers while a just-recorded payment is still in flight.
+ */
+export function suggestTransfers(
+  balances: ReadonlyArray<{ readonly userId: string; readonly balanceMinor: number }>,
+): Array<{ readonly fromUserId: string; readonly toUserId: string; readonly amountMinor: number }> {
+  const creditors = balances
+    .filter((row) => row.balanceMinor > 0)
+    .map((row) => ({ userId: row.userId, amount: row.balanceMinor }))
+    .sort((left, right) => right.amount - left.amount)
+  const debtors = balances
+    .filter((row) => row.balanceMinor < 0)
+    .map((row) => ({ userId: row.userId, amount: -row.balanceMinor }))
+    .sort((left, right) => right.amount - left.amount)
+
+  const transfers: Array<{
+    readonly fromUserId: string
+    readonly toUserId: string
+    readonly amountMinor: number
+  }> = []
+  let creditorIndex = 0
+  let debtorIndex = 0
+
+  while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
+    // `.at()` rather than `[]`: it types the miss as `undefined`, so the guard
+    // below is a real check rather than one the compiler proves away.
+    const creditor = creditors.at(creditorIndex)
+    const debtor = debtors.at(debtorIndex)
+    if (creditor === undefined || debtor === undefined) {
+      break
+    }
+    const amountMinor = Math.min(creditor.amount, debtor.amount)
+    if (amountMinor > 0) {
+      transfers.push({ fromUserId: debtor.userId, toUserId: creditor.userId, amountMinor })
+    }
+    creditor.amount -= amountMinor
+    debtor.amount -= amountMinor
+    if (creditor.amount === 0) {
+      creditorIndex += 1
+    }
+    if (debtor.amount === 0) {
+      debtorIndex += 1
+    }
+  }
+
+  return transfers
+}

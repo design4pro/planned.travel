@@ -1,0 +1,119 @@
+/**
+ * The whole demo dataset, in one place.
+ *
+ * Order matters for trips: the applier walks `trips` in sequence, and later entities (notifications,
+ * journeys, the audit trail) reference earlier trips by slug.
+ */
+
+import { planById, priceFor } from '#/lib/plans'
+import { ceilingsForPlan } from '#/server/billing/limits'
+import { flagshipTrip } from './flagship'
+import { supportingTrips } from './trips'
+import type { BillingInterval, PlanId } from '#/lib/plans'
+import type { SubscriptionRecord } from '#/server/billing/types'
+import type { SeedTrip } from '../types'
+
+export {
+  auditTrail,
+  bucketList,
+  collections,
+  extraCategories,
+  journeys,
+  notificationPreferences,
+  notifications,
+  people,
+  travelStats,
+  vacay,
+  visitedCountries,
+  visitedRegions,
+} from './workspace'
+
+export { flagshipTrip } from './flagship'
+export { dolomitesTrip, lisbonTrip, marrakechTrip, patagoniaTrip } from './trips'
+
+/** Every trip the seed writes, flagship first. */
+export const trips: ReadonlyArray<SeedTrip> = [flagshipTrip, ...supportingTrips]
+
+/**
+ * Bumped whenever the dataset changes in a way that should re-seed a workspace that already carries
+ * the marker. The applier stores it in `app_settings` under `demo.seed`.
+ */
+export const DATASET_VERSION = 2
+
+/** Workspace defaults the demo assumes: sterling, London, Monday weeks. */
+export const organizationSettings = {
+  defaultCurrency: 'GBP',
+  locale: 'en-GB',
+  timezone: 'Europe/London',
+  weekStartsOn: 1,
+  dateFormat: 'dd MMM yyyy',
+  distanceUnit: 'metric',
+  mapStyle: 'planned-light',
+} as const
+
+/**
+ * The demo workspace is a real **Crew** subscription: ten seats bought, four of them
+ * filled, billed monthly. Crew is the plan that sells what this dataset needs —
+ * unlimited trips and a shared workspace — so the seed is not fighting a ceiling it
+ * pretends not to have.
+ *
+ * Only the *plan* is declared here. The tier column, the seat and storage ceilings, the
+ * currency and the unit amount are all derived by `rowValuesFromRecord()`, exactly as a
+ * Stripe webhook would derive them. Hand-stamping tier-shaped ceilings next to a
+ * catalogue price is what made the demo tell `/settings/billing` one story and `/files`
+ * another; there is now no way for the seed to write a row that disagrees with itself.
+ */
+export const subscription = {
+  planId: 'crew',
+  interval: 'monthly',
+  status: 'active',
+  seats: 10,
+  stripeCustomerId: 'cus_demo_planned_travel',
+  stripeSubscriptionId: 'sub_demo_planned_travel',
+} as const satisfies {
+  planId: PlanId
+  interval: BillingInterval
+  status: SubscriptionRecord['status']
+  seats: number
+  stripeCustomerId: string
+  stripeSubscriptionId: string
+}
+
+/**
+ * The Stripe price id for the demo plan, when this deployment has one configured.
+ *
+ * Never a made-up `price_…` string: an id the catalogue does not know is worse than no
+ * id at all, because it is the first thing the resolver consults and it would resolve to
+ * nothing. With no price id configured the tier column and the seat count carry the
+ * plan instead, which is the legacy path every pre-catalogue row already takes.
+ */
+export function demoStripePriceId(): string | null {
+  const price = priceFor(planById(subscription.planId), subscription.interval)
+  return price === null || price.priceId === '' ? null : price.priceId
+}
+
+/**
+ * The demo subscription as the billing domain sees it, ready for
+ * `rowValuesFromRecord()` — the one function that knows which columns a plan occupies.
+ */
+export function demoSubscriptionRecord(
+  organizationId: string,
+  period: { readonly start: Date; readonly end: Date },
+): SubscriptionRecord {
+  return {
+    organizationId,
+    planId: subscription.planId,
+    status: subscription.status,
+    interval: subscription.interval,
+    seats: subscription.seats,
+    stripeCustomerId: subscription.stripeCustomerId,
+    stripeSubscriptionId: subscription.stripeSubscriptionId,
+    stripePriceId: demoStripePriceId(),
+    currentPeriodStart: period.start,
+    currentPeriodEnd: period.end,
+    cancelAtPeriodEnd: false,
+    trialEndsAt: null,
+    canceledAt: null,
+    ceilings: ceilingsForPlan(subscription.planId, subscription.seats),
+  }
+}

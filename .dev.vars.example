@@ -1,0 +1,91 @@
+# planned.travel — local secrets template
+#
+# Copy to `.dev.vars` and fill in. `vite dev` loads this file into the Worker's
+# `env` through Miniflare, exactly like `wrangler secret put` does in production.
+# `.dev.vars` is gitignored; this file must never contain a real value.
+#
+# Non-secret configuration (APP_URL, LOG_LEVEL, TILES_ARCHIVE_KEY, …) is NOT
+# here — it lives in the `vars` block of `wrangler.jsonc` and is checked in.
+#
+# In production every name below is set with:
+#   wrangler secret put <NAME>            # add --env staging for staging
+# List what is currently set with:
+#   wrangler secret list
+
+
+# ── Auth (required) ──────────────────────────────────────────────────────────
+
+# Signs session cookies and Better Auth tokens. Rotating it logs everyone out.
+# Generate: openssl rand -base64 32
+BETTER_AUTH_SECRET=
+
+
+# ── Social sign-in (optional; each provider is skipped when unset) ───────────
+
+# Google Cloud console → APIs & Services → Credentials → OAuth client ID (Web).
+# Authorised redirect URI: <APP_URL>/api/auth/callback/google
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Apple Developer → Certificates, Identifiers & Profiles → Services ID.
+# APPLE_CLIENT_SECRET is the ES256 client-secret JWT, not the .p8 key itself.
+APPLE_CLIENT_ID=
+APPLE_CLIENT_SECRET=
+# Only needed when a native iOS client signs in against this backend.
+APPLE_APP_BUNDLE_IDENTIFIER=
+
+
+# ── Billing (required for anything past the free plan) ───────────────────────
+
+# Stripe dashboard → Developers → API keys. Use the test key locally: sk_test_…
+STRIPE_SECRET_KEY=
+
+# Stripe dashboard → Developers → Webhooks → the /api/stripe/webhook endpoint.
+# Locally, `stripe listen --forward-to localhost:3000/api/stripe/webhook`
+# prints a whsec_… value for this variable.
+STRIPE_WEBHOOK_SECRET=
+
+
+# ── Transactional email (optional; queued mail fails loudly without it) ──────
+
+# Resend-compatible REST key. The endpoint itself is the EMAIL_API_URL var.
+EMAIL_API_KEY=
+
+
+# ── Nightly D1 backup to R2 (optional; the cron logs and skips without it) ───
+
+# Cloudflare dashboard → Workers & Pages → Account details → Account ID.
+CLOUDFLARE_ACCOUNT_ID=
+# Scoped API token with `D1:read` on this account only.
+CLOUDFLARE_API_TOKEN=
+# UUID of the D1 database to export — the `database_id` in wrangler.jsonc.
+D1_DATABASE_ID=
+
+
+# ── PDF itinerary export (optional; falls back to an HTML export) ────────────
+
+# API token with `Browser Rendering:edit`. Needs CLOUDFLARE_ACCOUNT_ID too.
+BROWSER_RENDERING_API_TOKEN=
+
+
+# ── Build-time public values — NOT part of this file ─────────────────────────
+#
+# Stripe *price* ids are inlined into both bundles by Vite, so they are read
+# from `import.meta.env`, not from the Worker environment. Put them in
+# `.env.local` (also gitignored) for local work, and in repository *variables*
+# for CI, since a price id is public information:
+#
+#   VITE_STRIPE_PRICE_SOLO_MONTHLY=price_…
+#   VITE_STRIPE_PRICE_SOLO_YEARLY=price_…
+#   VITE_STRIPE_PRICE_CREW_MONTHLY=price_…
+#   VITE_STRIPE_PRICE_CREW_YEARLY=price_…
+
+# Local dev origin — overrides the production APP_URL in wrangler.jsonc vars.
+APP_URL=http://localhost:3001
+
+# Local basemap archive — overrides the dated production TILES_ARCHIVE_KEY in
+# wrangler.jsonc vars. Deployments version the key and never overwrite it, but a local
+# miniflare bucket only holds whatever you put there with
+# `wrangler r2 object put planned-travel-tiles/<key> --file=… --local`, so name that
+# object here rather than renaming it. See docs/DEPLOY.md §7.4.
+TILES_ARCHIVE_KEY=basemaps/planet.pmtiles

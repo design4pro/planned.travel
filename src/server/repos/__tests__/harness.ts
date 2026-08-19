@@ -1,0 +1,228 @@
+/**
+ * Test harness: the whole relational model in an in-memory SQLite database.
+ *
+ * The DDL is generated from the Drizzle schema itself (`drizzle-kit/api`), so these tests exercise the
+ * real column types, the real `CHECK` constraints and the real foreign keys — including
+ * `ON DELETE CASCADE` — rather than a hand-written approximation that could drift.
+ *
+ * The database is reached through Drizzle's proxy driver, whose handle satisfies the same
+ * {@link Database} type the Worker's D1 handle does. Both the single-statement and the `batch`
+ * callbacks are wired, so `runBatch()` takes its real batching path here too.
+ */
+
+import { DatabaseSync } from 'node:sqlite'
+import { generateSQLiteDrizzleJson, generateSQLiteMigration } from 'drizzle-kit/api'
+import { drizzle } from 'drizzle-orm/sqlite-proxy'
+import { authSchema, member, organization, user } from '#/server/db/auth-schema'
+import * as domainSchema from '#/server/db/schema'
+import { newId } from '#/server/db/schema'
+import { ceilingsForPlan } from '#/server/billing/limits'
+import { ceilingColumns } from '#/server/billing/store'
+import { createScope } from '../base'
+import { upsertSubscription } from '../billing'
+import type { PlanId } from '#/lib/plans'
+import type { Database, OrganizationRole } from '#/server/db/types'
+import type { TenantScope } from '../base'
+
+/** The value types `node:sqlite` accepts as a bound parameter. */
+type SqliteValue = null | number | bigint | string | Uint8Array
+
+/** Generating the schema snapshot is the slow part, so it happens once per test process. */
+let ddl: Promise<Array<string>> | undefined
+
+function schemaStatements(): Promise<Array<string>> {
+  ddl ??= (async () => {
+    const empty = await generateSQLiteDrizzleJson({})
+    const current = await generateSQLiteDrizzleJson({ ...authSchema, ...domainSchema })
+    return generateSQLiteMigration(empty, current)
+  })()
+  return ddl
+}
+
+function toSqliteParams(params: ReadonlyArray<unknown>): Array<SqliteValue> {
+  return params.map((param) => {
+    if (param === null || param === undefined) {
+      return null
+    }
+    if (typeof param === 'boolean') {
+      return param ? 1 : 0
+    }
+    if (param instanceof Date) {
+      return param.getTime()
+    }
+    if (
+      typeof param === 'number' ||
+      typeof param === 'bigint' ||
+      typeof param === 'string' ||
+      param instanceof Uint8Array
+    ) {
+      return param
+    }
+    return JSON.stringify(param)
+  })
+}
+
+type ProxyMethod = 'run' | 'all' | 'values' | 'get'
+
+function runStatement(
+  sqlite: DatabaseSync,
+  query: string,
+  params: ReadonlyArray<unknown>,
+  method: ProxyMethod,
+): { rows: Array<unknown> } {
+  const statement = sqlite.prepare(query)
+  const bound = toSqliteParams(params)
+
+  if (method === 'run') {
+    statement.run(...bound)
+    return { rows: [] }
+  }
+
+  // Drizzle maps result rows positionally, so rows must come back as arrays, not objects: a join that
+  // selects two columns of the same name would otherwise collapse into one key.
+  statement.setReturnArrays(true)
+  const rows = statement.all(...bound) as unknown as Array<Array<unknown>>
+
+  if (method === 'get') {
+    return { rows: rows[0] ?? [] }
+  }
+  return { rows }
+}
+
+/** One tenant, ready to act: its organization, its owner, and a scope bound to both. */
+export interface SeededTenant {
+  readonly organizationId: string
+  readonly ownerUserId: string
+  readonly scope: TenantScope
+  /** A scope for another member of the same organization. */
+  scopeFor: (userId: string, role?: OrganizationRole) => TenantScope
+  /** Adds a user row plus a `member` row and returns the user id. */
+  addUser: (name: string, role?: OrganizationRole) => Promise<string>
+}
+
+export interface Harness {
+  readonly db: Database
+  readonly sqlite: DatabaseSync
+  seedTenant: (label: string) => Promise<SeededTenant>
+  /** Table names present in the generated schema — used by the smoke test. */
+  tableNames: () => Array<string>
+  close: () => void
+}
+
+/** Builds a fresh, fully migrated database. Call it in `beforeEach` so tests never share state. */
+export async function createHarness(): Promise<Harness> {
+  const statements = await schemaStatements()
+  const sqlite = new DatabaseSync(':memory:')
+  for (const statement of statements) {
+    sqlite.exec(statement)
+  }
+
+  const db: Database = drizzle(
+    async (query, params, method) => runStatement(sqlite, query, params, method),
+    async (queries) =>
+      queries.map((entry) => runStatement(sqlite, entry.sql, entry.params, entry.method)),
+  )
+
+  async function insertUser(name: string): Promise<string> {
+    const id = newId()
+    const now = new Date()
+    await db.insert(user).values({
+      id,
+      name,
+      email: `${id}@example.test`,
+      emailVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+    return id
+  }
+
+  async function seedTenant(label: string): Promise<SeededTenant> {
+    const organizationId = newId()
+    const now = new Date()
+    await db.insert(organization).values({
+      id: organizationId,
+      name: `Workspace ${label}`,
+      slug: `workspace-${label}-${organizationId.slice(-6)}`,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    const ownerUserId = await insertUser(`Owner ${label}`)
+    await db.insert(member).values({
+      id: newId(),
+      organizationId,
+      userId: ownerUserId,
+      role: 'owner',
+      createdAt: now,
+    })
+
+    const scopeFor = (userId: string, role: OrganizationRole = 'member'): TenantScope =>
+      createScope(db, { userId, organizationId, role })
+
+    return {
+      organizationId,
+      ownerUserId,
+      scope: createScope(db, { userId: ownerUserId, organizationId, role: 'owner' }),
+      scopeFor,
+      async addUser(name, role = 'member') {
+        const userId = await insertUser(name)
+        await db.insert(member).values({
+          id: newId(),
+          organizationId,
+          userId,
+          role,
+          createdAt: new Date(),
+        })
+        return userId
+      },
+    }
+  }
+
+  return {
+    db,
+    sqlite,
+    seedTenant,
+    tableNames() {
+      const statement = sqlite.prepare(
+        "select name from sqlite_master where type = 'table' order by name",
+      )
+      statement.setReturnArrays(true)
+      const rows = statement.all() as unknown as Array<Array<unknown>>
+      return rows.map((row) => String(row[0]))
+    },
+    close() {
+      sqlite.close()
+    },
+  }
+}
+
+/**
+ * Puts a tenant on a plan the way every sanctioned write path does: the plan's own
+ * ceilings, stamped onto the same columns `resolveQuotas()` reads back. A test that
+ * needs head-room asks for the plan that sells it rather than hand-picking a tier.
+ */
+export async function subscribeTenant(
+  scope: TenantScope,
+  planId: PlanId,
+  seats = 1,
+): Promise<void> {
+  await upsertSubscription(scope, {
+    ...ceilingColumns(ceilingsForPlan(planId, seats)),
+    status: 'active',
+    seats,
+  })
+}
+
+/** Asserts that `run` rejects, and returns the error so the caller can check its `code`. */
+export async function captureError(run: () => Promise<unknown>): Promise<Error> {
+  try {
+    await run()
+  } catch (error) {
+    if (error instanceof Error) {
+      return error
+    }
+    throw error
+  }
+  throw new Error('Expected the call to reject, but it resolved.')
+}

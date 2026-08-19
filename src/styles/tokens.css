@@ -1,0 +1,446 @@
+/* ==========================================================================
+   planned.travel — design tokens
+   --------------------------------------------------------------------------
+   The single source of truth for every colour, space, radius, shadow, type
+   step, easing and z-index in the product. Exposed to Tailwind utilities from
+   `styles.css` via `@theme inline`, so these declarations always win the
+   cascade (they are unlayered; Tailwind's theme block lives in `@layer theme`).
+
+   Light values sit on bare `:root`.
+   Dark values are re-declared twice:
+     1. `@media (prefers-color-scheme: dark)` guarded by
+        `:root:not([data-theme="light"])` — system preference with no attribute
+        set, and an explicit light toggle still wins.
+     2. `:root[data-theme="dark"]` — an explicit dark toggle wins on a
+        light-preferring system.
+
+   Every text/background pair in both themes is verified at WCAG 2.2 AA
+   (4.5:1 body text, 3:1 for control boundaries via `--color-edge-strong`).
+   Measured ratios are noted inline as trailing comments: "n.nn:1 vs <surface>".
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* ---------------------------------------------------------------- surfaces
+     Warm paper, never clinical white. */
+  --color-canvas: #faf9f7;
+  --color-surface: #ffffff;
+  --color-surface-2: #f3f1ed;
+  --color-surface-inset: #edebe6;
+
+  /* -------------------------------------------------------------------- ink
+     All four tiers clear 4.5:1 on all four surfaces above, so hierarchy comes
+     from weight and scale as much as from value.
+       ink    17.38 / 18.29 / 16.21 / 15.35
+       ink-2  10.18 / 10.71 /  9.50 /  8.99
+       ink-3   6.67 /  7.02 /  6.22 /  5.89
+       ink-4   5.15 /  5.42 /  4.81 /  4.55  */
+  --color-ink: #16150f;
+  --color-ink-2: #403e36;
+  --color-ink-3: #5b5951;
+  --color-ink-4: #6c6a61;
+
+  /* ------------------------------------------------------------------ edges
+     `edge` and `edge-faint` are decorative hairlines. `edge-strong` is the
+     boundary of an interactive control and holds 3:1 on every surface
+     (3.42 / 3.60 / 3.19 / 3.02) to satisfy WCAG 2.2 1.4.11. */
+  --color-edge: #e3e0d8;
+  --color-edge-faint: rgb(22 21 15 / 0.07);
+  --color-edge-strong: #89877f;
+
+  /* ----------------------------------------------------------------- accent
+     Near-black. Primary buttons, FAB, inverse cards. */
+  --color-accent: #16150f;
+  --color-accent-hover: #2c2a22;
+  --color-accent-on: #ffffff; /* 18.29:1 on accent, 14.37:1 on accent-hover */
+  --color-accent-subtle: #edebe6;
+
+  /* ------------------------------------------------------------------ brand
+     Deep pine. Links, active nav, map markers, focus ring, selection. */
+  --color-brand: #256256;
+  --color-brand-hover: #1c4e45;
+  --color-brand-on: #ffffff; /* 7.09:1 on brand, 9.44:1 on brand-hover */
+  --color-brand-subtle: #e3efeb; /* 6.02:1 with --color-brand as text */
+
+  /* -------------------------------------------------------------- semantics
+     Each `-soft` tint carries its own hue as readable text (5.3–5.6:1). */
+  --color-success: #136b45;
+  --color-success-soft: #e2f1e8;
+  --color-success-on: #ffffff; /* 6.53:1 */
+  --color-warning: #8a5305;
+  --color-warning-soft: #faeedb;
+  --color-warning-on: #ffffff; /* 6.33:1 */
+  --color-danger: #b22f22;
+  --color-danger-soft: #fbe7e4;
+  --color-danger-on: #ffffff; /* 6.32:1 */
+  --color-info: #1d4fd8;
+  --color-info-soft: #e5eafb;
+  --color-info-on: #ffffff; /* 6.64:1 */
+
+  /* ---------------------------------------------------------------- inverse
+     The near-black panel treatment. `inverse-muted` is the quiet tier, and it
+     has to clear AA on the *composed* ground rather than on bare `inverse`: the
+     dashboard hero stacks `inverse-surface` (6% white) and a brand gradient on
+     top of the slab, which lifted the ground enough to drop the old #a8a69c to
+     4.43:1 for an 11px label. Measured against that stack it is now 4.84:1, and
+     8.8:1 on bare `inverse`. */
+  --color-inverse: #16150f;
+  --color-inverse-on: #f8f7f4; /* 17.07:1 */
+  --color-inverse-muted: #b6b4a9;
+  --color-inverse-edge: rgb(255 255 255 / 0.12);
+  --color-inverse-surface: rgb(255 255 255 / 0.06);
+  /* Brand *as seen on an inverse panel*. An inverse slab is near-black in both
+     themes, so the deep pine that carries the brand on paper goes muddy there;
+     this is the lifted tone that keeps the atlas map, meters and legends reading
+     as the same green. 7.93:1 on `inverse`, so it is safe for text too. It takes
+     one value for both themes on purpose: the ground it sits on barely moves. */
+  --color-inverse-brand: #5fbba0;
+
+  /* ------------------------------------------------------------ interaction
+     Neutral washes for ghost buttons, menu items and rows. */
+  --color-hover: rgb(22 21 15 / 0.045);
+  --color-active: rgb(22 21 15 / 0.085);
+  --color-overlay: rgb(22 21 15 / 0.42);
+  --color-ring: #256256; /* 6.74:1 on canvas — drawn outside the control */
+  --color-selection: #cfe4dc;
+  --color-selection-on: #16150f;
+
+  /* ------------------------------------------------------------ segmented
+     PillNav / Tabs track and its animated thumb. */
+  --color-track: #f0eee9;
+  --color-track-thumb: #ffffff;
+
+  /* --------------------------------------------------------------- surfaces
+     Translucent panels floated over the map. */
+  --color-glass: rgb(255 255 255 / 0.78);
+  --color-glass-edge: rgb(22 21 15 / 0.08);
+
+  /* -------------------------------------------------------------- scrollbar */
+  --color-scrollbar-thumb: rgb(22 21 15 / 0.18);
+  --color-scrollbar-thumb-hover: rgb(22 21 15 / 0.3);
+
+  /* ---------------------------------------------------------------- shadows */
+  --shadow-card:
+    0 1px 2px rgb(22 21 15 / 0.04), 0 1px 3px -1px rgb(22 21 15 / 0.05);
+  --shadow-elevated:
+    0 1px 2px rgb(22 21 15 / 0.05), 0 10px 24px -8px rgb(22 21 15 / 0.12);
+  --shadow-modal:
+    0 2px 8px -2px rgb(22 21 15 / 0.1), 0 32px 72px -16px rgb(22 21 15 / 0.28);
+  --shadow-dropdown:
+    0 2px 6px -1px rgb(22 21 15 / 0.06), 0 12px 32px -10px rgb(22 21 15 / 0.18);
+  --shadow-popover:
+    0 2px 8px -2px rgb(22 21 15 / 0.07), 0 16px 44px -12px rgb(22 21 15 / 0.2);
+  --shadow-glass:
+    0 1px 0 rgb(255 255 255 / 0.6) inset, 0 8px 32px -10px rgb(22 21 15 / 0.2),
+    0 2px 6px -2px rgb(22 21 15 / 0.08);
+  --shadow-focus: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-ring);
+}
+
+/* ==========================================================================
+   Dark — warm charcoal. Never pure black, never an inverted light theme.
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --color-canvas: #121211;
+    --color-surface: #1a1a18;
+    --color-surface-2: #212120;
+    --color-surface-inset: #292926;
+
+    /* ink    17.50 / 16.27 / 15.04 / 13.62
+       ink-2  12.90 / 11.99 / 11.09 / 10.04
+       ink-3   8.15 /  7.58 /  7.01 /  6.34
+       ink-4   5.93 /  5.52 /  5.10 /  4.62 */
+    --color-ink: #f8f7f4;
+    --color-ink-2: #d8d6d0;
+    --color-ink-3: #adaba3;
+    --color-ink-4: #939188;
+
+    --color-edge: #33332f;
+    --color-edge-faint: rgb(255 255 255 / 0.08);
+    --color-edge-strong: #74726d; /* 3.90 / 3.63 / 3.35 / 3.04 */
+
+    /* The near-black / near-white inversion flips. */
+    --color-accent: #f8f7f4;
+    --color-accent-hover: #ffffff;
+    --color-accent-on: #16150f; /* 17.07:1 on accent, 18.29:1 on hover */
+    --color-accent-subtle: #292926;
+
+    --color-brand: #5fbba0;
+    --color-brand-hover: #79cbb2;
+    --color-brand-on: #07130f; /* 8.21:1 on brand, 9.92:1 on hover */
+    --color-brand-subtle: #12261f; /* 6.88:1 with --color-brand as text */
+
+    --color-success: #4cc38a;
+    --color-success-soft: #11251c;
+    --color-success-on: #07130f; /* 8.68:1 */
+    --color-warning: #e0a32e;
+    --color-warning-soft: #2a2010;
+    --color-warning-on: #16150f; /* 8.31:1 */
+    --color-danger: #f0776a;
+    --color-danger-soft: #2e1815;
+    --color-danger-on: #16150f; /* 6.65:1 */
+    --color-info: #8aacf9;
+    --color-info-soft: #151e33;
+    --color-info-on: #16150f; /* 8.24:1 */
+
+    /* Deliberately *not* the flip of the light slab.
+       `accent` flips, because a primary button in the dark should be the
+       near-white one. A 1376x360 panel is a different problem: flipped, the
+       dashboard hero and the sign-in panel became the brightest objects on a
+       charcoal page — a light-bomb that reads as a bug, and the textbook
+       "dark mode is an inversion" failure. So the ink slab of the light theme
+       becomes a deep pine panel here: still one clear step away from every card
+       around it, still obviously the feature tile, and carrying the brand rather
+       than fighting the theme. */
+    --color-inverse: #16221d;
+    --color-inverse-on: #f8f7f4; /* 16.15:1 on inverse */
+    --color-inverse-muted: #b6b4a9; /* 8.14:1 on inverse, 4.6:1 composed */
+    --color-inverse-edge: rgb(255 255 255 / 0.1);
+    --color-inverse-surface: rgb(255 255 255 / 0.06);
+
+    --color-hover: rgb(255 255 255 / 0.06);
+    --color-active: rgb(255 255 255 / 0.11);
+    --color-overlay: rgb(6 6 5 / 0.66);
+    --color-ring: #5fbba0; /* 8.12:1 on canvas */
+    --color-selection: #1d4a3e;
+    --color-selection-on: #f8f7f4;
+
+    --color-track: #212120;
+    --color-track-thumb: #33332f;
+
+    --color-glass: rgb(26 26 24 / 0.74);
+    --color-glass-edge: rgb(255 255 255 / 0.1);
+
+    --color-scrollbar-thumb: rgb(255 255 255 / 0.16);
+    --color-scrollbar-thumb-hover: rgb(255 255 255 / 0.28);
+
+    /* Re-declared, not reused: darker and tighter than the light set. */
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 1px 1px rgb(0 0 0 / 0.3);
+    --shadow-elevated:
+      0 2px 4px rgb(0 0 0 / 0.5), 0 8px 18px -6px rgb(0 0 0 / 0.6);
+    --shadow-modal:
+      0 2px 8px -2px rgb(0 0 0 / 0.6), 0 24px 52px -14px rgb(0 0 0 / 0.8);
+    --shadow-dropdown:
+      0 2px 6px -1px rgb(0 0 0 / 0.5), 0 10px 26px -8px rgb(0 0 0 / 0.7);
+    --shadow-popover:
+      0 2px 8px -2px rgb(0 0 0 / 0.55), 0 14px 34px -10px rgb(0 0 0 / 0.72);
+    --shadow-glass:
+      0 1px 0 rgb(255 255 255 / 0.06) inset, 0 6px 24px -8px rgb(0 0 0 / 0.7),
+      0 2px 6px -2px rgb(0 0 0 / 0.5);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-canvas: #121211;
+  --color-surface: #1a1a18;
+  --color-surface-2: #212120;
+  --color-surface-inset: #292926;
+
+  --color-ink: #f8f7f4;
+  --color-ink-2: #d8d6d0;
+  --color-ink-3: #adaba3;
+  --color-ink-4: #939188;
+
+  --color-edge: #33332f;
+  --color-edge-faint: rgb(255 255 255 / 0.08);
+  --color-edge-strong: #74726d;
+
+  --color-accent: #f8f7f4;
+  --color-accent-hover: #ffffff;
+  --color-accent-on: #16150f;
+  --color-accent-subtle: #292926;
+
+  --color-brand: #5fbba0;
+  --color-brand-hover: #79cbb2;
+  --color-brand-on: #07130f;
+  --color-brand-subtle: #12261f;
+
+  --color-success: #4cc38a;
+  --color-success-soft: #11251c;
+  --color-success-on: #07130f;
+  --color-warning: #e0a32e;
+  --color-warning-soft: #2a2010;
+  --color-warning-on: #16150f;
+  --color-danger: #f0776a;
+  --color-danger-soft: #2e1815;
+  --color-danger-on: #16150f;
+  --color-info: #8aacf9;
+  --color-info-soft: #151e33;
+  --color-info-on: #16150f;
+
+  --color-inverse: #16221d;
+  --color-inverse-on: #f8f7f4;
+  --color-inverse-muted: #b6b4a9;
+  --color-inverse-edge: rgb(255 255 255 / 0.1);
+  --color-inverse-surface: rgb(255 255 255 / 0.06);
+
+  --color-hover: rgb(255 255 255 / 0.06);
+  --color-active: rgb(255 255 255 / 0.11);
+  --color-overlay: rgb(6 6 5 / 0.66);
+  --color-ring: #5fbba0;
+  --color-selection: #1d4a3e;
+  --color-selection-on: #f8f7f4;
+
+  --color-track: #212120;
+  --color-track-thumb: #33332f;
+
+  --color-glass: rgb(26 26 24 / 0.74);
+  --color-glass-edge: rgb(255 255 255 / 0.1);
+
+  --color-scrollbar-thumb: rgb(255 255 255 / 0.16);
+  --color-scrollbar-thumb-hover: rgb(255 255 255 / 0.28);
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 1px 1px rgb(0 0 0 / 0.3);
+  --shadow-elevated:
+    0 2px 4px rgb(0 0 0 / 0.5), 0 8px 18px -6px rgb(0 0 0 / 0.6);
+  --shadow-modal:
+    0 2px 8px -2px rgb(0 0 0 / 0.6), 0 24px 52px -14px rgb(0 0 0 / 0.8);
+  --shadow-dropdown:
+    0 2px 6px -1px rgb(0 0 0 / 0.5), 0 10px 26px -8px rgb(0 0 0 / 0.7);
+  --shadow-popover:
+    0 2px 8px -2px rgb(0 0 0 / 0.55), 0 14px 34px -10px rgb(0 0 0 / 0.72);
+  --shadow-glass:
+    0 1px 0 rgb(255 255 255 / 0.06) inset, 0 6px 24px -8px rgb(0 0 0 / 0.7),
+    0 2px 6px -2px rgb(0 0 0 / 0.5);
+}
+
+/* ==========================================================================
+   Theme-independent tokens
+   ========================================================================== */
+
+:root {
+  /* ------------------------------------------------------------------ space
+     Strict 4px grid: --space-N === N * 4px. Tailwind's own scale is aligned
+     to the same grid via `--spacing: 0.25rem`, so `p-6` and `--space-6` are
+     always the same 24px. */
+  --space-1: 0.25rem; /*  4px */
+  --space-2: 0.5rem; /*  8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem; /* 24px */
+  --space-7: 1.75rem; /* 28px */
+  --space-8: 2rem; /* 32px */
+  --space-9: 2.25rem; /* 36px */
+  --space-10: 2.5rem; /* 40px */
+  --space-11: 2.75rem; /* 44px */
+  --space-12: 3rem; /* 48px */
+  --space-13: 3.25rem; /* 52px */
+  --space-14: 3.5rem; /* 56px */
+  --space-15: 3.75rem; /* 60px */
+  --space-16: 4rem; /* 64px */
+
+  /* ----------------------------------------------------------------- radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+  --radius-full: 9999px;
+
+  /* ------------------------------------------------------------------- type */
+  --font-display:
+    'MuseoModerno', 'Avenir Next', 'Trebuchet MS', ui-rounded, system-ui,
+    sans-serif;
+  --font-ui:
+    'Geist', 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:
+    ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', 'Liberation Mono',
+    monospace;
+
+  /* Semantic scale — each step carries its own line-height. */
+  --text-hero: clamp(2.75rem, 7.6vw, 6rem);
+  --text-hero--line-height: 0.95;
+  --text-hero--letter-spacing: -0.035em;
+  --text-hero--font-weight: 700;
+
+  /* One step below the hero, for a page whose headline is not the point.
+     `text-hero` at 96px inside a reading measure wraps a two-sentence pricing
+     headline onto four lines and pushes every price below the fold; 64px keeps
+     each sentence on one line and the plans in the first screen. */
+  --text-headline: clamp(2.25rem, 5.4vw, 4rem);
+  --text-headline--line-height: 1.02;
+  --text-headline--letter-spacing: -0.032em;
+  --text-headline--font-weight: 700;
+
+  /* The stat numeral. Fluid, because it also carries formatted money: a
+     zero-decimal currency in the millions is eleven glyphs wide, and at a fixed
+     48px that overflows a summary card on a 390px phone. 34px at 390, and back
+     to the full 48px from 923px up, where the four-across grid has the room. */
+  --text-display: clamp(2.125rem, 5.2vw, 3rem);
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 700;
+
+  --text-title: 1.625rem; /* 26px */
+  --text-title--line-height: 1.15;
+  --text-title--letter-spacing: -0.022em;
+  --text-title--font-weight: 700;
+
+  --text-subtitle: 1.125rem; /* 18px */
+  --text-subtitle--line-height: 1.4;
+  --text-subtitle--letter-spacing: -0.012em;
+  --text-subtitle--font-weight: 600;
+
+  --text-body: 0.9375rem; /* 15px */
+  --text-body--line-height: 1.55;
+
+  --text-label: 0.8125rem; /* 13px */
+  --text-label--line-height: 1.4;
+  --text-label--font-weight: 500;
+
+  --text-caption: 0.75rem; /* 12px */
+  --text-caption--line-height: 1.35;
+
+  --text-micro: 0.6875rem; /* 11px — SectionLabel */
+  --text-micro--line-height: 1.2;
+  --text-micro--letter-spacing: 0.08em;
+  --text-micro--font-weight: 600;
+
+  --tracking-label: 0.08em;
+  --tracking-wide: 0.04em;
+  --tracking-tight: -0.02em;
+  --tracking-tighter: -0.035em;
+
+  /* ----------------------------------------------------------------- motion */
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-quint: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration: 220ms;
+  --duration-slow: 320ms;
+
+  /* ----------------------------------------------------------------- layout */
+  --z-nav: 40;
+  --z-dropdown: 50;
+  --z-overlay: 60;
+  --z-modal: 70;
+  --z-toast: 80;
+  --nav-h: 4rem; /* 64px */
+  --subnav-h: 3rem; /* 48px */
+  --content-max: 90rem; /* 1440px */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* ------------------------------------------------ ink on a chosen colour
+     A traveller's own colour, a category's colour and a map pin's colour come
+     from tenant data, so they are identical in both themes. A theme-flipping
+     foreground on top of one is therefore wrong half the time — `brand-on` over
+     a light pine swatch measured 3.21:1 on the Vacay calendar. These two are the
+     fixed pair `inkOn()` picks from by measuring the swatch itself. */
+  --color-on-light: #16150f;
+  --color-on-dark: #f8f7f4;
+
+  /* ------------------------------------------------------------------- misc */
+  --blur-glass: 20px;
+}

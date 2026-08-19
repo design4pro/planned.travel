@@ -1,0 +1,177 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  // planned.travel — Cloudflare Workers configuration.
+  //
+  // Placeholder ids below (D1 database_id, KV namespace ids) are filled in by the
+  // first-deploy runbook in docs/DEPLOY.md. Local development does not need real
+  // ids: `vite dev` runs the bindings through Miniflare with local simulators.
+  //
+  // Secrets are NEVER declared here. They live in `.dev.vars` locally and in
+  // `wrangler secret put` remotely. See `.dev.vars.example` for the full list.
+  "name": "planned-travel",
+  "main": "src/server/worker.ts",
+  "compatibility_date": "2026-08-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": true,
+  "upload_source_maps": true,
+
+  // Smart placement moves the Worker close to D1's primary region so that a
+  // request that makes several sequential D1 round-trips pays the latency once
+  // instead of once per query.
+  "placement": { "mode": "smart" },
+
+  // Workers Observability: structured logs from src/server/observability are
+  // queryable in the dashboard and via `wrangler tail`.
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+      "head_sampling_rate": 1
+    }
+  },
+
+  "vars": {
+    "ENVIRONMENT": "production",
+    "APP_NAME": "planned.travel",
+    "APP_URL": "https://planned.travel",
+    "LOG_LEVEL": "info",
+    // Default Protomaps archive served by /api/tiles/*. Dated and never overwritten —
+    // a named key is cached `immutable` for a year, and rolling back is flipping this
+    // one var to the previous key (docs/DEPLOY.md §7.4, §7.5). Local dev overrides it
+    // in .dev.vars to name whatever object its own miniflare bucket holds.
+    "TILES_ARCHIVE_KEY": "basemaps/planet-20260818.pmtiles",
+    // Public base for R2 `FILES` objects, used by the thumbnail pipeline.
+    "FILES_PUBLIC_BASE": "https://files.planned.travel",
+    "EMAIL_FROM": "planned.travel <no-reply@planned.travel>",
+    "EMAIL_API_URL": "https://api.resend.com/emails",
+    "BACKUP_RETENTION_DAYS": 30,
+    "TASK_MAX_ATTEMPTS": 5
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "planned-travel-db",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "drizzle"
+    }
+  ],
+
+  "kv_namespaces": [
+    // Short-TTL read cache + queue idempotency + reminder index.
+    { "binding": "KV", "id": "0000000000000000000000000000000f" },
+    // Better Auth session store, read on nearly every authenticated request.
+    { "binding": "SESSIONS", "id": "0000000000000000000000000000000e" }
+  ],
+
+  "r2_buckets": [
+    // User uploads: journal photos, import files, generated exports.
+    { "binding": "FILES", "bucket_name": "planned-travel-files" },
+    // Protomaps `.pmtiles` archives, served by /api/tiles/*.
+    { "binding": "TILES", "bucket_name": "planned-travel-tiles" }
+  ],
+
+  "durable_objects": {
+    "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      // SQLite-backed Durable Objects: cheaper, higher storage limits, and the
+      // only class type available on the Workers Free plan.
+      "new_sqlite_classes": ["TripRoom"]
+    }
+  ],
+
+  "queues": {
+    "producers": [{ "binding": "TASKS", "queue": "planned-travel-tasks" }],
+    "consumers": [
+      {
+        "queue": "planned-travel-tasks",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 5,
+        "max_concurrency": 4,
+        "retry_delay": 10,
+        "dead_letter_queue": "planned-travel-tasks-dlq"
+      }
+    ]
+  },
+
+  "triggers": {
+    "crons": [
+      // Reminder sweep: enqueue notification emails whose due time has passed.
+      "*/15 * * * *",
+      // Nightly D1 export to R2.
+      "0 3 * * *",
+      // Weekly retention prune of expired backups and export artifacts.
+      "17 4 * * 1"
+    ]
+  },
+
+  "env": {
+    "staging": {
+      "name": "planned-travel-staging",
+      "workers_dev": true,
+      "placement": { "mode": "smart" },
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "logs": { "enabled": true, "invocation_logs": true, "head_sampling_rate": 1 }
+      },
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "APP_NAME": "planned.travel (staging)",
+        "APP_URL": "https://staging.planned.travel",
+        "LOG_LEVEL": "debug",
+        // Same archive as production, and versioned for the same reason.
+        "TILES_ARCHIVE_KEY": "basemaps/planet-20260818.pmtiles",
+        "FILES_PUBLIC_BASE": "https://files-staging.planned.travel",
+        "EMAIL_FROM": "planned.travel staging <no-reply@staging.planned.travel>",
+        "EMAIL_API_URL": "https://api.resend.com/emails",
+        "BACKUP_RETENTION_DAYS": 7,
+        "TASK_MAX_ATTEMPTS": 3
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "planned-travel-db-staging",
+          "database_id": "00000000-0000-0000-0000-000000000001",
+          "migrations_dir": "drizzle"
+        }
+      ],
+      "kv_namespaces": [
+        { "binding": "KV", "id": "0000000000000000000000000000000d" },
+        { "binding": "SESSIONS", "id": "0000000000000000000000000000000c" }
+      ],
+      "r2_buckets": [
+        { "binding": "FILES", "bucket_name": "planned-travel-files-staging" },
+        { "binding": "TILES", "bucket_name": "planned-travel-tiles" }
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }]
+      },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TripRoom"] }],
+      "queues": {
+        "producers": [{ "binding": "TASKS", "queue": "planned-travel-tasks-staging" }],
+        "consumers": [
+          {
+            "queue": "planned-travel-tasks-staging",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 3,
+            "max_concurrency": 2,
+            "retry_delay": 10,
+            "dead_letter_queue": "planned-travel-tasks-staging-dlq"
+          }
+        ]
+      },
+      "triggers": { "crons": ["0 3 * * *"] }
+    }
+  }
+}

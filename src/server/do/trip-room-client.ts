@@ -1,0 +1,106 @@
+/**
+ * Server-side helpers for talking to a trip's Durable Object.
+ *
+ * Route handlers and server functions use these instead of hand-building
+ * requests, so the room's URL scheme and identity envelope live in one place.
+ * The namespace is taken as a narrow structural type: any caller can pass
+ * `env.TRIP_ROOM`, and tests can pass a stub.
+ */
+
+import { TRIP_ROOM_IDENTITY_HEADER, encodeTripRoomIdentity } from './protocol'
+import type { CommitEntry, EntitySnapshot, PresenceMember, TripPatch, TripRoomIdentity } from './protocol'
+
+export interface TripRoomStub {
+  fetch: (request: Request) => Promise<Response>
+}
+
+export interface TripRoomNamespace {
+  idFromName: (name: string) => DurableObjectId
+  get: (id: DurableObjectId) => TripRoomStub
+}
+
+/**
+ * Internal origin. Durable Object requests never leave the Cloudflare network,
+ * but they still need a syntactically valid absolute URL.
+ */
+const ROOM_ORIGIN = 'https://trip-room.internal'
+
+export function tripRoomUrl(tripId: string, route: 'connect' | 'snapshot' | 'commit' | 'close'): string {
+  return `${ROOM_ORIGIN}/${encodeURIComponent(tripId)}/${route}`
+}
+
+function stubFor(namespace: TripRoomNamespace, tripId: string): TripRoomStub {
+  // One object per trip: the trip id *is* the shard key.
+  return namespace.get(namespace.idFromName(tripId))
+}
+
+/** Forwards a browser WebSocket upgrade into the trip's room. */
+export function connectToTripRoom(
+  namespace: TripRoomNamespace,
+  identity: TripRoomIdentity,
+  request: Request,
+): Promise<Response> {
+  const headers = new Headers(request.headers)
+  headers.set(TRIP_ROOM_IDENTITY_HEADER, encodeTripRoomIdentity(identity))
+  return stubFor(namespace, identity.tripId).fetch(
+    new Request(tripRoomUrl(identity.tripId, 'connect'), { method: 'GET', headers }),
+  )
+}
+
+export interface TripRoomSnapshotResponse {
+  version: number
+  entities: Array<EntitySnapshot>
+  truncated: boolean
+  peers: Array<PresenceMember>
+}
+
+/** Current room state, used to hydrate the collaborative UI on first paint. */
+export async function readTripRoomSnapshot(
+  namespace: TripRoomNamespace,
+  tripId: string,
+  limit?: number,
+): Promise<TripRoomSnapshotResponse> {
+  const url = new URL(tripRoomUrl(tripId, 'snapshot'))
+  if (limit !== undefined) url.searchParams.set('limit', String(limit))
+  const response = await stubFor(namespace, tripId).fetch(new Request(url.toString()))
+  if (!response.ok) {
+    throw new Error(`Trip room snapshot failed with ${response.status}`)
+  }
+  return (await response.json())
+}
+
+export interface TripRoomCommitResponse {
+  version: number
+  entries: Array<CommitEntry>
+}
+
+/**
+ * Applies a change that did not originate from a socket — a queue job importing
+ * bookings, or a server function writing D1 and mirroring the result to peers.
+ */
+export async function commitToTripRoom(
+  namespace: TripRoomNamespace,
+  input: { tripId: string; authorId: string; patches: Array<TripPatch> },
+): Promise<TripRoomCommitResponse> {
+  const response = await stubFor(namespace, input.tripId).fetch(
+    new Request(tripRoomUrl(input.tripId, 'commit'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+  )
+  if (!response.ok) {
+    throw new Error(`Trip room commit failed with ${response.status}`)
+  }
+  return (await response.json())
+}
+
+/** Evicts every connected client, e.g. after a trip is deleted or access revoked. */
+export async function closeTripRoom(namespace: TripRoomNamespace, tripId: string): Promise<void> {
+  const response = await stubFor(namespace, tripId).fetch(
+    new Request(tripRoomUrl(tripId, 'close'), { method: 'POST' }),
+  )
+  if (!response.ok) {
+    throw new Error(`Trip room close failed with ${response.status}`)
+  }
+}

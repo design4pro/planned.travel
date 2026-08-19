@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# One run per branch: a force-push supersedes the run it interrupted.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CI: 'true'
+  # Stripe price ids are public and are inlined into both bundles by Vite, so
+  # the build needs them to produce the same output CI is meant to verify.
+  # They live in repository *variables*, never in secrets.
+  VITE_STRIPE_PRICE_SOLO_MONTHLY: ${{ vars.VITE_STRIPE_PRICE_SOLO_MONTHLY }}
+  VITE_STRIPE_PRICE_SOLO_YEARLY: ${{ vars.VITE_STRIPE_PRICE_SOLO_YEARLY }}
+  VITE_STRIPE_PRICE_CREW_MONTHLY: ${{ vars.VITE_STRIPE_PRICE_CREW_MONTHLY }}
+  VITE_STRIPE_PRICE_CREW_YEARLY: ${{ vars.VITE_STRIPE_PRICE_CREW_YEARLY }}
+
+jobs:
+  verify:
+    name: lint · typecheck · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `src/routeTree.gen.ts` is generated and committed. Regenerating it here
+      # proves the committed copy matches the route files in the same commit —
+      # a stale tree is otherwise only discovered as a mystery type error.
+      - name: Generate route tree
+        run: pnpm generate-routes
+
+      - name: Check the committed route tree is current
+        run: git diff --exit-code -- src/routeTree.gen.ts
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm exec vitest run --coverage
+
+      - name: Build
+        run: pnpm build
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+          retention-days: 7
+          if-no-files-found: ignore

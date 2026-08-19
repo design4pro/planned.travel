@@ -1,0 +1,39 @@
+/**
+ * The shapes the map surface accepts.
+ *
+ * Deliberately structural rather than imported from `src/server/db/types`: the
+ * map draws whatever has a coordinate, and a component in `src/components` must
+ * not reach into the server layer. A caller maps a `Place` row onto
+ * {@link MapPlace} at the boundary, which also keeps the map usable for search
+ * results and imported files that are not rows yet.
+ */
+
+import type { Clusterable } from '#/lib/map/cluster'
+
+/** A tenant's own taxonomy entry, as stored on the `categories` table. */
+export interface MapCategory {
+  readonly id: string
+  readonly name: string
+  readonly slug: string
+  /** Hex colour from the tenant's taxonomy. Used for the pin ring and legend dot. */
+  readonly colour: string
+  /** `lucide-react` icon name in kebab case, e.g. `bed-double`. */
+  readonly icon: string
+}
+
+/** Anything the map can pin. */
+export interface MapPlace extends Clusterable {
+  readonly id: string
+  readonly name: string
+  readonly lng: number
+  readonly lat: number
+  readonly categoryId?: string | null
+  readonly address?: string | null
+  readonly city?: string | null
+  /** 1–5, as stored. `null` when the place has not been rated. */
+  readonly rating?: number | null
+  readonly imageUrl?: string | null
+  /** Itinerary day, 1-based. Drives the numeral on the pin. */
+  readonly dayNumber?: number | null
+  readonly isVisited?: boolean
+}

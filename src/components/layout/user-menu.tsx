@@ -1,0 +1,125 @@
+import { useState } from 'react'
+import { Link, useRouter } from '@tanstack/react-router'
+import { ChevronDown, CreditCard, LoaderCircle, LogOut, Settings, ShieldCheck } from 'lucide-react'
+import { toast } from 'sonner'
+import { cn } from '#/lib/cn'
+import { Avatar, transitionBase } from './kit'
+import {
+  MenuContent,
+  MenuDangerItem,
+  MenuItem,
+  MenuRoot,
+  MenuSeparator,
+  MenuTrigger,
+} from './menu'
+import { SIGN_OUT_ENDPOINT } from './session'
+
+import type { ShellSession } from './session'
+
+/**
+ * Avatar entry point to account-level destinations. Sign out posts to the auth
+ * handler and then throws away every cached loader result, so no page can keep
+ * rendering the previous person's data.
+ */
+export function UserMenu({ session }: { session: ShellSession }) {
+  const router = useRouter()
+  const [signingOut, setSigningOut] = useState(false)
+  const { user, organization } = session
+
+  async function signOut(): Promise<void> {
+    setSigningOut(true)
+    try {
+      const response = await fetch(SIGN_OUT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      })
+      if (!response.ok) throw new Error(`Sign out failed with ${response.status}`)
+      await router.invalidate()
+      await router.navigate({ to: '/login', replace: true })
+    } catch {
+      toast.error('Could not sign you out', {
+        description: 'Check your connection and try again.',
+      })
+    } finally {
+      setSigningOut(false)
+    }
+  }
+
+  return (
+    <MenuRoot>
+      <MenuTrigger
+        className={cn(
+          'group inline-flex max-w-56 items-center gap-2 rounded-full border border-transparent py-1 pl-1 pr-1 text-label font-medium text-ink focus-ring',
+          transitionBase,
+          'hover:border-edge hover:bg-surface-2 sm:pr-2.5',
+        )}
+        aria-label="Account menu"
+      >
+        <Avatar name={user.name} src={user.image} />
+        <span className="hidden min-w-0 truncate sm:block">{user.name}</span>
+        <ChevronDown
+          aria-hidden
+          className="hidden size-4 shrink-0 text-ink-4 transition-transform duration-base ease-out-quint group-data-[state=open]:rotate-180 sm:block"
+          data-motion-transform
+        />
+      </MenuTrigger>
+
+      <MenuContent className="min-w-64">
+        <div className="flex items-center gap-3 px-2.5 py-2.5">
+          <Avatar name={user.name} src={user.image} size="lg" />
+          <div className="min-w-0">
+            <p className="truncate text-label font-semibold text-ink">{user.name}</p>
+            <p className="truncate text-caption text-ink-3">{user.email}</p>
+          </div>
+        </div>
+
+        {organization ? (
+          <p className="px-2.5 pb-2 text-micro uppercase text-ink-4">{organization.name}</p>
+        ) : null}
+
+        <MenuSeparator />
+
+        <MenuItem asChild>
+          <Link to="/settings">
+            <Settings aria-hidden className="size-4 text-ink-4" />
+            Settings
+          </Link>
+        </MenuItem>
+        <MenuItem asChild>
+          <Link to="/settings/billing">
+            <CreditCard aria-hidden className="size-4 text-ink-4" />
+            Plan &amp; billing
+          </Link>
+        </MenuItem>
+        {user.isAdmin ? (
+          <MenuItem asChild>
+            <Link to="/admin">
+              <ShieldCheck aria-hidden className="size-4 text-ink-4" />
+              Admin
+            </Link>
+          </MenuItem>
+        ) : null}
+
+        <MenuSeparator />
+
+        <MenuDangerItem
+          disabled={signingOut}
+          onSelect={(event) => {
+            // Keep the menu mounted while the request is in flight so the
+            // spinner is visible instead of the menu vanishing mid-action.
+            event.preventDefault()
+            void signOut()
+          }}
+        >
+          {signingOut ? (
+            <LoaderCircle aria-hidden className="size-4 animate-spin" />
+          ) : (
+            <LogOut aria-hidden className="size-4" />
+          )}
+          {signingOut ? 'Signing out…' : 'Sign out'}
+        </MenuDangerItem>
+      </MenuContent>
+    </MenuRoot>
+  )
+}

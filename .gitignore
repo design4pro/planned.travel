@@ -1,0 +1,37 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+.output
+.nitro
+.vinxi
+.tanstack
+
+# Local Cloudflare state: Miniflare's D1/KV/R2/DO simulators live here.
+.wrangler
+
+# Secrets. `.dev.vars` is the local equivalent of `wrangler secret put`, and
+# `.env*` files feed `import.meta.env` at build time. Both hold live keys.
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+!.env.example
+*.local
+
+# Test and coverage artefacts. Playwright screenshot baselines are NOT ignored:
+# they live in e2e/__screenshots__ and are reviewed like source.
+coverage
+playwright-report
+blob-report
+test-results
+playwright/.cache
+
+# Editor and OS noise
+.DS_Store
+*.log
+__unconfig*
+todos.json

@@ -1,0 +1,137 @@
+/**
+ * `SubscriptionStore` over D1, and the row ↔ record translation either side of it.
+ *
+ * Kept apart from `runtime.cloudflare.ts` — which may import `cloudflare:workers` and
+ * therefore only runs on workerd — because this is the seam where the billing domain
+ * meets a real database, and it has to be exercisable against the in-memory SQLite the
+ * repository tests use. That is what lets `__tests__/limits.test.ts` assert the whole
+ * point of this module: that the limits the UI is told about are byte-for-byte the
+ * limits the repository guard enforces, over the same row, through both code paths.
+ *
+ * Every read and write goes through the `…Unscoped` billing repository functions, which
+ * are the only repository functions permitted to run without a tenant scope precisely
+ * because a Stripe webhook has no session. They touch billing rows and nothing else.
+ */
+
+import { isSubscriptionStatus, planById, planForPriceId } from '#/lib/plans'
+import {
+  findSubscriptionByOrganizationUnscoped,
+  findSubscriptionByStripeCustomerUnscoped,
+  findSubscriptionByStripeSubscriptionUnscoped,
+  upsertSubscriptionUnscoped,
+} from '#/server/repos'
+import { ceilingsForPlan, planIdFromRow, storedCeilingsFromRow } from './limits'
+
+import type { UpsertSubscriptionInput } from '#/server/repos'
+import type { Database, Subscription } from '#/server/db/types'
+import type { StoredCeilings } from './limits'
+import type { SubscriptionRecord, SubscriptionStore } from './types'
+
+/** Widen a persisted row into the shape the billing domain reasons about. */
+export function recordFromRow(row: Subscription): SubscriptionRecord {
+  return {
+    organizationId: row.organizationId,
+    planId: planIdFromRow(row),
+    status: isSubscriptionStatus(row.status) ? row.status : 'incomplete',
+    interval: planForPriceId(row.stripePriceId)?.interval ?? null,
+    seats: Math.max(row.seats, 1),
+    stripeCustomerId: row.stripeCustomerId,
+    stripeSubscriptionId: row.stripeSubscriptionId,
+    stripePriceId: row.stripePriceId,
+    currentPeriodStart: row.currentPeriodStart,
+    currentPeriodEnd: row.currentPeriodEnd,
+    cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+    trialEndsAt: row.trialEndsAt,
+    canceledAt: row.canceledAt,
+    ceilings: storedCeilingsFromRow(row),
+  }
+}
+
+/**
+ * The columns a plan's own ceilings occupy. Every sanctioned write path stamps these,
+ * so a row's `plan`, `seat_limit`, `storage_limit_bytes` and `quota_overrides` always
+ * describe the plan the row is actually on — an operator raising one afterwards is then
+ * an unambiguous, deliberate escape rather than a leftover from some other plan.
+ */
+export function ceilingColumns(
+  ceilings: StoredCeilings,
+): Pick<
+  UpsertSubscriptionInput,
+  'plan' | 'seatLimit' | 'storageLimitBytes' | 'quotaOverrides'
+> {
+  return {
+    plan: ceilings.tier,
+    seatLimit: ceilings.seatLimit,
+    storageLimitBytes: ceilings.storageLimitBytes,
+    quotaOverrides: ceilings.overrides,
+  }
+}
+
+/** Narrow a domain record back down to the columns the table holds. */
+export function rowValuesFromRecord(record: SubscriptionRecord): UpsertSubscriptionInput {
+  const plan = planById(record.planId)
+  const price = record.interval === null ? null : plan.prices[record.interval]
+
+  return {
+    ...ceilingColumns(record.ceilings),
+    status: record.status,
+    seats: record.seats,
+    stripeCustomerId: record.stripeCustomerId,
+    stripeSubscriptionId: record.stripeSubscriptionId,
+    stripePriceId: record.stripePriceId,
+    currency: price === null ? null : price.currency.toUpperCase(),
+    unitAmountMinor: price?.amount ?? null,
+    currentPeriodStart: record.currentPeriodStart,
+    currentPeriodEnd: record.currentPeriodEnd,
+    cancelAtPeriodEnd: record.cancelAtPeriodEnd,
+    canceledAt: record.canceledAt,
+    trialEndsAt: record.trialEndsAt,
+  }
+}
+
+/** Seed columns for a row that exists before any subscription does. */
+const FREE_CEILINGS: StoredCeilings = ceilingsForPlan('free', 1)
+
+export function createSubscriptionStore(db: Database): SubscriptionStore {
+  return {
+    async findByOrganization(organizationId) {
+      const row = await findSubscriptionByOrganizationUnscoped(db, organizationId)
+      return row === null ? null : recordFromRow(row)
+    },
+    async findByStripeCustomerId(stripeCustomerId) {
+      const row = await findSubscriptionByStripeCustomerUnscoped(db, stripeCustomerId)
+      return row === null ? null : recordFromRow(row)
+    },
+    async findByStripeSubscriptionId(stripeSubscriptionId) {
+      const row = await findSubscriptionByStripeSubscriptionUnscoped(
+        db,
+        stripeSubscriptionId,
+      )
+      return row === null ? null : recordFromRow(row)
+    },
+    async upsert(record) {
+      await upsertSubscriptionUnscoped(
+        db,
+        record.organizationId,
+        rowValuesFromRecord(record),
+      )
+    },
+    async attachCustomer(organizationId, stripeCustomerId) {
+      // A row created here predates the subscription it will carry, so it is stamped
+      // with the Free plan's ceilings. Leaving the column defaults would have handed a
+      // workspace ten seats for starting a checkout it never completed — and, now that
+      // the screen renders what is enforced, said so out loud.
+      const existing = await findSubscriptionByOrganizationUnscoped(db, organizationId)
+      await upsertSubscriptionUnscoped(db, organizationId, {
+        ...(existing === null ? ceilingColumns(FREE_CEILINGS) : {}),
+        stripeCustomerId,
+      })
+    },
+    async updateStatus(organizationId, status, changedAt) {
+      await upsertSubscriptionUnscoped(db, organizationId, {
+        status,
+        canceledAt: status === 'canceled' ? changedAt : undefined,
+      })
+    },
+  }
+}
