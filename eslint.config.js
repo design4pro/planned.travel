@@ -15,6 +15,9 @@ export default [
     },
   },
   {
-    ignores: ['eslint.config.js', 'prettier.config.js'],
+    // `.claude/workflows/*.js` are Claude Code orchestration scripts: plain JS
+    // run against a bespoke global environment (`agent`, `args`, `budget`), not
+    // part of the TypeScript project and not shipped.
+    ignores: ['eslint.config.js', 'prettier.config.js', '.claude/**'],
   },
 ]

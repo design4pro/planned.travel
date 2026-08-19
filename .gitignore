@@ -35,3 +35,8 @@ playwright/.cache
 *.log
 __unconfig*
 todos.json
+
+# /ultrabuild run state: contract pointer, item statuses, findings and the blind
+# A/B screenshot pairs. The command definitions in .claude/ are tracked; only the
+# per-run scratch is not.
+.claude/ultrabuild
