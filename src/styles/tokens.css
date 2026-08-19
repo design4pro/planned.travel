@@ -97,6 +97,42 @@
      one value for both themes on purpose: the ground it sits on barely moves. */
   --color-inverse-brand: #5fbba0;
 
+  /* ------------------------------------------------------- atlas country layer
+     The world map is the only surface in the product where colour carries data
+     rather than decoration, so it gets its own named group instead of borrowing
+     one. A live MapLibre paint property is JSON and cannot read a custom
+     property, so every value below is mirrored literally by `MapPalette.country`
+     in `src/lib/map/palette.ts`. This file stays the source of truth: change a
+     value here first, then mirror it there.
+
+     Land is `--color-surface-inset`, so the atlas is drawn on the same inset
+     sheet every card in the product is inset into and the map belongs to the
+     page rather than sitting on top of it.
+
+     Visited is *one* hue — the brand pine, OKLCH hue 178 — and the only thing
+     that moves along it is lightness, keyed to when you were last there:
+     `-distant` (longest ago) to the base to `-recent`, which is `--color-brand`
+     itself. A colour per country would be decoration pretending to be data, and
+     neighbours would collide at random. Interaction deepens the same pine one
+     step (`-hover`) and then another (`-selected`), so attention always reads as
+     "more of this country", never as "a different one". Adjacent steps sit
+     6–9 CIE L* apart in both themes, which is a difference you can see without
+     counting.
+
+     Measured against `--color-country-land`: distant 3.47:1, base 4.47:1,
+     recent 5.95:1, hover 7.92:1, selected 10.86:1. `-visited-edge` is the
+     hairline between two adjacent visited countries — the page knocked through
+     the fill — and holds 3.65:1 against the faintest of them. */
+  --color-country-land: #edebe6;
+  --color-country-land-edge: #c8c1af;
+  --color-country-land-hover: #ded8c8;
+  --color-country-visited: #357669;
+  --color-country-visited-recent: #256256;
+  --color-country-visited-distant: #48887a;
+  --color-country-visited-edge: #e9f3ef;
+  --color-country-visited-hover: #1c4e45;
+  --color-country-visited-selected: #0b3830;
+
   /* ------------------------------------------------------------ interaction
      Neutral washes for ghost buttons, menu items and rows. */
   --color-hover: rgb(22 21 15 / 0.045);
@@ -202,6 +238,24 @@
     --color-inverse-edge: rgb(255 255 255 / 0.1);
     --color-inverse-surface: rgb(255 255 255 / 0.06);
 
+    /* Land stays `--color-surface-inset`, and the pine ramp runs the other way:
+       on a charcoal map "more recent" reads as more *light*, not less. That
+       makes this a dark cartography in its own right rather than the light ramp
+       inverted, and it turns the hairline between two visited countries into a
+       groove of the page instead of a knockout of it.
+       Against `--color-country-land`: distant 3.88:1, base 4.89:1, recent
+       6.32:1, hover 7.64:1, selected 9.23:1; the edge holds 4.74:1 against the
+       faintest fill. */
+    --color-country-land: #292926;
+    --color-country-land-edge: #454540;
+    --color-country-land-hover: #35352f;
+    --color-country-visited: #51a48c;
+    --color-country-visited-recent: #5fbba0;
+    --color-country-visited-distant: #3d927a;
+    --color-country-visited-edge: #0e1a17;
+    --color-country-visited-hover: #79cbb2;
+    --color-country-visited-selected: #93dcc5;
+
     --color-hover: rgb(255 255 255 / 0.06);
     --color-active: rgb(255 255 255 / 0.11);
     --color-overlay: rgb(6 6 5 / 0.66);
@@ -279,6 +333,16 @@
   --color-inverse-muted: #b6b4a9;
   --color-inverse-edge: rgb(255 255 255 / 0.1);
   --color-inverse-surface: rgb(255 255 255 / 0.06);
+
+  --color-country-land: #292926;
+  --color-country-land-edge: #454540;
+  --color-country-land-hover: #35352f;
+  --color-country-visited: #51a48c;
+  --color-country-visited-recent: #5fbba0;
+  --color-country-visited-distant: #3d927a;
+  --color-country-visited-edge: #0e1a17;
+  --color-country-visited-hover: #79cbb2;
+  --color-country-visited-selected: #93dcc5;
 
   --color-hover: rgb(255 255 255 / 0.06);
   --color-active: rgb(255 255 255 / 0.11);
@@ -419,6 +483,13 @@
   --duration-slow: 320ms;
 
   /* ----------------------------------------------------------------- layout */
+  /* Chrome floating over a full-bleed map: the country search, the glass panel,
+     the zoom cluster. Above the WebGL canvas and everything the map paints into
+     it, below `--z-nav`, so the app nav and every overlay tier above it still
+     win. Theme-independent, like every other layout token in this block — a
+     stacking order has no light and dark value to declare. Reached from a
+     component as `z-(--z-map-overlay)`. */
+  --z-map-overlay: 30;
   --z-nav: 40;
   --z-dropdown: 50;
   --z-overlay: 60;

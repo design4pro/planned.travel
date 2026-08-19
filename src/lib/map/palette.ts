@@ -12,6 +12,11 @@
  * warm paper land, muted water, restrained road hierarchy, ink-tier labels.
  * Dark is a warm charcoal cartography in its own right, never an inverted copy
  * of the light one.
+ *
+ * One group is not cartography at all. {@link CountryPalette} paints the atlas,
+ * where the colour of a country is the traveller's own record rather than a
+ * description of the ground, and it is held to a different rule: one hue, and
+ * lightness that means something.
  */
 
 import type { ResolvedTheme } from '#/lib/theme'
@@ -77,6 +82,45 @@ export interface BoundaryPalette {
   readonly region: string
 }
 
+/**
+ * The atlas country layer — the one place on the map where colour is *data*.
+ *
+ * Every other palette here describes the world. This one describes what the
+ * traveller has done with it, so it is deliberately one hue: the brand pine,
+ * with lightness carrying how recently the country was last visited
+ * (`visitedDistant` → `visited` → `visitedRecent`) and two further steps
+ * carrying attention (`visitedHover`, `visitedSelected`). A colour picked per
+ * country by index would be decoration wearing the costume of data, and two
+ * neighbours would collide for no reason at all.
+ *
+ * `visitedEdge` is the hairline between two adjacent visited countries: the page
+ * knocked through the fill in light, the same page showing as a groove in dark.
+ * `land*` is the unvisited world, which is the product's inset surface.
+ *
+ * Mirrors the `--color-country-*` group in `src/styles/tokens.css` value for
+ * value; that file is the source of truth.
+ */
+export interface CountryPalette {
+  /** Unvisited land. */
+  readonly land: string
+  /** The hairline between two unvisited countries. */
+  readonly landEdge: string
+  /** Unvisited land under the pointer — the "you could mark this" wash. */
+  readonly landHover: string
+  /** Visited, with no date on the record to place it on the ramp. */
+  readonly visited: string
+  /** Visited most recently — the strongest end of the ramp. */
+  readonly visitedRecent: string
+  /** Visited longest ago — the faintest end of the ramp. */
+  readonly visitedDistant: string
+  /** The hairline drawn around a visited country. */
+  readonly visitedEdge: string
+  /** Visited, under the pointer. */
+  readonly visitedHover: string
+  /** Visited, and the country the rest of the screen is currently about. */
+  readonly visitedSelected: string
+}
+
 export interface LabelPalette {
   readonly country: string
   readonly region: string
@@ -116,6 +160,7 @@ export interface MapPalette {
   readonly road: RoadPalette
   readonly route: RouteLinePalette
   readonly boundary: BoundaryPalette
+  readonly country: CountryPalette
   readonly label: LabelPalette
   readonly fallback: FallbackPalette
 }
@@ -170,6 +215,20 @@ const LIGHT: MapPalette = {
   boundary: {
     country: '#bcb6a6',
     region: '#d3ccbe',
+  },
+  // Contrast against `land`, the measurement that decides whether the map reads:
+  // distant 3.47:1 · base 4.47:1 · recent 5.95:1 · hover 7.92:1 · selected
+  // 10.86:1. `visitedEdge` clears 3.65:1 against the faintest fill.
+  country: {
+    land: '#edebe6', // --color-country-land (= --color-surface-inset)
+    landEdge: '#c8c1af', // --color-country-land-edge
+    landHover: '#ded8c8', // --color-country-land-hover
+    visited: '#357669', // --color-country-visited
+    visitedRecent: '#256256', // --color-country-visited-recent (= --color-brand)
+    visitedDistant: '#48887a', // --color-country-visited-distant
+    visitedEdge: '#e9f3ef', // --color-country-visited-edge
+    visitedHover: '#1c4e45', // --color-country-visited-hover
+    visitedSelected: '#0b3830', // --color-country-visited-selected
   },
   label: {
     country: '#403e36', // --color-ink-2
@@ -255,6 +314,21 @@ const DARK: MapPalette = {
   boundary: {
     country: '#6b6860',
     region: '#4a473f',
+  },
+  // The ramp runs the other way here: on a charcoal map recency reads as more
+  // light, not less, and the hairline between two visited countries becomes a
+  // groove rather than a knockout. Against `land`: distant 3.88:1 · base 4.89:1
+  // · recent 6.32:1 · hover 7.64:1 · selected 9.23:1.
+  country: {
+    land: '#292926', // --color-country-land (= --color-surface-inset, dark)
+    landEdge: '#454540', // --color-country-land-edge
+    landHover: '#35352f', // --color-country-land-hover
+    visited: '#51a48c', // --color-country-visited
+    visitedRecent: '#5fbba0', // --color-country-visited-recent (= --color-brand)
+    visitedDistant: '#3d927a', // --color-country-visited-distant
+    visitedEdge: '#0e1a17', // --color-country-visited-edge
+    visitedHover: '#79cbb2', // --color-country-visited-hover
+    visitedSelected: '#93dcc5', // --color-country-visited-selected
   },
   label: {
     country: '#d8d6d0', // --color-ink-2
