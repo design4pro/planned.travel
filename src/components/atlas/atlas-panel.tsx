@@ -816,7 +816,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       icon={<Sun />}
                       label="Days away"
                       value={formatNumber(stats.dayCount ?? 0)}
-                      caption="Counted across finished trips"
+                      caption="Across every trip on your record"
                     />
                   </div>
 

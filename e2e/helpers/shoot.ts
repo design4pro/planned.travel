@@ -251,7 +251,9 @@ export type RouteCase = {
    * route that says it has a map must produce a marker, and a route that says it
    * has none must not, so neither half can rot in silence.
    *
-   * `/atlas` is the first and so far only route that carries one. Both halves of
+   * `/atlas` is the only route in THIS table that carries one - the trip planner
+   * at `/trips/$tripId/plan` mounts a map too, but it takes a route param and so is
+   * not screenshotted here. Both halves of
    * the audit, the wait itself and the resize capture path are additionally
    * exercised by `the gate itself` against a document built for them, because the
    * interesting states — a canvas that never latches, a marker on a route that
