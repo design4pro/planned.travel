@@ -5,7 +5,7 @@ import { Badge, SectionLabel, Skeleton, cardVariants } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { countryName } from '#/lib/atlas/country-names'
 import { UNRECORDED_VISIT_LABEL, visitSpan } from '#/lib/atlas/visit-span'
-import { countryFlag, pluralise } from '#/routes/_app/-lib/format'
+import { countryFlag, pluralise } from '#/lib/format'
 
 import type { VisitSpan } from '#/lib/atlas/visit-span'
 
@@ -33,7 +33,10 @@ import type { VisitSpan } from '#/lib/atlas/visit-span'
  *   1:110m cut, so the map cannot fill them. Those countries are still counted,
  *   still listed and still fully readable here, and the record says plainly
  *   that there is nothing to frame on the map rather than leaving a click that
- *   quietly does nothing.
+ *   quietly does nothing. The reason it gives is the real one: Natural Earth's
+ *   1:110m cut folds a dependency or an overseas department into its parent
+ *   sovereign state. It is emphatically *not* about size - French Guiana is
+ *   83,534 km², larger than Ireland, and Svalbard larger still.
  *
  * `hasOutline` arrives as a prop rather than being looked up here on purpose:
  * `hasCountryOutline()` reaches into the bundled world geometry, and a list of
@@ -75,13 +78,24 @@ const layout = {
       so a long value shortens itself instead of leaving the separator stranded
       at the end of a wrapped line. */
   meta: 'mt-1 flex items-center gap-2 text-caption text-ink-3',
+  /**
+   * A container, not a breakpoint.
+   *
+   * The two-column arrangement is right when this block is wide and wrong when
+   * it is narrow, and its width has nothing to do with the viewport's: the
+   * record is mounted in a 320px side panel on a 1440px screen as readily as it
+   * is in a 520px card. Keyed off `sm:` it kept two columns in that panel and
+   * wrapped every value onto two lines of unequal height - the 360px layout,
+   * which is the better one there, was unreachable. `@container` asks the only
+   * question that matters.
+   */
   dates:
-    'mt-4 overflow-hidden rounded-lg border border-edge-faint bg-surface-2',
+    'mt-4 @container overflow-hidden rounded-lg border border-edge-faint bg-surface-2',
   dateCell: 'px-4 py-3',
   /** Dividers are drawn per cell rather than with `divide-*`, so a single-cell
       span carries no orphaned rule. */
   dateDivider:
-    'not-last:border-b not-last:border-edge-faint sm:not-last:border-b-0 sm:not-last:border-r',
+    'not-last:border-b not-last:border-edge-faint @sm:not-last:border-b-0 @sm:not-last:border-r',
   /** 12px rather than the primitive's 11px: this surface has a hard floor at
       12px, and the label is a value's heading, not panel furniture. */
   dateLabel: 'text-caption',
@@ -185,7 +199,7 @@ function dateCells(span: VisitSpan): ReadonlyArray<DateCell> {
               absent: true,
             },
             {
-              label: 'Latest visit',
+              label: 'Last visit',
               value: span.date.label,
               iso: span.date.iso,
               absent: false,
@@ -227,6 +241,17 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
     const span = visitSpan(firstVisitedOn, lastVisitedOn)
     const cells = dateCells(span)
     const written = note !== null && note.trim().length > 0
+    /**
+     * The same trim guard the note already uses, for the same reason.
+     *
+     * `continent` is validated by `shortTextSchema`, which has no `.min(1)`, so
+     * `markCountryVisited({ continent: '' })` stores an empty string. A bare
+     * `!== null` check then prints "FR ·" with a stranded middot and nothing
+     * after it - a separator with no second operand reads as a rendering
+     * failure, not as missing data.
+     */
+    const region =
+      continent === null || continent.trim() === '' ? null : continent.trim()
 
     return (
       <article
@@ -258,12 +283,12 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
               <span className="shrink-0 font-semibold tracking-wide tabular-nums">
                 {code}
               </span>
-              {continent === null ? null : (
+              {region === null ? null : (
                 <>
                   <span aria-hidden="true" className="shrink-0">
                     &middot;
                   </span>
-                  <span className="min-w-0 truncate">{continent}</span>
+                  <span className="min-w-0 truncate">{region}</span>
                 </>
               )}
             </p>
@@ -275,7 +300,7 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
         </div>
 
         <div data-part="dates" className={layout.dates}>
-          <dl className={cn('grid', cells.length > 1 && 'sm:grid-cols-2')}>
+          <dl className={cn('grid', cells.length > 1 && '@sm:grid-cols-2')}>
             {cells.map((cell) => (
               <div
                 key={cell.label}
@@ -339,8 +364,9 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
               <MapPinOff size={14} />
             </span>
             <span>
-              Too small to outline at world scale, so there is nothing to frame
-              on the map. The visit still counts.
+              The world outlines this map draws are cut at 1:110m, which folds
+              this territory into its parent state - so there is nothing to
+              frame on the map. The visit still counts.
             </span>
           </p>
         )}
@@ -438,7 +464,7 @@ export const CountryRecordSkeleton = React.forwardRef<
     </div>
 
     <div data-part="dates" className={layout.dates}>
-      <div className="grid sm:grid-cols-2">
+      <div className="grid @sm:grid-cols-2">
         {['first', 'last'].map((cell) => (
           <div
             key={cell}

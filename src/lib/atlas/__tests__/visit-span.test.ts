@@ -93,7 +93,24 @@ describe('visitSpan', () => {
       const span = visitSpan(null, '2015-04-11')
       if (span.kind !== 'partial') throw new Error('expected a partial span')
       expect(span.edge).toBe('last')
-      expect(span.summary).toBe('Latest visit 11 Apr 2015')
+      expect(span.summary).toBe('Last visit 11 Apr 2015')
+    })
+
+    /**
+     * Two cards side by side must not head the same column with two different
+     * words. The later end is "Last visit" whatever shape it arrived in.
+     */
+    it('names the later end identically in a range and in a partial', () => {
+      const partial = visitSpan(null, '2015-04-11')
+      const ranged = visitSpan('2011-07-14', '2024-09-06')
+      if (partial.kind !== 'partial' || ranged.kind !== 'range') {
+        throw new Error('expected a partial and a range')
+      }
+      expect(partial.summary.startsWith('Last visit')).toBe(true)
+      expect(
+        visitSpan('2015-04-11', null).summary.startsWith('First visit'),
+      ).toBe(true)
+      expect(ranged.summary).toBe('14 Jul 2011 – 6 Sept 2024')
     })
 
     it('is never promoted to a range', () => {

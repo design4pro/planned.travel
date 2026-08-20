@@ -31,8 +31,16 @@
  * which is one continuous stay, and wrong here: these are two separate journeys
  * weeks or years apart, and collapsing them implies the traveller was in the
  * country for the whole interval. Both ends are therefore always printed whole.
+ *
+ * **One name per end, across every shape.** The later end is "Last visit"
+ * whether it arrived as half of a range or as the only recorded column. It read
+ * "Latest visit" in the last-only case for a while, which put two cards side by
+ * side heading the same column with two different words - a difference a reader
+ * has to stop and account for, and there is nothing behind it. The summary
+ * strings here and the cell headings in `CountryRecord` and `CountriesList` all
+ * say the same thing.
  */
-import { formatDate, parseIsoDate, pluralise } from '#/routes/_app/-lib/format'
+import { formatDate, parseIsoDate, pluralise } from '#/lib/format'
 
 const DAY_MS = 86_400_000
 
@@ -153,7 +161,7 @@ export function visitSpan(
       kind: 'partial',
       edge: 'last',
       date: closed.point,
-      summary: `Latest visit ${closed.point.label}`,
+      summary: `Last visit ${closed.point.label}`,
     }
   }
 

@@ -20,7 +20,10 @@ import type { BrowserContext, Locator, Page } from '@playwright/test'
  * 3. **The clock the server read, as text** — a countdown that says "in 51d" the
  *    evening a baseline is recorded and "in 50d" the next morning.
  *    `RELATIVE_TIME_SITES` excludes those regions from the comparison; the
- *    tolerance is untouched.
+ *    tolerance is untouched. Each entry is scoped to the component that prints
+ *    it, and the declaration behind it is audited off the payload
+ *    (`auditServerClock()`) rather than off the screen, because *how many* of
+ *    these strings a screen shows is seam 4's business and not this one's.
  * 4. **The calendar the server selected rows on** — the Worker also picks *which
  *    rows* a screen shows by comparing a date column against its own
  *    `new Date()`. `CALENDAR_SELECTIONS` is the table of those comparisons and
@@ -28,7 +31,11 @@ import type { BrowserContext, Locator, Page } from '@playwright/test'
  *    and the region it moves to the run. Read "What this file cannot pin" below
  *    before touching it.
  * 5. **A live WebGL map** — a canvas that has not finished drawing.
- *    `[data-map-ready]`, waited on inside `settle()`.
+ *    `[data-map-ready]`, waited on inside `settle()`. `/atlas` is the one route
+ *    that declares one; the failure modes a real canvas cannot be asked to
+ *    perform — never latching at all, or latching on a route that declares
+ *    nothing — are exercised by `the gate itself` against a document built for
+ *    them.
  * 6. **Graphics-driver chatter** — a performance advisory from the software
  *    rasteriser headless Chromium paints WebGL with, which is not something the
  *    app did. `classifyConsoleMessage()`, and nothing wider than that.
@@ -201,15 +208,39 @@ export type RouteCase = {
    * bare probe pass instantly and prove nothing. The declaration closes that: a
    * route that says it has a map must produce a marker, and a route that says it
    * has none must not, so neither half can rot in silence.
+   *
+   * `/atlas` is the first and so far only route that carries one. Both halves of
+   * the audit, the wait itself and the resize capture path are additionally
+   * exercised by `the gate itself` against a document built for them, because the
+   * interesting states — a canvas that never latches, a marker on a route that
+   * declares nothing — are states no real screen can be asked to enter, and
+   * machinery whose first run is the run it is needed on is machinery nobody has
+   * tested.
    */
   readonly map?: true
   /**
-   * The route prints at least one string the wall clock decides.
+   * The route's loader payload carries the Worker's `today`, so at least one
+   * string on it is the wall clock's to decide.
    *
-   * Enforced in both directions by `auditRelativeTime()`: a declared route must
-   * have something to exclude, and an undeclared one must have nothing. That is
-   * what turns RELATIVE_TIME_SITES from a list somebody has to remember to
-   * update into a claim the gate re-checks on every run.
+   * Declared as a fact about the *payload*, not about what is currently on
+   * screen, and that distinction is the whole fix for a class of overnight
+   * failure this file was written to end. Whether a countdown is *visible*
+   * depends on which rows the Worker selected: `TripTile` renders its badge only
+   * for a start date inside the next sixty days, so once the fixture's last
+   * upcoming trip has started, `/trips` prints no clock-derived string at all —
+   * for the seeded workspace, from 2026-10-10. An audit that demanded a declared
+   * route "must have something to exclude" would therefore fail four specs that
+   * morning, with a message blaming copy that nobody had touched. Payload
+   * presence cannot move like that: `today` is a required field on the DTO
+   * (`src/routes/_app/-server/overview.ts` and `.../library.ts` both declare
+   * `readonly today: string`), returned whether or not a row uses it.
+   *
+   * So the flag is audited in two places, each asserting only what it can
+   * actually see. `auditServerClock()` compares it against the streamed
+   * documents in both directions, which is calendar-proof. `auditRelativeTime()`
+   * keeps a *visible* clock-derived string fatal on a route that declares
+   * nothing — the direction that protects the comparison — and reports, rather
+   * than fails, when a declared route happens to show none this run.
    */
   readonly relativeTime?: true
 }
@@ -248,12 +279,21 @@ export const PINNED_YEAR = 2026
  * The three `relativeTime` routes are exactly the three whose loader payload
  * carries the server's `today` — verified by reading the SSR document for all
  * six: `/dashboard`, `/trips` and `/journey` each contain one `today:"…"`, and
- * `/atlas`, `/vacay` and `/settings` contain none.
+ * `/atlas`, `/vacay` and `/settings` contain none. `auditServerClock()` re-checks
+ * that on every run, in both directions.
+ *
+ * `/atlas` is the one route with a live map, and the flag and the canvas have to
+ * travel together: `settleMap()` fails a route that renders a `[data-map-ready]`
+ * marker without declaring one *and* a route that declares one and renders none,
+ * so neither half can be right on its own. The declaration also moves that route
+ * to the viewport-after-resize capture path (see `fitViewportToDocument()`), which
+ * is why the four `atlas-*` baselines are re-recorded by whoever owns that screen
+ * rather than left to fail.
  */
 export const APP_ROUTES: ReadonlyArray<RouteCase> = [
   { name: 'dashboard', path: '/dashboard', ready: 'main', relativeTime: true },
   { name: 'trips', path: '/trips', ready: 'main', relativeTime: true },
-  { name: 'atlas', path: '/atlas', ready: 'main' },
+  { name: 'atlas', path: '/atlas', ready: 'main', map: true },
   { name: 'journey', path: '/journey', ready: 'main', relativeTime: true },
   { name: 'vacay', path: `/vacay?year=${PINNED_YEAR}`, ready: 'main' },
   { name: 'settings', path: '/settings', ready: 'main' },
@@ -317,6 +357,29 @@ export type RelativeTimeSite = {
   /** Named in every failure message, so a stale entry points at its own source. */
   readonly source: string
   /**
+   * The element that renders this string, as a selector — the site's scope.
+   *
+   * Required, and required to be more than one bare tag, because the pattern
+   * below keys on *text* and no component owns a word. `span` filtered on
+   * `/^(Today|in \d+d)$/` is a document-wide scan: the day any other span on
+   * `/dashboard`, `/trips` or `/journey` reads exactly "Today" it would leave the
+   * comparison silently, with nothing in the run to say a region had stopped
+   * being compared. Scoping each site to the thing that actually prints it keeps
+   * the exclusion the size of what it excuses, and `the gate itself` asserts the
+   * scope is a real one.
+   */
+  readonly within: string
+  /** The masked element, resolved inside `within`. */
+  readonly region: string
+  /**
+   * Match the pattern against this descendant of the region instead of against
+   * the region's own text.
+   *
+   * The shape of a stat cell whose *label* flips while its value stays a
+   * numeral: the label is what the clock decides, the cell is what gets masked.
+   */
+  readonly keyedOn?: string
+  /**
    * Full-string pattern for every output the clock can produce here.
    *
    * Only clock-derived strings are listed. A state the clock has no hand in —
@@ -334,8 +397,6 @@ export type RelativeTimeSite = {
   readonly variants: ReadonlyArray<string>
   /** Nearby strings the clock does not decide, which the pattern must not match. */
   readonly fixed: ReadonlyArray<string>
-  /** The regions of the frame that are therefore excluded from the comparison. */
-  readonly regions: (page: Page, drifts: RegExp) => ReadonlyArray<Locator>
 }
 
 /**
@@ -352,7 +413,7 @@ export type RelativeTimeSite = {
  * `maxDiffPixelRatio` stays at 0.002, because a tolerance wide enough to swallow
  * a day counter is wide enough to swallow a real regression.
  *
- * Two properties are worth being exact about.
+ * Three properties are worth being exact about.
  *
  * **The region, not the glyphs.** A mask box is the size of the element it
  * covers, so masking a numeral alone would still move when the numeral changed
@@ -363,39 +424,58 @@ export type RelativeTimeSite = {
  * that failed round 4, and the reason line is a block element, so its box is the
  * row width whatever it says.
  *
+ * **The scope, not the word.** Every entry names the element that renders it
+ * (`within`), and the pattern is only consulted inside that scope. A bare
+ * `span` filtered on `/^(Today|in \d+d)$/` reads as tidy and is a document-wide
+ * scan: the first time any other span on those three routes says exactly
+ * "Today" it leaves the comparison, and a green run is how you find out.
+ *
  * **What this covers, and what it does not.** These are *strings* the clock
  * decides. The clock also decides *which rows* the Worker returns, and that is a
  * different frame rather than a different string — no exclusion reaches it. That
  * half of the problem is measured, not masked: see `CALENDAR_SELECTIONS` and the
- * "What this file cannot pin" note at the top of this file.
+ * "What this file cannot pin" note at the top of this file. It also decides *how
+ * many* of these strings a screen shows at all, which is why a declared route
+ * printing none is reported rather than failed — see `auditRelativeTime()`.
+ *
+ * Introducing these exclusions re-recorded twelve of the fifty-two baselines —
+ * `dashboard`, `trips` and `journey`, both themes, both projects — because a
+ * mask paints over the region it excludes, so a masked frame is a different
+ * picture by construction and not by regression. The other six baselines that
+ * moved in the same commit moved for an unrelated reason, recorded on
+ * `settleOnce()`.
  */
 export const RELATIVE_TIME_SITES: ReadonlyArray<RelativeTimeSite> = [
   {
     source: 'src/routes/_app/-ui/trip-card.tsx — the countdown badge',
+    // The badge is the last cell of the tile's meta row, and the whole tile is
+    // one link, so the tile is the scope. Every trip tile in the product is this
+    // component, on both the dashboard and the trip index.
+    within: 'a[href^="/trips/"][href$="/plan"]',
+    region: 'span',
     drifts: /^(Today|in \d+d)$/,
     variants: ['Today', 'in 1d', 'in 50d'],
     fixed: ['Active', '7d', '17 – 23 Aug 2026'],
-    regions: (page, drifts) => [
-      page.locator('span').filter({ hasText: drifts }),
-    ],
   },
   {
     source: 'src/routes/_app/dashboard.tsx — the hero "starts in" stat',
     // Keyed on the label, which is the part that flips, and masked at the cell,
-    // whose width the grid fixes. The other three hero stats are numerals too,
-    // and none of them is allowed to lose coverage over this one.
+    // whose width the four-column grid fixes. The other three hero stats are
+    // numerals too, and none of them is allowed to lose coverage over this one.
+    within: 'main dl',
+    region: ':scope > div',
+    keyedOn: 'dt',
     drifts: /^(Starts in|Started)$/,
     variants: ['Starts in', 'Started'],
     fixed: ['Travellers', 'Trip dates', 'Places'],
-    regions: (page, drifts) => [
-      page
-        .locator('dl > div')
-        .filter({ has: page.locator('dt').filter({ hasText: drifts }) }),
-    ],
   },
   {
     source:
       'src/routes/_app/journey/index.tsx — the unwritten-trip reason line',
+    // The reason line is the last block of a backlog row, and a backlog row is
+    // the list item that links to the trip waiting to be written up.
+    within: 'li:has(a[href^="/trips/"])',
+    region: 'span',
     drifts:
       /^(Happening now|Ended yesterday|Ended \d+ days ago|Starts tomorrow|Starts in \d+ days)$/,
     variants: [
@@ -406,31 +486,56 @@ export const RELATIVE_TIME_SITES: ReadonlyArray<RelativeTimeSite> = [
       'Starts in 50 days',
     ],
     fixed: ['No dates yet', 'Dates not set'],
-    regions: (page, drifts) => [
-      page.locator('span').filter({ hasText: drifts }),
-    ],
   },
 ]
 
+/**
+ * One site's excluded region, built from its scope rather than from a tag scan.
+ *
+ * Two shapes, and no more: the region's own text carries the drifting string, or
+ * a named descendant does and the region is what gets masked around it. See
+ * `keyedOn`.
+ */
+export function relativeTimeRegionOf(
+  page: Page,
+  site: RelativeTimeSite,
+): Locator {
+  const region = page.locator(site.within).locator(site.region)
+  return site.keyedOn === undefined
+    ? region.filter({ hasText: site.drifts })
+    : region.filter({
+        has: page.locator(site.keyedOn).filter({ hasText: site.drifts }),
+      })
+}
+
 /** Every region of this page excluded from the comparison, in table order. */
 function relativeTimeRegions(page: Page): Array<Locator> {
-  return RELATIVE_TIME_SITES.flatMap((site) => [
-    ...site.regions(page, site.drifts),
-  ])
+  return RELATIVE_TIME_SITES.map((site) => relativeTimeRegionOf(page, site))
 }
 
 /**
- * The same regions as one locator.
+ * The same regions as one locator, or null when the table is empty.
  *
  * Playwright resolves the mask list before every capture attempt, and each
  * locator in it is a round trip — see `auditRelativeTime()` on how little slack
  * there is before the shutter. `Locator.or()` folds the whole table into a single
  * resolution, so the exclusion costs the frame one round trip rather than one per
  * site, however long the table grows.
+ *
+ * The null is not defensive noise. Folding an empty table with a destructured
+ * first element produced `mask: [undefined]`, which Playwright accepts and which
+ * excludes nothing — an emptied table would have silently turned every exclusion
+ * off while the gate's own table specs stayed green. Now the mask list is empty
+ * instead of malformed, and `the gate itself` asserts the table is not empty, so
+ * this branch is reachable only on the way to a failing spec.
  */
-function relativeTimeRegion(page: Page): Locator {
-  const [first, ...rest] = relativeTimeRegions(page)
-  return rest.reduce((all, one) => all.or(one), first)
+function relativeTimeRegion(page: Page): Locator | null {
+  const regions = relativeTimeRegions(page)
+  const first = regions.at(0)
+  if (first === undefined) {
+    return null
+  }
+  return regions.slice(1).reduce((all, one) => all.or(one), first)
 }
 
 /** How many clock-derived elements this page is actually showing. */
@@ -442,32 +547,99 @@ async function countRelativeTime(page: Page): Promise<number> {
 }
 
 /**
- * Re-check what the route table claims about this page's relative-time strings,
- * in both directions: a declared route must have something to exclude, an
- * undeclared one must have nothing.
+ * Re-check what this page shows against what the route table declares, and fail
+ * only in the direction that can actually cost the comparison something.
  *
- * Called *after* the capture. Not for timing reasons any more — `settle()` now
- * ends on the hydrated frame, so nothing this function does can change which
- * document gets photographed — but because it is an audit of the route table
- * rather than a precondition of the frame, and a failure here should be read
- * next to a frame that was taken, not instead of one.
+ * **Fatal**: a visible clock-derived string on a route that declares none. That
+ * string is inside the comparison, it is a different string tomorrow, and the
+ * frame will fail on a morning when nothing was designed. It is the failure this
+ * whole file exists to prevent, and there is no calendar in which it is
+ * acceptable.
+ *
+ * **Reported**: a route that declares one and shows none. This looks like the
+ * mirror image and is not, because the *number of clock-derived strings on a
+ * screen is itself decided by the calendar*. `TripTile` prints its badge only
+ * within sixty days of a start date, so on the seeded fixture `/trips` prints
+ * none from 2026-10-10 — and an earlier version of this function asserted
+ * `toBeGreaterThan(0)` here and would have failed four specs that morning, in
+ * both themes on both projects, with a message accusing a copy change that had
+ * not happened. A run cannot tell that apart from a real copy change by counting
+ * elements, so it says what it saw and leaves the verdict to the frames. The
+ * claim that the declaration is not stale is made instead by
+ * `auditServerClock()`, off the payload, where the calendar cannot reach it.
+ *
+ * Called *after* the capture, because it is an audit of the route table rather
+ * than a precondition of the frame: a finding here should be read next to a
+ * frame that was taken, not instead of one.
  */
 export async function auditRelativeTime(
   page: Page,
   route: RouteCase,
-): Promise<void> {
+): Promise<ReadonlyArray<string>> {
   const found = await countRelativeTime(page)
-  if (route.relativeTime === true) {
+  if (route.relativeTime !== true) {
     expect(
       found,
-      `${route.path} declares \`relativeTime: true\` but nothing on it matched RELATIVE_TIME_SITES — the copy moved, and its countdown is back inside the comparison`,
-    ).toBeGreaterThan(0)
-    return
+      `${route.path} prints a clock-derived string but the route table does not declare \`relativeTime: true\` — add it, so the exclusion is audited rather than accidental`,
+    ).toBe(0)
+    return []
   }
-  expect(
-    found,
-    `${route.path} prints a clock-derived string but the route table does not declare \`relativeTime: true\` — add it, so the exclusion is audited rather than accidental`,
-  ).toBe(0)
+  if (found > 0) {
+    return []
+  }
+  return [
+    `${route.path} declares \`relativeTime: true\` and printed no clock-derived string this run, so its exclusion covered nothing and the whole frame was compared`,
+    'that is what the fixture calendar does once it moves past the rows that carry a countdown — see CALENDAR_SELECTIONS — and it is reported rather than failed because counting elements cannot tell it apart from a copy change',
+    `the declaration itself is still checked against the payload by auditServerClock(), which the calendar cannot move`,
+  ]
+}
+
+/**
+ * Audit the `relativeTime` declarations against the documents the Worker
+ * streamed, in both directions, on a fact no calendar can move.
+ *
+ * `todayIso()` reaches a screen exactly one way: the loader puts it on the
+ * payload, TanStack Start serialises the payload into the document, and the
+ * client recomputes every relative string from that field. So `today:"…"` being
+ * in the bytes is equivalent to "the wall clock can decide a string here", and it
+ * is a property of the loader rather than of the rows — `readonly today: string`
+ * is a required field on both DTOs, present whether or not a row uses it.
+ *
+ * That makes this the half of the old both-directions audit worth keeping fatal.
+ * Verified on the seeded workspace at the time of writing: `/dashboard`,
+ * `/trips` and `/journey` each carry exactly one `today`, and `/atlas`, `/vacay`
+ * and `/settings` carry none — which is precisely the set of declarations.
+ *
+ * Only the authenticated routes are audited, and deliberately: signed in, `/login`
+ * and `/register` answer 302, so a fetch that follows redirects would read the
+ * dashboard's document and report the dashboard's clock against the login page's
+ * declaration. A public route that starts printing a clock-derived string is
+ * still caught, by `auditRelativeTime()`, on the frame itself.
+ */
+export async function auditServerClock(
+  page: Page,
+  routes: ReadonlyArray<RouteCase>,
+): Promise<void> {
+  for (const route of routes) {
+    const response = await page.request.get(route.path)
+    expect(
+      response.status(),
+      `${route.path} should not be an error response`,
+    ).toBeLessThan(400)
+    const carries = [...(await response.text()).matchAll(TODAY_IN_PAYLOAD)]
+      .length
+    if (route.relativeTime === true) {
+      expect(
+        carries,
+        `${route.path} declares \`relativeTime: true\` but its document no longer carries the Worker's \`today\` — the loader stopped sending it, so the declaration is stale and the exclusion is guarding nothing`,
+      ).toBeGreaterThan(0)
+      continue
+    }
+    expect(
+      carries,
+      `${route.path} carries the Worker's \`today\` in its payload but does not declare \`relativeTime: true\` — anything it prints from that field is inside the comparison and will move at midnight`,
+    ).toBe(0)
+  }
 }
 
 /** What a route renders, split by whether the gate excludes it or not. */
@@ -904,30 +1076,60 @@ export async function reportServerCalendar(
 export const MAP_READY_TIMEOUT_MS = 15_000
 
 /** What the page says about its maps at the moment the census was taken. */
-type MapCensus = {
+export type MapCensus = {
   readonly total: number
   readonly unsettled: number
 }
 
 /**
- * Hold the shutter until no map on the page is still drawing.
+ * Count the readiness markers in the document, and how many are still drawing.
  *
- * Taken from a census the scroll reset already collected, so the twelve routes
- * with no map pay nothing at all for this: the polling assertion is entered only
- * when a marker exists *and* reads `false`. That parsimony is not premature —
- * see the note on `auditRelativeTime()` about how little slack there is before
- * the shutter.
+ * Run as a page function rather than through two locators, so the census is one
+ * round trip and one instant: a marker that latches between two queries would
+ * otherwise be counted in one and not the other.
  */
-async function settleMap(
+function censusIn(): MapCensus {
+  const markers = Array.from(document.querySelectorAll('[data-map-ready]'))
+  return {
+    total: markers.length,
+    unsettled: markers.filter(
+      (marker) => marker.getAttribute('data-map-ready') !== 'true',
+    ).length,
+  }
+}
+
+/** The census, exported so a spec can drive `settleMap()` without a real map. */
+export async function readMapCensus(page: Page): Promise<MapCensus> {
+  return page.evaluate(censusIn)
+}
+
+/**
+ * Hold the shutter until no map on the page is still drawing, and audit the
+ * declaration in both directions.
+ *
+ * Taken from a census the settling sequence already collected, so the twelve
+ * routes with no map pay nothing at all for the wait: the polling assertion is
+ * entered only when a marker exists *and* reads `false`. That parsimony is not
+ * premature — see the note on `auditRelativeTime()` about how little slack there
+ * is before the shutter.
+ *
+ * `timeout` is a parameter for one reason: the only way to prove this fails
+ * loudly rather than photographing an unfinished canvas is to hand it a marker
+ * that never latches, which no real screen can be asked to produce, and a spec
+ * should not spend MAP_READY_TIMEOUT_MS proving it. Every caller in the capture
+ * path uses the default.
+ */
+export async function settleMap(
   page: Page,
   route: RouteCase,
   census: MapCensus,
+  timeout: number = MAP_READY_TIMEOUT_MS,
 ): Promise<void> {
   if (census.unsettled > 0) {
     await expect(
       page.locator('[data-map-ready="false"]'),
       `${route.path}: a map on this page has not finished drawing`,
-    ).toHaveCount(0, { timeout: MAP_READY_TIMEOUT_MS })
+    ).toHaveCount(0, { timeout })
   }
   if (route.map === true) {
     expect(
@@ -1090,18 +1292,24 @@ async function hideDevChrome(page: Page): Promise<void> {
  *  5. every `<img>` now in the DOM has decoded — after 3 and 4, so an image the
  *     client added is included rather than missed;
  *  6. the dev toolbar is out of the frame;
- *  7. pointer and scroll reset, with the map census taken in the same round trip:
- *     the reset is the last thing that can set a hover feature-state on a map, so
- *     reading the marker after it folds any repaint it caused into the map's own
- *     first `idle` — the marker latches once and cannot report a second settle;
+ *  7. pointer and scroll reset, and only then the map census: the reset is the
+ *     last thing that can set a hover feature-state on a map, so reading the
+ *     marker after it folds any repaint it caused into the map's own first
+ *     `idle` — the marker latches once and cannot report a second settle;
  *  8. the map has finished drawing (`settleMap`);
  *  9. two animation frames, last, so the commit for everything above is on
  *     screen before anything is captured.
  *
- * Steps 3 and 4 moved six of the fifty-two baselines: `login` in both themes on
- * both projects, and `settings` in both themes on mobile-safari. Every other frame
- * came back byte-identical, which is the evidence that this change photographs the
- * same design and not a different one — it only stopped photographing it early.
+ * Steps 3 and 4 moved six of the fifty-two baselines, and exactly six: `login`
+ * in both themes on both projects, where the passkey affordance is client-only,
+ * and `settings` in both themes on mobile-safari, where the native controls and
+ * the avatar are. Twelve more baselines were re-recorded in the same commit and
+ * not by these steps — `dashboard`, `trips` and `journey`, which changed because
+ * the relative-time exclusion started painting over the regions it excludes; the
+ * attribution is on RELATIVE_TIME_SITES. The remaining thirty-four came back
+ * byte-identical, which is the evidence that neither change photographs a
+ * different design — one stopped photographing it early, the other covered part
+ * of it up.
  */
 async function settleOnce(page: Page, route: RouteCase): Promise<void> {
   await page.locator(route.ready).first().waitFor({ state: 'visible' })
@@ -1125,17 +1333,8 @@ async function settleOnce(page: Page, route: RouteCase): Promise<void> {
   )
   await hideDevChrome(page)
   await page.mouse.move(0, 0)
-  const census = await page.evaluate((): MapCensus => {
-    window.scrollTo(0, 0)
-    const markers = Array.from(document.querySelectorAll('[data-map-ready]'))
-    return {
-      total: markers.length,
-      unsettled: markers.filter(
-        (marker) => marker.getAttribute('data-map-ready') !== 'true',
-      ).length,
-    }
-  })
-  await settleMap(page, route, census)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await settleMap(page, route, await readMapCensus(page))
   await page.evaluate(
     () =>
       new Promise<void>((resolve) => {
@@ -1327,21 +1526,68 @@ export async function visit(
  * nothing, and are captured exactly as they were before this existed.
  */
 function maskFor(page: Page, route: RouteCase): Array<Locator> {
-  return route.relativeTime === true ? [relativeTimeRegion(page)] : []
+  if (route.relativeTime !== true) {
+    return []
+  }
+  const region = relativeTimeRegion(page)
+  return region === null ? [] : [region]
+}
+
+/** How a route's frame is captured, and why the two differ. */
+export type CaptureMode = 'full-page' | 'viewport-after-resize'
+
+/**
+ * Which capture path a route takes.
+ *
+ * A named decision rather than an inline branch, so the mapping is assertable
+ * without recording a baseline for a page that is not the product — a capture
+ * path first exercised on the day it is needed is a path nobody has tested, and
+ * this one is silent when it is wrong: `fullPage` on a live map does not fail, it
+ * times out.
+ */
+export function captureMode(route: RouteCase): CaptureMode {
+  return route.map === true ? 'viewport-after-resize' : 'full-page'
 }
 
 /**
- * Full-page baseline comparison, named for the snapshotPathTemplate.
+ * Grow the viewport to the document, then settle again.
  *
- * A route with a live map is captured differently, and measurably so. Chromium's
- * `fullPage` capture perturbs the viewport to reach below the fold; the page
- * emits `resize`, MapLibre re-sizes its canvas and repaints mid-capture, and
- * because `toHaveScreenshot` needs two consecutive identical captures the
- * assertion times out instead of failing cleanly. Measured on the planner's map
- * screen: `fullPage: true` fired one `resize` per capture and produced three
- * different images, while resizing the viewport to the document height *once*
- * and then capturing the viewport produced four identical ones. Same coverage,
- * without the perturbation.
+ * The alternative — Chromium's `fullPage` capture — perturbs the viewport to
+ * reach below the fold, the page emits `resize`, MapLibre re-sizes its canvas and
+ * repaints mid-capture, and because `toHaveScreenshot` needs two consecutive
+ * identical captures the assertion times out instead of failing cleanly. Measured
+ * on the planner's map screen: `fullPage: true` fired one `resize` per capture and
+ * produced three different images, while resizing once and then capturing the
+ * viewport produced four identical ones. Same coverage, without the perturbation.
+ *
+ * Returns whether it resized, which is what a spec can assert without recording a
+ * baseline for a page that is not the product.
+ */
+export async function fitViewportToDocument(
+  page: Page,
+  route: RouteCase,
+): Promise<boolean> {
+  const viewport = page.viewportSize()
+  const height = await page.evaluate(
+    () => document.documentElement.scrollHeight,
+  )
+  if (viewport === null || height <= viewport.height) {
+    return false
+  }
+  await page.setViewportSize({ width: viewport.width, height })
+  // The resize is a layout change like any other, so the page settles again —
+  // which is also where the map's post-resize repaint is waited out.
+  await settle(page, route)
+  return true
+}
+
+/**
+ * Baseline comparison, named for the snapshotPathTemplate.
+ *
+ * Two capture paths, one per `captureMode()`: a page with no live map is
+ * photographed full-page, and a page with one is photographed at a viewport
+ * grown to the document instead. See `fitViewportToDocument()` for the
+ * measurement behind that.
  */
 export async function shoot(
   page: Page,
@@ -1349,24 +1595,14 @@ export async function shoot(
   theme: Theme,
 ): Promise<void> {
   const name = `${route.name}-${theme}.png`
-  if (route.map !== true) {
+  if (captureMode(route) === 'full-page') {
     await expect(page).toHaveScreenshot(name, {
       fullPage: true,
       mask: maskFor(page, route),
     })
     return
   }
-
-  const viewport = page.viewportSize()
-  const height = await page.evaluate(
-    () => document.documentElement.scrollHeight,
-  )
-  if (viewport !== null && height > viewport.height) {
-    await page.setViewportSize({ width: viewport.width, height })
-    // The resize is a layout change like any other, so the page settles again —
-    // which is also where the map's post-resize repaint is waited out.
-    await settle(page, route)
-  }
+  await fitViewportToDocument(page, route)
   await expect(page).toHaveScreenshot(name, {
     fullPage: false,
     mask: maskFor(page, route),

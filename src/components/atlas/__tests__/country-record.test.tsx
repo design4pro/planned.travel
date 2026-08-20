@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 
 import { CountryRecord, CountryRecordSkeleton } from '../country-record'
 
@@ -129,6 +129,54 @@ describe('CountryRecord', () => {
     expect(screen.getByRole('heading', { name: 'France' })).toBeTruthy()
   })
 
+  /**
+   * `continent` is validated by `shortTextSchema`, which has no `.min(1)`, so an
+   * empty string is a value the database really holds. A bare null check printed
+   * "FR ·" with nothing after it.
+   */
+  it.each([
+    ['an empty string', ''],
+    ['whitespace only', '   '],
+  ])('strands no separator for %s', (_label, continent) => {
+    const { container } = render(
+      <CountryRecord {...FRANCE} continent={continent} />,
+    )
+    expect(container.textContent).not.toContain('·')
+    expect(container.textContent).toContain('FR')
+  })
+
+  it('trims a padded continent rather than printing the padding', () => {
+    render(<CountryRecord {...FRANCE} continent="  Europe  " />)
+    expect(screen.getByText('Europe')).toBeTruthy()
+  })
+
+  /**
+   * Two records side by side must not head the same column with two different
+   * words. "Latest visit" for a last-only partial did exactly that.
+   */
+  it('names the later end "Last visit" in every shape that has one', () => {
+    const partial = render(<CountryRecord {...AUSTRIA} firstVisitedOn={null} />)
+    expect(within(partial.container).getByText('Last visit')).toBeTruthy()
+    expect(partial.container.textContent).not.toContain('Latest visit')
+
+    const ranged = render(<CountryRecord {...FRANCE} />)
+    expect(within(ranged.container).getByText('Last visit')).toBeTruthy()
+  })
+
+  /**
+   * The dates block asks its own container, not the viewport. A 320px side panel
+   * on a 1440px screen has to get the single-column arrangement.
+   */
+  it('keys the two-column dates block off its container', () => {
+    const { container } = render(<CountryRecord {...FRANCE} />)
+    const dates = container.querySelector('[data-part="dates"]')
+    expect(dates?.className.split(' ')).toContain('@container')
+
+    const grid = dates?.firstElementChild?.className ?? ''
+    expect(grid).toContain('@sm:grid-cols-2')
+    expect(grid).not.toMatch(/(^| )sm:grid-cols-2( |$)/)
+  })
+
   describe('a country the bundled geometry cannot draw', () => {
     it('is still listed and still says what is missing', () => {
       render(
@@ -147,6 +195,11 @@ describe('CountryRecord', () => {
       expect(record.textContent).toContain('8 Nov 2017')
       expect(record.textContent).toContain('nothing to frame on the map')
       expect(record.textContent).toContain('The visit still counts.')
+      // The reason has to be the true one. French Guiana is 83,534 km²; it is
+      // absent because the 1:110m cut folds it into France, not because of size.
+      expect(record.textContent).toContain('1:110m')
+      expect(record.textContent).toContain('parent state')
+      expect(record.textContent).not.toContain('Too small')
     })
 
     it('says nothing about the map when the outline exists', () => {

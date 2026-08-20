@@ -21,11 +21,7 @@ import {
 import { cn } from '#/lib/cn'
 import { countryName } from '#/lib/atlas/country-names'
 import { UNRECORDED_VISIT_LABEL, visitSpan } from '#/lib/atlas/visit-span'
-import {
-  countryFlag,
-  formatNumber,
-  humaniseToken,
-} from '#/routes/_app/-lib/format'
+import { countryFlag, formatNumber, humaniseToken } from '#/lib/format'
 
 import type { VisitSpan } from '#/lib/atlas/visit-span'
 
@@ -242,7 +238,7 @@ function dateCells(span: VisitSpan): ReadonlyArray<DateCell> {
         : [
             { label: 'First visit', value: 'Not recorded', iso: null },
             {
-              label: 'Latest visit',
+              label: 'Last visit',
               value: span.date.label,
               iso: span.date.iso,
             },
@@ -256,9 +252,17 @@ function dateCells(span: VisitSpan): ReadonlyArray<DateCell> {
 
 /* -------------------------------------------------------------------- layout */
 
-/** Copy for a country the bundled 1:110m geometry is too coarse to draw. */
+/**
+ * Copy for a country the bundled geometry has no separate polygon for.
+ *
+ * The reason is stated as the true one. Natural Earth's 1:110m cut folds a
+ * dependency or an overseas department into its parent sovereign state, which is
+ * why GF, SJ, HK and MO are missing - not size. French Guiana is 83,534 km²,
+ * larger than Austria, and telling a reader it is "too small to outline" is a
+ * factual untruth in a product about places.
+ */
 const NO_OUTLINE_NOTICE =
-  'Too small to outline at world scale, so there is nothing to frame on the map.'
+  'Folded into its parent state by the world outlines, so there is nothing to frame on the map.'
 
 /**
  * Held as class strings rather than typed twice, so `CountriesListSkeleton` is
@@ -324,7 +328,7 @@ const layout = {
    * From `md`: the cells dissolve (`contents`) into a fixed label column, so
    * every date in the list aligns down one edge rather than starting wherever
    * its own heading happens to end. 5.25rem clears the longest heading
-   * ("Latest visit") at 11px with our tracking.
+   * ("Visit dates") at 11px with our tracking.
    */
   dates:
     'grid min-w-0 grid-cols-2 items-baseline gap-x-4 gap-y-1 md:col-start-2 md:row-start-1 md:grid-cols-[5.25rem_minmax(0,1fr)] md:gap-x-3',
@@ -412,16 +416,23 @@ export const CountriesList = React.forwardRef<
     })
 
     /**
-     * Bumped by every activation, whether or not it changed the selection.
+     * Bumped only when a row that is *already* selected is chosen again.
      *
-     * Re-choosing the row already selected is a supported gesture — it asks the
-     * map to frame the country again — and a live region only speaks when its
-     * text changes, so the same sentence written back into the same node is
-     * silent. The counter's parity decides which of two regions holds the
-     * sentence, so an unchanged message still arrives somewhere empty and gets
-     * read out.
+     * Re-choosing is a supported gesture — it asks the map to frame the country
+     * again — and a live region only speaks when its text changes, so writing the
+     * same sentence back into the same node is silent. Flipping which of two
+     * regions carries it makes the repeat land somewhere empty and be read out.
+     *
+     * It is deliberately *not* bumped by every click. A host that commits
+     * `selectedCode` asynchronously has not changed the selection yet at the
+     * moment of the click, so flipping the parity there moved the *previous*
+     * country's sentence into the empty region and announced it — the reader
+     * picked Japan and heard "France selected". The announcement below is driven
+     * by the sentence it announces: a new selection changes the text, which is
+     * what speaks, and this counter exists solely for the case where the text
+     * cannot change because it is already correct.
      */
-    const [activations, setActivations] = React.useState(0)
+    const [repeats, setRepeats] = React.useState(0)
 
     const rows = React.useMemo(
       () => sortCountries(countries, order),
@@ -435,15 +446,29 @@ export const CountriesList = React.forwardRef<
             (row) => normaliseCode(row.countryCode) === selectedKey,
           )
 
-    /* Roving tabindex. The tab stop follows the selection when the map picks a
-       country, so tabbing back into the list lands where the reader left off,
-       and otherwise follows whichever row was focused last. */
-    const [focusIndex, setFocusIndex] = React.useState(0)
+    /**
+     * Roving tabindex, held as a country code rather than a position.
+     *
+     * A position desyncs from the row it was pointing at the moment the order
+     * changes: focus stays on Japan while the tab stop slides to whatever row
+     * now occupies index 2. The code survives a re-sort, a filtered list and a
+     * country arriving or leaving, and it is the same normalised form the rows,
+     * the map and `selectedCode` all speak.
+     */
+    const [focusCode, setFocusCode] = React.useState<string | null>(null)
     React.useEffect(() => {
-      if (selectedIndex >= 0) setFocusIndex(selectedIndex)
-    }, [selectedIndex])
+      if (selectedKey !== '') setFocusCode(selectedKey)
+    }, [selectedKey])
+
+    const focusIndex =
+      focusCode === null
+        ? -1
+        : rows.findIndex((row) => normaliseCode(row.countryCode) === focusCode)
+    /* The tab stop follows the selection when the map picks a country, so tabbing
+       back into the list lands where the reader left off; otherwise it follows
+       whichever row was focused last, and falls back to the first row. */
     const activeIndex =
-      rows.length === 0 ? 0 : Math.min(focusIndex, rows.length - 1)
+      focusIndex >= 0 ? focusIndex : selectedIndex >= 0 ? selectedIndex : 0
 
     const nodes = React.useRef(new Map<string, HTMLButtonElement>())
     const refs = React.useRef(
@@ -468,8 +493,9 @@ export const CountriesList = React.forwardRef<
       (index: number) => {
         const row = rows.at(index)
         if (row === undefined) return
-        setFocusIndex(index)
-        nodes.current.get(normaliseCode(row.countryCode))?.focus()
+        const code = normaliseCode(row.countryCode)
+        setFocusCode(code)
+        nodes.current.get(code)?.focus()
       },
       [rows],
     )
@@ -629,9 +655,11 @@ export const CountriesList = React.forwardRef<
                   ].join(', ')}
                   aria-describedby={describedBy}
                   tabIndex={index === activeIndex ? 0 : -1}
-                  onFocus={() => setFocusIndex(index)}
+                  onFocus={() => setFocusCode(code)}
                   onClick={() => {
-                    setActivations((count) => count + 1)
+                    // Only a genuine repeat needs the parity flip; a new
+                    // country announces itself by changing the sentence.
+                    if (code === selectedKey) setRepeats((count) => count + 1)
                     setSelected(code)
                   }}
                   data-motion-transform=""
@@ -774,9 +802,15 @@ export const CountriesList = React.forwardRef<
 
         {/* Selection is a map camera move happening somewhere else on the
             screen, so it is also said out loud — including the honest case
-            where the map has no outline to fly to. Two regions, alternated by
-            activation, so choosing the same country twice is announced twice
-            rather than falling silent on an unchanged string. */}
+            where the map has no outline to fly to.
+
+            Two regions, and which one carries the sentence is decided by the
+            sentence, never by the click: a new selection changes the text, and
+            changed text is what a live region speaks. `repeats` moves it to the
+            other region only when the text cannot change because the reader
+            re-chose the country already selected. Flipping on the click instead
+            announced the previous country to anyone whose host commits the
+            selection a tick later. */}
         {[0, 1].map((slot) => (
           <p
             key={slot}
@@ -785,7 +819,7 @@ export const CountriesList = React.forwardRef<
             data-part="announcement"
             className="sr-only"
           >
-            {activations % 2 === slot ? announcement : ''}
+            {repeats % 2 === slot ? announcement : ''}
           </p>
         ))}
       </div>

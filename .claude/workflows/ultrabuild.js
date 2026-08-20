@@ -464,8 +464,9 @@ You are a neutral capture step. You do NOT judge quality and you do NOT edit app
 Ours:      ${item.url || 'the local dev server root'}
 Reference: ${item.referenceUrl || 'https://demo.liketrek.com/dashboard'}
 
-Our page is served by the local dev server. Find the port it actually bound (this environment
-injects an extra --port, so it is frequently not 3000) and use that.
+Our page is served by a dev server that is ALREADY RUNNING. Use the port the orchestrator names in
+the task context and do not start one of your own; if none is named, find the port already bound
+(this environment injects an extra --port, so it is frequently not 3000).
 
 For each of these combinations, screenshot BOTH pages full-page:
   viewports 360x800, 768x1024, 1440x900, 2560x1440
@@ -483,6 +484,24 @@ Mechanics, because the obvious approach does not work:
   and do not compare our dark against their light as if it were a fair pair.
 - Before each shot: wait for the page to settle and fonts to load, dismiss cookie banners and
   incidental modals, and scroll to top.
+- **Kill animation before you shoot.** An entrance transition caught mid-flight renders text at
+  20-25% opacity, and a critic reading that frame reports a contrast failure the product does not
+  have. Inject a stylesheet that stops them, then wait one frame:
+  browser_evaluate with:
+    const s = document.createElement('style');
+    s.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}';
+    document.head.appendChild(s);
+- **If the page has a map, wait for it to finish drawing.** A WebGL canvas photographed before its
+  first idle is a flat empty rectangle, and a critic reading that frame reports "renders no map at
+  all" about a map that works. Our MapCanvas publishes \`data-map-ready="false"\` from its first
+  render and latches it to \`"true"\` on MapLibre's own idle event. Wait for
+  \`[data-map-ready="true"]\` (allow 20s) before every shot of a map-bearing page, and wait for it
+  AGAIN after each theme switch and each resize - a theme change replaces the whole style document
+  through setStyle, and the marker goes back to false while the new style loads.
+- **Sanity-check your own frame before filing it.** If a full-bleed region larger than a third of
+  the viewport comes out as one flat colour, or a number renders as a pale ghost of its neighbours,
+  you captured too early. Retry that combination. Filing such a frame wastes the critic's round on
+  a defect that does not exist, which has happened.
 - The screenshot tool writes into its own output directory, so it cannot target a repo path
   directly. Take the shot with a distinctive filename, then MOVE the produced file into place with
   Bash. Create ${dir}/ first.
@@ -501,7 +520,11 @@ Crop or mask browser chrome, URL bars, and any wordmark or logo on BOTH sides, s
 identifiable by branding. If a wordmark cannot be cropped without destroying the layout, mask it in
 place.
 
-Also collect our page's browser console messages and report every error and warning.
+Also collect our page's browser console messages and report every error and warning **from the
+final load of the page you photographed**. Do not report session-wide history: earlier hot-reloads,
+other dev-server ports and transient module-graph errors from a build that has since settled are
+not defects of the frame you filed, and reporting them as console errors fails the item for
+something no reader would ever see.
 
 Return the schema: one pairs[] entry per viewport/theme, aPath and bPath pointing at that
 combination's two files. If the reference is unreachable, set captured false, explain in

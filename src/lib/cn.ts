@@ -37,7 +37,17 @@ const twMerge = extendTailwindMerge({
       tracking: [{ tracking: ['label', 'wide', 'tight', 'tighter'] }],
       duration: [{ duration: ['fast', 'base', 'slow'] }],
       ease: [{ ease: ['out-quint', 'in-quint', 'drawer', 'spring'] }],
-      z: [{ z: ['nav', 'dropdown', 'overlay', 'modal', 'toast'] }],
+      /**
+       * `map-overlay` is the lowest tier and the one most often overridden:
+       * chrome floating over a full-bleed map sits under the app nav, and a
+       * primitive whose default is `z-dropdown` — `GlassPanel` with
+       * `floating` — has to be able to be told otherwise. Left out of this
+       * list, `cn('z-dropdown', 'z-map-overlay')` kept both classes and
+       * stylesheet order decided the winner.
+       */
+      z: [
+        { z: ['map-overlay', 'nav', 'dropdown', 'overlay', 'modal', 'toast'] },
+      ],
       animate: [
         {
           animate: [

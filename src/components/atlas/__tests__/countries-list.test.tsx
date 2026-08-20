@@ -226,6 +226,10 @@ describe('a country the bundled geometry cannot draw', () => {
     const row = screen.getByRole('option', { name: /Singapore/ })
     expect(row.textContent).toContain('8 Nov 2017')
     expect(row.textContent).toContain('nothing to frame on the map')
+    // The reason is the true one: the 1:110m cut folds a dependency into its
+    // parent state. It is not a size claim — French Guiana is 83,534 km².
+    expect(row.textContent).toContain('parent state')
+    expect(row.textContent).not.toContain('Too small')
     const described = row.getAttribute('aria-describedby')
     expect(document.getElementById(described ?? '')?.textContent).toContain(
       'nothing to frame on the map',
@@ -235,7 +239,7 @@ describe('a country the bundled geometry cannot draw', () => {
   it('repeats it out loud when the row is selected', () => {
     render(<CountriesList countries={ALL} selectedCode="SG" />)
     expect(announcement()).toBe(
-      'Singapore selected. Too small to outline at world scale, so there is nothing to frame on the map.',
+      'Singapore selected. Folded into its parent state by the world outlines, so there is nothing to frame on the map.',
     )
   })
 
@@ -377,6 +381,32 @@ describe('selection', () => {
     expect(onSelect).toHaveBeenCalledWith('JP')
   })
 
+  /**
+   * The announcement is driven by the sentence, not by the click. A host that
+   * has not committed the new selection yet — or never will — must not have the
+   * previous country announced into the empty region on its behalf.
+   */
+  it('announces nothing new when the host does not commit the choice', async () => {
+    const user = userEvent.setup()
+    render(<CountriesList countries={ALL} selectedCode="FR" />)
+
+    const before = announcementSlot()
+    await user.click(screen.getByRole('option', { name: /Japan/ }))
+
+    expect(announcement()).toBe('France selected.')
+    expect(announcementSlot()).toBe(before)
+  })
+
+  it('announces the country the host actually committed', () => {
+    const { rerender } = render(
+      <CountriesList countries={ALL} selectedCode="FR" />,
+    )
+    expect(announcement()).toBe('France selected.')
+
+    rerender(<CountriesList countries={ALL} selectedCode="JP" />)
+    expect(announcement()).toBe('Japan selected.')
+  })
+
   it('speaks again when the country already selected is chosen again', async () => {
     const user = userEvent.setup()
     render(<CountriesList countries={ALL} selectedCode="FR" />)
@@ -439,6 +469,28 @@ describe('keyboard operation', () => {
     options()[0]?.focus()
     await user.keyboard('jap')
     expect(document.activeElement?.getAttribute('data-country')).toBe('JP')
+  })
+
+  /**
+   * The tab stop is held as a country code, not a position: an index desyncs
+   * from the row it was pointing at the moment the order changes.
+   */
+  it('keeps the tab stop on the same country across a re-sort', async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<CountriesList countries={ALL} sort="code" />)
+
+    // Default order is by country code: AT, FR, JP, SG.
+    options()[0]?.focus()
+    await user.keyboard('{ArrowDown}')
+    expect(document.activeElement?.getAttribute('data-country')).toBe('FR')
+
+    // Most visits puts France first: FR, JP, AT, SG.
+    rerender(<CountriesList countries={ALL} sort="visits" />)
+    const tabbable = options().filter(
+      (option) => option.getAttribute('tabindex') === '0',
+    )
+    expect(tabbable).toHaveLength(1)
+    expect(tabbable[0]?.getAttribute('data-country')).toBe('FR')
   })
 
   it('never traps focus: Tab leaves the list', async () => {
