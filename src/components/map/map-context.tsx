@@ -25,6 +25,37 @@ export type { MapLibreMap }
 /** Whether the vector basemap could be reached. */
 export type BasemapStatus = 'loading' | 'available' | 'unavailable'
 
+/**
+ * Whether the WebGL renderer itself ever came up — a different question from
+ * whether there is a basemap to draw with it.
+ *
+ * The two failures look identical on screen and have nothing else in common. A
+ * missing `.pmtiles` archive is a deploy artefact problem: the map still runs,
+ * the camera still moves, every coordinate is still true, and the bundled
+ * outlines still draw the world. A renderer that never started is the browser
+ * refusing: no WebGL2 context, a blocked GPU, a lost context, a `load` event
+ * that never arrives. Then there is no canvas content at all, and a consumer has
+ * to put something else on the screen rather than wait forever on a spinner.
+ *
+ * - `starting` — probing, importing, or waiting for the first `load`.
+ * - `running` — the style loaded and the canvas is drawing.
+ * - `unsupported` — this browser cannot give us a WebGL2 context, so no map was
+ *   created at all.
+ * - `stalled` — the map was created but nothing drew inside
+ *   {@link MAP_ENGINE_TIMEOUT_MS}. Recoverable: it flips to `running` if a late
+ *   `load` arrives.
+ */
+export type MapEngineStatus = 'starting' | 'running' | 'unsupported' | 'stalled'
+
+/**
+ * How long a created map has to draw something before it is reported `stalled`.
+ *
+ * Long enough that a cold worker start and a first tile fetch on a slow
+ * connection are not called a failure; short enough that a reader is not left
+ * watching a spinner over an empty rectangle.
+ */
+export const MAP_ENGINE_TIMEOUT_MS = 6000
+
 export interface MapContextValue {
   /** `null` until MapLibre has loaded and the canvas exists. */
   readonly map: MapLibreMap | null
@@ -33,6 +64,12 @@ export interface MapContextValue {
   /** `true` once the style has finished loading and layers can be added. */
   readonly ready: boolean
   readonly basemap: BasemapStatus
+  /**
+   * Whether the renderer started. Read this before deciding that an empty map
+   * means an empty trip: `unsupported` and `stalled` both mean nothing will ever
+   * be drawn, and the screen owes the reader a non-canvas answer.
+   */
+  readonly engine: MapEngineStatus
   /**
    * What the published archive says about itself: the rectangle it was cut to and
    * the zoom range it holds. `null` until the probe answers, and whenever it
@@ -58,6 +95,7 @@ const EMPTY: MapContextValue = {
   gl: null,
   ready: false,
   basemap: 'loading',
+  engine: 'starting',
   archive: null,
   theme: 'light',
   styleEpoch: 0,

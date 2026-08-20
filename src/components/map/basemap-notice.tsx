@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { MapPinned, RefreshCw } from 'lucide-react'
+import { Hourglass, MapPinned, MonitorX, RefreshCw } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import { Button, GlassPanel, SectionLabel } from '#/components/ui'
@@ -35,7 +35,7 @@ export const BasemapNotice = React.forwardRef<
       // bottom-left, the controls and attribution bottom-right, the category
       // filter top-centre. Faded in rather than risen, because the centring
       // translate and a transform animation cannot share one element.
-      'absolute bottom-4 left-1/2 z-dropdown max-w-72 -translate-x-1/2 animate-overlay-in',
+      'absolute bottom-4 left-1/2 z-map-overlay max-w-72 -translate-x-1/2 animate-overlay-in',
       className,
     )}
     {...props}
@@ -71,3 +71,88 @@ export const BasemapNotice = React.forwardRef<
   </GlassPanel>
 ))
 BasemapNotice.displayName = 'BasemapNotice'
+
+/** Which renderer failure the notice is explaining. */
+export type MapEngineFailure = 'unsupported' | 'stalled'
+
+const ENGINE_COPY: Readonly<
+  Record<
+    MapEngineFailure,
+    {
+      readonly title: string
+      readonly body: string
+      readonly tone: string
+      readonly icon: React.ReactNode
+    }
+  >
+> = {
+  unsupported: {
+    title: 'Map rendering unavailable',
+    body: "This browser cannot run the interactive map: it needs WebGL2, and no WebGL2 context is available here. Nothing else on this screen depends on it.",
+    tone: 'bg-warning-soft text-warning',
+    icon: <MonitorX size={14} strokeWidth={2} />,
+  },
+  stalled: {
+    title: 'The map has not drawn yet',
+    body: 'The map was started but nothing has appeared. It may still come good on its own; nothing else on this screen depends on it.',
+    tone: 'bg-info-soft text-info',
+    icon: <Hourglass size={14} strokeWidth={2} />,
+  },
+}
+
+export interface MapEngineNoticeProps
+  extends Omit<React.ComponentPropsWithoutRef<'div'>, 'children'> {
+  readonly reason: MapEngineFailure
+}
+
+/**
+ * The designed "nothing will ever be drawn here" state.
+ *
+ * Distinct from {@link BasemapNotice}, which explains a missing *archive* on a
+ * map that is otherwise working perfectly. This one explains a missing
+ * *renderer*: no WebGL2 context, or a canvas that never drew a frame. The two
+ * look identical to a reader staring at an empty rectangle and have nothing else
+ * in common, so they say different things — and this one replaces the loading
+ * spinner rather than joining it, because a spinner that never stops is a lie.
+ *
+ * Centred, because there is no map content for it to sit out of the way of.
+ */
+export const MapEngineNotice = React.forwardRef<
+  HTMLDivElement,
+  MapEngineNoticeProps
+>(({ reason, className, ...props }, ref) => {
+  const copy = ENGINE_COPY[reason]
+
+  return (
+    <GlassPanel
+      ref={ref}
+      radius="lg"
+      padding="sm"
+      role="status"
+      aria-live="polite"
+      className={cn(
+        'absolute top-1/2 left-1/2 z-map-overlay w-max max-w-[min(20rem,calc(100%-2rem))]',
+        '-translate-x-1/2 -translate-y-1/2 animate-overlay-in',
+        className,
+      )}
+      {...props}
+    >
+      <div className="flex items-start gap-2.5">
+        <span
+          className={cn(
+            'mt-0.5 grid size-7 shrink-0 place-items-center rounded-full',
+            copy.tone,
+          )}
+          aria-hidden="true"
+        >
+          {copy.icon}
+        </span>
+        <div className="min-w-0">
+          <SectionLabel as="h2">{copy.title}</SectionLabel>
+          <p className="mt-1 text-caption text-ink-2">{copy.body}</p>
+        </div>
+      </div>
+    </GlassPanel>
+  )
+})
+MapEngineNotice.displayName = 'MapEngineNotice'

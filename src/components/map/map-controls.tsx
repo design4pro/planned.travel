@@ -165,7 +165,7 @@ export function MapControls({
         onKeyDown={roving.onKeyDown}
         style={COLUMN}
         className={cn(
-          'absolute z-dropdown w-(--map-controls-w)',
+          'absolute z-map-overlay w-(--map-controls-w)',
           CORNERS[position],
           className,
         )}

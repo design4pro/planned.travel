@@ -37,3 +37,19 @@ export interface MapPlace extends Clusterable {
   readonly dayNumber?: number | null
   readonly isVisited?: boolean
 }
+
+/**
+ * One country on the traveller's record, as the atlas layer needs it.
+ *
+ * Deliberately narrower than the row it comes from. The map paints a country and
+ * places it on the recency ramp, and both answers come from the code and the
+ * *last* visit; the first visit, the count and the note belong to the record the
+ * reader opens, not to a polygon. Keeping the shape at two fields is what stops a
+ * pointer move rebuilding a payload it never reads.
+ */
+export interface VisitedCountry {
+  /** ISO 3166-1 alpha-2. Matched case-insensitively against the geometry. */
+  readonly countryCode: string
+  /** `YYYY-MM-DD`. `null` places the country on the middle stop of the ramp. */
+  readonly lastVisitedOn?: string | null
+}

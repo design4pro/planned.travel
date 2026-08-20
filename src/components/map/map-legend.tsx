@@ -62,7 +62,7 @@ export function MapLegend({
       radius="lg"
       padding="sm"
       className={cn(
-        'absolute z-dropdown w-52 max-w-[calc(100%-2rem)]',
+        'absolute z-map-overlay w-52 max-w-[calc(100%-2rem)]',
         CORNERS[position],
         className,
       )}

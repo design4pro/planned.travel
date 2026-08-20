@@ -28,9 +28,9 @@
  */
 
 import { tileEndpoints } from '#/routes/api/tiles/-client'
+import { worldLandFeatures } from './countries'
 import { graticule } from './graticule'
 import { mapPalette } from './palette'
-import { worldOutlines } from './world'
 
 import type { MapOptions } from 'maplibre-gl'
 import type { ResolvedTheme } from '#/lib/theme'
@@ -62,7 +62,15 @@ export const BASEMAP_SOURCE_ID = 'basemap'
 /** Source id of the generated graticule used by the no-archive style. */
 export const GRATICULE_SOURCE_ID = 'graticule'
 
-/** Source id of our own generalised coastlines, used by the ground underlay. */
+/**
+ * Source id of our own generalised coastlines.
+ *
+ * Shared by both honest-degradation paths: the ground underlay beneath a
+ * regional archive, and the no-archive style, which draws the whole world from
+ * it. The payload is {@link worldLandFeatures}, memoised and frozen in
+ * `./countries` so the per-country view and this one hold the *same* ring arrays
+ * rather than two copies of them.
+ */
 export const WORLD_LAND_SOURCE_ID = 'world-land'
 
 /**
@@ -141,6 +149,23 @@ export const MAP_LAYER_IDS = {
   /** Insert overlays (routes, corridors, heat) *before* this id to sit under labels. */
   labelAnchor: 'pt-label-water',
   localityLabels: 'pt-label-locality',
+} as const
+
+/**
+ * Layer ids of the no-archive style, in draw order.
+ *
+ * Named separately from {@link MAP_LAYER_IDS} because the two styles are not
+ * interchangeable: this one has no `source-layer` anywhere, no symbol layer, and
+ * no `pt-label-water` to insert beneath. A consumer that adds its own fill wants
+ * it above {@link FALLBACK_LAYER_IDS.coast} and below the graticule.
+ */
+export const FALLBACK_LAYER_IDS = {
+  /** The sea, as a background layer — everything else is drawn on top of it. */
+  background: MAP_LAYER_IDS.background,
+  land: 'pt-land',
+  coast: 'pt-coast',
+  graticule: 'pt-graticule',
+  graticuleMajor: 'pt-graticule-major',
 } as const
 
 export interface BasemapStyleOptions {
@@ -826,64 +851,6 @@ function labelLayers(
  * Ground underlay
  * ---------------------------------------------------------------------------------------------- */
 
-interface LandCollection {
-  readonly type: 'FeatureCollection'
-  readonly features: Array<{
-    readonly type: 'Feature'
-    readonly geometry: {
-      readonly type: 'MultiPolygon'
-      readonly coordinates: Array<Array<Array<[number, number]>>>
-    }
-    readonly properties: Record<string, never>
-  }>
-}
-
-let landCollection: LandCollection | null = null
-
-/**
- * Every country outline as one MultiPolygon.
- *
- * Each ring becomes its own single-ring polygon rather than a ring inside a
- * shared polygon: GeoJSON reads the second ring of a polygon as a hole, and the
- * bundled outlines are all *outer* rings, so grouping them would punch Hokkaido
- * out of Japan.
- *
- * Memoised at module scope. A theme switch rebuilds the whole style document, and
- * re-encoding 8,652 vertices on every switch would be a visible stall.
- */
-function worldLandCollection(): LandCollection {
-  if (landCollection !== null) return landCollection
-
-  const polygons: Array<Array<Array<[number, number]>>> = []
-  for (const outline of worldOutlines().values()) {
-    for (const ring of outline) {
-      if (ring.length < 3) continue
-      const closed: Array<[number, number]> = ring.map(([lng, lat]) => [
-        lng,
-        lat,
-      ])
-      const first = closed[0]
-      const last = closed[closed.length - 1]
-      if (first[0] !== last[0] || first[1] !== last[1]) {
-        closed.push([first[0], first[1]])
-      }
-      polygons.push([closed])
-    }
-  }
-
-  landCollection = {
-    type: 'FeatureCollection',
-    features: [
-      {
-        type: 'Feature',
-        geometry: { type: 'MultiPolygon', coordinates: polygons },
-        properties: {},
-      },
-    ],
-  }
-  return landCollection
-}
-
 /** Fades the underlay out as the reader zooms past what our own data can claim. */
 function groundFade(from: number, to: number): MapExpression {
   return [
@@ -915,6 +882,29 @@ function graticuleFade(peak: number): MapExpression {
     peak,
     GROUND_FADE_MAX_ZOOM,
     0,
+  ]
+}
+
+/**
+ * The grid, quietened at world scale.
+ *
+ * The graticule is generated at one fixed step, so its density on screen is
+ * decided entirely by the camera: the step that gives a trip-sized frame half a
+ * dozen useful reference lines gives a whole-world frame a line every few
+ * pixels. Rather than regenerate the source per zoom, the grid simply stands
+ * down the further out the reader is — which is also the scale at which the
+ * coastlines beneath it are doing the work. `interpolate` clamps above its last
+ * stop, so from {@link GROUND_MIN_ZOOM} up this is exactly full strength.
+ */
+function graticuleWorldFade(): MapExpression {
+  return [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    GRATICULE_WORLD_ZOOM,
+    GRATICULE_WORLD_OPACITY,
+    GROUND_MIN_ZOOM,
+    1,
   ]
 }
 
@@ -1026,7 +1016,7 @@ export function basemapStyle(options: BasemapStyleOptions): MapStyle {
         ? {
             [WORLD_LAND_SOURCE_ID]: {
               type: 'geojson' as const,
-              data: worldLandCollection(),
+              data: worldLandFeatures(),
             },
             [GRATICULE_SOURCE_ID]: {
               type: 'geojson' as const,
@@ -1054,19 +1044,42 @@ export function basemapStyle(options: BasemapStyleOptions): MapStyle {
 /**
  * The style used when no archive is reachable.
  *
- * There is no coastline to draw without tiles, so instead of a grey void the map
- * becomes a sheet of the same warm paper with a drafting graticule on it. Pins,
- * routes and the camera all keep working, and the reader can still see that a
- * place sits at a real latitude. Deliberately free of symbol layers, so it never
- * requests a glyph range that is equally missing.
+ * There are no *tiles* without an archive, but there is still a world: the same
+ * generalised coastlines the ground underlay draws are bundled with the app, so
+ * the honest degradation is a real map of the planet rather than a sheet of
+ * graph paper. Sea first, then land, then a coastline hairline, then the
+ * drafting graticule over both — which is what makes an island read as an island
+ * instead of as a shape on the page ground.
+ *
+ * The sea matters as much as the land. Without it every fill a consumer paints
+ * on top — a visited country, a corridor, a heat blob — would border the page
+ * rather than water, and the contrast ratios the palette measures against
+ * {@link MapPalette.water} would describe a colour that is nowhere on screen.
+ *
+ * The world hands over rather than overstaying, on exactly the terms the ground
+ * underlay uses: our coastlines are generalised to about nine kilometres, which
+ * is a fraction of a pixel across a continent and a pin in the sea across a
+ * city. So the sea drains to warm paper and the land dissolves into it between
+ * {@link GROUND_MIN_ZOOM} and {@link GROUND_FADE_MAX_ZOOM}, leaving the drafting
+ * graticule as the only claim being made at street scale — which is the only
+ * claim we can honestly make there.
+ *
+ * Pins, routes and the camera all keep working, and the reader can still see
+ * that a place sits at a real latitude. Deliberately free of symbol layers, so
+ * it never requests a glyph range that is equally missing, and free of any
+ * network reference at all, so it renders offline and never half-loads.
  */
 export function fallbackStyle(options: FallbackStyleOptions): MapStyle {
   const palette = mapPalette(options.theme)
 
   return {
     version: 8,
-    name: `planned.travel ${options.theme} (positions only)`,
+    name: `planned.travel ${options.theme} (bundled outlines)`,
     sources: {
+      [WORLD_LAND_SOURCE_ID]: {
+        type: 'geojson',
+        data: worldLandFeatures(),
+      },
       [GRATICULE_SOURCE_ID]: {
         type: 'geojson',
         data: graticule(options.graticule),
@@ -1074,12 +1087,47 @@ export function fallbackStyle(options: FallbackStyleOptions): MapStyle {
     },
     layers: [
       {
-        id: MAP_LAYER_IDS.background,
+        id: FALLBACK_LAYER_IDS.background,
         type: 'background',
-        paint: { 'background-color': palette.earth },
+        // Sea at every scale the coastlines are true at, and the warm page once
+        // they have gone — so the sheet the reader is left with at street scale
+        // is paper, not an ocean with nothing in it.
+        paint: {
+          'background-color': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            GROUND_MIN_ZOOM,
+            palette.water,
+            GROUND_FADE_MAX_ZOOM,
+            palette.earth,
+          ],
+        },
       },
       {
-        id: 'pt-graticule',
+        id: FALLBACK_LAYER_IDS.land,
+        type: 'fill',
+        source: WORLD_LAND_SOURCE_ID,
+        paint: {
+          'fill-color': palette.earth,
+          'fill-opacity': groundFade(1, 0),
+        },
+      },
+      {
+        id: FALLBACK_LAYER_IDS.coast,
+        type: 'line',
+        source: WORLD_LAND_SOURCE_ID,
+        layout: { 'line-join': 'round' },
+        paint: {
+          'line-color': palette.waterEdge,
+          // Generalised to about nine kilometres, so the line thickens with the
+          // camera rather than staying a hairline the reader has to hunt for.
+          'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.8, 6, 1.6],
+          'line-opacity': groundFade(1, 0),
+        },
+      },
+      {
+        id: FALLBACK_LAYER_IDS.graticule,
         type: 'line',
         source: GRATICULE_SOURCE_ID,
         filter: ['!', ['get', 'major']],
@@ -1088,16 +1136,18 @@ export function fallbackStyle(options: FallbackStyleOptions): MapStyle {
           // A whole pixel at the floor: half a pixel of a near-paper colour is
           // not a line, it is a rumour.
           'line-width': ['interpolate', ['linear'], ['zoom'], 1, 1, 8, 1.25],
+          'line-opacity': graticuleWorldFade(),
         },
       },
       {
-        id: 'pt-graticule-major',
+        id: FALLBACK_LAYER_IDS.graticuleMajor,
         type: 'line',
         source: GRATICULE_SOURCE_ID,
         filter: ['get', 'major'],
         paint: {
           'line-color': palette.fallback.graticuleMajor,
           'line-width': ['interpolate', ['linear'], ['zoom'], 1, 1.25, 8, 2],
+          'line-opacity': graticuleWorldFade(),
         },
       },
     ],

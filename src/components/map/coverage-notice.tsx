@@ -51,7 +51,7 @@ export const CoverageNotice = React.forwardRef<
         // attribution bottom-right, the category filter top-centre. Faded in
         // rather than risen, because the centring translate and a transform
         // animation cannot share one element.
-        'absolute bottom-4 left-1/2 z-dropdown w-max max-w-[min(22rem,calc(100%-2rem))]',
+        'absolute bottom-4 left-1/2 z-map-overlay w-max max-w-[min(22rem,calc(100%-2rem))]',
         '-translate-x-1/2 animate-overlay-in',
         className,
       )}

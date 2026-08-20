@@ -7,6 +7,7 @@ import {
   resetBasemapAvailability,
   resetPmtilesProtocol,
 } from '#/lib/map/pmtiles'
+import { MAP_ENGINE_TIMEOUT_MS, useMapContext } from '../map-context'
 import {
   BASEMAP_SOURCE_ID,
   GRATICULE_SOURCE_ID,
@@ -29,17 +30,43 @@ const harness = vi.hoisted(() => {
   }
 
   class FakeMap {
-    readonly options: { style: StyleLike }
+    readonly options: {
+      style: StyleLike
+      locale?: Record<string, string>
+      container?: HTMLElement
+    }
     readonly styles: Array<StyleLike> = []
     readonly handlers = new Map<string, Set<() => void>>()
+    // The real MapLibre gives this element `role="region"`, a `tabindex` and an
+    // `aria-label` from the `Map.Title` locale string, so the fake starts from
+    // the same attributes — the nesting they cause is what is under test.
+    readonly canvas = document.createElement('canvas')
     removed = false
     minZoom = 0
     maxZoom = 22
 
-    constructor(options: { style: StyleLike }) {
+    constructor(options: {
+      style: StyleLike
+      locale?: Record<string, string>
+      container?: HTMLElement
+    }) {
       this.options = options
       this.styles.push(options.style)
+      this.canvas.setAttribute('role', 'region')
+      this.canvas.setAttribute('tabindex', '0')
+      this.canvas.setAttribute(
+        'aria-label',
+        options.locale?.['Map.Title'] ?? 'Map',
+      )
+      // The real MapLibre renders into the element it is handed, so the fake
+      // puts its canvas there too: the landmark nesting only exists once the
+      // canvas is actually inside our labelled region.
+      options.container?.appendChild(this.canvas)
       harness.maps.push(this)
+    }
+
+    getCanvas(): HTMLCanvasElement {
+      return this.canvas
     }
 
     on(type: string, handler: () => void): this {
@@ -116,6 +143,37 @@ vi.mock('pmtiles', () => ({
 
 const { MapCanvas } = await import('../map-canvas')
 
+/** Publishes the two independent statuses so a case can tell them apart. */
+function StatusProbe() {
+  const { engine, basemap } = useMapContext()
+  return (
+    <>
+      <output data-testid="engine">{engine}</output>
+      <output data-testid="basemap">{basemap}</output>
+    </>
+  )
+}
+
+/**
+ * Waits for the map to be *committed*, not merely constructed.
+ *
+ * `harness.maps` is pushed from MapLibre's constructor, which runs inside the
+ * async bootstrap — several React commits before the instance reaches the
+ * context and the effects that read it. Waiting for the loading state to clear
+ * is what makes every case below deterministic.
+ */
+async function mapMounted(): Promise<void> {
+  await waitFor(() => {
+    expect(harness.maps).toHaveLength(1)
+    expect(screen.queryByText(/Loading map/)).toBeNull()
+  })
+}
+
+/** The readiness marker a screenshot gate waits on. */
+function readyMarker(container: HTMLElement): string | null {
+  return container.firstElementChild?.getAttribute('data-map-ready') ?? null
+}
+
 /**
  * Serves a v3 archive header. Global by default: most of these cases are about
  * the map, not about coverage, and a planet archive is the case with no extra
@@ -172,7 +230,7 @@ describe('MapCanvas', () => {
     serveArchive()
     render(<MapCanvas label="Trip map" />)
 
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
+    await mapMounted()
     expect(Object.keys(lastMap().options.style.sources)).toEqual([
       BASEMAP_SOURCE_ID,
     ])
@@ -184,7 +242,7 @@ describe('MapCanvas', () => {
     serveArchive(REGIONAL_BOUNDS)
     render(<MapCanvas label="Trip map" />)
 
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
+    await mapMounted()
     // Our own sea, coastlines and graticule, under the real tiles — so the world
     // outside the cut is still a map rather than an empty rectangle.
     expect(Object.keys(lastMap().options.style.sources).sort()).toEqual(
@@ -199,7 +257,7 @@ describe('MapCanvas', () => {
     serveArchive([-180, -85, 180, 85])
     render(<MapCanvas label="Trip map" />)
 
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
+    await mapMounted()
     expect(Object.keys(lastMap().options.style.sources)).toEqual([
       BASEMAP_SOURCE_ID,
     ])
@@ -209,11 +267,12 @@ describe('MapCanvas', () => {
     serveNothing()
     render(<MapCanvas label="Trip map" />)
 
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
-    // The map is built either way — pins must keep their positions.
-    expect(Object.keys(lastMap().options.style.sources)).toEqual([
-      GRATICULE_SOURCE_ID,
-    ])
+    await mapMounted()
+    // The map is built either way — pins must keep their positions, and the
+    // bundled outlines still draw the world beneath them.
+    expect(Object.keys(lastMap().options.style.sources).sort()).toEqual(
+      [WORLD_LAND_SOURCE_ID, GRATICULE_SOURCE_ID].sort(),
+    )
     expect(await screen.findByText('Basemap unavailable')).toBeDefined()
     // No attribution for data we are not showing.
     expect(screen.queryByRole('link', { name: 'OpenStreetMap' })).toBeNull()
@@ -224,7 +283,7 @@ describe('MapCanvas', () => {
     const { rerender } = render(
       <MapCanvas label="Trip map" minZoom={3} maxZoom={17} />,
     )
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
+    await mapMounted()
     expect(lastMap().minZoom).toBe(3)
 
     rerender(<MapCanvas label="Trip map" minZoom={5} maxZoom={17} />)
@@ -237,7 +296,7 @@ describe('MapCanvas', () => {
     const onMapReady = vi.fn()
     render(<MapCanvas label="Trip map" onMapReady={onMapReady} />)
 
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
+    await mapMounted()
     act(() => {
       lastMap().emit('load')
     })
@@ -247,7 +306,7 @@ describe('MapCanvas', () => {
   it('shows the notice when the style itself fails before it loads', async () => {
     serveArchive()
     render(<MapCanvas label="Trip map" />)
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
+    await mapMounted()
 
     act(() => {
       lastMap().emit('error')
@@ -258,7 +317,7 @@ describe('MapCanvas', () => {
   it('ignores an error once the map is up, because one bad tile is not a broken map', async () => {
     serveArchive()
     render(<MapCanvas label="Trip map" />)
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
+    await mapMounted()
 
     act(() => {
       lastMap().emit('load')
@@ -273,9 +332,9 @@ describe('MapCanvas', () => {
     render(<MapCanvas label="Trip map" />)
 
     const retry = await screen.findByRole('button', { name: 'Try again' })
-    expect(Object.keys(lastMap().options.style.sources)).toEqual([
-      GRATICULE_SOURCE_ID,
-    ])
+    expect(Object.keys(lastMap().options.style.sources).sort()).toEqual(
+      [WORLD_LAND_SOURCE_ID, GRATICULE_SOURCE_ID].sort(),
+    )
 
     serveArchive()
     await user.click(retry)
@@ -289,10 +348,121 @@ describe('MapCanvas', () => {
     expect(harness.maps).toHaveLength(1)
   })
 
+  it('names the canvas from the caller label, and leaves one region on the page', async () => {
+    serveArchive()
+    const { rerender } = render(<MapCanvas label="Trip map" />)
+    await mapMounted()
+
+    // Named through MapLibre's own locale table, so the focusable canvas has a
+    // real accessible name rather than the stock "Map".
+    expect(lastMap().options.locale).toEqual({ 'Map.Title': 'Trip map' })
+    const canvas = lastMap().getCanvas()
+    expect(canvas.getAttribute('aria-label')).toBe('Trip map')
+    // A region inside a region is announced as two maps with two names.
+    expect(canvas.hasAttribute('role')).toBe(false)
+    expect(screen.getAllByRole('region')).toHaveLength(1)
+    expect(screen.getByRole('region', { name: 'Trip map' })).toBeDefined()
+
+    // `locale` is read once at construction, so a renamed map has to be told.
+    rerender(<MapCanvas label="Kyoto map" />)
+    expect(canvas.getAttribute('aria-label')).toBe('Kyoto map')
+    expect(harness.maps).toHaveLength(1)
+  })
+
+  it('publishes a readiness marker on the first idle and latches it', async () => {
+    serveArchive()
+    const { container } = render(<MapCanvas label="Trip map" />)
+    await mapMounted()
+    expect(readyMarker(container)).toBe('false')
+
+    act(() => {
+      lastMap().emit('load')
+      lastMap().emit('idle')
+    })
+    expect(readyMarker(container)).toBe('true')
+
+    // Every later pan settles into another `idle`. The marker must not flicker,
+    // and the listener is gone, so nothing can race the gate.
+    expect(lastMap().handlers.get('idle')?.size ?? 0).toBe(0)
+    act(() => {
+      lastMap().emit('idle')
+    })
+    expect(readyMarker(container)).toBe('true')
+  })
+
+  it('tells a missing archive apart from a renderer that never started', async () => {
+    serveNothing()
+    render(
+      <MapCanvas label="Trip map">
+        <StatusProbe />
+      </MapCanvas>,
+    )
+    await mapMounted()
+    act(() => {
+      lastMap().emit('load')
+    })
+
+    // The archive is gone; the map itself is perfectly fine.
+    expect(screen.getByTestId('engine').textContent).toBe('running')
+    expect(screen.getByTestId('basemap').textContent).toBe('unavailable')
+    expect(screen.getByText('Basemap unavailable')).toBeDefined()
+    expect(screen.queryByText('Map rendering unavailable')).toBeNull()
+  })
+
+  it('says so, instead of spinning forever, when the browser refuses WebGL2', async () => {
+    serveArchive()
+    vi.stubGlobal('WebGL2RenderingContext', class {})
+    const getContext = vi
+      .spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue(null)
+
+    try {
+      const { container } = render(<MapCanvas label="Trip map" />)
+      expect(await screen.findByText('Map rendering unavailable')).toBeDefined()
+      // No map is built at all: a MapLibre instance with no painter cannot even
+      // be removed again.
+      expect(harness.maps).toHaveLength(0)
+      expect(screen.queryByText('Loading map')).toBeNull()
+      // Settled: nothing further will ever be drawn, so the gate may shoot.
+      expect(readyMarker(container)).toBe('true')
+    } finally {
+      getContext.mockRestore()
+    }
+  })
+
+  it('reports a stalled renderer, and recovers if a late load arrives', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      serveArchive()
+      const { container } = render(
+        <MapCanvas label="Trip map">
+          <StatusProbe />
+        </MapCanvas>,
+      )
+      await mapMounted()
+      expect(screen.getByTestId('engine').textContent).toBe('starting')
+
+      act(() => {
+        vi.advanceTimersByTime(MAP_ENGINE_TIMEOUT_MS + 1)
+      })
+      expect(screen.getByTestId('engine').textContent).toBe('stalled')
+      expect(screen.getByText('The map has not drawn yet')).toBeDefined()
+      expect(readyMarker(container)).toBe('true')
+
+      act(() => {
+        lastMap().emit('load')
+      })
+      expect(screen.getByTestId('engine').textContent).toBe('running')
+      expect(screen.queryByText('The map has not drawn yet')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('removes the map on unmount, leaving nothing running', async () => {
     serveArchive()
     const { unmount } = render(<MapCanvas label="Trip map" />)
-    await waitFor(() => expect(harness.maps).toHaveLength(1))
+    await mapMounted()
 
     const map = lastMap()
     expect(map.removed).toBe(false)

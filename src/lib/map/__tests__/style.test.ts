@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import { MAP_PALETTES } from '../palette'
+import { worldLandFeatures } from '../countries'
 import {
   BASEMAP_SOURCE_ID,
+  FALLBACK_LAYER_IDS,
   GRATICULE_SOURCE_ID,
+  GRATICULE_WORLD_OPACITY,
+  GRATICULE_WORLD_ZOOM,
   GROUND_FADE_MAX_ZOOM,
   GROUND_MIN_ZOOM,
   MAP_FONT_MEDIUM,
@@ -254,19 +258,64 @@ describe('basemapStyle ground underlay', () => {
 
 describe('fallbackStyle', () => {
   it.each(THEMES)(
-    'renders land and a graticule with no network in %s',
+    'draws the whole world from bundled geometry, with no network, in %s',
     (theme) => {
       const style = fallbackStyle({ theme })
       expect(style.version).toBe(8)
-      expect(Object.keys(style.sources)).toEqual([GRATICULE_SOURCE_ID])
+      expect(Object.keys(style.sources).sort()).toEqual(
+        [WORLD_LAND_SOURCE_ID, GRATICULE_SOURCE_ID].sort(),
+      )
       // Nothing to request: no glyphs, no sprite, no tiles.
       expect(style).not.toHaveProperty('glyphs')
       expect(style).not.toHaveProperty('sprite')
       for (const value of strings(style)) {
         expect(value).not.toContain('pmtiles://')
+        expect(value).not.toMatch(/^https?:\/\//)
       }
     },
   )
+
+  it.each(THEMES)('fills land from the bundled outlines in %s', (theme) => {
+    const style = fallbackStyle({ theme })
+    const source = style.sources[WORLD_LAND_SOURCE_ID]
+    expect(source).toMatchObject({ type: 'geojson' })
+
+    const land = style.layers.find(
+      (layer) => layer.id === FALLBACK_LAYER_IDS.land,
+    )
+    expect(land).toMatchObject({
+      type: 'fill',
+      source: WORLD_LAND_SOURCE_ID,
+      paint: { 'fill-color': MAP_PALETTES[theme].earth },
+    })
+
+    // A coastline needs something to be a coastline *of*.
+    expect(
+      style.layers.find((layer) => layer.id === FALLBACK_LAYER_IDS.coast),
+    ).toMatchObject({
+      type: 'line',
+      source: WORLD_LAND_SOURCE_ID,
+      paint: { 'line-color': MAP_PALETTES[theme].waterEdge },
+    })
+  })
+
+  it('shares one merged-land payload with the ground underlay', () => {
+    // By reference, not by value: this is what stops the two views holding two
+    // copies of the same 8,937 coordinate pairs, and it is also what keeps a
+    // `geojson` source from re-tiling the world on every theme switch.
+    const shared = worldLandFeatures()
+    expect(fallbackStyle({ theme: 'light' }).sources[WORLD_LAND_SOURCE_ID]).toMatchObject(
+      { data: shared },
+    )
+    expect(
+      basemapStyle({ theme: 'light', ground: true }).sources[
+        WORLD_LAND_SOURCE_ID
+      ],
+    ).toMatchObject({ data: shared })
+    expect(
+      fallbackStyle({ theme: 'dark' }).sources[WORLD_LAND_SOURCE_ID],
+    ).toMatchObject({ data: shared })
+  })
 
   it('has no symbol layer, so it never asks for a glyph range it lacks', () => {
     for (const theme of THEMES) {
@@ -277,20 +326,77 @@ describe('fallbackStyle', () => {
     }
   })
 
-  it('grounds the map in the theme land colour rather than a grey void', () => {
-    for (const theme of THEMES) {
-      const style = fallbackStyle({ theme })
-      const background = style.layers[0]
-      expect(background.type).toBe('background')
-      expect(JSON.stringify(background)).toContain(MAP_PALETTES[theme].earth)
-    }
+  it.each(THEMES)('paints a sea beneath the land in %s', (theme) => {
+    // Without water on screen an island sits on the page ground, and every
+    // contrast figure the palette measures against `water` describes a colour
+    // that is nowhere to be seen.
+    const style = fallbackStyle({ theme })
+    const background = style.layers[0]
+    expect(background.type).toBe('background')
+    expect(JSON.stringify(background)).toContain(MAP_PALETTES[theme].water)
+
+    const ids = layerIds(style)
+    expect(ids.indexOf(FALLBACK_LAYER_IDS.background)).toBeLessThan(
+      ids.indexOf(FALLBACK_LAYER_IDS.land),
+    )
   })
 
-  it('separates minor from major graticule lines', () => {
-    const ids = fallbackStyle({ theme: 'light' }).layers.map(
-      (layer) => layer.id,
+  it('hands the world over to warm paper before its coastlines could lie', () => {
+    // The bundled outlines are generalised to about nine kilometres: honest
+    // across a continent, a pin in the sea across a city. Same handover the
+    // ground underlay makes, for the same reason.
+    const style = fallbackStyle({ theme: 'light' })
+    const fade = JSON.stringify([
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      GROUND_MIN_ZOOM,
+      1,
+      GROUND_FADE_MAX_ZOOM,
+      0,
+    ])
+    for (const id of [FALLBACK_LAYER_IDS.land, FALLBACK_LAYER_IDS.coast]) {
+      expect(
+        JSON.stringify(style.layers.find((layer) => layer.id === id)),
+      ).toContain(fade)
+    }
+
+    const background = JSON.stringify(style.layers[0])
+    expect(background).toContain(MAP_PALETTES.light.water)
+    expect(background).toContain(MAP_PALETTES.light.earth)
+  })
+
+  it('draws sea, land, coast and grid in that order', () => {
+    expect(layerIds(fallbackStyle({ theme: 'light' }))).toEqual([
+      FALLBACK_LAYER_IDS.background,
+      FALLBACK_LAYER_IDS.land,
+      FALLBACK_LAYER_IDS.coast,
+      FALLBACK_LAYER_IDS.graticule,
+      FALLBACK_LAYER_IDS.graticuleMajor,
+    ])
+  })
+
+  it('gives every layer a unique id', () => {
+    const ids = layerIds(fallbackStyle({ theme: 'dark' }))
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('stands the grid down at world scale, where the coastlines do the work', () => {
+    const style = fallbackStyle({ theme: 'light' })
+    const grid = style.layers.find(
+      (layer) => layer.id === FALLBACK_LAYER_IDS.graticule,
     )
-    expect(ids).toEqual(['pt-background', 'pt-graticule', 'pt-graticule-major'])
+    expect(JSON.stringify(grid)).toContain(
+      JSON.stringify([
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        GRATICULE_WORLD_ZOOM,
+        GRATICULE_WORLD_OPACITY,
+        GROUND_MIN_ZOOM,
+        1,
+      ]),
+    )
   })
 })
 
@@ -305,6 +411,6 @@ describe('mapStyleFor', () => {
       Object.keys(
         mapStyleFor({ theme: 'light', basemapAvailable: false }).sources,
       ),
-    ).toEqual([GRATICULE_SOURCE_ID])
+    ).toEqual([WORLD_LAND_SOURCE_ID, GRATICULE_SOURCE_ID])
   })
 })

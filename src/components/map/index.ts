@@ -84,6 +84,12 @@ export type { CoverageNoticeProps } from './coverage-notice'
 /* ---------------------------------------------------------------- overlays */
 export { DayRoutes, ROUTE_LAYER_IDS, ROUTE_SOURCE_ID } from './day-routes'
 export type { DayRoutesProps } from './day-routes'
+export {
+  VisitedCountries,
+  VISITED_COUNTRY_LAYER_IDS,
+  VISITED_COUNTRY_SOURCE_ID,
+} from './visited-countries'
+export type { VisitedCountriesProps } from './visited-countries'
 
 /* ------------------------------------------------------------------- behaviour */
 export {
@@ -104,7 +110,7 @@ export type {
 /* ----------------------------------------------------------------- data shapes */
 export { CategoryIcon, categoryIcon } from './category-icon'
 export type { CategoryIconProps } from './category-icon'
-export type { MapCategory, MapPlace } from './types'
+export type { MapCategory, MapPlace, VisitedCountry } from './types'
 
 /* ------------------------------------------------------------------ map logic */
 export * from '#/lib/map'

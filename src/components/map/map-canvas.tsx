@@ -22,6 +22,12 @@
  * 4. **Real cleanup.** `map.remove()` on unmount, every listener attached to the
  *    map it belongs to, and an in-flight dynamic import that cannot resurrect a
  *    disposed component.
+ * 5. **An honest answer when the renderer itself never starts.** MapLibre needs a
+ *    WebGL2 context; a browser that cannot give it one gets no map, no `load`
+ *    event, and — without the probe below — a spinner that turns forever. That is
+ *    a *different* failure from a missing archive, it is reported separately as
+ *    {@link MapContextValue.engine}, and it is the one case where the map is
+ *    replaced rather than degraded.
  */
 
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -39,8 +45,8 @@ import {
   resetBasemapAvailability,
 } from '#/lib/map/pmtiles'
 import { boundsToTuple, clampPadding, resolvePadding } from '#/lib/map/bounds'
-import { MapProvider } from './map-context'
-import { BasemapNotice } from './basemap-notice'
+import { MAP_ENGINE_TIMEOUT_MS, MapProvider } from './map-context'
+import { BasemapNotice, MapEngineNotice } from './basemap-notice'
 import { MapAttribution } from './map-attribution'
 
 import type { MapOptions } from 'maplibre-gl'
@@ -50,6 +56,7 @@ import type { GraticuleOptions } from '#/lib/map/graticule'
 import type {
   BasemapStatus,
   MapContextValue,
+  MapEngineStatus,
   MapLibreMap,
   MapLibreModule,
 } from './map-context'
@@ -123,6 +130,49 @@ const DEFAULT_CENTER: LngLat = [10, 26]
 const DEFAULT_ZOOM = 1.3
 
 /**
+ * Confirmed once per page: a browser that has given us a WebGL2 context once
+ * will give us another, and re-probing per map mount would cost a real context
+ * creation for an answer already known. Only the positive is remembered — a
+ * refusal can be a GPU process that has since recovered.
+ */
+let webgl2Confirmed = false
+
+/**
+ * True only when this browser claims WebGL2 and then refuses to give us one.
+ *
+ * MapLibre 6 draws on WebGL2 and nothing else. Handed a canvas it cannot get a
+ * context from, it fires an error from inside its own constructor — before any
+ * listener of ours can exist, so MapLibre reports it by writing to the console —
+ * and returns a map with no painter, which then never fires `load` and cannot
+ * even be removed. The symptom is a spinner that turns forever. Probing first
+ * turns that into a state worth rendering.
+ *
+ * The question is asked narrowly on purpose. A platform that does not declare
+ * `WebGL2RenderingContext` at all is not answering it — it is a platform with no
+ * canvas rendering, not a browser saying no — so nothing is concluded and the
+ * map is built as usual. Only a definitive refusal skips construction; every
+ * other way of failing to draw is caught by {@link MAP_ENGINE_TIMEOUT_MS}.
+ *
+ * The probe hands its context straight back. Browsers cap live contexts per page
+ * at around sixteen, and the one that matters is the one the map is about to
+ * ask for.
+ */
+function webgl2Refused(): boolean {
+  if (webgl2Confirmed) return false
+  if (typeof WebGL2RenderingContext !== 'function') return false
+  try {
+    const context = document.createElement('canvas').getContext('webgl2')
+    if (context === null) return true
+    context.getExtension('WEBGL_lose_context')?.loseContext()
+    webgl2Confirmed = true
+    return false
+  } catch {
+    // A browser that throws rather than answering has told us nothing useful.
+    return false
+  }
+}
+
+/**
  * Identity of the style document currently applied.
  *
  * Three inputs decide it: the theme, whether there is an archive, and whether that
@@ -157,6 +207,8 @@ export function MapCanvas({
   const [map, setMap] = React.useState<MapLibreMap | null>(null)
   const [ready, setReady] = React.useState(false)
   const [basemap, setBasemap] = React.useState<BasemapStatus>('loading')
+  const [engine, setEngine] = React.useState<MapEngineStatus>('starting')
+  const [settled, setSettled] = React.useState(false)
   const [archive, setArchive] = React.useState<PmtilesHeader | null>(null)
   const [styleEpoch, setStyleEpoch] = React.useState(0)
   const [probeToken, setProbeToken] = React.useState(0)
@@ -169,6 +221,8 @@ export function MapCanvas({
   themeRef.current = theme
   const onMapReadyRef = React.useRef(onMapReady)
   onMapReadyRef.current = onMapReady
+  const labelRef = React.useRef(label)
+  labelRef.current = label
   const styleOptionsRef = React.useRef({ buildings, poiLabels, graticule })
   styleOptionsRef.current = { buildings, poiLabels, graticule }
   const zoomRangeRef = React.useRef({ minZoom, maxZoom })
@@ -222,7 +276,16 @@ export function MapCanvas({
     const disposed = (): boolean => lifetime.signal.aborted
     let created: MapLibreMap | null = null
 
+    let stallTimer: ReturnType<typeof setTimeout> | null = null
+
     const bootstrap = async (): Promise<void> => {
+      // Before the dynamic import and before the archive probe: with no context
+      // to render into, neither would ever be looked at.
+      if (webgl2Refused()) {
+        setEngine('unsupported')
+        return
+      }
+
       const [module, worker] = await Promise.all([
         import('maplibre-gl'),
         import('#/lib/map/worker'),
@@ -255,6 +318,10 @@ export function MapCanvas({
         minZoom: zoomRangeRef.current.minZoom,
         maxZoom: zoomRangeRef.current.maxZoom,
         interactive,
+        // The canvas is a focusable element, and MapLibre names it from this
+        // string. Left at its default it announces as "Map", which on a screen
+        // with one map is no name at all and on a screen with two is a trap.
+        locale: { 'Map.Title': labelRef.current },
         // Our own `MapControls` and `MapAttribution` replace both, so MapLibre's
         // chrome is switched off rather than restyled.
         attributionControl: false,
@@ -296,12 +363,27 @@ export function MapCanvas({
       const instance = new module.Map(options)
       created = instance
 
+      // MapLibre gives the canvas `role="region"` and names it from
+      // `Map.Title` — which the `locale` above has already set to the caller's
+      // label. The role is the problem: the canvas sits inside our own labelled
+      // region, and a region inside a region is announced as two maps with two
+      // names. Dropping it leaves one landmark, and leaves the canvas a
+      // focusable element with a real accessible name.
+      instance.getCanvas().removeAttribute('role')
+
       let loaded = false
+
+      stallTimer = setTimeout(() => {
+        if (disposed() || loaded) return
+        setEngine('stalled')
+      }, MAP_ENGINE_TIMEOUT_MS)
 
       instance.on('load', () => {
         loaded = true
+        if (stallTimer !== null) clearTimeout(stallTimer)
         if (disposed()) return
         setReady(true)
+        setEngine('running')
         onMapReadyRef.current?.(instance)
       })
 
@@ -330,8 +412,11 @@ export function MapCanvas({
 
     return () => {
       lifetime.abort()
+      if (stallTimer !== null) clearTimeout(stallTimer)
       setMap(null)
       setReady(false)
+      setEngine('starting')
+      setSettled(false)
       created?.remove()
       created = null
     }
@@ -339,6 +424,44 @@ export function MapCanvas({
     // else is applied by the effects below, so a prop change never costs a
     // remount and a refetch.
   }, [buildStyle, cooperativeGestures, interactive])
+
+  /* ------------------------------------------------------- accessible name */
+
+  // `locale` is read once, at construction, so a screen that renames its map —
+  // the planner does, from the trip title — would otherwise keep the first name
+  // forever.
+  React.useEffect(() => {
+    if (map === null) return
+    map.getCanvas().setAttribute('aria-label', label)
+  }, [label, map])
+
+  /* ----------------------------------------------------------- readiness */
+
+  /**
+   * The marker a screenshot can wait on.
+   *
+   * `idle` is MapLibre's own statement that it has finished: the style is
+   * loaded, every tile in view has arrived, and no transition is running. It
+   * fires again after every later pan, so the flag is latched — a marker that
+   * flickered off during a camera move would be worse than no marker at all.
+   * The two renderer failures latch it too: nothing further will ever be drawn,
+   * so the screen is as settled as it is ever going to be.
+   */
+  React.useEffect(() => {
+    if (settled) return
+    if (engine === 'unsupported' || engine === 'stalled') {
+      setSettled(true)
+      return
+    }
+    if (map === null) return
+    const onIdle = (): void => {
+      setSettled(true)
+    }
+    map.on('idle', onIdle)
+    return () => {
+      map.off('idle', onIdle)
+    }
+  }, [engine, map, settled])
 
   /* ------------------------------------------------------------- zoom range */
 
@@ -388,16 +511,33 @@ export function MapCanvas({
       gl,
       ready,
       basemap,
+      engine,
       archive,
       theme,
       styleEpoch,
       retryBasemap,
     }),
-    [map, gl, ready, basemap, archive, theme, styleEpoch, retryBasemap],
+    [
+      map,
+      gl,
+      ready,
+      basemap,
+      engine,
+      archive,
+      theme,
+      styleEpoch,
+      retryBasemap,
+    ],
   )
+
+  const engineFailed = engine === 'unsupported' || engine === 'stalled'
 
   return (
     <div
+      // Published for a screenshot gate, which otherwise has no way to tell a
+      // map that has finished drawing from one that has not started. Flips
+      // false → true exactly once, and never back.
+      data-map-ready={settled ? 'true' : 'false'}
       className={cn(
         'relative isolate size-full overflow-hidden bg-canvas',
         className,
@@ -421,7 +561,7 @@ export function MapCanvas({
         style={{ position: 'absolute', inset: 0, fontFamily: 'var(--font-ui)' }}
       />
 
-      {map === null ? (
+      {map === null && !engineFailed ? (
         <div
           className="absolute inset-0 grid place-items-center"
           role="status"
@@ -443,7 +583,12 @@ export function MapCanvas({
             from by discarding the whole map. Mounting them on the commit after
             the map is created keeps server and client output identical. */}
         {map === null ? null : children}
-        {basemap !== 'available' && map !== null ? (
+        {engine === 'unsupported' || engine === 'stalled' ? (
+          // Replaces the spinner rather than joining it: nothing further is
+          // coming, and a spinner that never stops is a lie.
+          <MapEngineNotice reason={engine} />
+        ) : null}
+        {basemap !== 'available' && map !== null && !engineFailed ? (
           // Kept mounted while a retry is in flight, so pressing "Try again"
           // spins the button in place instead of making the panel vanish and
           // reappear with no explanation.
