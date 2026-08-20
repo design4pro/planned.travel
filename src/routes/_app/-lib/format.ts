@@ -4,31 +4,64 @@
  * The locale is pinned rather than taken from the browser: the server renders
  * these strings first, and a locale that differs between the two would produce
  * a hydration mismatch on every date and every amount on the page.
+ *
+ * **Pinning the locale is not enough for the abbreviated month.** `Intl` resolves
+ * `month: 'short'` out of whichever ICU the runtime was built against, and the
+ * two runtimes this app renders in disagree: workerd says `6 Sept 2024` where
+ * WebKit says `6 Sep 2024`. Same locale, same date, different characters - so
+ * every September date on a server-rendered page threw a React hydration error
+ * in Safari, which the visual gate reproduced on /atlas across six consecutive
+ * runs. The abbreviations are therefore a table in this file rather than a
+ * question asked of the platform. The values are the CLDR en-GB set, which is
+ * what workerd already produced, so the server's output is unchanged and it is
+ * Safari that stops disagreeing.
  */
 
 const LOCALE = 'en-GB'
 
 const DAY_MS = 86_400_000
 
-const dateFormatter = new Intl.DateTimeFormat(LOCALE, {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
+/** CLDR en-GB abbreviated months. Note `Sept`, which is the one WebKit shortens. */
+const MONTHS_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sept',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const
 
-const dayMonthFormatter = new Intl.DateTimeFormat(LOCALE, {
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-})
+/** CLDR en-GB abbreviated weekdays, indexed the way `getUTCDay()` counts. */
+const WEEKDAYS_SHORT = [
+  'Sun',
+  'Mon',
+  'Tue',
+  'Wed',
+  'Thu',
+  'Fri',
+  'Sat',
+] as const
 
-const weekdayFormatter = new Intl.DateTimeFormat(LOCALE, {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-})
+const dateFormatter = {
+  format: (date: Date): string =>
+    `${date.getUTCDate()} ${MONTHS_SHORT[date.getUTCMonth()]} ${date.getUTCFullYear()}`,
+}
+
+const dayMonthFormatter = {
+  format: (date: Date): string =>
+    `${date.getUTCDate()} ${MONTHS_SHORT[date.getUTCMonth()]}`,
+}
+
+const weekdayFormatter = {
+  format: (date: Date): string =>
+    `${WEEKDAYS_SHORT[date.getUTCDay()]} ${date.getUTCDate()} ${MONTHS_SHORT[date.getUTCMonth()]}`,
+}
 
 const monthYearFormatter = new Intl.DateTimeFormat(LOCALE, {
   month: 'long',

@@ -20,6 +20,7 @@ import {
   unionBounds,
   wrapLongitude,
 } from '../bounds'
+import { countryBounds } from '../countries'
 
 import type { LngLat } from '../bounds'
 
@@ -115,6 +116,45 @@ describe('boundsForPoints', () => {
     ])
     expect(bounds!.north).toBe(MAX_MERCATOR_LATITUDE)
     expect(bounds!.south).toBe(-MAX_MERCATOR_LATITUDE)
+  })
+
+  it('does not cross the line on floating-point noise', () => {
+    // Shifting a set that is wholly west of the meridian and subtracting 360°
+    // again is not lossless: these two vertices measure 8.389999999999999°
+    // apart unshifted and 8.389999999999986° shifted. A bare `<` reads the
+    // second as narrower, takes the antimeridian branch for a country that
+    // never goes near the antimeridian, and hands back edges that are no longer
+    // the ones it was given.
+    const plainSpan = -8.67 - -17.06
+    const shiftSpan = -8.67 + 360 - (-17.06 + 360)
+    expect(shiftSpan).toBeLessThan(plainSpan)
+
+    const bounds = boundsForPoints([
+      [-17.06, 21],
+      [-8.67, 27.66],
+    ])
+    expect(bounds).toEqual({
+      west: -17.06,
+      south: 21,
+      east: -8.67,
+      north: 27.66,
+    })
+  })
+
+  it('carries the measured edges out of a real crossing', () => {
+    // Russia's western vertex and its eastern one, on opposite sides of the
+    // line. The shifted solution wins by 190° here, not by an ulp, and both
+    // edges come back exactly as measured rather than as west plus a span.
+    const bounds = boundsForPoints([
+      [19.66, 41.15],
+      [-169.9, 65],
+    ])
+    expect(bounds).toEqual({
+      west: 19.66,
+      south: 41.15,
+      east: 190.1,
+      north: 65,
+    })
   })
 })
 
@@ -235,5 +275,54 @@ describe('clampPadding', () => {
   it('survives a container with no size at all', () => {
     const clamped = clampPadding(DEFAULT_FIT_PADDING, { width: 0, height: 0 })
     expect(clamped).toEqual({ top: 0, right: 0, bottom: 0, left: 0 })
+  })
+})
+
+/**
+ * The solver against the geometry it actually has to solve.
+ *
+ * `boundsForPoints` is where a country's fly-to rectangle comes from, so the
+ * antimeridian tie is pinned here on real outlines rather than only on a pair of
+ * hand-written vertices: one country that merely looks like a crossing in binary
+ * floating point, and two that genuinely are one.
+ */
+describe('boundsForPoints, on the bundled outlines', () => {
+  it('keeps a western-hemisphere country on the plain line', () => {
+    // Western Sahara is the case the epsilon exists for: its two longitude
+    // solutions are one ulp apart, and the shifted one is the smaller number.
+    expect(countryBounds('EH')).toEqual({
+      west: -17.06,
+      south: 21,
+      east: -8.67,
+      north: 27.66,
+    })
+  })
+
+  it('lets a real crosser keep an eastern edge past 180', () => {
+    // MapLibre's `fitBounds` reads west > east as "crosses the antimeridian"
+    // only if the eastern edge is allowed to exceed 180. Wrapping or
+    // `Math.min`-ing these numbers aims the camera at the other half of the
+    // planet — Russia would frame from Kaliningrad westwards across the
+    // Atlantic, and Fiji would frame the entire Pacific.
+    expect(countryBounds('RU')).toEqual({
+      west: 19.66,
+      south: 41.15,
+      east: 190.1,
+      north: 81.25,
+    })
+    expect(countryBounds('FJ')).toEqual({
+      west: 177.29,
+      south: -18.29,
+      east: 180.21,
+      north: -16.02,
+    })
+  })
+
+  it('leaves a country that stops short of the line alone', () => {
+    const bounds = countryBounds('NZ')
+    expect(bounds).not.toBeNull()
+    if (bounds === null) return
+    expect(bounds.east).toBeLessThan(180)
+    expect(bounds.west).toBeGreaterThan(160)
   })
 })

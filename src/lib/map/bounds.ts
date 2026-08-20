@@ -91,13 +91,38 @@ export function clampLatitude(lat: number): number {
 }
 
 /**
+ * How much narrower the shifted solution has to be before it is believed.
+ *
+ * For a set of points that does not cross the antimeridian the two solutions
+ * describe the same rectangle, and floating point does not know that. Western
+ * Sahara's outline measures 8.389999999999999° across unshifted and
+ * 8.389999999999986° shifted — the same span, one ulp apart, because shifting
+ * every vertex by 360° and subtracting again is not lossless. A bare `<` reads
+ * that as "the shifted answer is narrower", picks it for a country wholly in the
+ * western hemisphere, and rebuilds its edges on the far side of the line:
+ * -17.060000000000002…-8.670000000000016 in place of -17.06…-8.67.
+ *
+ * A tenth of a millimetre of drift is not the problem. The problem is that the
+ * shifted branch is the antimeridian branch, and taking it for a country that
+ * never goes near the line means the camera is being aimed by a rounding error.
+ * Every crossing that genuinely needs that branch wins it by degrees — Russia
+ * 170° against 360°, Fiji 2.9° against 360° — so the margin can be demanded.
+ *
+ * 1e-9° is roughly 0.1mm at the equator: far below the 0.01° the bundled country
+ * outlines are quantised to, and far above the ~1e-14 noise of the shift.
+ */
+const ANTIMERIDIAN_TIE_EPSILON = 1e-9
+
+/**
  * The tightest rectangle containing every valid point, or `null` if there are
  * none.
  *
  * Longitude is solved twice — once on the `[-180, 180)` line and once with
- * negative longitudes shifted east by 360° — and the narrower of the two wins.
- * That is what makes a Tokyo → Honolulu trip fit across the Pacific instead of
- * zooming out to show the entire planet.
+ * negative longitudes shifted east by 360° — and the narrower of the two wins,
+ * by more than {@link ANTIMERIDIAN_TIE_EPSILON}. That is what makes a Tokyo →
+ * Honolulu trip fit across the Pacific instead of zooming out to show the entire
+ * planet, and what keeps a country that merely *looks* like a tie in binary
+ * floating point on the plain line where it belongs.
  */
 export function boundsForPoints(points: Iterable<LngLat>): MapBounds | null {
   let south = Number.POSITIVE_INFINITY
@@ -133,11 +158,17 @@ export function boundsForPoints(points: Iterable<LngLat>): MapBounds | null {
   const plainSpan = plainEast - plainWest
   const shiftSpan = shiftEast - shiftWest
 
-  if (shiftSpan < plainSpan) {
-    // Keep the western edge inside [-180, 180) and let the eastern edge run
-    // past it: that is exactly how MapLibre expresses an antimeridian crossing.
-    const west = shiftWest > 180 ? shiftWest - 360 : shiftWest
-    return { west, south, east: west + shiftSpan, north }
+  if (shiftSpan < plainSpan - ANTIMERIDIAN_TIE_EPSILON) {
+    // Both edges are measured values rather than a sum, so the rectangle carries
+    // the geometry's own numbers out again. That is safe here precisely because
+    // the shifted solution can only win when the set holds a longitude at or
+    // east of the prime meridian: if every longitude were negative, both spans
+    // would be the same difference of the same set and the tie above would have
+    // sent us down the plain branch. Any such longitude shifts to itself, so
+    // `shiftWest` is already inside [-180, 180] and only `shiftEast` runs past
+    // it — which is exactly how MapLibre expresses an antimeridian crossing to
+    // `fitBounds`, and why the eastern edge must never be wrapped or clamped.
+    return { west: shiftWest, south, east: shiftEast, north }
   }
 
   return { west: plainWest, south, east: plainEast, north }
