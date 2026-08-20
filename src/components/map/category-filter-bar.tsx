@@ -132,7 +132,10 @@ export function CategoryFilterBar({
         label={label}
         onKeyDown={roving.onKeyDown}
         className={cn(
-          'absolute top-4 left-1/2 z-dropdown max-w-[calc(100%-2rem)] -translate-x-1/2',
+          // `z-map-overlay`, not `z-dropdown`: map chrome sits below the app nav
+          // (`--z-nav`), so a filter bar at the top of a map can never paint over
+          // the bar the reader navigates with.
+          'absolute top-4 left-1/2 z-map-overlay max-w-[calc(100%-2rem)] -translate-x-1/2',
           'gap-1 overflow-x-auto scrollbar-none',
           className,
         )}

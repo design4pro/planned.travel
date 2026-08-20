@@ -56,9 +56,16 @@ import type { VisitSpan } from '#/lib/atlas/visit-span'
  *   left rail that is always in the layout and only changes colour, a tick in a
  *   slot that is always reserved, and a tinted ground. No border grows, no
  *   weight changes, no padding moves.
+ * - **Selection and the pointer are separate channels.** Selection paints the
+ *   row's ground; hover and press paint a wash stacked above it. Four states
+ *   stay four distinct paints, whether or not the row is the selected one.
  * - **Colour is never the only channel.** The tick and the `aria-selected`
  *   state carry selection on their own, and the recency the map encodes as
  *   lightness is spelled out here as dates.
+ * - **Choosing the same country twice still speaks.** Re-selecting is a
+ *   supported gesture — it re-frames the map — so the announcement alternates
+ *   between two live regions rather than rewriting one with the same sentence,
+ *   which a screen reader would pass over in silence.
  * - **The 75 countries the map cannot draw are still first-class.** They list,
  *   they select, and they say in the row that there is no outline to frame,
  *   rather than offering a click that quietly does nothing.
@@ -80,6 +87,21 @@ export interface CountriesListCountry {
   readonly note: string | null
   /** Whether the bundled world geometry can draw — and therefore frame — it. */
   readonly hasOutline: boolean
+}
+
+/* ------------------------------------------------------------------ identity */
+
+/**
+ * The one form of a country code this component compares, keys and reports.
+ *
+ * A code arrives from a database column, so it can carry whitespace or the
+ * wrong case, and it arrives twice: once on the row and once on the
+ * `selectedCode` a host hands back. Normalising in one place is what keeps
+ * those two agreeing — comparing a padded row code against a trimmed selection
+ * is how a row reports itself selected to the map and then renders unselected.
+ */
+function normaliseCode(code: string): string {
+  return code.trim().toUpperCase()
 }
 
 /* --------------------------------------------------------------------- order */
@@ -174,8 +196,8 @@ export function sortCountries(
     (left, right) =>
       compare(left, right) ||
       compareText(
-        left.countryCode.toUpperCase(),
-        right.countryCode.toUpperCase(),
+        normaliseCode(left.countryCode),
+        normaliseCode(right.countryCode),
       ),
   )
 }
@@ -252,12 +274,36 @@ const layout = {
   sort: 'w-auto min-w-40',
   list: 'min-w-0',
   item: 'not-last:border-b not-last:border-edge-faint',
-  row: 'relative flex w-full min-w-0 items-start gap-3 px-4 py-3 text-left sm:px-5',
+  row: 'relative isolate flex w-full min-w-0 items-start gap-3 px-4 py-3 text-left sm:px-5',
+  /**
+   * The interaction wash, painted over the row's ground and under its text.
+   *
+   * A row has two independent things to say: whether it is the country the map
+   * is framing (an opaque ground) and whether the pointer is over or pressing
+   * it (a neutral wash). Stacking them keeps four distinct paints — rest,
+   * hover, active, and each of those again while selected — instead of
+   * collapsing hover and active onto the one background a single element can
+   * hold. `-z-10` inside the row's own stacking context puts it above the
+   * ground and below every glyph, so nothing it does touches text contrast.
+   */
+  wash: 'absolute inset-0 -z-10',
   /** Always in the layout, so selection can only ever repaint it. */
   rail: 'absolute inset-y-0 left-0 w-1',
   flag: 'grid size-10 shrink-0 place-items-center rounded-md border border-edge-faint bg-surface-2 text-subtitle leading-none',
-  body: 'flex min-w-0 flex-1 flex-col gap-2 md:flex-row md:items-start md:gap-4',
-  identity: 'flex min-w-0 flex-1 flex-col gap-1',
+  /**
+   * One grid, two arrangements, and the dates ahead of the prose in both.
+   *
+   * Narrow: name, then the visit dates, then whatever else the row has to say.
+   * The dates are the payload — a note that pushed them below the fold would
+   * bury the one thing this list exists to state.
+   *
+   * From `md`: a fixed 14rem date column on the right, with the name in the
+   * first row of the left column and the note underneath it. Placing all three
+   * in one grid rather than nesting the note inside the name block is what lets
+   * the same source order read correctly at both widths.
+   */
+  body: 'grid min-w-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_14rem] md:gap-x-4',
+  identity: 'flex min-w-0 flex-col gap-1 md:col-start-1 md:row-start-1',
   nameRow: 'flex min-w-0 items-center gap-1.5',
   /** Weight is fixed at 600 in every state: a bolder selected row reflows. */
   name: 'min-w-0 truncate text-label font-semibold text-ink',
@@ -265,19 +311,39 @@ const layout = {
   tick: 'grid size-4 shrink-0 place-items-center text-brand',
   meta: 'flex min-w-0 items-center gap-1.5 text-caption',
   code: 'shrink-0 font-semibold tracking-wide tabular-nums',
-  /** A fixed label column, so every date in the list aligns down one edge
-      rather than starting wherever its own heading happens to end. 5.25rem
-      clears the longest heading ("Latest visit") at 11px with our tracking. */
+  /**
+   * Two shapes, one grid, and the same height either way.
+   *
+   * Narrow: each cell is its own stacked block in one of two columns, so one
+   * cell and two cells alike come to one line of headings above one line of
+   * dates. That is what lets the skeleton reserve the block honestly — the
+   * majority of rows are single-visit, and a loading shape that reserved two
+   * stacked cells for them would drop the page by a line the moment the real
+   * row arrived.
+   *
+   * From `md`: the cells dissolve (`contents`) into a fixed label column, so
+   * every date in the list aligns down one edge rather than starting wherever
+   * its own heading happens to end. 5.25rem clears the longest heading
+   * ("Latest visit") at 11px with our tracking.
+   */
   dates:
-    'grid shrink-0 grid-cols-[5.25rem_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1 md:w-56',
+    'grid min-w-0 grid-cols-2 items-baseline gap-x-4 gap-y-1 md:col-start-2 md:row-start-1 md:grid-cols-[5.25rem_minmax(0,1fr)] md:gap-x-3',
+  dateCell: 'flex min-w-0 flex-col gap-0.5 md:contents',
+  /** One cell has both narrow columns to itself, so "Dates not recorded" is a
+      sentence on one line rather than a word per line. */
+  dateCellWide: 'col-span-2',
   dateLabel: 'text-micro font-semibold uppercase tracking-label',
   dateValue: 'min-w-0 text-caption font-medium tabular-nums text-ink',
+  /** Everything the row says beyond its identity and its dates. */
+  asides: 'flex min-w-0 flex-col gap-1 md:col-start-1 md:row-start-2',
   aside: 'flex min-w-0 items-start gap-1.5 text-caption',
   /** Carries its own ground, so its contrast is the designed `info` pair in
       both themes rather than a function of whatever the row is painted. */
   outline:
     'flex w-fit min-w-0 items-start gap-1.5 rounded-md bg-info-soft px-2 py-1 text-caption text-info',
-  count: 'flex w-11 shrink-0 flex-col items-end gap-0.5',
+  /** A floor rather than a fixed width: four digits are unlikely and still
+      have to fit, and a clipped tally is worse than a slightly wider column. */
+  count: 'flex min-w-11 shrink-0 flex-col items-end gap-0.5',
   countValue: 'font-display text-subtitle font-bold tabular-nums text-ink',
   countLabel: 'text-micro font-semibold uppercase tracking-label',
 } as const
@@ -345,13 +411,29 @@ export const CountriesList = React.forwardRef<
       },
     })
 
+    /**
+     * Bumped by every activation, whether or not it changed the selection.
+     *
+     * Re-choosing the row already selected is a supported gesture — it asks the
+     * map to frame the country again — and a live region only speaks when its
+     * text changes, so the same sentence written back into the same node is
+     * silent. The counter's parity decides which of two regions holds the
+     * sentence, so an unchanged message still arrives somewhere empty and gets
+     * read out.
+     */
+    const [activations, setActivations] = React.useState(0)
+
     const rows = React.useMemo(
       () => sortCountries(countries, order),
       [countries, order],
     )
-    const selectedIndex = rows.findIndex(
-      (row) => row.countryCode.toUpperCase() === (selected ?? '').toUpperCase(),
-    )
+    const selectedKey = selected === null ? '' : normaliseCode(selected)
+    const selectedIndex =
+      selectedKey === ''
+        ? -1
+        : rows.findIndex(
+            (row) => normaliseCode(row.countryCode) === selectedKey,
+          )
 
     /* Roving tabindex. The tab stop follows the selection when the map picks a
        country, so tabbing back into the list lands where the reader left off,
@@ -387,7 +469,7 @@ export const CountriesList = React.forwardRef<
         const row = rows.at(index)
         if (row === undefined) return
         setFocusIndex(index)
-        nodes.current.get(row.countryCode)?.focus()
+        nodes.current.get(normaliseCode(row.countryCode))?.focus()
       },
       [rows],
     )
@@ -446,7 +528,7 @@ export const CountriesList = React.forwardRef<
         const index = (from + step + rows.length) % rows.length
         const row = rows.at(index)
         if (row === undefined) continue
-        const code = row.countryCode.toUpperCase()
+        const code = normaliseCode(row.countryCode)
         if (
           collationKey(countryName(code)).startsWith(needle) ||
           code.startsWith(needle)
@@ -478,6 +560,12 @@ export const CountriesList = React.forwardRef<
     const statementId = `${baseId}-order`
     const statusCountry =
       selectedIndex >= 0 ? rows.at(selectedIndex) : undefined
+    const announcement =
+      statusCountry === undefined
+        ? ''
+        : `${countryName(statusCountry.countryCode)} selected.${
+            statusCountry.hasOutline ? '' : ` ${NO_OUTLINE_NOTICE}`
+          }`
 
     return (
       <div ref={ref} className={cn(layout.root, className)} {...props}>
@@ -506,7 +594,7 @@ export const CountriesList = React.forwardRef<
           onKeyDown={onKeyDown}
         >
           {rows.map((row, index) => {
-            const code = row.countryCode.trim().toUpperCase()
+            const code = normaliseCode(row.countryCode)
             const name = countryName(code)
             const cells = dateCells(
               visitSpan(row.firstVisitedOn, row.lastVisitedOn),
@@ -528,7 +616,7 @@ export const CountriesList = React.forwardRef<
                 <button
                   type="button"
                   role="option"
-                  ref={nodeRef(row.countryCode)}
+                  ref={nodeRef(code)}
                   data-country={code}
                   aria-selected={isSelected}
                   aria-label={[
@@ -542,19 +630,32 @@ export const CountriesList = React.forwardRef<
                   aria-describedby={describedBy}
                   tabIndex={index === activeIndex ? 0 : -1}
                   onFocus={() => setFocusIndex(index)}
-                  onClick={() => setSelected(code)}
+                  onClick={() => {
+                    setActivations((count) => count + 1)
+                    setSelected(code)
+                  }}
                   data-motion-transform=""
                   style={{ animationDelay: staggerDelay(index) }}
                   className={cn(
                     layout.row,
-                    'animate-rise cursor-pointer',
+                    'group animate-rise cursor-pointer',
                     transitionBase,
                     focusRingInset,
-                    isSelected
-                      ? 'bg-brand-subtle hover:bg-selection active:bg-selection'
-                      : 'hover:bg-hover active:bg-active',
+                    // The ground says "this is the country the map is framing".
+                    // Hover and press are the wash below, so both channels stay
+                    // legible at once and neither ever moves the row.
+                    isSelected && 'bg-brand-subtle',
                   )}
                 >
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      layout.wash,
+                      transitionBase,
+                      'bg-transparent group-hover:bg-hover group-active:bg-active',
+                    )}
+                  />
+
                   <span
                     aria-hidden="true"
                     className={cn(
@@ -592,41 +693,17 @@ export const CountriesList = React.forwardRef<
                             : humaniseToken(row.continent)}
                         </span>
                       </span>
-
-                      {note === null ? null : (
-                        <span
-                          id={noteId}
-                          data-part="note"
-                          className={cn(layout.aside, quiet)}
-                        >
-                          <PenLine
-                            size={12}
-                            aria-hidden="true"
-                            className="mt-0.5 shrink-0"
-                          />
-                          <span className="min-w-0 truncate">{note}</span>
-                        </span>
-                      )}
-
-                      {row.hasOutline ? null : (
-                        <span
-                          id={outlineId}
-                          data-part="outline"
-                          className={layout.outline}
-                        >
-                          <MapPinOff
-                            size={12}
-                            aria-hidden="true"
-                            className="mt-0.5 shrink-0"
-                          />
-                          <span className="min-w-0">{NO_OUTLINE_NOTICE}</span>
-                        </span>
-                      )}
                     </span>
 
                     <span data-part="dates" className={layout.dates}>
                       {cells.map((cell) => (
-                        <React.Fragment key={cell.label}>
+                        <span
+                          key={cell.label}
+                          className={cn(
+                            layout.dateCell,
+                            cells.length === 1 && layout.dateCellWide,
+                          )}
+                        >
                           <span className={cn(layout.dateLabel, quiet)}>
                             {cell.label}
                           </span>
@@ -642,9 +719,43 @@ export const CountriesList = React.forwardRef<
                               <time dateTime={cell.iso}>{cell.value}</time>
                             )}
                           </span>
-                        </React.Fragment>
+                        </span>
                       ))}
                     </span>
+
+                    {note === null && row.hasOutline ? null : (
+                      <span className={layout.asides}>
+                        {note === null ? null : (
+                          <span
+                            id={noteId}
+                            data-part="note"
+                            className={cn(layout.aside, quiet)}
+                          >
+                            <PenLine
+                              size={12}
+                              aria-hidden="true"
+                              className="mt-0.5 shrink-0"
+                            />
+                            <span className="min-w-0 truncate">{note}</span>
+                          </span>
+                        )}
+
+                        {row.hasOutline ? null : (
+                          <span
+                            id={outlineId}
+                            data-part="outline"
+                            className={layout.outline}
+                          >
+                            <MapPinOff
+                              size={12}
+                              aria-hidden="true"
+                              className="mt-0.5 shrink-0"
+                            />
+                            <span className="min-w-0">{NO_OUTLINE_NOTICE}</span>
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </span>
 
                   <span data-part="count" className={layout.count}>
@@ -663,14 +774,20 @@ export const CountriesList = React.forwardRef<
 
         {/* Selection is a map camera move happening somewhere else on the
             screen, so it is also said out loud — including the honest case
-            where the map has no outline to fly to. */}
-        <p role="status" aria-live="polite" className="sr-only">
-          {statusCountry === undefined
-            ? ''
-            : `${countryName(statusCountry.countryCode.trim().toUpperCase())} selected.${
-                statusCountry.hasOutline ? '' : ` ${NO_OUTLINE_NOTICE}`
-              }`}
-        </p>
+            where the map has no outline to fly to. Two regions, alternated by
+            activation, so choosing the same country twice is announced twice
+            rather than falling silent on an unchanged string. */}
+        {[0, 1].map((slot) => (
+          <p
+            key={slot}
+            role="status"
+            aria-live="polite"
+            data-part="announcement"
+            className="sr-only"
+          >
+            {activations % 2 === slot ? announcement : ''}
+          </p>
+        ))}
       </div>
     )
   },
@@ -697,11 +814,15 @@ function Bar({
   readonly align?: 'start' | 'end'
 }) {
   return (
+    // A `div`, because `Skeleton` is one: a block element inside a `span` is
+    // invalid nesting, and an invalid tree is the browser's parse to repair
+    // rather than ours to reason about.
+    //
     // `block w-full` trails `className` so it wins the display and width
     // conflicts: the classes handed in are the list's own, and several of them
     // make their element a flex or grid item, which would otherwise shrink the
     // strut to the width of the space inside it.
-    <span className={cn('relative', className, 'block w-full')}>
+    <div data-part="bar" className={cn('relative', className, 'block w-full')}>
       <span className="invisible">&nbsp;</span>
       <Skeleton
         radius="sm"
@@ -711,7 +832,7 @@ function Bar({
           width,
         )}
       />
-    </span>
+    </div>
   )
 }
 
@@ -758,12 +879,16 @@ export const CountriesListSkeleton = React.forwardRef<
                 </div>
                 <Bar width="w-24 max-w-full" className={layout.meta} />
               </div>
-              <div className={layout.dates}>
+              {/* Two cells, which at every width reserve exactly what one
+                  cell reserves: side by side below `md`, and the two rows of
+                  the label column from `md` up. A single-visit country — most
+                  of them — therefore lands in the space already held for it. */}
+              <div data-part="dates" className={layout.dates}>
                 {['first', 'last'].map((cell) => (
-                  <React.Fragment key={cell}>
+                  <div key={cell} className={layout.dateCell}>
                     <Bar width="w-14" className={layout.dateLabel} />
                     <Bar width="w-20 max-w-full" className={layout.dateValue} />
-                  </React.Fragment>
+                  </div>
                 ))}
               </div>
             </div>

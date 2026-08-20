@@ -4,12 +4,14 @@ import { MAP_PALETTES } from '../palette'
 import { worldLandFeatures } from '../countries'
 import {
   BASEMAP_SOURCE_ID,
+  FALLBACK_ATTRIBUTION,
   FALLBACK_LAYER_IDS,
   GRATICULE_SOURCE_ID,
   GRATICULE_WORLD_OPACITY,
   GRATICULE_WORLD_ZOOM,
   GROUND_FADE_MAX_ZOOM,
   GROUND_MIN_ZOOM,
+  MAP_ATTRIBUTION,
   MAP_FONT_MEDIUM,
   MAP_FONT_SEMIBOLD,
   MAP_LAYER_IDS,
@@ -304,9 +306,9 @@ describe('fallbackStyle', () => {
     // copies of the same 8,937 coordinate pairs, and it is also what keeps a
     // `geojson` source from re-tiling the world on every theme switch.
     const shared = worldLandFeatures()
-    expect(fallbackStyle({ theme: 'light' }).sources[WORLD_LAND_SOURCE_ID]).toMatchObject(
-      { data: shared },
-    )
+    expect(
+      fallbackStyle({ theme: 'light' }).sources[WORLD_LAND_SOURCE_ID],
+    ).toMatchObject({ data: shared })
     expect(
       basemapStyle({ theme: 'light', ground: true }).sources[
         WORLD_LAND_SOURCE_ID
@@ -397,6 +399,24 @@ describe('fallbackStyle', () => {
         1,
       ]),
     )
+  })
+})
+
+describe('attribution', () => {
+  it('credits the tiles and the bundled outlines separately', () => {
+    // Two different maps of two different sources: crediting OpenStreetMap for
+    // a world drawn from our own outlines would name a source that is not on
+    // screen, and the reverse would drop an ODbL obligation.
+    expect(MAP_ATTRIBUTION.map((credit) => credit.label)).toEqual([
+      'OpenStreetMap',
+      'Protomaps',
+    ])
+    expect(FALLBACK_ATTRIBUTION.map((credit) => credit.label)).toEqual([
+      'Natural Earth',
+    ])
+    for (const credit of [...MAP_ATTRIBUTION, ...FALLBACK_ATTRIBUTION]) {
+      expect(credit.href).toMatch(/^https:\/\//)
+    }
   })
 })
 

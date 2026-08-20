@@ -7,6 +7,8 @@ import {
   visitRecency,
 } from '#/lib/map/visit-recency'
 
+import * as mapLib from '#/lib/map'
+
 import type { VisitRamp } from '#/lib/map/visit-recency'
 
 /** A fixed instant, so every case below states its answer rather than drifts. */
@@ -119,5 +121,21 @@ describe('visitRecency', () => {
     // must still answer against the real clock rather than throw.
     const today = new Date().toISOString().slice(0, 10)
     expect(visitRecency(today)).toBe('visitedRecent')
+  })
+})
+
+describe('the src/lib/map barrel', () => {
+  it('hands out the ramp and its thresholds like every other module here', () => {
+    // A legend has to be able to write the rule in words, and it reaches the map
+    // logic through one import. A module missing from the barrel is reachable
+    // only by deep path, which is how two spellings of the same threshold end up
+    // on one screen.
+    expect(mapLib.visitRecency).toBe(visitRecency)
+    expect(mapLib.RECENT_WITHIN_YEARS).toBe(RECENT_WITHIN_YEARS)
+    expect(mapLib.DISTANT_AFTER_YEARS).toBe(DISTANT_AFTER_YEARS)
+
+    // The type travels with them: this only compiles if `VisitRamp` is exported.
+    const stop: mapLib.VisitRamp = 'visitedRecent'
+    expect(stop).toBe(mapLib.visitRecency(NOW.toISOString().slice(0, 10), NOW))
   })
 })

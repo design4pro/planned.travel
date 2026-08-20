@@ -12,17 +12,18 @@ import {
   hasCountryOutline,
 } from '#/lib/map/countries'
 import { mapPalette } from '#/lib/map/palette'
-import { MAP_LAYER_IDS } from '#/lib/map/style'
+import { FALLBACK_LAYER_IDS, MAP_LAYER_IDS } from '#/lib/map/style'
 import { MapProvider } from '../map-context'
 import {
   VISITED_COUNTRY_LAYER_IDS,
   VISITED_COUNTRY_SOURCE_ID,
+  VISITED_COUNTRY_ZOOM,
   VisitedCountries,
 } from '../visited-countries'
 
 import type { MapContextValue, MapLibreMap } from '../map-context'
 import type { VisitedCountriesProps } from '../visited-countries'
-import type { VisitedCountry } from '../types'
+import type { MapVisitedCountry } from '../types'
 
 /**
  * The same fake-Map recorder the rest of the map suite uses, extended with the
@@ -84,6 +85,8 @@ class FakeMap {
   readonly queries: Array<{ layers?: ReadonlyArray<string> }> = []
   /** What the next hit test answers with. */
   hits: Array<{ id: unknown }> = []
+  /** The camera, which decides whether the layer answers a pointer at all. */
+  zoom = 1
 
   private readonly handlers = new Map<
     string,
@@ -134,6 +137,10 @@ class FakeMap {
     return this.hits
   }
 
+  getZoom(): number {
+    return this.zoom
+  }
+
   on(type: string, handler: (event: FakeMouseEvent) => void): this {
     const set = this.handlers.get(type) ?? new Set()
     set.add(handler)
@@ -170,6 +177,19 @@ class FakeMap {
       id: MAP_LAYER_IDS.labelAnchor,
       type: 'symbol',
     })
+  }
+
+  /** The no-archive style: sea, land, a coast hairline, then the graticule. */
+  addFallbackGround(): void {
+    for (const id of [
+      FALLBACK_LAYER_IDS.background,
+      FALLBACK_LAYER_IDS.land,
+      FALLBACK_LAYER_IDS.coast,
+      FALLBACK_LAYER_IDS.graticule,
+      FALLBACK_LAYER_IDS.graticuleMajor,
+    ]) {
+      this.layers.set(id, { id, type: 'line' })
+    }
   }
 }
 
@@ -210,7 +230,7 @@ function daysAgo(days: number): string {
   return new Date(Date.now() - days * DAY_MS).toISOString().slice(0, 10)
 }
 
-const VISITS: ReadonlyArray<VisitedCountry> = [
+const VISITS: ReadonlyArray<MapVisitedCountry> = [
   { countryCode: 'FR', lastVisitedOn: daysAgo(30) },
   { countryCode: 'IT', lastVisitedOn: daysAgo(9 * 365) },
   { countryCode: 'JP', lastVisitedOn: null },
@@ -406,20 +426,34 @@ describe('VisitedCountries', () => {
     const withLabels = new FakeMap()
     withLabels.addBasemapLabels()
     render(tree(withLabels, { visits: VISITS }))
-    expect(withLabels.insertedBefore.get(VISITED_COUNTRY_LAYER_IDS.fill)).toBe(
-      MAP_LAYER_IDS.labelAnchor,
-    )
 
-    // The fallback style ships no label layer at all, and naming a layer that
-    // does not exist is an error MapLibre would raise.
+    for (const id of Object.values(VISITED_COUNTRY_LAYER_IDS)) {
+      expect(withLabels.insertedBefore.get(id)).toBe(MAP_LAYER_IDS.labelAnchor)
+    }
+  })
+
+  it('sits under the graticule on the style that has no labels at all', () => {
+    // The fallback style ships no label layer, and appending on top of it would
+    // bury the only cartography it has — the coast hairline and the drafting
+    // graticule — under an opaque fill.
+    const fallback = new FakeMap()
+    fallback.addFallbackGround()
+    render(tree(fallback, { visits: VISITS }))
+
+    for (const id of Object.values(VISITED_COUNTRY_LAYER_IDS)) {
+      expect(fallback.insertedBefore.get(id)).toBe(FALLBACK_LAYER_IDS.graticule)
+    }
+  })
+
+  it('appends on top of a style that offers neither anchor', () => {
+    // Naming a layer that does not exist is an error MapLibre would raise, so a
+    // style neither of ours produced gets the honest guess.
     const bare = new FakeMap()
     render(tree(bare, { visits: VISITS }))
-    expect(bare.insertedBefore.get(VISITED_COUNTRY_LAYER_IDS.fill)).toBe(
-      undefined,
-    )
-    expect(bare.insertedBefore.get(VISITED_COUNTRY_LAYER_IDS.outline)).toBe(
-      undefined,
-    )
+
+    for (const id of Object.values(VISITED_COUNTRY_LAYER_IDS)) {
+      expect(bare.insertedBefore.get(id)).toBe(undefined)
+    }
   })
 
   it('re-adds itself in the new colours after a theme switch replaces the style', () => {
@@ -463,6 +497,64 @@ describe('VisitedCountries', () => {
     })
   })
 
+  it('re-applies the selection when the palette changes without a new epoch', () => {
+    const map = new FakeMap()
+    const { rerender } = render(
+      tree(map, { visits: VISITS, selectedCode: 'FR' }),
+    )
+    const before = map.listenerCount()
+    map.ops.length = 0
+    map.featureStates.length = 0
+
+    // MapLibre diffs a theme swap into the live style, and there is a commit in
+    // between where the palette has changed and the epoch has not. The layer
+    // effect rebuilds the source in that commit, and a rebuilt source carries no
+    // feature state — so every other effect has to rebuild with it or the
+    // highlight is painted on a source that no longer exists.
+    rerender(
+      tree(map, { visits: VISITS, selectedCode: 'FR' }, { theme: 'dark' }),
+    )
+
+    expect(map.ops).toEqual([
+      { kind: 'removeLayer', id: VISITED_COUNTRY_LAYER_IDS.outline },
+      { kind: 'removeLayer', id: VISITED_COUNTRY_LAYER_IDS.fill },
+      { kind: 'removeSource', id: VISITED_COUNTRY_SOURCE_ID },
+      { kind: 'addSource', id: VISITED_COUNTRY_SOURCE_ID },
+      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.fill },
+      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.outline },
+    ])
+    expect(map.featureStates.at(-1)).toEqual({
+      source: VISITED_COUNTRY_SOURCE_ID,
+      id: 'FR',
+      state: { selected: true },
+    })
+    expect(hexes(layerOf(map, VISITED_COUNTRY_LAYER_IDS.fill).paint)).toContain(
+      mapPalette('dark').country.visited,
+    )
+    // The re-added source carries the record already, so nothing re-tiles.
+    expect(sourceOf(map).setDataCalls).toBe(0)
+    expect(map.listenerCount()).toBe(before)
+  })
+
+  it('rebinds the pointer against the source the palette change rebuilt', () => {
+    const map = new FakeMap()
+    const onSelect = vi.fn()
+    const { rerender } = render(tree(map, { visits: VISITS, onSelect }))
+
+    map.hits = [{ id: 'FR' }]
+    map.emit('mousemove')
+    rerender(tree(map, { visits: VISITS, onSelect }, { theme: 'dark' }))
+    map.featureStates.length = 0
+
+    // A stale closure would still believe France is lit and skip the write.
+    map.emit('mousemove')
+    expect(map.featureStates).toEqual([
+      { source: VISITED_COUNTRY_SOURCE_ID, id: 'FR', state: { hover: true } },
+    ])
+    map.emit('click')
+    expect(onSelect).toHaveBeenCalledWith('FR')
+  })
+
   it('removes every layer before the source when it goes away', () => {
     const map = new FakeMap()
     const { unmount } = render(tree(map, { visits: VISITS }))
@@ -504,6 +596,26 @@ describe('VisitedCountries', () => {
     ])
   })
 
+  it('resolves overlapping countries to the one drawn on top', () => {
+    const map = new FakeMap()
+    const onSelect = vi.fn()
+    render(tree(map, { visits: VISITS, onSelect }))
+
+    // Topmost first is MapLibre's own order, and it is the tie-break: two
+    // simplified outlines can overlap by a pixel or two along a shared border,
+    // and the answer has to be the one the reader sees drawn last. The repeats
+    // in between are the same features coming back per tile and per world copy.
+    map.hits = [{ id: 'ES' }, { id: 'FR' }, { id: 'ES' }, { id: 'FR' }]
+    map.emit('click')
+    expect(onSelect).toHaveBeenCalledWith('ES')
+
+    // A foreign id at the top of the stack must not shadow a real answer under
+    // it — that would read as open water and clear the selection.
+    map.hits = [{ id: 0 }, { id: null }, { id: 'PT' }]
+    map.emit('click')
+    expect(onSelect).toHaveBeenLastCalledWith('PT')
+  })
+
   it('clears the selection when the click lands on open water', () => {
     const map = new FakeMap()
     const onSelect = vi.fn()
@@ -512,6 +624,64 @@ describe('VisitedCountries', () => {
     map.hits = []
     map.emit('click')
     expect(onSelect).toHaveBeenCalledWith(null)
+  })
+
+  it('says nothing about the record once the fill has faded away', () => {
+    const map = new FakeMap()
+    const onSelect = vi.fn()
+    const onHoverChange = vi.fn()
+    render(tree(map, { visits: VISITS, onSelect, onHoverChange }))
+
+    map.zoom = VISITED_COUNTRY_ZOOM.interactiveMax + 0.1
+    map.hits = [{ id: 'FR' }]
+    map.emit('click')
+    map.emit('mousemove')
+
+    // Not `null`: at street scale this gesture is a pan on the basemap, and
+    // reporting open water would clear a selection a list row or a search result
+    // put there. The hit test is not even asked.
+    expect(onSelect).not.toHaveBeenCalled()
+    expect(onHoverChange).not.toHaveBeenCalled()
+    expect(map.queries).toHaveLength(0)
+    expect(map.featureStates).toEqual([])
+  })
+
+  it('still answers at the last zoom the fill is legible at', () => {
+    const map = new FakeMap()
+    const onSelect = vi.fn()
+    render(tree(map, { visits: VISITS, onSelect }))
+
+    map.zoom = VISITED_COUNTRY_ZOOM.interactiveMax
+    map.hits = [{ id: 'IS' }]
+    map.emit('click')
+    expect(onSelect).toHaveBeenCalledWith('IS')
+
+    // The cut is solved from the fade, not guessed beside it.
+    expect(VISITED_COUNTRY_ZOOM.interactiveMax).toBeGreaterThan(
+      VISITED_COUNTRY_ZOOM.fadeStart,
+    )
+    expect(VISITED_COUNTRY_ZOOM.interactiveMax).toBeLessThan(
+      VISITED_COUNTRY_ZOOM.fadeEnd,
+    )
+  })
+
+  it('lets the pointer go when the camera climbs past the fade', () => {
+    const map = new FakeMap()
+    const onHoverChange = vi.fn()
+    render(tree(map, { visits: VISITS, onHoverChange }))
+
+    map.hits = [{ id: 'FR' }]
+    map.emit('mousemove')
+    expect(onHoverChange).toHaveBeenLastCalledWith('FR')
+
+    map.zoom = VISITED_COUNTRY_ZOOM.fadeEnd + 1
+    map.emit('mousemove')
+    expect(onHoverChange).toHaveBeenLastCalledWith(null)
+    expect(map.featureStates.at(-1)).toEqual({
+      source: VISITED_COUNTRY_SOURCE_ID,
+      id: 'FR',
+      state: { hover: false },
+    })
   })
 
   it('lights exactly one country per pointer move, and lets go of the last', () => {

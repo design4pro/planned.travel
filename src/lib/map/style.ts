@@ -118,17 +118,39 @@ export const MAP_FONT_SEMIBOLD: ReadonlyArray<string> = [
   'Noto Sans Regular',
 ]
 
+/** One line of data credit. */
+export interface MapCredit {
+  readonly label: string
+  readonly href: string
+}
+
 /**
- * Attribution for the underlying data. Rendered by `MapAttribution` in our own
+ * Attribution for the vector basemap. Rendered by `MapAttribution` in our own
  * chrome rather than by MapLibre's control, and also attached to the source so
  * the style document is self-describing.
  */
-export const MAP_ATTRIBUTION: ReadonlyArray<{
-  readonly label: string
-  readonly href: string
-}> = [
+export const MAP_ATTRIBUTION: ReadonlyArray<MapCredit> = [
   { label: 'OpenStreetMap', href: 'https://www.openstreetmap.org/copyright' },
   { label: 'Protomaps', href: 'https://protomaps.com' },
+]
+
+/**
+ * Attribution for {@link fallbackStyle}, which is a different map of a different
+ * source.
+ *
+ * Without an archive there are no tiles: every line on screen comes from the
+ * generalised outlines bundled with the app, which are Natural Earth 1:110m and
+ * placed in the public domain by their authors. So no licence compels this
+ * credit — but naming OpenStreetMap for a map it did not draw would be a false
+ * one, and naming nothing at all leaves the reader with no idea where the
+ * coastline came from.
+ *
+ * Rendered inside `BasemapNotice`, the panel that explains why this style is on
+ * screen at all, rather than in a floating pill of its own: the two would want
+ * the same corner of the map.
+ */
+export const FALLBACK_ATTRIBUTION: ReadonlyArray<MapCredit> = [
+  { label: 'Natural Earth', href: 'https://www.naturalearthdata.com' },
 ]
 
 const ATTRIBUTION_HTML = MAP_ATTRIBUTION.map(

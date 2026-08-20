@@ -63,6 +63,14 @@ const harness = vi.hoisted(() => {
       // canvas is actually inside our labelled region.
       options.container?.appendChild(this.canvas)
       harness.maps.push(this)
+      // Queued from the constructor, so it runs in the same microtask chain the
+      // bootstrap does — before React can possibly commit this instance, let
+      // alone run an effect against it. What it sees is therefore exactly what
+      // an early `idle` would have found: a record of whether the map was
+      // subscribed to before its first frame, or a commit too late.
+      void Promise.resolve().then(() => {
+        harness.earlyListeners = [...this.handlers.keys()]
+      })
     }
 
     getCanvas(): HTMLCanvasElement {
@@ -82,7 +90,9 @@ const harness = vi.hoisted(() => {
     }
 
     emit(type: string): void {
-      for (const handler of this.handlers.get(type) ?? []) handler()
+      // Copied before iterating: the readiness marker's own handler removes
+      // itself the first time it runs.
+      for (const handler of [...(this.handlers.get(type) ?? [])]) handler()
     }
 
     setStyle(style: StyleLike): void {
@@ -118,7 +128,11 @@ const harness = vi.hoisted(() => {
     }
   }
 
-  return { maps: [] as Array<FakeMap>, FakeMap }
+  return {
+    maps: [] as Array<FakeMap>,
+    FakeMap,
+    earlyListeners: [] as Array<string>,
+  }
 })
 
 vi.mock('maplibre-gl', () => ({
@@ -141,7 +155,9 @@ vi.mock('pmtiles', () => ({
   },
 }))
 
-const { MapCanvas } = await import('../map-canvas')
+const { MapCanvas, MAP_ARCHIVE_PROBE_TIMEOUT_MS } =
+  await import('../map-canvas')
+const { MapAttribution } = await import('../map-attribution')
 
 /** Publishes the two independent statuses so a case can tell them apart. */
 function StatusProbe() {
@@ -201,6 +217,37 @@ function serveNothing(): void {
   )
 }
 
+/**
+ * An endpoint that accepts the request and never answers, but does honour an
+ * abort — which is what a real `fetch` does. This is the hung tiles route the
+ * probe deadline exists for.
+ */
+function serveSlowly(): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn<typeof fetch>().mockImplementation(
+      (_input, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'))
+          })
+        }),
+    ),
+  )
+}
+
+/**
+ * The worse version of the same failure: a request that ignores its abort
+ * signal too, so nothing downstream of the probe can ever run. Only the
+ * start-up clock can answer for this one.
+ */
+function serveNever(): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn<typeof fetch>().mockImplementation(() => new Promise(() => {})),
+  )
+}
+
 /** The most recently constructed fake map. */
 function lastMap() {
   const map = harness.maps.at(-1)
@@ -210,6 +257,7 @@ function lastMap() {
 
 beforeEach(() => {
   harness.maps.length = 0
+  harness.earlyListeners = []
   resetBasemapAvailability()
   resetPmtilesProtocol()
 })
@@ -376,7 +424,6 @@ describe('MapCanvas', () => {
     expect(readyMarker(container)).toBe('false')
 
     act(() => {
-      lastMap().emit('load')
       lastMap().emit('idle')
     })
     expect(readyMarker(container)).toBe('true')
@@ -388,6 +435,19 @@ describe('MapCanvas', () => {
       lastMap().emit('idle')
     })
     expect(readyMarker(container)).toBe('true')
+  })
+
+  it('cannot miss the first idle, because it subscribes before the first frame', async () => {
+    // The deadlock this rules out: `idle` is fired from inside MapLibre's render
+    // loop, on a frame of its own. A subscription made from an effect — one
+    // React commit after the map reaches state — can miss it, and then waits for
+    // a second `idle` that a map at rest is never going to fire.
+    serveArchive()
+    render(<MapCanvas label="Trip map" />)
+    await mapMounted()
+
+    expect(harness.earlyListeners).toContain('idle')
+    expect(harness.earlyListeners).toContain('render')
   })
 
   it('tells a missing archive apart from a renderer that never started', async () => {
@@ -430,7 +490,7 @@ describe('MapCanvas', () => {
     }
   })
 
-  it('reports a stalled renderer, and recovers if a late load arrives', async () => {
+  it('reports a stalled renderer, and recovers if a late frame arrives', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     try {
       serveArchive()
@@ -450,13 +510,177 @@ describe('MapCanvas', () => {
       expect(readyMarker(container)).toBe('true')
 
       act(() => {
-        lastMap().emit('load')
+        lastMap().emit('render')
       })
       expect(screen.getByTestId('engine').textContent).toBe('running')
       expect(screen.queryByText('The map has not drawn yet')).toBeNull()
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('does not call a slow map stalled once it has painted a frame', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      // `load` waits for every tile in view, so a working map on a slow
+      // connection reaches it late. The frame is what proves the renderer runs.
+      serveArchive()
+      render(
+        <MapCanvas label="Trip map">
+          <StatusProbe />
+        </MapCanvas>,
+      )
+      await mapMounted()
+
+      act(() => {
+        lastMap().emit('render')
+      })
+      expect(screen.getByTestId('engine').textContent).toBe('running')
+
+      act(() => {
+        vi.advanceTimersByTime(MAP_ENGINE_TIMEOUT_MS * 2)
+      })
+      expect(screen.getByTestId('engine').textContent).toBe('running')
+      expect(screen.queryByText('The map has not drawn yet')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('builds the world from bundled outlines when the tile route hangs', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      serveSlowly()
+      render(
+        <MapCanvas label="Trip map">
+          <StatusProbe />
+        </MapCanvas>,
+      )
+      // The style the map is created with depends on the probe, so nothing is
+      // built until the probe answers — or until its deadline answers for it.
+      await waitFor(() => {
+        expect(globalThis.fetch).toHaveBeenCalled()
+      })
+      expect(harness.maps).toHaveLength(0)
+
+      await act(async () => {
+        vi.advanceTimersByTime(MAP_ARCHIVE_PROBE_TIMEOUT_MS + 1)
+      })
+      await mapMounted()
+
+      expect(Object.keys(lastMap().options.style.sources).sort()).toEqual(
+        [WORLD_LAND_SOURCE_ID, GRATICULE_SOURCE_ID].sort(),
+      )
+      expect(screen.getByTestId('basemap').textContent).toBe('unavailable')
+      expect(screen.getByText('Basemap unavailable')).toBeDefined()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('bounds the whole start-up, not only the window after construction', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      // A request that ignores its own abort signal never lets construction
+      // happen at all, so a clock armed after construction would never run.
+      serveNever()
+      const { container } = render(<MapCanvas label="Trip map" />)
+      await waitFor(() => {
+        expect(screen.getByRole('status').textContent).toContain('Loading map')
+      })
+
+      await act(async () => {
+        vi.advanceTimersByTime(MAP_ENGINE_TIMEOUT_MS + 1)
+      })
+
+      expect(harness.maps).toHaveLength(0)
+      expect(screen.getByText('The map has not drawn yet')).toBeDefined()
+      expect(screen.queryByText('Loading map')).toBeNull()
+      expect(readyMarker(container)).toBe('true')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('credits the outlines it is really drawing when there is no archive', async () => {
+    serveNothing()
+    render(
+      <MapCanvas label="Trip map">
+        <MapAttribution />
+      </MapCanvas>,
+    )
+    await mapMounted()
+
+    // The world on screen came from the bundled Natural Earth outlines. Naming
+    // OpenStreetMap beside a notice that says the basemap is unavailable would
+    // credit a source the reader cannot see.
+    expect(
+      await screen.findByRole('link', { name: 'Natural Earth' }),
+    ).toBeDefined()
+    expect(screen.queryByRole('link', { name: 'OpenStreetMap' })).toBeNull()
+  })
+
+  it('carries that credit inside the notice, never as a pill behind it', async () => {
+    serveNothing()
+    render(
+      <MapCanvas label="Trip map">
+        {/* Where the planner puts its credit: the same bottom-centre lane the
+            notice claims. Two independently positioned elements there leave the
+            pill behind the panel with a few pixels of itself showing. */}
+        <MapAttribution className="right-auto bottom-10 left-1/2 -translate-x-1/2" />
+      </MapCanvas>,
+    )
+    await mapMounted()
+
+    const credits = await screen.findAllByRole('link', {
+      name: 'Natural Earth',
+    })
+    expect(credits).toHaveLength(1)
+
+    const notice = screen
+      .getByText('Basemap unavailable')
+      .closest('[role="status"]')
+    expect(notice).not.toBeNull()
+    expect(notice?.contains(credits[0] ?? null)).toBe(true)
+  })
+
+  it('stands its own credit down when the screen places one itself', async () => {
+    serveArchive()
+    render(
+      <MapCanvas label="Trip map">
+        <MapAttribution className="left-1/2" />
+      </MapCanvas>,
+    )
+    await mapMounted()
+
+    // One map, one credit — a duplicate is invisible when the second sits behind
+    // a rail, and read out twice by a screen reader either way.
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole('link', { name: 'OpenStreetMap' }),
+      ).toHaveLength(1)
+    })
+  })
+
+  it('keeps its notice out of the edge a screen says its chrome covers', async () => {
+    serveNothing()
+    // What the planner declares on a phone: an action bar and a credit floating
+    // over the bottom 132px of the map. A notice posted at its designed 16px
+    // gutter would have its retry button underneath both.
+    const { rerender } = render(
+      <MapCanvas label="Trip map" padding={{ bottom: 132 }} />,
+    )
+    await mapMounted()
+
+    const notice = (await screen.findByText('Basemap unavailable')).closest<
+      HTMLElement
+    >('[role="status"]')
+    expect(notice?.style.bottom).toBe('132px')
+
+    // A screen that declares nothing gets the designed position, from the class
+    // rather than from an inline override.
+    rerender(<MapCanvas label="Trip map" />)
+    expect(notice?.style.bottom).toBe('')
   })
 
   it('removes the map on unmount, leaving nothing running', async () => {

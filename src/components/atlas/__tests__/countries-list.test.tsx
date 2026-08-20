@@ -63,6 +63,21 @@ const options = (): Array<HTMLElement> => screen.getAllByRole('option')
 const names = (): Array<string | null> =>
   options().map((option) => option.getAttribute('data-country'))
 
+/**
+ * Selection is announced through a pair of alternating live regions, so that
+ * re-choosing the country already selected is still spoken. Exactly one of them
+ * ever holds text, so the sentence is their concatenation.
+ */
+const announcement = (): string =>
+  screen
+    .getAllByRole('status')
+    .map((region) => region.textContent)
+    .join('')
+
+/** Which of the pair is currently carrying the sentence. */
+const announcementSlot = (): number =>
+  screen.getAllByRole('status').findIndex((region) => region.textContent !== '')
+
 describe('CountriesList rows', () => {
   it('states the whole record: flag, name, continent, both ends and the tally', () => {
     render(<CountriesList countries={[FRANCE]} />)
@@ -190,6 +205,18 @@ describe('CountriesList rows', () => {
     )
     expect(code?.className).toContain('tabular-nums')
   })
+
+  it('gives a four-figure tally room rather than a fixed column to overflow', () => {
+    const { container } = render(
+      <CountriesList countries={[{ ...FRANCE, visitCount: 1234 }]} />,
+    )
+    const count = container.querySelector('[data-part="count"]')
+
+    expect(count?.firstElementChild?.textContent).toBe('1,234')
+    expect(count?.className).toContain('min-w-11')
+    expect(count?.className.split(' ')).not.toContain('w-11')
+    expect(screen.getByRole('option', { name: /1,234 visits/ })).toBeTruthy()
+  })
 })
 
 describe('a country the bundled geometry cannot draw', () => {
@@ -207,14 +234,14 @@ describe('a country the bundled geometry cannot draw', () => {
 
   it('repeats it out loud when the row is selected', () => {
     render(<CountriesList countries={ALL} selectedCode="SG" />)
-    expect(screen.getByRole('status').textContent).toBe(
+    expect(announcement()).toBe(
       'Singapore selected. Too small to outline at world scale, so there is nothing to frame on the map.',
     )
   })
 
   it('says nothing about the map for a country that has an outline', () => {
     render(<CountriesList countries={ALL} selectedCode="FR" />)
-    expect(screen.getByRole('status').textContent).toBe('France selected.')
+    expect(announcement()).toBe('France selected.')
   })
 })
 
@@ -309,6 +336,60 @@ describe('selection', () => {
     const selected = screen.getByRole('option', { name: /Japan/ })
     const unselected = screen.getByRole('option', { name: /France/ })
     expect(geometry(selected)).toEqual(geometry(unselected))
+  })
+
+  it('keeps hover and press apart on a selected row as well as an idle one', () => {
+    render(<CountriesList countries={ALL} selectedCode="JP" />)
+
+    const wash = (option: HTMLElement): string =>
+      option.firstElementChild?.className ?? ''
+    const selected = screen.getByRole('option', { name: /Japan/ })
+    const unselected = screen.getByRole('option', { name: /France/ })
+
+    // The ground carries selection; the wash above it carries the pointer, so
+    // hover and active never resolve to the same paint in either state.
+    expect(selected.className).toContain('bg-brand-subtle')
+    expect(unselected.className).not.toContain('bg-brand-subtle')
+    for (const option of [selected, unselected]) {
+      expect(wash(option)).toContain('group-hover:bg-hover')
+      expect(wash(option)).toContain('group-active:bg-active')
+    }
+  })
+
+  it('renders a padded, lower-case code as the selected row', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    render(
+      <CountriesList
+        countries={[{ ...JAPAN, countryCode: ' jp ' }, FRANCE]}
+        selectedCode=" Jp "
+        onSelect={onSelect}
+      />,
+    )
+
+    const row = screen.getByRole('option', { name: /Japan/ })
+    expect(row.getAttribute('data-country')).toBe('JP')
+    expect(row.getAttribute('aria-selected')).toBe('true')
+    expect(announcement()).toBe('Japan selected.')
+
+    // …and it reports the one normalised form a map can look up.
+    await user.click(row)
+    expect(onSelect).toHaveBeenCalledWith('JP')
+  })
+
+  it('speaks again when the country already selected is chosen again', async () => {
+    const user = userEvent.setup()
+    render(<CountriesList countries={ALL} selectedCode="FR" />)
+
+    const before = announcementSlot()
+    expect(announcement()).toBe('France selected.')
+
+    await user.click(screen.getByRole('option', { name: /France/ }))
+
+    // Same sentence, other region: a live region that is written the same text
+    // it already holds says nothing at all.
+    expect(announcement()).toBe('France selected.')
+    expect(announcementSlot()).not.toBe(before)
   })
 })
 
@@ -519,6 +600,7 @@ describe('CountriesListSkeleton', () => {
           (name) =>
             !name.startsWith('animate-') &&
             !name.startsWith('cursor-') &&
+            name !== 'group' &&
             !name.startsWith('transition-') &&
             !name.startsWith('duration-') &&
             !name.startsWith('ease-') &&
@@ -532,13 +614,52 @@ describe('CountriesListSkeleton', () => {
 
   it('strikes each bar inside a real line box of the real type style', () => {
     const { container } = render(<CountriesListSkeleton rows={1} />)
-    const struts = [...container.querySelectorAll('span.relative')]
+    const struts = [...container.querySelectorAll('[data-part="bar"]')]
 
     expect(struts.length).toBeGreaterThan(0)
     for (const strut of struts) {
       expect(strut.textContent).toBe(' ')
       expect(strut.className).toMatch(/text-(label|caption|micro|subtitle)/)
     }
+  })
+
+  it('nests no block element inside a phrasing one', () => {
+    const { container } = render(<CountriesListSkeleton rows={2} />)
+    expect(container.querySelectorAll('span div')).toHaveLength(0)
+    expect(container.querySelectorAll('span p, span ul, span li')).toHaveLength(
+      0,
+    )
+  })
+
+  /**
+   * The reserved date block is the one part of a row whose size depends on the
+   * data, because eight of our twelve seeded countries were visited once. Both
+   * shapes have to occupy the same box, or the majority row drops the page by a
+   * line the moment the read lands.
+   */
+  it('reserves the date block one cell and two cells alike', () => {
+    const loading = render(<CountriesListSkeleton rows={1} />).container
+    const single = render(<CountriesList countries={[AUSTRIA]} />).container
+    const ranged = render(<CountriesList countries={[FRANCE]} />).container
+
+    const dates = (root: HTMLElement): Element | null =>
+      root.querySelector('[data-part="dates"]')
+    const cellClass = (root: HTMLElement): string | undefined =>
+      dates(root)?.firstElementChild?.className
+
+    // Two columns below `md`, so one cell and two cells alike are one line of
+    // labels above one line of values…
+    expect(dates(single)?.className).toContain('grid-cols-2')
+    expect(dates(single)?.className).toBe(dates(ranged)?.className)
+    expect(dates(loading)?.className).toBe(dates(single)?.className)
+
+    // …each cell stacking its own pair rather than sharing a row with them…
+    expect(cellClass(ranged)).toContain('flex-col')
+    expect(cellClass(loading)).toBe(cellClass(ranged))
+
+    // …and the lone cell of a single-visit country taking both columns, so its
+    // heading and its date each stay on one line.
+    expect(cellClass(single)).toBe(`${cellClass(ranged) ?? ''} col-span-2`)
   })
 })
 

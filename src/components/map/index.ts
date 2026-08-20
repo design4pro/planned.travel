@@ -88,6 +88,7 @@ export {
   VisitedCountries,
   VISITED_COUNTRY_LAYER_IDS,
   VISITED_COUNTRY_SOURCE_ID,
+  VISITED_COUNTRY_ZOOM,
 } from './visited-countries'
 export type { VisitedCountriesProps } from './visited-countries'
 
@@ -110,7 +111,7 @@ export type {
 /* ----------------------------------------------------------------- data shapes */
 export { CategoryIcon, categoryIcon } from './category-icon'
 export type { CategoryIconProps } from './category-icon'
-export type { MapCategory, MapPlace, VisitedCountry } from './types'
+export type { MapCategory, MapPlace, MapVisitedCountry } from './types'
 
 /* ------------------------------------------------------------------ map logic */
 export * from '#/lib/map'

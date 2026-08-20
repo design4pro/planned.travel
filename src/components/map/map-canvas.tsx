@@ -1,8 +1,8 @@
 /**
  * The base map.
  *
- * Four things make this component more than a `new maplibregl.Map()` wrapper, and
- * each of them is a bug the planner screen would otherwise hit:
+ * Five things make this component more than a `new maplibregl.Map()` wrapper, and
+ * each of them is a bug the screens above it would otherwise hit:
  *
  * 1. **SSR safety.** `maplibre-gl` touches `window` while it initialises, so it
  *    is imported dynamically inside an effect. Nothing in the render path — or in
@@ -13,21 +13,24 @@
  *    of remounting and refetching.
  * 3. **Graceful degradation, twice over.** The archive is probed once before the
  *    map is created, and the probe reads its header rather than just its first
- *    bytes. When there is no archive the map is built on the graticule style and
- *    the reader is told. When there *is* one but it was cut to a region — which
- *    ours is — the vector style gets our own sea, coastlines and graticule
- *    underneath it, so the world outside the cut is still a map. Either way the
- *    camera works and every pin sits at its true coordinate; the reader is never
- *    shown a grey void and left to interpret it.
+ *    bytes. With no archive the map is built on `fallbackStyle`, which draws the
+ *    whole planet — sea, land and coastline — from the outlines bundled with the
+ *    app, and the reader is told the street detail is missing. When there *is* an
+ *    archive but it was cut to a region — which ours is — the vector style gets
+ *    that same ground underneath it, so the world outside the cut is still a map.
+ *    Either way the camera works and every pin sits at its true coordinate; the
+ *    reader is never shown a grey void and left to interpret it.
  * 4. **Real cleanup.** `map.remove()` on unmount, every listener attached to the
  *    map it belongs to, and an in-flight dynamic import that cannot resurrect a
  *    disposed component.
  * 5. **An honest answer when the renderer itself never starts.** MapLibre needs a
- *    WebGL2 context; a browser that cannot give it one gets no map, no `load`
- *    event, and — without the probe below — a spinner that turns forever. That is
- *    a *different* failure from a missing archive, it is reported separately as
+ *    WebGL2 context; a browser that cannot give it one gets no map, no frame, and
+ *    — without the probe below — a spinner that turns forever. That is a
+ *    *different* failure from a missing archive, it is reported separately as
  *    {@link MapContextValue.engine}, and it is the one case where the map is
- *    replaced rather than degraded.
+ *    replaced rather than degraded. Every other way of never drawing is caught by
+ *    one clock, started when the surface mounts so that it covers the WebGL2
+ *    probe, both dynamic imports, the archive probe and the construction itself.
  */
 
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -45,7 +48,11 @@ import {
   resetBasemapAvailability,
 } from '#/lib/map/pmtiles'
 import { boundsToTuple, clampPadding, resolvePadding } from '#/lib/map/bounds'
-import { MAP_ENGINE_TIMEOUT_MS, MapProvider } from './map-context'
+import {
+  AttributionSlotProvider,
+  MAP_ENGINE_TIMEOUT_MS,
+  MapProvider,
+} from './map-context'
 import { BasemapNotice, MapEngineNotice } from './basemap-notice'
 import { MapAttribution } from './map-attribution'
 
@@ -66,6 +73,31 @@ export const MAP_MIN_ZOOM = 1.2
 
 /** Zoom ceiling, one step past the archive's own detail. */
 export const MAP_MAX_ZOOM = 19
+
+/**
+ * The bottom inset the canvas's own notice is designed at, in the pixels
+ * {@link MapCanvasProps.padding} speaks — `bottom-4`, the same 16px gutter the
+ * rest of the map chrome sits on.
+ *
+ * The notice only ever moves *up* from here, and only when a screen has declared
+ * that more of the bottom edge is covered. A screen that declares nothing gets
+ * the designed position.
+ */
+const NOTICE_INSET = 16
+
+/**
+ * How long the archive probe gets before the map is built without it.
+ *
+ * The probe is one ranged `GET` against our own tile route, and its answer
+ * decides which style the map is created with — so a request that hangs holds up
+ * the map itself. A tiles endpoint that never answers is a *worse* failure than
+ * one that 404s, and it deserves the same treatment: give up, build the map on
+ * the bundled outlines, and say the basemap is unavailable.
+ *
+ * Deliberately shorter than {@link MAP_ENGINE_TIMEOUT_MS}, so a hung endpoint
+ * degrades to a drawn world rather than to "the map has not drawn yet".
+ */
+export const MAP_ARCHIVE_PROBE_TIMEOUT_MS = 4000
 
 export interface MapCanvasProps {
   /**
@@ -173,6 +205,36 @@ function webgl2Refused(): boolean {
 }
 
 /**
+ * Asks whether the archive is there, with a deadline.
+ *
+ * {@link basemapAvailability} never rejects — a failed probe is one of its
+ * answers — but it will wait as long as the network makes it wait, and the map
+ * cannot be created until it answers. So the request gets its own controller:
+ * the caller's lifetime aborts it on unmount, and
+ * {@link MAP_ARCHIVE_PROBE_TIMEOUT_MS} aborts it when the endpoint has had long
+ * enough. An aborted probe reports `network`, which is not memoised, so the
+ * retry affordance can genuinely re-ask.
+ */
+async function probeArchive(
+  lifetime: AbortSignal,
+): Promise<PmtilesHeader | null> {
+  const attempt = new AbortController()
+  const giveUp = (): void => {
+    attempt.abort()
+  }
+  lifetime.addEventListener('abort', giveUp, { once: true })
+  const deadline = setTimeout(giveUp, MAP_ARCHIVE_PROBE_TIMEOUT_MS)
+
+  try {
+    const probe = await basemapAvailability({ signal: attempt.signal })
+    return probe.status === 'available' ? probe.header : null
+  } finally {
+    clearTimeout(deadline)
+    lifetime.removeEventListener('abort', giveUp)
+  }
+}
+
+/**
  * Identity of the style document currently applied.
  *
  * Three inputs decide it: the theme, whether there is an archive, and whether that
@@ -275,14 +337,44 @@ export function MapCanvas({
     // the compiler and every later check is then treated as dead code.
     const disposed = (): boolean => lifetime.signal.aborted
     let created: MapLibreMap | null = null
+    /** Whether the renderer has answered — by painting, or by refusing to. */
+    let engineAnswered = false
 
-    let stallTimer: ReturnType<typeof setTimeout> | null = null
+    // One clock for the whole start-up, armed here rather than after
+    // construction: the WebGL2 probe, the two dynamic imports and the archive
+    // probe all run first, and a hang in any of them used to be unbounded.
+    let stallTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      stallTimer = null
+      if (disposed() || engineAnswered) return
+      setEngine('stalled')
+    }, MAP_ENGINE_TIMEOUT_MS)
+
+    /**
+     * Answers the stall question for good, and stops the clock.
+     *
+     * The flag is what the timer reads, and it is set even when the component
+     * has gone: a disposed effect must not leave a clock that reports a failure
+     * about a map nobody is looking at.
+     */
+    const resolveEngine = (status: MapEngineStatus): void => {
+      engineAnswered = true
+      if (stallTimer !== null) {
+        clearTimeout(stallTimer)
+        stallTimer = null
+      }
+      if (disposed()) return
+      setEngine(status)
+    }
 
     const bootstrap = async (): Promise<void> => {
       // Before the dynamic import and before the archive probe: with no context
       // to render into, neither would ever be looked at.
       if (webgl2Refused()) {
-        setEngine('unsupported')
+        resolveEngine('unsupported')
+        // Nothing will be drawn, so nothing is showing a basemap. Left on
+        // `loading` a consumer would wait on a probe that is never going to be
+        // made — the same forever-spinner this branch exists to end.
+        setBasemap('unavailable')
         return
       }
 
@@ -298,10 +390,9 @@ export function MapCanvas({
       module.setWorkerUrl(worker.MAPLIBRE_WORKER_URL)
       setGl(module)
 
-      const probe = await basemapAvailability({ signal: lifetime.signal })
+      const header = await probeArchive(lifetime.signal)
       if (disposed()) return
 
-      const header = probe.status === 'available' ? probe.header : null
       const activeTheme = themeRef.current
       setBasemap(header === null ? 'unavailable' : 'available')
       setArchive(header)
@@ -373,19 +464,47 @@ export function MapCanvas({
 
       let loaded = false
 
-      stallTimer = setTimeout(() => {
-        if (disposed() || loaded) return
-        setEngine('stalled')
-      }, MAP_ENGINE_TIMEOUT_MS)
+      // The renderer's own statement that it exists: `render` fires once per
+      // painted frame, from the first one — long before `load`, which waits for
+      // every tile in view. A map with a WebGL2 context it cannot use never
+      // reaches either, which is precisely what the clock above is for.
+      const onFirstFrame = (): void => {
+        instance.off('render', onFirstFrame)
+        resolveEngine('running')
+      }
+      instance.on('render', onFirstFrame)
 
       instance.on('load', () => {
         loaded = true
-        if (stallTimer !== null) clearTimeout(stallTimer)
+        // A late `load` after a stall is a recovery: the frames arrived after
+        // all, so the notice comes down.
+        resolveEngine('running')
         if (disposed()) return
         setReady(true)
-        setEngine('running')
         onMapReadyRef.current?.(instance)
       })
+
+      /**
+       * The readiness marker, latched on the map's own statement that it has
+       * finished — see the `data-map-ready` attribute below.
+       *
+       * Subscribed here, in the same synchronous block as the constructor,
+       * rather than from an effect that reads the map out of state. `idle` is
+       * fired from inside MapLibre's render loop, which runs on a later frame:
+       * an effect one commit behind can miss it, and a marker that then waits
+       * for a *second* `idle` on a map that has stopped moving waits forever.
+       * Registering before the first frame closes that window completely.
+       *
+       * Removed on its first call, so the marker is written exactly once and
+       * every later pan — which settles into another `idle` — cannot make it
+       * flicker.
+       */
+      const onIdle = (): void => {
+        instance.off('idle', onIdle)
+        if (disposed()) return
+        setSettled(true)
+      }
+      instance.on('idle', onIdle)
 
       // Every style swap invalidates runtime-added sources and layers. The
       // counter lets consumers re-add theirs without watching MapLibre events.
@@ -408,7 +527,14 @@ export function MapCanvas({
       setMap(instance)
     }
 
-    void bootstrap()
+    void bootstrap().catch(() => {
+      // A chunk that never arrived, or a MapLibre that threw out of its own
+      // constructor: either way nothing was created and nothing will draw.
+      // Reported through the same state as any other renderer that never
+      // started — and caught rather than left to reject, because an unhandled
+      // rejection is a stack trace in the console that no reader can act on.
+      resolveEngine('stalled')
+    })
 
     return () => {
       lifetime.abort()
@@ -438,30 +564,21 @@ export function MapCanvas({
   /* ----------------------------------------------------------- readiness */
 
   /**
-   * The marker a screenshot can wait on.
+   * The other half of the readiness marker: a renderer that will never draw.
    *
-   * `idle` is MapLibre's own statement that it has finished: the style is
-   * loaded, every tile in view has arrived, and no transition is running. It
-   * fires again after every later pan, so the flag is latched — a marker that
-   * flickered off during a camera move would be worse than no marker at all.
-   * The two renderer failures latch it too: nothing further will ever be drawn,
-   * so the screen is as settled as it is ever going to be.
+   * The `idle` path is subscribed at construction, above, because an event
+   * cannot be listened for in the past. This is the case with no map to listen
+   * to at all — no WebGL2 context, or nothing painted inside the start-up
+   * clock. Nothing further is ever coming, so the screen is as settled as it is
+   * ever going to be, and a gate that kept waiting would wait out its own
+   * timeout on a frame that is already final.
    */
   React.useEffect(() => {
     if (settled) return
     if (engine === 'unsupported' || engine === 'stalled') {
       setSettled(true)
-      return
     }
-    if (map === null) return
-    const onIdle = (): void => {
-      setSettled(true)
-    }
-    map.on('idle', onIdle)
-    return () => {
-      map.off('idle', onIdle)
-    }
-  }, [engine, map, settled])
+  }, [engine, settled])
 
   /* ------------------------------------------------------------- zoom range */
 
@@ -487,16 +604,29 @@ export function MapCanvas({
 
   React.useEffect(() => {
     if (probeToken === 0) return
-    let cancelled = false
-    void basemapAvailability().then((probe) => {
-      if (cancelled) return
-      setArchive(probe.status === 'available' ? probe.header : null)
-      setBasemap(probe.status === 'available' ? 'available' : 'unavailable')
+    const lifetime = new AbortController()
+    void probeArchive(lifetime.signal).then((header) => {
+      if (lifetime.signal.aborted) return
+      setArchive(header)
+      setBasemap(header === null ? 'unavailable' : 'available')
     })
     return () => {
-      cancelled = true
+      lifetime.abort()
     }
   }, [probeToken])
+
+  /**
+   * How many children have placed their own credit.
+   *
+   * A map owes exactly one attribution, and a screen that wants it somewhere
+   * other than the bottom-right corner — the planner does, because that corner
+   * is under a rail — places its own. This is how the default below knows to
+   * stand down instead of doubling it up in the accessibility tree.
+   */
+  const [creditsPlaced, setCreditsPlaced] = React.useState(0)
+  const claimCredit = React.useCallback((delta: 1 | -1) => {
+    setCreditsPlaced((current) => current + delta)
+  }, [])
 
   const retryBasemap = React.useCallback(() => {
     resetBasemapAvailability()
@@ -517,20 +647,27 @@ export function MapCanvas({
       styleEpoch,
       retryBasemap,
     }),
-    [
-      map,
-      gl,
-      ready,
-      basemap,
-      engine,
-      archive,
-      theme,
-      styleEpoch,
-      retryBasemap,
-    ],
+    [map, gl, ready, basemap, engine, archive, theme, styleEpoch, retryBasemap],
   )
 
   const engineFailed = engine === 'unsupported' || engine === 'stalled'
+
+  /**
+   * Where the canvas may post its own notice without it being buried.
+   *
+   * The screen above floats its chrome over the map — rails, an action bar, a
+   * credit it has moved — and it has already said how much of each edge that
+   * chrome covers, because the camera needs the very same numbers to fit a trip
+   * into what is actually visible. Reusing that declaration is what keeps the
+   * "basemap unavailable" panel, and the retry button inside it, out from under a
+   * bar the map cannot see. Nothing to keep clear leaves the panel exactly where
+   * it is designed to sit.
+   */
+  const noticeStyle = React.useMemo<React.CSSProperties | undefined>(() => {
+    const declared = padding?.bottom
+    if (declared === undefined || declared <= NOTICE_INSET) return undefined
+    return { bottom: `${declared}px` }
+  }, [padding?.bottom])
 
   return (
     <div
@@ -582,7 +719,9 @@ export function MapCanvas({
             the hydrating tree, which React reports as a mismatch and recovers
             from by discarding the whole map. Mounting them on the commit after
             the map is created keeps server and client output identical. */}
-        {map === null ? null : children}
+        <AttributionSlotProvider value={claimCredit}>
+          {map === null ? null : children}
+        </AttributionSlotProvider>
         {engine === 'unsupported' || engine === 'stalled' ? (
           // Replaces the spinner rather than joining it: nothing further is
           // coming, and a spinner that never stops is a lie.
@@ -595,9 +734,16 @@ export function MapCanvas({
           <BasemapNotice
             onRetry={retryBasemap}
             retrying={basemap === 'loading'}
+            style={noticeStyle}
           />
         ) : null}
-        {basemap === 'available' ? <MapAttribution /> : null}
+        {basemap === 'available' && creditsPlaced === 0 ? (
+          // Outside the slot provider, so the default cannot claim the slot it
+          // is watching. Guarded on the archive as well, because the credit for
+          // the fallback world is carried by the notice above rather than by a
+          // second pill stacked behind it — see `BasemapNotice`.
+          <MapAttribution />
+        ) : null}
       </MapProvider>
     </div>
   )

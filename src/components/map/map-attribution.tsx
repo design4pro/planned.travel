@@ -3,53 +3,103 @@ import * as React from 'react'
 import { cn } from '#/lib/cn'
 import { MAP_ATTRIBUTION } from '#/lib/map/style'
 import { focusRing } from '#/components/ui'
+import { useAttributionSlot, useMapContext } from './map-context'
+
+import type { MapCredit } from '#/lib/map/style'
+
+export interface MapCreditListProps {
+  readonly credits: ReadonlyArray<MapCredit>
+}
+
+/**
+ * The credit links themselves, with nothing around them.
+ *
+ * Inline elements only, so this drops into a sentence as readily as into the
+ * pill below — and it exists precisely so there is one implementation of "a
+ * credit link" rather than one per surface that owes a credit. The two surfaces
+ * are the pill, which credits the tiles, and the "basemap unavailable" panel,
+ * which credits the outlines it is drawing in their place.
+ */
+export function MapCreditList({ credits }: MapCreditListProps) {
+  return (
+    <>
+      {credits.map((entry, index) => (
+        <React.Fragment key={entry.href}>
+          {index > 0 ? (
+            // Spaced with a margin rather than by the parent's `gap`, so the
+            // separator reads the same in a flex pill and inside a sentence.
+            <span aria-hidden="true" className="mx-1 text-ink-4">
+              ·
+            </span>
+          ) : null}
+          <a
+            href={entry.href}
+            target="_blank"
+            rel="noreferrer"
+            className={cn(
+              'pointer-events-auto rounded-sm underline decoration-edge-strong underline-offset-2',
+              'transition-colors duration-fast ease-out-quint hover:text-ink hover:decoration-ink-3',
+              focusRing,
+            )}
+          >
+            {entry.label}
+          </a>
+        </React.Fragment>
+      ))}
+    </>
+  )
+}
 
 export type MapAttributionProps = React.ComponentPropsWithoutRef<'div'>
 
 /**
- * Data credit for the basemap.
+ * Data credit for the vector basemap.
  *
  * MapLibre ships its own attribution control, but it comes with its own white
  * pill, its own blue links and its own type — three things that read as a
  * third-party widget bolted onto the product. This is the same obligation
  * discharged in our own palette, at our own type scale, in both themes, with real
  * links that are reachable by keyboard.
+ *
+ * The credit follows the data, and with no archive there is no tile data: every
+ * line on screen then comes from the outlines bundled with the app. Crediting
+ * OpenStreetMap there would name a source the reader cannot see, so the pill
+ * stands down entirely — and the credit for what *is* drawn travels with
+ * `BasemapNotice`, the panel that explains it. That is not a credit lost: the
+ * canvas renders that panel for exactly as long as the archive is missing, so
+ * the outlines are named once, in the one place a reader is already looking,
+ * and never as a second pill stacked behind the panel where nobody can read it.
+ *
+ * Placing one of these inside a `MapCanvas` also takes the map's single credit
+ * slot, so the canvas stands its own default copy down rather than leaving a
+ * screen reader to read the same credit twice.
  */
 export const MapAttribution = React.forwardRef<
   HTMLDivElement,
   MapAttributionProps
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      'pointer-events-none absolute right-2 bottom-2 z-dropdown flex items-center gap-1',
-      'rounded-full bg-glass px-2.5 py-1 text-caption text-ink-3 ring-1 ring-glass-edge ring-inset backdrop-glass',
-      className,
-    )}
-    {...props}
-  >
-    <span className="sr-only">Map data from</span>
-    {MAP_ATTRIBUTION.map((entry, index) => (
-      <React.Fragment key={entry.href}>
-        {index > 0 ? (
-          <span aria-hidden="true" className="text-ink-4">
-            ·
-          </span>
-        ) : null}
-        <a
-          href={entry.href}
-          target="_blank"
-          rel="noreferrer"
-          className={cn(
-            'pointer-events-auto rounded-sm underline decoration-edge-strong underline-offset-2',
-            'transition-colors duration-fast ease-out-quint hover:text-ink hover:decoration-ink-3',
-            focusRing,
-          )}
-        >
-          {entry.label}
-        </a>
-      </React.Fragment>
-    ))}
-  </div>
-))
+>(({ className, ...props }, ref) => {
+  const { basemap } = useMapContext()
+  useAttributionSlot()
+
+  // Only a confirmed archive earns the tile credit. `loading` is reachable
+  // exactly once — while a retry from `unavailable` is in flight — and there the
+  // bundled outlines are still the thing being drawn, still credited by the
+  // notice that is still on screen.
+  if (basemap !== 'available') return null
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'pointer-events-none absolute right-2 bottom-2 z-map-overlay flex items-center',
+        'rounded-full bg-glass px-2.5 py-1 text-caption text-ink-3 ring-1 ring-glass-edge ring-inset backdrop-glass',
+        className,
+      )}
+      {...props}
+    >
+      <span className="sr-only">Map data from</span>
+      <MapCreditList credits={MAP_ATTRIBUTION} />
+    </div>
+  )
+})
 MapAttribution.displayName = 'MapAttribution'

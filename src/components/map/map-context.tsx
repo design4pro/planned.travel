@@ -37,18 +37,31 @@ export type BasemapStatus = 'loading' | 'available' | 'unavailable'
  * that never arrives. Then there is no canvas content at all, and a consumer has
  * to put something else on the screen rather than wait forever on a spinner.
  *
- * - `starting` — probing, importing, or waiting for the first `load`.
- * - `running` — the style loaded and the canvas is drawing.
+ * - `starting` — probing, importing, or waiting for the renderer's first frame.
+ * - `running` — the renderer has painted at least one frame.
  * - `unsupported` — this browser cannot give us a WebGL2 context, so no map was
  *   created at all.
- * - `stalled` — the map was created but nothing drew inside
- *   {@link MAP_ENGINE_TIMEOUT_MS}. Recoverable: it flips to `running` if a late
- *   `load` arrives.
+ * - `stalled` — nothing was painted within {@link MAP_ENGINE_TIMEOUT_MS} of the
+ *   surface mounting. Recoverable: it flips to `running` the moment a frame
+ *   arrives.
+ *
+ * `running` is deliberately the *first painted frame* rather than MapLibre's
+ * `load`. `load` waits for every tile in view, so a working map on a slow
+ * connection reaches it late — and timing the failure against it would tell a
+ * reader whose world is already on screen that nothing ever drew. Whether the
+ * style has finished, which is what a consumer adding layers needs, is
+ * {@link MapContextValue.ready}.
  */
 export type MapEngineStatus = 'starting' | 'running' | 'unsupported' | 'stalled'
 
 /**
- * How long a created map has to draw something before it is reported `stalled`.
+ * How long the whole start-up has to paint one frame before it is reported
+ * `stalled`.
+ *
+ * Measured from the moment the surface mounts, so it covers every step that can
+ * hang: the WebGL2 probe, the two dynamic imports, the archive probe and the
+ * construction of the map itself. A clock started only after construction leaves
+ * the slowest of those uncovered, which is a spinner that turns forever.
  *
  * Long enough that a cold worker start and a first tile fetch on a slow
  * connection are not called a failure; short enough that a reader is not left
@@ -114,6 +127,47 @@ export function useMapContext(): MapContextValue {
 /** The map instance, or `null` while it is still coming up. */
 export function useMapInstance(): MapLibreMap | null {
   return React.useContext(MapContext).map
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The credit slot
+ * ---------------------------------------------------------------------------------------------- */
+
+/** Registers or releases one consumer-placed credit. */
+type AttributionClaim = (delta: 1 | -1) => void
+
+const AttributionSlot = React.createContext<AttributionClaim | null>(null)
+
+/**
+ * Handed to a map surface's children so their own credit can take the slot.
+ *
+ * A map owes exactly one attribution, and two parties want to place it: the
+ * canvas, which is the only thing that knows *which* data is on screen, and the
+ * screen, which is the only thing that knows where the credit will not be buried
+ * under a rail. Both placing one leaves the reader with a duplicate — invisible
+ * when the second sits behind an opaque panel, but read out twice by a screen
+ * reader either way. The canvas therefore keeps its default and stands it down
+ * as soon as a child claims the slot.
+ */
+export const AttributionSlotProvider = AttributionSlot.Provider
+
+/**
+ * Claims the map's single credit slot for as long as the caller is mounted.
+ *
+ * A no-op outside a map surface, so `MapAttribution` stays usable on its own —
+ * and a no-op for the canvas's own default, which is rendered outside the
+ * provider precisely so it cannot claim the slot it is watching.
+ */
+export function useAttributionSlot(): void {
+  const claim = React.useContext(AttributionSlot)
+
+  React.useEffect(() => {
+    if (claim === null) return
+    claim(1)
+    return () => {
+      claim(-1)
+    }
+  }, [claim])
 }
 
 /**

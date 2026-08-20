@@ -46,8 +46,13 @@ export interface MapPlace extends Clusterable {
  * *last* visit; the first visit, the count and the note belong to the record the
  * reader opens, not to a polygon. Keeping the shape at two fields is what stops a
  * pointer move rebuilding a payload it never reads.
+ *
+ * Prefixed `Map`, like {@link MapPlace} and {@link MapCategory} beside it, because
+ * `VisitedCountry` is already the name of the D1 row in `src/server/db/types` and
+ * an atlas screen legitimately holds both: the rows it loaded and the projection
+ * it hands the map. One import, one name, no alias at the call site.
  */
-export interface VisitedCountry {
+export interface MapVisitedCountry {
   /** ISO 3166-1 alpha-2. Matched case-insensitively against the geometry. */
   readonly countryCode: string
   /** `YYYY-MM-DD`. `null` places the country on the middle stop of the ramp. */
