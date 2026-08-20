@@ -185,6 +185,37 @@ describe('CountriesList rows', () => {
     ).toBeTruthy()
   })
 
+  /**
+   * `continent` is validated by `shortTextSchema`, which trims but has no
+   * `.min(1)`, so a country marked visited with `continent: ''` stores an empty
+   * string. Treated as data it printed the separator with nothing after it -
+   * "FR ·" - and joined an empty segment into the row's accessible name, which a
+   * screen reader reads as a doubled comma.
+   */
+  it.each([
+    ['an empty string', ''],
+    ['whitespace only', '   '],
+  ])('treats %s as no continent at all', (_label, continent) => {
+    const { container } = render(
+      <CountriesList countries={[{ ...FRANCE, continent }]} />,
+    )
+    const row = screen.getByRole('option', { name: /France/ })
+
+    expect(screen.getByText('Continent not recorded')).toBeTruthy()
+    expect(row.getAttribute('aria-label')).toContain(
+      'France, continent not recorded',
+    )
+    expect(row.getAttribute('aria-label')).not.toContain(',,')
+    // The middot is decoration beside a value; it never stands on its own.
+    const meta = container.querySelector('[data-part="dates"]')?.previousSibling
+    expect(meta?.textContent?.trim().endsWith('·')).toBe(false)
+  })
+
+  it('trims a padded continent rather than printing the padding', () => {
+    render(<CountriesList countries={[{ ...FRANCE, continent: '  Europe  ' }]} />)
+    expect(screen.getByText('Europe')).toBeTruthy()
+  })
+
   it('marks every date and every count as tabular', () => {
     const { container } = render(<CountriesList countries={[FRANCE]} />)
 

@@ -31,7 +31,7 @@ describe('AtlasLegend', () => {
     expect(screen.getByText(`Within ${RECENT_WITHIN_YEARS} years`)).toBeTruthy()
     expect(
       screen.getByText(
-        `${RECENT_WITHIN_YEARS}–${DISTANT_AFTER_YEARS} years ago`,
+        `${RECENT_WITHIN_YEARS}–${DISTANT_AFTER_YEARS} years ago, or undated`,
       ),
     ).toBeTruthy()
     expect(
@@ -39,11 +39,24 @@ describe('AtlasLegend', () => {
     ).toBeTruthy()
   })
 
+  /**
+   * `visitRecency()` sends a country with no usable date to the middle stop as
+   * well as one visited two to eight years ago, and both readings are on the
+   * same swatch. A key that states only the date range leaves the reader to
+   * guess why an undated country is painted that shade.
+   */
+  it('states the middle stop’s second meaning', () => {
+    const { container } = render(<AtlasLegend />)
+    const middle = container.querySelector('[data-step="visited"]')
+
+    expect(middle?.textContent).toContain('undated')
+  })
+
   it('follows the thresholds when they are retuned', () => {
     render(<AtlasLegend recentWithinYears={3} distantAfterYears={12} />)
 
     expect(screen.getByText('Within 3 years')).toBeTruthy()
-    expect(screen.getByText('3–12 years ago')).toBeTruthy()
+    expect(screen.getByText('3–12 years ago, or undated')).toBeTruthy()
     expect(screen.getByText('Over 12 years ago')).toBeTruthy()
   })
 
@@ -78,11 +91,34 @@ describe('AtlasLegend', () => {
     }
   })
 
-  it('points at the text the map cannot carry', () => {
+  /**
+   * The footnote has to name something that is on screen. It read "under
+   * Countries" for a while and there is no section by that name: the record and
+   * the list that write out every date both live in the panel's Country tab.
+   */
+  it('points at a section the panel actually has', () => {
     render(<AtlasLegend />)
     expect(
-      screen.getByText(/every date is written out under Countries/i),
+      screen.getByText(/the Country tab writes out every date/i),
     ).toBeTruthy()
+    expect(screen.queryByText(/under Countries/i)).toBeNull()
+  })
+
+  /**
+   * The steps are a grid with a stated column count, not a row that wraps
+   * wherever the text runs out: the labels are set in a webfont that arrives
+   * after first paint, and a text-driven wrap point moved the key and everything
+   * under it about 300ms in. A grid wraps where the text cannot reach.
+   */
+  it('lays the steps out on a grid so a font swap cannot rewrap them', () => {
+    const { container } = render(<AtlasLegend />)
+    const list = container.querySelector('ul')
+
+    expect(list?.className).toContain('grid-cols-2')
+    expect(list?.className).toContain('sm:grid-cols-4')
+    expect(list?.className).not.toContain('flex-wrap')
+    // Safari drops the implicit list role from a grid `ul`, so it is stated.
+    expect(list?.getAttribute('role')).toBe('list')
   })
 
   /** Every fill comes from the country ramp tokens, never a literal colour. */

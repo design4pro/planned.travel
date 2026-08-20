@@ -21,7 +21,12 @@ import {
 import { cn } from '#/lib/cn'
 import { countryName } from '#/lib/atlas/country-names'
 import { UNRECORDED_VISIT_LABEL, visitSpan } from '#/lib/atlas/visit-span'
-import { countryFlag, formatNumber, humaniseToken } from '#/lib/format'
+import {
+  countryFlag,
+  formatNumber,
+  humaniseToken,
+  trimmedOrNull,
+} from '#/lib/format'
 
 import type { VisitSpan } from '#/lib/atlas/visit-span'
 
@@ -625,8 +630,17 @@ export const CountriesList = React.forwardRef<
             const cells = dateCells(
               visitSpan(row.firstVisitedOn, row.lastVisitedOn),
             )
-            const note =
-              row.note !== null && row.note.trim().length > 0 ? row.note : null
+            const note = trimmedOrNull(row.note)
+            /**
+             * The same trim guard the note uses, for the same reason.
+             *
+             * `continent` is validated by `shortTextSchema`, which has no
+             * `.min(1)`, so a country marked visited with `continent: ''` stores
+             * an empty string. A bare `!== null` check then printed the middot
+             * with nothing after it and joined an empty segment into the row's
+             * accessible name, which a screen reader reads as a doubled comma.
+             */
+            const region = trimmedOrNull(row.continent)
             const isSelected = index === selectedIndex
             const quiet = isSelected ? 'text-ink-2' : 'text-ink-3'
             const noteId = note === null ? undefined : `${baseId}-note-${code}`
@@ -647,9 +661,9 @@ export const CountriesList = React.forwardRef<
                   aria-selected={isSelected}
                   aria-label={[
                     name,
-                    row.continent === null
+                    region === null
                       ? 'continent not recorded'
-                      : humaniseToken(row.continent),
+                      : humaniseToken(region),
                     ...cells.map((cell) => `${cell.label} ${cell.value}`),
                     `${formatNumber(row.visitCount)} ${row.visitCount === 1 ? 'visit' : 'visits'}`,
                   ].join(', ')}
@@ -716,9 +730,9 @@ export const CountriesList = React.forwardRef<
                           &middot;
                         </span>
                         <span className="min-w-0 truncate">
-                          {row.continent === null
+                          {region === null
                             ? 'Continent not recorded'
-                            : humaniseToken(row.continent)}
+                            : humaniseToken(region)}
                         </span>
                       </span>
                     </span>

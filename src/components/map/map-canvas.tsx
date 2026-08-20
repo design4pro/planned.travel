@@ -86,6 +86,16 @@ export const MAP_MAX_ZOOM = 19
 const NOTICE_INSET = 16
 
 /**
+ * Half the engine notice's own height, at the widest copy it carries.
+ *
+ * Only used as the floor below which its centre cannot travel, so that the
+ * panel's top edge never crosses the inset a screen has declared. Measured
+ * rather than guessed: the "no WebGL2" copy is four lines at 320px, which with
+ * the panel's padding comes to 192px.
+ */
+const NOTICE_HALF_HEIGHT = 96
+
+/**
  * How long the archive probe gets before the map is built without it.
  *
  * The probe is one ranged `GET` against our own tile route, and its answer
@@ -669,6 +679,39 @@ export function MapCanvas({
     return { bottom: `${declared}px` }
   }, [padding?.bottom])
 
+  /**
+   * Where the *engine* notice goes, which is not the middle of the canvas.
+   *
+   * `MapEngineNotice` centres itself, and centring is right when the canvas is
+   * all there is. On a full-bleed screen it is not: the atlas floats a glass
+   * shelf across the bottom 400px of the map, and the geometric centre of the
+   * canvas is under it — so the one state where the map has nothing to show got
+   * its explanation half hidden behind the panel, last line first.
+   *
+   * The centre of the *unobstructed* box is the honest position, and the screen
+   * has already declared where that box is, for the camera. Both insets are
+   * accounted for rather than only the bottom one: lifting the panel off a
+   * covered footer would otherwise slide it under a search field on a phone,
+   * where the top edge is claimed too.
+   */
+  const engineNoticeStyle = React.useMemo<
+    React.CSSProperties | undefined
+  >(() => {
+    const top = padding?.top ?? 0
+    const bottom = padding?.bottom ?? 0
+    if (top <= NOTICE_INSET && bottom <= NOTICE_INSET) return undefined
+    // `50% + (top - bottom) / 2` is the midpoint of what the chrome leaves. The
+    // notice keeps its own `-translate-y-1/2`, so this positions its centre.
+    const centre = `calc(50% + ${Math.round((top - bottom) / 2)}px)`
+    // And a floor, for the case where the chrome leaves less room than the
+    // notice needs — a phone with the atlas drawer open has about 90px of clear
+    // map. Clamped this way the panel can only ever be pushed *down* from the
+    // top inset, so its first lines are always the readable ones; unclamped, a
+    // centre computed from a box smaller than the panel put its heading behind
+    // the search field.
+    return { top: `max(${top + NOTICE_HALF_HEIGHT}px, ${centre})` }
+  }, [padding?.top, padding?.bottom])
+
   return (
     <div
       // Published for a screenshot gate, which otherwise has no way to tell a
@@ -725,7 +768,7 @@ export function MapCanvas({
         {engine === 'unsupported' || engine === 'stalled' ? (
           // Replaces the spinner rather than joining it: nothing further is
           // coming, and a spinner that never stops is a lie.
-          <MapEngineNotice reason={engine} />
+          <MapEngineNotice reason={engine} style={engineNoticeStyle} />
         ) : null}
         {basemap !== 'available' && map !== null && !engineFailed ? (
           // Kept mounted while a retry is in flight, so pressing "Try again"

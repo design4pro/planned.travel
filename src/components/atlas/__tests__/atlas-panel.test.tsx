@@ -138,6 +138,41 @@ describe('sections', () => {
     await user.click(toggle)
     expect(onExpandedChange).toHaveBeenCalledWith(true)
   })
+
+  /**
+   * The header is a two-column grid below `lg` so the tab strip gets a row to
+   * itself. Beside the toggle it had 272px at 360 for three labelled tabs that
+   * want 330, and "Bucket list" overflowed its own trigger to within a pixel of
+   * the toggle. jsdom cannot measure that, but it can hold the arrangement that
+   * fixed it: the toggle on the first row's second column, the strip spanning
+   * both columns on the second.
+   */
+  it('gives the tab strip its own row on a phone', () => {
+    const { container } = panel({})
+    const header = container.querySelector('[data-part="panel-header"]')
+    const toggle = screen.getByRole('button', { name: 'Hide atlas details' })
+    const list = screen.getByRole('tablist')
+
+    expect(header?.className).toContain('grid-cols-[minmax(0,1fr)_auto]')
+    expect(toggle.className).toContain('col-start-2')
+    expect(toggle.className).toContain('row-start-1')
+    // …and back to the end of one row from `lg`, where there was never a
+    // shortage of width.
+    expect(toggle.className).toContain('lg:order-last')
+    expect(list.className).toContain('col-span-2')
+    expect(list.className).toContain('row-start-2')
+  })
+
+  it('spends padding rather than type to fit the labels at 360', () => {
+    panel({})
+    for (const name of ['Country', 'Stats', 'Bucket list']) {
+      const trigger = screen.getByRole('tab', { name })
+      expect(trigger.className).toContain('px-2')
+      expect(trigger.className).toContain('sm:px-3')
+      // The type scale is a fixed contract: no trigger may shrink its label.
+      expect(trigger.className).toContain('text-caption')
+    }
+  })
 })
 
 describe('the country section', () => {

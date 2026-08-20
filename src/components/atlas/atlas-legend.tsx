@@ -28,10 +28,15 @@ import type { VisitRamp } from '#/lib/map/visit-recency'
  * is worse than no key.
  *
  * **Colour is never the only carrier.** Every swatch is labelled in words, the
- * four steps are in a stated order, and the footnote points at the countries
- * list, where each country's actual dates are written out in text. A reader who
- * cannot separate the three greens loses nothing — the same information is on
- * screen as prose.
+ * four steps are in a stated order, and the footnote points at the Country tab,
+ * where each country's actual dates are written out in text. A reader who cannot
+ * separate the three greens loses nothing — the same information is on screen as
+ * prose.
+ *
+ * **Every step says everything it means.** The middle stop is not only "two to
+ * eight years ago": `visitRecency()` sends a country with no usable date there
+ * as well, because the ramp measures the last visit and an undated country has
+ * none. The label carries both, or the key is a key to something else.
  *
  * **Unvisited land is a step, not the absence of one.** The map draws the whole
  * world, so the pale fill means something specific and gets named. Left out, the
@@ -71,7 +76,12 @@ function legendSteps(
     {
       id: 'visited',
       swatch: 'bg-country-visited ring-country-visited-edge',
-      label: `${recent}–${distant} years ago`,
+      // Two meanings, both stated. `visitRecency()` routes a country with no
+      // usable date to this same stop by design - the ramp measures the last
+      // visit and there is nothing to measure - so a key that claimed only the
+      // date range left the reader to guess why an undated country was painted
+      // the middle shade.
+      label: `${recent}–${distant} years ago, or undated`,
     },
     {
       id: 'visitedDistant',
@@ -92,9 +102,30 @@ function legendSteps(
  */
 const layout = {
   root: 'flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2',
-  /** The eyebrow is the key's heading, so it is a real one. */
-  heading: 'shrink-0',
-  list: 'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2',
+  /**
+   * The eyebrow is the key's heading, so it is a real one — and from `sm` it is a
+   * column of stated width rather than a shrink-to-fit label.
+   *
+   * The steps sit after it, so anything that changes its width slides all four
+   * of them: the webfont arriving is exactly that, and it moved the row about
+   * 300ms after paint. 5rem holds "Last visit" at 11px with our tracking in both
+   * the webfont and the fallback, with room to spare. Below `sm` the row is too
+   * tight to spend the difference, and the steps are stacked two-by-two there
+   * anyway, so the label keeps its own width.
+   */
+  heading: 'shrink-0 sm:w-20',
+  /**
+   * A grid with a stated number of columns, not a wrapping row, and it takes the
+   * space that is left rather than the space its text happens to need.
+   *
+   * The four labels are text, the type is a webfont, and the webfont arrives
+   * after first paint - so a row that wraps wherever the text runs out reflowed
+   * about 300ms in, moving the key and everything below it. Equal columns in a
+   * box sized by its container rather than by its contents means every swatch
+   * and every label is where it was before the font landed.
+   */
+  list:
+    'grid min-w-0 flex-1 grid-cols-2 items-center gap-x-4 gap-y-2 sm:grid-cols-4',
   item: 'flex min-w-0 items-center gap-2',
   /** A hairline inside the swatch, so a pale fill still has an edge on glass. */
   swatch: 'size-3 shrink-0 rounded-xs ring-1 ring-inset',
@@ -102,10 +133,10 @@ const layout = {
   /**
    * Held back on a phone, where the shelf is a drawer with 190px of content in
    * it and this sentence costs three lines of that. What it points at — the
-   * countries list, with every date written out — is on the same screen, one tab
+   * Country tab, with every date written out — is on the same screen, one press
    * away, so nothing is lost but the signpost.
    */
-  note: 'hidden min-w-0 basis-full text-caption text-ink-3 sm:block xl:basis-auto',
+  note: 'hidden min-w-0 basis-full text-caption text-ink-3 sm:block xl:w-100 xl:basis-auto',
 } as const
 
 export interface AtlasLegendProps extends Omit<
@@ -147,7 +178,11 @@ export const AtlasLegend = React.forwardRef<HTMLDivElement, AtlasLegendProps>(
           Last visit
         </SectionLabel>
 
-        <ul className={layout.list}>
+        {/* `role="list"` because the layout is a grid: Safari drops the
+            implicit list role from a `ul` whose display is grid or flex, and a
+            key whose steps are not announced as a set of four is a key a screen
+            reader has to reassemble. */}
+        <ul role="list" className={layout.list}>
           {steps.map((step) => (
             <li key={step.id} data-step={step.id} className={layout.item}>
               {/* Decoration. The label beside it is what states the step, which
@@ -161,8 +196,11 @@ export const AtlasLegend = React.forwardRef<HTMLDivElement, AtlasLegendProps>(
           ))}
         </ul>
 
+        {/* Names a tab that is on screen. It read "under Countries" for a
+            while, and there is no section by that name: the record and the list
+            that spell out every date both live in the Country tab. */}
         <p className={layout.note}>
-          Shade shows recency only — every date is written out under Countries.
+          Shade shows recency only — the Country tab writes out every date.
         </p>
       </div>
     )

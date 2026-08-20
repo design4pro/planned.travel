@@ -5,8 +5,10 @@ import {
   BASELINE_DAY,
   CALENDAR_SELECTIONS,
   DEMO_EMAIL,
+  DEV_TOOLBAR,
   PUBLIC_ROUTES,
   RELATIVE_TIME_SITES,
+  SERVER_CLOCK_ROUTES,
   THEMES,
   auditRelativeTime,
   auditServerClock,
@@ -16,6 +18,7 @@ import {
   fitViewportToDocument,
   hasSession,
   holdsOn,
+  pinRelativeTime,
   readCaptureState,
   readMapCensus,
   readRelativeTime,
@@ -40,7 +43,8 @@ import type {
  * The visual gate.
  *
  * Two Playwright projects (desktop Chromium at 1440x900 and mobile WebKit at
- * 393x852) times two themes is the mechanical half of the quality bar in
+ * 393x659, the iPhone 15 descriptor's viewport rather than its 393x852 screen)
+ * times two themes is the mechanical half of the quality bar in
  * docs/SPEC.md §2: it catches regressions against an approved baseline. Judging
  * whether the design is *good* is the pixel-critic sub-agent's job, not this
  * file's — these tests only hold the line once a frame has been approved.
@@ -58,10 +62,16 @@ import type {
  * Compare the frame, and when it differs, say whether the calendar moved the rows
  * in it before anyone starts cropping two pictures.
  *
- * The diagnosis is best-effort by construction: it runs only on a failure, it
- * cannot replace the failure it explains, and anything that goes wrong while
- * fetching it is discarded rather than reported instead of the real error. See
- * `reportServerCalendar()`.
+ * The diagnosis runs only on a failure and never replaces the failure it explains,
+ * so the original error is always what the run reports. What it no longer does is
+ * throw away the reason it could not be read: an earlier version discarded every
+ * error from `reportServerCalendar()`, and what it was silently discarding was that
+ * function asserting a server `today` on a route that carries none — so the
+ * per-frame diagnosis was dead for `/atlas`, `/vacay` and `/settings`, in a suite
+ * that stayed green because the only symptom was a missing annotation.
+ * `reportServerCalendar()` now reads the clock from `SERVER_CLOCK_ROUTES` when the
+ * frame's own route has none, and anything that still goes wrong is attached under
+ * its own heading instead of vanishing.
  */
 async function shootWithCalendarDiagnosis(
   page: Page,
@@ -71,12 +81,24 @@ async function shootWithCalendarDiagnosis(
   try {
     await shoot(page, route, theme)
   } catch (failure) {
-    const crossings = await reportServerCalendar(page, [route]).catch(() => [])
-    if (crossings.length > 0) {
-      test.info().annotations.push({
-        type: 'fixture calendar crossed',
-        description: crossings.join('\n'),
-      })
+    const annotation = await reportServerCalendar(page, [route]).then(
+      (report) =>
+        report.lines.length === 0
+          ? null
+          : {
+              type: 'fixture calendar crossed',
+              description: report.lines.join('\n'),
+            },
+      (error: unknown) => ({
+        type: 'fixture calendar unreadable',
+        description: [
+          `the calendar diagnosis for ${route.path} could not be read, so this frame failed without one:`,
+          error instanceof Error ? error.message : String(error),
+        ].join('\n'),
+      }),
+    )
+    if (annotation !== null) {
+      test.info().annotations.push(annotation)
     }
     throw failure
   }
@@ -219,12 +241,50 @@ test.describe('authenticated routes', () => {
   test('the fixture calendar is reported against the baseline day', async ({
     page,
   }) => {
-    const crossings = await reportServerCalendar(page, APP_ROUTES)
-    if (crossings.length > 0) {
+    const report = await reportServerCalendar(page, APP_ROUTES)
+    // The one thing this spec does assert, because it is a claim about the run
+    // rather than about the calendar: the workspace has dated rows to compare at
+    // all. A per-frame diagnosis cannot make it — `/settings` and `/vacay` carry
+    // no dated row by design — so it is made once, here, where "none anywhere"
+    // really does mean an unseeded database.
+    expect(
+      report.dates,
+      'no authenticated route carried a fixture date, so nothing here is being checked — run `node scripts/seed/seed.mjs` before the gate',
+    ).not.toEqual([])
+    if (report.lines.length > 0) {
       test.info().annotations.push({
         type: 'fixture calendar crossed',
-        description: crossings.join('\n'),
+        description: report.lines.join('\n'),
       })
+    }
+  })
+
+  /**
+   * The per-frame diagnosis, on the routes that used to make it throw.
+   *
+   * Three of the six authenticated screens stamp no server `today` at all —
+   * `/atlas`, which has shipped dated rows without a clock to compare them
+   * against, and `/vacay` and `/settings`, which ship neither.
+   * `shootWithCalendarDiagnosis()` scopes the report to the single route whose
+   * frame failed, so every one of them used to hit
+   * `reportServerCalendar()`'s "no route stamped a server `today`" assertion — and
+   * the `catch` around it threw the reason away. The diagnosis was therefore dead
+   * for exactly the frames CALENDAR_SELECTIONS says a crossed `endDate` moves, in a
+   * suite that could not go red over it.
+   *
+   * So it is asserted directly, route by route: the report resolves, it agrees with
+   * the run about what day it is, and no route is excused for being small.
+   */
+  test('every route can be diagnosed on its own, clock or no clock', async ({
+    page,
+  }) => {
+    const run = await reportServerCalendar(page, APP_ROUTES)
+    for (const route of APP_ROUTES) {
+      const report = await reportServerCalendar(page, [route])
+      expect(
+        report.today,
+        `${route.path} could not be diagnosed on its own — a frame that fails on this route would report no calendar at all`,
+      ).toBe(run.today)
     }
   })
 
@@ -274,6 +334,11 @@ test.describe('authenticated routes', () => {
    * calendar — while the claim about pixels is the mask's to make, and the mask
    * is what the baselines above already exercise.
    *
+   * The words are the whole `<body>`, not the route's own root. The screenshot is
+   * of the document, so a countdown in the top nav or the mobile tab bar would be
+   * inside the comparison and unmasked, and a probe scoped to `main` would never
+   * have looked at it.
+   *
    * The two halves are asserted differently on purpose. "Nothing outside an
    * excluded region moved" holds for every route on every day and is asserted for
    * every route. "Something inside an excluded region moved" can only be asserted
@@ -309,7 +374,7 @@ test.describe('authenticated routes', () => {
       // No extra hydration wait: `visit()` ends on the hydrated, settled frame,
       // which is exactly the text the client recomputed from the rewritten
       // payload. See `settleOnce()`.
-      return readRelativeTime(page, route)
+      return readRelativeTime(page)
     }
 
     let proven = 0
@@ -455,14 +520,25 @@ const SYNTHETIC_CLOCK: RouteCase = {
 async function syntheticPage(
   page: Page,
   body: string,
-  options: { readonly latchAfterMs?: number } = {},
+  options: {
+    readonly latchAfterMs?: number
+    /**
+     * Markup outside `main`, for the app shell.
+     *
+     * The screenshot is of the document, so a string in the top nav or the mobile
+     * tab bar is in the frame — which is why the day-boundary probe reads the whole
+     * `<body>`. Asserting that needs a page with something outside the route's own
+     * root, and no real screen can be asked to put a countdown in its header.
+     */
+    readonly shell?: string
+  } = {},
 ): Promise<void> {
   // A whole document, not a fragment: without a doctype the engine renders in
   // quirks mode, and without the viewport meta mobile WebKit lays the page out at
   // 980px and scales it, which makes a 120px document report as 2125px tall and
   // the resize path fire on a page that already fits.
   await page.setContent(
-    `<!DOCTYPE html><html lang="en"><head><meta name="viewport" content="width=device-width, initial-scale=1" /></head><body style="margin:0"><main style="min-width:120px;min-height:120px">${body}</main></body></html>`,
+    `<!DOCTYPE html><html lang="en"><head><meta name="viewport" content="width=device-width, initial-scale=1" /></head><body style="margin:0">${options.shell ?? ''}<main style="min-width:120px;min-height:120px">${body}</main></body></html>`,
   )
   await page.evaluate((latchAfterMs) => {
     document.querySelectorAll('main, main *').forEach((node) => {
@@ -536,6 +612,18 @@ test.describe('the gate itself', () => {
           `${site.source}: this string is not the clock's doing and must stay inside the comparison`,
         ).not.toMatch(site.drifts)
       }
+      // The pinned value is written over the live string before the shutter, so a
+      // value the pattern no longer matches would leave the region unmasked, and a
+      // value outside the corpus would put copy on the screen the product cannot
+      // print.
+      expect(
+        site.pinned,
+        `${site.source}: the pinned string has to be one this site's own pattern matches, or pinning it takes the region out of the mask`,
+      ).toMatch(site.drifts)
+      expect(
+        site.variants,
+        `${site.source}: pin to a string the product can actually print, not to an invented one`,
+      ).toContain(site.pinned)
     }
   })
 
@@ -911,6 +999,192 @@ test.describe('the gate itself', () => {
     ).toContain('CALENDAR_SELECTIONS')
   })
 
+  /**
+   * The dev toolbar, kept out of the frame however late it arrives.
+   *
+   * Not hypothetical: every mobile-safari baseline recorded before this change has
+   * the toolbar's trigger sitting over the "Journey" tab, ~3500 differing pixels
+   * that the next run either reproduced or failed on depending on how loaded the
+   * machine was. The old mechanism wrote `display: none` onto whatever existed at
+   * that instant, and the trigger has two ways round that — mounting later, and
+   * re-rendering over its own `style` attribute — so what it hid was a matter of
+   * timing. A rule with `!important` can be raced by neither, and both halves are
+   * asserted here, because both are silent in a green run.
+   */
+  test('the dev toolbar stays out of the frame when it arrives after the settle', async ({
+    page,
+  }) => {
+    await syntheticPage(page, '<p>No tooling on this page yet.</p>')
+    await settle(page, SYNTHETIC_PLAIN)
+
+    // Mounted after the settle, with an inline `display` of its own — the two
+    // things that used to defeat the one-shot write, together. Written as the
+    // markup the toolbar actually renders and then checked against `DEV_TOOLBAR`,
+    // so the stand-in and the selector cannot drift apart in silence.
+    await page.evaluate(() => {
+      document.body.insertAdjacentHTML(
+        'beforeend',
+        '<div data-testid="tanstack_devtools" style="display:block;position:fixed;inset:auto 0 0 auto;width:60px;height:60px"></div>',
+      )
+    })
+
+    expect(
+      await page.locator(DEV_TOOLBAR).count(),
+      'the stand-in has to match the selector the gate hides, or this asserts nothing',
+    ).toBe(1)
+    expect(
+      (await readCaptureState(page, SYNTHETIC_PLAIN)).devChromeShown,
+      'a toolbar that mounts after the settle, carrying its own inline display, must still be out of the frame',
+    ).toBe(false)
+  })
+
+  /**
+   * A control the product mounts on a timer, waited for rather than raced.
+   *
+   * The app's avatar is one: Radix's fallback is given `delayMs={200}`, so the
+   * initials arrive about 200 ms after mount with nothing mutating in between — and
+   * a 150 ms quiet window can close in that gap and photograph a blank circle. Both
+   * frames sit inside `maxDiffPixelRatio`, so it never turned a run red; it just
+   * meant the baseline was whichever one the recording machine happened to produce.
+   * `DOM_QUIET_FLOOR_MS` holds the observer open past that timer.
+   */
+  test('a control that mounts on a timer is in the settled frame', async ({
+    page,
+  }) => {
+    await syntheticPage(page, '<p>Copy.</p>')
+    // Later than the quiet window and earlier than the floor: the whole point is
+    // that quiet alone cannot see it coming.
+    await page.evaluate(() => {
+      window.setTimeout(() => {
+        const late = document.createElement('span')
+        late.id = 'mounts-on-a-timer'
+        late.textContent = 'RW'
+        document.querySelector('main')?.appendChild(late)
+      }, 250)
+    })
+
+    await settle(page, SYNTHETIC_PLAIN)
+
+    expect(
+      await page.locator('#mounts-on-a-timer').count(),
+      'settle() returned before a timer-driven control had mounted, so the frame is the one before the product finished rendering',
+    ).toBe(1)
+  })
+
+  /**
+   * The excluded rectangle, held still by construction rather than by tolerance.
+   *
+   * A mask covers an element's box, and the countdown badge's box *is* its text:
+   * `ml-auto` fixes its right edge and the content sets its width, so "in 1d" and
+   * "in 50d" mask two different rectangles and the difference between them is
+   * unmasked page. It hid inside `maxDiffPixelRatio`, which is precisely why it
+   * needed fixing — the tolerance is the one budget this gate is not allowed to
+   * spend, and an exclusion that leans on it is an exclusion that fails the
+   * morning something else needs the room.
+   *
+   * Asserted in both directions on the same markup: unpinned, the two clock values
+   * really do produce different boxes, so the defect is reproduced rather than
+   * assumed; pinned, they produce the same box to the pixel.
+   */
+  test('pinning makes the excluded region the same rectangle whatever the clock says', async ({
+    page,
+  }) => {
+    const badge = RELATIVE_TIME_SITES.find((site) =>
+      site.source.includes('trip-card'),
+    )
+    expect(
+      badge,
+      'the trip-card countdown is the site under test',
+    ).toBeDefined()
+    if (badge === undefined) {
+      return
+    }
+
+    // The tile's meta row as the product builds it: a flex row whose last cell is
+    // pushed right, inside the link that covers the whole tile.
+    const tile = (countdown: string) =>
+      `<a href="/trips/x/plan" style="display:block;width:320px;font:14px sans-serif"><div style="display:flex;gap:16px"><span>17 &ndash; 23 Aug 2026</span><span style="margin-left:auto">${countdown}</span></div></a>`
+
+    const boxesFor = async (countdown: string) => {
+      await syntheticPage(page, tile(countdown))
+      const loose = await relativeTimeRegionOf(page, badge).boundingBox()
+      const written = await pinRelativeTime(page, SYNTHETIC_CLOCK)
+      const held = await relativeTimeRegionOf(page, badge).boundingBox()
+      return { loose, held, written }
+    }
+
+    const short = await boxesFor('in 1d')
+    const long = await boxesFor('in 50d')
+
+    expect(
+      short.written,
+      'the pin has to find the badge, or this spec proves nothing about it',
+    ).toBe(1)
+    expect(
+      long.written,
+      'the pin has to find the badge, or this spec proves nothing about it',
+    ).toBe(1)
+    expect(
+      short.loose?.width,
+      'the defect being fixed: unpinned, two clock values mask two different rectangles',
+    ).not.toBe(long.loose?.width)
+    expect(
+      short.held,
+      'pinned, the excluded rectangle is the same rectangle — the exclusion no longer depends on what the clock said',
+    ).toEqual(long.held)
+
+    // And a route that declares no clock is left exactly as the product rendered
+    // it: pinning is scoped by the same declaration the mask is.
+    await syntheticPage(page, tile('in 50d'))
+    expect(
+      await pinRelativeTime(page, SYNTHETIC_PLAIN),
+      'a route with no declared clock has nothing to pin, and its copy must not be rewritten',
+    ).toBe(0)
+    await expect(
+      page.locator('a[href="/trips/x/plan"]'),
+      'the undeclared route keeps its own words',
+    ).toContainText('in 50d')
+  })
+
+  /**
+   * What the day-boundary probe reads, and what it refuses to read.
+   *
+   * Two failures, opposite in shape. The probe used to walk `route.ready` — `main`
+   * on every authenticated route — so a clock-derived string rendered by the app
+   * shell was inside the screenshot, outside every mask, and outside the one check
+   * that would have noticed: the probe would have compared two empty strings and
+   * passed. And the walk has to skip `<script>`, because the loader payload is
+   * serialised into one and the probe's whole method is rewriting `today` inside
+   * it — a walk that counted script text would report its own input as a page that
+   * moved, on every route, every run.
+   */
+  test('the day-boundary probe reads the whole document and not the source in it', async ({
+    page,
+  }) => {
+    await syntheticPage(
+      page,
+      '<p>Nothing in here is the wall clock&rsquo;s.</p>',
+      {
+        shell: '<header><span>in 51d</span></header>',
+      },
+    )
+    const shell = await readRelativeTime(page)
+    expect(
+      shell.rest,
+      'a countdown in the app shell is in the frame, so it has to be in the words the probe compares',
+    ).toContain('in 51d')
+
+    await syntheticPage(
+      page,
+      '<p>Copy</p><script type="application/json">{"today":"2026-08-20"}</script>',
+    )
+    const source = await readRelativeTime(page)
+    expect(
+      source.rest,
+      'the payload the probe rewrites lives in a script tag, and reading it back would make every route look like it moved',
+    ).toBe('Copy')
+  })
+
   test('an exclusion covers the component that prints it and not the word', async ({
     page,
   }) => {
@@ -938,6 +1212,29 @@ test.describe('the gate itself', () => {
       await relativeTimeRegionOf(page, badge).count(),
       'only the badge inside a trip tile is excluded; the identical word outside one stays in the comparison',
     ).toBe(1)
+  })
+
+  /**
+   * The fallback the per-frame diagnosis stands on.
+   *
+   * `reportServerCalendar()` reads the server's day from `SERVER_CLOCK_ROUTES`
+   * whenever the route under diagnosis carries none, and that list is derived from
+   * the route table rather than written twice. An empty one would put the function
+   * straight back into the assertion this round removed — "no document stamped a
+   * server `today`" — for exactly the three frames that need the fallback, and the
+   * only symptom would be a missing annotation on a failing frame.
+   */
+  test('the calendar report has somewhere to read the clock from', () => {
+    expect(
+      SERVER_CLOCK_ROUTES.length,
+      'with no clock route the per-frame diagnosis has no day to compare a fixture date against, and it fails silently into an annotation nobody gets',
+    ).toBeGreaterThan(0)
+    for (const route of SERVER_CLOCK_ROUTES) {
+      expect(
+        route.relativeTime,
+        `${route.path} is in the clock list without declaring the clock — the list has stopped being derived from the route table`,
+      ).toBe(true)
+    }
   })
 
   test('every calendar selection names a source and what it moves', () => {

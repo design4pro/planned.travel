@@ -19,16 +19,36 @@
  *
  * Three decisions keep it honest.
  *
- * **Web Mercator, matching the live map.** An equirectangular sheet is the more
- * honest projection for a coverage map, and it was what this drew when it was a
- * card in a scrolling dashboard. As the understudy for a Mercator canvas it is
- * the wrong choice: every landmass would shift as the real map faded in, which
- * reads as a glitch rather than as a hand-off. It therefore projects the same way
- * MapLibre does, over the same latitude window the map opens on.
+ * **The same frame the map opens on, to the pixel.** An equirectangular sheet is
+ * the more honest projection for a coverage map, and it was what this drew when
+ * it was a card in a scrolling dashboard. As the understudy for a Mercator canvas
+ * it is the wrong choice: every landmass shifts as the real map fades in, which
+ * reads as a glitch rather than as a hand-off. It drew Web Mercator over a
+ * hand-picked latitude window for a while, which was closer and still wrong — the
+ * window's centre was 18°N against the camera's 14°S, and the world jumped about
+ * 130px vertically on the hand-off at 1440. So the drawing space is now the whole
+ * Mercator square, scaled to cover the container, which is *definitionally* the
+ * camera's `log2(edge / 512)` opening zoom; and the square is lifted by
+ * {@link WORLD_FRAME_CSS}.lift, which is the offset from the equator to
+ * {@link WORLD_CENTRE} capped exactly where MapLibre caps the camera. Nothing
+ * moves on the hand-off.
+ *
+ * The cost is Mercator's own: Greenland and Antarctica arrive inflated, and the
+ * inhabited world is smaller than a hand-picked window would draw it. That is
+ * what the live map shows, and looking like the map it stands in for is this
+ * element's entire purpose.
+ *
+ * **Container query units, not a measurement.** The frame is stated in `cqw` and
+ * `cqh` against a size container, so the server-rendered document already has the
+ * world in the right place. A measured frame would need an effect, which lands
+ * after the first paint, which is a visible jump and a layout shift in exchange
+ * for arithmetic the browser can do itself.
  *
  * **The same palette as the live layer.** Both fills come from the
- * `--color-country-*` ramp that `mapPalette().country` mirrors, so the hand-off is
- * a change of sharpness rather than a change of colour.
+ * `--color-country-*` ramp that `mapPalette().country` mirrors, so every landmass
+ * is the same colour before and after the hand-off. The sea is the one thing that
+ * changes: this draws land on the page's own canvas, and the basemap brings its
+ * water with it.
  *
  * **One visited fill, not the ramp.** `visitRecency()` reads a client-side clock,
  * and this element is server-rendered; banding it would print one colour into the
@@ -40,6 +60,7 @@
 import * as React from 'react'
 
 import { cn } from '#/lib/cn'
+import { WORLD_FRAME_CSS, mercatorY } from '#/lib/atlas/layout'
 import { ringsToPath, worldOutlines } from '#/lib/map/world'
 
 import type { Projection, WorldRing } from '#/lib/map/world'
@@ -47,37 +68,20 @@ import type { Projection, WorldRing } from '#/lib/map/world'
 /* ------------------------------------------------------------------ geometry */
 
 /**
- * The drawing space. 2000 units of longitude keeps a unit at a fifth of a
- * degree, which lands under half a device pixel at any width this is ever given
- * — so path coordinates round to whole numbers and the geometry inlined into the
- * server-rendered document stays about a third smaller than a decimal would be.
- */
-const VIEW_WIDTH = 2000
-
-/**
- * The latitude window.
+ * The drawing space: the Web Mercator square, in 2048 units a side.
  *
- * 72°N to 56°S is every inhabited degree and no more. Mercator inflates the two
- * ends beyond any use - at 85° a pixel is worth a tenth of what it is worth at
- * the equator - and including them would shrink the part of the world people
- * travel in to make room for ice.
+ * Square because that is the shape of the world MapLibre draws — `x` runs the
+ * full 360° of longitude and `y` the full ±85.051129° Mercator can render — and
+ * 2048 because it puts a unit at about a fifth of a degree, which lands under
+ * half a device pixel at any width this is ever given. Path coordinates therefore
+ * round to whole numbers, and the geometry inlined into the server-rendered
+ * document stays about a third smaller than a decimal would be.
  */
-const WORLD_LATITUDE_SPAN = { north: 72, south: -56 } as const
-
-/** Normalised Web Mercator y for a latitude, in `[0, 1]` from the north pole. */
-function mercatorY(lat: number): number {
-  const clamped = Math.min(Math.max(lat, -85.051129), 85.051129)
-  const radians = (clamped * Math.PI) / 180
-  return 0.5 - Math.log(Math.tan(Math.PI / 4 + radians / 2)) / (2 * Math.PI)
-}
-
-const TOP = mercatorY(WORLD_LATITUDE_SPAN.north)
-const BOTTOM = mercatorY(WORLD_LATITUDE_SPAN.south)
-const VIEW_HEIGHT = Math.round(VIEW_WIDTH * (BOTTOM - TOP))
+const VIEW_SIZE = 2048
 
 const project: Projection = (lng, lat) => [
-  ((lng + 180) / 360) * VIEW_WIDTH,
-  ((mercatorY(lat) - TOP) / (BOTTOM - TOP)) * VIEW_HEIGHT,
+  ((lng + 180) / 360) * VIEW_SIZE,
+  mercatorY(lat) * VIEW_SIZE,
 ]
 
 let allLand: string | null = null
@@ -104,6 +108,18 @@ function visitedPath(codes: ReadonlyArray<string>): string {
 }
 
 /* ------------------------------------------------------------------- drawing */
+
+/**
+ * The frame, as custom properties resolved by the browser.
+ *
+ * Declared on the size container and read by the square inside it, so the `cqw`
+ * and `cqh` in them resolve against the container rather than against whichever
+ * element happens to carry the declaration.
+ */
+const frameStyle = {
+  '--atlas-world-edge': WORLD_FRAME_CSS.edge,
+  '--atlas-world-lift': WORLD_FRAME_CSS.lift,
+} as React.CSSProperties
 
 export interface WorldCoverageMapProps {
   /** ISO 3166-1 alpha-2 codes to light up. Unknown codes are ignored. */
@@ -140,37 +156,51 @@ export function WorldCoverageMap({
   )
 
   return (
-    <svg
-      viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
-      // `meet`, not `slice`: when this is the only map the reader gets, showing
-      // the whole world matters more than filling the box edge to edge.
-      preserveAspectRatio="xMidYMid meet"
-      className={cn('block size-full', className)}
-      // `role="img"` with no name is worse than no role, so the two attributes
-      // move together.
-      role={decorative ? undefined : 'img'}
-      aria-hidden={decorative ? true : undefined}
-      aria-label={decorative ? undefined : label}
+    <div
+      // `@container-size` rather than plain `@container`: the lift is stated
+      // against the container's *block* size, and `cqh` is only available on a
+      // size container. Safe here because the box is `absolute inset-0` inside a
+      // slice of definite height, so its own size cannot depend on its contents.
+      className={cn('@container-size relative overflow-hidden', className)}
+      style={frameStyle}
     >
-      {/* Unvisited land: present, legible, and quiet enough that the lit
-          countries are the only thing the eye lands on. Both fills are the
-          tokens the live layer paints with. */}
-      <path
-        d={landPath()}
-        fill="var(--color-country-land)"
-        stroke="var(--color-country-land-edge)"
-        strokeWidth={1.1}
-        strokeLinejoin="round"
-      />
-      {lit === '' ? null : (
+      <svg
+        viewBox={`0 0 ${VIEW_SIZE} ${VIEW_SIZE}`}
+        // The element's own box is square and so is the viewBox, so this is a
+        // formality — stated anyway, because the whole point of the frame is that
+        // the drawing is never letterboxed and never stretched.
+        preserveAspectRatio="xMidYMid slice"
+        className="absolute top-1/2 left-1/2 h-(--atlas-world-edge) w-(--atlas-world-edge)"
+        style={{
+          transform:
+            'translate(-50%, calc(-50% - var(--atlas-world-lift, 0px)))',
+        }}
+        // `role="img"` with no name is worse than no role, so the two attributes
+        // move together.
+        role={decorative ? undefined : 'img'}
+        aria-hidden={decorative ? true : undefined}
+        aria-label={decorative ? undefined : label}
+      >
+        {/* Unvisited land: present, legible, and quiet enough that the lit
+            countries are the only thing the eye lands on. Both fills are the
+            tokens the live layer paints with. */}
         <path
-          d={lit}
-          fill="var(--color-country-visited)"
-          stroke="var(--color-country-visited-edge)"
+          d={landPath()}
+          fill="var(--color-country-land)"
+          stroke="var(--color-country-land-edge)"
           strokeWidth={1.1}
           strokeLinejoin="round"
         />
-      )}
-    </svg>
+        {lit === '' ? null : (
+          <path
+            d={lit}
+            fill="var(--color-country-visited)"
+            stroke="var(--color-country-visited-edge)"
+            strokeWidth={1.1}
+            strokeLinejoin="round"
+          />
+        )}
+      </svg>
+    </div>
   )
 }

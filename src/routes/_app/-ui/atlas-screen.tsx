@@ -8,6 +8,7 @@ import {
 import { ErrorPanel } from '#/components/layout/error-state'
 import { GlassPanel, Skeleton } from '#/components/ui'
 import {
+  MAP_CONTROLS_WIDTH,
   MapAttribution,
   MapCanvas,
   MapControls,
@@ -16,6 +17,15 @@ import {
   fitMapToBounds,
   useMapContext,
 } from '#/components/map'
+import {
+  SHELF_CLASS,
+  SHELF_VAR,
+  SLICE_HEIGHT_CLASS,
+  WORLD_CENTRE,
+  cameraPadding,
+  canvasBox,
+  worldZoom,
+} from '#/lib/atlas/layout'
 import { countryBounds, hasCountryOutline } from '#/lib/map'
 import { cn } from '#/lib/cn'
 import { WORLD_COUNTRY_COUNT } from '../-server/library'
@@ -23,6 +33,7 @@ import { WorldCoverageMap } from './world-map'
 
 import type { AtlasPanelTab } from '#/components/atlas'
 import type { MapVisitedCountry } from '#/components/map'
+import type { ViewportBox } from '#/lib/atlas/layout'
 import type { EdgePadding } from '#/lib/map'
 import type { AtlasPayload } from '../-server/library'
 
@@ -40,11 +51,14 @@ import type { AtlasPayload } from '../-server/library'
  * `<main>`: no max width, no padding, and — importantly — none of the bottom
  * gutter that normally clears the mobile tab bar. So the height is written here,
  * and `/atlas` has no sub-nav, which is why `--subnav-h` is absent from an
- * expression that otherwise looks like the trip planner's. Below `lg` the mobile
- * tab bar (4rem) and the home indicator (`--safe-bottom`) come off; from `lg` up
- * the tab bar is gone and they do not. Nothing inside scrolls the document —
- * every list is its own scroll container — so the page cannot grow behind the
- * map at any width from 360 to 2560.
+ * expression that otherwise looks like the trip planner's. The expression itself
+ * lives in `#/lib/atlas/layout` with a test on it, because it has to account for
+ * more than the two tokens it looks like it needs: the app header is `border-b`
+ * and the tab bar is `border-t`, and the two hairlines that nobody subtracted
+ * put the document at `100svh + 1px` from `lg` up and ran the map two pixels
+ * under a translucent tab bar on a phone. Nothing inside scrolls the document —
+ * every list is its own scroll container — so the page cannot grow behind the map
+ * at any width from 360 to 2560.
  *
  * **One world, never a row of them.** MapLibre renders copies of the world
  * either side of the antimeridian by default, and a 2560px screen at world zoom
@@ -52,9 +66,23 @@ import type { AtlasPayload } from '../-server/library'
  * times, which is a data map lying about its own data. `setRenderWorldCopies(false)`
  * is applied the moment the style is up. The other half of that is the camera:
  * the container is measured first, and the map opens at the zoom that makes one
- * world exactly span its longer edge, which is also the floor. See
- * {@link WORLD_CENTER} for why that is the only frame MapLibre will actually
- * hold.
+ * world exactly span its longer edge, which is also the floor. `worldZoom()` and
+ * the centre it is paired with are in `#/lib/atlas/layout`, because the static
+ * world behind the canvas has to draw the very same frame.
+ *
+ * **The shelf's height is measured, never guessed.** Four numbers used to claim
+ * to be the shelf — `25rem` in a class, `27.5rem` in a custom property, `9rem`
+ * for the collapsed variant and a literal `424` in the camera padding — related
+ * only by a comment, and two of them disagreed. Now the panel is measured and
+ * published as `--atlas-shelf`; the zoom cluster, the credit and the camera's
+ * bottom inset are all derived from that one value, so they cannot drift and the
+ * collapsed shelf needs no second set of numbers at all.
+ *
+ * **All the chrome in one column.** The search pill, the zoom cluster, the credit
+ * and the panel are positioned inside a single `max-w-content` well rather than
+ * against the viewport's own edges. Below that width nothing changes; above it —
+ * a 2560px screen has 1120px spare — it is what keeps the composition together
+ * instead of stranding the zoom cluster half a metre from the panel it belongs to.
  *
  * **The camera has exactly one owner per gesture.** A list row asks for a frame,
  * because the reader picked a country from a list and cannot see where it is.
@@ -76,12 +104,19 @@ import type { AtlasPayload } from '../-server/library'
  *
  * **The world is drawn twice, on purpose, and only ever visible once.** Behind
  * the canvas sits the static SVG world (`./world-map`), from the same bundled
- * outlines and the same `--color-country-*` tokens. The canvas is mounted with a
- * transparent ground, so before the first painted frame the reader sees the world
- * rather than an empty rectangle, and if the renderer never starts — no WebGL2,
- * or a canvas that never draws — it stays, under the canvas's own designed
- * notice. It fades out and goes `aria-hidden` the moment MapLibre reports its
- * style loaded, so exactly one map is ever announced.
+ * outlines, the same `--color-country-*` tokens and now the same frame. The
+ * canvas is mounted with a transparent ground, so before the first painted frame
+ * the reader sees the world rather than an empty rectangle, and if the renderer
+ * never starts — no WebGL2, or a canvas that never draws — it stays, under the
+ * canvas's own designed notice. It fades out and goes `aria-hidden` the moment
+ * MapLibre reports its style loaded, so exactly one map is ever announced.
+ *
+ * **The canvas overhangs its frame by a pixel.** With world copies off, the
+ * antimeridian is the canvas's own left and right edge, and both the generated
+ * graticule and every country ring that touches the date line draw a line on it —
+ * half inside the frame, half outside, which reads as a seam. `canvasBox()` hands
+ * the camera the wider box, so both the live canvas and the static world behind
+ * it push that line just past the clip.
  */
 
 /* -------------------------------------------------------------------- layout */
@@ -92,9 +127,47 @@ import type { AtlasPayload } from '../-server/library'
  */
 const SLICE = cn(
   'relative isolate w-full overflow-hidden bg-canvas',
-  'h-[calc(100svh-var(--safe-top)-var(--nav-h)-4rem-var(--safe-bottom))]',
-  'lg:h-[calc(100svh-var(--safe-top)-var(--nav-h))]',
+  SLICE_HEIGHT_CLASS.base,
+  SLICE_HEIGHT_CLASS.lg,
+  SHELF_CLASS.fallback,
+  SHELF_CLASS.clear,
 )
+
+/**
+ * The well every floating element is positioned in.
+ *
+ * `--content-max` is the measure the rest of the product is laid out to, and the
+ * panel was already centred in it. The map chrome was not: it was pinned to the
+ * slice, so at 2560 the search pill, the credit and the zoom cluster sat 560px
+ * outside the column the panel occupied. One shared positioning layer puts all
+ * four on the same grid at every width, and changes nothing at or below 1440.
+ *
+ * `pointer-events-none` is not optional: this box covers the whole map, and a
+ * transparent full-size div over a canvas eats every pan and every click. Each
+ * child turns them back on for itself.
+ */
+const WELL = cn(
+  'pointer-events-none absolute top-0 bottom-0 mx-auto max-w-content',
+  // A pixel in from each edge of the overhanging box below, which puts it back
+  // on the slice's own edges: the overhang belongs to the drawing, not to the
+  // chrome floating over it.
+  'right-px left-px',
+)
+
+/**
+ * The box both maps are drawn in: the slice, a pixel wider on each side.
+ *
+ * With `renderWorldCopies` off, the world's own edge — the antimeridian — lands
+ * exactly on the drawing's left and right edge, and two things are drawn on that
+ * line: the generated graticule's first meridian, at -180°, and the outline
+ * stroke of every country ring that touches the date line, Antarctica and Russia
+ * among them. Half of each falls inside the frame and the other half outside,
+ * which reads as a one-pixel seam down the edge of the screen rather than as the
+ * feature it is. So the drawing overhangs and the slice, which clips, hides it.
+ * `canvasBox()` hands the camera the same two pixels, so the world still spans
+ * the frame exactly.
+ */
+const DRAWING = 'absolute top-0 bottom-0 -right-px -left-px'
 
 /** The floating panel's box: gutters, and the product's own content ceiling. */
 const PANEL_BOX = cn(
@@ -103,99 +176,44 @@ const PANEL_BOX = cn(
 )
 
 /**
- * The search pill: the top row on a phone, minus the 56px the zoom stack takes
- * on the right plus a gutter; a fixed column at the top left from `lg`.
+ * The search pill: the top row on a phone, minus the width the zoom cluster
+ * takes on the right plus a gutter; a fixed column at the top left from `lg`.
  */
 const SEARCH_BOX = cn(
   // `w-auto` is load-bearing: the pill's own root is `w-full`, which on an
   // absolutely positioned element beats a left/right pair and pushed it 84px
-  // past the right edge of the screen, straight under the zoom stack.
-  'absolute top-3 right-18 left-3 w-auto z-map-overlay',
+  // past the right edge of the screen, straight under the zoom cluster.
+  'pointer-events-auto absolute top-3 right-18 left-3 w-auto z-map-overlay',
   'lg:top-4 lg:right-auto lg:left-4 lg:w-88',
 )
 
 /**
- * Where the chrome sits, and why it is not the same place at both sizes.
+ * Where the rest of the chrome sits, and why it is not the same place at both
+ * sizes.
  *
- * A phone has no room for a zoom stack above a drawer that can be a third of the
- * screen tall — open the drawer on a short handset and the controls end up on top
- * of the search field. So below `lg` they move to the top right, opposite a
+ * A phone has no room for a zoom cluster above a drawer that can be a third of
+ * the screen tall — open the drawer on a short handset and the controls end up on
+ * top of the search field. So below `lg` they move to the top right, opposite a
  * search pill that gives up 72px for them, where no drawer height can ever reach
  * them; from `lg` up they return to the bottom right, lifted clear of the shelf
- * by `--atlas-controls`. That offset is 27.5rem: the shelf's own 25rem plus its
- * gutter plus a gap, named once rather than spelled out at three call sites.
+ * by `--atlas-clear`, which is the measured shelf plus its gutter and a gap.
+ *
+ * The credit is the mirror image. Below `lg` the top-left slot is the search
+ * pill's, and stacking the credit eight pixels under it put two translucent
+ * pills in one optical column; it goes to the bottom-left instead, on the same
+ * `--atlas-clear` line as the cluster, which is a lane nothing else claims. From
+ * `lg` the top-right corner is genuinely free and it takes that.
  */
 const CHROME = {
-  controls:
-    'top-3 right-3 bottom-auto lg:top-auto lg:right-4 lg:bottom-(--atlas-controls)',
-  /** Clear of the open shelf (25rem plus its gutter and a gap) … */
-  controlsOffset: 'lg:[--atlas-controls:27.5rem]',
-  /** … and clear of the collapsed one, which is its header and nothing else. */
-  controlsOffsetShut: 'lg:[--atlas-controls:9rem]',
-  /** Second row on a phone, under the search; the free corner from `lg`. */
-  credit:
-    'top-18 right-auto left-3 bottom-auto lg:top-4 lg:right-4 lg:left-auto',
+  controls: cn(
+    'pointer-events-auto top-3 right-3 bottom-auto',
+    'lg:top-auto lg:right-4 lg:bottom-(--atlas-clear)',
+  ),
+  credit: cn(
+    'top-auto right-auto bottom-(--atlas-clear) left-3',
+    'lg:top-4 lg:right-4 lg:bottom-auto lg:left-auto',
+  ),
 } as const
-
-/* -------------------------------------------------------------------- camera */
-
-/** MapLibre's own tile size, and therefore the width of the world at zoom 0. */
-const WORLD_TILE_SIZE = 512
-
-/**
- * Where the map opens, and why it is a centre and a zoom rather than a rectangle.
- *
- * Two MapLibre facts decide this, and both were measured rather than assumed.
- *
- * The camera is *always* constrained so the Mercator square covers the container
- * vertically — `latRange` defaults to ±85.05 and cannot be widened — so the world
- * can never be smaller than the canvas is tall. And with `renderWorldCopies` off,
- * which it must be or a wide screen highlights every visited country two and a
- * bit times, nothing fills the space either side of the world: handing
- * `fitBounds` a world rectangle produced a square map letterboxed in 300px of
- * page colour on both flanks.
- *
- * So the opening zoom is stated: the one that makes a single world exactly span
- * the longer edge of the container. On a landscape screen that is the width, so
- * the world reaches both edges with no copies and no gaps; on a phone the height
- * wins and the reader gets a tall slice of the world, pannable, with the search
- * field to jump anywhere in it. It is also the floor, so zooming out can never
- * reach the letterbox.
- *
- * The latitude is 14°S rather than the equator because the shelf covers the foot
- * of the map, and a centred camera puts the middle of the world behind it — the
- * atlas opened on the northern hemisphere alone. 14°S is the southernmost centre
- * that still keeps Iceland, the northernmost country on our own record, above the
- * shelf, and it buys about forty degrees of southern hemisphere for it. The rest
- * is behind translucent glass and one press of the shelf's own collapse button
- * away, which is why that button is offered at every width rather than only on a
- * phone.
- */
-const WORLD_CENTER: readonly [number, number] = [0, -14]
-
-/** The zoom at which one world exactly spans the container's longer edge. */
-function worldZoomFor(box: {
-  readonly width: number
-  readonly height: number
-}): number {
-  const edge = Math.max(box.width, box.height)
-  return Number(Math.log2(Math.max(edge, 1) / WORLD_TILE_SIZE).toFixed(3))
-}
-
-/**
- * Insets the camera must keep clear, per breakpoint.
- *
- * One declaration, handed to both `MapCanvas` (which uses it to place its own
- * "basemap unavailable" notice) and `CountrySearch` (which clamps its fly-to
- * against it). Two numbers that disagreed put a searched country underneath the
- * panel that was supposed to describe it.
- */
-function cameraPadding(wide: boolean, expanded: boolean): Partial<EdgePadding> {
-  if (wide) {
-    return { top: 96, right: 96, bottom: 424, left: 24 }
-  }
-  return { top: 76, right: 60, bottom: expanded ? 360 : 108, left: 16 }
-}
 
 /* --------------------------------------------------------------- map children */
 
@@ -204,7 +222,7 @@ interface AtlasCameraProps {
   readonly token: number
   /** The country to frame when the token moves. */
   readonly countryCode: string | null
-  readonly padding: Partial<EdgePadding>
+  readonly padding: EdgePadding
 }
 
 /**
@@ -250,24 +268,33 @@ function AtlasCamera({ token, countryCode, padding }: AtlasCameraProps) {
 /* -------------------------------------------------------------------- viewport */
 
 /**
- * The container's own box in CSS pixels, or `null` before it has been measured.
+ * Runs before the browser paints on the client and never on the server.
  *
- * The opening zoom is a function of it, and `MapCanvas` reads its centre and zoom
- * once at construction, so the canvas is deliberately not rendered until the
- * answer is in. That costs one commit and no layout shift: the box is a fixed
- * slice of the viewport and the static world is already drawn inside it.
+ * Both measurements below place something: the camera's opening zoom is a
+ * function of the container, and the chrome's clearance is a function of the
+ * shelf. Measured in `useEffect` they land one painted frame late, which is a
+ * visible jump and a layout shift after paint for exactly the elements this
+ * screen is supposed to hold still. `useLayoutEffect` lands before the paint —
+ * and calling it during a server render is what React warns about, so on the
+ * server it is the passive one, which never runs there anyway.
+ */
+const useIsomorphicLayoutEffect =
+  typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect
+
+/**
+ * An element's own box in CSS pixels, or `null` before it has been measured.
+ *
+ * Used twice: for the slice, whose longer edge decides the opening zoom, and for
+ * the glass shelf, whose height decides where the rest of the chrome sits.
  */
 function useMeasuredBox(): [
   React.RefObject<HTMLDivElement | null>,
-  { readonly width: number; readonly height: number } | null,
+  ViewportBox | null,
 ] {
   const ref = React.useRef<HTMLDivElement | null>(null)
-  const [box, setBox] = React.useState<{
-    readonly width: number
-    readonly height: number
-  } | null>(null)
+  const [box, setBox] = React.useState<ViewportBox | null>(null)
 
-  React.useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const node = ref.current
     if (node === null) return
 
@@ -310,8 +337,8 @@ const WIDE_QUERY = '(min-width: 1024px)'
  * Reading a media query during render is only safe because nothing rendered
  * depends on it: the padding is a plain object handed to effects and to
  * client-only children, and every element whose *appearance* changes with the
- * breakpoint does so through a Tailwind variant instead. The server's answer and
- * the client's may differ and no markup can notice.
+ * breakpoint does so through a Tailwind variant or a custom property instead.
+ * The server's answer and the client's may differ and no markup can notice.
  */
 function useIsWide(): boolean {
   const [wide, setWide] = React.useState(
@@ -340,6 +367,7 @@ export interface AtlasScreenProps {
 
 export function AtlasScreen({ atlas }: AtlasScreenProps) {
   const [containerRef, box] = useMeasuredBox()
+  const [shelfRef, shelfBox] = useMeasuredBox()
   const wide = useIsWide()
 
   const [selected, setSelected] = React.useState<string | null>(null)
@@ -353,8 +381,32 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
   const [cameraToken, setCameraToken] = React.useState(0)
   const [mapDrawing, setMapDrawing] = React.useState(false)
 
-  const shelfOpen = expanded ?? wide
-  const padding = cameraPadding(wide, shelfOpen)
+  /**
+   * The one shelf height, published to CSS and handed to the camera.
+   *
+   * Absent until it has been measured, and the classes on the slice carry a
+   * designed default for exactly that window — so a document with no JavaScript
+   * yet still places the chrome correctly, and there is nothing to move once the
+   * measurement lands.
+   */
+  const shelf = shelfBox?.height ?? null
+  const shelfStyle = React.useMemo<React.CSSProperties | undefined>(
+    () =>
+      shelf === null
+        ? undefined
+        : ({ [SHELF_VAR]: `${shelf}px` } as React.CSSProperties),
+    [shelf],
+  )
+
+  const padding = React.useMemo(
+    () =>
+      cameraPadding({
+        wide,
+        shelf: shelf ?? 0,
+        controls: MAP_CONTROLS_WIDTH,
+      }),
+    [wide, shelf],
+  )
 
   /**
    * `hasOutline` is resolved here, once, and handed down.
@@ -425,90 +477,95 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
       : `World map with ${atlas.countryCount} of ${WORLD_COUNTRY_COUNT} countries marked as visited.`
 
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        SLICE,
-        // Keyed off the reader's explicit opinion rather than off `wide`, so the
-        // class is identical on both render passes and hydration has nothing to
-        // reconcile. Below `lg` the variant does not apply either way.
-        expanded === false ? CHROME.controlsOffsetShut : CHROME.controlsOffset,
-      )}
-    >
+    <div ref={containerRef} className={SLICE} style={shelfStyle}>
       {/* The ground of last resort, and the first thing the reader sees. It is
-          the same geometry and the same tokens the live layer paints with, so
-          the hand-off is a change of sharpness rather than of colour. */}
-      <WorldCoverageMap
-        visited={visitedCodes}
-        label={worldLabel}
-        decorative={mapDrawing}
-        className={cn(
-          // A short cut rather than a long cross-fade: the two draw the world
-          // at slightly different scales, and holding both on screen would show
-          // it twice. 150ms is the token exit duration.
-          'absolute inset-0 -z-10 transition-opacity duration-fast ease-out-quint',
-          mapDrawing ? 'opacity-0' : 'opacity-100',
-        )}
-      />
-
-      {box === null ? null : (
-        <MapCanvas
+          the same geometry, the same tokens and the same frame the live layer
+          paints with, so the hand-off is a change of sharpness rather than a
+          change of position. */}
+      <div className={DRAWING}>
+        <WorldCoverageMap
+          visited={visitedCodes}
           label={worldLabel}
-          center={WORLD_CENTER}
-          zoom={worldZoomFor(box)}
-          padding={padding}
-          minZoom={worldZoomFor(box)}
-          // The country fills are not drawn past this zoom, so the reader can
-          // never arrive somewhere the atlas has nothing to say.
-          maxZoom={VISITED_COUNTRY_ZOOM.fadeEnd}
-          buildings={false}
-          graticule={{ step: 15, majorEvery: 2 }}
-          onMapReady={(map) => {
-            // `MapCanvas` constructs with `renderWorldCopies: true` and exposes no
-            // prop for it, so the single world is asked for through MapLibre's own
-            // setter. A wide screen would otherwise show two and a bit copies of
-            // the world with every visited country highlighted two and a bit
-            // times, which is a data map lying about its own data. It is a
-            // transform property rather than a style one, so the theme swap —
-            // which replaces the whole style document — cannot undo it.
-            map.setRenderWorldCopies(false)
-            setMapDrawing(true)
-          }}
-          // Transparent, so the static world behind it shows through until the
-          // renderer paints — and forever, if it never does.
-          className="absolute inset-0 bg-transparent"
-        >
-          <VisitedCountries
-            visits={visits}
-            selectedCode={selected}
-            onSelect={open}
-          />
+          decorative={mapDrawing}
+          className={cn(
+            // A short cut rather than a long cross-fade: 150ms is the token exit
+            // duration, and the two are drawing the same world in the same
+            // place, so there is nothing to see across the swap.
+            'absolute inset-0 -z-10',
+            'transition-opacity duration-fast ease-out-quint',
+            mapDrawing ? 'opacity-0' : 'opacity-100',
+          )}
+        />
 
-          <AtlasCamera
-            token={cameraToken}
-            countryCode={selected}
+        {box === null ? null : (
+          <MapCanvas
+            label={worldLabel}
+            center={WORLD_CENTRE}
+            zoom={worldZoom(canvasBox(box))}
             padding={padding}
-          />
+            minZoom={worldZoom(canvasBox(box))}
+            // The country fills are not drawn past this zoom, so the reader can
+            // never arrive somewhere the atlas has nothing to say.
+            maxZoom={VISITED_COUNTRY_ZOOM.fadeEnd}
+            buildings={false}
+            // Drafting lines over the sea, for the state where the archive is
+            // regional or absent and the ground layers are the map. Majors every
+            // 30 degrees rather than every 60: at world zoom the grid is already
+            // down to 22% opacity, and the sparser pair read as two stray lines.
+            graticule={{ step: 15, majorEvery: 2 }}
+            onMapReady={(map) => {
+              // `MapCanvas` constructs with `renderWorldCopies: true` and exposes no
+              // prop for it, so the single world is asked for through MapLibre's own
+              // setter. A wide screen would otherwise show two and a bit copies of
+              // the world with every visited country highlighted two and a bit
+              // times, which is a data map lying about its own data. It is a
+              // transform property rather than a style one, so the theme swap —
+              // which replaces the whole style document — cannot undo it.
+              map.setRenderWorldCopies(false)
+              setMapDrawing(true)
+            }}
+            // Transparent, so the static world behind it shows through until the
+            // renderer paints — and forever, if it never does.
+            className="absolute inset-0 bg-transparent"
+          >
+            <VisitedCountries
+              visits={visits}
+              selectedCode={selected}
+              onSelect={open}
+            />
 
-          <CountrySearch
-            countries={countries}
-            selectedCode={selected}
-            onSelect={open}
-            padding={padding}
-            // `GlassPanel`'s floating default is `z-dropdown`, which sits above
-            // the app nav. Map chrome belongs below it.
-            className={SEARCH_BOX}
-          />
+            <AtlasCamera
+              token={cameraToken}
+              countryCode={selected}
+              padding={padding}
+            />
 
-          <MapControls position="bottom-right" className={CHROME.controls} />
+            <div className={WELL}>
+              <CountrySearch
+                countries={countries}
+                selectedCode={selected}
+                onSelect={open}
+                padding={padding}
+                // `GlassPanel`'s floating default is `z-dropdown`, which sits above
+                // the app nav. Map chrome belongs below it.
+                className={SEARCH_BOX}
+              />
 
-          {/* ODbL. Credited in the product's own type, at a size that can be
-              read, and clear of both the search pill and the panel. */}
-          <MapAttribution className={CHROME.credit} />
-        </MapCanvas>
-      )}
+              <MapControls
+                position="bottom-right"
+                className={CHROME.controls}
+              />
+
+              {/* ODbL. Credited in the product's own type, at a size that can be
+                read, and clear of both the search pill and the panel. */}
+              <MapAttribution className={CHROME.credit} />
+            </div>
+          </MapCanvas>
+        )}
+      </div>
 
       <AtlasPanel
+        ref={shelfRef}
         countries={countries}
         selectedCode={selected}
         onSelect={openAndFrame}
@@ -540,9 +597,9 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
           // reader asked for it, and one press of the same button gives the map
           // back.
           expanded === null
-            ? 'h-auto lg:h-100'
+            ? cn('h-auto', SHELF_CLASS.height)
             : expanded
-              ? 'h-[min(58svh,30rem)] lg:h-100'
+              ? cn('h-[min(58svh,30rem)]', SHELF_CLASS.height)
               : 'h-auto',
         )}
       />
@@ -565,24 +622,33 @@ export function AtlasScreenPending() {
     <div className={SLICE}>
       {/* No countries to light up yet, so the world is drawn as ground. It is
           decorative here: the region that will name itself does not exist. */}
-      <WorldCoverageMap
-        visited={[]}
-        label=""
-        decorative
-        className="absolute inset-0 -z-10 opacity-60"
+      <div className={DRAWING}>
+        <WorldCoverageMap
+          visited={[]}
+          label=""
+          decorative
+          className="absolute inset-0 -z-10 opacity-60"
+        />
+
+        {/* Inside the drawing box, exactly where the real pill will be: `WELL`
+            compensates for the overhang, so it has to be measured against the
+            same box in both states or the swap moves the pill a pixel. */}
+        <div className={WELL}>
+          <GlassPanel
+            radius="lg"
+            padding="none"
+            floating={false}
+            aria-hidden="true"
+            className={cn(SEARCH_BOX, 'flex w-full min-w-0 flex-col p-1.5')}
+          >
+            <Skeleton radius="md" className="h-10 w-full" />
+          </GlassPanel>
+        </div>
+      </div>
+
+      <AtlasPanelSkeleton
+        className={cn(PANEL_BOX, 'h-auto', SHELF_CLASS.height)}
       />
-
-      <GlassPanel
-        radius="lg"
-        padding="none"
-        floating={false}
-        aria-hidden="true"
-        className={cn(SEARCH_BOX, 'flex w-full min-w-0 flex-col p-1.5')}
-      >
-        <Skeleton radius="md" className="h-10 w-full" />
-      </GlassPanel>
-
-      <AtlasPanelSkeleton className={cn(PANEL_BOX, 'h-auto lg:h-100')} />
     </div>
   )
 }
@@ -605,12 +671,14 @@ export interface AtlasScreenErrorProps {
 export function AtlasScreenError({ error }: AtlasScreenErrorProps) {
   return (
     <div className={SLICE}>
-      <WorldCoverageMap
-        visited={[]}
-        label=""
-        decorative
-        className="absolute inset-0 -z-10 opacity-60"
-      />
+      <div className={DRAWING}>
+        <WorldCoverageMap
+          visited={[]}
+          label=""
+          decorative
+          className="absolute inset-0 -z-10 opacity-60"
+        />
+      </div>
       <div className="absolute inset-0 grid place-items-center p-4">
         <div className="w-full max-w-md">
           <ErrorPanel error={error} title="The atlas did not load" />

@@ -209,12 +209,6 @@ export interface AtlasPayload {
     readonly distanceMetres: number
     readonly yearStreak: number
   }>
-  readonly recentTrips: ReadonlyArray<{
-    readonly id: string
-    readonly title: string
-    readonly endDate: string | null
-    readonly countryCodes: ReadonlyArray<string>
-  }>
 }
 
 /** The world total the atlas counts against — UN member states plus observers. */
@@ -225,12 +219,17 @@ export const loadAtlas = createServerFn({ method: 'GET' }).handler(
     const scope = await appScope()
     const userId = scope.ctx.userId
 
-    const [summary, countries, bucket, stats, recent] = await Promise.all([
+    // Four reads, and every one of them is on screen. A fifth - the six most
+    // recent trips - travelled in this payload and was rendered by nothing after
+    // the atlas became a map; on Workers each query is a subrequest and every
+    // field here is bytes dehydrated into the SSR document, so an unread one is
+    // paid for on every request. `listPastTrips` itself stays: the journey
+    // loader below still asks for it.
+    const [summary, countries, bucket, stats] = await Promise.all([
       getAtlasSummary(scope, userId),
       listVisitedCountries(scope, userId),
       listBucketList(scope, userId),
       listTravelStats(scope, userId),
-      listPastTrips(scope, { today: todayIso(), limit: 6 }),
     ])
 
     return {
@@ -265,12 +264,6 @@ export const loadAtlas = createServerFn({ method: 'GET' }).handler(
         dayCount: row.dayCount,
         distanceMetres: row.distanceMetres,
         yearStreak: row.yearStreak,
-      })),
-      recentTrips: recent.map((trip) => ({
-        id: trip.id,
-        title: trip.title,
-        endDate: trip.endDate,
-        countryCodes: trip.countryCodes ?? [],
       })),
     }
   },

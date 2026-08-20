@@ -322,6 +322,24 @@ export function formatRelative(
   return dateFormatter.format(parsed)
 }
 
+/**
+ * A short text column reduced to "we have a value" or "we do not".
+ *
+ * Several of our own columns are validated by `shortTextSchema`, which trims but
+ * has no `.min(1)`, so a write of `''` stores an empty string and a bare
+ * `!== null` check treats it as data. Downstream that renders as a separator with
+ * nothing after it — `FR ·` — and announces as a doubled comma, both of which
+ * read as a rendering failure rather than as missing data. One guard, so every
+ * surface that prints one of those columns agrees on what absent means.
+ */
+export function trimmedOrNull(value: string | null | undefined): string | null {
+  if (value === null || value === undefined) {
+    return null
+  }
+  const trimmed = value.trim()
+  return trimmed === '' ? null : trimmed
+}
+
 /** Turns a dotted enum value into sentence case: `bank_transfer` → `Bank transfer`. */
 export function humaniseToken(value: string): string {
   const words = value.replace(/[._-]+/g, ' ').trim()

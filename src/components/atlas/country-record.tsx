@@ -5,7 +5,7 @@ import { Badge, SectionLabel, Skeleton, cardVariants } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { countryName } from '#/lib/atlas/country-names'
 import { UNRECORDED_VISIT_LABEL, visitSpan } from '#/lib/atlas/visit-span'
-import { countryFlag, pluralise } from '#/lib/format'
+import { countryFlag, pluralise, trimmedOrNull } from '#/lib/format'
 
 import type { VisitSpan } from '#/lib/atlas/visit-span'
 
@@ -240,18 +240,19 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
     const name = countryName(code)
     const span = visitSpan(firstVisitedOn, lastVisitedOn)
     const cells = dateCells(span)
-    const written = note !== null && note.trim().length > 0
+    /** Trimmed, so padding a note cannot indent it or leave a blank line. */
+    const written = trimmedOrNull(note)
     /**
-     * The same trim guard the note already uses, for the same reason.
+     * The same trim guard the note uses, for the same reason.
      *
      * `continent` is validated by `shortTextSchema`, which has no `.min(1)`, so
      * `markCountryVisited({ continent: '' })` stores an empty string. A bare
      * `!== null` check then prints "FR ·" with a stranded middot and nothing
      * after it - a separator with no second operand reads as a rendering
-     * failure, not as missing data.
+     * failure, not as missing data. `CountriesList` calls the same helper, so
+     * the two cannot disagree about what absent means.
      */
-    const region =
-      continent === null || continent.trim() === '' ? null : continent.trim()
+    const region = trimmedOrNull(continent)
 
     return (
       <article
@@ -344,9 +345,9 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
           ) : null}
         </div>
 
-        {written ? (
+        {written !== null ? (
           <p data-part="note" className={layout.note}>
-            {note}
+            {written}
           </p>
         ) : (
           <p className="mt-4 flex items-center gap-2 rounded-md border border-dashed border-edge px-4 py-3 text-caption text-ink-3">

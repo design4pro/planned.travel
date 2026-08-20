@@ -213,23 +213,58 @@ const layout = {
    * not expose the variant.
    */
   root: 'flex min-w-0 flex-col overflow-hidden z-map-overlay',
+  /**
+   * A two-column grid on a phone, a row from `lg`.
+   *
+   * The four parts are siblings rather than two nested rows because of what
+   * happens at 360: the collapse toggle used to sit beside the tab strip, which
+   * left the strip 272px for three labelled tabs that want 330, and
+   * "Bucket list" overflowed its own trigger to within a pixel of the toggle.
+   * Placed on the grid, the toggle takes the space the short headline was
+   * wasting on the right and the tab strip gets the full width of the panel.
+   * Both are the same row from `lg`, where there was never a shortage.
+   */
   header:
-    'flex min-w-0 shrink-0 flex-col gap-3 px-3 py-3 sm:px-5 sm:py-3.5 lg:flex-row lg:items-center lg:gap-6',
-  headline: 'flex min-w-0 items-center gap-3 lg:shrink-0',
+    'grid min-w-0 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 sm:px-5 sm:py-3.5 lg:flex lg:gap-6',
+  /**
+   * A column of stated width from `lg`, not a shrink-to-fit block.
+   *
+   * The progress bar sits directly after it, so anything that changes the
+   * headline's width moves the bar: the display face arriving is exactly that,
+   * and it slid the whole row a few pixels a quarter of a second after paint.
+   * 11rem holds the hero pair and its caption at every plausible count, and the
+   * caption truncates rather than widening the column if a tenant ever manages
+   * more.
+   */
+  headline: 'flex min-w-0 items-center gap-3 lg:w-44 lg:shrink-0',
   /** Fills the void between the headline and the tabs on a wide shelf, and says
       something the numerals do not: how far there is still to go. */
   progress: 'hidden min-w-0 flex-1 lg:block',
-  /** Tabs and the collapse toggle travel together: the second row on a phone,
-      the right-hand end of the header from `lg`. */
-  controls: 'flex min-w-0 items-center gap-2 lg:shrink-0',
+  /**
+   * The collapse toggle: beside the headline on a phone, the far end from `lg`.
+   *
+   * It is written before the tab strip so the grid can put it on the first row
+   * without either of them being positioned twice; `order-last` is what returns
+   * it to the end of the header once the header is a flex row. Grid placement is
+   * inert there, and `order` is inert in the grid.
+   */
+  toggle: 'col-start-2 row-start-1 shrink-0 justify-self-end lg:order-last',
   /** Tight leading and `tabular-nums`: the count changes, the layout must not. */
   hero: 'font-display text-[clamp(1.75rem,6vw,2.5rem)] leading-[0.95] font-extrabold tracking-tighter tabular-nums text-ink',
   heroUnit: 'text-label font-medium tabular-nums text-ink-3',
   heroCaption: 'mt-0.5 truncate text-caption tabular-nums text-ink-2',
-  /** Takes the row on a phone and shrinks to its content from `lg`; `flex-1`
-      rather than `w-full` so the collapse toggle beside it is never squeezed
-      out of a panel that clips its own overflow. */
-  tabs: 'min-w-0 flex-1 lg:w-auto lg:flex-none',
+  /** Its own full-width row on a phone, and content-width from `lg`. */
+  tabs: 'col-span-2 col-start-1 row-start-2 min-w-0 lg:w-auto lg:flex-none',
+  /**
+   * Two pixels off each trigger's padding below `sm`.
+   *
+   * Not off the type: `SectionLabel`'s 11px and the 12px caption floor are fixed
+   * contracts, and shrinking a label to make a control fit is how the bar we are
+   * measured against ends up with "OCEANIA" reading "OCEAN". Eight pixels a
+   * trigger is what "Bucket list" needed at 360, and padding is the part of the
+   * trigger that is not information.
+   */
+  tab: 'px-2 sm:px-3',
   /**
    * The shelf's opening height on a phone is its header alone; from `lg` the
    * screen gives it a definite 25rem, so the record and the list inside are real
@@ -422,41 +457,51 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
               />
             </div>
 
-            <div className={layout.controls}>
-              <TabsList aria-label="Atlas sections" className={layout.tabs}>
-                <TabsTrigger value="country" icon={<MapPinned />}>
-                  Country
-                </TabsTrigger>
-                <TabsTrigger value="stats" icon={<Globe />}>
-                  Stats
-                </TabsTrigger>
-                <TabsTrigger value="bucket" icon={<Telescope />}>
-                  Bucket list
-                </TabsTrigger>
-              </TabsList>
+            {/* Offered at every width, not only on a phone: collapsing the
+                shelf is how a desktop reader gets the southern hemisphere back
+                from under it. */}
+            <IconButton
+              variant="subtle"
+              size="sm"
+              label={open ? 'Hide atlas details' : 'Show atlas details'}
+              aria-expanded={open}
+              aria-controls={bodyId}
+              onClick={() => onExpandedChange(!open)}
+              icon={
+                <ChevronDown
+                  size={16}
+                  className={cn(
+                    'transition-transform duration-base ease-out-quint',
+                    open ? 'rotate-0' : 'rotate-180',
+                  )}
+                />
+              }
+              className={layout.toggle}
+            />
 
-              {/* Offered at every width, not only on a phone: collapsing the
-                  shelf is how a desktop reader gets the southern hemisphere back
-                  from under it. */}
-              <IconButton
-                variant="subtle"
-                size="sm"
-                label={open ? 'Hide atlas details' : 'Show atlas details'}
-                aria-expanded={open}
-                aria-controls={bodyId}
-                onClick={() => onExpandedChange(!open)}
-                icon={
-                  <ChevronDown
-                    size={16}
-                    className={cn(
-                      'transition-transform duration-base ease-out-quint',
-                      open ? 'rotate-0' : 'rotate-180',
-                    )}
-                  />
-                }
-                className="shrink-0"
-              />
-            </div>
+            <TabsList aria-label="Atlas sections" className={layout.tabs}>
+              <TabsTrigger
+                value="country"
+                icon={<MapPinned />}
+                className={layout.tab}
+              >
+                Country
+              </TabsTrigger>
+              <TabsTrigger
+                value="stats"
+                icon={<Globe />}
+                className={layout.tab}
+              >
+                Stats
+              </TabsTrigger>
+              <TabsTrigger
+                value="bucket"
+                icon={<Telescope />}
+                className={layout.tab}
+              >
+                Bucket list
+              </TabsTrigger>
+            </TabsList>
           </div>
 
           <div
@@ -810,8 +855,13 @@ export const AtlasPanelSkeleton = React.forwardRef<
           <Skeleton radius="sm" className="mt-1.5 h-3 w-40" />
         </div>
       </div>
-      {/* The `sm` segmented track's own height, so nothing resizes on arrival. */}
-      <Skeleton radius="full" className="h-9 w-full shrink-0 lg:w-88" />
+      {/* The collapse toggle's own box, so the headline column is the width it
+          will be rather than 44px wider until the read lands. */}
+      <Skeleton radius="full" className={cn(layout.toggle, 'size-8')} />
+
+      {/* The `sm` segmented track's own height and the tab strip's own place on
+          the grid, so nothing moves or resizes when the read lands. */}
+      <Skeleton radius="full" className={cn(layout.tabs, 'h-9 lg:w-88')} />
     </div>
 
     <div aria-hidden="true" className={cn(layout.body, 'hidden lg:flex')}>
