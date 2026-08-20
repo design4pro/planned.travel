@@ -33,6 +33,7 @@ import { WorldCoverageMap } from './world-map'
 
 import type { AtlasPanelTab } from '#/components/atlas'
 import type { MapVisitedCountry } from '#/components/map'
+import type { CountrySearchVisit } from '#/lib/atlas/country-search'
 import type { ViewportBox } from '#/lib/atlas/layout'
 import type { EdgePadding } from '#/lib/map'
 import type { AtlasPayload } from '../-server/library'
@@ -108,8 +109,27 @@ import type { AtlasPayload } from '../-server/library'
  * canvas is mounted with a transparent ground, so before the first painted frame
  * the reader sees the world rather than an empty rectangle, and if the renderer
  * never starts — no WebGL2, or a canvas that never draws — it stays, under the
- * canvas's own designed notice. It fades out and goes `aria-hidden` the moment
- * MapLibre reports its style loaded, so exactly one map is ever announced.
+ * canvas's own designed notice. It fades out the moment MapLibre reports its
+ * style loaded.
+ *
+ * **Exactly one map is ever announced.** Two things on this screen can be "the
+ * world map": the canvas region and the drawn SVG behind it. While the renderer
+ * is coming up the canvas owns the name and the SVG is decoration; when the
+ * renderer refuses — no WebGL2 — the canvas hides itself from the accessibility
+ * tree and the SVG, which is now the only map there is, takes the name back.
+ * Neither state announces the same map twice, and neither announces an empty
+ * region.
+ *
+ * **The chrome is not the map's child.** The search pill and the zoom cluster
+ * used to be rendered inside `MapCanvas`, which holds its children back until a
+ * MapLibre instance exists. That put them out of the server-rendered document
+ * altogether and out of the no-WebGL2 fallback *permanently* — a country search
+ * that only answers once a GPU says yes. They go in the canvas's `chrome` slot
+ * instead: inside the map's context, so they still drive the camera when there
+ * is one, and inside the document from the very first byte. The zoom cluster is
+ * the one piece that stands down when the renderer refuses, because there is
+ * then nothing to zoom; the search, the panel, the record and the list all still
+ * work, and the notice says why the world is a drawing.
  *
  * **The canvas overhangs its frame by a pixel.** With world copies off, the
  * antimeridian is the canvas's own left and right edge, and both the generated
@@ -265,6 +285,95 @@ function AtlasCamera({ token, countryCode, padding }: AtlasCameraProps) {
   return null
 }
 
+/* ------------------------------------------------------------------ map chrome */
+
+interface AtlasChromeProps {
+  readonly countries: ReadonlyArray<CountrySearchVisit>
+  readonly selectedCode: string | null
+  readonly onSelect: (countryCode: string | null) => void
+  readonly padding: EdgePadding
+  /**
+   * Told when the renderer settles into a state it will not leave. The screen
+   * needs the answer for the static world behind the canvas, which becomes the
+   * only map on the page the moment the canvas admits it will never draw one.
+   */
+  readonly onEngineFailedChange: (failed: boolean) => void
+}
+
+/**
+ * Everything floating over the map that is not the panel.
+ *
+ * Rendered through `MapCanvas`'s `chrome` slot rather than as its child, which
+ * is what puts it in the server-rendered document and keeps it there on a
+ * machine that cannot give MapLibre a WebGL2 context. Inside the slot it is
+ * still inside the map's context, so the search flies the camera and the zoom
+ * cluster zooms exactly as before; with no map they both fall back to the
+ * `map: null` behaviour every control in that module already ships.
+ *
+ * The zoom cluster is withdrawn once the renderer has definitively refused. A
+ * toolbar that is present, enabled and inert is a worse answer than no toolbar
+ * beside a notice that explains the drawing — and there is genuinely nothing to
+ * zoom: what is left on screen is a fixed-scale SVG. Everything that still works
+ * without a renderer stays: the search, its results, the record, the list.
+ */
+function AtlasChrome({
+  countries,
+  selectedCode,
+  onSelect,
+  padding,
+  onEngineFailedChange,
+}: AtlasChromeProps) {
+  const { engine } = useMapContext()
+  const failed = engine === 'unsupported' || engine === 'stalled'
+
+  React.useEffect(() => {
+    onEngineFailedChange(failed)
+  }, [failed, onEngineFailedChange])
+
+  return (
+    <div className={WELL}>
+      <CountrySearch
+        countries={countries}
+        selectedCode={selectedCode}
+        onSelect={onSelect}
+        padding={padding}
+        className={cn(
+          // `GlassPanel`'s floating default is `z-dropdown`, which sits above
+          // the app nav. Map chrome belongs below it.
+          SEARCH_BOX,
+          // The 72px the pill gives up on a phone belongs to the zoom cluster.
+          // With no cluster there is nothing to give it up for, and the gap
+          // reads as a control that failed to draw.
+          failed && 'right-3',
+        )}
+      />
+
+      {failed ? null : (
+        <MapControls
+          position="bottom-right"
+          // Zoom and compass, and deliberately no "find my location".
+          //
+          // Two reasons, and the second one is the screen's own contract. This
+          // map's ceiling is `VISITED_COUNTRY_ZOOM.fadeEnd`, so locating a
+          // reader can only ever answer "you are in the country you are in" —
+          // a button that spends a permission prompt to say nothing. And the
+          // button exists only after a `navigator` probe that cannot run during
+          // a server render, so on a cluster anchored to its *bottom* edge it
+          // arrives as a 34px growth after hydration: a layout shift after
+          // paint, on the one screen in the product that must not have one.
+          showLocate={false}
+          className={CHROME.controls}
+        />
+      )}
+
+      {/* ODbL. Credited in the product's own type, at a size that can be read,
+          and clear of both the search pill and the panel. Renders nothing until
+          there are tiles to credit — with none, the basemap notice carries it. */}
+      <MapAttribution className={CHROME.credit} />
+    </div>
+  )
+}
+
 /* -------------------------------------------------------------------- viewport */
 
 /**
@@ -380,6 +489,14 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
   const [expanded, setExpanded] = React.useState<boolean | null>(null)
   const [cameraToken, setCameraToken] = React.useState(0)
   const [mapDrawing, setMapDrawing] = React.useState(false)
+  /**
+   * Whether the renderer has given up for good.
+   *
+   * Reported up out of the map's own context by {@link AtlasChrome}, because it
+   * decides something outside the canvas: which of the two worlds on this screen
+   * is the one a screen reader is told about.
+   */
+  const [engineFailed, setEngineFailed] = React.useState(false)
 
   /**
    * The one shelf height, published to CSS and handed to the camera.
@@ -486,7 +603,12 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
         <WorldCoverageMap
           visited={visitedCodes}
           label={worldLabel}
-          decorative={mapDrawing}
+          // Decoration for as long as the canvas over it is a map region with
+          // this same name — which is from the first server-rendered byte until
+          // the renderer either draws or refuses. It takes the name back only in
+          // the state where the canvas has hidden itself: then this drawing is
+          // the map, and it is the only thing left to announce.
+          decorative={!engineFailed}
           className={cn(
             // A short cut rather than a long cross-fade: 150ms is the token exit
             // duration, and the two are drawing the same world in the same
@@ -497,71 +619,63 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
           )}
         />
 
-        {box === null ? null : (
-          <MapCanvas
-            label={worldLabel}
-            center={WORLD_CENTRE}
-            zoom={worldZoom(canvasBox(box))}
-            padding={padding}
-            minZoom={worldZoom(canvasBox(box))}
-            // The country fills are not drawn past this zoom, so the reader can
-            // never arrive somewhere the atlas has nothing to say.
-            maxZoom={VISITED_COUNTRY_ZOOM.fadeEnd}
-            buildings={false}
-            // Drafting lines over the sea, for the state where the archive is
-            // regional or absent and the ground layers are the map. Majors every
-            // 30 degrees rather than every 60: at world zoom the grid is already
-            // down to 22% opacity, and the sparser pair read as two stray lines.
-            graticule={{ step: 15, majorEvery: 2 }}
-            onMapReady={(map) => {
-              // `MapCanvas` constructs with `renderWorldCopies: true` and exposes no
-              // prop for it, so the single world is asked for through MapLibre's own
-              // setter. A wide screen would otherwise show two and a bit copies of
-              // the world with every visited country highlighted two and a bit
-              // times, which is a data map lying about its own data. It is a
-              // transform property rather than a style one, so the theme swap —
-              // which replaces the whole style document — cannot undo it.
-              map.setRenderWorldCopies(false)
-              setMapDrawing(true)
-            }}
-            // Transparent, so the static world behind it shows through until the
-            // renderer paints — and forever, if it never does.
-            className="absolute inset-0 bg-transparent"
-          >
-            <VisitedCountries
-              visits={visits}
+        {/* Mounted from the first render, not from the first measurement.
+            `MapCanvas` reads its opening camera when it constructs the map —
+            after two dynamic imports and an archive probe — so the zoom that
+            makes one world span this container is ready long before it is
+            wanted, and the chrome below travels in the server-rendered document
+            instead of waiting on a layout effect that never runs there. */}
+        <MapCanvas
+          label={worldLabel}
+          center={WORLD_CENTRE}
+          zoom={box === null ? undefined : worldZoom(canvasBox(box))}
+          padding={padding}
+          minZoom={box === null ? undefined : worldZoom(canvasBox(box))}
+          // The country fills are not drawn past this zoom, so the reader can
+          // never arrive somewhere the atlas has nothing to say.
+          maxZoom={VISITED_COUNTRY_ZOOM.fadeEnd}
+          buildings={false}
+          // Drafting lines over the sea, for the state where the archive is
+          // regional or absent and the ground layers are the map. Majors every
+          // 30 degrees rather than every 60: at world zoom the grid is already
+          // down to 22% opacity, and the sparser pair read as two stray lines.
+          graticule={{ step: 15, majorEvery: 2 }}
+          onMapReady={(map) => {
+            // `MapCanvas` constructs with `renderWorldCopies: true` and exposes
+            // no prop for it, so the single world is asked for through
+            // MapLibre's own setter. A wide screen would otherwise show two and
+            // a bit copies of the world with every visited country highlighted
+            // two and a bit times, which is a data map lying about its own data.
+            // It is a transform property rather than a style one, so the theme
+            // swap — which replaces the whole style document — cannot undo it.
+            map.setRenderWorldCopies(false)
+            setMapDrawing(true)
+          }}
+          // Transparent, so the static world behind it shows through until the
+          // renderer paints — and forever, if it never does.
+          className="absolute inset-0 bg-transparent"
+          chrome={
+            <AtlasChrome
+              countries={countries}
               selectedCode={selected}
               onSelect={open}
-            />
-
-            <AtlasCamera
-              token={cameraToken}
-              countryCode={selected}
               padding={padding}
+              onEngineFailedChange={setEngineFailed}
             />
+          }
+        >
+          <VisitedCountries
+            visits={visits}
+            selectedCode={selected}
+            onSelect={open}
+          />
 
-            <div className={WELL}>
-              <CountrySearch
-                countries={countries}
-                selectedCode={selected}
-                onSelect={open}
-                padding={padding}
-                // `GlassPanel`'s floating default is `z-dropdown`, which sits above
-                // the app nav. Map chrome belongs below it.
-                className={SEARCH_BOX}
-              />
-
-              <MapControls
-                position="bottom-right"
-                className={CHROME.controls}
-              />
-
-              {/* ODbL. Credited in the product's own type, at a size that can be
-                read, and clear of both the search pill and the panel. */}
-              <MapAttribution className={CHROME.credit} />
-            </div>
-          </MapCanvas>
-        )}
+          <AtlasCamera
+            token={cameraToken}
+            countryCode={selected}
+            padding={padding}
+          />
+        </MapCanvas>
       </div>
 
       <AtlasPanel
@@ -580,12 +694,15 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
           regionCount: atlas.regionCount,
           visitCount: atlas.visitCount,
           tripCount: allTime?.tripCount ?? null,
+          placeCount: allTime?.placeCount ?? null,
           cityCount: allTime?.cityCount ?? null,
           dayCount: allTime?.dayCount ?? null,
           distanceMetres: allTime?.distanceMetres ?? null,
         }}
         byContinent={atlas.byContinent}
         bucketList={atlas.bucketList}
+        bucketTotal={atlas.bucketListTotal}
+        bucketAchieved={atlas.bucketListAchieved}
         className={cn(
           PANEL_BOX,
           // `h-auto` until the reader has an opinion, so the collapsed phone

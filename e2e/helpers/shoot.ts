@@ -16,7 +16,10 @@ import type { BrowserContext, Locator, Page } from '@playwright/test'
  *    stopped `/settings` failing three runs in six at five times its pixel
  *    budget.
  * 2. **The clock the browser reads** — `FROZEN_NOW`, installed before the first
- *    navigation. This is what the atlas map's recency ramp is computed from.
+ *    navigation. This is what the atlas map's recency ramp is computed from. It
+ *    pins the wall clock and fakes the page's timer APIs alongside it, which is
+ *    why nothing this file runs in the page measures elapsed time with a clock —
+ *    read the note on `FROZEN_NOW` before writing anything that does.
  * 3. **The clock the server read, as text** — a countdown that says "in 51d" the
  *    evening a baseline is recorded and "in 50d" the next morning.
  *    `RELATIVE_TIME_SITES` excludes those regions from the comparison; the
@@ -41,9 +44,14 @@ import type { BrowserContext, Locator, Page } from '@playwright/test'
  *    perform — never latching at all, or latching on a route that declares
  *    nothing — are exercised by `the gate itself` against a document built for
  *    them.
- * 6. **Graphics-driver chatter** — a performance advisory from the software
- *    rasteriser headless Chromium paints WebGL with, which is not something the
- *    app did. `classifyConsoleMessage()`, and nothing wider than that.
+ * 6. **Browser chatter that is not the app talking** — the performance advisory
+ *    the software rasteriser headless Chromium paints WebGL with, and the
+ *    unused-preload advisory either engine writes about a Vite dev-server URL a
+ *    few seconds after the load event. Neither is something the app did, and the
+ *    second one arrives or does not according to how long the page stayed open.
+ *    `classifyConsoleMessage()`, two anchored patterns, and nothing wider than
+ *    that: a warning the app writes itself stays fatal even when it quotes one of
+ *    them, and a React hydration report is not a warning at all.
  *
  * ## What this file cannot pin
  *
@@ -377,11 +385,26 @@ export async function applyTheme(page: Page, theme: Theme): Promise<void> {
  * The instant every gate frame is rendered at, as far as the browser is
  * concerned.
  *
- * `page.clock.setFixedTime` patches `Date` only — `setTimeout`,
- * `requestAnimationFrame` and `performance.now()` keep running, so MapLibre's
- * render loop and React's scheduler are untouched. `clock.install()` would fake
- * all of those and has to be ticked by hand, and a map would never finish
- * drawing.
+ * `page.clock.setFixedTime` holds the *wall clock* still and lets everything
+ * else run: measured on the pinned Playwright in both engines, an in-page
+ * `Date.now()` advances by 0 ms across a real 500 ms `setTimeout` while
+ * `performance.now()` advances by 501. MapLibre's render loop and React's
+ * scheduler therefore keep going, which is the whole reason this is
+ * `setFixedTime` and not `clock.install()` — the latter suspends the timers and
+ * has to be ticked by hand, and a map would never finish drawing.
+ *
+ * What it does *not* do is leave the other clocks alone, and the difference cost
+ * this gate a round. `setFixedTime` installs the entire clock harness: `Date`,
+ * `performance`, `setTimeout`, `setInterval` and `requestAnimationFrame` are all
+ * Playwright's own implementations afterwards — `String(setTimeout)` carries no
+ * `[native code]` in either engine — and they are then resumed against real time,
+ * which is why they still fire and why only `Date` is pinned. The consequence is
+ * a rule rather than a curiosity: **nothing running inside the page may measure
+ * elapsed time with `Date`**. `settleMutations()` did, subtracting two readings of
+ * a frozen clock always gave it 0 ms, its floor could therefore never be
+ * satisfied, and every frame in the suite was taken on the give-up cap with no
+ * quiet guarantee at all. It now latches on a timer instead of doing arithmetic
+ * on any clock, which is immune to this and to a future `clock.install()` alike.
  *
  * The value is arbitrary but not careless. The atlas paints each visited country
  * by how long ago it was last there (`visitRecency`, thresholds at 2 and 8
@@ -1446,10 +1469,16 @@ export async function settle(page: Page, route: RouteCase): Promise<void> {
  * mutation is seen and quiet restarts after it, so the frame is the same frame
  * every run. 350 ms is that timer plus half of it again, and it stays well under
  * the cap.
+ *
+ * All three are exported because the numbers are only half the guarantee: the
+ * other half is *which* of them the wait actually ends on, and for a while the
+ * answer was "always the cap" (see `settleMutations()`). `the gate itself` asserts
+ * that under the frozen clock the quiet path still resolves, and it needs the cap
+ * to state what it is asserting the wait came in under.
  */
-const DOM_QUIET_MS = 150
-const DOM_QUIET_FLOOR_MS = 350
-const DOM_QUIET_CAP_MS = 2_000
+export const DOM_QUIET_MS = 150
+export const DOM_QUIET_FLOOR_MS = 350
+export const DOM_QUIET_CAP_MS = 2_000
 
 /**
  * The signal that React has claimed the whole tree.
@@ -1479,45 +1508,95 @@ function hydratedIn(selector: string): boolean {
  * on a document that is about to change — see `DOM_QUIET_FLOOR_MS`. Holding the
  * observer open until the floor keeps that mutation inside the window, where it
  * restarts the quiet period like any other.
+ *
+ * **Three timers and two latches, and not one reading of a clock.** The first
+ * version of this expressed the floor as arithmetic — `Date.now()` at open,
+ * `Date.now()` again on every quiet window, hold if the difference was under the
+ * floor — and it was wrong from the moment it met `FROZEN_NOW`. `visit()` installs
+ * `page.clock.setFixedTime` before the first navigation, so in-page `Date` does not
+ * move: the difference was 0 ms on every evaluation, the floor was never satisfied,
+ * `stop()` rescheduled itself forever, and the only path that ever resolved was the
+ * cap. Measured on this app in both engines: 2003 ms and 2004 ms, every frame, for
+ * a wait whose designed answer is 353 ms. The gate was not photographing unsettled
+ * pages — two seconds is longer than the quiet path it was meant to take — but it
+ * had no quiet guarantee at all, and it was paying 1.65 s a frame to have none.
+ *
+ * `performance.now()` would have fixed it (it advances in real time under a fixed
+ * `Date`, measured), and it is still a clock. This does not read one. The floor is
+ * a `setTimeout` armed once at open that flips a latch, the quiet window is a
+ * `setTimeout` restarted by the observer that flips another, and the wait ends on
+ * the first moment both latches are set — whichever order they land in. So a quiet
+ * window that closes at 150 ms waits for the floor at 350, and a mutation at 349 ms
+ * clears the quiet latch and pushes the end to 499, exactly as the arithmetic
+ * version intended. Nothing here can be broken by a fixed clock, and nothing here
+ * would break under a future `clock.install()` either.
+ *
+ * The cap stays outside both latches, as it always has: it is the one timer whose
+ * job is to give up, and the floor must never be able to defer it.
+ *
+ * **No baseline moved for this.** Worth stating, because the repair shortens every
+ * frame in the suite from ~2000 ms of holding to ~350 ms, and a shorter hold is the
+ * shape of change that photographs a page mid-render. All fifty-two frames compared
+ * clean against the baselines recorded under the cap, on both projects, in
+ * consecutive full runs — which is the evidence that the extra 1.65 s was buying
+ * nothing a reader could see, and that what the floor now guarantees is what the
+ * cap was accidentally providing.
+ *
+ * Exported for the same reason `readMapCensus()` is: which of the three timers the
+ * wait ends on is invisible in a green run, and it was wrong for every frame in
+ * the suite while every frame in the suite passed. `the gate itself` measures this
+ * function directly — with the gate's own frozen clock installed — rather than
+ * measuring `settle()`, so what it asserts is the wait and not the round trips
+ * around it.
  */
-async function settleMutations(page: Page): Promise<void> {
+export async function settleMutations(page: Page): Promise<void> {
   await page.evaluate(
     ({ quietMs, floorMs, capMs }) =>
       new Promise<void>((resolve) => {
-        const opened = Date.now()
         let quiet = 0
+        let floor = 0
+        let cap = 0
+        let quietElapsed = false
+        let floorReached = false
         const observer = new MutationObserver(() => restart())
-        const stop = (): void => {
-          const held = Date.now() - opened
-          if (held < floorMs) {
-            // Quiet, but too early to be believed: keep watching until the floor,
-            // and let any mutation in between restart the window.
-            quiet = window.setTimeout(stop, floorMs - held)
-            return
-          }
+        const finish = (): void => {
           observer.disconnect()
           window.clearTimeout(quiet)
+          window.clearTimeout(floor)
+          window.clearTimeout(cap)
           resolve()
         }
+        const stop = (): void => {
+          quietElapsed = true
+          // Quiet, but only believable once the floor has passed: a control the
+          // product mounts on a timer has not arrived yet, and the observer will
+          // see it and clear this latch again.
+          if (floorReached) {
+            finish()
+          }
+        }
         const restart = (): void => {
+          quietElapsed = false
           window.clearTimeout(quiet)
           quiet = window.setTimeout(stop, quietMs)
         }
+        floor = window.setTimeout(() => {
+          floorReached = true
+          if (quietElapsed) {
+            finish()
+          }
+        }, floorMs)
+        // The cap ends the wait whatever the observer is seeing, so a page that
+        // mutates forever degrades to a fixed pause instead of a test timeout. It
+        // is deliberately not routed through `stop()`: the floor must never be able
+        // to defer the one timer whose job is to give up.
+        cap = window.setTimeout(finish, capMs)
         observer.observe(document.documentElement, {
           subtree: true,
           childList: true,
           attributes: true,
           characterData: true,
         })
-        // The cap ends the wait whatever the observer is seeing, so a page that
-        // mutates forever degrades to a fixed pause instead of a test timeout. It
-        // is deliberately not routed through `stop()`: the floor must never be able
-        // to defer the one timer whose job is to give up.
-        window.setTimeout(() => {
-          observer.disconnect()
-          window.clearTimeout(quiet)
-          resolve()
-        }, capMs)
         restart()
       }),
     {
@@ -1613,36 +1692,51 @@ async function hideDevChrome(page: Page): Promise<void> {
  * affordance is client-only, and `settings` in both themes on mobile-safari, where
  * the native controls and the avatar are.
  *
- * Step 4's floor and step 6's rule moved twenty-six more, and every one of them is
- * a picture of the product finishing something the old sequence photographed it
- * halfway through. Attributed by cropping the frames rather than by reasoning
- * about them:
+ * Step 4's floor and step 6's rule moved thirty more, and every one of them is a
+ * picture of the product finishing something the old sequence photographed it
+ * halfway through. The list below is the whole thirty, with nothing left over:
+ * attributed by differencing each committed pair and reading the connected
+ * components of the difference, rather than by reasoning about what ought to have
+ * moved. (The same commit re-recorded the four `atlas-*` frames. Those belong to
+ * whoever owns that screen and are not this sequence's doing; the other eighteen
+ * of the fifty-two came back byte-identical, which is the evidence that none of
+ * this photographs a different design.)
  *
- * - **twelve dark public frames** — `landing`, `pricing`, `register`,
- *   `forgot-password`, `legal/terms`, `legal/privacy`, both projects. The
- *   marketing header's theme toggle was photographed on its sun icon, which is
- *   what it shows before the client has resolved the colour scheme; it now shows
- *   the moon a reader in dark mode actually sees.
- * - **`settings` in both themes on Chromium** — its six native `<select>`
- *   controls were photographed empty. They now read "Workspace default — en-GB",
- *   "GBP — Pound sterling" and the rest, because the values arrive after the old
- *   quiet window had already closed.
- * - **the app header, on every Chromium app frame** — the avatar was a blank
- *   black disc and is now the initials. Radix's fallback is given `delayMs={200}`
- *   in `src/components/layout/kit.tsx`, and 200 ms was on the wrong side of a
- *   150 ms quiet window.
- * - **five mobile frames** — `dashboard` and `journey` in both themes and
- *   `trips` in light carried the dev toolbar's trigger, sitting over the
- *   "Journey" tab. Measured with `maxDiffPixels: 0`: it was 925 of the 1322
- *   pixels `maxDiffPixelRatio` allows a 393x1682 frame, so seventy per cent of
- *   that frame's entire budget was being spent on a picture of the dev server.
+ * - **the theme toggle — nineteen frames, every dark frame that carries a
+ *   header.** The twelve dark public ones (`landing`, `pricing`, `register`,
+ *   `forgot-password`, `legal/terms`, `legal/privacy`, both projects), the five
+ *   dark app frames on Chromium (`dashboard`, `journey`, `trips`, `vacay`,
+ *   `settings`), and `trips` and `vacay` in dark on mobile WebKit. One 16–18px
+ *   glyph in each: the sun the toggle shows before the client has resolved the
+ *   colour scheme, now the moon a reader in dark mode actually sees.
+ * - **the account chip — thirteen app frames, on both projects.** This is the
+ *   entry an earlier version of this note got wrong: it claimed the avatar moved
+ *   "every Chromium app frame", and it moved mobile WebKit too. All ten Chromium
+ *   app frames, both themes, where a blank black disc is now the initials "RW"
+ *   and the name beside it re-rendered with them; and three mobile ones — `vacay`
+ *   in light, where the whole 32px disc moved, and `trips` and `vacay` in dark,
+ *   where the initials did. Radix's fallback is given `delayMs={200}` in
+ *   `src/components/layout/kit.tsx`, and 200 ms was on the wrong side of a 150 ms
+ *   quiet window. It did not move the other five mobile app frames because which
+ *   side of that race a recording landed on was luck, and those five had been
+ *   recorded on the winning side — which is the failure mode, not an exception to
+ *   it.
+ * - **`settings` in both themes on Chromium — two frames.** Its six native
+ *   `<select>` controls were photographed empty. They now read "Workspace
+ *   default — en-GB", "GBP — Pound sterling" and the rest, because the values
+ *   arrive after the old quiet window had already closed.
+ * - **the dev toolbar's trigger — five mobile frames.** `dashboard` and `journey`
+ *   in both themes and `trips` in light carried it, sitting over the "Journey"
+ *   tab. On `trips` in light the whole frame differs by 3,927 pixels against a
+ *   budget of 1,322 — three times over `maxDiffPixelRatio`, spent on a picture of
+ *   the dev server.
  *
- * Eight of those twenty-six also moved for a reason that is not this sequence's —
+ * Eight of the thirty also moved for a reason that is not this sequence's:
  * `dashboard` and `trips`, all four frames each, whose countdown badge is now
- * masked at the size of its pinned string. The attribution for that is on
- * RELATIVE_TIME_SITES. The remaining twenty-two baselines came back
- * byte-identical, which is the evidence that none of this photographs a different
- * design: it stopped photographing the product mid-render.
+ * masked at the size of its pinned string — on `trips` in light on Chromium the
+ * excluded rectangle went from 52x20 at +411+718 to 50x20 at +413+718, which is
+ * the two pixels of unmasked page that pinning exists to remove. The attribution
+ * for that is on RELATIVE_TIME_SITES.
  */
 async function settleOnce(page: Page, route: RouteCase): Promise<void> {
   await page.locator(route.ready).first().waitFor({ state: 'visible' })
@@ -1741,16 +1835,43 @@ export type ToleratedConsoleWarning = {
  * Message types the gate has never read — `log`, `info`, `debug`, `trace` and
  * the rest — stay ignored, as before.
  *
- * The one entry is not an app warning at all. Headless Chromium paints WebGL
- * through a software rasteriser, and its GL layer reports — by its own fields,
- * source `OpenGL`, type `Performance`, severity `High` — that reading the
- * drawing buffer back to composite it stalled the GPU. It is a driver advisory
- * about a code path we do not own, it does not exist on hardware, and only a
- * page with a WebGL canvas can produce it, which is why it is scoped to
- * `map: true` routes and stays fatal everywhere else. The per-context pointer in
- * the prefix changes every run, so the pattern is anchored on the shape and
- * never on the handle; anchoring it at the start is what keeps an app warning
- * that merely quotes the advisory fatal.
+ * Neither entry is an app warning, and neither can become one: both patterns are
+ * anchored at the start of the message, so a warning the app writes itself is
+ * fatal even when it quotes one of these word for word. A React hydration report
+ * cannot reach this list at all — React 19 surfaces a mismatch as an uncaught
+ * error through `window.reportError` and, in development, as a `console.error`,
+ * and `classifyConsoleMessage()` answers `fatal` for both before it is ever
+ * consulted. A warning-only tolerance is structurally incapable of swallowing one.
+ *
+ * **The graphics-driver advisory.** Headless Chromium paints WebGL through a
+ * software rasteriser, and its GL layer reports — by its own fields, source
+ * `OpenGL`, type `Performance`, severity `High` — that reading the drawing buffer
+ * back to composite it stalled the GPU. It is a driver advisory about a code path
+ * we do not own, it does not exist on hardware, and only a page with a WebGL
+ * canvas can produce it, which is why it is scoped to `map: true` routes and stays
+ * fatal everywhere else. The per-context pointer in the prefix changes every run,
+ * so the pattern is anchored on the shape and never on the handle.
+ *
+ * **The unused-preload advisory.** The engine's own resource loader, a few seconds
+ * after the load event, about a resource the *dev server* handed the parser. It
+ * failed `register renders in dark` on mobile WebKit in one full run of four, and
+ * what decided which run was how long the page happened to stay open — the
+ * emission window is fixed and the app on screen has no part in it. Reproduced
+ * verbatim in both engines against this origin: WebKit ends the message "Please
+ * make sure it wasn't preloaded for nothing." and Chromium "Please make sure it
+ * has an appropriate `as` value and it is preloaded intentionally.", so the
+ * pattern stops at the sentence they share.
+ *
+ * Its scope is the URL, and the URL is what makes the tolerance narrow rather
+ * than convenient. The resource has to be served by a development server —
+ * `localhost` or a loopback address with a port — under a path only `vite dev`
+ * publishes: `/src/…` is the source tree, anything under `/@` is one of the dev
+ * server's own namespaces (`/@vite/`, `/@id/`, `/@fs/`, `/@tanstack-start/`,
+ * `/@react-refresh`), and `/node_modules/…` is an unbundled dependency. The deployed Worker serves none of them; it serves hashed
+ * `/assets/*` instead, and the identical advisory about an `/assets/…` URL — or
+ * about any host that is not the loopback — stays fatal, because there it would be
+ * a real preload the built application asked for and did not use. Both halves are
+ * asserted in `the gate itself`.
  */
 export const TOLERATED_CONSOLE_WARNINGS: ReadonlyArray<ToleratedConsoleWarning> =
   [
@@ -1759,6 +1880,12 @@ export const TOLERATED_CONSOLE_WARNINGS: ReadonlyArray<ToleratedConsoleWarning> 
       match:
         /^\[\.WebGL-0x[0-9a-f]+\]GL Driver Message \(OpenGL, Performance, /,
       onlyWithLiveMap: true,
+    },
+    {
+      why: "the browser's resource loader reporting that a Vite dev-server URL was speculatively preloaded and not used — a path that exists only under `vite dev`, and a warning whose arrival depends on how long the page stayed open rather than on what the page rendered",
+      match:
+        /^The resource https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]):\d+\/(?:src\/|node_modules\/|@)\S* was preloaded using link preload but not used within a few seconds from the window's load event\./,
+      onlyWithLiveMap: false,
     },
   ]
 

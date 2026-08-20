@@ -5,6 +5,7 @@ import {
   Compass,
   Flag,
   Globe,
+  Landmark,
   MapPin,
   MapPinned,
   PlaneTakeoff,
@@ -77,9 +78,22 @@ import type { CountriesListCountry } from './countries-list'
  *
  * **A phone gets a drawer, not a squeezed desktop.** Below `lg` the panel is
  * collapsed to its header, so the map keeps the screen; the tab strip is still
- * there, and touching a tab opens it. From `lg` up it is always open, because
- * there is room, and the toggle disappears rather than becoming a control with
- * nothing to do.
+ * there, and touching a tab opens it. From `lg` up it opens by default, because
+ * there is room. The toggle is offered at both, because collapsing the shelf is
+ * also how a desktop reader gets the southern hemisphere back from under it.
+ *
+ * **The toggle reports the state the panel is actually in.** Which shelf is open
+ * by default is a question about the *width*, and the panel refuses to answer it
+ * during render — that is the classic hydration mismatch, and the body's own
+ * `hidden lg:flex` lets the stylesheet answer it instead, in both passes and
+ * with no JavaScript at all. But `aria-expanded` and the chevron are not
+ * stylesheet-addressable, and left at the desktop default they told a phone
+ * reader the drawer was open while it was `display: none` — and then swallowed
+ * the first press, because "close what is already closed" is a no-op. So the
+ * breakpoint is read through `useSyncExternalStore`, which is the one hook that
+ * may legitimately return a different answer on the server: React hydrates with
+ * the server snapshot and reconciles afterwards, with no mismatch and nothing
+ * on screen to move.
  *
  * **A zero is a figure, not a blank.** Oceania is 0 in our own record, and three
  * continents are 0 for most travellers. Every continent cell is rendered at the
@@ -98,6 +112,61 @@ export type AtlasPanelTab = (typeof TAB_VALUES)[number]
 /** Narrows an arbitrary string from the tab primitive back to our union. */
 function asTab(value: string): AtlasPanelTab | null {
   return TAB_VALUES.find((candidate) => candidate === value) ?? null
+}
+
+/* ----------------------------------------------------------------- viewport */
+
+/**
+ * Tailwind's `lg`, as a query — the same 1024px the body's `hidden lg:flex`
+ * turns on, written once so the markup and the announcement cannot disagree.
+ */
+const SHELF_OPEN_QUERY = '(min-width: 1024px)'
+
+/** True where `window.matchMedia` exists to be asked. */
+function canMatchMedia(): boolean {
+  return (
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+  )
+}
+
+function subscribeToShelfWidth(onChange: () => void): () => void {
+  if (!canMatchMedia()) return () => {}
+  const query = window.matchMedia(SHELF_OPEN_QUERY)
+  query.addEventListener('change', onChange)
+  return () => {
+    query.removeEventListener('change', onChange)
+  }
+}
+
+function readShelfWidth(): boolean {
+  return canMatchMedia() && window.matchMedia(SHELF_OPEN_QUERY).matches
+}
+
+/**
+ * The server has no viewport, and guessing one is what produces a mismatch. It
+ * reports the stylesheet's own mobile-first default instead — shut — which is
+ * exactly what the body renders to before any `lg` rule applies.
+ */
+function shelfWidthOnServer(): boolean {
+  return false
+}
+
+/**
+ * Whether this viewport is one where the shelf opens by default.
+ *
+ * `useSyncExternalStore` rather than `useState` + an effect: React uses the
+ * server snapshot for the hydrating render and re-reads afterwards, so a desktop
+ * gets the right answer without either pass rendering markup the other did not.
+ * Nothing laid out depends on it — only `aria-expanded`, the toggle's accessible
+ * name and which way the chevron points, and the chevron takes the breakpoint
+ * from CSS so that not even it moves after hydration.
+ */
+function useShelfOpensByDefault(): boolean {
+  return React.useSyncExternalStore(
+    subscribeToShelfWidth,
+    readShelfWidth,
+    shelfWidthOnServer,
+  )
 }
 
 /* --------------------------------------------------------------- continents */
@@ -177,6 +246,8 @@ export interface AtlasPanelStats {
   readonly visitCount: number
   /** All-time roll-up figures. `null` where no roll-up row exists yet. */
   readonly tripCount: number | null
+  /** Saved stops across every trip — sights, stays, restaurants. */
+  readonly placeCount: number | null
   readonly cityCount: number | null
   readonly dayCount: number | null
   readonly distanceMetres: number | null
@@ -223,9 +294,19 @@ const layout = {
    * Placed on the grid, the toggle takes the space the short headline was
    * wasting on the right and the tab strip gets the full width of the panel.
    * Both are the same row from `lg`, where there was never a shortage.
+   *
+   * The stated 100px from `lg` is the header holding still. The shelf is a fixed
+   * box anchored to the foot of the map, so everything in it is measured down
+   * from a header whose height was its own text: three lines whose sum landed a
+   * fraction under 100px in the fallback face and a fraction over it in ours,
+   * which rounded to a one-pixel step and moved the entire body — six stat
+   * tiles, the record, the list — a quarter of a second after paint. The content
+   * is fixed at this breakpoint (an 11px label, a 40px numeral, a 12px caption,
+   * with the padding either side), so the box may as well be stated, and then no
+   * font arriving can change it.
    */
   header:
-    'grid min-w-0 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 sm:px-5 sm:py-3.5 lg:flex lg:gap-6',
+    'grid min-w-0 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 sm:px-5 sm:py-3.5 lg:flex lg:h-25 lg:gap-6',
   /**
    * A column of stated width from `lg`, not a shrink-to-fit block.
    *
@@ -347,7 +428,23 @@ export interface AtlasPanelProps extends Omit<
   readonly onExpandedChange: (expanded: boolean) => void
   readonly stats: AtlasPanelStats
   readonly byContinent: ReadonlyArray<AtlasPanelContinent>
+  /**
+   * The rows to draw. May be the head of a longer list — see
+   * {@link AtlasPanelProps.bucketTotal}.
+   */
   readonly bucketList: ReadonlyArray<AtlasPanelBucketItem>
+  /**
+   * How many bucket-list rows exist. Defaults to what was handed over.
+   *
+   * The loader ships a bounded slice, because this list is neither virtualised
+   * nor paginated and every row travels in the streamed document. Given the true
+   * total the tab counts against it and says, in words, that it is showing the
+   * top — a count that quietly disagrees with the reader's own list is worse
+   * than a longer list.
+   */
+  readonly bucketTotal?: number
+  /** How many of the whole list are ticked. Defaults to what was handed over. */
+  readonly bucketAchieved?: number
 }
 
 export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
@@ -364,6 +461,8 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
       stats,
       byContinent,
       bucketList,
+      bucketTotal,
+      bucketAchieved,
       className,
       ...props
     },
@@ -371,12 +470,21 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
   ) => {
     const bodyId = React.useId()
     const unvisitedId = React.useId()
-    /** What the toggle says, and what a screen reader is told. `null` follows
-        the breakpoint, and the desktop default is open. */
-    const open = expanded ?? true
+    /**
+     * What the toggle says, what a screen reader is told, and what one press of
+     * it does. `null` follows the breakpoint — measured, not assumed, because
+     * assuming the desktop default made the first press on a phone a no-op that
+     * "closed" a drawer already closed.
+     */
+    const opensByDefault = useShelfOpensByDefault()
+    const open = expanded ?? opensByDefault
     const share =
       stats.worldCount === 0 ? 0 : stats.countryCount / stats.worldCount
-    const achieved = bucketList.filter((row) => row.isAchieved).length
+    /** Counted over the whole list when the caller knows it, not over the slice. */
+    const total = bucketTotal ?? bucketList.length
+    const achieved =
+      bucketAchieved ?? bucketList.filter((row) => row.isAchieved).length
+    const hidden = Math.max(total - bucketList.length, 0)
     const cells = React.useMemo(
       () => continentCells(byContinent),
       [byContinent],
@@ -447,7 +555,12 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                   <span className="text-ink-2">Towards every country</span>
                 }
                 valueText={
-                  <span className="tabular-nums text-ink-2">
+                  // A stated width, right-aligned, because this end of the row
+                  // is anchored to the right: let the box shrink to its text and
+                  // the webfont arriving moves its left edge, which is a layout
+                  // shift after paint for a string whose value never changed.
+                  // 4rem holds "195 to go" in both faces with room over.
+                  <span className="inline-block w-16 text-right tabular-nums text-ink-2">
                     {formatNumber(
                       Math.max(stats.worldCount - stats.countryCount, 0),
                     )}{' '}
@@ -472,7 +585,16 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                   size={16}
                   className={cn(
                     'transition-transform duration-base ease-out-quint',
-                    open ? 'rotate-0' : 'rotate-180',
+                    // The one place the breakpoint is taken from CSS rather than
+                    // from the measurement above: this is the visible half of the
+                    // state, and a glyph that spins 180° a frame after hydration
+                    // is motion the reader did not ask for. Once the reader has
+                    // an opinion the width stops having one.
+                    expanded === null
+                      ? 'rotate-180 lg:rotate-0'
+                      : expanded
+                        ? 'rotate-0'
+                        : 'rotate-180',
                   )}
                 />
               }
@@ -633,13 +755,25 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
               <ScrollArea axis="vertical" className="min-h-0 flex-1">
                 <div className="flex flex-col gap-4">
                   <div className={layout.statGrid}>
+                    {/* Places, not countries.
+
+                        The count of countries and its share of the world are
+                        already the panel's headline, in the display face at
+                        40px, 120px above this row — printing "12 of 195" and
+                        "6% of the world" a second time made the first tile a
+                        smaller copy of the thing directly above it and spent a
+                        sixth of the row saying nothing new. The saved stops
+                        behind those countries were on no surface at all. */}
                     <StatCard
                       className={layout.statCard}
-                      icon={<Globe />}
-                      label="Countries"
-                      value={formatNumber(stats.countryCount)}
-                      unit={`of ${formatNumber(stats.worldCount)}`}
-                      caption={`${formatPercent(share)} of the world`}
+                      icon={<Landmark />}
+                      label="Places"
+                      value={formatNumber(stats.placeCount ?? 0)}
+                      caption={
+                        (stats.placeCount ?? 0) === 0
+                          ? 'Nothing pinned on a trip yet'
+                          : 'Sights, stays and stops saved'
+                      }
                     />
                     <StatCard
                       className={layout.statCard}
@@ -675,7 +809,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       icon={<MapPinned />}
                       label="Cities"
                       value={formatNumber(stats.cityCount ?? 0)}
-                      caption="Places you slept or stopped"
+                      caption="Towns you slept or stopped in"
                     />
                     <StatCard
                       className={layout.statCard}
@@ -738,8 +872,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                     className="mb-2"
                     action={
                       <span className="text-caption tabular-nums text-ink-2">
-                        {formatNumber(achieved)} of{' '}
-                        {formatNumber(bucketList.length)} done
+                        {formatNumber(achieved)} of {formatNumber(total)} done
                       </span>
                     }
                   >
@@ -804,6 +937,16 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                         </li>
                       ))}
                     </ul>
+
+                    {/* Inside the scroll container, at the end of the rows it
+                        is about, so a reader who scrolls to the bottom of the
+                        list is told what the bottom of the list is. */}
+                    {hidden === 0 ? null : (
+                      <p className="border-t border-edge-faint px-1 pt-2.5 text-caption tabular-nums text-ink-3">
+                        {pluralise(hidden, 'more entry', 'more entries')} on
+                        your list, not shown here.
+                      </p>
+                    )}
                   </ScrollArea>
                 </>
               )}
@@ -855,6 +998,18 @@ export const AtlasPanelSkeleton = React.forwardRef<
           <Skeleton radius="sm" className="mt-1.5 h-3 w-40" />
         </div>
       </div>
+      {/* The progress column's own box. It is the flexible element in the
+          header row from `lg`, so leaving it out of the loading shape let the
+          tab strip slide left against the headline and then jump back when the
+          read landed. */}
+      <div className={layout.progress}>
+        <div className="mb-1.5 flex items-baseline justify-between gap-3">
+          <Skeleton radius="sm" className="h-3 w-36" />
+          <Skeleton radius="sm" className="h-3 w-16" />
+        </div>
+        <Skeleton radius="full" className="h-1.5 w-full" />
+      </div>
+
       {/* The collapse toggle's own box, so the headline column is the width it
           will be rather than 44px wider until the read lands. */}
       <Skeleton radius="full" className={cn(layout.toggle, 'size-8')} />

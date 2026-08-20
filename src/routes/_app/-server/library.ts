@@ -189,6 +189,16 @@ export interface AtlasPayload {
     readonly visitCount: number
     readonly note: string | null
   }>
+  /**
+   * The head of the bucket list, at most {@link ATLAS_BUCKET_LIST_LIMIT} rows.
+   *
+   * Bounded because this payload is dehydrated into the SSR document on every
+   * request and rendered into a plain `<ul>` that neither virtualises nor
+   * paginates: a traveller with four hundred entries paid for all four hundred
+   * on every load of a screen whose subject is the map. The two figures below
+   * are counted over the whole list, so the panel states the truth about a list
+   * it is only showing the top of.
+   */
   readonly bucketList: ReadonlyArray<{
     readonly id: string
     readonly name: string
@@ -196,9 +206,11 @@ export interface AtlasPayload {
     readonly countryCode: string | null
     readonly targetYear: number | null
     readonly isAchieved: boolean
-    readonly achievedOn: string | null
-    readonly note: string | null
   }>
+  /** How many bucket-list rows exist, whether or not they travelled. */
+  readonly bucketListTotal: number
+  /** How many of those are ticked off — again over the whole list. */
+  readonly bucketListAchieved: number
   readonly stats: ReadonlyArray<{
     readonly statYear: number
     readonly tripCount: number
@@ -213,6 +225,17 @@ export interface AtlasPayload {
 
 /** The world total the atlas counts against — UN member states plus observers. */
 export const WORLD_COUNTRY_COUNT = 195
+
+/**
+ * How many bucket-list rows the atlas ships.
+ *
+ * The panel's bucket tab is a scroll container about 300px tall inside a shelf
+ * that covers a third of the map; forty rows is already several screens of
+ * scrolling past the fold, and every row beyond them is bytes in the streamed
+ * document that no reader will reach on this screen. The list is ordered
+ * outstanding-first, so the head is the part that answers "what is still on it".
+ */
+export const ATLAS_BUCKET_LIST_LIMIT = 40
 
 export const loadAtlas = createServerFn({ method: 'GET' }).handler(
   async (): Promise<AtlasPayload> => {
@@ -245,16 +268,19 @@ export const loadAtlas = createServerFn({ method: 'GET' }).handler(
         visitCount: row.visitCount,
         note: row.note,
       })),
-      bucketList: bucket.map((row) => ({
+      // Sliced, and reduced to the six fields the panel prints: `achievedOn` and
+      // the item's own note were dehydrated into every document and rendered by
+      // nothing.
+      bucketList: bucket.slice(0, ATLAS_BUCKET_LIST_LIMIT).map((row) => ({
         id: row.id,
         name: row.name,
         kind: row.kind,
         countryCode: row.countryCode,
         targetYear: row.targetYear,
         isAchieved: row.isAchieved,
-        achievedOn: row.achievedOn,
-        note: row.note,
       })),
+      bucketListTotal: bucket.length,
+      bucketListAchieved: bucket.filter((row) => row.isAchieved).length,
       stats: stats.map((row) => ({
         statYear: row.statYear,
         tripCount: row.tripCount,

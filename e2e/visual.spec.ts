@@ -6,6 +6,10 @@ import {
   CALENDAR_SELECTIONS,
   DEMO_EMAIL,
   DEV_TOOLBAR,
+  DOM_QUIET_CAP_MS,
+  DOM_QUIET_FLOOR_MS,
+  DOM_QUIET_MS,
+  FROZEN_NOW,
   PUBLIC_ROUTES,
   RELATIVE_TIME_SITES,
   SERVER_CLOCK_ROUTES,
@@ -26,6 +30,7 @@ import {
   reportServerCalendar,
   settle,
   settleMap,
+  settleMutations,
   shiftServerToday,
   shoot,
   useSession,
@@ -572,6 +577,36 @@ function glAdvisory(handle: string, suffix = ''): string {
 }
 
 /**
+ * The unused-preload advisory, verbatim, in each engine's own wording.
+ *
+ * Not transcribed from a failing run: reproduced against this origin by serving a
+ * document whose only content is two `<link rel="preload" as="style">` tags that
+ * nothing uses, one under a dev-server path and one under a built-asset path, and
+ * reading what each engine then wrote to the console. Both produce the same first
+ * sentence for both URLs and diverge only in the advice that follows — which is
+ * why the tolerance is anchored on the sentence they share and scoped by the URL
+ * rather than by the tail.
+ *
+ * `WEBKIT_PRELOAD_TAIL` is the wording that actually failed a run of the suite,
+ * on mobile WebKit, on `/register` in dark.
+ */
+const WEBKIT_PRELOAD_TAIL = " Please make sure it wasn't preloaded for nothing."
+
+const CHROMIUM_PRELOAD_TAIL =
+  ' Please make sure it has an appropriate `as` value and it is preloaded intentionally.'
+
+function preloadAdvisory(url: string, tail = WEBKIT_PRELOAD_TAIL): string {
+  return `The resource ${url} was preloaded using link preload but not used within a few seconds from the window's load event.${tail}`
+}
+
+/** The hosts a development server answers on, and the only ones the tolerance covers. */
+const LOOPBACK_HOSTS: ReadonlyArray<string> = [
+  'localhost',
+  '127.0.0.1',
+  '[::1]',
+]
+
+/**
  * The gate's own tables and its own mechanics.
  *
  * The table specs are pure — no browser, no server — and cover the lists that
@@ -705,6 +740,60 @@ test.describe('the gate itself', () => {
         verdict: 'fatal',
       },
       {
+        // The message that failed `register renders in dark` on mobile WebKit in
+        // one full run of four. `/src/styles/styles.css` is a path only `vite dev`
+        // serves, and the engine writes this about it a few seconds after the load
+        // event — so whether the gate went red was decided by how long the page
+        // stayed open, not by anything on the page.
+        what: 'the unused-preload advisory about a dev-server stylesheet',
+        type: 'warning',
+        text: preloadAdvisory('http://localhost:3000/src/styles/styles.css'),
+        liveMap: false,
+        verdict: 'tolerated',
+      },
+      {
+        what: "the same advisory in Chromium's wording, on a loopback address",
+        type: 'warning',
+        text: preloadAdvisory(
+          'http://127.0.0.1:3003/@id/virtual:tanstack-start-dev-client-entry',
+          CHROMIUM_PRELOAD_TAIL,
+        ),
+        liveMap: false,
+        verdict: 'tolerated',
+      },
+      {
+        what: 'the advisory about an unbundled dependency the dev server served',
+        type: 'warning',
+        text: preloadAdvisory(
+          'http://localhost:3003/node_modules/.vite/deps/maplibre-gl.js',
+        ),
+        liveMap: false,
+        verdict: 'tolerated',
+      },
+      {
+        // The direction that keeps this narrow: the built application preloading
+        // an asset it never uses is a real defect, and it is the same sentence.
+        what: 'the advisory about a hashed asset the deployed bundle preloaded',
+        type: 'warning',
+        text: preloadAdvisory('http://localhost:3003/assets/app-9f3c1a2b.css'),
+        liveMap: false,
+        verdict: 'fatal',
+      },
+      {
+        what: 'the advisory from a host that is not a development server',
+        type: 'warning',
+        text: preloadAdvisory('https://planned.travel/src/styles/styles.css'),
+        liveMap: false,
+        verdict: 'fatal',
+      },
+      {
+        what: 'an app warning that merely quotes the preload advisory',
+        type: 'warning',
+        text: `The theme script bailed out. ${preloadAdvisory('http://localhost:3003/src/styles/styles.css')}`,
+        liveMap: false,
+        verdict: 'fatal',
+      },
+      {
         what: 'ordinary logging',
         type: 'log',
         text: 'hydrated',
@@ -742,21 +831,28 @@ test.describe('the gate itself', () => {
    * green console assertion — which is the one assertion in this suite whose
    * failure mode is silence.
    */
-  test("the console watcher splits the advisory from the app's own mistakes", async ({
+  test("the console watcher splits the browser's advisories from the app's own mistakes", async ({
     page,
   }) => {
     const watched = watchConsole(page, SYNTHETIC_MAP)
     await syntheticPage(page, '<p>A page with a console.</p>')
 
-    await page.evaluate((advisory) => {
-      console.warn(advisory)
-      console.error(
-        "Hydration failed because the server rendered text didn't match the client.",
-      )
-      window.setTimeout(() => {
-        throw new Error('a component threw after paint')
-      }, 0)
-    }, glAdvisory('0x13400534c00'))
+    await page.evaluate(
+      ([driver, preload]) => {
+        console.warn(driver)
+        console.warn(preload)
+        console.error(
+          "Hydration failed because the server rendered text didn't match the client.",
+        )
+        window.setTimeout(() => {
+          throw new Error('a component threw after paint')
+        }, 0)
+      },
+      [
+        glAdvisory('0x13400534c00'),
+        preloadAdvisory('http://localhost:3000/src/styles/styles.css'),
+      ] as const,
+    )
 
     await expect
       .poll(() => watched().fatal.length, {
@@ -770,6 +866,10 @@ test.describe('the gate itself', () => {
       'the driver advisory is the browser talking about a code path we do not own',
     ).toContain('GPU stall due to ReadPixels')
     expect(
+      report.tolerated.join('\n'),
+      'the unused-preload advisory is the browser talking about a URL only the dev server serves',
+    ).toContain('/src/styles/styles.css was preloaded')
+    expect(
       report.fatal.join('\n'),
       'a hydration error is the defect this repo has actually shipped, and it stays fatal',
     ).toContain('Hydration failed')
@@ -777,6 +877,78 @@ test.describe('the gate itself', () => {
       report.fatal.join('\n'),
       'an uncaught exception after paint reaches the run through pageerror, not through console',
     ).toContain('a component threw after paint')
+  })
+
+  /**
+   * The advisory as the engine itself writes it, rather than as this file quotes
+   * it.
+   *
+   * The tolerance is a pattern matched against a string, so a spec built entirely
+   * out of `console.warn` proves the pattern matches what *this file* believes the
+   * message says. Both are worth having, and only one of them notices the day an
+   * engine rewords it: this drives a real unused preload on a real dev-server
+   * origin and lets WebKit and Chromium write their own message.
+   *
+   * Two preloads, one under a dev-server path and one under a built-asset path,
+   * because the interesting property is not that the advisory is tolerated — it is
+   * that the identical sentence about an `/assets/…` URL is not. A tolerance that
+   * could not tell them apart would be a licence to preload anything.
+   *
+   * The engine emits this "a few seconds from the window's load event", so the
+   * spec polls rather than waits a fixed time, and it is the one spec here allowed
+   * to be slow.
+   */
+  test('the engine writes the preload advisory this gate tolerates, and not the one it does not', async ({
+    page,
+    baseURL,
+  }) => {
+    test.setTimeout(30_000)
+    // The tolerance is scoped to a development origin by design, so pointing the
+    // suite at a deployed preview leaves nothing here to assert — and the
+    // advisory would correctly be fatal there.
+    const origin = baseURL === undefined ? null : new URL(baseURL).hostname
+    test.skip(
+      origin === null || !LOOPBACK_HOSTS.includes(origin),
+      'this run is not against a development origin, where the tolerance does not apply at all',
+    )
+
+    const DEV_URL = '/src/styles/styles.css'
+    const BUILT_URL = '/assets/gate-probe-9f3c1a2b.css'
+    const stylesheet = { contentType: 'text/css', body: 'body{}' }
+
+    await page.route(`**${DEV_URL}`, (route) => route.fulfill(stylesheet))
+    await page.route(`**${BUILT_URL}`, (route) => route.fulfill(stylesheet))
+    await page.route('**/gate/unused-preloads', (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: `<!DOCTYPE html><html lang="en"><head><link rel="preload" as="style" href="${DEV_URL}"><link rel="preload" as="style" href="${BUILT_URL}"></head><body><main>Two preloads nothing uses.</main></body></html>`,
+      }),
+    )
+
+    const watched = watchConsole(page, SYNTHETIC_PLAIN)
+    await page.goto('/gate/unused-preloads', { waitUntil: 'load' })
+
+    await expect
+      .poll(() => watched().fatal.length, {
+        message:
+          'the engine has to write the advisory about the built asset, or this spec is asserting nothing',
+        timeout: 20_000,
+      })
+      .toBe(1)
+
+    const report = watched()
+    expect(
+      report.fatal.join('\n'),
+      'a built asset preloaded and not used is the application asking for something it never needed, and it stays fatal',
+    ).toContain(BUILT_URL)
+    expect(
+      report.tolerated.join('\n'),
+      "the same sentence about a path only `vite dev` serves is the dev server's, not the product's",
+    ).toContain(DEV_URL)
+    expect(
+      report.fatal.join('\n'),
+      'the dev-server advisory must not also reach the fatal list',
+    ).not.toContain(DEV_URL)
   })
 
   test('a date comparison flips on the right morning and not the one before', () => {
@@ -1051,6 +1223,10 @@ test.describe('the gate itself', () => {
   test('a control that mounts on a timer is in the settled frame', async ({
     page,
   }) => {
+    // Under the clock the gate actually installs, because that is the one
+    // configuration this has to hold in — and the configuration it stopped holding
+    // in the moment `FROZEN_NOW` arrived.
+    await page.clock.setFixedTime(new Date(FROZEN_NOW))
     await syntheticPage(page, '<p>Copy.</p>')
     // Later than the quiet window and earlier than the floor: the whole point is
     // that quiet alone cannot see it coming.
@@ -1069,6 +1245,113 @@ test.describe('the gate itself', () => {
       await page.locator('#mounts-on-a-timer').count(),
       'settle() returned before a timer-driven control had mounted, so the frame is the one before the product finished rendering',
     ).toBe(1)
+  })
+
+  /**
+   * Which of the three timers the wait actually ends on, under the clock the gate
+   * installs.
+   *
+   * This is the regression test for a defect that was invisible for every frame in
+   * the suite while every frame in the suite passed. `settleMutations()` used to
+   * express its floor as arithmetic — `Date.now()` at open, `Date.now()` again on
+   * each quiet window — and `visit()` installs `page.clock.setFixedTime` before the
+   * first navigation, so the difference was 0 ms on every evaluation. The floor was
+   * never satisfied, the quiet path rescheduled itself forever, and the only timer
+   * that ever resolved was the one whose job is to give up: measured at 2003 ms on
+   * Chromium and 2004 ms on WebKit, every frame, for a wait whose designed answer
+   * is 353 ms. Nothing went red over it. The gate simply had no quiet guarantee at
+   * all and was paying 1.65 s a frame to have none.
+   *
+   * So the freeze is asserted first, in the page, rather than assumed: without it
+   * this spec would pass against the arithmetic it exists to reject. `Date` must
+   * not move across a real delay and `performance.now()` must — which is also the
+   * measurement behind the rule that nothing running in the page may time itself
+   * with a clock.
+   *
+   * The wait is then measured from the Node side, where the clock is real, and
+   * asserted from both ends: at least the floor, so a timer-driven control is still
+   * waited for, and comfortably short of the cap, so it is the quiet path that
+   * ended it. `settleMutations()` is measured directly rather than through
+   * `settle()`, so the numbers are the wait and not the round trips around it.
+   */
+  test('the settle ends on a quiet document, not on the give-up cap', async ({
+    page,
+  }) => {
+    expect(
+      DOM_QUIET_FLOOR_MS,
+      'a floor no longer than the quiet window is not a floor, and the timer-driven control it exists for goes back to being a race',
+    ).toBeGreaterThan(DOM_QUIET_MS)
+
+    await page.clock.setFixedTime(new Date(FROZEN_NOW))
+    await syntheticPage(page, '<p>A document with nothing left to do.</p>')
+
+    const clock = await page.evaluate(async () => {
+      const wall = Date.now()
+      const monotonic = performance.now()
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 400)
+      })
+      return {
+        wall: Date.now() - wall,
+        monotonic: Math.round(performance.now() - monotonic),
+      }
+    })
+    expect(
+      clock.wall,
+      'the frozen clock is the precondition: if `Date` moves in the page, this spec is not testing the configuration the gate runs in',
+    ).toBe(0)
+    expect(
+      clock.monotonic,
+      'the page timers have to keep running, or a map would never finish drawing and this would be `clock.install()` rather than `setFixedTime`',
+    ).toBeGreaterThanOrEqual(300)
+
+    const started = Date.now()
+    await settleMutations(page)
+    const held = Date.now() - started
+
+    expect(
+      held,
+      'the wait returned before the floor, so a control the product mounts on a timer is a race again',
+    ).toBeGreaterThanOrEqual(DOM_QUIET_FLOOR_MS)
+    expect(
+      held,
+      'the wait ended on the give-up cap, which means the quiet path is unreachable and no frame in the suite has a quiet guarantee',
+    ).toBeLessThan(DOM_QUIET_CAP_MS)
+  })
+
+  /**
+   * The give-up timer, which the floor must never be able to defer.
+   *
+   * A dev-server heartbeat, a live clock, a spinner: a document that mutates
+   * forever has no quiet window to offer, and the wait has to degrade to a fixed
+   * pause rather than to a test timeout. The cap is the only one of the three
+   * timers that is not behind a latch, and this is what says so.
+   */
+  test('a document that never stops mutating gives up on the cap', async ({
+    page,
+  }) => {
+    await page.clock.setFixedTime(new Date(FROZEN_NOW))
+    await syntheticPage(page, '<p>Never still.</p>')
+    await page.evaluate(() => {
+      let tick = 0
+      window.setInterval(() => {
+        tick += 1
+        document.querySelector('main')?.setAttribute('data-tick', String(tick))
+      }, 50)
+    })
+
+    const started = Date.now()
+    await settleMutations(page)
+    const held = Date.now() - started
+
+    expect(
+      held,
+      'a page that mutates forever must still hold the full cap, or the wait is ending on something the observer never saw',
+    ).toBeGreaterThanOrEqual(DOM_QUIET_CAP_MS)
+    expect(
+      held,
+      'the cap has to end the wait on its own: a floor that can defer it turns a busy page into a test timeout',
+    ).toBeLessThan(DOM_QUIET_CAP_MS * 2)
   })
 
   /**

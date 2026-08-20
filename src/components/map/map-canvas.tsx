@@ -149,6 +149,25 @@ export interface MapCanvasProps {
   readonly onMapReady?: (map: MapLibreMap) => void
   /** Overlays, markers and controls. Rendered inside the map context. */
   readonly children?: React.ReactNode
+  /**
+   * Chrome that exists whether or not a map ever does — a search field, a zoom
+   * cluster, a credit.
+   *
+   * The difference from {@link MapCanvasProps.children} is not decoration, it is
+   * *when they are allowed to exist*. Children are held back until the instance
+   * is up, because `MapMarker` portals its subtree into MapLibre's marker pane
+   * and that pane does not exist during SSR. Nothing in this slot may portal —
+   * and in exchange it is rendered on the server, on the first client pass and
+   * for the whole of a browser that cannot give MapLibre a WebGL2 context at
+   * all. A country search that only answers once a canvas succeeds is not a
+   * designed fallback; it is a screen with a hole in it.
+   *
+   * Rendered inside the same context and the same credit slot as the children,
+   * so a control in here reads the map exactly as one below it does — and gets
+   * `map: null` while there is none, which every control in this module already
+   * handles.
+   */
+  readonly chrome?: React.ReactNode
 }
 
 interface InitialView {
@@ -273,6 +292,7 @@ export function MapCanvas({
   className,
   onMapReady,
   children,
+  chrome,
 }: MapCanvasProps) {
   const containerRef = React.useRef<HTMLDivElement | null>(null)
   const [gl, setGl] = React.useState<MapLibreModule | null>(null)
@@ -303,12 +323,26 @@ export function MapCanvas({
   // The camera the map is *created* with. Later changes are the caller's job,
   // through `FitBounds` or the map handle — silently flying the camera because a
   // prop re-rendered would fight the reader's own panning.
+  //
+  // "Later" starts at construction, not at the first render, and the difference
+  // is a whole class of wrong opening frames. A screen whose camera is a
+  // function of its own container — the atlas opens at the zoom that makes one
+  // world span the longer edge — cannot know that number until it has measured,
+  // which is one commit after mount. Frozen at first render, such a screen had
+  // to keep the canvas out of the tree until the measurement landed, and that
+  // is what kept its search field and its zoom cluster out of the server-
+  // rendered document. Kept current until the instance exists, the ref is read
+  // after two dynamic imports and an archive probe, by which time every
+  // layout effect above has long since run.
   const initialRef = React.useRef<InitialView>({
     center,
     zoom,
     bounds,
     padding,
   })
+  if (map === null) {
+    initialRef.current = { center, zoom, bounds, padding }
+  }
 
   /** The style key currently applied, so the swap effect can skip a no-op. */
   const appliedRef = React.useRef<string | null>(null)
@@ -725,8 +759,20 @@ export function MapCanvas({
     >
       <div
         ref={containerRef}
-        role="region"
-        aria-label={label}
+        // Hidden from the accessibility tree exactly when there is nothing in
+        // it and never will be. A renderer that refused a WebGL2 context — or
+        // one that never painted — leaves this box empty for good, and a screen
+        // that has drawn its own world behind the canvas then announced the same
+        // map twice: once as the picture a reader can actually read, once as an
+        // empty region with the same name. `MapEngineNotice` below says what
+        // happened; this stops the silence from being announced.
+        //
+        // While the map is merely *coming* it stays a named region: the spinner
+        // beside it is `role="status"`, and a region that is about to be filled
+        // is not a lie.
+        {...(engineFailed
+          ? { 'aria-hidden': true }
+          : { role: 'region', 'aria-label': label })}
         // MapLibre's own stylesheet is unlayered, so every rule in it outranks a
         // Tailwind utility — utilities live in `@layer utilities`, and an
         // unlayered declaration beats any layered one regardless of specificity.
@@ -755,14 +801,19 @@ export function MapCanvas({
       ) : null}
 
       <MapProvider value={value}>
-        {/* Held back until the instance exists. Every child here reads the map
-            from context, and `MapMarker` portals its subtree into MapLibre's own
-            marker pane — a pane that does not exist during SSR or on the first
-            client pass. Rendering children in both then moves DOM out from under
-            the hydrating tree, which React reports as a mismatch and recovers
-            from by discarding the whole map. Mounting them on the commit after
-            the map is created keeps server and client output identical. */}
+        {/* `chrome` always; `children` once the instance exists.
+
+            Every child here reads the map from context, and `MapMarker` portals
+            its subtree into MapLibre's own marker pane — a pane that does not
+            exist during SSR or on the first client pass. Rendering children in
+            both then moves DOM out from under the hydrating tree, which React
+            reports as a mismatch and recovers from by discarding the whole map.
+            Mounting them on the commit after the map is created keeps server and
+            client output identical. Nothing in `chrome` portals, so nothing in
+            it needs that protection — and a screen's search field has to exist
+            in the document a browser without WebGL2 is left holding. */}
         <AttributionSlotProvider value={claimCredit}>
+          {chrome}
           {map === null ? null : children}
         </AttributionSlotProvider>
         {engine === 'unsupported' || engine === 'stalled' ? (

@@ -164,4 +164,22 @@ describe('AtlasLegendSkeleton', () => {
 
     expect(loading?.className).toBe(real?.className)
   })
+
+  /**
+   * The heading is the one part of the row with a stated width, and the steps
+   * take what is left of it. A skeleton heading cut from its own class rather
+   * than from the shared one was 16px narrower from `sm`, which moved all four
+   * steps — and the panel footer they sit in — on the loading-to-loaded swap.
+   */
+  it('reserves the heading’s own column, not a guess at it', () => {
+    const real = render(<AtlasLegend />).container.firstElementChild
+    const loading = render(<AtlasLegendSkeleton />).container.firstElementChild
+
+    const heading = real?.firstElementChild?.className ?? ''
+    const placeholder = loading?.firstElementChild?.className ?? ''
+
+    expect(heading).toContain('sm:w-20')
+    expect(placeholder).toContain('sm:w-20')
+    expect(placeholder).toContain('shrink-0')
+  })
 })

@@ -222,7 +222,10 @@ export const AtlasLegendSkeleton = React.forwardRef<
     className={cn(layout.root, className)}
     {...props}
   >
-    <Skeleton radius="sm" className="h-3 w-16 shrink-0" />
+    {/* Cut from the heading's own class, not from a copy of it: the heading is
+        a stated column from `sm`, and a skeleton 16px narrower moved the four
+        steps — and with them the panel's footer — when the read landed. */}
+    <Skeleton radius="sm" className={cn(layout.heading, 'h-3 w-16')} />
     <div className={layout.list}>
       {[0, 1, 2, 3].map((step) => (
         <div key={step} className={layout.item}>

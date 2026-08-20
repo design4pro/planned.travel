@@ -39,6 +39,7 @@ const STATS: AtlasPanelProps['stats'] = {
   regionCount: 4,
   visitCount: 18,
   tripCount: 5,
+  placeCount: 15,
   cityCount: 6,
   dayCount: 45,
   distanceMetres: 82_400_000,
@@ -62,6 +63,26 @@ function panel(overrides: Partial<AtlasPanelProps> = {}) {
     ...overrides,
   }
   return render(<AtlasPanel {...props} />)
+}
+
+/**
+ * Answers the panel's `(min-width: 1024px)` query with a stated verdict.
+ *
+ * jsdom has one viewport and no `lg`, so the breakpoint has to be told rather
+ * than resized into. `restoreMocks` puts the real one back after each test.
+ */
+function matchWidth(wide: boolean): void {
+  vi.spyOn(window, 'matchMedia').mockImplementation(
+    (query: string) =>
+      ({
+        matches: query.includes('min-width: 1024px') ? wide : false,
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      }) as unknown as MediaQueryList,
+  )
 }
 
 const coverage = (root: HTMLElement): string =>
@@ -137,6 +158,55 @@ describe('sections', () => {
 
     await user.click(toggle)
     expect(onExpandedChange).toHaveBeenCalledWith(true)
+  })
+
+  /**
+   * The body below `lg` is `display: none` until the reader opens it, and the
+   * toggle used to announce the desktop default regardless — `aria-expanded`
+   * true over a hidden target, and a first press that "closed" what was already
+   * closed. A phone reader had to press it twice to reach the stats, the record
+   * and the list.
+   */
+  it('reports the drawer shut on a narrow viewport, and opens it in one press', async () => {
+    matchWidth(false)
+    const user = userEvent.setup()
+    const onExpandedChange = vi.fn()
+    panel({ expanded: null, onExpandedChange })
+
+    const toggle = screen.getByRole('button', { name: 'Show atlas details' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+
+    await user.click(toggle)
+    expect(onExpandedChange).toHaveBeenCalledWith(true)
+  })
+
+  it('reports the shelf open from lg, where the stylesheet shows it', async () => {
+    matchWidth(true)
+    const user = userEvent.setup()
+    const onExpandedChange = vi.fn()
+    panel({ expanded: null, onExpandedChange })
+
+    const toggle = screen.getByRole('button', { name: 'Hide atlas details' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+
+    await user.click(toggle)
+    expect(onExpandedChange).toHaveBeenCalledWith(false)
+  })
+
+  /**
+   * The glyph is the visible half of the same state, and it is the half that
+   * must not move after hydration — so it asks CSS, not the measurement, while
+   * the reader has no opinion.
+   */
+  it('points the chevron with a variant while the breakpoint decides', () => {
+    matchWidth(false)
+    panel({ expanded: null })
+    const glyph = screen
+      .getByRole('button', { name: 'Show atlas details' })
+      .querySelector('svg')
+
+    expect(glyph?.getAttribute('class')).toContain('rotate-180')
+    expect(glyph?.getAttribute('class')).toContain('lg:rotate-0')
   })
 
   /**
@@ -275,7 +345,7 @@ describe('the stats section', () => {
     panel()
 
     for (const label of [
-      'Countries',
+      'Places',
       'Regions',
       'Visits',
       'Trips',
@@ -288,17 +358,34 @@ describe('the stats section', () => {
     expect(screen.getByText('82,400 km')).toBeTruthy()
   })
 
+  /**
+   * The count of countries and its share of the world are the panel's headline,
+   * in the display face directly above this row. A tile repeating both of them
+   * was a smaller copy of the thing above it; the tile carries the saved stops
+   * behind those countries instead, which no other surface states.
+   */
+  it('does not repeat the headline count in the tile row', () => {
+    panel()
+
+    // Once each, in the header — not a second time twelve tiles later.
+    expect(screen.getAllByText('of 195')).toHaveLength(1)
+    expect(screen.getAllByText(/6% of the world/)).toHaveLength(1)
+    expect(screen.getByText('Sights, stays and stops saved')).toBeTruthy()
+  })
+
   it('prints a zero rather than a blank when no roll-up row exists', () => {
     panel({
       stats: {
         ...STATS,
         tripCount: null,
+        placeCount: null,
         cityCount: null,
         dayCount: null,
         distanceMetres: null,
       },
     })
     expect(screen.getByText('Finished trips only')).toBeTruthy()
+    expect(screen.getByText('Nothing pinned on a trip yet')).toBeTruthy()
   })
 
   /**
@@ -433,6 +520,46 @@ describe('the bucket list', () => {
     panel({ tab: 'bucket', bucketList: ITEMS })
     expect(screen.getByText(/Iceland/)).toBeTruthy()
   })
+
+  /**
+   * The loader ships a bounded slice of this list, because it is neither
+   * virtualised nor paginated and every row is dehydrated into the streamed
+   * document. Counting the rows that arrived would then tell a traveller with a
+   * hundred entries that they have forty.
+   */
+  it('counts the whole list even when it was handed the head of it', () => {
+    panel({
+      tab: 'bucket',
+      bucketList: ITEMS,
+      bucketTotal: 61,
+      bucketAchieved: 9,
+    })
+    expect(screen.getByText('9 of 61 done')).toBeTruthy()
+  })
+
+  it('says in words that the rest of the list is not on screen', () => {
+    panel({
+      tab: 'bucket',
+      bucketList: ITEMS,
+      bucketTotal: 61,
+      bucketAchieved: 9,
+    })
+    expect(
+      screen.getByText(/59 more entries on your list, not shown here\./),
+    ).toBeTruthy()
+  })
+
+  it('says nothing at all when the whole list is on screen', () => {
+    panel({ tab: 'bucket', bucketList: ITEMS, bucketTotal: 2 })
+    expect(screen.queryByText(/not shown here/)).toBeNull()
+  })
+
+  it('uses the singular for a single hidden entry', () => {
+    panel({ tab: 'bucket', bucketList: ITEMS, bucketTotal: 3 })
+    expect(
+      screen.getByText(/1 more entry on your list, not shown here\./),
+    ).toBeTruthy()
+  })
 })
 
 describe('the map key', () => {
@@ -500,5 +627,50 @@ describe('AtlasPanelSkeleton', () => {
       root?.querySelector('[data-part="panel-header"]')?.className ?? ''
     expect(header(loading)).toBe(header(real))
     expect(header(real).length).toBeGreaterThan(0)
+  })
+
+  /**
+   * The header row from `lg` is headline, progress, tabs, toggle. Leaving the
+   * progress column out of the loading shape let the tab strip sit against the
+   * headline and jump right when the read landed — the flexible element is the
+   * one a skeleton cannot afford to skip.
+   */
+  it('reserves the progress column the loaded header spends', () => {
+    const loading = render(<AtlasPanelSkeleton />).container.firstElementChild
+    const header = loading?.querySelector('[data-part="panel-header"]')
+
+    const progress = [...(header?.children ?? [])].filter((child) =>
+      child.className.includes('lg:block'),
+    )
+    expect(progress).toHaveLength(1)
+    expect(progress[0]?.className).toContain('flex-1')
+  })
+})
+
+describe('holding still', () => {
+  /**
+   * The shelf is a fixed box anchored to the foot of the map, so everything in
+   * it is measured down from the header. Left to its own text the header landed
+   * a fraction under 100px in the fallback face and a fraction over it in ours,
+   * which rounded to a one-pixel step and moved the whole body a quarter of a
+   * second after paint.
+   */
+  it('states the header height at the breakpoint the shelf is fixed at', () => {
+    const { container } = panel()
+    const header = container.querySelector('[data-part="panel-header"]')
+    expect(header?.className).toContain('lg:h-25')
+  })
+
+  /**
+   * The right-hand end of the progress row is anchored to the right, so a box
+   * that shrinks to its text moves its own left edge when the webfont arrives —
+   * a layout shift for a value that never changed.
+   */
+  it('gives the progress value a stated width rather than its text width', () => {
+    const { container } = panel()
+    const value = within(container).getByText(/to go/)
+    expect(value.className).toContain('w-16')
+    expect(value.className).toContain('text-right')
+    expect(value.className).toContain('tabular-nums')
   })
 })
