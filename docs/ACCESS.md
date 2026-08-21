@@ -558,7 +558,7 @@ depends on and does not own; the two lists are the same list, and this one is th
 | `actor_kind`    | text, `enumCheck()`                                    | no   | `human` · `agent` · `system`                                                                                                                                     |
 | `actor_role`    | text                                                   | yes  | The platform role held **at the moment of the action**: `admin`, `curator` or `user`. `NULL` only when `actor_kind = 'system'`                                   |
 | `token_id`      | text, FK → `staff_api_tokens.id`, `on delete set null` | yes  | The credential the call arrived on. Non-`NULL` exactly when `actor_kind = 'agent'`, and `NULL` for every other kind                                              |
-| `action`        | text                                                   | no   | Three-segment lowercase dotted verb from the closed list in §4.2                                                                                                 |
+| `action`        | text                                                   | no   | Lowercase dotted verb from the closed list in §4.2                                                                                                               |
 | `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link`. The mapping to `action` is in §4.2 |
 | `entity_id`     | text                                                   | yes  | The row the action touched. `NULL` only for an action whose entity does not exist yet or no longer does                                                          |
 | `changes`       | text, JSON                                             | yes  | `{ before, after }` - the fields that moved, on both sides                                                                                                       |
@@ -621,23 +621,34 @@ it.
 ```
 
 It is **imported**, not re-declared. But a shared regex only prevents two spellings of a
-character class; it happily accepts `catalog_place.published` and `catalog.place.published` as
+character class; it happily accepts `catalog_place.published` and `place.published` as
 two different verbs for one event, and a log with two names for one event answers no question
 correctly. So the shape and the list are fixed here too.
 
-**The shape is exactly three segments: `<domain>.<entity>.<verb_in_past_tense>`.** Two domains,
-and the pair is closed: `catalog` for the global catalogue surface, `platform` for users,
-sessions, credentials and shares. The verb is the only segment that may carry an underscore.
+**The last segment is the verb, in the past tense; every segment before it is the prefix, and the
+prefix names the entity.** Underscores are ordinary characters on both sides of that split. They
+occur inside an entity name - `catalog_place`, `place_pack` - and inside a compound verb -
+`role_changed`, `places_set` - and the imported regex permits them in any segment. What
+distinguishes the two prefix forms is the segment count, never the underscore.
 
-The second segment names the entity family and fixes the `entity_type` written beside it, so
-§4.4's query never has to guess which prefix belongs to which table:
+There are exactly two prefix forms, and the entity decides which one an action takes. A catalogue
+action is the two-segment `<entity_type>.<verb>` form `src/server/repos/**` already writes - all
+nine of its action names have that shape, from `trip.created` to `billing.plan_changed` - and its
+prefix is the `entity_type` spelled verbatim. An action on a user, a session, a credential or a
+share takes the three-segment `platform.<entity>.<verb>`, because those entities are named
+identically in the tenant log of §4.5 and a bare `user.created` read out of an operational view
+spanning both tables would be attributable to neither. Sixteen of the thirty-one actions below
+take the first form and fifteen take the second; no third form exists.
+
+Everything before the verb fixes the `entity_type` written beside it, so §4.4's query never has to
+guess which prefix belongs to which table:
 
 | Action prefix        | `entity_type`     |
 | -------------------- | ----------------- |
-| `catalog.place.*`    | `catalog_place`   |
-| `catalog.ingest.*`   | `catalog_ingest`  |
-| `catalog.pack.*`     | `place_pack`      |
-| `catalog.source.*`   | `catalog_source`  |
+| `catalog_place.*`    | `catalog_place`   |
+| `catalog_ingest.*`   | `catalog_ingest`  |
+| `place_pack.*`       | `place_pack`      |
+| `catalog_source.*`   | `catalog_source`  |
 | `platform.user.*`    | `user`            |
 | `platform.session.*` | `session`         |
 | `platform.token.*`   | `staff_api_token` |
@@ -646,29 +657,31 @@ The second segment names the entity family and fixes the `entity_type` written b
 **The list is closed.** Every action this platform can ever write is below. A new action is an
 edit to this table, in the commit that adds the code that writes it.
 
-The thirteen `catalog.*` names are the ones `docs/CATALOG.md` already declares - in its tool
-table (§8.4), its status-transition table (§7.2) and its licence rule (§5.4) - reproduced here
-character for character rather than paraphrased. That document names the actions its tools emit;
-this one owns the vocabulary they are drawn from, and the two lists are the same list.
+`docs/CATALOG.md` §8.4 owns the catalogue action vocabulary. Its thirteen names - declared across
+that tool table, its status-transition table (§7.2) and its licence rule (§5.4) - are reproduced
+below character for character rather than paraphrased, and this section claims no authority over
+them: where the two files ever disagree about a catalogue action, that one is right. What this
+section owns is the rest of the list - the three console-only catalogue actions no MCP tool can
+emit, and every `platform.*` action - marked "here" in the last column.
 
 | Action                                | Written when                                                         | Declared in                   |
 | ------------------------------------- | -------------------------------------------------------------------- | ----------------------------- |
-| `catalog.place.created`               | A catalogue record is created                                        | `docs/CATALOG.md` §8.4        |
-| `catalog.place.updated`               | A catalogue record's fields change                                   | `docs/CATALOG.md` §8.4        |
-| `catalog.place.published`             | A record moves to `published`                                        | `docs/CATALOG.md` §8.4        |
-| `catalog.place.retired`               | A record moves to `retired`                                          | `docs/CATALOG.md` §8.4, §7.2  |
-| `catalog.place.status_changed`        | Any other status transition                                          | `docs/CATALOG.md` §8.4, §7.2  |
-| `catalog.place.licence_escalated`     | A new source forces a stricter licence and unpublishes the record    | `docs/CATALOG.md` §5.4 rule 3 |
-| `catalog.ingest.promoted`             | An ingest row becomes a new catalogue record                         | `docs/CATALOG.md` §8.4        |
-| `catalog.ingest.merged`               | An ingest row is merged into an existing record                      | `docs/CATALOG.md` §8.4        |
-| `catalog.ingest.rejected`             | An ingest row is rejected with a reason                              | `docs/CATALOG.md` §8.4        |
-| `catalog.pack.created`                | A pack is created                                                    | `docs/CATALOG.md` §8.4        |
-| `catalog.pack.places_set`             | A pack's member places or their order change                         | `docs/CATALOG.md` §8.4        |
-| `catalog.pack.published`              | A pack moves to `published`                                          | `docs/CATALOG.md` §8.4        |
-| `catalog.source.run_started`          | A source run is started, by a curator or by the weekly cron          | `docs/CATALOG.md` §8.4        |
-| `catalog.pack.retired`                | A pack moves to `retired` - console-only; no MCP tool retires a pack | here (`pack:publish`, §1.2)   |
-| `catalog.source.enabled`              | A source is enabled - console-only                                   | here (`source:run`, §1.2)     |
-| `catalog.source.disabled`             | A source is disabled - console-only                                  | here (`source:run`, §1.2)     |
+| `catalog_place.created`               | A catalogue record is created                                        | `docs/CATALOG.md` §8.4        |
+| `catalog_place.updated`               | A catalogue record's fields change                                   | `docs/CATALOG.md` §8.4        |
+| `catalog_place.published`             | A record moves to `published`                                        | `docs/CATALOG.md` §8.4        |
+| `catalog_place.retired`               | A record moves to `retired`                                          | `docs/CATALOG.md` §8.4, §7.2  |
+| `catalog_place.status_changed`        | Any other status transition                                          | `docs/CATALOG.md` §8.4, §7.2  |
+| `catalog_place.licence_escalated`     | A new source forces a stricter licence and unpublishes the record    | `docs/CATALOG.md` §5.4 rule 3 |
+| `catalog_ingest.promoted`             | An ingest row becomes a new catalogue record                         | `docs/CATALOG.md` §8.4        |
+| `catalog_ingest.merged`               | An ingest row is merged into an existing record                      | `docs/CATALOG.md` §8.4        |
+| `catalog_ingest.rejected`             | An ingest row is rejected with a reason                              | `docs/CATALOG.md` §8.4        |
+| `place_pack.created`                  | A pack is created                                                    | `docs/CATALOG.md` §8.4        |
+| `place_pack.places_set`               | A pack's member places or their order change                         | `docs/CATALOG.md` §8.4        |
+| `place_pack.published`                | A pack moves to `published`                                          | `docs/CATALOG.md` §8.4        |
+| `catalog_source.run_started`          | A source run is started, by a curator or by the weekly cron          | `docs/CATALOG.md` §8.4        |
+| `place_pack.retired`                  | A pack moves to `retired` - console-only; no MCP tool retires a pack | here (`pack:publish`, §1.2)   |
+| `catalog_source.enabled`              | A source is enabled - console-only                                   | here (`source:run`, §1.2)     |
+| `catalog_source.disabled`             | A source is disabled - console-only                                  | here (`source:run`, §1.2)     |
 | `platform.user.created`               | An account is created from the console                               | here (`user:create`)          |
 | `platform.user.updated`               | An account's profile fields are changed from the console             | here (`user:update`)          |
 | `platform.user.role_changed`          | A platform role is set; `changes` carries before and after           | here (`user:set-role`)        |
@@ -692,7 +705,7 @@ Thirty-one actions. Three notes so the list cannot be miscounted or misread:
   `platform_audit_log` row under it. The two vocabularies happen to look alike; only this one is
   audited.
 - Reads are not audited, in the console or over MCP, for the reasons `docs/CATALOG.md` §8.3 gives.
-  There is deliberately no `catalog.place.read`.
+  There is deliberately no `catalog_place.read`.
 - Every **mutating** statement in §2.1 and §2.2 has exactly one action prefix here, and that is the
   point: an `admin` capability with no action name would be a capability that leaves no trace.
   `user:create` → `platform.user.created`; `user:update` → `platform.user.updated`; `user:set-role`
@@ -705,9 +718,10 @@ Thirty-one actions. Three notes so the list cannot be miscounted or misread:
   ever write under it.
 
 A unit test asserts the union of the action constants exported by `src/server/catalog` and
-`src/server/fns/console/*` equals this list exactly, and that every one of them matches the shape
-above. A name that exists in code and not in this table fails it; so does a name in this table
-that nothing writes.
+`src/server/fns/console/*` equals this list exactly, that every one of them matches the imported
+regex, and that every one of them begins with a prefix listed in the prefix table above - which is
+the machine-checkable half of the shape, and the half §4.4's query depends on. A name that exists
+in code and not in this table fails it; so does a name in this table that nothing writes.
 
 ### 4.3 Append-only, and never a reason to fail
 

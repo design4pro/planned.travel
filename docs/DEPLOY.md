@@ -713,14 +713,53 @@ to sandbox looks healthy and bills nobody.
 
 ### 9.4 Create the webhook endpoint
 
-Public URL: `https://planned.travel/api/polar/webhook` (staging:
-`https://staging.planned.travel/api/polar/webhook`). **The route itself lands in phase A.** Until
-then, create the endpoint in the _sandbox_ organization only — a production endpoint pointed at a
-path that 404s burns down the auto-disable counter in §9.7 within ten renewals.
+**Two endpoints, two organizations, two base URLs, created at two different times.** An endpoint
+belongs to the organization whose access token created it, and the URL it points at has to be the
+Worker that organization talks to. Cross the two and every delivery fails: a production URL
+registered in the sandbox organization sends sandbox events to the production Worker, which
+verifies them against the production signing secret and rejects them — and until phase A there is
+no `/api/polar/webhook` route there at all, so each attempt is a bare `404`. Ten consecutive
+non-2xx deliveries disable the endpoint (§9.7), so a wrong URL costs an hour and an email to every
+organization member.
 
-Dashboard: **Settings → Webhooks → Add endpoint**. Or by API:
+| Step            | Organization | API base (§9.3)                   | URL to register                                    |
+| --------------- | ------------ | --------------------------------- | -------------------------------------------------- |
+| **A** — now     | Sandbox      | `https://sandbox-api.polar.sh/v1` | `https://staging.planned.travel/api/polar/webhook` |
+| **B** — phase A | Production   | `https://api.polar.sh/v1`         | `https://planned.travel/api/polar/webhook`         |
+
+**The route itself lands in phase A.** Step A is a first-deploy step and is the endpoint §9.11
+walks against. **Step B is not: do not run it until `/api/polar/webhook` is deployed and answering
+on `https://planned.travel`.**
+
+Dashboard: **Settings → Webhooks → Add endpoint**, in the organization the step names. Or by API.
+
+**Step A — sandbox. `POLAR_ACCESS_TOKEN` must be the _sandbox_ token of §9.2:**
 
 ```bash
+POLAR_API=https://sandbox-api.polar.sh/v1
+
+curl -sS -X POST "$POLAR_API/webhooks/endpoints" \
+  -H "Authorization: Bearer $POLAR_ACCESS_TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{
+        "url": "https://staging.planned.travel/api/polar/webhook",
+        "name": "planned.travel staging",
+        "format": "raw",
+        "events": ["subscription.created","subscription.active","subscription.updated",
+                   "subscription.canceled","subscription.uncanceled","subscription.cycled",
+                   "subscription.past_due","subscription.revoked","subscription.paused",
+                   "subscription.resumed","order.created","order.updated","order.paid",
+                   "order.refunded","checkout.created","checkout.updated","checkout.expired"]
+      }'
+```
+
+**Step B — production, phase A only. `POLAR_ACCESS_TOKEN` must be re-exported as the
+_production_ token of §9.2; the sandbox one answers `401` here, which is the cheap failure. The
+expensive one is a valid sandbox token, which quietly creates a second sandbox endpoint:**
+
+```bash
+POLAR_API=https://api.polar.sh/v1
+
 curl -sS -X POST "$POLAR_API/webhooks/endpoints" \
   -H "Authorization: Bearer $POLAR_ACCESS_TOKEN" \
   -H 'content-type: application/json' \
@@ -736,7 +775,10 @@ curl -sS -X POST "$POLAR_API/webhooks/endpoints" \
       }'
 ```
 
-Three things about that call that are easy to get wrong:
+Read back what you just created — `GET "$POLAR_API/webhooks/endpoints"` — and confirm the `url`
+belongs to the environment the base URL does.
+
+Three things about the create call that are easy to get wrong:
 
 - **`/v1/webhooks/endpoints` has no trailing slash**, unlike `/v1/checkouts/`,
   `/v1/customer-sessions/` and `/v1/orders/`. Polar's paths are not uniform; copy them exactly.
@@ -891,7 +933,7 @@ curl -sS -X POST "$POLAR_API/checkouts/" \
   -d '{
         "products": ["PRODUCT_UUID"],
         "external_customer_id": "ORGANIZATION_ID",
-        "success_url": "https://planned.travel/settings/billing?checkout=complete",
+        "success_url": "APP_ORIGIN/settings/billing?checkout=complete",
         "metadata": { "organizationId": "ORGANIZATION_ID", "plan": "solo" }
       }'
 ```
@@ -901,7 +943,17 @@ string; the first entry is preselected. `external_customer_id` is the tenant's
 `organizationId` — Polar links an existing customer with that external id or creates one — which
 is what makes the order list below scope to a workspace without us storing a mapping first.
 `success_url` supports the `checkout_id={CHECKOUT_ID}` placeholder. `metadata` allows at most 50
-pairs, keys ≤ 40 characters and values ≤ 500.
+pairs, keys ≤ 40 characters and values ≤ 500. `APP_ORIGIN` here and in the `return_url` below is
+an `ALL_CAPS` placeholder like the others: replace it with the origin of the Worker the
+organization behind `$POLAR_API` talks to — `https://staging.planned.travel` while the sandbox
+matrix of §9.11 is being walked, `https://planned.travel` once phase A is live. Paste the
+production origin into a sandbox checkout and the redirect leaves the Worker that received the
+events. The product itself never writes the host down. The billing runtime on disk today — still
+the Stripe path, since no Polar call is shipped until phase A — builds every return URL from the
+`APP_URL` var through `billingAppUrl()` in `src/server/billing/runtime.cloudflare.ts`, and
+`wrangler.jsonc` sets that var per environment (`https://staging.planned.travel` under
+`env.staging`). The phase-A Polar calls take their origin from the same accessor, so the redirect
+follows the deployment rather than the snippet.
 
 **Customer Portal** — `POST /v1/customer-sessions/`
 
@@ -910,7 +962,7 @@ curl -sS -X POST "$POLAR_API/customer-sessions/" \
   -H "Authorization: Bearer $POLAR_ACCESS_TOKEN" \
   -H 'content-type: application/json' \
   -d '{ "external_customer_id": "ORGANIZATION_ID",
-        "return_url": "https://planned.travel/settings/billing?portal=complete" }'
+        "return_url": "APP_ORIGIN/settings/billing?portal=complete" }'
 ```
 
 The body is one of two variants: `{ "customer_id": … }` or `{ "external_customer_id": … }`. The
@@ -1545,8 +1597,10 @@ makes a payment work today
       test detects it.
 - [ ] The same setting reads `After 21 days` in the **sandbox** organization (§9.1), so §9.11's
       row 6 tests the shape production actually runs.
-- [ ] The webhook endpoint exists, `format` is `raw`, and it subscribes to the seventeen events
-      of §9.6.
+- [ ] The **sandbox** webhook endpoint of §9.4 step A exists and points at
+      `https://staging.planned.travel/api/polar/webhook`, `format` is `raw`, and it subscribes to
+      the seventeen events of §9.6. Step B — the production endpoint — is a phase-A line, not one
+      to tick today.
 - [ ] Bot Fight Mode is **off** for the zone (§9.7).
 - [ ] The verifier keys its HMAC with the raw UTF-8 bytes of the secret — §9.5's gotcha — and has
       a unit test with a captured payload.

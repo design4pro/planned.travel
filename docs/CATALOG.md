@@ -19,11 +19,11 @@ Those two sentences generate most of the rules below.
 
 ## 1. Scope and status
 
-|                |                                                                                                                                                                                                                                                                        |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Owns           | The eight global tables, the tenant-scoped `pack_entitlements`, the catalogue field dictionary, provenance, dedupe, lifecycle, the MCP tool and transport contract, the Firecrawl request contract, catalogue retention.                                               |
-| Does not own   | Platform role definitions, permission statements, impersonation and the audit-log surface - those are `docs/ACCESS.md`. Secrets, cron registration and vendor runbooks - those are `docs/DEPLOY.md`. Visual tokens - `docs/DESIGN.md`.                                 |
-| Implemented in | Phase C (model + curator console), phase D (scrape pipeline), phase E (MCP server), phase F (public surface), phase G (sale). Nothing in this document exists on disk yet; it is written so that each of those phases has one answer to build against instead of five. |
+|                |                                                                                                                                                                                                                                                                             |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Owns           | The eight global tables, the tenant-scoped `pack_entitlements`, the catalogue field dictionary, provenance, dedupe, lifecycle, the MCP tool and transport contract, the Firecrawl request contract, catalogue retention, the thirteen catalogue audit action names of §8.4. |
+| Does not own   | Platform role definitions, permission statements, impersonation, and the `platform_audit_log` columns, indexes and retention - those are `docs/ACCESS.md`. Secrets, cron registration and vendor runbooks - those are `docs/DEPLOY.md`. Visual tokens - `docs/DESIGN.md`.   |
+| Implemented in | Phase C (model + curator console), phase D (scrape pipeline), phase E (MCP server), phase F (public surface), phase G (sale). Nothing in this document exists on disk yet; it is written so that each of those phases has one answer to build against instead of five.      |
 
 **Clean room.** Every table, column, enum value, amenity key and tool name in this document is
 ours. The reference product informed _what a catalogue of camping places has to record_; not one
@@ -371,15 +371,20 @@ table: it carries no `organization_id`, and the existing `audit_log`
 before/after payload. **This document names the tension rather than resolving it silently** - see
 the finding in §13.1.
 
-**Its columns, its indexes, its action vocabulary and its retention are specified in
-`docs/ACCESS.md` §4, and this document does not restate them.** An earlier revision of this
-section printed a second column table of its own. Two column lists for one table is precisely how
-a schema acquires two spellings, and the spelling that would have won is not the one written in a
-file about camping places. `docs/ACCESS.md` owns the audit surface; the normative shape is there,
-and only there.
+**Its columns, its indexes and its retention are specified in `docs/ACCESS.md` §4.1, and this
+document does not restate them.** An earlier revision of this section printed a second column table
+of its own. Two column lists for one table is precisely how a schema acquires two spellings, and
+the spelling that would have won is not the one written in a file about camping places.
+`docs/ACCESS.md` §4.1 owns the column list; the normative shape is there, and only there.
 
-What this document does own is the four claims the catalogue makes _about_ that table. Each has to
-hold against whatever `docs/ACCESS.md` §4 defines, and each is checkable:
+The **action vocabulary** runs the other way, and this is the one part of the audit surface this
+document owns. The catalogue's thirteen action names are defined in the last column of §8.4, they
+are used in §5.4 and §7.2, and `docs/ACCESS.md` §4.2 reproduces them from there. Naming an action
+is naming the mutation that emits it, and the mutations are specified here; a file describing the
+permission model cannot invent a verb for a transition it does not define.
+
+What this document does own besides those names is the four claims the catalogue makes _about_ that
+table. Each has to hold against what `docs/ACCESS.md` §4.1 defines, and each is checkable:
 
 1. **One row per mutation, in the same call.** Every transition in §7.2 and every mutating tool in
    §8.4 appends exactly one entry (§8.3). Reads append none, and §8.3 says why.
@@ -394,17 +399,20 @@ hold against whatever `docs/ACCESS.md` §4 defines, and each is checkable:
    `docs/ACCESS.md` §4.1 already gives for that column, and `catalog_ingest` is a fourth in the
    same shape - that list is prefixed "e.g." and is illustrative, so adding a table name to it is
    not a contract change. If a later round closes the list, `catalog_ingest` belongs in it.
-4. **`docs/ACCESS.md` wins.** Where this document and that one can be read as disagreeing about
-   the audit surface, this document is the one that is wrong and the one that gets corrected. That
-   is stated again at the foot of §8.4 because it is the sentence most likely to be needed there.
+4. **Each half has one owner, and they are different files.** Where this document and that one
+   can be read as disagreeing about the _shape_ of the table - its columns, its indexes, its
+   retention - `docs/ACCESS.md` §4.1 wins and this document is the one that gets corrected. Where
+   they can be read as disagreeing about the _spelling of a catalogue action_, the thirteen names
+   in §8.4 win and `docs/ACCESS.md` §4.2 is the one that gets corrected. Both halves are stated
+   again at the foot of §8.4 because that is where they are most likely to be needed.
 
-One improvement is _proposed_ rather than assumed, so that proposing it does not quietly become
-asserting it. Under `docs/ACCESS.md` §4.1 an `agent` row identifies its token inside `user_agent`,
-a free-text column doing a foreign key's job - so "every action this revoked token ever took"
-cannot be answered by a join, only by a string match. A real `token_id` column referencing
-`staff_api_tokens.id` would answer it properly. That is a change to `docs/ACCESS.md` §4.1, it is
-filed as §13.9, and until the round that owns that file makes it, the `user_agent` form is the
-contract and this document follows it without amendment.
+An earlier revision of this section proposed a `token_id` column, on the reasoning that "every
+action this revoked token ever took" should be a join rather than a string match over free text.
+There is nothing left to propose: `docs/ACCESS.md` §4.1 already declares `token_id` and
+`actor_role` as real columns of `platform_audit_log`, and `user_agent` there carries a
+`User-Agent` header and nothing else. §8.3 and §8.4 of this document are written against that
+column list. `docs/ACCESS.md` §4.1 is where the column list lives and where any further column is
+added or removed; read it there rather than inferring it from anything in this section.
 
 ---
 
@@ -934,8 +942,21 @@ Every statement named above is drawn from the closed dictionary in `docs/ACCESS.
 gates the whole back office: a `published` row needs no statement because it is reachable through
 the public projections, and everything that is not published, plus every mutation, is behind these
 statements. `user` holds none of them, so there is no MCP tool a `user`-role token can call. Where
-the two documents ever disagree, `docs/ACCESS.md` wins and this table is the thing that gets
-corrected - for the statements here exactly as for the audit shape in §2.12.
+the two documents ever disagree about a **statement**, `docs/ACCESS.md` §1.1 wins and this table is
+the thing that gets corrected - exactly as `docs/ACCESS.md` §4.1 wins on the columns of
+`platform_audit_log` (§2.12).
+
+The last column is the exception, and it runs the other way. The thirteen action names above -
+`catalog_place.created`, `catalog_place.updated`, `catalog_place.licence_escalated`,
+`catalog_place.published`, `catalog_place.retired`, `catalog_place.status_changed`,
+`catalog_ingest.promoted`, `catalog_ingest.merged`, `catalog_ingest.rejected`,
+`place_pack.created`, `place_pack.places_set`, `place_pack.published` and
+`catalog_source.run_started` - are **defined here**, they are the closed catalogue vocabulary, and
+`docs/ACCESS.md` §4.2 reproduces them from this table rather than the reverse. They are two
+segments, `<entity_type>.<verb_in_past_tense>`, because that is the grammar `src/server/repos/**`
+already writes (`place.created`, `trip.created`, `trip.archived`, `trip.hijacked`,
+`billing.plan_changed`, `member.added`, `expense.created`, `journey.published`,
+`reservation.confirmed`) and one audit surface with two grammars is a surface nobody can grep.
 
 ### 8.5 Response caps, as numbers
 
@@ -966,10 +987,34 @@ First match wins. The order is by selectivity, and it is not negotiated per call
 | --- | --------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------- | ----------------------- |
 | 1   | `bbox`          | Up to 32 geohash prefix ranges covering the box (below)                 | `index(status, geohash, id)` with `status`, else `index(geohash, id)` | `(geohash, id)`         |
 | 2   | `q`, no `bbox`  | `name_normalised >= n AND name_normalised < n \|\| '{'`                 | `index(name_normalised, id)`                                          | `(name_normalised, id)` |
-| 3   | `country_code`  | `country_code = ?`, plus `kind` and `status` as further leading columns | `index(country_code, kind, status, id)`                               | `(id)` within the group |
-| 4   | `kind` only     | `kind = ?`, plus `status`                                               | `index(kind, status, id)`                                             | `(id)` within the group |
+| 3   | `country_code`  | `country_code = ?`, plus `kind` and `status` as further leading columns | `index(country_code, kind, status, id)`                               | `(kind, status, id)`    |
+| 4   | `kind` only     | `kind = ?`, plus `status`                                               | `index(kind, status, id)`                                             | `(status, id)`          |
 | 5   | `status` only   | `status = ?`, newest first                                              | `index(status, updated_at, id)`                                       | `(updated_at, id)`      |
 | 6   | nothing         | `id > ?` - a primary-key walk                                           | primary key                                                           | `(id)`                  |
+
+One rule generates all six cells: **the cursor carries the driving index's columns from the first
+one this plan does not pin to a single value, down to and including `id`.** That is the tuple the
+index delivers rows in, so it is the only tuple a keyset resume can compare against. Row 1 pins
+`status` and therefore carries `(geohash, id)` rather than `(status, geohash, id)`; row 2 pins
+nothing, because `q` is a range and not an equality, so it carries `name_normalised` itself; row 5
+pins `status` and carries `(updated_at, id)`. The candidate window orders by that same tuple and
+resumes with one row-value comparison against it - `where (kind, status, id) > (?, ?, ?)` - which
+SQLite has served as a single index range since 3.15.
+
+Rows 3 and 4 keep `kind` and `status` in the tuple even though a caller may pin them, and that is
+deliberate: both are **optional** inputs (§8.4), so a cursor whose arity followed them would change
+shape between one call and the next. A pinned column simply compares equal and costs nothing; an
+unpinned one is the whole reason the cursor exists. An `id`-only cursor is what this rule exists to
+forbid. With only `country_code` supplied, the index delivers rows ordered by `(kind, status, id)`
+within the country, and `id > ?` is not a range on that: D1 seeks on `country_code` and applies the
+`id` test as a residual across the entire group, so page 2 re-reads rows page 1 already returned
+**and** permanently skips every row whose `id` sorts below the cursor but whose `(kind, status)`
+sorts after it. Row 4 fails identically whenever `status` is omitted. Row 6 may carry an `id` alone
+only because there the driving index **is** the primary key and `newId()` is time-sortable.
+
+Row 5 walks its index backwards, so its comparison is `<` and every component of its ordering is
+descending. SQLite reads an ascending index in reverse, so that costs nothing and adds no
+eleventh index to §3's ten.
 
 Row 6 is a real, cheap plan and not a loophole: a keyset walk of the primary key reads exactly the
 rows it returns, in order, with no sort. It is how an agent enumerates the catalogue, and it is
@@ -1102,18 +1147,30 @@ request carrying modern per-request `_meta` is served under this revision, and a
 request selects legacy semantics. Era is therefore resolved **first**, from the body and the
 header together, and only then is the request validated under the rules of the era it belongs to:
 
-| #   | Condition, evaluated in this order                                   | Era resolved                                                                                                                                                                                                  |
-| --- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `method === "initialize"`                                            | **Legacy**, whatever headers are present. A legacy `initialize` has no `MCP-Protocol-Version` header - the version is negotiated in `params.protocolVersion` - so this case is checked before the header.     |
-| 2   | `MCP-Protocol-Version: 2026-07-28`                                   | **Modern.**                                                                                                                                                                                                   |
-| 3   | `MCP-Protocol-Version: 2025-11-25` or `2025-06-18`                   | **Legacy**, post-handshake. These are the values a legacy client sends on every request after its `initialize`.                                                                                               |
-| 4   | `MCP-Protocol-Version` present with any other value                  | Neither. `400` + `-32022` (§9.5).                                                                                                                                                                             |
-| 5   | No `MCP-Protocol-Version` header, and the method is not `initialize` | Neither. The only reading the specification offers here is the pre-`2025-06-18` era it lets a server assume as `2025-03-26`; we do not implement it, so `400` + `-32022` with `data.requested: "2025-03-26"`. |
+| #   | Condition, evaluated in this order                                   | Era resolved                                                                                                                                                                                              |
+| --- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `method === "initialize"`                                            | **Legacy**, whatever headers are present. A legacy `initialize` has no `MCP-Protocol-Version` header - the version is negotiated in `params.protocolVersion` - so this case is checked before the header. |
+| 2   | `MCP-Protocol-Version: 2026-07-28`                                   | **Modern.**                                                                                                                                                                                               |
+| 3   | `MCP-Protocol-Version: 2025-11-25` or `2025-06-18`                   | **Legacy**, post-handshake. These are the values a legacy client sends on every request after its `initialize`.                                                                                           |
+| 4   | `MCP-Protocol-Version` present with any other value                  | Neither. `400` + `-32022` (§9.5).                                                                                                                                                                         |
+| 5   | No `MCP-Protocol-Version` header, and the method is not `initialize` | Neither. A required header is missing: `400` + `-32020` (`HeaderMismatch`, §9.5). No version is echoed back, because the client named none. See below.                                                    |
 
 Row 1 carries the whole dual-era guarantee. Resolving the era from the header alone would reject
 every legacy `initialize` for a missing header, and a server that cannot be initialised by a legacy
 client is not dual-era no matter what its version list says. Row 5 is the only "no header"
 rejection, and it is scoped so that it can never swallow row 1.
+
+Row 5 is `-32020` and not `-32022`, and the division is the specification's rather than ours. The
+one escape on offer - treating a missing header as `2025-03-26` - is a **MAY** extended only to "a
+server that supports clients implementing protocol versions earlier than `2025-06-18`", and our
+closed set begins at `2025-06-18`, so it does not reach us: "a server that does not support such
+clients **MUST** reject a request without the header per Server Validation", where a missing
+required standard header is `400` with `-32020`. `-32022` means an _unsupported_ version and its
+payload echoes `data.requested`, so using it here would both misname the fault and report a version
+nobody sent - which is exactly the reading that makes a client retry the same request. Row 4, where
+a version really was requested and really is unsupported, keeps `-32022`. This rejection is reached
+during era resolution rather than under §9.5's modern-era scoping, because a request carrying no
+version belongs to no era.
 
 We assign no `Mcp-Session-Id` in either era. The legacy revisions make the session **optional**, so
 a legacy client that receives no session id simply operates statelessly - which is what our tools
@@ -1541,13 +1598,13 @@ Recorded here so a later round inherits them as decisions to make rather than as
    `required: false` with no `defaultValue`, so the migration that adds it leaves pre-existing
    rows `NULL`. §2.1 coerces `NULL` to `'user'` at the boundary; `docs/ACCESS.md` owns the
    normative statement and should say the same thing.
-9. **`platform_audit_log` should record an `agent`'s token as a foreign key, not as text.**
-   `docs/ACCESS.md` §4.1 puts the token's name and id into `user_agent`, which answers "what did
-   this call look like" but not "what did this token ever do" - the second question is the one
-   asked the morning a token is revoked, and a `LIKE` over a free-text column is not an answer.
-   Adding `token_id text references staff_api_tokens(id) on delete set null` with an index would
-   make it a join. The change belongs to `docs/ACCESS.md`, which owns that table; §2.12 records
-   the proposal and follows the current contract meanwhile.
+9. **Settled, and recorded here only so the item is not reopened: an `agent`'s token is a
+   foreign key.** `docs/ACCESS.md` §4.1 declares `token_id` (`text`, references
+   `staff_api_tokens(id)`, `on delete set null`, indexed, non-`NULL` exactly when
+   `actor_kind = 'agent'`) and `actor_role` as columns of `platform_audit_log`, and confines
+   `user_agent` to a `User-Agent` header. "What did this token ever do" is a join. `docs/ACCESS.md`
+   §4.1 is the owner of that column list and the only place it may change; this document states no
+   column of its own.
 10. **Substring and fuzzy place search is not in this contract.** §8.6 specifies `q` as a prefix
     match on `name_normalised`, because a leading wildcard defeats a B-tree on D1. Full substring
     search needs an FTS5 table with the trigram tokenizer, which D1 supports and which costs
