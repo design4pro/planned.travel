@@ -309,3 +309,79 @@ describe('CountryCardError', () => {
     expect(button.textContent).toContain('Loading this country')
   })
 })
+
+/**
+ * The card lands on whatever country the reader pointed at, so its ground, its
+ * hairline, its elevation and its stacking layer are the four things that
+ * decide whether it is legible at all — and each of them is a token whose value
+ * and whose measured ratios live in `tokens.css`.
+ *
+ * A drift to a page surface is the regression worth guarding: `bg-surface`
+ * still looks correct over paper-coloured land, and only fails over a pine
+ * fill, which is a state no screenshot of the atlas at rest ever contains.
+ */
+describe('the surface every variant stands on', () => {
+  const SURFACE = [
+    'bg-map-card',
+    'border-map-card-edge',
+    'shadow-popover',
+    'z-map-surface',
+  ] as const
+
+  it('draws the full card from the over-map tokens', () => {
+    render(<CountryCard {...FRANCE} />)
+    for (const token of SURFACE) {
+      expect(cardFor('FR').className).toContain(token)
+    }
+  })
+
+  it('gives the compact pill that same ground rather than a second one', () => {
+    render(<CountryCard variant="compact" countryCode="MR" />)
+    for (const token of SURFACE) {
+      expect(cardFor('MR').className).toContain(token)
+    }
+  })
+
+  it('gives the loading and degraded states that same ground', () => {
+    const { container } = render(<CountryCardSkeleton />)
+    render(<CountryCardError countryCode="FR" />)
+    for (const token of SURFACE) {
+      expect(container.firstElementChild?.className).toContain(token)
+      expect(cardFor('FR').className).toContain(token)
+    }
+  })
+
+  it('draws the pointer from the card’s own ground and hairline', () => {
+    render(<CountryCard {...FRANCE} pointer="top" />)
+    const pointer = cardFor('FR').querySelector('[data-part="pointer"]')
+    expect(pointer?.className).toContain('bg-map-card')
+    expect(pointer?.className).toContain('border-map-card-edge')
+  })
+
+  it('moves on the product’s own easing, inside the motion band', () => {
+    render(<CountryCard {...FRANCE} />)
+    const card = cardFor('FR')
+    expect(card.className).toContain('duration-fast')
+    expect(card.className).toContain('ease-out-quint')
+  })
+
+  /**
+   * The runtime half of the repo's no-hardcoded-values rule, run over every
+   * variant at once: whatever reaches the DOM must be a token utility, never a
+   * literal colour, shadow, radius or stacking index.
+   */
+  it('lets no literal colour, shadow, radius or z-index reach the DOM', () => {
+    const { container } = render(
+      <>
+        <CountryCard {...FRANCE} pointer="bottom" />
+        <CountryCard {...ALGERIA} />
+        <CountryCard variant="compact" countryCode="MR" pointer="top" />
+        <CountryCardSkeleton pointer="left" />
+        <CountryCardError countryCode="IT" onRetry={() => undefined} />
+      </>,
+    )
+    expect(container.innerHTML).not.toMatch(
+      /#[0-9a-fA-F]{3,8}|rgba?\(|shadow-\[|z-\[|rounded-\[/,
+    )
+  })
+})

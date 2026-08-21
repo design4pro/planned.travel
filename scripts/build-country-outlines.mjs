@@ -81,8 +81,9 @@
  *
  * Simplification never costs a country. If a ring quantises to fewer than three
  * distinct vertices after simplification, the unsimplified ring is quantised
- * instead; if that still collapses, the ring is dropped. Vatican City is 0.008°
- * across and survives only because of that retry.
+ * instead; if that still collapses, the ring is dropped. Vatican City's only
+ * ring is 0.012° across and survives only because of that retry — see
+ * {@link cutRing} for the eleven codes it rescues and the two it decides.
  */
 
 import { argv, exit, stderr, stdout } from 'node:process'
@@ -185,7 +186,8 @@ function squaredSegmentDistance(point, start, end) {
   let dy = end[1] - y
 
   if (dx !== 0 || dy !== 0) {
-    const along = ((point[0] - x) * dx + (point[1] - y) * dy) / (dx * dx + dy * dy)
+    const along =
+      ((point[0] - x) * dx + (point[1] - y) * dy) / (dx * dx + dy * dy)
     if (along > 1) {
       x = end[0]
       y = end[1]
@@ -218,7 +220,11 @@ function simplify(ring, toleranceDegrees) {
     let furthest = -1
     let worst = tolerance
     for (let index = first + 1; index < last; index += 1) {
-      const distance = squaredSegmentDistance(ring[index], ring[first], ring[last])
+      const distance = squaredSegmentDistance(
+        ring[index],
+        ring[first],
+        ring[last],
+      )
       if (distance > worst) {
         worst = distance
         furthest = index
@@ -262,10 +268,22 @@ function quantise(ring) {
  * One ring, cut for the asset — or `null` when it encloses nothing at this
  * scale.
  *
- * The retry is what keeps the micro-states: simplification runs first, and if
- * it has taken the ring below the three distinct vertices a fill needs, the
- * original is quantised instead. Vatican City, Monaco, Nauru, Tuvalu, Macao,
- * Sint Maarten and Wallis and Futuna all reach the asset through this branch.
+ * The retry is what keeps the smallest islands: simplification runs first, and
+ * if it has taken the ring below the three distinct vertices a fill needs, the
+ * original is quantised instead.
+ *
+ * Counted over the pinned source rather than guessed: 23 rings across 11 codes
+ * take this branch — AU, FJ, IN, KI, MH, NL, NZ, PF, US, VA, VC — and none of
+ * them is wider than 0.21°. For nine it is one islet of many: an Ashmore and
+ * Cartier islet for Australia, Saba for the Netherlands, Kadmat in the
+ * Lakshadweep for India, four barrier islands and keys for the United States.
+ * For two the branch is the difference between drawn and absent — Vatican City,
+ * whose only ring is 0.012° across, and Tokelau, whose two rings are New
+ * Zealand's only land within a degree of the point `UNMAPPED_TERRITORY_CODES`
+ * promises TK's coastline at.
+ *
+ * Nothing in the 1:50m source collapses past the retry, so at this scale the
+ * final `null` never fires. It stays because a coarser source would need it.
  */
 function cutRing(ring) {
   const simplified = quantise(simplify(ring, TOLERANCE_UNITS / GRID))
@@ -444,7 +462,9 @@ async function main() {
   if (options.check) {
     const current = await readFile(target, 'utf8').catch(() => null)
     if (current === text) {
-      stdout.write(`${options.out} is up to date (${report.vertices} vertices)\n`)
+      stdout.write(
+        `${options.out} is up to date (${report.vertices} vertices)\n`,
+      )
       return
     }
     stderr.write(

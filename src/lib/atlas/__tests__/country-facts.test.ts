@@ -71,6 +71,72 @@ describe('countryFactMonth', () => {
     expect(countryFactMonth('First trip', '2004-01-02').iso).toBe('2004-01')
   })
 
+  /**
+   * The long month name is the other half of the same rule. `Sept` and `Sep`
+   * differ between ICU builds; `September` does not, in any runtime this app
+   * renders in. Sweeping all twelve pins the whole set rather than the one
+   * month that has already burned us, so a future formatter that quietly
+   * abbreviates fails here instead of on a reader's Safari.
+   */
+  it('spells every month out in full, on every runtime', () => {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ]
+    months.forEach((name, index) => {
+      const column = `2026-${String(index + 1).padStart(2, '0')}-15`
+      expect(countryFactMonth('First trip', column).value).toBe(`${name} 2026`)
+    })
+  })
+
+  /**
+   * The printed month and the `<time dateTime>` beside it are two readings of
+   * one column, and a card whose eye and whose machine disagree about which
+   * month a trip fell in is worse than one that prints nothing. The pairs below
+   * are the three ways they could come apart: the two ends of a year, and an
+   * instant sitting either side of midnight UTC.
+   */
+  it('never lets the printed month and its machine form disagree', () => {
+    const pairs = [
+      ['2026-01-01', 'January 2026', '2026-01'],
+      ['2026-12-31', 'December 2026', '2026-12'],
+      ['2026-09-30T23:30:00.000Z', 'September 2026', '2026-09'],
+    ] as const
+    for (const [column, value, iso] of pairs) {
+      expect(countryFactMonth('Last trip', column)).toEqual({
+        label: 'Last trip',
+        value,
+        iso,
+      })
+    }
+  })
+
+  /**
+   * A stored day is a day, not an instant: `2026-10-01` in Auckland and the
+   * same column read in Los Angeles are the same trip. Coarsening by the
+   * reader's clock would slide a September trip into October for half the
+   * planet, so the date portion is taken literally and the offset is ignored.
+   */
+  it('does not let a timezone offset move a trip into another month', () => {
+    expect(countryFactMonth('First trip', '2026-10-01T00:30:00+02:00')).toEqual(
+      {
+        label: 'First trip',
+        value: 'October 2026',
+        iso: '2026-10',
+      },
+    )
+  })
+
   it('accepts a full instant as readily as a day column', () => {
     expect(countryFactMonth('Last trip', '2026-10-02T09:30:00.000Z')).toEqual({
       label: 'Last trip',

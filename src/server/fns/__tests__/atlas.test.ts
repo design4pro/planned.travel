@@ -23,6 +23,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AuthRequirementError } from '#/server/auth/tenant'
 import {
+  achieveBucketListItem,
   createBucketListItem,
   getAtlasSummary,
   listBucketList,
@@ -46,7 +47,38 @@ const stubs = vi.hoisted(() => ({
   scope: null as TenantScope | null,
   /** When set, the next bucket-list insert refuses with a repository quota error. */
   quota: null as { metric: string; limit: number; current: number } | null,
+  /**
+   * How many of the next visited-country inserts are refused the way the unique
+   * index refuses them, and whether the row the winner would have written is
+   * actually laid down before each refusal.
+   *
+   * Together these reproduce a race the harness cannot schedule on demand: a
+   * concurrent request that commits between this one's read and its write.
+   */
+  clashes: 0,
+  clashLeavesRow: false,
 }))
+
+/**
+ * The refusal a driver produces when `visited_countries_org_user_country_unq`
+ * rejects a duplicate, copied in shape from what this harness actually throws:
+ * an outer error carrying the whole statement and the tenant's identifiers, with
+ * SQLite's own message and sub-code hanging off it as `cause`. It is reproduced
+ * rather than provoked so a test can also assert what the boundary does *not*
+ * forward.
+ */
+function uniqueIndexRefusal(): Error {
+  const inner = Object.assign(
+    new Error(
+      'UNIQUE constraint failed: visited_countries.organization_id, visited_countries.user_id, visited_countries.country_code',
+    ),
+    { code: 'ERR_SQLITE_ERROR', errcode: 2067, errstr: 'constraint failed' },
+  )
+  return new Error(
+    'Failed query: insert into "visited_countries" ("id", "organization_id", "user_id", "country_code") values (?, ?, ?, ?)\nparams: row_c0ffee,org_seeded_atlas,user_seeded_atlas,IS',
+    { cause: inner },
+  )
+}
 
 vi.mock('../context', async () => {
   const { AuthRequirementError: AuthError } =
@@ -81,6 +113,18 @@ vi.mock('#/server/repos', async (importOriginal) => {
       }
       return actual.createBucketListItem(...args)
     },
+    markCountryVisited: async (
+      ...args: Parameters<typeof actual.markCountryVisited>
+    ) => {
+      if (stubs.clashes > 0) {
+        stubs.clashes -= 1
+        if (stubs.clashLeavesRow) {
+          await actual.markCountryVisited(...args)
+        }
+        throw uniqueIndexRefusal()
+      }
+      return actual.markCountryVisited(...args)
+    },
   }
 })
 
@@ -114,10 +158,12 @@ function startContext(): StartContext {
 }
 
 const {
+  AtlasConflictError,
   AtlasQuotaError,
   addCountryToBucketListFn,
   addCountryToBucketListInputSchema,
   atlasCountryState,
+  isUniqueConstraintViolation,
   markCountryVisitedFn,
   markCountryVisitedInputSchema,
   removeCountryFromBucketListFn,
@@ -217,6 +263,8 @@ beforeEach(async () => {
   other = await harness.seedTenant('elsewhere')
   signIn(tenant.scope)
   stubs.quota = null
+  stubs.clashes = 0
+  stubs.clashLeavesRow = false
 })
 
 afterEach(() => {
@@ -298,6 +346,63 @@ describe('markCountryVisitedFn', () => {
     })
   })
 
+  it('survives two requests for the same country arriving at once', async () => {
+    // Not a simulation: both calls run through the real repository against the
+    // real index, and the second one's insert is genuinely refused. Before the
+    // boundary converged on that refusal, this rejected with the driver's error.
+    const outcomes = await Promise.allSettled([
+      markVisited({ countryCode: 'IS', visitedOn: '2025-11-02' }),
+      markVisited({ countryCode: 'IS', visitedOn: '2025-11-02' }),
+    ])
+
+    expect(outcomes.map((outcome) => outcome.status)).toEqual([
+      'fulfilled',
+      'fulfilled',
+    ])
+
+    const rows = await listVisitedCountries(tenant.scope, tenant.ownerUserId)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ countryCode: 'IS', visitCount: 1 })
+  })
+
+  it('answers with the winner’s row when the index refuses this one', async () => {
+    stubs.clashes = 1
+    stubs.clashLeavesRow = true
+
+    await markVisited({ countryCode: 'IS', visitedOn: '2025-11-02' })
+
+    const state = await atlasCountryState(tenant.scope, 'IS')
+    expect(state.visit).toMatchObject({
+      countryCode: 'IS',
+      visitCount: 1,
+      firstVisitedOn: '2025-11-02',
+    })
+    expect(await visitedCodes(tenant.scope)).toEqual(['IS'])
+  })
+
+  it('reports a standing collision as a conflict, not as a database error', async () => {
+    // The winner takes the index and then rolls its own row back, so re-reading
+    // finds nothing and the second attempt is refused too.
+    stubs.clashes = 2
+    stubs.clashLeavesRow = false
+
+    const failure = await markVisited({ countryCode: 'IS' }).catch(
+      (cause: unknown) => cause,
+    )
+
+    expect(failure).toBeInstanceOf(AtlasConflictError)
+    const conflict = failure as InstanceType<typeof AtlasConflictError>
+    expect(conflict.status).toBe(409)
+    expect(conflict.countryCode).toBe('IS')
+    expect(conflict.message).toContain('Iceland')
+    // What a boundary must never hand back: the statement, the tenant and the
+    // traveller the driver names in its own refusal.
+    expect(conflict.message).not.toMatch(/insert into/i)
+    expect(conflict.message).not.toContain('org_seeded_atlas')
+    expect(conflict.message).not.toContain('user_seeded_atlas')
+    expect(await visitedCodes(tenant.scope)).toEqual([])
+  })
+
   it('refuses malformed input at the boundary, before any write', async () => {
     expect(
       await validateAtBoundary(markCountryVisitedFn, { countryCode: 'FRANCE' }),
@@ -354,6 +459,21 @@ describe('unmarkCountryVisitedFn', () => {
     expect(state.visit).toBeNull()
   })
 
+  it('survives two undos of the same country arriving at once', async () => {
+    await markVisited({ countryCode: 'NO' })
+
+    const outcomes = await Promise.allSettled([
+      unmarkVisited({ countryCode: 'NO' }),
+      unmarkVisited({ countryCode: 'NO' }),
+    ])
+
+    expect(outcomes.map((outcome) => outcome.status)).toEqual([
+      'fulfilled',
+      'fulfilled',
+    ])
+    expect(await visitedCodes(tenant.scope)).toEqual([])
+  })
+
   it('refuses malformed input at the boundary', async () => {
     expect(
       await validateAtBoundary(unmarkCountryVisitedFn, { countryCode: '' }),
@@ -406,6 +526,56 @@ describe('addCountryToBucketListFn', () => {
     const items = await listBucketList(tenant.scope, tenant.ownerUserId)
     expect(items).toHaveLength(1)
     expect(items[0]?.targetYear).toBe(2027)
+  })
+
+  it('lists a country once when two adds arrive at once', async () => {
+    // `bucket_list_items` has no unique index, so both inserts succeed and the
+    // duplicate is permanent unless the boundary collapses it. Before it did,
+    // this left two entries and the bucket tab showed the country twice.
+    const outcomes = await Promise.allSettled([
+      addToBucketList({ countryCode: 'KR', targetYear: 2027 }),
+      addToBucketList({ countryCode: 'KR', targetYear: 2030 }),
+    ])
+
+    expect(outcomes.map((outcome) => outcome.status)).toEqual([
+      'fulfilled',
+      'fulfilled',
+    ])
+
+    const items = await listBucketList(tenant.scope, tenant.ownerUserId)
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({ kind: 'country', countryCode: 'KR' })
+
+    const state = await atlasCountryState(tenant.scope, 'KR')
+    expect(state.bucketGoal?.id).toBe(items[0]?.id)
+  })
+
+  it('collapses onto the same entry whichever request gets there first', async () => {
+    // Both racers keep the lowest id, so the survivor does not depend on which
+    // of them ran the repair - and one entry cannot outlive the other's delete.
+    await Promise.all([
+      addToBucketList({ countryCode: 'KR' }),
+      addToBucketList({ countryCode: 'KR' }),
+    ])
+    await addToBucketList({ countryCode: 'KR' })
+
+    const items = await listBucketList(tenant.scope, tenant.ownerUserId)
+    expect(items).toHaveLength(1)
+  })
+
+  it('leaves an achieved entry standing rather than listing the country twice', async () => {
+    const achieved = await createBucketListItem(tenant.scope, {
+      kind: 'country',
+      name: 'South Korea',
+      countryCode: 'KR',
+    })
+    await achieveBucketListItem(tenant.scope, achieved.id, '2026-04-02')
+
+    await addToBucketList({ countryCode: 'KR' })
+
+    const items = await listBucketList(tenant.scope, tenant.ownerUserId)
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({ id: achieved.id, isAchieved: true })
   })
 
   it('refuses malformed input at the boundary, before any write', async () => {
@@ -474,6 +644,21 @@ describe('removeCountryFromBucketListFn', () => {
     const state = await atlasCountryState(tenant.scope, 'MN')
     expect(state.bucketGoal).toBeNull()
     expect(state.continent).toBe('Asia')
+    expect(await listBucketList(tenant.scope, tenant.ownerUserId)).toEqual([])
+  })
+
+  it('survives two removals of the same entry arriving at once', async () => {
+    const itemId = await seedGoal(tenant.scope, 'MN')
+
+    const outcomes = await Promise.allSettled([
+      removeFromBucketList({ itemId }),
+      removeFromBucketList({ itemId }),
+    ])
+
+    expect(outcomes.map((outcome) => outcome.status)).toEqual([
+      'fulfilled',
+      'fulfilled',
+    ])
     expect(await listBucketList(tenant.scope, tenant.ownerUserId)).toEqual([])
   })
 
@@ -573,5 +758,65 @@ describe('atlasCountryState', () => {
       visit: null,
       bucketGoal: null,
     })
+  })
+})
+
+/* ------------------------------------------- isUniqueConstraintViolation */
+
+describe('isUniqueConstraintViolation', () => {
+  it('recognises the wrapped refusal this driver throws', () => {
+    expect(isUniqueConstraintViolation(uniqueIndexRefusal())).toBe(true)
+  })
+
+  it('recognises the refusal D1 throws in the Worker, which carries no code', () => {
+    // D1 flattens SQLite's message into its own and drops the sub-code, so a
+    // detector that only read `errcode` would let this one through as a fault.
+    expect(
+      isUniqueConstraintViolation(
+        new Error(
+          'D1_ERROR: UNIQUE constraint failed: visited_countries.organization_id, visited_countries.user_id, visited_countries.country_code: SQLITE_CONSTRAINT',
+        ),
+      ),
+    ).toBe(true)
+  })
+
+  it('recognises the sub-code alone, whatever the message says', () => {
+    expect(
+      isUniqueConstraintViolation(
+        Object.assign(new Error('constraint failed'), { errcode: 2067 }),
+      ),
+    ).toBe(true)
+    expect(
+      isUniqueConstraintViolation(
+        Object.assign(new Error('constraint failed'), { errcode: 1555 }),
+      ),
+    ).toBe(true)
+  })
+
+  it('says no to everything a retry would not fix', () => {
+    expect(
+      isUniqueConstraintViolation(
+        new Error('CHECK constraint failed: bucket_list_items_kind_chk'),
+      ),
+    ).toBe(false)
+    expect(
+      isUniqueConstraintViolation(
+        Object.assign(new Error('FOREIGN KEY constraint failed'), {
+          errcode: 787,
+        }),
+      ),
+    ).toBe(false)
+    expect(isUniqueConstraintViolation(new Error('network timed out'))).toBe(
+      false,
+    )
+    expect(isUniqueConstraintViolation('UNIQUE constraint failed')).toBe(false)
+    expect(isUniqueConstraintViolation(null)).toBe(false)
+    expect(isUniqueConstraintViolation(undefined)).toBe(false)
+  })
+
+  it('terminates on a cause chain that points at itself', () => {
+    const looping = new Error('wrapped')
+    Object.defineProperty(looping, 'cause', { value: looping })
+    expect(isUniqueConstraintViolation(looping)).toBe(false)
   })
 })

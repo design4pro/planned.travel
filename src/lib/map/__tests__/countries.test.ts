@@ -26,6 +26,7 @@ import type {
   CountryDetail,
   countryDetail,
   loadCountryDetail,
+  subscribeCountryDetail,
 } from '../countries'
 import type { MapOptions } from 'maplibre-gl'
 
@@ -97,6 +98,7 @@ interface CountriesModule {
   readonly countrySource: typeof countrySource
   readonly hasCountryOutline: typeof hasCountryOutline
   readonly loadCountryDetail: typeof loadCountryDetail
+  readonly subscribeCountryDetail: typeof subscribeCountryDetail
   readonly worldLandFeatures: typeof worldLandFeatures
 }
 
@@ -983,6 +985,109 @@ describe('loadCountryDetail', () => {
     // The Canaries drag the western edge from mainland Iberia out past 18°W.
     expect(before.west).toBeGreaterThan(-10)
     expect(after.west).toBeLessThan(-18)
+  })
+
+  it('refuses to guess an origin where there is no browser', async () => {
+    // The URL is root-relative because it is an asset of this origin. A Worker
+    // has no origin to resolve it against, and the failure it produces on its
+    // own names neither this module nor the asset.
+    const countries = await freshCountries()
+    vi.stubGlobal('window', undefined)
+    try {
+      await expect(countries.loadCountryDetail()).rejects.toThrow(
+        /browser asset/,
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+    // An injected fetcher supplies the base the default one lacks, so it is
+    // still the way a test or a build step reads the same bytes.
+    const detail = await countries.loadCountryDetail(assetFetcher().fetcher)
+    expect(detail.manifest.source).toBe('natural-earth-50m')
+  })
+})
+
+describe('subscribeCountryDetail', () => {
+  it('tells a listener once, after the finer answers are installed', async () => {
+    const countries = await freshCountries()
+    const seen: Array<{ outline: boolean; west: number | null }> = []
+    countries.subscribeCountryDetail(() => {
+      seen.push({
+        outline: countries.hasCountryOutline('SG'),
+        west: countries.countryBounds('ES')?.west ?? null,
+      })
+    })
+
+    expect(seen).toEqual([])
+    await countries.loadCountryDetail(assetFetcher().fetcher)
+    await countries.loadCountryDetail(assetFetcher().fetcher)
+
+    // Once, and with the finer cut already answering — a listener that saw the
+    // bundled answers would have nothing to re-render for.
+    expect(seen.length).toBe(1)
+    expect(seen[0].outline).toBe(true)
+    expect(seen[0].west).toBeLessThan(-18)
+  })
+
+  it('stays quiet when the load fails, and speaks when the retry lands', async () => {
+    const countries = await freshCountries()
+    let calls = 0
+    countries.subscribeCountryDetail(() => {
+      calls += 1
+    })
+
+    await expect(
+      countries.loadCountryDetail(assetFetcher('', 503).fetcher),
+    ).rejects.toThrow(/503/)
+    expect(calls).toBe(0)
+
+    await countries.loadCountryDetail(assetFetcher().fetcher)
+    expect(calls).toBe(1)
+  })
+
+  it('hands back an unsubscribe that actually detaches', async () => {
+    const countries = await freshCountries()
+    let calls = 0
+    const unsubscribe = countries.subscribeCountryDetail(() => {
+      calls += 1
+    })
+    unsubscribe()
+    // Idempotent, because a React effect cleanup can run twice under Strict
+    // Mode and must not throw the second time.
+    unsubscribe()
+
+    await countries.loadCountryDetail(assetFetcher().fetcher)
+    expect(calls).toBe(0)
+  })
+
+  it('does not skip a neighbour when a listener detaches mid-announcement', async () => {
+    const countries = await freshCountries()
+    const order: Array<string> = []
+    const first = countries.subscribeCountryDetail(() => {
+      order.push('first')
+      first()
+    })
+    countries.subscribeCountryDetail(() => {
+      order.push('second')
+    })
+
+    await countries.loadCountryDetail(assetFetcher().fetcher)
+    expect(order).toEqual(['first', 'second'])
+  })
+
+  it('never fires for a subscriber that arrives after the cut has landed', async () => {
+    const countries = await freshCountries()
+    await countries.loadCountryDetail(assetFetcher().fetcher)
+
+    let calls = 0
+    countries.subscribeCountryDetail(() => {
+      calls += 1
+    })
+    await countries.loadCountryDetail(assetFetcher().fetcher)
+
+    // There is nothing left to announce; countryDetail() is the answer.
+    expect(calls).toBe(0)
+    expect(countries.countryDetail()).not.toBeNull()
   })
 })
 

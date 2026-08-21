@@ -569,7 +569,29 @@ export interface CountryDetail {
 /** How the asset is fetched. Injectable so the decode can be tested offline. */
 export type CountryDetailFetcher = (url: string) => Promise<Response>
 
-const defaultDetailFetcher: CountryDetailFetcher = (url) => fetch(url)
+/**
+ * The default fetcher, and the one place the client-only rule is enforced.
+ *
+ * {@link COUNTRY_DETAIL_URL} is root-relative because it is an asset of this
+ * origin, and a Worker has no origin to resolve it against: `fetch('/atlas/…')`
+ * there fails with a parse error naming neither this module nor the asset. A
+ * caller that genuinely wants these bytes on the server — a test, or a build
+ * step — injects a fetcher and gets no guard, because it has already supplied
+ * the base this one lacks.
+ */
+const defaultDetailFetcher: CountryDetailFetcher = (url) => {
+  if (typeof window === 'undefined') {
+    return Promise.reject(
+      new Error(
+        `country outlines: ${url} is a browser asset, and loadCountryDetail() has no origin to resolve it against here. Pass a fetcher to read it anywhere else.`,
+      ),
+    )
+  }
+  return fetch(url)
+}
+
+/** Everything waiting to be told the finer cut landed. */
+const detailListeners = new Set<() => void>()
 
 /** Reads `key=value key=value` into a lookup, ignoring anything malformed. */
 function manifestFields(line: string): ReadonlyMap<string, string> {
@@ -628,7 +650,10 @@ export function parseCountryDetail(payload: string): CountryDetail {
     throw new Error(`country outlines: grid=${manifest.grid} is not a grid`)
   }
 
-  const outlines = decodeOutlines(payload.slice(newline + 1).trim(), manifest.grid)
+  const outlines = decodeOutlines(
+    payload.slice(newline + 1).trim(),
+    manifest.grid,
+  )
   const features: Array<CountryFeature> = []
   let rings = 0
   let vertices = 0
@@ -687,10 +712,45 @@ export function parseCountryDetail(payload: string): CountryDetail {
  * The finer cut, once it has arrived — or `null`.
  *
  * Synchronous and stable: it returns the identical object between loads, so it
- * is safe as a `useSyncExternalStore` snapshot or an effect dependency.
+ * is safe as an effect dependency, and safe as the `getSnapshot` half of a
+ * `useSyncExternalStore` whose `subscribe` half is {@link subscribeCountryDetail}.
  */
 export function countryDetail(): CountryDetail | null {
   return detail
+}
+
+/**
+ * Called once, when the finer cut installs.
+ *
+ * The subscription half of the store, and the reason it exists is that two
+ * *derived* answers move at the same instant — {@link hasCountryOutline} and
+ * {@link countryBounds} — and both are the kind of thing a component reads
+ * during render. A list row that resolved "no outline at this scale" for
+ * Singapore from the bundled cut has no other way to be told the map can fill
+ * it now, and would keep saying it until something unrelated re-rendered.
+ *
+ * Fires at most once per process, after the payload is installed and before
+ * {@link loadCountryDetail} resolves. Returns its own unsubscribe; subscribing
+ * after the cut has landed never fires, because there is nothing left to
+ * announce — read {@link countryDetail} for that.
+ */
+export function subscribeCountryDetail(onInstalled: () => void): () => void {
+  detailListeners.add(onInstalled)
+  return () => {
+    detailListeners.delete(onInstalled)
+  }
+}
+
+/**
+ * Announces the install to everything subscribed, over a snapshot of the set so
+ * a listener that unsubscribes itself as it runs cannot skip its neighbour.
+ *
+ * Deliberately not caught: a throwing listener rejects the load, which is
+ * loud rather than silent. The payload is installed by then, so the module is
+ * never left half-loaded and a retry resolves with it immediately.
+ */
+function announceCountryDetail(): void {
+  for (const listener of [...detailListeners]) listener()
 }
 
 /**
@@ -712,6 +772,9 @@ export function countryDetail(): CountryDetail | null {
  * predicate and a fly-to rectangle that all describe the same world. A caller
  * that ignores the result gets a rectangle that can be wider than the shapes it
  * draws, which is why this returns the source rather than merely announcing it.
+ *
+ * A caller that cannot await — a component that already rendered one of those
+ * derived answers — subscribes with {@link subscribeCountryDetail} instead.
  */
 export function loadCountryDetail(
   fetcher: CountryDetailFetcher = defaultDetailFetcher,
@@ -738,6 +801,9 @@ export function loadCountryDetail(
     // The rectangles were solved over the coarser cut and are now wrong by a
     // continent for anything with an offshore territory.
     boundsByCode = null
+    // Installed first, announced second, so a listener that re-reads the two
+    // derived answers sees the finer cut rather than the one it replaced.
+    announceCountryDetail()
     return parsed
   })()
 

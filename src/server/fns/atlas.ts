@@ -22,8 +22,11 @@
  *    write *does* do is translate a `QuotaExceededError` should a repository ever
  *    start throwing one: see {@link AtlasQuotaError}. A plan ceiling that reaches
  *    the reader as a bare 500 is a bug waiting to happen, not a decision to defer.
- * 3. **Write.** One statement, through one repository function. There is no
- *    multi-row invariant to hold, so there is nothing to wrap in a transaction.
+ * 3. **Write.** One row, through one repository function. There is no multi-row
+ *    invariant to hold, so there is nothing to wrap in a transaction. The
+ *    unmetered table without a unique index pays for that with one extra read
+ *    after its insert (see Idempotence below), which keeps every handler inside
+ *    §2.2's 1-4 statement budget and none of them holding a lock across an await.
  * 4. **Invalidate.** Nothing to invalidate: `/atlas` is loader-driven straight off
  *    D1, and the only things this deployment keeps in KV are plan state and
  *    sessions, neither of which a country touches. Usage counters are not cached
@@ -38,12 +41,35 @@
  *
  * ## Idempotence
  *
- * All four handlers are safe to repeat. `visited_countries` carries a unique index
- * on `(organization_id, user_id, country_code)`, and the honest way to respect it
- * is to read the row first and return it unchanged rather than to insert and catch
- * a constraint violation - a double-tapped button, a retried request and a
- * reconnecting client all arrive here, and none of them means the traveller went
- * twice.
+ * All four handlers are safe to repeat, and "repeat" here means *overlapping*, not
+ * merely sequential: a double-tapped button, a retried request and a reconnecting
+ * client all arrive here, two of them can be in flight at once, and none of them
+ * means the traveller went twice. Reading the row before writing it answers the
+ * sequential case and cannot answer the concurrent one - between the read and the
+ * write, the other request commits - so each write path also converges after the
+ * fact, and the two tables need different mechanics for that because they are
+ * protected differently:
+ *
+ * - `visited_countries` carries `visited_countries_org_user_country_unq` on
+ *   `(organization_id, user_id, country_code)`. The loser of a race is refused by
+ *   the database, so {@link markCountryVisitedFn} treats that refusal as the
+ *   answer it was looking for - see {@link isUniqueConstraintViolation} - re-reads
+ *   the winner's row from D1 and returns it. The raw refusal never leaves this
+ *   module: the driver puts the whole `INSERT`, the organisation id, the user id
+ *   and the country code into its message, and a boundary that forwards that is
+ *   handing an internal schema to whoever double-tapped a button.
+ * - `bucket_list_items` carries no unique index at all, so nothing refuses the
+ *   loser and the duplicate is permanent rather than caught.
+ *   {@link addCountryToBucketListFn} therefore re-reads its own write and
+ *   collapses any rival entry for the same country onto one deterministic
+ *   keeper - the lowest id, so both racers choose the same survivor and the
+ *   loser's delete is a harmless no-op. A unique index would be cheaper and
+ *   belongs in the schema; it is not this module's to add.
+ * - The two undo paths converge the easy way: a row that has gone between this
+ *   request's read and its delete is the state the caller asked for, so
+ *   {@link alreadyGone} lets it pass. That never softens a refusal that meant
+ *   "not yours" - ownership is proved before the delete is attempted, and a
+ *   stranger's id is refused before any write is reached at all.
  *
  * ## Continent
  *
@@ -181,7 +207,75 @@ export class AtlasQuotaError extends Error {
   }
 }
 
+/**
+ * The boundary's answer when two writes for the same country collide and neither
+ * attempt can be resolved into a stable state.
+ *
+ * Reaching this needs the other request to have inserted the row and then rolled
+ * it back between this one's two attempts, which is a genuine conflict rather
+ * than a fault: 409, and a message that says what to do about it. What it
+ * deliberately does *not* repeat is anything the database said - the driver's
+ * refusal carries the failing statement, the organisation id and the traveller
+ * id, and none of those is a thing to hand back over a wire.
+ */
+export class AtlasConflictError extends Error {
+  override readonly name = 'AtlasConflictError'
+  readonly status = 409
+
+  constructor(readonly countryCode: string) {
+    super(
+      `${countryName(countryCode)} was being changed somewhere else at the same moment. Try that again.`,
+    )
+  }
+}
+
 /* ----------------------------------------------------------------- helpers */
+
+/**
+ * SQLite's constraint sub-codes for the two indexes that can refuse a duplicate:
+ * `SQLITE_CONSTRAINT_PRIMARYKEY` and `SQLITE_CONSTRAINT_UNIQUE`.
+ */
+const UNIQUE_CONSTRAINT_CODES: ReadonlySet<number> = new Set([1555, 2067])
+
+/** How far down a `cause` chain {@link isUniqueConstraintViolation} will look. */
+const CAUSE_DEPTH = 8
+
+function errorCode(value: object): number | null {
+  const code: unknown = (value as { errcode?: unknown }).errcode
+  return typeof code === 'number' ? code : null
+}
+
+/**
+ * True when `cause` is a database refusal from a unique index.
+ *
+ * The chain has to be walked because no two drivers agree on where the refusal
+ * ends up. The proxy driver the tests run against wraps it: the outer error says
+ * "Failed query: insert into …" and carries the real one as `cause`, with
+ * `errcode` 2067 on it. D1 in the Worker throws its own error whose message is
+ * `D1_ERROR: UNIQUE constraint failed: …: SQLITE_CONSTRAINT` and carries no
+ * numeric code at all. Matching either the sub-code or the sentence SQLite emits
+ * covers both without asking the caller which runtime it is in.
+ */
+export function isUniqueConstraintViolation(cause: unknown): boolean {
+  let current: unknown = cause
+  for (let depth = 0; depth < CAUSE_DEPTH; depth += 1) {
+    if (typeof current !== 'object' || current === null) {
+      return false
+    }
+    const code = errorCode(current)
+    if (code !== null && UNIQUE_CONSTRAINT_CODES.has(code)) {
+      return true
+    }
+    if (
+      current instanceof Error &&
+      /unique constraint failed/i.test(current.message)
+    ) {
+      return true
+    }
+    current = (current as { cause?: unknown }).cause
+  }
+  return false
+}
 
 /**
  * Runs a repository write and turns its quota refusal into one a person can act
@@ -198,6 +292,28 @@ async function withQuotaBoundary<TResult>(
       throw new AtlasQuotaError(cause.metric, cause.limit, cause.current)
     }
     throw cause
+  }
+}
+
+/**
+ * Runs a delete whose whole purpose is that the row should not exist afterwards,
+ * and treats "it already does not" as the success it is.
+ *
+ * The repositories raise {@link NotFoundError} when a delete matches nothing,
+ * which is the right answer for an id a caller supplied and the wrong one for an
+ * id this module found in the row it is removing: between the read and the delete
+ * a second tab, a retry or a colleague can have removed it, and refusing the
+ * request then tells the traveller a change failed when it is exactly what they
+ * asked for. Only ever wrapped around a delete whose ownership has already been
+ * proved, so nothing here can swallow a refusal that meant "not yours".
+ */
+async function alreadyGone(remove: () => Promise<void>): Promise<void> {
+  try {
+    await remove()
+  } catch (cause) {
+    if (!(cause instanceof NotFoundError)) {
+      throw cause
+    }
   }
 }
 
@@ -233,6 +349,20 @@ function bucketGoalOf(row: BucketListItem): AtlasBucketGoal {
   }
 }
 
+/** Every bucket-list entry that is this country, in a stable order. */
+function countryGoals(
+  items: ReadonlyArray<BucketListItem>,
+  code: string,
+): Array<BucketListItem> {
+  return items
+    .filter(
+      (row) =>
+        row.kind === 'country' &&
+        (row.countryCode ?? '').toUpperCase() === code,
+    )
+    .sort((left, right) => left.id.localeCompare(right.id))
+}
+
 /**
  * The country goal for `code`, preferring one still to be achieved.
  *
@@ -244,10 +374,7 @@ function pickGoal(
   items: ReadonlyArray<BucketListItem>,
   code: string,
 ): BucketListItem | null {
-  const matches = items.filter(
-    (row) =>
-      row.kind === 'country' && (row.countryCode ?? '').toUpperCase() === code,
-  )
+  const matches = countryGoals(items, code)
   return matches.find((row) => !row.isAchieved) ?? matches.at(0) ?? null
 }
 
@@ -289,43 +416,71 @@ export async function atlasCountryState(
 /* -------------------------------------------------------- visited countries */
 
 /**
+ * How many times {@link markCountryVisitedFn} will try before it calls a
+ * collision a conflict.
+ *
+ * Two is the whole space. Attempt one loses the index to a request that is still
+ * in flight; attempt two re-reads and finds that request's row, which is the
+ * answer. The only way past two is for the winner to have rolled its own insert
+ * back in between, and a third attempt would be guessing rather than converging.
+ */
+const MARK_VISITED_ATTEMPTS = 2
+
+/**
  * Records a country as visited with no trip behind it - "I have been to Peru",
  * said by someone who is not about to reconstruct the itinerary.
  *
- * Idempotent: a country already on the traveller's list comes back untouched
- * rather than incrementing its visit counter, because the control that calls this
- * is a toggle and pressing it twice is not two visits. Correcting a date or a note
- * on an existing record is the atlas panel's job, not this one's.
+ * Idempotent, twice over. A country already on the traveller's list comes back
+ * untouched rather than incrementing its visit counter, because the control that
+ * calls this is a toggle and pressing it twice is not two visits. And a country
+ * that arrives on the list *while this request is running* comes back the same
+ * way: `visited_countries_org_user_country_unq` refuses the second insert, and
+ * the refusal is read as "somebody already did it", not as an error. Correcting a
+ * date or a note on an existing record is the atlas panel's job, not this one's.
  */
 export const markCountryVisitedFn = createServerFn({ method: 'POST' })
   .validator(markCountryVisitedInputSchema)
   .handler(async ({ data }): Promise<AtlasCountryState> => {
     const scope = await appScope()
     const code = data.countryCode
-    const current = await atlasCountryState(scope, code)
 
-    if (current.visit !== null) {
-      return current
+    for (let attempt = 0; attempt < MARK_VISITED_ATTEMPTS; attempt += 1) {
+      const current = await atlasCountryState(scope, code)
+      if (current.visit !== null) {
+        return current
+      }
+
+      try {
+        const visit = await withQuotaBoundary(() =>
+          markCountryVisited(scope, {
+            countryCode: code,
+            continent: continentOf(code),
+            visitedOn: optionalText(data.visitedOn),
+            note: optionalText(data.note),
+          }),
+        )
+        return { ...current, visit: visitRecordOf(visit) }
+      } catch (cause) {
+        if (!isUniqueConstraintViolation(cause)) {
+          throw cause
+        }
+        // A concurrent request holds the index. Its row is the truth; go round
+        // and read it back from D1 rather than answering from this one's memory.
+      }
     }
 
-    const visit = await withQuotaBoundary(() =>
-      markCountryVisited(scope, {
-        countryCode: code,
-        continent: continentOf(code),
-        visitedOn: optionalText(data.visitedOn),
-        note: optionalText(data.note),
-      }),
-    )
-    return { ...current, visit: visitRecordOf(visit) }
+    throw new AtlasConflictError(code)
   })
 
 /**
  * Undoes {@link markCountryVisitedFn}.
  *
  * Also idempotent, and for the same reason: a country that is not on the list is
- * already in the state the caller asked for. The row is found inside the caller's
- * own tenant and traveller before it is addressed by id, so a code marked by
- * another workspace resolves to nothing here and is never touched.
+ * already in the state the caller asked for - and so is one whose row went in the
+ * moment between this request's read and its delete, which is why the delete is
+ * allowed to find nothing. The row is found inside the caller's own tenant and
+ * traveller before it is addressed by id, so a code marked by another workspace
+ * resolves to nothing here and is never touched.
  */
 export const unmarkCountryVisitedFn = createServerFn({ method: 'POST' })
   .validator(unmarkCountryVisitedInputSchema)
@@ -337,11 +492,46 @@ export const unmarkCountryVisitedFn = createServerFn({ method: 'POST' })
       return current
     }
 
-    await unmarkCountryVisited(scope, current.visit.id)
+    const visitId = current.visit.id
+    await alreadyGone(() => unmarkCountryVisited(scope, visitId))
     return { ...current, visit: null }
   })
 
 /* -------------------------------------------------------------- bucket list */
+
+/**
+ * Collapses the rival entries an overlapping add can leave behind, and answers
+ * with the one that survives.
+ *
+ * `bucket_list_items` has no unique index, so two requests that both found the
+ * country absent both insert, and nothing stops them. The repair is to re-read
+ * the list - from D1, in the same request - and keep the lowest id among the live
+ * entries for this country. Both racers compute the same keeper from the same
+ * rows, so whichever one reaches a delete first, the other's delete finds the
+ * row already gone - which is the outcome it was asking for, and is why it goes
+ * through {@link alreadyGone}.
+ *
+ * Achieved entries are never touched: a ticked-off goal is a record of something
+ * that happened. This runs only when the country had no entry at all a moment
+ * ago, so the rivals it can see are entries written in the same instant as its
+ * own.
+ */
+async function collapseRivalGoals(
+  scope: TenantScope,
+  code: string,
+  created: BucketListItem,
+): Promise<BucketListItem> {
+  const live = countryGoals(
+    await listBucketList(scope, scope.ctx.userId),
+    code,
+  ).filter((row) => !row.isAchieved)
+
+  const keeper = live.at(0) ?? created
+  for (const rival of live.slice(1)) {
+    await alreadyGone(() => deleteBucketListItem(scope, rival.id))
+  }
+  return keeper
+}
 
 /**
  * Puts a country on the bucket list.
@@ -349,7 +539,10 @@ export const unmarkCountryVisitedFn = createServerFn({ method: 'POST' })
  * The entry's name is the country's name as this product spells it, resolved
  * server-side: a client that could choose the label could put anything into the
  * traveller's list. Idempotent against an entry that already exists for the
- * country, ticked off or not.
+ * country, ticked off or not - and, because the table has no unique index to lean
+ * on, idempotent against one that appears while this request is running too: the
+ * write is read back and any rival entry for the same country is collapsed onto a
+ * single keeper before the answer is returned. See {@link collapseRivalGoals}.
  */
 export const addCountryToBucketListFn = createServerFn({ method: 'POST' })
   .validator(addCountryToBucketListInputSchema)
@@ -362,7 +555,7 @@ export const addCountryToBucketListFn = createServerFn({ method: 'POST' })
       return current
     }
 
-    const goal = await withQuotaBoundary(() =>
+    const created = await withQuotaBoundary(() =>
       createBucketListItem(scope, {
         kind: 'country',
         name: countryName(code),
@@ -371,6 +564,7 @@ export const addCountryToBucketListFn = createServerFn({ method: 'POST' })
         note: optionalText(data.note),
       }),
     )
+    const goal = await collapseRivalGoals(scope, code, created)
     return { ...current, bucketGoal: bucketGoalOf(goal) }
   })
 
@@ -383,7 +577,10 @@ export const addCountryToBucketListFn = createServerFn({ method: 'POST' })
  * the atlas promises - every other atlas read is per traveller - so the refusal is
  * made here, as the same `NotFoundError` a cross-tenant id would have produced. An
  * id from another workspace and an id belonging to a colleague are equally
- * invisible, and so is an id that names a place goal rather than a country.
+ * invisible, and so is an id that names a place goal rather than a country. Once
+ * that ownership is settled the delete itself is allowed to find nothing: a
+ * second tap on the same control asked for a row that is already gone, and it got
+ * one.
  */
 export const removeCountryFromBucketListFn = createServerFn({ method: 'POST' })
   .validator(removeCountryFromBucketListInputSchema)
@@ -396,6 +593,6 @@ export const removeCountryFromBucketListFn = createServerFn({ method: 'POST' })
       throw new NotFoundError('bucket list country', data.itemId)
     }
 
-    await deleteBucketListItem(scope, item.id)
+    await alreadyGone(() => deleteBucketListItem(scope, item.id))
     return atlasCountryState(scope, item.countryCode)
   })
