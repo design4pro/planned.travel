@@ -8,7 +8,9 @@ import type { BrowserContext, Locator, Page } from '@playwright/test'
  *
  * The gate that `/ultrabuild` runs needs frames that only change when the design
  * changes. Six things otherwise make a baseline flap, and each one has its own
- * seam here so that a regression in one can never be hidden by another:
+ * seam so that a regression in one can never be hidden by another. Five of those
+ * seams close inside this file; the sixth is closed in the Worker and audited
+ * here, for reasons written out under "What this file could not pin".
  *
  * 1. **Paint timing** — fonts, hydration, entrance motion, in-flight images.
  *    `settle()`, which ends on the frame a reader actually sees. Read the note on
@@ -33,11 +35,16 @@ import type { BrowserContext, Locator, Page } from '@playwright/test'
  *    many* of these strings a screen shows is seam 4's business and not this
  *    one's.
  * 4. **The calendar the server selected rows on** — the Worker also picks *which
- *    rows* a screen shows by comparing a date column against its own
- *    `new Date()`. `CALENDAR_SELECTIONS` is the table of those comparisons and
- *    `reportServerCalendar()` attaches the offending date, the query that reads it
- *    and the region it moves to the run. Read "What this file cannot pin" below
- *    before touching it.
+ *    rows* a screen shows by comparing a date column against its own notion of
+ *    today. That notion is pinned rather than merely observed: `serverToday()`
+ *    (`src/server/clock.ts`) accepts a development-only request header, and
+ *    `playwright.config.ts` sets it to `BASELINE_DAY` on both browser projects,
+ *    so the SSR document and every server-function call that follows it agree on
+ *    the day the baselines were recorded. `CALENDAR_SELECTIONS` and
+ *    `reportServerCalendar()` remain as the audit of that pin: they read the day
+ *    back out of the Worker's own payload, so a pin that stopped arriving is
+ *    reported as a named crossing instead of surfacing as an unexplained red
+ *    frame. Read "What this file could not pin" below before touching it.
  * 5. **A live WebGL map** — a canvas that has not finished drawing.
  *    `[data-map-ready]`, waited on inside `settle()`. `/atlas` is the one route
  *    that declares one; the failure modes a real canvas cannot be asked to
@@ -53,15 +60,15 @@ import type { BrowserContext, Locator, Page } from '@playwright/test'
  *    that: a warning the app writes itself stays fatal even when it quotes one of
  *    them, and a React hydration report is not a warning at all.
  *
- * ## What this file cannot pin
+ * ## What this file could not pin
  *
- * Seams 1, 2, 3, 5 and 6 close completely from inside `e2e/`. Seam 4 does not, and
- * the reason is worth writing down so nobody spends another round rediscovering
- * it.
+ * Seams 1, 2, 3, 5 and 6 close completely from inside `e2e/`. Seam 4 never could,
+ * and the reason is worth keeping written down so nobody spends another round
+ * rediscovering it — or tries to solve it from here again.
  *
- * `todayIso()` runs in the Worker (`src/routes/_app/-server/serialise.ts`) and is
- * handed to the repositories, which filter with it: `listUpcomingTrips` keeps a
- * trip while `endDate >= today`, `listPastTrips` takes it once `endDate <= today`,
+ * The Worker's `today` reaches the repositories, which filter with it:
+ * `listUpcomingTrips` keeps a trip while `endDate >= today`, `listPastTrips`
+ * takes it once `endDate <= today`,
  * `listUpcomingReservations` reads forward from `today`, and
  * `listTripsWithoutJourney` ranks by whether a trip has finished, started, or is
  * still ahead. When the calendar crosses one of the fixture's dates the Worker
@@ -94,12 +101,23 @@ import type { BrowserContext, Locator, Page } from '@playwright/test'
  * existed, and rewriting `today` in that document (see `shiftServerToday`) changes
  * the *strings* the client recomputes and not the *rows* the server sent.
  *
- * The two mechanisms that do close seam 4 both live outside this file: pin the
- * Worker's clock for a dev request, or move the seeded windows away from the
- * server's today so no fixture date sits next to it. Until one of them lands,
- * `reportServerCalendar()` is the honest half of the job — the run says "the
- * fixture crossed 2026-08-23 and the rows moved" instead of showing two pictures
- * and letting a reader guess.
+ * So the repair lives in the Worker, where the decision is made.
+ * `serverToday()` in `src/server/clock.ts` is the single place the server answers
+ * "what day is it", and on a development request it will take that answer from an
+ * `x-pt-server-today` header; `playwright.config.ts` sets that header to
+ * `BASELINE_DAY` for both browser projects, on the browser context, so the SSR
+ * document and the server-function POSTs that follow it cannot disagree. The
+ * guard is `import.meta.env.DEV`, which the production build folds to `false` and
+ * drops along with the header name, so nothing deployed can be told what day it
+ * is.
+ *
+ * What stays here is the audit, and it is not decoration.
+ * `reportServerCalendar()` reads the day back out of the documents the Worker
+ * actually streamed and compares the fixture's dates against `BASELINE_DAY` on
+ * both days, so a pin that stopped arriving — a renamed header, a project without
+ * it, a run against a production build — is named as "2026-08-23 has been crossed,
+ * which moves the journal's finished trips" rather than discovered by cropping two
+ * pictures.
  */
 
 export type Theme = 'light' | 'dark'
@@ -502,15 +520,15 @@ export type RelativeTimeSite = {
  * Every string in the product a Worker-side `new Date()` reaches, and the region
  * of the frame excluded from the comparison because of it.
  *
- * `todayIso()` in `src/routes/_app/-server/serialise.ts` is a plain `new Date()`,
- * and its value travels to the client as `payload.today`. The countdown is
- * therefore already in the SSR HTML: no browser-side clock, `page.clock`
- * included, can change it, and no amount of settling helps, because it is simply
- * a different string tomorrow. The only honest answer available from inside
- * `e2e/` is to exclude those regions from the comparison, which is what
- * `toHaveScreenshot`'s `mask` does. The tolerance is untouched:
- * `maxDiffPixelRatio` stays at 0.002, because a tolerance wide enough to swallow
- * a day counter is wide enough to swallow a real regression.
+ * The Worker's `today` travels to the client as `payload.today`, and the
+ * countdown is therefore already in the SSR HTML: no browser-side clock,
+ * `page.clock` included, can change it, and no amount of settling helps, because
+ * it is simply a different string tomorrow. Seam 4's header pins which *rows*
+ * the Worker selects, not what a locale prints, so these regions stay excluded
+ * from the comparison on their own terms — which is what `toHaveScreenshot`'s
+ * `mask` does. The tolerance is untouched: `maxDiffPixelRatio` stays at 0.002,
+ * because a tolerance wide enough to swallow a day counter is wide enough to
+ * swallow a real regression.
  *
  * Three properties are worth being exact about.
  *
@@ -781,8 +799,8 @@ export async function auditRelativeTime(
  * Audit the `relativeTime` declarations against the documents the Worker
  * streamed, in both directions, on a fact no calendar can move.
  *
- * `todayIso()` reaches a screen exactly one way: the loader puts it on the
- * payload, TanStack Start serialises the payload into the document, and the
+ * The Worker's `today` reaches a screen exactly one way: the loader puts it on
+ * the payload, TanStack Start serialises the payload into the document, and the
  * client recomputes every relative string from that field. So `today:"…"` being
  * in the bytes is equivalent to "the wall clock can decide a string here", and it
  * is a property of the loader rather than of the rows — `readonly today: string`
@@ -927,12 +945,14 @@ export type ServerTodayShift = {
 /**
  * Move the server's `today` without waiting for midnight.
  *
- * The Worker's `todayIso()` cannot be reached from a test, but the value it
- * produced is serialised into the streamed document exactly once per route that
- * uses it (`today:"2026-08-20"`), and every relative-time string on the client is
- * recomputed from that field. Rewriting it in flight therefore renders the same
- * data on a different calendar day — precisely the change that failed round 4,
- * reproduced on demand instead of waited for.
+ * The header in `playwright.config.ts` holds the Worker on one day; this moves the
+ * day the *client* recomputes from, which is a different question and needs a
+ * different lever. The value the Worker chose is serialised into the streamed
+ * document exactly once per route that uses it (`today:"2026-08-20"`), and every
+ * relative-time string on the client is recomputed from that field. Rewriting it
+ * in flight therefore renders the same rows on a different calendar day —
+ * precisely the change that failed round 4, reproduced on demand instead of
+ * waited for, and without moving the rows the pin is there to hold still.
  *
  * The rewrite disagrees with the markup the server already streamed, so React
  * reports a hydration mismatch and re-renders the tree from the payload. That is
@@ -983,10 +1003,13 @@ export async function shiftServerToday(page: Page): Promise<ServerTodayShift> {
  * saw it.
  *
  * Whoever re-records a frame whose rows the Worker chose by date moves this to
- * the day they recorded it, in the same commit. It is not decoration:
+ * the day they recorded it, in the same commit — and moves `BASELINE_DAY` in
+ * `playwright.config.ts` with it, because that is the value the suite pins the
+ * Worker's clock to and the two have to name the same day. It is not decoration:
  * `reportServerCalendar()` compares the Worker's `today` against it to decide
  * whether the row sets in those frames are still the row sets the Worker returns,
- * and a stale value would either hide a real move or invent one.
+ * so a stale value would either hide a real move or invent one, and a pin that
+ * stopped arriving shows up here as a crossing rather than as a mystery.
  */
 export const BASELINE_DAY = '2026-08-20'
 
@@ -1027,7 +1050,7 @@ export type CalendarSelection = {
 
 /**
  * Every place the Worker decides *which rows a screen shows* by comparing a date
- * column against `todayIso()`.
+ * column against `serverToday()`.
  *
  * Read off the repositories rather than guessed:
  * `listUpcomingTrips` (src/server/repos/trips.ts) keeps a trip while
@@ -1957,11 +1980,60 @@ export function watchConsole(
 }
 
 /** Navigate and settle, asserting the response was not an error page. */
+/**
+ * The webfont origins the document reaches for, and the pages already cleared to
+ * reach them.
+ *
+ * Both are declared in `src/routes/__root.tsx`: the stylesheet comes from
+ * `fonts.googleapis.com` and the `woff2` files it names come from
+ * `fonts.gstatic.com`, which is the only cross-origin subresource in the
+ * product.
+ */
+const WEBFONT_ORIGINS = [
+  'https://fonts.googleapis.com/**',
+  'https://fonts.gstatic.com/**',
+] as const
+const fontsUnblocked = new WeakSet<Page>()
+
+/**
+ * Take the webfont requests out of the browser's CORS path.
+ *
+ * Seam 4's pin (`playwright.config.ts`) rides on `extraHTTPHeaders`, and a
+ * context header is sent to *every* origin the page touches — including the
+ * font CDN. A font file is fetched in CORS mode, so a request carrying one
+ * header outside the CORS safelist stops being a simple request and earns a
+ * preflight; `fonts.gstatic.com` answers that preflight without naming the
+ * header, the browser refuses the response, and both faces fall back to the
+ * system stack. Every frame in the suite is then a picture of the wrong
+ * typeface, announced as four console errors rather than as the typographic
+ * regression it looks like.
+ *
+ * Routing those two origins hands the request to Playwright, which issues it
+ * outside the page's CORS enforcement and returns it verbatim — the same bytes,
+ * from the same CDN, with the preflight no longer in the way. Nothing about the
+ * fonts themselves changes, which is the point: the baselines were recorded with
+ * the real faces and still match them.
+ *
+ * Registered once per page rather than once per navigation, because `visit()`
+ * runs several times in some specs and Playwright keeps every handler it is
+ * given.
+ */
+async function unblockCrossOriginFonts(page: Page): Promise<void> {
+  if (fontsUnblocked.has(page)) {
+    return
+  }
+  fontsUnblocked.add(page)
+  for (const origin of WEBFONT_ORIGINS) {
+    await page.route(origin, (route) => route.continue())
+  }
+}
+
 export async function visit(
   page: Page,
   route: RouteCase,
   theme: Theme,
 ): Promise<void> {
+  await unblockCrossOriginFonts(page)
   await applyTheme(page, theme)
   // Before `goto`, and before the document exists: the fixed time is installed
   // as an init script. It costs the frame nothing, because it runs on the

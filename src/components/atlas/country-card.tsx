@@ -1,7 +1,13 @@
 import * as React from 'react'
 import { TriangleAlert } from 'lucide-react'
 
-import { Button, SectionLabel, Skeleton, transitionBase } from '#/components/ui'
+import {
+  Button,
+  SectionLabel,
+  Skeleton,
+  focusRing,
+  transitionBase,
+} from '#/components/ui'
 import { cn } from '#/lib/cn'
 import {
   ABSENT_FACT_LABEL,
@@ -50,10 +56,28 @@ import type { CountryFactMonth } from '#/lib/atlas/country-facts'
  * Every numeral carries `tabular-nums`, because the trip count is the one
  * figure on the atlas that changes under the reader.
  *
+ * Measured in a browser against the rendered `--color-map-card` face, and the
+ * same over `--color-country-land` and `--color-country-visited` because the
+ * face is opaque and the ground beneath it cannot reach the type — light, then
+ * dark: name and numerals 18.29:1 / 15.42:1, months 10.71:1 / 11.37:1, unit
+ * labels and the em dash 7.02:1 / 7.18:1, the error sentence 10.71:1 / 11.37:1,
+ * its icon 6.33:1 / 7.43:1, and the hairline 4.55:1 / 4.65:1. The floor across
+ * the whole card is the 11px label tier, and it clears AA by better than half
+ * again in both themes.
+ *
  * **The zero state is designed, not empty.** A country you have not been to
  * still has a card, and it prints `0` twice and an em dash for each month. The
  * dash is `aria-hidden` and paired with words, because a reader hearing "dash"
  * cannot tell a missing date from a broken one.
+ *
+ * **Every state this surface can be in ships here.** Rest and the zero state
+ * are `CountryCard`; the name-only pill is its `compact` variant; loading is
+ * `CountryCardSkeleton` and degraded is `CountryCardError`, both struck from
+ * the same `layout` strings so all four measure identically and the swap
+ * between them moves nothing. Focus is the product's own ring, drawn on the
+ * card itself for a host that pins it and focuses it. There is deliberately no
+ * hover and no pressed treatment: this is a fact surface, and a card that lit
+ * up under the pointer would be promising an action it does not have.
  */
 
 /** Heading levels a host screen might legitimately need for the name. */
@@ -91,21 +115,55 @@ const POINTERS = {
  */
 const layout = {
   /**
+   * The ground every variant stands on.
+   *
+   * `focusRing` is inert on a card nobody focuses — `:focus-visible` cannot
+   * match an element with no tab stop — and it is not decoration for a state
+   * that cannot happen. A card pinned by a click is focused by its host when it
+   * opens and is focused again when a roving-focus map hands it the country, and
+   * without this the reader would be somewhere with no ring at all. The card
+   * carries no hover or pressed treatment on purpose: it is a fact surface, not
+   * a control, and lighting it up under the pointer would promise an action it
+   * does not have. Every control it *contains* — the error state's retry — is a
+   * `Button`, and brings its own five states with it.
+   */
+  surface: cn(
+    'relative z-map-surface border border-map-card-edge bg-map-card shadow-popover',
+    focusRing,
+  ),
+  /**
    * `w-72` is fixed on purpose. A card sized by its content would breathe every
    * time a trip count crossed a digit or a month changed length, and it is
    * anchored to a country, so breathing means moving. 288px is the width at
    * which the two date columns hold `September 2026` — the longest month-year
    * the formatter can produce — without either of them truncating, and it still
    * clears a 360px viewport with a 16px margin on both sides.
+   *
+   * The one step at `2xl` is density, not reflow: past 1536px the whole screen
+   * is set looser, and a card frozen at a phone's measure stops reading as an
+   * object placed on the map and starts reading as a sticker left on it. Width
+   * and padding step together so the type block keeps its proportions, and the
+   * step lands on every variant at once because they all take this string —
+   * so the skeleton and the error state resize with the card rather than
+   * against it, at every viewport.
+   *
+   * Nothing here scrolls and nothing here clips: the card is exactly as tall as
+   * the four cells it prints, so a host can measure it once and anchor to it.
+   * A fact card that cuts its own last row in half reads as a fault.
    */
-  surface:
-    'relative z-map-surface border border-map-card-edge bg-map-card shadow-popover',
-  card: 'w-72 max-w-full rounded-lg text-left',
-  /** A single-line pill: fixed height, so a row of them never staggers. */
-  compact: 'inline-flex h-8 max-w-56 items-center rounded-full px-3',
+  card: 'w-72 2xl:w-80 max-w-full rounded-lg text-left',
+  /**
+   * A single-line pill: fixed height, so a row of them never staggers. It takes
+   * the same density step as the card at `2xl` — two surfaces of the same family
+   * can be on screen at once, and one of them growing alone would read as two
+   * unrelated objects.
+   */
+  compact:
+    'inline-flex h-8 max-w-56 items-center rounded-full px-3 2xl:h-9 2xl:px-4',
   compactName:
     'min-w-0 truncate font-display text-label font-bold tracking-tight text-ink',
-  header: 'flex items-center gap-2 border-b border-edge-faint px-4 py-3',
+  header:
+    'flex items-center gap-2 border-b border-edge-faint px-4 py-3 2xl:px-5 2xl:py-4',
   /** Decoration beside the name, never the label — see the `<span>` below. */
   flag: 'shrink-0 text-label leading-none',
   /**
@@ -117,7 +175,7 @@ const layout = {
   name: 'min-w-0 truncate font-display text-subtitle font-bold tracking-tight text-ink',
   /** Two columns, two rows: trips and places over first trip and last trip. */
   grid: 'grid grid-cols-2',
-  cell: 'min-w-0 px-4 py-3',
+  cell: 'min-w-0 px-4 py-3 2xl:px-5 2xl:py-4',
   cellRule: 'border-r border-edge-faint',
   rowRule: 'border-t border-edge-faint',
   /**
@@ -442,6 +500,13 @@ CountryCard.displayName = 'CountryCard'
 
 export type CountryCardSkeletonProps = React.ComponentPropsWithoutRef<'div'> & {
   readonly pointer?: CountryCardPointer
+  /**
+   * The country whose figures are on their way, when the host already knows it
+   * — a click surface does. Naming it turns "loading" into "loading France",
+   * which is the difference between a reader knowing the card they opened is
+   * still coming and a reader hearing that something, somewhere, is busy.
+   */
+  readonly countryCode?: string
 }
 
 /**
@@ -453,60 +518,77 @@ export type CountryCardSkeletonProps = React.ComponentPropsWithoutRef<'div'> & {
  * with the same rules between them. Nothing here is an eyeballed height, so the
  * two components cannot drift apart, and nothing moves when the facts land.
  *
+ * **It is audible.** `aria-busy` on a subtree that is also `aria-hidden` says
+ * nothing to anybody: hiding the subtree removes the very node the busy state
+ * was declared on. So the root carries `aria-busy` and one `sr-only` sentence,
+ * and only the drawing below it is hidden — the same division `Skeleton` itself
+ * documents, and the same one `CountriesListSkeleton` uses.
+ *
  * There is no compact skeleton, because the compact pill has nothing to wait
  * for: its only datum is the country's name, which is a frozen table lookup.
  */
 export const CountryCardSkeleton = React.forwardRef<
   HTMLDivElement,
   CountryCardSkeletonProps
->(({ pointer = 'none', className, ...props }, ref) => (
-  <div
-    ref={ref}
-    aria-busy="true"
-    aria-hidden="true"
-    data-variant="skeleton"
-    className={cn(layout.surface, layout.card, transitionBase, className)}
-    {...props}
-  >
-    <div data-part="header" className={layout.header}>
-      {/* Matched to a flag glyph's own box rather than to a round number, so
-          the header's baseline does not move when the country lands. */}
-      <Skeleton radius="sm" className="h-3.5 w-5 shrink-0" />
-      {/* `flex-1` is load-bearing: the name line carries `min-w-0` and
-          `truncate`, so as a flex item with only an invisible strut inside it
-          it would measure four pixels wide and clip its own bar away. */}
-      <LineSkeleton
-        width="w-32 max-w-full"
-        className={cn(layout.name, 'flex-1')}
-      />
-    </div>
+>(({ pointer = 'none', countryCode, className, ...props }, ref) => {
+  const code = countryCode?.trim().toUpperCase()
+  return (
+    <div
+      ref={ref}
+      aria-busy="true"
+      data-variant="skeleton"
+      data-country={code}
+      className={cn(layout.surface, layout.card, transitionBase, className)}
+      {...props}
+    >
+      <span className="sr-only">
+        {code === undefined
+          ? 'Loading this country'
+          : `Loading ${countryName(code)}`}
+      </span>
 
-    <div className={layout.grid}>
-      {[0, 1, 2, 3].map((index) => (
-        <div
-          key={index}
-          data-part="cell"
-          className={cn(
-            layout.cell,
-            index % 2 === 0 && layout.cellRule,
-            index > 1 && layout.rowRule,
-          )}
-        >
+      <div aria-hidden="true">
+        <div data-part="header" className={layout.header}>
+          {/* Matched to a flag glyph's own box rather than to a round number, so
+              the header's baseline does not move when the country lands. */}
+          <Skeleton radius="sm" className="h-3.5 w-5 shrink-0" />
+          {/* `flex-1` is load-bearing: the name line carries `min-w-0` and
+              `truncate`, so as a flex item with only an invisible strut inside
+              it it would measure four pixels wide and clip its own bar away. */}
           <LineSkeleton
-            width={index > 1 ? 'w-16 max-w-full' : 'w-10 max-w-full'}
-            className={layout.label}
-          />
-          <LineSkeleton
-            width={index > 1 ? 'w-24 max-w-full' : 'w-8 max-w-full'}
-            className={index > 1 ? layout.month : layout.figure}
+            width="w-32 max-w-full"
+            className={cn(layout.name, 'flex-1')}
           />
         </div>
-      ))}
-    </div>
 
-    <Pointer side={pointer} />
-  </div>
-))
+        <div className={layout.grid}>
+          {[0, 1, 2, 3].map((index) => (
+            <div
+              key={index}
+              data-part="cell"
+              className={cn(
+                layout.cell,
+                index % 2 === 0 && layout.cellRule,
+                index > 1 && layout.rowRule,
+              )}
+            >
+              <LineSkeleton
+                width={index > 1 ? 'w-16 max-w-full' : 'w-10 max-w-full'}
+                className={layout.label}
+              />
+              <LineSkeleton
+                width={index > 1 ? 'w-24 max-w-full' : 'w-8 max-w-full'}
+                className={index > 1 ? layout.month : layout.figure}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Pointer side={pointer} />
+    </div>
+  )
+})
 CountryCardSkeleton.displayName = 'CountryCardSkeleton'
 
 export type CountryCardErrorProps = Omit<
@@ -536,6 +618,12 @@ export type CountryCardErrorProps = Omit<
  * It occupies the rest card's exact height by rendering the real body as an
  * invisible strut and floating the message over it, so a retry that succeeds
  * swaps content without moving the card off the country it is anchored to.
+ *
+ * `role="status"` rather than `role="alert"`: a figure that failed to arrive is
+ * worth telling the reader about, and it is not worth interrupting them
+ * mid-sentence to do it. The whole card is the live region, so the one polite
+ * announcement carries the country, the sentence and the fact that there is a
+ * retry — the reader never has to hunt for which card went wrong.
  */
 export const CountryCardError = React.forwardRef<
   HTMLDivElement,
@@ -556,6 +644,8 @@ export const CountryCardError = React.forwardRef<
     return (
       <div
         ref={ref}
+        role="status"
+        aria-live="polite"
         data-variant="error"
         data-country={code}
         className={cn(layout.surface, layout.card, transitionBase, className)}
@@ -570,13 +660,17 @@ export const CountryCardError = React.forwardRef<
 
         <div className="relative overflow-hidden">
           <BodyStrut />
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center 2xl:px-5">
             <TriangleAlert
               size={16}
               aria-hidden="true"
               className="shrink-0 text-warning"
             />
-            <p className="text-caption text-ink-2">
+            {/* Balanced rather than ragged: two sentences in a 288px column
+                otherwise break with `lost.` alone on the last line, and a
+                one-word last line in a card this small reads as a truncation
+                the reader is meant to do something about. */}
+            <p className="text-balance text-caption text-ink-2">
               These figures did not load. Nothing has been lost.
             </p>
             {onRetry === undefined ? null : (

@@ -29,8 +29,9 @@ import {
   markRead,
   resolveQuotas,
 } from '#/server/repos'
+import { serverToday } from '#/server/clock'
 import { appScope } from './context'
-import { isoOfRequired, todayIso } from './serialise'
+import { isoOfRequired } from './serialise'
 
 import type { JsonRecord } from '#/server/db/schema'
 import type { Reservation, Trip } from '#/server/db/types'
@@ -180,7 +181,7 @@ export function toReservationCard(row: Reservation): ReservationCard {
 export const loadDashboard = createServerFn({ method: 'GET' }).handler(
   async (): Promise<DashboardPayload> => {
     const scope = await appScope()
-    const today = todayIso()
+    const today = serverToday()
 
     const [summary, atlas, quotas] = await Promise.all([
       getDashboardSummary(scope, { today }),
@@ -259,7 +260,7 @@ export const loadTrips = createServerFn({ method: 'GET' })
   .validator(tripFilterSchema)
   .handler(async ({ data }): Promise<TripsPayload> => {
     const scope = await appScope()
-    const today = todayIso()
+    const today = serverToday()
 
     const [rows, summary, quotas] = await Promise.all([
       listTrips(scope, {
@@ -442,7 +443,7 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
       journeys,
     ] = await Promise.all([
       getOrganization(scope),
-      getDashboardSummary(scope, { today: todayIso() }),
+      getDashboardSummary(scope, { today: serverToday() }),
       resolveQuotas(scope),
       listMemberProfiles(scope),
       listPendingInvitations(scope),

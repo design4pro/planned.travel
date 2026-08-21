@@ -10,6 +10,30 @@ const externalBaseURL = process.env.PLAYWRIGHT_BASE_URL
 const baseURL = externalBaseURL ?? 'http://localhost:3000'
 
 /**
+ * The clock the Worker reads, pinned for the whole suite.
+ *
+ * The server picks *which rows* a screen shows by comparing a fixture date
+ * against its own `new Date()` — the dashboard's reservation rail reads forward
+ * from today, the journal splits its backlog on it — so a baseline recorded one
+ * evening photographs a different set of rows the next morning. No mask absorbs
+ * that: a row leaving a list moves everything below it.
+ *
+ * `serverToday()` in `src/server/clock.ts` therefore accepts this header on a
+ * development request, and both browser projects send it on every request the
+ * context makes, so the SSR document and the server-function RPCs that follow it
+ * agree about the day. The value is the day the baselines in
+ * `e2e/__screenshots__` were recorded, kept in step with `BASELINE_DAY` in
+ * `e2e/helpers/shoot.ts`; it is deliberately *not* `FROZEN_NOW`, which pins the
+ * clock inside the page and is a separate seam with its own reasons.
+ *
+ * The header is inert against anything but a dev server: the guard around it is
+ * `import.meta.env.DEV`, which the production build folds to `false` and drops.
+ */
+const SERVER_TODAY_HEADER = 'x-pt-server-today'
+const BASELINE_DAY = '2026-08-20'
+const clockPin = { [SERVER_TODAY_HEADER]: BASELINE_DAY }
+
+/**
  * End-to-end and visual-regression suite.
  *
  * Two projects, matching the two layouts the design system actually ships:
@@ -84,13 +108,14 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1440, height: 900 },
+        extraHTTPHeaders: clockPin,
       },
     },
     {
       name: 'mobile-safari',
       dependencies: ['setup'],
       // Includes `defaultBrowserType: 'webkit'`, a 393x852 viewport and touch.
-      use: { ...devices['iPhone 15'] },
+      use: { ...devices['iPhone 15'], extraHTTPHeaders: clockPin },
     },
   ],
 

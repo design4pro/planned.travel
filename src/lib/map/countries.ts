@@ -67,23 +67,69 @@
  * copy, in `dist/client`, served from cache without waking the Worker at all.
  * {@link loadCountryDetail} is the door; {@link COUNTRY_DETAIL_URL} is the key.
  *
- * **Measured, against a ceiling of 384KiB raw and 128KiB gzip:**
+ * **Measured, against a ceiling of 384KiB raw and 128KiB gzip.** Every figure
+ * below is a real measurement, gzip at level 9 — but the three rows do not
+ * measure the same kind of thing, and an earlier version of this paragraph said
+ * they did, so each row states its own provenance:
  *
- * | cut | codes | rings | vertices | raw | gzip |
- * |---|---|---|---|---|---|
- * | 1:110m, bundled | 175 | 285 | 8,652 | 62KB | ~25KB |
- * | **1:50m, shipped** | **237** | **1,617** | **50,413** | **302.7KiB** | **107.7KiB** |
- * | 1:10m, rejected | 238 | 4,082 | 116,779 | 651.9KiB | 221.0KiB |
+ * - **1:110m, bundled** measures the `ENCODED` payload string in `./world`
+ *   exactly as it ships. It was cut with Douglas–Peucker at **0.08°**, which is
+ *   that module's tolerance and not this script's, and it is not rebuilt here.
+ *   Its raw figure is the string alone, because a bundled payload has no
+ *   manifest line to carry; the two asset rows are whole files.
+ * - **1:50m, shipped** and **1:10m, rejected** are both output of
+ *   `scripts/build-country-outlines.mjs`, at its own **0.02°** tolerance, on the
+ *   same grid and through the same encoder. The shipped row is the committed
+ *   asset byte for byte. The rejected row is a throwaway build of the 1:10m
+ *   source, which the script takes without pretending the result is the pinned
+ *   dataset:
  *
- * 1:10m is rejected on measurement, not on principle. Through the same script at
- * the same tolerance it is 2.3× the vertices and 2.05× the transfer — over the
- * ceiling on its own — and it buys nothing visible: the outlines are quantised
- * to a hundredth of a degree, {@link COUNTRY_SOURCE_MAX_ZOOM} stops the source
- * sub-dividing at zoom 5, and the atlas fades its country fill out by zoom 6, so
- * every extra vertex lands inside a pixel that is already painted. It also loses
- * Vatican City, whose 1:10m ring collapses on that grid where the 1:50m one does
- * not. For scale: the reference product ships the same feature as ~4.3MB gzipped
- * and ~30MB of GeoJSON decoded on every atlas load. This is 2.5% of that.
+ *   ```sh
+ *   node scripts/build-country-outlines.mjs --source-id natural-earth-10m \
+ *     --source https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries.geojson \
+ *     --out /tmp/country-outlines-10m.txt
+ *   ```
+ *
+ * | cut | tolerance | codes | rings | vertices | raw | gzip |
+ * |---|---|---|---|---|---|---|
+ * | 1:110m, bundled | 0.08° | 175 | 285 | 8,652 | 62,983 B / 61.5KiB | 25.2KiB |
+ * | **1:50m, shipped** | **0.02°** | **237** | **1,617** | **50,413** | **309,993 B / 302.7KiB** | **107.7KiB** |
+ * | 1:10m, rejected | 0.02° | 238 | 4,082 | 116,779 | 667,570 B / 651.9KiB | 221.0KiB |
+ *
+ * A test re-measures both the shipped row and the bundled row on every run and
+ * holds them to those bytes and to the ceiling, so the table stays true after
+ * the next rebuild rather than only on the day it was written.
+ *
+ * 1:10m is rejected on measurement, not on principle. It is 2.3× the vertices
+ * and 2.05× the transfer — 173% of the gzip ceiling on its own — and it buys
+ * nothing visible: the outlines are quantised to a hundredth of a degree,
+ * {@link COUNTRY_SOURCE_MAX_ZOOM} stops the source sub-dividing at zoom 5, and
+ * the atlas fades its country fill out by zoom 6, so every extra vertex lands
+ * inside a pixel that is already painted. It also loses Vatican City, whose
+ * 1:10m ring collapses on that grid where the 1:50m one does not. For scale: the
+ * reference product ships the same feature as ~4.3MB gzipped and ~30MB of
+ * GeoJSON decoded on every atlas load. This is 2.5% of that.
+ *
+ * That the bytes stay out of the Worker is checkable rather than asserted — but
+ * the check needs building with some care, because two things that are *not* the
+ * payload look like it to a careless grep. The first is {@link COUNTRY_DETAIL_URL}:
+ * a page that will later fetch the asset ships the string that names it, and a
+ * string is not 300KB of coordinates. The second is this comment block, which
+ * the SSR build preserves verbatim — so a proof that spells its own needle out
+ * matches itself, which is exactly how the first version of this paragraph came
+ * to be false.
+ *
+ * So take the needle from the asset. Its manifest line is the payload's first
+ * line, and a test pins that no file under `src/` or `scripts/` contains it, so
+ * a hit anywhere in a build output can only be a copy of the payload:
+ *
+ * ```sh
+ * pnpm build
+ * needle=$(head -1 public/atlas/country-outlines-50m.v1.txt)
+ * grep -rlF "$needle" dist/server       # silent: no copy in the Worker bundle
+ * grep -rlF "$needle" dist/client       # one path: the asset, served as an asset
+ * find dist -name '*country-outlines*'  # the same single path, under dist/client
+ * ```
  *
  * Decoding the finer payload costs about 12ms in Node — 7ms to walk the deltas,
  * 5ms to close, clamp and freeze 1,617 rings — and it happens once, off the

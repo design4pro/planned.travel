@@ -228,7 +228,24 @@ describe('CountryCardSkeleton', () => {
     const { container } = render(<CountryCardSkeleton />)
     const root = container.firstElementChild
     expect(root?.getAttribute('aria-busy')).toBe('true')
-    expect(root?.getAttribute('aria-hidden')).toBe('true')
+    // The busy state must be on a node a reader can still reach: hiding the
+    // subtree it was declared on makes the whole announcement inert.
+    expect(root?.getAttribute('aria-hidden')).toBeNull()
+    expect(screen.getByText('Loading this country').className).toContain(
+      'sr-only',
+    )
+  })
+
+  it('hides only the drawing, so no reader counts empty boxes', () => {
+    const { container } = render(<CountryCardSkeleton />)
+    const header = container.querySelector('[data-part="header"]')
+    expect(header?.closest('[aria-hidden="true"]')).not.toBeNull()
+  })
+
+  it('names the country whose figures are still in the air', () => {
+    render(<CountryCardSkeleton countryCode=" fr " />)
+    expect(screen.getByText('Loading France')).toBeTruthy()
+    expect(cardFor('FR').getAttribute('aria-busy')).toBe('true')
   })
 
   it('stands on exactly the card the facts will arrive into', () => {
@@ -265,6 +282,13 @@ describe('CountryCardError', () => {
   it('still names the country whose figures went missing', () => {
     render(<CountryCardError countryCode="FR" />)
     expect(cardFor('FR').textContent).toContain('France')
+  })
+
+  it('tells the reader politely rather than interrupting them', () => {
+    render(<CountryCardError countryCode="FR" />)
+    const card = cardFor('FR')
+    expect(card.getAttribute('role')).toBe('status')
+    expect(card.getAttribute('aria-live')).toBe('polite')
   })
 
   it('says what happened without claiming the country is empty', () => {
@@ -356,6 +380,53 @@ describe('the surface every variant stands on', () => {
     const pointer = cardFor('FR').querySelector('[data-part="pointer"]')
     expect(pointer?.className).toContain('bg-map-card')
     expect(pointer?.className).toContain('border-map-card-edge')
+  })
+
+  /**
+   * A card pinned by a click is focused by its host when it opens, and a map
+   * that hands focus to the selected country lands the reader here. Without a
+   * ring on the card itself that reader is somewhere with nothing drawn round
+   * it. `:focus-visible` cannot match an element with no tab stop, so this is
+   * inert on the hover card rather than decoration for an impossible state.
+   */
+  it('draws the product’s focus ring on every variant', () => {
+    const { container } = render(
+      <>
+        <CountryCard {...FRANCE} />
+        <CountryCard variant="compact" countryCode="MR" />
+        <CountryCardSkeleton />
+        <CountryCardError countryCode="IT" />
+      </>,
+    )
+    const roots = [...container.children]
+    expect(roots).toHaveLength(4)
+    for (const root of roots) {
+      expect(root.className).toContain('focus-visible:outline-ring')
+      expect(root.className).toContain('focus-visible:outline-2')
+    }
+  })
+
+  /**
+   * Past 1536px the whole product is set looser, and a card frozen at a phone's
+   * measure reads as a sticker left on the map. The step has to reach every
+   * variant or the placeholder stops standing on the card it stands in for.
+   */
+  it('steps its measure once at the widest breakpoint, on every variant', () => {
+    const { container } = render(
+      <>
+        <CountryCard {...FRANCE} />
+        <CountryCardSkeleton />
+        <CountryCardError countryCode="IT" />
+      </>,
+    )
+    for (const root of container.children) {
+      expect(root.className).toContain('w-72')
+      expect(root.className).toContain('2xl:w-80')
+    }
+    for (const cell of container.querySelectorAll('[data-part="cell"]')) {
+      expect(cell.className).toContain('2xl:px-5')
+      expect(cell.className).toContain('2xl:py-4')
+    }
   })
 
   it('moves on the product’s own easing, inside the motion band', () => {

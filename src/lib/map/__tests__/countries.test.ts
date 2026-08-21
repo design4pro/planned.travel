@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { fileURLToPath } from 'node:url'
@@ -59,6 +59,12 @@ const SOLVER_DRIFT = 1e-7
 /** Every officially-assigned ISO2 code the bundled geometry cannot fill. */
 const UNMAPPED_CODES = [...UNMAPPED_COUNTRY_CODES, ...UNMAPPED_TERRITORY_CODES]
 
+/** The repository root, resolved from this file so the run directory is free. */
+const REPO_ROOT = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../..',
+)
+
 /**
  * The finer cut as it is committed, read from disk rather than from the module.
  *
@@ -66,16 +72,85 @@ const UNMAPPED_CODES = [...UNMAPPED_COUNTRY_CODES, ...UNMAPPED_TERRITORY_CODES]
  * cannot pass by agreeing with a decoder that is itself wrong.
  */
 const DETAIL_ASSET = readFileSync(
-  resolve(
-    dirname(fileURLToPath(import.meta.url)),
-    '../../../..',
-    `public${COUNTRY_DETAIL_URL}`,
-  ),
+  resolve(REPO_ROOT, `public${COUNTRY_DETAIL_URL}`),
   'utf8',
 )
 
+/**
+ * The asset's manifest line: its first line, and the needle the module's
+ * bundle-absence proof greps a build for.
+ */
+const DETAIL_MANIFEST_LINE = DETAIL_ASSET.slice(0, DETAIL_ASSET.indexOf('\n'))
+
+/** Every file under one repository directory, depth first. */
+function filesUnder(directory: string): Array<string> {
+  const found: Array<string> = []
+  for (const entry of readdirSync(resolve(REPO_ROOT, directory), {
+    withFileTypes: true,
+  })) {
+    const path = `${directory}/${entry.name}`
+    if (entry.isDirectory()) found.push(...filesUnder(path))
+    else if (entry.isFile()) found.push(path)
+  }
+  return found
+}
+
+/** The repository-relative paths whose bytes contain `needle`. */
+function sourceFilesContaining(needle: string): Array<string> {
+  const hits: Array<string> = []
+  for (const directory of ['src', 'scripts']) {
+    for (const path of filesUnder(directory)) {
+      if (readFileSync(resolve(REPO_ROOT, path), 'utf8').includes(needle)) {
+        hits.push(path)
+      }
+    }
+  }
+  return hits.sort()
+}
+
 /** The ceiling the module's budget table states, in bytes. */
 const DETAIL_BUDGET = { raw: 384 * 1024, gzip: 128 * 1024 }
+
+/**
+ * Every row of the module's budget table, as bytes.
+ *
+ * The table used to claim all three rows came out of the same script at the same
+ * tolerance. They do not: the bundled row is `./world`'s payload as it ships,
+ * cut at 0.08° by a different process, and its byte figure had drifted seven
+ * bytes from the string it describes. Two of the three rows are measurable from
+ * this repository, so they are measured here instead of trusted.
+ *
+ * `gzip` is the table's own 0.1KiB rounding rather than an exact count, because
+ * zlib's output moves by a handful of bytes between Node builds while the figure
+ * the table prints does not.
+ */
+const BUDGET_TABLE = {
+  bundled: { raw: 62_983, gzipKiB: '25.2' },
+  shipped: { raw: 309_993, gzipKiB: '107.7' },
+} as const
+
+/**
+ * The bundled 1:110m payload, taken from `./world`'s source rather than from its
+ * decoder, so this measures the bytes the client downloads.
+ *
+ * The literal is one long single-quoted segment concatenated with an empty one,
+ * and it holds no quote and no backslash, which is what makes the naive match
+ * safe here.
+ */
+function bundledPayload(): string {
+  const source = readFileSync(
+    resolve(REPO_ROOT, 'src/lib/map/world.ts'),
+    'utf8',
+  )
+  const literal = /const ENCODED =\n((?:\s*'[^'\n]*'\s*\+?\n)+)/.exec(source)
+  if (literal === null) throw new Error('world.ts no longer spells ENCODED out')
+  return [...literal[1].matchAll(/'([^'\n]*)'/g)].map((m) => m[1]).join('')
+}
+
+/** A byte count as the budget table rounds it: KiB to one decimal place. */
+function asKiB(bytes: number): string {
+  return (bytes / 1024).toFixed(1)
+}
 
 /** The codes the shipped asset carries, parsed independently of the module. */
 function detailCodes(): ReadonlyArray<string> {
@@ -624,6 +699,58 @@ describe('the finer cut', () => {
       DETAIL_BUDGET.gzip,
     )
     expect(COUNTRY_DETAIL_URL).toMatch(/^\/atlas\/.+\.v\d+\.txt$/)
+  })
+
+  it('prints the bytes the budget table quotes, for both cuts we ship', () => {
+    // A ceiling only says the asset is not too big. These are the figures the
+    // table states, and a wrong one is how the table came to lie about the
+    // bundled cut: the 1:110m row named seven bytes the payload does not have.
+    const shipped = Buffer.byteLength(DETAIL_ASSET)
+    expect(shipped).toBe(BUDGET_TABLE.shipped.raw)
+    expect(asKiB(gzipSync(DETAIL_ASSET, { level: 9 }).length)).toBe(
+      BUDGET_TABLE.shipped.gzipKiB,
+    )
+
+    const bundled = bundledPayload()
+    expect(Buffer.byteLength(bundled)).toBe(BUDGET_TABLE.bundled.raw)
+    expect(asKiB(gzipSync(bundled, { level: 9 }).length)).toBe(
+      BUDGET_TABLE.bundled.gzipKiB,
+    )
+
+    // And the row is the bundled cut rather than a build of it: the codes, rings
+    // and vertices the table prints are the ones `./world` hands out.
+    let rings = 0
+    let vertices = 0
+    for (const outline of worldOutlines().values()) {
+      rings += outline.length
+      for (const ring of outline) vertices += ring.length
+    }
+    expect([worldOutlines().size, rings, vertices]).toEqual([175, 285, 8652])
+  })
+
+  it('has a manifest line no source file quotes, so absence is provable', () => {
+    // The module documents a grep that proves the payload never reaches
+    // `dist/server`, and that proof is only sound while its needle belongs to
+    // the asset alone. It did not once: the paragraph named the provenance
+    // token, `scripts/build-country-outlines.mjs` writes that same token into
+    // the manifest, and the SSR build keeps comment blocks verbatim — so the
+    // proof matched its own text and the grep it promised was silent found a
+    // file. The needle is the whole manifest line for that reason, and this is
+    // the assertion that keeps it unquotable.
+    expect(DETAIL_MANIFEST_LINE).toMatch(/^version=\d+ source=\S+ /)
+    expect(DETAIL_MANIFEST_LINE.length).toBeGreaterThan(40)
+    expect(sourceFilesContaining(DETAIL_MANIFEST_LINE)).toEqual([])
+
+    // A search that finds nothing everywhere proves nothing, so the walk is
+    // checked against one file in each directory it covers. The needles are
+    // assembled rather than written out, because a literal would put itself in
+    // this file and make its own answer wrong.
+    expect(
+      sourceFilesContaining(`export const ${'COUNTRY'}_DETAIL_URL`),
+    ).toEqual(['src/lib/map/countries.ts'])
+    expect(sourceFilesContaining(`const ${'SOURCE'}_ID =`)).toEqual([
+      'scripts/build-country-outlines.mjs',
+    ])
   })
 
   it('states its own provenance, and decodes to exactly what it claims', () => {

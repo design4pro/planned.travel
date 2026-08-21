@@ -42,8 +42,9 @@ import {
   totalTripReservationsMinor,
   listItems,
 } from '#/server/repos'
+import { serverToday } from '#/server/clock'
 import { appScope } from './context'
-import { isoOf, isoOfRequired, todayIso } from './serialise'
+import { isoOf, isoOfRequired } from './serialise'
 import { toReservationCard } from './overview'
 
 import type { TenantScope } from '#/server/repos'
@@ -128,7 +129,7 @@ export const loadTripHeader = createServerFn({ method: 'GET' })
     ])
 
     return {
-      today: todayIso(),
+      today: serverToday(),
       dayCount: days.length,
       people,
       trip: {

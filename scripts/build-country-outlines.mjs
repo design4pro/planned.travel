@@ -3,13 +3,19 @@
 /**
  * Builds the finer country-outline asset served from `public/atlas/`.
  *
- *   node scripts/build-country-outlines.mjs [--source <path|url>] [--out <path>] [--check]
+ *   node scripts/build-country-outlines.mjs
+ *     [--source <path|url>] [--source-id <token>] [--out <path>] [--check]
  *
  * With no arguments it fetches the pinned source, writes `public/atlas/` and
  * prints what it cut. `--source` takes a local mirror of that same dataset, for
  * an offline build; `--check` rebuilds and fails if the committed asset differs.
- * The manifest's provenance token names the pinned dataset, so `--source` is for
- * a copy of it rather than for a different scale.
+ *
+ * `--source-id` renames the provenance token the manifest line carries, and it
+ * exists for one purpose: measuring a scale this asset is *not* cut from, so a
+ * rejection can be argued from bytes. Pointing `--source` at another scale
+ * without it would write a file whose first line names a dataset it did not
+ * come from — see the budget table in `src/lib/map/countries.ts`, which quotes
+ * the exact 1:10m command. A build meant for `public/atlas/` never passes it.
  *
  * The bundled 1:110m cut in `src/lib/map/world.ts` exists so a map can always
  * draw land, and it is deliberately tiny: outer rings only, Douglas–Peucker at
@@ -106,6 +112,14 @@ const SOURCE_URL =
 
 /** Short provenance token written into the asset's manifest line. */
 const SOURCE_ID = 'natural-earth-50m'
+
+/**
+ * What a provenance token may look like.
+ *
+ * The manifest line is space-separated `key=value` pairs, so a token carrying a
+ * space or an `=` would produce a line the decoder reads as extra fields.
+ */
+const SOURCE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/
 
 /** Asset format version. Bumping it means bumping the filename too. */
 const FORMAT_VERSION = 1
@@ -363,7 +377,7 @@ function encode(countries) {
  * ---------------------------------------------------------------------------------------------- */
 
 /** The asset's text, manifest line included, from a parsed source collection. */
-function build(collection) {
+function build(collection, sourceId) {
   if (collection === null || !Array.isArray(collection.features)) {
     throw new Error('source is not a GeoJSON FeatureCollection')
   }
@@ -414,7 +428,7 @@ function build(collection) {
 
   const manifest = [
     `version=${FORMAT_VERSION}`,
-    `source=${SOURCE_ID}`,
+    `source=${sourceId}`,
     `grid=${GRID}`,
     `tolerance=${TOLERANCE_UNITS}`,
     `codes=${countries.length}`,
@@ -440,16 +454,31 @@ function build(collection) {
  * ---------------------------------------------------------------------------------------------- */
 
 function parseArgs(args) {
-  const options = { source: SOURCE_URL, out: OUT_PATH, check: false }
+  const options = {
+    source: SOURCE_URL,
+    sourceId: SOURCE_ID,
+    out: OUT_PATH,
+    check: false,
+  }
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]
     if (arg === '--check') options.check = true
     else if (arg === '--source') options.source = args[(index += 1)]
+    else if (arg === '--source-id') options.sourceId = args[(index += 1)]
     else if (arg === '--out') options.out = args[(index += 1)]
     else throw new Error(`unknown argument: ${arg}`)
-    if (options.source === undefined || options.out === undefined) {
+    if (
+      options.source === undefined ||
+      options.sourceId === undefined ||
+      options.out === undefined
+    ) {
       throw new Error(`${arg} needs a value`)
     }
+  }
+  if (!SOURCE_ID_PATTERN.test(options.sourceId)) {
+    throw new Error(
+      `--source-id must match ${String(SOURCE_ID_PATTERN)}: ${options.sourceId}`,
+    )
   }
   return options
 }
@@ -457,7 +486,10 @@ function parseArgs(args) {
 async function main() {
   const options = parseArgs(argv.slice(2))
   const target = resolve(repoRoot(), options.out)
-  const { text, report } = build(await readSource(options.source))
+  const { text, report } = build(
+    await readSource(options.source),
+    options.sourceId,
+  )
 
   if (options.check) {
     const current = await readFile(target, 'utf8').catch(() => null)
@@ -480,7 +512,7 @@ async function main() {
   stdout.write(
     [
       `wrote ${options.out}`,
-      `  source     ${options.source}`,
+      `  source     ${options.source} (${options.sourceId})`,
       `  features   ${report.features} read, ${report.skipped.length} without an ISO code: ${report.skipped.join(', ')}`,
       `  codes      ${report.codes}${report.empty.length > 0 ? ` (${report.empty.length} collapsed: ${report.empty.join(', ')})` : ''}`,
       `  geometry   ${report.rings} rings, ${report.vertices} vertices`,

@@ -426,6 +426,28 @@ describe('markCountryVisitedFn', () => {
     expect(await visitedCodes(tenant.scope)).toEqual([])
   })
 
+  it('refuses a note longer than the boundary allows, before any write', async () => {
+    expect(
+      await validateAtBoundary(markCountryVisitedFn, {
+        countryCode: 'FR',
+        note: 'x'.repeat(2_001),
+      }),
+    ).not.toBeNull()
+
+    expect(await visitedCodes(tenant.scope)).toEqual([])
+  })
+
+  it('normalises a padded, lower-case code on the wire, not just in memory', async () => {
+    // The `.transform()` runs on the boundary validator, which is the only place
+    // a code arriving from a map feature or a URL passes through.
+    await markVisited({ countryCode: '  fr  ' })
+
+    expect(await visitedCodes(tenant.scope)).toEqual(['FR'])
+    expect((await atlasCountryState(tenant.scope, 'FR')).visit?.continent).toBe(
+      'Europe',
+    )
+  })
+
   it('rejects an anonymous caller and writes nothing', async () => {
     signIn(null)
     await expect(markVisited({ countryCode: 'FR' })).rejects.toBeInstanceOf(
@@ -434,6 +456,33 @@ describe('markCountryVisitedFn', () => {
 
     signIn(tenant.scope)
     expect(await visitedCodes(tenant.scope)).toEqual([])
+  })
+
+  it('writes into the caller’s workspace and nobody else’s', async () => {
+    await markVisited({ countryCode: 'FR' })
+
+    signIn(other.scope)
+    await markVisited({ countryCode: 'JP' })
+
+    expect(await visitedCodes(tenant.scope)).toEqual(['FR'])
+    expect(await visitedCodes(other.scope)).toEqual(['JP'])
+
+    // Same traveller identity, other workspace: the atlas is scoped by both.
+    signIn(tenant.scope)
+    expect((await atlasCountryState(tenant.scope, 'JP')).visit).toBeNull()
+    expect((await atlasCountryState(other.scope, 'FR')).visit).toBeNull()
+  })
+
+  it('keeps one colleague’s atlas out of another’s inside one workspace', async () => {
+    const colleagueId = await tenant.addUser('Colleague')
+    const colleague = tenant.scopeFor(colleagueId)
+
+    signIn(colleague)
+    await markVisited({ countryCode: 'CL' })
+
+    signIn(tenant.scope)
+    expect(await visitedCodes(tenant.scope)).toEqual([])
+    expect(await visitedCodes(colleague)).toEqual(['CL'])
   })
 })
 
@@ -490,6 +539,31 @@ describe('unmarkCountryVisitedFn', () => {
 
     expect(await visitedCodes(other.scope)).toEqual(['FR'])
     expect(await visitedCodes(tenant.scope)).toEqual([])
+  })
+
+  it('cannot reach a colleague’s record inside the same workspace', async () => {
+    const colleagueId = await tenant.addUser('Colleague')
+    const colleague = tenant.scopeFor(colleagueId)
+
+    signIn(colleague)
+    await markVisited({ countryCode: 'FR' })
+
+    signIn(tenant.scope)
+    await unmarkVisited({ countryCode: 'FR' })
+
+    expect(await visitedCodes(colleague)).toEqual(['FR'])
+  })
+
+  it('rejects an anonymous caller and leaves the record standing', async () => {
+    await markVisited({ countryCode: 'FR' })
+
+    signIn(null)
+    await expect(unmarkVisited({ countryCode: 'FR' })).rejects.toBeInstanceOf(
+      AuthRequirementError,
+    )
+
+    signIn(tenant.scope)
+    expect(await visitedCodes(tenant.scope)).toEqual(['FR'])
   })
 })
 
@@ -606,6 +680,46 @@ describe('addCountryToBucketListFn', () => {
 
     signIn(tenant.scope)
     expect(await listBucketList(tenant.scope, tenant.ownerUserId)).toEqual([])
+  })
+
+  it('lists the country on the caller’s list and nobody else’s', async () => {
+    await addToBucketList({ countryCode: 'KR' })
+
+    signIn(other.scope)
+    await addToBucketList({ countryCode: 'PE' })
+
+    expect(
+      (await listBucketList(tenant.scope, tenant.ownerUserId)).map(
+        (row) => row.countryCode,
+      ),
+    ).toEqual(['KR'])
+    expect(
+      (await listBucketList(other.scope, other.ownerUserId)).map(
+        (row) => row.countryCode,
+      ),
+    ).toEqual(['PE'])
+
+    signIn(tenant.scope)
+    expect((await atlasCountryState(tenant.scope, 'PE')).bucketGoal).toBeNull()
+    expect((await atlasCountryState(other.scope, 'KR')).bucketGoal).toBeNull()
+  })
+
+  it('does not collapse a colleague’s entry for the same country', async () => {
+    const colleagueId = await tenant.addUser('Colleague')
+    const colleague = tenant.scopeFor(colleagueId)
+
+    signIn(colleague)
+    await addToBucketList({ countryCode: 'KR' })
+
+    signIn(tenant.scope)
+    await addToBucketList({ countryCode: 'KR' })
+
+    // Two travellers, one country, two goals: the repair only ever touches the
+    // rows the caller can see, which are their own.
+    expect(await listBucketList(colleague, colleagueId)).toHaveLength(1)
+    expect(await listBucketList(tenant.scope, tenant.ownerUserId)).toHaveLength(
+      1,
+    )
   })
 
   it('names the metric and the ceiling when the repository refuses on quota', async () => {
