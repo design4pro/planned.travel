@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  decodeOutlines,
   landPath,
   outlineFor,
   ringsToPath,
@@ -175,5 +176,78 @@ describe('landPath', () => {
         identity,
       ),
     ).toBe('')
+  })
+})
+
+describe('decodeOutlines', () => {
+  it('walks deltas back into degrees, longitude first', () => {
+    // Two rings for one country, the second starting from its own origin.
+    const outlines = decodeOutlines('ZZ:0,0,100,0,0,100;500,500,100,0,0,100')
+    expect([...outlines.keys()]).toEqual(['ZZ'])
+
+    const [first, second] = outlines.get('ZZ') ?? []
+    expect(first).toEqual([
+      [0, 0],
+      [1, 0],
+      [1, 1],
+    ])
+    expect(second).toEqual([
+      [5, 5],
+      [6, 5],
+      [6, 6],
+    ])
+  })
+
+  it('reads the payload on the grid it is told about', () => {
+    // The finer cut states its grid in its own manifest rather than assuming
+    // this module's, so a future asset can change it without a second decoder.
+    expect(decodeOutlines('ZZ:1,2,3,4', 1).get('ZZ')).toEqual([
+      [
+        [1, 2],
+        [4, 6],
+      ],
+    ])
+    expect(decodeOutlines('ZZ:1,2,3,4', 1000).get('ZZ')).toEqual([
+      [
+        [0.001, 0.002],
+        [0.004, 0.006],
+      ],
+    ])
+  })
+
+  it('skips a malformed entry instead of inventing a country called nothing', () => {
+    // One of the two payloads in this encoding arrives over the network.
+    const outlines = decodeOutlines('|:1,2|ZZ:0,0,100,0,0,100|')
+    expect([...outlines.keys()]).toEqual(['ZZ'])
+  })
+
+  it('drops a trailing coordinate rather than reading it as NaN', () => {
+    const ring = decodeOutlines('ZZ:0,0,100,0,50').get('ZZ')?.[0] ?? []
+    expect(ring).toEqual([
+      [0, 0],
+      [1, 0],
+    ])
+  })
+
+  it('is what the bundled cut itself is decoded with', () => {
+    // The claim that there is one decoder, not two: re-encoding a country from
+    // the bundle and decoding it again lands on the same coordinates.
+    const japan = outlineFor('JP')
+    const encoded = japan
+      .map((ring) => {
+        const deltas: Array<number> = []
+        let lastLng = 0
+        let lastLat = 0
+        for (const [lng, lat] of ring) {
+          const x = Math.round(lng * 100)
+          const y = Math.round(lat * 100)
+          deltas.push(x - lastLng, y - lastLat)
+          lastLng = x
+          lastLat = y
+        }
+        return deltas.join(',')
+      })
+      .join(';')
+    expect(decodeOutlines(`JP:${encoded}`).get('JP')).toEqual(japan)
   })
 })

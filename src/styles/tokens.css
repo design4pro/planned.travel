@@ -168,6 +168,49 @@
   --color-glass: rgb(255 255 255 / 0.78);
   --color-glass-edge: rgb(22 21 15 / 0.08);
 
+  /* ------------------------------------------------------- over-map card
+     The ground of a fact card floated over the world map.
+
+     The country hover surface and the country click surface are one card, so
+     they take one ground and can never disagree about it.
+
+     Opaque, and deliberately not `--color-glass`. Glass is right for chrome
+     whose job is to stay out of the way; this card carries an 11px label ladder
+     and a 26px numeral over an arbitrary country fill, and a translucent ground
+     lets that fill and its border read straight through the type. Opacity is
+     also the only thing that makes the card's text contrast independent of the
+     map beneath it — which is what allows the ratios below to be stated once
+     and stay true wherever the card lands.
+
+     In light the value coincides with `--color-surface`, and it is still its
+     own token: the two part company in dark, and a card that borrowed the page
+     surface would have to be re-derived the next time either moves.
+
+     Measured on `--color-map-card`, light:
+       ink 18.29:1 · ink-2 10.71:1 · ink-3 7.02:1 · warning 6.33:1 · danger 6.32:1
+
+     The card's *boundary* against the map is a graphical object and owes 3:1
+     (WCAG 2.2 1.4.11). It is carried by whichever of the face or the hairline
+     wins on the ground the card happens to cover — face / edge / best, against
+     every fill the atlas paints:
+       country-land               1.19 / 3.71 / 3.71
+       country-land-hover         1.42 / 3.11 / 3.11
+       basemap water              1.39 / 3.28 / 3.28
+       country-visited            5.61 / 1.23 / 5.61
+       country-visited-recent     7.09 / 1.56 / 7.09
+       country-visited-distant    4.48 / 1.02 / 4.48
+       country-visited-hover      8.90 / 1.96 / 8.90
+       country-visited-selected  11.16 / 2.45 / 11.16
+     Over paper-coloured land and over the sea the hairline draws the boundary;
+     over a pine fill the face draws it and the hairline is free to be quiet.
+
+     `--color-map-card-edge` is also the two visible sides of the card's
+     pointer. The pointer is the card's own corner turned forty-five degrees,
+     not a second object, so it takes the card's ground and the card's hairline
+     and cannot drift from either. */
+  --color-map-card: #ffffff;
+  --color-map-card-edge: #78766e; /* 4.55:1 on the card face */
+
   /* -------------------------------------------------------------- scrollbar */
   --color-scrollbar-thumb: rgb(22 21 15 / 0.18);
   --color-scrollbar-thumb-hover: rgb(22 21 15 / 0.3);
@@ -299,6 +342,29 @@
     --color-glass: rgb(26 26 24 / 0.74);
     --color-glass-edge: rgb(255 255 255 / 0.1);
 
+    /* Not the light card inverted, and not the dark page surface either. The
+       card sits *below* the land it floats over rather than above it (L* 11.7
+       against the land's 16.5, and above the sea's 7.9), and elevation is
+       carried by a light rim and a tight shadow instead of by luminance. Going
+       the other way — a card lighter than the land — was measured and dropped:
+       it cost the type a third of its contrast (ink 12.55:1 rather than
+       15.42:1) and pulled the face to within 4.77:1 of a visited fill, and it
+       bought nothing the rim was not already doing.
+
+       Measured on `--color-map-card`, dark:
+         ink 15.42:1 · ink-2 11.37:1 · ink-3 7.18:1 · warning 7.43:1 · danger 5.94:1
+       Face / edge / best against every fill:
+         country-land              1.13 / 4.11 / 4.11
+         country-land-hover        1.34 / 3.48 / 3.48
+         basemap water             1.08 / 5.03 / 5.03
+         country-visited           5.87 / 1.26 / 5.87
+         country-visited-recent    7.16 / 1.54 / 7.16
+         country-visited-distant   4.76 / 1.02 / 4.76
+         country-visited-hover     8.65 / 1.86 / 8.65
+         country-visited-selected 10.38 / 2.23 / 10.38 */
+    --color-map-card: #1f1f1c;
+    --color-map-card-edge: #8a8880; /* 4.65:1 on the card face */
+
     --color-scrollbar-thumb: rgb(255 255 255 / 0.16);
     --color-scrollbar-thumb-hover: rgb(255 255 255 / 0.28);
 
@@ -386,6 +452,9 @@
 
   --color-glass: rgb(26 26 24 / 0.74);
   --color-glass-edge: rgb(255 255 255 / 0.1);
+
+  --color-map-card: #1f1f1c;
+  --color-map-card-edge: #8a8880;
 
   --color-scrollbar-thumb: rgb(255 255 255 / 0.16);
   --color-scrollbar-thumb-hover: rgb(255 255 255 / 0.28);
@@ -521,6 +590,14 @@
      it as `@utility z-map-overlay`, so a component writes `z-map-overlay`
      exactly as it writes `z-nav`. */
   --z-map-overlay: 30;
+  /* The layer the map's own hover and click surfaces live on: the country fact
+     card and its pointer. One step above `--z-map-overlay`, so a card summoned
+     by the pointer covers the search pill and the zoom cluster it was anchored
+     beside rather than sliding under them, and below `--z-nav`, so it can never
+     float over the app header or the mobile tab bar. Exported by `styles.css`
+     as `@utility z-map-surface`. Theme-independent, like every layout token in
+     this block — a stacking order has no light and dark value to declare. */
+  --z-map-surface: 35;
   --z-nav: 40;
   --z-dropdown: 50;
   --z-overlay: 60;

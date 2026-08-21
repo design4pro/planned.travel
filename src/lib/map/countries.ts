@@ -47,10 +47,51 @@
  * the declared types stay mutable so MapLibre's own GeoJSON vocabulary accepts
  * them without a cast, but a stray in-place edit throws instead of quietly
  * corrupting both views for the life of the tab.
+ *
+ * ## Two cuts, and the budget for the finer one
+ *
+ * The bundle above is Natural Earth 1:110m, and it is a silhouette: Spain is one
+ * 42-vertex ring with neither the Canaries nor the Balearics, France is three
+ * rings, and 75 assigned ISO codes have no shape at all. That is the right
+ * trade for the two callers that need land *synchronously* — the server-rendered
+ * world map, which inlines the paths into the document, and the style's ground
+ * underlay, which draws before any tile can arrive — and the wrong trade for a
+ * tracker that colours countries one at a time.
+ *
+ * So there is a second cut, built by `scripts/build-country-outlines.mjs` from
+ * Natural Earth 1:50m and served as a version-stamped static file. It is
+ * **fetched, never imported**: an `import()` of a 300KB string is still an edge
+ * in the module graph, so it would be emitted into the SSR bundle and counted
+ * against the Worker's compressed size limit, for a payload no server-rendered
+ * page ever draws. As a file under `public/atlas/` it is a Workers Asset — one
+ * copy, in `dist/client`, served from cache without waking the Worker at all.
+ * {@link loadCountryDetail} is the door; {@link COUNTRY_DETAIL_URL} is the key.
+ *
+ * **Measured, against a ceiling of 384KiB raw and 128KiB gzip:**
+ *
+ * | cut | codes | rings | vertices | raw | gzip |
+ * |---|---|---|---|---|---|
+ * | 1:110m, bundled | 175 | 285 | 8,652 | 62KB | ~25KB |
+ * | **1:50m, shipped** | **237** | **1,617** | **50,413** | **302.7KiB** | **107.7KiB** |
+ * | 1:10m, rejected | 238 | 4,082 | 116,779 | 651.9KiB | 221.0KiB |
+ *
+ * 1:10m is rejected on measurement, not on principle. Through the same script at
+ * the same tolerance it is 2.3× the vertices and 2.05× the transfer — over the
+ * ceiling on its own — and it buys nothing visible: the outlines are quantised
+ * to a hundredth of a degree, {@link COUNTRY_SOURCE_MAX_ZOOM} stops the source
+ * sub-dividing at zoom 5, and the atlas fades its country fill out by zoom 6, so
+ * every extra vertex lands inside a pixel that is already painted. It also loses
+ * Vatican City, whose 1:10m ring collapses on that grid where the 1:50m one does
+ * not. For scale: the reference product ships the same feature as ~4.3MB gzipped
+ * and ~30MB of GeoJSON decoded on every atlas load. This is 2.5% of that.
+ *
+ * Decoding the finer payload costs about 12ms in Node — 7ms to walk the deltas,
+ * 5ms to close, clamp and freeze 1,617 rings — and it happens once, off the
+ * first-paint path, after the fetch resolves.
  */
 
 import { boundsForPoints, clampLatitude } from './bounds'
-import { worldOutlines } from './world'
+import { decodeOutlines, worldOutlines } from './world'
 
 import type { MapBounds } from './bounds'
 import type { WorldOutline, WorldRing } from './world'
@@ -126,124 +167,78 @@ export type CountrySource = Extract<
 export const COUNTRY_CODE_PROPERTY = 'code'
 
 /**
- * The zoom past which the country source stops sub-dividing.
+ * The zoom past which a country source stops sub-dividing.
  *
- * `./world` quantises outlines to a hundredth of a degree, about a kilometre. A
- * tile pixel is finer than that from roughly zoom 6, so tiling further only buys
- * memory: the same vertices, cut into four times as many tiles per level.
- * Overzooming the z5 tiles draws exactly the same shape.
+ * Both cuts quantise to a hundredth of a degree, about a kilometre, and the
+ * finer one is simplified to two hundredths — one tile pixel at zoom 5, where a
+ * pixel spans 0.022° of longitude at the equator. Tiling past the grid the
+ * vertices sit on only buys memory: the same coordinates, cut into four times as
+ * many tiles per level. Overzooming the z5 tiles draws exactly the same shape.
+ *
+ * So this is not a number to raise by hand when the geometry gets finer. It
+ * follows the grid, and the finer cut deliberately shares the grid — see the
+ * budget table at the top of the file for why a finer grid was not worth buying.
  */
 export const COUNTRY_SOURCE_MAX_ZOOM = 5
 
 /**
- * UN member states with no bundled outline.
+ * Assigned ISO codes with no geometry anywhere on the map.
  *
- * Natural Earth's 1:110m cut drops anything smaller than about a pixel at world
- * scale, which is 29 of the 195 states the tracker counts: the micro-states, the
- * lesser Antilles and most of the Pacific. A country in here can be visited,
- * counted and listed, but it cannot be filled on the map.
+ * Two of them, and neither is a place a traveller books a flight to: Bouvet
+ * Island, an uninhabited glacier in the South Atlantic whose nearest drawn land
+ * is Antarctica 15° away, and the United States Minor Outlying Islands, nine
+ * scattered atolls whose nearest drawn land is 16° off. Natural Earth's 1:50m
+ * cut has no polygon for either, so nothing on the map represents them.
  *
- * This is the sovereign half of the answer only. A traveller records dependent
- * territories too, and the 1:110m cut drops most of those as well — see
- * {@link UNMAPPED_TERRITORY_CODES} for the rest, and {@link hasCountryOutline}
- * for the question a caller usually means to ask.
+ * The companion list is the other half of the answer and the more interesting
+ * one: {@link UNMAPPED_TERRITORY_CODES} names the codes whose land *is* drawn,
+ * inside the country that administers it. Together they are every
+ * officially-assigned code the finer cut cannot fill — thirteen, down from the
+ * seventy-five the bundled 1:110m cut leaves unfillable.
  *
- * Sorted, so a reader can find a code by eye. Verified against `./world` by test.
+ * These describe the finest cut we ship, which arrives over the network. Until
+ * it does, the bundled cut is what the map draws and it is much coarser, so
+ * {@link hasCountryOutline} — not this list — is the runtime question.
+ *
+ * Sorted, so a reader can find a code by eye. Verified against the shipped asset
+ * by test.
  */
-export const UNMAPPED_COUNTRY_CODES: ReadonlyArray<string> = [
-  'AD',
-  'AG',
-  'BB',
-  'BH',
-  'CV',
-  'DM',
-  'FM',
-  'GD',
-  'KI',
-  'KM',
-  'KN',
-  'LC',
-  'LI',
-  'MC',
-  'MH',
-  'MT',
-  'MU',
-  'MV',
-  'NR',
-  'PW',
-  'SC',
-  'SG',
-  'SM',
-  'ST',
-  'TO',
-  'TV',
-  'VA',
-  'VC',
-  'WS',
-]
+export const UNMAPPED_COUNTRY_CODES: ReadonlyArray<string> = ['BV', 'UM']
 
 /**
- * Dependent territories and special areas with no bundled outline.
+ * Assigned ISO codes whose land is drawn, but not under their own name.
  *
- * The bundled geometry does carry a handful of territories that are large enough
- * to draw — Greenland, Puerto Rico, New Caledonia, the Falklands, French
- * Southern Territories, Western Sahara — so this is specifically the 46 further
- * officially-assigned ISO 3166-1 alpha-2 codes that it does not. They matter
- * because they are ordinary holiday destinations: Hong Kong, Guadeloupe,
- * Réunion, the Cayman Islands, Guam, the Faroes.
+ * Natural Earth's Admin 0 cut is the *sovereign* one, so a dependency's
+ * coastline belongs to the feature of the country that administers it: Réunion,
+ * Mayotte, Guadeloupe, Martinique and French Guiana are all part of France's
+ * shape, Svalbard part of Norway's, the Cocos and Christmas Islands part of
+ * Australia's, Bonaire part of the Netherlands', Tokelau part of New Zealand's,
+ * and Gibraltar sits inside Spain's coastline at this scale. Every one of them
+ * has geometry within a degree of where it belongs — it simply answers to
+ * another code.
  *
- * Together with {@link UNMAPPED_COUNTRY_CODES} this is every officially-assigned
- * ISO 3166-1 alpha-2 code the map cannot fill, so a caller can annotate a
- * visited row — "no outline at this scale" — instead of silently dropping it.
+ * That is a deliberate choice rather than a limitation of the source. Natural
+ * Earth also publishes a map-units cut that splits France into the metropole
+ * plus each overseas département under its own code, and adopting it would fill
+ * eleven of these thirteen. It would also redefine what "France" means on a map
+ * that colours what you have visited, while drawing exactly the same land. The
+ * sovereign cut is what a country tracker colours, so these codes are listed
+ * rather than carved out.
  *
- * Sorted, so a reader can find a code by eye. Verified against `./world` by test.
+ * Sorted, so a reader can find a code by eye. Verified against the shipped asset
+ * by test.
  */
 export const UNMAPPED_TERRITORY_CODES: ReadonlyArray<string> = [
-  'AI',
-  'AS',
-  'AW',
-  'AX',
-  'BL',
-  'BM',
   'BQ',
-  'BV',
   'CC',
-  'CK',
-  'CW',
   'CX',
-  'FO',
   'GF',
-  'GG',
   'GI',
   'GP',
-  'GS',
-  'GU',
-  'HK',
-  'HM',
-  'IM',
-  'IO',
-  'JE',
-  'KY',
-  'MF',
-  'MO',
-  'MP',
   'MQ',
-  'MS',
-  'NF',
-  'NU',
-  'PF',
-  'PM',
-  'PN',
   'RE',
-  'SH',
   'SJ',
-  'SX',
-  'TC',
   'TK',
-  'UM',
-  'VG',
-  'VI',
-  'WF',
   'YT',
 ]
 
@@ -263,6 +258,9 @@ let collection: CountryFeatureCollection | null = null
 let land: LandFeatureCollection | null = null
 let source: CountrySource | null = null
 let boundsByCode: ReadonlyMap<string, MapBounds> | null = null
+let detail: CountryDetail | null = null
+let detailIndex: ReadonlyMap<string, MultiPolygonCoordinates> | null = null
+let detailPending: Promise<CountryDetail> | null = null
 
 /**
  * Freezes a value without narrowing its type.
@@ -332,14 +330,33 @@ function drawableOutlines(): ReadonlyMap<string, MultiPolygonCoordinates> {
 }
 
 /**
+ * The finest cut installed: the fetched 1:50m detail if it has arrived, and the
+ * bundled 1:110m cut until then.
+ *
+ * Only two answers move when the detail lands — {@link hasCountryOutline} and
+ * {@link countryBounds}, the two that describe *a country* rather than *the
+ * payload a source was built from*. {@link countryFeatures} and
+ * {@link worldLandFeatures} stay on the bundle for the life of the process,
+ * because their consumers hold them by reference and a payload that changed
+ * underneath a MapLibre source without a `setData` would be a lie.
+ */
+function fillableOutlines(): ReadonlyMap<string, MultiPolygonCoordinates> {
+  return detailIndex ?? drawableOutlines()
+}
+
+/**
  * True when the map can actually fill this code.
  *
  * The general form of the two unmapped lists, and the question a list row or a
  * search result usually wants answered: it takes any string, including a code
  * neither list names, and never grows anything.
+ *
+ * Answers from the finest cut installed, so it says yes to Singapore, Malta and
+ * the Maldives once {@link loadCountryDetail} has resolved and no before that.
+ * A caller that renders the answer should re-read it when the detail lands.
  */
 export function hasCountryOutline(countryCode: string): boolean {
-  return drawableOutlines().has(countryCode.toUpperCase())
+  return fillableOutlines().has(countryCode.toUpperCase())
 }
 
 /**
@@ -433,6 +450,15 @@ export function worldLandFeatures(): LandFeatureCollection {
  * longitude solutions, which is right for every country that crosses the line
  * and wrong for the one that surrounds the pole: Antarctica is present at every
  * longitude, and the tightest rectangle around its vertices claims otherwise.
+ *
+ * Offshore rings are what make the two-solution search earn its keep. With the
+ * finer cut installed, France reaches from Guadeloupe at 61.8°W to Réunion at
+ * 55.8°E — 118° across a rectangle that contains no French land for most of its
+ * width, and 242° if the solver takes the shifted branch by mistake. The United
+ * States gains the western Aleutians and only the shifted branch keeps it off
+ * the whole line; Chile gains Easter Island; Ecuador the Galápagos. Every one of
+ * them still has to come back narrower than {@link ENCIRCLING_SPAN_DEGREES}, and
+ * a test asserts it for all of them rather than for the handful named here.
  */
 function outlineBounds(polygons: MultiPolygonCoordinates): MapBounds | null {
   const points: Array<[number, number]> = []
@@ -465,7 +491,7 @@ function boundsTable(): ReadonlyMap<string, MapBounds> {
   if (boundsByCode !== null) return boundsByCode
 
   const table = new Map<string, MapBounds>()
-  for (const [code, polygons] of drawableOutlines()) {
+  for (const [code, polygons] of fillableOutlines()) {
     const bounds = outlineBounds(polygons)
     if (bounds !== null) table.set(code, bounds)
   }
@@ -486,7 +512,240 @@ function boundsTable(): ReadonlyMap<string, MapBounds> {
  * Case-insensitive, and the same code always returns the identical object: a
  * fly-to from search re-asks for the same country every time the reader retypes
  * its name.
+ *
+ * Solved over the finest cut installed, so a country's rectangle grows to hold
+ * its offshore territories the moment {@link loadCountryDetail} resolves — and
+ * so the codes that only the finer cut can draw stop coming back `null`.
  */
 export function countryBounds(countryCode: string): MapBounds | null {
   return boundsTable().get(countryCode.toUpperCase()) ?? null
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The finer cut
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Where the finer outlines are served from.
+ *
+ * Version-stamped and never overwritten, which is the only way an asset served
+ * from a shared cache can be replaced safely: a new cut is a new filename and a
+ * new constant, so nothing has to expire. Root-relative, because it is a Workers
+ * Asset served from this origin, and reachable from `vite dev` the same way.
+ */
+export const COUNTRY_DETAIL_URL = '/atlas/country-outlines-50m.v1.txt'
+
+/**
+ * The header line of the asset, parsed.
+ *
+ * The payload states its own provenance and shape so a reader — and a test — can
+ * check what arrived rather than trusting the filename. `grid` is units per
+ * degree and is what the delta decoder needs; the counts are what the build
+ * measured, and a decode that disagrees with them means a truncated download.
+ */
+export interface CountryDetailManifest {
+  readonly version: number
+  readonly source: string
+  readonly grid: number
+  readonly codes: number
+  readonly rings: number
+  readonly vertices: number
+}
+
+/**
+ * The finer cut, decoded and ready to hand to MapLibre.
+ *
+ * `source` is the whole source definition rather than the data alone, for the
+ * same reason {@link countrySource} is: `promoteId` is not optional, and a
+ * caller assembling three-quarters of a source is a hover that silently does
+ * nothing.
+ */
+export interface CountryDetail {
+  readonly manifest: CountryDetailManifest
+  readonly features: CountryFeatureCollection
+  readonly source: CountrySource
+}
+
+/** How the asset is fetched. Injectable so the decode can be tested offline. */
+export type CountryDetailFetcher = (url: string) => Promise<Response>
+
+const defaultDetailFetcher: CountryDetailFetcher = (url) => fetch(url)
+
+/** Reads `key=value key=value` into a lookup, ignoring anything malformed. */
+function manifestFields(line: string): ReadonlyMap<string, string> {
+  const fields = new Map<string, string>()
+  for (const token of line.trim().split(/\s+/)) {
+    const split = token.indexOf('=')
+    if (split <= 0) continue
+    fields.set(token.slice(0, split), token.slice(split + 1))
+  }
+  return fields
+}
+
+/**
+ * A manifest number, or a throw naming the field — never a silent `NaN`.
+ *
+ * An absent field and an empty one are both rejected, because `Number('')` is
+ * zero and a grid of zero would divide every coordinate into infinity.
+ */
+function manifestNumber(
+  fields: ReadonlyMap<string, string>,
+  key: string,
+): number {
+  const raw = fields.get(key)
+  const value = raw === undefined || raw === '' ? Number.NaN : Number(raw)
+  if (!Number.isFinite(value)) {
+    throw new Error(`country outlines: manifest is missing ${key}`)
+  }
+  return value
+}
+
+/**
+ * Turns the asset's text into the payload a map can use.
+ *
+ * Exported so the decode is testable without a network, and separately from
+ * {@link loadCountryDetail} so a failure has one of two obvious causes: the
+ * fetch, or the bytes.
+ *
+ * Validated rather than trusted. The counts in the header are compared against
+ * what actually decoded, because a truncated response still parses — the delta
+ * encoding has no terminator — and would quietly draw half a world.
+ */
+export function parseCountryDetail(payload: string): CountryDetail {
+  const newline = payload.indexOf('\n')
+  if (newline <= 0) throw new Error('country outlines: no manifest line')
+
+  const fields = manifestFields(payload.slice(0, newline))
+  const manifest: CountryDetailManifest = {
+    version: manifestNumber(fields, 'version'),
+    source: fields.get('source') ?? '',
+    grid: manifestNumber(fields, 'grid'),
+    codes: manifestNumber(fields, 'codes'),
+    rings: manifestNumber(fields, 'rings'),
+    vertices: manifestNumber(fields, 'vertices'),
+  }
+  if (manifest.grid <= 0) {
+    throw new Error(`country outlines: grid=${manifest.grid} is not a grid`)
+  }
+
+  const outlines = decodeOutlines(payload.slice(newline + 1).trim(), manifest.grid)
+  const features: Array<CountryFeature> = []
+  let rings = 0
+  let vertices = 0
+
+  for (const [code, outline] of outlines) {
+    for (const ring of outline) {
+      // The build already dropped every ring that encloses nothing, so this
+      // counts what arrived rather than what survives — a mismatch is a
+      // truncated download, not a degenerate island.
+      rings += 1
+      vertices += ring.length
+    }
+    const coordinates = polygonsOf(outline)
+    if (coordinates.length === 0) continue
+    features.push(
+      frozen<CountryFeature>({
+        type: 'Feature',
+        id: code,
+        geometry: frozen({ type: 'MultiPolygon', coordinates }),
+        properties: frozen({ [COUNTRY_CODE_PROPERTY]: code }),
+      }),
+    )
+  }
+
+  if (
+    features.length !== manifest.codes ||
+    rings !== manifest.rings ||
+    vertices !== manifest.vertices
+  ) {
+    throw new Error(
+      `country outlines: decoded ${features.length}/${rings}/${vertices} against a manifest of ${manifest.codes}/${manifest.rings}/${manifest.vertices}`,
+    )
+  }
+
+  const decoded = frozen<CountryFeatureCollection>({
+    type: 'FeatureCollection',
+    features: frozen(features),
+  })
+
+  return frozen<CountryDetail>({
+    manifest,
+    features: decoded,
+    source: frozen<CountrySource>({
+      type: 'geojson',
+      data: decoded,
+      // Not optional. Without it MapLibre runs the string id through `parseInt`,
+      // `'FR'` becomes `NaN` becomes `0`, and every country in the payload
+      // shares one feature-state: hover one, light them all.
+      promoteId: COUNTRY_CODE_PROPERTY,
+      maxzoom: COUNTRY_SOURCE_MAX_ZOOM,
+    }),
+  })
+}
+
+/**
+ * The finer cut, once it has arrived — or `null`.
+ *
+ * Synchronous and stable: it returns the identical object between loads, so it
+ * is safe as a `useSyncExternalStore` snapshot or an effect dependency.
+ */
+export function countryDetail(): CountryDetail | null {
+  return detail
+}
+
+/**
+ * Fetches, decodes and installs the finer cut.
+ *
+ * Idempotent and shared: concurrent callers await one request and one decode,
+ * and a caller after it has landed gets the installed payload without touching
+ * the network. A failure clears the shared promise, so a retry is a retry rather
+ * than the same rejection handed out forever.
+ *
+ * Client-side only, and deliberately so. The URL is root-relative because it is
+ * an asset of this origin; a server render has no origin to resolve it against
+ * and no map to draw with it, and the whole point of the fetch is that these
+ * bytes never enter the Worker.
+ *
+ * Installing is atomic and it moves three answers together — the payload this
+ * resolves with, {@link hasCountryOutline}, and {@link countryBounds}. A caller
+ * that swaps its source to `detail.source` therefore has a layer, an outline
+ * predicate and a fly-to rectangle that all describe the same world. A caller
+ * that ignores the result gets a rectangle that can be wider than the shapes it
+ * draws, which is why this returns the source rather than merely announcing it.
+ */
+export function loadCountryDetail(
+  fetcher: CountryDetailFetcher = defaultDetailFetcher,
+): Promise<CountryDetail> {
+  if (detail !== null) return Promise.resolve(detail)
+  if (detailPending !== null) return detailPending
+
+  const request = (async () => {
+    const response = await fetcher(COUNTRY_DETAIL_URL)
+    if (!response.ok) {
+      throw new Error(
+        `country outlines: ${COUNTRY_DETAIL_URL} responded ${response.status}`,
+      )
+    }
+    const parsed = parseCountryDetail(await response.text())
+
+    const index = new Map<string, MultiPolygonCoordinates>()
+    for (const feature of parsed.features.features) {
+      index.set(feature.properties.code, feature.geometry.coordinates)
+    }
+
+    detail = parsed
+    detailIndex = index
+    // The rectangles were solved over the coarser cut and are now wrong by a
+    // continent for anything with an offshore territory.
+    boundsByCode = null
+    return parsed
+  })()
+
+  // One promise for everybody, and it clears itself on the way out so the next
+  // caller starts a fresh request instead of re-reading an old failure.
+  detailPending = request.catch((error: unknown) => {
+    detailPending = null
+    throw error
+  })
+  return detailPending
 }

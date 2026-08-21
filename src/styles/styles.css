@@ -80,6 +80,13 @@
   --color-glass: var(--color-glass);
   --color-glass-edge: var(--color-glass-edge);
 
+  /* The opaque ground and hairline of a fact card floated over the world map,
+     so the atlas's hover surface and its click surface say `bg-map-card` and
+     `border-map-card-edge` rather than borrowing a page surface that is not
+     tuned to sit on a country fill. */
+  --color-map-card: var(--color-map-card);
+  --color-map-card-edge: var(--color-map-card-edge);
+
   /* The atlas country ramp. MapLibre paints the polygons from the literal
      mirror in `src/lib/map/palette.ts`, but the chrome around them — legend
      swatches, the hovered list row, the selected country's chip — is ordinary
@@ -170,18 +177,22 @@
 
   --animate-shimmer: pt-shimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   --animate-pulse-soft: pt-pulse-soft 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --animate-indeterminate: pt-indeterminate 1.4s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+  --animate-indeterminate: pt-indeterminate 1.4s cubic-bezier(0.23, 1, 0.32, 1)
+    infinite;
   --animate-sweep: pt-sweep 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 
   /* Overlay-layer choreography. Enter 220ms out-quint, exit 150ms in-quint —
      the rule from docs/DESIGN.md, expressed once. */
   --animate-overlay-in: pt-fade-in var(--duration) var(--ease-out-quint) both;
-  --animate-overlay-out: pt-fade-out var(--duration-fast) var(--ease-in-quint) both;
+  --animate-overlay-out: pt-fade-out var(--duration-fast) var(--ease-in-quint)
+    both;
   --animate-dialog-in: pt-dialog-in var(--duration) var(--ease-out-quint) both;
-  --animate-dialog-out: pt-dialog-out var(--duration-fast) var(--ease-in-quint) both;
+  --animate-dialog-out: pt-dialog-out var(--duration-fast) var(--ease-in-quint)
+    both;
   --animate-pop-in: pt-pop-in var(--duration) var(--ease-out-quint) both;
   --animate-pop-out: pt-pop-out var(--duration-fast) var(--ease-in-quint) both;
-  --animate-tooltip-in: pt-tooltip-in var(--duration-fast) var(--ease-out-quint) both;
+  --animate-tooltip-in: pt-tooltip-in var(--duration-fast) var(--ease-out-quint)
+    both;
   --animate-tooltip-out: pt-fade-out 90ms var(--ease-in-quint) both;
   --animate-rise: pt-rise var(--duration) var(--ease-out-quint) both;
 
@@ -206,6 +217,11 @@
 /* Chrome floating over a full-bleed map — below the app nav, above the canvas. */
 @utility z-map-overlay {
   z-index: var(--z-map-overlay);
+}
+/* The map's own hover and click surfaces — above that chrome, still below the
+   app nav and the mobile tab bar. */
+@utility z-map-surface {
+  z-index: var(--z-map-surface);
 }
 @utility z-nav {
   z-index: var(--z-nav);

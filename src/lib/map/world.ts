@@ -21,6 +21,14 @@
  * every number to two or three characters, which is what makes 8,652 vertices
  * fit in 62KB of source and about 25KB over the wire. Decoding is one pass and
  * memoised, so the cost is paid once per process.
+ *
+ * **This cut stays as it is.** Two callers need land *synchronously*: the
+ * server-rendered world map inlines these paths straight into the document, and
+ * the style's ground underlay draws them before any tile can arrive. Neither can
+ * await a fetch, and both are sized for this payload. The finer 1:50m cut — the
+ * one that knows about the Canaries, Réunion and Guadeloupe — is a separate
+ * static asset fetched at runtime by `./countries`, which decodes it with
+ * {@link decodeOutlines} below. One encoding, two payloads, one decoder.
  */
 
 /** One closed ring, in degrees, longitude first. */
@@ -38,10 +46,27 @@ const ENCODED =
 
 let decoded: ReadonlyMap<string, WorldOutline> | null = null
 
-function decode(): ReadonlyMap<string, WorldOutline> {
+/**
+ * Turns an encoded payload into outlines keyed by ISO alpha-2.
+ *
+ * Exported because there are two payloads in this shape and only one of them is
+ * bundled: `./countries` fetches the finer 1:50m cut as a static asset and
+ * decodes it here rather than growing a second parser that could drift from
+ * this one. `scale` is the payload's quantisation grid, which the finer asset
+ * states in its own manifest.
+ *
+ * Tolerant of a stray separator — an empty entry, or one with no colon, is
+ * skipped rather than producing a country called `''` — because one of the two
+ * payloads arrives over the network.
+ */
+export function decodeOutlines(
+  encoded: string,
+  scale: number = SCALE,
+): ReadonlyMap<string, WorldOutline> {
   const out = new Map<string, WorldOutline>()
-  for (const entry of ENCODED.split('|')) {
+  for (const entry of encoded.split('|')) {
     const split = entry.indexOf(':')
+    if (split <= 0) continue
     const iso = entry.slice(0, split)
     const rings: Array<WorldRing> = []
     for (const encodedRing of entry.slice(split + 1).split(';')) {
@@ -49,10 +74,10 @@ function decode(): ReadonlyMap<string, WorldOutline> {
       const ring: Array<readonly [number, number]> = []
       let lng = 0
       let lat = 0
-      for (let index = 0; index < deltas.length; index += 2) {
+      for (let index = 0; index + 1 < deltas.length; index += 2) {
         lng += Number(deltas[index])
         lat += Number(deltas[index + 1])
-        ring.push([lng / SCALE, lat / SCALE])
+        ring.push([lng / scale, lat / scale])
       }
       rings.push(ring)
     }
@@ -68,7 +93,7 @@ function decode(): ReadonlyMap<string, WorldOutline> {
  * result is deeply immutable and every caller wants the same thing.
  */
 export function worldOutlines(): ReadonlyMap<string, WorldOutline> {
-  decoded ??= decode()
+  decoded ??= decodeOutlines(ENCODED)
   return decoded
 }
 
