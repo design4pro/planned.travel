@@ -1,6 +1,12 @@
 import * as React from 'react'
 
-import { countryFeatures, countrySource } from '#/lib/map/countries'
+import {
+  countryDetail,
+  countryFeatures,
+  countrySource,
+  loadCountryDetail,
+  subscribeCountryDetail,
+} from '#/lib/map/countries'
 import { mapPalette } from '#/lib/map/palette'
 import { FALLBACK_LAYER_IDS, MAP_LAYER_IDS } from '#/lib/map/style'
 import { visitRecency } from '#/lib/map/visit-recency'
@@ -13,7 +19,12 @@ import type {
   MapGeoJSONFeature,
   MapMouseEvent,
 } from 'maplibre-gl'
-import type { CountryFeature } from '#/lib/map/countries'
+import type {
+  CountryDetail,
+  CountryFeature,
+  CountryFeatureCollection,
+  CountrySource,
+} from '#/lib/map/countries'
 import type { CountryPalette } from '#/lib/map/palette'
 import type { VisitRamp } from '#/lib/map/visit-recency'
 import type { MapLibreMap } from './map-context'
@@ -67,6 +78,17 @@ const FADE_END_ZOOM = 6
  * both layers carry `maxzoom: fadeEnd`, rather than pretending to a precision
  * the geometry does not have. Everything the atlas has to say is said between
  * the world view and zoom 6; past that the basemap is the better map.
+ *
+ * **The finer cut does not move it.** The 1:50m payload this layer upgrades to
+ * is simplified at 0.02°, which would buy two more zoom levels on the same
+ * arithmetic — and buying them would make the fade, the layer ceiling and the
+ * hit-test range depend on whether one `fetch` succeeded. A reader whose finer
+ * cut never arrived would then get a map that stops answering two zooms earlier
+ * than everybody else's, and the failure would look like a bug in the pointer
+ * rather than a slow network. So the range stays solved from the *coarsest*
+ * payload this layer can be showing — the bundled one, which is what a failed
+ * fetch leaves in place for good — and the finer cut spends its precision on
+ * being the right shape rather than on being drawn larger.
  *
  * `interactiveMax` is where the fade has dropped the fill below
  * {@link INTERACTIVE_MIN_OPACITY} — solved from the ramp rather than guessed, so
@@ -142,6 +164,78 @@ interface VisitedCountryFeatureCollection {
   readonly features: Array<VisitedCountryFeature>
 }
 
+/* ------------------------------------------------------------------ payload */
+
+/**
+ * Which world the layer is currently drawing, as one comparable token.
+ *
+ * Part of the data key, so the finer cut landing invalidates exactly the same
+ * memo the traveller's record does — one mechanism, one `setData`, no second
+ * code path that could re-tile a payload the source is already carrying. The
+ * finer cut's own version is in the token rather than a bare flag: a future cut
+ * is a new payload and has to be a new key, the same way the asset itself is a
+ * new filename rather than an overwrite.
+ */
+function payloadKey(detail: CountryDetail | null): string {
+  return detail === null ? 'bundled' : `detail.v${detail.manifest.version}`
+}
+
+/** The world the source is built from: the finest cut that has arrived. */
+function worldFeatures(detail: CountryDetail | null): CountryFeatureCollection {
+  return detail?.features ?? countryFeatures()
+}
+
+/**
+ * The source definition to add, minus its data.
+ *
+ * Both cuts promote the same id property and carry the same zoom ceiling, so
+ * this changes nothing today — but taking it from whichever payload is installed
+ * is what stops a future cut from being added under the previous one's terms.
+ */
+function payloadSource(detail: CountryDetail | null): CountrySource {
+  return detail?.source ?? countrySource()
+}
+
+/** No finer cut has ever been installed during a server render. */
+function noCountryDetail(): null {
+  return null
+}
+
+/**
+ * The finer outlines, once they arrive — and the request that fetches them.
+ *
+ * A store rather than a `useState` + `await`, for two reasons. The payload is
+ * process-wide and installs at most once, so a second mount must read the
+ * installed cut synchronously rather than re-fetching it; and the install moves
+ * two *derived* answers with it — `hasCountryOutline` and `countryBounds` — so
+ * anything that rendered one of those needs telling, which is the subscription
+ * half of {@link subscribeCountryDetail}.
+ *
+ * The fetch is started on mount and never awaited by the render path. That is
+ * the whole progressive contract: the bundled 1:110m cut is already in the
+ * bundle, so the first frame draws a complete world synchronously, and the finer
+ * payload replaces it in place when it lands. Nothing here has a loading state,
+ * because there is nothing to wait for — a reader looking at a finished map is
+ * not shown a spinner for a better version of it.
+ *
+ * A rejection is swallowed on purpose and is not a console line. There is no
+ * repair for it that a reader could carry out, the map is fully working without
+ * it, and the console is a contract: a screen that logs an error the reader
+ * cannot act on trains everybody to ignore the ones they can. `loadCountryDetail`
+ * clears its own shared promise on failure, so the next mount is a real retry.
+ */
+function useCountryDetail(): CountryDetail | null {
+  React.useEffect(() => {
+    void loadCountryDetail().catch(() => undefined)
+  }, [])
+
+  return React.useSyncExternalStore(
+    subscribeCountryDetail,
+    countryDetail,
+    noCountryDetail,
+  )
+}
+
 /** What a pointer resolved to, which is not the same question as "which code". */
 type CountryHit =
   | { readonly kind: 'country'; readonly code: string }
@@ -191,24 +285,39 @@ export interface VisitedCountriesProps {
  * That is a WCAG 1.4.1 obligation on the host, not something a paint expression
  * can discharge.
  *
- * Seven decisions are worth knowing before changing anything here.
+ * Eight decisions are worth knowing before changing anything here.
  *
  * **`promoteId` is not optional.** A `geojson` source drops a string feature id
  * during tiling unless the source names the property to promote, and MapLibre
  * coerces what is left through `parseInt` — `'FR'` becomes `NaN` becomes `0`, so
- * all 175 countries collapse onto one id and hovering France lights Afghanistan.
- * The source definition therefore comes from `countrySource()` whole rather than
- * being assembled here. It is frozen and memoised, and MapLibre's `addSource`
- * writes `collectResourceTiming` onto the object it is handed, so it is spread
- * into a fresh object at the call site: passing the frozen one through would
- * throw a `TypeError` under ESM strict mode on a map built with that option.
+ * every country collapses onto one id and hovering France lights Afghanistan.
+ * The source definition therefore comes from whichever payload is installed —
+ * see {@link payloadSource} — whole, rather than being assembled here. Both cuts
+ * are frozen and memoised, and MapLibre's `addSource` writes
+ * `collectResourceTiming` onto the object it is handed, so it is spread into a
+ * fresh object at the call site: passing the frozen one through would throw a
+ * `TypeError` under ESM strict mode on a map built with that option.
  *
  * **Hover and selection are `feature-state`, never `setData`.** Re-setting the
- * source data re-tiles 175 MultiPolygons; doing that on `mousemove` would burn a
+ * source data re-tiles every country; doing that on `mousemove` would burn a
  * frame budget per pixel of pointer travel. `setFeatureState` touches one feature
  * and repaints, so the state effects below never write data and the data effect
  * never writes state. The payload itself is memoised on the record's own
  * identity, so a parent that rebuilds its array on every render costs nothing.
+ *
+ * **The world upgrades in place, exactly once.** The bundled 1:110m cut is in
+ * the bundle, so the first frame is never blank and never waits; the 1:50m cut
+ * is fetched on mount and swapped in with a single `setData` when it lands. Both
+ * payloads promote the same string ids, and MapLibre's feature state lives on
+ * the source cache rather than on the tiles, so the swap keeps whatever the
+ * pointer and the selection were lighting. A fetch that fails or never returns
+ * is not a state anybody is shown: the map stays on the bundled world, complete
+ * and fully interactive, and nothing is logged. The upgrade rides the same data
+ * key the traveller's record does — see {@link payloadKey} — so the source can
+ * never be handed a collection it is already carrying, and the collection is
+ * memoised across style epochs so a theme switch re-adds the source from the
+ * payload it already built rather than rebuilding 237 features to hand back the
+ * same world in different colours.
  *
  * **Insertion depth is per style, and both anchors matter.** See
  * {@link INSERT_ANCHORS}: under the labels on the vector basemap, under the
@@ -246,21 +355,28 @@ export function VisitedCountries({
 }: VisitedCountriesProps) {
   const { map, ready, styleEpoch, theme } = useMapContext()
   const palette = mapPalette(theme)
+  const detail = useCountryDetail()
 
-  // The record as a value, so the payload is rebuilt when the traveller's list
-  // really changes rather than every time the screen around it re-renders.
-  const dataKey = visitKey(visits)
+  // The world and the record as one value, so the payload is rebuilt when the
+  // traveller's list really changes — or when the finer cut lands — rather than
+  // every time the screen around it re-renders. Neither the theme nor the style
+  // epoch is in it, which is what keeps a light/dark toggle from re-parsing a
+  // payload it already has.
+  const dataKey = `${payloadKey(detail)}|${visitKey(visits)}`
   // Keyed on that string rather than on the array's reference: a caller maps its
   // rows into this shape inline, so the reference is new on every render while
   // the contents change on a trip. The key is a complete serialisation of the
   // two fields the payload reads, so nothing can change behind it, and the array
   // is reached through a ref written in the same render — which keeps the
   // dependency list exactly the value the payload is memoised on, rather than a
-  // reference that would rebuild 175 features per keystroke elsewhere on screen.
+  // reference that would rebuild every feature per keystroke elsewhere on screen.
   const visitsRef = React.useRef(visits)
   visitsRef.current = visits
+  const detailRef = React.useRef(detail)
+  detailRef.current = detail
   const collection = React.useMemo(
-    () => visitedCollection(visitsRef.current),
+    () =>
+      visitedCollection(worldFeatures(detailRef.current), visitsRef.current),
     [dataKey],
   )
   const collectionRef = React.useRef(collection)
@@ -284,13 +400,13 @@ export function VisitedCountries({
     if (map.getSource(VISITED_COUNTRY_SOURCE_ID) === undefined) {
       // Spread, never the frozen object itself — see the note above.
       map.addSource(VISITED_COUNTRY_SOURCE_ID, {
-        ...countrySource(),
+        ...payloadSource(detailRef.current),
         data: collectionRef.current,
       })
-      // The source went in carrying the current record, so the data effect below
-      // has nothing to do until that record changes. Without this the layer would
-      // re-tile 175 MultiPolygons immediately after adding them, once on mount
-      // and again on every theme switch.
+      // The source went in carrying the current world *and* the current record,
+      // so the data effect below has nothing to do until one of them changes.
+      // Without this the layer would re-tile every country immediately after
+      // adding them, once on mount and again on every theme switch.
       appliedKeyRef.current = dataKeyRef.current
     }
 
@@ -361,11 +477,20 @@ export function VisitedCountries({
 
   React.useEffect(() => {
     if (map === null || !ready) return
+    // The one guard that keeps the same collection from being tiled twice: the
+    // layer effect above records what it added the source with, so a style epoch
+    // that re-adds the finer cut and a render that merely re-ran both stop here.
     if (appliedKeyRef.current === dataKey) return
     const source = map.getSource(VISITED_COUNTRY_SOURCE_ID)
     if (source === undefined) return
     // The narrowest possible cast: MapLibre types `getSource` as the union of
     // every source kind, and only the GeoJSON one carries `setData`.
+    //
+    // This is also the swap to the finer cut, and it is a `setData` rather than
+    // a re-added source because feature state is held on the source cache and
+    // re-initialised onto every tile as it reloads. Re-adding would drop the
+    // hover and the selection; setting the data keeps both, because the ids are
+    // the same ISO codes in both payloads.
     ;(source as GeoJSONSource).setData(collectionRef.current)
     appliedKeyRef.current = dataKey
   }, [dataKey, map, palette, ready, styleEpoch])
@@ -586,13 +711,19 @@ function visitKey(visits: ReadonlyArray<MapVisitedCountry>): string {
 }
 
 /**
- * The bundled world, with the traveller's record folded into its properties.
+ * The world, with the traveller's record folded into its properties.
+ *
+ * Takes the payload rather than reaching for it, so the caller's memo key and
+ * the cut being built are the same decision in one place — and so a swap to the
+ * finer cut cannot half-happen.
  *
  * The geometry arrays are handed straight through by reference: they are frozen
- * and shared with the ground underlay, so this view costs 175 small objects
- * rather than a second copy of 8,937 coordinate pairs.
+ * and, for the bundled cut, shared with the ground underlay, so this view costs
+ * one small object per country rather than a second copy of every coordinate
+ * pair — 50,413 of them once the finer cut has landed.
  */
 function visitedCollection(
+  world: CountryFeatureCollection,
   visits: ReadonlyArray<MapVisitedCountry>,
 ): VisitedCountryFeatureCollection {
   const now = new Date()
@@ -606,7 +737,7 @@ function visitedCollection(
 
   return {
     type: 'FeatureCollection',
-    features: countryFeatures().features.map((feature) => {
+    features: world.features.map((feature) => {
       const ramp = ramps.get(feature.properties.code)
       return {
         type: 'Feature',
@@ -627,8 +758,10 @@ function visitedCollection(
  *
  * `queryRenderedFeatures` returns one entry per tile a feature intersects and
  * one per world copy on screen, so a single country answers three or four times
- * at atlas zoom. Anything that counts, iterates or toggles the raw array is
- * counting renderings rather than countries. Order is preserved because it is
+ * at atlas zoom — and more once the finer cut hands France its overseas
+ * départements, because one country then spans tiles on both sides of the
+ * Atlantic. Anything that counts, iterates or toggles the raw array is counting
+ * renderings rather than countries. Order is preserved because it is
  * the tie-break: MapLibre answers topmost first, so two countries whose
  * simplified outlines overlap resolve to the one drawn last.
  */

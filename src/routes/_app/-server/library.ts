@@ -7,6 +7,9 @@ import { z } from 'zod'
 
 import {
   countCollectionPlacesByCountry,
+  countTripsByCountry,
+  countVisitedPlacesByCountry,
+  countryTravelFactsLookup,
   createCollection,
   createJourney,
   ensurePlan,
@@ -181,13 +184,58 @@ export interface AtlasPayload {
     readonly continent: string
     readonly countryCount: number
   }>
+  /**
+   * One row per country the traveller has recorded, carrying both readings of
+   * "how much of this country is in the record".
+   *
+   * The two must not be confused, and the field names are the whole defence
+   * against confusing them. `visitCount` is a tally: `markCountryVisited` adds
+   * one every time a visit is recorded, by a trip, a ticked-off bucket-list goal
+   * or the traveller's own hand, and it can therefore be larger *or* smaller
+   * than the number of journeys. `tripCount` counts trips - distinct trips in
+   * this workspace whose itinerary names the country and which have already
+   * begun. A card that printed the tally under the heading "trips" would be
+   * wrong about the one number a traveller can check from memory.
+   *
+   * The `-VisitedOn` pair and the `-TripOn` pair are the same distinction in
+   * dates: the first is when a visit was recorded, the second is when the trips
+   * behind it actually started, and the card prints the second as months.
+   */
   readonly countries: ReadonlyArray<{
     readonly countryCode: string
     readonly continent: string | null
     readonly firstVisitedOn: string | null
     readonly lastVisitedOn: string | null
+    /** Recorded visits - the tally, not a journey count. */
     readonly visitCount: number
     readonly note: string | null
+    /** Trips that have started and name this country. */
+    readonly tripCount: number
+    /** Saved places inside it that the traveller has ticked off as seen. */
+    readonly visitedPlaceCount: number
+    /** The start date of the earliest of those trips, `YYYY-MM-DD`. */
+    readonly firstTripOn: string | null
+    /** The start date of the latest of those trips, `YYYY-MM-DD`. */
+    readonly lastTripOn: string | null
+  }>
+  /**
+   * Every country the bucket list names, whichever end of the list it sits at.
+   *
+   * `bucketList` below is capped, and a cap is fine for a panel that shows the
+   * head of a list - but it is not fine for the question "is this country
+   * already on it?", which the map asks about whatever country is under the
+   * pointer and which must not answer "no" merely because the entry is row
+   * forty-one. This array is capped by the world instead: one row per country,
+   * never more than there are countries, and about twenty bytes each.
+   *
+   * `itemId` is the entry a caller would take back off the list, chosen the way
+   * `atlasCountryState` chooses it - the live aspiration in front of an
+   * already-achieved one, and the lowest id between rivals, so both agree.
+   */
+  readonly bucketListCountries: ReadonlyArray<{
+    readonly countryCode: string
+    readonly itemId: string
+    readonly isAchieved: boolean
   }>
   /**
    * The head of the bucket list, at most {@link ATLAS_BUCKET_LIST_LIMIT} rows.
@@ -237,37 +285,115 @@ export const WORLD_COUNTRY_COUNT = 195
  */
 export const ATLAS_BUCKET_LIST_LIMIT = 40
 
+/**
+ * The bucket-list entry a country would be taken off by, over the whole list.
+ *
+ * The same choice `atlasCountryState` makes when a handler answers for one
+ * country: a live aspiration in front of one already ticked off, and the lowest
+ * id between two rivals, because `bucket_list_items` carries no unique index and
+ * a data set can hold both. Deciding it the same way in both places is what
+ * stops the map and the write path disagreeing about which row they mean.
+ */
+function bucketListCountriesOf(
+  items: ReadonlyArray<{
+    readonly id: string
+    readonly kind: string
+    readonly countryCode: string | null
+    readonly isAchieved: boolean
+  }>,
+): Array<{ countryCode: string; itemId: string; isAchieved: boolean }> {
+  const byCode = new Map<string, { id: string; isAchieved: boolean }>()
+
+  for (const row of items) {
+    if (row.kind !== 'country' || row.countryCode === null) {
+      continue
+    }
+    const code = row.countryCode.toUpperCase()
+    const held = byCode.get(code)
+    const wins =
+      held === undefined ||
+      (held.isAchieved && !row.isAchieved) ||
+      (held.isAchieved === row.isAchieved && row.id < held.id)
+    if (wins) {
+      byCode.set(code, { id: row.id, isAchieved: row.isAchieved })
+    }
+  }
+
+  return [...byCode]
+    .map(([countryCode, entry]) => ({
+      countryCode,
+      itemId: entry.id,
+      isAchieved: entry.isAchieved,
+    }))
+    .sort((left, right) => left.countryCode.localeCompare(right.countryCode))
+}
+
 export const loadAtlas = createServerFn({ method: 'GET' }).handler(
   async (): Promise<AtlasPayload> => {
     const scope = await appScope()
     const userId = scope.ctx.userId
+    const today = todayIso()
 
-    // Four reads, and every one of them is on screen. A fifth - the six most
-    // recent trips - travelled in this payload and was rendered by nothing after
-    // the atlas became a map; on Workers each query is a subrequest and every
-    // field here is bytes dehydrated into the SSR document, so an unread one is
-    // paid for on every request. `listPastTrips` itself stays: the journey
-    // loader below still asks for it.
-    const [summary, countries, bucket, stats] = await Promise.all([
-      getAtlasSummary(scope, userId),
-      listVisitedCountries(scope, userId),
-      listBucketList(scope, userId),
-      listTravelStats(scope, userId),
-    ])
+    // Six reads, in one `Promise.all`, and every one of them is on screen. A
+    // seventh - the six most recent trips - travelled in this payload and was
+    // rendered by nothing after the atlas became a map; on Workers each query is
+    // a subrequest and every field here is bytes dehydrated into the SSR
+    // document, so an unread one is paid for on every request. `listPastTrips`
+    // itself stays: the journey loader below still asks for it.
+    //
+    // The two new ones are the per-country aggregates, and they are worth both
+    // the subrequest and the bytes. Each is a single grouped statement over the
+    // whole workspace - not one per country - so the pair costs two round trips
+    // that overlap the four already in flight, and the document's D1 budget goes
+    // from four to six against the eight this Worker allows itself.
+    //
+    // The bytes are four small fields per *recorded* country: two integers and
+    // two `YYYY-MM-DD` days, on a list whose length is the number of countries a
+    // person has been to. That is well under a kilobyte for a well-travelled
+    // traveller, and it buys the map its whole reason for existing - a country's
+    // figures are already in the document when the pointer reaches it, so
+    // hovering costs no request, works offline after first paint, and cannot
+    // flash a skeleton over a shape the reader is already looking at. Fetching
+    // them per country instead would be one RPC per hover, which on a map is a
+    // request per pointer crossing.
+    //
+    // `today` is read once, from the request's own clock, and handed to the trip
+    // aggregate: every country on the screen is then counted against the same
+    // day, and a development request can pin that day so the visual gate
+    // photographs the same figures on every calendar date.
+    const [summary, countries, bucket, stats, tripsByCountry, placesByCountry] =
+      await Promise.all([
+        getAtlasSummary(scope, userId),
+        listVisitedCountries(scope, userId),
+        listBucketList(scope, userId),
+        listTravelStats(scope, userId),
+        countTripsByCountry(scope, { until: today }),
+        countVisitedPlacesByCountry(scope),
+      ])
+
+    const factsFor = countryTravelFactsLookup(tripsByCountry, placesByCountry)
 
     return {
       countryCount: summary.countryCount,
       regionCount: summary.regionCount,
       visitCount: summary.visitCount,
       byContinent: summary.byContinent,
-      countries: countries.map((row) => ({
-        countryCode: row.countryCode,
-        continent: row.continent,
-        firstVisitedOn: row.firstVisitedOn,
-        lastVisitedOn: row.lastVisitedOn,
-        visitCount: row.visitCount,
-        note: row.note,
-      })),
+      countries: countries.map((row) => {
+        const facts = factsFor(row.countryCode)
+        return {
+          countryCode: row.countryCode,
+          continent: row.continent,
+          firstVisitedOn: row.firstVisitedOn,
+          lastVisitedOn: row.lastVisitedOn,
+          visitCount: row.visitCount,
+          note: row.note,
+          tripCount: facts.tripCount,
+          visitedPlaceCount: facts.visitedPlaceCount,
+          firstTripOn: facts.firstTripOn,
+          lastTripOn: facts.lastTripOn,
+        }
+      }),
+      bucketListCountries: bucketListCountriesOf(bucket),
       // Sliced, and reduced to the six fields the panel prints: `achievedOn` and
       // the item's own note were dehydrated into every document and rendered by
       // nothing.

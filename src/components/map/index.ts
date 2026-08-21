@@ -84,6 +84,15 @@ export type { CoverageNoticeProps } from './coverage-notice'
 /* ---------------------------------------------------------------- overlays */
 export { DayRoutes, ROUTE_LAYER_IDS, ROUTE_SOURCE_ID } from './day-routes'
 export type { DayRoutesProps } from './day-routes'
+/**
+ * `VisitedCountries` draws the bundled 1:110m outlines on its first frame and
+ * upgrades itself to the 1:50m cut — `loadCountryDetail()` from `#/lib/map` —
+ * as soon as that asset arrives. Two answers a screen may already have rendered
+ * move with it: `hasCountryOutline()` starts saying yes to Singapore, Malta and
+ * the Maldives, and `countryBounds()` grows to hold a country's offshore
+ * territories. Anything that renders either should read it through
+ * `subscribeCountryDetail()` rather than once.
+ */
 export {
   VisitedCountries,
   VISITED_COUNTRY_LAYER_IDS,

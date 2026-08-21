@@ -8,7 +8,20 @@
  * the underlying trips, days, places and expenses.
  */
 
-import { and, asc, count, desc, eq, gte, inArray, lte, sum } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableName,
+  gte,
+  inArray,
+  isNotNull,
+  lte,
+  sql,
+  sum,
+} from 'drizzle-orm'
 import { z } from 'zod'
 import {
   BUCKET_LIST_KINDS,
@@ -300,6 +313,212 @@ export async function achieveBucketListItem(
 
 export async function deleteBucketListItem(scope: TenantScope, itemId: string): Promise<void> {
   await bucketListRepository.requireRemove(scope, itemId)
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Per-country facts
+ *
+ * `visited_countries` answers *whether* a traveller has been somewhere and how many times it was
+ * recorded. It cannot answer what the atlas card prints next to a country - how many trips went
+ * there, how many places inside it were actually seen, and the months the first and the last of
+ * those trips fell in. Those live in `trips` and `places`, and both reads below are shaped for the
+ * one caller that needs them: the atlas loader, which wants the whole map's worth of figures in a
+ * single statement each, not one statement per country.
+ * ---------------------------------------------------------------------------------------------- */
+
+/** What the workspace's trips say about one country. Every field is named for what it counts. */
+export interface CountryTripTally {
+  /** ISO 3166-1 alpha-2, upper-cased. */
+  readonly countryCode: string
+  /** Distinct trips whose declared countries include this one. Never the visit tally. */
+  readonly tripCount: number
+  /** The earliest of those trips' start dates, `YYYY-MM-DD`. */
+  readonly firstTripOn: string | null
+  /** The latest of those trips' start dates, `YYYY-MM-DD`. */
+  readonly lastTripOn: string | null
+}
+
+export interface CountryTripTallyOptions {
+  /**
+   * The last day a trip may have started on and still be counted, `YYYY-MM-DD`.
+   *
+   * Always the caller's "today", which on this Worker is one decision per request
+   * (`serverToday()`), so a screen cannot count one country against one day and its neighbour
+   * against another.
+   */
+  readonly until: string
+}
+
+/**
+ * Trips per country, with the months the record spans - one grouped statement for the whole map.
+ *
+ * ## Only trips that have happened
+ *
+ * A country's card is a record of travel, so a trip that has not begun is not part of it: a
+ * fortnight in Japan booked for October is not a trip the traveller has taken, and printing its
+ * month under "last trip" on a card about somewhere they went in 2019 states something false in
+ * the plainest possible way. So the population is trips whose `start_date` is set and is not after
+ * `until`. An undated draft is excluded by the same rule - it names no month, so it can neither
+ * be dated nor be said to have happened.
+ *
+ * ## The workspace's trips, not the member's
+ *
+ * `trips` is organisation-scoped and {@link recomputeTravelStats} already counts every one of them
+ * for a traveller's stat row. A per-country figure filtered by trip membership would not sum to
+ * the trip count the same screen prints above the map, and two figures on one panel that disagree
+ * read as a bug rather than as a distinction. So this counts the workspace's trips, and the
+ * traveller-scoped half of the atlas stays where it already is, in `visited_countries`.
+ *
+ * ## One pass over `trips`
+ *
+ * `trips.country_codes` is a JSON array, which has no index and cannot be joined against. The
+ * shape that would be obvious - ask each of the ~175 codes on the map whether the array contains
+ * it - is 175 statements, or one statement that re-reads the column 175 times. `json_each` instead
+ * expands the array *once per trip row*, turning the column into rows that `GROUP BY` can work on,
+ * so the whole map is answered by one pass over `trips` instead of one pass per country.
+ *
+ * The `json_valid` guard is not decoration: `json_each` raises "malformed JSON" and fails the
+ * whole statement on a single bad row, which would take the atlas screen down over one trip
+ * imported by hand. A row that is not valid JSON is read as an empty array and drops out of the
+ * join, exactly as `NULL` does. Codes are upper-cased in SQL because that is also the grouping
+ * key, and a row stored as `pt` must land on `PT` rather than beside it.
+ */
+export async function countTripsByCountry(
+  scope: TenantScope,
+  options: CountryTripTallyOptions,
+): Promise<Array<CountryTripTally>> {
+  const until = dateSchema.parse(options.until)
+  const countryCode = sql<string>`upper(trip_country.value)`
+  // Qualified by hand: `json_each` exposes an `id` column of its own, so the unqualified `"id"`
+  // Drizzle emits for a single-table field list is ambiguous and SQLite refuses the statement.
+  const tripsTable = sql.identifier(getTableName(trips))
+  const tripId = sql`${tripsTable}.${sql.identifier(trips.id.name)}`
+  const tripStart = sql`${tripsTable}.${sql.identifier(trips.startDate.name)}`
+
+  const rows = await scope.db
+    .select({
+      countryCode,
+      tripCount: sql<number>`count(distinct ${tripId})`,
+      firstTripOn: sql<string | null>`min(${tripStart})`,
+      lastTripOn: sql<string | null>`max(${tripStart})`,
+    })
+    .from(
+      sql`${trips}, json_each(case when json_valid(${trips.countryCodes}) then ${trips.countryCodes} else '[]' end) as trip_country`,
+    )
+    .where(
+      tenantFilter(scope, trips, isNotNull(trips.startDate), lte(trips.startDate, until)),
+    )
+    .groupBy(countryCode)
+    .orderBy(countryCode)
+
+  return rows.map((row) => ({
+    countryCode: row.countryCode,
+    tripCount: Number(row.tripCount),
+    firstTripOn: row.firstTripOn,
+    lastTripOn: row.lastTripOn,
+  }))
+}
+
+/** How many saved places inside one country the traveller has ticked off as seen. */
+export interface CountryPlaceTally {
+  readonly countryCode: string
+  readonly visitedPlaceCount: number
+}
+
+/**
+ * Visited places per country - one grouped statement, straight down `places_org_country_idx`.
+ *
+ * `is_visited` is the traveller's own assertion that they stood there, which is the figure a card
+ * about where someone has been should carry. Counting every saved place instead would put the
+ * twenty restaurants shortlisted for a trip that has not left yet on a card whose other three
+ * figures are all about the past.
+ *
+ * The statement filters and groups on `country_code` under a fixed `organization_id`, which is
+ * `places_org_country_idx` exactly; `is_visited` is a residual test on the rows the index already
+ * narrowed to. Case is folded in JavaScript rather than in SQL on purpose: `upper(country_code)` as
+ * the grouping key would throw the index's ordering away and sort every place in the workspace,
+ * and the column is written through `countryCodeSchema`, which accepts nothing but upper case. The
+ * fold is there for rows written before that rule was.
+ */
+export async function countVisitedPlacesByCountry(
+  scope: TenantScope,
+): Promise<Array<CountryPlaceTally>> {
+  const rows = await scope.db
+    .select({ countryCode: places.countryCode, value: count() })
+    .from(places)
+    .where(
+      tenantFilter(scope, places, isNotNull(places.countryCode), eq(places.isVisited, true)),
+    )
+    .groupBy(places.countryCode)
+    .orderBy(places.countryCode)
+
+  const tally = new Map<string, number>()
+  for (const row of rows) {
+    if (row.countryCode === null) {
+      continue
+    }
+    const code = row.countryCode.toUpperCase()
+    tally.set(code, (tally.get(code) ?? 0) + row.value)
+  }
+
+  return [...tally]
+    .map(([countryCode, visitedPlaceCount]) => ({ countryCode, visitedPlaceCount }))
+    .sort((left, right) => left.countryCode.localeCompare(right.countryCode))
+}
+
+/** Everything the two aggregates above know about one country, in one row. */
+export interface CountryTravelFacts {
+  readonly countryCode: string
+  readonly tripCount: number
+  readonly visitedPlaceCount: number
+  readonly firstTripOn: string | null
+  readonly lastTripOn: string | null
+}
+
+/**
+ * Both aggregates folded into one reader, keyed by upper-case country code.
+ *
+ * A `GROUP BY` only names groups it found rows for, so a country the traveller marked visited by
+ * hand - no trip behind it, nothing ticked off inside it - appears in neither result. That absence
+ * is not the same thing as an unknown: the honest answer for it is zero trips, zero places and no
+ * months, and a caller that has to write `?? 0` four times per country will eventually write it
+ * three times. So the reader answers for every code that is asked, and the zeroed row is a
+ * deliberate value rather than a hole.
+ */
+export function countryTravelFactsLookup(
+  tripTallies: ReadonlyArray<CountryTripTally>,
+  placeTallies: ReadonlyArray<CountryPlaceTally>,
+): (countryCode: string) => CountryTravelFacts {
+  const byCode = new Map<string, CountryTravelFacts>()
+
+  const nothingRecorded = (countryCode: string): CountryTravelFacts => ({
+    countryCode,
+    tripCount: 0,
+    visitedPlaceCount: 0,
+    firstTripOn: null,
+    lastTripOn: null,
+  })
+
+  const upsert = (countryCode: string, patch: Partial<CountryTravelFacts>): void => {
+    const code = countryCode.trim().toUpperCase()
+    byCode.set(code, { ...(byCode.get(code) ?? nothingRecorded(code)), ...patch })
+  }
+
+  for (const row of tripTallies) {
+    upsert(row.countryCode, {
+      tripCount: row.tripCount,
+      firstTripOn: row.firstTripOn,
+      lastTripOn: row.lastTripOn,
+    })
+  }
+  for (const row of placeTallies) {
+    upsert(row.countryCode, { visitedPlaceCount: row.visitedPlaceCount })
+  }
+
+  return (countryCode) => {
+    const code = countryCode.trim().toUpperCase()
+    return byCode.get(code) ?? nothingRecorded(code)
+  }
 }
 
 /* -------------------------------------------------------------------------------------------------

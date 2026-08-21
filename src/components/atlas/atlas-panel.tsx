@@ -43,9 +43,11 @@ import {
 } from '#/lib/format'
 import { AtlasLegend, AtlasLegendSkeleton } from './atlas-legend'
 import { CountriesList, CountriesListSkeleton } from './countries-list'
+import { CountryActions } from './country-actions'
 import { CountryRecord, CountryRecordSkeleton } from './country-record'
 
 import type { CountriesListCountry } from './countries-list'
+import type { CountryActionsGoal, CountryActionsVisit } from './country-actions'
 
 /**
  * The atlas's floating panel: everything the map cannot say, over the map.
@@ -499,6 +501,44 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
             (row) => row.countryCode.trim().toUpperCase() === selectedKey,
           ) ?? null)
 
+    /** The action block's half of the record, in the shape it asks for. */
+    const visitFacts: CountryActionsVisit | null =
+      record === null
+        ? null
+        : {
+            firstVisitedOn: record.firstVisitedOn,
+            lastVisitedOn: record.lastVisitedOn,
+            visitCount: record.visitCount,
+            note: record.note,
+          }
+
+    /**
+     * The selected country's entry on the bucket list, read off the rows the
+     * panel was handed.
+     *
+     * Those rows can be the head of a longer list — see {@link
+     * AtlasPanelProps.bucketTotal} — so a country sitting past the cut reads as
+     * "not on the list" here. The write behind the button is idempotent against
+     * exactly that: adding a country that already has an entry returns the
+     * existing one rather than a second row, and the invalidation that follows
+     * brings the true state back into the panel.
+     */
+    const bucketGoal: CountryActionsGoal | null = React.useMemo(() => {
+      if (selectedKey === null) return null
+      const row = bucketList.find(
+        (entry) =>
+          entry.kind === 'country' &&
+          (entry.countryCode ?? '').trim().toUpperCase() === selectedKey,
+      )
+      return row === undefined
+        ? null
+        : {
+            id: row.id,
+            targetYear: row.targetYear,
+            isAchieved: row.isAchieved,
+          }
+    }, [bucketList, selectedKey])
+
     return (
       <GlassPanel
         ref={ref}
@@ -667,39 +707,61 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                   )}
 
                   {record === null && selectedKey !== null ? (
-                    <article
-                      aria-labelledby={unvisitedId}
-                      data-country={selectedKey}
-                      className={layout.unvisited}
+                    // Scrolled for the same reason the record beside it is: the
+                    // shelf is a fixed box, and the card plus its two actions is
+                    // taller than the drawer a phone opens. Keyed by the country
+                    // so choosing another one starts at the top of it rather
+                    // than wherever the last one was left.
+                    <ScrollArea
+                      key={selectedKey}
+                      axis="vertical"
+                      className="min-h-0 flex-1"
                     >
-                      <div className="flex items-start gap-3">
-                        <span
-                          aria-hidden="true"
-                          className={layout.unvisitedFlag}
-                        >
-                          {countryFlag(selectedKey)}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <h3
-                            id={unvisitedId}
-                            className="text-balance wrap-anywhere text-subtitle font-semibold text-ink"
+                      <article
+                        aria-labelledby={unvisitedId}
+                        data-country={selectedKey}
+                        className={layout.unvisited}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span
+                            aria-hidden="true"
+                            className={layout.unvisitedFlag}
                           >
-                            {countryName(selectedKey)}
-                          </h3>
-                          <p className="mt-1 text-caption font-semibold tracking-wide tabular-nums text-ink-3">
-                            {selectedKey}
-                          </p>
+                            {countryFlag(selectedKey)}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <h3
+                              id={unvisitedId}
+                              className="text-balance wrap-anywhere text-subtitle font-semibold text-ink"
+                            >
+                              {countryName(selectedKey)}
+                            </h3>
+                            <p className="mt-1 text-caption font-semibold tracking-wide tabular-nums text-ink-3">
+                              {selectedKey}
+                            </p>
+                          </div>
                         </div>
-                        <Badge tone="neutral" className="shrink-0">
-                          Not visited
-                        </Badge>
-                      </div>
-                      <p className="mt-4 text-body text-ink-2">
-                        Nothing is recorded here yet. Mark a visit and it joins
-                        your atlas with its first arrival, its latest one and
-                        the tally.
-                      </p>
-                    </article>
+                        {/* One line, not three. The state and what each write
+                            does are stated by the block below, where the
+                            controls that change them are; saying it twice
+                            pushed the actions off the bottom of the shelf. */}
+                        <p className="mt-3 text-body text-ink-2">
+                          Nothing is recorded here yet.
+                        </p>
+
+                        {/* Every fact the map can show is reachable from the
+                            shelf, and so is every action: this is the keyboard
+                            and touch route to both writes. */}
+                        <CountryActions
+                          key={selectedKey}
+                          countryCode={selectedKey}
+                          visit={null}
+                          bucketGoal={bucketGoal}
+                          headingLevel={4}
+                          className="mt-4 border-t border-edge-faint pt-4"
+                        />
+                      </article>
+                    </ScrollArea>
                   ) : record === null ? (
                     <EmptyState
                       variant="filled"
@@ -718,9 +780,12 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       }
                     />
                   ) : (
-                    <ScrollArea axis="vertical" className="min-h-0 flex-1">
+                    <ScrollArea
+                      key={record.countryCode}
+                      axis="vertical"
+                      className="min-h-0 flex-1"
+                    >
                       <CountryRecord
-                        key={record.countryCode}
                         countryCode={record.countryCode}
                         continent={record.continent}
                         firstVisitedOn={record.firstVisitedOn}
@@ -729,6 +794,19 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                         note={record.note}
                         hasOutline={record.hasOutline}
                         headingLevel={3}
+                      />
+
+                      {/* Under the record rather than inside it: the record is
+                          what is true, and this is what a reader can change
+                          about it. A visited country needs the inverse of both
+                          writes as much as an unvisited one needs the writes. */}
+                      <CountryActions
+                        key={`${record.countryCode}-actions`}
+                        countryCode={record.countryCode}
+                        visit={visitFacts}
+                        bucketGoal={bucketGoal}
+                        headingLevel={4}
+                        className="mt-3"
                       />
                     </ScrollArea>
                   )}

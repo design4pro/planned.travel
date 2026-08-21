@@ -3,7 +3,7 @@
 // of which need the pointer-capture and scroll stubs jsdom does not implement.
 import '#/components/ui/__tests__/test-env'
 
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -12,6 +12,39 @@ import { AtlasPanel, AtlasPanelSkeleton } from '../atlas-panel'
 
 import type { AtlasPanelProps } from '../atlas-panel'
 import type { CountriesListCountry } from '../countries-list'
+
+/**
+ * The country pane now carries the two atlas writes, so the panel pulls in the
+ * server-function module and the router hook behind `useAction`. Both are stood
+ * in for here: the real module reaches `cloudflare:workers` through the request
+ * scope, which has no meaning in jsdom, and the real `useRouter` needs a router
+ * above it. What the writes *do* is `country-actions.test.tsx`'s subject; this
+ * file only cares that the pane offers them.
+ */
+const atlas = vi.hoisted(() => ({
+  mark: vi.fn(),
+  unmark: vi.fn(),
+  add: vi.fn(),
+  drop: vi.fn(),
+}))
+const router = vi.hoisted(() => ({ invalidate: vi.fn() }))
+
+vi.mock('#/server/fns/atlas', () => ({
+  markCountryVisitedFn: atlas.mark,
+  unmarkCountryVisitedFn: atlas.unmark,
+  addCountryToBucketListFn: atlas.add,
+  removeCountryFromBucketListFn: atlas.drop,
+}))
+vi.mock('@tanstack/react-router', () => ({ useRouter: () => router }))
+
+beforeEach(() => {
+  // `restoreMocks` reaches spies, not the plain `vi.fn()`s held above.
+  vi.clearAllMocks()
+  router.invalidate.mockResolvedValue(undefined)
+  for (const fn of [atlas.mark, atlas.unmark, atlas.add, atlas.drop]) {
+    fn.mockResolvedValue(undefined)
+  }
+})
 
 const FRANCE: CountriesListCountry = {
   countryCode: 'FR',
@@ -328,6 +361,55 @@ describe('the country section', () => {
     expect(card.textContent).toContain('Not visited')
     expect(card.textContent).toContain('Nothing is recorded here yet')
     expect(screen.queryByText('Pick a country')).toBeNull()
+  })
+
+  /**
+   * The map's hover and click surfaces are pointer-only by construction. The
+   * shelf is the route a keyboard and a phone take to the same two writes, so
+   * the pane carries them in both of its states.
+   */
+  it('carries both writes inside the card for a country off the record', async () => {
+    const user = userEvent.setup()
+    panel({ tab: 'country', selectedCode: 'NZ' })
+
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    expect(card.textContent).toContain('Not visited')
+    expect(card.textContent).toContain('Not on the list')
+
+    const mark = within(card).getByRole('button', { name: 'Mark visited' })
+    await user.click(mark)
+    expect(atlas.mark).toHaveBeenCalledWith({ data: { countryCode: 'NZ' } })
+  })
+
+  it('offers the inverse of both writes beside a country on the record', () => {
+    panel({
+      tab: 'country',
+      selectedCode: 'FR',
+      bucketList: [
+        {
+          id: 'goal-fr',
+          name: 'France',
+          kind: 'country',
+          countryCode: 'FR',
+          targetYear: 2027,
+          isAchieved: false,
+        },
+      ],
+    })
+
+    const block = document.querySelector<HTMLElement>(
+      '[data-part="country-actions"][data-country="FR"]',
+    )
+    expect(block?.textContent).toContain('Visited')
+    expect(block?.textContent).toContain('On the bucket list')
+    expect(
+      screen.getByRole('button', { name: 'Remove France from your atlas' }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('button', {
+        name: 'Remove France from your bucket list',
+      }),
+    ).toBeTruthy()
   })
 
   it('lists every country beside the record and reports a choice', async () => {

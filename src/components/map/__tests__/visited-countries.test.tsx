@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import * as React from 'react'
-import { describe, expect, it, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, render } from '@testing-library/react'
 
 import {
   COUNTRY_CODE_PROPERTY,
+  COUNTRY_DETAIL_URL,
   COUNTRY_SOURCE_MAX_ZOOM,
   UNMAPPED_COUNTRY_CODES,
   countryFeatures,
@@ -21,6 +25,7 @@ import {
   VisitedCountries,
 } from '../visited-countries'
 
+import type { countryDetail } from '#/lib/map/countries'
 import type { MapContextValue, MapLibreMap } from '../map-context'
 import type { VisitedCountriesProps } from '../visited-countries'
 import type { MapVisitedCountry } from '../types'
@@ -268,6 +273,141 @@ function layerOf(map: FakeMap, id: string): LayerRecord {
   if (layer === undefined) throw new Error(`the ${id} layer was never added`)
   return layer
 }
+
+/* ------------------------------------------------------------------ network */
+
+/** The repository root, resolved from this file so the run directory is free. */
+const REPO_ROOT = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../..',
+)
+
+/**
+ * The finer cut as it is committed, not as a fixture.
+ *
+ * The swap is only worth testing against the bytes the browser will actually be
+ * served: a hand-written stub would agree with whatever the decoder does, and
+ * the whole point of the assertions below is that France really does arrive
+ * carrying Guadeloupe and Réunion on one feature.
+ */
+const DETAIL_ASSET = readFileSync(
+  resolve(REPO_ROOT, `public${COUNTRY_DETAIL_URL}`),
+  'utf8',
+)
+
+/**
+ * Replaces the network for the duration of one test, and records what was asked
+ * for.
+ *
+ * The layer reaches the asset through `loadCountryDetail()`'s default fetcher —
+ * there is no prop to inject one through, because a component that took its own
+ * transport would be a component a screen could wire up wrongly. So the global
+ * is what a test controls, which is also the only honest stand-in for "the
+ * network did not answer".
+ */
+function stubFetch(answer: (url: string) => Promise<Response>): Array<string> {
+  const asked: Array<string> = []
+  vi.stubGlobal('fetch', (url: string) => {
+    asked.push(url)
+    return answer(url)
+  })
+  return asked
+}
+
+/** A network that is simply not there, which is the default every test gets. */
+function offline(): Array<string> {
+  return stubFetch(() => Promise.reject(new Error('no network in this test')))
+}
+
+/** A network that serves the committed asset. */
+function serveDetail(): Array<string> {
+  return stubFetch(() => Promise.resolve(new Response(DETAIL_ASSET)))
+}
+
+/**
+ * Let the finer-cut request settle, and let React commit what it caused.
+ *
+ * A macrotask rather than a microtask flush: the request, the decode and the
+ * `useSyncExternalStore` notification are three separate turns, and draining the
+ * queue once would land between them.
+ */
+async function settleDetail(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve_) => {
+      setTimeout(resolve_, 0)
+    })
+  })
+}
+
+/** Every console channel a stray diagnostic could reach the reader through. */
+const CONSOLE_CHANNELS = ['debug', 'error', 'info', 'log', 'warn'] as const
+
+/** Silences the console and hands back everything it was asked to say. */
+function watchConsole(): () => Array<string> {
+  const said: Array<string> = []
+  for (const channel of CONSOLE_CHANNELS) {
+    vi.spyOn(console, channel).mockImplementation((...args: Array<unknown>) => {
+      said.push(`${channel}: ${args.map(String).join(' ')}`)
+    })
+  }
+  return () => said
+}
+
+/**
+ * The slice of `#/lib/map/countries` a fresh module instance is read through.
+ *
+ * Spelled out rather than taken wholesale, because naming the answers that move
+ * when the finer cut installs is the useful documentation — and because the
+ * repo forbids `typeof import()` annotations.
+ */
+interface FreshCountries {
+  readonly COUNTRY_DETAIL_URL: string
+  readonly countryDetail: typeof countryDetail
+  readonly countryFeatures: typeof countryFeatures
+  readonly hasCountryOutline: typeof hasCountryOutline
+}
+
+/** Every longitude one feature's geometry touches. */
+function longitudesOf(geometry: unknown): Array<number> {
+  const { coordinates } = geometry as {
+    coordinates: Array<Array<Array<[number, number]>>>
+  }
+  const found: Array<number> = []
+  for (const polygon of coordinates) {
+    for (const ring of polygon) {
+      for (const [lng] of ring) found.push(lng)
+    }
+  }
+  return found
+}
+
+/** How many rings one feature's geometry is made of. */
+function ringCount(geometry: unknown): number {
+  const { coordinates } = geometry as {
+    coordinates: Array<Array<Array<[number, number]>>>
+  }
+  let rings = 0
+  for (const polygon of coordinates) rings += polygon.length
+  return rings
+}
+
+/**
+ * What the finer-cut request was asked for, in the test currently running.
+ *
+ * Every test starts {@link offline}: the bundled world is the one this suite is
+ * mostly about, and a unit test that reaches a real origin is a unit test that
+ * fails on an aeroplane. The cases that want the upgrade turn the network on
+ * themselves.
+ */
+let detailRequests: Array<string> = []
+
+beforeEach(() => {
+  detailRequests = offline()
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('VisitedCountries', () => {
   it('adds the country source and its two layers, and draws no DOM of its own', () => {
@@ -809,5 +949,298 @@ describe('VisitedCountries', () => {
     // which MapLibre answers with an error event on the map.
     expect(map.featureStates).toHaveLength(written)
     expect(map.getSource(VISITED_COUNTRY_SOURCE_ID)).toBe(undefined)
+  })
+
+  it('draws the bundled world on the first frame, and asks for the finer cut', () => {
+    const map = new FakeMap()
+    render(tree(map, { visits: VISITS }))
+
+    // Synchronously, in the same commit as the mount: nothing has been fetched,
+    // nothing has been awaited, and the reader already has a complete world.
+    expect(featuresOf(sourceOf(map).data).size).toBe(
+      countryFeatures().features.length,
+    )
+    expect(sourceOf(map).setDataCalls).toBe(0)
+    expect(detailRequests).toEqual([COUNTRY_DETAIL_URL])
+  })
+
+  it('asks for the finer cut once, however many maps are on the page', () => {
+    render(tree(new FakeMap(), { visits: VISITS }))
+    render(tree(new FakeMap(), { visits: VISITS }))
+
+    // `loadCountryDetail` shares one request; a layer that fetched per mount
+    // would download 300 KB per map on a screen with two of them.
+    expect(detailRequests).toEqual([COUNTRY_DETAIL_URL])
+  })
+
+  it('stays a complete, working map when the finer outlines never arrive', async () => {
+    const map = new FakeMap()
+    const onSelect = vi.fn()
+    const onHoverChange = vi.fn()
+    const said = watchConsole()
+    render(tree(map, { visits: VISITS, onSelect, onHoverChange }))
+
+    await settleDetail()
+
+    // The layer is exactly what it was before the request failed: the bundled
+    // world, added once, never re-tiled.
+    expect(map.ops).toEqual([
+      { kind: 'addSource', id: VISITED_COUNTRY_SOURCE_ID },
+      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.fill },
+      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.outline },
+    ])
+    expect(featuresOf(sourceOf(map).data).size).toBe(
+      countryFeatures().features.length,
+    )
+    expect(sourceOf(map).setDataCalls).toBe(0)
+
+    map.hits = [{ id: 'FR' }]
+    map.emit('mousemove')
+    expect(onHoverChange).toHaveBeenLastCalledWith('FR')
+    expect(map.featureStates).toContainEqual({
+      source: VISITED_COUNTRY_SOURCE_ID,
+      id: 'FR',
+      state: { hover: true },
+    })
+    map.emit('click')
+    expect(onSelect).toHaveBeenCalledWith('FR')
+
+    // Nothing at all in the console. There is no repair a reader could carry
+    // out, the map in front of them is whole, and a screen that logs errors
+    // nobody can act on teaches everybody to ignore the ones they can.
+    expect(said()).toEqual([])
+  })
+
+  it('retries the finer cut on the next mount rather than caching the failure', async () => {
+    const { unmount } = render(tree(new FakeMap(), { visits: VISITS }))
+    await settleDetail()
+    unmount()
+
+    render(tree(new FakeMap(), { visits: VISITS }))
+    expect(detailRequests).toEqual([COUNTRY_DETAIL_URL, COUNTRY_DETAIL_URL])
+  })
+})
+
+/**
+ * The upgrade to the 1:50m cut.
+ *
+ * Installing the finer outlines is process-wide state in `#/lib/map/countries` —
+ * it is fetched once and stays installed for the life of the module, which is
+ * exactly what makes it cheap at runtime and leaky in a suite. So every case in
+ * here takes a module graph of its own through {@link freshLayer} and the block
+ * above keeps asserting about the bundled world it was always asserting about.
+ */
+describe('VisitedCountries and the finer cut', () => {
+  /** The component, the provider and the geometry, none of them shared. */
+  async function freshLayer(): Promise<{
+    readonly countries: FreshCountries
+    readonly draw: (
+      map: FakeMap,
+      props: VisitedCountriesProps,
+      overrides?: Partial<MapContextValue>,
+    ) => React.ReactElement
+  }> {
+    vi.resetModules()
+    const countries = await import('#/lib/map/countries')
+    const mapContext = await import('../map-context')
+    const layer = await import('../visited-countries')
+
+    return {
+      countries,
+      draw: (map, props, overrides = {}) => (
+        <mapContext.MapProvider value={context(map, overrides)}>
+          <layer.VisitedCountries {...props} />
+        </mapContext.MapProvider>
+      ),
+    }
+  }
+
+  it('replaces the bundled world with one setData, and never re-adds the source', async () => {
+    const { countries, draw } = await freshLayer()
+    detailRequests = serveDetail()
+    const map = new FakeMap()
+    render(draw(map, { visits: VISITS }))
+
+    const source = sourceOf(map)
+    const bundled = featuresOf(source.data).size
+    expect(bundled).toBe(countries.countryFeatures().features.length)
+
+    await settleDetail()
+
+    expect(detailRequests).toEqual([countries.COUNTRY_DETAIL_URL])
+    // One re-tile for the whole upgrade, and no source churn: the layers were
+    // added once, over a source that was added once and never taken away. A
+    // re-added source would have dropped every feature state hanging on it.
+    expect(source.setDataCalls).toBe(1)
+    expect(map.ops).toEqual([
+      { kind: 'addSource', id: VISITED_COUNTRY_SOURCE_ID },
+      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.fill },
+      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.outline },
+    ])
+
+    const finer = featuresOf(source.data)
+    expect(finer.size).toBe(countries.countryDetail()?.manifest.codes)
+    expect(finer.size).toBeGreaterThan(bundled)
+    // The traveller's record came across with it, unchanged.
+    expect(finer.get('FR')?.properties).toEqual({
+      code: 'FR',
+      visited: true,
+      ramp: 'visitedRecent',
+    })
+    expect(finer.get('DE')?.properties.visited).toBe(false)
+  })
+
+  it('fills a country the bundled cut could not draw at all', async () => {
+    const { countries, draw } = await freshLayer()
+    detailRequests = serveDetail()
+    const visits: ReadonlyArray<MapVisitedCountry> = [
+      { countryCode: 'SG', lastVisitedOn: null },
+    ]
+    const map = new FakeMap()
+    render(draw(map, { visits }))
+
+    expect(countries.hasCountryOutline('SG')).toBe(false)
+    expect(featuresOf(sourceOf(map).data).has('SG')).toBe(false)
+
+    await settleDetail()
+
+    // Singapore is 50 km² and simply is not in a 1:110m cut. Until the finer
+    // outlines land the record can hold it and the map cannot show it.
+    expect(countries.hasCountryOutline('SG')).toBe(true)
+    expect(featuresOf(sourceOf(map).data).get('SG')?.properties.visited).toBe(
+      true,
+    )
+  })
+
+  it('lights every ring of a country as one shape', async () => {
+    const { draw } = await freshLayer()
+    detailRequests = serveDetail()
+    const map = new FakeMap()
+    const onHoverChange = vi.fn()
+    render(draw(map, { visits: VISITS, onHoverChange }))
+
+    const before = sourceOf(map).data
+    const coarse = featuresOf(before).get('FR')?.geometry
+    await settleDetail()
+    const france = featuresOf(sourceOf(map).data).get('FR')
+    if (france === undefined) throw new Error('France left the payload')
+
+    // Natural Earth's Admin 0 is the sovereign cut, so Guadeloupe (61.8°W) and
+    // Réunion (55.8°E) are rings of *France*, not countries beside it. That is
+    // the whole reason the upgrade is worth its 300 KB: hovering the mainland
+    // and hovering an overseas département are the same country.
+    const longitudes = longitudesOf(france.geometry)
+    expect(Math.min(...longitudes)).toBeLessThan(-60)
+    expect(Math.max(...longitudes)).toBeGreaterThan(55)
+    expect(ringCount(france.geometry)).toBeGreaterThan(ringCount(coarse))
+
+    // And they are one feature, so one `setFeatureState` lights all of them —
+    // however many tiles and world copies the hit test answers from.
+    map.hits = [{ id: 'FR' }, { id: 'FR' }, { id: 'FR' }, { id: 'FR' }]
+    map.emit('mousemove')
+    expect(map.featureStates).toEqual([
+      { source: VISITED_COUNTRY_SOURCE_ID, id: 'FR', state: { hover: true } },
+    ])
+    expect(onHoverChange).toHaveBeenCalledTimes(1)
+    expect(onHoverChange).toHaveBeenCalledWith('FR')
+  })
+
+  it('keeps the hover and the selection lit across the swap', async () => {
+    const { draw } = await freshLayer()
+    detailRequests = serveDetail()
+    const map = new FakeMap()
+    render(draw(map, { visits: VISITS, selectedCode: 'FR' }))
+
+    map.hits = [{ id: 'IT' }]
+    map.emit('mousemove')
+    map.featureStates.length = 0
+
+    await settleDetail()
+
+    // Feature state is held on the source cache and re-initialised onto every
+    // tile as it reloads, so a `setData` keeps it — provided the ids match, which
+    // is what `promoteId` on both payloads guarantees. Nothing is rewritten and
+    // nothing is dropped, so the pointer does not blink at the moment the finer
+    // coastlines arrive under it.
+    expect(map.featureStates).toEqual([])
+    expect(sourceOf(map).setDataCalls).toBe(1)
+    expect(map.ops.filter((op) => op.kind === 'removeSource')).toEqual([])
+  })
+
+  it('re-adds the finer cut on a theme switch without re-parsing or re-tiling it', async () => {
+    const { draw } = await freshLayer()
+    detailRequests = serveDetail()
+    const map = new FakeMap()
+    const { rerender } = render(draw(map, { visits: VISITS }))
+    await settleDetail()
+
+    const built = sourceOf(map).data
+    expect(sourceOf(map).setDataCalls).toBe(1)
+
+    // What `setStyle` really does, which is what a light/dark toggle is: every
+    // runtime source, layer and feature state is simply gone.
+    map.dropStyle()
+    rerender(draw(map, { visits: VISITS }, { theme: 'dark', styleEpoch: 1 }))
+
+    const readded = sourceOf(map)
+    // The identical object, not an equal one: the collection is memoised on the
+    // payload and the record, neither of which a theme touches. Rebuilding it
+    // would walk 237 features to hand back the same world in different colours.
+    expect(readded.data).toBe(built)
+    // And it went in carrying that world, so nothing re-tiles behind the swap.
+    expect(readded.setDataCalls).toBe(0)
+    // Fetched once, therefore decoded once: the payload is process state, not
+    // component state, and a second style epoch cannot pay for it again.
+    expect(detailRequests).toEqual([COUNTRY_DETAIL_URL])
+    expect(map.ops).toEqual([
+      { kind: 'addSource', id: VISITED_COUNTRY_SOURCE_ID },
+      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.fill },
+      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.outline },
+    ])
+
+    // Re-added under the finer cut's own terms — string ids still addressable,
+    // same zoom ceiling — and repainted in the theme that caused the epoch.
+    expect(readded.definition.promoteId).toBe(COUNTRY_CODE_PROPERTY)
+    expect(readded.definition.maxzoom).toBe(COUNTRY_SOURCE_MAX_ZOOM)
+    expect(hexes(layerOf(map, VISITED_COUNTRY_LAYER_IDS.fill).paint)).toContain(
+      mapPalette('dark').country.visited,
+    )
+  })
+
+  it('holds the fade, the hit-test ceiling and the layer ceiling where they were', async () => {
+    const { draw } = await freshLayer()
+    detailRequests = serveDetail()
+    const map = new FakeMap()
+    const onSelect = vi.fn()
+    render(draw(map, { visits: VISITS, onSelect }))
+    await settleDetail()
+
+    // The finer cut is simplified at 0.02° and would carry two more zoom levels
+    // on the same arithmetic. Spending them would make the interactive range
+    // depend on whether one fetch succeeded, so the range stays solved from the
+    // coarsest payload this layer can be showing — the bundled one.
+    for (const id of Object.values(VISITED_COUNTRY_LAYER_IDS)) {
+      const layer = layerOf(map, id)
+      expect(layer.maxzoom).toBe(VISITED_COUNTRY_ZOOM.fadeEnd)
+      expect(
+        layer.paint?.['fill-opacity'] ?? layer.paint?.['line-opacity'],
+      ).toEqual(['interpolate', ['linear'], ['zoom'], 4, 1, 6, 0])
+    }
+    expect(VISITED_COUNTRY_ZOOM).toEqual({
+      fadeStart: 4,
+      fadeEnd: 6,
+      interactiveMax: 5.6,
+    })
+
+    map.zoom = VISITED_COUNTRY_ZOOM.interactiveMax
+    map.hits = [{ id: 'SG' }]
+    map.emit('click')
+    expect(onSelect).toHaveBeenLastCalledWith('SG')
+
+    // Past the ceiling the three-state answer is still silence, not water.
+    map.zoom = VISITED_COUNTRY_ZOOM.interactiveMax + 0.1
+    onSelect.mockClear()
+    map.emit('click')
+    expect(onSelect).not.toHaveBeenCalled()
   })
 })
