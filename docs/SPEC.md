@@ -7,9 +7,15 @@ The single source of truth for every agent on this build. Read fully before writ
 A **multi-tenant SaaS travel planner** — collaborative trip planning with interactive maps,
 budgets, packing lists, reservations, a travel journal and a world-map tracker.
 
-Deployed on **Cloudflare Workers** at **planned.travel**. Paid subscriptions via **Stripe**.
+Deployed on **Cloudflare Workers** at **planned.travel**. Paid subscriptions via **Polar.sh**.
 First release provisioned for **10 users**, architected so that scaling to thousands is a
 config change, never a rewrite.
+
+> **Vendor correction of record.** Stripe is **superseded** as the billing provider by Polar.sh,
+> which is Merchant of Record and therefore carries the VAT and sales-tax liability on our
+> behalf. This is a correction of a factual statement about a third-party vendor and nothing
+> more. It does not touch, soften, or create an exception to the clean-room rule below, which
+> stands unchanged and non-negotiable.
 
 ### Clean-room rule (non-negotiable)
 
@@ -53,7 +59,8 @@ Specifically:
 | Realtime | Durable Objects + WebSockets (`partysocket` client) |
 | Background work | Queues + Cron Triggers |
 | Auth | Better Auth on D1 (email+password, social, passkeys, TOTP) |
-| Billing | Stripe (Checkout + Billing Portal + webhooks) |
+| Billing | Polar.sh (Checkout + Customer Portal + webhooks) |
+| Email | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret, rendered in `src/server/auth/email.ts`, delivered by `src/server/queue/handlers/email.ts` |
 | Maps | MapLibre GL + Protomaps `.pmtiles` from R2 |
 | Server state | TanStack Query + Start server functions |
 | Forms | TanStack Form + Zod v4 |
@@ -66,6 +73,32 @@ Specifically:
 **Dependency freeze.** The dependency set is complete. Do **not** run `pnpm add`, and do not
 edit `package.json` or `pnpm-lock.yaml`. If you genuinely need a package that is absent, stop
 and report it in your result instead of installing it.
+
+**Named exception: two packages, once.** Exactly two packages may ever be added, by name:
+`@react-email/components` and `react-email`. The install belongs to **phase A** of the Polar
+migration and to no other round; before that phase they are absent and every builder treats them
+as absent. They exist so the transactional templates are authored as React components instead of
+concatenated HTML strings, and they change nothing about where those templates live. This is a
+list of two names, not a policy: any package outside these two is still a finding you report in
+your result and never a `pnpm add`, and nothing here grants a precedent, a category, or a
+"while we are in there" install.
+
+**Email path.** Transactional mail is already wired end to end and needs no new integration.
+`src/server/auth/email.ts` renders `{ subject, html, text }` up front, the queue producer
+enqueues it, and `src/server/queue/handlers/email.ts` POSTs it to the Resend-compatible endpoint
+named by the `EMAIL_API_URL` var using the `EMAIL_API_KEY` secret, with an idempotency key. The
+handler fails loudly when the key is unset. Phase A adds four billing templates on that same
+path - **subscription confirmed**, **plan changed**, **payment failed** and **pack purchased** -
+and each one ships a plain-text alternative alongside its HTML. The queue payload carries `text`,
+so a template without one delivers an empty message to any client that does not render HTML.
+
+**Known follow-up.** The `stripe` package stays in `package.json` as a known follow-up: phase A
+deletes its last consumer, and deleting the entry would breach the freeze above, so an unused
+dependency is left behind deliberately rather than by oversight. It is removed by the first
+round that is permitted to edit `package.json`; until then no source file imports it.
+Superseded likewise, and corrected by the round that owns each file: every Stripe reference
+still standing in `docs/ARCHITECTURE.md` (§4 cache invalidator, §6 entitlement authority order,
+§8 cost model, §9 failure rows 8 and 9) and in `docs/DEPLOY.md`.
 
 ## 4. Design language
 
@@ -101,6 +134,76 @@ through `member`. **Every** query goes through a scoped repository in `src/serve
 that takes an explicit tenant context — never a raw `db.select()` from a route or component.
 Tenant isolation is enforced in the repository layer and covered by tests.
 
+#### Global-catalogue carve-out
+
+"Every domain row is scoped by `organization_id`" has exactly one exception, and this is it.
+Eight tables are platform content rather than tenant data and carry no `organization_id`:
+
+`catalog_sources` · `catalog_runs` · `catalog_ingest` · `catalog_places` ·
+`catalog_place_sources` · `place_packs` · `place_pack_places` · `staff_api_tokens`
+
+That list is closed. A ninth global table is a change to this contract, not a schema decision a
+builder makes on the way past.
+
+These tables must **never** be reached through `src/server/repos/base.ts` or
+`createTenantRepository()`. That layer exists so that forgetting the tenant filter is not
+expressible, and handing it a fabricated, empty, or placeholder tenant context in order to reach
+global rows destroys the single guarantee it was built to give. Reaching for
+`createTenantRepository()` here is a defect, not a shortcut.
+
+Their isolation invariant is different and equally mandatory. All access goes through
+`src/server/catalog/repo.ts`, where every mutation takes an explicit platform actor
+(`{ userId, actorKind, role }`), passes `requirePermission` before it touches a row, and writes a
+`platform_audit_log` entry in the same call: actor, action, entity type, entity id, and a
+before/after `changes` payload. Reads go through the same door: a row that is not `published`
+needs a platform permission, a `published` row is readable by an entitled tenant and, without a
+session, only through the column-whitelisted projections in `src/server/public/**`. Tests cover
+this boundary the way tenant-isolation tests cover the repository boundary - a `curator` may not
+act outside its statements, and an unaudited mutation is a failing test.
+
+`pack_entitlements` is **not** in that list. Which workspace bought which pack is tenant data:
+it is scoped by `organization_id`, lives in `src/server/repos/packs.ts`, and stays on the
+existing `createTenantRepository()`. The pack is global; the right to use it is not.
+
+### Platform roles
+
+Two role vocabularies coexist and must never be conflated. **Organization roles** (`owner`,
+`admin`, `member`, from Better Auth's `organization` plugin) describe standing inside one
+workspace and keep exactly their present meaning. **Platform roles** describe standing on the
+product itself, and they are new.
+
+Platform roles come from Better Auth's `admin` plugin, which ships inside the pinned
+`better-auth@1.7.1`. Registering it adds no dependency and does not touch §3's freeze. Three
+roles, and no fourth:
+
+| Role | Authority |
+|---|---|
+| `admin` | Full platform authority: user management, roles, bans, session revocation, impersonation, MCP token issuance, everything a `curator` may do. |
+| `curator` | The catalogue, packs, sources and share moderation. Nothing that touches users or sessions. |
+| `user` | Everyone else, which is nearly everyone. No platform surface at all. |
+
+`defaultRole: 'user'` - a platform role is only ever raised deliberately. The plugin adds five
+columns and they are the whole storage cost of the model: `user.role`, `user.banned`,
+`user.ban_reason`, `user.ban_expires` and `session.impersonated_by`. All five are non-writable
+from the client.
+
+Authorisation is decided in exactly one place, `requirePermission` in
+`src/server/auth/guard.ts`, used identically by console server functions and by the MCP server,
+so "may this actor do this" never grows a second implementation. A session with
+`session.impersonated_by` set carries a persistent warning bar with an "end impersonation"
+action on every screen; entering and leaving impersonation are both audited.
+
+### Billing surface
+
+Settled once, so no later round re-argues it. `/settings/billing` offers a **Manage billing**
+action that mints a customer session server-side and redirects the browser to the hosted Polar
+Customer Portal it returns, alongside a **read-only** list of orders and invoices for the active
+organization. We do **not** build an in-app invoice-details form. Polar is Merchant of Record:
+it determines the tax and issues the legal invoice, so billing name, VAT number and billing
+address have to be edited where the invoice is produced, or our copy and the legal document
+disagree at precisely the moment an accountant reads them. Payment-method changes are
+portal-only for the same class of reason - it is what keeps card data outside our PCI scope.
+
 ### Scaling posture (10 → thousands of users)
 - Stateless Workers; all state in D1/KV/R2/DO. Horizontal scale is automatic.
 - **Read path**: cache hot reads in KV with short TTL + explicit invalidation on write.
@@ -118,6 +221,27 @@ Tenant isolation is enforced in the repository layer and covered by tests.
 `DB` (D1) · `KV` (cache) · `SESSIONS` (KV) · `FILES` (R2) · `TILES` (R2) ·
 `TRIP_ROOM` (Durable Object) · `TASKS` (Queue) · secrets via `wrangler secret`.
 
+Non-secret configuration lives in the `vars` block; secrets never appear in `wrangler.jsonc`,
+and the complete list with its acquisition steps lives in `.dev.vars.example`. Six secrets are
+new, spelled exactly this way everywhere:
+
+| Secret | What it is |
+|---|---|
+| `POLAR_ACCESS_TOKEN` | Organization Access Token for every server-side Polar call. It never reaches the browser. |
+| `POLAR_WEBHOOK_SECRET` | Signing secret for the billing webhook endpoint. |
+| `POLAR_SERVER` | `sandbox` or `production`. Selects the API base URL. It sits with the secrets rather than in `vars` so one file switches the whole billing environment, and because sandbox and production are separate accounts with separate tokens and separate product ids. |
+| `FIRECRAWL_API_KEY` | Bearer token for the scrape and crawl calls behind the catalogue pipeline. |
+| `FIRECRAWL_WEBHOOK_SECRET` | HMAC secret verifying crawl callbacks. It is one account-wide value, not one per endpoint. |
+| `MCP_TOKEN_PEPPER` | Hashing pepper for `staff_api_tokens`. Rotating it invalidates every issued MCP token at once, the way rotating `BETTER_AUTH_SECRET` logs everyone out. |
+
+**Cron.** The weekly catalogue scrape is `0 4 * * 1`. It is registered in `wrangler.jsonc` - in
+the top-level `triggers.crons` list *and* in the `env.staging` override, since a deploy replaces
+the whole list - and given its `switch (controller.cron)` branch in `src/server/worker.ts` in
+**phase D**. Until that phase it is inert and deliberately absent from both files: registering a
+schedule ahead of its handler makes the next deploy invoke a branch that does not exist. It is
+unrelated to the `17 4 * * 1` retention prune that runs seventeen minutes later the same
+morning; neither depends on the other's ordering.
+
 ## 6. Repo conventions
 
 ```
@@ -127,14 +251,21 @@ src/
     index.tsx        marketing landing
     (auth)/          login, register, reset, 2fa  — owned by auth
     _app/            authenticated app shell + all product modules
-    api/             server route handlers (auth, stripe webhooks, tiles)
+    api/             server route handlers (auth, billing + scrape webhooks, tiles, MCP)
   components/
     ui/              design-system primitives (no product logic, no data fetching)
     layout/          app shell, nav, headers
     <module>/        product components for one module
   server/
     db/              drizzle schema + client
-    repos/           tenant-scoped data access (the ONLY place SQL lives)
+    auth/            Better Auth setup, tenant context, permission guard, email rendering
+    repos/           tenant-scoped data access (every tenant query and its SQL)
+    catalog/         global catalogue access - the single stated exception to the SQL rule
+    public/          session-less reads - read-only, column-whitelisted projections only
+    mcp/             JSON-RPC 2.0 tool server - transport and tool schemas, no data layer
+    billing/         Polar client, webhook handling, entitlements, quota resolution
+    queue/           queue producer, envelopes and handlers
+    observability/   structured logging, health probes
     fns/             TanStack Start server functions
     do/              Durable Objects
   lib/               isomorphic helpers, formatters, hooks
@@ -147,6 +278,19 @@ Rules:
 - `routeTree.gen.ts` is **generated**. Never hand-edit. Run `pnpm generate-routes`.
 - Components in `components/ui` never fetch data and never import from `server/`.
 - All SQL lives in `server/repos`. Routes call server functions; server functions call repos.
+- The single stated exception is `server/catalog`, and it exists only because the eight global
+  tables in §5 carry no `organization_id` and therefore cannot pass through the tenant
+  repository at all. It is the one exception; a second one is a change to this contract. Its
+  SQL is guarded instead by an explicit platform actor, `requirePermission`, and a
+  `platform_audit_log` write in the same call.
+- `server/public` is the only path that reads without a session, and it holds no SQL of its own.
+  Every response is a named read-only projection - an explicit column whitelist of what a
+  stranger may see, so leaking a field is unexpressible - executed through `server/repos` for
+  token-resolved tenant resources and `server/catalog` for published global rows. The tenant
+  scope it passes is always the one derived from the share record it resolved, never fabricated.
+- `server/mcp` owns transport and tool schemas only. Every tool authorises through the same
+  `requirePermission` the console uses and reaches data through `server/catalog`; it never grows
+  a second authorisation path or a second query layer.
 - Validate every server-function input with Zod. Never trust the client.
 - Named exports, no default exports (except route modules, which TanStack requires).
 - `cn()` from `src/lib/cn.ts` for class merging.
