@@ -95,6 +95,12 @@ describe('at rest', () => {
     expect(goalButton().textContent).toContain('Add to list')
     expect(visitButton().tagName).toBe('BUTTON')
     expect(goalButton().tagName).toBe('BUTTON')
+    // The name opens with the words printed on the control, so voice control
+    // can say them and WCAG 2.5.3 holds, and it names the country it acts on.
+    expect(visitButton().getAttribute('aria-label')).toBe(
+      'Mark visited, France',
+    )
+    expect(goalButton().getAttribute('aria-label')).toBe('Add to list, France')
   })
 
   it('says what the two controls do, and shows no failure', () => {
@@ -170,6 +176,106 @@ describe('while a write is in flight', () => {
 
     pending.resolve(undefined)
     await waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+  })
+})
+
+describe('what the busy control announces', () => {
+  /**
+   * The row paints the claim the instant the button is pressed, and the button
+   * must not be read off that claim: a control that says "Remove France from
+   * your atlas, busy" one frame after the reader pressed "Mark visited" is
+   * announcing the opposite of what it is doing, and it is `disabled` for the
+   * whole window in which it offers the inverse.
+   */
+  it('names the additive press it is performing, not the inverse it flipped to', async () => {
+    const user = userEvent.setup()
+    const pending = deferred<undefined>()
+    atlas.mark.mockReturnValue(pending.promise)
+    block()
+
+    await user.click(visitButton())
+
+    const control = visitButton()
+    expect(control.getAttribute('aria-busy')).toBe('true')
+    expect(control.getAttribute('aria-label')).toBe('Marking France as visited')
+    expect(control.textContent).toContain('Marking France as visited')
+    expect(control.textContent).not.toContain('Remove')
+    // The row itself is free to paint the claim; that is the other half of it.
+    expect(screen.getByText('Visited')).toBeTruthy()
+
+    pending.resolve(undefined)
+    await waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+  })
+
+  it('names the bucket-list add it is performing, not the removal', async () => {
+    const user = userEvent.setup()
+    const pending = deferred<undefined>()
+    atlas.add.mockReturnValue(pending.promise)
+    block()
+
+    await user.click(goalButton())
+
+    const control = goalButton()
+    expect(control.getAttribute('aria-label')).toBe(
+      'Adding France to your bucket list',
+    )
+    expect(control.textContent).not.toContain('Remove')
+
+    pending.resolve(undefined)
+    await waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+  })
+
+  it('names a removal as a removal while it runs', async () => {
+    const user = userEvent.setup()
+    const pending = deferred<undefined>()
+    atlas.unmark.mockReturnValue(pending.promise)
+    block({
+      visit: {
+        firstVisitedOn: null,
+        lastVisitedOn: null,
+        visitCount: 1,
+        note: null,
+      },
+    })
+
+    await user.click(visitButton())
+
+    expect(visitButton().getAttribute('aria-label')).toBe(
+      'Removing France from your atlas',
+    )
+    expect(visitButton().textContent).not.toContain('Mark visited')
+
+    pending.resolve(undefined)
+    await waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+  })
+
+  it('keeps the pressed control on its own styling while it works', async () => {
+    const user = userEvent.setup()
+    const pending = deferred<undefined>()
+    atlas.mark.mockReturnValue(pending.promise)
+    block()
+    const resting = visitButton().className
+
+    await user.click(visitButton())
+    // The optimistic claim must not restyle the control mid-press: the primary
+    // fill would drop to the secondary hairline and back again in one press.
+    expect(visitButton().className).toBe(resting)
+
+    pending.resolve(undefined)
+    await waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+  })
+
+  it('puts the name back to the offer once the write settles', async () => {
+    const user = userEvent.setup()
+    block()
+
+    await user.click(goalButton())
+
+    await waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+    // Nothing is in flight and no row came back from the loader stub, so the
+    // control returns to the offer it opened with.
+    expect(goalButton().getAttribute('aria-label')).toBe('Add to list, France')
+    expect(goalButton().getAttribute('aria-busy')).toBeNull()
   })
 })
 
@@ -447,5 +553,154 @@ describe('by keyboard alone', () => {
 
     pending.resolve(undefined)
     await waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+  })
+})
+
+describe('where the reader is left afterwards', () => {
+  /**
+   * `Button` disables itself while it loads, and the browser drops focus from a
+   * control the moment it is disabled. Without the block taking it back, a
+   * keyboard reader who pressed "Add to list" is standing on `<body>` with no
+   * way back to the row and no way to reach the sentence saying why it failed.
+   */
+  /**
+   * jsdom lets a disabled control keep focus, where every browser takes it
+   * away, so the drop is performed here rather than waited for. What is under
+   * test is what the block does about it, which is the same either way.
+   */
+  function dropFocus(): void {
+    const spare = document.createElement('button')
+    document.body.appendChild(spare)
+    spare.focus()
+    spare.remove()
+    expect(document.activeElement).toBe(document.body)
+  }
+
+  it('takes focus back to the control it was dropped from', async () => {
+    const user = userEvent.setup()
+    const pending = deferred<undefined>()
+    atlas.add.mockReturnValue(pending.promise)
+    block()
+
+    goalButton().focus()
+    await user.keyboard('{Enter}')
+    expect(goalButton().getAttribute('aria-busy')).toBe('true')
+    dropFocus()
+
+    pending.resolve(undefined)
+    await waitFor(() => expect(document.activeElement).toBe(goalButton()))
+  })
+
+  it('takes it back after a failure too, beside the reason', async () => {
+    const user = userEvent.setup()
+    const pending = deferred<undefined>()
+    atlas.mark.mockReturnValue(pending.promise)
+    const view = block()
+
+    visitButton().focus()
+    await user.keyboard('{Enter}')
+    dropFocus()
+
+    pending.reject(new Error('Your plan is at its ceiling.'))
+    await waitFor(() => expect(document.activeElement).toBe(visitButton()))
+    expect(message(view.container)?.textContent).toContain(
+      'Your plan is at its ceiling.',
+    )
+  })
+
+  it('leaves focus alone when something else has taken it', async () => {
+    const user = userEvent.setup()
+    const pending = deferred<undefined>()
+    atlas.mark.mockReturnValue(pending.promise)
+    block()
+
+    await user.click(visitButton())
+    // A reader who moved on while the write ran keeps where they moved to.
+    const elsewhere = document.createElement('button')
+    document.body.appendChild(elsewhere)
+    elsewhere.focus()
+
+    pending.resolve(undefined)
+    await waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+    expect(document.activeElement).toBe(elsewhere)
+    elsewhere.remove()
+  })
+
+  /**
+   * The block is mounted inside scroll containers shorter than it is — a 230px
+   * record pane on the desktop shelf — so the strip under the rows can be a
+   * hundred pixels below the fold at the moment it is written to.
+   */
+  it('brings the failure into view in whatever is clipping it', async () => {
+    const user = userEvent.setup()
+    const scrollIntoView = vi.fn()
+    // jsdom implements no scrolling at all, so the method is absent and the
+    // block skips it; this is the browser's version of the same element.
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    })
+    atlas.add.mockRejectedValue(new Error('The server said no.'))
+    const view = block()
+
+    expect(scrollIntoView).not.toHaveBeenCalled()
+
+    await user.click(goalButton())
+
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled())
+    expect(scrollIntoView.mock.instances[0]).toBe(message(view.container))
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' })
+
+    Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+  })
+})
+
+describe('when a confirmed removal fails', () => {
+  const HISTORY = {
+    firstVisitedOn: '2011-07-14',
+    lastVisitedOn: '2024-09-06',
+    visitCount: 3,
+    note: 'Paris twice.',
+  }
+
+  /**
+   * The strip lives under the rows, behind the dialog's own overlay. Leaving the
+   * question open over a failure means the only thing the reader can see is the
+   * button they just pressed.
+   */
+  it('stands the question down so the reason is on screen', async () => {
+    const user = userEvent.setup()
+    const failure = vi.spyOn(toast, 'error')
+    atlas.unmark.mockRejectedValue(new Error('The row is gone already.'))
+    const view = block({ visit: HISTORY })
+
+    await user.click(visitButton())
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Remove',
+      }),
+    )
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(message(view.container)?.textContent).toContain(
+      'The row is gone already.',
+    )
+    // The claim is withdrawn with it: the record is still on the atlas.
+    expect(screen.getByText('Visited')).toBeTruthy()
+    expect(visitButton().getAttribute('aria-busy')).toBeNull()
+    expect(failure).toHaveBeenCalled()
+  })
+})
+
+describe('on the 4px grid', () => {
+  it('states every step of the message strip in whole grid units', () => {
+    const view = block()
+    const strip = message(view.container)
+
+    // 8px of gap, 32px of strip, and a 16px glyph against a 16px first line.
+    expect(strip?.className).toContain('gap-2')
+    expect(strip?.className).toContain('h-8')
+    expect(strip?.className).toContain('mt-2')
+    expect(strip?.className).not.toContain('gap-1.5')
   })
 })

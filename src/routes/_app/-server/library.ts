@@ -6,14 +6,15 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import {
+  atlasCountryRecords,
   countCollectionPlacesByCountry,
+  countCountriesByContinent,
   countTripsByCountry,
   countVisitedPlacesByCountry,
-  countryTravelFactsLookup,
+  countVisitedRegions,
   createCollection,
   createJourney,
   ensurePlan,
-  getAtlasSummary,
   getCollection,
   getJourneyStory,
   getPlanOverview,
@@ -185,21 +186,34 @@ export interface AtlasPayload {
     readonly countryCount: number
   }>
   /**
-   * One row per country the traveller has recorded, carrying both readings of
-   * "how much of this country is in the record".
+   * One row per country the traveller has *recorded*, and no others, carrying
+   * both readings of "how much of this country is in the record".
    *
-   * The two must not be confused, and the field names are the whole defence
-   * against confusing them. `visitCount` is a tally: `markCountryVisited` adds
-   * one every time a visit is recorded, by a trip, a ticked-off bucket-list goal
-   * or the traveller's own hand, and it can therefore be larger *or* smaller
-   * than the number of journeys. `tripCount` counts trips - distinct trips in
-   * this workspace whose itinerary names the country and which have already
-   * begun. A card that printed the tally under the heading "trips" would be
-   * wrong about the one number a traveller can check from memory.
+   * Membership is the whole contract: this array is what the map paints its
+   * visited fill from, what the panel lists under "countries visited" and what
+   * `countryCount` above counts, so a country is here if and only if
+   * `visited_countries` names it. A trip whose itinerary mentioned a country
+   * asserts that a plan went there, not that the traveller did, and it does not
+   * put a row here; its figures stay legible on their own terms in the trip
+   * aggregate behind the loader.
+   *
+   * The two readings must not be confused either, and the field names are the
+   * whole defence against confusing them. `visitCount` is a tally:
+   * `markCountryVisited` adds one every time a visit is recorded, by a trip, a
+   * ticked-off bucket-list goal or the traveller's own hand, and it can
+   * therefore be larger *or* smaller than the number of journeys. `tripCount`
+   * counts trips - distinct trips in this workspace whose itinerary names the
+   * country and which have already begun. A card that printed the tally under
+   * the heading "trips" would be wrong about the one number a traveller can
+   * check from memory.
    *
    * The `-VisitedOn` pair and the `-TripOn` pair are the same distinction in
    * dates: the first is when a visit was recorded, the second is when the trips
    * behind it actually started, and the card prints the second as months.
+   *
+   * A country marked visited by hand is in neither aggregate, and its honest
+   * figures there are zeros and no months rather than gaps - so every row below
+   * carries all four, and no reader has to write `?? 0`.
    */
   readonly countries: ReadonlyArray<{
     readonly countryCode: string
@@ -334,65 +348,88 @@ export const loadAtlas = createServerFn({ method: 'GET' }).handler(
     const userId = scope.ctx.userId
     const today = todayIso()
 
-    // Six reads, in one `Promise.all`, and every one of them is on screen. A
-    // seventh - the six most recent trips - travelled in this payload and was
-    // rendered by nothing after the atlas became a map; on Workers each query is
-    // a subrequest and every field here is bytes dehydrated into the SSR
-    // document, so an unread one is paid for on every request. `listPastTrips`
-    // itself stays: the journey loader below still asks for it.
+    // Seven reads in one `Promise.all`, and seven D1 statements: every entry
+    // below is exactly one query, so the fan-out is the subrequest count rather
+    // than a floor on it. That matters because `getAtlasSummary`, which this
+    // loader used to open with, is one call and five statements, and the atlas
+    // needed four of the eight figures it returns. Counting honestly, the screen
+    // was costing eight statements before the per-country facts existed:
     //
-    // The two new ones are the per-country aggregates, and they are worth both
-    // the subrequest and the bytes. Each is a single grouped statement over the
-    // whole workspace - not one per country - so the pair costs two round trips
-    // that overlap the four already in flight, and the document's D1 budget goes
-    // from four to six against the eight this Worker allows itself.
+    //   getAtlasSummary  visited countries · visited-region count · continent
+    //                    roll-up · bucket total + achieved            = 5
+    //   listVisitedCountries   the same visited rows, read a second time  = 1
+    //   listBucketList · listTravelStats                                 = 2
     //
-    // The bytes are four small fields per *recorded* country: two integers and
-    // two `YYYY-MM-DD` days, on a list whose length is the number of countries a
-    // person has been to. That is well under a kilobyte for a well-travelled
-    // traveller, and it buys the map its whole reason for existing - a country's
-    // figures are already in the document when the pointer reaches it, so
-    // hovering costs no request, works offline after first paint, and cannot
-    // flash a skeleton over a shape the reader is already looking at. Fetching
-    // them per country instead would be one RPC per hover, which on a map is a
-    // request per pointer crossing.
+    // It now costs seven, with the two aggregates added: the duplicated read of
+    // `visited_countries` is gone, and the two bucket counts with it - this
+    // loader already holds the whole bucket list and counts it in memory, so
+    // asking D1 to count it again was a round trip spent on an answer already in
+    // hand. The two roll-ups the summary did have to run are now named exports
+    // of the same repository (`countVisitedRegions`, `countCountriesByContinent`)
+    // rather than inline statements, so there is still one implementation of the
+    // continent grouping and `getAtlasSummary` keeps returning what it always
+    // did for the dashboard tile that still wants all eight figures at once. The
+    // other two figures it used to hand over - how many countries, how many
+    // recorded visits - are `.length` and a sum over rows this handler is already
+    // holding, which is a fold rather than a second answer to a query.
     //
-    // `today` is read once, from the request's own clock, and handed to the trip
-    // aggregate: every country on the screen is then counted against the same
-    // day, and a development request can pin that day so the visual gate
-    // photographs the same figures on every calendar date.
-    const [summary, countries, bucket, stats, tripsByCountry, placesByCountry] =
-      await Promise.all([
-        getAtlasSummary(scope, userId),
-        listVisitedCountries(scope, userId),
-        listBucketList(scope, userId),
-        listTravelStats(scope, userId),
-        countTripsByCountry(scope, { until: today }),
-        countVisitedPlacesByCountry(scope),
-      ])
+    // Seven sits inside the 3-8 D1 queries ARCHITECTURE §2.1 budgets for a warm
+    // authenticated document, which is the only per-request D1 figure this
+    // project has committed to.
+    //
+    // The two aggregates are worth their round trip and their bytes. Each is a
+    // single grouped statement over the whole workspace - not one per country,
+    // and not one per hover - and they overlap the five already in flight, so
+    // they cost latency only if they are the slowest of the seven. The bytes are
+    // four small fields per country: two integers and two `YYYY-MM-DD` days, on
+    // a list as long as the traveller's own record. That is well under a
+    // kilobyte for a well-travelled traveller, and
+    // it buys the map its whole reason for existing - a country's figures are
+    // already in the document when the pointer reaches it, so hovering costs no
+    // request, survives a dropped connection after first paint, and cannot flash
+    // a skeleton over the shape the reader is already looking at. Fetching them
+    // per country instead would be one RPC per pointer crossing.
+    //
+    // `today` is read once, from the request's own clock (`serverToday()` behind
+    // `todayIso()`), and handed to the trip aggregate: every country on the
+    // screen is counted against the same day, and a development request can pin
+    // that day so the visual gate photographs the same figures on every calendar
+    // date.
+    const [
+      countries,
+      regionCount,
+      byContinent,
+      bucket,
+      stats,
+      tripsByCountry,
+      placesByCountry,
+    ] = await Promise.all([
+      listVisitedCountries(scope, userId),
+      countVisitedRegions(scope, userId),
+      countCountriesByContinent(scope, userId),
+      listBucketList(scope, userId),
+      listTravelStats(scope, userId),
+      countTripsByCountry(scope, { until: today }),
+      countVisitedPlacesByCountry(scope),
+    ])
 
-    const factsFor = countryTravelFactsLookup(tripsByCountry, placesByCountry)
+    // Counted off the folded record rather than off the raw rows, so the figure
+    // above the map is the length of the list under it. The two can only differ
+    // where a workspace holds the same country twice in different case - the
+    // unique index is on the stored string - and there the folded answer is the
+    // true one: the traveller has been to one country, not two.
+    const records = atlasCountryRecords(
+      countries,
+      tripsByCountry,
+      placesByCountry,
+    )
 
     return {
-      countryCount: summary.countryCount,
-      regionCount: summary.regionCount,
-      visitCount: summary.visitCount,
-      byContinent: summary.byContinent,
-      countries: countries.map((row) => {
-        const facts = factsFor(row.countryCode)
-        return {
-          countryCode: row.countryCode,
-          continent: row.continent,
-          firstVisitedOn: row.firstVisitedOn,
-          lastVisitedOn: row.lastVisitedOn,
-          visitCount: row.visitCount,
-          note: row.note,
-          tripCount: facts.tripCount,
-          visitedPlaceCount: facts.visitedPlaceCount,
-          firstTripOn: facts.firstTripOn,
-          lastTripOn: facts.lastTripOn,
-        }
-      }),
+      countryCount: records.length,
+      regionCount,
+      visitCount: records.reduce((total, row) => total + row.visitCount, 0),
+      byContinent,
+      countries: records,
       bucketListCountries: bucketListCountriesOf(bucket),
       // Sliced, and reduced to the six fields the panel prints: `achievedOn` and
       // the item's own note were dehydrated into every document and rendered by

@@ -132,11 +132,44 @@ const INSERT_ANCHORS = [
   FALLBACK_LAYER_IDS.graticule,
 ] as const
 
-/** Outline weight at the world view and at the point the layer fades out. */
+/**
+ * The narrowest a border may be drawn and still be a border.
+ *
+ * MapLibre takes `line-width` in CSS pixels and multiplies by the device pixel
+ * ratio, so anything under 1 lands on a fraction of a device pixel on a 1x
+ * display and is resolved by coverage: the hairline is *blended* with the land
+ * behind it rather than drawn in its own colour. Measured over Africa on the
+ * atlas frame at 1440×900, where `country.landEdge` (#c8c1af) is worth 1.51:1
+ * against `country.land` (#edebe6): a half-pixel border averaged 1.33:1 across
+ * the pixels it did reach, and along the shallow diagonals most of that
+ * coastline is made of it reached none at all. A whole pixel carries 47% more
+ * border pixels at 1.38:1, which is a line rather than a rumour of one.
+ *
+ * That average is a ceiling set by the token, not by this file. A border asked
+ * to clear 2:1 against the land needs a darker `--color-country-land-edge`;
+ * width is all a paint expression can do about it.
+ */
+const MIN_OUTLINE_WIDTH = 1
+
+/**
+ * Outline weight at the world view and at the point the layer fades out.
+ *
+ * Three states that have to be told apart at a glance and at a distance, so
+ * each step is a clear multiple of the one below it rather than a nudge:
+ * roughly 1× / 2× / 2.6× of {@link MIN_OUTLINE_WIDTH}. `far` is the same ladder
+ * scaled for the zoom at which the fill has faded out from under it — the
+ * hairline is carrying the whole shape by then, and the outer `interpolate` in
+ * the layer walks between the two ends.
+ *
+ * Weight is the only lever this component has. The colours come from
+ * `mapPalette().country`, which mirrors the `--color-country-*` tokens value for
+ * value, and a border that wants more contrast than `landEdge` carries wants a
+ * different token rather than a literal here.
+ */
 const OUTLINE_WIDTH = {
-  rest: { near: 0.5, far: 1 },
-  hover: { near: 1.2, far: 2.2 },
-  selected: { near: 1.6, far: 3 },
+  rest: { near: MIN_OUTLINE_WIDTH, far: 1.6 },
+  hover: { near: MIN_OUTLINE_WIDTH * 2, far: 3.2 },
+  selected: { near: MIN_OUTLINE_WIDTH * 2.6, far: 4 },
 } as const
 
 /** One country as this layer's source carries it. */
@@ -188,9 +221,17 @@ function worldFeatures(detail: CountryDetail | null): CountryFeatureCollection {
 /**
  * The source definition to add, minus its data.
  *
- * Both cuts promote the same id property and carry the same zoom ceiling, so
- * this changes nothing today — but taking it from whichever payload is installed
- * is what stops a future cut from being added under the previous one's terms.
+ * Read at every *fresh* `addSource` — the first mount, a second map on the same
+ * page, and every style epoch — so a source added after the finer cut has landed
+ * goes in under that cut's own terms rather than the bundled cut's. Both cuts
+ * promote the same id property and carry the same zoom ceiling, so today the two
+ * answers are identical and this is the guarantee rather than a behaviour change.
+ *
+ * What it deliberately does **not** cover is the in-place upgrade: that is a
+ * `setData`, which replaces the payload and cannot restate the source's terms. A
+ * cut that ever needs different terms is therefore a new *source*, not a new
+ * payload, and installing it means removing this one — which drops every feature
+ * state hanging on it, and is exactly why the current cut was built to match.
  */
 function payloadSource(detail: CountryDetail | null): CountrySource {
   return detail?.source ?? countrySource()
@@ -223,8 +264,43 @@ function noCountryDetail(): null {
  * it, and the console is a contract: a screen that logs an error the reader
  * cannot act on trains everybody to ignore the ones they can. `loadCountryDetail`
  * clears its own shared promise on failure, so the next mount is a real retry.
+ *
+ * ## Why this is exported
+ *
+ * Because the install is not this layer's private business. The two derived
+ * answers are read *during render* by screens that are nowhere near the map:
+ *
+ * ```tsx
+ * const detail = useCountryDetail()
+ * const rows = React.useMemo(
+ *   () => record.map((row) => ({ ...row, hasOutline: hasCountryOutline(row.code) })),
+ *   // `detail` is the token that says the answer moved. Without it this memo
+ *   // resolves once against the bundled cut and keeps saying "no outline" for
+ *   // Singapore, Malta and the Maldives long after the map has filled them.
+ *   [record, detail],
+ * )
+ * ```
+ *
+ * The same applies to anything holding a `countryBounds()` rectangle: a country
+ * with offshore territory gets a wider one the moment the cut lands, and a memo
+ * that never re-runs will fly the camera to the rectangle it solved first.
+ *
+ * The update is *monotonic*, which is what makes applying it live safe rather
+ * than jarring: the finer cut is a superset, so a code the bundled world could
+ * not draw becomes drawable and no code ever goes the other way. A subscriber's
+ * second pass therefore only ever withdraws a caveat — it cannot take a country
+ * off a list, and it cannot move a row that was already offering the map.
+ *
+ * It costs a subscriber exactly one extra pass, ever. The install happens at
+ * most once per process and this returns the identical object from then on, so
+ * a memo keyed on it runs twice and never again — and a component mounted after
+ * the cut landed reads it synchronously on its first render, with no flash of
+ * the bundled answer. Mounting it twice — a screen and its map — still costs one
+ * fetch, because {@link loadCountryDetail} shares one promise process-wide. Use
+ * it where the atlas is, though, and not on a screen with no map: it is what
+ * starts the 300 KB request.
  */
-function useCountryDetail(): CountryDetail | null {
+export function useCountryDetail(): CountryDetail | null {
   React.useEffect(() => {
     void loadCountryDetail().catch(() => undefined)
   }, [])
@@ -323,16 +399,22 @@ export interface VisitedCountriesProps {
  * {@link INSERT_ANCHORS}: under the labels on the vector basemap, under the
  * graticule on the fallback style, above the water ground on both.
  *
- * **Every effect keys on the same four values.** `map`, `palette`, `ready` and
- * `styleEpoch` rebuild the source and the layers, and a rebuilt source has no
- * feature state on it. So the selection and interaction effects list exactly the
- * same dependencies: any list that is narrower leaves the highlight painted on a
- * source that no longer exists, and the hover closure holding a stale one.
+ * **A new palette is a repaint, never a rebuild.** Every effect that can be
+ * invalidated by the style document going away keys on the same three values —
+ * `map`, `ready` and `styleEpoch` — and *not* on the palette. A theme switch
+ * changes the palette one commit before it changes the epoch, so a layer effect
+ * that listed the palette tore the source down and re-added it in that commit,
+ * only for `setStyle` to throw the result away a frame later: the whole payload
+ * tiled twice for one toggle, on the largest collection this app owns. Colour is
+ * the one thing a live layer can be told about in place, so it is:
+ * `setPaintProperty` on the two colour ramps, and nothing else moves — the
+ * tiles, the hover and the selection all survive untouched.
  *
  * **The style epoch is load-bearing.** A theme switch replaces the style
  * document — `setStyle` diffs our runtime layers out of it and fires
  * `style.load` — which silently drops every runtime-added source, layer *and*
- * feature state. The epoch is the only signal that it happened.
+ * feature state. The epoch is the only signal that it happened, and it is
+ * therefore the only thing that may rebuild any of the three.
  *
  * **Hover is an enhancement.** `mousemove` does not fire on touch, so hover only
  * ever adds emphasis to something a click, a list row or a search result can
@@ -387,6 +469,15 @@ export function VisitedCountries({
   /** The record the source is currently carrying, so it is never re-set for free. */
   const appliedKeyRef = React.useRef<string | null>(null)
 
+  // The palette is read by the install effect but is deliberately not one of its
+  // dependencies — see the note above about a theme switch arriving as two
+  // commits. The ref is what lets a fresh install go in already wearing the
+  // current colours, so the repaint effect below has nothing to do behind it.
+  const paletteRef = React.useRef(palette)
+  paletteRef.current = palette
+  /** The palette the two layers are currently painted in. */
+  const appliedPaletteRef = React.useRef<typeof palette | null>(null)
+
   const onSelectRef = React.useRef(onSelect)
   onSelectRef.current = onSelect
   const onHoverChangeRef = React.useRef(onHoverChange)
@@ -396,6 +487,13 @@ export function VisitedCountries({
 
   React.useEffect(() => {
     if (map === null || !ready) return
+
+    // The two layers go in and come out as a pair, so one answer describes both:
+    // either this is a fresh install and they are about to be painted in the
+    // current palette, or they are already on the style wearing whatever the
+    // repaint effect last gave them.
+    const fresh = map.getLayer(VISITED_COUNTRY_LAYER_IDS.fill) === undefined
+    const country = paletteRef.current.country
 
     if (map.getSource(VISITED_COUNTRY_SOURCE_ID) === undefined) {
       // Spread, never the frozen object itself — see the note above.
@@ -420,7 +518,7 @@ export function VisitedCountries({
           source: VISITED_COUNTRY_SOURCE_ID,
           maxzoom: VISITED_COUNTRY_ZOOM.fadeEnd,
           paint: {
-            'fill-color': fillColour(palette.country),
+            'fill-color': fillColour(country),
             // Opaque, so the recorded contrast ratios are the ones on screen.
             'fill-opacity': fade(),
           },
@@ -440,7 +538,7 @@ export function VisitedCountries({
           paint: {
             // `fill-outline-color` is a fixed one-pixel hairline with no width
             // control, so attention needs a line layer of its own.
-            'line-color': outlineColour(palette.country),
+            'line-color': outlineColour(country),
             'line-width': [
               'interpolate',
               ['linear'],
@@ -457,6 +555,8 @@ export function VisitedCountries({
       )
     }
 
+    if (fresh) appliedPaletteRef.current = paletteRef.current
+
     return () => {
       // A style swap has already removed them, so every step is guarded: cleanup
       // must never throw mid-swap. The source goes last, after the layers that
@@ -471,7 +571,10 @@ export function VisitedCountries({
         map.removeSource(VISITED_COUNTRY_SOURCE_ID)
       }
     }
-  }, [map, palette, ready, styleEpoch])
+    // No `palette`: see the note on the component. A theme switch changes the
+    // palette a commit before it drops the style, and rebuilding here in that
+    // commit tiles the whole world for a frame that `setStyle` then discards.
+  }, [map, ready, styleEpoch])
 
   /* ---------------------------------------------------------------- data */
 
@@ -493,7 +596,44 @@ export function VisitedCountries({
     // the same ISO codes in both payloads.
     ;(source as GeoJSONSource).setData(collectionRef.current)
     appliedKeyRef.current = dataKey
-  }, [dataKey, map, palette, ready, styleEpoch])
+  }, [dataKey, map, ready, styleEpoch])
+
+  /* ------------------------------------------------------------- palette */
+
+  /**
+   * The theme, applied to the two colour ramps and to nothing else.
+   *
+   * This is the whole of what a light/dark toggle costs this layer: two
+   * `setPaintProperty` calls against layers that are already on the style,
+   * carrying tiles that are already parsed and feature state that is already
+   * lit. The alternative — listing the palette on the install effect — reads as
+   * the simpler code and is the expensive one, because the palette moves one
+   * commit ahead of the style epoch and everything built in that commit is
+   * thrown away by `setStyle` a frame later.
+   *
+   * `styleEpoch` is deliberately absent. A fresh install goes in wearing
+   * {@link paletteRef}'s colours and records them, so there is never a case
+   * where the epoch moved and the paint did not follow it.
+   */
+  React.useEffect(() => {
+    if (map === null || !ready) return
+    if (appliedPaletteRef.current === palette) return
+    if (map.getLayer(VISITED_COUNTRY_LAYER_IDS.fill) === undefined) return
+
+    map.setPaintProperty(
+      VISITED_COUNTRY_LAYER_IDS.fill,
+      'fill-color',
+      fillColour(palette.country),
+    )
+    if (map.getLayer(VISITED_COUNTRY_LAYER_IDS.outline) !== undefined) {
+      map.setPaintProperty(
+        VISITED_COUNTRY_LAYER_IDS.outline,
+        'line-color',
+        outlineColour(palette.country),
+      )
+    }
+    appliedPaletteRef.current = palette
+  }, [map, palette, ready])
 
   /* ----------------------------------------------------------- selection */
 
@@ -515,7 +655,10 @@ export function VisitedCountries({
         { selected: false },
       )
     }
-  }, [map, palette, ready, selectedCode, styleEpoch])
+    // A recolour cannot disturb feature state — only a dropped style can — so
+    // the palette is not here either. Re-running on it would clear and rewrite
+    // the highlight for every theme toggle, for no change on screen.
+  }, [map, ready, selectedCode, styleEpoch])
 
   /* -------------------------------------------------------- interaction */
 
@@ -590,7 +733,10 @@ export function VisitedCountries({
       map.off('touchstart', onOut)
       map.off('click', onClick)
     }
-  }, [map, palette, ready, styleEpoch])
+    // And not here: `hovered` tracks a feature state that a recolour leaves
+    // exactly where it was, so rebinding on a theme toggle would drop a live
+    // hover and make the pointer blink on its way past a country.
+  }, [map, ready, styleEpoch])
 
   return null
 }
@@ -604,7 +750,9 @@ export function VisitedCountries({
  * caller's own style document — and appending on top is the only defensible
  * guess there.
  */
-function insertionAnchor(map: Pick<MapLibreMap, 'getLayer'>): string | undefined {
+function insertionAnchor(
+  map: Pick<MapLibreMap, 'getLayer'>,
+): string | undefined {
   for (const id of INSERT_ANCHORS) {
     if (map.getLayer(id) !== undefined) return id
   }

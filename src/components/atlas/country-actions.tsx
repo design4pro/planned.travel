@@ -74,6 +74,33 @@ import type { ConfirmRequest } from '#/components/modules/shared'
  * you sure?". A ticked-off bucket-list entry is treated the same way, because it
  * is a record of something that happened rather than an intention.
  *
+ * **The row paints the claim; the button describes the press.** The two are not
+ * the same sentence and must not be read off the same value. The row's glyph,
+ * title and caption follow the optimistic claim, because that is the state the
+ * reader asked for. The button follows the *write in flight* — `mark.pending`
+ * means the control is marking, whatever the row has already painted — and only
+ * falls back to the claim when nothing is running. Deriving the button from the
+ * claim is how a control ends up announcing "Remove France from your atlas,
+ * busy" one frame after the reader pressed "Mark visited", and offering an
+ * inverse it is `disabled` for. Label, glyph, variant and the announced progress
+ * all come from that one intent, so they cannot disagree with each other either.
+ *
+ * **The name at rest carries the visible label; the name in flight carries the
+ * verb.** While the button is at rest its accessible name begins with the words
+ * printed on it, so voice control can say them and WCAG 2.5.3 holds. While it is
+ * busy there is no visible label to match — the spinner has taken its place — so
+ * the name becomes the sentence describing what is happening, and the same
+ * sentence is passed as the loading label so the two can never drift.
+ *
+ * **The reader keeps their place, and is shown the reason.** `Button` disables
+ * itself while it loads, so the browser drops focus from whichever control was
+ * pressed; the block takes it back when the write settles, and only when the
+ * drop is the one it caused. The failure strip is scrolled into view by the
+ * least amount that works, because this block is mounted inside scroll
+ * containers shorter than it is and a sentence below the fold is a sentence
+ * nobody read. A confirmation that was open over a failed removal stands down
+ * for the same reason: its overlay is the other way to hide that sentence.
+ *
  * **The failure is said twice, announced once.** The toast is the announcement
  * (`sonner` owns a live region and speaks it); the strip under the rows is the
  * durable copy for a reader who looked away while the toast expired. Marking the
@@ -160,9 +187,14 @@ const layout = {
   /**
    * Two lines of caption at a stated 16px leading: 32px in every state, whether
    * it holds the hint, a two-line failure or the tail of one fading out.
+   *
+   * Every step in it is on the grid, the glyph included: a 16px icon against a
+   * 16px first line needs no optical nudge to sit on the same baseline, so the
+   * half-step this row used to carry bought nothing but a value off the scale.
    */
-  message: 'mt-2 flex h-8 items-start gap-1.5',
+  message: 'mt-2 flex h-8 items-start gap-2',
   messageText: 'line-clamp-2 text-caption leading-4',
+  messageGlyph: 'size-4 shrink-0 text-danger',
 } as const
 
 /* --------------------------------------------------------------------- copy */
@@ -239,6 +271,80 @@ function goalCopy(listed: boolean, goal: CountryActionsGoal | null): RowCopy {
         ? 'Waiting for its turn.'
         : `Aiming for ${goal.targetYear}.`,
   }
+}
+
+/* ------------------------------------------------------------------- intent */
+
+/** Which of the two rows a press came from. */
+type RowName = 'visit' | 'goal'
+
+/** Which way a row's control is pointing: the write it would send if pressed. */
+type RowIntent = 'add' | 'remove'
+
+/**
+ * What the control is for, which is not always what the row currently says.
+ *
+ * A write in flight is the answer whenever there is one, because that is the
+ * press the reader made and the sentence they are owed. Only when both writes
+ * are idle does the row's own state decide, and then it is the optimistic state
+ * — an idle row is a settled row, so the claim and the record agree.
+ */
+function rowIntent(
+  adding: boolean,
+  removing: boolean,
+  set: boolean,
+): RowIntent {
+  if (adding) return 'add'
+  if (removing) return 'remove'
+  return set ? 'remove' : 'add'
+}
+
+/**
+ * Everything the row's button says, in one object so no two of them can be read
+ * off different values.
+ */
+interface RowControl {
+  readonly intent: RowIntent
+  /** Printed on the control. */
+  readonly label: string
+  /** The accessible name at rest. Opens with {@link label}, so 2.5.3 holds. */
+  readonly restName: string
+  /** The accessible name and the announced label while the write is running. */
+  readonly busyName: string
+}
+
+/** The atlas row's control, in both directions. */
+function visitControl(intent: RowIntent, name: string): RowControl {
+  return intent === 'remove'
+    ? {
+        intent,
+        label: 'Remove',
+        restName: `Remove ${name} from your atlas`,
+        busyName: `Removing ${name} from your atlas`,
+      }
+    : {
+        intent,
+        label: 'Mark visited',
+        restName: `Mark visited, ${name}`,
+        busyName: `Marking ${name} as visited`,
+      }
+}
+
+/** The bucket-list row's control, in both directions. */
+function goalControl(intent: RowIntent, name: string): RowControl {
+  return intent === 'remove'
+    ? {
+        intent,
+        label: 'Remove',
+        restName: `Remove ${name} from your bucket list`,
+        busyName: `Removing ${name} from your bucket list`,
+      }
+    : {
+        intent,
+        label: 'Add to list',
+        restName: `Add to list, ${name}`,
+        busyName: `Adding ${name} to your bucket list`,
+      }
 }
 
 /** The resting line under the rows. Replaced by a failure, never by silence. */
@@ -374,6 +480,11 @@ export const CountryActions = React.forwardRef<
     const code = countryCode.trim().toUpperCase()
     const name = countryName(code)
     const [confirm, setConfirm] = React.useState<ConfirmRequest | null>(null)
+    const messageRef = React.useRef<HTMLParagraphElement | null>(null)
+    const visitRef = React.useRef<HTMLButtonElement | null>(null)
+    const goalRef = React.useRef<HTMLButtonElement | null>(null)
+    /** Which control started the write in flight, so focus can go back to it. */
+    const pressedRef = React.useRef<RowName | null>(null)
 
     /**
      * The claimed state of each row while a write is in flight. Keyed by the
@@ -400,6 +511,12 @@ export const CountryActions = React.forwardRef<
       failure: `${name} was not removed`,
       fallback: 'The change did not reach the server. Try again in a moment.',
       onSuccess: closeConfirm,
+      // A confirmation that stays open over a failure hides the only durable
+      // copy of the reason: the strip lives under the rows, behind the modal's
+      // own overlay. Standing the question down puts the reader back on the row
+      // they pressed, with the sentence under it and the offer still there to
+      // take again.
+      onError: closeConfirm,
     })
     const addGoal = useAction(addGoalToList, {
       success: 'Added to your bucket list',
@@ -413,11 +530,14 @@ export const CountryActions = React.forwardRef<
       failure: `${name} was not removed`,
       fallback: 'The change did not reach the server. Try again in a moment.',
       onSuccess: closeConfirm,
+      onError: closeConfirm,
     })
 
     const visitPending = mark.pending || unmark.pending
     const goalPending = addGoal.pending || dropGoal.pending
     const busy = visitPending || goalPending
+    const visitIntent = rowIntent(mark.pending, unmark.pending, visited)
+    const goalIntent = rowIntent(addGoal.pending, dropGoal.pending, listed)
 
     /**
      * One strip, four possible writers. Each write clears the other three before
@@ -448,8 +568,54 @@ export const CountryActions = React.forwardRef<
       setConfirm(null)
     }, [code, clearMessages])
 
+    /**
+     * Brings the failure into view in whatever is clipping the block.
+     *
+     * This block is mounted inside two scroll containers — a 230px record pane
+     * on a desktop shelf and a shorter drawer on a phone — and the strip sits
+     * under two rows that already fill them, so a reader who pressed a button
+     * at the top of the pane was being told why it failed a hundred pixels
+     * below the fold. `nearest` moves the least it can and does nothing at all
+     * when the strip is already on screen, so nothing jumps for the readers who
+     * could see it anyway. It is deliberately not `smooth`: the sentence should
+     * be readable on the next frame, and the stylesheet pins
+     * `scroll-behavior: auto` under `prefers-reduced-motion` regardless.
+     */
+    React.useEffect(() => {
+      if (error === null) return
+      const node = messageRef.current
+      // Absent in jsdom, where there is nothing to scroll in the first place.
+      if (node === null || typeof node.scrollIntoView !== 'function') return
+      node.scrollIntoView({ block: 'nearest' })
+    }, [error])
+
+    /**
+     * Hands focus back to the control that was pressed.
+     *
+     * `Button` puts a real `disabled` attribute on itself while it loads, which
+     * is right — a control that is working must not be pressed twice — but the
+     * browser drops focus from a control the moment it is disabled, and it
+     * lands on `<body>`. A keyboard reader who pressed "Add to list" was left
+     * at the top of the document with no way back to the row, and no way to
+     * reach the sentence explaining why it did not save. So when the write
+     * settles the block takes focus back, and only in the case it caused:
+     * anything else holding focus — the confirmation dialog, a row the reader
+     * tabbed on to while the write ran — keeps it.
+     */
+    React.useEffect(() => {
+      if (busy) return
+      const pressed = pressedRef.current
+      if (pressed === null) return
+      pressedRef.current = null
+      const active = document.activeElement
+      if (active !== null && active !== document.body) return
+      const node = pressed === 'visit' ? visitRef.current : goalRef.current
+      node?.focus()
+    }, [busy])
+
     function runMark(): void {
       clearMessages()
+      pressedRef.current = 'visit'
       void overlay.claim([[visitKey, true]], () =>
         mark.run({ data: { countryCode: code } }),
       )
@@ -457,6 +623,7 @@ export const CountryActions = React.forwardRef<
 
     function runUnmark(): void {
       clearMessages()
+      pressedRef.current = 'visit'
       void overlay.claim([[visitKey, false]], () =>
         unmark.run({ data: { countryCode: code } }),
       )
@@ -464,6 +631,7 @@ export const CountryActions = React.forwardRef<
 
     function runAddGoal(): void {
       clearMessages()
+      pressedRef.current = 'goal'
       void overlay.claim([[goalKey, true]], () =>
         addGoal.run({ data: { countryCode: code } }),
       )
@@ -471,13 +639,14 @@ export const CountryActions = React.forwardRef<
 
     function runDropGoal(itemId: string): void {
       clearMessages()
+      pressedRef.current = 'goal'
       void overlay.claim([[goalKey, false]], () =>
         dropGoal.run({ data: { itemId } }),
       )
     }
 
     function onVisitPress(): void {
-      if (!visited) {
+      if (visitIntent === 'add') {
         runMark()
         return
       }
@@ -494,14 +663,15 @@ export const CountryActions = React.forwardRef<
     }
 
     function onGoalPress(): void {
-      if (!listed) {
+      if (goalIntent === 'add') {
         runAddGoal()
         return
       }
       if (bucketGoal === null) {
-        // Claimed as listed but with no row to address yet, which is only true
-        // while the add is in flight — and the control is disabled for exactly
-        // that window, so this is a guard rather than a path.
+        // Pointing at a removal with no row to address. The claim that produces
+        // that is only held while the add is in flight, and the intent above
+        // reads the flight rather than the claim, so this is a guard against a
+        // state that cannot be reached rather than a path through the block.
         return
       }
       const itemId = bucketGoal.id
@@ -525,6 +695,11 @@ export const CountryActions = React.forwardRef<
     const goalTitleId = `${rowId}-goal`
     /** The dialog owns the spinner while it is the control being pressed. */
     const confirming = confirm !== null
+    /** Busy on the control itself, which is not the same as busy in the block. */
+    const visitBusy = visitPending && !confirming
+    const goalBusy = goalPending && !confirming
+    const visitAction = visitControl(visitIntent, name)
+    const goalAction = goalControl(goalIntent, name)
 
     return (
       <div
@@ -561,19 +736,24 @@ export const CountryActions = React.forwardRef<
               <p className={layout.caption}>{visitText.caption}</p>
             </div>
             <Button
-              variant={visited ? 'secondary' : 'primary'}
+              ref={visitRef}
+              variant={
+                visitAction.intent === 'remove' ? 'secondary' : 'primary'
+              }
               size="sm"
-              icon={visited ? <CircleMinus /> : <Check />}
-              loading={visitPending && !confirming}
-              loadingLabel={visited ? 'Removing' : 'Marking'}
+              icon={
+                visitAction.intent === 'remove' ? <CircleMinus /> : <Check />
+              }
+              loading={visitBusy}
+              loadingLabel={visitAction.busyName}
               disabled={goalPending}
               aria-label={
-                visited ? `Remove ${name} from your atlas` : undefined
+                visitBusy ? visitAction.busyName : visitAction.restName
               }
               onClick={onVisitPress}
               className={layout.action}
             >
-              {visited ? 'Remove' : 'Mark visited'}
+              {visitAction.label}
             </Button>
           </div>
 
@@ -599,31 +779,30 @@ export const CountryActions = React.forwardRef<
               <p className={layout.caption}>{goalText.caption}</p>
             </div>
             <Button
+              ref={goalRef}
               variant="secondary"
               size="sm"
-              icon={listed ? <CircleMinus /> : <Plus />}
-              loading={goalPending && !confirming}
-              loadingLabel={listed ? 'Removing' : 'Adding'}
+              icon={goalAction.intent === 'remove' ? <CircleMinus /> : <Plus />}
+              loading={goalBusy}
+              loadingLabel={goalAction.busyName}
               disabled={visitPending}
-              aria-label={
-                listed ? `Remove ${name} from your bucket list` : undefined
-              }
+              aria-label={goalBusy ? goalAction.busyName : goalAction.restName}
               onClick={onGoalPress}
               className={layout.action}
             >
-              {listed ? 'Remove' : 'Add to list'}
+              {goalAction.label}
             </Button>
           </div>
         </div>
 
-        <p data-part="message" className={layout.message}>
+        <p ref={messageRef} data-part="message" className={layout.message}>
           {message.text === '' ? (
             <span className={cn(layout.messageText, 'text-ink-3')}>{HINT}</span>
           ) : (
             <>
               <TriangleAlert
                 aria-hidden="true"
-                className="mt-0.5 size-3.5 shrink-0 text-danger"
+                className={layout.messageGlyph}
               />
               <span
                 data-state={message.state}

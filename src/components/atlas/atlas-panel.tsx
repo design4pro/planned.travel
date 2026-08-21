@@ -78,6 +78,14 @@ import type { CountryActionsGoal, CountryActionsVisit } from './country-actions'
  * exactly as a mouse reader does; hover on the map only adds emphasis to
  * something already reachable without a pointer.
  *
+ * **One country is one card.** The country's facts and the two writes that
+ * change them sit in a single article whether or not there is a record behind
+ * it — only the facts inside it differ. Two cards meant two announcements for
+ * one country, and worse, two places for the action block to be mounted: a
+ * successful mark turns the first answer into the second while the write is
+ * still settling, and React threw the block away mid-flight, taking the
+ * keyboard reader's place and the failure message with it.
+ *
  * **A phone gets a drawer, not a squeezed desktop.** Below `lg` the panel is
  * collapsed to its header, so the map keeps the screen; the tab strip is still
  * there, and touching a tab opens it. From `lg` up it opens by default, because
@@ -255,6 +263,20 @@ export interface AtlasPanelStats {
   readonly distanceMetres: number | null
 }
 
+/**
+ * One country on the bucket list, with only what the lookup needs.
+ *
+ * Deliberately smaller than {@link AtlasPanelBucketItem}: this list is uncapped,
+ * so it travels in the streamed document for every country the reader has ever
+ * listed, and a target year nobody reads is a byte per row nobody needs.
+ */
+export interface AtlasPanelBucketCountry {
+  readonly countryCode: string
+  /** The row id, which is how the entry is addressed when it is removed. */
+  readonly itemId: string
+  readonly isAchieved: boolean
+}
+
 /** One bucket-list row, as the atlas loader returns it. */
 export interface AtlasPanelBucketItem {
   readonly id: string
@@ -384,16 +406,20 @@ const layout = {
   bucketRow:
     'flex min-w-0 items-center gap-3 border-b border-edge-faint px-1 py-2.5 last:border-b-0',
   /**
-   * A country on the map that is not on the record.
+   * The selected country's card, whether or not it is on the record.
    *
-   * Clicking one is a real question — "have I been here?" — and the honest answer
-   * is a card that says no. Before this, choosing an unvisited country switched
-   * to the record tab and showed "Pick a country", which reads as the app having
-   * ignored the click.
+   * One surface for both, not two. Clicking an unvisited country is a real
+   * question — "have I been here?" — and the honest answer is a card that says
+   * no; before this, choosing one switched to the record tab and showed "Pick a
+   * country", which reads as the app having ignored the click. Giving the two
+   * answers the same card also gives the action block under them one place in
+   * the tree, which is what stops it being torn down mid-write.
    */
-  unvisited: cardVariants({ variant: 'default', padding: 'md' }),
-  unvisitedFlag:
+  pane: cardVariants({ variant: 'default', padding: 'md' }),
+  paneFlag:
     'grid size-11 shrink-0 place-items-center rounded-md border border-edge-faint bg-surface-2 text-title leading-none',
+  /** The rule between the facts above and the two writes below them. */
+  paneActions: 'mt-4 border-t border-edge-faint pt-4',
 } as const
 
 /* -------------------------------------------------------------------- panel */
@@ -447,6 +473,19 @@ export interface AtlasPanelProps extends Omit<
   readonly bucketTotal?: number
   /** How many of the whole list are ticked. Defaults to what was handed over. */
   readonly bucketAchieved?: number
+  /**
+   * Every country on the list, uncapped — the answer to "is the country the
+   * reader just selected already on it?".
+   *
+   * {@link AtlasPanelProps.bucketList} is a bounded slice, so a country past the
+   * cut reads as "not on the list" and the action block offers to add one that
+   * is already there. The write is idempotent, so nothing is duplicated, but the
+   * reader is told it was added when it was already on the list — a dead button
+   * wearing a success toast. One row per country is cheap enough to ship
+   * uncapped, and this is that list. Omit it and the lookup falls back to the
+   * slice, which is what it did before.
+   */
+  readonly bucketCountries?: ReadonlyArray<AtlasPanelBucketCountry>
 }
 
 export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
@@ -465,13 +504,13 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
       bucketList,
       bucketTotal,
       bucketAchieved,
+      bucketCountries,
       className,
       ...props
     },
     ref,
   ) => {
     const bodyId = React.useId()
-    const unvisitedId = React.useId()
     /**
      * What the toggle says, what a screen reader is told, and what one press of
      * it does. `null` follows the breakpoint — measured, not assumed, because
@@ -513,15 +552,18 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
           }
 
     /**
-     * The selected country's entry on the bucket list, read off the rows the
-     * panel was handed.
+     * The selected country's entry on the bucket list.
      *
-     * Those rows can be the head of a longer list — see {@link
-     * AtlasPanelProps.bucketTotal} — so a country sitting past the cut reads as
-     * "not on the list" here. The write behind the button is idempotent against
-     * exactly that: adding a country that already has an entry returns the
-     * existing one rather than a second row, and the invalidation that follows
-     * brings the true state back into the panel.
+     * Two sources, in this order, because they answer two different questions.
+     * The displayed rows are the richer of the two — they carry the target year,
+     * which is the difference between "Waiting for its turn." and "Aiming for
+     * 2027." — but they are a bounded slice, so a country past the cut is absent
+     * from them without being absent from the list. {@link
+     * AtlasPanelProps.bucketCountries} is the uncapped one-row-per-country
+     * answer, and it is what stops the block offering to add a country that is
+     * already there and then reporting success for a write that changed nothing.
+     * Its rows carry no year, so a country found only there is described without
+     * one rather than described wrongly.
      */
     const bucketGoal: CountryActionsGoal | null = React.useMemo(() => {
       if (selectedKey === null) return null
@@ -530,14 +572,20 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
           entry.kind === 'country' &&
           (entry.countryCode ?? '').trim().toUpperCase() === selectedKey,
       )
-      return row === undefined
+      if (row !== undefined) {
+        return {
+          id: row.id,
+          targetYear: row.targetYear,
+          isAchieved: row.isAchieved,
+        }
+      }
+      const listed = bucketCountries?.find(
+        (entry) => entry.countryCode.trim().toUpperCase() === selectedKey,
+      )
+      return listed === undefined
         ? null
-        : {
-            id: row.id,
-            targetYear: row.targetYear,
-            isAchieved: row.isAchieved,
-          }
-    }, [bucketList, selectedKey])
+        : { id: listed.itemId, targetYear: null, isAchieved: listed.isAchieved }
+    }, [bucketCountries, bucketList, selectedKey])
 
     return (
       <GlassPanel
@@ -706,63 +754,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                     </Button>
                   )}
 
-                  {record === null && selectedKey !== null ? (
-                    // Scrolled for the same reason the record beside it is: the
-                    // shelf is a fixed box, and the card plus its two actions is
-                    // taller than the drawer a phone opens. Keyed by the country
-                    // so choosing another one starts at the top of it rather
-                    // than wherever the last one was left.
-                    <ScrollArea
-                      key={selectedKey}
-                      axis="vertical"
-                      className="min-h-0 flex-1"
-                    >
-                      <article
-                        aria-labelledby={unvisitedId}
-                        data-country={selectedKey}
-                        className={layout.unvisited}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span
-                            aria-hidden="true"
-                            className={layout.unvisitedFlag}
-                          >
-                            {countryFlag(selectedKey)}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <h3
-                              id={unvisitedId}
-                              className="text-balance wrap-anywhere text-subtitle font-semibold text-ink"
-                            >
-                              {countryName(selectedKey)}
-                            </h3>
-                            <p className="mt-1 text-caption font-semibold tracking-wide tabular-nums text-ink-3">
-                              {selectedKey}
-                            </p>
-                          </div>
-                        </div>
-                        {/* One line, not three. The state and what each write
-                            does are stated by the block below, where the
-                            controls that change them are; saying it twice
-                            pushed the actions off the bottom of the shelf. */}
-                        <p className="mt-3 text-body text-ink-2">
-                          Nothing is recorded here yet.
-                        </p>
-
-                        {/* Every fact the map can show is reachable from the
-                            shelf, and so is every action: this is the keyboard
-                            and touch route to both writes. */}
-                        <CountryActions
-                          key={selectedKey}
-                          countryCode={selectedKey}
-                          visit={null}
-                          bucketGoal={bucketGoal}
-                          headingLevel={4}
-                          className="mt-4 border-t border-edge-faint pt-4"
-                        />
-                      </article>
-                    </ScrollArea>
-                  ) : record === null ? (
+                  {selectedKey === null ? (
                     <EmptyState
                       variant="filled"
                       tone="brand"
@@ -780,34 +772,103 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       }
                     />
                   ) : (
+                    // Scrolled because the shelf is a fixed box and the card
+                    // plus its two actions is taller than the drawer a phone
+                    // opens. Keyed by the country, so choosing another one
+                    // starts at the top of it rather than wherever the last one
+                    // was left.
                     <ScrollArea
-                      key={record.countryCode}
+                      key={selectedKey}
                       axis="vertical"
                       className="min-h-0 flex-1"
                     >
-                      <CountryRecord
-                        countryCode={record.countryCode}
-                        continent={record.continent}
-                        firstVisitedOn={record.firstVisitedOn}
-                        lastVisitedOn={record.lastVisitedOn}
-                        visitCount={record.visitCount}
-                        note={record.note}
-                        hasOutline={record.hasOutline}
-                        headingLevel={3}
-                      />
+                      {/* One card for both answers, and one mount for the block
+                          under them.
 
-                      {/* Under the record rather than inside it: the record is
-                          what is true, and this is what a reader can change
-                          about it. A visited country needs the inverse of both
-                          writes as much as an unvisited one needs the writes. */}
-                      <CountryActions
-                        key={`${record.countryCode}-actions`}
-                        countryCode={record.countryCode}
-                        visit={visitFacts}
-                        bucketGoal={bucketGoal}
-                        headingLevel={4}
-                        className="mt-3"
-                      />
+                          The two answers used to be two branches — an "off the
+                          record" card and a `CountryRecord` — each carrying its
+                          own `CountryActions`. Marking a country visited from
+                          the first one made the second one true, and because
+                          `useAction` awaits `router.invalidate()` before it
+                          reports the write as settled, the loader's new answer
+                          arrived while the block still had focus and a spinner
+                          on it. React saw a different element in that slot,
+                          threw the block away and mounted a fresh one, so the
+                          effect that hands focus back to the pressed control
+                          never ran and a keyboard reader was left on `<body>`.
+                          Holding the card, its label and the block at fixed
+                          positions means only the facts between them are
+                          replaced, and the reader keeps both their place and
+                          the reason if it failed. */}
+                      <article
+                        data-part="country-pane"
+                        data-country={selectedKey}
+                        aria-label={countryName(selectedKey)}
+                        className={layout.pane}
+                      >
+                        {record === null ? (
+                          // No line of prose under the name. "Nothing is
+                          // recorded here yet." said, in a whole paragraph,
+                          // exactly what the row sixteen pixels below it says
+                          // in its own title, and cost the shelf thirty-six of
+                          // the two hundred and thirty pixels it has — which is
+                          // where the second action was going.
+                          <div className="flex items-start gap-3">
+                            <span
+                              aria-hidden="true"
+                              className={layout.paneFlag}
+                            >
+                              {countryFlag(selectedKey)}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-balance wrap-anywhere text-subtitle font-semibold text-ink">
+                                {countryName(selectedKey)}
+                              </h3>
+                              <p className="mt-1 text-caption font-semibold tracking-wide tabular-nums text-ink-3">
+                                {selectedKey}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          // The record brings the facts, not a second surface:
+                          // the card around it is the pane's, and one country
+                          // is one article, so the name and the two writes are
+                          // announced together rather than as two nested
+                          // regions. Dropping the record's own name with its
+                          // role is what makes the demotion hold — a
+                          // `presentation` role is ignored on an element that
+                          // still carries a global ARIA attribute.
+                          <CountryRecord
+                            variant="plain"
+                            role="presentation"
+                            aria-labelledby={undefined}
+                            countryCode={record.countryCode}
+                            continent={record.continent}
+                            firstVisitedOn={record.firstVisitedOn}
+                            lastVisitedOn={record.lastVisitedOn}
+                            visitCount={record.visitCount}
+                            note={record.note}
+                            hasOutline={record.hasOutline}
+                            headingLevel={3}
+                          />
+                        )}
+
+                        {/* Under the facts rather than among them: the card is
+                            what is true, and this is what a reader can change
+                            about it. A visited country needs the inverse of
+                            both writes as much as an unvisited one needs the
+                            writes, and every fact the map can show is reachable
+                            here — so this is also the keyboard and touch route
+                            to both. */}
+                        <CountryActions
+                          key="actions"
+                          countryCode={selectedKey}
+                          visit={visitFacts}
+                          bucketGoal={bucketGoal}
+                          headingLevel={4}
+                          className={layout.paneActions}
+                        />
+                      </article>
                     </ScrollArea>
                   )}
                 </div>

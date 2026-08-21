@@ -90,10 +90,17 @@ export type { DayRoutesProps } from './day-routes'
  * as soon as that asset arrives. Two answers a screen may already have rendered
  * move with it: `hasCountryOutline()` starts saying yes to Singapore, Malta and
  * the Maldives, and `countryBounds()` grows to hold a country's offshore
- * territories. Anything that renders either should read it through
- * `subscribeCountryDetail()` rather than once.
+ * territories.
+ *
+ * `useCountryDetail()` is how anything outside the map is told. Read it in the
+ * component that renders either answer and put it in the dependency list of the
+ * memo that resolves them — a memo keyed on the record alone resolves once
+ * against the bundled cut and then contradicts the map for the life of the
+ * screen. It is a subscription over process-wide state, so mounting it beside
+ * the map costs no second request.
  */
 export {
+  useCountryDetail,
   VisitedCountries,
   VISITED_COUNTRY_LAYER_IDS,
   VISITED_COUNTRY_SOURCE_ID,

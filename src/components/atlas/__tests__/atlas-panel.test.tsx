@@ -78,8 +78,12 @@ const STATS: AtlasPanelProps['stats'] = {
   distanceMetres: 82_400_000,
 }
 
-function panel(overrides: Partial<AtlasPanelProps> = {}) {
-  const props: AtlasPanelProps = {
+/**
+ * Split out from {@link panel} so a test that has to re-render the panel with a
+ * changed loader answer can build the second set of props from the first.
+ */
+function props(overrides: Partial<AtlasPanelProps> = {}): AtlasPanelProps {
+  return {
     countries: [FRANCE, JAPAN],
     selectedCode: null,
     onSelect: () => {},
@@ -95,7 +99,10 @@ function panel(overrides: Partial<AtlasPanelProps> = {}) {
     bucketList: [],
     ...overrides,
   }
-  return render(<AtlasPanel {...props} />)
+}
+
+function panel(overrides: Partial<AtlasPanelProps> = {}) {
+  return render(<AtlasPanel {...props(overrides)} />)
 }
 
 /**
@@ -359,8 +366,24 @@ describe('the country section', () => {
     const card = screen.getByRole('article', { name: 'New Zealand' })
     expect(card.textContent).toContain('NZ')
     expect(card.textContent).toContain('Not visited')
-    expect(card.textContent).toContain('Nothing is recorded here yet')
     expect(screen.queryByText('Pick a country')).toBeNull()
+  })
+
+  /**
+   * The card names the country; the block below it states both of its states.
+   * A paragraph between them saying the same thing as the row's own title cost
+   * the shelf thirty-six of the two hundred and thirty pixels it has, and the
+   * second action is what was standing in them.
+   */
+  it('says nothing between the name and the block that the block says itself', () => {
+    panel({ tab: 'country', selectedCode: 'NZ' })
+
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    expect(card.textContent).not.toContain('Nothing is recorded here yet')
+    const heading = within(card).getByRole('heading', { name: 'New Zealand' })
+    // The country's own label, and then straight into the record block.
+    expect(within(card).getByText('Your record')).toBeTruthy()
+    expect(heading.textContent).toBe('New Zealand')
   })
 
   /**
@@ -376,7 +399,16 @@ describe('the country section', () => {
     expect(card.textContent).toContain('Not visited')
     expect(card.textContent).toContain('Not on the list')
 
-    const mark = within(card).getByRole('button', { name: 'Mark visited' })
+    // Named for the country it acts on, so the two additive controls in the
+    // pane are told apart by a screen reader without their surrounding prose.
+    const mark = within(card).getByRole('button', {
+      name: 'Mark visited, New Zealand',
+    })
+    expect(
+      within(card).getByRole('button', {
+        name: 'Add to list, New Zealand',
+      }),
+    ).toBeTruthy()
     await user.click(mark)
     expect(atlas.mark).toHaveBeenCalledWith({ data: { countryCode: 'NZ' } })
   })
@@ -410,6 +442,146 @@ describe('the country section', () => {
         name: 'Remove France from your bucket list',
       }),
     ).toBeTruthy()
+  })
+
+  /**
+   * One country is one card and one announcement, in both of the pane's states.
+   * The record used to sit in its own article with the block outside it, which
+   * gave a screen reader two regions for one country and gave React two places
+   * to put the block — see the mid-write test below.
+   */
+  it('carries the record and both writes in one card, not two', () => {
+    panel({ tab: 'country', selectedCode: 'FR' })
+
+    expect(screen.getAllByRole('article', { name: 'France' })).toHaveLength(1)
+    const card = screen.getByRole('article', { name: 'France' })
+    expect(card.textContent).toContain('14 Jul 2011')
+    expect(within(card).getByText('Your record')).toBeTruthy()
+    expect(
+      within(card).getByRole('button', {
+        name: 'Remove France from your atlas',
+      }),
+    ).toBeTruthy()
+    expect(
+      within(card).getByRole('button', { name: 'Add to list, France' }),
+    ).toBeTruthy()
+  })
+
+  /**
+   * The write's answer arrives before the write reports itself finished:
+   * `useAction` awaits `router.invalidate()` inside `run`, so the loader's new
+   * country lands while the pressed control is still disabled and focus is
+   * still parked on `<body>`. When the pane answered that with a different
+   * branch, React threw the whole block away at exactly that moment, the
+   * effect that hands focus back never ran, and a keyboard reader was left at
+   * the top of the document with no way back to the row or to the reason.
+   */
+  it('holds the reader on the control when the record lands mid-write', async () => {
+    const user = userEvent.setup()
+    const NEW_ZEALAND: CountriesListCountry = {
+      countryCode: 'NZ',
+      continent: 'Oceania',
+      firstVisitedOn: null,
+      lastVisitedOn: null,
+      visitCount: 1,
+      note: null,
+      hasOutline: true,
+    }
+    const before = props({ tab: 'country', selectedCode: 'NZ' })
+    const view = render(<AtlasPanel {...before} />)
+
+    // What a successful mark actually does: re-run the loaders, and hand the
+    // panel a record where a moment ago there was none.
+    router.invalidate.mockImplementation(async () => {
+      view.rerender(
+        <AtlasPanel {...before} countries={[FRANCE, JAPAN, NEW_ZEALAND]} />,
+      )
+    })
+
+    const mark = screen.getByRole('button', {
+      name: 'Mark visited, New Zealand',
+    })
+    mark.focus()
+    await user.click(mark)
+
+    const inverse = await screen.findByRole('button', {
+      name: 'Remove New Zealand from your atlas',
+    })
+    // The very same control, turned round — not a fresh one in a fresh block.
+    expect(inverse).toBe(mark)
+    expect(document.activeElement).toBe(inverse)
+    // And the facts the write produced are in the same card as the actions.
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    expect(within(card).getByText('Your record')).toBeTruthy()
+    expect(card.textContent).toContain('Oceania')
+  })
+
+  /**
+   * The displayed rows are a bounded slice. A country past the cut used to read
+   * as "not on the list" and offer an add that the server answers with the row
+   * it already had — a success toast for a write that changed nothing, and the
+   * dead button the block exists to avoid.
+   */
+  it('reads the whole list, not the slice, when asked whether a country is on it', () => {
+    panel({
+      tab: 'country',
+      selectedCode: 'NZ',
+      bucketList: [],
+      bucketCountries: [
+        { countryCode: 'NZ', itemId: 'goal-nz', isAchieved: false },
+      ],
+    })
+
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    expect(card.textContent).toContain('On the bucket list')
+    expect(
+      within(card).getByRole('button', {
+        name: 'Remove New Zealand from your bucket list',
+      }),
+    ).toBeTruthy()
+  })
+
+  it('keeps the richer displayed row when the country is in both', () => {
+    panel({
+      tab: 'country',
+      selectedCode: 'FR',
+      bucketList: [
+        {
+          id: 'goal-fr',
+          name: 'France',
+          kind: 'country',
+          countryCode: 'FR',
+          targetYear: 2027,
+          isAchieved: false,
+        },
+      ],
+      bucketCountries: [
+        { countryCode: 'FR', itemId: 'goal-fr', isAchieved: false },
+      ],
+    })
+
+    // Only the displayed row carries the year, so the slice has to win.
+    expect(screen.getByText('Aiming for 2027.')).toBeTruthy()
+  })
+
+  it('falls back to the slice when no uncapped list is handed over', () => {
+    panel({
+      tab: 'country',
+      selectedCode: 'NZ',
+      bucketList: [
+        {
+          id: 'goal-nz',
+          name: 'New Zealand',
+          kind: 'country',
+          countryCode: 'NZ',
+          targetYear: null,
+          isAchieved: false,
+        },
+      ],
+    })
+
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    expect(card.textContent).toContain('On the bucket list')
   })
 
   it('lists every country beside the record and reports a choice', async () => {

@@ -319,6 +319,645 @@ test.describe('authenticated routes', () => {
   }
 
   /**
+   * The two surfaces the atlas map answers with, which no baseline can hold.
+   *
+   * A screenshot is a picture of a page at rest, and both of these exist only
+   * while somebody is pointing at the map: a hover card that is gone the moment
+   * the pointer leaves, and a panel that opens on a press. Recording either as a
+   * frame would mean recording a synthetic pointer position into a baseline and
+   * then defending it against every future change of camera — so what is held
+   * here is behaviour and geometry instead. The resting frame above is unchanged
+   * by design: with nothing hovered and nothing selected, the overlay draws no
+   * DOM at all, and the four atlas baselines are byte-identical to the ones
+   * recorded before it existed.
+   *
+   * The country is chosen through the search field rather than by hunting for
+   * pixels. That is the one route to a country that works identically on a
+   * desktop pointer and on a phone, it frames the country in the middle of
+   * whatever map the chrome has left free — which is what makes the hover probe
+   * below deterministic — and it is itself one of the three non-pointer routes
+   * that keep the map's surfaces from ever being the only way to reach a fact.
+   */
+  const ATLAS = APP_ROUTES.find((candidate) => candidate.name === 'atlas')
+
+  /** Chooses a country by name, the way a reader with no mouse would. */
+  async function chooseCountry(page: Page, name: string): Promise<void> {
+    await page.getByRole('button', { name: 'Find a country' }).click()
+    await page.getByRole('combobox', { name: 'Find a country' }).fill(name)
+    await page.getByRole('option', { name }).first().click()
+    await expect(
+      page.locator('[data-part="country-panel"]'),
+      'choosing a country has to open the map surface, whichever route chose it',
+    ).toBeVisible()
+    // The camera frames it, and the anchor tracks the flight; the probes below
+    // read boxes, so they wait for it to come to rest.
+    await page.waitForTimeout(1_500)
+  }
+
+  /** Every box the map surfaces are forbidden to land on. */
+  async function chromeBoxes(page: Page) {
+    return page.evaluate(() => {
+      const box = (selector: string) => {
+        const node = document.querySelector(selector)
+        return node === null ? null : node.getBoundingClientRect().toJSON()
+      }
+      return {
+        search: box('[aria-label="Find a country"]'),
+        zoom: box('[aria-label="Zoom in"]'),
+        shelf: box('[data-part="atlas-shelf"]'),
+        header: box('header'),
+      }
+    })
+  }
+
+  test('the atlas map answers a pointer with a card that clears its chrome', async ({
+    page,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    if (ATLAS === undefined) return
+    const watched = watchConsole(page, ATLAS)
+    await visit(page, ATLAS, 'light')
+    // Spain rather than France: `countryBounds()` is solved over the sovereign
+    // cut, so framing France centres the camera between Guadeloupe and Réunion
+    // and the middle of the map is the Sahara. Spain's rectangle is one
+    // peninsula and the Canaries, and the camera lands on the peninsula — which
+    // is what makes "there is land in the middle of the clear map" a fact rather
+    // than a hope. The search is still the route, because it is the one that
+    // works identically with a pointer and with a finger.
+    await chooseCountry(page, 'Spain')
+    // The panel is dismissed first: a hover card for the country the panel is
+    // already about would be the same country said twice, and this test is
+    // about the hover surface on its own.
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-part="country-panel"]')).toHaveCount(0)
+
+    const canvas = await page.locator('.maplibregl-canvas').boundingBox()
+    expect(
+      canvas,
+      'the map has to have drawn before it can be pointed at',
+    ).not.toBeNull()
+    if (canvas === null) return
+    const chrome = await chromeBoxes(page)
+    const clearTop = chrome.search?.bottom ?? canvas.y
+    const clearBottom = chrome.shelf?.top ?? canvas.y + canvas.height
+    const card = page.locator('[data-part="country-hover"]')
+
+    // A ring around the middle of the clear map rather than one point: a
+    // coastline is a coastline, and a probe that insisted on a single pixel
+    // being land would be asserting against the camera rather than against the
+    // card.
+    const centre = {
+      x: canvas.x + canvas.width / 2,
+      y: (clearTop + clearBottom) / 2,
+    }
+    let found = false
+    for (const dy of [0, -40, 40, -80, 80]) {
+      for (const dx of [0, -40, 40, -80, 80]) {
+        await page.mouse.move(centre.x + dx, centre.y + dy)
+        if ((await card.count()) > 0) {
+          found = true
+          break
+        }
+      }
+      if (found) break
+    }
+    expect(
+      found,
+      'the framed country fills the middle of the clear map, so a pointer there must find it',
+    ).toBe(true)
+
+    await expect(
+      card,
+      'the card is decoration: the same facts are in the panel, the record and the list',
+    ).toHaveAttribute('aria-hidden', 'true')
+    expect(
+      await card.getAttribute('data-country'),
+      'the card has to name the country under the pointer with its ISO code',
+    ).toMatch(/^[A-Z]{2}$/)
+    expect(
+      (await card.textContent())?.trim() ?? '',
+      'and print that country in words',
+    ).not.toBe('')
+    expect(
+      await card.locator('button, a, [tabindex]').count(),
+      'nothing inside a decorative surface may take focus',
+    ).toBe(0)
+
+    const surface = await page
+      .locator('[data-part="country-surface"]')
+      .first()
+      .boundingBox()
+    expect(
+      surface,
+      'the card has to be placed before it is judged',
+    ).not.toBeNull()
+    if (surface === null) return
+    const apart = (
+      other: { x: number; y: number; width: number; height: number } | null,
+    ) =>
+      other === null ||
+      surface.x + surface.width <= other.x ||
+      surface.x >= other.x + other.width ||
+      surface.y + surface.height <= other.y ||
+      surface.y >= other.y + other.height
+    expect(
+      apart(chrome.search),
+      'the card must never land on the search pill',
+    ).toBe(true)
+    expect(
+      apart(chrome.zoom),
+      'the card must never land on the zoom cluster',
+    ).toBe(true)
+    expect(apart(chrome.shelf), 'the card must never land on the shelf').toBe(
+      true,
+    )
+
+    expect(
+      watched().fatal,
+      'pointing at the map must not put anything in the console',
+    ).toEqual([])
+  })
+
+  test('pressing a country opens a surface that carries the actions and answers the keyboard', async ({
+    page,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    if (ATLAS === undefined) return
+    const watched = watchConsole(page, ATLAS)
+    await visit(page, ATLAS, 'dark')
+    await chooseCountry(page, 'France')
+
+    const panel = page.getByRole('dialog', { name: 'France' })
+    await expect(
+      panel,
+      'the surface is a real dialog with the country as its name',
+    ).toBeVisible()
+    // The same figures the hover card carries, and the two writes it does not.
+    await expect(panel).toContainText('Trips')
+    await expect(panel).toContainText('Places')
+    await expect(
+      panel.getByRole('button', {
+        name: /^(Mark visited|Remove France from your atlas)/,
+      }),
+    ).toBeVisible()
+    await expect(
+      panel.getByRole('button', {
+        name: /^(Add to list|Remove France from your bucket list)/,
+      }),
+    ).toBeVisible()
+
+    expect(
+      await page.evaluate(() => {
+        const surface = document.querySelector('[data-part="country-panel"]')
+        return surface?.contains(document.activeElement) ?? false
+      }),
+      'focus moves into the surface when it opens',
+    ).toBe(true)
+
+    await page.keyboard.press('Escape')
+    await expect(panel, 'Escape closes it').toHaveCount(0)
+    expect(
+      await page.evaluate(() => document.activeElement?.tagName ?? null),
+      'and focus returns to the map, which is where the reader was',
+    ).toBe('CANVAS')
+
+    expect(
+      watched().fatal,
+      'opening and closing the surface must not put anything in the console',
+    ).toEqual([])
+  })
+
+  /**
+   * The rule for the other kind of pointer.
+   *
+   * `mousemove` does not exist on a finger, and the browser's own synthetic one
+   * arrives *after* the tap — which is exactly how a hover pill ends up stranded
+   * behind the panel that tap opened. The overlay stands hover down for as long
+   * as the last thing to touch the map was a finger, and this is where that is
+   * checked, on the project that actually has one.
+   */
+  test('a tap opens the surface and leaves no hover card behind it', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    test.skip(
+      !isMobile,
+      'this is the touch rule, and it needs a project with a touchscreen',
+    )
+    if (ATLAS === undefined) return
+    await visit(page, ATLAS, 'light')
+    await chooseCountry(page, 'Spain')
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-part="country-panel"]')).toHaveCount(0)
+
+    const canvas = await page.locator('.maplibregl-canvas').boundingBox()
+    expect(canvas, 'the map has to have drawn to be tapped').not.toBeNull()
+    if (canvas === null) return
+    const chrome = await chromeBoxes(page)
+    const centre = {
+      x: canvas.x + canvas.width / 2,
+      y:
+        ((chrome.search?.bottom ?? canvas.y) +
+          (chrome.shelf?.top ?? canvas.y + canvas.height)) /
+        2,
+    }
+
+    // A ring of taps rather than one, for the same reason the pointer probe
+    // uses one: a coastline is a coastline, and a tap that lands in the sea is
+    // the map correctly answering "nowhere".
+    const panel = page.locator('[data-part="country-panel"]')
+    let opened = false
+    for (const dy of [0, -40, 40, -80, 80]) {
+      for (const dx of [0, -40, 40, -80, 80]) {
+        await page.touchscreen.tap(centre.x + dx, centre.y + dy)
+        // Waited for, never merely counted. A tap that has landed on a country
+        // but has not yet committed reads as "nothing opened", and the next tap
+        // in the ring then lands *inside* the surface that did open — on the
+        // action block, which writes to the fixture every later frame is
+        // compared against. One short wait per tap is the whole cost.
+        opened = await panel
+          .waitFor({ state: 'attached', timeout: 500 })
+          .then(() => true)
+          .catch(() => false)
+        if (opened) break
+      }
+      if (opened) break
+    }
+    expect(
+      opened,
+      'a tap on a country is the touch route to the facts and to both writes',
+    ).toBe(true)
+    expect(
+      await page.locator('[data-part="country-hover"]').count(),
+      'and it must not leave a pointer affordance stranded behind the panel',
+    ).toBe(0)
+  })
+
+  /**
+   * What happens to the surface when its country leaves.
+   *
+   * A reader zooms in to read a country and then drags the world, and the shape
+   * the panel is anchored to goes off the edge of the map. The first version
+   * answered that by hiding the layer — which does not merely conceal a
+   * non-modal dialog, it makes everything inside it unfocusable: the reader's
+   * focus fell to the document body and an open dialog was left that no key
+   * could reach. The anchor is clamped to the map's own edge instead, so the
+   * surface stays on screen, stays operable, and its tip points the way back.
+   */
+  test('the click surface survives its country leaving the map', async ({
+    page,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    if (ATLAS === undefined) return
+    const watched = watchConsole(page, ATLAS)
+    await visit(page, ATLAS, 'light')
+    // Spain rather than France, for the reason `chooseCountry` gives: a
+    // sovereign cut puts France's rectangle across two oceans, and the camera
+    // has to actually arrive somewhere pannable.
+    await chooseCountry(page, 'Spain')
+
+    const panel = page.getByRole('dialog', { name: 'Spain' })
+    await expect(panel).toBeVisible()
+    const layer = page.locator('[data-part="country-surface"]').first()
+
+    const canvas = await page.locator('.maplibregl-canvas').boundingBox()
+    expect(canvas, 'the map has to have drawn to be dragged').not.toBeNull()
+    if (canvas === null) return
+
+    // One step of zoom, and then drag. At the opening zoom the atlas draws
+    // exactly one world into its container, so there is nothing to pan; and
+    // zooming on past `VISITED_COUNTRY_ZOOM.interactiveMax` is not the state
+    // under test — the layer stops answering a pointer there and closes the
+    // surface on purpose.
+    const chrome = await chromeBoxes(page)
+    const placed = await panel.boundingBox()
+    expect(
+      placed,
+      'the surface has to be placed before it is dragged',
+    ).not.toBeNull()
+    if (placed === null) return
+    const shelfTop = chrome.shelf?.top ?? canvas.y + canvas.height
+    const lane =
+      shelfTop - (placed.y + placed.height) > 60
+        ? (placed.y + placed.height + shelfTop) / 2
+        : ((chrome.search?.bottom ?? canvas.y) + placed.y) / 2
+
+    // Through the map's own control, which is also the shortest statement of the
+    // other half of this: the zoom cluster is rendered beside MapLibre's
+    // container rather than inside it, so a dismissable layer with Radix's
+    // default rules treated pressing `+` as "the reader is done with this
+    // panel" and threw away the surface they were zooming in to read.
+    await page.getByRole('button', { name: 'Zoom in' }).click()
+    await page.waitForTimeout(700)
+    await expect(
+      panel,
+      'the map\u2019s own controls do not dismiss the map\u2019s own surface',
+    ).toBeVisible()
+
+    let gone = false
+    for (let step = 0; step < 8 && !gone; step += 1) {
+      await page.mouse.move(canvas.x + canvas.width - 60, lane)
+      await page.mouse.down()
+      await page.mouse.move(canvas.x + 60, lane, { steps: 12 })
+      await page.mouse.up()
+      await page.waitForTimeout(350)
+      gone = (await layer.getAttribute('data-anchor')) === 'offscreen'
+    }
+    expect(
+      gone,
+      'zooming away from the country has to take it off the map, or this proves nothing',
+    ).toBe(true)
+
+    await expect(
+      panel,
+      'the surface stays on screen when its country does not',
+    ).toBeVisible()
+    const close = panel.getByRole('button', { name: 'Close Spain' })
+    await close.focus()
+    expect(
+      await page.evaluate(() => {
+        const surface = document.querySelector('[data-part="country-panel"]')
+        return surface?.contains(document.activeElement) ?? false
+      }),
+      'and it is still reachable, which is what being hidden took away',
+    ).toBe(true)
+
+    await page.keyboard.press('Escape')
+    await expect(panel, 'and Escape still closes it').toHaveCount(0)
+
+    expect(
+      watched().fatal,
+      'none of that may put anything in the console',
+    ).toEqual([])
+  })
+
+  /**
+   * Non-modal has to mean it, and Radix does not give that away for free.
+   *
+   * A dialog's content is rendered inside a focus scope with `loop` hard-wired
+   * on, and that scope loops a Tab press at either of its edges whether or not
+   * it is trapped — so the panel called itself non-modal and was a keyboard trap
+   * anyway: Tab and Shift+Tab both bounced off it forever and the shelf, the
+   * search field and the map behind it could not be reached at all while it was
+   * open. Asserted in a real browser rather than only in jsdom, because the
+   * thing under test is the browser's own sequential focus navigation.
+   */
+  test('the click surface can be tabbed out of in both directions', async ({
+    page,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    if (ATLAS === undefined) return
+    const watched = watchConsole(page, ATLAS)
+    await visit(page, ATLAS, 'light')
+    await chooseCountry(page, 'France')
+
+    const panel = page.getByRole('dialog', { name: 'France' })
+    await expect(panel).toBeVisible()
+
+    /** Walks to the far edge of the panel, then one press past it. */
+    const leave = async (key: 'Tab' | 'Shift+Tab'): Promise<boolean> => {
+      for (let press = 0; press < 12; press += 1) {
+        const inside = await page.evaluate(() => {
+          const surface = document.querySelector('[data-part="country-panel"]')
+          return surface?.contains(document.activeElement) ?? false
+        })
+        if (!inside) return true
+        await page.keyboard.press(key)
+      }
+      return false
+    }
+
+    // Focus opens on the panel's own dismissal, so forwards is a short walk to
+    // the end of the action block and backwards is a short walk to its start.
+    expect(
+      await leave('Tab'),
+      'a reader must be able to tab forwards out of the panel',
+    ).toBe(true)
+    await expect(
+      panel,
+      'and tabbing away is not a dismissal: the panel belongs to the selection',
+    ).toBeVisible()
+
+    await panel.getByRole('button', { name: 'Close France' }).focus()
+    expect(await leave('Shift+Tab'), 'and backwards out of it as well').toBe(
+      true,
+    )
+    await expect(panel).toBeVisible()
+
+    // And back in, and dismissed from there.
+    const dismiss = panel.getByRole('button', { name: 'Close France' })
+    await dismiss.focus()
+    await expect(
+      dismiss,
+      'leaving the panel does not put its dismissal out of reach',
+    ).toBeFocused()
+
+    // Escape belongs to the topmost dismissable layer, and a keyboard reader
+    // opens a tooltip on every icon control their focus passes over — the zoom
+    // cluster on the way out, the panel's own dismissal on the way back. Each of
+    // those is a layer above this one for as long as it is leaving, so the press
+    // is repeated until they have gone, which is the sequence a reader performs
+    // rather than a sequence invented to make an assertion pass.
+    for (let press = 0; press < 6; press += 1) {
+      await page.keyboard.press('Escape')
+      if ((await page.locator('[data-part="country-panel"]').count()) === 0) {
+        break
+      }
+      await page.waitForTimeout(250)
+    }
+    await expect(
+      panel,
+      'and it is the dismissible surface it was before the reader left it',
+    ).toHaveCount(0)
+
+    expect(
+      watched().fatal,
+      'none of that may put anything in the console',
+    ).toEqual([])
+  })
+
+  /**
+   * The reader who asked for less movement still gets the focus move.
+   *
+   * Both are motion-layer decisions and only one of them is motion. The panel
+   * asked for focus one style recalculation before the layer it lives in had
+   * been made visible, and with the entrance animation running that
+   * recalculation always landed first — so the defect existed only for a reader
+   * with `prefers-reduced-motion: reduce`, and only that reader lost the
+   * keyboard route into the surface they had just opened.
+   */
+  test('reduced motion still moves focus into the click surface', async ({
+    page,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    if (ATLAS === undefined) return
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await visit(page, ATLAS, 'light')
+    await chooseCountry(page, 'France')
+
+    expect(
+      await page.evaluate(() => {
+        const surface = document.querySelector('[data-part="country-panel"]')
+        return {
+          inside: surface?.contains(document.activeElement) ?? false,
+          active: document.activeElement?.getAttribute('aria-label') ?? null,
+        }
+      }),
+      'focus moves into the surface whatever the reader has asked motion to do',
+    ).toEqual({ inside: true, active: 'Close France' })
+
+    await page.keyboard.press('Escape')
+    await expect(
+      page.getByRole('dialog', { name: 'France' }),
+      'and Escape still closes it',
+    ).toHaveCount(0)
+  })
+
+  /**
+   * The exit, which has to have a frame to play in.
+   *
+   * Radix marks its content `data-state="closed"` and defers the unmount until
+   * the animation it finds there has run. That only works if the layer above it
+   * is still rendered: while the open country was derived from the selection,
+   * the commit that closed the surface tore the whole subtree down in the same
+   * frame and the pop-out was dead styling. Sampled per animation frame rather
+   * than at one instant, because a 150ms exit is a handful of frames and a
+   * single probe would be a race.
+   */
+  test('the click surface plays an exit instead of blinking out', async ({
+    page,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    if (ATLAS === undefined) return
+    await visit(page, ATLAS, 'light')
+    await chooseCountry(page, 'France')
+
+    const sampling = page.evaluate(
+      () =>
+        new Promise<Array<string>>((resolve) => {
+          const seen: Array<string> = []
+          const deadline = 40
+          const tick = (): void => {
+            const layer = document.querySelector(
+              '[data-part="country-surface"]',
+            )
+            const panel = document.querySelector('[data-part="country-panel"]')
+            seen.push(
+              layer === null
+                ? 'gone'
+                : `${layer.getAttribute('data-state') ?? '?'}:${
+                    panel === null
+                      ? 'unmounted'
+                      : getComputedStyle(panel).animationName
+                  }`,
+            )
+            if (seen.length < deadline) {
+              requestAnimationFrame(tick)
+              return
+            }
+            resolve(seen)
+          }
+          requestAnimationFrame(tick)
+        }),
+    )
+    await page.keyboard.press('Escape')
+    const frames = await sampling
+
+    expect(
+      frames.some((sample) => sample.startsWith('closed:')),
+      'the layer stays mounted, marked closed, while it leaves',
+    ).toBe(true)
+    expect(
+      frames.some((sample) => sample.endsWith(':pt-pop-out')),
+      'and the exit the design system names is the one that runs',
+    ).toBe(true)
+    expect(frames.at(-1), 'and then it is gone').toBe('gone')
+  })
+
+  /**
+   * The layer the surfaces claim, checked against the tokens rather than
+   * against a picture.
+   *
+   * Radix's own popover layers default to `--z-dropdown`, which is above
+   * `--z-nav`; a surface that inherited that default would float over the app
+   * header and, on a phone, over the tab bar. The three tiers are read off the
+   * live document so a token retune cannot silently reorder them.
+   */
+  test('the map surfaces sit above the shelf and below the app header', async ({
+    page,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    if (ATLAS === undefined) return
+    await visit(page, ATLAS, 'light')
+    await chooseCountry(page, 'France')
+
+    const layers = await page.evaluate(() => {
+      const zOf = (node: Element | null) =>
+        node === null
+          ? null
+          : Number.parseInt(getComputedStyle(node).zIndex, 10)
+      const style = getComputedStyle(document.documentElement)
+      return {
+        surface: zOf(document.querySelector('[data-part="country-surfaces"]')),
+        shelf: zOf(document.querySelector('[data-part="atlas-shelf"]')),
+        nav: Number.parseInt(style.getPropertyValue('--z-nav'), 10),
+        mapSurface: Number.parseInt(
+          style.getPropertyValue('--z-map-surface'),
+          10,
+        ),
+        mapOverlay: Number.parseInt(
+          style.getPropertyValue('--z-map-overlay'),
+          10,
+        ),
+        portalled:
+          document.body.querySelector(
+            ':scope > [data-part="country-panel"]',
+          ) !== null,
+      }
+    })
+
+    expect(
+      layers.mapOverlay,
+      'the shelf tier is below the surface tier',
+    ).toBeLessThan(layers.mapSurface)
+    expect(layers.mapSurface, 'and both are below the app header').toBeLessThan(
+      layers.nav,
+    )
+    expect(layers.surface, 'the surface layer claims the surface tier').toBe(
+      layers.mapSurface,
+    )
+    expect(
+      layers.portalled,
+      'nothing here portals to the document body, where it would escape the slice',
+    ).toBe(false)
+  })
+
+  /**
    * The day boundary, without waiting for one.
    *
    * Round 4 was failed by two dashboard frames whose only difference was a

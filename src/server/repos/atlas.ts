@@ -467,7 +467,7 @@ export async function countVisitedPlacesByCountry(
 }
 
 /** Everything the two aggregates above know about one country, in one row. */
-export interface CountryTravelFacts {
+interface CountryTravelFacts {
   readonly countryCode: string
   readonly tripCount: number
   readonly visitedPlaceCount: number
@@ -485,7 +485,7 @@ export interface CountryTravelFacts {
  * three times. So the reader answers for every code that is asked, and the zeroed row is a
  * deliberate value rather than a hole.
  */
-export function countryTravelFactsLookup(
+function countryTravelFactsLookup(
   tripTallies: ReadonlyArray<CountryTripTally>,
   placeTallies: ReadonlyArray<CountryPlaceTally>,
 ): (countryCode: string) => CountryTravelFacts {
@@ -521,6 +521,135 @@ export function countryTravelFactsLookup(
   }
 }
 
+/**
+ * One country on the traveller's record, carrying both readings of "how much of this country is
+ * in the record" side by side and never folded into each other.
+ *
+ * The field names carry the whole distinction. The `-Visited-` family and `visitCount` come from
+ * `visited_countries`, which {@link markCountryVisited} maintains and the traveller may edit by
+ * hand: `visitCount` goes up by one every time a visit is recorded, so it is a tally and can sit
+ * either side of the number of journeys. The `-Trip-` family comes from `trips`: distinct trips
+ * that named this country and have already begun, and the start dates of the earliest and latest
+ * of them, which is what a card prints as months. `visitedPlaceCount` counts saved places inside
+ * the country the traveller ticked off as seen.
+ */
+export interface AtlasCountryRecord {
+  /** ISO 3166-1 alpha-2, upper-cased. */
+  readonly countryCode: string
+  /** As `visited_countries` files it. */
+  readonly continent: string | null
+  /** When the first visit was *recorded*, `YYYY-MM-DD`. */
+  readonly firstVisitedOn: string | null
+  /** When the last visit was *recorded*, `YYYY-MM-DD`. */
+  readonly lastVisitedOn: string | null
+  /** Recorded visits - the tally, not a journey count. */
+  readonly visitCount: number
+  /** The traveller's own note on the country. */
+  readonly note: string | null
+  /** Trips that have started and name this country. */
+  readonly tripCount: number
+  /** Saved places inside it the traveller has ticked off as seen. */
+  readonly visitedPlaceCount: number
+  /** The start date of the earliest of those trips, `YYYY-MM-DD`. */
+  readonly firstTripOn: string | null
+  /** The start date of the latest of those trips, `YYYY-MM-DD`. */
+  readonly lastTripOn: string | null
+}
+
+/** The earlier of two `YYYY-MM-DD` days, where absent loses to present. */
+function earlierDay(left: string | null, right: string | null): string | null {
+  if (left === null) return right
+  if (right === null) return left
+  return left < right ? left : right
+}
+
+/** The later of two `YYYY-MM-DD` days, where absent loses to present. */
+function laterDay(left: string | null, right: string | null): string | null {
+  if (left === null) return right
+  if (right === null) return left
+  return left > right ? left : right
+}
+
+/**
+ * The visited list widened with the two aggregates - one row per country the traveller has
+ * recorded, and no others.
+ *
+ * ## Why the record decides the row set
+ *
+ * The trip and place aggregates cover the whole workspace, so it is tempting to return their union
+ * with the record and let each row say which half it came from. That was tried and it is wrong
+ * here: this array is what the map paints its visited fill from and what the panel prints under
+ * "countries visited", so every extra row is a country claimed as visited that nobody visited, and
+ * a flag distinguishing them is only as good as the least careful of the several consumers reading
+ * it. Presence in `visited_countries` is the one thing in this schema that means "I have been
+ * here" - {@link markCountryVisited} writes it, {@link unmarkCountryVisited} takes it away, and a
+ * trip that merely named a country in its itinerary asserts nothing of the kind. So presence in
+ * this array carries exactly that meaning, and no consumer has to be told twice.
+ *
+ * A country the trips went to and nobody wrote down is therefore absent, and its figures stay
+ * where they are legible on their own terms: {@link countTripsByCountry} and
+ * {@link countVisitedPlacesByCountry} still name it, and a surface that wants to offer "you have
+ * been here - shall I record it?" reads those rather than this.
+ *
+ * ## Why absence from the aggregates is a zero and not a gap
+ *
+ * The mirror case runs the other way. A `GROUP BY` names only the groups it found rows for, so a
+ * country marked visited by hand - no trip behind it, nothing ticked off inside it - is in neither
+ * aggregate. The honest answer for it is zero trips, zero places and no months, which is what
+ * {@link countryTravelFactsLookup} returns, so every row here carries all four figures and no
+ * caller writes `?? 0`.
+ *
+ * ## Case
+ *
+ * Codes are folded to upper case because the three inputs are written by three different rules and
+ * a country must not appear twice on a map keyed by ISO code. `visited_countries` carries a unique
+ * index per organisation, traveller and code, so two of its rows can only collide across case;
+ * when they do they are merged the way {@link markCountryVisited} merges a repeat visit - earliest
+ * first, latest last, tallies summed - because dropping one of them would silently lose a date the
+ * traveller entered.
+ */
+export function atlasCountryRecords(
+  visited: ReadonlyArray<VisitedCountry>,
+  tripTallies: ReadonlyArray<CountryTripTally>,
+  placeTallies: ReadonlyArray<CountryPlaceTally>,
+): Array<AtlasCountryRecord> {
+  const factsFor = countryTravelFactsLookup(tripTallies, placeTallies)
+  const byCode = new Map<string, AtlasCountryRecord>()
+
+  for (const row of visited) {
+    const countryCode = row.countryCode.trim().toUpperCase()
+    const held = byCode.get(countryCode)
+    if (held === undefined) {
+      const facts = factsFor(countryCode)
+      byCode.set(countryCode, {
+        countryCode,
+        continent: row.continent,
+        firstVisitedOn: row.firstVisitedOn,
+        lastVisitedOn: row.lastVisitedOn,
+        visitCount: row.visitCount,
+        note: row.note,
+        tripCount: facts.tripCount,
+        visitedPlaceCount: facts.visitedPlaceCount,
+        firstTripOn: facts.firstTripOn,
+        lastTripOn: facts.lastTripOn,
+      })
+      continue
+    }
+    byCode.set(countryCode, {
+      ...held,
+      continent: held.continent ?? row.continent,
+      firstVisitedOn: earlierDay(held.firstVisitedOn, row.firstVisitedOn),
+      lastVisitedOn: laterDay(held.lastVisitedOn, row.lastVisitedOn),
+      visitCount: held.visitCount + row.visitCount,
+      note: held.note ?? row.note,
+    })
+  }
+
+  return [...byCode.values()].sort((left, right) =>
+    left.countryCode.localeCompare(right.countryCode),
+  )
+}
+
 /* -------------------------------------------------------------------------------------------------
  * Roll-ups
  * ---------------------------------------------------------------------------------------------- */
@@ -541,20 +670,46 @@ export interface AtlasSummary {
   readonly latestVisit: VisitedCountry | null
 }
 
-/** Everything the atlas screen renders above the map, in four scoped reads. */
+/** How many regions inside any country this traveller has recorded. One statement. */
+export async function countVisitedRegions(scope: TenantScope, userId: string): Promise<number> {
+  return visitedRegionsRepository.count(scope, eq(visitedRegions.userId, userId))
+}
+
+/**
+ * The visited list rolled up by continent, busiest first - one grouped statement.
+ *
+ * Named and exported rather than left inline in {@link getAtlasSummary} because the atlas loader
+ * wants this roll-up without the two bucket-list counts and the second read of the visited list
+ * that summary also runs. The alternative - folding the same grouping in JavaScript at that second
+ * call site - would be two implementations of one answer, free to drift on the one case that
+ * matters: a country recorded with no continent at all is not a group called "unknown", it is
+ * simply absent.
+ */
+export async function countCountriesByContinent(
+  scope: TenantScope,
+  userId: string,
+): Promise<Array<ContinentRollUp>> {
+  const rows = await scope.db
+    .select({ continent: visitedCountries.continent, value: count() })
+    .from(visitedCountries)
+    .where(tenantFilter(scope, visitedCountries, eq(visitedCountries.userId, userId)))
+    .groupBy(visitedCountries.continent)
+    .orderBy(desc(count()))
+
+  return rows.flatMap((row) =>
+    row.continent === null ? [] : [{ continent: row.continent, countryCount: row.value }],
+  )
+}
+
+/** Everything the dashboard's atlas tile renders: four scoped reads, five statements. */
 export async function getAtlasSummary(
   scope: TenantScope,
   userId: string,
 ): Promise<AtlasSummary> {
-  const [countries, regionCount, continentRows, bucket] = await Promise.all([
+  const [countries, regionCount, byContinent, bucket] = await Promise.all([
     listVisitedCountries(scope, userId),
-    visitedRegionsRepository.count(scope, eq(visitedRegions.userId, userId)),
-    scope.db
-      .select({ continent: visitedCountries.continent, value: count() })
-      .from(visitedCountries)
-      .where(tenantFilter(scope, visitedCountries, eq(visitedCountries.userId, userId)))
-      .groupBy(visitedCountries.continent)
-      .orderBy(desc(count())),
+    countVisitedRegions(scope, userId),
+    countCountriesByContinent(scope, userId),
     Promise.all([
       bucketListRepository.count(scope, eq(bucketListItems.userId, userId)),
       bucketListRepository.count(
@@ -573,9 +728,7 @@ export async function getAtlasSummary(
     countryCount: countries.length,
     regionCount,
     visitCount: countries.reduce((total, row) => total + row.visitCount, 0),
-    byContinent: continentRows.flatMap((row) =>
-      row.continent === null ? [] : [{ continent: row.continent, countryCount: row.value }],
-    ),
+    byContinent,
     countryCodes: countries.map((row) => row.countryCode),
     bucketList: { total: bucket[0], achieved: bucket[1] },
     latestVisit: sorted[0] ?? null,

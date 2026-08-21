@@ -46,6 +46,45 @@ export type {
   CountriesListSort,
 } from './countries-list'
 
+export { CountryActions } from './country-actions'
+export type {
+  CountryActionsGoal,
+  CountryActionsProps,
+  CountryActionsVisit,
+} from './country-actions'
+
+export {
+  CountryCard,
+  CountryCardError,
+  CountryCardSkeleton,
+} from './country-card'
+export type {
+  CountryCardCompactProps,
+  CountryCardErrorProps,
+  CountryCardFactsProps,
+  CountryCardPointer,
+  CountryCardProps,
+  CountryCardSkeletonProps,
+} from './country-card'
+
+export {
+  CountryOverlay,
+  anchorLandmass,
+  countryLandmasses,
+  placeCountrySurface,
+  surfaceAreas,
+} from './country-overlay'
+export type {
+  CountryOverlayCountry,
+  CountryOverlayGoal,
+  CountryOverlayProps,
+  CountryOverlayStatus,
+  PlaceSurfaceInput,
+  SurfaceBox,
+  SurfacePlacement,
+  SurfaceSide,
+} from './country-overlay'
+
 export { CountryRecord, CountryRecordSkeleton } from './country-record'
 export type {
   CountryRecordProps,

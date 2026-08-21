@@ -23,6 +23,7 @@ import {
   VISITED_COUNTRY_SOURCE_ID,
   VISITED_COUNTRY_ZOOM,
   VisitedCountries,
+  useCountryDetail,
 } from '../visited-countries'
 
 import type { countryDetail } from '#/lib/map/countries'
@@ -60,6 +61,11 @@ interface FeatureStateCall {
   readonly state: Record<string, unknown>
 }
 
+interface PaintCall {
+  readonly id: string
+  readonly property: string
+}
+
 interface FakeMouseEvent {
   readonly point: { readonly x: number; readonly y: number }
 }
@@ -87,6 +93,17 @@ class FakeMap {
   readonly layers = new Map<string, LayerRecord>()
   readonly insertedBefore = new Map<string, string | undefined>()
   readonly featureStates: Array<FeatureStateCall> = []
+  /** Which layer was recoloured, and on which ramp. */
+  readonly paintCalls: Array<PaintCall> = []
+  /**
+   * The payload behind every `addSource` this map has ever taken.
+   *
+   * Deliberately *not* cleared by {@link dropStyle}, unlike {@link ops}: the
+   * question a theme switch raises is how many times one collection was tiled
+   * across the whole toggle, and an `ops` log that starts again with each style
+   * document cannot answer it.
+   */
+  readonly sourceInstalls: Array<unknown> = []
   readonly queries: Array<{ layers?: ReadonlyArray<string> }> = []
   /** What the next hit test answers with. */
   hits: Array<{ id: unknown }> = []
@@ -100,6 +117,7 @@ class FakeMap {
 
   addSource(id: string, source: Record<string, unknown>): void {
     this.ops.push({ kind: 'addSource', id })
+    this.sourceInstalls.push(source.data)
     this.sources.set(id, new FakeSource(source))
   }
 
@@ -125,6 +143,23 @@ class FakeMap {
   removeLayer(id: string): void {
     this.ops.push({ kind: 'removeLayer', id })
     this.layers.delete(id)
+  }
+
+  /**
+   * The one thing a live layer can be told in place: a new colour ramp.
+   *
+   * MapLibre throws on an unknown layer id rather than ignoring the call, so
+   * this does too — a repaint aimed at a layer the style has already taken away
+   * is the bug, not something to swallow.
+   */
+  setPaintProperty(id: string, property: string, value: unknown): void {
+    const layer = this.layers.get(id)
+    if (layer === undefined) throw new Error(`no ${id} layer to paint`)
+    this.paintCalls.push({ id, property })
+    this.layers.set(id, {
+      ...layer,
+      paint: { ...layer.paint, [property]: value },
+    })
   }
 
   setFeatureState(
@@ -158,7 +193,10 @@ class FakeMap {
     return this
   }
 
-  emit(type: string, event: FakeMouseEvent = { point: { x: 10, y: 10 } }): void {
+  emit(
+    type: string,
+    event: FakeMouseEvent = { point: { x: 10, y: 10 } },
+  ): void {
     for (const handler of [...(this.handlers.get(type) ?? [])]) handler(event)
   }
 
@@ -245,6 +283,64 @@ const VISITS: ReadonlyArray<MapVisitedCountry> = [
 function hexes(paint: unknown): Array<string> {
   return JSON.stringify(paint).match(/#[0-9a-f]{6}/g) ?? []
 }
+
+/** Which ramps were recoloured in place, as `layer.property`. */
+function repaints(map: FakeMap): Array<string> {
+  return map.paintCalls.map((call) => `${call.id}.${call.property}`)
+}
+
+/** The three outline weights at one end of the zoom ramp. */
+interface OutlineStep {
+  readonly rest: number
+  readonly hover: number
+  readonly selected: number
+}
+
+/**
+ * The hairline weights, read back out of the layer's own `line-width`.
+ *
+ * Zoom has to be the input of the *outer* `interpolate`, so the state branch is
+ * evaluated at each stop rather than wrapping the interpolation — which means
+ * the widths are only reachable by walking the expression the way MapLibre
+ * would. Reading them from the layer rather than from a constant is the point:
+ * a test that imported the table would pass on a layer painted with something
+ * else entirely.
+ */
+function outlineWidths(map: FakeMap): {
+  readonly stops: Array<number>
+  readonly near: OutlineStep
+  readonly far: OutlineStep
+} {
+  const width = layerOf(map, VISITED_COUNTRY_LAYER_IDS.outline).paint?.[
+    'line-width'
+  ] as [string, unknown, unknown, number, unknown, number, unknown]
+  const [operator, , input, nearZoom, nearCase, farZoom, farCase] = width
+  expect(operator).toBe('interpolate')
+  expect(input).toEqual(['zoom'])
+
+  const step = (branch: unknown): OutlineStep => {
+    const [, , selected, , hover, rest] = branch as [
+      string,
+      unknown,
+      number,
+      unknown,
+      number,
+      number,
+    ]
+    return { rest, hover, selected }
+  }
+  return {
+    stops: [nearZoom, farZoom],
+    near: step(nearCase),
+    far: step(farCase),
+  }
+}
+
+/** The two colour ramps a theme switch has to move, and nothing else. */
+const COLOUR_RAMPS = [
+  `${VISITED_COUNTRY_LAYER_IDS.fill}.fill-color`,
+  `${VISITED_COUNTRY_LAYER_IDS.outline}.line-color`,
+]
 
 interface DataFeature {
   readonly id: unknown
@@ -548,6 +644,35 @@ describe('VisitedCountries', () => {
     expect(JSON.stringify(paint)).toContain('["feature-state","selected"]')
   })
 
+  it('draws every border at least a whole pixel wide, in three separable steps', () => {
+    const map = new FakeMap()
+    render(tree(map, { visits: VISITS }))
+    const { stops, near, far } = outlineWidths(map)
+
+    // The ramp spans the world view to the zoom the layer stands down at, so
+    // the hairline is still growing while the fill fades out from under it.
+    expect(stops).toEqual([1, VISITED_COUNTRY_ZOOM.fadeEnd])
+
+    // MapLibre multiplies `line-width` by the device pixel ratio, so anything
+    // under 1 is resolved by coverage on a 1x display: the border is blended
+    // with the land rather than drawn in `country.landEdge`, and it drops out
+    // altogether along a shallow diagonal. Measured over Africa at 1440×900, a
+    // half-pixel border averaged 1.33:1 against the land where it landed at
+    // all; a whole one carries 47% more border pixels at 1.38:1.
+    for (const end of [near, far]) {
+      expect(end.rest).toBeGreaterThanOrEqual(1)
+      // Each state has to be told apart from the one below it across a whole
+      // world at once, so the steps are multiples rather than nudges.
+      expect(end.hover).toBeGreaterThanOrEqual(end.rest * 2)
+      expect(end.selected).toBeGreaterThan(end.hover)
+    }
+    // And the far end is heavier than the near one at every state, because by
+    // then the outline is the only thing left drawing the country.
+    expect(far.rest).toBeGreaterThan(near.rest)
+    expect(far.hover).toBeGreaterThan(near.hover)
+    expect(far.selected).toBeGreaterThan(near.selected)
+  })
+
   it('stands the layer down before the outlines outrun their own precision', () => {
     const map = new FakeMap()
     render(tree(map, { visits: VISITS }))
@@ -557,8 +682,9 @@ describe('VisitedCountries', () => {
       expect(layer.maxzoom).toBe(6)
       // The fade has to reach zero by the same zoom, or the layer would blink
       // out at full strength instead of handing over to the basemap.
-      expect(layer.paint?.['fill-opacity'] ?? layer.paint?.['line-opacity'])
-        .toEqual(['interpolate', ['linear'], ['zoom'], 4, 1, 6, 0])
+      expect(
+        layer.paint?.['fill-opacity'] ?? layer.paint?.['line-opacity'],
+      ).toEqual(['interpolate', ['linear'], ['zoom'], 4, 1, 6, 0])
     }
   })
 
@@ -637,7 +763,7 @@ describe('VisitedCountries', () => {
     })
   })
 
-  it('re-applies the selection when the palette changes without a new epoch', () => {
+  it('recolours in place when the palette changes without a new epoch', () => {
     const map = new FakeMap()
     const { rerender } = render(
       tree(map, { visits: VISITS, selectedCode: 'FR' }),
@@ -647,52 +773,66 @@ describe('VisitedCountries', () => {
     map.featureStates.length = 0
 
     // MapLibre diffs a theme swap into the live style, and there is a commit in
-    // between where the palette has changed and the epoch has not. The layer
-    // effect rebuilds the source in that commit, and a rebuilt source carries no
-    // feature state — so every other effect has to rebuild with it or the
-    // highlight is painted on a source that no longer exists.
+    // between where the palette has changed and the epoch has not. Rebuilding
+    // the source in that commit tiles the whole world for a frame `setStyle`
+    // then throws away — so colour, and only colour, is applied to the layers
+    // that are already on the style.
     rerender(
       tree(map, { visits: VISITS, selectedCode: 'FR' }, { theme: 'dark' }),
     )
 
-    expect(map.ops).toEqual([
-      { kind: 'removeLayer', id: VISITED_COUNTRY_LAYER_IDS.outline },
-      { kind: 'removeLayer', id: VISITED_COUNTRY_LAYER_IDS.fill },
-      { kind: 'removeSource', id: VISITED_COUNTRY_SOURCE_ID },
-      { kind: 'addSource', id: VISITED_COUNTRY_SOURCE_ID },
-      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.fill },
-      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.outline },
-    ])
-    expect(map.featureStates.at(-1)).toEqual({
-      source: VISITED_COUNTRY_SOURCE_ID,
-      id: 'FR',
-      state: { selected: true },
-    })
+    expect(map.ops).toEqual([])
+    expect(repaints(map)).toEqual(COLOUR_RAMPS)
     expect(hexes(layerOf(map, VISITED_COUNTRY_LAYER_IDS.fill).paint)).toContain(
       mapPalette('dark').country.visited,
     )
-    // The re-added source carries the record already, so nothing re-tiles.
+    expect(
+      hexes(layerOf(map, VISITED_COUNTRY_LAYER_IDS.fill).paint),
+    ).not.toContain(mapPalette('light').country.visited)
+    expect(
+      hexes(layerOf(map, VISITED_COUNTRY_LAYER_IDS.outline).paint),
+    ).toEqual([
+      mapPalette('dark').country.visitedEdge,
+      mapPalette('dark').country.landEdge,
+    ])
+
+    // Nothing else moved. The tiles are the tiles, and the selection is still
+    // hanging on the same source it was written to — a recolour cannot disturb
+    // feature state, so nothing is cleared and nothing is rewritten.
     expect(sourceOf(map).setDataCalls).toBe(0)
+    expect(map.featureStates).toEqual([])
     expect(map.listenerCount()).toBe(before)
   })
 
-  it('rebinds the pointer against the source the palette change rebuilt', () => {
+  it('keeps a live hover across a recolour, and rebinds it once the style goes', () => {
     const map = new FakeMap()
     const onSelect = vi.fn()
     const { rerender } = render(tree(map, { visits: VISITS, onSelect }))
 
     map.hits = [{ id: 'FR' }]
     map.emit('mousemove')
-    rerender(tree(map, { visits: VISITS, onSelect }, { theme: 'dark' }))
     map.featureStates.length = 0
 
-    // A stale closure would still believe France is lit and skip the write.
+    rerender(tree(map, { visits: VISITS, onSelect }, { theme: 'dark' }))
+
+    // France is still lit on the same source, so the pointer does not blink on
+    // its way past a country while the theme catches up.
+    map.emit('mousemove')
+    expect(map.featureStates).toEqual([])
+    map.emit('click')
+    expect(onSelect).toHaveBeenCalledWith('FR')
+
+    // The style really going away is the case that *does* drop feature state,
+    // and the epoch is what says so: the next move has to write the highlight
+    // again, against the source the install effect has just re-added.
+    map.dropStyle()
+    rerender(
+      tree(map, { visits: VISITS, onSelect }, { theme: 'dark', styleEpoch: 1 }),
+    )
     map.emit('mousemove')
     expect(map.featureStates).toEqual([
       { source: VISITED_COUNTRY_SOURCE_ID, id: 'FR', state: { hover: true } },
     ])
-    map.emit('click')
-    expect(onSelect).toHaveBeenCalledWith('FR')
   })
 
   it('removes every layer before the source when it goes away', () => {
@@ -731,9 +871,7 @@ describe('VisitedCountries', () => {
 
     expect(onSelect).toHaveBeenCalledTimes(1)
     expect(onSelect).toHaveBeenCalledWith('FR')
-    expect(map.queries.at(-1)?.layers).toEqual([
-      VISITED_COUNTRY_LAYER_IDS.fill,
-    ])
+    expect(map.queries.at(-1)?.layers).toEqual([VISITED_COUNTRY_LAYER_IDS.fill])
   })
 
   it('resolves overlapping countries to the one drawn on top', () => {
@@ -884,7 +1022,11 @@ describe('VisitedCountries', () => {
       tree(map, { visits: VISITS, selectedCode: 'fr' }),
     )
     expect(map.featureStates).toEqual([
-      { source: VISITED_COUNTRY_SOURCE_ID, id: 'FR', state: { selected: true } },
+      {
+        source: VISITED_COUNTRY_SOURCE_ID,
+        id: 'FR',
+        state: { selected: true },
+      },
     ])
 
     rerender(tree(map, { visits: VISITS, selectedCode: 'IT' }))
@@ -894,7 +1036,11 @@ describe('VisitedCountries', () => {
         id: 'FR',
         state: { selected: false },
       },
-      { source: VISITED_COUNTRY_SOURCE_ID, id: 'IT', state: { selected: true } },
+      {
+        source: VISITED_COUNTRY_SOURCE_ID,
+        id: 'IT',
+        state: { selected: true },
+      },
     ])
   })
 
@@ -1019,6 +1165,26 @@ describe('VisitedCountries', () => {
     render(tree(new FakeMap(), { visits: VISITS }))
     expect(detailRequests).toEqual([COUNTRY_DETAIL_URL, COUNTRY_DETAIL_URL])
   })
+
+  it('leaves a subscriber on the bundled answers when the request fails', async () => {
+    const said = watchConsole()
+    const seen: Array<unknown> = []
+
+    function Shelf(): null {
+      seen.push(useCountryDetail())
+      return null
+    }
+
+    render(<Shelf />)
+    await settleDetail()
+
+    // A screen that subscribes gets exactly what the map got: the bundled world
+    // and no announcement, because nothing installed. It re-renders zero extra
+    // times, so a failed upgrade cannot cost a pass over a country list either.
+    expect(seen).toEqual([null])
+    expect(hasCountryOutline('SG')).toBe(false)
+    expect(said()).toEqual([])
+  })
 })
 
 /**
@@ -1031,7 +1197,7 @@ describe('VisitedCountries', () => {
  * above keeps asserting about the bundled world it was always asserting about.
  */
 describe('VisitedCountries and the finer cut', () => {
-  /** The component, the provider and the geometry, none of them shared. */
+  /** The component, the hook, the provider and the geometry, none of them shared. */
   async function freshLayer(): Promise<{
     readonly countries: FreshCountries
     readonly draw: (
@@ -1039,6 +1205,8 @@ describe('VisitedCountries and the finer cut', () => {
       props: VisitedCountriesProps,
       overrides?: Partial<MapContextValue>,
     ) => React.ReactElement
+    /** The same module instance the layer upgrades itself through. */
+    readonly subscribe: typeof useCountryDetail
   }> {
     vi.resetModules()
     const countries = await import('#/lib/map/countries')
@@ -1052,6 +1220,7 @@ describe('VisitedCountries and the finer cut', () => {
           <layer.VisitedCountries {...props} />
         </mapContext.MapProvider>
       ),
+      subscribe: layer.useCountryDetail,
     }
   }
 
@@ -1167,7 +1336,7 @@ describe('VisitedCountries and the finer cut', () => {
     expect(map.ops.filter((op) => op.kind === 'removeSource')).toEqual([])
   })
 
-  it('re-adds the finer cut on a theme switch without re-parsing or re-tiling it', async () => {
+  it('tiles the finer cut once for a theme switch, across both of its commits', async () => {
     const { draw } = await freshLayer()
     detailRequests = serveDetail()
     const map = new FakeMap()
@@ -1176,35 +1345,99 @@ describe('VisitedCountries and the finer cut', () => {
 
     const built = sourceOf(map).data
     expect(sourceOf(map).setDataCalls).toBe(1)
+    expect(map.sourceInstalls).toHaveLength(1)
+    map.ops.length = 0
 
-    // What `setStyle` really does, which is what a light/dark toggle is: every
-    // runtime source, layer and feature state is simply gone.
+    // A light/dark toggle reaches this layer as *two* commits, and the first one
+    // is the trap. React re-renders with the new palette while MapLibre is still
+    // holding the old style document, because `setStyle` is called from the
+    // canvas above and `style.load` is a frame or two away. Anything rebuilt
+    // here is thrown away by that swap — so 50,413 vertices are not re-tiled to
+    // change two colours.
+    rerender(draw(map, { visits: VISITS }, { theme: 'dark' }))
+
+    expect(map.ops).toEqual([])
+    expect(map.sourceInstalls).toHaveLength(1)
+    expect(repaints(map)).toEqual(COLOUR_RAMPS)
+
+    // The second commit is the real one: `setStyle` has landed, every runtime
+    // source, layer and feature state is gone with the old style document, and
+    // the epoch is the only signal that it happened.
     map.dropStyle()
     rerender(draw(map, { visits: VISITS }, { theme: 'dark', styleEpoch: 1 }))
 
     const readded = sourceOf(map)
+    expect(map.ops).toEqual([
+      { kind: 'addSource', id: VISITED_COUNTRY_SOURCE_ID },
+      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.fill },
+      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.outline },
+    ])
+    // One install for the mount and one for the toggle. A third would be the
+    // discarded commit above paying full price for a frame nobody sees.
+    expect(map.sourceInstalls).toHaveLength(2)
     // The identical object, not an equal one: the collection is memoised on the
     // payload and the record, neither of which a theme touches. Rebuilding it
     // would walk 237 features to hand back the same world in different colours.
+    expect(map.sourceInstalls.at(-1)).toBe(built)
     expect(readded.data).toBe(built)
     // And it went in carrying that world, so nothing re-tiles behind the swap.
     expect(readded.setDataCalls).toBe(0)
     // Fetched once, therefore decoded once: the payload is process state, not
     // component state, and a second style epoch cannot pay for it again.
     expect(detailRequests).toEqual([COUNTRY_DETAIL_URL])
-    expect(map.ops).toEqual([
-      { kind: 'addSource', id: VISITED_COUNTRY_SOURCE_ID },
-      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.fill },
-      { kind: 'addLayer', id: VISITED_COUNTRY_LAYER_IDS.outline },
-    ])
 
     // Re-added under the finer cut's own terms — string ids still addressable,
-    // same zoom ceiling — and repainted in the theme that caused the epoch.
+    // same zoom ceiling — and already wearing the theme that caused the epoch,
+    // so there is no second recolour behind the install either.
     expect(readded.definition.promoteId).toBe(COUNTRY_CODE_PROPERTY)
     expect(readded.definition.maxzoom).toBe(COUNTRY_SOURCE_MAX_ZOOM)
+    expect(repaints(map)).toEqual(COLOUR_RAMPS)
     expect(hexes(layerOf(map, VISITED_COUNTRY_LAYER_IDS.fill).paint)).toContain(
       mapPalette('dark').country.visited,
     )
+    expect(
+      hexes(layerOf(map, VISITED_COUNTRY_LAYER_IDS.fill).paint),
+    ).not.toContain(mapPalette('light').country.visited)
+  })
+
+  it('keeps the record and the offshore rings across a theme switch', async () => {
+    const { draw } = await freshLayer()
+    detailRequests = serveDetail()
+    const map = new FakeMap()
+    const onHoverChange = vi.fn()
+    const { rerender } = render(
+      draw(map, { visits: VISITS, selectedCode: 'IT', onHoverChange }),
+    )
+    await settleDetail()
+
+    map.dropStyle()
+    rerender(
+      draw(
+        map,
+        { visits: VISITS, selectedCode: 'IT', onHoverChange },
+        { theme: 'dark', styleEpoch: 1 },
+      ),
+    )
+
+    // The world that came back is the finer one, with France still carrying
+    // Guadeloupe and Réunion on a single feature — so one `setFeatureState`
+    // still lights every ring of it, however many tiles the hit test answers
+    // from, and however many times the reader has toggled the theme.
+    const france = featuresOf(sourceOf(map).data).get('FR')
+    if (france === undefined) throw new Error('France left the payload')
+    const longitudes = longitudesOf(france.geometry)
+    expect(Math.min(...longitudes)).toBeLessThan(-60)
+    expect(Math.max(...longitudes)).toBeGreaterThan(55)
+    expect(france.properties.visited).toBe(true)
+
+    map.featureStates.length = 0
+    map.hits = [{ id: 'FR' }, { id: 'FR' }, { id: 'FR' }]
+    map.emit('mousemove')
+    expect(map.featureStates).toEqual([
+      { source: VISITED_COUNTRY_SOURCE_ID, id: 'FR', state: { hover: true } },
+    ])
+    expect(onHoverChange).toHaveBeenCalledTimes(1)
+    expect(onHoverChange).toHaveBeenCalledWith('FR')
   })
 
   it('holds the fade, the hit-test ceiling and the layer ceiling where they were', async () => {
@@ -1242,5 +1475,77 @@ describe('VisitedCountries and the finer cut', () => {
     onSelect.mockClear()
     map.emit('click')
     expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('tells a screen outside the map that the derived answers moved', async () => {
+    const { countries, draw, subscribe } = await freshLayer()
+    detailRequests = serveDetail()
+    const passes: Array<string> = []
+
+    /** What an atlas shelf really writes: one memo over `hasCountryOutline`. */
+    function Shelf({ codes }: { readonly codes: ReadonlyArray<string> }): null {
+      const detail = subscribe()
+      const rows = React.useMemo(
+        () =>
+          codes
+            .map(
+              (code) =>
+                `${code}:${countries.hasCountryOutline(code) ? 'drawn' : 'absent'}`,
+            )
+            .join(' '),
+        // The install is the whole reason this dependency is here. Keyed on the
+        // record alone, the memo resolves once against the bundled cut and then
+        // contradicts the map — a list row offering nothing to frame for a
+        // country the fill layer is busy filling.
+        [codes, detail],
+      )
+      passes.push(rows)
+      return null
+    }
+
+    const map = new FakeMap()
+    render(
+      <>
+        {draw(map, { visits: VISITS })}
+        <Shelf codes={['SG', 'MT', 'FR']} />
+      </>,
+    )
+
+    expect(passes).toEqual(['SG:absent MT:absent FR:drawn'])
+
+    await settleDetail()
+
+    // One further pass, not one per frame: a subscription over process state,
+    // and the same single request the layer itself rode on.
+    expect(passes).toEqual([
+      'SG:absent MT:absent FR:drawn',
+      'SG:drawn MT:drawn FR:drawn',
+    ])
+    expect(detailRequests).toEqual([countries.COUNTRY_DETAIL_URL])
+    // And the shelf now agrees with what the map is drawing.
+    expect(featuresOf(sourceOf(map).data).has('SG')).toBe(true)
+  })
+
+  it('hands a subscriber the installed cut without asking for it again', async () => {
+    const { countries, draw, subscribe } = await freshLayer()
+    detailRequests = serveDetail()
+    const seen: Array<unknown> = []
+
+    function Shelf(): null {
+      seen.push(subscribe())
+      return null
+    }
+
+    render(draw(new FakeMap(), { visits: VISITS }))
+    await settleDetail()
+    render(<Shelf />)
+
+    // Mounted after the cut landed: the first render already has it, because
+    // `countryDetail()` is the synchronous half of the store. No flash of the
+    // bundled answer, and no second 300 KB request for a payload the process is
+    // already holding.
+    expect(seen).toEqual([countries.countryDetail()])
+    expect(seen[0]).not.toBe(null)
+    expect(detailRequests).toEqual([countries.COUNTRY_DETAIL_URL])
   })
 })
