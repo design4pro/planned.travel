@@ -405,6 +405,162 @@ describe('placeCountrySurface', () => {
       }),
     ).toBeNull()
   })
+
+  /**
+   * The phone's whole composition, stated as arithmetic.
+   *
+   * A 360px handset leaves about 570 usable pixels of map, and a panel carrying
+   * a fact grid and two writes wants five hundred and forty of them — so at full
+   * height no side of the country ever fits and the surface used to be centred
+   * on the very shape it describes, covering four fifths of the map. Given a
+   * floor it may not go below, it gives up height instead and sits beneath the
+   * country with the country still on screen.
+   */
+  describe('when the surface may be squeezed', () => {
+    // A phone: 286 of clear width, 566 of clear height, a country in the middle.
+    const phone: SurfaceBox = { x: 11, y: 137, width: 286, height: 566 }
+    const country: SurfaceBox = { x: 90, y: 210, width: 130, height: 140 }
+    const tall = { width: 286, height: 546 }
+
+    it('gives up height rather than covering the shape', () => {
+      const spot = placeCountrySurface({
+        anchor: country,
+        size: tall,
+        areas: [phone],
+        minHeight: 288,
+      })
+      expect(spot?.clear).toBe(true)
+      expect(spot?.side).toBe('bottom')
+      // Below the shape, by the gap, and no further down than the area allows.
+      expect(spot?.y).toBe(country.y + country.height + 8)
+      expect(spot?.height).toBe(
+        phone.y + phone.height - (country.y + country.height + 8),
+      )
+      expect((spot?.height ?? 0) + (spot?.y ?? 0)).toBeLessThanOrEqual(
+        phone.y + phone.height,
+      )
+    })
+
+    it('still points its tip at the shape it was squeezed for', () => {
+      const spot = placeCountrySurface({
+        anchor: country,
+        size: tall,
+        areas: [phone],
+        minHeight: 288,
+      })
+      expect(spot?.tip).not.toBeNull()
+    })
+
+    it('takes the side with the most room, not the first that fits', () => {
+      // A country low on the map: 275 above it and 211 below, and both clear the
+      // floor — so the answer is the roomier one rather than the first offered.
+      const spot = placeCountrySurface({
+        anchor: { x: 90, y: 420, width: 130, height: 64 },
+        size: tall,
+        areas: [phone],
+        minHeight: 200,
+      })
+      expect(spot?.side).toBe('top')
+      expect(spot?.height).toBe(420 - 8 - phone.y)
+    })
+
+    /**
+     * Some maps are shorter than the surface plus the country.
+     *
+     * An iPhone in Safari leaves 529 pixels of world once its two bars are out,
+     * and no panel carrying a fact card and two writes clears a framed country
+     * inside that at a height worth having. Centred on the shape it covers the
+     * country *and* the world either side of it. Docked, it takes the edge the
+     * country is furthest from and stops as close to the country as the floor
+     * allows, so the search pill and a third of the world stay above it.
+     */
+    it('docks to the far edge rather than sit on top of the shape', () => {
+      const spot = placeCountrySurface({
+        // A country high on a short map: 137 → 220 above it, 458 → 703 below.
+        anchor: { x: 90, y: 220, width: 130, height: 238 },
+        size: tall,
+        areas: [phone],
+        minHeight: 288,
+      })
+      expect(spot?.clear, 'it overlaps, and says so').toBe(false)
+      expect(spot?.side).toBe('bottom')
+      expect(
+        spot?.tip,
+        'a tip pointing into the surface itself is a lie',
+      ).toBeNull()
+      expect(spot?.height).toBe(288)
+      expect(
+        (spot?.y ?? 0) + (spot?.height ?? 0),
+        'flush with the edge it docked to',
+      ).toBe(phone.y + phone.height)
+      expect(
+        spot?.y,
+        'and it leaves the top of the country and the world above it on screen',
+      ).toBeGreaterThan(220)
+    })
+
+    it('docks to the top for a country low on the map', () => {
+      const spot = placeCountrySurface({
+        anchor: { x: 90, y: 460, width: 130, height: 200 },
+        size: tall,
+        areas: [phone],
+        minHeight: 288,
+      })
+      expect(spot?.side).toBe('top')
+      expect(spot?.y).toBe(phone.y)
+      expect(spot?.height).toBe(460 - 8 - phone.y)
+    })
+
+    it('centres on the shape only when the map cannot hold the floor at all', () => {
+      const spot = placeCountrySurface({
+        anchor: { x: 90, y: 150, width: 130, height: 100 },
+        size: tall,
+        areas: [{ x: 11, y: 137, width: 286, height: 200 }],
+        minHeight: 288,
+      })
+      expect(spot?.clear).toBe(false)
+      expect(spot?.height).toBeNull()
+    })
+
+    it('never squeezes a surface that could have fitted whole', () => {
+      const spot = placeCountrySurface({
+        anchor: { x: 400, y: 300, width: 100, height: 60 },
+        size,
+        areas: [area],
+        minHeight: 100,
+      })
+      expect(spot?.side).toBe('top')
+      expect(
+        spot?.height,
+        'a surface placed at the height it asked for reports no ceiling',
+      ).toBeNull()
+    })
+
+    it('keeps the strict area ahead of the looser one even when it holds less', () => {
+      const strict: SurfaceBox = { x: 0, y: 0, width: 400, height: 400 }
+      const relaxed: SurfaceBox = { x: 0, y: 0, width: 400, height: 600 }
+      const spot = placeCountrySurface({
+        anchor: { x: 100, y: 100, width: 40, height: 40 },
+        size: { width: 300, height: 500 },
+        areas: [strict, relaxed],
+        minHeight: 200,
+      })
+      // 148 → 400 inside the strict area is 252; the looser one would have given
+      // 452. The chrome is there to be cleared, not to be outbid.
+      expect(spot?.height).toBe(252)
+      expect((spot?.y ?? 0) + (spot?.height ?? 0)).toBeLessThanOrEqual(400)
+    })
+
+    it('leaves a surface with no floor to fall back on centred, as before', () => {
+      const spot = placeCountrySurface({
+        anchor: country,
+        size: tall,
+        areas: [phone],
+      })
+      expect(spot?.clear).toBe(false)
+      expect(spot?.height).toBeNull()
+    })
+  })
 })
 
 /**
@@ -482,6 +638,65 @@ describe('surfaceAreas', () => {
     expect(
       surfaceAreas(box, { top: 76, right: 60, bottom: 16, left: 16 }),
     ).toHaveLength(1)
+  })
+
+  /**
+   * The phone's zoom cluster is the top-right corner, and `cameraPadding()`
+   * charges it to both `top` and `right`. Charging it twice cost the click panel
+   * 54px of width it could have had, which showed as a ribbon of shelf down the
+   * side of a sheet that was otherwise the width of the composition.
+   */
+  it('gives a phone back the width the top-right zoom cluster was charged twice for', () => {
+    const phone: SurfaceBox = { x: 0, y: 0, width: 360, height: 650 }
+    const areas = surfaceAreas(phone, {
+      top: 72,
+      right: 54,
+      bottom: 156,
+      left: 12,
+    })
+    expect(areas).toHaveLength(2)
+    expect(areas[0]).toEqual({ x: 12, y: 72, width: 294, height: 422 })
+    expect(areas[1]?.width, 'gutter to gutter, as the shelf is').toBe(336)
+  })
+
+  it('keeps the right inset once the cluster has moved under the shelf', () => {
+    const areas = surfaceAreas(box, {
+      top: 76,
+      right: 60,
+      bottom: 424,
+      left: 16,
+    })
+    expect(areas[1]?.width).toBe(areas[0]?.width)
+  })
+
+  /**
+   * Above the product's measure the chrome stops being at the map's edges. The
+   * zoom cluster is 560px in from the right of a 2560px screen, and an area that
+   * subtracted its inset from the map put the click panel straight over it.
+   */
+  describe('on a screen wider than the chrome column', () => {
+    const wide: SurfaceBox = { x: 0, y: 0, width: 2560, height: 1375 }
+    const padding = { top: 76, right: 60, bottom: 424, left: 16 }
+
+    it('stops the strict area at the column, where the zoom cluster is', () => {
+      const [strict] = surfaceAreas(wide, padding, 1440)
+      // The well is 560 → 2000; the cluster sits inside its right-hand inset.
+      expect(strict.x).toBe(16)
+      expect(strict.x + strict.width).toBe(2000 - 60)
+    })
+
+    it('offers the map beyond the column, where no chrome ever goes', () => {
+      const areas = surfaceAreas(wide, padding, 1440)
+      const outside = areas.find((area) => area.x === 2000)
+      expect(outside?.width).toBe(2560 - 16 - 2000)
+      expect(outside?.height).toBe(1375 - 76 - 424)
+    })
+
+    it('leaves a map no wider than the column exactly as it was', () => {
+      expect(surfaceAreas(box, padding, 1440)).toEqual(
+        surfaceAreas(box, padding),
+      )
+    })
   })
 })
 
@@ -692,12 +907,21 @@ describe('CountryOverlay panel', () => {
     mount(map, { selectedCode: 'FR', selectionToken: 1 })
 
     const panel = screen.getByRole('dialog', { name: 'France' })
-    // Into the panel on open, and onto the dismissal rather than onto the first
-    // control in it — which for a country already on the record would be the
-    // undo of somebody's travel history.
-    expect(document.activeElement).toBe(
-      within(panel).getByRole('button', { name: 'Close France' }),
-    )
+    // Onto the panel itself, which is neither of the two wrong answers. Radix's
+    // default is the first control in it, and for a country already on the record
+    // that is the undo of somebody's travel history under the space bar; the
+    // dismissal is the *last* control, so focusing that left the two writes this
+    // surface exists for reachable only by tabbing backwards. The container
+    // announces the dialog and its country, and a forward Tab walks into the
+    // block rather than straight out of the panel.
+    expect(document.activeElement).toBe(panel)
+    expect(panel.getAttribute('tabindex')).toBe('-1')
+
+    const stops = tabStops(panel)
+    expect(
+      stops.at(0),
+      'and the first thing forwards is a write, not the way out',
+    ).toBe(within(panel).getByRole('button', { name: /^Remove France/ }))
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: 'France' })).toBeNull()

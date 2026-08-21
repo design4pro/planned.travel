@@ -57,13 +57,32 @@ import type { ConfirmRequest } from '#/components/modules/shared'
  * while the message underneath says why. The claim is keyed by country code, so
  * a reader who selects somewhere else mid-flight cannot inherit the claim.
  *
- * **Nothing moves.** The message strip under the rows is a fixed two lines of
- * caption at every moment of the block's life — the resting hint, a failure, and
- * the gap between them are all the same 32px — because this block sits above a
- * list inside a scroll container, and a strip that grows on failure pushes the
- * list under the reader's cursor at the exact moment they are reading why
- * something did not save. For the same reason the button keeps one minimum
- * width across every label it can carry.
+ * **Nothing moves.** The message strip under the rows is a stated box at every
+ * moment of the block's life — the resting hint, a failure, and the gap between
+ * them are all the same height — because this block sits above a list inside a
+ * scroll container, and a strip that grows on failure pushes the list under the
+ * reader's cursor at the exact moment they are reading why something did not
+ * save. The box is two lines of caption where the block is wide and three where
+ * it is narrow enough for the same sentence to wrap further, so the message is
+ * never cut off on a phone either. For the same reason the button keeps one
+ * minimum width across every label it can carry.
+ *
+ * **A phone gets its own composition, not a squeezed copy of the desktop one.**
+ * Under 20rem of container — the card the map anchors on a 360px screen, and the
+ * drawer the shelf opens there — the two rows stop stacking and sit side by
+ * side, each a small card holding the state it is about and the control that
+ * changes it. Stacked, the block is 360px tall and the second control lands a
+ * quarter of a screen below the bottom of a surface with under 300px to give;
+ * side by side it is 183px and both controls are within a hundred of its top. A
+ * reader on a phone should not have to scroll a card that does not look
+ * scrollable to reach the button the card exists for. The trade is the
+ * explanatory caption, kept for a screen reader and dropped from the page —
+ * every date it can carry is already written out in the record directly above
+ * this block, and the state is in the row's own title either way. The 36px
+ * glyph goes with it, because at that width it costs the title the twenty
+ * pixels that keep "On the bucket list" from truncating; the state is carried
+ * instead by the card's own tint, which the rest of the block already uses for
+ * exactly that. From 20rem up nothing about the row changes.
  *
  * **A record with a history behind it is asked about first.** A country marked
  * from this block carries no dates and a single arrival, and taking that back is
@@ -151,49 +170,84 @@ const layout = {
    * needs answered is how wide *it* is, not how wide the window is.
    */
   root: '@container min-w-0',
-  rows: 'mt-2 flex min-w-0 flex-col gap-2',
   /**
-   * Glyph and text on one line, the button under them, and all three on one line
-   * from 20rem of container. Stated as a grid rather than as `flex-wrap`, so the
-   * button either sits in its own column or spans the full width — never a
-   * half-width orphan pushed onto a second line by a long title. 20rem is the
-   * width at which the three columns stop fighting: under it a 360px phone gets
-   * a full-width control instead of a 90px one squeezed against a wrapped title.
+   * Side by side under 20rem of container, stacked above it.
+   *
+   * The narrow case is the map's own card on a 360px screen, which is 288px tall
+   * and holds the country's facts before it gets to this block. Two stacked rows
+   * put the second control a quarter of a screen below the bottom of that card;
+   * two columns put both of them inside the first hundred pixels of the block,
+   * which is the only arrangement in which a phone reader can press either
+   * without scrolling a surface that does not look scrollable.
    */
-  row: 'grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 rounded-lg border border-edge-faint bg-surface-2/60 p-3 @xs:grid-cols-[auto_minmax(0,1fr)_auto]',
+  rows: 'mt-1 grid min-w-0 grid-cols-2 gap-2 @xs:mt-2 @xs:grid-cols-1',
+  /**
+   * Under 20rem: the state on one line and its control under it, in a card of
+   * its own. From 20rem: the glyph, the text and the control on a single line.
+   *
+   * Stated as a grid rather than as `flex-wrap`, so the button either sits in
+   * its own column or spans the full width — never a half-width orphan pushed
+   * onto a second line by a long title. 20rem is the width at which the three
+   * columns stop fighting: under it there is no room for a 36px glyph, a title
+   * and a 120px control on one line without the title losing characters.
+   *
+   * The tint is the narrow half of what the glyph does everywhere else: at that
+   * width the glyph is gone, so the card itself carries whether the state is set
+   * — never alone, because the title says it in words directly inside it.
+   */
+  row: 'grid min-w-0 grid-cols-[minmax(0,1fr)] items-center gap-1 rounded-lg border border-edge-faint bg-surface-2/60 p-2 transition-colors duration-base ease-out-quint @max-xs:data-[set]:border-brand-subtle @max-xs:data-[set]:bg-brand-subtle @xs:grid-cols-[auto_minmax(0,1fr)_auto] @xs:gap-x-3 @xs:gap-y-3 @xs:p-3',
   glyph:
-    'grid size-9 shrink-0 place-items-center rounded-md border border-edge-faint transition-colors duration-base ease-out-quint [&_svg]:size-4',
+    'hidden size-9 shrink-0 place-items-center rounded-md border border-edge-faint transition-colors duration-base ease-out-quint @xs:grid [&_svg]:size-4',
   glyphIdle: 'bg-surface text-ink-3',
   glyphSet: 'bg-brand-subtle text-brand',
   body: 'min-w-0',
   /** One line, always: a wrapped title is the other way a row changes height. */
-  title: 'truncate text-label leading-5 font-semibold text-ink',
+  title: 'truncate text-label leading-4 font-semibold text-ink @xs:leading-5',
   /**
-   * Two lines of caption at a stated 16px leading, whatever it holds.
+   * Two lines of caption at a stated 16px leading from 20rem of container, and
+   * a line only a screen reader hears below it.
    *
    * The row's copy changes the instant a button is pressed — "A visit with no
    * trip behind it." becomes "Recorded without a trip." — and those two do not
    * wrap to the same number of lines in a 138px column. Reserving the two lines
    * every row can need makes the block one height in rest, in flight and after a
    * failure, which is the whole of §2h's second clause for this surface.
+   *
+   * On a phone the same two lines are the difference between the second control
+   * being on the card and being under it, and every fact they carry is already
+   * written out in the record above this block. So the sentence stays in the
+   * accessibility tree and leaves the page: `sr-only` is a real element with no
+   * size rather than a hidden one, so nothing is announced twice and nothing is
+   * lost to a reader who cannot see the card in the first place.
    */
   caption:
-    'mt-1 line-clamp-2 h-8 text-caption leading-4 tabular-nums text-ink-2',
+    'sr-only text-caption leading-4 tabular-nums text-ink-2 @xs:not-sr-only @xs:mt-1 @xs:line-clamp-2 @xs:h-8',
   /**
    * One minimum width for every label the row can carry, so the optimistic flip
    * from "Mark visited" to "Remove" cannot resize the row it sits in.
    */
-  action: 'col-span-2 w-full @xs:col-span-1 @xs:w-auto @xs:min-w-30',
+  action: 'w-full @xs:w-auto @xs:min-w-30',
   /**
-   * Two lines of caption at a stated 16px leading: 32px in every state, whether
-   * it holds the hint, a two-line failure or the tail of one fading out.
+   * A stated box at every width, whether it holds the hint, a failure or the
+   * tail of one fading out — and tall enough at each width to hold the longest
+   * sentence the block can be handed.
+   *
+   * Two lines of 16px leading is 32px, and two lines is what a 344px record pane
+   * needs for the longest refusal the server writes. In the 284px card a phone
+   * gets, the same sentence wraps to three, and clipping the third line is
+   * clipping the half of the message that says what to do about it — so the
+   * strip is 48px there. It is a container query rather than a breakpoint
+   * because the block is mounted in two hosts of different widths on the same
+   * screen, and it is stated per width rather than grown on demand because a
+   * strip that grows when a write fails pushes the rows out from under the
+   * reader's cursor at the worst possible moment (SPEC §2h).
    *
    * Every step in it is on the grid, the glyph included: a 16px icon against a
    * 16px first line needs no optical nudge to sit on the same baseline, so the
    * half-step this row used to carry bought nothing but a value off the scale.
    */
-  message: 'mt-2 flex h-8 items-start gap-2',
-  messageText: 'line-clamp-2 text-caption leading-4',
+  message: 'mt-2 flex h-12 items-start gap-2 @xs:h-8',
+  messageText: 'line-clamp-3 text-caption leading-4 @xs:line-clamp-2',
   messageGlyph: 'size-4 shrink-0 text-danger',
 } as const
 
@@ -427,9 +481,11 @@ const dropGoalFromList = readable(removeCountryFromBucketListFn)
 
 /**
  * How long the outgoing message stays mounted for its exit, in step with
- * `--duration-fast` and with the `animate-pop-out` class that plays over it. A
- * number rather than a token read, because the timer lives in JavaScript and the
- * animation lives in CSS; they are stated together here so they cannot drift.
+ * `--duration-fast` and with the transition that plays over it. A number rather
+ * than a token read, because the timer lives in JavaScript and the transition
+ * lives in CSS; they are stated together here so they cannot drift. Nothing
+ * moves when it expires either way — the strip is a stated box, so this only
+ * decides how long an invisible sentence lingers before it is dropped.
  */
 const MESSAGE_EXIT_MS = 150
 
@@ -716,6 +772,7 @@ export const CountryActions = React.forwardRef<
         <div className={layout.rows}>
           <div
             data-part="visit-row"
+            data-set={visited ? '' : undefined}
             role="group"
             aria-labelledby={visitTitleId}
             className={layout.row}
@@ -759,6 +816,7 @@ export const CountryActions = React.forwardRef<
 
           <div
             data-part="goal-row"
+            data-set={listed ? '' : undefined}
             role="group"
             aria-labelledby={goalTitleId}
             className={layout.row}
@@ -810,7 +868,16 @@ export const CountryActions = React.forwardRef<
                 className={cn(
                   layout.messageText,
                   'text-danger',
-                  'data-[state=open]:animate-rise data-[state=closed]:animate-pop-out',
+                  // In on `animate-rise` — 220ms of `--ease-out-quint`, opacity
+                  // and transform only — and out on a transition of the same
+                  // curve at `--duration-fast`, rather than on the house
+                  // `animate-pop-out`, whose easing is the one curve this block
+                  // is asked not to use. Under `prefers-reduced-motion` the
+                  // stylesheet collapses both to nothing and pins the transform
+                  // flat through `data-motion-transform`.
+                  'transition-[opacity,transform] duration-fast ease-out-quint',
+                  'data-[state=open]:animate-rise',
+                  'data-[state=closed]:translate-y-1 data-[state=closed]:opacity-0',
                 )}
               >
                 {message.text}

@@ -854,6 +854,45 @@ describe('stacking', () => {
   })
 })
 
+/**
+ * The map paints one hue and lets lightness carry recency, so the key is the
+ * only thing on the screen that says what a shade means. It has been taken out
+ * of the narrow layout once, to buy the country pane the height its two writes
+ * wanted, and that trade is not available: a legend a reader cannot reach on a
+ * phone is WCAG 1.4.1 unmet on the surface where colour is doing the most work.
+ * The height came out of the action block's own composition instead.
+ */
+describe('the map key', () => {
+  it('stays in the panel at every width, whichever section is open', () => {
+    for (const wide of [true, false]) {
+      matchWidth(wide)
+      for (const tab of ['country', 'stats', 'bucket'] as const) {
+        const { container, unmount } = panel({ tab })
+        const legend = container.querySelector('[data-part="legend"]')
+
+        expect(legend).toBeTruthy()
+        // Present in the tree is not the same as on the screen: the footer that
+        // holds it must not be display-none at any width either.
+        expect(legend?.parentElement?.className).not.toContain('hidden')
+        unmount()
+      }
+    }
+  })
+
+  it('names every step in words, so no reader is left decoding a shade', () => {
+    matchWidth(false)
+    const { container } = panel({ tab: 'country' })
+    const steps = [
+      ...container.querySelectorAll('[data-part="legend"] [data-step]'),
+    ]
+
+    expect(steps).toHaveLength(4)
+    for (const step of steps) {
+      expect(step.textContent.trim().length).toBeGreaterThan(0)
+    }
+  })
+})
+
 describe('AtlasPanelSkeleton', () => {
   it('says it is loading once, rather than narrating empty boxes', () => {
     const { container } = render(<AtlasPanelSkeleton />)

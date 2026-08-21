@@ -780,6 +780,15 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                     <ScrollArea
                       key={selectedKey}
                       axis="vertical"
+                      // `auto` rather than the primitive's hover default. This
+                      // is the one pane on the screen that reliably overflows —
+                      // a country's facts and the two writes under them are
+                      // taller than the drawer a phone opens — and a reader on
+                      // a phone has no pointer to hover with, so a bar that
+                      // waits for one is a bar that never appears. Shown while
+                      // there is something to scroll to, absent when there is
+                      // not.
+                      type="auto"
                       className="min-h-0 flex-1"
                     >
                       {/* One card for both answers, and one mount for the block

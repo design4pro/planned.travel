@@ -83,6 +83,26 @@ import type {
  * `cameraPadding()` declaration rather than from a second set of insets invented
  * here.
  *
+ * **A phone gets a composition, not a smaller desktop.** Stacked, the click
+ * panel is a 182px fact card over an action block, and it wants five hundred and
+ * forty pixels — where a 360px handset has about five hundred and seventy of map
+ * and an iPhone in Safari, once its two bars are out, has five hundred and
+ * twenty-nine. At full height no side of a framed country ever fits, and the
+ * placement used to answer that by centring the panel on the very shape it
+ * describes: four fifths of the map covered, no tip, and the country the reader
+ * had just pressed underneath the panel about it. So the panel now states a
+ * floor it will not go below — {@link PANEL_MIN_HEIGHT} — and gives up height
+ * instead, taking the side of the country with the most room; where even the
+ * floor will not clear the shape it docks to the edge the country is furthest
+ * from rather than sit on top of it. The block inside scrolls behind a mask fade
+ * with a bar that is drawn for exactly as long as there is more to read, and the
+ * fact card above it never scrolls, so nothing that identifies the country can
+ * be cut. Squeezed, the surface is given a *height* and not merely a ceiling:
+ * `max-height` alone leaves it indefinite, a percentage height inside an
+ * indefinite box resolves to `auto`, and the scroll region grew to its content
+ * behind a parent that clips — which put the second write in a strip no gesture
+ * could reach.
+ *
  * **Hover costs one render per country, not one per pointer frame.** MapLibre
  * fires `mousemove` for every pixel of pointer travel. `VisitedCountries`
  * already dedupes by code before it calls back, and the state that code lands in
@@ -119,7 +139,20 @@ import type {
  * any sense a reader recognises. Focus *leaving* is not a dismissal either — it
  * is non-modal, and Radix's default closed the panel the instant the country
  * search handed focus back to its own trigger. What is left closes on Escape, on
- * its own control, and when the selection goes away.
+ * its own control, and when the selection goes away — and for the 150ms it
+ * spends leaving it stops answering a press, because a control the reader can
+ * see fading away should not be one they can still hit, and two of the controls
+ * under it rewrite the traveller's record.
+ *
+ * **And focus opens on the panel, not on a control in it.** Both of the obvious
+ * answers are wrong. Radix's default is the first tab stop, which for a country
+ * already on the record reads "Remove … from your atlas" — a panel that opens
+ * with the undo of somebody's travel history under the space bar. Moving focus
+ * to the dismissal instead traded that for a second defect: the dismissal is
+ * *last* in the panel, so the very first Tab left it and the two writes this
+ * surface exists for were reachable only backwards. The container is focusable
+ * and never a tab stop: a screen reader announces the dialog and the country,
+ * and a forward Tab walks into the block rather than out of the panel.
  *
  * **And non-modal is made to mean it.** Radix says a non-modal dialog does not
  * trap focus, and it does not — but it renders one inside a focus scope with
@@ -173,6 +206,20 @@ export interface SurfacePlacement {
   readonly tip: number | null
   /** True when the surface cleared both the shape and the chrome. */
   readonly clear: boolean
+  /**
+   * The height the surface was placed at, in pixels, when clearing the shape
+   * meant giving some of it up — and `null` when it was placed at the height it
+   * asked for.
+   *
+   * This is the phone's whole answer. A 360px handset has about 570 usable
+   * pixels of map and a panel that carries a fact grid *and* two writes wants
+   * five hundred and forty of them, so at full height no side of the country
+   * ever fits and the surface used to fall back to being centred on the very
+   * shape it describes. Squeezed, it sits below the country with the country
+   * still on screen, and the block inside it scrolls — which is a designed
+   * phone composition rather than a desktop panel dropped onto a phone.
+   */
+  readonly height: number | null
 }
 
 /** The gap between the shape and the surface. `--space-2`. */
@@ -304,6 +351,54 @@ export interface PlaceSurfaceInput {
    */
   readonly areas: ReadonlyArray<SurfaceBox>
   readonly gap?: number
+  /**
+   * The shortest the surface may be squeezed to in order to clear the shape.
+   *
+   * Omitted for a surface that would rather not be drawn at all — the hover card
+   * is decoration, and decoration that has to be shortened to fit has already
+   * lost the argument. Given, the placement is allowed a second pass in which the
+   * surface gives up height to the side with the most room, which is what turns
+   * a phone's click panel from a slab centred on the country into a sheet
+   * beneath it.
+   */
+  readonly minHeight?: number
+}
+
+/** The two sides a surface may be squeezed onto. A sheet is never a column. */
+const SQUEEZE_SIDES: ReadonlyArray<'top' | 'bottom'> = ['bottom', 'top']
+
+/**
+ * The area with the most room in it, whatever order they were offered in.
+ *
+ * Offered order is a preference — the strictest first — and the last resort is
+ * the opposite question: which of them holds the most. The two used to be the
+ * same list read from both ends, which was true only for as long as the widest
+ * area happened to be the last one. It stopped being true the moment a screen
+ * wider than the product's measure grew a narrow chrome-free band beyond it.
+ */
+function roomiest(areas: ReadonlyArray<SurfaceBox>): SurfaceBox | undefined {
+  let best: SurfaceBox | undefined
+  for (const area of areas) {
+    if (
+      best === undefined ||
+      area.width * area.height > best.width * best.height
+    ) {
+      best = area
+    }
+  }
+  return best
+}
+
+/** How much room one side of the anchor leaves inside one area. */
+function roomBeside(
+  side: 'top' | 'bottom',
+  anchor: SurfaceBox,
+  area: SurfaceBox,
+  gap: number,
+): number {
+  return side === 'bottom'
+    ? area.y + area.height - (anchor.y + anchor.height + gap)
+    : anchor.y - gap - area.y
 }
 
 /**
@@ -315,16 +410,24 @@ export interface PlaceSurfaceInput {
  * shape* wins; the cross axis is then clamped into the area, which is what keeps
  * a card for a country at the edge of the screen on screen.
  *
- * When no side fits in any area the surface is centred on the shape and clamped,
- * and the answer is marked `clear: false`. A caller whose surface is decoration
- * — the hover card — declines to draw that; a caller whose surface is the only
- * way to act declines to hide it.
+ * A surface that states a {@link PlaceSurfaceInput.minHeight} gets a second pass
+ * before it gives up: above and below are offered again with the surface
+ * shortened to the room that side actually has, and the taller of the two wins.
+ * That answer still clears the shape — it is `clear: true` — and it carries the
+ * height it was placed at, so the caller can cap the surface and let the block
+ * inside it scroll.
+ *
+ * When no side fits in any area, at any height, the surface is centred on the
+ * shape and clamped, and the answer is marked `clear: false`. A caller whose
+ * surface is decoration — the hover card — declines to draw that; a caller whose
+ * surface is the only way to act declines to hide it.
  */
 export function placeCountrySurface({
   anchor,
   size,
   areas,
   gap = SURFACE_GAP,
+  minHeight,
 }: PlaceSurfaceInput): SurfacePlacement | null {
   for (const area of areas) {
     if (size.width > area.width || size.height > area.height) continue
@@ -337,12 +440,94 @@ export function placeCountrySurface({
         side,
         tip: tipFor(side, spot, anchor, size),
         clear: true,
+        height: null,
       }
     }
   }
 
-  const area = areas.at(-1)
+  if (minHeight !== undefined && minHeight < size.height) {
+    for (const area of areas) {
+      if (size.width > area.width) continue
+      // Per area rather than across all of them, so the strict area still wins
+      // over the looser one even when the looser one could hold more of the
+      // surface: the chrome is there to be cleared, not to be outbid.
+      let best: SurfacePlacement | null = null
+      for (const side of SQUEEZE_SIDES) {
+        const height = Math.min(
+          size.height,
+          Math.floor(roomBeside(side, anchor, area, gap)),
+        )
+        if (height < minHeight) continue
+        const squeezed = { width: size.width, height }
+        const spot = offerSide(side, anchor, squeezed, area, gap)
+        if (spot === null) continue
+        if (best !== null && (best.height ?? 0) >= height) continue
+        best = {
+          x: Math.round(spot.x),
+          y: Math.round(spot.y),
+          side,
+          tip: tipFor(side, spot, anchor, squeezed),
+          clear: true,
+          height,
+        }
+      }
+      if (best !== null) return best
+    }
+  }
+
+  const area = roomiest(areas)
   if (area === undefined) return null
+
+  // Docked, which is the last honest answer before the worst one.
+  //
+  // Some maps are simply shorter than the surface plus the country: an iPhone in
+  // Safari, whose two bars leave 529 pixels of world, cannot hold a panel that
+  // clears a framed country at any usable height. Centred on the shape it covers
+  // the country *and* the world either side of it, which is the state the
+  // reference ships and the one this screen was rejected for. Docked, the sheet
+  // takes the edge the country is furthest from, stops as close to the country as
+  // the floor allows, and leaves the search pill and a third of the world above
+  // it. It still overlaps, so it still reports `clear: false` — decoration
+  // declines to draw this, and only the surface that has to stay reachable takes
+  // it.
+  if (minHeight !== undefined && area.height >= minHeight) {
+    const below = anchor.y + anchor.height / 2 <= area.y + area.height / 2
+    const edge = area.y + area.height
+    const x = Math.round(
+      clamp(
+        anchor.x + anchor.width / 2 - size.width / 2,
+        area.x,
+        area.x + Math.max(area.width - size.width, 0),
+      ),
+    )
+    if (below) {
+      const top = clamp(
+        anchor.y + anchor.height + gap,
+        area.y,
+        edge - minHeight,
+      )
+      const height = Math.min(size.height, Math.floor(edge - top))
+      return {
+        x,
+        y: Math.round(edge - height),
+        side: 'bottom',
+        tip: null,
+        clear: false,
+        height,
+      }
+    }
+    const bottom = clamp(anchor.y - gap, area.y + minHeight, edge)
+    const height = Math.min(size.height, Math.floor(bottom - area.y))
+    return {
+      x,
+      y: Math.round(area.y),
+      side: 'top',
+      tip: null,
+      clear: false,
+      height,
+    }
+  }
+
   return {
     x: Math.round(
       clamp(
@@ -361,35 +546,91 @@ export function placeCountrySurface({
     side: 'top',
     tip: null,
     clear: false,
+    height: null,
   }
 }
 
 /**
- * The two areas a surface may occupy, from the insets the screen declared.
+ * The width at which the zoom cluster stops being the map's top-right corner.
+ *
+ * `AtlasScreen`'s chrome puts the cluster at `top-3 right-3` and moves it to
+ * `lg:bottom-(--atlas-clear) lg:right-4` — so below `lg` the room it costs is at
+ * the top, which {@link cameraPadding} already charges to `padding.top`, and the
+ * right inset it also charges is the same room counted twice. A surface that has
+ * come down to the bottom of a phone's map is nowhere near the cluster, and the
+ * duplicate inset is what left a 54px ribbon of shelf showing down the side of a
+ * panel that was otherwise the width of the composition.
+ */
+const CONTROLS_MOVE_AT = 1024
+
+/**
+ * The areas a surface may occupy, from the insets the screen declared and the
+ * column it lays its chrome out in.
  *
  * `cameraPadding()` is already the one place this screen states how much of each
  * edge its chrome covers — the camera is told the same four numbers — so the
- * strict area is that rectangle exactly. The looser one keeps every inset except
- * the shelf's and takes the plain gutter in its place, and `padding.left` *is*
- * that gutter, so the two cannot drift.
+ * insets are that rectangle exactly. What the insets alone cannot say is *where*
+ * those edges are on a screen wider than the product's measure: the search pill,
+ * the zoom cluster, the credit and the shelf are positioned inside one centred
+ * `--content-max` well, so on a 2560px screen the cluster is 560px in from the
+ * map's right edge and an area that subtracted the right inset from the map
+ * placed the panel straight over it. `column` is that well's width; the strict
+ * area therefore stops at the well's right edge rather than at the map's.
+ *
+ * Three areas, offered in the order a surface should want them:
+ *
+ * 1. **strict** — every inset honoured. Every surface may use it, and the hover
+ *    card may use nothing else: decoration that sits on the shelf or on the
+ *    search pill has stopped being decoration.
+ * 2. **outside** — the map beyond the well, on a screen wide enough to have any.
+ *    No chrome is out there at all, so a country in the far east or west gets
+ *    honest room rather than the shelf.
+ * 3. **relaxed** — for the surface that has to be somewhere, and it gives up two
+ *    insets. The shelf's, because the click panel carries both writes and cannot
+ *    answer "no room" by not being drawn. And, below {@link CONTROLS_MOVE_AT},
+ *    the zoom cluster's, because at that width the cluster is the *top* right
+ *    corner and `padding.top` is already the inset that clears it.
+ *
+ * `padding.left` is the plain gutter in both substitutions, so the areas and the
+ * chrome cannot drift apart.
  */
 export function surfaceAreas(
   box: SurfaceBox,
   padding: EdgePadding,
+  column: number = Number.POSITIVE_INFINITY,
 ): ReadonlyArray<SurfaceBox> {
+  const well = Math.min(box.width, Math.max(column, 0))
+  const wellRight = box.x + (box.width - well) / 2 + well
+
+  const left = box.x + padding.left
+  const top = box.y + padding.top
   const strict: SurfaceBox = {
-    x: box.x + padding.left,
-    y: box.y + padding.top,
-    width: Math.max(box.width - padding.left - padding.right, 0),
+    x: left,
+    y: top,
+    width: Math.max(wellRight - padding.right - left, 0),
     height: Math.max(box.height - padding.top - padding.bottom, 0),
   }
+  const right =
+    box.width < CONTROLS_MOVE_AT ? padding.left : Math.max(padding.right, 0)
   const relaxed: SurfaceBox = {
-    x: strict.x,
-    y: strict.y,
-    width: strict.width,
+    x: left,
+    y: top,
+    width: Math.max(wellRight - right - left, 0),
     height: Math.max(box.height - padding.top - padding.left, 0),
   }
-  return relaxed.height > strict.height ? [strict, relaxed] : [strict]
+  const outside: SurfaceBox = {
+    x: wellRight,
+    y: top,
+    width: Math.max(box.x + box.width - padding.left - wellRight, 0),
+    height: strict.height,
+  }
+
+  const areas = [strict]
+  if (outside.width > 0) areas.push(outside)
+  if (relaxed.height > strict.height || relaxed.width > strict.width) {
+    areas.push(relaxed)
+  }
+  return areas
 }
 
 /* ----------------------------------------------------------------- geometry */
@@ -619,6 +860,21 @@ const layout = {
     'pointer-events-auto relative flex max-h-(--pt-max-h) w-full flex-col overflow-hidden',
     'rounded-lg border border-map-card-edge bg-map-card text-left shadow-popover',
     'focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring',
+    // Dismissed, and therefore no longer a target. The layer fades for 150ms and
+    // for every one of them the panel used to stay hit-testable, so a press
+    // arriving in that window landed on a control the reader could see leaving —
+    // and two of the controls under it rewrite the traveller's record. The
+    // wrapper is the `group`, so the exit it is already driving turns this off
+    // in the same frame it starts fading.
+    'group-data-[state=closed]:pointer-events-none',
+    // Squeezed, the ceiling becomes a floor as well — and that is a layout fact,
+    // not a flourish. `max-height` alone leaves the surface's height *indefinite*,
+    // and a percentage height inside an indefinite box resolves to `auto`: the
+    // scroll region's own viewport grew to its content, overflowed a parent that
+    // clips, and the second write ended up in a strip no gesture could reach.
+    // Stated as a height, every box down the chain is definite and the region
+    // scrolls the way it says it does.
+    'group-data-[fit=squeezed]:h-(--pt-max-h)',
     '@md:flex-row',
   ),
   /**
@@ -760,6 +1016,64 @@ function mapOffset(map: HTMLElement, host: HTMLElement): SurfaceBox {
 }
 
 /**
+ * The width the screen lays its floating chrome out in, resolved from the token
+ * that states it.
+ *
+ * `--content-max` is the product's measure, and `AtlasScreen` positions the
+ * search pill, the zoom cluster, the credit and the shelf inside one centred well
+ * of exactly that width rather than against the viewport's own edges. On a screen
+ * no wider than the measure the two are the same rectangle and this changes
+ * nothing; above it — a 2560px screen has 1120px spare — it is the difference
+ * between subtracting the zoom cluster's inset from the map's right edge, where
+ * there is nothing, and from the well's, where the cluster actually is.
+ *
+ * Read from the DOM rather than repeated as a number here, because the token file
+ * is where a measure is allowed to change. Read once per resize and held, because
+ * `place()` runs once per rendered frame of a pan and `getComputedStyle` there is
+ * a forced style recalculation sixty times a second.
+ */
+function chromeColumn(host: HTMLElement): number {
+  const declared = getComputedStyle(host)
+    .getPropertyValue('--content-max')
+    .trim()
+  const measure = Number.parseFloat(declared)
+  if (!Number.isFinite(measure)) return Number.POSITIVE_INFINITY
+  if (!declared.endsWith('rem')) return measure
+  const root = Number.parseFloat(
+    getComputedStyle(document.documentElement).fontSize,
+  )
+  return Number.isFinite(root) ? measure * root : Number.POSITIVE_INFINITY
+}
+
+/**
+ * The map, cropped to the layer the surfaces are actually drawn in.
+ *
+ * The two are not the same rectangle by one pixel a side, and it is deliberate:
+ * the atlas draws exactly one world, so the antimeridian lands on the drawing's
+ * own left and right edge, and the screen overhangs the drawing by a pixel each
+ * way so the graticule's first meridian and every ring that touches the date line
+ * fall outside the clip instead of down the edge of the screen as a seam.
+ *
+ * Projection has to use the true box — that pixel is real map. Placement must
+ * not: the gutters the areas are measured from are the composition's, and a
+ * surface solved against the overhang lands a pixel outside the column the shelf
+ * and the search pill are laid out in, which on a phone is a visible misfit
+ * between a full-width sheet and the shelf underneath it.
+ */
+function placementBox(box: SurfaceBox, host: HTMLElement): SurfaceBox {
+  const left = Math.max(box.x, 0)
+  const top = Math.max(box.y, 0)
+  const right = Math.min(box.x + box.width, host.clientWidth)
+  const bottom = Math.min(box.y + box.height, host.clientHeight)
+  return {
+    x: left,
+    y: top,
+    width: Math.max(right - left, 0),
+    height: Math.max(bottom - top, 0),
+  }
+}
+
+/**
  * What an anchored surface needs to place itself.
  *
  * The insets rather than the areas: the areas are a function of the map's box,
@@ -784,6 +1098,14 @@ interface AnchoredSurfaceProps {
    * card: a surface that holds focus is never hidden, whatever the camera does.
    */
   readonly decorative: boolean
+  /**
+   * The shortest this surface may be squeezed to rather than cover its shape.
+   *
+   * Only the click panel offers one — see {@link PlaceSurfaceInput.minHeight}.
+   * The card the hover shows is decoration and answers "no room" by not being
+   * drawn, which costs the reader nothing at all.
+   */
+  readonly minHeight?: number
   /** Drives the layer's exit. `closed` fades it, tip and all. */
   readonly state: 'open' | 'closed'
   readonly className: string
@@ -805,6 +1127,7 @@ function AnchoredSurface({
   frame,
   host,
   decorative,
+  minHeight,
   state,
   className,
   children,
@@ -824,12 +1147,30 @@ function AnchoredSurface({
    */
   const sizeRef = React.useRef({ width: 0, height: 0 })
   const capRef = React.useRef({ width: -1, height: -1 })
+  /**
+   * The ceiling currently written on the element, which is not always the area's.
+   *
+   * A squeezed surface is *shorter* than the room its area has, and the height
+   * the placement solved from has to stay the height it would take if the room
+   * came back — otherwise the first squeeze would ratchet: measure the squeezed
+   * box, squeeze that, measure again. So every measurement is taken with the
+   * area's own ceiling restored, and the squeeze is re-applied after it.
+   */
+  const fitRef = React.useRef(-1)
+  /** The chrome column's width, re-read only when the viewport moves. */
+  const columnRef = React.useRef(Number.POSITIVE_INFINITY)
 
   const measure = React.useCallback(() => {
     const node = nodeRef.current
     if (node === null) return
+    columnRef.current = chromeColumn(host)
+    const cap = capRef.current.height
+    if (cap >= 0 && fitRef.current !== cap) {
+      node.style.setProperty('--pt-max-h', `${cap}px`)
+      fitRef.current = cap
+    }
     sizeRef.current = { width: node.offsetWidth, height: node.offsetHeight }
-  }, [])
+  }, [host])
 
   const place = React.useCallback(() => {
     const node = nodeRef.current
@@ -866,9 +1207,17 @@ function AnchoredSurface({
     )
     const onScreen = horizontal.onScreen && vertical.onScreen
 
-    const solved = surfaceAreas(box, current.padding)
+    const solved = surfaceAreas(
+      placementBox(box, host),
+      current.padding,
+      columnRef.current,
+    )
     const areas = current.strict ? solved.slice(0, 1) : solved
-    const area = areas.at(-1)
+    // The roomiest of them, not the last: the ceilings are an upper bound on
+    // what the surface may become, and an area it will never be placed in must
+    // not be allowed to shrink it. The placement below still rejects any area
+    // the measured surface will not fit inside.
+    const area = roomiest(areas)
     if (area === undefined) return
     // Written before the measurement, because the surface reads them: the panel
     // is capped at the room there is, and the scroll inside it only ever engages
@@ -880,7 +1229,6 @@ function AnchoredSurface({
       capRef.current.height !== capHeight
     ) {
       node.style.setProperty('--pt-max-w', `${capWidth}px`)
-      node.style.setProperty('--pt-max-h', `${capHeight}px`)
       capRef.current = { width: capWidth, height: capHeight }
       measure()
     }
@@ -897,8 +1245,19 @@ function AnchoredSurface({
       },
       size,
       areas,
+      minHeight,
     })
     if (spot === null) return
+
+    // The ceiling the placement chose, which is the area's own unless clearing
+    // the shape cost the surface some height. Written before the transform so
+    // the frame the reader sees carries both at once.
+    const fit = spot.height ?? capHeight
+    if (fitRef.current !== fit) {
+      node.style.setProperty('--pt-max-h', `${fit}px`)
+      fitRef.current = fit
+    }
+    node.dataset.fit = spot.height === null ? 'full' : 'squeezed'
 
     node.style.transform = `translate3d(${spot.x}px, ${spot.y}px, 0)`
     node.dataset.side = spot.side
@@ -916,7 +1275,7 @@ function AnchoredSurface({
     // the map" is the state the click surface must survive, and a gate that had
     // to infer it from pixels would be asserting against the camera.
     node.dataset.anchor = onScreen ? 'visible' : 'offscreen'
-  }, [map, host, decorative, measure])
+  }, [map, host, decorative, minHeight, measure])
 
   // After every render, because the surface's own size is what half the
   // arithmetic reads and a status change or a longer country name moves it.
@@ -936,6 +1295,12 @@ function AnchoredSurface({
     // a pan, a zoom and a fly-to, which is exactly the cadence the anchor has to
     // keep up with — and it is the one path that must not re-measure, because
     // nothing about the surface itself has changed.
+    //
+    // The observer below cannot loop on the squeeze, and the reason is worth
+    // stating: `remeasure` restores the area's ceiling, reads, and re-applies the
+    // squeeze inside one callback, so the size the browser settles on is the size
+    // it just reported. A notification is only ever raised again by a content
+    // change, which is the thing the observer is here for.
     map.on('move', place)
     map.on('resize', remeasure)
     const observer =
@@ -1153,10 +1518,11 @@ function CountryPanel({
     firstTripOn: country?.firstTripOn ?? null,
     lastTripOn: country?.lastTripOn ?? null,
   }).name
-  const closeRef = React.useRef<HTMLButtonElement | null>(null)
+  const panelRef = React.useRef<HTMLDivElement | null>(null)
 
   return (
     <DialogPrimitive.Content
+      ref={panelRef}
       data-part="country-panel"
       data-country={countryCode}
       data-motion-transform=""
@@ -1164,18 +1530,29 @@ function CountryPanel({
       // Pointing `aria-describedby` at the panel would read the whole card out
       // as a description of itself before the reader reached any of it.
       aria-describedby={undefined}
+      // Focusable, and only programmatically: the panel itself is where focus
+      // lands when it opens, so it needs to accept focus without ever becoming a
+      // tab stop of its own.
+      tabIndex={-1}
       className={cn(layout.surface, layout.motion)}
-      // Focus lands on the dismissal, not on the first control in the document.
-      // That control is the action block's own first row, and for a country
-      // already on the record it reads "Remove … from your atlas" — a panel that
-      // opens with the undo of somebody's travel history under the space bar is
-      // a panel that will eventually be pressed by accident. The close control
-      // is last in the document so it paints over the card; focus is moved to it
-      // explicitly rather than by reordering, because the reading order of the
-      // panel is the facts and then what can be done about them.
+      // Focus lands on the panel, not on a control inside it.
+      //
+      // Radix's default is the first tab stop, which here is the action block's
+      // first row — and for a country already on the record that control reads
+      // "Remove … from your atlas". A panel that opens with the undo of somebody's
+      // travel history under the space bar is a panel that will eventually be
+      // pressed by accident. The previous answer was to focus the dismissal
+      // instead, and it traded one defect for another: the dismissal is *last* in
+      // the panel, so the very first Tab left, and the two writes this surface
+      // exists for could only be reached by tabbing backwards.
+      //
+      // The container is the answer to both. A screen reader announces the
+      // dialog's role and its name — the country — the reading order is the facts
+      // and then what can be done about them, and a forward Tab walks into the
+      // block rather than out of the panel.
       onOpenAutoFocus={(event) => {
         event.preventDefault()
-        closeRef.current?.focus({ preventScroll: true })
+        panelRef.current?.focus({ preventScroll: true })
       }}
       onCloseAutoFocus={onCloseAutoFocus}
       onFocusOutside={onFocusOutside}
@@ -1200,8 +1577,14 @@ function CountryPanel({
         {/* `fade` is the mask and the bar is the affordance. Both appear only on
             a viewport that genuinely cannot hold the block — a short phone with
             the shelf beneath it — and the card above never scrolls, so nothing
-            that identifies the country can ever be cut. */}
-        <ScrollArea fade axis="vertical" className="min-h-0 flex-1">
+            that identifies the country can ever be cut.
+
+            `type="auto"` rather than the primitive's hover default: on the
+            viewport where this actually scrolls the reader has no pointer to
+            hover with, and a mask fade on its own is a design flourish that could
+            equally be a card that stops. The bar is drawn for exactly as long as
+            there is something under the fold and never a moment longer. */}
+        <ScrollArea fade type="auto" axis="vertical" className="min-h-0 flex-1">
           <CountryActions
             key={countryCode}
             countryCode={countryCode}
@@ -1222,7 +1605,6 @@ function CountryPanel({
 
       <DialogPrimitive.Close asChild>
         <IconButton
-          ref={closeRef}
           icon={<X />}
           label={`Close ${name}`}
           size="sm"
@@ -1238,6 +1620,19 @@ function CountryPanel({
 
 /** How long after a touch a `mousemove` is still the browser's echo of it. */
 const TOUCH_GRACE_MS = 700
+
+/**
+ * The shortest the click panel may be squeezed to rather than cover its country.
+ *
+ * 18rem, and the number is the composition rather than a look. Stacked — which
+ * is the phone's layout — the panel is the fact card at 182px over the action
+ * block, and eighteen rem leaves the whole card plus the block's heading and its
+ * first row above the fold, with the fade and the bar saying there is a second.
+ * Below that the squeeze would be buying room by hiding the thing the reader
+ * pressed the country to see, and being centred over the country is the better
+ * of two bad answers.
+ */
+const PANEL_MIN_HEIGHT = 288
 
 export function CountryOverlay({
   visits,
@@ -1559,6 +1954,7 @@ export function CountryOverlay({
                   frame={panel.target.frame}
                   host={container}
                   decorative={false}
+                  minHeight={PANEL_MIN_HEIGHT}
                   state={panel.state}
                   className={layout.panelWidth}
                 >

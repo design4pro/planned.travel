@@ -36,6 +36,7 @@ import type {
   AtlasPanelTab,
   CountryOverlayCountry,
   CountryOverlayGoal,
+  CountryOverlayStatus,
 } from '#/components/atlas'
 import type { MapVisitedCountry } from '#/components/map'
 import type { CountrySearchVisit } from '#/lib/atlas/country-search'
@@ -719,11 +720,30 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
    * with the card's own skeleton, at the card's own dimensions, so the swap moves
    * nothing — and says so again if the re-read never comes back, with a retry
    * that runs the very same invalidation.
+   *
+   * Read off *this route's own match* rather than off the router's global
+   * `isLoading`. The global flag is true for any pending navigation, so pressing
+   * a link to the trip planner put the card into its skeleton and held it there
+   * for the length of a page load that had nothing to do with the atlas — a
+   * loading state answering a question nobody asked. `matches.at(-1)` is the leaf,
+   * which on this screen is `/_app/atlas` by construction, and `isFetching` is
+   * true for exactly the re-read.
+   *
+   * The failed branch is deliberately kept beside it, and it is honest about what
+   * it covers: a loader that throws on the *first* read is caught by the route's
+   * own `errorComponent`, which replaces this whole screen. This is the state
+   * where the payload on screen is stale and the re-read behind it did not come
+   * back — the card says the figures did not arrive rather than printing the old
+   * ones as though they were current.
    */
   const router = useRouter()
-  const reading = useRouterState({ select: (state) => state.isLoading })
-  const readFailed = useRouterState({
-    select: (state) => state.matches.some((match) => match.status === 'error'),
+  const status = useRouterState({
+    select: (state): CountryOverlayStatus => {
+      const match = state.matches.at(-1)
+      if (match === undefined) return 'ready'
+      if (match.status === 'error') return 'failed'
+      return match.isFetching === false ? 'ready' : 'loading'
+    },
   })
   const retry = React.useCallback(() => {
     void router.invalidate()
@@ -819,7 +839,7 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
             onSelect={open}
             padding={padding}
             container={surfaceHost}
-            status={readFailed ? 'failed' : reading ? 'loading' : 'ready'}
+            status={status}
             onRetry={retry}
           />
 
@@ -868,6 +888,15 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
         }}
         byContinent={atlas.byContinent}
         bucketList={atlas.bucketList}
+        // The same uncapped index the map overlay reads, and for the same
+        // reason. `bucketList` above is the head of the list — forty rows — which
+        // is the right shape for something a reader scrolls and the wrong one for
+        // "is the selected country already on it?": a country at row forty-one
+        // answered no, the shelf offered "Add to list" for an entry that was
+        // already there, and the map surface a few hundred pixels above it
+        // answered "On the bucket list" about the very same country at the very
+        // same moment.
+        bucketCountries={atlas.bucketListCountries}
         bucketTotal={atlas.bucketListTotal}
         bucketAchieved={atlas.bucketListAchieved}
         className={cn(

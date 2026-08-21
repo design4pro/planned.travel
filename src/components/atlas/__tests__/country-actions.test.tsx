@@ -72,6 +72,14 @@ function block(overrides: Partial<CountryActionsProps> = {}) {
   return render(<CountryActions {...props} />)
 }
 
+/** A visit with nothing behind it: the shape this block's own write leaves. */
+const VISITED = {
+  firstVisitedOn: null,
+  lastVisitedOn: null,
+  visitCount: 1,
+  note: null,
+}
+
 /** One of the block's two rows, addressed the way the map surface will. */
 function row(part: 'visit-row' | 'goal-row'): HTMLElement {
   const node = document.querySelector<HTMLElement>(`[data-part="${part}"]`)
@@ -158,10 +166,35 @@ describe('while a write is in flight', () => {
     expect(captions).toHaveLength(2)
     for (const node of captions) {
       // A stated box, not a wrapped one: the copy in these rows changes on the
-      // press, and two captions do not wrap to the same number of lines.
-      expect(node.className).toContain('h-8')
-      expect(node.className).toContain('line-clamp-2')
+      // press, and two captions do not wrap to the same number of lines. The
+      // reservation is made where the caption is on the page, which is from
+      // 20rem of container up.
+      expect(node.className).toContain('@xs:h-8')
+      expect(node.className).toContain('@xs:line-clamp-2')
     }
+  })
+
+  it('keeps the row itself one shape from the press to the answer', async () => {
+    const user = userEvent.setup()
+    const pending = deferred<undefined>()
+    atlas.mark.mockReturnValue(pending.promise)
+    block()
+    const resting = row('visit-row').className
+    const restingTitle = within(row('visit-row')).getByText(
+      'Not visited',
+    ).className
+
+    await user.click(visitButton())
+
+    // The state cue on the card is an attribute; nothing about the geometry
+    // that holds the row's height may move with it.
+    expect(row('visit-row').className).toBe(resting)
+    expect(within(row('visit-row')).getByText('Visited').className).toBe(
+      restingTitle,
+    )
+
+    pending.resolve(undefined)
+    await waitFor(() => expect(router.invalidate).toHaveBeenCalled())
   })
 
   it('holds the strip at its resting height', async () => {
@@ -697,10 +730,138 @@ describe('on the 4px grid', () => {
     const view = block()
     const strip = message(view.container)
 
-    // 8px of gap, 32px of strip, and a 16px glyph against a 16px first line.
+    // 8px of gap, 48px of strip on a phone and 32px from 20rem of container,
+    // and a 16px glyph against a 16px first line.
     expect(strip?.className).toContain('gap-2')
-    expect(strip?.className).toContain('h-8')
+    expect(strip?.className).toContain('h-12')
+    expect(strip?.className).toContain('@xs:h-8')
     expect(strip?.className).toContain('mt-2')
     expect(strip?.className).not.toContain('gap-1.5')
+  })
+
+  it('holds three lines of failure where the block is narrow, two where it is not', () => {
+    const view = block()
+    const line = message(view.container)?.firstElementChild
+
+    expect(line?.className).toContain('line-clamp-3')
+    expect(line?.className).toContain('@xs:line-clamp-2')
+  })
+})
+
+/**
+ * The narrow half of the block: the 284px card the map anchors on a 360px screen
+ * and the drawer the shelf opens there. jsdom has no layout and cannot evaluate
+ * a container query, so what is asserted is the contract in the class strings —
+ * which arrangement each width is asked for — rather than the pixels it renders
+ * to. The pixels are the visual gate's job.
+ */
+describe('the composition a narrow host gets', () => {
+  const rowsOf = (root: HTMLElement): HTMLElement => {
+    const node = root.querySelector<HTMLElement>('[data-part="visit-row"]')
+      ?.parentElement
+    if (node === null || node === undefined) throw new Error('no rows on screen')
+    return node
+  }
+
+  it('sets the two rows side by side under 20rem and stacks them above it', () => {
+    const view = block()
+    const rows = rowsOf(view.container)
+
+    // Side by side is what puts both controls inside the first hundred pixels
+    // of the block, which is the whole of the difference on a 360px screen.
+    expect(rows.className).toContain('grid-cols-2')
+    expect(rows.className).toContain('@xs:grid-cols-1')
+  })
+
+  it('drops the 36px glyph from the narrow card and puts it back from 20rem', () => {
+    block()
+    const glyph = row('visit-row').firstElementChild
+
+    expect(glyph?.className).toContain('hidden')
+    expect(glyph?.className).toContain('@xs:grid')
+    // Decoration either way: the title beside it is what states the row.
+    expect(glyph?.getAttribute('aria-hidden')).toBe('true')
+  })
+
+  it('carries the state on the card where the glyph is not there to carry it', async () => {
+    const user = userEvent.setup()
+    const pending = deferred<undefined>()
+    atlas.add.mockReturnValue(pending.promise)
+    block({ visit: { ...VISITED } })
+
+    expect(row('visit-row').hasAttribute('data-set')).toBe(true)
+    expect(row('goal-row').hasAttribute('data-set')).toBe(false)
+    expect(row('visit-row').className).toContain(
+      '@max-xs:data-[set]:bg-brand-subtle',
+    )
+
+    // The cue follows the claim, so the card fills the instant it is pressed.
+    await user.click(goalButton())
+    expect(row('goal-row').hasAttribute('data-set')).toBe(true)
+
+    pending.reject(new Error('The server said no.'))
+    await waitFor(() =>
+      expect(row('goal-row').hasAttribute('data-set')).toBe(false),
+    )
+  })
+
+  it('keeps the caption a reader can hear when the page cannot hold it', () => {
+    block()
+    const caption = within(row('visit-row')).getByText(
+      'A visit with no trip behind it.',
+    )
+
+    // `sr-only` rather than `hidden`: the sentence leaves the page on a phone
+    // and stays in the accessibility tree, so nothing is lost to a reader who
+    // was never going to see it.
+    expect(caption.className).toContain('sr-only')
+    expect(caption.className).toContain('@xs:not-sr-only')
+  })
+
+  it('gives the narrow control the whole card and a stated minimum above it', () => {
+    block()
+    for (const control of [visitButton(), goalButton()]) {
+      expect(control.className).toContain('w-full')
+      expect(control.className).toContain('@xs:w-auto')
+      expect(control.className).toContain('@xs:min-w-30')
+    }
+  })
+
+  it('leaves both rows named and grouped in either arrangement', () => {
+    block()
+    for (const part of ['visit-row', 'goal-row'] as const) {
+      const group = row(part)
+      const labelledBy = group.getAttribute('aria-labelledby')
+      expect(group.getAttribute('role')).toBe('group')
+      expect(labelledBy).toBeTruthy()
+      expect(document.getElementById(labelledBy ?? '')?.textContent).toBeTruthy()
+    }
+  })
+})
+
+describe('the motion under the rows', () => {
+  it('enters and leaves on the same curve, on transform and opacity only', async () => {
+    const user = userEvent.setup()
+    atlas.mark.mockRejectedValue(new Error('The server said no.'))
+    const view = block()
+
+    await user.click(visitButton())
+    await waitFor(() =>
+      expect(message(view.container)?.textContent).toContain(
+        'The server said no.',
+      ),
+    )
+    const line = view.container.querySelector('[data-state="open"]')
+
+    // 220ms in on `--ease-out-quint`, 150ms out on the same curve — never the
+    // house `animate-pop-out`, whose easing is the one curve this block is
+    // asked not to use, and which scales rather than translating.
+    expect(line?.className).toContain('animate-rise')
+    expect(line?.className).toContain('transition-[opacity,transform]')
+    expect(line?.className).toContain('duration-fast')
+    expect(line?.className).toContain('ease-out-quint')
+    expect(line?.className).not.toContain('animate-pop-out')
+    // Pinned flat for a reader who asked for no motion.
+    expect(line?.getAttribute('data-motion-transform')).toBe('')
   })
 })
