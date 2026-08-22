@@ -128,24 +128,38 @@ whichever round next owns `src/server/auth/**` and `src/server/billing/**`.
   `src/server/queue/handlers/email.ts`; the cost of the fix is that the handler then needs the
   brand and the catalogue the producer has today, which is why it is a follow-up and not a
   one-line move.
-- **F2 - the four billing templates have no dispatch site.** `BillingEmailMessage` declares
-  `billing.subscription-confirmed`, `billing.plan-changed`, `billing.payment-failed` and
-  `billing.pack-purchased`, and `describe()` renders all four, but the only caller of
-  `queueAuthEmail()` in the product is `src/server/auth/index.ts`, which sends the five auth kinds.
-  No path in `src/server/billing/**` sends a billing email, so the four templates are exercised by
+- **F2 - six of the nine templates have no dispatch site.** `describe()` in
+  `src/server/auth/email.ts` maps all nine kinds of `TransactionalEmailMessage` onto a subject, an
+  analytics tag and a template element, and `renderAuthEmail()` renders whichever one it is handed.
+  `queueAuthEmail()` has exactly **three** callers in the product, all of them Better Auth hooks in
+  `src/server/auth/index.ts`: `sendResetPassword`, `sendVerificationEmail` and
+  `sendInvitationEmail`. Between them they send three kinds - `auth.reset-password`, `auth.verify-email`,
+  `auth.organization-invitation`. The other **six** are reached from no product path at all:
+  `auth.email-changed` and `auth.delete-account` are declared and rendered but never queued, and
+  so are the four billing kinds `billing.subscription-confirmed`, `billing.plan-changed`,
+  `billing.payment-failed` and `billing.pack-purchased`, because nothing in
+  `src/server/billing/**` sends mail. All six are exercised by
   `src/server/email/__tests__/templates.test.tsx` and by nothing else. They are written and unsent.
+  An earlier revision of this bullet counted *four* unsent templates and described the caller as
+  sending "the five auth kinds". Both numbers were recalled rather than counted. This one is the
+  recount, and both of its numbers are one command each:
+  `/usr/bin/grep -rn 'queueAuthEmail(' src/ | /usr/bin/grep -v 'auth/email.ts'` lists the **three**
+  dispatch sites, and `/usr/bin/grep -c "kind: 'auth\.\|kind: 'billing\." src/server/auth/email.ts`
+  counts the **nine** message kinds. Three of nine are sent; six are not.
 
 **The `stripe` package is gone, and so is every line that imported it.** The phase-A dependency
 round ran `pnpm remove stripe` in the same edit that installed the two React Email packages, so
-the dependency entry and its lockfile block are both absent: `grep -c stripe pnpm-lock.yaml`
-returns `0`, and nothing transitive pulls it back. The code followed over two further rounds, and
-`grep -ril stripe src/` now returns nothing at all - thirty-one files at the low point, none
-today. The Polar client is `src/server/billing/polar.ts`, the mounted webhook route is
+the dependency entry and its lockfile block are both absent - `/usr/bin/grep -c stripe pnpm-lock.yaml`
+returns `0` - and nothing transitive pulls it back. The code followed over two further rounds, and
+`/usr/bin/grep -ril stripe src/` now returns nothing at all: thirty-one files at the low point,
+none today. The Polar client is `src/server/billing/polar.ts`, the mounted webhook route is
 `src/routes/api/polar/webhook.ts`, and the four build-time ids `src/lib/plans.ts` reads are
 `VITE_POLAR_PRODUCT_SOLO_MONTHLY`, `…_SOLO_YEARLY`, `…_CREW_MONTHLY` and `…_CREW_YEARLY`. Both CI
 workflows and `.dev.vars.example` carry that set and no other.
 
-`grep -ril stripe src/` is the check, not the type checker. A git worktree nested inside another
+`/usr/bin/grep -ril stripe src/` is the check, not the type checker. The absolute path is written
+out on purpose: a plain `grep` here is a shell function, it is right about a tracked path and wrong
+about other inputs, and §8 records the round that was lost to trusting it. A git worktree nested inside another
 checkout of this repository resolves `stripe` from the **parent** checkout's `node_modules`,
 because Node's lookup walks up past the worktree root, so `pnpm typecheck` can pass with imports
 still in place. The manifest is the authority and the resolver is not. That sentence is kept for
@@ -162,16 +176,23 @@ additive migration, so a `wrangler rollback` past the phase-A release meets a Wo
 names columns the schema no longer has. `docs/DEPLOY.md` §5 and §12 record that as a bounded,
 named exception rather than as a promise the schema cannot keep.
 
-**The user-visible copy moved with the provider, and one string did not.**
+**The user-visible copy moved with the provider, and one string took three rounds to follow.**
 `src/routes/legal/terms.tsx` and `src/routes/pricing.tsx` told the reader that Stripe *calculates
 and shows sales tax*, which under Polar is false, because §1 records Polar as Merchant of Record
 carrying that liability on our behalf. Both were rewritten; the legal pages went first, because
 they are a representation to a customer and not a label on a button. The string that did not move
-is `src/components/marketing/plans.tsx`, which still renders `14-day free trial, no card needed`
+with them was minted in `planPriceFootnote()` in `src/components/marketing/plans.tsx`, the one
+function that writes the line under each price, and it read `14-day free trial, no card needed`
 on the Solo and Crew cards of both `/` and `/pricing` - contradicted, on the same pricing page, by
 the FAQ's "Polar takes a payment method when the trial starts and charges it the day the trial
-ends". No phase-A work item owned that file. It is the third exhibit in §8 and the reason §8
-exists.
+ends". No phase-A work item owned that file, so two rounds corrected the claim on the pages that
+show it and never on the function that mints it - which is what §8 exists to prevent, and which
+cost the two exhibits in rows 3 and 4 of §8's table. It was closed by a round-6 item drawn around
+the claim rather than around the pages. The paid branch now returns
+`${plan.trialDays}-day free trial, card up front, charged when it ends`, which renders as
+"14-day free trial, card up front, charged when it ends" on Solo and Crew and agrees with both the
+FAQ and `src/routes/legal/terms.tsx`. The free plan's line is untouched and was never wrong: it
+has no trial, so the function returns `No card, no expiry, no countdown` for it.
 
 **The contract documents describe the system that now exists.** `docs/ARCHITECTURE.md` was written
 while the superseded path was still mounted, and four places in it said so: the preamble above §1,
@@ -346,7 +367,8 @@ src/
     <module>/        product components for one module
   server/
     db/              drizzle schema + client
-    auth/            Better Auth setup, tenant context, permission guard, email rendering
+    auth/            Better Auth setup, tenant context, permission guard, mail message contract
+    email/           React Email templates + the HTML/plain-text renderer, no bindings
     repos/           tenant-scoped data access (every tenant query and its SQL)
     catalog/         global catalogue access - the single stated exception to the SQL rule
     public/          session-less reads - read-only, column-whitelisted projections only
@@ -379,6 +401,12 @@ Rules:
 - `server/mcp` owns transport and tool schemas only. Every tool authorises through the same
   `requirePermission` the console uses and reaches data through `server/catalog`; it never grows
   a second authorisation path or a second query layer.
+- Transactional mail is three directories, not one, and §3 describes the seams between them.
+  `server/email` holds the nine templates and `renderEmailBody()`; it touches no Worker binding
+  and takes product identity as a prop, which is what lets it render under plain Node in a test.
+  `server/auth/email.ts` owns the message union, the subject lines and the analytics tags.
+  `server/queue/handlers/email.ts` delivers. A template that imports a binding, or an `auth/`
+  module that renders JSX, has crossed a seam.
 - Validate every server-function input with Zod. Never trust the client.
 - Named exports, no default exports (except route modules, which TanStack requires).
 - `cn()` from `src/lib/cn.ts` for class merging.
@@ -406,7 +434,7 @@ vocabulary (`stripe_*` → `provider_*`), a claim repeated across pages, a cache
 column and every mapper that crosses it. The test is not "how many lines change" but "can half of
 this land and leave the repository self-consistent?" If the answer is no, the change is one item.
 
-Three corollaries, because each is a mistake this repository has actually made:
+Four corollaries, because each is a mistake this repository has actually made:
 
 - **A rename of a shared export lands with all of its consumers or not at all.** Deferring a
   consumer to a later item does not defer the breakage.
@@ -415,23 +443,63 @@ Three corollaries, because each is a mistake this repository has actually made:
 - **A claim is a file.** If the same sentence is rendered from a component none of the items
   owns, the item that owns the claim owns that component too — otherwise the claim is corrected
   everywhere the round looked and nowhere it did not.
+- **A claim is closed by a render, not by a grep.** A concept that reaches the user as words on a
+  page is only proved gone when the page is loaded and the words are counted in it. The section
+  below is what that costs when it is skipped.
 
 ### Why this is a rule and not advice
 
-Phase A paid for it three times, in three separate rounds, and each one is on the record:
+Phase A paid for it four times, and each one is on the record:
 
-| Round | The concept | What it cost |
-| --- | --- | --- |
-| 1 | `PlanPrice.priceId` renamed to `productId`, and `planForPriceId` dropped, in `src/lib/plans.ts` | All five consumers — `checkout.ts`, `mapping.ts`, `store.ts`, `limits.ts` and the demo seed — sat in items the round had deferred under a three-item cap. Eight typecheck errors, 338 failing tests, and a `MISSING_EXPORT` at build. |
-| 1 | `pnpm remove stripe` | The manifest entry left while **31 files** under `src/` still imported it, so those files could not compile at all. It took rounds 2 and 3 to finish, 31 → 12 → 0. |
-| 3–4 | "14-day free trial, no card needed" | Item 6 owned `billing.tsx`, `pricing.tsx` and `terms.tsx`, so the trial copy was corrected in all three. The string is rendered from `src/components/marketing/plans.tsx`, which no item owned, and it is still on `/` and `/pricing` today — beside the same page's FAQ saying Polar takes a card. |
+| # | Round | The concept | What it cost |
+| --- | --- | --- | --- |
+| 1 | 1 | `PlanPrice.priceId` renamed to `productId`, and `planForPriceId` dropped, in `src/lib/plans.ts` | All five consumers — `checkout.ts`, `mapping.ts`, `store.ts`, `limits.ts` and the demo seed — sat in items the round had deferred under a three-item cap. Eight typecheck errors, 338 failing tests, and a `MISSING_EXPORT` at build. |
+| 2 | 1 | `pnpm remove stripe` | The manifest entry left while **31 files** under `src/` still imported it, so those files could not compile at all. It took rounds 2 and 3 to finish, 31 → 12 → 0. |
+| 3 | 3–4 | "14-day free trial, no card needed" | Item 6 owned `billing.tsx`, `pricing.tsx` and `terms.tsx`, so the trial copy was corrected in all three. The string is minted by `planPriceFootnote()` in `src/components/marketing/plans.tsx`, which no item owned — so it survived both rounds on `/` and `/pricing`, beside the same page's FAQ saying Polar takes a card. It took a round 6 item drawn around the *claim* to close it. |
+| 4 | 4 | The same string, **reported fixed** | The evidence was `curl … /pricing \| grep -c 'no card needed'` returning `0`. The string was still being served, twice on each page. A measurement was accepted as a fix, so the round closed a finding it had not touched and round 6 had to reopen it. |
 
-The third row also records how a fix gets *reported* as done when it is not. The evidence offered
-was `curl … /pricing | grep -c 'no card needed'` returning `0`. Run today against the dev server
-that same command returns `1`, and the page contains the string **twice** — once on the Solo card
-and once on the Crew card, with `/` the same. Whatever produced the zero, the check was never
-capable of proving the claim, because it was run on a surface the fix did not own. A grep is
-evidence about a file; a page is evidence about a render.
+Rows 3 and 4 are the same string twice, because they are two different mistakes. Row 3 is a
+decomposition failure: the round corrected the claim everywhere it looked and nowhere it did not.
+Row 4 is a **measurement** failure, and it is the one worth learning in detail, because the
+command looked like proof.
+
+**On a streamed page, a grep of the HTTP response is not evidence. Render it.** Three independent
+reasons that pipeline could not have proved anything, each verified here rather than asserted:
+
+1. **`grep -c` counts matching *lines*, not occurrences.** Our SSR document is one line. A capture
+   of `/pricing` taken while writing this measures 77,875 bytes and contains **zero** newline
+   characters, and today's corrected paid-plan footnote occurs in it twice — once per paid card.
+   `/usr/bin/grep -c` over that capture answers `1`; `/usr/bin/grep -o … | wc -l` over the same
+   bytes answers `2`. On a file like that `-c` saturates at `1` and is structurally incapable of
+   returning a two, whichever `grep` runs it. Count with `/usr/bin/grep -o PATTERN file | wc -l`,
+   or in Python with `bytes.count()`.
+2. **`curl -s` prints nothing on a connection failure.** Pipe a refused port into
+   `/usr/bin/grep -c` and the pipeline prints a clean `0` with no diagnostic at all — a zero
+   produced by never reaching the server is indistinguishable from a zero about the page. Always
+   assert a non-zero byte count first, and always run a **positive control**: grep for a string you
+   know is on the page before you believe a zero about one you hope is gone.
+3. **A `grep` is not necessarily `grep`, and this page is not text.** In the shell these rounds run
+   in, `type grep` answers "shell function", and that function is `ugrep` invoked with
+   `--ignore-files … -I` — `-I` being *skip binary input*. Our served document is binary by that
+   test: it carries three NUL bytes, inside the route ids of the streamed router payload. Handed
+   those 77,875 bytes **on stdin** the shell function prints nothing and exits `1`, while
+   `/usr/bin/grep -c` on the identical bytes prints `1`. Cutting the capture at the byte before the
+   first NUL makes the same function answer, and adding that one byte back silences it again, which
+   is how the cause was isolated rather than guessed. Spell it `/usr/bin/grep` when the input is a
+   response body rather than a tracked file, run `type grep` before trusting a zero, and remember
+   that an exit code of `1` is what "no match" and "never looked" have in common.
+
+The general form, which is the rule and not the anecdote: **a grep is evidence about a file; a
+page is evidence about a render.** Anything a user reads is a render, so the claim "the user no
+longer sees X" is closed by loading the page in a browser and counting in
+`document.body.innerText` *and* `document.body.textContent` — they disagree, and by a lot. On
+`/pricing` at a 1440 px viewport the two read 3,706 and 5,199 characters, because seven `<details>`
+FAQ items are collapsed. Measured in that browser, the sentence "Polar takes a payment method when
+the trial starts" occurs **zero** times in `innerText` and **once** in `textContent`: the first
+cannot see a collapsed answer, the second sees text nobody is looking at, and neither is the truth
+alone. Report both. `innerText` also moves with the viewport — the same page at 360 px reads 3,666
+characters — so a count is only a fact when the width is beside it. §7's fourth condition already
+asks for the browser; this is why.
 
 ### How to apply it when drawing a round
 

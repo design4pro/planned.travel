@@ -13,6 +13,16 @@ Two rules for this runbook:
   template used to omit, so every name §6 sets is in the template and every name in the template
   is set here.
 
+**One thing is not finished, and it is the one a first deploy will want to assume is.** §9.11's
+sandbox acceptance matrix — eight rows covering subscribe, upgrade, downgrade, cancel, resume,
+failed payment, the orders list and the Customer Portal — is **unwalked. Not one row is green.**
+No credential was ever issued to a build round: `POLAR_ACCESS_TOKEN` and `POLAR_WEBHOOK_SECRET`
+were empty by design, so the rounds that wrote the billing integration made no live API call and
+received no live delivery. Everything §9 tells you to configure is correct and everything §9
+tells you the Worker does is on disk; what nobody has yet observed is Polar agreeing. Read §9.11
+before you ship anything that sells, and treat its checklist line in §16 as the gate it is —
+a green `pnpm test` is evidence about our handler, never about the vendor.
+
 ---
 
 ## 0. Prerequisites
@@ -203,9 +213,12 @@ stranding a paying customer. It does not remove the reader.
 
 **§12's register is the list.** A migration that is not in it is additive; a migration that is not
 additive and not in it is a defect belonging to the round that generated it, and the fix is to add
-the row before the release ships, not after someone needs a rollback. Two entries exist today and
-they fail differently — `0001` recreated a table, `0002` renamed three columns — which is why §12
-records the _kind_ of departure and not only the number.
+the row before the release ships, not after someone needs a rollback. Four migrations exist and
+two are registered, and the two fail differently — `0001` recreated a table, `0002` renamed three
+columns — which is why §12 records the _kind_ of departure and not only the number. The other two
+are absent on purpose: `0000` is the initial `CREATE TABLE` set, and `0003` is three bare
+`ALTER TABLE "subscriptions" ADD COLUMN` statements (`pending_plan`, `pending_interval`,
+`pending_effective_at`) with no constraint, which is exactly the shape that stays additive.
 
 ---
 
@@ -229,12 +242,12 @@ it, so there is nothing left for the two files to disagree about.
 **One provider, and it is Polar.** There is no second billing path in the Worker and no
 configuration in which one is live and the other is not:
 
-| What the Worker reads             | Where it is read                                                                  | What happens when it is unset                                                                                                                                                                      |
-| --------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POLAR_ACCESS_TOKEN`              | `src/server/billing/polar.ts`, through `src/server/billing/runtime.cloudflare.ts` | The first **Upgrade** or **Manage billing** click throws `BillingConfigError`, whose message names the exact `wrangler secret put` command.                                                        |
-| `POLAR_WEBHOOK_SECRET`            | the same accessor, read by `src/routes/api/polar/webhook.ts`                      | The webhook rejects every delivery, so nothing a customer pays for reaches D1.                                                                                                                     |
-| `POLAR_SERVER`                    | the same accessor; `resolvePolarOrigin()` in `polar.ts` validates it              | `BillingConfigError`, naming the command. Its domain is exactly `sandbox \| production` — anything else, including an empty string or a URL, raises the same error rather than guessing an origin. |
-| four `VITE_POLAR_PRODUCT_*` (§10) | `src/lib/plans.ts`, inlined at **build** time                                     | `requirePrice()` throws, so the pricing page renders with nothing to buy. A build with them unset succeeds and deploys; nothing fails, there is simply nothing to sell.                            |
+| What the Worker reads             | Where it is read                                                                  | What happens when it is unset                                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POLAR_ACCESS_TOKEN`              | `src/server/billing/polar.ts`, through `src/server/billing/runtime.cloudflare.ts` | The first **Upgrade** or **Manage billing** click throws `BillingConfigError`, whose message names the exact `wrangler secret put` command.                                                                                                                                                                                                                                                                                |
+| `POLAR_WEBHOOK_SECRET`            | `src/server/billing/runtime.cloudflare.ts`, verified in `polar.ts`                | The webhook rejects every delivery, so nothing a customer pays for reaches D1. Do not go looking in the route file: `src/routes/api/polar/webhook.ts` names no binding of its own — it builds the runtime, hands the request to `handlePolarWebhook()`, and the accessor `polarWebhookSecret()` returns an empty string when the secret is unset, which `verifyWebhookSignature()` turns into a `400` rather than a `500`. |
+| `POLAR_SERVER`                    | the same accessor; `resolvePolarOrigin()` in `polar.ts` validates it              | `BillingConfigError`, naming the command. Its domain is exactly `sandbox \| production` — anything else, including an empty string or a URL, raises the same error rather than guessing an origin.                                                                                                                                                                                                                         |
+| four `VITE_POLAR_PRODUCT_*` (§10) | `src/lib/plans.ts`, inlined at **build** time                                     | `requirePrice()` throws, so the pricing page renders with nothing to buy. A build with them unset succeeds and deploys; nothing fails, there is simply nothing to sell.                                                                                                                                                                                                                                                    |
 
 Secrets and build variables are two different failures with the same symptom. A deploy that sets
 all three `POLAR_*` secrets and skips the four repository variables serves happily, signs people

@@ -10,7 +10,7 @@ z których użytkownik planuje podróż.
 Żeby taki pakiet powstał i dał się sprzedać, brakuje w repo czterech rzeczy:
 
 1. **ról platformowych i zarządzania użytkownikami** - dziś jedyna rola to rola w organizacji
-   (`member.role`), a `isAdmin` w `src/routes/_app/-server/shell.ts:129` znaczy „admin tego
+   (`member.role`), a `isAdmin` w `src/routes/_app/-server/shell.ts` znaczy „admin tego
    workspace'u", nie „administrator platformy";
 2. **globalnego katalogu miejsc** (ponadtenantowego) - `places` i `collection_places` są zawsze
    przypisane do organizacji i wyjazdu;
@@ -57,8 +57,8 @@ polityki nie wymaga zmiany schematu - wystarczy wyłączyć adapter w `catalog_s
   zamrożona, a każda kolejna paczka to nadal finding, nie `pnpm add`. Instalacja należy do Fazy A;
   Faza 0 tylko odnotowuje wyjątek w kontrakcie.
 - Paczka `stripe` **została usunięta w Fazie A**, jako wyjątek nazwany razem z dwiema paczkami
-  React Email - i to zamyka listę wyjątków. `grep -c stripe pnpm-lock.yaml` zwraca `0`. Reguła
-  bez zmian: każda inna paczka to finding, nigdy `pnpm add`.
+  React Email - i to zamyka listę wyjątków. `/usr/bin/grep -c stripe pnpm-lock.yaml` zwraca `0`.
+  Reguła bez zmian: każda inna paczka to finding, nigdy `pnpm add`.
 
 Podczas implementacji agent **weryfikuje kontrakty w dokumentacji** (Polar: nazwy zdarzeń webhooka
 i nagłówki podpisu; Firecrawl: kształt `formats`/`json`/`webhook`; Better Auth: opcje `admin()`),
@@ -95,9 +95,12 @@ Warunek wstępny Fazy G. **Stripe zniknął z repozytorium w tej fazie** - nie z
 kod „do sprzątnięcia później", bo późniejsze fazy budowałyby wtedy na mylnym założeniu, że jeszcze
 gdzieś żyje. Decyzja użytkownika z 22.08: jesteśmy na etapie build, więc zmieniamy wszystko naraz.
 
-**Status: kod napisany, matryca sandboxowa nieprzejdzona.** Sześć itemów wylądowało przez pięć
-rund; `grep -ril stripe src/` zwraca pustkę, a `docs/DEPLOY.md` §9.11 nadal ma osiem
-niezweryfikowanych wierszy, bo żadnej rundzie nie wydano poświadczeń do Polara. Zielony
+**Status: kod napisany, matryca sandboxowa nieprzejdzona.** Sześć itemów wylądowało przez sześć
+rund: runda 5 domknęła trwałość `pendingChange`, a runda 6 determinizm fikstury demo i tę jedną
+linijkę copy, której nie miał żaden item. `/usr/bin/grep -ril stripe src/` zwraca pustkę, a
+`docs/DEPLOY.md` §9.11 nadal ma osiem niezweryfikowanych wierszy, bo **żadnej rundzie nie wydano
+poświadczeń do Polara** - `POLAR_ACCESS_TOKEN` i `POLAR_WEBHOOK_SECRET` były puste z założenia,
+więc nie padło ani jedno żywe wywołanie i nie przyszła ani jedna żywa dostawa. Zielony
 `pnpm test` mówi, co robi nasz handler, nie co robi Polar.
 
 **Zakres pełny** - lista poniżej była w pierwszej wersji planu niekompletna i audyt to wykazał:
@@ -116,7 +119,7 @@ z pamięci**, bo pierwsza wersja tego planu miała tu cztery błędy:
 | Twierdzenie z pierwszej wersji planu | Jak jest naprawdę |
 |---|---|
 | `POST /v1/checkout-sessions` | nie istnieje; są `POST /v1/checkouts/` i `POST /v1/customer-sessions/` |
-| `incomplete*` nie istnieje w Polarze, zawęź krotkę | **istnieje**; osiem wartości Polara = osiem w `plans.ts:32-41`, **nie ruszamy krotki** |
+| `incomplete*` nie istnieje w Polarze, zawęź krotkę | **istnieje**; osiem wartości Polara = osiem w krotce `SUBSCRIPTION_STATUSES` (`src/lib/plans.ts`), **nie ruszamy krotki** |
 | `subscription.cycled\|paused\|resumed` nie istnieją | **istnieją**; enum ma 41 wartości. Okrojoną listę 35 niesie schemat narzędzia MCP, nie API |
 | rename kolumn to osobna decyzja | rename **robimy**, razem z usunięciem Stripe'a |
 
@@ -156,10 +159,11 @@ max_seats: seatRange.max ?? seatRange.min
 
 Plan płaski (Solo) nie niesie żadnego z nich - Polar dokumentuje je jako działające wyłącznie
 z cennikiem seat-based, a checkout Crew, który by je pominął, policzyłby dziesięć osób jak jedną.
-Zweryfikowane na żywym OpenAPI (`info.version` 2026-04): `CheckoutProductsCreate` ma dokładnie
-`seats`, `min_seats` i `max_seats`. Cztery produkty w sandboxie utworzono jako `seat_based`
-(volume, 2-10 miejsc) właśnie po to, żeby ta ścieżka miała po drugiej stronie cennik, który ją
-rozumie.
+Zweryfikowane na żywym OpenAPI (`info.version` 2026-04): `CheckoutProductsCreate` ma trzydzieści
+właściwości, z których wymagana jest jedna (`products`), a te trzy - `seats`, `min_seats`,
+`max_seats` - są jedynymi dotyczącymi miejsc. Cztery produkty w sandboxie utworzono jako
+`seat_based` (volume, 2-10 miejsc) właśnie po to, żeby ta ścieżka miała po drugiej stronie
+cennik, który ją rozumie.
 
 Zmiana liczby miejsc na istniejącej subskrypcji to osobny wariant unii `SubscriptionUpdate`
 Polara: ciało niosące jednocześnie produkt i miejsca dopasowuje się do wariantu „seats" i gubi
@@ -181,32 +185,58 @@ wylądowało - plan zamieniony na opis stanu.
 | 5 | React Email | **dziewięć** szablonów w `src/server/email/templates/`, nie cztery: pięć istniejących maili konta przepisanych na komponenty (`verify-email`, `reset-password`, `email-changed`, `delete-account`, `organization-invitation`) plus cztery billingowe (`subscription-confirmed`, `plan-changed`, `payment-failed`, `pack-purchased`). Każdy ma wersję tekstową, wyprowadzaną z HTML-a przez `toPlainText()`, więc URL nie może istnieć w jednej wersji i zniknąć z drugiej. |
 | 6 | powierzchnie widoczne | `billing.tsx`, `pricing.tsx`, `terms.tsx` - poprawka Merchant-of-Record i alert `?plan=changed`, który rozróżnia zmianę natychmiastową od zaplanowanej na koniec okresu. |
 
-**Trzy rzeczy, których pierwotny plan nie przewidział, a które kosztowały rundy.** Wszystkie trzy
-są teraz zapisane jako reguła w `docs/SPEC.md` §8 („jedno pojęcie, jeden właściciel"):
+**Cztery rzeczy, których pierwotny plan nie przewidział, a które kosztowały rundy.** Wszystkie
+cztery są teraz zapisane jako reguła w `docs/SPEC.md` §8 („jedno pojęcie, jeden właściciel"),
+gdzie stoją jako cztery wiersze tablicy dowodowej:
 
 1. Item 1 przemianował `PlanPrice.priceId`, a jego pięciu konsumentów siedziało w itemach
    odłożonych na później. Osiem błędów typów, 338 czerwonych testów, `MISSING_EXPORT` przy
    buildzie.
 2. `pnpm remove stripe` wyjęło paczkę z manifestu, kiedy 31 plików w `src/` jeszcze ją
    importowało. Zejście 31 → 12 → 0 zajęło dwie kolejne rundy.
-3. Napis „14-day free trial, no card needed" mieszka w `src/components/marketing/plans.tsx`,
-   którego nie miał żaden item - więc poprawka Merchant-of-Record ominęła go i napis nadal stoi
-   obok FAQ mówiącego, że Polar pobiera kartę.
+3. Napis „14-day free trial, no card needed" powstawał w `planPriceFootnote()`
+   (`src/components/marketing/plans.tsx`), którego nie miał żaden item - więc poprawka
+   Merchant-of-Record ominęła go i przez dwie rundy stał obok FAQ mówiącego, że Polar pobiera
+   kartę. Zamknęła go dopiero runda 6, itemem narysowanym wokół **twierdzenia**, a nie wokół
+   stron, na których je widać.
+4. Ten sam napis, **zgłoszony jako naprawiony** w rundzie 4 na dowodzie
+   `curl … /pricing | grep -c 'no card needed'` zwracającym `0`. Napis był wtedy serwowany dwa
+   razy na każdej ze stron. Dokument SSR nie ma ani jednego znaku nowej linii, a `grep -c` liczy
+   **linie**, nie wystąpienia, więc ta komenda nie mogła zwrócić dwójki niezależnie od stanu
+   strony; `curl -s` na martwym porcie daje dodatkowo czyste `0` bez żadnego komunikatu. Reguła,
+   która z tego została: na stronie strumieniowanej grep po odpowiedzi HTTP nie jest dowodem -
+   trzeba ją wyrenderować i policzyć w `document.body.innerText` **oraz** `textContent`.
 
 ### `pendingChange` - zmiana planu, która jeszcze nie weszła
 
 Pojęcie pochodzi wprost od Polara. Przy `proration_behavior: "next_period"` (jedna z czterech
 wartości `SubscriptionProrationBehavior` - obok `invoice`, `prorate` i `reset`) subskrypcja **nie**
 zmienia się od razu: odpowiedź i każdy późniejszy odczyt niosą `pending_update`, obiekt
-`PendingSubscriptionUpdate` z polami `applies_at`, `product_id` i `seats`. To jest wiersz 3
-macierzy §9.11 i jedyny scenariusz, w którym uprawnienia mają przeżyć do końca opłaconego okresu.
+`PendingSubscriptionUpdate`. Na żywym OpenAPI (`info.version` 2026-04) ma on sześć pól -
+`created_at`, `modified_at`, `id`, `applies_at`, `product_id`, `seats` - i wszystkie sześć są
+wymagane. To jest wiersz 3 macierzy §9.11 i jedyny scenariusz, w którym uprawnienia mają przeżyć
+do końca opłaconego okresu.
 
 Ścieżka po naszej stronie, w kolejności:
 
-- `pendingChangeFor()` w `checkout.ts` czyta `pending_update` z **surowej** odpowiedzi PATCH-a
-  (schemat subskrypcji tego pola nie nazywa, więc parsuje się je osobno) i sprowadza do
-  `PendingPlanChange { planId, interval, effectiveAt }`. Gdy Polar nie odesłał `pending_update`,
-  a proracja była `next_period`, fallbackiem jest koniec bieżącego okresu.
+- **Pole jest nazwane w schemacie i parsowane raz.** `polarSubscriptionSchema` w
+  `src/server/billing/mapping.ts` deklaruje `pending_update: polarPendingUpdateSchema.nullish()`,
+  a `patchSubscription()` w `src/server/billing/checkout.ts` robi jedno
+  `polarSubscriptionSchema.parse(raw)` i zwraca `PolarSubscription`. Surowa odpowiedź nie jest
+  parsowana drugi raz - ani tam, ani nigdzie indziej. Wcześniejszy projekt zakładał odwrotnie
+  (osobny parse przy jednym wywołaniu) i został **porzucony**: `z.object()` w Zod 4 obcina klucze,
+  których nie nazywa, więc schemat pomijający `pending_update` zmuszałby *każdego* czytelnika do
+  drugiego parse'a - a webhook, który jest reconcilerem, nigdy go nie robił i dlatego gubił
+  zaplanowaną zmianę.
+- `polarPendingUpdateSchema` nazywa dwa z sześciu pól - `applies_at` i `product_id` - bo tyle
+  potrzeba, żeby zbudować `PendingPlanChange`. `seats` z `pending_update` nie jest dziś czytane,
+  więc zaplanowana **zmiana rozmiaru zespołu** bez zmiany produktu nie ma jak trafić na ekran;
+  to otwarty follow-up na `src/server/billing/**`, nie na tym dokumencie.
+- `pendingChangeFor()` w `checkout.ts` czyta `applied.pending_update` z już sparsowanej
+  subskrypcji i przepuszcza je przez `pendingChangeFromPolar()` (`mapping.ts`), które sprowadza
+  je do `PendingPlanChange { planId, interval, effectiveAt }` albo do `null`, gdy czegokolwiek z
+  tej trójki nie da się opisać w całości. Gdy Polar nie odesłał `pending_update`, a proracja była
+  `next_period`, fallbackiem jest koniec bieżącego okresu.
 - `persistChangedSubscription()` zapisuje to razem z resztą wiersza, jednym upsertem.
 - Trwałość to trzy kolumny na `subscriptions`: `pending_plan`, `pending_interval`,
   `pending_effective_at`. `pending_plan` niesie identyfikator **katalogowy** (`free|solo|crew`),
@@ -255,7 +285,14 @@ runda sama zbindowała i ubija po sobie.
 
 ### Akceptacja Fazy A - matryca w sandboxie Polara
 
-Każdy wiersz przechodzony ręcznie w sandboxie i pokryty testem tam, gdzie da się to zrobić bez sieci:
+**Żadnego z ośmiu wierszy nie przeszliśmy.** Rundy budujące dostały puste
+`POLAR_ACCESS_TOKEN` i `POLAR_WEBHOOK_SECRET` - taka była decyzja - więc nie było ani jednego
+żywego wywołania i ani jednej żywej dostawy. Tabela poniżej jest planem, nie protokołem; pełna
+wersja z komendami, kartą testową i warunkami zaliczenia stoi w `docs/DEPLOY.md` §9.11, wraz z
+tym, jak odblokować przejście. Wiersz 6 jest pokryty testem na sztucznym runtime, co jest dowodem
+o naszym handlerze, nie o Polarze.
+
+Każdy wiersz do przejścia ręcznie w sandboxie i pokryty testem tam, gdzie da się to zrobić bez sieci:
 
 | # | Scenariusz | Oczekiwany wynik |
 |---|---|---|
@@ -285,17 +322,45 @@ portalu, plus opcjonalna read-only lista zamówień z linkami do PDF.
 
 ### Maile transakcyjne
 
-Resend jest **już podłączony**: [src/server/queue/handlers/email.ts](src/server/queue/handlers/email.ts)
-POST-uje na `https://api.resend.com/emails` z `EMAIL_API_KEY`, a zmienna jest już w
-`.dev.vars.example`. Nie ma czego integrować - brakuje wyłącznie realnej wartości w lokalnym
-`.dev.vars`.
+Transport był podłączony przed Fazą A i nie ruszał się:
+[src/server/queue/handlers/email.ts](src/server/queue/handlers/email.ts) POST-uje pod
+`context.env.EMAIL_API_URL`, a gdy zmiennej nie ma - pod domyślne `https://api.resend.com/emails`,
+autoryzując się sekretem `EMAIL_API_KEY`. Brak sekretu to `TaskConfigurationError` z dokładną
+komendą, nie cicha porażka.
 
-Faza A instaluje React Email (wyjątek wyżej), przepisuje istniejące szablony z
-[src/server/auth/email.ts](src/server/auth/email.ts) na komponenty i dokłada szablony billingowe:
-potwierdzenie subskrypcji, zmiana planu, nieudana płatność, zakup pakietu. Każdy szablon zachowuje
-wersję tekstową - klienci pocztowe bez HTML nie mogą dostać pustej wiadomości.
+Faza A zainstalowała React Email (wyjątek wyżej) i przepisała bodies na komponenty. Na dysku jest
+**dziewięć** szablonów w `src/server/email/templates/`: pięć kont
+(`verify-email`, `reset-password`, `email-changed`, `delete-account`,
+`organization-invitation`) i cztery billingowe (`subscription-confirmed`, `plan-changed`,
+`payment-failed`, `pack-purchased`). Każdy ma wersję tekstową wyprowadzoną z HTML-a przez
+`toPlainText()`, więc URL nie może istnieć w jednej wersji i zniknąć z drugiej.
+
+Dwa długi tej ścieżki są zapisane w `docs/SPEC.md` §3 jako **F1** i **F2** i nie należą do tego
+dokumentu: render leci inline na ścieżce żądania zamiast w handlerze kolejki, a sześć z dziewięciu
+szablonów nie ma miejsca wysyłki - `queueAuthEmail()` ma trzy wywołania, wszystkie w
+`src/server/auth/index.ts`.
 
 ---
+
+> **Jak czytać ścieżki w tym dokumencie.** Faza A jest opisem stanu: każdy plik, który nazywa,
+> jest na dysku. Jedyny wyjątek powyżej to lista katalogów w §Faza 0 (`src/server/catalog/**`,
+> `src/server/mcp/**`, `src/server/public/**`), która cytuje kontrakt `docs/SPEC.md` §6, czyli
+> miejsca docelowe. Fazy B-G to plan: nazwane w nich moduły - `src/server/auth/access.ts`,
+> `src/server/auth/guard.ts`, `src/server/catalog/**`, `src/server/repos/packs.ts`,
+> `src/server/mcp/**`, `src/routes/api/mcp.ts`, `src/server/public/**`,
+> `src/routes/api/firecrawl/webhook.ts`, `src/routes/packs.index.tsx`, `src/routes/_app/packs.tsx`,
+> `src/components/modules/add-place-dialog.tsx` - **nie istnieją jeszcze** i są kontraktem na to,
+> gdzie mają powstać, a nie odniesieniem do kodu. `docs/SPEC.md` §5 i `docs/ARCHITECTURE.md` §2.5
+> mówią to samo o tych z nich, które te dokumenty nazywają.
+>
+> **I dlaczego nie ma tu numerów linii.** Ten dokument cytuje **symbole**, nie linie:
+> `PLACE_SOURCES`, `ShareScopes`, `shareLinks`, `SUBSCRIPTION_STATUSES`, `isAdmin`. Numer linii
+> w planie, który przeżywa kilkanaście rund, jest twierdzeniem o cudzym pliku i psuje się przy
+> pierwszym commicie, który nikogo o nic nie pyta - cztery takie cytaty (`schema.ts:159`,
+> `schema.ts:253`, `schema.ts:1028`, `plans.ts:32-41`) rozjechały się dokładnie tak i pokazywały
+> w rundzie 6 nie to, co obiecywały, mimo że samo twierdzenie obok każdego z nich było prawdziwe.
+> Symbol znajduje `/usr/bin/grep -n`, a rename symbolu jest zmianą, którą i tak widać w code
+> review. Wyjątkiem są sekcje dokumentów (`§9.11`) i nazwy plików - te są stabilne.
 
 ## Faza B - role platformowe i zarządzanie użytkownikami (Better Auth `admin`)
 
@@ -392,7 +457,7 @@ Tabela **tenantowa**: `pack_entitlements` (`organization_id`, `pack_id`, `polar_
 
 Konwencje z nagłówka `schema.ts`: `pk()`, `timestamps()`, `enumCheck()`, `latLngChecks()`,
 `minor()`, indeks na każdym FK i każdej kolumnie filtrowanej. `dedupe_key` = geohash ~100 m +
-znormalizowana nazwa, z `uniqueIndex`. Dodatkowo `PLACE_SOURCES` (`schema.ts:159`) rozszerzone
+znormalizowana nazwa, z `uniqueIndex`. Dodatkowo krotka `PLACE_SOURCES` (`src/server/db/schema.ts`) rozszerzona
 o `'catalog'`.
 
 ### Warstwa dostępu
@@ -503,9 +568,9 @@ sprzedawać).
 
 ### Uogólnienie `share_links`
 
-`share_links` (`schema.ts:1028`) ma dziś `trip_id NOT NULL`. Zmień na `resource_kind`
+Tabela `shareLinks` (`src/server/db/schema.ts`) ma dziś `trip_id NOT NULL`. Zmień na `resource_kind`
 (`trip` / `atlas` / `collection`) + `resource_id`, z `enumCheck` i indeksem
-`(resource_kind, resource_id)`. `ShareScopes` (`schema.ts:253`) rozszerz o wariant atlasowy
+`(resource_kind, resource_id)`. Typ `ShareScopes` (`src/server/db/schema.ts`) rozszerz o wariant atlasowy
 (`countries`, `stats`, `bucketList`). Tabela jest pusta przed produkcją - migracja bez backfillu.
 
 ### Trasy publiczne

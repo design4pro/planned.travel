@@ -129,9 +129,30 @@ slices that matter.
   `{webhook-id}.{webhook-timestamp}.{raw body}`, with the 300 s timestamp tolerance §9 states —
   then claim `webhook-id` in `KV`, make one small inline D1 write, enqueue everything else to
   `TASKS`, and return 200. Nothing that calls a third party or writes more than one row happens
-  inline (`docs/DEPLOY.md` §9.5 and §9.7). Every branch that persists a subscription record ends
-  by invalidating that organization's plan-state key (§4) and handing a `billing.*` task to
-  `TASKS`.
+  inline (`docs/DEPLOY.md` §9.5 and §9.7). **Invalidation and the queue hand-off are two separate
+  conditions, and neither implies the other** — the difference is deliberate rather than an
+  oversight, and neither of them is "every delivery".
+  `invalidateEntitlements()` has six call sites in `src/server/billing/webhook.ts`, and the rule
+  they follow is *every branch that could have changed what this tenant may do*. That includes the
+  two branches that write no row at all — a refund, and a subscription for a product this
+  deployment does not sell — because both mean the cached answer may now be stale. It excludes two
+  branches that resolve an organization and deliberately leave the key warm: `order.paid` against a
+  subscription that was already healthy, and a retrying order against a row that is neither
+  `active` nor `trialing`. Both of those return without touching D1, so there is nothing a warm
+  entry could now be wrong about, and a delete would only buy a cold read.
+  The `billing.*` task is narrower again. The `subscription.*` branch enqueues only when
+  `movedState()` says the row actually moved, comparing plan, status, seats, interval and
+  `cancel_at_period_end`, because Polar sends the catch-all `subscription.updated` beside the
+  specific event with no ordering guarantee and an unconditional enqueue would notify twice for one
+  real change. `order.paid` enqueues the receipt on every delivery it can attribute to a row.
+  `order.created` and `order.updated` enqueue only on the dunning path — an order that is not
+  `paid` and carries a `next_payment_attempt_at`, against a row that was healthy — which is also
+  the only shape a failed payment has: **Polar has no `order.payment_failed` event.** Its order
+  events are `created`, `updated`, `paid`, `refunded`, `voided` and `unvoided`, and a failed
+  payment is an unpaid order with a retry scheduled on it. `order.refunded` and `checkout.updated`
+  at `succeeded` enqueue nothing — the latter attaches the Polar customer so the billing screen
+  works the instant the browser returns, and leaves the notification to the `subscription.created`
+  already on its way with the whole subscription on it.
 - **Transactional email** → nine React Email templates in `src/server/email/templates/`, rendered
   by `renderEmailBody()` (`src/server/email/render.ts`) into `{ html, text }`, described by
   `src/server/auth/email.ts`, and POSTed to the Resend-compatible endpoint by
@@ -142,8 +163,10 @@ slices that matter.
   **Known departure from the inline rule, recorded rather than implied:** `queueAuthEmail()`
   awaits the render *before* it enqueues, so React's streaming renderer runs inside the request
   that triggered the mail. Only delivery is queued today. `docs/SPEC.md` §3 carries this as
-  follow-up **F1**, with the reason it is not a one-line move, alongside **F2** — the four billing
-  templates have no dispatch site in `src/server/billing/**` and are exercised only by their test.
+  follow-up **F1**, with the reason it is not a one-line move, alongside **F2** — `queueAuthEmail()`
+  has three callers, all Better Auth hooks in `src/server/auth/index.ts`, so **six** of the nine
+  kinds (`auth.email-changed`, `auth.delete-account` and the four `billing.*`) have no dispatch
+  site and are exercised only by `src/server/email/__tests__/templates.test.tsx`.
 - **Cron** → three triggers are registered in `wrangler.jsonc` today: `*/15 * * * *` reminder
   sweep, `0 3 * * *` nightly D1 export to R2, `17 4 * * 1` weekly retention prune. The `staging`
   environment overrides that list with `0 3 * * *` alone. A fourth, `0 4 * * 1` for the weekly
@@ -234,18 +257,22 @@ Three rules that are not negotiable:
 `PLAN_STATE_CACHE_VERSION` constant in the same file — **not** a literal to copy into a second
 place. It is bumped whenever `CachedPlanState` changes shape **or meaning**, so a warm entry written by
 older code is ignored rather than misread. It has moved several times as the cached shape grew —
-this table named `v2` when it was first written, `v4` added the scheduled plan change, and `v5` is
-the release in which that field can finally be non-null, a bump with an identical shape and a
-different meaning. At the time of writing the key resolves to `billing:plan:v5:<orgId>`. **Read
-the constant rather than this sentence**: the value is deliberately not duplicated anywhere in the
-repository, and a document is the wrong place to learn it from.
+this table named `v2` when it was first written, a later bump added the scheduled plan change, and
+the bump after that carried an identical shape with a different meaning — the release in which
+that field can finally be non-null. **Read the constant rather than this sentence.** The current
+value is deliberately written in exactly one place, and this document is not it; an earlier
+revision of this paragraph quoted the resolved key here, which made the sentence beside it false
+the moment it did.
+`/usr/bin/grep -n 'const PLAN_STATE_CACHE_VERSION' src/server/billing/entitlements.ts` prints the
+declaration; the only other line that mentions it is the one directly below, where the key is
+assembled.
 
 Only one function deletes the key — `invalidateEntitlements()`, also in `entitlements.ts` — and
 exactly two paths call it:
 
 | Writer | Where | When |
 | --- | --- | --- |
-| The Polar webhook | `src/server/billing/webhook.ts`, six call sites, one per branch that changes billing state | Asynchronously, on every subscription event Polar delivers. This is the reconciler and it always runs. |
+| The Polar webhook | `src/server/billing/webhook.ts`, six call sites across its subscription, order and checkout branches | Asynchronously, on every delivery that could have changed what the tenant may do — including the two branches that write no row, and excluding the two that resolve an organization and change nothing (§2.4). This is the reconciler and it runs on its own schedule, not ours. |
 | `changePlan()` | `src/server/billing/checkout.ts`, through the local `evictPlanState()` helper, in a `finally` | Synchronously, inside the request that made the change — an in-app upgrade, downgrade or seat resize, which we apply with `PATCH /v1/subscriptions/{id}` rather than through a hosted flow. |
 
 The second writer is not a duplicate of the first, and rule 2 above is why. `changePlan()` mutates
@@ -517,8 +544,10 @@ still owes.
 
 **The one property row 9 still owes, and where it lives.** §2.4 states the inline rule: nothing
 that calls a third party or writes more than one row happens inline. The mounted Polar handler
-keeps it — every branch makes at most one small D1 write, invalidates the plan-state key and hands
-the rest to `TASKS`. The exception is not in the webhook at all; it is `changePlan()` in
+keeps it — every branch makes at most one small D1 write, deletes the plan-state key when what the
+tenant may do could have changed, and hands whatever follows to `TASKS`, which for the subscription
+branches means a `billing.*` task when `movedState()` says the row moved and nothing when it did
+not (§2.4). The exception is not in the webhook at all; it is `changePlan()` in
 `src/server/billing/checkout.ts`, which is a *request* path rather than a webhook one and calls
 `PATCH /v1/subscriptions/{id}` inline on purpose, so the billing screen is already correct when the
 customer is redirected back. That trade is deliberate and bounded: one provider call, one D1 write

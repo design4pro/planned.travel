@@ -44,27 +44,95 @@ import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
 const ID_RANDOM_LENGTH = 16
 const ID_TIME_LENGTH = 9
 
+/** Column defaults a fixture supplies for itself, in place of the clock and the random source. */
+export interface SuppliedRowDefaults {
+  /** Stands in for {@link newId}. Must return the same 25-character shape. */
+  readonly id: () => string
+  /** Stands in for the wall clock behind `created_at` and `updated_at`. */
+  readonly now: () => Date
+}
+
+/**
+ * The defaults in force for the write currently in progress.
+ *
+ * `null` in every request the product serves, which is what {@link newId} being unchanged means: no
+ * deployed write path can reach {@link withSuppliedRowDefaults}, so no deployed write path sees
+ * anything but `Date.now()` and `nanoid`. It exists for the demo fixture, whose rows have to be the
+ * *same* rows on every run — a cover drawing, a wash colour and a grid's de-duplication walk are all
+ * pure functions of a record's id, so a fixture that mints a new id per run repaints screens nobody
+ * edited and reddens a visual baseline that is still correct about the product.
+ *
+ * Module scope rather than an `AsyncLocalStorage`, deliberately and with a cost. This file is
+ * reachable from the client graph — routes read its enum tuples for their forms — so importing
+ * `node:async_hooks` here fails the browser bundle outright. The cost is that the override is
+ * isolate-wide while it is installed, so a write racing the seed inside the same *development*
+ * isolate would be handed fixture values. That is bounded by {@link withSuppliedRowDefaults} being
+ * unreachable outside `/api/dev/seed`, which `import.meta.env.DEV` compiles out of a production
+ * build.
+ */
+let supplied: SuppliedRowDefaults | null = null
+
 /**
  * Time-sortable, URL-safe, 25 character identifier: a base-36 millisecond timestamp followed by
  * 16 random characters. Sorting by `id` is therefore sorting by creation time, which lets every
  * paginated list use the primary key as a stable cursor.
  */
 export function newId(): string {
+  if (supplied !== null) {
+    return supplied.id()
+  }
   return `${Date.now().toString(36).padStart(ID_TIME_LENGTH, '0')}${nanoid(ID_RANDOM_LENGTH)}`
+}
+
+/** The instant a mutated row is stamped with when the caller does not name one itself. */
+function rowInstant(): Date {
+  return supplied === null ? new Date() : supplied.now()
+}
+
+/**
+ * Runs `write` with every {@link newId} and every unstamped `created_at` / `updated_at` inside it
+ * answered by `defaults`.
+ *
+ * **Fixtures only.** The one caller is the demo seed in `src/routes/api/dev/-seed`, which is behind
+ * `import.meta.env.DEV` and compiled out of a production bundle;
+ * `-seed/__tests__/fixture-rows.test.ts` reads the tree back off disk and fails if a second caller
+ * appears. A real identifier is drawn from a real random source, and an application write that
+ * supplied its own would be handing an attacker the shape of the next primary key.
+ *
+ * `defaults.id` must return an identifier of the same shape `newId()` does — a base-36 instant
+ * followed by sixteen characters — and `defaults.now` must advance, or the ordering that every
+ * keyset cursor in `src/server/repos` depends on stops meaning creation order. The defaults are
+ * restored on the way out however `write` ends, and two of these do not nest: a second one inside
+ * the first is a caller that has lost track of its own sections, and it throws rather than quietly
+ * stealing them.
+ */
+export async function withSuppliedRowDefaults<T>(
+  defaults: SuppliedRowDefaults,
+  write: () => Promise<T>,
+): Promise<T> {
+  if (supplied !== null) {
+    throw new Error(
+      'withSuppliedRowDefaults: defaults are already installed for this write; these do not nest',
+    )
+  }
+  supplied = defaults
+  try {
+    return await write()
+  } finally {
+    supplied = null
+  }
 }
 
 const pk = () => text('id').primaryKey().$defaultFn(newId)
 
 const createdAt = () =>
-  integer('created_at', { mode: 'timestamp_ms' })
-    .notNull()
-    .$defaultFn(() => new Date())
+  integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(rowInstant)
 
 const updatedAt = () =>
   integer('updated_at', { mode: 'timestamp_ms' })
     .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdateFn(() => new Date())
+    .$defaultFn(rowInstant)
+    .$onUpdateFn(rowInstant)
 
 const timestamps = () => ({ createdAt: createdAt(), updatedAt: updatedAt() })
 

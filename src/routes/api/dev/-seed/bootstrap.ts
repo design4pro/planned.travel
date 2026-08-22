@@ -23,12 +23,13 @@
 
 import { and, eq, inArray } from 'drizzle-orm'
 import { hashPassword, verifyPassword } from 'better-auth/crypto'
-import { account, user } from '#/server/db/auth-schema'
+import { account, member, organization, user } from '#/server/db/auth-schema'
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, getAuth } from '#/server/auth'
 import { authDb } from '#/server/auth/db'
 import { firstOrganizationIdFor, membershipRoleFor } from '#/server/auth/provisioning'
 import { addMember, createScope } from '#/server/repos'
 import { SEED_ANCHOR_INSTANT, people } from './dataset'
+import { membershipInstants } from './fixture-rows'
 import { stableId } from './stable-id'
 import type { OrganizationRole } from '#/server/db/auth-schema'
 import type { Database } from '#/server/db/types'
@@ -329,6 +330,49 @@ export async function resolveWorkspace(
 }
 
 /**
+ * Puts the anchor on the four auth-side rows the fixture cannot fill in for itself.
+ *
+ * `./fixture-rows` answers the column defaults in `src/server/db/schema.ts`, and that covers every
+ * row a repository inserts without naming a date. It does not cover these: Better Auth's sign-up
+ * writes the owner's `user` and `account` rows with its own clock, its organization plugin writes
+ * `organization` with the same, and `addMember()` in `src/server/repos/members.ts` passes an explicit
+ * `new Date()`. So a freshly provisioned workspace carries the day it was provisioned in four places,
+ * and `/settings` prints one of them — "Member since", which read a different date on each machine
+ * and on each morning until this ran.
+ *
+ * Idempotent, and cheap enough to run on every seed: it writes the same four values every time, so a
+ * warm database is left exactly as a cold one ends up.
+ */
+async function anchorAuthRows(
+  workspace: ResolvedWorkspace,
+  ids: ReadonlyMap<PersonKey, string>,
+): Promise<void> {
+  const db = authDb()
+  const now = SEED_ANCHOR_INSTANT
+  const userIds = people.flatMap((person) => {
+    const id = ids.get(person.key)
+    return id === undefined ? [] : [id]
+  })
+
+  await db.update(user).set({ createdAt: now, updatedAt: now }).where(inArray(user.id, userIds))
+  await db
+    .update(account)
+    .set({ createdAt: now, updatedAt: now })
+    .where(inArray(account.userId, userIds))
+  await db
+    .update(organization)
+    .set({ createdAt: now, updatedAt: now })
+    .where(eq(organization.id, workspace.organizationId))
+
+  for (const { userId, joinedAt } of membershipInstants(userIds)) {
+    await db
+      .update(member)
+      .set({ createdAt: joinedAt })
+      .where(and(eq(member.organizationId, workspace.organizationId), eq(member.userId, userId)))
+  }
+}
+
+/**
  * Creates the collaborator user rows, joins them to the workspace and builds a scope for each.
  *
  * Membership goes through the repository, so the seat quota and the "never remove the last owner"
@@ -349,6 +393,8 @@ export async function ensureWorkspacePeople(
     }
     await addMember(workspace.ownerScope, { userId, role: person.role })
   }
+
+  await anchorAuthRows(workspace, ids)
 
   const scopes = new Map<PersonKey, TenantScope>()
   for (const person of people) {

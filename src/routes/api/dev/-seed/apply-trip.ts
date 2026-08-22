@@ -30,16 +30,16 @@ import {
   createTrip,
   listTripDays,
   listTripMembers,
+  packingItemsRepository,
   recordFile,
   resolveTags,
   setAssignmentParticipants,
-  setListItemDone,
   setPlaceTags,
   toggleReaction,
   updateDay,
   updateTripMember,
 } from '#/server/repos'
-import { minutesBeforeAnchor } from './dataset'
+import { SEED_ANCHOR_INSTANT, minutesBeforeAnchor } from './dataset'
 import type { TenantScope } from '#/server/repos'
 import type { PersonKey, SeedSplit, SeedTrip } from './types'
 
@@ -449,7 +449,13 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
       })
       listItems += 1
       if (item.isDone === true) {
-        await setListItemDone(owner, itemRow.id, true)
+        // `setListItemDone` stamps `doneAt` from the wall clock, and that column is the only value
+        // in a packed row that two runs of this fixture would disagree about. The repository's own
+        // update is used instead — still tenant-scoped, still validated — with the fixture's today.
+        await packingItemsRepository.requireUpdate(owner, itemRow.id, {
+          isDone: true,
+          doneAt: SEED_ANCHOR_INSTANT,
+        })
       }
     }
   }

@@ -14,12 +14,41 @@ The dev server must be running. Then:
 node scripts/seed/seed.mjs --url http://localhost:3010
 ```
 
+Every flag `seed.mjs` accepts; `--help` prints the same list and anything else is a hard error:
+
 | Flag | Effect |
 | --- | --- |
 | `--force`, `-f` | Rebuild the demo workspace even though it has already been seeded. |
 | `--email <address>`, `-e` | Workspace owner to seed. Defaults to `rafal@planned.travel`. |
 | `--url <origin>`, `-u` | Dev-server origin. Defaults to `$SEED_URL`, then the probe list below. |
+| `--password <secret>`, `-p` | Password the owner account should have. Defaults to `$DEMO_PASSWORD`, then `$E2E_PASSWORD`, then the committed fixture below. |
+| `--keep-password` | Never overwrite a password that is already set. |
+| `--today <YYYY-MM-DD>`, `-t` | Tell the Worker what day it is, for the duration of this one request. |
 | `--status`, `-s` | Report whether the workspace is seeded. Writes nothing. |
+
+### `--today` is a falsification tool, not a configuration knob
+
+The fixture is anchored: every date in it is an offset from `SEED_ANCHOR_DAY` in
+`src/routes/api/dev/-seed/dataset/anchor.ts`, and no clock reaches a written row — the only
+`Date.now()` under `-seed/` is the stopwatch that times the run for the report. The two column
+defaults that would otherwise smuggle one in are supplied by the fixture itself:
+`src/routes/api/dev/-seed/fixture-rows.ts` hands the seed a primary key and a row instant derived
+from the anchor, so the id a trip's cover drawing is hashed from is the same id on every run. That
+is a claim, and `--today` is how it gets tested instead of trusted. The flag sends the day as the
+`x-pt-server-today` header; `serverToday()` in `src/server/clock.ts` reads it, guarded by
+`import.meta.env.DEV` so the production build folds the whole path away.
+
+Seed the same dataset under three widely separated days and the rows written must be
+byte-identical:
+
+```sh
+node scripts/seed/seed.mjs --url http://localhost:3010 --force --today 2026-08-20
+node scripts/seed/seed.mjs --url http://localhost:3010 --force --today 2026-09-01
+node scripts/seed/seed.mjs --url http://localhost:3010 --force --today 2026-11-15
+```
+
+`--force` is not optional in that loop. The completion marker makes a second run a no-op, so a
+three-clock proof run without it writes nothing twice and proves nothing three times.
 
 ### Always pass `--url`, and the reason is not tidiness
 
