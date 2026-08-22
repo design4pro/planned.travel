@@ -54,7 +54,7 @@ each `new` or `edit`. This list is the fan-out contract: an auditor diffs the st
 against it, and a path outside it is a failure even if the code is correct.
 
 If the stage needs a change to a shared path, it does **not** appear here. State the requirement
-under the relevant heading below so it becomes a foundations stage in an earlier wave.
+under the relevant heading below so it becomes a wave-0 foundations stage in `00-foundations.md`.
 
 ### Data and migration
 
