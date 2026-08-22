@@ -104,13 +104,19 @@ Run these and fix what is trivially fixable before invoking the workflow.
   for p in $(seq 3010 3020); do
     pid=$(lsof -nP -iTCP:$p -sTCP:LISTEN -t 2>/dev/null) && [ -n "$pid" ] && kill $pid
   done
-  pnpm dev -- --port 3010 --strictPort &
+  pnpm exec vite dev --port 3010 --strictPort &
   curl -s -o /dev/null -w '%{http_code}' http://localhost:3010/
   ```
 
-  `--strictPort` is not optional: without it Vite silently walks to the next free port and the
-  round loses track of what it bound. If 3010 is genuinely wedged, use 3011, and say which port
-  the round is on in your report.
+  **Call `vite` directly, never `pnpm dev`.** The `dev` script in `package.json` is
+  `vite dev --port 3000`, so `pnpm dev -- --port 3010` passes *two* `--port` flags and Vite keeps
+  the first one. This was tried and it bound 3000 — the very port the rule above forbids, which
+  happened to be free at that moment. `pnpm exec vite dev` has no baked-in port and honours the
+  flag.
+
+  `--strictPort` is not optional either: without it Vite silently walks to the next free port and
+  the round loses track of what it bound. If 3010 is genuinely wedged, use 3011, and say which
+  port the round is on in your report.
 
   End of round — kill it, unconditionally, before you write the report:
 
@@ -131,11 +137,16 @@ Run these and fix what is trivially fixable before invoking the workflow.
   baseline comparison, cross-browser (the config runs desktop Chromium and mobile WebKit), and the
   end-to-end specs. A round that only needs to look at a page does not need Playwright and must not
   start a server for it.
+- **Local D1, before the seed.** Every worktree carries its own `.wrangler/state`, so a worktree
+  that has not run migrations has an empty database and the seed fails with
+  `Failed query: select "id" from "user" …`. Run `pnpm db:migrate:local` first; it is idempotent
+  and reports which migrations were already applied. `--local` only ever touches this worktree.
 - **Demo data and the demo session.** The authenticated half of the visual gate signs in as
   `rafal@planned.travel`. Run `node scripts/seed/seed.mjs --url http://localhost:<port>` if the
   authenticated specs report themselves as skipped — it provisions the workspace and reconciles the
   account password, and is idempotent, so running it is always safe. Note the seed script's own port
-  probe only covers 3000-3005, so pass `--url` explicitly.
+  probe only covers 3000-3005, so pass `--url` explicitly — with the reserved range it will never
+  find the port on its own.
 - Baselines: if `e2e/__screenshots__` is empty, seed it once with
   `PLAYWRIGHT_BASE_URL=… pnpm exec playwright test --update-snapshots`. After that **never** pass
   `--update-snapshots` automatically — a gate that rewrites its own baseline cannot fail, and
