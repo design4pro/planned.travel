@@ -633,11 +633,15 @@ distinguishes the two prefix forms is the segment count, never the underscore.
 
 There are exactly two prefix forms, and the entity decides which one an action takes. A catalogue
 action is the two-segment `<entity_type>.<verb>` form, and its prefix is the `entity_type` spelled
-verbatim. Two segments is also the shape of every audit action name that exists anywhere in this
-codebase today - nine of them, from `trip.created` to `billing.plan_changed` - which is the whole
-of what precedent settles here. It settles no more than that: none of the nine is written by a
-production path, seven being seed rows in `src/routes/api/dev/-seed/dataset/workspace.ts` and the
-other two, `place.created` and `trip.hijacked`, appearing only under `src/server/repos/__tests__/`;
+verbatim. Two segments is also the shape of every audit action name any code path in this
+repository writes today - nine of them, from `trip.created` to `billing.plan_changed` - which is
+the whole of what precedent settles here. Nine is what a grep of the `action:` literals
+demonstrates, and the claim is deliberately no wider than the grep: `member.role_changed`, the
+second example in the JSDoc at `src/server/repos/audit.ts:30`, is a tenth name this codebase
+mentions and nothing writes, and it is two segments as well - so it moves the count and never the
+shape. Precedent settles no more than that: none of the nine is written by a production path,
+seven being seed rows in `src/routes/api/dev/-seed/dataset/workspace.ts` and the other two,
+`place.created` and `trip.hijacked`, appearing only under `src/server/repos/__tests__/`;
 and one of them, `billing.plan_changed`, is recorded against `entity_type: 'subscription'`, so the
 prefix-equals-`entity_type` rule is declared by the table below rather than inherited from them.
 

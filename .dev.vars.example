@@ -8,7 +8,9 @@
 # §3 both promise lives here. The two superseded STRIPE_* names are the one
 # deliberate omission: the shipped billing code still reads them, but they are
 # on their way out, and docs/DEPLOY.md §6 is where they are set until phase A
-# retires them. Nothing else the Worker reads is missing from this file.
+# retires them. Apart from that pair, every secret the Worker reads is below.
+# The Worker also reads names that are not secrets, and those are the next
+# paragraph's subject rather than an omission from this one.
 #
 # Non-secret configuration (LOG_LEVEL, EMAIL_FROM, FILES_PUBLIC_BASE, …) is
 # NOT here — it lives in the `vars` block of `wrangler.jsonc` and is checked
@@ -55,10 +57,19 @@ APPLE_APP_BUNDLE_IDENTIFIER=
 # is presented as polar_oat_… and can issue refunds, so it stays server-side.
 POLAR_ACCESS_TOKEN=
 
-# Signing secret of the billing webhook endpoint. Polar returns it on the
-# response to `POST /v1/webhooks/endpoints`, and the dashboard → Settings →
-# Webhooks → Add endpoint form lets you set your own instead. It is only ever
-# regenerated, never assigned: PATCH /v1/webhooks/endpoints/{id}/secret.
+# Signing secret of the billing webhook endpoint. Which of the two creation
+# paths you used decides where this value comes from, and only one of them
+# lets you choose it. `POST /v1/webhooks/endpoints` takes no `secret` field:
+# Polar generates one and returns it on the 201, so you copy it out of the
+# response. The dashboard → Settings → Webhooks → Add endpoint form is the
+# path that lets you supply your own — its "Set a secret" step, in Polar's
+# words, "you can set your own or generate a random one" — so mint the value
+# first (openssl rand -base64 32) and create the endpoint there if you want
+# this secret set before the endpoint exists. Afterwards neither path can
+# assign one: PATCH /v1/webhooks/endpoints/{id}/secret takes no request body
+# and only regenerates, and the old value stops verifying the moment it
+# returns. Verified against Polar 2026-08-22; docs/DEPLOY.md §9.4 has the
+# citations and the redeploy window.
 POLAR_WEBHOOK_SECRET=
 
 # `sandbox` or `production`, nothing else and no default. This one is not a
@@ -71,9 +82,10 @@ POLAR_SERVER=
 # Nothing above is read yet: until phase A the live checkout is still
 # `src/server/billing/stripe.ts`, which reads the two superseded STRIPE_*
 # secrets this file no longer lists, together with the four build-time price
-# ids they pair with in `src/lib/plans.ts`. Both sets are in docs/DEPLOY.md §6
-# and §10; take them from there if paid plans must work today, and set the
-# three names above now so the cutover is a deploy rather than a scramble.
+# ids they pair with in `src/lib/plans.ts`. Take the secret pair from
+# docs/DEPLOY.md §6 if paid plans must work today; the four price ids are
+# named in the build-time section near the bottom of this file. Set the three
+# names above now so the cutover is a deploy rather than a scramble.
 
 
 # ── Transactional email (optional; queued mail fails loudly without it) ──────
@@ -124,21 +136,38 @@ MCP_TOKEN_PEPPER=
 
 # ── Build-time public values — NOT part of this file ─────────────────────────
 #
-# Polar *product* ids are inlined into both bundles by Vite, so they are read
+# Price and product ids are inlined into both bundles by Vite, so they are read
 # from `import.meta.env`, not from the Worker environment. Put them in
 # `.env.local` (also gitignored) for local work, and in repository *variables*
-# for CI, since a product id is public information:
+# for CI, since neither kind of id is secret. There are two sets, and only the
+# first one is live:
 #
+#   # CURRENT — read today by `src/lib/plans.ts`, and passed into the build by
+#   # both .github/workflows/ci.yml and .github/workflows/deploy.yml. Leave one
+#   # empty and that plan's checkout throws instead of opening, so the pricing
+#   # page renders with nothing anyone can actually buy.
+#   VITE_STRIPE_PRICE_SOLO_MONTHLY=price_…
+#   VITE_STRIPE_PRICE_SOLO_YEARLY=price_…
+#   VITE_STRIPE_PRICE_CREW_MONTHLY=price_…
+#   VITE_STRIPE_PRICE_CREW_YEARLY=price_…
+#
+#   # PHASE A — the four that replace them, one per product of the Polar
+#   # organization. Nothing reads these yet; set them with the cutover.
 #   VITE_POLAR_PRODUCT_SOLO_MONTHLY=…
 #   VITE_POLAR_PRODUCT_SOLO_YEARLY=…
 #   VITE_POLAR_PRODUCT_CREW_MONTHLY=…
 #   VITE_POLAR_PRODUCT_CREW_YEARLY=…
 #
-# Sandbox and production are separate Polar accounts, so those four ids are
-# different values in the two places: `.env.local` carries the sandbox ids and
-# CI carries the production ones. A sandbox id in a production build does not
-# fail loudly — it opens a checkout for a product that account does not have.
-# Nothing reads them before phase A; set them with it, per docs/DEPLOY.md §10.
+# The swap is all-or-nothing: one module resolves the purchasable price, so a
+# build carrying both sets would offer two prices for the same plan. Move the
+# module, both workflow files and this block together — docs/DEPLOY.md §10 owns
+# that change and enumerates what else moves with it.
+#
+# Sandbox and production are separate Polar accounts, so the four product ids
+# are different values in the two places: `.env.local` carries the sandbox ids
+# and CI carries the production ones. A sandbox id in a production build does
+# not fail loudly — it opens a checkout for a product that account does not
+# have.
 #
 # `.env.local` is the right home only because Vite, not the Worker, reads these
 # at build time. Never move a name from the sections above into it: while a
@@ -149,7 +178,15 @@ MCP_TOKEN_PEPPER=
 # ── Local non-secret overrides (optional; wrangler.jsonc vars win otherwise) ─
 
 # Local dev origin — overrides the production APP_URL in wrangler.jsonc vars.
-APP_URL=http://localhost:3001
+# The port must be the one `pnpm dev` binds, which is 3000 (`vite dev --port
+# 3000` in package.json), and 3000 is also what `appUrl()` in
+# `src/server/auth/env.ts` falls back to when this name is unset. Every auth URL
+# is built from this value, so a port nothing is listening on does not fail
+# loudly — it sends the OAuth callback, the verification link in an email and
+# the PDF-export link to a dead origin. If you deliberately run the dev server
+# on another port, change both this line and the redirect URI registered with
+# each social provider above.
+APP_URL=http://localhost:3000
 
 # Local basemap archive — overrides the dated production TILES_ARCHIVE_KEY in
 # wrangler.jsonc vars. Deployments version that key and never overwrite it, but

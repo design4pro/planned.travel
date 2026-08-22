@@ -128,6 +128,8 @@ slices that matter.
   with the 300 s timestamp tolerance §9 states — then claim `webhook-id` in `KV`, make one small
   inline D1 write, enqueue everything else to `TASKS`, and return 200. Nothing that calls a
   third party or writes more than one row happens inline (`docs/DEPLOY.md` §9.5 and §9.7).
+  That is the target shape, not a description of the mounted handler, which breaks the rule
+  on one event; the note under the §9 table says where and why.
 - **Cron** → three triggers are registered in `wrangler.jsonc` today: `*/15 * * * *` reminder
   sweep, `0 3 * * *` nightly D1 export to R2, `17 4 * * 1` weekly retention prune. The `staging`
   environment overrides that list with `0 3 * * *` alone. A fourth, `0 4 * * 1` for the weekly
@@ -160,7 +162,10 @@ entry rule. None exists on disk yet; each lands with its phase.
 ## 3. Binding map
 
 Exactly as configured in `wrangler.jsonc` (production; the `staging` environment mirrors it
-with its own ids and a separate files bucket, sharing only the tiles bucket).
+with its own ids and a separate files bucket, sharing only the tiles bucket). The mirroring is
+of bindings only: `staging` overrides `triggers.crons` with `0 3 * * *` alone, so the reminder
+sweep and the retention prune never fire there, and its queue consumer is deliberately tuned
+smaller (3 retries, concurrency 2) than production's 5 and 4.
 
 | Binding     | Type                                          | Holds                                                                           | Read by                            | Written by                             |
 | ----------- | --------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------- | -------------------------------------- |
@@ -287,9 +292,10 @@ equivalence is the invariant; it is what stops the two from drifting apart again
 The two plan vocabularies are bridged in that one file too: the `plan` column carries a coarse
 tier (`free | starter | pro | business`) under a CHECK constraint and predates the catalogue,
 which sells `free | solo | crew`. `planIdFromRow()` translates one way, `TIER_FOR_PLAN` the
-other, and `ceilingsForPlan()` is what every sanctioned write path — the Polar webhook via
-`rowValuesFromRecord()`, and the demo seed — stamps onto the ceiling columns, so a freshly
-written row always agrees with its own plan.
+other, and `ceilingsForPlan()` is what every sanctioned write path — the billing webhook via
+`rowValuesFromRecord()` (the Stripe handler today, the Polar one from phase A; the call site is
+the same either way), and the demo seed — stamps onto the ceiling columns, so a freshly written
+row always agrees with its own plan.
 
 Two reasons this sits at the repository boundary rather than in the route:
 
@@ -388,15 +394,58 @@ What the model actually says:
 - **Realtime is nearly free at this scale** because of hibernation and the 20:1 WebSocket
   message ratio: 10 000 users of live collaboration is ~$0.10 of DO requests.
 - **Revenue context.** Ten paying customers on the entry paid plan cover the platform bill for
-  the first thousand users. Infrastructure is not the constraint on this product; it is
-  bounded, predictable, and a fraction of the merchant-of-record fees Polar takes out of the
-  same revenue.
+  the first thousand users. But "infrastructure is negligible against the merchant-of-record
+  fee" is a claim with a scale attached, and the scale changes the answer by two orders of
+  magnitude — so it is set out below rather than asserted.
+
+**Infrastructure against the Polar fee, at four mixes.** The entry paid plan is Solo at $9/month
+(`src/lib/plans.ts`). Polar's Starter rate takes 5% + 50¢ per transaction, so 95¢ of that $9 —
+an effective **10.6%**, because on a ticket that small the fixed 50¢ dominates. Platform bills
+are the table above, unchanged:
+
+| Paying customers    | Gross / month | Polar fee / month | Platform bill / month | Fee ÷ infrastructure |
+| ------------------- | ------------- | ----------------- | --------------------- | -------------------- |
+| 10 (of 10 users)    | $90           | $9.50             | $6.40                 | 1.5×                 |
+| 10 (of 1 000 users) | $90           | $9.50             | $8.60                 | 1.1×                 |
+| 100 (of 100 users)  | $900          | $95               | $6.60                 | 14×                  |
+| 1 000 (of 1 000)    | $9 000        | $950              | $8.60                 | **110×**             |
+
+Read it in that order. At the ten-user first release §1 provisions for, the fee and the entire
+platform bill are the **same order of magnitude**, and the fee is the larger of the two — so at
+launch neither number is worth optimising and the ten-payers-cover-the-bill sentence above is
+the whole story. Infrastructure is only **two orders of magnitude** smaller than the fee at a
+thousand paying customers, and nowhere below that. What holds at every row is the direction, and
+that is the durable claim: the platform bill grows sublinearly and is bounded by the levers in
+§7, while the fee grows linearly with revenue and its only levers are commercial ones. So
+infrastructure stops being the interesting number the moment the product sells.
+
+The rate is **5% + 50¢ per transaction** on Polar's Starter plan, plus 1.5% on non-US cards and
+$15 per dispute, taken from `polar.sh/docs/merchant-of-record/fees` in **August 2026** and to be
+re-checked on the same terms as the Cloudflare rates above. Starter is the plan assumed here
+because it is what an organization created on or after 27 May 2026 starts on; the 4% + 40¢ Early
+Member rate is grandfathered for older organizations only and is lost permanently on the first
+upgrade, so it is not a number to plan against.
+
+The cheapest lever on the *fee* is the billing interval, not a Polar plan upgrade. One 50¢ on a
+$90 yearly order instead of twelve 50¢ on $9 brings the effective rate from 10.6% to **5.6%**,
+and the yearly price already exists in `src/lib/plans.ts`, so the change is a default on the
+pricing page. It is a lever on the fee and not on net revenue, though: that $90 is twelve months
+sold at a two-month discount, so annual nets $85 a year against monthly's $96.60. Halving the
+rate is worth having; it is worth having for retention, not for margin. Upgrading to Polar's Pro
+tier (3.8% + 40¢ for $20/month) saves 21¢ on the same $9 ticket, so it needs about 96 Solo
+subscriptions a month to pay for its own $20; at the thousand-payer row it would cut the $950 to
+$742. Worth doing there, worth nothing at launch.
 
 ---
 
 ## 9. Failure modes and mitigations
 
-| #   | Failure                                           | Blast radius                              | Detection                                                                                          | Mitigation in the code today                                                                                                                                                                 |
+Twelve of these fourteen rows describe code that is deployed right now. Rows 8 and 9 are the
+two that do not, and they are marked: they describe the Polar handler **phase A** writes, and
+the note under the table says what is mounted in its place today. Every other row is present
+tense and can be checked against the file it names.
+
+| #   | Failure                                           | Blast radius                              | Detection                                                                                          | Mitigation in the code today (rows 8 and 9: phase A)                                                                                                                                         |
 | --- | ------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | D1 unavailable or timing out                      | all authenticated reads and writes        | `checkReadiness` probe (`src/server/observability/health.ts`); error-rate spike on `outcome=error` | read-only queries are auto-retried by D1 (up to 2); writes are wrapped in explicit idempotent retries; the marketing pages never touch D1 so the front door stays up                         |
 | 2   | KV read returns stale data                        | one tenant sees a stale plan for ≤ 60 s   | plan mismatch between webhook log and quota decision                                               | 60 s TTL plus explicit invalidation from the webhook; usage never cached; entitlement downgrades take effect on the next check, never mid-request                                            |
@@ -405,13 +454,40 @@ What the model actually says:
 | 5   | A trip room gets hot (many editors, huge patches) | one trip                                  | DO CPU/duration metrics; client-visible rate-limit errors                                          | 32 KiB frames, 40 msg/s per connection, bounded patch log and tombstone TTL; the object is the only thing that slows down                                                                    |
 | 6   | Durable Object evicted mid-session                | one trip's clients reconnect              | reconnect rate                                                                                     | clients re-handshake and resnapshot via `partysocket`; D1 holds the durable record, so the worst case is replaying recent patches                                                            |
 | 7   | Queue consumer failing on a poison message        | one job kind                              | retry count, then DLQ depth                                                                        | 5 retries with 10 s delay, then the dead-letter queue; envelopes carry idempotency keys, so redelivery is safe; DLQ diagnostics are kept 14 days                                             |
-| 8   | Third-party outage (Polar, email provider)        | billing changes and notifications delayed | job failure logs, DLQ depth                                                                        | all third-party calls happen in queue handlers, never inline; webhooks are idempotent by event id; Polar retries on its side, up to ten times with exponential backoff, and we retry on ours |
-| 9   | Polar webhook replay or forgery                   | billing state                             | signature failures in logs                                                                         | the `{webhook-id}.{webhook-timestamp}.{raw body}` signature is verified with WebCrypto (HMAC-SHA256) inside a 300 s tolerance; the event id is claimed in KV before any state change         |
+| 8   | Third-party outage (Polar, email provider)        | billing changes and notifications delayed | job failure logs, DLQ depth                                                                        | **Phase A.** All third-party calls happen in queue handlers, never inline; webhooks are idempotent by event id; Polar retries on its side, up to ten times with exponential backoff, and we retry on ours |
+| 9   | Polar webhook replay or forgery                   | billing state                             | signature failures in logs                                                                         | **Phase A.** The `{webhook-id}.{webhook-timestamp}.{raw body}` signature is verified with WebCrypto (HMAC-SHA256) inside a 300 s tolerance; the event id is claimed in KV before any state change |
 | 10  | Runaway range request (huge or many-part)         | one request's CPU and memory              | 400/416 rate on `/api/tiles/*`                                                                     | ≤ 8 range specs, ≤ 8 MiB assembled multipart, ≤ 24 MiB cached per entry, everything above streams without buffering                                                                          |
 | 11  | Quota bypass attempt via a new code path          | one tenant over its ceiling               | quota-exceeded counters versus plan                                                                | quotas live at the repository boundary, so a new route or job cannot skip them                                                                                                               |
 | 12  | Bad deploy                                        | everything                                | smoke check in `deploy.yml`; error rate in Observability                                           | `wrangler rollback` (see `docs/DEPLOY.md`); migrations are additive so the previous version keeps working against the new schema                                                             |
 | 13  | Secret missing or rotated wrongly                 | the feature that needs it                 | first request throws a named error                                                                 | every secret is read through an accessor that fails loudly with the exact `wrangler secret put` command to run                                                                               |
 | 14  | Cron trigger missed or overlapping                | reminders late by one tick                | reminder lag in logs                                                                               | the reminder index is idempotent: the sweep enqueues by due-time prefix with deterministic ids, so a double sweep sends one email                                                            |
+
+**What rows 8 and 9 look like until phase A lands.** The mounted route is
+`src/routes/api/stripe/webhook.ts`, and `verifyStripeEvent()` in `src/server/billing/webhook.ts`
+reads the `stripe-signature` header, not `webhook-signature`. Verification goes through the
+Stripe SDK's `constructEventAsync()` on `Stripe.createSubtleCryptoProvider()`, because workerd
+has no Node `crypto`. Two of the properties those rows claim are already true today and survive
+the migration unchanged: the 300 s tolerance (`WEBHOOK_TOLERANCE_SECONDS` in
+`src/server/billing/stripe.ts`), and the KV claim on the event id before any state change
+(`webhookEventCacheKey()`, claimed in `processStripeEvent()` ahead of dispatch and deleted again
+if a handler throws, so the provider's retry is free to try once more).
+
+A third does **not** hold today, and phase A owes it rather than inherits it. §2.4 states the
+rule: nothing that calls a third party or writes more than one row happens inline. The mounted
+handler breaks it on one event. `checkout.session.completed` calls
+`runtime.stripe.subscriptions.retrieve()` inside the request — a deliberate choice, so the
+billing screen is already correct when the customer is redirected back — and writes D1 twice on
+that path, once through `attachCustomer()` and again through the `upsert()` inside `persist()`.
+Everything slower than those writes is already queued: every branch that changes state ends by
+handing a `billing.*` task to `TASKS` and answering immediately, and the other five event
+branches make at most one D1 write each — that half of the rule does hold. So read the inline
+discipline in §2.4 and row 9 as the shape phase A must build, not as a property to be
+preserved: the Polar handler has to fold that provider read into the queued task and land on a
+single inline write.
+
+What else changes in phase A is the signed string, the header it arrives in, and the provider
+whose retry policy row 8 quotes: ten attempts with exponential backoff is Polar's, not Stripe's.
+Do not read either row as a description of `src/server/billing/**` as it stands.
 
 ### Numbers worth alerting on
 

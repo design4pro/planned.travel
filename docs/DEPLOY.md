@@ -7,8 +7,10 @@ Every command is copy-pasteable; replace only the `ALL_CAPS` placeholders. Read
 Two rules for this runbook:
 
 - **Resource ids go into `wrangler.jsonc` and are committed.** They are not secrets.
-- **Secrets never go into `wrangler.jsonc`.** They are set with `wrangler secret put` and
-  documented in `.dev.vars.example`.
+- **Secrets never go into `wrangler.jsonc`.** They are set with `wrangler secret put`, and
+  `.dev.vars.example` documents each one with the steps that obtain it — every name in §6 except
+  the superseded Stripe pair, which the template names in its header and leaves to §6 for as long
+  as the shipped billing code still reads it.
 
 ---
 
@@ -181,19 +183,24 @@ where they do.
 
 ## 6. Set every secret
 
-**This section is the full list. `.dev.vars.example` is not, and that is a known divergence
-(§10).** The template on disk carries the two Stripe names the running code reads, and **none**
-of the six new ones — `POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`, `POLAR_SERVER`,
-`FIRECRAWL_API_KEY`, `FIRECRAWL_WEBHOOK_SECRET`, `MCP_TOKEN_PEPPER`. This round does not own that
-file, so it does not touch it; §10 enumerates the divergence with the others and phase A closes
-it. Until then:
+**This section and `.dev.vars.example` describe the same secret list — seventeen shared names —
+and one deliberate difference.** The template on disk carries all six of the new names —
+`POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`, `POLAR_SERVER`, `FIRECRAWL_API_KEY`,
+`FIRECRAWL_WEBHOOK_SECRET`, `MCP_TOKEN_PEPPER` — each with the acquisition steps for it. What it
+deliberately does **not** declare is the superseded Stripe pair, `STRIPE_SECRET_KEY` and
+`STRIPE_WEBHOOK_SECRET`, which the running code still reads: the template describes the shape
+phase A leaves behind, names that omission in its own header rather than leaving it silent, and
+points here for the two. So:
 
-- Read `.dev.vars.example` for the **local** shape of the names it does carry —
-  `BETTER_AUTH_SECRET`, the two Stripe values, `EMAIL_API_KEY`, the social sign-in pairs, the
-  backup and PDF tokens. Those entries are accurate; the file is incomplete, not wrong.
-- Take every Polar, Firecrawl and MCP name from **this section**.
-- `docs/SPEC.md` §5 says the complete secret list lives in `.dev.vars.example`. That becomes true
-  when phase A rewrites the template; this section is what stands in for it in the meantime.
+- Read `.dev.vars.example` for the **local** shape of every name below and what each one buys.
+  It is the file you copy to `.dev.vars` at the end of this section, and every entry is accurate.
+  Its last section adds two names that are not secrets and are not set here — `APP_URL` and
+  `TILES_ARCHIVE_KEY`, which exist only to override the `wrangler.jsonc` vars locally.
+- Take the two Stripe secrets, and the four build-time price ids that pair with them, from
+  **this section** and §10. Nothing else in the list needs this section rather than the template.
+- `docs/SPEC.md` §5 says the complete secret list lives in `.dev.vars.example`. That is true of
+  the template as it stands today, with the single Stripe carve-out above, which the template
+  states in its header and §10 records with the rest of the divergence.
 
 **Which provider the running code calls. Read this before the block below — it is the one thing
 in this runbook that is easy to get backwards.** Both providers appear in the list, and exactly
@@ -728,7 +735,7 @@ organization member.
 | **A** — now     | Sandbox      | `https://sandbox-api.polar.sh/v1` | the staging Worker's own origin + `/api/polar/webhook` |
 | **B** — phase A | Production   | `https://api.polar.sh/v1`         | `https://planned.travel/api/polar/webhook`             |
 
-**Step A's origin is whichever one staging actually answers on.** §7 attaches
+**Step A's origin is whichever one staging actually answers on.** §8 attaches
 `staging.planned.travel` only when you want the real hostname; until then `env.staging` has
 `workers_dev: true` and the deployed Worker is
 `https://planned-travel-staging.ACCOUNT_SUBDOMAIN.workers.dev`. Register the origin that resolves
@@ -990,11 +997,15 @@ is what makes the order list below scope to a workspace without us storing a map
 `success_url` supports the `checkout_id={CHECKOUT_ID}` placeholder. `metadata` allows at most 50
 pairs, keys ≤ 40 characters and values ≤ 500. `APP_ORIGIN` here and in the `return_url` below is
 an `ALL_CAPS` placeholder like the others: replace it with the origin of the Worker the
-organization behind `$POLAR_API` talks to — `https://staging.planned.travel` while the sandbox
-matrix of §9.11 is being walked, `https://planned.travel` once phase A is live. Paste the
-production origin into a sandbox checkout and the redirect leaves the Worker that received the
-events. The product itself never writes the host down: it builds every return URL from the
-`APP_URL` var, which `wrangler.jsonc` sets per environment.
+organization behind `$POLAR_API` talks to. While the sandbox matrix of §9.11 is being walked that
+is **whichever origin staging actually answers on** — the same rule as §9.4 step A, so
+`https://planned-travel-staging.ACCOUNT_SUBDOMAIN.workers.dev` until §8 attaches the custom
+hostname and `https://staging.planned.travel` after it. Once phase A is live it is
+`https://planned.travel`. Paste the production origin into a sandbox checkout and the redirect
+leaves the Worker that received the events; paste a hostname staging has not been given yet and
+the customer lands on a name that does not resolve, with the payment already taken. The product
+itself never writes the host down: it builds every return URL from the `APP_URL` var, which
+`wrangler.jsonc` sets per environment.
 
 **Customer Portal** — `POST /v1/customer-sessions/`
 
@@ -1189,11 +1200,14 @@ places, and the first three need an operator to act:
   `STRIPE_SECRET_KEY`, and `/api/stripe/webhook` is the only billing route mounted in this
   release. **Act:** set §6's two Stripe secrets and register the Stripe webhook endpoint §6
   describes — or deploy with no paid billing deliberately, and write that in the deploy log.
-- `.dev.vars.example` is **incomplete rather than wrong**: it declares the two Stripe values the
-  code actually reads and comments the four `VITE_STRIPE_PRICE_*` names, all of which are accurate
-  today, and it carries none of §6's six new names. **§6 is the authoritative secret list until
-  phase A rewrites the template**, and §6 says so at its head. Nothing to act on beyond reading §6
-  instead of the template.
+- `.dev.vars.example` has **already moved to the far side of the cutover, and says so**: it
+  declares all six of §6's new names with their acquisition steps, and its build-time block names
+  both sets of ids — the four `VITE_STRIPE_PRICE_*` the build reads today and the four
+  `VITE_POLAR_PRODUCT_*` that replace them — each labelled with which one is current. The one
+  thing it does not declare is the superseded Stripe secret pair, which §6 sets and the
+  template's own header names as its single omission. Nothing to act on here beyond taking that
+  pair from §6, which the third bullet already requires; every other secret is copy-and-fill
+  from the template.
 - The `stripe` package stays in `package.json`. `docs/SPEC.md` §3 puts its removal behind the
   dependency freeze — phase A deletes its last consumer, and the first round permitted to edit
   `package.json` deletes the entry. It costs bundle weight, nothing else.
@@ -1204,10 +1218,13 @@ in §9.10 — and none of those asks anything of an operator.
 
 **Phase A closes all five in one change**, because a half-migrated build is worse than either end
 state: the Polar route and client land, `src/lib/plans.ts`, both workflow files and `.env.local`
-move to `VITE_POLAR_PRODUCT_*` together, the template is rewritten, and the Stripe secrets stop
-being read. There is no overlap period for the build-time names — one module reads both sets, and
-a build that has both would offer two prices for one plan. Set the `VITE_POLAR_PRODUCT_*`
-variables when that change lands, and not before.
+move to `VITE_POLAR_PRODUCT_*` together, the template loses its Stripe half, and the Stripe
+secrets stop being read. There is no overlap period for the build-time names — one module reads
+both sets, and a build that has both would offer two prices for one plan. Set the `VITE_POLAR_PRODUCT_*`
+variables when that change lands, and not before. The template needs the least work of the five,
+because it already documents both sets: what phase A deletes from it is the Stripe prose in its
+header, its billing section and its build-time block, leaving the six new names it already
+carries.
 
 Without the two repository **secrets** the deploy workflow logs a warning and skips rather than
 failing, so a fork stays green. The price **variables** behave differently and more quietly: a
@@ -1563,7 +1580,7 @@ When phase D lands, the entry goes in **two** places, and both must be complete:
 }
 ```
 
-Three warnings, in the order they bite:
+Four warnings, in the order they bite:
 
 1. **A deploy replaces the whole array.** Cloudflare's wording: "When deploying a Worker with
    Wrangler any previous Cron Triggers are replaced with those specified in the `triggers` array."
@@ -1579,6 +1596,19 @@ Three warnings, in the order they bite:
    is not broken. Verify with the `…/schedules` read-back in §11 — the one command that prints
    the expressions actually registered — rather than by waiting for 04:00, and note that
    `wrangler deployments list` will not answer this question: it lists versions, never crons.
+4. **The ceiling is per _account_, not per Worker, and phase D is the deploy that reaches it.**
+   Cloudflare's limits table reads "Number of Cron Triggers **per account** — 5 on Workers Free,
+   250 on Workers Paid" (<https://developers.cloudflare.com/workers/platform/limits/>, read
+   2026-08-22; the Cron Triggers page's own _Limits_ line still says "per Worker" — the table is
+   the one that binds, and production and staging are two Workers on one account). The
+   arithmetic: production registers three today and `env.staging` one, which is four. Phase D adds
+   `0 4 * * 1` to both arrays, because neither inherits from the other — so five, then six. Six is
+   over the Free ceiling of five, and it is the _staging_ entry that tips it, which is why nobody
+   sees it coming while editing the production array. §0 already requires Workers Paid for the
+   queue configuration in `wrangler.jsonc`, so on the account this runbook provisions the real
+   headroom is 250 and this is a note. It stops being a note the moment phase D is walked against
+   a Free account — a fork, a personal test account, a second staging account — and then the
+   failure is at deploy time, not at 04:00 on the Monday after.
 
 `0 4 * * 1` is **unrelated to `17 4 * * 1`**, the weekly retention prune that runs seventeen
 minutes later the same morning. Neither depends on the other's ordering, neither reads the other's
@@ -1640,7 +1670,7 @@ makes a payment work today
       row 6 tests the shape production actually runs.
 - [ ] The **sandbox** webhook endpoint of §9.4 step A exists, is the only one on that organization,
       and points at `/api/polar/webhook` on the origin the staging Worker answers on today —
-      `https://staging.planned.travel` once §7's custom hostname is attached, its `workers.dev`
+      `https://staging.planned.travel` once §8's custom hostname is attached, its `workers.dev`
       origin before that. `format` is `raw`, and it subscribes to the seventeen events of §9.6.
       Step B — the production endpoint — is a phase-A line, not one to tick today.
 - [ ] Bot Fight Mode is **off** for the zone (§9.7).
@@ -1654,10 +1684,11 @@ makes a payment work today
 
 - [ ] `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set as repository secrets.
 - [ ] All five faces of §10's single known divergence were read before the deploy, the three that
-      ask for action were acted on, and every secret was taken from §6 rather than from the
-      incomplete `.dev.vars.example`.
+      ask for action were acted on, and the two superseded Stripe secrets were taken from §6 —
+      the one part of the list `.dev.vars.example` deliberately does not carry.
 - [ ] No `VITE_POLAR_PRODUCT_*` variable is set yet — they land with the phase-A rename, together
-      with the four they replace, and never half a set at a time.
+      with the four they replace, and never half a set at a time. The template names all eight and
+      labels which four are current; naming them is documentation, not configuration.
 
 **Platform access** (§14)
 
@@ -1671,8 +1702,10 @@ makes a payment work today
 - [ ] `wrangler.jsonc` still lists three crons and staging still lists one — `0 4 * * 1` is absent
       from both until phase D (§15.3), confirmed with §11's `…/schedules` read-back rather than
       with `wrangler deployments list`, which never prints a cron.
-- [ ] `.dev.vars.example` is untouched: accurate for the two Stripe values, silent about the six
-      new names. Phase A rewrites it (§10).
+- [ ] `.dev.vars.example` declares neither Stripe secret, on purpose — that pair comes from §6 for
+      as long as `src/server/billing/stripe.ts` is the live checkout, and it is the only part of
+      §6's list the template does not carry. Everything else in §6 was filled in from the template.
+      Phase A deletes the template's Stripe prose and this line goes with it (§10).
 - [ ] No `/api/polar/webhook` route in production until phase A; the sandbox endpoint is the only
       live one (§9.4). The billing route that _is_ mounted today is `/api/stripe/webhook`.
 

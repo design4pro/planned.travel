@@ -403,9 +403,13 @@ table. Each has to hold against what `docs/ACCESS.md` §4.1 defines, and each is
 4. **Each half has one owner, and they are different files.** Where this document and that one
    can be read as disagreeing about the _shape_ of the table - its columns, its indexes, its
    retention - `docs/ACCESS.md` §4.1 wins and this document is the one that gets corrected. Where
-   they can be read as disagreeing about the _spelling of a catalogue action_, the thirteen names
-   in §8.4 win and `docs/ACCESS.md` §4.2 is the one that gets corrected. Both halves are stated
-   again at the foot of §8.4 because that is where they are most likely to be needed.
+   they can be read as disagreeing about the _spelling of one of the thirteen catalogue actions
+   §8.4 defines_, those thirteen win and `docs/ACCESS.md` §4.2 is the one that gets corrected. That
+   deference is to the thirteen and to nothing wider: the three console-only catalogue actions -
+   `place_pack.retired`, `catalog_source.enabled` and `catalog_source.disabled` - are emitted by no
+   tool in §8.4, are declared in `docs/ACCESS.md` §4.2, and are that document's to spell. Both
+   halves are stated again at the foot of §8.4 because that is where they are most likely to be
+   needed.
 
 An earlier revision of this section proposed a `token_id` column, on the reasoning that "every
 action this revoked token ever took" should be a join rather than a string match over free text.
@@ -913,15 +917,27 @@ reads explicitly.
 Twelve tools; the list is closed. Every input is a Zod v4 schema; every `limit` is clamped
 (§8.5); every `cursor` is an opaque base64url token encoding two things - the tuple of the
 **driving index** the call resolved to, with the row's `id` as its last component (§8.6), and a
-**filter fingerprint**: the driving row number of §8.6's table together with the values of the
-equality filters that row pins. For the tools whose driving index is the primary key that tuple is
-just the `id`, which works because `newId()` is time-sortable; for the others it is not, and a
-cursor is never an `id` alone. A cursor is meaningless to the client, is not a stable handle, and
-is rejected with `-32602` when the call it is replayed against resolves a different driving row
-**or** pins a different value for any filter in its fingerprint. The fingerprint is what lets that
-check be performed at all: §8.6 deliberately keeps pinned equality columns out of the ordering
-tuple, so a `country_code=DE` cursor replayed under `country_code=FR` would otherwise compare
-cleanly and return a page that silently skips rows.
+**filter fingerprint**: the driving plan §8.6 resolved - for `catalog_search_places`, the row
+number of its table - together with the value of **every** filter input the call carried, not only
+the ones that plan pins to a single value. For `catalog_search_places` that is `q`, `country_code`,
+`kind`, `status`, `bbox` and `amenities`; `limit` is not a filter, stays outside the fingerprint,
+and may change from one page to the next. For the tools whose driving index is the primary key that
+tuple is just the `id`, which works because `newId()` is time-sortable; for the others it is not,
+and a cursor is never an `id` alone. A cursor is meaningless to the client, is not a stable handle,
+and is rejected with `-32602` when the call it is replayed against resolves a different driving
+plan **or** carries a different value for any filter in its fingerprint. Covering the whole filter
+set rather than the pinned part of it is what makes the check sufficient: §8.6 deliberately keeps
+pinned equality columns out of the ordering tuple, so a `country_code=DE` cursor replayed under
+`country_code=FR` would otherwise compare cleanly and return a page that silently skips rows. That
+failure has a general form rather than a countable list of instances: a fingerprint built from
+pinned equalities alone is blind to every filter the resolved plan does not pin to a single value,
+and which filters those are changes from row to row - row 2 pins nothing at all, so under it such a
+fingerprint sees none of the six. `bbox` and `q` are ranges and are pinned by no row; `amenities` is
+applied as a residual and reaches no index; `kind` and `status` are carried in the ordering tuple
+rather than pinned on rows 3 and 4. Quantifying over the filter set is what closes all of that
+without anyone having to enumerate the combinations, and it is why the fingerprint is defined over
+the call's inputs rather than over the plan's pinned columns. §8.6 states that same rule from the
+other side and states no second one.
 
 | Tool                       | Input summary                                                                                                                                                                                                                                                                  | Kind     | `requirePermission`                                                                                                                            | `platform_audit_log` action (`actor_kind: 'agent'`)                                                            |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -964,15 +980,18 @@ console-only ones - `place_pack.retired`, `catalog_source.enabled`, `catalog_sou
 emitted by no tool in the table above and are declared by `docs/ACCESS.md` §4.2, which owns them.
 
 The thirteen are two segments, `<entity_type>.<verb_in_past_tense>`, because two segments is the
-shape of every audit action name that exists anywhere in this codebase today: `place.created`,
+shape of every audit action name any code path in this repository writes today: `place.created`,
 `trip.created`, `trip.archived`, `trip.hijacked`, `billing.plan_changed`, `member.added`,
-`expense.created`, `journey.published`, `reservation.confirmed`. None of the nine is written by a
-production path - seven are seed rows in `src/routes/api/dev/-seed/dataset/workspace.ts`, the other
-two live only under `src/server/repos/__tests__/` - and one of them, `billing.plan_changed`, is
-recorded against `entity_type: 'subscription'`, so they settle the segment count and nothing
-further. The count is the part that matters: one audit surface with two grammars is a surface
-nobody can grep. That the prefix of each of the thirteen _is_ its `entity_type` is a rule
-`docs/ACCESS.md` §4.2 states outright, in the prefix table there.
+`expense.created`, `journey.published`, `reservation.confirmed`. Nine is what a grep of the
+`action:` literals demonstrates and the claim is no wider than the grep: `member.role_changed`, the
+JSDoc example at `src/server/repos/audit.ts:30`, is a tenth name this codebase mentions and nothing
+writes, and it is two segments as well. None of the nine is written by a production path - seven
+are seed rows in `src/routes/api/dev/-seed/dataset/workspace.ts`, the other two live only under
+`src/server/repos/__tests__/` - and one of them, `billing.plan_changed`, is recorded against
+`entity_type: 'subscription'`, so they settle the segment count and nothing further. The count is
+the part that matters: one audit surface with two grammars is a surface nobody can grep. That the
+prefix of each of the thirteen _is_ its `entity_type` is a rule `docs/ACCESS.md` §4.2 states
+outright, in the prefix table there.
 
 ### 8.5 Response caps, as numbers
 
@@ -1021,8 +1040,15 @@ Rows 3 and 4 keep `kind` and `status` in the tuple even though a caller may pin 
 deliberate: both are **optional** inputs (§8.4), so a cursor whose arity followed them would change
 shape between one call and the next. A pinned column simply compares equal and costs nothing; an
 unpinned one is the whole reason the cursor exists. The values a row does pin are absent from this
-tuple but present in the cursor's filter fingerprint (§8.4), which is what makes replaying a
-`country_code=DE` cursor under `country_code=FR` a `-32602` rather than a quietly wrong page.
+tuple but present in the cursor's filter fingerprint, which covers the call's whole filter set and
+not merely the pinned part of it (§8.4). That is what makes replaying a `country_code=DE` cursor
+under `country_code=FR` a `-32602` rather than a quietly wrong page, and it is equally what catches
+a filter the resolved row does not pin: a row-3 cursor under a changed `kind`, which this tuple
+carries rather than pins, a row-1 cursor under a changed `bbox` or a row-2 cursor under a changed
+`q`, neither of which is an equality, and a cursor of any row under a changed `amenities` set,
+which is a residual and reaches no index, are instances of that rather than the whole of it. The
+rule is the one §8.4 states, quantified over the same filter set; there is not a narrower one
+here.
 
 An `id`-only cursor is what this rule exists to forbid. With only `country_code` supplied, the
 index delivers rows ordered by `(kind, status, id)` within the country, and `id > ?` is not a range
@@ -1188,9 +1214,10 @@ clients **MUST** reject a request without the header per Server Validation", whe
 required standard header is `400` with `-32020`. `-32022` means an _unsupported_ version and its
 payload echoes `data.requested`, so using it here would both misname the fault and report a version
 nobody sent - which is exactly the reading that makes a client retry the same request. Row 4, where
-a version really was requested and really is unsupported, keeps `-32022`. This rejection is reached
-during era resolution rather than under §9.5's modern-era scoping, because a request carrying no
-version belongs to no era.
+a version really was requested and really is unsupported, keeps `-32022`. Both rejections are
+reached during era resolution rather than under §9.5's modern-era scoping, for the reason the table
+gives their era as _neither_: a request naming a version we do not speak, or naming none at all, has
+not resolved to an era whose rules could be applied to it.
 
 We assign no `Mcp-Session-Id` in either era. The legacy revisions make the session **optional**, so
 a legacy client that receives no session id simply operates statelessly - which is what our tools
@@ -1235,13 +1262,15 @@ mis-versioned request. Three different failures, three different codes.
 
 ### 9.5 Version and header validation
 
-Every rule in this subsection is scoped to an era by §9.1, and the scoping is load-bearing: the
-`2026-07-28` header obligations did not exist in `2025-06-18` or `2025-11-25`, so applying them to
-a legacy request would reject traffic the specification says a dual-era server must serve. The
-specification agrees explicitly - it tells intermediaries to check that `MCP-Protocol-Version`
-"indicates a version that requires header-body validation" before enforcing it.
+Every rule in this subsection is scoped by §9.1 - to an era, or to the era resolution that runs
+before both - and the scoping is load-bearing: the `2026-07-28` header obligations did not exist
+in `2025-06-18` or `2025-11-25`, so applying them to a legacy request would reject traffic the
+specification says a dual-era server must serve. The specification agrees explicitly - it tells
+intermediaries to check that `MCP-Protocol-Version` "indicates a version that requires header-body
+validation" before enforcing it.
 
-**Both eras, and only on the `MCP-Protocol-Version` header path (§9.1 row 4):**
+**Neither era - reached during era resolution, and only on the `MCP-Protocol-Version` header path
+(§9.1 row 4):**
 
 - **An unsupported version in the `MCP-Protocol-Version` header → HTTP `400` _carrying_ a JSON-RPC
   error**, code `-32022` (`UnsupportedProtocolVersion`), whose `data.supported` lists our three
@@ -1260,12 +1289,15 @@ specification agrees explicitly - it tells intermediaries to check that `MCP-Pro
 **Modern era (`2026-07-28`) only:**
 
 - `MCP-Protocol-Version` header disagreeing with the body's
-  `_meta["io.modelcontextprotocol/protocolVersion"]`, or a missing required header - which for us
-  means `MCP-Protocol-Version`, `Mcp-Method` on every request, and `Mcp-Name` on `tools/call` -
-  → **HTTP `400` with JSON-RPC `-32020` (`HeaderMismatch`)**. `Mcp-Method` mirrors `method`;
-  `Mcp-Name` mirrors `params.name`. A value carried in the `=?base64?…?=` sentinel form is decoded
-  before comparison. We annotate no tool parameter with `x-mcp-header`, so no `Mcp-Param-*` header
-  is ever expected and any that arrives is ignored.
+  `_meta["io.modelcontextprotocol/protocolVersion"]`, or a missing required header - which in this
+  era means `Mcp-Method` on every request and `Mcp-Name` on `tools/call` - → **HTTP `400` with
+  JSON-RPC `-32020` (`HeaderMismatch`)**. The specification lists `MCP-Protocol-Version` among the
+  same missing-header conditions; here it cannot be the one that is missing, because a request
+  reaches this era only by carrying it (§9.1 row 2), and a request without it was already answered
+  with this same `400` and this same `-32020` during era resolution (§9.1 row 5). `Mcp-Method`
+  mirrors `method`; `Mcp-Name` mirrors `params.name`. A value carried in the `=?base64?…?=`
+  sentinel form is decoded before comparison. We annotate no tool parameter with `x-mcp-header`, so
+  no `Mcp-Param-*` header is ever expected and any that arrives is ignored.
 - A request missing a required `_meta` field (`protocolVersion`, `clientCapabilities`) → `400`
   with `-32602`.
 - A request needing a client capability it did not declare → `400` with `-32021`
