@@ -23,7 +23,7 @@
  */
 
 // Must come first: it configures the price ids `#/lib/plans` reads at import.
-import { TEST_PRICE_IDS } from './prices.fixture'
+import { TEST_PRODUCT_IDS } from './prices.fixture'
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
@@ -86,7 +86,7 @@ describe('authority order', () => {
           status,
           plan: 'business',
           seats: 10,
-          providerProductId: TEST_PRICE_IDS.crewMonthly,
+          providerProductId: TEST_PRODUCT_IDS.crewMonthly,
           seatLimit: 10,
           storageLimitBytes: 50 * GIGABYTE,
         }),
@@ -102,7 +102,7 @@ describe('authority order', () => {
   it('1 — the provider product id outranks the tier column', () => {
     // A row whose tier says Free but whose product id says Crew is being charged for Crew.
     const resolved = resolveLimitsFromRow(
-      row({ plan: 'free', seats: 4, providerProductId: TEST_PRICE_IDS.crewMonthly }),
+      row({ plan: 'free', seats: 4, providerProductId: TEST_PRODUCT_IDS.crewMonthly }),
     )
 
     expect(resolved.planId).toBe('crew')
@@ -241,7 +241,7 @@ const ROW_CASES: ReadonlyArray<{
       ...ceilingColumns(ceilingsForPlan('crew', 10)),
       status: 'active',
       seats: 10,
-      providerProductId: TEST_PRICE_IDS.crewMonthly,
+      providerProductId: TEST_PRODUCT_IDS.crewMonthly,
     },
     expectPlanId: 'crew',
   },
@@ -251,7 +251,7 @@ const ROW_CASES: ReadonlyArray<{
       ...ceilingColumns(ceilingsForPlan('solo', 1)),
       status: 'trialing',
       seats: 1,
-      providerProductId: TEST_PRICE_IDS.soloMonthly,
+      providerProductId: TEST_PRODUCT_IDS.soloMonthly,
     },
     expectPlanId: 'solo',
   },
@@ -287,7 +287,7 @@ const ROW_CASES: ReadonlyArray<{
       ...ceilingColumns(ceilingsForPlan('crew', 10)),
       status: 'active',
       seats: 10,
-      providerProductId: TEST_PRICE_IDS.crewMonthly,
+      providerProductId: TEST_PRODUCT_IDS.crewMonthly,
       seatLimit: 2,
       storageLimitBytes: 1 * GIGABYTE,
     },
@@ -299,7 +299,7 @@ const ROW_CASES: ReadonlyArray<{
       ...ceilingColumns(ceilingsForPlan('crew', 10)),
       status: 'canceled',
       seats: 10,
-      providerProductId: TEST_PRICE_IDS.crewMonthly,
+      providerProductId: TEST_PRODUCT_IDS.crewMonthly,
     },
     expectPlanId: 'free',
   },

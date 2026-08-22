@@ -41,7 +41,7 @@ import { Route as AppTripsIndexRouteImport } from './routes/_app/trips/index'
 import { Route as AppTripsTripIdRouteRouteImport } from './routes/_app/trips/$tripId/route'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiDevSeedRouteImport } from './routes/api/dev/seed'
-import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
+import { Route as ApiPolarWebhookRouteImport } from './routes/api/polar/webhook'
 import { Route as ApiTilesSplatRouteImport } from './routes/api/tiles/$'
 import { Route as ApiTripRoomTripIdRouteImport } from './routes/api/trip-room/$tripId'
 import { Route as AppTripsTripIdIndexRouteImport } from './routes/_app/trips/$tripId/index'
@@ -215,9 +215,9 @@ const ApiDevSeedRoute = ApiDevSeedRouteImport.update({
   path: '/api/dev/seed',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
-  id: '/api/stripe/webhook',
-  path: '/api/stripe/webhook',
+const ApiPolarWebhookRoute = ApiPolarWebhookRouteImport.update({
+  id: '/api/polar/webhook',
+  path: '/api/polar/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTilesSplatRoute = ApiTilesSplatRouteImport.update({
@@ -300,7 +300,7 @@ export interface FileRoutesByFullPath {
   '/settings/security': typeof AppSettingsSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
-  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/polar/webhook': typeof ApiPolarWebhookRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
   '/api/trip-room/$tripId': typeof ApiTripRoomTripIdRoute
   '/collections/': typeof AppCollectionsIndexRoute
@@ -342,7 +342,7 @@ export interface FileRoutesByTo {
   '/settings/security': typeof AppSettingsSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
-  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/polar/webhook': typeof ApiPolarWebhookRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
   '/api/trip-room/$tripId': typeof ApiTripRoomTripIdRoute
   '/collections': typeof AppCollectionsIndexRoute
@@ -388,7 +388,7 @@ export interface FileRoutesById {
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
-  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/polar/webhook': typeof ApiPolarWebhookRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
   '/api/trip-room/$tripId': typeof ApiTripRoomTripIdRoute
   '/_app/collections/': typeof AppCollectionsIndexRoute
@@ -434,7 +434,7 @@ export interface FileRouteTypes {
     | '/settings/security'
     | '/api/auth/$'
     | '/api/dev/seed'
-    | '/api/stripe/webhook'
+    | '/api/polar/webhook'
     | '/api/tiles/$'
     | '/api/trip-room/$tripId'
     | '/collections/'
@@ -476,7 +476,7 @@ export interface FileRouteTypes {
     | '/settings/security'
     | '/api/auth/$'
     | '/api/dev/seed'
-    | '/api/stripe/webhook'
+    | '/api/polar/webhook'
     | '/api/tiles/$'
     | '/api/trip-room/$tripId'
     | '/collections'
@@ -521,7 +521,7 @@ export interface FileRouteTypes {
     | '/_app/settings/security'
     | '/api/auth/$'
     | '/api/dev/seed'
-    | '/api/stripe/webhook'
+    | '/api/polar/webhook'
     | '/api/tiles/$'
     | '/api/trip-room/$tripId'
     | '/_app/collections/'
@@ -553,7 +553,7 @@ export interface RootRouteChildren {
   authAcceptInvitationInvitationIdRoute: typeof authAcceptInvitationInvitationIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiDevSeedRoute: typeof ApiDevSeedRoute
-  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  ApiPolarWebhookRoute: typeof ApiPolarWebhookRoute
   ApiTilesSplatRoute: typeof ApiTilesSplatRoute
   ApiTripRoomTripIdRoute: typeof ApiTripRoomTripIdRoute
 }
@@ -784,11 +784,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDevSeedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/stripe/webhook': {
-      id: '/api/stripe/webhook'
-      path: '/api/stripe/webhook'
-      fullPath: '/api/stripe/webhook'
-      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+    '/api/polar/webhook': {
+      id: '/api/polar/webhook'
+      path: '/api/polar/webhook'
+      fullPath: '/api/polar/webhook'
+      preLoaderRoute: typeof ApiPolarWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/tiles/$': {
@@ -959,7 +959,7 @@ const rootRouteChildren: RootRouteChildren = {
   authAcceptInvitationInvitationIdRoute: authAcceptInvitationInvitationIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiDevSeedRoute: ApiDevSeedRoute,
-  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  ApiPolarWebhookRoute: ApiPolarWebhookRoute,
   ApiTilesSplatRoute: ApiTilesSplatRoute,
   ApiTripRoomTripIdRoute: ApiTripRoomTripIdRoute,
 }

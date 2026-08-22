@@ -11,7 +11,7 @@
  */
 
 // Must come first: it configures the product ids `#/lib/plans` reads at import.
-import { TEST_PRICE_IDS } from './prices.fixture'
+import { TEST_PRODUCT_IDS } from './prices.fixture'
 
 import { describe, expect, it } from 'vitest'
 
@@ -198,7 +198,7 @@ describe('resolveSubscriptionPlan', () => {
 
   it('fixes a flat plan at one seat whatever Polar reports', () => {
     const solo = polarSubscription({
-      product_id: TEST_PRICE_IDS.soloYearly,
+      product_id: TEST_PRODUCT_IDS.soloYearly,
       seats: 6,
     })
 
@@ -239,7 +239,7 @@ describe('subscriptionRecordFromPolar', () => {
       seats: 4,
       providerCustomerId: TEST_CUSTOMER_ID,
       providerSubscriptionId: TEST_SUBSCRIPTION_ID,
-      providerProductId: TEST_PRICE_IDS.crewMonthly,
+      providerProductId: TEST_PRODUCT_IDS.crewMonthly,
       currentPeriodStart: new Date('2026-08-01T00:00:00.000Z'),
       currentPeriodEnd: new Date('2026-09-01T00:00:00.000Z'),
       cancelAtPeriodEnd: false,
@@ -369,10 +369,35 @@ describe('orders', () => {
 /* --------------------------------------------------------------- the port itself */
 
 describe('the ported surface', () => {
-  it('no longer exposes the line-item helpers a Polar subscription cannot have', () => {
-    expect(mapping).not.toHaveProperty('resolveSubscriptionItem')
-    expect(mapping).not.toHaveProperty('periodOf')
-    expect(mapping).not.toHaveProperty('subscriptionIdFromInvoice')
-    expect(mapping).not.toHaveProperty('subscriptionRecordFromStripe')
+  /**
+   * An exact list rather than a set of absence checks. Absence checks have to spell
+   * the names of the model this file replaced, which keeps those names alive in the
+   * tree forever; equality catches the same regression — a line-item helper coming
+   * back for an object that has no line items — and catches a lost export too.
+   */
+  it('exports exactly the Polar mapping surface', () => {
+    expect(Object.keys(mapping).sort()).toEqual(
+      [
+        'POLAR_CHECKOUT_STATUSES',
+        'POLAR_ORDER_STATUSES',
+        'POLAR_SUBSCRIPTION_STATUSES',
+        'cancelledRecord',
+        'fromPolarTimestamp',
+        'organizationIdFromMetadata',
+        'organizationIdFromOrder',
+        'organizationIdFromSubscription',
+        'polarCheckoutSchema',
+        'polarCustomerSessionSchema',
+        'polarMetadataSchema',
+        'polarOrderInvoiceSchema',
+        'polarOrderListSchema',
+        'polarOrderSchema',
+        'polarSubscriptionSchema',
+        'resolveSubscriptionPlan',
+        'subscriptionIdFromOrder',
+        'subscriptionRecordFromPolar',
+        'toSubscriptionStatus',
+      ].sort(),
+    )
   })
 })

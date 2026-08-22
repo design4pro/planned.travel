@@ -17,14 +17,14 @@
 
 import { vi } from 'vitest'
 
-export const TEST_PRICE_IDS = {
+export const TEST_PRODUCT_IDS = {
   soloMonthly: '3f1d9c02-7a64-4b18-9e5c-8d1a2f0b6c31',
   soloYearly: '5b8e4a17-2c93-4f60-8d7a-1e6b3c920f45',
   crewMonthly: '9a2c7e50-64b1-4d83-a15f-7c0e2b48d963',
   crewYearly: 'c47b1d38-0f56-4a29-b3e8-52d9a610f7be',
 } as const
 
-vi.stubEnv('VITE_POLAR_PRODUCT_SOLO_MONTHLY', TEST_PRICE_IDS.soloMonthly)
-vi.stubEnv('VITE_POLAR_PRODUCT_SOLO_YEARLY', TEST_PRICE_IDS.soloYearly)
-vi.stubEnv('VITE_POLAR_PRODUCT_CREW_MONTHLY', TEST_PRICE_IDS.crewMonthly)
-vi.stubEnv('VITE_POLAR_PRODUCT_CREW_YEARLY', TEST_PRICE_IDS.crewYearly)
+vi.stubEnv('VITE_POLAR_PRODUCT_SOLO_MONTHLY', TEST_PRODUCT_IDS.soloMonthly)
+vi.stubEnv('VITE_POLAR_PRODUCT_SOLO_YEARLY', TEST_PRODUCT_IDS.soloYearly)
+vi.stubEnv('VITE_POLAR_PRODUCT_CREW_MONTHLY', TEST_PRODUCT_IDS.crewMonthly)
+vi.stubEnv('VITE_POLAR_PRODUCT_CREW_YEARLY', TEST_PRODUCT_IDS.crewYearly)

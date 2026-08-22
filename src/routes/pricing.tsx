@@ -75,7 +75,12 @@ const FAQ: ReadonlyArray<FaqItem> = [
   {
     question: 'What happens when a trial ends?',
     answer:
-      'Nothing is deleted. The paid modules lock, your trips stay exactly where they are, and everything unlocks again the moment you subscribe. You are never asked for a card to start a trial.',
+      'The trial converts into the paid plan. Polar takes a payment method when the trial starts and charges it the day the trial ends, so cancel before then and you are never charged. Nothing is ever deleted either way: the paid modules lock, your trips stay exactly where they are, and everything unlocks again the moment you subscribe.',
+  },
+  {
+    question: 'Who am I actually buying from?',
+    answer:
+      'Polar. They are our merchant of record, which means they sell the subscription to you as our reseller, take the payment, issue the invoice in their own name, and determine, collect and remit the sales tax or VAT your country charges. Refunds and card disputes are settled with them too. We are still the people who run the service and answer your email.',
   },
   {
     question: 'Can I change plan halfway through a trip?',
@@ -174,9 +179,10 @@ function PlansBand({
         <PlanCardGrid interval={interval} className="mt-12" />
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-caption text-ink-4">
-          Prices in US dollars, excluding any sales tax or VAT your country adds
-          — Stripe shows that at checkout. Cancel whenever you like, from inside
-          the product.
+          Prices in US dollars, excluding sales tax or VAT. Polar is our
+          merchant of record: it is the seller on your invoice, and it works out
+          what your country charges, adds it at checkout and remits it. Cancel
+          whenever you like, from inside the product.
         </p>
       </div>
     </section>

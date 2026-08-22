@@ -10,7 +10,7 @@
  */
 
 // Must come first: it configures the product ids `#/lib/plans` reads at import.
-import { TEST_PRICE_IDS } from './prices.fixture'
+import { TEST_PRODUCT_IDS } from './prices.fixture'
 
 import { describe, expect, it } from 'vitest'
 
@@ -18,6 +18,8 @@ import {
   CHECKOUT_PATH,
   CUSTOMER_SESSION_PATH,
   INVOICE_HISTORY_LIMIT,
+  INVOICE_POLL_DELAYS_MS,
+  INVOICE_RETRY_AFTER_MS,
   ORDERS_PATH,
   annualisedAmount,
   billingMetadata,
@@ -38,6 +40,8 @@ import {
   prorationFor,
   resolvePlanSelection,
 } from '../checkout'
+import { planStateCacheKey } from '../entitlements'
+import { PolarApiError } from '../polar'
 import { BillingForbiddenError } from '../types'
 import { PLANS } from '#/lib/plans'
 import {
@@ -51,6 +55,7 @@ import {
   TEST_SUBSCRIPTION_ID,
   billingIdentity,
   createHarness,
+  invoiceNotRenderedYet,
   polarOrder,
   subscriptionRecord,
 } from './harness'
@@ -84,6 +89,24 @@ function bodyOf(request: PolarRequest): Record<string, unknown> {
   return body as Record<string, unknown>
 }
 
+/** A sleep that records what it was asked to wait and waits none of it. */
+function recordingSleep(): { sleep: (ms: number) => Promise<void>; waits: Array<number> } {
+  const waits: Array<number> = []
+  return {
+    waits,
+    sleep: async (ms) => {
+      waits.push(ms)
+    },
+  }
+}
+
+/** Seeds a plan-state entry so an invalidation has something to remove. */
+function warmPlanCache(harness: ReturnType<typeof createHarness>): string {
+  const key = planStateCacheKey(TEST_ORG_ID)
+  harness.cache.entries.set(key, '{"planId":"crew"}')
+  return key
+}
+
 /* ----------------------------------------------------------------- selection */
 
 describe('resolvePlanSelection', () => {
@@ -93,7 +116,7 @@ describe('resolvePlanSelection', () => {
       interval: 'yearly',
     })
 
-    expect(selection.price.productId).toBe(TEST_PRICE_IDS.soloYearly)
+    expect(selection.price.productId).toBe(TEST_PRODUCT_IDS.soloYearly)
     expect(selection.price.amount).toBe(PLANS.solo.prices.yearly?.amount)
   })
 
@@ -271,7 +294,7 @@ describe('buildCheckoutParams', () => {
   it('names the product as an array of UUIDs and the org as the customer', () => {
     const body = params(crew)
 
-    expect(body.products).toEqual([TEST_PRICE_IDS.crewMonthly])
+    expect(body.products).toEqual([TEST_PRODUCT_IDS.crewMonthly])
     expect(body.external_customer_id).toBe(TEST_ORG_ID)
     expect(body.currency).toBe('usd')
     expect(body.success_url).toBe(checkoutSuccessUrl(TEST_APP_URL))
@@ -411,7 +434,7 @@ describe('createCheckoutSession', () => {
 
     const call = callTo(harness.calls, 'POST', CHECKOUT_PATH)
     const body = bodyOf(call)
-    expect(body.products).toEqual([TEST_PRICE_IDS.crewMonthly])
+    expect(body.products).toEqual([TEST_PRODUCT_IDS.crewMonthly])
     expect(body.external_customer_id).toBe(TEST_ORG_ID)
     expect(body.seats).toBe(4)
   })
@@ -634,7 +657,7 @@ describe('changePlan', () => {
       `/v1/subscriptions/${TEST_SUBSCRIPTION_ID}`,
     )
     expect(bodyOf(call)).toEqual({
-      product_id: TEST_PRICE_IDS.soloYearly,
+      product_id: TEST_PRODUCT_IDS.soloYearly,
       proration_behavior: 'next_period',
     })
   })
@@ -667,13 +690,14 @@ describe('changePlan', () => {
     expect(harness.calls).toHaveLength(2)
     expect(bodyOf(harness.calls[0])).toHaveProperty(
       'product_id',
-      TEST_PRICE_IDS.crewYearly,
+      TEST_PRODUCT_IDS.crewYearly,
     )
     expect(bodyOf(harness.calls[1])).toHaveProperty('seats', 9)
   })
 
   it('asks Polar for nothing when nothing actually changed', async () => {
     const harness = createHarness({ record: subscriptionRecord({ seats: 4 }) })
+    const key = warmPlanCache(harness)
 
     await changePlan(harness.runtime, billingIdentity(), {
       planId: 'crew',
@@ -682,6 +706,39 @@ describe('changePlan', () => {
     })
 
     expect(harness.calls).toHaveLength(0)
+    // Nothing was written, so nothing may be evicted: a no-op that cleared the
+    // cache would make every visit to the screen a cold D1 read.
+    expect(harness.cache.entries.has(key)).toBe(true)
+    expect(harness.cache.deletes).toBe(0)
+  })
+
+  it('drops the cached plan state before redirecting to the billing screen', async () => {
+    const harness = createHarness({ record: subscriptionRecord() })
+    const key = warmPlanCache(harness)
+
+    const redirect = await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'solo',
+      interval: 'yearly',
+    })
+
+    // ARCHITECTURE §4 rule 2. The URL below is our own billing screen, so a plan
+    // state left in KV would render the plan we just moved off for the whole TTL.
+    expect(redirect.url).toBe(planChangedUrl(TEST_APP_URL))
+    expect(harness.cache.entries.has(key)).toBe(false)
+    expect(harness.cache.deletes).toBe(1)
+  })
+
+  it('drops the cached plan state on a seats-only change too', async () => {
+    const harness = createHarness({ record: subscriptionRecord({ seats: 4 }) })
+    const key = warmPlanCache(harness)
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 8,
+    })
+
+    expect(harness.cache.entries.has(key)).toBe(false)
   })
 
   it('resolves the new product on the server even when the seats are absurd', async () => {
@@ -807,11 +864,11 @@ describe('orderInvoiceUrl', () => {
       polar: { order: polarOrder({ is_invoice_generated: false }) },
     })
 
-    const url = await orderInvoiceUrl(harness.runtime, TEST_ORG_ID, {
+    const result = await orderInvoiceUrl(harness.runtime, TEST_ORG_ID, {
       orderId: TEST_ORDER_ID,
     })
 
-    expect(url).toBe(TEST_INVOICE_PDF_URL)
+    expect(result).toEqual({ state: 'ready', url: TEST_INVOICE_PDF_URL })
     expect(harness.calls.map((call) => `${call.method} ${call.path}`)).toEqual([
       `GET /v1/orders/${TEST_ORDER_ID}`,
       `POST /v1/orders/${TEST_ORDER_ID}/invoice`,
@@ -822,11 +879,104 @@ describe('orderInvoiceUrl', () => {
   it('skips the generate call for an order that already has one', async () => {
     const harness = createHarness({ polar: { order: polarOrder() } })
 
-    await orderInvoiceUrl(harness.runtime, TEST_ORG_ID, {
-      orderId: TEST_ORDER_ID,
-    })
+    await expect(
+      orderInvoiceUrl(harness.runtime, TEST_ORG_ID, { orderId: TEST_ORDER_ID }),
+    ).resolves.toEqual({ state: 'ready', url: TEST_INVOICE_PDF_URL })
 
     expect(harness.calls.map((call) => call.method)).toEqual(['GET', 'GET'])
+  })
+
+  /**
+   * The generate call answers 202 and Polar renders asynchronously, so the very
+   * first download of any invoice used to race the renderer and 404. This is that
+   * exact delivery: 202, then a 404, then the document.
+   */
+  it('waits out the 202 → 404 → 200 render race instead of failing on the 404', async () => {
+    const harness = createHarness({
+      polar: {
+        order: polarOrder({ is_invoice_generated: false }),
+        orderInvoiceSequence: [
+          invoiceNotRenderedYet(),
+          { url: TEST_INVOICE_PDF_URL },
+        ],
+      },
+    })
+    const { sleep, waits } = recordingSleep()
+
+    const result = await orderInvoiceUrl(
+      harness.runtime,
+      TEST_ORG_ID,
+      { orderId: TEST_ORDER_ID },
+      { sleep },
+    )
+
+    expect(result).toEqual({ state: 'ready', url: TEST_INVOICE_PDF_URL })
+    expect(harness.calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      `GET /v1/orders/${TEST_ORDER_ID}`,
+      `POST /v1/orders/${TEST_ORDER_ID}/invoice`,
+      `GET /v1/orders/${TEST_ORDER_ID}/invoice`,
+      `GET /v1/orders/${TEST_ORDER_ID}/invoice`,
+    ])
+    expect(waits).toEqual([INVOICE_POLL_DELAYS_MS[0]])
+  })
+
+  it('reports a still-rendering invoice as pending rather than waiting forever', async () => {
+    const harness = createHarness({
+      polar: {
+        order: polarOrder({ is_invoice_generated: false }),
+        orderInvoiceSequence: [invoiceNotRenderedYet()],
+      },
+    })
+    const { sleep, waits } = recordingSleep()
+
+    const result = await orderInvoiceUrl(
+      harness.runtime,
+      TEST_ORG_ID,
+      { orderId: TEST_ORDER_ID },
+      { sleep },
+    )
+
+    expect(result).toEqual({
+      state: 'pending',
+      retryAfterMs: INVOICE_RETRY_AFTER_MS,
+    })
+    // One read per delay, plus the read that precedes the first wait — and then it
+    // gives the request path back rather than holding it open.
+    expect(
+      harness.calls.filter((call) => call.path.endsWith('/invoice')),
+    ).toHaveLength(INVOICE_POLL_DELAYS_MS.length + 2)
+    expect(waits).toEqual([...INVOICE_POLL_DELAYS_MS])
+    expect(harness.logs).toContainEqual({
+      level: 'warn',
+      message: 'billing.invoice.still_generating',
+      fields: {
+        organizationId: TEST_ORG_ID,
+        orderId: TEST_ORDER_ID,
+        attempts: INVOICE_POLL_DELAYS_MS.length + 1,
+      },
+    })
+  })
+
+  it('never reads a failure that is not a 404 as "still generating"', async () => {
+    const harness = createHarness({
+      polar: {
+        order: polarOrder(),
+        orderInvoiceSequence: [
+          new PolarApiError(500, 'boom', 'Polar GET failed with 500.'),
+        ],
+      },
+    })
+    const { sleep, waits } = recordingSleep()
+
+    await expect(
+      orderInvoiceUrl(
+        harness.runtime,
+        TEST_ORG_ID,
+        { orderId: TEST_ORDER_ID },
+        { sleep },
+      ),
+    ).rejects.toBeInstanceOf(PolarApiError)
+    expect(waits).toEqual([])
   })
 
   it('refuses an order that belongs to another workspace', async () => {

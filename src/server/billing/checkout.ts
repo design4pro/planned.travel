@@ -30,6 +30,7 @@ import {
   planById,
   requirePrice,
 } from '#/lib/plans'
+import { invalidateEntitlements } from './entitlements'
 import {
   organizationIdFromOrder,
   polarCheckoutSchema,
@@ -39,6 +40,7 @@ import {
   polarOrderSchema,
   polarSubscriptionSchema,
 } from './mapping'
+import { PolarApiError } from './polar'
 import { BillingForbiddenError, canManageBilling } from './types'
 
 import type { BillingInterval, Plan, PlanId, PlanPrice } from '#/lib/plans'
@@ -498,6 +500,12 @@ export function prorationFor(
  * `SubscriptionUpdate` union — a body carrying both matches the seats variant and
  * drops the product — so a plan change that also resizes the crew is two calls, the
  * product first.
+ *
+ * This is the one purchase path that mutates entitlement state inside our own
+ * request rather than leaving it to the webhook, so it is also the one that owes
+ * the cache invalidation ARCHITECTURE §4 rule 2 requires: the redirect below lands
+ * on our billing screen, and a cached plan state left in place would let that
+ * screen render the plan the customer just moved off for the rest of the TTL.
  */
 export async function changePlan(
   runtime: BillingRuntime,
@@ -545,6 +553,15 @@ export async function changePlan(
     )
   }
 
+  const changed = productChanged || seatsChanged
+
+  // Drop the cached plan state before returning, not after: the browser follows the
+  // URL below immediately, and KV would otherwise keep answering with the plan we
+  // just left until the TTL lapses or the webhook lands, whichever came first.
+  if (changed) {
+    await invalidateEntitlements(runtime, identity.organizationId)
+  }
+
   runtime.logger.info('billing.plan_change.applied', {
     organizationId: identity.organizationId,
     from: record.planId,
@@ -552,7 +569,7 @@ export async function changePlan(
     interval: selection.interval,
     seats: selection.seats,
     proration,
-    changed: productChanged || seatsChanged,
+    changed,
   })
 
   return { url: planChangedUrl(runtime.appUrl), surface: 'applied' }
@@ -624,19 +641,86 @@ export async function listRecentInvoices(
 }
 
 /**
+ * How long we are willing to hold the request path open while Polar renders a PDF,
+ * and how that wait is spread.
+ *
+ * `POST /v1/orders/{id}/invoice` answers 202 and renders asynchronously, so a `GET`
+ * issued straight after it 404s every time — which is exactly what the first
+ * download of any invoice used to do. Four reads spread over about a second and a
+ * half cover the generation Polar finishes quickly, which is nearly all of them,
+ * without turning one click into a hung tab when it does not.
+ */
+export const INVOICE_POLL_DELAYS_MS: ReadonlyArray<number> = [150, 400, 900]
+
+/** What we ask the browser to wait before trying a pending invoice again. */
+export const INVOICE_RETRY_AFTER_MS = 4_000
+
+/**
+ * The outcome of asking for one order's PDF.
+ *
+ * Discriminated rather than `string | null`, because "not written yet" is a state
+ * the billing screen renders rather than a failure: the document is on its way and
+ * the same click succeeds a moment later. Every other Polar failure still throws.
+ */
+export type OrderInvoiceResult =
+  | { readonly state: 'ready'; readonly url: string }
+  | { readonly state: 'pending'; readonly retryAfterMs: number }
+
+export interface OrderInvoiceOptions {
+  /** Injected in tests so the backoff can be asserted without waiting it out. */
+  readonly sleep?: (ms: number) => Promise<void>
+}
+
+function defaultSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+/**
+ * One read of the rendered document. `null` means Polar has not written it yet.
+ *
+ * Only a 404, and only from this endpoint, is read that way: a 403, a 429 or a 500
+ * propagates, because reporting "still generating" over an outage would hide it
+ * from the customer and from the logs at the same time.
+ */
+async function readInvoiceUrl(
+  runtime: BillingRuntime,
+  orderId: string,
+): Promise<string | null> {
+  try {
+    const invoice = polarOrderInvoiceSchema.parse(
+      await runtime.polar.request({
+        method: 'GET',
+        path: `${ORDERS_PATH}${orderId}/invoice`,
+      }),
+    )
+    return invoice.url
+  } catch (error) {
+    if (error instanceof PolarApiError && error.status === 404) return null
+    throw error
+  }
+}
+
+/**
  * The PDF for one order, fetched only when a customer asks for it.
  *
- * Three things happen in order, and the first is the one that matters: the order is
- * read back and checked against the organization asking for it, because the order id
- * arrived from a browser. Then Polar generates the document if it has not already —
- * a 202, so the URL is asked for separately — and the signed URL is returned.
+ * The first thing that happens is the one that matters: the order is read back and
+ * checked against the organization asking for it, because the order id arrived from
+ * a browser. Polar is then asked to render the document if it has not already, and
+ * the URL is polled on a bounded backoff — the render is asynchronous, so the read
+ * that follows a fresh 202 legitimately answers 404 and is retried rather than
+ * believed. When the budget runs out the caller gets `pending`, never a thrown 404
+ * and never a wait without an end.
  */
 export async function orderInvoiceUrl(
   runtime: BillingRuntime,
   organizationId: string,
   input: OrderInvoiceInput,
-): Promise<string> {
+  options: OrderInvoiceOptions = {},
+): Promise<OrderInvoiceResult> {
   const { orderId } = orderInvoiceInput.parse(input)
+  const sleep = options.sleep ?? defaultSleep
 
   const order = polarOrderSchema.parse(
     await runtime.polar.request({
@@ -656,12 +740,22 @@ export async function orderInvoiceUrl(
     })
   }
 
-  const invoice = polarOrderInvoiceSchema.parse(
-    await runtime.polar.request({
-      method: 'GET',
-      path: `${ORDERS_PATH}${orderId}/invoice`,
-    }),
-  )
+  for (const delay of INVOICE_POLL_DELAYS_MS) {
+    const url = await readInvoiceUrl(runtime, orderId)
+    if (url !== null) return { state: 'ready', url }
+    await sleep(delay)
+  }
 
-  return invoice.url
+  // One last look after the final wait, so the budget is spent on reading rather
+  // than on sleeping.
+  const settled = await readInvoiceUrl(runtime, orderId)
+  if (settled !== null) return { state: 'ready', url: settled }
+
+  runtime.logger.warn('billing.invoice.still_generating', {
+    organizationId,
+    orderId,
+    attempts: INVOICE_POLL_DELAYS_MS.length + 1,
+  })
+
+  return { state: 'pending', retryAfterMs: INVOICE_RETRY_AFTER_MS }
 }

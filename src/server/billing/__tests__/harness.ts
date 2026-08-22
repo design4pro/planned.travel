@@ -14,8 +14,9 @@
  */
 
 // Must come first: it configures the product ids `#/lib/plans` reads at import.
-import { TEST_PRICE_IDS } from './prices.fixture'
+import { TEST_PRODUCT_IDS } from './prices.fixture'
 import { ceilingsForPlan } from '../limits'
+import { PolarApiError } from '../polar'
 import { EMPTY_USAGE } from '../types'
 
 import type { PolarOrder, PolarSubscription } from '../mapping'
@@ -216,7 +217,7 @@ export function subscriptionRecord(
     seats: 4,
     providerCustomerId: TEST_CUSTOMER_ID,
     providerSubscriptionId: TEST_SUBSCRIPTION_ID,
-    providerProductId: TEST_PRICE_IDS.crewMonthly,
+    providerProductId: TEST_PRODUCT_IDS.crewMonthly,
     currentPeriodStart: new Date('2026-08-01T00:00:00.000Z'),
     currentPeriodEnd: new Date('2026-09-01T00:00:00.000Z'),
     cancelAtPeriodEnd: false,
@@ -240,7 +241,7 @@ export function polarSubscription(
   return {
     id: TEST_SUBSCRIPTION_ID,
     status: 'active',
-    product_id: TEST_PRICE_IDS.crewMonthly,
+    product_id: TEST_PRODUCT_IDS.crewMonthly,
     seats: 4,
     current_period_start: '2026-08-01T00:00:00Z',
     current_period_end: '2026-09-01T00:00:00Z',
@@ -381,6 +382,13 @@ export interface PolarStubSeed {
   readonly order?: unknown
   /** Body of `GET /v1/orders/{id}/invoice`. */
   readonly orderInvoice?: unknown
+  /**
+   * Successive answers to `GET /v1/orders/{id}/invoice`, one per call, so the
+   * 202-then-404-then-200 render race can be reproduced exactly. An `Error` entry
+   * is thrown rather than returned, and the last entry repeats once the list runs
+   * out — which is what lets a test hold the endpoint at 404 forever.
+   */
+  readonly orderInvoiceSequence?: ReadonlyArray<unknown>
   /** Thrown by every request, for the paths that must degrade rather than fail. */
   readonly error?: Error
 }
@@ -390,12 +398,25 @@ function defaultCheckout(): unknown {
     id: TEST_CHECKOUT_ID,
     status: 'open',
     url: TEST_CHECKOUT_URL,
-    product_id: TEST_PRICE_IDS.crewMonthly,
+    product_id: TEST_PRODUCT_IDS.crewMonthly,
     external_customer_id: TEST_ORG_ID,
     customer_id: null,
     seats: null,
     metadata: {},
   }
+}
+
+/**
+ * The 404 Polar answers with between accepting a generate request and finishing the
+ * render. Built from the real error class so the code under test branches on
+ * `status` exactly as it does in production.
+ */
+export function invoiceNotRenderedYet(): PolarApiError {
+  return new PolarApiError(
+    404,
+    '{"error":"ResourceNotFound","detail":"Invoice not generated"}',
+    'Polar GET /v1/orders/{id}/invoice failed with 404.',
+  )
 }
 
 function defaultCustomerSession(): unknown {
@@ -419,6 +440,7 @@ export function createPolarStub(seed: PolarStubSeed = {}): {
   calls: Array<PolarRequest>
 } {
   const calls: Array<PolarRequest> = []
+  let invoiceReads = 0
 
   const polar: PolarClient = {
     async request(request: PolarRequest): Promise<unknown> {
@@ -443,6 +465,15 @@ export function createPolarStub(seed: PolarStubSeed = {}): {
       if (path.startsWith('/v1/orders/') && path.endsWith('/invoice')) {
         // The generate call answers 202 with no body at all.
         if (method === 'POST') return null
+
+        const sequence = seed.orderInvoiceSequence
+        if (sequence !== undefined && sequence.length > 0) {
+          const answer = sequence[Math.min(invoiceReads, sequence.length - 1)]
+          invoiceReads += 1
+          if (answer instanceof Error) throw answer
+          return answer
+        }
+
         return seed.orderInvoice ?? { url: TEST_INVOICE_PDF_URL }
       }
       if (method === 'GET' && path.startsWith('/v1/orders/')) {

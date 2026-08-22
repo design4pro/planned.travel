@@ -224,7 +224,7 @@ export function MarketingFooter() {
           <p>&copy; {COPYRIGHT_YEAR} planned.travel</p>
           <p className="sm:text-right">
             Runs on Cloudflare Workers. Map data &copy; OpenStreetMap
-            contributors. Payments handled by Stripe.
+            contributors. Sold and invoiced by Polar, our merchant of record.
           </p>
         </div>
       </div>

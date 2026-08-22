@@ -1,17 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import {
   ArrowUpRight,
   Check,
   CreditCard,
   ExternalLink,
+  FileDown,
   FileText,
   Infinity as InfinityIcon,
   Lock,
   Receipt,
   Sparkles,
 } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { ErrorPanel } from '#/components/layout/error-state'
 import {
@@ -26,6 +26,7 @@ import {
   Separator,
   SimpleSelect,
   Skeleton,
+  Spinner,
   Table,
   TableBody,
   TableCell,
@@ -52,12 +53,14 @@ import {
 } from '#/lib/plans'
 import { formatDate, formatMoneyMinor } from '../-lib/format'
 import {
+  downloadInvoice,
   loadBilling,
   openBillingPortal,
   startPlanChange,
 } from '../-server/billing'
 import { SettingsSection } from '../-ui/settings-nav'
 
+import type { BadgeTone } from '#/components/ui'
 import type { BillingInterval, BillingState, Plan, QuotaKey } from '#/lib/plans'
 import type { InvoiceSummary } from '#/server/billing/checkout'
 import type { Entitlements, QuotaState } from '#/server/billing/types'
@@ -67,11 +70,26 @@ import type { ReactNode } from 'react'
 
 type CheckoutOutcome = 'complete' | 'cancelled'
 
+/**
+ * The three ways a customer arrives here from somewhere else.
+ *
+ * Each outcome keeps its own literal rather than collapsing to `true`. The
+ * router re-serialises whatever `validateSearch` returns back into the address
+ * bar, so a boolean wrote `?portal=true`, which the next validation no longer
+ * recognised — the parameter was dropped on the spot and the alert never
+ * rendered. Round-tripping the word keeps the URL shareable and idempotent.
+ */
 interface BillingSearch {
-  /** Set by the URLs Stripe Checkout redirects back to. */
+  /** Set by the URLs Polar Checkout returns the browser to. */
   readonly checkout?: CheckoutOutcome
-  /** Set when the customer comes back out of the Billing Portal. */
-  readonly portal?: true
+  /** Set when the customer comes back out of the hosted customer portal. */
+  readonly portal?: 'complete'
+  /**
+   * Set by a plan change we applied ourselves. Polar has no hosted "confirm the
+   * proration" page, so `changePlan()` patches the subscription server-side and
+   * sends the browser back here rather than out to the provider.
+   */
+  readonly plan?: 'changed'
 }
 
 function readOutcome(value: unknown): CheckoutOutcome | undefined {
@@ -81,7 +99,8 @@ function readOutcome(value: unknown): CheckoutOutcome | undefined {
 export const Route = createFileRoute('/_app/settings/billing')({
   validateSearch: (search: Record<string, unknown>): BillingSearch => ({
     checkout: readOutcome(search.checkout),
-    portal: search.portal === 'complete' ? true : undefined,
+    portal: search.portal === 'complete' ? 'complete' : undefined,
+    plan: search.plan === 'changed' ? 'changed' : undefined,
   }),
   loader: () => loadBilling(),
   pendingComponent: BillingPending,
@@ -96,6 +115,30 @@ export const Route = createFileRoute('/_app/settings/billing')({
 /** Where a plan sits in the catalogue — how upgrade is told from downgrade. */
 function rankOf(planId: Plan['id']): number {
   return PLAN_LIST.findIndex((plan) => plan.id === planId)
+}
+
+/** Longest provider sentence the screen will repeat verbatim. */
+const MAX_FAILURE_MESSAGE = 200
+
+/**
+ * What a rejected call says on screen.
+ *
+ * The server functions already replace an operator-facing provider error with a
+ * customer sentence, so what usually arrives here is prose worth showing. A
+ * rejection from the Zod validator is the exception: it serialises as JSON and
+ * is a diagnostic, not a sentence, so anything that opens like a structure or
+ * runs past a readable length is replaced rather than pasted into the alert.
+ */
+function messageOf(cause: unknown): string {
+  const message = cause instanceof Error ? cause.message.trim() : ''
+  const readable =
+    message !== '' &&
+    message.length <= MAX_FAILURE_MESSAGE &&
+    !message.startsWith('[') &&
+    !message.startsWith('{')
+  return readable
+    ? message
+    : 'The billing provider rejected that request. Try again in a moment.'
 }
 
 const STATUS_BADGES: {
@@ -123,7 +166,15 @@ function daysFromNow(iso: string | null): number | null {
   return Math.floor((at - Date.now()) / 86_400_000)
 }
 
-/** The one line under the plan name that says what happens next, and when. */
+/**
+ * The one line under the plan name that says what happens next, and when.
+ *
+ * The trial lines are deliberately not the ones a card-optional provider would
+ * write. Polar collects a payment method at checkout and charges it when the
+ * trial ends unless the customer cancels first, so the honest sentence is when
+ * the charge lands — not an invitation to "add a card later" that the customer
+ * has already been through.
+ */
 function renewalLine(state: Entitlements): string {
   const on = formatDate(state.currentPeriodEnd)
 
@@ -131,8 +182,8 @@ function renewalLine(state: Entitlements): string {
     const left = daysFromNow(state.trialEndsAt)
     if (left !== null && left >= 0) {
       return left === 0
-        ? 'Your trial ends today. Add a card to keep every module unlocked.'
-        : `Your trial ends in ${left} ${left === 1 ? 'day' : 'days'}. No card needed until then.`
+        ? 'Your trial ends today. The first charge follows unless you cancel before then.'
+        : `Your trial ends in ${left} ${left === 1 ? 'day' : 'days'}, and the first charge follows unless you cancel before then.`
     }
     return 'Your trial has ended.'
   }
@@ -145,7 +196,7 @@ function renewalLine(state: Entitlements): string {
 
   switch (state.status) {
     case 'past_due':
-      return 'The last payment did not go through. Update your card to avoid losing the paid modules.'
+      return 'The last payment did not go through. Update your card in the billing portal to avoid losing the paid modules.'
     case 'unpaid':
       return 'This subscription is unpaid and the paid modules are locked.'
     case 'paused':
@@ -154,7 +205,7 @@ function renewalLine(state: Entitlements): string {
     case 'incomplete_expired':
       return 'Choose a plan below to unlock reservations, the journal and offline maps again.'
     case 'incomplete':
-      return 'Stripe is still waiting for this payment to be confirmed.'
+      return 'Polar has not confirmed this payment yet.'
     case 'none':
       return 'Two trips at a time, on the house. Upgrade whenever you outgrow it.'
     case 'active':
@@ -166,7 +217,7 @@ function renewalLine(state: Entitlements): string {
 /**
  * The interval this workspace is billed on.
  *
- * The interval comes from the Stripe subscription and can be missing — a record
+ * The interval comes from the Polar subscription and can be missing — a record
  * imported without one, a plan an operator set by hand, a webhook that has not landed
  * yet. A paid plan is quoted monthly everywhere else in the product, so that is the
  * fallback. Without it the header priced a paid plan at "Free" directly above a renewal
@@ -209,6 +260,17 @@ function quotaHint(key: QuotaKey, quota: QuotaState): string {
 
 /* --------------------------------------------------------------------- page */
 
+/** Which section a failed provider call belongs to, so it is shown in place. */
+type FailureScope = 'plan' | 'portal'
+
+interface Failure {
+  readonly scope: FailureScope
+  readonly message: string
+}
+
+/** The single portal action's pending key. Polar mints one URL, so there is one. */
+const PORTAL_KEY = 'portal'
+
 function BillingPage() {
   const data = Route.useLoaderData()
   const search = Route.useSearch()
@@ -226,29 +288,33 @@ function BillingPage() {
     clampSeats(PLANS.crew, Math.max(state.seats, state.usage.seats)),
   )
   const [pending, setPending] = useState<string | null>(null)
+  const [failure, setFailure] = useState<Failure | null>(null)
 
-  /** Hands the browser to Stripe, keeping the button that asked in a pending state. */
-  async function goToStripe(
+  /**
+   * Hands the browser over, keeping the button that asked in a pending state.
+   *
+   * A rejection is rendered where the action lives rather than thrown at a
+   * toast: a 422 on a seat count belongs next to the seat control, and a portal
+   * that cannot be minted belongs under the button that tried.
+   */
+  async function handOff(
     key: string,
+    scope: FailureScope,
     run: () => Promise<{ url: string }>,
   ): Promise<void> {
     setPending(key)
+    setFailure(null)
     try {
       const { url } = await run()
       window.location.assign(url)
     } catch (cause) {
       setPending(null)
-      toast.error('Stripe could not be reached', {
-        description:
-          cause instanceof Error
-            ? cause.message
-            : 'Check your connection and try again in a moment.',
-      })
+      setFailure({ scope, message: messageOf(cause) })
     }
   }
 
   function choosePlan(target: Plan): void {
-    void goToStripe(`plan:${target.id}`, () =>
+    void handOff(`plan:${target.id}`, 'plan', () =>
       startPlanChange({
         data: {
           planId: target.id,
@@ -259,11 +325,12 @@ function BillingPage() {
     )
   }
 
-  function toPortal(
-    key: string,
-    intent: 'home' | 'paymentMethod' | 'cancel',
-  ): void {
-    void goToStripe(key, () => openBillingPortal({ data: { intent } }))
+  function openPortal(): void {
+    void handOff(PORTAL_KEY, 'portal', () => openBillingPortal({ data: {} }))
+  }
+
+  function refresh(): void {
+    void router.invalidate()
   }
 
   return (
@@ -272,20 +339,9 @@ function BillingPage() {
         <Alert
           tone="success"
           title="Payment received"
-          actions={
-            <Button
-              variant="ghost"
-              size="sm"
-              shape="pill"
-              onClick={() => {
-                void router.invalidate()
-              }}
-            >
-              Refresh
-            </Button>
-          }
+          actions={<RefreshButton onClick={refresh} />}
         >
-          Your new plan is being applied. It appears here the moment Stripe
+          Your new plan is being applied. It appears here the moment Polar
           confirms it — usually within a few seconds.
         </Alert>
       ) : null}
@@ -296,24 +352,24 @@ function BillingPage() {
         </Alert>
       ) : null}
 
-      {search.portal === true ? (
+      {search.plan === 'changed' ? (
+        <Alert
+          tone="success"
+          title="Plan updated"
+          actions={<RefreshButton onClick={refresh} />}
+        >
+          The change is already in force with Polar, who will invoice the
+          difference. The summary below catches up within a minute.
+        </Alert>
+      ) : null}
+
+      {search.portal === 'complete' ? (
         <Alert
           tone="info"
-          title="Back from Stripe"
-          actions={
-            <Button
-              variant="ghost"
-              size="sm"
-              shape="pill"
-              onClick={() => {
-                void router.invalidate()
-              }}
-            >
-              Refresh
-            </Button>
-          }
+          title="Back from the billing portal"
+          actions={<RefreshButton onClick={refresh} />}
         >
-          Anything you changed there lands here as soon as Stripe confirms it.
+          Anything you changed there lands here as soon as Polar confirms it.
         </Alert>
       ) : null}
 
@@ -333,46 +389,60 @@ function BillingPage() {
         plan={plan}
         canManage={data.canManage}
         pending={pending}
-        onManagePayment={() =>
-          toPortal('portal:paymentMethod', 'paymentMethod')
-        }
-        onCancel={() => toPortal('portal:cancel', 'cancel')}
+        failure={failure?.scope === 'portal' ? failure.message : null}
+        onManageBilling={openPortal}
       />
 
       <UsageMeters state={state} />
 
       <SettingsSection
         title="Plans"
-        description="Change plan whenever you like. Upgrades are prorated to the day; a downgrade waits until the period you have paid for is over."
+        description="Change plan whenever you like. Upgrades are invoiced immediately and prorated to the day; a downgrade waits until the period you have paid for is over."
         actions={<IntervalToggle value={interval} onChange={setInterval} />}
       >
-        <div className="grid gap-4 xl:grid-cols-3">
-          {PLAN_LIST.map((candidate) => (
-            <PlanOption
-              key={candidate.id}
-              plan={candidate}
-              interval={interval}
-              state={state}
-              canManage={data.canManage}
-              pending={pending}
-              seats={seats}
-              onSeatsChange={setSeats}
-              onChoose={() => choosePlan(candidate)}
-              onDowngradeToFree={() => toPortal('portal:cancel', 'cancel')}
-            />
-          ))}
+        <div className="flex flex-col gap-4">
+          {failure?.scope === 'plan' ? (
+            <Alert tone="danger" title="That change was not applied" size="sm">
+              {failure.message}
+            </Alert>
+          ) : null}
+
+          <div className="grid gap-4 xl:grid-cols-3">
+            {PLAN_LIST.map((candidate) => (
+              <PlanOption
+                key={candidate.id}
+                plan={candidate}
+                interval={interval}
+                state={state}
+                canManage={data.canManage}
+                pending={pending}
+                seats={seats}
+                onSeatsChange={setSeats}
+                onChoose={() => choosePlan(candidate)}
+                onOpenPortal={openPortal}
+              />
+            ))}
+          </div>
         </div>
       </SettingsSection>
 
       <InvoiceHistory
         invoices={data.invoices}
         unavailable={data.invoicesUnavailable}
-        hasCustomer={state.hasStripeCustomer}
+        hasCustomer={state.hasProviderCustomer}
         canManage={data.canManage}
-        pending={pending}
-        onOpenPortal={() => toPortal('portal:home', 'home')}
+        portalPending={pending === PORTAL_KEY}
+        onOpenPortal={openPortal}
       />
     </div>
+  )
+}
+
+function RefreshButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button variant="ghost" size="sm" shape="pill" onClick={onClick}>
+      Refresh
+    </Button>
   )
 }
 
@@ -383,18 +453,18 @@ function PlanHero({
   plan,
   canManage,
   pending,
-  onManagePayment,
-  onCancel,
+  failure,
+  onManageBilling,
 }: {
   state: Entitlements
   plan: Plan
   canManage: boolean
   pending: string | null
-  onManagePayment: () => void
-  onCancel: () => void
+  failure: string | null
+  onManageBilling: () => void
 }) {
+  const hintId = useId()
   const badge = STATUS_BADGES[state.status]
-  const paid = plan.id !== FREE_PLAN.id
   const interval = billedInterval(state)
   const price = interval === null ? null : plan.prices[interval]
   const total =
@@ -453,32 +523,43 @@ function PlanHero({
           </div>
 
           {canManage ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col items-start gap-2 lg:items-end">
+              {/*
+                One action, because Polar mints one short-lived token for the
+                portal home and every card, address, VAT number, receipt and
+                cancellation lives behind it. Polar is Merchant of Record, so
+                the invoice details belong where the invoice is issued.
+              */}
               <Button
                 variant="inverse"
                 size="sm"
                 shape="pill"
                 icon={<CreditCard />}
-                disabled={!state.hasStripeCustomer}
-                loading={pending === 'portal:paymentMethod'}
-                loadingLabel="Opening Stripe"
-                onClick={onManagePayment}
+                iconAfter={<ExternalLink />}
+                disabled={!state.hasProviderCustomer}
+                loading={pending === PORTAL_KEY}
+                loadingLabel="Opening the billing portal"
+                aria-describedby={hintId}
+                onClick={onManageBilling}
               >
-                Payment method
+                Manage billing
               </Button>
-              {paid ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  shape="pill"
-                  className="text-inverse-muted hover:bg-inverse-surface hover:text-inverse-on"
-                  loading={pending === 'portal:cancel'}
-                  loadingLabel="Opening Stripe"
-                  onClick={onCancel}
+              <p
+                id={hintId}
+                className="max-w-[40ch] text-caption leading-relaxed text-inverse-muted lg:text-right"
+              >
+                {state.hasProviderCustomer
+                  ? 'Cards, billing address, VAT number, receipts and cancellation live with Polar, who issues the invoice.'
+                  : 'There is no billing profile yet. Choosing a paid plan below creates one, and the portal opens from then on.'}
+              </p>
+              {failure === null ? null : (
+                <p
+                  role="alert"
+                  className="max-w-[40ch] rounded-lg bg-danger-soft px-2.5 py-1.5 text-caption leading-relaxed text-danger lg:text-right"
                 >
-                  Cancel plan
-                </Button>
-              ) : null}
+                  {failure}
+                </p>
+              )}
             </div>
           ) : null}
         </div>
@@ -600,6 +681,32 @@ function IntervalToggle({
 
 const SEAT_OPTION_LABEL = (count: number): string => `${count} members`
 
+/**
+ * Why a seat count can be refused before it is sent.
+ *
+ * `clampSeats()` exists so a tampered request cannot buy a plan at the wrong
+ * price, but a silent clamp on screen is a different thing: a workspace of
+ * twelve that sees "10 members" selected would buy ten seats and discover the
+ * shortfall from an invoice. Both cases are named here and both block the
+ * button, so nothing is quietly rounded on the customer's behalf.
+ */
+function seatProblem(
+  plan: Plan,
+  chosen: number,
+  members: number,
+): string | null {
+  if (!plan.seatBased) return null
+  const max = plan.seatRange.max
+  if (max !== null && members > max) {
+    const over = members - max
+    return `This workspace has ${members} members and ${plan.name} bills at most ${max}. Remove ${over} ${over === 1 ? 'member' : 'members'} before switching.`
+  }
+  if (chosen < members) {
+    return `You have ${members} members. Choose at least ${members} seats — Polar rejects a subscription with fewer seats than assignments.`
+  }
+  return null
+}
+
 function PlanOption({
   plan,
   interval,
@@ -609,7 +716,7 @@ function PlanOption({
   seats,
   onSeatsChange,
   onChoose,
-  onDowngradeToFree,
+  onOpenPortal,
 }: {
   plan: Plan
   interval: BillingInterval
@@ -619,23 +726,29 @@ function PlanOption({
   seats: number
   onSeatsChange: (next: number) => void
   onChoose: () => void
-  onDowngradeToFree: () => void
+  /** The Free card cancels, and cancelling is portal-only. */
+  onOpenPortal: () => void
 }) {
   const price = plan.prices[interval]
   const isCurrentPlan = plan.id === state.planId
   const isCurrent =
     isCurrentPlan && (price === null || billedInterval(state) === interval)
   const delta = rankOf(plan.id) - rankOf(state.planId)
-  const busy = pending === `plan:${plan.id}` || pending === 'portal:cancel'
+  const isFree = plan.id === FREE_PLAN.id
+  const busy =
+    pending === `plan:${plan.id}` || (isFree && pending === PORTAL_KEY)
 
   const seatCount = plan.seatBased ? seats : plan.seatRange.min
   const total =
     price === null ? 0 : price.amount * (price.perSeat ? seatCount : 1)
+  const seatError = isCurrent
+    ? null
+    : seatProblem(plan, seatCount, state.usage.seats)
 
   const label = isCurrent
     ? 'Current plan'
-    : plan.id === FREE_PLAN.id
-      ? 'Move to Free'
+    : isFree
+      ? 'Cancel in the portal'
       : isCurrentPlan
         ? interval === 'yearly'
           ? 'Switch to yearly'
@@ -708,11 +821,16 @@ function PlanOption({
         </div>
 
         {plan.seatBased && !isCurrent ? (
-          <Field label="Members" hint="Change it any time — billing follows.">
+          <Field
+            label="Members"
+            hint="Change it any time — billing follows."
+            error={seatError}
+          >
             <SimpleSelect
               size="sm"
               options={seatOptions}
               value={String(seatCount)}
+              invalid={seatError !== null}
               onValueChange={(next) => onSeatsChange(Number.parseInt(next, 10))}
             />
           </Field>
@@ -740,11 +858,13 @@ function PlanOption({
           size="sm"
           shape="pill"
           block
-          disabled={!canManage || isCurrent}
+          disabled={!canManage || isCurrent || seatError !== null}
           loading={busy}
-          loadingLabel="Opening Stripe"
-          iconAfter={isCurrent ? undefined : <ArrowUpRight />}
-          onClick={plan.id === FREE_PLAN.id ? onDowngradeToFree : onChoose}
+          loadingLabel={isFree ? 'Opening the billing portal' : 'Opening Polar'}
+          iconAfter={
+            isCurrent ? undefined : isFree ? <ExternalLink /> : <ArrowUpRight />
+          }
+          onClick={isFree ? onOpenPortal : onChoose}
         >
           {label}
         </Button>
@@ -755,17 +875,101 @@ function PlanOption({
 
 /* ------------------------------------------------------------------ invoices */
 
+/**
+ * Polar's order vocabulary, each with its own designed badge.
+ *
+ * A refund is neither a failure nor a success, so it gets `info` rather than
+ * borrowing the danger tone from an unpaid invoice — an accountant reading this
+ * table needs the two told apart at a glance.
+ */
 const INVOICE_TONES: {
   readonly [K in InvoiceSummary['status']]: {
-    label: string
-    tone: 'success' | 'warning' | 'danger' | 'neutral'
+    readonly label: string
+    readonly tone: BadgeTone
   }
 } = {
-  paid: { label: 'Paid', tone: 'success' },
-  open: { label: 'Due', tone: 'warning' },
   draft: { label: 'Draft', tone: 'neutral' },
+  pending: { label: 'Pending', tone: 'warning' },
+  paid: { label: 'Paid', tone: 'success' },
+  refunded: { label: 'Refunded', tone: 'info' },
+  partially_refunded: { label: 'Part refunded', tone: 'info' },
   void: { label: 'Void', tone: 'neutral' },
-  uncollectible: { label: 'Uncollectible', tone: 'danger' },
+}
+
+const INVOICE_DESCRIPTION = 'Every order for this workspace, newest first.'
+
+/**
+ * The per-row document action, shared by the mobile stack and the table.
+ *
+ * Three states, because Polar has three: a draft order has no invoice at all, a
+ * document Polar is still rendering is a wait rather than a failure, and
+ * anything else is one click away from a signed URL.
+ */
+function InvoiceDocument({
+  invoice,
+  fetching,
+  generating,
+  onOpen,
+}: {
+  invoice: InvoiceSummary
+  fetching: boolean
+  generating: boolean
+  onOpen: (invoice: InvoiceSummary) => Promise<void>
+}) {
+  if (invoice.status === 'draft') {
+    return (
+      <>
+        <span aria-hidden className="text-caption text-ink-4">
+          &mdash;
+        </span>
+        <span className="sr-only">No invoice while this order is a draft</span>
+      </>
+    )
+  }
+
+  if (generating) {
+    return (
+      <span
+        role="status"
+        className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-1 text-caption font-medium whitespace-nowrap text-warning"
+      >
+        <Spinner size="xs" label={null} />
+        Preparing
+        <span className="sr-only">
+          Polar is still rendering invoice {invoice.number}. The download
+          returns in a few seconds.
+        </span>
+      </span>
+    )
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      shape="pill"
+      icon={<FileDown />}
+      loading={fetching}
+      loadingLabel={
+        invoice.invoiceGenerated
+          ? 'Fetching the invoice'
+          : 'Polar is preparing the invoice'
+      }
+      onClick={() => {
+        void onOpen(invoice)
+      }}
+    >
+      <span className="sr-only">Invoice {invoice.number} as </span>
+      PDF
+    </Button>
+  )
+}
+
+/** What the section says above the table after a per-row action answered. */
+interface InvoiceNotice {
+  readonly tone: 'info' | 'danger'
+  readonly title: string
+  readonly body: string
 }
 
 function InvoiceHistory({
@@ -773,47 +977,104 @@ function InvoiceHistory({
   unavailable,
   hasCustomer,
   canManage,
-  pending,
+  portalPending,
   onOpenPortal,
 }: {
   invoices: ReadonlyArray<InvoiceSummary>
-  /** Stripe did not answer for the receipts. Plan and usage are still live. */
+  /** Polar did not answer for the orders. Plan and usage are still live. */
   unavailable: boolean
   hasCustomer: boolean
   canManage: boolean
-  pending: string | null
+  portalPending: boolean
   onOpenPortal: () => void
 }) {
-  const portalButton = canManage ? (
-    <Button
-      variant="secondary"
-      size="sm"
-      shape="pill"
-      icon={<Receipt />}
-      disabled={!hasCustomer}
-      loading={pending === 'portal:home'}
-      loadingLabel="Opening Stripe"
-      onClick={onOpenPortal}
-    >
-      Billing portal
-    </Button>
-  ) : null
+  const [pendingId, setPendingId] = useState<string | null>(null)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [notice, setNotice] = useState<InvoiceNotice | null>(null)
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Stripe failing is a state of *this section*, not of the page. Leading the
+  useEffect(
+    () => () => {
+      if (retryTimer.current !== null) clearTimeout(retryTimer.current)
+    },
+    [],
+  )
+
+  /**
+   * Resolve one order's PDF on click.
+   *
+   * The tab is opened by the click itself and pointed at the signed URL once
+   * Polar has produced the document, because a popup opened after an await is
+   * blocked. When the browser refuses the tab anyway, the current one is used.
+   * A document Polar has not finished rendering is a state, not a failure: the
+   * row says so and the action comes back on its own.
+   */
+  async function openInvoice(invoice: InvoiceSummary): Promise<void> {
+    setPendingId(invoice.id)
+    setNotice(null)
+    const tab = window.open('about:blank', '_blank')
+    if (tab !== null) tab.opener = null
+    try {
+      const result = await downloadInvoice({ data: { orderId: invoice.id } })
+      if (result.state === 'ready') {
+        if (tab === null) window.location.assign(result.url)
+        else tab.location.replace(result.url)
+        return
+      }
+
+      tab?.close()
+      setGeneratingId(invoice.id)
+      setNotice({
+        tone: 'info',
+        title: 'Polar is still writing that invoice',
+        body: `Invoice ${invoice.number} is being rendered. The download comes back on its own in a few seconds.`,
+      })
+      if (retryTimer.current !== null) clearTimeout(retryTimer.current)
+      retryTimer.current = setTimeout(() => {
+        retryTimer.current = null
+        setGeneratingId(null)
+      }, result.retryAfterMs)
+    } catch (cause) {
+      tab?.close()
+      setNotice({
+        tone: 'danger',
+        title: 'That invoice did not open',
+        body: messageOf(cause),
+      })
+    } finally {
+      setPendingId(null)
+    }
+  }
+
+  const portalAction =
+    canManage && hasCustomer ? (
+      <Button
+        variant="secondary"
+        size="sm"
+        shape="pill"
+        icon={<Receipt />}
+        iconAfter={<ExternalLink />}
+        loading={portalPending}
+        loadingLabel="Opening the billing portal"
+        onClick={onOpenPortal}
+      >
+        All receipts
+      </Button>
+    ) : null
+
+  // Polar failing is a state of *this section*, not of the page. Leading the
   // screen with a warning banner made a working subscription look broken; the
   // plan, the usage meters and the plan picker above are all live either way.
   if (unavailable) {
     return (
-      <SettingsSection
-        title="Invoices"
-        description="Every receipt for this workspace, newest first."
-        actions={portalButton}
-      >
+      <SettingsSection title="Orders" description={INVOICE_DESCRIPTION}>
         <EmptyState
           tone="warning"
+          variant="filled"
           icon={<Receipt />}
-          title="Receipts are not loading"
-          description="Stripe did not answer in time for the history. Everything above is live; open the billing portal for the full record, or come back in a moment."
+          title="Orders are not loading"
+          description="Polar did not answer in time for the history. Everything above is live — try again in a moment, or read the full record in the billing portal."
+          action={portalAction}
         />
       </SettingsSection>
     )
@@ -822,17 +1083,18 @@ function InvoiceHistory({
   if (invoices.length === 0) {
     return (
       <SettingsSection
-        title="Invoices"
-        description="Every receipt for this workspace, newest first."
-        actions={portalButton}
+        title="Orders"
+        description={INVOICE_DESCRIPTION}
+        actions={portalAction}
       >
         <EmptyState
+          variant="dashed"
           icon={<FileText />}
-          title="No invoices yet"
+          title="No orders yet"
           description={
             hasCustomer
-              ? 'The first receipt appears here as soon as a billing period closes.'
-              : 'This workspace has never been charged. Choose a paid plan and the receipts will collect here.'
+              ? 'The first invoice appears here as soon as a billing period closes.'
+              : 'This workspace has never been charged. Choose a paid plan and the invoices collect here.'
           }
         />
       </SettingsSection>
@@ -841,66 +1103,105 @@ function InvoiceHistory({
 
   return (
     <SettingsSection
-      title="Invoices"
-      description="Every receipt for this workspace, newest first."
-      actions={portalButton}
+      title="Orders"
+      description={INVOICE_DESCRIPTION}
+      actions={portalAction}
       className="overflow-hidden"
     >
-      <Table label="Invoice history" containerClassName="-mx-1">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Invoice</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead className="hidden sm:table-cell">Period</TableHead>
-            <TableHead numeric>Amount</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="sr-only">Receipt</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+      <div className="flex flex-col gap-4">
+        {notice === null ? null : (
+          <Alert tone={notice.tone} title={notice.title} size="sm">
+            {notice.body}
+          </Alert>
+        )}
+
+        {/*
+          Two layouts rather than one that scrolls. A five-column table at
+          360px is a desktop table with a scrollbar bolted on: the date wraps
+          to three lines and the status badge sits off-screen. The stack below
+          is the same data read top to bottom, and the table takes over the
+          moment there is room for it.
+        */}
+        <ul className="flex flex-col gap-2 sm:hidden">
           {invoices.map((invoice) => {
             const badge = INVOICE_TONES[invoice.status]
             return (
-              <TableRow key={invoice.id}>
-                <TableCell className="font-medium text-ink tabular-nums">
-                  {invoice.number}
-                </TableCell>
-                <TableCell muted>
-                  {formatDate(invoice.createdAt) ?? '—'}
-                </TableCell>
-                <TableCell muted className="hidden sm:table-cell">
-                  {formatDate(invoice.periodStart) ?? '—'} —{' '}
-                  {formatDate(invoice.periodEnd) ?? '—'}
-                </TableCell>
-                <TableCell numeric>
-                  {formatMoneyMinor(invoice.total, invoice.currency)}
-                </TableCell>
-                <TableCell>
+              <li
+                key={invoice.id}
+                className="rounded-lg border border-edge-faint bg-surface-2 p-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 text-label font-medium break-all text-ink tabular-nums">
+                    {invoice.number}
+                  </p>
+                  <p className="shrink-0 text-label font-semibold text-ink tabular-nums">
+                    {formatMoneyMinor(invoice.total, invoice.currency)}
+                  </p>
+                </div>
+                <p className="mt-0.5 text-caption text-ink-3 tabular-nums">
+                  {formatDate(invoice.createdAt) ?? 'Date unknown'}
+                </p>
+                <div className="mt-3 flex items-center justify-between gap-3">
                   <Badge tone={badge.tone} size="sm">
                     {badge.label}
                   </Badge>
-                </TableCell>
-                <TableCell align="end">
-                  {invoice.hostedUrl === null && invoice.pdfUrl === null ? (
-                    <span className="text-caption text-ink-4">—</span>
-                  ) : (
-                    <Button asChild variant="ghost" size="sm" shape="pill">
-                      <a
-                        href={invoice.hostedUrl ?? invoice.pdfUrl ?? '#'}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                      >
-                        View
-                        <ExternalLink aria-hidden />
-                      </a>
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
+                  <InvoiceDocument
+                    invoice={invoice}
+                    fetching={pendingId === invoice.id}
+                    generating={generatingId === invoice.id}
+                    onOpen={openInvoice}
+                  />
+                </div>
+              </li>
             )
           })}
-        </TableBody>
-      </Table>
+        </ul>
+
+        <div className="hidden sm:block">
+          <Table label="Order history" containerClassName="-mx-1">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Invoice</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead numeric>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="sr-only">Document</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {invoices.map((invoice) => {
+                const badge = INVOICE_TONES[invoice.status]
+                return (
+                  <TableRow key={invoice.id}>
+                    <TableCell className="font-medium break-all text-ink tabular-nums">
+                      {invoice.number}
+                    </TableCell>
+                    <TableCell muted className="whitespace-nowrap">
+                      {formatDate(invoice.createdAt) ?? 'Date unknown'}
+                    </TableCell>
+                    <TableCell numeric>
+                      {formatMoneyMinor(invoice.total, invoice.currency)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge tone={badge.tone} size="sm">
+                        {badge.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell align="end">
+                      <InvoiceDocument
+                        invoice={invoice}
+                        fetching={pendingId === invoice.id}
+                        generating={generatingId === invoice.id}
+                        onOpen={openInvoice}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
     </SettingsSection>
   )
 }
@@ -954,6 +1255,18 @@ function BillingPending() {
           </Card>
         ))}
       </div>
+
+      <Card className="space-y-3">
+        <Bar className="h-4 w-28" />
+        {[0, 1, 2, 3].map((row) => (
+          <div key={row} className="flex items-center justify-between gap-4">
+            <Bar className="h-3 w-28" />
+            <Bar className="h-3 w-20" />
+            <Bar className="h-3 w-16" />
+            <Bar className="h-5 w-14" />
+          </div>
+        ))}
+      </Card>
     </div>
   )
 }
