@@ -40,8 +40,10 @@ import type { EffectiveLimits } from './limits'
 import type {
   BillingContext,
   BillingRuntime,
+  CachedPendingPlanChange,
   CachedPlanState,
   Entitlements,
+  PendingPlanChange,
   QuotaState,
   SubscriptionRecord,
   UsageSnapshot,
@@ -55,9 +57,9 @@ export const PLAN_STATE_CACHE_TTL_SECONDS = 60
 
 /**
  * Bumped whenever `CachedPlanState` changes shape, so old entries are ignored.
- * `v3` is the rename of the customer flag to `hasProviderCustomer`.
+ * `v4` adds the scheduled change Polar has accepted but not yet applied.
  */
-const PLAN_STATE_CACHE_VERSION = 'v3'
+const PLAN_STATE_CACHE_VERSION = 'v4'
 
 export function planStateCacheKey(organizationId: string): string {
   return `billing:plan:${PLAN_STATE_CACHE_VERSION}:${organizationId}`
@@ -70,6 +72,12 @@ const storedCeilingsSchema = z.object({
   overrides: z.partialRecord(z.enum(USAGE_METRICS), z.number().int().min(0)),
 })
 
+const pendingChangeSchema = z.object({
+  planId: z.enum(PLAN_IDS),
+  interval: z.enum(BILLING_INTERVALS),
+  effectiveAt: z.string(),
+})
+
 const planStateSchema = z.object({
   planId: z.enum(PLAN_IDS),
   status: z.enum(BILLING_STATES),
@@ -79,6 +87,7 @@ const planStateSchema = z.object({
   currentPeriodEnd: z.string().nullable(),
   trialEndsAt: z.string().nullable(),
   hasProviderCustomer: z.boolean(),
+  pendingChange: pendingChangeSchema.nullable(),
   ceilings: storedCeilingsSchema.nullable(),
 })
 
@@ -105,7 +114,22 @@ export function planStateFromRecord(record: SubscriptionRecord | null): CachedPl
     currentPeriodEnd: toIso(record?.currentPeriodEnd ?? null),
     trialEndsAt: toIso(record?.trialEndsAt ?? null),
     hasProviderCustomer: (record?.providerCustomerId ?? null) !== null,
+    // A lapsed subscription schedules nothing, for the same reason it grandfathers
+    // nothing: whatever Polar had queued against it went with the entitlement.
+    pendingChange: entitled ? cachedPendingChange(record.pendingChange ?? null) : null,
     ceilings: entitled ? record.ceilings : null,
+  }
+}
+
+/** Narrow a scheduled change to the JSON-safe shape the cache entry holds. */
+function cachedPendingChange(
+  pending: PendingPlanChange | null,
+): CachedPendingPlanChange | null {
+  if (pending === null) return null
+  return {
+    planId: pending.planId,
+    interval: pending.interval,
+    effectiveAt: pending.effectiveAt.toISOString(),
   }
 }
 
@@ -223,7 +247,32 @@ export async function entitlements(ctx: BillingContext): Promise<Entitlements> {
     trialEndsAt: state.trialEndsAt,
     trialing: isTrialing(state, ctx.runtime.now()),
     hasProviderCustomer: state.hasProviderCustomer,
+    pendingChange: pendingChangeOf(state, ctx.runtime.now()),
   }
+}
+
+/**
+ * The scheduled change, revived from the cache entry — or `null` when there is none
+ * left to report.
+ *
+ * A date that has already passed is dropped rather than rendered: Polar applies the
+ * change at the start of the next period, so past that instant the plan fields above
+ * are the change, and a banner still promising it is a lie the customer can check.
+ * An unparseable instant is dropped for the same reason a malformed cache entry is a
+ * miss — a scheduled change we cannot date is one we cannot describe.
+ */
+function pendingChangeOf(
+  state: CachedPlanState,
+  now: Date,
+): PendingPlanChange | null {
+  const pending = state.pendingChange
+  if (pending === null) return null
+
+  const effectiveAt = new Date(pending.effectiveAt)
+  if (Number.isNaN(effectiveAt.getTime())) return null
+  if (effectiveAt.getTime() <= now.getTime()) return null
+
+  return { planId: pending.planId, interval: pending.interval, effectiveAt }
 }
 
 function isTrialing(state: CachedPlanState, now: Date): boolean {

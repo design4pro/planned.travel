@@ -50,6 +50,17 @@ export interface SubscriptionRecord {
   readonly trialEndsAt: Date | null
   readonly canceledAt: Date | null
   /**
+   * A change Polar has accepted but not yet applied — see {@link PendingPlanChange}.
+   *
+   * Optional because the `subscriptions` table has no column for it yet: the change
+   * path sets it on the record it writes, the store drops it on the way to D1, and
+   * the row reader cannot bring it back. Adding `pending_plan`, `pending_interval`
+   * and `pending_effective_at` alongside the mapper's `pending_update` is what makes
+   * a scheduled change survive a page reload rather than only the redirect that
+   * follows it.
+   */
+  readonly pendingChange?: PendingPlanChange | null
+  /**
    * The per-tenant ceilings the row carries — the last word on effective limits, and
    * the reason a customer can be grandfathered above the plan they pay for. A record
    * synthesised from a Polar subscription rather than read back from the table
@@ -252,10 +263,32 @@ export interface QuotaState {
 }
 
 /**
+ * A plan change Polar has scheduled for the start of the next billing period.
+ *
+ * Polar applies an upgrade at once and defers a downgrade: the subscription keeps
+ * its current product, seats and entitlements until `effectiveAt`, and carries a
+ * non-null `pending_update` describing what it becomes. So this is what the customer
+ * moves *to*, never what they are on now — a screen that renders it as the current
+ * plan tells them they have lost a plan they are still paying for.
+ *
+ * `effectiveAt` is a real `Date` rather than the ISO string every other instant on
+ * {@link Entitlements} uses. TanStack Start serialises server-function results with
+ * seroval, which encodes `Date` natively, so it arrives in the browser as a `Date`.
+ * The cached half keeps its ISO twin — see {@link CachedPendingPlanChange} — because
+ * KV round-trips through `JSON.stringify`.
+ */
+export interface PendingPlanChange {
+  readonly planId: PlanId
+  readonly interval: BillingInterval
+  readonly effectiveAt: Date
+}
+
+/**
  * The whole entitlement picture for one organization.
  *
- * Every field is JSON-serializable so it can cross the server-function boundary
- * untouched — dates are ISO strings, unlimited quotas are `null`.
+ * Every field crosses the server-function boundary untouched — dates are ISO
+ * strings, unlimited quotas are `null`. `pendingChange.effectiveAt` is the one
+ * documented exception and the reason it is one is written on it.
  */
 export interface Entitlements {
   readonly organizationId: string
@@ -279,6 +312,27 @@ export interface Entitlements {
   /** True while a trial is running, so the UI can count down. */
   readonly trialing: boolean
   readonly hasProviderCustomer: boolean
+  /**
+   * The change Polar will apply at the start of the next period, or `null`.
+   *
+   * Non-null only while a scheduled change is genuinely still ahead of us: an
+   * immediate upgrade leaves it `null`, and so does a scheduled change whose date
+   * has already passed, because at that point Polar has applied it and the fields
+   * above already describe it.
+   */
+  readonly pendingChange: PendingPlanChange | null
+}
+
+/**
+ * {@link PendingPlanChange} as it survives the KV round trip: the instant is an
+ * ISO-8601 string, because the cache entry is `JSON.stringify`d and a `Date` would
+ * come back a string and fail the schema — which `loadPlanState()` would then treat
+ * as a miss, quietly turning the cache off instead of throwing.
+ */
+export interface CachedPendingPlanChange {
+  readonly planId: PlanId
+  readonly interval: BillingInterval
+  readonly effectiveAt: string
 }
 
 /**
@@ -295,6 +349,8 @@ export interface CachedPlanState {
   readonly currentPeriodEnd: string | null
   readonly trialEndsAt: string | null
   readonly hasProviderCustomer: boolean
+  /** The scheduled change, or `null`. Dropped with the plan when a status lapses. */
+  readonly pendingChange: CachedPendingPlanChange | null
   /**
    * The row's own ceilings, cached alongside the plan because they change on exactly
    * the same events. `null` for a tenant with nothing to escape with — no row, or a row

@@ -28,6 +28,7 @@ import {
   clampSeats,
   isEntitlingStatus,
   planById,
+  planForProductId,
   requirePrice,
 } from '#/lib/plans'
 import { invalidateEntitlements } from './entitlements'
@@ -39,15 +40,17 @@ import {
   polarOrderListSchema,
   polarOrderSchema,
   polarSubscriptionSchema,
+  subscriptionRecordFromPolar,
 } from './mapping'
 import { PolarApiError } from './polar'
 import { BillingForbiddenError, canManageBilling } from './types'
 
 import type { BillingInterval, Plan, PlanId, PlanPrice } from '#/lib/plans'
-import type { PolarOrder, PolarOrderStatus } from './mapping'
+import type { PolarOrder, PolarOrderStatus, PolarSubscription } from './mapping'
 import type {
   BillingIdentity,
   BillingRuntime,
+  PendingPlanChange,
   ProviderBillingMetadata,
   SubscriptionRecord,
 } from './types'
@@ -492,6 +495,143 @@ export function prorationFor(
 }
 
 /**
+ * `pending_update` on a Polar subscription: the change it will become at the start
+ * of the next period, and when.
+ *
+ * Declared here rather than folded into `polarSubscriptionSchema` because that
+ * schema and its record mapper belong to the webhook path, which has no column to
+ * put a scheduled change in yet. A `z.object()` strips unknown keys in Zod 4, so
+ * reading `pending_update` off the parsed subscription would silently see
+ * `undefined` — the raw response is parsed a second time, against exactly the one
+ * field we want.
+ */
+const polarPendingUpdateSchema = z.object({
+  /** ISO-8601. The start of the next period, as Polar computes it. */
+  applies_at: z.string().min(1),
+  product_id: z.string().min(1),
+})
+
+const polarPendingUpdateEnvelope = z.object({
+  pending_update: polarPendingUpdateSchema.nullish(),
+})
+
+/** One `PATCH /v1/subscriptions/{id}`, kept raw as well as parsed. */
+interface PatchedSubscription {
+  /** Untouched, so `pending_update` survives the schema that does not name it. */
+  readonly raw: unknown
+  readonly subscription: PolarSubscription
+}
+
+async function patchSubscription(
+  runtime: BillingRuntime,
+  path: string,
+  body: unknown,
+): Promise<PatchedSubscription> {
+  const raw = await runtime.polar.request({ method: 'PATCH', path, body })
+  return { raw, subscription: polarSubscriptionSchema.parse(raw) }
+}
+
+/**
+ * What Polar has scheduled but not applied, after a change we just made.
+ *
+ * Polar's own answer comes first: `pending_update` names the product and the instant,
+ * and it is the only source that stays right when the API disagrees with our local
+ * arithmetic. The `next_period` branch below is the fallback for a response that
+ * carries no `pending_update` — a deferred change is, by definition, the one the
+ * customer just asked for, landing when the period they have paid for ends. An
+ * immediate change schedules nothing and returns `null`, which is also what
+ * supersedes a pending change already on the subscription.
+ */
+export function pendingChangeFor(
+  raw: unknown,
+  proration: ProrationBehavior,
+  selection: PlanSelection,
+  current: SubscriptionRecord,
+): PendingPlanChange | null {
+  const envelope = polarPendingUpdateEnvelope.safeParse(raw)
+  const update = envelope.success ? (envelope.data.pending_update ?? null) : null
+
+  if (update !== null) {
+    const match = planForProductId(update.product_id)
+    const appliesAt = new Date(update.applies_at)
+    if (match !== null && !Number.isNaN(appliesAt.getTime())) {
+      return {
+        planId: match.plan.id,
+        interval: match.interval,
+        effectiveAt: appliesAt,
+      }
+    }
+  }
+
+  if (proration !== 'next_period') return null
+  if (current.currentPeriodEnd === null) return null
+
+  return {
+    planId: selection.plan.id,
+    interval: selection.interval,
+    effectiveAt: current.currentPeriodEnd,
+  }
+}
+
+/**
+ * Persist what Polar just told us the subscription is.
+ *
+ * The response is authoritative and a locally reconstructed row is a guess, so the
+ * write goes through the same mapper the webhook uses — which stamps
+ * `ceilingsForPlan()` and therefore leaves a row that agrees with its own plan. On a
+ * deferred change that response still names the *old* product, which is correct:
+ * nothing has moved yet, and only `pendingChange` describes what will.
+ *
+ * A failed write is a real failure and propagates. The webhook stays the reconciler.
+ */
+async function persistChangedSubscription(
+  runtime: BillingRuntime,
+  organizationId: string,
+  applied: PatchedSubscription,
+  pendingChange: PendingPlanChange | null,
+): Promise<void> {
+  const mapped = subscriptionRecordFromPolar(applied.subscription, {
+    fallbackOrganizationId: organizationId,
+  })
+
+  if (mapped === null) {
+    // Only reachable if Polar answered with a product this deployment does not
+    // sell, which it cannot do for a product we just named. Loud, and not fatal:
+    // the eviction below still runs and the webhook still reconciles.
+    runtime.logger.warn('billing.plan_change.unmapped', {
+      organizationId,
+      subscriptionId: applied.subscription.id,
+      productId: applied.subscription.product_id,
+    })
+    return
+  }
+
+  await runtime.subscriptions.upsert({ ...mapped, pendingChange })
+}
+
+/**
+ * Drop the cached plan state, and never let failing to do so fail the change.
+ *
+ * By the time this runs Polar has taken the customer's money. An exception escaping
+ * here would surface on the billing screen as "that change was not applied" for a
+ * change that was, which is a worse outcome than one stale minute — the entry
+ * carries a 60 s TTL and the webhook invalidates again behind us.
+ */
+async function evictPlanState(
+  runtime: BillingRuntime,
+  organizationId: string,
+): Promise<void> {
+  try {
+    await invalidateEntitlements(runtime, organizationId)
+  } catch (cause) {
+    runtime.logger.error('billing.plan_change.eviction_failed', {
+      organizationId,
+      reason: cause instanceof Error ? cause.message : String(cause),
+    })
+  }
+}
+
+/**
  * Move an existing subscription onto another plan, interval or seat count.
  *
  * Polar has no hosted "confirm the prorated amount" flow, so the change is applied
@@ -499,13 +639,20 @@ export function prorationFor(
  * than the arithmetic. Product and seats are separate variants of Polar's
  * `SubscriptionUpdate` union — a body carrying both matches the seats variant and
  * drops the product — so a plan change that also resizes the crew is two calls, the
- * product first.
+ * product first, and only the second response describes both moves.
  *
  * This is the one purchase path that mutates entitlement state inside our own
- * request rather than leaving it to the webhook, so it is also the one that owes
- * the cache invalidation ARCHITECTURE §4 rule 2 requires: the redirect below lands
- * on our billing screen, and a cached plan state left in place would let that
- * screen render the plan the customer just moved off for the rest of the TTL.
+ * request rather than leaving it to the webhook, so it owes the full write shape
+ * ARCHITECTURE §2.2 sets out: write D1 from the provider's answer, *then* invalidate
+ * the key that answer makes stale. Evicting without writing is inert — the next read
+ * misses, re-reads the same unchanged row and re-caches it for another TTL — and it
+ * is the ceilings that make it expensive: `effectiveLimitsFor()` derives them from
+ * that row, so a Solo→Crew upgrade Polar has already billed would leave
+ * `assertWithinLimit` refusing the seats the customer is paying for.
+ *
+ * The eviction sits in a `finally` so a change that failed half way through cannot
+ * leave a stale entry behind, and it swallows its own failure so a KV problem can
+ * never be reported as a billing problem.
  */
 export async function changePlan(
   runtime: BillingRuntime,
@@ -529,37 +676,45 @@ export async function changePlan(
   const productChanged = record.providerProductId !== selection.price.productId
   const seatsChanged =
     selection.plan.seatBased && record.seats !== selection.seats
-
-  if (productChanged) {
-    polarSubscriptionSchema.parse(
-      await runtime.polar.request({
-        method: 'PATCH',
-        path,
-        body: {
-          product_id: selection.price.productId,
-          proration_behavior: proration,
-        },
-      }),
-    )
-  }
-
-  if (seatsChanged) {
-    polarSubscriptionSchema.parse(
-      await runtime.polar.request({
-        method: 'PATCH',
-        path,
-        body: { seats: selection.seats, proration_behavior: proration },
-      }),
-    )
-  }
-
   const changed = productChanged || seatsChanged
 
-  // Drop the cached plan state before returning, not after: the browser follows the
-  // URL below immediately, and KV would otherwise keep answering with the plan we
-  // just left until the TTL lapses or the webhook lands, whichever came first.
+  let pendingChange: PendingPlanChange | null = null
+
   if (changed) {
-    await invalidateEntitlements(runtime, identity.organizationId)
+    try {
+      let applied: PatchedSubscription | null = null
+
+      if (productChanged) {
+        applied = await patchSubscription(runtime, path, {
+          product_id: selection.price.productId,
+          proration_behavior: proration,
+        })
+      }
+
+      if (seatsChanged) {
+        applied = await patchSubscription(runtime, path, {
+          seats: selection.seats,
+          proration_behavior: proration,
+        })
+      }
+
+      if (applied !== null) {
+        pendingChange = pendingChangeFor(
+          applied.raw,
+          proration,
+          selection,
+          record,
+        )
+        await persistChangedSubscription(
+          runtime,
+          identity.organizationId,
+          applied,
+          pendingChange,
+        )
+      }
+    } finally {
+      await evictPlanState(runtime, identity.organizationId)
+    }
   }
 
   runtime.logger.info('billing.plan_change.applied', {
@@ -570,6 +725,7 @@ export async function changePlan(
     seats: selection.seats,
     proration,
     changed,
+    scheduled: pendingChange !== null,
   })
 
   return { url: planChangedUrl(runtime.appUrl), surface: 'applied' }

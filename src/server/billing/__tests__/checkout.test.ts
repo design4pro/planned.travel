@@ -35,14 +35,23 @@ import {
   listRecentInvoices,
   liveSubscriptionId,
   orderInvoiceUrl,
+  pendingChangeFor,
   planChangedUrl,
   portalReturnUrl,
   prorationFor,
   resolvePlanSelection,
 } from '../checkout'
-import { planStateCacheKey } from '../entitlements'
+import {
+  assertWithinLimit,
+  entitlements,
+  planStateCacheKey,
+} from '../entitlements'
 import { PolarApiError } from '../polar'
-import { BillingForbiddenError } from '../types'
+import {
+  BillingForbiddenError,
+  QuotaExceededError,
+  billingContext,
+} from '../types'
 import { PLANS } from '#/lib/plans'
 import {
   TEST_APP_URL,
@@ -57,11 +66,12 @@ import {
   createHarness,
   invoiceNotRenderedYet,
   polarOrder,
+  polarSubscription,
   subscriptionRecord,
 } from './harness'
 
 import type { PlanSelection } from '../checkout'
-import type { PolarRequest } from '../types'
+import type { BillingRuntime, PolarRequest } from '../types'
 
 /* ------------------------------------------------------------------- helpers */
 
@@ -106,6 +116,65 @@ function warmPlanCache(harness: ReturnType<typeof createHarness>): string {
   harness.cache.entries.set(key, '{"planId":"crew"}')
   return key
 }
+
+type Harness = ReturnType<typeof createHarness>
+
+/**
+ * Records the order of the two side effects a plan change owes, so a test can prove
+ * the row is written *before* the key is dropped and not merely that both happened.
+ */
+function sideEffectOrder(harness: Harness): Array<'upsert' | 'delete'> {
+  const order: Array<'upsert' | 'delete'> = []
+  const upsert = harness.store.upsert.bind(harness.store)
+  const remove = harness.cache.delete.bind(harness.cache)
+
+  harness.store.upsert = async (record) => {
+    order.push('upsert')
+    await upsert(record)
+  }
+  harness.cache.delete = async (key) => {
+    order.push('delete')
+    await remove(key)
+  }
+
+  return order
+}
+
+/**
+ * A runtime whose Polar answers each PATCH differently, which the shared stub
+ * cannot do — and which is the only way to tell "we persisted the last response"
+ * apart from "we persisted a response".
+ */
+function withScriptedPolar(
+  harness: Harness,
+  answers: ReadonlyArray<unknown | Error>,
+): { runtime: BillingRuntime; calls: Array<PolarRequest> } {
+  const calls: Array<PolarRequest> = []
+  let index = 0
+
+  const runtime: BillingRuntime = {
+    ...harness.runtime,
+    polar: {
+      async request(request: PolarRequest): Promise<unknown> {
+        calls.push(request)
+        const answer = answers[Math.min(index, answers.length - 1)]
+        index += 1
+        if (answer instanceof Error) throw answer
+        return answer
+      },
+    },
+  }
+
+  return { runtime, calls }
+}
+
+const SOLO_RECORD = () =>
+  subscriptionRecord({
+    planId: 'solo',
+    interval: 'monthly',
+    seats: 1,
+    providerProductId: TEST_PRODUCT_IDS.soloMonthly,
+  })
 
 /* ----------------------------------------------------------------- selection */
 
@@ -780,6 +849,287 @@ describe('changePlan', () => {
         interval: 'monthly',
       }),
     ).rejects.toBeInstanceOf(BillingForbiddenError)
+  })
+})
+
+describe('changePlan writes what Polar answered', () => {
+  it('persists the subscription from the PATCH response before it evicts the key', async () => {
+    const harness = createHarness({ record: SOLO_RECORD() })
+    warmPlanCache(harness)
+    const order = sideEffectOrder(harness)
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+    })
+
+    // Evicting without writing is inert: the next read misses, re-reads the same
+    // unchanged row and re-caches it for another full TTL.
+    expect(order).toEqual(['upsert', 'delete'])
+    expect(harness.store.writes).toHaveLength(1)
+    expect(harness.store.writes[0]).toMatchObject({
+      organizationId: TEST_ORG_ID,
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+      providerProductId: TEST_PRODUCT_IDS.crewMonthly,
+      providerSubscriptionId: TEST_SUBSCRIPTION_ID,
+    })
+  })
+
+  it('stamps the new plan onto the ceilings, so the upgraded seats are usable at once', async () => {
+    const harness = createHarness({
+      record: SOLO_RECORD(),
+      usage: { seats: 1, trips: 0, storageBytes: 0 },
+    })
+    const ctx = billingContext(harness.runtime, TEST_ORG_ID)
+
+    // Solo allows one seat, so this is the exact refusal the stale row produced for
+    // a Crew subscription Polar had already billed.
+    await expect(assertWithinLimit(ctx, 'seats', 3)).rejects.toBeInstanceOf(
+      QuotaExceededError,
+    )
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+    })
+
+    expect(harness.store.writes[0]?.ceilings.seatLimit).toBe(4)
+
+    const state = await entitlements(ctx)
+    expect(state.planId).toBe('crew')
+    expect(state.limits.seats).toBe(4)
+    expect(state.quotas.seats.limit).toBe(4)
+    await expect(assertWithinLimit(ctx, 'seats', 3)).resolves.toBeUndefined()
+  })
+
+  it('persists the second response when the product and the seats both move', async () => {
+    const harness = createHarness({ record: SOLO_RECORD() })
+    const { runtime, calls } = withScriptedPolar(harness, [
+      polarSubscription({ product_id: TEST_PRODUCT_IDS.crewMonthly, seats: 1 }),
+      polarSubscription({ product_id: TEST_PRODUCT_IDS.crewMonthly, seats: 6 }),
+    ])
+
+    await changePlan(runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 6,
+    })
+
+    expect(calls).toHaveLength(2)
+    // Only the last answer describes both moves; persisting the first would write a
+    // seat count Polar has already superseded.
+    expect(harness.store.writes).toHaveLength(1)
+    expect(harness.store.writes[0]?.seats).toBe(6)
+    expect(harness.store.writes[0]?.ceilings.seatLimit).toBe(6)
+  })
+
+  it('leaves D1 alone and still evicts when the seats PATCH fails', async () => {
+    const harness = createHarness({ record: SOLO_RECORD() })
+    const key = warmPlanCache(harness)
+    const { runtime } = withScriptedPolar(harness, [
+      polarSubscription({ product_id: TEST_PRODUCT_IDS.crewMonthly, seats: 1 }),
+      new PolarApiError(409, '{}', 'Polar PATCH failed with 409.'),
+    ])
+
+    await expect(
+      changePlan(runtime, billingIdentity(), {
+        planId: 'crew',
+        interval: 'monthly',
+        seats: 6,
+      }),
+    ).rejects.toBeInstanceOf(PolarApiError)
+
+    // A half-applied change must not leave the plan the customer moved off in KV.
+    expect(harness.cache.entries.has(key)).toBe(false)
+    expect(harness.store.writes).toHaveLength(0)
+  })
+
+  it('never turns a failed eviction into a failed billing change', async () => {
+    const harness = createHarness({ record: SOLO_RECORD() })
+    harness.cache.delete = async () => {
+      throw new Error('KV namespace unavailable')
+    }
+
+    const redirect = await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+    })
+
+    // Polar has already charged the customer by this point. Reporting a cache
+    // problem here would render "that change was not applied" for one that was.
+    expect(redirect.surface).toBe('applied')
+    expect(harness.store.writes).toHaveLength(1)
+    expect(
+      harness.logs.some(
+        (log) =>
+          log.level === 'error' &&
+          log.message === 'billing.plan_change.eviction_failed',
+      ),
+    ).toBe(true)
+  })
+
+  it('writes nothing and evicts nothing when Polar was never asked', async () => {
+    const harness = createHarness({ record: subscriptionRecord({ seats: 4 }) })
+    const key = warmPlanCache(harness)
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+    })
+
+    expect(harness.store.writes).toHaveLength(0)
+    expect(harness.cache.entries.has(key)).toBe(true)
+  })
+})
+
+describe('pendingChangeFor', () => {
+  const record = subscriptionRecord()
+
+  it('reads Polar\u2019s own schedule in preference to our arithmetic', () => {
+    const pending = pendingChangeFor(
+      {
+        pending_update: {
+          applies_at: '2026-09-01T00:00:00Z',
+          product_id: TEST_PRODUCT_IDS.soloYearly,
+        },
+      },
+      'next_period',
+      resolvePlanSelection({ planId: 'crew', interval: 'monthly', seats: 2 }),
+      record,
+    )
+
+    expect(pending).toEqual({
+      planId: 'solo',
+      interval: 'yearly',
+      effectiveAt: new Date('2026-09-01T00:00:00Z'),
+    })
+  })
+
+  it('falls back to the end of the paid period for a deferred change', () => {
+    expect(
+      pendingChangeFor(
+        { pending_update: null },
+        'next_period',
+        resolvePlanSelection({ planId: 'solo', interval: 'yearly' }),
+        record,
+      ),
+    ).toEqual({
+      planId: 'solo',
+      interval: 'yearly',
+      effectiveAt: record.currentPeriodEnd,
+    })
+  })
+
+  it('schedules nothing for a change that is already in force', () => {
+    for (const proration of ['invoice', 'prorate'] as const) {
+      expect(
+        pendingChangeFor(
+          {},
+          proration,
+          resolvePlanSelection({ planId: 'crew', interval: 'monthly', seats: 8 }),
+          record,
+        ),
+        proration,
+      ).toBeNull()
+    }
+  })
+
+  it('refuses a schedule it cannot date or name', () => {
+    const selection = resolvePlanSelection({ planId: 'crew', interval: 'monthly', seats: 8 })
+
+    expect(
+      pendingChangeFor(
+        {
+          pending_update: {
+            applies_at: 'not a date',
+            product_id: TEST_PRODUCT_IDS.soloYearly,
+          },
+        },
+        'invoice',
+        selection,
+        record,
+      ),
+    ).toBeNull()
+    expect(
+      pendingChangeFor(
+        {
+          pending_update: {
+            applies_at: '2026-09-01T00:00:00Z',
+            product_id: 'a-product-we-do-not-sell',
+          },
+        },
+        'invoice',
+        selection,
+        record,
+      ),
+    ).toBeNull()
+  })
+
+  it('cannot date a deferred change on a subscription with no period end', () => {
+    expect(
+      pendingChangeFor(
+        {},
+        'next_period',
+        resolvePlanSelection({ planId: 'solo', interval: 'yearly' }),
+        subscriptionRecord({ currentPeriodEnd: null }),
+      ),
+    ).toBeNull()
+  })
+})
+
+describe('changePlan records a scheduled change', () => {
+  it('files the downgrade Polar deferred against the row it writes', async () => {
+    const harness = createHarness({
+      record: subscriptionRecord(),
+      polar: {
+        subscription: {
+          ...polarSubscription(),
+          pending_update: {
+            applies_at: '2026-09-01T00:00:00Z',
+            product_id: TEST_PRODUCT_IDS.soloYearly,
+          },
+        },
+      },
+    })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'solo',
+      interval: 'yearly',
+    })
+
+    const written = harness.store.writes[0]
+    // Polar's answer still names the old product, because nothing has moved yet.
+    expect(written.planId).toBe('crew')
+    expect(written.pendingChange).toEqual({
+      planId: 'solo',
+      interval: 'yearly',
+      effectiveAt: new Date('2026-09-01T00:00:00Z'),
+    })
+    expect(
+      harness.logs.some(
+        (log) =>
+          log.message === 'billing.plan_change.applied' &&
+          log.fields.scheduled === true,
+      ),
+    ).toBe(true)
+  })
+
+  it('files nothing against a change that took effect immediately', async () => {
+    const harness = createHarness({ record: SOLO_RECORD() })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+    })
+
+    expect(harness.store.writes[0]?.pendingChange).toBeNull()
   })
 })
 

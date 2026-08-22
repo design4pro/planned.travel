@@ -1,6 +1,25 @@
+import { createElement } from 'react'
+import { planById } from '#/lib/plans'
+import { formatDate } from '#/lib/format'
 import { SYSTEM_ORG_ID, enqueueTask } from '#/server/queue/jobs'
+import {
+  DeleteAccountEmail,
+  EmailChangedEmail,
+  OrganizationInvitationEmail,
+  PackPurchasedEmail,
+  PaymentFailedEmail,
+  PlanChangedEmail,
+  ResetPasswordEmail,
+  SubscriptionConfirmedEmail,
+  VerifyEmail,
+  renderEmailBody,
+} from '#/server/email'
 import { APP_NAME, appUrl, taskQueue } from './env'
 import { logAuth } from './log'
+
+import type { ReactElement } from 'react'
+import type { BillingInterval, PlanId } from '#/lib/plans'
+import type { EmailBrand, PendingPlanChange } from '#/server/email'
 
 /**
  * Transactional email is dispatched to the `TASKS` queue rather than sent
@@ -8,7 +27,8 @@ import { logAuth } from './log'
  *
  * The queue's `email` job carries a fully rendered message (`to`, `subject`,
  * `html`, `text`), so rendering happens here and the consumer only delivers.
- * This module owns both the contract and the templates.
+ * This module owns the message contract, the subject lines and the analytics
+ * tags; the bodies are React components under `src/server/email`.
  */
 export type AuthEmailMessage =
   | {
@@ -53,10 +73,100 @@ export type AuthEmailMessage =
       expiresInHours: number
     }
 
-/** Discriminator values, useful to the queue consumer's exhaustive switch. */
-export type AuthEmailKind = AuthEmailMessage['kind']
+/**
+ * A plan change Polar accepted but scheduled instead of applying.
+ *
+ * `null` on the message means the change is already in force. The field names
+ * are the billing domain's `pendingChange` vocabulary; the plan arrives as an id
+ * and is resolved against the catalogue here, so no caller can invent a plan
+ * name the pricing page does not use.
+ */
+export interface PendingPlanChangeMessage {
+  planId: PlanId
+  interval: BillingInterval
+  /** Seats the scheduled plan will bill, or `null` when it is not seat-based. */
+  seats: number | null
+  /** Per-period cost once it lands, in minor units of the message's currency. */
+  amountMinor: number
+  /** ISO instant Polar applies it: the end of the period already paid for. */
+  effectiveAt: string
+}
 
-/** Subject, body and analytics tag for one auth email. */
+export type BillingEmailMessage =
+  | {
+      kind: 'billing.subscription-confirmed'
+      to: string
+      name: string
+      organizationName: string
+      planId: PlanId
+      interval: BillingInterval
+      /** Per-period charge for the whole subscription, in minor units. */
+      amountMinor: number
+      /** ISO 4217 code of the charge. */
+      currency: string
+      /** Seats paid for, or `null` when the plan is not seat-based. */
+      seats: number | null
+      /** ISO instant of the next renewal, or `null` when Polar has not set one. */
+      renewsAt: string | null
+      /** Hosted Polar Customer Portal URL for this customer. */
+      portalUrl: string
+    }
+  | {
+      kind: 'billing.plan-changed'
+      to: string
+      name: string
+      organizationName: string
+      /** The plan the workspace was on before the request. */
+      previousPlanId: PlanId
+      /** The plan in force now — unchanged when `pendingChange` is set. */
+      planId: PlanId
+      interval: BillingInterval
+      amountMinor: number
+      currency: string
+      seats: number | null
+      pendingChange: PendingPlanChangeMessage | null
+      portalUrl: string
+    }
+  | {
+      kind: 'billing.payment-failed'
+      to: string
+      name: string
+      organizationName: string
+      planId: PlanId
+      interval: BillingInterval
+      /** The amount Polar could not take, in minor units. */
+      amountMinor: number
+      currency: string
+      seats: number | null
+      /** ISO instant of Polar's next retry, or `null` when there will not be one. */
+      nextAttemptAt: string | null
+      /** ISO instant the subscription lapses if the charge never clears. */
+      lapsesAt: string | null
+      portalUrl: string
+    }
+  | {
+      kind: 'billing.pack-purchased'
+      to: string
+      name: string
+      organizationName: string
+      packName: string
+      /** How many places the pack adds to the workspace's library. */
+      placeCount: number
+      /** What was charged, in minor units. */
+      amountMinor: number
+      currency: string
+      /** Absolute URL that opens the pack inside the app. */
+      packUrl: string
+      portalUrl: string
+    }
+
+/** Every transactional message the product can send. */
+export type TransactionalEmailMessage = AuthEmailMessage | BillingEmailMessage
+
+/** Discriminator values, useful to the queue consumer's exhaustive switch. */
+export type TransactionalEmailKind = TransactionalEmailMessage['kind']
+
+/** Subject, body and analytics tag for one transactional email. */
 export interface RenderedAuthEmail {
   subject: string
   html: string
@@ -64,228 +174,217 @@ export interface RenderedAuthEmail {
   tag: string
 }
 
-const BRAND_INK = '#16150f'
-const BRAND_CANVAS = '#faf9f7'
-const BRAND_MUTED = '#5b5951'
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+/** Subject line, analytics tag and the element that renders both bodies. */
+interface EmailDescriptor {
+  subject: string
+  tag: string
+  element: ReactElement
 }
 
-/**
- * Wraps body copy in the branded shell.
- *
- * Email clients strip `<style>` and ignore most modern CSS, so everything is
- * inlined on table cells and no web font is requested.
- */
-function shell(input: {
-  preheader: string
-  heading: string
-  paragraphs: Array<string>
-  action?: { label: string; url: string }
-  footnote?: string
-}): string {
-  const paragraphs = input.paragraphs
-    .map(
-      (copy) =>
-        `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:${BRAND_INK}">${copy}</p>`,
-    )
-    .join('')
-
-  const action = input.action
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 24px">
-         <tr><td style="border-radius:12px;background:${BRAND_INK}">
-           <a href="${escapeHtml(input.action.url)}" style="display:inline-block;padding:13px 24px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none">${escapeHtml(input.action.label)}</a>
-         </td></tr>
-       </table>`
-    : ''
-
-  const footnote = input.footnote
-    ? `<p style="margin:0;font-size:13px;line-height:1.6;color:${BRAND_MUTED}">${input.footnote}</p>`
-    : ''
-
-  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>${escapeHtml(input.heading)}</title></head>
-<body style="margin:0;padding:0;background:${BRAND_CANVAS}">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(input.preheader)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND_CANVAS}">
-  <tr><td align="center" style="padding:40px 20px">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px">
-      <tr><td style="padding:0 0 24px;font-size:17px;font-weight:700;letter-spacing:-0.01em;color:${BRAND_INK}">${APP_NAME}</td></tr>
-      <tr><td style="background:#ffffff;border:1px solid #e3e0d8;border-radius:20px;padding:32px">
-        <h1 style="margin:0 0 16px;font-size:22px;line-height:1.25;font-weight:700;letter-spacing:-0.02em;color:${BRAND_INK}">${escapeHtml(input.heading)}</h1>
-        ${paragraphs}${action}${footnote}
-      </td></tr>
-      <tr><td style="padding:24px 0 0;font-size:12px;line-height:1.6;color:${BRAND_MUTED}">
-        You received this because someone used this address at <a href="${escapeHtml(appUrl())}" style="color:${BRAND_MUTED}">${escapeHtml(appUrl().replace(/^https?:\/\//, ''))}</a>. If it was not you, you can ignore it safely.
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>`
+function brand(): EmailBrand {
+  return { appName: APP_NAME, appUrl: appUrl() }
 }
 
-function plain(lines: Array<string>): string {
-  return `${lines.filter(Boolean).join('\n\n')}\n`
+function planName(id: PlanId): string {
+  return planById(id).name
 }
 
-function firstName(name: string): string {
-  const trimmed = name.trim()
-  if (!trimmed) return 'there'
-  return trimmed.split(/\s+/)[0] ?? 'there'
+/** `23 Jun 2026`, falling back to the raw instant rather than to a blank. */
+function whenLabel(instant: string): string {
+  return formatDate(instant) ?? instant
 }
 
-function expiry(minutes: number): string {
-  if (minutes % 60 === 0) {
-    const hours = minutes / 60
-    if (hours % 24 === 0) {
-      const days = hours / 24
-      return days === 1 ? '24 hours' : `${days} days`
-    }
-    return hours === 1 ? 'an hour' : `${hours} hours`
+function pendingForTemplate(
+  pending: PendingPlanChangeMessage,
+): PendingPlanChange {
+  return {
+    planName: planName(pending.planId),
+    interval: pending.interval,
+    seats: pending.seats,
+    amountMinor: pending.amountMinor,
+    effectiveAt: pending.effectiveAt,
   }
-  return `${minutes} minutes`
 }
 
-/** Renders one auth email into the payload the queue's `email` job expects. */
-export function renderAuthEmail(message: AuthEmailMessage): RenderedAuthEmail {
+function describe(message: TransactionalEmailMessage): EmailDescriptor {
   switch (message.kind) {
-    case 'auth.verify-email': {
-      const window = expiry(message.expiresInMinutes)
+    case 'auth.verify-email':
       return {
         subject: `Confirm your email for ${APP_NAME}`,
         tag: 'auth-verify-email',
-        html: shell({
-          preheader: 'One tap and your account is ready.',
-          heading: 'Confirm your email',
-          paragraphs: [
-            `Hi ${escapeHtml(firstName(message.name))} — confirm this address and your account is ready to use.`,
-          ],
-          action: { label: 'Confirm email', url: message.url },
-          footnote: `This link works once and expires in ${window}.`,
+        element: createElement(VerifyEmail, {
+          brand: brand(),
+          name: message.name,
+          url: message.url,
+          expiresInMinutes: message.expiresInMinutes,
         }),
-        text: plain([
-          `Hi ${firstName(message.name)},`,
-          `Confirm your email for ${APP_NAME}:`,
-          message.url,
-          `This link works once and expires in ${window}.`,
-        ]),
       }
-    }
 
-    case 'auth.reset-password': {
-      const window = expiry(message.expiresInMinutes)
+    case 'auth.reset-password':
       return {
         subject: `Reset your ${APP_NAME} password`,
         tag: 'auth-reset-password',
-        html: shell({
-          preheader: 'Choose a new password.',
-          heading: 'Reset your password',
-          paragraphs: [
-            `Hi ${escapeHtml(firstName(message.name))} — use the button below to choose a new password.`,
-            'Your current password keeps working until you set a new one.',
-          ],
-          action: { label: 'Choose a new password', url: message.url },
-          footnote: `This link works once and expires in ${window}. If you did not ask for it, no action is needed.`,
+        element: createElement(ResetPasswordEmail, {
+          brand: brand(),
+          name: message.name,
+          url: message.url,
+          expiresInMinutes: message.expiresInMinutes,
         }),
-        text: plain([
-          `Hi ${firstName(message.name)},`,
-          `Reset your ${APP_NAME} password:`,
-          message.url,
-          `This link works once and expires in ${window}. If you did not ask for it, no action is needed.`,
-        ]),
       }
-    }
 
-    case 'auth.email-changed': {
+    case 'auth.email-changed':
       return {
         subject: `Confirm your new email for ${APP_NAME}`,
         tag: 'auth-email-changed',
-        html: shell({
-          preheader: 'Confirm the change to finish it.',
-          heading: 'Confirm your new email',
-          paragraphs: [
-            `Hi ${escapeHtml(firstName(message.name))} — you asked to move this account to <strong>${escapeHtml(message.newEmail)}</strong>.`,
-            'Confirm the change and we will start using the new address.',
-          ],
-          action: { label: 'Confirm the change', url: message.url },
-          footnote:
-            'If you did not request this, change your password — someone may have access to your account.',
+        element: createElement(EmailChangedEmail, {
+          brand: brand(),
+          name: message.name,
+          url: message.url,
+          newEmail: message.newEmail,
         }),
-        text: plain([
-          `Hi ${firstName(message.name)},`,
-          `Confirm moving your ${APP_NAME} account to ${message.newEmail}:`,
-          message.url,
-          'If you did not request this, change your password.',
-        ]),
       }
-    }
 
-    case 'auth.delete-account': {
+    case 'auth.delete-account':
       return {
         subject: `Confirm deleting your ${APP_NAME} account`,
         tag: 'auth-delete-account',
-        html: shell({
-          preheader: 'This one cannot be undone.',
-          heading: 'Confirm account deletion',
-          paragraphs: [
-            `Hi ${escapeHtml(firstName(message.name))} — confirming will permanently delete your account, your trips and everything in them.`,
-            'This cannot be undone.',
-          ],
-          action: { label: 'Delete my account', url: message.url },
-          footnote: 'If you did not ask for this, ignore this email and nothing will change.',
+        element: createElement(DeleteAccountEmail, {
+          brand: brand(),
+          name: message.name,
+          url: message.url,
         }),
-        text: plain([
-          `Hi ${firstName(message.name)},`,
-          `Confirm deleting your ${APP_NAME} account (this cannot be undone):`,
-          message.url,
-          'If you did not ask for this, ignore this email and nothing will change.',
-        ]),
       }
-    }
 
-    case 'auth.organization-invitation': {
-      const window =
-        message.expiresInHours % 24 === 0
-          ? `${message.expiresInHours / 24} days`
-          : `${message.expiresInHours} hours`
+    case 'auth.organization-invitation':
       return {
         subject: `${message.invitedByName} invited you to ${message.organizationName}`,
         tag: 'auth-organization-invitation',
-        html: shell({
-          preheader: `Join ${message.organizationName} on ${APP_NAME}.`,
-          heading: `Join ${escapeHtml(message.organizationName)}`,
-          paragraphs: [
-            `<strong>${escapeHtml(message.invitedByName)}</strong> (${escapeHtml(message.invitedByEmail)}) invited you to plan with them on ${APP_NAME} as ${escapeHtml(message.role)}.`,
-          ],
-          action: { label: 'Accept invitation', url: message.url },
-          footnote: `This invitation expires in ${window}.`,
+        element: createElement(OrganizationInvitationEmail, {
+          brand: brand(),
+          invitedByName: message.invitedByName,
+          invitedByEmail: message.invitedByEmail,
+          organizationName: message.organizationName,
+          role: message.role,
+          url: message.url,
+          expiresInHours: message.expiresInHours,
         }),
-        text: plain([
-          `${message.invitedByName} (${message.invitedByEmail}) invited you to ${message.organizationName} on ${APP_NAME} as ${message.role}.`,
-          message.url,
-          `This invitation expires in ${window}.`,
-        ]),
+      }
+
+    case 'billing.subscription-confirmed': {
+      const plan = planName(message.planId)
+      return {
+        subject: `${plan} is live for ${message.organizationName}`,
+        tag: 'billing-subscription-confirmed',
+        element: createElement(SubscriptionConfirmedEmail, {
+          brand: brand(),
+          name: message.name,
+          organizationName: message.organizationName,
+          planName: plan,
+          interval: message.interval,
+          amountMinor: message.amountMinor,
+          currency: message.currency,
+          seats: message.seats,
+          renewsAt: message.renewsAt,
+          portalUrl: message.portalUrl,
+        }),
       }
     }
+
+    case 'billing.plan-changed': {
+      const plan = planName(message.planId)
+      const pending =
+        message.pendingChange === null
+          ? null
+          : pendingForTemplate(message.pendingChange)
+      return {
+        subject:
+          pending === null
+            ? `${message.organizationName} is now on ${plan}`
+            : `${pending.planName} from ${whenLabel(pending.effectiveAt)}`,
+        tag: 'billing-plan-changed',
+        element: createElement(PlanChangedEmail, {
+          brand: brand(),
+          name: message.name,
+          organizationName: message.organizationName,
+          previousPlanName: planName(message.previousPlanId),
+          planName: plan,
+          interval: message.interval,
+          amountMinor: message.amountMinor,
+          currency: message.currency,
+          seats: message.seats,
+          pendingChange: pending,
+          portalUrl: message.portalUrl,
+        }),
+      }
+    }
+
+    case 'billing.payment-failed':
+      return {
+        subject: `We could not take the payment for ${message.organizationName}`,
+        tag: 'billing-payment-failed',
+        element: createElement(PaymentFailedEmail, {
+          brand: brand(),
+          name: message.name,
+          organizationName: message.organizationName,
+          planName: planName(message.planId),
+          interval: message.interval,
+          amountMinor: message.amountMinor,
+          currency: message.currency,
+          seats: message.seats,
+          nextAttemptAt: message.nextAttemptAt,
+          lapsesAt: message.lapsesAt,
+          portalUrl: message.portalUrl,
+        }),
+      }
+
+    case 'billing.pack-purchased':
+      return {
+        subject: `${message.packName} is unlocked for ${message.organizationName}`,
+        tag: 'billing-pack-purchased',
+        element: createElement(PackPurchasedEmail, {
+          brand: brand(),
+          name: message.name,
+          organizationName: message.organizationName,
+          packName: message.packName,
+          placeCount: message.placeCount,
+          amountMinor: message.amountMinor,
+          currency: message.currency,
+          packUrl: message.packUrl,
+          portalUrl: message.portalUrl,
+        }),
+      }
   }
 }
 
 /**
- * Renders an auth email and hands it to the queue.
+ * Renders one transactional email into the payload the queue's `email` job
+ * expects.
+ *
+ * Asynchronous because React Email's `render()` drives the streaming server
+ * renderer to completion. The return type is written out rather than inferred so
+ * a caller that forgets to await fails the type check here instead of enqueueing
+ * a `Promise` where a string belongs.
+ */
+export async function renderAuthEmail(
+  message: TransactionalEmailMessage,
+): Promise<RenderedAuthEmail> {
+  const { subject, tag, element } = describe(message)
+  const { html, text } = await renderEmailBody(element)
+  return { subject, html, text, tag }
+}
+
+/**
+ * Renders a transactional email and hands it to the queue.
  *
  * A send failure is logged and swallowed rather than propagated: a courier that
  * cannot take the letter must not turn a successful sign-up into a 500. The
  * caller therefore always resolves.
  */
-export async function queueAuthEmail(message: AuthEmailMessage): Promise<void> {
+export async function queueAuthEmail(
+  message: TransactionalEmailMessage,
+): Promise<void> {
   try {
-    const rendered = renderAuthEmail(message)
+    const rendered = await renderAuthEmail(message)
     await enqueueTask(taskQueue(), {
       kind: 'email',
       orgId: SYSTEM_ORG_ID,
