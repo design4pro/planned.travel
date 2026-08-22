@@ -1089,7 +1089,7 @@ settles this; here is what it means for whoever runs the deploy:
   portal off — it guarantees invoice access, self-service cancellation and PCI-compliant card
   updates by keeping it always available.
 
-### 9.10 What phase A must not change
+### 9.10 What phase A must not change, and the one rename it does
 
 **The status tuple stays at eight values.** Polar's `SubscriptionStatus` enum is exactly
 `incomplete`, `incomplete_expired`, `trialing`, `active`, `past_due`, `canceled`, `unpaid`,
@@ -1100,20 +1100,50 @@ superseded in provenance only: both are real members of the Stripe-era tuple _an
 enum, so narrowing the tuple would make a legitimate webhook fail its `CHECK` constraint. Phase A
 must not narrow it.
 
-**The three provider columns are reused, not renamed. This round runs no migration, and phase A
-runs no rename migration either.** §5's migration policy is additive — never rename, never drop in the release
-that stops using a name — and a rename would have to move two indexes in the same breath
-(superseded in name only: `subscriptions_stripe_subscription_unq`, `subscriptions_stripe_customer_idx`):
+**The three provider columns are renamed, and that rename is migration `0002`.** Phase A moves
+them rather than leaving three Stripe-era names holding Polar ids:
 
-- Superseded in meaning, not in SQL: `stripe_customer_id` holds the Polar customer id.
-- Superseded in meaning, not in SQL: `stripe_subscription_id` holds the Polar subscription id.
-- Superseded in meaning, not in SQL: `stripe_price_id` holds the Polar **product** id — a UUID,
-  since §9.1 puts the interval on the product.
+| Was                      | Is now                     | Holds                                                                          |
+| ------------------------ | -------------------------- | ------------------------------------------------------------------------------ |
+| `stripe_customer_id`     | `provider_customer_id`     | the Polar customer id                                                          |
+| `stripe_subscription_id` | `provider_subscription_id` | the Polar subscription id                                                      |
+| `stripe_price_id`        | `provider_product_id`      | the Polar **product** id — a UUID, since §9.1 puts the interval on the product |
 
-If those names are ever to go, it is a two-release additive move of its own — add the new
-columns, backfill, switch reads, then drop — and not something phase A does on the way past.
+The two indexes over those columns move with them, because their names carry the old one:
+`subscriptions_stripe_subscription_unq` → **`subscriptions_provider_subscription_unq`** (unique)
+and `subscriptions_stripe_customer_idx` → **`subscriptions_provider_customer_idx`**.
+
+`drizzle/0002_*.sql` is three `ALTER TABLE "subscriptions" RENAME COLUMN` statements plus a
+`DROP INDEX` and a `CREATE [UNIQUE] INDEX` for each of the two indexes. **There is no backfill,
+because the `subscriptions` table carries no rows in any deployed environment**: nothing has been
+sold yet, the local demo row is written by the seed and re-created on the next run, and no Polar
+subscription exists because §9.11 has not been walked. §5's additive policy exists to keep an old
+and a new Worker serving the same schema through a deploy window; with an empty table and no
+paid customer to strand, there is no old reader to protect and no data to move, so the two-release
+dance buys nothing and is not run. That is the whole justification — the moment a production row
+exists, this reasoning expires and any further column move is additive again.
+
+Read the generated SQL before committing it. `drizzle-kit` asks which old column each new one came
+from, and it cannot ask in a non-TTY: run it in a real terminal, answer the three prompts against
+the exact target names above, and confirm the file says `RENAME COLUMN` and not a `__new_`
+table recreate. A recreate would silently drop the `subscriptions_status_chk` constraint.
 
 ### 9.11 Sandbox acceptance matrix
+
+> **Status: pending operator. Not one of the eight rows has been walked.** The code round that
+> built the Polar integration ran with `POLAR_ACCESS_TOKEN` and `POLAR_WEBHOOK_SECRET` **empty by
+> design** — no credential was issued to it, so it could make no live API call, receive no live
+> delivery, and complete no checkout. Every row below therefore stands **unverified**, row 6
+> included: its fake-runtime unit test is evidence about our handler, not the sandbox walk this
+> table asks for. Nothing in this repository or in these documents claims otherwise. A green
+> `pnpm test` says our code does what we think Polar does; only the walk says Polar agrees, and
+> the two are the same statement only after an operator has made it. The strongest offline
+> evidence available without a credential — a Standard Webhooks signature vector computed by an
+> implementation other than the verifier it checks, and a test that every path needing a secret
+> raises `BillingConfigError` when it is unset — is worth having and is still not a green row.
+>
+> **To clear this block:** issue the sandbox Organization Access Token (§9.2), set both secrets on
+> the staging Worker (§6), then walk the table. Record the outcome per row here and tick §16.
 
 Eight rows. All eight are walked in the **sandbox** organization, against a staging Worker with
 `POLAR_SERVER=sandbox`, before phase A is called done. Set up once, then work down the table.
@@ -1161,6 +1191,11 @@ Read the columns as: what you do → what Polar must send → what our side must
 Rows 1–5, 7 and 8 are walked by hand and their evidence is the `wrangler tail` transcript plus a
 screenshot of `/settings/billing`. Row 6's evidence is a passing test. Phase A is not done until
 all eight are green and a redelivery (§9.7) of any row-1 event changes nothing.
+
+Until then, the honest statement of where phase A stands is: **the code is written and the matrix
+is unwalked.** Say that, in those terms, in the deploy log and in any release note. A row is green
+when an operator has run it and written the evidence down here — never because the code that would
+satisfy it exists.
 
 ---
 
@@ -1212,23 +1247,25 @@ places, and the first three need an operator to act:
   template's own header names as its single omission. Nothing to act on here beyond taking that
   pair from §6, which the third bullet already requires; every other secret is copy-and-fill
   from the template.
-- The `stripe` package stays in `package.json`. `docs/SPEC.md` §3 puts its removal behind the
-  dependency freeze — phase A deletes its last consumer, and the first round permitted to edit
-  `package.json` deletes the entry. It costs bundle weight, nothing else.
+- The `stripe` package is **already out of `package.json`** — this is the one of the five that is
+  closed. Phase A's dependency round removed it in the same edit that installed the two React
+  Email packages `docs/SPEC.md` §3 names, so the entry and its lockfile block are both gone and
+  `grep -c stripe pnpm-lock.yaml` returns `0`. Nothing to act on, and nothing an operator can
+  check on a deployed Worker: this one is verified in the repository, not in the dashboard.
 
-Every other Stripe string left in the repository is superseded code or a superseded column name,
-recorded as such where it lives — the two modules named above in §6, the three `stripe_*` columns
-in §9.10 — and none of those asks anything of an operator.
+Every other Stripe string left in the repository is superseded code, recorded as such where it
+lives — the two modules named above in §6 — and none of it asks anything of an operator. The
+three `stripe_*` columns are no longer among them: §9.10 renames them to `provider_*`.
 
-**Phase A closes all five in one change**, because a half-migrated build is worse than either end
-state: the Polar route and client land, `src/lib/plans.ts`, both workflow files and `.env.local`
-move to `VITE_POLAR_PRODUCT_*` together, the template loses its Stripe half, and the Stripe
-secrets stop being read. There is no overlap period for the build-time names — one module reads
-both sets, and a build that has both would offer two prices for one plan. Set the `VITE_POLAR_PRODUCT_*`
-variables when that change lands, and not before. The template needs the least work of the five,
-because it already documents both sets: what phase A deletes from it is the Stripe prose in its
-header, its billing section and its build-time block, leaving the six new names it already
-carries.
+**Phase A closes the four that are left in one change**, because a half-migrated build is worse
+than either end state: the Polar route and client land, `src/lib/plans.ts`, both workflow files
+and `.env.local` move to `VITE_POLAR_PRODUCT_*` together, the template loses its Stripe half, and
+the Stripe secrets stop being read. There is no overlap period for the build-time names — one
+module reads both sets, and a build that has both would offer two prices for one plan. Set the
+`VITE_POLAR_PRODUCT_*` variables when that change lands, and not before. The template needs the
+least work of them, because it already documents both sets: what phase A deletes from it is the
+Stripe prose in its header, its billing section and its build-time block, leaving the six new
+names it already carries.
 
 Without the two repository **secrets** the deploy workflow logs a warning and skips rather than
 failing, so a fork stays green. The price **variables** behave differently and more quietly: a

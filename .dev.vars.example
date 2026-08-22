@@ -5,12 +5,9 @@
 # `.dev.vars` is gitignored; this file must never contain a real value.
 #
 # This is the complete secret list docs/SPEC.md §5 and docs/ARCHITECTURE.md
-# §3 both promise lives here. The two superseded STRIPE_* names are the one
-# deliberate omission: the shipped billing code still reads them, but they are
-# on their way out, and docs/DEPLOY.md §6 is where they are set until phase A
-# retires them. Apart from that pair, every secret the Worker reads is below.
-# The Worker also reads names that are not secrets, and those are the next
-# paragraph's subject rather than an omission from this one.
+# §3 both promise lives here: every secret the Worker reads is below, with no
+# omissions. The Worker also reads names that are not secrets, and those are
+# the next paragraph's subject rather than a gap in this one.
 #
 # Non-secret configuration (LOG_LEVEL, EMAIL_FROM, FILES_PUBLIC_BASE, …) is
 # NOT here — it lives in the `vars` block of `wrangler.jsonc` and is checked
@@ -49,7 +46,7 @@ APPLE_CLIENT_SECRET=
 APPLE_APP_BUNDLE_IDENTIFIER=
 
 
-# ── Billing (optional until phase A; nothing reads these before it) ──────────
+# ── Billing (optional; every paid plan fails loudly without it) ──────────────
 
 # Polar dashboard → Settings → Developers → New Token. Scope it to exactly
 # checkouts:write, customer_sessions:write, orders:read, subscriptions:read,
@@ -79,13 +76,12 @@ POLAR_WEBHOOK_SECRET=
 # apart. Argued in docs/SPEC.md §5; base URLs in docs/DEPLOY.md §9.3.
 POLAR_SERVER=
 
-# Nothing above is read yet: until phase A the live checkout is still
-# `src/server/billing/stripe.ts`, which reads the two superseded STRIPE_*
-# secrets this file no longer lists, together with the four build-time price
-# ids they pair with in `src/lib/plans.ts`. Take the secret pair from
-# docs/DEPLOY.md §6 if paid plans must work today; the four price ids are
-# named in the build-time section near the bottom of this file. Set the three
-# names above now so the cutover is a deploy rather than a scramble.
+# Those three are the whole server side of billing. The client side is four
+# public product ids that Vite inlines at build time; they are not secrets, do
+# not belong in this file, and are named in the build-time section near the
+# bottom. Leave the three above unset and the app still renders — checkout and
+# the customer portal raise a configuration error naming the missing secret
+# instead of half-working.
 
 
 # ── Transactional email (optional; queued mail fails loudly without it) ──────
@@ -136,33 +132,26 @@ MCP_TOKEN_PEPPER=
 
 # ── Build-time public values — NOT part of this file ─────────────────────────
 #
-# Price and product ids are inlined into both bundles by Vite, so they are read
-# from `import.meta.env`, not from the Worker environment. Put them in
-# `.env.local` (also gitignored) for local work, and in repository *variables*
-# for CI, since neither kind of id is secret. There are two sets, and only the
-# first one is live:
+# Polar product ids are inlined into both bundles by Vite, so they are read
+# from `import.meta.env`, not from the Worker environment. They are public — a
+# product id ships in every client-side checkout integration — so they are
+# repository *variables* rather than secrets. Four names, one per purchasable
+# product of the Polar organization (docs/DEPLOY.md §9.1 creates them):
 #
-#   # CURRENT — read today by `src/lib/plans.ts`, and passed into the build by
-#   # both .github/workflows/ci.yml and .github/workflows/deploy.yml. Leave one
-#   # empty and `requirePrice()` throws for that plan and interval alone, so its
-#   # Upgrade button fails while the other three still open a checkout. Leave all
-#   # four empty and the pricing page has nothing anyone can actually buy.
-#   VITE_STRIPE_PRICE_SOLO_MONTHLY=price_…
-#   VITE_STRIPE_PRICE_SOLO_YEARLY=price_…
-#   VITE_STRIPE_PRICE_CREW_MONTHLY=price_…
-#   VITE_STRIPE_PRICE_CREW_YEARLY=price_…
+#   VITE_POLAR_PRODUCT_SOLO_MONTHLY=00000000-0000-0000-0000-000000000000
+#   VITE_POLAR_PRODUCT_SOLO_YEARLY=00000000-0000-0000-0000-000000000000
+#   VITE_POLAR_PRODUCT_CREW_MONTHLY=00000000-0000-0000-0000-000000000000
+#   VITE_POLAR_PRODUCT_CREW_YEARLY=00000000-0000-0000-0000-000000000000
 #
-#   # PHASE A — the four that replace them, one per product of the Polar
-#   # organization. Nothing reads these yet; set them with the cutover.
-#   VITE_POLAR_PRODUCT_SOLO_MONTHLY=…
-#   VITE_POLAR_PRODUCT_SOLO_YEARLY=…
-#   VITE_POLAR_PRODUCT_CREW_MONTHLY=…
-#   VITE_POLAR_PRODUCT_CREW_YEARLY=…
-#
-# The swap is all-or-nothing: one module resolves the purchasable price, so a
-# build carrying both sets would offer two prices for the same plan. Move the
-# module, both workflow files and this block together — docs/DEPLOY.md §10 owns
-# that change and enumerates what else moves with it.
+# Those four lines go in `.env.local` (also gitignored) for local work, and
+# never here: Vite reads `.env.local`, Miniflare reads `.dev.vars`, and a
+# build-time name set in the wrong one is silently empty rather than an error.
+# CI passes the same four names into the build from repository variables, in
+# `.github/workflows/ci.yml` and `.github/workflows/deploy.yml` — the three
+# places move together, or a green build ships a pricing page with nothing on
+# it. `src/lib/plans.ts` is the only reader. Leave one empty and
+# `requirePrice()` throws for that plan and interval alone, so one Upgrade
+# button fails while the other three still open a checkout.
 #
 # Sandbox and production are separate Polar accounts, so the four product ids
 # are different values in the two places: `.env.local` carries the sandbox ids
@@ -170,10 +159,10 @@ MCP_TOKEN_PEPPER=
 # not fail loudly — it opens a checkout for a product that account does not
 # have.
 #
-# `.env.local` is the right home only because Vite, not the Worker, reads these
-# at build time. Never move a name from the sections above into it: while a
-# `.dev.vars` file exists, Cloudflare loads no `.env` file into the Worker's
-# `env`, so the value would be silently undefined at runtime with no error.
+# The rule runs both ways. Never move a name from the sections above into
+# `.env.local`: while a `.dev.vars` file exists, Cloudflare loads no `.env`
+# file into the Worker's `env`, so the secret would be silently undefined at
+# runtime with no error.
 
 
 # ── Local non-secret overrides (optional; wrangler.jsonc vars win otherwise) ─

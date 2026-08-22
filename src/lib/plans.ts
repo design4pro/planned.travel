@@ -2,21 +2,21 @@
  * The planned.travel plan catalogue.
  *
  * This module is **isomorphic** — it is safe to import from browser code. It contains
- * no secrets: Stripe *price* identifiers are public (they ship in every client-side
- * Stripe integration), so they are supplied through Vite's `VITE_`-prefixed
+ * no secrets: Polar *product* identifiers are public (they ship in every client-side
+ * checkout integration), so they are supplied through Vite's `VITE_`-prefixed
  * environment variables and inlined at build time.
  *
  * The catalogue is the single source of truth for what a subscription is allowed to
- * do. The server always resolves a price id from this file — never from a value the
+ * do. The server always resolves a product id from this file — never from a value the
  * client sent — so a tampered request can only ever ask for a plan that exists here.
  */
 
 declare global {
   interface ImportMetaEnv {
-    readonly VITE_STRIPE_PRICE_SOLO_MONTHLY?: string
-    readonly VITE_STRIPE_PRICE_SOLO_YEARLY?: string
-    readonly VITE_STRIPE_PRICE_CREW_MONTHLY?: string
-    readonly VITE_STRIPE_PRICE_CREW_YEARLY?: string
+    readonly VITE_POLAR_PRODUCT_SOLO_MONTHLY?: string
+    readonly VITE_POLAR_PRODUCT_SOLO_YEARLY?: string
+    readonly VITE_POLAR_PRODUCT_CREW_MONTHLY?: string
+    readonly VITE_POLAR_PRODUCT_CREW_YEARLY?: string
   }
 }
 
@@ -28,7 +28,12 @@ export type BillingInterval = (typeof BILLING_INTERVALS)[number]
 export const PLAN_IDS = ['free', 'solo', 'crew'] as const
 export type PlanId = (typeof PLAN_IDS)[number]
 
-/** Stripe subscription statuses we persist and reason about. */
+/**
+ * Subscription statuses we persist and reason about. The eight values are Polar's
+ * `SubscriptionStatus` enum, one for one, and the `subscriptions_status_chk` CHECK
+ * constraint in `src/server/db/schema.ts` mirrors them: dropping one here would make
+ * a legitimate webhook fail on write rather than fail a type check.
+ */
 export const SUBSCRIPTION_STATUSES = [
   'trialing',
   'active',
@@ -43,7 +48,7 @@ export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number]
 
 /**
  * Every billing state an organization can be in, including our own `none` sentinel
- * for an organization that has never had a subscription. Stripe never sends `none`.
+ * for an organization that has never had a subscription. Polar never sends `none`.
  */
 export const BILLING_STATES = [...SUBSCRIPTION_STATUSES, 'none'] as const
 export type BillingState = (typeof BILLING_STATES)[number]
@@ -157,8 +162,8 @@ export const QUOTA_LABELS: { readonly [K in QuotaKey]: string } = {
 
 export interface PlanPrice {
   readonly interval: BillingInterval
-  /** Stripe price id. Empty string when the deployment has not configured it yet. */
-  readonly priceId: string
+  /** Polar product id. Empty string when the deployment has not configured it yet. */
+  readonly productId: string
   /** Amount in minor units per billing period — per seat when `perSeat` is true. */
   readonly amount: number
   readonly currency: 'usd'
@@ -178,7 +183,7 @@ export interface Plan {
   readonly tagline: string
   /** A full sentence for settings screens and marketing pages. */
   readonly description: string
-  /** True when Stripe bills one unit per member rather than a flat fee. */
+  /** True when the subscription bills one unit per member rather than a flat fee. */
   readonly seatBased: boolean
   readonly seatRange: { readonly min: number; readonly max: number | null }
   /** Free-trial length applied on a customer's first paid subscription. */
@@ -193,12 +198,17 @@ export interface Plan {
 const MEGABYTE = 1024 * 1024
 const GIGABYTE = 1024 * MEGABYTE
 
-/** Price ids must be referenced statically so Vite can inline them into both bundles. */
-const PRICE_IDS = {
-  soloMonthly: import.meta.env.VITE_STRIPE_PRICE_SOLO_MONTHLY ?? '',
-  soloYearly: import.meta.env.VITE_STRIPE_PRICE_SOLO_YEARLY ?? '',
-  crewMonthly: import.meta.env.VITE_STRIPE_PRICE_CREW_MONTHLY ?? '',
-  crewYearly: import.meta.env.VITE_STRIPE_PRICE_CREW_YEARLY ?? '',
+/**
+ * Product ids must be referenced statically so Vite can inline them into both
+ * bundles. A computed lookup — `import.meta.env[name]` — compiles and then resolves
+ * to an empty string in the client bundle, which surfaces one broken Upgrade button
+ * at a time instead of a build error.
+ */
+const PRODUCT_IDS = {
+  soloMonthly: import.meta.env.VITE_POLAR_PRODUCT_SOLO_MONTHLY ?? '',
+  soloYearly: import.meta.env.VITE_POLAR_PRODUCT_SOLO_YEARLY ?? '',
+  crewMonthly: import.meta.env.VITE_POLAR_PRODUCT_CREW_MONTHLY ?? '',
+  crewYearly: import.meta.env.VITE_POLAR_PRODUCT_CREW_YEARLY ?? '',
 } as const
 
 const NO_MODULES: PlanModules = {
@@ -260,14 +270,14 @@ const soloPlan: Plan = {
   prices: {
     monthly: {
       interval: 'monthly',
-      priceId: PRICE_IDS.soloMonthly,
+      productId: PRODUCT_IDS.soloMonthly,
       amount: 900,
       currency: 'usd',
       perSeat: false,
     },
     yearly: {
       interval: 'yearly',
-      priceId: PRICE_IDS.soloYearly,
+      productId: PRODUCT_IDS.soloYearly,
       amount: 9000,
       currency: 'usd',
       perSeat: false,
@@ -310,14 +320,14 @@ const crewPlan: Plan = {
   prices: {
     monthly: {
       interval: 'monthly',
-      priceId: PRICE_IDS.crewMonthly,
+      productId: PRODUCT_IDS.crewMonthly,
       amount: 700,
       currency: 'usd',
       perSeat: true,
     },
     yearly: {
       interval: 'yearly',
-      priceId: PRICE_IDS.crewYearly,
+      productId: PRODUCT_IDS.crewYearly,
       amount: 7000,
       currency: 'usd',
       perSeat: true,
@@ -393,15 +403,15 @@ export function planFor(subscription: PlanSubscriptionLike | null | undefined): 
   return planFromUnknown(subscription.planId) ?? freePlan
 }
 
-/** Reverse-resolve a Stripe price id back to our catalogue. */
-export function planForPriceId(
-  priceId: string | null | undefined,
+/** Reverse-resolve a Polar product id back to our catalogue. */
+export function planForProductId(
+  productId: string | null | undefined,
 ): { plan: Plan; interval: BillingInterval } | null {
-  if (!priceId) return null
+  if (!productId) return null
   for (const plan of PAID_PLAN_LIST) {
     for (const interval of BILLING_INTERVALS) {
       const price = plan.prices[interval]
-      if (price && price.priceId !== '' && price.priceId === priceId) {
+      if (price && price.productId !== '' && price.productId === productId) {
         return { plan, interval }
       }
     }
@@ -422,10 +432,10 @@ export function requirePrice(plan: Plan, interval: BillingInterval): PlanPrice {
   if (!price) {
     throw new Error(`Plan "${plan.id}" cannot be purchased on a ${interval} interval.`)
   }
-  if (price.priceId === '') {
+  if (price.productId === '') {
     throw new Error(
-      `Stripe price id for the ${plan.id} ${interval} plan is not configured. ` +
-        `Set VITE_STRIPE_PRICE_${plan.id.toUpperCase()}_${interval.toUpperCase()}.`,
+      `Polar product id for the ${plan.id} ${interval} plan is not configured. ` +
+        `Set VITE_POLAR_PRODUCT_${plan.id.toUpperCase()}_${interval.toUpperCase()}.`,
     )
   }
   return price

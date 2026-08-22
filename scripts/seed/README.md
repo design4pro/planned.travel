@@ -151,9 +151,17 @@ configured — hand-rolling a hash would produce a row the login form rejects.
 The workspace is put on the **Crew** plan first — ten seats bought, four of them filled, billed
 monthly — because the Free plan seats one person and caps trips at two. Only the plan is declared in
 the dataset: the tier column, the seat and storage ceilings, the currency and the unit amount are all
-derived by `rowValuesFromRecord()`, the same translation the Stripe webhook uses, so the row cannot
-end up describing a plan it is not on. The ceiling is raised through the billing repository, so the
-membership writes that follow still pass through the same quota guard rather than around it.
+derived by `rowValuesFromRecord()`, the same translation the billing webhook uses, so the row cannot
+end up describing a plan it is not on.
+
+The three provider columns on that row — `provider_customer_id`, `provider_subscription_id` and
+`provider_product_id` — carry local placeholders and nothing real. The seed contacts no payment
+provider and mints no customer; the customer and subscription ids are fixed demo strings, and the
+product id is resolved from the catalogue in `src/lib/plans.ts` so the row agrees with whatever this
+build sells. That is what makes the seeded workspace exercise the same read path as a paid one —
+`resolveQuotas()` reads `provider_product_id` exactly as it does in production — without any
+credential being present. The ceiling is raised through the billing repository, so the membership
+writes that follow still pass through the same quota guard rather than around it.
 
 ## What gets written
 

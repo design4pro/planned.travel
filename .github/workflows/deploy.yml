@@ -25,10 +25,13 @@ jobs:
 
     env:
       CI: 'true'
-      VITE_STRIPE_PRICE_SOLO_MONTHLY: ${{ vars.VITE_STRIPE_PRICE_SOLO_MONTHLY }}
-      VITE_STRIPE_PRICE_SOLO_YEARLY: ${{ vars.VITE_STRIPE_PRICE_SOLO_YEARLY }}
-      VITE_STRIPE_PRICE_CREW_MONTHLY: ${{ vars.VITE_STRIPE_PRICE_CREW_MONTHLY }}
-      VITE_STRIPE_PRICE_CREW_YEARLY: ${{ vars.VITE_STRIPE_PRICE_CREW_YEARLY }}
+      # Public Polar product ids, inlined into both bundles at build time. Same
+      # four repository *variables* CI reads, in the same order — production ids
+      # here, sandbox ids in a developer's .env.local.
+      VITE_POLAR_PRODUCT_SOLO_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_SOLO_MONTHLY }}
+      VITE_POLAR_PRODUCT_SOLO_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_SOLO_YEARLY }}
+      VITE_POLAR_PRODUCT_CREW_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_MONTHLY }}
+      VITE_POLAR_PRODUCT_CREW_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_YEARLY }}
 
     steps:
       # The `secrets` context is not available in a job-level `if`, so the gate

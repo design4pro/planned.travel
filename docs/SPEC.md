@@ -74,14 +74,19 @@ Specifically:
 edit `package.json` or `pnpm-lock.yaml`. If you genuinely need a package that is absent, stop
 and report it in your result instead of installing it.
 
-**Named exception: two packages, once.** Exactly two packages may ever be added, by name:
-`@react-email/components` and `react-email`. The install belongs to **phase A** of the Polar
-migration and to no other round; before that phase they are absent and every builder treats them
-as absent. They exist so the transactional templates are authored as React components instead of
-concatenated HTML strings, and they change nothing about where those templates live. This is a
-list of two names, not a policy: any package outside these two is still a finding you report in
-your result and never a `pnpm add`, and nothing here grants a precedent, a category, or a
-"while we are in there" install.
+**Named exception: two packages, once — spent.** Exactly two packages could ever be added, by
+name: `@react-email/components` and `react-email`. Phase A installed them and the exception is
+now closed. `@react-email/components` is a **dependency**, `react-email` a **devDependency**;
+both are in `package.json` and in `pnpm-lock.yaml`, and no third name went in beside them. They
+exist so the transactional templates are authored as React components instead of concatenated
+HTML strings, and they change nothing about where those templates live: `@react-email/components`
+re-exports the renderer, so `render()` and `toPlainText()` come from that one import and the
+`{ subject, html, text }` shape below is unchanged. `react-email` is the preview CLI and stays a
+devDependency — a template that imports from `react-email` rather than `@react-email/components`
+pulls the CLI into the Worker bundle, which is a defect. This was a list of two names, not a
+policy: any package outside these two is still a finding you report in your result and never a
+`pnpm add`, and nothing here grants a precedent, a category, or a "while we are in there"
+install.
 
 **Email path.** Transactional mail is already wired end to end and needs no new integration.
 `src/server/auth/email.ts` renders `{ subject, html, text }` up front, the queue producer
@@ -92,12 +97,19 @@ path - **subscription confirmed**, **plan changed**, **payment failed** and **pa
 and each one ships a plain-text alternative alongside its HTML. The queue payload carries `text`,
 so a template without one delivers an empty message to any client that does not render HTML.
 
-**Known follow-up.** The `stripe` package stays in `package.json` as a known follow-up: phase A
-deletes its last consumer, and deleting the entry would breach the freeze above, so an unused
-dependency is left behind deliberately rather than by oversight. It is removed by the first
-round that is permitted to edit `package.json`. Until phase A gets there the package is still
-imported: once as a value in `src/server/billing/stripe.ts`, and type-only in the eight files
-beside it.
+**The `stripe` package is gone.** The same phase-A round that installed the two React Email
+packages ran `pnpm remove stripe`, so the dependency entry and its lockfile block are both
+absent: `grep -c stripe pnpm-lock.yaml` returns `0`, and nothing transitive pulls it back. The
+removal is deliberately the **first** change of the phase and not the last, so that the nine
+files that imported it — once as a value in `src/server/billing/stripe.ts`, type-only in the
+eight beside it — lose their import before anyone can call the port finished with one of them
+still standing. Phase A is not done while any of those imports survives.
+
+Do not lean on the type checker to tell you that. A git worktree nested inside another checkout
+of this repository resolves `stripe` from the **parent** checkout's `node_modules`, because
+Node's lookup walks up past the worktree root, so `pnpm typecheck` can pass with all nine imports
+in place. The manifest is the authority and the resolver is not; `grep -ril stripe src/` is what
+answers the question.
 
 What is genuinely still outstanding is the code, not the prose, and its inventory is
 `grep -ril stripe src/`. This paragraph names the categories and not the count: every
@@ -123,23 +135,29 @@ under Polar is false, because §1 records Polar as Merchant of Record carrying t
 our behalf. The legal pages go first: they are a representation to a customer, not a label on a
 button.
 
-Two categories are **not** phase-A work. The columns `stripe_customer_id`,
-`stripe_subscription_id` and `stripe_price_id` in `src/server/db/schema.ts` take Polar ids in
-place; renaming them is a two-release additive migration (`docs/ARCHITECTURE.md` §6,
-`docs/DEPLOY.md` §9.10), so the readers of those Drizzle field names — `src/server/repos/base.ts`
-projects `stripePriceId`, `src/server/repos/billing.ts` reads and writes all three — keep them
-until that migration lands, and the demo seed under `src/routes/api/dev/-seed/` follows the
-columns rather than the provider. `src/routeTree.gen.ts` holds `/api/stripe/webhook` because the
-route file does; it is regenerated by `pnpm generate-routes` when the route moves and never
-hand-edited (§6).
+**The three provider columns are renamed in phase A.** `stripe_customer_id`,
+`stripe_subscription_id` and `stripe_price_id` in `src/server/db/schema.ts` become
+`provider_customer_id`, `provider_subscription_id` and `provider_product_id`, and the two indexes
+move in the same breath: `subscriptions_stripe_subscription_unq` →
+`subscriptions_provider_subscription_unq`, `subscriptions_stripe_customer_idx` →
+`subscriptions_provider_customer_idx`. Migration `0002` does it with
+`ALTER TABLE … RENAME COLUMN` and an index drop-and-recreate, against a table that carries no
+subscription rows in any deployed environment, so there is no backfill and no two-release window
+to sit out — the additive-migration policy of `docs/DEPLOY.md` §5 protects data that does not
+exist here. `docs/ARCHITECTURE.md` §6 and `docs/DEPLOY.md` §9.10 carry the same decision. Every
+reader of those Drizzle field names moves in the same commit — `src/server/repos/base.ts`
+projects `providerProductId`, `src/server/repos/billing.ts` reads and writes all three — and the
+demo seed under `src/routes/api/dev/-seed/` follows the columns, which is also how it follows the
+provider. `src/routeTree.gen.ts` holds the billing webhook route because the route file does; it
+is regenerated by `pnpm generate-routes` when the route moves and never hand-edited (§6).
 
-`docs/ARCHITECTURE.md` no longer carries an uncorrected Stripe reference: the ones that remain
-are deliberate and each explains itself on the spot — the superseded path named as superseded
-(the preamble above §1, and §2.4), both §6 sites (the `stripe_price_id` column keeping its
-Stripe-era name because renaming it is a two-release additive migration and not a rewording, and
-`rowValuesFromRecord()` named as the Stripe handler today and the Polar one from phase A), and the
-two Polar rows of the §9 failure table marked as phase-A behaviour under a note that states what
-is mounted in their place. Treat all of those as correct; a round that "fixes" one falsifies the file.
+`docs/ARCHITECTURE.md` no longer carries an uncorrected Stripe reference. Its **§6** moved with
+the columns: authority row 1 names `provider_product_id`, and the `ceilingsForPlan()` /
+`rowValuesFromRecord()` note names the Polar webhook handler. The references that remain are
+deliberate and each explains itself on the spot — the superseded path named as superseded (the
+preamble above §1, and §2.4), and the two Polar rows of the §9 failure table marked as phase-A
+behaviour under a note that states what is mounted in their place. Treat those as correct; a
+round that "fixes" one falsifies the file.
 `docs/DEPLOY.md` is the runbook for what is deployed today, so the Stripe path is what it is
 supposed to describe; it is corrected by the round that owns that file, on the same schedule as
 the code it documents.

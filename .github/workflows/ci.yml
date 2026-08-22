@@ -16,13 +16,15 @@ permissions:
 
 env:
   CI: 'true'
-  # Stripe price ids are public and are inlined into both bundles by Vite, so
+  # Polar product ids are public and are inlined into both bundles by Vite, so
   # the build needs them to produce the same output CI is meant to verify.
-  # They live in repository *variables*, never in secrets.
-  VITE_STRIPE_PRICE_SOLO_MONTHLY: ${{ vars.VITE_STRIPE_PRICE_SOLO_MONTHLY }}
-  VITE_STRIPE_PRICE_SOLO_YEARLY: ${{ vars.VITE_STRIPE_PRICE_SOLO_YEARLY }}
-  VITE_STRIPE_PRICE_CREW_MONTHLY: ${{ vars.VITE_STRIPE_PRICE_CREW_MONTHLY }}
-  VITE_STRIPE_PRICE_CREW_YEARLY: ${{ vars.VITE_STRIPE_PRICE_CREW_YEARLY }}
+  # They live in repository *variables*, never in secrets. Leave one unset and
+  # the build still goes green — `requirePrice()` in src/lib/plans.ts throws for
+  # that plan and interval alone, at the moment a customer clicks Upgrade.
+  VITE_POLAR_PRODUCT_SOLO_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_SOLO_MONTHLY }}
+  VITE_POLAR_PRODUCT_SOLO_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_SOLO_YEARLY }}
+  VITE_POLAR_PRODUCT_CREW_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_MONTHLY }}
+  VITE_POLAR_PRODUCT_CREW_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_YEARLY }}
 
 jobs:
   verify:
