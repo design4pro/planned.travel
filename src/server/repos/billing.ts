@@ -5,7 +5,7 @@
  *
  * - **In-app reads** go through {@link getSubscription} and the usage helpers, all tenant-scoped like
  *   every other repository. `assertQuota()` in `./base` resolves its ceilings from the same row.
- * - **Stripe webhooks** have no session and therefore no tenant context: they arrive with a Stripe
+ * - **Billing webhooks** have no session and therefore no tenant context: they arrive with a provider
  *   customer or subscription id and have to *discover* which organization they belong to. Those three
  *   functions take a plain {@link Database}, are named `…Unscoped`, and are the only functions in
  *   `src/server/repos/**` that may run without a {@link TenantScope}. They return billing rows only —
@@ -54,9 +54,9 @@ const quotaOverridesSchema: z.ZodType<QuotaOverrides> = z.partialRecord(
 export const upsertSubscriptionInput = z.object({
   plan: planSchema.optional(),
   status: statusSchema.optional(),
-  stripeCustomerId: z.string().trim().min(1).max(64).nullish(),
-  stripeSubscriptionId: z.string().trim().min(1).max(64).nullish(),
-  stripePriceId: z.string().trim().min(1).max(64).nullish(),
+  providerCustomerId: z.string().trim().min(1).max(64).nullish(),
+  providerSubscriptionId: z.string().trim().min(1).max(64).nullish(),
+  providerProductId: z.string().trim().min(1).max(64).nullish(),
   seats: nonNegativeIntSchema.max(10_000).optional(),
   currency: currencySchema.nullish(),
   unitAmountMinor: nonNegativeIntSchema.nullish(),
@@ -231,7 +231,7 @@ export async function getMonthlyUsage(
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Resolves the billing row for one organization without a tenant context. Only the Stripe webhook and
+ * Resolves the billing row for one organization without a tenant context. Only the billing webhook and
  * the checkout callback may call this; everything inside a request uses {@link getSubscription}.
  */
 export async function findSubscriptionByOrganizationUnscoped(
@@ -246,31 +246,36 @@ export async function findSubscriptionByOrganizationUnscoped(
   return rows[0] ?? null
 }
 
-/** Finds the organization a Stripe customer belongs to. Webhook-only. */
-export async function findSubscriptionByStripeCustomerUnscoped(
+/** Finds the organization a provider customer belongs to. Webhook-only. */
+export async function findSubscriptionByProviderCustomerUnscoped(
   db: Database,
-  stripeCustomerId: string,
-): Promise<Subscription | null> {
-  const rows = await db
-    .select()
-    .from(subscriptions)
-    .where(eq(subscriptions.stripeCustomerId, z.string().trim().min(1).max(64).parse(stripeCustomerId)))
-    .limit(1)
-  return rows[0] ?? null
-}
-
-/** Finds the organization a Stripe subscription belongs to. Webhook-only. */
-export async function findSubscriptionByStripeSubscriptionUnscoped(
-  db: Database,
-  stripeSubscriptionId: string,
+  providerCustomerId: string,
 ): Promise<Subscription | null> {
   const rows = await db
     .select()
     .from(subscriptions)
     .where(
       eq(
-        subscriptions.stripeSubscriptionId,
-        z.string().trim().min(1).max(64).parse(stripeSubscriptionId),
+        subscriptions.providerCustomerId,
+        z.string().trim().min(1).max(64).parse(providerCustomerId),
+      ),
+    )
+    .limit(1)
+  return rows[0] ?? null
+}
+
+/** Finds the organization a provider subscription belongs to. Webhook-only. */
+export async function findSubscriptionByProviderSubscriptionUnscoped(
+  db: Database,
+  providerSubscriptionId: string,
+): Promise<Subscription | null> {
+  const rows = await db
+    .select()
+    .from(subscriptions)
+    .where(
+      eq(
+        subscriptions.providerSubscriptionId,
+        z.string().trim().min(1).max(64).parse(providerSubscriptionId),
       ),
     )
     .limit(1)

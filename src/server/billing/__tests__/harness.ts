@@ -1,23 +1,24 @@
 /**
  * Fakes for the billing ports.
  *
- * `src/server/billing/types.ts` describes the runtime as a set of interfaces
- * rather than as bindings, which is exactly so this file can exist: the
- * entitlement maths and the webhook endpoint run here against in-memory doubles,
+ * `src/server/billing/types.ts` describes the runtime as a set of interfaces rather
+ * than as bindings, which is exactly so this file can exist: the entitlement maths,
+ * the purchase flows and the webhook endpoint all run here against in-memory doubles,
  * with no D1, no KV, no queue and no network.
  *
- * The one real Stripe object is the `webhooks` namespace, because signature
- * verification is the thing under test and faking it would test nothing. It runs
- * on the same WebCrypto provider production uses.
+ * `signPolarWebhook()` is the one thing here that is not a double. It is a second,
+ * independent implementation of Standard Webhooks signing, written straight from the
+ * specification on WebCrypto and deliberately *not* calling
+ * `verifyWebhookSignature()`. A signer that shared code with the verifier would agree
+ * with it about anything, including a mistake, and would prove nothing.
  */
 
-// Must come first: it configures the price ids `#/lib/plans` reads at import.
+// Must come first: it configures the product ids `#/lib/plans` reads at import.
 import { TEST_PRICE_IDS } from './prices.fixture'
 import { ceilingsForPlan } from '../limits'
-import { createStripeClient, stripeWebhookCryptoProvider } from '../stripe'
 import { EMPTY_USAGE } from '../types'
 
-import type Stripe from 'stripe'
+import type { PolarOrder, PolarSubscription } from '../mapping'
 import type {
   BillingCache,
   BillingIdentity,
@@ -25,6 +26,8 @@ import type {
   BillingRuntime,
   BillingTask,
   BillingTaskQueue,
+  PolarClient,
+  PolarRequest,
   SubscriptionRecord,
   SubscriptionStore,
   UsageReader,
@@ -33,36 +36,76 @@ import type {
 import type { SubscriptionStatus } from '#/lib/plans'
 
 export const TEST_ORG_ID = 'org_test'
-export const TEST_WEBHOOK_SECRET = 'whsec_test_secret_value'
+export const TEST_WEBHOOK_SECRET = 'polar_whs_test_secret_value'
 export const TEST_APP_URL = 'https://planned.travel'
-export const TEST_CUSTOMER_ID = 'cus_test_1'
-export const TEST_CHECKOUT_URL = 'https://checkout.stripe.com/c/pay/cs_test_1'
-export const TEST_PORTAL_URL = 'https://billing.stripe.com/p/session/test_1'
+/** Polar object ids are UUIDs, and a fixture that pretended otherwise would let a
+ *  validator that rejects one slip through the suite and fail against the API. */
+export const TEST_CUSTOMER_ID = '0d7d6f5c-9a51-4f0e-8f0c-2a3b4c5d6e7f'
+export const TEST_SUBSCRIPTION_ID = '4c1e8b22-5a7d-4c19-9e33-6f8b0a1d2e34'
+export const TEST_ORDER_ID = 'a95f2c71-3b8e-4d06-9c52-1e7a4f930b68'
+export const TEST_CHECKOUT_ID = 'e2b71f04-6c3d-4a58-b019-7d5e2c86af13'
+export const TEST_CHECKOUT_URL = `https://buy.polar.sh/c/${TEST_CHECKOUT_ID}`
+export const TEST_PORTAL_URL = 'https://polar.sh/planned-travel/portal?token=test'
+export const TEST_INVOICE_PDF_URL = 'https://polar.sh/invoices/test.pdf'
 
 /* ------------------------------------------------------------------- signing */
 
-/** A client used only for its `webhooks` namespace — it never makes a request. */
-const signingClient = createStripeClient('sk_test_harness')
+export interface PolarSigningOptions {
+  readonly secret?: string
+  /** The `webhook-id` header. Polar's event id lives here and not in the body. */
+  readonly webhookId?: string
+  readonly timestampSeconds?: number
+}
 
-/** Sign a payload exactly the way Stripe does, on WebCrypto. */
-export async function signStripePayload(
+function base64(bytes: Uint8Array): string {
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary)
+}
+
+/**
+ * Sign a payload the way Polar does: HMAC-SHA256 over
+ * `${webhook-id}.${webhook-timestamp}.${raw body}`, keyed on the raw UTF-8 bytes of
+ * the secret, base64 with padding, presented as one `v1,<signature>` entry.
+ *
+ * Returns the three headers a delivery carries, ready to spread into a `Request`.
+ */
+export async function signPolarWebhook(
   payload: string,
-  secret: string = TEST_WEBHOOK_SECRET,
-  timestampSeconds: number = Math.floor(Date.now() / 1000),
-): Promise<string> {
-  return await signingClient.webhooks.generateTestHeaderStringAsync({
-    payload,
-    secret,
-    timestamp: timestampSeconds,
-    cryptoProvider: stripeWebhookCryptoProvider(),
-  })
+  options: PolarSigningOptions = {},
+): Promise<Record<string, string>> {
+  const secret = options.secret ?? TEST_WEBHOOK_SECRET
+  const webhookId = options.webhookId ?? 'msg_test_delivery_1'
+  const timestamp = String(
+    options.timestampSeconds ?? Math.floor(Date.now() / 1000),
+  )
+
+  const encoder = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(`${webhookId}.${timestamp}.${payload}`),
+  )
+
+  return {
+    'webhook-id': webhookId,
+    'webhook-timestamp': timestamp,
+    'webhook-signature': `v1,${base64(new Uint8Array(signature))}`,
+  }
 }
 
 export function webhookRequest(
   body: string,
   headers: Readonly<Record<string, string>> = {},
 ): Request {
-  return new Request('https://planned.travel/api/stripe/webhook', {
+  return new Request('https://planned.travel/api/polar/webhook', {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
     body,
@@ -86,20 +129,20 @@ export class FakeSubscriptionStore implements SubscriptionStore {
     return this.rows.get(organizationId) ?? null
   }
 
-  async findByStripeCustomerId(
-    stripeCustomerId: string,
+  async findByProviderCustomerId(
+    providerCustomerId: string,
   ): Promise<SubscriptionRecord | null> {
     for (const row of this.rows.values()) {
-      if (row.stripeCustomerId === stripeCustomerId) return row
+      if (row.providerCustomerId === providerCustomerId) return row
     }
     return null
   }
 
-  async findByStripeSubscriptionId(
-    stripeSubscriptionId: string,
+  async findByProviderSubscriptionId(
+    providerSubscriptionId: string,
   ): Promise<SubscriptionRecord | null> {
     for (const row of this.rows.values()) {
-      if (row.stripeSubscriptionId === stripeSubscriptionId) return row
+      if (row.providerSubscriptionId === providerSubscriptionId) return row
     }
     return null
   }
@@ -111,12 +154,12 @@ export class FakeSubscriptionStore implements SubscriptionStore {
 
   async attachCustomer(
     organizationId: string,
-    stripeCustomerId: string,
+    providerCustomerId: string,
   ): Promise<void> {
     const existing = this.rows.get(organizationId)
     this.rows.set(organizationId, {
       ...(existing ?? emptyRecord(organizationId)),
-      stripeCustomerId,
+      providerCustomerId,
     })
   }
 
@@ -142,9 +185,9 @@ export function emptyRecord(organizationId: string): SubscriptionRecord {
     status: 'incomplete',
     interval: null,
     seats: 1,
-    stripeCustomerId: null,
-    stripeSubscriptionId: null,
-    stripePriceId: null,
+    providerCustomerId: null,
+    providerSubscriptionId: null,
+    providerProductId: null,
     currentPeriodStart: null,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
@@ -171,9 +214,9 @@ export function subscriptionRecord(
     status: 'active',
     interval: 'monthly',
     seats: 4,
-    stripeCustomerId: TEST_CUSTOMER_ID,
-    stripeSubscriptionId: 'sub_test_1',
-    stripePriceId: TEST_PRICE_IDS.crewMonthly,
+    providerCustomerId: TEST_CUSTOMER_ID,
+    providerSubscriptionId: TEST_SUBSCRIPTION_ID,
+    providerProductId: TEST_PRICE_IDS.crewMonthly,
     currentPeriodStart: new Date('2026-08-01T00:00:00.000Z'),
     currentPeriodEnd: new Date('2026-09-01T00:00:00.000Z'),
     cancelAtPeriodEnd: false,
@@ -185,6 +228,61 @@ export function subscriptionRecord(
   return {
     ...base,
     ceilings: overrides.ceilings ?? ceilingsForPlan(base.planId, base.seats),
+  }
+}
+
+/* ---------------------------------------------------------------- wire fixtures */
+
+/** A Polar `Subscription` as the API and the webhooks deliver it. */
+export function polarSubscription(
+  overrides: Partial<PolarSubscription> = {},
+): PolarSubscription {
+  return {
+    id: TEST_SUBSCRIPTION_ID,
+    status: 'active',
+    product_id: TEST_PRICE_IDS.crewMonthly,
+    seats: 4,
+    current_period_start: '2026-08-01T00:00:00Z',
+    current_period_end: '2026-09-01T00:00:00Z',
+    cancel_at_period_end: false,
+    trial_end: null,
+    canceled_at: null,
+    customer_id: TEST_CUSTOMER_ID,
+    customer: {
+      id: TEST_CUSTOMER_ID,
+      external_id: TEST_ORG_ID,
+      email: 'owner@example.com',
+    },
+    metadata: {
+      organizationId: TEST_ORG_ID,
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+    },
+    ...overrides,
+  }
+}
+
+/** A Polar `Order` — what Polar issues in place of an invoice. */
+export function polarOrder(overrides: Partial<PolarOrder> = {}): PolarOrder {
+  return {
+    id: TEST_ORDER_ID,
+    status: 'paid',
+    created_at: '2026-08-01T09:30:00Z',
+    total_amount: 2800,
+    currency: 'usd',
+    invoice_number: 'PT-0001',
+    is_invoice_generated: true,
+    next_payment_attempt_at: null,
+    subscription_id: TEST_SUBSCRIPTION_ID,
+    customer_id: TEST_CUSTOMER_ID,
+    customer: {
+      id: TEST_CUSTOMER_ID,
+      external_id: TEST_ORG_ID,
+      email: 'owner@example.com',
+    },
+    metadata: { organizationId: TEST_ORG_ID },
+    ...overrides,
   }
 }
 
@@ -268,100 +366,94 @@ export function createCapturingLogger(): {
   }
 }
 
-/* -------------------------------------------------------------------- stripe */
+/* --------------------------------------------------------------------- polar */
 
-export interface StripeCalls {
-  readonly customers: Array<{
-    params: Stripe.CustomerCreateParams
-    options?: Stripe.RequestOptions
-  }>
-  readonly checkoutSessions: Array<{
-    params: Stripe.Checkout.SessionCreateParams
-    options?: Stripe.RequestOptions
-  }>
-  readonly portalSessions: Array<Stripe.BillingPortal.SessionCreateParams>
-  readonly subscriptionsRetrieved: Array<string>
-  readonly invoiceQueries: Array<Stripe.InvoiceListParams>
+export interface PolarStubSeed {
+  /** Body of `POST /v1/checkouts/`. */
+  readonly checkout?: unknown
+  /** Body of `POST /v1/customer-sessions/`. */
+  readonly customerSession?: unknown
+  /** Body of `PATCH /v1/subscriptions/{id}`. */
+  readonly subscription?: unknown
+  /** Items of `GET /v1/orders/`. */
+  readonly orders?: ReadonlyArray<unknown>
+  /** Body of `GET /v1/orders/{id}`. */
+  readonly order?: unknown
+  /** Body of `GET /v1/orders/{id}/invoice`. */
+  readonly orderInvoice?: unknown
+  /** Thrown by every request, for the paths that must degrade rather than fail. */
+  readonly error?: Error
 }
 
-export interface StripeStubSeed {
-  /** Returned by `subscriptions.retrieve`. */
-  readonly subscription?: Stripe.Subscription
-  readonly invoices?: ReadonlyArray<Stripe.Invoice>
-  /** Forces `checkout.sessions.create` to answer without a URL. */
-  readonly checkoutWithoutUrl?: boolean
+function defaultCheckout(): unknown {
+  return {
+    id: TEST_CHECKOUT_ID,
+    status: 'open',
+    url: TEST_CHECKOUT_URL,
+    product_id: TEST_PRICE_IDS.crewMonthly,
+    external_customer_id: TEST_ORG_ID,
+    customer_id: null,
+    seats: null,
+    metadata: {},
+  }
+}
+
+function defaultCustomerSession(): unknown {
+  return {
+    id: 'b3ec9f47-1d20-4a6b-8c7e-90f1a2b3c4d5',
+    customer_portal_url: TEST_PORTAL_URL,
+    customer_id: TEST_CUSTOMER_ID,
+    expires_at: '2026-08-01T10:00:00Z',
+  }
 }
 
 /**
- * A Stripe double with a real `webhooks` namespace and recorded writes.
+ * A Polar double that records every request and answers by route.
  *
- * The cast is deliberate and confined to this function: the SDK surface is far
- * larger than billing touches, and widening the fake to all of it would add
- * noise without adding a single assertion.
+ * The port is one `request()` method precisely so a fake can be this small and a
+ * test can assert the path, the method and the exact body that went out — which is
+ * the only thing standing between a Crew subscription and being billed as one seat.
  */
-export function createStripeStub(seed: StripeStubSeed = {}): {
-  stripe: Stripe
-  calls: StripeCalls
+export function createPolarStub(seed: PolarStubSeed = {}): {
+  polar: PolarClient
+  calls: Array<PolarRequest>
 } {
-  const calls: StripeCalls = {
-    customers: [],
-    checkoutSessions: [],
-    portalSessions: [],
-    subscriptionsRetrieved: [],
-    invoiceQueries: [],
-  }
+  const calls: Array<PolarRequest> = []
 
-  const stub = {
-    webhooks: signingClient.webhooks,
-    customers: {
-      create: async (
-        params: Stripe.CustomerCreateParams,
-        options?: Stripe.RequestOptions,
-      ) => {
-        calls.customers.push({ params, options })
-        return { id: TEST_CUSTOMER_ID }
-      },
-    },
-    checkout: {
-      sessions: {
-        create: async (
-          params: Stripe.Checkout.SessionCreateParams,
-          options?: Stripe.RequestOptions,
-        ) => {
-          calls.checkoutSessions.push({ params, options })
-          return {
-            id: 'cs_test_1',
-            url: seed.checkoutWithoutUrl === true ? null : TEST_CHECKOUT_URL,
-          }
-        },
-      },
-    },
-    billingPortal: {
-      sessions: {
-        create: async (params: Stripe.BillingPortal.SessionCreateParams) => {
-          calls.portalSessions.push(params)
-          return { url: TEST_PORTAL_URL }
-        },
-      },
-    },
-    subscriptions: {
-      retrieve: async (id: string) => {
-        calls.subscriptionsRetrieved.push(id)
-        if (seed.subscription === undefined) {
-          throw new Error(`No subscription seeded for ${id}`)
-        }
-        return seed.subscription
-      },
-    },
-    invoices: {
-      list: async (params: Stripe.InvoiceListParams) => {
-        calls.invoiceQueries.push(params)
-        return { data: [...(seed.invoices ?? [])] }
-      },
+  const polar: PolarClient = {
+    async request(request: PolarRequest): Promise<unknown> {
+      calls.push(request)
+      if (seed.error !== undefined) throw seed.error
+
+      const { method, path } = request
+
+      if (method === 'POST' && path === '/v1/checkouts/') {
+        return seed.checkout ?? defaultCheckout()
+      }
+      if (method === 'POST' && path === '/v1/customer-sessions/') {
+        return seed.customerSession ?? defaultCustomerSession()
+      }
+      if (method === 'PATCH' && path.startsWith('/v1/subscriptions/')) {
+        return seed.subscription ?? polarSubscription()
+      }
+      if (method === 'GET' && path === '/v1/orders/') {
+        const items = seed.orders ?? []
+        return { items, pagination: { total_count: items.length, max_page: 1 } }
+      }
+      if (path.startsWith('/v1/orders/') && path.endsWith('/invoice')) {
+        // The generate call answers 202 with no body at all.
+        if (method === 'POST') return null
+        return seed.orderInvoice ?? { url: TEST_INVOICE_PDF_URL }
+      }
+      if (method === 'GET' && path.startsWith('/v1/orders/')) {
+        return seed.order ?? polarOrder()
+      }
+
+      throw new Error(`No Polar stub for ${method} ${path}`)
     },
   }
 
-  return { stripe: stub as unknown as Stripe, calls }
+  return { polar, calls }
 }
 
 /* ------------------------------------------------------------------- runtime */
@@ -371,7 +463,7 @@ export interface HarnessOptions {
   readonly usage?: UsageSnapshot
   readonly webhookSecret?: string
   readonly now?: Date
-  readonly stripe?: StripeStubSeed
+  readonly polar?: PolarStubSeed
 }
 
 export interface Harness {
@@ -381,7 +473,8 @@ export interface Harness {
   readonly usage: FakeUsageReader
   readonly tasks: FakeTaskQueue
   readonly logs: Array<CapturedLog>
-  readonly calls: StripeCalls
+  /** Every request that went to Polar, in order. */
+  readonly calls: Array<PolarRequest>
   /** Moves the injected clock, for trial and tolerance assertions. */
   setNow: (next: Date) => void
 }
@@ -392,18 +485,18 @@ export function createHarness(options: HarnessOptions = {}): Harness {
   const usage = new FakeUsageReader(options.usage ?? EMPTY_USAGE)
   const tasks = new FakeTaskQueue()
   const { logger, records } = createCapturingLogger()
-  const { stripe, calls } = createStripeStub(options.stripe)
+  const { polar, calls } = createPolarStub(options.polar)
 
   // A frozen, deliberately arbitrary instant. Every assertion that touches it is
   // relative to it, so the value itself carries no meaning — verified by running
   // the suite with dates months either side of the real one. Keep it in the past
   // and never set it from `new Date()`: a default of "today" would silently
-  // couple the suite to the wall clock, and Stripe signature timestamps are
+  // couple the suite to the wall clock, and webhook signature timestamps are
   // generated from the real clock, so the two must not be assumed equal.
   let now = options.now ?? new Date('2025-03-04T09:17:00.000Z')
 
   const runtime: BillingRuntime = {
-    stripe,
+    polar,
     webhookSecret: options.webhookSecret ?? TEST_WEBHOOK_SECRET,
     appUrl: TEST_APP_URL,
     subscriptions: store,

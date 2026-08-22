@@ -1,12 +1,15 @@
 /**
  * Billing domain types and the runtime contract every billing operation runs against.
  *
- * Nothing in this file touches the Cloudflare runtime, Drizzle, or Stripe's network
+ * Nothing in this file touches the Cloudflare runtime, Drizzle, or Polar's network
  * layer, which is what makes the entitlement and webhook logic unit-testable with
  * plain fakes. The platform bindings are wired in `runtime.cloudflare.ts`.
+ *
+ * `provider*` rather than `polar*` throughout: these names describe the row and the
+ * queue envelope, both of which outlive any one payment provider, and the migration
+ * away from the previous one is the proof that they do.
  */
 
-import type Stripe from 'stripe'
 import type {
   BillingInterval,
   BillingState,
@@ -35,9 +38,12 @@ export interface SubscriptionRecord {
   readonly interval: BillingInterval | null
   /** Seats billed on the subscription. Always at least 1. */
   readonly seats: number
-  readonly stripeCustomerId: string | null
-  readonly stripeSubscriptionId: string | null
-  readonly stripePriceId: string | null
+  /** Polar customer id — `provider_customer_id` on the row. */
+  readonly providerCustomerId: string | null
+  /** Polar subscription id — `provider_subscription_id` on the row. */
+  readonly providerSubscriptionId: string | null
+  /** Polar **product** id, a UUID — `provider_product_id` on the row. */
+  readonly providerProductId: string | null
   readonly currentPeriodStart: Date | null
   readonly currentPeriodEnd: Date | null
   readonly cancelAtPeriodEnd: boolean
@@ -46,8 +52,9 @@ export interface SubscriptionRecord {
   /**
    * The per-tenant ceilings the row carries — the last word on effective limits, and
    * the reason a customer can be grandfathered above the plan they pay for. A record
-   * synthesised from a Stripe object rather than read back from the table carries the
-   * ceilings its plan writes (`ceilingsForPlan`), which is what will be persisted.
+   * synthesised from a Polar subscription rather than read back from the table
+   * carries the ceilings its plan writes (`ceilingsForPlan`), which is exactly what
+   * will be persisted, so the two paths cannot drift.
    */
   readonly ceilings: StoredCeilings
 }
@@ -55,12 +62,16 @@ export interface SubscriptionRecord {
 /** Tenant-scoped persistence for billing state. Implemented over Drizzle/D1. */
 export interface SubscriptionStore {
   findByOrganization: (organizationId: string) => Promise<SubscriptionRecord | null>
-  findByStripeCustomerId: (stripeCustomerId: string) => Promise<SubscriptionRecord | null>
-  findByStripeSubscriptionId: (stripeSubscriptionId: string) => Promise<SubscriptionRecord | null>
+  findByProviderCustomerId: (
+    providerCustomerId: string,
+  ) => Promise<SubscriptionRecord | null>
+  findByProviderSubscriptionId: (
+    providerSubscriptionId: string,
+  ) => Promise<SubscriptionRecord | null>
   /** Insert or replace the organization's row wholesale. */
   upsert: (record: SubscriptionRecord) => Promise<void>
-  /** Attach a Stripe customer to an organization before any subscription exists. */
-  attachCustomer: (organizationId: string, stripeCustomerId: string) => Promise<void>
+  /** Attach a provider customer to an organization before any subscription exists. */
+  attachCustomer: (organizationId: string, providerCustomerId: string) => Promise<void>
   /** Narrow status-only write used by invoice events. */
   updateStatus: (
     organizationId: string,
@@ -96,7 +107,7 @@ export interface BillingCache {
   delete: (key: string) => Promise<void>
 }
 
-/** Follow-up work a webhook hands off so it can answer Stripe immediately. */
+/** Follow-up work a webhook hands off so it can answer the provider immediately. */
 export type BillingTask =
   | {
       readonly kind: 'billing.subscription.changed'
@@ -104,23 +115,25 @@ export type BillingTask =
       readonly planId: PlanId
       readonly previousPlanId: PlanId
       readonly status: SubscriptionStatus
-      readonly stripeEventId: string
+      /** Polar delivers the event id in the `webhook-id` header, not in the body. */
+      readonly providerEventId: string
     }
   | {
       readonly kind: 'billing.invoice.paid'
       readonly organizationId: string
-      readonly stripeInvoiceId: string
+      /** Polar order id. An order is what Polar calls a paid invoice. */
+      readonly providerOrderId: string
       readonly amountPaid: number
       readonly currency: string
-      readonly stripeEventId: string
+      readonly providerEventId: string
     }
   | {
       readonly kind: 'billing.invoice.payment_failed'
       readonly organizationId: string
-      readonly stripeInvoiceId: string
+      readonly providerOrderId: string
       readonly attemptCount: number
       readonly nextAttemptAt: string | null
-      readonly stripeEventId: string
+      readonly providerEventId: string
     }
 
 /** The slice of a Cloudflare Queue billing uses. */
@@ -135,14 +148,59 @@ export interface BillingLogger {
   error: (message: string, fields?: Readonly<Record<string, unknown>>) => void
 }
 
+/* ------------------------------------------------------------------ the provider */
+
+/**
+ * Metadata we write onto every Polar object we create, and read back off the ones
+ * Polar sends us.
+ *
+ * Polar metadata values may be strings, integers, floats or booleans — unlike the
+ * string-only maps of the provider before it — so the seat count travels as a number
+ * and needs no parsing on the way back. It is a *cross-check* and never the primary
+ * source of attribution: `customer.external_id` is, because Polar guarantees it is
+ * unique per organization and copies it onto every object in the chain.
+ */
+export interface ProviderBillingMetadata {
+  readonly organizationId: string
+  readonly planId: PlanId
+  readonly interval: BillingInterval
+  readonly seats: number
+}
+
+/** One call against Polar's REST API. */
+export interface PolarRequest {
+  readonly method: 'GET' | 'POST' | 'PATCH'
+  /**
+   * Path from the API root. Polar's collection endpoints answer a request without
+   * the trailing slash with a 307, which costs a subrequest and can drop the
+   * `Authorization` header, so the slash is part of the path and not optional.
+   */
+  readonly path: string
+  readonly query?: Readonly<Record<string, string | number>>
+  readonly body?: unknown
+}
+
+/**
+ * The Polar REST surface, as one method.
+ *
+ * Deliberately not a facade of named operations: keeping the path on the call site
+ * is what lets the checkout and invoice tests assert *which* endpoint was hit and
+ * with what body, which is the only thing standing between a Crew subscription and
+ * being billed as one seat. The response is `unknown` because a third party's JSON
+ * is untrusted input; every caller parses it with Zod before believing a field.
+ */
+export interface PolarClient {
+  request: (request: PolarRequest) => Promise<unknown>
+}
+
 /* ---------------------------------------------------------------------- runtime */
 
 /** Everything a billing operation needs, injected rather than imported. */
 export interface BillingRuntime {
-  readonly stripe: Stripe
-  /** `whsec_…` signing secret for the webhook endpoint. */
+  readonly polar: PolarClient
+  /** Standard Webhooks signing secret for the billing endpoint. */
   readonly webhookSecret: string
-  /** Absolute origin used to build Stripe return URLs, no trailing slash. */
+  /** Absolute origin used to build Polar return URLs, no trailing slash. */
   readonly appUrl: string
   readonly subscriptions: SubscriptionStore
   readonly usage: UsageReader
@@ -220,12 +278,12 @@ export interface Entitlements {
   readonly trialEndsAt: string | null
   /** True while a trial is running, so the UI can count down. */
   readonly trialing: boolean
-  readonly hasStripeCustomer: boolean
+  readonly hasProviderCustomer: boolean
 }
 
 /**
  * The cached half of an entitlement lookup: the plan state, which only changes when
- * Stripe tells us it has. Usage is always read live so a tenant cannot burst past a
+ * Polar tells us it has. Usage is always read live so a tenant cannot burst past a
  * quota inside the cache window.
  */
 export interface CachedPlanState {
@@ -236,7 +294,7 @@ export interface CachedPlanState {
   readonly cancelAtPeriodEnd: boolean
   readonly currentPeriodEnd: string | null
   readonly trialEndsAt: string | null
-  readonly hasStripeCustomer: boolean
+  readonly hasProviderCustomer: boolean
   /**
    * The row's own ceilings, cached alongside the plan because they change on exactly
    * the same events. `null` for a tenant with nothing to escape with — no row, or a row
@@ -248,7 +306,7 @@ export interface CachedPlanState {
 
 /* ----------------------------------------------------------------------- errors */
 
-/** A deployment is missing a secret or a price id. Never shown to a customer. */
+/** A deployment is missing a secret or a product id. Never shown to a customer. */
 export class BillingConfigError extends Error {
   override readonly name = 'BillingConfigError'
 }

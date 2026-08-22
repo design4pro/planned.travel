@@ -16,10 +16,10 @@
  * 0. **Subscription status.** A row whose status no longer entitles the customer
  *    (`canceled`, `unpaid`, `paused`, `incomplete…`) resolves to the Free plan with no
  *    per-tenant escapes at all. A lapsed subscription grandfathers nothing.
- * 1. **The Stripe price id** identifies the plan. It is what the customer is actually
- *    being charged for, so it outranks every other hint about which plan they are on.
- *    A row with no price id, or one referencing a price this deployment no longer
- *    sells, falls back to the legacy tier column via {@link planIdFromTier}.
+ * 1. **The provider product id** identifies the plan. It is what the customer is
+ *    actually being charged for, so it outranks every other hint about which plan they
+ *    are on. A row with no product id, or one referencing a product this deployment no
+ *    longer sells, falls back to the legacy tier column via {@link planIdFromTier}.
  * 2. **The plan catalogue** (`src/lib/plans.ts`) supplies that plan's own limits —
  *    seats (narrowed to the seats actually purchased on a per-seat plan), trips,
  *    storage and every module switch. The coarse tier row in
@@ -44,12 +44,7 @@
  * three metrics they share is asserted in `__tests__/limits.test.ts`.
  */
 
-import {
-  catalogueLimits,
-  isEntitlingStatus,
-  planById,
-  planForPriceId,
-} from '#/lib/plans'
+import { catalogueLimits, isEntitlingStatus, planById, planForProductId } from '#/lib/plans'
 import { ORGANIZATION_PLANS, USAGE_METRICS } from '#/server/db/schema'
 import { PLAN_QUOTAS, UNLIMITED } from '#/server/db/types'
 
@@ -128,21 +123,21 @@ export interface SubscriptionLimitsRow {
   readonly plan: string
   readonly status: string
   readonly seats: number
-  readonly stripePriceId: string | null
+  readonly providerProductId: string | null
   readonly seatLimit: number
   readonly storageLimitBytes: number
   readonly quotaOverrides: QuotaOverrides | null
 }
 
 /**
- * The plan a persisted row represents: price id first, tier column only as a fallback.
- * The only translation from a row to the catalogue in the codebase.
+ * The plan a persisted row represents: product id first, tier column only as a
+ * fallback. The only translation from a row to the catalogue in the codebase.
  */
 export function planIdFromRow(
-  row: Pick<SubscriptionLimitsRow, 'plan' | 'seats' | 'stripePriceId'>,
+  row: Pick<SubscriptionLimitsRow, 'plan' | 'seats' | 'providerProductId'>,
 ): PlanId {
-  const fromPrice = planForPriceId(row.stripePriceId)
-  if (fromPrice !== null) return fromPrice.plan.id
+  const fromProduct = planForProductId(row.providerProductId)
+  if (fromProduct !== null) return fromProduct.plan.id
   return planIdFromTier(tierOf(row.plan), row.seats)
 }
 
@@ -179,7 +174,7 @@ export function ceilingsForPlan(planId: PlanId, seats: number): StoredCeilings {
 /* ---------------------------------------------------------------- the resolver */
 
 export interface ResolveLimitsInput {
-  /** The catalogue plan in force, already resolved from the price id or the tier. */
+  /** The catalogue plan in force, already resolved from the product id or the tier. */
   readonly planId: PlanId
   /** Seats billed on the subscription. */
   readonly seats: number

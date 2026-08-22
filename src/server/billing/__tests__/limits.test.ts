@@ -68,7 +68,7 @@ function row(overrides: Partial<SubscriptionLimitsRow> = {}): SubscriptionLimits
     plan: 'free',
     status: 'active',
     seats: 1,
-    stripePriceId: null,
+    providerProductId: null,
     seatLimit: 1,
     storageLimitBytes: 100 * MEGABYTE,
     quotaOverrides: null,
@@ -86,7 +86,7 @@ describe('authority order', () => {
           status,
           plan: 'business',
           seats: 10,
-          stripePriceId: TEST_PRICE_IDS.crewMonthly,
+          providerProductId: TEST_PRICE_IDS.crewMonthly,
           seatLimit: 10,
           storageLimitBytes: 50 * GIGABYTE,
         }),
@@ -99,25 +99,25 @@ describe('authority order', () => {
     }
   })
 
-  it('1 — the Stripe price id outranks the tier column', () => {
-    // A row whose tier says Free but whose price id says Crew is being charged for Crew.
+  it('1 — the provider product id outranks the tier column', () => {
+    // A row whose tier says Free but whose product id says Crew is being charged for Crew.
     const resolved = resolveLimitsFromRow(
-      row({ plan: 'free', seats: 4, stripePriceId: TEST_PRICE_IDS.crewMonthly }),
+      row({ plan: 'free', seats: 4, providerProductId: TEST_PRICE_IDS.crewMonthly }),
     )
 
     expect(resolved.planId).toBe('crew')
     expect(resolved.limits.realtime).toBe(true)
   })
 
-  it('1b — a row with no price id falls back to the tier column and its seat count', () => {
+  it('1b — a row with no product id falls back to the tier column and its seat count', () => {
     expect(planIdFromRow(row({ plan: 'pro', seats: 1 }))).toBe('solo')
     expect(planIdFromRow(row({ plan: 'business', seats: 1 }))).toBe('solo')
     expect(planIdFromRow(row({ plan: 'business', seats: 4 }))).toBe('crew')
     expect(planIdFromRow(row({ plan: 'starter', seats: 9 }))).toBe('free')
     // An id this deployment does not sell is no better than none at all.
-    expect(planIdFromRow(row({ plan: 'pro', seats: 1, stripePriceId: 'price_gone' }))).toBe(
-      'solo',
-    )
+    expect(
+      planIdFromRow(row({ plan: 'pro', seats: 1, providerProductId: 'product-retired' })),
+    ).toBe('solo')
   })
 
   it('2 — the catalogue owns its own limits, the tier row owns the rest', () => {
@@ -241,7 +241,7 @@ const ROW_CASES: ReadonlyArray<{
       ...ceilingColumns(ceilingsForPlan('crew', 10)),
       status: 'active',
       seats: 10,
-      stripePriceId: TEST_PRICE_IDS.crewMonthly,
+      providerProductId: TEST_PRICE_IDS.crewMonthly,
     },
     expectPlanId: 'crew',
   },
@@ -251,12 +251,12 @@ const ROW_CASES: ReadonlyArray<{
       ...ceilingColumns(ceilingsForPlan('solo', 1)),
       status: 'trialing',
       seats: 1,
-      stripePriceId: TEST_PRICE_IDS.soloMonthly,
+      providerProductId: TEST_PRICE_IDS.soloMonthly,
     },
     expectPlanId: 'solo',
   },
   {
-    name: 'a tier-only legacy row with no price id',
+    name: 'a tier-only legacy row with no product id',
     values: { plan: 'pro', status: 'active', seats: 1 },
     expectPlanId: 'solo',
   },
@@ -287,7 +287,7 @@ const ROW_CASES: ReadonlyArray<{
       ...ceilingColumns(ceilingsForPlan('crew', 10)),
       status: 'active',
       seats: 10,
-      stripePriceId: TEST_PRICE_IDS.crewMonthly,
+      providerProductId: TEST_PRICE_IDS.crewMonthly,
       seatLimit: 2,
       storageLimitBytes: 1 * GIGABYTE,
     },
@@ -299,13 +299,13 @@ const ROW_CASES: ReadonlyArray<{
       ...ceilingColumns(ceilingsForPlan('crew', 10)),
       status: 'canceled',
       seats: 10,
-      stripePriceId: TEST_PRICE_IDS.crewMonthly,
+      providerProductId: TEST_PRICE_IDS.crewMonthly,
     },
     expectPlanId: 'free',
   },
   {
-    name: 'a bare row that only carries a Stripe customer',
-    values: { stripeCustomerId: 'cus_bare' },
+    name: 'a bare row that only carries a provider customer',
+    values: { providerCustomerId: 'customer-bare' },
     expectPlanId: 'free',
   },
 ]
@@ -475,7 +475,7 @@ describe('ceilingsForPlan', () => {
         planId,
         seats,
         status: 'active',
-        stripePriceId: null,
+        providerProductId: null,
         interval: null,
         ceilings: ceilingsForPlan(planId, seats),
       })

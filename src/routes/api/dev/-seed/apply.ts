@@ -265,7 +265,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
   await markOrganizationOnboarded(owner)
 
   // The subscription comes first on purpose: the free plan seats one person, and the demo needs four.
-  // The row is derived from the plan by `rowValuesFromRecord()` — the same translation the Stripe
+  // The row is derived from the plan by `rowValuesFromRecord()` — the same translation the billing
   // webhook uses — so the tier, the seats, the price and the ceilings cannot drift apart, and the
   // membership writes below still go through the same quota guard rather than around it.
   await upsertSubscription(

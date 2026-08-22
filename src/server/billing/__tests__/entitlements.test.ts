@@ -65,7 +65,7 @@ describe('plan resolution', () => {
     expect(state.planId).toBe('free')
     expect(state.status).toBe('none')
     expect(state.seats).toBe(1)
-    expect(state.hasStripeCustomer).toBe(false)
+    expect(state.hasProviderCustomer).toBe(false)
   })
 
   it('keeps a paid plan while the status still entitles it', () => {
@@ -288,7 +288,7 @@ describe('entitlements', () => {
       exceeded: false,
     })
     expect(state.quotas.storageBytes.ratio).toBeCloseTo(0.5, 5)
-    expect(state.hasStripeCustomer).toBe(false)
+    expect(state.hasProviderCustomer).toBe(false)
   })
 
   it('flags the over-limit workspace a downgrade leaves behind', async () => {

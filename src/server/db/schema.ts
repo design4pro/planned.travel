@@ -263,7 +263,7 @@ export type QuotaOverrides = Partial<Record<(typeof USAGE_METRICS)[number], numb
 export type ContinentCounts = Record<string, number>
 
 /* -------------------------------------------------------------------------------------------------
- * Billing — written by the Stripe webhook handler, read by the quota guards
+ * Billing — written by the billing provider's webhook handler, read by the quota guards
  * ---------------------------------------------------------------------------------------------- */
 
 export const subscriptions = sqliteTable(
@@ -273,9 +273,9 @@ export const subscriptions = sqliteTable(
     organizationId: orgRef(),
     plan: text('plan').notNull().default('free'),
     status: text('status').notNull().default('active'),
-    stripeCustomerId: text('stripe_customer_id'),
-    stripeSubscriptionId: text('stripe_subscription_id'),
-    stripePriceId: text('stripe_price_id'),
+    providerCustomerId: text('provider_customer_id'),
+    providerSubscriptionId: text('provider_subscription_id'),
+    providerProductId: text('provider_product_id'),
     seats: integer('seats').notNull().default(1),
     currency: currency(),
     unitAmountMinor: minor('unit_amount_minor'),
@@ -294,8 +294,8 @@ export const subscriptions = sqliteTable(
   },
   (t) => [
     uniqueIndex('subscriptions_org_unq').on(t.organizationId),
-    uniqueIndex('subscriptions_stripe_subscription_unq').on(t.stripeSubscriptionId),
-    index('subscriptions_stripe_customer_idx').on(t.stripeCustomerId),
+    uniqueIndex('subscriptions_provider_subscription_unq').on(t.providerSubscriptionId),
+    index('subscriptions_provider_customer_idx').on(t.providerCustomerId),
     index('subscriptions_status_idx').on(t.status),
     index('subscriptions_current_period_end_idx').on(t.currentPeriodEnd),
     enumCheck('subscriptions_plan_chk', t.plan, ORGANIZATION_PLANS),

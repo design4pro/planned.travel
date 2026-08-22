@@ -10,14 +10,14 @@
  *
  * Every read and write goes through the `…Unscoped` billing repository functions, which
  * are the only repository functions permitted to run without a tenant scope precisely
- * because a Stripe webhook has no session. They touch billing rows and nothing else.
+ * because a billing webhook has no session. They touch billing rows and nothing else.
  */
 
-import { isSubscriptionStatus, planById, planForPriceId } from '#/lib/plans'
+import { isSubscriptionStatus, planById, planForProductId } from '#/lib/plans'
 import {
   findSubscriptionByOrganizationUnscoped,
-  findSubscriptionByStripeCustomerUnscoped,
-  findSubscriptionByStripeSubscriptionUnscoped,
+  findSubscriptionByProviderCustomerUnscoped,
+  findSubscriptionByProviderSubscriptionUnscoped,
   upsertSubscriptionUnscoped,
 } from '#/server/repos'
 import { ceilingsForPlan, planIdFromRow, storedCeilingsFromRow } from './limits'
@@ -33,11 +33,11 @@ export function recordFromRow(row: Subscription): SubscriptionRecord {
     organizationId: row.organizationId,
     planId: planIdFromRow(row),
     status: isSubscriptionStatus(row.status) ? row.status : 'incomplete',
-    interval: planForPriceId(row.stripePriceId)?.interval ?? null,
+    interval: planForProductId(row.providerProductId)?.interval ?? null,
     seats: Math.max(row.seats, 1),
-    stripeCustomerId: row.stripeCustomerId,
-    stripeSubscriptionId: row.stripeSubscriptionId,
-    stripePriceId: row.stripePriceId,
+    providerCustomerId: row.providerCustomerId,
+    providerSubscriptionId: row.providerSubscriptionId,
+    providerProductId: row.providerProductId,
     currentPeriodStart: row.currentPeriodStart,
     currentPeriodEnd: row.currentPeriodEnd,
     cancelAtPeriodEnd: row.cancelAtPeriodEnd,
@@ -76,9 +76,9 @@ export function rowValuesFromRecord(record: SubscriptionRecord): UpsertSubscript
     ...ceilingColumns(record.ceilings),
     status: record.status,
     seats: record.seats,
-    stripeCustomerId: record.stripeCustomerId,
-    stripeSubscriptionId: record.stripeSubscriptionId,
-    stripePriceId: record.stripePriceId,
+    providerCustomerId: record.providerCustomerId,
+    providerSubscriptionId: record.providerSubscriptionId,
+    providerProductId: record.providerProductId,
     currency: price === null ? null : price.currency.toUpperCase(),
     unitAmountMinor: price?.amount ?? null,
     currentPeriodStart: record.currentPeriodStart,
@@ -98,14 +98,14 @@ export function createSubscriptionStore(db: Database): SubscriptionStore {
       const row = await findSubscriptionByOrganizationUnscoped(db, organizationId)
       return row === null ? null : recordFromRow(row)
     },
-    async findByStripeCustomerId(stripeCustomerId) {
-      const row = await findSubscriptionByStripeCustomerUnscoped(db, stripeCustomerId)
+    async findByProviderCustomerId(providerCustomerId) {
+      const row = await findSubscriptionByProviderCustomerUnscoped(db, providerCustomerId)
       return row === null ? null : recordFromRow(row)
     },
-    async findByStripeSubscriptionId(stripeSubscriptionId) {
-      const row = await findSubscriptionByStripeSubscriptionUnscoped(
+    async findByProviderSubscriptionId(providerSubscriptionId) {
+      const row = await findSubscriptionByProviderSubscriptionUnscoped(
         db,
-        stripeSubscriptionId,
+        providerSubscriptionId,
       )
       return row === null ? null : recordFromRow(row)
     },
@@ -116,7 +116,7 @@ export function createSubscriptionStore(db: Database): SubscriptionStore {
         rowValuesFromRecord(record),
       )
     },
-    async attachCustomer(organizationId, stripeCustomerId) {
+    async attachCustomer(organizationId, providerCustomerId) {
       // A row created here predates the subscription it will carry, so it is stamped
       // with the Free plan's ceilings. Leaving the column defaults would have handed a
       // workspace ten seats for starting a checkout it never completed — and, now that
@@ -124,7 +124,7 @@ export function createSubscriptionStore(db: Database): SubscriptionStore {
       const existing = await findSubscriptionByOrganizationUnscoped(db, organizationId)
       await upsertSubscriptionUnscoped(db, organizationId, {
         ...(existing === null ? ceilingColumns(FREE_CEILINGS) : {}),
-        stripeCustomerId,
+        providerCustomerId,
       })
     },
     async updateStatus(organizationId, status, changedAt) {

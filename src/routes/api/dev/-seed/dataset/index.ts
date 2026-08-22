@@ -59,7 +59,7 @@ export const organizationSettings = {
  *
  * Only the *plan* is declared here. The tier column, the seat and storage ceilings, the
  * currency and the unit amount are all derived by `rowValuesFromRecord()`, exactly as a
- * Stripe webhook would derive them. Hand-stamping tier-shaped ceilings next to a
+ * billing webhook would derive them. Hand-stamping tier-shaped ceilings next to a
  * catalogue price is what made the demo tell `/settings/billing` one story and `/files`
  * another; there is now no way for the seed to write a row that disagrees with itself.
  */
@@ -68,28 +68,30 @@ export const subscription = {
   interval: 'monthly',
   status: 'active',
   seats: 10,
-  stripeCustomerId: 'cus_demo_planned_travel',
-  stripeSubscriptionId: 'sub_demo_planned_travel',
+  providerCustomerId: 'demo-customer-planned-travel',
+  providerSubscriptionId: 'demo-subscription-planned-travel',
 } as const satisfies {
   planId: PlanId
   interval: BillingInterval
   status: SubscriptionRecord['status']
   seats: number
-  stripeCustomerId: string
-  stripeSubscriptionId: string
+  providerCustomerId: string
+  providerSubscriptionId: string
 }
 
 /**
- * The Stripe price id for the demo plan, when this deployment has one configured.
+ * The provider product id for the demo plan, when this deployment has one configured.
  *
- * Never a made-up `price_…` string: an id the catalogue does not know is worse than no
- * id at all, because it is the first thing the resolver consults and it would resolve to
- * nothing. With no price id configured the tier column and the seat count carry the
- * plan instead, which is the legacy path every pre-catalogue row already takes.
+ * Never a made-up id: one the catalogue does not know is worse than none at all,
+ * because it is the first thing the resolver consults and it would resolve to nothing.
+ * The value comes from the catalogue itself, so it is whatever the deployment's
+ * `VITE_POLAR_PRODUCT_*` variables configured. With none configured the tier column and
+ * the seat count carry the plan instead, which is the legacy path every pre-catalogue
+ * row already takes.
  */
-export function demoStripePriceId(): string | null {
+export function demoProviderProductId(): string | null {
   const price = priceFor(planById(subscription.planId), subscription.interval)
-  return price === null || price.priceId === '' ? null : price.priceId
+  return price === null || price.productId === '' ? null : price.productId
 }
 
 /**
@@ -106,9 +108,9 @@ export function demoSubscriptionRecord(
     status: subscription.status,
     interval: subscription.interval,
     seats: subscription.seats,
-    stripeCustomerId: subscription.stripeCustomerId,
-    stripeSubscriptionId: subscription.stripeSubscriptionId,
-    stripePriceId: demoStripePriceId(),
+    providerCustomerId: subscription.providerCustomerId,
+    providerSubscriptionId: subscription.providerSubscriptionId,
+    providerProductId: demoProviderProductId(),
     currentPeriodStart: period.start,
     currentPeriodEnd: period.end,
     cancelAtPeriodEnd: false,

@@ -1,32 +1,41 @@
 /**
- * Buying a plan.
+ * Buying a plan on Polar.
  *
- * The load-bearing assertions here are the ones about *trust*: that a price is
- * never taken from the caller, that seats are clamped into the plan's own range,
- * that only an owner or an admin can spend the organization's money, and that a
- * double-clicked button cannot open two Checkout Sessions.
+ * The load-bearing assertions here are the ones about *money*: that a product id is
+ * never taken from the caller, that seats are clamped into the plan's own range and
+ * then actually sent — a Crew checkout without `seats` bills ten people as one, and
+ * Polar's schema accepts that body without complaint — that only an owner or an admin
+ * can spend the organization's money, and that a double-clicked button cannot open two
+ * checkouts.
  */
 
-// Must come first: it configures the price ids `#/lib/plans` reads at import.
+// Must come first: it configures the product ids `#/lib/plans` reads at import.
 import { TEST_PRICE_IDS } from './prices.fixture'
 
 import { describe, expect, it } from 'vitest'
 
 import {
-  buildCheckoutSessionParams,
-  buildPortalSessionParams,
+  CHECKOUT_PATH,
+  CUSTOMER_SESSION_PATH,
+  INVOICE_HISTORY_LIMIT,
+  ORDERS_PATH,
+  annualisedAmount,
+  billingMetadata,
+  buildCheckoutParams,
   changePlan,
-  checkoutCancelUrl,
   checkoutIdempotencyKey,
+  checkoutReturnUrl,
   checkoutSuccessUrl,
   createCheckoutSession,
   createPortalSession,
-  ensureStripeCustomer,
   invoiceSummaryOf,
   isEligibleForTrial,
   listRecentInvoices,
   liveSubscriptionId,
+  orderInvoiceUrl,
+  planChangedUrl,
   portalReturnUrl,
+  prorationFor,
   resolvePlanSelection,
 } from '../checkout'
 import { BillingForbiddenError } from '../types'
@@ -35,30 +44,60 @@ import {
   TEST_APP_URL,
   TEST_CHECKOUT_URL,
   TEST_CUSTOMER_ID,
+  TEST_INVOICE_PDF_URL,
+  TEST_ORDER_ID,
   TEST_ORG_ID,
   TEST_PORTAL_URL,
+  TEST_SUBSCRIPTION_ID,
   billingIdentity,
   createHarness,
+  polarOrder,
   subscriptionRecord,
 } from './harness'
 
-import type Stripe from 'stripe'
 import type { PlanSelection } from '../checkout'
+import type { PolarRequest } from '../types'
+
+/* ------------------------------------------------------------------- helpers */
+
+function callTo(
+  calls: ReadonlyArray<PolarRequest>,
+  method: PolarRequest['method'],
+  path: string,
+): PolarRequest {
+  const found = calls.find(
+    (call) => call.method === method && call.path === path,
+  )
+  if (found === undefined) {
+    throw new Error(
+      `No ${method} ${path} in [${calls.map((c) => `${c.method} ${c.path}`).join(', ')}]`,
+    )
+  }
+  return found
+}
+
+function bodyOf(request: PolarRequest): Record<string, unknown> {
+  const body = request.body
+  if (typeof body !== 'object' || body === null) {
+    throw new Error(`${request.method} ${request.path} carried no object body.`)
+  }
+  return body as Record<string, unknown>
+}
 
 /* ----------------------------------------------------------------- selection */
 
 describe('resolvePlanSelection', () => {
-  it('resolves the price from the catalogue, never from the caller', () => {
+  it('resolves the product from the catalogue, never from the caller', () => {
     const selection = resolvePlanSelection({
       planId: 'solo',
       interval: 'yearly',
     })
 
-    expect(selection.price.priceId).toBe(TEST_PRICE_IDS.soloYearly)
+    expect(selection.price.productId).toBe(TEST_PRICE_IDS.soloYearly)
     expect(selection.price.amount).toBe(PLANS.solo.prices.yearly?.amount)
   })
 
-  it('refuses the Free plan, which is not something Stripe can sell', () => {
+  it('refuses the Free plan, which is not something Polar can sell', () => {
     expect(() =>
       resolvePlanSelection({
         planId: 'free',
@@ -113,14 +152,23 @@ describe('resolvePlanSelection', () => {
 describe('return urls', () => {
   it('brings the customer back to the billing screen with an outcome', () => {
     expect(checkoutSuccessUrl(TEST_APP_URL)).toBe(
-      'https://planned.travel/settings/billing?checkout=complete&session={CHECKOUT_SESSION_ID}',
+      'https://planned.travel/settings/billing?checkout=complete&checkout_id={CHECKOUT_ID}',
     )
-    expect(checkoutCancelUrl(TEST_APP_URL)).toBe(
+    expect(checkoutReturnUrl(TEST_APP_URL)).toBe(
       'https://planned.travel/settings/billing?checkout=cancelled',
     )
     expect(portalReturnUrl(TEST_APP_URL)).toBe(
       'https://planned.travel/settings/billing?portal=complete',
     )
+    expect(planChangedUrl(TEST_APP_URL)).toBe(
+      'https://planned.travel/settings/billing?plan=changed',
+    )
+  })
+
+  it('uses Polar’s own interpolation token, not another provider’s', () => {
+    const url = checkoutSuccessUrl(TEST_APP_URL)
+    expect(url).toContain('checkout_id={CHECKOUT_ID}')
+    expect(url).not.toContain('CHECKOUT_SESSION_ID')
   })
 })
 
@@ -196,159 +244,115 @@ describe('checkoutIdempotencyKey', () => {
   })
 })
 
-/* ------------------------------------------------------------ session params */
+/* ----------------------------------------------------------- checkout params */
 
-describe('buildCheckoutSessionParams', () => {
+describe('buildCheckoutParams', () => {
   const crew: PlanSelection = resolvePlanSelection({
     planId: 'crew',
     interval: 'monthly',
     seats: 4,
   })
+  const solo: PlanSelection = resolvePlanSelection({
+    planId: 'solo',
+    interval: 'monthly',
+  })
 
-  it('asks for a subscription against our own customer and organization', () => {
-    const params = buildCheckoutSessionParams({
+  function params(selection: PlanSelection, trialDays = 0) {
+    return buildCheckoutParams({
       appUrl: TEST_APP_URL,
       organizationId: TEST_ORG_ID,
-      customerId: TEST_CUSTOMER_ID,
-      selection: crew,
-      trialDays: 0,
+      customerEmail: 'owner@example.com',
+      customerName: 'Test Expeditions',
+      selection,
+      trialDays,
     })
+  }
 
-    expect(params.mode).toBe('subscription')
-    expect(params.customer).toBe(TEST_CUSTOMER_ID)
-    expect(params.client_reference_id).toBe(TEST_ORG_ID)
-    expect(params.metadata).toEqual({
+  it('names the product as an array of UUIDs and the org as the customer', () => {
+    const body = params(crew)
+
+    expect(body.products).toEqual([TEST_PRICE_IDS.crewMonthly])
+    expect(body.external_customer_id).toBe(TEST_ORG_ID)
+    expect(body.currency).toBe('usd')
+    expect(body.success_url).toBe(checkoutSuccessUrl(TEST_APP_URL))
+  })
+
+  it('carries the organization, plan and interval in metadata', () => {
+    expect(params(crew).metadata).toEqual({
       organizationId: TEST_ORG_ID,
       planId: 'crew',
       interval: 'monthly',
-      seats: '4',
+      seats: 4,
     })
   })
 
-  it('carries the same metadata onto the subscription the webhook reads back', () => {
-    const params = buildCheckoutSessionParams({
-      appUrl: TEST_APP_URL,
-      organizationId: TEST_ORG_ID,
-      customerId: TEST_CUSTOMER_ID,
-      selection: crew,
-      trialDays: 0,
-    })
+  it('bills a seat-based plan for its seats, inside its own range', () => {
+    const body = params(crew)
 
-    expect(params.subscription_data?.metadata).toEqual(params.metadata)
+    expect(body.seats).toBe(crew.seats)
+    expect(body.min_seats).toBe(2)
+    expect(body.max_seats).toBe(10)
+    expect(body.min_seats).toBe(PLANS.crew.seatRange.min)
+    expect(body.max_seats).toBe(PLANS.crew.seatRange.max)
   })
 
-  it('lets a seat-based plan be adjusted only inside its own range', () => {
-    const params = buildCheckoutSessionParams({
-      appUrl: TEST_APP_URL,
-      organizationId: TEST_ORG_ID,
-      customerId: TEST_CUSTOMER_ID,
-      selection: crew,
-      trialDays: 0,
-    })
+  it('sends no seat fields at all for a flat plan', () => {
+    const body = params(solo)
 
-    expect(params.line_items?.[0]).toMatchObject({
-      price: TEST_PRICE_IDS.crewMonthly,
-      quantity: 4,
-      adjustable_quantity: {
-        enabled: true,
-        minimum: PLANS.crew.seatRange.min,
-        maximum: PLANS.crew.seatRange.max,
-      },
-    })
+    expect(body).not.toHaveProperty('seats')
+    expect(body).not.toHaveProperty('min_seats')
+    expect(body).not.toHaveProperty('max_seats')
   })
 
-  it('fixes the quantity of a flat plan at one', () => {
-    const solo = resolvePlanSelection({ planId: 'solo', interval: 'monthly' })
-    const params = buildCheckoutSessionParams({
-      appUrl: TEST_APP_URL,
-      organizationId: TEST_ORG_ID,
-      customerId: TEST_CUSTOMER_ID,
-      selection: solo,
-      trialDays: 0,
-    })
+  it('asks Polar for the trial in days, and refuses a second one', () => {
+    const offered = params(crew, 14)
+    expect(offered.allow_trial).toBe(true)
+    expect(offered.trial_interval).toBe('day')
+    expect(offered.trial_interval_count).toBe(14)
 
-    expect(params.line_items?.[0]?.quantity).toBe(1)
-    expect(params.line_items?.[0]?.adjustable_quantity).toBeUndefined()
+    const withheld = params(crew, 0)
+    expect(withheld.allow_trial).toBe(false)
+    expect(withheld).not.toHaveProperty('trial_interval')
+    expect(withheld).not.toHaveProperty('trial_interval_count')
   })
 
-  it('asks for no card while a trial is on offer, and cancels if none arrives', () => {
-    const params = buildCheckoutSessionParams({
-      appUrl: TEST_APP_URL,
-      organizationId: TEST_ORG_ID,
-      customerId: TEST_CUSTOMER_ID,
-      selection: crew,
-      trialDays: 14,
-    })
+  it('renames the two parameters Polar still has', () => {
+    const body = params(crew)
 
-    expect(params.payment_method_collection).toBe('if_required')
-    expect(params.subscription_data?.trial_period_days).toBe(14)
-    expect(params.subscription_data?.trial_settings).toEqual({
-      end_behavior: { missing_payment_method: 'cancel' },
-    })
+    expect(body.allow_discount_codes).toBe(true)
+    expect(body.require_billing_address).toBe(false)
+    expect(body).not.toHaveProperty('allow_promotion_codes')
+    expect(body).not.toHaveProperty('billing_address_collection')
   })
 
-  it('insists on a card when there is no trial', () => {
-    const params = buildCheckoutSessionParams({
-      appUrl: TEST_APP_URL,
-      organizationId: TEST_ORG_ID,
-      customerId: TEST_CUSTOMER_ID,
-      selection: crew,
-      trialDays: 0,
-    })
+  it('drops every parameter that has no Polar counterpart', () => {
+    const body = params(crew, 14)
 
-    expect(params.payment_method_collection).toBe('always')
-    expect(params.subscription_data?.trial_period_days).toBeUndefined()
-    expect(params.subscription_data?.trial_settings).toBeUndefined()
+    for (const dropped of [
+      'mode',
+      'line_items',
+      'client_reference_id',
+      'subscription_data',
+      'automatic_tax',
+      'tax_id_collection',
+      'customer_update',
+      'payment_method_collection',
+      'cancel_url',
+    ]) {
+      expect(body).not.toHaveProperty(dropped)
+    }
   })
 })
 
-describe('buildPortalSessionParams', () => {
-  it('opens the portal home with no flow', () => {
-    const params = buildPortalSessionParams({
-      appUrl: TEST_APP_URL,
-      customerId: TEST_CUSTOMER_ID,
-      intent: 'home',
-      subscriptionId: 'sub_test_1',
+describe('billingMetadata', () => {
+  it('keeps the seat count an integer, because Polar metadata is typed', () => {
+    const selection = resolvePlanSelection({
+      planId: 'crew',
+      interval: 'yearly',
+      seats: 7,
     })
 
-    expect(params.flow_data).toBeUndefined()
-    expect(params.return_url).toBe(portalReturnUrl(TEST_APP_URL))
-  })
-
-  it('opens the card-update flow without needing a subscription', () => {
-    const params = buildPortalSessionParams({
-      appUrl: TEST_APP_URL,
-      customerId: TEST_CUSTOMER_ID,
-      intent: 'paymentMethod',
-      subscriptionId: null,
-    })
-
-    expect(params.flow_data?.type).toBe('payment_method_update')
-  })
-
-  it('names the subscription being cancelled', () => {
-    const params = buildPortalSessionParams({
-      appUrl: TEST_APP_URL,
-      customerId: TEST_CUSTOMER_ID,
-      intent: 'cancel',
-      subscriptionId: 'sub_test_1',
-    })
-
-    expect(params.flow_data).toMatchObject({
-      type: 'subscription_cancel',
-      subscription_cancel: { subscription: 'sub_test_1' },
-    })
-  })
-
-  it('refuses to open a cancellation flow with nothing to cancel', () => {
-    expect(() =>
-      buildPortalSessionParams({
-        appUrl: TEST_APP_URL,
-        customerId: TEST_CUSTOMER_ID,
-        intent: 'cancel',
-        subscriptionId: null,
-      }),
-    ).toThrow('no active subscription')
+    expect(billingMetadata(TEST_ORG_ID, selection).seats).toBe(7)
   })
 })
 
@@ -358,7 +362,7 @@ describe('trial eligibility', () => {
   it('offers a trial to an organization that has never subscribed', () => {
     expect(isEligibleForTrial(null)).toBe(true)
     expect(
-      isEligibleForTrial(subscriptionRecord({ stripeSubscriptionId: null })),
+      isEligibleForTrial(subscriptionRecord({ providerSubscriptionId: null })),
     ).toBe(true)
   })
 
@@ -367,7 +371,7 @@ describe('trial eligibility', () => {
     expect(
       isEligibleForTrial(
         subscriptionRecord({
-          stripeSubscriptionId: null,
+          providerSubscriptionId: null,
           trialEndsAt: new Date('2026-01-01T00:00:00.000Z'),
         }),
       ),
@@ -377,75 +381,77 @@ describe('trial eligibility', () => {
 
 describe('liveSubscriptionId', () => {
   it('finds the subscription only while its status still entitles it', () => {
-    expect(liveSubscriptionId(subscriptionRecord())).toBe('sub_test_1')
+    expect(liveSubscriptionId(subscriptionRecord())).toBe(TEST_SUBSCRIPTION_ID)
     expect(liveSubscriptionId(subscriptionRecord({ status: 'past_due' }))).toBe(
-      'sub_test_1',
+      TEST_SUBSCRIPTION_ID,
     )
     expect(
       liveSubscriptionId(subscriptionRecord({ status: 'canceled' })),
     ).toBeNull()
     expect(
-      liveSubscriptionId(subscriptionRecord({ stripeSubscriptionId: null })),
+      liveSubscriptionId(subscriptionRecord({ providerSubscriptionId: null })),
     ).toBeNull()
     expect(liveSubscriptionId(null)).toBeNull()
-  })
-})
-
-/* ----------------------------------------------------------------- customers */
-
-describe('ensureStripeCustomer', () => {
-  it('creates one customer per organization and remembers it', async () => {
-    const harness = createHarness()
-
-    const id = await ensureStripeCustomer(harness.runtime, billingIdentity())
-
-    expect(id).toBe(TEST_CUSTOMER_ID)
-    expect(harness.calls.customers).toHaveLength(1)
-    expect(harness.calls.customers[0]?.params.metadata).toMatchObject({
-      organizationId: TEST_ORG_ID,
-    })
-    expect(harness.calls.customers[0]?.options?.idempotencyKey).toBe(
-      `customer:${TEST_ORG_ID}`,
-    )
-    expect(harness.store.rows.get(TEST_ORG_ID)?.stripeCustomerId).toBe(
-      TEST_CUSTOMER_ID,
-    )
-  })
-
-  it('reuses the customer a returning workspace already has', async () => {
-    const harness = createHarness({
-      record: subscriptionRecord({ status: 'canceled' }),
-    })
-
-    const id = await ensureStripeCustomer(harness.runtime, billingIdentity())
-
-    expect(id).toBe(TEST_CUSTOMER_ID)
-    expect(harness.calls.customers).toHaveLength(0)
   })
 })
 
 /* ------------------------------------------------------------------ checkout */
 
 describe('createCheckoutSession', () => {
-  it('sends a first-time subscriber to Checkout with their trial', async () => {
+  it('posts to /v1/checkouts/ and hands back the URL Polar returned', async () => {
     const harness = createHarness()
 
     const redirect = await createCheckoutSession(
       harness.runtime,
       billingIdentity(),
-      {
-        planId: 'crew',
-        interval: 'monthly',
-        seats: 4,
-      },
+      { planId: 'crew', interval: 'monthly', seats: 4 },
     )
 
     expect(redirect).toEqual({ url: TEST_CHECKOUT_URL, surface: 'checkout' })
-    const call = harness.calls.checkoutSessions[0]
-    expect(call.params.subscription_data?.trial_period_days).toBe(
-      PLANS.crew.trialDays,
-    )
-    expect(call.options?.idempotencyKey).toBeTypeOf('string')
+
+    const call = callTo(harness.calls, 'POST', CHECKOUT_PATH)
+    const body = bodyOf(call)
+    expect(body.products).toEqual([TEST_PRICE_IDS.crewMonthly])
+    expect(body.external_customer_id).toBe(TEST_ORG_ID)
+    expect(body.seats).toBe(4)
+  })
+
+  it('never touches a checkout-sessions path', async () => {
+    const harness = createHarness()
+
+    await createCheckoutSession(harness.runtime, billingIdentity(), {
+      planId: 'solo',
+      interval: 'monthly',
+    })
+
+    for (const call of harness.calls) {
+      expect(call.path).not.toContain('checkout-sessions')
+    }
+  })
+
+  it('creates no customer up front — external_customer_id does that job', async () => {
+    const harness = createHarness()
+
+    await createCheckoutSession(harness.runtime, billingIdentity(), {
+      planId: 'solo',
+      interval: 'monthly',
+    })
+
+    expect(harness.calls.map((call) => call.path)).toEqual([CHECKOUT_PATH])
+  })
+
+  it('sends a first-time subscriber to checkout with their trial', async () => {
+    const harness = createHarness()
+
+    await createCheckoutSession(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+    })
+
+    const body = bodyOf(callTo(harness.calls, 'POST', CHECKOUT_PATH))
+    expect(body.allow_trial).toBe(true)
+    expect(body.trial_interval_count).toBe(PLANS.crew.trialDays)
   })
 
   it('withholds the trial from a workspace that has already had one', async () => {
@@ -459,10 +465,42 @@ describe('createCheckoutSession', () => {
       seats: 4,
     })
 
-    expect(
-      harness.calls.checkoutSessions[0]?.params.subscription_data
-        ?.trial_period_days,
-    ).toBeUndefined()
+    const body = bodyOf(callTo(harness.calls, 'POST', CHECKOUT_PATH))
+    expect(body.allow_trial).toBe(false)
+  })
+
+  it('collapses a double-clicked button onto one checkout', async () => {
+    const harness = createHarness()
+
+    const first = await createCheckoutSession(
+      harness.runtime,
+      billingIdentity(),
+      { planId: 'solo', interval: 'monthly' },
+    )
+    const second = await createCheckoutSession(
+      harness.runtime,
+      billingIdentity(),
+      { planId: 'solo', interval: 'monthly' },
+    )
+
+    expect(second).toEqual(first)
+    expect(harness.calls).toHaveLength(1)
+  })
+
+  it('opens a fresh checkout once the window has rolled over', async () => {
+    const harness = createHarness({ now: new Date('2025-03-04T09:17:00.000Z') })
+
+    await createCheckoutSession(harness.runtime, billingIdentity(), {
+      planId: 'solo',
+      interval: 'monthly',
+    })
+    harness.setNow(new Date('2025-03-04T09:19:00.000Z'))
+    await createCheckoutSession(harness.runtime, billingIdentity(), {
+      planId: 'solo',
+      interval: 'monthly',
+    })
+
+    expect(harness.calls).toHaveLength(2)
   })
 
   it('refuses a member who is not allowed to spend the workspace’s money', async () => {
@@ -472,15 +510,11 @@ describe('createCheckoutSession', () => {
       createCheckoutSession(
         harness.runtime,
         billingIdentity({ role: 'member' }),
-        {
-          planId: 'solo',
-          interval: 'monthly',
-        },
+        { planId: 'solo', interval: 'monthly' },
       ),
     ).rejects.toBeInstanceOf(BillingForbiddenError)
 
-    expect(harness.calls.checkoutSessions).toHaveLength(0)
-    expect(harness.calls.customers).toHaveLength(0)
+    expect(harness.calls).toHaveLength(0)
   })
 
   it('allows an admin as well as an owner', async () => {
@@ -490,59 +524,182 @@ describe('createCheckoutSession', () => {
       createCheckoutSession(
         harness.runtime,
         billingIdentity({ role: 'admin' }),
-        {
-          planId: 'solo',
-          interval: 'monthly',
-        },
+        { planId: 'solo', interval: 'monthly' },
       ),
     ).resolves.toMatchObject({ surface: 'checkout' })
   })
 
   it('fails loudly rather than redirecting nowhere', async () => {
-    const harness = createHarness({ stripe: { checkoutWithoutUrl: true } })
+    const harness = createHarness({
+      polar: { checkout: { id: 'x', status: 'open', product_id: 'y' } },
+    })
 
     await expect(
       createCheckoutSession(harness.runtime, billingIdentity(), {
         planId: 'solo',
         interval: 'monthly',
       }),
-    ).rejects.toThrow('Checkout URL')
+    ).rejects.toThrow()
+  })
+})
+
+/* -------------------------------------------------------------------- portal */
+
+describe('createPortalSession', () => {
+  it('mints a customer session against the organization id', async () => {
+    const harness = createHarness({ record: subscriptionRecord() })
+
+    const redirect = await createPortalSession(
+      harness.runtime,
+      billingIdentity(),
+    )
+
+    expect(redirect).toEqual({ url: TEST_PORTAL_URL, surface: 'portal' })
+
+    const body = bodyOf(callTo(harness.calls, 'POST', CUSTOMER_SESSION_PATH))
+    expect(body.external_customer_id).toBe(TEST_ORG_ID)
+    expect(body.return_url).toBe(portalReturnUrl(TEST_APP_URL))
+    expect(body).not.toHaveProperty('flow_data')
+  })
+
+  it('explains itself when there is no billing profile yet', async () => {
+    const harness = createHarness()
+
+    await expect(
+      createPortalSession(harness.runtime, billingIdentity()),
+    ).rejects.toThrow('no billing profile')
+    expect(harness.calls).toHaveLength(0)
+  })
+
+  it('refuses a member', async () => {
+    const harness = createHarness({ record: subscriptionRecord() })
+
+    await expect(
+      createPortalSession(harness.runtime, billingIdentity({ role: 'member' })),
+    ).rejects.toBeInstanceOf(BillingForbiddenError)
   })
 })
 
 /* -------------------------------------------------------------- plan changes */
 
-const LIVE_SUBSCRIPTION = {
-  id: 'sub_test_1',
-  items: { data: [{ id: 'si_test_1' }] },
-} as unknown as Stripe.Subscription
+describe('proration', () => {
+  it('prices a year of a plan at the seats it is billed for', () => {
+    expect(annualisedAmount('crew', 'monthly', 4)).toBe(700 * 12 * 4)
+    expect(annualisedAmount('crew', 'yearly', 4)).toBe(7000 * 4)
+    expect(annualisedAmount('solo', 'monthly', 9)).toBe(900 * 12)
+    expect(annualisedAmount('free', null, 1)).toBe(0)
+  })
+
+  it('invoices an upgrade now and defers a downgrade to the next period', () => {
+    const crew4 = subscriptionRecord({ seats: 4 })
+
+    expect(
+      prorationFor(
+        crew4,
+        resolvePlanSelection({ planId: 'crew', interval: 'monthly', seats: 8 }),
+      ),
+    ).toBe('invoice')
+    expect(
+      prorationFor(
+        crew4,
+        resolvePlanSelection({ planId: 'solo', interval: 'yearly' }),
+      ),
+    ).toBe('next_period')
+    expect(
+      prorationFor(
+        crew4,
+        resolvePlanSelection({ planId: 'crew', interval: 'monthly', seats: 4 }),
+      ),
+    ).toBe('prorate')
+  })
+})
 
 describe('changePlan', () => {
-  it('confirms the change in the portal when a subscription is already live', async () => {
-    const harness = createHarness({
-      record: subscriptionRecord(),
-      stripe: { subscription: LIVE_SUBSCRIPTION },
-    })
+  it('patches the subscription onto the new product', async () => {
+    const harness = createHarness({ record: subscriptionRecord() })
 
     const redirect = await changePlan(harness.runtime, billingIdentity(), {
       planId: 'solo',
       interval: 'yearly',
     })
 
-    expect(redirect).toEqual({ url: TEST_PORTAL_URL, surface: 'portal' })
-    expect(harness.calls.portalSessions[0]?.flow_data).toMatchObject({
-      type: 'subscription_update_confirm',
-      subscription_update_confirm: {
-        subscription: 'sub_test_1',
-        items: [
-          { id: 'si_test_1', price: TEST_PRICE_IDS.soloYearly, quantity: 1 },
-        ],
-      },
+    expect(redirect).toEqual({
+      url: planChangedUrl(TEST_APP_URL),
+      surface: 'applied',
     })
-    expect(harness.calls.checkoutSessions).toHaveLength(0)
+
+    const call = callTo(
+      harness.calls,
+      'PATCH',
+      `/v1/subscriptions/${TEST_SUBSCRIPTION_ID}`,
+    )
+    expect(bodyOf(call)).toEqual({
+      product_id: TEST_PRICE_IDS.soloYearly,
+      proration_behavior: 'next_period',
+    })
   })
 
-  it('falls back to Checkout when the old subscription no longer entitles anything', async () => {
+  it('changes seats on their own variant, never alongside the product', async () => {
+    const harness = createHarness({ record: subscriptionRecord({ seats: 4 }) })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 8,
+    })
+
+    expect(harness.calls).toHaveLength(1)
+    expect(bodyOf(harness.calls[0])).toEqual({
+      seats: 8,
+      proration_behavior: 'invoice',
+    })
+  })
+
+  it('sends the product first and the seats second when both move', async () => {
+    const harness = createHarness({ record: subscriptionRecord({ seats: 4 }) })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'yearly',
+      seats: 9,
+    })
+
+    expect(harness.calls).toHaveLength(2)
+    expect(bodyOf(harness.calls[0])).toHaveProperty(
+      'product_id',
+      TEST_PRICE_IDS.crewYearly,
+    )
+    expect(bodyOf(harness.calls[1])).toHaveProperty('seats', 9)
+  })
+
+  it('asks Polar for nothing when nothing actually changed', async () => {
+    const harness = createHarness({ record: subscriptionRecord({ seats: 4 }) })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+    })
+
+    expect(harness.calls).toHaveLength(0)
+  })
+
+  it('resolves the new product on the server even when the seats are absurd', async () => {
+    const harness = createHarness({ record: subscriptionRecord({ seats: 4 }) })
+
+    await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 999,
+    })
+
+    expect(bodyOf(harness.calls[0])).toHaveProperty(
+      'seats',
+      PLANS.crew.seatRange.max,
+    )
+  })
+
+  it('falls back to checkout when the old subscription no longer entitles anything', async () => {
     const harness = createHarness({
       record: subscriptionRecord({ status: 'canceled' }),
     })
@@ -554,31 +711,7 @@ describe('changePlan', () => {
     })
 
     expect(redirect.surface).toBe('checkout')
-    expect(harness.calls.portalSessions).toHaveLength(0)
-  })
-
-  it('resolves the new price on the server even when the seats are absurd', async () => {
-    const harness = createHarness({
-      record: subscriptionRecord(),
-      stripe: { subscription: LIVE_SUBSCRIPTION },
-    })
-
-    await changePlan(harness.runtime, billingIdentity(), {
-      planId: 'crew',
-      interval: 'monthly',
-      seats: 999,
-    })
-
-    expect(harness.calls.portalSessions[0]?.flow_data).toMatchObject({
-      subscription_update_confirm: {
-        items: [
-          {
-            price: TEST_PRICE_IDS.crewMonthly,
-            quantity: PLANS.crew.seatRange.max,
-          },
-        ],
-      },
-    })
+    expect(callTo(harness.calls, 'POST', CHECKOUT_PATH)).toBeDefined()
   })
 
   it('refuses a member outright', async () => {
@@ -593,117 +726,132 @@ describe('changePlan', () => {
   })
 })
 
-/* -------------------------------------------------------------------- portal */
+/* ------------------------------------------------------------------- orders */
 
-describe('createPortalSession', () => {
-  it('opens the portal for a workspace with a billing profile', async () => {
-    const harness = createHarness({ record: subscriptionRecord() })
-
-    const redirect = await createPortalSession(
-      harness.runtime,
-      billingIdentity(),
-      {
-        intent: 'paymentMethod',
-      },
-    )
-
-    expect(redirect).toEqual({ url: TEST_PORTAL_URL, surface: 'portal' })
-    expect(harness.calls.portalSessions[0]?.customer).toBe(TEST_CUSTOMER_ID)
-  })
-
-  it('explains itself when there is no billing profile yet', async () => {
-    const harness = createHarness()
-
-    await expect(
-      createPortalSession(harness.runtime, billingIdentity(), {
-        intent: 'home',
-      }),
-    ).rejects.toThrow('no billing profile')
-  })
-
-  it('refuses a member', async () => {
-    const harness = createHarness({ record: subscriptionRecord() })
-
-    await expect(
-      createPortalSession(
-        harness.runtime,
-        billingIdentity({ role: 'member' }),
-        {
-          intent: 'home',
-        },
-      ),
-    ).rejects.toBeInstanceOf(BillingForbiddenError)
-  })
-})
-
-/* ------------------------------------------------------------------ invoices */
-
-function invoice(overrides: Partial<Stripe.Invoice> = {}): Stripe.Invoice {
-  return {
-    id: 'in_test_1',
-    number: 'PT-0001',
-    status: 'paid',
-    created: 1_755_000_000,
-    currency: 'usd',
-    total: 2800,
-    period_start: 1_755_000_000,
-    period_end: 1_757_678_400,
-    hosted_invoice_url: 'https://invoice.stripe.com/i/test',
-    invoice_pdf: 'https://invoice.stripe.com/i/test.pdf',
-    ...overrides,
-  } as unknown as Stripe.Invoice
-}
-
-describe('invoice history', () => {
-  it('turns a Stripe invoice into wire-safe values', () => {
-    const summary = invoiceSummaryOf(invoice())
-
-    expect(summary).toEqual({
-      id: 'in_test_1',
+describe('order history', () => {
+  it('turns a Polar order into wire-safe values', () => {
+    expect(invoiceSummaryOf(polarOrder())).toEqual({
+      id: TEST_ORDER_ID,
       number: 'PT-0001',
       status: 'paid',
-      createdAt: new Date(1_755_000_000_000).toISOString(),
+      createdAt: new Date('2026-08-01T09:30:00Z').toISOString(),
       total: 2800,
       currency: 'USD',
-      periodStart: new Date(1_755_000_000_000).toISOString(),
-      periodEnd: new Date(1_757_678_400_000).toISOString(),
-      hostedUrl: 'https://invoice.stripe.com/i/test',
-      pdfUrl: 'https://invoice.stripe.com/i/test.pdf',
+      invoiceGenerated: true,
     })
   })
 
-  it('falls back to the invoice id when Stripe never numbered it', () => {
-    expect(invoiceSummaryOf(invoice({ number: null })).number).toBe('in_test_1')
+  it('emits no period or hosted-page fields, because Polar has neither', () => {
+    const summary = invoiceSummaryOf(polarOrder())
+
+    expect(summary).not.toHaveProperty('periodStart')
+    expect(summary).not.toHaveProperty('periodEnd')
+    expect(summary).not.toHaveProperty('hostedUrl')
+    expect(summary).not.toHaveProperty('pdfUrl')
   })
 
-  it('narrows an unrecognised status rather than trusting it', () => {
+  it('falls back to the order id when Polar never numbered it', () => {
+    expect(invoiceSummaryOf(polarOrder({ invoice_number: null })).number).toBe(
+      TEST_ORDER_ID,
+    )
+  })
+
+  it('carries Polar’s own order statuses', () => {
+    expect(invoiceSummaryOf(polarOrder({ status: 'refunded' })).status).toBe(
+      'refunded',
+    )
     expect(
-      invoiceSummaryOf(
-        invoice({ status: 'something_new' as Stripe.Invoice.Status }),
-      ).status,
-    ).toBe('draft')
+      invoiceSummaryOf(polarOrder({ status: 'partially_refunded' })).status,
+    ).toBe('partially_refunded')
   })
 
-  it('reads a customer’s invoices, newest first', async () => {
+  it('reads the organization’s orders, newest first', async () => {
     const harness = createHarness({
       record: subscriptionRecord(),
-      stripe: {
-        invoices: [invoice(), invoice({ id: 'in_test_2', number: 'PT-0002' })],
+      polar: {
+        orders: [
+          polarOrder(),
+          polarOrder({
+            id: 'bd0f7d1a-2c4e-4b98-9f37-6a1e5c082d94',
+            invoice_number: 'PT-0002',
+          }),
+        ],
       },
     })
 
     const rows = await listRecentInvoices(harness.runtime, TEST_ORG_ID)
 
     expect(rows.map((row) => row.number)).toEqual(['PT-0001', 'PT-0002'])
-    expect(harness.calls.invoiceQueries[0]?.customer).toBe(TEST_CUSTOMER_ID)
+
+    const call = callTo(harness.calls, 'GET', ORDERS_PATH)
+    expect(call.query).toEqual({
+      external_customer_id: TEST_ORG_ID,
+      limit: INVOICE_HISTORY_LIMIT,
+      sorting: '-created_at',
+    })
   })
 
-  it('returns nothing, and asks Stripe nothing, without a customer', async () => {
+  it('returns nothing, and asks Polar nothing, without a customer', async () => {
     const harness = createHarness()
 
     await expect(
       listRecentInvoices(harness.runtime, TEST_ORG_ID),
     ).resolves.toEqual([])
-    expect(harness.calls.invoiceQueries).toHaveLength(0)
+    expect(harness.calls).toHaveLength(0)
+  })
+})
+
+describe('orderInvoiceUrl', () => {
+  it('generates the PDF only when Polar has not already', async () => {
+    const harness = createHarness({
+      polar: { order: polarOrder({ is_invoice_generated: false }) },
+    })
+
+    const url = await orderInvoiceUrl(harness.runtime, TEST_ORG_ID, {
+      orderId: TEST_ORDER_ID,
+    })
+
+    expect(url).toBe(TEST_INVOICE_PDF_URL)
+    expect(harness.calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      `GET /v1/orders/${TEST_ORDER_ID}`,
+      `POST /v1/orders/${TEST_ORDER_ID}/invoice`,
+      `GET /v1/orders/${TEST_ORDER_ID}/invoice`,
+    ])
+  })
+
+  it('skips the generate call for an order that already has one', async () => {
+    const harness = createHarness({ polar: { order: polarOrder() } })
+
+    await orderInvoiceUrl(harness.runtime, TEST_ORG_ID, {
+      orderId: TEST_ORDER_ID,
+    })
+
+    expect(harness.calls.map((call) => call.method)).toEqual(['GET', 'GET'])
+  })
+
+  it('refuses an order that belongs to another workspace', async () => {
+    const harness = createHarness({
+      polar: {
+        order: polarOrder({
+          customer: { id: TEST_CUSTOMER_ID, external_id: 'org_someone_else' },
+          metadata: {},
+        }),
+      },
+    })
+
+    await expect(
+      orderInvoiceUrl(harness.runtime, TEST_ORG_ID, { orderId: TEST_ORDER_ID }),
+    ).rejects.toBeInstanceOf(BillingForbiddenError)
+  })
+
+  it('refuses an order id that is not a Polar id at all', async () => {
+    const harness = createHarness()
+
+    await expect(
+      orderInvoiceUrl(harness.runtime, TEST_ORG_ID, {
+        orderId: '../../v1/customers/',
+      }),
+    ).rejects.toThrow()
+    expect(harness.calls).toHaveLength(0)
   })
 })

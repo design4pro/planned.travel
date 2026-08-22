@@ -7,9 +7,10 @@
  *
  * Caching strategy — deliberate, and the reason the two halves are separate:
  *
- * - **Plan state** (which plan, which status, how many seats) changes only when Stripe
- *   tells us it has, so it is cached in KV for a short TTL and invalidated explicitly
- *   from the webhook. That keeps D1 out of the hot path on every quota check.
+ * - **Plan state** (which plan, which status, how many seats) changes only when the
+ *   billing provider tells us it has, so it is cached in KV for a short TTL and
+ *   invalidated explicitly from the webhook. That keeps D1 out of the hot path on every
+ *   quota check.
  * - **Usage** is always counted live. Caching it would let a tenant burst past a quota
  *   inside the cache window, which is exactly what this module exists to prevent.
  */
@@ -52,8 +53,11 @@ import type {
  */
 export const PLAN_STATE_CACHE_TTL_SECONDS = 60
 
-/** Bumped whenever `CachedPlanState` changes shape, so old entries are ignored. */
-const PLAN_STATE_CACHE_VERSION = 'v2'
+/**
+ * Bumped whenever `CachedPlanState` changes shape, so old entries are ignored.
+ * `v3` is the rename of the customer flag to `hasProviderCustomer`.
+ */
+const PLAN_STATE_CACHE_VERSION = 'v3'
 
 export function planStateCacheKey(organizationId: string): string {
   return `billing:plan:${PLAN_STATE_CACHE_VERSION}:${organizationId}`
@@ -74,7 +78,7 @@ const planStateSchema = z.object({
   cancelAtPeriodEnd: z.boolean(),
   currentPeriodEnd: z.string().nullable(),
   trialEndsAt: z.string().nullable(),
-  hasStripeCustomer: z.boolean(),
+  hasProviderCustomer: z.boolean(),
   ceilings: storedCeilingsSchema.nullable(),
 })
 
@@ -100,7 +104,7 @@ export function planStateFromRecord(record: SubscriptionRecord | null): CachedPl
     cancelAtPeriodEnd: record?.cancelAtPeriodEnd ?? false,
     currentPeriodEnd: toIso(record?.currentPeriodEnd ?? null),
     trialEndsAt: toIso(record?.trialEndsAt ?? null),
-    hasStripeCustomer: (record?.stripeCustomerId ?? null) !== null,
+    hasProviderCustomer: (record?.providerCustomerId ?? null) !== null,
     ceilings: entitled ? record.ceilings : null,
   }
 }
@@ -218,7 +222,7 @@ export async function entitlements(ctx: BillingContext): Promise<Entitlements> {
     currentPeriodEnd: state.currentPeriodEnd,
     trialEndsAt: state.trialEndsAt,
     trialing: isTrialing(state, ctx.runtime.now()),
-    hasStripeCustomer: state.hasStripeCustomer,
+    hasProviderCustomer: state.hasProviderCustomer,
   }
 }
 
