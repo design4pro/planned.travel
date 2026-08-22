@@ -9,6 +9,11 @@ Cloudflare list prices and platform allowances quoted here were taken from
 `developers.cloudflare.com/workers/platform/pricing/` in **August 2026**. Re-check them before
 committing to a budget; the shape of the model outlives the numbers.
 
+Billing is **Polar.sh**, which is Merchant of Record. The Stripe path still mounted in
+`src/server/billing/**` and at `/api/stripe/webhook` is superseded and is replaced wholesale in
+**phase A**; wherever this document names a billing route, a webhook or a provider behaviour it
+describes the Polar one (`docs/SPEC.md` §1 and §3, `docs/DEPLOY.md` §6 and §9).
+
 ---
 
 ## 1. Shape of the system
@@ -34,9 +39,10 @@ committing to a budget; the shape of the model outlives the numbers.
 ```
 
 One Worker serves everything: marketing pages, the authenticated app, server functions, the
-Better Auth endpoints, Stripe webhooks, the tile endpoint, the queue consumer and the three
-cron triggers. There is no second service to keep in step, and no cold-start tier: every
-request runs in V8 isolates that are already warm at the PoP that answered the TLS handshake.
+Better Auth endpoints, the billing webhook, the tile endpoint, the queue consumer and the cron
+triggers — three registered today, a fourth from phase D (§2.4). There is no second service to
+keep in step, and no cold-start tier: every request runs in V8 isolates that are already warm at
+the PoP that answered the TLS handshake.
 
 `placement: smart` is set in `wrangler.jsonc`. A request that makes five sequential D1 calls
 pays the Worker→D1 round trip five times; Smart Placement moves the isolate close to the D1
@@ -116,8 +122,38 @@ slices that matter.
 - **Queue producer** → `src/server/queue/jobs.ts` writes a validated, idempotency-keyed
   envelope to `TASKS`; the consumer batches 10 messages with a 5 s timeout, 5 retries, 10 s
   retry delay, and a dead-letter queue.
-- **Cron** → `*/15 * * * *` reminder sweep, `0 3 * * *` nightly D1 export to R2,
-  `17 4 * * 1` weekly retention prune.
+- **Billing webhook** → `/api/polar/webhook` from phase A; until then the mounted route is the
+  superseded `/api/stripe/webhook`. The shape does not change with the provider: verify the
+  `v1,` signature on WebCrypto — HMAC-SHA256 over `{webhook-id}.{webhook-timestamp}.{raw body}`,
+  with the 300 s timestamp tolerance §9 states — then claim `webhook-id` in `KV`, make one small
+  inline D1 write, enqueue everything else to `TASKS`, and return 200. Nothing that calls a
+  third party or writes more than one row happens inline (`docs/DEPLOY.md` §9.5 and §9.7).
+- **Cron** → three triggers are registered in `wrangler.jsonc` today: `*/15 * * * *` reminder
+  sweep, `0 3 * * *` nightly D1 export to R2, `17 4 * * 1` weekly retention prune. The `staging`
+  environment overrides that list with `0 3 * * *` alone. A fourth, `0 4 * * 1` for the weekly
+  catalogue scrape, is registered in **phase D** — in the top-level `triggers.crons` list _and_
+  in the `env.staging` override, because a deploy replaces the whole array — and is deliberately
+  absent from `wrangler.jsonc` and unwired in `src/server/worker.ts` until its
+  `switch (controller.cron)` branch exists (`docs/SPEC.md` §5). It is unrelated to the
+  `17 4 * * 1` prune that runs seventeen minutes later the same morning.
+
+### 2.5 The three paths beside the tenant repository
+
+`src/server/repos/**` is the tenant-scoped path §2.1 and §2.2 take, and it remains the only
+place tenant SQL lives. `docs/SPEC.md` §6 puts three siblings beside it, each with its own
+entry rule. None exists on disk yet; each lands with its phase.
+
+- `src/server/catalog/**` (phase C) — the global catalogue tables. They carry no
+  `organization_id`, so they cannot pass through a tenant repository at all, which is why this
+  is the single stated exception to the SQL rule. Its SQL is guarded instead by an explicit
+  platform actor, `requirePermission`, and a `platform_audit_log` write in the same call.
+- `src/server/mcp/**` (phase E) — JSON-RPC transport and tool schemas only. Every tool
+  authorises through the same `requirePermission` the console uses and reaches data through
+  `server/catalog`; it never grows a second authorisation path or a second query layer.
+- `src/server/public/**` (phase F) — the only session-less read path in the Worker, and it holds
+  no SQL of its own. Every response is a named read-only projection with an explicit column
+  whitelist, executed through `server/repos` under the tenant scope derived from the share
+  record it resolved, or through `server/catalog` for published global rows.
 
 ---
 
@@ -155,14 +191,14 @@ on a TTL alone to become correct.
 | Browser, tile alias           | `/api/tiles/basemap.pmtiles` | `max-age=3600, s-maxage=31536000` | 1 h in the browser; instantly at the edge when `TILES_ARCHIVE_KEY` changes, because the edge key is the _resolved_ key |
 | Cache API, tile slices        | `…/<key>?__bytes=<ranges>`   | follows `Cache-Control` above     | entity-tag mismatch on read (entry dropped), or repointing the alias                                                   |
 | Cache API, tile metadata      | `…/<key>?__meta=1`           | 24 h                              | entity-tag mismatch, or a 404 on the object (entry dropped)                                                            |
-| KV, plan state                | `billing:plan:<v>:<orgId>`   | 60 s                              | the Stripe webhook, explicitly, on every subscription event                                                            |
+| KV, plan state                | `billing:plan:<v>:<orgId>`   | 60 s                              | the Polar webhook, explicitly, on every subscription event                                                             |
 | KV, session                   | Better Auth session id       | session lifetime, 60 s floor      | logout, password change, session revocation                                                                            |
 | KV, queue idempotency         | `task:done:<id>`             | 24 h                              | not invalidated — expiry _is_ the semantics                                                                            |
 
 Three rules that are not negotiable:
 
 1. **Usage counters are never cached.** `src/server/billing/entitlements.ts` caches _plan
-   state_ (which plan, which status, how many seats) because only Stripe changes it, and counts
+   state_ (which plan, which status, how many seats) because only Polar changes it, and counts
    _usage_ live on every check. A cached count would let a tenant burst past a quota inside the
    cache window, which is the one thing the quota system exists to prevent.
 2. **Invalidate on the write path, in the same request.** A mutation that changes cached state
@@ -227,12 +263,12 @@ it was nowhere near, while `/files` and the repositories enforced the row's real
 
 **Authority order.** Later steps override earlier ones:
 
-| # | Source | What it decides |
-| - | ------ | --------------- |
-| 0 | `subscriptions.status` | A row that no longer entitles (`canceled`, `unpaid`, `paused`, `incomplete…`) resolves to Free **with no escapes**: a lapsed subscription grandfathers nothing. |
-| 1 | `stripe_price_id` | The plan. It is what the customer is charged for. A row with no price id, or one this deployment no longer sells, falls back to the legacy `plan` tier column plus the seat count. |
-| 2 | The catalogue in `src/lib/plans.ts` | That plan's own limits — seats (narrowed to the seats purchased), trips, storage, every module switch. `PLAN_QUOTAS[tier]` in `src/server/db/types.ts` supplies **only** the operational metrics the catalogue does not sell: places, files, exports, collections, journeys. |
-| 3 | `seat_limit`, `storage_limit_bytes`, then `quota_overrides` | The last word. This is the deliberate escape hatch that grandfathers a customer above the plan they pay for, and it stays. |
+| #   | Source                                                      | What it decides                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0   | `subscriptions.status`                                      | A row that no longer entitles (`canceled`, `unpaid`, `paused`, `incomplete…`) resolves to Free **with no escapes**: a lapsed subscription grandfathers nothing.                                                                                                                                                                                                                                                   |
+| 1   | `stripe_price_id`                                           | The plan. It is what the customer is charged for. The column keeps its Stripe-era name and is superseded in meaning, not in SQL: from phase A it holds the Polar product id. Renaming it is a two-release additive migration, not a documentation edit (`docs/DEPLOY.md` §9.10). A row with no price id, or one this deployment no longer sells, falls back to the legacy `plan` tier column plus the seat count. |
+| 2   | The catalogue in `src/lib/plans.ts`                         | That plan's own limits — seats (narrowed to the seats purchased), trips, storage, every module switch. `PLAN_QUOTAS[tier]` in `src/server/db/types.ts` supplies **only** the operational metrics the catalogue does not sell: places, files, exports, collections, journeys.                                                                                                                                      |
+| 3   | `seat_limit`, `storage_limit_bytes`, then `quota_overrides` | The last word. This is the deliberate escape hatch that grandfathers a customer above the plan they pay for, and it stays.                                                                                                                                                                                                                                                                                        |
 
 Two consequences worth stating out loud. First, **the published number is the enforced number**:
 the Free plan sells two trips at a time and two is what `assertQuota` allows — the old fudge of
@@ -251,7 +287,7 @@ equivalence is the invariant; it is what stops the two from drifting apart again
 The two plan vocabularies are bridged in that one file too: the `plan` column carries a coarse
 tier (`free | starter | pro | business`) under a CHECK constraint and predates the catalogue,
 which sells `free | solo | crew`. `planIdFromRow()` translates one way, `TIER_FOR_PLAN` the
-other, and `ceilingsForPlan()` is what every sanctioned write path — the Stripe webhook via
+other, and `ceilingsForPlan()` is what every sanctioned write path — the Polar webhook via
 `rowValuesFromRecord()`, and the demo seed — stamps onto the ceiling columns, so a freshly
 written row always agrees with its own plan.
 
@@ -353,28 +389,29 @@ What the model actually says:
   message ratio: 10 000 users of live collaboration is ~$0.10 of DO requests.
 - **Revenue context.** Ten paying customers on the entry paid plan cover the platform bill for
   the first thousand users. Infrastructure is not the constraint on this product; it is
-  bounded, predictable, and an order of magnitude below the Stripe fees on the same revenue.
+  bounded, predictable, and a fraction of the merchant-of-record fees Polar takes out of the
+  same revenue.
 
 ---
 
 ## 9. Failure modes and mitigations
 
-| #   | Failure                                           | Blast radius                              | Detection                                                                                          | Mitigation in the code today                                                                                                                                         |
-| --- | ------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | D1 unavailable or timing out                      | all authenticated reads and writes        | `checkReadiness` probe (`src/server/observability/health.ts`); error-rate spike on `outcome=error` | read-only queries are auto-retried by D1 (up to 2); writes are wrapped in explicit idempotent retries; the marketing pages never touch D1 so the front door stays up |
-| 2   | KV read returns stale data                        | one tenant sees a stale plan for ≤ 60 s   | plan mismatch between webhook log and quota decision                                               | 60 s TTL plus explicit invalidation from the webhook; usage never cached; entitlement downgrades take effect on the next check, never mid-request                    |
-| 3   | R2 object missing or replaced under a live key    | map degrades to no basemap                | `x-tiles-cache` miss rate, 404 rate on `/api/tiles/*`                                              | metadata entry is dropped on a 404; cached slices are dropped on entity-tag mismatch, so a replaced archive can never be served half-old, half-new                   |
-| 4   | Cache API `put`/`match` failure                   | one uncached read, higher R2 op count     | `tile cache operation failed` warning line                                                         | every cache call is wrapped; a fault degrades to an R2 read and never fails the request                                                                              |
-| 5   | A trip room gets hot (many editors, huge patches) | one trip                                  | DO CPU/duration metrics; client-visible rate-limit errors                                          | 32 KiB frames, 40 msg/s per connection, bounded patch log and tombstone TTL; the object is the only thing that slows down                                            |
-| 6   | Durable Object evicted mid-session                | one trip's clients reconnect              | reconnect rate                                                                                     | clients re-handshake and resnapshot via `partysocket`; D1 holds the durable record, so the worst case is replaying recent patches                                    |
-| 7   | Queue consumer failing on a poison message        | one job kind                              | retry count, then DLQ depth                                                                        | 5 retries with 10 s delay, then the dead-letter queue; envelopes carry idempotency keys, so redelivery is safe; DLQ diagnostics are kept 14 days                     |
-| 8   | Third-party outage (Stripe, email provider)       | billing changes and notifications delayed | job failure logs, DLQ depth                                                                        | all third-party calls happen in queue handlers, never inline; webhooks are idempotent by event id; Stripe retries on its side and we retry on ours                   |
-| 9   | Stripe webhook replay or forgery                  | billing state                             | signature failures in logs                                                                         | signature verified with WebCrypto and a 300 s tolerance; event ids deduplicated in KV before any state change                                                        |
-| 10  | Runaway range request (huge or many-part)         | one request's CPU and memory              | 400/416 rate on `/api/tiles/*`                                                                     | ≤ 8 range specs, ≤ 8 MiB assembled multipart, ≤ 24 MiB cached per entry, everything above streams without buffering                                                  |
-| 11  | Quota bypass attempt via a new code path          | one tenant over its ceiling               | quota-exceeded counters versus plan                                                                | quotas live at the repository boundary, so a new route or job cannot skip them                                                                                       |
-| 12  | Bad deploy                                        | everything                                | smoke check in `deploy.yml`; error rate in Observability                                           | `wrangler rollback` (see `docs/DEPLOY.md`); migrations are additive so the previous version keeps working against the new schema                                     |
-| 13  | Secret missing or rotated wrongly                 | the feature that needs it                 | first request throws a named error                                                                 | every secret is read through an accessor that fails loudly with the exact `wrangler secret put` command to run                                                       |
-| 14  | Cron trigger missed or overlapping                | reminders late by one tick                | reminder lag in logs                                                                               | the reminder index is idempotent: the sweep enqueues by due-time prefix with deterministic ids, so a double sweep sends one email                                    |
+| #   | Failure                                           | Blast radius                              | Detection                                                                                          | Mitigation in the code today                                                                                                                                                                 |
+| --- | ------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | D1 unavailable or timing out                      | all authenticated reads and writes        | `checkReadiness` probe (`src/server/observability/health.ts`); error-rate spike on `outcome=error` | read-only queries are auto-retried by D1 (up to 2); writes are wrapped in explicit idempotent retries; the marketing pages never touch D1 so the front door stays up                         |
+| 2   | KV read returns stale data                        | one tenant sees a stale plan for ≤ 60 s   | plan mismatch between webhook log and quota decision                                               | 60 s TTL plus explicit invalidation from the webhook; usage never cached; entitlement downgrades take effect on the next check, never mid-request                                            |
+| 3   | R2 object missing or replaced under a live key    | map degrades to no basemap                | `x-tiles-cache` miss rate, 404 rate on `/api/tiles/*`                                              | metadata entry is dropped on a 404; cached slices are dropped on entity-tag mismatch, so a replaced archive can never be served half-old, half-new                                           |
+| 4   | Cache API `put`/`match` failure                   | one uncached read, higher R2 op count     | `tile cache operation failed` warning line                                                         | every cache call is wrapped; a fault degrades to an R2 read and never fails the request                                                                                                      |
+| 5   | A trip room gets hot (many editors, huge patches) | one trip                                  | DO CPU/duration metrics; client-visible rate-limit errors                                          | 32 KiB frames, 40 msg/s per connection, bounded patch log and tombstone TTL; the object is the only thing that slows down                                                                    |
+| 6   | Durable Object evicted mid-session                | one trip's clients reconnect              | reconnect rate                                                                                     | clients re-handshake and resnapshot via `partysocket`; D1 holds the durable record, so the worst case is replaying recent patches                                                            |
+| 7   | Queue consumer failing on a poison message        | one job kind                              | retry count, then DLQ depth                                                                        | 5 retries with 10 s delay, then the dead-letter queue; envelopes carry idempotency keys, so redelivery is safe; DLQ diagnostics are kept 14 days                                             |
+| 8   | Third-party outage (Polar, email provider)        | billing changes and notifications delayed | job failure logs, DLQ depth                                                                        | all third-party calls happen in queue handlers, never inline; webhooks are idempotent by event id; Polar retries on its side, up to ten times with exponential backoff, and we retry on ours |
+| 9   | Polar webhook replay or forgery                   | billing state                             | signature failures in logs                                                                         | the `{webhook-id}.{webhook-timestamp}.{raw body}` signature is verified with WebCrypto (HMAC-SHA256) inside a 300 s tolerance; the event id is claimed in KV before any state change         |
+| 10  | Runaway range request (huge or many-part)         | one request's CPU and memory              | 400/416 rate on `/api/tiles/*`                                                                     | ≤ 8 range specs, ≤ 8 MiB assembled multipart, ≤ 24 MiB cached per entry, everything above streams without buffering                                                                          |
+| 11  | Quota bypass attempt via a new code path          | one tenant over its ceiling               | quota-exceeded counters versus plan                                                                | quotas live at the repository boundary, so a new route or job cannot skip them                                                                                                               |
+| 12  | Bad deploy                                        | everything                                | smoke check in `deploy.yml`; error rate in Observability                                           | `wrangler rollback` (see `docs/DEPLOY.md`); migrations are additive so the previous version keeps working against the new schema                                                             |
+| 13  | Secret missing or rotated wrongly                 | the feature that needs it                 | first request throws a named error                                                                 | every secret is read through an accessor that fails loudly with the exact `wrangler secret put` command to run                                                                               |
+| 14  | Cron trigger missed or overlapping                | reminders late by one tick                | reminder lag in logs                                                                               | the reminder index is idempotent: the sweep enqueues by due-time prefix with deterministic ids, so a double sweep sends one email                                                            |
 
 ### Numbers worth alerting on
 

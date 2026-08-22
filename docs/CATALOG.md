@@ -390,15 +390,16 @@ table. Each has to hold against what `docs/ACCESS.md` §4.1 defines, and each is
    §8.4 appends exactly one entry (§8.3). Reads append none, and §8.3 says why.
 2. **MCP mutations are `agent` mutations.** A mutation arriving over the transport in §8 is
    recorded with `actor_kind: 'agent'`, attributed to the token owner's `user_id`, with the token
-   itself identified in the row the way `docs/ACCESS.md` §4.1 prescribes. This document names no
-   column for the token: naming one would be the second column list all over again.
+   itself identified in the row the way `docs/ACCESS.md` §4.1 prescribes - through the `token_id`
+   column that section declares. This document names that column only to point at it; its type,
+   its foreign key, its nullability rule and its index are stated there and are not repeated here,
+   because repeating them is how a table acquires a second spelling.
 3. **The action strings are `entity_type.verb_in_past_tense`.** Every action used in §7.2 and §8.4
    is spelled that way and satisfies the regex `docs/ACCESS.md` §4.2 imports from
-   `src/server/repos/audit.ts:36`. The catalogue emits four `entity_type` values:
-   `catalog_place`, `place_pack` and `catalog_source` are three of the examples
-   `docs/ACCESS.md` §4.1 already gives for that column, and `catalog_ingest` is a fourth in the
-   same shape - that list is prefixed "e.g." and is illustrative, so adding a table name to it is
-   not a contract change. If a later round closes the list, `catalog_ingest` belongs in it.
+   `src/server/repos/audit.ts:36`. The catalogue emits four `entity_type` values -
+   `catalog_place`, `catalog_ingest`, `place_pack` and `catalog_source` - and all four are already
+   in the closed `entity_type` list `docs/ACCESS.md` §4.1 declares for that column, which is where
+   a fifth would have to be added. This document needs none.
 4. **Each half has one owner, and they are different files.** Where this document and that one
    can be read as disagreeing about the _shape_ of the table - its columns, its indexes, its
    retention - `docs/ACCESS.md` §4.1 wins and this document is the one that gets corrected. Where
@@ -910,12 +911,17 @@ reads explicitly.
 ### 8.4 The tools
 
 Twelve tools; the list is closed. Every input is a Zod v4 schema; every `limit` is clamped
-(§8.5); every `cursor` is an opaque base64url token encoding the tuple of the **driving index**
-the call resolved to, with the row's `id` as its last component (§8.6). For the tools whose
-driving index is the primary key that tuple is just the `id`, which works because `newId()` is
-time-sortable; for the others it is not, and a cursor is never an `id` alone. A cursor is
-meaningless to the client, is not a stable handle, and is rejected with `-32602` if its driving
-index does not match the filters it is replayed against.
+(§8.5); every `cursor` is an opaque base64url token encoding two things - the tuple of the
+**driving index** the call resolved to, with the row's `id` as its last component (§8.6), and a
+**filter fingerprint**: the driving row number of §8.6's table together with the values of the
+equality filters that row pins. For the tools whose driving index is the primary key that tuple is
+just the `id`, which works because `newId()` is time-sortable; for the others it is not, and a
+cursor is never an `id` alone. A cursor is meaningless to the client, is not a stable handle, and
+is rejected with `-32602` when the call it is replayed against resolves a different driving row
+**or** pins a different value for any filter in its fingerprint. The fingerprint is what lets that
+check be performed at all: §8.6 deliberately keeps pinned equality columns out of the ordering
+tuple, so a `country_code=DE` cursor replayed under `country_code=FR` would otherwise compare
+cleanly and return a page that silently skips rows.
 
 | Tool                       | Input summary                                                                                                                                                                                                                                                                  | Kind     | `requirePermission`                                                                                                                            | `platform_audit_log` action (`actor_kind: 'agent'`)                                                            |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -951,12 +957,22 @@ The last column is the exception, and it runs the other way. The thirteen action
 `catalog_place.published`, `catalog_place.retired`, `catalog_place.status_changed`,
 `catalog_ingest.promoted`, `catalog_ingest.merged`, `catalog_ingest.rejected`,
 `place_pack.created`, `place_pack.places_set`, `place_pack.published` and
-`catalog_source.run_started` - are **defined here**, they are the closed catalogue vocabulary, and
-`docs/ACCESS.md` §4.2 reproduces them from this table rather than the reverse. They are two
-segments, `<entity_type>.<verb_in_past_tense>`, because that is the grammar `src/server/repos/**`
-already writes (`place.created`, `trip.created`, `trip.archived`, `trip.hijacked`,
-`billing.plan_changed`, `member.added`, `expense.created`, `journey.published`,
-`reservation.confirmed`) and one audit surface with two grammars is a surface nobody can grep.
+`catalog_source.run_started` - are **defined here**, they are the closed catalogue vocabulary of
+the MCP surface, and `docs/ACCESS.md` §4.2 reproduces them from this table rather than the reverse.
+Closed means no fourteenth tool action, not that no catalogue action exists elsewhere: the three
+console-only ones - `place_pack.retired`, `catalog_source.enabled`, `catalog_source.disabled` - are
+emitted by no tool in the table above and are declared by `docs/ACCESS.md` §4.2, which owns them.
+
+The thirteen are two segments, `<entity_type>.<verb_in_past_tense>`, because two segments is the
+shape of every audit action name that exists anywhere in this codebase today: `place.created`,
+`trip.created`, `trip.archived`, `trip.hijacked`, `billing.plan_changed`, `member.added`,
+`expense.created`, `journey.published`, `reservation.confirmed`. None of the nine is written by a
+production path - seven are seed rows in `src/routes/api/dev/-seed/dataset/workspace.ts`, the other
+two live only under `src/server/repos/__tests__/` - and one of them, `billing.plan_changed`, is
+recorded against `entity_type: 'subscription'`, so they settle the segment count and nothing
+further. The count is the part that matters: one audit surface with two grammars is a surface
+nobody can grep. That the prefix of each of the thirteen _is_ its `entity_type` is a rule
+`docs/ACCESS.md` §4.2 states outright, in the prefix table there.
 
 ### 8.5 Response caps, as numbers
 
@@ -1004,9 +1020,13 @@ SQLite has served as a single index range since 3.15.
 Rows 3 and 4 keep `kind` and `status` in the tuple even though a caller may pin them, and that is
 deliberate: both are **optional** inputs (§8.4), so a cursor whose arity followed them would change
 shape between one call and the next. A pinned column simply compares equal and costs nothing; an
-unpinned one is the whole reason the cursor exists. An `id`-only cursor is what this rule exists to
-forbid. With only `country_code` supplied, the index delivers rows ordered by `(kind, status, id)`
-within the country, and `id > ?` is not a range on that: D1 seeks on `country_code` and applies the
+unpinned one is the whole reason the cursor exists. The values a row does pin are absent from this
+tuple but present in the cursor's filter fingerprint (§8.4), which is what makes replaying a
+`country_code=DE` cursor under `country_code=FR` a `-32602` rather than a quietly wrong page.
+
+An `id`-only cursor is what this rule exists to forbid. With only `country_code` supplied, the
+index delivers rows ordered by `(kind, status, id)` within the country, and `id > ?` is not a range
+on that: D1 seeks on `country_code` and applies the
 `id` test as a residual across the entire group, so page 2 re-reads rows page 1 already returned
 **and** permanently skips every row whose `id` sorts below the cursor but whose `(kind, status)`
 sorts after it. Row 4 fails identically whenever `status` is omitted. Row 6 may carry an `id` alone
@@ -1014,7 +1034,7 @@ only because there the driving index **is** the primary key and `newId()` is tim
 
 Row 5 walks its index backwards, so its comparison is `<` and every component of its ordering is
 descending. SQLite reads an ascending index in reverse, so that costs nothing and adds no
-eleventh index to §3's ten.
+eleventh index to the ten §2.6 budgets.
 
 Row 6 is a real, cheap plan and not a loophole: a keyset walk of the primary key reads exactly the
 rows it returns, in order, with no sort. It is how an agent enumerates the catalogue, and it is
@@ -1221,11 +1241,17 @@ a legacy request would reject traffic the specification says a dual-era server m
 specification agrees explicitly - it tells intermediaries to check that `MCP-Protocol-Version`
 "indicates a version that requires header-body validation" before enforcing it.
 
-**Both eras:**
+**Both eras, and only on the `MCP-Protocol-Version` header path (§9.1 row 4):**
 
-- **Unsupported protocol version → HTTP `400` _carrying_ a JSON-RPC error**, code `-32022`
-  (`UnsupportedProtocolVersion`), whose `data.supported` lists our three versions and whose
-  `data.requested` echoes theirs. It is `400` **and** a JSON-RPC error, not `400` instead of one:
+- **An unsupported version in the `MCP-Protocol-Version` header → HTTP `400` _carrying_ a JSON-RPC
+  error**, code `-32022` (`UnsupportedProtocolVersion`), whose `data.supported` lists our three
+  versions and whose `data.requested` echoes theirs. The `400` is the specification's, not a
+  choice: a server receiving "a request with an invalid or unsupported `MCP-Protocol-Version`"
+  **MUST** answer `400 Bad Request`. The scope is equally the specification's, because a legacy
+  `initialize` carries no such header - it negotiates in the body, under the different rule the
+  legacy bullets below state, and §9.1 row 1 resolves it to the legacy era before any header is
+  read. So this bullet never reaches an `initialize`. It is `400` **and** a JSON-RPC error, not
+  `400` instead of one:
   the specification's backward-compatibility rules depend on that body being present, because a
   client inspects it to tell a modern server from a legacy one before deciding whether to fall
   back. A bare `400` with an empty body would make well-behaved clients downgrade to `initialize`
@@ -1250,9 +1276,11 @@ specification agrees explicitly - it tells intermediaries to check that `MCP-Pro
 - `Mcp-Method`, `Mcp-Name` and `_meta["io.modelcontextprotocol/protocolVersion"]` carry no
   protocol meaning in these revisions. They are **not required**, and if a client sends them
   anyway they are ignored rather than validated - there is nothing to validate them against.
-- `initialize` negotiates the version in the body. We answer with the same version when it is one
-  of ours; when it is not, we answer with `2025-11-25`, the newest legacy revision we speak, which
-  is the legacy negotiation rule (the client then continues or disconnects). We do not return
+- `initialize` negotiates the version in the body, and the specification's rule there is a
+  counter-offer rather than a rejection: a server that does not support the requested version
+  **MUST** "respond with another protocol version it supports". We answer with the same version
+  when it is one of ours; when it is not, we answer with `2025-11-25`, the newest revision a
+  legacy client can act on (the client then continues or disconnects). We do not return
   `-32022` to an `initialize`, because a legacy client has no fall-forward mechanism and would
   surface the error rather than retry.
 - The version chosen at `initialize` is echoed by the client in `MCP-Protocol-Version` on every
@@ -1599,12 +1627,11 @@ Recorded here so a later round inherits them as decisions to make rather than as
    rows `NULL`. §2.1 coerces `NULL` to `'user'` at the boundary; `docs/ACCESS.md` owns the
    normative statement and should say the same thing.
 9. **Settled, and recorded here only so the item is not reopened: an `agent`'s token is a
-   foreign key.** `docs/ACCESS.md` §4.1 declares `token_id` (`text`, references
-   `staff_api_tokens(id)`, `on delete set null`, indexed, non-`NULL` exactly when
-   `actor_kind = 'agent'`) and `actor_role` as columns of `platform_audit_log`, and confines
-   `user_agent` to a `User-Agent` header. "What did this token ever do" is a join. `docs/ACCESS.md`
-   §4.1 is the owner of that column list and the only place it may change; this document states no
-   column of its own.
+   foreign key.** `docs/ACCESS.md` §4.1 declares `token_id` and `actor_role` as columns of
+   `platform_audit_log` and confines `user_agent` to a `User-Agent` header, so "what did this token
+   ever do" is a join rather than a string match over free text. Their types, the foreign key, the
+   nullability rules and the index are stated there and are deliberately not restated here: §4.1
+   owns that column list and is the only place it may change.
 10. **Substring and fuzzy place search is not in this contract.** §8.6 specifies `q` as a prefix
     match on `name_normalised`, because a leading wildcard defeats a B-tree on D1. Full substring
     search needs an FTS5 table with the trigram tokenizer, which D1 supports and which costs

@@ -590,9 +590,10 @@ vendor change itself.
 
 It does not supersede it in **code** yet, and the difference decides what you do this week:
 
-- **Everything in §9.1 → §9.4 is configuration you can do today.** It happens in the Polar
+- **§9.1 → §9.3, and §9.4 step A, are configuration you can do today.** They happen in the Polar
   dashboard and over Polar's own API; none of it needs a line of ours, and doing it early costs
-  nothing but an unused organization.
+  nothing but an unused organization. **§9.4 step B is the one exception in this range** - it
+  registers the production endpoint and must wait for phase A, for the reason §9.4 gives.
 - **Nothing in §9 is reached by the deployed Worker until phase A.** There is no
   `/api/polar/webhook` route, no Polar client and no Polar branch in the checkout path. Until
   phase A ships them, paid plans run on the superseded-but-live Stripe path of §6 and §10, and
@@ -722,10 +723,22 @@ no `/api/polar/webhook` route there at all, so each attempt is a bare `404`. Ten
 non-2xx deliveries disable the endpoint (§9.7), so a wrong URL costs an hour and an email to every
 organization member.
 
-| Step            | Organization | API base (§9.3)                   | URL to register                                    |
-| --------------- | ------------ | --------------------------------- | -------------------------------------------------- |
-| **A** — now     | Sandbox      | `https://sandbox-api.polar.sh/v1` | `https://staging.planned.travel/api/polar/webhook` |
-| **B** — phase A | Production   | `https://api.polar.sh/v1`         | `https://planned.travel/api/polar/webhook`         |
+| Step            | Organization | API base (§9.3)                   | URL to register                                        |
+| --------------- | ------------ | --------------------------------- | ------------------------------------------------------ |
+| **A** — now     | Sandbox      | `https://sandbox-api.polar.sh/v1` | the staging Worker's own origin + `/api/polar/webhook` |
+| **B** — phase A | Production   | `https://api.polar.sh/v1`         | `https://planned.travel/api/polar/webhook`             |
+
+**Step A's origin is whichever one staging actually answers on.** §7 attaches
+`staging.planned.travel` only when you want the real hostname; until then `env.staging` has
+`workers_dev: true` and the deployed Worker is
+`https://planned-travel-staging.ACCOUNT_SUBDOMAIN.workers.dev`. Register the origin that resolves
+today — §9.7 disables an endpoint after ten deliveries to a host that redirects or does not
+resolve, so a hostname you have not attached yet is worse than a `workers.dev` one. When you do
+attach the custom hostname, move the endpoint with
+`PATCH /v1/webhooks/endpoints/{id}` and `{"url": "https://staging.planned.travel/api/polar/webhook"}`
+rather than creating a second endpoint; two endpoints on one organization deliver every event
+twice. The command below uses the custom hostname; substitute your `workers.dev` origin if that is
+the one live.
 
 **The route itself lands in phase A.** Step A is a first-deploy step and is the endpoint §9.11
 walks against. **Step B is not: do not run it until `/api/polar/webhook` is deployed and answering
@@ -753,14 +766,18 @@ curl -sS -X POST "$POLAR_API/webhooks/endpoints" \
       }'
 ```
 
-**Step B — production, phase A only. `POLAR_ACCESS_TOKEN` must be re-exported as the
-_production_ token of §9.2; the sandbox one answers `401` here, which is the cheap failure. The
-expensive one is a valid sandbox token, which quietly creates a second sandbox endpoint:**
+**Step B — production, phase A only. `POLAR_ACCESS_TOKEN` must be re-exported as the _production_
+token of §9.2.** There are two ways to get this wrong and they fail very differently. Forget the
+token and keep the sandbox one: against `https://api.polar.sh/v1` it is not a credential of that
+organization, so the call answers `401` and nothing happens — the cheap failure. Forget the _base
+URL_ instead, and run this block with the sandbox token still exported and `$POLAR_API` still
+pointing at `https://sandbox-api.polar.sh/v1`: it succeeds, and quietly adds a second sandbox
+endpoint aimed at the production Worker, which then receives sandbox events signed with the
+sandbox secret and rejects all of them. That is the expensive one, because it looks like a
+successful step. The block below writes the production base URL literally for exactly that reason:
 
 ```bash
-POLAR_API=https://api.polar.sh/v1
-
-curl -sS -X POST "$POLAR_API/webhooks/endpoints" \
+curl -sS -X POST "https://api.polar.sh/v1/webhooks/endpoints" \
   -H "Authorization: Bearer $POLAR_ACCESS_TOKEN" \
   -H 'content-type: application/json' \
   -d '{
@@ -775,8 +792,12 @@ curl -sS -X POST "$POLAR_API/webhooks/endpoints" \
       }'
 ```
 
-Read back what you just created — `GET "$POLAR_API/webhooks/endpoints"` — and confirm the `url`
-belongs to the environment the base URL does.
+Read back what you just created — `GET <base>/webhooks/endpoints` against the same base URL the
+create used — and confirm the `url` belongs to the environment that base URL does. Step B writes
+its base URL literally rather than re-exporting `POLAR_API`, so the shell keeps whatever §9.1 set;
+everything after §9.4 — the delivery reads of §9.7, the four calls of §9.8, the matrix of §9.11 —
+is sandbox work, and a `POLAR_API` left pointing at production turns §9.8's `POST /checkouts/`
+into a real production checkout.
 
 Three things about the create call that are easy to get wrong:
 
@@ -784,11 +805,28 @@ Three things about the create call that are easy to get wrong:
   `/v1/customer-sessions/` and `/v1/orders/`. Polar's paths are not uniform; copy them exactly.
 - **`format` must be `"raw"`.** The enum is `raw | discord | slack`; the other two reshape the
   body into a chat message and our verifier would be signing something else entirely.
-- **The create body has no `secret` field.** It accepts exactly `url`, `name`, `format`, `events`
-  and `organization_id`. The signing secret comes back on the response object, is set by hand
-  only in the dashboard, and is _regenerated_ — never assigned — through
-  `PATCH /v1/webhooks/endpoints/{id}/secret`. Copy it into `POLAR_WEBHOOK_SECRET` (§6) and
-  redeploy so the running Worker picks it up.
+- **The secret can be chosen, but not over the API — so the two creation paths differ in what you
+  do next.** The API create body accepts exactly `url`, `name`, `format`, `events` and
+  `organization_id`, and no `secret`; Polar generates one and returns it on the `201` response
+  object, so with the `curl` above you read the secret out of the response, put it in
+  `POLAR_WEBHOOK_SECRET` (§6) and redeploy. The **dashboard** flow is the one that lets you supply
+  a value: its **Add endpoint** form has a _Set a secret_ step where, in Polar's own words, "you
+  can set your own or generate a random one" — so if you would rather mint the secret first
+  (`openssl rand -base64 32`), set `POLAR_WEBHOOK_SECRET` and then create the endpoint around it,
+  create it in the dashboard, not with this call. Afterwards neither path can assign one:
+  `PATCH /v1/webhooks/endpoints/{id}` accepts `url`, `name`, `format`, `events` and `enabled` only,
+  and `PATCH /v1/webhooks/endpoints/{id}/secret` takes no request body at all — it _regenerates_,
+  and the old value stops verifying the moment it returns, so redeploy in the same window. A
+  self-chosen secret has no `whsec_` prefix and that changes nothing: §9.5's key is the raw UTF-8
+  bytes of the value exactly as it stands in the dashboard, prefix or no prefix.
+
+  Verified against Polar's published API document at <https://polar.sh/docs/openapi.json>
+  (`info.version` `2026-04`) and the dashboard steps at
+  <https://polar.sh/docs/integrate/webhooks/endpoints>, both re-checked 2026-08-22. Polar has
+  retired the `docs.polar.sh` HTML host — it `301`s to `polar.sh/docs/…` — and its API-reference
+  pages are version-namespaced, so a citation like
+  <https://polar.sh/docs/api-reference/2026-04/webhooks/create-webhook-endpoint> resolves while the
+  same path without `2026-04` returns `404`. Re-date these links when Polar cuts a new API version.
 
 ### 9.5 Verifying the signature by hand
 
@@ -812,10 +850,14 @@ everything:
 ```
 
 The signature is **HMAC-SHA256**, **base64**-encoded, and carried as `v1,<sig>`.
-`webhook-signature` is a **space-delimited list**: during a secret rotation Polar sends the same
-payload signed with both the old and the new key, so a verifier must accept the message if _any_
-`v1,` entry matches, and must skip entries whose version prefix is not `v1`. Compare in constant
-time.
+`webhook-signature` is a **space-delimited list**, because Standard Webhooks allows a sender to
+carry several signatures on one delivery — a rotation overlap, or more than one scheme version. A
+verifier must therefore accept the message if _any_ `v1,` entry matches, and must skip entries
+whose version prefix is not `v1`. Compare in constant time. Polar itself publishes no overlap
+window: an endpoint holds exactly one secret and `PATCH /v1/webhooks/endpoints/{id}/secret`
+replaces it outright (§9.4), so treat a reset as an immediate cutover and redeploy
+`POLAR_WEBHOOK_SECRET` in the same maintenance window. Parsing the list is what keeps the verifier
+correct if that ever changes.
 
 > ⚠️ **The base64-secret gotcha. Read this before writing the verifier.**
 >
@@ -898,6 +940,9 @@ payment succeeds, and also when a trial converts. Read `status` to tell those ap
 **Redelivery is a real endpoint, and it is how idempotency gets tested:**
 
 ```bash
+# $POLAR_API here and through §9.8 is whichever base §9.1 set — sandbox while §9.11 is being
+# walked. Echo it before anything that writes; §9.4 step B deliberately does not change it.
+
 # Recent attempts, newest first — read the response code and body Polar actually got.
 curl -sS "$POLAR_API/webhooks/deliveries?limit=20" -H "Authorization: Bearer $POLAR_ACCESS_TOKEN"
 
@@ -948,12 +993,8 @@ an `ALL_CAPS` placeholder like the others: replace it with the origin of the Wor
 organization behind `$POLAR_API` talks to — `https://staging.planned.travel` while the sandbox
 matrix of §9.11 is being walked, `https://planned.travel` once phase A is live. Paste the
 production origin into a sandbox checkout and the redirect leaves the Worker that received the
-events. The product itself never writes the host down. The billing runtime on disk today — still
-the Stripe path, since no Polar call is shipped until phase A — builds every return URL from the
-`APP_URL` var through `billingAppUrl()` in `src/server/billing/runtime.cloudflare.ts`, and
-`wrangler.jsonc` sets that var per environment (`https://staging.planned.travel` under
-`env.staging`). The phase-A Polar calls take their origin from the same accessor, so the redirect
-follows the deployment rather than the snippet.
+events. The product itself never writes the host down: it builds every return URL from the
+`APP_URL` var, which `wrangler.jsonc` sets per environment.
 
 **Customer Portal** — `POST /v1/customer-sessions/`
 
@@ -1597,10 +1638,11 @@ makes a payment work today
       test detects it.
 - [ ] The same setting reads `After 21 days` in the **sandbox** organization (§9.1), so §9.11's
       row 6 tests the shape production actually runs.
-- [ ] The **sandbox** webhook endpoint of §9.4 step A exists and points at
-      `https://staging.planned.travel/api/polar/webhook`, `format` is `raw`, and it subscribes to
-      the seventeen events of §9.6. Step B — the production endpoint — is a phase-A line, not one
-      to tick today.
+- [ ] The **sandbox** webhook endpoint of §9.4 step A exists, is the only one on that organization,
+      and points at `/api/polar/webhook` on the origin the staging Worker answers on today —
+      `https://staging.planned.travel` once §7's custom hostname is attached, its `workers.dev`
+      origin before that. `format` is `raw`, and it subscribes to the seventeen events of §9.6.
+      Step B — the production endpoint — is a phase-A line, not one to tick today.
 - [ ] Bot Fight Mode is **off** for the zone (§9.7).
 - [ ] The verifier keys its HMAC with the raw UTF-8 bytes of the secret — §9.5's gotcha — and has
       a unit test with a captured payload.

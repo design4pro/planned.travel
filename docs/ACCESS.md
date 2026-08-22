@@ -548,8 +548,9 @@ Nothing else in the codebase reads data without a session. Three rules, all test
 
 ### 4.1 `platform_audit_log` - the global table
 
-Twelve columns, and this is the whole list. `docs/CATALOG.md` §2.12 reproduces it as a table it
-depends on and does not own; the two lists are the same list, and this one is the declaration.
+Twelve columns, and this is the whole list. `docs/CATALOG.md` §2.12 depends on this table and does
+not own it, and deliberately reproduces none of it: it points here for the columns, the indexes and
+the retention rather than restating them, so there is one list and it is this one.
 
 | Column          | Type                                                   | Null | Notes                                                                                                                                                            |
 | --------------- | ------------------------------------------------------ | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -568,10 +569,10 @@ depends on and does not own; the two lists are the same list, and this one is th
 
 This shape adopts the change `docs/CATALOG.md` files as its §13.9 and sketches in its §2.12 - a
 real `token_id` foreign key in place of a token identity smuggled through `user_agent`. That
-document's table already declares both columns; the paragraph beside it, and the finding it points
-at, still describe the `user_agent` form as the standing contract. It is not, as of this section.
-The two stale paragraphs belong to the round that owns `docs/CATALOG.md` and are recorded as
-**FU-6** in §7.
+document now says the same thing in prose as well as in shape: its §2.12 closes by recording that
+there is nothing left to propose, and its §13.9 records the item as settled. The two files agreed
+on the columns before they agreed on the wording; they agree on both now, which is why **FU-6** in
+§7 is closed.
 
 Two invariants are `CHECK` constraints rather than prose, because both are the kind of rule that
 decays into a convention the first time a caller is in a hurry: `actor_kind = 'agent'` implies
@@ -580,10 +581,9 @@ decays into a convention the first time a caller is in a hurry: `actor_kind = 'a
 
 Indexes: `(entity_type, entity_id, created_at)` for the timeline query in §4.4,
 `(actor_user_id, created_at)`, `(action, created_at)`, `(token_id)`, and `(created_at)` for the
-prune. `docs/CATALOG.md` §2.12 lists the timeline index in its two-column form,
-`(entity_type, entity_id)`; that is the leading prefix of the three-column index above and is
-served by it, so it is not created a second time. This is the one place the two tables are written
-differently, it is deliberate, and it is not drift.
+prune. The timeline query in §4.4 filters on `(entity_type, entity_id)` and orders by
+`created_at`, so the three-column index above serves it whole; no two-column index is created
+beside it. `docs/CATALOG.md` §2.12 lists no index of its own and reads this list from here.
 
 **Why `actor_role` and `token_id` are columns and not fields inside `changes`.** Both are asked
 about in queries rather than read off a row somebody already found: "everything a curator did last
@@ -632,13 +632,20 @@ occur inside an entity name - `catalog_place`, `place_pack` - and inside a compo
 distinguishes the two prefix forms is the segment count, never the underscore.
 
 There are exactly two prefix forms, and the entity decides which one an action takes. A catalogue
-action is the two-segment `<entity_type>.<verb>` form `src/server/repos/**` already writes - all
-nine of its action names have that shape, from `trip.created` to `billing.plan_changed` - and its
-prefix is the `entity_type` spelled verbatim. An action on a user, a session, a credential or a
-share takes the three-segment `platform.<entity>.<verb>`, because those entities are named
-identically in the tenant log of §4.5 and a bare `user.created` read out of an operational view
-spanning both tables would be attributable to neither. Sixteen of the thirty-one actions below
-take the first form and fifteen take the second; no third form exists.
+action is the two-segment `<entity_type>.<verb>` form, and its prefix is the `entity_type` spelled
+verbatim. Two segments is also the shape of every audit action name that exists anywhere in this
+codebase today - nine of them, from `trip.created` to `billing.plan_changed` - which is the whole
+of what precedent settles here. It settles no more than that: none of the nine is written by a
+production path, seven being seed rows in `src/routes/api/dev/-seed/dataset/workspace.ts` and the
+other two, `place.created` and `trip.hijacked`, appearing only under `src/server/repos/__tests__/`;
+and one of them, `billing.plan_changed`, is recorded against `entity_type: 'subscription'`, so the
+prefix-equals-`entity_type` rule is declared by the table below rather than inherited from them.
+
+An action on a user, a session, a credential or a share takes the three-segment
+`platform.<entity>.<verb>`, because those entities are named identically in the tenant log of §4.5
+and a bare `user.created` read out of an operational view spanning both tables would be
+attributable to neither. Sixteen of the thirty-one actions below take the first form and fifteen
+take the second; no third form exists.
 
 Everything before the verb fixes the `entity_type` written beside it, so §4.4's query never has to
 guess which prefix belongs to which table:
@@ -657,12 +664,18 @@ guess which prefix belongs to which table:
 **The list is closed.** Every action this platform can ever write is below. A new action is an
 edit to this table, in the commit that adds the code that writes it.
 
-`docs/CATALOG.md` §8.4 owns the catalogue action vocabulary. Its thirteen names - declared across
-that tool table, its status-transition table (§7.2) and its licence rule (§5.4) - are reproduced
-below character for character rather than paraphrased, and this section claims no authority over
-them: where the two files ever disagree about a catalogue action, that one is right. What this
-section owns is the rest of the list - the three console-only catalogue actions no MCP tool can
-emit, and every `platform.*` action - marked "here" in the last column.
+`docs/CATALOG.md` §8.4 owns the catalogue actions an MCP tool can emit. Its thirteen names -
+declared across that tool table, its status-transition table (§7.2) and its licence rule (§5.4) -
+are reproduced below character for character rather than paraphrased, and this section claims no
+authority over them: where the two files ever disagree about **one of those thirteen**, that one is
+right.
+
+The deference is to the thirteen names and to nothing wider. Closing the catalogue vocabulary in
+§8.4 closes the set of catalogue actions the MCP surface emits, not the set of catalogue actions
+this platform writes: `place_pack.retired`, `catalog_source.enabled` and `catalog_source.disabled`
+are reachable only from the console, no MCP tool can produce them, and they are therefore declared
+here and are legal here. Those three and every `platform.*` action are what this section owns, and
+they are marked "here" in the last column.
 
 | Action                                | Written when                                                         | Declared in                   |
 | ------------------------------------- | -------------------------------------------------------------------- | ----------------------------- |
@@ -702,8 +715,9 @@ Thirty-one actions. Three notes so the list cannot be miscounted or misread:
 
 - `catalog.run.poll` appears in `docs/CATALOG.md` §2.4 and is **not** in this list on purpose. It is
   the name of a queue task on `TASKS`, not an audit action, and nothing writes a
-  `platform_audit_log` row under it. The two vocabularies happen to look alike; only this one is
-  audited.
+  `platform_audit_log` row under it. Its `catalog` prefix is not an action prefix at all - the
+  prefix table above has no such row - so it cannot be mistaken for a member of this list; the note
+  is here because the two vocabularies are dotted and adjacent, not because they collide.
 - Reads are not audited, in the console or over MCP, for the reasons `docs/CATALOG.md` §8.3 gives.
   There is deliberately no `catalog_place.read`.
 - Every **mutating** statement in §2.1 and §2.2 has exactly one action prefix here, and that is the
@@ -749,8 +763,9 @@ in code and not in this table fails it; so does a name in this table that nothin
   severity the logger has - the action still stands, because reversing a completed ban because a
   log write failed is the worse of the two failures. Also always audited: `platform.user.role_changed`,
   `platform.user.deleted`, `platform.session.revoked`, `platform.session.revoked_all`,
-  `platform.token.issued`, `platform.token.revoked`, and every `catalog` / `pack` / `source` /
-  `share` mutation in §4.2's table.
+  `platform.token.issued`, `platform.token.revoked`, and every `catalog_place.*` /
+  `catalog_ingest.*` / `place_pack.*` / `catalog_source.*` / `platform.share.*` mutation in §4.2's
+  table.
 
 ### 4.4 The query that makes this log worth having
 
@@ -936,15 +951,13 @@ a server function that forgets to call it. The correct replacement text is alrea
 SQL grant, which `docs/DEPLOY.md` §14.1 documents immediately above the paragraph in question.
 Recorded rather than fixed, because a document may not edit a contract file it does not own.
 
-**FU-6 - `docs/CATALOG.md` still calls the `user_agent` token form the standing contract.** §4.1
-now declares `actor_role` and `token_id` as real columns, which is exactly the change that document
-proposes in its §13.9 and describes in the closing paragraph of its §2.12. Its column table already
-matches this one; only the prose beside it lags, and it lags in a direction that matters - a
-builder reading "the `user_agent` form is the contract and this document follows it without
-amendment" would implement the wrong table. Both paragraphs should be replaced with a pointer to
-§4.1 by the round that owns `docs/CATALOG.md`. Nothing else in that document changes: its §8.3 and
-§8.4 already write `actor_role` and `token_id`, which is why the two files agreed on the columns
-before they agreed on the prose.
+**FU-6 - _closed._ `docs/CATALOG.md` no longer calls the `user_agent` token form the standing
+contract.** The item was that §4.1 here declared `actor_role` and `token_id` as real columns while
+two paragraphs there still described the superseded `user_agent` form as the contract, which a
+builder could have implemented. The round that owns that document replaced both: its §2.12 now
+closes by recording that there is nothing left to propose because those columns already exist here,
+and its §13.9 records the same as settled. Nothing remains to do. The entry is kept rather than
+deleted so FU-1 … FU-5 keep their numbers and §4.1's pointer to it still resolves.
 
 ---
 
