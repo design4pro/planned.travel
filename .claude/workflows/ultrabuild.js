@@ -55,6 +55,65 @@ Hard constraints that override any instinct to be helpful:
  * came back as 64 timeouts with not one pixel difference among them. Reuse beats spawning, and a
  * bounded pool keeps two concurrent runs off each other's ports.
  */
+/**
+ * Which browser an agent reaches for, and why the two are not interchangeable.
+ *
+ * Ego Lite is a Chromium browser built for agents: it drives a page from a Node heredoc and runs in
+ * an isolated task space that inherits the human's login state. That last part is the reason it is
+ * the default for looking at the app — capture agents in the atlas run repeatedly returned
+ * `captured: false` because /atlas sits behind a login they had no session for.
+ *
+ * Playwright stays the authority for anything that has to be reproducible or cross-engine: it owns
+ * the gate, the committed baselines, and WebKit. Ego Lite is one Chromium build on one machine and
+ * must never be allowed to decide whether a baseline passed.
+ */
+const BROWSER_POLICY = `BROWSER POLICY — two browsers, one job each. Do not substitute one for the other.
+
+EGO LITE (\`ego-browser\`) — the default for LOOKING at the app.
+Use it for: the blind A/B capture pair, checking a change by eye, exploring a flow, reading the DOM
+of a page that needs a session. Verified on this machine: ego-browser 0.4.7.1, Chromium 150.
+  - Invoke it from Bash as a heredoc; do not write a .js file first:
+      ego-browser nodejs <<'SCRIPT'
+      const task = await useOrCreateTaskSpace('ultrabuild <item-id>')
+      await openOrReuseTab('http://localhost:<port>/atlas', { wait: true, timeout: 30 })
+      await waitForNetworkIdle().catch(() => {})
+      const path = await captureScreenshot()
+      cliLog(path)
+      SCRIPT
+  - \`captureScreenshot()\` resolves to a PATH STRING pointing at a PNG in a temp directory. Copy that
+    file to where the item wants it; it is not bytes and not a data URL.
+  - \`cliLog(...)\` is the only way anything reaches your terminal from inside the heredoc.
+  - The task space inherits the human's logged-in session, which is how you reach a page behind
+    auth. Reuse one named space for the whole item across heredoc rounds; the Node runtime keeps no
+    state between them.
+  - Set the viewport with \`cdp('Emulation.setDeviceMetricsOverride', { width, height,
+    deviceScaleFactor: 1, mobile: false })\` and CONFIRM it took by reading \`await pageInfo()\`, which
+    reports w and h. If the override does not take, say so and fall back to Playwright rather than
+    shipping frames at the wrong size.
+  - Helpers that exist in this build: openOrReuseTab, gotoAndWait, listTabs, switchTab, closeTab,
+    snapshotText, captureScreenshot, pageInfo, click, doubleClick, hover, dragMouse, scroll,
+    scrollBy, typeText, fillInput, pressKey, uploadFile, wait, waitForLoad, waitForElement,
+    waitForNetworkIdle, js, cdp, serverFetch, browserFetch, cliLog, and the taskSpace family.
+    \`help(name)\` has an incomplete registry — a helper missing from help() may still exist.
+  - Finish with \`completeTaskSpace(<nameOrId>, { keep: false })\` in its own final heredoc, so you do
+    not leave browser windows behind for the next agent.
+
+PLAYWRIGHT — the authority for anything that must be REPRODUCIBLE OR CROSS-ENGINE.
+Use it, and only it, for:
+  - the mechanical gate: \`PLAYWRIGHT_BASE_URL=http://localhost:<port> pnpm exec playwright test\`;
+  - every committed baseline under e2e/__screenshots__. Ego Lite must never record or re-record one.
+    Those frames are compared pixel for pixel across machines; a second Chromium build with its own
+    fonts and GPU would silently rewrite the truth;
+  - anything that has to hold in more than one engine — the suite runs desktop Chromium and mobile
+    WebKit today, and Firefox if a project is added. Ego Lite is Chromium only, so a WebKit or
+    Firefox claim made from it is not evidence.
+
+WHEN THEY DISAGREE, PLAYWRIGHT WINS, and the disagreement itself is worth reporting: it usually
+means the capture and the gate were not looking at the same state.
+
+Say which browser produced each piece of evidence you report. "Ego Lite, 1440x900, light" and
+"Playwright chromium project" are different claims and a reader must be able to tell them apart.`
+
 const PORT_POLICY = `PORT POOL POLICY — binding on every agent, no exceptions.
 
 The pool is ports 3000 through 3010. Nothing outside it is ever used, and 3000 is never assumed:
@@ -456,6 +515,8 @@ ${item.acceptance.map((a) => `  - ${a}`).join('\n')}
 ${item.url ? `Renders at: ${item.url}\n` : ''}
 ${CONTRACT}
 
+${BROWSER_POLICY}
+
 ${PORT_POLICY}
 
 Established recon — do not re-derive:
@@ -503,6 +564,8 @@ Reference: ${item.referenceUrl || 'https://demo.liketrek.com/dashboard'}
 Our page is served by a dev server. Follow the PORT POOL POLICY below exactly — sixteen concurrent
 dev servers once put this machine at a load average of 563 and cost a whole round to timeouts.
 
+${BROWSER_POLICY}
+
 ${PORT_POLICY}
 
 For each of these combinations, screenshot BOTH pages full-page:
@@ -511,11 +574,19 @@ For each of these combinations, screenshot BOTH pages full-page:
 At minimum produce: 1440 light, 1440 dark, 360 light, 360 dark, 768 light, 2560 light.
 
 Mechanics, because the obvious approach does not work:
-- Set the viewport with the Playwright MCP resize tool before each capture.
+- Set the viewport before each capture. In Ego Lite:
+    await cdp('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false })
+  then confirm it took by reading \`await pageInfo()\`, which reports w and h. With Playwright MCP,
+  use its resize tool instead. Never file a frame whose measured size is not the one you intended.
 - Switch OUR theme by setting the attribute directly:
-  browser_evaluate with: document.documentElement.setAttribute('data-theme', 'dark')  (or 'light').
+  in Ego Lite, await js("document.documentElement.setAttribute('data-theme','dark')")  (or 'light');
+  with Playwright MCP, browser_evaluate with the same expression.
   docs/DESIGN.md guarantees an explicit data-theme attribute wins over the media query in both
   directions, so this is the supported path. There is no colour-scheme emulation tool here.
+  Do NOT drive the app's own theme control instead: a single click on it only OPENS a dropdown
+  offering Light / Dark / Match system, and a frame shot at that moment has chrome and map
+  disagreeing about the theme. That mistake was reported as a product defect three times in one run
+  before it was measured and found to be the capture's fault.
 - Switch the REFERENCE theme using that site's own theme control. If you cannot find one, capture
   the reference in its default theme only and say so in skippedReason — do not fake a dark frame,
   and do not compare our dark against their light as if it were a fair pair.
@@ -524,7 +595,7 @@ Mechanics, because the obvious approach does not work:
 - **Kill animation before you shoot.** An entrance transition caught mid-flight renders text at
   20-25% opacity, and a critic reading that frame reports a contrast failure the product does not
   have. Inject a stylesheet that stops them, then wait one frame:
-  browser_evaluate with:
+  in Ego Lite await js(...), or browser_evaluate with:
     const s = document.createElement('style');
     s.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}';
     document.head.appendChild(s);
@@ -539,9 +610,10 @@ Mechanics, because the obvious approach does not work:
   the viewport comes out as one flat colour, or a number renders as a pale ghost of its neighbours,
   you captured too early. Retry that combination. Filing such a frame wastes the critic's round on
   a defect that does not exist, which has happened.
-- The screenshot tool writes into its own output directory, so it cannot target a repo path
-  directly. Take the shot with a distinctive filename, then MOVE the produced file into place with
-  Bash. Create ${dir}/ first.
+- Neither browser writes straight into the repo. Ego Lite's \`captureScreenshot()\` RESOLVES TO A
+  PATH STRING for a PNG in a temp directory; Playwright MCP writes into its own output directory.
+  Either way, take the shot and then MOVE the produced file into place with Bash. Create ${dir}/
+  first.
 
 Final filenames, and this part matters more than anything else you do — the critic must not be
 able to tell which product is which:
@@ -623,6 +695,8 @@ Acceptance criteria it claims to satisfy:
 ${item.acceptance.map((a) => `  - ${a}`).join('\n')}
 
 ${CONTRACT}
+
+${BROWSER_POLICY}
 
 ${PORT_POLICY}
 
