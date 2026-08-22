@@ -87,9 +87,11 @@ of a page that needs a session. Verified on this machine: ego-browser 0.4.7.1, C
     auth. Reuse one named space for the whole item across heredoc rounds; the Node runtime keeps no
     state between them.
   - Set the viewport with \`cdp('Emulation.setDeviceMetricsOverride', { width, height,
-    deviceScaleFactor: 1, mobile: false })\` and CONFIRM it took by reading \`await pageInfo()\`, which
-    reports w and h. If the override does not take, say so and fall back to Playwright rather than
-    shipping frames at the wrong size.
+    deviceScaleFactor: 1, mobile: false })\`. Measured on this machine: overriding to 360x800 and
+    then 1440x900 makes \`await pageInfo()\` report exactly \`w: 360, h: 800\` and \`w: 1440, h: 900\`,
+    so the override is real and immediate. Still READ pageInfo() back after every resize and never
+    file a frame whose measured size is not the one you intended — a wrongly sized frame sends the
+    critic after a responsive defect that does not exist.
   - Helpers that exist in this build: openOrReuseTab, gotoAndWait, listTabs, switchTab, closeTab,
     snapshotText, captureScreenshot, pageInfo, click, doubleClick, hover, dragMouse, scroll,
     scrollBy, typeText, fillInput, pressKey, uploadFile, wait, waitForLoad, waitForElement,
