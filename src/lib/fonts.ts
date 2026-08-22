@@ -11,10 +11,11 @@
  * would resolve to whatever the reader's platform happens to install, at a
  * different weight, a different optical size and a different baseline.
  *
- * The fix is four script-covering companions requested in the same stylesheet,
+ * The fix is six script-covering companions requested in the same stylesheet,
  * so one request carries every script the product can render:
  *
- * - `Noto Sans` — Greek (and the Cyrillic that MuseoModerno lacks).
+ * - `Noto Sans` — Greek. It is also the only face in the set that draws the
+ *   accented Greek vowels (ά, έ, ή …); nothing else requested here claims them.
  * - `Noto Sans Arabic` — the Arabic script for `ar`.
  * - `Noto Sans SC` / `TC` — Han, Simplified and Traditional, with the regional
  *   glyph variants a reader of each expects.
@@ -25,12 +26,29 @@
  * `src/styles/styles.css` carries the metric-compensated `local()` faces that
  * hold the line while these download.
  *
- * Cost, measured with a Chrome 150 user agent: the stylesheet is 466 KB
- * uncompressed and ~117 KB over the wire, because the four CJK families are cut
- * into ~100 `unicode-range` slices each. The slicing is also what makes it
- * affordable — a page with no Han on it downloads none of those slices — but
- * the CSS itself is on the critical path, so the shell should keep this to a
- * single `<link>` and never duplicate it.
+ * WIRING. Nothing else in this file has an effect until the document shell
+ * renders it. `src/routes/__root.tsx` is the only place that may, from its
+ * `head()` `links` array, and it has to be all three entries in this order —
+ * the two preconnects before the stylesheet, or the stylesheet opens its own
+ * connections and the warm-up is wasted:
+ *
+ *     ...FONT_PRECONNECT_ORIGINS.map(({ href, crossOrigin }) => ({
+ *       rel: 'preconnect', href, crossOrigin,
+ *     })),
+ *     { rel: 'stylesheet', href: FONT_STYLESHEET_HREF },
+ *
+ * That replaces the shell's own `FONTS_HREF` constant and its two hand-written
+ * preconnect entries. There must be exactly one copy of the URL in the repo,
+ * because it and the stacks in `tokens.css` have to name the same eight
+ * families or a script silently loses its face.
+ *
+ * Cost, re-measured with a Chrome 150 user agent on 2026-08-23: the stylesheet
+ * answers 200 with 465,919 bytes over 499 `@font-face` blocks, every one of
+ * them carrying `font-display: swap`. It is that large because the four CJK
+ * families are cut into ~100 `unicode-range` slices each. The slicing is also
+ * what makes it affordable — a page with no Han on it downloads none of those
+ * slices — but the CSS itself is on the critical path, so the shell should keep
+ * this to a single `<link>` and never duplicate it.
  */
 
 /** One family as the Google Fonts CSS2 API wants it spelled. */

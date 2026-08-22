@@ -1,6 +1,24 @@
 import { describe, expect, it } from 'vitest'
 
+import { LOCALE_TAGS } from '../locales'
 import { negotiate, parseAcceptLanguage, resolveLocaleTag } from '../negotiate'
+
+/**
+ * Names that live on `Object.prototype` and therefore answer a plain object
+ * index with something that is not a locale and is not `undefined` either. Any
+ * of them can arrive as an `Accept-Language` entry, and any of them can be
+ * written into `user_settings.locale` or `organization_settings.locale`.
+ */
+const PROTOTYPE_KEYS = [
+  'constructor',
+  '__proto__',
+  'toString',
+  'valueOf',
+  'hasOwnProperty',
+  'isPrototypeOf',
+  'propertyIsEnumerable',
+  'toLocaleString',
+] as const
 
 describe('normalising a stored tag', () => {
   it('accepts a canonical tag as it stands', () => {
@@ -50,6 +68,53 @@ describe('normalising a stored tag', () => {
     expect(resolveLocaleTag('   ')).toBeNull()
     expect(resolveLocaleTag(null)).toBeNull()
     expect(resolveLocaleTag(undefined)).toBeNull()
+  })
+
+  it('does not mistake an inherited property name for a locale', () => {
+    // The lookup tables are `Map`s precisely so this cannot happen. Indexed as
+    // object literals they answered `constructor` with the `Object` constructor
+    // and `__proto__` with `Object.prototype`, neither of which `?? null`
+    // treats as a miss — so a header could make this function return a
+    // function, and the settings columns could persist it.
+    for (const key of PROTOTYPE_KEYS) {
+      expect(resolveLocaleTag(key)).toBeNull()
+      expect(resolveLocaleTag(`${key}-GB`)).toBeNull()
+      expect(resolveLocaleTag(key.toUpperCase())).toBeNull()
+    }
+  })
+
+  it('never returns anything but a shipped tag or null', () => {
+    const probes = [
+      ...PROTOTYPE_KEYS,
+      'en-GB',
+      'zh-Hant-TW',
+      '-',
+      '--',
+      '-en',
+      'en-',
+      'en--GB',
+      '   pl   ',
+      'klingon',
+    ]
+    for (const probe of probes) {
+      const resolved = resolveLocaleTag(probe)
+      if (resolved !== null) {
+        expect(LOCALE_TAGS).toContain(resolved)
+      }
+    }
+  })
+
+  it('refuses a tag longer than any real one, without walking it', () => {
+    // Truncation drops one subtag per pass, so an unbounded tag turns one
+    // request header into a measurable slice of the Worker's CPU budget. The
+    // budget below is loose enough to survive a loaded machine and still two
+    // orders of magnitude under the uncapped walk of an input this size.
+    const started = performance.now()
+    expect(resolveLocaleTag(`en${'-x'.repeat(100_000)}`)).toBeNull()
+    expect(resolveLocaleTag('e'.repeat(200_000))).toBeNull()
+    expect(performance.now() - started).toBeLessThan(500)
+    // A tag at the bound is still normalised on its merits.
+    expect(resolveLocaleTag(`en-${'a'.repeat(60)}`)).toBe('en')
   })
 })
 
@@ -134,6 +199,22 @@ describe('negotiating a locale', () => {
       'en',
     )
     expect(negotiate({ acceptLanguage: 'nb, da, fi' })).toBe('en')
+  })
+
+  it('returns a shipped locale for a hostile input at every step', () => {
+    // Each of the three inputs is attacker-influenced: the header directly, and
+    // both settings columns through whatever wrote them. None may make this
+    // function hand back a value the rest of the product cannot load a
+    // catalogue for.
+    for (const key of PROTOTYPE_KEYS) {
+      expect(negotiate({ user: key })).toBe('en')
+      expect(negotiate({ workspace: key })).toBe('en')
+      expect(negotiate({ acceptLanguage: key })).toBe('en')
+      expect(negotiate({ acceptLanguage: `${key};q=1.0, pl;q=0.5` })).toBe('pl')
+      expect(LOCALE_TAGS).toContain(
+        negotiate({ user: key, workspace: key, acceptLanguage: key }),
+      )
+    }
   })
 
   it('reads no ambient request state', () => {

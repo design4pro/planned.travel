@@ -382,11 +382,26 @@
    `body` declares it, and everything below inherits the answer. An element that
    carries its own `lang` in an otherwise English page — one chip in the language
    picker, a place name quoted inside English prose — inherits that English list
-   instead and has to ask again. `:where()` keeps the selector at zero
-   specificity, so an explicit `font-display` or `font-mono` utility on the same
-   element still wins and only unstyled text is re-resolved. */
-:where([lang]:lang(ja), [lang]:lang(ko), [lang]:lang(zh-Hant)) {
-  font-family: var(--font-ui);
+   instead and has to ask again.
+
+   This one rule is therefore LAYERED while its three neighbours above are not,
+   and which layer it lands in is load-bearing twice over. Specificity is only
+   consulted between declarations in the *same* layer, and an unlayered one
+   outranks every layered one whatever its selector — so written outside a layer
+   this rule beats `.font-display` and `.font-mono` in `@layer utilities` even at
+   zero specificity, and strips the display face off every element carrying its
+   own `lang`, which is every chip in the language picker. `@layer base` is not
+   the answer either: preflight puts `button, input, select, textarea { font:
+   inherit }` in that same layer at specificity (0,0,1), which beats `:where()`
+   and hands a `<button lang="ja">` the English list straight back — measured.
+
+   `components` is the one layer that sits above both: after base, so preflight
+   loses; before utilities, so `font-display` and `font-mono` win. `:where()`
+   stays so that a component's own `[lang]`-scoped rule outranks it too. */
+@layer components {
+  :where([lang]:lang(ja), [lang]:lang(ko), [lang]:lang(zh-Hant)) {
+    font-family: var(--font-ui);
+  }
 }
 
 /* Arabic is the one script in the set that cannot wear the Latin type scale.
@@ -440,11 +455,57 @@
    backwards. Isolating the elements that carry numbers pins each run to its own
    embedding level. It is scoped to RTL because that is the only direction where
    the bidi algorithm has anything to decide.
+
+   Everything below is the whole of that job for the product. SPEC §8.4 asks for
+   a *designed* RTL rather than a flipped one, so nothing here flips a layout —
+   the three rules are the three things a component genuinely cannot say, and a
+   component that reaches for a `[dir]` selector of its own is a defect.
    ========================================================================== */
 
 [dir='rtl'] :is(time, output, [data-numeric]) {
   direction: ltr;
   unicode-bidi: isolate;
+}
+
+/* Content that is Latin by definition and stays Latin in every locale: an
+   address, a URL, a phone number, a code sample, a keyboard shortcut. Arabic
+   makes these unreadable — `user@planned.travel` reorders around the `@` and
+   `https://` loses its slashes to the paragraph direction — and no utility
+   expresses "this element's *content* has a direction of its own". The field's
+   own box still mirrors with the form around it; only the run inside is pinned. */
+[dir='rtl']
+  :is(
+    input[type='email'],
+    input[type='url'],
+    input[type='tel'],
+    code,
+    kbd,
+    samp
+  ) {
+  direction: ltr;
+  text-align: start;
+}
+
+/* Directional icons mirror (SPEC §8.4): a back chevron, a "next" arrow, a
+   send glyph all point the wrong way once the page runs right to left, while a
+   clock, a close cross or a chevron that only means "expand" must not move.
+   That distinction is semantic, so the component names it with an attribute and
+   this rule does the flip — one place, rather than an `rtl:-scale-x-100` on
+   thirty icons.
+
+   `scale` rather than `transform`, for one reason that outweighs the rest: the
+   reduced-motion block below resets `transform` on `[data-motion-transform]`,
+   and a mirror written as `transform: scaleX(-1)` would be wiped there — an
+   arrow pointing the wrong way for exactly the readers least able to re-orient
+   themselves. `scale` is a separate property and survives it, and it also
+   composes with `rotate-*` and `translate-*`, which Tailwind v4.3 compiles to
+   their own properties too (measured against the installed compiler).
+
+   The one thing it does not compose with is `scale-*`, which compiles to this
+   same property. An icon that both mirrors and scales puts the scale on its
+   wrapper; none in the product does either yet. */
+[dir='rtl'] [data-mirror-rtl] {
+  scale: -1 1;
 }
 
 /* ==========================================================================

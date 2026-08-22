@@ -536,10 +536,11 @@
      half of that alphabet: measured against the Google Fonts API, Geist serves
      Latin, Latin-ext, Cyrillic and Vietnamese, and MuseoModerno serves Latin,
      Latin-ext and Vietnamese only. Greek, Arabic, Han, Kana and Hangul have no
-     subset in either. Four Noto companions — requested in the same stylesheet
-     by `src/lib/fonts.ts` — close that gap, and they are named here *ahead of*
-     the generic system entries so a Han or Arabic glyph can never resolve to an
-     unstyled platform default.
+     subset in either. Six Noto companions — Noto Sans for Greek, Noto Sans
+     Arabic, and the four Han/Kana/Hangul cuts below — are requested in the same
+     stylesheet by `src/lib/fonts.ts` and close that gap. They are named here
+     *ahead of* the generic system entries so a Greek, Arabic, Han, Kana or
+     Hangul glyph can never resolve to an unstyled platform default.
 
      Order inside a stack is coverage order, not preference: the browser takes
      the first family that owns the codepoint. `Noto Sans` and `Noto Sans
@@ -552,8 +553,15 @@
      Japanese. Simplified leads by default because it is the widest of the four;
      `styles.css` re-orders this list under `:lang()` so a Japanese, Korean or
      Traditional-Chinese reader — or a single chip in the language picker that
-     carries its own `lang` — gets its own shapes. Only `Noto Sans KR` carries
-     Hangul, so Korean text falls through the other three by coverage alone. */
+     carries its own `lang` — gets its own shapes.
+
+     Hangul is why that `:lang()` re-order is not a nicety. Counted over the
+     `unicode-range` of the served stylesheet, `Noto Sans KR` claims all 11,172
+     Hangul syllables while `Noto Sans SC` claims 80 and `Noto Sans TC` 49 — and
+     한, 국 and 어 are all inside those 80. Ordering alone therefore cannot route
+     Korean to `Noto Sans KR`, because moving it up the list would hand it every
+     ideograph as well. Korean text reaches its own face by carrying `lang="ko"`,
+     which is exactly what the picker chip and a Korean page both do. */
   --font-han: 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR';
 
   /* The metric-compensated `local()` faces declared in `styles.css`. They stand

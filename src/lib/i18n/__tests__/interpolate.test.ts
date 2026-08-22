@@ -34,6 +34,20 @@ describe('interpolation', () => {
     expect(interpolate('{ name }', { name: 'Ada' })).toBe('{ name }')
     expect(interpolate('a { b } c', { b: 'x' })).toBe('a { b } c')
   })
+
+  it('treats an inherited property name as an unknown token', () => {
+    // A params bag is an ordinary object literal, so `params.constructor`
+    // answers with the `Object` constructor rather than `undefined`. Presence is
+    // decided by `Object.hasOwn`, or a `{constructor}` token would stringify a
+    // native function into the middle of a sentence.
+    for (const name of ['constructor', 'toString', 'valueOf', '__proto__']) {
+      expect(interpolate(`Hi {${name}}`, { name: 'Ada' })).toBe(`Hi {${name}}`)
+    }
+    // …and an own property of that name still substitutes normally.
+    expect(interpolate('Hi {constructor}', { constructor: 'Ada' })).toBe(
+      'Hi Ada',
+    )
+  })
 })
 
 describe('resolving a message', () => {

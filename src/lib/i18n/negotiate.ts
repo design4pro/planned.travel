@@ -44,25 +44,45 @@ const CANONICAL_BY_LOWER = new Map<string, Locale>(
  *   and Android clients send.
  *
  * A tag that is absent here and does not truncate falls through to `en`.
+ *
+ * Both lookup tables are `Map`s rather than object literals, and that is not a
+ * style choice. An object literal inherits `Object.prototype`, so indexing one
+ * with `constructor` answers with the `Object` constructor and with `__proto__`
+ * answers with `Object.prototype` — neither of which `?? null` reads as a miss.
+ * Both names arrive freely in an `Accept-Language` header and both are
+ * persistable through the settings columns, so the object form left
+ * `negotiate()` handing back a function where every caller had been promised a
+ * `Locale`. A `Map` has no inherited entries and no such shape to exploit.
  */
-const ALIASES: Readonly<Record<string, Locale | undefined>> = Object.freeze({
-  in: 'id',
-  pt: 'pt-BR',
-  'pt-pt': 'pt-BR',
-  zh: 'zh-Hans',
-  'zh-chs': 'zh-Hans',
-  'zh-cn': 'zh-Hans',
-  'zh-my': 'zh-Hans',
-  'zh-sg': 'zh-Hans',
-  'zh-cht': 'zh-Hant',
-  'zh-hk': 'zh-Hant',
-  'zh-mo': 'zh-Hant',
-  'zh-tw': 'zh-Hant',
-})
+const ALIASES = new Map<string, Locale>([
+  ['in', 'id'],
+  ['pt', 'pt-BR'],
+  ['pt-pt', 'pt-BR'],
+  ['zh', 'zh-Hans'],
+  ['zh-chs', 'zh-Hans'],
+  ['zh-cn', 'zh-Hans'],
+  ['zh-my', 'zh-Hans'],
+  ['zh-sg', 'zh-Hans'],
+  ['zh-cht', 'zh-Hant'],
+  ['zh-hk', 'zh-Hant'],
+  ['zh-mo', 'zh-Hant'],
+  ['zh-tw', 'zh-Hant'],
+])
 
 function lookup(candidate: string): Locale | null {
-  return CANONICAL_BY_LOWER.get(candidate) ?? ALIASES[candidate] ?? null
+  return CANONICAL_BY_LOWER.get(candidate) ?? ALIASES.get(candidate) ?? null
 }
+
+/**
+ * Longest input `resolveLocaleTag` will even look at.
+ *
+ * RFC 5646 caps a registered language tag well below this; the bound is here
+ * because truncation walks one subtag at a time and this function runs on the
+ * request path for every visitor. Without it a single 16 KB `Accept-Language`
+ * entry of nothing but hyphens costs the Worker a measurable slice of its CPU
+ * budget for a tag that could never have matched.
+ */
+const MAX_TAG_LENGTH = 64
 
 /**
  * Canonicalises one tag to a shipped locale, or returns `null` if the product
@@ -75,12 +95,12 @@ export function resolveLocaleTag(
     return null
   }
   const lower = tag.trim().toLowerCase()
-  if (lower === '' || lower === '*') {
+  if (lower === '' || lower === '*' || lower.length > MAX_TAG_LENGTH) {
     return null
   }
-  const subtags = lower.split('-')
-  for (let length = subtags.length; length >= 1; length -= 1) {
-    const hit = lookup(subtags.slice(0, length).join('-'))
+  // `en-gb` → `en`, `zh-hant-tw` → `zh-hant` → …, dropping one subtag per pass.
+  for (let end = lower.length; end > 0; end = lower.lastIndexOf('-', end - 1)) {
+    const hit = lookup(lower.slice(0, end))
     if (hit !== null) {
       return hit
     }

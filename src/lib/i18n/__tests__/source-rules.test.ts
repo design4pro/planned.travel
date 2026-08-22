@@ -86,4 +86,24 @@ describe('the shipped i18n source', () => {
       expect(offenders, reason).toEqual([])
     })
   }
+
+  /**
+   * A third ban, enforced here for the same reason: the failure is a build
+   * failure rather than a test failure, so nothing else in the suite would ever
+   * see it. `` import(`./messages/${locale}`) `` reads better than the map of
+   * twenty-three literal specifiers in `../catalogue` and does not survive the
+   * bundle — esbuild cannot tell which files it means, so wrangler tries to emit
+   * the whole source directory and the deploy fails outright.
+   */
+  it('never builds an import specifier from a variable', () => {
+    const offenders = sources.filter((path) =>
+      readFileSync(path, 'utf8')
+        .split('\n')
+        .some((line) => !COMMENT.test(line) && /import\s*\(\s*`/.test(line)),
+    )
+    expect(
+      offenders,
+      'a template-literal import() specifier breaks the wrangler bundle; use a literal one per locale, as ../catalogue does',
+    ).toEqual([])
+  })
 })

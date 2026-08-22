@@ -262,5 +262,64 @@
       "auditor"
     ],
     "invalidatesWhen": "playwright.config.ts scopes extraHTTPHeaders to the app origin, which is open backlog work"
+  },
+  {
+    "id": "missing-key-ts-diagnostic",
+    "claim": "A missing t() key produces two DIFFERENT TypeScript errors depending on argument count, and the low-information one can be mistaken for the key check being absent. With matching arity you get the clear TS2345 naming MessageKey; with mismatched arity the constraint failure is masked by TS2554 'Expected N arguments'. Check the criterion with a params object present.",
+    "evidence": "Probe file in src/lib/i18n: `t('language.nope')` -> \"error TS2554: Expected 2 arguments, but got 1.\" (TKey falls back to the MessageKey constraint, whose union of messages requires a params bag). `t('language.nope', { name: 'x' })` -> \"error TS2345: Argument of type '\\\"language.nope\\\"' is not assignable to parameter of type 'MessageKey'.\" Both are errors, so the criterion holds, but only the second one says why.",
+    "measuredIn": "i18n run, round 2",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": "the toolchain, the font set or the catalogue layout changes"
+  },
+  {
+    "id": "dirty-tree-is-not-yours",
+    "claim": "This checkout is shared with parallel items mid-round, so `git status --porcelain` at the repo root does NOT equal your changedPaths. Scope it to your owned path. src/styles/styles.css and src/styles/tokens.css were dirtied by another agent during my session even though the session-start snapshot said clean.",
+    "evidence": "`git status --porcelain` listed 7 modified files; `git status --porcelain src/lib/i18n/` listed exactly my 5. The two extra were src/styles/styles.css (+57/-5) and src/styles/tokens.css (+9/-4), whose diff is a new `@layer components` wrapper around the `:where([lang]:lang(ja), [lang]:lang(ko), [lang]:lang(zh-Hant))` font rule — the font/script item, not this one.",
+    "measuredIn": "i18n run, round 2",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "the toolchain, the font set or the catalogue layout changes"
+  },
+  {
+    "id": "lang-rule-needs-components-layer",
+    "claim": "The `:lang()` font re-order rule must live in `@layer components`, not `@layer base`: Tailwind preflight puts `button, input, select, textarea { font: inherit }` in `base` at specificity (0,0,1), which beats a zero-specificity `:where()` in the same layer and hands a `<button lang=\"ja\">` the English stack back. `components` sits after base (preflight loses) and before utilities (`.font-display`/`.font-mono` win).",
+    "evidence": "Compiled src/styles/styles.css with the installed tailwindcss 4.3.3 `compile()` API and measured getComputedStyle in Chromium on `<button lang=\"ja\">`. Unlayered: .font-display and .font-mono both → 'Geist, Geist Sans, …' (the bug). @layer base: no-utility button → SC-first default stack (preflight regression). @layer components: .font-display → 'MuseoModerno, Noto Sans, Noto Sans Arabic, Noto Sans JP…', .font-mono → 'ui-monospace…', bare lang=\"ja\" → JP-first, lang=\"ko\" → KR-first.",
+    "measuredIn": "i18n run, round 2",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": "the toolchain, the font set or the catalogue layout changes"
+  },
+  {
+    "id": "metric-compensated-fallbacks",
+    "claim": "The metric-compensated `Planned * Fallback` faces make the fallback→webfont swap geometrically free: identical markup measured with only the local() fallbacks and then with all 20 web faces loaded gives byte-identical boxes. And with the 8-family stylesheet wired, all ten scripts share one row height and one baseline.",
+    "evidence": "Playwright chromium, built dist/client/assets/styles-*.css. Fallback-only (3 faces loaded) vs web-font (20 faces loaded): chips both `[[46.8,24] ×7]`, ja paragraph 46.5px both. CDP CSS.getPlatformFontsForNode over a ten-chip row: en/ru/vi/cs→Geist, el→Noto Sans, ar→Noto Sans Arabic, ja→Noto Sans JP, ko→Noto Sans KR, zh-Hans→Noto Sans SC, zh-Hant→Noto Sans TC; every box 46.8@24. Zero gstatic/googleapis request failures in an unpinned context.",
+    "measuredIn": "i18n run, round 2",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "invalidatesWhen": "the toolchain, the font set or the catalogue layout changes"
+  },
+  {
+    "id": "hangul-needs-lang-attribute",
+    "claim": "`--font-han` ordering alone CANNOT route Korean to Noto Sans KR. Noto Sans SC and TC each claim a handful of Hangul syllables in their served unicode-range, and 한, 국 and 어 are all among them — so with SC first, short Korean strings render in SC. Only the `lang=\"ko\"` attribute (via the `:lang(ko)` re-order plus the layered `:where([lang]…)` rule) reaches Noto Sans KR.",
+    "evidence": "Counted U+AC00–U+D7A3 codepoints across the unicode-range of the served stylesheet: Noto Sans KR 11172, Noto Sans SC 80, Noto Sans TC 49. A per-codepoint probe put 한/국/어 in all three. CDP platform-font check confirms `<button lang=\"ko\">` renders in Noto Sans KR while the same text without `lang` would take SC.",
+    "measuredIn": "i18n run, round 2",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "invalidatesWhen": "the toolchain, the font set or the catalogue layout changes"
   }
 ]

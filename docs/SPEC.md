@@ -216,3 +216,38 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
 9. **Copy is authored, not copied.** §1's clean-room rule governs every catalogue file. Our English
    copy is our own, and each translation is made from *our* English — never from the reference's
    catalogues, which are AGPL-licensed source.
+
+### Catalogue layout (fixed — every i18n item builds against this)
+
+Round 2 rejected a runtime that shipped flat `messages/<tag>.ts` files while fifteen downstream
+items owned per-locale directories. The parity test globbed `messages/*.ts`, which does not match
+`messages/de/settings.ts`, so it would have reported green while the product rendered English.
+The layout is therefore part of the contract, not a builder's choice:
+
+```
+src/lib/i18n/messages/<locale>/<namespace>.ts     one flat object of keys, default-exported
+```
+
+**Namespaces — exactly these ten**, and a new one is a contract change, not an edit:
+
+`shell` · `auth` · `trips` · `modules` · `costs` · `atlas` · `journal` · `marketing` ·
+`settings` · `ui`
+
+- `src/lib/i18n/catalogue.ts` aggregates with `import.meta.glob('./messages/*/*.ts')`, so a new
+  namespace file is picked up with no shared index for fifteen items to fight over. Measured in
+  round 1: an explicit per-locale importer emits 23 separate chunks and inlines none of them into
+  the entry — the glob must keep that property.
+- `src/lib/i18n/types.ts` derives the key union from `import type` of the ten **`en`** namespace
+  files. English is the only source of truth for what a key is.
+- The parity test globs `messages/*/*.ts`. It fails on a key in `en` and missing elsewhere, a key
+  present only outside `en`, and a non-`en` value byte-identical to `en` outside a proper-noun
+  allow-list.
+- **Ownership.** One item owns `messages/en/<namespace>.ts` for its own screens. A translation item
+  owns `messages/<tag>/` for its tags, whole. Nothing is shared, so nothing collides.
+
+### Who wires the document shell
+
+`src/lib/fonts.ts` exports the stylesheet href and the preconnect origins **as data**; it does not
+render them. `src/routes/__root.tsx` is owned by `locale-negotiation-shell`, and that item is what
+imports `fonts.ts`, deletes the second hard-coded copy of the font URL, and sets `<html lang>` and
+`<html dir>`. An item is never held to an acceptance criterion it does not own the file to satisfy.

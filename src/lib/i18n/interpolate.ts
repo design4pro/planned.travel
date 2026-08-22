@@ -29,6 +29,11 @@ const TOKEN = /\{([A-Za-z0-9_]+)\}/g
  * damage in review instead of a silently missing word — and `parity.test.ts`
  * fails on it long before that, by comparing each locale's token set with
  * English's.
+ *
+ * Presence is decided by `Object.hasOwn` rather than by an `undefined` check:
+ * a params bag is an ordinary object literal, so `params.constructor` answers
+ * with the `Object` constructor and a `{constructor}` token would render
+ * `function Object() { [native code] }` into a sentence.
  */
 export function interpolate(
   template: string,
@@ -38,6 +43,9 @@ export function interpolate(
     return template
   }
   return template.replace(TOKEN, (token, name: string) => {
+    if (!Object.hasOwn(params, name)) {
+      return token
+    }
     const value = params[name]
     return value === undefined ? token : String(value)
   })
