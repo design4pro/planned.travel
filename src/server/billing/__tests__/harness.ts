@@ -15,10 +15,15 @@
 
 // Must come first: it configures the product ids `#/lib/plans` reads at import.
 import { TEST_PRODUCT_IDS } from './prices.fixture'
+import { planById } from '#/lib/plans'
+import { upsertSubscriptionInput } from '#/server/repos'
 import { ceilingsForPlan } from '../limits'
 import { PolarApiError } from '../polar'
+import { ceilingColumns, recordFromRow, rowValuesFromRecord } from '../store'
 import { EMPTY_USAGE } from '../types'
 
+import type { Subscription } from '#/server/db/types'
+import type { UpsertSubscriptionInput } from '#/server/repos'
 import type { PolarOrder, PolarSubscription } from '../mapping'
 import type {
   BillingCache,
@@ -34,7 +39,7 @@ import type {
   UsageReader,
   UsageSnapshot,
 } from '../types'
-import type { SubscriptionStatus } from '#/lib/plans'
+import type { BillingInterval, PlanId, SubscriptionStatus } from '#/lib/plans'
 
 export const TEST_ORG_ID = 'org_test'
 export const TEST_WEBHOOK_SECRET = 'polar_whs_test_secret_value'
@@ -115,26 +120,122 @@ export function webhookRequest(
 
 /* --------------------------------------------------------------------- store */
 
+/** A row as the `subscriptions` table would hold it before anything is written. */
+function blankRow(organizationId: string): Subscription {
+  const stamp = new Date('2026-01-01T00:00:00.000Z')
+  return {
+    id: `sub_${organizationId}`,
+    organizationId,
+    plan: 'free',
+    status: 'active',
+    providerCustomerId: null,
+    providerSubscriptionId: null,
+    providerProductId: null,
+    seats: 1,
+    currency: null,
+    unitAmountMinor: null,
+    currentPeriodStart: null,
+    currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+    canceledAt: null,
+    trialEndsAt: null,
+    quotaOverrides: null,
+    seatLimit: 10,
+    storageLimitBytes: 1_073_741_824,
+    pendingPlan: null,
+    pendingInterval: null,
+    pendingEffectiveAt: null,
+    createdAt: stamp,
+    updatedAt: stamp,
+  }
+}
+
+/**
+ * Apply a patch to a row the way `definedOnly()` does in the repository: `undefined`
+ * leaves the column alone, `null` writes SQL NULL. Spelled out column by column
+ * rather than spread, so a column added to the table without a line here is a type
+ * error in this file instead of a value that silently stops being persisted.
+ */
+function applyPatch(base: Subscription, patch: UpsertSubscriptionInput): Subscription {
+  const keep = <T>(next: T | null | undefined, current: T | null): T | null =>
+    next === undefined ? current : next
+
+  return {
+    ...base,
+    plan: patch.plan ?? base.plan,
+    status: patch.status ?? base.status,
+    providerCustomerId: keep(patch.providerCustomerId, base.providerCustomerId),
+    providerSubscriptionId: keep(
+      patch.providerSubscriptionId,
+      base.providerSubscriptionId,
+    ),
+    providerProductId: keep(patch.providerProductId, base.providerProductId),
+    seats: patch.seats ?? base.seats,
+    currency: keep(patch.currency, base.currency),
+    unitAmountMinor: keep(patch.unitAmountMinor, base.unitAmountMinor),
+    currentPeriodStart: keep(patch.currentPeriodStart, base.currentPeriodStart),
+    currentPeriodEnd: keep(patch.currentPeriodEnd, base.currentPeriodEnd),
+    cancelAtPeriodEnd: patch.cancelAtPeriodEnd ?? base.cancelAtPeriodEnd,
+    canceledAt: keep(patch.canceledAt, base.canceledAt),
+    trialEndsAt: keep(patch.trialEndsAt, base.trialEndsAt),
+    quotaOverrides: keep(patch.quotaOverrides, base.quotaOverrides),
+    seatLimit: patch.seatLimit ?? base.seatLimit,
+    storageLimitBytes: patch.storageLimitBytes ?? base.storageLimitBytes,
+    pendingPlan: keep(patch.pendingPlan, base.pendingPlan),
+    pendingInterval: keep(patch.pendingInterval, base.pendingInterval),
+    pendingEffectiveAt: keep(patch.pendingEffectiveAt, base.pendingEffectiveAt),
+  }
+}
+
+/**
+ * An in-memory `SubscriptionStore` that is exactly as narrow as the table.
+ *
+ * It keeps **rows**, not records, and every write goes through the real
+ * `rowValuesFromRecord()` and the real `upsertSubscriptionInput` parse before it is
+ * stored, then back through the real `recordFromRow()` on the way out. That is
+ * deliberate and it is the fix for how a whole feature shipped green: the previous
+ * version put the domain record straight into a `Map` and handed the same object
+ * back, so it round-tripped any field the *type* allowed — including one the database
+ * had no column for. A double that is wider than the thing it stands in for does not
+ * fail; it agrees with you.
+ *
+ * `src/server/billing/__tests__/store.test.ts` is the other half of the argument: the
+ * same round trip over a real SQLite database, because a fake built from the same
+ * mappers cannot prove the columns exist.
+ */
 export class FakeSubscriptionStore implements SubscriptionStore {
-  readonly rows = new Map<string, SubscriptionRecord>()
-  /** Every write, in order — the assertion surface for idempotency tests. */
+  readonly rows = new Map<string, Subscription>()
+  /** Every write, in order, as the row reads back — the idempotency assertion surface. */
   readonly writes: Array<SubscriptionRecord> = []
 
   constructor(seed?: SubscriptionRecord) {
-    if (seed !== undefined) this.rows.set(seed.organizationId, seed)
+    if (seed !== undefined) this.seed(seed)
+  }
+
+  /** Put a row in place without counting it as a write. */
+  seed(record: SubscriptionRecord): void {
+    this.#write(record.organizationId, rowValuesFromRecord(record))
+  }
+
+  #write(organizationId: string, patch: UpsertSubscriptionInput): Subscription {
+    const base = this.rows.get(organizationId) ?? blankRow(organizationId)
+    const row = applyPatch(base, upsertSubscriptionInput.parse(patch))
+    this.rows.set(organizationId, row)
+    return row
   }
 
   async findByOrganization(
     organizationId: string,
   ): Promise<SubscriptionRecord | null> {
-    return this.rows.get(organizationId) ?? null
+    const row = this.rows.get(organizationId)
+    return row === undefined ? null : recordFromRow(row)
   }
 
   async findByProviderCustomerId(
     providerCustomerId: string,
   ): Promise<SubscriptionRecord | null> {
     for (const row of this.rows.values()) {
-      if (row.providerCustomerId === providerCustomerId) return row
+      if (row.providerCustomerId === providerCustomerId) return recordFromRow(row)
     }
     return null
   }
@@ -143,23 +244,27 @@ export class FakeSubscriptionStore implements SubscriptionStore {
     providerSubscriptionId: string,
   ): Promise<SubscriptionRecord | null> {
     for (const row of this.rows.values()) {
-      if (row.providerSubscriptionId === providerSubscriptionId) return row
+      if (row.providerSubscriptionId === providerSubscriptionId) {
+        return recordFromRow(row)
+      }
     }
     return null
   }
 
   async upsert(record: SubscriptionRecord): Promise<void> {
-    this.rows.set(record.organizationId, record)
-    this.writes.push(record)
+    const row = this.#write(record.organizationId, rowValuesFromRecord(record))
+    this.writes.push(recordFromRow(row))
   }
 
   async attachCustomer(
     organizationId: string,
     providerCustomerId: string,
   ): Promise<void> {
+    // Mirrors the real store: a row created ahead of any subscription is stamped with
+    // the Free plan's ceilings rather than left on the column defaults.
     const existing = this.rows.get(organizationId)
-    this.rows.set(organizationId, {
-      ...(existing ?? emptyRecord(organizationId)),
+    this.#write(organizationId, {
+      ...(existing === undefined ? ceilingColumns(ceilingsForPlan('free', 1)) : {}),
       providerCustomerId,
     })
   }
@@ -169,42 +274,30 @@ export class FakeSubscriptionStore implements SubscriptionStore {
     status: SubscriptionStatus,
     changedAt: Date,
   ): Promise<void> {
-    const existing = this.rows.get(organizationId)
-    if (existing === undefined) return
-    this.rows.set(organizationId, {
-      ...existing,
+    if (!this.rows.has(organizationId)) return
+    this.#write(organizationId, {
       status,
-      canceledAt: status === 'canceled' ? changedAt : existing.canceledAt,
+      canceledAt: status === 'canceled' ? changedAt : undefined,
     })
   }
 }
 
-export function emptyRecord(organizationId: string): SubscriptionRecord {
-  return {
-    organizationId,
-    planId: 'free',
-    status: 'incomplete',
-    interval: null,
-    seats: 1,
-    providerCustomerId: null,
-    providerSubscriptionId: null,
-    providerProductId: null,
-    currentPeriodStart: null,
-    currentPeriodEnd: null,
-    cancelAtPeriodEnd: false,
-    trialEndsAt: null,
-    canceledAt: null,
-    ceilings: ceilingsForPlan('free', 1),
-  }
+/** The catalogue product a plan and interval are sold under, or `null` for Free. */
+function productIdFor(planId: PlanId, interval: BillingInterval | null): string | null {
+  if (planId === 'free' || interval === null) return null
+  return planById(planId).prices[interval]?.productId ?? null
 }
 
 /**
  * A persisted row, with only the fields a test cares about spelled out.
  *
- * The stored ceilings default to the ones the record's own plan writes, so the row is
- * internally consistent the way every sanctioned write path leaves it. A test that
- * wants a row whose ceilings *disagree* with its plan — a grandfathered escape, a
- * legacy row — passes `ceilings` explicitly and says so.
+ * The stored ceilings and the provider product id both default to the ones the
+ * record's own plan and interval carry, so the row is internally consistent the way
+ * every sanctioned write path leaves it — and, since the store now reads a plan back
+ * out of `provider_product_id` rather than trusting the record it was handed, a
+ * fixture whose two halves disagreed would come back as a different plan than it went
+ * in as. A test that wants that disagreement — a grandfathered escape, a legacy row —
+ * passes `ceilings` or `providerProductId` explicitly and says so.
  */
 export function subscriptionRecord(
   overrides: Partial<SubscriptionRecord> = {},
@@ -223,11 +316,16 @@ export function subscriptionRecord(
     cancelAtPeriodEnd: false,
     trialEndsAt: null,
     canceledAt: null,
+    pendingChange: null,
     ...overrides,
   } satisfies Omit<SubscriptionRecord, 'ceilings'> & Partial<SubscriptionRecord>
 
   return {
     ...base,
+    providerProductId:
+      overrides.providerProductId === undefined
+        ? productIdFor(base.planId, base.interval)
+        : overrides.providerProductId,
     ceilings: overrides.ceilings ?? ceilingsForPlan(base.planId, base.seats),
   }
 }

@@ -22,21 +22,32 @@
  */
 
 import { and, eq, inArray } from 'drizzle-orm'
-import { nanoid } from 'nanoid'
 import { hashPassword, verifyPassword } from 'better-auth/crypto'
 import { account, user } from '#/server/db/auth-schema'
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, getAuth } from '#/server/auth'
 import { authDb } from '#/server/auth/db'
 import { firstOrganizationIdFor, membershipRoleFor } from '#/server/auth/provisioning'
 import { addMember, createScope } from '#/server/repos'
-import { people } from './dataset'
+import { SEED_ANCHOR_INSTANT, people } from './dataset'
+import { stableId } from './stable-id'
 import type { OrganizationRole } from '#/server/db/auth-schema'
 import type { Database } from '#/server/db/types'
 import type { TenantScope } from '#/server/repos'
 import type { PersonKey } from './types'
 
-/** Better Auth generates 24-character ids; the demo users match so nothing looks foreign. */
+/** Better Auth generates 24-character ids; the demo rows match so nothing looks foreign. */
 const ID_LENGTH = 24
+
+/**
+ * The id a demo row gets, derived from the address it belongs to.
+ *
+ * Better Auth mints a random id for a real registration and so does this module's owner path, which
+ * goes through `signUpEmail`. The three collaborators are fixture rows, and deriving their ids keeps
+ * a freshly cloned workspace identical to every other freshly cloned workspace.
+ */
+function demoAuthId(namespace: string, email: string): string {
+  return stableId(`demo-auth-${namespace}`, email, ID_LENGTH)
+}
 
 /** What Better Auth's credential provider writes into `account.provider_id` and `account.issuer`. */
 const CREDENTIAL_PROVIDER = 'credential'
@@ -101,7 +112,7 @@ async function createOwnerAccount(email: string, password: string): Promise<void
   // behind the address and the queued verification mail goes nowhere.
   await authDb()
     .update(user)
-    .set({ emailVerified: true, updatedAt: new Date() })
+    .set({ emailVerified: true, updatedAt: SEED_ANCHOR_INSTANT })
     .where(eq(user.email, email))
 }
 
@@ -130,13 +141,16 @@ async function ensureOwnerCredential(
     .where(and(eq(account.userId, userId), eq(account.providerId, CREDENTIAL_PROVIDER)))
     .limit(1)
   const existing = rows.at(0)
-  const now = new Date()
+  // The fixture's own instant, not the machine's: a demo workspace that says it was provisioned
+  // three seconds ago reads as a test harness, and it makes two seedings of the same dataset
+  // differ in a column for no reason anybody can act on.
+  const now = SEED_ANCHOR_INSTANT
 
   if (existing === undefined) {
     await db.insert(account).values({
-      id: nanoid(ID_LENGTH),
+      id: demoAuthId('account', userId),
       issuer: CREDENTIAL_ISSUER,
-      accountId: nanoid(ID_LENGTH),
+      accountId: demoAuthId('account-external', userId),
       providerId: CREDENTIAL_PROVIDER,
       userId,
       password: await hashPassword(password),
@@ -238,10 +252,10 @@ async function ensureCollaboratorUsers(
 
   const missing = wanted.filter((person) => !byEmail.has(person.email))
   if (missing.length > 0) {
-    const now = new Date()
+    const now = SEED_ANCHOR_INSTANT
     await db.insert(user).values(
       missing.map((person) => ({
-        id: nanoid(ID_LENGTH),
+        id: demoAuthId('user', person.email),
         name: person.name,
         email: person.email,
         emailVerified: true,

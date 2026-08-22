@@ -22,7 +22,7 @@ import { clampSeats, planById, planForProductId } from '#/lib/plans'
 import { ceilingsForPlan } from './limits'
 
 import type { BillingInterval, PlanId, SubscriptionStatus } from '#/lib/plans'
-import type { SubscriptionRecord } from './types'
+import type { PendingPlanChange, SubscriptionRecord } from './types'
 
 /* ------------------------------------------------------------------ wire shapes */
 
@@ -71,6 +71,24 @@ const polarCustomerSchema = z.object({
 })
 
 /**
+ * `pending_update` on a Polar subscription: what it becomes at the start of the next
+ * period, and when.
+ *
+ * Polar applies an upgrade at once and defers a downgrade, and only the deferred case
+ * carries this object. It belongs on {@link polarSubscriptionSchema} below rather than
+ * beside the one call that first needed it: a `z.object()` strips unknown keys in Zod
+ * 4, so a schema that does not name the field makes every reader parse the raw
+ * response a second time to see it — and the webhook, which is the reconciler, never
+ * did.
+ */
+export const polarPendingUpdateSchema = z.object({
+  /** ISO-8601. The start of the next period, as Polar computes it. */
+  applies_at: z.string().min(1),
+  product_id: z.string().min(1),
+})
+export type PolarPendingUpdate = z.infer<typeof polarPendingUpdateSchema>
+
+/**
  * The slice of Polar's `Subscription` we read.
  *
  * The period boundaries are declared non-nullable by the API, and are accepted as
@@ -90,6 +108,7 @@ export const polarSubscriptionSchema = z.object({
   customer_id: z.string().min(1),
   customer: polarCustomerSchema,
   metadata: polarMetadataSchema.nullish(),
+  pending_update: polarPendingUpdateSchema.nullish(),
 })
 export type PolarSubscription = z.infer<typeof polarSubscriptionSchema>
 
@@ -198,6 +217,25 @@ export function organizationIdFromMetadata(
   return typeof value === 'string' && value !== '' ? value : null
 }
 
+/**
+ * A Polar `pending_update` as the billing domain's one scheduled-change type.
+ *
+ * `null` for anything we cannot describe in full: no pending update, a product this
+ * deployment has stopped selling, or an instant that does not parse. A scheduled
+ * change reaches a customer's screen and their inbox, so a half-known one is worse
+ * than none.
+ */
+export function pendingChangeFromPolar(
+  update: PolarPendingUpdate | null | undefined,
+): PendingPlanChange | null {
+  if (update == null) return null
+  const match = planForProductId(update.product_id)
+  if (match === null) return null
+  const effectiveAt = fromPolarTimestamp(update.applies_at)
+  if (effectiveAt === null) return null
+  return { planId: match.plan.id, interval: match.interval, effectiveAt }
+}
+
 /* ------------------------------------------------------------------- attribution */
 
 export interface SubscriptionMappingOptions {
@@ -283,6 +321,11 @@ export function subscriptionRecordFromPolar(
     cancelAtPeriodEnd: subscription.cancel_at_period_end,
     trialEndsAt: fromPolarTimestamp(subscription.trial_end),
     canceledAt: fromPolarTimestamp(subscription.canceled_at),
+    // Polar's own answer about what it has scheduled, every time — which is what makes
+    // the webhook a reconciler rather than a clock: a payload with no `pending_update`
+    // writes `null` over whatever we had stored, so a change Polar has since applied or
+    // superseded stops being promised the moment Polar stops promising it.
+    pendingChange: pendingChangeFromPolar(subscription.pending_update),
     // A subscription that arrives from Polar is the plan it names, so its ceilings are
     // the plan's own. An operator escape can only ever be applied after this point.
     ceilings: ceilingsForPlan(resolved.planId, resolved.seats),
@@ -314,6 +357,8 @@ export function cancelledRecord(
     cancelAtPeriodEnd: false,
     trialEndsAt: null,
     canceledAt,
+    // Whatever was queued against the subscription went with the entitlement.
+    pendingChange: null,
     // Back on Free means back to Free's ceilings: cancellation grandfathers nothing.
     ceilings: ceilingsForPlan('free', free.seatRange.min),
   }

@@ -56,10 +56,15 @@ import type {
 export const PLAN_STATE_CACHE_TTL_SECONDS = 60
 
 /**
- * Bumped whenever `CachedPlanState` changes shape, so old entries are ignored.
- * `v4` adds the scheduled change Polar has accepted but not yet applied.
+ * Bumped whenever `CachedPlanState` changes shape *or* meaning, so old entries are
+ * ignored. `v4` added the scheduled change Polar has accepted but not yet applied;
+ * `v5` is the release in which that field can finally be non-null, because the
+ * `pending_*` columns exist to hold it. The shape is identical, which is exactly why
+ * the bump is needed: every warm `v4` entry was written by code that could only ever
+ * report `null`, so it would still validate and would still hide a real scheduled
+ * change until its TTL ran out.
  */
-const PLAN_STATE_CACHE_VERSION = 'v4'
+const PLAN_STATE_CACHE_VERSION = 'v5'
 
 export function planStateCacheKey(organizationId: string): string {
   return `billing:plan:${PLAN_STATE_CACHE_VERSION}:${organizationId}`

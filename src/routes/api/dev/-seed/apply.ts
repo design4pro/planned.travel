@@ -2,7 +2,7 @@
  * The seed orchestrator.
  *
  * Runs the whole demo dataset through `src/server/repos` in dependency order and reports what it
- * wrote. Two properties matter more than anything else here:
+ * wrote. Three properties matter more than anything else here:
  *
  * **Idempotence.** A marker row in `app_settings` records the dataset version once a run has finished
  * completely. A second run sees the marker and does nothing. A run that crashed half way leaves no
@@ -13,6 +13,13 @@
  * **Honesty.** Nothing here writes SQL, stamps an `organization_id` by hand, or reaches around a
  * validation schema. If the repositories would reject a value in production they reject it here, which
  * is why the dataset is worth trusting as a fixture.
+ *
+ * **Determinism.** The values this file writes are a pure function of `./dataset`. Every date and
+ * every instant is measured from `SEED_ANCHOR_INSTANT` rather than from the machine's clock, and the
+ * one secret the dataset needs — a published journey's share token — is derived from the journey's
+ * slug rather than drawn from a random source. The only wall-clock read left is the stopwatch behind
+ * `durationMs`, which is reported and never stored. Two runs a month apart therefore write the same
+ * rows, which is what lets a visual baseline outlive the day it was recorded.
  */
 
 import {
@@ -71,15 +78,21 @@ import {
 } from '#/server/repos'
 import { applyTrip } from './apply-trip'
 import { ensureWorkspacePeople, resolveWorkspace } from './bootstrap'
+import { stableId } from './stable-id'
 import { rowValuesFromRecord } from '#/server/billing/store'
 import {
   DATASET_VERSION,
+  SEED_ANCHOR_DAY,
+  SEED_ANCHOR_INSTANT,
   auditTrail,
   bucketList,
   collections,
+  daysFromAnchor,
   demoSubscriptionRecord,
   extraCategories,
+  instantOn,
   journeys,
+  minutesBeforeAnchor,
   notificationPreferences,
   notifications,
   organizationSettings,
@@ -99,7 +112,6 @@ import type { PersonKey } from './types'
 /** `app_settings` key holding the marker that makes a second run a no-op. */
 const MARKER_KEY = 'demo.seed'
 
-const MS_PER_MINUTE = 60_000
 /** How far back the inbox and audit sweep looks for rows an earlier run of this dataset wrote. */
 const INBOX_SWEEP_LIMIT = 500
 const MS_PER_DAY = 86_400_000
@@ -160,23 +172,6 @@ export interface SeedReport {
   readonly durationMs: number
 }
 
-function instant(now: Date, minutesAgo: number): Date {
-  return new Date(now.getTime() - minutesAgo * MS_PER_MINUTE)
-}
-
-/** Whole days from `today` to `date`, floored at zero. */
-function daysUntil(today: Date, date: string | null): number {
-  if (date === null) {
-    return 0
-  }
-  const target = Date.parse(`${date}T00:00:00.000Z`)
-  if (Number.isNaN(target)) {
-    return 0
-  }
-  const midnight = Date.parse(`${today.toISOString().slice(0, 10)}T00:00:00.000Z`)
-  return Math.max(Math.round((target - midnight) / MS_PER_DAY), 0)
-}
-
 /** Inclusive number of calendar days in a `YYYY-MM-DD` range. */
 function daysInRange(from: string, to: string): number {
   const start = Date.parse(`${from}T00:00:00.000Z`)
@@ -205,10 +200,15 @@ function resolveParams(
   return resolved
 }
 
-/** 32 hex characters, for the public token of a published journey. */
-function publicToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16))
-  return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+/**
+ * The 32 hex characters a published journey is shared under.
+ *
+ * Derived from the journey's slug rather than drawn from a random source, so a re-seed does not
+ * silently invalidate a share URL somebody kept. See `./stable-id.ts` for why that is safe here and
+ * nowhere else.
+ */
+function publicToken(slug: string): string {
+  return stableId('demo-journey-token', slug, 32)
 }
 
 export interface ApplySeedOptions {
@@ -229,7 +229,10 @@ const DEFAULT_OWNER_EMAIL = 'rafal@planned.travel'
 
 export async function applySeed(db: Database, options: ApplySeedOptions = {}): Promise<SeedReport> {
   const startedAt = Date.now()
-  const now = new Date()
+  // The fixture's one notion of now, and it is not a clock: see `./dataset/anchor.ts`. Nothing in
+  // this file reads the wall clock except `startedAt`, which measures the run and is never written
+  // to a row — so seeding twice, on two machines, in two calendar months, produces the same rows.
+  const now = SEED_ANCHOR_INSTANT
   const ownerEmail = options.ownerEmail ?? DEFAULT_OWNER_EMAIL
 
   const resolved = await resolveWorkspace(
@@ -272,8 +275,8 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
     owner,
     rowValuesFromRecord(
       demoSubscriptionRecord(resolved.organizationId, {
-        start: new Date(now.getTime() - 12 * MS_PER_DAY),
-        end: new Date(now.getTime() + 18 * MS_PER_DAY),
+        start: instantOn(-12),
+        end: instantOn(18),
       }),
     ),
   )
@@ -326,7 +329,6 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
     scopes: seedPeople.scopes,
     categoryIds,
     colours: new Map<PersonKey, string>(people.map((person) => [person.key, person.colour])),
-    now,
   }
 
   const tripReports: Array<{ slug: string; counts: TripCounts }> = []
@@ -409,7 +411,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
 
     // The Dolomites write-up is published; Marrakech stays a draft, so both states are on screen.
     if (journey.slug === 'dolomites-hut-to-hut') {
-      await publishJourney(owner, created.id, publicToken())
+      await publishJourney(owner, created.id, publicToken(journey.slug))
     }
   }
 
@@ -629,15 +631,14 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
         ? null
         : (tripIdBySlug.get(notification.entityTripSlug) ?? null)
     const replacements = {
-      days: daysUntil(
-        now,
+      days: daysFromAnchor(
         notification.entityTripSlug === undefined
           ? null
           : (tripStartBySlug.get(notification.entityTripSlug) ?? null),
       ),
       organizationName: organization.name,
     }
-    const createdAt = instant(now, notification.minutesAgo)
+    const createdAt = minutesBeforeAnchor(notification.minutesAgo)
     await notificationsRepository.insert(owner, {
       recipientUserId: resolved.ownerUserId,
       senderUserId: seedPeople.ids.get(notification.sender) ?? resolved.ownerUserId,
@@ -651,7 +652,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
       bodyParams: resolveParams(notification.bodyParams, replacements),
       actionUrl: tripId === null ? null : `/trips/${tripId}`,
       isRead: notification.isRead,
-      readAt: notification.isRead ? instant(now, Math.max(notification.minutesAgo - 30, 0)) : null,
+      readAt: notification.isRead ? minutesBeforeAnchor(Math.max(notification.minutesAgo - 30, 0)) : null,
       createdAt,
       updatedAt: createdAt,
     })
@@ -668,7 +669,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
 
   let auditCount = 0
   for (const entry of auditTrail) {
-    const createdAt = instant(now, entry.minutesAgo)
+    const createdAt = minutesBeforeAnchor(entry.minutesAgo)
     await auditLogRepository.insert(owner, {
       actorUserId: resolved.ownerUserId,
       action: entry.action,
@@ -694,7 +695,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
   await appSettingsStore.set(
     db,
     MARKER_KEY,
-    { version: DATASET_VERSION, seededAt: now.toISOString(), organizationId: resolved.organizationId },
+    { version: DATASET_VERSION, anchor: SEED_ANCHOR_DAY, organizationId: resolved.organizationId },
     'Demo dataset marker written by /api/dev/seed. Delete it to allow a re-seed.',
   )
 

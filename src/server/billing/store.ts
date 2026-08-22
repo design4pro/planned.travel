@@ -13,7 +13,13 @@
  * because a billing webhook has no session. They touch billing rows and nothing else.
  */
 
-import { isSubscriptionStatus, planById, planForProductId } from '#/lib/plans'
+import {
+  isBillingInterval,
+  isPlanId,
+  isSubscriptionStatus,
+  planById,
+  planForProductId,
+} from '#/lib/plans'
 import {
   findSubscriptionByOrganizationUnscoped,
   findSubscriptionByProviderCustomerUnscoped,
@@ -25,7 +31,7 @@ import { ceilingsForPlan, planIdFromRow, storedCeilingsFromRow } from './limits'
 import type { UpsertSubscriptionInput } from '#/server/repos'
 import type { Database, Subscription } from '#/server/db/types'
 import type { StoredCeilings } from './limits'
-import type { SubscriptionRecord, SubscriptionStore } from './types'
+import type { PendingPlanChange, SubscriptionRecord, SubscriptionStore } from './types'
 
 /** Widen a persisted row into the shape the billing domain reasons about. */
 export function recordFromRow(row: Subscription): SubscriptionRecord {
@@ -43,7 +49,50 @@ export function recordFromRow(row: Subscription): SubscriptionRecord {
     cancelAtPeriodEnd: row.cancelAtPeriodEnd,
     trialEndsAt: row.trialEndsAt,
     canceledAt: row.canceledAt,
+    pendingChange: pendingChangeFromRow(row),
     ceilings: storedCeilingsFromRow(row),
+  }
+}
+
+/**
+ * The scheduled change a row carries, or `null`.
+ *
+ * The three columns are nullable and carry no CHECK constraint, so this is where a
+ * partial or unrecognised triple is refused: a row naming a plan with no date, or a
+ * plan this deployment has stopped selling, reads as *no* scheduled change rather than
+ * as one dated `Invalid Date`. That matters because the value goes straight into KV
+ * through `cachedPendingChange()` and into the plan-changed email after that — a
+ * change we cannot date is a change we cannot describe.
+ */
+function pendingChangeFromRow(row: Subscription): PendingPlanChange | null {
+  const { pendingPlan, pendingInterval, pendingEffectiveAt } = row
+  if (pendingEffectiveAt === null) return null
+  if (!isPlanId(pendingPlan) || !isBillingInterval(pendingInterval)) return null
+  return {
+    planId: pendingPlan,
+    interval: pendingInterval,
+    effectiveAt: pendingEffectiveAt,
+  }
+}
+
+/**
+ * The columns a scheduled change occupies — the counterpart to {@link ceilingColumns}.
+ *
+ * Every value is an explicit `null` rather than `undefined` when there is nothing
+ * scheduled, because `definedOnly()` in the repository strips `undefined` and keeps
+ * `null`: emitting `undefined` would leave a superseded schedule sitting on the row
+ * for the rest of the period it was supposed to end.
+ */
+export function pendingChangeColumns(
+  pending: PendingPlanChange | null,
+): Pick<
+  UpsertSubscriptionInput,
+  'pendingPlan' | 'pendingInterval' | 'pendingEffectiveAt'
+> {
+  return {
+    pendingPlan: pending?.planId ?? null,
+    pendingInterval: pending?.interval ?? null,
+    pendingEffectiveAt: pending?.effectiveAt ?? null,
   }
 }
 
@@ -74,6 +123,7 @@ export function rowValuesFromRecord(record: SubscriptionRecord): UpsertSubscript
 
   return {
     ...ceilingColumns(record.ceilings),
+    ...pendingChangeColumns(record.pendingChange ?? null),
     status: record.status,
     seats: record.seats,
     providerCustomerId: record.providerCustomerId,

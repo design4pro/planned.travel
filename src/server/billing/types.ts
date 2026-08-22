@@ -52,12 +52,14 @@ export interface SubscriptionRecord {
   /**
    * A change Polar has accepted but not yet applied — see {@link PendingPlanChange}.
    *
-   * Optional because the `subscriptions` table has no column for it yet: the change
-   * path sets it on the record it writes, the store drops it on the way to D1, and
-   * the row reader cannot bring it back. Adding `pending_plan`, `pending_interval`
-   * and `pending_effective_at` alongside the mapper's `pending_update` is what makes
-   * a scheduled change survive a page reload rather than only the redirect that
-   * follows it.
+   * Persisted, since the `pending_plan`, `pending_interval` and `pending_effective_at`
+   * columns landed beside the mapper's `pending_update`: a scheduled change now
+   * survives a page reload rather than only the redirect that follows it.
+   *
+   * Omitting it means the same thing as `null` — nothing is scheduled — and the store
+   * writes the three columns to SQL `NULL` either way. Omission can therefore never
+   * *preserve* a schedule that Polar has applied or superseded; only naming a change
+   * keeps one, which is the direction a mistake should fail in.
    */
   readonly pendingChange?: PendingPlanChange | null
   /**
@@ -274,13 +276,15 @@ export interface QuotaState {
  * `effectiveAt` is a real `Date` rather than the ISO string every other instant on
  * {@link Entitlements} uses. TanStack Start serialises server-function results with
  * seroval, which encodes `Date` natively, so it arrives in the browser as a `Date`.
- * The cached half keeps its ISO twin — see {@link CachedPendingPlanChange} — because
- * KV round-trips through `JSON.stringify`.
+ * KV round-trips through `JSON.stringify`, which a `Date` does not survive, so the
+ * cached half is the *same* declaration at `TInstant = string` rather than a second
+ * interface — see {@link CachedPendingPlanChange}. One set of field names, one place
+ * to change them, and no way for the two halves to drift into disagreeing shapes.
  */
-export interface PendingPlanChange {
+export interface PendingPlanChange<TInstant extends Date | string = Date> {
   readonly planId: PlanId
   readonly interval: BillingInterval
-  readonly effectiveAt: Date
+  readonly effectiveAt: TInstant
 }
 
 /**
@@ -329,11 +333,7 @@ export interface Entitlements {
  * come back a string and fail the schema — which `loadPlanState()` would then treat
  * as a miss, quietly turning the cache off instead of throwing.
  */
-export interface CachedPendingPlanChange {
-  readonly planId: PlanId
-  readonly interval: BillingInterval
-  readonly effectiveAt: string
-}
+export type CachedPendingPlanChange = PendingPlanChange<string>
 
 /**
  * The cached half of an entitlement lookup: the plan state, which only changes when

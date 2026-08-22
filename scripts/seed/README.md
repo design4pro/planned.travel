@@ -8,21 +8,45 @@ them. Without it every screen renders an empty state and nothing can be judged a
 
 ## Run it
 
-The dev server must be running (`pnpm dev`). Then:
+The dev server must be running. Then:
 
 ```sh
-node scripts/seed/seed.mjs
+node scripts/seed/seed.mjs --url http://localhost:3010
 ```
 
 | Flag | Effect |
 | --- | --- |
 | `--force`, `-f` | Rebuild the demo workspace even though it has already been seeded. |
 | `--email <address>`, `-e` | Workspace owner to seed. Defaults to `rafal@planned.travel`. |
-| `--url <origin>`, `-u` | Dev-server origin. Defaults to `$SEED_URL`, then `localhost:3000`–`3005`. |
+| `--url <origin>`, `-u` | Dev-server origin. Defaults to `$SEED_URL`, then the probe list below. |
 | `--status`, `-s` | Report whether the workspace is seeded. Writes nothing. |
 
-`vite dev` moves to the next free port when its configured one is taken, so the script probes
-`3000`–`3005` rather than assuming `3000`. Pass `--url` if yours is elsewhere.
+### Always pass `--url`, and the reason is not tidiness
+
+**Ports 3010–3020 are reserved for automated rounds.** The reservation is enforced in
+`playwright.config.ts`, which throws rather than run the visual suite against a port outside that
+range — a rule added after four consecutive rounds photographed the wrong server, one of them a
+different worktree's application. That file also names the only sanctioned way to start a server
+for those rounds:
+
+```sh
+pnpm exec vite dev --port 3010 --strictPort
+```
+
+`pnpm dev` hardcodes `--port 3000` and `package.json` is frozen, so it cannot be corrected there.
+
+The seeder has no equivalent guard, and it cannot have one: it is an HTTP client, so every origin
+that answers `/api/dev/seed` looks alike to it. `DEFAULT_PORTS` in `seed.mjs` probes the developer
+range first and then part of the reserved one, and takes the first origin that answers — which on
+a machine running two checkouts is a **write** to whichever server replied, not necessarily yours.
+So:
+
+- **Pass `--url http://localhost:3010`** (or export `SEED_URL`) whenever a reserved server is what
+  you mean to seed. `-u` is not optional in that situation, and the reserved range is exactly the
+  one that is shared between worktrees.
+- `--status` is the cheap way to confirm you are talking to the right database before `--force`
+  rebuilds one.
+- Bare `node scripts/seed/seed.mjs` is only correct on a single-checkout machine.
 
 ## Verify it
 
@@ -206,22 +230,17 @@ extra bags), `shares` (2:1:2:1 on luggage hire), and one expense with `paid_by` 
 "outstanding" tile has a value. The other trips deliberately differ: Dolomites and Marrakech are
 settled to exactly zero, Lisbon is mid-trip and unsettled.
 
-## Known upstream issue
+## Resolved: `expenses.original_currency`
 
-`expenses.original_currency` **does not exist in the database.** In `src/server/db/schema.ts` the
-column is declared as:
+For a while the dataset supplied `originalCurrency` on seven foreign receipts and the database
+threw it away. The shared column builder in `src/server/db/schema.ts` hardcoded the SQL name, so
+`currency` and `originalCurrency` both mapped to one column and only the trip currency landed — no
+row was corrupted, but a receipt could never render as `£596.00 → ¥464,880`, which the reference
+demo's costs screen does show.
 
-```ts
-currency: currency(),          // → SQL column "currency"
-originalCurrency: currency(),  // → SQL column "currency"  ← same name
-```
-
-The shared `currency()` builder hardcodes the column name `'currency'`, so both properties map to one
-SQL column and the generated migration only ever created one. `original_amount_minor` and
-`exchange_rate` persist correctly; the source currency code is silently discarded (`currency` wins, so
-no row is corrupted — the trip currency is always what lands).
-
-This is why a foreign receipt currently cannot render as `£596.00 → ¥464,880`, which the reference
-demo's costs screen does show. The dataset already supplies `originalCurrency`, so the moment the
-schema is fixed the copy becomes correct with no change here. The fix is to give `currency()` a name
-parameter and regenerate the migration — both outside this task's file ownership.
+That is fixed. The builder now takes a name (`const currency = (name = 'currency') => …`),
+`originalCurrency` maps to `original_currency`, and migration `0001_aspiring_cargill` rebuilt the
+`expenses` table to add it. Nothing in this directory changed: the dataset was already correct,
+and the costs screen already reads the field (`src/components/costs/data.ts`), so the copy became
+correct the moment the column did. That migration is a table recreate rather than an
+`ADD COLUMN`, which is why it has a row in the register in `docs/DEPLOY.md` §12.

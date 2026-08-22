@@ -11,11 +11,11 @@ Deployed on **Cloudflare Workers** at **planned.travel**. Paid subscriptions via
 First release provisioned for **10 users**, architected so that scaling to thousands is a
 config change, never a rewrite.
 
-> **Vendor correction of record.** Stripe is **superseded** as the billing provider by Polar.sh,
+> **Vendor correction of record.** Stripe was **superseded** as the billing provider by Polar.sh,
 > which is Merchant of Record and therefore carries the VAT and sales-tax liability on our
-> behalf. This is a correction of a factual statement about a third-party vendor and nothing
-> more. It does not touch, soften, or create an exception to the clean-room rule below, which
-> stands unchanged and non-negotiable.
+> behalf, and phase A removed it from the repository entirely (§3). This is a correction of a
+> factual statement about a third-party vendor and nothing more. It does not touch, soften, or
+> create an exception to the clean-room rule below, which stands unchanged and non-negotiable.
 
 ### Clean-room rule (non-negotiable)
 
@@ -60,7 +60,7 @@ Specifically:
 | Background work | Queues + Cron Triggers |
 | Auth | Better Auth on D1 (email+password, social, passkeys, TOTP) |
 | Billing | Polar.sh (Checkout + Customer Portal + webhooks) |
-| Email | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret, rendered in `src/server/auth/email.ts`, delivered by `src/server/queue/handlers/email.ts` |
+| Email | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret. Nine React Email templates in `src/server/email/templates/**`, the message contract and subject lines in `src/server/auth/email.ts`, delivery in `src/server/queue/handlers/email.ts` |
 | Maps | MapLibre GL + Protomaps `.pmtiles` from R2 |
 | Server state | TanStack Query + Start server functions |
 | Forms | TanStack Form + Zod v4 |
@@ -88,79 +88,100 @@ policy: any package outside these two is still a finding you report in your resu
 `pnpm add`, and nothing here grants a precedent, a category, or a "while we are in there"
 install.
 
-**Email path.** Transactional mail is already wired end to end and needs no new integration.
-`src/server/auth/email.ts` renders `{ subject, html, text }` up front, the queue producer
-enqueues it, and `src/server/queue/handlers/email.ts` POSTs it to the Resend-compatible endpoint
-named by the `EMAIL_API_URL` var using the `EMAIL_API_KEY` secret, with an idempotency key. The
-handler fails loudly when the key is unset. Phase A adds four billing templates on that same
-path - **subscription confirmed**, **plan changed**, **payment failed** and **pack purchased** -
-and each one ships a plain-text alternative alongside its HTML. The queue payload carries `text`,
-so a template without one delivers an empty message to any client that does not render HTML.
+**Email path, as built.** Transactional mail is wired end to end and needs no new integration.
+Phase A rewrote the bodies as React components and left the transport untouched, so the pipeline
+now has three parts and one seam between each:
 
-**The `stripe` package is gone.** The same phase-A round that installed the two React Email
-packages ran `pnpm remove stripe`, so the dependency entry and its lockfile block are both
-absent: `grep -c stripe pnpm-lock.yaml` returns `0`, and nothing transitive pulls it back. The
-removal is deliberately the **first** change of the phase and not the last, so that the nine
-files that imported it — once as a value in `src/server/billing/stripe.ts`, type-only in the
-eight beside it — lose their import before anyone can call the port finished with one of them
-still standing. Phase A is not done while any of those imports survives.
+1. **Nine templates** under `src/server/email/templates/`, one file each, all re-exported from
+   `src/server/email/index.ts`. Five carry the account lifecycle - `verify-email`,
+   `reset-password`, `email-changed`, `delete-account`, `organization-invitation` - and four are
+   phase A's billing set: `subscription-confirmed`, `plan-changed`, `payment-failed`,
+   `pack-purchased`. Nothing in that directory touches a Worker binding; product identity arrives
+   as an `EmailBrand` prop, which is what lets every template render under plain Node in a test.
+2. **`renderEmailBody()`** in `src/server/email/render.ts` turns one element into
+   `{ html, text }`. Both halves come from `@react-email/components`, which re-exports
+   `@react-email/render`'s `render()` and `toPlainText()`; nothing imports the `react-email` CLI,
+   which is a devDependency and has no business in a Worker bundle. The plain-text half is derived
+   from the rendered HTML rather than authored a second time, so a URL cannot appear in one body
+   and be missing from the other - which is how **every template ships a plain-text alternative**
+   rather than by nine separate promises. The queue payload carries `text`; a template without one
+   delivers an empty message to any client that does not render HTML.
+   The renderer is reached through a dynamic `import()` on purpose: its workerd build statically
+   pulls `prettier/standalone`, `prettier/plugins/html` and `html-to-text`, about 540 kB that would
+   otherwise land on the cold start of every authenticated request, because this module is
+   reachable from Better Auth.
+3. **`src/server/auth/email.ts`** owns the message union, the subject lines and the analytics tags,
+   and `src/server/queue/handlers/email.ts` POSTs the rendered message to the Resend-compatible
+   endpoint named by `EMAIL_API_URL` using the `EMAIL_API_KEY` secret, with an idempotency key.
+   The handler fails loudly when the key is unset.
 
-Do not lean on the type checker to tell you that. A git worktree nested inside another checkout
-of this repository resolves `stripe` from the **parent** checkout's `node_modules`, because
-Node's lookup walks up past the worktree root, so `pnpm typecheck` can pass with all nine imports
-in place. The manifest is the authority and the resolver is not; `grep -ril stripe src/` is what
-answers the question.
+**Two follow-ups this path owes, named here rather than left to be rediscovered.** Neither is a
+defect in a template and neither is fixed by the round that wrote this paragraph; both belong to
+whichever round next owns `src/server/auth/**` and `src/server/billing/**`.
 
-What is genuinely still outstanding is the code, not the prose, and its inventory is
-`grep -ril stripe src/`. This paragraph names the categories and not the count: every
-hand-curated shortlist it has carried was wrong on the next grep, and a count is wrong the first
-time anyone edits `src/`. Run the grep; what follows says what each category means.
+- **F1 - rendering runs inline on the request path.** `queueAuthEmail()`
+  (`src/server/auth/email.ts`) awaits `renderAuthEmail()` *before* it enqueues, so React's
+  streaming renderer and that 540 kB chunk are evaluated inside the request that triggered the
+  mail - a sign-up, a password reset, an invitation. Only *delivery* is queued. §5 says heavy or
+  slow work goes to Queues and never inline, and rendering an email is the heavier half of sending
+  one. The fix is to enqueue the message *description* and render inside
+  `src/server/queue/handlers/email.ts`; the cost of the fix is that the handler then needs the
+  brand and the catalogue the producer has today, which is why it is a follow-up and not a
+  one-line move.
+- **F2 - the four billing templates have no dispatch site.** `BillingEmailMessage` declares
+  `billing.subscription-confirmed`, `billing.plan-changed`, `billing.payment-failed` and
+  `billing.pack-purchased`, and `describe()` renders all four, but the only caller of
+  `queueAuthEmail()` in the product is `src/server/auth/index.ts`, which sends the five auth kinds.
+  No path in `src/server/billing/**` sends a billing email, so the four templates are exercised by
+  `src/server/email/__tests__/templates.test.tsx` and by nothing else. They are written and unsent.
 
-Phase A replaces the provider integration — `src/server/billing/**`, the mounted
-`src/routes/api/stripe/webhook.ts`, the server functions in `src/routes/_app/-server/billing.ts`
-and the billing task envelopes in `src/server/queue/types.ts`, with their tests — swaps the four
-`VITE_STRIPE_PRICE_*` build variables read in `src/lib/plans.ts` for `VITE_POLAR_PRODUCT_*`
-(`.dev.vars.example` names both sets, `docs/DEPLOY.md` §10 marks which is current), and rewrites
-the user-visible copy. Two details need an operator rather than a builder: the `stripe-signature`
-header read by `verifyStripeEvent()` in `src/server/billing/webhook.ts`, and the secrets
-`STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`, declared in
-`src/server/billing/cloudflare-env.d.ts` and read through
-`src/server/billing/runtime.cloudflare.ts`. That pair is the one deliberate difference between
-`docs/DEPLOY.md` §6 and `.dev.vars.example` — the template describes the shape phase A leaves
-behind and does not declare them, the runbook sets them because the running code reads them, and
-each names the other — and it rotates to `POLAR_*` at the cutover, not before. The copy carries a
-correctness problem and not merely a stale name: `src/routes/legal/terms.tsx` and
-`src/routes/pricing.tsx` tell the reader that Stripe *calculates and shows sales tax*, which
-under Polar is false, because §1 records Polar as Merchant of Record carrying that liability on
-our behalf. The legal pages go first: they are a representation to a customer, not a label on a
-button.
+**The `stripe` package is gone, and so is every line that imported it.** The phase-A dependency
+round ran `pnpm remove stripe` in the same edit that installed the two React Email packages, so
+the dependency entry and its lockfile block are both absent: `grep -c stripe pnpm-lock.yaml`
+returns `0`, and nothing transitive pulls it back. The code followed over two further rounds, and
+`grep -ril stripe src/` now returns nothing at all - thirty-one files at the low point, none
+today. The Polar client is `src/server/billing/polar.ts`, the mounted webhook route is
+`src/routes/api/polar/webhook.ts`, and the four build-time ids `src/lib/plans.ts` reads are
+`VITE_POLAR_PRODUCT_SOLO_MONTHLY`, `…_SOLO_YEARLY`, `…_CREW_MONTHLY` and `…_CREW_YEARLY`. Both CI
+workflows and `.dev.vars.example` carry that set and no other.
 
-**The three provider columns are renamed in phase A.** `stripe_customer_id`,
-`stripe_subscription_id` and `stripe_price_id` in `src/server/db/schema.ts` become
+`grep -ril stripe src/` is the check, not the type checker. A git worktree nested inside another
+checkout of this repository resolves `stripe` from the **parent** checkout's `node_modules`,
+because Node's lookup walks up past the worktree root, so `pnpm typecheck` can pass with imports
+still in place. The manifest is the authority and the resolver is not. That sentence is kept for
+the next dependency removal, not because this one is open.
+
+**The three provider columns were renamed in migration `0002`.** `stripe_customer_id`,
+`stripe_subscription_id` and `stripe_price_id` in `src/server/db/schema.ts` became
 `provider_customer_id`, `provider_subscription_id` and `provider_product_id`, and the two indexes
-move in the same breath: `subscriptions_stripe_subscription_unq` →
+moved with them: `subscriptions_stripe_subscription_unq` →
 `subscriptions_provider_subscription_unq`, `subscriptions_stripe_customer_idx` →
-`subscriptions_provider_customer_idx`. Migration `0002` does it with
-`ALTER TABLE … RENAME COLUMN` and an index drop-and-recreate, against a table that carries no
-subscription rows in any deployed environment, so there is no backfill and no two-release window
-to sit out — the additive-migration policy of `docs/DEPLOY.md` §5 protects data that does not
-exist here. `docs/ARCHITECTURE.md` §6 and `docs/DEPLOY.md` §9.10 carry the same decision. Every
-reader of those Drizzle field names moves in the same commit — `src/server/repos/base.ts`
-projects `providerProductId`, `src/server/repos/billing.ts` reads and writes all three — and the
-demo seed under `src/routes/api/dev/-seed/` follows the columns, which is also how it follows the
-provider. `src/routeTree.gen.ts` holds the billing webhook route because the route file does; it
-is regenerated by `pnpm generate-routes` when the route moves and never hand-edited (§6).
+`subscriptions_provider_customer_idx`. `docs/ARCHITECTURE.md` §6 and `docs/DEPLOY.md` §9.10 carry
+the same decision, and §9.10 now also carries what the rename **cost**: a rename is not an
+additive migration, so a `wrangler rollback` past the phase-A release meets a Worker whose SQL
+names columns the schema no longer has. `docs/DEPLOY.md` §5 and §12 record that as a bounded,
+named exception rather than as a promise the schema cannot keep.
 
-`docs/ARCHITECTURE.md` no longer carries an uncorrected Stripe reference. Its **§6** moved with
-the columns: authority row 1 names `provider_product_id`, and the `ceilingsForPlan()` /
-`rowValuesFromRecord()` note names the Polar webhook handler. The references that remain are
-deliberate and each explains itself on the spot — the superseded path named as superseded (the
-preamble above §1, and §2.4), and the two Polar rows of the §9 failure table marked as phase-A
-behaviour under a note that states what is mounted in their place. Treat those as correct; a
-round that "fixes" one falsifies the file.
-`docs/DEPLOY.md` is the runbook for what is deployed today, so the Stripe path is what it is
-supposed to describe; it is corrected by the round that owns that file, on the same schedule as
-the code it documents.
+**The user-visible copy moved with the provider, and one string did not.**
+`src/routes/legal/terms.tsx` and `src/routes/pricing.tsx` told the reader that Stripe *calculates
+and shows sales tax*, which under Polar is false, because §1 records Polar as Merchant of Record
+carrying that liability on our behalf. Both were rewritten; the legal pages went first, because
+they are a representation to a customer and not a label on a button. The string that did not move
+is `src/components/marketing/plans.tsx`, which still renders `14-day free trial, no card needed`
+on the Solo and Crew cards of both `/` and `/pricing` - contradicted, on the same pricing page, by
+the FAQ's "Polar takes a payment method when the trial starts and charges it the day the trial
+ends". No phase-A work item owned that file. It is the third exhibit in §8 and the reason §8
+exists.
+
+**The contract documents describe the system that now exists.** `docs/ARCHITECTURE.md` was written
+while the superseded path was still mounted, and four places in it said so: the preamble above §1,
+the billing-webhook bullet in §2.4, rows 8 and 9 of the §9 failure table, and the note beneath
+that table describing the mounted handler. All four are now corrected to the present tense,
+because the handler they described no longer exists on disk. An earlier revision of this section
+instructed later rounds to leave them alone; that instruction was correct while the cutover was
+pending and is retired here, in the same document that issued it, rather than being quietly
+disobeyed. `docs/DEPLOY.md` is the runbook for what is deployed, so it is corrected on the same
+schedule as the code it documents - which is now.
 
 ## 4. Design language
 
@@ -189,6 +210,11 @@ in a component. If a value is missing from the token set, add it to the token fi
 
 ### Request path
 Browser → Cloudflare edge → Worker (TanStack Start SSR + server functions) → D1 / KV / R2 / DO.
+
+> **Reading the paths in this section.** `src/server/catalog/**`, `src/server/mcp/**`,
+> `src/server/public/**`, `src/server/repos/packs.ts` and `src/server/auth/guard.ts` are named
+> here as the contract for where that code goes. None of them is on disk yet; each lands with its
+> phase (`docs/ARCHITECTURE.md` §2.5). Everything else this section names exists today.
 
 ### Multi-tenancy
 Every domain row is scoped by `organization_id`. A user belongs to one or more organizations
@@ -365,4 +391,54 @@ Rules:
 3. New logic has tests; `pnpm test` passes.
 4. The feature is visually verified in a real browser, light and dark, desktop and mobile.
 5. No TODOs, no placeholder copy, no `console.log`, no commented-out code left behind.
-6. You did not touch files outside your assigned ownership.
+6. You did not touch files outside your assigned ownership. Work you discover elsewhere is
+   reported, never edited — and if that work is a *concept* rather than a file, §8 governs how
+   the next round draws the item that owns it.
+
+## 8. Decomposition rule: one concept, one owner
+
+**A change whose blast radius is a concept rather than a file must be owned by exactly one work
+item, and that item must own every file the concept touches.**
+
+A concept, for this rule, is anything that is true in more than one place at once and has to stay
+true in all of them: a shared exported type or its field names, a dependency in `package.json`, a
+vocabulary (`stripe_*` → `provider_*`), a claim repeated across pages, a cache key's shape, a
+column and every mapper that crosses it. The test is not "how many lines change" but "can half of
+this land and leave the repository self-consistent?" If the answer is no, the change is one item.
+
+Three corollaries, because each is a mistake this repository has actually made:
+
+- **A rename of a shared export lands with all of its consumers or not at all.** Deferring a
+  consumer to a later item does not defer the breakage.
+- **Removing a dependency is a global operation.** It is finished when the last import is gone,
+  not when the manifest entry is.
+- **A claim is a file.** If the same sentence is rendered from a component none of the items
+  owns, the item that owns the claim owns that component too — otherwise the claim is corrected
+  everywhere the round looked and nowhere it did not.
+
+### Why this is a rule and not advice
+
+Phase A paid for it three times, in three separate rounds, and each one is on the record:
+
+| Round | The concept | What it cost |
+| --- | --- | --- |
+| 1 | `PlanPrice.priceId` renamed to `productId`, and `planForPriceId` dropped, in `src/lib/plans.ts` | All five consumers — `checkout.ts`, `mapping.ts`, `store.ts`, `limits.ts` and the demo seed — sat in items the round had deferred under a three-item cap. Eight typecheck errors, 338 failing tests, and a `MISSING_EXPORT` at build. |
+| 1 | `pnpm remove stripe` | The manifest entry left while **31 files** under `src/` still imported it, so those files could not compile at all. It took rounds 2 and 3 to finish, 31 → 12 → 0. |
+| 3–4 | "14-day free trial, no card needed" | Item 6 owned `billing.tsx`, `pricing.tsx` and `terms.tsx`, so the trial copy was corrected in all three. The string is rendered from `src/components/marketing/plans.tsx`, which no item owned, and it is still on `/` and `/pricing` today — beside the same page's FAQ saying Polar takes a card. |
+
+The third row also records how a fix gets *reported* as done when it is not. The evidence offered
+was `curl … /pricing | grep -c 'no card needed'` returning `0`. Run today against the dev server
+that same command returns `1`, and the page contains the string **twice** — once on the Solo card
+and once on the Crew card, with `/` the same. Whatever produced the zero, the check was never
+capable of proving the claim, because it was run on a surface the fix did not own. A grep is
+evidence about a file; a page is evidence about a render.
+
+### How to apply it when drawing a round
+
+1. Before splitting, list the concepts the round changes. For each, run the grep that enumerates
+   every file it appears in — not a shortlist from memory, which has been wrong every time.
+2. Give each concept exactly one owner, and give that owner the whole grep result. If two items
+   need the same file, one of them is drawn wrong.
+3. Tests belong to the owner of the code they test.
+4. A concept whose file set exceeds one item's reasonable size is not a reason to split it. It is
+   a reason to make that item the whole round.

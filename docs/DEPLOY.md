@@ -8,9 +8,10 @@ Two rules for this runbook:
 
 - **Resource ids go into `wrangler.jsonc` and are committed.** They are not secrets.
 - **Secrets never go into `wrangler.jsonc`.** They are set with `wrangler secret put`, and
-  `.dev.vars.example` documents each one with the steps that obtain it — every name in §6 except
-  the superseded Stripe pair, which the template names in its header and leaves to §6 for as long
-  as the shipped billing code still reads it.
+  `.dev.vars.example` documents each one with the steps that obtain it. The template and §6 now
+  describe the same list with no carve-out: phase A removed the superseded billing pair the
+  template used to omit, so every name §6 sets is in the template and every name in the template
+  is set here.
 
 ---
 
@@ -33,20 +34,19 @@ You also need:
 - **A decision, before any of the rest: does this deploy sell anything?** The Worker deploys,
   serves and signs people up with no payment provider configured at all — every workspace sits on
   `free` and the pricing page has nothing to buy. That is a legitimate first deploy, and it is the
-  right one if the zone is not live yet. If the deploy _must_ take money, read §6's provider table
-  before you start: the billing code that ships in **this** release is the **superseded Stripe
-  path**, and the Polar wiring of §9 is what **phase A** cuts over to. Configuring only the newer
-  one produces exactly the no-billing deploy above, while looking configured.
-- Known divergence, and only until phase A: a **Stripe** account with the four prices of §10 and
-  the two secrets of §6 is what makes paid plans work _today_. §10 enumerates that divergence
-  once, in one place, in five parts — and marks the three of them an operator has to act on.
-  Phase A closes all five in a single change.
+  right one if the zone is not live yet. If the deploy _must_ take money, everything it needs is
+  in §6 and §9, and there is exactly one provider to configure.
 - A **Polar** organization with the four products of §9.1, plus a _separate_ sandbox
   organization for the acceptance walk in §9.11 — sandbox and production are different accounts
-  and their product ids never match. Create both now: §9 is dashboard configuration that needs
-  none of our code, and doing it early costs nothing. But nothing in the deployed Worker calls
-  Polar before phase A, so setting the `POLAR_*` secrets early is preparation, never a substitute
-  for the bullet above.
+  and their product ids never match. Create both: §9.1 → §9.3 are dashboard configuration that
+  needs none of our code, and doing them early costs nothing. Paid plans need the three `POLAR_*`
+  secrets of §6 **and** the four `VITE_POLAR_PRODUCT_*` repository variables of §10; either half
+  missing is a Worker that serves, signs people up and bills nobody.
+- **Before you sell for real: §9.11.** Its eight-row sandbox matrix is the acceptance gate for the
+  billing integration and **not one row has been walked** — no credential has been issued to a
+  build round, so every row stands unverified. A green `pnpm test` is evidence about our handler,
+  not about Polar. Walk it on staging against the sandbox organization before production takes a
+  card.
 - Only from **phase D**: a Firecrawl account for the weekly catalogue scrape (§15). The product
   deploys, serves and bills without one; §6 states exactly what degrades while it is absent.
 - Workers Paid on the account. D1, KV, R2, Queues and SQLite-backed Durable Objects all have
@@ -174,48 +174,71 @@ pnpm exec wrangler d1 execute planned-travel-db --remote \
 You should see the 57 domain tables plus the 9 Better Auth tables (`user`, `session`,
 `account`, `verification`, `organization`, `member`, `invitation`, `passkey`, `two_factor`).
 
-**Migration policy:** migrations are additive. Add a column or a table; never rename or drop in
+**Migration policy: migrations are additive.** Add a column or a table; never rename or drop in
 the same release that stops using it. Both the old and the new Worker version must be able to
 serve against the schema, because there is a window during a deploy — and during a rollback —
 where they do.
+
+**What "the old reader" means, because getting this wrong is what makes the policy sound optional.**
+The reader the policy protects is _the previous Worker's SQL_, not the rows in the table. Drizzle
+generates a fixed column list into every statement, so a Worker that selects `stripe_customer_id`
+fails with `no such column` against a schema that has renamed it — on the first query, whether the
+table holds a million rows or none. An empty table removes the _backfill_ problem and the risk of
+stranding a paying customer. It does not remove the reader.
+
+**A non-additive migration is therefore allowed, but only on these terms:**
+
+1. It is written down in the register in §12, with the migration number and the release it ships
+   in, before it is applied to any environment.
+2. That release is marked **rollback-unsafe past that migration**, and §12 carries the recipe for
+   getting back across it.
+3. A `drizzle-kit` output that recreates a table — `CREATE TABLE __new_<name>` … `DROP TABLE` …
+   `RENAME TO` — counts as non-additive by this definition even when no column is dropped, because
+   it is a drop and a rebuild. It also emits `PRAGMA foreign_keys=OFF/ON`, which D1 does not
+   honour: D1 enforces foreign keys as if `PRAGMA foreign_keys = on` and a query cannot change that
+   during a migration; the supported mechanism is `PRAGMA defer_foreign_keys = on`, valid to the
+   end of the current transaction. **Read every generated file before committing it.** A pure
+   `ALTER TABLE … ADD COLUMN` with no new constraint stays additive and avoids all of this; adding
+   a `CHECK` in the same generate is what escalates drizzle-kit to a recreate.
+
+**§12's register is the list.** A migration that is not in it is additive; a migration that is not
+additive and not in it is a defect belonging to the round that generated it, and the fix is to add
+the row before the release ships, not after someone needs a rollback. Two entries exist today and
+they fail differently — `0001` recreated a table, `0002` renamed three columns — which is why §12
+records the _kind_ of departure and not only the number.
 
 ---
 
 ## 6. Set every secret
 
-**This section and `.dev.vars.example` describe the same secret list — seventeen shared names —
-and one deliberate difference.** The template on disk carries all six of the new names —
+**This section and `.dev.vars.example` describe the same secret list, with no carve-out.** The
+template on disk carries every name below, including all six of the newer ones —
 `POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`, `POLAR_SERVER`, `FIRECRAWL_API_KEY`,
-`FIRECRAWL_WEBHOOK_SECRET`, `MCP_TOKEN_PEPPER` — each with the acquisition steps for it. What it
-deliberately does **not** declare is the superseded Stripe pair, `STRIPE_SECRET_KEY` and
-`STRIPE_WEBHOOK_SECRET`, which the running code still reads: the template describes the shape
-phase A leaves behind, names that omission in its own header rather than leaving it silent, and
-points here for the two. So:
+`FIRECRAWL_WEBHOOK_SECRET`, `MCP_TOKEN_PEPPER` — each with the acquisition steps for it, and its
+header now claims completeness rather than an omission. Phase A is what closed the gap: the
+superseded billing pair the template used to leave to this section is gone from the code that read
+it, so there is nothing left for the two files to disagree about.
 
-- Read `.dev.vars.example` for the **local** shape of every name below except the Stripe pair,
-  which it does not declare, and for what each name it does declare buys.
+- Read `.dev.vars.example` for the **local** shape of every name below and for what each one buys.
   It is the file you copy to `.dev.vars` at the end of this section, and every entry is accurate.
   Its last section adds two names that are not secrets and are not set here — `APP_URL` and
   `TILES_ARCHIVE_KEY`, which exist only to override the `wrangler.jsonc` vars locally.
-- Take the two Stripe secrets, and the four build-time price ids that pair with them, from
-  **this section** and §10. Nothing else in the list needs this section rather than the template.
-- `docs/SPEC.md` §5 says the complete secret list lives in `.dev.vars.example`. That is true of
-  the template as it stands today, with the single Stripe carve-out above, which the template
-  states in its header and §10 records with the rest of the divergence.
+- `docs/SPEC.md` §5 says the complete secret list lives in `.dev.vars.example`. That is now true
+  without qualification.
 
-**Which provider the running code calls. Read this before the block below — it is the one thing
-in this runbook that is easy to get backwards.** Both providers appear in the list, and exactly
-one of them is live in this release:
+**One provider, and it is Polar.** There is no second billing path in the Worker and no
+configuration in which one is live and the other is not:
 
-| Provider                                        | State in this release                                                                                                           | What its secrets do today                                                                                                                                                                                                                                                      |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Stripe** — superseded by §9, and still _live_ | `src/server/billing/**` builds its client from `STRIPE_SECRET_KEY`, and `/api/stripe/webhook` is the only billing route mounted | Unset `STRIPE_SECRET_KEY` and the first **Upgrade** or **Manage billing** click throws `BillingConfigError`; unset `STRIPE_WEBHOOK_SECRET` and the webhook answers `400` to every delivery, so nothing a customer pays for ever reaches D1. Paid plans do not work either way. |
-| **Polar** — the target, from phase A            | no client, no branch in the checkout path, and `/api/polar/webhook` does not exist yet (§9.4)                                   | Nothing reads `POLAR_*` before phase A. Set them now so the cutover is a deploy rather than a scramble — but they buy no working billing today, and no error says so.                                                                                                          |
+| What the Worker reads             | Where it is read                                                                  | What happens when it is unset                                                                                                                                                                      |
+| --------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POLAR_ACCESS_TOKEN`              | `src/server/billing/polar.ts`, through `src/server/billing/runtime.cloudflare.ts` | The first **Upgrade** or **Manage billing** click throws `BillingConfigError`, whose message names the exact `wrangler secret put` command.                                                        |
+| `POLAR_WEBHOOK_SECRET`            | the same accessor, read by `src/routes/api/polar/webhook.ts`                      | The webhook rejects every delivery, so nothing a customer pays for reaches D1.                                                                                                                     |
+| `POLAR_SERVER`                    | the same accessor; `resolvePolarOrigin()` in `polar.ts` validates it              | `BillingConfigError`, naming the command. Its domain is exactly `sandbox \| production` — anything else, including an empty string or a URL, raises the same error rather than guessing an origin. |
+| four `VITE_POLAR_PRODUCT_*` (§10) | `src/lib/plans.ts`, inlined at **build** time                                     | `requirePrice()` throws, so the pricing page renders with nothing to buy. A build with them unset succeeds and deploys; nothing fails, there is simply nothing to sell.                            |
 
-There is no configuration in which both are live, and none in which neither is live and paid
-plans work. A deploy that sets the three `POLAR_*` names and skips the two Stripe ones serves
-happily, signs people up, and bills nobody — which is the failure this table exists to prevent.
-The four build-time price ids of §10 belong to the same live path and are just as required.
+Secrets and build variables are two different failures with the same symptom. A deploy that sets
+all three `POLAR_*` secrets and skips the four repository variables serves happily, signs people
+up, and bills nobody.
 
 For production:
 
@@ -224,14 +247,12 @@ For production:
 openssl rand -base64 32 | pnpm exec wrangler secret put BETTER_AUTH_SECRET
 pnpm exec wrangler secret put EMAIL_API_KEY               # transactional email provider
 
-# Required for paid plans TODAY — superseded by §9, live until phase A (§10)
-pnpm exec wrangler secret put STRIPE_SECRET_KEY           # sk_live_… — the client every checkout builds
-pnpm exec wrangler secret put STRIPE_WEBHOOK_SECRET       # whsec_…   — for /api/stripe/webhook
-
-# Set now, first read in phase A — the Polar cutover (§9)
+# Required for paid plans — the billing path the Worker actually calls (§9)
 pnpm exec wrangler secret put POLAR_ACCESS_TOKEN          # polar_oat_…      — §9.2
 pnpm exec wrangler secret put POLAR_WEBHOOK_SECRET        # endpoint secret  — §9.4
 printf production | pnpm exec wrangler secret put POLAR_SERVER   # sandbox | production — §9.3
+# …and the four VITE_POLAR_PRODUCT_* repository variables of §10, which are build-time
+# and are not secrets. Both halves, or the pricing page has nothing to buy.
 
 # Optional — each feature degrades cleanly when its secret is absent
 pnpm exec wrangler secret put GOOGLE_CLIENT_ID
@@ -271,32 +292,15 @@ partial rotation and no grace period — every agent integration breaks in the s
 every token has to be reissued and redistributed by hand. Rotate it only in response to a
 suspected compromise of the token table, and tell the token holders first.
 
-**Superseded in design, live in code: what to do with the Stripe pair.** `STRIPE_SECRET_KEY` and
-`STRIPE_WEBHOOK_SECRET` are superseded by §9 and not yet by any shipped module —
-`src/server/billing/stripe.ts` is what a checkout reaches in this release, and
-`src/routes/api/stripe/webhook.ts` is the endpoint that turns a completed payment into a
-`subscriptions` row. So the secret pair is accompanied by one dashboard step, which is the whole
-of the Stripe wiring a deploy still performs:
+**Historical note, so a rollback is not walked blind.** Releases before phase A read a
+`STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` pair and mounted a `/api/stripe/webhook` route.
+Both secrets and that route are gone from the code, and §12's register says what a rollback onto
+one of those releases would need. Do not set the old pair on a current Worker: nothing reads it,
+`wrangler secret list` will show it forever, and it is one more name to confuse with the three
+above.
 
-- Stripe dashboard → **Developers → Webhooks → Add endpoint** →
-  `https://planned.travel/api/stripe/webhook` (staging: whichever origin staging actually answers
-  on plus `/api/stripe/webhook` — the same rule as §9.4 step A, so
-  `https://planned-travel-staging.ACCOUNT_SUBDOMAIN.workers.dev/api/stripe/webhook` until §8
-  attaches the custom hostname and `https://staging.planned.travel/api/stripe/webhook` after it),
-  subscribed to the six events the handler acts on: `checkout.session.completed`,
-  `customer.subscription.created`,
-  `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`,
-  `invoice.payment_failed`. Copy the signing secret into `STRIPE_WEBHOOK_SECRET` and redeploy.
-- Create the four prices there too, and put their ids in §10's four build-time variables. Nothing
-  else about Stripe is configured by hand.
-
-Keep both secrets set through the phase-A deploy and remove them only once §9.11's matrix is green
-against the Polar path. A rollback (§12) onto this release with neither provider configured has no
-billing at all, which is a worse outage than one superseded secret sitting unused for a release.
-
-Repeat with `--env staging` for the staging Worker, with **test** credentials throughout: Stripe
-test keys and a test-mode webhook endpoint for the live path, and the **sandbox** Polar
-organization for §9's — its own `POLAR_ACCESS_TOKEN`, its own `POLAR_WEBHOOK_SECRET`, and
+Repeat with `--env staging` for the staging Worker, with the **sandbox** Polar organization
+throughout: its own `POLAR_ACCESS_TOKEN`, its own `POLAR_WEBHOOK_SECRET`, and
 `POLAR_SERVER=sandbox`. A production token in staging is not a degraded configuration, it is
 a live charge.
 
@@ -592,25 +596,26 @@ same way when you want the real hostname.
 
 ---
 
-## 9. Polar wiring — the billing configuration phase A cuts over to
+## 9. Polar wiring — the billing configuration the Worker calls
 
-This section supersedes the Stripe wiring of the previous release in **design**: the endpoint, the
-signature scheme, the event names, the checkout call and the portal call are all different, and
-none of the old steps has a residual role once the cutover lands. `docs/SPEC.md` §1 records the
-vendor change itself.
+This is the billing wiring of the current release. Phase A replaced the previous provider's
+integration wholesale — the endpoint, the signature scheme, the event names, the checkout call and
+the portal call are all different, and none of the old steps has a residual role. `docs/SPEC.md`
+§1 records the vendor change itself.
 
-It does not supersede it in **code** yet, and the difference decides what you do this week:
+Where each part now stands:
 
-- **§9.1 → §9.3, and §9.4 step A, are configuration you can do today.** They happen in the Polar
-  dashboard and over Polar's own API; none of it needs a line of ours, and doing it early costs
-  nothing but an unused organization. **§9.4 step B is the one exception in this range** - it
-  registers the production endpoint and must wait for phase A, for the reason §9.4 gives.
-- **Nothing in §9 is reached by the deployed Worker until phase A.** There is no
-  `/api/polar/webhook` route, no Polar client and no Polar branch in the checkout path. Until
-  phase A ships them, paid plans run on the superseded-but-live Stripe path of §6 and §10, and
-  the `POLAR_*` secrets sit unread.
-- **§9.11 is the phase-A acceptance gate**, walked in the sandbox against a staging Worker that
-  already has the phase-A code. It is not a first-deploy step.
+- **§9.1 → §9.3 and §9.4 are live configuration.** The code that reads them is deployed:
+  `src/server/billing/polar.ts` builds the client, `src/routes/api/polar/webhook.ts` is the
+  mounted route, and `src/lib/plans.ts` resolves the four product ids. Nothing here is
+  preparation for a later phase.
+- **§9.4 step B — the production endpoint — is now a step to take**, not one to defer. The reason
+  it used to wait was that the route did not exist; it does.
+- **§9.11 is the acceptance gate, and it is unwalked.** All eight rows stand unverified: the
+  rounds that wrote the integration ran with `POLAR_ACCESS_TOKEN` and `POLAR_WEBHOOK_SECRET`
+  deliberately empty, so no live call was made and no live delivery received. Walk it in the
+  sandbox against staging before production sells. Until it is walked, the honest statement is
+  the one §9.11 repeats: **the code is written and the matrix is unwalked.**
 
 Read §9.1 → §9.10 once before touching the dashboard.
 
@@ -729,15 +734,14 @@ to sandbox looks healthy and bills nobody.
 belongs to the organization whose access token created it, and the URL it points at has to be the
 Worker that organization talks to. Cross the two and every delivery fails: a production URL
 registered in the sandbox organization sends sandbox events to the production Worker, which
-verifies them against the production signing secret and rejects them — and until phase A there is
-no `/api/polar/webhook` route there at all, so each attempt is a bare `404`. Ten consecutive
-non-2xx deliveries disable the endpoint (§9.7), so a wrong URL costs an hour and an email to every
+verifies them against the production signing secret and rejects them. Ten consecutive non-2xx
+deliveries disable the endpoint (§9.7), so a wrong URL costs an hour and an email to every
 organization member.
 
-| Step            | Organization | API base (§9.3)                   | URL to register                                        |
-| --------------- | ------------ | --------------------------------- | ------------------------------------------------------ |
-| **A** — now     | Sandbox      | `https://sandbox-api.polar.sh/v1` | the staging Worker's own origin + `/api/polar/webhook` |
-| **B** — phase A | Production   | `https://api.polar.sh/v1`         | `https://planned.travel/api/polar/webhook`             |
+| Step                          | Organization | API base (§9.3)                   | URL to register                                        |
+| ----------------------------- | ------------ | --------------------------------- | ------------------------------------------------------ |
+| **A** — staging first         | Sandbox      | `https://sandbox-api.polar.sh/v1` | the staging Worker's own origin + `/api/polar/webhook` |
+| **B** — when production sells | Production   | `https://api.polar.sh/v1`         | `https://planned.travel/api/polar/webhook`             |
 
 **Step A's origin is whichever one staging actually answers on.** §8 attaches
 `staging.planned.travel` only when you want the real hostname; until then `env.staging` has
@@ -751,9 +755,11 @@ rather than creating a second endpoint; two endpoints on one organization delive
 twice. The command below uses the custom hostname; substitute your `workers.dev` origin if that is
 the one live.
 
-**The route itself lands in phase A.** Step A is a first-deploy step and is the endpoint §9.11
-walks against. **Step B is not: do not run it until `/api/polar/webhook` is deployed and answering
-on `https://planned.travel`.**
+**Order matters, and the rule is the same one it always was: register an endpoint only against a
+Worker that answers it.** Step A is the endpoint §9.11 walks against, so do it first and walk the
+matrix on staging. **Run step B only once `/api/polar/webhook` is deployed and answering on
+`https://planned.travel`** — an endpoint pointed at a URL that 404s spends its ten deliveries and
+disables itself.
 
 Dashboard: **Settings → Webhooks → Add endpoint**, in the organization the step names. Or by API.
 
@@ -777,8 +783,8 @@ curl -sS -X POST "$POLAR_API/webhooks/endpoints" \
       }'
 ```
 
-**Step B — production, phase A only. `POLAR_ACCESS_TOKEN` must be re-exported as the _production_
-token of §9.2.** There are two ways to get this wrong and they fail very differently. Forget the
+**Step B — production. `POLAR_ACCESS_TOKEN` must be re-exported as the _production_ token of
+§9.2.** There are two ways to get this wrong and they fail very differently. Forget the
 token and keep the sandbox one: against `https://api.polar.sh/v1` it is not a credential of that
 organization, so the call answers `401` and nothing happens — the cheap failure. Forget the _base
 URL_ instead, and run this block with the sandbox token still exported and `$POLAR_API` still
@@ -940,13 +946,13 @@ payment succeeds, and also when a trial converts. Read `status` to tell those ap
 
 ### 9.7 Delivery operations
 
-| Property             | Value                                                                                                                                         | Consequence for us                                                                                                                                                                                                                                                                                                       |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Request timeout      | **10 s**                                                                                                                                      | Hard ceiling.                                                                                                                                                                                                                                                                                                            |
-| Recommended response | **under 2 s**, vendor-endorsed, with the work handed to a background worker — Polar states it "may lower the timeout threshold in the future" | This is exactly the shape `src/server/billing/webhook.ts` already has and phase A keeps: **verify the signature → claim `webhook-id` in KV → one small inline D1 write → enqueue the rest to `TASKS` → return `200`**. Nothing that talks to a third party, renders an email or writes more than one row belongs inline. |
-| Retries              | up to **10**, exponential backoff                                                                                                             | A redelivery must be a no-op. The KV claim on `webhook-id` is what makes it one.                                                                                                                                                                                                                                         |
-| Auto-disable         | after **10 consecutive non-2xx** deliveries the endpoint is disabled and every organization member is emailed                                 | Re-enable it by hand: dashboard → Settings → Webhooks → the endpoint → enable, or `PATCH /v1/webhooks/endpoints/{id}` with `{"enabled": true}`. Fix the cause first; a re-enable against a still-broken endpoint spends the ten again.                                                                                   |
-| Redirects            | `301`, `302`, `307` … are treated as **failures** and are never followed                                                                      | Register the final URL. An apex-to-`www` redirect, or `http://` in the endpoint URL, disables the endpoint in ten deliveries and looks like Polar being down.                                                                                                                                                            |
+| Property             | Value                                                                                                                                         | Consequence for us                                                                                                                                                                                                                                                                             |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Request timeout      | **10 s**                                                                                                                                      | Hard ceiling.                                                                                                                                                                                                                                                                                  |
+| Recommended response | **under 2 s**, vendor-endorsed, with the work handed to a background worker — Polar states it "may lower the timeout threshold in the future" | This is exactly the shape `src/server/billing/webhook.ts` has: **verify the signature → claim `webhook-id` in KV → one small inline D1 write → enqueue the rest to `TASKS` → return `200`**. Nothing that talks to a third party, renders an email or writes more than one row belongs inline. |
+| Retries              | up to **10**, exponential backoff                                                                                                             | A redelivery must be a no-op. The KV claim on `webhook-id` is what makes it one.                                                                                                                                                                                                               |
+| Auto-disable         | after **10 consecutive non-2xx** deliveries the endpoint is disabled and every organization member is emailed                                 | Re-enable it by hand: dashboard → Settings → Webhooks → the endpoint → enable, or `PATCH /v1/webhooks/endpoints/{id}` with `{"enabled": true}`. Fix the cause first; a re-enable against a still-broken endpoint spends the ten again.                                                         |
+| Redirects            | `301`, `302`, `307` … are treated as **failures** and are never followed                                                                      | Register the final URL. An apex-to-`www` redirect, or `http://` in the endpoint URL, disables the endpoint in ten deliveries and looks like Polar being down.                                                                                                                                  |
 
 **Redelivery is a real endpoint, and it is how idempotency gets tested:**
 
@@ -1004,7 +1010,7 @@ an `ALL_CAPS` placeholder like the others: replace it with the origin of the Wor
 organization behind `$POLAR_API` talks to. While the sandbox matrix of §9.11 is being walked that
 is **whichever origin staging actually answers on** — the same rule as §9.4 step A, so
 `https://planned-travel-staging.ACCOUNT_SUBDOMAIN.workers.dev` until §8 attaches the custom
-hostname and `https://staging.planned.travel` after it. Once phase A is live it is
+hostname and `https://staging.planned.travel` after it. For the production organization it is
 `https://planned.travel`. Paste the production origin into a sandbox checkout and the redirect
 leaves the Worker that received the events; paste a hostname staging has not been given yet and
 the customer lands on a name that does not resolve, with the payment already taken. The product
@@ -1089,19 +1095,21 @@ settles this; here is what it means for whoever runs the deploy:
   portal off — it guarantees invoice access, self-service cancellation and PCI-compliant card
   updates by keeping it always available.
 
-### 9.10 What phase A must not change, and the one rename it does
+### 9.10 What phase A did not change, and the one rename it did
 
 **The status tuple stays at eight values.** Polar's `SubscriptionStatus` enum is exactly
 `incomplete`, `incomplete_expired`, `trialing`, `active`, `past_due`, `canceled`, `unpaid`,
 `paused`. That is value-for-value the tuple already in `src/lib/plans.ts` and in the
 `subscriptions_status_chk` constraint, `incomplete` and `incomplete_expired` included. It is
 settled here in writing so that nobody tidies away the two values that look inherited. They are
-superseded in provenance only: both are real members of the Stripe-era tuple _and_ of Polar's own
-enum, so narrowing the tuple would make a legitimate webhook fail its `CHECK` constraint. Phase A
-must not narrow it.
+superseded in provenance only: both were members of the previous provider's tuple _and_ are
+members of Polar's own enum, so narrowing the tuple would make a legitimate webhook fail its
+`CHECK` constraint. Phase A did not narrow it, and nothing later may. Verified against the live
+OpenAPI (`https://polar.sh/docs/openapi.json`, `info.version` 2026-04): `SubscriptionStatus` is
+exactly those eight values.
 
-**The three provider columns are renamed, and that rename is migration `0002`.** Phase A moves
-them rather than leaving three Stripe-era names holding Polar ids:
+**The three provider columns were renamed, and that rename is migration `0002`.** Phase A moved
+them rather than leaving three inherited names holding Polar ids:
 
 | Was                      | Is now                     | Holds                                                                          |
 | ------------------------ | -------------------------- | ------------------------------------------------------------------------------ |
@@ -1113,20 +1121,38 @@ The two indexes over those columns move with them, because their names carry the
 `subscriptions_stripe_subscription_unq` → **`subscriptions_provider_subscription_unq`** (unique)
 and `subscriptions_stripe_customer_idx` → **`subscriptions_provider_customer_idx`**.
 
-`drizzle/0002_*.sql` is three `ALTER TABLE "subscriptions" RENAME COLUMN` statements plus a
-`DROP INDEX` and a `CREATE [UNIQUE] INDEX` for each of the two indexes. **There is no backfill,
-because the `subscriptions` table carries no rows in any deployed environment**: nothing has been
-sold yet, the local demo row is written by the seed and re-created on the next run, and no Polar
-subscription exists because §9.11 has not been walked. §5's additive policy exists to keep an old
-and a new Worker serving the same schema through a deploy window; with an empty table and no
-paid customer to strand, there is no old reader to protect and no data to move, so the two-release
-dance buys nothing and is not run. That is the whole justification — the moment a production row
-exists, this reasoning expires and any further column move is additive again.
+`drizzle/0002_calm_daredevil.sql` is three `ALTER TABLE "subscriptions" RENAME COLUMN` statements
+plus a `DROP INDEX` and a `CREATE [UNIQUE] INDEX` for each of the two indexes.
 
-Read the generated SQL before committing it. `drizzle-kit` asks which old column each new one came
-from, and it cannot ask in a non-TTY: run it in a real terminal, answer the three prompts against
-the exact target names above, and confirm the file says `RENAME COLUMN` and not a `__new_`
-table recreate. A recreate would silently drop the `subscriptions_status_chk` constraint.
+**What the empty table did and did not buy, corrected.** An earlier revision of this section
+justified the rename with "there is no old reader to protect". That was wrong, and the correction
+matters because §5 and §12 are written on the other reading. The `subscriptions` table does carry
+no rows in any deployed environment — nothing has been sold, the local demo row is rewritten by
+the seed on every run, and no Polar subscription exists because §9.11 has not been walked. So:
+
+- **There is no data risk.** No backfill, no dual-write window, no paying customer stranded on a
+  column that moved underneath them. That much the empty table genuinely buys, and it is why the
+  rename was the right call rather than a two-release dance over three names nobody was reading.
+- **There is still a reader risk, and it is not the rows.** The reader §5 protects is the previous
+  Worker's SQL. Drizzle bakes a fixed column list into every statement, so a Worker rolled back
+  past `0002` issues `select … "stripe_customer_id" …` against a schema that no longer has that
+  column and fails with `no such column` on its first billing query — with an empty table exactly
+  as with a full one. §12 registers that window and carries the recipe for crossing it.
+
+So the honest statement is: `0002` is a **deliberate, registered exception** to §5's additive
+policy, taken because the cost was one rollback window on a pre-revenue release and the benefit
+was not shipping three misleading column names into every future migration. It is not a precedent.
+The moment a production row exists the data argument expires too, and any further column move is
+additive or it does not happen.
+
+Read the generated SQL before committing it — for this migration and every other one. `drizzle-kit`
+asks which old column each new one came from and it cannot ask in a non-TTY, so a rename is run in
+a real terminal, the three prompts answered against the exact target names above, and the file
+confirmed to say `RENAME COLUMN` and not a `__new_` table recreate. A recreate would rebuild the
+table and emit `PRAGMA foreign_keys=OFF/ON`, which D1 does not honour (§5). The same escalation is
+triggered by adding a `CHECK` constraint in the same generate as a column, so add columns bare and
+let Zod at the repository boundary do the enforcing, or accept a recreate knowingly and register
+it in §12.
 
 ### 9.11 Sandbox acceptance matrix
 
@@ -1205,70 +1231,40 @@ satisfy it exists.
 typecheck, tests with coverage, build. `.github/workflows/deploy.yml` runs on `main`: build,
 apply D1 migrations, deploy, smoke-check.
 
-Configure the repository once. Product and price ids are public and are inlined into both
-bundles at build time, so they belong in repository **variables**, never secrets. Locally the
-same names go in `.env.local`, which is gitignored.
+Configure the repository once. Product ids are public and are inlined into both bundles at build
+time, so they belong in repository **variables**, never secrets. Locally the same names go in
+`.env.local`, which is gitignored.
 
-| Kind     | Name                              | Value                                                            | Status                                                            |
-| -------- | --------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Secret   | `CLOUDFLARE_API_TOKEN`            | token with _Edit Cloudflare Workers_ + _D1 Edit_ on this account | required                                                          |
-| Secret   | `CLOUDFLARE_ACCOUNT_ID`           | account id from the dashboard sidebar                            | required                                                          |
-| Variable | `VITE_STRIPE_PRICE_SOLO_MONTHLY`  | `price_…` from the Stripe dashboard                              | **required to sell today** — known divergence, renamed in phase A |
-| Variable | `VITE_STRIPE_PRICE_SOLO_YEARLY`   | `price_…` from the Stripe dashboard                              | **required to sell today** — known divergence, renamed in phase A |
-| Variable | `VITE_STRIPE_PRICE_CREW_MONTHLY`  | `price_…` from the Stripe dashboard                              | **required to sell today** — known divergence, renamed in phase A |
-| Variable | `VITE_STRIPE_PRICE_CREW_YEARLY`   | `price_…` from the Stripe dashboard                              | **required to sell today** — known divergence, renamed in phase A |
-| Variable | `VITE_POLAR_PRODUCT_SOLO_MONTHLY` | product UUID from §9.1                                           | phase A — nothing reads it before then                            |
-| Variable | `VITE_POLAR_PRODUCT_SOLO_YEARLY`  | product UUID from §9.1                                           | phase A — nothing reads it before then                            |
-| Variable | `VITE_POLAR_PRODUCT_CREW_MONTHLY` | product UUID from §9.1                                           | phase A — nothing reads it before then                            |
-| Variable | `VITE_POLAR_PRODUCT_CREW_YEARLY`  | product UUID from §9.1                                           | phase A — nothing reads it before then                            |
+| Kind     | Name                              | Value                                                            | Status                                             |
+| -------- | --------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- |
+| Secret   | `CLOUDFLARE_API_TOKEN`            | token with _Edit Cloudflare Workers_ + _D1 Edit_ on this account | required                                           |
+| Secret   | `CLOUDFLARE_ACCOUNT_ID`           | account id from the dashboard sidebar                            | required                                           |
+| Variable | `VITE_POLAR_PRODUCT_SOLO_MONTHLY` | product UUID from §9.1                                           | **required to sell** — `src/lib/plans.ts` reads it |
+| Variable | `VITE_POLAR_PRODUCT_SOLO_YEARLY`  | product UUID from §9.1                                           | **required to sell**                               |
+| Variable | `VITE_POLAR_PRODUCT_CREW_MONTHLY` | product UUID from §9.1                                           | **required to sell**                               |
+| Variable | `VITE_POLAR_PRODUCT_CREW_YEARLY`  | product UUID from §9.1                                           | **required to sell**                               |
 
-**The known divergence, enumerated once — this list is complete.** There is one divergence, not
-several: **the billing cutover has not happened yet.** §9 has moved the runbook to Polar; no
-shipped module has moved with it, and this round moves neither. That single fact surfaces in five
-places, and the first three need an operator to act:
+**One set of build-time names, and it is the Polar one.** `src/lib/plans.ts` resolves every
+purchasable price from the four variables above and `requirePrice()` throws when one is empty, so
+a build with them unset renders a pricing page with nothing to buy. Both `.github/workflows/ci.yml`
+and `.github/workflows/deploy.yml` pass exactly these four into the build — which is why they are
+repository variables here rather than `.env.local` entries — and `.dev.vars.example` documents the
+same four and no others. **Act:** create the four products in Polar (§9.1) and set the four
+variables in the repository, not only locally. An unset variable there is a green CI run that
+ships an unpurchasable pricing page.
 
-- **The build reads the four `VITE_STRIPE_PRICE_*` names.** `src/lib/plans.ts` resolves every
-  purchasable price from them, and `requirePrice()` throws when one is empty, so a build with them
-  unset renders a pricing page with nothing to buy. **Act:** create the four prices in Stripe and
-  set the four variables above.
-- **Both workflows still name them.** `.github/workflows/ci.yml` and
-  `.github/workflows/deploy.yml` pass all four into the build, which is why they are repository
-  variables here and not `.env.local` entries. **Act:** set them in the repository, not only
-  locally — an unset variable there is a green CI run that ships an unpurchasable pricing page.
-- **The running billing code is Stripe's.** Every checkout builds a client from
-  `STRIPE_SECRET_KEY`, and `/api/stripe/webhook` is the only billing route mounted in this
-  release. **Act:** set §6's two Stripe secrets and register the Stripe webhook endpoint §6
-  describes — or deploy with no paid billing deliberately, and write that in the deploy log.
-- `.dev.vars.example` has **already moved to the far side of the cutover, and says so**: it
-  declares all six of §6's new names with their acquisition steps, and its build-time block names
-  both sets of ids — the four `VITE_STRIPE_PRICE_*` the build reads today and the four
-  `VITE_POLAR_PRODUCT_*` that replace them — each labelled with which one is current. The one
-  thing it does not declare is the superseded Stripe secret pair, which §6 sets and the
-  template's own header names as its single omission. Nothing to act on here beyond taking that
-  pair from §6, which the third bullet already requires; every other secret is copy-and-fill
-  from the template.
-- The `stripe` package is **already out of `package.json`** — this is the one of the five that is
-  closed. Phase A's dependency round removed it in the same edit that installed the two React
-  Email packages `docs/SPEC.md` §3 names, so the entry and its lockfile block are both gone and
-  `grep -c stripe pnpm-lock.yaml` returns `0`. Nothing to act on, and nothing an operator can
-  check on a deployed Worker: this one is verified in the repository, not in the dashboard.
-
-Every other Stripe string left in the repository is superseded code, recorded as such where it
-lives — the two modules named above in §6 — and none of it asks anything of an operator. The
-three `stripe_*` columns are no longer among them: §9.10 renames them to `provider_*`.
-
-**Phase A closes the four that are left in one change**, because a half-migrated build is worse
-than either end state: the Polar route and client land, `src/lib/plans.ts`, both workflow files
-and `.env.local` move to `VITE_POLAR_PRODUCT_*` together, the template loses its Stripe half, and
-the Stripe secrets stop being read. There is no overlap period for the build-time names — one
-module reads both sets, and a build that has both would offer two prices for one plan. Set the
-`VITE_POLAR_PRODUCT_*` variables when that change lands, and not before. The template needs the
-least work of them, because it already documents both sets: what phase A deletes from it is the
-Stripe prose in its header, its billing section and its build-time block, leaving the six new
-names it already carries.
+**Closed, and recorded so it is not reopened.** Before phase A this section carried a five-part
+"known divergence" between the runbook and the shipped code: four `VITE_STRIPE_PRICE_*` build
+variables, both workflows naming them, a superseded billing client and route, a template that had
+already moved ahead of the code, and the `stripe` package itself. All five are closed. The package
+left `package.json` in phase A's dependency round — `grep -c stripe pnpm-lock.yaml` returns `0` —
+and the rest went with the code over the three rounds that followed; `grep -ril stripe src/`
+returns nothing. There is now one provider, one set of build-time names, and no divergence to
+enumerate. The three provider **columns** moved in the same phase: §9.10 has the rename and §12
+has what it costs a rollback.
 
 Without the two repository **secrets** the deploy workflow logs a warning and skips rather than
-failing, so a fork stays green. The price **variables** behave differently and more quietly: a
+failing, so a fork stays green. The product **variables** behave differently and more quietly: a
 build with them unset succeeds, deploys, and renders a pricing page whose buttons cannot reach a
 checkout. Nothing fails; there is simply nothing to buy. That is why §11's click-through, and not
 CI, is what proves billing works.
@@ -1325,16 +1321,16 @@ and `outcome`; no unhandled exceptions; no `tile cache operation failed` warning
 
 **If this deploy sells, one more click, and it is the only proof that billing works.** No curl
 can stand in for it: the eight checks above pass identically on a Worker with no payment provider
-configured at all, and so does CI (§10). On staging, in test mode: sign in, open `/pricing`,
-choose **Solo → monthly**, and complete the checkout with Stripe's test card
-`4242 4242 4242 4242` and any future expiry. Three things must all be true afterwards —
-`wrangler tail` shows the webhook delivery answered `200`, `/settings/billing` shows the active
-plan, and the Solo modules have unlocked. A `BillingConfigError` in the tail means
-`STRIPE_SECRET_KEY` is unset; a checkout button that goes nowhere means the four
-`VITE_STRIPE_PRICE_*` variables were missing from the build; a completed payment that never
-changes the plan means the webhook endpoint or its signing secret is wrong. Each of those is a
-§6 or §10 step, not a bug. When phase A lands, this same click is walked against Polar as row 1
-of §9.11.
+configured at all, and so does CI (§10). On staging, against the **sandbox** organization: sign
+in, open `/pricing`, choose **Solo → monthly**, and complete the checkout with the sandbox test
+card `4242 4242 4242 4242`, any future expiry, any 3-digit CVC. Three things must all be true
+afterwards — `wrangler tail` shows the webhook delivery answered `200`, `/settings/billing` shows
+the active plan, and the Solo modules have unlocked. A `BillingConfigError` in the tail means
+`POLAR_ACCESS_TOKEN` is unset; a checkout button that goes nowhere means the four
+`VITE_POLAR_PRODUCT_*` variables were missing from the build; a completed payment that never
+changes the plan means the webhook endpoint or `POLAR_WEBHOOK_SECRET` is wrong. Each of those is a
+§6, §9 or §10 step, not a bug. This click is row 1 of §9.11, and walking it here does not tick the
+other seven.
 
 Finally confirm the background paths:
 
@@ -1378,9 +1374,59 @@ pnpm exec wrangler deployments list          # find the previous version id
 pnpm exec wrangler rollback VERSION_ID
 ```
 
-Rollback reverts code, not data. Because migrations are additive (§5), the previous version can
-serve against the newer schema. If a migration must be undone, write a new forward migration
-that removes what the previous one added — never edit an applied migration file.
+Rollback reverts code, not data. **That is only safe across migrations that are additive**, and §5
+says why: the reader a rollback strands is the previous Worker's SQL, not the rows. An additive
+migration leaves every column the old Worker names still present, so it serves. A rename or a drop
+does not, and no amount of empty table changes that — the failure is `no such column` on the first
+query.
+
+So `wrangler rollback` alone is correct for any release whose migrations are all additive, which
+is every release except the ones in the register below. If a migration must be undone in the
+normal case, write a new **forward** migration that removes what the previous one added; never
+edit an applied migration file.
+
+### Register of non-additive migrations
+
+Every migration that departs from §5's additive rule is listed here, with what it costs and how to
+cross it. A migration absent from this table is a plain `ALTER TABLE … ADD COLUMN` or a
+`CREATE TABLE` and needs nothing from this section. Adding a row is part of shipping the
+migration, not part of the incident.
+
+Two different departures, and they fail differently, so the table names which one each is:
+
+- **Reader-unsafe** — the old Worker's SQL no longer matches the schema. A rollback across it
+  fails on the first query, with any number of rows including zero.
+- **Table recreate** — `drizzle-kit` rebuilt the table (`CREATE TABLE __new_<name>` … `DROP TABLE`
+  … `RENAME TO`). The old reader may survive it, but the forward application is a copy under
+  `PRAGMA foreign_keys=OFF/ON`, which D1 does not honour (§5), and a hand-written `CHECK`
+  constraint that the regenerated schema no longer carries would be lost silently.
+
+| Migration               | Departure      | What it did                                                                                                                                                                                                                                                           | Crossing it                                                                                                                                                                                         |
+| ----------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0001_aspiring_cargill` | table recreate | Rebuilt `expenses` to give `original_currency` its own column. Previously the shared `currency()` builder hardcoded the name, so `currency` and `originalCurrency` both mapped to one SQL column and the source currency of a foreign receipt was silently discarded. | Rollback is safe for the reader: it only gained a column, so the older Worker's statements still resolve. The recreate matters going forward, not backward — read §5 before generating another one. |
+| `0002_calm_daredevil`   | reader-unsafe  | Renamed `stripe_customer_id` → `provider_customer_id`, `stripe_subscription_id` → `provider_subscription_id`, `stripe_price_id` → `provider_product_id`, and swapped the two indexes over them (§9.10).                                                               | **Not safe on code alone.** A Worker from before the phase-A release selects the three old names. Move the schema back first, or do not roll back past it.                                          |
+
+**Crossing `0002`, if it is ever necessary.** In order, and only with the billing screen expected
+to be down for the duration:
+
+1. Prefer rolling **forward**. A fix deployed on the current schema costs one deploy; a schema
+   reversal costs a migration, a rollback, and a second migration to get back.
+2. If the rollback is unavoidable, reverse the three columns and the two indexes in D1 _before_
+   the old Worker starts serving — three `ALTER TABLE "subscriptions" RENAME COLUMN` statements
+   in the opposite direction, then drop and recreate the two indexes under their old names. Apply
+   it with `pnpm exec wrangler d1 execute planned-travel-db --remote --file=…`, not as a
+   `drizzle/` migration, because it is a temporary state the repository must not carry.
+3. Roll the Worker back. Verify with §11's click-through, not with the eight curl checks — none of
+   them touches billing.
+4. Getting forward again is the same three renames in the original direction, and then the normal
+   deploy. `d1_migrations` already lists `0002` as applied and must not be edited; the renames are
+   data-plane statements, not migrations.
+
+**The cheap alternative, and it is usually the right one.** The `subscriptions` table is the only
+table `0002` touched, and pre-revenue it is empty or holds one seeded demo row. Dropping and
+re-creating it from the old schema is faster than the rename dance and loses nothing that exists.
+That stops being true the day the first production row is written, which is also the day this
+register stops being a formality.
 
 ---
 
@@ -1397,8 +1443,8 @@ pnpm exec wrangler d1 execute planned-travel-db --remote --command "select count
 # No cache purge is needed — the edge key is the resolved object key.
 
 # Rotate a secret. Set the new value, deploy, then revoke the old one upstream.
-pnpm exec wrangler secret put POLAR_ACCESS_TOKEN          # unread until phase A (§9)
-pnpm exec wrangler secret put STRIPE_SECRET_KEY           # superseded, but the live path today (§6, §10)
+pnpm exec wrangler secret put POLAR_ACCESS_TOKEN          # the billing credential (§6, §9.2)
+pnpm exec wrangler secret put POLAR_WEBHOOK_SECRET        # rotate in the dashboard first (§9.4)
 
 # Nightly backups land in the FILES bucket under backups/.
 pnpm exec wrangler r2 object get planned-travel-files/backups/LATEST_KEY --file ./restore.sql --remote
@@ -1680,25 +1726,23 @@ a deploy that is not finished.
 - [ ] Optional secrets set or knowingly skipped, with §6's degradation table read for each.
 - [ ] `FIRECRAWL_API_KEY` and `FIRECRAWL_WEBHOOK_SECRET` are either both set or both unset.
 
-**Billing that works on the day of the deploy** (§6, §10) — the superseded-but-live Stripe path.
-Tick either the first four lines or the last one; there is no third outcome.
-
-- [ ] `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are set, for both environments, with test
-      keys on staging.
-- [ ] The Stripe webhook endpoint points at `/api/stripe/webhook` and subscribes to §6's six
-      events; its signing secret is the one in `STRIPE_WEBHOOK_SECRET`.
-- [ ] The four `VITE_STRIPE_PRICE_*` repository variables hold real `price_…` ids, per §10's
-      first two divergences — the build reads those names until phase A renames them.
-- [ ] §11's test-card click-through completes on staging: checkout succeeds, the webhook is
-      answered `200`, and `/settings/billing` shows the plan. Nothing shorter proves this.
-- [ ] _Or_: this deploy sells nothing on purpose. No Stripe configuration, every workspace on
-      `free`, and that decision is written in the deploy log rather than discovered later.
-
-**Polar** (§9) — configuration done now; the cutover itself is phase A, and none of these lines
-makes a payment work today
+**Billing that works on the day of the deploy** (§6, §9, §10). Tick either the first four lines
+or the last one; there is no third outcome.
 
 - [ ] `POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET` and `POLAR_SERVER` are set, for both
-      environments — unread until phase A, and set now so the cutover is a redeploy.
+      environments, with the sandbox organization's credentials on staging.
+- [ ] The four `VITE_POLAR_PRODUCT_*` repository variables hold real product UUIDs from the
+      **production** organization (§9.1, §10). Secrets alone do not sell.
+- [ ] The production webhook endpoint of §9.4 step B exists and points at
+      `https://planned.travel/api/polar/webhook`.
+- [ ] §11's test-card click-through completes on staging: checkout succeeds, the webhook is
+      answered `200`, and `/settings/billing` shows the plan. Nothing shorter proves this.
+- [ ] _Or_: this deploy sells nothing on purpose. No `POLAR_*` configuration, every workspace on
+      `free`, and that decision is written in the deploy log rather than discovered later.
+
+**Polar organization configuration** (§9) — dashboard state no test can read back
+
+- [ ] The three `POLAR_*` secrets belong to the organization the environment is meant to talk to.
 - [ ] `POLAR_SERVER` is `production` on production and `sandbox` on staging — and the token beside
       it belongs to the _same_ organization.
 - [ ] Four products exist in production and four in sandbox; the two sets of ids are not confused.
@@ -1718,18 +1762,19 @@ makes a payment work today
 - [ ] The verifier keys its HMAC with the raw UTF-8 bytes of the secret — §9.5's gotcha — and has
       a unit test with a captured payload.
 - [ ] A redelivered event changes nothing (§9.7).
-- [ ] _Phase A only, not a first-deploy line:_ all eight rows of §9.11 pass in the sandbox, row 6
-      by its unit test.
+- [ ] All eight rows of §9.11 pass in the sandbox, row 6 by its unit test. **This is the line
+      that is not ticked today** — the matrix is unwalked and no credential has been issued to a
+      build round, so no row is green. Nothing about a production deploy that sells is finished
+      before it is.
 
 **Repository configuration** (§10)
 
 - [ ] `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set as repository secrets.
-- [ ] All five faces of §10's single known divergence were read before the deploy, the three that
-      ask for action were acted on, and the two superseded Stripe secrets were taken from §6 —
-      the one part of the list `.dev.vars.example` deliberately does not carry.
-- [ ] No `VITE_POLAR_PRODUCT_*` variable is set yet — they land with the phase-A rename, together
-      with the four they replace, and never half a set at a time. The template names all eight and
-      labels which four are current; naming them is documentation, not configuration.
+- [ ] All four `VITE_POLAR_PRODUCT_*` variables are set, or none of them is and the deploy sells
+      nothing on purpose. Never half a set: a build with two of four offers one plan and breaks
+      the other with no error.
+- [ ] `.dev.vars.example` was the source for every local secret value; §6 and the template agree
+      name for name, with no carve-out (§6).
 
 **Platform access** (§14)
 
@@ -1743,12 +1788,8 @@ makes a payment work today
 - [ ] `wrangler.jsonc` still lists three crons and staging still lists one — `0 4 * * 1` is absent
       from both until phase D (§15.3), confirmed with §11's `…/schedules` read-back rather than
       with `wrangler deployments list`, which never prints a cron.
-- [ ] `.dev.vars.example` declares neither Stripe secret, on purpose — that pair comes from §6 for
-      as long as `src/server/billing/stripe.ts` is the live checkout, and it is the only part of
-      §6's list the template does not carry. Everything else in §6 was filled in from the template.
-      Phase A deletes the template's Stripe prose and this line goes with it (§10).
-- [ ] No `/api/polar/webhook` route in production until phase A; the sandbox endpoint is the only
-      live one (§9.4). The billing route that _is_ mounted today is `/api/stripe/webhook`.
+- [ ] Rolling back past the phase-A release needs §12's register read first — migration `0002`
+      renamed three columns, so `wrangler rollback` on its own is not enough across that window.
 
 **Verification** (§11)
 

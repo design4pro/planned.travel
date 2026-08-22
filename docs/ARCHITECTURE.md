@@ -9,10 +9,12 @@ Cloudflare list prices and platform allowances quoted here were taken from
 `developers.cloudflare.com/workers/platform/pricing/` in **August 2026**. Re-check them before
 committing to a budget; the shape of the model outlives the numbers.
 
-Billing is **Polar.sh**, which is Merchant of Record. The Stripe path still mounted in
-`src/server/billing/**` and at `/api/stripe/webhook` is superseded and is replaced wholesale in
-**phase A**; wherever this document names a billing route, a webhook or a provider behaviour it
-describes the Polar one (`docs/SPEC.md` §1 and §3, `docs/DEPLOY.md` §6 and §9).
+Billing is **Polar.sh**, which is Merchant of Record. Phase A replaced the superseded Stripe
+integration wholesale and removed it: the client is `src/server/billing/polar.ts`, the mounted
+route is `/api/polar/webhook` (`src/routes/api/polar/webhook.ts`), and `grep -ril stripe src/`
+returns nothing. Wherever this document names a billing route, a webhook or a provider behaviour
+it describes the Polar one, in the present tense (`docs/SPEC.md` §1 and §3, `docs/DEPLOY.md` §6
+and §9).
 
 ---
 
@@ -62,7 +64,7 @@ It is the single biggest latency lever for the authenticated app, and it costs n
 3. **Session.** The auth layer reads the session cookie and resolves it against the `SESSIONS`
    KV namespace (`src/server/auth/secondary-storage.ts`). A KV hot read at the edge is
    sub-millisecond and costs one KV read, versus a D1 round trip plus a row read.
-4. **Tenant context.** `src/server/auth/tenant-context.ts` resolves the active organization and
+4. **Tenant context.** `src/server/auth/tenant.ts` resolves the active organization and
    membership, producing the `TenantScope` that every repository call requires.
 5. **Loaders.** Route loaders call server functions in `src/server/fns/**`, which validate input
    with Zod and call repositories in `src/server/repos/**`. Repositories are the only place SQL
@@ -122,14 +124,26 @@ slices that matter.
 - **Queue producer** → `src/server/queue/jobs.ts` writes a validated, idempotency-keyed
   envelope to `TASKS`; the consumer batches 10 messages with a 5 s timeout, 5 retries, 10 s
   retry delay, and a dead-letter queue.
-- **Billing webhook** → `/api/polar/webhook` from phase A; until then the mounted route is the
-  superseded `/api/stripe/webhook`. The shape does not change with the provider: verify the
-  `v1,` signature on WebCrypto — HMAC-SHA256 over `{webhook-id}.{webhook-timestamp}.{raw body}`,
-  with the 300 s timestamp tolerance §9 states — then claim `webhook-id` in `KV`, make one small
-  inline D1 write, enqueue everything else to `TASKS`, and return 200. Nothing that calls a
-  third party or writes more than one row happens inline (`docs/DEPLOY.md` §9.5 and §9.7).
-  That is the target shape, not a description of the mounted handler, which breaks the rule
-  on one event; the note under the §9 table says where and why.
+- **Billing webhook** → `/api/polar/webhook`, mounted at `src/routes/api/polar/webhook.ts`.
+  Verify the `v1,` signature on WebCrypto — HMAC-SHA256 over
+  `{webhook-id}.{webhook-timestamp}.{raw body}`, with the 300 s timestamp tolerance §9 states —
+  then claim `webhook-id` in `KV`, make one small inline D1 write, enqueue everything else to
+  `TASKS`, and return 200. Nothing that calls a third party or writes more than one row happens
+  inline (`docs/DEPLOY.md` §9.5 and §9.7). Every branch that persists a subscription record ends
+  by invalidating that organization's plan-state key (§4) and handing a `billing.*` task to
+  `TASKS`.
+- **Transactional email** → nine React Email templates in `src/server/email/templates/`, rendered
+  by `renderEmailBody()` (`src/server/email/render.ts`) into `{ html, text }`, described by
+  `src/server/auth/email.ts`, and POSTed to the Resend-compatible endpoint by
+  `src/server/queue/handlers/email.ts` with a provider-side idempotency key. The renderer is
+  behind a dynamic `import()` because its workerd build statically pulls ~540 kB of
+  `prettier/standalone`, `prettier/plugins/html` and `html-to-text`, and this module is reachable
+  from Better Auth and therefore from every authenticated request.
+  **Known departure from the inline rule, recorded rather than implied:** `queueAuthEmail()`
+  awaits the render *before* it enqueues, so React's streaming renderer runs inside the request
+  that triggered the mail. Only delivery is queued today. `docs/SPEC.md` §3 carries this as
+  follow-up **F1**, with the reason it is not a one-line move, alongside **F2** — the four billing
+  templates have no dispatch site in `src/server/billing/**` and are exercised only by their test.
 - **Cron** → three triggers are registered in `wrangler.jsonc` today: `*/15 * * * *` reminder
   sweep, `0 3 * * *` nightly D1 export to R2, `17 4 * * 1` weekly retention prune. The `staging`
   environment overrides that list with `0 3 * * *` alone. A fourth, `0 4 * * 1` for the weekly
@@ -196,7 +210,7 @@ on a TTL alone to become correct.
 | Browser, tile alias           | `/api/tiles/basemap.pmtiles` | `max-age=3600, s-maxage=31536000` | 1 h in the browser; instantly at the edge when `TILES_ARCHIVE_KEY` changes, because the edge key is the _resolved_ key |
 | Cache API, tile slices        | `…/<key>?__bytes=<ranges>`   | follows `Cache-Control` above     | entity-tag mismatch on read (entry dropped), or repointing the alias                                                   |
 | Cache API, tile metadata      | `…/<key>?__meta=1`           | 24 h                              | entity-tag mismatch, or a 404 on the object (entry dropped)                                                            |
-| KV, plan state                | `billing:plan:<v>:<orgId>`   | 60 s                              | the Polar webhook, explicitly, on every subscription event                                                             |
+| KV, plan state                | `billing:plan:<version>:<orgId>` | 60 s                              | **two writers, both explicit** — the Polar webhook on every subscription event, and `changePlan()` in the same request that made the change |
 | KV, session                   | Better Auth session id       | session lifetime, 60 s floor      | logout, password change, session revocation                                                                            |
 | KV, queue idempotency         | `task:done:<id>`             | 24 h                              | not invalidated — expiry _is_ the semantics                                                                            |
 
@@ -212,6 +226,42 @@ Three rules that are not negotiable:
 3. **`immutable` is a promise about the key, not the content.** Tile archives are published as
    new keys (`basemaps/planet-2026-08.pmtiles`) and the alias is repointed. Overwriting a key
    that has already been served with `immutable` is a bug, not a deployment step.
+
+### The plan-state key has two writers, and both are named
+
+`billing:plan:<version>:<orgId>` is built by `planStateCacheKey()` in
+`src/server/billing/entitlements.ts`, and the `<version>` segment is the module-private
+`PLAN_STATE_CACHE_VERSION` constant in the same file — **not** a literal to copy into a second
+place. It is bumped whenever `CachedPlanState` changes shape **or meaning**, so a warm entry written by
+older code is ignored rather than misread. It has moved several times as the cached shape grew —
+this table named `v2` when it was first written, `v4` added the scheduled plan change, and `v5` is
+the release in which that field can finally be non-null, a bump with an identical shape and a
+different meaning. At the time of writing the key resolves to `billing:plan:v5:<orgId>`. **Read
+the constant rather than this sentence**: the value is deliberately not duplicated anywhere in the
+repository, and a document is the wrong place to learn it from.
+
+Only one function deletes the key — `invalidateEntitlements()`, also in `entitlements.ts` — and
+exactly two paths call it:
+
+| Writer | Where | When |
+| --- | --- | --- |
+| The Polar webhook | `src/server/billing/webhook.ts`, six call sites, one per branch that changes billing state | Asynchronously, on every subscription event Polar delivers. This is the reconciler and it always runs. |
+| `changePlan()` | `src/server/billing/checkout.ts`, through the local `evictPlanState()` helper, in a `finally` | Synchronously, inside the request that made the change — an in-app upgrade, downgrade or seat resize, which we apply with `PATCH /v1/subscriptions/{id}` rather than through a hosted flow. |
+
+The second writer is not a duplicate of the first, and rule 2 above is why. `changePlan()` mutates
+entitlement state inside our own request, so it owes the whole write shape §2.2 sets out: write D1
+from the provider's answer, *then* delete the key that answer makes stale. Two failure modes were
+walked to get here and both are worth keeping written down:
+
+- **Evicting without writing is inert.** The next read misses, re-reads the same unchanged row and
+  re-caches it for another TTL, so the customer sees the old plan until the webhook lands.
+- **Writing without evicting is worse than stale.** `effectiveLimitsFor()` derives the ceilings
+  from that row, so a Solo→Crew upgrade Polar has already billed would leave `assertWithinLimit`
+  refusing the seats the customer is paying for.
+
+`evictPlanState()` swallows its own failure and logs it, because by the time it runs Polar has
+taken the money: a KV fault must not be reported to a customer as a billing failure, and the 60 s
+TTL plus the webhook's own invalidation close the window behind it.
 
 ---
 
@@ -440,10 +490,13 @@ Starter's $950, which carries no plan fee because Starter is free.
 
 ## 9. Failure modes and mitigations
 
-Twelve of these fourteen rows describe code that is deployed right now. Rows 8 and 9 are the
-two that do not, and they are marked: they describe the Polar handler **phase A** writes, and
-the note under the table says what is mounted in its place today. Every other row is present
-tense and can be checked against the file it names.
+All fourteen rows describe code that is on disk right now, rows 8 and 9 included: phase A
+replaced the superseded provider integration wholesale, so the Polar handler those two rows
+describe is the mounted one. Every row is present tense and can be checked against the file it
+names. What rows 8 and 9 cannot yet claim is a *walk* — `docs/DEPLOY.md` §9.11's eight-row sandbox
+matrix is unwalked and no credential has been issued, so their evidence is our tests, not Polar's
+agreement. The note under the table says which of their properties is a design target the code
+still owes.
 
 | #   | Failure                                           | Blast radius                              | Detection                                                                                          | Mitigation in the code today (rows 8 and 9: phase A)                                                                                                                                         |
 | --- | ------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -454,41 +507,29 @@ tense and can be checked against the file it names.
 | 5   | A trip room gets hot (many editors, huge patches) | one trip                                  | DO CPU/duration metrics; client-visible rate-limit errors                                          | 32 KiB frames, 40 msg/s per connection, bounded patch log and tombstone TTL; the object is the only thing that slows down                                                                    |
 | 6   | Durable Object evicted mid-session                | one trip's clients reconnect              | reconnect rate                                                                                     | clients re-handshake and resnapshot via `partysocket`; D1 holds the durable record, so the worst case is replaying recent patches                                                            |
 | 7   | Queue consumer failing on a poison message        | one job kind                              | retry count, then DLQ depth                                                                        | 5 retries with 10 s delay, then the dead-letter queue; envelopes carry idempotency keys, so redelivery is safe; DLQ diagnostics are kept 14 days                                             |
-| 8   | Third-party outage (Polar, email provider)        | billing changes and notifications delayed | job failure logs, DLQ depth                                                                        | **Phase A.** All third-party calls happen in queue handlers, never inline; webhooks are idempotent by event id; Polar retries on its side, up to ten times with exponential backoff, and we retry on ours |
-| 9   | Polar webhook replay or forgery                   | billing state                             | signature failures in logs                                                                         | **Phase A.** The `{webhook-id}.{webhook-timestamp}.{raw body}` signature is verified with WebCrypto (HMAC-SHA256) inside a 300 s tolerance; the event id is claimed in KV before any state change |
+| 8   | Third-party outage (Polar, email provider)        | billing changes and notifications delayed | job failure logs, DLQ depth                                                                        | Third-party calls happen in queue handlers rather than inline; webhooks are idempotent by event id; Polar retries on its side, up to ten times with exponential backoff, and we retry on ours. One inline provider read survives on the plan-change path and the note below names it |
+| 9   | Polar webhook replay or forgery                   | billing state                             | signature failures in logs                                                                         | The `{webhook-id}.{webhook-timestamp}.{raw body}` signature is verified with WebCrypto (HMAC-SHA256) inside a 300 s tolerance; the event id is claimed in KV before any state change, and released again if a handler throws so the provider's retry is free to try once more |
 | 10  | Runaway range request (huge or many-part)         | one request's CPU and memory              | 400/416 rate on `/api/tiles/*`                                                                     | ≤ 8 range specs, ≤ 8 MiB assembled multipart, ≤ 24 MiB cached per entry, everything above streams without buffering                                                                          |
 | 11  | Quota bypass attempt via a new code path          | one tenant over its ceiling               | quota-exceeded counters versus plan                                                                | quotas live at the repository boundary, so a new route or job cannot skip them                                                                                                               |
-| 12  | Bad deploy                                        | everything                                | smoke check in `deploy.yml`; error rate in Observability                                           | `wrangler rollback` (see `docs/DEPLOY.md`); migrations are additive so the previous version keeps working against the new schema                                                             |
+| 12  | Bad deploy                                        | everything                                | smoke check in `deploy.yml`; error rate in Observability                                           | `wrangler rollback` (`docs/DEPLOY.md` §12). Migrations are additive, so the previous version keeps working against the new schema — **with the named exceptions §12 registers.** Migration `0002` renamed three columns, so a rollback past the phase-A release needs the schema moved back first; the register in §12 is what says which windows are safe |
 | 13  | Secret missing or rotated wrongly                 | the feature that needs it                 | first request throws a named error                                                                 | every secret is read through an accessor that fails loudly with the exact `wrangler secret put` command to run                                                                               |
 | 14  | Cron trigger missed or overlapping                | reminders late by one tick                | reminder lag in logs                                                                               | the reminder index is idempotent: the sweep enqueues by due-time prefix with deterministic ids, so a double sweep sends one email                                                            |
 
-**What rows 8 and 9 look like until phase A lands.** The mounted route is
-`src/routes/api/stripe/webhook.ts`, and `verifyStripeEvent()` in `src/server/billing/webhook.ts`
-reads the `stripe-signature` header, not `webhook-signature`. Verification goes through the
-Stripe SDK's `constructEventAsync()` on `Stripe.createSubtleCryptoProvider()`, because workerd
-has no Node `crypto`. Two of the properties those rows claim are already true today and survive
-the migration unchanged: the 300 s tolerance (`WEBHOOK_TOLERANCE_SECONDS` in
-`src/server/billing/stripe.ts`), and the KV claim on the event id before any state change
-(`webhookEventCacheKey()`, claimed in `processStripeEvent()` ahead of dispatch and deleted again
-if a handler throws, so the provider's retry is free to try once more).
+**The one property row 9 still owes, and where it lives.** §2.4 states the inline rule: nothing
+that calls a third party or writes more than one row happens inline. The mounted Polar handler
+keeps it — every branch makes at most one small D1 write, invalidates the plan-state key and hands
+the rest to `TASKS`. The exception is not in the webhook at all; it is `changePlan()` in
+`src/server/billing/checkout.ts`, which is a *request* path rather than a webhook one and calls
+`PATCH /v1/subscriptions/{id}` inline on purpose, so the billing screen is already correct when the
+customer is redirected back. That trade is deliberate and bounded: one provider call, one D1 write
+from the answer, one KV delete, no fan-out (§4).
 
-A third does **not** hold today, and phase A owes it rather than inherits it. §2.4 states the
-rule: nothing that calls a third party or writes more than one row happens inline. The mounted
-handler breaks it on one event. `checkout.session.completed` calls
-`runtime.stripe.subscriptions.retrieve()` inside the request — a deliberate choice, so the
-billing screen is already correct when the customer is redirected back — and writes D1 twice on
-that path, once through `attachCustomer()` and again through the `upsert()` inside `persist()`.
-Everything slower than those writes is already queued: every branch that persists a subscription
-record ends by handing a `billing.*` task to `TASKS` and answering immediately, and the other five
-event branches make at most one D1 write each — that half of the rule does hold. The two
-`checkout.session.completed` sub-paths that write only the customer id and stop enqueue nothing,
-having no plan change to follow up on. So read the inline discipline in §2.4 and row 9 as the
-shape phase A must build, not as a property to be preserved: the Polar handler has to fold that
-provider read into the queued task and land on a single inline write.
-
-What else changes in phase A is the signed string, the header it arrives in, and the provider
-whose retry policy row 8 quotes: ten attempts with exponential backoff is Polar's, not Stripe's.
-Do not read either row as a description of `src/server/billing/**` as it stands.
+Two properties rows 8 and 9 assert are verified offline and not in the vendor's sandbox: the 300 s
+tolerance and the KV claim on the event id are covered by
+`src/server/billing/__tests__/webhook.test.ts`, including a Standard Webhooks signature vector
+computed out of band so that both halves of the check are not our own implementation. That is the
+strongest evidence available without a credential, and `docs/DEPLOY.md` §9.11 is explicit that it
+is still not a green row.
 
 ### Numbers worth alerting on
 

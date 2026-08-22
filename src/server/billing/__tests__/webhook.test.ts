@@ -381,11 +381,11 @@ describe('redelivery idempotency', () => {
     })
 
     expect(h.store.writes).toHaveLength(1)
-    const row = h.store.rows.get(TEST_ORG_ID)
-    expect(row?.planId).toBe('crew')
-    expect(row?.seats).toBe(4)
-    expect(row?.status).toBe('active')
-    expect(row?.providerSubscriptionId).toBe(TEST_SUBSCRIPTION_ID)
+    const stored = await h.store.findByOrganization(TEST_ORG_ID)
+    expect(stored?.planId).toBe('crew')
+    expect(stored?.seats).toBe(4)
+    expect(stored?.status).toBe('active')
+    expect(stored?.providerSubscriptionId).toBe(TEST_SUBSCRIPTION_ID)
     expect(h.tasks.sent).toHaveLength(1)
   })
 
@@ -772,12 +772,12 @@ describe('the Polar event vocabulary', () => {
       ),
     )
 
-    const row = h.store.rows.get(TEST_ORG_ID)
-    expect(row?.planId).toBe('free')
-    expect(row?.status).toBe('canceled')
-    expect(row?.canceledAt?.toISOString()).toBe('2026-08-19T11:59:00.000Z')
+    const stored = await h.store.findByOrganization(TEST_ORG_ID)
+    expect(stored?.planId).toBe('free')
+    expect(stored?.status).toBe('canceled')
+    expect(stored?.canceledAt?.toISOString()).toBe('2026-08-19T11:59:00.000Z')
     // The customer survives so the next upgrade reuses the billing profile.
-    expect(row?.providerCustomerId).toBe(TEST_CUSTOMER_ID)
+    expect(stored?.providerCustomerId).toBe(TEST_CUSTOMER_ID)
     expect(h.tasks.sent).toEqual([
       {
         kind: 'billing.subscription.changed',
@@ -805,11 +805,77 @@ describe('the Polar event vocabulary', () => {
       ),
     )
 
-    const row = h.store.rows.get(TEST_ORG_ID)
-    expect(row?.planId).toBe('crew')
-    expect(row?.status).toBe('active')
-    expect(row?.cancelAtPeriodEnd).toBe(true)
+    const stored = await h.store.findByOrganization(TEST_ORG_ID)
+    expect(stored?.planId).toBe('crew')
+    expect(stored?.status).toBe('active')
+    expect(stored?.cancelAtPeriodEnd).toBe(true)
     expect(h.tasks.sent).toHaveLength(1)
+  })
+
+  it('files the schedule Polar reports, and clears it when Polar stops reporting it', async () => {
+    const h = harness({ record: subscriptionRecord() })
+
+    await handlePolarWebhook(
+      h.runtime,
+      await delivery(
+        subscriptionBody('subscription.updated', {
+          pending_update: {
+            applies_at: '2026-09-01T00:00:00Z',
+            product_id: TEST_PRODUCT_IDS.soloYearly,
+          },
+        }),
+        { webhookId: 'msg_scheduled' },
+      ),
+    )
+
+    const scheduled = await h.store.findByOrganization(TEST_ORG_ID)
+    // Nothing has moved yet: the customer is still on, and still paying for, Crew.
+    expect(scheduled?.planId).toBe('crew')
+    expect(scheduled?.pendingChange).toEqual({
+      planId: 'solo',
+      interval: 'yearly',
+      effectiveAt: new Date('2026-09-01T00:00:00.000Z'),
+    })
+
+    // Polar applied it, superseded it, or the customer cancelled it in the portal —
+    // every one of those arrives as a payload with no `pending_update` at all, and the
+    // row must stop promising a change nobody is going to make.
+    await handlePolarWebhook(
+      h.runtime,
+      await delivery(subscriptionBody('subscription.updated'), {
+        webhookId: 'msg_superseded',
+      }),
+    )
+
+    await expect(h.store.findByOrganization(TEST_ORG_ID)).resolves.toMatchObject({
+      pendingChange: null,
+    })
+  })
+
+  it('keeps no schedule against a subscription that has been revoked', async () => {
+    const h = harness({
+      record: subscriptionRecord({
+        pendingChange: {
+          planId: 'solo',
+          interval: 'yearly',
+          effectiveAt: new Date('2026-09-01T00:00:00.000Z'),
+        },
+      }),
+    })
+
+    await handlePolarWebhook(
+      h.runtime,
+      await delivery(subscriptionBody('subscription.revoked', { status: 'canceled' }), {
+        webhookId: 'msg_revoked_schedule',
+      }),
+    )
+
+    // A subscription that has ended schedules nothing, for the same reason it
+    // grandfathers nothing.
+    await expect(h.store.findByOrganization(TEST_ORG_ID)).resolves.toMatchObject({
+      planId: 'free',
+      pendingChange: null,
+    })
   })
 
   it('restores the scheduled cancellation on subscription.uncanceled', async () => {
@@ -842,9 +908,9 @@ describe('the Polar event vocabulary', () => {
       ),
     )
 
-    const row = h.store.rows.get(TEST_ORG_ID)
-    expect(row?.currentPeriodEnd?.toISOString()).toBe('2026-10-01T00:00:00.000Z')
-    expect(row?.planId).toBe('crew')
+    const stored = await h.store.findByOrganization(TEST_ORG_ID)
+    expect(stored?.currentPeriodEnd?.toISOString()).toBe('2026-10-01T00:00:00.000Z')
+    expect(stored?.planId).toBe('crew')
     // A renewal is not a change of plan: the receipt is `order.paid`.
     expect(h.tasks.sent).toHaveLength(0)
   })
@@ -859,9 +925,9 @@ describe('the Polar event vocabulary', () => {
       }),
     )
 
-    const row = h.store.rows.get(TEST_ORG_ID)
-    expect(row?.status).toBe('past_due')
-    expect(row?.planId).toBe('crew')
+    const stored = await h.store.findByOrganization(TEST_ORG_ID)
+    expect(stored?.status).toBe('past_due')
+    expect(stored?.planId).toBe('crew')
     expect(h.tasks.sent).toHaveLength(1)
   })
 
@@ -906,9 +972,9 @@ describe('the Polar event vocabulary', () => {
       }),
     )
 
-    const row = h.store.rows.get(TEST_ORG_ID)
-    expect(row?.planId).toBe('free')
-    expect(row?.status).toBe('canceled')
+    const stored = await h.store.findByOrganization(TEST_ORG_ID)
+    expect(stored?.planId).toBe('free')
+    expect(stored?.status).toBe('canceled')
     // Two deliveries, one real change, one notification.
     expect(h.tasks.sent).toHaveLength(1)
   })

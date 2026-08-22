@@ -22,6 +22,7 @@ import {
   INVOICE_RETRY_AFTER_MS,
   ORDERS_PATH,
   annualisedAmount,
+  billingHomeUrl,
   billingMetadata,
   buildCheckoutParams,
   changePlan,
@@ -255,6 +256,9 @@ describe('return urls', () => {
     expect(planChangedUrl(TEST_APP_URL)).toBe(
       'https://planned.travel/settings/billing?plan=changed',
     )
+    // Deliberately bare: the screen keys every alert off a search parameter, so the
+    // absence of one is the absence of a claim.
+    expect(billingHomeUrl(TEST_APP_URL)).toBe('https://planned.travel/settings/billing')
   })
 
   it('uses Polar’s own interpolation token, not another provider’s', () => {
@@ -986,6 +990,31 @@ describe('changePlan writes what Polar answered', () => {
     expect(harness.store.writes).toHaveLength(0)
     expect(harness.cache.entries.has(key)).toBe(true)
   })
+
+  it('says so, rather than announcing a change it did not make', async () => {
+    const harness = createHarness({ record: subscriptionRecord({ seats: 4 }) })
+
+    const redirect = await changePlan(harness.runtime, billingIdentity(), {
+      planId: 'crew',
+      interval: 'monthly',
+      seats: 4,
+    })
+
+    // `/settings/billing` raises its "Plan updated" alert off `?plan=changed` and
+    // nothing else, so the bare path is what stops a no-op claiming a change — and
+    // claiming, in the same sentence, that Polar invoiced a difference.
+    expect(redirect).toEqual({
+      url: billingHomeUrl(TEST_APP_URL),
+      surface: 'unchanged',
+    })
+    expect(redirect.url).not.toContain('plan=changed')
+    expect(
+      harness.logs.some((log) => log.message === 'billing.plan_change.applied'),
+    ).toBe(false)
+    expect(
+      harness.logs.some((log) => log.message === 'billing.plan_change.unchanged'),
+    ).toBe(true)
+  })
 })
 
 describe('pendingChangeFor', () => {
@@ -993,12 +1022,12 @@ describe('pendingChangeFor', () => {
 
   it('reads Polar\u2019s own schedule in preference to our arithmetic', () => {
     const pending = pendingChangeFor(
-      {
+      polarSubscription({
         pending_update: {
           applies_at: '2026-09-01T00:00:00Z',
           product_id: TEST_PRODUCT_IDS.soloYearly,
         },
-      },
+      }),
       'next_period',
       resolvePlanSelection({ planId: 'crew', interval: 'monthly', seats: 2 }),
       record,
@@ -1014,7 +1043,7 @@ describe('pendingChangeFor', () => {
   it('falls back to the end of the paid period for a deferred change', () => {
     expect(
       pendingChangeFor(
-        { pending_update: null },
+        polarSubscription({ pending_update: null }),
         'next_period',
         resolvePlanSelection({ planId: 'solo', interval: 'yearly' }),
         record,
@@ -1030,7 +1059,7 @@ describe('pendingChangeFor', () => {
     for (const proration of ['invoice', 'prorate'] as const) {
       expect(
         pendingChangeFor(
-          {},
+          polarSubscription(),
           proration,
           resolvePlanSelection({ planId: 'crew', interval: 'monthly', seats: 8 }),
           record,
@@ -1045,12 +1074,12 @@ describe('pendingChangeFor', () => {
 
     expect(
       pendingChangeFor(
-        {
+        polarSubscription({
           pending_update: {
             applies_at: 'not a date',
             product_id: TEST_PRODUCT_IDS.soloYearly,
           },
-        },
+        }),
         'invoice',
         selection,
         record,
@@ -1058,12 +1087,12 @@ describe('pendingChangeFor', () => {
     ).toBeNull()
     expect(
       pendingChangeFor(
-        {
+        polarSubscription({
           pending_update: {
             applies_at: '2026-09-01T00:00:00Z',
             product_id: 'a-product-we-do-not-sell',
           },
-        },
+        }),
         'invoice',
         selection,
         record,
@@ -1074,7 +1103,7 @@ describe('pendingChangeFor', () => {
   it('cannot date a deferred change on a subscription with no period end', () => {
     expect(
       pendingChangeFor(
-        {},
+        polarSubscription(),
         'next_period',
         resolvePlanSelection({ planId: 'solo', interval: 'yearly' }),
         subscriptionRecord({ currentPeriodEnd: null }),

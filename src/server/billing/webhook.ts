@@ -411,6 +411,13 @@ async function onSubscriptionEvent(
  * entitling status and raises `cancel_at_period_end`, and Polar's own field
  * documentation says so. Both therefore take the Free row, keeping the customer
  * so the next upgrade reuses the same billing profile.
+ *
+ * Either branch carries the payload's `pending_update` — `null` on the cancelled
+ * one, because a subscription that has ended schedules nothing. That is what makes
+ * this handler the reconciler for a scheduled change and not merely for a plan: the
+ * upsert below writes the whole row, so a schedule Polar has applied, superseded or
+ * cancelled is cleared by the same delivery that tells us about it, whether the
+ * customer asked for it here or in the hosted portal.
  */
 function recordForSubscription(
   runtime: BillingRuntime,

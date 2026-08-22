@@ -22,12 +22,13 @@ z których użytkownik planuje podróż.
    landingiem i cennikiem, a publiczna atlas map i publiczna strona pakietu są warunkiem sprzedaży.
 
 Do tego decyzja o zastąpieniu Stripe'a przez Polar.sh, warunek wstępny dla płatnych pakietów.
+Wykonana w Fazie A: dostawcą jest Polar, a po Stripie nie ma w `src/` ani jednego importu.
 
 ## Decyzje przyjęte
 
 | Obszar | Decyzja |
 |---|---|
-| Billing | Polar.sh **zastępuje** Stripe - subskrypcje i pakiety u jednego dostawcy |
+| Billing | Polar.sh **zastąpił** Stripe (Faza A) - subskrypcje i pakiety u jednego dostawcy |
 | Źródła danych | Scrapujemy wszystkie trzy serwisy; provenance zapisywana przy każdym rekordzie |
 | MCP | Własna implementacja JSON-RPC 2.0 / Streamable HTTP, bez nowych zależności |
 | Role i administracja | Plugin `admin` Better Auth + konsola platformy `/_app/console` |
@@ -55,8 +56,9 @@ polityki nie wymaga zmiany schematu - wystarczy wyłączyć adapter w `catalog_s
   `docs/SPEC.md` §3 zapisuje go jako wyjątek wąski i wymieniony z nazwy - reszta zestawu pozostaje
   zamrożona, a każda kolejna paczka to nadal finding, nie `pnpm add`. Instalacja należy do Fazy A;
   Faza 0 tylko odnotowuje wyjątek w kontrakcie.
-- Paczka `stripe` **zostaje** w `package.json` mimo usunięcia kodu, który jej używa. Usunięcie
-  wpisu łamie zamrożenie - agent zgłasza to jako finding, nie robi samodzielnie.
+- Paczka `stripe` **została usunięta w Fazie A**, jako wyjątek nazwany razem z dwiema paczkami
+  React Email - i to zamyka listę wyjątków. `grep -c stripe pnpm-lock.yaml` zwraca `0`. Reguła
+  bez zmian: każda inna paczka to finding, nigdy `pnpm add`.
 
 Podczas implementacji agent **weryfikuje kontrakty w dokumentacji** (Polar: nazwy zdarzeń webhooka
 i nagłówki podpisu; Firecrawl: kształt `formats`/`json`/`webhook`; Better Auth: opcje `admin()`),
@@ -65,10 +67,12 @@ trzech źródeł **przed** napisaniem adapterów.
 
 ---
 
-## Faza 0 - kontrakt dokumentów
+## Faza 0 - kontrakt dokumentów (wykonana)
 
 Ultrabuild czyta `docs/SPEC.md`, `DESIGN.md`, `ARCHITECTURE.md`, `DEPLOY.md` jako definicję
-gotowości. Kontrakt musi opisywać nowy stan, zanim ruszy budowanie.
+gotowości. Kontrakt musi opisywać nowy stan, zanim ruszy budowanie. Lista poniżej to zakres tej
+fazy, zapisany tak, jak go zlecono - wszystkie pozycje są zrobione, łącznie z wymianą `STRIPE_*`
+na `POLAR_*` w `.dev.vars.example`.
 
 - `docs/SPEC.md` - §3 `Billing: Polar.sh`; §5 role platformowe, nowe bindingi i cron; §6 nowe
   katalogi (`src/server/catalog/**`, `src/server/mcp/**`, `src/server/public/**`).
@@ -87,9 +91,14 @@ gotowości. Kontrakt musi opisywać nowy stan, zanim ruszy budowanie.
 
 ## Faza A - migracja billingu na Polar.sh
 
-Warunek wstępny Fazy G. **Stripe znika z repozytorium w tej fazie** - nie zostaje jako martwy kod
-„do sprzątnięcia później", bo późniejsze fazy budowałyby wtedy na mylnym założeniu, że jeszcze
+Warunek wstępny Fazy G. **Stripe zniknął z repozytorium w tej fazie** - nie został jako martwy
+kod „do sprzątnięcia później", bo późniejsze fazy budowałyby wtedy na mylnym założeniu, że jeszcze
 gdzieś żyje. Decyzja użytkownika z 22.08: jesteśmy na etapie build, więc zmieniamy wszystko naraz.
+
+**Status: kod napisany, matryca sandboxowa nieprzejdzona.** Sześć itemów wylądowało przez pięć
+rund; `grep -ril stripe src/` zwraca pustkę, a `docs/DEPLOY.md` §9.11 nadal ma osiem
+niezweryfikowanych wierszy, bo żadnej rundzie nie wydano poświadczeń do Polara. Zielony
+`pnpm test` mówi, co robi nasz handler, nie co robi Polar.
 
 **Zakres pełny** - lista poniżej była w pierwszej wersji planu niekompletna i audyt to wykazał:
 `src/server/billing/**`, `src/lib/plans.ts`, `src/routes/api/polar/**`,
@@ -128,68 +137,121 @@ cenę w EUR **i** USD, bo Polar wymaga obecności domyślnej waluty prezentacyjn
 a nasz katalog jest w USD. Kwoty są równe nominalnie (9 EUR = 9 USD), nie przeliczone kursem -
 **do potwierdzenia przed produkcją**.
 
-### Crew jest seat-based i to musi przetrwać migrację
+### Crew jest seat-based i przetrwał migrację
 
 Faza 0 przegapiła to w całości: słowo „seat" nie padło ani razu w SPEC, DEPLOY, CATALOG ani w tym
-planie, podczas gdy `src/lib/plans.ts:306` ma `seatBased: true`, `seatRange {min: 2, max: 10}`,
-`perSeat: true`, a `checkout.ts:251` wysyła `quantity: selection.seats` z `adjustable_quantity`.
-Polar odwzorowuje to niemal 1:1: `seats` / `min_seats` / `max_seats` w `POST /v1/checkouts/`.
-`clampSeats` i `seatRange` zostają bez zmian. Gdyby produkty powstały jako `fixed`, Crew po cichu
-policzyłby 7 USD za dziesięć osób - dlatego produkty utworzono jako `seat_based` od razu.
+planie, podczas gdy `src/lib/plans.ts` deklaruje dla Crew `seatBased: true`,
+`seatRange {min: 2, max: 10}` i `perSeat: true`.
 
-### Praca do wykonania
+**Jak to wygląda po migracji.** `resolvePlanSelection()` w `src/server/billing/checkout.ts` przepuszcza
+żądaną liczbę miejsc przez `clampSeats(plan, …)`, więc do Polara nie trafia wartość spoza zakresu
+planu - klient nie może wynegocjować jedenastego miejsca podmianą pola. Ciało `POST /v1/checkouts/`
+dostaje trzy klucze **tylko dla planu seat-based**:
 
-- `src/server/billing/stripe.ts` → **`polar.ts`**: cienki klient `fetch` (base URL wg `POLAR_SERVER`,
-  `Authorization: Bearer`, retry 2×, timeout 20 s) + `verifyWebhookSignature()` na WebCrypto.
-  Brak sekretu → `BillingConfigError`, jak dziś.
-- `checkout.ts` - `createCheckoutSession()` na `POST /v1/checkouts/` (`products` jako tablica UUID,
-  `external_customer_id` = `organizationId`, `seats` dla Crew), `createPortalSession()` na
-  `POST /v1/customer-sessions/`. Produkt **zawsze** rozwiązywany po stronie serwera z
-  `src/lib/plans.ts` - reguła zostaje.
-- `webhook.ts` - zdarzenia `subscription.created|active|updated|canceled|uncanceled|cycled|past_due|revoked|paused|resumed`,
-  `order.created|updated|paid|refunded`, `checkout.created|updated|expired`. Zachowaj architekturę:
-  weryfikacja podpisu → claim `event_id` w KV (idempotencja) → mały zapis do D1 inline → reszta na
-  `TASKS`. `subscription.cycled` jest sygnałem odnowienia.
-- `mapping.ts` - statusy Polara na `SUBSCRIPTION_STATUSES` **jeden do jednego**. Krotki nie ruszamy.
-- `types.ts`, `store.ts`, `schema.ts`, `repos/billing.ts`, `queue/types.ts` -
-  `stripeCustomerId` → `providerCustomerId`, `stripeSubscriptionId` → `providerSubscriptionId`,
-  `stripePriceId` → `providerProductId`, plus te same nazwy kolumn w tabeli `subscriptions`
-  i w dwóch indeksach.
-- **Migracja Drizzle**: `pnpm db:generate` po zmianie nazw kolumn (`schema.ts:269`). Tabela jest
-  pusta przed produkcją, więc rename bez backfillu. `drizzle-kit` pyta interaktywnie przy renamie -
-  sprawdź wygenerowany SQL, zanim go zacommitujesz.
-- `src/lib/plans.ts` - `PlanPrice.priceId` → `productId`, `PRICE_IDS` → `PRODUCT_IDS`
-  z `import.meta.env.VITE_POLAR_PRODUCT_*`.
-- `src/routes/api/stripe/webhook.ts` → `src/routes/api/polar/webhook.ts`, potem
-  `pnpm generate-routes`.
-- **Usunięcie Stripe'a**: `pnpm remove stripe`, zero importów wartościowych i typowych, zero
-  `STRIPE_*` w `.dev.vars.example` i w obu workflow'ach CI. Kryterium: `grep -ril stripe src/`
-  zwraca pustkę.
-- **React Email**: `pnpm add @react-email/components` (dependencies) + `pnpm add -D react-email`
-  (devDependencies), przepisanie `src/server/auth/email.ts` na komponenty i cztery szablony
-  billingowe - potwierdzenie subskrypcji, zmiana planu, nieudana płatność, zakup pakietu. Każdy
-  zachowuje wersję tekstową.
-- `src/routes/legal/terms.tsx` i `src/routes/pricing.tsx` - ta sama poprawka Merchant-of-Record co
-  w `billing.tsx`; wszystkie trzy ruszają zacommitowane baseline'y, więc jeden właściciel.
-- `src/server/billing/__tests__/**` - fake'i Polara zamiast Stripe'a; zachowaj przypadki:
-  redelivery, drift zegara, brak sekretu, dunning. **Dołóż zaszyty wektor Standard Webhooks**
-  (sekret + surowe ciało + trzy nagłówki + podpis policzony niezależnie): dziś obie strony testu
-  podpisu to SDK Stripe'a, a po migracji obie stają się naszym kodem i bez wektora dziewięć testów
-  przestaje czegokolwiek dowodzić.
+```
+seats:     selection.seats
+min_seats: seatRange.min
+max_seats: seatRange.max ?? seatRange.min
+```
 
-### Kształt rundy
+Plan płaski (Solo) nie niesie żadnego z nich - Polar dokumentuje je jako działające wyłącznie
+z cennikiem seat-based, a checkout Crew, który by je pominął, policzyłby dziesięć osób jak jedną.
+Zweryfikowane na żywym OpenAPI (`info.version` 2026-04): `CheckoutProductsCreate` ma dokładnie
+`seats`, `min_seats` i `max_seats`. Cztery produkty w sandboxie utworzono jako `seat_based`
+(volume, 2-10 miejsc) właśnie po to, żeby ta ścieżka miała po drugiej stronie cennik, który ją
+rozumie.
+
+Zmiana liczby miejsc na istniejącej subskrypcji to osobny wariant unii `SubscriptionUpdate`
+Polara: ciało niosące jednocześnie produkt i miejsca dopasowuje się do wariantu „seats" i gubi
+produkt. Dlatego zmiana planu, która **równocześnie** zmienia rozmiar zespołu, to dwa wywołania
+`PATCH /v1/subscriptions/{id}` - najpierw produkt - i dopiero druga odpowiedź opisuje oba ruchy.
+
+### Co powstało, item po itemie
 
 Sześć itemów, własność rysowana tak, żeby pliki, które muszą się zgadzać, miały jednego
-właściciela, a testy należały do właściciela kodu, który testują: **(1)** katalog produktów -
-`plans.ts` + oba workflow'y CI + `.dev.vars.example`; **(2)** `polar.ts`; **(3)** `checkout.ts` +
-`types.ts` + `mapping.ts` + testy; **(4)** `webhook.ts` + przeniesienie trasy + `harness.ts`
-i `webhook.test.ts`; **(5)** React Email + cztery szablony; **(6)** powierzchnie widoczne -
-`billing.tsx`, `pricing.tsx`, `terms.tsx`.
+właściciela, a testy należały do właściciela kodu, który testują. Poniżej to, co faktycznie
+wylądowało - plan zamieniony na opis stanu.
 
-Gate mechaniczny: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm generate-routes && git diff
---exit-code -- src/routeTree.gen.ts`, `pnpm build`, oraz Playwright **wyłącznie** z jawnym
-`PLAYWRIGHT_BASE_URL` na porcie z przedziału 3010-3020, który runda sama zbindowała i ubija po
-sobie. Weryfikacja wizualna w trakcie rundy przez Ego Lite, nie przez Playwrighta.
+| # | Item | Co jest na dysku |
+| --- | --- | --- |
+| 1 | katalog produktów | `src/lib/plans.ts` rozwiązuje cztery identyfikatory z `VITE_POLAR_PRODUCT_SOLO_MONTHLY`, `…_SOLO_YEARLY`, `…_CREW_MONTHLY`, `…_CREW_YEARLY`; `PlanPrice.priceId` → `productId`, `PRICE_IDS` → `PRODUCT_IDS`, `planForPriceId` → `planForProductId`. Oba workflow'y CI i `.dev.vars.example` niosą ten sam zestaw i żaden inny. Pierwsze testy, jakie ten plik kiedykolwiek miał. |
+| 2 | klient REST | `src/server/billing/polar.ts` - cienki `fetch` (base URL wg `POLAR_SERVER`, `Authorization: Bearer`, retry, timeout) plus weryfikacja podpisu Standard Webhooks na WebCrypto. Brak sekretu → `BillingConfigError` z dokładną komendą `wrangler secret put`. Zero `@polar-sh/sdk`. |
+| 3 | rdzeń zakupowy | `checkout.ts` (`POST /v1/checkouts/`, `POST /v1/customer-sessions/`, `PATCH /v1/subscriptions/{id}`), `types.ts`, `mapping.ts` - statusy Polara na `SUBSCRIPTION_STATUSES` jeden do jednego, krotka ośmiu wartości nietknięta. |
+| 4 | webhook | `src/routes/api/polar/webhook.ts` (trasa przeniesiona, `routeTree.gen.ts` **regenerowany**), `src/server/billing/webhook.ts` - podpis → claim `webhook-id` w KV → jeden mały zapis do D1 → unieważnienie klucza planu → reszta na `TASKS`. |
+| 5 | React Email | **dziewięć** szablonów w `src/server/email/templates/`, nie cztery: pięć istniejących maili konta przepisanych na komponenty (`verify-email`, `reset-password`, `email-changed`, `delete-account`, `organization-invitation`) plus cztery billingowe (`subscription-confirmed`, `plan-changed`, `payment-failed`, `pack-purchased`). Każdy ma wersję tekstową, wyprowadzaną z HTML-a przez `toPlainText()`, więc URL nie może istnieć w jednej wersji i zniknąć z drugiej. |
+| 6 | powierzchnie widoczne | `billing.tsx`, `pricing.tsx`, `terms.tsx` - poprawka Merchant-of-Record i alert `?plan=changed`, który rozróżnia zmianę natychmiastową od zaplanowanej na koniec okresu. |
+
+**Trzy rzeczy, których pierwotny plan nie przewidział, a które kosztowały rundy.** Wszystkie trzy
+są teraz zapisane jako reguła w `docs/SPEC.md` §8 („jedno pojęcie, jeden właściciel"):
+
+1. Item 1 przemianował `PlanPrice.priceId`, a jego pięciu konsumentów siedziało w itemach
+   odłożonych na później. Osiem błędów typów, 338 czerwonych testów, `MISSING_EXPORT` przy
+   buildzie.
+2. `pnpm remove stripe` wyjęło paczkę z manifestu, kiedy 31 plików w `src/` jeszcze ją
+   importowało. Zejście 31 → 12 → 0 zajęło dwie kolejne rundy.
+3. Napis „14-day free trial, no card needed" mieszka w `src/components/marketing/plans.tsx`,
+   którego nie miał żaden item - więc poprawka Merchant-of-Record ominęła go i napis nadal stoi
+   obok FAQ mówiącego, że Polar pobiera kartę.
+
+### `pendingChange` - zmiana planu, która jeszcze nie weszła
+
+Pojęcie pochodzi wprost od Polara. Przy `proration_behavior: "next_period"` (jedna z czterech
+wartości `SubscriptionProrationBehavior` - obok `invoice`, `prorate` i `reset`) subskrypcja **nie**
+zmienia się od razu: odpowiedź i każdy późniejszy odczyt niosą `pending_update`, obiekt
+`PendingSubscriptionUpdate` z polami `applies_at`, `product_id` i `seats`. To jest wiersz 3
+macierzy §9.11 i jedyny scenariusz, w którym uprawnienia mają przeżyć do końca opłaconego okresu.
+
+Ścieżka po naszej stronie, w kolejności:
+
+- `pendingChangeFor()` w `checkout.ts` czyta `pending_update` z **surowej** odpowiedzi PATCH-a
+  (schemat subskrypcji tego pola nie nazywa, więc parsuje się je osobno) i sprowadza do
+  `PendingPlanChange { planId, interval, effectiveAt }`. Gdy Polar nie odesłał `pending_update`,
+  a proracja była `next_period`, fallbackiem jest koniec bieżącego okresu.
+- `persistChangedSubscription()` zapisuje to razem z resztą wiersza, jednym upsertem.
+- Trwałość to trzy kolumny na `subscriptions`: `pending_plan`, `pending_interval`,
+  `pending_effective_at`. `pending_plan` niesie identyfikator **katalogowy** (`free|solo|crew`),
+  a nie zgrubny tier z kolumny `plan` (`free|starter|pro|business`) - to dwa różne słowniki i
+  pomylenie ich jest tu najłatwiejszym błędem.
+- `recordFromRow()` w `store.ts` ożywia trójkę, a niekompletną trójkę traktuje jako brak zmiany -
+  wiersz z ustawionym planem i pustą datą nie może wyprodukować `Invalid Date`, który potem
+  poleciałby do KV i do maila.
+- Kształt w cache'u ma własną wersję: klucz `billing:plan:<wersja>:<orgId>` niesie
+  `PLAN_STATE_CACHE_VERSION` z `entitlements.ts`, podbijaną przy każdej zmianie kształtu, więc
+  ciepły wpis w starym kształcie jest ignorowany, a nie źle odczytany.
+
+Dlaczego to w ogóle wymagało osobnej rundy: pole `pendingChange` istniało w typie i w cache'u,
+zanim istniała kolumna. Testy przechodziły, bo `FakeSubscriptionStore` trzymał cały rekord
+domenowy w mapie i oddawał go z powrotem - był **szerszy** niż prawdziwy magazyn, więc żaden
+mapper nie był ćwiczony i żadne gubione pole nie mogło się ujawnić. Reguła, która z tego zostaje:
+test double nie może być szerszy niż rzecz, którą zastępuje, a runda, która dokłada pole do
+rekordu, dokłada też przejście przez prawdziwą bazę (wzorzec z
+`src/server/billing/__tests__/limits.test.ts`, który jedzie po realnym SQLite).
+
+### Reguła portów - już nie prośba, tylko kod
+
+Cztery rundy z rzędu puściły Playwrighta na porcie spoza zakresu: dwa razy 3000, raz na serwer
+odpowiadający 500 na wszystko, raz na 3002 należący do innego worktree - i ta ostatnia runda
+sfotografowała aplikację z cudzej gałęzi, po czym zaliczyła dziewięć porażek jako dowód. Od Fazy A
+`playwright.config.ts` **rzuca wyjątkiem**, jeśli port rozwiązany z `PLAYWRIGHT_BASE_URL` nie mieści
+się w 3010-3020; furtką jest `PLAYWRIGHT_ALLOW_ANY_PORT=1`, a `CI` jest zwolnione. Komunikat błędu
+podaje jedyne poprawne wywołanie ręczne: `pnpm exec vite dev --port 3010 --strictPort` - nigdy
+`pnpm dev`, który ma na sztywno `--port 3000`.
+
+Dwie konsekwencje warte zapisania. Po pierwsze: `package.json` jest zamrożony, więc `pnpm dev`
+zostaje z portem 3000 i reguła może żyć tylko w tym pliku konfiguracyjnym oraz w dokumentach.
+Po drugie: `scripts/seed/seed.mjs` **nie może** mieć takiego strażnika - to klient HTTP, więc
+każdy origin odpowiadający na `/api/dev/seed` wygląda dla niego tak samo. Skrypt sonduje listę
+portów i bierze pierwszy, który odpowie, a zarezerwowany zakres jest współdzielony między
+worktree'ami; dlatego re-seed pod rundę wymaga `--url http://localhost:3010`, inaczej można po
+cichu przebudować cudzy workspace. Trzy rundy coraz bardziej stanowczej prozy nie zrobiły tego, co
+jedno mechaniczne ograniczenie zrobiło za pierwszym razem.
+
+### Gate mechaniczny
+
+`pnpm lint`, `pnpm typecheck`, `pnpm test`,
+`pnpm generate-routes && git diff --exit-code -- src/routeTree.gen.ts`, `pnpm build`, oraz
+Playwright **wyłącznie** z jawnym `PLAYWRIGHT_BASE_URL` na porcie z przedziału 3010-3020, który
+runda sama zbindowała i ubija po sobie.
 
 ### Akceptacja Fazy A - matryca w sandboxie Polara
 
@@ -502,6 +564,9 @@ równolegle. Faza F może iść równolegle z E, jeśli zdecydujesz się prowadz
 ```bash
 /ultrabuild Faza 0: zaktualizuj docs/SPEC.md, docs/DEPLOY.md i .dev.vars.example pod Polar.sh, role platformowe, katalog miejsc, MCP i treści publiczne; napisz docs/CATALOG.md i docs/ACCESS.md
 ```
+
+Poniższe wywołania są archiwum - Faza 0 i Faza A są już wykonane i ich wiersze zostawiono jako
+zapis tego, co zlecono.
 
 ```bash
 /ultrabuild Faza A: zastąp Stripe przez Polar.sh i usuń Stripe z repo całkowicie - REST przez fetch, webhook HMAC na WebCrypto, Crew jako seat_based, rename kolumn stripe_* na provider_* z migracją, pnpm remove stripe, pnpm add @react-email/components i -D react-email z czterema szablonami billingowymi. Pracuj wg docs/PACKS-PLAN.md §Faza A - produkty w sandboxie już istnieją, ich id są w .env.local

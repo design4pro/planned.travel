@@ -39,10 +39,10 @@ import {
   updateDay,
   updateTripMember,
 } from '#/server/repos'
+import { minutesBeforeAnchor } from './dataset'
 import type { TenantScope } from '#/server/repos'
 import type { PersonKey, SeedSplit, SeedTrip } from './types'
 
-const MS_PER_MINUTE = 60_000
 
 /** Row counts produced by one trip, used for the seed report and the verification query. */
 export interface TripCounts {
@@ -78,8 +78,6 @@ export interface TripApplyContext {
   readonly categoryIds: ReadonlyMap<string, string>
   /** Colour each traveller is drawn in, from the workspace people list. */
   readonly colours: ReadonlyMap<PersonKey, string>
-  /** Wall-clock instant the seed started, so relative timestamps are consistent across the run. */
-  readonly now: Date
 }
 
 /** Scope for a person, falling back to the owner when a dataset key is unknown. */
@@ -89,10 +87,6 @@ function scopeFor(context: TripApplyContext, person: PersonKey): TenantScope {
 
 function userIdFor(context: TripApplyContext, person: PersonKey): string {
   return scopeFor(context, person).ctx.userId
-}
-
-function instant(now: Date, minutesAgo: number): Date {
-  return new Date(now.getTime() - minutesAgo * MS_PER_MINUTE)
 }
 
 /** Maps dataset split rows onto the participant shape `createExpense` validates. */
@@ -467,7 +461,7 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
   let reactions = 0
   for (const message of trip.messages ?? []) {
     const authorScope = scopeFor(context, message.author)
-    const createdAt = instant(context.now, message.minutesAgo)
+    const createdAt = minutesBeforeAnchor(message.minutesAgo)
     // `postMessage` cannot backdate a row, and a chat where every bubble shares one timestamp does not
     // read as a conversation — so the repository's insert is used directly, still tenant-scoped.
     const row = await collabMessagesRepository.insert(authorScope, {

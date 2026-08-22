@@ -124,6 +124,16 @@ const geo = () => ({ lat: real('lat'), lng: real('lng') })
  * ---------------------------------------------------------------------------------------------- */
 
 export const ORGANIZATION_PLANS = ['free', 'starter', 'pro', 'business'] as const
+/**
+ * The plans we *sell*, which is a different vocabulary from the coarse tier above:
+ * `plan` is what the quota guards read, these are what a customer is told they are on.
+ * Mirrors `PLAN_IDS` in `src/lib/plans.ts`, which this file cannot import because that
+ * module reads `import.meta.env` at load time and `drizzle-kit generate` runs it under
+ * plain Node. The two tuples are held in step by a test rather than by an import.
+ */
+export const PLAN_CATALOGUE_IDS = ['free', 'solo', 'crew'] as const
+/** Mirrors `BILLING_INTERVALS` in `src/lib/plans.ts`, on the same terms. */
+export const BILLING_INTERVALS = ['monthly', 'yearly'] as const
 export const SUBSCRIPTION_STATUSES = [
   'trialing',
   'active',
@@ -290,6 +300,25 @@ export const subscriptions = sqliteTable(
     quotaOverrides: text('quota_overrides', { mode: 'json' }).$type<QuotaOverrides>(),
     seatLimit: integer('seat_limit').notNull().default(10),
     storageLimitBytes: integer('storage_limit_bytes').notNull().default(1_073_741_824),
+    /**
+     * A plan change the provider has accepted but has not applied yet — an upgrade
+     * lands at once, a downgrade waits for the period the customer has paid for to
+     * end. All three are null together or set together; a partial triple is read as
+     * no scheduled change, because a change we cannot date is one we cannot describe.
+     *
+     * `pending_plan` holds a **catalogue** plan id (`PLAN_CATALOGUE_IDS` —
+     * `free`/`solo`/`crew`), a different vocabulary from the coarse `plan` tier column
+     * above. They carry no CHECK constraint, unlike every other enum column in this
+     * file, and the exception is deliberate: SQLite cannot attach a constraint to a
+     * live table, so drizzle-kit answers one with a `__new_subscriptions` recreate that
+     * drops and rebuilds the table — which on D1 would run without the
+     * `PRAGMA foreign_keys=OFF` it emits, and would take `subscriptions_status_chk`
+     * with it. The value tuples above are enforced by `upsertSubscriptionInput` in
+     * `src/server/repos/billing.ts`, which is the only way a row is ever written.
+     */
+    pendingPlan: text('pending_plan'),
+    pendingInterval: text('pending_interval'),
+    pendingEffectiveAt: integer('pending_effective_at', { mode: 'timestamp_ms' }),
     ...timestamps(),
   },
   (t) => [

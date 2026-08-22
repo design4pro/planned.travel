@@ -24,6 +24,7 @@ import {
   organizationIdFromMetadata,
   organizationIdFromOrder,
   organizationIdFromSubscription,
+  pendingChangeFromPolar,
   polarOrderSchema,
   polarSubscriptionSchema,
   resolveSubscriptionPlan,
@@ -245,6 +246,7 @@ describe('subscriptionRecordFromPolar', () => {
       cancelAtPeriodEnd: false,
       trialEndsAt: null,
       canceledAt: null,
+      pendingChange: null,
       ceilings: ceilingsForPlan('crew', 4),
     })
   })
@@ -282,6 +284,53 @@ describe('subscriptionRecordFromPolar', () => {
     const record = subscriptionRecordFromPolar(polarSubscription({ seats: 9 }))
 
     expect(record?.ceilings).toEqual(ceilingsForPlan('crew', 9))
+  })
+
+  it('carries the schedule Polar has accepted but not applied', () => {
+    const record = subscriptionRecordFromPolar(
+      polarSubscription({
+        pending_update: {
+          applies_at: '2026-09-01T00:00:00Z',
+          product_id: TEST_PRODUCT_IDS.soloYearly,
+        },
+      }),
+    )
+
+    // The record still names the plan in force. Only `pendingChange` describes what
+    // it becomes, which is the whole point of the distinction.
+    expect(record?.planId).toBe('crew')
+    expect(record?.pendingChange).toEqual({
+      planId: 'solo',
+      interval: 'yearly',
+      effectiveAt: new Date('2026-09-01T00:00:00.000Z'),
+    })
+  })
+
+  it('reports no schedule when Polar sends none, so the webhook clears one', () => {
+    expect(subscriptionRecordFromPolar(polarSubscription())?.pendingChange).toBeNull()
+    expect(
+      subscriptionRecordFromPolar(polarSubscription({ pending_update: null }))
+        ?.pendingChange,
+    ).toBeNull()
+  })
+})
+
+describe('pendingChangeFromPolar', () => {
+  it('refuses a schedule it cannot name or date', () => {
+    expect(pendingChangeFromPolar(null)).toBeNull()
+    expect(pendingChangeFromPolar(undefined)).toBeNull()
+    expect(
+      pendingChangeFromPolar({
+        applies_at: '2026-09-01T00:00:00Z',
+        product_id: 'a-product-we-do-not-sell',
+      }),
+    ).toBeNull()
+    expect(
+      pendingChangeFromPolar({
+        applies_at: 'the first of next month',
+        product_id: TEST_PRODUCT_IDS.soloYearly,
+      }),
+    ).toBeNull()
   })
 })
 
@@ -386,12 +435,14 @@ describe('the ported surface', () => {
         'organizationIdFromMetadata',
         'organizationIdFromOrder',
         'organizationIdFromSubscription',
+        'pendingChangeFromPolar',
         'polarCheckoutSchema',
         'polarCustomerSessionSchema',
         'polarMetadataSchema',
         'polarOrderInvoiceSchema',
         'polarOrderListSchema',
         'polarOrderSchema',
+        'polarPendingUpdateSchema',
         'polarSubscriptionSchema',
         'resolveSubscriptionPlan',
         'subscriptionIdFromOrder',

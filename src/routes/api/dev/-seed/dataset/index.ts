@@ -28,6 +28,18 @@ export {
   visitedRegions,
 } from './workspace'
 
+export {
+  SEED_ANCHOR_DAY,
+  SEED_ANCHOR_INSTANT,
+  SEED_ANCHOR_YEAR,
+  anchorYearDay,
+  day,
+  daysFromAnchor,
+  historic,
+  instantOn,
+  minutesBeforeAnchor,
+} from './anchor'
+
 export { flagshipTrip } from './flagship'
 export { dolomitesTrip, lisbonTrip, marrakechTrip, patagoniaTrip } from './trips'
 
@@ -36,9 +48,13 @@ export const trips: ReadonlyArray<SeedTrip> = [flagshipTrip, ...supportingTrips]
 
 /**
  * Bumped whenever the dataset changes in a way that should re-seed a workspace that already carries
- * the marker. The applier stores it in `app_settings` under `demo.seed`.
+ * the marker. The applier stores it in `app_settings` under `demo.seed`, alongside the anchor the
+ * rows were written against.
+ *
+ * 3 — every date became an offset from `SEED_ANCHOR_DAY` and the applier stopped reading the wall
+ * clock, so the rows a workspace holds no longer depend on the day it was seeded.
  */
-export const DATASET_VERSION = 2
+export const DATASET_VERSION = 3
 
 /** Workspace defaults the demo assumes: sterling, London, Monday weeks. */
 export const organizationSettings = {

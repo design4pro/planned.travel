@@ -28,12 +28,12 @@ import {
   clampSeats,
   isEntitlingStatus,
   planById,
-  planForProductId,
   requirePrice,
 } from '#/lib/plans'
 import { invalidateEntitlements } from './entitlements'
 import {
   organizationIdFromOrder,
+  pendingChangeFromPolar,
   polarCheckoutSchema,
   polarCustomerSessionSchema,
   polarOrderInvoiceSchema,
@@ -106,10 +106,16 @@ export type OrderInvoiceInput = z.infer<typeof orderInvoiceInput>
 export interface BillingRedirect {
   readonly url: string
   /**
-   * Which surface the customer is going to, for analytics and copy. `applied` is
-   * a change we completed server-side — the URL is our own billing screen.
+   * Which surface the customer is going to, for analytics and copy.
+   *
+   * `applied` is a change we completed server-side and `unchanged` is a request that
+   * matched the subscription already in force, so nothing was patched and nothing was
+   * billed. Both land on our own billing screen; only `applied` carries the
+   * `?plan=changed` marker that raises the "Plan updated" alert, because telling a
+   * customer their plan changed when we sent no request at all is the same class of
+   * untruth as telling them we invoiced a difference we deferred.
    */
-  readonly surface: 'checkout' | 'portal' | 'applied'
+  readonly surface: 'checkout' | 'portal' | 'applied' | 'unchanged'
 }
 
 export interface PlanSelection {
@@ -165,6 +171,16 @@ export function portalReturnUrl(appUrl: string): string {
 /** Where a change we applied ourselves sends the browser. */
 export function planChangedUrl(appUrl: string): string {
   return `${appUrl}/settings/billing?plan=changed`
+}
+
+/**
+ * The billing screen with nothing to announce — where a request that matched the
+ * live subscription sends the browser. Deliberately the bare path: the screen keys
+ * every alert off a search parameter, so the absence of one *is* the absence of a
+ * claim.
+ */
+export function billingHomeUrl(appUrl: string): string {
+  return `${appUrl}/settings/billing`
 }
 
 /* -------------------------------------------------------------- idempotency */
@@ -494,41 +510,14 @@ export function prorationFor(
   return 'prorate'
 }
 
-/**
- * `pending_update` on a Polar subscription: the change it will become at the start
- * of the next period, and when.
- *
- * Declared here rather than folded into `polarSubscriptionSchema` because that
- * schema and its record mapper belong to the webhook path, which has no column to
- * put a scheduled change in yet. A `z.object()` strips unknown keys in Zod 4, so
- * reading `pending_update` off the parsed subscription would silently see
- * `undefined` — the raw response is parsed a second time, against exactly the one
- * field we want.
- */
-const polarPendingUpdateSchema = z.object({
-  /** ISO-8601. The start of the next period, as Polar computes it. */
-  applies_at: z.string().min(1),
-  product_id: z.string().min(1),
-})
-
-const polarPendingUpdateEnvelope = z.object({
-  pending_update: polarPendingUpdateSchema.nullish(),
-})
-
-/** One `PATCH /v1/subscriptions/{id}`, kept raw as well as parsed. */
-interface PatchedSubscription {
-  /** Untouched, so `pending_update` survives the schema that does not name it. */
-  readonly raw: unknown
-  readonly subscription: PolarSubscription
-}
-
+/** One `PATCH /v1/subscriptions/{id}`. */
 async function patchSubscription(
   runtime: BillingRuntime,
   path: string,
   body: unknown,
-): Promise<PatchedSubscription> {
+): Promise<PolarSubscription> {
   const raw = await runtime.polar.request({ method: 'PATCH', path, body })
-  return { raw, subscription: polarSubscriptionSchema.parse(raw) }
+  return polarSubscriptionSchema.parse(raw)
 }
 
 /**
@@ -536,32 +525,24 @@ async function patchSubscription(
  *
  * Polar's own answer comes first: `pending_update` names the product and the instant,
  * and it is the only source that stays right when the API disagrees with our local
- * arithmetic. The `next_period` branch below is the fallback for a response that
- * carries no `pending_update` — a deferred change is, by definition, the one the
- * customer just asked for, landing when the period they have paid for ends. An
- * immediate change schedules nothing and returns `null`, which is also what
- * supersedes a pending change already on the subscription.
+ * arithmetic. It is read straight off the parsed subscription, because
+ * `polarSubscriptionSchema` now names the field: the raw response is not parsed a
+ * second time here, or anywhere.
+ *
+ * The `next_period` branch below is the fallback for a response that carries no
+ * usable `pending_update` — a deferred change is, by definition, the one the customer
+ * just asked for, landing when the period they have paid for ends. An immediate change
+ * schedules nothing and returns `null`, which is also what supersedes a pending change
+ * already on the subscription.
  */
 export function pendingChangeFor(
-  raw: unknown,
+  applied: PolarSubscription,
   proration: ProrationBehavior,
   selection: PlanSelection,
   current: SubscriptionRecord,
 ): PendingPlanChange | null {
-  const envelope = polarPendingUpdateEnvelope.safeParse(raw)
-  const update = envelope.success ? (envelope.data.pending_update ?? null) : null
-
-  if (update !== null) {
-    const match = planForProductId(update.product_id)
-    const appliesAt = new Date(update.applies_at)
-    if (match !== null && !Number.isNaN(appliesAt.getTime())) {
-      return {
-        planId: match.plan.id,
-        interval: match.interval,
-        effectiveAt: appliesAt,
-      }
-    }
-  }
+  const scheduled = pendingChangeFromPolar(applied.pending_update)
+  if (scheduled !== null) return scheduled
 
   if (proration !== 'next_period') return null
   if (current.currentPeriodEnd === null) return null
@@ -587,10 +568,10 @@ export function pendingChangeFor(
 async function persistChangedSubscription(
   runtime: BillingRuntime,
   organizationId: string,
-  applied: PatchedSubscription,
+  applied: PolarSubscription,
   pendingChange: PendingPlanChange | null,
 ): Promise<void> {
-  const mapped = subscriptionRecordFromPolar(applied.subscription, {
+  const mapped = subscriptionRecordFromPolar(applied, {
     fallbackOrganizationId: organizationId,
   })
 
@@ -600,8 +581,8 @@ async function persistChangedSubscription(
     // the eviction below still runs and the webhook still reconciles.
     runtime.logger.warn('billing.plan_change.unmapped', {
       organizationId,
-      subscriptionId: applied.subscription.id,
-      productId: applied.subscription.product_id,
+      subscriptionId: applied.id,
+      productId: applied.product_id,
     })
     return
   }
@@ -676,45 +657,50 @@ export async function changePlan(
   const productChanged = record.providerProductId !== selection.price.productId
   const seatsChanged =
     selection.plan.seatBased && record.seats !== selection.seats
-  const changed = productChanged || seatsChanged
+
+  if (!productChanged && !seatsChanged) {
+    // The selection already describes the live subscription, so no request was made,
+    // no money moved and there is nothing to invalidate. Saying "applied" here is what
+    // let `?plan=changed` raise "Plan updated" over a change that never happened.
+    runtime.logger.info('billing.plan_change.unchanged', {
+      organizationId: identity.organizationId,
+      planId: record.planId,
+      interval: selection.interval,
+      seats: selection.seats,
+    })
+    return { url: billingHomeUrl(runtime.appUrl), surface: 'unchanged' }
+  }
 
   let pendingChange: PendingPlanChange | null = null
 
-  if (changed) {
-    try {
-      let applied: PatchedSubscription | null = null
+  try {
+    let applied: PolarSubscription | null = null
 
-      if (productChanged) {
-        applied = await patchSubscription(runtime, path, {
-          product_id: selection.price.productId,
-          proration_behavior: proration,
-        })
-      }
-
-      if (seatsChanged) {
-        applied = await patchSubscription(runtime, path, {
-          seats: selection.seats,
-          proration_behavior: proration,
-        })
-      }
-
-      if (applied !== null) {
-        pendingChange = pendingChangeFor(
-          applied.raw,
-          proration,
-          selection,
-          record,
-        )
-        await persistChangedSubscription(
-          runtime,
-          identity.organizationId,
-          applied,
-          pendingChange,
-        )
-      }
-    } finally {
-      await evictPlanState(runtime, identity.organizationId)
+    if (productChanged) {
+      applied = await patchSubscription(runtime, path, {
+        product_id: selection.price.productId,
+        proration_behavior: proration,
+      })
     }
+
+    if (seatsChanged) {
+      applied = await patchSubscription(runtime, path, {
+        seats: selection.seats,
+        proration_behavior: proration,
+      })
+    }
+
+    if (applied !== null) {
+      pendingChange = pendingChangeFor(applied, proration, selection, record)
+      await persistChangedSubscription(
+        runtime,
+        identity.organizationId,
+        applied,
+        pendingChange,
+      )
+    }
+  } finally {
+    await evictPlanState(runtime, identity.organizationId)
   }
 
   runtime.logger.info('billing.plan_change.applied', {
@@ -724,7 +710,6 @@ export async function changePlan(
     interval: selection.interval,
     seats: selection.seats,
     proration,
-    changed,
     scheduled: pendingChange !== null,
   })
 

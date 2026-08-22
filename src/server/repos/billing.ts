@@ -15,7 +15,9 @@
 import { and, asc, desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
+  BILLING_INTERVALS,
   ORGANIZATION_PLANS,
+  PLAN_CATALOGUE_IDS,
   SUBSCRIPTION_STATUSES,
   USAGE_METRICS,
   subscriptions,
@@ -39,6 +41,8 @@ export const usageRecordsRepository = createTenantRepository(usageRecords, 'usag
 const planSchema = z.enum(ORGANIZATION_PLANS)
 const statusSchema = z.enum(SUBSCRIPTION_STATUSES)
 const metricSchema = z.enum(USAGE_METRICS)
+const pendingPlanSchema = z.enum(PLAN_CATALOGUE_IDS)
+const pendingIntervalSchema = z.enum(BILLING_INTERVALS)
 
 /**
  * Overrides are sparse by definition — a metric with no entry falls back to the plan.
@@ -68,6 +72,17 @@ export const upsertSubscriptionInput = z.object({
   quotaOverrides: quotaOverridesSchema.nullish(),
   seatLimit: nonNegativeIntSchema.max(100_000).optional(),
   storageLimitBytes: nonNegativeIntSchema.optional(),
+  /**
+   * The plan change the provider has scheduled but not applied. The three move as one
+   * triple and they are the only enum columns on this table with no CHECK constraint
+   * behind them — SQLite cannot add one to a live table without rebuilding it — so
+   * these two `z.enum()`s are the whole enforcement, which is why they are spelled out
+   * rather than left as free text. `pendingPlan` is a *catalogue* id and not the coarse
+   * `plan` tier above it.
+   */
+  pendingPlan: pendingPlanSchema.nullish(),
+  pendingInterval: pendingIntervalSchema.nullish(),
+  pendingEffectiveAt: instantSchema.nullish(),
 })
 export type UpsertSubscriptionInput = z.infer<typeof upsertSubscriptionInput>
 

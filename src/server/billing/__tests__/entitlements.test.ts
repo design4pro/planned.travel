@@ -466,10 +466,7 @@ describe('plan-state caching', () => {
     expect(harness.cache.entries.has(planStateCacheKey(TEST_ORG_ID))).toBe(
       false,
     )
-    harness.store.rows.set(
-      TEST_ORG_ID,
-      subscriptionRecord({ planId: 'solo', seats: 1 }),
-    )
+    harness.store.seed(subscriptionRecord({ planId: 'solo', seats: 1 }))
     await expect(loadPlanState(ctx)).resolves.toMatchObject({ planId: 'solo' })
   })
 
