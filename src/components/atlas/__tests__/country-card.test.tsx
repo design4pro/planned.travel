@@ -9,12 +9,22 @@ import {
 } from '../country-card'
 import { countryFactColumns } from '#/lib/atlas/country-facts'
 
+/**
+ * A country with an itinerary and no separate visit record behind it.
+ *
+ * The visit columns are stated rather than omitted because the card requires
+ * all eight: a host that can only supply four of them is the host that printed
+ * four dashes over every hand-marked country, and the type now refuses it.
+ */
 const FRANCE = {
   countryCode: 'FR',
   tripCount: 3,
   placeCount: 12,
   firstTripOn: '2019-07-14',
   lastTripOn: '2026-09-06',
+  visitCount: 0,
+  firstVisitedOn: null,
+  lastVisitedOn: null,
 } as const
 
 const ALGERIA = {
@@ -23,6 +33,9 @@ const ALGERIA = {
   placeCount: 0,
   firstTripOn: null,
   lastTripOn: null,
+  visitCount: 0,
+  firstVisitedOn: null,
+  lastVisitedOn: null,
 } as const
 
 /**
@@ -405,6 +418,13 @@ describe('CountryCard', () => {
     })
   })
 
+  /** The glyph at the end of one card's name line. */
+  const markOf = (code: string): Element => {
+    const node = cardFor(code).querySelector('[data-part="record"]')
+    if (node === null) throw new Error(`no record mark for ${code}`)
+    return node
+  }
+
   /**
    * The card is anchored to a country and the pointer crosses borders, so the
    * three states have to measure the same or the surface twitches under the
@@ -428,6 +448,75 @@ describe('CountryCard', () => {
       expect(geometry('FR')).toHaveLength(4)
       expect(geometry('TH')).toEqual(geometry('FR'))
       expect(geometry('DZ')).toEqual(geometry('FR'))
+    })
+
+    /**
+     * The header is where the three states differ most — one glyph out of
+     * three — so it is the line most likely to start moving the card. One mark
+     * per card, at one size, on one class, is what keeps that line still while
+     * the pointer crosses a border.
+     */
+    it('gives every state the same header, carrying one mark of one size', () => {
+      render(<CountryCard {...FRANCE} />)
+      render(<CountryCard {...THAILAND} />)
+      render(<CountryCard {...ALGERIA} />)
+
+      const header = (code: string) => {
+        const node = cardFor(code).querySelector('[data-part="header"]')
+        if (!(node instanceof HTMLElement)) throw new Error(`no header ${code}`)
+        return node
+      }
+      expect(header('TH').className).toBe(header('FR').className)
+      expect(header('DZ').className).toBe(header('FR').className)
+
+      for (const code of ['FR', 'TH', 'DZ']) {
+        expect(
+          header(code).querySelectorAll('[data-part="record"]'),
+        ).toHaveLength(1)
+        const mark = markOf(code)
+        expect(mark.getAttribute('width')).toBe('16')
+        expect(mark.getAttribute('height')).toBe('16')
+        expect(mark.getAttribute('class')).toContain('shrink-0')
+      }
+    })
+  })
+
+  /**
+   * The card is read in a glance and replaced by the next country a second
+   * later, so which of the three records it is speaking from has to be legible
+   * before a caption is. The glyph is that answer; the tone separates a card
+   * with a record from a card without one.
+   */
+  describe('the record mark', () => {
+    it('gives the three states three different shapes', () => {
+      render(<CountryCard {...FRANCE} />)
+      render(<CountryCard {...THAILAND} />)
+      render(<CountryCard {...ALGERIA} />)
+
+      const shape = (code: string) => markOf(code).innerHTML
+      expect(shape('TH')).not.toBe(shape('FR'))
+      expect(shape('DZ')).not.toBe(shape('FR'))
+      expect(shape('DZ')).not.toBe(shape('TH'))
+    })
+
+    it('separates a card with a record from a card with none by tone', () => {
+      render(<CountryCard {...FRANCE} />)
+      render(<CountryCard {...THAILAND} />)
+      render(<CountryCard {...ALGERIA} />)
+
+      expect(markOf('FR').getAttribute('class')).toContain('text-brand')
+      expect(markOf('TH').getAttribute('class')).toContain('text-brand')
+      expect(markOf('DZ').getAttribute('class')).toContain('text-ink-3')
+    })
+
+    /**
+     * It repeats the captions, so announcing it would make a reader hear the
+     * state twice — once as a shape they cannot see and once in words.
+     */
+    it('says nothing a reader has not already been told', () => {
+      render(<CountryCard {...THAILAND} />)
+      expect(markOf('TH').getAttribute('aria-hidden')).toBe('true')
+      expect(markOf('TH').textContent).toBe('')
     })
 
     it('keeps every label and every value on one line box', () => {

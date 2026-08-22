@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { TriangleAlert } from 'lucide-react'
+import { CircleDashed, MapPin, Route, TriangleAlert } from 'lucide-react'
 
 import {
   Button,
@@ -17,7 +17,10 @@ import {
 import { countryName } from '#/lib/atlas/country-names'
 import { countryFlag } from '#/lib/format'
 
-import type { CountryFactMonth } from '#/lib/atlas/country-facts'
+import type {
+  CountryFactMonth,
+  CountryFactSource,
+} from '#/lib/atlas/country-facts'
 
 /**
  * One country, told on the map itself.
@@ -74,8 +77,11 @@ import type { CountryFactMonth } from '#/lib/atlas/country-facts'
  * just filled in. A country with nothing recorded at all prints `0` twice and
  * an em dash for each month, the whole grid set back an ink tier so the
  * emptiness is legible before any label is read. That is the distinction the
- * eye makes first — a card that speaks against a card gone quiet — and the
- * captions make the second one, between a journey and a visit. The dash is
+ * eye makes first — a card that speaks against a card gone quiet. The second
+ * one, between a journey and a visit, is made twice over: by the captions, and
+ * by the record mark at the end of the name line, which is a route, a pin or a
+ * dashed ring. Under a moving pointer a caption is a shape rather than a
+ * sentence, and the glyph answers at that speed. The dash is
  * `aria-hidden` and paired with words, because a reader hearing "dash" cannot
  * tell a missing date from a broken one. All three are the same grid, the same
  * rules and the same type ladder, so the card's height never changes as the
@@ -85,9 +91,11 @@ import type { CountryFactMonth } from '#/lib/atlas/country-facts'
  * **Both records are passed or the card lies.** The trip columns alone cannot
  * tell a country nobody has recorded from a country visited three times, and a
  * host that hands over only those turns every manually marked country into the
- * empty state. `countryFactColumns()` in `#/lib/atlas/country-facts` projects a
- * whole atlas record into exactly these props; a host holding one should spread
- * it rather than pick fields.
+ * empty state — which is exactly what shipped, for three rounds, while the
+ * visit columns were optional and nothing checked them. They are required
+ * props, so that host no longer compiles. `countryFactColumns()` in
+ * `#/lib/atlas/country-facts` projects a whole atlas record into exactly these
+ * props; a host holding one should spread it rather than pick fields.
  *
  * **Every state this surface can be in ships here.** Rest and the zero state
  * are `CountryCard`; the name-only pill is its `compact` variant; loading is
@@ -186,6 +194,15 @@ const layout = {
   /** Decoration beside the name, never the label — see the `<span>` below. */
   flag: 'shrink-0 text-label leading-none',
   /**
+   * The record mark, pushed to the far end of the header line.
+   *
+   * `ml-auto` rather than a spacer, and `shrink-0` so a long name truncates
+   * against it instead of squeezing it away. A 16px glyph inside a 25px name
+   * line adds no height, which is what lets the mark exist at all: the card is
+   * anchored to a country and its height is a promise to whatever anchored it.
+   */
+  mark: 'ml-auto shrink-0',
+  /**
    * `truncate` rather than a wrap: the name is the card's identity line and the
    * card's height is a promise to whatever anchored it. "South Georgia & South
    * Sandwich Islands" shortens itself instead of taking a second line and
@@ -232,6 +249,49 @@ const layout = {
   monthAbsent:
     'mt-1 block truncate text-label font-semibold tabular-nums text-ink-3',
 } as const
+
+/**
+ * Which of the three records the card is speaking from, said as a shape.
+ *
+ * The captions already say it in words — `Trips` against `Visits`, `First trip`
+ * against `First visit` — and words are what a reader who is *reading* the card
+ * gets. But this card exists under a moving pointer: it appears, it is glanced
+ * at, and it is replaced by the next country a second later, and at that speed
+ * an 11px caption is a shape rather than a sentence. So the state is also
+ * carried by a glyph at the end of the name line, where the eye already is: a
+ * route for a country with an itinerary behind it, a pin for one the traveller
+ * marked by hand, and a dashed ring for one nothing has ever been written
+ * about.
+ *
+ * It is redundant on purpose. Nothing here is the only carrier of anything —
+ * the glyph is `aria-hidden`, the captions are the accessible reading, and the
+ * two tones say only "there is a record here" against "there is not", which the
+ * receded figures below already say. A reader who cannot resolve a 16px glyph
+ * loses nothing; a reader glancing across a map gains the answer half a beat
+ * earlier.
+ *
+ * `--color-brand` on the card face measures 5.36:1 light and 7.31:1 dark, and
+ * `--color-ink-3` 7.02:1 and 7.18:1 — every one of them past the 3:1 a
+ * non-text graphic owes, several times over.
+ */
+const RECORD_MARKS = {
+  trips: { Glyph: Route, tone: 'text-brand' },
+  visits: { Glyph: MapPin, tone: 'text-brand' },
+  none: { Glyph: CircleDashed, tone: 'text-ink-3' },
+} as const
+
+/** The glyph at the end of the name line, for one of the three records. */
+function RecordMark({ source }: { readonly source: CountryFactSource }) {
+  const { Glyph, tone } = RECORD_MARKS[source]
+  return (
+    <Glyph
+      size={16}
+      aria-hidden="true"
+      data-part="record"
+      className={cn(layout.mark, tone)}
+    />
+  )
+}
 
 /** The pointer element, or nothing when the card is not anchored to anything. */
 function Pointer({ side }: { readonly side: CountryCardPointer }) {
@@ -388,11 +448,20 @@ interface CountryCardBaseProps extends Omit<
 /**
  * The full card: name, the leading tally, places, and the two months.
  *
- * Both records are taken, not one. The trip columns are the more specific
- * thing to know and win whenever there is a trip; the visit columns are what
- * the atlas's manual half writes, and they are what most countries on a real
- * record have instead. A host that passes only the trip columns still gets a
- * correct card — it simply cannot show the visits it did not hand over.
+ * Both records are taken, not one, and **both are required**. The trip columns
+ * are the more specific thing to know and win whenever there is a trip; the
+ * visit columns are what the atlas's manual half writes, and they are what most
+ * countries on a real record have instead. A host that hands over only the trip
+ * half cannot tell a country nobody has recorded from a country visited three
+ * times, so every such country renders as the empty state — a defect that
+ * survived three rounds precisely because the visit columns were optional and
+ * the type checker had nothing to say about a host that dropped them. They are
+ * required now, so dropping them is a build failure rather than a card that
+ * quietly prints four dashes over a country the map has just filled in.
+ *
+ * `countryFactColumns()` in `#/lib/atlas/country-facts` projects a whole atlas
+ * record into exactly these eight fields; a host holding one should spread its
+ * result rather than pick fields by hand.
  */
 export interface CountryCardFactsProps extends CountryCardBaseProps {
   readonly variant?: 'card'
@@ -401,9 +470,9 @@ export interface CountryCardFactsProps extends CountryCardBaseProps {
   readonly firstTripOn: string | null
   readonly lastTripOn: string | null
   /** Visits on the record, whether or not a trip is attached to any of them. */
-  readonly visitCount?: number
-  readonly firstVisitedOn?: string | null
-  readonly lastVisitedOn?: string | null
+  readonly visitCount: number
+  readonly firstVisitedOn: string | null
+  readonly lastVisitedOn: string | null
   /** The name is a heading; the host decides at what depth. */
   readonly headingLevel?: 2 | 3 | 4
 }
@@ -521,6 +590,7 @@ export const CountryCard = React.forwardRef<HTMLElement, CountryCardProps>(
           <Heading id={headingId} className={layout.name}>
             {facts.name}
           </Heading>
+          <RecordMark source={facts.source} />
         </div>
 
         <dl className={layout.grid}>

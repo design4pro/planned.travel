@@ -199,6 +199,32 @@ const FRANCE: CountryOverlayCountry = {
   },
 }
 
+/**
+ * The United States as the demo workspace seeds it: two visits, no itinerary.
+ *
+ * This is the shape most of a real record is in — the map fills the country
+ * because somebody marked it, and no trip was ever planned in this product to
+ * go with it — and it is the shape the overlay used to drop on the floor. The
+ * row carries its visits nested under `visit` because the action block wants
+ * them as an object, and for three rounds the two card call sites listed the
+ * four trip columns beside it and never reached in. So there is a fixture for
+ * it here, at the seam, rather than only in the card's own tests: the card was
+ * never the thing that was broken.
+ */
+const UNITED_STATES: CountryOverlayCountry = {
+  countryCode: 'US',
+  tripCount: 0,
+  placeCount: 0,
+  firstTripOn: null,
+  lastTripOn: null,
+  visit: {
+    firstVisitedOn: '2016-08-14',
+    lastVisitedOn: '2023-03-02',
+    visitCount: 2,
+    note: null,
+  },
+}
+
 /** How many times the screen above the overlay has rendered. */
 let screenRenders = 0
 
@@ -775,6 +801,46 @@ describe('CountryOverlay hover', () => {
     expect(pill?.textContent).toBe('Germany')
   })
 
+  it('prints the visit record for a country the map fills with no trip behind it', () => {
+    const map = new FakeMap()
+    mount(map, { countries: [FRANCE, UNITED_STATES] })
+    moveOver(map, 'US', -98, 39)
+
+    const card = screen.getByTestId('surface-host').querySelector('article')
+    expect(card?.getAttribute('data-country')).toBe('US')
+    // The reading the map is already making with its fill, said in words.
+    expect(card?.dataset.record).toBe('visits')
+    expect(card?.dataset.visited).toBe('true')
+    const cells = [...(card?.querySelectorAll('dt, dd') ?? [])].map(
+      (node) => node.textContent,
+    )
+    expect(cells).toEqual([
+      'Visits',
+      '2',
+      'Places',
+      '0',
+      'First visit',
+      'August 2016',
+      'Last visit',
+      'March 2023',
+    ])
+    // The defect this file exists around, stated as its own assertion: a
+    // country the map has painted must not print an absence.
+    expect(card?.textContent).not.toContain('Not recorded')
+  })
+
+  it('keeps the trip reading for a country with an itinerary behind it', () => {
+    const map = new FakeMap()
+    mount(map, { countries: [FRANCE, UNITED_STATES] })
+    moveOver(map, 'FR')
+
+    const card = screen.getByTestId('surface-host').querySelector('article')
+    expect(card?.dataset.record).toBe('trips')
+    expect(
+      [...(card?.querySelectorAll('dt') ?? [])].map((node) => node.textContent),
+    ).toEqual(['Trips', 'Places', 'First trip', 'Last trip'])
+  })
+
   it('is decoration: nothing in it is announced or reachable', () => {
     const map = new FakeMap()
     mount(map)
@@ -860,6 +926,43 @@ describe('CountryOverlay panel', () => {
     expect(
       within(panel).getByRole('button', {
         name: /^Remove France from your atlas/,
+      }),
+    ).toBeTruthy()
+    expect(
+      within(panel).getByRole('button', { name: /^Add to list/ }),
+    ).toBeTruthy()
+  })
+
+  it('says the same about a visit-only country as the hover card does', () => {
+    const map = new FakeMap()
+    mount(map, {
+      countries: [FRANCE, UNITED_STATES],
+      selectedCode: 'US',
+      selectionToken: 1,
+    })
+
+    const panel = screen.getByRole('dialog', { name: 'United States' })
+    const card = panel.querySelector('article')
+    expect(card?.dataset.record).toBe('visits')
+    expect(
+      [...(card?.querySelectorAll('dt, dd') ?? [])].map(
+        (node) => node.textContent,
+      ),
+    ).toEqual([
+      'Visits',
+      '2',
+      'Places',
+      '0',
+      'First visit',
+      'August 2016',
+      'Last visit',
+      'March 2023',
+    ])
+    // And still both writes, because a visit recorded by hand is exactly the
+    // thing a reader might want to take back.
+    expect(
+      within(panel).getByRole('button', {
+        name: /^Remove United States from your atlas/,
       }),
     ).toBeTruthy()
     expect(

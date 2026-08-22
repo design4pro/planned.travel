@@ -25,6 +25,7 @@ import {
 } from './country-card'
 
 import type { CountryActionsGoal, CountryActionsVisit } from './country-actions'
+import type { CountryFactColumns } from '#/lib/atlas/country-facts'
 import type { MapVisitedCountry } from '#/components/map'
 import type {
   CountryFeatureCollection,
@@ -740,8 +741,42 @@ export interface CountryOverlayCountry {
   readonly placeCount: number
   readonly firstTripOn: string | null
   readonly lastTripOn: string | null
-  /** The visit on record, for the action block. */
+  /** The visit on record, for the action block and for the card's fact grid. */
   readonly visit: CountryActionsVisit
+}
+
+/**
+ * One row of the overlay's input, read as the eight columns a card prints.
+ *
+ * The overlay holds a country's two records in two shapes — the trip
+ * aggregates flat on the row, the visit nested under `visit`, because the
+ * action block wants the visit as an object and the card wants it as columns —
+ * and the defect this function exists to remove is what happens when a call
+ * site bridges that by hand: it picks the four trip fields, forgets the three
+ * visit ones, and every country somebody marked without planning a trip renders
+ * as the empty state while the record panel two centimetres away prints the
+ * visits and their dates. That shipped. So the bridge is written once, here,
+ * and the three surfaces spread it rather than each listing props.
+ *
+ * `null` is a real argument, not a defensive one: the hover card and the panel
+ * are both opened by a country code, and a code the payload has no row for is
+ * a country with nothing recorded — which is a state the card draws, not an
+ * error. Every column then reads as its own zero.
+ */
+function factColumns(
+  countryCode: string,
+  country: CountryOverlayCountry | null,
+): CountryFactColumns {
+  return {
+    countryCode,
+    tripCount: country?.tripCount ?? 0,
+    placeCount: country?.placeCount ?? 0,
+    firstTripOn: country?.firstTripOn ?? null,
+    lastTripOn: country?.lastTripOn ?? null,
+    visitCount: country?.visit.visitCount ?? 0,
+    firstVisitedOn: country?.visit.firstVisitedOn ?? null,
+    lastVisitedOn: country?.visit.lastVisitedOn ?? null,
+  }
 }
 
 /** One country's entry on the bucket list, whichever end of the list it is at. */
@@ -1359,11 +1394,7 @@ function PanelFacts({
   }
   return (
     <CountryCard
-      countryCode={countryCode}
-      tripCount={country?.tripCount ?? 0}
-      placeCount={country?.placeCount ?? 0}
-      firstTripOn={country?.firstTripOn ?? null}
-      lastTripOn={country?.lastTripOn ?? null}
+      {...factColumns(countryCode, country)}
       headingLevel={3}
       className={layout.facts}
     />
@@ -1511,13 +1542,7 @@ function CountryPanel({
   onInteractOutside,
   onFocusOutside,
 }: CountryPanelProps) {
-  const name = countryFacts({
-    countryCode,
-    tripCount: country?.tripCount ?? 0,
-    placeCount: country?.placeCount ?? 0,
-    firstTripOn: country?.firstTripOn ?? null,
-    lastTripOn: country?.lastTripOn ?? null,
-  }).name
+  const name = countryFacts(factColumns(countryCode, country)).name
   const panelRef = React.useRef<HTMLDivElement | null>(null)
 
   return (
@@ -1923,11 +1948,7 @@ export function CountryOverlay({
                     />
                   ) : (
                     <CountryCard
-                      countryCode={hoverCode}
-                      tripCount={hoverCountry.tripCount}
-                      placeCount={hoverCountry.placeCount}
-                      firstTripOn={hoverCountry.firstTripOn}
-                      lastTripOn={hoverCountry.lastTripOn}
+                      {...factColumns(hoverCode, hoverCountry)}
                       decorative
                     />
                   )}

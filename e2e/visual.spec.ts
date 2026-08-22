@@ -448,34 +448,59 @@ test.describe('authenticated routes', () => {
 
     // The two shapes the hover surface takes, and the rule that there is no
     // third. A country on the record gets the whole fact grid — both figures and
-    // both trip months; a country that is not gets its name and nothing else.
+    // both months; a country that is not gets its name and nothing else.
     // Whichever the ring found, a card carrying *some* of the grid would be a
     // reader told half a story, so the coherence is what is asserted rather than
     // a country hard-coded here that a fixture change could quietly retire.
     const shown = await page.evaluate(() => {
       const surface = document.querySelector('[data-part="country-hover"]')
+      const article = surface?.querySelector('article') ?? null
       return {
+        record: article?.getAttribute('data-record') ?? null,
         labels: [...(surface?.querySelectorAll('dt') ?? [])].map((node) =>
+          node.textContent.trim(),
+        ),
+        values: [...(surface?.querySelectorAll('dd') ?? [])].map((node) =>
           node.textContent.trim(),
         ),
         words: (surface?.textContent ?? '').replace(/\s+/g, ' ').trim().length,
       }
     })
+    // Which quartet of headings belongs to which record. Most of the demo
+    // fixture is countries somebody marked with no trip planned behind them, so
+    // the visit reading is the common one and the trip reading is the exception
+    // — pinning either alone would assert against the fixture rather than
+    // against the card.
+    const headings = {
+      trips: [/^Trips?$/, /^Places?$/, /^First trip$/, /^Last trip$/],
+      visits: [/^Visits?$/, /^Places?$/, /^First visit$/, /^Last visit$/],
+      none: [/^Trips?$/, /^Places?$/, /^First trip$/, /^Last trip$/],
+    } as const
     if (shown.labels.length === 0) {
       expect(
         shown.words,
         'the pill is a country name and a flag, never a card with its numbers missing',
       ).toBeLessThan(40)
     } else {
+      const record = shown.record
+      expect(
+        record,
+        'the card has to say which of the three records it is speaking from',
+      ).toMatch(/^(trips|visits|none)$/)
+      if (record !== 'trips' && record !== 'visits' && record !== 'none') return
       expect(
         shown.labels,
-        'the fact grid is all four fields, in the order the card declares them',
-      ).toEqual([
-        expect.stringMatching(/^Trips?$/),
-        expect.stringMatching(/^Places?$/),
-        'First trip',
-        'Last trip',
-      ])
+        'the fact grid is all four fields, headed for the record it is reading',
+      ).toEqual(headings[record].map((rule) => expect.stringMatching(rule)))
+      if (record !== 'none') {
+        // The whole point of the visit reading, asserted on the running page:
+        // a country the map has filled in prints what is known about it, not an
+        // em dash under a heading and a nought beside it.
+        expect(
+          shown.values.join(' '),
+          'a country on the record never prints an absence',
+        ).not.toContain('—')
+      }
     }
 
     const surface = await page
@@ -531,8 +556,23 @@ test.describe('authenticated routes', () => {
       'the surface is a real dialog with the country as its name',
     ).toBeVisible()
     // The same figures the hover card carries, and the two writes it does not.
-    await expect(panel).toContainText('Trips')
+    //
+    // France is on the demo record with three visits and no itinerary behind
+    // them, which is the state most of the fixture is in: the card reads the
+    // visits, and the panel that used to print `Trips 0` beside an action block
+    // saying `3 visits` now agrees with it.
+    const facts = panel.locator('article[data-country="FR"]')
+    await expect(
+      facts,
+      'a country the map fills reads from the record it was filled from',
+    ).toHaveAttribute('data-record', 'visits')
+    await expect(facts).toHaveAttribute('data-visited', 'true')
+    await expect(panel).toContainText('Visits')
     await expect(panel).toContainText('Places')
+    expect(
+      await facts.locator('dd').allInnerTexts(),
+      'and prints every one of its four figures rather than an absence',
+    ).not.toContain('—')
     await expect(
       panel.getByRole('button', {
         name: /^(Mark visited|Remove France from your atlas)/,
