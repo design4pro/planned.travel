@@ -172,5 +172,28 @@
       "capture"
     ],
     "invalidatesWhen": "the gate goes green, or a source change lands that could plausibly explain the failures"
+  },
+  {
+    "id": "no-repair-pass-while-gate-red",
+    "claim": "The workflow's in-round repair pass is guarded on `mechanicalGreen`. While the repo gate stays red, a rejected item gets exactly ONE build attempt per round and no same-round retry, so every rejection costs a whole round. Budget maxRounds accordingly rather than assuming three attempts per item.",
+    "evidence": "Read at .claude/workflows/ultrabuild.js line 1230: the `while` loop requires itemRound < MAX_ITEM_ROUNDS AND rejected items AND mechanicalGreen. Rounds 1 and 2 each carried exactly one build of plan-index-and-conventions.",
+    "measuredIn": "this run, round 2",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "the repo gate goes green, or the guard changes"
+  },
+  {
+    "id": "docs-items-are-auditor-only",
+    "claim": "An item with neither `url` nor `referenceUrl` is NOT penalised for having no visual verdict — verdictFor() guards that reason behind `else if (item.url || item.referenceUrl)`. A documentation item is therefore judged by the auditor alone, and only BLOCKING audit findings reject it; minor ones are recorded and carried.",
+    "evidence": "Read at .claude/workflows/ultrabuild.js lines 1163-1172. Confirmed by round 2, where plan-index-and-conventions was rejected with the single reason \"1 blocking audit finding(s)\" while carrying five minor ones.",
+    "measuredIn": "this run, round 2",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "verdictFor() stops guarding the visual reason on url/referenceUrl"
   }
 ]

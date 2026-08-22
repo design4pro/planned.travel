@@ -5,7 +5,11 @@
     "why": "It is a broken capture, not a defect of either candidate. Measured: selecting Dark from the theme menu sets the dark ramp on the MapLibre canvas within one second, and frames at +1s and +5s are both fully dark, chrome and map together. The frames that showed a mismatch were shot immediately after a scripted attribute change, before the style document had reloaded.",
     "cost": "sank atlas-map-overlay once and wasted parts of rounds 2, 3 and 5",
     "blindSafe": true,
-    "scope": ["critic", "auditor", "builder"]
+    "scope": [
+      "critic",
+      "auditor",
+      "builder"
+    ]
   },
   {
     "id": "vite-hmr-console-error",
@@ -13,7 +17,10 @@
     "why": "Its stack frame is /@vite/client, the dev server's own HMR message handler. It cannot occur in a build and the Playwright gate never sees it. See the `vite-console-noise` fact.",
     "cost": "failed two finished items, atlas-country-actions and atlas-country-card, in round 9",
     "blindSafe": false,
-    "scope": ["auditor", "capture"]
+    "scope": [
+      "auditor",
+      "capture"
+    ]
   },
   {
     "id": "countries-test-timeout",
@@ -21,7 +28,11 @@
     "why": "It passes 74/74 when run alone. The 5000ms timeout only appears under the concurrent load a fanned-out round puts on this machine.",
     "cost": "recurring across rounds 4, 5 and 9-12",
     "blindSafe": false,
-    "scope": ["builder", "auditor", "mechanical"]
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ]
   },
   {
     "id": "register-hydration-timeout",
@@ -29,6 +40,20 @@
     "why": "Seen once in round 2 and never reproduced, on a machine that was carrying sixteen dev servers at the time. A single non-reproducing timeout is a flake.",
     "cost": "chased in round 3",
     "blindSafe": false,
-    "scope": ["builder", "auditor"]
+    "scope": [
+      "builder",
+      "auditor"
+    ]
+  },
+  {
+    "id": "four-leader-rows",
+    "claim": "COL-01, ACC-05, TRP-11 and MNY-07 are the four rows the most other rows depend on.",
+    "why": "Measured on the edge set and refuted. By transitive in-degree the top five are COL-01 20, ACC-05 16, ADM-02 10, TRP-11 8, MNY-01 8; by direct in-degree DOC-01 leads with 6. Only COL-01 and ACC-05 lead on both readings. MNY-07 and TRP-11 belong early for reasons the graph does not express, which is a different argument and must be made as one.",
+    "cost": "one blocking and one minor finding, and a wave-table acceptance criterion that could not be satisfied — two rounds",
+    "blindSafe": true,
+    "scope": [
+      "builder",
+      "auditor"
+    ]
   }
 ]

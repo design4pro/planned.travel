@@ -118,7 +118,7 @@ Two further edges are re-pointed so that the four rows the most others hang off 
 | `MAP-01 → MAP-02` | cut         | Manual place creation is the create-place write path. Until search lands, its address field degrades to coordinates.          |
 | `BKG-02 → DOC-04` | cut         | Reservation CRUD is the entity; the multi-target file link picker is an attachment surface on top of it.                      |
 | `LST-01 → LST-04` | cut         | A list must exist before a template can seed one or be saved from one.                                                        |
-| `COL-02 → COL-09` | cut         | The collab panel is the container; the "what's next" widget is one of the things it hosts.                                    |
+| `COL-02 → COL-09` | cut         | The collab panel is the container; the upcoming-assignments widget (COL-09) is one of the surfaces it hosts.                  |
 | `ACC-05 → COL-01` | cut         | The notification write path is a D1 write plus a centre that already reads it. Live push over the trip room is an enrichment. |
 | `TRP-11 → ADM-02` | reversed    | Trip membership and the invitation machinery are the model; workspace member administration is the console built over it.     |
 
