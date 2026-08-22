@@ -129,6 +129,16 @@ Use it, and only it, for:
     WebKit today, and Firefox if a project is added. Ego Lite is Chromium only, so a WebKit or
     Firefox claim made from it is not evidence.
 
+WHERE ARTEFACTS GO — the repo root is not a scratch directory.
+Every screenshot you take belongs under \`.claude/ultrabuild/shots/<slug>/round-<n>/<item-id>/\`,
+including the throwaway ones you shot to check a viewport or a theme. Every scratch script belongs
+in the session scratchpad, never in the repo. Both browsers write to a temp path first, so moving
+the file is a step you were taking anyway — move it to the right place, not to \`./\`.
+This is not tidiness for its own sake. One run left eleven loose PNGs and two probe scripts at the
+repo root, and a \`git add -A\` committed 770 KB of them before anyone noticed. A bare image or a
+bare .mjs at the root is now gitignored as a backstop, but the backstop only hides them from git —
+they still clutter the working directory, so DELETE what you created once it has served its purpose.
+
 WHEN THEY DISAGREE, PLAYWRIGHT WINS, and the disagreement itself is worth reporting: it usually
 means the capture and the gate were not looking at the same state.
 

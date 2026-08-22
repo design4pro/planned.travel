@@ -50,7 +50,13 @@ e2e/.auth
 # Local MCP server config. Developer-specific, never shared.
 .mcp.json
 
-# Screenshots a capture agent drops in the working directory. The repo's own
-# images live under e2e/__screenshots__ and .claude, both addressed elsewhere,
-# so nothing legitimate is a bare PNG at the root.
+# Scratch a browser agent drops in the working directory. The repo's own images
+# live under e2e/__screenshots__ and .claude/ultrabuild/shots, and its own
+# scripts live under scripts/, so nothing legitimate is a bare image or a bare
+# .mjs at the root. Ignoring them is the backstop; the rule that they belong in
+# .claude/ultrabuild/shots is in BROWSER_POLICY in .claude/workflows/ultrabuild.js.
 /*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.mjs
