@@ -1,0 +1,33 @@
+[
+  {
+    "id": "seed-relative-dates",
+    "title": "The demo fixture must not decide what the gate photographs",
+    "why": "Absolute seeded dates mean the Worker chooses WHICH ROWS a screen shows by comparing them against its own today, so baselines change size and toHaveScreenshot refuses two images of different size before it consults any tolerance. Measured: /dashboard shrinks 43px on 2026-08-21, /atlas grows 43px on 2026-08-24, the reservations rail is empty for good after 2026-10-12.",
+    "decision": "Deferred by the user in round 6: to be done after the Atlas task, as its own task.",
+    "paths": [
+      "src/routes/api/dev/-seed/dataset/*.ts",
+      "scripts/seed/seed.mjs"
+    ]
+  },
+  {
+    "id": "intl-month-callsites",
+    "title": "Six components still ask the platform for an abbreviated month",
+    "why": "The same hydration bug the atlas gate caught, still latent elsewhere: workerd renders en-GB September as \"Sept\" and WebKit as \"Sep\", so any September date these render server-side throws a React hydration error in Safari. src/lib/format.ts now holds the frozen CLDR table; these six never routed through it. None of these screens is covered by a visual baseline, which is why nothing has failed yet.",
+    "paths": [
+      "src/components/costs/data.ts (two formatters)",
+      "src/components/modules/transports/legs-timeline.tsx",
+      "src/components/modules/collab/collab-board.tsx",
+      "src/components/modules/collab/thread.tsx",
+      "src/components/modules/book/bookings-timeline.tsx",
+      "src/components/modules/files/file-library.tsx"
+    ]
+  },
+  {
+    "id": "gpu-rasterised-baselines",
+    "title": "The mobile-safari atlas baselines are rasterised by a real GPU and nothing pins it",
+    "why": "The two mobile-safari atlas frames contain a WebGL canvas rendered by this machine’s hardware GPU. Nothing in playwright.config.ts forces a software renderer, so the same commit can produce different pixels on CI or on another developer’s machine. Raising maxDiffPixelRatio to absorb that is expressly forbidden by the gate’s own acceptance; the fix is to pin the renderer.",
+    "paths": [
+      "playwright.config.ts"
+    ]
+  }
+]

@@ -39,7 +39,15 @@ todos.json
 # /ultrabuild run state: contract pointer, item statuses, findings and the blind
 # A/B screenshot pairs. The command definitions in .claude/ are tracked; only the
 # per-run scratch is not.
-.claude/ultrabuild
+#
+# `knowledge/` is the exception and is tracked on purpose. It holds what the loop
+# MEASURED rather than what it produced — the settled environment facts, the
+# claims already refuted, and the deferred backlog — and it is the only thing that
+# survives a run being archived. Ignoring it is how the same port, theme and
+# capture mistakes were rediscovered in two consecutive runs at a cost of roughly
+# a hundred findings. Everything else here is derived and disposable.
+.claude/ultrabuild/*
+!.claude/ultrabuild/knowledge/
 
 # One cached demo session per e2e run, written by e2e/auth.setup.ts.
 e2e/.auth

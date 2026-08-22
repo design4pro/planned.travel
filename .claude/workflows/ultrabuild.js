@@ -27,6 +27,38 @@ const MAX_ITEM_ROUNDS = run.maxItemRounds || 3
 const KNOWN = Array.isArray(run.knownItems) ? run.knownItems : []
 const ONLY = Array.isArray(run.onlyItems) ? run.onlyItems : []
 
+/**
+ * What earlier rounds and earlier RUNS measured, handed in by the orchestrator.
+ *
+ * This script has no filesystem, so the orchestrator reads
+ * `.claude/ultrabuild/knowledge/` and passes the contents through. The point is that a fact
+ * measured once is never measured again: the same port, theme, capture and console mistakes were
+ * rediscovered across two consecutive runs at a cost of roughly a hundred findings, because the
+ * only channel for carrying knowledge forward was prose appended to the task string.
+ *
+ *   facts    — settled measurements, each scoped to the agents it applies to.
+ *   refuted  — claims already investigated and found wrong, so a critic or auditor does not file
+ *              them a fourth time. Only entries marked blindSafe reach the critic, because a
+ *              refutation that names our side would end the blind comparison.
+ *   backlog  — work deliberately deferred, carried as known risk rather than rediscovered.
+ */
+const FACTS = Array.isArray(run.facts) ? run.facts : []
+const REFUTED = Array.isArray(run.refuted) ? run.refuted : []
+const BACKLOG = Array.isArray(run.backlog) ? run.backlog : []
+
+/**
+ * Recon the orchestrator found still valid, keyed by reader, plus the hashes it validated them
+ * against. A reader present in RECON_CACHE is not run again this round.
+ */
+const RECON_CACHE = run.recon && typeof run.recon === 'object' ? run.recon : {}
+const RECON_HASHES = run.reconHashes && typeof run.reconHashes === 'object' ? run.reconHashes : {}
+
+/** Item ids to carry before anything else, whatever the alphabet says. */
+const PRIORITY = Array.isArray(run.priorityItems) ? run.priorityItems : []
+
+/** Current content hash per item id, so an unchanged item is not re-photographed. */
+const ITEM_HASHES = run.itemHashes && typeof run.itemHashes === 'object' ? run.itemHashes : {}
+
 // How many items one round dares to carry. Each item costs ~4 agents
 // (build + capture + critic + auditor), so this is the main cost lever.
 const ITEM_CAP = budget.total
@@ -145,31 +177,53 @@ means the capture and the gate were not looking at the same state.
 Say which browser produced each piece of evidence you report. "Ego Lite, 1440x900, light" and
 "Playwright chromium project" are different claims and a reader must be able to tell them apart.`
 
-const PORT_POLICY = `PORT POOL POLICY — binding on every agent, no exceptions.
+const PORT_POLICY = `DEV SERVER — one command, not a procedure.
 
-The pool is ports 3000 through 3010. Nothing outside it is ever used, and 3000 is never assumed:
-on this machine it has belonged to an unrelated project.
+    PORT=$(scripts/ultrabuild/resolve-port.sh) || { echo "no server in the pool"; }
 
-1. REUSE FIRST. Walk the pool and take the lowest port that answers as THIS app. Answering HTTP at
-   all is not enough — another project can hold a port in the pool. Confirm identity:
-     for p in $(seq 3000 3010); do
-       curl -s -m 3 "http://localhost:$p/api/dev/seed" | grep -q '"ok"' && echo "ours: $p"
-     done
-   That endpoint is this repo's own, so a match proves the server is ours and seeded.
-2. START ONE ONLY IF THE POOL HAS NONE. If no port answers as ours, start exactly ONE server on the
-   lowest free port in the pool and say so in your result:
-     pnpm dev --port <free port from 3000..3010>
-   Never start a second. Never start one "just in case". Never start one because the port you were
-   handed is busy — a busy pool means another run owns it, so reuse it or report and stop.
-3. NEVER KILL a server you did not start. Another ultrabuild run may be using it.
-4. ALWAYS pass the resolved port explicitly:
-     PLAYWRIGHT_BASE_URL=http://localhost:<port> pnpm exec playwright test
-   Without it, playwright.config.ts waits on 3000 forever and the round hangs.
-5. If the orchestrator named a port in the task context, that port wins over discovery — use it and
-   do not probe. If it does not answer, report that and stop rather than starting your own.
-6. A Playwright or vitest failure whose message is a TIMEOUT, with no pixel-difference count and no
-   assertion diff, is evidence about this machine's load, not about the code. Report it as such and
-   never change code in response to one.`
+That script IS the port policy: it walks the pool 3000-3010, takes the lowest port that identifies
+as this app by its own /api/dev/seed endpoint, and prints only the number. Do not probe by hand, do
+not assume 3000 (on this machine it has belonged to an unrelated project), and never kill a server
+you did not start — a concurrent run may own it.
+
+Add \`--start\` ONLY if you are the mechanical or capture agent and the pool is empty; it starts
+exactly one server on the lowest free port. Never start a second one, and never start one because
+the port you were handed is busy.
+
+Then pass the port explicitly to everything:
+    PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test
+Without it, playwright.config.ts waits on 3000 forever and the round hangs.
+
+If the orchestrator named a port, use it and do not probe. If it does not answer, report and stop.`
+
+/**
+ * Turn the knowledge files into a prompt block, scoped to one kind of agent.
+ *
+ * Scoping matters twice over. It keeps each prompt to the facts that agent can act on rather than
+ * pasting the whole ledger into every one of the ~30 agents a round spawns, and it keeps the critic
+ * blind: only refutations marked blindSafe reach it, because one that names our side of the pair
+ * would end the comparison the gate exists for.
+ */
+function knowledgeFor(role) {
+  const facts = FACTS.filter((f) => !f.scope || f.scope.includes(role))
+  const refuted = REFUTED.filter(
+    (r) => (!r.scope || r.scope.includes(role)) && (role !== 'critic' || r.blindSafe === true),
+  )
+  if (!facts.length && !refuted.length) return ''
+
+  const factLines = facts.length
+    ? `SETTLED — measured already, do not re-derive and do not re-litigate:
+${facts.map((f) => `  - ${f.claim}\n      evidence: ${f.evidence}`).join('\n')}`
+    : ''
+
+  const refutedLines = refuted.length
+    ? `ALREADY REFUTED — these were investigated and found wrong. Reporting one again is a defect of
+the report, not of the work. If you believe one is now true, say so WITH a fresh measurement:
+${refuted.map((r) => `  - "${r.claim}"\n      why not: ${r.why}${r.cost ? `\n      cost when it was believed: ${r.cost}` : ''}`).join('\n')}`
+    : ''
+
+  return `\n${[factLines, refutedLines].filter(Boolean).join('\n\n')}\n`
+}
 
 /* ------------------------------------------------------------------ *
  * Schemas — validated at the tool boundary, so agents retry on mismatch.
@@ -213,6 +267,26 @@ const DECOMPOSE_SCHEMA = {
           url: { type: 'string', description: 'local URL that renders this item, if any' },
           referenceUrl: { type: 'string', description: 'reference screen to be judged against, if any' },
           dependsOn: { type: 'array', items: { type: 'string' } },
+          captureStates: {
+            type: 'array',
+            maxItems: 4,
+            description:
+              'Interaction states the critic must see, for an item whose whole point is a state the resting screen does not show — a hover tooltip, an open dialog. Omit for an item judged at rest.',
+            items: {
+              type: 'object',
+              required: ['name', 'why', 'flags'],
+              additionalProperties: false,
+              properties: {
+                name: { type: 'string', description: 'kebab-case, becomes the filename prefix' },
+                why: { type: 'string', description: 'what the critic is meant to see in it' },
+                flags: {
+                  type: 'string',
+                  description:
+                    "scripts/ultrabuild/capture.mjs flags that reach the state, e.g. --hover '[data-country=\"FR\"]'",
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -233,6 +307,26 @@ const BUILD_SCHEMA = {
       type: 'array',
       items: { type: 'string' },
       description: 'work discovered but out of this item’s ownership; becomes next round’s items',
+    },
+    learned: {
+      type: 'array',
+      maxItems: 3,
+      description:
+        'Environment measurements a LATER agent would otherwise have to repeat: a command that works, a selector that exists, a seam that behaves differently from the obvious guess. Only what you MEASURED, never a plan or an opinion, and never a defect of the code — that is a finding.',
+      items: {
+        type: 'object',
+        required: ['claim', 'evidence', 'scope'],
+        additionalProperties: false,
+        properties: {
+          claim: { type: 'string' },
+          evidence: { type: 'string', description: 'the measurement itself, specific enough to re-check' },
+          scope: {
+            type: 'array',
+            items: { type: 'string', enum: ['builder', 'capture', 'critic', 'auditor', 'mechanical'] },
+            minItems: 1,
+          },
+        },
+      },
     },
   },
 }
@@ -261,6 +355,26 @@ const CAPTURE_SCHEMA = {
     },
     consoleErrors: { type: 'array', items: { type: 'string' } },
     skippedReason: { type: 'string' },
+    learned: {
+      type: 'array',
+      maxItems: 3,
+      description:
+        'Environment measurements a LATER agent would otherwise have to repeat: a command that works, a selector that exists, a seam that behaves differently from the obvious guess. Only what you MEASURED, never a plan or an opinion, and never a defect of the code — that is a finding.',
+      items: {
+        type: 'object',
+        required: ['claim', 'evidence', 'scope'],
+        additionalProperties: false,
+        properties: {
+          claim: { type: 'string' },
+          evidence: { type: 'string', description: 'the measurement itself, specific enough to re-check' },
+          scope: {
+            type: 'array',
+            items: { type: 'string', enum: ['builder', 'capture', 'critic', 'auditor', 'mechanical'] },
+            minItems: 1,
+          },
+        },
+      },
+    },
   },
 }
 
@@ -338,6 +452,26 @@ const MECHANICAL_SCHEMA = {
       },
     },
     failures: { type: 'array', items: FINDING, maxItems: 40 },
+    learned: {
+      type: 'array',
+      maxItems: 3,
+      description:
+        'Environment measurements a LATER agent would otherwise have to repeat: a command that works, a selector that exists, a seam that behaves differently from the obvious guess. Only what you MEASURED, never a plan or an opinion, and never a defect of the code — that is a finding.',
+      items: {
+        type: 'object',
+        required: ['claim', 'evidence', 'scope'],
+        additionalProperties: false,
+        properties: {
+          claim: { type: 'string' },
+          evidence: { type: 'string', description: 'the measurement itself, specific enough to re-check' },
+          scope: {
+            type: 'array',
+            items: { type: 'string', enum: ['builder', 'capture', 'critic', 'auditor', 'mechanical'] },
+            minItems: 1,
+          },
+        },
+      },
+    },
   },
 }
 
@@ -355,6 +489,38 @@ function blindOrder(id) {
 
 function shotDir(id) {
   return `.claude/ultrabuild/shots/${SLUG}/round-${ROUND}/${id}`
+}
+
+/** The path part of an item's url, so the capture can be pointed at whatever port resolved. */
+function pathOf(url) {
+  if (!url) return '/'
+  const afterScheme = url.replace(/^https?:\/\//, '')
+  const slash = afterScheme.indexOf('/')
+  return slash === -1 ? '/' : afterScheme.slice(slash)
+}
+
+/**
+ * Which frames to take for one item this round.
+ *
+ * The full grid is eight frames per side, and with ten items that is eighty images a round for a
+ * vision model to read — comfortably the largest single input cost in the loop. It is worth paying
+ * when an item is being judged for the first time or is up for acceptance. It is not worth paying
+ * on a repair pass, where the question is narrower: did the findings get fixed. So a repair
+ * captures the anchor pair plus whichever viewport and theme the previous findings actually named.
+ */
+function captureMatrix(item, priorFindings, { repair }) {
+  const map = /atlas|map/i.test(`${item.id} ${item.title}`) || (item.url || '').includes('/atlas')
+  const states = Array.isArray(item.captureStates) ? item.captureStates : []
+  if (!repair) {
+    return { viewports: ['1440x900', '768x1024', '360x800', '2560x1440'], themes: ['light', 'dark'], map, states }
+  }
+  const said = (priorFindings || []).map((f) => `${f.summary} ${f.evidence || ''}`).join(' ')
+  const viewports = new Set(['1440x900', '360x800'])
+  for (const [needle, vp] of [['768', '768x1024'], ['2560', '2560x1440']]) {
+    if (said.includes(needle)) viewports.add(vp)
+  }
+  const themes = /\bdark\b/i.test(said) || !/\blight\b/i.test(said) ? ['light', 'dark'] : ['light']
+  return { viewports: [...viewports], themes, map, states }
 }
 
 function byId(a, b) {
@@ -421,21 +587,52 @@ from v3). Cite doc sources.`,
   },
 ]
 
-const recon = (
-  await parallel(
-    RECON_READERS.map((r) => () =>
-      agent(r.prompt, {
-        label: `recon:${r.key}`,
-        phase: 'Recon',
-        schema: RECON_SCHEMA,
-      }),
-    ),
-  )
-).filter(Boolean)
+/*
+ * Only the readers whose inputs actually moved are run.
+ *
+ * The orchestrator hashes each reader's inputs — the contract documents, the lockfile, HEAD, the
+ * run slug — and hands back any cached result whose hash still matches. Across twelve rounds the
+ * contract reader read docs/SPEC.md, DESIGN.md, ARCHITECTURE.md and DEPLOY.md (68 KB) twelve times
+ * for an answer that never changed once, and the stack reader re-researched a frozen dependency set
+ * just as often. Recon is four high-effort agents; this is the cheapest large saving in the loop.
+ */
+const staleReaders = RECON_READERS.filter((r) => !RECON_CACHE[r.key])
+const cachedReaders = RECON_READERS.filter((r) => RECON_CACHE[r.key])
+
+if (cachedReaders.length) {
+  log(`recon reused for: ${cachedReaders.map((r) => r.key).join(', ')}`)
+}
+
+const freshRecon = staleReaders.length
+  ? (
+      await parallel(
+        staleReaders.map((r) => () =>
+          agent(r.prompt, {
+            label: `recon:${r.key}`,
+            phase: 'Recon',
+            schema: RECON_SCHEMA,
+          }),
+        ),
+      )
+    ).map((result, i) => (result ? { key: staleReaders[i].key, result } : null))
+  : []
+
+const reconByKey = {}
+for (const r of cachedReaders) reconByKey[r.key] = RECON_CACHE[r.key]
+for (const entry of freshRecon.filter(Boolean)) reconByKey[entry.key] = entry.result
+
+const recon = RECON_READERS.map((r) => reconByKey[r.key]).filter(Boolean)
 
 if (!recon.length) {
   log('recon produced nothing — aborting the round rather than building blind')
   return { items: KNOWN, newFindings: [], dry: false, aborted: 'recon-empty' }
+}
+
+// Fresh results only, tagged with the hash they were measured against, so the orchestrator can
+// persist them and know when they go stale.
+const reconToPersist = {}
+for (const entry of freshRecon.filter(Boolean)) {
+  reconToPersist[entry.key] = { hash: RECON_HASHES[entry.key] || null, result: entry.result }
 }
 
 const reconDigest = recon
@@ -443,6 +640,14 @@ const reconDigest = recon
 ${(r.gaps || []).length ? `Gaps:\n${r.gaps.map((g) => `- ${g}`).join('\n')}` : ''}
 ${(r.risks || []).length ? `Risks:\n${r.risks.map((g) => `- ${g}`).join('\n')}` : ''}`)
   .join('\n\n')
+
+// Deferred work is a known risk, not something to rediscover. It reaches the decomposer so a new
+// item is not carved over a problem someone already diagnosed and parked.
+const backlogDigest = BACKLOG.length
+  ? `\nKNOWN DEFERRED WORK — diagnosed in an earlier round and parked on purpose. Do not re-diagnose
+it, and do not silently absorb it into an item unless the task actually calls for it:
+${BACKLOG.map((b) => `  - ${b.id}: ${b.title}\n      ${b.why || ''}${b.decision ? `\n      decision: ${b.decision}` : ''}`).join('\n')}\n`
+  : ''
 
 /* ------------------------------------------------------------------ *
  * Phase 2 — Decompose. Skipped when resuming: the item list is part of
@@ -462,7 +667,7 @@ ${CONTRACT}
 Recon findings from four parallel readers — treat these as established, do not re-derive them:
 
 ${reconDigest}
-
+${backlogDigest}
 Rules for the decomposition:
 - One item = one slice a single agent can finish and defend on its own.
 - ownedPaths must be DISJOINT across items. Two items may never list the same file, because
@@ -475,6 +680,10 @@ Rules for the decomposition:
   id across loop rounds.
 - Set url to the local route that renders the item (http://localhost:3000/...) and referenceUrl to
   the reference screen it will be judged against, whenever a visual judgement is possible.
+- If the item's whole point is a state the resting screen does not show — a hover tooltip, an open
+  dialog, an error surface — declare it in captureStates with the flags that reach it. An earlier
+  run accepted a hover tooltip at high confidence without the critic ever seeing one, because every
+  frame photographed the screen at rest. Give a selector you have actually verified exists.
 - Order items so dependencies come first; express them in dependsOn.`,
     { label: 'decompose', phase: 'Decompose', schema: DECOMPOSE_SCHEMA, effort: 'high' },
   )
@@ -505,11 +714,36 @@ const queue = items.filter((i) => targetIds.includes(i.id)).sort(byId)
 // Dependency gate: an item whose dependency is still unaccepted would be built
 // against work that does not exist yet, and would be rejected for reasons that
 // are not its own. Hold it for a later round instead.
-const acceptedIds = new Set(items.filter((i) => i.status === 'accepted').map((i) => i.id))
-const ready = queue.filter((i) => (i.dependsOn || []).every((d) => acceptedIds.has(d)))
+// `accepted-pending-gate` satisfies a dependency: the work is built and both lenses passed it, and
+// it is only unaccepted because some OTHER item left the repo gate red. Treating it as unmet would
+// hold its dependants for a reason that has nothing to do with either of them.
+const doneIds = new Set(
+  items.filter((i) => i.status === 'accepted' || i.status === 'accepted-pending-gate').map((i) => i.id),
+)
+const ready = queue.filter((i) => (i.dependsOn || []).every((d) => doneIds.has(d)))
 const heldForDeps = queue.filter((i) => !ready.includes(i))
-const carried = ready.slice(0, ITEM_CAP)
-const deferred = ready.slice(ITEM_CAP).concat(heldForDeps)
+
+/*
+ * Which items the round can afford, chosen by what unblocks the most rather than by the alphabet.
+ *
+ * `sort(byId)` used to decide this, and it cost four rounds: `server-clock-pin` was the only item
+ * that could turn the repo gate green, every other item was therefore rejected for "repo mechanical
+ * gate red" whatever its own quality, and it sorted last, so ITEM_CAP deferred it in rounds 1 and 2.
+ * The orchestrator now names the items that unblock the round in `priorityItems`.
+ */
+const rank = (i) => {
+  if (PRIORITY.includes(i.id)) return 0
+  if (i.status === 'rejected') return 1
+  if (i.status === 'accepted' || i.status === 'accepted-pending-gate') return 3
+  return 2
+}
+const ordered = ready.slice().sort((a, b) => rank(a) - rank(b) || byId(a, b))
+const carried = ordered.slice(0, ITEM_CAP)
+const deferred = ordered.slice(ITEM_CAP).concat(heldForDeps)
+
+if (PRIORITY.length) {
+  log(`priority items this round: ${PRIORITY.join(', ')}`)
+}
 
 if (heldForDeps.length) {
   log(`held for unmet dependencies: ${heldForDeps.map((i) => `${i.id}(needs ${(i.dependsOn || []).join('+')})`).join(', ')}`)
@@ -549,7 +783,7 @@ ${CONTRACT}
 ${BROWSER_POLICY}
 
 ${PORT_POLICY}
-
+${knowledgeFor('builder')}
 Established recon — do not re-derive:
 
 ${reconDigest}
@@ -582,9 +816,11 @@ For the record, this item's screenshots will be filed as candidate ${order.ours}
 ${order.reference} (reference); the critic that judges them will not be told which is which.`
 }
 
-function capturePrompt(item) {
+function capturePrompt(item, matrix) {
   const order = blindOrder(item.id)
   const dir = shotDir(item.id)
+  const viewports = matrix.viewports.join(',')
+  const themes = matrix.themes.join(',')
   return `Capture a blind A/B screenshot pair for item ${item.id} — ${item.title}.
 
 You are a neutral capture step. You do NOT judge quality and you do NOT edit application code.
@@ -592,79 +828,60 @@ You are a neutral capture step. You do NOT judge quality and you do NOT edit app
 Ours:      ${item.url || 'the local dev server root'}
 Reference: ${item.referenceUrl || 'https://demo.liketrek.com/dashboard'}
 
-Our page is served by a dev server. Follow the PORT POOL POLICY below exactly — sixteen concurrent
-dev servers once put this machine at a load average of 563 and cost a whole round to timeouts.
+${PORT_POLICY}
+${knowledgeFor('capture')}
+## Our side — run the script, do not reinvent the procedure
+
+    mkdir -p ${dir}
+    PORT=$(scripts/ultrabuild/resolve-port.sh --start)
+    node scripts/ultrabuild/capture.mjs \\
+      --url http://localhost:$PORT${pathOf(item.url)} \\
+      --out ${dir} \\
+      --label ${order.ours} \\
+      --viewports ${viewports} \\
+      --themes ${themes} \\
+      --auth${matrix.map ? ' \\\n      --map' : ''}
+
+It prints one JSON object: \`{ files, console: { fatal, notTheApp }, warnings }\`. Report
+\`console.fatal\` as consoleErrors and nothing else — \`notTheApp\` is dev-server machinery that
+cannot occur in a build. Report every entry of \`warnings\` in skippedReason; a warning means a
+frame is suspect and the critic should not be handed it as evidence.
+
+The script owns the viewport, the theme, animation suppression, the map-ready wait, the filename and
+the flat-frame check. Do not work around it. If it cannot photograph the state this item is about,
+say so in skippedReason and set captured false — a frame of the wrong state is worse than no frame,
+because it sends the critic after a defect that does not exist.
+
+${
+  matrix.states && matrix.states.length
+    ? `### States this item is judged on
+
+The resting screen is not evidence about this item. Capture each of these as its own set of frames,
+by adding the flag shown and a \`--state\` name that goes into the filename prefix:
+${matrix.states.map((s) => `  ${s.why}\n      --state ${s.name} ${s.flags}`).join('\n')}
+`
+    : ''
+}
+## The reference side
 
 ${BROWSER_POLICY}
 
-${PORT_POLICY}
+Photograph the reference with Ego Lite: it is an external site, Ego reaches it without a Playwright
+project or a storage state, and it inherits the human's browser session. Switch its theme with that
+site's own control; if you cannot find one, capture its default theme only and say so in
+skippedReason. Never fake a dark frame, and never compare our dark against their light as a pair.
 
-For each of these combinations, screenshot BOTH pages full-page:
-  viewports 360x800, 768x1024, 1440x900, 2560x1440
-  themes    light and dark
-At minimum produce: 1440 light, 1440 dark, 360 light, 360 dark, 768 light, 2560 light.
+File the reference frames as \`${dir}/<viewport>-<theme>-${order.reference}.png\`, matching the
+names our side produced.
 
-Mechanics, because the obvious approach does not work:
-- Set the viewport before each capture. In Ego Lite:
-    await cdp('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false })
-  then confirm it took by reading \`await pageInfo()\`, which reports w and h. With Playwright MCP,
-  use its resize tool instead. Never file a frame whose measured size is not the one you intended.
-- Switch OUR theme by setting the attribute directly:
-  in Ego Lite, await js("document.documentElement.setAttribute('data-theme','dark')")  (or 'light');
-  with Playwright MCP, browser_evaluate with the same expression.
-  docs/DESIGN.md guarantees an explicit data-theme attribute wins over the media query in both
-  directions, so this is the supported path. There is no colour-scheme emulation tool here.
-  Do NOT drive the app's own theme control instead: a single click on it only OPENS a dropdown
-  offering Light / Dark / Match system, and a frame shot at that moment has chrome and map
-  disagreeing about the theme. That mistake was reported as a product defect three times in one run
-  before it was measured and found to be the capture's fault.
-- Switch the REFERENCE theme using that site's own theme control. If you cannot find one, capture
-  the reference in its default theme only and say so in skippedReason — do not fake a dark frame,
-  and do not compare our dark against their light as if it were a fair pair.
-- Before each shot: wait for the page to settle and fonts to load, dismiss cookie banners and
-  incidental modals, and scroll to top.
-- **Kill animation before you shoot.** An entrance transition caught mid-flight renders text at
-  20-25% opacity, and a critic reading that frame reports a contrast failure the product does not
-  have. Inject a stylesheet that stops them, then wait one frame:
-  in Ego Lite await js(...), or browser_evaluate with:
-    const s = document.createElement('style');
-    s.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}';
-    document.head.appendChild(s);
-- **If the page has a map, wait for it to finish drawing.** A WebGL canvas photographed before its
-  first idle is a flat empty rectangle, and a critic reading that frame reports "renders no map at
-  all" about a map that works. Our MapCanvas publishes \`data-map-ready="false"\` from its first
-  render and latches it to \`"true"\` on MapLibre's own idle event. Wait for
-  \`[data-map-ready="true"]\` (allow 20s) before every shot of a map-bearing page, and wait for it
-  AGAIN after each theme switch and each resize - a theme change replaces the whole style document
-  through setStyle, and the marker goes back to false while the new style loads.
-- **Sanity-check your own frame before filing it.** If a full-bleed region larger than a third of
-  the viewport comes out as one flat colour, or a number renders as a pale ghost of its neighbours,
-  you captured too early. Retry that combination. Filing such a frame wastes the critic's round on
-  a defect that does not exist, which has happened.
-- Neither browser writes straight into the repo. Ego Lite's \`captureScreenshot()\` RESOLVES TO A
-  PATH STRING for a PNG in a temp directory; Playwright MCP writes into its own output directory.
-  Either way, take the shot and then MOVE the produced file into place with Bash. Create ${dir}/
-  first.
+## The directory is the critic's whole world
 
-Final filenames, and this part matters more than anything else you do — the critic must not be
-able to tell which product is which:
-  ${dir}/<viewport>-<theme>-${order.ours}.png   <- OUR page
-  ${dir}/<viewport>-<theme>-${order.reference}.png   <- the REFERENCE page
-e.g. 1440-light-${order.ours}.png and 1440-light-${order.reference}.png.
-
-Write NOTHING else into that directory: no mapping file, no notes, no README, and never put the
-words "ours", "reference", "planned" or the reference product's name into a filename or into any
-file in that directory. The critic reads that directory and only that directory.
+Write NOTHING else into ${dir}: no mapping file, no notes, no README, and never the words "ours",
+"reference", "planned" or the reference product's name in a filename or in any file there.
 
 Crop or mask browser chrome, URL bars, and any wordmark or logo on BOTH sides, so neither frame is
 identifiable by branding. If a wordmark cannot be cropped without destroying the layout, mask it in
 place.
-
-Also collect our page's browser console messages and report every error and warning **from the
-final load of the page you photographed**. Do not report session-wide history: earlier hot-reloads,
-other dev-server ports and transient module-graph errors from a build that has since settled are
-not defects of the frame you filed, and reporting them as console errors fails the item for
-something no reader would ever see.
 
 Return the schema: one pairs[] entry per viewport/theme, aPath and bPath pointing at that
 combination's two files. If the reference is unreachable, set captured false, explain in
@@ -675,8 +892,9 @@ function criticPrompt(item) {
   const dir = shotDir(item.id)
   return `You are the harsh visual critic for item ${item.id} — ${item.title}.
 
-In ${dir}/ there are screenshot pairs named <viewport>-<theme>-A.png and <viewport>-<theme>-B.png.
-Two different products are shown. You are NOT told which is which and you must NOT try to find
+In ${dir}/ there are screenshot pairs named <viewport>-<theme>-A.png and <viewport>-<theme>-B.png,
+possibly with a state prefix such as hover-visited-1440-light-A.png. Two different products are
+shown. You are NOT told which is which and you must NOT try to find
 out: do not read any mapping file, do not open source code, do not visit any URL, do not reason
 about which one "looks like the repo you are in". Judge only the pixels in front of you.
 
@@ -710,7 +928,8 @@ element, which viewport, which theme, what is wrong, and what it should be inste
 Vague findings ("improve the spacing") are useless — name the element and the value.
 
 Set winner to A, B or tie. Set verdict per the rules above. Fill scores 0-10 for each dimension,
-scoring the candidate you judged better.`
+scoring the candidate you judged better.
+${knowledgeFor('critic')}`
 }
 
 function auditPrompt(item, changedPaths) {
@@ -730,7 +949,7 @@ ${CONTRACT}
 ${BROWSER_POLICY}
 
 ${PORT_POLICY}
-
+${knowledgeFor('auditor')}
 Read the actual code. Check, in this order:
 1. Ownership: did it edit anything outside ownedPaths? Did it touch package.json, pnpm-lock.yaml
    or src/routeTree.gen.ts? Any of those is blocking.
@@ -764,11 +983,30 @@ if (VERIFY_ONLY) log('verification round: re-gating accepted work without rebuil
 
 phase('Build')
 
+/**
+ * Whether the item's files are byte-for-byte what they were when it was last judged.
+ *
+ * The orchestrator hashes each item's ownedPaths before the round; the item carries the hash it had
+ * at its last verdict. When the two agree AND the builder reports it wrote nothing, re-photographing
+ * and re-critiquing it produces the same eight images and the same verdict at the cost of the
+ * single most expensive agent in the loop. The auditor still runs — it reads code, it is cheap
+ * beside a vision pass, and it is the lens that catches a defect the pictures cannot show.
+ */
+function unchangedSinceVerdict(item, built) {
+  return (
+    built &&
+    built.status === 'unchanged' &&
+    item.hashAtVerdict &&
+    ITEM_HASHES[item.id] &&
+    item.hashAtVerdict === ITEM_HASHES[item.id]
+  )
+}
+
 const gated = await pipeline(
   carried,
   // Stage 1 — build, unless this is a verification pass over accepted work.
   (item) =>
-    VERIFY_ONLY && item.status === 'accepted'
+    VERIFY_ONLY && (item.status === 'accepted' || item.status === 'accepted-pending-gate')
       ? Promise.resolve({ itemId: item.id, status: 'unchanged', changedPaths: [] })
       : agent(buildPrompt(item, priorFindingsById[item.id]), {
           label: `build:${item.id}`,
@@ -777,29 +1015,36 @@ const gated = await pipeline(
           agentType: 'ultrabuild-builder',
           effort: 'high',
         }),
-  // Stage 2 — capture the blind pair (skipped for items with nothing visual).
-  (built, item) =>
-    item.url || item.referenceUrl
-      ? agent(capturePrompt(item), {
-          label: `capture:${item.id}`,
-          phase: 'Capture',
-          schema: CAPTURE_SCHEMA,
-          effort: 'low',
-        }).then((cap) => ({ built, cap }))
-      : Promise.resolve({ built, cap: null }),
+  // Stage 2 — capture the blind pair (skipped for items with nothing visual, and for items whose
+  // files did not move since the verdict that already judged them).
+  (built, item) => {
+    if (!item.url && !item.referenceUrl) return Promise.resolve({ built, cap: null, reused: false })
+    if (unchangedSinceVerdict(item, built) && item.priorVisual) {
+      log(`${item.id}: unchanged since its last verdict — reusing that visual verdict`)
+      return Promise.resolve({ built, cap: null, reused: true })
+    }
+    return agent(capturePrompt(item, captureMatrix(item, priorFindingsById[item.id], { repair: false })), {
+      label: `capture:${item.id}`,
+      phase: 'Capture',
+      schema: CAPTURE_SCHEMA,
+      effort: 'low',
+    }).then((cap) => ({ built, cap, reused: false }))
+  },
   // Stage 3 — judge. Critic and auditor are independent lenses on the same work.
-  ({ built, cap }, item) =>
+  ({ built, cap, reused }, item) =>
     parallel([
       () =>
-        cap && cap.captured
-          ? agent(criticPrompt(item), {
-              label: `critic:${item.id}`,
-              phase: 'Gate',
-              schema: VISUAL_SCHEMA,
-              agentType: 'pixel-critic',
-              effort: 'high',
-            })
-          : Promise.resolve(null),
+        reused
+          ? Promise.resolve(item.priorVisual)
+          : cap && cap.captured
+            ? agent(criticPrompt(item), {
+                label: `critic:${item.id}`,
+                phase: 'Gate',
+                schema: VISUAL_SCHEMA,
+                agentType: 'pixel-critic',
+                effort: 'high',
+              })
+            : Promise.resolve(null),
       () =>
         agent(auditPrompt(item, built && built.changedPaths), {
           label: `audit:${item.id}`,
@@ -808,7 +1053,7 @@ const gated = await pipeline(
           agentType: 'ultrabuild-auditor',
           effort: 'high',
         }),
-    ]).then(([visual, audit]) => ({ item, built, cap, visual, audit })),
+    ]).then(([visual, audit]) => ({ item, built, cap, visual, audit, reused })),
 )
 
 /* ------------------------------------------------------------------ *
@@ -831,10 +1076,11 @@ Run each command from the repo root, capture its exit code, and summarise its ou
   pnpm exec playwright test
 
 Notes:
-- Playwright needs a running dev server AND an explicit base URL. Resolve the port with the PORT
-  POOL POLICY below, then run the suite as
-  \`PLAYWRIGHT_BASE_URL=http://localhost:<port> pnpm exec playwright test\`. That makes
-  playwright.config.ts skip its own webServer block, which otherwise waits on port 3000 forever.
+- Playwright needs a running dev server AND an explicit base URL:
+    PORT=$(scripts/ultrabuild/resolve-port.sh --start)
+    PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test
+  That makes playwright.config.ts skip its own webServer block, which otherwise waits on port 3000
+  forever.
 - Never pass --update-snapshots. Rewriting the baseline would turn a visual regression into the new
   expected result. A failing screenshot comparison is a finding, not a baseline to refresh.
 - If a browser is missing, run \`pnpm exec playwright install\` and retry once, then report.
@@ -844,7 +1090,8 @@ Notes:
 - For each failure, add a finding with the file and line from the compiler/linter/test output and a
   short excerpt of the actual error text. Severity is always "blocking" for a non-zero exit.
 
-${PORT_POLICY}`,
+${PORT_POLICY}
+${knowledgeFor('mechanical')}`,
   { label: 'mechanical', phase: 'Mechanical', schema: MECHANICAL_SCHEMA, effort: 'low' },
 )
 
@@ -857,8 +1104,47 @@ if (!mechanicalGreen) {
  * Verdict. An item is accepted only when all three lenses agree.
  * ------------------------------------------------------------------ */
 
+/**
+ * Console output that belongs to the toolchain rather than to the item under judgement.
+ *
+ * Anchored on WHERE the message came from, never on what it says, so an error the app raises stays
+ * blocking even when it quotes one of these. `scripts/ultrabuild/capture.mjs` already splits them
+ * out; this is the backstop for a capture agent that reported them anyway, and it is the place the
+ * reject decision is actually made.
+ *
+ * The cost of not having it: a `ReferenceError: document is not defined` raised by Vite's own HMR
+ * message handler failed atlas-country-actions and atlas-country-card in round 9. Both were
+ * finished. The Playwright gate never sees this message, because the gate runs no dev client.
+ */
+const NOT_THE_APP = /\/@vite\/|\/@react-refresh|\/@id\/|\/@fs\/|react[-_]devtools/i
+
+/**
+ * A stable key for "the same problem", so a finding is not re-reported as new in every round.
+ *
+ * Deliberately keyed on PLACE and not on words. 589 findings in one run produced 588 distinct
+ * summaries, because each agent phrases the same defect its own way — so any key derived from the
+ * text makes a rewording look like a new problem and a fixed problem look like it is still open.
+ * Item plus file plus a ten-line bucket survives rewording. Two genuinely different defects within
+ * ten lines of one file collapse into one key, which is a rare and cheap error: they belong to the
+ * same builder and land in the same repair either way.
+ *
+ * A finding with no file has no place to key on, so it falls back to the shape of its summary. That
+ * is the weaker key, and it is the reason a critic finding should name a file whenever it can.
+ */
+function fingerprint(itemId, f) {
+  if (f.file) return `${itemId}|${f.file}:${Math.floor((f.line || 0) / 10)}`
+  const shape = (f.summary || '')
+    .toLowerCase()
+    .replace(/[^a-z ]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 4)
+    .slice(0, 4)
+    .join('-')
+  return `${itemId}|no-file|${shape}`
+}
+
 function verdictFor(row) {
-  const { item, built, cap, visual, audit } = row
+  const { item, built, cap, visual, audit, reused } = row
   const findings = []
   const reasons = []
 
@@ -886,24 +1172,48 @@ function verdictFor(row) {
     reasons.push(cap && cap.skippedReason ? `no blind pair: ${cap.skippedReason}` : 'no visual verdict')
   }
 
-  if (cap && (cap.consoleErrors || []).length) {
-    reasons.push(`${cap.consoleErrors.length} console error(s)`)
-    for (const e of cap.consoleErrors) findings.push({ summary: `Console: ${e}`, severity: 'blocking', source: 'capture' })
+  const appConsoleErrors = (cap ? cap.consoleErrors || [] : []).filter((e) => !NOT_THE_APP.test(e))
+  if (appConsoleErrors.length) {
+    reasons.push(`${appConsoleErrors.length} console error(s)`)
+    for (const e of appConsoleErrors) {
+      findings.push({ summary: `Console: ${e}`, severity: 'blocking', source: 'capture' })
+    }
   }
 
-  if (!mechanicalGreen) reasons.push('repo mechanical gate red')
+  /*
+   * The repo gate is a fact about the ROUND, not a judgement on this item.
+   *
+   * It used to be appended to `reasons`, so a red repo rejected every item whatever its own two
+   * lenses said — and a rejected item goes back to the builder with its findings and is rebuilt.
+   * In the atlas run that meant correct, finished code was rebuilt for someone else's failing test
+   * across rounds 1 to 8, and five items ended the run marked `rejected` with, in the report's own
+   * words, no defect that still existed. An item that passed both its lenses is now held at
+   * `accepted-pending-gate`: it is not rebuilt, not re-photographed, and needs only a green repo to
+   * become accepted.
+   */
+  const ownVerdict = reasons.length ? 'rejected' : 'accepted'
+  const status = ownVerdict === 'accepted' && !mechanicalGreen ? 'accepted-pending-gate' : ownVerdict
+
+  const blocking = findings
+    .filter((f) => f.severity === 'blocking')
+    .map((f) => ({ ...f, fingerprint: fingerprint(item.id, f) }))
 
   return {
     ...item,
-    status: reasons.length ? 'rejected' : 'accepted',
+    status,
+    gateBlocked: !mechanicalGreen,
     round: ROUND,
     abWinner,
     scores: visual ? visual.scores : undefined,
     reasons,
     changedPaths: built ? built.changedPaths : [],
     contractExtensions: built ? built.contractExtensions || [] : [],
-    findings: findings.filter((f) => f.severity === 'blocking'),
-    allFindings: findings,
+    // Carried so a later round can reuse it when the item's files have not moved.
+    priorVisual: visual || item.priorVisual,
+    reusedVisual: !!reused,
+    learned: [...((built && built.learned) || []), ...((cap && cap.learned) || [])],
+    findings: blocking,
+    allFindings: findings.map((f) => ({ ...f, fingerprint: fingerprint(item.id, f) })),
   }
 }
 
@@ -939,9 +1249,12 @@ while (
       }),
     (built, v) =>
       v.url || v.referenceUrl
-        ? agent(capturePrompt(v), { label: `recapture:${v.id}`, phase: 'Repair', schema: CAPTURE_SCHEMA, effort: 'low' }).then(
-            (cap) => ({ built, cap }),
-          )
+        ? agent(capturePrompt(v, captureMatrix(v, v.findings, { repair: true })), {
+            label: `recapture:${v.id}`,
+            phase: 'Repair',
+            schema: CAPTURE_SCHEMA,
+            effort: 'low',
+          }).then((cap) => ({ built, cap }))
         : Promise.resolve({ built, cap: null }),
     ({ built, cap }, v) =>
       parallel([
@@ -1005,18 +1318,57 @@ if (!mechanicalGreen) {
   }
 }
 
+/*
+ * Findings this round did NOT re-report, keyed by the fingerprint of a finding it inherited.
+ *
+ * The loop had no way to say "that one is fixed": a finding stayed in the item's blocking list
+ * until a round happened not to mention it, and the builder was handed the same list again. Naming
+ * the resolved ones lets the orchestrator close them in the ledger instead of carrying them.
+ */
+const seen = new Set(newFindings.map((f) => f.fingerprint).filter(Boolean))
+const resolved = []
+for (const v of verdicts) {
+  for (const f of priorFindingsById[v.id] || []) {
+    if (f.fingerprint && !seen.has(f.fingerprint)) resolved.push({ itemId: v.id, fingerprint: f.fingerprint })
+  }
+}
+
+// Environment measurements the agents made, for the orchestrator to fold into
+// .claude/ultrabuild/knowledge/facts.json. Deduplicated on the claim so three agents measuring the
+// same thing in the same round contribute one entry.
+const learnedFacts = []
+const claimed = new Set()
+for (const source of [...verdicts.map((v) => v.learned), mechanical && mechanical.learned]) {
+  for (const l of source || []) {
+    const key = (l.claim || '').toLowerCase().slice(0, 80)
+    if (!key || claimed.has(key)) continue
+    claimed.add(key)
+    learnedFacts.push(l)
+  }
+}
+
 const accepted = merged.filter((m) => m.status === 'accepted').length
-log(`round ${ROUND}: ${accepted}/${merged.length} accepted · ${newFindings.length} findings · mechanical ${mechanicalGreen ? 'green' : 'RED'}`)
+const pending = merged.filter((m) => m.status === 'accepted-pending-gate').length
+log(
+  `round ${ROUND}: ${accepted}/${merged.length} accepted${pending ? ` (+${pending} awaiting a green repo)` : ''} · ` +
+    `${newFindings.length} findings · ${resolved.length} resolved · mechanical ${mechanicalGreen ? 'green' : 'RED'}`,
+)
 
 return {
   round: ROUND,
   items: merged,
   newFindings,
+  resolvedFindings: resolved,
+  learnedFacts,
+  // Fresh recon only, tagged with the hash it was measured against. The orchestrator persists these
+  // and hands back whichever are still valid next round, so a reader runs only when its inputs move.
+  recon: reconToPersist,
   extensions,
   mechanical: { green: mechanicalGreen, results: (mechanical && mechanical.results) || [] },
   deferred: deferred.map((i) => i.id),
   // Dry means the loop has nothing left to do: no new findings, a green repo, and
   // every item accepted. Reporting dry while an item is still rejected would let
-  // the caller's two-dry-rounds stop condition fire over unfinished work.
+  // the caller's two-dry-rounds stop condition fire over unfinished work. A green repo means no
+  // item can be sitting at `accepted-pending-gate`, so `accepted` is the only status that counts.
   dry: newFindings.length === 0 && mechanicalGreen && merged.every((m) => m.status === 'accepted'),
 }

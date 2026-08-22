@@ -1,0 +1,140 @@
+[
+  {
+    "id": "theme-seam",
+    "claim": "Select a theme with `page.emulateMedia({ colorScheme })` and nothing else. Do NOT write `data-theme`, and do NOT drive the app's own theme control.",
+    "evidence": "Measured against http://localhost:3003/pricing: emulateMedia('light') gives body background rgb(250,249,247), emulateMedia('dark') gives rgb(18,18,17), and `documentElement.getAttribute('data-theme')` stays null in both. docs/DESIGN.md puts the dark values behind `@media (prefers-color-scheme: dark)` guarded as `:root:not([data-theme=\"light\"])`, so the media path is the whole job. Writing data-theme fights the app's own theme script; a single click on the theme control only OPENS a dropdown, which is how a half-dark frame came to be reported as a product defect three times in one run.",
+    "measuredIn": "atlas-tooltips run, post-round-12 review",
+    "scope": [
+      "capture",
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "docs/DESIGN.md stops guaranteeing the media-query path, or `applyTheme` in e2e/helpers/shoot.ts changes"
+  },
+  {
+    "id": "port-resolution",
+    "claim": "Resolve the dev server with `scripts/ultrabuild/resolve-port.sh` (add `--start` if you are allowed to start one). Never probe the pool by hand, never assume 3000, never kill a server you did not start.",
+    "evidence": "The rule used to be prose in four prompts and produced 23 port findings across ten rounds. Sixteen concurrent `pnpm dev` servers once put this machine at load average 563 with 4.4 GB of swap, and round 4's gate returned 64 failures of which none was a pixel difference. The script probes /api/dev/seed, which is this repo's own endpoint, so a match proves the server is ours rather than merely alive.",
+    "measuredIn": "atlas-tooltips run, rounds 4-12",
+    "scope": [
+      "builder",
+      "capture",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "the pool bounds change, or /api/dev/seed stops answering on a dev build"
+  },
+  {
+    "id": "capture-procedure",
+    "claim": "Take blind-pair frames with `scripts/ultrabuild/capture.mjs`. It owns the viewport, the theme, animation suppression, the map-ready wait, the filename and the console classification.",
+    "evidence": "The procedure used to be ~2 KB of prose that each capture agent re-derived. Cost across two runs: 5 findings about a wrongly switched theme, frames shot with the screen at rest when a hover state was under judgement, flat-colour frames from a WebGL canvas photographed before its first idle, and 36 findings about scratch PNGs left at the repo root.",
+    "measuredIn": "atlas-tooltips run, rounds 1-12",
+    "scope": [
+      "capture"
+    ],
+    "invalidatesWhen": "the script stops covering a state the item needs — extend the script, do not go around it"
+  },
+  {
+    "id": "demo-session",
+    "claim": "Our authenticated screens are photographed with Playwright, which holds the demo session in e2e/.auth/demo.json. Ego Lite cannot reach them. A stale session does not fail, it redirects to /login — refresh it with `PLAYWRIGHT_BASE_URL=http://localhost:<port> pnpm exec playwright test --project=setup`.",
+    "evidence": "Measured: an Ego tab opening /atlas lands on /login?redirect=%2Fatlas, and signing in from inside the task space did not work (no input[type=email], pageInfo() timed out, tab ended on about:blank). Measured again during this review: a cached demo.json against a freshly started server on 3003 redirected /atlas to /login, so the guard in capture.mjs refuses to file that frame.",
+    "measuredIn": "atlas-tooltips run, rounds 9-12 and post-round-12 review",
+    "scope": [
+      "capture",
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "someone demonstrates Ego Lite carrying our session, with a measurement"
+  },
+  {
+    "id": "map-readiness",
+    "claim": "A page with a MapLibre canvas is ready when at least one `[data-map-ready]` marker exists AND no `[data-map-ready=\"false\"]` remains. Wait again after every resize and every theme change.",
+    "evidence": "`settleMap()` in e2e/helpers/shoot.ts makes the same two-sided check, for the same reason: a bare wait on `[data-map-ready=\"true\"]` hangs, because the marker sits on a wrapper Playwright does not always call visible. A theme change replaces the whole style document through setStyle and the marker goes back to false.",
+    "measuredIn": "atlas-tooltips run, and post-round-12 review",
+    "scope": [
+      "capture",
+      "builder"
+    ],
+    "invalidatesWhen": "src/components/map/map-canvas.tsx stops publishing the marker"
+  },
+  {
+    "id": "timeouts-are-load",
+    "claim": "A Playwright or vitest failure whose message is a TIMEOUT, with no pixel count and no assertion diff, is evidence about this machine's load and not about the code. Report it; never change code in response to one.",
+    "evidence": "src/lib/map/__tests__/countries.test.ts timing out at 5000ms is the standing example: it passes 74/74 when run alone. 12 findings in the current run and 10 in the previous one were timeouts of this shape.",
+    "measuredIn": "both runs",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "a timeout reproduces on an idle machine"
+  },
+  {
+    "id": "vite-console-noise",
+    "claim": "A console message whose own stack frame is a Vite dev-server namespace (/@vite/, /@react-refresh, /@id/, /@fs/) is the toolchain talking, not the application. It is not a defect of the item under judgement.",
+    "evidence": "`ReferenceError: document is not defined` from http://localhost:3001/@vite/client:976 (handleMessage) failed atlas-country-actions and atlas-country-card in round 9. Both were otherwise finished. The gate itself never sees it, because the gate runs no dev client — see TOLERATED_CONSOLE_WARNINGS in e2e/helpers/shoot.ts, which must stay as strict as it is.",
+    "measuredIn": "atlas-tooltips run, rounds 4, 9 and 10",
+    "scope": [
+      "capture",
+      "auditor"
+    ],
+    "invalidatesWhen": "the message originates from our own bundle rather than from a dev-server namespace"
+  },
+  {
+    "id": "prettier-not-in-gate",
+    "claim": "`pnpm check` (prettier) fails repo-wide on ~157 pre-existing files and is deliberately not part of the mechanical gate. Keep the files you touch prettier-clean; never reformat the repo as a side effect.",
+    "evidence": "Standing decision, carried in the /ultrabuild command since the first run.",
+    "measuredIn": "both runs",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "someone formats the repo as its own task"
+  },
+  {
+    "id": "artefact-location",
+    "claim": "Every screenshot belongs under .claude/ultrabuild/shots/<slug>/round-<n>/<item-id>/, every scratch script in the session scratchpad. Delete what you created once it has served its purpose.",
+    "evidence": "One run left eleven loose PNGs and two probe scripts at the repo root and a `git add -A` committed 770 KB of them. 36 findings in the current run and 17 in the previous one were about stray artefacts. A root-level PNG/mjs rule in .gitignore is the backstop, not the fix.",
+    "measuredIn": "both runs",
+    "scope": [
+      "builder",
+      "capture",
+      "auditor"
+    ],
+    "invalidatesWhen": "never — this is a convention, not a measurement"
+  },
+  {
+    "id": "clock-pin-cors",
+    "claim": "`extraHTTPHeaders` in playwright.config.ts applies the x-pt-server-today clock pin to EVERY request the context makes, including cross-origin Google Fonts, which rejects the preflight. Every baseline in e2e/__screenshots__ is therefore recorded in the fallback face. Scope the header to the app origin.",
+    "evidence": "Reported by the auditor of atlas-country-actions: 'Request header field x-pt-server-today is not allowed by Access-Control-Allow-Headers'. scripts/ultrabuild/capture.mjs scopes it per-request for exactly this reason.",
+    "measuredIn": "atlas-tooltips run, round 9",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "playwright.config.ts scopes the header, which is open backlog work"
+  },
+  {
+    "id": "critic-judges-the-screen",
+    "claim": "The blind critic judges the whole SCREEN, not the component the item owns. Screen-level defects — the 360px composition, a panel's information architecture, a card clipped by its scroll container — will surface while an item that owns none of those files is under judgement.",
+    "evidence": "In the atlas run, atlas-country-card was repeatedly rejected for defects belonging to src/routes/_app/-ui/atlas-screen.tsx, which it does not own. A component item can only reach acceptance once the screen hosting it is finished, so order the items that way and put the screen-level acceptance on the item that owns the screen.",
+    "measuredIn": "atlas-tooltips run, rounds 3-9",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "the capture starts cropping to the item's own element, which it does not"
+  },
+  {
+    "id": "capture-the-state-not-the-screen",
+    "claim": "For an item whose point is an interaction state, the capture must photograph THAT state. Declare it in the item's captureStates so scripts/ultrabuild/capture.mjs reaches it; a resting-screen frame is not evidence about such an item.",
+    "evidence": "Every blind pair in rounds 1-5 of the atlas run photographed /atlas at rest. The critic accepted atlas-map-overlay at high confidence without ever seeing the hover tooltip, which was the entire thing the user had asked for.",
+    "measuredIn": "atlas-tooltips run, rounds 1-6",
+    "scope": [
+      "capture",
+      "builder"
+    ],
+    "invalidatesWhen": "never — it is a property of judging by pictures"
+  }
+]
