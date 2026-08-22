@@ -136,5 +136,41 @@
       "builder"
     ],
     "invalidatesWhen": "never — it is a property of judging by pictures"
+  },
+  {
+    "id": "gap-rows-not-a-dag",
+    "claim": "The dependsOn edges in .claude/ultrabuild/recon/gap-rows.json are NOT a DAG and cannot be topologically sorted as written — they contain nine mutual A->B / B->A pairs. Any wave ordering must cut edges explicitly and record which ones it cut.",
+    "evidence": "Measured by the plan-index builder in round 1 while deriving the wave table. A naive topological sort lands TRP-11 in wave 4 and disagrees with the recon summary, which names it one of four wave-1 leaders.",
+    "measuredIn": "this run, round 1",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "gap-rows.json is rewritten with an acyclic dependsOn"
+  },
+  {
+    "id": "markdown-not-prettier-clean",
+    "claim": "New markdown under docs/ passes pnpm lint untouched — eslint never sees it — but hand-written markdown is NOT prettier-clean: prettier rewrites table column padding and converts *emphasis* to _emphasis_. Run pnpm exec prettier --write on every markdown file you create.",
+    "evidence": "Measured in round 1 on docs/plans/README.md and docs/plans/TEMPLATE.md.",
+    "measuredIn": "this run, round 1",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "prettier stops covering markdown"
+  },
+  {
+    "id": "repo-gate-red-at-head",
+    "claim": "The repo-wide Playwright gate is RED at HEAD c97dfd1 for reasons that predate this run: 44 failed / 5 skipped / 88 passed. typecheck, lint, 2243 unit tests and build are all green. NO item in this run can turn it green, because every item owns only docs/ and every failure is in a src/-rendered screen. Items therefore settle at accepted-pending-gate, and this run must never report the gate as passed.",
+    "evidence": "git diff 54f18a7..HEAD -- e2e playwright.config.ts src is EMPTY, so neither the app nor the gate config changed since the baselines were recorded, when the gate was 105/105 green on 2026-08-21. The working tree carries only untracked docs/plans/*.md. Failure shapes: pricing-light 76px taller, legal-terms 283px, legal-privacy 118px, dashboard-light, trips-light, mobile-safari landing, plus a functional [data-part=\"country-panel\"] that never renders and chrome.shelf null on /atlas. The measuring agent recorded that NONE of the 44 is a load-related timeout — every one carries a pixel count or a concrete missing-locator assertion.",
+    "measuredIn": "this run, round 1",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical",
+      "capture"
+    ],
+    "invalidatesWhen": "the gate goes green, or a source change lands that could plausibly explain the failures"
   }
 ]
