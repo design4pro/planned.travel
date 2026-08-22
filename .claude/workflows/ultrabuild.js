@@ -59,9 +59,12 @@ Hard constraints that override any instinct to be helpful:
  * Which browser an agent reaches for, and why the two are not interchangeable.
  *
  * Ego Lite is a Chromium browser built for agents: it drives a page from a Node heredoc and runs in
- * an isolated task space that inherits the human's login state. That last part is the reason it is
- * the default for looking at the app — capture agents in the atlas run repeatedly returned
- * `captured: false` because /atlas sits behind a login they had no session for.
+ * an isolated task space. It inherits the HUMAN's browser login state, which covers external sites
+ * — but measured against this repo it does NOT carry our demo session, because that session lives
+ * in Playwright's e2e/.auth/demo.json, not in the human's Chrome profile. An Ego tab asking for
+ * /atlas lands on /login?redirect=%2Fatlas, and signing in from inside the task space did not work
+ * either. So the split is by SIDE of the blind pair, not by browser preference: Ego takes the
+ * external reference, Playwright takes our authenticated screens.
  *
  * Playwright stays the authority for anything that has to be reproducible or cross-engine: it owns
  * the gate, the committed baselines, and WebKit. Ego Lite is one Chromium build on one machine and
@@ -69,9 +72,9 @@ Hard constraints that override any instinct to be helpful:
  */
 const BROWSER_POLICY = `BROWSER POLICY — two browsers, one job each. Do not substitute one for the other.
 
-EGO LITE (\`ego-browser\`) — the default for LOOKING at the app.
-Use it for: the blind A/B capture pair, checking a change by eye, exploring a flow, reading the DOM
-of a page that needs a session. Verified on this machine: ego-browser 0.4.7.1, Chromium 150.
+EGO LITE (\`ego-browser\`) — for the REFERENCE side and any page that needs no session of ours.
+Use it for: the reference half of the blind A/B pair, our own unauthenticated pages, and quick
+exploratory looks. Verified on this machine: ego-browser 0.4.7.1, Chromium 150.
   - Invoke it from Bash as a heredoc; do not write a .js file first:
       ego-browser nodejs <<'SCRIPT'
       const task = await useOrCreateTaskSpace('ultrabuild <item-id>')
@@ -83,9 +86,25 @@ of a page that needs a session. Verified on this machine: ego-browser 0.4.7.1, C
   - \`captureScreenshot()\` resolves to a PATH STRING pointing at a PNG in a temp directory. Copy that
     file to where the item wants it; it is not bytes and not a data URL.
   - \`cliLog(...)\` is the only way anything reaches your terminal from inside the heredoc.
-  - The task space inherits the human's logged-in session, which is how you reach a page behind
-    auth. Reuse one named space for the whole item across heredoc rounds; the Node runtime keeps no
-    state between them.
+  - AUTH AND RELIABILITY, both measured — this decides which browser photographs which side.
+    Ego inherits the HUMAN's browser session, so an external site the human is signed into just
+    works. Our own dev server does not: this repo's demo session lives in Playwright's
+    e2e/.auth/demo.json, and an Ego tab opening http://localhost:<port>/atlas lands on
+    /login?redirect=%2Fatlas. Signing in from inside the task space was attempted and did NOT work:
+    the login form exposes no input[type="email"], pageInfo() then timed out on Runtime.evaluate,
+    and the tab ended on about:blank. Three probes against our localhost gave one success, one
+    five-minute hang and one error.
+    THEREFORE, until someone demonstrates otherwise with a measurement:
+      * OUR AUTHENTICATED SCREENS — anything inside the app shell, which is every screen this
+        project's items are about — are photographed with PLAYWRIGHT, which already holds the
+        session and has been reliable all run.
+      * EGO LITE takes the REFERENCE side of the blind pair and any unauthenticated page of ours,
+        plus quick exploratory looks. That is still most of the value: the reference is an external
+        site, and Ego reaches it without a Playwright project or a storage state.
+    If you do get Ego onto an authenticated screen of ours, say how you did it in your result so the
+    next round can stop paying this cost.
+  - Reuse one named space for the whole item across heredoc rounds; the Node runtime keeps no state
+    between them, but the task space does — including that session.
   - Set the viewport with \`cdp('Emulation.setDeviceMetricsOverride', { width, height,
     deviceScaleFactor: 1, mobile: false })\`. Measured on this machine: overriding to 360x800 and
     then 1440x900 makes \`await pageInfo()\` report exactly \`w: 360, h: 800\` and \`w: 1440, h: 900\`,
