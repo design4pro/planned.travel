@@ -89,18 +89,48 @@ Run these and fix what is trivially fixable before invoking the workflow.
 - Playwright browsers present → `pnpm exec playwright install` if a launch fails with
   "Executable doesn't exist". Both `chromium` and `webkit` are needed (the config runs a desktop
   Chromium project and a mobile WebKit one).
-- **Dev server, and its base URL.** Start `pnpm dev` in the background if nothing is serving, then
-  find the port it actually bound and confirm it answers:
+- **Dev server: the reserved port range 3010-3020.** Ports **3010 to 3020 belong to ultrabuild and
+  to nothing else**. Everything below 3010 belongs to the developer or to another project — port
+  3000 currently serves an unrelated app — so a round never binds there, never probes there and
+  never kills there.
+
+  This rule exists because it was learned the hard way: six rounds in a row started a server and
+  left it running, because there was no way to tell our process from someone else's and therefore
+  no safe way to clean up. A reserved range makes ownership decidable, so cleanup becomes safe.
+
+  Start of round — reclaim the range, then bind one port in it:
 
   ```
-  lsof -nP -iTCP -sTCP:LISTEN | grep -i node
-  curl -s -o /dev/null -w '%{http_code}' http://localhost:<port>/
+  for p in $(seq 3010 3020); do
+    pid=$(lsof -nP -iTCP:$p -sTCP:LISTEN -t 2>/dev/null) && [ -n "$pid" ] && kill $pid
+  done
+  pnpm dev -- --port 3010 --strictPort &
+  curl -s -o /dev/null -w '%{http_code}' http://localhost:3010/
   ```
 
-  This environment injects an extra `--port` into the dev command, so `pnpm dev` can land on a port
-  other than 3000. Do not assume 3000. Export the real one as `PLAYWRIGHT_BASE_URL` for every
-  Playwright invocation this round — `playwright.config.ts` then targets it directly and skips its
-  own `webServer` block, which otherwise waits on 3000 forever and hangs the whole round.
+  `--strictPort` is not optional: without it Vite silently walks to the next free port and the
+  round loses track of what it bound. If 3010 is genuinely wedged, use 3011, and say which port
+  the round is on in your report.
+
+  End of round — kill it, unconditionally, before you write the report:
+
+  ```
+  for p in $(seq 3010 3020); do
+    pid=$(lsof -nP -iTCP:$p -sTCP:LISTEN -t 2>/dev/null) && [ -n "$pid" ] && kill $pid
+  done
+  ```
+
+  Every Playwright invocation gets `PLAYWRIGHT_BASE_URL=http://localhost:<the port you bound>`
+  passed explicitly. Without it `playwright.config.ts` falls back to `http://localhost:3000`
+  (line 10) with `reuseExistingServer` on (line 129), and the gate photographs whatever unrelated
+  application happens to be answering there — a green run proving nothing about this repo.
+- **Visual verification: Ego Lite first, Playwright for the gate.** `~/.local/bin/ego-browser` is a
+  light Chromium built for agents, and the `ego-browser` skill drives it. Use it for the
+  look-at-the-screen work inside a round: checking a change rendered, grabbing a screenshot for the
+  blind A/B pair, walking a flow by hand. Keep Playwright for what only it does — the committed
+  baseline comparison, cross-browser (the config runs desktop Chromium and mobile WebKit), and the
+  end-to-end specs. A round that only needs to look at a page does not need Playwright and must not
+  start a server for it.
 - **Demo data and the demo session.** The authenticated half of the visual gate signs in as
   `rafal@planned.travel`. Run `node scripts/seed/seed.mjs --url http://localhost:<port>` if the
   authenticated specs report themselves as skipped — it provisions the workspace and reconciles the
@@ -183,9 +213,10 @@ winner per screen, what changed, next action. No preamble, no restating the plan
 ## Autonomy (granted) and hard limits (never)
 
 Permitted unattended, no confirmation needed: editing source, `pnpm build|typecheck|lint|test`,
-`pnpm exec playwright test`, running the dev server, taking screenshots, fetching reference URLs,
-`wrangler deploy`, `wrangler d1 migrations apply --local|--remote`, `wrangler versions upload`,
-`git add|commit|push` (fast-forward), Stripe **test**-mode calls.
+`pnpm exec playwright test`, running the dev server **on a port in 3010-3020**, killing any
+listener **in that range** (it is ours by definition), driving `ego-browser`, taking screenshots,
+fetching reference URLs, `wrangler deploy`, `wrangler d1 migrations apply --local|--remote`,
+`wrangler versions upload`, `git add|commit|push` (fast-forward), Polar **sandbox** API calls.
 
 Never, under any circumstance, even if a round seems to need it — stop and ask instead:
 
@@ -193,8 +224,13 @@ Never, under any circumstance, even if a round seems to need it — stop and ask
   deletion of a Cloudflare resource, remote database or bucket.
 - `git push --force`, `git reset --hard` on shared history, `git rebase`/`filter-branch` on `main`,
   or anything that rewrites published commits.
-- Stripe **live**-mode API calls.
+- Polar **production**-mode API calls. Sandbox is fine; production moves real money.
 - `pnpm add` / `pnpm remove`, or editing `package.json` or `pnpm-lock.yaml` — `SPEC.md` §3 freezes
   the dependency set. A genuinely missing package is a finding to report, not a thing to install.
+  **One standing exception, and it is a list of two names rather than a policy:**
+  `@react-email/components` and `react-email` may be installed, in **phase A of the Polar
+  migration and in no other round**, because `SPEC.md` §3 admits them by name. Phase A also
+  **removes** `stripe` in the same round, since that phase deletes the last code importing it.
+  Nothing else is in scope: any other package is still a finding you report and never install.
 - Hand-editing `src/routeTree.gen.ts` (run `pnpm generate-routes`).
 - Introducing the TREK name, mark, source or assets anywhere in this repo.

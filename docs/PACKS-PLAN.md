@@ -87,32 +87,109 @@ gotowości. Kontrakt musi opisywać nowy stan, zanim ruszy budowanie.
 
 ## Faza A - migracja billingu na Polar.sh
 
-Warunek wstępny Fazy G. Zakres: `src/server/billing/**`, `src/lib/plans.ts`,
-`src/routes/api/polar/**`, `src/routes/_app/settings/billing.tsx`, `src/routes/pricing.tsx`.
+Warunek wstępny Fazy G. **Stripe znika z repozytorium w tej fazie** - nie zostaje jako martwy kod
+„do sprzątnięcia później", bo późniejsze fazy budowałyby wtedy na mylnym założeniu, że jeszcze
+gdzieś żyje. Decyzja użytkownika z 22.08: jesteśmy na etapie build, więc zmieniamy wszystko naraz.
+
+**Zakres pełny** - lista poniżej była w pierwszej wersji planu niekompletna i audyt to wykazał:
+`src/server/billing/**`, `src/lib/plans.ts`, `src/routes/api/polar/**`,
+`src/routes/_app/settings/billing.tsx`, `src/routes/pricing.tsx`, `src/routes/legal/terms.tsx`,
+`src/server/db/schema.ts`, `drizzle/`, `src/server/repos/billing.ts`, `src/server/queue/types.ts`,
+`src/routes/api/dev/-seed/dataset/**`, `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`,
+`package.json` + `pnpm-lock.yaml` (wyjątek nazwany), `.dev.vars.example`. `src/routeTree.gen.ts`
+**regenerowany** przez `pnpm generate-routes`, nigdy ręcznie.
+
+### Zweryfikowane fakty, którymi ta faza się kieruje
+
+Sprawdzone na żywym OpenAPI Polara (`info.version` 2026-04) i w sandboxie DESIGN4PRO - **nie
+z pamięci**, bo pierwsza wersja tego planu miała tu cztery błędy:
+
+| Twierdzenie z pierwszej wersji planu | Jak jest naprawdę |
+|---|---|
+| `POST /v1/checkout-sessions` | nie istnieje; są `POST /v1/checkouts/` i `POST /v1/customer-sessions/` |
+| `incomplete*` nie istnieje w Polarze, zawęź krotkę | **istnieje**; osiem wartości Polara = osiem w `plans.ts:32-41`, **nie ruszamy krotki** |
+| `subscription.cycled\|paused\|resumed` nie istnieją | **istnieją**; enum ma 41 wartości. Okrojoną listę 35 niesie schemat narzędzia MCP, nie API |
+| rename kolumn to osobna decyzja | rename **robimy**, razem z usunięciem Stripe'a |
+
+### Produkty w sandboxie - już utworzone
+
+Organizacja DESIGN4PRO (`0cad0d45-3b92-4144-ad4c-1438ec9cd6d3`), cztery produkty gotowe,
+identyfikatory w `.env.local` (plik ignorowany przez git):
+
+| plan | interwał | kształt ceny | kwota |
+|---|---|---|---|
+| Solo | monthly | fixed | 900 |
+| Solo | yearly | fixed | 9000 |
+| Crew | monthly | **seat_based**, volume, 2-10 miejsc | 700 za miejsce |
+| Crew | yearly | **seat_based**, volume, 2-10 miejsc | 7000 za miejsce |
+
+Wszystkie z `trial_interval: day` × 14, zgodnie z `trialDays: 14` w `plans.ts`. Każdy produkt niesie
+cenę w EUR **i** USD, bo Polar wymaga obecności domyślnej waluty prezentacyjnej organizacji (EUR),
+a nasz katalog jest w USD. Kwoty są równe nominalnie (9 EUR = 9 USD), nie przeliczone kursem -
+**do potwierdzenia przed produkcją**.
+
+### Crew jest seat-based i to musi przetrwać migrację
+
+Faza 0 przegapiła to w całości: słowo „seat" nie padło ani razu w SPEC, DEPLOY, CATALOG ani w tym
+planie, podczas gdy `src/lib/plans.ts:306` ma `seatBased: true`, `seatRange {min: 2, max: 10}`,
+`perSeat: true`, a `checkout.ts:251` wysyła `quantity: selection.seats` z `adjustable_quantity`.
+Polar odwzorowuje to niemal 1:1: `seats` / `min_seats` / `max_seats` w `POST /v1/checkouts/`.
+`clampSeats` i `seatRange` zostają bez zmian. Gdyby produkty powstały jako `fixed`, Crew po cichu
+policzyłby 7 USD za dziesięć osób - dlatego produkty utworzono jako `seat_based` od razu.
+
+### Praca do wykonania
 
 - `src/server/billing/stripe.ts` → **`polar.ts`**: cienki klient `fetch` (base URL wg `POLAR_SERVER`,
   `Authorization: Bearer`, retry 2×, timeout 20 s) + `verifyWebhookSignature()` na WebCrypto.
   Brak sekretu → `BillingConfigError`, jak dziś.
-- `checkout.ts` - `createCheckoutSession()` na `POST /v1/checkout-sessions`
-  (`external_customer_id` = `organizationId`), `createPortalSession()` na `POST /v1/customer-sessions`.
-  Produkt **zawsze** rozwiązywany po stronie serwera z `src/lib/plans.ts` - reguła zostaje.
-- `webhook.ts` - zdarzenia `subscription.created|updated|canceled|revoked`, `order.paid`,
-  `checkout.updated`. Zachowaj architekturę: weryfikacja podpisu → claim `event_id` w KV
-  (idempotencja) → mały zapis do D1 inline → reszta na `TASKS`.
-- `mapping.ts` - statusy Polara na `SUBSCRIPTION_STATUSES`; `incomplete*` nie istnieje w Polarze,
-  więc zawęź krotkę w `src/lib/plans.ts` zamiast utrzymywać martwe warianty.
-- `types.ts`, `store.ts` - `stripeCustomerId` → `providerCustomerId`,
-  `stripeSubscriptionId` → `providerSubscriptionId`, `stripePriceId` → `providerProductId`.
+- `checkout.ts` - `createCheckoutSession()` na `POST /v1/checkouts/` (`products` jako tablica UUID,
+  `external_customer_id` = `organizationId`, `seats` dla Crew), `createPortalSession()` na
+  `POST /v1/customer-sessions/`. Produkt **zawsze** rozwiązywany po stronie serwera z
+  `src/lib/plans.ts` - reguła zostaje.
+- `webhook.ts` - zdarzenia `subscription.created|active|updated|canceled|uncanceled|cycled|past_due|revoked|paused|resumed`,
+  `order.created|updated|paid|refunded`, `checkout.created|updated|expired`. Zachowaj architekturę:
+  weryfikacja podpisu → claim `event_id` w KV (idempotencja) → mały zapis do D1 inline → reszta na
+  `TASKS`. `subscription.cycled` jest sygnałem odnowienia.
+- `mapping.ts` - statusy Polara na `SUBSCRIPTION_STATUSES` **jeden do jednego**. Krotki nie ruszamy.
+- `types.ts`, `store.ts`, `schema.ts`, `repos/billing.ts`, `queue/types.ts` -
+  `stripeCustomerId` → `providerCustomerId`, `stripeSubscriptionId` → `providerSubscriptionId`,
+  `stripePriceId` → `providerProductId`, plus te same nazwy kolumn w tabeli `subscriptions`
+  i w dwóch indeksach.
+- **Migracja Drizzle**: `pnpm db:generate` po zmianie nazw kolumn (`schema.ts:269`). Tabela jest
+  pusta przed produkcją, więc rename bez backfillu. `drizzle-kit` pyta interaktywnie przy renamie -
+  sprawdź wygenerowany SQL, zanim go zacommitujesz.
 - `src/lib/plans.ts` - `PlanPrice.priceId` → `productId`, `PRICE_IDS` → `PRODUCT_IDS`
   z `import.meta.env.VITE_POLAR_PRODUCT_*`.
-- `src/routes/api/stripe/webhook.ts` → `src/routes/api/polar/webhook.ts` (ta sama struktura:
-  tylko `server`, `POST`, inne metody 405).
-- Migracja Drizzle po zmianie nazw kolumn w `subscriptions` (`schema.ts:269`). Tabela pusta przed
-  produkcją - rename bez backfillu.
+- `src/routes/api/stripe/webhook.ts` → `src/routes/api/polar/webhook.ts`, potem
+  `pnpm generate-routes`.
+- **Usunięcie Stripe'a**: `pnpm remove stripe`, zero importów wartościowych i typowych, zero
+  `STRIPE_*` w `.dev.vars.example` i w obu workflow'ach CI. Kryterium: `grep -ril stripe src/`
+  zwraca pustkę.
+- **React Email**: `pnpm add @react-email/components` (dependencies) + `pnpm add -D react-email`
+  (devDependencies), przepisanie `src/server/auth/email.ts` na komponenty i cztery szablony
+  billingowe - potwierdzenie subskrypcji, zmiana planu, nieudana płatność, zakup pakietu. Każdy
+  zachowuje wersję tekstową.
+- `src/routes/legal/terms.tsx` i `src/routes/pricing.tsx` - ta sama poprawka Merchant-of-Record co
+  w `billing.tsx`; wszystkie trzy ruszają zacommitowane baseline'y, więc jeden właściciel.
 - `src/server/billing/__tests__/**` - fake'i Polara zamiast Stripe'a; zachowaj przypadki:
-  redelivery, drift zegara, brak sekretu, dunning.
+  redelivery, drift zegara, brak sekretu, dunning. **Dołóż zaszyty wektor Standard Webhooks**
+  (sekret + surowe ciało + trzy nagłówki + podpis policzony niezależnie): dziś obie strony testu
+  podpisu to SDK Stripe'a, a po migracji obie stają się naszym kodem i bez wektora dziewięć testów
+  przestaje czegokolwiek dowodzić.
 
----
+### Kształt rundy
+
+Sześć itemów, własność rysowana tak, żeby pliki, które muszą się zgadzać, miały jednego
+właściciela, a testy należały do właściciela kodu, który testują: **(1)** katalog produktów -
+`plans.ts` + oba workflow'y CI + `.dev.vars.example`; **(2)** `polar.ts`; **(3)** `checkout.ts` +
+`types.ts` + `mapping.ts` + testy; **(4)** `webhook.ts` + przeniesienie trasy + `harness.ts`
+i `webhook.test.ts`; **(5)** React Email + cztery szablony; **(6)** powierzchnie widoczne -
+`billing.tsx`, `pricing.tsx`, `terms.tsx`.
+
+Gate mechaniczny: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm generate-routes && git diff
+--exit-code -- src/routeTree.gen.ts`, `pnpm build`, oraz Playwright **wyłącznie** z jawnym
+`PLAYWRIGHT_BASE_URL` na porcie z przedziału 3010-3020, który runda sama zbindowała i ubija po
+sobie. Weryfikacja wizualna w trakcie rundy przez Ego Lite, nie przez Playwrighta.
 
 ### Akceptacja Fazy A - matryca w sandboxie Polara
 
@@ -427,7 +504,7 @@ równolegle. Faza F może iść równolegle z E, jeśli zdecydujesz się prowadz
 ```
 
 ```bash
-/ultrabuild Faza A: zastąp Stripe przez Polar.sh w src/server/billing, src/lib/plans.ts i src/routes/api - REST przez fetch, webhook HMAC na WebCrypto, bez nowych zależności
+/ultrabuild Faza A: zastąp Stripe przez Polar.sh i usuń Stripe z repo całkowicie - REST przez fetch, webhook HMAC na WebCrypto, Crew jako seat_based, rename kolumn stripe_* na provider_* z migracją, pnpm remove stripe, pnpm add @react-email/components i -D react-email z czterema szablonami billingowymi. Pracuj wg docs/PACKS-PLAN.md §Faza A - produkty w sandboxie już istnieją, ich id są w .env.local
 ```
 
 ```bash

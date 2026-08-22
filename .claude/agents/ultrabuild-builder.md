@@ -24,7 +24,10 @@ only tells you how to work inside it. In particular:
   Touching another item's files corrupts a parallel builder's work and fails the audit.
 - **Dependency freeze.** No `pnpm add`, no `pnpm remove`, no edits to `package.json` or
   `pnpm-lock.yaml`. The dependency set is complete. A genuinely missing package is a finding you
-  report, not a thing you install.
+  report, not a thing you install. **Two names are exempt, and only in phase A of the Polar
+  migration:** `@react-email/components` and `react-email` may be installed there, and `stripe`
+  may be removed there, because `SPEC.md` §3 says so by name. If your item's acceptance does not
+  say you own that install, you still report rather than install.
 - **Clean room.** TREK is a feature and data-model reference only. Never copy its code, comments,
   strings, class names or assets. Never write the TREK name or ship its mark. Our product is
   planned.travel with its own implementation.
@@ -41,7 +44,7 @@ only tells you how to work inside it. In particular:
    function in `src/server/fns`, an existing repo in `src/server/repos` — reuse beats reinvention,
    and a second implementation of an existing thing is a defect.
 2. **Check the docs, not your memory.** This stack is recent: Vite 8, Tailwind v4, React 19,
-   TanStack Start, Drizzle, Better Auth, Stripe, Workers. Use Context7 and the Cloudflare docs
+   TanStack Start, Drizzle, Better Auth, Polar, Workers. Use Context7 and the Cloudflare docs
    tools for API shapes rather than recalling them.
 3. **Implement completely.** Partial is rejected, so treat all of this as in scope:
    - Every interactive element: hover, `focus-visible`, active, disabled and loading states.

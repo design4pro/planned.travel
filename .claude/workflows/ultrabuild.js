@@ -42,7 +42,9 @@ Hard constraints that override any instinct to be helpful:
   - Never copy TREK source, strings or assets. Never use the TREK name or mark. TREK is a
     feature and data-model reference only.
   - Dependency freeze: no pnpm add/remove, no edits to package.json or pnpm-lock.yaml. A missing
-    package is a finding you report, never a thing you install.
+    package is a finding you report, never a thing you install. Two names are exempt, and only in
+    phase A of the Polar migration, because docs/SPEC.md §3 admits them by name: install
+    @react-email/components and react-email, and remove stripe. Nothing else, no other round.
   - src/routeTree.gen.ts is generated. Never hand-edit it; run \`pnpm generate-routes\`.
   - SQL lives only in src/server/repos. components/ui never fetches data and never imports server/.
   - TypeScript strict. No \`any\`. No suppressions. No TODOs, placeholder copy or console.log left behind.`
@@ -288,7 +290,7 @@ screen this task maps to.`,
     prompt: `Research the current, correct way to implement this task on this pinned stack: "${TASK}".
 The stack is TanStack Start (React 19) on Cloudflare Workers, Vite 8 + @cloudflare/vite-plugin,
 Tailwind v4 CSS-first @theme, radix-ui, Drizzle + D1, KV, R2, Durable Objects, Queues, Better
-Auth, Stripe, MapLibre + pmtiles, TanStack Query/Form, Zod v4.
+Auth, Polar, MapLibre + pmtiles, TanStack Query/Form, Zod v4.
 Use Context7 for library docs and the Cloudflare documentation tools for platform behaviour —
 prefer retrieved docs over recollection, since these versions are recent. Report as facts the
 specific APIs, config keys and idioms to use, and in "risks" the version-specific traps
@@ -598,7 +600,7 @@ Read the actual code. Check, in this order:
    Trace the real call chain rather than trusting names. Look for unhandled rejections, missing
    loading and error branches, incorrect Suspense or hydration boundaries.
 4. Security and tenancy: every server function input validated with Zod; every repo call scoped to
-   the tenant; no authorisation decided on the client; auth/session and Stripe webhook handling
+   the tenant; no authorisation decided on the client; auth/session and Polar webhook handling
    verifying signatures and idempotency; no secret reachable from client bundles.
 5. Scale, per docs/ARCHITECTURE.md: N+1 queries against D1, unbounded result sets, missing cache
    or invalidation, Durable Object hot-spotting, quota checks bypassed at the repository boundary.
