@@ -7,6 +7,7 @@ import {
   CountryCardError,
   CountryCardSkeleton,
 } from '../country-card'
+import { countryFactColumns } from '#/lib/atlas/country-facts'
 
 const FRANCE = {
   countryCode: 'FR',
@@ -23,6 +24,32 @@ const ALGERIA = {
   firstTripOn: null,
   lastTripOn: null,
 } as const
+
+/**
+ * A country marked by hand, with no trip behind it — the state most of a real
+ * record is in, and the one the card used to print four dashes for.
+ */
+const THAILAND = {
+  countryCode: 'TH',
+  tripCount: 0,
+  placeCount: 0,
+  firstTripOn: null,
+  lastTripOn: null,
+  visitCount: 3,
+  firstVisitedOn: '2011-07-14',
+  lastVisitedOn: '2024-09-06',
+} as const
+
+/** Every label and every value of one card, in document order. */
+function cellsOf(code: string): ReadonlyArray<readonly [string, string]> {
+  const card = cardFor(code)
+  const labels = [...card.querySelectorAll('dt')]
+  const values = [...card.querySelectorAll('dd')]
+  return labels.map((label, index) => [
+    label.textContent,
+    values[index]?.textContent ?? '',
+  ])
+}
 
 /** The card's root, found the way a host would find it. */
 function cardFor(code: string): HTMLElement {
@@ -155,6 +182,269 @@ describe('CountryCard', () => {
       const card = cardFor('DZ')
       expect(within(card).getByText('First trip')).toBeTruthy()
       expect(within(card).getByText('Last trip')).toBeTruthy()
+    })
+
+    it('names the state it is in', () => {
+      render(<CountryCard {...ALGERIA} />)
+      expect(cardFor('DZ').dataset.record).toBe('none')
+    })
+
+    it('sets both noughts back a tier, so the emptiness reads first', () => {
+      render(<CountryCard {...ALGERIA} />)
+      const figures = [...cardFor('DZ').querySelectorAll('dd')].slice(0, 2)
+      for (const figure of figures) {
+        expect(figure.className).toContain('text-ink-3')
+        expect(figure.className).not.toContain('text-ink ')
+      }
+    })
+  })
+
+  /**
+   * The defect the card was widened for. The map fills these countries, the
+   * shelf prints their visit tally, and the card used to answer with two zeros
+   * and two em dashes — about most of a real record.
+   */
+  describe('a country visited with no trip behind it', () => {
+    it('prints its visits and both visit months', () => {
+      render(<CountryCard {...THAILAND} />)
+      expect(cellsOf('TH')).toEqual([
+        ['Visits', '3'],
+        ['Places', '0'],
+        ['First visit', 'July 2011'],
+        ['Last visit', 'September 2024'],
+      ])
+    })
+
+    it('prints no dash at all where a date is known', () => {
+      render(<CountryCard {...THAILAND} />)
+      expect(cardFor('TH').textContent).not.toContain('—')
+      expect(within(cardFor('TH')).queryByText('Not recorded')).toBeNull()
+    })
+
+    it('dates both months as machine-readable months', () => {
+      render(<CountryCard {...THAILAND} />)
+      const times = [...cardFor('TH').querySelectorAll('time')]
+      expect(times.map((node) => node.getAttribute('dateTime'))).toEqual([
+        '2011-07',
+        '2024-09',
+      ])
+    })
+
+    it('reports itself as visited, which is what the map is painting', () => {
+      render(<CountryCard {...THAILAND} />)
+      expect(cardFor('TH').dataset.visited).toBe('true')
+      expect(cardFor('TH').dataset.record).toBe('visits')
+    })
+
+    it('keeps its tally at full ink, because it is a fact and not an absence', () => {
+      render(<CountryCard {...THAILAND} />)
+      const [tally] = [...cardFor('TH').querySelectorAll('dd')]
+      expect(tally.className).toContain('text-ink')
+      expect(tally.className).not.toContain('text-ink-3')
+    })
+
+    /**
+     * The regression a critic caught: greyed per cell, a country with three
+     * visits and no saved place had its `0` set back exactly as far as the
+     * empty card's, so the surface that exists to say "you have been here"
+     * read as "nothing recorded" all over again. The tier answers one question
+     * per card, not one per cell.
+     */
+    it('leaves a nought at full ink when the card carries a record', () => {
+      render(<CountryCard {...THAILAND} />)
+      const [tally, places] = [...cardFor('TH').querySelectorAll('dd')]
+      expect(places.textContent).toBe('0')
+      expect(places.className).toBe(tally.className)
+      expect(places.className).not.toContain('text-ink-3')
+    })
+
+    it('sets a nought back only on the card with nothing behind it', () => {
+      render(<CountryCard {...THAILAND} />)
+      render(<CountryCard {...ALGERIA} />)
+      const figuresOf = (code: string) =>
+        [...cardFor(code).querySelectorAll('dd')]
+          .slice(0, 2)
+          .map((value) => value.className)
+
+      expect(new Set(figuresOf('TH')).size).toBe(1)
+      expect(new Set(figuresOf('DZ')).size).toBe(1)
+      expect(figuresOf('TH')).not.toEqual(figuresOf('DZ'))
+    })
+
+    it('agrees the unit with a single visit', () => {
+      render(<CountryCard {...THAILAND} visitCount={1} />)
+      expect(within(cardFor('TH')).getByText('Visit')).toBeTruthy()
+    })
+
+    it('still dashes a visit whose dates were never written down', () => {
+      render(
+        <CountryCard
+          {...THAILAND}
+          firstVisitedOn={null}
+          lastVisitedOn={null}
+        />,
+      )
+      expect(cellsOf('TH').map(([label]) => label)).toEqual([
+        'Visits',
+        'Places',
+        'First visit',
+        'Last visit',
+      ])
+      expect(within(cardFor('TH')).getAllByText('Not recorded')).toHaveLength(2)
+    })
+  })
+
+  describe('a country with a trip on record', () => {
+    it('keeps the trip reading, whatever the visit tally says', () => {
+      render(
+        <CountryCard
+          {...FRANCE}
+          countryCode="PT"
+          tripCount={1}
+          placeCount={4}
+          firstTripOn="2026-08-03"
+          lastTripOn="2026-08-28"
+          visitCount={2}
+          firstVisitedOn="2019-09-21"
+          lastVisitedOn="2026-08-17"
+        />,
+      )
+      expect(cellsOf('PT')).toEqual([
+        ['Trip', '1'],
+        ['Places', '4'],
+        ['First trip', 'August 2026'],
+        ['Last trip', 'August 2026'],
+      ])
+      expect(cardFor('PT').dataset.record).toBe('trips')
+    })
+  })
+
+  /**
+   * The props a host actually has.
+   *
+   * Every one of these cards is fed from one row of the atlas record, and the
+   * defect this file exists around came from a host picking four of that row's
+   * ten columns by hand. `countryFactColumns()` is the projection written down
+   * once, so the assertion here is on the shape a screen spreads rather than on
+   * a literal invented for the test — and the two demo countries below are the
+   * two readings the fixture actually contains.
+   */
+  describe('spread straight from an atlas record', () => {
+    /** France as the demo workspace seeds it: three visits, no itinerary. */
+    const FRANCE_RECORD = {
+      countryCode: 'FR',
+      tripCount: 0,
+      visitedPlaceCount: 0,
+      firstTripOn: null,
+      lastTripOn: null,
+      visitCount: 3,
+      firstVisitedOn: '2011-07-14',
+      lastVisitedOn: '2024-09-06',
+    } as const
+
+    /** Portugal: two visits and a trip that has already begun. */
+    const PORTUGAL_RECORD = {
+      countryCode: 'PT',
+      tripCount: 1,
+      visitedPlaceCount: 4,
+      firstTripOn: '2026-08-17',
+      lastTripOn: '2026-08-17',
+      visitCount: 2,
+      firstVisitedOn: '2019-09-21',
+      lastVisitedOn: '2026-08-17',
+    } as const
+
+    it('reads a visit-only record as visits and visit months', () => {
+      render(<CountryCard {...countryFactColumns(FRANCE_RECORD)} />)
+      expect(cellsOf('FR')).toEqual([
+        ['Visits', '3'],
+        ['Places', '0'],
+        ['First visit', 'July 2011'],
+        ['Last visit', 'September 2024'],
+      ])
+      expect(cardFor('FR').dataset.visited).toBe('true')
+    })
+
+    it('reads a record with an itinerary as trips and trip months', () => {
+      render(<CountryCard {...countryFactColumns(PORTUGAL_RECORD)} />)
+      expect(cellsOf('PT')).toEqual([
+        ['Trip', '1'],
+        ['Places', '4'],
+        ['First trip', 'August 2026'],
+        ['Last trip', 'August 2026'],
+      ])
+    })
+
+    /**
+     * A country the traveller has never recorded is not in the record at all,
+     * so a host holding no row hands over zeros — and that, and only that, is
+     * the card that goes quiet.
+     */
+    it('prints the zero state for a country with no row behind it', () => {
+      render(
+        <CountryCard
+          {...countryFactColumns({
+            countryCode: 'DZ',
+            tripCount: 0,
+            visitedPlaceCount: 0,
+            firstTripOn: null,
+            lastTripOn: null,
+            visitCount: 0,
+            firstVisitedOn: null,
+            lastVisitedOn: null,
+          })}
+        />,
+      )
+      expect(cardFor('DZ').dataset.record).toBe('none')
+      expect(cellsOf('DZ')).toEqual([
+        ['Trips', '0'],
+        ['Places', '0'],
+        ['First trip', '—Not recorded'],
+        ['Last trip', '—Not recorded'],
+      ])
+    })
+  })
+
+  /**
+   * The card is anchored to a country and the pointer crosses borders, so the
+   * three states have to measure the same or the surface twitches under the
+   * reader. They are struck from one `layout`, and this is the assertion that
+   * keeps them there: same root, same cells, same type on every line box.
+   */
+  describe('the three states measure the same', () => {
+    it('shares a root, a cell count and a cell geometry', () => {
+      render(<CountryCard {...FRANCE} />)
+      render(<CountryCard {...THAILAND} />)
+      render(<CountryCard {...ALGERIA} />)
+
+      const roots = ['FR', 'TH', 'DZ'].map((code) => cardFor(code))
+      expect(roots[1]?.className).toBe(roots[0]?.className)
+      expect(roots[2]?.className).toBe(roots[0]?.className)
+
+      const geometry = (code: string) =>
+        [...cardFor(code).querySelectorAll('[data-part="cell"]')].map(
+          (cell) => cell.className,
+        )
+      expect(geometry('FR')).toHaveLength(4)
+      expect(geometry('TH')).toEqual(geometry('FR'))
+      expect(geometry('DZ')).toEqual(geometry('FR'))
+    })
+
+    it('keeps every label and every value on one line box', () => {
+      render(<CountryCard {...FRANCE} />)
+      render(<CountryCard {...THAILAND} />)
+      render(<CountryCard {...ALGERIA} />)
+
+      for (const code of ['FR', 'TH', 'DZ']) {
+        const card = cardFor(code)
+        for (const label of card.querySelectorAll('dt > *')) {
+          expect(label.className).toContain('text-micro')
+        }
+        for (const value of card.querySelectorAll('dd')) {
+          expect(value.className).toContain('truncate')
+          expect(value.className).toContain('tabular-nums')
+        }
+      }
     })
   })
 

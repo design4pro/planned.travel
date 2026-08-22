@@ -32,6 +32,10 @@ import {
   markCountryVisited,
   markRegionVisited,
 } from '../atlas'
+import { countryFactColumns, countryFacts } from '#/lib/atlas/country-facts'
+import { visitSpan } from '#/lib/atlas/visit-span'
+import { formatMonthYear, formatNumber } from '#/lib/format'
+import { visitedCountries as demoVisitedCountries } from '#/routes/api/dev/-seed/dataset/workspace'
 import { createHarness, subscribeTenant } from './harness'
 import type { AtlasCountryRecord } from '../atlas'
 import type { Harness, SeededTenant } from './harness'
@@ -507,6 +511,159 @@ describe('atlas roll-ups the loader reads on their own', () => {
     )
     expect(await countVisitedRegions(tenant.scope, tenant.ownerUserId)).toBe(2)
     expect(await countVisitedRegions(tenant.scope, tenant.ownerUserId)).toBe(summary.regionCount)
+  })
+
+  /**
+   * The two surfaces of the atlas, held against each other on the fixture the demo actually ships.
+   *
+   * The map's card and the shelf's country row read the same record and are written in different
+   * files, and for most of a real record they read *different halves* of it: the shelf prints the
+   * visit tally, and the card - until this was fixed - printed only the trip aggregates, so a
+   * country marked by hand answered "0 trips, no dates" two hundred pixels above its own
+   * "3 visits". A product whose two surfaces disagree about the same country has a credibility
+   * problem rather than a formatting one, so the agreement is asserted rather than assumed, and it
+   * is asserted on the twelve countries the demo workspace seeds rather than on a fixture invented
+   * to pass.
+   */
+  describe('the map card and the shelf agree on the demo fixture', () => {
+    /** The demo's atlas, applied through the repository exactly as the seeder applies it. */
+    async function seedDemoAtlas(): Promise<Array<AtlasCountryRecord>> {
+      for (const country of demoVisitedCountries) {
+        for (const visitedOn of country.visits) {
+          await markCountryVisited(tenant.scope, {
+            countryCode: country.countryCode,
+            continent: country.continent,
+            visitedOn,
+            note: country.note,
+          })
+        }
+      }
+      // The one country in the fixture that also has an itinerary behind it, so the trip reading
+      // and the visit reading are both exercised by the same pass.
+      await seedTrip(tenant.scope, {
+        title: 'Lisbon, slowly',
+        countryCodes: ['PT'],
+        startDate: '2026-08-17',
+        endDate: '2026-08-23',
+        places: [
+          ['PT', true],
+          ['PT', true],
+        ],
+      })
+      return atlasRecords(tenant.scope, tenant.ownerUserId)
+    }
+
+    it('never prints the no-record card for a country the map fills', async () => {
+      const records = await seedDemoAtlas()
+      expect(records).toHaveLength(demoVisitedCountries.length)
+
+      for (const record of records) {
+        const facts = countryFacts(countryFactColumns(record))
+        expect(facts.visited).toBe(true)
+        expect(facts.source).not.toBe('none')
+        // Whatever the card leads with, it is a number the reader can check against the row on
+        // the shelf: the trip count or the visit tally, never an em dash.
+        expect(facts.tally.value).toBe(
+          formatNumber(
+            facts.source === 'visits' ? record.visitCount : record.tripCount,
+          ),
+        )
+        expect(facts.last.value).not.toBeNull()
+      }
+    })
+
+    it('prints the same tally the shelf prints, for every country with no trip', async () => {
+      const records = await seedDemoAtlas()
+      const withoutTrips = records.filter((record) => record.tripCount === 0)
+      // The state is the fixture's majority, not its edge case - eleven of twelve.
+      expect(withoutTrips).toHaveLength(demoVisitedCountries.length - 1)
+
+      for (const record of withoutTrips) {
+        const facts = countryFacts(countryFactColumns(record))
+        expect(facts.source).toBe('visits')
+        // `formatNumber(row.visitCount)` is exactly what the shelf's country row prints.
+        expect(facts.tally.value).toBe(formatNumber(record.visitCount))
+        expect(facts.tally.label).toBe(record.visitCount === 1 ? 'Visit' : 'Visits')
+      }
+    })
+
+    /**
+     * The two surfaces, side by side, on the same row.
+     *
+     * The shelf's country row prints `formatNumber(visitCount)` beside `visit`/`visits` and dates
+     * the record with {@link visitSpan}; the map's card prints `facts.tally` and coarsens the same
+     * two days to months. Nothing here re-derives either reading - both are asked for exactly as
+     * their own component asks for them - so a change that moves one and not the other fails here
+     * rather than on screen, which is where the contradiction was found.
+     */
+    it('agrees with the shelf, country by country, on the whole fixture', async () => {
+      const records = await seedDemoAtlas()
+
+      for (const record of records) {
+        const facts = countryFacts(countryFactColumns(record))
+        const span = visitSpan(record.firstVisitedOn, record.lastVisitedOn)
+        const shelfTally = formatNumber(record.visitCount)
+        const shelfUnit = record.visitCount === 1 ? 'visit' : 'visits'
+
+        if (facts.source === 'visits') {
+          expect(facts.tally.value).toBe(shelfTally)
+          expect(facts.tally.label.toLowerCase()).toBe(shelfUnit)
+        } else {
+          // A country with an itinerary leads with its trips, and says so: the number changes
+          // meaning only where the unit changes with it.
+          expect(facts.tally.value).toBe(formatNumber(record.tripCount))
+          expect(facts.tally.label.toLowerCase()).toMatch(/^trips?$/)
+        }
+
+        // Whichever record the card is on, neither surface may print a dash where the other
+        // prints a date. The shelf works in days and the card in months, so the card's month is
+        // the shelf's day coarsened - never a different day, and never nothing.
+        expect(span.kind).not.toBe('unrecorded')
+        if (span.kind === 'range') {
+          expect(facts.last.value).toBe(
+            facts.source === 'visits'
+              ? formatMonthYear(span.last.iso)
+              : formatMonthYear(record.lastTripOn),
+          )
+        }
+        if (span.kind === 'single' && facts.source === 'visits') {
+          expect(facts.first.value).toBe(formatMonthYear(span.date.iso))
+          expect(facts.last.value).toBe(formatMonthYear(span.date.iso))
+        }
+      }
+    })
+
+    it('reads out the three countries the map fills and the card used to empty', async () => {
+      const records = await seedDemoAtlas()
+      const summaries = ['FR', 'US', 'TH'].map((code) => {
+        const record = recordFor(records, code)
+        expect(record).toBeDefined()
+        return record === undefined
+          ? null
+          : countryFacts(countryFactColumns(record))
+      })
+
+      expect(summaries.map((facts) => facts?.summary ?? null)).toEqual([
+        'France. 3 visits, no places saved. First visit July 2011, last visit September 2024.',
+        'United States. 2 visits, no places saved. First visit August 2016, last visit March 2023.',
+        'Thailand. 1 visit, no places saved. Visited in November 2017.',
+      ])
+    })
+
+    it('leaves a country with an itinerary on the trip reading', async () => {
+      const records = await seedDemoAtlas()
+      const portugal = recordFor(records, 'PT')
+      expect(portugal).toMatchObject({ tripCount: 1, visitedPlaceCount: 2, visitCount: 2 })
+
+      expect(portugal).toBeDefined()
+      if (portugal === undefined) return
+      const facts = countryFacts(countryFactColumns(portugal))
+      expect(facts.source).toBe('trips')
+      expect(facts.tally.label).toBe('Trip')
+      expect(facts.tally.value).toBe('1')
+      expect(facts.first.value).toBe('August 2026')
+      expect(facts.last.value).toBe('August 2026')
+    })
   })
 
   it('never leaks another organisation’s roll-up', async () => {

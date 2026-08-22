@@ -49,3 +49,8 @@ e2e/.auth
 
 # Local MCP server config. Developer-specific, never shared.
 .mcp.json
+
+# Screenshots a capture agent drops in the working directory. The repo's own
+# images live under e2e/__screenshots__ and .claude, both addressed elsewhere,
+# so nothing legitimate is a bare PNG at the root.
+/*.png

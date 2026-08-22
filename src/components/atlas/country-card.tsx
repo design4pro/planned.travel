@@ -65,10 +65,29 @@ import type { CountryFactMonth } from '#/lib/atlas/country-facts'
  * the whole card is the 11px label tier, and it clears AA by better than half
  * again in both themes.
  *
- * **The zero state is designed, not empty.** A country you have not been to
- * still has a card, and it prints `0` twice and an em dash for each month. The
- * dash is `aria-hidden` and paired with words, because a reader hearing "dash"
- * cannot tell a missing date from a broken one.
+ * **Three states, one geometry.** A country with an itinerary prints its trips
+ * and its trip months, headed `Trips · Places · First trip · Last trip`. A
+ * country the traveller marked by hand — no trip behind it, which on a real
+ * record is most of them — prints its visits and its visit months in the same
+ * four cells, headed `Visits · Places · First visit · Last visit`, because the
+ * alternative is a card that says nothing about the very countries the map has
+ * just filled in. A country with nothing recorded at all prints `0` twice and
+ * an em dash for each month, the whole grid set back an ink tier so the
+ * emptiness is legible before any label is read. That is the distinction the
+ * eye makes first — a card that speaks against a card gone quiet — and the
+ * captions make the second one, between a journey and a visit. The dash is
+ * `aria-hidden` and paired with words, because a reader hearing "dash" cannot
+ * tell a missing date from a broken one. All three are the same grid, the same
+ * rules and the same type ladder, so the card's height never changes as the
+ * pointer crosses a border — `countryFacts()` chooses the wording and this file
+ * draws whatever it was handed.
+ *
+ * **Both records are passed or the card lies.** The trip columns alone cannot
+ * tell a country nobody has recorded from a country visited three times, and a
+ * host that hands over only those turns every manually marked country into the
+ * empty state. `countryFactColumns()` in `#/lib/atlas/country-facts` projects a
+ * whole atlas record into exactly these props; a host holding one should spread
+ * it rather than pick fields.
  *
  * **Every state this surface can be in ships here.** Rest and the zero state
  * are `CountryCard`; the name-only pill is its `compact` variant; loading is
@@ -186,6 +205,28 @@ const layout = {
    */
   label: 'block text-micro font-semibold uppercase tracking-label',
   figure: 'mt-1 block truncate font-display text-title tabular-nums text-ink',
+  /**
+   * The figures of a card with no record behind it, one ink tier back.
+   *
+   * Both noughts or neither, and only on the card where nothing has ever been
+   * written down. `0` is a fact and it stays on the card, but on *that* card it
+   * is a fact about nothing, and the two dashes below it already say so at
+   * `ink-3`; at full `ink` the empty card was the loudest of the three — two
+   * big black noughts announcing an absence — and it took a reading of the
+   * labels to tell it from a country genuinely on the record. Set back a tier,
+   * the whole grid recedes together and the eye sorts the three states before
+   * it reads a word: a card that speaks, or a card that has nothing to say.
+   *
+   * What this must never do is grey a single cell inside a card that carries a
+   * record. A country visited three times with no place saved in it has no
+   * places saved in it, and dimming that one nought made the card read as the
+   * empty state — the very defect the visit reading was added to remove.
+   *
+   * Measured at 7.02:1 light and 7.18:1 dark against the card face — the same
+   * figures the unit labels carry, and comfortably past AA at this size.
+   */
+  figureAbsent:
+    'mt-1 block truncate font-display text-title tabular-nums text-ink-3',
   month: 'mt-1 block truncate text-label font-semibold tabular-nums text-ink-2',
   /** The em dash sits a tier back: it is an absence, not a value. */
   monthAbsent:
@@ -344,13 +385,25 @@ interface CountryCardBaseProps extends Omit<
   readonly decorative?: boolean
 }
 
-/** The full card: name, trips, places, first trip and last trip. */
+/**
+ * The full card: name, the leading tally, places, and the two months.
+ *
+ * Both records are taken, not one. The trip columns are the more specific
+ * thing to know and win whenever there is a trip; the visit columns are what
+ * the atlas's manual half writes, and they are what most countries on a real
+ * record have instead. A host that passes only the trip columns still gets a
+ * correct card — it simply cannot show the visits it did not hand over.
+ */
 export interface CountryCardFactsProps extends CountryCardBaseProps {
   readonly variant?: 'card'
   readonly tripCount: number
   readonly placeCount: number
   readonly firstTripOn: string | null
   readonly lastTripOn: string | null
+  /** Visits on the record, whether or not a trip is attached to any of them. */
+  readonly visitCount?: number
+  readonly firstVisitedOn?: string | null
+  readonly lastVisitedOn?: string | null
   /** The name is a heading; the host decides at what depth. */
   readonly headingLevel?: 2 | 3 | 4
 }
@@ -413,6 +466,9 @@ export const CountryCard = React.forwardRef<HTMLElement, CountryCardProps>(
       placeCount,
       firstTripOn,
       lastTripOn,
+      visitCount,
+      firstVisitedOn,
+      lastVisitedOn,
       headingLevel = 3,
       pointer = 'none',
       decorative = false,
@@ -426,7 +482,19 @@ export const CountryCard = React.forwardRef<HTMLElement, CountryCardProps>(
       placeCount,
       firstTripOn,
       lastTripOn,
+      visitCount,
+      firstVisitedOn,
+      lastVisitedOn,
     })
+    // Per card, not per cell. A nought inside a card that carries a record is
+    // a measured fact — a country visited three times with no place saved in
+    // it has *no* places saved in it, and dimming that one figure made the
+    // card read as the empty state it is not, which is the exact defect this
+    // component was widened to remove. So the tier answers one question, once:
+    // is there a record here at all? Either the whole grid speaks at full ink,
+    // or the whole grid recedes.
+    const figureTier =
+      facts.source === 'none' ? layout.figureAbsent : layout.figure
 
     return (
       <article
@@ -438,6 +506,9 @@ export const CountryCard = React.forwardRef<HTMLElement, CountryCardProps>(
         // host can find one card without inventing its own id scheme.
         data-country={facts.code}
         data-visited={String(facts.visited)}
+        // Which record the cells speak for, so a host or an end-to-end test can
+        // assert the state without parsing the labels back out of the DOM.
+        data-record={facts.source}
         className={cn(layout.surface, layout.card, transitionBase, className)}
         {...rest}
       >
@@ -454,18 +525,18 @@ export const CountryCard = React.forwardRef<HTMLElement, CountryCardProps>(
 
         <dl className={layout.grid}>
           <FactCell
-            label={facts.trips.label}
+            label={facts.tally.label}
             rule
             row={false}
-            valueClassName={layout.figure}
+            valueClassName={figureTier}
           >
-            {facts.trips.value}
+            {facts.tally.value}
           </FactCell>
           <FactCell
             label={facts.places.label}
             rule={false}
             row={false}
-            valueClassName={layout.figure}
+            valueClassName={figureTier}
           >
             {facts.places.value}
           </FactCell>

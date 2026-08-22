@@ -69,6 +69,16 @@ export interface CountryFactMonth {
   readonly iso: string | null
 }
 
+/**
+ * Which record the card's four cells were drawn from.
+ *
+ * `trips` is a country with an itinerary behind it; `visits` is a country the
+ * traveller marked by hand, with no trip attached — the atlas's whole manual
+ * half, and most of any real record; `none` is a country nothing has ever been
+ * written about.
+ */
+export type CountryFactSource = 'trips' | 'visits' | 'none'
+
 /** The columns a caller has about a country. Every one may be absent or zero. */
 export interface CountryFactsInput {
   /** ISO 3166-1 alpha-2, in whatever case the row happened to store. */
@@ -81,6 +91,96 @@ export interface CountryFactsInput {
   readonly firstTripOn: string | null | undefined
   /** Last day recorded in the country. */
   readonly lastTripOn: string | null | undefined
+  /**
+   * Visits on the traveller's own record — the tally `markCountryVisited`
+   * keeps, which is a count of times they were there and not a count of
+   * journeys planned in this product.
+   *
+   * Optional because a caller that has only the trip aggregates is still a
+   * legitimate caller; absent reads exactly as zero.
+   */
+  readonly visitCount?: number
+  /** First day on the visit record, `YYYY-MM-DD` or an ISO instant. */
+  readonly firstVisitedOn?: string | null | undefined
+  /** Last day on the visit record. */
+  readonly lastVisitedOn?: string | null | undefined
+}
+
+/**
+ * One country's row on the atlas record, in the shape the repository files it.
+ *
+ * Structural rather than imported: this module is isomorphic and a component
+ * may not reach into `server/`, so the columns are restated here and
+ * `AtlasCountryRecord` satisfies them by having the same names. If the two ever
+ * drift, the type check fails at the call site rather than the card quietly
+ * printing a zero.
+ */
+export interface CountryFactsRecord {
+  readonly countryCode: string
+  readonly tripCount: number
+  /** The repository's name for the places ticked off inside the country. */
+  readonly visitedPlaceCount: number
+  readonly firstTripOn: string | null
+  readonly lastTripOn: string | null
+  readonly visitCount: number
+  readonly firstVisitedOn: string | null
+  readonly lastVisitedOn: string | null
+}
+
+/**
+ * The columns a card takes, with nothing left undefined.
+ *
+ * {@link CountryFactsInput} tolerates an absent visit half so a caller holding
+ * only the trip aggregates is still a legitimate caller. This is the resolved
+ * form: every field present, so it can be spread straight onto a card whose
+ * props are `string | null` rather than optional.
+ */
+export interface CountryFactColumns {
+  readonly countryCode: string
+  readonly tripCount: number
+  readonly placeCount: number
+  readonly firstTripOn: string | null
+  readonly lastTripOn: string | null
+  readonly visitCount: number
+  readonly firstVisitedOn: string | null
+  readonly lastVisitedOn: string | null
+}
+
+/**
+ * An atlas record read as the columns of a card — the one place that reading is
+ * written down.
+ *
+ * The map's card and the shelf's country row are fed from the same repository
+ * row, and the defect this exists to prevent is the two of them projecting it
+ * differently: the shelf printed `2 visits · 11 Apr 2015` while the card, given
+ * only the trip half of the same row, printed `0` and two dashes about the
+ * country beside it. So the projection is a function rather than an object
+ * literal at each call site, and every surface that renders a country card
+ * spreads its result:
+ *
+ * ```tsx
+ * <CountryCard {...countryFactColumns(record)} headingLevel={3} />
+ * ```
+ *
+ * `visitedPlaceCount` is renamed to `placeCount` on the way through, and only
+ * that: the repository's name says which places were counted, and the card's
+ * says what the column is headed. No figure is combined with another, because
+ * a trip and a visit are two different claims about a country and folding them
+ * would make the count unverifiable against either surface.
+ */
+export function countryFactColumns(
+  record: CountryFactsRecord,
+): CountryFactColumns {
+  return {
+    countryCode: record.countryCode,
+    tripCount: record.tripCount,
+    placeCount: record.visitedPlaceCount,
+    firstTripOn: record.firstTripOn,
+    lastTripOn: record.lastTripOn,
+    visitCount: record.visitCount,
+    firstVisitedOn: record.firstVisitedOn,
+    lastVisitedOn: record.lastVisitedOn,
+  }
 }
 
 /** Everything a country card renders, and nothing it has to work out itself. */
@@ -91,7 +191,18 @@ export interface CountryFacts {
   readonly name: string
   /** True once anything at all has been recorded here. */
   readonly visited: boolean
-  readonly trips: CountryFactFigure
+  /**
+   * Which of the two records {@link tally}, {@link first} and {@link last}
+   * speak for, so a card can style the empty state differently from the two
+   * that carry something without re-deriving the question.
+   */
+  readonly source: CountryFactSource
+  /**
+   * The leading figure: trips when a trip is on record, otherwise the visits
+   * that were recorded without one. Its `label` says which — `Trips` or
+   * `Visits` — so the card never has to caption it itself.
+   */
+  readonly tally: CountryFactFigure
   readonly places: CountryFactFigure
   readonly first: CountryFactMonth
   readonly last: CountryFactMonth
@@ -175,26 +286,78 @@ function figurePhrase(
 }
 
 /**
+ * Everything that changes between the two records, held as data.
+ *
+ * The card is one component printing one geometry, and the only difference
+ * between a country with an itinerary and a country somebody simply marked is
+ * the noun. Writing that difference as a table rather than as branches through
+ * the derivation keeps the two readings honest with each other — a heading, its
+ * unit, its empty phrase and its spoken clause are chosen together or not at
+ * all — and it is the reason the visited-without-a-trip card has exactly the
+ * height, the rules and the type ladder of the one beside it.
+ */
+interface FactWording {
+  /** The heading over the first month cell. */
+  readonly first: string
+  /** The heading over the second. */
+  readonly last: string
+  /** The unit over the leading numeral, singular and plural. */
+  readonly unit: string
+  readonly units: string
+  /** The noun in a spoken clause: `3 visits`, `no visit dates recorded`. */
+  readonly noun: string
+  /** What a spoken sentence says instead of `0 trips`. */
+  readonly empty: string
+  /** Both ends inside one month, said once rather than twice. */
+  readonly together: (month: string) => string
+}
+
+const TRIP_WORDING: FactWording = {
+  first: 'First trip',
+  last: 'Last trip',
+  unit: 'Trip',
+  units: 'Trips',
+  noun: 'trip',
+  empty: 'no trips yet',
+  together: (month) => `Travelled in ${month}`,
+}
+
+const VISIT_WORDING: FactWording = {
+  first: 'First visit',
+  last: 'Last visit',
+  unit: 'Visit',
+  units: 'Visits',
+  noun: 'visit',
+  empty: 'no visits yet',
+  together: (month) => `Visited in ${month}`,
+}
+
+/**
  * The two months as one clause.
  *
- * A country visited inside a single month gets one statement rather than the
- * same month read out twice under two different headings — the card still shows
- * both cells, because they are two columns of a table and a table with a hole
- * in it reads as a fault, but a sentence has no such obligation.
+ * A country seen inside a single month gets one statement rather than the same
+ * month read out twice under two different headings — the card still shows both
+ * cells, because they are two columns of a table and a table with a hole in it
+ * reads as a fault, but a sentence has no such obligation.
  */
-function monthPhrase(first: CountryFactMonth, last: CountryFactMonth): string {
+function monthPhrase(
+  first: CountryFactMonth,
+  last: CountryFactMonth,
+  words: FactWording,
+): string {
+  const { noun } = words
   if (first.value === null && last.value === null) {
-    return 'No trip dates recorded'
+    return `No ${noun} dates recorded`
   }
   if (first.value !== null && last.value !== null) {
     return first.iso === last.iso
-      ? `Travelled in ${first.value}`
-      : `First trip ${first.value}, last trip ${last.value}`
+      ? words.together(first.value)
+      : `First ${noun} ${first.value}, last ${noun} ${last.value}`
   }
   if (first.value !== null) {
-    return `First trip ${first.value}, last trip not recorded`
+    return `First ${noun} ${first.value}, last ${noun} not recorded`
   }
-  return `First trip not recorded, last trip ${last.value ?? ''}`
+  return `First ${noun} not recorded, last ${noun} ${last.value ?? ''}`
 }
 
 /** Opens a clause as a sentence. A clause starting with a digit is left alone. */
@@ -207,16 +370,56 @@ function sentence(value: string): string {
  *
  * Pure, synchronous and free of any component import, so the card can be built
  * and proved before there is a map to hang it on.
+ *
+ * ## Why a country with no trip is not an empty country
+ *
+ * The map fills a country because it is on the traveller's record, and the
+ * record is a list of visits — `markCountryVisited` writes one, and a trip
+ * planned in this product is a different thing that may or may not exist beside
+ * it. Reading only the trip aggregates therefore prints two zeros and two
+ * dashes over a country the same screen has just painted as visited, and says
+ * it about most of a real record rather than about an edge case. So the trip
+ * columns are consulted first, because an itinerary is the more specific thing
+ * to know; when there is no trip at all the visit record answers instead, in
+ * its own words, at the same geometry; and the dashes are kept for the one case
+ * that has earned them — a country nothing has ever been written about.
  */
 export function countryFacts(input: CountryFactsInput): CountryFacts {
   const code = input.countryCode.trim().toUpperCase()
-  const trips = figure(input.tripCount, 'Trip', 'Trips')
-  const places = figure(input.placeCount, 'Place', 'Places')
-  const first = countryFactMonth('First trip', input.firstTripOn)
-  const last = countryFactMonth('Last trip', input.lastTripOn)
   const name = countryName(code)
+  const places = figure(input.placeCount, 'Place', 'Places')
 
-  const counted = `${figurePhrase(trips, 'trip', 'no trips yet')}, ${figurePhrase(
+  const tripCount = countryFactCount(input.tripCount)
+  const firstTrip = countryFactMonth(TRIP_WORDING.first, input.firstTripOn)
+  const lastTrip = countryFactMonth(TRIP_WORDING.last, input.lastTripOn)
+
+  const visitCount = countryFactCount(input.visitCount ?? 0)
+  const firstVisit = countryFactMonth(VISIT_WORDING.first, input.firstVisitedOn)
+  const lastVisit = countryFactMonth(VISIT_WORDING.last, input.lastVisitedOn)
+
+  // A saved place is deliberately not evidence of a trip here. It is counted in
+  // its own cell either way, and letting it choose the record would put a
+  // country with a shortlist and a visit back on the trip wording — which is
+  // the four-dash card again, wearing a number.
+  const hasTrips =
+    tripCount > 0 || firstTrip.iso !== null || lastTrip.iso !== null
+  const hasVisits =
+    visitCount > 0 || firstVisit.iso !== null || lastVisit.iso !== null
+
+  const source: CountryFactSource = hasTrips
+    ? 'trips'
+    : hasVisits
+      ? 'visits'
+      : 'none'
+  const words = source === 'visits' ? VISIT_WORDING : TRIP_WORDING
+  const tally =
+    source === 'visits'
+      ? figure(visitCount, VISIT_WORDING.unit, VISIT_WORDING.units)
+      : figure(tripCount, TRIP_WORDING.unit, TRIP_WORDING.units)
+  const first = source === 'visits' ? firstVisit : firstTrip
+  const last = source === 'visits' ? lastVisit : lastTrip
+
+  const counted = `${figurePhrase(tally, words.noun, words.empty)}, ${figurePhrase(
     places,
     'place',
     'no places saved',
@@ -225,15 +428,12 @@ export function countryFacts(input: CountryFactsInput): CountryFacts {
   return {
     code,
     name,
-    visited:
-      trips.count > 0 ||
-      places.count > 0 ||
-      first.iso !== null ||
-      last.iso !== null,
-    trips,
+    visited: source !== 'none' || places.count > 0,
+    source,
+    tally,
     places,
     first,
     last,
-    summary: `${name}. ${sentence(counted)}. ${monthPhrase(first, last)}.`,
+    summary: `${name}. ${sentence(counted)}. ${monthPhrase(first, last, words)}.`,
   }
 }
