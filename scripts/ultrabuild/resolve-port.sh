@@ -25,11 +25,29 @@ START=0
 repo_root() { cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd; }
 ROOT="$(repo_root)"
 
-# Identity, not liveness. A port answering HTTP proves nothing: on this machine 3000 has belonged
-# to an unrelated project. /api/dev/seed is this repo's own endpoint, so a match proves the server
-# is ours AND that it is a dev build.
+# Identity, not liveness — and identity means THIS WORKING TREE, not merely this application.
+#
+# /api/dev/seed is this repo's own endpoint, so a match proves the responder is a dev build of this
+# app rather than the unrelated project that has owned port 3000 on this machine. That is necessary
+# and it is not sufficient: a git worktree under .claude/worktrees/ is the same app on a different
+# branch, answers the same endpoint, and is indistinguishable over HTTP. One did exactly that. A
+# whole /ultrabuild round photographed a sibling worktree's checkout on port 3005 and filed 44
+# visual failures against code that was never rendered, and a hand check of "does this reproduce on
+# main?" confirmed the failures against the same wrong server. Nothing in the HTTP answer could have
+# revealed it.
+#
+# So the probe is two-sided: the endpoint proves it is our app, and the listening process's working
+# directory proves it is our checkout.
 is_ours() {
-  curl -fsS -m 3 "http://localhost:$1/api/dev/seed" 2>/dev/null | grep -q '"ok"'
+  curl -fsS -m 3 "http://localhost:$1/api/dev/seed" 2>/dev/null | grep -q '"ok"' || return 1
+  local pid cwd
+  pid="$(lsof -nP -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null | head -1)"
+  [[ -n "$pid" ]] || return 1
+  cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | grep '^n' | cut -c2-)"
+  if [[ "$cwd" != "$ROOT" ]]; then
+    echo >&2 "resolve-port: port $1 answers as this app but runs from $cwd, not $ROOT — skipping it"
+    return 1
+  fi
 }
 
 port_free() {

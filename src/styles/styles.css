@@ -2,17 +2,23 @@
    planned.travel — Tailwind v4 entry
    --------------------------------------------------------------------------
    Order matters:
-     1. Google Fonts (must precede every non-@import rule).
-     2. Tailwind, which installs `@layer theme, base, components, utilities`.
-     3. `./tokens.css`, which lands UNLAYERED and therefore always outranks
+     1. Tailwind, which installs `@layer theme, base, components, utilities`.
+     2. `./tokens.css`, which lands UNLAYERED and therefore always outranks
         the `@layer theme` block that `@theme inline` emits.
-     4. `@theme inline`, which teaches Tailwind our token names so
+     3. `@theme inline`, which teaches Tailwind our token names so
         `bg-canvas`, `text-ink-3`, `rounded-xl`, `shadow-card`,
         `ease-out-quint`, `text-micro`, `tracking-label` … all resolve to the
         live custom property (and therefore respond to the theme switch).
+
+   The web fonts are deliberately NOT imported here. An `@import url(…)` inside
+   this file is only discovered once this stylesheet has itself downloaded and
+   parsed, which puts the font request a whole round trip behind first paint.
+   The href and its two preconnect origins are declared as data in
+   `src/lib/fonts.ts` and rendered by the document shell in `<head>`, where the
+   preload scanner finds them immediately — and where there is exactly one copy
+   of the URL to keep in step with the stacks in `tokens.css`.
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=MuseoModerno:wght@400;500;700;800&display=swap');
 @import 'tailwindcss';
 @import './tokens.css';
 
@@ -202,6 +208,243 @@
 
   /* ------------------------------------------------------------------ layout */
   --blur-glass: var(--blur-glass);
+}
+
+/* ==========================================================================
+   Metric-compensated fallback faces
+   --------------------------------------------------------------------------
+   Every web font in `src/lib/fonts.ts` is requested with `display=swap`, which
+   means a zero-second block period: the first frame is painted in whatever the
+   platform can supply, and the real face replaces it moments later. That second
+   moment is where layout shift comes from, and SPEC §2 allows none of it.
+
+   So each script gets a named face that wraps the platform fonts most likely to
+   own it and then *overrides their vertical metrics* with the metrics of the
+   web font it stands in for. `ascent-override`, `descent-override` and
+   `line-gap-override` are absolute — a percentage of the font size, not of the
+   local font's own em — so the substituted line box and the baseline inside it
+   are identical whichever local font the reader happens to have, on any
+   platform. When the web font arrives, nothing moves.
+
+   Every number below was read out of the shipped font binaries (`head`,
+   `hhea` and `OS/2`), all of which use a 1000-unit em:
+
+     face                asc     desc    gap   x-height  cap
+     Geist               1.005   0.295   0     0.530     0.710
+     Noto Sans           1.069   0.293   0     0.536     0.714
+     Noto Sans Arabic    1.374   0.738   0     0.536     0.714
+     Noto Sans SC/TC/JP  1.160   0.288   0     0.543     0.733
+     Noto Sans KR        1.160   0.288   0     0.543     0.733
+     Arial (the local)   0.905   0.212   0.033 0.5186    0.7163
+
+   `size-adjust` is the optical half of the job, and it is only stated where a
+   single number is true across platforms. Arial and its metric clone Liberation
+   Sans are installed on macOS, Windows and most Linux desktops and share an
+   x-height of 0.5186, so the Latin and Greek faces can be scaled onto Geist's
+   and Noto Sans's x-heights exactly. The Arabic, Han and Hangul locals disagree
+   with each other far too widely for one ratio to be honest (Geeza Pro 0.491 vs
+   Segoe UI 0.500; Hiragino Sans GB 0.545 vs Apple SD Gothic Neo 0.502), and an
+   x-height is not a meaningful measure of an Arabic or an ideographic face in
+   any case — those three take the vertical overrides only.
+
+   Per CSS Fonts 4 the overrides are resolved against the *adjusted* em, so each
+   percentage below is the target ratio divided by its own `size-adjust`.
+   ========================================================================== */
+
+/* Stands in for Geist: Latin, Latin-ext, Vietnamese, Cyrillic. This is the face
+   that paints the entire product on a cold load, so it is the one that decides
+   whether the page settles or jumps. */
+@font-face {
+  font-family: 'Planned Latin Fallback';
+  src:
+    local('Arial'), local('Liberation Sans'), local('Helvetica Neue'),
+    local('Roboto'), local('Segoe UI');
+  font-display: swap;
+  size-adjust: 102.2%; /* 0.530 ÷ 0.5186 */
+  ascent-override: 98.34%; /* 1.005 ÷ 1.022 */
+  descent-override: 28.87%; /* 0.295 ÷ 1.022 */
+  line-gap-override: 0%;
+  unicode-range:
+    U+0000-024F, U+0259, U+0300-036F, U+0400-052F, U+1E00-1EFF, U+2000-206F,
+    U+20A0-20CF, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+/* Stands in for Noto Sans over Greek — the one script Geist does not carry at
+   all, and the reason `el` exists in the picker at the same weight as `en`. */
+@font-face {
+  font-family: 'Planned Greek Fallback';
+  src:
+    local('Arial'), local('Liberation Sans'), local('Helvetica Neue'),
+    local('Roboto'), local('Segoe UI');
+  font-display: swap;
+  size-adjust: 103.36%; /* 0.536 ÷ 0.5186 */
+  ascent-override: 103.42%; /* 1.069 ÷ 1.0336 */
+  descent-override: 28.35%; /* 0.293 ÷ 1.0336 */
+  line-gap-override: 0%;
+  unicode-range: U+0370-03FF, U+1F00-1FFF;
+}
+
+/* Stands in for Noto Sans Arabic. Its 2.112 em ink height is why `:lang(ar)`
+   below re-leads the type scale rather than trusting the Latin one. */
+@font-face {
+  font-family: 'Planned Arabic Fallback';
+  src:
+    local('Geeza Pro'), local('Segoe UI'), local('Noto Sans Arabic'),
+    local('Tahoma'), local('Arial');
+  font-display: swap;
+  ascent-override: 137.4%;
+  descent-override: 73.8%;
+  line-gap-override: 0%;
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+/* Stands in for the three Han faces and the Kana in them. `line-gap-override`
+   is doing real work here: Hiragino Sans GB declares a half-em line gap, which
+   would open every ideographic line by 7.5px at body size and then close it
+   again the instant the web font landed. */
+@font-face {
+  font-family: 'Planned Han Fallback';
+  src:
+    local('PingFang SC'), local('Hiragino Sans'), local('Hiragino Sans GB'),
+    local('Microsoft YaHei'), local('Meiryo'), local('Noto Sans CJK SC');
+  font-display: swap;
+  ascent-override: 116%;
+  descent-override: 28.8%;
+  line-gap-override: 0%;
+  unicode-range:
+    U+2E80-2FFF, U+3000-30FF, U+3100-312F, U+3190-319F, U+31C0-31FF,
+    U+3200-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF,
+    U+20000-2FA1F;
+}
+
+/* Stands in for Noto Sans KR, which is the only one of the four that carries
+   Hangul — so Korean is reached by coverage rather than by stack order. */
+@font-face {
+  font-family: 'Planned Hangul Fallback';
+  src:
+    local('Apple SD Gothic Neo'), local('Malgun Gothic'),
+    local('Noto Sans CJK KR'), local('Nanum Gothic');
+  font-display: swap;
+  ascent-override: 116%;
+  descent-override: 28.8%;
+  line-gap-override: 0%;
+  unicode-range: U+1100-11FF, U+3130-318F, U+A960-A97F, U+AC00-D7FF;
+}
+
+/* ==========================================================================
+   Script layer — what changes when the page is not in Latin
+   --------------------------------------------------------------------------
+   These rules are unlayered and therefore outrank `tokens.css`, which is
+   imported above them at the same specificity. They only ever re-state tokens;
+   no component needs to know they exist.
+
+   `:lang()` matches the element carrying the language *and everything inside
+   it*, so one attribute on `<html>` re-types a whole page, and one attribute on
+   a single language-picker chip re-types just that chip inside an otherwise
+   English page. The stacks have to be restated in full rather than varying
+   `--font-han` alone: a `var()` inside a custom property is substituted where
+   the property is *declared*, so redefining `--font-han` further down the tree
+   would leave an already-resolved `--font-ui` untouched.
+   ========================================================================== */
+
+:lang(ja) {
+  --font-han: 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans KR';
+  --font-display:
+    'MuseoModerno', 'Noto Sans', 'Noto Sans Arabic', var(--font-han),
+    var(--font-fallback), var(--font-system-display);
+  --font-ui:
+    'Geist', 'Geist Sans', 'Noto Sans', 'Noto Sans Arabic', var(--font-han),
+    var(--font-fallback), var(--font-system);
+}
+
+:lang(ko) {
+  --font-han: 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans TC';
+  --font-display:
+    'MuseoModerno', 'Noto Sans', 'Noto Sans Arabic', var(--font-han),
+    var(--font-fallback), var(--font-system-display);
+  --font-ui:
+    'Geist', 'Geist Sans', 'Noto Sans', 'Noto Sans Arabic', var(--font-han),
+    var(--font-fallback), var(--font-system);
+}
+
+:lang(zh-Hant) {
+  --font-han: 'Noto Sans TC', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR';
+  --font-display:
+    'MuseoModerno', 'Noto Sans', 'Noto Sans Arabic', var(--font-han),
+    var(--font-fallback), var(--font-system-display);
+  --font-ui:
+    'Geist', 'Geist Sans', 'Noto Sans', 'Noto Sans Arabic', var(--font-han),
+    var(--font-fallback), var(--font-system);
+}
+
+/* `font-family` inherits as an *already resolved* list, so the three rules above
+   only reach a whole page — `<html lang="ja">` re-resolves `--font-ui` where
+   `body` declares it, and everything below inherits the answer. An element that
+   carries its own `lang` in an otherwise English page — one chip in the language
+   picker, a place name quoted inside English prose — inherits that English list
+   instead and has to ask again. `:where()` keeps the selector at zero
+   specificity, so an explicit `font-display` or `font-mono` utility on the same
+   element still wins and only unstyled text is re-resolved. */
+:where([lang]:lang(ja), [lang]:lang(ko), [lang]:lang(zh-Hant)) {
+  font-family: var(--font-ui);
+}
+
+/* Arabic is the one script in the set that cannot wear the Latin type scale.
+
+   Tracking: the scale tightens headings by up to -0.035em, and letter-spacing
+   in Arabic does not space letters, it *breaks the joins between them* — the
+   cursive equivalent of setting a word with gaps inside it. Every tracking
+   token is therefore zeroed rather than reduced.
+
+   Leading: Noto Sans Arabic spans 1.374 em above the baseline and 0.738 below,
+   2.112 em in all, against Geist's 1.300. Anything under that is negative
+   leading, and the display steps — the hero sits at 0.95 — would overlap
+   outright. The values below are the smallest that keep stacked vowel marks
+   clear of the line above at each step. */
+:lang(ar) {
+  --text-hero--letter-spacing: 0;
+  --text-headline--letter-spacing: 0;
+  --text-display--letter-spacing: 0;
+  --text-title--letter-spacing: 0;
+  --text-subtitle--letter-spacing: 0;
+  --text-micro--letter-spacing: 0;
+  --tracking-label: 0;
+  --tracking-wide: 0;
+  --tracking-tight: 0;
+  --tracking-tighter: 0;
+
+  --text-hero--line-height: 1.12;
+  --text-headline--line-height: 1.16;
+  --text-display--line-height: 1.2;
+  --text-title--line-height: 1.32;
+  --text-subtitle--line-height: 1.55;
+  --text-body--line-height: 1.75;
+  --text-label--line-height: 1.6;
+  --text-caption--line-height: 1.55;
+  --text-micro--line-height: 1.45;
+}
+
+/* ==========================================================================
+   Direction layer — the part of RTL that no utility can say
+   --------------------------------------------------------------------------
+   Tailwind v4 already compiles `ms-*`, `pe-*`, `start-*`, `text-start`,
+   `border-s`, `rounded-s-*` to real logical properties, and `rtl:` to
+   `:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *)`, so a component mirrors
+   itself with utilities and never needs a `[dir]` selector of its own. Setting
+   `dir="rtl"` on `<html>` is enough to reach all of them.
+
+   What remains is bidi, which has no utility anywhere: a run of digits inside
+   Arabic prose is only weakly left-to-right, so the neutral characters glueing
+   it together — the en dash in a date range, the colon in a time, the slash in
+   a ratio — are re-ordered by the surrounding paragraph and "3–7 Sep" comes out
+   backwards. Isolating the elements that carry numbers pins each run to its own
+   embedding level. It is scoped to RTL because that is the only direction where
+   the bidi algorithm has anything to decide.
+   ========================================================================== */
+
+[dir='rtl'] :is(time, output, [data-numeric]) {
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 /* ==========================================================================

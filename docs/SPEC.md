@@ -160,3 +160,59 @@ Rules:
 4. The feature is visually verified in a real browser, light and dark, desktop and mobile.
 5. No TODOs, no placeholder copy, no `console.log`, no commented-out code left behind.
 6. You did not touch files outside your assigned ownership.
+
+## 8. Localisation
+
+The product ships in **23 languages**. The storage layer already exists and is unused for copy:
+`organization_settings.locale` is the workspace default, `user_settings.locale` the traveller's
+override, and `getEffectiveSettings` already merges them. Making those columns decide what the
+screens say is the work.
+
+### Supported locales — the exact set, tagged BCP-47
+
+| Tag | Native name | Tag | Native name |
+|---|---|---|---|
+| `ar` | العربية *(RTL)* | `ko` | 한국어 |
+| `ca` | Català | `nl` | Nederlands |
+| `cs` | Čeština | `pl` | Polski |
+| `de` | Deutsch | `pt-BR` | Português (Brasil) |
+| `el` | Ελληνικά | `ru` | Русский |
+| `en` | English *(source)* | `sv` | Svenska |
+| `es` | Español | `tr` | Türkçe |
+| `fr` | Français | `uk` | Українська |
+| `hu` | Magyar | `vi` | Tiếng Việt |
+| `id` | Bahasa Indonesia | `zh-Hans` | 简体中文 |
+| `it` | Italiano | `zh-Hant` | 繁體中文 |
+| `ja` | 日本語 | | |
+
+A locale is named in **its own language and its own script**, never in English. The tags are
+canonical BCP-47; the reference's non-standard `br` and `gr` are not what we ship.
+
+### Rules
+
+1. **In-house.** §3's dependency freeze holds — there is no i18n package and none is to be added.
+   The message layer, the plural rules and the interpolation are ours, built on the platform `Intl`.
+2. **Source locale is `en`.** Every key exists in every locale. A test proves parity — no missing
+   key, no orphan key, no locale silently falling back to English at runtime.
+3. **Negotiation happens on the server, once, before first paint**: user setting → workspace
+   setting → `Accept-Language` → `en`. `<html lang>` and `<html dir>` are server-rendered. No
+   locale flash, no hydration mismatch, no second render to correct the language.
+4. **`ar` is RTL.** Layout uses logical properties, not `left`/`right`. Directional icons mirror.
+   RTL is a designed layout, exactly as dark mode is, not a flipped afterthought.
+5. **Formatting must agree across runtimes.** `src/lib/format.ts` pins `en-GB` and freezes the
+   CLDR month and weekday tables *because* workerd and WebKit disagree on `Intl` output, and every
+   server-rendered September date threw a hydration error in Safari until it did. The multi-locale
+   formatter inherits that requirement: any locale-dependent name taken from the platform must be
+   proven identical in workerd and WebKit, or frozen in a table. This is the hardest constraint on
+   this task — treat a divergence as a defect, never as a tolerance.
+6. **No untranslated string reaches a screen.** §7.5's ban on placeholder copy covers an
+   English string sitting in a non-English catalogue.
+7. **The language picker** lives in settings, lists every locale in its native name and script,
+   shows the active one, and persists through a reload.
+8. **Scope.** In: `src/routes/(auth)`, `src/routes/_app`, the marketing landing and pricing pages,
+   and every component they render. Out, for now: `src/routes/legal/**` long-form terms and privacy
+   prose, which stays English and says so on the page — translated legal text needs review this
+   build cannot give it.
+9. **Copy is authored, not copied.** §1's clean-room rule governs every catalogue file. Our English
+   copy is our own, and each translation is made from *our* English — never from the reference's
+   catalogues, which are AGPL-licensed source.

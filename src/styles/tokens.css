@@ -528,13 +528,57 @@
   --radius-2xl: 28px;
   --radius-full: 9999px;
 
-  /* ------------------------------------------------------------------- type */
+  /* ------------------------------------------------------------------- type
+     A stack has no light and dark value to declare, so like every other token
+     in this second `:root` block it is stated once.
+
+     The product ships in 23 languages, and the two pinned faces cover neither
+     half of that alphabet: measured against the Google Fonts API, Geist serves
+     Latin, Latin-ext, Cyrillic and Vietnamese, and MuseoModerno serves Latin,
+     Latin-ext and Vietnamese only. Greek, Arabic, Han, Kana and Hangul have no
+     subset in either. Four Noto companions — requested in the same stylesheet
+     by `src/lib/fonts.ts` — close that gap, and they are named here *ahead of*
+     the generic system entries so a Han or Arabic glyph can never resolve to an
+     unstyled platform default.
+
+     Order inside a stack is coverage order, not preference: the browser takes
+     the first family that owns the codepoint. `Noto Sans` and `Noto Sans
+     Arabic` therefore precede the Han faces, which also carry Greek, Cyrillic
+     and Latin and would otherwise claim them. */
+
+  /* Han, Kana and Hangul. The four faces are one type family cut four ways, so
+     a shared ideograph gets a different shape in each: 直 and 骨 are drawn one
+     way for a reader of Simplified Chinese and another for a reader of
+     Japanese. Simplified leads by default because it is the widest of the four;
+     `styles.css` re-orders this list under `:lang()` so a Japanese, Korean or
+     Traditional-Chinese reader — or a single chip in the language picker that
+     carries its own `lang` — gets its own shapes. Only `Noto Sans KR` carries
+     Hangul, so Korean text falls through the other three by coverage alone. */
+  --font-han: 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR';
+
+  /* The metric-compensated `local()` faces declared in `styles.css`. They stand
+     in for the web fonts above during the `swap` period, with the *same*
+     ascent, descent and line gap, so the moment a face arrives nothing on the
+     page moves (SPEC §2, zero layout shift after paint). */
+  --font-fallback:
+    'Planned Latin Fallback', 'Planned Greek Fallback', 'Planned Arabic Fallback',
+    'Planned Han Fallback', 'Planned Hangul Fallback';
+
+  /* Last resort, after every face we control has failed to load and failed to
+     match a local. Split in two because the display voice is rounded and the UI
+     voice is not. */
+  --font-system:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-system-display:
+    'Avenir Next', 'Trebuchet MS', ui-rounded, system-ui, sans-serif;
+
   --font-display:
-    'MuseoModerno', 'Avenir Next', 'Trebuchet MS', ui-rounded, system-ui,
-    sans-serif;
+    'MuseoModerno', 'Noto Sans', 'Noto Sans Arabic', var(--font-han),
+    var(--font-fallback), var(--font-system-display);
   --font-ui:
-    'Geist', 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    Roboto, 'Helvetica Neue', Arial, sans-serif;
+    'Geist', 'Geist Sans', 'Noto Sans', 'Noto Sans Arabic', var(--font-han),
+    var(--font-fallback), var(--font-system);
   --font-mono:
     ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', 'Liberation Mono',
     monospace;

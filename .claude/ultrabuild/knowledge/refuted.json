@@ -5,7 +5,11 @@
     "why": "It is a broken capture, not a defect of either candidate. Measured: selecting Dark from the theme menu sets the dark ramp on the MapLibre canvas within one second, and frames at +1s and +5s are both fully dark, chrome and map together. The frames that showed a mismatch were shot immediately after a scripted attribute change, before the style document had reloaded.",
     "cost": "sank atlas-map-overlay once and wasted parts of rounds 2, 3 and 5",
     "blindSafe": true,
-    "scope": ["critic", "auditor", "builder"]
+    "scope": [
+      "critic",
+      "auditor",
+      "builder"
+    ]
   },
   {
     "id": "vite-hmr-console-error",
@@ -13,7 +17,10 @@
     "why": "Its stack frame is /@vite/client, the dev server's own HMR message handler. It cannot occur in a build and the Playwright gate never sees it. See the `vite-console-noise` fact.",
     "cost": "failed two finished items, atlas-country-actions and atlas-country-card, in round 9",
     "blindSafe": false,
-    "scope": ["auditor", "capture"]
+    "scope": [
+      "auditor",
+      "capture"
+    ]
   },
   {
     "id": "countries-test-timeout",
@@ -21,7 +28,11 @@
     "why": "It passes 74/74 when run alone. The 5000ms timeout only appears under the concurrent load a fanned-out round puts on this machine.",
     "cost": "recurring across rounds 4, 5 and 9-12",
     "blindSafe": false,
-    "scope": ["builder", "auditor", "mechanical"]
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ]
   },
   {
     "id": "register-hydration-timeout",
@@ -29,6 +40,21 @@
     "why": "Seen once in round 2 and never reproduced, on a machine that was carrying sixteen dev servers at the time. A single non-reproducing timeout is a flake.",
     "cost": "chased in round 3",
     "blindSafe": false,
-    "scope": ["builder", "auditor"]
+    "scope": [
+      "builder",
+      "auditor"
+    ]
+  },
+  {
+    "id": "visual-gate-red-on-main",
+    "claim": "The Playwright chromium visual project is red on main with ~44 failures, so the repo has a pre-existing red floor this run must carry or fix.",
+    "why": "Every one of those failures was photographed against port 3005, a dev server belonging to a sibling git worktree. Measured on a server started from this checkout: 132 passed, 5 skipped, 0 unexpected, with round 1's changes already in the tree. There is no red floor. See the port-identity-is-the-worktree fact.",
+    "cost": "the whole of round 1's mechanical verdict, plus an orchestrator investigation that first reached the same wrong conclusion",
+    "blindSafe": false,
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ]
   }
 ]

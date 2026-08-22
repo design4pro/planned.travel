@@ -136,5 +136,131 @@
       "builder"
     ],
     "invalidatesWhen": "never — it is a property of judging by pictures"
+  },
+  {
+    "id": "copy-surface-inventory",
+    "claim": "The translatable surface is ~1,415 unique candidate strings across 263 .ts/.tsx files under src/routes and src/components. It is heavily concentrated: src/routes/_app 680, src/components/modules 316, src/routes/api 267, src/routes/(auth) 146, src/components/marketing 82, src/components/atlas 79, src/components/costs 68, src/routes/legal 65, src/components/layout 45, src/components/ui 28, src/components/map 22, src/components/planner 9.",
+    "evidence": "Measured before round 1 by scanning JSX text nodes plus copy-bearing props (title|label|hint|description|placeholder|aria-label|message|heading|subtitle|cta|empty|error) over both trees, excluding __tests__. The src/routes/api figure is mostly server JSON and error text rather than screen copy — do not assume all 267 are user-facing. It is an upper bound, not a key count.",
+    "measuredIn": "i18n run, preflight",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "extraction has begun and the catalogue is the better count — re-measure from the catalogue, not from the components"
+  },
+  {
+    "id": "notification-copy-already-keyed",
+    "claim": "Notifications are ALREADY key-based: src/server/repos/notifications.ts stores titleKey + bodyKey + a params JSON record, deliberately never a rendered sentence. Those keys must be rendered through the new catalogue, not re-authored as literals.",
+    "evidence": "Measured: notifyInput in src/server/repos/notifications.ts validates titleKey and bodyKey as shortTextSchema.min(1) with a params jsonRecordSchema, and the module docstring states the reason — 'a notification written a year ago still renders in the reader's current language'. The rendering sites are src/routes/_app/notifications.tsx and src/components/layout/notification-bell.tsx.",
+    "measuredIn": "i18n run, preflight",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "the notifications repo stops storing keys"
+  },
+  {
+    "id": "reference-locale-provenance",
+    "claim": "The reference ships 23 locale directories and 45 namespace files per locale under shared/src/i18n. Its codes are ar br ca cs de en es fr gr hu id it ja ko nl pl ru sv tr uk vi zh zh-TW, where br and gr are its non-standard tags for Brazilian Portuguese and Greek. The 23 chips in the user's screenshot map one-to-one onto that set.",
+    "evidence": "Measured with the GitHub tree API (repos/liketrek/TREK/git/trees/main?recursive=1) — a directory listing only. The catalogue CONTENTS are AGPL source and docs/SPEC.md §1 and §8.9 forbid reading them into our copy. The canonical tags we ship are fixed in docs/SPEC.md §8; do not re-derive the set from the reference.",
+    "measuredIn": "i18n run, preflight",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "docs/SPEC.md §8 changes the shipped set"
+  },
+  {
+    "id": "vitest-jsdom-import-meta-url",
+    "claim": "In the vitest `ui` (jsdom) project, `import.meta.url` is an http: URL, so `fileURLToPath(new URL('..', import.meta.url))` throws 'The URL must be of scheme file' and fails the whole suite file with 0 failed tests reported. Resolve paths from `process.cwd()` instead — vitest sets it to the project root.",
+    "evidence": "src/lib/i18n/__tests__/source-rules.test.ts failed with exactly that message while numFailedTests was 0 and numFailedTestSuites was 1; switching to join(process.cwd(),'src','lib','i18n') made it pass. Note the JSON reporter hides this: a suite-level failure shows up only in numFailedTestSuites.",
+    "measuredIn": "i18n run, round 1",
+    "scope": [
+      "builder",
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": "the toolchain or the shipped font set changes"
+  },
+  {
+    "id": "catalogue-loader-code-splits",
+    "claim": "The explicit `Record<Locale, () => import('./messages/<tag>')>` loader genuinely code-splits: an SSR `vite build` over src/lib/i18n/catalogue.ts emits exactly 23 separate chunks, one per locale, and none of them is inlined into the entry.",
+    "evidence": "Scratch config with build.ssr:true and rollupOptions.input=src/lib/i18n/catalogue.ts produced probe-dist/assets containing ar-*.js … zh-Hant-*.js, count = 23, plus catalogue.js. Probe deleted afterwards.",
+    "measuredIn": "i18n run, round 1",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "invalidatesWhen": "the toolchain or the shipped font set changes"
+  },
+  {
+    "id": "vi-domock-runtime-path",
+    "claim": "`vi.doMock` accepts a path built at runtime (`vi.doMock(`../messages/${tag}`, factory)`), resolves it against the test file, and matches the loader's own `import('./messages/<tag>')` — which is how loader laziness can be measured rather than asserted.",
+    "evidence": "src/lib/i18n/__tests__/catalogue.test.ts mocks all 23 catalogues in a loop with recording factories; after `await loadCatalogue('pl')` the recorder holds exactly ['pl'], and after 'ar' exactly ['pl','ar']. Requires vi.resetModules() before importing ../catalogue and vi.doUnmock in afterEach.",
+    "measuredIn": "i18n run, round 1",
+    "scope": [
+      "builder"
+    ],
+    "invalidatesWhen": "the toolchain or the shipped font set changes"
+  },
+  {
+    "id": "dev-server-stale-css",
+    "claim": "The dev server in the pool can serve a stale CSS transform indefinitely: port 3005 kept returning the pre-edit `styles.css` (old `@import`, old `--font-ui`) after both style files were edited and then `touch`ed, so any CSS change has to be verified by injecting the built stylesheet rather than by reloading the page.",
+    "evidence": "`curl http://localhost:3005/src/styles/styles.css | grep -c 'Planned Latin Fallback'` returned 0 both before and 3 s after `touch src/styles/tokens.css src/styles/styles.css`, while `dist/client/assets/styles-*.css` from a fresh `pnpm build` contained the rule. In-page `getComputedStyle(document.body).fontFamily` showed the pre-edit stack. Appending `dist/client/assets/styles-*.css` as a `<style>` (it is unlayered-equal and later in source order, so it wins) made the computed stack correct and let the real faces load.",
+    "measuredIn": "i18n run, round 1",
+    "scope": [
+      "builder",
+      "capture",
+      "mechanical",
+      "critic"
+    ],
+    "invalidatesWhen": "the toolchain or the shipped font set changes"
+  },
+  {
+    "id": "theme-inline-font-inheritance",
+    "claim": "`@theme inline` emits `var()` references rather than resolved values, so redeclaring a type token under `:lang()` retunes every Tailwind utility live — but `font-family` inherits as an already-resolved list, so a `:lang()` change to `--font-ui` reaches a whole page and NOT an element that merely carries its own `lang`.",
+    "evidence": "Built CSS: `.text-title{…line-height:var(--tw-leading,var(--text-title--line-height));letter-spacing:var(--tw-tracking,var(--text-title--letter-spacing))}`. Measured: `<html lang=\"ar\">` moved a `.text-title` from `-0.572px`/`29.9px` to `normal`/`34.32px`. Measured the failure too: a `<button lang=\"ja\">` inside an `lang=\"en\"` page did not use `Noto Sans JP` (absent from `document.fonts` loaded list) until a `:where([lang]:lang(ja)){font-family:var(--font-ui)}` rule was added to re-resolve it; `:where()` keeps specificity at 0 so `.font-display` still wins.",
+    "measuredIn": "i18n run, round 1",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "invalidatesWhen": "the toolchain or the shipped font set changes"
+  },
+  {
+    "id": "font-script-coverage",
+    "claim": "Script coverage and metrics of the shipped faces, read from the font binaries — Geist has no Greek, MuseoModerno has neither Greek nor Cyrillic, and only Noto Sans KR of the four CJK faces carries Hangul.",
+    "evidence": "cmap probe of the Google-served TTFs: geist latin/cyrillic/vietnamese yes, greek no; museomoderno latin/vietnamese only; notosans latin+cyrillic+greek; notosc/tc/jp all carry greek+cyrillic+kana+han but NOT U+D55C, notokr carries it. Metrics (upm 1000, hhea asc/desc/gap, x-height): Geist 1.005/-0.295/0 0.530 · Noto Sans 1.069/-0.293/0 0.536 · Noto Sans Arabic 1.374/-0.738/0 · Noto Sans SC=TC=JP=KR 1.160/-0.288/0 0.543 · Arial 0.905/-0.212/0.033 0.5186. Consequence: the Han faces must sit AFTER Noto Sans in a stack or they claim Greek and Cyrillic.",
+    "measuredIn": "i18n run, round 1",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "invalidatesWhen": "the toolchain or the shipped font set changes"
+  },
+  {
+    "id": "port-identity-is-the-worktree",
+    "claim": "A dev server is OURS only if it answers /api/dev/seed AND its listening process's cwd equals this repo root. A git worktree under .claude/worktrees/ is the same app on a different branch: it answers the same endpoint and is invisible over HTTP. Always resolve with scripts/ultrabuild/resolve-port.sh, which now checks both.",
+    "evidence": "Measured in round 1. Ports 3002-3005 and 3010 all ran from .claude/worktrees/camping-spots-scraping-plan-79bc83; 3005 and 3010 answered '\"ok\"' on /api/dev/seed, so the old one-sided probe picked 3005. The entire round-1 gate photographed that sibling checkout and filed 44 visual failures — pricing 4600->4883px, legal-terms 4097->4173px, an atlas country panel that 'never opens', a null chrome.shelf — against code that was never rendered. A hand check of 'does this reproduce on main?' hit the same wrong server and appeared to confirm it. Re-run against a server started from this tree on 3007: 132 passed, 5 skipped, 0 unexpected.",
+    "measuredIn": "i18n run, round 1",
+    "scope": [
+      "builder",
+      "capture",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "never — an HTTP answer cannot distinguish two checkouts of one app"
+  },
+  {
+    "id": "clock-pin-blocks-webfont-files",
+    "claim": "The x-pt-server-today clock pin is sent to fonts.gstatic.com too, and every woff2 file fails with net::ERR_FAILED, so a pinned context renders in the fallback face while an unpinned one renders in Geist and MuseoModerno. The CSS at fonts.googleapis.com still returns 200, so the failure is silent.",
+    "evidence": "Measured directly with a Playwright probe on /pricing: clockPin=true gave 'gfonts fail: .../geist/v5/...woff2 :: net::ERR_FAILED | .../museomoderno/v29/...woff2 :: net::ERR_FAILED' and zero real faces loaded; clockPin=false loaded Geist 400/500/600/700 and MuseoModerno 700/800. NOTE: this probe ran against the sibling-worktree server on 3005, so its HEIGHT numbers say nothing about this tree — the CORS mechanism is what it establishes, and it matches the standing clock-pin-cors fact.",
+    "measuredIn": "i18n run, round 1",
+    "scope": [
+      "builder",
+      "capture",
+      "auditor"
+    ],
+    "invalidatesWhen": "playwright.config.ts scopes extraHTTPHeaders to the app origin, which is open backlog work"
   }
 ]
