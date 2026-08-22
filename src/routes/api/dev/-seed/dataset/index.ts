@@ -3,6 +3,10 @@
  *
  * Order matters for trips: the applier walks `trips` in sequence, and later entities (notifications,
  * journeys, the audit trail) reference earlier trips by slug.
+ *
+ * That sequence is also the id sequence. Every trip declares its own primary key (see `SeedTrip.id`)
+ * and those keys ascend in the order below, so `order by id` — the cursor a paginated list uses —
+ * still returns the demo trips newest-first even though nothing about them is time-stamped any more.
  */
 
 import { planById, priceFor } from '#/lib/plans'
@@ -31,14 +35,17 @@ export {
 export { flagshipTrip } from './flagship'
 export { dolomitesTrip, lisbonTrip, marrakechTrip, patagoniaTrip } from './trips'
 
-/** Every trip the seed writes, flagship first. */
+/** Every trip the seed writes, flagship first — and in ascending id order. */
 export const trips: ReadonlyArray<SeedTrip> = [flagshipTrip, ...supportingTrips]
 
 /**
  * Bumped whenever the dataset changes in a way that should re-seed a workspace that already carries
  * the marker. The applier stores it in `app_settings` under `demo.seed`.
+ *
+ * Version 3 gave every trip a fixed primary key, so a workspace seeded under version 2 still holds
+ * generated ones and has to be rebuilt before its cover art matches the recorded screenshots.
  */
-export const DATASET_VERSION = 2
+export const DATASET_VERSION = 3
 
 /** Workspace defaults the demo assumes: sterling, London, Monday weeks. */
 export const organizationSettings = {
