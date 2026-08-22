@@ -47,6 +47,40 @@ Hard constraints that override any instinct to be helpful:
   - SQL lives only in src/server/repos. components/ui never fetches data and never imports server/.
   - TypeScript strict. No \`any\`. No suppressions. No TODOs, placeholder copy or console.log left behind.`
 
+/**
+ * Every agent that needs the app in a browser resolves its port the same way.
+ *
+ * The rule exists because the opposite happened: agents each started their own `pnpm dev`, sixteen
+ * ran at once, the machine hit a load average of 563 with 4.4 GB of swap, and a whole round's gate
+ * came back as 64 timeouts with not one pixel difference among them. Reuse beats spawning, and a
+ * bounded pool keeps two concurrent runs off each other's ports.
+ */
+const PORT_POLICY = `PORT POOL POLICY — binding on every agent, no exceptions.
+
+The pool is ports 3000 through 3010. Nothing outside it is ever used, and 3000 is never assumed:
+on this machine it has belonged to an unrelated project.
+
+1. REUSE FIRST. Walk the pool and take the lowest port that answers as THIS app. Answering HTTP at
+   all is not enough — another project can hold a port in the pool. Confirm identity:
+     for p in $(seq 3000 3010); do
+       curl -s -m 3 "http://localhost:$p/api/dev/seed" | grep -q '"ok"' && echo "ours: $p"
+     done
+   That endpoint is this repo's own, so a match proves the server is ours and seeded.
+2. START ONE ONLY IF THE POOL HAS NONE. If no port answers as ours, start exactly ONE server on the
+   lowest free port in the pool and say so in your result:
+     pnpm dev --port <free port from 3000..3010>
+   Never start a second. Never start one "just in case". Never start one because the port you were
+   handed is busy — a busy pool means another run owns it, so reuse it or report and stop.
+3. NEVER KILL a server you did not start. Another ultrabuild run may be using it.
+4. ALWAYS pass the resolved port explicitly:
+     PLAYWRIGHT_BASE_URL=http://localhost:<port> pnpm exec playwright test
+   Without it, playwright.config.ts waits on 3000 forever and the round hangs.
+5. If the orchestrator named a port in the task context, that port wins over discovery — use it and
+   do not probe. If it does not answer, report that and stop rather than starting your own.
+6. A Playwright or vitest failure whose message is a TIMEOUT, with no pixel-difference count and no
+   assertion diff, is evidence about this machine's load, not about the code. Report it as such and
+   never change code in response to one.`
+
 /* ------------------------------------------------------------------ *
  * Schemas — validated at the tool boundary, so agents retry on mismatch.
  * ------------------------------------------------------------------ */
@@ -422,6 +456,8 @@ ${item.acceptance.map((a) => `  - ${a}`).join('\n')}
 ${item.url ? `Renders at: ${item.url}\n` : ''}
 ${CONTRACT}
 
+${PORT_POLICY}
+
 Established recon — do not re-derive:
 
 ${reconDigest}
@@ -464,9 +500,10 @@ You are a neutral capture step. You do NOT judge quality and you do NOT edit app
 Ours:      ${item.url || 'the local dev server root'}
 Reference: ${item.referenceUrl || 'https://demo.liketrek.com/dashboard'}
 
-Our page is served by a dev server that is ALREADY RUNNING. Use the port the orchestrator names in
-the task context and do not start one of your own; if none is named, find the port already bound
-(this environment injects an extra --port, so it is frequently not 3000).
+Our page is served by a dev server. Follow the PORT POOL POLICY below exactly — sixteen concurrent
+dev servers once put this machine at a load average of 563 and cost a whole round to timeouts.
+
+${PORT_POLICY}
 
 For each of these combinations, screenshot BOTH pages full-page:
   viewports 360x800, 768x1024, 1440x900, 2560x1440
@@ -587,6 +624,8 @@ ${item.acceptance.map((a) => `  - ${a}`).join('\n')}
 
 ${CONTRACT}
 
+${PORT_POLICY}
+
 Read the actual code. Check, in this order:
 1. Ownership: did it edit anything outside ownedPaths? Did it touch package.json, pnpm-lock.yaml
    or src/routeTree.gen.ts? Any of those is blocking.
@@ -687,9 +726,8 @@ Run each command from the repo root, capture its exit code, and summarise its ou
   pnpm exec playwright test
 
 Notes:
-- Playwright needs a running dev server AND an explicit base URL. Find the port the dev server
-  actually bound (this environment injects an extra --port, so it is often not 3000), verify it
-  answers with curl, and run the suite as
+- Playwright needs a running dev server AND an explicit base URL. Resolve the port with the PORT
+  POOL POLICY below, then run the suite as
   \`PLAYWRIGHT_BASE_URL=http://localhost:<port> pnpm exec playwright test\`. That makes
   playwright.config.ts skip its own webServer block, which otherwise waits on port 3000 forever.
 - Never pass --update-snapshots. Rewriting the baseline would turn a visual regression into the new
@@ -699,7 +737,9 @@ Notes:
   part of this gate.
 - green is true only if EVERY command exited 0. One non-zero exit means green is false.
 - For each failure, add a finding with the file and line from the compiler/linter/test output and a
-  short excerpt of the actual error text. Severity is always "blocking" for a non-zero exit.`,
+  short excerpt of the actual error text. Severity is always "blocking" for a non-zero exit.
+
+${PORT_POLICY}`,
   { label: 'mechanical', phase: 'Mechanical', schema: MECHANICAL_SCHEMA, effort: 'low' },
 )
 
