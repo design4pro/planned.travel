@@ -89,8 +89,8 @@ export type { DayRoutesProps } from './day-routes'
  * upgrades itself to the 1:50m cut — `loadCountryDetail()` from `#/lib/map` —
  * as soon as that asset arrives. Two answers a screen may already have rendered
  * move with it: `hasCountryOutline()` starts saying yes to Singapore, Malta and
- * the Maldives, and `countryBounds()` grows to hold a country's offshore
- * territories.
+ * the Maldives, and `countryBounds()` sharpens, gaining the Balearics for Spain
+ * and the near Ryukyus for Japan.
  *
  * `useCountryDetail()` is how anything outside the map is told. Read it in the
  * component that renders either answer and put it in the dependency list of the
@@ -99,11 +99,11 @@ export type { DayRoutesProps } from './day-routes'
  * screen. It is a subscription over process-wide state, so mounting it beside
  * the map costs no second request.
  *
- * One of those two answers changes meaning as well as value. A `countryBounds()`
- * rectangle grown to hold Guadeloupe and Réunion describes France honestly and
- * frames it uselessly: fitting a camera to it lands on open ocean. Use it to ask
- * whether a code can be drawn and how much of the world it covers; frame a
- * fly-to on the country's principal landmass instead.
+ * `countryBounds()` is a camera frame, not a measurement of how much planet a
+ * country covers: it is grown outwards from the principal landmass, so France
+ * frames as the metropole and Corsica while Réunion, Guadeloupe and French
+ * Guiana stay drawn, filled and hoverable on the layer. Fit it and you have
+ * framed the country the reader named.
  */
 export {
   useCountryDetail,

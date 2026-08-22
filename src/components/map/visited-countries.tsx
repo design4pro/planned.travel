@@ -281,16 +281,16 @@ function noCountryDetail(): null {
  * )
  * ```
  *
- * `countryBounds()` moves the same way, and it carries a warning the bundled cut
- * never needed: **the rectangle a country fits inside is not a camera frame.**
- * Measured on the committed 1:50m payload, France's rectangle runs from
- * Guadeloupe at 61.8°W to Réunion at 55.8°E — 117° of longitude, almost all of
- * it open ocean — and the Netherlands, Norway, Portugal, Chile and the United
- * States all grow the same way when the cut lands. A camera that fits that
- * rectangle answers "show me France" with the mid-Atlantic. Read the rectangle
- * for the two questions it is honest about — whether a code has any geometry,
- * and how much of the world one country covers — and frame a fly-to on the
- * country's principal landmass instead of on its full extent.
+ * `countryBounds()` moves the same way, and it sharpens rather than widens.
+ * The hazard the finer cut created is real — the tightest rectangle around
+ * France runs from Guadeloupe at 61.8°W to Réunion at 55.8°E, 118° of longitude
+ * and almost all of it open ocean — and it is answered where the rectangle is
+ * built: `countryBounds()` returns a *frame*, grown outwards from the principal
+ * landmass, so it comes back as metropolitan France and Corsica and a camera
+ * fitted to it lands on France. The départements it leaves out are still in the
+ * payload this layer draws: still filled, still lit by a hover, still part of
+ * the country's shape. A caller therefore needs no special handling for them —
+ * fit the rectangle and frame the country.
  *
  * The update is *monotonic*, which is what makes applying it live safe rather
  * than jarring: the finer cut is a superset, so a code the bundled world could

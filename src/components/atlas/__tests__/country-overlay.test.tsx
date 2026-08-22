@@ -16,6 +16,7 @@ import {
   CountryOverlay,
   anchorLandmass,
   anchorSpan,
+  chromeFreeAreas,
   countryLandmasses,
   placeCountrySurface,
   surfaceAreas,
@@ -24,6 +25,7 @@ import {
 import type {
   CountryOverlayCountry,
   CountryOverlayProps,
+  SurfaceArea,
   SurfaceBox,
 } from '../country-overlay'
 import type { MapContextValue, MapLibreMap } from '#/components/map/map-context'
@@ -797,7 +799,13 @@ describe('surfaceAreas', () => {
       bottom: 424,
       left: 16,
     })
-    expect(strict).toEqual({ x: 16, y: 76, width: 1364, height: 335 })
+    expect(strict).toEqual({
+      kind: 'strict',
+      x: 16,
+      y: 76,
+      width: 1364,
+      height: 335,
+    })
   })
 
   it('offers a second area that gives up the shelf and keeps the gutter', () => {
@@ -826,9 +834,9 @@ describe('surfaceAreas', () => {
    *
    * The widened band is its own area rather than a wider strict one, because the
    * inset is not merely spare: below this width the cluster is the map's top
-   * *corner*, and the decorative card, which may use nothing but the strict area,
-   * has to keep clear of it. The panel takes the widened band and comes down the
-   * map, where the cluster is not.
+   * *corner*, and the decorative card, which may use no band that buys its room
+   * from the chrome, has to keep clear of it. The panel takes the widened band
+   * and comes down the map, where the cluster is not.
    */
   it('offers a phone the width the top-right zoom cluster was charged twice for', () => {
     const phone: SurfaceBox = { x: 0, y: 0, width: 360, height: 650 }
@@ -840,6 +848,7 @@ describe('surfaceAreas', () => {
     })
     expect(areas).toHaveLength(3)
     expect(areas[0], 'the strict area still clears the cluster').toEqual({
+      kind: 'strict',
       x: 12,
       y: 72,
       width: 294,
@@ -847,6 +856,7 @@ describe('surfaceAreas', () => {
     })
     expect(areas[1], 'gutter to gutter, as the shelf is, and above it').toEqual(
       {
+        kind: 'gutter',
         x: 12,
         y: 72,
         width: 336,
@@ -896,6 +906,190 @@ describe('surfaceAreas', () => {
         surfaceAreas(box, padding),
       )
     })
+
+    /**
+     * The band beyond the column is chrome-free by construction, and the hover
+     * card was denied it anyway.
+     *
+     * `slice(0, 1)` is the same answer as this for every screen no wider than
+     * the column, and the wrong one above it: the search pill, the zoom cluster,
+     * the credit and the shelf are all laid out inside the column, so nothing
+     * the decorative surface must clear is ever out there.
+     */
+    it('offers the decorative surface both bands with no chrome on them', () => {
+      const free = chromeFreeAreas(surfaceAreas(wide, padding, 1440))
+      expect(free.map((band) => band.kind)).toEqual(['strict', 'outside'])
+    })
+
+    it('denies it every band that buys its room from the chrome', () => {
+      const phone: SurfaceBox = { x: 0, y: 0, width: 360, height: 650 }
+      const free = chromeFreeAreas(
+        surfaceAreas(phone, { top: 72, right: 54, bottom: 156, left: 12 }),
+      )
+      expect(
+        free.map((band) => band.kind),
+        'the gutter reclaims the cluster inset and the relaxed band is the shelf',
+      ).toEqual(['strict'])
+    })
+  })
+})
+
+/**
+ * The east edge of a screen wider than the chrome column, which is where a
+ * preference between kinds of room stops being the right question.
+ *
+ * The strict band ends at the column's right edge and the outside band carries
+ * on to the map's; they are a horizontal partition rather than a ranking, and a
+ * shape standing in the second of them was being offered the first — which
+ * clamps: `offerSide` brings the surface back inside the area it was given, so
+ * the answer looked placed and clear while sitting five hundred pixels west of
+ * the country it named, with no tip, over open water.
+ */
+describe('placeCountrySurface across a partitioned map', () => {
+  const strict: SurfaceArea = {
+    kind: 'strict',
+    x: 16,
+    y: 76,
+    width: 1924,
+    height: 875,
+  }
+  const outside: SurfaceArea = {
+    kind: 'outside',
+    x: 2000,
+    y: 76,
+    width: 544,
+    height: 875,
+  }
+  /** Australia's rectangle on a 2560px world map, near enough. */
+  const australia: SurfaceBox = { x: 2150, y: 620, width: 350, height: 210 }
+  const card = { width: 90, height: 36 }
+
+  it('places a card for a country beyond the column beside that country', () => {
+    const spot = placeCountrySurface({
+      anchor: australia,
+      size: card,
+      areas: [strict, outside],
+    })
+    expect(spot?.clear).toBe(true)
+    expect(
+      spot?.x,
+      'inside the band the shape stands in, not clamped to the column',
+    ).toBeGreaterThanOrEqual(outside.x)
+    expect(
+      spot?.tip,
+      'and close enough to still point at the shape it names',
+    ).not.toBeNull()
+    expect(
+      Math.abs(
+        (spot?.x ?? 0) + card.width / 2 - (australia.x + australia.width / 2),
+      ),
+      'centred on the shape to within the room the band leaves',
+    ).toBeLessThan(60)
+  })
+
+  it('leaves a country inside the column in the strict band', () => {
+    const spot = placeCountrySurface({
+      anchor: { x: 900, y: 400, width: 120, height: 90 },
+      size: card,
+      areas: [strict, outside],
+    })
+    expect(spot?.x).toBeLessThan(outside.x)
+    expect(spot?.tip).not.toBeNull()
+  })
+
+  it('keeps the band order when a shape straddles both of them', () => {
+    // Two thirds of it inside the column, so the column is where it goes: the
+    // partition is decided by which band holds most of the shape, not by which
+    // edge it happens to touch.
+    const spot = placeCountrySurface({
+      anchor: { x: 1700, y: 400, width: 360, height: 200 },
+      size: card,
+      areas: [strict, outside],
+    })
+    expect(spot?.x).toBeLessThan(outside.x)
+  })
+
+  it('falls back to the column when the outside band is too narrow to hold it', () => {
+    const spot = placeCountrySurface({
+      anchor: australia,
+      size: { width: 674, height: 275 },
+      areas: [strict, outside],
+      minHeight: 288,
+    })
+    expect(spot?.x).toBeLessThan(outside.x)
+    expect(spot?.clear).toBe(true)
+  })
+
+  /**
+   * The order that is a ranking rather than a partition, and must survive this.
+   *
+   * A phone's widened band is 52px wider on the right than its strict one, so a
+   * country at the eastern edge of a 360px map holds more of the widened band
+   * than of the strict one — and the band that reaches down *over the shelf*
+   * shares that width. Ordering on width alone would therefore have promoted the
+   * shelf band ahead of the strict one for exactly those countries, which is the
+   * defect the area order exists to prevent: a panel lying across the tab strip
+   * that names the country it is about.
+   */
+  it('never promotes the band that reaches over the shelf', () => {
+    const strictPhone: SurfaceArea = {
+      kind: 'strict',
+      x: 12,
+      y: 72,
+      width: 294,
+      height: 422,
+    }
+    const gutter: SurfaceArea = {
+      kind: 'gutter',
+      x: 12,
+      y: 72,
+      width: 336,
+      height: 422,
+    }
+    const shelf: SurfaceArea = {
+      kind: 'relaxed',
+      x: 12,
+      y: 72,
+      width: 336,
+      height: 566,
+    }
+    const spot = placeCountrySurface({
+      // Hard against the east edge, where only the two widened bands hold it.
+      anchor: { x: 300, y: 200, width: 48, height: 60 },
+      size: { width: 336, height: 368 },
+      areas: [strictPhone, gutter, shelf],
+      minHeight: 288,
+    })
+    expect(
+      (spot?.y ?? 0) + (spot?.height ?? 368),
+      'the shelf is reached only when nothing above it can hold the surface',
+    ).toBeLessThanOrEqual(strictPhone.y + strictPhone.height)
+  })
+
+  /**
+   * A country dragged off the map leaves a stub clamped to the edge it went out
+   * of, and no band holds any of it. Nothing is preferred then, and the caller's
+   * own order — the strictest first, the shelf last — stands exactly as before.
+   */
+  it('keeps the caller order when no band holds any of the shape', () => {
+    const shelf: SurfaceArea = {
+      kind: 'relaxed',
+      x: 16,
+      y: 76,
+      width: 1924,
+      height: 1283,
+    }
+    const stub: SurfaceBox = { x: 16, y: 1240, width: 12, height: 12 }
+    const spot = placeCountrySurface({
+      anchor: stub,
+      size: { width: 300, height: 200 },
+      areas: [strict, shelf],
+      minHeight: 180,
+    })
+    expect(
+      (spot?.y ?? 0) + (spot?.height ?? 200),
+      'the strict band is exhausted before the shelf is looked at',
+    ).toBeLessThanOrEqual(strict.y + strict.height)
   })
 })
 

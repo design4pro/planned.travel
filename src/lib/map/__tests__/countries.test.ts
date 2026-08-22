@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { COUNTRY_NAMES } from '#/lib/atlas/country-names'
-import { MAX_MERCATOR_LATITUDE, boundsContains } from '../bounds'
+import { MAX_MERCATOR_LATITUDE, boundsContains, boundsForPoints } from '../bounds'
 import {
   COUNTRY_CODE_PROPERTY,
   COUNTRY_DETAIL_URL,
@@ -24,6 +24,7 @@ import { worldOutlines } from '../world'
 import type { MapBounds } from '../bounds'
 import type {
   CountryDetail,
+  CountryFeature,
   countryDetail,
   loadCountryDetail,
   subscribeCountryDetail,
@@ -55,6 +56,83 @@ type GeoJsonSourceData = NonNullable<
  * meaningful assertion rather than an indulgent one.
  */
 const SOLVER_DRIFT = 1e-7
+
+/**
+ * A ring's area in square degrees, corrected for its latitude.
+ *
+ * The framing solver picks the principal landmass by area, so a test that wants
+ * to know which ring that is has to measure it — and it measures it here,
+ * independently of the module, so the two cannot agree by sharing a bug.
+ */
+function ringArea(ring: ReadonlyArray<[number, number]>): number {
+  let twice = 0
+  let latitudes = 0
+  for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index, index += 1) {
+    twice +=
+      ring[previous][0] * ring[index][1] - ring[index][0] * ring[previous][1]
+    latitudes += ring[index][1]
+  }
+  const mean = ((latitudes / ring.length) * Math.PI) / 180
+  return Math.abs(twice / 2) * Math.cos(mean)
+}
+
+/**
+ * True when a frame claims no longitude or latitude the country has no land in.
+ *
+ * Tested on the frame's own corners rather than by comparing edges, because the
+ * two rectangles may be solved on different longitude branches: the United
+ * States' extent runs 172.5°…293° across the antimeridian while its frame is a
+ * plain -124.7°…-67°, and the two numbers are the same place.
+ */
+function withinExtent(feature: CountryFeature, frame: MapBounds): boolean {
+  const extent = boundsForPoints(ringsOf(feature).flat())
+  if (extent === null) return false
+  const tolerant: MapBounds = {
+    west: extent.west - SOLVER_DRIFT,
+    south: extent.south - SOLVER_DRIFT,
+    east: extent.east + SOLVER_DRIFT,
+    north: extent.north + SOLVER_DRIFT,
+  }
+  return (
+    [
+      [frame.west, frame.south],
+      [frame.west, frame.north],
+      [frame.east, frame.south],
+      [frame.east, frame.north],
+    ] as ReadonlyArray<[number, number]>
+  ).every((corner) => boundsContains(tolerant, corner))
+}
+
+/** Every ring of one country's MultiPolygon, flattened. */
+function ringsOf(feature: CountryFeature): Array<Array<[number, number]>> {
+  return feature.geometry.coordinates.flat()
+}
+
+/** The single biggest ring a country owns: its principal landmass. */
+function principalRing(feature: CountryFeature): Array<[number, number]> {
+  let best = ringsOf(feature)[0]
+  let bestArea = ringArea(best)
+  for (const ring of ringsOf(feature)) {
+    const area = ringArea(ring)
+    if (area > bestArea) {
+      best = ring
+      bestArea = area
+    }
+  }
+  return best
+}
+
+/** How much of a country's land the rectangle actually holds, 0…1. */
+function landShare(feature: CountryFeature, bounds: MapBounds): number {
+  let inside = 0
+  let total = 0
+  for (const ring of ringsOf(feature)) {
+    const area = ringArea(ring)
+    total += area
+    if (ring.every((point) => boundsContains(bounds, point))) inside += area
+  }
+  return total === 0 ? 1 : inside / total
+}
 
 /** Every officially-assigned ISO2 code the bundled geometry cannot fill. */
 const UNMAPPED_CODES = [...UNMAPPED_COUNTRY_CODES, ...UNMAPPED_TERRITORY_CODES]
@@ -506,13 +584,18 @@ describe('countryBounds', () => {
     }
   })
 
-  it('frames geometry it actually contains, line and pole included', () => {
+  it('frames the principal landmass whole, and claims no water beyond it', () => {
     // The claim the module makes and nothing else checked: a country's fill and
-    // its fly-to describe the same country. A clamp applied to one and not the
-    // other, or a longitude solved on the wrong side of the line, shows up here
-    // as a vertex outside the rectangle drawn around it — off by degrees, not by
-    // the centimetre `SOLVER_DRIFT` allows for.
+    // its fly-to describe the same country. Two halves to it, and the bundled
+    // cut is the easy half — it draws so few offshore rings that the frame and
+    // the extent agree for almost everything.
+    //
+    // A clamp applied to the geometry and not to the rectangle, or a longitude
+    // solved on the wrong side of the line, shows up here as a vertex of the
+    // principal landmass outside the rectangle drawn around it — off by
+    // degrees, not by the centimetre `SOLVER_DRIFT` allows for.
     const escaped: Array<string> = []
+    const overreached: Array<string> = []
     for (const feature of countryFeatures().features) {
       const { code } = feature.properties
       const bounds = countryBounds(code)
@@ -525,17 +608,38 @@ describe('countryBounds', () => {
         east: bounds.east + SOLVER_DRIFT,
         north: bounds.north + SOLVER_DRIFT,
       }
-      for (const polygon of feature.geometry.coordinates) {
-        for (const ring of polygon) {
-          for (const point of ring) {
-            if (!boundsContains(tolerant, point)) {
-              escaped.push(`${code} ${point[0]},${point[1]}`)
-            }
-          }
+      for (const point of principalRing(feature)) {
+        if (!boundsContains(tolerant, point)) {
+          escaped.push(`${code} ${point[0]},${point[1]}`)
         }
       }
+
+      // And the other direction: the frame is a union of rings the country
+      // owns, so it can never reach past the country's own extent. Antarctica
+      // is the exception the module documents — it is present at every
+      // longitude and is given the whole line.
+      if (code === 'AQ') continue
+      if (!withinExtent(feature, bounds)) overreached.push(code)
     }
     expect(escaped).toEqual([])
+    expect(overreached).toEqual([])
+  })
+
+  it('keeps almost every bundled country whole, because it can', () => {
+    // The bundled cut is a silhouette: 285 rings for 175 countries, so for most
+    // of them the principal landmass *is* the country and the frame holds all
+    // of it. Pinned as a share rather than a list, because the interesting
+    // regression is a solver that starts dropping neighbouring islands
+    // wholesale — not one Danish island moving in or out.
+    const whole: Array<string> = []
+    for (const feature of countryFeatures().features) {
+      const bounds = countryBounds(feature.properties.code)
+      if (bounds === null) continue
+      if (landShare(feature, bounds) > 0.999) whole.push(feature.properties.code)
+    }
+    expect(whole.length / countryFeatures().features.length).toBeGreaterThan(
+      0.9,
+    )
   })
 
   it('hands out a frozen rectangle', () => {
@@ -688,6 +792,28 @@ describe('the finer cut', () => {
     return feature.geometry.coordinates.filter((polygon) =>
       polygon[0].every((point) => boundsContains(box, point)),
     ).length
+  }
+
+  /**
+   * How far a place is from the nearest vertex *of that country's own shape*,
+   * in degrees corrected for latitude.
+   *
+   * The question a framing test has to answer twice: a territory left out of
+   * the frame must still be drawn, filled and hoverable as part of the country
+   * that administers it, and this is the only way to say so from outside the
+   * map.
+   */
+  const nearestVertex = (code: string, point: [number, number]) => {
+    const feature = featureFor(code)
+    if (feature === undefined) return Infinity
+    let best = Infinity
+    for (const polygon of feature.geometry.coordinates) {
+      for (const [lng, lat] of polygon[0]) {
+        const dx = (lng - point[0]) * Math.cos((point[1] * Math.PI) / 180)
+        best = Math.min(best, Math.hypot(dx, lat - point[1]))
+      }
+    }
+    return best
   }
 
   it('is the asset the module points at, and it is inside its budget', () => {
@@ -881,19 +1007,88 @@ describe('the finer cut', () => {
     }
   })
 
-  it('keeps a rectangle honest once a country spans two hemispheres', () => {
-    // France now reaches from Guadeloupe at 61.8°W to Réunion at 55.8°E. The
-    // antimeridian solver has two answers for that and only one of them is a
-    // rectangle a camera can use.
+  it('frames the country a reader asked for, not the ocean it owns', () => {
+    // The whole point of the framing solver, on the country that needs it most.
+    // France's *extent* now runs from Guadeloupe at 61.8°W to Réunion at
+    // 55.8°E: 118° of longitude, 116 of them open water, and a camera fitted to
+    // it answers "show me France" with the mid-Atlantic. So the frame is the
+    // metropole and Corsica, and the départements it leaves out are still
+    // drawn, still filled and still lit by a hover — they are part of the
+    // country's shape, and simply not part of this picture.
+    const inFrame: Record<string, [number, number]> = {
+      Paris: [2.35, 48.85],
+      Brest: [-4.49, 48.39],
+      Ajaccio: [8.74, 41.93],
+    }
+    const drawnElsewhere: Record<string, [number, number]> = {
+      'Saint-Denis, Réunion': [55.45, -20.88],
+      'Fort-de-France, Martinique': [-61.07, 14.6],
+      'Basse-Terre, Guadeloupe': [-61.73, 16.0],
+      Cayenne: [-52.33, 4.94],
+      Mamoudzou: [45.22, -12.78],
+    }
+
     const france = countries.countryBounds('FR')
     expect(france).not.toBeNull()
     if (france === null) return
-    expect(france.west).toBeLessThan(-60)
-    expect(france.east).toBeGreaterThan(55)
-    expect(france.east - france.west).toBeLessThan(180)
-    expect(boundsContains(france, [2.35, 48.85])).toBe(true)
-    expect(boundsContains(france, [55.53, -21.13])).toBe(true)
-    expect(boundsContains(france, [-61.02, 14.64])).toBe(true)
+    for (const [place, point] of Object.entries(inFrame)) {
+      expect(boundsContains(france, point), place).toBe(true)
+    }
+    for (const [place, point] of Object.entries(drawnElsewhere)) {
+      expect(boundsContains(france, point), place).toBe(false)
+      // Out of the frame is not out of the country: every one of them is inside
+      // a ring the map draws, which is what a hover and a fill read.
+      expect(nearestVertex('FR', point), place).toBeLessThan(1)
+    }
+
+    // Both edges are metropolitan French coast, and the frame is a European
+    // rectangle rather than an Atlantic one.
+    expect(france.west).toBeCloseTo(-4.76, 2)
+    expect(france.east).toBeCloseTo(9.55, 2)
+    expect(france.east - france.west).toBeLessThan(16)
+  })
+
+  it('frames the Netherlands on the North Sea, with Bonaire still drawn', () => {
+    // The same failure with a different shape: the Netherlands' extent reaches
+    // the Caribbean, and 388× the area of the country a reader typed the name
+    // of.
+    const netherlands = countries.countryBounds('NL')
+    expect(netherlands).not.toBeNull()
+    if (netherlands === null) return
+    expect(boundsContains(netherlands, [4.9, 52.37]), 'Amsterdam').toBe(true)
+    expect(boundsContains(netherlands, [6.9, 53.44]), 'Schiermonnikoog').toBe(
+      true,
+    )
+    expect(boundsContains(netherlands, [-68.28, 12.18]), 'Bonaire').toBe(false)
+    expect(nearestVertex('NL', [-68.28, 12.18]), 'Bonaire').toBeLessThan(1)
+    expect(netherlands.east - netherlands.west).toBeLessThan(6)
+  })
+
+  it('leaves every offshore territory drawable and out of its own frame', () => {
+    // The general form, over the countries whose extent the finer cut moved by
+    // more than a continent. Each pair is a mainland the frame must hold and a
+    // territory it must not — and every territory is still a vertex on the map.
+    const cases: ReadonlyArray<{
+      readonly code: string
+      readonly mainland: [number, number]
+      readonly offshore: [number, number]
+    }> = [
+      { code: 'ES', mainland: [-3.7, 40.42], offshore: [-15.43, 28.1] },
+      { code: 'PT', mainland: [-9.14, 38.72], offshore: [-25.67, 37.74] },
+      { code: 'CL', mainland: [-70.65, -33.45], offshore: [-109.35, -27.12] },
+      { code: 'EC', mainland: [-78.47, -0.18], offshore: [-90.31, -0.74] },
+      { code: 'US', mainland: [-77.04, 38.91], offshore: [-157.86, 21.31] },
+      { code: 'AU', mainland: [151.21, -33.87], offshore: [105.62, -10.48] },
+      { code: 'ZA', mainland: [28.05, -26.2], offshore: [37.75, -46.88] },
+    ]
+    for (const { code, mainland, offshore } of cases) {
+      const bounds = countries.countryBounds(code)
+      expect(bounds, code).not.toBeNull()
+      if (bounds === null) continue
+      expect(boundsContains(bounds, mainland), `${code} mainland`).toBe(true)
+      expect(boundsContains(bounds, offshore), `${code} offshore`).toBe(false)
+      expect(nearestVertex(code, offshore), `${code} offshore`).toBeLessThan(2)
+    }
   })
 
   it('keeps the antimeridian and the encircling case intact', () => {
@@ -927,8 +1122,13 @@ describe('the finer cut', () => {
     expect(wrapped).toEqual([])
   })
 
-  it('frames geometry it actually contains, offshore rings included', () => {
+  it('frames the principal landmass of every country it can draw', () => {
+    // The invariant the framing solver is built on, over all 237 codes rather
+    // than the handful named above: whatever else a frame does or does not
+    // hold, the biggest ring the country owns is inside it whole, and the frame
+    // never reaches past the country's own extent.
     const escaped: Array<string> = []
+    const overreached: Array<string> = []
     for (const feature of detail.features.features) {
       const { code } = feature.properties
       const bounds = countries.countryBounds(code)
@@ -942,15 +1142,91 @@ describe('the finer cut', () => {
         east: bounds.east + SOLVER_DRIFT,
         north: bounds.north + SOLVER_DRIFT,
       }
-      for (const polygon of feature.geometry.coordinates) {
-        for (const point of polygon[0]) {
-          if (!boundsContains(tolerant, point)) {
-            escaped.push(`${code} ${point[0]},${point[1]}`)
-          }
+      for (const point of principalRing(feature)) {
+        if (!boundsContains(tolerant, point)) {
+          escaped.push(`${code} ${point[0]},${point[1]}`)
         }
       }
+
+      if (code === 'AQ') continue
+      if (!withinExtent(feature, bounds)) overreached.push(code)
     }
     expect(escaped).toEqual([])
+    expect(overreached).toEqual([])
+  })
+
+  it('buys an island on distance, on price, or on the land it brings', () => {
+    // The three clauses the framing solver documents, each pinned by a place
+    // that only that clause could have brought into the frame — so the numbers
+    // in `frameBounds`' comment stay true after the next rebuild rather than
+    // only on the day they were measured.
+    const framed: Record<string, [number, number]> = {
+      // Near: within a degree and a half of the frame's edge.
+      FR: [9.15, 41.97], // Corsica, 0.31° off the metropole
+      GB: [-1.15, 60.15], // Lerwick, 1.23° off Great Britain
+      DK: [14.7, 55.1], // Bornholm, 1.17° off Zealand
+      KR: [126.53, 33.5], // Jeju, 0.76° off the peninsula
+      // Free: inside the gutter the fit leaves anyway.
+      AU: [147.0, -42.0], // Tasmania, 13.5% of Australia's frame
+      RU: [20.5, 54.7], // Kaliningrad, 4.8% of Russia's
+      // Land: an ocean away, and worth the crossing.
+      ID: [140.7, -2.53], // Jayapura, on Indonesian Papua
+      MY: [101.69, 3.14], // Kuala Lumpur, on the peninsula
+      NO: [16.0, 78.6], // Longyearbyen, on Svalbard
+      PH: [125.6, 7.07], // Davao, on Mindanao
+    }
+    const beyond: Record<string, [number, number]> = {
+      JP: [129.5, 28.35], // Amami-Ōshima, 1.72° off Kyushu — the nearest refusal
+      NZ: [-176.55, -43.95], // the Chathams, 3.41° off North Island
+      US: [-149.9, 61.2], // Anchorage: Alaska asks 1.8× and offers 0.19
+    }
+
+    for (const [code, point] of Object.entries(framed)) {
+      const bounds = countries.countryBounds(code)
+      expect(bounds, code).not.toBeNull()
+      if (bounds === null) continue
+      expect(boundsContains(bounds, point), code).toBe(true)
+    }
+    for (const [code, point] of Object.entries(beyond)) {
+      const bounds = countries.countryBounds(code)
+      expect(bounds, code).not.toBeNull()
+      if (bounds === null) continue
+      expect(boundsContains(bounds, point), code).toBe(false)
+      expect(nearestVertex(code, point), code).toBeLessThan(2)
+    }
+  })
+
+  it('keeps a country whole unless its land is genuinely in two oceans', () => {
+    // The finer cut hands 237 countries 1,617 rings, and a frame that started
+    // dropping neighbouring islands to look tight would pass every assertion
+    // above. So the share of each country's land inside its own frame is
+    // measured, and the two ends of the distribution are pinned.
+    //
+    // Whole: the frame holds every ring. Split: the frame holds the landmass
+    // and leaves an ocean between it and the rest, which is the honest answer
+    // for a country with an overseas département.
+    const shares = new Map<string, number>()
+    for (const feature of detail.features.features) {
+      const bounds = countries.countryBounds(feature.properties.code)
+      if (bounds === null) continue
+      shares.set(feature.properties.code, landShare(feature, bounds))
+    }
+
+    const whole = [...shares.values()].filter((share) => share > 0.999)
+    expect(whole.length / shares.size).toBeGreaterThan(0.8)
+
+    // Nobody is framed on a scrap. The floor is French Polynesia, whose 118
+    // islands are spread over 2,000km of the Pacific: Tahiti is the picture,
+    // and a rectangle around the archipelago would be 15° of open water.
+    for (const [code, share] of shares) {
+      expect(share, code).toBeGreaterThan(0.4)
+    }
+
+    // And the countries this exists for really are split, rather than merely
+    // rounded down by a rock somewhere.
+    for (const code of ['FR', 'NL', 'PT', 'ES', 'EC', 'US']) {
+      expect(shares.get(code), code).toBeLessThan(0.999)
+    }
   })
 
   it('is a source MapLibre will keep the string ids of', () => {
@@ -1109,9 +1385,14 @@ describe('loadCountryDetail', () => {
     const after = countries.countryBounds('ES')
     expect(after).not.toBeNull()
     if (after === null || before === null) return
-    // The Canaries drag the western edge from mainland Iberia out past 18°W.
-    expect(before.west).toBeGreaterThan(-10)
-    expect(after.west).toBeLessThan(-18)
+    // The finer cut gives Spain the Balearics, which the 1:110m silhouette does
+    // not draw at all, and the eastern edge moves from the Costa Brava out to
+    // Menorca. The Canaries arrive with the same payload and stay out of the
+    // frame, which is the framing solver's job rather than this one's.
+    expect(before.east).toBeLessThan(3.5)
+    expect(after.east).toBeGreaterThan(4)
+    // And a code the bundled cut cannot draw at all now has a rectangle.
+    expect(countries.countryBounds('SG')).not.toBeNull()
   })
 
   it('refuses to guess an origin where there is no browser', async () => {
@@ -1137,11 +1418,11 @@ describe('loadCountryDetail', () => {
 describe('subscribeCountryDetail', () => {
   it('tells a listener once, after the finer answers are installed', async () => {
     const countries = await freshCountries()
-    const seen: Array<{ outline: boolean; west: number | null }> = []
+    const seen: Array<{ outline: boolean; east: number | null }> = []
     countries.subscribeCountryDetail(() => {
       seen.push({
         outline: countries.hasCountryOutline('SG'),
-        west: countries.countryBounds('ES')?.west ?? null,
+        east: countries.countryBounds('ES')?.east ?? null,
       })
     })
 
@@ -1153,7 +1434,8 @@ describe('subscribeCountryDetail', () => {
     // bundled answers would have nothing to re-render for.
     expect(seen.length).toBe(1)
     expect(seen[0].outline).toBe(true)
-    expect(seen[0].west).toBeLessThan(-18)
+    // The Balearics: bundled Spain stops at the Costa Brava, 3.04°E.
+    expect(seen[0].east).toBeGreaterThan(4)
   })
 
   it('stays quiet when the load fails, and speaks when the retry lands', async () => {

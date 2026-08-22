@@ -37,6 +37,11 @@
  *   {@link countryBounds} defers to `boundsForPoints`, which solves longitude
  *   twice and keeps the narrower answer, and then handles the one shape that
  *   genuinely encircles the planet.
+ * - **A country's rectangle is a frame, not a measurement.** Once the finer cut
+ *   lands, the tightest rectangle around France is 118° wide and almost all of
+ *   it is the Atlantic. {@link frameBounds} builds the frame outwards from the
+ *   principal landmass instead, so "show me France" is France and the overseas
+ *   départements stay drawn, filled and hoverable.
  *
  * Memoised at module scope for a reason specific to this payload: a MapLibre
  * `geojson` source only re-tiles when its `data` changes by reference, and a
@@ -489,41 +494,269 @@ export function worldLandFeatures(): LandFeatureCollection {
   return land
 }
 
+/* -------------------------------------------------------------------------------------------------
+ * Framing
+ * ---------------------------------------------------------------------------------------------- */
+
 /**
- * The rectangle one country's polygons fit inside.
+ * How much a rectangle may grow for nothing.
  *
- * `boundsForPoints` solves the antimeridian by keeping the narrower of two
- * longitude solutions, which is right for every country that crosses the line
- * and wrong for the one that surrounds the pole: Antarctica is present at every
- * longitude, and the tightest rectangle around its vertices claims otherwise.
+ * A camera never fits a rectangle to the pixel: `DEFAULT_FIT_PADDING` keeps 48
+ * CSS pixels clear on every edge, which on a 900px-tall canvas is about a tenth
+ * of the axis. A rectangle that grows 7% on each axis — 15% of its area — is
+ * still inside the gutter the fit was going to leave anyway, so whether it holds
+ * that ring or not is a difference the reader cannot see. Below this, a ring is
+ * taken without further argument.
  *
- * Offshore rings are what make the two-solution search earn its keep. With the
- * finer cut installed, France reaches from Guadeloupe at 61.8°W to Réunion at
- * 55.8°E — 118° across a rectangle that contains no French land for most of its
- * width, and 242° if the solver takes the shifted branch by mistake. The United
- * States gains the western Aleutians and only the shifted branch keeps it off
- * the whole line; Chile gains Easter Island; Ecuador the Galápagos. Every one of
- * them still has to come back narrower than {@link ENCIRCLING_SPAN_DEGREES}, and
- * a test asserts it for all of them rather than for the handful named here.
+ * Six rings on the whole planet are taken by this clause and no other, and they
+ * are exactly the kind of thing an argument about them would be a waste of:
+ * Tasmania (13.5% of Australia's frame), Kaliningrad (4.8% of Russia's),
+ * Canada's high Arctic islands (11.9%) and three Antarctic outliers.
  */
-function outlineBounds(polygons: MultiPolygonCoordinates): MapBounds | null {
+const FRAME_FREE_GROWTH = 0.15
+
+/**
+ * How far off the frame a ring may sit and still count as part of the shape.
+ *
+ * Measured between rectangles, with longitude corrected for latitude. The atlas
+ * frames a country at zoom 5.6 at the very most — {@link COUNTRY_SOURCE_MAX_ZOOM}
+ * and the fill's own fade see to that — where a degree and a half of longitude
+ * is about 130 CSS pixels: an island that close reads as attached to the coast
+ * beside it, and cropping it out of its own country is worse than the zoom step
+ * it costs. Measured on the shipped cut, this clause is the only thing that
+ * takes Corsica (0.31° off metropolitan France), Shetland (1.23° off Great
+ * Britain), Bornholm (1.17° off Zealand), Jeju (0.76° off South Korea) and 55
+ * more. The nearest refusals are Amami-Ōshima, 1.72° off Kyushu, and the
+ * Chatham Islands, 3.41° off New Zealand.
+ */
+const FRAME_NEAR_DEGREES = 1.5
+
+/**
+ * How much frame a ring may cost, per unit of land it adds.
+ *
+ * The clause that keeps a country with two real halves whole, and the only one
+ * that can buy a ring an ocean away. Measured on the shipped cut, against the
+ * frame each ring was actually offered — cost is the fraction the rectangle
+ * grows by, and the offer is the ring's area against the land already framed:
+ *
+ * - Sumatra costs Indonesia 2.19 and offers 0.81; Indonesian Papua costs 1.46
+ *   and offers 0.40; Mindanao costs the Philippines 2.40 and offers 0.89;
+ *   Peninsular Malaysia costs 0.97 and offers 0.67; Svalbard costs Norway 0.40
+ *   and offers 0.13. All five are bought, and no other clause would have taken
+ *   any of them.
+ * - Alaska asks the contiguous states for 1.80 and offers 0.19. French Guiana
+ *   asks France for 34.5 and offers 0.16, Réunion 43.1 for 0.005. All refused.
+ *
+ * That puts the honest band at 3.67 — Papua, the tightest purchase — up to 9.2,
+ * where Alaska would start dragging the United States across the Pacific. The
+ * only ring anywhere between 5 and 9 is a 0.004°² islet north of Saipan, so the
+ * number can sit near the bottom of the band without the choice being a fit to
+ * one country.
+ */
+const FRAME_LAND_WEIGHT = 5
+
+/**
+ * The smallest area a rectangle is allowed to be divided by.
+ *
+ * Both cuts quantise to a hundredth of a degree, so one grid cell is 1e-4
+ * square degrees and nothing the payload can express is smaller. Monaco, the
+ * Vatican and a Maldivian atoll all land there, and without a floor the first
+ * ring of one of them would divide by zero and refuse every other ring it owns.
+ */
+const MIN_FRAME_AREA = 1e-4
+
+/** One ring, reduced to what the framing solver reads. */
+interface FrameRing {
+  readonly bounds: MapBounds
+  /** Square degrees, corrected for how longitude narrows towards the pole. */
+  readonly area: number
+  /** Set once the ring has been taken into the frame. */
+  taken: boolean
+}
+
+/**
+ * A ring's area in square degrees, corrected for its latitude.
+ *
+ * The shoelace formula over raw longitude and latitude, scaled by the cosine of
+ * the ring's mean latitude, because a degree of longitude at 70°N is a third of
+ * one at the equator and Svalbard would otherwise outweigh Sicily. It is not an
+ * area in km² and does not need to be: every comparison made here is between
+ * two rings of the same country, and only the ratio is read.
+ *
+ * Rings are pre-cut at the antimeridian, so none of them spans the seam and the
+ * raw longitudes can be walked in the order they are stored.
+ */
+function ringArea(ring: ReadonlyArray<[number, number]>): number {
+  let twice = 0
+  let latitudes = 0
+  for (
+    let index = 0, previous = ring.length - 1;
+    index < ring.length;
+    previous = index, index += 1
+  ) {
+    const [previousLng, previousLat] = ring[previous]
+    const [lng, lat] = ring[index]
+    twice += previousLng * lat - lng * previousLat
+    latitudes += lat
+  }
+  const mean = ((latitudes / ring.length) * Math.PI) / 180
+  return Math.abs(twice / 2) * Math.cos(mean)
+}
+
+/** A rectangle's area, corrected the way {@link ringArea} corrects a ring's. */
+function boundsArea(bounds: MapBounds): number {
+  const middle = (((bounds.south + bounds.north) / 2) * Math.PI) / 180
+  return (
+    (bounds.east - bounds.west) *
+    (bounds.north - bounds.south) *
+    Math.cos(middle)
+  )
+}
+
+/**
+ * The distance between two rectangles, in degrees, or zero if they touch.
+ *
+ * Longitude is tried on all three copies of the line so a rectangle that has
+ * already crossed the antimeridian — Russia's, once Chukotka is in it — is
+ * still measured against an island on the other side of the seam as the short
+ * way round. The two gaps combine as a right triangle with longitude scaled by
+ * the cosine of the latitude both rectangles sit at, so 1° means about the same
+ * distance on the ground in the Arctic as it does at the equator.
+ */
+function boundsGap(a: MapBounds, b: MapBounds): number {
+  const lat = Math.max(0, a.south - b.north, b.south - a.north)
+  let lng = Number.POSITIVE_INFINITY
+  for (const shift of [-360, 0, 360]) {
+    lng = Math.min(
+      lng,
+      Math.max(0, a.west - (b.east + shift), b.west + shift - a.east),
+    )
+  }
+  const middle = (((a.south + a.north + b.south + b.north) / 4) * Math.PI) / 180
+  return Math.hypot(lng * Math.cos(middle), lat)
+}
+
+/**
+ * A rectangle as the four points that reproduce it.
+ *
+ * Rectangles are merged through these rather than by `Math.min`/`Math.max` so
+ * the antimeridian stays solved in exactly one place: the corners go back
+ * through `boundsForPoints`, which searches both longitude solutions and
+ * therefore unions Chukotka onto Russia as 190.1°E instead of opening the
+ * rectangle westwards across the Atlantic.
+ */
+function boundsCorners(bounds: MapBounds): Array<[number, number]> {
+  return [
+    [bounds.west, bounds.south],
+    [bounds.west, bounds.north],
+    [bounds.east, bounds.south],
+    [bounds.east, bounds.north],
+  ]
+}
+
+/**
+ * The rectangle a camera should frame one country in.
+ *
+ * Not the rectangle the country fits inside. With the finer cut installed those
+ * are different questions and only one of them has a useful answer: France's
+ * full extent runs from Guadeloupe at 61.8°W to Réunion at 55.8°E, 118° of
+ * which 116 are open ocean, and a camera fitted to it answers "show me France"
+ * with the mid-Atlantic. The Netherlands reaches to Bonaire, Portugal to the
+ * Azores, Chile to Easter Island, Ecuador to the Galápagos, the United States
+ * from the Aleutians to the Virgin Islands. Every one of those territories is
+ * still drawn, still filled and still lit by a hover — they are part of the
+ * country's shape. They are simply not part of the picture a reader asked for
+ * when they typed the country's name.
+ *
+ * So the frame is built rather than measured. The largest ring goes in first —
+ * the principal landmass, which is what the reader came to see — and every
+ * other ring is offered to the frame in descending order of area and taken when
+ * any of three things is true:
+ *
+ * - it sits within {@link FRAME_NEAR_DEGREES} of the frame, so it reads as part
+ *   of the same coastline at this zoom (Corsica, Shetland, Bornholm, Jeju);
+ * - it costs less than {@link FRAME_FREE_GROWTH}, which is inside the padding
+ *   the fit leaves anyway (Tasmania, Kaliningrad, the Canadian high Arctic);
+ * - or the land it adds pays for the frame it costs, at
+ *   {@link FRAME_LAND_WEIGHT} (Sumatra, Indonesian Papua, Svalbard).
+ *
+ * The pass repeats while anything was taken, because a ring is offered against
+ * the frame as it stands rather than against the one it started with, and the
+ * order rings arrive in should not decide the answer. It converges quickly and
+ * it cannot walk: a ring too far and too small to be worth the frame is refused
+ * again on every pass, and the frame stops growing. Solving all 237 countries
+ * of the finer cut — 1,617 rings — costs 18ms in Node, once, on the first
+ * rectangle asked for after the payload installs; a lookup after that is a
+ * `Map.get`.
+ *
+ * One shape is exempt. Antarctica is present at every longitude, its extent is
+ * 356° wide, and no rectangle around a subset of its rings describes it — so a
+ * country whose *extent* encircles the planet is framed on the whole line, the
+ * same answer this file has always given it.
+ */
+function frameBounds(polygons: MultiPolygonCoordinates): MapBounds | null {
+  const rings: Array<FrameRing> = []
   const points: Array<[number, number]> = []
   for (const polygon of polygons) {
     for (const ring of polygon) {
+      const bounds = boundsForPoints(ring)
+      if (bounds === null) continue
+      rings.push({ bounds, area: ringArea(ring), taken: false })
       for (const point of ring) points.push(point)
     }
   }
 
-  const bounds = boundsForPoints(points)
-  if (bounds === null) return null
-  if (bounds.east - bounds.west < ENCIRCLING_SPAN_DEGREES) return frozen(bounds)
+  const extent = boundsForPoints(points)
+  if (extent === null) return null
+  if (extent.east - extent.west >= ENCIRCLING_SPAN_DEGREES) {
+    return frozen<MapBounds>({
+      west: -180,
+      south: extent.south,
+      east: 180,
+      north: extent.north,
+    })
+  }
 
-  return frozen<MapBounds>({
-    west: -180,
-    south: bounds.south,
-    east: 180,
-    north: bounds.north,
-  })
+  // Largest first, so the frame starts on the principal landmass and every
+  // later decision is measured against something the reader came to see. The
+  // rectangle breaks a tie, so two rings of identical area cannot be ordered by
+  // the accident of how the payload was written out.
+  rings.sort((a, b) => b.area - a.area || a.bounds.west - b.bounds.west)
+
+  const corners = boundsCorners(rings[0].bounds)
+  rings[0].taken = true
+  let frame = rings[0].bounds
+  let frameArea = boundsArea(frame)
+  let framedLand = rings[0].area
+
+  let growing = true
+  while (growing) {
+    growing = false
+    for (const ring of rings) {
+      if (ring.taken) continue
+      const merged = boundsForPoints([...corners, ...boundsCorners(ring.bounds)])
+      if (merged === null) continue
+
+      const growth = boundsArea(merged) / Math.max(frameArea, MIN_FRAME_AREA) - 1
+      const share = ring.area / Math.max(framedLand, MIN_FRAME_AREA)
+      if (
+        boundsGap(frame, ring.bounds) > FRAME_NEAR_DEGREES &&
+        growth > FRAME_FREE_GROWTH &&
+        growth > share * FRAME_LAND_WEIGHT
+      ) {
+        continue
+      }
+
+      corners.push(...boundsCorners(ring.bounds))
+      ring.taken = true
+      frame = merged
+      frameArea = boundsArea(merged)
+      framedLand += ring.area
+      growing = true
+    }
+  }
+
+  return frozen(frame)
 }
 
 /**
@@ -538,7 +771,7 @@ function boundsTable(): ReadonlyMap<string, MapBounds> {
 
   const table = new Map<string, MapBounds>()
   for (const [code, polygons] of fillableOutlines()) {
-    const bounds = outlineBounds(polygons)
+    const bounds = frameBounds(polygons)
     if (bounds !== null) table.set(code, bounds)
   }
 
@@ -547,7 +780,15 @@ function boundsTable(): ReadonlyMap<string, MapBounds> {
 }
 
 /**
- * The rectangle a country fits inside, or `null` for a code we cannot draw.
+ * The rectangle to frame one country in, or `null` for a code we cannot draw.
+ *
+ * A camera frame rather than a measurement: it holds the country's principal
+ * landmass and everything that reads as part of it, and it leaves an overseas
+ * département on the other side of an ocean out. France comes back as
+ * metropolitan France and Corsica; Réunion, Mayotte, Guadeloupe, Martinique and
+ * French Guiana are still drawn, still filled and still lit by a hover, and are
+ * simply not in the picture. See {@link frameBounds} for how that is decided and
+ * for the measurements behind it.
  *
  * The eastern edge may exceed 180° for a country that crosses the antimeridian —
  * Russia comes back as 19.66…190.1 — which is exactly how MapLibre expresses a
@@ -559,9 +800,12 @@ function boundsTable(): ReadonlyMap<string, MapBounds> {
  * fly-to from search re-asks for the same country every time the reader retypes
  * its name.
  *
- * Solved over the finest cut installed, so a country's rectangle grows to hold
- * its offshore territories the moment {@link loadCountryDetail} resolves — and
- * so the codes that only the finer cut can draw stop coming back `null`.
+ * Solved over the finest cut installed, so the rectangle sharpens the moment
+ * {@link loadCountryDetail} resolves — Spain gains the Balearics, Japan the
+ * Ryukyus as far as Yakushima — and so the codes only the finer cut can draw
+ * stop coming back `null`. What it does *not* do is grow by a continent: that
+ * was the price of the finer cut, and the framing solver is what stops the
+ * atlas paying it.
  */
 export function countryBounds(countryCode: string): MapBounds | null {
   return boundsTable().get(countryCode.toUpperCase()) ?? null

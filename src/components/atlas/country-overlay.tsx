@@ -211,6 +211,24 @@ export interface SurfaceBox {
   readonly height: number
 }
 
+/**
+ * Which band of the map an area was cut from — see {@link surfaceAreas}.
+ *
+ * Named rather than positional, because two callers ask two different questions
+ * of the same list. The placement asks "in what order should I want these",
+ * which is the order they arrive in; the decorative surface asks "which of these
+ * has no chrome on it", which is a property of the band and not of its index.
+ * That second question used to be answered as `slice(0, 1)`, and the answer was
+ * wrong by one: it excluded the map *beyond* the chrome column, which carries no
+ * chrome at all and is exactly where a country in the far east has room.
+ */
+export type SurfaceAreaKind = 'strict' | 'outside' | 'gutter' | 'relaxed'
+
+/** One rectangle a surface may occupy, and the band it came from. */
+export interface SurfaceArea extends SurfaceBox {
+  readonly kind: SurfaceAreaKind
+}
+
 /** Which side of the anchor the surface sits on. */
 export type SurfaceSide = 'top' | 'bottom' | 'left' | 'right'
 
@@ -688,6 +706,86 @@ function placeInArea({
   return dockInArea(anchor, size, area, gap, minHeight, avoid)
 }
 
+/** How much of one axis two rectangles share, in pixels. */
+function spanShare(
+  low: number,
+  high: number,
+  otherLow: number,
+  otherHigh: number,
+): number {
+  return Math.max(Math.min(high, otherHigh) - Math.max(low, otherLow), 0)
+}
+
+/**
+ * The areas again, with the ones the shape actually stands in offered first —
+ * and never at the cost of the order that matters.
+ *
+ * The order the areas arrive in carries two different claims, and only one of
+ * them is a preference. Vertically it is a ranking: a band that reaches down
+ * over the shelf is genuinely last, because the shelf carries the tab strip that
+ * names the very country a surface is about. Horizontally it is not a ranking at
+ * all — on a screen wider than the chrome column, the strict band stops at the
+ * column's right edge and the outside band carries on to the map's, so the two
+ * are a *partition* of one map. Offering the first regardless is what put a pill
+ * naming Australia over the Indian Ocean, clamped to the column's edge with no
+ * tip and five hundred pixels of map between it and the shape it named:
+ * `offerSide` brings a surface back inside whatever area it was handed, so the
+ * answer looked placed and clear while being neither.
+ *
+ * So the re-ordering happens strictly *inside* a band's vertical extent. Areas
+ * are grouped by the `y` and height they cover, the groups keep the order they
+ * arrived in — which is what pins the shelf last — and within one group the
+ * areas holding the most of the anchor's own width come first, ties keeping
+ * their order. Where no area in a group holds any of the shape — a country
+ * dragged off the map leaves a stub clamped to its edge — nothing is preferred
+ * and the caller's order stands untouched.
+ */
+function areasByAnchor(
+  areas: ReadonlyArray<SurfaceBox>,
+  anchor: SurfaceBox,
+): ReadonlyArray<SurfaceBox> {
+  if (areas.length < 2) return areas
+
+  const bands: Array<{
+    readonly key: string
+    readonly members: Array<SurfaceBox>
+  }> = []
+  for (const area of areas) {
+    const key = `${area.y}:${area.height}`
+    const band = bands.find((candidate) => candidate.key === key)
+    if (band === undefined) bands.push({ key, members: [area] })
+    else band.members.push(area)
+  }
+
+  const ordered: Array<SurfaceBox> = []
+  for (const band of bands) {
+    if (band.members.length < 2) {
+      ordered.push(...band.members)
+      continue
+    }
+    let best = 0
+    const shares = band.members.map((area) => {
+      const share = spanShare(
+        anchor.x,
+        anchor.x + anchor.width,
+        area.x,
+        area.x + area.width,
+      )
+      if (share > best) best = share
+      return share
+    })
+    if (best === 0) {
+      ordered.push(...band.members)
+      continue
+    }
+    ordered.push(
+      ...band.members.filter((_, index) => shares[index] === best),
+      ...band.members.filter((_, index) => shares[index] !== best),
+    )
+  }
+  return ordered
+}
+
 /**
  * Where a surface goes, given the shape it belongs to and the room there is.
  *
@@ -723,6 +821,13 @@ function placeInArea({
  * whole behaviour: rather than stack two cards about two countries on the same
  * pixels, the decorative one steps aside, and where it cannot, it is not drawn.
  *
+ * The areas are re-ordered before any of that, by {@link areasByAnchor}, and
+ * only ever within one vertical band: on a screen wider than the chrome column
+ * two of the areas are a horizontal partition of the same map rather than a
+ * ranking, so a shape standing in the second of them is offered it first. The
+ * band that reaches over the shelf keeps its place at the very end, whatever the
+ * shape is doing.
+ *
  * When no area can hold the surface at any height, it is centred on the shape
  * and clamped, and the answer is marked `clear: false`. A caller whose surface
  * is decoration — the hover card — declines to draw that; a caller whose surface
@@ -736,7 +841,7 @@ export function placeCountrySurface({
   minHeight,
   avoid,
 }: PlaceSurfaceInput): SurfacePlacement | null {
-  for (const area of areas) {
+  for (const area of areasByAnchor(areas, anchor)) {
     const spot = placeInArea({ anchor, size, area, gap, minHeight, avoid })
     if (spot !== null) return spot
   }
@@ -795,12 +900,13 @@ const CONTROLS_MOVE_AT = 1024
  *
  * Four areas, offered in the order a surface should want them:
  *
- * 1. **strict** — every inset honoured. Every surface may use it, and the hover
- *    card may use nothing else: decoration that sits on the shelf, on the search
- *    pill or under the zoom cluster has stopped being decoration.
+ * 1. **strict** — every inset honoured. Every surface may use it.
  * 2. **outside** — the map beyond the well, on a screen wide enough to have any.
  *    No chrome is out there at all, so a country in the far east or west gets
- *    honest room rather than the shelf.
+ *    honest room rather than the shelf. The hover card may use this and the
+ *    strict area and nothing else — see {@link chromeFreeAreas} — because
+ *    decoration that sits on the shelf, on the search pill or under the zoom
+ *    cluster has stopped being decoration, and neither of these two ever can.
  * 3. **gutter** — the same band, widened to the gutter, and only below
  *    {@link CONTROLS_MOVE_AT}. At that width the zoom cluster is the map's *top*
  *    right corner rather than its right edge, so a surface that has come down the
@@ -821,14 +927,15 @@ export function surfaceAreas(
   box: SurfaceBox,
   padding: EdgePadding,
   column: number = Number.POSITIVE_INFINITY,
-): ReadonlyArray<SurfaceBox> {
+): ReadonlyArray<SurfaceArea> {
   const well = Math.min(box.width, Math.max(column, 0))
   const wellRight = box.x + (box.width - well) / 2 + well
 
   const left = box.x + padding.left
   const top = box.y + padding.top
   const clear = Math.max(box.height - padding.top - padding.bottom, 0)
-  const strict: SurfaceBox = {
+  const strict: SurfaceArea = {
+    kind: 'strict',
     x: left,
     y: top,
     width: Math.max(wellRight - padding.right - left, 0),
@@ -842,30 +949,59 @@ export function surfaceAreas(
   // panel used to end up on top of it.
   const right =
     box.width < CONTROLS_MOVE_AT ? padding.left : Math.max(padding.right, 0)
-  const gutter: SurfaceBox = {
+  const gutter: SurfaceArea = {
+    kind: 'gutter',
     x: left,
     y: top,
     width: Math.max(wellRight - right - left, 0),
     height: clear,
   }
-  const relaxed: SurfaceBox = {
+  const relaxed: SurfaceArea = {
+    kind: 'relaxed',
     x: gutter.x,
     y: gutter.y,
     width: gutter.width,
     height: Math.max(box.height - padding.top - padding.left, 0),
   }
-  const outside: SurfaceBox = {
+  const outside: SurfaceArea = {
+    kind: 'outside',
     x: wellRight,
     y: top,
     width: Math.max(box.x + box.width - padding.left - wellRight, 0),
     height: clear,
   }
 
-  const areas = [strict]
+  const areas: Array<SurfaceArea> = [strict]
   if (outside.width > 0) areas.push(outside)
   if (gutter.width > strict.width) areas.push(gutter)
   if (relaxed.height > clear) areas.push(relaxed)
   return areas
+}
+
+/** The bands {@link chromeFreeAreas} keeps, and the only two with no chrome. */
+const CHROME_FREE: ReadonlyArray<SurfaceAreaKind> = ['strict', 'outside']
+
+/**
+ * The map a decorative surface may occupy: every band the chrome has left free.
+ *
+ * Both of these are cut so that the search pill, the zoom cluster, the credit
+ * and the shelf are outside them — `strict` because every inset is honoured
+ * inside the chrome column, `outside` because on a screen wide enough to have
+ * any map beyond that column there is no chrome out there at all. The two the
+ * hover card is denied are the ones that buy their extra room *from* the chrome:
+ * `gutter` reclaims the zoom cluster's inset and `relaxed` reaches down over the
+ * shelf, and decoration that sits on either has stopped being decoration.
+ *
+ * This used to be `areas.slice(0, 1)`, which is the same answer for every screen
+ * no wider than the chrome column and the wrong one above it — the outside band
+ * exists precisely so that a country in the far east or west gets honest room,
+ * and excluding it left the pill for such a country clamped to the column's edge
+ * with no tip and half a screen of map between it and its own shape.
+ */
+export function chromeFreeAreas(
+  areas: ReadonlyArray<SurfaceArea>,
+): ReadonlyArray<SurfaceArea> {
+  return areas.filter((area) => CHROME_FREE.includes(area.kind))
 }
 
 /* ----------------------------------------------------------------- geometry */
@@ -1547,7 +1683,11 @@ function AnchoredSurface({
       current.padding,
       columnRef.current,
     )
-    const areas = current.strict ? solved.slice(0, 1) : solved
+    // Every band with no chrome on it, rather than the first band: on a screen
+    // wider than the chrome column the map carries on past it, and a decorative
+    // surface denied that band is clamped to the column's edge — which for a
+    // country in the far east is half a screen away from the shape it names.
+    const areas = current.strict ? chromeFreeAreas(solved) : solved
     // The roomiest of them, not the last: the ceilings are an upper bound on
     // what the surface may become, and an area it will never be placed in must
     // not be allowed to shrink it. The placement below still rejects any area

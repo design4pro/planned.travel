@@ -80,6 +80,8 @@ export type {
   CountryOverlayProps,
   CountryOverlayStatus,
   PlaceSurfaceInput,
+  SurfaceArea,
+  SurfaceAreaKind,
   SurfaceBox,
   SurfacePlacement,
   SurfaceSide,

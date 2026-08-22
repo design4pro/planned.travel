@@ -627,6 +627,115 @@ test.describe('authenticated routes', () => {
   })
 
   /**
+   * One surface family, two moments — which is the whole difference from the
+   * screen this is judged against.
+   *
+   * That one ships two disjoint things: a hover card carrying the figures which
+   * cannot be acted on, and a click card carrying the actions which drops the
+   * figures. A reader therefore has to *remember* what pointing said in order to
+   * use what pressing offers. Here both moments are the same component fed by
+   * the same formatter, so the panel is the card plus the two writes and nothing
+   * the pointer said disappears when the reader commits to it.
+   *
+   * Asserted as an equality between the two rendered surfaces rather than as a
+   * claim about the component tree, because the defect this prevents is a call
+   * site picking four of the eight columns — which compiles, renders, and prints
+   * an empty state beside a record that is not empty.
+   */
+  test('the hover card and the click surface say the same thing', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    test.skip(
+      isMobile,
+      'a finger has no hover, so there is no second surface to compare on one',
+    )
+    if (ATLAS === undefined) return
+    const watched = watchConsole(page, ATLAS)
+    await visit(page, ATLAS, 'light')
+    // Spain, for the reason the pointer probe below needs: its rectangle is one
+    // peninsula and the Canaries, so the camera lands the shape in the middle of
+    // the clear map rather than in the ocean between two overseas départements.
+    await chooseCountry(page, 'Spain')
+
+    const read = (root: string) =>
+      page.evaluate((selector) => {
+        const surface = document.querySelector(selector)
+        const article = surface?.querySelector('article') ?? null
+        if (article === null) return null
+        return {
+          country: article.getAttribute('data-country'),
+          record: article.getAttribute('data-record'),
+          visited: article.getAttribute('data-visited'),
+          labels: [...article.querySelectorAll('dt')].map((node) =>
+            node.textContent.trim(),
+          ),
+          values: [...article.querySelectorAll('dd')].map((node) =>
+            node.textContent.trim(),
+          ),
+        }
+      }, root)
+
+    const pressed = await read('[data-part="country-panel"]')
+    expect(
+      pressed,
+      'the panel has to be open before it is compared',
+    ).not.toBeNull()
+    if (pressed === null) return
+    expect(
+      pressed.labels.length,
+      'the panel carries the whole fact grid, not a heading',
+    ).toBe(4)
+
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-part="country-panel"]')).toHaveCount(0)
+
+    const canvas = await page.locator('.maplibregl-canvas').boundingBox()
+    expect(canvas, 'the map has to have drawn to be pointed at').not.toBeNull()
+    if (canvas === null) return
+    const chrome = await chromeBoxes(page)
+    const centre = {
+      x: canvas.x + canvas.width / 2,
+      y:
+        ((chrome.search?.bottom ?? canvas.y) +
+          (chrome.shelf?.top ?? canvas.y + canvas.height)) /
+        2,
+    }
+
+    let pointed: Awaited<ReturnType<typeof read>> = null
+    for (const dy of [0, -40, 40, -80, 80]) {
+      for (const dx of [0, -40, 40, -80, 80]) {
+        await page.mouse.move(centre.x + dx, centre.y + dy)
+        const seen = await read('[data-part="country-hover"]')
+        if (seen !== null && seen.country === pressed.country) {
+          pointed = seen
+          break
+        }
+      }
+      if (pointed !== null) break
+    }
+    expect(
+      pointed,
+      'the framed country fills the middle of the clear map, so a pointer must find it',
+    ).not.toBeNull()
+    if (pointed === null) return
+
+    expect(
+      pointed,
+      'pointing and pressing are two moments of one surface, not two answers',
+    ).toEqual(pressed)
+
+    expect(
+      watched().fatal,
+      'comparing the two surfaces must not put anything in the console',
+    ).toEqual([])
+  })
+
+  /**
    * The rule for the other kind of pointer.
    *
    * `mousemove` does not exist on a finger, and the browser's own synthetic one
@@ -860,6 +969,107 @@ test.describe('authenticated routes', () => {
     expect(
       watched().fatal,
       'a screen wider than the measure must not put anything in the console',
+    ).toEqual([])
+  })
+
+  /**
+   * The other half of that column, and the defect it hid.
+   *
+   * The chrome column is where the chrome is; the map carries on past it, and on
+   * a 2560px screen there are 560 pixels of it out there with nothing on them at
+   * all. The decorative card was allowed the column and nothing else, which does
+   * not fail loudly — the placement clamps a surface back inside the area it was
+   * given — so a pill naming a country in the far east came to rest against the
+   * column's right-hand inset with no tip, up to half a screen west of the shape
+   * it named, over open water. Measured before the fix at 2560×1440: Australia's
+   * pill 468px away, Papua New Guinea's 368, and the pill for Australia sitting
+   * over the Indian Ocean near Sumatra.
+   *
+   * The sweep is the whole strip beyond the column rather than one country,
+   * because the failure is a property of the band and not of any one shape: every
+   * card the pointer finds out there has to be *out there*. Nothing about the
+   * chrome is being relaxed by this — that band has none on it, which is why it
+   * is the one the card is allowed.
+   */
+  test('the hover card follows a country past the chrome column', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    test.skip(
+      isMobile,
+      'a phone is narrower than the measure, so it has no map beyond it',
+    )
+    if (ATLAS === undefined) return
+    const watched = watchConsole(page, ATLAS)
+    await page.setViewportSize({ width: 2560, height: 900 })
+    await visit(page, ATLAS, 'light')
+
+    const chrome = await chromeBoxes(page)
+    const canvas = await page.locator('.maplibregl-canvas').boundingBox()
+    expect(
+      canvas,
+      'the map has to have drawn before it is pointed at',
+    ).not.toBeNull()
+    expect(
+      chrome.shelf,
+      'the shelf is what states where the chrome column ends',
+    ).not.toBeNull()
+    if (canvas === null || chrome.shelf === null) return
+
+    // The shelf is laid out in the column, so its right edge is the column's.
+    const column = chrome.shelf.x + chrome.shelf.width
+    const mapRight = canvas.x + canvas.width
+    expect(
+      mapRight - column,
+      'the viewport has to be wider than the column for this to test anything',
+    ).toBeGreaterThan(200)
+
+    const confined: Array<string> = []
+    let found = 0
+    for (let step = 0; step <= 14; step += 1) {
+      const x = column + 8 + (step * (mapRight - column - 16)) / 14
+      for (const share of [0.2, 0.35, 0.5, 0.65]) {
+        await page.mouse.move(x, canvas.y + canvas.height * share)
+        // Presence and geometry in one round trip. A locator would take three,
+        // and the card belongs to whichever country the pointer is over *now* —
+        // so a probe that asked whether one existed and then asked how big it
+        // was could have the answer unmount between the two questions, which is
+        // a timeout in a test about placement.
+        const seen = await page.evaluate(() => {
+          const node = document.querySelector('[data-part="country-hover"]')
+          if (node === null) return null
+          const box = node.getBoundingClientRect()
+          return {
+            code: node.getAttribute('data-country'),
+            right: box.right,
+          }
+        })
+        if (seen === null) continue
+        found += 1
+        if (seen.right <= column) {
+          confined.push(
+            `${seen.code} at ${Math.round(x)} → ${Math.round(seen.right)}`,
+          )
+        }
+      }
+    }
+
+    expect(
+      found,
+      'the strip beyond the column has to hold some land, or this proves nothing',
+    ).toBeGreaterThan(4)
+    expect(
+      confined,
+      'a card for a country beyond the column must not be clamped back inside it',
+    ).toEqual([])
+
+    expect(
+      watched().fatal,
+      'sweeping the far side of a wide map must not put anything in the console',
     ).toEqual([])
   })
 
