@@ -933,9 +933,10 @@ failure has a general form rather than a countable list of instances: a fingerpr
 pinned equalities alone is blind to every filter the resolved plan does not pin to a single value,
 and which filters those are changes from row to row - row 2 pins nothing at all, so under it such a
 fingerprint sees none of the six. `bbox` and `q` are ranges and are pinned by no row; `amenities` is
-applied as a residual and reaches no index; `kind` and `status` are carried in the ordering tuple
-rather than pinned on rows 3 and 4. Quantifying over the filter set is what closes all of that
-without anyone having to enumerate the combinations, and it is why the fingerprint is defined over
+applied as a residual and reaches no index; on row 3 `kind` and `status` are carried in the
+ordering tuple rather than pinned, and on row 4 `status` is, while `kind` is the column that row
+pins. Quantifying over the filter set is what closes all of that without anyone having to
+enumerate the combinations, and it is why the fingerprint is defined over
 the call's inputs rather than over the plan's pinned columns. §8.6 states that same rule from the
 other side and states no second one.
 
@@ -984,9 +985,10 @@ shape of every audit action name any code path in this repository writes today: 
 `trip.created`, `trip.archived`, `trip.hijacked`, `billing.plan_changed`, `member.added`,
 `expense.created`, `journey.published`, `reservation.confirmed`. Nine is what a grep of the
 `action:` literals demonstrates and the claim is no wider than the grep: `member.role_changed`, the
-JSDoc example at `src/server/repos/audit.ts:30`, is a tenth name this codebase mentions and nothing
-writes, and it is two segments as well. None of the nine is written by a production path - seven
-are seed rows in `src/routes/api/dev/-seed/dataset/workspace.ts`, the other two live only under
+second example in the JSDoc at `src/server/repos/audit.ts:30`, is a tenth name this codebase
+mentions and nothing writes, and it is two segments as well. None of the nine is written by a
+production path - seven are seed rows in `src/routes/api/dev/-seed/dataset/workspace.ts`, the
+other two live only under
 `src/server/repos/__tests__/` - and one of them, `billing.plan_changed`, is recorded against
 `entity_type: 'subscription'`, so they settle the segment count and nothing further. The count is
 the part that matters: one audit surface with two grammars is a surface nobody can grep. That the
@@ -1159,8 +1161,9 @@ An index that stops being used is then a red test, not a slow month.
 ## 9. Transport facts, verified
 
 Everything in this section was read from the Model Context Protocol specification at
-`modelcontextprotocol.io` on **2026-08-21**, not recalled. Each claim names its rule so a builder
-can re-check it against the same page.
+`modelcontextprotocol.io` on **2026-08-21**, not recalled, with §9.5's opening paragraph re-read
+and re-founded on **2026-08-22**. Each claim names its rule so a builder can re-check it against
+the same page.
 
 ### 9.1 Protocol versions we speak
 
@@ -1264,13 +1267,16 @@ mis-versioned request. Three different failures, three different codes.
 
 Every rule in this subsection is scoped by §9.1 - to an era, or to the era resolution that runs
 before both - and the scoping is load-bearing: the `2026-07-28` header obligations did not exist
-in `2025-06-18` or `2025-11-25`, so applying them to a legacy request would reject traffic the
-specification says a dual-era server must serve. The specification agrees explicitly - it tells
-intermediaries to check that `MCP-Protocol-Version` "indicates a version that requires header-body
-validation" before enforcing it.
+in `2025-06-18` or `2025-11-25`, so applying them to a legacy request would reject traffic a
+dual-era server exists to serve. The rule this rests on is the one §9.1 already resolves era with:
+a dual-era server "selects its behavior from how the client opens", and an `initialize` "selects
+legacy semantics ... as specified by the negotiated legacy protocol version" - that revision's
+rules, not this one's. Being dual-era is our choice, which the specification permits rather than
+requires; the scoping that follows from having made it is the specification's.
 
-**Neither era - reached during era resolution, and only on the `MCP-Protocol-Version` header path
-(§9.1 row 4):**
+**Neither era - reached during era resolution, on the `MCP-Protocol-Version` header check (§9.1
+rows 4 and 5). Row 5, a request that carries no such header at all, resolves to no era here as
+well; its `400` + `-32020` is stated in the modern-era bullet below and reasoned in §9.1:**
 
 - **An unsupported version in the `MCP-Protocol-Version` header → HTTP `400` _carrying_ a JSON-RPC
   error**, code `-32022` (`UnsupportedProtocolVersion`), whose `data.supported` lists our three

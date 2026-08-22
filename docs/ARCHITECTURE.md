@@ -426,15 +426,15 @@ because it is what an organization created on or after 27 May 2026 starts on; th
 Member rate is grandfathered for older organizations only and is lost permanently on the first
 upgrade, so it is not a number to plan against.
 
-The cheapest lever on the *fee* is the billing interval, not a Polar plan upgrade. One 50¢ on a
-$90 yearly order instead of twelve 50¢ on $9 brings the effective rate from 10.6% to **5.6%**,
-and the yearly price already exists in `src/lib/plans.ts`, so the change is a default on the
-pricing page. It is a lever on the fee and not on net revenue, though: that $90 is twelve months
-sold at a two-month discount, so annual nets $85 a year against monthly's $96.60. Halving the
-rate is worth having; it is worth having for retention, not for margin. Upgrading to Polar's Pro
-tier (3.8% + 40¢ for $20/month) saves 21¢ on the same $9 ticket, so it needs about 96 Solo
-subscriptions a month to pay for its own $20; at the thousand-payer row it would cut the $950 to
-$742. Worth doing there, worth nothing at launch.
+Two things move the fee, and both are commercial rather than architectural, which is why they are
+recorded here as arithmetic and not as a recommendation. **Billing interval:** one 50¢ on a $90
+yearly order instead of twelve 50¢ on $9 brings the effective rate from 10.6% to **5.6%**, and the
+yearly price already exists in `src/lib/plans.ts`. It moves the fee and not net revenue, though:
+that $90 is twelve months sold at a two-month discount, so annual nets $85 a year against
+monthly's $96.60. **Polar plan tier:** Pro is 3.8% + 40¢ plus $20/month, so it saves 21¢ on the
+same $9 ticket and about 96 Solo subscriptions a month recover its own $20. At the thousand-payer
+row that is $742 of transaction fees **plus** the $20 plan fee — **$762** all in, against
+Starter's $950, which carries no plan fee because Starter is free.
 
 ---
 
@@ -478,12 +478,13 @@ handler breaks it on one event. `checkout.session.completed` calls
 `runtime.stripe.subscriptions.retrieve()` inside the request — a deliberate choice, so the
 billing screen is already correct when the customer is redirected back — and writes D1 twice on
 that path, once through `attachCustomer()` and again through the `upsert()` inside `persist()`.
-Everything slower than those writes is already queued: every branch that changes state ends by
-handing a `billing.*` task to `TASKS` and answering immediately, and the other five event
-branches make at most one D1 write each — that half of the rule does hold. So read the inline
-discipline in §2.4 and row 9 as the shape phase A must build, not as a property to be
-preserved: the Polar handler has to fold that provider read into the queued task and land on a
-single inline write.
+Everything slower than those writes is already queued: every branch that persists a subscription
+record ends by handing a `billing.*` task to `TASKS` and answering immediately, and the other five
+event branches make at most one D1 write each — that half of the rule does hold. The two
+`checkout.session.completed` sub-paths that write only the customer id and stop enqueue nothing,
+having no plan change to follow up on. So read the inline discipline in §2.4 and row 9 as the
+shape phase A must build, not as a property to be preserved: the Polar handler has to fold that
+provider read into the queued task and land on a single inline write.
 
 What else changes in phase A is the signed string, the header it arrives in, and the provider
 whose retry policy row 8 quotes: ten attempts with exponential backoff is Polar's, not Stripe's.

@@ -192,7 +192,8 @@ deliberately does **not** declare is the superseded Stripe pair, `STRIPE_SECRET_
 phase A leaves behind, names that omission in its own header rather than leaving it silent, and
 points here for the two. So:
 
-- Read `.dev.vars.example` for the **local** shape of every name below and what each one buys.
+- Read `.dev.vars.example` for the **local** shape of every name below except the Stripe pair,
+  which it does not declare, and for what each name it does declare buys.
   It is the file you copy to `.dev.vars` at the end of this section, and every entry is accurate.
   Its last section adds two names that are not secrets and are not set here — `APP_URL` and
   `TILES_ARCHIVE_KEY`, which exist only to override the `wrangler.jsonc` vars locally.
@@ -247,13 +248,13 @@ pnpm exec wrangler secret put FIRECRAWL_WEBHOOK_SECRET    # crawl callbacks  —
 openssl rand -base64 32 | pnpm exec wrangler secret put MCP_TOKEN_PEPPER  # phase E, §14.3
 ```
 
-`POLAR_SERVER` is not a credential, and the general rule (§0, and the header of
-`.dev.vars.example`) is that non-secret configuration belongs in the `vars` block of
-`wrangler.jsonc`. It is kept here on purpose, and `docs/SPEC.md` §5 fixes the exception: one
-file then switches the whole billing environment, and because sandbox and production are
-separate Polar accounts, the environment selector and the token it pairs with must never be able
-to drift apart across two files. Its value domain is exactly `sandbox | production` — no URL, no
-`test`, no empty string.
+`POLAR_SERVER` is not a credential, and the general rule (the two rules at the head of this
+runbook, and the header of `.dev.vars.example`) is that non-secret configuration belongs in the
+`vars` block of `wrangler.jsonc`. It is kept here on purpose, and `docs/SPEC.md` §5 fixes the
+exception: one file then switches the whole billing environment, and because sandbox and
+production are separate Polar accounts, the environment selector and the token it pairs with must
+never be able to drift apart across two files. Its value domain is exactly
+`sandbox | production` — no URL, no `test`, no empty string.
 
 What each optional secret costs when it is unset:
 
@@ -278,9 +279,12 @@ suspected compromise of the token table, and tell the token holders first.
 of the Stripe wiring a deploy still performs:
 
 - Stripe dashboard → **Developers → Webhooks → Add endpoint** →
-  `https://planned.travel/api/stripe/webhook` (staging:
-  `https://staging.planned.travel/api/stripe/webhook`), subscribed to the six events the handler
-  acts on: `checkout.session.completed`, `customer.subscription.created`,
+  `https://planned.travel/api/stripe/webhook` (staging: whichever origin staging actually answers
+  on plus `/api/stripe/webhook` — the same rule as §9.4 step A, so
+  `https://planned-travel-staging.ACCOUNT_SUBDOMAIN.workers.dev/api/stripe/webhook` until §8
+  attaches the custom hostname and `https://staging.planned.travel/api/stripe/webhook` after it),
+  subscribed to the six events the handler acts on: `checkout.session.completed`,
+  `customer.subscription.created`,
   `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`,
   `invoice.payment_failed`. Copy the signing secret into `STRIPE_WEBHOOK_SECRET` and redeploy.
 - Create the four prices there too, and put their ids in §10's four build-time variables. Nothing

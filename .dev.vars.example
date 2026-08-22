@@ -144,8 +144,9 @@ MCP_TOKEN_PEPPER=
 #
 #   # CURRENT — read today by `src/lib/plans.ts`, and passed into the build by
 #   # both .github/workflows/ci.yml and .github/workflows/deploy.yml. Leave one
-#   # empty and that plan's checkout throws instead of opening, so the pricing
-#   # page renders with nothing anyone can actually buy.
+#   # empty and `requirePrice()` throws for that plan and interval alone, so its
+#   # Upgrade button fails while the other three still open a checkout. Leave all
+#   # four empty and the pricing page has nothing anyone can actually buy.
 #   VITE_STRIPE_PRICE_SOLO_MONTHLY=price_…
 #   VITE_STRIPE_PRICE_SOLO_YEARLY=price_…
 #   VITE_STRIPE_PRICE_CREW_MONTHLY=price_…
