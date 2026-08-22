@@ -75,14 +75,33 @@ import type {
  * of, so the surface stays on screen, stays operable, and its tip points the way
  * back.
  *
- * **Two clear areas, not one.** The hover card is an enhancement, so it may only
- * occupy map the chrome has left free: it never lands on the search pill, the
- * zoom cluster or the shelf, and where there is no room for it, it is simply not
- * drawn. The click surface is the only place a touch reader can act, so it is
- * allowed a second, looser area that reaches down over the shelf when a phone
- * leaves it nowhere else. Both areas are derived from the screen's own
+ * **Two clear areas, not one — and the looser one is very nearly never used.**
+ * The hover card is an enhancement, so it may only occupy map the chrome has
+ * left free: it never lands on the search pill, the zoom cluster or the shelf,
+ * and where there is no room for it, it is simply not drawn. The click surface
+ * is the only place a touch reader can act, so it is allowed a second, looser
+ * area that reaches down over the shelf. What it is *not* allowed is to prefer
+ * that area to a squeeze or a dock inside the strict one: a panel that could not
+ * clear a framed country used to take the looser area at full height, which laid
+ * 674×275 of surface flat across the shelf's tab strip at 1440×900 and left the
+ * tab named "Country" — about the very country the panel described — unpressable.
+ * Every answer one area has is exhausted before the next area is looked at, so
+ * the shelf is reached only by a phone with its drawer pulled open, where there
+ * genuinely is nowhere else. Both areas are derived from the screen's own
  * `cameraPadding()` declaration rather than from a second set of insets invented
  * here.
+ *
+ * **And the other surface is an obstacle too.** The areas are cut from the
+ * chrome's insets, and the click panel is not chrome: it is anchored to a
+ * country of its own, it comes and goes, and it moves on every frame of a pan.
+ * So a hover card solved against the insets alone landed *behind* it — press
+ * Spain, run the pointer over France, and France's card had its two month cells
+ * hidden under Spain's panel, two cards about two countries stacked on the same
+ * pixels. The decorative surface now reads the panel's live rectangle at
+ * placement time and treats it exactly like the shape it must not cover: it
+ * takes another side if there is one, and where there is none it is not drawn.
+ * Only decoration yields — the panel is the thing being avoided, and a panel
+ * asked to avoid itself would have nowhere left to be.
  *
  * **A phone gets a composition, not a smaller desktop.** Stacked, the click
  * panel is a 182px fact card over an action block, and it wants five hundred and
@@ -363,6 +382,40 @@ export interface PlaceSurfaceInput {
    * beneath it.
    */
   readonly minHeight?: number
+  /**
+   * One more rectangle the surface may not land on, over and above its own
+   * shape.
+   *
+   * There is exactly one thing on this layer that is neither map nor chrome: the
+   * other surface. Press Spain, then run the pointer over France, and the hover
+   * card for France was solved against a map that did not know the Spain panel
+   * was on it — so it landed *behind* the panel, with its two month cells hidden
+   * and two cards about two different countries stacked on the same pixels. The
+   * areas cannot express that, because they are cut from the chrome's insets and
+   * the panel is not chrome: it moves with its country, it comes and goes, and
+   * its rectangle is only known at the moment the placement runs.
+   *
+   * Only the decorative surface passes one. The click panel is the thing being
+   * avoided, and a panel that had to avoid itself would have nowhere to be.
+   */
+  readonly avoid?: SurfaceBox | null
+}
+
+/** How much of one rectangle the other covers, in square pixels. */
+function overlap(a: SurfaceBox, b: SurfaceBox): number {
+  const width = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
+  const height = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
+  return width <= 0 || height <= 0 ? 0 : width * height
+}
+
+/** Whether a candidate spot keeps clear of the one rectangle it must. */
+function clearsObstacle(
+  spot: { readonly x: number; readonly y: number },
+  size: { readonly width: number; readonly height: number },
+  avoid: SurfaceBox | null | undefined,
+): boolean {
+  if (avoid === null || avoid === undefined) return true
+  return overlap({ x: spot.x, y: spot.y, ...size }, avoid) === 0
 }
 
 /** The two sides a surface may be squeezed onto. A sheet is never a column. */
@@ -403,38 +456,197 @@ function roomBeside(
 }
 
 /**
- * Where a surface goes, given the shape it belongs to and the room there is.
+ * One docked offer: the surface pushed against one edge of the area, as far from
+ * the shape as that edge allows.
  *
- * Pure arithmetic on four rectangles, so the whole collision behaviour is
- * provable without a map, a browser or a viewport. Every side is offered in turn
- * and the first that fits *entirely inside an area and entirely outside the
- * shape* wins; the cross axis is then clamped into the area, which is what keeps
- * a card for a country at the edge of the screen on screen.
+ * Docking is what a surface does when the map is simply smaller than the surface
+ * plus the country — which, on this screen, is the ordinary desktop case rather
+ * than an exotic one. A 1440×900 viewport leaves 335 pixels of map above the
+ * shelf, and a country framed inside it fills nearly all of them, so no side of
+ * the shape has room for a panel at any height.
  *
- * A surface that states a {@link PlaceSurfaceInput.minHeight} gets a second pass
- * before it gives up: above and below are offered again with the surface
- * shortened to the room that side actually has, and the taller of the two wins.
- * That answer still clears the shape — it is `clear: true` — and it carries the
- * height it was placed at, so the caller can cap the surface and let the block
- * inside it scroll.
- *
- * When no side fits in any area, at any height, the surface is centred on the
- * shape and clamped, and the answer is marked `clear: false`. A caller whose
- * surface is decoration — the hover card — declines to draw that; a caller whose
- * surface is the only way to act declines to hide it.
+ * The two axes dock differently because the surface can give up height and
+ * cannot give up width. Against the top or bottom edge it stops as close to the
+ * country as its own floor allows, so a phone keeps the country and the world
+ * above it on screen. Against the left or right edge it takes its full width at
+ * whatever height the area has and stays level with the country, which is the
+ * desktop answer: a wide panel laid down the side of a framed country covers a
+ * third of it rather than four fifths.
  */
-export function placeCountrySurface({
+function dockOffer(
+  side: SurfaceSide,
+  anchor: SurfaceBox,
+  size: { readonly width: number; readonly height: number },
+  area: SurfaceBox,
+  gap: number,
+  minHeight: number,
+): SurfaceBox {
+  const edge = area.y + area.height
+  if (side === 'bottom') {
+    const top = clamp(anchor.y + anchor.height + gap, area.y, edge - minHeight)
+    const height = Math.min(size.height, Math.floor(edge - top))
+    return {
+      x: clamp(
+        anchor.x + anchor.width / 2 - size.width / 2,
+        area.x,
+        area.x + area.width - size.width,
+      ),
+      y: edge - height,
+      width: size.width,
+      height,
+    }
+  }
+  if (side === 'top') {
+    const bottom = clamp(anchor.y - gap, area.y + minHeight, edge)
+    return {
+      x: clamp(
+        anchor.x + anchor.width / 2 - size.width / 2,
+        area.x,
+        area.x + area.width - size.width,
+      ),
+      y: area.y,
+      width: size.width,
+      height: Math.min(size.height, Math.floor(bottom - area.y)),
+    }
+  }
+  const height = Math.min(size.height, area.height)
+  return {
+    x: side === 'left' ? area.x : area.x + area.width - size.width,
+    y: clamp(
+      anchor.y + anchor.height / 2 - height / 2,
+      area.y,
+      area.y + area.height - height,
+    ),
+    width: size.width,
+    height,
+  }
+}
+
+/**
+ * The tip on a docked surface, which is a narrower claim than the one a placed
+ * surface makes.
+ *
+ * A tip says "the shape is out this edge of me". A surface that had to dock has
+ * usually taken some of the shape with it, and pointing out of an edge the shape
+ * is *under* would be a lie — so the tip survives only while the middle of the
+ * shape is still beyond that edge. It very often is: a wide panel laid down the
+ * left of a country framed in the middle of the map takes thirty pixels of its
+ * west coast and leaves the rest of it, and the whole country, out to the right.
+ */
+function dockTip(
+  side: SurfaceSide,
+  spot: SurfaceBox,
+  anchor: SurfaceBox,
+): number | null {
+  const centre =
+    side === 'left' || side === 'right'
+      ? anchor.x + anchor.width / 2
+      : anchor.y + anchor.height / 2
+  const beyond =
+    side === 'left'
+      ? centre >= spot.x + spot.width
+      : side === 'right'
+        ? centre <= spot.x
+        : side === 'bottom'
+          ? centre <= spot.y
+          : centre >= spot.y + spot.height
+  return beyond
+    ? tipFor(side, spot, anchor, { width: spot.width, height: spot.height })
+    : null
+}
+
+/** The edges a docked surface may take, in the order that breaks a tie. */
+const DOCK_SIDES: ReadonlyArray<SurfaceSide> = [
+  'bottom',
+  'top',
+  'left',
+  'right',
+]
+
+/**
+ * The dock that hides the least of the country, out of the four on offer.
+ *
+ * Least *covered shape*, measured, rather than a rule of thumb about which edge
+ * is nicer: the answer changes with the composition, and both answers are right
+ * where they win. On a phone the surface is a column as wide as the map, so
+ * every horizontal dock covers the whole country and the vertical one — stopped
+ * at its own floor — covers a strip of it. On a desktop the surface is a wide,
+ * short row and the country is framed in the middle of 335 pixels of clear map,
+ * so a vertical dock lies across it and a horizontal one lies beside it.
+ */
+function dockInArea(
+  anchor: SurfaceBox,
+  size: { readonly width: number; readonly height: number },
+  area: SurfaceBox,
+  gap: number,
+  minHeight: number,
+  avoid: SurfaceBox | null | undefined,
+): SurfacePlacement | null {
+  // The floor is what the surface may be squeezed *down* to, not a size it has
+  // to reach: a panel whose content is naturally shorter than the floor is
+  // already at its full height, and rejecting it for that left a 275px surface
+  // with nowhere to dock and the whole shelf to lie on.
+  const floor = Math.min(minHeight, size.height)
+  if (size.width > area.width || area.height < floor) return null
+
+  let best: SurfacePlacement | null = null
+  let bestCovered = Number.POSITIVE_INFINITY
+  for (const side of DOCK_SIDES) {
+    const spot = dockOffer(side, anchor, size, area, gap, floor)
+    if (spot.height < floor) continue
+    // The obstacle is never negotiable, even here: covering the country is a
+    // compromise the reader can see through, and covering the *other* surface is
+    // two cards about two countries on the same pixels.
+    if (!clearsObstacle(spot, spot, avoid)) continue
+    const covered = overlap(spot, anchor)
+    if (best !== null && covered >= bestCovered) continue
+    bestCovered = covered
+    best = {
+      x: Math.round(spot.x),
+      y: Math.round(spot.y),
+      side,
+      tip: dockTip(side, spot, anchor),
+      clear: covered === 0,
+      // The ceiling is reported only when it actually bit. A dock that took the
+      // surface whole is not a squeeze, and saying so would give it a *definite*
+      // height it never needed and arm the scroll affordance inside it.
+      height: spot.height >= size.height ? null : spot.height,
+    }
+    if (covered === 0) break
+  }
+  return best
+}
+
+/**
+ * Everything one area has to offer, in the order the surface should want it.
+ *
+ * Whole and clear of the shape first; then shortened to the room one side
+ * actually has; then docked against an edge. Exhausting one area before moving
+ * to the next is the difference between a panel that lies over the shelf and one
+ * that does not — a *docked* surface inside the strict area beats a *whole* one
+ * inside the looser area, because the looser area is the shelf, and the shelf
+ * carries the tab strip that names the very country the panel is about.
+ */
+function placeInArea({
   anchor,
   size,
-  areas,
-  gap = SURFACE_GAP,
+  area,
+  gap,
   minHeight,
-}: PlaceSurfaceInput): SurfacePlacement | null {
-  for (const area of areas) {
-    if (size.width > area.width || size.height > area.height) continue
+  avoid,
+}: {
+  readonly anchor: SurfaceBox
+  readonly size: { readonly width: number; readonly height: number }
+  readonly area: SurfaceBox
+  readonly gap: number
+  readonly minHeight: number | undefined
+  readonly avoid: SurfaceBox | null | undefined
+}): SurfacePlacement | null {
+  if (size.width <= area.width && size.height <= area.height) {
     for (const side of SIDES) {
       const spot = offerSide(side, anchor, size, area, gap)
       if (spot === null) continue
+      if (!clearsObstacle(spot, size, avoid)) continue
       return {
         x: Math.round(spot.x),
         y: Math.round(spot.y),
@@ -446,88 +658,91 @@ export function placeCountrySurface({
     }
   }
 
-  if (minHeight !== undefined && minHeight < size.height) {
-    for (const area of areas) {
-      if (size.width > area.width) continue
-      // Per area rather than across all of them, so the strict area still wins
-      // over the looser one even when the looser one could hold more of the
-      // surface: the chrome is there to be cleared, not to be outbid.
-      let best: SurfacePlacement | null = null
-      for (const side of SQUEEZE_SIDES) {
-        const height = Math.min(
-          size.height,
-          Math.floor(roomBeside(side, anchor, area, gap)),
-        )
-        if (height < minHeight) continue
-        const squeezed = { width: size.width, height }
-        const spot = offerSide(side, anchor, squeezed, area, gap)
-        if (spot === null) continue
-        if (best !== null && (best.height ?? 0) >= height) continue
-        best = {
-          x: Math.round(spot.x),
-          y: Math.round(spot.y),
-          side,
-          tip: tipFor(side, spot, anchor, squeezed),
-          clear: true,
-          height,
-        }
+  if (minHeight === undefined) return null
+
+  if (minHeight < size.height && size.width <= area.width) {
+    let best: SurfacePlacement | null = null
+    for (const side of SQUEEZE_SIDES) {
+      const height = Math.min(
+        size.height,
+        Math.floor(roomBeside(side, anchor, area, gap)),
+      )
+      if (height < minHeight) continue
+      const squeezed = { width: size.width, height }
+      const spot = offerSide(side, anchor, squeezed, area, gap)
+      if (spot === null) continue
+      if (!clearsObstacle(spot, squeezed, avoid)) continue
+      if (best !== null && (best.height ?? 0) >= height) continue
+      best = {
+        x: Math.round(spot.x),
+        y: Math.round(spot.y),
+        side,
+        tip: tipFor(side, spot, anchor, squeezed),
+        clear: true,
+        height,
       }
-      if (best !== null) return best
     }
+    if (best !== null) return best
+  }
+
+  return dockInArea(anchor, size, area, gap, minHeight, avoid)
+}
+
+/**
+ * Where a surface goes, given the shape it belongs to and the room there is.
+ *
+ * Pure arithmetic on four rectangles, so the whole collision behaviour is
+ * provable without a map, a browser or a viewport. Every side is offered in turn
+ * and the first that fits *entirely inside an area and entirely outside the
+ * shape* wins; the cross axis is then clamped into the area, which is what keeps
+ * a card for a country at the edge of the screen on screen.
+ *
+ * A surface that states a {@link PlaceSurfaceInput.minHeight} has two more
+ * answers before it gives up, and both are asked of one area before the next
+ * area is looked at at all. First it is offered above and below again, shortened
+ * to the room that side actually has, and the taller of the two wins; that
+ * answer still clears the shape — it is `clear: true` — and it carries the height
+ * it was placed at, so the caller can cap the surface and let the block inside
+ * it scroll. Then it is docked against whichever edge of the area hides the
+ * least of the country.
+ *
+ * The order between those three and the order between the areas is the whole
+ * point, and it was wrong: a panel that could not clear a framed country inside
+ * the strict area used to take the *looser* area whole, which put a 674×275
+ * surface flat across the shelf's tab strip at 1440×900 — the tab named
+ * "Country", about the very country the panel was describing, could not be
+ * pressed. The looser area is the shelf. It is reached only when the strict one
+ * cannot hold the surface even docked at its floor, which on this screen means a
+ * phone with the drawer pulled open.
+ *
+ * An {@link PlaceSurfaceInput.avoid} rectangle is treated exactly like the shape
+ * itself: a side that would put the surface on top of it is not offered. Only
+ * the hover card supplies one — the thing being avoided is the click panel — and
+ * because the hover card states no floor, a map with nowhere left ends at the
+ * `clear: false` answer below, which decoration declines to draw. That is the
+ * whole behaviour: rather than stack two cards about two countries on the same
+ * pixels, the decorative one steps aside, and where it cannot, it is not drawn.
+ *
+ * When no area can hold the surface at any height, it is centred on the shape
+ * and clamped, and the answer is marked `clear: false`. A caller whose surface
+ * is decoration — the hover card — declines to draw that; a caller whose surface
+ * is the only way to act declines to hide it.
+ */
+export function placeCountrySurface({
+  anchor,
+  size,
+  areas,
+  gap = SURFACE_GAP,
+  minHeight,
+  avoid,
+}: PlaceSurfaceInput): SurfacePlacement | null {
+  for (const area of areas) {
+    const spot = placeInArea({ anchor, size, area, gap, minHeight, avoid })
+    if (spot !== null) return spot
   }
 
   const area = roomiest(areas)
   if (area === undefined) return null
-
-  // Docked, which is the last honest answer before the worst one.
-  //
-  // Some maps are simply shorter than the surface plus the country: an iPhone in
-  // Safari, whose two bars leave 529 pixels of world, cannot hold a panel that
-  // clears a framed country at any usable height. Centred on the shape it covers
-  // the country *and* the world either side of it, which is the state the
-  // reference ships and the one this screen was rejected for. Docked, the sheet
-  // takes the edge the country is furthest from, stops as close to the country as
-  // the floor allows, and leaves the search pill and a third of the world above
-  // it. It still overlaps, so it still reports `clear: false` — decoration
-  // declines to draw this, and only the surface that has to stay reachable takes
-  // it.
-  if (minHeight !== undefined && area.height >= minHeight) {
-    const below = anchor.y + anchor.height / 2 <= area.y + area.height / 2
-    const edge = area.y + area.height
-    const x = Math.round(
-      clamp(
-        anchor.x + anchor.width / 2 - size.width / 2,
-        area.x,
-        area.x + Math.max(area.width - size.width, 0),
-      ),
-    )
-    if (below) {
-      const top = clamp(
-        anchor.y + anchor.height + gap,
-        area.y,
-        edge - minHeight,
-      )
-      const height = Math.min(size.height, Math.floor(edge - top))
-      return {
-        x,
-        y: Math.round(edge - height),
-        side: 'bottom',
-        tip: null,
-        clear: false,
-        height,
-      }
-    }
-    const bottom = clamp(anchor.y - gap, area.y + minHeight, edge)
-    const height = Math.min(size.height, Math.floor(bottom - area.y))
-    return {
-      x,
-      y: Math.round(area.y),
-      side: 'top',
-      tip: null,
-      clear: false,
-      height,
-    }
-  }
 
   return {
     x: Math.round(
@@ -578,21 +793,28 @@ const CONTROLS_MOVE_AT = 1024
  * placed the panel straight over it. `column` is that well's width; the strict
  * area therefore stops at the well's right edge rather than at the map's.
  *
- * Three areas, offered in the order a surface should want them:
+ * Four areas, offered in the order a surface should want them:
  *
  * 1. **strict** — every inset honoured. Every surface may use it, and the hover
- *    card may use nothing else: decoration that sits on the shelf or on the
- *    search pill has stopped being decoration.
+ *    card may use nothing else: decoration that sits on the shelf, on the search
+ *    pill or under the zoom cluster has stopped being decoration.
  * 2. **outside** — the map beyond the well, on a screen wide enough to have any.
  *    No chrome is out there at all, so a country in the far east or west gets
  *    honest room rather than the shelf.
- * 3. **relaxed** — for the surface that has to be somewhere, and it gives up two
- *    insets. The shelf's, because the click panel carries both writes and cannot
- *    answer "no room" by not being drawn. And, below {@link CONTROLS_MOVE_AT},
- *    the zoom cluster's, because at that width the cluster is the *top* right
- *    corner and `padding.top` is already the inset that clears it.
+ * 3. **gutter** — the same band, widened to the gutter, and only below
+ *    {@link CONTROLS_MOVE_AT}. At that width the zoom cluster is the map's *top*
+ *    right corner rather than its right edge, so a surface that has come down the
+ *    map is nowhere near it, and the 52 pixels the inset costs are exactly what a
+ *    gutter-to-gutter sheet needs to sit above the shelf instead of on it.
+ * 4. **relaxed** — the widened band, reaching down over the shelf, for the
+ *    surface that has to be somewhere: the click panel carries both writes and
+ *    cannot answer "no room" by not being drawn. It is genuinely last, and
+ *    {@link placeCountrySurface} does not reach it until every area before it has
+ *    been offered every answer it has, docking included — the shelf carries the
+ *    tab strip, and a panel lying across it takes the reader's other route to the
+ *    very country it is about.
  *
- * `padding.left` is the plain gutter in both substitutions, so the areas and the
+ * `padding.left` is the plain gutter in both widenings, so the areas and the
  * chrome cannot drift apart.
  */
 export function surfaceAreas(
@@ -605,32 +827,44 @@ export function surfaceAreas(
 
   const left = box.x + padding.left
   const top = box.y + padding.top
+  const clear = Math.max(box.height - padding.top - padding.bottom, 0)
   const strict: SurfaceBox = {
     x: left,
     y: top,
     width: Math.max(wellRight - padding.right - left, 0),
-    height: Math.max(box.height - padding.top - padding.bottom, 0),
+    height: clear,
   }
+  // Below the width at which the cluster moves it is the map's *top* right
+  // corner rather than its right edge, so a surface that has come down the map
+  // is nowhere near it and the right inset is the same room charged twice. It
+  // cost a phone 52 of its 348 clear pixels — exactly the width a gutter-to-
+  // gutter sheet was short of fitting above the shelf, which is why every phone
+  // panel used to end up on top of it.
   const right =
     box.width < CONTROLS_MOVE_AT ? padding.left : Math.max(padding.right, 0)
-  const relaxed: SurfaceBox = {
+  const gutter: SurfaceBox = {
     x: left,
     y: top,
     width: Math.max(wellRight - right - left, 0),
+    height: clear,
+  }
+  const relaxed: SurfaceBox = {
+    x: gutter.x,
+    y: gutter.y,
+    width: gutter.width,
     height: Math.max(box.height - padding.top - padding.left, 0),
   }
   const outside: SurfaceBox = {
     x: wellRight,
     y: top,
     width: Math.max(box.x + box.width - padding.left - wellRight, 0),
-    height: strict.height,
+    height: clear,
   }
 
   const areas = [strict]
   if (outside.width > 0) areas.push(outside)
-  if (relaxed.height > strict.height || relaxed.width > strict.width) {
-    areas.push(relaxed)
-  }
+  if (gutter.width > strict.width) areas.push(gutter)
+  if (relaxed.height > clear) areas.push(relaxed)
   return areas
 }
 
@@ -964,6 +1198,25 @@ const layout = {
     '@md:w-96 @md:flex-none @md:border-t-0 @md:border-l',
   ),
   /**
+   * The action block's scroll region, and the one thing the primitive cannot
+   * decide for it.
+   *
+   * `ScrollArea`'s bar is drawn at `--color-scrollbar-thumb`, which is a
+   * macOS-style overlay: quiet at rest because a pointer is about to arrive and
+   * make it louder. The one viewport where this region actually scrolls is a
+   * short phone, where no pointer is ever going to arrive — so at rest is the
+   * only state there is, and a 18%-alpha bar six pixels wide beside a control the
+   * fold has cut in half reads as a rendering fault rather than as "there is more
+   * below". Squeezed, the bar is therefore drawn at the strength the primitive
+   * keeps for hover, which is the same token in both themes and the same 10px
+   * lane; nothing moves, and the fade above it is unchanged. On every viewport
+   * that does not squeeze, this selects nothing at all.
+   */
+  actionsScroll: cn(
+    'min-h-0 flex-1',
+    'group-data-[fit=squeezed]:[&_[data-orientation=vertical]>*]:bg-scrollbar-thumb-hover',
+  ),
+  /**
    * `z-map-surface`, not `z-10`.
    *
    * `CountryCard` carries that same tier on its own root — it is designed to be
@@ -1108,6 +1361,40 @@ function placementBox(box: SurfaceBox, host: HTMLElement): SurfaceBox {
   }
 }
 
+/** The selector for the one surface a decorative one has to stay clear of. */
+const PANEL_SELECTOR = '[data-part="country-panel"]'
+
+/**
+ * The open click panel, as a rectangle in the host layer's own coordinates,
+ * grown by the gap the composition keeps between two floating things.
+ *
+ * Read from the DOM at placement time rather than threaded down as a prop, and
+ * that is the point rather than a shortcut: the panel is anchored to a country
+ * of its own, so its rectangle changes on every rendered frame of a pan without
+ * anything re-rendering. A prop would carry the position the panel held when
+ * React last committed, which during a drag is wherever the reader started.
+ *
+ * `null` when there is no panel, which is the common case and costs nothing —
+ * `querySelector` on a host holding at most two elements, and no layout is
+ * forced unless something was actually found.
+ */
+function panelObstacle(
+  host: HTMLElement,
+  self: HTMLElement,
+): SurfaceBox | null {
+  const panel = host.querySelector(PANEL_SELECTOR)
+  if (panel === null || self.contains(panel)) return null
+  const box = panel.getBoundingClientRect()
+  if (box.width === 0 || box.height === 0) return null
+  const layer = host.getBoundingClientRect()
+  return {
+    x: box.left - layer.left - SURFACE_GAP,
+    y: box.top - layer.top - SURFACE_GAP,
+    width: box.width + SURFACE_GAP * 2,
+    height: box.height + SURFACE_GAP * 2,
+  }
+}
+
 /**
  * What an anchored surface needs to place itself.
  *
@@ -1204,7 +1491,20 @@ function AnchoredSurface({
       node.style.setProperty('--pt-max-h', `${cap}px`)
       fitRef.current = cap
     }
+    // Read at the surface's own height, not at the one the last placement gave
+    // it. A squeezed surface carries a *definite* height — that is what makes the
+    // region inside it scroll rather than grow — and this layer's own box is that
+    // height, so `offsetHeight` reads back the ceiling instead of the content and
+    // the next placement solves from the answer the previous one imposed. One
+    // 674×275 panel measured itself at 335 that way and then docked at 335, which
+    // is sixty pixels of empty surface below a card that had already finished.
+    // The squeeze is a `data-fit` flag the surface reads through this layer's
+    // `group`, so standing it down for the read is enough; `place()` runs
+    // immediately after and writes the real one back.
+    const fit = node.dataset.fit ?? 'full'
+    node.dataset.fit = 'full'
     sizeRef.current = { width: node.offsetWidth, height: node.offsetHeight }
+    node.dataset.fit = fit
   }, [host])
 
   const place = React.useCallback(() => {
@@ -1281,6 +1581,9 @@ function AnchoredSurface({
       size,
       areas,
       minHeight,
+      // Only decoration yields. The panel is the thing being avoided, and a
+      // panel asked to avoid itself would have nowhere left to be.
+      avoid: decorative ? panelObstacle(host, node) : null,
     })
     if (spot === null) return
 
@@ -1609,7 +1912,13 @@ function CountryPanel({
             hover with, and a mask fade on its own is a design flourish that could
             equally be a card that stops. The bar is drawn for exactly as long as
             there is something under the fold and never a moment longer. */}
-        <ScrollArea fade type="auto" axis="vertical" className="min-h-0 flex-1">
+        <ScrollArea
+          fade
+          type="auto"
+          axis="vertical"
+          data-part="actions-scroll"
+          className={layout.actionsScroll}
+        >
           <CountryActions
             key={countryCode}
             countryCode={countryCode}

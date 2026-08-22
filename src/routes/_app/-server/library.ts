@@ -306,9 +306,23 @@ export const ATLAS_BUCKET_LIST_LIMIT = 40
  * country: a live aspiration in front of one already ticked off, and the lowest
  * id between two rivals, because `bucket_list_items` carries no unique index and
  * a data set can hold both. Deciding it the same way in both places is what
- * stops the map and the write path disagreeing about which row they mean.
+ * stops the map and the write path disagreeing about which row they mean - the
+ * map would offer to remove one row and the write would answer about another.
+ *
+ * "Lowest" therefore has to mean what it means over there, and over there it is
+ * `id.localeCompare(id)`, not `<`. The two are genuinely different orders on the
+ * ids this schema mints: `newId()` appends a nanoid over `A-Za-z0-9_-`, and on
+ * that alphabet `'a_b' < 'aXb'` is false while `'a_b'.localeCompare('aXb')` is
+ * negative, because `_` sorts after `X` by code point and before it by collation.
+ * A workspace holding two live goals for the same country is all it takes to
+ * land on such a pair, so this comparator is the collating one on purpose.
+ *
+ * Exported because it is the only implementation of the question the map asks of
+ * every country under the pointer - "is this one already on the list, and by
+ * which row?" - and an answer that is only ever read through a route loader is an
+ * answer nothing can hold against the write path. Its suite does exactly that.
  */
-function bucketListCountriesOf(
+export function bucketListCountriesOf(
   items: ReadonlyArray<{
     readonly id: string
     readonly kind: string
@@ -327,7 +341,7 @@ function bucketListCountriesOf(
     const wins =
       held === undefined ||
       (held.isAchieved && !row.isAchieved) ||
-      (held.isAchieved === row.isAchieved && row.id < held.id)
+      (held.isAchieved === row.isAchieved && row.id.localeCompare(held.id) < 0)
     if (wins) {
       byCode.set(code, { id: row.id, isAchieved: row.isAchieved })
     }

@@ -98,6 +98,12 @@ export type { DayRoutesProps } from './day-routes'
  * against the bundled cut and then contradicts the map for the life of the
  * screen. It is a subscription over process-wide state, so mounting it beside
  * the map costs no second request.
+ *
+ * One of those two answers changes meaning as well as value. A `countryBounds()`
+ * rectangle grown to hold Guadeloupe and Réunion describes France honestly and
+ * frames it uselessly: fitting a camera to it lands on open ocean. Use it to ask
+ * whether a code can be drawn and how much of the world it covers; frame a
+ * fly-to on the country's principal landmass instead.
  */
 export {
   useCountryDetail,

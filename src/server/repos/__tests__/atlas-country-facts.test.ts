@@ -18,16 +18,19 @@
  * went there. Its figures stay readable in the aggregate that produced them.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPlace } from '../places'
 import { createTrip } from '../trips'
 import {
+  achieveBucketListItem,
   atlasCountryRecords,
   countCountriesByContinent,
   countTripsByCountry,
   countVisitedPlacesByCountry,
   countVisitedRegions,
+  createBucketListItem,
   getAtlasSummary,
+  listBucketList,
   listVisitedCountries,
   markCountryVisited,
   markRegionVisited,
@@ -38,8 +41,33 @@ import { formatMonthYear, formatNumber } from '#/lib/format'
 import { visitedCountries as demoVisitedCountries } from '#/routes/api/dev/-seed/dataset/workspace'
 import { createHarness, subscribeTenant } from './harness'
 import type { AtlasCountryRecord } from '../atlas'
+import type { BucketListItem } from '#/server/db/types'
 import type { Harness, SeededTenant } from './harness'
 import type { TenantScope } from '../base'
+
+/**
+ * Both surfaces under test resolve their tenant through a module that imports
+ * `cloudflare:workers`, which has no meaning outside the Worker runtime. Neither
+ * is *called* through that door here - the loader's fold is a pure function and
+ * `atlasCountryState` takes the scope as an argument - so the door is stubbed
+ * rather than opened, and every query below still runs against the real schema
+ * in the real harness.
+ */
+vi.mock('#/routes/_app/-server/context', () => ({
+  appScope: (): Promise<never> => {
+    throw new Error('Route loaders are not driven by this suite.')
+  },
+}))
+vi.mock('#/server/fns/context', () => ({
+  appScope: (): Promise<never> => {
+    throw new Error('Server functions are not driven by this suite.')
+  },
+}))
+
+const { ATLAS_BUCKET_LIST_LIMIT, bucketListCountriesOf } = await import(
+  '#/routes/_app/-server/library'
+)
+const { atlasCountryState } = await import('#/server/fns/atlas')
 
 /** The day every count in this file stops at, so a passing run does not depend on the calendar. */
 const TODAY = '2026-08-20'
@@ -681,5 +709,376 @@ describe('atlas roll-ups the loader reads on their own', () => {
       { continent: 'South America', countryCount: 1 },
     ])
     expect(await countVisitedRegions(other.scope, other.ownerUserId)).toBe(1)
+  })
+})
+
+/* ------------------------------------------- bucket-list membership index */
+
+/**
+ * The other half of what the map asks about the country under the pointer: not "have you been
+ * there" but "is it already on the list, and which row would I take it off by?".
+ *
+ * That question has exactly one implementation - `bucketListCountriesOf` in the atlas loader - and
+ * it is a different reading of the same table from the one the panel renders. The panel gets
+ * `bucketList`, the first {@link ATLAS_BUCKET_LIST_LIMIT} rows, which is a fine answer to "what is
+ * still on it" and a wrong answer to "is this one on it": a country at row forty-one is on the
+ * list, and a surface that answered "no" would offer to add a goal that already exists.
+ *
+ * The second failure is quieter and worse. `bucket_list_items` has no unique index on the country,
+ * so one country can hold several goals, and two places in this codebase choose between them - the
+ * loader here, for the row the map offers to remove, and `atlasCountryState` behind every write,
+ * for the row a removal actually removes. If those two ever choose differently the reader presses
+ * Remove, the write reports success about a different row, and the country stays on the list. So
+ * every case below is asserted against *both*, and the tie-break is exercised on an id pair the
+ * two orderings genuinely disagree about rather than on ids that happen to agree.
+ */
+describe('the bucket-list membership index the map reads', () => {
+  let harness: Harness
+  let tenant: SeededTenant
+
+  beforeEach(async () => {
+    harness = await createHarness()
+    tenant = await harness.seedTenant('atlas')
+  })
+
+  /** Two-letter codes shaped like ISO-3166-1 alpha-2, for filling a list past its cap. */
+  const CODE_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+  /**
+   * An id with a chosen suffix, minted through a function rather than written as a literal.
+   *
+   * The two ids below are compared against each other at runtime, and that comparison is a claim
+   * about the runtime. Written as literals the compiler would settle it at type level and carry
+   * the assertion away with it, so the pair goes through here and stays plain `string`.
+   */
+  function goalId(suffix: string): string {
+    return `bkt_${suffix}`
+  }
+
+  /**
+   * Two ids the two candidate tie-breaks disagree about.
+   *
+   * `_` sorts after `X` by code point and before it by collation, and `newId()` mints its suffix
+   * over an alphabet that holds both - so a workspace with two live goals for one country really
+   * can land on such a pair.
+   */
+  const CODE_POINT_FIRST = goalId('aXb')
+  const COLLATION_FIRST = goalId('a_b')
+
+  function syntheticCode(position: number): string {
+    const high = CODE_LETTERS[Math.floor(position / CODE_LETTERS.length)]
+    return `${high}${CODE_LETTERS[position % CODE_LETTERS.length]}`
+  }
+
+  /** A bucket-list row, added through the repository the panel's own form adds one through. */
+  async function seedGoal(
+    scope: TenantScope,
+    input: {
+      readonly countryCode?: string | null
+      readonly kind?: 'country' | 'region' | 'place'
+      readonly name?: string
+      readonly sortOrder?: number
+    },
+  ): Promise<BucketListItem> {
+    return createBucketListItem(scope, {
+      kind: input.kind ?? 'country',
+      name: input.name ?? `Somewhere · ${input.countryCode ?? 'unplaced'}`,
+      countryCode: input.countryCode ?? null,
+      sortOrder: input.sortOrder,
+    })
+  }
+
+  /** The whole list, as the loader reads it before folding it. */
+  async function goalsOf(scope: TenantScope, userId: string): Promise<Array<BucketListItem>> {
+    return listBucketList(scope, userId)
+  }
+
+  /** The index, built exactly as the loader builds it. */
+  async function indexOf(
+    scope: TenantScope,
+    userId: string,
+  ): Promise<Array<{ countryCode: string; itemId: string; isAchieved: boolean }>> {
+    return bucketListCountriesOf(await goalsOf(scope, userId))
+  }
+
+  function rowFor(
+    index: ReadonlyArray<{ countryCode: string; itemId: string; isAchieved: boolean }>,
+    countryCode: string,
+  ): { countryCode: string; itemId: string; isAchieved: boolean } | null {
+    return index.find((row) => row.countryCode === countryCode) ?? null
+  }
+
+  /** What the write path would say about the same country, read back from D1 in the same shape. */
+  async function writePathGoal(
+    scope: TenantScope,
+    countryCode: string,
+  ): Promise<{ itemId: string; isAchieved: boolean } | null> {
+    const state = await atlasCountryState(scope, countryCode)
+    return state.bucketGoal === null
+      ? null
+      : { itemId: state.bucketGoal.id, isAchieved: state.bucketGoal.isAchieved }
+  }
+
+  /** Rewrites a primary key, which is the only way to pin the ids a tie-break has to compare. */
+  function renameGoal(from: string, to: string): void {
+    harness.sqlite.prepare('update bucket_list_items set id = ? where id = ?').run(to, from)
+  }
+
+  it('answers for a country the capped list never reaches', async () => {
+    const written = new Map<string, string>()
+    for (let position = 0; position <= ATLAS_BUCKET_LIST_LIMIT; position += 1) {
+      const countryCode = syntheticCode(position)
+      const goal = await seedGoal(tenant.scope, { countryCode, sortOrder: position })
+      written.set(countryCode, goal.id)
+    }
+    const beyond = syntheticCode(ATLAS_BUCKET_LIST_LIMIT)
+
+    const bucket = await goalsOf(tenant.scope, tenant.ownerUserId)
+    expect(bucket).toHaveLength(ATLAS_BUCKET_LIST_LIMIT + 1)
+    // The payload's `bucketList` is this slice, and it stops one row short of the country below.
+    const capped = bucket.slice(0, ATLAS_BUCKET_LIST_LIMIT)
+    expect(capped.some((row) => row.countryCode === beyond)).toBe(false)
+
+    const index = bucketListCountriesOf(bucket)
+    expect(index).toHaveLength(ATLAS_BUCKET_LIST_LIMIT + 1)
+    expect(rowFor(index, beyond)).toEqual({
+      countryCode: beyond,
+      itemId: written.get(beyond),
+      isAchieved: false,
+    })
+    // And the row it names is the row a removal would take off, so the map's offer is honest.
+    expect(await writePathGoal(tenant.scope, beyond)).toEqual({
+      itemId: written.get(beyond),
+      isAchieved: false,
+    })
+  })
+
+  it('leaves out every row that is not a country goal', async () => {
+    const region = await seedGoal(tenant.scope, {
+      kind: 'region',
+      countryCode: 'IT',
+      name: 'The Dolomites in winter',
+    })
+    const place = await seedGoal(tenant.scope, {
+      kind: 'place',
+      countryCode: 'IT',
+      name: 'Tre Cime at first light',
+    })
+    // A country goal that never got a code - a name typed before the picker offered one.
+    const unplaced = await seedGoal(tenant.scope, {
+      countryCode: null,
+      name: 'Wherever the northern lights are',
+    })
+    const country = await seedGoal(tenant.scope, { countryCode: 'IT', name: 'Italy' })
+
+    const index = await indexOf(tenant.scope, tenant.ownerUserId)
+
+    expect(index).toEqual([{ countryCode: 'IT', itemId: country.id, isAchieved: false }])
+    const named = index.map((row) => row.itemId)
+    expect(named).not.toContain(region.id)
+    expect(named).not.toContain(place.id)
+    expect(named).not.toContain(unplaced.id)
+    // The write path draws the same line: a region inside Italy is not Italy on the list.
+    expect(await writePathGoal(tenant.scope, 'IT')).toEqual({
+      itemId: country.id,
+      isAchieved: false,
+    })
+  })
+
+  it('answers for a country whose row was stored before codes were upper-cased', async () => {
+    const goal = await seedGoal(tenant.scope, { countryCode: 'FR', name: 'France' })
+    harness.sqlite
+      .prepare('update bucket_list_items set country_code = ? where id = ?')
+      .run('fr', goal.id)
+
+    expect(await indexOf(tenant.scope, tenant.ownerUserId)).toEqual([
+      { countryCode: 'FR', itemId: goal.id, isAchieved: false },
+    ])
+    expect(await writePathGoal(tenant.scope, 'FR')).toEqual({
+      itemId: goal.id,
+      isAchieved: false,
+    })
+  })
+
+  it('offers the goal still to be reached, whichever of the two was written first', async () => {
+    // Ticked off first, set again afterwards.
+    const doneFirst = await seedGoal(tenant.scope, { countryCode: 'MX', name: 'Mexico, once' })
+    await achieveBucketListItem(tenant.scope, doneFirst.id, '2019-03-02')
+    const liveSecond = await seedGoal(tenant.scope, { countryCode: 'MX', name: 'Mexico, again' })
+
+    // The same pair in the other order.
+    const liveFirst = await seedGoal(tenant.scope, { countryCode: 'KE', name: 'Kenya, still' })
+    const doneSecond = await seedGoal(tenant.scope, { countryCode: 'KE', name: 'Kenya, done' })
+    await achieveBucketListItem(tenant.scope, doneSecond.id, '2021-07-14')
+
+    const index = await indexOf(tenant.scope, tenant.ownerUserId)
+
+    expect(rowFor(index, 'MX')).toEqual({
+      countryCode: 'MX',
+      itemId: liveSecond.id,
+      isAchieved: false,
+    })
+    expect(rowFor(index, 'KE')).toEqual({
+      countryCode: 'KE',
+      itemId: liveFirst.id,
+      isAchieved: false,
+    })
+    const named = index.map((row) => row.itemId)
+    expect(named).not.toContain(doneFirst.id)
+    expect(named).not.toContain(doneSecond.id)
+    expect(await writePathGoal(tenant.scope, 'MX')).toEqual({
+      itemId: liveSecond.id,
+      isAchieved: false,
+    })
+    expect(await writePathGoal(tenant.scope, 'KE')).toEqual({
+      itemId: liveFirst.id,
+      isAchieved: false,
+    })
+  })
+
+  it('still names a country whose only goal is already ticked off', async () => {
+    const goal = await seedGoal(tenant.scope, { countryCode: 'CU', name: 'Cuba' })
+    await achieveBucketListItem(tenant.scope, goal.id, '2018-01-09')
+
+    // On the list and reached: the map must not offer to add it a second time.
+    expect(await indexOf(tenant.scope, tenant.ownerUserId)).toEqual([
+      { countryCode: 'CU', itemId: goal.id, isAchieved: true },
+    ])
+    expect(await writePathGoal(tenant.scope, 'CU')).toEqual({ itemId: goal.id, isAchieved: true })
+  })
+
+  it('breaks a tie between two live goals exactly as the write path breaks it', async () => {
+    const north = await seedGoal(tenant.scope, { countryCode: 'IS', name: 'Iceland, the north' })
+    const south = await seedGoal(tenant.scope, { countryCode: 'IS', name: 'Iceland, the south' })
+
+    // The two orderings pick different rows out of this pair, so it is the pair that proves the
+    // two surfaces agree rather than merely coincide.
+    expect(CODE_POINT_FIRST < COLLATION_FIRST).toBe(true)
+    expect(CODE_POINT_FIRST.localeCompare(COLLATION_FIRST)).toBeGreaterThan(0)
+    renameGoal(north.id, CODE_POINT_FIRST)
+    renameGoal(south.id, COLLATION_FIRST)
+
+    const index = await indexOf(tenant.scope, tenant.ownerUserId)
+    const written = await writePathGoal(tenant.scope, 'IS')
+
+    expect(rowFor(index, 'IS')).toEqual({
+      countryCode: 'IS',
+      itemId: COLLATION_FIRST,
+      isAchieved: false,
+    })
+    expect(written).toEqual({ itemId: COLLATION_FIRST, isAchieved: false })
+  })
+
+  it('answers one row per country, in country-code order', async () => {
+    for (const countryCode of ['PE', 'JP', 'FR']) {
+      await seedGoal(tenant.scope, { countryCode })
+    }
+    await seedGoal(tenant.scope, { countryCode: 'FR', name: 'France, again' })
+
+    const index = await indexOf(tenant.scope, tenant.ownerUserId)
+    expect(index.map((row) => row.countryCode)).toEqual(['FR', 'JP', 'PE'])
+  })
+
+  it('answers nothing at all for a list with no country on it', async () => {
+    await seedGoal(tenant.scope, {
+      kind: 'place',
+      countryCode: 'JP',
+      name: 'A ryokan with its own onsen',
+    })
+
+    expect(await indexOf(tenant.scope, tenant.ownerUserId)).toEqual([])
+    expect(bucketListCountriesOf([])).toEqual([])
+    expect(await writePathGoal(tenant.scope, 'JP')).toBeNull()
+  })
+
+  it('never answers with another organisation’s bucket-list row', async () => {
+    const other = await harness.seedTenant('rival')
+    const ours = await seedGoal(tenant.scope, { countryCode: 'FR', name: 'France, ours' })
+    const theirs = await seedGoal(other.scope, { countryCode: 'FR', name: 'France, theirs' })
+    await seedGoal(other.scope, { countryCode: 'BR', name: 'Brazil, theirs' })
+
+    expect(await indexOf(tenant.scope, tenant.ownerUserId)).toEqual([
+      { countryCode: 'FR', itemId: ours.id, isAchieved: false },
+    ])
+    expect(await indexOf(other.scope, other.ownerUserId)).toEqual([
+      { countryCode: 'BR', itemId: expect.any(String), isAchieved: false },
+      { countryCode: 'FR', itemId: theirs.id, isAchieved: false },
+    ])
+    expect(await writePathGoal(tenant.scope, 'BR')).toBeNull()
+
+    // A third organisation reading with its own scope sees the same wall from the other side.
+    const colleague = await harness.seedTenant('third')
+    expect(await indexOf(colleague.scope, colleague.ownerUserId)).toEqual([])
+    expect(await writePathGoal(colleague.scope, 'FR')).toBeNull()
+  })
+
+  it('never answers with a colleague’s bucket list inside the same organisation', async () => {
+    const colleagueId = await tenant.addUser('Ana', 'member')
+    const colleagueScope = tenant.scopeFor(colleagueId, 'member')
+    const ours = await seedGoal(tenant.scope, { countryCode: 'NO', name: 'Norway, mine' })
+    const hers = await seedGoal(colleagueScope, { countryCode: 'NO', name: 'Norway, hers' })
+
+    // The atlas is one person's record of where they mean to go, not the workspace's.
+    expect(await indexOf(tenant.scope, tenant.ownerUserId)).toEqual([
+      { countryCode: 'NO', itemId: ours.id, isAchieved: false },
+    ])
+    expect(await indexOf(colleagueScope, colleagueId)).toEqual([
+      { countryCode: 'NO', itemId: hers.id, isAchieved: false },
+    ])
+    expect(await writePathGoal(tenant.scope, 'NO')).toEqual({
+      itemId: ours.id,
+      isAchieved: false,
+    })
+    expect(await writePathGoal(colleagueScope, 'NO')).toEqual({
+      itemId: hers.id,
+      isAchieved: false,
+    })
+  })
+
+  it('agrees with the write path about every country on a list that holds every awkward row', async () => {
+    // Enough live goals to push the interesting ones past the cap.
+    for (let position = 0; position < ATLAS_BUCKET_LIST_LIMIT; position += 1) {
+      await seedGoal(tenant.scope, { countryCode: syntheticCode(position), sortOrder: position })
+    }
+    // A country reached and set again, past the cap.
+    const reached = await seedGoal(tenant.scope, { countryCode: 'MX', name: 'Mexico, once' })
+    await achieveBucketListItem(tenant.scope, reached.id, '2019-03-02')
+    await seedGoal(tenant.scope, { countryCode: 'MX', name: 'Mexico, again', sortOrder: 99 })
+    // A country whose only goal is ticked off.
+    const done = await seedGoal(tenant.scope, { countryCode: 'CU', name: 'Cuba' })
+    await achieveBucketListItem(tenant.scope, done.id, '2018-01-09')
+    // Two live rivals whose ids the two orderings disagree about.
+    const north = await seedGoal(tenant.scope, { countryCode: 'IS', name: 'Iceland, the north' })
+    const south = await seedGoal(tenant.scope, { countryCode: 'IS', name: 'Iceland, the south' })
+    renameGoal(north.id, CODE_POINT_FIRST)
+    renameGoal(south.id, COLLATION_FIRST)
+    // A row written before codes were upper-cased, and two rows that are not countries at all.
+    const lowercased = await seedGoal(tenant.scope, { countryCode: 'FR', name: 'France' })
+    harness.sqlite
+      .prepare('update bucket_list_items set country_code = ? where id = ?')
+      .run('fr', lowercased.id)
+    await seedGoal(tenant.scope, { kind: 'region', countryCode: 'IT', name: 'The Dolomites' })
+    await seedGoal(tenant.scope, { countryCode: null, name: 'Wherever the ice is' })
+    // And a rival organisation holding the same countries.
+    const other = await harness.seedTenant('rival')
+    await seedGoal(other.scope, { countryCode: 'FR', name: 'France, theirs' })
+    await seedGoal(other.scope, { countryCode: 'IT', name: 'Italy, theirs' })
+
+    const index = await indexOf(tenant.scope, tenant.ownerUserId)
+
+    // The index reaches past the cap, which is the whole reason it exists.
+    expect(index.length).toBeGreaterThan(ATLAS_BUCKET_LIST_LIMIT)
+    for (const row of index) {
+      expect(await writePathGoal(tenant.scope, row.countryCode)).toEqual({
+        itemId: row.itemId,
+        isAchieved: row.isAchieved,
+      })
+    }
+    // And the countries it leaves out are exactly the ones the write path leaves out too: a
+    // region goal, a goal with no country, and a rival's list.
+    for (const countryCode of ['IT', 'ZW', 'BR']) {
+      expect(rowFor(index, countryCode)).toBeNull()
+      expect(await writePathGoal(tenant.scope, countryCode)).toBeNull()
+    }
   })
 })

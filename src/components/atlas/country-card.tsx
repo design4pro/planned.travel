@@ -47,8 +47,14 @@ import type {
  * through a date, and it makes every contrast figure conditional on geography.
  * `--color-map-card` is opaque so the ratios in `tokens.css` are true wherever
  * the card lands, and the boundary against the map is carried by whichever of
- * the face or the hairline wins on that particular fill — never below 3:1 on
- * any of the nine the atlas paints, in either theme.
+ * the face or the hairline wins on that particular fill. Measured against every
+ * ground the card can land on — paper land, hovered land, the sea and the five
+ * steps of the visited ramp — the winning edge never falls below 3.1987:1 in
+ * light (over hovered land) or 3.4754:1 in dark (over the same), well past the
+ * 3:1 a boundary owes, so the card clears WCAG 2.2 1.4.11 wherever the
+ * reader points. The two remaining tokens in the country group are 1px borders
+ * rather than fills; a card edge can only ever coincide with one across a
+ * single pixel, and the fill on both sides of that pixel clears 3:1 on its own.
  *
  * **The type is the whole argument.** The reference this screen is judged
  * against sets its labels at 9px and 10px in whatever the OS falls back to, at
@@ -66,7 +72,10 @@ import type {
  * labels and the em dash 7.02:1 / 7.18:1, the error sentence 10.71:1 / 11.37:1,
  * its icon 6.33:1 / 7.43:1, and the hairline 4.55:1 / 4.65:1. The floor across
  * the whole card is the 11px label tier, and it clears AA by better than half
- * again in both themes.
+ * again in both themes. The placeholder bars are the one non-text figure the
+ * card owns, and they sit on `--color-map-card-inset` at 1.19:1 light and
+ * 1.20:1 dark — the same reading every other skeleton in the product gives on
+ * a page.
  *
  * **Three states, one geometry.** A country with an itinerary prints its trips
  * and its trip months, headed `Trips · Places · First trip · Last trip`. A
@@ -184,9 +193,18 @@ const layout = {
    * the same density step as the card at `2xl` — two surfaces of the same family
    * can be on screen at once, and one of them growing alone would read as two
    * unrelated objects.
+   *
+   * The ceiling is the card's own measure, not a narrower one of its own. A
+   * pill prints exactly one thing, and a ceiling below the card's clipped the
+   * only thing it has to say: measured across all 250 names in the table, one
+   * of them — `South Georgia & South Sandwich Islands`, 280px — overran the old
+   * 224px and arrived already shortened, on a surface with no second line to
+   * shorten *into*. At the card's own measure none of the 250 does, the two
+   * atlas surfaces read as one object at two sizes, and 288px is a width a
+   * 360px viewport has already been shown to hold, because the card takes it.
    */
   compact:
-    'inline-flex h-8 max-w-56 items-center rounded-full px-3 2xl:h-9 2xl:px-4',
+    'inline-flex h-8 max-w-72 items-center rounded-full px-3 2xl:h-9 2xl:max-w-80 2xl:px-4',
   compactName:
     'min-w-0 truncate font-display text-label font-bold tracking-tight text-ink',
   header:
@@ -270,7 +288,7 @@ const layout = {
  * loses nothing; a reader glancing across a map gains the answer half a beat
  * earlier.
  *
- * `--color-brand` on the card face measures 5.36:1 light and 7.31:1 dark, and
+ * `--color-brand` on the card face measures 7.09:1 light and 7.16:1 dark, and
  * `--color-ink-3` 7.02:1 and 7.18:1 — every one of them past the 3:1 a
  * non-text graphic owes, several times over.
  */
@@ -401,10 +419,15 @@ function BodyStrut() {
  * an 18.2px line, not 16. The invisible strut inside makes the browser do the
  * measuring instead.
  *
- * The bar keeps `Skeleton`'s own `--color-surface-inset`, measured at 1.19:1
- * against the light card face and 1.13:1 against the dark one. `--color-surface-2`
- * was tried first and dropped: it lands at 1.13:1 in light and 1.03:1 in dark,
- * where the bars stop being visible at all.
+ * The bar stands on `--color-map-card-inset`, which is the card's own ground
+ * rather than the page's. `Skeleton`'s default `--color-surface-inset` is
+ * measured against `--color-surface`, and over the darker over-map face it
+ * falls to 1.13:1 where the same bar on a page reads 1.20:1 — a third quieter,
+ * for no reason but which surface it happened to borrow. The card's own token
+ * lands on 1.19:1 in light and 1.20:1 in dark against `--color-map-card`, so a
+ * card waiting over the map reads exactly as loud as one waiting on a page.
+ * `--color-surface-2` was tried before either and dropped: it lands at 1.13:1
+ * in light and 1.03:1 in dark, where the bars stop being visible at all.
  */
 function LineSkeleton({
   width,
@@ -421,7 +444,7 @@ function LineSkeleton({
       <span className="invisible">{STRUT}</span>
       <Skeleton
         radius="sm"
-        className={cn('absolute inset-y-0.5 left-0', width)}
+        className={cn('absolute inset-y-0.5 left-0 bg-map-card-inset', width)}
       />
     </span>
   )
@@ -692,7 +715,10 @@ export const CountryCardSkeleton = React.forwardRef<
         <div data-part="header" className={layout.header}>
           {/* Matched to a flag glyph's own box rather than to a round number, so
               the header's baseline does not move when the country lands. */}
-          <Skeleton radius="sm" className="h-3.5 w-5 shrink-0" />
+          <Skeleton
+            radius="sm"
+            className="h-3.5 w-5 shrink-0 bg-map-card-inset"
+          />
           {/* `flex-1` is load-bearing: the name line carries `min-w-0` and
               `truncate`, so as a flex item with only an invisible strut inside
               it it would measure four pixels wide and clip its own bar away. */}

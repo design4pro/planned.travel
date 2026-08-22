@@ -17,7 +17,7 @@ import {
 } from '#/components/modules/shared'
 import { cn } from '#/lib/cn'
 import { countryName } from '#/lib/atlas/country-names'
-import { visitSpan } from '#/lib/atlas/visit-span'
+import { UNRECORDED_VISIT_LABEL, visitSpan } from '#/lib/atlas/visit-span'
 import { pluralise } from '#/lib/format'
 import {
   addCountryToBucketListFn,
@@ -27,6 +27,7 @@ import {
 } from '#/server/fns/atlas'
 
 import type { ConfirmRequest } from '#/components/modules/shared'
+import type { AtlasCountryState } from '#/server/fns/atlas'
 
 /**
  * The two things a traveller can do to a country without planning a trip to it.
@@ -50,12 +51,37 @@ import type { ConfirmRequest } from '#/components/modules/shared'
  * from two different answers.
  *
  * **The intention paints first, and rolls back where the reader can see it.**
- * `useOptimistic` claims the row's new state the instant the button is pressed
- * and withdraws the claim when the write settles — after the invalidation on
- * success, so the row never flickers through its old value on the way to its new
- * one, and immediately on failure, so the row visibly returns to what it was
- * while the message underneath says why. The claim is keyed by country code, so
- * a reader who selects somewhere else mid-flight cannot inherit the claim.
+ * `useOptimistic` claims the row's new state the instant the button is pressed,
+ * and the claim is withdrawn immediately on failure, so the row visibly returns
+ * to what it was while the message underneath says why. The claim is keyed by
+ * country code, so a reader who selects somewhere else mid-flight cannot inherit
+ * the claim.
+ *
+ * **A successful claim is held until the loader's answer replaces it, not until
+ * the write returns.** Those are not the same moment and the gap between them is
+ * visible. `useAction.run` resolves after `await router.invalidate()`, which
+ * means the loader has *fetched* — but TanStack Router commits the new
+ * `loaderData` inside a React transition, while withdrawing the claim is a
+ * default-priority update that renders first, with the props the block already
+ * had. Withdrawing on `run` therefore paints the pre-write row again for the
+ * length of the screen's transition render — measured at ~75ms on the atlas at
+ * 360px, with the success toast already on screen saying the opposite. So the
+ * claim is instead held by {@link useClaimHold} until the incoming props carry
+ * the value that was claimed, and dropped after {@link CLAIM_HOLD_MS} if they
+ * never do, so a claim can never outlive the write that made it for good.
+ *
+ * **The offer a claim creates is addressed by the answer that created it.** The
+ * bucket-list entry is removed by row id, and for the whole of the hold above
+ * there is no row in the props to read one from — the claim says the country is
+ * on the list before the loader has said which entry it is. So the id is taken
+ * from the write's own answer, which is the same {@link AtlasCountryState} the
+ * loader will eventually carry, and held beside the claim until the props do.
+ * Without it the "Remove" the claim offers would be a control that runs nothing,
+ * which is the one thing this block is here to prevent. Nothing in the block
+ * ever offers a removal it cannot address: the row's control is derived from
+ * {@link CountryActionsProps.bucketGoal} *or* that held answer, so when there is
+ * neither, the offer is the additive one — which the server treats as
+ * idempotent — rather than a press that goes nowhere.
  *
  * **Nothing moves.** The message strip under the rows is a stated box at every
  * moment of the block's life — the resting hint, a failure, and the gap between
@@ -208,10 +234,11 @@ const layout = {
    * a line only a screen reader hears below it.
    *
    * The row's copy changes the instant a button is pressed — "A visit with no
-   * trip behind it." becomes "Recorded without a trip." — and those two do not
-   * wrap to the same number of lines in a 138px column. Reserving the two lines
-   * every row can need makes the block one height in rest, in flight and after a
-   * failure, which is the whole of §2h's second clause for this surface.
+   * trip behind it." becomes "Dates not recorded", and "Somewhere you mean to
+   * go." becomes "Waiting for its turn." — and no two of those wrap to the same
+   * number of lines in a 138px column. Reserving the two lines every row can
+   * need makes the block one height in rest, in flight and after a failure,
+   * which is the whole of §2h's second clause for this surface.
    *
    * On a phone the same two lines are the difference between the second control
    * being on the card and being under it, and every fact they carry is already
@@ -272,9 +299,14 @@ function spanLine(visit: CountryActionsVisit): string {
 }
 
 /**
- * What the atlas row says. The optimistic case — claimed as visited with no row
- * to read yet — states what the write is about to produce, which is a visit with
- * no dates behind it.
+ * What the atlas row says.
+ *
+ * The optimistic case — claimed as visited with no row to read yet — is written
+ * in the *same words* the row it is about to become will use. A mark made from
+ * this block produces a single visit with no days recorded, which the settled
+ * row prints as {@link UNRECORDED_VISIT_LABEL}; a placeholder that said the same
+ * thing differently made the caption change a second time, eighty milliseconds
+ * after the state had stopped changing, for a fact that had not moved.
  */
 function visitCopy(
   visited: boolean,
@@ -287,7 +319,7 @@ function visitCopy(
     }
   }
   if (visit === null) {
-    return { title: 'Visited', caption: 'Recorded without a trip.' }
+    return { title: 'Visited', caption: UNRECORDED_VISIT_LABEL }
   }
   const dates = spanLine(visit)
   return {
@@ -477,6 +509,35 @@ const unmarkVisited = readable(unmarkCountryVisitedFn)
 const addGoalToList = readable(addCountryToBucketListFn)
 const dropGoalFromList = readable(removeCountryFromBucketListFn)
 
+/* ------------------------------------------------------------------ answers */
+
+/** A bucket-list row the server has confirmed, and the country it is for. */
+interface HeldGoal {
+  readonly code: string
+  readonly goal: CountryActionsGoal
+}
+
+/**
+ * The bucket-list row inside a write's answer, in the shape this block holds.
+ *
+ * Optional at every step on purpose. The answer is a network payload, and the
+ * only thing the block does with a missing one is decline to hold a row it was
+ * not given — which leaves the control offering the additive write, the same
+ * place it started. Narrowing to the three fields the block reads also keeps the
+ * held value from carrying a name or a note that nothing here prints.
+ */
+function goalIn(state: AtlasCountryState | null): CountryActionsGoal | null {
+  const goal = state?.bucketGoal ?? null
+  if (goal === null || goal.id === '') {
+    return null
+  }
+  return {
+    id: goal.id,
+    targetYear: goal.targetYear,
+    isAchieved: goal.isAchieved,
+  }
+}
+
 /* ----------------------------------------------------------------- presence */
 
 /**
@@ -520,6 +581,94 @@ function useMessagePresence(error: string | null): MessagePresence {
   return { text: shown ?? '', state }
 }
 
+/* --------------------------------------------------------------- settlement */
+
+/**
+ * The longest a settled claim may stand in for an answer that never arrived.
+ *
+ * The claim is normally withdrawn the frame the loader's new row renders, which
+ * is one transition render after the write returns — under a tenth of a second
+ * on the shelf, and this ceiling is never reached. It exists for the case the
+ * happy path cannot cover: a write the server accepted whose row the loader
+ * does not come back with, in which case the block would otherwise paint a
+ * state nothing behind it agrees with, for as long as it stayed mounted. A
+ * second and a bit is long enough that no ordinary commit races it, and short
+ * enough that the row corrects itself while the reader is still looking at it.
+ */
+const CLAIM_HOLD_MS = 1200
+
+interface ClaimHold {
+  /**
+   * Resolves once the row's incoming value reads `want` — or after
+   * {@link CLAIM_HOLD_MS}, whichever comes first. Awaited inside the optimistic
+   * claim, so the claim is withdrawn on the far side of the loader's commit
+   * rather than on the far side of the request.
+   */
+  readonly settled: (want: boolean) => Promise<void>
+  /** Gives up whatever is being waited for, resolving it now. */
+  readonly release: () => void
+}
+
+interface ClaimWaiter {
+  readonly want: boolean
+  readonly resolve: () => void
+  readonly timer: number
+}
+
+/**
+ * Watches one row's incoming value and reports when it catches up with a claim.
+ *
+ * `actual` is read through a ref updated in an effect, because the question is
+ * asked from a promise continuation rather than from a render: by the time the
+ * write has returned, the value in scope is the one the last commit carried, and
+ * the only reliable "has it committed yet" is the commit itself.
+ */
+function useClaimHold(actual: boolean): ClaimHold {
+  const actualRef = React.useRef(actual)
+  const waiterRef = React.useRef<ClaimWaiter | null>(null)
+
+  const release = React.useCallback((): void => {
+    const waiter = waiterRef.current
+    if (waiter === null) return
+    waiterRef.current = null
+    window.clearTimeout(waiter.timer)
+    waiter.resolve()
+  }, [])
+
+  React.useEffect(() => {
+    actualRef.current = actual
+    if (waiterRef.current?.want === actual) {
+      release()
+    }
+  }, [actual, release])
+
+  // Unmounting is the last moment anything can be waited for: the promise has
+  // to be resolved or the claim's `finally` never runs and the reducer keeps a
+  // claim for a block that is gone.
+  React.useEffect(() => release, [release])
+
+  const settled = React.useCallback(
+    (want: boolean): Promise<void> =>
+      new Promise<void>((resolve) => {
+        // A second press supersedes the first: its claim is the newer one and
+        // is the one being painted, so the older claim has nothing left to say.
+        release()
+        if (actualRef.current === want) {
+          resolve()
+          return
+        }
+        const timer = window.setTimeout(() => {
+          waiterRef.current = null
+          resolve()
+        }, CLAIM_HOLD_MS)
+        waiterRef.current = { want, resolve, timer }
+      }),
+    [release],
+  )
+
+  return React.useMemo(() => ({ settled, release }), [settled, release])
+}
+
 /* -------------------------------------------------------------------- block */
 
 const HEADINGS = { 2: 'h2', 3: 'h3', 4: 'h4' } as const
@@ -552,6 +701,27 @@ export const CountryActions = React.forwardRef<
     const goalKey = `${code}:goal`
     const visited = overlay.get(visitKey) ?? visit !== null
     const listed = overlay.get(goalKey) ?? bucketGoal !== null
+
+    /**
+     * The bucket-list row the last successful add reported, kept for as long as
+     * the props have not caught up with it.
+     *
+     * Held with the country it belongs to for the same reason the claims are
+     * keyed by country: a row written for France must not be the row a press
+     * removes after the reader has selected Japan.
+     */
+    const [heldGoal, setHeldGoal] = React.useState<HeldGoal | null>(null)
+    /** The props are the record; the held answer only stands in for a gap. */
+    const goalRow =
+      bucketGoal ??
+      (heldGoal !== null && heldGoal.code === code ? heldGoal.goal : null)
+
+    /**
+     * When each row's claim may be given back: the commit that carries the
+     * loader's new answer, not the promise the write returned.
+     */
+    const visitHold = useClaimHold(visit !== null)
+    const goalHold = useClaimHold(bucketGoal !== null)
 
     const closeConfirm = React.useCallback(() => setConfirm(null), [])
 
@@ -593,7 +763,19 @@ export const CountryActions = React.forwardRef<
     const goalPending = addGoal.pending || dropGoal.pending
     const busy = visitPending || goalPending
     const visitIntent = rowIntent(mark.pending, unmark.pending, visited)
-    const goalIntent = rowIntent(addGoal.pending, dropGoal.pending, listed)
+    /**
+     * The row a press on the bucket-list control would remove, which is what
+     * decides whether a removal is the thing on offer at all. Reading the
+     * addressable row rather than the painted one is what keeps the offer and
+     * the press in step: "Remove" is shown only where there is something to
+     * send it about.
+     */
+    const goalTarget = listed ? goalRow : null
+    const goalIntent = rowIntent(
+      addGoal.pending,
+      dropGoal.pending,
+      goalTarget !== null,
+    )
 
     /**
      * One strip, four possible writers. Each write clears the other three before
@@ -616,13 +798,27 @@ export const CountryActions = React.forwardRef<
       resetDrop()
     }, [resetVisit, resetUnmark, resetAdd, resetDrop])
 
+    const releaseVisit = visitHold.release
+    const releaseGoal = goalHold.release
+
     // A new country is a new subject: whatever the last one failed at is not
-    // this one's news, and the confirmation raised for it is not this one's
-    // question either.
+    // this one's news, the confirmation raised for it is not this one's
+    // question, and a claim still waiting for the last country's row is waiting
+    // for an answer this block will never read again.
     React.useEffect(() => {
       clearMessages()
       setConfirm(null)
-    }, [code, clearMessages])
+      releaseVisit()
+      releaseGoal()
+      setHeldGoal(null)
+    }, [code, clearMessages, releaseVisit, releaseGoal])
+
+    // The props are the record as soon as they carry one, so the answer that was
+    // standing in for them is dropped rather than left to resurface if the entry
+    // is later removed from somewhere else on the screen.
+    React.useEffect(() => {
+      if (bucketGoal !== null) setHeldGoal(null)
+    }, [bucketGoal])
 
     /**
      * Brings the failure into view in whatever is clipping the block.
@@ -669,11 +865,38 @@ export const CountryActions = React.forwardRef<
       node?.focus()
     }, [busy])
 
+    /**
+     * One write, from the press to the moment the claim it made can be given
+     * back.
+     *
+     * `useAction.run` answers `null` for a failure and the server's own state
+     * for a success, and never rejects — so a failure gives the claim back on
+     * the spot, which is the rollback the reader is owed, and a success keeps it
+     * until the row it produced has actually rendered.
+     *
+     * The answer itself is handed to `received` before the claim is held, so a
+     * row that only exists in the server's reply — the bucket-list entry's id —
+     * is on hand for the whole of that hold rather than after it.
+     */
+    async function commit<TResult>(
+      hold: ClaimHold,
+      want: boolean,
+      run: () => Promise<TResult | null>,
+      received?: (result: TResult) => void,
+    ): Promise<void> {
+      const result = await run()
+      if (result === null) return
+      received?.(result)
+      await hold.settled(want)
+    }
+
     function runMark(): void {
       clearMessages()
       pressedRef.current = 'visit'
       void overlay.claim([[visitKey, true]], () =>
-        mark.run({ data: { countryCode: code } }),
+        commit(visitHold, true, () =>
+          mark.run({ data: { countryCode: code } }),
+        ),
       )
     }
 
@@ -681,7 +904,9 @@ export const CountryActions = React.forwardRef<
       clearMessages()
       pressedRef.current = 'visit'
       void overlay.claim([[visitKey, false]], () =>
-        unmark.run({ data: { countryCode: code } }),
+        commit(visitHold, false, () =>
+          unmark.run({ data: { countryCode: code } }),
+        ),
       )
     }
 
@@ -689,7 +914,17 @@ export const CountryActions = React.forwardRef<
       clearMessages()
       pressedRef.current = 'goal'
       void overlay.claim([[goalKey, true]], () =>
-        addGoal.run({ data: { countryCode: code } }),
+        commit(
+          goalHold,
+          true,
+          () => addGoal.run({ data: { countryCode: code } }),
+          (state) => {
+            // The entry the server wrote, so the "Remove" this claim puts on
+            // screen has the id it needs before the loader supplies one.
+            const goal = goalIn(state)
+            if (goal !== null) setHeldGoal({ code, goal })
+          },
+        ),
       )
     }
 
@@ -697,7 +932,16 @@ export const CountryActions = React.forwardRef<
       clearMessages()
       pressedRef.current = 'goal'
       void overlay.claim([[goalKey, false]], () =>
-        dropGoal.run({ data: { itemId } }),
+        commit(
+          goalHold,
+          false,
+          () => dropGoal.run({ data: { itemId } }),
+          // The row is gone. Dropping it on success rather than on the press
+          // keeps it standing if the removal is refused, so a failed press
+          // leaves the offer it failed at rather than an invitation to add
+          // something that is already there.
+          () => setHeldGoal(null),
+        ),
       )
     }
 
@@ -719,19 +963,17 @@ export const CountryActions = React.forwardRef<
     }
 
     function onGoalPress(): void {
-      if (goalIntent === 'add') {
+      // The row this control is pointing at, which decides which write the
+      // press sends. With no row to address, the press is the additive one —
+      // the same write the label offers in that state, and one the server
+      // treats as idempotent. No press through this control does nothing.
+      const goal = goalTarget
+      if (goal === null) {
         runAddGoal()
         return
       }
-      if (bucketGoal === null) {
-        // Pointing at a removal with no row to address. The claim that produces
-        // that is only held while the add is in flight, and the intent above
-        // reads the flight rather than the claim, so this is a guard against a
-        // state that cannot be reached rather than a path through the block.
-        return
-      }
-      const itemId = bucketGoal.id
-      if (bucketGoal.isAchieved) {
+      const itemId = goal.id
+      if (goal.isAchieved) {
         setConfirm({
           title: `Remove ${name} from your bucket list?`,
           description:
@@ -745,7 +987,7 @@ export const CountryActions = React.forwardRef<
     }
 
     const visitText = visitCopy(visited, visit)
-    const goalText = goalCopy(listed, bucketGoal)
+    const goalText = goalCopy(listed, goalRow)
     const Heading = HEADINGS[headingLevel]
     const visitTitleId = `${rowId}-visit`
     const goalTitleId = `${rowId}-goal`

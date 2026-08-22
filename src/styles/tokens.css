@@ -193,8 +193,8 @@
      (WCAG 2.2 1.4.11). It is carried by whichever of the face or the hairline
      wins on the ground the card happens to cover — face / edge / best, against
      every fill the atlas paints:
-       country-land               1.19 / 3.71 / 3.71
-       country-land-hover         1.42 / 3.11 / 3.11
+       country-land               1.19 / 3.82 / 3.82
+       country-land-hover         1.42 / 3.20 / 3.20
        basemap water              1.39 / 3.28 / 3.28
        country-visited            5.61 / 1.23 / 5.61
        country-visited-recent     7.09 / 1.56 / 7.09
@@ -207,9 +207,24 @@
      `--color-map-card-edge` is also the two visible sides of the card's
      pointer. The pointer is the card's own corner turned forty-five degrees,
      not a second object, so it takes the card's ground and the card's hairline
-     and cannot drift from either. */
+     and cannot drift from either.
+
+     `--color-map-card-inset` is the bar a placeholder draws on that card while
+     its figures are in the air — the card's own version of
+     `--color-surface-inset`, which is what every other skeleton in the product
+     stands on. It exists for the same reason the face does: the over-map card
+     is not the page, and a placeholder that borrows the page's inset is
+     measured against the wrong ground. In light the two values coincide,
+     because the light card face and the light page surface do; in dark they
+     part company, and the page's inset over the darker card face falls to
+     1.1325:1 where the same bar on a page reads 1.1947:1. Tuned so the card's
+     own bar lands on 1.1914:1 in light and 1.1962:1 in dark — within two
+     thousandths of what `--color-surface-inset` reads on `--color-surface` in
+     each theme, so a card waiting over the map is exactly as loud as one
+     waiting on a page. */
   --color-map-card: #ffffff;
   --color-map-card-edge: #78766e; /* 4.55:1 on the card face */
+  --color-map-card-inset: #edebe6; /* 1.19:1 on the card face */
 
   /* -------------------------------------------------------------- scrollbar */
   --color-scrollbar-thumb: rgb(22 21 15 / 0.18);
@@ -364,6 +379,11 @@
          country-visited-selected 10.38 / 2.23 / 10.38 */
     --color-map-card: #1f1f1c;
     --color-map-card-edge: #8a8880; /* 4.65:1 on the card face */
+    /* Lifted off the page's own inset (`#292926`), which lands at 1.1325:1 on
+       this darker face where the same bar on a page reads 1.1947:1 — the
+       placeholder was a third quieter over the map than it is on a page, for
+       no reason other than which ground it happened to borrow. */
+    --color-map-card-inset: #2d2d2a; /* 1.1962:1 on the card face */
 
     --color-scrollbar-thumb: rgb(255 255 255 / 0.16);
     --color-scrollbar-thumb-hover: rgb(255 255 255 / 0.28);
@@ -455,6 +475,7 @@
 
   --color-map-card: #1f1f1c;
   --color-map-card-edge: #8a8880;
+  --color-map-card-inset: #2d2d2a;
 
   --color-scrollbar-thumb: rgb(255 255 255 / 0.16);
   --color-scrollbar-thumb-hover: rgb(255 255 255 / 0.28);

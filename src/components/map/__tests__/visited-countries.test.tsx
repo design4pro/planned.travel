@@ -421,6 +421,36 @@ function serveDetail(): Array<string> {
 }
 
 /**
+ * A network that has taken the request and not answered it yet.
+ *
+ * The slow case and the failed case are one requirement — the reader is given a
+ * whole map either way — but they are not one code path, and a request left in
+ * flight is the one a real reader on a train meets. `deliver` closes it, so a
+ * test can assert about the map both before and after the wait.
+ */
+function deferDetail(): {
+  readonly asked: Array<string>
+  readonly deliver: () => void
+} {
+  let answer: (() => void) | null = null
+  const asked = stubFetch(
+    () =>
+      new Promise<Response>((resolve_) => {
+        answer = () => {
+          resolve_(new Response(DETAIL_ASSET))
+        }
+      }),
+  )
+  return {
+    asked,
+    deliver: () => {
+      if (answer === null) throw new Error('nothing has asked for the cut yet')
+      answer()
+    },
+  }
+}
+
+/**
  * Let the finer-cut request settle, and let React commit what it caused.
  *
  * A macrotask rather than a microtask flush: the request, the decode and the
@@ -986,6 +1016,44 @@ describe('VisitedCountries', () => {
     ])
   })
 
+  it('calls back once per crossing, however many frames the pointer spends', () => {
+    const map = new FakeMap()
+    const onHoverChange = vi.fn()
+    render(tree(map, { visits: VISITS, onHoverChange }))
+
+    /** One pointer sweep: eight frames of travel without leaving the country. */
+    const sweep = (across: number): void => {
+      for (let frame = 0; frame < 8; frame += 1) {
+        map.emit('mousemove', { point: { x: across + frame, y: 240 } })
+      }
+    }
+
+    map.hits = [{ id: 'FR' }, { id: 'FR' }]
+    sweep(120)
+    map.hits = [{ id: 'IT' }]
+    sweep(200)
+    map.hits = []
+    sweep(280)
+
+    // Twenty-four frames of pointer travel, three things worth telling anybody
+    // about. This is the whole of the `onHoverChange` contract: a consumer is
+    // free to lift the answer into React state, because crossing a border is
+    // what fires it and moving the mouse is not. A callback that fired per frame
+    // would re-render the atlas — its shelf, its list, its 237-feature payload
+    // memo — at the refresh rate of the display.
+    expect(onHoverChange.mock.calls).toEqual([['FR'], ['IT'], [null]])
+    // And the same restraint on the map: two lights on, two lights off.
+    expect(map.featureStates).toEqual([
+      { source: VISITED_COUNTRY_SOURCE_ID, id: 'FR', state: { hover: true } },
+      { source: VISITED_COUNTRY_SOURCE_ID, id: 'FR', state: { hover: false } },
+      { source: VISITED_COUNTRY_SOURCE_ID, id: 'IT', state: { hover: true } },
+      { source: VISITED_COUNTRY_SOURCE_ID, id: 'IT', state: { hover: false } },
+    ])
+    // The hit test itself does run every frame, which is the cheap half of the
+    // deal and the reason the expensive half can be skipped.
+    expect(map.queries).toHaveLength(24)
+  })
+
   it('drops the hover when the pointer leaves, and when a finger arrives', () => {
     const map = new FakeMap()
     render(tree(map, { visits: VISITS }))
@@ -1257,6 +1325,54 @@ describe('VisitedCountries and the finer cut', () => {
       ramp: 'visitedRecent',
     })
     expect(finer.get('DE')?.properties.visited).toBe(false)
+  })
+
+  it('is a whole map for as long as the finer cut takes to arrive', async () => {
+    const { countries, draw } = await freshLayer()
+    const slow = deferDetail()
+    detailRequests = slow.asked
+    const map = new FakeMap()
+    const onHoverChange = vi.fn()
+    const onSelect = vi.fn()
+    const said = watchConsole()
+    render(draw(map, { visits: VISITS, onHoverChange, onSelect }))
+
+    // A turn of the event loop has passed and the request has not answered. On
+    // a real connection this is most of a second; there is no spinner, no
+    // skeleton and no half-drawn world, because the bundled cut is already on
+    // screen and complete.
+    await settleDetail()
+    expect(detailRequests).toEqual([countries.COUNTRY_DETAIL_URL])
+    expect(sourceOf(map).setDataCalls).toBe(0)
+    expect(featuresOf(sourceOf(map).data).size).toBe(
+      countries.countryFeatures().features.length,
+    )
+
+    map.hits = [{ id: 'FR' }]
+    map.emit('mousemove')
+    expect(onHoverChange).toHaveBeenLastCalledWith('FR')
+    map.emit('click')
+    expect(onSelect).toHaveBeenCalledWith('FR')
+
+    slow.deliver()
+    await settleDetail()
+
+    // The upgrade lands under a pointer that never let go, and costs exactly
+    // what it costs when the network is quick: one re-tile, no source churn, and
+    // not one feature state rewritten — so France does not blink as its
+    // coastline sharpens.
+    expect(sourceOf(map).setDataCalls).toBe(1)
+    expect(featuresOf(sourceOf(map).data).size).toBe(
+      countries.countryDetail()?.manifest.codes,
+    )
+    expect(map.ops.filter((op) => op.kind === 'removeSource')).toEqual([])
+    expect(map.featureStates.at(-1)).toEqual({
+      source: VISITED_COUNTRY_SOURCE_ID,
+      id: 'FR',
+      state: { hover: true },
+    })
+    // Neither the wait nor the arrival is something the reader is told about.
+    expect(said()).toEqual([])
   })
 
   it('fills a country the bundled cut could not draw at all', async () => {

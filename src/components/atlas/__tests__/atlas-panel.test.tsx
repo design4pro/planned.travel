@@ -37,13 +37,49 @@ vi.mock('#/server/fns/atlas', () => ({
 }))
 vi.mock('@tanstack/react-router', () => ({ useRouter: () => router }))
 
+/** The id the stood-in `addCountryToBucketListFn` reports for a new entry. */
+const CREATED_GOAL_ID = 'goal-created-nz'
+
+/**
+ * The shape every atlas write answers with. Only the bucket-list half is read
+ * by the pane's action block — it is the id an entry created here is removed
+ * by, and the props have none until the loader commits.
+ */
+function answer(
+  bucketGoal: {
+    readonly id: string
+    readonly targetYear: number | null
+    readonly isAchieved: boolean
+  } | null,
+) {
+  return {
+    countryCode: 'NZ',
+    continent: 'Oceania',
+    visit: null,
+    bucketGoal:
+      bucketGoal === null
+        ? null
+        : {
+            id: bucketGoal.id,
+            name: 'New Zealand',
+            targetYear: bucketGoal.targetYear,
+            note: null,
+            isAchieved: bucketGoal.isAchieved,
+            achievedOn: null,
+          },
+  }
+}
+
 beforeEach(() => {
   // `restoreMocks` reaches spies, not the plain `vi.fn()`s held above.
   vi.clearAllMocks()
   router.invalidate.mockResolvedValue(undefined)
-  for (const fn of [atlas.mark, atlas.unmark, atlas.add, atlas.drop]) {
-    fn.mockResolvedValue(undefined)
-  }
+  atlas.mark.mockResolvedValue(answer(null))
+  atlas.unmark.mockResolvedValue(answer(null))
+  atlas.add.mockResolvedValue(
+    answer({ id: CREATED_GOAL_ID, targetYear: null, isAchieved: false }),
+  )
+  atlas.drop.mockResolvedValue(answer(null))
 })
 
 const FRANCE: CountriesListCountry = {
@@ -350,6 +386,23 @@ describe('the country section', () => {
     },
   )
 
+  /**
+   * The shelf gives this pane 156px on a phone and a country's facts plus its
+   * two writes are 264px, so the fold is permanent. Fading the last grid step
+   * of the viewport is what makes the fold read as a scroll rather than as a
+   * severed card — and it is on the viewport, not on the scroll root, so the
+   * bar down the right keeps its contrast where it matters most.
+   */
+  it('says the country pane continues past its fold', () => {
+    const { container } = panel({ tab: 'country', selectedCode: 'FR' })
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-radix-scroll-area-viewport]',
+    )
+
+    expect(viewport?.className).toContain('mask-image')
+    expect(viewport?.className).toContain('var(--space-4)')
+  })
+
   it('draws no back button when the host cannot clear the selection', () => {
     panel({ tab: 'country', selectedCode: 'FR' })
     expect(screen.queryByRole('button', { name: 'All countries' })).toBeNull()
@@ -411,6 +464,33 @@ describe('the country section', () => {
     ).toBeTruthy()
     await user.click(mark)
     expect(atlas.mark).toHaveBeenCalledWith({ data: { countryCode: 'NZ' } })
+  })
+
+  /**
+   * The pane is the keyboard and touch route to both writes, so the undo the
+   * block promises under them has to be reachable from here too — including in
+   * the window between a successful add and the loader's answer, where the
+   * entry exists on the server and the panel's props do not carry it yet.
+   */
+  it('undoes an add made from the pane, before the loader carries it', async () => {
+    const user = userEvent.setup()
+    panel({ tab: 'country', selectedCode: 'NZ' })
+
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    await user.click(
+      within(card).getByRole('button', { name: 'Add to list, New Zealand' }),
+    )
+
+    const undo = await within(card).findByRole('button', {
+      name: 'Remove New Zealand from your bucket list',
+    })
+    expect((undo as HTMLButtonElement).disabled).toBe(false)
+
+    await user.click(undo)
+    expect(atlas.drop).toHaveBeenCalledWith({
+      data: { itemId: CREATED_GOAL_ID },
+    })
+    expect(atlas.add).toHaveBeenCalledTimes(1)
   })
 
   it('offers the inverse of both writes beside a country on the record', () => {
@@ -514,6 +594,45 @@ describe('the country section', () => {
     const card = screen.getByRole('article', { name: 'New Zealand' })
     expect(within(card).getByText('Your record')).toBeTruthy()
     expect(card.textContent).toContain('Oceania')
+  })
+
+  /**
+   * The other order, which is the one a browser actually runs: the loader
+   * fetches, `router.invalidate()` resolves, and the new `loaderData` is
+   * committed a render later inside a transition. The row must not fall back
+   * through "Not visited" in that gap — the success toast is already on screen
+   * saying the opposite of what it would read.
+   */
+  it('does not flash the pre-write row while the loader commits', async () => {
+    const user = userEvent.setup()
+    const NEW_ZEALAND: CountriesListCountry = {
+      countryCode: 'NZ',
+      continent: 'Oceania',
+      firstVisitedOn: null,
+      lastVisitedOn: null,
+      visitCount: 1,
+      note: null,
+      hasOutline: true,
+    }
+    const before = props({ tab: 'country', selectedCode: 'NZ' })
+    const view = render(<AtlasPanel {...before} />)
+
+    await user.click(
+      screen.getByRole('button', { name: 'Mark visited, New Zealand' }),
+    )
+
+    // The write has returned and the loader has been re-run; nothing has
+    // re-rendered the panel yet.
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    expect(card.textContent).toContain('Visited')
+    expect(card.textContent).not.toContain('Not visited')
+
+    view.rerender(
+      <AtlasPanel {...before} countries={[FRANCE, JAPAN, NEW_ZEALAND]} />,
+    )
+    const settled = screen.getByRole('article', { name: 'New Zealand' })
+    expect(settled.textContent).toContain('Visited')
+    expect(settled.textContent).not.toContain('Not visited')
   })
 
   /**

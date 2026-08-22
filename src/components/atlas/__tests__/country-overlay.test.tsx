@@ -512,8 +512,8 @@ describe('placeCountrySurface', () => {
       expect(spot?.side).toBe('bottom')
       expect(
         spot?.tip,
-        'a tip pointing into the surface itself is a lie',
-      ).toBeNull()
+        'the middle of the country is still above it, so the tip still points at it',
+      ).not.toBeNull()
       expect(spot?.height).toBe(288)
       expect(
         (spot?.y ?? 0) + (spot?.height ?? 0),
@@ -523,6 +523,62 @@ describe('placeCountrySurface', () => {
         spot?.y,
         'and it leaves the top of the country and the world above it on screen',
       ).toBeGreaterThan(220)
+    })
+
+    /**
+     * The phone's real numbers, and the one dock that may not point.
+     *
+     * A 360px handset frames a country 128px tall in 444 of clear map, and the
+     * sheet's floor stops it 228px down — under the middle of the country. A tip
+     * on that edge would be pointing at land the surface is standing on, so it is
+     * dropped; the flag and the name in the card are what say which country it
+     * is, and the map behind still has it outlined.
+     */
+    it('drops the tip when the dock reaches past the middle of the shape', () => {
+      const spot = placeCountrySurface({
+        anchor: { x: 124, y: 167, width: 160, height: 128 },
+        size: { width: 336, height: 368 },
+        areas: [{ x: 12, y: 72, width: 336, height: 444 }],
+        minHeight: 288,
+      })
+      expect(spot?.side).toBe('bottom')
+      expect(spot?.height).toBe(288)
+      expect(spot?.tip).toBeNull()
+    })
+
+    /**
+     * The desktop's real numbers, and the reason the shelf is no longer touched.
+     *
+     * 1440×900 leaves 335 pixels of map above the shelf and a panel carrying the
+     * card *and* both writes is 674×275, so no side of a framed country fits and
+     * the surface used to answer that by taking the looser area whole — flat
+     * across the shelf's tab strip, with the tab named "Country" unpressable.
+     * Docked down the left of the clear map it takes thirty pixels of the west
+     * coast, leaves the country and the shelf alone, and still points at it.
+     */
+    it('docks beside a framed country rather than over the shelf', () => {
+      const strict: SurfaceBox = { x: 16, y: 76, width: 1356, height: 335 }
+      const shelf: SurfaceBox = { x: 16, y: 76, width: 1356, height: 743 }
+      const spot = placeCountrySurface({
+        anchor: { x: 655, y: 76, width: 210, height: 169 },
+        size: { width: 674, height: 275 },
+        areas: [strict, shelf],
+        minHeight: 288,
+      })
+      expect(spot?.side).toBe('left')
+      expect(spot?.x).toBe(strict.x)
+      expect(
+        (spot?.y ?? 0) + (spot?.height ?? 275),
+        'entirely above the shelf, which starts where the strict area ends',
+      ).toBeLessThanOrEqual(strict.y + strict.height)
+      expect(
+        spot?.tip,
+        'the country is out to the right of it, so it points that way',
+      ).not.toBeNull()
+      expect(
+        spot?.height,
+        'and it never had to give up a pixel of height to do it',
+      ).toBeNull()
     })
 
     it('docks to the top for a country low on the map', () => {
@@ -585,6 +641,101 @@ describe('placeCountrySurface', () => {
       })
       expect(spot?.clear).toBe(false)
       expect(spot?.height).toBeNull()
+    })
+  })
+
+  /**
+   * The other surface, which is neither map nor chrome.
+   *
+   * The areas are cut from the screen's own insets, so they can say where the
+   * search pill and the shelf are and nothing at all about the click panel: it
+   * is anchored to a country of its own, it comes and goes, and it moves on
+   * every frame of a pan. A hover card solved without it landed *behind* it,
+   * with two cards about two countries stacked on the same pixels.
+   */
+  describe('when another surface is in the way', () => {
+    const panel: SurfaceBox = { x: 300, y: 320, width: 400, height: 240 }
+
+    it('takes another side rather than landing on it', () => {
+      const anchor = { x: 400, y: 300, width: 100, height: 60 }
+      // Above the shape is the first side offered, and with nothing in the way
+      // it is the one taken — so the case only bites when that side is occupied.
+      expect(placeCountrySurface({ anchor, size, areas: [area] })?.side).toBe(
+        'top',
+      )
+
+      const spot = placeCountrySurface({
+        anchor,
+        size,
+        areas: [area],
+        avoid: { x: 300, y: 0, width: 400, height: 300 },
+      })
+      expect(spot?.clear).toBe(true)
+      expect(spot?.side).toBe('bottom')
+      expect(spot?.y).toBe(300 + 60 + 8)
+    })
+
+    it('never shares a pixel with the rectangle it was told to avoid', () => {
+      for (const x of [0, 120, 480, 700, 940]) {
+        for (const y of [0, 90, 300, 520, 590]) {
+          const spot = placeCountrySurface({
+            anchor: { x, y, width: 60, height: 40 },
+            size,
+            areas: [area],
+            avoid: panel,
+          })
+          expect(spot).not.toBeNull()
+          if (spot === null || !spot.clear) continue
+          const apart =
+            spot.x + size.width <= panel.x ||
+            spot.x >= panel.x + panel.width ||
+            spot.y + size.height <= panel.y ||
+            spot.y >= panel.y + panel.height
+          expect(apart, `landed on the panel at ${x},${y}`).toBe(true)
+        }
+      }
+    })
+
+    it('reports that it could not clear it, so decoration can stand down', () => {
+      const spot = placeCountrySurface({
+        anchor: { x: 400, y: 280, width: 100, height: 40 },
+        size,
+        areas: [{ x: 0, y: 0, width: 320, height: 600 }],
+        avoid: { x: 0, y: 0, width: 320, height: 600 },
+      })
+      expect(spot?.clear).toBe(false)
+    })
+
+    it('changes nothing for a surface that was given no obstacle', () => {
+      const anchor = { x: 400, y: 300, width: 100, height: 60 }
+      expect(placeCountrySurface({ anchor, size, areas: [area] })).toEqual(
+        placeCountrySurface({ anchor, size, areas: [area], avoid: null }),
+      )
+    })
+
+    it('keeps a squeezed surface off it as well', () => {
+      const anchor = { x: 20, y: 200, width: 300, height: 60 }
+      const phone: SurfaceBox = { x: 0, y: 0, width: 340, height: 600 }
+      const squeezed = {
+        anchor,
+        size: { width: 336, height: 540 },
+        areas: [phone],
+        minHeight: 288,
+      }
+      // With the lower half free the sheet is squeezed onto it and reports that
+      // it cleared the shape.
+      const free = placeCountrySurface(squeezed)
+      expect(free?.clear).toBe(true)
+      expect(free?.side).toBe('bottom')
+
+      // With the lower half occupied the squeeze pass declines it, and what
+      // comes back is the docked answer that says so. Only a surface which must
+      // stay reachable ever takes that one; the hover card is not drawn.
+      const blocked = placeCountrySurface({
+        ...squeezed,
+        avoid: { x: 0, y: 300, width: 340, height: 300 },
+      })
+      expect(blocked?.clear).toBe(false)
     })
   })
 })
@@ -668,11 +819,18 @@ describe('surfaceAreas', () => {
 
   /**
    * The phone's zoom cluster is the top-right corner, and `cameraPadding()`
-   * charges it to both `top` and `right`. Charging it twice cost the click panel
-   * 54px of width it could have had, which showed as a ribbon of shelf down the
-   * side of a sheet that was otherwise the width of the composition.
+   * charges it to both `top` and `right`. Charged twice it cost 54px of width —
+   * and 54px is exactly what a gutter-to-gutter sheet was short of, so the click
+   * panel could never be placed above the shelf at all and every phone answer
+   * ended up on top of it.
+   *
+   * The widened band is its own area rather than a wider strict one, because the
+   * inset is not merely spare: below this width the cluster is the map's top
+   * *corner*, and the decorative card, which may use nothing but the strict area,
+   * has to keep clear of it. The panel takes the widened band and comes down the
+   * map, where the cluster is not.
    */
-  it('gives a phone back the width the top-right zoom cluster was charged twice for', () => {
+  it('offers a phone the width the top-right zoom cluster was charged twice for', () => {
     const phone: SurfaceBox = { x: 0, y: 0, width: 360, height: 650 }
     const areas = surfaceAreas(phone, {
       top: 72,
@@ -680,9 +838,24 @@ describe('surfaceAreas', () => {
       bottom: 156,
       left: 12,
     })
-    expect(areas).toHaveLength(2)
-    expect(areas[0]).toEqual({ x: 12, y: 72, width: 294, height: 422 })
-    expect(areas[1]?.width, 'gutter to gutter, as the shelf is').toBe(336)
+    expect(areas).toHaveLength(3)
+    expect(areas[0], 'the strict area still clears the cluster').toEqual({
+      x: 12,
+      y: 72,
+      width: 294,
+      height: 422,
+    })
+    expect(areas[1], 'gutter to gutter, as the shelf is, and above it').toEqual(
+      {
+        x: 12,
+        y: 72,
+        width: 336,
+        height: 422,
+      },
+    )
+    expect(areas[2]?.height, 'and only then, over the shelf').toBe(
+      650 - 72 - 12,
+    )
   })
 
   it('keeps the right inset once the cluster has moved under the shelf', () => {

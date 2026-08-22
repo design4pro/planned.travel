@@ -416,6 +416,25 @@ const layout = {
    * the tree, which is what stops it being torn down mid-write.
    */
   pane: cardVariants({ variant: 'default', padding: 'md' }),
+  /**
+   * The cue that the card is scrolled rather than severed.
+   *
+   * On a phone the shelf gives this pane 156px and a country's facts plus the
+   * two writes under them are 264px, so something is always below the fold —
+   * and where the fold lands mid-control, a still frame of it reads as a
+   * clipped card rather than a scrollable one. The last four pixels-times-four
+   * of the viewport are faded out, so the content visibly *continues* past the
+   * edge instead of being cut at it.
+   *
+   * On the viewport rather than on the scroll root, so the bar down the right
+   * keeps its full contrast at the very edge it is pointing at — masking the
+   * root would soften the one control that says how far there is left to go.
+   * Length from `--space-4`, so the cue is on the same grid as everything it
+   * fades, and no colour is involved: black and transparent here are mask
+   * channels, not paint.
+   */
+  paneFade:
+    '[mask-image:linear-gradient(to_bottom,black_calc(100%-var(--space-4)),transparent)]',
   paneFlag:
     'grid size-11 shrink-0 place-items-center rounded-md border border-edge-faint bg-surface-2 text-title leading-none',
   /** The rule between the facts above and the two writes below them. */
@@ -790,6 +809,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       // not.
                       type="auto"
                       className="min-h-0 flex-1"
+                      viewportClassName={layout.paneFade}
                     >
                       {/* One card for both answers, and one mount for the block
                           under them.

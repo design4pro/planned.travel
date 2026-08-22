@@ -1,4 +1,8 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 
@@ -599,6 +603,30 @@ describe('CountryCard', () => {
       render(<CountryCard variant="compact" countryCode="MR" decorative />)
       expect(cardFor('MR').getAttribute('aria-hidden')).toBe('true')
     })
+
+    /**
+     * A pill prints exactly one thing, and a ceiling narrower than the card's
+     * clipped it. Held to the card's own measure — and stepped with it at the
+     * widest breakpoint — the two atlas surfaces read as one object at two
+     * sizes, and the one name in the table that overran the old 224px stops
+     * arriving already shortened on a surface with no second line to shorten
+     * into.
+     */
+    it('is never allowed to be narrower than the card it belongs to', () => {
+      render(
+        <>
+          <CountryCard variant="compact" countryCode="IO" />
+          <CountryCard {...FRANCE} />
+        </>,
+      )
+      const pill = cardFor('IO')
+      expect(pill.className).toContain('max-w-72')
+      expect(pill.className).toContain('2xl:max-w-80')
+      // The same two steps the card takes, so neither can move without the
+      // other.
+      expect(cardFor('FR').className).toContain('w-72')
+      expect(cardFor('FR').className).toContain('2xl:w-80')
+    })
   })
 })
 
@@ -754,6 +782,24 @@ describe('the surface every variant stands on', () => {
     }
   })
 
+  /**
+   * The placeholder is the last thing on this card that used to borrow a page
+   * token. `Skeleton`'s default inset is tuned against `--color-surface`, and
+   * on the darker over-map face it reads a third quieter than the same bar does
+   * on a page — so the card supplies its own ground, measured against its own
+   * face, and lands both themes within two thousandths of the 1.19:1 every
+   * other skeleton in the product gives.
+   */
+  it('draws its placeholder bars on the card’s own inset, not the page’s', () => {
+    const { container } = render(<CountryCardSkeleton countryCode="FR" />)
+    const bars = container.querySelectorAll('[aria-hidden="true"].rounded-sm')
+    expect(bars.length).toBeGreaterThan(0)
+    for (const bar of bars) {
+      expect(bar.className).toContain('bg-map-card-inset')
+      expect(bar.className).not.toContain('bg-surface-inset')
+    }
+  })
+
   it('draws the pointer from the card’s own ground and hairline', () => {
     render(<CountryCard {...FRANCE} pointer="top" />)
     const pointer = cardFor('FR').querySelector('[data-part="pointer"]')
@@ -833,5 +879,229 @@ describe('the surface every variant stands on', () => {
     expect(container.innerHTML).not.toMatch(
       /#[0-9a-fA-F]{3,8}|rgba?\(|shadow-\[|z-\[|rounded-\[/,
     )
+  })
+})
+
+/**
+ * The card's contrast, measured from the token file rather than asserted from
+ * memory.
+ *
+ * Every figure this card prints is a token pair, and every one of those pairs
+ * is quoted as a ratio in a comment — in `country-card.tsx` for the type ladder
+ * and in `tokens.css` for the ground. A quoted ratio is documentation until
+ * something recomputes it, and three of them had already drifted a full point
+ * behind their tokens by the time anybody checked: the brand tone the record
+ * mark is drawn in had moved, and two rows of the light boundary table were
+ * measured against an older hairline. Nothing failed, because nothing was
+ * looking.
+ *
+ * So this block does the looking. It reads `tokens.css` as text — the same way
+ * `src/lib/map/__tests__/palette.test.ts` does, because vitest stubs CSS
+ * modules out to nothing and the point is the source the browser is handed —
+ * resolves each token in each of the three places a themed value is allowed to
+ * be declared, and recomputes the ratio from the hex. A token that moves now
+ * fails here rather than shipping under a comment that says otherwise.
+ */
+describe('the card’s colours, measured from the tokens themselves', () => {
+  /** The relative luminance of a `#rrggbb` value, per WCAG 2.x. */
+  function luminance(value: string): number {
+    const channels = [1, 3, 5].map((at) => {
+      const c = Number.parseInt(value.slice(at, at + 2), 16) / 255
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+    })
+    return (
+      0.2126 * (channels[0] ?? 0) +
+      0.7152 * (channels[1] ?? 0) +
+      0.0722 * (channels[2] ?? 0)
+    )
+  }
+
+  /** The WCAG contrast ratio between two `#rrggbb` values. */
+  function contrast(a: string, b: string): number {
+    const first = luminance(a)
+    const second = luminance(b)
+    const light = Math.max(first, second)
+    const dark = Math.min(first, second)
+    return (light + 0.05) / (dark + 0.05)
+  }
+
+  /**
+   * `tokens.css`, cut into the three places DESIGN.md allows a themed value to
+   * be declared: the bare `:root` that carries light, the guarded
+   * `prefers-color-scheme` block, and the explicit `[data-theme='dark']` block.
+   */
+  function contexts(): {
+    readonly light: string
+    readonly media: string
+    readonly attribute: string
+  } {
+    const here = dirname(fileURLToPath(import.meta.url))
+    const css = readFileSync(
+      join(here, '..', '..', '..', 'styles', 'tokens.css'),
+      'utf8',
+    )
+    const media = css.indexOf('@media (prefers-color-scheme: dark) {')
+    const attribute = css.indexOf(":root[data-theme='dark'] {")
+    if (media <= 0 || attribute <= media) {
+      throw new Error('tokens.css is missing one of the two dark blocks')
+    }
+    return {
+      light: css.slice(0, media),
+      media: css.slice(media, attribute),
+      attribute: css.slice(attribute),
+    }
+  }
+
+  const SLICES = contexts()
+
+  /** The declared value of one custom property inside one slice. */
+  function declared(slice: string, token: string): string {
+    const match = new RegExp(`^\\s*${token}:\\s*([^;]+);`, 'm').exec(slice)
+    if (match === null) {
+      throw new Error(`${token} is not declared in this theme context`)
+    }
+    return match[1].trim()
+  }
+
+  /** Every colour the card draws with, resolved for one theme. */
+  function palette(theme: 'light' | 'dark'): Record<string, string> {
+    const slice = theme === 'light' ? SLICES.light : SLICES.attribute
+    const names = [
+      '--color-map-card',
+      '--color-map-card-edge',
+      '--color-map-card-inset',
+      '--color-ink',
+      '--color-ink-2',
+      '--color-ink-3',
+      '--color-brand',
+      '--color-warning',
+      '--color-country-land',
+      '--color-country-land-hover',
+      '--color-country-visited',
+      '--color-country-visited-recent',
+      '--color-country-visited-distant',
+      '--color-country-visited-hover',
+      '--color-country-visited-selected',
+    ]
+    return Object.fromEntries(
+      names.map((name) => [name, declared(slice, name)]),
+    )
+  }
+
+  it('declares the card’s own tokens in all three theme contexts', () => {
+    for (const token of [
+      '--color-map-card',
+      '--color-map-card-edge',
+      '--color-map-card-inset',
+    ]) {
+      const light = declared(SLICES.light, token)
+      const media = declared(SLICES.media, token)
+      const attribute = declared(SLICES.attribute, token)
+      expect(light, token).toMatch(/^#[0-9a-f]{6}$/)
+      // A system-preference reader and a reader who pressed the toggle must
+      // land on the same card. The one that only exists in the media query is
+      // the bug that survives every screenshot and appears on first use.
+      expect(media, token).toBe(attribute)
+      expect(media, token).not.toBe(light)
+    }
+  })
+
+  /**
+   * Every text tier this card sets, against the one ground it ever sets them
+   * on. The card face is opaque, so these are true wherever it lands — which is
+   * the whole argument for the face being opaque.
+   */
+  it('clears AA for every text tier it prints, in both themes', () => {
+    const TEXT = [
+      ['--color-ink', 'the name and the figures'],
+      ['--color-ink-2', 'the months and the error sentence'],
+      ['--color-ink-3', 'the unit labels, the dash and a set-back nought'],
+    ] as const
+    for (const theme of ['light', 'dark'] as const) {
+      const tokens = palette(theme)
+      const face = tokens['--color-map-card'] ?? ''
+      for (const [token, what] of TEXT) {
+        const ratio = contrast(tokens[token] ?? '', face)
+        expect(ratio, `${theme}: ${what}`).toBeGreaterThanOrEqual(4.5)
+      }
+    }
+  })
+
+  /**
+   * The record mark and the error icon are non-text graphics, which owe 3:1
+   * under WCAG 2.2 1.4.11 rather than 4.5:1 — and both clear the text bar
+   * anyway, which is why the mark can be read at a glance at 16px.
+   */
+  it('clears the graphic bar for the record mark and the error icon', () => {
+    for (const theme of ['light', 'dark'] as const) {
+      const tokens = palette(theme)
+      const face = tokens['--color-map-card'] ?? ''
+      for (const token of ['--color-brand', '--color-warning']) {
+        expect(
+          contrast(tokens[token] ?? '', face),
+          `${theme}: ${token}`,
+        ).toBeGreaterThanOrEqual(3)
+      }
+    }
+  })
+
+  /**
+   * The boundary between the card and the map. It is drawn by whichever of the
+   * opaque face or the hairline wins on the ground underneath, so the test is
+   * on the better of the two — that is what a reader actually sees.
+   */
+  it('holds 3:1 against every country fill the card can land on', () => {
+    const FILLS = [
+      '--color-country-land',
+      '--color-country-land-hover',
+      '--color-country-visited',
+      '--color-country-visited-recent',
+      '--color-country-visited-distant',
+      '--color-country-visited-hover',
+      '--color-country-visited-selected',
+    ]
+    // The worst case in each theme, quoted to four places in the module comment
+    // of `country-card.tsx`. Both are checked: the standard's 3:1, so a token
+    // that moves is a failure rather than a footnote, and the quoted figure, so
+    // a token that moves *within* the standard still fails the comment that
+    // claims to have measured it.
+    const QUOTED = { light: 3.1987, dark: 3.4754 } as const
+    for (const theme of ['light', 'dark'] as const) {
+      const tokens = palette(theme)
+      const face = tokens['--color-map-card'] ?? ''
+      const edge = tokens['--color-map-card-edge'] ?? ''
+      let worst = Number.POSITIVE_INFINITY
+      for (const fill of FILLS) {
+        const ground = tokens[fill] ?? ''
+        const boundary = Math.max(
+          contrast(face, ground),
+          contrast(edge, ground),
+        )
+        expect(boundary, `${theme}: ${fill}`).toBeGreaterThanOrEqual(3)
+        worst = Math.min(worst, boundary)
+      }
+      expect(worst, `${theme}: worst boundary`).toBeCloseTo(QUOTED[theme], 3)
+    }
+  })
+
+  /**
+   * The placeholder bar is the one non-text figure the card owns. It is not
+   * held to a contrast minimum — it is held to *parity*: a card waiting over
+   * the map must read exactly as loud as a card waiting on a page, or the
+   * loading state tells the reader something about geography.
+   */
+  it('gives its placeholder the same weight a page skeleton has', () => {
+    for (const theme of ['light', 'dark'] as const) {
+      const slice = theme === 'light' ? SLICES.light : SLICES.attribute
+      const onCard = contrast(
+        declared(slice, '--color-map-card-inset'),
+        declared(slice, '--color-map-card'),
+      )
+      const onPage = contrast(
+        declared(slice, '--color-surface-inset'),
+        declared(slice, '--color-surface'),
+      )
+      expect(Math.abs(onCard - onPage), theme).toBeLessThan(0.002)
+    }
   })
 })

@@ -976,18 +976,43 @@ test.describe('authenticated routes', () => {
     // zooming on past `VISITED_COUNTRY_ZOOM.interactiveMax` is not the state
     // under test — the layer stops answering a pointer there and closes the
     // surface on purpose.
-    const chrome = await chromeBoxes(page)
     const placed = await panel.boundingBox()
     expect(
       placed,
       'the surface has to be placed before it is dragged',
     ).not.toBeNull()
     if (placed === null) return
-    const shelfTop = chrome.shelf?.top ?? canvas.y + canvas.height
-    const lane =
-      shelfTop - (placed.y + placed.height) > 60
-        ? (placed.y + placed.height + shelfTop) / 2
-        : ((chrome.search?.bottom ?? canvas.y) + placed.y) / 2
+
+    /**
+     * A horizontal lane in which both ends of the drag actually reach the map.
+     *
+     * Hit-tested rather than solved from the chrome's rectangles, and re-read
+     * before every drag. The panel re-places itself as the camera moves, the
+     * zoom cluster is a column and not the one button `chromeBoxes` can find,
+     * and a lane solved once from either of those put the press on a control:
+     * the drag then panned nothing and the country never left the map, which
+     * fails this test at its own precondition rather than at its subject.
+     */
+    const from = canvas.x + canvas.width - 60
+    const to = canvas.x + 60
+    const laneNow = async (): Promise<number | null> =>
+      page.evaluate(
+        ([left, right]) => {
+          const map = document.querySelector('.maplibregl-canvas')
+          if (map === null) return null
+          const box = map.getBoundingClientRect()
+          for (let y = box.top + 40; y < box.bottom - 40; y += 16) {
+            if (
+              document.elementFromPoint(left, y) === map &&
+              document.elementFromPoint(right, y) === map
+            ) {
+              return y
+            }
+          }
+          return null
+        },
+        [to, from],
+      )
 
     // Through the map's own control, which is also the shortest statement of the
     // other half of this: the zoom cluster is rendered beside MapLibre's
@@ -1003,9 +1028,12 @@ test.describe('authenticated routes', () => {
 
     let gone = false
     for (let step = 0; step < 8 && !gone; step += 1) {
-      await page.mouse.move(canvas.x + canvas.width - 60, lane)
+      const lane = await laneNow()
+      expect(lane, 'the map has to be draggable somewhere').not.toBeNull()
+      if (lane === null) return
+      await page.mouse.move(from, lane)
       await page.mouse.down()
-      await page.mouse.move(canvas.x + 60, lane, { steps: 12 })
+      await page.mouse.move(to, lane, { steps: 12 })
       await page.mouse.up()
       await page.waitForTimeout(350)
       gone = (await layer.getAttribute('data-anchor')) === 'offscreen'
@@ -1289,6 +1317,250 @@ test.describe('authenticated routes', () => {
       layers.portalled,
       'nothing here portals to the document body, where it would escape the slice',
     ).toBe(false)
+  })
+
+  /**
+   * The shelf keeps its tabs while the map is answering about a country.
+   *
+   * Two surfaces name the same selection — the panel on the map and the shelf's
+   * "Country" tab under it — and for as long as the panel was allowed to prefer
+   * a whole placement over the shelf to a docked one above it, the panel landed
+   * flat across that tab strip. At 1440×900, the viewport this suite photographs,
+   * a 674×275 surface covered "Country" outright; at 1200×905 it took "Stats" as
+   * well. Both were visible, neither could be pressed, and the tab it covered was
+   * the reader's other route to the very country it was describing.
+   *
+   * Hit-tested rather than compared as rectangles. A tab can be covered by
+   * anything — the panel, its tip, the layer it sits in — and what the reader
+   * cares about is only whether a press arrives, which is the question
+   * `elementFromPoint` answers and a box intersection only approximates.
+   */
+  test('the click surface never takes the shelf tabs from the reader', async ({
+    page,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    if (ATLAS === undefined) return
+    const watched = watchConsole(page, ATLAS)
+    await visit(page, ATLAS, 'light')
+    await chooseCountry(page, 'Spain')
+    await expect(page.locator('[data-part="country-panel"]')).toBeVisible()
+
+    const strip = await page.evaluate(() => {
+      const tabs = [
+        ...document.querySelectorAll('[data-part="atlas-shelf"] [role="tab"]'),
+      ]
+      return tabs.map((tab) => {
+        const box = tab.getBoundingClientRect()
+        const under = document.elementFromPoint(
+          box.x + box.width / 2,
+          box.y + box.height / 2,
+        )
+        return {
+          name: tab.textContent.replace(/\s+/g, ' ').trim(),
+          pressable: under !== null && tab.contains(under),
+        }
+      })
+    })
+
+    expect(
+      strip.length,
+      'the shelf has to be showing its tabs for this to be asserting anything',
+    ).toBeGreaterThan(0)
+    expect(
+      strip.filter((tab) => !tab.pressable).map((tab) => tab.name),
+      'every tab the shelf offers stays pressable with the panel open',
+    ).toEqual([])
+
+    expect(
+      watched().fatal,
+      'and it does all that without putting anything in the console',
+    ).toEqual([])
+  })
+
+  /**
+   * The one thing on this layer that is neither map nor chrome.
+   *
+   * The clear areas a surface is placed inside are cut from the screen's own
+   * `cameraPadding()` insets, so they know where the search pill, the zoom
+   * cluster and the shelf are and nothing whatever about the *other* surface:
+   * the click panel is anchored to a country of its own, it comes and goes, and
+   * it moves on every rendered frame of a pan. So a hover card solved from the
+   * insets alone landed behind it — press Spain, run the pointer over France,
+   * and France's card had its two month cells hidden under Spain's panel, two
+   * cards about two countries stacked on the same pixels.
+   *
+   * The rule asserted here is the one the component now keeps: a hover card is
+   * either somewhere clear of the panel or it is not drawn. `data-placed` is how
+   * the layer reports which of the two happened, and a withdrawn layer is
+   * `visibility: hidden` — it still has a box, so a probe that only compared
+   * rectangles would fail on a card nobody can see.
+   */
+  test('the hover card never lands on the panel it would hide behind', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    if (ATLAS === undefined) return
+    const watched = watchConsole(page, ATLAS)
+    await visit(page, ATLAS, 'light')
+    // Spain, for the reason `chooseCountry` gives, and because the camera then
+    // frames a country with several neighbours a pointer can find.
+    await chooseCountry(page, 'Spain')
+    await expect(page.locator('[data-part="country-panel"]')).toBeVisible()
+
+    const canvas = await page.locator('.maplibregl-canvas').boundingBox()
+    expect(canvas, 'the map has to have drawn to be pointed at').not.toBeNull()
+    if (canvas === null) return
+
+    // A coarse sweep rather than one probe: the interesting positions are the
+    // ones whose preferred side is the panel, and which those are depends on
+    // where the camera came to rest. Coarse, and stopped as soon as it has both
+    // an answer and a sample — a fine grid is a thousand round trips to the page
+    // and turns a rule into a timeout on a loaded machine.
+    const step = { x: 120, y: 80 }
+    let hovered = 0
+    let drawn = 0
+    for (
+      let y = canvas.y + 60;
+      y < canvas.y + canvas.height - 60 && (hovered < 6 || drawn === 0);
+      y += step.y
+    ) {
+      for (
+        let x = canvas.x + 60;
+        x < canvas.x + canvas.width - 60 && (hovered < 6 || drawn === 0);
+        x += step.x
+      ) {
+        await page.mouse.move(x, y)
+        const report = await page.evaluate(() => {
+          const hover = document.querySelector('[data-part="country-hover"]')
+          const panel = document.querySelector('[data-part="country-panel"]')
+          if (hover === null || panel === null) return null
+          const layer = hover.closest('[data-part="country-surface"]')
+          if (layer === null) return null
+          const a = layer.getBoundingClientRect()
+          const b = panel.getBoundingClientRect()
+          return {
+            placed: layer.getAttribute('data-placed'),
+            hidden: getComputedStyle(layer).visibility === 'hidden',
+            over:
+              a.x < b.x + b.width &&
+              a.x + a.width > b.x &&
+              a.y < b.y + b.height &&
+              a.y + a.height > b.y,
+          }
+        })
+        if (report === null) continue
+        hovered += 1
+        if (report.placed === 'true') drawn += 1
+        expect(
+          report.placed === 'true' ? !report.over : report.hidden,
+          `a hover card at ${x},${y} was drawn on top of the panel`,
+        ).toBe(true)
+      }
+    }
+
+    expect(
+      hovered,
+      'the sweep has to find countries, or it proves nothing about them',
+    ).toBeGreaterThan(0)
+    // On a desktop the rule has to be kept by *placing* the card somewhere
+    // clear, not by never drawing one. A phone is the opposite case and is
+    // asserted as such: the panel is most of the clear map there, so a card
+    // that has nowhere to go is correct to stay withdrawn — and the loop above
+    // has already insisted that whichever of the two happened, no card was ever
+    // drawn on top of the panel.
+    if (!isMobile) {
+      expect(
+        drawn,
+        'and it has to draw at least one card, or the rule is being kept by never drawing',
+      ).toBeGreaterThan(0)
+    }
+
+    expect(
+      watched().fatal,
+      'and none of that may put anything in the console',
+    ).toEqual([])
+  })
+
+  /**
+   * The fold on a phone, and the two things that make it deliberate.
+   *
+   * A short handset cannot hold the fact card *and* both writes, so the block
+   * beneath the card scrolls — which is a designed answer only for as long as
+   * the reader can tell a fold from a card that stopped. The mask fade is the
+   * primitive's, and the bar is the part this surface has to decide: our scroll
+   * bars are macOS-style overlays, quiet at rest because a pointer is about to
+   * arrive, and on the one viewport where this region actually scrolls no
+   * pointer ever will.
+   *
+   * The viewport is set here rather than taken from the project, so both engines
+   * assert the same geometry: 360×640 is the smallest phone the design system
+   * claims, and it is where the squeeze genuinely bites.
+   */
+  test('the phone panel says there is more below rather than cutting it off', async ({
+    page,
+  }) => {
+    test.skip(
+      ATLAS === undefined,
+      'the atlas route is what this asserts against',
+    )
+    if (ATLAS === undefined) return
+    await page.setViewportSize({ width: 360, height: 640 })
+    await visit(page, ATLAS, 'light')
+    await chooseCountry(page, 'Spain')
+
+    const layer = page.locator('[data-part="country-surface"]').last()
+    await expect(
+      layer,
+      'a 360×640 phone is exactly the viewport the panel gives up height on',
+    ).toHaveAttribute('data-fit', 'squeezed')
+
+    const fold = await page.evaluate(() => {
+      const region = document.querySelector('[data-part="actions-scroll"]')
+      if (region === null) return null
+      const viewport = region.querySelector('[data-radix-scroll-area-viewport]')
+      const bar = region.querySelector('[data-orientation="vertical"]')
+      const thumb = bar?.firstElementChild ?? null
+      if (viewport === null || bar === null || thumb === null) return null
+      const style = getComputedStyle(bar)
+      return {
+        overflows: viewport.scrollHeight > viewport.clientHeight + 1,
+        faded: getComputedStyle(region).maskImage !== 'none',
+        barState: bar.getAttribute('data-state'),
+        barOpacity: Number.parseFloat(style.opacity),
+        thumb: thumb.getBoundingClientRect().width,
+        thumbInk: getComputedStyle(thumb).backgroundColor,
+        restingInk: getComputedStyle(document.documentElement)
+          .getPropertyValue('--color-scrollbar-thumb')
+          .trim(),
+      }
+    })
+    expect(
+      fold,
+      'the action block has to be on screen to be judged',
+    ).not.toBeNull()
+    if (fold === null) return
+
+    expect(
+      fold.overflows,
+      'this is the viewport where the block genuinely does not fit',
+    ).toBe(true)
+    expect(fold.faded, 'the fold is masked rather than sliced').toBe(true)
+    expect(fold.barState, 'and the bar is drawn, not waiting for a hover').toBe(
+      'visible',
+    )
+    expect(fold.barOpacity).toBe(1)
+    expect(fold.thumb, 'with a thumb wide enough to see').toBeGreaterThan(0)
+    expect(
+      fold.thumbInk,
+      'at the strength the primitive keeps for a pointer that is never coming',
+    ).not.toBe(fold.restingInk)
   })
 
   /**
