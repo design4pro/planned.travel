@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "13c53cd4-76e3-4132-9892-a81bf3843ea9",
+  "id": "0e0c46e7-df78-4250-9618-a4e95ee6565d",
   "prevId": "1ee5482b-38c8-4dab-91bf-149706e1ab6f",
   "tables": {
     "account": {
@@ -6984,10 +6984,6 @@
           "name": "platform_audit_log_actor_kind_chk",
           "value": "(\"actor_kind\" IS NULL OR \"actor_kind\" IN ('human', 'agent', 'system'))"
         },
-        "platform_audit_log_entity_type_chk": {
-          "name": "platform_audit_log_entity_type_chk",
-          "value": "(\"entity_type\" IS NULL OR \"entity_type\" IN ('catalog_place', 'catalog_ingest', 'place_pack', 'catalog_source', 'user', 'session', 'staff_api_token', 'share_link'))"
-        },
         "platform_audit_log_agent_token_chk": {
           "name": "platform_audit_log_agent_token_chk",
           "value": "(\"actor_kind\" <> 'agent' OR \"token_id\" IS NOT NULL)"
@@ -6995,6 +6991,14 @@
         "platform_audit_log_system_actor_chk": {
           "name": "platform_audit_log_system_actor_chk",
           "value": "(\"actor_kind\" <> 'system' OR (\"actor_user_id\" IS NULL AND \"actor_role\" IS NULL AND \"token_id\" IS NULL))"
+        },
+        "platform_audit_log_token_agent_only_chk": {
+          "name": "platform_audit_log_token_agent_only_chk",
+          "value": "(\"token_id\" IS NULL OR \"actor_kind\" = 'agent')"
+        },
+        "platform_audit_log_actor_identity_chk": {
+          "name": "platform_audit_log_actor_identity_chk",
+          "value": "(\"actor_kind\" = 'system' OR (\"actor_user_id\" IS NOT NULL AND \"actor_role\" IS NOT NULL))"
         }
       }
     },

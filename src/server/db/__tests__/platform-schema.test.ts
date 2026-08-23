@@ -13,13 +13,23 @@
  *    `docs/ACCESS.md` §4.1 are cross-column, so nothing in TypeScript enforces them. The harness
  *    generates its DDL from this very schema through `drizzle-kit/api` and runs it on `node:sqlite`,
  *    so the constraints exercised here are the ones the migration ships.
+ * 3. **Half a biconditional.** §4.1's two invariants each say "exactly when", and the obvious
+ *    `CHECK` for each covers only the forward direction: `agent ⇒ token` leaves a `human` row free
+ *    to carry a credential, and `system ⇒ no actor` leaves every other kind free to carry none.
+ *    Both converses are constraints too, and the cases below insert the three rows that used to be
+ *    accepted so a regression is a failing test rather than a quiet hole in the log.
  */
 
 import { beforeEach, afterEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { getTableConfig } from 'drizzle-orm/sqlite-core'
 import { session, user } from '#/server/db/auth-schema'
-import { newId, platformAuditLog, staffApiTokens } from '#/server/db/schema'
+import {
+  PLATFORM_AUDIT_ENTITY_TYPES,
+  newId,
+  platformAuditLog,
+  staffApiTokens,
+} from '#/server/db/schema'
 import { captureError, createHarness } from '#/server/repos/__tests__/harness'
 import type { Harness } from '#/server/repos/__tests__/harness'
 import type { NewPlatformAuditLogEntry } from '#/server/db/types'
@@ -115,6 +125,19 @@ describe('platform_audit_log declaration', () => {
     ])
   })
 
+  it('declares five CHECKs, forward halves first, and none on entity_type', () => {
+    // The order is load-bearing: SQLite reports the first constraint a row violates in declaration
+    // order, so a `system` row naming a token is reported against the kind it claimed to be rather
+    // than against the converse rule it also broke. The behavioural half is asserted further down.
+    expect(getTableConfig(platformAuditLog).checks.map((entry) => entry.name)).toEqual([
+      'platform_audit_log_actor_kind_chk',
+      'platform_audit_log_agent_token_chk',
+      'platform_audit_log_system_actor_chk',
+      'platform_audit_log_token_agent_only_chk',
+      'platform_audit_log_actor_identity_chk',
+    ])
+  })
+
   it('gives token_id a real foreign key and actor_user_id none', () => {
     const config = getTableConfig(platformAuditLog)
     const references = config.foreignKeys.map((key) => key.reference())
@@ -182,12 +205,32 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
     harness.close()
   })
 
+  /**
+   * A row that satisfies every constraint, so each case below breaks exactly the one rule it names.
+   * The default actor is a `human` with both identity columns filled, which is what
+   * `platform_audit_log_actor_identity_chk` requires of every kind but `system`.
+   */
   function entry(overrides: Partial<NewPlatformAuditLogEntry>): NewPlatformAuditLogEntry {
     return {
       actorKind: 'human',
+      actorUserId: newId(),
+      actorRole: 'admin',
       action: 'platform.user.role_changed',
       entityType: 'user',
       entityId: newId(),
+      ...overrides,
+    }
+  }
+
+  /** A `system` row: no actor, no role, no credential, and each case puts back only what it tests. */
+  function systemEntry(
+    overrides: Partial<NewPlatformAuditLogEntry> = {},
+  ): Partial<NewPlatformAuditLogEntry> {
+    return {
+      actorKind: 'system',
+      actorUserId: null,
+      actorRole: null,
+      tokenId: null,
       ...overrides,
     }
   }
@@ -235,29 +278,53 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
     expect(rows[0]?.tokenId).toBe(tokenId)
   })
 
-  it('rejects a system row that names an actor', async () => {
+  it('rejects a human row carrying a token, because only an agent arrives on one', async () => {
+    const tokenId = await seedToken()
+    const error = await captureError(() => append({ actorKind: 'human', tokenId }))
+    expect(constraintName(error)).toContain('platform_audit_log_token_agent_only_chk')
+  })
+
+  it('rejects a human row with no actor', async () => {
+    const error = await captureError(() => append({ actorKind: 'human', actorUserId: null }))
+    expect(constraintName(error)).toContain('platform_audit_log_actor_identity_chk')
+  })
+
+  it('rejects a human row with no role', async () => {
+    const error = await captureError(() => append({ actorKind: 'human', actorRole: null }))
+    expect(constraintName(error)).toContain('platform_audit_log_actor_identity_chk')
+  })
+
+  it('rejects an agent row with no actor, even though it names a token', async () => {
+    const tokenId = await seedToken()
     const error = await captureError(() =>
-      append({ actorKind: 'system', actorUserId: newId() }),
+      append({ actorKind: 'agent', actorUserId: null, actorRole: 'curator', tokenId }),
     )
+    expect(constraintName(error)).toContain('platform_audit_log_actor_identity_chk')
+  })
+
+  it('rejects a system row that names an actor', async () => {
+    const error = await captureError(() => append(systemEntry({ actorUserId: newId() })))
     expect(constraintName(error)).toContain('platform_audit_log_system_actor_chk')
   })
 
   it('rejects a system row that names a role', async () => {
-    const error = await captureError(() => append({ actorKind: 'system', actorRole: 'admin' }))
+    const error = await captureError(() => append(systemEntry({ actorRole: 'admin' })))
     expect(constraintName(error)).toContain('platform_audit_log_system_actor_chk')
   })
 
   it('rejects a system row that names a token', async () => {
     const tokenId = await seedToken()
-    const error = await captureError(() => append({ actorKind: 'system', tokenId }))
+    const error = await captureError(() => append(systemEntry({ tokenId })))
     expect(constraintName(error)).toContain('platform_audit_log_system_actor_chk')
   })
 
   it('accepts a system row with no actor, no role and no token', async () => {
-    await append({ actorKind: 'system', entityType: 'catalog_place' })
+    await append(systemEntry({ entityType: 'catalog_place' }))
 
     const rows = await harness.db.select().from(platformAuditLog)
     expect(rows[0]?.actorUserId).toBeNull()
+    expect(rows[0]?.actorRole).toBeNull()
+    expect(rows[0]?.tokenId).toBeNull()
   })
 
   it('rejects an actor_kind outside the three', async () => {
@@ -268,11 +335,18 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
     expect(constraintName(error)).toContain('platform_audit_log_actor_kind_chk')
   })
 
-  it('rejects an entity_type outside the eight of §4.2', async () => {
-    const error = await captureError(() =>
-      append({ entityType: 'trip' }),
-    )
-    expect(constraintName(error)).toContain('platform_audit_log_entity_type_chk')
+  it('leaves entity_type unconstrained, which is what docs/ACCESS.md §4.1 asks for', async () => {
+    // §4.1's type column marks `actor_kind` as text + enumCheck() and `entity_type` as plain text,
+    // with the eight values in the Notes column; `action` is closed the same way in §4.2 and is
+    // plain text too. A ninth entity type therefore costs an amendment to §4.2's mapping table and
+    // not a recreate of a table that may not be recreated. The vocabulary is enforced above the
+    // database, by PLATFORM_AUDIT_ENTITY_TYPES and the writer that validates against it.
+    await append({ entityType: 'trip' })
+
+    const rows = await harness.db.select().from(platformAuditLog)
+    expect(rows[0]?.entityType).toBe('trip')
+    expect(PLATFORM_AUDIT_ENTITY_TYPES).not.toContain('trip')
+    expect(PLATFORM_AUDIT_ENTITY_TYPES).toHaveLength(8)
   })
 
   it('refuses to hard-delete a credential an agent row still names', async () => {

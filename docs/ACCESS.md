@@ -574,10 +574,39 @@ there is nothing left to propose, and its §13.9 records the item as settled. Th
 on the columns before they agreed on the wording; they agree on both now, which is why **FU-6** in
 §7 is closed.
 
-Two invariants are `CHECK` constraints rather than prose, because both are the kind of rule that
-decays into a convention the first time a caller is in a hurry: `actor_kind = 'agent'` implies
-`token_id is not null`, and `actor_kind = 'system'` implies `actor_user_id is null` **and**
-`actor_role is null` **and** `token_id is null`.
+Four invariants are `CHECK` constraints rather than prose, because each is the kind of rule that
+decays into a convention the first time a caller is in a hurry:
+
+- `actor_kind = 'agent'` implies `token_id is not null`
+- `actor_kind = 'system'` implies `actor_user_id is null` **and** `actor_role is null` **and**
+  `token_id is null`
+- `token_id is not null` implies `actor_kind = 'agent'` - the other half of the Notes column's
+  "non-`NULL` exactly when", without which a console action can wear a credential
+- `actor_kind <> 'system'` implies `actor_user_id is not null` **and** `actor_role is not null` -
+  the other half of "`NULL` only when `actor_kind = 'system'`", without which the log can hold a
+  row with no actor
+
+**Why four and not the two this paragraph used to name.** Faza B shipped the two, and the round's
+auditor then ran the emitted SQL into `node:sqlite` and inserted against it rather than reading it:
+a `human` row carrying a `token_id` was accepted, and so were `human` and `agent` rows with a
+`NULL` `actor_user_id`. All three contradict the Notes column above. Prose that the schema does
+not enforce is a convention, and this table is the one place in the product where a convention is
+not enough. The two extra constraints landed while migration `0004` had still never left its
+worktree, which is the only window in which the shape of this table is free to change: SQLite
+cannot add a `CHECK` to an existing table, so `docs/DEPLOY.md` §register would have had to carry a
+non-additive recreate instead.
+
+`actor_kind` additionally carries the ordinary single-column `enumCheck()` named in the type
+column, so five constraints ship in total.
+
+**`entity_type` is narrowed in TypeScript, not in SQL, and that is deliberate.** The type column
+above says plain `text` for it while marking `actor_kind` as `text, enumCheck()`, and the
+distinction is the point: §4.2's entity list grows by amendment in the commit that adds the code
+writing it, and a `CHECK` would price each of those amendments at a table recreate. The narrowing
+that does exist is `$type<PlatformAuditEntityType>()` on the column, so a value outside the eight
+fails `pnpm typecheck`. The same reasoning governs `action`, whose vocabulary in §4.2 is closed and
+grows the same way. A schema that drops the `CHECK` without adding the `$type` has narrowed the
+column nowhere at all, which is what the first attempt did.
 
 Indexes: `(entity_type, entity_id, created_at)` for the timeline query in §4.4,
 `(actor_user_id, created_at)`, `(action, created_at)`, `(token_id)`, and `(created_at)` for the

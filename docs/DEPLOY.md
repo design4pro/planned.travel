@@ -224,10 +224,15 @@ are absent on purpose. `0000` is the initial `CREATE TABLE` set. `0003` is three
 `pending_effective_at`) with no constraint, which is exactly the shape that stays additive. `0004`
 is the same shape at larger scale: two `CREATE TABLE` statements for `staff_api_tokens` and
 `platform_audit_log` with their indexes, then five bare column adds on `user` and `session` and one
-`CREATE INDEX` — no `__new_`, no `DROP TABLE`, no `RENAME TO`, no `PRAGMA foreign_keys`. Its four
-`CHECK` constraints are inside the two new `CREATE TABLE` statements, which is not what the
-paragraph above warns about: the escalation comes from adding a `CHECK` to a table that already
-exists, and neither of these did.
+`CREATE INDEX` — no `__new_`, no `DROP TABLE`, no `RENAME TO`, no `PRAGMA foreign_keys`. Its five
+`CHECK` constraints are all inside the `CREATE TABLE` for `platform_audit_log`, which is not what
+the paragraph above warns about: the escalation comes from adding a `CHECK` to a table that already
+exists, and this one did not exist. Four of the five are the cross-column rules of
+`docs/ACCESS.md` §4.1, written as two forward implications and their two converses because each of
+§4.1's invariants says "exactly when" and a single implication only carries half of that; the
+fifth closes `actor_kind` over its three values. `entity_type` carries none, deliberately — §4.1
+types that column as plain text and keeps its eight values in prose, so a ninth costs an amendment
+to §4.2's mapping table rather than a recreate of an append-only log.
 
 ---
 

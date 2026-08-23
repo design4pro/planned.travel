@@ -258,9 +258,13 @@ builder makes on the way past.
 `platform_audit_log` joined the list in Faza B, by amendment rather than on the way past. The
 eight-name form of this sentence contradicted this same section's mandate to write that table on
 every platform mutation, and `docs/ACCESS.md` §4.1 recorded the contradiction as FU-2 instead of
-resolving it unilaterally. This paragraph closes FU-2. The table's twelve columns, its two
+resolving it unilaterally. This paragraph closes FU-2. The table's twelve columns, its four
 cross-column `CHECK` constraints, its five indexes and its retention prune live in
-`docs/ACCESS.md` §4.1 and are deliberately not restated here.
+`docs/ACCESS.md` §4.1 and are deliberately not restated here. Four rather than two because each of
+§4.1's two invariants says "exactly when", and a single implication carries only half of that: the
+converses are what stop a `human` row carrying an MCP credential and a `human` or `agent` row
+carrying no actor at all. Constraining the shipped table more tightly than the prose was read to
+mean is an extension of that contract and never a relaxation of it.
 
 These tables must **never** be reached through `src/server/repos/base.ts` or
 `createTenantRepository()`. That layer exists so that forgetting the tenant filter is not

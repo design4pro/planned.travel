@@ -290,7 +290,24 @@ async function main() {
     clearTimeout(timer)
   }
 
+  await dropCachedVisualSession(options.force)
   printReport(body)
+}
+
+/**
+ * A rebuild mints a new organization id, so any session cached from the previous dataset now
+ * points at a membership that no longer exists. Playwright caches exactly one such session in
+ * `e2e/.auth/demo.json`, and a run that inherits it does not skip - it renders a 500 on the first
+ * authenticated route and reports it as a failing route.
+ *
+ * That cost a full round: two items were rejected on a visual gate that was measuring a stale
+ * cookie rather than the code under test. Deleting the file here, rather than asking every caller
+ * to remember, is the mechanical version of the instruction.
+ */
+async function dropCachedVisualSession(force) {
+  if (!force) return
+  const { rm } = await import('node:fs/promises')
+  await rm('e2e/.auth/demo.json', { force: true })
 }
 
 main().catch((error) => {

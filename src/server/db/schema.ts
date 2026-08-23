@@ -331,7 +331,13 @@ export const DISTANCE_UNITS = ['metric', 'imperial'] as const
  */
 export const PLATFORM_ACTOR_KINDS = ['human', 'agent', 'system'] as const
 
-/** The eight entities a platform action can touch (docs/ACCESS.md §4.2). */
+/**
+ * The eight entities a platform action can touch (docs/ACCESS.md §4.2).
+ *
+ * A TypeScript vocabulary, not a database constraint: `entity_type` is plain `text` in §4.1's
+ * column table, so a ninth entity costs an amendment to §4.2's mapping rather than a recreate of
+ * an append-only log.
+ */
 export const PLATFORM_AUDIT_ENTITY_TYPES = [
   'catalog_place',
   'catalog_ingest',
@@ -2065,9 +2071,28 @@ export const staffApiTokens = sqliteTable(
  * rather than left as prose, since neither can be changed after `0004` ships without a table
  * recreate (docs/DEPLOY.md §5).
  *
- * Both cross-column invariants are `CHECK` constraints rather than prose, and both are declared in
- * the `CREATE TABLE` rather than added later: adding a `CHECK` to an existing table escalates
- * drizzle-kit to a table recreate, which docs/DEPLOY.md §5 counts as non-additive.
+ * **Four cross-column `CHECK`s, because the two obvious ones only cover half of each rule.**
+ * docs/ACCESS.md §4.1 states two invariants — `actor_user_id` and `actor_role` are `NULL` only when
+ * `actor_kind` is `system`, and `token_id` is non-`NULL` *exactly* when `actor_kind` is `agent` —
+ * and each is a biconditional. `agent ⇒ token_id NOT NULL` and `system ⇒ everything NULL` are the
+ * forward halves; without the converses a `human` row could carry a `token_id` and a `human` or an
+ * `agent` row could carry no actor at all, all three accepted by a direct insert.
+ * `platform_audit_log_token_agent_only_chk` and `platform_audit_log_actor_identity_chk` close those
+ * converses, so the shipped table enforces what §4.1 says rather than a weaker reading of it. Four
+ * is an extension of that contract, never a relaxation; the amendment to §4.1's own "two
+ * invariants" sentence is reported with this item rather than made here, because that file is the
+ * specification and is not ours to edit.
+ *
+ * All four are declared in the `CREATE TABLE` rather than added later: adding a `CHECK` to an
+ * existing table escalates drizzle-kit to a table recreate, which docs/DEPLOY.md §5 counts as
+ * non-additive.
+ *
+ * **`entity_type` deliberately carries no `CHECK`.** §4.1's type column marks `actor_kind` as
+ * `text, enumCheck()` and `entity_type` as plain `text`, with the eight values in the Notes column;
+ * `action` is closed in §4.2 by the same kind of list and is plain `text` too. A ninth entity type
+ * should cost an amendment to §4.2's mapping table, which is where the vocabulary lives, and not a
+ * table recreate on a log that may not be recreated. {@link PLATFORM_AUDIT_ENTITY_TYPES} carries
+ * the eight names into TypeScript, which is where this column is narrowed.
  */
 export const platformAuditLog = sqliteTable(
   'platform_audit_log',
@@ -2100,15 +2125,32 @@ export const platformAuditLog = sqliteTable(
     index('platform_audit_log_token_idx').on(t.tokenId),
     index('platform_audit_log_created_at_idx').on(t.createdAt),
     enumCheck('platform_audit_log_actor_kind_chk', t.actorKind, PLATFORM_ACTOR_KINDS),
-    enumCheck('platform_audit_log_entity_type_chk', t.entityType, PLATFORM_AUDIT_ENTITY_TYPES),
+    // The two forward halves are declared first, deliberately. SQLite reports the first constraint a
+    // row violates in declaration order, and a `system` row naming a token breaks a forward rule and
+    // a converse one at once; naming it against the kind it claimed to be is the sharper of the two
+    // messages. `src/server/db/__tests__/platform-schema.test.ts` pins the order and the names.
+    // An agent row names its credential.
     check(
       'platform_audit_log_agent_token_chk',
       sql.raw(`("actor_kind" <> 'agent' OR "token_id" IS NOT NULL)`),
     ),
+    // A system row names no actor, no role and no credential.
     check(
       'platform_audit_log_system_actor_chk',
       sql.raw(
         `("actor_kind" <> 'system' OR ("actor_user_id" IS NULL AND "actor_role" IS NULL AND "token_id" IS NULL))`,
+      ),
+    ),
+    // Nothing but an agent row may name a credential.
+    check(
+      'platform_audit_log_token_agent_only_chk',
+      sql.raw(`("token_id" IS NULL OR "actor_kind" = 'agent')`),
+    ),
+    // Every kind but system names both an actor and the role it held at the time.
+    check(
+      'platform_audit_log_actor_identity_chk',
+      sql.raw(
+        `("actor_kind" = 'system' OR ("actor_user_id" IS NOT NULL AND "actor_role" IS NOT NULL))`,
       ),
     ),
   ],

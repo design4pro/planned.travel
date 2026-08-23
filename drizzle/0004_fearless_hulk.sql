@@ -13,9 +13,10 @@ CREATE TABLE `platform_audit_log` (
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`token_id`) REFERENCES `staff_api_tokens`(`id`) ON UPDATE no action ON DELETE set null,
 	CONSTRAINT "platform_audit_log_actor_kind_chk" CHECK(("actor_kind" IS NULL OR "actor_kind" IN ('human', 'agent', 'system'))),
-	CONSTRAINT "platform_audit_log_entity_type_chk" CHECK(("entity_type" IS NULL OR "entity_type" IN ('catalog_place', 'catalog_ingest', 'place_pack', 'catalog_source', 'user', 'session', 'staff_api_token', 'share_link'))),
 	CONSTRAINT "platform_audit_log_agent_token_chk" CHECK(("actor_kind" <> 'agent' OR "token_id" IS NOT NULL)),
-	CONSTRAINT "platform_audit_log_system_actor_chk" CHECK(("actor_kind" <> 'system' OR ("actor_user_id" IS NULL AND "actor_role" IS NULL AND "token_id" IS NULL)))
+	CONSTRAINT "platform_audit_log_system_actor_chk" CHECK(("actor_kind" <> 'system' OR ("actor_user_id" IS NULL AND "actor_role" IS NULL AND "token_id" IS NULL))),
+	CONSTRAINT "platform_audit_log_token_agent_only_chk" CHECK(("token_id" IS NULL OR "actor_kind" = 'agent')),
+	CONSTRAINT "platform_audit_log_actor_identity_chk" CHECK(("actor_kind" = 'system' OR ("actor_user_id" IS NOT NULL AND "actor_role" IS NOT NULL)))
 );
 --> statement-breakpoint
 CREATE INDEX `platform_audit_log_entity_idx` ON `platform_audit_log` (`entity_type`,`entity_id`,`created_at`);--> statement-breakpoint
