@@ -195,5 +195,28 @@
       "auditor"
     ],
     "invalidatesWhen": "verdictFor() stops guarding the visual reason on url/referenceUrl"
+  },
+  {
+    "id": "warm-the-server-before-the-round",
+    "claim": "A dev server started INSIDE the round is not a measuring instrument. A cold Vite SSR server, under the concurrent load of `pnpm build` and `pnpm test` in the same round, answers HTTP 500 on routes it has not transformed yet, and a session cached against a different port makes every authenticated spec skip. The orchestrator warms the server, seeds, and refreshes the session BEFORE launching a round, and the round reuses it.",
+    "evidence": "Round 4 of this run: the mechanical agent found no server, started one on 3006, and reported \"16 failed, 66 skipped, 55 passed (23.8s). All 16 failures are HTTP 500 from the dev server on auth/legal routes\" — against the settled 44-failed / 5-skipped / 88-passed baseline measured on a warm 3005 in rounds 1, 2 and 3. Same commit, same tree, three times the skips and a quarter of the runtime: the number describes the server, not the code.",
+    "measuredIn": "this run, round 4",
+    "scope": [
+      "mechanical",
+      "capture",
+      "auditor"
+    ],
+    "invalidatesWhen": "the gate stops depending on a dev server, or playwright.config.ts owns its own warmed webServer"
+  },
+  {
+    "id": "plan-claims-must-cite-a-line",
+    "claim": "A plan stage that asserts how existing code behaves must cite the file and line, because the assertions that read most confidently are the ones most often wrong. Three of round 4's five blocking findings were false claims about this repo, each refuted by one grep.",
+    "evidence": "Round 4, docs/plans/00-foundations.md: a \"100-member organization ceiling\" that does not exist (SEAT_LIMIT_CEILING is 100_000 at src/server/billing/limits.ts:82, and the largest published plan sells seats: 10); listTripMembers said to raise NotFoundError for a foreign trip id when src/server/repos/trips.ts:403 returns [] via findMany; recomputeTravelStats described as per-traveller when its aggregates are tenant-scoped. Each would have sent a future implementation run to write a test that cannot pass.",
+    "measuredIn": "this run, round 4",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "never — it is a discipline, not a measurement"
   }
 ]
