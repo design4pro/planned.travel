@@ -29,6 +29,13 @@
       "when": 1787420026276,
       "tag": "0003_neat_leper_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1787460942783,
+      "tag": "0004_volatile_arachne",
+      "breakpoints": true
     }
   ]
 }

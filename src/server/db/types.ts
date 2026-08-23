@@ -8,7 +8,12 @@
 
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
 import type * as schema from './schema'
-import type { ORGANIZATION_PLANS, USAGE_METRICS } from './schema'
+import type {
+  ORGANIZATION_PLANS,
+  PLATFORM_ACTOR_KINDS,
+  PLATFORM_AUDIT_ENTITY_TYPES,
+  USAGE_METRICS,
+} from './schema'
 
 /** Any async SQLite-dialect Drizzle handle. Satisfied by both D1 and the proxy driver. */
 export type Database = BaseSQLiteDatabase<'async', unknown>
@@ -214,3 +219,18 @@ export type UserSettings = typeof schema.userSettings.$inferSelect
 export type NewUserSettings = typeof schema.userSettings.$inferInsert
 export type AppSetting = typeof schema.appSettings.$inferSelect
 export type NewAppSetting = typeof schema.appSettings.$inferInsert
+
+/**
+ * The two global platform tables of `docs/SPEC.md` §5's carve-out. They carry no
+ * `organization_id` and are never reached through a tenant repository; their row types live here
+ * beside every other table so the model has one import site.
+ */
+export type StaffApiToken = typeof schema.staffApiTokens.$inferSelect
+export type NewStaffApiToken = typeof schema.staffApiTokens.$inferInsert
+export type PlatformAuditLogEntry = typeof schema.platformAuditLog.$inferSelect
+export type NewPlatformAuditLogEntry = typeof schema.platformAuditLog.$inferInsert
+
+export type { PlatformAuditChanges } from './schema'
+
+export type PlatformActorKind = (typeof PLATFORM_ACTOR_KINDS)[number]
+export type PlatformAuditEntityType = (typeof PLATFORM_AUDIT_ENTITY_TYPES)[number]

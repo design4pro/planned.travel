@@ -181,8 +181,11 @@ pnpm exec wrangler d1 execute planned-travel-db --remote \
   --command "select name from sqlite_master where type='table' order by name;"
 ```
 
-You should see the 57 domain tables plus the 9 Better Auth tables (`user`, `session`,
-`account`, `verification`, `organization`, `member`, `invitation`, `passkey`, `two_factor`).
+You should see **59 domain tables + 9 Better Auth tables** (`user`, `session`, `account`,
+`verification`, `organization`, `member`, `invitation`, `passkey`, `two_factor`). Both numbers are
+read off the schema rather than remembered: `grep -c 'sqliteTable(' src/server/db/schema.ts` prints
+the first and the same command over `auth-schema.ts` prints the second. Migration `0004` moved the
+domain count from 57 by adding `staff_api_tokens` and `platform_audit_log`.
 
 **Migration policy: migrations are additive.** Add a column or a table; never rename or drop in
 the same release that stops using it. Both the old and the new Worker version must be able to
@@ -213,12 +216,18 @@ stranding a paying customer. It does not remove the reader.
 
 **§12's register is the list.** A migration that is not in it is additive; a migration that is not
 additive and not in it is a defect belonging to the round that generated it, and the fix is to add
-the row before the release ships, not after someone needs a rollback. Four migrations exist and
+the row before the release ships, not after someone needs a rollback. Five migrations exist and
 two are registered, and the two fail differently — `0001` recreated a table, `0002` renamed three
-columns — which is why §12 records the _kind_ of departure and not only the number. The other two
-are absent on purpose: `0000` is the initial `CREATE TABLE` set, and `0003` is three bare
+columns — which is why §12 records the _kind_ of departure and not only the number. The other three
+are absent on purpose. `0000` is the initial `CREATE TABLE` set. `0003` is three bare
 `ALTER TABLE "subscriptions" ADD COLUMN` statements (`pending_plan`, `pending_interval`,
-`pending_effective_at`) with no constraint, which is exactly the shape that stays additive.
+`pending_effective_at`) with no constraint, which is exactly the shape that stays additive. `0004`
+is the same shape at larger scale: two `CREATE TABLE` statements for `staff_api_tokens` and
+`platform_audit_log` with their indexes, then five bare column adds on `user` and `session` and one
+`CREATE INDEX` — no `__new_`, no `DROP TABLE`, no `RENAME TO`, no `PRAGMA foreign_keys`. Its four
+`CHECK` constraints are inside the two new `CREATE TABLE` statements, which is not what the
+paragraph above warns about: the escalation comes from adding a `CHECK` to a table that already
+exists, and neither of these did.
 
 ---
 
@@ -1513,11 +1522,22 @@ Two things about that column:
 - **A role change may not reach a live session.** Sessions are cached in KV, so sign out and back
   in after the grant rather than wondering why the console still refuses.
 
-**The escape hatch, for when there is no admin at all.** Better Auth's `admin` plugin accepts
-`adminUserIds: [...]`, and a user id in that list passes every permission check regardless of the
-`role` column. It is checked into source, so it is reviewable, and it survives a database restore
-that predates the grant above. Use it to recover; use the `update` above to operate. A permanent
-`adminUserIds` entry is an ungoverned superuser that no audit row explains.
+**When there is no admin at all, the recovery is this same `update`.** The steps above are the
+whole instrument: run against `--remote`, read back with step 3, sign in. It works from a database
+restore that predates any earlier grant, because it writes the `role` column rather than depending
+on one.
+
+Better Auth's `admin` plugin does carry a second route - `adminUserIds: [...]`, whose members pass
+every permission check regardless of `role` - and this runbook does **not** offer it, for reasons
+`docs/ACCESS.md` §1.4 sets out in full. Two of them are operational and belong here: our guard
+never consults the list, and all fifteen of the plugin's HTTP paths answer `404`, so an id added to
+it opens no console screen and no MCP tool. What it would still do is satisfy the plugin's internal
+check inside the `auth.api.*` calls the console makes after our guard has already approved them -
+it grants nothing while the code is correct and everything the moment a server function is written
+without the guard call. Beyond that it is invisible: no query finds it, no audit row explains it,
+`actor_role` records the account as a plain `user`, and it is removable only by a deploy. The
+`update` above is greppable, readable back with one query, visible in the console's own user list,
+attributable on every row that account writes, and reversible by the statement that set it.
 
 ### 14.2 Create a `curator`
 
@@ -1558,24 +1578,33 @@ the failing-loudly accessor; neither has a fallback, because a fallback here mea
 for one token.
 
 - The plaintext token is shown **once**, at issue time, and is never recoverable afterwards.
-- `staff_api_tokens` stores the digest, a label, the owning user, `created_at`, `last_used_at`
-  and `revoked_at`. It never stores the token.
+- `staff_api_tokens` stores the digest in `token_hash`, the operator's own `name` for the token,
+  the non-secret `token_prefix`, the owning `user_id`, a mandatory `expires_at`, and
+  `last_used_at` / `last_used_ip` / `revoked_at`. It never stores the token. The full column list
+  is docs/CATALOG.md §2.10, and the SQL below is written against exactly those names.
 - Revocation is a `revoked_at` stamp, not a delete, so the audit trail survives the token.
 
-Issue (console, phase E): **Console → Access → API tokens → Issue token** → pick the owner and a
-label → copy the value once. Revoke: the same screen → **Revoke**. Both actions write a
+Issue (console, phase E): **Console → Access → API tokens → Issue token** → pick the owner, a name
+and an expiry → copy the value once. Revoke: the same screen → **Revoke**. Both actions write a
 `platform_audit_log` row.
 
-Before that console exists, and as the break-glass path afterwards, revoke straight in D1:
+Before that console exists, and as the break-glass path afterwards, revoke straight in D1. `name`
+carries no unique index, so identify the token by its `token_prefix` — the first twelve characters
+of the plaintext, which the console lists beside the name and which is not a secret. Read before
+you write: the `select` names the rows the `update` will touch.
 
 ```bash
-# Revoke one token by its label.
+# Which live tokens exist, and what each one is called.
 pnpm exec wrangler d1 execute planned-travel-db --remote \
-  --command "update staff_api_tokens set revoked_at = unixepoch() * 1000 where label = 'claude-code-ops' and revoked_at is null;"
+  --command "select id, name, token_prefix, user_id, expires_at from staff_api_tokens where revoked_at is null;"
+
+# Revoke one token by its prefix.
+pnpm exec wrangler d1 execute planned-travel-db --remote \
+  --command "update staff_api_tokens set revoked_at = unixepoch() * 1000, updated_at = unixepoch() * 1000 where token_prefix = 'pt_mcp_A1b2C' and revoked_at is null;"
 
 # Revoke everything, immediately, for a suspected leak of the table itself.
 pnpm exec wrangler d1 execute planned-travel-db --remote \
-  --command "update staff_api_tokens set revoked_at = unixepoch() * 1000 where revoked_at is null;"
+  --command "update staff_api_tokens set revoked_at = unixepoch() * 1000, updated_at = unixepoch() * 1000 where revoked_at is null;"
 ```
 
 Rotating `MCP_TOKEN_PEPPER` (§6) is the heavier hammer: it invalidates every issued token at
@@ -1793,7 +1822,9 @@ or the last one; there is no third outcome.
 
 - [ ] Exactly one `admin` exists, granted by hand, and §14.1's read-back query returns exactly
       that one row.
-- [ ] `adminUserIds` is empty in source, or its single entry is deliberate and dated.
+- [ ] `adminUserIds` does not appear in `src/server/auth/index.ts` at all - absent, not `[]` with
+      a comment beside it. Every recovery goes through §14.1's SQL grant, which is `docs/ACCESS.md`
+      §8.1's, and a unit test fails on the key's presence rather than on its contents.
 - [ ] No MCP token is issued before phase E, and `MCP_TOKEN_PEPPER` is set before the first one is.
 
 **Not yet, on purpose**

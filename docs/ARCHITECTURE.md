@@ -206,7 +206,7 @@ smaller (3 retries, concurrency 2) than production's 5 and 4.
 
 | Binding     | Type                                          | Holds                                                                           | Read by                            | Written by                             |
 | ----------- | --------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------- | -------------------------------------- |
-| `DB`        | D1 `planned-travel-db`                        | 57 domain tables + 9 Better Auth tables, `migrations_dir: drizzle`              | every repository                   | server functions, queue handlers, cron |
+| `DB`        | D1 `planned-travel-db`                        | 59 domain tables + 9 Better Auth tables, `migrations_dir: drizzle`              | every repository                   | server functions, queue handlers, cron |
 | `KV`        | KV namespace                                  | plan-state cache (60 s TTL), queue idempotency markers, reminder due-time index | entitlements, queue consumer, cron | mutations, webhook, queue              |
 | `SESSIONS`  | KV namespace                                  | Better Auth session and rate-limit records, 60 s TTL floor                      | nearly every authenticated request | login, session refresh, logout         |
 | `FILES`     | R2 `planned-travel-files`                     | journal photos, imports, generated exports                                      | file routes, PDF/thumbnail jobs    | upload server fn, queue handlers       |

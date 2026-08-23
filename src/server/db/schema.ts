@@ -324,8 +324,36 @@ export const NOTIFICATION_CHANNELS = ['in_app', 'email', 'push', 'webhook'] as c
 export const THEME_PREFERENCES = ['system', 'light', 'dark'] as const
 export const DISTANCE_UNITS = ['metric', 'imperial'] as const
 
+/**
+ * Who a `platform_audit_log` row is attributed to (docs/ACCESS.md §4.1). `human` is a signed-in
+ * platform role acting through the console, `agent` an MCP call authenticated by a
+ * `staff_api_tokens` bearer, `system` the platform itself — cron, matcher, prune.
+ */
+export const PLATFORM_ACTOR_KINDS = ['human', 'agent', 'system'] as const
+
+/** The eight entities a platform action can touch (docs/ACCESS.md §4.2). */
+export const PLATFORM_AUDIT_ENTITY_TYPES = [
+  'catalog_place',
+  'catalog_ingest',
+  'place_pack',
+  'catalog_source',
+  'user',
+  'session',
+  'staff_api_token',
+  'share_link',
+] as const
+
 /** JSON payload shapes stored in `text({ mode: 'json' })` columns. */
 export type JsonRecord = Record<string, string | number | boolean | null>
+/**
+ * The `changes` payload on `platform_audit_log`: the fields that moved, on both sides. Nested by
+ * definition, so the flat {@link JsonRecord} the tenant log's `metadata` column uses does not fit
+ * it and is deliberately not reused.
+ */
+export type PlatformAuditChanges = {
+  before: Record<string, unknown> | null
+  after: Record<string, unknown> | null
+}
 export type PollOption = { id: string; label: string }
 export type OpeningHours = Array<{ day: number; opens: string; closes: string }>
 export type ShareScopes = {
@@ -1966,4 +1994,122 @@ export const appSettings = sqliteTable(
     ...timestamps(),
   },
   (t) => [index('app_settings_updated_at_idx').on(t.updatedAt)],
+)
+
+/* -------------------------------------------------------------------------------------------------
+ * Platform tables — global, never tenant-scoped
+ *
+ * Two of the nine tables docs/SPEC.md §5 carves out of "every domain row is scoped by
+ * organization_id". They carry no `organization_id`, they are never reachable through
+ * `createTenantRepository()` or `src/server/repos/base.ts`, and every mutation that touches them
+ * takes an explicit platform actor instead of a tenant context.
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * MCP bearer credentials (docs/CATALOG.md §2.10). A token's authority is its owner's platform
+ * role, never a per-token scope list, so there is one authorisation model rather than two.
+ *
+ * `token_hash` is the lowercase hex `HMAC-SHA256(key = MCP_TOKEN_PEPPER, message = token)`; the
+ * plaintext is shown once at creation and never stored. `expires_at` is mandatory — the console
+ * offers 30 / 90 / 365 days and nothing unbounded — and revocation sets `revoked_at` rather than
+ * deleting the row, so a revoked credential's history stays attributable.
+ */
+export const staffApiTokens = sqliteTable(
+  'staff_api_tokens',
+  {
+    id: pk(),
+    userId: userRef('user_id').notNull(),
+    name: text('name').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    tokenPrefix: text('token_prefix').notNull(),
+    lastUsedAt: integer('last_used_at', { mode: 'timestamp_ms' }),
+    lastUsedIp: text('last_used_ip'),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
+    createdBy: userRef('created_by').notNull(),
+    ...timestamps(),
+  },
+  (t) => [
+    uniqueIndex('staff_api_tokens_token_hash_unq').on(t.tokenHash),
+    index('staff_api_tokens_user_revoked_idx').on(t.userId, t.revokedAt),
+    index('staff_api_tokens_expires_at_idx').on(t.expiresAt),
+    index('staff_api_tokens_created_by_idx').on(t.createdBy),
+  ],
+)
+
+/**
+ * The platform audit log (docs/ACCESS.md §4.1). Twelve columns and no thirteenth; in particular no
+ * `organization_id`, because a platform action belongs to no tenant.
+ *
+ * Append-only. Rows are never updated, and the only delete path is the retention prune on
+ * `created_at`. Its single writer is `src/server/catalog/audit.ts`.
+ *
+ * **Why `actor_user_id` has no foreign key while `token_id` does.** `userRef()` is a bare text
+ * column by house convention, so this file never imports the auth module's schema — see the header
+ * of this file. `staff_api_tokens` lives here, so `token_id` carries a real foreign key, and with
+ * it the referential guarantee that "everything that arrived on this credential" joins to a row
+ * that exists. The two columns sit side by side for that reason and not by oversight.
+ *
+ * **`on delete set null` on `token_id` refuses the delete; it never nulls a row.** The clause is
+ * docs/ACCESS.md §4.1's and is reproduced faithfully, but it is unreachable by construction and
+ * saying so here is cheaper than the afternoon somebody spends discovering it. SQLite re-evaluates
+ * `CHECK` constraints on the implicit `UPDATE` that `SET NULL` performs, and
+ * `platform_audit_log_agent_token_chk` demands a non-`NULL` `token_id` on precisely the rows —
+ * the `agent` ones — that are the only rows able to reference a token at all. Every `SET NULL` the
+ * action could perform therefore violates that `CHECK`, and SQLite aborts the whole `DELETE`. The
+ * observed behaviour is `ON DELETE RESTRICT`: a credential with agent history cannot be
+ * hard-deleted, so that history keeps its `token_id` instead of losing it. For an append-only log
+ * that is the better of the two outcomes, which is why the shape is kept rather than argued with —
+ * and nothing hard-deletes a `staff_api_tokens` row in any case, because revocation writes
+ * `revoked_at`. Both halves are pinned by tests in `src/server/db/__tests__/platform-schema.test.ts`
+ * rather than left as prose, since neither can be changed after `0004` ships without a table
+ * recreate (docs/DEPLOY.md §5).
+ *
+ * Both cross-column invariants are `CHECK` constraints rather than prose, and both are declared in
+ * the `CREATE TABLE` rather than added later: adding a `CHECK` to an existing table escalates
+ * drizzle-kit to a table recreate, which docs/DEPLOY.md §5 counts as non-additive.
+ */
+export const platformAuditLog = sqliteTable(
+  'platform_audit_log',
+  {
+    id: pk(),
+    /** The human, or the owner of the MCP token. `NULL` only when `actor_kind` is `system`. */
+    actorUserId: userRef('actor_user_id'),
+    actorKind: text('actor_kind').notNull(),
+    /** The platform role held at the moment of the action — `user.role` is mutable, this is not. */
+    actorRole: text('actor_role'),
+    /** The credential the call arrived on. Non-`NULL` exactly when `actor_kind` is `agent`. */
+    tokenId: text('token_id').references(() => staffApiTokens.id, {
+      onDelete: 'set null',
+    }),
+    action: text('action').notNull(),
+    entityType: text('entity_type').notNull(),
+    entityId: text('entity_id'),
+    changes: text('changes', { mode: 'json' }).$type<PlatformAuditChanges>(),
+    ip: text('ip'),
+    /** The request's `User-Agent` header, verbatim, and nothing else. */
+    userAgent: text('user_agent'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    // The §4.4 timeline query filters on (entity_type, entity_id) and orders by created_at, so this
+    // three-column index serves it whole and no two-column index is created beside it.
+    index('platform_audit_log_entity_idx').on(t.entityType, t.entityId, t.createdAt),
+    index('platform_audit_log_actor_idx').on(t.actorUserId, t.createdAt),
+    index('platform_audit_log_action_idx').on(t.action, t.createdAt),
+    index('platform_audit_log_token_idx').on(t.tokenId),
+    index('platform_audit_log_created_at_idx').on(t.createdAt),
+    enumCheck('platform_audit_log_actor_kind_chk', t.actorKind, PLATFORM_ACTOR_KINDS),
+    enumCheck('platform_audit_log_entity_type_chk', t.entityType, PLATFORM_AUDIT_ENTITY_TYPES),
+    check(
+      'platform_audit_log_agent_token_chk',
+      sql.raw(`("actor_kind" <> 'agent' OR "token_id" IS NOT NULL)`),
+    ),
+    check(
+      'platform_audit_log_system_actor_chk',
+      sql.raw(
+        `("actor_kind" <> 'system' OR ("actor_user_id" IS NULL AND "actor_role" IS NULL AND "token_id" IS NULL))`,
+      ),
+    ),
+  ],
 )

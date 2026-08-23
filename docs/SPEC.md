@@ -312,7 +312,12 @@ Authorisation is decided in exactly one place, `requirePermission` in
 `src/server/auth/guard.ts`, used identically by console server functions and by the MCP server,
 so "may this actor do this" never grows a second implementation. A session with
 `session.impersonated_by` set carries a persistent warning bar with an "end impersonation"
-action on every screen; entering and leaving impersonation are both audited.
+action on **every screen under `/_app`** - rendered by `AppShell`, which is the only wrapper with
+a session in scope, so no route inside it can omit the bar and no route can scroll it away. The
+bound is `docs/ACCESS.md` §6.1's, and it is a bound rather than a weakening: the `(auth)` tree and
+the public marketing pages render under `RootDocument`, whose router context carries no session at
+all, and threading one in would put an auth read in front of every anonymous page to cover a case
+that cannot arise. Entering and leaving impersonation are both audited.
 
 ### Billing surface
 
@@ -400,7 +405,7 @@ Rules:
 - `routeTree.gen.ts` is **generated**. Never hand-edit. Run `pnpm generate-routes`.
 - Components in `components/ui` never fetch data and never import from `server/`.
 - All SQL lives in `server/repos`. Routes call server functions; server functions call repos.
-- The single stated exception is `server/catalog`, and it exists only because the eight global
+- The single stated exception is `server/catalog`, and it exists only because the nine global
   tables in §5 carry no `organization_id` and therefore cannot pass through the tenant
   repository at all. It is the one exception; a second one is a change to this contract. Its
   SQL is guarded instead by an explicit platform actor, `requirePermission`, and a
