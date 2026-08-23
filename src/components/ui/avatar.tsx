@@ -3,7 +3,9 @@ import { Avatar as AvatarPrimitive } from 'radix-ui'
 import { cva } from 'class-variance-authority'
 
 import { cn } from '#/lib/cn'
+import { useUiCopy } from './copy'
 
+import type { MessageKey } from '#/lib/i18n'
 import type { VariantProps } from 'class-variance-authority'
 
 export const avatarVariants = cva(
@@ -82,6 +84,17 @@ const statusTones = {
   offline: 'bg-ink-4',
 } as const
 
+/**
+ * Presence is announced in words, so it never rests on the dot's colour alone —
+ * and the words are catalogue keys, so it is announced in the reader's language.
+ */
+const statusKeys: Record<keyof typeof statusTones, MessageKey> = {
+  online: 'ui.avatar.status.online',
+  away: 'ui.avatar.status.away',
+  busy: 'ui.avatar.status.busy',
+  offline: 'ui.avatar.status.offline',
+}
+
 const statusSizes = {
   xs: 'size-1.5',
   sm: 'size-2',
@@ -127,62 +140,65 @@ export const Avatar = React.forwardRef<HTMLSpanElement, AvatarProps>(
       ...props
     },
     ref,
-  ) => (
-    <span
-      ref={ref}
-      className={cn(
-        avatarVariants({ size, shape }),
-        ring && 'ring-2 ring-surface',
-        status && 'overflow-visible',
-        className,
-      )}
-      {...props}
-    >
-      <AvatarPrimitive.Root
+  ) => {
+    const t = useUiCopy()
+    return (
+      <span
+        ref={ref}
         className={cn(
-          'flex size-full items-center justify-center overflow-hidden',
-          shape === 'rounded' ? 'rounded-md' : 'rounded-full',
+          avatarVariants({ size, shape }),
+          ring && 'ring-2 ring-surface',
+          status && 'overflow-visible',
+          className,
         )}
+        {...props}
       >
-        {src ? (
-          <AvatarPrimitive.Image
-            src={src}
-            alt={name}
-            className="size-full object-cover"
-          />
-        ) : null}
-        <AvatarPrimitive.Fallback
-          // Only an avatar that is waiting on an image delays its fallback; an
-          // initials-only avatar must paint on the first frame.
-          delayMs={src ? 120 : undefined}
+        <AvatarPrimitive.Root
           className={cn(
-            'flex size-full items-center justify-center font-semibold',
-            tintFor(name),
+            'flex size-full items-center justify-center overflow-hidden',
+            shape === 'rounded' ? 'rounded-md' : 'rounded-full',
           )}
         >
-          <span aria-hidden="true">
-            {initials ??
-              initialsFor(
-                name,
-                SINGLE_INITIAL_SIZES.has(size ?? 'md') ? 1 : 2,
-              )}
-          </span>
-          <span className="sr-only">{name}</span>
-        </AvatarPrimitive.Fallback>
-      </AvatarPrimitive.Root>
+          {src ? (
+            <AvatarPrimitive.Image
+              src={src}
+              alt={name}
+              className="size-full object-cover"
+            />
+          ) : null}
+          <AvatarPrimitive.Fallback
+            // Only an avatar that is waiting on an image delays its fallback; an
+            // initials-only avatar must paint on the first frame.
+            delayMs={src ? 120 : undefined}
+            className={cn(
+              'flex size-full items-center justify-center font-semibold',
+              tintFor(name),
+            )}
+          >
+            <span aria-hidden="true">
+              {initials ??
+                initialsFor(
+                  name,
+                  SINGLE_INITIAL_SIZES.has(size ?? 'md') ? 1 : 2,
+                )}
+            </span>
+            <span className="sr-only">{name}</span>
+          </AvatarPrimitive.Fallback>
+        </AvatarPrimitive.Root>
 
-      {status ? (
-        <span
-          className={cn(
-            'absolute right-0 bottom-0 rounded-full ring-2 ring-surface',
-            statusTones[status],
-            statusSizes[size ?? 'md'],
-          )}
-          role="img"
-          aria-label={`${name} is ${status}`}
-        />
-      ) : null}
-    </span>
-  ),
+        {status ? (
+          <span
+            className={cn(
+              'absolute end-0 bottom-0 rounded-full ring-2 ring-surface',
+              statusTones[status],
+              statusSizes[size ?? 'md'],
+            )}
+            role="img"
+            aria-label={t(statusKeys[status], { name })}
+          />
+        ) : null}
+      </span>
+    )
+  },
 )
 Avatar.displayName = 'Avatar'

@@ -79,8 +79,8 @@ describe('Table', () => {
     )
     const amount = screen.getByTestId('amount')
     expect(amount.className).toContain('tabular-nums')
-    expect(amount.className).toContain('text-right')
-    expect(screen.getByTestId('label').className).toContain('text-left')
+    expect(amount.className).toContain('text-end')
+    expect(screen.getByTestId('label').className).toContain('text-start')
   })
 
   it('reports the sort state through aria-sort and fires on click', async () => {

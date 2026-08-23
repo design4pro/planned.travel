@@ -4,6 +4,7 @@ import { cva } from 'class-variance-authority'
 
 import { cn } from '#/lib/cn'
 import { Spinner } from './spinner'
+import { useUiCopy } from './copy'
 import { disabledLabelled, focusRing, transitionBase } from './shared'
 
 import type { VariantProps } from 'class-variance-authority'
@@ -117,7 +118,7 @@ export type ButtonProps = React.ComponentPropsWithoutRef<'button'> &
      * width, so a pending action never reflows the row it sits in.
      */
     loading?: boolean
-    /** Announced while `loading`. */
+    /** Overrides what is announced while `loading`. Left out, it says "Working". */
     loadingLabel?: string
     /** Render as the single child element (a router `Link`, for instance). */
     asChild?: boolean
@@ -140,7 +141,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       icon,
       iconAfter,
       loading = false,
-      loadingLabel = 'Working',
+      loadingLabel,
       asChild = false,
       disabled = false,
       type,
@@ -149,6 +150,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref,
   ) => {
+    const t = useUiCopy()
     const isDisabled = disabled || loading
     const classes = cn(
       buttonVariants({ variant, size, shape, block }),
@@ -209,7 +211,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           {children}
           {iconAfter}
         </span>
-        {loading ? <span className="sr-only">{loadingLabel}</span> : null}
+        {loading ? (
+          <span className="sr-only">
+            {loadingLabel ?? t('ui.status.working')}
+          </span>
+        ) : null}
       </button>
     )
   },

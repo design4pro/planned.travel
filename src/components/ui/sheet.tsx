@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import { IconButton } from './icon-button'
+import { useUiI18n } from './copy'
 
 /**
  * The draggable drawer. `vaul` gives it the physics — velocity-aware dismissal,
@@ -30,6 +31,19 @@ export const SheetOverlay = React.forwardRef<
 ))
 SheetOverlay.displayName = 'SheetOverlay'
 
+/**
+ * The four physical edges, and why they stay physical.
+ *
+ * `vaul` needs `direction` on the root to know which way the drag goes, and its
+ * vocabulary is physical. The classes below are physical for the same reason and
+ * are *correct* that way: a sheet pinned to the physical left edge rounds its
+ * physical right corners in every script, because that is the edge facing the
+ * page. Swapping them for logical properties would round the wrong corners in
+ * Arabic.
+ *
+ * What is genuinely direction-dependent is which edge a *detail panel* should
+ * come from, and that is what `start` and `end` below are for.
+ */
 const sideClasses = {
   bottom:
     'inset-x-0 bottom-0 mt-24 max-h-[92dvh] rounded-t-2xl border-t pb-safe',
@@ -38,7 +52,14 @@ const sideClasses = {
   right: 'inset-y-0 right-0 w-full max-w-md rounded-l-2xl border-l',
 } as const
 
-export type SheetSide = keyof typeof sideClasses
+/**
+ * `start` and `end` are the inline edges: `end` is the right in English and the
+ * left in Arabic, which is where a detail panel belongs in either. Pass the
+ * matching physical `direction` to `Sheet` so the drag agrees with the anchor —
+ * `const dir = useDirection()` then `direction={dir === 'rtl' ? 'left' : 'right'}`
+ * beside `side="end"`.
+ */
+export type SheetSide = keyof typeof sideClasses | 'start' | 'end'
 
 export type SheetContentProps = React.ComponentPropsWithoutRef<
   typeof Drawer.Content
@@ -60,7 +81,7 @@ export const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
       side = 'bottom',
       handle,
       hideClose = false,
-      closeLabel = 'Close',
+      closeLabel,
       onOpenAutoFocus,
       onCloseAutoFocus,
       children,
@@ -68,7 +89,18 @@ export const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
     },
     ref,
   ) => {
-    const showHandle = handle ?? side === 'bottom'
+    const { dir, t } = useUiI18n()
+    const physicalSide =
+      side === 'start'
+        ? dir === 'rtl'
+          ? 'right'
+          : 'left'
+        : side === 'end'
+          ? dir === 'rtl'
+            ? 'left'
+            : 'right'
+          : side
+    const showHandle = handle ?? physicalSide === 'bottom'
     /**
      * Where focus goes when the sheet closes.
      *
@@ -86,7 +118,7 @@ export const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
           ref={ref}
           className={cn(
             'fixed z-modal flex flex-col border-edge bg-surface text-ink shadow-modal outline-none',
-            sideClasses[side],
+            sideClasses[physicalSide],
             className,
           )}
           /**
@@ -131,10 +163,10 @@ export const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
             <Drawer.Close asChild>
               <IconButton
                 icon={<X />}
-                label={closeLabel}
+                label={closeLabel ?? t('ui.action.close')}
                 size="sm"
                 variant="ghost"
-                className="absolute top-3.5 right-3.5"
+                className="absolute top-3.5 end-3.5"
               />
             </Drawer.Close>
           )}
@@ -152,7 +184,7 @@ export const SheetHeader = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'shrink-0 border-b border-edge-faint px-5 py-4 pr-14',
+      'shrink-0 border-b border-edge-faint px-5 py-4 pe-14',
       className,
     )}
     {...props}

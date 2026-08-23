@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import { IconButton } from './icon-button'
+import { useUiCopy } from './copy'
 import { overlaySurface } from './shared'
 
 const contentSizes = {
@@ -37,6 +38,7 @@ export type DialogContentProps = React.ComponentPropsWithoutRef<
   size?: keyof typeof contentSizes
   /** Hides the built-in close affordance when the footer already owns dismissal. */
   hideClose?: boolean
+  /** Overrides the close button's name. Left out, it says "Close". */
   closeLabel?: string
   /** Class for the overlay behind the panel. */
   overlayClassName?: string
@@ -60,7 +62,7 @@ export const DialogContent = React.forwardRef<
       overlayClassName,
       size = 'md',
       hideClose = false,
-      closeLabel = 'Close',
+      closeLabel,
       onOpenAutoFocus,
       onCloseAutoFocus,
       children,
@@ -79,57 +81,58 @@ export const DialogContent = React.forwardRef<
      * shapes, and a caller's own handler still wins.
      */
     const opener = React.useRef<HTMLElement | null>(null)
+    const t = useUiCopy()
     return (
-    <DialogPortal>
-      <DialogOverlay className={overlayClassName} />
-      {/* A non-interactive centring frame. Keeping the panel free of layout
+      <DialogPortal>
+        <DialogOverlay className={overlayClassName} />
+        {/* A non-interactive centring frame. Keeping the panel free of layout
           transforms is what lets the entrance animation own `transform`
           outright, with no fight between centring and choreography. */}
-      <div className="pointer-events-none fixed inset-0 z-modal flex items-end justify-center sm:items-center sm:p-4">
-        <DialogPrimitive.Content
-          ref={ref}
-          data-motion-transform=""
-          className={cn(
-            'pointer-events-auto relative flex w-full flex-col overflow-hidden bg-surface text-ink shadow-modal',
-            'max-h-[92dvh] rounded-t-2xl border-t border-edge-faint pb-safe',
-            'sm:max-h-[85dvh] sm:rounded-xl sm:border sm:pb-0',
-            'data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out',
-            contentSizes[size],
-            className,
-          )}
-          onOpenAutoFocus={(event) => {
-            opener.current =
-              document.activeElement instanceof HTMLElement
-                ? document.activeElement
-                : null
-            onOpenAutoFocus?.(event)
-          }}
-          onCloseAutoFocus={(event) => {
-            onCloseAutoFocus?.(event)
-            if (event.defaultPrevented) return
-            const target = opener.current
-            opener.current = null
-            if (target === null || !target.isConnected) return
-            event.preventDefault()
-            target.focus({ preventScroll: true })
-          }}
-          {...props}
-        >
-          {children}
-          {hideClose ? null : (
-            <DialogPrimitive.Close asChild>
-              <IconButton
-                icon={<X />}
-                label={closeLabel}
-                size="sm"
-                variant="ghost"
-                className="absolute top-3.5 right-3.5"
-              />
-            </DialogPrimitive.Close>
-          )}
-        </DialogPrimitive.Content>
-      </div>
-    </DialogPortal>
+        <div className="pointer-events-none fixed inset-0 z-modal flex items-end justify-center sm:items-center sm:p-4">
+          <DialogPrimitive.Content
+            ref={ref}
+            data-motion-transform=""
+            className={cn(
+              'pointer-events-auto relative flex w-full flex-col overflow-hidden bg-surface text-ink shadow-modal',
+              'max-h-[92dvh] rounded-t-2xl border-t border-edge-faint pb-safe',
+              'sm:max-h-[85dvh] sm:rounded-xl sm:border sm:pb-0',
+              'data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out',
+              contentSizes[size],
+              className,
+            )}
+            onOpenAutoFocus={(event) => {
+              opener.current =
+                document.activeElement instanceof HTMLElement
+                  ? document.activeElement
+                  : null
+              onOpenAutoFocus?.(event)
+            }}
+            onCloseAutoFocus={(event) => {
+              onCloseAutoFocus?.(event)
+              if (event.defaultPrevented) return
+              const target = opener.current
+              opener.current = null
+              if (target === null || !target.isConnected) return
+              event.preventDefault()
+              target.focus({ preventScroll: true })
+            }}
+            {...props}
+          >
+            {children}
+            {hideClose ? null : (
+              <DialogPrimitive.Close asChild>
+                <IconButton
+                  icon={<X />}
+                  label={closeLabel ?? t('ui.action.close')}
+                  size="sm"
+                  variant="ghost"
+                  className="absolute top-3.5 end-3.5"
+                />
+              </DialogPrimitive.Close>
+            )}
+          </DialogPrimitive.Content>
+        </div>
+      </DialogPortal>
     )
   },
 )
@@ -143,7 +146,7 @@ export const DialogHeader = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'shrink-0 border-b border-edge-faint px-5 py-4 pr-14 sm:px-6 sm:py-5',
+      'shrink-0 border-b border-edge-faint px-5 py-4 pe-14 sm:px-6 sm:py-5',
       className,
     )}
     {...props}

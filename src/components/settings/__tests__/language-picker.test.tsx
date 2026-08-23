@@ -223,6 +223,49 @@ describe('LanguagePicker — keyboard traversal never writes', () => {
     expect(chip('es').getAttribute('tabindex')).toBe('0')
     expect(chip('en').getAttribute('tabindex')).toBe('-1')
   })
+
+  it('leaves the tab stop where the arrows left it, not on the checked option', async () => {
+    // Rule 1 of the two the component documents. Focus is not selection here,
+    // so tabbing out and back in must not discard the traversal the reader
+    // just made — which is the opposite of the plain ARIA radio pattern, and
+    // the reason the behaviour is written down rather than inherited.
+    const user = userEvent.setup()
+    renderPicker({ value: 'en' })
+
+    chip('en').focus()
+    await user.keyboard('{ArrowRight}{ArrowRight}')
+    expect(document.activeElement).toBe(chip('fr'))
+
+    chip('fr').blur()
+    expect(document.activeElement).not.toBe(chip('fr'))
+
+    await user.tab()
+    expect(document.activeElement).toBe(chip('fr'))
+    expect(chip('en').getAttribute('tabindex')).toBe('-1')
+  })
+
+  it('re-anchors the tab stop when the selection changes from outside', async () => {
+    // Rule 2. A commit settling, a router invalidation or another tab moves
+    // `value` without touching focus; the last focused index is then stale,
+    // and the tab stop belongs on the language actually in force.
+    const user = userEvent.setup()
+    const { rerender } = renderPicker({ value: 'en' })
+
+    chip('en').focus()
+    await user.keyboard('{ArrowRight}{ArrowRight}')
+    expect(chip('fr').getAttribute('tabindex')).toBe('0')
+
+    rerender(
+      <LanguagePicker
+        value="uk"
+        workspaceDefault="pl"
+        onSelect={vi.fn()}
+        {...COPY}
+      />,
+    )
+    expect(chip('uk').getAttribute('tabindex')).toBe('0')
+    expect(chip('fr').getAttribute('tabindex')).toBe('-1')
+  })
 })
 
 describe('LanguagePicker — commit', () => {
@@ -286,6 +329,24 @@ describe('LanguagePicker — the busy lock', () => {
     expect(chip('de').getAttribute('aria-disabled')).toBe('true')
   })
 
+  it('keeps the locked options readable rather than dimming them below AA', () => {
+    // `opacity-60` measured 3.40:1 on the unselected chips mid-write. These
+    // options are momentarily inert, not disabled, so WCAG 1.4.3's exception
+    // is not ours to claim; the lock is drawn by receding one ink tier.
+    renderPicker({ value: 'en', pending: 'ja' })
+
+    const locked = chip('de').className.split(/\s+/)
+    expect(locked).not.toContain('opacity-60')
+    expect(locked).toContain('text-ink-3')
+    expect(locked).not.toContain('text-ink-2')
+    expect(locked).toContain('cursor-progress')
+
+    // The option being written keeps full ink — it is the one being watched.
+    expect(chip('ja').className.split(/\s+/)).toContain('text-ink-2')
+    // ...and so does the language still in force.
+    expect(chip('en').className.split(/\s+/)).toContain('text-brand')
+  })
+
   it('turns a double click into exactly one write', async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()
@@ -324,6 +385,51 @@ describe('LanguagePicker — the loading shape', () => {
     const root = container.firstElementChild
     expect(root?.getAttribute('aria-hidden')).toBe('true')
     expect(screen.queryAllByRole('radio')).toHaveLength(0)
+  })
+
+  it('is the loaded picker geometry, box for box', () => {
+    // A skeleton of the wrong height turns one jump into two. jsdom has no
+    // layout engine, so the guarantee is made structurally: identical column,
+    // identical grid, identical box count, and the "follow" row inside the
+    // grid so it takes the grid's 8px gap rather than the column's 12px —
+    // which is where 4 of the 2.81px discrepancy came from.
+    const loaded = render(
+      <LanguagePicker
+        value="en"
+        workspaceDefault="pl"
+        onSelect={vi.fn()}
+        {...COPY}
+      />,
+    )
+    const loadedRoot = loaded.container.firstElementChild
+    const loadedGrid = loadedRoot?.lastElementChild
+
+    const skeleton = render(<LanguagePickerSkeleton />)
+    const root = skeleton.container.firstElementChild
+    const grid = root?.lastElementChild
+
+    expect(root?.className).toBe(loadedRoot?.className)
+    expect(grid?.className).toBe(loadedGrid?.className)
+    expect(grid?.children).toHaveLength(loadedGrid?.children.length ?? 0)
+    expect(grid?.children).toHaveLength(24)
+
+    for (const index of [0, 1, 23]) {
+      expect(grid?.children[index]?.className).toContain('h-11')
+      expect(loadedGrid?.children[index]?.className).toContain('h-11')
+    }
+    expect(grid?.children[0]?.className).toContain('col-span-full')
+    expect(loadedGrid?.children[0]?.className).toContain('col-span-full')
+  })
+
+  it('sizes its label row from the tokens that draw the real label', () => {
+    // 11px x 1.2 = 13.2px. The previous `h-3` was 12px and left the loading
+    // shape 1.19px short of the loaded one; a literal 13.2 would only be right
+    // until the type scale moved, so the box is derived instead.
+    const { container } = render(<LanguagePickerSkeleton />)
+    const labelRow = container.firstElementChild?.firstElementChild
+    expect(labelRow?.className).toContain(
+      'h-[calc(var(--text-micro)*var(--text-micro--line-height))]',
+    )
   })
 })
 

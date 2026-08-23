@@ -32,8 +32,11 @@ const fabVariants = cva(
       /** Anchors it over the content, clear of the mobile tab bar and the notch. */
       position: {
         none: '',
+        /** The reading-end corner: bottom right in English, bottom left in Arabic. */
         'bottom-right':
-          'fixed right-4 bottom-[calc(var(--safe-bottom)+var(--space-5))] z-nav sm:right-6 sm:bottom-6',
+          'fixed end-4 bottom-[calc(var(--safe-bottom)+var(--space-5))] z-nav sm:end-6 sm:bottom-6',
+        /** Centred, so `left-1/2` and the half-width pull back are symmetrical
+            and mean the same thing in either direction. */
         'bottom-center':
           'fixed left-1/2 bottom-[calc(var(--safe-bottom)+var(--space-5))] z-nav -translate-x-1/2',
       },

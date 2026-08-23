@@ -1,11 +1,13 @@
 import * as React from 'react'
 import { CalendarDays, X } from 'lucide-react'
-import { format, isValid } from 'date-fns'
+import { isValid } from 'date-fns'
 
 import { cn } from '#/lib/cn'
-import { Calendar } from './calendar'
+import { formatDate } from '#/lib/format'
+import { Calendar, isoDay } from './calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './popover'
 import { useFieldControl } from './field'
+import { useUiI18n } from './copy'
 import {
   fieldSizes,
   focusRing,
@@ -18,7 +20,7 @@ import type { CalendarBaseProps } from './calendar'
 import type { FieldSize } from './shared'
 
 export const dateTriggerClasses = [
-  'flex w-full items-center gap-2 rounded-md border border-edge-strong bg-surface text-left text-ink',
+  'flex w-full items-center gap-2 rounded-md border border-edge-strong bg-surface text-start text-ink',
   transitionBase,
   focusRing,
   'hover:border-ink-4',
@@ -34,8 +36,10 @@ export type DatePickerProps = Omit<
   value?: Date | null
   defaultValue?: Date | null
   onChange?: (date: Date | null) => void
-  /** `date-fns` pattern for the trigger's label. */
-  displayFormat?: string
+  /**
+   * Overrides the placeholder. Left out, the primitive says "Pick a date" in
+   * the reader's language.
+   */
   placeholder?: string
   size?: FieldSize
   invalid?: boolean
@@ -63,8 +67,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
       value,
       defaultValue = null,
       onChange,
-      displayFormat = 'd MMM yyyy',
-      placeholder = 'Pick a date',
+      placeholder,
       size = 'md',
       invalid,
       disabled,
@@ -78,6 +81,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
     },
     ref,
   ) => {
+    const ui = useUiI18n()
     const [open, setOpen] = React.useState(false)
     const [selected, setSelected] = useControllableState<Date | null>({
       value,
@@ -99,7 +103,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
               className={cn(
                 dateTriggerClasses,
                 fieldSizes[size],
-                clearable && hasValue && 'pr-9',
+                clearable && hasValue && 'pe-9',
                 triggerClassName,
               )}
               {...field}
@@ -116,8 +120,8 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                 )}
               >
                 {selected && isValid(selected)
-                  ? format(selected, displayFormat)
-                  : placeholder}
+                  ? formatDate(isoDay(selected), ui.locale)
+                  : (placeholder ?? ui.t('ui.datePicker.placeholder'))}
               </span>
             </button>
           </PopoverTrigger>
@@ -125,10 +129,10 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
           {clearable && hasValue && !field.disabled ? (
             <button
               type="button"
-              aria-label="Clear date"
+              aria-label={ui.t('ui.datePicker.clear')}
               onClick={() => setSelected(null)}
               className={cn(
-                'absolute top-1/2 right-1.5 grid size-6 -translate-y-1/2 place-items-center rounded-full text-ink-4',
+                'absolute top-1/2 end-1.5 grid size-6 -translate-y-1/2 place-items-center rounded-full text-ink-4',
                 transitionBase,
                 focusRing,
                 'hover:bg-hover hover:text-ink',

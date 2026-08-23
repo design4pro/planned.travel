@@ -1,12 +1,14 @@
 import * as React from 'react'
 import { CalendarRange, X } from 'lucide-react'
-import { addDays, differenceInCalendarDays, format, startOfDay } from 'date-fns'
+import { addDays, differenceInCalendarDays, startOfDay } from 'date-fns'
 
 import { cn } from '#/lib/cn'
-import { RangeCalendar } from './calendar'
+import { formatDayMonth } from '#/lib/format'
+import { RangeCalendar, isoDay } from './calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './popover'
 import { useFieldControl } from './field'
 import { dateTriggerClasses } from './date-picker'
+import { useUiI18n } from './copy'
 import {
   fieldSizes,
   focusRing,
@@ -15,6 +17,7 @@ import {
   useControllableState,
 } from './shared'
 
+import type { Translate } from '#/lib/i18n'
 import type { CalendarBaseProps, DateRange } from './calendar'
 import type { FieldSize } from './shared'
 
@@ -24,30 +27,25 @@ export type DateRangePreset = {
   build: () => DateRange
 }
 
-/** Trip-shaped defaults. Callers with their own seasons override them. */
-export const defaultRangePresets: Array<DateRangePreset> = [
-  {
-    label: 'Next 7 days',
-    build: () => ({
-      from: startOfDay(new Date()),
-      to: addDays(startOfDay(new Date()), 6),
-    }),
-  },
-  {
-    label: 'Next 2 weeks',
-    build: () => ({
-      from: startOfDay(new Date()),
-      to: addDays(startOfDay(new Date()), 13),
-    }),
-  },
-  {
-    label: 'Next 30 days',
-    build: () => ({
-      from: startOfDay(new Date()),
-      to: addDays(startOfDay(new Date()), 29),
-    }),
-  },
-]
+/**
+ * Trip-shaped defaults. Callers with their own seasons pass their own.
+ *
+ * A function of the translator rather than a constant: the labels are copy, and
+ * copy frozen at module scope is copy in whatever language the module was
+ * written in. The spans stay relative to today, so "next 7 days" is always the
+ * next seven.
+ */
+export function defaultRangePresets(t: Translate): Array<DateRangePreset> {
+  const span = (days: number) => () => ({
+    from: startOfDay(new Date()),
+    to: addDays(startOfDay(new Date()), days - 1),
+  })
+  return [
+    { label: t('ui.dateRange.preset.week'), build: span(7) },
+    { label: t('ui.dateRange.preset.fortnight'), build: span(14) },
+    { label: t('ui.dateRange.preset.month'), build: span(30) },
+  ]
+}
 
 export type DateRangePickerProps = Omit<
   CalendarBaseProps,
@@ -56,7 +54,10 @@ export type DateRangePickerProps = Omit<
   value?: DateRange | null
   defaultValue?: DateRange | null
   onChange?: (range: DateRange | null) => void
-  displayFormat?: string
+  /**
+   * Overrides the placeholder. Left out, the primitive says "Pick dates" in the
+   * reader's language.
+   */
   placeholder?: string
   size?: FieldSize
   invalid?: boolean
@@ -66,16 +67,10 @@ export type DateRangePickerProps = Omit<
   ariaLabel?: string
   triggerClassName?: string
   contentClassName?: string
-  /** Quick ranges down the left edge of the panel. Pass `[]` to hide them. */
+  /** Quick ranges down the leading edge of the panel. Pass `[]` to hide them. */
   presets?: Array<DateRangePreset>
   /** Shows "8 nights" beside the dates once both ends are set. */
   showNights?: boolean
-}
-
-function formatRange(range: DateRange | null, pattern: string): string | null {
-  if (!range) return null
-  if (!range.to) return `${format(range.from, pattern)} — …`
-  return `${format(range.from, pattern)} – ${format(range.to, pattern)}`
 }
 
 /**
@@ -92,8 +87,7 @@ export const DateRangePicker = React.forwardRef<
       value,
       defaultValue = null,
       onChange,
-      displayFormat = 'd MMM',
-      placeholder = 'Pick dates',
+      placeholder,
       size = 'md',
       invalid,
       disabled,
@@ -102,12 +96,13 @@ export const DateRangePicker = React.forwardRef<
       ariaLabel,
       triggerClassName,
       contentClassName,
-      presets = defaultRangePresets,
+      presets,
       showNights = true,
       ...calendarProps
     },
     ref,
   ) => {
+    const ui = useUiI18n()
     const [open, setOpen] = React.useState(false)
     const [range, setRange] = useControllableState<DateRange | null>({
       value,
@@ -116,7 +111,17 @@ export const DateRangePicker = React.forwardRef<
     })
 
     const field = useFieldControl({ id, 'aria-invalid': invalid, disabled })
-    const label = formatRange(range, displayFormat)
+    const quickRanges = presets ?? defaultRangePresets(ui.t)
+    const start = range ? formatDayMonth(isoDay(range.from), ui.locale) : null
+    const label =
+      start === null
+        ? null
+        : range?.to
+          ? ui.t('ui.dateRange.value', {
+              start,
+              end: formatDayMonth(isoDay(range.to), ui.locale) ?? '',
+            })
+          : ui.t('ui.dateRange.valuePending', { start })
     const nights = range?.to
       ? differenceInCalendarDays(range.to, range.from)
       : 0
@@ -132,7 +137,7 @@ export const DateRangePicker = React.forwardRef<
               className={cn(
                 dateTriggerClasses,
                 fieldSizes[size],
-                clearable && range && 'pr-9',
+                clearable && range && 'pe-9',
                 triggerClassName,
               )}
               {...field}
@@ -148,11 +153,11 @@ export const DateRangePicker = React.forwardRef<
                   !label && 'text-ink-4',
                 )}
               >
-                {label ?? placeholder}
+                {label ?? placeholder ?? ui.t('ui.dateRange.placeholder')}
               </span>
               {showNights && nights > 0 ? (
                 <span className="shrink-0 text-caption tabular-nums text-ink-3">
-                  {nights} {nights === 1 ? 'night' : 'nights'}
+                  {ui.t('ui.dateRange.nights', { count: nights })}
                 </span>
               ) : null}
             </button>
@@ -161,10 +166,10 @@ export const DateRangePicker = React.forwardRef<
           {clearable && range && !field.disabled ? (
             <button
               type="button"
-              aria-label="Clear dates"
+              aria-label={ui.t('ui.dateRange.clear')}
               onClick={() => setRange(null)}
               className={cn(
-                'absolute top-1/2 right-1.5 grid size-6 -translate-y-1/2 place-items-center rounded-full text-ink-4',
+                'absolute top-1/2 end-1.5 grid size-6 -translate-y-1/2 place-items-center rounded-full text-ink-4',
                 transitionBase,
                 focusRing,
                 'hover:bg-hover hover:text-ink',
@@ -181,19 +186,19 @@ export const DateRangePicker = React.forwardRef<
           className={cn('w-auto', contentClassName)}
         >
           <div className="flex flex-col gap-3 sm:flex-row">
-            {presets.length > 0 ? (
+            {quickRanges.length > 0 ? (
               <div
-                className="flex shrink-0 gap-1.5 sm:w-36 sm:flex-col sm:border-r sm:border-edge-faint sm:pr-3"
+                className="flex shrink-0 gap-1.5 sm:w-36 sm:flex-col sm:border-e sm:border-edge-faint sm:pe-3"
                 role="group"
-                aria-label="Quick ranges"
+                aria-label={ui.t('ui.dateRange.presets')}
               >
-                {presets.map((preset) => (
+                {quickRanges.map((preset) => (
                   <button
                     key={preset.label}
                     type="button"
                     onClick={() => setRange(preset.build())}
                     className={cn(
-                      'rounded-md px-2.5 py-1.5 text-left text-caption font-medium text-ink-2 whitespace-nowrap',
+                      'rounded-md px-2.5 py-1.5 text-start text-caption font-medium text-ink-2 whitespace-nowrap',
                       transitionBase,
                       focusRing,
                       'hover:bg-hover hover:text-ink active:bg-active',
@@ -214,11 +219,8 @@ export const DateRangePicker = React.forwardRef<
               }}
               footer={
                 showNights && nights > 0 ? (
-                  <p className="text-caption text-ink-3">
-                    <span className="font-semibold tabular-nums text-ink">
-                      {nights}
-                    </span>{' '}
-                    {nights === 1 ? 'night' : 'nights'} selected
+                  <p className="text-caption font-medium tabular-nums text-ink-2">
+                    {ui.t('ui.dateRange.nightsSelected', { count: nights })}
                   </p>
                 ) : null
               }

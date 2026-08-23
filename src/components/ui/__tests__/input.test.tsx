@@ -15,9 +15,9 @@ describe('Input', () => {
     expect(screen.getByLabelText('Search').className).toContain('h-12')
   })
 
-  it('reserves room for a leading affix', () => {
+  it('reserves room for a leading affix, on the side reading starts', () => {
     render(<Input leading={<span>@</span>} aria-label="Handle" />)
-    expect(screen.getByLabelText('Handle').className).toContain('pl-9')
+    expect(screen.getByLabelText('Handle').className).toContain('ps-9')
   })
 
   it('shows the clear button only once there is a value, uncontrolled', async () => {

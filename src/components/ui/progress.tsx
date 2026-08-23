@@ -83,6 +83,12 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
           max={max}
           className={cn(
             'relative w-full overflow-hidden rounded-full bg-surface-inset',
+            // The fill is a transform along the x axis — the one thing in this
+            // directory that no logical property can express — and the sweep
+            // keyframes are the same. Mirroring the whole track under RTL turns
+            // both round at once, and the track itself is a symmetrical pill, so
+            // there is nothing else in here for the flip to damage.
+            'rtl:-scale-x-100',
             trackSizes[size],
             className,
           )}
@@ -93,6 +99,8 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
             className={cn(
               'size-full rounded-full',
               tones[tone],
+              // `origin-left` is read through the track's RTL mirror above, so
+              // the sweep still starts from the edge the reader starts at.
               indeterminate
                 ? 'animate-indeterminate origin-left'
                 : 'transition-transform duration-slow ease-out-quint',

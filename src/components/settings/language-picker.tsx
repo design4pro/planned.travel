@@ -139,6 +139,25 @@ const CHIP_REST_HOVER = 'hover:border-ink-4 hover:bg-surface-2 hover:text-ink'
 const CHIP_SELECTED_HOVER = 'hover:border-brand-hover'
 
 /**
+ * How an option that is *not* being written looks while the group is locked.
+ *
+ * `opacity-60` used to carry this, and it was a contrast defect: over
+ * `--color-surface` it mixes `--color-ink-2` (#403e36) down to roughly
+ * rgb(140 138 134), measured at 3.40:1 against AA's 4.5:1 floor. WCAG 1.4.3
+ * exempts *inactive* components, but these are not inactive — they are a live
+ * control momentarily refusing a second write, for the few hundred
+ * milliseconds a locale change takes, and a reader mid-sentence should not be
+ * asked to accept unreadable text for it.
+ *
+ * Receding one ink tier says the same thing at 7.02:1 on `--color-surface`
+ * (6.22:1 on `--color-surface-2`), leaves `--color-edge-strong` doing its
+ * 1.4.11 job of drawing the control boundary, and pairs with `cursor-progress`
+ * and the withdrawn hover and press affordances. The option actually being
+ * written keeps full ink and gains a spinner: it is the one being watched.
+ */
+const CHIP_BUSY_UNSELECTED = 'text-ink-3'
+
+/**
  * One wrapped grid at every width, from 360px to 2560px — never a dropdown at
  * `sm`, because the whole point of the affordance is that someone stranded in
  * a script they cannot read finds their own language by shape. `auto-fill`
@@ -158,6 +177,21 @@ const CHIP_SELECTED_HOVER = 'hover:border-brand-hover'
  */
 const GRID =
   'grid grid-cols-[repeat(auto-fill,minmax(min(100%,10.5rem),1fr))] gap-2'
+
+/**
+ * The `SectionLabel`'s line box, written in the two tokens that draw it.
+ *
+ * `--text-micro` is 11px and `--text-micro--line-height` is 1.2, so the loaded
+ * label occupies exactly 13.2px. The skeleton used to stand in for it with
+ * `h-3` — 12px, 1.19px short — and, together with a "follow" placeholder that
+ * sat outside the grid and so took the column's 12px gap instead of the grid's
+ * 8px, left the loading shape 2.81px taller than the thing it was holding
+ * space for at 1440px, 768px and 393px alike. Deriving the box from the same
+ * two tokens makes the two heights equal by construction, which is the only
+ * version of this that survives a change to the type scale.
+ */
+const LABEL_LINE_BOX =
+  'h-[calc(var(--text-micro)*var(--text-micro--line-height))]'
 
 /** Reads the direction the *group* is laid out in, so arrows follow the eye. */
 function isRtl(element: HTMLElement): boolean {
@@ -255,8 +289,20 @@ export function LanguagePicker({
     Math.max(selectedIndex, 0),
   )
 
-  // The checked option owns the tab stop, so tabbing back in returns to the
-  // language in force rather than to wherever the arrows were last left.
+  // Two rules decide where the group's single tab stop sits, and this effect
+  // is only the second of them.
+  //
+  //   1. Inside the group the tab stop follows focus. Arrow to `fr`, tab away,
+  //      tab back and you land on `fr`. That is deliberate and it is where
+  //      this control parts company with the plain ARIA radio pattern: here
+  //      focus is not selection, so returning the reader to the checked option
+  //      would silently discard the traversal they just made. It needs no
+  //      code — `focusIndex` is already moved by the arrow keys and by
+  //      `onFocus`.
+  //   2. When the *selection* changes, the tab stop re-anchors to it. That is
+  //      this effect. It covers a commit settling and a value arriving from
+  //      outside the component — a router invalidation, another tab, a reset —
+  //      where the last focused index is stale rather than intentional.
   React.useEffect(() => {
     if (selectedIndex >= 0) setFocusIndex(selectedIndex)
   }, [selectedIndex])
@@ -360,7 +406,7 @@ export function LanguagePicker({
                     selected ? CHIP_SELECTED_HOVER : CHIP_REST_HOVER,
                   ],
                 busy && 'cursor-progress',
-                busy && !writing && 'opacity-60',
+                busy && !writing && !selected && CHIP_BUSY_UNSELECTED,
                 'disabled:pointer-events-none disabled:opacity-60 disabled:shadow-none',
               )}
             >
@@ -464,8 +510,22 @@ function WorkspaceName({
 }
 
 /**
- * The picker's shape while the settings loader is still running, so the panel
- * holds its height and the grid does not jump into place on arrival.
+ * The picker's shape while the settings loader is still running.
+ *
+ * A skeleton that is not the height of the thing it replaces is worse than no
+ * skeleton at all: it converts one jump into two. So this is the loaded
+ * picker's own markup with the text taken out, and every measurement it makes
+ * is made the same way the real one makes it — the same `flex flex-col gap-3`
+ * column, a label row whose height is the same `--text-micro` line box, and
+ * the same `GRID` holding the same twenty-four boxes with the "follow" row
+ * spanning full width *inside* the grid rather than beside it. The two agree
+ * to the pixel at every width, because there is no number in here that the
+ * picker does not also use.
+ *
+ * There is no empty state to design: the twenty-three locales are a frozen
+ * table in `src/lib/i18n/locales.ts`, so an empty grid is not a state this
+ * component can reach. A failed write is the host route's to report — the
+ * picker's part of it is refusing the commit and releasing `pending`.
  */
 export function LanguagePickerSkeleton({
   className,
@@ -474,9 +534,11 @@ export function LanguagePickerSkeleton({
 }) {
   return (
     <div aria-hidden="true" className={cn('flex flex-col gap-3', className)}>
-      <Skeleton className="h-3 w-24" radius="sm" />
-      <Skeleton className="h-11 w-full" radius="md" />
+      <div className={cn('flex items-center', LABEL_LINE_BOX)}>
+        <Skeleton className="h-2 w-24" radius="sm" />
+      </div>
       <div className={GRID}>
+        <Skeleton className="col-span-full h-11" radius="md" />
         {SUPPORTED_LOCALES.map((descriptor) => (
           <Skeleton key={descriptor.tag} className="h-11" radius="md" />
         ))}

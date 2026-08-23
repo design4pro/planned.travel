@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 import { cn } from '#/lib/cn'
 import { Spinner } from './spinner'
 import { useFieldControl } from './field'
+import { useUiCopy } from './copy'
 import {
   fieldSizes,
   focusRing,
@@ -16,9 +17,9 @@ import type { FieldSize } from './shared'
 
 /** Horizontal room an affix slot needs, per control size. */
 const affixWidth = { sm: 'w-8', md: 'w-9', lg: 'w-11' } as const
-const leadingPad = { sm: 'pl-8', md: 'pl-9', lg: 'pl-11' } as const
-const trailingPad = { sm: 'pr-8', md: 'pr-9', lg: 'pr-11' } as const
-const trailingPadWide = { sm: 'pr-14', md: 'pr-16', lg: 'pr-19' } as const
+const leadingPad = { sm: 'ps-8', md: 'ps-9', lg: 'ps-11' } as const
+const trailingPad = { sm: 'pe-8', md: 'pe-9', lg: 'pe-11' } as const
+const trailingPadWide = { sm: 'pe-14', md: 'pe-16', lg: 'pe-19' } as const
 const spinnerForSize = { sm: 'xs', md: 'xs', lg: 'sm' } as const
 
 export type InputProps = Omit<
@@ -39,7 +40,7 @@ export type InputProps = Omit<
    * reset, so it works for controlled and uncontrolled inputs alike.
    */
   onClear?: () => void
-  /** Announced on the clear button. */
+  /** Overrides the clear button's name. Left out, it says "Clear". */
   clearLabel?: string
   /** Class applied to the positioning wrapper rather than the `<input>`. */
   wrapperClassName?: string
@@ -61,7 +62,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       invalid,
       loading = false,
       onClear,
-      clearLabel = 'Clear',
+      clearLabel,
       type = 'text',
       value,
       defaultValue,
@@ -73,6 +74,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     },
     ref,
   ) => {
+    const t = useUiCopy()
     const field = useFieldControl({
       id,
       'aria-describedby': describedBy,
@@ -104,7 +106,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {leading ? (
           <span
             className={cn(
-              'pointer-events-none absolute left-0 grid h-full shrink-0 place-items-center text-ink-4',
+              'pointer-events-none absolute start-0 grid h-full shrink-0 place-items-center text-ink-4',
               affixWidth[size],
             )}
             aria-hidden="true"
@@ -145,12 +147,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         />
 
         {rightSlot ? (
-          <span className="absolute right-0 flex h-full items-center gap-0.5 pr-1.5">
+          <span className="absolute end-0 flex h-full items-center gap-0.5 pe-1.5">
             {showClear ? (
               <button
                 type="button"
                 onClick={onClear}
-                aria-label={clearLabel}
+                aria-label={clearLabel ?? t('ui.action.clear')}
                 className={cn(
                   'grid size-6 shrink-0 place-items-center rounded-full text-ink-4',
                   transitionBase,

@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Tabs as TabsPrimitive } from 'radix-ui'
 
 import { cn } from '#/lib/cn'
+import { useUiI18n } from './copy'
 import {
   ariaDisabledState,
   focusRing,
@@ -96,6 +97,7 @@ export type TabsListProps = React.ComponentPropsWithoutRef<
 
 export const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
   ({ className, children, ...props }, ref) => {
+    const { dir } = useUiI18n()
     const { variant, value } = React.useContext(TabsContext)
 
     // Trigger values are read straight off the children, so the thumb's index
@@ -119,14 +121,23 @@ export const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
             aria-hidden="true"
             data-motion-transform=""
             className={cn(
-              'pointer-events-none absolute inset-y-1 left-1 rounded-full bg-track-thumb shadow-card',
-              'w-[calc((100%-var(--space-2))/var(--tab-count))] translate-x-[calc(var(--tab-index)*100%)]',
+              'pointer-events-none absolute inset-y-1 start-1 rounded-full bg-track-thumb shadow-card',
+              'w-[calc((100%-var(--space-2))/var(--tab-count))] translate-x-[calc(var(--tab-index)*var(--tab-dir)*100%)]',
               'transition-transform duration-base ease-out-quint',
             )}
+            /**
+             * The thumb is anchored at the inline start and walks along the
+             * inline axis, so under `dir="rtl"` it has to walk the other way.
+             * The sign lives in a custom property rather than in an `rtl:`
+             * variant because Tailwind v4 compiles `rtl:` to a zero-specificity
+             * `:where()`, which would leave two `translate` utilities to be
+             * settled by emission order rather than by intent.
+             */
             style={
               {
                 '--tab-count': values.length,
                 '--tab-index': activeIndex,
+                '--tab-dir': dir === 'rtl' ? -1 : 1,
               } as React.CSSProperties
             }
           />

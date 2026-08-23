@@ -47,13 +47,7 @@ describe('DatePicker', () => {
 
   it('formats the chosen date on the trigger', async () => {
     const user = userEvent.setup()
-    render(
-      <DatePicker
-        ariaLabel="Departure"
-        defaultMonth={march}
-        displayFormat="d MMM yyyy"
-      />,
-    )
+    render(<DatePicker ariaLabel="Departure" defaultMonth={march} />)
     await user.click(screen.getByRole('button', { name: 'Departure' }))
     await user.click(screen.getByRole('button', { name: dayLabel(18) }))
     expect(

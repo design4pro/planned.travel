@@ -169,7 +169,7 @@ export const FieldLabel = React.forwardRef<HTMLLabelElement, FieldLabelProps>(
     >
       {children}
       {required ? (
-        <span className="ml-0.5 text-danger" aria-hidden="true">
+        <span className="ms-0.5 text-danger" aria-hidden="true">
           *
         </span>
       ) : null}

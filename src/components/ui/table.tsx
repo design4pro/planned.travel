@@ -30,7 +30,7 @@ export const Table = React.forwardRef<HTMLTableElement, TableProps>(
         ref={ref}
         aria-label={label}
         className={cn(
-          'w-full border-collapse text-left text-label',
+          'w-full border-collapse text-start text-label',
           fixed && 'table-fixed',
           className,
         )}
@@ -120,9 +120,9 @@ export const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(
 TableRow.displayName = 'TableRow'
 
 const alignments = {
-  start: 'text-left',
+  start: 'text-start',
   center: 'text-center',
-  end: 'text-right',
+  end: 'text-end',
 } as const
 
 export type SortDirection = 'asc' | 'desc' | null

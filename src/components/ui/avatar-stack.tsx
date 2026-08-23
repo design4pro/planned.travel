@@ -1,7 +1,9 @@
 import * as React from 'react'
 
 import { cn } from '#/lib/cn'
+import { formatList } from '#/lib/format'
 import { Avatar, avatarVariants } from './avatar'
+import { useUiI18n } from './copy'
 
 import type { AvatarSize } from './avatar'
 
@@ -55,13 +57,22 @@ export const AvatarStack = React.forwardRef<HTMLDivElement, AvatarStackProps>(
     },
     ref,
   ) => {
+    const ui = useUiI18n()
     const shown = people.slice(0, max)
     const hidden = people.length - shown.length
     const names = people.map((person) => person.name)
-    const summary =
+    // The party is read out as one conjunction list in this locale's own
+    // punctuation — `formatList` freezes those separators for the same reason
+    // the date tables are frozen (`docs/SPEC.md` §8.5).
+    const summary = formatList(
       names.length <= max
-        ? names.join(', ')
-        : `${names.slice(0, max).join(', ')} and ${names.length - max} others`
+        ? names
+        : [
+            ...names.slice(0, max),
+            ui.t('ui.avatar.overflow', { count: names.length - max }),
+          ],
+      ui.locale,
+    )
 
     return (
       <div
