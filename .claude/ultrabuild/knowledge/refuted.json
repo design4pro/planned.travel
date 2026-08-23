@@ -56,5 +56,28 @@
       "auditor",
       "mechanical"
     ]
+  },
+  {
+    "id": "vite-dep-optimiser-504",
+    "claim": "A console `Failed to load resource: 504 (Outdated Optimize Dep)` from /node_modules/.vite/deps/ is an application error and fails the item.",
+    "why": "It is Vite's dependency optimiser re-bundling while the page is open — the same class as the vite-console-noise fact. The origin is the dev server's own deps namespace, the gate runs no dev client, and it cannot occur in a build. It failed language-picker in round 4.",
+    "cost": "one item's whole round",
+    "blindSafe": false,
+    "scope": [
+      "auditor",
+      "capture"
+    ]
+  },
+  {
+    "id": "a-side-findings-are-not-ours",
+    "claim": "Blocking findings the critic writes about candidate A are defects of the item under judgement.",
+    "why": "A and B are randomised and the critic is blind. In round 4 every 'A's ...' finding on locale-negotiation-shell described the REFERENCE: reading the frames showed B carries our seeded user and our trip 'Japan · Honshu' while A carries 'Japana' and 'Demo User', and abWinner was 'ours'. Check which side won before carrying a critic finding as a defect.",
+    "cost": "nine phantom blocking findings on an accepted item",
+    "blindSafe": false,
+    "scope": [
+      "auditor",
+      "builder",
+      "mechanical"
+    ]
   }
 ]

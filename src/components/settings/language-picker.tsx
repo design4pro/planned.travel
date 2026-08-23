@@ -146,9 +146,18 @@ const CHIP_SELECTED_HOVER = 'hover:border-brand-hover'
  * of the ragged right edge a plain `flex-wrap` leaves. The `min(100%, …)`
  * floor is what stops the track from outgrowing a narrow container and
  * pushing a horizontal scrollbar onto the page.
+ *
+ * 10.5rem is measured, not chosen. Set in Geist at `--text-label`, the widest
+ * of the twenty-three names is `Português (Brasil)` at 107.9px and
+ * `Bahasa Indonesia` follows at 107.2px; the chip spends 24px on `px-3`, 8px on
+ * its gap and 16px on the mark well, so 156px is the width at which the last
+ * name stops truncating. 168px keeps 12px of slack for the moment the fallback
+ * face swaps for the webfont, and it is the narrowest track on the 4px grid
+ * that does — which is what turns a settings panel into four columns instead of
+ * three and stops 日本語 sitting alone in a 236px box.
  */
 const GRID =
-  'grid grid-cols-[repeat(auto-fill,minmax(min(100%,11.5rem),1fr))] gap-2'
+  'grid grid-cols-[repeat(auto-fill,minmax(min(100%,10.5rem),1fr))] gap-2'
 
 /** Reads the direction the *group* is laid out in, so arrows follow the eye. */
 function isRtl(element: HTMLElement): boolean {
@@ -352,22 +361,20 @@ export function LanguagePicker({
                   ],
                 busy && 'cursor-progress',
                 busy && !writing && 'opacity-60',
-                'disabled:pointer-events-none disabled:opacity-45 disabled:shadow-none',
+                'disabled:pointer-events-none disabled:opacity-60 disabled:shadow-none',
               )}
             >
-              <Mark selected={selected} writing={writing} />
-              {item.descriptor === null ? (
-                <>
-                  <span className={cn('truncate', NAME_LINE)}>
-                    {followWorkspaceLabel}
-                  </span>
+              <span className={cn('truncate', NAME_LINE)}>
+                {item.descriptor === null
+                  ? followWorkspaceLabel
+                  : item.descriptor.nativeName}
+              </span>
+              <span className="ms-auto flex min-w-0 shrink items-center gap-2">
+                {item.descriptor === null ? (
                   <WorkspaceName tag={workspaceDefault} selected={selected} />
-                </>
-              ) : (
-                <span className={cn('truncate', NAME_LINE)}>
-                  {item.descriptor.nativeName}
-                </span>
-              )}
+                ) : null}
+                <Mark selected={selected} writing={writing} />
+              </span>
             </button>
           )
         })}
@@ -377,13 +384,18 @@ export function LanguagePicker({
 }
 
 /**
- * The selection mark: a 16px well that is always there.
+ * The selection mark: a 16px well at the trailing edge that is always there.
  *
- * Reserving the box rather than inserting it on selection is what keeps the
- * name column aligned down every row and keeps a commit from nudging its
- * neighbours — the check and the spinner both land inside a slot the layout has
- * already paid for. The check itself grows in on `--ease-out-quint`; under
- * reduced motion the global rule collapses that animation to nothing.
+ * Reserving the box rather than inserting it on commit is what keeps a
+ * selection from re-measuring the name beside it — the check and the spinner
+ * both land in a slot the layout has already paid for, so `Português (Brasil)`
+ * cannot be pulled into an ellipsis by being chosen. Empty when the option is
+ * not selected, deliberately: an outlined ring on all twenty-four options is
+ * twenty-three grey rings of noise competing with the one that matters, and
+ * the state is already carried three times over by the brand border, the
+ * brand-subtle fill and the brand text. The check grows in on
+ * `--ease-out-quint`; under reduced motion the global rule in
+ * `src/styles/styles.css` collapses that animation to nothing.
  */
 function Mark({
   selected,
@@ -402,18 +414,12 @@ function Mark({
   return (
     <span
       aria-hidden="true"
-      className={cn(
-        'grid size-4 shrink-0 place-items-center rounded-full border',
-        'transition-[background-color,border-color] duration-base ease-out-quint',
-        selected
-          ? 'border-brand bg-brand text-brand-on'
-          : 'border-edge-strong bg-transparent',
-      )}
+      className="grid size-4 shrink-0 place-items-center"
     >
       {selected ? (
         <Check
-          className="size-2.5 animate-pop-in"
-          strokeWidth={3}
+          className="size-4 animate-pop-in"
+          strokeWidth={2.75}
           aria-hidden="true"
         />
       ) : null}
@@ -424,13 +430,15 @@ function Mark({
 /**
  * The workspace default, always in its own script — never an English exonym.
  *
- * The auto margin that pushes it to the far edge sits on an outer span that
- * inherits the group's direction, and `dir` sits on the inner one. Putting
- * both on the same element is a real bug rather than a nicety: `ms-auto` is
- * `margin-inline-start`, which resolves against the element's *own*
- * direction, so `dir="rtl"` flipped it to `margin-right: auto` and parked
- * العربية against the label instead of at the end of the chip — measured in
- * the browser at 1440px before this split.
+ * It carries `lang` and, for Arabic, `dir` for the same two reasons the chips
+ * do: the font stack is re-ordered per script, and a screen reader must not
+ * read العربية in an English voice. The auto margin that pushes this whole
+ * trailing group to the far edge deliberately sits on the group instead, which
+ * has no direction of its own. Both on one element is a real bug rather than a
+ * nicety: `ms-auto` is `margin-inline-start`, which resolves against the
+ * element's *own* direction, so `dir="rtl"` flipped it to `margin-right: auto`
+ * and parked العربية against the label instead of at the end of the chip —
+ * measured in the browser at 1440px before the two were split.
  */
 function WorkspaceName({
   tag,
@@ -441,18 +449,16 @@ function WorkspaceName({
 }) {
   const descriptor = localeDescriptor(tag)
   return (
-    <span className="ms-auto min-w-0 shrink ps-2">
-      <span
-        lang={descriptor.tag}
-        dir={descriptor.dir === 'rtl' ? 'rtl' : undefined}
-        className={cn(
-          'block truncate text-caption',
-          NAME_LINE,
-          selected ? 'text-brand' : 'text-ink-3',
-        )}
-      >
-        {descriptor.nativeName}
-      </span>
+    <span
+      lang={descriptor.tag}
+      dir={descriptor.dir === 'rtl' ? 'rtl' : undefined}
+      className={cn(
+        'min-w-0 truncate text-caption',
+        NAME_LINE,
+        selected ? 'text-brand' : 'text-ink-3',
+      )}
+    >
+      {descriptor.nativeName}
     </span>
   )
 }

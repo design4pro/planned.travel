@@ -80,16 +80,55 @@ describe('LanguagePicker — the catalogue it renders', () => {
 
   it('keeps the auto margin off the element that carries dir', () => {
     // `ms-auto` is `margin-inline-start`, which resolves against the element's
-    // own direction. Both on one span put العربية against the label instead of
-    // at the end of the chip — measured in Chromium at 1440px. The layout span
-    // and the language span have to stay separate.
+    // own direction. On the element that also carries `dir="rtl"` it becomes
+    // `margin-right: auto` and parks العربية against the label instead of at
+    // the end of the chip — measured in Chromium at 1440px. The auto margin
+    // therefore lives on the trailing group, which has no direction of its own,
+    // and the language span sits inside it.
     renderPicker({ workspaceDefault: 'ar' })
     const option = chip(FOLLOW_WORKSPACE)
-    const spacer = option.querySelector('.ms-auto')
-    expect(spacer).not.toBeNull()
-    expect(spacer?.getAttribute('dir')).toBeNull()
-    expect(spacer?.getAttribute('lang')).toBeNull()
-    expect(spacer?.querySelector('[dir="rtl"]')?.textContent).toBe('العربية')
+    const trailing = option.querySelector('.ms-auto')
+    expect(trailing).not.toBeNull()
+    expect(trailing?.getAttribute('dir')).toBeNull()
+    expect(trailing?.getAttribute('lang')).toBeNull()
+    expect(trailing?.querySelector('[dir="rtl"]')?.textContent).toBe('العربية')
+  })
+})
+
+describe('LanguagePicker — the mark slot', () => {
+  /** The 16px well every option reserves at its trailing edge. */
+  const slot = (choice: LocaleChoice): Element => {
+    const well = chip(choice).querySelector('span.size-4')
+    if (!well) throw new Error(`no mark slot on ${choice}`)
+    return well
+  }
+
+  it('reserves the well on every option so a commit cannot re-measure a name', () => {
+    renderPicker({ value: 'en' })
+    for (const descriptor of SUPPORTED_LOCALES) {
+      expect(slot(descriptor.tag)).toBeDefined()
+    }
+    expect(slot(FOLLOW_WORKSPACE)).toBeDefined()
+  })
+
+  it('draws a mark on the selected option and nothing on the other 23', () => {
+    renderPicker({ value: 'pl' })
+    expect(slot('pl').querySelector('svg')).not.toBeNull()
+    for (const tag of ['en', 'ar', 'ja', 'zh-Hant'] as const) {
+      expect(slot(tag).innerHTML).toBe('')
+    }
+  })
+
+  it('swaps the mark for a spinner on the option being written', () => {
+    renderPicker({ value: 'en', pending: 'ja' })
+    expect(slot('ja').querySelector('svg')).not.toBeNull()
+    expect(slot('ja').textContent).toBe('')
+    expect(slot('en').querySelector('svg')).not.toBeNull()
+  })
+
+  it('hides the mark from assistive tech — aria-checked already says it', () => {
+    renderPicker({ value: 'pl' })
+    expect(slot('pl').getAttribute('aria-hidden')).toBe('true')
   })
 })
 
