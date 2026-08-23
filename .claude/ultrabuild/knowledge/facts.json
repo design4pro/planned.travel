@@ -334,5 +334,17 @@
       "mechanical"
     ],
     "invalidatesWhen": "the worktrees move out of the repo root, or vite.config.ts loses the ignore list"
+  },
+  {
+    "id": "parity-red-until-translations-land",
+    "claim": "The i18n parity suite is red BY CONSTRUCTION until the six translation items land, and that redness is not a defect of any English-side item. `src/lib/i18n/messages/en/ui.ts` exists and no `messages/<tag>/` directory does, so the parity test reports every key of every shipped `en` namespace as missing from the other 22 locales. Every further `en/<namespace>.ts` an item ships makes the count worse until `translations-cjk|germanic|romance|rtl-hellenic|sea|slavic` fill their tags, and those six depend on every English-side item. Do NOT repair it from outside a translation item: SPEC §8 gives `messages/<tag>/` wholly to one translation item, so writing a translation from any other item is an ownership violation. An item whose own work is sound is `accepted-pending-gate` here, not rejected.",
+    "evidence": "Measured at commit 9ee20d4 on a dev server proven to be this worktree: `pnpm typecheck` clean, `pnpm lint` clean, `pnpm test` = Test Files 1 failed | 102 passed (103), Tests 23 failed | 2667 passed (2690). Every one of the 23 failures is src/lib/i18n/__tests__/parity.test.ts, and every reported missing key is a `ui.*` key.",
+    "measuredIn": "i18n round 5 preflight",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "all six translations-* items have shipped their messages/<tag>/ directories"
   }
 ]
