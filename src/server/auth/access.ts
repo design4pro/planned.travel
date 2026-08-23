@@ -148,11 +148,19 @@ export function isPlatformRole(value: unknown): value is PlatformRole {
  * row null and the plugin only applies `defaultRole` at signup; an unrecognised value resolves to
  * `user` because deny-by-default is the only safe reading of a string nobody declared. Neither is
  * ever read as "unset, therefore permissive".
+ *
+ * The parts are compared exactly as `split(',')` produces them, whitespace and all. Better Auth's
+ * own check does the same — `(role || defaultRole || 'user').split(',')`, no trim — and it runs on
+ * every `auth.api.*` call the console makes, so trimming here would make one column value read as
+ * `admin` in this guard and as an undeclared role inside the plugin. `' admin '` is a string
+ * docs/ACCESS.md §1.3 step 3 covers: not one of the three, therefore `user`. The column is
+ * `input: false`, so the value can only ever come from `setRole`, which stores the names joined
+ * without padding.
  */
 export function resolvePlatformRole(role: string | null): PlatformRole {
   if (role === null) return 'user'
 
-  const held = new Set(role.split(',').map((part) => part.trim()))
+  const held = new Set(role.split(','))
   return (
     PLATFORM_ROLES_BY_PRECEDENCE.find((candidate) => held.has(candidate)) ??
     'user'

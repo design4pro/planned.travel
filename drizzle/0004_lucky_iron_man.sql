@@ -11,7 +11,7 @@ CREATE TABLE `platform_audit_log` (
 	`ip` text,
 	`user_agent` text,
 	`created_at` integer NOT NULL,
-	FOREIGN KEY (`token_id`) REFERENCES `staff_api_tokens`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`token_id`) REFERENCES `staff_api_tokens`(`id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "platform_audit_log_actor_kind_chk" CHECK(("actor_kind" IS NULL OR "actor_kind" IN ('human', 'agent', 'system'))),
 	CONSTRAINT "platform_audit_log_agent_token_chk" CHECK(("actor_kind" <> 'agent' OR "token_id" IS NOT NULL)),
 	CONSTRAINT "platform_audit_log_system_actor_chk" CHECK(("actor_kind" <> 'system' OR ("actor_user_id" IS NULL AND "actor_role" IS NULL AND "token_id" IS NULL))),

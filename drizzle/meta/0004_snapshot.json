@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0e0c46e7-df78-4250-9618-a4e95ee6565d",
+  "id": "e2e3a10d-6ad2-4a38-a8b3-aebe4e1d28ef",
   "prevId": "1ee5482b-38c8-4dab-91bf-149706e1ab6f",
   "tables": {
     "account": {
@@ -6973,7 +6973,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },

@@ -1,8 +1,8 @@
 /**
  * The declaration layer for platform roles and the platform audit log.
  *
- * Two failures this file exists to catch, both of which typecheck cleanly and neither of which any
- * other test can see:
+ * Four failures this file exists to catch. The first three typecheck cleanly and the fourth is the
+ * absence of typechecking; no other test in the repository can see any of them:
  *
  * 1. **A snake_case property key on `user` or `session`.** Better Auth's Drizzle adapter resolves a
  *    column as `schemaModel[getFieldName({ model, field })]`, and `initGetFieldName` returns the
@@ -18,21 +18,39 @@
  *    to carry a credential, and `system ⇒ no actor` leaves every other kind free to carry none.
  *    Both converses are constraints too, and the cases below insert the three rows that used to be
  *    accepted so a regression is a failing test rather than a quiet hole in the log.
+ * 4. **A vocabulary column narrowed nowhere.** `entity_type` and `action` carry no `CHECK` on
+ *    purpose (§4.1), which leaves `$type` as the only thing standing between them and a value
+ *    nobody declared — and a column declared `text()` without one is bare `string` on both
+ *    inferred row types, so `entityType: 'trip'` and an undotted `action` compile silently. The
+ *    type-level block asserts all four vocabularies, and it is checked by `tsc --noEmit` as much
+ *    as by vitest.
  */
 
-import { beforeEach, afterEach, describe, expect, it } from 'vitest'
+import { beforeEach, afterEach, describe, expect, expectTypeOf, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { getTableConfig } from 'drizzle-orm/sqlite-core'
 import { session, user } from '#/server/db/auth-schema'
 import {
+  PLATFORM_ACTOR_ROLES,
+  PLATFORM_AUDIT_ACTIONS,
   PLATFORM_AUDIT_ENTITY_TYPES,
   newId,
   platformAuditLog,
   staffApiTokens,
 } from '#/server/db/schema'
+import { PLATFORM_ROLES_BY_PRECEDENCE } from '#/server/auth/access'
 import { captureError, createHarness } from '#/server/repos/__tests__/harness'
 import type { Harness } from '#/server/repos/__tests__/harness'
-import type { NewPlatformAuditLogEntry } from '#/server/db/types'
+import type { PlatformRole } from '#/server/auth/access'
+import type {
+  NewPlatformAuditLogEntry,
+  PlatformActorKind,
+  PlatformActorRole,
+  PlatformAuditAction,
+  PlatformAuditChanges,
+  PlatformAuditEntityType,
+  PlatformAuditLogEntry,
+} from '#/server/db/types'
 
 /**
  * The constraint a rejected write tripped.
@@ -48,6 +66,22 @@ function constraintName(error: Error): string {
 
 function sqlNames(table: typeof user | typeof session): Array<string> {
   return getTableConfig(table).columns.map((column) => column.name)
+}
+
+/**
+ * A value the column's `$type` refuses, put back into the row so the database can answer for
+ * itself.
+ *
+ * Every use of this is a test asking the second question — "and if TypeScript were bypassed?" —
+ * which is the only interesting one to ask of a `CHECK`, and the only way to demonstrate the
+ * *absence* of one. The cast is named rather than scattered so that a reader can see that no
+ * production path can construct these values at all: `pnpm typecheck` refuses them, which is what
+ * the block of type assertions below pins.
+ */
+function pastTheTypeSystem<TField extends keyof NewPlatformAuditLogEntry>(
+  value: string,
+): NewPlatformAuditLogEntry[TField] {
+  return value as NewPlatformAuditLogEntry[TField]
 }
 
 describe('the admin plugin columns on user and session', () => {
@@ -145,9 +179,84 @@ describe('platform_audit_log declaration', () => {
     expect(references).toHaveLength(1)
     expect(references[0]?.columns.map((column) => column.name)).toEqual(['token_id'])
     expect(references[0]?.foreignColumns.map((column) => column.name)).toEqual(['id'])
-    // The declared clause is docs/ACCESS.md §4.1's, verbatim. What it does at runtime is not what
-    // it reads as; the two tests further down pin the actual behaviour.
-    expect(config.foreignKeys[0]?.onDelete).toBe('set null')
+    // `restrict` rather than docs/ACCESS.md §4.1's `set null`, because `SET NULL` is unreachable
+    // here: it violates the agent CHECK on the only rows able to name a token, so the DELETE was
+    // always refused. The clause now says that. The two tests further down pin the behaviour.
+    expect(config.foreignKeys[0]?.onDelete).toBe('restrict')
+  })
+})
+
+/**
+ * docs/ACCESS.md §4.1 narrows `entity_type` and `action` in TypeScript rather than in SQL, because
+ * both vocabularies grow by amendment and a `CHECK` would price each amendment at a recreate of a
+ * table that may not be recreated. That reasoning is only sound while the narrowing exists, and a
+ * column declared `text()` with no `$type` is bare `string` on both inferred row types — which
+ * accepts `actorKind: 'robot'`, `actorRole: 'wizard'`, an undotted `action` and `entityType:
+ * 'trip'` with no complaint from `pnpm typecheck` at all. That is exactly the row an auditor
+ * compiled against an earlier form of this table.
+ *
+ * These assertions are the whole of the guarantee for the two columns with no `CHECK` behind them,
+ * and the first line of it for the two that have one. They are type-level, so they are checked by
+ * `tsc --noEmit` as well as run by vitest.
+ */
+describe('the four vocabulary columns, narrowed in TypeScript', () => {
+  it('types entity_type as the eight entities of docs/ACCESS.md §4.2', () => {
+    expectTypeOf<NewPlatformAuditLogEntry['entityType']>().toEqualTypeOf<PlatformAuditEntityType>()
+    expectTypeOf<PlatformAuditLogEntry['entityType']>().toEqualTypeOf<PlatformAuditEntityType>()
+    expectTypeOf<'trip'>().not.toExtend<PlatformAuditEntityType>()
+  })
+
+  it('types action as the thirty-one actions of docs/ACCESS.md §4.2', () => {
+    expectTypeOf<NewPlatformAuditLogEntry['action']>().toEqualTypeOf<PlatformAuditAction>()
+    expectTypeOf<PlatformAuditLogEntry['action']>().toEqualTypeOf<PlatformAuditAction>()
+    expectTypeOf<'NOT A DOTTED ACTION'>().not.toExtend<PlatformAuditAction>()
+    expectTypeOf<'trip.hijacked'>().not.toExtend<PlatformAuditAction>()
+
+    expect(PLATFORM_AUDIT_ACTIONS).toHaveLength(31)
+    // §4.2: sixteen two-segment catalogue actions and fifteen three-segment platform ones.
+    const platform = PLATFORM_AUDIT_ACTIONS.filter((action) => action.startsWith('platform.'))
+    expect(platform).toHaveLength(15)
+    expect(platform.every((action) => action.split('.').length === 3)).toBe(true)
+    expect(
+      PLATFORM_AUDIT_ACTIONS.filter((action) => !action.startsWith('platform.')).every(
+        (action) => action.split('.').length === 2,
+      ),
+    ).toBe(true)
+  })
+
+  it('types action against the dotted-action regex the tenant log already enforces', () => {
+    // The shape rule of docs/ACCESS.md §4.2, restated here only as a property of the list. The
+    // regex itself is `src/server/repos/audit.ts`'s, and §4.2 requires the writer to import it
+    // rather than re-declare it; this assertion is about the vocabulary, not about the validator.
+    for (const action of PLATFORM_AUDIT_ACTIONS) {
+      expect(action).toMatch(/^[a-z0-9]+(?:[._][a-z0-9]+)*$/)
+      expect(action.length).toBeLessThanOrEqual(64)
+    }
+  })
+
+  it('types actor_kind and actor_role as their three names each', () => {
+    expectTypeOf<NewPlatformAuditLogEntry['actorKind']>().toEqualTypeOf<PlatformActorKind>()
+    expectTypeOf<NonNullable<NewPlatformAuditLogEntry['actorRole']>>().toEqualTypeOf<
+      PlatformActorRole
+    >()
+    expectTypeOf<'robot'>().not.toExtend<PlatformActorKind>()
+    expectTypeOf<'wizard'>().not.toExtend<PlatformActorRole>()
+  })
+
+  it('spells actor_role with the same three names as the role dictionary', () => {
+    // `src/server/auth/access.ts` enumerates the three roles a second time, as the keys of its
+    // `roles` map, because this file is reachable from the client graph and from drizzle-kit and
+    // will not import an authorisation module to type a column. This is the join between them: a
+    // fourth role added to either side without the other fails here, at the type level and at
+    // runtime both.
+    expectTypeOf<PlatformActorRole>().toEqualTypeOf<PlatformRole>()
+    expect([...PLATFORM_ACTOR_ROLES].sort()).toEqual([...PLATFORM_ROLES_BY_PRECEDENCE].sort())
+  })
+
+  it('narrows the nested changes payload rather than reusing the flat tenant one', () => {
+    expectTypeOf<NonNullable<NewPlatformAuditLogEntry['changes']>>().toEqualTypeOf<
+      PlatformAuditChanges
+    >()
   })
 })
 
@@ -329,19 +438,21 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
 
   it('rejects an actor_kind outside the three', async () => {
     const error = await captureError(() =>
-      // `robot` is not one of the three; only the CHECK stands between it and the table.
-      append({ actorKind: 'robot' }),
+      // `robot` is refused by the column's `$type` as well; the cast is what lets this test ask the
+      // second question — whether the CHECK still stands when TypeScript is bypassed.
+      append({ actorKind: pastTheTypeSystem<'actorKind'>('robot') }),
     )
     expect(constraintName(error)).toContain('platform_audit_log_actor_kind_chk')
   })
 
-  it('leaves entity_type unconstrained, which is what docs/ACCESS.md §4.1 asks for', async () => {
+  it('leaves entity_type unconstrained in SQL, which is what docs/ACCESS.md §4.1 asks for', async () => {
     // §4.1's type column marks `actor_kind` as text + enumCheck() and `entity_type` as plain text,
     // with the eight values in the Notes column; `action` is closed the same way in §4.2 and is
     // plain text too. A ninth entity type therefore costs an amendment to §4.2's mapping table and
-    // not a recreate of a table that may not be recreated. The vocabulary is enforced above the
-    // database, by PLATFORM_AUDIT_ENTITY_TYPES and the writer that validates against it.
-    await append({ entityType: 'trip' })
+    // not a recreate of a table that may not be recreated. This test pins the *absence* of the
+    // CHECK, so a future round cannot quietly add one; the narrowing that does the work is the
+    // `$type` asserted in the block below, which is why the ninth value needs a cast to get here.
+    await append({ entityType: pastTheTypeSystem<'entityType'>('trip') })
 
     const rows = await harness.db.select().from(platformAuditLog)
     expect(rows[0]?.entityType).toBe('trip')
@@ -349,18 +460,26 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
     expect(PLATFORM_AUDIT_ENTITY_TYPES).toHaveLength(8)
   })
 
+  it('leaves action unconstrained in SQL for the same reason', async () => {
+    await append({ action: pastTheTypeSystem<'action'>('trip.hijacked') })
+
+    const rows = await harness.db.select().from(platformAuditLog)
+    expect(rows[0]?.action).toBe('trip.hijacked')
+  })
+
   it('refuses to hard-delete a credential an agent row still names', async () => {
-    // `on delete set null` is docs/ACCESS.md §4.1's clause and it can never fire: SQLite
+    // The outcome docs/ACCESS.md §4.1 writes as `on delete set null` was never reachable: SQLite
     // re-evaluates CHECKs on the implicit UPDATE that SET NULL performs, and the agent CHECK
-    // demands a non-NULL token_id on exactly the rows able to reference a token. The DELETE aborts
-    // and the history keeps its attribution — the behaviour the schema docblock now describes.
+    // demands a non-NULL token_id on exactly the rows able to reference a token, so the DELETE
+    // aborted against a constraint the caller never mentioned. `restrict` produces the same
+    // outcome and names it: the history keeps its attribution, and the refusal reads as one.
     const tokenId = await seedToken()
     await append({ actorKind: 'agent', actorUserId: newId(), actorRole: 'curator', tokenId })
 
     const error = await captureError(() =>
       harness.db.delete(staffApiTokens).where(eq(staffApiTokens.id, tokenId)),
     )
-    expect(constraintName(error)).toContain('platform_audit_log_agent_token_chk')
+    expect(constraintName(error)).toContain('FOREIGN KEY constraint failed')
 
     const rows = await harness.db.select().from(platformAuditLog)
     expect(rows[0]?.tokenId).toBe(tokenId)

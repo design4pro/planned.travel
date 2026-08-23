@@ -230,9 +230,23 @@ the paragraph above warns about: the escalation comes from adding a `CHECK` to a
 exists, and this one did not exist. Four of the five are the cross-column rules of
 `docs/ACCESS.md` §4.1, written as two forward implications and their two converses because each of
 §4.1's invariants says "exactly when" and a single implication only carries half of that; the
-fifth closes `actor_kind` over its three values. `entity_type` carries none, deliberately — §4.1
-types that column as plain text and keeps its eight values in prose, so a ninth costs an amendment
-to §4.2's mapping table rather than a recreate of an append-only log.
+fifth closes `actor_kind` over its three values. `entity_type` and `action` carry none,
+deliberately — §4.1 types those columns as plain text and keeps their vocabularies in §4.2, so a
+ninth entity or a thirty-second action costs an amendment to that table rather than a recreate of
+an append-only log. Both are narrowed with Drizzle's `$type` instead, which emits no SQL and
+therefore appears nowhere in this file; a value outside either list fails `pnpm typecheck` at the
+insert, and that is the whole of the guarantee for those two columns.
+
+One line in `0004` does not match `docs/ACCESS.md` §4.1 as written, and the difference is
+deliberate: `platform_audit_log.token_id` ships as `ON DELETE restrict` where §4.1's type column
+says `on delete set null`. `SET NULL` is unreachable on this table — SQLite re-evaluates `CHECK`
+constraints on the implicit `UPDATE` that `SET NULL` performs, and the agent rule demands a
+non-`NULL` `token_id` on exactly the rows able to name a token, so the `DELETE` was always refused
+and always reported against a constraint the caller never mentioned. `restrict` changes no outcome
+and names the one that happens. Operationally it means a `staff_api_tokens` row with agent history
+cannot be hard-deleted; nothing tries, because §5 revokes a credential by writing `revoked_at`.
+The divergence from §4.1's wording is reported as a finding against that document rather than
+edited into it.
 
 ---
 

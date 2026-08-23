@@ -332,6 +332,20 @@ export const DISTANCE_UNITS = ['metric', 'imperial'] as const
 export const PLATFORM_ACTOR_KINDS = ['human', 'agent', 'system'] as const
 
 /**
+ * The platform role an audit row records its actor as holding **at the moment of the action**
+ * (docs/ACCESS.md §4.1). `user.role` is mutable and this column is not, which is the whole reason
+ * the role is stored rather than joined.
+ *
+ * The same three names are enumerated once more, as the keys of `roles` in
+ * `src/server/auth/access.ts`, and that is deliberate rather than an oversight. This file is
+ * reachable from the client graph and from `drizzle-kit`, so it carries the vocabulary of every
+ * column it declares itself instead of importing an authorisation module to type one; the two
+ * lists are held together by a drift test in `__tests__/platform-schema.test.ts` that fails the
+ * moment a fourth role is added to either without the other.
+ */
+export const PLATFORM_ACTOR_ROLES = ['admin', 'curator', 'user'] as const
+
+/**
  * The eight entities a platform action can touch (docs/ACCESS.md §4.2).
  *
  * A TypeScript vocabulary, not a database constraint: `entity_type` is plain `text` in §4.1's
@@ -347,6 +361,54 @@ export const PLATFORM_AUDIT_ENTITY_TYPES = [
   'session',
   'staff_api_token',
   'share_link',
+] as const
+
+/**
+ * The thirty-one actions a `platform_audit_log` row can carry, in the order docs/ACCESS.md §4.2
+ * tables them. The list is closed there and closed here: a new action is an amendment to that
+ * table, made in the commit that adds the code writing it.
+ *
+ * Sixteen take the two-segment `<entity_type>.<verb>` form, and fifteen take the three-segment
+ * `platform.<entity>.<verb>` form because their entities — user, session, credential, share — are
+ * named identically in the tenant audit log of §4.5, where a bare `user.created` read out of a
+ * view spanning both tables would be attributable to neither.
+ *
+ * Like {@link PLATFORM_AUDIT_ENTITY_TYPES} this is a TypeScript vocabulary rather than a SQL
+ * `CHECK`, for the reason §4.1 gives: the list grows by amendment, and a `CHECK` would price each
+ * amendment at a recreate of an append-only table that may not be recreated.
+ */
+export const PLATFORM_AUDIT_ACTIONS = [
+  'catalog_place.created',
+  'catalog_place.updated',
+  'catalog_place.published',
+  'catalog_place.retired',
+  'catalog_place.status_changed',
+  'catalog_place.licence_escalated',
+  'catalog_ingest.promoted',
+  'catalog_ingest.merged',
+  'catalog_ingest.rejected',
+  'place_pack.created',
+  'place_pack.places_set',
+  'place_pack.published',
+  'catalog_source.run_started',
+  'place_pack.retired',
+  'catalog_source.enabled',
+  'catalog_source.disabled',
+  'platform.user.created',
+  'platform.user.updated',
+  'platform.user.role_changed',
+  'platform.user.banned',
+  'platform.user.unbanned',
+  'platform.user.deleted',
+  'platform.user.password_set',
+  'platform.user.email_set',
+  'platform.user.impersonation_started',
+  'platform.user.impersonation_ended',
+  'platform.session.revoked',
+  'platform.session.revoked_all',
+  'platform.token.issued',
+  'platform.token.revoked',
+  'platform.share.revoked',
 ] as const
 
 /** JSON payload shapes stored in `text({ mode: 'json' })` columns. */
@@ -2056,20 +2118,22 @@ export const staffApiTokens = sqliteTable(
  * it the referential guarantee that "everything that arrived on this credential" joins to a row
  * that exists. The two columns sit side by side for that reason and not by oversight.
  *
- * **`on delete set null` on `token_id` refuses the delete; it never nulls a row.** The clause is
- * docs/ACCESS.md §4.1's and is reproduced faithfully, but it is unreachable by construction and
- * saying so here is cheaper than the afternoon somebody spends discovering it. SQLite re-evaluates
- * `CHECK` constraints on the implicit `UPDATE` that `SET NULL` performs, and
- * `platform_audit_log_agent_token_chk` demands a non-`NULL` `token_id` on precisely the rows —
- * the `agent` ones — that are the only rows able to reference a token at all. Every `SET NULL` the
- * action could perform therefore violates that `CHECK`, and SQLite aborts the whole `DELETE`. The
- * observed behaviour is `ON DELETE RESTRICT`: a credential with agent history cannot be
- * hard-deleted, so that history keeps its `token_id` instead of losing it. For an append-only log
- * that is the better of the two outcomes, which is why the shape is kept rather than argued with —
- * and nothing hard-deletes a `staff_api_tokens` row in any case, because revocation writes
- * `revoked_at`. Both halves are pinned by tests in `src/server/db/__tests__/platform-schema.test.ts`
- * rather than left as prose, since neither can be changed after `0004` ships without a table
- * recreate (docs/DEPLOY.md §5).
+ * **`token_id` is `on delete restrict`, which is the only action this table can actually take.**
+ * docs/ACCESS.md §4.1's type column writes the clause as `on delete set null`, and `SET NULL` is
+ * unreachable here by construction: SQLite re-evaluates `CHECK` constraints on the implicit
+ * `UPDATE` that `SET NULL` performs, and `platform_audit_log_agent_token_chk` demands a non-`NULL`
+ * `token_id` on precisely the rows — the `agent` ones — that are the only rows able to reference a
+ * token at all. Every `SET NULL` the action could perform therefore violates that `CHECK` and
+ * SQLite aborts the whole `DELETE`, so the declared clause and the observed behaviour disagreed:
+ * it read as "the history loses its attribution" and did "the delete is refused". `RESTRICT` says
+ * what happens, fails with a foreign-key message rather than a constraint the caller did not
+ * mention, and changes no outcome — for an append-only log, keeping the `token_id` is the better
+ * of the two anyway, and nothing hard-deletes a `staff_api_tokens` row in the first place because
+ * revocation writes `revoked_at` (docs/ACCESS.md §5). The divergence from §4.1's wording is
+ * reported as a finding with this item rather than edited into that file, which is the
+ * specification. The behaviour is pinned by tests in
+ * `src/server/db/__tests__/platform-schema.test.ts` rather than left as prose, since it cannot be
+ * changed after `0004` ships without a table recreate (docs/DEPLOY.md §5).
  *
  * **Four cross-column `CHECK`s, because the two obvious ones only cover half of each rule.**
  * docs/ACCESS.md §4.1 states two invariants — `actor_user_id` and `actor_role` are `NULL` only when
@@ -2087,12 +2151,21 @@ export const staffApiTokens = sqliteTable(
  * existing table escalates drizzle-kit to a table recreate, which docs/DEPLOY.md §5 counts as
  * non-additive.
  *
- * **`entity_type` deliberately carries no `CHECK`.** §4.1's type column marks `actor_kind` as
- * `text, enumCheck()` and `entity_type` as plain `text`, with the eight values in the Notes column;
- * `action` is closed in §4.2 by the same kind of list and is plain `text` too. A ninth entity type
- * should cost an amendment to §4.2's mapping table, which is where the vocabulary lives, and not a
- * table recreate on a log that may not be recreated. {@link PLATFORM_AUDIT_ENTITY_TYPES} carries
- * the eight names into TypeScript, which is where this column is narrowed.
+ * **`entity_type` and `action` carry no `CHECK`, and are narrowed by `$type` instead.** §4.1's
+ * type column marks `actor_kind` as `text, enumCheck()` and `entity_type` as plain `text`, with
+ * the eight values in the Notes column; `action` is closed in §4.2 by the same kind of list and is
+ * plain `text` too. Both vocabularies grow by amendment, in the commit that adds the code writing
+ * the new name, and a `CHECK` would price each of those amendments at a recreate of a table that
+ * may not be recreated.
+ *
+ * That reasoning only holds if the narrowing exists somewhere, so all four vocabulary columns
+ * carry `$type`: {@link PLATFORM_AUDIT_ACTIONS} on `action`,
+ * {@link PLATFORM_AUDIT_ENTITY_TYPES} on `entity_type`, {@link PLATFORM_ACTOR_KINDS} on
+ * `actor_kind` and {@link PLATFORM_ACTOR_ROLES} on `actor_role`. A value outside any of the four
+ * fails `pnpm typecheck` at the insert, which is the whole of the guarantee for the two with no
+ * `CHECK` behind them and the first line of it for the two that have one. `$type` is a type-level
+ * cast that emits no SQL — the `changes` column has carried one since `0004` and generates plain
+ * `text` — so adding these moved no migration.
  */
 export const platformAuditLog = sqliteTable(
   'platform_audit_log',
@@ -2100,15 +2173,17 @@ export const platformAuditLog = sqliteTable(
     id: pk(),
     /** The human, or the owner of the MCP token. `NULL` only when `actor_kind` is `system`. */
     actorUserId: userRef('actor_user_id'),
-    actorKind: text('actor_kind').notNull(),
+    actorKind: text('actor_kind').notNull().$type<(typeof PLATFORM_ACTOR_KINDS)[number]>(),
     /** The platform role held at the moment of the action — `user.role` is mutable, this is not. */
-    actorRole: text('actor_role'),
+    actorRole: text('actor_role').$type<(typeof PLATFORM_ACTOR_ROLES)[number]>(),
     /** The credential the call arrived on. Non-`NULL` exactly when `actor_kind` is `agent`. */
     tokenId: text('token_id').references(() => staffApiTokens.id, {
-      onDelete: 'set null',
+      onDelete: 'restrict',
     }),
-    action: text('action').notNull(),
-    entityType: text('entity_type').notNull(),
+    action: text('action').notNull().$type<(typeof PLATFORM_AUDIT_ACTIONS)[number]>(),
+    entityType: text('entity_type')
+      .notNull()
+      .$type<(typeof PLATFORM_AUDIT_ENTITY_TYPES)[number]>(),
     entityId: text('entity_id'),
     changes: text('changes', { mode: 'json' }).$type<PlatformAuditChanges>(),
     ip: text('ip'),

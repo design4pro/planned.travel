@@ -251,7 +251,7 @@ through `createTenantRepository()`, which ANDs `organization_id = ?` onto every 
 supplies. A curator moderating a stranger's link holds no tenant context for that stranger's
 workspace and may not invent one: §3.7 rule 2 and SPEC §5 both forbid exactly that, and it is the
 single thing `src/server/repos/base.ts` exists to make inexpressible. Nor is the table reachable
-through `src/server/catalog/repo.ts`: that door serves the eight global tables of SPEC §5's
+through `src/server/catalog/repo.ts`: that door serves eight of the nine global tables of SPEC §5's
 carve-out, and `share_links` is not one of them. So the surface is built the way the one existing
 session-less path in this codebase is already built, and named the same way:
 
@@ -558,7 +558,7 @@ the retention rather than restating them, so there is one list and it is this on
 | `actor_user_id` | `userRef('actor_user_id')`                             | yes  | The human, or the owner of the MCP token. `NULL` only when `actor_kind = 'system'`                                                                               |
 | `actor_kind`    | text, `enumCheck()`                                    | no   | `human` · `agent` · `system`                                                                                                                                     |
 | `actor_role`    | text                                                   | yes  | The platform role held **at the moment of the action**: `admin`, `curator` or `user`. `NULL` only when `actor_kind = 'system'`                                   |
-| `token_id`      | text, FK → `staff_api_tokens.id`, `on delete set null` | yes  | The credential the call arrived on. Non-`NULL` exactly when `actor_kind = 'agent'`, and `NULL` for every other kind                                              |
+| `token_id`      | text, FK → `staff_api_tokens.id`, `on delete restrict`  | yes  | The credential the call arrived on. Non-`NULL` exactly when `actor_kind = 'agent'`, and `NULL` for every other kind                                              |
 | `action`        | text                                                   | no   | Lowercase dotted verb from the closed list in §4.2                                                                                                               |
 | `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link`. The mapping to `action` is in §4.2 |
 | `entity_id`     | text                                                   | yes  | The row the action touched. `NULL` only for an action whose entity does not exist yet or no longer does                                                          |
@@ -859,9 +859,16 @@ The rest follows from that sentence:
   `actor_user_id`, the role that owner held in `actor_role`, and the credential in `token_id`
   (§4.1), so "which agent did this, on whose authority, with which token" is answerable with one
   indexed query and no log correlation. Revocation stamps `revoked_at` on the token row and never
-  deletes it, which is what keeps that join intact - `token_id` is `on delete set null`, so a row
-  that was deleted rather than revoked would take its own history's attribution with it. A
-  `staff_api_tokens` row is never hard-deleted.
+  deletes it, which is what keeps that join intact. A `staff_api_tokens` row is never
+  hard-deleted, and `token_id` is `on delete restrict`.
+
+  The earlier `set null` was a clause that could never fire, and Faza B's auditor showed why: with
+  §4.1's two token CHECKs both in force - an `agent` row must carry a token, and only an `agent`
+  row may carry one - every `SET NULL` the foreign key could perform violates one of them, so the
+  database refuses the parent delete either way. `restrict` is the behaviour that was already
+  happening; naming it is the difference between a rule and an accident. The attribution this
+  protects rests on the sentence above, that a token row is never hard-deleted, rather than on a
+  fallback that cannot run.
 - A token belongs in user-scope MCP configuration, never in a file that gets committed. The
   operational detail lives in `docs/DEPLOY.md` and `docs/CATALOG.md`; the rule that it is
   `curator`-only lives here.
@@ -997,7 +1004,7 @@ because that dictionary is closed and cannot grow later without amending this do
 the phase that lands the migration, so that they are written once against the real column rather
 than twice against a hardcoded `'trip'`.
 
-**FU-5 - `docs/DEPLOY.md` still recommends `adminUserIds`.** §1.4 rules the list permanently
+**FU-5 - _closed._ `docs/DEPLOY.md` recommended `adminUserIds`.** §1.4 rules the list permanently
 empty and explains why it is not a recovery instrument on this architecture. Two places in the
 runbook say otherwise and both need the round that owns that file: §14.1 offers the list as "the
 escape hatch, for when there is no admin at all", and §16's closing checklist accepts
@@ -1007,7 +1014,11 @@ query for and no audit row can attribute, and an operator following §14.1 today
 that grants nothing through our guard while standing permanently ready to grant everything through
 a server function that forgets to call it. The correct replacement text is already written: §8.1's
 SQL grant, which `docs/DEPLOY.md` §14.1 documents immediately above the paragraph in question.
-Recorded rather than fixed, because a document may not edit a contract file it does not own.
+_Closed in Faza B._ Both sites were rewritten by the round that owns `docs/DEPLOY.md`: §14.1 now
+routes recovery through the same `update`, and §16's checkbox now asserts that `adminUserIds` does
+not appear in `src/server/auth/index.ts` at all. The remaining half of that checkbox - that a unit
+test fails on the key's presence rather than on its contents - is true of `src/server/auth/guard.ts`
+today and becomes true of `index.ts` in the round that registers the plugin.
 
 **FU-6 - _closed._ `docs/CATALOG.md` no longer calls the `user_agent` token form the standing
 contract.** The item was that §4.1 here declared `actor_role` and `token_id` as real columns while

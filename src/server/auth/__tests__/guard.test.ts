@@ -288,6 +288,20 @@ describe('role resolution', () => {
     )
   })
 
+  it('reads a padded column value the way the dependency does — as an undeclared role', () => {
+    // Better Auth's own check splits this column on `,` and never trims, and it runs inside every
+    // `auth.api.*` call a console function makes after this guard has answered. Trimming here would
+    // make one stored string mean `admin` on this side of the request and an undeclared role on
+    // the other, in the permissive direction. docs/ACCESS.md §1.3 step 3: not one of the three,
+    // therefore `user`.
+    expect(allows(sessionWith({ role: ' admin ' }), { user: ['ban'] })).toBe(
+      false,
+    )
+    expect(
+      allows(sessionWith({ role: 'user, curator' }), { catalog: ['write'] }),
+    ).toBe(false)
+  })
+
   it('never reads the whole column as a single role name', () => {
     // `'admin'` is a substring of `'not-admin'`; matching on containment rather than on the split
     // parts would grant it.
