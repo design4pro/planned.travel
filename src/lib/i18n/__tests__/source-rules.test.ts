@@ -4,8 +4,8 @@ import { join, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Two platform APIs are banned in this directory, and prose in a doc comment is
- * not enforcement. This test reads the shipped source and fails on either.
+ * Rules about this directory's source that no type and no runtime assertion can
+ * express, so they are read off the shipped files instead.
  *
  * `Intl.DisplayNames` is the obvious way to label a language picker and it
  * disagrees with itself across runtimes: workerd returns CLDR's lower-case
@@ -40,6 +40,18 @@ const BANNED: ReadonlyArray<readonly [string, string]> = [
   ],
 ]
 
+/** The eight modules that make up the runtime. */
+const MODULES: ReadonlyArray<string> = [
+  'catalogue.ts',
+  'index.ts',
+  'interpolate.ts',
+  'locales.ts',
+  'negotiate.ts',
+  'plural.ts',
+  'provider.tsx',
+  'types.ts',
+]
+
 /** A line that is entirely comment: `//`, `/*` or a `*` continuation. */
 const COMMENT = /^\s*(\/\/|\/\*|\*)/
 
@@ -61,27 +73,32 @@ function shippedSources(directory: string): Array<string> {
   return files
 }
 
+/** Non-comment lines only: a doc comment may name what the code may not do. */
+function codeLines(path: string): ReadonlyArray<string> {
+  return readFileSync(path, 'utf8')
+    .split('\n')
+    .filter((line) => !COMMENT.test(line))
+}
+
 describe('the shipped i18n source', () => {
   const sources = shippedSources(I18N_DIR)
 
-  it('covers the whole module, so the grep below means something', () => {
+  it('covers the whole module, so the greps below mean something', () => {
     const names = sources.map((path) =>
       path.slice(I18N_DIR.length + sep.length),
     )
-    expect(names).toContain('locales.ts')
-    expect(names).toContain('negotiate.ts')
-    expect(names).toContain('provider.tsx')
-    // 8 modules at the root plus the 23 catalogues.
-    expect(names.length).toBeGreaterThanOrEqual(31)
+    for (const module of MODULES) {
+      expect(names).toContain(module)
+    }
+    // Catalogue files live under `messages/<locale>/` and are written by other
+    // items, so the count grows; the eight above are what this item ships.
+    expect(names.length).toBeGreaterThanOrEqual(MODULES.length)
   })
 
   for (const [api, reason] of BANNED) {
     it(`never calls ${api}`, () => {
       const offenders = sources.filter((path) =>
-        // Doc comments explain why these APIs are banned; only code counts.
-        readFileSync(path, 'utf8')
-          .split('\n')
-          .some((line) => !COMMENT.test(line) && line.includes(api)),
+        codeLines(path).some((line) => line.includes(api)),
       )
       expect(offenders, reason).toEqual([])
     })
@@ -90,20 +107,29 @@ describe('the shipped i18n source', () => {
   /**
    * A third ban, enforced here for the same reason: the failure is a build
    * failure rather than a test failure, so nothing else in the suite would ever
-   * see it. `` import(`./messages/${locale}`) `` reads better than the map of
-   * twenty-three literal specifiers in `../catalogue` and does not survive the
-   * bundle — esbuild cannot tell which files it means, so wrangler tries to emit
-   * the whole source directory and the deploy fails outright.
+   * see it. `` import(`./messages/${locale}`) `` reads better than a glob and
+   * does not survive the bundle — esbuild cannot tell which files it means, so
+   * wrangler tries to emit the whole source directory and the deploy fails
+   * outright. `import.meta.glob` has the same requirement for the same reason:
+   * its pattern must be a literal.
    */
   it('never builds an import specifier from a variable', () => {
     const offenders = sources.filter((path) =>
-      readFileSync(path, 'utf8')
-        .split('\n')
-        .some((line) => !COMMENT.test(line) && /import\s*\(\s*`/.test(line)),
+      codeLines(path).some((line) => /import\s*\(\s*`/.test(line)),
     )
     expect(
       offenders,
-      'a template-literal import() specifier breaks the wrangler bundle; use a literal one per locale, as ../catalogue does',
+      'a template-literal import() specifier breaks the wrangler bundle; aggregate with import.meta.glob over a literal pattern',
     ).toEqual([])
+  })
+
+  it('aggregates catalogues with the glob docs/SPEC.md §8 fixes', () => {
+    // The layout and the pattern are one decision. A glob one level shallower
+    // matches no namespace file at all, which is how round 2 shipped a parity
+    // gate that reported green over a product rendering English.
+    const catalogue = codeLines(join(I18N_DIR, 'catalogue.ts')).join('\n')
+    expect(catalogue).toContain(
+      "import.meta.glob<NamespaceModule>('./messages/*/*.ts')",
+    )
   })
 })

@@ -1,23 +1,39 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import { messages as arMessages } from '../messages/ar'
-import { messages as enMessages } from '../messages/en'
-import { messages as plMessages } from '../messages/pl'
 import {
   I18nProvider,
   useDirection,
   useLocale,
+  useStoredTranslate,
   useTranslate,
 } from '../provider'
 
+import type { Catalogue } from '../types'
+
+/**
+ * The provider is checked through `useStoredTranslate` rather than through
+ * `useTranslate`. Both read the same bound catalogue; only the second is typed
+ * against the English key union, which is empty until the nine content items
+ * write `messages/en/<namespace>.ts` — so a test that called `t('…')` today
+ * would not compile, and that is the guarantee §8.2 asks for rather than a gap.
+ */
+
+const CATALOGUE: Catalogue = {
+  'settings.language.current': 'Aktualny język: {name}',
+  'settings.language.label': 'Polski',
+}
+
 function Readout() {
   const t = useTranslate()
+  const tStored = useStoredTranslate()
   const locale = useLocale()
   const dir = useDirection()
   return (
-    <p data-testid="readout" lang={locale} dir={dir}>
-      {t('language.current', { name: t('language.label') })}
+    <p data-testid="readout" lang={locale} dir={dir} data-typed={typeof t}>
+      {tStored('settings.language.current', {
+        name: tStored('settings.language.label') ?? '',
+      })}
     </p>
   )
 }
@@ -25,18 +41,18 @@ function Readout() {
 describe('the i18n provider', () => {
   it('renders the catalogue it was handed', () => {
     render(
-      <I18nProvider locale="pl" messages={plMessages}>
+      <I18nProvider locale="pl" messages={CATALOGUE}>
         <Readout />
       </I18nProvider>,
     )
     expect(screen.getByTestId('readout').textContent).toBe(
-      'Bieżący język: Język',
+      'Aktualny język: Polski',
     )
   })
 
   it('publishes the locale and its direction', () => {
     render(
-      <I18nProvider locale="ar" messages={arMessages}>
+      <I18nProvider locale="ar" messages={CATALOGUE}>
         <Readout />
       </I18nProvider>,
     )
@@ -47,11 +63,22 @@ describe('the i18n provider', () => {
 
   it('marks a left-to-right locale as such, explicitly', () => {
     render(
-      <I18nProvider locale="en" messages={enMessages}>
+      <I18nProvider locale="en" messages={CATALOGUE}>
         <Readout />
       </I18nProvider>,
     )
     expect(screen.getByTestId('readout').getAttribute('dir')).toBe('ltr')
+  })
+
+  it('publishes a translator bound to the locale it was given', () => {
+    render(
+      <I18nProvider locale="pl" messages={CATALOGUE}>
+        <Readout />
+      </I18nProvider>,
+    )
+    expect(screen.getByTestId('readout').getAttribute('data-typed')).toBe(
+      'function',
+    )
   })
 
   it('refuses to translate outside a provider rather than falling back', () => {

@@ -74,13 +74,20 @@ function lookup(candidate: string): Locale | null {
 }
 
 /**
- * Longest input `resolveLocaleTag` will even look at.
+ * How much of an over-long tag `resolveLocaleTag` considers.
  *
- * RFC 5646 caps a registered language tag well below this; the bound is here
+ * RFC 5646 caps a registered language tag well below this. The bound is here
  * because truncation walks one subtag at a time and this function runs on the
- * request path for every visitor. Without it a single 16 KB `Accept-Language`
+ * request path for every visitor: without it a single 16 KB `Accept-Language`
  * entry of nothing but hyphens costs the Worker a measurable slice of its CPU
- * budget for a tag that could never have matched.
+ * budget.
+ *
+ * It bounds the *work*, not the answer. An over-long tag is truncated toward
+ * its prefix like any other, because `en-GB-oed-x-` followed by a kilobyte of
+ * junk is still an English speaker and dropping the whole thing would send them
+ * to the next step of the chain — or to `en` — for a reason that has nothing to
+ * do with what they asked for. Only the first 64 characters are searched, which
+ * is more than every registered tag needs and caps the walk at 64 passes.
  */
 const MAX_TAG_LENGTH = 64
 
@@ -95,12 +102,20 @@ export function resolveLocaleTag(
     return null
   }
   const lower = tag.trim().toLowerCase()
-  if (lower === '' || lower === '*' || lower.length > MAX_TAG_LENGTH) {
+  if (lower === '' || lower === '*') {
     return null
   }
+  const bounded =
+    lower.length > MAX_TAG_LENGTH ? lower.slice(0, MAX_TAG_LENGTH) : lower
   // `en-gb` → `en`, `zh-hant-tw` → `zh-hant` → …, dropping one subtag per pass.
-  for (let end = lower.length; end > 0; end = lower.lastIndexOf('-', end - 1)) {
-    const hit = lookup(lower.slice(0, end))
+  // A prefix cut mid-subtag simply fails to match and the next pass lands on a
+  // hyphen boundary, so the walk is the same one every other tag gets.
+  for (
+    let end = bounded.length;
+    end > 0;
+    end = bounded.lastIndexOf('-', end - 1)
+  ) {
+    const hit = lookup(bounded.slice(0, end))
     if (hit !== null) {
       return hit
     }

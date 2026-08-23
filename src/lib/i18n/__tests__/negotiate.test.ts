@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import { LOCALE_TAGS } from '../locales'
@@ -104,15 +107,19 @@ describe('normalising a stored tag', () => {
     }
   })
 
-  it('refuses a tag longer than any real one, without walking it', () => {
-    // Truncation drops one subtag per pass, so an unbounded tag turns one
+  it('truncates an over-long tag toward its prefix instead of dropping it', () => {
+    // Truncation drops one subtag per pass, so an unbounded tag would turn one
     // request header into a measurable slice of the Worker's CPU budget. The
-    // budget below is loose enough to survive a loaded machine and still two
-    // orders of magnitude under the uncapped walk of an input this size.
-    const started = performance.now()
-    expect(resolveLocaleTag(`en${'-x'.repeat(100_000)}`)).toBeNull()
+    // bound caps the *walk*, not the answer: someone whose client sent a
+    // kilobyte of private-use subtags after `en-GB` is still an English
+    // speaker, and discarding the tag whole would hand them whatever the next
+    // step of the chain happened to say.
+    expect(resolveLocaleTag(`en-GB${'-x'.repeat(100_000)}`)).toBe('en')
+    expect(resolveLocaleTag(`zh-Hant-TW${'-x'.repeat(100_000)}`)).toBe('zh-Hant')
+    expect(resolveLocaleTag(`en${'-x'.repeat(100_000)}`)).toBe('en')
+    // A single unbroken subtag has no prefix we ship, over-long or not.
     expect(resolveLocaleTag('e'.repeat(200_000))).toBeNull()
-    expect(performance.now() - started).toBeLessThan(500)
+    expect(resolveLocaleTag(`klingon${'-x'.repeat(100_000)}`)).toBeNull()
     // A tag at the bound is still normalised on its merits.
     expect(resolveLocaleTag(`en-${'a'.repeat(60)}`)).toBe('en')
   })
@@ -217,12 +224,39 @@ describe('negotiating a locale', () => {
     }
   })
 
-  it('reads no ambient request state', () => {
-    // The function is pure by construction; this pins it, because the moment it
-    // reads `getRequest()` or `navigator` it stops working on one of the two
-    // sides of the wire (`navigator.language` is hard-coded to `en` in workerd).
-    const source = negotiate.toString()
-    expect(source).not.toContain('navigator')
-    expect(source).not.toContain('getRequest')
+  it('reads no ambient request state, in any of its helpers', () => {
+    // The chain is pure by construction; this pins it, because the moment any
+    // part of it reads `getRequest()` or `navigator` it stops working on one of
+    // the two sides of the wire (`navigator.language` is hard-coded to `en` in
+    // workerd, so every non-English visitor gets a document-level hydration
+    // mismatch).
+    //
+    // Read off the whole module rather than off `negotiate.toString()`:
+    // `negotiate` delegates to `resolveLocaleTag`, `parseAcceptLanguage`,
+    // `qualityOf` and `lookup`, and a function's own source says nothing about
+    // what those do. Non-comment lines only, since this comment names them all.
+    const source = readFileSync(
+      join(process.cwd(), 'src', 'lib', 'i18n', 'negotiate.ts'),
+      'utf8',
+    )
+      .split('\n')
+      .filter((line) => !/^\s*(\/\/|\/\*|\*)/.test(line))
+      .join('\n')
+
+    for (const ambient of [
+      'navigator',
+      'getRequest',
+      'getCookie',
+      'getHeader',
+      'globalThis',
+      'process.env',
+      'document',
+      'window',
+      'localStorage',
+    ]) {
+      expect(source, `negotiate.ts must not read ${ambient}`).not.toContain(
+        ambient,
+      )
+    }
   })
 })

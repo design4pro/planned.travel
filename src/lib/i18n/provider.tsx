@@ -1,11 +1,11 @@
 import { createContext, useContext, useMemo } from 'react'
 
-import { createTranslator } from './catalogue'
+import { createStoredTranslator, createTranslator } from './catalogue'
 import { directionOf } from './locales'
 
 import type { ReactNode } from 'react'
 import type { Direction, Locale } from './locales'
-import type { Catalogue, Translate } from './types'
+import type { Catalogue, Translate, TranslateStored } from './types'
 
 /**
  * The React seam for the message layer.
@@ -30,6 +30,12 @@ export interface I18nContextValue {
   readonly dir: Direction
   /** The bound translator. */
   readonly t: Translate
+  /**
+   * The bound renderer for keys that only exist at run time — a stored
+   * notification row's `titleKey` and `params`. `null` for a key this catalogue
+   * does not carry, never English.
+   */
+  readonly tStored: TranslateStored
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null)
@@ -51,6 +57,7 @@ export function I18nProvider({
       locale,
       dir: directionOf(locale),
       t: createTranslator(locale, messages),
+      tStored: createStoredTranslator(locale, messages),
     }),
     [locale, messages],
   )
@@ -77,6 +84,16 @@ export function useI18n(): I18nContextValue {
 /** The translator, for the common case where a component only renders copy. */
 export function useTranslate(): Translate {
   return useI18n().t
+}
+
+/**
+ * The renderer for a key read out of the database rather than written in a
+ * component — a notification row keeps `titleKey`, `bodyKey` and a `params`
+ * record, so the sentence is composed in the reader's language at render time
+ * rather than frozen in whatever language the writer was using.
+ */
+export function useStoredTranslate(): TranslateStored {
+  return useI18n().tStored
 }
 
 /** The active locale, for formatters and for `lang` attributes. */

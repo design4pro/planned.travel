@@ -14,6 +14,13 @@
  * // …render inside <I18nProvider locale={locale} messages={messages}>
  * ```
  *
+ * Copy lives in `messages/<locale>/<namespace>.ts` across the ten namespaces
+ * §8 fixes — `shell`, `auth`, `trips`, `modules`, `costs`, `atlas`, `journal`,
+ * `marketing`, `settings`, `ui` — and a key is `<namespace>.<key in the file>`,
+ * so a screen calls `t('shell.nav.trips')` for the `'nav.trips'` written in
+ * `messages/en/shell.ts`. English is the schema: a key that does not exist
+ * there is a compile error, never a runtime fallback to English.
+ *
  * Two platform APIs are banned in here and a unit test enforces it:
  * `Intl.DisplayNames`, whose language names differ between workerd and WebKit
  * and are not the forms §8 fixed, and `Intl.Locale.prototype.textInfo`, which
@@ -39,10 +46,16 @@ export { plural, pluralCategories } from './plural'
 export { interpolate, resolveMessage } from './interpolate'
 
 export {
-  CATALOGUE_LOADERS,
+  createCatalogueLoader,
+  createStoredTranslator,
   createTranslator,
   loadCatalogue,
   peekCatalogue,
+} from './catalogue'
+export type {
+  CatalogueLoader,
+  NamespaceImporter,
+  NamespaceModule,
 } from './catalogue'
 
 export {
@@ -50,18 +63,23 @@ export {
   useDirection,
   useI18n,
   useLocale,
+  useStoredTranslate,
   useTranslate,
 } from './provider'
 export type { I18nContextValue, I18nProviderProps } from './provider'
 
+export { NAMESPACES } from './types'
 export type {
   Catalogue,
-  CatalogueModule,
   Message,
   MessageKey,
   MessageParamValue,
   MessageParams,
+  Namespace,
+  NamespaceMessages,
   PluralMessage,
   Translate,
   TranslateArgs,
+  TranslateStored,
+  TranslationOf,
 } from './types'
