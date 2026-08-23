@@ -819,9 +819,11 @@ Rows unblocked: `ADD-06` directly. `ADD-05` (the atlas map itself, wave 1) is AD
 not blocked by this stage; it is named because its write functions are where the recompute is
 triggered from.
 
-One constraint travels with the unblock, and `ADD-06` inherits it: seven of the row's ten figures are
-workspace-wide, not per-traveller. The measurement and what it forces on the panel's labelling are
-under **Server** below, and the row's copy is bound by it.
+One constraint travels with the unblock, and `ADD-06` inherits it: most of the row's ten figures are
+workspace-wide rather than per-traveller, and _how many_ depends on which row is being read — seven
+of ten on the all-time row, eight of ten on a year row, because `countryCount` changes sides between
+them. The measurement and what it forces on the panel's labelling are under **Server** below, and the
+row's copy is bound by it.
 
 ### Owned paths
 
@@ -854,14 +856,34 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
   per-traveller. Read the predicates: `tripCount` (`atlas.ts:813`), `dayCount` (`:821-823`),
   `placeCount` (`:827-831`), `cityCount` (`:834-838`), `spendMinor` (`:841-844`) and the
   `currency`/`lastTripId` lifted from `tripRows[0]` (`:892-893`) are bound by `tenantFilter()` and by
-  nothing else, so every member of a workspace gets the same seven numbers. Only three figures
-  differ between two travellers in one workspace: `countryCount` and `byContinent`, from
-  `listVisitedCountries(scope, userId)` (`:845`), and `regionCount`, which counts `visited_regions`
-  filtered by `userId` (`:890`). This is deliberate, and the repository already argues it at
-  `atlas.ts:366-370`: a per-country trip figure filtered by trip membership would not sum to the
-  workspace trip count printed above the map, and two figures on one panel that disagree read as a
-  bug rather than as a distinction. The stage adopts that reading rather than fighting it, and
-  `ADD-06` labels the seven workspace figures as the workspace's — never as "your trips".
+  nothing else, so every member of a workspace gets the same seven numbers on every row.
+- **The remaining three do not split cleanly, and the exception is the one an implementer will get
+  wrong: `countryCount` is per-traveller on the all-time row and workspace-scoped on a year row.**
+  Measured at `atlas.ts:889`, the field is `yearCodes === null ? countries.length : yearCodes.size`.
+  On the all-time row (`statYear = 0`) `yearCodes` is `null` and the figure is the length of
+  `listVisitedCountries(scope, userId)` (`:845`), which is the traveller's own list. On a year row
+  `yearCodes` is the set built at `:860-867` from `trips.country_codes` over `tripRows`, and
+  `tripRows` (`:805-814`) is `tenantFilter()`-bound and carries no `userId` predicate — so a year's
+  country count is the workspace's distinct countries for that year and is byte-identical for every
+  member. `byContinent` is per-traveller on both kinds: it is built at `:869-880` from
+  `scopedCountries`, which is the traveller's visited list, intersected with `yearCodes` on a year
+  row. `regionCount` (`:890`) is per-traveller on both kinds and carries a second property worth
+  stating, because the panel will otherwise print it as a yearly figure: it takes no year predicate
+  at all, so the traveller's lifetime region count is repeated unchanged on every year row.
+- **What that leaves, and what it binds `ADD-06` to.** The per-traveller set is
+  `{countryCount, regionCount, byContinent}` on the all-time row and `{regionCount, byContinent}` on
+  a year row. The switch is deliberate and the repository argues it in place at `atlas.ts:848-859`:
+  reading the lifetime visited list for a year row printed the same total on every year — "2026: 12
+  countries, 2025: 12 countries, 12 all time" — which reads as a broken aggregate rather than as a
+  history, and the year's own trips already name their countries. `atlas.ts:366-370` makes the
+  matching argument for the per-country trip tally: a figure filtered by trip membership would not
+  sum to the workspace trip count printed above the map, and two figures on one panel that disagree
+  read as a bug rather than as a distinction. The stage adopts both readings rather than fighting
+  them, and `ADD-06`'s copy is bound accordingly: the seven always-workspace figures are labelled as
+  the workspace's and never as "your trips"; a year row's country count is labelled the same way;
+  only the all-time row may say "countries you have visited"; and a year row's region line either
+  carries a lifetime qualifier or is dropped from year rows, because "regions in 2026" is a number
+  this repository does not compute.
 - **Repository.** No new SQL. `recomputeTravelStats` already rebuilds the row from five aggregate
   queries, and `upsertTravelStats` (`atlas.ts:764-786`) already writes it through `definedOnly`, so
   a field the recompute omits keeps its stored value instead of resetting to zero.
@@ -875,7 +897,9 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
   the handler: read the year rows with `listTravelStats(scope, userId)` (`atlas.ts:742-750`), count
   consecutive years with a non-zero `tripCount` back from the newest, and pass the result as
   `yearStreak` on the all-time upsert. That needs no repository edit, because the input already
-  accepts the field. `distance_metres` has no source at all — no transport leg carries a distance
+  accepts the field. It is a **workspace** streak, and `ADD-06` labels it as one: a year row's
+  `tripCount` is `tenantFilter()`-bound and identical for every member, so consecutive years of
+  travel are the workspace's consecutive years, not the traveller's. `distance_metres` has no source at all — no transport leg carries a distance
   today — and the stage does **not** invent one. It is reported as a decision under **Blockers**;
   `ADD-06` either omits the figure or files its own row for it, because a panel printing a permanent
   zero is worse than a panel that omits the line.
@@ -903,14 +927,19 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
 - **Which years, and which writes.** Measured: `src/server/fns/atlas.ts` exposes exactly four write
   functions — `markCountryVisitedFn` (`:441`), `unmarkCountryVisitedFn` (`:485`),
   `addCountryToBucketListFn` (`:547`) and `removeCountryFromBucketListFn` (`:585`). Only the first
-  two change an input of the stat row, and only its per-traveller third. `bucket_list_items` feeds no
-  column of `travel_stats` (`schema.ts:1491-1520`), so the two bucket-list functions enqueue nothing;
-  enqueueing from them would buy a consumer invocation whose only measurable effect is cost. The two
-  visited-country functions enqueue the all-time roll-up (`statYear = 0`) and, when the write carries
-  a `visitedOn` date, that date's year.
-- **The seven workspace figures move on writes this stage does not own, and that is stated rather
-  than hidden.** A trip, day, place or expense write changes `tripCount`, `dayCount`, `placeCount`,
-  `cityCount` and `spendMinor` for _every_ member's row at once, and those write paths belong to
+  two change an input of the stat row, and only through `visited_countries`: on the all-time row that
+  moves `countryCount` and `byContinent`, and on a year row it moves `byContinent` alone, since a
+  year's `countryCount` comes from `trips` and not from the visited list. `bucket_list_items` feeds
+  no column of `travel_stats` (`schema.ts:1491-1520`), so the two bucket-list functions enqueue
+  nothing; enqueueing from them would buy a consumer invocation whose only measurable effect is cost.
+  The two visited-country functions enqueue the all-time roll-up (`statYear = 0`) and, when the write
+  carries a `visitedOn` date, that date's year — the year envelope is still worth sending, because
+  the year row's continent breakdown is exactly what that write changed.
+- **The workspace figures move on writes this stage does not own, and that is stated rather than
+  hidden.** A trip, day, place or expense write changes `tripCount`, `dayCount`, `placeCount`,
+  `cityCount` and `spendMinor` for _every_ member's row at once — and a trip write that changes
+  `trips.country_codes` or `trips.start_date` also moves every member's year-row `countryCount`, by
+  the derivation at `atlas.ts:860-867`. Those write paths belong to
   `01-trips-core.md` and `04-budget-and-currencies.md`. This stage does not reach into them. It ships
   the task kind, the handler and the deterministic envelope id so that those plans enqueue one task
   per affected member and year, and it records the requirement here so neither plan invents a second
@@ -940,18 +969,27 @@ aggregates and must stay off the read path. Keeping it in the queue is that cont
 Added to `src/server/repos/__tests__/tenant-isolation.test.ts`, with assertions that follow the
 measured split above rather than the intuitive one.
 
-Run the recompute in A's scope with a user id that belongs only to B. The row is written under A's
-organization, never under B's, and B's own stats rows are unchanged — that is the isolation claim,
-and it is asserted whole. The row's _contents_ are asserted in two halves, because a blanket "zero
-counts" assertion is unsatisfiable and would fail on its first run:
+Run the recompute in A's scope with a user id that belongs only to B — twice: once for the all-time
+row (`statYear = 0`) and once for a year in which A's own trips have `start_date` and non-empty
+`country_codes`. Both rows are written under A's organization, never under B's, and B's own stats
+rows are unchanged — that is the isolation claim, and it is asserted whole. The rows' _contents_ are
+asserted in three parts, because a blanket "zero counts" assertion is unsatisfiable and would fail on
+its first run, and because the per-traveller set is not the same on the two row kinds:
 
-- the three per-traveller figures — `countryCount`, `regionCount`, `byContinent` — are zero, because
-  `visited_countries` and `visited_regions` are filtered by organization **and** user, and B's rows
+- per-traveller on **both** row kinds — `regionCount` is zero and `byContinent` is empty, because
+  `visited_countries` and `visited_regions` are filtered by organization **and** user, so B's rows
   are invisible from A's scope;
-- the seven workspace figures — `tripCount`, `dayCount`, `placeCount`, `cityCount`, `spendMinor`,
-  `currency`, `lastTripId` — equal A's own all-time row, because they are `tenantFilter()`-bound
-  only. Asserting them equal to A's row rather than to zero is what makes the test express the real
-  boundary.
+- `countryCount` is asserted **per row kind**, and this is the assertion the intuitive reading gets
+  wrong. On the all-time row it is zero, because it is `countries.length` over B's invisible visited
+  list. On the year row it equals the number of distinct upper-cased codes across A's own trips that
+  started in that year (`atlas.ts:860-867`, `:889`) and is therefore **non-zero by construction** —
+  it is derived from `trips`, which is `tenantFilter()`-bound only. Asserting zero there is the
+  assertion that cannot pass, and it is named here so that nobody writes it and then edits the
+  repository to make it pass;
+- the seven always-workspace figures — `tripCount`, `dayCount`, `placeCount`, `cityCount`,
+  `spendMinor`, `currency`, `lastTripId` — equal A's own row for the same `statYear`, because they
+  are `tenantFilter()`-bound only. Asserting them equal to A's row rather than to zero is what makes
+  the test express the real boundary.
 
 Then read the row back from B's scope. `getTravelStats(scopeB, aUserId, 0)` returns `null`: measured,
 it is `travelStatsRepository.findOne` with return type `TravelStat | null`
