@@ -162,16 +162,16 @@
   },
   {
     "id": "repo-gate-red-at-head",
-    "claim": "The repo-wide Playwright gate is RED at HEAD c97dfd1 for reasons that predate this run: 44 failed / 5 skipped / 88 passed. typecheck, lint, 2243 unit tests and build are all green. NO item in this run can turn it green, because every item owns only docs/ and every failure is in a src/-rendered screen. Items therefore settle at accepted-pending-gate, and this run must never report the gate as passed.",
-    "evidence": "git diff 54f18a7..HEAD -- e2e playwright.config.ts src is EMPTY, so neither the app nor the gate config changed since the baselines were recorded, when the gate was 105/105 green on 2026-08-21. The working tree carries only untracked docs/plans/*.md. Failure shapes: pricing-light 76px taller, legal-terms 283px, legal-privacy 118px, dashboard-light, trips-light, mobile-safari landing, plus a functional [data-part=\"country-panel\"] that never renders and chrome.shelf null on /atlas. The measuring agent recorded that NONE of the 44 is a load-related timeout — every one carries a pixel count or a concrete missing-locator assertion.",
-    "measuredIn": "this run, round 1",
+    "claim": "SUPERSEDED AND WRONG AS ORIGINALLY WRITTEN. It claimed the Playwright gate was red at this branch HEAD with 44 failures, on the evidence that git diff since the baseline commit was empty. The diff was empty for THIS worktree; the server under test was not this worktree. Rounds 1-3 measured main (2433 src/ insertions ahead, incl. 376 lines of styles.css and tokens.css, which is what the page-height differences actually were); rounds 4-5 measured servers with no .dev.vars. This branch has NEVER had its Playwright leg honestly measured.",
+    "evidence": "resolve-port.sh identified a server by GET /api/dev/seed, which every git worktree of this repo answers identically. Three worktrees were running. Confirmed by lsof: the process on the port it handed back had cwd in a different worktree. Fixed: is_ours() now also requires the listening process cwd to equal , verified to refuse the other worktrees servers.",
+    "measuredIn": "this run, rounds 1-5, corrected in round 5",
     "scope": [
       "builder",
       "auditor",
       "mechanical",
       "capture"
     ],
-    "invalidatesWhen": "the gate goes green, or a source change lands that could plausibly explain the failures"
+    "invalidatesWhen": "a Playwright run is completed against a server whose cwd is this worktree and whose env includes .dev.vars"
   },
   {
     "id": "no-repair-pass-while-gate-red",
@@ -218,5 +218,28 @@
       "auditor"
     ],
     "invalidatesWhen": "never — it is a discipline, not a measurement"
+  },
+  {
+    "id": "dev-vars-not-in-worktree",
+    "claim": ".dev.vars is gitignored, so git worktree add never brings it. Without it Better Auth has no BETTER_AUTH_SECRET, /login and /register return HTTP 500, and every authenticated Playwright spec skips rather than fails. Copy it from the main checkout as the first step in any new worktree.",
+    "evidence": "Rounds 4 and 5 both measured servers without it: 66 specs skipped and every failure traced to that one cause. The main checkout has .dev.vars (3960 bytes); this worktree had only .dev.vars.example until round 5.",
+    "measuredIn": "this run, round 5",
+    "scope": [
+      "mechanical",
+      "capture",
+      "builder"
+    ],
+    "invalidatesWhen": "the app stops needing a secret to boot auth"
+  },
+  {
+    "id": "dev-server-does-not-outlive-its-task",
+    "claim": "A dev server started from an agent background shell does NOT survive that task ending — the harness takes the process tree down with it, and a POSIX::setsid wrapper was tried and changed nothing. Do not try to hand a warm server from the orchestrator to the next round. Let each round own its own: the mechanical agent starts one and it lives as long as that agent runs, which is all the gate needs.",
+    "evidence": "Measured three times in round 5. Each time resolve-port.sh printed \"started and answering\" and the next command got connection refused, with bash reporting \"Terminated: 15\" against the vite job.",
+    "measuredIn": "this run, round 5",
+    "scope": [
+      "mechanical",
+      "capture"
+    ],
+    "invalidatesWhen": "the harness stops reaping background process trees"
   }
 ]

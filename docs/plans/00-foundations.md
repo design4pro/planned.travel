@@ -126,10 +126,10 @@ steps:
    case there.
 
 **Silence is not an answer.** A stage that creates no quota-bearing row says so explicitly under its
-**Quota** heading and gives the reason — "notification rows are not sold and not metered; the only
-bound that matters is fan-out, capped at 500 recipients by `notifyMany`" is an answer. An empty
-**Quota** heading is a rejected stage, because it is indistinguishable from an author who never
-asked the question.
+**Quota** heading and gives the reason — "notification rows are not sold and not metered; what has
+to be bounded is fan-out, and the stage bounds it by chunking the recipient set rather than by
+assuming a member ceiling" is an answer. An empty **Quota** heading is a rejected stage, because it
+is indistinguishable from an author who never asked the question.
 
 ## The tenant procedure
 
@@ -184,11 +184,15 @@ in a server function. Envelopes carry a deterministic id so a redelivery is a no
 
 Two measured facts about the background surface that a stage must not walk into blind:
 
-- `TASK_KINDS` declares eight job kinds; the `taskHandlers` registry in `src/server/queue/consumer.ts`
-  supplies three — `email`, `pdf-export` and `booking-import`. The other five reach `unhandled()`,
-  which raises a permanent error and dead-letters the message. **`pdf-export` and `booking-import` are complete
-  handlers with no producer anywhere in `src/` and no UI entry point**, and `thumbnail` has neither a registered
-  handler nor a producer. Wiring a producer to the two finished handlers is cheap movement for
+- `TASK_KINDS` (`src/server/queue/types.ts:13-24`) declares eight job kinds and
+  `runHandler` (`src/server/queue/consumer.ts:98-124`) has a `case` for every one of them, `thumbnail`
+  included — but a `case` is not a handler. The `taskHandlers` registry at `consumer.ts:78` supplies
+  three, and `src/server/queue/handlers/` holds exactly three modules: `email.ts`, `pdf-export.ts`
+  and `booking-import.ts`. The other five kinds fall through their `case` to `unhandled()`, which
+  raises a permanent error and dead-letters the message. So of the three kinds a later plan will
+  reach for: **`pdf-export` and `booking-import` are complete handlers with no producer anywhere in
+  `src/` and no UI entry point**, and **`thumbnail` has a routed `case`, no handler module and no
+  producer** — a distinction worth 20 minutes to whoever assumes the third is like the first two. Wiring a producer to the two finished handlers is cheap movement for
   `06-documents-and-media.md` (DOC-06) and `03-reservations-and-transport.md` (BKG-03); writing a
   second exporter would be a defect.
 - The Stripe webhook really does enqueue `billing.subscription.changed`, `billing.invoice.paid` and
@@ -482,9 +486,16 @@ No column, no index, no migration.
   translation keys and their params, using the `error` parameter for messages. It validates the
   caller, not the client: no recipient list ever arrives from the browser, so there is nothing to
   trust. `notify()` re-validates the row shape on the way in, and that redundancy is kept.
-- **Authorisation.** Decided in the repository, in the caller's scope. Recipients are derived
-  server-side from trip membership; a trip id that does not belong to the tenant is a `NotFoundError`
-  from `listTripMembers` before any notification row is written.
+- **Authorisation, and the one call the obvious reading omits.** Decided in the repository, in the
+  caller's scope. Measured: `listTripMembers` (`src/server/repos/trips.ts:403-411`) is
+  `tripMembersRepository.findMany` under `tenantFilter`, so a `tripId` belonging to another tenant
+  returns `[]`. It does **not** raise. Fanning out over that empty list would succeed silently and
+  be indistinguishable on screen from a trip whose only member is the actor, which is precisely the
+  failure this stage exists to prevent. So `dispatch` resolves the trip first, through
+  `requireTrip(scope, tripId)` — `src/server/repos/trips.ts:152`, which is
+  `tripsRepository.requireById` and is documented at `:148-151` as rejecting an id belonging to
+  another organization with `NotFoundError` — and only then reads the membership. Recipients are
+  always derived server-side from that membership; no recipient list ever arrives from the browser.
 - Nothing slow runs inline: the only external call is the email provider, and it happens in the
   queue handler.
 
@@ -500,28 +511,63 @@ No new route file, so `pnpm generate-routes` is not run. No new token, no new pr
 
 **Creates no quota-bearing row, explicitly.** Notification rows are not sold by the plan catalogue
 and are not an operational metric in `PLAN_QUOTAS`; adding one would meter a side effect of work the
-tenant already paid for elsewhere. The bound that matters is fan-out, and it already exists:
-`notifyMany` caps a single event at 500 recipients, which is five times the configured 100-member
-organization ceiling. Nothing is added to `resolveLimits()`, nothing to `PLAN_QUOTAS`, and therefore
-no case to `src/server/billing/__tests__/limits.test.ts`.
+tenant already paid for elsewhere. Nothing is added to `resolveLimits()`, nothing to `PLAN_QUOTAS`,
+and therefore no case to `src/server/billing/__tests__/limits.test.ts`.
+
+Fan-out still has to be bounded, and the bound is this stage's own work rather than a limit it may
+lean on. Measured: `notifyMany` (`src/server/repos/notifications.ts:140`) evaluates
+`z.array(idSchema).max(500).parse(...)` over the raw recipient array **before** it de-duplicates.
+That is a rejecting validator, not a cap — a 501st recipient throws a `ZodError` and writes no row
+at all, so on a large workspace it would turn a successful trip message into a failed one. Nor is
+there one member number to size against. Three exist and they disagree: `membershipLimit: 100` in
+the Better Auth organization plugin (`src/server/auth/index.ts:237`), which is the only one enforced
+at the point a membership is written; the fallback `SEAT_LIMIT_CEILING = 100_000`
+(`src/server/billing/limits.ts:82`), which applies when a plan sells no seat limit; and the largest
+published plan's `seats: 10` (`src/lib/plans.ts:335`). A dispatch sized against any one of them is
+sized against a number the other two contradict.
+
+So `dispatch` bounds itself and depends on none of the three: it de-duplicates the resolved
+recipient set, then calls `notifyMany` once per chunk of at most 500, with the chunk size declared as
+a named constant in the dispatch module that cites the line of `notifications.ts` it mirrors. No
+recipient is dropped, no ceiling is assumed, and the invariant is a unit test — an event with 501
+distinct recipients writes 501 rows across two calls and does not throw.
 
 ### Tenant isolation test
 
-Added to `src/server/repos/__tests__/tenant-isolation.test.ts`: in A's scope, dispatch an event for
-one of B's trips — `NotFoundError`, and B's `notifications` table is unchanged. In A's scope,
-dispatch to a recipient id that belongs only to B — the recipient is dropped rather than written, so
-no cross-tenant row is created. Then read the rows A's own dispatch produced from B's scope by id —
-`NotFoundError`. Functions covered: `dispatch`, and through it `notifyMany`, `filterEnabledRecipients`
+Added to `src/server/repos/__tests__/tenant-isolation.test.ts`. Three cases, and the middle one is
+written against what the repository actually does rather than against what it ought to do:
+
+- In A's scope, dispatch an event for one of B's trips — `NotFoundError`, raised by the
+  `requireTrip` call named under **Server**, not by `listTripMembers`, and B's `notifications` table
+  is unchanged.
+- `dispatch` takes no recipient list, so "dispatch to one of B's users" is not an expressible input;
+  the case is made one level down, against `notifyMany` directly. Measured:
+  `notifications.recipient_user_id` is a `userRef()` text column with no foreign key
+  (`src/server/db/schema.ts:1727` — the convention every domain table follows so the domain schema
+  never imports the auth schema), and `filterEnabledRecipients`
+  (`src/server/repos/notifications.ts:299-318`) is **opt-out** — it removes only users with an
+  explicit `is_enabled = false` row. A foreign user id handed to `notifyMany` is therefore written,
+  under A's organization, not dropped. The test asserts exactly that, and the assertion is the reason
+  the layer above must derive recipients from `listTripMembers` and never from a request body. It
+  also asserts the half that is isolated: an opt-out B recorded in B's organization is invisible from
+  A's scope and does not suppress A's row.
+- Read the rows A's own dispatch produced from B's scope: `notificationsRepository.requireById` —
+  `NotFoundError`, and `listNotifications` in B returns none of them.
+
+Functions covered: `dispatch`, and through it `notifyMany`, `filterEnabledRecipients`, `requireTrip`
 and `listTripMembers`.
 
 ### Verification
 
 - Gate, in order: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 - Unit tests in `src/server/notifications/__tests__/dispatch.test.ts`, each holding one invariant:
-  the actor never notifies themselves; a recipient whose `in_app` preference is off receives no row;
-  a recipient whose `email` preference is on produces exactly one enqueued envelope with the
-  deterministic id; a queue that rejects does not propagate the rejection to the caller; a channel
-  with no transport logs once and writes the in-app row anyway.
+  the actor never notifies themselves; a recipient with an explicit `in_app` opt-out row receives no
+  row; **a recipient with no preference row at all does receive one**, because absence means enabled
+  — `isChannelEnabled` returns `row?.isEnabled ?? true` (`src/server/repos/notifications.ts:277-296`)
+  so travellers opt out and never in, and a test written the other way round would encode the
+  opposite product; a recipient whose `email` preference is on produces exactly one enqueued envelope
+  with the deterministic id; a queue that rejects does not propagate the rejection to the caller; a
+  channel with no transport logs once and writes the in-app row anyway.
 - Browser evidence: `/notifications` and the shell bell, at 360px and 1440px, in light and dark,
   photographed **after** a second member posts a trip message — the state that is the point of the
   stage is the unread badge incrementing and the new row appearing at the head of the list, not the
@@ -570,10 +616,12 @@ Closes none. It supplies the write half of `ADM-04` (`10-administration.md`, wav
 chronological audit table with actor, action key, resource, IP and JSON detail — which keeps the row
 and owns the reading surface, the paging and the filters.
 
-Measured: `recordAudit` and `recordAuditMany` in `src/server/repos/audit.ts` have no caller, so every
-`audit_log` row today comes from `src/routes/api/dev/-seed/apply.ts:481`. `loadAdmin` in
-`src/routes/_app/-server/overview.ts` renders `listAuditLog` and `countAuditActions` on `/admin`
-against a trail no production write path appends to.
+Measured: `recordAudit` and `recordAuditMany` in `src/server/repos/audit.ts` have no caller outside
+`src/server/repos/__tests__/`, so every `audit_log` row today comes from the dev seeder — and it does
+not even use them, inserting through `auditLogRepository.insert` directly at
+`src/routes/api/dev/-seed/apply.ts:672`. `loadAdmin` in `src/routes/_app/-server/overview.ts` renders
+`listAuditLog` and `countAuditActions` on `/admin` against a trail no production write path appends
+to.
 
 Rows unblocked: `ADM-04` directly. `ADM-01` (the admin console shell, wave 4) and `ADM-03` (the
 permission matrix, wave 5) both read the same table and inherit a trail with real rows in it; neither
@@ -700,6 +748,10 @@ Rows unblocked: `ADD-06` directly. `ADD-05` (the atlas map itself, wave 1) is AD
 not blocked by this stage; it is named because its write functions are where the recompute is
 triggered from.
 
+One constraint travels with the unblock, and `ADD-06` inherits it: seven of the row's ten figures are
+workspace-wide, not per-traveller. The measurement and what it forces on the panel's labelling are
+under **Server** below, and the row's copy is bound by it.
+
 ### Owned paths
 
 - `src/server/queue/handlers/travel-stats.ts` — new. Recomputes one traveller's rows.
@@ -707,7 +759,8 @@ triggered from.
 - `src/server/queue/types.ts` — edit. Adds the `travel-stats` kind, its payload schema, and `DB` to
   the handler binding surface.
 - `src/server/queue/consumer.ts` — edit. Registers the handler.
-- `src/server/fns/atlas.ts` — edit. The four existing write functions enqueue a recompute.
+- `src/server/fns/atlas.ts` — edit. The two visited-country write functions enqueue a recompute; the
+  two bucket-list ones deliberately do not, for the reason under **Server**.
 
 ### Data and migration
 
@@ -716,18 +769,47 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
 
 ### Server (repo, server function, Zod)
 
-- **Repository.** No new SQL. `recomputeTravelStats(scope, userId, statYear)` already rebuilds a row
-  from five aggregate queries over trips, days, places, spend and countries, and `upsertTravelStats`
-  already writes it.
+- **What the row actually aggregates, measured — the stage's premise depends on getting this
+  right.** `recomputeTravelStats(scope, userId, statYear)` (`src/server/repos/atlas.ts:792-896`)
+  writes one row keyed `(organization_id, user_id, stat_year)` — the unique index at
+  `src/server/db/schema.ts:1515` — but the row being per-traveller does not make its contents
+  per-traveller. Read the predicates: `tripCount` (`atlas.ts:813`), `dayCount` (`:821-823`),
+  `placeCount` (`:827-831`), `cityCount` (`:834-838`), `spendMinor` (`:841-844`) and the
+  `currency`/`lastTripId` lifted from `tripRows[0]` (`:892-893`) are bound by `tenantFilter()` and by
+  nothing else, so every member of a workspace gets the same seven numbers. Only three figures
+  differ between two travellers in one workspace: `countryCount` and `byContinent`, from
+  `listVisitedCountries(scope, userId)` (`:845`), and `regionCount`, which counts `visited_regions`
+  filtered by `userId` (`:890`). This is deliberate, and the repository already argues it at
+  `atlas.ts:366-370`: a per-country trip figure filtered by trip membership would not sum to the
+  workspace trip count printed above the map, and two figures on one panel that disagree read as a
+  bug rather than as a distinction. The stage adopts that reading rather than fighting it, and
+  `ADD-06` labels the seven workspace figures as the workspace's — never as "your trips".
+- **Repository.** No new SQL. `recomputeTravelStats` already rebuilds the row from five aggregate
+  queries, and `upsertTravelStats` (`atlas.ts:764-786`) already writes it through `definedOnly`, so
+  a field the recompute omits keeps its stored value instead of resetting to zero.
+- **Two columns the recompute cannot derive, and what happens to each.** `travel_stats.year_streak`
+  and `travel_stats.distance_metres` (`schema.ts:1509`, `:1505`) are accepted by
+  `upsertTravelStatsInput` (`atlas.ts:130`, `:127`) and never passed by `recomputeTravelStats`. The
+  seeder states this in its own words at `src/routes/api/dev/-seed/dataset/workspace.ts:206` and
+  writes them in a second call (`src/routes/api/dev/-seed/apply.ts:536-537`). Because
+  `upsertTravelStats` uses `definedOnly`, both survive every recompute at their seeded value, which
+  is exactly how a frozen number hides behind numbers that move. The streak is therefore derived in
+  the handler: read the year rows with `listTravelStats(scope, userId)` (`atlas.ts:742-750`), count
+  consecutive years with a non-zero `tripCount` back from the newest, and pass the result as
+  `yearStreak` on the all-time upsert. That needs no repository edit, because the input already
+  accepts the field. `distance_metres` has no source at all — no transport leg carries a distance
+  today — and the stage does **not** invent one. It is reported as a decision under **Blockers**;
+  `ADD-06` either omits the figure or files its own row for it, because a panel printing a permanent
+  zero is worse than a panel that omits the line.
 - **Why a queue and not inline.** Five aggregate queries on a busy tenant is exactly the shape
   `ARCHITECTURE.md` §5 sends to `TASKS`. The atlas write functions enqueue one `travel-stats` task
   and return; the map updates optimistically as it does today, and the panel catches up on its next
   read. The envelope id is deterministic per user and year, so a burst of country toggles collapses
   rather than fanning out.
-- **Measured obstacle, and its fix.** `TaskBindings` in `src/server/queue/types.ts` declares `KV`,
-  `FILES` and `TASKS` and **no `DB`**, so no queue handler can reach D1 today. The `DB` binding
-  already exists on the Worker and the consumer runs in the same Worker, so this is a type-surface
-  change in `types.ts`, not a `wrangler.jsonc` change. No binding stage is required, and none is
+- **Measured obstacle, and its fix.** `TaskBindings` in `src/server/queue/types.ts:228-241` declares
+  `KV`, `FILES`, `TASKS` and an optional `TRIP_ROOM`, and **no `DB`**, so no queue handler can reach
+  D1 today. The `DB` binding already exists on the Worker and the consumer runs in the same Worker,
+  so this is a type-surface change in `types.ts`, not a `wrangler.jsonc` change. No binding stage is required, and none is
   minted.
 - **Scope inside a handler.** `createScope()` needs `{ userId, organizationId, role }`. The envelope
   carries the organization id and the user id; the role is resolved with `getMembership` from
@@ -740,8 +822,24 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
   the envelope is used to build the scope, and every query the repository then runs is
   `tenantFilter()`-bound to that same organization, so a forged envelope can only recompute rows it
   already owns.
-- **Which years.** Each write enqueues two tasks: the all-time roll-up (`statYear = 0`) and the year
-  of the trip that changed. The streak is derived inside the repository from the year rows.
+- **Which years, and which writes.** Measured: `src/server/fns/atlas.ts` exposes exactly four write
+  functions — `markCountryVisitedFn` (`:441`), `unmarkCountryVisitedFn` (`:485`),
+  `addCountryToBucketListFn` (`:547`) and `removeCountryFromBucketListFn` (`:585`). Only the first
+  two change an input of the stat row, and only its per-traveller third. `bucket_list_items` feeds no
+  column of `travel_stats` (`schema.ts:1491-1520`), so the two bucket-list functions enqueue nothing;
+  enqueueing from them would buy a consumer invocation whose only measurable effect is cost. The two
+  visited-country functions enqueue the all-time roll-up (`statYear = 0`) and, when the write carries
+  a `visitedOn` date, that date's year.
+- **The seven workspace figures move on writes this stage does not own, and that is stated rather
+  than hidden.** A trip, day, place or expense write changes `tripCount`, `dayCount`, `placeCount`,
+  `cityCount` and `spendMinor` for _every_ member's row at once, and those write paths belong to
+  `01-trips-core.md` and `04-budget-and-currencies.md`. This stage does not reach into them. It ships
+  the task kind, the handler and the deterministic envelope id so that those plans enqueue one task
+  per affected member and year, and it records the requirement here so neither plan invents a second
+  recompute. The deterministic id is what keeps that fan-out affordable: repeated envelopes for the
+  same `(user, year)` collapse. Until those plans land, the workspace figures still refresh on the
+  next visited-country write — a delay rather than a freeze, and strictly better than today, where
+  nothing in production recomputes at all.
 
 ### UI (route, components)
 
@@ -761,21 +859,44 @@ aggregates and must stay off the read path. Keeping it in the queue is that cont
 
 ### Tenant isolation test
 
-Added to `src/server/repos/__tests__/tenant-isolation.test.ts`: run the recompute in A's scope with a
-user id that belongs only to B — the row is written under A's organization with zero counts, never
-under B's, and B's own stats rows are unchanged. Read A's stats row from B's scope by id —
-`NotFoundError`. Functions covered: `recomputeTravelStats`, `upsertTravelStats`, `getTravelStats`,
-`listTravelStats`.
+Added to `src/server/repos/__tests__/tenant-isolation.test.ts`, with assertions that follow the
+measured split above rather than the intuitive one.
+
+Run the recompute in A's scope with a user id that belongs only to B. The row is written under A's
+organization, never under B's, and B's own stats rows are unchanged — that is the isolation claim,
+and it is asserted whole. The row's _contents_ are asserted in two halves, because a blanket "zero
+counts" assertion is unsatisfiable and would fail on its first run:
+
+- the three per-traveller figures — `countryCount`, `regionCount`, `byContinent` — are zero, because
+  `visited_countries` and `visited_regions` are filtered by organization **and** user, and B's rows
+  are invisible from A's scope;
+- the seven workspace figures — `tripCount`, `dayCount`, `placeCount`, `cityCount`, `spendMinor`,
+  `currency`, `lastTripId` — equal A's own all-time row, because they are `tenantFilter()`-bound
+  only. Asserting them equal to A's row rather than to zero is what makes the test express the real
+  boundary.
+
+Then read the row back from B's scope. `getTravelStats(scopeB, aUserId, 0)` returns `null`: measured,
+it is `travelStatsRepository.findOne` with return type `TravelStat | null`
+(`src/server/repos/atlas.ts:752-761`), so the assertion is `toBeNull()` and not a rejection, and
+`listTravelStats(scopeB, aUserId)` is empty. The throwing path is asserted separately through
+`travelStatsRepository.requireById(scopeB, rowIdWrittenInA)` (`src/server/repos/base.ts:298`), which
+is where `NotFoundError` actually comes from. Functions covered: `recomputeTravelStats`,
+`upsertTravelStats`, `getTravelStats`, `listTravelStats`.
 
 ### Verification
 
 - Gate, in order: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 - Unit tests in `src/server/queue/handlers/__tests__/travel-stats.test.ts`: a handled message writes
-  both the all-time row and the year row; the same message delivered twice leaves one row per year
-  and the same numbers; a user who is no longer a member fails permanently rather than retrying; the
-  handler never reads outside the envelope's organization.
-- Unit test in the atlas function tests: each of the four write functions enqueues exactly two
-  envelopes with the deterministic ids, and a queue rejection does not fail the user's write.
+  the row for the year its own envelope names, and the all-time and year envelopes together leave two
+  rows; the same message delivered twice leaves one row per year with the same numbers; the streak
+  the handler computes matches a hand-built year history, including a gap year that ends the run; a
+  recompute leaves `distance_metres` at its stored value rather than zeroing it; a user who is no
+  longer a member fails permanently rather than retrying; the handler never reads outside the
+  envelope's organization.
+- Unit test in the atlas function tests: `markCountryVisitedFn` and `unmarkCountryVisitedFn` each
+  enqueue the all-time envelope, plus the year envelope when `visitedOn` is supplied, both with the
+  deterministic ids; the two bucket-list functions enqueue nothing; and a queue rejection does not
+  fail the user's write.
 - Browser evidence: `/atlas` at 360px and 1440px in light and dark, photographed **after** marking a
   country visited and letting the consumer run — the state that is the point of the stage is the
   statistics panel's numbers moving in step with the map, which is precisely what does not happen
@@ -803,7 +924,11 @@ The `SPEC.md` §2 clauses are ticked against the atlas statistics panel:
 
 ### Blockers
 
-None.
+- **`travel_stats.distance_metres` has no source.** No transport leg records a distance, so the
+  recompute cannot derive the column and the seeder is the only thing that has ever filled it
+  (`src/routes/api/dev/-seed/dataset/workspace.ts:206`). Disposition: **report**. This stage invents
+  no distance model; `ADD-06` omits the figure until a row owns it, and
+  `11-boundaries-and-blockers.md` carries the disposition.
 
 ## Stage 00-S5 — Reminder scheduling
 
@@ -840,9 +965,13 @@ index, no migration.
 
 ### Server (repo, server function, Zod)
 
-- **Repository.** No new SQL. The stage reads the trip through the existing tenant-scoped reader in
-  `src/server/repos/trips.ts`, its membership through `listTripMembers`, and the members' addresses
-  through `listUserProfiles` in `src/server/repos/members.ts`.
+- **Repository.** No new SQL, and the reader is named rather than left to the implementer's choice,
+  because the two candidates behave differently. The trip is resolved with
+  `requireTrip(scope, tripId)` (`src/server/repos/trips.ts:152`), which raises `NotFoundError` for an
+  id outside the tenant — **not** `getTrip` (`:223`), whose return type is `Trip | null`, and **not**
+  `listTripMembers` (`:403-411`), which returns `[]` for a foreign trip and would let a cross-tenant
+  id fall through as "a trip with no members". Membership then comes from `listTripMembers` and the
+  addresses from `listUserProfiles` in `src/server/repos/members.ts`.
 - **The sync function.** `syncTripReminder(scope, kv, tripId)`: reads the trip in the caller's scope,
   computes the due instant, calls `cancelReminder` for the previous key and then `scheduleReminder`
   for the new one. Cancel-then-schedule is required, not defensive: the module's own header records
@@ -855,9 +984,13 @@ index, no migration.
   that arrives after departure is worthless. A trip whose computed instant is already in the past
   schedules nothing. `reminder_days = 0` means no reminder, and is a valid stored value under the
   existing non-negative CHECK.
-- **Recipients.** Every trip member with a verified address, resolved server-side. `reminderRecordSchema`
-  already caps the list at 20 and validates each address; a trip with more members than that sends to
-  the first 20 and logs the truncation rather than throwing.
+- **Recipients.** Every trip member with a verified address, resolved server-side.
+  `reminderRecordSchema` (`src/server/queue/reminders.ts:25-34`) declares `to` as
+  `z.array(z.string().email()).min(1).max(20)`, and both bounds matter. The upper one: a trip with
+  more than 20 addressable members sends to the first 20 and logs the truncation rather than letting
+  the schema throw. The lower one: with zero verified addresses the record cannot be constructed at
+  all, so `syncTripReminder` returns without writing a key instead of calling `scheduleReminder` and
+  catching its `ZodError`. Both are unit tests, not comments.
 - **Failure isolation.** A KV failure never fails trip creation. It is caught, logged once with
   `serializeError`, and the trip is still created — a missing reminder is a smaller harm than a failed
   save, and the next edit re-syncs.
@@ -901,8 +1034,10 @@ Added to `src/server/repos/__tests__/tenant-isolation.test.ts`: in A's scope, ca
 for one of B's trips — `NotFoundError`, and no KV key is written for either tenant. Then confirm that
 the key A's own trip produced contains A's organization id, so a sweep can attribute it, and that
 reading B's trip through the same path in A's scope never yields B's member addresses. Functions
-covered: `syncTripReminder`, and through it the trip reader and `listTripMembers` in
-`src/server/repos/trips.ts` and `listUserProfiles` in `src/server/repos/members.ts`.
+covered: `syncTripReminder`, and through it `requireTrip` and `listTripMembers` in
+`src/server/repos/trips.ts` and `listUserProfiles` in `src/server/repos/members.ts`. The
+`NotFoundError` in that case comes from `requireTrip`; asserting it against `listTripMembers` would
+be asserting a rejection that function does not make.
 
 ### Verification
 

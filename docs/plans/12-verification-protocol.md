@@ -132,7 +132,7 @@ file in this repository, it drives Chromium through `@playwright/test`, and it d
 **nothing** under `e2e/__screenshots__`:
 
 ```sh
-node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/<route>" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/<stage-id>" \
   --label B \
@@ -145,10 +145,33 @@ node scripts/ultrabuild/capture.mjs \
 It prints one JSON object — `{ files, console, warnings }` — and that object is the stage's evidence.
 What it already handles, so no stage re-derives it: the theme is selected with
 `page.emulateMedia({ colorScheme })` and nothing else; `--map` waits for the two-sided
-`[data-map-ready]` predicate again after every resize and every theme change; the clock header is
-scoped to the app origin by hand rather than set context-wide; entrance motion is stopped before the
-shutter; a frame whose measured `window.innerWidth` is not the one asked for is refused rather than
-filed; and `--auth` refuses to file a frame that landed on `/login`.
+`[data-map-ready]` predicate again after every resize and every theme change; entrance motion is
+stopped before the shutter; a frame whose measured `window.innerWidth` is not the one asked for is
+refused rather than filed; and `--auth` refuses to file a frame that landed on `/login`.
+
+### `PT_SERVER_TODAY` is not a default, and a stage that omits it shoots a different day
+
+The clock pin is the one seam `capture.mjs` does **not** apply on its own, and the environment
+variable in the command above is not decoration. Measured in the script: the header is read from
+`process.env.PT_SERVER_TODAY` and the `context.route()` interceptor that attaches it is installed
+only `if (serverToday)` (`scripts/ultrabuild/capture.mjs:168-178`). Unset, no request carries
+`x-pt-server-today`, the Worker answers from its own wall clock, and the frames show whichever rows
+today selects — next to baselines recorded on `BASELINE_DAY`. What the script fixes is the
+_scoping_, not the setting: when the value is present it is attached per request and only to the
+capture URL's own origin, because setting it context-wide is what made Google Fonts reject the
+preflight and recorded every baseline in the fallback face.
+
+`2026-08-20` is the value, and it is not a free choice — it is `BASELINE_DAY` in
+`e2e/helpers/shoot.ts:1014` and the same string `playwright.config.ts` sends. A stage that pins the
+capture to one day and the gate to another has produced two pictures of two products.
+
+One limit, measured, that decides where a capture may be pointed: `serverToday()` reads the header
+inside an `if (import.meta.env.DEV)` branch (`src/server/clock.ts:73-90`), which the production
+build folds out. The pin therefore works against `pnpm dev` — which is what
+`scripts/ultrabuild/resolve-port.sh` resolves and what the gate's `webServer` starts — and does
+nothing at all against `pnpm preview` or a deployed Worker. A stage that wants pinned frames captures
+against the dev server, and a stage with a reason to capture against a built Worker says in its
+evidence that its frames are on the real day.
 
 Frames go under `.claude/ultrabuild/shots/<slug>/round-<n>/<stage-id>/` and nowhere else — not the
 repository root, not `docs/`. Scratch scripts go in the session scratchpad and are deleted after
@@ -266,7 +289,7 @@ convenience.**
 | `applyTheme(page, theme)` and `THEMES`                                                                   | `page.emulateMedia({ colorScheme })` and nothing else. Never write `data-theme`; never drive the app's theme menu.                                                             |
 | `useSession` / `hasSession` / `AUTH_STATE`                                                               | The cached demo session, and skipping with an actionable reason when there is none.                                                                                            |
 | `watchConsole(page, route)` + `classifyConsoleMessage(...)` + `TOLERATED_CONSOLE_WARNINGS`               | The console verdict. §6 governs it.                                                                                                                                            |
-| `RouteCase`, `PUBLIC_ROUTES`, `APP_ROUTES`, `PINNED_YEAR`                                                | The route declaration: `name`, `path`, `ready`, and the `map` / `relativeTime` flags that must match reality in both directions.                                               |
+| `RouteCase`, `PUBLIC_ROUTES`, `APP_ROUTES`, `PINNED_YEAR`                                                | The route declaration: `name`, `path`, `ready`, the `map` flag, which is audited in both directions, and the `relativeTime` flag, which is not — see below.                    |
 | `BASELINE_DAY`, `FROZEN_NOW`, `reportServerCalendar`, `shiftServerToday`, `crossedBoundaries`, `holdsOn` | The clock seams, and the diagnosis printed when a fixture date has crossed one.                                                                                                |
 
 A stage that needs a helper none of these provides adds it **to `e2e/helpers/`** — a new module such
@@ -275,9 +298,48 @@ belongs to the shared settle — and lists it under **Owned paths**. `e2e/helper
 of the six shared paths in `README.md`, so a stage may claim it; but two stages in the same wave may
 not both claim it, and the second one to want it declares a module-local helper instead.
 
-A stage's route also declares its flags honestly. `settleMap()` fails a route that renders a
-`[data-map-ready]` marker without declaring `map: true` **and** a route that declares one and renders
-none, so neither half can rot in silence. The same is true of `relativeTime`.
+### The two route flags are not equally self-policing, and the difference is the module spec's to carry
+
+`map` is safe to declare and forget. `settleMap()` (`e2e/helpers/shoot.ts:1407-1430`) fails a route
+that renders a `[data-map-ready]` marker without declaring `map: true` **and** a route that declares
+one and renders none, so neither half can rot in silence. It reads a generic attribute every map
+wrapper in the product publishes, so it holds on a module screen the helper has never seen.
+
+`relativeTime` is not that, and a plan that assumes it is will ship a baseline with an unpinned clock
+string in it. Three things, measured in the source rather than assumed:
+
+1. **Declared-but-shows-none is reported, not failed.** `auditRelativeTime()`
+   (`e2e/helpers/shoot.ts:776-796`) returns an array of sentences in that direction and asserts
+   nothing. Its header says why, and the reason is good: how many clock-derived strings a screen
+   shows is itself the calendar's decision — `/trips` prints none from 2026-10-10 on the seeded
+   fixture — so counting elements cannot tell a moved fixture apart from a deleted string.
+2. **The fatal direction only sees strings it already knows.** `countRelativeTime()`
+   (`:743-748`) sums locators built from `RELATIVE_TIME_SITES` (`:573`), which is **three
+   hand-written entries**: the trip-card countdown badge, the dashboard hero `Starts in` / `Started`
+   stat, and the journey backlog reason line. A new module screen that prints a fourth shape of
+   clock-derived string counts as `0` on a route declaring nothing, and the assertion passes.
+3. **The calendar-proof half is fatal in both directions but is pointed at six routes.**
+   `auditServerClock()` (`:820-844`) compares the flag against `today` in the streamed document and
+   fails either way round. It is called in exactly one place — `e2e/visual.spec.ts:310`, over
+   `APP_ROUTES`. A route declared in a module spec's own table is in nobody's `APP_ROUTES` and is
+   audited by nothing.
+
+So a module spec that declares any authenticated route owes three things, and a stage that skips one
+has an unaudited declaration rather than a passing one:
+
+- **Call `auditServerClock(page, <the spec's own route table>)` once, in a `describe` of its own.**
+  This is the only check that reads the declaration against the payload, it is the one the calendar
+  cannot move, and it is one line.
+- **If the screen prints a clock-derived string of a shape not already in `RELATIVE_TIME_SITES`, add
+  the entry** — `source`, `within`, `region`, optional `keyedOn`, `drifts`, `variants`, `fixed`,
+  `pinned`, the same fields the three existing ones carry — and claim `e2e/helpers/shoot.ts` under
+  **Owned paths**, subject to the one-claimant-per-wave rule stated just above. Without the entry
+  `pinRelativeTime()` writes nothing on that screen and the mask covers nothing, so the string is
+  inside the comparison at full size and the baseline fails on a morning nobody designed.
+- **Read the report instead of discarding it.** A non-empty return from `auditRelativeTime()` means
+  that run's exclusion covered nothing and the whole frame was compared. That is legitimate when the
+  fixture calendar has moved past the rows carrying the string — see §7.1 — and it is the identical
+  signal a silently deleted string produces. The stage says in its evidence which of the two it is.
 
 ---
 
@@ -393,7 +455,8 @@ that a stage knows what its baseline is worth, and so that nobody spends a round
 ### 7.1 Demo-fixture dates move with the day the workspace was seeded
 
 `playwright.config.ts` pins the day the Worker _reads_ — `x-pt-server-today: 2026-08-20`, matching
-`BASELINE_DAY` — and `visit()` pins the clock inside the page at `FROZEN_NOW`. Neither pins the
+`BASELINE_DAY` — `visit()` pins the clock inside the page at `FROZEN_NOW`, and `capture.mjs` sends
+the same header when, and only when, `PT_SERVER_TODAY` is set (§2). None of the three pins the
 **data**. Measured: `applySeed()` in `src/routes/api/dev/-seed/apply.ts` derives its
 fixtures from `new Date()` at seed time (`:232`), and places the demo trip at `now - 12 days` to
 `now + 18 days` (`:275-276`). Re-seed on a different day and every fixture date moves under a reader
@@ -459,13 +522,16 @@ Five things, and a stage that produces four of them is not done:
 1. **The command gate**, run in `TEMPLATE.md`'s order, with the result of each: `pnpm lint`,
    `pnpm typecheck`, `pnpm test`, `pnpm build`.
 2. **The Playwright run**, with the exact invocation including `PLAYWRIGHT_BASE_URL`, the projects
-   it covered, and the pass/fail count. A failure whose message is a bare timeout with no pixel
-   count and no assertion diff is evidence about machine load, not about the code — it is reported
-   as such and no code changes in response to it.
+   it covered, and the pass/fail count; and, for a spec that declares a `relativeTime` route, the
+   `auditServerClock()` result plus any sentences `auditRelativeTime()` reported, read as §4 says.
+   A failure whose message is a bare timeout with no pixel count and no assertion diff is evidence
+   about machine load, not about the code — it is reported as such and no code changes in response
+   to it.
 3. **The frame set**: light and dark at 360, 1280 and 2560, plus a declared-state set for any stage
    whose point is a non-resting state, all under
    `.claude/ultrabuild/shots/<slug>/round-<n>/<stage-id>/`, with the selector that reached the state
-   and how it was verified to exist.
+   and how it was verified to exist, and with the `capture.mjs` invocation quoted in full so the
+   `PT_SERVER_TODAY` pin is visible rather than assumed.
 4. **The console verdict**: `fatal` empty, and any `tolerated` entry named with the rule that
    excused it.
 5. **The layout-shift reading** after the settle mark, per engine, with the WebKit skip stated as a
