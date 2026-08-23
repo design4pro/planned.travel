@@ -602,9 +602,9 @@ column cannot be indexed, cannot be filtered, and cannot be read by anyone who h
 paragraph. The credential now lives in `token_id`, the role in `actor_role`, and an `agent` row
 simply has a `NULL` `user_agent` when the client sent no header.
 
-It carries **no** `organization_id`. It is platform content, and SPEC §5's carve-out list of eight
-tables plus this one is the reason the closure sentence there needs a matching amendment - recorded
-as FU-2 in §7.
+It carries **no** `organization_id`. It is platform content, and SPEC §5's carve-out list now
+names it as the ninth of nine - the amendment FU-2 in §7 asked for, made in Faza B by the round
+that owns that file.
 
 `actor_kind` in three sentences. `human` is a signed-in platform role acting through the console.
 `agent` is an MCP call authenticated by a `staff_api_tokens` bearer, attributed to the token's
@@ -708,7 +708,7 @@ they are marked "here" in the last column.
 | `platform.user.password_set`          | An administrator sets a password; the value is never in `changes`    | here (`user:set-password`)    |
 | `platform.user.email_set`             | An administrator changes an address                                  | here (`user:set-email`)       |
 | `platform.user.impersonation_started` | Impersonation begins; `entity_id` is the target                      | here (§6)                     |
-| `platform.user.impersonation_ended`   | Impersonation ends, by action or by expiry                           | here (§6)                     |
+| `platform.user.impersonation_ended`   | Impersonation ends by the **End impersonation** action                | here (§6)                     |
 | `platform.session.revoked`            | One session of one account is revoked                                | here (`session:revoke`)       |
 | `platform.session.revoked_all`        | Every session of one account is revoked                              | here (`session:revoke`)       |
 | `platform.token.issued`               | An MCP token is minted; the token itself is never in `changes`       | here (§5)                     |
@@ -765,7 +765,18 @@ in code and not in this table fails it; so does a name in this table that nothin
   here are precisely the ones nobody would think to check afterwards. If
   the append is rejected for one of these four, it is retried once and then raised at the highest
   severity the logger has - the action still stands, because reversing a completed ban because a
-  log write failed is the worse of the two failures. Also always audited: `platform.user.role_changed`,
+  log write failed is the worse of the two failures. **Two stated exceptions, both found in Faza B
+  by reading the plugin rather than by trusting this sentence.** First, a *temporary* ban lifts
+  itself: `admin()`'s `session.create.before` hook writes
+  `{ banned: false, banReason: null, banExpires: null }` on the next ordinary sign-in once
+  `banExpires` has passed, with no console call to hang an append on. That path is audited from a
+  `databaseHooks.user.update.after` tripwire as `actor_kind = 'system'`, which is why the ban
+  ledger stays complete and why the hook swallows every error it can raise - see the bullet above.
+  Second, impersonation **by expiry** produces no event at all: the row is deleted lazily on the
+  next request, and under KV secondary storage it usually just TTLs away, so there is no moment at
+  which anything could append. §4.2's entry was narrowed to the action accordingly. An impersonated
+  session that simply lapses is visible as a `platform.user.impersonation_started` with no matching
+  `_ended` inside 900 seconds, and that is the only signal there is. Also always audited: `platform.user.role_changed`,
   `platform.user.deleted`, `platform.session.revoked`, `platform.session.revoked_all`,
   `platform.token.issued`, `platform.token.revoked`, and every `catalog_place.*` /
   `catalog_ingest.*` / `place_pack.*` / `catalog_source.*` / `platform.share.*` mutation in §4.2's
@@ -839,6 +850,15 @@ below are hard requirements.
 Whenever `session.impersonatedBy` is set, a persistent warning bar is visible on **every** screen.
 Not most screens, not the console - every screen, rendered by the app shell above the route
 outlet, so no route can omit it and no route can scroll it away.
+
+**The bound on "every".** The app shell meant here is `AppShell` in `src/routes/_app/route.tsx`,
+which wraps the authenticated tree and is the only wrapper with a session in scope. "Every screen"
+therefore means every screen under `/_app`, and that is the whole of it. The `(auth)` tree and the
+public marketing pages render under `RootDocument`, whose router context carries `queryClient`
+alone; threading a session into it would put an auth read in front of every public page to cover a
+case that should not arise, because an impersonated operator has no business on `/login` or
+`/pricing`. Decided in Faza B and written down here rather than left for a builder to discover as
+a gap between this sentence and the code.
 
 It carries, at minimum: that this is an impersonated session, whose account is being acted on, who
 is doing the acting, the time remaining on the session as a live countdown with
@@ -914,12 +934,12 @@ in the same commit, under whatever names that round's owner chooses. This docume
 token names for a file it does not own, and it does not let the phase-B builder assume a contract
 that is not there.
 
-**FU-2 - SPEC §5's closed table list and `platform_audit_log`.** SPEC §5 calls the eight-table
-global list closed while the same section mandates a `platform_audit_log` write, and this document
-specifies that table's columns in §4.1. It is a ninth global table. The closure sentence needs
-amending by the round that owns `docs/SPEC.md`; it is recorded here rather than resolved here,
-because relaxing a contract clause from a document that does not own it is exactly the failure mode
-the closure sentence guards against.
+**FU-2 - SPEC §5's closed table list and `platform_audit_log`. CLOSED in Faza B.** SPEC §5 called
+the eight-table global list closed while the same section mandated a `platform_audit_log` write,
+and this document specifies that table's columns in §4.1. It is a ninth global table. The round
+that owns `docs/SPEC.md` amended the closure sentence to nine names and carved out the audit
+table's writer, exactly as this note asked, rather than this document relaxing a clause it does not
+own.
 
 **FU-3 - SPEC §5's "every query is scoped" sentence has exceptions in fact and none in text.** The
 sentence reads "**Every** query goes through a scoped repository in `src/server/repos/**` that
@@ -941,7 +961,12 @@ A shared atlas and a moderation list that can distinguish one kind of link from 
 the same generalisation - a `resource_kind` column and a nullable `trip_id` - and that is a
 migration belonging to the phase that ships the public share surfaces. Until it lands, §3.2 and
 §3.4 describe the shape those surfaces must have rather than the schema currently on disk, and
-this note exists so that no builder reads them as a description of what is already there.
+this note exists so that no builder reads them as a description of what is already there. **Split
+decided in Faza B.** The `share` resource and its two statements ship in the §1.1 dictionary now,
+because that dictionary is closed and cannot grow later without amending this document;
+`src/server/repos/shares.ts`, `src/server/fns/console/shares.ts` and the moderation screen wait for
+the phase that lands the migration, so that they are written once against the real column rather
+than twice against a hardcoded `'trip'`.
 
 **FU-5 - `docs/DEPLOY.md` still recommends `adminUserIds`.** §1.4 rules the list permanently
 empty and explains why it is not a recovery instrument on this architecture. Two places in the

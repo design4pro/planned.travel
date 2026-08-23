@@ -367,6 +367,41 @@ szablonów nie ma miejsca wysyłki - `queueAuthEmail()` ma trzy wywołania, wszy
 To fundament dla wszystkiego dalej: kurator katalogu, moderator treści publicznych i token MCP
 sięgają po ten sam model uprawnień.
 
+> **Specyfikacją tej fazy jest `docs/ACCESS.md`, a nie ta sekcja.** Sekcja poniżej to indeks:
+> mówi, co faza obejmuje i jakie decyzje zapadły, a szczegóły wiążące - słownik uprawnień co do
+> komórki, dwanaście kolumn audytu, zamknięty słownik 31 akcji, cztery obowiązkowe testy drift,
+> retencja - są w `ACCESS.md` i nie są tu powtarzane. Runda, która przeczyta tylko te kilkadziesiąt
+> linii, dowiezie fazę oblewającą kontrakt, wobec którego jest mierzona.
+
+### Zweryfikowane fakty, którymi ta faza się kieruje
+
+Pierwsza wersja tej sekcji miała pięć błędów blokujących. Sprawdzone w `node_modules`
+(`better-auth@1.7.1`, ta sama kopia, którą zbuduje runda), **nie z pamięci**:
+
+| Twierdzenie z pierwszej wersji planu | Jak jest naprawdę |
+|---|---|
+| Kolumny to `user.ban_reason`, `user.ban_expires`, `session.impersonated_by` | To nazwy SQL. Adapter Drizzle nigdy ich nie widzi: rozwiązuje pole jako `schemaModel[getFieldName(...)]`, a `getFieldName` nie robi żadnej transformacji wielkości liter, więc indeksuje **klucz właściwości JS**. Plugin deklaruje `role`, `banned`, `banReason`, `banExpires`, `impersonatedBy` (`plugins/admin/schema.mjs`). Literalne wdrożenie planu wywala `BetterAuthError` przy pierwszym banie. Argumenty tekstowe (nazwy SQL) zostają snake_case wg konwencji repo |
+| `admin({ ac, roles, ... })` - `ac` niesie autoryzację | `ac` jest **martwe po stronie serwera**: jedyny odczyt `options?.ac` w całym pluginie to `plugins/admin/client.mjs:20`. Autoryzacja czyta `input.options?.roles \|\| defaultRoles` (`has-permission.mjs:7`). Nośną opcją jest `roles` i musi zawierać komplet `admin`/`curator`/`user`; bez tego `curator` jest `undefined` i dostaje odmowę na wszystkim |
+| Cztery opcje wystarczą | Brakują dwie. `impersonationSessionDuration` pominięte cichcem daje 3600 s zamiast wymaganych przez `ACCESS.md` §6.2 **900 s**. `disabledPaths` **nie jest argumentem `admin()`** tylko opcją top-level `betterAuth` (rodzeństwo `plugins`), egzekwowaną w `onRequest` routera przez `return new Response("Not Found", { status: 404 })` |
+| Akcje konsoli wołają `/api/auth/admin/*` klientem Better Auth | Klient jest bezwarunkowo HTTP, a `ACCESS.md` §2.6 wymaga, by wszystkie 15 ścieżek zwracało 404, i zakazuje rejestrowania `adminClient()`. Mechanizmem jest `auth.api.<endpoint>({ body, headers })` **w procesie**: `api` buduje `getEndpoints()` i nie przechodzi przez router, więc `disabledPaths` go nie dotyka. Dla impersonacji to nie jest detal stylu - jej **całym efektem** są nagłówki `Set-Cookie`, które wrapper HTTP zjada, więc wołanie zgłosiłoby sukces i nie zmieniło nic. Stąd `returnHeaders: true` i wmieszanie nagłówków w odpowiedź funkcji serwerowej |
+| `platform_audit_log` ma dziewięć kolumn | Ma **dwanaście** i `ACCESS.md` §4.1 mówi wprost „this is the whole list". Brakowały `actor_role` (rola w chwili akcji, wartość a nie join, bo `user.role` jest zmienne) i `token_id` (FK → `staff_api_tokens`). Do tego dwa CHECK-i międzykolumnowe i pięć indeksów. W SQLite dodanie FK albo CHECK później to recreate tabeli, a `docs/DEPLOY.md` §register liczy recreate jako niedodatkowy |
+
+Szósta poprawka jest kontraktowa, nie faktograficzna: `docs/SPEC.md` §5 zamykał listę tabel
+globalnych na ośmiu nazwach, jednocześnie nakazując zapis do `platform_audit_log`. `ACCESS.md`
+§4.1 notował to jako FU-2 i nie rozstrzygał. **Faza B amenduje `SPEC.md` §5 do dziewięciu nazw** i
+wydziela pisarza tabeli audytu, bo `repo.ts` do niej dopisuje, więc nie może być też przez nią
+osiągany. FU-2 zamknięte.
+
+### Decyzje użytkownika z 23.08
+
+| Pytanie | Decyzja | Konsekwencja |
+|---|---|---|
+| Ban a 300-sekundowy cache sesji w ciasteczku | **Zabić cache.** `disableCookieCache` w `src/server/auth/session.ts` i usunięcie bloku `session.cookieCache` | Kryterium „natychmiastowe wylogowanie" zostaje prawdziwe. Koszt: jeden odczyt KV na każde uwierzytelnione żądanie w całej aplikacji, na stałe. Świadomie kasujemy optymalizację, bo ban jest kontrolą bezpieczeństwa i okno opóźnienia było na niej nie do obronienia. Osobno: funkcja banująca **enumeruje tokeny sesji celu z D1**, a nie ufa indeksowi KV `active-sessions-<userId>`, który jest eventually consistent |
+| Czy Faza B tworzy `staff_api_tokens` | **Tak, samą tabelę.** UI wydawania tokenów zostaje w Fazie E | `platform_audit_log` dostaje prawdziwy FK `token_id` i CHECK dla `actor_kind='agent'` od razu, w jednym `CREATE TABLE`. Płacimy recreate zero razy zamiast raz |
+| Moderacja `share_links` | **Tylko wpis w słowniku.** `repos/shares.ts`, `fns/console/shares.ts` i ekran czekają na Fazę F | Słownik jest zamknięty i nie urośnie później bez zmiany `ACCESS.md`, więc zasób `share` musi wejść teraz. Powierzchnia czeka na migrację, która da `share_links` dyskryminator (FU-4) |
+| Zakres paska impersonacji | **Tylko `/_app`** | `AppShell` to jedyny wrapper z sesją w zasięgu. Wciągnięcie sesji do `__root.tsx` postawiłoby odczyt auth przed każdą publiczną stroną marketingową. Zapisane w `ACCESS.md` §6.1 jako świadome ograniczenie |
+| „Ban i impersonacja audytowane bez wyjątku" | **Dwa nazwane wyjątki** | Auto-unban wygasłego bana dzieje się w `session.create.before` pluginu, bez wywołania konsoli; audytowany z tripwire `databaseHooks.user.update.after` jako `actor_kind='system'`. Impersonacja **przez wygaśnięcie** nie produkuje żadnego zdarzenia serwerowego, więc `ACCESS.md` §4.2 zawęża wpis do akcji. Oba zapisane, bo milczenie czyniło „without exception" fałszem |
+
 ### Konfiguracja
 
 `src/server/auth/access.ts` (**nowy**, izomorficzny słownik uprawnień):
@@ -381,51 +416,101 @@ const statement = {
 } as const
 ```
 
-Role: `admin` (wszystko), `curator` (catalog/pack/source/share, **bez** `user` i `session`),
-`user` (nic platformowego, rola domyślna).
+Role: `admin`, `curator` (catalog/pack/source/share, **bez** `user` i `session`), `user` (nic
+platformowego, rola domyślna). **`admin` nie znaczy „wszystko"**: `user:impersonate-admins` jest
+odmówione każdej roli włącznie z `admin` (`ACCESS.md` §2.4), a `allowImpersonatingAdmins` zostaje
+nieustawione, żeby własna kontrola pluginu nie obeszła naszej. Procedura dla admin-na-adminie to
+degradacja → impersonacja → przywrócenie, trzy audytowane zdarzenia. Wiążące są 72 komórki
+z `ACCESS.md` §2.1-§2.3, nie to zdanie. Role budowane z `statement`, nigdy dziedziczone z `adminAc`.
 
-`src/server/auth/index.ts` - dołóż `admin({ ac, roles, adminRoles: ['admin'], defaultRole: 'user' })`
-do listy pluginów obok `organization` i `twoFactor`.
+Plik importuje wyłącznie `better-auth/plugins/access` i `better-auth/plugins/admin/access` - cały
+osiągalny graf tych dwóch podścieżek to ~6 modułów bez ani jednego wbudowanego `node:`. Nic w
+toolchainie tego nie pilnuje, więc pilnuje tego test.
 
-`src/server/db/auth-schema.ts` - kolumny wymagane przez plugin: `user.role`, `user.banned`,
-`user.ban_reason`, `user.ban_expires`, `session.impersonated_by`. Indeks na `user.role`.
+`src/server/auth/index.ts` - dołóż `admin({ ac, roles, adminRoles: ['admin'], defaultRole: 'user',
+impersonationSessionDuration: 900, bannedUserMessage: <copy repo> })` do listy pluginów obok
+`organization`, `twoFactor` i `passkey`, oraz **top-level `disabledPaths`** z kompletem 15 ścieżek
+`/admin/*`. `adminUserIds` celowo nieobecne - nie puste, nieobecne (`ACCESS.md` §1.4).
+
+`src/server/db/auth-schema.ts` - pięć pól pluginu **kluczami camelCase**: `user.role` text,
+`user.banned` `integer({ mode: 'boolean' })` `.notNull().default(false)`, `user.banReason` text,
+`user.banExpires` `integer({ mode: 'timestamp_ms' })`, `session.impersonatedBy` text. Indeks na
+`user.role`.
 
 `src/components/layout/session.ts` + `src/routes/_app/-server/shell.ts` - do sesji dochodzi
-`platformRole` i pochodne `isPlatformAdmin` / `isCurator`. Istniejące `isAdmin` **zostaje**
-rolą w organizacji - nie zmieniaj jego znaczenia, dołóż obok.
+`platformRole` i pochodne `isPlatformAdmin` / `isCurator`. Istniejące `isAdmin` **zostaje** rolą
+w organizacji - nie zmieniaj jego znaczenia, dołóż obok. Uwaga: `normaliseSession` w
+`src/server/auth/tenant.ts` przepuszcza zamkniętą białą listę pól i **wyrzuca resztę**, więc
+`impersonatedBy` jest dziś strukturalnie nieosiągalne z Reacta. Pięć plików musi się zmienić po
+kolei, zanim pasek wyrenderuje cokolwiek innego niż `undefined`.
 
-`src/server/auth/guard.ts` (**nowy**) - `requirePermission(session, { catalog: ['write'] })`,
-jedna funkcja używana przez funkcje serwerowe konsoli **i** przez MCP, żeby nie było dwóch
-niezależnych implementacji autoryzacji.
+`src/server/auth/guard.ts` (**nowy**) - `requirePermission(session, { catalog: ['write'] })`, jedna
+funkcja używana przez funkcje serwerowe konsoli **i** przez MCP, żeby nie było dwóch niezależnych
+implementacji autoryzacji. Jest synchronicznym predykatem nad czystym `role.authorize`, więc
+**nie może** wymusić zapisu audytu - patrz niżej.
 
 ### Audyt
 
-`platform_audit_log` (**nowa tabela globalna**, `schema.ts`): `actor_user_id`, `actor_kind`
-(`human` / `agent` / `system`), `action`, `entity_type`, `entity_id`, `changes` (JSON before/after),
-`ip`, `user_agent`, `created_at`. Zastępuje osobną tabelę rewizji katalogu - oś czasu miejsca to
-zapytanie po `entity_type = 'catalog_place'`. Istniejący `audit_log` jest tenantowy i zostaje bez zmian.
+`platform_audit_log` (**nowa tabela globalna**, `schema.ts`), dwanaście kolumn, dwa CHECK-i
+międzykolumnowe i pięć indeksów - komplet w `ACCESS.md` §4.1, tu nie powtarzany. Zastępuje osobną
+tabelę rewizji katalogu: oś czasu miejsca to zapytanie po `entity_type = 'catalog_place'`.
+Istniejący `audit_log` jest tenantowy i zostaje bez zmian.
 
-Zapis wymuszony w `requirePermission`-owanych mutacjach; **impersonacja i ban zawsze audytowane**.
+Jedynym pisarzem jest `src/server/catalog/audit.ts`. Wpis powstaje **po** zatwierdzeniu mutacji,
+w osobnym `try/catch`, który nigdy nie zamienia wykonanej akcji w `500`; dla czterech czasowników
+ban/impersonacja ponawiany raz i podnoszony przez `src/server/observability` na najwyższej
+istotności. Zdanie „zapis wymuszony w `requirePermission`-owanych mutacjach" z pierwszej wersji
+planu było nieprawdziwe w obie strony: `requirePermission` nic po mutacji nie uruchamia, a hak
+Better Auth nie uniesie kontraktu, bo `options.hooks.after` zamienia rzucone `APIError` w
+odpowiedź, a `databaseHooks.*.after` re-rzuca - obie drogi oddają wołającemu błąd po akcji, która
+się powiodła. To dokładnie ten tryb awarii, przed którym `ACCESS.md` §4.3 ostrzega.
 
 ### Konsola `/_app/console`
 
-Nowa gałąź tras, oddzielona od istniejącego `/_app/admin` (który pozostaje panelem workspace'u).
-Wejście widoczne w `src/components/layout/user-menu.tsx` tylko dla ról platformowych.
+Nowa gałąź tras, oddzielona od istniejącego `/_app/admin` (który pozostaje panelem workspace'u i
+**nie jest ruszany**). Wejście widoczne w `src/components/layout/user-menu.tsx` tylko dla ról
+platformowych.
 
-- `console/route.tsx` - guard `requirePermission`, wspólna nawigacja `PillNav`.
+- `console/route.tsx` - guard w `beforeLoad` przez funkcję serwerową; konto z rolą `user` jest
+  odrzucane, zanim padnie pytanie o jakikolwiek statement. Nawigacja **lokalna dla gałęzi**
+  w `console/-ui/console-nav.tsx`, wzorowana na `src/routes/_app/-ui/settings-nav.tsx`, z własną
+  literałową unią `to`. **Nie `PillNav`**: jego `PrimaryNavTo` to zamknięta czteroelementowa unia
+  we współdzielonym `src/components/layout/nav-model.ts`, a poszerzanie jej poszerzyłoby też to,
+  co przyjmują `TopNav` i `MobileNav` - zmiana typów nawigacji produktowej bez powodu produktowego.
 - `console/index.tsx` - przegląd: użytkownicy, katalog wg statusu, ostatnie przebiegi scrapingu,
   ostatnie wpisy audytu.
-- `console/users.tsx` - tabela użytkowników (szukanie, filtr po roli i statusie bana,
-  wirtualizacja `@tanstack/react-virtual`), akcje: zmiana roli, ban/unban z powodem i terminem,
-  wygaszenie sesji, reset hasła, utworzenie konta, impersonacja.
+- `console/users.tsx` - tabela użytkowników (szukanie, filtr po roli i statusie bana), akcje:
+  zmiana roli, ban/unban z powodem i terminem, wygaszenie sesji, reset hasła, utworzenie konta,
+  impersonacja. **Bez wirtualizacji.** `listUsers` jest już stronicowane i sortowane po stronie
+  serwera (`limit`/`offset`), więc ograniczona strona wierszy nic z okienkowania nie zyskuje,
+  a `Table` w `src/components/ui` nie ma na to szwu: trzyma własny kontener przewijania z
+  `overflow-x-auto` i forwarduje ref do `<table>`, nie do kontenera. Używamy istniejących
+  `Table` + `Pagination` + `paginationRange`.
 - `console/users.$userId.tsx` - karta użytkownika: organizacje i role w nich, sesje, historia
   audytu, subskrypcja.
-- Impersonacja: trwały pasek ostrzegawczy na całej aplikacji, gdy `session.impersonatedBy` jest
-  ustawione, z akcją „zakończ". Bez tego funkcja jest niebezpieczna.
+- Impersonacja: trwały pasek ostrzegawczy nad outletem tras `/_app`, gdy sesja jest
+  impersonowana, z odliczaniem i akcją „zakończ" jako pierwszym stopem tabulacji. Bez tego funkcja
+  jest niebezpieczna. Pasek przesuwa początek viewportu, więc jest jednym itemem razem z
+  kontraktem `--nav-h` i wszystkim, co się do niego przypina (FU-1: dwa nowe tokeny lądują
+  w `src/styles/tokens.css` i w `docs/DESIGN.md` w tym samym commicie).
 
-Wszystkie akcje idą przez `src/server/fns/console/*` opakowujące endpointy `/api/auth/admin/*`
-klientem Better Auth, nigdy bezpośrednim `fetch` z komponentu.
+Wszystkie akcje idą przez `src/server/fns/console/*`, które wołają `auth.api.<endpoint>` **w
+procesie**, nigdy klientem Better Auth i nigdy bezpośrednim `fetch` z komponentu. Dla
+`impersonateUser` i `stopImpersonating` z `returnHeaders: true` i wmieszaniem zwróconych nagłówków
+w odpowiedź funkcji serwerowej.
 
+### Czego ta faza świadomie nie robi
+
+- Nie buduje UI wydawania tokenów MCP (`console/tokens`) - sama tabela `staff_api_tokens` tak, UI
+  w Fazie E.
+- Nie buduje ekranu moderacji linków ani `repos/shares.ts` - Faza F, po migracji z FU-4.
+- Nie buduje ekranów kuratora katalogu (`console/places`, `console/ingest`, `console/packs`,
+  `console/sources`) - Faza C, w tej samej gałęzi tras.
+- Test „unia stałych akcji równa się dokładnie liście z §4.2" nie może w tej fazie przejść w
+  literalnym brzmieniu: `src/server/catalog/` nie istnieje, a 16 z 31 nazw to akcje katalogowe
+  pisane przez Fazę C. W Fazie B test asercjonuje podzbiór `platform.*` (15 nazw) i jest
+  rozszerzany w Fazie C; obie sprawdzalne maszynowo połowy - zgodność z regexem i prefiks
+  z tablicy §4.2 - wchodzą już teraz.
 ---
 
 ## Faza C - katalog miejsc i panel kuratora
@@ -638,7 +723,7 @@ zapis tego, co zlecono.
 ```
 
 ```bash
-/ultrabuild Faza B: włącz plugin admin Better Auth z rolami admin/curator/user, dodaj platform_audit_log i konsolę platformy /_app/console z zarządzaniem użytkownikami, banem i impersonacją
+/ultrabuild Faza B: role platformowe Better Auth (admin/curator/user), platform_audit_log i konsola /_app/console. Specyfikacją jest docs/ACCESS.md, a §Faza B tego planu jest indeksem do niej - przeczytaj oba, w tej kolejności
 ```
 
 ```bash
@@ -682,11 +767,22 @@ z podmienionym `product_id` odrzucone.
 ```bash
 pnpm db:generate && pnpm db:migrate:local
 ```
-- Konto z rolą `user` dostaje 403 na `/console` i na każdej funkcji serwerowej konsoli.
+Przeczytaj wygenerowany SQL, zanim go zacommitujesz: ma zawierać `ALTER TABLE ... ADD` dla pięciu
+kolumn pluginu i `CREATE TABLE platform_audit_log`, a **nie** `__new_user`, `__new_session` ani
+`DROP TABLE`. Recreate wymaga wpisu w `docs/DEPLOY.md` §register, zanim gdziekolwiek zostanie
+zastosowany.
+
+- Konto z rolą `user` dostaje odmowę na `/console` i na każdej funkcji serwerowej konsoli.
 - `curator` widzi katalog, ale nie zakładkę użytkowników i nie może zmienić roli.
-- Ban → natychmiastowe wylogowanie i komunikat przy próbie logowania.
-- Impersonacja → pasek ostrzegawczy widoczny na każdym ekranie, wpis w `platform_audit_log`,
-  „zakończ" wraca do konta administratora.
+- Ban → natychmiastowe wylogowanie (cache ciasteczka wyłączony, decyzja z 23.08) i komunikat
+  repo, nie domyślny string Better Autha, przy próbie logowania.
+- Impersonacja → pasek ostrzegawczy widoczny na każdym ekranie `/_app`, wpis w
+  `platform_audit_log`, sesja wygasa po **900 s** a nie 3600, „zakończ" wraca do konta
+  administratora. Każda mutacja konsoli odrzucona przez weto z `ACCESS.md` §6.4.
+- Wszystkie 15 ścieżek `/api/auth/admin/*` zwraca **404** przy żywej sesji z rolą `admin`, a
+  `grep -rn adminClient src | wc -l` daje `0`.
+- Cztery testy drift z `ACCESS.md` są na miejscu: dryf `statement`, nieobecność `adminUserIds`,
+  równość `disabledPaths` z listą ścieżek pluginu, i domknięcie sprawdzone od zewnątrz.
 
 **Faza C** - edycja miejsca tworzy wpis audytu z `actor_kind='human'`; publikacja pakietu bez
 `polar_product_id` odrzucona z czytelnym błędem.

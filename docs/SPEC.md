@@ -246,13 +246,21 @@ Tenant isolation is enforced in the repository layer and covered by tests.
 #### Global-catalogue carve-out
 
 "Every domain row is scoped by `organization_id`" has exactly one exception, and this is it.
-Eight tables are platform content rather than tenant data and carry no `organization_id`:
+Nine tables are platform content rather than tenant data and carry no `organization_id`:
 
 `catalog_sources` · `catalog_runs` · `catalog_ingest` · `catalog_places` ·
-`catalog_place_sources` · `place_packs` · `place_pack_places` · `staff_api_tokens`
+`catalog_place_sources` · `place_packs` · `place_pack_places` · `staff_api_tokens` ·
+`platform_audit_log`
 
-That list is closed. A ninth global table is a change to this contract, not a schema decision a
+That list is closed. A tenth global table is a change to this contract, not a schema decision a
 builder makes on the way past.
+
+`platform_audit_log` joined the list in Faza B, by amendment rather than on the way past. The
+eight-name form of this sentence contradicted this same section's mandate to write that table on
+every platform mutation, and `docs/ACCESS.md` §4.1 recorded the contradiction as FU-2 instead of
+resolving it unilaterally. This paragraph closes FU-2. The table's twelve columns, its two
+cross-column `CHECK` constraints, its five indexes and its retention prune live in
+`docs/ACCESS.md` §4.1 and are deliberately not restated here.
 
 These tables must **never** be reached through `src/server/repos/base.ts` or
 `createTenantRepository()`. That layer exists so that forgetting the tenant filter is not
@@ -260,7 +268,11 @@ expressible, and handing it a fabricated, empty, or placeholder tenant context i
 global rows destroys the single guarantee it was built to give. Reaching for
 `createTenantRepository()` here is a defect, not a shortcut.
 
-Their isolation invariant is different and equally mandatory. All access goes through
+Their isolation invariant is different and equally mandatory. `platform_audit_log` is the one
+member of the list that `repo.ts` does not own: `repo.ts` appends to it, so it cannot also be
+reached through it. Its single writer is `src/server/catalog/audit.ts`, and every other clause
+below binds it unchanged - never `createTenantRepository()`, never `base.ts`, always an explicit
+platform actor. For the other eight, all access goes through
 `src/server/catalog/repo.ts`, where every mutation takes an explicit platform actor
 (`{ userId, actorKind, role }`), passes `requirePermission` before it touches a row, and writes a
 `platform_audit_log` entry in the same call: actor, action, entity type, entity id, and a
