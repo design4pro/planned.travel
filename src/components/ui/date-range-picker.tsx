@@ -3,7 +3,7 @@ import { CalendarRange, X } from 'lucide-react'
 import { addDays, differenceInCalendarDays, startOfDay } from 'date-fns'
 
 import { cn } from '#/lib/cn'
-import { formatDayMonth } from '#/lib/format'
+import { formatDayMonth, formatNumber } from '#/lib/format'
 import { RangeCalendar, isoDay } from './calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './popover'
 import { useFieldControl } from './field'
@@ -125,6 +125,17 @@ export const DateRangePicker = React.forwardRef<
     const nights = range?.to
       ? differenceInCalendarDays(range.to, range.from)
       : 0
+    /*
+     * `count` picks the plural branch; `nights` is what the reader sees.
+     * `docs/SPEC.md` §8 splits the two because a raw substitution renders ASCII
+     * digits with no group separator in all twenty-three locales — a
+     * three-week Baltic winter reads `1,234` in German only if the number goes
+     * through the frozen formatter first, and `1.234` is what German wants.
+     */
+    const nightParams = {
+      count: nights,
+      nights: formatNumber(nights, ui.locale),
+    }
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
@@ -157,7 +168,7 @@ export const DateRangePicker = React.forwardRef<
               </span>
               {showNights && nights > 0 ? (
                 <span className="shrink-0 text-caption tabular-nums text-ink-3">
-                  {ui.t('ui.dateRange.nights', { count: nights })}
+                  {ui.t('ui.dateRange.nights', nightParams)}
                 </span>
               ) : null}
             </button>
@@ -220,7 +231,7 @@ export const DateRangePicker = React.forwardRef<
               footer={
                 showNights && nights > 0 ? (
                   <p className="text-caption font-medium tabular-nums text-ink-2">
-                    {ui.t('ui.dateRange.nightsSelected', { count: nights })}
+                    {ui.t('ui.dateRange.nightsSelected', nightParams)}
                   </p>
                 ) : null
               }

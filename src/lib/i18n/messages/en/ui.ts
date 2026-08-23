@@ -62,10 +62,17 @@ const messages = {
   'avatar.status.away': '{name} is away',
   'avatar.status.busy': '{name} is busy',
   'avatar.status.offline': '{name} is offline',
-  /** The tail of an avatar stack's accessible name: "…, Mira and 3 others". */
+  /**
+   * The tail of an avatar stack's accessible name: "…, Mira and 3 others".
+   *
+   * `{others}` arrives already grouped for the locale; `count` is present only
+   * to pick the plural branch and is never rendered. §8's rule on numbers
+   * inside messages: a raw substitution would read `1234` in every one of the
+   * twenty-three locales, where German wants `1.234`.
+   */
   'avatar.overflow': {
-    one: '{count} other',
-    other: '{count} others',
+    one: '{others} other',
+    other: '{others} others',
   },
   /**
    * The face at the end of a crowded stack. `{hidden}` arrives already grouped
@@ -123,13 +130,20 @@ const messages = {
   'dateRange.value': '{start} – {end}',
   /** The first end is chosen and the reader is still picking the second. */
   'dateRange.valuePending': '{start} — …',
+  /**
+   * The night count beside a chosen range, and the same figure spelled out
+   * under the calendar. `{nights}` is already grouped for the locale and is the
+   * only thing the reader sees; `count` selects the plural branch and stops
+   * there, so `ja` gets one branch and `ar` all six without either of them
+   * inheriting English digits.
+   */
   'dateRange.nights': {
-    one: '{count} night',
-    other: '{count} nights',
+    one: '{nights} night',
+    other: '{nights} nights',
   },
   'dateRange.nightsSelected': {
-    one: '{count} night selected',
-    other: '{count} nights selected',
+    one: '{nights} night selected',
+    other: '{nights} nights selected',
   },
 
   /* ---------------------------------------------------------- pagination */

@@ -512,15 +512,109 @@
   },
   {
     "id": "settings-selects-are-broken-and-pre-existing",
-    "claim": "All six SimpleSelect controls on /settings render an EMPTY trigger and open zero options on click, with a completely clean console. It is PRE-EXISTING, not round-5 work: reverting src/components/ui/select.tsx to 5de9015 (before the ui-primitives builder touched it) reproduces the identical behaviour. Do not charge it to whichever item is being judged on that screen, and do not let a critic read it as the screen items defect.",
-    "evidence": "Playwright chromium 1440x900 with e2e/.auth/demo.json against a healthy server: textContent of [aria-label=\"Language\"|\"Time zone\"|\"Currency\"|\"Date format\"|\"Week starts on\"|\"Distance\"] is \"\" for all six; after .click() on the Language trigger, getByRole(\"option\") count is 0 and the trigger stays attached; zero console errors and zero pageerrors. A/B: git show 5de9015:src/components/ui/select.tsx over the live file gives byte-different source and identical measured behaviour.",
-    "measuredIn": "i18n round 5, orchestrator re-measurement",
+    "claim": "The /settings SimpleSelect defect was TWO things, and only one of them was what round 5 measured. The empty trigger was real and is now FIXED (all six triggers render their selected label). The 'opens zero options' half was partly a probe artefact: Playwright's .click() does not reliably drive a Radix Select, and a real mouse.down/up sequence opens it with 9 options. What survives is narrow and genuine: Enter does not open the control, while Space, ArrowDown and ArrowUp all do.",
+    "evidence": "Measured on the settled round-6 tree at /settings, keyboard only: Enter -> aria-expanded=false, 0 options; Space/ArrowDown/ArrowUp -> aria-expanded=true, 9 options, 1 [role=listbox]. Trigger is role=combobox on a BUTTON with aria-haspopup absent; Tab reaches it after 16 presses. Round 5 measured the same screen before the fix: all six triggers textContent '' and .click() yielding 0 options.",
+    "measuredIn": "i18n rounds 5 and 6, orchestrator re-measurement",
     "scope": [
       "builder",
       "critic",
       "auditor",
       "capture"
     ],
-    "invalidatesWhen": "the six triggers show their selected label and click opens a listbox"
+    "invalidatesWhen": "Enter opens the listbox"
+  },
+  {
+    "id": "db-generate-runs-in-place",
+    "claim": "`pnpm db:generate --name <slug>` can be run in place on this repo and produces complete drizzle bookkeeping; the snapshot diff is the only reliable way to prove a migration carries no unrelated schema drift.",
+    "evidence": "Ran it after changing one column default: wrote drizzle/0002_locale_normalisation.sql (7 statements), drizzle/meta/0002_snapshot.json and _journal.json idx 2 (when=1787524764378). A flattened key-by-key diff of 0001_snapshot.json vs 0002_snapshot.json showed exactly three changed keys: .id, .prevId, and tables.organization_settings.columns.locale.default \"'en-GB'\" -> \"'en'\". From-empty apply: `npx wrangler d1 migrations apply planned-travel-db --local --persist-to <scratch>/d1state` = 0000/0001/0002 all ✅, 13 commands for 0002, resulting DDL `locale text DEFAULT 'en' NOT NULL`, integrity_check ok. On the shared local D1 `pnpm db:migrate:local` = \"No migrations to apply!\".",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "builder",
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "prove-generated-sql-in-vitest",
+    "claim": "A \"this file is db:generate output\" claim is testable from vitest without shelling out: `generateSQLiteDrizzleJson`/`generateSQLiteMigration` from drizzle-kit/api reproduce a migration's DDL half from `drizzle/meta/<prev>_snapshot.json` (parsed straight off disk as the `prev` argument) plus the live schema.",
+    "evidence": "In src/server/repos/__tests__/settings-locale.test.ts: JSON.parse of drizzle/meta/0001_snapshot.json cast to `Awaited<ReturnType<typeof generateSQLiteDrizzleJson>>`, then `generateSQLiteMigration(previous, await generateSQLiteDrizzleJson({...authSchema, ...domainSchema}))` returns 7 statements that equal the file's first 7 breakpoint-split, trimmed statements exactly. Test runs in ~1.2s total for the 26-test file because the harness already pays the same drizzle-kit cost once per process.",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "prove-your-slice-in-a-copy",
+    "claim": "In a checkout shared with parallel items you can still prove your own slice typechecks and builds: rsync the tree to the scratchpad excluding node_modules/.git, symlink the real node_modules in, and restore the other item's dirty files from HEAD with `git --git-dir=<repo>/.git show HEAD:<path>`.",
+    "evidence": "Repo-root `pnpm typecheck` reported exactly one error (src/components/ui/select.tsx(300,7) TS2322) from another builder's in-flight edit. In the scratch copy with the 6 dirty src/components/ui + src/lib/i18n/messages/en/ui.ts files reverted to HEAD, `./node_modules/.bin/tsc --noEmit` exited 0 and `./node_modules/.bin/vite build` completed (\"✓ built in 1.47s\", full client+server output). Cost: one rsync, no repo files touched — `git status --porcelain` over my owned paths stayed exactly my 8 files.",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "select-ssr-gap-is-real",
+    "claim": "The reported SimpleSelect defect is a real SSR gap in the primitive, not a dead dev server, and it is measurable in vitest without a browser: Radix builds Select.Content's offscreen DocumentFragment in a layout effect, which never runs on the server, so a server-rendered trigger is empty until hydration. This is now fixed and locked by a test.",
+    "evidence": "Before the change, `renderToStaticMarkup(<SimpleSelect options={[{value:'gbp',label:'British pound'}]} value=\"gbp\" />)` emitted `<span class=\"truncate\"><span style=\"pointer-events:none\"></span></span>` and did not contain 'British pound'. After it, the same markup contains the label, and a Playwright context with javaScriptEnabled:false on /settings reads 'Workspace default — en' and 'GBP — Pound sterling' off the triggers. Meanwhile the SAME commit on a healthy server already passed every interactive check: 9 options on click, aria-expanded true, zero console errors — so a browser probe alone cannot tell this defect from a hydration failure. Use renderToStaticMarkup.",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "ui-only-item-browser-harness",
+    "claim": "A src/components/ui-only item CAN be measured in a real browser with no repo file added, via an SSR gallery harness — but the harness MUST mount `Direction.DirectionProvider` or it manufactures a phantom RTL overflow defect.",
+    "evidence": "Recipe that worked: scratchpad `npx vite build -c cfg.mjs` with build.ssr:true, rollupOptions.input=gallery.tsx, external react/react-dom/react-dom/server/react/jsx-runtime, alias '#'->src; then renderToStaticMarkup, inline `dist/client/assets/styles-*.css`, screenshot the file:// page with Playwright. Yielded --thumb-travel 1rem→-1rem, progress scale none→'-1 1', skeleton ::before scale none→'-1 1', --tab-dir 1→-1, weekday 'Mon'→'الاثنين'. THE GOTCHA: without DirectionProvider, Radix Tabs.Root emits dir=\"ltr\", so `start-1` on the segmented pill anchors to the physical LEFT and the pill lands at L=-293 — document.scrollWidth 1193 vs clientWidth 900. Adding the provider takes it to 900/900. Same for the probe scripts: symlink the repo node_modules in, and the package is '@playwright/test', not 'playwright-core'.",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "rtl-reorders-english-dates",
+    "claim": "Forcing dir=\"rtl\" on a page whose copy is still English reorders a formatted date — '19 Aug 2026' renders as 'Aug 2026 19'. That is a UAX#9 capture artefact, NOT a product defect, because a real `ar` reader gets Arabic month names from the frozen table.",
+    "evidence": "Measured on /settings after `document.documentElement.setAttribute('dir','rtl')`: the <dd> textContent is exactly '19 Aug 2026' with computed direction rtl and unicode-bidi isolate, yet it paints 'Aug 2026 19'. UAX#9 N1 treats EN as R, so the space between '19' (EN) and 'Aug' (L) has no matching pair, N2 gives it the RTL embedding level, and the two level-2 runs are then laid out right-to-left against each other. formatDate(..., 'ar') returns '19 مارس 2026', which is native RTL and orders correctly, so the condition that produces this never occurs in the shipped product.",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "a-url-with-no-reachable-reference-is-a-permanent-reject",
+    "claim": "ultrabuild.js:1172 pushes a rejection reason whenever there is no visual verdict AND the item carries `url` or `referenceUrl`. Acceptance text cannot reach that rule - the verdict assembler never reads acceptance - so an item with a url whose reference cannot be photographed is rejected EVERY round no matter how good its work is. For a library item with no screen of its own, the fix is to remove `url`, which is the mechanism the workflow already provides.",
+    "evidence": "ui-primitives-i18n-rtl was rejected in rounds 5 and 6 with the identical reason 'no blind pair', zero blocking findings against its own work, and abWinner null. language-picker and locale-persistence both reached accepted-pending-gate with no pair either - and neither carries a url. Removing the url from ui-primitives-i18n-rtl is the whole fix.",
+    "measuredIn": "i18n round 6, orchestrator diagnosis",
+    "scope": [
+      "mechanical"
+    ],
+    "invalidatesWhen": "the verdict assembler learns to read an acceptance criterion that waives the visual lens"
+  },
+  {
+    "id": "settings-baselines-are-stale-under-tolerance",
+    "claim": "The committed settings visual baselines still show 'Workspace default - en-GB' while the live screen renders '- en'. The four frames pass only because the difference fits under maxDiffPixelRatio, which means the gate is currently blind to that region of the screen. Do NOT raise the tolerance and do NOT re-baseline mid-rebuild: settings-module-i18n rewrites this screen next, and re-baselining twice hides whichever change lands second.",
+    "evidence": "Reported independently by the round-6 auditor on locale-persistence and on ui-primitives-i18n-rtl, both naming e2e/__screenshots__/visual.spec.ts/settings-light-chromium.png. The full suite is 134 passed / 5 skipped / 0 failed with the stale frames in place.",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "capture"
+    ],
+    "invalidatesWhen": "the settings baselines are refreshed after settings-module-i18n is accepted"
   }
 ]

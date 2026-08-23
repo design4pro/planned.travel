@@ -47,10 +47,19 @@ export const trips: ReadonlyArray<SeedTrip> = [flagshipTrip, ...supportingTrips]
  */
 export const DATASET_VERSION = 3
 
-/** Workspace defaults the demo assumes: sterling, London, Monday weeks. */
+/**
+ * Workspace defaults the demo assumes: English, sterling, London, Monday weeks.
+ *
+ * `locale` is a *language* tag from the twenty-three of `docs/SPEC.md` §8 — the language the
+ * workspace's screens are written in — not a regional-format tag. It read `en-GB`, which is not one
+ * of the twenty-three, so the seeded workspace disagreed with the column's own contract and the
+ * demo exercised a normalisation path no shipped workspace should ever need. The British *formats*
+ * this dataset wants live in `defaultCurrency`, `timezone`, `dateFormat` and `weekStartsOn`, all
+ * unchanged.
+ */
 export const organizationSettings = {
   defaultCurrency: 'GBP',
-  locale: 'en-GB',
+  locale: 'en',
   timezone: 'Europe/London',
   weekStartsOn: 1,
   dateFormat: 'dd MMM yyyy',

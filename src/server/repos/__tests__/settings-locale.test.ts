@@ -14,14 +14,22 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
+import {
+  generateSQLiteDrizzleJson,
+  generateSQLiteMigration,
+} from 'drizzle-kit/api'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { LOCALE_TAGS } from '#/lib/i18n/locales'
 import {
+  languagePreferenceInput,
   overrideOrNull,
   regionalSettingsInput,
   workspaceDefaultsInput,
 } from '#/routes/_app/-server/settings'
+import { authSchema } from '#/server/db/auth-schema'
+import * as domainSchema from '#/server/db/schema'
+import { ForbiddenError } from '../context'
 import {
   ensureOrganizationSettings,
   ensureUserSettings,
@@ -33,7 +41,7 @@ import {
   updateUserSettings,
   userSettingsRepository,
 } from '../settings'
-import { createHarness } from './harness'
+import { captureError, createHarness } from './harness'
 
 import type { AuthSession } from '#/server/auth/session'
 import type { Harness, SeededTenant } from './harness'
@@ -73,6 +81,24 @@ async function storeUserLocale(
 ): Promise<void> {
   const row = await ensureUserSettings(tenant.scope, userId)
   await userSettingsRepository.requireUpdate(tenant.scope, row.id, { locale })
+}
+
+/**
+ * The shipped migration, split into the statements wrangler would run.
+ *
+ * Read from disk rather than restated in the test, so an edit to the SQL has to keep these rows
+ * resolving: the file is the thing under test, not a description of it.
+ */
+function migrationStatements(): ReadonlyArray<string> {
+  const file = path.join(
+    process.cwd(),
+    'drizzle',
+    '0002_locale_normalisation.sql',
+  )
+  return readFileSync(file, 'utf8')
+    .split('--> statement-breakpoint')
+    .map((statement) => statement.trim())
+    .filter((statement) => statement !== '')
 }
 
 /** A complete regional-form submission, with one field overridden per test. */
@@ -209,6 +235,134 @@ describe('locale persistence', () => {
     })
   })
 
+  describe('the locale-only write path', () => {
+    /**
+     * A chip click in the language picker changes one column, and the form input cannot express that.
+     *
+     * `regionalSettingsInput` requires all six regional fields, so a payload carrying only `locale`
+     * never parses; and because `''` clears an override in every one of them, a client that padded
+     * the other five to satisfy the schema would blank the traveller's timezone, currency, date
+     * format and distance unit on the way past. Both halves of that are asserted here, because
+     * either one alone would make `languagePreferenceInput` look like duplication.
+     */
+    it('accepts a payload the six-field form refuses', () => {
+      expect(languagePreferenceInput.parse({ locale: 'pl' }).locale).toBe('pl')
+      expect(() => regionalSettingsInput.parse({ locale: 'pl' })).toThrow()
+    })
+
+    it('narrows and canonicalises exactly as the form does', () => {
+      expect(languagePreferenceInput.parse({ locale: 'ja-JP' }).locale).toBe(
+        'ja',
+      )
+      expect(languagePreferenceInput.parse({ locale: '' }).locale).toBe('')
+      expect(() => languagePreferenceInput.parse({ locale: 'xx-YY' })).toThrow()
+      expect(() =>
+        languagePreferenceInput.parse({ locale: '__proto__' }),
+      ).toThrow()
+    })
+
+    it('leaves every other override on the row untouched', async () => {
+      await updateUserSettings(alpha.scope, {
+        locale: 'de',
+        timezone: 'Europe/Warsaw',
+        currency: 'PLN',
+        dateFormat: 'dd MMM yyyy',
+        weekStartsOn: 1,
+        distanceUnit: 'imperial',
+      })
+
+      const chosen = languagePreferenceInput.parse({ locale: 'ko' })
+      const row = await updateUserSettings(alpha.scope, {
+        locale: overrideOrNull(chosen.locale),
+      })
+
+      expect(row.locale).toBe('ko')
+      expect(row.timezone).toBe('Europe/Warsaw')
+      expect(row.currency).toBe('PLN')
+      expect(row.dateFormat).toBe('dd MMM yyyy')
+      expect(row.weekStartsOn).toBe(1)
+      expect(row.distanceUnit).toBe('imperial')
+    })
+
+    it('clears only the language when the workspace chip is clicked', async () => {
+      await storeWorkspaceLocale(alpha, 'pl')
+      await updateUserSettings(alpha.scope, {
+        locale: 'ko',
+        timezone: 'Asia/Seoul',
+      })
+
+      const cleared = languagePreferenceInput.parse({ locale: '' })
+      const row = await updateUserSettings(alpha.scope, {
+        locale: overrideOrNull(cleared.locale),
+      })
+
+      expect(row.locale).toBeNull()
+      expect(row.timezone).toBe('Asia/Seoul')
+      expect((await getEffectiveSettings(alpha.scope)).locale).toBe('pl')
+    })
+  })
+
+  describe('authorisation', () => {
+    /**
+     * `member` is this model's least-privileged role — the one `loadOrganizationSettings` reports as
+     * `viewerRole` with `canAdminister: false`, which disables the form on the screen and nothing
+     * more. The workspace row it would have written is the language, currency, timezone, date
+     * format, week start and distance unit that every member without an override reads, so the
+     * refusal has to happen on the server.
+     */
+    it('refuses a viewer the workspace-wide language', async () => {
+      const viewerUserId = await alpha.addUser('Viewer', 'member')
+      const viewer = alpha.scopeFor(viewerUserId, 'member')
+      await storeWorkspaceLocale(alpha, 'pl')
+
+      const error = await captureError(() =>
+        updateOrganizationSettings(viewer, { locale: 'ja' }),
+      )
+      expect(error).toBeInstanceOf(ForbiddenError)
+      expect((await ensureOrganizationSettings(alpha.scope)).locale).toBe('pl')
+    })
+
+    it('refuses a viewer the other five workspace defaults too', async () => {
+      const viewerUserId = await alpha.addUser('Viewer', 'member')
+      const viewer = alpha.scopeFor(viewerUserId, 'member')
+
+      for (const patch of [
+        { defaultCurrency: 'USD' },
+        { timezone: 'America/New_York' },
+        { dateFormat: 'MM/dd/yyyy' },
+        { weekStartsOn: 0 },
+        { distanceUnit: 'imperial' },
+      ] as const) {
+        expect(
+          await captureError(() => updateOrganizationSettings(viewer, patch)),
+        ).toBeInstanceOf(ForbiddenError)
+      }
+
+      const row = await ensureOrganizationSettings(alpha.scope)
+      expect(row.defaultCurrency).toBe('EUR')
+      expect(row.timezone).toBe('UTC')
+      expect(row.weekStartsOn).toBe(1)
+      expect(row.distanceUnit).toBe('metric')
+    })
+
+    it('lets an admin set the workspace language, a viewer their own', async () => {
+      const adminUserId = await alpha.addUser('Admin', 'admin')
+      const admin = alpha.scopeFor(adminUserId, 'admin')
+      const workspace = await updateOrganizationSettings(admin, {
+        locale: 'sv',
+      })
+      expect(workspace.locale).toBe('sv')
+
+      const viewerUserId = await alpha.addUser('Viewer', 'member')
+      const viewer = alpha.scopeFor(viewerUserId, 'member')
+      const own = await updateUserSettings(viewer, { locale: 'tr' })
+      expect(own.locale).toBe('tr')
+      expect((await getEffectiveSettings(viewer, viewerUserId)).locale).toBe(
+        'tr',
+      )
+    })
+  })
+
   describe('getEffectiveSettings', () => {
     it('narrows a legacy workspace row to a shipped tag', async () => {
       for (const [stored, shipped] of [
@@ -271,20 +425,75 @@ describe('locale persistence', () => {
      * these rows resolving — the SQL is the thing under test, not a description of it.
      */
     function applyMigration(): void {
-      const file = path.join(
-        process.cwd(),
-        'drizzle',
-        '0002_locale_normalisation.sql',
-      )
-      const statements = readFileSync(file, 'utf8')
-        .split('--> statement-breakpoint')
-        .map((statement) => statement.trim())
-        .filter((statement) => statement !== '')
-
-      for (const statement of statements) {
+      for (const statement of migrationStatements()) {
         harness.sqlite.exec(statement)
       }
     }
+
+    /**
+     * The file claims its first half is `pnpm db:generate` output. This is that claim, checked.
+     *
+     * `db:generate` diffs the previous snapshot against the live schema; `drizzle-kit/api` exposes
+     * exactly that pair, and the harness already uses it to build this database. So the DDL is
+     * re-derived from `drizzle/meta/0001_snapshot.json` plus `src/server/db/schema.ts` and compared
+     * statement by statement. What this catches is the failure the round-5 audit found: a hand-edited
+     * DDL half, a schema default left at `en-GB` behind a migration that says `en`, or a
+     * `meta/0002_snapshot.json` that no longer describes the SQL shipped beside it — each of which
+     * makes the *next* `db:generate` emit a fourth migration undoing this one.
+     */
+    it('carries the DDL `pnpm db:generate` produces, statement for statement', async () => {
+      const previous = JSON.parse(
+        readFileSync(
+          path.join(process.cwd(), 'drizzle', 'meta', '0001_snapshot.json'),
+          'utf8',
+        ),
+      ) as Awaited<ReturnType<typeof generateSQLiteDrizzleJson>>
+      const current = await generateSQLiteDrizzleJson({
+        ...authSchema,
+        ...domainSchema,
+      })
+      const generated = (await generateSQLiteMigration(previous, current)).map(
+        (statement) => statement.trim(),
+      )
+
+      const shipped = migrationStatements()
+      expect(generated.length).toBeGreaterThan(0)
+      expect(shipped.slice(0, generated.length)).toEqual(generated)
+
+      // …and the hand-written half is still there, so a truncated file cannot pass the line above.
+      expect(shipped.length).toBeGreaterThan(generated.length)
+      expect(shipped.at(-1)).toBe('DROP TABLE `__locale_normalisation`;')
+    })
+
+    /**
+     * drizzle-kit applies by journal entry and wrangler by filename, so a missing entry is how a
+     * second file lands in the 0002 slot under a random name and then runs in the wrong order.
+     */
+    it('is recorded in drizzle’s own bookkeeping', () => {
+      const journal = JSON.parse(
+        readFileSync(
+          path.join(process.cwd(), 'drizzle', 'meta', '_journal.json'),
+          'utf8',
+        ),
+      ) as { entries: ReadonlyArray<{ idx: number; tag: string }> }
+
+      expect(journal.entries.map((entry) => entry.idx)).toEqual([0, 1, 2])
+      expect(journal.entries.at(-1)?.tag).toBe('0002_locale_normalisation')
+
+      const snapshot = JSON.parse(
+        readFileSync(
+          path.join(process.cwd(), 'drizzle', 'meta', '0002_snapshot.json'),
+          'utf8',
+        ),
+      ) as {
+        tables: {
+          organization_settings: { columns: { locale: { default: string } } }
+        }
+      }
+      expect(snapshot.tables.organization_settings.columns.locale.default).toBe(
+        "'en'",
+      )
+    })
 
     it('normalises both columns and leaves a shipped tag alone', async () => {
       const traveller = await alpha.addUser('Second traveller')

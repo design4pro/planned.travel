@@ -69,7 +69,10 @@ export const AvatarStack = React.forwardRef<HTMLDivElement, AvatarStackProps>(
         ? names
         : [
             ...names.slice(0, max),
-            ui.t('ui.avatar.overflow', { count: names.length - max }),
+            ui.t('ui.avatar.overflow', {
+              count: names.length - max,
+              others: formatNumber(names.length - max, ui.locale),
+            }),
           ],
       ui.locale,
     )

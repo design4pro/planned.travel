@@ -14,6 +14,7 @@ import {
   menuSeparatorBase,
   popMotion,
   transitionBase,
+  useControllableState,
 } from './shared'
 
 import type { FieldSize } from './shared'
@@ -255,13 +256,67 @@ export const SimpleSelect = React.forwardRef<
       className,
       triggerId,
       ariaLabel,
+      value,
+      defaultValue,
+      onValueChange,
       ...props
     },
     ref,
   ) => {
     const t = useUiCopy()
+
+    /*
+     * Why this component tracks the chosen value as well as passing it down.
+     *
+     * Radix fills the trigger by portalling the selected `Select.ItemText` into
+     * the `Select.Value` node, and the items live inside `Select.Content`. While
+     * the menu is shut, `Content` renders them into a `DocumentFragment` it
+     * builds in a layout effect — which never runs on the server. So a
+     * server-rendered trigger holds `<span style="pointer-events:none"></span>`
+     * and nothing else, and the label only appears once React has hydrated.
+     *
+     * Measured on this tree before the fix: `renderToStaticMarkup` of a
+     * `SimpleSelect` with `value="gbp"` contained no `British pound` anywhere,
+     * and a settings screen whose client bundle had not hydrated showed six
+     * blank controls with an entirely clean console — a working page that looked
+     * broken, and a flash of empty control on every first paint even when
+     * hydration was healthy.
+     *
+     * The composable parts cannot fix this: only the caller knows what an item's
+     * text is. `SimpleSelect` does know — it was handed `options` — so it renders
+     * the label itself as `Select.Value`'s children. Radix treats supplied
+     * children as authoritative (`onValueNodeHasChildrenChange`) and stops
+     * portalling, so there is one copy of the label, present in the SSR HTML and
+     * unchanged by hydration.
+     *
+     * That needs the current value on every render, including after an
+     * uncontrolled pick, hence the mirror. A caller that passes `value` still
+     * owns it: `useControllableState` defers to a defined `value` and only holds
+     * state when there is none.
+     */
+    const [chosen, setChosen] = useControllableState<string>({
+      value,
+      // Radix's own "nothing chosen" sentinel, and a value no item may carry.
+      defaultValue: defaultValue ?? '',
+      onChange: onValueChange,
+    })
+    /*
+     * `undefined`, never `null`, when no option carries the current value:
+     * Radix reads "the caller supplied the text" off `children !== undefined`,
+     * so a nullish child would block its own portal and leave the trigger
+     * blank. Undefined hands the question back and the placeholder rules apply.
+     */
+    const selectedLabel = options.find(
+      (option) => option.value === chosen,
+    )?.label
+
     return (
-      <SelectPrimitive.Root {...props}>
+      <SelectPrimitive.Root
+        value={value}
+        defaultValue={defaultValue}
+        onValueChange={setChosen}
+        {...props}
+      >
         <SelectTrigger
           ref={ref}
           id={triggerId}
@@ -270,9 +325,9 @@ export const SimpleSelect = React.forwardRef<
           className={className}
           aria-label={ariaLabel}
         >
-          <SelectValue
-            placeholder={placeholder ?? t('ui.select.placeholder')}
-          />
+          <SelectValue placeholder={placeholder ?? t('ui.select.placeholder')}>
+            {selectedLabel}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (

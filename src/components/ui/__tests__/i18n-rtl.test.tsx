@@ -4,6 +4,7 @@ import './test-env'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { addDays } from 'date-fns'
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -13,6 +14,7 @@ import { AvatarStack } from '../avatar-stack'
 import { CountBadge } from '../badge'
 import { Calendar } from '../calendar'
 import { Chip } from '../chip'
+import { DateRangePicker } from '../date-range-picker'
 import { Pagination } from '../pagination'
 import { Progress } from '../progress'
 import { Sheet, SheetContent, SheetTitle } from '../sheet'
@@ -271,7 +273,9 @@ describe('a number a primitive writes for itself', () => {
   })
 
   it('groups the figure the way the locale groups', () => {
-    render(withLocale('de', {}, <Progress value={1234} max={10000} label="B" />))
+    render(
+      withLocale('de', {}, <Progress value={1234} max={10000} label="B" />),
+    )
     expect(screen.getByText('12 %')).not.toBeNull()
   })
 
@@ -300,6 +304,62 @@ describe('a number a primitive writes for itself', () => {
   it('groups a count that is under the cap', () => {
     render(withLocale('de', {}, <CountBadge count={1234} max={9999} />))
     expect(screen.getByText('1.234')).not.toBeNull()
+  })
+
+  /**
+   * A plural message's number is two things at once, and §8 splits them.
+   *
+   * `count` chooses the CLDR branch — one branch in Japanese, six in Arabic —
+   * and never reaches the sentence. The figure the reader sees goes through the
+   * frozen formatter first and arrives as an already-grouped string, because a
+   * raw `{count}` renders ASCII digits with no separator in every one of the
+   * twenty-three locales. German is the readable assertion: it groups with a
+   * full stop, so `1.234` proves the formatter ran and `1234` proves it did not.
+   */
+  it('groups the figure in a plural message while count still picks the branch', () => {
+    const from = new Date(2026, 0, 1)
+    render(
+      withLocale(
+        'de',
+        {
+          'ui.dateRange.nights': {
+            one: '{nights} Nacht',
+            other: '{nights} Nächte',
+          },
+        },
+        <DateRangePicker
+          ariaLabel="Reisedaten"
+          presets={[]}
+          value={{ from, to: addDays(from, 1234) }}
+        />,
+      ),
+    )
+    expect(
+      screen.getByRole('button', { name: 'Reisedaten' }).textContent,
+    ).toContain('1.234 Nächte')
+  })
+
+  it('takes the singular branch from count, not from the formatted string', () => {
+    const from = new Date(2026, 0, 1)
+    render(
+      withLocale(
+        'de',
+        {
+          'ui.dateRange.nights': {
+            one: '{nights} Nacht',
+            other: '{nights} Nächte',
+          },
+        },
+        <DateRangePicker
+          ariaLabel="Reisedaten"
+          presets={[]}
+          value={{ from, to: addDays(from, 1) }}
+        />,
+      ),
+    )
+    expect(
+      screen.getByRole('button', { name: 'Reisedaten' }).textContent,
+    ).toContain('1 Nacht')
   })
 
   it('lets an RTL catalogue move the overflow sign to the other side', () => {

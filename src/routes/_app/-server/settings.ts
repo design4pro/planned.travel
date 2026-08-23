@@ -203,6 +203,38 @@ export function overrideOrNull<T extends string>(value: T | ''): T | null {
   return value === '' ? null : value
 }
 
+/**
+ * The traveller's language, on its own — one chip click in the language picker.
+ *
+ * {@link regionalSettingsInput} cannot serve that click from either side. It requires all six
+ * regional fields, so a payload carrying only `locale` fails Zod; and every one of those fields
+ * treats `''` as "clear this override", so a client that fills the gaps with empty strings silently
+ * blanks the traveller's timezone, currency, date format and distance unit on the way past. Widening
+ * the six to optional would fix the first problem by handing a client the second one — an optional
+ * `''` is still a write. A separate, narrower input is what makes a locale-only write possible
+ * *without* giving anyone a way to reach a column this write has no business touching:
+ * {@link updateUserSettings} passes the parsed patch through `definedOnly`, so a field this object
+ * does not carry is not in the `SET` clause at all.
+ *
+ * `''` keeps its meaning from {@link regionalSettingsInput}: the follow-the-workspace chip, cleared
+ * to `NULL` by {@link overrideOrNull}.
+ */
+export const languagePreferenceInput = z.object({ locale: localeOverride })
+
+export const saveLanguagePreference = createServerFn({ method: 'POST' })
+  .validator(languagePreferenceInput)
+  .handler(async ({ data }): Promise<{ readonly locale: Locale | null }> => {
+    const scope = await appScope()
+    // `docs/ARCHITECTURE.md` §4 rule 2, as in `saveRegionalSettings`: no cache holds this row, so
+    // there is no key to drop, and the re-negotiation this write is for reads D1 on the next
+    // request rather than KV. The saved value is returned so the caller renders what D1 now holds
+    // instead of the tag it hoped for — `en-GB` is stored, and answered, as `en`.
+    const row = await updateUserSettings(scope, {
+      locale: overrideOrNull(data.locale),
+    })
+    return { locale: resolveLocaleTag(row.locale) }
+  })
+
 export const saveRegionalSettings = createServerFn({ method: 'POST' })
   .validator(regionalSettingsInput)
   .handler(async ({ data }): Promise<{ readonly saved: true }> => {
@@ -441,6 +473,16 @@ export const workspaceDefaultsInput = z.object({
   distanceUnit: z.enum(DISTANCE_UNITS),
 })
 
+/**
+ * Writes the workspace defaults. Refused for anyone below `admin`.
+ *
+ * The `canAdminister` flag on {@link OrganizationPayload} disables the form for a plain member, and
+ * that is all it does — a POST is a POST, and the flag is on the far side of the wire. The gate that
+ * decides is {@link updateOrganizationSettings}, which asserts the caller's role from the tenant
+ * scope before it touches the row, exactly as `updateOrganization` gates a workspace rename and
+ * `addMember` gates an invitation. Re-checking here would be a second copy of a rule that has to
+ * hold for every caller of that repository function, not just this one.
+ */
 export const saveWorkspaceDefaults = createServerFn({ method: 'POST' })
   .validator(workspaceDefaultsInput)
   .handler(async ({ data }): Promise<{ readonly saved: true }> => {
