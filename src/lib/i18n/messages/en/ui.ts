@@ -67,6 +67,22 @@ const messages = {
     one: '{count} other',
     other: '{count} others',
   },
+  /**
+   * The face at the end of a crowded stack. `{hidden}` arrives already grouped
+   * in this locale's digits — the name is not `count` on purpose, because
+   * `count` is reserved for the number that selects a plural branch and reaches
+   * the template unformatted. The sign is on this side of it only because
+   * English puts it there; an Arabic translator moves it.
+   */
+  'avatar.more': '+{hidden}',
+
+  /* --------------------------------------------------------------- badge */
+  /**
+   * A count that has run past the badge's cap: `99+`. The number arrives
+   * already grouped, and the marker's side is the translator's to choose, the
+   * same way `avatar.more`'s is.
+   */
+  'badge.overflow': '{max}+',
 
   /* ------------------------------------------------------------ calendar */
   'calendar.label.date': 'Choose a date',

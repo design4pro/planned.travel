@@ -77,6 +77,13 @@ const weekStartSchema = z.number().int().min(0).max(6)
  * language at best. The predecessor was `z.string().min(2).max(16)`, which let
  * `__proto__` and `constructor` reach the negotiator through a settings form.
  *
+ * `LOCALE_TAGS` *is* `SUPPORTED_LOCALES`, one field narrower: that module
+ * declares it as `SUPPORTED_LOCALES.map((entry) => entry.tag)`, because
+ * `SUPPORTED_LOCALES` holds `{ tag, nativeName, dir }` descriptors and `z.enum`
+ * takes strings. Enumerating the descriptors here instead would be a second
+ * derivation of the same list, which is the thing this comment exists to
+ * forbid. Both are exported from the one registry file and neither can drift.
+ *
  * The canonicalising step in front of the enum is not politeness, it is the
  * data. `organization_settings.locale` defaulted to `en-GB` for every workspace
  * created before this migration, the demo dataset still declares `en-GB`, and

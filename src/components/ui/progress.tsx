@@ -2,6 +2,8 @@ import * as React from 'react'
 import { Progress as ProgressPrimitive } from 'radix-ui'
 
 import { cn } from '#/lib/cn'
+import { formatPercent } from '#/lib/format'
+import { useUiI18n } from './copy'
 
 const trackSizes = { xs: 'h-1', sm: 'h-1.5', md: 'h-2', lg: 'h-3' } as const
 
@@ -30,7 +32,11 @@ export type ProgressProps = Omit<
   tone?: ProgressTone
   /** Label row above the bar. */
   label?: React.ReactNode
-  /** Right-aligned value text. Defaults to a percentage when `label` is set. */
+  /**
+   * The value text at the inline end of the label row. Left out, the primitive
+   * writes the percentage itself, punctuated and placed the way the negotiated
+   * locale does it — `42%` in English, `%42` in Turkish, `٤٢٪` in Arabic.
+   */
   valueText?: React.ReactNode
 }
 
@@ -53,6 +59,7 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
     },
     ref,
   ) => {
+    const { locale } = useUiI18n()
     const indeterminate = value === null
     const clamped = indeterminate ? 0 : Math.min(Math.max(value, 0), max)
     const percent = max === 0 ? 0 : (clamped / max) * 100
@@ -71,8 +78,12 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
                 {label}
               </span>
             ) : null}
-            <span className="text-caption tabular-nums text-ink-3">
-              {valueText ?? (indeterminate ? '' : `${Math.round(percent)}%`)}
+            <span
+              className="text-caption tabular-nums text-ink-3"
+              data-numeric=""
+            >
+              {valueText ??
+                (indeterminate ? '' : formatPercent(percent / 100, locale))}
             </span>
           </div>
         ) : null}

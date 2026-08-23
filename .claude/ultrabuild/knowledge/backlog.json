@@ -38,5 +38,23 @@
     "paths": [
       "playwright.config.ts"
     ]
+  },
+  {
+    "id": "interpolate-formats-no-numbers",
+    "title": "interpolate() substitutes raw numbers, so any grouped count renders unlocalised",
+    "why": "A plural message's `count` param is typed `number` because it selects the CLDR branch, and it reaches the template through `String(value)`. So a four-digit count renders `1234` with ASCII digits and no group separator in every one of the 23 locales, while `formatNumber` for the same locale would give `1.234` (de) or `1 234` (fr, U+202F). Only one shipped key hits it today (`ui.dateRange.nights`), and that one is assigned to ui-primitives-i18n-rtl to fix at its own call site. The general fix - a locale-aware numeric substitution inside interpolate(), or a documented pre-formatted-param convention - belongs to whoever owns src/lib/i18n/ and would reopen an accepted item.",
+    "decision": "Deferred: the one shipped occurrence is fixed at its call site this run; the runtime change waits so it does not reopen i18n-core-runtime and ripple through every catalogue item still to be built.",
+    "paths": [
+      "src/lib/i18n/interpolate.ts"
+    ]
+  },
+  {
+    "id": "cn-registers-no-shadow-group",
+    "title": "tailwind-merge does not know this repo shadow tokens, so shadow classes never cancel",
+    "why": "`src/lib/cn.ts` registers no `shadow` class group, and `card`/`elevated`/`dropdown` are not on tailwind-merge's built-in shadow SIZE scale, so it classifies `shadow-card` as a shadow COLOUR. `cn('shadow-card','shadow-none')` therefore keeps BOTH classes and CSS source order decides which box-shadow paints. Every component composing a token shadow with an override is affected. Registering the group is a repo-wide change to how classes merge and could silently alter components nobody is looking at this run, so it is not a change to make inside a localisation task.",
+    "decision": "Deferred as a repo-wide risk. Builders are warned instead by the `shadow-token-is-a-colour` fact: compose the class list so the shadow is left off rather than relying on shadow-none to cancel it.",
+    "paths": [
+      "src/lib/cn.ts"
+    ]
   }
 ]

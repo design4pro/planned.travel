@@ -1,7 +1,7 @@
 import * as React from 'react'
 
 import { cn } from '#/lib/cn'
-import { formatList } from '#/lib/format'
+import { formatList, formatNumber } from '#/lib/format'
 import { Avatar, avatarVariants } from './avatar'
 import { useUiI18n } from './copy'
 
@@ -96,6 +96,10 @@ export const AvatarStack = React.forwardRef<HTMLDivElement, AvatarStackProps>(
             />
           ))}
           {showOverflow && hidden > 0 ? (
+            /* The count is already in `summary` above, so this face is decoration
+               for the eye only. Its copy still comes from the catalogue: the sign
+               sits before the number in English and after it in several of the
+               scripts we ship, and grouped digits are the locale's, not ASCII's. */
             <span
               className={cn(
                 avatarVariants({ size }),
@@ -103,7 +107,9 @@ export const AvatarStack = React.forwardRef<HTMLDivElement, AvatarStackProps>(
               )}
               aria-hidden="true"
             >
-              +{hidden}
+              {ui.t('ui.avatar.more', {
+                hidden: formatNumber(hidden, ui.locale),
+              })}
             </span>
           ) : null}
         </div>

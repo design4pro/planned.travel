@@ -198,8 +198,8 @@ describe('LanguagePicker — keyboard traversal never writes', () => {
   it('steps a row with ArrowDown and ArrowUp', async () => {
     // jsdom reports `offsetTop: 0` for every chip, so the picker reads the grid
     // as a single row and a vertical press moves one chip — the same answer a
-    // container wide enough for all twenty-three would give. The multi-row case
-    // is measured in the browser, where the grid resolves to five columns.
+    // container wide enough for all twenty-three would give. The multi-column
+    // case is the test below.
     const user = userEvent.setup()
     const { onSelect } = renderPicker()
 
@@ -210,6 +210,50 @@ describe('LanguagePicker — keyboard traversal never writes', () => {
     expect(document.activeElement).toBe(chip('ar'))
     await user.keyboard('{ArrowUp}')
     expect(document.activeElement).toBe(chip(FOLLOW_WORKSPACE))
+
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('steps a whole row when the grid really has columns', async () => {
+    // The column count is a property of the rendered layout — the grid is
+    // `auto-fill`, so no React state knows it and the picker measures
+    // `offsetTop` at keypress time. jsdom has no layout engine and answers 0
+    // for every node, which is why this stubs the five-column geometry
+    // Chromium produces at 1024px (measured: `gridTemplateColumns` resolves to
+    // 5 tracks there, 7 at 1440px and 14 at 2560px, and the picker's own
+    // `columnsIn` returned the same number at each).
+    const user = userEvent.setup()
+    const { onSelect } = renderPicker()
+
+    const options = screen.getAllByRole('radio')
+    options.forEach((option, index) => {
+      // Row 0 is the full-width "follow" option; the 23 locales then sit five
+      // to a row, each row 52px below the last (a 44px chip plus the 8px gap).
+      const row = index === 0 ? 0 : Math.floor((index - 1) / 5) + 1
+      Object.defineProperty(option, 'offsetTop', { value: row * 52 })
+    })
+
+    // ca is second in the first locale row; five later is es.
+    chip('ca').focus()
+    await user.keyboard('{ArrowDown}')
+    expect(document.activeElement).toBe(chip('es'))
+    await user.keyboard('{ArrowDown}')
+    expect(document.activeElement).toBe(chip('ja'))
+    await user.keyboard('{ArrowUp}{ArrowUp}')
+    expect(document.activeElement).toBe(chip('ca'))
+
+    // Up from the first locale row lands on the "follow" row above it, not
+    // four chips back into the same row.
+    await user.keyboard('{ArrowUp}')
+    expect(document.activeElement).toBe(chip(FOLLOW_WORKSPACE))
+    await user.keyboard('{ArrowDown}')
+    expect(document.activeElement).toBe(chip('ar'))
+
+    // Down from the last, short row clamps to the final option rather than
+    // running off the end of the group.
+    chip('vi').focus()
+    await user.keyboard('{ArrowDown}')
+    expect(document.activeElement).toBe(chip('zh-Hant'))
 
     expect(onSelect).not.toHaveBeenCalled()
   })
@@ -443,5 +487,44 @@ describe('LanguagePicker — disabled', () => {
     }
     await user.click(chip('de'))
     expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('repaints the locked group instead of fading it', () => {
+    // `disabled:opacity-60` measured 3.41:1 on the unchosen options and 2.56:1
+    // on the chosen one, which made the one thing a locked picker still has to
+    // say — which language is in force — the least legible thing on it.
+    // `src/components/ui/shared.ts` already settled the house answer for a
+    // control that carries its own label: repaint, never fade.
+    renderPicker({ value: 'en', disabled: true })
+
+    const off = chip('de').className.split(/\s+/)
+    expect(off).not.toContain('opacity-60')
+    expect(off).toContain('bg-surface-2')
+    expect(off).toContain('text-ink-3')
+    expect(off).toContain('border-edge')
+    expect(off).not.toContain('border-edge-strong')
+
+    // The language in force keeps its brand treatment, minus the shadow that
+    // would still read as raised and clickable.
+    const active = chip('en').className.split(/\s+/)
+    expect(active).toContain('text-brand')
+    expect(active).toContain('bg-brand-subtle')
+    expect(active).not.toContain('shadow-card')
+    expect(active).not.toContain('opacity-60')
+  })
+
+  it('withdraws hover and press while off, and while a write is in flight', () => {
+    const enabled = renderPicker({ value: 'en' })
+    expect(chip('de').className).toContain('hover:-translate-y-px')
+    enabled.unmount()
+
+    renderPicker({ value: 'en', disabled: true })
+    expect(chip('de').className).not.toContain('hover:')
+    expect(chip('de').className).not.toContain('active:')
+    cleanup()
+
+    renderPicker({ value: 'en', pending: 'ja' })
+    expect(chip('de').className).not.toContain('hover:')
+    expect(chip('de').className).not.toContain('active:')
   })
 })

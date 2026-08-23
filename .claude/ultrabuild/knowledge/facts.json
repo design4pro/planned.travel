@@ -346,5 +346,181 @@
       "mechanical"
     ],
     "invalidatesWhen": "all six translations-* items have shipped their messages/<tag>/ directories"
+  },
+  {
+    "id": "recon-cache-double-wrap",
+    "claim": "The workflow already returns each recon entry AS `{hash, result}`, so the persist step must write that value VERBATIM. Wrapping it again produces `{hash, result:{hash, result:{topic,facts,...}}}`, and the next round hands the inner wrapper to the workflow as if it were the reader payload. Nothing errors: the run logs `recon reused for: <key>`, `r.topic` and `r.facts` are simply undefined, and that reader contributes an EMPTY section to the digest every builder, critic and auditor reads. Before trusting a cache entry, assert `result.topic` is a string and `result.facts` is non-empty — a matching hash is not proof the payload survived.",
+    "evidence": "Measured in round 5: recon/stack.json and recon/reference.json were both double-wrapped, so the digest carried 0 of 36 stack facts (plus 20 risks) and 0 of 33 reference facts. Their inner hashes matched their outer ones, which is why the hash check passed. recon/contract.json and recon/codebase.json, written verbatim, were single-wrapped and intact. Unwrapping restored 69 facts and 26 risks. Rounds 3, 4 and the first round-5 attempt all reused the degraded pair.",
+    "measuredIn": "i18n round 5, second attempt",
+    "scope": [
+      "mechanical"
+    ],
+    "invalidatesWhen": "the persist step writes the returned recon entry verbatim and validates topic/facts before reuse"
+  },
+  {
+    "id": "shadow-token-is-a-colour",
+    "claim": "tailwind-merge in this repo treats `shadow-<token>` as a shadow COLOUR, not a shadow size, so `cn('shadow-card', 'shadow-none')` keeps both classes and CSS source order decides which box-shadow paints. Never rely on `shadow-none` to cancel a token shadow — compose the class list so the shadow is left off instead.",
+    "evidence": "A test asserting the disabled+selected chip's className `not.toContain('shadow-card')` failed with both `shadow-card` and `shadow-none` present in the merged list. `grep -n shadow src/lib/cn.ts` returns nothing, so no shadow class group is registered in `extendTailwindMerge` and `card` is not on tailwind-merge's built-in shadow size scale.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "mount-free-component-probe",
+    "claim": "A component that no route mounts can still be measured in a real browser without touching any file outside ownership: create a programmatic Vite dev server in the scratchpad (`configFile: false`, `resolve: { tsconfigPaths: true }`, `plugins: [viteReact()]`), `ssrLoadModule()` the component and `src/lib/fonts.ts`, render with `renderToStaticMarkup`, inline `dist/client/assets/styles-*.css` plus the real `FONT_STYLESHEET_HREF`, and drive the resulting file:// page with Playwright.",
+    "evidence": "Produced heights, baselines, column counts, contrast ratios, per-script platform fonts and hover/focus/active/reduced-motion computed styles for LanguagePicker with zero repo files added. Two gotchas measured: a script living outside the repo cannot resolve `vite`/`@playwright/test`, so symlink the repo's node_modules into the scratchpad first; and `playwright` is not installed — the package is `@playwright/test`. Regexing the font href out of fonts.ts yields the raw template literal (`css2?${FONT_FAMILIES.map(`) and loads zero real faces; importing the module gives the real URL and 28 loaded faces.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "capture"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "one-box-one-baseline-across-scripts",
+    "claim": "With the eight-family stylesheet and per-chip `lang`, all seven scripts share one 44px box and one 26px baseline, and CDP confirms each chip gets its own face — so the fixed `h-11` + `leading-7` construction makes 'zero layout shift after paint' true for the catalogue swap rather than merely likely.",
+    "evidence": "Playwright chromium, unpinned context, 28 faces loaded, zero gstatic/googleapis request failures. Chip height {44} and strut-measured baseline {26} were single-valued sets across en/el/ru/ar/ja/ko/zh-Hans/zh-Hant/vi/cs/id/pt-BR at 360, 393, 768, 1024, 1440 and 2560 in both light and dark. `CSS.getPlatformFontsForNode`: Geist / Noto Sans / Noto Sans Arabic / Noto Sans JP / Noto Sans KR / Noto Sans SC / Noto Sans TC respectively. Skeleton-minus-loaded height delta was 0.00px in all twelve combinations.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "critic",
+      "capture"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "drizzle-generate-in-a-sandbox",
+    "claim": "drizzle-kit generate can be run entirely in a sandbox, so a 'this file is generated' claim is checkable without writing to drizzle/ — but the `out` path MUST be repo-relative, because drizzle-kit prefixes it with './'.",
+    "evidence": "An absolute `out` failed with `ENOENT: open './/private/tmp/.../out/meta/0000_snapshot.json'`. With `out: 'node_modules/.dzprobe'` pre-seeded with `cp -R drizzle/meta` plus the 0000/0001 .sql files, and the schema default temporarily set to 'en', `npx drizzle-kit generate --config <scratch>/drizzle.config.ts --name locale_normalisation` wrote 0002_locale_normalisation.sql byte-identical to lines 1-25 of the shipped drizzle/0002_locale_normalisation.sql (sole diff: the shipped file appends '--> statement-breakpoint' to line 25 to join the hand-written data block). Also generated meta/_journal.json idx 2 and meta/0002_snapshot.json. drizzle/ and src/server/db/schema.ts were both clean in `git status` afterwards.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "throwaway-d1-for-migration-tests",
+    "claim": "`wrangler d1 migrations apply … --local --persist-to <dir>` gives a throwaway D1 for a from-empty migration test, so you can prove `pnpm db:migrate:local` semantics without touching the shared .wrangler/state a running dev server owns.",
+    "evidence": "`npx wrangler d1 migrations apply planned-travel-db --local --persist-to <scratch>/d1state` reported 0000 ✅, 0001 ✅, 0002 ✅ (13 commands for 0002, no error). The resulting DB: `locale` text DEFAULT 'en' NOT NULL, no leftover `__locale_normalisation` table, d1_migrations holds all three rows, PRAGMA foreign_key_check and integrity_check both clean. On the shared local D1, `pnpm db:migrate:local` says 'No migrations to apply!' — 0002 was recorded there at 2026-08-23 08:32:55.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "healthy-probe-dead-server",
+    "claim": "A server that passes resolve-port.sh can still be dead for every authenticated screen: port 3006 answers /api/dev/seed with 200 while `/node_modules/.vite/deps/motion_react.js?v=6f0f8d75` returns 504 'Outdated Optimize Dep', so `src/routes/_app/route.tsx` fails its dynamic import and every `_app` route renders the 'Something went off route' boundary. Four successive full reloads did not recover it.",
+    "evidence": "Playwright with e2e/.auth/demo.json on /settings/appearance: page.url() stays on /settings/appearance (session is valid) but the first h1/h2 is 'Something went off route' on passes 0-3, and the only >=400 responses are two hits on that deps URL. `ls node_modules/.vite/deps/` no longer contains motion_react.js. Workaround that DID produce evidence: build an SSR harness with `npx vite build -c <config> ` (ssr:true, external react/react-dom/react-dom/server/react/jsx-runtime, alias '#'->src), renderToStaticMarkup the primitives, link the real dist/client/assets/styles-*.css, and screenshot the file:// page — CSS-accurate, no dev server needed.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "capture",
+      "mechanical",
+      "critic"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "rtl-pseudo-element-mirroring",
+    "claim": "`rtl:before:-scale-x-100` genuinely reaches the pseudo-element in Tailwind 4.3.3 and composes with a keyframe `transform` rather than replacing it, which is the only way to reverse a physical gradient plus a translateX sweep at once.",
+    "evidence": "tailwindcss compile() emits `.rtl\\:before\\:-scale-x-100:where(:dir(rtl), [dir=\"rtl\"], [dir=\"rtl\"] *)::before { --tw-scale-x: calc(100% * -1); scale: var(--tw-scale-x) var(--tw-scale-y) }` — the standalone `scale` property, not `transform`. Measured in Chromium against the built stylesheet: `getComputedStyle(el, '::before').scale` on a `<Skeleton>` is `none` under `<html dir=\"ltr\">` and `-1 1` under `<html dir=\"rtl\">`.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "arabic-uses-latin-digits",
+    "claim": "`LOCALE_FORMATS.ar.intlLocale` is the bare tag `'ar'`, whose CLDR default numbering system is `latn` — so `formatNumber(1234,'ar')` is `1,234`, NOT `١٢٣٤`. Arabic-Indic digits belong to `ar-EG` / `ar-u-nu-arab`, which we do not ship. Percent in `ar` also carries U+200E marks.",
+    "evidence": "node: `new Intl.NumberFormat('ar').format(1234)` -> \"1,234\"; percent style -> \"42‎%‎\". Confirmed in-browser through the harness: the ar frames render `2,500` and `+99` in Latin digits. Contrast `tr` -> \"%42\" (sign prefixed) and `de` -> \"1.234\" / \"42 %\". Practical consequence: a test asserting Arabic-Indic digits from this codebase will always fail, and `fr` grouping uses U+202F with U+00A0 before `%`, so `de` and `tr` are the readable locales to assert against.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "reference-dashboard-needs-its-own-login",
+    "claim": "The reference product's /dashboard cannot be photographed: demo.liketrek.com requires its own sign-in and the human's inherited browser session is not authenticated to it.",
+    "evidence": "Ego Lite opened https://demo.liketrek.com/dashboard; pageInfo() returned url https://demo.liketrek.com/login?redirect=%2Fdashboard, title \"TREK\". snapshotText() shows a Sign In form with input[placeholder=\"your@email.com\"] and a password field, plus a \"Change language\" button. No dashboard content in the tree.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "ego-lite-hangs-on-the-reference-host",
+    "claim": "Ego Lite hangs against demo.liketrek.com, and a heredoc killed mid-run leaves the named task space wedged so every later heredoc reusing that name also hangs.",
+    "evidence": "Three runs, three timeouts: 5m00s (4-viewport loop), 2m50s (single captureScreenshot in the same space, no navigation), 3m20s (fresh space name, fresh openOrReuseTab). completeTaskSpace(name,{keep:false}) returned promptly both times and cleared it. Use a fresh space name after any kill.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "capture"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "playwright-green-once-the-server-is-healthy",
+    "claim": "Round 5s mechanical gate reported 71 identical Playwright failures; every one was the dead dependency optimiser, not our code. Clearing `node_modules/.vite` and restarting the dev server takes the same commit to 134 passed / 5 skipped / 0 failed - the exact pre-round baseline. A whole route suite failing on ONE error shape, with zero screenshot comparisons anywhere in the output, is a statement about the server, never about the diff.",
+    "evidence": "Measured at the round-5 tree: first run after the restart gave 131 passed / 3 failed (mobile-safari pricing-dark, legal-privacy-dark, reduced-motion focus); all three passed run individually, and a second full run gave 134 passed / 5 skipped / 0 failed. The 504 on /node_modules/.vite/deps/motion_react.js was reproduced by hand with curl while /api/dev/seed still answered 200.",
+    "measuredIn": "i18n round 5, orchestrator re-measurement",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "builder",
+      "capture"
+    ],
+    "invalidatesWhen": "a route suite fails with more than one distinct error shape, or a pixel diff appears"
+  },
+  {
+    "id": "three-flakes-under-full-suite-load",
+    "claim": "Under full-suite load this machine flakes about three mobile-safari specs per run - pricing-dark, legal-privacy-dark and the reduced-motion focus spec - and they pass individually and disappear on a clean re-run. Same family as the countries-test-timeout refutation: measure a suspicious failure again on its own before filing it.",
+    "evidence": "Run 1 after the server restart: 3 failed. Each of the three re-run alone with --project=mobile-safari -g: passed in 2.2-4.4s. Run 2 of the identical suite on the identical tree: 134 passed, 0 failed.",
+    "measuredIn": "i18n round 5, orchestrator re-measurement",
+    "scope": [
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": "the same spec fails in two consecutive full runs"
+  },
+  {
+    "id": "never-timeout-the-port-script",
+    "claim": "Do not run `scripts/ultrabuild/resolve-port.sh --start` under a short Bash timeout. The script polls for readiness after nohup-ing the server, and a SIGTERM to the script takes the server down with it - so the round loses the very server it just started. With a cold `.vite` cache the first identifying request needs several seconds, which is exactly when the naive timeout fires. Give it a long timeout, or spawn `vite dev --port <p>` detached and poll separately.",
+    "evidence": "Measured: after `rm -rf node_modules/.vite`, `--start` was killed at 5m (exit 143). Its log shows VITE ready on port 3000 at 00:07, yet nothing was listening afterwards. Re-spawned detached with nohup + disown: the server survived and answered /api/dev/seed in 4.46s on the first request.",
+    "measuredIn": "i18n round 5, orchestrator re-measurement",
+    "scope": [
+      "mechanical",
+      "builder",
+      "capture"
+    ],
+    "invalidatesWhen": "resolve-port.sh stops polling in the foreground"
+  },
+  {
+    "id": "settings-selects-are-broken-and-pre-existing",
+    "claim": "All six SimpleSelect controls on /settings render an EMPTY trigger and open zero options on click, with a completely clean console. It is PRE-EXISTING, not round-5 work: reverting src/components/ui/select.tsx to 5de9015 (before the ui-primitives builder touched it) reproduces the identical behaviour. Do not charge it to whichever item is being judged on that screen, and do not let a critic read it as the screen items defect.",
+    "evidence": "Playwright chromium 1440x900 with e2e/.auth/demo.json against a healthy server: textContent of [aria-label=\"Language\"|\"Time zone\"|\"Currency\"|\"Date format\"|\"Week starts on\"|\"Distance\"] is \"\" for all six; after .click() on the Language trigger, getByRole(\"option\") count is 0 and the trigger stays attached; zero console errors and zero pageerrors. A/B: git show 5de9015:src/components/ui/select.tsx over the live file gives byte-different source and identical measured behaviour.",
+    "measuredIn": "i18n round 5, orchestrator re-measurement",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "capture"
+    ],
+    "invalidatesWhen": "the six triggers show their selected label and click opens a listbox"
   }
 ]

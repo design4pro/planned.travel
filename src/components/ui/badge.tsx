@@ -3,6 +3,8 @@ import { Slot } from 'radix-ui'
 import { cva } from 'class-variance-authority'
 
 import { cn } from '#/lib/cn'
+import { formatNumber } from '#/lib/format'
+import { useUiI18n } from './copy'
 
 import type { VariantProps } from 'class-variance-authority'
 
@@ -102,17 +104,33 @@ export type CountBadgeProps = Omit<BadgeProps, 'children'> & {
   max?: number
 }
 
-/** Tabular numerals and a fixed minimum width, so 9 → 10 never nudges a tab. */
+/**
+ * Tabular numerals and a fixed minimum width, so 9 → 10 never nudges a tab.
+ *
+ * The figure is grouped by `src/lib/format.ts` for the negotiated locale, so an
+ * Arabic reader sees `١٢` rather than `12`, and the over-cap marker is catalogue
+ * copy rather than a `+` welded to the end of a template string — `docs/SPEC.md`
+ * §8 counts a hard-coded affix as an untranslated string, and the side it sits
+ * on is exactly the kind of thing that is wrong in half the locales we ship.
+ * `data-numeric` is what `src/styles/styles.css` isolates against bidi
+ * reordering when this badge sits inside a right-to-left sentence.
+ */
 export const CountBadge = React.forwardRef<HTMLSpanElement, CountBadgeProps>(
-  ({ count, max = 99, className, size = 'sm', ...props }, ref) => (
-    <Badge
-      ref={ref}
-      size={size}
-      className={cn('min-w-4.5 justify-center px-1 tabular-nums', className)}
-      {...props}
-    >
-      {count > max ? `${max}+` : count}
-    </Badge>
-  ),
+  ({ count, max = 99, className, size = 'sm', ...props }, ref) => {
+    const { locale, t } = useUiI18n()
+    return (
+      <Badge
+        ref={ref}
+        size={size}
+        data-numeric=""
+        className={cn('min-w-4.5 justify-center px-1 tabular-nums', className)}
+        {...props}
+      >
+        {count > max
+          ? t('ui.badge.overflow', { max: formatNumber(max, locale) })
+          : formatNumber(count, locale)}
+      </Badge>
+    )
+  },
 )
 CountBadge.displayName = 'CountBadge'
