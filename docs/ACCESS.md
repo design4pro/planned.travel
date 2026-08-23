@@ -643,13 +643,25 @@ it.
 
 ### 4.2 The action vocabulary: one regex, one shape, one closed list
 
-`action` is validated by the identical rule already enforced at `src/server/repos/audit.ts:36`:
+`action` is validated by the identical rule the tenant audit log already enforces:
 
 ```
 /^[a-z0-9]+(?:[._][a-z0-9]+)*$/   // 'must be a lowercase dotted action', trimmed, 1..64 chars
 ```
 
-It is **imported**, not re-declared. But a shared regex only prevents two spellings of a
+It is **imported**, not re-declared. Its home is `src/server/db/audit-action.ts`, a leaf module
+that imports nothing, and both `src/server/repos/audit.ts` and `src/server/catalog/audit.ts` read
+it from there.
+
+**Why it lives in a third place rather than in the tenant log that declared it.** Faza B's first
+attempt imported it straight from `src/server/repos/audit.ts`, which satisfies the sentence above
+and quietly breaks SPEC §5: that module imports `./base` and calls `createTenantRepository()` at
+module-evaluation time, so importing the constant drags the tenant repository into the global
+table's module graph - the one graph SPEC §5 says must never reach it. A leaf module satisfies both
+rules at once, and it is the only arrangement that does: re-declaring the regex breaks this section,
+and importing it across the layer boundary breaks that one.
+
+But a shared regex only prevents two spellings of a
 character class; it happily accepts `catalog_place.published` and `place.published` as
 two different verbs for one event, and a log with two names for one event answers no question
 correctly. So the shape and the list are fixed here too.

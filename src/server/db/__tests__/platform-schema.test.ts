@@ -39,6 +39,7 @@ import {
   staffApiTokens,
 } from '#/server/db/schema'
 import { PLATFORM_ROLES_BY_PRECEDENCE } from '#/server/auth/access'
+import { AUDIT_ACTION_PATTERN } from '#/server/repos/audit'
 import { captureError, createHarness } from '#/server/repos/__tests__/harness'
 import type { Harness } from '#/server/repos/__tests__/harness'
 import type { PlatformRole } from '#/server/auth/access'
@@ -225,11 +226,12 @@ describe('the four vocabulary columns, narrowed in TypeScript', () => {
   })
 
   it('types action against the dotted-action regex the tenant log already enforces', () => {
-    // The shape rule of docs/ACCESS.md §4.2, restated here only as a property of the list. The
-    // regex itself is `src/server/repos/audit.ts`'s, and §4.2 requires the writer to import it
-    // rather than re-declare it; this assertion is about the vocabulary, not about the validator.
+    // The shape rule of docs/ACCESS.md §4.2, asserted here as a property of the list rather than of
+    // the validator. The regex is `src/server/repos/audit.ts`'s and is *imported*, never spelled a
+    // second time: §4.2 requires one declaration of the character class in the repository, and a
+    // test that re-types it is the same drift the rule exists to prevent, merely wearing a comment.
     for (const action of PLATFORM_AUDIT_ACTIONS) {
-      expect(action).toMatch(/^[a-z0-9]+(?:[._][a-z0-9]+)*$/)
+      expect(action).toMatch(AUDIT_ACTION_PATTERN)
       expect(action.length).toBeLessThanOrEqual(64)
     }
   })

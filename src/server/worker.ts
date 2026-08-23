@@ -14,6 +14,8 @@
  */
 
 import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server'
+import { prunePlatformAuditLog } from './catalog/audit'
+import { createDb } from './db/client'
 import { consumeTaskBatch } from './queue/consumer'
 import { sweepReminders } from './queue/reminders'
 import { loggerFromEnv } from './observability/logger'
@@ -34,7 +36,11 @@ function taskEnv(env: Cloudflare.Env): TaskBindings {
   return env
 }
 
-/** Reminder sweep. The other two crons are handled by the branches below. */
+/**
+ * The three expressions `wrangler.jsonc` registers, and there are exactly three on production
+ * (docs/DEPLOY.md §11). The weekly retention slot prunes `platform_audit_log`; a fourth expression
+ * for that prune would falsify that count, so it joins the existing one rather than adding one.
+ */
 const REMINDER_CRON = '*/15 * * * *'
 const BACKUP_CRON = '0 3 * * *'
 const RETENTION_CRON = '17 4 * * 1'
@@ -57,8 +63,15 @@ export default {
       case REMINDER_CRON:
         await sweepReminders(bindings, logger, controller.scheduledTime)
         return
-      case BACKUP_CRON:
       case RETENTION_CRON:
+        // The 400-day prune of `platform_audit_log` (docs/ACCESS.md §4.3). It is the only delete
+        // path that table has, it selects by `created_at` alone, and it logs its own row count —
+        // so there is nothing to report here that the writer has not already emitted.
+        await prunePlatformAuditLog(createDb(env.DB), logger, {
+          now: new Date(controller.scheduledTime),
+        })
+        return
+      case BACKUP_CRON:
         // The `backup` task kind is declared but its handler is not written yet,
         // so enqueueing here would only fill the dead-letter queue. Logged at
         // warn so the gap is visible in Workers Observability rather than silent.

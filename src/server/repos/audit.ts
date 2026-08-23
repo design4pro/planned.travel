@@ -26,6 +26,19 @@ const jsonRecordSchema: z.ZodType<JsonRecord> = z.record(
   z.union([z.string(), z.number(), z.boolean(), z.null()]),
 )
 
+/**
+ * The shape every audit action has, in either log.
+ *
+ * Exported rather than inlined below because `src/server/catalog/audit.ts` — the single writer of
+ * the global `platform_audit_log` — enforces the identical rule, and docs/ACCESS.md §4.2 requires
+ * it to *import* this one rather than re-declare it: two spellings of a character class are two
+ * vocabularies waiting to disagree. This is the declaration site: a module that needs the rule
+ * imports this constant rather than spelling the class a second time.
+ *
+ * The regex carries no `g` flag, so it holds no `lastIndex` and sharing it across modules is safe.
+ */
+export const AUDIT_ACTION_PATTERN = /^[a-z0-9]+(?:[._][a-z0-9]+)*$/
+
 export const recordAuditInput = z.object({
   /** Dotted verb, e.g. `trip.archived`, `member.role_changed`. */
   action: z
@@ -33,7 +46,7 @@ export const recordAuditInput = z.object({
     .trim()
     .min(1)
     .max(64)
-    .regex(/^[a-z0-9]+(?:[._][a-z0-9]+)*$/, 'must be a lowercase dotted action'),
+    .regex(AUDIT_ACTION_PATTERN, 'must be a lowercase dotted action'),
   entityType: shortTextSchema.nullish(),
   entityId: idSchema.nullish(),
   metadata: jsonRecordSchema.nullish(),
