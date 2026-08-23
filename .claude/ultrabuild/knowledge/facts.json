@@ -241,5 +241,28 @@
       "capture"
     ],
     "invalidatesWhen": "the harness stops reaping background process trees"
+  },
+  {
+    "id": "plan-collisions-are-measurable",
+    "claim": "Cross-plan owned-path collisions must be checked with scripts/ultrabuild/check-plan-collisions.mjs, not by reading sibling plans. Two stages in the same wave that both take an exclusive disposition (edit/new/create/delete) on one file clobber each other; \"append\" is the documented cooperative pattern and is not a collision.",
+    "evidence": "Round 8 wrote three area plans in parallel and produced two real collisions despite every plan carrying an acceptance criterion about it, because each plan could only read the siblings that existed when it started, and one checked a single sibling while asserting it had checked them all. The script finds 01-S2 vs 07-S1 on -server/plan.ts in wave 1.",
+    "measuredIn": "this run, round 8",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "the plan set stops being written concurrently"
+  },
+  {
+    "id": "foreign-work-in-this-worktree",
+    "claim": "Another session is editing src/ in this worktree. NEVER commit with  from here — stage only docs/plans, .claude/ultrabuild, scripts/ultrabuild and .gitignore, or a round commit will absorb someone else's in-flight work under a message that does not describe it.",
+    "evidence": "Measured after round 8: src/lib/map/pmtiles.ts, src/routes/api/tiles/-lib/serve.ts, their tests and docs/ARCHITECTURE.md were modified 53 minutes earlier by the repo owner, fixing the tile 404 this run had filed. Unit tests went 2243 -> 2245 and the webkit 404 console failures disappeared mid-run.",
+    "measuredIn": "this run, round 8",
+    "scope": [
+      "builder",
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": "git status in this worktree is clean of foreign changes"
   }
 ]

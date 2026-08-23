@@ -76,7 +76,29 @@ const __CARRIED = ${JSON.stringify(carried)}
 const run = Object.assign({}, __CARRIED, args || {})
 `.trimStart()
 
-fs.writeFileSync(OUT, source.replace(ANCHOR, preamble))
+let out = source.replace(ANCHOR, preamble)
+
+/*
+ * ITEM_CAP override, when run.json asks for one.
+ *
+ * The workflow derives the cap from a token-budget directive and otherwise defaults to 3, sized on
+ * the comment's own model of "~4 agents per item: build + capture + critic + auditor". A
+ * documentation run has no capture and no critic, so an item costs TWO agents, not four, and the
+ * default is sized for a run twice as expensive as this one. The cap is still the cost lever it
+ * says it is — this only re-sizes it for the run actually happening, and only when asked
+ * explicitly in run.json, never silently.
+ */
+const itemCap = readJson('run.json', {}).itemCap
+if (itemCap) {
+  const CAP_ANCHOR = /const ITEM_CAP = budget\.total\n[\s\S]*?: 3\n/
+  if (!CAP_ANCHOR.test(out)) {
+    console.error('build-round: run.json sets itemCap but the ITEM_CAP declaration was not found.')
+    process.exit(1)
+  }
+  out = out.replace(CAP_ANCHOR, `const ITEM_CAP = ${Number(itemCap)}\n`)
+}
+
+fs.writeFileSync(OUT, out)
 
 const sizes = Object.entries(carried).map(
   ([k, v]) => `${k}=${Array.isArray(v) ? v.length : typeof v === 'object' && v ? Object.keys(v).length : 1}`,

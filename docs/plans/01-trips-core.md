@@ -1,0 +1,2967 @@
+# 01 — Trips core
+
+## Area brief
+
+A trip is the aggregate root of this product: every place, day, booking, expense, list, file and
+message in the repository hangs off one. This plan owns the eleven `TRP-*` rows of
+`.claude/ultrabuild/recon/gap-rows.json` — the trip list and its lifecycle, trip creation, membership
+and guests, the planner workspace shell, the day model and the merged day timeline.
+
+Read `docs/SPEC.md`, `docs/DESIGN.md` and `docs/ARCHITECTURE.md` first, then `TEMPLATE.md` for the
+stage shape, `README.md` for the shared-file protocol and the wave table, and
+`12-verification-protocol.md` for what a **Verification** heading has to contain. This file does not
+restate them.
+
+## What is already on disk, measured
+
+The trips area is not greenfield. Every claim below was read at this branch's HEAD, and a stage that
+contradicts one owes its own measurement.
+
+| Surface                                                          | State at HEAD                                                                                                                                                                                                         |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/routes/_app/trips/index.tsx` (264 lines)                    | Ships, D1-live. Status pills with counts, favourites and archived scopes, a search form bound to the URL, an `Alert` at the trip ceiling, a designed empty state, `TripGrid` and a pending skeleton.                  |
+| `src/routes/_app/dashboard.tsx` (537 lines)                      | Ships, D1-live. `UpNext` hero, stat row, trip mix, next bookings, storage meter, pending skeleton.                                                                                                                    |
+| `src/routes/_app/-ui/trip-card.tsx` (263 lines)                  | `TripTile`, `TripGrid`, `AddTile`. Renders a cover, a countdown badge and a place count. No per-card actions.                                                                                                         |
+| `src/routes/_app/-ui/new-trip-dialog.tsx` (247 lines)            | Five fields — title, destination, two dates, currency — over `createTripFn`. No cover, no reminder, no members.                                                                                                       |
+| `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` (1437 lines) | The planner. One full-bleed MapLibre canvas, two folding glass rails, a category filter bar, `@dnd-kit` with an optimistic `PlanOrder` that rolls back, a bidirectional selection reducer, fold-aware camera padding. |
+| `src/routes/_app/trips/$tripId/-server/plan.ts` (536 lines)      | `loadPlanBoard` plus eight writes, each one Zod-validated and one repository call deep.                                                                                                                               |
+| `src/server/repos/trips.ts` (520 lines)                          | `createTrip`, `updateTrip`, `archiveTrip`, `restoreTrip`, `setTripFavourite`, `deleteTrip`, the `trip_members` writers and the share-link writers. Only `createTrip` and the readers have a caller.                   |
+| `src/server/repos/days.ts` (254 lines)                           | `syncTripDays` owns the contiguous `1..n` day run. `createDayNote`, `updateDayNote`, `deleteDayNote` exist; only `createDayNote` is called, and only by the seeder and the isolation fixture.                         |
+| `src/components/planner/` (12 modules)                           | `ordering.ts` is the pure move engine, `plan-dnd.ts` the drag adapter, `selection.ts` the cross-highlight reducer, plus `DaySection`, `StopRow`, `IdeasList`, `PlannerRail`, `PlaceThumb`, `DragPreview`.             |
+| `src/components/layout/trip-sub-nav.tsx` (122 lines)             | The seven-tab strip on the inverse band, with a `motion` active pill and a Share button that currently links to the Collab tab.                                                                                       |
+
+Two consequences bind every stage in this file. **No stage recreates the trips index or the
+dashboard**: both ship, both are D1-live, and both are edited in place by exactly one stage each.
+**No stage rewrites the drag engine**: `TRP-10` is already closed on disk, and `01-S4` extends it
+under an explicit no-regression obligation rather than replacing it.
+
+## Where the eleven rows land
+
+| Row      | Status now | Stage               | Wave | Moves to                             |
+| -------- | ---------- | ------------------- | ---- | ------------------------------------ |
+| `TRP-03` | absent     | `01-S1`             | 1    | done                                 |
+| `TRP-09` | absent     | `01-S2`             | 1    | done                                 |
+| `TRP-07` | partial    | `01-S3`             | 1    | done                                 |
+| `TRP-08` | partial    | `01-S4`             | 2    | done                                 |
+| `TRP-10` | done       | `01-S4` (protected) | 2    | done                                 |
+| `TRP-05` | absent     | `01-S5`             | 2    | partial — deferral stated in `01-S5` |
+| `TRP-11` | absent     | `01-S6`             | 4    | done                                 |
+| `TRP-01` | partial    | `01-S7`             | 5    | done                                 |
+| `TRP-02` | partial    | `01-S8`             | 5    | done                                 |
+| `TRP-06` | partial    | `01-S9`             | 5    | done                                 |
+| `TRP-04` | partial    | `01-S10`            | 6    | done                                 |
+
+Ten stages, eleven rows. `01-S4` carries two: the row it closes and the row it must not break.
+
+**Two stages sit later than the row's wave in `README.md`, and neither is a change to the wave
+table.** That column is the earliest wave a row _may_ start in, derived mechanically from
+`gap-rows.json`; a plan may schedule a stage later, and this one does twice. `TRP-10` is listed there
+in wave 1 and is already closed on disk, so its stage is the wave-2 one that must not regress it —
+there is nothing to start. `TRP-01` is listed there in wave 2 and its stage is scheduled in wave 5,
+for the reason argued in the next section. Neither `gap-rows.json`, `gap-cuts.json` nor `README.md` is
+edited by this plan, and no edge is re-pointed.
+
+## Order of the stages, and the edges it satisfies
+
+`gap-rows.json` records seven `dependsOn` edges that touch a `TRP-*` row. Every one is satisfied by
+the table above, and each is checked here rather than left to a reader's arithmetic. `X → Y` reads
+"X depends on Y", so Y's stage must be in a strictly earlier wave.
+
+| Edge              | Y's stage and wave | X's stage and wave | Satisfied |
+| ----------------- | ------------------ | ------------------ | --------- |
+| `TRP-01 → TRP-03` | `01-S1`, wave 1    | `01-S7`, wave 5    | yes       |
+| `TRP-02 → TRP-11` | `01-S6`, wave 4    | `01-S8`, wave 5    | yes       |
+| `TRP-04 → TRP-02` | `01-S8`, wave 5    | `01-S10`, wave 6   | yes       |
+| `TRP-04 → ACC-05` | `09-…`, wave 2     | `01-S10`, wave 6   | yes       |
+| `TRP-05 → MNY-07` | `04-…`, wave 1     | `01-S5`, wave 2    | yes       |
+| `TRP-06 → TRP-11` | `01-S6`, wave 4    | `01-S9`, wave 5    | yes       |
+| `TRP-08 → TRP-09` | `01-S2`, wave 1    | `01-S4`, wave 2    | yes       |
+| `TRP-11 → ADM-02` | `10-…`, wave 3     | `01-S6`, wave 4    | yes       |
+
+Two orderings are stronger than the edge set requires, and both are deliberate rather than
+accidental, so a reader does not go looking for an edge that is not there:
+
+- **`TRP-11` precedes `TRP-01` as well as `TRP-02`.** The edge set only requires
+  `TRP-11 → TRP-02`; `TRP-01` names `TRP-03` and nothing else. `01-S7` is nonetheless scheduled in
+  wave 5, behind `01-S6` in wave 4, because the trip card grows two membership-fed affordances at
+  once — the entry point into the people panel, and the travel-companion figure in the spotlight
+  card's statistics strip. Building the card in wave 2 and rebuilding it in wave 4 is the same card
+  designed twice, and the second design is the one that has to be right. This costs the edge set
+  nothing: `README.md`'s wave column is the **earliest** wave a row may start in, not the wave it
+  must be built in, and no row anywhere depends on `TRP-01`.
+- **`TRP-03` precedes `TRP-02` as well as `TRP-01`.** Also not an edge. `01-S1` moves trip creation
+  into the module that owns every other trip write and gives the edit path its server function and
+  its confirmation surfaces; `01-S8` then grows the form that both creation and edit render. A
+  creation dialog written before the edit path exists is a form with one caller and no shape.
+
+## The `TRP-08` / `TRP-09` cut, applied
+
+`gap-cuts.json` records that the mutual pair between these two rows was cut in round 3 by removing
+`TRP-09 → TRP-08` and keeping `TRP-08 → TRP-09`, on the reason that the day-note record and its write
+path must exist before a merged timeline can order notes among places. This plan applies that cut as
+a split of work, not merely as a wave order:
+
+- **`01-S2` (wave 1) ships the record and the write path first.** The note gains its optional detail
+  column, its validated icon, its optional time and its three server functions. Repositioning inside
+  `01-S2` is **notes among notes only**, through explicit up/down controls that rewrite
+  `day_notes.sort_order` for one day. Nothing in `01-S2` touches `src/components/planner/ordering.ts`.
+- **`01-S4` (wave 2) ships the merged ordering second.** The day becomes one sequence in which a note
+  and a stop share a single position space, `PlanOrder` carries both kinds, and a note becomes
+  draggable. `01-S4` cannot start before `01-S2` closes, because there is nothing to interleave until
+  the note has a writable position of its own.
+
+The reason for that division, stated once so no stage re-argues it: the ordering engine is the piece
+`TRP-10` already closed and the piece a regression would be most expensive in. Extending it is worth
+one whole stage's attention, and it should not be a paragraph inside a stage whose real subject is a
+form.
+
+## Transport rows in the timeline are `BKG-10`, not this plan
+
+`TRP-08`'s row name in `gap-rows.json` mentions inline transports, multi-day phase labels and an
+active car rental in the day header. The same three behaviours are named in `BKG-10`
+(`03-reservations-and-transport.md`, wave 3), whose surviving edge is `BKG-10 → TRP-08` — the merged
+timeline is the **host surface** and transport rows are placed **into** it. `01-S4` therefore ships
+the host: one sequence, one position space, one sort contract, and a declared extension point that
+takes a third item kind without another change to `ordering.ts`. It ships no transport row, no phase
+label and no day-header rental, and `BKG-10` closes those in wave 3. Splitting it any other way puts
+one file in two plans.
+
+## Four places where this plan contradicts `gap-rows.json`
+
+The matrix is a round-3 measurement, and four of its `TRP-*` rows are wrong or stale at this HEAD.
+Each is corrected here with the file and line that refutes it, because a stage written from the stale
+reading would build something that already exists or miss something that does not.
+
+1. **`TRP-08` says "No notes". The day payload has carried notes since before this plan existed.**
+   `PlanBoardDay.notes` is declared at `src/routes/_app/trips/$tripId/-server/plan.ts:140-146`,
+   populated at `:220-224` from `getTripItinerary`, carried through `plan-model.ts:184` into
+   `PlannerDay.notes`, and rendered at `src/components/planner/day-section.tsx:164-192` as a
+   read-only list beneath the stop list. What is missing is not the read — it is that the list sits
+   **outside** the ordering space, carries no icon and has no writer. That is what `01-S2` and
+   `01-S4` fix, in that order.
+2. **`TRP-09` says "no UI". There is a read-only UI.** Same evidence as above. The row's absent status
+   is correct about the write path and wrong about the render, and `01-S2` extends the existing
+   render rather than adding a second one.
+3. **`day_notes` has no title column, and the row's field list assumes one.**
+   `src/server/db/schema.ts:581-603` defines `body text NOT NULL`, `time`, `icon text NOT NULL DEFAULT
+'sticky-note'`, `created_by` and `sort_order` — and no title and no detail. `01-S2` maps the
+   existing `body` to the note's required headline, because it is already `NOT NULL` and the seeded
+   rows already read as one, and asks wave 0 for a **new nullable `detail` column** for the long
+   text. The opposite mapping would need `body` to become nullable, which is a narrowing change and
+   is forbidden by the migration ritual.
+4. **`createDayNote` accepts a day from another tenant.** `src/server/repos/days.ts:216-226` parses
+   its input and inserts, calling neither `requireTrip` nor `requireTripDay` — unlike every
+   comparable writer, e.g. `addTripMember` (`src/server/repos/trips.ts:428-434`) and
+   `createShareLink` (`:497-503`). Because `createTenantRepository().insert` stamps the **caller's**
+   `organization_id`, a well-formed `dayId` belonging to organization B is written as a row owned by
+   A that points at B's day. It is unreachable today only because no server function calls it. `01-S2`
+   is the stage that gives it one, so `01-S2` fixes it and adds the isolation case that proves it —
+   the same rule `00-S5` applies to the unchunked sweep it makes reachable.
+
+## The four planner core files
+
+`src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` (1437 lines), the sibling
+`-ui/plan-actions.tsx` (831) and `-ui/plan-model.ts` (312), and
+`src/routes/_app/trips/$tripId/-server/plan.ts` (536) are the planner's core. They are cited in
+shorthand elsewhere as `-ui/plan-screen.tsx`, `-ui/plan-actions.tsx`, `-ui/plan-model.ts` and
+`-server/plan.ts`; the paths above are the measured ones and are what a stage's **Owned paths** must
+carry. Prefixed `$tripId` is a route parameter directory, not a shell variable, and a stage that
+writes it into a command quotes it.
+
+**At most one stage per wave names any of the four.** The schedule below is the whole of it, and a
+stage added later that breaks it is rejected before it is scheduled:
+
+| Wave | Stage   | Which of the four it holds                                    |
+| ---- | ------- | ------------------------------------------------------------- |
+| 1    | `01-S2` | `-server/plan.ts`, `-ui/plan-model.ts`, `-ui/plan-screen.tsx` |
+| 2    | `01-S4` | all four                                                      |
+| 5    | `01-S9` | `-ui/plan-screen.tsx`                                         |
+
+No other stage in this file names one, and in waves 3, 4 and 6 nobody holds them at all.
+
+## Two test files, two different answers to the same question
+
+Within-wave **Owned paths** in this plan are disjoint, with exactly one exception, and the exception is
+one somebody else wrote down rather than one this plan invented.
+
+**`src/server/repos/__tests__/tenant-isolation.test.ts` is shared, because the contract says it may
+be.** `00-foundations.md`'s tenant procedure records it as "the one append-only exception to
+within-wave disjointness", on the reasoning that almost every stage adds a repository function and
+forcing them into separate waves would serialise the whole build for one file. Four stages here name
+it — `01-S1`, `01-S2`, `01-S4`, `01-S6` and `01-S7` — each marked `append`, each adding one new
+`describe` block at the end of the file and editing nobody else's, so two of them landing in one wave
+produce a merge resolved by keeping both. `01-S1` and `01-S2` are the only pair that actually lands in
+the same wave.
+
+**`e2e/<module>.visual.spec.ts` is not shared, and that is a deliberate departure from
+`12-verification-protocol.md` §4, stated rather than smuggled.** That section says a plan adds one
+spec file and its stages "share the file and are told apart by their `test.describe` block". That rule
+and `README.md`'s within-wave disjointness rule cannot both hold for any plan with two stages in one
+wave, and this plan has three in wave 1 and three in wave 5. The protocol resolves the identical clash
+for `e2e/helpers/shoot.ts` in favour of disjointness — "two stages in the same wave may not both claim
+it, and the second one to want it declares a module-local helper instead" — and this plan applies the
+same resolution one level up: **one spec file per stage**, `e2e/trips-core-s<k>.visual.spec.ts`, each
+with its own baseline directory.
+
+Everything the protocol's rule was protecting is preserved. `e2e/visual.spec.ts` is never appended to
+and never split, so its 52 approved baselines are untouched. `snapshotPathTemplate` in
+`playwright.config.ts` gives every spec file its own baseline directory, so no stage's frames can
+collide with or disturb another's — which is the mechanical property that makes the split safe rather
+than merely convenient. Every spec imports the shared helpers from `e2e/helpers/shoot.ts` and
+re-implements none of them, and `e2e/helpers/shoot.ts` itself is claimed by exactly one stage in the
+whole plan, `01-S5`, which needs a `RELATIVE_TIME_SITES` entry for its live clock.
+
+## Shared paths this plan never claims
+
+`README.md`'s six shared paths are absent from every **Owned paths** list below:
+`src/server/db/schema.ts`, `src/server/worker.ts`, `wrangler.jsonc`, `src/styles/tokens.css`,
+`src/components/ui/**` and `src/routeTree.gen.ts`. Three stages need a schema change and each files it
+as a requirement under **Data and migration** for the wave's foundations schema stage to collect;
+none needs a new token or a new primitive, and each says so. `package.json` and `pnpm-lock.yaml` are
+not edited by anything here.
+
+`src/routeTree.gen.ts` has the one mechanical exception `README.md` grants: `01-S6` adds a route file,
+runs `pnpm generate-routes`, and the regenerated tree travels in its diff without ever being
+hand-edited or listed as an owned path.
+
+## Clean-room
+
+The reference product is never named in this file, its wiki pages are cited as `` `wiki: <Page-Name>` ``
+with no URL, and no sentence, table name, column name, enum value, class name or user-visible string
+is carried across from it. Where a behaviour is sourced, the citation says which page was studied and
+the behaviour is then described in this product's own vocabulary against the tables that already
+exist in `src/server/db/schema.ts`. Two of its concepts are deliberately **not** ported and each
+stage that meets one says so: an instance-wide administrator who bypasses per-trip permission, and a
+user directory that enumerates every account on the deployment. Both are single-tenant assumptions
+and both would be a cross-tenant data leak here.
+
+## Stage 01-S1 — Every action a trip's owner can take on it
+
+### Stage id
+
+`01-S1` · Wave 1 · effort **M**. The first stage of the plan and the one the trip list, the creation
+dialog and the reminder preference all write through.
+
+### Reference rows
+
+- `TRP-03` absent → **done**. Edit, copy, archive, unarchive, favourite, delete.
+
+Sourced from `wiki: My-Trips-Dashboard` for which actions belong to an active trip and which to an
+archived one, and from `wiki: Creating-a-Trip` for the field set edit shares with creation.
+
+**Contradiction with the row, stated with evidence.** The row's evidence is accurate and is the
+cheapest movement in this plan: `src/server/repos/trips.ts` already defines `updateTrip` (`:349`),
+`archiveTrip` (`:377`), `restoreTrip` (`:381`), `setTripFavourite` (`:385`) and `deleteTrip` (`:394`),
+and none of the five has a caller anywhere in `src/`. This stage is almost entirely a missing write
+path, exactly as `README.md` says the dominant gap in this repository is. The one genuinely new
+repository function is the copy.
+
+**Two deletes, and why we ship one.** The reference offers Delete on an active trip and Permanently
+delete on an archived one, which is two recoverable states plus a terminal one. We ship one terminal
+delete, because `trips.is_archived` (`src/server/db/schema.ts:355`) already **is** the recoverable
+state and a second one would need a `deleted_at` column, a filter on every trip read in the
+repository, and a sweep to make the recovery window mean anything. The archive is the undo; delete is
+final from either place and says so, and the archived section labels it "Delete permanently" because
+from there it is the last copy. This is a smaller product decision than it looks, but it is a
+decision, and it is recorded so a later stage does not add the second state by reflex.
+
+Rows unblocked: `TRP-01` (`01-S7`) directly.
+
+### Owned paths
+
+- `src/routes/_app/-server/trip-lifecycle.ts` — new. Every trip-level write server function,
+  including `createTripFn` moved here from `-server/overview.ts`.
+- `src/routes/_app/-server/overview.ts` — edit. `createTripFn` (`:556-568`) is **moved out**, not
+  copied; the module keeps its four loaders and its two notification writes. The move carries
+  `00-S5`'s reminder scheduling call intact — that wave-0 stage edits this same function, closes
+  before wave 1 opens, and its `syncTripReminder(…, { previous: null })` call travels with the
+  function rather than being re-derived.
+- `src/routes/_app/-ui/trip-actions.tsx` — new. The per-trip action menu, the destructive
+  confirmations and the edit sheet.
+- `src/routes/_app/-ui/trip-card.tsx` — edit. Mounts the action menu on `TripTile`.
+- `src/routes/_app/-ui/new-trip-dialog.tsx` — edit, and the edit is one import specifier: it calls
+  `createTripFn` from its new module.
+- `src/server/repos/trips.ts` — edit. Adds `copyTrip` and the trip-role guard the writers share.
+- `src/server/repos/__tests__/trip-lifecycle.test.ts` — new. The stage's own repository tests, in a
+  new file so that no wave-1 stage has to contend for `repositories.test.ts`.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block, under the
+  append-only exception in `00-foundations.md`'s tenant procedure.
+- `e2e/trips-core-s1.visual.spec.ts` — new. This stage's spec file; see **the spec-file split** in
+  the Area brief for why each stage carries its own rather than sharing one.
+- `e2e/__screenshots__/trips-core-s1.visual.spec.ts/` — new. Its own baseline directory, which
+  `snapshotPathTemplate` guarantees cannot collide with or disturb any existing baseline.
+
+### Data and migration
+
+**No schema change, and no migration.** Every column this stage writes exists:
+`trips.is_archived`, `trips.is_favourite` and `trips.status` at `src/server/db/schema.ts:348-356`,
+each already carrying its `CHECK` (`trips_status_chk`) or its boolean default. Nothing is filed for
+the wave-1 foundations schema stage on this stage's account.
+
+The copy writes only rows whose tables already exist: `trips`, `days`, `places`, `day_assignments`
+and `day_notes`. Ids come from `newId()` through each table's own `pk()` default; dates stay
+`YYYY-MM-DD` text and `order_index` stays `real`, so no second convention is introduced.
+
+**What a copy copies, and what it deliberately does not.** It copies the trip row, its day run, its
+place inventory, the day assignments that place those places, and the day notes. It does **not** copy
+expenses, settlements, files, reservations, transports, messages, share links or members other than
+the copying user's own owner row. The rule behind that line is one sentence: a copy reproduces the
+**plan**, never the **record of what happened**, and money and documents are the record. The copied
+trip is created with `status: 'planning'`, `is_archived: false`, `is_favourite: false` and no dates,
+so the day run is rebuilt from the source's day count rather than from a stale calendar.
+
+### Server (repo, server function, Zod)
+
+**Repository — `src/server/repos/trips.ts`.**
+
+- `copyTrip(scope, tripId, input)` — new. Resolves the source with `requireTrip`, asserts quota (see
+  **Quota**), inserts the new trip through `tripsRepository.insert`, reserves a slug with the
+  existing `reserveTripSlug`, inserts the owner membership, then copies days, places, assignments and
+  notes in `scope.db.batch()` groups so a failure part-way leaves no half-trip. SQL stays in this
+  module.
+- `assertTripRole(scope, tripId, allowed)` — new, and the only new guard. Reads the acting user's
+  role through the existing `tripRoleFor` (`:466-476`) and raises `RepositoryError` with a
+  `FORBIDDEN` code when it is not in `allowed`. It is called by `updateTrip`, `archiveTrip`,
+  `restoreTrip`, `setTripFavourite`, `deleteTrip` and `copyTrip` **inside the repository**, after
+  `requireTrip` and before the write.
+- The five existing writers are otherwise unchanged in behaviour. `updateTrip` already reconciles the
+  day run through `syncTripDays` when the range moves (`:367-371`), which is why the edit path needs
+  no day handling of its own.
+
+**Why the role guard is in the repository and not in the handler.** `TRIP_MEMBER_ROLES` is
+`['owner', 'editor', 'viewer']` (`src/server/db/schema.ts:157`), and `createTrip` already writes an
+`owner` membership for the creator (`src/server/repos/trips.ts:334-339`), so every trip in the
+database has exactly one. Today `requireTrip` admits any member of the organization to any trip in
+it, which is correct for a read and too generous for a delete. Putting the check in the repository
+means it holds for the queue consumer and for a future server route as well as for these six server
+functions, which is the same argument `ARCHITECTURE.md` §6 makes about quota.
+
+The role each write requires:
+
+| Write                            | Role required     | Why                                                                      |
+| -------------------------------- | ----------------- | ------------------------------------------------------------------------ |
+| `updateTrip`, `setTripFavourite` | `owner`, `editor` | Editing the plan is what an editor is for.                               |
+| `archiveTrip`, `restoreTrip`     | `owner`, `editor` | Archiving is reversible, so it does not need the stricter role.          |
+| `deleteTrip`                     | `owner`           | Terminal and cascading; `days`, `places` and every child row go with it. |
+| `copyTrip`                       | `owner`, `editor` | Reads the source, writes a new trip the caller then owns.                |
+
+**Server functions — `src/routes/_app/-server/trip-lifecycle.ts`.** Seven, each
+`createServerFn({ method: 'POST' })` except where noted, each resolving its tenant through the
+existing `appScope()` in `-server/context.ts`:
+
+| Function             | Input                                                                         | Returns                         |
+| -------------------- | ----------------------------------------------------------------------------- | ------------------------------- |
+| `createTripFn`       | moved unchanged from `-server/overview.ts:556`                                | `{ tripId }`                    |
+| `updateTripFn`       | `{ tripId, title?, destination?, startDate?, endDate?, currency?, summary? }` | `{ tripId }`                    |
+| `copyTripFn`         | `{ tripId, title? }`                                                          | `{ tripId }` of the new trip    |
+| `archiveTripFn`      | `{ tripId }`                                                                  | `{ tripId, isArchived: true }`  |
+| `restoreTripFn`      | `{ tripId }`                                                                  | `{ tripId, isArchived: false }` |
+| `setTripFavouriteFn` | `{ tripId, isFavourite }`                                                     | `{ tripId, isFavourite }`       |
+| `deleteTripFn`       | `{ tripId, confirmTitle }`                                                    | `{ deleted: true }`             |
+
+**Zod v4.** `z.strictObject()` for every input with the `error` parameter carrying the message the
+form shows; `z.iso.date()` for `startDate` and `endDate`; a trimmed non-empty `title`; a
+`z.literal`-free confirmation field compared to the trip's own title **on the server**, not in the
+browser. Blank string means "clear it", `undefined` means "unchanged" — the convention
+`-server/plan.ts:70-81` already established, reused rather than reinvented.
+
+**Authorisation.** Decided in the repository through `assertTripRole`, as tabulated above. The
+server function contributes nothing but the tenant scope; a well-formed `tripId` from the browser is
+re-resolved by `requireTrip` inside that scope and is a `NotFoundError` when it belongs to another
+organization. `beforeLoad` guards nothing here and none of these functions relies on one.
+
+Nothing in this stage is slow: no queue envelope, no Durable Object patch. The trip room stays
+invalidation-only, which is how every write in `-server/plan.ts` already behaves.
+
+### UI (route, components)
+
+**Route.** None added, moved or removed. `pnpm generate-routes` is not run, and `src/routeTree.gen.ts`
+does not appear in **Owned paths**.
+
+**Components.** `src/routes/_app/-ui/trip-actions.tsx` exports `TripActionsMenu`, `TripEditSheet` and
+`TripDeleteDialog`. Every primitive it needs already ships in `src/components/ui` and is reused by
+name, because a second implementation of one is a defect: `DropdownMenu` with its items and
+separators, `IconButton` for the trigger, `Dialog` for the destructive confirmation, `Sheet` for the
+edit form, `Field` + `Input` + `SimpleSelect` for the fields, `Button` with its `loading` prop,
+`Alert` for the server error, and `toast` from `sonner` for the success line. No new primitive is
+required and none is proposed.
+
+**How the menu behaves.** The trigger is an `IconButton` in the tile's top-right corner. Above the
+`md` breakpoint it is transparent at rest and becomes opaque on `group-hover` **and** on
+`group-focus-within`, so it is reachable by keyboard at every width; below `md` it is always opaque,
+because a hover-revealed control on a touch screen is an invisible control. The menu items are
+Edit, Copy, Favourite/Unfavourite, Archive/Restore and Delete; `aria-label` on the trigger names the
+trip, so a screen reader hears "Actions for Lisbon in April" and not five identical buttons.
+
+**States, named rather than asserted.**
+
+- _Menu items._ Rest, hover (`--color-surface-2` wash), focus-visible (the shared focus ring, never
+  `outline-none`), active, disabled while a write for that trip is in flight, and a `Spinner` in the
+  item that is running. The destructive item carries `--color-danger` text and a `--color-danger-soft`
+  hover.
+- _Delete dialog._ The trip's title must be typed to arm the button; the button is disabled until it
+  matches and shows `loading` while the write is in the air. The copy names what goes with the trip —
+  days, places, bookings, money and files — as a count read from the payload, not as a vague warning.
+- _Edit sheet._ Per-field inline errors from the Zod message; a form-level `Alert` on
+  `--color-surface-2` for a server error, with a Retry that re-submits; the sheet cannot be dismissed
+  while a save is in flight.
+- _Empty and skeleton._ This stage adds no list, so it adds no empty state and no skeleton of its own.
+  The two lists it appears inside — the trip grid and the archived section — keep the empty state
+  already shipped at `src/routes/_app/trips/index.tsx:205-232` and the `CardsSkeleton` at `:250`, and
+  `01-S7` owns their redesign. Stated rather than skipped: the box below is ticked against those two
+  surfaces re-checked after this stage's edit, not against new ones.
+- _Optimistic and rollback._ Favourite toggles optimistically and reverts on failure with the reason
+  in a toast, matching the `PlanOrder` rollback in `plan-screen.tsx`. Archive, restore, copy and
+  delete are not optimistic: they move a card between sections or remove it, and a card that flickers
+  back is worse than a card that waits 200 ms.
+
+**Motion.** The menu uses the `DropdownMenu` primitive's own entrance, 220 ms on `--ease-out-quint`
+in, 150 ms out, transform and opacity only. The trigger's reveal is an opacity transition on
+`--duration-fast`. `prefers-reduced-motion: reduce` collapses both to opacity, which the primitives
+already honour.
+
+**Tokens.** None missing. Colour, spacing, radius, shadow and easing all resolve from
+`src/styles/tokens.css` as it stands, so nothing is filed for a wave-1 token stage. Every count the
+dialog prints carries `tabular-nums`.
+
+### Quota
+
+Two metrics, both already in the catalogue, both asserted inside the repository before the write.
+
+- **`trips`.** `copyTrip` creates a trip row. It calls
+  `assertQuota(scope, 'trips', await tripsRepository.count(scope))` as its **first** write-path
+  statement, before the insert and before any child row, copying `createTrip`'s call at
+  `src/server/repos/trips.ts:315`. Usage is a live `COUNT(*)`, never `usage_records`. The metric is a
+  catalogue metric resolved by `resolveLimits()` in `src/server/billing/limits.ts:227` and is
+  deliberately absent from `PLAN_QUOTAS`; nothing is added to either.
+- **`places`.** A copy also duplicates the source's place inventory, which is metered.
+  `copyTrip` calls `assertQuota(scope, 'places', <live count> )` once, before inserting the copied
+  places and with the count of places it is about to write included in the projection, so a copy that
+  would cross the ceiling fails before it writes any of them rather than half-way through. `places` is
+  a `PLAN_QUOTAS` metric (`src/server/db/types.ts:43`) already resolved for `createPlace`
+  (`src/server/repos/places.ts:269`).
+
+No metric is added, so `src/server/billing/__tests__/limits.test.ts` gains no case and is not named
+in **Owned paths**. The other six writes create no row: they update or delete one that already
+counted.
+
+### Tenant isolation test
+
+One new `describe('trip lifecycle')` block appended to
+`src/server/repos/__tests__/tenant-isolation.test.ts`, built on the `createHarness` / `seedWorld`
+fixtures the file already constructs for `alpha` and `beta`.
+
+In A's scope, against B's trip id: `updateTrip`, `archiveTrip`, `restoreTrip`, `setTripFavourite`,
+`deleteTrip` and `copyTrip` each raise `NotFoundError`, and B's trip row, day run, places and
+assignments are byte-identical afterwards. Then, in A's scope with A's own trip: the acting user is
+demoted to `viewer` through `updateTripMember` and `deleteTrip` raises the `FORBIDDEN`
+`RepositoryError` rather than a `NotFoundError` — the two failures must stay distinguishable, because
+one means "not yours" and the other means "not allowed", and collapsing them tells an attacker
+whether a trip exists.
+
+Functions covered: `copyTrip`, `assertTripRole`, `updateTrip`, `archiveTrip`, `restoreTrip`,
+`setTripFavourite`, `deleteTrip`.
+
+### Verification
+
+**The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**Unit tests.** `src/server/repos/__tests__/trip-lifecycle.test.ts`, new, holding four invariants:
+
+1. A copy reproduces the plan and not the record — the new trip has the source's day count, place
+   count, assignment count and note count, and zero expenses, files, reservations and share links.
+2. A copy is independent — editing the copy's assignments leaves the source's `order_index` values
+   unchanged.
+3. `assertTripRole` admits `owner` and `editor` for an archive and only `owner` for a delete, and the
+   refusal is a `RepositoryError`, not a `NotFoundError`.
+4. `deleteTrip` cascades — after it, `days`, `places`, `day_assignments` and `day_notes` for that trip
+   return zero rows in the same scope.
+
+Plus the isolation block above, which runs inside `pnpm test` with everything else.
+
+**Browser evidence.** The dev server is resolved rather than assumed, and the port is passed
+explicitly to everything:
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/trips-core-s1.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/trips-core-s1.visual.spec.ts --update-snapshots
+```
+
+`e2e/trips-core-s1.visual.spec.ts` imports every helper from
+`./helpers/shoot.ts` — `visit`, `settle`, `shoot`, `applyTheme`, `THEMES`, `useSession`,
+`watchConsole` — and re-implements none of them. It declares its own route table for `/trips` and
+calls `auditServerClock(page, <that table>)` once in a `describe` of its own, because
+`auditServerClock` is called only over `APP_ROUTES` in `e2e/visual.spec.ts:310` and a route declared
+in a module spec is otherwise audited by nothing. It does **not** claim `e2e/helpers/shoot.ts`: the
+only clock-derived string on this stage's surface is the trip card's countdown badge, which is
+already the first entry in `RELATIVE_TIME_SITES` (`e2e/helpers/shoot.ts:573`), so `pinRelativeTime()`
+already covers it. A non-empty return from `auditRelativeTime()` is read and reported rather than
+discarded.
+
+**The frames.** `/trips`, light and dark, at 360, 1280 and 2560 — six for the resting screen. This
+stage's outcome is a state the screen is not in when it loads, so it owes two more sets, declared with
+their selectors:
+
+```sh
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips" \
+  --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S1" \
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
+  --state menu-open --click '[data-part="trip-actions-trigger"]'
+```
+
+and a second run with `--state delete-confirm` clicking through to the confirmation. The two
+selectors are stable attributes the product publishes — `[data-part="trip-actions-trigger"]` and
+`[data-part="trip-delete-dialog"]` — not class names and not nth-child paths, and **each is verified
+against the running server with a `page.locator(sel).count()` of 1 before the capture is run**, not
+by reading the JSX. `PT_SERVER_TODAY=2026-08-20` matches `BASELINE_DAY` (`e2e/helpers/shoot.ts:1014`)
+and the header `playwright.config.ts` sends; omitting it photographs a different day.
+
+Frames go to `.claude/ultrabuild/shots/<slug>/round-<n>/01-S1/` and nowhere else — not the repository
+root, not `docs/`.
+
+**Console.** `watchConsole(page, route)` is attached before every navigation and the report's `fatal`
+list is asserted empty at the end of every test, including the ones that only take a frame. Nothing is
+added to `TOLERATED_CONSOLE_WARNINGS`.
+
+**Layout shift.** Asserted after `settle()`, gated on `PerformanceObserver.supportedEntryTypes`
+including `layout-shift`; on `mobile-safari` the entry type is absent and `observe()` does not throw,
+so the assertion is skipped with that stated reason rather than passing vacuously.
+
+### Definition of done
+
+The six repository-wide items from `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm
+lint` and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test` passes;
+the feature is verified in a real browser in light and dark, desktop and mobile; nothing is left
+behind — no TODO, no placeholder copy, no `console.log`, no commented-out code; and no file outside
+**Owned paths** is touched.
+
+On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
+
+- [ ] Spacing is on the 4px grid, from `--space-*`. No eyeballed one-off margins.
+- [ ] Every interactive element has hover, focus-visible, active, disabled and loading states.
+- [ ] Every list has a designed empty state, a skeleton loading state and an error state, each drawn
+      on `--color-surface-2` rather than on the raw canvas.
+- [ ] Motion is 150–260ms on `--ease-out-quint` or a sibling token, transform and opacity only, and
+      `prefers-reduced-motion: reduce` is honoured.
+- [ ] Full parity in light **and** dark theme, with dark shadows re-declared rather than reused.
+- [ ] Checked at 360px, 1280px and 2560px, and the small layout is designed rather than a squeezed
+      desktop.
+- [ ] Keyboard navigable end to end, sensible focus order, accessible names, WCAG 2.2 AA contrast in
+      both themes.
+- [ ] Zero console errors or warnings, and zero layout shift after paint.
+
+### Blockers
+
+None. Every package this stage needs is in the `docs/SPEC.md` §3 pinned set — `radix-ui` behind the
+menu and dialog primitives, `lucide-react` for the icons, `sonner` for the toast, `zod` for the
+inputs — no binding is added to `wrangler.jsonc`, no third-party service is called, and no row in
+another plan gates it.
+
+## Stage 01-S2 — A day note becomes something you can write
+
+### Stage id
+
+`01-S2` · Wave 1 · effort **M**. The first half of the `TRP-08`/`TRP-09` cut: the record and its
+write path, before the merged ordering.
+
+### Reference rows
+
+- `TRP-09` absent → **done**, with one display residue named under **Blockers**.
+
+Sourced from `wiki: Day-Plans-and-Notes` for the note's field set, its icon affordance, its optional
+time and the two ways it is repositioned.
+
+**Two contradictions with the row, both measured, both already argued in the Area brief.** The row
+says "no server function, no UI"; the server function half is right and the UI half is wrong — a
+read-only note list has rendered at `src/components/planner/day-section.tsx:164-192` since before this
+plan, fed by `PlanBoardDay.notes` (`-server/plan.ts:140-146`). And the row's field list assumes a
+`title` column that `day_notes` does not have (`src/server/db/schema.ts:581-603`). This stage extends
+the render it found and maps the field set onto the columns that exist.
+
+**The field mapping, fixed here so no later stage re-guesses it.** `body` is the note's headline: it
+is already `NOT NULL`, the seeded rows already read as one line, and making it nullable to free the
+name would be a narrowing change the migration ritual forbids. The long text becomes a **new nullable
+`detail` column**. `time` and `icon` are used as they stand.
+
+Rows unblocked: `TRP-08` (`01-S4`) directly.
+
+### Owned paths
+
+- `src/server/repos/days.ts` — edit. The two guards, the icon vocabulary, the detail field and the
+  note reorder.
+- `src/routes/_app/trips/$tripId/-server/plan.ts` — edit. Three write server functions, and the day
+  payload gains the note's icon and detail.
+- `src/routes/_app/trips/$tripId/-ui/plan-model.ts` — edit. The note view model.
+- `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` — edit. Mounts the note editor and wires the
+  three writes; no other part of the screen changes.
+- `src/routes/_app/trips/$tripId/-ui/note-dialog.tsx` — new. The note editor.
+- `src/components/planner/note-row.tsx` — new. One note in a day section.
+- `src/components/planner/day-section.tsx` — edit. Renders note rows and the day's add-note control.
+- `src/components/planner/types.ts` — edit. `PlannerNote`.
+- `src/components/planner/index.ts` — edit. Exports the two new symbols.
+- `src/components/planner/__tests__/notes.test.tsx` — new. This stage's component tests, in their own
+  file so no wave-1 stage contends for `rails.test.tsx`.
+- `src/server/repos/__tests__/day-notes.test.ts` — new.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
+- `e2e/trips-core-s2.visual.spec.ts` — new. This stage's own spec file.
+- `e2e/__screenshots__/trips-core-s2.visual.spec.ts/` — new. Its own baseline directory.
+
+Three of the four planner core files are named here — `-server/plan.ts`, `-ui/plan-model.ts` and
+`-ui/plan-screen.tsx` — and **this is the only wave-1 stage that names any of the four**, which is the
+schedule the Area brief fixes. `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` is deliberately
+absent: the note editor is a new dialog, not a variant of the place dialog, and adding a fifth dialog
+to an 831-line module to save a file is how that module got to 831 lines.
+
+### Data and migration
+
+**One additive column, filed as a requirement for the wave-1 foundations schema stage.** This stage
+does not edit `src/server/db/schema.ts`.
+
+| Table       | Column   | Type   | Null     | Default | CHECK                       |
+| ----------- | -------- | ------ | -------- | ------- | --------------------------- |
+| `day_notes` | `detail` | `text` | nullable | none    | none — see the reason below |
+
+Nullable with no default, because every existing row has no detail and a rollback must keep working
+against the new schema. No `CHECK` is added for the icon vocabulary either: drizzle-kit emits a full
+table rebuild for a constraint change on SQLite, as `drizzle/0001_aspiring_cargill.sql` shows, and a
+rebuild is a poor trade for an invariant a Zod enum holds exactly. `icon` keeps its
+`NOT NULL DEFAULT 'sticky-note'` and gains no constraint.
+
+No new index. `day_notes` already carries `day_notes_org_trip_idx` on `(organization_id, trip_id)` and
+`day_notes_day_sort_idx` on `(day_id, sort_order)` (`src/server/db/schema.ts:599-602`), and `detail`
+is not a filter. The migration backfills nothing.
+
+Times stay `HH:MM` text and `sort_order` stays `real`, so a fractional insert between two notes needs
+no renumbering pass. No second convention is introduced.
+
+### Server (repo, server function, Zod)
+
+**Repository — `src/server/repos/days.ts`.**
+
+- **The guard, which is a defect fix.** `createDayNote` (`:216-226`) parses and inserts, calling
+  neither `requireTrip` nor `requireTripDay`. Because `createTenantRepository().insert` stamps the
+  caller's `organization_id`, a `dayId` from organization B is written as a row owned by A pointing at
+  B's day. This stage adds `await requireTrip(scope, values.tripId)` and
+  `await requireTripDay(scope, values.tripId, values.dayId)` — the second already exists in this
+  module at `:104-115` and already raises `NotFoundError` when the day belongs to a different trip —
+  before the insert, and the same pair to `updateDayNote` whenever the patch moves a note between
+  days. `deleteDayNote` needs neither: `requireRemove` is tenant-filtered and the note's id is its
+  own authority.
+- **The icon vocabulary.** `DAY_NOTE_ICONS`, a `readonly` tuple exported from this module, is the
+  single list both the picker and the validator read. Each entry is the kebab-case name of an icon
+  that exists in `lucide-react`, which is already a pinned dependency and already how
+  `categories.icon` is stored (`src/server/db/schema.ts:433`). The input becomes
+  `z.enum(DAY_NOTE_ICONS).optional()` — omitted, never nulled, because the column is `NOT NULL` with a
+  default. Our set is chosen for what a traveller annotates a day with; it is not sized to match any
+  other product's.
+- **`detail`.** `createDayNoteInput` and `updateDayNoteInput` gain
+  `detail: longTextSchema.nullish()`. `body` keeps `longTextSchema.min(1)` and stays required.
+- **`reorderDayNotes(scope, dayId, noteIds)`** — new. Resolves the day, refuses ids that are not that
+  day's notes rather than rejecting the whole call, and writes `sort_order` from array position so the
+  run renormalises to `0..n-1` on every move. One `scope.db.batch()`. This is the same
+  self-healing contract `reorderPlanFn` (`-server/plan.ts:256`) already uses for assignments, and it
+  is deliberately the same so that `01-S4` can merge the two number lines without reconciling two
+  philosophies.
+
+**Server functions — `src/routes/_app/trips/$tripId/-server/plan.ts`.** Three, each
+`createServerFn({ method: 'POST' })`, each behind the module's existing `writableTrip` guard (`:97-106`)
+so a note cannot be written onto an archived trip:
+
+| Function            | Input                                              | Returns             |
+| ------------------- | -------------------------------------------------- | ------------------- |
+| `createDayNoteFn`   | `{ tripId, dayId, body, detail, time, icon }`      | `{ noteId }`        |
+| `updateDayNoteFn`   | `{ tripId, noteId, body?, detail?, time?, icon? }` | `{ noteId }`        |
+| `deleteDayNoteFn`   | `{ tripId, noteId }`                               | `{ deleted: true }` |
+| `reorderDayNotesFn` | `{ tripId, dayId, noteIds }`                       | `{ dayId }`         |
+
+`loadPlanBoard`'s `PlanBoardDay.notes` shape gains `icon` and `detail` alongside the `id`, `body` and
+`time` it already carries (`:140-146`, populated at `:220-224`).
+
+**Zod v4.** `z.strictObject()` with the `error` parameter; the module's existing `timeOrBlank`
+(`:72-75`) reused for the time rather than a second regular expression; `z.enum(DAY_NOTE_ICONS)` for
+the icon; blank string clears, `undefined` leaves unchanged.
+
+**Authorisation.** In the repository. `requireTrip` re-resolves the trip in the caller's scope and
+`requireTripDay` proves the day belongs to it; both raise `NotFoundError` across a tenant boundary. A
+well-formed `dayId` from the browser is not an authorised `dayId`, which is precisely the hole this
+stage closes.
+
+Nothing enqueued, no Durable Object patch. A note write invalidates the router like every other
+planner write; the trip room stays a signal.
+
+### UI (route, components)
+
+**Route.** None added or moved. `pnpm generate-routes` is not run and `src/routeTree.gen.ts` is not an
+owned path.
+
+**Components.** `NoteRow` in `src/components/planner/note-row.tsx` renders one note: the chosen icon
+in a `--color-surface-inset` tile, the headline in the UI face, the optional time in
+`tabular-nums`, the detail in `--color-ink-3` clamped to two lines with the rest behind a disclosure,
+and an actions cluster. `DaySection` renders the run of notes and an add-note control in the day
+header. The editor, `NoteDialog` in `-ui/note-dialog.tsx`, reuses `Dialog`, `Field`, `Input`,
+`Textarea`, `Button`, `IconButton`, `Alert` and `Tooltip` from `src/components/ui`, plus a radio
+group of icon buttons built on the shipped `RadioGroup` so the picker is one tab stop with arrow-key
+movement rather than twenty tab stops.
+
+**Repositioning in this stage is notes among notes.** Each note carries an up and a down `IconButton`
+that call `reorderDayNotesFn` with the resulting order. The first note's up control and the last
+note's down control are `disabled`, not hidden, so the row's control count does not change as it
+moves. Drag repositioning and interleaving with stops are `01-S4`'s, and this stage adds no
+`useSortable` and no change to `ordering.ts`.
+
+**States.**
+
+- _The note list._ Empty is the common case and is designed rather than blank: a day with stops and no
+  notes shows a single dashed `--color-edge` add-note affordance reading "Add a note for this day",
+  on `--color-surface-2`. A day with neither stops nor notes keeps the existing
+  "Nothing planned — drop a place here" target (`day-section.tsx:139-149`) and puts the note
+  affordance beneath it.
+- _Skeleton._ The planner's day rail is server-rendered through the route loader, so a note run has no
+  independent pending state; the day section's existing skeleton covers it. What does get one is the
+  note **being saved**: the row renders at 60% opacity with a `Spinner` in place of its icon until the
+  router invalidation lands.
+- _Error._ A failed write leaves the dialog open with an `Alert` on `--color-surface-2` carrying the
+  server's message and a Retry, and a failed reorder rolls the run back to its previous order and
+  says so in a toast — the rollback contract `plan-screen.tsx` already applies to `PlanOrder`.
+- _Every control._ Rest, hover, focus-visible, active, disabled and loading, on the add control, the
+  two chevrons, the icon radios, the save and the delete.
+
+**Motion.** A note entering the run fades and lifts 4px over 220 ms on `--ease-out-quint`; a run of
+several staggers by 24 ms capped at eight rows. Reordering animates transform only. Reduced motion
+collapses to opacity.
+
+**Tokens.** None missing; nothing filed for a token stage. The time carries `tabular-nums`.
+
+### Quota
+
+**No countable row, and the reason is not that nobody asked.** A day note is a text row on a day of a
+trip the tenant has already paid for: `days` are created only by `syncTripDays` from the trip's own
+date range, and `trips` is a catalogue metric asserted at `src/server/repos/trips.ts:315`. There is no
+`day_notes` metric in `resolveLimits()` and none in `PLAN_QUOTAS`, and this stage adds neither, because
+a metric added to the resolver is a number the billing screen then has to publish and
+`src/server/billing/__tests__/limits.test.ts` then has to hold — and we do not sell notes. Nothing is
+added to that test file and it is not named in **Owned paths**.
+
+The bound that does exist is structural: `longTextSchema` caps a note's size, and the notes of a day
+are read in one indexed query on `(day_id, sort_order)`.
+
+### Tenant isolation test
+
+One new `describe('day notes')` block appended to
+`src/server/repos/__tests__/tenant-isolation.test.ts`. The file already imports `createDayNote`
+(`:67`) and already builds a note for each tenant in `seedWorld` (`:273`), so the generic read, list,
+update, delete and count cases over `dayNotesRepository` already run; what is missing is the
+foreign-parent case, which is the one this stage's guard makes pass.
+
+In A's scope: `createDayNote` with B's `tripId` and B's `dayId` raises `NotFoundError`;
+`createDayNote` with A's own `tripId` and B's `dayId` raises `NotFoundError` — the case that fails
+today and the reason the guard is two calls and not one; `updateDayNote` moving A's note onto B's day
+raises `NotFoundError`; `reorderDayNotes` with B's `dayId` raises `NotFoundError`; and
+`reorderDayNotes` on A's own day with a list containing one of B's note ids leaves both tenants'
+`sort_order` values unchanged for the foreign id. B's `day_notes` rows are byte-identical afterwards
+and B's day still holds the same number of notes.
+
+Functions covered: `createDayNote`, `updateDayNote`, `deleteDayNote`, `reorderDayNotes`.
+
+### Verification
+
+**The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+The migration this stage filed is generated and applied by the wave-1 foundations schema stage, not
+here; this stage's gate runs against the schema that stage produced and fails loudly if `detail` is
+absent, which is the intended coupling.
+
+**Unit tests.**
+
+- `src/server/repos/__tests__/day-notes.test.ts` — new. Four invariants: an icon outside
+  `DAY_NOTE_ICONS` is rejected by the input rather than written; an omitted icon takes the column
+  default and a `null` icon is rejected; `reorderDayNotes` renormalises a fractional run to
+  `0..n-1` and drops ids that are not that day's; and a note with a detail round-trips the author's
+  text byte for byte, including newlines, because the display decision under **Blockers** must not be
+  allowed to become a storage decision.
+- `src/components/planner/__tests__/notes.test.tsx` — new. `NoteRow` disables the up control on the
+  first note and the down control on the last; the icon radio group is one tab stop and moves with
+  arrow keys; the detail disclosure is a real `button` with an accessible name.
+
+**Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
+`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes out
+in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for this
+stage's own baselines and nobody else's — against `e2e/trips-core-s2.visual.spec.ts`. This stage's `describe` block declares
+`/trips/$tripId/plan` for a seeded trip, marks it `map: true` — the route renders `[data-map-ready]`
+and `settleMap()` fails a route that renders the marker without declaring it — and calls
+`auditServerClock` over its own route table.
+
+Frames: the planner at 360, 1280 and 2560 in both themes for the resting screen, and a declared
+non-resting set for the editor, whose open state is the entire point of the stage:
+
+```sh
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/<seeded-trip-id>/plan" \
+  --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S2" \
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
+  --state note-editor --click '[data-part="day-add-note"]'
+```
+
+`[data-part="day-add-note"]` and `[data-part="note-row"]` are stable published attributes and each is
+verified with a `page.locator(sel).count()` against the running server before the capture runs. The
+`--map` flag is not optional on this route: it re-waits for the two-sided `[data-map-ready]` predicate
+after every resize and every theme change, and without it a frame is filed mid-restyle.
+
+`e2e/helpers/shoot.ts` is **not** claimed. The planner prints no clock-derived string of a shape
+outside `RELATIVE_TIME_SITES`; a note's time is a stored `HH:MM`, not a relative string, and is
+therefore stable across days.
+
+**Console.** `watchConsole` attached before navigation, `fatal` asserted empty in every test,
+`TOLERATED_CONSOLE_WARNINGS` untouched. **Layout shift** asserted after `settle()`, gated on
+`supportedEntryTypes`.
+
+### Definition of done
+
+The six repository-wide items from `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm
+lint` and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test` passes;
+the feature is verified in a real browser in light and dark, desktop and mobile; nothing is left
+behind — no TODO, no placeholder copy, no `console.log`, no commented-out code; and no file outside
+**Owned paths** is touched.
+
+On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
+
+- [ ] Spacing is on the 4px grid, from `--space-*`. No eyeballed one-off margins.
+- [ ] Every interactive element has hover, focus-visible, active, disabled and loading states.
+- [ ] Every list has a designed empty state, a skeleton loading state and an error state, each drawn
+      on `--color-surface-2` rather than on the raw canvas.
+- [ ] Motion is 150–260ms on `--ease-out-quint` or a sibling token, transform and opacity only, and
+      `prefers-reduced-motion: reduce` is honoured.
+- [ ] Full parity in light **and** dark theme, with dark shadows re-declared rather than reused.
+- [ ] Checked at 360px, 1280px and 2560px, and the small layout is designed rather than a squeezed
+      desktop.
+- [ ] Keyboard navigable end to end, sensible focus order, accessible names, WCAG 2.2 AA contrast in
+      both themes.
+- [ ] Zero console errors or warnings, and zero layout shift after paint.
+
+### Blockers
+
+**One, and it is a display residue rather than a stop.** The note's detail is described upstream as
+markdown. Measured against `package.json`: the pinned dependency set contains **no markdown parser and
+no HTML sanitiser** — the runtime dependencies are `@dnd-kit/*`, `@tanstack/*`, `better-auth`,
+`class-variance-authority`, `clsx`, `date-fns`, `drizzle-orm`, `lucide-react`, `maplibre-gl`,
+`motion`, `nanoid`, `partysocket`, `pmtiles`, `radix-ui`, `react`, `sonner`, `stripe`,
+`tailwind-merge`, `tailwindcss`, `vaul` and `zod`, and `src/` contains exactly one
+`dangerouslySetInnerHTML`, the theme bootstrap script at `src/routes/__root.tsx:95`.
+
+- **What it would do:** render emphasis, links and lists inside a note's detail.
+- **Disposition: defer**, recorded in `11-boundaries-and-blockers.md`. Not **hand-roll**: a renderer
+  without a sanitiser turns a tenant-authored field into stored cross-site scripting, and writing our
+  own sanitiser is a security component, not a stage. Not **drop**: the requirement is real and the
+  column this stage adds is exactly the one a renderer would later read.
+- **What ships instead:** the detail is stored unchanged, byte for byte including newlines — held by
+  a unit test above — and displayed as plain text with line breaks preserved and URLs left as text.
+  Nothing about the record, the write path, the icon, the time or the ordering is affected, so every
+  behaviour `TRP-08` depends on is complete.
+
+`docs/SPEC.md` §3 is absolute: no package is installed, and neither `package.json` nor
+`pnpm-lock.yaml` is edited by this stage or by any other in this file.
+
+## Stage 01-S3 — A trip reopens on the tab you left it on
+
+### Stage id
+
+`01-S3` · Wave 1 · effort **S**. The smallest stage in the plan, and the one that mints the local
+preference module the two later client-preference stages reuse.
+
+### Reference rows
+
+- `TRP-07` partial → **done**.
+
+Sourced from `wiki: Trip-Planner-Overview` for the behaviour that each trip remembers its own last
+section rather than the app remembering one section for all trips.
+
+**Agreement with the row, and the half of it we do not port.** The row is accurate: all seven tabs are
+declared in `src/components/layout/nav-model.ts:91-99`, each has a real route under
+`src/routes/_app/trips/$tripId/`, and nothing persists the active one. The upstream tab strip also
+hides four of the seven behind an instance-wide administrative switch. That is a single-tenant
+concept — one deployment serves every tenant here, so an instance switch would turn a feature off for
+every customer at once — and the hosted equivalent already exists as the per-plan module flags in
+`src/lib/plans.ts`. Entitlement gating of tabs is `ADD-01`'s subject in
+`08-product-modules.md`, not this stage's, and this stage renders all seven.
+
+Rows unblocked: none. `TRP-07` has no dependants in `gap-rows.json`.
+
+### Owned paths
+
+- `src/lib/local-preference.ts` — new. A `useSyncExternalStore`-backed reader and writer for a
+  namespaced browser preference, storage-failure tolerant.
+- `src/lib/__tests__/local-preference.test.ts` — new.
+- `src/lib/trip-tab.ts` — new. The tab vocabulary check and the per-trip key, isomorphic and pure.
+- `src/lib/__tests__/trip-tab.test.ts` — new.
+- `src/components/layout/trip-sub-nav.tsx` — edit. Records the active tab on activation.
+- `src/routes/_app/trips/$tripId/index.tsx` — edit. The redirect reads the remembered tab.
+- `e2e/trips-core-s3.visual.spec.ts` — new. This stage's own spec file.
+- `e2e/__screenshots__/trips-core-s3.visual.spec.ts/` — new. Its own baseline directory.
+
+### Data and migration
+
+**None, and the choice is deliberate rather than lazy.** The remembered tab is a per-browser
+navigation convenience, not an account setting: it is worthless on a second device, it changes on
+every click, and writing it to D1 would put a round trip and a row write on the path of a tab click.
+`user_settings` (`src/server/db/schema.ts:1827-1856`) carries theme, locale, timezone, currency, week
+start, date format, distance unit, map style, accent colour and reduce-motion, and none of those has
+this shape. No column is filed for the foundations schema stage, and no migration is generated.
+
+The trade-off is stated rather than hidden: the preference does not follow the user to a second
+device. Two later stages make the same call for the same reason — the dashboard view mode (`01-S7`)
+and the widget visibility (`01-S5`) — and all three go through the one module this stage mints, so
+that a future stage which does want them on the server has one place to change and not three.
+
+### Server (repo, server function, Zod)
+
+**None of any kind.** No repository function, no server function, no Zod schema, no SQL, no
+authorisation decision — this stage writes no row and reads no row. It is recorded here explicitly
+because an empty heading is indistinguishable from an author who never asked.
+
+The one server-side seam it touches is the isomorphism of `beforeLoad`, which is a correctness
+question rather than a data one. `src/routes/_app/trips/$tripId/index.tsx:9-11` throws
+`redirect({ to: '/trips/$tripId/plan', replace: true })` from `beforeLoad`, and `beforeLoad` runs on
+the server for a cold load and in the browser for a client navigation. `window.sessionStorage` does
+not exist in the first case. The rule this stage fixes: the redirect reads the remembered tab **only
+when `typeof window !== 'undefined'`**, and falls back to `plan` otherwise. A cold load of
+`/trips/<id>` therefore lands on the plan and a client navigation lands on the remembered tab, which
+is the honest behaviour and is what the stage's evidence has to show — not a hydration mismatch
+dressed as a feature.
+
+### UI (route, components)
+
+**Route.** No route file is added or moved, so `pnpm generate-routes` is not run and
+`src/routeTree.gen.ts` is not an owned path. `src/routes/_app/trips/$tripId/index.tsx` is edited in
+place and keeps its path.
+
+**Components.** `TripSubNav` gains one call in the tab `Link`'s activation path and nothing else. Its
+`motion` active pill, its horizontal scroll on narrow viewports and its two-row narrow layout are
+untouched — the stage is a memory, not a redesign, and the strip already meets the bar.
+
+**The storage contract.** Keys are namespaced under this product's own prefix, `planned.` , matching
+`THEME_STORAGE_KEY = 'planned.theme'` (`src/lib/theme.ts:18`); the per-trip key is
+`planned.trip-tab.<tripId>`. `sessionStorage` rather than `localStorage`, because "where I was in this
+trip" is a property of a working session and a week-old memory is a surprise. Every read and every
+write is wrapped in `try`/`catch` for the same reason `src/lib/theme.ts:52-59` wraps its own: storage
+access itself throws in Safari private browsing, and a preference is never worth a white screen.
+
+**States.** No list, so no empty state, no skeleton and no error surface of its own — stated rather
+than skipped, and the box below is ticked against the tab strip re-checked after the edit. The tab
+`Link` keeps the hover, focus-visible and active states it already has; nothing here can be disabled
+and nothing here loads.
+
+**Motion.** Unchanged: the shared `layoutId` pill at 260 ms on the quintic easing already declared at
+`trip-sub-nav.tsx:7`, already collapsed to `duration: 0` under `useReducedMotion()`.
+
+**Tokens.** None missing, none filed.
+
+### Quota
+
+**No countable row.** This stage creates no row in any table; it writes one string into the visitor's
+own browser. No metric is added to `resolveLimits()` and none to `PLAN_QUOTAS`, so
+`src/server/billing/__tests__/limits.test.ts` gains no case and is not an owned path.
+
+### Tenant isolation test
+
+**None, and the reason is that there is nothing to isolate.** The stage adds no repository function
+and touches no repository. `src/server/repos/__tests__/tenant-isolation.test.ts` is not listed under
+**Owned paths** and is not edited.
+
+The adjacent risk is worth naming once, because it is the one way a client-side memory can leak: the
+key is namespaced by trip id, and a trip id is not a secret but it is also not a capability — landing
+on a remembered tab for a trip the session can no longer read produces the route's own
+`notFoundComponent` (`src/routes/_app/trips/$tripId/route.tsx:21-25`) because the loader is still
+tenant-scoped. The memory can never widen access; at worst it names a route that then refuses.
+
+### Verification
+
+**The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**Unit tests.**
+
+- `src/lib/__tests__/local-preference.test.ts` — reading with no stored value returns the fallback; a
+  stored value that fails the caller's guard returns the fallback rather than propagating; a `getItem`
+  that throws returns the fallback and does not rethrow; a `setItem` that throws is swallowed;
+  subscribers are notified on write and unsubscribed cleanly.
+- `src/lib/__tests__/trip-tab.test.ts` — the key is derived from the trip id and is stable; an unknown
+  tab id read back from storage resolves to `plan`, so a renamed tab cannot strand a user on a dead
+  route; the seven ids match `TRIP_TABS` exactly, which is the assertion that fails if someone adds an
+  eighth tab without revisiting this module.
+
+**Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
+the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
+`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
+`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s3.visual.spec.ts`. This stage's `describe`
+block asserts the behaviour end to end in one engine-independent test — visit
+`/trips/<id>/costs`, navigate to `/trips`, click back into the trip, and assert the URL is the costs
+tab — and takes its frames of the strip in its non-default state, which is the point of the stage and
+is not visible at rest:
+
+```sh
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/<seeded-trip-id>/costs" \
+  --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S3" \
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
+  --state tab-remembered
+```
+
+The selector the assertion uses is `nav[aria-label="Trip sections"] a[aria-current="page"]`, a role
+plus an accessible name plus a published ARIA state rather than a class name, and it is verified with
+a `count()` of 1 against the running server before the run. `auditServerClock` is called over this
+stage's route table; `e2e/helpers/shoot.ts` is not claimed, because the sub-navigation prints no
+clock-derived string at all.
+
+The mobile engine matters more than usual here: the strip is horizontally scrollable and
+`mobile-safari` is the only project with touch and momentum scrolling, so the 360px frames and the
+`--project=mobile-safari` run are read rather than skimmed.
+
+**Console.** `watchConsole` attached, `fatal` empty, tolerance list untouched. A hydration mismatch is
+the specific failure this stage risks and React 19 surfaces it as both an uncaught error and a
+`console.error`, so it is fatal before the tolerance list is consulted — which is exactly the guard
+that proves the `typeof window` fallback above is right. **Layout shift** asserted after `settle()`,
+gated on `supportedEntryTypes`.
+
+### Definition of done
+
+The six repository-wide items from `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm
+lint` and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test` passes;
+the feature is verified in a real browser in light and dark, desktop and mobile; nothing is left
+behind — no TODO, no placeholder copy, no `console.log`, no commented-out code; and no file outside
+**Owned paths** is touched.
+
+On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
+
+- [ ] Spacing is on the 4px grid, from `--space-*`. No eyeballed one-off margins.
+- [ ] Every interactive element has hover, focus-visible, active, disabled and loading states.
+- [ ] Every list has a designed empty state, a skeleton loading state and an error state, each drawn
+      on `--color-surface-2` rather than on the raw canvas.
+- [ ] Motion is 150–260ms on `--ease-out-quint` or a sibling token, transform and opacity only, and
+      `prefers-reduced-motion: reduce` is honoured.
+- [ ] Full parity in light **and** dark theme, with dark shadows re-declared rather than reused.
+- [ ] Checked at 360px, 1280px and 2560px, and the small layout is designed rather than a squeezed
+      desktop.
+- [ ] Keyboard navigable end to end, sensible focus order, accessible names, WCAG 2.2 AA contrast in
+      both themes.
+- [ ] Zero console errors or warnings, and zero layout shift after paint.
+
+### Blockers
+
+None. No package, no binding, no third-party service, and no dependency on a row in another plan.
+
+## Stage 01-S4 — One sequence per day, in time-then-position order
+
+### Stage id
+
+`01-S4` · Wave 2 · effort **L**. The second half of the `TRP-08`/`TRP-09` cut, and the only stage in
+this plan that touches all four planner core files.
+
+### Reference rows
+
+- `TRP-08` partial → **done**, for the host surface: places and notes in one sequence, one position
+  space, one sort contract, and a declared extension point for a third item kind.
+- `TRP-10` done → **done**. Not re-opened and not re-implemented. It is carried here because this
+  stage edits the exact modules that closed it — `src/components/planner/ordering.ts`,
+  `plan-dnd.ts` and the drag path in `plan-screen.tsx` — and a stage that widens a drag engine
+  without naming the row it could break is how a closed row quietly re-opens.
+
+Sourced from `wiki: Day-Plans-and-Notes` for the merged sequence and its time-or-position ordering.
+
+**What is deliberately not here.** The row's name also mentions inline transports, per-type multi-day
+phase labels and an active car rental promoted to the day header. Those three belong to `BKG-10`
+(`03-reservations-and-transport.md`, wave 3), whose surviving edge in `gap-cuts.json` is
+`BKG-10 → TRP-08` precisely because the timeline is the host and the transport rows are placed into
+it. This stage ships the host and the seam; `BKG-10` ships the rows. Doing it the other way puts
+`src/components/planner/ordering.ts` in two plans.
+
+**Contradiction with the row, already established in the Area brief.** "No notes" is wrong at this
+HEAD — notes render read-only beneath the stop list at
+`src/components/planner/day-section.tsx:164-192`. What this stage changes is that they stop being a
+separate list.
+
+Rows unblocked: `BKG-10` (`03-…`, wave 3) directly; `TRP-06` (`01-S9`) reads the merged day.
+
+### Owned paths
+
+- `src/components/planner/ordering.ts` — edit. The item-id space, the move rules, the change variants.
+- `src/components/planner/plan-dnd.ts` — edit. The drag adapter over the widened space.
+- `src/components/planner/day-section.tsx` — edit. Renders one sequence instead of two lists.
+- `src/components/planner/drag-preview.tsx` — edit. A note's drag preview.
+- `src/components/planner/types.ts` — edit. `PlannerItem`, the discriminated union.
+- `src/components/planner/index.ts` — edit. The new exports.
+- `src/components/planner/__tests__/ordering.test.ts` — edit. Extended, never rewritten.
+- `src/components/planner/__tests__/keyboard-drag.test.tsx` — edit. Same rule.
+- `src/components/planner/__tests__/rails.test.tsx` — edit. Same rule.
+- `src/components/planner/__tests__/timeline.test.ts` — new. The sort contract, on its own.
+- `src/server/repos/itinerary.ts` — edit. `reorderDayTimeline`.
+- `src/routes/_app/trips/$tripId/-server/plan.ts` — edit. `reorderPlanFn` widens.
+- `src/routes/_app/trips/$tripId/-ui/plan-model.ts` — edit. Builds the merged sequence.
+- `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` — edit. The drag path and the refusal message.
+- `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` — edit. A note's row menu, beside the stop's.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
+- `e2e/trips-core-s4.visual.spec.ts` — new. This stage's own spec file.
+- `e2e/__screenshots__/trips-core-s4.visual.spec.ts/` — new. Its own baseline directory.
+
+All four planner core files are named here, and **this is the only wave-2 stage that names any of
+them**, which is the schedule the Area brief fixes.
+
+`src/server/repos/days.ts` is **not** here. `reorderDayTimeline` lives in `itinerary.ts` and reaches
+the note rows through the `dayNotesRepository` that `days.ts` already exports (`:26`), so the note
+module is unchanged and the two-table write still has exactly one home.
+
+### Data and migration
+
+**No schema change and no migration.** Both position columns exist and both are `real`:
+`day_assignments.order_index` (`src/server/db/schema.ts:544`, `NOT NULL DEFAULT 0`) and
+`day_notes.sort_order` (`:596`, through the shared `sortOrder()` helper). Nothing is filed for the
+wave-2 foundations schema stage on this stage's account.
+
+**One number line, two columns, stated once.** The merged position space is not a new column; it is
+the agreement that for a given day, `day_assignments.order_index` and `day_notes.sort_order` are read
+and written as one sequence of positions `0..n-1`. The server derives every position from array
+index on each write, so the two columns cannot drift apart and no fractional value survives a move —
+the same self-healing contract `reorderPlanFn` already documents at `-server/plan.ts:261-267` and the
+one `01-S2` deliberately gave `reorderDayNotes` so that the two could be merged without reconciling
+two philosophies.
+
+A rollback is safe by construction: the previous Worker reads `order_index` for stops and
+`sort_order` for notes and renders them as two lists, exactly as it does today, because this stage
+writes no value either column could not already hold.
+
+### Server (repo, server function, Zod)
+
+**Repository — `src/server/repos/itinerary.ts`.**
+
+`reorderDayTimeline(scope, input)` where `input` is
+`{ tripId, dayId, items: ReadonlyArray<{ kind: 'stop' | 'note'; id: string }> }`. It resolves the
+trip with `requireTrip` and the day with `requireTripDay` (`src/server/repos/days.ts:104-115`, which
+already rejects a day belonging to another trip), reads the day's current stop ids and note ids,
+**drops** any incoming id that is not in either set rather than rejecting the whole call — a stale tab
+one delete behind should still be able to reorder the rows that do exist, which is the rule
+`-server/plan.ts:269-272` already states — appends any known id the client omitted at its current
+relative position so a partial list cannot silently delete an item's position, and then writes
+positions `0..n-1` into the two tables in a single `scope.db.batch()`.
+
+`db.batch()` is a real transaction on D1: statements run sequentially and a failure rolls the whole
+sequence back. That is the property the merged space needs, because a half-applied reorder is a day
+whose two columns disagree about one number line.
+
+SQL stays in this module. Both halves of the write are `organization_id`-scoped and neither can be
+made otherwise: the assignment rows go through `dayAssignmentsRepository` and the note rows through the
+`dayNotesRepository` that `days.ts` exports, both built by `createTenantRepository`, whose every
+statement starts from `tenantFilter()` — `eq(table.organizationId, scope.ctx.organizationId)` — with
+callers able only to `AND` predicates onto it. Both tables carry `organization_id NOT NULL` and both
+lead a composite index with it (`day_assignments_org_trip_idx`, `day_notes_org_trip_idx`), so the
+two-table batch is bounded by the tenant on both sides.
+
+**Server function — `src/routes/_app/trips/$tripId/-server/plan.ts`.** `reorderPlanFn` is widened
+rather than duplicated. Its `days` array entries carry `items: Array<{ kind, id }>` in place of
+`assignmentIds`, and the handler dispatches per day to `reorderDayTimeline`. `schedulePlaceFn`,
+`unschedulePlaceFn` and `rankIdeasFn` are untouched: an idea has no position among notes, and the
+ideas column is still a list of places only.
+
+**Zod v4.** `z.strictObject()` with the `error` parameter; the item is
+`z.strictObject({ kind: z.enum(['stop', 'note']), id })` reusing the module's existing `id` schema
+(`:68`); the per-day array is capped, as the existing validator already caps its own, so one request
+cannot ask for an unbounded batch.
+
+**Authorisation.** Unchanged in shape and decided in the repository: `writableTrip` (`:97-106`)
+refuses an archived trip, `requireTrip` refuses a trip outside the caller's tenant, and
+`requireTripDay` refuses a day outside the trip. A well-formed `dayId` from the browser is not an
+authorised `dayId`.
+
+Nothing enqueued and no Durable Object patch. `src/server/do/protocol.ts` already declares a `day`
+and a `stop` entity kind, and this stage adds none: the planner's writes have never published a patch
+and the trip room stays an invalidation signal, which is what `repo-platform.md` records and what
+`use-trip-room.ts` consumes.
+
+### UI (route, components)
+
+**Route.** None added or moved; `pnpm generate-routes` is not run and `src/routeTree.gen.ts` is not an
+owned path.
+
+**The id space.** `ordering.ts` already keeps two id spaces apart with a prefix — `IDEA_PREFIX` at
+`:29`, `ideaItemId`, `isIdeaItemId`, `placeIdOfIdeaItem` at `:38-51`. This stage adds the third by the
+same mechanism and no other: `noteItemId(noteId)`, `isNoteItemId(itemId)`, `noteIdOfNoteItem(itemId)`
+behind a `note:` prefix. A stop keeps being identified by its bare assignment id, so nothing that
+already works has to be re-keyed. `containerOf`, `indexOf`, `itemsIn` and `removePlanItem` are
+unchanged; `movePlanItem` gains the two rules below and nothing else.
+
+**The two new move rules.**
+
+1. **A note cannot leave the days.** Dropping a note into the ideas container is refused. The ideas
+   column is the trip's unscheduled place inventory and a note has no meaning outside a day, so the
+   refusal is a product statement, not a limitation. It reuses the existing `'unknown'` refusal path's
+   shape and gets its own reason, `'not-in-ideas'`.
+2. **A timed row is moved by its time.** `PlanMoveRefusal` gains `'timed'`. Dropping an item that
+   carries a time into a position that contradicts that time — before an item with an earlier time, or
+   after one with a later time — is refused, and the screen says how to move it instead. Without this
+   the reader drags a row, the sort puts it back, and the product looks broken; with it, the one
+   affordance that moves a timed row is the one that is actually authoritative.
+
+**The sort contract, stated as a pure function.** For one day: read the items in ascending position.
+Walk them once, carrying the last time seen; an item without a time inherits the carried time, and
+items before the first timed item inherit nothing and sort first. Then stable-sort by inherited time,
+with position as the tiebreak. The result is that timed items appear in clock order, untimed items
+stay attached to the timed item they follow, and a day with no times at all is exactly the
+position order it already has today. It lives in `src/components/planner/ordering.ts` as
+`mergeDayTimeline(items)`, is pure, takes ids and times and nothing else, and has its own test file.
+
+**Components.** `PlannerItem` in `types.ts` is a discriminated union of
+`{ kind: 'stop'; row: PlannerRow }` and `{ kind: 'note'; note: PlannerNote }`, and `PlannerDay` gains
+`items` beside the `rows` it already has. `rows` is kept deliberately: `routeDaysOf`
+(`plan-model.ts:298-311`) draws the map's per-day route line from stop coordinates and must not learn
+about notes, and `mapPlacesOf` has the same property. `DaySection` renders one `SortableContext` over
+`items`; `StopRow` and the `NoteRow` `01-S2` created are the two renderers, and neither is rewritten.
+`plan-actions.tsx` gains `NoteMenu` alongside its existing `StopMenu`, built on the same shipped
+`DropdownMenu`. No new primitive from `src/components/ui` is required and none is proposed.
+
+**The extension point `BKG-10` fills.** `PlannerItem` is a union and `mergeDayTimeline` reads only
+`{ id, position, time }`, so a third kind is one variant in the union, one prefix in the id space and
+one renderer — and no change to the merge, the drag adapter or the repository's two-table batch beyond
+its own table. This is stated so `BKG-10` does not open `ordering.ts` and find a design that assumed
+two.
+
+**States.**
+
+- _Empty._ A day with no stops and no notes keeps its dashed drop target
+  (`day-section.tsx:139-149`) and gains the add-note affordance beneath it, both on
+  `--color-surface-2`. A day with notes but no stops is no longer an empty day — the change is that
+  the drop target only appears when the whole sequence is empty, which is the bug the two-list layout
+  has today.
+- _Skeleton._ The rail is loader-rendered; the day section's existing skeleton covers a cold load. An
+  item with a write in flight keeps the `pendingItemIds` treatment `DaySection` already takes
+  (`:20`, `:158`), which now covers notes as well as stops.
+- _Error._ A refused move never mutates the board and states its reason inline in a toast:
+  a duplicate place, a note dragged to the ideas column, a timed row dragged out of clock order. A
+  **failed** write rolls the optimistic `PlanOrder` back to the previous arrangement, which is the
+  contract `plan-screen.tsx` already implements and this stage must not weaken.
+- _Every control._ Rest, hover, focus-visible, active, disabled and loading on the row, its drag
+  handle and its menu.
+
+**Keyboard.** The merged list is keyboard-draggable, not mouse-only. `src/lib/dnd-keyboard.ts`
+already supplies the sensor behaviour and `__tests__/keyboard-drag.test.tsx` already holds it for
+stops; this stage extends both to notes and adds the refusal announcements to the same live region,
+so a keyboard user hears why a move was refused rather than watching nothing happen.
+
+**Motion.** Reordering animates transform only, 220 ms on `--ease-out-quint`, with the drag overlay
+already provided by `DragPreview`. Reduced motion collapses to no movement, which `@dnd-kit` respects
+through the existing configuration.
+
+**Tokens.** None missing, none filed. Times carry `tabular-nums`.
+
+### Quota
+
+**No countable row.** Every write in this stage updates a position on a row that already exists and
+already counted: `day_assignments` rows are created by `schedulePlaceFn` and bounded through the
+`places` metric asserted in `src/server/repos/places.ts:269`, and `day_notes` rows are created by
+`01-S2`, which recorded why no note metric exists. No metric is added to `resolveLimits()` and none to
+`PLAN_QUOTAS`; `src/server/billing/__tests__/limits.test.ts` gains no case and is not an owned path.
+
+### Tenant isolation test
+
+One new `describe('day timeline ordering')` block appended to
+`src/server/repos/__tests__/tenant-isolation.test.ts`, on the existing `alpha`/`beta` fixtures.
+
+In A's scope: `reorderDayTimeline` against B's `dayId` raises `NotFoundError`;
+`reorderDayTimeline` against A's own day with A's own `tripId` but B's `dayId` raises `NotFoundError`,
+which is `requireTripDay`'s job and must not be assumed; `reorderDayTimeline` on A's own day carrying
+one of B's assignment ids and one of B's note ids writes neither — B's `order_index` and `sort_order`
+values are byte-identical afterwards and A's own day renumbers to `0..n-1` over its own items only.
+Finally, the whole call is rolled back on failure: a batch containing an unknown table id leaves A's
+own positions unchanged rather than half-written.
+
+Functions covered: `reorderDayTimeline`.
+
+### Verification
+
+**The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**Unit tests.**
+
+- `src/components/planner/__tests__/timeline.test.ts` — new, and it is the stage's centre of gravity.
+  `mergeDayTimeline` with no times returns position order unchanged; with all times returns clock
+  order; an untimed item follows the timed item above it and never jumps to the top; items before the
+  first timed item sort first; the function is stable, so two items with the same inherited time keep
+  their relative positions; and it is idempotent, so merging a merged list is a fixed point.
+- `src/components/planner/__tests__/ordering.test.ts` — extended, not rewritten. Every existing case
+  is kept and must still pass — that is the `TRP-10` no-regression obligation, stated as a mechanical
+  one. New cases: a note moves within a day; a note refused into the ideas column returns
+  `'not-in-ideas'` and the unchanged order; a timed row into a contradicting position returns
+  `'timed'`; a place dropped onto a day that already holds it still returns `'duplicate'`.
+- `src/components/planner/__tests__/keyboard-drag.test.tsx` — extended. A note is pickable, movable and
+  droppable by keyboard, and a refusal is announced.
+- `src/components/planner/__tests__/rails.test.tsx` — extended. A day renders one list, notes and stops
+  interleave in the merged order, and the empty-day drop target appears only when the whole sequence
+  is empty.
+
+**Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
+the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
+`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
+`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s4.visual.spec.ts`. This stage's `describe`
+declares `/trips/$tripId/plan` with `map: true` and calls `auditServerClock` over its own table.
+
+Frames: the planner resting at 360, 1280 and 2560 in both themes, plus a declared mid-drag set, since
+a drag is the state the stage exists to change and a resting rail is not evidence about it:
+
+```sh
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/<seeded-trip-id>/plan" \
+  --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S4" \
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
+  --state merged-day --settle 800
+```
+
+and a second run at `--state note-hover --hover '[data-part="note-row"]'`. Both selectors are stable
+published attributes and each is verified with a `page.locator(sel).count()` against the running
+server before the capture runs; a selector that resolves to nothing makes `capture.mjs` throw at
+`--hover`, and discovering that during capture costs a round. `--map` is required on this route and
+re-waits the two-sided `[data-map-ready]` predicate after every resize and theme change.
+
+`e2e/helpers/shoot.ts` is not claimed: a note's time and a stop's time are stored `HH:MM` strings, not
+clock-derived, so `RELATIVE_TIME_SITES` needs no entry and the existing three are untouched. This
+matters because `01-S5` lands in the same wave and does claim that file; only one wave-2 stage may.
+
+**Console.** `watchConsole` attached, `fatal` empty in every test including the frame-only ones,
+tolerance list untouched. **Layout shift** asserted after `settle()`, gated on `supportedEntryTypes`,
+and it is the assertion that catches a merged list which reflows once the times resolve.
+
+### Definition of done
+
+The six repository-wide items from `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm
+lint` and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test` passes;
+the feature is verified in a real browser in light and dark, desktop and mobile; nothing is left
+behind — no TODO, no placeholder copy, no `console.log`, no commented-out code; and no file outside
+**Owned paths** is touched.
+
+One item is added to this stage's definition of done and is not negotiable: **every test that passed
+in `ordering.test.ts`, `keyboard-drag.test.tsx` and `rails.test.tsx` before the stage still passes
+after it**, unchanged rather than adjusted. That is what carrying `TRP-10` means.
+
+On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
+
+- [ ] Spacing is on the 4px grid, from `--space-*`. No eyeballed one-off margins.
+- [ ] Every interactive element has hover, focus-visible, active, disabled and loading states.
+- [ ] Every list has a designed empty state, a skeleton loading state and an error state, each drawn
+      on `--color-surface-2` rather than on the raw canvas.
+- [ ] Motion is 150–260ms on `--ease-out-quint` or a sibling token, transform and opacity only, and
+      `prefers-reduced-motion: reduce` is honoured.
+- [ ] Full parity in light **and** dark theme, with dark shadows re-declared rather than reused.
+- [ ] Checked at 360px, 1280px and 2560px, and the small layout is designed rather than a squeezed
+      desktop.
+- [ ] Keyboard navigable end to end, sensible focus order, accessible names, WCAG 2.2 AA contrast in
+      both themes.
+- [ ] Zero console errors or warnings, and zero layout shift after paint.
+
+### Blockers
+
+None. `@dnd-kit/core`, `@dnd-kit/sortable` and `@dnd-kit/utilities` are all in the pinned set and all
+already in use; no package, no binding, no third-party service. The one dependency on another plan is
+in the opposite direction — `BKG-10` waits on this stage, not the reverse — and `01-S2` must have
+closed, which wave 1 guarantees.
+
+## Stage 01-S5 — The dashboard's reference column, and the clock in it
+
+### Stage id
+
+`01-S5` · Wave 2 · effort **M**. The stage that adds the dashboard's second column and the one
+widget in it that can be built today.
+
+### Reference rows
+
+- `TRP-05` absent → **partial**, deliberately and with the residue named below.
+
+Sourced from `wiki: My-Trips-Dashboard` for the fixed reference column on wide screens, the
+per-widget visibility control, and the bottom sheet the same widgets open in on a narrow one.
+
+**What this stage closes:** the reference column itself, its per-widget show/hide, the mobile bottom
+sheet, and the multi-time-zone clock.
+
+**What is deferred, why, and to where.** The currency converter is **not** built here. It needs a
+foreign-exchange rate source, and there is none: `00-foundations.md` records that no rate source
+exists in the dependency set or in `src/`, and `11-boundaries-and-blockers.md`'s stage `11-S3` lists
+`TRP-05` by name among the fifteen rows waiting on a provider decision, alongside `MNY-06`, `MNY-07`
+and `COL-10`. `11-S3` also states the rule this stage obeys rather than works around: **the plan that
+needs a provider stops at the decision** — it does not name a provider, does not assume a free tier,
+does not write a client for an unnamed service, and does not ship a feature degraded into
+uselessness to avoid asking.
+
+- **Deferred to:** `01-S11`, **target wave 6**.
+- **Why it is not minted as a stage block now:** its shape is decided by terms nobody has read yet.
+  What a provider licenses us to cache, for how long, and what attribution it requires on screen are
+  the three things that decide the widget's data path and its layout, and all three are unknown. A
+  stage block written before them would be a guess wearing the format of a plan.
+- **What unblocks it:** the provider decision recorded in `11-S3`. `01-S11` is minted in this file on
+  the day that decision lands, takes the next free id, and moves `TRP-05` partial → done.
+
+A free tier is not evidence a capability is free to us: this product charges for subscriptions
+through Stripe, so a "free for non-commercial use" tier is unavailable at any traffic level. That is
+`11-S3`'s constraint and it is repeated here because it is the specific trap this row invites.
+
+Rows unblocked: none.
+
+### Owned paths
+
+- `src/routes/_app/dashboard.tsx` — edit. Mounts the column and the sheet; the existing hero, stat
+  row, trip mix, bookings and storage meter are untouched.
+- `src/routes/_app/-ui/dashboard-widgets.tsx` — new. The column, the sheet, the visibility control.
+- `src/routes/_app/-ui/timezone-clock.tsx` — new. The clock widget.
+- `src/lib/clock-zones.ts` — new. Pure: zone validation, the label, the offset line, the ordering.
+- `src/lib/__tests__/clock-zones.test.ts` — new.
+- `e2e/helpers/shoot.ts` — edit, and this stage is the **only** wave-2 stage that claims it; `01-S4`
+  states in its own Verification block that it does not. One entry is added to
+  `RELATIVE_TIME_SITES`; nothing else in the module changes.
+- `e2e/trips-core-s5.visual.spec.ts` — new. This stage's own spec file.
+- `e2e/__screenshots__/trips-core-s5.visual.spec.ts/` — new. Its own baseline directory.
+
+### Data and migration
+
+**No schema change and no migration, and the decision is argued rather than assumed.**
+
+The per-widget visibility is a per-browser preference, stored through the
+`src/lib/local-preference.ts` module `01-S3` minted, under `planned.dashboard-widgets`. It is not a
+column. `user_settings` (`src/server/db/schema.ts:1827-1856`) carries theme, locale, timezone,
+currency, week start, date format, distance unit, map style, accent colour, reduce-motion and an
+onboarding stamp — every one of them a setting that must follow the account to a second device.
+Whether a reference column is folded on this laptop is not in that class, and adding a column plus a
+write path plus a resolver for it would put a D1 write on a checkbox.
+
+The trade-off, stated rather than hidden: the fold does not follow the user to another device. This
+is the same call `01-S3` made for the remembered tab and `01-S7` makes for the view mode, all three go
+through the same module, and if a later stage decides the preference should be an account setting
+there is one place to change.
+
+The chosen time zones are stored the same way, as IANA zone identifiers validated against the
+runtime's own zone list. `user_settings.timezone` already exists and this stage reads nothing from
+it — see the next heading for why.
+
+### Server (repo, server function, Zod)
+
+**None.** No repository function, no server function, no Zod schema, no SQL, no authorisation
+decision, and `loadDashboard` (`src/routes/_app/-server/overview.ts:181`) is not touched.
+
+That is a design decision and not an omission. A clock renders from the browser's own `Date` and
+`Intl`; a zone list comes from `Intl.supportedValuesOf('timeZone')`, which the runtime supplies with
+no network call and no dependency; and the fold state is a browser preference. Adding a server round
+trip would buy nothing and would put the dashboard's loader in this stage's ownership, where two other
+stages in this plan also want it.
+
+The one server-side fact worth recording so a later stage does not trip on it: the app's day is
+pinned in development through `x-pt-server-today`, read inside an `if (import.meta.env.DEV)` branch at
+`src/server/clock.ts:73-90`. That pin governs the **server's** notion of today. The clock widget is a
+client clock and is not pinned by it, which is exactly why it needs the `RELATIVE_TIME_SITES` entry
+under **Verification** rather than a server fixture.
+
+### UI (route, components)
+
+**Route.** None added or moved; `pnpm generate-routes` is not run and `src/routeTree.gen.ts` is not an
+owned path. `/dashboard` ships and is edited in place — this stage does not recreate it, and the
+existing sections keep their current composition and their pending skeleton
+(`dashboard.tsx:520-537`).
+
+**Layout.** Above `xl` the dashboard becomes a two-column grid: the existing content column and a
+reference column of fixed width that sticks below the app nav. Between `md` and `xl` the column
+becomes a single row of widgets under the hero, because a 900px-wide screen has room for the widgets
+but not for a permanent second column. Below `md` the widgets are not on the page at all: a compact
+control in the header opens them in a `Sheet` — the shipped primitive, `vaul`-backed, which already
+gives a bottom sheet its drag-to-dismiss, its focus trap and its `Escape`.
+
+**The visibility control** is a `DropdownMenu` of `Checkbox` items, one per widget, in the dashboard's
+header. Turning every widget off collapses the column entirely and the grid returns to one column, so
+the reader is never left with a strip of empty rail — the failure mode a naive `display: none` per
+widget produces.
+
+**The clock widget.** A `Card` with a `SectionLabel` header, then one row per chosen zone: the city
+label, the local time in the display face at `tabular-nums`, and the offset from the reader's own zone
+as a signed hour figure, also `tabular-nums`. Zones are added from a `Combobox` over
+`Intl.supportedValuesOf('timeZone')` filtered as the reader types, and removed with an `IconButton`
+per row. The default set on first open is the reader's own zone plus the destination zone of the
+nearest upcoming trip when the payload has one, so the widget is useful before it is configured.
+
+The clock ticks on a one-minute interval aligned to the next minute boundary rather than a
+one-second timer: seconds are not shown, so a per-second render is a wasted frame every second for
+the life of the page. The interval is cleared on unmount and on `document.visibilitychange` to hidden.
+
+**Components reused, not rebuilt.** `Card`, `SectionLabel`, `Sheet` and its parts, `DropdownMenu`,
+`Checkbox`, `Combobox`, `IconButton`, `Button`, `EmptyState`, `Skeleton`, `Alert`, `Separator` — all
+from `src/components/ui`. No new primitive is required and none is proposed.
+
+**States.**
+
+- _Empty._ Two of them, both designed. Every widget hidden: the column disappears and the control's
+  menu is the only trace, which is the correct empty state for a fold. The clock with no zones: an
+  `EmptyState` on `--color-surface-2` reading that no zones are pinned yet, with the add control as
+  its action.
+- _Skeleton._ The column renders inside the route's existing pending component, so a cold load shows
+  a `Skeleton` block of the column's exact height — that height is fixed, which is what keeps the
+  layout-shift assertion below honest.
+- _Error._ The clock's own failure mode is a zone identifier the runtime rejects, which happens when a
+  stored preference outlives a runtime update. The row renders an `Alert` on `--color-surface-2`
+  naming the zone and offering to remove it, rather than throwing inside a formatter and taking the
+  dashboard with it.
+- _Every control._ Rest, hover, focus-visible, active, disabled and loading on the visibility items,
+  the zone combobox, the per-row remove and the sheet trigger.
+
+**Motion.** The column folds with an opacity and 4px transform over 220 ms on `--ease-out-quint`; the
+sheet uses the primitive's `--ease-drawer`. No layout property is animated. Reduced motion collapses
+both to opacity.
+
+**Tokens.** None missing, none filed for a wave-2 token stage. Every figure the widget prints —
+time, offset — carries `tabular-nums`, which is what stops a clock from jittering its own row once a
+minute.
+
+### Quota
+
+**No countable row.** This stage writes nothing to D1 at all: no insert, no update, no delete. No
+metric is added to `resolveLimits()` and none to `PLAN_QUOTAS`, so
+`src/server/billing/__tests__/limits.test.ts` gains no case and is not an owned path. The deferred
+converter will not create a row either — a conversion is a read of a cached rate — but its cache and
+its provider terms are `01-S11`'s to argue, not this stage's to pre-empt.
+
+### Tenant isolation test
+
+**None, and the reason is that the stage adds no repository function.**
+`src/server/repos/__tests__/tenant-isolation.test.ts` is not listed under **Owned paths** and is not
+edited.
+
+The adjacent risk, named once: a browser preference must never become an authorisation input. The
+zone list is validated against the runtime's own zone set before it reaches `Intl`, and nothing the
+reader stores locally is sent to a server function or used as a query key. The dashboard's data still
+arrives entirely through `loadDashboard`, which is tenant-scoped and untouched.
+
+### Verification
+
+**The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**Unit tests.** `src/lib/__tests__/clock-zones.test.ts` — an unknown zone identifier is rejected
+rather than passed to `Intl`; the offset line is signed and correct across a zone with a
+half-hour offset, which is where a naive integer-hours implementation fails; the label is derived from
+the identifier without hard-coding a city list; zones sort by offset then label, so the column reads
+top-to-bottom as the day moves; and the tick alignment computes the delay to the next minute boundary
+rather than a fixed 60000, which is what stops the clock drifting a second per hour.
+
+**Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
+the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
+`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
+`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s5.visual.spec.ts`. This stage's `describe`
+declares `/dashboard` and calls `auditServerClock` over its own route table.
+
+**The `RELATIVE_TIME_SITES` entry, which is the whole reason this stage claims a shared helper.** The
+clock prints a live, client-derived time string. `12-verification-protocol.md` §4 measures that
+`countRelativeTime()` sums locators built from `RELATIVE_TIME_SITES` (`e2e/helpers/shoot.ts:573`),
+which holds three hand-written entries — the trip-card countdown, the dashboard hero's start stat and
+the journey backlog reason — and that a new shape of clock-derived string on a route declaring nothing
+counts as zero and passes vacuously. Without an entry, `pinRelativeTime()` writes nothing on this
+widget, the mask covers nothing, the live time is inside the comparison at full size, and the baseline
+fails on the next minute rather than on the next regression. This stage therefore adds one entry with
+the same fields the existing three carry — `source`, `within`, `region`, and the drift and pinning
+flags — and asserts in its own `describe` that the region is non-empty on `/dashboard`, so a future
+restyle that breaks the selector fails loudly instead of silently un-masking.
+
+Frames: `/dashboard` at 360, 1280 and 2560 in both themes for the resting screen, plus a declared
+non-resting set for the sheet, which is the only way the widgets are reachable at 360:
+
+```sh
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/dashboard" \
+  --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S5" \
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
+  --state widgets-sheet --click '[data-part="dashboard-widgets-trigger"]'
+```
+
+The selector is a stable published attribute and is verified with a `page.locator(sel).count()` of 1
+against the running server before the capture runs. The 2560 frame is read for the specific defect a
+sticky second column produces at that width — a column that stretches instead of sitting at its own
+measure.
+
+**Console.** `watchConsole` attached, `fatal` empty in every test, `TOLERATED_CONSOLE_WARNINGS`
+untouched. **Layout shift** asserted after `settle()`, gated on `supportedEntryTypes`; the fixed
+column height in the skeleton is what this assertion exists to hold.
+
+### Definition of done
+
+The six repository-wide items from `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm
+lint` and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test` passes;
+the feature is verified in a real browser in light and dark, desktop and mobile; nothing is left
+behind — no TODO, no placeholder copy, no `console.log`, no commented-out code; and no file outside
+**Owned paths** is touched.
+
+On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
+
+- [ ] Spacing is on the 4px grid, from `--space-*`. No eyeballed one-off margins.
+- [ ] Every interactive element has hover, focus-visible, active, disabled and loading states.
+- [ ] Every list has a designed empty state, a skeleton loading state and an error state, each drawn
+      on `--color-surface-2` rather than on the raw canvas.
+- [ ] Motion is 150–260ms on `--ease-out-quint` or a sibling token, transform and opacity only, and
+      `prefers-reduced-motion: reduce` is honoured.
+- [ ] Full parity in light **and** dark theme, with dark shadows re-declared rather than reused.
+- [ ] Checked at 360px, 1280px and 2560px, and the small layout is designed rather than a squeezed
+      desktop.
+- [ ] Keyboard navigable end to end, sensible focus order, accessible names, WCAG 2.2 AA contrast in
+      both themes.
+- [ ] Zero console errors or warnings, and zero layout shift after paint.
+
+### Blockers
+
+**One, and it is the reason this row moves to partial rather than done.**
+
+- **Capability:** a foreign-exchange rate source for the currency converter widget.
+- **It is not a package.** No dependency outside the `docs/SPEC.md` §3 pinned set would supply it, so
+  nothing is installed and neither `package.json` nor `pnpm-lock.yaml` is edited. It is a
+  **third-party service whose commercial terms have not been read**, which is the third kind of
+  blocker `TEMPLATE.md` names.
+- **Disposition: defer**, and the disposition is already recorded — `11-S3` in
+  `11-boundaries-and-blockers.md` lists `TRP-05` among the rows waiting on it, together with the two
+  terms that decide the cost more than the per-call price does: what may be cached and for how long,
+  and what attribution is owed on screen.
+- **Target:** `01-S11`, wave 6, minted here when the decision lands.
+- **What this stage does about it:** nothing. It ships the column, the fold and the clock, and the
+  converter is absent rather than stubbed. A disabled control promising a feature that has no provider
+  is worse than no control, and `11-S3` forbids shipping one degraded into uselessness to avoid asking.
+
+No binding is added to `wrangler.jsonc` and no other plan's row gates this stage.
+
+## Stage 01-S6 — Who is on this trip, including the people without accounts
+
+### Stage id
+
+`01-S6` · Wave 4 · effort **L**. The membership record and the surface that manages it, and the one
+stage in this plan that adds a route file.
+
+### Reference rows
+
+- `TRP-11` absent → **done**.
+
+Sourced from `wiki: Trip-Members-and-Sharing` for the two lists — people with accounts and people
+without — the owner marking, the self-removal affordance, and the rule that a guest is an assignable
+participant who can never sign in.
+
+**Why this row is early relative to its in-degree, said accurately.** `README.md` measures `TRP-11`'s
+transitive in-degree at 8 and its direct in-degree at 5, which is fourth and second respectively —
+respectable, not leading, and `COL-01` and `ACC-05` lead on both readings. `TRP-11` is nonetheless
+worth reading first inside this plan because membership is what three later surfaces here read: the
+initial-members picker in `01-S8`, the participant vocabulary the planner shows in `01-S9`, and the
+travel-companion figure on the card in `01-S7`. That is a reading priority, not an in-degree claim.
+
+**Two upstream behaviours we deliberately do not port, both single-tenant assumptions.**
+
+1. **The invite picker does not enumerate every account.** Upstream it lists every registered user on
+   the deployment. Here one deployment serves every tenant, so that list would be a cross-tenant data
+   leak — the exact thing `docs/SPEC.md` §5 exists to prevent. Our picker searches **the caller's own
+   workspace** through `listMemberProfiles` (`src/server/repos/members.ts:118`), which is
+   tenant-scoped, and a person outside the workspace is invited to the workspace first through
+   `ADM-02` (`10-administration.md`, wave 3, and `TRP-11`'s own `dependsOn`).
+2. **There is no instance administrator who bypasses per-trip permission.** The workspace `owner` and
+   `admin` roles govern the workspace; a trip's roles govern the trip, and `01-S1`'s `assertTripRole`
+   is the only bypass-free path to a trip write.
+
+Rows unblocked: `TRP-02` (`01-S8`) and `TRP-06` (`01-S9`) directly.
+
+### Owned paths
+
+- `src/server/repos/trip-guests.ts` — new. The guest record and the participant read model.
+- `src/server/repos/index.ts` — edit. Two export lines; no other repository module is touched.
+- `src/server/repos/trips.ts` — edit. The membership guards named below.
+- `src/routes/_app/trips/$tripId/-server/people.ts` — new. The stage's server functions.
+- `src/routes/_app/trips/$tripId/people.tsx` — new. The route.
+- `src/routes/_app/trips/$tripId/-ui/people-screen.tsx` — new. The screen.
+- `src/components/layout/trip-sub-nav.tsx` — edit, and the edit is the Share button's destination:
+  today it links to `/trips/$tripId/collab` (`:98-121`), which is the chat tab and not a people
+  surface.
+- `src/server/repos/__tests__/trip-guests.test.ts` — new.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
+- `e2e/trips-core-s6.visual.spec.ts` — new. This stage's own spec file.
+- `e2e/__screenshots__/trips-core-s6.visual.spec.ts/` — new. Its own baseline directory.
+
+`src/routeTree.gen.ts` is **not** an owned path and is never hand-edited. `pnpm generate-routes` is a
+step of this stage (see **UI**) and the regenerated tree travels in the diff, which is the one
+mechanical exception `README.md` grants.
+
+### Data and migration
+
+**One additive table, filed as a requirement for the wave-4 foundations schema stage.** This stage
+does not edit `src/server/db/schema.ts`.
+
+`trip_guests`, following the conventions every existing domain table follows:
+
+| Column            | Type                   | Null     | Notes                                            |
+| ----------------- | ---------------------- | -------- | ------------------------------------------------ |
+| `id`              | `text` PK              | not null | `pk()`, `newId()` default — time-sortable        |
+| `organization_id` | `text`                 | not null | `orgRef()`, `ON DELETE CASCADE`                  |
+| `trip_id`         | `text` → `trips.id`    | not null | `ON DELETE CASCADE`                              |
+| `display_name`    | `text`                 | not null | The only identity a guest has                    |
+| `colour`          | `text`                 | nullable | `colour()`, matching `trip_members.colour`       |
+| `created_by`      | `text`                 | nullable | `userRef()`, no Drizzle FK, as every user column |
+| `created_at`      | `integer` timestamp_ms | not null | `timestamps()`                                   |
+| `updated_at`      | `integer` timestamp_ms | not null | `timestamps()`, `$onUpdateFn`                    |
+
+Indexes: `trip_guests_org_trip_idx` on `(organization_id, trip_id)` — leading `organization_id`, as
+every composite index in this schema does — and `trip_guests_trip_name_unq`, a unique index on
+`(trip_id, display_name)`, which is what makes the disambiguation rule below enforceable rather than
+hopeful. No `CHECK` constraint: there is no enum column.
+
+Additive, backfills nothing, and a rollback is safe because the previous Worker never reads the table.
+
+**Deliberately not in this stage: guest participation in other modules.** A guest has to be a valid
+assignee in expense splits, packing items and day-plan participants, and none of those links is added
+here. The reason is measured rather than aesthetic: `assignment_participants`
+(`src/server/db/schema.ts:564-579`) has a composite primary key of `(assignment_id, user_id)`, so it
+cannot hold a guest without a primary-key change, and drizzle-kit emits a full table rebuild for that
+on SQLite — which is not additive and is exactly what the migration ritual forbids. The additive shape
+is a **second join table per link**, and each one belongs to the plan that owns the surface reading
+it: `04-budget-and-currencies.md` for expense shares, `05-packing-and-todos.md` for packing, and
+`BKG-10`/`TRP-08`'s successor for day-plan participants. This stage gives all three the one read model
+they should build against — `listTripParticipants` — so the shape is decided once here and not four
+times there.
+
+### Server (repo, server function, Zod)
+
+**Repository — `src/server/repos/trip-guests.ts`, new.**
+
+- `listTripGuests(scope, tripId)` — ordered by `display_name`.
+- `createTripGuest(scope, { tripId, displayName, colour })` — `requireTrip` first, then the
+  disambiguation below, then insert through `createTenantRepository(tripGuests, 'trip guest')`.
+- `renameTripGuest(scope, guestId, displayName)` — `requireUpdate`, disambiguating against the same
+  trip.
+- `removeTripGuest(scope, guestId)` — `requireRemove`.
+- `listTripParticipants(scope, tripId)` — the read model every later participant picker consumes.
+  Returns one array of a discriminated union: `{ kind: 'member', userId, role, colour }` from
+  `listTripMembers` (`src/server/repos/trips.ts:403`) joined to `listUserProfiles`
+  (`src/server/repos/members.ts:210`), and `{ kind: 'guest', guestId, displayName, colour }` from this
+  module. One shape, one place, so a picker never has to merge two lists itself and never has to
+  decide what a participant is.
+
+**Duplicate names.** A second guest with a name already on the trip is stored with an appended
+ordinal, and the ordinal climbs until the unique index accepts it. The mechanism is the one this
+repository already uses for a colliding trip slug — `reserveTripSlug`
+(`src/server/repos/trips.ts:161-179`), a bounded attempt loop against a `count`, falling back to a
+time-suffixed value rather than looping forever. The point is not tidiness: two identical names in a
+participant picker is how a cost gets split onto the wrong person.
+
+**Repository — `src/server/repos/trips.ts`, edited.** Three guards on the membership writers, each
+inside the repository so they hold for every caller:
+
+- `addTripMember` refuses a `userId` that is not a member of the caller's organization, resolved
+  through `getMembership` (`src/server/repos/members.ts:144`). A well-formed user id is not an
+  authorised user id, and without this check a trip membership is a way to name any account in the
+  database.
+- `removeTripMember` refuses to remove the trip's last `owner`. The trip would otherwise become
+  unownable, and `assertTripRole` would then refuse every write on it forever.
+- `addTripMember`, `updateTripMember` and `removeTripMember` call `assertTripRole(scope, tripId,
+['owner'])` — the guard `01-S1` added — except for the self-removal path, which any member may take
+  for themselves and which is the same call with the acting user's own membership id.
+
+**Server functions — `src/routes/_app/trips/$tripId/-server/people.ts`, new.** One `GET` loader and
+six `POST` writes:
+
+| Function             | Method | Input                              | Returns                                                    |
+| -------------------- | ------ | ---------------------------------- | ---------------------------------------------------------- |
+| `loadTripPeople`     | GET    | `{ tripId }`                       | members, guests, invitable profiles, the caller's own role |
+| `addTripMemberFn`    | POST   | `{ tripId, userId, role }`         | `{ memberId }`                                             |
+| `setTripRoleFn`      | POST   | `{ tripId, memberId, role }`       | `{ memberId, role }`                                       |
+| `removeTripMemberFn` | POST   | `{ tripId, memberId }`             | `{ removed: true }`                                        |
+| `leaveTripFn`        | POST   | `{ tripId }`                       | `{ removed: true }`                                        |
+| `addTripGuestFn`     | POST   | `{ tripId, displayName }`          | `{ guestId, displayName }`                                 |
+| `renameTripGuestFn`  | POST   | `{ tripId, guestId, displayName }` | `{ guestId, displayName }`                                 |
+| `removeTripGuestFn`  | POST   | `{ tripId, guestId }`              | `{ removed: true }`                                        |
+
+`loadTripPeople` returns the invitable set **already filtered** to workspace members who are not yet
+on the trip, so the client never receives a directory it then has to subtract from.
+
+**Zod v4.** `z.strictObject()` with the `error` parameter; `z.enum(TRIP_MEMBER_ROLES)` for the role,
+reading the tuple the schema already exports (`src/server/db/schema.ts:157`) rather than restating it;
+a trimmed `displayName` between 1 and the shared `shortTextSchema` bound. No `z.string().email()`
+anywhere — the picker searches profiles the server already resolved, and an email never crosses the
+wire as an identifier.
+
+**Authorisation, said explicitly.** Every decision is in the repository, through `assertTripRole` and
+the three guards above. The server function contributes the tenant scope and nothing else. Adding,
+promoting and removing another member, and every guest write, require the trip `owner` role; leaving
+requires only that the membership being removed is the caller's own; reading requires membership,
+which `requireTrip` inside the caller's scope already establishes. `beforeLoad` on the new route is UX
+— it makes the page 404 gracefully — and is never the boundary.
+
+**The invited person is told.** `addTripMemberFn` calls `notify()`
+(`src/server/repos/notifications.ts:129`), whose write path is supplied by `00-S2` in wave 0, with the
+`trip` scope, the trip's id as the entity and the trip's own URL as the action. One notification per
+invitation, so no fan-out and no chunking question; `notifyMany` is not used and the queue is not
+touched. A guest is never notified, because a guest has no account and no address — that is what
+being a guest means.
+
+Nothing slow, nothing enqueued, and no Durable Object patch kind is added.
+
+### UI (route, components)
+
+**Route.** `src/routes/_app/trips/$tripId/people.tsx`, new, default SSR. `pnpm generate-routes` is run
+after the file lands and `src/routeTree.gen.ts` is never hand-edited and never listed as an owned
+path.
+
+It is a **route and not an eighth tab.** `TRIP_TABS` (`src/components/layout/nav-model.ts:91-99`)
+stays at seven, which is what `TRP-07` and `01-S3`'s test assert; the people screen is reached from
+the sub-navigation's existing Share button and, from wave 5, from the trip card's own action menu. A
+route rather than a modal buys three things a panel does not: a shareable address, a place for the
+mobile layout to be a full page instead of a squeezed sheet, and a URL the capture script can point
+at.
+
+**Screen.** Above `lg`, two columns: people on the left, and on the right the invite control above a
+card that will hold this trip's link sharing when `COL-10` and `COL-11`
+(`07-collaboration-and-sharing.md`) land — the column is present with the invite control alone until
+then, and is not a placeholder for a feature that does not exist. Below `lg` the columns stack, invite
+first, because on a phone the reason you opened this page is to add somebody.
+
+**The two lists.** Members carry an `Avatar`, a name, the workspace handle, a role `Badge`, and a
+marking on the trip's owner; the caller's own row is labelled as theirs. Non-owner rows carry a remove
+`IconButton`; the caller's own row carries a leave affordance instead, which is a different verb and a
+different icon because it has a different consequence — leaving redirects to the trips index, removing
+does not move you anywhere. Guests are a second list beneath, each row a name, a guest `Badge`, a
+rename control and a remove control, all `owner`-only.
+
+**Components reused, not rebuilt.** `Card`, `SectionLabel`, `Avatar`, `AvatarStack`, `Badge`,
+`Button`, `IconButton`, `Combobox`, `Input`, `Field`, `Dialog`, `Alert`, `EmptyState`, `Skeleton`,
+`Separator`, `Tooltip`, `DropdownMenu` — every one already in `src/components/ui`. No new primitive is
+required and none is proposed.
+
+**States.**
+
+- _Empty._ A trip with one member and no guests is the common first state, so it is designed rather
+  than treated as an error: the guests list shows an `EmptyState` on `--color-surface-2` explaining
+  that a guest is somebody travelling with you who does not need an account, with the add control as
+  its action. A workspace whose every member is already on the trip shows the invite combobox in a
+  resolved empty state pointing at workspace invitations, not an endlessly empty dropdown.
+- _Skeleton._ The route's `pendingComponent` renders two column skeletons of the same height as the
+  loaded lists, reusing `RowsSkeleton` from `src/routes/_app/-ui/scaffold.tsx:228`.
+- _Error._ The route's `errorComponent` uses the shipped `ErrorPanel`, as every other trip route does.
+  A failed write leaves its own row in an error state with the server's message and a Retry, and never
+  clears the list.
+- _Destructive confirmation._ Removing a guest states what goes with them; leaving a trip states that
+  you will lose access until somebody re-adds you. Both are `Dialog`s with a `loading` button, not a
+  browser `confirm`.
+- _Every control._ Rest, hover, focus-visible, active, disabled and loading — including the invite
+  button, which is disabled until a person is chosen and shows `loading` while the write is in flight.
+
+**Motion.** Rows enter with opacity and a 4px lift over 220 ms on `--ease-out-quint`, staggered by
+24 ms and capped at eight. A removed row leaves in 150 ms. Reduced motion collapses to opacity.
+
+**Tokens.** None missing, none filed for a wave-4 token stage. Any count the screen prints carries
+`tabular-nums`.
+
+### Quota
+
+**One row kind is created and neither metric already in the catalogue applies. Both answers are
+argued rather than assumed.**
+
+- **A trip membership does not consume `members`.** That metric counts **workspace seats** and is
+  asserted where a seat is created — `src/server/repos/members.ts:160` and `:276`, for a member and
+  for a pending invitation. A `trip_members` row links a seat that already exists and already counted
+  to one trip. Charging for it a second time would make the enforced number differ from the published
+  one, which is the exact failure `resolveLimits()` exists to prevent. No `assertQuota` call is added
+  to `addTripMember`.
+- **A guest consumes nothing, and no metric is added.** A guest cannot sign in, cannot be notified and
+  exists only inside one trip, so it is not a seat and selling it as one would publish a number we do
+  not mean. Nothing is added to `resolveLimits()` or to `PLAN_QUOTAS`, and
+  `src/server/billing/__tests__/limits.test.ts` gains no case and is not an owned path.
+- **What bounds guests instead is structural, and it is not a quota.** `createTripGuest` refuses past
+  a named constant, `MAX_TRIP_GUESTS`, declared in `src/server/repos/trip-guests.ts` next to the
+  reason it exists: the participant pickers and the split arithmetic every later plan builds on this
+  read model degrade badly past a few dozen names, and an unbounded per-trip list is a noisy-neighbour
+  surface with no meter behind it. It is a repository invariant with a unit test, not a plan ceiling,
+  it is not published on the pricing page, and it is deliberately not routed through `assertQuota`,
+  because `assertQuota` is for numbers we sell.
+
+### Tenant isolation test
+
+One new `describe('trip people')` block appended to
+`src/server/repos/__tests__/tenant-isolation.test.ts`, on the existing `alpha`/`beta` fixtures, and
+`seedWorld` gains a guest for each tenant so the generic read, list, update, delete and count cases
+cover `tripGuestsRepository` the way they cover every other repository.
+
+In A's scope: `createTripGuest` onto B's trip raises `NotFoundError`; `renameTripGuest` and
+`removeTripGuest` against B's guest id raise `NotFoundError` and leave B's row byte-identical;
+`listTripGuests` for B's trip id returns `[]` and never B's guests; `listTripParticipants` for B's trip
+id returns an empty participant set rather than a member list — the specific trap being that
+`listTripMembers` (`src/server/repos/trips.ts:403-411`) returns `[]` through `findMany` for a foreign
+trip rather than raising, so a participant reader that does not call `requireTrip` first would report
+"a trip with no people" instead of refusing. `listTripParticipants` therefore calls `requireTrip`
+first, and this case is what proves it. Finally, `addTripMember` with a `userId` belonging to B's
+organization raises rather than writing a membership naming a stranger.
+
+Functions covered: `createTripGuest`, `renameTripGuest`, `removeTripGuest`, `listTripGuests`,
+`listTripParticipants`, `addTripMember`, `updateTripMember`, `removeTripMember`.
+
+### Verification
+
+**The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+`pnpm generate-routes` runs before the gate, because a route file that is not in the generated tree
+fails `pnpm typecheck` rather than the browser.
+
+**Unit tests.** `src/server/repos/__tests__/trip-guests.test.ts` — a second guest with an existing
+name is stored disambiguated and the unique index is never violated; disambiguation is bounded and
+falls back rather than looping; `MAX_TRIP_GUESTS` is enforced at the boundary and the refusal names
+the limit; `listTripParticipants` returns members and guests in one array with the discriminant
+intact and the trip's owner first; removing the last owner is refused; and a member removed from the
+workspace no longer appears as an invitable profile.
+
+**Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
+the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
+`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
+`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s6.visual.spec.ts`. This stage's `describe`
+declares `/trips/$tripId/people` — a route no existing spec knows about — and calls `auditServerClock`
+over its own route table, which is the only check that reads a route's declaration against the
+streamed payload and is called nowhere else for a module route.
+
+Frames: `/trips/<id>/people` at 360, 1280 and 2560 in both themes, plus a declared non-resting set for
+the invite picker, which is the affordance the stage is about:
+
+```sh
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/<seeded-trip-id>/people" \
+  --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S6" \
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
+  --state invite-open --click '[data-part="trip-invite-trigger"]'
+```
+
+and a second run at `--state guest-remove` reaching the destructive dialog. Both selectors are stable
+published attributes, each verified with a `page.locator(sel).count()` of 1 against the running server
+before the capture runs. `e2e/helpers/shoot.ts` is not claimed: the screen prints no clock-derived
+string — a joined date is rendered as an absolute date, deliberately, so that this page is stable on
+every calendar day.
+
+**Console.** `watchConsole` attached, `fatal` empty in every test, tolerance list untouched. **Layout
+shift** asserted after `settle()`, gated on `supportedEntryTypes`.
+
+### Definition of done
+
+The six repository-wide items from `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm
+lint` and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test` passes;
+the feature is verified in a real browser in light and dark, desktop and mobile; nothing is left
+behind — no TODO, no placeholder copy, no `console.log`, no commented-out code; and no file outside
+**Owned paths** is touched.
+
+On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
+
+- [ ] Spacing is on the 4px grid, from `--space-*`. No eyeballed one-off margins.
+- [ ] Every interactive element has hover, focus-visible, active, disabled and loading states.
+- [ ] Every list has a designed empty state, a skeleton loading state and an error state, each drawn
+      on `--color-surface-2` rather than on the raw canvas.
+- [ ] Motion is 150–260ms on `--ease-out-quint` or a sibling token, transform and opacity only, and
+      `prefers-reduced-motion: reduce` is honoured.
+- [ ] Full parity in light **and** dark theme, with dark shadows re-declared rather than reused.
+- [ ] Checked at 360px, 1280px and 2560px, and the small layout is designed rather than a squeezed
+      desktop.
+- [ ] Keyboard navigable end to end, sensible focus order, accessible names, WCAG 2.2 AA contrast in
+      both themes.
+- [ ] Zero console errors or warnings, and zero layout shift after paint.
+
+### Blockers
+
+None that stop the stage, and one dependency that is already satisfied by the wave order: the
+notification write path this stage calls is `00-S2`'s, in wave 0, and `TRP-11`'s own `dependsOn` names
+`ADM-02` (`10-administration.md`, wave 3), which supplies the workspace-invitation path a person
+outside the workspace has to travel before they can be put on a trip. No package outside the
+`docs/SPEC.md` §3 pinned set, no binding added to `wrangler.jsonc`, no third-party service.
+
+## Stage 01-S7 — Reading a list of trips two ways, and finding the archived ones
+
+### Stage id
+
+`01-S7` · Wave 5 · effort **M**. Scheduled behind `01-S6` rather than in wave 2; the Area brief argues
+why, and the argument is that the card grows two membership-fed affordances and should be designed
+once.
+
+### Reference rows
+
+- `TRP-01` partial → **done**.
+
+Sourced from `wiki: My-Trips-Dashboard` for the two view modes, the prominent card for the trip that
+matters now, the collapsed archive at the foot of the list, and the per-card actions that appear on
+hover on a pointer device and are always visible on a touch one.
+
+**What already ships, and is therefore extended rather than recreated.**
+`src/routes/_app/trips/index.tsx` (264 lines) is D1-live and already has the status pills with counts,
+the favourites and archived scopes, the URL-bound search, the plan-ceiling `Alert`, a designed empty
+state and a pending skeleton. `src/routes/_app/dashboard.tsx` (537 lines) already has the `UpNext`
+hero, which **is** the prominent card, plus the stat row, trip mix, next bookings and storage meter.
+This stage adds to both and rebuilds neither; a stage that recreated either would be a defect under
+`README.md`'s extend-never-recreate rule.
+
+**What is missing and lands here:** a grid/list switch remembered between sessions; a list mode that
+is a genuinely different layout rather than a narrower grid; the progress bar and statistics strip on
+the prominent card, including the travel-companion figure `01-S6` makes countable; a collapsible
+archived section with restore and permanent delete in place; and the per-card action menu, mounted
+here on the list rows as `01-S1` mounted it on the tiles.
+
+Rows unblocked: none. No row in `gap-rows.json` names `TRP-01`.
+
+### Owned paths
+
+- `src/routes/_app/trips/index.tsx` — edit.
+- `src/routes/_app/dashboard.tsx` — edit.
+- `src/routes/_app/-ui/trip-card.tsx` — edit.
+- `src/routes/_app/-ui/trip-list-row.tsx` — new. The list mode's row.
+- `src/routes/_app/-lib/view-mode.ts` — new. The view-mode vocabulary and its key.
+- `src/routes/_app/-lib/__tests__/view-mode.test.ts` — new. The route-local helper directory has no
+  `__tests__` today; this stage creates it, following `src/routes/(auth)/-lib/__tests__` and
+  `src/routes/api/tiles/-lib/__tests__`, which already do.
+- `src/routes/_app/-server/overview.ts` — edit. `loadTrips` and `loadDashboard` payloads.
+- `src/server/repos/trip-guests.ts` — edit. `countTripPeople`.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
+- `e2e/trips-core-s7.visual.spec.ts` — new. This stage's own spec file.
+- `e2e/__screenshots__/trips-core-s7.visual.spec.ts/` — new. Its own baseline directory.
+
+`src/routes/_app/-ui/trip-actions.tsx` is **not** here: the menu `01-S1` built is reused as it stands,
+and a second implementation of it would be the defect this list is meant to prevent.
+
+### Data and migration
+
+**No schema change and no migration.** Every column is present: `trips.is_archived` and
+`trips.is_favourite` (`src/server/db/schema.ts:355-356`), `trips.start_date`/`end_date` for the
+progress figure, and `trip_guests` from `01-S6`. The view mode is a per-browser preference through
+`src/lib/local-preference.ts`, for the reasons `01-S3` and `01-S5` already argued, and is not a
+column. Nothing is filed for the wave-5 foundations schema stage.
+
+**One measured read-cost note, because this screen is the one that could regress it.** D1 bills rows
+**read**, not rows returned. `countTripPeople` therefore counts in one grouped query over
+`(organization_id, trip_id)` for the whole page of trips, exactly as `countTripsByStatus`
+(`src/server/repos/trips.ts:276-283`) and `countPlacesPerTrip` already do — never one query per card.
+Both `trip_members` and `trip_guests` lead their composite index with `organization_id`, so the scan
+is bounded by the tenant.
+
+### Server (repo, server function, Zod)
+
+**Repository — `src/server/repos/trip-guests.ts`, edited.** `countTripPeople(scope, tripIds)` returns
+a `Map<string, number>` of members plus guests per trip, in two grouped queries built on
+`tenantFilter()`. SQL stays here.
+
+**Server functions — `src/routes/_app/-server/overview.ts`, edited.** No new endpoint; two existing
+payloads grow:
+
+- `loadTrips` (`:259`) returns the archived trips as their own array beside the active list, so the
+  archived section is a fold rather than a second request, and adds the companion count per card.
+  Its existing `archived` search filter is kept, because the archived **scope** and the archived
+  **section** are different readings and a URL that names the scope must keep working.
+- `loadDashboard` (`:181`) adds the companion count and the elapsed fraction for the trip in the hero.
+  The fraction is computed on the server from `serverToday()`, not in the browser, so it is pinned by
+  `x-pt-server-today` in development and a baseline of the progress bar is stable — a client-computed
+  percentage would move every day and mask a real regression.
+
+**Zod v4.** `tripFilterSchema` on `loadTrips` keeps its shape; no input is added, because the view
+mode never reaches the server. `z.strictObject()` and the `error` parameter apply to anything new.
+
+**Authorisation.** Unchanged: both loaders resolve the tenant through `appScope()` and read through
+tenant-scoped repositories. The action menu's writes are `01-S1`'s server functions, whose role checks
+are in the repository, so the menu can render an item the caller may not use and the refusal is still
+the repository's — the menu hides items the caller's role cannot exercise as a courtesy, never as the
+control.
+
+### UI (route, components)
+
+**Route.** None added or moved; `pnpm generate-routes` is not run and `src/routeTree.gen.ts` is not an
+owned path.
+
+**The two modes, and why list is not a narrow grid.** Grid keeps the existing `TripTile` — cover art,
+title, countdown badge, place count, action menu. List is a different information order for a
+different question: one row per trip, dense, with the dates and the status legible in a vertical scan,
+the companion avatars as an `AvatarStack`, and the same action menu at the row's end. A reader in grid
+mode is browsing; a reader in list mode is looking something up. Below `md` the switch is hidden and
+the layout is always the row: a two-column grid of cover art on a 360px screen is a squeezed desktop,
+which `docs/SPEC.md` §2 rules out by name.
+
+**The prominent card.** The hero at `dashboard.tsx:91` gains a `Progress` bar — only while a trip is
+under way, because a percentage on a trip that has not started is noise — and a three-figure strip:
+nights, places, travelling companions. All three are display-face numerals with `tabular-nums`, which
+is what the `StatCard` pattern in `docs/DESIGN.md` is for and what `HeroStat` (`:235`) already renders.
+
+**The archived section** sits at the foot of the trips index as a `disclosure` — a real button with
+`aria-expanded` and a `Chip` carrying the count — collapsed by default and remembered per browser. Its
+rows carry Copy, Restore and Delete permanently, which are `01-S1`'s `copyTripFn`, `restoreTripFn` and
+`deleteTripFn`; no new write is added.
+
+**Components reused, not rebuilt.** `Card`, `Progress`, `AvatarStack`, `Badge`, `Chip`, `Button`,
+`IconButton`, `SectionLabel`, `Skeleton`, `EmptyState`, `Alert`, `Separator`, `Tooltip`, and
+`TripActionsMenu` from `01-S1`. No new primitive is required and none is proposed.
+
+**States.**
+
+- _Empty._ Three, each different and each designed. No trips at all keeps the existing full-bleed
+  `EmptyState` (`trips/index.tsx:205-232`). A filter that matches nothing keeps the existing reset
+  affordance. An archived section with nothing in it is not rendered at all rather than rendered
+  empty, because a fold that opens onto nothing is a broken promise.
+- _Skeleton._ `CardsSkeleton` in grid mode and a new rows skeleton of the same row height in list mode,
+  both on `--color-surface-2`; the mode is read before first paint from the preference module so the
+  skeleton matches the layout that is about to arrive and the page does not swap shape after hydration.
+- _Error._ The route's existing `ErrorPanel` is kept. A failed lifecycle write from a row's menu keeps
+  the row and surfaces the reason in a toast, which is `01-S1`'s contract.
+- _Every control._ Rest, hover, focus-visible, active, disabled and loading on the mode switch, the
+  disclosure, the row, and every menu item.
+
+**Motion.** Switching mode cross-fades over 220 ms on `--ease-out-quint` with a 4px lift, transform
+and opacity only; rows stagger by 24 ms capped at eight. The archive fold animates its own height
+through the shipped disclosure behaviour rather than a hand-rolled `max-height` transition. Reduced
+motion collapses to opacity.
+
+**Tokens.** None missing, none filed. Every changing number carries `tabular-nums`.
+
+### Quota
+
+**No countable row.** This stage reads; the writes its menus invoke are `01-S1`'s, whose `trips` and
+`places` assertions are already in the repository. No metric is added to `resolveLimits()` and none to
+`PLAN_QUOTAS`; `src/server/billing/__tests__/limits.test.ts` gains no case and is not an owned path.
+
+The trip ceiling is **displayed** here and not enforced here: `loadTrips` already returns `tripLimit`
+from `resolveQuotas` (`:274`) and the index already renders the `Alert` at the ceiling (`:194-206`).
+That stays a courtesy in front of an enforcement that lives in `createTrip`.
+
+### Tenant isolation test
+
+One new `describe('trip people counts')` block appended to
+`src/server/repos/__tests__/tenant-isolation.test.ts`. In A's scope, `countTripPeople` over a list of
+trip ids containing both A's and B's returns an entry for A's trips only and no entry — not a zero —
+for B's, so a caller cannot learn that a foreign id exists from the shape of the answer. Counting with
+B's ids alone returns an empty map. B's `trip_members` and `trip_guests` rows are unchanged
+afterwards.
+
+Functions covered: `countTripPeople`.
+
+### Verification
+
+**The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**Unit tests.** `src/routes/_app/-lib/__tests__/view-mode.test.ts`, over the pure module: an unknown
+stored value resolves to grid rather than crashing; the key is a single exported constant, so the
+skeleton and the list cannot read two different ones; and the elapsed fraction is clamped to `0..1`, is
+zero before the start date, is one after the end date, and takes today as an argument rather than
+reading a clock — the signature that fails to compile if somebody moves the computation into the
+component.
+
+**Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
+the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
+`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
+`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s7.visual.spec.ts`. This stage's `describe`
+declares `/trips` and `/dashboard` and calls `auditServerClock` over its own route table.
+
+Both routes already print clock-derived strings that `RELATIVE_TIME_SITES` covers — the trip-card
+countdown badge and the dashboard hero's start stat are two of its three entries — so
+`e2e/helpers/shoot.ts` is **not** claimed and no entry is added. A non-empty return from
+`auditRelativeTime()` is read and reported rather than discarded: it is legitimate when the pinned day
+sits past the rows that carry the string, and it is the identical signal a silently deleted string
+produces, so the evidence says which of the two it is.
+
+Frames: `/trips` and `/dashboard` at 360, 1280 and 2560 in both themes — twelve for the two resting
+surfaces — plus two declared states, because list mode and the opened archive are not what the screen
+loads into:
+
+```sh
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips" \
+  --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S7" \
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
+  --state list-mode --click '[data-part="trip-view-list"]'
+```
+
+and a second run at `--state archive-open --click '[data-part="trip-archive-disclosure"]'`. Both
+selectors are stable published attributes, each verified with a `page.locator(sel).count()` of 1
+against the running server before the capture runs. The 2560 frames are read for the defect a card
+grid produces at that width — four columns of stretched cover art instead of a bounded measure.
+
+**Console.** `watchConsole` attached, `fatal` empty in every test, tolerance list untouched. **Layout
+shift** asserted after `settle()`, gated on `supportedEntryTypes`, and it is the assertion that
+catches a mode switch which paints grid before it paints list.
+
+### Definition of done
+
+The six repository-wide items from `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm
+lint` and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test` passes;
+the feature is verified in a real browser in light and dark, desktop and mobile; nothing is left
+behind — no TODO, no placeholder copy, no `console.log`, no commented-out code; and no file outside
+**Owned paths** is touched.
+
+On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
+
+- [ ] Spacing is on the 4px grid, from `--space-*`. No eyeballed one-off margins.
+- [ ] Every interactive element has hover, focus-visible, active, disabled and loading states.
+- [ ] Every list has a designed empty state, a skeleton loading state and an error state, each drawn
+      on `--color-surface-2` rather than on the raw canvas.
+- [ ] Motion is 150–260ms on `--ease-out-quint` or a sibling token, transform and opacity only, and
+      `prefers-reduced-motion: reduce` is honoured.
+- [ ] Full parity in light **and** dark theme, with dark shadows re-declared rather than reused.
+- [ ] Checked at 360px, 1280px and 2560px, and the small layout is designed rather than a squeezed
+      desktop.
+- [ ] Keyboard navigable end to end, sensible focus order, accessible names, WCAG 2.2 AA contrast in
+      both themes.
+- [ ] Zero console errors or warnings, and zero layout shift after paint.
+
+### Blockers
+
+None. No package outside the pinned set, no binding, no third-party service. `01-S1` and `01-S6` must
+have closed, which waves 1 and 4 guarantee.
+
+## Stage 01-S8 — One form for starting a trip and for changing it
+
+### Stage id
+
+`01-S8` · Wave 5 · effort **L**. The creation dialog grows from five fields to the full set, and the
+same form becomes the edit sheet `01-S1` opened.
+
+### Reference rows
+
+- `TRP-02` partial → **done**, with the stock-photo search path named under **Blockers**.
+
+Sourced from `wiki: Creating-a-Trip` for the field set, the date-and-duration linkage, the accounting
+currency, the cover image, the reminder choice and the initial-members selection.
+
+**What ships today.** `src/routes/_app/-ui/new-trip-dialog.tsx` (247 lines) has exactly five fields —
+title, destination, two dates and currency, from a nine-entry currency list at `:31-40` — over
+`createTripFn`. It already validates the date order in the browser and disables the save while the
+title is empty, and `createTrip` already reserves the slug, writes the owner membership and builds the
+day run (`src/server/repos/trips.ts:307-345`). The gap is the field set, not the plumbing.
+
+**Two corrections to the row, measured.** First, the row says no upload path writes
+`trips.cover_image_key` or `cover_image_url`. That is right, and the missing half is only the upload:
+both columns exist (`src/server/db/schema.ts:350-351`), `updateTripInput` already accepts both
+(`src/server/repos/trips.ts:71-72`), and `TripTile` already renders a cover. Second, the currency list
+does not need to be hand-written to reach parity: `Intl.supportedValuesOf('currency')` is supplied by
+the runtime with no dependency and no network call, and it is a complete ISO-4217 set rather than
+somebody's list of 165. The nine-entry list stays as the pinned favourites shown first, which is a
+better reading affordance than an alphabetical wall.
+
+Rows unblocked: `TRP-04` (`01-S10`) directly.
+
+### Owned paths
+
+- `src/routes/_app/-ui/trip-form.tsx` — new. The one field set, rendered by both callers.
+- `src/routes/_app/-ui/new-trip-dialog.tsx` — edit. Becomes a thin dialog around the form.
+- `src/routes/_app/-ui/trip-actions.tsx` — edit. The edit sheet renders the same form.
+- `src/routes/_app/-server/trip-lifecycle.ts` — edit. `createTripFn` accepts the wider input.
+- `src/lib/currency-list.ts` — new. Pinned favourites, the runtime set, and the search over both.
+- `src/lib/__tests__/currency-list.test.ts` — new.
+- `src/routes/_app/-ui/__tests__/trip-form.test.tsx` — new. The date-and-duration linkage.
+- `e2e/trips-core-s8.visual.spec.ts` — new. This stage's own spec file.
+- `e2e/__screenshots__/trips-core-s8.visual.spec.ts/` — new. Its own baseline directory.
+
+`src/lib/money.ts` is deliberately **not** claimed: `CURRENCY_OPTIONS` (`:40-73`) is a curated list
+with a reason written above it, `04-budget-and-currencies.md` reads that module, and widening it would
+put one file in two plans. The new module imports the favourites from it and adds the rest.
+
+### Data and migration
+
+**No schema change and no migration.** Every field maps to a column that exists:
+`trips.title`, `summary`, `destination`, `start_date`, `end_date`, `currency`, `cover_image_key`,
+`cover_image_url`, `reminder_days` (`src/server/db/schema.ts:338-354`), and the initial members are
+`trip_members` rows. Nothing is filed for the wave-5 foundations schema stage.
+
+**Where the duration lives, and why it is not a column.** The form offers a duration when neither date
+is set, and derives it when both are. It is never stored: the trip's day run is the duration, and
+`syncTripDays` (`src/server/repos/days.ts:141-201`) is the single writer of that run. A `day_count`
+column would be a second source of truth for a number `days` already answers, and the two would
+disagree the first time somebody moved a date. When the form submits a duration with no dates, the
+server creates that many days directly through the day repository; when it submits two dates,
+`createTrip` builds the run from the range exactly as it does today.
+
+Dates stay `YYYY-MM-DD` text, currency stays `text(3)`, the budget stays integer minor units. No second
+convention.
+
+### Server (repo, server function, Zod)
+
+**Repository.** No new function. `createTrip` and `updateTrip` already accept every field, already
+enforce the date order through `assertDateOrder` (`src/server/repos/trips.ts:398-406`) and already
+reconcile the day run. The one repository behaviour this stage relies on and must not weaken is that
+`assertDateOrder` is server-side: the browser's own check at `new-trip-dialog.tsx:74-75` is a courtesy
+and the `trips_date_order_chk` constraint (`src/server/db/schema.ts:369-372`) is the backstop.
+
+**Server functions — `src/routes/_app/-server/trip-lifecycle.ts`, edited.** `createTripFn`'s validator
+widens to the full field set plus `dayCount`, `coverImageKey`, `coverImageUrl`, `reminderDays` and
+`memberUserIds`. It then does, in order: create the trip; when a duration was given without dates,
+create that many days; when member ids were given, add each through `addTripMember`, which `01-S6`
+guarded to refuse a user outside the workspace; and finally schedule the reminder through
+`00-S5`'s `syncTripReminder(scope, kv, { tripId, previous: null })`, which the function already calls
+and which this stage must carry forward rather than drop while editing around it.
+
+Members are added **after** the trip exists, because a membership needs a trip id, and each failure is
+reported per person rather than failing the creation — a trip that was created is not un-created
+because one invitation could not be written.
+
+**The cover image is uploaded before the trip is saved, and stored after.** The file goes to R2 through
+the existing upload server function in `src/server/fns/files.ts`, which is `DOC-01`'s
+(`06-documents-and-media.md`, wave 1) and is reused rather than reimplemented; this stage writes only
+the returned key and URL onto the trip. The R2 ordering rule is `files.ts`'s and is not re-derived
+here: object first, `assertQuota` second, compensating delete if the assertion throws
+(`src/server/repos/files.ts:170-171`).
+
+**Zod v4.** `z.strictObject()` with the `error` parameter; `z.iso.date()` for both dates; the currency
+validated as a three-letter uppercase code rather than against a hard-coded list, because the runtime's
+set is not ours to freeze; `dayCount` an integer with a stated range and rejected outright when either
+date is present, so the two ways of expressing a duration can never both arrive; `memberUserIds` a
+bounded array of ids.
+
+**Authorisation.** `createTripFn` needs only a tenant scope — creating a trip inside your own workspace
+is what a member does — and the `trips` quota assertion inside `createTrip` is what bounds it. Editing
+goes through `updateTripFn`, whose `assertTripRole` check `01-S1` put in the repository. A member id
+arriving from the browser is re-resolved against the caller's workspace before it becomes a
+membership.
+
+Nothing enqueued beyond the reminder key `00-S5` already writes; no Durable Object patch.
+
+### UI (route, components)
+
+**Route.** None added or moved; `pnpm generate-routes` is not run and `src/routeTree.gen.ts` is not an
+owned path. The dialog opens over `/trips` and over `/dashboard` as it does today.
+
+**One form, two frames.** `TripForm` is the field set and its client rules; `NewTripDialog` wraps it in
+the shipped `Dialog` and `TripEditSheet` wraps it in the shipped `Sheet`. Two frames because the two
+jobs differ — creating is a short focused act over the list, editing is a longer one beside the thing
+being edited — and one form because a field that behaves differently in the two places is a bug
+waiting for a bug report.
+
+**The date and duration rule, stated so it can be tested.** Both dates set: the duration is derived,
+displayed and not editable. Neither date set: the duration is editable and the trip is created with
+that many undated days. Moving the start date with both dates set moves the end date to preserve the
+duration; moving the end date changes the duration. An end before its start is refused inline, and the
+server refuses it again.
+
+**The cover control** is one control with three ways in — drop, paste, and choose — sharing one
+drop-target region that is also a real `button`, so the keyboard path is the file picker and not
+nothing. It shows the chosen image immediately from an object URL, uploads on submit, and reports its
+own progress. The fourth way in, a stock-photo search, is under **Blockers**.
+
+**Components reused, not rebuilt.** `Dialog`, `Sheet`, `Field`, `Input`, `Textarea`, `Combobox`,
+`DatePicker`, `DateRangePicker`, `RadioGroup`, `Button`, `IconButton`, `Progress`, `Alert`, `Avatar`,
+`Badge`, `EmptyState`, `Skeleton`. `DateRangePicker` and `MultiCombobox` are two of the four primitives
+`repo-ui.md` records as built, tested and imported by no screen; this stage is where two of them get
+their first consumer, which is better than adding a fifth unconsumed one.
+
+**States.**
+
+- _Empty._ The members picker with every workspace member already chosen shows a resolved empty state
+  pointing at workspace invitations, not an empty dropdown. The cover control's rest state is its
+  designed empty state — a dashed `--color-edge` region on `--color-surface-2` naming all three ways
+  in.
+- _Skeleton._ The members picker loads its profiles asynchronously and shows three skeleton rows at the
+  row height it will use, so the popover does not resize under the pointer.
+- _Error._ Per-field inline messages from the Zod message; a form-level `Alert` on `--color-surface-2`
+  for a server failure with a Retry that re-submits; an upload failure that names the file and offers
+  to continue without a cover, because a cover must never be able to block a trip from existing.
+- _Every control._ Rest, hover, focus-visible, active, disabled and loading, including the save, which
+  is disabled while the title is empty and shows `loading` while the write is in flight, and the dialog,
+  which cannot be dismissed mid-save.
+
+**Motion.** The dialog and sheet use the primitives' own entrances — 220 ms in on `--ease-out-quint`,
+150 ms out, `--ease-drawer` for the sheet. The duration field appearing and disappearing as the dates
+change animates opacity and height-independent transform only. Reduced motion collapses to opacity.
+
+**Tokens.** None missing, none filed. The duration and the budget carry `tabular-nums`.
+
+### Quota
+
+- **`trips`** is asserted inside `createTrip` (`src/server/repos/trips.ts:315`) before any write, as it
+  is today. This stage adds no second assertion and no bypass; the dialog's own disabled state at the
+  ceiling (`trips/index.tsx:194-206`) stays a courtesy in front of it.
+- **`storage_bytes` and `files`** are asserted by `recordFile`
+  (`src/server/repos/files.ts:170-171`) for the cover image, in the fixed R2 order — object, assert,
+  compensating delete on throw. This stage calls that path and does not re-implement it.
+- **A trip membership consumes nothing**, for the reason `01-S6` argued: `members` counts workspace
+  seats and a trip membership links a seat that already counted.
+
+No metric is added to `resolveLimits()` or `PLAN_QUOTAS`, so
+`src/server/billing/__tests__/limits.test.ts` gains no case and is not an owned path.
+
+### Tenant isolation test
+
+**No new `describe` block, and the reason is that this stage adds no repository function.** Every write
+it performs is an existing repository call whose isolation case already exists: `createTrip` and
+`updateTrip` are covered in the file's foreign-parent block (`:845` onward, which already asserts
+`updateTrip(scope, beta.tripId, …)` raises), `addTripMember` gained its case in `01-S6`, and
+`recordFile` is covered in the same block. `src/server/repos/__tests__/tenant-isolation.test.ts` is not
+listed under **Owned paths** and is not edited.
+
+The one new cross-tenant surface is the initial-members list, and it is closed in the server function
+rather than at the repository: `memberUserIds` is re-resolved through `getMembership` in the caller's
+scope before any membership is written, which is `01-S6`'s guard on `addTripMember` and is asserted
+there.
+
+### Verification
+
+**The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**Unit tests.**
+
+- `src/lib/__tests__/currency-list.test.ts` — the favourites appear first and appear once; the runtime
+  set is deduplicated against them; search matches on code and on name; an environment whose
+  `Intl.supportedValuesOf` is unavailable degrades to the favourites rather than throwing, which is the
+  case that decides whether the form renders at all on an older engine.
+- `src/routes/_app/-ui/__tests__/trip-form.test.tsx` — both dates set hides the duration field and
+  derives the figure; neither date set shows it; moving the start preserves the duration by moving the
+  end; moving the end changes the duration; an inverted range is refused inline; and a duration and a
+  date range can never both be submitted, which is the invariant the server's validator also holds.
+
+**Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
+the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
+`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
+`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s8.visual.spec.ts`. The stage's `describe`
+declares `/trips` and calls `auditServerClock` over its own route table; `e2e/helpers/shoot.ts` is not
+claimed, because a form prints no clock-derived string.
+
+Frames: the dialog open is the stage, so the resting `/trips` set is owed and the open dialog is
+declared:
+
+```sh
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips" \
+  --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S8" \
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
+  --state new-trip-dialog --click '[data-part="new-trip-trigger"]'
+```
+
+and a second run at `--state trip-edit-sheet`, reached through the card menu `01-S1` built. Both
+selectors are stable published attributes, each verified with a `page.locator(sel).count()` of 1
+against the running server before the capture runs. The 360px dialog frame is read specifically for the
+failure this form invites: a modal taller than the viewport whose save button is below the fold.
+
+**Console.** `watchConsole` attached, `fatal` empty in every test, tolerance list untouched. **Layout
+shift** asserted after `settle()`, gated on `supportedEntryTypes` — the duration field appearing and
+disappearing is exactly the kind of change that scores here if it is done by unmounting a block instead
+of reserving its space.
+
+### Definition of done
+
+The six repository-wide items from `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm
+lint` and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test` passes;
+the feature is verified in a real browser in light and dark, desktop and mobile; nothing is left
+behind — no TODO, no placeholder copy, no `console.log`, no commented-out code; and no file outside
+**Owned paths** is touched.
+
+On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
+
+- [ ] Spacing is on the 4px grid, from `--space-*`. No eyeballed one-off margins.
+- [ ] Every interactive element has hover, focus-visible, active, disabled and loading states.
+- [ ] Every list has a designed empty state, a skeleton loading state and an error state, each drawn
+      on `--color-surface-2` rather than on the raw canvas.
+- [ ] Motion is 150–260ms on `--ease-out-quint` or a sibling token, transform and opacity only, and
+      `prefers-reduced-motion: reduce` is honoured.
+- [ ] Full parity in light **and** dark theme, with dark shadows re-declared rather than reused.
+- [ ] Checked at 360px, 1280px and 2560px, and the small layout is designed rather than a squeezed
+      desktop.
+- [ ] Keyboard navigable end to end, sensible focus order, accessible names, WCAG 2.2 AA contrast in
+      both themes.
+- [ ] Zero console errors or warnings, and zero layout shift after paint.
+
+### Blockers
+
+**One, and it removes one of four ways into a control rather than the control.**
+
+- **Capability:** a stock-photo search for the cover image — type a query, choose a result, store the
+  image with its attribution.
+- **It is not a package.** No dependency outside the `docs/SPEC.md` §3 pinned set would supply it;
+  nothing is installed and neither `package.json` nor `pnpm-lock.yaml` is edited. It is a **third-party
+  service with unread commercial terms**, the same class of blocker `11-S3` in
+  `11-boundaries-and-blockers.md` already holds four other capabilities in.
+- **Disposition: defer**, recorded in `11-boundaries-and-blockers.md`. The terms that decide it are the
+  ones `11-S3` names for every provider: whether a paid, subscription-funded product may use the tier at
+  all, what may be cached and for how long, and what attribution is owed on screen — the last of which
+  is a design constraint on the trip card and the hero, not just on the picker.
+- **What ships instead:** the other three ways in — drop, paste, choose — all of which write to our own
+  R2 bucket through the existing file path, cost nothing per request and carry no attribution
+  obligation. No disabled fourth tab is rendered promising a search that has no provider.
+
+No binding is added to `wrangler.jsonc`. `01-S1` and `01-S6` must have closed, which waves 1 and 4
+guarantee, and `DOC-01` must have closed for the upload path, which wave 1 guarantees.
+
+## Stage 01-S9 — The planner as a workspace you can arrange
+
+### Stage id
+
+`01-S9` · Wave 5 · effort **L**. The largest surface in the repository, extended rather than rebuilt.
+
+### Reference rows
+
+- `TRP-06` partial → **done**.
+
+Sourced from `wiki: Trip-Planner-Overview` for the resizable panes, the day detail that floats over
+the map and minimises without closing, the first-open splash, the full-screen overlays on a narrow
+viewport, and the short undo history over the planner's own edits.
+
+**What already ships, measured, and is therefore extended.**
+`src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` is 1437 lines and already gives one full-bleed
+MapLibre canvas with two folding glass rails, a category filter bar, `@dnd-kit` with an optimistic
+`PlanOrder` that rolls back on failure, a bidirectional selection reducer, and camera padding that
+shrinks with a folded rail. The row's evidence is accurate about what is missing: drag-to-resize, the
+day detail, the splash, and the undo control.
+
+**Ahead of the reference already, and not to be regressed.** Two behaviours this screen has that the
+upstream product does not are named here so no stage trades them away for a described feature: the
+fold-aware camera padding, which is why a pin never hides behind glass when a rail opens, and the
+optimistic-with-rollback drag, which is why a drop feels instant while the write is in the air.
+`README.md` forbids regressing what we are already ahead on, and these are two of this screen's.
+
+Rows unblocked: `DOC-08` (`06-documents-and-media.md`, wave 6) places its per-day weather badge into
+the day detail this stage builds, which is why its surviving edge is `DOC-08 → TRP-06`.
+
+### Owned paths
+
+- `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` — edit.
+- `src/routes/_app/trips/$tripId/-ui/plan-workspace.tsx` — new. The workspace chrome extracted:
+  the rail widths, the resize handles, the splash and the narrow-viewport overlays.
+- `src/routes/_app/trips/$tripId/-ui/day-detail.tsx` — new.
+- `src/routes/_app/trips/$tripId/-ui/plan-undo.ts` — new. The undo ring, pure.
+- `src/routes/_app/trips/$tripId/-ui/__tests__/plan-undo.test.ts` — new.
+- `src/components/planner/rail.tsx` — edit. The rail accepts a width and publishes a resize handle.
+- `src/components/planner/__tests__/rails.test.tsx` — edit.
+- `e2e/trips-core-s9.visual.spec.ts` — new. This stage's own spec file.
+- `e2e/__screenshots__/trips-core-s9.visual.spec.ts/` — new. Its own baseline directory.
+
+`-ui/plan-model.ts`, `-ui/plan-actions.tsx` and `-server/plan.ts` are **not** claimed: this stage
+changes how the workspace is arranged, not what it holds or what it writes. It is the only wave-5
+stage that names any of the four planner core files, and it names one.
+
+**The extraction is part of the stage, not a refactor smuggled into it.** `plan-screen.tsx` is already
+the largest module in `src/`, and adding four behaviours to it without moving anything out would make
+the next stage that opens it worse off. The chrome moves to `plan-workspace.tsx`; the three things the
+screen's own header says it owns — the optimistic arrangement, the selection reducer and the writes —
+stay exactly where they are, because those are the reasons the screen is a screen.
+
+### Data and migration
+
+**No schema change and no migration.** Rail widths, the day-detail minimised flag and the day
+expand/collapse state are per-browser preferences through `src/lib/local-preference.ts`, for the reason
+`01-S3` argued and under the same `planned.` namespace, keyed by trip where they are per-trip. The undo
+ring is in memory only and is deliberately not persisted: an undo offered after a reload would reverse
+an edit the reader has forgotten making, and possibly one somebody else has since built on. Nothing is
+filed for the wave-5 foundations schema stage.
+
+### Server (repo, server function, Zod)
+
+**None.** No repository function, no server function, no Zod schema, no SQL, no authorisation
+decision. Every write the undo control reverses is an existing planner server function in
+`-server/plan.ts`, invoked with an inverse payload the ring already holds; the day detail reads from
+`loadPlanBoard`'s existing payload, which already carries each day's stops, stays and notes
+(`:132-146`).
+
+Two consequences, both deliberate:
+
+- **Undo is not a server concept.** There is no undo endpoint and no server-side history. The ring
+  holds an inverse call and issues it through the same validated, tenant-scoped server function the
+  original edit used, so an undo is authorised exactly as the edit was and cannot become a way to
+  write something the caller could not have written directly.
+- **A stale undo fails safely.** If the row it would reverse is gone, the server function raises and
+  the ring reports it and drops the entry rather than retrying. Undo never invents a row.
+
+### UI (route, components)
+
+**Route.** `src/routes/_app/trips/$tripId/plan.tsx` is not edited and no route is added or moved, so
+`pnpm generate-routes` is not run and `src/routeTree.gen.ts` is not an owned path. The route keeps
+default SSR: the rails are content and belong in the streamed document, and the map already mounts on
+the client.
+
+**Resizing, and the reason it is not a mouse-only affordance.** Each rail's inner edge carries a
+handle with `role="separator"`, `aria-orientation="vertical"`, `aria-valuenow`, `aria-valuemin`,
+`aria-valuemax` and an accessible name. It drags with a pointer and it moves with arrow keys, `Home`
+and `End` when focused, in 16px steps. Width is clamped to a readable band and persisted per browser.
+The camera is told: the existing fold-aware padding already recomputes when a rail folds, and this
+stage feeds it the width as well, so resizing a rail keeps a pin out from under it exactly as folding
+one does.
+
+**The day detail** is a `GlassPanel` floating over the map, opened from a day's header — which is
+already a real button (`day-section.tsx:74-112`). It holds that day's date and title, its stays with
+their check-in window and confirmation number, its notes, and a declared region for the weather badge
+`DOC-08` will place. It minimises to a slim bar that keeps its title and its close control, and closes
+with `Escape` or its own control. It is not a `Dialog`: it must not trap focus or block the map, since
+its whole purpose is to be read while the route stays visible. Focus is therefore managed explicitly —
+opening moves focus to the panel's heading, closing returns it to the day header that opened it.
+
+**The first-open splash** shows the trip's title over the workspace while the loader's data and the
+map's first style resolve, then crosses into the workspace. It has a floor and a ceiling: it is not
+shown at all on a navigation that resolves immediately, so a fast load never flashes it, and it never
+outlives the data by more than its exit. `[data-map-ready]` is what it waits on, which is the same
+marker the capture and the e2e settle already read, so the splash and the test agree on what "ready"
+means instead of each having an opinion.
+
+**Narrow viewports.** Below the workspace breakpoint the two rails are not narrow rails; they are
+full-screen overlays behind a Plan control and a Places control, dismissed by their own close control,
+by `Escape` and by a tap outside. The screen already imports `Sheet` and this is where it earns its
+place. The resize handles are absent below that breakpoint, because there is nothing to resize
+against.
+
+**The undo control** sits at the head of the itinerary rail and is present only when the ring is not
+empty. Its accessible name and its tooltip both name the action that will be reversed — "Undo moving
+Café Sacher to day 3" — because an unlabelled undo is a dare. The ring is bounded and its bound is a
+named constant beside the reason for it; it covers the four planner edits that already have server
+functions: adding a place, scheduling one, reordering, and removing an assignment.
+
+**Components reused, not rebuilt.** `GlassPanel`, `Sheet`, `Button`, `IconButton`, `Tooltip`,
+`SectionLabel`, `Badge`, `Skeleton`, `EmptyState`, `Alert`, `ScrollArea`. No new primitive is required
+and none is proposed.
+
+**States.**
+
+- _Empty._ The day detail for a day with nothing on it is a designed empty state on
+  `--color-surface-2`, naming the two things that would fill it — a stop and a note — rather than an
+  empty panel. The undo control's empty state is its absence, which is stated so it reads as a decision.
+- _Skeleton._ The splash **is** the workspace's loading state, and the day detail shows skeleton rows at
+  the height of the rows it will render while a route invalidation is in flight.
+- _Error._ A failed undo reports the reason in a toast and drops the entry. A day detail whose data has
+  gone — the day was removed by a collaborator while the panel was open — closes itself with a
+  message rather than rendering a panel about nothing.
+- _Every control._ Rest, hover, focus-visible, active, disabled and loading on the handles, the
+  overlay triggers, the minimise, the close and the undo.
+
+**Motion.** The day detail enters at 220 ms on `--ease-out-quint` and minimises at 150 ms, transform
+and opacity only. The overlays use `--ease-drawer`. The splash cross-fades. Resizing is **not**
+animated: a handle that lags the pointer feels broken, and a width change is a layout property, which
+`docs/DESIGN.md` forbids animating anyway. Reduced motion collapses every one of these to opacity or
+to nothing, and the splash to a plain hold.
+
+**Tokens.** None missing, none filed for a wave-5 token stage. Every figure the day detail prints —
+times, the check-in window, the confirmation number — carries `tabular-nums`.
+
+### Quota
+
+**No countable row.** This stage creates nothing: it arranges what the screen already loads and
+reverses writes that were already counted when they were made. No metric is added to `resolveLimits()`
+and none to `PLAN_QUOTAS`; `src/server/billing/__tests__/limits.test.ts` gains no case and is not an
+owned path.
+
+### Tenant isolation test
+
+**None, and the reason is that the stage adds no repository function.**
+`src/server/repos/__tests__/tenant-isolation.test.ts` is not listed under **Owned paths** and is not
+edited.
+
+The one thing worth stating, because an undo ring is exactly where a shortcut would be tempting: undo
+never bypasses the server. It re-issues an existing planner server function, which resolves the tenant
+through `appScope()` and re-resolves the trip through `writableTrip` and `requireTrip`, so an inverse
+payload built in a browser cannot reach a row the caller could not otherwise write. There is no
+client-supplied identifier in the ring that is not already validated on the way back in.
+
+### Verification
+
+**The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**Unit tests.**
+
+- `src/routes/_app/trips/$tripId/-ui/__tests__/plan-undo.test.ts` — the ring is bounded and drops its
+  oldest entry, not its newest; each of the four tracked edits produces an inverse that returns the
+  board to the arrangement before it; undoing twice reverses two edits in order; a rejected inverse
+  drops its entry rather than retrying; and the ring is cleared when the loader's own order lands from
+  a different source, so an undo can never fight a collaborator's write.
+- `src/components/planner/__tests__/rails.test.tsx` — extended, not rewritten. The handle exposes
+  `role="separator"` with a name and the three ARIA values; arrow keys move it and clamp at both ends;
+  the width is read back from the preference module on mount; and every existing case still passes.
+
+**Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
+the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
+`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
+`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s9.visual.spec.ts`. This stage's `describe`
+declares `/trips/$tripId/plan` with `map: true` and calls `auditServerClock` over its own route table.
+`e2e/helpers/shoot.ts` is not claimed.
+
+Frames: the workspace resting at 360, 1280 and 2560 in both themes, plus three declared states, because
+every one of this stage's four outcomes is a state the screen is not in when it loads:
+
+```sh
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/<seeded-trip-id>/plan" \
+  --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S9" \
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
+  --state day-detail --click '[data-part="day-header"]'
+```
+
+then `--state day-detail-minimised --click '[data-part="day-detail-minimise"]'`, and at 360 only,
+`--state plan-overlay --click '[data-part="plan-overlay-trigger"]'`. Each selector is a stable
+published attribute and each is verified with a `page.locator(sel).count()` of 1 against the running
+server before its capture runs; a selector that resolves to nothing makes `capture.mjs` throw at
+`--click`. `--map` is required on this route and re-waits the two-sided `[data-map-ready]` predicate
+after every resize and every theme change — which matters more here than anywhere else in the plan,
+because this stage changes what the map's viewport is.
+
+The splash is captured with `--settle 0` against a cold navigation so the frame is the splash and not
+what follows it, and the evidence says plainly that a frame of a transient state is a frame of a
+transient state.
+
+**Console.** `watchConsole` attached, `fatal` empty in every test, tolerance list untouched. The one
+tolerated warning that legitimately appears on this route is the headless rasteriser's GL advisory,
+which is already in `TOLERATED_CONSOLE_WARNINGS` scoped to routes declaring a live map; nothing is
+added. **Layout shift** asserted after `settle()`, gated on `supportedEntryTypes` — and this is the
+stage where it earns its keep, because a splash that hands over to a workspace is the classic way to
+score a large shift after paint.
+
+### Definition of done
+
+The six repository-wide items from `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm
+lint` and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test` passes;
+the feature is verified in a real browser in light and dark, desktop and mobile; nothing is left
+behind — no TODO, no placeholder copy, no `console.log`, no commented-out code; and no file outside
+**Owned paths** is touched.
+
+One item is added and is not negotiable: **the fold-aware camera padding and the optimistic-rollback
+drag both still behave exactly as they do before the stage**, evidenced by the existing planner tests
+passing unchanged and by a frame with a rail resized and a pin still clear of it.
+
+On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
+
+- [ ] Spacing is on the 4px grid, from `--space-*`. No eyeballed one-off margins.
+- [ ] Every interactive element has hover, focus-visible, active, disabled and loading states.
+- [ ] Every list has a designed empty state, a skeleton loading state and an error state, each drawn
+      on `--color-surface-2` rather than on the raw canvas.
+- [ ] Motion is 150–260ms on `--ease-out-quint` or a sibling token, transform and opacity only, and
+      `prefers-reduced-motion: reduce` is honoured.
+- [ ] Full parity in light **and** dark theme, with dark shadows re-declared rather than reused.
+- [ ] Checked at 360px, 1280px and 2560px, and the small layout is designed rather than a squeezed
+      desktop.
+- [ ] Keyboard navigable end to end, sensible focus order, accessible names, WCAG 2.2 AA contrast in
+      both themes.
+- [ ] Zero console errors or warnings, and zero layout shift after paint.
+
+### Blockers
+
+None. `motion`, `vaul` behind `Sheet`, `radix-ui` and `@dnd-kit` are all pinned and all already in use;
+no package, no binding, no third-party service. `01-S6` must have closed, which wave 4 guarantees, and
+the day detail's weather region stays empty until `DOC-08` lands in wave 6 — which is a later stage
+filling a declared seam, not a blocker on this one.
+
+## Stage 01-S10 — A reminder that fires on the right day, and can be turned off
+
+### Stage id
+
+`01-S10` · Wave 6 · effort **M**. The last stage of the plan, and the one that makes the `*/15`
+reminder sweep have something to sweep for a trip.
+
+### Reference rows
+
+- `TRP-04` partial → **done**.
+
+Sourced from `wiki: Creating-a-Trip` and its reminder sub-page for the preset choices, the custom
+range and the anchoring to the trip's departure.
+
+**What already exists, measured.** `trips.reminder_days` is `NOT NULL DEFAULT 3` with a non-negative
+`CHECK` (`src/server/db/schema.ts:354`, `:368`). `src/server/queue/reminders.ts` is complete: the KV
+key's 13-digit zero-padded due time sorts lexicographically, `sweepReminders` is wired to the
+`*/15 * * * *` cron in `src/server/worker.ts`, and the sweep turns due records into `email` tasks with
+a deterministic id so a double sweep sends one message. `00-S5` in wave 0 supplies
+`syncTripReminder(scope, kv, { tripId, previous })` and `reminderDueAt(anchor)`, fixes the sweep's
+unchunked enqueue, and wires creation. So the preference is stored, the transport exists, and the
+creation path already schedules.
+
+**What is missing and lands here:** the reader can neither choose the value nor see it, and **editing a
+trip's dates does not move the reminder**. That second one is the defect this stage exists for.
+
+**A refinement of `00-S5`'s sentence, stated rather than assumed.** `00-S5` says `TRP-04` "owns the
+preference UI". `TRP-02`'s row text names reminder presets as a field of the creation dialog, and
+`01-S8` renders the control there because a form field belongs to the form. This stage owns the
+control's **semantics** — the preset vocabulary, the custom range, the meaning of zero — and the
+re-anchoring on edit, which is the part that cannot live in a form. The two do not overlap and the
+split is recorded here so neither stage assumes the other did it.
+
+**The upstream kill switch is not ported.** Upstream, an administrator can disable reminders for the
+whole deployment, and the control is then rendered dimmed with an explanation rather than hidden. One
+deployment serves every tenant here, so that switch would silence reminders for every customer at
+once. The hosted equivalent already exists and is somebody else's row: the per-user notification
+channel matrix in `ACC-05` (`09-account-and-settings.md`, wave 2), which is `TRP-04`'s other
+`dependsOn` and which decides whether this reminder reaches a person by email, in the notification
+centre, or not at all.
+
+Rows unblocked: none. `TRP-04` is a leaf.
+
+### Owned paths
+
+- `src/routes/_app/-ui/trip-form.tsx` — edit. The reminder control's presets, custom range and copy.
+- `src/routes/_app/-server/trip-lifecycle.ts` — edit. `updateTripFn` re-anchors the reminder.
+- `src/routes/_app/-server/__tests__/trip-reminder.test.ts` — new. The re-anchoring seam.
+- `e2e/trips-core-s10.visual.spec.ts` — new. This stage's own spec file.
+- `e2e/__screenshots__/trips-core-s10.visual.spec.ts/` — new. Its own baseline directory.
+
+`src/server/queue/reminders.ts` and `src/server/queue/reminder-sync.ts` are **not** claimed: both are
+`00-S5`'s, both closed in wave 0, and this stage calls them. A second scheduler would be the defect.
+
+### Data and migration
+
+**No schema change and no migration.** `trips.reminder_days` exists with its default and its `CHECK`,
+and the reminder index lives in KV rather than D1. Nothing is filed for the wave-6 foundations schema
+stage.
+
+**Zero is the off switch, and it needs no column.** `reminder_days = 0` means no reminder, which the
+non-negative `CHECK` already permits and `reminderDueAt` already answers `null` for. A separate
+`reminder_enabled` boolean would be a second way to say the same thing and the two would disagree.
+
+**A trip with no start date has nothing to anchor to.** That is not an error and is not hidden: the
+control renders with an explanation that the reminder starts working once the trip has a departure
+date, and `reminderDueAt` returns `null`, so no key is written. When the date is later filled in, the
+edit path below schedules it — which is precisely why the re-anchoring is the substance of this stage.
+
+### Server (repo, server function, Zod)
+
+**Repository.** None added. The row this stage writes is the trip row, through `updateTrip` in
+`src/server/repos/trips.ts`, which already accepts `reminderDays` through `tripFields` (`:74`) and
+already validates it as a non-negative integer capped at 365. Its `organization_id` scoping is the
+repository's own and is unchanged: `tripsRepository` is a `createTenantRepository`, so every statement
+starts from `tenantFilter()` on `trips.organization_id`, and `requireTrip` re-resolves the id inside
+the caller's scope before the update.
+
+**Server function — `src/routes/_app/-server/trip-lifecycle.ts`, edited.** `updateTripFn` reads the
+trip's **current** `startDate` and `reminderDays` **before** it writes, passes them to
+`syncTripReminder` as `previous`, and calls it after the write.
+
+**Why the previous anchor has to be read first, and what breaks without it.** `00-S5` measured this and
+this stage consumes the measurement rather than rediscovering it: `reminderKey`
+(`src/server/queue/reminders.ts:38-41`) builds `reminder:<due13>:<orgId>:<kind>:<id>`, so the due time
+is inside the key and is its leading variable segment, and `cancelReminder` (`:66-71`) rebuilds that
+same string from `{ dueAt, orgId, entity }`. Cancelling therefore needs the **old** due time. It cannot
+be read from the trip row, which by then holds the new dates, and it cannot be found by prefix either,
+because the due time sorts ahead of the organization and the entity — only a full scan would find it,
+which is the scan the design exists to avoid. A handler that writes first and syncs afterwards leaves
+an orphan that fires on the old date. Read, write, sync, in that order, and `previous` is a required
+property typed as nullable so an omitted one cannot compile into "cancel nothing".
+
+**Zod v4.** The `reminderDays` input is an integer in `0..30`, with the `error` parameter carrying the
+message the field shows. The repository's own cap is 365 and stays there — the wider bound is the
+column's, the narrower one is the product's, and narrowing at the boundary rather than in the column
+means the decision can change without a migration.
+
+**Authorisation.** In the repository, through the `assertTripRole` guard `01-S1` added to `updateTrip`:
+`owner` or `editor`. The reminder is not separately gated, because the people who can move a trip's
+dates are exactly the people whose reminder it is.
+
+**Delivery is already asynchronous.** The sweep enqueues an `email` task on `TASKS` with a
+deterministic id; nothing in this stage sends anything inline, and the chunking fix that keeps a tick
+with more than a hundred due reminders from throwing is `00-S5`'s, in `sweepReminders`. No Durable
+Object patch, no new task kind.
+
+### UI (route, components)
+
+**Route.** None added or moved; `pnpm generate-routes` is not run and `src/routeTree.gen.ts` is not an
+owned path.
+
+**The control.** A `RadioGroup` of presets — none, one day, three days, nine days — plus a custom
+option that reveals a numeric `Input` bounded to 1–30. One tab stop for the presets with arrow-key
+movement, which is what a radio group is for and what a row of buttons would lose. Beneath it, one line
+of resolved copy naming the actual date the reminder would be sent, computed from the trip's own start
+date — a preset in days is arithmetic the reader should not have to do, and the resolved date is what
+makes the choice obvious.
+
+**When there is no start date** the presets stay enabled and the resolved line says the reminder will
+start once a departure date is set. The value is stored either way, so filling the date in later needs
+no second visit to this control.
+
+**Components reused, not rebuilt.** `RadioGroup`, `Field`, `Input`, `Alert`, `Tooltip`, `SectionLabel`
+— all from `src/components/ui`. No new primitive is required and none is proposed.
+
+**States.**
+
+- _Empty._ Not a list, so no empty state of its own; the resolved-date line is what an unset trip shows
+  instead of a blank, and it renders on `--color-surface-2` inside the form's own section.
+- _Skeleton._ The control is part of a form that is either open or not; it has no independent pending
+  state. Stated rather than skipped.
+- _Error._ A custom value outside 1–30 is refused inline with the bound named, and the server refuses it
+  again. A failed save leaves the form's existing `Alert` in place, which `01-S8` owns.
+- _Every control._ Rest, hover, focus-visible, active, disabled and loading on the radios and the custom
+  input.
+
+**Motion.** The custom input reveals with opacity and a 4px transform over 220 ms on
+`--ease-out-quint`; reduced motion collapses it to opacity.
+
+**Tokens.** None missing, none filed. The day figure and the resolved date carry `tabular-nums`.
+
+### Quota
+
+**No countable row.** A reminder is a KV key with a TTL and, when it comes due, one queue envelope. It
+creates no D1 row, so no metric applies; none is added to `resolveLimits()` and none to `PLAN_QUOTAS`,
+and `src/server/billing/__tests__/limits.test.ts` gains no case and is not an owned path.
+
+What has to be bounded here is not rows but fan-out, and it already is, in two places that are not this
+stage's: at most one key per trip, because the key is keyed by the trip's entity id and re-scheduling
+cancels the old one; and at most a hundred envelopes per `sendBatch`, because `00-S5` chunks the sweep
+against the platform's own limit and holds the bound in a unit test rather than in a comment.
+
+### Tenant isolation test
+
+**No new `describe` block, and the reason is that the stage adds no repository function.**
+`src/server/repos/__tests__/tenant-isolation.test.ts` is not listed under **Owned paths** and is not
+edited. `updateTrip`'s isolation case already exists in the file's foreign-parent block, which asserts
+that `updateTrip(scope, beta.tripId, …)` raises, and `00-S5` appended the case covering
+`syncTripReminder` reading a foreign trip.
+
+The tenant property this stage must not break is in the KV key rather than in SQL, and it is asserted in
+the unit test below: `reminderKey` embeds the organization id, so two tenants whose trips fall due at
+the same instant cannot collide on one key, and `cancelReminder` for one tenant's trip cannot delete
+another's.
+
+### Verification
+
+**The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**Unit tests.** `src/routes/_app/-server/__tests__/trip-reminder.test.ts`, against a fake KV that
+records its `put` and `delete` calls:
+
+1. Moving a trip's start date cancels the key for the old anchor and writes exactly one key for the new
+   one — the orphan case, and the reason `previous` exists.
+2. Changing `reminderDays` with the dates unchanged does the same.
+3. Setting `reminderDays` to zero cancels and writes nothing.
+4. Clearing the start date cancels and writes nothing.
+5. Setting a start date on a trip that had none writes a key with no cancel, and `previous` is the
+   honest `{ startDate: null, reminderDays }` rather than an omitted argument.
+6. A reminder whose computed due instant is already in the past writes no key, so editing a trip that
+   departs tomorrow does not enqueue a message for last week.
+7. Two organizations with the same due instant produce two distinct keys, and cancelling one leaves the
+   other.
+
+**Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
+`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes out
+in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for this
+stage's own baselines and nobody else's — against `e2e/trips-core-s10.visual.spec.ts`. This stage's `describe` declares
+`/trips` — the surface the form opens over — and calls `auditServerClock` over its own route table.
+
+The resolved-date line is derived from the trip's start date and the chosen offset, both of which are
+fixture data rather than the clock, so it is stable on every calendar day and `e2e/helpers/shoot.ts` is
+not claimed and `RELATIVE_TIME_SITES` gains no entry. That is a property worth stating: had the line
+been phrased relative to today it would have needed an entry, and phrasing it as an absolute date is
+what avoids the mask.
+
+Frames: the reminder control is inside a dialog, so the state is declared:
+
+```sh
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips" \
+  --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S10" \
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
+  --state reminder-custom --click '[data-part="trip-reminder-custom"]'
+```
+
+The selector is a stable published attribute and is verified with a `page.locator(sel).count()` of 1
+against the running server before the capture runs. The resting `/trips` set is still owed, because the
+custom state is judged against the state it changes from.
+
+**Console.** `watchConsole` attached, `fatal` empty in every test, tolerance list untouched. **Layout
+shift** asserted after `settle()`, gated on `supportedEntryTypes`; the custom input revealing inside a
+dialog is the specific movement it measures here.
+
+### Definition of done
+
+The six repository-wide items from `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm
+lint` and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test` passes;
+the feature is verified in a real browser in light and dark, desktop and mobile; nothing is left
+behind — no TODO, no placeholder copy, no `console.log`, no commented-out code; and no file outside
+**Owned paths** is touched.
+
+On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
+
+- [ ] Spacing is on the 4px grid, from `--space-*`. No eyeballed one-off margins.
+- [ ] Every interactive element has hover, focus-visible, active, disabled and loading states.
+- [ ] Every list has a designed empty state, a skeleton loading state and an error state, each drawn
+      on `--color-surface-2` rather than on the raw canvas.
+- [ ] Motion is 150–260ms on `--ease-out-quint` or a sibling token, transform and opacity only, and
+      `prefers-reduced-motion: reduce` is honoured.
+- [ ] Full parity in light **and** dark theme, with dark shadows re-declared rather than reused.
+- [ ] Checked at 360px, 1280px and 2560px, and the small layout is designed rather than a squeezed
+      desktop.
+- [ ] Keyboard navigable end to end, sensible focus order, accessible names, WCAG 2.2 AA contrast in
+      both themes.
+- [ ] Zero console errors or warnings, and zero layout shift after paint.
+
+### Blockers
+
+None. No package outside the `docs/SPEC.md` §3 pinned set, no binding added to `wrangler.jsonc` — the
+reminder rides the `TASKS` queue and the `*/15` cron that are already declared and already wired — and
+no third-party service. Two rows in other plans gate it and both close earlier: `ACC-05`
+(`09-account-and-settings.md`, wave 2) for the channel the reminder is delivered on, and `TRP-02`
+(`01-S8`, wave 5) for the form the control lives in.
