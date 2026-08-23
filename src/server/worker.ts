@@ -14,7 +14,7 @@
  */
 
 import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server'
-import { prunePlatformAuditLog } from './catalog/audit'
+import { PLATFORM_SYSTEM_ACTOR, prunePlatformAuditLog } from './catalog/audit'
 import { createDb } from './db/client'
 import { consumeTaskBatch } from './queue/consumer'
 import { sweepReminders } from './queue/reminders'
@@ -38,8 +38,9 @@ function taskEnv(env: Cloudflare.Env): TaskBindings {
 
 /**
  * The three expressions `wrangler.jsonc` registers, and there are exactly three on production
- * (docs/DEPLOY.md §11). The weekly retention slot prunes `platform_audit_log`; a fourth expression
- * for that prune would falsify that count, so it joins the existing one rather than adding one.
+ * (docs/DEPLOY.md §11). The weekly retention slot now carries the 400-day `platform_audit_log`
+ * prune as well as the backup and export retention it was registered for; a fourth expression for
+ * that prune would falsify that count, so it joins the existing one rather than adding one.
  */
 const REMINDER_CRON = '*/15 * * * *'
 const BACKUP_CRON = '0 3 * * *'
@@ -64,11 +65,24 @@ export default {
         await sweepReminders(bindings, logger, controller.scheduledTime)
         return
       case RETENTION_CRON:
-        // The 400-day prune of `platform_audit_log` (docs/ACCESS.md §4.3). It is the only delete
-        // path that table has, it selects by `created_at` alone, and it logs its own row count —
-        // so there is nothing to report here that the writer has not already emitted.
-        await prunePlatformAuditLog(createDb(env.DB), logger, {
+        // This slot has two jobs, and only one of them is written.
+        //
+        // Written: the 400-day prune of `platform_audit_log` (docs/ACCESS.md §4.3). It is the only
+        // delete path that table has, it selects by `created_at` alone, it acts as an explicit
+        // `system` actor, and it logs its own row count — so there is nothing to report here that
+        // the writer has not already emitted.
+        await prunePlatformAuditLog(createDb(env.DB), PLATFORM_SYSTEM_ACTOR, logger, {
           now: new Date(controller.scheduledTime),
+        })
+        // Not written: the R2 half this expression was registered for. `wrangler.jsonc` documents
+        // `17 4 * * 1` as the weekly retention prune of expired backups and export artifacts, and
+        // `BACKUP_RETENTION_DAYS` is a declared var nothing acts on. Adding the audit prune beside it
+        // must not make that gap invisible in Workers Observability, so the warn the branch carried
+        // before this handler existed stays — one line per week, naming the half that is missing.
+        logger.warn('cron half has no handler yet', {
+          cron: controller.cron,
+          pending: 'backup and export artifact retention',
+          retentionDays: env.BACKUP_RETENTION_DAYS,
         })
         return
       case BACKUP_CRON:

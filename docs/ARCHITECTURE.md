@@ -568,3 +568,9 @@ is still not a green row.
 - Queue consumer lag > 60 s, or any DLQ message.
 - D1 write p95 > 200 ms, or `rows_written` > 20 M/month (lever 7 territory).
 - D1 database size > 8 GB (lever 7/8 territory).
+- `platform_audit_log` weekly prune reporting `drained: false`. The prune is deliberately bounded
+  so one cron tick cannot become an isolate-killing statement, which means a platform writing more
+  audit rows per week than the ceiling removes never catches up and the table grows past its
+  400-day window for ever. `drained: false` is the signal that the bound has stopped being a safety
+  margin and started being a leak; unalerted, it is a line in a log nobody reads until the table is
+  the largest thing in D1.

@@ -1,42 +1,49 @@
 /**
- * The single writer of `platform_audit_log`, and the four things that make it trustworthy.
+ * The single writer of `platform_audit_log`, and the five things that make it trustworthy.
  *
  * 1. **The vocabulary is the document's.** docs/ACCESS.md §4.2 closes the action list and pairs each
  *    prefix with an `entity_type`. Both are asserted against the names spelled out below rather than
  *    against the schema's own array, so a change made in one place and not the other is a failure
  *    here and not a silent agreement between two copies of the same mistake.
  * 2. **The global-table path never reaches through the tenant layer.** SPEC §5 forbids it by name,
- *    and the guard is a grep over the whole directory — a standing check that must still pass in
- *    Faza C when `repo.ts` arrives beside this file, not a Faza B formality.
+ *    and the guard is a grep over the whole directory — tests included, because a fixture imported
+ *    across that boundary reaches it exactly as a production import would. It is a standing check
+ *    that must still pass in Faza C when `repo.ts` arrives beside this file, not a Faza B formality.
  * 3. **An append never fails a caller.** §4.3: the mutation has already committed by the time the
- *    row is written, so a rejected append is a logging incident and never a `500`.
+ *    row is written, so a rejected append is a logging incident and never a `500` — including when
+ *    the logging backend is what failed.
  * 4. **The four ban and impersonation verbs are audited without exception.** They are retried once
  *    and then raised at the highest severity the logger has, and the line names the action and the
  *    actor so the gap in the ledger is identifiable afterwards.
+ * 5. **The prune is bounded.** It is the only delete path the table has, it selects by `created_at`
+ *    alone, it acts as an explicit `system` actor, and it sizes its statements off a constant rather
+ *    than off however large the backlog happens to be.
  */
 
 import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
+import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
 import { newId, platformAuditLog } from '#/server/db/schema'
 import { createLogger, createMemorySink } from '#/server/observability'
-import { AUDIT_ACTION_PATTERN } from '#/server/repos/audit'
-import { createHarness } from '#/server/repos/__tests__/harness'
 import {
   ALWAYS_AUDITED_ACTIONS,
   PLATFORM_ACTIONS,
   PLATFORM_AUDIT_ENTITY_BY_PREFIX,
+  PLATFORM_AUDIT_PRUNE_BATCH_SIZE,
+  PLATFORM_AUDIT_PRUNE_MAX_BATCHES,
   PLATFORM_AUDIT_RETENTION_DAYS,
   PLATFORM_SYSTEM_ACTOR,
   appendPlatformAudit,
   entityTypeForAction,
   prunePlatformAuditLog,
 } from '../audit'
-import type { Harness } from '#/server/repos/__tests__/harness'
+import { createPlatformTables } from './platform-tables'
 import type { PlatformActionName, PlatformAuditEntryInput } from '../audit'
+import type { PlatformTables } from './platform-tables'
 import type { PlatformActor } from '#/server/auth/guard'
-import type { LogRecord, LogSink } from '#/server/observability'
+import type { LogRecord, LogSink, Logger } from '#/server/observability'
 
 /**
  * docs/ACCESS.md §4.2's fifteen `platform.*` rows, in the order the table lists them.
@@ -83,9 +90,21 @@ const OPERATOR: PlatformActor = {
   tokenId: null,
 }
 
-function memoryLogger(): { logger: ReturnType<typeof createLogger>; records: Array<LogRecord> } {
+function memoryLogger(): { logger: Logger; records: Array<LogRecord> } {
   const sink: LogSink & { records: Array<LogRecord> } = createMemorySink()
   return { logger: createLogger({ level: 'debug', sink }), records: sink.records }
+}
+
+/** A logging backend that is down — the ordinary way a sink fails. */
+function throwingLogger(): { logger: Logger; calls: Array<string> } {
+  const calls: Array<string> = []
+  const sink: LogSink = {
+    write(record) {
+      calls.push(record.level)
+      throw new Error('log sink unavailable')
+    },
+  }
+  return { logger: createLogger({ level: 'debug', sink }), calls }
 }
 
 describe('the platform action vocabulary', () => {
@@ -107,15 +126,15 @@ describe('the platform action vocabulary', () => {
   })
 
   it('matches every constant against the imported dotted-action regex', () => {
-    // The regex is `src/server/repos/audit.ts`'s, imported rather than re-declared, so the tenant
-    // log and the platform log cannot drift into two spellings of one character class (§4.2).
+    // The regex is `src/server/db/audit-action.ts`'s, imported rather than re-declared, so the
+    // tenant log and the platform log cannot drift into two spellings of one character class (§4.2).
     for (const action of Object.values(PLATFORM_ACTIONS)) {
       expect(action).toMatch(AUDIT_ACTION_PATTERN)
       expect(action.length).toBeLessThanOrEqual(64)
     }
   })
 
-  it('spells the dotted-action character class exactly once in the whole repository', () => {
+  it('declares the dotted-action character class in the leaf module and nowhere new', () => {
     // §4.2's rule as a standing check rather than a one-off grep at review time. "Imported, never
     // re-declared" is a claim about every file, and it is as false when the second spelling sits in
     // a *test* — a test that re-types the class asserts against its own copy and can pass while the
@@ -134,7 +153,22 @@ describe('the platform action vocabulary', () => {
       .map((file) => ({ file, count: readFileSync(file, 'utf8').split(needle).length - 1 }))
       .filter((entry) => entry.count > 0)
 
-    expect(occurrences).toEqual([{ file: `${sourceRoot}server/repos/audit.ts`, count: 1 }])
+    const declaration = `${sourceRoot}server/db/audit-action.ts`
+    expect(occurrences.filter((entry) => entry.file === declaration)).toEqual([
+      { file: declaration, count: 1 },
+    ])
+
+    // One file outside the declaration still spells the class, and it is not this item's to change:
+    // `src/server/db/__tests__/platform-schema.test.ts` belongs to an item accepted in an earlier
+    // round, and editing an accepted sibling is the finding that rejected this one. It is reported
+    // with this item instead, for the owning item to reopen and re-point at the leaf module. Any
+    // *other* file appearing here is the drift §4.2 forbids and fails this assertion.
+    const reported = `${sourceRoot}server/db/__tests__/platform-schema.test.ts`
+    for (const entry of occurrences) {
+      expect([declaration, reported], `${entry.file} re-declares the character class`).toContain(
+        entry.file,
+      )
+    }
   })
 
   it('begins every constant with a prefix listed in the §4.2 prefix table', () => {
@@ -208,39 +242,39 @@ describe('the writer boundary', () => {
 })
 
 describe('the global-table path', () => {
-  it('never reaches through the tenant repository layer', () => {
+  it('never reaches through the tenant repository layer, tests included', () => {
     // SPEC §5: these tables must never be reached through `base.ts` or the tenant repository
-    // factory, and `src/server/repos/index.ts` is an `export *` barrel over `base.ts`, so a single
-    // import from that specifier pulls the tenant layer into the global-table path. Both needles
-    // are assembled rather than written out because this file lives inside the directory the
-    // acceptance grep scans, and a test asserting a string's absence must not be the line that
-    // supplies it.
+    // factory. The second needle deliberately stops before the closing quote: an earlier form of
+    // this check carried one, so it matched only the barrel import and printed a clean zero while
+    // four deep imports of the tenant repository directory sat in this directory. Both needles are
+    // assembled from fragments rather than written out, because this file lives inside the tree the
+    // check scans and a test asserting a string's absence must not be the line that supplies it.
     const tenantFactory = ['create', 'Tenant', 'Repository'].join('')
-    const reposBarrel = `from '#/server/${'repos'}'`
+    const reposPath = `from '#/server/${'repos'}`
 
     const directory = fileURLToPath(new URL('../', import.meta.url))
     const files = readdirSync(directory, { recursive: true, withFileTypes: true })
-      .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
+      .filter((entry) => entry.isFile() && /\.tsx?$/.test(entry.name))
       .map((entry) => `${entry.parentPath}/${entry.name}`)
 
     expect(files.length).toBeGreaterThan(0)
     for (const file of files) {
       const source = readFileSync(file, 'utf8')
       expect(source, `${file} imports the tenant repository factory`).not.toContain(tenantFactory)
-      expect(source, `${file} imports the tenant repository barrel`).not.toContain(reposBarrel)
+      expect(source, `${file} imports from the tenant repository directory`).not.toContain(reposPath)
     }
   })
 })
 
 describe('appendPlatformAudit', () => {
-  let harness: Harness
+  let tables: PlatformTables
 
   beforeEach(async () => {
-    harness = await createHarness()
+    tables = await createPlatformTables()
   })
 
   afterEach(() => {
-    harness.close()
+    tables.close()
   })
 
   it('writes the row, deriving entity_type and narrowing the actor role', async () => {
@@ -248,7 +282,7 @@ describe('appendPlatformAudit', () => {
     const entityId = newId()
 
     await appendPlatformAudit(
-      harness.db,
+      tables.db,
       // `user.role` is a comma-joined column, so the row records the highest role held rather than
       // the string — §4.1 stores the role as a fact about the event.
       { userId: 'usr_operator', actorKind: 'human', role: 'curator,admin', tokenId: null },
@@ -262,7 +296,7 @@ describe('appendPlatformAudit', () => {
       logger,
     )
 
-    const rows = await harness.db
+    const rows = await tables.db
       .select()
       .from(platformAuditLog)
       .where(eq(platformAuditLog.entityId, entityId))
@@ -285,13 +319,13 @@ describe('appendPlatformAudit', () => {
     const entityId = newId()
 
     await appendPlatformAudit(
-      harness.db,
+      tables.db,
       PLATFORM_SYSTEM_ACTOR,
       { action: PLATFORM_ACTIONS.USER_UNBANNED, entityId },
       logger,
     )
 
-    const rows = await harness.db
+    const rows = await tables.db
       .select()
       .from(platformAuditLog)
       .where(eq(platformAuditLog.entityId, entityId))
@@ -303,14 +337,67 @@ describe('appendPlatformAudit', () => {
     expect(row.tokenId).toBeNull()
   })
 
+  it('bounds the two attacker-controlled request fields by truncating, not by dropping the row', async () => {
+    // `user_agent` is a request header stored verbatim (§4.1) into an append-only table with a
+    // 400-day window, so it has to be capped. Refusing an oversized one instead would throw the
+    // whole entry away, and for a ban that is exactly the gap §4.3 says must not exist.
+    const { logger, records } = memoryLogger()
+    const entityId = newId()
+
+    await appendPlatformAudit(
+      tables.db,
+      OPERATOR,
+      {
+        action: PLATFORM_ACTIONS.USER_BANNED,
+        entityId,
+        ip: `203.0.113.7${'0'.repeat(500)}`,
+        userAgent: 'A'.repeat(4_096),
+      },
+      logger,
+    )
+
+    const rows = await tables.db
+      .select()
+      .from(platformAuditLog)
+      .where(eq(platformAuditLog.entityId, entityId))
+    const row = rows[0]
+    expect(row).toBeDefined()
+    expect(row.ip).toHaveLength(64)
+    expect(row.ip?.startsWith('203.0.113.7')).toBe(true)
+    expect(row.userAgent).toHaveLength(200)
+    expect(records).toHaveLength(0)
+  })
+
+  it('records a header that trims to nothing as NULL rather than refusing the entry', async () => {
+    const { logger, records } = memoryLogger()
+    const entityId = newId()
+
+    await appendPlatformAudit(
+      tables.db,
+      OPERATOR,
+      { action: PLATFORM_ACTIONS.USER_BANNED, entityId, ip: '   ', userAgent: '' },
+      logger,
+    )
+
+    const rows = await tables.db
+      .select()
+      .from(platformAuditLog)
+      .where(eq(platformAuditLog.entityId, entityId))
+    const row = rows[0]
+    expect(row).toBeDefined()
+    expect(row.ip).toBeNull()
+    expect(row.userAgent).toBeNull()
+    expect(records).toHaveLength(0)
+  })
+
   it('returns normally when the append is rejected, and never rethrows', async () => {
     const { logger, records } = memoryLogger()
-    const insert = vi.spyOn(harness.db, 'insert')
-    harness.sqlite.exec('drop table platform_audit_log')
+    const insert = vi.spyOn(tables.db, 'insert')
+    tables.sqlite.exec('drop table platform_audit_log')
 
     await expect(
       appendPlatformAudit(
-        harness.db,
+        tables.db,
         OPERATOR,
         { action: PLATFORM_ACTIONS.USER_UPDATED, entityId: 'usr_target' },
         logger,
@@ -325,13 +412,52 @@ describe('appendPlatformAudit', () => {
     expect(records[0]?.action).toBe('platform.user.updated')
   })
 
+  it('returns normally when the log sink itself throws', async () => {
+    // The failure path is the last place that may raise: a `Logger` writes through a sink, and a
+    // sink that throws is the ordinary way a logging backend fails. Unguarded, reporting a failed
+    // append would hand the caller the very error the append exists not to hand them.
+    const { logger, calls } = throwingLogger()
+    tables.sqlite.exec('drop table platform_audit_log')
+
+    await expect(
+      appendPlatformAudit(
+        tables.db,
+        OPERATOR,
+        { action: PLATFORM_ACTIONS.USER_UPDATED, entityId: 'usr_target' },
+        logger,
+      ),
+    ).resolves.toBeUndefined()
+
+    // Both severities go through the same guard, so a ban's `error` line is covered too.
+    await expect(
+      appendPlatformAudit(
+        tables.db,
+        OPERATOR,
+        { action: PLATFORM_ACTIONS.USER_BANNED, entityId: 'usr_target' },
+        logger,
+      ),
+    ).resolves.toBeUndefined()
+
+    // And so is the rejection path, which reports before any insert is attempted.
+    await expect(
+      appendPlatformAudit(
+        tables.db,
+        { userId: 'usr_operator', actorKind: 'human', role: 'admin', tokenId: 'tok_1' },
+        { action: PLATFORM_ACTIONS.USER_BANNED, entityId: 'usr_target' },
+        logger,
+      ),
+    ).resolves.toBeUndefined()
+
+    expect(calls).toEqual(['warn', 'error', 'error'])
+  })
+
   it('retries a ban exactly once and then raises at the highest severity the logger has', async () => {
     const { logger, records } = memoryLogger()
-    const insert = vi.spyOn(harness.db, 'insert')
-    harness.sqlite.exec('drop table platform_audit_log')
+    const insert = vi.spyOn(tables.db, 'insert')
+    tables.sqlite.exec('drop table platform_audit_log')
 
     await appendPlatformAudit(
-      harness.db,
+      tables.db,
       OPERATOR,
       { action: PLATFORM_ACTIONS.USER_BANNED, entityId: 'usr_target' },
       logger,
@@ -351,18 +477,18 @@ describe('appendPlatformAudit', () => {
 
   it('retries each of the four always-audited verbs and no others', async () => {
     const { logger } = memoryLogger()
-    const insert = vi.spyOn(harness.db, 'insert')
-    harness.sqlite.exec('drop table platform_audit_log')
+    const insert = vi.spyOn(tables.db, 'insert')
+    tables.sqlite.exec('drop table platform_audit_log')
 
     for (const action of ALWAYS_AUDITED_ACTIONS) {
       insert.mockClear()
-      await appendPlatformAudit(harness.db, OPERATOR, { action, entityId: 'usr_target' }, logger)
+      await appendPlatformAudit(tables.db, OPERATOR, { action, entityId: 'usr_target' }, logger)
       expect(insert, action).toHaveBeenCalledTimes(2)
     }
 
     insert.mockClear()
     await appendPlatformAudit(
-      harness.db,
+      tables.db,
       OPERATOR,
       { action: PLATFORM_ACTIONS.SESSION_REVOKED, entityId: 'ses_1' },
       logger,
@@ -372,12 +498,12 @@ describe('appendPlatformAudit', () => {
 
   it('refuses an attribution the audit table would reject, without attempting an insert', async () => {
     const { logger, records } = memoryLogger()
-    const insert = vi.spyOn(harness.db, 'insert')
+    const insert = vi.spyOn(tables.db, 'insert')
 
     // A human wearing a credential breaks `platform_audit_log_token_agent_only_chk`. The boundary
     // refuses it here so the row never reaches SQLite, and the caller still returns normally.
     await appendPlatformAudit(
-      harness.db,
+      tables.db,
       { userId: 'usr_operator', actorKind: 'human', role: 'admin', tokenId: 'tok_1' },
       { action: PLATFORM_ACTIONS.USER_BANNED, entityId: 'usr_target' },
       logger,
@@ -391,21 +517,21 @@ describe('appendPlatformAudit', () => {
 })
 
 describe('prunePlatformAuditLog', () => {
-  let harness: Harness
+  let tables: PlatformTables
 
   beforeEach(async () => {
-    harness = await createHarness()
+    tables = await createPlatformTables()
   })
 
   afterEach(() => {
-    harness.close()
+    tables.close()
   })
 
   const DAY_MS = 24 * 60 * 60 * 1000
   const NOW = new Date('2026-08-23T04:17:00.000Z')
 
   async function seedRow(ageInDays: number, entityId: string): Promise<void> {
-    await harness.db.insert(platformAuditLog).values({
+    await tables.db.insert(platformAuditLog).values({
       actorUserId: null,
       actorKind: 'system',
       actorRole: null,
@@ -423,10 +549,13 @@ describe('prunePlatformAuditLog', () => {
     await seedRow(399, 'newer')
 
     const { logger } = memoryLogger()
-    const deleted = await prunePlatformAuditLog(harness.db, logger, { now: NOW })
+    const result = await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, {
+      now: NOW,
+    })
 
-    expect(deleted).toBe(1)
-    const survivors = await harness.db.select().from(platformAuditLog)
+    expect(result.deleted).toBe(1)
+    expect(result.drained).toBe(true)
+    const survivors = await tables.db.select().from(platformAuditLog)
     expect(survivors.map((row) => row.entityId)).toEqual(['newer'])
   })
 
@@ -434,19 +563,22 @@ describe('prunePlatformAuditLog', () => {
     await seedRow(500, 'ancient')
     const { logger, records } = memoryLogger()
 
-    await prunePlatformAuditLog(harness.db, logger, { now: NOW })
+    await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, { now: NOW })
 
     expect(records).toHaveLength(1)
     const record = records[0]
     expect(record).toBeDefined()
     expect(record.level).toBe('info')
     expect(record.deleted).toBe(1)
+    expect(record.batches).toBe(1)
+    expect(record.drained).toBe(true)
     expect(record.retentionDays).toBe(400)
     expect(record.actorKind).toBe('system')
+    expect(record.actorUserId).toBeNull()
 
     // The prune does not append a row about the prune — §4.3: how many rows it removed is a log
     // line, not a row in the table it just pruned.
-    const remaining = await harness.db.select().from(platformAuditLog)
+    const remaining = await tables.db.select().from(platformAuditLog)
     expect(remaining).toHaveLength(0)
   })
 
@@ -454,8 +586,83 @@ describe('prunePlatformAuditLog', () => {
     await seedRow(10, 'fresh')
     const { logger, records } = memoryLogger()
 
-    expect(await prunePlatformAuditLog(harness.db, logger, { now: NOW })).toBe(0)
+    const result = await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, {
+      now: NOW,
+    })
+    expect(result.deleted).toBe(0)
     expect(records).toHaveLength(1)
     expect(records[0]?.deleted).toBe(0)
+  })
+
+  it('deletes in bounded batches rather than in one unbounded statement', async () => {
+    // A backlog must size the schedule, never the statement: an unbounded `DELETE … RETURNING id`
+    // materialises every removed id into the isolate purely to obtain a count.
+    for (let index = 0; index < 5; index += 1) {
+      await seedRow(500, `old-${index}`)
+    }
+    const { logger, records } = memoryLogger()
+
+    const result = await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, {
+      now: NOW,
+      batchSize: 2,
+    })
+
+    expect(result).toEqual({ deleted: 5, batches: 3, drained: true })
+    expect(records[0]?.batchSize).toBe(2)
+    expect(await tables.db.select().from(platformAuditLog)).toHaveLength(0)
+  })
+
+  it('stops at the batch cap with the backlog still due, and says so', async () => {
+    for (let index = 0; index < 5; index += 1) {
+      await seedRow(500, `old-${index}`)
+    }
+    const { logger, records } = memoryLogger()
+
+    const result = await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, {
+      now: NOW,
+      batchSize: 2,
+      maxBatches: 2,
+    })
+
+    expect(result).toEqual({ deleted: 4, batches: 2, drained: false })
+    expect(records[0]?.drained).toBe(false)
+    // The remainder is not lost, only deferred: next week's tick carries on from here.
+    expect(await tables.db.select().from(platformAuditLog)).toHaveLength(1)
+  })
+
+  it('bounds a default run the way the sibling cron in the same switch is bounded', () => {
+    expect(PLATFORM_AUDIT_PRUNE_BATCH_SIZE).toBe(200)
+    expect(PLATFORM_AUDIT_PRUNE_MAX_BATCHES).toBe(50)
+  })
+
+  it('refuses a malformed actor rather than acting as one', async () => {
+    // SPEC §5: always an explicit platform actor. A `system` actor carrying a user id is not one of
+    // the four shapes §4.1's CHECK constraints accept, and the prune is not the place to discover
+    // that a caller invented a fifth.
+    await seedRow(500, 'ancient')
+    const { logger } = memoryLogger()
+
+    await expect(
+      prunePlatformAuditLog(
+        tables.db,
+        { userId: 'usr_operator', actorKind: 'system', role: null, tokenId: null },
+        logger,
+        { now: NOW },
+      ),
+    ).rejects.toThrow()
+
+    expect(await tables.db.select().from(platformAuditLog)).toHaveLength(1)
+  })
+
+  it('does not propagate a throwing log sink', async () => {
+    await seedRow(500, 'ancient')
+    const { logger, calls } = throwingLogger()
+
+    const result = await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, {
+      now: NOW,
+    })
+
+    expect(result.deleted).toBe(1)
+    expect(calls).toEqual(['info'])
   })
 })

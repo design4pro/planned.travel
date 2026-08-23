@@ -5,9 +5,12 @@
  * This module is the single writer of `platform_audit_log` (SPEC §5, docs/ACCESS.md §4). Rows are
  * never updated, and the only delete path is {@link prunePlatformAuditLog} for the retention cron.
  * An audit write must never be the reason a user's action fails, so callers append *after* the
- * mutation has committed and every function here swallows its own failure: a rejected append is a
- * logging incident raised through `src/server/observability`, never a `500` handed to the caller and
- * never a rollback of work that already succeeded.
+ * mutation has committed and {@link appendPlatformAudit} swallows every failure it can raise — the
+ * insert's, the validator's, and its own logging: a rejected append is a logging incident raised
+ * through `src/server/observability`, never a `500` handed to the caller and never a rollback of
+ * work that already succeeded. The prune is the one function here that may reject, because it runs
+ * on a cron rather than behind a user's request: a weekly job that fails is meant to be visible and
+ * retried, and there is no completed work of anyone's to protect.
  *
  * Two things this file deliberately does not do, both of them SPEC §5's carve-out in practice:
  *
@@ -15,21 +18,24 @@
  *   `platform_audit_log` carries no `organization_id`, so the tenant layer — whose whole purpose is
  *   to make a forgotten tenant filter inexpressible — cannot reach it, and handing that layer a
  *   fabricated context to get here would destroy the one guarantee it exists to give. Nothing in
- *   `src/server/catalog/**` may import the tenant repository factory or the `src/server/repos`
- *   barrel, and the test beside this file greps the whole directory for both. The one symbol it
- *   does take from that directory is {@link AUDIT_ACTION_PATTERN}, a regex, so that the two logs
- *   cannot drift into two spellings of one vocabulary (§4.2).
+ *   `src/server/catalog/**` imports anything from `src/server/repos/**` — not the tenant repository
+ *   factory, not the barrel, not a deep module — and the test beside this file greps the whole
+ *   directory, tests included, for both needles. The shared dotted-action rule the two logs must
+ *   not drift apart on (§4.2) therefore comes from {@link AUDIT_ACTION_PATTERN} in
+ *   `src/server/db/audit-action.ts`, a leaf module that imports nothing: reading it from the tenant
+ *   log instead would satisfy §4.2 and quietly pull the tenant repository factory — which that
+ *   module calls at evaluation time — into this file's module graph.
  * - It decides no authorisation. `requirePermission` in `src/server/auth/guard.ts` is the only place
  *   that answers "may this actor do this", and it performs no audit write of its own — a denied
  *   request changed nothing, and a log of attempts is a different table from a log of changes.
  */
 
-import { lt } from 'drizzle-orm'
+import { inArray, lt } from 'drizzle-orm'
 import { z } from 'zod'
 import { resolvePlatformRole } from '#/server/auth/access'
+import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
 import { PLATFORM_AUDIT_ACTIONS, platformAuditLog } from '#/server/db/schema'
 import { serializeError } from '#/server/observability'
-import { AUDIT_ACTION_PATTERN } from '#/server/repos/audit'
 import type { PlatformActor } from '#/server/auth/guard'
 import type {
   Database,
@@ -155,6 +161,29 @@ export function entityTypeForAction(action: PlatformAuditAction): PlatformAuditE
 
 const identifierSchema = z.string().trim().min(1).max(64)
 
+/** An IPv6 address with a zone id is the longest thing this column can legitimately hold. */
+const IP_MAX_LENGTH = 64
+
+/** The tenant log's `shortTextSchema` bound, so the two logs cap their request fields alike. */
+const USER_AGENT_MAX_LENGTH = 200
+
+/**
+ * A request field copied verbatim from an attacker-controlled header, bounded.
+ *
+ * Bounded by **truncation** rather than by rejection, and the difference is the whole reason this
+ * helper exists. `ip` and `user_agent` reach this module straight off the wire into an append-only
+ * table with a 400-day window (docs/ACCESS.md §4.1), so an unbounded value is a header-sized row
+ * that nothing ever deletes — but refusing an oversized one would throw away the entire entry, and
+ * for the four verbs of §4.3 a lost entry is precisely the gap that section says must not exist. A
+ * value trimmed to nothing becomes `NULL`, which is what §4.1 already says a missing header records.
+ */
+function requestTextSchema(max: number): z.ZodType<string | null, string> {
+  return z
+    .string()
+    .transform((value) => value.trim().slice(0, max))
+    .transform((value) => (value.length === 0 ? null : value))
+}
+
 const changeSideSchema = z.record(z.string(), z.unknown()).nullable()
 
 /** `{ before, after }` — the fields that moved, on both sides (docs/ACCESS.md §4.1). */
@@ -216,10 +245,13 @@ const platformAuditEntrySchema = z.object({
   /** The row the action touched. `null` only for an action whose entity does not exist yet. */
   entityId: identifierSchema.nullable(),
   changes: changesSchema.nullish(),
-  /** The request IP, verbatim. */
-  ip: z.string().trim().min(1).nullish(),
-  /** The request's `User-Agent` header, verbatim, and nothing else. */
-  userAgent: z.string().trim().min(1).nullish(),
+  /** The request IP, verbatim, bounded at {@link IP_MAX_LENGTH}. */
+  ip: requestTextSchema(IP_MAX_LENGTH).nullish(),
+  /**
+   * The request's `User-Agent` header, verbatim and nothing else, bounded at
+   * {@link USER_AGENT_MAX_LENGTH}.
+   */
+  userAgent: requestTextSchema(USER_AGENT_MAX_LENGTH).nullish(),
 })
 
 /**
@@ -265,6 +297,23 @@ function isAlwaysAudited(action: PlatformActionName): boolean {
   return ALWAYS_AUDITED_ACTIONS.some((candidate) => candidate === action)
 }
 
+/**
+ * Emits a log line, and never throws — the last link in this module's "never a `500`" promise.
+ *
+ * A `Logger` writes through a {@link LogSink}, and a sink that throws is the ordinary way a logging
+ * backend fails. Left unguarded, the failure path of an audit append would itself reject and hand
+ * the caller the error the append exists to avoid, which is the same defect one layer down. There is
+ * nowhere left to report to at this point, so the throw is dropped: the caller's work committed, and
+ * a logging backend that cannot log is its own alarm.
+ */
+function emitSafely(write: () => void): void {
+  try {
+    write()
+  } catch {
+    // Deliberately empty — see above. Re-raising here is the failure this module exists to prevent.
+  }
+}
+
 /** The action and the actor, on every failure line, so the gap in the ledger is identifiable. */
 function failureFields(actor: PlatformActor, entry: PlatformAuditEntryInput): LogFields {
   return {
@@ -298,11 +347,13 @@ export async function appendPlatformAudit(
 ): Promise<void> {
   const critical = isAlwaysAudited(entry.action)
   const report = (message: string, cause: unknown, fields: LogFields): void => {
-    if (critical) {
-      logger.error(message, cause, fields)
-    } else {
-      logger.warn(message, { ...fields, ...serializeError(cause) })
-    }
+    emitSafely(() => {
+      if (critical) {
+        logger.error(message, cause, fields)
+      } else {
+        logger.warn(message, { ...fields, ...serializeError(cause) })
+      }
+    })
   }
 
   let row: NewPlatformAuditLogEntry
@@ -339,33 +390,100 @@ export async function appendPlatformAudit(
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Drops entries older than {@link PLATFORM_AUDIT_RETENTION_DAYS} and returns how many went.
+ * Rows per statement. The sibling cron in the same `switch` — `sweepReminders` — is bounded at the
+ * same number, and for the same reason: a weekly job must not size its statement off a backlog.
+ */
+export const PLATFORM_AUDIT_PRUNE_BATCH_SIZE = 200
+
+/**
+ * Statements per run, so one invocation removes at most 10 000 rows and a backlog drains over
+ * several weeks instead of turning one cron tick into an isolate-killing statement. A run that hits
+ * the cap says so in its log line, which is the signal to widen it deliberately rather than by
+ * discovering an out-of-memory error.
+ */
+export const PLATFORM_AUDIT_PRUNE_MAX_BATCHES = 50
+
+export interface PrunePlatformAuditLogResult {
+  /** Rows removed by this run. */
+  readonly deleted: number
+  /** Statements issued. */
+  readonly batches: number
+  /** `false` when the run stopped at {@link PLATFORM_AUDIT_PRUNE_MAX_BATCHES} with rows still due. */
+  readonly drained: boolean
+}
+
+/**
+ * Drops entries older than {@link PLATFORM_AUDIT_RETENTION_DAYS} and reports what it removed.
  *
  * The weekly retention cron is the only delete path this table has (docs/ACCESS.md §4.3). It selects
  * by `created_at` and by nothing else — no action, no actor, no entity — because a prune that can
- * filter is a prune that can be asked to remove one inconvenient row. It runs as
- * {@link PLATFORM_SYSTEM_ACTOR} and audits nothing about itself: how many rows it removed is a
+ * filter is a prune that can be asked to remove one inconvenient row. It takes an explicit
+ * {@link PlatformActor} like every other write on this path (SPEC §5), normally
+ * {@link PLATFORM_SYSTEM_ACTOR}, and audits nothing about itself: how many rows it removed is a
  * structured log line, not a row in the table it just pruned.
+ *
+ * The delete is batched. An unbounded `DELETE … RETURNING id` materialises every removed id into the
+ * isolate purely to obtain a count, so a backlog from a bulk import or a burst of `agent` rows would
+ * size the statement rather than the schedule doing it. Each batch names its own ids through a
+ * bounded sub-select, so partial progress survives a failure part-way through and the next tick
+ * carries on from there.
  */
 export async function prunePlatformAuditLog(
   db: Database,
+  actor: PlatformActor,
   logger: Logger,
-  options: { readonly now?: Date } = {},
-): Promise<number> {
+  options: {
+    readonly now?: Date
+    readonly batchSize?: number
+    readonly maxBatches?: number
+  } = {},
+): Promise<PrunePlatformAuditLogResult> {
+  const parsedActor = platformActorSchema.parse(actor)
   const now = options.now ?? new Date()
   const cutoff = new Date(now.getTime() - PLATFORM_AUDIT_RETENTION_DAYS * DAY_MS)
+  const batchSize = options.batchSize ?? PLATFORM_AUDIT_PRUNE_BATCH_SIZE
+  const maxBatches = options.maxBatches ?? PLATFORM_AUDIT_PRUNE_MAX_BATCHES
 
-  const removed = await db
-    .delete(platformAuditLog)
-    .where(lt(platformAuditLog.createdAt, cutoff))
-    .returning({ id: platformAuditLog.id })
+  let deleted = 0
+  let batches = 0
+  let drained = false
 
-  logger.info('platform audit retention prune', {
-    deleted: removed.length,
-    retentionDays: PLATFORM_AUDIT_RETENTION_DAYS,
-    cutoff: cutoff.toISOString(),
-    actorKind: PLATFORM_SYSTEM_ACTOR.actorKind,
+  while (batches < maxBatches) {
+    const removed = await db
+      .delete(platformAuditLog)
+      .where(
+        inArray(
+          platformAuditLog.id,
+          db
+            .select({ id: platformAuditLog.id })
+            .from(platformAuditLog)
+            .where(lt(platformAuditLog.createdAt, cutoff))
+            .limit(batchSize),
+        ),
+      )
+      .returning({ id: platformAuditLog.id })
+
+    batches += 1
+    deleted += removed.length
+
+    if (removed.length < batchSize) {
+      drained = true
+      break
+    }
+  }
+
+  emitSafely(() => {
+    logger.info('platform audit retention prune', {
+      deleted,
+      batches,
+      drained,
+      batchSize,
+      retentionDays: PLATFORM_AUDIT_RETENTION_DAYS,
+      cutoff: cutoff.toISOString(),
+      actorKind: parsedActor.actorKind,
+      actorUserId: parsedActor.userId,
+    })
   })
 
-  return removed.length
+  return { deleted, batches, drained }
 }
