@@ -95,7 +95,11 @@ export function resetPmtilesProtocol(): void {
 
 /** Why a basemap could not be used. */
 export type BasemapUnavailableReason =
-  /** The endpoint answered 404: no archive is published under that key. */
+  /**
+   * Nothing is published under that key. The alias says so with 204, a named
+   * key with 404, and R2 behind a bucket policy with 403 — three ways of
+   * answering the same question, and one designed state on this side of it.
+   */
   | 'missing'
   /** Something is there, but it is not a v3 Protomaps archive. */
   | 'unsupported'
@@ -152,7 +156,17 @@ export async function probeBasemap(
       signal: options.signal,
     })
 
-    if (response.status === 404 || response.status === 403) {
+    // 204 is the alias saying it points at nothing published — a designed
+    // state, and the one this route answers in every checkout that has no
+    // archive. 404 is a named key that is not there, 403 an object behind a
+    // bucket policy. All three mean the same thing to a map: draw the world we
+    // bundle. See `notPublished()` in `#/routes/api/tiles/-lib/serve` for why
+    // the alias is not allowed to say it with an error status.
+    if (
+      response.status === 204 ||
+      response.status === 404 ||
+      response.status === 403
+    ) {
       return { status: 'unavailable', url, reason: 'missing' }
     }
     if (!response.ok && response.status !== 206) {
