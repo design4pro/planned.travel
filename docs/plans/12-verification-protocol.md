@@ -338,8 +338,9 @@ has an unaudited declaration rather than a passing one:
   inside the comparison at full size and the baseline fails on a morning nobody designed.
 - **Read the report instead of discarding it.** A non-empty return from `auditRelativeTime()` means
   that run's exclusion covered nothing and the whole frame was compared. That is legitimate when the
-  fixture calendar has moved past the rows carrying the string — see §7.1 — and it is the identical
-  signal a silently deleted string produces. The stage says in its evidence which of the two it is.
+  day the suite is pinned to sits past the rows that carry the string — `CALENDAR_SELECTIONS` names
+  each of those crossings — and it is the identical signal a silently deleted string produces. The
+  stage says in its evidence which of the two it is.
 
 ---
 
@@ -449,27 +450,59 @@ owns the choice of screen.
 
 ## 7. Three harness preconditions, deferred and already understood
 
-Each has been diagnosed. **None is re-diagnosed here and none is fixed here.** They are recorded so
-that a stage knows what its baseline is worth, and so that nobody spends a round rediscovering one.
+Each has been diagnosed. **None is fixed here, and none is re-opened here** — where a diagnosis has
+since been corrected the correction is recorded with its citations and nothing further is
+investigated. They are listed so that a stage knows what its baseline is worth, and so that nobody
+spends a round rediscovering one.
 
-### 7.1 Demo-fixture dates move with the day the workspace was seeded
+### 7.1 The demo fixture's instants come from the day it was seeded, and no pin reaches them
 
-`playwright.config.ts` pins the day the Worker _reads_ — `x-pt-server-today: 2026-08-20`, matching
-`BASELINE_DAY` — `visit()` pins the clock inside the page at `FROZEN_NOW`, and `capture.mjs` sends
-the same header when, and only when, `PT_SERVER_TODAY` is set (§2). None of the three pins the
-**data**. Measured: `applySeed()` in `src/routes/api/dev/-seed/apply.ts` derives its
-fixtures from `new Date()` at seed time (`:232`), and places the demo trip at `now - 12 days` to
-`now + 18 days` (`:275-276`). Re-seed on a different day and every fixture date moves under a reader
-that did not, so a screen selecting rows by comparing a fixture date against `today` renders a
-different set of rows.
+An earlier draft of this section said `applySeed()` places the demo trip at `now - 12 days` to
+`now + 18 days` and that every fixture date therefore moves on re-seed. Both halves were wrong, and
+the correction is recorded here rather than quietly dropped so the claim is not made a third time.
+Measured: `src/routes/api/dev/-seed/apply.ts:275-276` is the demo **subscription's** billing period,
+handed to `demoSubscriptionRecord()` at `:274`; no trip is placed there. Every trip date in the
+dataset is an absolute ISO literal —
+`src/routes/api/dev/-seed/dataset/trips.ts:30-31` (`2026-08-17` → `2026-08-23`), `:537-538`
+(`2026-06-13` → `2026-06-20`), `:1069-1070` (`2025-11-08` → `2025-11-15`) and
+`.../dataset/flagship.ts:41-42` (`2026-10-09` → `2026-10-20`). Re-seeding on a different day moves
+none of them.
 
-The diagnosis machinery for this already exists and is what a failure should be read with:
-`reportServerCalendar()`, `crossedBoundaries()`, `CALENDAR_SELECTIONS` and `shiftServerToday()`.
+The half of the problem that was real is **closed, not deferred**, and a stage should stop treating
+it as an open risk. The Worker chooses which rows a dated screen shows through `serverToday()`
+(`src/server/clock.ts`), which takes `x-pt-server-today` on a development request;
+`playwright.config.ts` sends `BASELINE_DAY` on both browser projects, and `capture.mjs` sends the
+same value when `PT_SERVER_TODAY` is set (§2). Absolute dates on one side and a pinned reader on the
+other is a fixed comparison. `reportServerCalendar()`, `crossedBoundaries()`, `CALENDAR_SELECTIONS`
+and `shiftServerToday()` survive as the **audit** of that pin — a pin that stopped arriving is named
+rather than discovered by cropping two pictures — and they are what a red frame on a dated screen is
+read with.
 
-**Status: deferred. Blocking for authenticated baselines.** Until the fixture is anchored to an
-absolute day rather than to seed time, a baseline of an authenticated route is only trustworthy
-against the database it was recorded against. Public-route baselines are unaffected — they select no
-rows.
+What is still seed-time-relative is the set of **instants** `applySeed()` derives from the single
+`new Date()` at `apply.ts:232`: the subscription period (`:275-276`), the workspace's `onboardedAt`
+(`:264`) and each person's `onboardingCompletedAt` (`:294`), every notification's `createdAt` and
+`readAt` (`:640`, `:654`), every audit-log row's `createdAt` (`:671`), the marker's `seededAt`
+(`:697`), and the day count `daysUntil(now, tripStart)` interpolates into notification copy
+(`:632-637`). Those are epoch-millisecond columns and `serverToday()` answers a calendar day, so the
+header pin does not reach them. Neither does `FROZEN_NOW` (`e2e/helpers/shoot.ts:441`), which holds
+an in-page `Date.now()` at `2026-06-15T12:00:00.000Z` — two months before `BASELINE_DAY`, because the
+two seams pin different things for different reasons.
+
+Where those columns reach pixels: `formatRelative(value, now)` with `now = Date.now()`, at
+`src/routes/_app/notifications.tsx:198` and `:260`, and at `src/routes/_app/admin.tsx:67` and `:303`.
+`grep -rn formatRelative src/` returns those two call sites and the definition, and nothing else.
+Neither `/notifications` nor `/admin` appears in `PUBLIC_ROUTES` (`e2e/helpers/shoot.ts:314-322`) or
+`APP_ROUTES` (`:355-362`), and `e2e/__screenshots__/visual.spec.ts/` holds no baseline for either of
+them. What those strings render as under the two clocks has consequently never been measured, and
+this section does not guess: the recorded fact is that the value is unpinned, and an unpinned value
+inside a comparison is a baseline with an expiry date. The defect is **latent today and active the
+moment one of those two screens is baselined** — the same shape as §7.2.
+
+**Status: deferred. Blocking for the first stage that baselines `/notifications`, `/admin`, or any
+new surface printing a `formatRelative` string.** It is not blocking for the thirteen routes
+baselined today, which select rows on absolute dates against a pinned reader. A stage that adds one
+of those screens inherits this and records it under **Blockers**; designing the seam is neither this
+file's work nor a side effect that stage may take on.
 
 ### 7.2 Seven abbreviated-month call sites still ask the platform
 
