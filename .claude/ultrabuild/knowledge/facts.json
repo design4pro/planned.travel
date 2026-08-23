@@ -321,5 +321,18 @@
       "critic"
     ],
     "invalidatesWhen": "the toolchain, the font set or the catalogue layout changes"
+  },
+  {
+    "id": "vite-watcher-eats-the-worktree",
+    "claim": "The dev server dies with exit code 144 after a while unless the Vite watcher excludes `.claude/**`. `.claude/worktrees/` holds full git worktrees inside the repo root, so chokidar walks another checkout's node_modules and Playwright reports and turns every file its test runs write into a page reload for us.",
+    "evidence": "Measured: `.claude/worktrees` is 3.2 GB across 95,520 files. The dying server's log was a stream of `[vite] (client) page reload .claude/worktrees/camping-spots-scraping-plan-79bc83/playwright-report/trace/*.html`. vite.config.ts now sets server.watch.ignored to ['**/.claude/**','**/playwright-report/**','**/test-results/**']; after the fix the log contains zero 'worktrees' lines and the server is stable.",
+    "measuredIn": "i18n run, between rounds 3 and 4",
+    "scope": [
+      "builder",
+      "capture",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "the worktrees move out of the repo root, or vite.config.ts loses the ignore list"
   }
 ]
