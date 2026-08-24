@@ -26,6 +26,24 @@
  * Vietnamese subset, so those marks must sit where the face draws them; a
  * fallback face without the subset shows it immediately, which makes this
  * locale the one worth looking at when a font change lands.
+ *
+ * **Three keys are shorter than a literal translation, and measurement is
+ * why.** Each sits in a `.truncate` box, and a faithful phrase clipped into an
+ * ellipsis reads worse than a shorter true one:
+ *
+ * - `dashboard.hero.travellersHint` is `ở không gian này`, not `trong không
+ *   gian này` — 115px of copy in a 107px tile. Both render "in this
+ *   workspace"; `ở` is the plainer preposition.
+ * - `dashboard.trips.label` is `Chuyến đi`, not `Chuyến đi của bạn` — 126px in
+ *   a 111px label. The list underneath is the reader's own, and the sibling
+ *   key `dashboard.trips.all` already reads `Tất cả chuyến đi`.
+ * - `bookingStatus.confirmed` is `Đã chốt`, not `Đã xác nhận`. The badge and
+ *   the date share one row, so the badge's width comes straight off the date:
+ *   `Đã xác nhận` measured 81px and left the date 145px to draw `Thứ 2, 12 thg
+ *   10 · 19:00 – 21:00` in, which needs 169px. `Đã chốt` measures 56px and
+ *   gives the date 170px. `chốt` is what a Vietnamese traveller says when a
+ *   booking stops being provisional, so the shorter word is also the warmer
+ *   one; `Chờ xác nhận` stays long because its row's date is short.
  */
 
 import type En from '../en/shell'
@@ -168,7 +186,7 @@ const messages = {
   'dashboard.upNext': 'Sắp tới',
   'dashboard.openPlan': 'Mở lịch trình',
   'dashboard.hero.travellers': 'Người đi',
-  'dashboard.hero.travellersHint': 'trong không gian này',
+  'dashboard.hero.travellersHint': 'ở không gian này',
   'dashboard.hero.dates': 'Ngày đi',
   'dashboard.hero.datesUnset': 'Chưa đặt',
   'dashboard.hero.datesHint': { other: '{days} ngày' },
@@ -198,7 +216,7 @@ const messages = {
   'dashboard.stat.bookingsNone': 'Không có đặt chỗ nào sắp tới',
   'dashboard.stat.bookingsSoon': { other: '{bookings} đặt chỗ đang tới' },
 
-  'dashboard.trips.label': 'Chuyến đi của bạn',
+  'dashboard.trips.label': 'Chuyến đi',
   'dashboard.trips.all': 'Tất cả chuyến đi',
   'dashboard.trips.empty.title': 'Chưa có chuyến đi nào',
   'dashboard.trips.empty.body':
@@ -279,7 +297,7 @@ const messages = {
 
   'bookingStatus.none': 'Chưa đặt',
   'bookingStatus.pending': 'Chờ xác nhận',
-  'bookingStatus.confirmed': 'Đã xác nhận',
+  'bookingStatus.confirmed': 'Đã chốt',
   'bookingStatus.cancelled': 'Đã hủy',
   'bookingStatus.completed': 'Hoàn tất',
 

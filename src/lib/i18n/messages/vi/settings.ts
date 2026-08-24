@@ -23,6 +23,21 @@
  * **Plan names are words, not identifiers.** `free`, `solo` and `crew` are the
  * ids Stripe and the invoice carry and no reader ever sees; the words on the
  * screen are `Miễn phí`, `Cá nhân` and `Nhóm`.
+ *
+ * **Two keys are cut to a measured budget.** Both live in a `.truncate` box
+ * whose width the screen fixes, so length is a correctness question here and
+ * not a matter of taste:
+ *
+ * - `nav.profile.hint` gets 198px. `Bạn, và cách đọc ngày tháng cùng tiền bạc`
+ *   measured 260px, so the hint is `Bạn, ngày tháng và tiền tệ` (158px), which
+ *   names the same three things without the relative clause.
+ * - `regional.workspaceDefault` fills a select trigger 206px wide. `Mặc định
+ *   của không gian — ` measured 273px with a date in it; `Mặc định chung — `
+ *   brings it to 219px, and `chung` carries the "shared, not yours" sense that
+ *   `Workspace default` carries in English. The date row is the one value that
+ *   still runs over, and English overruns that same row by 5px (211px), so
+ *   this is the screen's own margin rather than a Vietnamese defect — the
+ *   other three values measure 160–173px and fit.
  */
 
 import type En from '../en/settings'
@@ -37,7 +52,7 @@ const messages = {
 
   'nav.label': 'Các mục cài đặt',
   'nav.profile': 'Hồ sơ',
-  'nav.profile.hint': 'Bạn, và cách đọc ngày tháng cùng tiền bạc',
+  'nav.profile.hint': 'Bạn, ngày tháng và tiền tệ',
   'nav.language': 'Ngôn ngữ',
   'nav.language.hint': 'Thứ tiếng mọi màn hình dùng',
   'nav.appearance': 'Giao diện',
@@ -57,7 +72,7 @@ const messages = {
   'role.admin': 'Quản trị viên',
   'role.member': 'Thành viên',
 
-  'regional.workspaceDefault': 'Mặc định của không gian — {value}',
+  'regional.workspaceDefault': 'Mặc định chung — {value}',
   'regional.currency.AUD': 'Đô la Úc',
   'regional.currency.CAD': 'Đô la Canada',
   'regional.currency.CHF': 'Franc Thụy Sĩ',

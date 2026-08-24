@@ -55,10 +55,33 @@ const messages = {
     many: '{others} آخر',
     other: '{others} آخر',
   },
+  /**
+   * The only message in this catalogue whose token order deliberately differs
+   * from English, and it differs so that the two render the SAME.
+   *
+   * The overflow face in `src/components/ui/avatar-stack.tsx` is a bare span:
+   * unlike the count badge below it carries no `data-numeric`, so it inherits
+   * `dir="rtl"` and the bidi algorithm reorders the run. Measured in Chromium
+   * against the built stylesheet, with the component's own markup: a logical
+   * `+{hidden}` paints as `2+`, and a logical `{hidden}+` paints as `+2`. The
+   * mark English puts before the number therefore has to be written after it
+   * to arrive before it — `+2`, "two more faces", not `2+`, "two or more".
+   *
+   * If that span is ever isolated the way the badge is, this flips back to
+   * `+{hidden}` on the same day.
+   */
   'avatar.more': '{hidden}+',
 
   /* --------------------------------------------------------------- badge */
-  'badge.overflow': '+{max}',
+  /**
+   * Not the mirror image of `avatar.more`, because the count badge DOES carry
+   * `data-numeric`, and `src/styles/styles.css` pins that to `direction: ltr;
+   * unicode-bidi: isolate`. Inside an isolate the logical order is the painted
+   * order, so `+{max}` would genuinely paint `+99` — "ninety-nine arrived"
+   * rather than "ninety-nine or more". Arabic writes the cap exactly as
+   * English does. Measured in the same probe: logical `99+` paints `99+`.
+   */
+  'badge.overflow': '{max}+',
 
   /* ------------------------------------------------------------ calendar */
   'calendar.label.date': 'اختر تاريخًا',

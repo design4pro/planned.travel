@@ -23,6 +23,18 @@
  * **Plan names are words, not identifiers.** `free`, `solo` and `crew` are the
  * ids Stripe and the invoice carry and no reader ever sees; the words on the
  * screen are `Gratis`, `Perorangan` and `Rombongan`.
+ *
+ * **Two keys are cut to a measured budget.** Both live in a `.truncate` box
+ * whose width the screen fixes, so length is a correctness question here and
+ * not a matter of taste:
+ *
+ * - `nav.profile.hint` gets 198px. `Anda, serta cara tanggal dan uang terbaca`
+ *   measured 258px, so the hint is `Anda, tanggal dan format uang` (187px),
+ *   which names the same three things without the relative clause.
+ * - `regional.workspaceDefault` fills a select trigger 206px wide, and the
+ *   longest value it ever carries is a date. `Setelan ruang kerja — 23 Jun
+ *   2026` measured 215px; `Setelan bersama — ` brings it to 200px and still
+ *   says the value is the workspace's rather than the reader's own.
  */
 
 import type En from '../en/settings'
@@ -37,7 +49,7 @@ const messages = {
 
   'nav.label': 'Bagian pengaturan',
   'nav.profile': 'Profil',
-  'nav.profile.hint': 'Anda, serta cara tanggal dan uang terbaca',
+  'nav.profile.hint': 'Anda, tanggal dan format uang',
   'nav.language': 'Bahasa',
   'nav.language.hint': 'Bahasa yang dipakai setiap layar',
   'nav.appearance': 'Tampilan',
@@ -58,7 +70,7 @@ const messages = {
   'role.admin': 'Administrator',
   'role.member': 'Anggota',
 
-  'regional.workspaceDefault': 'Setelan ruang kerja — {value}',
+  'regional.workspaceDefault': 'Setelan bersama — {value}',
   'regional.currency.AUD': 'dolar Australia',
   'regional.currency.CAD': 'dolar Kanada',
   'regional.currency.CHF': 'franc Swiss',

@@ -47,10 +47,10 @@ const messages = {
     one: '{others} ακόμη άτομο',
     other: '{others} ακόμη άτομα',
   },
-  'avatar.more': '{hidden}+',
+  'avatar.more': '+{hidden}',
 
   /* --------------------------------------------------------------- badge */
-  'badge.overflow': '+{max}',
+  'badge.overflow': '{max}+',
 
   /* ------------------------------------------------------------ calendar */
   'calendar.label.date': 'Επιλέξτε ημερομηνία',

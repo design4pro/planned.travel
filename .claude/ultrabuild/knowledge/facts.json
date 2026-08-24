@@ -1549,5 +1549,116 @@
     ],
     "id": "playwright-is-fully-green-against-port-3001-with",
     "measuredIn": "round-11"
+  },
+  {
+    "claim": "The literal `import.meta.glob('./messages/*/*.ts')` still emits exactly one chunk per catalogue file at the current 92-file catalogue, with no locale content inlined into the entry and no chunk mixing two locales. This updates the settled 73-file measurement.",
+    "evidence": "Scratchpad SSR `vite build` (configFile:false, build.ssr:true, rollupOptions.input=src/lib/i18n/catalogue.ts) over the tree at 92 catalogue files: 92 chunks in assets/, 92 dynamic import() specifiers in the 15,590-byte entry, all 92 distinct. Entry contains none of 'Sprache' / 'Wyjazdy' / 'العربية' / 'nav.trips' / 'Reisen'. Scanning every chunk: 1 carries German, 2 carry Polish, 0 carry both. Gotcha unchanged: symlink the repo's node_modules into the scratchpad or the config cannot resolve `vite`.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-literal-import-meta-glob-messages-ts-still",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "src/lib/i18n/__tests__/parity.test.ts is no longer a binary file. It now reads as UTF-8 text, plain `grep` matches it, and its `git diff` will render from the next commit onward.",
+    "evidence": "Before: `file` -> 'data'; `grep -c \"u0000\"` exited 1. After replacing the two literal U+0000 characters at lines 172-173 with the escape `\u0000`: `file` -> 'Unicode text, UTF-8 text'; `grep -c \"u0000\"` -> 2; `prettier --check` clean; the i18n suite still passes 256/256. `git diff --stat` on the WORKING TREE still prints 'Bin 14784 -> 14794' because the pre-fix blob is the binary side of the comparison — that resolves once the change is committed.",
+    "scope": [
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "src-lib-i18n-tests-parity-test-ts-is",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The whole repo gate is green at this tree with the fix applied — including the i18n parity suite, which earlier rounds carried red.",
+    "evidence": "pnpm typecheck exit 0 (no output); pnpm lint exit 0 ('ESLint: No issues found'); pnpm test exit 0 (Test Files 114 passed (114), Tests 3179 passed (3179), 11.04s); pnpm build exit 0 ('✓ built in 1.48s'). The i18n slice alone: `vitest run src/lib/i18n` = 9 files / 256 tests passed in 794ms. Any new red this round is therefore the round's doing, not a pre-existing floor.",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "critic"
+    ],
+    "id": "the-whole-repo-gate-is-green-at-this",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The overflow affix's correct token order in Arabic depends on whether the host element carries `data-numeric`, and the two hosts in this repo differ - so the two affix keys must NOT be repaired in the same direction. CountBadge is isolated (direction:ltr) so logical order == painted order and ar must write '{max}+' exactly like English; the AvatarStack overflow face is bare, inherits dir=rtl, and the bidi algorithm reverses the run, so ar must write '{hidden}+' to PAINT '+2'.",
+    "evidence": "Chromium against dist/client/assets/styles-CfaXwTeV.css, reproducing each component's real markup under <html dir=rtl lang=ar>, wrapping each logical character in an inline span and sorting by getBoundingClientRect().left: isolated dir=ltr logical '99+' -> paints '99+', logical '+99' -> paints '+99'. Bare dir=rtl logical '+2' -> paints '2+', logical '2+' -> paints '+2', logical '+99' -> paints '99+', logical '99+' -> paints '+99'. Wrapping in zero-effect spans does not perturb bidi resolution.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-overflow-affix-s-correct-token-order-in",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The 206px `.truncate` Select trigger on /settings is a budget English ITSELF fails, so 'fits the box' is the wrong acceptance bar - the right one is 'no wider than English on the same row'. English measures 211px live and 217px on its longest sample date.",
+    "evidence": "Playwright chromium + e2e/.auth/demo.json at 1440 on http://localhost:3001/settings, filtering .truncate on clientWidth within 4px of 206: en 'Workspace default - 23 Jun 2026' 211>206 CLIPPED. Canvas measureText at the element's own sampled font ('normal 500 13px/18.2px Geist, ...') gives en worst case 217px. Before my fix: el 227 live / 220 canvas, hu 226 canvas at '2026. szept. 23.', tr 209 live. After: tr and hu clip nothing at 360 or 1440; el 213>206, two pixels past English.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-206px-truncate-select-trigger-on-settings-is",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A locale's own `nav.workspace.hint` already contains the short idiomatic phrase for 'shared defaults', which makes it the right source for shortening an overlong `regional.workspaceDefault` prefix - no new terminology has to be invented and the catalogue stays internally consistent.",
+    "evidence": "el nav.workspace.hint = 'Mele kai koines proepiloges' -> prefix 'Koini proepilogi'; tr = 'Uyeler ve ortak varsayilanlar' -> 'Ortak varsayilan'; hu = 'Tagok es kozos alapertekek' -> 'Kozos alapertek'. All three measured under the 206px budget on the longest sample date (189/176/195px range) where the literal genitive renderings measured 220/210/226px.",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "id": "a-locale-s-own-nav-workspace-hint-already",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The dashboard reservation-meta clipping is governed exactly by meta = 226 - (status badge width) per row at 360px, and canvas measureText at the badge's own sampled font plus its 12px horizontal padding predicts the live badge width to the pixel. A translator can therefore size a status word before editing a file.",
+    "evidence": "Playwright chromium + e2e/.auth/demo.json at 360 on /dashboard. en badge 'Confirmed' 71px -> meta 155/155 (every date line fits exactly, zero slack). id 'Terkonfirmasi' 89px -> meta 137, date lines 142 and 146 clip. vi 'Da xac nhan' 81px -> meta 145, date lines to 169 clip. Canvas at the sampled 'normal 600 11px/13.2px Geist' with letterSpacing 0.44px plus pad 12 returned exactly 89 for 'Terkonfirmasi', equal to the live getBoundingClientRect width. After shipping 'Dipastikan' (73) and 'Da chot' (56) the date lines fit in both locales.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-dashboard-reservation-meta-clipping-is-governed-exactly",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "English is not the pass mark on /settings: the regional Select trigger clips in English itself (211>206) on the date row. The correct bar is the measured number plus 'clips no row English does not'. Measured this way, id ships 0 non-seed clips and vi 1, against en's 1.",
+    "evidence": "Probe over /settings, /settings/language, /settings/workspace, /settings/billing, /dashboard, /notifications, /settings/security and /admin at 360 and 1440, filtering `main *, header *, nav *` for .truncate with scrollWidth > clientWidth+1 and excluding the five seeded English reservation titles (Gracery/Skytree/teamLab/Kyubey/Hakone). en produced exactly one row: 'Workspace default - 23 Jun 2026' 211>206. id produced none. vi produced one, 'Mac dinh chung - 23 Thang 6 2026' 219>206, the same row.",
+    "scope": [
+      "builder",
+      "critic",
+      "capture"
+    ],
+    "id": "english-is-not-the-pass-mark-on-settings",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The Vietnamese dashboard hero date wraps to two lines at 360px while Indonesian's stays on one, and no catalogue key is involved - it is src/lib/format.ts plus the frozen CLDR table, so no translation item can fix it. This is the vi analogue of the already-settled German case.",
+    "evidence": "Screenshot .claude/ultrabuild/shots/i18n/round-15/translations-sea/vi-dashboard-360-light.png shows '9 - 20 thg 10, 2026' on two lines inside the 107px NGAY DI tile; id-dashboard-360-dark.png shows '9 - 20 Okt 2026' on one line in the same tile. Neither string has a key in messages/*/shell.ts - both are produced by formatDateRange in src/lib/format.ts against the frozen month table.",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "id": "the-vietnamese-dashboard-hero-date-wraps-to-two",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The whole mechanical gate is green on this tree: typecheck, lint, test (3179/3179 across 114 files), build and Playwright (138 passed / 5 skipped / 0 failed) all exit 0 on the first run, no flakes and no retries.",
+    "evidence": "pnpm typecheck exit 0; pnpm lint exit 0; pnpm test exit 0 (Test Files 114 passed (114), Tests 3179 passed (3179), 10.96s); pnpm build exit 0 ('✓ built in 1.48s'); PLAYWRIGHT_BASE_URL=http://localhost:3001 pnpm exec playwright test exit 0 ('5 skipped / 138 passed (1.0m)'), and grep -c 'could not pin' over the run log returned 0.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-whole-mechanical-gate-is-green-on-this",
+    "measuredIn": "round-11"
   }
 ]

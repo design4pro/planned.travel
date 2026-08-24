@@ -17,9 +17,13 @@
  *   frozen table in `src/lib/format-tables.ts` hands `{month}` over as
  *   `Tháng 9`, so a heading needs `năm` before the year to read as a date
  *   rather than as two numbers that happen to be adjacent.
- * - **The overflow markers swap sides.** `+3` and `99+` are read the same way
- *   in Vietnamese as in English, so the plus moves rather than the word: `3+`
- *   on a crowded avatar stack, `+99` on a badge past its cap.
+ * - **The overflow markers keep English's sides, and that is the correct
+ *   translation.** Vietnamese reads `+3` and `99+` exactly as English does: a
+ *   leading plus means "three more faces we did not draw", a trailing plus
+ *   means "ninety-nine or more". Swapping them inverts what the number says,
+ *   so `avatar.more` stays `+{hidden}` and `badge.overflow` stays `{max}+`.
+ *   They are byte-identical to English on purpose; neither carries a letter in
+ *   any script, so the parity suite's `isUntranslatable` exemption covers them.
  * - **Diacritics are the whole point of the face.** Every value below stacks
  *   tone marks over vowels that already carry a diacritic — `ế`, `ộ`, `ữ` — so
  *   this locale is the one that proves the shipped Vietnamese subsets of Geist
@@ -43,8 +47,8 @@ const messages = {
   'avatar.status.busy': '{name} đang bận',
   'avatar.status.offline': '{name} đang ngoại tuyến',
   'avatar.overflow': { other: '{others} người khác' },
-  'avatar.more': '{hidden}+',
-  'badge.overflow': '+{max}',
+  'avatar.more': '+{hidden}',
+  'badge.overflow': '{max}+',
   'calendar.label.date': 'Chọn một ngày',
   'calendar.label.range': 'Chọn khoảng ngày',
   'calendar.previousMonth': 'Tháng trước',

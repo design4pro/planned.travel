@@ -20,6 +20,23 @@
  * are one word each even where the long form is a phrase, and `nav.atlas`
  * becomes `Peta dunia` rather than a transliterated `Atlas` nobody would read
  * as a map of where they have been.
+ *
+ * **Three keys are shorter than a literal translation, and measurement is
+ * why.** All three sit in a `.truncate` box the dashboard sizes from its
+ * siblings, so a faithful phrase clips into an ellipsis and reads worse than a
+ * shorter true one:
+ *
+ * - `dashboard.hero.dates` is `Tanggal`, not `Tanggal perjalanan` — 143px of
+ *   copy in a 107px tile. The word sits in a row beside `Pelancong` and
+ *   `Tempat`, where one noun is the register anyway.
+ * - `dashboard.trips.label` is `Perjalanan`, not `Perjalanan Anda` — 120px in
+ *   a 102px label. Indonesian drops a possessive in a heading readily, and the
+ *   list underneath is plainly the reader's own.
+ * - `bookingStatus.confirmed` is `Dipastikan`, not the loanword
+ *   `Terkonfirmasi`. The badge and the date beside it share one row, so the
+ *   badge's width comes straight off the date: `Terkonfirmasi` measured 89px
+ *   and left the date 137px to draw `Sen, 12 Okt · 10:30 – 12:30` in, which
+ *   needs 146px. `Dipastikan` measures 73px and gives the date 153px.
  */
 
 import type En from '../en/shell'
@@ -164,7 +181,7 @@ const messages = {
   'dashboard.openPlan': 'Buka rencananya',
   'dashboard.hero.travellers': 'Pelancong',
   'dashboard.hero.travellersHint': 'di ruang kerja ini',
-  'dashboard.hero.dates': 'Tanggal perjalanan',
+  'dashboard.hero.dates': 'Tanggal',
   'dashboard.hero.datesUnset': 'Belum diatur',
   'dashboard.hero.datesHint': { other: '{days} hari' },
   'dashboard.hero.datesMissing': 'Isi tanggalnya untuk menyusun hari',
@@ -193,7 +210,7 @@ const messages = {
   'dashboard.stat.bookingsNone': 'Tidak ada pemesanan yang akan datang',
   'dashboard.stat.bookingsSoon': { other: '{bookings} pemesanan akan datang' },
 
-  'dashboard.trips.label': 'Perjalanan Anda',
+  'dashboard.trips.label': 'Perjalanan',
   'dashboard.trips.all': 'Semua perjalanan',
   'dashboard.trips.empty.title': 'Belum ada perjalanan',
   'dashboard.trips.empty.body':
@@ -278,7 +295,7 @@ const messages = {
 
   'bookingStatus.none': 'Belum dipesan',
   'bookingStatus.pending': 'Menunggu',
-  'bookingStatus.confirmed': 'Terkonfirmasi',
+  'bookingStatus.confirmed': 'Dipastikan',
   'bookingStatus.cancelled': 'Dibatalkan',
   'bookingStatus.completed': 'Tuntas',
 

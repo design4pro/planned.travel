@@ -48,10 +48,10 @@ const messages = {
     one: '{others} kişi daha',
     other: '{others} kişi daha',
   },
-  'avatar.more': '{hidden}+',
+  'avatar.more': '+{hidden}',
 
   /* --------------------------------------------------------------- badge */
-  'badge.overflow': '+{max}',
+  'badge.overflow': '{max}+',
 
   /* ------------------------------------------------------------ calendar */
   'calendar.label.date': 'Bir tarih seçin',

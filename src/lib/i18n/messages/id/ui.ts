@@ -17,10 +17,13 @@
  *   calendar heading exactly as English does — `September 2026` — so the only
  *   honest difference is typographic, and it is one the layout wants: the month
  *   name and its year must not break across two lines in a 280px popover.
- * - **The overflow markers swap sides.** `+3` and `99+` are read the same way
- *   in both languages, so the plus moves rather than the word: `3+` on a
- *   crowded avatar stack reads "three or more faces we did not draw", `+99` on
- *   a badge reads "more than the cap". Same glyph budget, different sentence.
+ * - **The overflow markers keep English's sides, and that is the correct
+ *   translation.** Indonesian reads `+3` and `99+` exactly as English does: a
+ *   leading plus means "three more we did not draw", a trailing plus means
+ *   "ninety-nine or more". Swapping them inverts the sentence, so
+ *   `avatar.more` stays `+{hidden}` and `badge.overflow` stays `{max}+`. They
+ *   are byte-identical to English on purpose; neither carries a letter in any
+ *   script, so the parity suite's `isUntranslatable` exemption covers them.
  */
 
 import type En from '../en/ui'
@@ -40,8 +43,8 @@ const messages = {
   'avatar.status.busy': '{name} sedang sibuk',
   'avatar.status.offline': '{name} sedang tidak aktif',
   'avatar.overflow': { other: '{others} orang lainnya' },
-  'avatar.more': '{hidden}+',
-  'badge.overflow': '+{max}',
+  'avatar.more': '+{hidden}',
+  'badge.overflow': '{max}+',
   'calendar.label.date': 'Pilih satu tanggal',
   'calendar.label.range': 'Pilih rentang tanggal',
   'calendar.previousMonth': 'Bulan sebelumnya',

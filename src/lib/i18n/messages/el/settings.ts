@@ -53,7 +53,12 @@ const messages = {
   'role.member': 'Μέλος',
 
   /* -------------------------------------------------- regional option labels */
-  'regional.workspaceDefault': 'Του χώρου εργασίας — {value}',
+  /* The trigger this sits in truncates at 206px. Measured against its own
+     computed font: the literal genitive «Του χώρου εργασίας» reached 220px on
+     the longest sample date, past even English's own 217px. «Κοινή προεπιλογή»
+     is the phrase this catalogue already uses for the same idea in
+     `nav.workspace.hint`, and it lands at 206px. */
+  'regional.workspaceDefault': 'Κοινή προεπιλογή — {value}',
   'regional.currency.AUD': 'Δολάριο Αυστραλίας',
   'regional.currency.CAD': 'Δολάριο Καναδά',
   'regional.currency.CHF': 'Φράγκο Ελβετίας',

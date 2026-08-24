@@ -57,7 +57,10 @@ const messages = {
   'role.member': 'Üye',
 
   /* -------------------------------------------------- regional option labels */
-  'regional.workspaceDefault': 'Çalışma alanından — {value}',
+  /* 206px truncating trigger: «Çalışma alanından» measured 210px and clipped
+     live. «Ortak varsayılan» is this catalogue's own wording for the same thing
+     in `nav.workspace.hint`, and measures 198px. */
+  'regional.workspaceDefault': 'Ortak varsayılan — {value}',
   'regional.currency.AUD': 'Avustralya doları',
   'regional.currency.CAD': 'Kanada doları',
   'regional.currency.CHF': 'İsviçre frangı',

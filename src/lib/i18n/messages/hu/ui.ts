@@ -49,10 +49,10 @@ const messages = {
     one: 'még {others} fő',
     other: 'még {others} fő',
   },
-  'avatar.more': '{hidden}+',
+  'avatar.more': '+{hidden}',
 
   /* --------------------------------------------------------------- badge */
-  'badge.overflow': '+{max}',
+  'badge.overflow': '{max}+',
 
   /* ------------------------------------------------------------ calendar */
   'calendar.label.date': 'Válasszon dátumot',

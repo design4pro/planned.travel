@@ -56,7 +56,11 @@ const messages = {
   'role.member': 'Tag',
 
   /* -------------------------------------------------- regional option labels */
-  'regional.workspaceDefault': 'A munkaterületről — {value}',
+  /* 206px truncating trigger, and Hungarian dates are the longest we ship:
+     «A munkaterületről» reached 226px on `2026. szept. 23.`, past English's own
+     217px. «Közös alapérték» is the wording `nav.workspace.hint` already uses,
+     and it drops a leading article that was carrying no meaning here. */
+  'regional.workspaceDefault': 'Közös alapérték — {value}',
   'regional.currency.AUD': 'ausztrál dollár',
   'regional.currency.CAD': 'kanadai dollár',
   'regional.currency.CHF': 'svájci frank',
