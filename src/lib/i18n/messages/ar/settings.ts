@@ -32,8 +32,7 @@ const messages = {
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'الحساب',
   'page.title': 'الإعدادات',
-  'page.description':
-    'كل ما يتعلق بك وبمساحة عملك وبطريقة عمل planned.travel',
+  'page.description': 'كل ما يتعلق بك وبمساحة عملك وبطريقة عمل planned.travel',
   'page.error': 'لم تُحمّل الإعدادات',
 
   'nav.label': 'أقسام الإعدادات',
@@ -44,7 +43,7 @@ const messages = {
   'nav.appearance': 'المظهر',
   'nav.appearance.hint': 'الثيم والحركة والخريطة',
   'nav.security': 'الأمان',
-  'nav.security.hint': 'كلمة المرور والتحقق بخطوتين ومفاتيح المرور',
+  'nav.security.hint': 'كلمة المرور والتحقق ومفاتيح المرور',
   'nav.notifications': 'الإشعارات',
   'nav.notifications.hint': 'صندوق الوارد والبريد والهاتف',
   'nav.workspace': 'مساحة العمل',
@@ -224,8 +223,7 @@ const messages = {
   'notifications.channel.push': 'إشعار فوري',
   'notifications.channel.push.hint': 'على الأجهزة التي سمحت لها بذلك',
   'notifications.event.trip.invited': 'دعوات الرحلات',
-  'notifications.event.trip.invited.hint':
-    'شخص يضيفك إلى رحلة يخطط لها.',
+  'notifications.event.trip.invited.hint': 'شخص يضيفك إلى رحلة يخطط لها.',
   'notifications.event.trip.updated': 'تغييرات الخطة',
   'notifications.event.trip.updated.hint':
     'يوم أو محطة أو تاريخ يتغير في رحلة أنت فيها.',
@@ -239,17 +237,14 @@ const messages = {
   'notifications.event.expense.added.hint':
     'شخص يسجّل مبلغًا صُرف في رحلة مشتركة.',
   'notifications.event.expense.settled': 'الأرصدة المسوّاة',
-  'notifications.event.expense.settled.hint':
-    'رصيد كنت طرفًا فيه تم سداده.',
+  'notifications.event.expense.settled.hint': 'رصيد كنت طرفًا فيه تم سداده.',
   'notifications.event.list.assigned': 'العناصر المسندة',
   'notifications.event.list.assigned.hint':
     'عنصر في قائمة حزم أو قائمة مهام يصبح من نصيبك.',
   'notifications.event.collab.message': 'محادثة الرحلة',
-  'notifications.event.collab.message.hint':
-    'رسائل جديدة في رحلة تسافر فيها.',
+  'notifications.event.collab.message.hint': 'رسائل جديدة في رحلة تسافر فيها.',
   'notifications.event.organization.invited': 'دعوات مساحة العمل',
-  'notifications.event.organization.invited.hint':
-    'تُدعى إلى مساحة عمل.',
+  'notifications.event.organization.invited.hint': 'تُدعى إلى مساحة عمل.',
 
   /* -------------------------------------------------------------- workspace */
   'workspace.error': 'لم تُحمّل مساحة العمل',
@@ -370,15 +365,13 @@ const messages = {
     'تنتهي هذه الخطة في {date}. لا يُحذف شيء — الوحدات المدفوعة تُقفل فقط.',
   'billing.renewal.pastDue':
     'لم تنجح الدفعة الأخيرة. حدّث بطاقتك لتجنّب فقدان الوحدات المدفوعة.',
-  'billing.renewal.unpaid':
-    'هذا الاشتراك غير مدفوع، والوحدات المدفوعة مقفلة.',
+  'billing.renewal.unpaid': 'هذا الاشتراك غير مدفوع، والوحدات المدفوعة مقفلة.',
   'billing.renewal.paused':
     'هذا الاشتراك موقوف مؤقتًا. استأنفه متى استعدت للسفر.',
   'billing.renewal.lapsed':
     'اختر خطة أدناه لتفتح الحجوزات واليوميات والخرائط دون اتصال مرة أخرى.',
   'billing.renewal.incomplete': 'ما زال Stripe ينتظر تأكيد هذه الدفعة.',
-  'billing.renewal.free':
-    'رحلتان في وقت واحد، على حسابنا. ارتقِ متى ضاقت بك.',
+  'billing.renewal.free': 'رحلتان في وقت واحد، على حسابنا. ارتقِ متى ضاقت بك.',
   'billing.renewal.auto': 'يُجدَّد تلقائيًا.',
   'billing.renewal.renewsOn': 'يُجدَّد في {date}.',
 
@@ -465,8 +458,7 @@ const messages = {
   },
 
   'billing.invoices.title': 'الفواتير',
-  'billing.invoices.description':
-    'كل إيصال لمساحة العمل هذه، الأحدث أولًا.',
+  'billing.invoices.description': 'كل إيصال لمساحة العمل هذه، الأحدث أولًا.',
   'billing.invoices.portal': 'بوابة الفواتير',
   'billing.invoices.unavailableTitle': 'الإيصالات لا تُحمّل',
   'billing.invoices.unavailableBody':

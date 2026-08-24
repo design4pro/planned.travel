@@ -30,13 +30,13 @@ const messages = {
 
   'nav.label': 'Ενότητες ρυθμίσεων',
   'nav.profile': 'Προφίλ',
-  'nav.profile.hint': 'Εσείς, και πώς διαβάζονται ημερομηνίες και ποσά',
+  'nav.profile.hint': 'Εσείς, ημερομηνίες και ποσά',
   'nav.language': 'Γλώσσα',
   'nav.language.hint': 'Η γλώσσα που μιλά κάθε οθόνη',
   'nav.appearance': 'Εμφάνιση',
   'nav.appearance.hint': 'Θέμα, κίνηση και χάρτης',
   'nav.security': 'Ασφάλεια',
-  'nav.security.hint': 'Κωδικός, δύο παράγοντες, κλειδιά πρόσβασης',
+  'nav.security.hint': 'Κωδικός, δύο παράγοντες, κλειδιά',
   'nav.notifications': 'Ειδοποιήσεις',
   'nav.notifications.hint': 'Εισερχόμενα, email και κινητό',
   'nav.workspace': 'Χώρος εργασίας',
@@ -199,8 +199,7 @@ const messages = {
     'Τερματίζει αυτή τη συνεδρία και σας γυρίζει στη σελίδα σύνδεσης. Οι άλλες συσκευές μένουν συνδεδεμένες.',
   'security.signOut.pending': 'Αποσυνδέεστε',
   'security.signOut.failed': 'Δεν αποσυνδεθήκατε',
-  'security.signOut.failedBody':
-    'Ελέγξτε τη σύνδεσή σας και ξαναδοκιμάστε.',
+  'security.signOut.failedBody': 'Ελέγξτε τη σύνδεσή σας και ξαναδοκιμάστε.',
 
   /* ---------------------------------------------------------- notifications */
   'notifications.error': 'Οι ρυθμίσεις ειδοποιήσεων δεν φόρτωσαν',
@@ -243,8 +242,7 @@ const messages = {
   'notifications.event.collab.message': 'Συνομιλία ταξιδιού',
   'notifications.event.collab.message.hint':
     'Νέα μηνύματα σε ταξίδι στο οποίο ταξιδεύετε.',
-  'notifications.event.organization.invited':
-    'Προσκλήσεις σε χώρο εργασίας',
+  'notifications.event.organization.invited': 'Προσκλήσεις σε χώρο εργασίας',
   'notifications.event.organization.invited.hint':
     'Σας προσκαλούν σε χώρο εργασίας.',
 
@@ -291,8 +289,7 @@ const messages = {
   'workspace.defaults.readOnly': 'Μόνο ανάγνωση',
   'workspace.defaults.saving': 'Αποθηκεύονται οι προεπιλογές του χώρου',
   'workspace.defaults.saved': 'Οι προεπιλογές του χώρου αποθηκεύτηκαν',
-  'workspace.defaults.saveFailed':
-    'Οι προεπιλογές του χώρου δεν αποθηκεύτηκαν',
+  'workspace.defaults.saveFailed': 'Οι προεπιλογές του χώρου δεν αποθηκεύτηκαν',
   'workspace.defaults.saveFailedBody':
     'Μόνο ιδιοκτήτης ή διαχειριστής μπορεί να τις αλλάξει. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.',
   'workspace.currency.label': 'Προεπιλεγμένο νόμισμα',
@@ -426,8 +423,7 @@ const messages = {
   'billing.plan.solo.feature.export': 'Εξαγωγή σε PDF και σε ημερολόγιο',
   'billing.plan.crew.name': 'Ομαδικό',
   'billing.plan.crew.tagline': 'Για οικογένειες, φίλους και μικρές ομάδες',
-  'billing.plan.crew.feature.members':
-    'Έως δέκα μέλη, με χρέωση κατά άτομο',
+  'billing.plan.crew.feature.members': 'Έως δέκα μέλη, με χρέωση κατά άτομο',
   'billing.plan.crew.feature.realtime':
     'Συνεργασία σε πραγματικό χρόνο με ζωντανούς δείκτες',
   'billing.plan.crew.feature.everything':
@@ -449,8 +445,7 @@ const messages = {
   'billing.plan.billedYearly': '{amount} με ετήσια χρέωση',
   'billing.plan.billedMonthly': '{amount} με μηνιαία χρέωση',
   'billing.plan.members': 'Μέλη',
-  'billing.plan.membersHint':
-    'Αλλάξτε τα όποτε θέλετε — η χρέωση ακολουθεί.',
+  'billing.plan.membersHint': 'Αλλάξτε τα όποτε θέλετε — η χρέωση ακολουθεί.',
   'billing.plan.seatOption': {
     one: '{value} μέλος',
     other: '{value} μέλη',

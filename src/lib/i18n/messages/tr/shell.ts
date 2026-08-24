@@ -150,8 +150,7 @@ const messages = {
   'notification.expense.added.title': '{actorName} bir masraf ekledi',
   'notification.expense.added.body': '{tripTitle} gezisinde {title}.',
   'notification.expense.settled.title': '{actorName} hesabı kapattı',
-  'notification.expense.settled.body':
-    '{tripTitle} gezisindeki bakiye ödendi.',
+  'notification.expense.settled.body': '{tripTitle} gezisindeki bakiye ödendi.',
   'notification.list.assigned.title': '{actorName} size bir madde atadı',
   'notification.list.assigned.body': '{tripTitle} gezisinde {title}.',
   'notification.collab.message.title':
@@ -183,7 +182,7 @@ const messages = {
   'dashboard.upNext': 'Sırada',
   'dashboard.openPlan': 'Programı aç',
   'dashboard.hero.travellers': 'Yolcular',
-  'dashboard.hero.travellersHint': 'bu çalışma alanında',
+  'dashboard.hero.travellersHint': 'çalışma alanında',
   'dashboard.hero.dates': 'Gezi tarihleri',
   'dashboard.hero.datesUnset': 'Belirsiz',
   'dashboard.hero.datesHint': { one: '{days} gün', other: '{days} gün' },
@@ -370,8 +369,7 @@ const messages = {
 
   'session.noWorkspace':
     'Hesabınız henüz bir çalışma alanına bağlı değil. Kurulumu tamamlamak için çıkış yapıp yeniden girin.',
-  'session.membershipRemoved':
-    'Bu çalışma alanındaki üyeliğiniz kaldırıldı.',
+  'session.membershipRemoved': 'Bu çalışma alanındaki üyeliğiniz kaldırıldı.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

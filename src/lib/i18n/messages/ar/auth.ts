@@ -110,8 +110,7 @@ const messages = {
   /* ------------------------------------------------------------------ login */
   'login.eyebrow': 'مرحبًا بعودتك',
   'login.heading': 'الدخول إلى planned.travel',
-  'login.description':
-    'التقط برامجك وميزانياتك وقوائمك من حيث تركتها بالضبط.',
+  'login.description': 'التقط برامجك وميزانياتك وقوائمك من حيث تركتها بالضبط.',
   'login.newHere': 'جديد هنا؟',
   'login.createAccount': 'أنشئ حسابًا',
   'login.forgot': 'نسيت كلمة المرور؟',
@@ -122,8 +121,7 @@ const messages = {
   /* --------------------------------------------------------------- register */
   'register.eyebrow': 'أنشئ حسابك',
   'register.heading': 'ابدأ التخطيط في دقيقتين',
-  'register.description':
-    'حساب واحد يغطي كل رحلة وكل رفيق سفر وكل قائمة.',
+  'register.description': 'حساب واحد يغطي كل رحلة وكل رفيق سفر وكل قائمة.',
   'register.haveAccount': 'لديك حساب بالفعل؟',
   'register.signIn': 'دخول',
   'register.terms': 'أوافق على شروط الخدمة وإشعار الخصوصية.',
@@ -355,8 +353,7 @@ const messages = {
   'error.sessionExpired.title': 'انتهت جلستك',
   'error.sessionExpired.detail': 'ادخل مرة أخرى لتتابع من حيث توقفت.',
   'error.alreadyVerified.title': 'مؤكَّد بالفعل',
-  'error.alreadyVerified.detail':
-    'هذا البريد مُوثَّق. يمكنك الدخول كالمعتاد.',
+  'error.alreadyVerified.detail': 'هذا البريد مُوثَّق. يمكنك الدخول كالمعتاد.',
   'error.badCode.title': 'هذا الرمز لم ينجح',
   'error.badCode.detail':
     'رموز المصادقة تدوم ثلاثين ثانية. انتظر الرمز التالي وأدخل الأرقام الستة كلها.',
@@ -378,8 +375,7 @@ const messages = {
   'error.invitationOther.detail':
     'أُرسلت إلى بريد مختلف. ادخل بذلك البريد لتقبلها.',
   'error.alreadyMember.title': 'أنت في مساحة العمل هذه بالفعل',
-  'error.alreadyMember.detail':
-    'لا شيء لقبوله — افتحها من مبدّل مساحات العمل.',
+  'error.alreadyMember.detail': 'لا شيء لقبوله — افتحها من مبدّل مساحات العمل.',
   'error.workspaceFull.title': 'مساحة العمل هذه ممتلئة',
   'error.workspaceFull.detail':
     'بلغت حد أعضائها. اطلب من المالك تحرير مقعد أو ترقية الخطة.',

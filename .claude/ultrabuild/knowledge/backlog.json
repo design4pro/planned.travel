@@ -84,5 +84,11 @@
       "src/routes/_app/-server/overview.ts",
       "src/routes/_app/admin.tsx"
     ]
+  },
+  {
+    "id": "glyph-only-values-cannot-pass-the-untranslated-check",
+    "title": "The parity suite has no way to say \"this value has nothing to translate\"",
+    "why": "PROPER_NOUNS is [] and its docstring only admits proper nouns - a product name, a brand, a currency code. A numeric affix notation like \"{max}+\" is the same category (no translatable content) but does not fit that wording, so fourteen translators corrupted the notation instead of asking for the allow-list.",
+    "decision": "Round 12: i18n-core-runtime widens the allow-list and its docstring to cover glyph-only values, then each translation item restores its own two keys."
   }
 ]

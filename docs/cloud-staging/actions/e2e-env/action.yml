@@ -1,0 +1,126 @@
+name: Prepare the e2e environment
+description: >
+  Everything the Playwright suite needs before a single spec runs: dependencies,
+  a migrated local D1, the PMTiles archive in the local R2 simulator, a dev
+  server on port 3000 and the seeded demo workspace behind it.
+
+  Two workflows need this identical preparation - the gate in ci.yml and the
+  baseline refresh in update-snapshots.yml - and a drift between them would show
+  up as screenshots that only fail in one of the two. So it lives here once.
+
+  Assumes a runner that already carries the browsers, i.e. a job running in
+  `mcr.microsoft.com/playwright:v<version>-noble`. Installing them per run costs
+  a couple of minutes and pins nothing extra.
+
+inputs:
+  cloudflare-api-token:
+    description: >
+      Token with R2:read on planned-travel-tiles. Only used to pull the basemap
+      archive out of production R2 into the local simulator.
+    required: true
+  cloudflare-account-id:
+    description: Cloudflare account that owns the bucket.
+    required: true
+  tiles-key:
+    description: >
+      Object key of the archive to pull, e.g. basemaps/planet-20260818.pmtiles.
+      Dated and immutable by policy (docs/DEPLOY.md 7.4), which is what makes it
+      a sound cache key.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Set up Node
+      uses: actions/setup-node@v5
+      with:
+        node-version: 24.x
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Generate route tree
+      shell: bash
+      run: pnpm generate-routes
+
+    # `vite dev` loads this through Miniflare exactly as `wrangler secret put`
+    # does in production. Every value here is a throwaway for a database that
+    # exists for the length of this job: nothing signs anything that outlives it.
+    - name: Write .dev.vars
+      shell: bash
+      run: |
+        set -euo pipefail
+        cat > .dev.vars <<EOF
+        BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+        APP_URL=http://localhost:3000
+        TILES_ARCHIVE_KEY=basemaps/e2e.pmtiles
+        EOF
+
+    - name: Apply D1 migrations
+      shell: bash
+      run: pnpm db:migrate:local
+
+    # The archive is ~480 MB and immutable under its dated key, so a hit here is
+    # the normal case and the download below runs once per new basemap.
+    - name: Restore the basemap archive
+      id: tiles-cache
+      uses: actions/cache@v4
+      with:
+        path: .e2e-tiles/basemap.pmtiles
+        key: pmtiles-${{ inputs.tiles-key }}
+
+    - name: Download the basemap archive from R2
+      if: steps.tiles-cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ inputs.cloudflare-api-token }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.cloudflare-account-id }}
+      run: |
+        set -euo pipefail
+        mkdir -p .e2e-tiles
+        pnpm exec wrangler r2 object get \
+          "planned-travel-tiles/${{ inputs.tiles-key }}" \
+          --remote --file .e2e-tiles/basemap.pmtiles
+
+    # Into the Miniflare bucket under the key .dev.vars names, so /api/tiles/*
+    # resolves the same way it does on your machine.
+    - name: Load the archive into the local R2 simulator
+      shell: bash
+      run: |
+        set -euo pipefail
+        pnpm exec wrangler r2 object put \
+          planned-travel-tiles/basemaps/e2e.pmtiles \
+          --local --file .e2e-tiles/basemap.pmtiles \
+          --content-type application/octet-stream
+
+    # Started here rather than by Playwright's `webServer` because the seed has
+    # to run against it before the first spec: the seed endpoint lives inside the
+    # Worker, so there is no seeding a database without a server in front of it.
+    - name: Start the dev server
+      shell: bash
+      run: |
+        set -euo pipefail
+        pnpm dev > dev-server.log 2>&1 &
+        for _ in $(seq 1 60); do
+          if curl --silent --fail --output /dev/null http://localhost:3000/; then
+            echo "dev server up"
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "::error title=Dev server::did not answer on :3000 within 120s"
+        tail -50 dev-server.log
+        exit 1
+
+    - name: Seed the demo workspace
+      shell: bash
+      run: node scripts/seed/seed.mjs
+
+    - name: Verify the seed
+      shell: bash
+      run: node scripts/seed/verify.mjs

@@ -33,13 +33,13 @@ const messages = {
 
   'nav.label': 'Beállítási szakaszok',
   'nav.profile': 'Profil',
-  'nav.profile.hint': 'Ön, és ahogy a dátumok és az összegek olvashatók',
+  'nav.profile.hint': 'Ön, dátumok és összegek',
   'nav.language': 'Nyelv',
-  'nav.language.hint': 'Az a nyelv, amelyen minden képernyő megszólal',
+  'nav.language.hint': 'Minden képernyő nyelve',
   'nav.appearance': 'Megjelenés',
   'nav.appearance.hint': 'Téma, mozgás és térkép',
   'nav.security': 'Biztonság',
-  'nav.security.hint': 'Jelszó, kétfaktoros belépés, belépési kulcsok',
+  'nav.security.hint': 'Jelszó, hitelesítés, kulcsok',
   'nav.notifications': 'Értesítések',
   'nav.notifications.hint': 'Postafiók, e-mail és telefon',
   'nav.workspace': 'Munkaterület',
@@ -391,12 +391,10 @@ const messages = {
     other: '{value} utazáshellyel a csomag korlátja felett',
   },
   'billing.quota.over.storage': '{value} a csomag korlátja felett',
-  'billing.quota.exhausted.seats':
-    'Ebben a csomagban minden hely betöltve',
+  'billing.quota.exhausted.seats': 'Ebben a csomagban minden hely betöltve',
   'billing.quota.exhausted.trips':
     'Ebben a csomagban minden utazáshely használatban',
-  'billing.quota.exhausted.storage':
-    'Ennek a csomagnak a tárhelye megtelt',
+  'billing.quota.exhausted.storage': 'Ennek a csomagnak a tárhelye megtelt',
   'billing.quota.left': '{value} maradt',
 
   'billing.plans.title': 'Csomagok',
@@ -410,8 +408,7 @@ const messages = {
   'billing.plan.free.tagline': 'Tervezze meg a következő két utazását',
   'billing.plan.free.feature.trips': 'Két utazás egyszerre',
   'billing.plan.free.feature.itinerary': 'Napra bontott útiterv és térkép',
-  'billing.plan.free.feature.lists':
-    'Csomaglisták és egyszerű költségvetések',
+  'billing.plan.free.feature.lists': 'Csomaglisták és egyszerű költségvetések',
   'billing.plan.free.feature.atlas':
     'A világtérkép, amely számon tartja, hol járt',
   'billing.plan.solo.name': 'Egyéni',
@@ -428,8 +425,7 @@ const messages = {
     'Legfeljebb tíz tag, fejenkénti számlázással',
   'billing.plan.crew.feature.realtime':
     'Valós idejű együttműködés élő kurzorokkal',
-  'billing.plan.crew.feature.everything':
-    'Korlátlan utazás és minden modul',
+  'billing.plan.crew.feature.everything': 'Korlátlan utazás és minden modul',
   'billing.plan.crew.feature.storage':
     'Közös hely mindenki fotóinak és dokumentumainak',
 

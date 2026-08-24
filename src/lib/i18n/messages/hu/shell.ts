@@ -149,8 +149,7 @@ const messages = {
     'A foglalás megerősítettként szerepel a {tripTitle} utazásban.',
   'notification.expense.added.title': '{actorName} költséget rögzített',
   'notification.expense.added.body': '{title} a {tripTitle} utazásban.',
-  'notification.expense.settled.title':
-    '{actorName} kiegyenlítette a számlát',
+  'notification.expense.settled.title': '{actorName} kiegyenlítette a számlát',
   'notification.expense.settled.body':
     'A {tripTitle} utazás egyenlege ki van fizetve.',
   'notification.list.assigned.title': '{actorName} Önhöz rendelt egy tételt',
@@ -158,8 +157,7 @@ const messages = {
   'notification.collab.message.title':
     '{actorName} írt a {tripTitle} utazásban',
   'notification.collab.message.body': '„{preview}”',
-  'notification.collab.poll.title':
-    'Szavazás indult a {tripTitle} utazásban',
+  'notification.collab.poll.title': 'Szavazás indult a {tripTitle} utazásban',
   'notification.collab.poll.body': '„{question}”',
   'notification.organization.invited.title':
     'Meghívták a {organizationName} munkaterületre',
@@ -186,8 +184,8 @@ const messages = {
   'dashboard.upNext': 'Következik',
   'dashboard.openPlan': 'Terv megnyitása',
   'dashboard.hero.travellers': 'Utazók',
-  'dashboard.hero.travellersHint': 'ebben a munkaterületen',
-  'dashboard.hero.dates': 'Az utazás dátumai',
+  'dashboard.hero.travellersHint': 'a munkaterületen',
+  'dashboard.hero.dates': 'Utazás dátumai',
   'dashboard.hero.datesUnset': 'Nincs megadva',
   'dashboard.hero.datesHint': { one: '{days} nap', other: '{days} nap' },
   'dashboard.hero.datesMissing':
@@ -258,7 +256,8 @@ const messages = {
   'dashboard.storage.count': '{used} a {limit} keretből',
   'dashboard.storage.files': {
     one: '{files} fájl az összes utazásban, a fotókkal és a jegyekkel együtt.',
-    other: '{files} fájl az összes utazásban, a fotókkal és a jegyekkel együtt.',
+    other:
+      '{files} fájl az összes utazásban, a fotókkal és a jegyekkel együtt.',
   },
   'dashboard.storage.more': 'Több helyre van szüksége?',
   'dashboard.storage.plans': 'Csomagok megtekintése',

@@ -324,7 +324,8 @@ const messages = {
   'error.emailTaken.detail':
     'Bunun yerine giriş yapın ya da unuttuysanız şifrenizi sıfırlayın.',
   'error.noAccount.title': 'Bu hesabı bulamadık',
-  'error.noAccount.detail': 'Adresi kontrol edin ya da yeni bir hesap oluşturun.',
+  'error.noAccount.detail':
+    'Adresi kontrol edin ya da yeni bir hesap oluşturun.',
   'error.passwordTooShort.title': 'Şifre çok kısa',
   'error.passwordTooShort.detail': 'Daha uzun bir söz seçip yeniden deneyin.',
   'error.passwordTooLong.title': 'Şifre çok uzun',
@@ -333,8 +334,7 @@ const messages = {
   'error.linkSpent.detail':
     'Şifre bağlantıları yalnızca bir kez kullanılabilir. Yenisini isteyin, hemen e-postayla gönderelim.',
   'error.linkExpired.title': 'Bu bağlantının süresi doldu',
-  'error.linkExpired.detail':
-    'Yenisini isteyin, hemen e-postayla gönderelim.',
+  'error.linkExpired.detail': 'Yenisini isteyin, hemen e-postayla gönderelim.',
   'error.linkIncomplete.title': 'Bu bağlantı eksik',
   'error.linkIncomplete.detail':
     'Şifre sıfırlama bağlantıları tek kullanımlık bir belirteç taşır. En son e-postayı açın ya da yeni bir bağlantı isteyin.',

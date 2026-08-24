@@ -115,8 +115,7 @@ const messages = {
     'Ένας λογαριασμός καλύπτει κάθε ταξίδι, κάθε συνταξιδιώτη και κάθε λίστα.',
   'register.haveAccount': 'Έχετε ήδη λογαριασμό;',
   'register.signIn': 'Σύνδεση',
-  'register.terms':
-    'Συμφωνώ με τους όρους χρήσης και τη δήλωση απορρήτου.',
+  'register.terms': 'Συμφωνώ με τους όρους χρήσης και τη δήλωση απορρήτου.',
   'register.submit': 'Δημιουργία λογαριασμού',
   'register.submitting': 'Δημιουργείται ο λογαριασμός σας',
 
@@ -182,8 +181,7 @@ const messages = {
   'twoFactor.methods': 'Μέθοδος επιβεβαίωσης',
   'twoFactor.totp.tab': 'Εφαρμογή ταυτοποίησης',
   'twoFactor.totp.label': 'Εξαψήφιος κωδικός',
-  'twoFactor.totp.hint':
-    'Οι κωδικοί ανανεώνονται κάθε τριάντα δευτερόλεπτα.',
+  'twoFactor.totp.hint': 'Οι κωδικοί ανανεώνονται κάθε τριάντα δευτερόλεπτα.',
   'twoFactor.totp.submit': 'Επιβεβαίωση και συνέχεια',
   'twoFactor.backup.tab': 'Κωδικός ασφαλείας',
   'twoFactor.backup.label': 'Κωδικός ασφαλείας',
@@ -191,8 +189,7 @@ const messages = {
     'Από τη λίστα που κρατήσατε όταν ενεργοποιήσατε τους δύο παράγοντες. Κάθε κωδικός δουλεύει μία φορά.',
   'twoFactor.backup.submit': 'Χρήση κωδικού ασφαλείας',
   'twoFactor.submitting': 'Ελέγχεται ο κωδικός σας',
-  'twoFactor.trust.label':
-    'Εμπιστεύσου αυτή τη συσκευή για τριάντα ημέρες',
+  'twoFactor.trust.label': 'Εμπιστεύσου αυτή τη συσκευή για τριάντα ημέρες',
   'twoFactor.trust.detail':
     'Παράλειψη αυτού του βήματος σε αυτό το πρόγραμμα περιήγησης μέχρι τότε. Κάντε το μόνο σε συσκευή που είναι αποκλειστικά δική σας.',
 
@@ -252,8 +249,7 @@ const messages = {
   'invitation.reassurance':
     'Μπορείτε να φύγετε από έναν χώρο εργασίας όποτε θέλετε από τις ρυθμίσεις του, και ό,τι φτιάχνετε έξω από αυτόν δεν μοιράζεται ποτέ.',
 
-  'invitation.role.owner':
-    'Ιδιοκτήτης — πλήρης έλεγχος, μαζί με τις χρεώσεις',
+  'invitation.role.owner': 'Ιδιοκτήτης — πλήρης έλεγχος, μαζί με τις χρεώσεις',
   'invitation.role.admin':
     'Διαχειριστής — διαχείριση ταξιδιών, μελών και ρυθμίσεων',
   'invitation.role.member': 'Μέλος — σχεδιάζει ταξίδια μαζί με όλους',
@@ -263,8 +259,7 @@ const messages = {
   'invitation.role.badge.admin': 'Διαχειριστής',
   'invitation.role.badge.member': 'Μέλος',
 
-  'invitation.anonymous.heading':
-    'Συνδεθείτε για να δείτε την πρόσκλησή σας',
+  'invitation.anonymous.heading': 'Συνδεθείτε για να δείτε την πρόσκλησή σας',
   'invitation.anonymous.description':
     'Οι προσκλήσεις είναι δεμένες με τη διεύθυνση στην οποία στάλθηκαν, οπότε πρέπει να ξέρουμε ποιος είστε πριν σας τη δείξουμε.',
   'invitation.anonymous.body':
@@ -283,19 +278,16 @@ const messages = {
   'invitation.mismatch.action': 'Αλλαγή λογαριασμού',
   'invitation.mismatch.back': 'Πίσω στη σύνδεση',
 
-  'invitation.unverified.heading':
-    'Επιβεβαιώστε το email σας για να μπείτε',
+  'invitation.unverified.heading': 'Επιβεβαιώστε το email σας για να μπείτε',
   'invitation.unverified.description':
     'Οι χώροι εργασίας δέχονται μόνο επιβεβαιωμένες διευθύνσεις, ώστε κανείς να μην μπαίνει από τυπογραφικό λάθος.',
-  'invitation.unverified.title':
-    'Το {email} δεν έχει επιβεβαιωθεί ακόμη',
+  'invitation.unverified.title': 'Το {email} δεν έχει επιβεβαιωθεί ακόμη',
   'invitation.unverified.body':
     'Ανοίξτε τον σύνδεσμο επιβεβαίωσης στα εισερχόμενά σας και γυρίστε σε αυτή τη σελίδα. Η πρόσκληση θα σας περιμένει.',
   'invitation.unverified.action': 'Επιβεβαίωση του email μου',
   'invitation.unverified.resend': 'Επαναποστολή του email επιβεβαίωσης',
 
-  'invitation.unavailable.heading':
-    'Αυτή η πρόσκληση δεν είναι πια διαθέσιμη',
+  'invitation.unavailable.heading': 'Αυτή η πρόσκληση δεν είναι πια διαθέσιμη',
   'invitation.unavailable.description':
     'Οι προσκλήσεις κρατούν επτά ημέρες και αποσύρονται τη στιγμή που χρησιμοποιούνται ή ανακαλούνται.',
   'invitation.unavailable.title': 'Τίποτα για αποδοχή εδώ',
@@ -335,8 +327,7 @@ const messages = {
   'error.emailTaken.detail':
     'Συνδεθείτε αντ’ αυτού, ή επαναφέρετε τον κωδικό σας αν τον ξεχάσατε.',
   'error.noAccount.title': 'Δεν βρήκαμε αυτόν τον λογαριασμό',
-  'error.noAccount.detail':
-    'Ελέγξτε τη διεύθυνση, ή φτιάξτε νέο λογαριασμό.',
+  'error.noAccount.detail': 'Ελέγξτε τη διεύθυνση, ή φτιάξτε νέο λογαριασμό.',
   'error.passwordTooShort.title': 'Ο κωδικός είναι πολύ μικρός',
   'error.passwordTooShort.detail':
     'Διαλέξτε μεγαλύτερη φράση και δοκιμάστε ξανά.',
@@ -373,8 +364,7 @@ const messages = {
   'error.twoFactorExpired.title': 'Ξεκινήστε πάλι από τη σύνδεση',
   'error.twoFactorExpired.detail':
     'Αυτό το βήμα επιβεβαίωσης έληξε. Βάλτε ξανά το email και τον κωδικό σας.',
-  'error.invitationGone.title':
-    'Αυτή η πρόσκληση δεν είναι πια διαθέσιμη',
+  'error.invitationGone.title': 'Αυτή η πρόσκληση δεν είναι πια διαθέσιμη',
   'error.invitationGone.detail':
     'Μπορεί να έληξε, να ανακλήθηκε ή να χρησιμοποιήθηκε ήδη. Ζητήστε καινούρια πρόσκληση.',
   'error.invitationOther.title': 'Αυτή η πρόσκληση είναι για κάποιον άλλο',

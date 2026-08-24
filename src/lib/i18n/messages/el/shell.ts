@@ -143,8 +143,7 @@ const messages = {
   'notification.expense.added.title': '{actorName} πρόσθεσε ένα έξοδο',
   'notification.expense.added.body': '{title} στο {tripTitle}.',
   'notification.expense.settled.title': '{actorName} εξόφλησε',
-  'notification.expense.settled.body':
-    'Το υπόλοιπο στο {tripTitle} πληρώθηκε.',
+  'notification.expense.settled.body': 'Το υπόλοιπο στο {tripTitle} πληρώθηκε.',
   'notification.list.assigned.title': '{actorName} σας ανέθεσε ένα στοιχείο',
   'notification.list.assigned.body': '{title} στο {tripTitle}.',
   'notification.collab.message.title': '{actorName} έγραψε στο {tripTitle}',
@@ -175,8 +174,8 @@ const messages = {
   'dashboard.upNext': 'Ακολουθεί',
   'dashboard.openPlan': 'Ανοίξτε το πρόγραμμα',
   'dashboard.hero.travellers': 'Ταξιδιώτες',
-  'dashboard.hero.travellersHint': 'σε αυτόν τον χώρο εργασίας',
-  'dashboard.hero.dates': 'Ημερομηνίες ταξιδιού',
+  'dashboard.hero.travellersHint': 'στο χώρο εργασίας',
+  'dashboard.hero.dates': 'Ημερομηνίες',
   'dashboard.hero.datesUnset': 'Χωρίς ορισμό',
   'dashboard.hero.datesHint': { one: '{days} ημέρα', other: '{days} ημέρες' },
   'dashboard.hero.datesMissing': 'Βάλτε ημερομηνίες για να φτιαχτούν οι ημέρες',
@@ -196,11 +195,12 @@ const messages = {
   'dashboard.stat.countriesNone':
     'Σημειώστε μια χώρα για να ξεκινήσει ο άτλαντάς σας',
   'dashboard.stat.visits': {
-    one: '{visits} καταγεγραμμένη επίσκεψη',
-    other: '{visits} καταγεγραμμένες επισκέψεις',
+    one: '{visits} επίσκεψη',
+    other: '{visits} επισκέψεις',
   },
   'dashboard.stat.trips': 'Σύνολο ταξιδιών',
-  'dashboard.stat.tripsCaption': '{planning} σε σχεδιασμό · {booked} με κρατήσεις',
+  'dashboard.stat.tripsCaption':
+    '{planning} σε σχεδιασμό · {booked} με κρατήσεις',
   'dashboard.stat.places': 'Μέρη στον χάρτη',
   'dashboard.stat.placesNone': 'Τίποτα στον χάρτη ακόμη',
   'dashboard.stat.placesAcross': {
@@ -317,8 +317,8 @@ const messages = {
   'tripStatus.archived': 'Αρχειοθετημένο',
 
   'bookingStatus.none': 'Χωρίς κράτηση',
-  'bookingStatus.pending': 'Σε εκκρεμότητα',
-  'bookingStatus.confirmed': 'Επιβεβαιωμένη',
+  'bookingStatus.pending': 'Εκκρεμεί',
+  'bookingStatus.confirmed': 'Βεβαιωμένη',
   'bookingStatus.cancelled': 'Ακυρωμένη',
   'bookingStatus.completed': 'Έγινε',
 

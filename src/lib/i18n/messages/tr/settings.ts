@@ -34,13 +34,13 @@ const messages = {
 
   'nav.label': 'Ayar bölümleri',
   'nav.profile': 'Profil',
-  'nav.profile.hint': 'Siz, ve tarihlerin ve tutarların okunuşu',
+  'nav.profile.hint': 'Siz, tarihler ve tutarlar',
   'nav.language': 'Dil',
   'nav.language.hint': 'Her ekranın konuştuğu dil',
   'nav.appearance': 'Görünüm',
   'nav.appearance.hint': 'Tema, hareket ve harita',
   'nav.security': 'Güvenlik',
-  'nav.security.hint': 'Şifre, iki adımlı doğrulama, geçiş anahtarları',
+  'nav.security.hint': 'Şifre, iki adım, geçiş anahtarları',
   'nav.notifications': 'Bildirimler',
   'nav.notifications.hint': 'Gelen kutusu, e-posta ve telefon',
   'nav.workspace': 'Çalışma alanı',
@@ -201,8 +201,7 @@ const messages = {
     'Bu oturumu kapatır ve sizi giriş sayfasına döndürür. Diğer cihazlar açık kalır.',
   'security.signOut.pending': 'Çıkış yapılıyor',
   'security.signOut.failed': 'Çıkış yapılmadı',
-  'security.signOut.failedBody':
-    'Bağlantınızı kontrol edip tekrar deneyin.',
+  'security.signOut.failedBody': 'Bağlantınızı kontrol edip tekrar deneyin.',
 
   /* ---------------------------------------------------------- notifications */
   'notifications.error': 'Bildirim ayarları yüklenmedi',
@@ -279,8 +278,7 @@ const messages = {
   'workspace.members.role': 'Rol',
   'workspace.members.joined': 'Katıldı',
   'workspace.invitations.title': 'Davetler',
-  'workspace.invitations.description':
-    'Davet edilip henüz katılmamış kişiler.',
+  'workspace.invitations.description': 'Davet edilip henüz katılmamış kişiler.',
   'workspace.invitations.emptyTitle': 'Açık davet yok',
   'workspace.invitations.emptyBody':
     'Bu çalışma alanına davet edilen herkes zaten katıldı.',
@@ -292,15 +290,13 @@ const messages = {
   'workspace.defaults.readOnly': 'Salt okunur',
   'workspace.defaults.saving': 'Çalışma alanı varsayılanları kaydediliyor',
   'workspace.defaults.saved': 'Çalışma alanı varsayılanları kaydedildi',
-  'workspace.defaults.saveFailed':
-    'Çalışma alanı varsayılanları kaydedilmedi',
+  'workspace.defaults.saveFailed': 'Çalışma alanı varsayılanları kaydedilmedi',
   'workspace.defaults.saveFailedBody':
     'Bunları yalnızca bir sahip ya da yönetici değiştirebilir. Bağlantınızı kontrol edip yeniden deneyin.',
   'workspace.currency.label': 'Varsayılan para birimi',
   'workspace.currency.hint': 'Yeni gezilerin bütçesi bununla tutulur.',
   'workspace.language.label': 'Dil',
-  'workspace.language.hint':
-    'Kendine dil seçmemiş bir üyenin okuduğu dil.',
+  'workspace.language.hint': 'Kendine dil seçmemiş bir üyenin okuduğu dil.',
   'workspace.timezone.label': 'Saat dilimi',
   'workspace.dateFormat.label': 'Tarih biçimi',
   'workspace.weekStart.label': 'Hafta şu gün başlar',
@@ -362,14 +358,12 @@ const messages = {
     'Bu paket {date} tarihinde bitiyor. Hiçbir şey silinmez — ücretli modüller yalnızca kilitlenir.',
   'billing.renewal.pastDue':
     'Son ödeme geçmedi. Ücretli modülleri kaybetmemek için kartınızı güncelleyin.',
-  'billing.renewal.unpaid':
-    'Bu abonelik ödenmedi ve ücretli modüller kilitli.',
+  'billing.renewal.unpaid': 'Bu abonelik ödenmedi ve ücretli modüller kilitli.',
   'billing.renewal.paused':
     'Bu abonelik duraklatıldı. Yeniden yola çıkmaya hazır olduğunuzda sürdürün.',
   'billing.renewal.lapsed':
     'Rezervasyonları, günlüğü ve çevrimdışı haritaları yeniden açmak için aşağıdan bir paket seçin.',
-  'billing.renewal.incomplete':
-    'Stripe bu ödemenin onaylanmasını bekliyor.',
+  'billing.renewal.incomplete': 'Stripe bu ödemenin onaylanmasını bekliyor.',
   'billing.renewal.free':
     'Aynı anda iki gezi, bizden. Size küçük gelmeye başlayınca yükseltin.',
   'billing.renewal.auto': 'Otomatik yenilenir.',
@@ -444,8 +438,7 @@ const messages = {
   'billing.plan.billedYearly': 'Yıllık {amount} tahsil edilir',
   'billing.plan.billedMonthly': 'Aylık {amount} tahsil edilir',
   'billing.plan.members': 'Üyeler',
-  'billing.plan.membersHint':
-    'İstediğiniz zaman değiştirin — ödeme buna uyar.',
+  'billing.plan.membersHint': 'İstediğiniz zaman değiştirin — ödeme buna uyar.',
   'billing.plan.seatOption': {
     one: '{value} üye',
     other: '{value} üye',

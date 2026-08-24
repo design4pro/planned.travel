@@ -1020,5 +1020,135 @@
       "auditor"
     ],
     "invalidatesWhen": "a new en namespace file appears or a deferred item is un-deferred"
+  },
+  {
+    "claim": "The settings screen has two hard pixel budgets a translation can silently blow: the nav hint under each section link is 198px and the regional select trigger is 206px, both `.truncate`. English itself already runs 5px over on the date row, so 'within ~5px of English' is the real bar, not 'fits'.",
+    "evidence": "Playwright chromium at 1440 and 2560 on http://localhost:3001/settings, `[...document.querySelectorAll('.truncate')].filter(e => e.scrollWidth > e.clientWidth + 1)`. en: one row, 206<211. de before fixing: 198<246, 198<221, 198<225, 198<208 plus 206<271 on four select triggers. After shortening the hints and changing the prefix to 'Vom Arbeitsbereich — ': de one row at 206<216, nl zero rows, sv one row at 206<208.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "id": "the-settings-screen-has-two-hard-pixel-budgets",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Switching the demo fixture's locale from Playwright needs `goto(..., { waitUntil: 'networkidle' })` before clicking the chip — with `domcontentloaded` the click lands before hydration, silently does nothing, and `waitForFunction(lang === tag)` times out even at 60s. The `locale-chip-workspace` chip resolves to lang 'en', not 'workspace'. The fixture is also contended: a parallel agent moved it sv → en → id → vi mid-probe.",
+    "evidence": "Identical script, only the waitUntil differing: domcontentloaded → TimeoutError at 60000ms with log: []; networkidle → `document.documentElement.lang` becomes 'de' within ~3s and the h1 reads 'Einstellungen'. Mid-run the probe recorded lang=en then lang=id ('Pengaturan') then lang=vi ('Thông báo') on consecutive navigations while the script had set sv. `playwright test --project=setup` restores it (1 passed).",
+    "scope": [
+      "builder",
+      "capture"
+    ],
+    "id": "switching-the-demo-fixture-s-locale-from-playwright",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "At 360px the floating action button covers the fourth mobile-nav tab in EVERY locale including English, so a translated fourth label that looks clipped in a 360 frame is not a translation defect.",
+    "evidence": "Measured on /settings at 360x800 with the demo session: the four tabs occupy exactly 0-90, 90-180, 180-270 and 270-360 in en, de, nl and sv alike, and the FAB occupies 292-352 in all four. en labels Trips/Vacay/Atlas/Journey, de Reisen/Urlaub/Karte/Tagebuch, nl Reizen/Vakantie/Kaart/Dagboek, sv Resor/Semester/Karta/Dagbok — every label fits its 90px cell; only the FAB overlaps.",
+    "scope": [
+      "critic",
+      "auditor",
+      "capture"
+    ],
+    "id": "at-360px-the-floating-action-button-covers-the",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A Playwright probe that clicks a locale chip must load /settings/language with waitUntil:'networkidle' and call scrollIntoViewIfNeeded() before .click(); with waitUntil:'domcontentloaded' the click lands pre-hydration and document.documentElement.lang never changes.",
+    "evidence": "Measured on http://localhost:3001/settings/language with e2e/.auth/demo.json: domcontentloaded + chip.click() then waitForFunction(lang==='ar') threw TimeoutError after 20000ms with an empty log. The identical script with networkidle + scrollIntoViewIfNeeded gave lang='ar' dir='rtl' and h1 'الإعدادات' within 4s, and then drove all 24 chips across 48 viewport/theme combinations without a single miss.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "id": "a-playwright-probe-that-clicks-a-locale-chip",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Node 26's native TS type-stripping imports the catalogue files directly by absolute path, so a full key/value/token/plural diff of any locale against `en` runs as a plain .mjs script in about a second — no vitest process, no repo file added.",
+    "evidence": "`node scratch/diff.mjs ar el tr hu` with `await import('/abs/.../messages/ar/shell.ts')` returned the default export for all 16 files; the `import type En from '../en/auth'` and `satisfies TranslationOf<...>` lines strip cleanly. Output gave enTop/trTop/missing/orphan/identical/tokendiff per namespace and is what found hu/auth.ts absent and proved ar/el/tr complete, before the parity suite was ever run.",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "node-26-s-native-ts-type-stripping-imports",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Locale-specific text clipping is measurable as scrollWidth > clientWidth over `main *, header *, nav *`, and on this demo fixture English clips exactly 11 nodes at BOTH 360 and 1440 — five seeded reservation titles plus the sr-only avatar name. Any count above 11 is translated copy that is too long, not a screen defect.",
+    "evidence": "Measured across /dashboard, /settings, /settings/language, /settings/security, /settings/workspace, /settings/billing, /notifications, /admin. Baseline en=11 at 360 and 11 at 1440. Before copy fixes: el=18/27, hu=13, tr=12, ar=11. After: all four = 11 with an element-for-element identical set. The Greek case was traced to bookingStatus.confirmed rendering an 81px vs 71px badge, which shrank the sibling meta column from 155px to 126px.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "locale-specific-text-clipping-is-measurable-as-scrollwidth",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Vietnamese tone stacks render in the real Geist and MuseoModerno Vietnamese subsets, not a fallback face, and cost zero layout shift — measurable with no dev server and no repo file added.",
+    "evidence": "Scratchpad harness: esbuild-bundled the en/id/vi catalogues to .mjs, rendered them into a file:// page with `dist/client/assets/styles-CfaXwTeV.css` inlined and the real FONT_STYLESHEET_HREF imported from src/lib/fonts.ts, then Playwright chromium + CDP CSS.getPlatformFontsForNode. Result: 8 faces loaded, 0 failed requests; body/nav en→Geist:130 id→Geist:163 vi→Geist:146, display en/id/vi all →MuseoModerno. Chip heights were {en:[44x7], id:[44x7], vi:[44x7]} — one value across all three locales in light and dark.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "id": "vietnamese-tone-stacks-render-in-the-real-geist",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "`satisfies TranslationOf<typeof En>` is a complete key-parity gate at compile time for a translation catalogue: `pnpm typecheck` rejects both a missing key and an invented one, so a translator gets the full diff before running vitest.",
+    "evidence": "TranslationOf maps `readonly [K in keyof TSource]: Message` with no `?`, and the value is an object literal, so excess-property checking applies. Measured: after writing id/vi ui+shell+auth, `./node_modules/.bin/tsc --noEmit` printed nothing and the subsequent parity run showed zero `id`/`vi` failures across all seven parity assertions — the type check had already caught everything.",
+    "scope": [
+      "builder",
+      "mechanical"
+    ],
+    "id": "-satisfies-translationof-typeof-en-is-a-complete",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The i18n parity suite is now down to 8 failures covering only ca/es/fr/it/pt-BR/nl/sv (the romance and germanic packs) plus the aggregate locale-count test. de and hu, which were red in earlier rounds, are green.",
+    "evidence": "`pnpm test` at this tree: Test Files 1 failed | 112 passed (113), Tests 8 failed | 3147 passed (3155). The named failures are exactly `the shipped catalogues > {ca,es,fr,it,pt-BR,nl,sv} > carries every key English carries` plus `carries a file for every locale, once English carries any key`. Earlier in the same session the run also listed de and hu; parallel items landed them mid-round.",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "critic"
+    ],
+    "id": "the-i18n-parity-suite-is-now-down-to",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The i18n parity suite has shrunk from 23 failures to 6, and the remaining ones are the romance pack (ca, es, fr, it, pt-BR) missing the ui.* namespace plus one whole-catalogue file-presence test. Other packs (cs, el, hu, ja, ko, pl, ru, tr, uk, zh-Hans, zh-Hant, ar) now pass.",
+    "evidence": "pnpm test: Test Files 1 failed | 112 passed (113), Tests 6 failed | 3149 passed (3155). Named failures: 'carries a file for every locale, once English carries any key' plus ca/es/fr/it/pt-BR 'carries every key English carries'; every diff key printed is a ui.* key.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-i18n-parity-suite-has-shrunk-from-23",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Playwright is fully green against port 3001 on this tree, including all settings-language frames — no visual regressions this round.",
+    "evidence": "PLAYWRIGHT_BASE_URL=http://localhost:3001 pnpm exec playwright test → PASS (138) FAIL (0) skipped (5), 64968ms, no timeout flakes.",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "capture"
+    ],
+    "id": "playwright-is-fully-green-against-port-3001-on",
+    "measuredIn": "round-11"
+  },
+  {
+    "id": "the-overflow-affix-is-inverted-in-fourteen-locales",
+    "measuredIn": "round-11",
+    "appliesTo": [
+      "builder",
+      "auditor"
+    ],
+    "claim": "The `ui.badge.overflow` / `ui.avatar.more` affix inversion the round-11 auditor pinned on translations-germanic is in FOURTEEN locales, not three. Measured by grepping both keys across every shipped catalogue: en is '{max}+' / '+{hidden}'; de, nl, sv, ar, el, tr, hu, id, vi, cs, pl, ru and uk all ship '+{max}' / '{hidden}+', the same inversion in the same direction. Only ja, zh-Hans and zh-Hant differ honestly (fullwidth '＋', a real typographic difference) and ko writes a real Korean phrase ('외 {hidden}'). Every builder independently hit the same wall and made the same move, so this is a contract defect, not three translators' carelessness: PROPER_NOUNS in src/lib/i18n/__tests__/parity.test.ts is [], the no-byte-identical check therefore forbids a glyph-only value from staying identical to English, and a Germanic or Slavic translator has no honest way to ship '{max}+'. Fixing it means extending the allow-list (owned by i18n-core-runtime) FIRST; a builder told to restore '{max}+' without that lands straight back in a red parity suite."
   }
 ]

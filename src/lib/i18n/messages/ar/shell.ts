@@ -174,7 +174,8 @@ const messages = {
   'notification.collab.message.body': '«{preview}»',
   'notification.collab.poll.title': 'هناك تصويت مفتوح في {tripTitle}',
   'notification.collab.poll.body': '«{question}»',
-  'notification.organization.invited.title': 'تلقيت دعوة إلى {organizationName}',
+  'notification.organization.invited.title':
+    'تلقيت دعوة إلى {organizationName}',
   'notification.organization.invited.body':
     'اقبل الدعوة لتنضم إلى مساحة العمل وكل ما يُشارَك فيها.',
   'notification.journey.published.title': 'تم نشر {title}',
