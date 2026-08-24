@@ -1660,5 +1660,87 @@
     ],
     "id": "the-whole-mechanical-gate-is-green-on-this",
     "measuredIn": "round-11"
+  },
+  {
+    "claim": "The reference product's /dashboard is still auth-gated in round 16 — a fourth independent confirmation. No authenticated reference frame has ever been obtained, so app-shell-i18n can never form a blind pair and future rounds should stop paying the Ego Lite cost for it.",
+    "evidence": "Ego Lite 0.4.7.1 / Chromium 150, fresh task space 'ultrabuild app-shell-i18n r16': openOrReuseTab('https://demo.liketrek.com/dashboard', {wait:true,timeout:30}) + waitForNetworkIdle + pageInfo() returned url 'https://demo.liketrek.com/login?redirect=%2Fdashboard', title 'TREK'. One navigation, no hang, well under a minute. completeTaskSpace(..., {keep:false}) returned promptly.",
+    "scope": [
+      "capture",
+      "critic"
+    ],
+    "id": "the-reference-product-s-dashboard-is-still-auth",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The dashboard capture is completely clean this round: 8 frames, captureValid true, zero warnings and an empty console in all three classification buckets — so any defect the critic finds in these frames is a layout/copy judgement, not a capture artefact.",
+    "evidence": "node scripts/ultrabuild/capture.mjs --url http://localhost:3001/dashboard --label B --viewports 1440x900,768x1024,360x800,2560x1440 --themes light,dark --auth printed console.fatal [], notTheApp [], toolchainBroken [], warnings [], captureValid true, 8 files 327-429 KB each.",
+    "scope": [
+      "critic",
+      "auditor"
+    ],
+    "id": "the-dashboard-capture-is-completely-clean-this-round",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The committed Playwright visual baselines photograph exactly two viewports — chromium 1440x900 and mobile-safari 393x852 — so `2xl:` (>=1536) and the `sm`..`lg` band (640-1023) are design zones no baseline can see. A screen can therefore be recomposed for large and tablet viewports with the mechanical gate staying green and e2e/__screenshots__ untouched.",
+    "evidence": "playwright.config.ts:125 `viewport: { width: 1440, height: 900 }` for the chromium project and devices['iPhone 15'] (393x852) for mobile-safari. Measured: an auth-shell rewrite whose every composition change was gated to `2xl:` and `sm:...lg:hidden` took `-g \"login|register|forgot\"` from 6 pixel failures (22309px diff on forgot-password-light, ratio 0.02) to PASS (13) FAIL (0), and the full suite to PASS (138) FAIL (0) skipped (5).",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-committed-playwright-visual-baselines-photograph-exactly-two",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The round-16 auth-i18n B frames are not evidence about this tree: /login renders its H1, its Wordmark link and its ThemeToggle at every viewport and theme, and both HEAD and the working tree contained that markup when those frames were shot. A frame showing an empty band where a heading belongs, with no space reserved for a header that is unconditional in the source, is a stale or foreign build — check the server before filing it as a design defect.",
+    "evidence": "Playwright chromium against the resolve-port.sh server on 3001, 360/768/1440/2560 x light/dark: h1 textContent 'Sign in to planned.travel' in all eight, box [165,169,448,30] at 1440, fontFamily 'MuseoModerno, \"Planned Display Fallback\"'; header box [48,32,682,36] with innerHTML `<a aria-label=\"planned.travel home\" href=\"/\">` plus the toggle button. `git show HEAD:src/routes/(auth)/-ui/auth-shell.tsx` contains the same unconditional <header> and <h1>.",
+    "scope": [
+      "critic",
+      "capture",
+      "auditor"
+    ],
+    "id": "the-round-16-auth-i18n-b-frames-are",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A form's submitting state is only observable if the endpoint is slowed: on this local server the sign-in round trip resolves inside 120ms, so a bare click-then-read reports disabled=false / no spinner and looks like a missing loading state. `page.route('**/api/auth/sign-in/**', delay then continue)` makes it readable.",
+    "evidence": "Same page, same button. Read at +120ms after click: {disabled:false, busy:null, spinner:false}. With a 2500ms route delay and a 700ms wait: {disabled:true, busy:'true', spinner:true, text:'دخولجارٍ تسجيل دخولك'} under Accept-Language: ar and {…, text:'Sign inSigning you in'} under en — the Button's loadingLabel rendered alongside the resting label.",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "id": "a-form-s-submitting-state-is-only-observable",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "scripts/ultrabuild/capture.mjs cannot photograph a non-English locale: it hardcodes `locale: 'en-GB'` on the browser context and has no Accept-Language or locale flag. Any item whose point is a non-English auth screen cannot be captured by it as-is.",
+    "evidence": "grep of scripts/ultrabuild/capture.mjs line 184 shows `locale: 'en-GB',` inside newContext; the argument parser (lines 92-94) only recognises --url --out --label --viewports --themes --auth --hover --click --settle, no locale or header option.",
+    "scope": [
+      "capture",
+      "mechanical"
+    ],
+    "id": "scripts-ultrabuild-capture-mjs-cannot-photograph-a-non",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Ego Lite reaches demo.liketrek.com/login fine at its native size, but cdp('Emulation.setDeviceMetricsOverride') reliably wedges the task space on this target. Playwright chromium does the reference-side viewports cleanly IF you use waitUntil:'domcontentloaded' - 'networkidle' never fires on that site and times out at 60s.",
+    "evidence": "Ego: a plain openOrReuseTab + captureScreenshot returned '1200x818|https://demo.liketrek.com/login|/var/folders/.../ego-browser-shot-45674-1.png' in seconds; the very next heredoc doing only setDeviceMetricsOverride(1440x900)+pageInfo produced zero output and was killed at 240s (a prior 4-viewport loop was killed at 420s). Playwright: goto with waitUntil:'networkidle' threw TimeoutError 60000ms; the identical script with 'domcontentloaded' + 3.5s settle captured all four viewports, each reporting innerWidth/innerHeight exactly 1440x900 / 360x800 / 768x1024 / 2560x1440.",
+    "scope": [
+      "capture"
+    ],
+    "id": "ego-lite-reaches-demo-liketrek-com-login-fine",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "`sharp` is NOT installed in this repo, so image post-processing (masking wordmarks) has to go through a Playwright page: read the PNG as a base64 data URL, draw it plus the mask rects onto a canvas in page.evaluate, and write back canvas.toDataURL. Element rects for the mask come from a separate measuring pass at the same viewport, and map 1:1 onto capture.mjs output because it shoots fullPage at deviceScaleFactor 1.",
+    "evidence": "`import sharp from 'sharp'` failed with ERR_MODULE_NOT_FOUND even with the repo node_modules symlinked into the scratchpad. The canvas route masked 12 of 13 frames in one run. Our lockups are `a.rounded-md.focus-ring` and the `p.font-display` in the aside, both with textContent exactly 'planned.travel' (measured at 1440: [48,32.1,170,35.8] and [834.4,56,549.6,24]).",
+    "scope": [
+      "capture"
+    ],
+    "id": "-sharp-is-not-installed-in-this-repo",
+    "measuredIn": "round-11"
   }
 ]

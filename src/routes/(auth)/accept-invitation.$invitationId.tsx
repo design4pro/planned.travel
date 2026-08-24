@@ -15,11 +15,11 @@ import { formatDate } from '#/lib/format'
 import { useI18n, useTranslate } from '#/lib/i18n'
 import { describeFailure } from './-lib/errors'
 import { DEFAULT_REDIRECT, loginHrefFor } from './-lib/redirect'
+import { roleCopy } from './-lib/roles'
 import { loadInvitation } from './-server/invitation'
 import { AuthShell } from './-ui/auth-shell'
 import { AuthPanel, EmailSentence, FormAlert } from './-ui/form'
 
-import type { MessageKey } from '#/lib/i18n'
 import type { AuthMessage } from './-lib/errors'
 import type { InvitationSummary } from './-server/invitation'
 
@@ -31,25 +31,6 @@ export const Route = createFileRoute('/(auth)/accept-invitation/$invitationId')(
   },
 )
 
-/**
- * Role names as the product says them, not as the database spells them.
- *
- * A role the server invented is shown verbatim in the badge and explained by
- * `invitation.role.other`, which is the honest answer: no catalogue can carry a
- * word that was made up after it was written.
- */
-const ROLE_NAMES: Record<string, MessageKey | undefined> = {
-  owner: 'auth.invitation.role.badge.owner',
-  admin: 'auth.invitation.role.badge.admin',
-  member: 'auth.invitation.role.badge.member',
-}
-
-const ROLE_MEANINGS: Record<string, MessageKey | undefined> = {
-  owner: 'auth.invitation.role.owner',
-  admin: 'auth.invitation.role.admin',
-  member: 'auth.invitation.role.member',
-}
-
 /** The workspace card at the heart of every state on this screen. */
 function InvitationDetails({ invitation }: { invitation: InvitationSummary }) {
   const { t, locale } = useI18n()
@@ -57,8 +38,7 @@ function InvitationDetails({ invitation }: { invitation: InvitationSummary }) {
   // §8.5 treats a workerd/WebKit divergence in a date as a defect, and this one
   // is server-rendered and then hydrated.
   const expires = formatDate(invitation.expiresAt, locale)
-  const roleName = ROLE_NAMES[invitation.role]
-  const roleMeaning = ROLE_MEANINGS[invitation.role]
+  const role = roleCopy(invitation.role)
 
   return (
     <div className="rounded-lg border border-edge-faint bg-surface-2 p-5">
@@ -83,10 +63,12 @@ function InvitationDetails({ invitation }: { invitation: InvitationSummary }) {
 
       <dl className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <dt className="text-caption text-ink-3">{t('auth.invitation.role')}</dt>
+          <dt className="text-caption text-ink-3">
+            {t('auth.invitation.role')}
+          </dt>
           <dd className="min-w-0">
             <Badge tone="brand">
-              {roleName ? t(roleName) : invitation.role}
+              {role ? t(role.badge) : invitation.role}
             </Badge>
           </dd>
         </div>
@@ -95,8 +77,8 @@ function InvitationDetails({ invitation }: { invitation: InvitationSummary }) {
             {t('auth.invitation.means')}
           </dt>
           <dd className="text-end text-caption text-ink-2">
-            {roleMeaning
-              ? t(roleMeaning)
+            {role
+              ? t(role.meaning)
               : t('auth.invitation.role.other', { role: invitation.role })}
           </dd>
         </div>
@@ -115,9 +97,14 @@ function InvitationDetails({ invitation }: { invitation: InvitationSummary }) {
             <dt className="shrink-0 text-caption text-ink-3">
               {t('auth.invitation.expires')}
             </dt>
-            <dd data-numeric className="text-caption text-ink-2 numeral">
-              {expires}
-            </dd>
+            {/* `numeral` for tabular figures, and deliberately NOT
+                `data-numeric`: that attribute pins a run to `direction: ltr`,
+                which is right for a code or a time range glued together by
+                neutral characters and wrong for a formatted date. An Arabic
+                date is Arabic prose — `23 يونيو 2026` reads right to left — so
+                pinning it reversed the reading order to year-month-day. It
+                takes the paragraph's direction, like the sentence it is. */}
+            <dd className="text-caption text-ink-2 numeral">{expires}</dd>
           </div>
         ) : null}
       </dl>
