@@ -1,0 +1,419 @@
+/**
+ * Everything the application shell says, in Czech.
+ *
+ * Authored from `../en/shell.ts` (`docs/SPEC.md` §8.9 — never from another
+ * product's catalogue). `TranslationOf<typeof En>` is the key contract;
+ * `__tests__/parity.test.ts` checks placeholders, plural branches and that no
+ * value is left in English.
+ *
+ * **Plural.** Czech uses `one` (1), `few` (2–4), `other` (0 and 5 up) and
+ * `many` **for fractions only**, so every `many` branch carries the genitive
+ * singular of a decimal ("1,5 dne").
+ *
+ * **Names of the modules.** `Atlas` is the world map that records where a
+ * traveller has been; Czech has no one-word noun a reader would recognise in a
+ * nav pill, so it is named for what it is — „Mapa světa“, shortened to „Mapa“.
+ * `Journey` is the travel journal, so „Deník“; `Vacay` is time off, so
+ * „Dovolená“.
+ *
+ * **Two senses of „plan“.** English `Plan` is both an itinerary and a
+ * subscription. Czech keeps „plán“ for the itinerary and says „tarif“ wherever
+ * the sentence is about what the workspace pays for.
+ *
+ * **Gender.** A Czech past participle agrees with its subject and a
+ * notification names a person whose gender we do not know, so nothing below
+ * agrees with `{actorName}`: the copy uses a verbal noun („Vyrovnání od …“) or
+ * the present tense, both genderless.
+ */
+
+import type { TranslationOf } from '../../types'
+import type En from '../en/shell'
+
+const messages = {
+  /* -------------------------------------------------------------- navigation */
+  'nav.primary': 'Hlavní sekce',
+  'nav.mobile': 'Sekce',
+  'nav.dashboardLink': 'Přehled planned.travel',
+  'nav.homeLink': 'Domovská stránka planned.travel',
+  'nav.newTrip': 'Nová cesta',
+
+  'nav.trips': 'Moje cesty',
+  'nav.trips.short': 'Cesty',
+  'nav.vacay': 'Dovolená',
+  'nav.vacay.short': 'Dovolená',
+  'nav.atlas': 'Mapa světa',
+  'nav.atlas.short': 'Mapa',
+  'nav.journey': 'Deník',
+  'nav.journey.short': 'Deník',
+
+  /* ---------------------------------------------------------- trip sub-nav */
+  'trip.nav.label': 'Sekce cesty',
+  'trip.nav.back': 'Cesty',
+  'trip.nav.share': 'Sdílet',
+  'trip.nav.shareLabel': 'Sdílet tuto cestu',
+  'trip.tab.plan': 'Plán',
+  'trip.tab.transports': 'Doprava',
+  'trip.tab.book': 'Rezervace',
+  'trip.tab.lists': 'Seznamy',
+  'trip.tab.costs': 'Náklady',
+  'trip.tab.files': 'Soubory',
+  'trip.tab.collab': 'Spolupráce',
+
+  /* ------------------------------------------------------------ user menu */
+  'account.menu': 'Nabídka účtu',
+  'account.settings': 'Nastavení',
+  'account.billing': 'Tarif a platby',
+  'account.admin': 'Správa',
+  'account.signOut': 'Odhlásit se',
+  'account.signingOut': 'Odhlašování…',
+  'account.signOutFailed': 'Odhlášení se nepovedlo',
+  'account.signOutFailedBody': 'Zkontrolujte připojení a zkuste to znovu.',
+
+  /* --------------------------------------------------------- theme switcher */
+  'theme.label': 'Vzhled',
+  'theme.light': 'Světlý',
+  'theme.dark': 'Tmavý',
+  'theme.system': 'Podle systému',
+  'theme.state.light': 'světlý',
+  'theme.state.dark': 'tmavý',
+  'theme.state.system': 'podle systému',
+  'theme.trigger': 'Téma: {state}. Změnit téma',
+
+  /* ------------------------------------------------------------------ bell */
+  'bell.none': 'Oznámení, nic nepřečteného',
+  'bell.unread': {
+    one: 'Oznámení, {unread} nepřečtené',
+    few: 'Oznámení, {unread} nepřečtená',
+    many: 'Oznámení, {unread} nepřečteného',
+    other: 'Oznámení, {unread} nepřečtených',
+  },
+
+  /* ----------------------------------------------------------------- inbox */
+  'inbox.eyebrow': 'Doručené',
+  'inbox.title': 'Oznámení',
+  'inbox.error': 'Vaše doručené se nenačetly',
+  'inbox.allRead': 'Vše přečteno',
+  'inbox.unread': {
+    one: '{unread} nepřečtená zpráva',
+    few: '{unread} nepřečtené zprávy',
+    many: '{unread} nepřečtené zprávy',
+    other: '{unread} nepřečtených zpráv',
+  },
+  'inbox.markAll': 'Označit přečtené',
+  'inbox.markingAll': 'Označuji vše jako přečtené',
+  'inbox.cleared': 'Vyčištěno',
+  'inbox.markAllFailed': 'Nepovedlo se označit vše',
+  'inbox.retryHint': 'Zkontrolujte připojení a zkuste to znovu.',
+  'inbox.filter.all': 'Vše',
+  'inbox.filter.unread': 'Nepřečtené',
+  'inbox.waiting': {
+    one: '{invitations} pozvánka čeká',
+    few: '{invitations} pozvánky čekají',
+    many: '{invitations} pozvánky čeká',
+    other: '{invitations} pozvánek čeká',
+  },
+  'inbox.empty.title': 'Doručené jsou prázdné',
+  'inbox.empty.body':
+    'Pozvánky na cesty, změny v plánu, upomínky k rezervacím i vyrovnané zůstatky — všechno přichází sem.',
+  'inbox.empty.action': 'Zpět na přehled',
+  'inbox.emptyUnread.title': 'Nic nepřečteného',
+  'inbox.emptyUnread.body':
+    'Přečteno je všechno. Přepněte na Vše a projděte si historii.',
+  'inbox.emptyUnread.action': 'Zobrazit vše',
+  'inbox.row.new': 'Nové',
+  'inbox.row.accepted': 'Přijato',
+  'inbox.row.declined': 'Odmítnuto',
+  'inbox.row.open': 'Otevřít',
+  'inbox.row.markRead': 'Přečteno',
+  'inbox.row.markingRead': 'Označuji jako přečtené',
+  'inbox.row.markReadFailed': 'Nepovedlo se to označit jako přečtené',
+  'inbox.preferences':
+    'Vyberte, co z toho má chodit do doručených, na e-mail a do telefonu.',
+  'inbox.preferencesAction': 'Nastavení oznámení',
+
+  /* ----------------------------------------------- stored notification copy */
+  'notification.trip.invited.title': 'Máte pozvánku na {tripTitle}',
+  'notification.trip.invited.body': 'Pozvánka od {actorName}.',
+  'notification.trip.updated.title': 'Změny u cesty {tripTitle}',
+  'notification.trip.updated.body': 'Změna plánu od {actorName}.',
+  'notification.trip.member_added.title':
+    '{memberName} se přidává k {tripTitle}',
+  'notification.trip.member_added.body':
+    'Vidí itinerář, rezervace i společné peníze.',
+  'notification.trip.member_removed.title': '{memberName} opouští {tripTitle}',
+  'notification.trip.member_removed.body': 'Přístup k této cestě skončil.',
+  'notification.trip.starting_soon.title': {
+    one: '{tripTitle} začíná za {days} den',
+    few: '{tripTitle} začíná za {days} dny',
+    many: '{tripTitle} začíná za {days} dne',
+    other: '{tripTitle} začíná za {days} dní',
+  },
+  'notification.trip.starting_soon.body':
+    'Je čas zkontrolovat seznam věcí a rezervace.',
+  'notification.reservation.reminder.title': '{title} se blíží',
+  'notification.reservation.reminder.body':
+    'Zkontrolujte čas a potvrzovací kód u rezervace.',
+  'notification.reservation.confirmed.title': '{title} je potvrzeno',
+  'notification.reservation.confirmed.body':
+    'Rezervace u cesty {tripTitle} je označená jako potvrzená.',
+  'notification.expense.added.title': 'Nový výdaj od {actorName}',
+  'notification.expense.added.body': '{title} u cesty {tripTitle}.',
+  'notification.expense.settled.title': 'Vyrovnání od {actorName}',
+  'notification.expense.settled.body':
+    'Zůstatek u cesty {tripTitle} je zaplacený.',
+  'notification.list.assigned.title': 'Úkol od {actorName}',
+  'notification.list.assigned.body': '{title} u cesty {tripTitle}.',
+  'notification.collab.message.title':
+    'Nová zpráva od {actorName} v {tripTitle}',
+  'notification.collab.message.body': '„{preview}“',
+  'notification.collab.poll.title': 'U cesty {tripTitle} běží hlasování',
+  'notification.collab.poll.body': '„{question}“',
+  'notification.organization.invited.title':
+    'Máte pozvánku do {organizationName}',
+  'notification.organization.invited.body':
+    'Přijměte ji a vstupte do prostoru i ke všemu, co je v něm sdílené.',
+  'notification.journey.published.title': 'Zveřejněno: {title}',
+  'notification.journey.published.body':
+    'Deník si teď přečte každý, kdo má odkaz.',
+  'notification.billing.plan_changed.title': 'Změna tarifu',
+  'notification.billing.plan_changed.body':
+    '{organizationName} má nyní tarif {plan}.',
+  'notification.fallback.title': 'Ve vašem prostoru se něco změnilo',
+  'notification.fallback.body': 'Otevřete cestu a podívejte se co.',
+
+  /* ------------------------------------------------------------- dashboard */
+  'dashboard.error': 'Přehled se nenačetl',
+  'dashboard.blank.title': 'Tady začíná vaše další cesta',
+  'dashboard.blank.body':
+    'Vytvořte cestu, na mapu vysypte místa, která chcete vidět, a planned.travel kolem nich postaví plán den po dni.',
+  'dashboard.blank.action': 'Naplánovat cestu',
+  'dashboard.blank.secondary': 'Zobrazit mapu světa',
+
+  'dashboard.upNext': 'Nejbližší cesta',
+  'dashboard.openPlan': 'Otevřít plán',
+  'dashboard.hero.travellers': 'Cestující',
+  'dashboard.hero.travellersHint': 'v tomto prostoru',
+  'dashboard.hero.dates': 'Termín cesty',
+  'dashboard.hero.datesUnset': 'Nezadán',
+  'dashboard.hero.datesHint': {
+    one: '{days} den',
+    few: '{days} dny',
+    many: '{days} dne',
+    other: '{days} dní',
+  },
+  'dashboard.hero.datesMissing': 'Zadejte termín a vzniknou dny',
+  'dashboard.hero.startsIn': 'Start za',
+  'dashboard.hero.started': 'Start byl',
+  'dashboard.hero.today': 'Dnes',
+  'dashboard.hero.startUnknown': 'bez data startu',
+  'dashboard.hero.startToday': 'ať se cesta vydaří',
+  'dashboard.hero.startPast': {
+    one: 'den zpět',
+    few: 'dny zpět',
+    many: 'dne zpět',
+    other: 'dní zpět',
+  },
+  'dashboard.hero.startFuture': {
+    one: 'den',
+    few: 'dny',
+    many: 'dne',
+    other: 'dní',
+  },
+  'dashboard.hero.places': 'Místa',
+  'dashboard.hero.placesNone': 'na mapě ještě nic',
+  'dashboard.hero.placesHint': 'na mapě',
+
+  'dashboard.stat.countries': 'Navštívené země',
+  'dashboard.stat.countriesUnit': 'z {total}',
+  'dashboard.stat.countriesNone': 'Označte zemi a mapa světa začne',
+  'dashboard.stat.visits': {
+    one: '{visits} zapsaná návštěva',
+    few: '{visits} zapsané návštěvy',
+    many: '{visits} zapsané návštěvy',
+    other: '{visits} zapsaných návštěv',
+  },
+  'dashboard.stat.trips': 'Cesty celkem',
+  'dashboard.stat.tripsCaption':
+    '{planning} v plánování · {booked} zarezervováno',
+  'dashboard.stat.places': 'Místa na mapě',
+  'dashboard.stat.placesNone': 'Na mapě ještě nic není',
+  'dashboard.stat.placesAcross': {
+    one: 'na {trips} cestě',
+    few: 'na {trips} cestách',
+    many: 'na {trips} cesty',
+    other: 'na {trips} cestách',
+  },
+  'dashboard.stat.bookings': 'Potvrzené rezervace',
+  'dashboard.stat.bookingsNone': 'Žádná rezervace se neblíží',
+  'dashboard.stat.bookingsSoon': {
+    one: '{bookings} rezervace se blíží',
+    few: '{bookings} rezervace se blíží',
+    many: '{bookings} rezervace se blíží',
+    other: '{bookings} rezervací se blíží',
+  },
+
+  'dashboard.trips.label': 'Vaše cesty',
+  'dashboard.trips.all': 'Všechny cesty',
+  'dashboard.trips.empty.title': 'Zatím žádné cesty',
+  'dashboard.trips.empty.body':
+    'Všechno, co naplánujete, se objeví tady — nejnovější nahoře.',
+  'dashboard.trips.empty.action': 'Vytvořit cestu',
+
+  'dashboard.bookings.label': 'Nejbližší rezervace',
+  'dashboard.bookings.empty.title': 'Zatím nic zarezervováno',
+  'dashboard.bookings.empty.body':
+    'Potvrzené noclehy, stoly a vstupenky se objeví tady, jak se budou blížit jejich termíny.',
+
+  'dashboard.pipeline.label': 'Fáze cest',
+  'dashboard.pipeline.empty': 'Nic v běhu. První cesta to rozdělí po fázích.',
+  'dashboard.pipeline.favourites': {
+    one: '{favourites} oblíbená',
+    few: '{favourites} oblíbené',
+    many: '{favourites} oblíbené',
+    other: '{favourites} oblíbených',
+  },
+  'dashboard.pipeline.archived': {
+    one: '{archived} archivovaná cesta',
+    few: '{archived} archivované cesty',
+    many: '{archived} archivované cesty',
+    other: '{archived} archivovaných cest',
+  },
+
+  'dashboard.storage.label': 'Úložiště',
+  'dashboard.storage.count': '{used} z {limit}',
+  'dashboard.storage.files': {
+    one: '{files} soubor ze všech cest, včetně fotek a vstupenek.',
+    few: '{files} soubory ze všech cest, včetně fotek a vstupenek.',
+    many: '{files} souboru ze všech cest, včetně fotek a vstupenek.',
+    other: '{files} souborů ze všech cest, včetně fotek a vstupenek.',
+  },
+  'dashboard.storage.more': 'Potřebujete víc místa?',
+  'dashboard.storage.plans': 'Zobrazit tarify',
+
+  /* ----------------------------------------------------------------- admin */
+  'admin.error': 'Konzole správce se nenačetla',
+  'admin.denied.title': 'Sem se dostanou jen správci prostoru',
+  'admin.denied.body':
+    'Pokud to potřebujete, požádejte vlastníka nebo správce tohoto prostoru o změnu své funkce.',
+  'admin.denied.action': 'Zpět na přehled',
+  'admin.eyebrow': 'Správa prostoru',
+  'admin.description': 'Tarif {plan} · vytvořeno {date}',
+  'admin.createdUnknown': 'nedávno',
+  'admin.workspaceSettings': 'Nastavení prostoru',
+  'admin.billing': 'Tarif a platby',
+
+  'admin.invitations.title': {
+    one: '{invitations} pozvánka stále otevřená',
+    few: '{invitations} pozvánky stále otevřené',
+    many: '{invitations} pozvánky stále otevřené',
+    other: '{invitations} pozvánek stále otevřených',
+  },
+  'admin.invitations.body':
+    'Každá otevřená pozvánka zabírá jedno z míst, která váš tarif platí.',
+  'admin.invitations.action': 'Projít pozvánky',
+
+  'admin.stat.members': 'Členové',
+  'admin.stat.membersCaption': {
+    one: '{invitations} pozvánka čeká',
+    few: '{invitations} pozvánky čekají',
+    many: '{invitations} pozvánky čeká',
+    other: '{invitations} pozvánek čeká',
+  },
+  'admin.stat.storage': 'Úložiště',
+  'admin.stat.storageUnit': 'z {limit}',
+  'admin.stat.storageUnlimited': 'bez limitu',
+  'admin.stat.storageCaption': 'Soubory, fotky a exporty',
+  'admin.stat.audit': 'Záznamy auditu',
+  'admin.stat.auditCaption': 'Nejnovější aktivita je níže',
+  'admin.stat.plan': 'Tarif',
+  'admin.stat.planCaption': 'Limity se hlídají na hranici repozitářů',
+
+  'admin.quotas.label': 'Limity',
+  'admin.quotas.count': {
+    one: '{metrics} veličina',
+    few: '{metrics} veličiny',
+    many: '{metrics} veličiny',
+    other: '{metrics} veličin',
+  },
+  'admin.quotas.unlimited': 'Bez limitu',
+  'admin.quotas.value': '{used} z {limit}',
+
+  'admin.members.label': 'Členové',
+  'admin.members.table': 'Členové tohoto prostoru',
+  'admin.members.person': 'Osoba',
+  'admin.members.role': 'Funkce',
+  'admin.members.joined': 'Členem od',
+
+  'admin.activity.label': 'Nedávná aktivita',
+  'admin.activity.empty.title': 'Zatím nic zaznamenáno',
+  'admin.activity.empty.body':
+    'Každý zápis, na kterém záleží, se do auditu přidá v okamžiku, kdy nastane.',
+  'admin.activity.workspace': 'prostor sám',
+  'admin.actions.label': 'Nejčastější akce',
+  'admin.actions.count': {
+    one: '{actions} akce',
+    few: '{actions} akce',
+    many: '{actions} akce',
+    other: '{actions} akcí',
+  },
+
+  /* ---------------------------------------------------------- domain words */
+  'tripStatus.draft': 'Koncept',
+  'tripStatus.planning': 'Plánuje se',
+  'tripStatus.booked': 'Zarezervováno',
+  'tripStatus.active': 'Aktivní',
+  'tripStatus.completed': 'Dokončeno',
+  'tripStatus.archived': 'Archivováno',
+
+  'bookingStatus.none': 'Bez rezervace',
+  'bookingStatus.pending': 'Čeká',
+  'bookingStatus.confirmed': 'Potvrzeno',
+  'bookingStatus.cancelled': 'Zrušeno',
+  'bookingStatus.completed': 'Hotovo',
+
+  'bookingType.accommodation': 'Nocleh',
+  'bookingType.restaurant': 'Stůl',
+  'bookingType.activity': 'Aktivita',
+  'bookingType.tour': 'Výlet',
+  'bookingType.ticket': 'Vstupenka',
+  'bookingType.transport': 'Přeprava',
+  'bookingType.other': 'Rezervace',
+
+  'role.owner': 'Vlastník',
+  'role.admin': 'Správce',
+  'role.member': 'Člen',
+
+  'metric.trips': 'Cesty',
+  'metric.places': 'Místa',
+  'metric.members': 'Členové',
+  'metric.files': 'Soubory',
+  'metric.storage_bytes': 'Úložiště',
+  'metric.collections': 'Kolekce',
+  'metric.journeys': 'Deníky',
+
+  /* -------------------------------------------------------------- failures */
+  'error.title': 'Tohle se nenačetlo',
+  'error.body':
+    'Nic se neztratilo. Zkuste to znovu, a pokud se to bude opakovat, pošlete nám podrobnosti níže.',
+  'error.retry': 'Zkusit znovu',
+  'error.dashboard': 'Zpět na přehled',
+  'error.unknown': 'Požadavek nedošel do konce.',
+  'error.root': 'Sjeli jsme z cesty',
+  'error.session': 'Váš přístup do prostoru se změnil',
+
+  'notFound.eyebrow': 'Chyba 404',
+  'notFound.title': 'Tato stránka na mapě není',
+  'notFound.body':
+    'Odkaz může být starý, nebo se cesta, na kterou mířil, přesunula či byla smazána.',
+  'notFound.trips': 'Všechny cesty',
+  'notFound.rootBody':
+    'Hledali jsme po celé trase. Adresa může mít překlep, nebo se stránka posunula dál.',
+  'notFound.home': 'Zpět na domovskou stránku',
+  'notFound.plans': 'Zobrazit tarify',
+
+  'session.noWorkspace':
+    'Váš účet zatím nepatří k žádnému prostoru. Odhlaste se a znovu přihlaste, ať se nastavení dokončí.',
+  'session.membershipRemoved': 'Vaše členství v tomto prostoru bylo odebráno.',
+} satisfies TranslationOf<typeof En>
+
+export default messages
