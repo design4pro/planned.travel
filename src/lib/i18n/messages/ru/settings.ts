@@ -369,7 +369,7 @@ const messages = {
   'billing.renewal.endsNoDate':
     'Этот тариф должен закончиться и не будет продлён.',
   'billing.renewal.endsOn':
-    'Этот тариф заканчивается {date}. Ничего не удалится — платные модули просто закроются.',
+    'Этот тариф заканчивается {date} — ничего не удалится, платные модули просто закроются.',
   'billing.renewal.pastDue':
     'Последний платёж не прошёл. Обновите карту, чтобы не потерять платные модули.',
   'billing.renewal.unpaid':
@@ -383,7 +383,13 @@ const messages = {
   'billing.renewal.free':
     'Две поездки одновременно, за наш счёт. Тариф повыше возьмёте, когда станет тесно.',
   'billing.renewal.auto': 'Продлевается автоматически.',
-  'billing.renewal.renewsOn': 'Продлится {date}.',
+  /**
+   * No full stop after `{date}`: the frozen table renders a Russian date as
+   * «11 сент. 2026 г.», whose abbreviation point already closes the sentence.
+   * A second one prints «г..». `renewal.endsOn` keeps the date away from the
+   * clause boundary for the same reason.
+   */
+  'billing.renewal.renewsOn': 'Продлится {date}',
 
   'billing.usage.title': 'Использование',
   'billing.usage.description':
@@ -417,8 +423,14 @@ const messages = {
   'billing.plans.description':
     'Тариф меняйте когда угодно. Повышение пересчитываем по дням, а понижение ждёт конца оплаченного периода.',
   'billing.interval.label': 'Период оплаты',
-  'billing.interval.monthly': 'Ежемесячно',
-  'billing.interval.yearly': 'Ежегодно',
+  /**
+   * The two cadences ride inside one pill above the plan cards, and that pill
+   * has 326px at 360px wide. `Ежемесячно` / `Ежегодно` pushed it 26px past the
+   * card edge. `В месяц` / `В год` is what a Russian price list says anyway,
+   * and it answers the group's own label — «Период оплаты: в месяц».
+   */
+  'billing.interval.monthly': 'В месяц',
+  'billing.interval.yearly': 'В год',
   'billing.interval.saving': 'Экономия {value}',
   'billing.plan.free.name': 'Бесплатный',
   'billing.plan.free.tagline': 'Спланируйте две ближайшие поездки',

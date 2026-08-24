@@ -11,13 +11,13 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { ErrorPanel } from '#/components/layout/error-state'
 import { SIGN_OUT_ENDPOINT } from '#/components/layout/session'
 import { Alert, Badge, Button, Card, Skeleton } from '#/components/ui'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadSecurity } from '../-server/settings'
 import { formatDate } from '../-lib/format'
 import { SettingsRow, SettingsSection } from '../-ui/settings-nav'
+import { RouteError } from './-ui/route-error'
 
 import type { ReactNode } from 'react'
 
@@ -30,7 +30,7 @@ export const Route = createFileRoute('/_app/settings/security')({
 
 function SecurityError({ error }: { error: unknown }) {
   const t = useTranslate()
-  return <ErrorPanel error={error} title={t('settings.security.error')} />
+  return <RouteError error={error} title={t('settings.security.error')} />
 }
 
 /** A row label with its glyph, so the four sign-in rows scan as one column. */

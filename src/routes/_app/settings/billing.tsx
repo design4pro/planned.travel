@@ -13,7 +13,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { ErrorPanel } from '#/components/layout/error-state'
 import {
   Alert,
   Badge,
@@ -62,6 +61,7 @@ import {
 } from '../-server/billing'
 import { SettingsSection } from '../-ui/settings-nav'
 import { PLAN_COPY } from './-lib/plan-copy'
+import { RouteError } from './-ui/route-error'
 
 import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type { BillingInterval, BillingState, Plan, QuotaKey } from '#/lib/plans'
@@ -97,7 +97,7 @@ export const Route = createFileRoute('/_app/settings/billing')({
 
 function BillingError({ error }: { error: unknown }) {
   const t = useTranslate()
-  return <ErrorPanel error={error} title={t('settings.billing.error')} />
+  return <RouteError error={error} title={t('settings.billing.error')} />
 }
 
 /* ------------------------------------------------------------------ helpers */

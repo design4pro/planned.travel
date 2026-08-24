@@ -43,7 +43,16 @@ const messages = {
   'role.owner': 'オーナー',
   'role.admin': '管理者',
   'role.member': 'メンバー',
-  'regional.workspaceDefault': 'ワークスペースの初期値 — {value}',
+  /**
+   * Not「ワークスペースの初期値」, which is the phrase this catalogue uses
+   * everywhere else for the same idea. This one string is the label of a
+   * `.truncate` Select trigger with a 206px budget, and eleven full-width
+   * glyphs plus a formatted value measured 235px there — the only place any
+   * of the four CJK catalogues clipped. 共有の初期値 keeps the meaning that
+   * matters (a default inherited rather than chosen here) in six glyphs and
+   * lands at ~172px. Do not restore the longer form without re-measuring.
+   */
+  'regional.workspaceDefault': '共有の初期値 — {value}',
   'regional.currency.AUD': 'オーストラリアドル',
   'regional.currency.CAD': 'カナダドル',
   'regional.currency.CHF': 'スイスフラン',

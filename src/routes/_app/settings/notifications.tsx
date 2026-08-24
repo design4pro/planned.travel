@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
-import { ErrorPanel } from '#/components/layout/error-state'
 import { Card, Skeleton, Switch } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
 import {
@@ -10,6 +9,7 @@ import {
   saveNotificationPreference,
 } from '../-server/settings'
 import { SettingsSection } from '../-ui/settings-nav'
+import { RouteError } from './-ui/route-error'
 
 import type { MessageKey, Translate } from '#/lib/i18n'
 
@@ -106,7 +106,7 @@ export const Route = createFileRoute('/_app/settings/notifications')({
 
 function PreferencesError({ error }: { error: unknown }) {
   const t = useTranslate()
-  return <ErrorPanel error={error} title={t('settings.notifications.error')} />
+  return <RouteError error={error} title={t('settings.notifications.error')} />
 }
 
 /** A key that identifies one switch in the matrix. */

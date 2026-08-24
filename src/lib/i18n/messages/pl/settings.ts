@@ -424,9 +424,16 @@ const messages = {
   'billing.plans.description':
     'Plan zmieniasz, kiedy chcesz. Wyższy rozliczamy proporcjonalnie do dnia, a niższy czeka na koniec opłaconego okresu.',
   'billing.interval.label': 'Okres rozliczeniowy',
-  'billing.interval.monthly': 'Miesięcznie',
-  'billing.interval.yearly': 'Rocznie',
-  'billing.interval.saving': 'Oszczędzasz {value}',
+  /**
+   * The two cadences ride inside one pill above the plan cards, and that pill
+   * has 326px at 360px wide. `Miesięcznie` / `Rocznie` / `Oszczędzasz` pushed it
+   * 20px past the card edge, so the adverbs give way to the equally ordinary
+   * `Co miesiąc` / `Co rok`, and the badge says how much cheaper rather than
+   * who is doing the saving.
+   */
+  'billing.interval.monthly': 'Co miesiąc',
+  'billing.interval.yearly': 'Co rok',
+  'billing.interval.saving': 'Taniej o {value}',
   'billing.plan.free.name': 'Darmowy',
   'billing.plan.free.tagline': 'Zaplanuj dwa najbliższe wyjazdy',
   'billing.plan.free.feature.trips': 'Dwa wyjazdy naraz',

@@ -372,7 +372,13 @@ const messages = {
 
   'bookingStatus.none': 'Bez rezerwacji',
   'bookingStatus.pending': 'W toku',
-  'bookingStatus.confirmed': 'Potwierdzona',
+  /**
+   * The dashboard's reservation rows put this chip beside a truncating date
+   * line, so every pixel it takes comes straight off that line. At 360px
+   * `Potwierdzona` measured 90px and clipped the Sunday row; `Przyjęta` is the
+   * natural answer to `W toku` anyway — the booking has been accepted.
+   */
+  'bookingStatus.confirmed': 'Przyjęta',
   'bookingStatus.cancelled': 'Anulowana',
   'bookingStatus.completed': 'Zrealizowana',
 

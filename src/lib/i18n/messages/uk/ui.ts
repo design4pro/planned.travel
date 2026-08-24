@@ -44,14 +44,19 @@ const messages = {
     other: 'ще {others} особи',
   },
   /**
-   * The sign sits after the number here. English writes `+3`; a Ukrainian
-   * reader meets the same figure as `3+`, and the face is `aria-hidden`, so the
-   * exact count is spoken from `avatar.overflow` either way.
+   * The face at the end of a crowded stack. `+3` reads "three more", and Ukrainian
+   * marks it exactly where English does — the plus belongs in front of the
+   * figure, not after it, where it would instead read "three or more".
+   * `{hidden}` arrives already grouped in this locale's digits.
    */
-  'avatar.more': '{hidden}+',
+  'avatar.more': '+{hidden}',
 
   /* --------------------------------------------------------------- badge */
-  'badge.overflow': '+{max}',
+  /**
+   * A count that has run past the badge's cap: `99+` says "ninety-nine or
+   * more", which is the same marker and the same side as English uses.
+   */
+  'badge.overflow': '{max}+',
 
   /* ------------------------------------------------------------ calendar */
   'calendar.label.date': 'Виберіть дату',

@@ -367,7 +367,7 @@ const messages = {
   'billing.renewal.endsNoDate':
     'Цей тариф має завершитися і не буде продовжений.',
   'billing.renewal.endsOn':
-    'Цей тариф завершується {date}. Нічого не зникне — платні модулі просто закриються.',
+    'Цей тариф завершується {date} — нічого не зникне, платні модулі просто закриються.',
   'billing.renewal.pastDue':
     'Останній платіж не пройшов. Оновіть картку, щоб не втратити платні модулі.',
   'billing.renewal.unpaid': 'Ця підписка не оплачена, а платні модулі закриті.',
@@ -380,7 +380,13 @@ const messages = {
   'billing.renewal.free':
     'Дві поїздки водночас, за наш рахунок. Тариф вище візьмете, коли стане тісно.',
   'billing.renewal.auto': 'Продовжується автоматично.',
-  'billing.renewal.renewsOn': 'Продовжиться {date}.',
+  /**
+   * No full stop after `{date}`: the frozen table renders a Ukrainian date as
+   * «11 вер. 2026 р.», whose abbreviation point already closes the sentence.
+   * A second one prints «р..». `renewal.endsOn` keeps the date away from the
+   * clause boundary for the same reason.
+   */
+  'billing.renewal.renewsOn': 'Продовжиться {date}',
 
   'billing.usage.title': 'Використання',
   'billing.usage.description':

@@ -368,7 +368,13 @@ const messages = {
 
   'bookingStatus.none': 'Без брони',
   'bookingStatus.pending': 'В ожидании',
-  'bookingStatus.confirmed': 'Подтверждена',
+  /**
+   * The dashboard's reservation rows put this chip beside a truncating date
+   * line, so every pixel it takes comes straight off that line. At 360px
+   * `Подтверждена` measured 100px and clipped the date; `Принята` is what a
+   * Russian booking says once it stops being «В ожидании».
+   */
+  'bookingStatus.confirmed': 'Принята',
   'bookingStatus.cancelled': 'Отменена',
   'bookingStatus.completed': 'Состоялась',
 

@@ -3,13 +3,13 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Laptop, Moon, Sun } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { ErrorPanel } from '#/components/layout/error-state'
 import { Card, Field, SimpleSelect, Skeleton, Switch } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 import { useTheme } from '#/lib/theme'
 import { loadAppearance, saveAppearance } from '../-server/settings'
 import { SettingsRow, SettingsSection } from '../-ui/settings-nav'
+import { RouteError } from './-ui/route-error'
 
 import type { MessageKey } from '#/lib/i18n'
 import type { ThemeMode } from '#/lib/theme'
@@ -67,7 +67,7 @@ export const Route = createFileRoute('/_app/settings/appearance')({
 
 function AppearanceError({ error }: { error: unknown }) {
   const t = useTranslate()
-  return <ErrorPanel error={error} title={t('settings.appearance.error')} />
+  return <RouteError error={error} title={t('settings.appearance.error')} />
 }
 
 function AppearancePage() {

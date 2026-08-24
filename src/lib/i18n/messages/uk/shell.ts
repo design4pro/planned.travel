@@ -363,7 +363,13 @@ const messages = {
 
   'bookingStatus.none': 'Без броні',
   'bookingStatus.pending': 'В очікуванні',
-  'bookingStatus.confirmed': 'Підтверджена',
+  /**
+   * The dashboard's reservation rows put this chip beside a truncating date
+   * line, so every pixel it takes comes straight off that line. At 360px
+   * `Підтверджена` measured 97px and clipped the date; `Прийнята` is what a
+   * Ukrainian booking says once it stops being «В очікуванні».
+   */
+  'bookingStatus.confirmed': 'Прийнята',
   'bookingStatus.cancelled': 'Скасована',
   'bookingStatus.completed': 'Відбулася',
 

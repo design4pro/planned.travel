@@ -3,7 +3,6 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Languages } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { ErrorPanel } from '#/components/layout/error-state'
 import {
   FOLLOW_WORKSPACE,
   LanguagePicker,
@@ -21,10 +20,12 @@ import {
 } from '#/lib/i18n'
 import { saveLanguagePreference } from '../-server/settings'
 import { SettingsSection } from '../-ui/settings-nav'
+import { commitLanguage, localeInForce } from './-lib/language-commit'
+import { RouteError } from './-ui/route-error'
 import { loadLanguageSettings } from './-server/preferences'
 
 import type { LocaleChoice } from '#/components/settings'
-import type { Locale } from '#/lib/i18n'
+import type { LanguageOverride } from './-lib/language-commit'
 import type { ReactNode } from 'react'
 
 /**
@@ -77,13 +78,21 @@ export const Route = createFileRoute('/_app/settings/language')({
 
 function LanguageError({ error }: { error: unknown }) {
   const t = useTranslate()
-  return <ErrorPanel error={error} title={t('settings.language.error')} />
+  return <RouteError error={error} title={t('settings.language.error')} />
 }
 
 /** The day and the amounts the preview is written with — never a real "now". */
 const SAMPLE_DATE = '2026-06-23'
 const SAMPLE_NUMBER = 1_234_567
 const SAMPLE_MINOR = 249_900
+
+/** The picker's sentinel option, in the column's own vocabulary and back. */
+function overrideOf(choice: LocaleChoice): LanguageOverride {
+  return choice === FOLLOW_WORKSPACE ? null : choice
+}
+function choiceOf(override: LanguageOverride): LocaleChoice {
+  return override ?? FOLLOW_WORKSPACE
+}
 
 function LanguagePage() {
   const data = Route.useLoaderData()
@@ -92,100 +101,89 @@ function LanguagePage() {
   const locale = useLocale()
 
   const workspaceDefault = data.workspace
-  const [choice, setChoice] = useState<LocaleChoice>(
-    data.override ?? FOLLOW_WORKSPACE,
-  )
+  const [choice, setChoice] = useState<LocaleChoice>(choiceOf(data.override))
   const [pending, setPending] = useState<LocaleChoice | null>(null)
 
-  /** The locale a choice actually resolves to, for naming it in its own script. */
-  function resolve(value: LocaleChoice): Locale {
-    return value === FOLLOW_WORKSPACE ? workspaceDefault : value
-  }
-
   /**
-   * The click, in two halves that fail differently.
+   * The click. Everything that decides *which* of the three things happened
+   * lives in `./-lib/language-commit`; what is left here is the part that is
+   * only true of a screen — moving the selection before the write answers so a
+   * chip never stalls under a finger, putting it back when the write is
+   * refused, and choosing which of three authored sentences to say.
    *
-   * Only the first half can be rolled back. Once `saveLanguagePreference`
-   * resolves, `user_settings.locale` holds the new tag and `<html lang>` is one
-   * `invalidate()` away from agreeing with it — so a rejection *after* that
-   * point is not "the save failed", and answering it by putting the chip back
-   * and saying "you are still reading English" leaves both the control and the
-   * sentence contradicting the row and the document. The two halves therefore
-   * get one `try` each: the write may be undone, and what follows it may only
-   * be reported.
+   * The success sentence is spoken by `commit.speak`, a translator for the
+   * locale that just arrived, rather than by `t`, which belongs to the render
+   * that closed over it and therefore to the language being left. A traveller
+   * moving to German was told so in English, in the one sentence on the screen
+   * whose whole job is to prove the change took effect.
    */
   async function choose(next: LocaleChoice): Promise<void> {
     const previous = choice
     setPending(next)
     setChoice(next)
 
-    let landed: LocaleChoice
-    try {
-      const saved = await saveLanguagePreference({
-        data: { locale: next === FOLLOW_WORKSPACE ? '' : next },
-      })
-      // What D1 now holds, not what the click hoped for: `en-GB` is stored, and
-      // answered, as `en`.
-      landed = saved.locale ?? FOLLOW_WORKSPACE
-    } catch {
-      // Nothing was written, so back to the value that is still in D1, and an
-      // authored sentence — never a server error message, which is written for
-      // an operator's log rather than for a traveller who has just been told
-      // their language did change.
-      setChoice(previous)
-      setPending(null)
+    const commit = await commitLanguage(
+      {
+        next: overrideOf(next),
+        previous: overrideOf(previous),
+        workspace: workspaceDefault,
+      },
+      {
+        save: (value) => saveLanguagePreference({ data: { locale: value } }),
+        // `forcePending`, and it is load-bearing. A plain `invalidate()` serves
+        // the matches their existing data, resolves, and refetches in the
+        // *background* — so a loader that fails lands after the promise has
+        // already settled. Measured: at the moment a plain invalidation
+        // resolved, all four matches read `success` and `router.state.status`
+        // was already `idle`; the language match flipped to `error` only
+        // afterwards, and the screen congratulated the reader on a language
+        // change underneath an error panel. `forcePending` runs the load in
+        // the foreground, so the outcome below is the outcome.
+        refresh: () => router.invalidate({ forcePending: true }),
+        // The failure itself never reaches this promise: TanStack routes a
+        // loader rejection to `errorComponent` and resolves the invalidation
+        // either way. So the question is asked of the router's state rather
+        // than of a `catch` that can never fire.
+        refreshed: () =>
+          !router.state.matches.some((match) => match.status === 'error'),
+        // Already resolved by the root loader that `refresh()` just re-ran, so
+        // this reads `loadCatalogue`'s map rather than fetching a second time.
+        // A locale whose catalogue is still empty renders its keys, on purpose:
+        // `createTranslator` has no English branch, because §8.2 bans the
+        // silent fallback that hides a hole.
+        translatorFor: async (target) =>
+          createTranslator(target, await loadCatalogue(target)),
+      },
+    )
+
+    setPending(null)
+    const language = localeDescriptor(commit.inForce).nativeName
+
+    if (commit.status === 'rejected') {
+      setChoice(choiceOf(commit.restore))
       toast.error(t('settings.language.saveFailed'), {
-        description: t('settings.language.saveFailedBody', {
-          language: localeDescriptor(resolve(previous)).nativeName,
-        }),
+        description: t('settings.language.saveFailedBody', { language }),
       })
       return
     }
 
-    setChoice(landed)
-    const inForceNow = resolve(landed)
-    try {
-      await router.invalidate()
-      // Announced in the language that was just switched on, not the one being
-      // left. `t` is the translator this render closed over, so a traveller
-      // moving to German was told so in English — the one sentence on the
-      // screen that must prove the change took effect, printed in the proof's
-      // own contradiction. The root loader has already resolved this locale's
-      // catalogue by the time `invalidate()` settles, so the load below is a
-      // cache read (`peekCatalogue`'s map, filled by `loadCatalogue`) rather
-      // than a second fetch.
-      //
-      // A locale whose catalogue is still empty renders the key, deliberately:
-      // `createTranslator` has no English branch, because `docs/SPEC.md` §8.2
-      // bans the silent fallback that hides a hole. Until the translation items
-      // land, this toast says what every other string on the page says — and it
-      // is the same sentence in every locale the moment they do.
-      const spoken = createTranslator(
-        inForceNow,
-        await loadCatalogue(inForceNow),
-      )
-      toast.success(
-        spoken('settings.language.saved', {
-          language: localeDescriptor(inForceNow).nativeName,
-        }),
-      )
-    } catch {
-      // The row was written and the chip is right; a loader on this screen or
-      // the catalogue chunk for the new language was not. Said in the language
-      // the reader is still looking at, because the switch is exactly what did
-      // not finish — and the selection stays where D1 put it.
+    setChoice(choiceOf(commit.landed))
+    if (commit.status === 'stale') {
+      // The row was written and the chip is right; the page behind it is not.
+      // Said in the language the reader is still looking at, because finishing
+      // the switch is exactly what did not happen.
       toast.warning(t('settings.language.reload.title'), {
-        description: t('settings.language.reload.body', {
-          language: localeDescriptor(inForceNow).nativeName,
-        }),
+        description: t('settings.language.reload.body', { language }),
       })
-    } finally {
-      setPending(null)
+      return
     }
+    toast.success(commit.speak('settings.language.saved', { language }))
   }
 
   const following = choice === FOLLOW_WORKSPACE
-  const inForce = localeDescriptor(resolve(choice))
+  const inForce = localeDescriptor(
+    localeInForce(overrideOf(choice), workspaceDefault),
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -201,12 +199,8 @@ function LanguagePage() {
             >
               <Languages className="size-4" />
             </span>
-            <span className="min-w-0">
-              <span className={cn('block truncate', MICRO_TEXT)}>
-                {following
-                  ? t('settings.language.state.workspace')
-                  : t('settings.language.state.yours')}
-              </span>
+            <div className="min-w-0 flex-1">
+              <StateEyebrow state={following ? 'workspace' : 'yours'} />
               <span
                 lang={inForce.tag}
                 dir={inForce.dir === 'rtl' ? 'rtl' : undefined}
@@ -214,7 +208,7 @@ function LanguagePage() {
               >
                 {inForce.nativeName}
               </span>
-            </span>
+            </div>
           </div>
 
           <LanguagePicker
@@ -257,6 +251,53 @@ function LanguagePage() {
 }
 
 /**
+ * The one sentence that says whose language this is — never abbreviated.
+ *
+ * It used to be a `truncate`d line, reserved at one line box so the loading
+ * shape could stand in for it. That is the wrong trade for this particular
+ * string: it is the whole point of the panel, and "Supplied by the workspace"
+ * set in an 11px uppercase face tracked at 0.08em is already 200px of ink
+ * against the 206px this panel's text column measures at 360px — so the German
+ * or the Ukrainian for it lost its ending to an ellipsis on a phone.
+ *
+ * Both sentences are therefore rendered, always, stacked into one grid cell, so
+ * the box is as tall as the longer of the two in every state and every
+ * language: while one applies, while the other does, and while neither is known
+ * yet. A reserved line count could not promise that, and the shift it hides is
+ * the one `docs/SPEC.md` §2 rules out.
+ *
+ * `invisible` is `visibility: hidden`, which keeps the box — that is the point
+ * — and takes the words out of the accessibility tree, so a screen reader hears
+ * the one sentence that is true.
+ */
+function StateEyebrow({ state }: { state: 'yours' | 'workspace' | 'pending' }) {
+  const t = useTranslate()
+  return (
+    <div className="grid">
+      <span
+        className={cn(STACK_CELL, MICRO_TEXT, state !== 'yours' && 'invisible')}
+      >
+        {t('settings.language.state.yours')}
+      </span>
+      <span
+        className={cn(
+          STACK_CELL,
+          MICRO_TEXT,
+          state !== 'workspace' && 'invisible',
+        )}
+      >
+        {t('settings.language.state.workspace')}
+      </span>
+      {state === 'pending' ? (
+        <div className={cn(STACK_CELL, 'flex items-center')}>
+          <Skeleton className="h-2 w-32" radius="sm" />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/**
  * The two sentences under the grid, stacked into one grid cell.
  *
  * Only one of them is true at a time and they are different lengths, so a block
@@ -268,24 +309,20 @@ function LanguagePage() {
  * A reserved `min-h` cannot promise that — it would need a line count per
  * breakpoint per language, and would be wrong the first time a translator wrote
  * a longer sentence.
- *
- * `invisible` is `visibility: hidden`, which keeps the box (that is the whole
- * point) and takes the words out of the accessibility tree, so a screen reader
- * hears the one sentence that applies rather than both.
  */
 function Hints({ state }: { state: 'yours' | 'workspace' | 'pending' }) {
   const t = useTranslate()
   return (
     <div className="flex flex-col gap-1.5 text-caption leading-relaxed text-ink-3">
       <div className="grid">
-        <p className={cn(HINT_CELL, state !== 'yours' && 'invisible')}>
+        <p className={cn(STACK_CELL, state !== 'yours' && 'invisible')}>
           {t('settings.language.state.hint.override')}
         </p>
-        <p className={cn(HINT_CELL, state !== 'workspace' && 'invisible')}>
+        <p className={cn(STACK_CELL, state !== 'workspace' && 'invisible')}>
           {t('settings.language.state.hint.workspace')}
         </p>
         {state === 'pending' ? (
-          <Skeleton className={cn(HINT_CELL, 'my-1')} radius="sm" />
+          <Skeleton className={cn(STACK_CELL, 'my-1')} radius="sm" />
         ) : null}
       </div>
       {/* Static copy, so the loading shape shows it rather than shimmering it. */}
@@ -300,12 +337,13 @@ function Hints({ state }: { state: 'yours' | 'workspace' | 'pending' }) {
  *
  * `value` is a node rather than a string so the loading shape is this same
  * component with a bar in it, which is the only way the box, its padding and
- * its two line heights cannot drift apart between the two states.
+ * its two line heights cannot drift apart between the two states. The label is
+ * the same authored string in both, so it is free to wrap rather than be cut.
  */
 function Sample({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className={SAMPLE_SHELL}>
-      <dt className={cn('mb-1 truncate', MICRO_TEXT)}>{label}</dt>
+      <dt className={cn('mb-1', MICRO_TEXT)}>{label}</dt>
       <dd className="truncate text-label font-medium tabular-nums text-ink">
         {value}
       </dd>
@@ -314,7 +352,7 @@ function Sample({ label, value }: { label: string; value: ReactNode }) {
 }
 
 /**
- * The two boxes this screen adds to the picker, and the line boxes inside them.
+ * The two boxes this screen adds to the picker, and the line box inside them.
  *
  * Written once and shared with the pending state below, which is the only way a
  * skeleton stays the height of the thing it replaces. Measured before they were
@@ -323,34 +361,25 @@ function Sample({ label, value }: { label: string; value: ReactNode }) {
  * the content it was holding space for jumped on arrival — which is worse than
  * no skeleton, because it converts one movement into two.
  *
- * The line boxes are the type tokens themselves rather than a rounded pixel
- * count, so they survive a change to the scale and follow the `:lang(ar)`
- * re-leading in `src/styles/styles.css` the same way the real text does.
+ * The line box is the type token itself rather than a rounded pixel count, so it
+ * survives a change to the scale and follows the `:lang(ar)` re-leading in
+ * `src/styles/styles.css` the same way the real text does. It is safe to reserve
+ * for the native name and for a sample figure — a language's own name and a
+ * formatted date are short, finite and known — and deliberately *not* used for
+ * the sentence above it, which is prose.
  */
 const STATE_SHELL =
   'flex min-w-0 items-center gap-3 rounded-lg border border-edge-faint bg-surface-2 px-4 py-3'
 const SAMPLE_SHELL =
   'min-w-0 rounded-md border border-edge-faint bg-surface-2 px-3.5 py-3'
-const MICRO_LINE = 'h-[calc(var(--text-micro)*var(--text-micro--line-height))]'
 const LABEL_LINE = 'h-[calc(var(--text-label)*var(--text-label--line-height))]'
 
-/**
- * The eyebrow above a value, and why it is always `truncate`d.
- *
- * A single line box is only worth reserving if the text can never take two, and
- * "Supplied by the workspace" in an 11px uppercase face tracked at 0.08em is
- * 200px of ink against the 206px this panel's text column measures at 360px —
- * so the German or Ukrainian for it would have wrapped, and the loading shape
- * that reserved one line would have been a line short of the thing it was
- * holding space for. `truncate` makes the box one line by construction in all
- * twenty-three languages, which is the same reason the name beneath it carries
- * one.
- */
+/** The 11px uppercase eyebrow over a value. */
 const MICRO_TEXT =
   'text-micro font-semibold tracking-label uppercase text-ink-4'
 
-/** Both hint sentences occupy this one cell, so the taller of them sizes it. */
-const HINT_CELL = 'col-start-1 row-start-1'
+/** Every alternative of a stack shares this one cell, so the tallest sizes it. */
+const STACK_CELL = 'col-start-1 row-start-1'
 
 /**
  * Two columns of chips on a phone, instead of twenty-three stacked rows.
@@ -443,7 +472,7 @@ function LanguagePending() {
           <div className={STATE_SHELL}>
             <Skeleton className="size-9 shrink-0" radius="full" />
             <div className="min-w-0 flex-1">
-              <BarInLine box={MICRO_LINE} width="w-32" />
+              <StateEyebrow state="pending" />
               <BarInLine box={LABEL_LINE} width="w-20" />
             </div>
           </div>

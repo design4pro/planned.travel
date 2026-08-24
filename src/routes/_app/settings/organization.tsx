@@ -3,7 +3,6 @@ import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { MailPlus, Save, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { ErrorPanel } from '#/components/layout/error-state'
 import {
   Alert,
   Avatar,
@@ -42,6 +41,7 @@ import {
 } from '../-server/settings'
 import { formatDate, formatNumber } from '../-lib/format'
 import { SettingsRow, SettingsSection } from '../-ui/settings-nav'
+import { RouteError } from './-ui/route-error'
 import {
   currencyOptions,
   dateFormatOptions,
@@ -68,7 +68,7 @@ export const Route = createFileRoute('/_app/settings/organization')({
 
 function OrganizationError({ error }: { error: unknown }) {
   const t = useTranslate()
-  return <ErrorPanel error={error} title={t('settings.workspace.error')} />
+  return <RouteError error={error} title={t('settings.workspace.error')} />
 }
 
 /**

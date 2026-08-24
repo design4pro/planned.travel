@@ -1,11 +1,11 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router'
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
-import { ErrorPanel } from '#/components/layout/error-state'
 import { NotFoundPanel } from '#/components/layout/not-found'
 import { PageHeader } from '#/components/layout/page-header'
 import { useTranslate } from '#/lib/i18n'
 import { SettingsNav } from '../-ui/settings-nav'
+import { RouteError } from './-ui/route-error'
 
 /**
  * The settings shell: one persistent index of sections on the left, the section
@@ -29,7 +29,7 @@ function SettingsError({ error }: { error: unknown }) {
   const t = useTranslate()
   return (
     <AppFrame>
-      <ErrorPanel error={error} title={t('settings.page.error')} />
+      <RouteError error={error} title={t('settings.page.error')} />
     </AppFrame>
   )
 }

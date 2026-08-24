@@ -248,20 +248,35 @@ async function storeSession(
 export async function pinDemoLanguage(page: Page): Promise<boolean> {
   const chip = page.locator('[data-testid="locale-chip-workspace"]')
   try {
-    await page.goto('/settings/language')
+    // `networkidle`, not the default `load`: a visible chip is not a hydrated
+    // chip, and a click that lands before hydration is swallowed silently —
+    // `data-selected` then never arrives and this helper reports a failure that
+    // is really a race with its own page.
+    await page.goto('/settings/language', { waitUntil: 'networkidle' })
     await chip.waitFor({ state: 'visible', timeout: 15_000 })
     if ((await chip.getAttribute('data-selected')) === null) {
+      // Armed before the click, because the response can arrive first.
+      const written = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes('/_serverFn/'),
+        { timeout: 15_000 },
+      )
+      await chip.scrollIntoViewIfNeeded()
       await chip.click()
       await expect(chip).toHaveAttribute('data-selected', '', {
         timeout: 15_000,
       })
       // That attribute is optimistic: the picker's host moves the selection
-      // before the POST answers, so the control never stalls under a click. The
-      // pin therefore confirms itself against the *server* — a fresh document,
-      // negotiated from the row the write was meant to change. Reading
-      // `html.lang` off the optimistic page instead raced the write, and losing
-      // that race made this helper report that the workspace supplies a
-      // language it does not.
+      // before the POST answers, so the control never stalls under a click.
+      // Reloading on it alone navigates away mid-flight, and a cancelled
+      // request leaves the very row this helper exists to clear exactly as it
+      // was. So the write is awaited first, and only then is the pin confirmed
+      // against the *server* — a fresh document, negotiated from the row the
+      // write was meant to change. Reading `html.lang` off the optimistic page
+      // instead raced the write, and losing that race made this helper report
+      // that the workspace supplies a language it does not.
+      await written
       await page.reload()
       await chip.waitFor({ state: 'visible', timeout: 15_000 })
       if ((await chip.getAttribute('data-selected')) === null) {

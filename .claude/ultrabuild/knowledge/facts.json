@@ -1400,5 +1400,154 @@
     ],
     "claim": "Round 13 lost `build:translations-cjk` to 'API Error: Output blocked by content filtering policy' while the other six agents finished normally. It is not a usage limit and not a crash: the round completes, reports 6 done / 1 error, and the item simply stays at its previous status. Treat it like any other unfinished item - re-carry it next round - rather than as a reason to re-run the whole round.",
     "measuredIn": "round-13"
+  },
+  {
+    "claim": "`router.invalidate()` resolves BEFORE a failed loader is committed to match state, because a plain invalidation serves the matches their existing data and refetches in the background. `router.invalidate({ forcePending: true })` runs the load in the foreground and makes the post-condition observable.",
+    "evidence": "Instrumented `refreshed()` on /settings/language and aborted only the `loadLanguageSettings` serverFn (targeted by base64-decoding the `/_serverFn/<id>` path). With plain `invalidate()`: at check time all four matches read `__root__=success /_app=success /_app/settings=success /_app/settings/language=success` and `router.state.status` was `idle`; a later read of the same array showed `/_app/settings/language=error`, the ErrorPanel was on screen, and the toast was `success`. With `{ forcePending: true }`: the check-time array already read `/_app/settings/language=error` and the toast was `warning`. Source confirms it — `runClientTransaction` in @tanstack/router-core 1.171.25 commits inside `startTransition` and only then calls `runBackground(...)`.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "-router-invalidate-resolves-before-a-failed-loader",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A specific TanStack Start loader can be failed or delayed in isolation by base64-decoding the `/_serverFn/<id>` path segment and matching the export name — `route.abort()` for the error state, a `setTimeout` before `route.continue()` for the pending state. Aborting on the raw URL pattern instead hits `loadShell`/`negotiateRequestLocale` and lands you on the ROOT boundary rather than the route's own.",
+    "evidence": "`Buffer.from(id,'base64').toString()` yields `{\"file\":\"/src/routes/_app/settings/-server/preferences.ts?tss-serverfn-split\",\"export\":\"loadLanguageSettings_createServerFn_handler\"}`. A blanket abort on `**/_serverFn/**` GETs killed `loadShell_createServerFn_handler` first and rendered `RootErrorBoundary` ('Ми збилися з маршруту' + 'Failed to fetch'); filtering on the decoded export name produced the route's own ErrorPanel and, with a 6s delay instead, `[aria-busy=\"true\"]` and the pendingComponent after a 2.2s wait.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "id": "a-specific-tanstack-start-loader-can-be-failed",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The session scratchpad's `node_modules` symlink is deleted by concurrently running agents mid-session, so a probe script that worked five minutes ago fails with ERR_MODULE_NOT_FOUND for '@playwright/test'. Re-create the symlink in the same command that runs the script.",
+    "evidence": "`node <scratch>/smi18n-probe2.mjs` ran fine, then failed with \"Cannot find package '@playwright/test' imported from <scratch>/smi18n-probe2.mjs\" with no edit of mine in between; `ln -sfn <repo>/node_modules <scratch>/node_modules` immediately before the run fixed it, and it had to be repeated three separate times during one session.",
+    "scope": [
+      "builder",
+      "capture",
+      "mechanical"
+    ],
+    "id": "the-session-scratchpad-s-node-modules-symlink-is",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The reference product's authenticated settings screen is STILL gated in round 14 — /settings?tab=display redirects to its own login. No authenticated reference frame has ever been obtained and none was this round either.",
+    "evidence": "Ego Lite 0.4.7.1 / Chromium 150, fresh task space: openOrReuseTab('https://demo.liketrek.com/settings?tab=display') then pageInfo() returned url 'https://demo.liketrek.com/login?redirect=%2Fsettings%3Ftab%3Ddisplay', title 'TREK', w 1184 h 802. One navigation, no hang, under a minute.",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-reference-product-s-authenticated-settings-screen-is",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "capture.mjs --click '[data-testid=\"locale-chip-ar\"]' --settle 900 reaches the real selected-RTL state on /settings/language without any hydration workaround — the settled networkidle/scrollIntoViewIfNeeded recipe is already inside the script.",
+    "evidence": "All eight selected-rtl frames rendered Arabic RTL; selected-rtl-1440-light-A.png read back shows h1 'الإعدادات', mirrored nav, the العربية chip checked, and the toast 'planned.travel يتحدث الآن العربية'. captureValid true, warnings [], console.fatal [].",
+    "scope": [
+      "capture",
+      "builder"
+    ],
+    "id": "capture-mjs-click-data-testid-locale-chip-ar",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A --settle 900 on a chip click photographs the confirmation toast while it is still on screen, where it overlaps the consent paragraph below the chip grid. That overlap is the toast's normal life, not a layout defect.",
+    "evidence": "selected-rtl-1440-light-A.png: the toast card sits at roughly y=755-815 across the paragraph beginning 'اختيارك الخاص...'. The resting frames from the same run, same viewport, show that paragraph unobstructed.",
+    "scope": [
+      "critic",
+      "auditor"
+    ],
+    "id": "a-settle-900-on-a-chip-click-photographs",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The four CJK catalogues were already complete on disk before this round and are now committed; English's true unique key count is 859, not the 1,005 the item prompt states.",
+    "evidence": "git log shows 3c1daf3 committed ja/ko/zh-Hans/zh-Hant, and `git status --porcelain` over the four owned dirs listed only my single edit. Importing the .ts catalogues in node: en = auth 244 + settings 331 + shell 235 + ui 49 = 859 unique keys, and each of the four locales carries 859 with missing=0 orphans=0 shapeDrift=0 tokenDrift=0 pluralGaps=0 blanks=0 untranslated=0. The 1,005 figure is `grep -cE \"^\\s+'\"` = 297/398/260/50, which counts plural-branch and multi-line-string continuation lines as keys.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-four-cjk-catalogues-were-already-complete-on",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A CJK translation can be sized against the 206px `.truncate` Select-trigger budget without editing a file: sample the live element's computed style into a canvas 2d context and measureText the candidates. The canvas number tracks the element's scrollWidth to within ~2%.",
+    "evidence": "Live ja /settings trigger measured scrollWidth 235 for `ワークスペースの初期値 — 23 6月 2026`; canvas at the sampled font ('600 13px Geist, …' with the eight-family CJK tail) returned 239 for the same string, ratio 0.983. Candidates at the same font: ワークスペース既定 212 (still over 206), 共有の初期値 175, ワークスペース 186. Shipped 共有の初期値 and the live re-measure came back with zero clipped .truncate nodes at 1440 in both themes. Gotcha: `[...document.querySelectorAll('.truncate')]` also matches the 196px settings nav hint, so filter on clientWidth before sampling or you calibrate against the wrong budget.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "id": "a-cjk-translation-can-be-sized-against-the",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Under fixture contention, pin the locale BEFORE EVERY FRAME and retry, rather than pinning once and looping viewports/themes. Pin-once loses most of a run to drift; re-pin-per-frame lost nothing.",
+    "evidence": "Identical routes and combos, same session: pin-once-then-loop produced 15 frames reporting `DRIFT->en`/`DRIFT->pl`/`DRIFT->ru` out of 32 (a parallel agent moved the demo row mid-run). Restructuring to pin() inside the per-frame loop with up to 4 attempts, plus a post-navigation `document.documentElement.lang === tag` guard AND an error-boundary check on document.body, produced 32/32 captured and all four locales reported CLEAN. Also note a crashed earlier run had already written screenshots to the output dir, so clear the directory before a re-capture or stale/error-boundary frames get filed as evidence.",
+    "scope": [
+      "capture",
+      "builder"
+    ],
+    "id": "under-fixture-contention-pin-the-locale-before-every",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The dashboard reservation-meta clipping in ru/uk/pl IS catalogue copy, not the frozen CLDR table — the bookingStatus badge steals width from the sibling meta column one pixel for one. This refutes the standing 'not catalogue copy' fact for the ru case.",
+    "evidence": "Playwright chromium at 360 on /dashboard, measuring the row's leaf nodes: badge 'Confirmed' 71px → meta 155 (no clip); 'Potvrzeno' 70 → 156; 'Potwierdzona' 90 → 136 (Sunday row 150>136); 'Підтверджена' 97 → 129 (151>129); 'Подтверждена' 100 → 126 (140>126). After shortening confirmed to Przyjęta/Принята/Прийнята the same measurement gives meta 166/164/157 and zero clipped date lines, with no change to dashboard.tsx or format.ts.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-dashboard-reservation-meta-clipping-in-ru-uk",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "formatDate ends with an abbreviation point in ru ('11 сент. 2026 г.') and uk ('11 вер. 2026 р.'), so any catalogue sentence writing '{date}.' prints a doubled full stop on screen. cs ('11. 9. 2026') and pl ('11 wrz 2026') end in a digit and are safe.",
+    "evidence": "A vitest probe importing #/lib/format printed en=[11 Sept 2026] cs=[11. 9. 2026] pl=[11 wrz 2026] ru=[11 сент. 2026 г.] uk=[11 вер. 2026 р.]. The live /settings/billing renewal line then read 'Продлится 11 сент. 2026 г..' before the fix. Only two en keys put a period straight after a formatted date: settings billing.renewal.renewsOn and billing.renewal.endsOn.",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "id": "formatdate-ends-with-an-abbreviation-point-in-ru",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The Plans panel header on /settings/billing gives its `actions` slot a 326px content box at 360px wide (left 17, right 343), and the cadence pill is shrink-0 so anything wider paints outside the card rather than wrapping.",
+    "evidence": "Playwright chromium 360x800 with e2e/.auth/demo.json on http://localhost:3001/settings/billing, reading the toggle's and the header's getBoundingClientRect: headerLeft 17 / headerRight 343 in every locale; toggleRight en 262, cs 290, uk 316, pl 346, ru 352. docOverflow stayed 0 in all cases, so the document scrollbar never reveals this — only the card edge does.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "id": "the-plans-panel-header-on-settings-billing-gives",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Vitest is now 3179 tests across 114 files, all passing — up 11 tests from the 3168 recorded last round, and still zero parity failures.",
+    "evidence": "pnpm test: Test Files 114 passed (114), Tests 3179 passed (3179), 10.76s.",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "critic"
+    ],
+    "id": "vitest-is-now-3179-tests-across-114-files",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Playwright is fully green against port 3001 with no flakes: 138 passed, 5 skipped, 0 failed in 56.8s on the first run, no retries needed.",
+    "evidence": "PLAYWRIGHT_BASE_URL=http://localhost:3001 pnpm exec playwright test -> 'PASS (138) FAIL (0) skipped (5)  Time: 56850ms'.",
+    "scope": [
+      "mechanical",
+      "capture"
+    ],
+    "id": "playwright-is-fully-green-against-port-3001-with",
+    "measuredIn": "round-11"
   }
 ]

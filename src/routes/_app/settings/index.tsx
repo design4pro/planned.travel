@@ -9,7 +9,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { ErrorPanel } from '#/components/layout/error-state'
 import {
   Avatar,
   Badge,
@@ -24,6 +23,7 @@ import { loadProfile } from '../-server/settings'
 import { formatDate } from '../-lib/format'
 import { SettingsRow, SettingsSection } from '../-ui/settings-nav'
 import { saveRegionalOverrides } from './-server/preferences'
+import { RouteError } from './-ui/route-error'
 import {
   FOLLOW_DEFAULT,
   currencyLabel,
@@ -68,7 +68,7 @@ export const Route = createFileRoute('/_app/settings/')({
 
 function ProfileError({ error }: { error: unknown }) {
   const t = useTranslate()
-  return <ErrorPanel error={error} title={t('settings.profile.error')} />
+  return <RouteError error={error} title={t('settings.profile.error')} />
 }
 
 function ProfilePage() {
