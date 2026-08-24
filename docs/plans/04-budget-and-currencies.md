@@ -117,6 +117,15 @@ cannot write the same PNG. Every stage still lists the path under **Owned paths*
 The same treatment is asked of `src/server/repos/__tests__/tenant-isolation.test.ts`, where
 `00-foundations.md` already grants it.
 
+## How Owned paths are written here, and why the form matters
+
+Every stage's **Owned paths** is a bullet list of `` `path` — mode ``, never a table. That is not a
+style preference: `scripts/ultrabuild/check-plan-collisions.mjs` parses exactly that shape, and a
+plan that writes its ownership as a table contributes **zero** paths to the collision check while
+still reading as though it had been checked. This file was in that state and its clean result meant
+nothing; the last section of this file records what the check said once the form was fixed, and what
+had to change to make it say it.
+
 ## Stage 04-S1 — Give every receipt its own currency and freeze the rate it was booked at
 
 ### Stage id
@@ -149,28 +158,37 @@ Behaviour sourced from `wiki: Currencies`, restated in our own vocabulary.
 
 ### Owned paths
 
-| Path                                                        | Mode   |
-| ----------------------------------------------------------- | ------ |
-| `src/lib/money.ts`                                          | edit   |
-| `src/lib/__tests__/money.test.ts`                           | edit   |
-| `src/server/repos/rates.ts`                                 | new    |
-| `src/server/repos/__tests__/rates.test.ts`                  | new    |
-| `src/server/repos/expenses.ts`                              | edit   |
-| `src/server/fns/costs.ts`                                   | edit   |
-| `src/components/costs/expense-dialog.tsx`                   | edit   |
-| `src/components/costs/payment-dialog.tsx`                   | edit   |
-| `src/components/costs/costs-toolbar.tsx`                    | edit   |
-| `src/components/costs/data.ts`                              | edit   |
-| `src/components/costs/__tests__/data.test.ts`               | edit   |
-| `src/server/repos/__tests__/tenant-isolation.test.ts`       | append |
-| `e2e/budget-and-currencies.visual.spec.ts`                  | new    |
-| `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` | new    |
+- `src/lib/money.ts` — edit. The conversion arithmetic and the display-currency resolver.
+- `src/lib/__tests__/money.test.ts` — edit.
+- `src/server/repos/rates.ts` — new. The rate seam and its KV cache.
+- `src/server/repos/__tests__/rates.test.ts` — new.
+- `src/server/repos/expenses.ts` — edit. The freeze on the two expense writers and the settlement
+  writer.
+- `src/server/fns/costs.ts` — edit. The loader payload and the three write endpoints.
+- `src/components/costs/expense-dialog.tsx` — edit.
+- `src/components/costs/payment-dialog.tsx` — edit.
+- `src/components/costs/costs-toolbar.tsx` — edit.
+- `src/components/costs/data.ts` — edit.
+- `src/components/costs/__tests__/data.test.ts` — edit.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block that
+  edits none of the existing ones.
+- `e2e/budget-and-currencies.visual.spec.ts` — new. This plan's spec file, per
+  `12-verification-protocol.md` §4.
+- `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — new. Its baseline directory.
 
-**Not owned by this stage, and listed only to be excluded**: `src/server/db/schema.ts`, `drizzle/`,
-`src/styles/tokens.css`,
-`src/components/ui/**`, `wrangler.jsonc`, `src/server/worker.ts`, `src/routeTree.gen.ts`,
-`package.json`, `pnpm-lock.yaml`. The first two belong to wave 0; the rest are shared or generated
-and no feature stage names them.
+**Two of those files are owned by another plan in an earlier wave, and each is named here with its
+sibling stage id** so the cross-plan check in this file's last section resolves rather than merely
+passes. `src/server/repos/expenses.ts` is held by **`00-S1`** (`00-foundations.md`, wave 0), which
+adds the settlement writer's source-field guard; this stage is that guard's first caller and edits
+the same module a wave later. `src/server/fns/costs.ts` is held by **`00-S2`** (`00-foundations.md`,
+wave 0), which makes the expense writers notify the members a split lands on. Both close before wave
+1 opens, so neither is a same-wave claim, and this stage starts from their landed edits rather than
+from HEAD.
+
+**Not owned by this stage, and listed only to be excluded** — none of these is an owned path of any
+stage in this file: the schema module and `drizzle/`, the token file, `src/components/ui/**`, the
+Worker entry, the Wrangler config, the generated route tree, and the two dependency manifests. The
+first two belong to wave 0; the rest are shared or generated and no feature stage names them.
 
 `src/routes/_app/trips/$tripId/-costs/**` is not claimed either: `04-S2` holds that directory for
 wave 1, and this stage reaches the screen through the components and the loader payload it does own.
@@ -483,29 +501,33 @@ No behaviour of this row is deferred. Sourced from `wiki: Budget-Tracking`.
 
 ### Owned paths
 
-| Path                                                       | Mode   |
-| ---------------------------------------------------------- | ------ |
-| `src/server/repos/cost-categories.ts`                      | new    |
-| `src/server/repos/__tests__/cost-categories.test.ts`       | new    |
-| `src/server/fns/cost-categories.ts`                        | new    |
-| `src/server/do/protocol.ts`                                | edit   |
-| `src/routes/_app/trips/$tripId/costs.tsx`                  | edit   |
-| `src/routes/_app/trips/$tripId/-costs/categories.tsx`      | edit   |
-| `src/routes/_app/trips/$tripId/-costs/category-editor.tsx` | new    |
-| `src/routes/_app/trips/$tripId/-costs/screen.tsx`          | edit   |
-| `src/routes/_app/trips/$tripId/-costs/expense-list.tsx`    | edit   |
-| `src/routes/_app/trips/$tripId/-costs/actions.ts`          | edit   |
-| `src/routes/_app/trips/$tripId/-costs/skeleton.tsx`        | edit   |
-| `src/server/repos/__tests__/tenant-isolation.test.ts`      | append |
-| `e2e/budget-and-currencies.visual.spec.ts`                 | append |
+- `src/server/repos/cost-categories.ts` — new. All SQL for the category entity.
+- `src/server/repos/__tests__/cost-categories.test.ts` — new.
+- `src/server/fns/cost-categories.ts` — new. The five endpoints.
+- `src/routes/_app/trips/$tripId/costs.tsx` — edit. The route's search schema only.
+- `src/routes/_app/trips/$tripId/-costs/categories.tsx` — edit.
+- `src/routes/_app/trips/$tripId/-costs/category-editor.tsx` — new.
+- `src/routes/_app/trips/$tripId/-costs/screen.tsx` — edit.
+- `src/routes/_app/trips/$tripId/-costs/expense-list.tsx` — edit.
+- `src/routes/_app/trips/$tripId/-costs/actions.ts` — edit.
+- `src/routes/_app/trips/$tripId/-costs/skeleton.tsx` — edit.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
+- `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block, added at
+  the end and editing nobody else's.
 
 `src/routes/_app/trips/$tripId/costs.tsx` is an **existing** route file whose `validateSearch`
 schema currently enumerates the eight fixed categories; it is edited, not created, so
-`pnpm generate-routes` does not run and `src/routeTree.gen.ts` is not touched.
+`pnpm generate-routes` does not run and the generated route tree is not touched.
 
-`src/server/do/protocol.ts` is claimed because a new entity kind is declared there and nowhere else.
-It is not one of the six shared paths in `README.md`, so a feature stage may name it — see
-**Blockers** for the coordination risk that creates.
+**`src/server/do/protocol.ts` is deliberately not claimed, and the reason is a measurement rather
+than a preference.** An earlier draft of this stage declared a new `cost-category` entity kind in
+that module. Running `node scripts/ultrabuild/check-plan-collisions.mjs 04` showed the cost of that:
+`07-S1` (`07-collaboration-and-sharing.md`) takes the same module exclusively **in the same wave**,
+and two stages adding an entity kind to one module in parallel corrupt each other. No new kind is
+needed, because the product already has the pattern — `recordPaymentFn` mirrors a settlement as
+`patch('trip', trip.id, { expensesChangedAt: Date.now() })` (`src/server/fns/costs.ts:478-480`)
+rather than inventing an entity for a row the room does not need to reconstruct. This stage does the
+same for categories. See **Server** below.
 
 ### Data and migration
 
@@ -587,12 +609,15 @@ and a uniqueness refinement, so a client cannot ask for a reorder that is not a 
 route is UX and is never the data boundary — every one of these functions is a public endpoint
 reachable without the screen that renders it.
 
-**Realtime.** A new entity kind `cost-category` is declared in `src/server/do/protocol.ts`, joining
-the nine that exist, with its Zod shape in the same module. It stays inside the measured envelope —
-32 KiB per frame, 40 messages per second per connection, 50 patches per message, 64 fields per patch.
-Conflict resolution stays last-write-wins per field on the room's monotonic version, and the room
-stays one per trip. A commit frame is a signal: the client invalidates and D1 answers, which is what
-makes a rename land on every open tab without a bespoke payload.
+**Realtime, and no new patch kind.** Every category write mirrors under the **existing `trip` entity
+kind** as a single field — `patch('trip', trip.id, { categoriesChangedAt: Date.now() })` — which is
+the shape `recordPaymentFn` already uses for a settlement (`src/server/fns/costs.ts:478-480`) and
+the reason `src/server/do/protocol.ts` is not an owned path of this stage. A commit frame is a
+signal, not a payload: the client invalidates the router and D1 answers, which is what makes a rename
+land on every open tab. That is well inside the measured envelope — 32 KiB per frame, 40 messages per
+second per connection, 50 patches per message, 64 fields per patch — because the frame carries one
+timestamp. Conflict resolution stays last-write-wins per field on the room's monotonic version, and
+the room stays one per trip.
 
 Nothing here is slow. Nothing is enqueued on `TASKS`.
 
@@ -741,14 +766,16 @@ The `docs/SPEC.md` §2 visual clauses, per surface:
 No package outside the `docs/SPEC.md` §3 pinned set is needed, and none is installed: `@dnd-kit` is
 present and is already the reordering idiom in this repository.
 
-One coordination risk, stated before it is scheduled rather than discovered mid-run: **`README.md`
+One coordination finding, measured rather than anticipated, and already designed around: **`README.md`
 lists six shared paths and `src/server/do/protocol.ts` is not among them, although it has exactly the
 property that makes the other six shared** — one module, many stages, and two stages adding an entity
-kind in parallel corrupt each other. This stage names it under **Owned paths**, which is legal today.
-If another wave-1 stage in another plan also needs a kind, the two must be serialised. The
-durable fix is for `00-foundations.md` to govern that module per wave the way it governs the schema,
-and that is filed as a change to `README.md` and `00-foundations.md`, neither of which this stage
-owns or edits.
+kind in parallel corrupt each other. `node scripts/ultrabuild/check-plan-collisions.mjs 04` finds
+`07-S1` holding that module exclusively in this stage's own wave. This stage therefore declares no
+entity kind and does not name the module; it mirrors under the existing `trip` kind instead, on the
+precedent at `src/server/fns/costs.ts:478-480`. The durable fix is for `00-foundations.md` to govern
+that module per wave the way it governs the schema; that is filed as a change to `README.md` and
+`00-foundations.md`, neither of which this stage owns or edits, and it is **not** a blocker for this
+stage, which now needs nothing from either.
 
 ## Stage 04-S3 — Edit the ledger where the reader is looking
 
@@ -762,9 +789,22 @@ groups by.
 - `MNY-02` partial → **done**. Today `-costs/expense-list.tsx` and `components/costs/expense-dialog.tsx`
   write through `createExpenseFn` / `updateExpenseFn` / `deleteExpenseFn`, and every edit is a dialog
   round trip. Correcting one figure in one row costs an open, a focus hunt, a save and a close. This
-  stage adds editing in the cell the reader is already looking at, an add-row pinned to the bottom of
-  each category, the persons and days columns the ledger is missing, and the three derived per-unit
-  figures.
+  stage adds editing in place on the row the reader is already looking at, an add-row pinned to the
+  bottom of each day group, the per-person and per-day divisors the ledger is missing, and the three
+  derived per-unit figures.
+
+**What the ledger is at HEAD, measured, because the shape of it decides the whole stage.**
+`src/routes/_app/trips/$tripId/-costs/expense-list.tsx` is 209 lines and renders **no table**: it
+imports `Avatar`, `Badge`, `IconButton`, `Spinner`, `Tooltip` and `TooltipProvider` from
+`#/components/ui` and imports no `Table`. The list is a `<ul>` of `<li>` rows inside a `Panel` per
+day group, grouped by `groupByDay` (`src/components/costs/data.ts:168`), and each row is a two-line
+flex block: title and amount on the first line, payer, category, conversion, note and "yours" on the
+second (`expense-list.tsx:125-171`). An earlier draft of this stage asserted the ledger "already
+renders through the `Table` primitive" and built an inline-cell contract, a skeleton plan, a 360px
+argument and a set of capture selectors on top of that assertion. It was false, and every one of
+those four things is restated below against the list that actually exists. **This stage does not
+build a table**; introducing one would be a redesign of a finished surface, not the edit-in-place
+row `MNY-02` asks for, and it is not in scope here or anywhere else in this plan.
 
 Two behaviours are stated precisely because they are easy to get subtly wrong:
 
@@ -772,29 +812,43 @@ Two behaviours are stated precisely because they are easy to get subtly wrong:
   person-day. Persisting them guarantees they drift from the amount they were derived from.
   `budget_items` carries `persons` and `days` (`schema.ts:760-761`) and `expenses` does not; this
   stage asks for the same two nullable columns on `expenses` so a line item can carry its own.
-- **A reservation-linked expense does not own its own title.** When an expense derives from a
-  booking, the booking owns the name; the ledger renders it read-only, with a link to the booking and
-  a tooltip saying where the name comes from, rather than letting two surfaces disagree.
+- **The source amount is a first-class part of the row, not a footnote.** `formatConversion`
+  (`src/lib/money.ts`) already renders it on the quiet line and `04-S1` fills the columns it reads;
+  editing in place must keep the source amount and its rate editable as one pair, because changing
+  an amount without its rate is what produces a row whose two figures disagree.
+
+**One behaviour an earlier draft claimed and this stage does not attempt**, so that a later reader
+does not restore it: a read-only title on a booking-derived expense. Measured, `expenses` has **no
+reservation reference at all** — its foreign keys are `day_id`, `place_id` and `budget_item_id`
+(`src/server/db/schema.ts:785-787`), and `grep -n reservation src/server/db/schema.ts` returns
+nothing inside that table. There is nothing to render read-only until a booking can own an expense,
+and giving it one is `03-reservations-and-transport.md`'s column to add, not this stage's.
 
 Sourced from `wiki: Budget-Tracking`.
 
 ### Owned paths
 
-| Path                                                    | Mode   |
-| ------------------------------------------------------- | ------ |
-| `src/server/repos/expenses.ts`                          | edit   |
-| `src/server/fns/costs.ts`                               | edit   |
-| `src/routes/_app/trips/$tripId/-costs/expense-list.tsx` | edit   |
-| `src/routes/_app/trips/$tripId/-costs/actions.ts`       | edit   |
-| `src/components/costs/expense-dialog.tsx`               | edit   |
-| `src/components/costs/data.ts`                          | edit   |
-| `src/components/costs/__tests__/data.test.ts`           | edit   |
-| `src/server/repos/__tests__/tenant-isolation.test.ts`   | append |
-| `e2e/budget-and-currencies.visual.spec.ts`              | append |
+- `src/server/repos/expenses.ts` — edit. The two new columns on the writers' inputs and the partial
+  patch.
+- `src/server/fns/costs.ts` — edit. `updateExpenseFn` takes a patch; `loadCosts` returns the
+  divisors.
+- `src/routes/_app/trips/$tripId/-costs/expense-list.tsx` — edit. The row becomes editable in place
+  and gains the add-row.
+- `src/routes/_app/trips/$tripId/-costs/actions.ts` — edit. The optimistic patch op.
+- `src/components/costs/expense-dialog.tsx` — edit. The divisors join the full form.
+- `src/components/costs/data.ts` — edit. The derivation helpers and the patch merge.
+- `src/components/costs/__tests__/data.test.ts` — edit.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
+- `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
 
-Disjoint from the other two wave-2 stages: `04-S4` owns `stat-tiles.tsx`, `rail.tsx` and
-`src/components/costs/index.ts`; `04-S5` owns its own new repository, server-function and dialog
-modules plus `costs-toolbar.tsx` and `screen.tsx`.
+Disjoint from the other two wave-2 stages, checked with
+`node scripts/ultrabuild/check-plan-collisions.mjs 04` rather than by reading them: `04-S4` owns
+`stat-tiles.tsx`, `rail.tsx`, its two new chart modules and `src/components/costs/index.ts`; `04-S5`
+owns its own new repository, server-function and dialog modules plus `costs-toolbar.tsx` and
+`-costs/screen.tsx`. Two paths here are also held by an **earlier-wave** stage in another plan and
+are named with their sibling ids: `src/server/repos/expenses.ts` by `00-S1` (wave 0) and
+`src/server/fns/costs.ts` by `00-S2` (wave 0). Within this plan both are also held by `04-S1`
+(wave 1), which closes first.
 
 ### Data and migration
 
@@ -809,76 +863,88 @@ holds `src/server/db/schema.ts` and `drizzle/`; this stage names neither.
 | `expenses` | `days`    | `integer` | Nullable, `nonNegativeCheck`, mirrors `budget_items.days`.    |
 
 **Backfill: none.** `NULL` means "not stated for this line", and a per-unit figure derived from a
-`NULL` divisor is not rendered as zero, not rendered as infinity, and not rendered at all — the cell
-shows an em-dash and the column header explains the rule once. Existing rows keep `NULL` and the
-previous Worker, which reads neither column, keeps working.
+`NULL` divisor is not rendered as zero, not rendered as infinity, and not rendered at all — the
+figure's slot on the row's quiet line shows an em-dash, and the row's own `Tooltip` explains the rule
+once rather than a column header, because this ledger has no header row. Existing rows keep `NULL`
+and the previous Worker, which reads neither column, keeps working.
 
 No new table. Money stays integer minor units plus a `text(3)` ISO-4217 currency; the derived
 per-unit figures are computed at render time from `amount_minor` and are never written anywhere.
 
-The reservation link uses `reservations.place_id` / `reservations.assignment_id` and the existing
-`expenses.budget_item_id`; no new foreign key is required, because `03-reservations-and-transport.md`
-owns the link direction and this stage only reads it.
+No foreign key is added and none is needed. `expenses.budget_item_id` (`schema.ts:787`) is the only
+link this stage reads; it already exists and is already re-resolved in the caller's scope on write
+(`src/server/repos/expenses.ts:301`). A link from a booking to an expense does not exist at HEAD and
+is not invented here — see **Reference rows**.
 
 ### Server (repo, server function, Zod)
 
 **Repository — `src/server/repos/expenses.ts` (edit).** `createExpenseInput` and `updateExpenseInput`
 gain `persons` and `days` as nullable non-negative integers with the same `.max(1000)` bound
 `budget_items` already uses, and `costCategoryId` as a nullable id re-resolved through the category
-repository inside the caller's scope. `updateExpense` refuses a title change on a
-reservation-linked row with `RepositoryError('...', 'TITLE_OWNED_BY_BOOKING')` — the rule is enforced
-on the server, because the ledger's read-only cell is a courtesy to the reader and not a security
-boundary. SQL stays in this module — `src/server/repos/expenses.ts` — and every query keeps starting
+repository inside the caller's scope. SQL stays in this module — `src/server/repos/expenses.ts` — and every query keeps starting
 from `tenantFilter()`, so each statement carries `organization_id = ?` before any other predicate;
 `expenses_org_trip_idx` already leads with `organization_id`, so the two new columns add no index and
 change no access path.
 
 **Server function — `src/server/fns/costs.ts` (edit).** `updateExpenseFn` accepts a **partial** patch
-so a single cell is one small write rather than a whole-row replace; `loadCosts` returns `persons`,
-`days` and the reservation link per row. Both continue to mirror to the trip room under the existing
-`expense` kind — no new patch kind, no protocol edit, no collision with `04-S2`.
+so one committed field is one small write rather than a whole-row replace; `loadCosts` returns
+`persons`, `days` and the budget-item link per row. Both continue to mirror to the trip room under
+the existing `expense` kind — no new patch kind, so `src/server/do/protocol.ts` is not an owned path
+of this stage either.
 
 **Zod (v4).** `z.strictObject()` with `error`; a patch shape where every field is optional and at
 least one must be present, refined rather than assumed; `z.iso.date()` on `spentOn`. A patch that
 arrives with only an id is rejected as a malformed request rather than executed as a no-op write.
 
 **Authorisation** is decided in the handler: `appScope()`, `requireTrip()`, then the repository. A
-per-cell write is the same endpoint with a smaller body, and it re-authorises exactly like the
+per-field write is the same endpoint with a smaller body, and it re-authorises exactly like the
 dialog write it replaces.
 
 ### UI (route, components)
 
 **Route.** None added, none edited. No `pnpm generate-routes`.
 
-**Components.** Reused: `Table` (the ledger already renders through it), `Input`, `Select`,
-`DatePicker`, `IconButton`, `Tooltip`, `Badge`, `Skeleton`, `Kbd` (the inline editor's shortcut
-hint), `Alert`. New product component: a route-local cell editor beside `expense-list.tsx`, small
-enough to live in that file rather than earning a module of its own.
+**Components.** Reused, all of them already imported by this screen or already shipped in
+`src/components/ui`: `Input`, `Select`, `DatePicker`, `IconButton`, `Tooltip`, `TooltipProvider`,
+`Badge`, `Avatar`, `Spinner`, `Kbd` (the editor's shortcut hint) and `Alert`. **`Table` is not
+used and is not introduced**: the ledger is the day-grouped `<ul>` measured above, and editing
+happens inside the row that is already there. New product component: a route-local field editor
+beside the row in `expense-list.tsx`, small enough to live in that file rather than earning a module
+of its own.
 
-**Interaction contract, stated because "inline editing" hides a dozen decisions.** A cell enters edit
-on click or on `Enter` when focused; `Escape` reverts and restores focus to the cell; `Enter` commits
-and moves to the next editable cell in the row; `Tab` commits and moves; blur commits. A commit that
-fails restores the prior value and says why. Nothing auto-saves on every keystroke — one write per
-committed cell, and the row is `aria-busy` until it lands.
+**Interaction contract, stated because "editing in place" hides a dozen decisions, and stated
+against a row rather than a grid.** A row has four editable fields — title, amount, payer and date —
+plus the two divisors on its quiet line. A field enters edit on click, or on `Enter` when it is
+focused; `Escape` reverts it and restores focus to the field; `Enter` commits and moves to the next
+editable field of the same row; `Tab` commits and moves; blur commits. The row's tab order is its
+reading order, and it is unchanged from the resting row, so a keyboard reader who knows the list
+already knows the editor. Nothing auto-saves on a keystroke — one write per committed field — and the
+row keeps the `aria-busy` and dimmed treatment it already applies while a write is in flight
+(`expense-list.tsx:110-122`). A field that enters edit does not change the row's height: the editor
+is sized to the text it replaces, which is what keeps the layout-shift assertion below at zero.
 
 **States.**
 
-- _Empty_ — the existing screen-level empty state is kept; the per-category add-row is always
-  present, so a category with no rows shows one editable line rather than nothing, on
-  `--color-surface-2`.
-- _Skeleton_ — the existing `RowsSkeleton` shape, widened for the two new columns; the derived
-  columns are part of the same skeleton so the table does not grow when the payload lands.
-- _Error_ — a rejected cell reverts, marks the cell with `--color-danger`, and shows the reason in an
-  inline `Alert` under the row on `--color-surface-2`, with "try again" re-issuing the write.
-- _Loading_ — the committing cell shows a subdued state and stays readable; it never collapses to a
-  spinner that changes the column width.
-- _Read-only_ — a reservation-linked title renders as text with a `Tooltip` naming the booking that
-  owns it, and is reachable by keyboard so a screen reader hears the same explanation.
+- _Empty_ — the existing screen-level empty state (`-costs/screen.tsx`) is kept and not re-designed.
+  The add-row is pinned to the bottom of each day group, so a day with one expense still offers one
+  editable line under it, on `--color-surface-2`.
+- _Skeleton_ — **unchanged, deliberately, and the reason is a measurement.** The ledger's loading
+  state is `CostsSkeleton` (`-costs/skeleton.tsx`, owned by `04-S2` in wave 1) rendering
+  `RowsSkeleton` from `src/routes/_app/-ui/scaffold.tsx`, which no stage in this plan owns. This
+  stage adds nothing to either, because it adds no line to the row: the divisors and the three
+  derived figures sit on the quiet line that already exists, and the row's height is the same before
+  and after. The frame set proves the shape still fits; if it does not, that is a filing to `04-S2`'s
+  file and a finding, not an unowned edit.
+- _Error_ — a rejected field reverts, marks itself with `--color-danger`, and shows the reason in an
+  inline `Alert` under the row on `--color-surface-2`, with "try again" re-issuing the same write.
+- _Loading_ — the committing field shows a subdued state and stays readable; it never collapses to a
+  spinner, and the row's existing `Spinner` in its trailing action group is the one moving-parts
+  indicator.
 
 **Tokens.** None missing; spacing on the 4px grid from `--space-*`, no hex, no one-off margin.
-`font-variant-numeric: tabular-nums` on the amount, the persons and days counts and all three derived
-per-unit figures — a derived column that jitters as the reader types is exactly the failure the token
-exists to prevent.
+`font-variant-numeric: tabular-nums` on the amount, the source amount, the persons and days counts
+and all three derived per-unit figures — a derived figure that jitters as the reader types is exactly
+the failure the token exists to prevent.
 
 ### Quota
 
@@ -888,7 +954,7 @@ case is added to `src/server/billing/__tests__/limits.test.ts`.
 
 ### Tenant isolation test
 
-Appended as its own `describe` block. In A's scope: patch a single cell of B's expense by id
+Appended as its own `describe` block. In A's scope: patch a single field of B's expense by id
 (`NotFoundError`); patch B's expense to point at one of A's categories (`NotFoundError`); patch one
 of A's expenses to point at one of B's categories (`NotFoundError`); read and delete B's expenses by
 id (`NotFoundError`). B's rows are compared before and after. Functions covered: `createExpense`,
@@ -901,24 +967,28 @@ id (`NotFoundError`). B's rows are compared before and after. Functions covered:
 **Unit tests.** `src/components/costs/__tests__/data.test.ts` (edit) — the three derived figures are
 computed from the amount and the divisors and are absent, not zero, when a divisor is `NULL`; a
 per-unit figure of a converted expense is derived from the accounting amount, not from the source
-amount; the ledger's grouping falls back to the legacy enum when `cost_category_id` is `NULL`; a
-partial patch merges without clearing the fields it omits.
+amount; an expense whose `cost_category_id` is `NULL` still resolves to its legacy enum label through
+the helper `04-S2` ships, which is the ledger's guard against a row losing its label; and a partial
+patch merges through `applyOps` (`src/components/costs/data.ts:266`) without clearing the fields it
+omits.
 
-**Browser evidence.** `describe` block `04-S3 — inline ledger editing`, shared helpers only.
+**Browser evidence.** `describe` block `04-S3 — editing the ledger in place`, shared helpers only.
 
 - Route: `/trips/$tripId/costs`. Frame set: light and dark at **360px, 1280px and 2560px** at rest.
-- **Declared non-resting state**: a cell in edit, reached by `--click` on
-  `[data-part="expense-cell-amount"]`, framed as `--state cell-edit`; and the read-only
-  reservation-linked title with its tooltip open, reached by `--hover` on
-  `[data-part="expense-title-locked"]`, framed as `--state locked-title`. Both selectors are stable
-  `data-part` attributes this stage ships, verified with `page.locator(sel).count()` against a
-  running server before capture.
-- At 360px the ledger is a designed stack — label above value, one editable field at a time — not a
-  horizontally scrolled desktop table, and the frame proves it.
+- **Declared non-resting states**: the amount field of a row in edit, reached by `--click` on
+  `[data-part="expense-field-amount"]`, framed as `--state field-edit`; and the add-row of a day
+  group focused with its first field open, reached by `--click` on `[data-part="expense-add-row"]`,
+  framed as `--state add-row`. Both are stable `data-part` attributes this stage ships onto the
+  existing row markup, and both are verified with `page.locator(sel).count()` returning 1 against a
+  running server before capture — reading the JSX and believing it is not a verification.
+- At 360px the row is already a designed two-line stack rather than a squeezed wide line, which is
+  the shape at HEAD and not something this stage invents; what the frame has to prove is that the
+  editor **preserves** it — one field open at a time, the field sized to the text it replaced, and no
+  horizontal scroller introduced.
 
 **Console must be silent**, asserted through `watchConsole`. **No layout shift after paint**,
-measured with the init-script observer, marked after `settle()`, then a cell edited and committed,
-asserted `0` after the mark, gated on `supportedEntryTypes` with the WebKit skip stated.
+measured with the init-script observer, marked after `settle()`, then a field opened, edited and
+committed, asserted `0` after the mark, gated on `supportedEntryTypes` with the WebKit skip stated.
 
 ### Definition of done
 
@@ -927,13 +997,15 @@ suppressions; new logic tested and `pnpm test` passing; verified in a real brows
 desktop and mobile; nothing left behind; no file outside **Owned paths** touched.
 
 - [ ] Spacing on the 4px grid from `--space-*`, no eyeballed one-off margins.
-- [ ] Hover, focus-visible, active, disabled and loading on every cell editor, the add-row and every
+- [ ] Hover, focus-visible, active, disabled and loading on every field editor, the add-row and every
       control in it.
-- [ ] Designed empty, skeleton and error states for the ledger, each on `--color-surface-2`.
+- [ ] Designed empty, skeleton and error states for the ledger, each on `--color-surface-2` — the
+      skeleton being the existing one, confirmed to still fit rather than assumed to.
 - [ ] Motion 150–260ms on `--ease-out-quint` or a sibling, transform and opacity only,
       `prefers-reduced-motion: reduce` honoured.
 - [ ] Light and dark parity with dark shadows re-declared.
-- [ ] 360px → 2560px, where 360px is a designed stack rather than a squeezed table.
+- [ ] 360px → 2560px, where 360px keeps the row's designed two-line stack and the editor never
+      introduces a horizontal scroller.
 - [ ] Keyboard navigable end to end — `Enter`, `Escape` and `Tab` all specified above — with sensible
       focus order, accessible names and WCAG 2.2 AA contrast in both themes.
 - [ ] Zero console errors or warnings, and zero layout shift after paint.
@@ -961,19 +1033,26 @@ Sourced from `wiki: Budget-Tracking`.
 
 ### Owned paths
 
-| Path                                                    | Mode   |
-| ------------------------------------------------------- | ------ |
-| `src/components/costs/category-donut.tsx`               | new    |
-| `src/components/costs/member-bar.tsx`                   | new    |
-| `src/components/costs/__tests__/chart-geometry.test.ts` | new    |
-| `src/components/costs/index.ts`                         | edit   |
-| `src/routes/_app/trips/$tripId/-costs/rail.tsx`         | edit   |
-| `src/routes/_app/trips/$tripId/-costs/stat-tiles.tsx`   | edit   |
-| `e2e/budget-and-currencies.visual.spec.ts`              | append |
+- `src/components/costs/category-donut.tsx` — new.
+- `src/components/costs/member-bar.tsx` — new.
+- `src/components/costs/__tests__/chart-geometry.test.ts` — new.
+- `src/components/costs/index.ts` — edit. The module barrel every consumer of that directory imports
+  through; this stage is its **only** claimant in wave 2, which is what lets the two new modules be
+  reached the way the existing six are.
+- `src/routes/_app/trips/$tripId/-costs/rail.tsx` — edit.
+- `src/routes/_app/trips/$tripId/-costs/stat-tiles.tsx` — edit.
+- `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
 
 `src/server/repos/__tests__/tenant-isolation.test.ts` is **not** named: this stage writes no row and
 adds no repository function, so it has no isolation case to add. See **Tenant isolation test** below
 for why that is a statement rather than an omission.
+
+Because this stage holds the barrel for the wave, **no other wave-2 stage may add a module to
+`src/components/costs/`** — a new file there is unreachable without a barrel line, and a second stage
+editing the barrel in parallel is the collision the disjointness rule exists to prevent. `04-S5` was
+drafted with a new module in that directory and no claim on the barrel; it now ships its dialog
+route-locally instead, and says so under its own **Owned paths**. Nothing in this plan is left
+needing a barrel line this stage does not write.
 
 ### Data and migration
 
@@ -1131,8 +1210,9 @@ BLOCKED and recorded in `11-boundaries-and-blockers.md` rather than built around
 
 ### Stage id
 
-`04-S5` · Wave 2 · effort **M**. Depends on `04-S1` for the frozen-rate columns and on `TRP-03`
-(`01-trips-core.md`, wave 1) for the trip edit surface.
+`04-S5` · Wave 2 · effort **M**. Depends on `04-S1` for the frozen-rate write path. It does **not**
+depend on `TRP-03` (`01-trips-core.md`, wave 1): that stage may call this one's server function from
+the trip edit surface, but this stage ships its own entry point and closes without it.
 
 ### Reference rows
 
@@ -1141,49 +1221,98 @@ BLOCKED and recorded in `11-boundaries-and-blockers.md` rather than built around
   data if it did. This stage makes the change safe, which is the whole of the work: a currency change
   is a re-basing, not a relabel.
 
-Four rules, each of which prevents a specific silent corruption:
+Five rules, each of which prevents a specific silent corruption:
 
-1. **An expense that inherited the trip's currency is pinned to the old code before the base moves.**
-   Otherwise a figure typed under the old base is reinterpreted as the new one and the number lies.
-2. **Every frozen rate is re-anchored**, because a frozen rate is stored relative to the accounting
+1. **A row that inherited the trip's currency is pinned into its own source columns before the base
+   moves.** `original_amount_minor` takes the figure the reader typed, `original_currency` takes the
+   old code. Otherwise a figure typed under the old base is reinterpreted as the new one and the
+   number lies.
+2. **An amount and its currency code move in the same statement.** A row is never written with
+   `amount_minor` in the new base and `currency` still naming the old one. This rule is stated
+   because an earlier draft of this stage broke it: it pinned `currency = old`, recomputed
+   `amount_minor` into the new base, and never wrote the new code — leaving every expense on the trip
+   labelled with a currency it was no longer denominated in. That is a silent money-mislabelling in a
+   stage whose title promises not to move any money, and the batch below is written so it cannot
+   recur.
+3. **Every frozen rate is re-anchored**, because a frozen rate is stored relative to the accounting
    currency, and leaving it anchored to a base that no longer exists is worse than having no rate.
-3. **Place prices are pinned the same way.** `places.price_minor` and `places.currency`
-   (`schema.ts:484-485`) are nullable and inherit the trip's currency when unset, so they are exactly
-   as exposed as expenses are.
-4. **No amount the reader typed is ever rewritten.** Each row keeps its original amount in its
-   original currency; only the base the balances are expressed in changes.
+4. **Every derived figure denominated in the base is recomputed with it.** `expense_shares.share_minor`
+   is in the accounting currency (`schema.ts:830`) and is not recoverable from a converted total,
+   so it is recomputed from each row's stored `weight` and must still sum exactly to the new
+   `amount_minor`. A base change that left the shares behind would re-open a settled trip.
+5. **No amount the reader typed is ever rewritten.** Every row keeps its own figure in its own
+   currency in its source columns; only the base the balances are expressed in changes.
 
 Sourced from `wiki: Currencies`.
 
 ### Owned paths
 
-| Path                                                  | Mode   |
-| ----------------------------------------------------- | ------ |
-| `src/server/repos/trip-currency.ts`                   | new    |
-| `src/server/repos/__tests__/trip-currency.test.ts`    | new    |
-| `src/server/fns/trip-currency.ts`                     | new    |
-| `src/components/costs/currency-rebase-dialog.tsx`     | new    |
-| `src/components/costs/costs-toolbar.tsx`              | edit   |
-| `src/routes/_app/trips/$tripId/-costs/screen.tsx`     | edit   |
-| `src/server/repos/__tests__/tenant-isolation.test.ts` | append |
-| `e2e/budget-and-currencies.visual.spec.ts`            | append |
+- `src/server/repos/trip-currency.ts` — new. Every statement of the re-basing.
+- `src/server/repos/__tests__/trip-currency.test.ts` — new.
+- `src/server/fns/trip-currency.ts` — new. The preview and the commit.
+- `src/routes/_app/trips/$tripId/-costs/currency-rebase-dialog.tsx` — new. Route-local, beside the
+  screen that opens it.
+- `src/components/costs/costs-toolbar.tsx` — edit. The entry point.
+- `src/routes/_app/trips/$tripId/-costs/screen.tsx` — edit. Mounts the dialog and holds its state.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
+- `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
 
-**The trip edit dialog is not claimed.** `TRP-03` owns that surface and this stage does not know its
-filename; the re-basing is exposed as one server function that `TRP-03` calls, and this stage ships
-its own entry point in the money toolbar where a currency change is most likely to be wanted. That
-contract — one function, two callers — is stated here so `01-trips-core.md` can rely on it without
-either stage editing the other's file.
+**Why the dialog is route-local rather than a module in `src/components/costs/`.** An earlier draft
+put it there and claimed no share of `src/components/costs/index.ts`, which is the barrel every
+consumer of that directory imports through — so the module would have been unreachable — while
+`04-S4`, in this same wave, does claim that barrel. Two wave-2 stages needing one file is precisely
+the collision the disjointness rule exists to stop. The dialog has exactly **one** caller, this
+screen, so the directory was the wrong home anyway: it lives at
+`src/routes/_app/trips/$tripId/-costs/currency-rebase-dialog.tsx`, is imported relatively by
+`-costs/screen.tsx`, and needs no barrel line from anyone.
 
-Disjoint from the other wave-2 stages: `04-S3` owns `expense-list.tsx`, `actions.ts`,
-`expense-dialog.tsx` and `data.ts`; `04-S4` owns `rail.tsx`, `stat-tiles.tsx` and
-`components/costs/index.ts`.
+**The trip edit dialog is not claimed either.** `TRP-03` owns that surface and this stage does not
+know its filename; the re-basing is exposed as one server function that `TRP-03` may call, and this
+stage ships its own entry point in the money toolbar where a currency change is most likely to be
+wanted. That contract — one server function, callable from a second surface this stage does not
+own — is stated here so `01-trips-core.md` can rely on it without either stage editing the other's
+file. It is the **function** that is shared, never the component.
+
+Disjoint from the other wave-2 stages, checked with
+`node scripts/ultrabuild/check-plan-collisions.mjs 04`: `04-S3` owns `expense-list.tsx`,
+`actions.ts`, `expense-dialog.tsx` and `data.ts`; `04-S4` owns `rail.tsx`, `stat-tiles.tsx`, its two
+chart modules and `src/components/costs/index.ts`. No path appears twice in wave 2.
 
 ### Data and migration
 
-**No schema change.** Every column this stage needs exists: `trips.currency`, `expenses.currency`,
-`expenses.original_currency`, `expenses.exchange_rate`, `places.currency`, and — after `00-S1` — the
-settlement triple. Money stays integer minor units plus a `text(3)` ISO-4217 code throughout; a
-re-basing changes codes and rates, never an amount a reader typed.
+**One filing, and everything else already exists.** `trips.currency`, `expenses.amount_minor`,
+`expenses.currency`, `expenses.original_amount_minor`, `expenses.original_currency`,
+`expenses.exchange_rate`, `expense_shares.share_minor`, `expense_shares.weight`, `places.price_minor`
+and `places.currency` are all on disk; the settlement triple lands with `00-S1` in wave 0.
+
+The filing is the same three columns on **`budget_items`**, which today carries
+`planned_amount_minor` and `currency` (`schema.ts:758-759`) and no source columns at all. Without
+them a planned figure cannot be re-based under rule 5: there is nowhere to keep what the reader
+typed, so the choice would be between rewriting their number and leaving a plan denominated in a base
+the trip no longer uses. It is filed to `00-foundations.md` — to the schema stage of the wave that
+**closes before wave 2 opens**, for the reason `04-S3` states — and this stage names neither
+`src/server/db/schema.ts` nor `drizzle/`.
+
+| Table          | Column                  | Type      | Notes                                                      |
+| -------------- | ----------------------- | --------- | ---------------------------------------------------------- |
+| `budget_items` | `original_amount_minor` | `integer` | Nullable, no default, no CHECK.                            |
+| `budget_items` | `original_currency`     | `text(3)` | Nullable, same `currency('original_currency')` helper.     |
+| `budget_items` | `exchange_rate`         | `real`    | Nullable. Major-per-major, `1 original = rate` accounting. |
+
+Additive, nullable, no CHECK and no index — the same three decisions `00-S1` argues for the
+settlement triple, for the same reasons: a CHECK change is a full table rebuild on SQLite, the
+non-negative guard lives in the repository's Zod input instead, and none of the three columns is ever
+a filter. The previous Worker reads none of them and keeps working after a rollback.
+
+**Backfill: none, and the reading of an un-backfilled row is stated rather than inferred.** Every
+budget item written before the migration is by construction denominated in its trip's accounting
+currency, so the triple stays `NULL` and `NULL` means exactly one thing here, as it does on
+`expenses` and `settlements`: _no conversion happened, and the implied rate is 1_. Only a re-basing
+ever fills these columns; an ordinary budget-item write is typed in the trip's own currency and
+leaves them null, which is why no other stage in this plan needs to change a budget-item writer.
+
+Money stays integer minor units plus a `text(3)` ISO-4217 code throughout; a re-basing changes codes
+and rates, never an amount a reader typed.
 
 **A data migration is not a schema migration, and this one runs in a server function rather than in
 `drizzle/`.** It is per-trip, initiated by a reader, and scoped to one tenant, so it cannot be a
@@ -1191,36 +1320,64 @@ deployment-time SQL file. It runs as a single `db.batch()`, which on D1 is a rea
 statements execute in sequence and an error rolls the whole sequence back — so a half-re-based trip
 is not a reachable state.
 
-The batch, in order, for a change from `old` to `new`:
+The batch, in order, for a change from `old` to `new`. `k` is the single old-to-new rate, resolved
+**once** before the batch opens through `src/server/repos/rates.ts` — one `k` for the whole batch,
+never one lookup per row, because two rows re-anchored at two different rates would not net to zero
+afterwards.
 
-1. `UPDATE expenses SET currency = old WHERE currency IS NULL OR currency = old` — pin the inheritors
-   before anything else moves. (`expenses.currency` is `NOT NULL` with a default today; the pinning
-   step is written against the inheritance rule rather than against the current nullability, so it
-   stays correct if a later stage relaxes the column.)
-2. `UPDATE places SET currency = old WHERE price_minor IS NOT NULL AND currency IS NULL` — the same
-   pinning for place prices.
-3. Re-anchor every frozen rate: a rate stored as `1 source = r old` becomes `1 source = r × k new`,
-   where `k` is the single old-to-new rate resolved once, at the start, through
-   `src/server/repos/rates.ts`. One `k` for the whole batch, never one lookup per row: two rows
-   re-anchored at two different rates would not net to zero afterwards.
-4. Recompute each row's `amount_minor` in the new base from its own source amount and its
-   re-anchored rate, using the shared conversion helper and its digit-difference rule — the step that
-   makes a change into or out of a zero-decimal currency correct rather than a hundred-fold error.
-5. `UPDATE trips SET currency = new`.
+_Pin first. Nothing is converted until every row holds its own source figure._
 
-**Backfill: not applicable — no column is added.** The trips that have never changed base are
-untouched by anything here, and a trip that has changed base carries no marker beyond its own rows.
+1. `expenses`: for every row of the trip with `original_currency IS NULL`, set
+   `original_amount_minor = amount_minor`, `original_currency = old`, `exchange_rate = 1`. Rows that
+   already carry a source triple — a foreign receipt entered under `04-S1` — are left alone; their
+   source is already the truth.
+2. `settlements`: the identical pinning, over the triple `00-S1` adds.
+3. `budget_items`: the identical pinning, over the triple filed above.
+4. `places`: `SET currency = old WHERE price_minor IS NOT NULL AND currency IS NULL`. A place price
+   is a reference figure rather than an accounting one — it is never netted into a balance — so
+   pinning it is the whole treatment and it is deliberately **not** converted. Its own row now says
+   which currency it is in, which is what it was missing.
+
+_Then convert. Amount, rate and code move together, in one statement per table._
+
+5. `expenses`, one `UPDATE` per row writing three columns at once:
+   `amount_minor = convert(original_amount_minor, original_currency → new)` through the shared
+   helper and its digit-difference rule; `exchange_rate = r × k`, the re-anchoring of a rate stored
+   as `1 source = r old` into `1 source = r × k new`; and **`currency = new`**. The third of those is
+   rule 2 and is not optional: a row that gets the first two and not the third is denominated in one
+   currency and labelled with another.
+6. `settlements` and `budget_items`: the same three-column statement, from their own source triples.
+7. `expense_shares`: for every expense the batch touched, recompute `share_minor` from the row's
+   stored `weight` values through the shared split helper, so the shares still sum **exactly** to the
+   row's new `amount_minor`. `is_settled` is carried through untouched — a paid flag records
+   something that happened outside the ledger and is not arithmetic.
+8. `UPDATE trips SET currency = new`.
+
+**Backfill: none for the three columns this stage files** — see **Data and migration** above, where
+the `NULL` reading is fixed. Trips that never change base are untouched by anything here.
 
 **Refusal beats corruption.** If `k` cannot be resolved, the whole change is refused with a designed
 message and nothing is written. Re-anchoring at an invented rate would move real money.
+
+**Two invariants the batch is checked against afterwards, in the same transaction's test**: no row of
+the trip has a `currency` other than `new`, and every row's `amount_minor` equals the conversion of
+its own source triple. They are named here because they are the two ways the earlier draft's bug
+would have shown itself, and both are unit tests below rather than comments.
 
 ### Server (repo, server function, Zod)
 
 **Repository — `src/server/repos/trip-currency.ts` (new).** All SQL for the re-basing.
 
-- `previewCurrencyChange(scope, tripId, next)` — what would move: how many expenses would be pinned,
-  how many rates re-anchored, how many place prices pinned, and the resolved `k`. A read only.
+- `previewCurrencyChange(scope, tripId, next)` — what would move: how many expenses, settlements and
+  budget items would be pinned, how many rates re-anchored, how many share rows recomputed, how many
+  place prices pinned, and the resolved `k`. A read only.
 - `changeTripCurrency(scope, tripId, next, { rate })` — the batch above, in one `db.batch()`.
+
+Neither re-implements arithmetic that already exists: the conversion is the shared helper in
+`src/lib/money.ts` with its digit-difference rule, and the share recomputation in step 7 goes through
+the same exported split helper the expenses repository uses, imported rather than copied — a second
+splitter that disagreed with the first by one minor unit is the exact failure this whole file is
+written to prevent.
 
 Both start from `requireTrip(scope, tripId)` and build every statement through `tenantFilter()`, so
 each `UPDATE` carries `organization_id = ?` in its `WHERE` clause. A bulk `UPDATE` is precisely where
@@ -1250,9 +1407,10 @@ repository with a named constant rather than discovered in production.
 **Route.** None added, none edited. No `pnpm generate-routes`.
 
 **Components.** Reused: `Dialog`, `Select` (the same `CURRENCY_OPTIONS` list), `Alert`, `Button`,
-`Spinner`, `Badge`, `SectionLabel`, `Separator`, `Tooltip`. New: `currency-rebase-dialog.tsx`, a
-product component under `src/components/costs/`, because it is money-shaped and reused by two
-callers.
+`Spinner`, `Badge`, `SectionLabel`, `Separator`, `Tooltip`. New:
+`-costs/currency-rebase-dialog.tsx`, route-local for the reason given under **Owned paths** — it has
+one caller, and the module barrel that would be needed to reach it from `src/components/costs/` is
+held by `04-S4` for this wave.
 
 **The dialog is a confirmation with arithmetic in it, not a warning.** It shows, before anything
 moves: the rate it will use and where that rate came from; the counts from the preview; and one
@@ -1302,7 +1460,14 @@ which is the same assertion from the other side. Functions covered: `previewCurr
 
 **Unit tests.** `src/server/repos/__tests__/trip-currency.test.ts` (new):
 
-- Re-basing a trip with no foreign expenses changes only `trips.currency` and pins the inheritors.
+- **Rule 2, the one an earlier draft broke**: after any re-basing, no expense, settlement or budget
+  item of the trip carries a `currency` other than the new code, and every one of those rows has
+  `amount_minor` equal to the conversion of its own source triple. Asserted over a trip mixing an
+  inherited row, a foreign row entered under `04-S1` and a zero-decimal currency.
+- **Rule 4**: every expense's share rows sum exactly to its new `amount_minor`, for a total and a
+  participant count that do not divide evenly, and `is_settled` survives the batch unchanged.
+- Re-basing a trip with no foreign expenses pins every inheritor's source triple, moves every code
+  and leaves the reader's typed figures readable in `original_amount_minor` unchanged.
 - Every member balance nets to the same real value before and after, allowing for one minor unit per
   member of rounding and no more — the invariant the whole stage exists to protect.
 - A settled trip stays settled: balances that were zero before are zero after, so nobody is asked to
@@ -1316,7 +1481,8 @@ which is the same assertion from the other side. Functions covered: `previewCurr
 **Browser evidence.** `describe` block `04-S5 — trip currency re-basing`, shared helpers only.
 
 - Route: `/trips/$tripId/costs`. Frame set: light and dark at **360px, 1280px and 2560px** at rest.
-- **Declared non-resting state**: the re-basing dialog open with a preview loaded, reached by
+- **Declared non-resting state**: the re-basing dialog open with a preview loaded and its worked
+  example rendered, reached by
   `--click` on `[data-part="trip-currency-change"]`, framed as `--state rebase-preview`; and the
   refusal, reached with `page.route()` failing the preview, framed as `--state rebase-error`. Both
   selectors are stable `data-part` attributes this stage ships, verified with
@@ -1356,9 +1522,9 @@ dialog or from one the workspace has already frozen for that pair, and refuses t
 answer with neither. When `04-S7` lands a provider, the same call starts answering automatically and
 no surface changes.
 
-The dependency on `TRP-03` (`01-trips-core.md`, wave 1) is a scheduling fact rather than a blocker:
-it closes a wave before this stage opens, and if it slips, this stage still ships its own entry point
-in the money toolbar.
+`TRP-03` (`01-trips-core.md`, wave 1) is neither a dependency nor a blocker: it may call this stage's
+server function from the trip edit surface, and if it slips or never does, this stage still ships its
+own entry point in the money toolbar and closes `MNY-06` on its own.
 
 ## Stage 04-S6 — Split a receipt fairly and clear the debts
 
@@ -1369,30 +1535,59 @@ this plan in wave 3, so its owned paths cannot collide with a sibling.
 
 ### Reference rows
 
-- `MNY-03` partial → **done**. `computeShares` (`src/server/repos/expenses.ts:151`) already covers
-  equal, weighted, exact and percentage splits; `src/components/costs/split-editor.tsx` is the
-  editor; `getMemberBalances` is wired into the screen and `recordPaymentFn` writes settlements. Four
-  things are missing and this stage adds them: a deterministic remainder rule that does not always
-  favour the top of the list, itemised splitting where different lines of one receipt have different
-  participants, a per-member paid toggle that reaches `markShareSettled` (which has no caller today),
-  and `suggestSettlements` surfaced as accept-able transfers (it likewise has no caller).
+- `MNY-03` partial → **done**. What already works, measured rather than assumed, because an earlier
+  draft of this stage claimed the settle-up flow was missing and it is not:
+
+  - `computeShares` (`src/server/repos/expenses.ts:151`) covers equal, weighted, exact and percentage
+    splits, and `src/components/costs/split-editor.tsx` is its editor.
+  - `suggestSettlements` **has a caller**: `loadCosts` invokes it in the same `Promise.all` as the
+    other five aggregate reads (`src/server/fns/costs.ts:335`, imported at `:33`).
+  - The suggestions are **already rendered as accept-able transfers**: the settle-up panel lists one
+    row per suggested transfer with both avatars, the direction and the amount, and a working
+    `Settle` button (`-costs/rail.tsx:140-170`) whose handler pre-fills the payment dialog with the
+    payer, the payee and the amount (`-costs/screen.tsx:178-187`). `recordPaymentFn` then writes the
+    settlement (`src/server/fns/costs.ts:460-482`).
+
+  So the settle-up surface is not the gap. **Three** things are, and this stage adds exactly those:
+
+  1. **A deterministic remainder rule** that does not always favour the top of the list. Both
+     implementations hand the remainder to the first participants in list order today —
+     `computeShares` (`src/server/repos/expenses.ts:196-204`) and `distribute`
+     (`src/lib/money.ts:391-403`).
+  2. **Itemised splitting**, where different lines of one receipt carry different participants.
+     Nothing in the schema or the editor expresses this today.
+  3. **A per-member paid toggle.** `markShareSettled` (`src/server/repos/expenses.ts:391`) genuinely
+     has no caller — `grep -rn markShareSettled src/` returns its definition and nothing else — so
+     `expense_shares.is_settled` can be read but never written by the product.
+
+  A settlement recorded in a currency other than the trip's is **not** this stage's work either:
+  `recordPaymentFn` hard-codes `currency: trip.currency` (`src/server/fns/costs.ts:470`) today, and
+  `04-S1` is the stage that gives it the source triple `00-S1` adds to `settlements`. This stage
+  inherits that and adds nothing to it.
 
 Sourced from `wiki: Budget-Tracking`.
 
 ### Owned paths
 
-| Path                                                  | Mode   |
-| ----------------------------------------------------- | ------ |
-| `src/lib/money.ts`                                    | edit   |
-| `src/lib/__tests__/money.test.ts`                     | edit   |
-| `src/server/repos/expenses.ts`                        | edit   |
-| `src/server/repos/__tests__/expenses-split.test.ts`   | new    |
-| `src/server/fns/costs.ts`                             | edit   |
-| `src/components/costs/split-editor.tsx`               | edit   |
-| `src/components/costs/payment-dialog.tsx`             | edit   |
-| `src/routes/_app/trips/$tripId/-costs/rail.tsx`       | edit   |
-| `src/server/repos/__tests__/tenant-isolation.test.ts` | append |
-| `e2e/budget-and-currencies.visual.spec.ts`            | append |
+- `src/lib/money.ts` — edit. The one exported remainder helper both sides import.
+- `src/lib/__tests__/money.test.ts` — edit.
+- `src/server/repos/expenses.ts` — edit. `computeShares`, the ticket-line writers and
+  `markShareSettled`'s guard.
+- `src/server/repos/__tests__/expenses-split.test.ts` — new.
+- `src/server/fns/costs.ts` — edit. Ticket lines on the update endpoint, and the paid toggle.
+- `src/components/costs/split-editor.tsx` — edit. Ticket mode and the three-state chip.
+- `src/routes/_app/trips/$tripId/-costs/expense-list.tsx` — edit. The quiet line already prints the
+  reader's own share (`expense-list.tsx:167-170`); it gains the marker that says when that share is
+  recorded as paid.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
+- `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
+
+`src/components/costs/payment-dialog.tsx` and `-costs/rail.tsx` were on an earlier draft of this list
+and are **not** claimed: the accept-a-suggestion path they would have carried already exists and
+works, and a stage does not take a file it has no edit to make in. `src/server/repos/expenses.ts`
+and `src/server/fns/costs.ts` are held by `00-S1` and `00-S2` (`00-foundations.md`, wave 0) and by
+`04-S1` (wave 1) and `04-S3` (wave 2); this stage is wave 3 and is the last of the four, so no claim
+is a same-wave one.
 
 ### Data and migration
 
@@ -1455,9 +1650,7 @@ off the expense id, so the extra unit lands on a different traveller from receip
 of always on whoever sorts first; over a trip nobody is systematically overcharged, and the result is
 still a pure function of stored data, so a re-render and a re-read agree.
 
-Today's implementations both hand the remainder to the first participants in list order —
-`computeShares` (`src/server/repos/expenses.ts:196-204`) and `distribute`
-(`src/lib/money.ts:391-403`). Both are changed to the rule above, in the same commit, from **one**
+Both of today's implementations are changed to the rule above, in the same commit, from **one**
 exported helper in `src/lib/money.ts` that the repository imports, so the preview under the editor
 and the rows that get written can never disagree. `exact` splits keep bypassing the rule entirely and
 keep being validated to sum to the total.
@@ -1470,9 +1663,11 @@ keep being validated to sum to the total.
   server, never accepted from the client.
 - Ticket lines are written and replaced inside one `db.batch()` with the shares they imply, so a
   receipt is never half-itemised.
-- `markShareSettled` gains its first caller, and `suggestSettlements` gains its second. Neither
-  function is rewritten — they are correct and unreached, which is a wiring problem rather than a
-  code problem.
+- `markShareSettled` gains its first caller and is not rewritten: it is correct and unreached, which
+  is a wiring problem rather than a code problem. `suggestSettlements` is **not** touched at all — it
+  is already called by `loadCosts` and already rendered as accept-able transfers — but its input
+  changes, because the balances it greedily matches are now netted from shares produced by the
+  corrected remainder rule. That is why its output is asserted below rather than assumed stable.
 - The settle-up read converts exactly once: balances net in the trip's accounting currency, and the
   reader's display currency is applied to the netted figure at the end. A regression test covers a
   non-`EUR` trip currency holding a foreign-currency expense, which is the case a hard-coded base
@@ -1482,11 +1677,13 @@ Every query keeps starting from `tenantFilter()`; `requireTrip()` re-resolves th
 write; a participant id from the client is checked against the trip's own membership inside the
 scope, because a well-formed user id is not a member of this trip.
 
-**Server functions — `src/server/fns/costs.ts` (edit).** `updateExpenseFn` accepts ticket lines;
-`markSharePaidFn` (new, `method: 'POST'`) toggles a share's settled flag; `acceptSuggestionFn` (new,
-`method: 'POST'`) records a settlement from a suggested transfer, carrying the source currency and
-frozen rate `04-S1` established. All mirror to the trip room under the existing `expense` kind — no
-new patch kind, so `src/server/do/protocol.ts` is untouched.
+**Server functions — `src/server/fns/costs.ts` (edit).** Two changes and no more. `updateExpenseFn`
+accepts ticket lines, and `markSharePaidFn` (new, `method: 'POST'`) toggles a share's settled flag.
+**No accept-a-suggestion endpoint is added**: `recordPaymentFn` already records the settlement a
+suggestion becomes, the `Settle` button already pre-fills it, and a second endpoint for the same
+write would be a second source of truth for what a settlement is. Both changes mirror to the trip
+room under the existing `expense` kind — no new patch kind, so `src/server/do/protocol.ts` is not an
+owned path of this stage.
 
 **Zod (v4).** `z.strictObject()` with `error`; ticket lines as a bounded array (at most 50) of
 `{ label, amountMinor, participants }` with `participants` a non-empty unique id array; a refinement
@@ -1499,9 +1696,11 @@ is shape; membership and permission are decided in the handler and the repositor
 
 **Components.** Reused: `Avatar` and `AvatarStack`, `Chip` (the participant chips), `Checkbox`,
 `Input`, `Select`, `Button`, `IconButton`, `Badge`, `Progress`, `Separator`, `Tooltip`, `Alert`,
-`EmptyState`, `Skeleton`, `Dialog`. Edited in place: `split-editor.tsx` gains the ticket mode,
-`payment-dialog.tsx` gains the accept-a-suggestion path, `rail.tsx` gains the accept affordance on
-each suggested transfer.
+`EmptyState`, `Skeleton`. Edited in place, and only these two: `split-editor.tsx` gains ticket mode
+and the three-state participant chip, and `expense-list.tsx` gains the marker that says a share is
+recorded as paid. The settle-up panel in `-costs/rail.tsx` and `payment-dialog.tsx` are **left
+alone** — they already do their job, and the shortest way to make a finished surface worse is to
+rebuild it for a stage that had no change to make to it.
 
 **Three interaction rules worth fixing in the plan.**
 
@@ -1518,15 +1717,19 @@ each suggested transfer.
 **States.**
 
 - _Empty_ — a trip with one member renders the split editor as a single explanatory line rather than
-  a picker with one option; the settle-up panel with nothing outstanding renders an `EmptyState` on
-  `--color-surface-2` reading "Everyone is square", which is a result and not an absence.
-- _Skeleton_ — the settle-up panel's rows are `Skeleton` lines at final height inside the existing
-  rail card, so accepting a transfer does not make the panel jump.
+  a picker with one option; ticket mode with no lines yet renders an `EmptyState` on
+  `--color-surface-2` offering the first line inline. The settle-up panel's own empty state already
+  exists and already reads as a result rather than an absence (`-costs/rail.tsx:128-138`); this stage
+  does not touch it.
+- _Skeleton_ — the ticket-line list renders `Skeleton` lines at final height while a re-opened
+  expense's lines load, so the editor does not grow under the reader's cursor. The screen-level
+  skeleton is `CostsSkeleton`, which this stage does not own and does not need to change: no surface
+  it ships adds a line to the resting screen.
 - _Error_ — an unbalanced custom split blocks the save and names the difference; a failed paid-toggle
-  reverts the chip and raises a `sonner` toast with a retry; a failed settlement keeps the dialog
+  reverts the chip and raises a `sonner` toast with a retry; a rejected ticket line keeps the editor
   open with its values intact.
-- _Loading_ — the accepting transfer row is `aria-busy` with its button `loading`; the other rows
-  stay interactive, because clearing three debts should not be three modal waits.
+- _Loading_ — the chip being toggled is `aria-busy` with its control `loading`; the other chips stay
+  interactive, because marking three shares should not be three modal waits.
 
 **Tokens.** None missing. 4px grid from `--space-*`; the paid state is carried by
 `--color-success` plus a shape change, never by colour alone; dark re-declares its own shadows.
@@ -1534,9 +1737,9 @@ Motion: a cleared transfer leaves with a 150ms opacity and transform exit on `--
 the list re-flows without animating layout properties; all of it collapses under
 `prefers-reduced-motion: reduce`.
 
-`font-variant-numeric: tabular-nums` on every share, every balance, every suggested transfer amount,
-every ticket line and the running difference in the custom mode — that last one changes on every
-keystroke and is the single most jitter-prone figure on the screen.
+`font-variant-numeric: tabular-nums` on every share, every ticket line, every per-participant sum and
+the running difference in the custom mode — that last one changes on every keystroke and is the
+single most jitter-prone figure on the screen.
 
 ### Quota
 
@@ -1551,15 +1754,16 @@ test.
 ### Tenant isolation test
 
 Appended as its own `describe` block. In A's scope: read, list, update and delete B's ticket lines by
-id; add a ticket line to B's expense; toggle the paid flag on B's expense share; accept a settlement
-suggestion computed for B's trip; and record a settlement between two of B's members. Every one is a
-`NotFoundError`, and B's expense, share, ticket-line and settlement rows are byte-identical
-afterwards. Then the crossing case: add a ticket line to one of A's expenses naming one of B's users
-as a participant — rejected, because a participant must be a member of the trip resolved in the
-caller's scope, and a well-formed foreign user id is not one.
+id; add a ticket line to B's expense; and toggle the paid flag on B's expense share. Every one is a
+`NotFoundError`, and B's expense, share and ticket-line rows are byte-identical afterwards. Then the
+crossing case: add a ticket line to one of A's expenses naming one of B's users as a participant —
+rejected, because a participant must be a member of the trip resolved in the caller's scope, and a
+well-formed foreign user id is not one. `suggestSettlements` is asked, in A's scope, for B's trip and
+answers `NotFoundError`; it is covered here rather than changed, because this stage moves the
+balances it reads.
 
-Functions covered: `computeShares`, `setExpenseShares`, `markShareSettled`, `suggestSettlements`,
-`createSettlement` and the new ticket-line writers in `src/server/repos/expenses.ts`.
+Functions covered: `computeShares`, `markShareSettled`, `suggestSettlements` and the new ticket-line
+writers in `src/server/repos/expenses.ts`.
 
 ### Verification
 
@@ -1580,9 +1784,13 @@ Functions covered: `computeShares`, `setExpenseShares`, `markShareSettled`, `sug
   client preview for identical inputs, byte for byte; a ticket expense's total equals the sum of its
   lines and a client-supplied total is ignored; per-line participants produce per-participant sums
   that add back to the receipt total exactly; a percentage split still has to add to 100; an exact
-  split still has to balance; `markShareSettled` moves nothing in the balances, because a paid flag
-  records that a debt was cleared outside the ledger rather than changing the arithmetic; and
-  `suggestSettlements` clears every balance to zero in at most `members − 1` transfers.
+  split still has to balance; `markShareSettled` moves nothing in the balances, which is a
+  property of the code rather than a wish — `getMemberBalances` sums `expense_shares.share_minor`
+  with no predicate on `is_settled` (`src/server/repos/expenses.ts`), so a paid flag records that a
+  debt was cleared outside the ledger without changing the arithmetic, and the test pins that so a
+  later stage cannot make the flag load-bearing by accident; and `suggestSettlements`, whose input
+  this stage moves, still clears every balance to zero in at most `members − 1` transfers under the
+  new remainder rule.
 - The non-`EUR` regression: a trip whose accounting currency is not `EUR`, holding one
   foreign-currency expense, produces the same balances whether the reader's display currency is the
   trip's own or another — proof that netting happens in the accounting currency and conversion
@@ -1593,16 +1801,19 @@ Functions covered: `computeShares`, `setExpenseShares`, `markShareSettled`, `sug
 - Route: `/trips/$tripId/costs`. Frame set: light and dark at **360px, 1280px and 2560px** at rest.
 - **Declared non-resting states**, because every one of them is the point of the row: the split
   editor in ticket mode with two lines and different participants on each, reached by `--click` on
-  `[data-part="split-mode-ticket"]`, framed as `--state ticket`; a participant chip in its paid
-  state, framed as `--state chip-paid`; and the settle-up panel with a transfer mid-accept, reached
-  by `--click` on `[data-part="settle-accept"]`, framed as `--state settling`. Each selector is a
-  stable `data-part` attribute this stage ships and each is verified with
-  `page.locator(sel).count()` against a running server before capture.
+  `[data-part="split-mode-ticket"]`, framed as `--state ticket`; and a participant chip in its
+  included-and-paid state, reached by `--click` on `[data-part="share-paid-toggle"]`, framed as
+  `--state chip-paid`. Each selector is a stable `data-part` attribute this stage ships and each is
+  verified with `page.locator(sel).count()` returning 1 against a running server before capture. The
+  settle-up panel is **not** a declared state of this stage: it already renders its transfers and its
+  `Settle` button at HEAD, this stage changes neither, and photographing a surface a stage did not
+  touch is evidence about somebody else's work.
 - The unbalanced-custom-split error is reached by typing an unbalanced value, not by mocking.
 
 **Console must be silent**, asserted through `watchConsole` in every test of the block. **No layout
-shift after paint**: init-script observer, mark after `settle()`, then switch split modes and accept
-a transfer, assert `0` after the mark, gated on `supportedEntryTypes` with the WebKit skip stated.
+shift after paint**: init-script observer, mark after `settle()`, then switch split modes, add a
+ticket line and toggle a share paid, assert `0` after the mark, gated on `supportedEntryTypes` with
+the WebKit skip stated.
 
 ### Definition of done
 
@@ -1611,10 +1822,10 @@ suppressions; new logic tested and `pnpm test` passing; verified in a real brows
 desktop and mobile; nothing left behind; no file outside **Owned paths** touched.
 
 - [ ] Spacing on the 4px grid from `--space-*`, no eyeballed one-off margins.
-- [ ] Hover, focus-visible, active, disabled and loading on every chip, every line control, the paid
-      toggle and every accept button.
-- [ ] Designed empty, skeleton and error states for the ticket-line list and the settle-up panel,
-      each on `--color-surface-2`.
+- [ ] Hover, focus-visible, active, disabled and loading on every chip, every ticket-line control and
+      the paid toggle.
+- [ ] Designed empty, skeleton and error states for the ticket-line list, each on
+      `--color-surface-2`.
 - [ ] Motion 150–260ms on `--ease-out-quint` or a sibling, transform and opacity only,
       `prefers-reduced-motion: reduce` honoured.
 - [ ] Light and dark parity with dark shadows re-declared; the paid state legible in both without
@@ -1622,17 +1833,18 @@ desktop and mobile; nothing left behind; no file outside **Owned paths** touched
 - [ ] 360px → 2560px, where the ticket editor is a designed vertical form on small rather than a
       compressed grid.
 - [ ] Keyboard navigable end to end — including adding a line, assigning its participants and
-      accepting a transfer — with sensible focus order, accessible names and WCAG 2.2 AA contrast in
+      toggling a share paid — with sensible focus order, accessible names and WCAG 2.2 AA contrast in
       both themes.
 - [ ] Zero console errors or warnings, and zero layout shift after paint.
-- [ ] `tabular-nums` on every share, balance, transfer, ticket line and the running difference.
+- [ ] `tabular-nums` on every share, ticket line, per-participant sum and the running difference.
 
 ### Blockers
 
-None. The settlement source columns this stage writes land in wave 0 (`00-S1`); the rate that fills
-them is resolved through `src/server/repos/rates.ts` exactly as `04-S1` established, and a settlement
-in the trip's own currency needs no rate at all. No package outside the pinned set, no binding, no
-third-party service.
+None. This stage writes no settlement column and needs no rate: the settlement source triple lands
+in wave 0 (`00-S1`) and is written by `04-S1` in wave 1, both of which close before wave 3 opens. Its
+one schema requirement — the `expense_ticket_lines` table and the fifth `split_method` value — is
+filed above to the schema stage of the wave that closes before this one. No package outside the
+pinned set, no binding, no third-party service.
 
 ## Stage 04-S7 — Turn a chosen rate provider on behind the seam that already exists
 
@@ -1658,22 +1870,22 @@ Four rows across three other plans wait on the same decision and become buildabl
 
 ### Owned paths
 
-| Path                                                  | Mode   |
-| ----------------------------------------------------- | ------ |
-| `src/server/repos/rates.ts`                           | edit   |
-| `src/server/repos/__tests__/rates.test.ts`            | edit   |
-| `src/server/repos/__tests__/tenant-isolation.test.ts` | edit   |
-| `e2e/budget-and-currencies.visual.spec.ts`            | append |
+- `src/server/repos/rates.ts` — edit. One implementation of the port `04-S1` defined.
+- `src/server/repos/__tests__/rates.test.ts` — edit.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append. Its own new `describe` block for
+  the cache-key rule below, editing none of the existing ones.
+- `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
 
 Deliberately small. `04-S1` builds the port, the cache, the refusal path and every surface that
 consumes a rate; this stage supplies one implementation of the port. If landing a provider requires
 more than these four files, the seam `04-S1` built was wrong and that is the finding, not the
 workaround.
 
-The isolation suite is marked `edit` rather than `append` because this stage extends the block
-`04-S1` wrote instead of adding one of its own, and `00-foundations.md` is explicit that a stage
-changing an existing block takes the file exclusively for its wave. This stage has no wave until its
-decision is taken, so whichever wave it lands in must have no other claimant on that file.
+The isolation suite is `append`, not `edit`: the case this stage owns is the cache-key rule, which is
+its own subject and its own block, so it never edits the block `04-S1` wrote. That matters more here
+than elsewhere, because this stage has **no wave** until its decision is taken and an exclusive claim
+by an unscheduled stage cannot be checked against anything — `check-plan-collisions.mjs` groups every
+wave-less stage together and can only report that it could not check them.
 
 ### Data and migration
 
@@ -1731,10 +1943,7 @@ published number is the enforced number.
 
 ### Tenant isolation test
 
-Extends the block `04-S1` added to `src/server/repos/__tests__/tenant-isolation.test.ts` rather than
-adding a second one for the same repository — which is the one direction the append-only exception
-does not cover, so this stage takes that file exclusively for its run and names it under **Owned
-paths** above. The case
+Appended as its own `describe` block, editing none of the blocks `04-S1` wrote. The case
 this stage owns is the cache-key rule: a rate fetched in A's scope is served from cache to B, which
 is correct and asserted as correct; and no key the module can construct contains a trip id, a member
 id or any other tenant value, asserted by exercising the key builder rather than by reading it.
@@ -1795,3 +2004,92 @@ package is installed — the freeze covers `package.json` and `pnpm-lock.yaml` a
 
 Until then `04-S1`'s shipped behaviour stands on its own: the reader supplies the rate their receipt
 shows, the workspace remembers the last rate used for that pair, and nothing is ever invented.
+
+## Cross-plan collisions
+
+Two stages in the same wave that both take an exclusive disposition — `edit`, `new`, `create`,
+`delete` — on one file clobber each other, because the runs that execute them go in parallel.
+`append` is the documented cooperative pattern and is not a collision. This is checked with a script
+rather than by reading the sibling plans, because a plan can only read the siblings that existed when
+it was written, and a judgement that has to be re-made by hand every round is eventually made wrong.
+
+```sh
+node scripts/ultrabuild/check-plan-collisions.mjs 04
+```
+
+Output, pasted whole:
+
+```
+plans 7 · stages 37 · owned paths 204
+
+5 stage(s) state no parseable wave and cannot be checked: 04-S7 11-S1 11-S2 11-S3 04-S2
+
+no same-wave exclusive collisions
+
+touched by more than one plan in different waves (2) — legal; each plan must name the other:
+  src/server/repos/expenses.ts
+      00-foundations.md  00-S1  wave 0  (edit)
+      04-budget-and-currencies.md  04-S1  wave 1  (edit)
+      04-budget-and-currencies.md  04-S3  wave 2  (edit)
+      04-budget-and-currencies.md  04-S6  wave 3  (edit)
+  src/server/fns/costs.ts
+      00-foundations.md  00-S2  wave 0  (edit)
+      04-budget-and-currencies.md  04-S1  wave 1  (edit)
+      04-budget-and-currencies.md  04-S3  wave 2  (edit)
+      04-budget-and-currencies.md  04-S6  wave 3  (edit)
+```
+
+### Reading it, line by line
+
+**No same-wave exclusive collision involves this plan.** That is the result the check exists for, and
+it was not free: reaching it changed two stages.
+
+- `04-S2` no longer names `src/server/do/protocol.ts`. The check found `07-S1`
+  (`07-collaboration-and-sharing.md`) holding that module exclusively **in the same wave**, and two
+  stages adding an entity kind to one module in parallel corrupt each other. `04-S2` now mirrors
+  category writes under the existing `trip` entity kind, on the precedent at
+  `src/server/fns/costs.ts:478-480`, and declares no kind at all.
+- `04-S5` no longer puts a module in `src/components/costs/`. `04-S4`, in the same wave, holds
+  `src/components/costs/index.ts` — the barrel every consumer of that directory imports through — so
+  a new module there would either have been unreachable or would have needed a second claim on the
+  barrel. The dialog is route-local instead, at
+  `src/routes/_app/trips/$tripId/-costs/currency-rebase-dialog.tsx`, and has exactly one caller.
+
+**Both cross-wave paths are named in their owning stages, with the sibling stage id**, which is what
+the rule asks for:
+
+- `src/server/repos/expenses.ts` — held by `00-S1` in wave 0 and named as such under **Owned paths**
+  in `04-S1`, `04-S3` and `04-S6`. `00-S1` closes before wave 1 opens, so every stage in this file
+  starts from its landed edit rather than from HEAD.
+- `src/server/fns/costs.ts` — held by `00-S2` in wave 0, named the same way in the same three stages.
+
+**The two wave-less lines are not this plan's stages failing to state a wave.** The check reports
+`04-S7` and `04-S2` among five. `04-S7` is this file's, and it is unscheduled on purpose: it cannot
+be given a wave until the provider decision in `11-boundaries-and-blockers.md` (`11-S3`) is taken,
+which is stated in its **Stage id** and argued in its **Blockers**. The `04-S2` in that list is
+**not** this file's `04-S2`, which states `Wave 1` and parses: it is the illustrative
+`## Stage 04-S2` heading inside the code fence at `12-verification-protocol.md:26`, which the script
+reads as a stage because it cannot tell a fenced example from a real heading. `11-S1`, `11-S2` and
+`11-S3` belong to the register plan and are outside this file's ownership. Every one of this file's
+scheduled stages states its wave in its `### Stage id` line, in the form the script parses:
+
+| Stage   | Wave        | Effort |
+| ------- | ----------- | ------ |
+| `04-S1` | 1           | L      |
+| `04-S2` | 1           | L      |
+| `04-S3` | 2           | M      |
+| `04-S4` | 2           | M      |
+| `04-S5` | 2           | M      |
+| `04-S6` | 3           | M      |
+| `04-S7` | unscheduled | S      |
+
+**One thing the output cannot tell anyone, said here instead.** The header counts are a snapshot of a
+set that two other runs were still writing: `09-account-and-settings.md` appeared during this run,
+and `01-trips-core.md` and `07-collaboration-and-sharing.md` both grew between two invocations
+minutes apart. So `plans 7 · stages 37 · owned paths 204` will not reproduce exactly, and it is not
+the part that matters. The two findings under it are properties of **this** file's ownership —
+nothing this plan claims exclusively is claimed by a sibling in the same wave, and the two paths it
+shares across waves are named in the stages that own them — and those hold until a sibling changes
+what it claims. The stage that executes any part of this file re-runs the script first, reads the
+same three things, and treats a new same-wave line as a blocker rather than a note. That re-run is
+part of this plan's gate, not an optional courtesy.

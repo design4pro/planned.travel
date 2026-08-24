@@ -47,11 +47,18 @@ under an explicit no-regression obligation rather than replacing it.
 | `TRP-05` | absent     | `01-S5`             | 2    | partial — deferral stated in `01-S5` |
 | `TRP-11` | absent     | `01-S6`             | 4    | done                                 |
 | `TRP-01` | partial    | `01-S7`             | 5    | done                                 |
-| `TRP-02` | partial    | `01-S8`             | 5    | done                                 |
+| `TRP-02` | partial    | `01-S8`             | 5    | partial — deferral stated in `01-S8` |
 | `TRP-06` | partial    | `01-S9`             | 5    | done                                 |
 | `TRP-04` | partial    | `01-S10`            | 6    | done                                 |
 
 Ten stages, eleven rows. `01-S4` carries two: the row it closes and the row it must not break.
+
+**Two rows land partial rather than done, and both say so in one place each.** `TRP-05` keeps its
+currency converter and `TRP-02` keeps its stock-photo cover search, and each of those two capabilities
+waits on a commercial decision nobody has taken — a rate source for the first, an image provider for
+the second. Each deferral is written out under its stage's **Blockers** with the same four things: the
+capability, why it cannot be built today, the stage id it is deferred to, and that stage's target
+wave. Nothing else in either row is deferred, and no other row in this file lands anywhere but done.
 
 **Two stages sit later than the row's wave in `README.md`, and neither is a change to the wave
 table.** That column is the earliest wave a row _may_ start in, derived mechanically from
@@ -102,7 +109,8 @@ path must exist before a merged timeline can order notes among places. This plan
 a split of work, not merely as a wave order:
 
 - **`01-S2` (wave 1) ships the record and the write path first.** The note gains its optional detail
-  column, its validated icon, its optional time and its three server functions. Repositioning inside
+  column, its validated icon, its optional time, the restricted markdown subset that renders the
+  detail, and a server module of its own carrying one read and four writes. Repositioning inside
   `01-S2` is **notes among notes only**, through explicit up/down controls that rewrite
   `day_notes.sort_order` for one day. Nothing in `01-S2` touches `src/components/planner/ordering.ts`.
 - **`01-S4` (wave 2) ships the merged ordering second.** The day becomes one sequence in which a note
@@ -149,7 +157,7 @@ reading would build something that already exists or miss something that does no
    rows already read as one, and asks wave 0 for a **new nullable `detail` column** for the long
    text. The opposite mapping would need `body` to become nullable, which is a narrowing change and
    is forbidden by the migration ritual.
-4. **`createDayNote` accepts a day from another tenant.** `src/server/repos/days.ts:216-226` parses
+4. **`createDayNote` accepts a day from another tenant.** `src/server/repos/days.ts:229-237` parses
    its input and inserts, calling neither `requireTrip` nor `requireTripDay` — unlike every
    comparable writer, e.g. `addTripMember` (`src/server/repos/trips.ts:428-434`) and
    `createShareLink` (`:497-503`). Because `createTenantRepository().insert` stamps the **caller's**
@@ -168,16 +176,43 @@ shorthand elsewhere as `-ui/plan-screen.tsx`, `-ui/plan-actions.tsx`, `-ui/plan-
 carry. Prefixed `$tripId` is a route parameter directory, not a shell variable, and a stage that
 writes it into a command quotes it.
 
-**At most one stage per wave names any of the four.** The schedule below is the whole of it, and a
-stage added later that breaks it is rejected before it is scheduled:
+**At most one stage per wave names any of the four**, counting the stages of every other plan and not
+only this one. The schedule below is the whole of it, and a stage added later that breaks it is
+rejected before it is scheduled:
 
-| Wave | Stage   | Which of the four it holds                                    |
-| ---- | ------- | ------------------------------------------------------------- |
-| 1    | `01-S2` | `-server/plan.ts`, `-ui/plan-model.ts`, `-ui/plan-screen.tsx` |
-| 2    | `01-S4` | all four                                                      |
-| 5    | `01-S9` | `-ui/plan-screen.tsx`                                         |
+| Wave | Stage                          | Which of the four it holds                 |
+| ---- | ------------------------------ | ------------------------------------------ |
+| 1    | `07-S1` (`07-…`, another plan) | `-server/plan.ts`                          |
+| 1    | `01-S2`                        | `-ui/plan-model.ts`, `-ui/plan-screen.tsx` |
+| 2    | `01-S4`                        | all four                                   |
+| 5    | `01-S9`                        | `-ui/plan-screen.tsx`                      |
 
 No other stage in this file names one, and in waves 3, 4 and 6 nobody holds them at all.
+
+**Wave 1 of `-server/plan.ts` belongs to another plan, and this one yields it.** An earlier draft of
+`01-S2` claimed `-server/plan.ts` as `edit` in wave 1, and so does `07-S1` of
+`07-collaboration-and-sharing.md`, which adds a room-mirror call after each of the module's eight
+writers. `node scripts/ultrabuild/check-plan-collisions.mjs 01` reported that pair as a same-wave
+exclusive collision — the clobbering case **Owned paths** exists to prevent, because the two stages
+are built concurrently and the second one to write the file drops the first one's work. The
+resolution is this plan's, because the other plan's file is not ours to edit:
+
+- `01-S2` does **not** name `-server/plan.ts`. Its four writes and its one read live in a new sibling
+  module, `src/routes/_app/trips/$tripId/-server/day-notes.ts`, and the planner's route file composes
+  the two loaders. A note is a record of its own with its own tenant guards, so a module of its own is
+  where it would have gone had the collision never existed; the collision only forced the decision
+  earlier.
+- `loadPlanBoard` keeps projecting its three-field note shape for exactly one wave, unread by anything
+  once `01-S2` lands, and `01-S4` deletes that projection in wave 2 as part of the merged read. `01-S4`
+  is the stage that owns `-server/plan.ts` next, so the removal costs no extra claim on it.
+- `01-S4` inherits the file from `07-S1` rather than from `01-S2`, which makes one obligation
+  explicit: **`reorderPlanFn` gains its item-kind vocabulary without losing the mirror call `07-S1`
+  put there.** Widening a function whose body a wave-1 stage of another plan has already edited is
+  precisely where that call would be silently dropped, and `01-S4`'s Verification carries the case.
+
+The check is a measurement, not a judgement: the script's current output is pasted verbatim under
+**Cross-plan collisions** at the end of this file, and a stage that changes an **Owned paths** list
+re-runs it.
 
 ## Two test files, two different answers to the same question
 
@@ -187,7 +222,7 @@ one somebody else wrote down rather than one this plan invented.
 **`src/server/repos/__tests__/tenant-isolation.test.ts` is shared, because the contract says it may
 be.** `00-foundations.md`'s tenant procedure records it as "the one append-only exception to
 within-wave disjointness", on the reasoning that almost every stage adds a repository function and
-forcing them into separate waves would serialise the whole build for one file. Four stages here name
+forcing them into separate waves would serialise the whole build for one file. Five stages here name
 it — `01-S1`, `01-S2`, `01-S4`, `01-S6` and `01-S7` — each marked `append`, each adding one new
 `describe` block at the end of the file and editing nobody else's, so two of them landing in one wave
 produce a merge resolved by keeping both. `01-S1` and `01-S2` are the only pair that actually lands in
@@ -275,13 +310,17 @@ Rows unblocked: `TRP-01` (`01-S7`) directly.
   copied; the module keeps its four loaders and its two notification writes. The move carries
   `00-S5`'s reminder scheduling call intact — that wave-0 stage edits this same function, closes
   before wave 1 opens, and its `syncTripReminder(…, { previous: null })` call travels with the
-  function rather than being re-derived.
+  function rather than being re-derived. Three stages touch this module across three waves and no two
+  share one: `00-S5` (`00-foundations.md`, wave 0), this stage in wave 1, and `01-S7` in wave 5.
 - `src/routes/_app/-ui/trip-actions.tsx` — new. The per-trip action menu, the destructive
   confirmations and the edit sheet.
 - `src/routes/_app/-ui/trip-card.tsx` — edit. Mounts the action menu on `TripTile`.
 - `src/routes/_app/-ui/new-trip-dialog.tsx` — edit, and the edit is one import specifier: it calls
   `createTripFn` from its new module.
 - `src/server/repos/trips.ts` — edit. Adds `copyTrip` and the trip-role guard the writers share.
+  Three stages touch this module across three waves and no two share one: this stage in wave 1,
+  `07-S6` (`07-collaboration-and-sharing.md`, wave 2) for the share-link writers, and `01-S6` in
+  wave 4 for the membership guards. Each adds functions; none reshapes one the others call.
 - `src/server/repos/__tests__/trip-lifecycle.test.ts` — new. The stage's own repository tests, in a
   new file so that no wave-1 stage has to contend for `repositories.test.ts`.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block, under the
@@ -565,12 +604,22 @@ another plan gates it.
 
 ### Stage id
 
-`01-S2` · Wave 1 · effort **M**. The first half of the `TRP-08`/`TRP-09` cut: the record and its
-write path, before the merged ordering.
+`01-S2` · Wave 1 · effort **L**. The first half of the `TRP-08`/`TRP-09` cut: the record and its
+write path, before the merged ordering. Recorded as **M** in `gap-rows.json`, and the difference is
+one thing the row's name asks for and the matrix did not price — the note's detail is markdown, no
+markdown renderer is in the dependency set, and `11-boundaries-and-blockers.md` disposes of that gap
+as **hand-roll a restricted subset** owned by the earliest wave-1 stage that needs it. This is that
+stage. The subset is specified under **UI** and bounded under **Blockers**.
 
 ### Reference rows
 
-- `TRP-09` absent → **done**, with one display residue named under **Blockers**.
+- `TRP-09` absent → **done**. Every field the row names ships here: the required headline, the
+  markdown detail rendered through the restricted subset this stage mints, the icon picker, the
+  optional time, a position of the note's own, and repositioning by explicit up and down controls.
+  Two of the row's behaviours — the ordering space shared with places, and drag repositioning inside
+  it — are the second half of the `TRP-08`/`TRP-09` cut and land in `01-S4` in wave 2. That is the
+  cut, not a deferral: it is recorded in `gap-cuts.json`, argued in the Area brief, and the row's
+  status moves once, here.
 
 Sourced from `wiki: Day-Plans-and-Notes` for the note's field set, its icon affordance, its optional
 time and the two ways it is repositioned.
@@ -593,11 +642,21 @@ Rows unblocked: `TRP-08` (`01-S4`) directly.
 
 - `src/server/repos/days.ts` — edit. The two guards, the icon vocabulary, the detail field and the
   note reorder.
-- `src/routes/_app/trips/$tripId/-server/plan.ts` — edit. Three write server functions, and the day
-  payload gains the note's icon and detail.
+- `src/routes/_app/trips/$tripId/-server/day-notes.ts` — new. The note's one read and its four
+  writes. A new module rather than an addition to `-server/plan.ts`, for the reason **The four
+  planner core files** gives: `07-S1` holds `-server/plan.ts` in wave 1.
+- `src/routes/_app/trips/$tripId/plan.tsx` — edit, and the edit is the loader. It resolves the board
+  read and the note read together and hands both to `PlanScreen`; the route's pending component and
+  its error component are untouched. No route is added, moved or renamed, so the generated tree does
+  not change and `pnpm generate-routes` is not a step of this stage.
+- `src/lib/markdown/parse.ts` — new. The restricted markdown subset, as a pure function from text to
+  a typed node tree. No React, no HTML, no string output.
+- `src/lib/markdown/render.tsx` — new. The node tree as a React element tree, token-styled.
+- `src/lib/markdown/__tests__/parse.test.ts` — new.
+- `src/lib/markdown/__tests__/render.test.tsx` — new.
 - `src/routes/_app/trips/$tripId/-ui/plan-model.ts` — edit. The note view model.
 - `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` — edit. Mounts the note editor and wires the
-  three writes; no other part of the screen changes.
+  four writes; no other part of the screen changes.
 - `src/routes/_app/trips/$tripId/-ui/note-dialog.tsx` — new. The note editor.
 - `src/components/planner/note-row.tsx` — new. One note in a day section.
 - `src/components/planner/day-section.tsx` — edit. Renders note rows and the day's add-note control.
@@ -610,11 +669,21 @@ Rows unblocked: `TRP-08` (`01-S4`) directly.
 - `e2e/trips-core-s2.visual.spec.ts` — new. This stage's own spec file.
 - `e2e/__screenshots__/trips-core-s2.visual.spec.ts/` — new. Its own baseline directory.
 
-Three of the four planner core files are named here — `-server/plan.ts`, `-ui/plan-model.ts` and
-`-ui/plan-screen.tsx` — and **this is the only wave-1 stage that names any of the four**, which is the
-schedule the Area brief fixes. `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` is deliberately
-absent: the note editor is a new dialog, not a variant of the place dialog, and adding a fifth dialog
-to an 831-line module to save a file is how that module got to 831 lines.
+Two of the four planner core files are named here — `-ui/plan-model.ts` and `-ui/plan-screen.tsx` —
+and no stage of any plan names either of those two in wave 1 except this one, which is the schedule
+**The four planner core files** fixes.
+
+`src/routes/_app/trips/$tripId/-server/plan.ts` is **not** named, and its absence is the collision
+resolution rather than an oversight: `07-S1` of `07-collaboration-and-sharing.md` claims it as `edit`
+in wave 1 to add its room-mirror calls, and two exclusive claims on one file in one wave clobber each
+other. `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` is absent for a different reason: the note
+editor is a new dialog, not a variant of the place dialog, and adding a fifth dialog to an 831-line
+module to save a file is how that module got to 831 lines.
+
+`src/lib/markdown/**` is new in this stage and claimed by no stage of any plan. Four other rows want
+the same renderer — `EXT-04`, `COL-07`, `ADD-08` and `DOC-06` — and every one of them **imports** this
+module. A second implementation of it, in any plan, is a defect and not a convenience; that is entry 5
+of `11-S2`'s register speaking, not this stage.
 
 ### Data and migration
 
@@ -632,7 +701,7 @@ rebuild is a poor trade for an invariant a Zod enum holds exactly. `icon` keeps 
 `NOT NULL DEFAULT 'sticky-note'` and gains no constraint.
 
 No new index. `day_notes` already carries `day_notes_org_trip_idx` on `(organization_id, trip_id)` and
-`day_notes_day_sort_idx` on `(day_id, sort_order)` (`src/server/db/schema.ts:599-602`), and `detail`
+`day_notes_day_sort_idx` on `(day_id, sort_order)` (`src/server/db/schema.ts:599-600`), and `detail`
 is not a filter. The migration backfills nothing.
 
 Times stay `HH:MM` text and `sort_order` stays `real`, so a fractional insert between two notes needs
@@ -642,7 +711,7 @@ no renumbering pass. No second convention is introduced.
 
 **Repository — `src/server/repos/days.ts`.**
 
-- **The guard, which is a defect fix.** `createDayNote` (`:216-226`) parses and inserts, calling
+- **The guard, which is a defect fix.** `createDayNote` (`:229-237`) parses and inserts, calling
   neither `requireTrip` nor `requireTripDay`. Because `createTenantRepository().insert` stamps the
   caller's `organization_id`, a `dayId` from organization B is written as a row owned by A pointing at
   B's day. This stage adds `await requireTrip(scope, values.tripId)` and
@@ -651,6 +720,15 @@ no renumbering pass. No second convention is introduced.
   before the insert, and the same pair to `updateDayNote` whenever the patch moves a note between
   days. `deleteDayNote` needs neither: `requireRemove` is tenant-filtered and the note's id is its
   own authority.
+- **`requireWritableTripDay(scope, tripId, dayId)`** — new, and the reason it exists is a
+  consequence of the collision. `-server/plan.ts` refuses a write to an archived trip in a
+  module-private `writableTrip` (`:97-106`) which is **not exported**, and exporting it would mean
+  editing a file `07-S1` holds in wave 1. So the same policy gets a repository-level home instead:
+  one function that calls `requireTrip`, refuses `trip.isArchived` with the same message the planner
+  already shows, then calls `requireTripDay`, and returns both rows. It is where the policy belonged
+  anyway — every other authorisation decision in this product is taken in a repository, not in a
+  server function. `-server/plan.ts` is left exactly as it is; `01-S4` owns both modules in wave 2
+  and may fold the private guard into this one, and this stage does not require it to.
 - **The icon vocabulary.** `DAY_NOTE_ICONS`, a `readonly` tuple exported from this module, is the
   single list both the picker and the validator read. Each entry is the kebab-case name of an icon
   that exists in `lucide-react`, which is already a pinned dependency and already how
@@ -667,45 +745,114 @@ no renumbering pass. No second convention is introduced.
   is deliberately the same so that `01-S4` can merge the two number lines without reconciling two
   philosophies.
 
-**Server functions — `src/routes/_app/trips/$tripId/-server/plan.ts`.** Three, each
-`createServerFn({ method: 'POST' })`, each behind the module's existing `writableTrip` guard (`:97-106`)
-so a note cannot be written onto an archived trip:
+**Server functions — `src/routes/_app/trips/$tripId/-server/day-notes.ts`.** One read and four
+writes, every one of them `.validator()`-guarded and one repository call deep, exactly as
+`-server/plan.ts` does it. The writes are `createServerFn({ method: 'POST' })` and each opens with
+`requireWritableTripDay`, so a note cannot be written onto an archived trip or onto another tenant's
+day; the read is `{ method: 'GET' }` and resolves the trip with `requireTrip` before it reads:
 
-| Function            | Input                                              | Returns             |
-| ------------------- | -------------------------------------------------- | ------------------- |
-| `createDayNoteFn`   | `{ tripId, dayId, body, detail, time, icon }`      | `{ noteId }`        |
-| `updateDayNoteFn`   | `{ tripId, noteId, body?, detail?, time?, icon? }` | `{ noteId }`        |
-| `deleteDayNoteFn`   | `{ tripId, noteId }`                               | `{ deleted: true }` |
-| `reorderDayNotesFn` | `{ tripId, dayId, noteIds }`                       | `{ dayId }`         |
+| Function            | Method | Input                                              | Returns             |
+| ------------------- | ------ | -------------------------------------------------- | ------------------- |
+| `loadDayNotes`      | GET    | `{ tripId }`                                       | `PlanNotesPayload`  |
+| `createDayNoteFn`   | POST   | `{ tripId, dayId, body, detail, time, icon }`      | `{ noteId }`        |
+| `updateDayNoteFn`   | POST   | `{ tripId, noteId, body?, detail?, time?, icon? }` | `{ noteId }`        |
+| `deleteDayNoteFn`   | POST   | `{ tripId, noteId }`                               | `{ deleted: true }` |
+| `reorderDayNotesFn` | POST   | `{ tripId, dayId, noteIds }`                       | `{ dayId }`         |
 
-`loadPlanBoard`'s `PlanBoardDay.notes` shape gains `icon` and `detail` alongside the `id`, `body` and
-`time` it already carries (`:140-146`, populated at `:220-224`).
+`PlanNotesPayload` is `{ tripId, notes: ReadonlyArray<PlanNote> }` where `PlanNote` is
+`{ id, dayId, body, detail, time, icon, sortOrder }` — the whole trip's notes in one query, through
+`listTripDayNotes` (`src/server/repos/days.ts:219-227`), which is already ordered by
+`(sort_order, id)` and already tenant-filtered. One query, not one per day: `day_notes` leads
+`day_notes_org_trip_idx` with `organization_id`, so the read is index-bounded and D1 charges for the
+trip's notes rather than for a scan.
 
-**Zod v4.** `z.strictObject()` with the `error` parameter; the module's existing `timeOrBlank`
-(`:72-75`) reused for the time rather than a second regular expression; `z.enum(DAY_NOTE_ICONS)` for
-the icon; blank string clears, `undefined` leaves unchanged.
+**The board's own note projection is not extended, and it is not left to rot.** `loadPlanBoard` keeps
+projecting `{ id, body, time }` at `-server/plan.ts:140-146` for one wave, because that file belongs
+to `07-S1` in wave 1. From the moment this stage lands, nothing reads it — `plan-model.ts` builds
+every note from `PlanNotesPayload` — and `01-S4` deletes the projection in wave 2 as part of the
+merged read, in the stage that owns the file next. That is one wave of a dead field, stated here so it
+is not discovered as a surprise, and it is the whole price of the yield.
 
-**Authorisation.** In the repository. `requireTrip` re-resolves the trip in the caller's scope and
-`requireTripDay` proves the day belongs to it; both raise `NotFoundError` across a tenant boundary. A
-well-formed `dayId` from the browser is not an authorised `dayId`, which is precisely the hole this
-stage closes.
+**Zod v4.** `z.strictObject()` with the `error` parameter; `z.enum(DAY_NOTE_ICONS)` for the icon; a
+blank string clears an optional field and `undefined` leaves it unchanged. The time is a
+blank-tolerant union declared in this module: `-server/plan.ts`'s `timeOrBlank` (`:73-76`) is
+module-private and exporting it would mean editing a file this stage does not own, so the four-line
+union is re-declared rather than reached for. `01-S4` owns both modules and may lift it into a shared
+one; two four-line unions for one wave is the cheaper of the two mistakes available here.
+
+**Authorisation and tenant scoping.** Both decided in the repository, and neither in the server
+function. All SQL this stage adds is in `src/server/repos/days.ts`; the new module under `-server/`
+contains none. Every statement goes through `dayNotesRepository`, built by `createTenantRepository`
+in `src/server/repos/base.ts`, so a read starts from `tenantFilter()` —
+`eq(day_notes.organization_id, scope.ctx.organizationId)`, which a caller can only `AND` onto — and an
+insert has `organization_id` stamped from the scope rather than taken from the payload.
+`requireTrip` re-resolves the trip in the caller's scope and `requireTripDay` proves the day belongs
+to it; both raise `NotFoundError` across a tenant boundary. A well-formed `dayId` from the browser is
+not an authorised `dayId`, which is precisely the hole this stage closes.
 
 Nothing enqueued, no Durable Object patch. A note write invalidates the router like every other
 planner write; the trip room stays a signal.
 
 ### UI (route, components)
 
-**Route.** None added or moved. `pnpm generate-routes` is not run and `src/routeTree.gen.ts` is not an
-owned path.
+**Route.** None added, moved or renamed, so the generated route tree does not change:
+`pnpm generate-routes` is not a step of this stage and `src/routeTree.gen.ts` is not an owned path.
+One existing route file changes, `src/routes/_app/trips/$tripId/plan.tsx`, and only in its `loader`:
+it awaits `loadPlanBoard` and `loadDayNotes` together with `Promise.all` and hands
+`{ board, notes }` to `PlanScreen`. Both are server functions, so both run on the server and neither
+pulls D1 into the browser bundle — the isomorphic-loader rule that makes a direct database call in a
+loader a bug. The second call adds one indexed D1 read to the planner's server render and no
+round trip on the client, because the loader resolves before the route paints.
 
 **Components.** `NoteRow` in `src/components/planner/note-row.tsx` renders one note: the chosen icon
 in a `--color-surface-inset` tile, the headline in the UI face, the optional time in
-`tabular-nums`, the detail in `--color-ink-3` clamped to two lines with the rest behind a disclosure,
-and an actions cluster. `DaySection` renders the run of notes and an add-note control in the day
+`tabular-nums`, the detail rendered through `src/lib/markdown` and clamped to two lines with the rest
+behind a disclosure, and an actions cluster. `DaySection` renders the run of notes and an add-note control in the day
 header. The editor, `NoteDialog` in `-ui/note-dialog.tsx`, reuses `Dialog`, `Field`, `Input`,
-`Textarea`, `Button`, `IconButton`, `Alert` and `Tooltip` from `src/components/ui`, plus a radio
-group of icon buttons built on the shipped `RadioGroup` so the picker is one tab stop with arrow-key
-movement rather than twenty tab stops.
+`Textarea`, `Button`, `IconButton`, `Alert`, `Spinner` and `Tooltip` from `src/components/ui`, plus a
+radio group of icon buttons built on the shipped `RadioGroup` (`src/components/ui/radio-group.tsx`)
+so the picker is one tab stop with arrow-key movement rather than twenty tab stops. Nothing is added
+to `src/components/ui`, which this plan never claims.
+
+**The markdown detail, and the subset it renders.** `TRP-09` says the detail is markdown, no markdown
+parser and no HTML sanitiser is in the pinned dependency set, and
+`11-boundaries-and-blockers.md` disposes of exactly that gap as entry 5 of `11-S2`'s register:
+**hand-roll a restricted subset**, "one implementation under `src/lib/`, owned by the earliest wave-1
+stage that needs it and reused by the other four". `TRP-09` is a wave-1 row and this is its stage, so
+this stage writes it. The subset is entry 5's, copied into work rather than reinterpreted:
+
+- **Block level:** paragraph, heading levels one to three, unordered list, ordered list, fenced code,
+  block quote, thematic break, and a simple pipe table.
+- **Inline:** emphasis, strong, code span, hard break, and a link whose scheme is checked against an
+  `http` / `https` / `mailto` allow-list before it becomes an anchor.
+- **Explicitly not in the subset:** raw HTML pass-through in any form — which is what removes the
+  sanitiser requirement altogether rather than deferring it; images inside a body; reference links;
+  footnotes; autolink literals; nested block quotes.
+- **Shape:** `parse()` in `src/lib/markdown/parse.ts` is pure and returns a readonly node tree with no
+  React in it; `Markdown` in `src/lib/markdown/render.tsx` turns that tree into a React element tree.
+  **Never a string assigned to `dangerouslySetInnerHTML`** — `src/` contains exactly one of those, the
+  theme bootstrap at `src/routes/__root.tsx:95`, and this stage adds none. A serialiser can later walk
+  the same tree for the document export in `DOC-06` rather than parsing twice.
+- **Degradation:** syntax outside the subset renders as its literal characters. Nothing throws, so a
+  note written in a fuller dialect elsewhere is still readable here.
+- **Type-level:** the node tree is a discriminated union, the renderer switches on it exhaustively,
+  and there is no `any` and no cast anywhere in either module.
+
+It is styled from tokens only: `--text-body` and its paired line height for prose, `--color-ink-2`
+for body text and `--color-ink-3` for a block quote's rule, `--color-surface-inset` behind a code
+span and a fenced block, `--radius-sm` on both, `--space-*` for every gap, and `--color-brand` on a
+link with a visible `focus-visible` ring. Both themes are checked, and the code surface gets its own
+dark value rather than an inverted light one. Long content inside a note detail scrolls its own
+container rather than growing the day rail.
+
+`src/lib/markdown` imports nothing from `server/` and fetches no data, so it obeys the same rule as a
+`components/ui` primitive; it lives under `src/lib/` because that is where entry 5 of the register put
+it and because `README.md` reserves `src/components/ui/**` as a shared path no feature stage may
+claim.
+
+The editor writes the raw text and shows what it will look like: `NoteDialog` puts the `Textarea` and
+a live rendered preview side by side above 640px and behind a two-item `Tabs` below it, so a 360px
+viewport is a designed layout rather than two panes crushed together.
 
 **Repositioning in this stage is notes among notes.** Each note carries an up and a down `IconButton`
 that call `reorderDayNotesFn` with the resulting order. The first note's up control and the last
@@ -728,7 +875,10 @@ moves. Drag repositioning and interleaving with stops are `01-S4`'s, and this st
   server's message and a Retry, and a failed reorder rolls the run back to its previous order and
   says so in a toast — the rollback contract `plan-screen.tsx` already applies to `PlanOrder`.
 - _Every control._ Rest, hover, focus-visible, active, disabled and loading, on the add control, the
-  two chevrons, the icon radios, the save and the delete.
+  two chevrons, the icon radios, the detail disclosure, the preview tabs, the save and the delete.
+- _An empty detail._ A note with a headline and no detail renders no empty prose block and no
+  placeholder line — the row is simply one line tall, and the disclosure control is absent rather
+  than present-and-disabled, because there is nothing behind it to disclose.
 
 **Motion.** A note entering the run fades and lifts 4px over 220 ms on `--ease-out-quint`; a run of
 several staggers by 24 ms capped at eight rows. Reordering animates transform only. Reduced motion
@@ -777,15 +927,28 @@ absent, which is the intended coupling.
 
 **Unit tests.**
 
-- `src/server/repos/__tests__/day-notes.test.ts` — new. Four invariants: an icon outside
+- `src/server/repos/__tests__/day-notes.test.ts` — new. Five invariants: an icon outside
   `DAY_NOTE_ICONS` is rejected by the input rather than written; an omitted icon takes the column
   default and a `null` icon is rejected; `reorderDayNotes` renormalises a fractional run to
-  `0..n-1` and drops ids that are not that day's; and a note with a detail round-trips the author's
-  text byte for byte, including newlines, because the display decision under **Blockers** must not be
-  allowed to become a storage decision.
+  `0..n-1` and drops ids that are not that day's; a note with a detail round-trips the author's text
+  byte for byte, including newlines, because a rendering decision must never become a storage
+  decision; and `requireWritableTripDay` refuses an archived trip with the message the planner shows.
+- `src/lib/markdown/__tests__/parse.test.ts` — new. Every block form and every inline form in the
+  subset, one case each, asserted against the node tree rather than against a string. Then the four
+  that matter more than the happy path: a `javascript:` link and a `data:` link survive as literal
+  text and never become an anchor; a raw `<script>` in the source is text, not a node; unclosed
+  emphasis and a half-written table degrade to their literal characters without throwing; and a
+  10 000-character body parses within the test's default timeout, so a long note cannot become a
+  render stall.
+- `src/lib/markdown/__tests__/render.test.tsx` — new. The tree renders the expected elements; an
+  allow-listed link is an `<a>` carrying `rel="noreferrer noopener"`; a disallowed one is plain text;
+  the rendered subtree contains no `dangerouslySetInnerHTML` — asserted by rendering a body full of
+  markup and querying for the element that markup would have produced, which must not exist; and a
+  heading level three is an `<h3>` so the note's prose does not outrank the day it sits in.
 - `src/components/planner/__tests__/notes.test.tsx` — new. `NoteRow` disables the up control on the
   first note and the down control on the last; the icon radio group is one tab stop and moves with
-  arrow keys; the detail disclosure is a real `button` with an accessible name.
+  arrow keys; the detail disclosure is a real `button` with an accessible name; and a note with no
+  detail renders no disclosure at all.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
 `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes out
@@ -795,8 +958,13 @@ stage's own baselines and nobody else's — against `e2e/trips-core-s2.visual.sp
 and `settleMap()` fails a route that renders the marker without declaring it — and calls
 `auditServerClock` over its own route table.
 
-Frames: the planner at 360, 1280 and 2560 in both themes for the resting screen, and a declared
-non-resting set for the editor, whose open state is the entire point of the stage:
+Frames: the planner at 360, 1280 and 2560 in both themes for the resting screen, and **two** declared
+non-resting sets, because the two states this stage exists to add are both invisible at rest — the
+editor with its live preview, and a note's expanded detail in the day rail:
+
+`scripts/ultrabuild/capture.mjs` takes **one** `--state` and one `--click` per run — `opt.state` is a
+single string at `:102` and `opt.click` a single selector at `:222` — so this is two invocations and
+not one with two flags, and each writes its own `<state>-` prefixed frames into the same directory:
 
 ```sh
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
@@ -804,10 +972,21 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S2" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
   --state note-editor --click '[data-part="day-add-note"]'
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/<seeded-trip-id>/plan" \
+  --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S2" \
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
+  --state note-detail --click '[data-part="note-disclosure"]'
 ```
 
-`[data-part="day-add-note"]` and `[data-part="note-row"]` are stable published attributes and each is
-verified with a `page.locator(sel).count()` against the running server before the capture runs. The
+The seeded note the second state opens carries a detail exercising every block form in the subset —
+a heading, a list, a quote, a fenced block, a rule and a table — so the frame the critic judges shows
+the renderer doing its whole job rather than one paragraph.
+
+`[data-part="day-add-note"]`, `[data-part="note-row"]` and `[data-part="note-disclosure"]` are stable
+published attributes and each is verified with a `page.locator(sel).count()` against the running
+server before the capture runs. The
 `--map` flag is not optional on this route: it re-waits for the two-sided `[data-map-ready]` predicate
 after every resize and every theme change, and without it a frame is filed mid-restyle.
 
@@ -844,26 +1023,43 @@ On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this 
 
 ### Blockers
 
-**One, and it is a display residue rather than a stop.** The note's detail is described upstream as
+**One missing package, and the register already decided what happens to it.** The note's detail is
 markdown. Measured against `package.json`: the pinned dependency set contains **no markdown parser and
 no HTML sanitiser** — the runtime dependencies are `@dnd-kit/*`, `@tanstack/*`, `better-auth`,
 `class-variance-authority`, `clsx`, `date-fns`, `drizzle-orm`, `lucide-react`, `maplibre-gl`,
 `motion`, `nanoid`, `partysocket`, `pmtiles`, `radix-ui`, `react`, `sonner`, `stripe`,
-`tailwind-merge`, `tailwindcss`, `vaul` and `zod`, and `src/` contains exactly one
+`tailwind-merge`, `tailwindcss`, `vaul` and `zod`. Measured in `src/`: exactly one
 `dangerouslySetInnerHTML`, the theme bootstrap script at `src/routes/__root.tsx:95`.
 
-- **What it would do:** render emphasis, links and lists inside a note's detail.
-- **Disposition: defer**, recorded in `11-boundaries-and-blockers.md`. Not **hand-roll**: a renderer
-  without a sanitiser turns a tenant-authored field into stored cross-site scripting, and writing our
-  own sanitiser is a security component, not a stage. Not **drop**: the requirement is real and the
-  column this stage adds is exactly the one a renderer would later read.
-- **What ships instead:** the detail is stored unchanged, byte for byte including newlines — held by
-  a unit test above — and displayed as plain text with line breaks preserved and URLs left as text.
-  Nothing about the record, the write path, the icon, the time or the ordering is affected, so every
-  behaviour `TRP-08` depends on is complete.
+- **Missing capability:** a markdown parser, and the HTML sanitiser any parser that passes raw HTML
+  through obliges.
+- **Verdict, `docs/SPEC.md` §3:** stop and report, do not install. No package is added, and neither
+  `package.json` nor `pnpm-lock.yaml` is edited by this stage or by any other in this file.
+- **Disposition: hand-roll a restricted subset.** This is entry 5 of the register in
+  `11-boundaries-and-blockers.md` (`11-S2`), which lists `TRP-09` first among the five rows it blocks
+  and assigns the implementation to "the earliest wave-1 stage that needs it". That is this stage, so
+  the subset is **built here**, not deferred: `src/lib/markdown/parse.ts` and
+  `src/lib/markdown/render.tsx`, specified in full under **UI** and tested under **Verification**.
+- **Why hand-rolling is safe here and would not be with a parser.** The sanitiser exists to clean the
+  raw HTML a general parser lets through. This subset passes **no** raw HTML at all and emits a React
+  element tree rather than a string, so there is no HTML to clean and no
+  `dangerouslySetInnerHTML` anywhere in the path. The one remaining injection surface is a link's
+  scheme, and it is closed by an allow-list of `http`, `https` and `mailto` with everything else
+  rendered as literal text. That is a smaller, provable security surface than the one a parser plus a
+  sanitiser would create — which is why the register chose it.
+- **The bound, restated so this stage cannot quietly grow:** what is in the subset and what is not is
+  entry 5's list, reproduced under **UI**. A syntax outside it renders as its own characters. This
+  stage does not add images, reference links, footnotes, autolink literals, nested block quotes or
+  raw HTML, and a later stage that wants one of them argues it against the register rather than
+  against this file.
+- **Reuse, not re-implementation.** `EXT-04`, `COL-07`, `ADD-08` and `DOC-06` import this module. The
+  register is explicit that a second implementation is a defect, and the export surface is kept
+  deliberately small — `parse`, `Markdown`, and the node types — so that consuming it is easier than
+  writing another one.
 
-`docs/SPEC.md` §3 is absolute: no package is installed, and neither `package.json` nor
-`pnpm-lock.yaml` is edited by this stage or by any other in this file.
+Nothing else blocks this stage: no binding is added to `wrangler.jsonc`, no third-party service is
+called, and the only other plan it waits on is the wave-1 foundations schema stage for the `detail`
+column.
 
 ## Stage 01-S3 — A trip reopens on the tab you left it on
 
@@ -1096,21 +1292,43 @@ Rows unblocked: `BKG-10` (`03-…`, wave 3) directly; `TRP-06` (`01-S9`) reads t
 - `src/components/planner/__tests__/keyboard-drag.test.tsx` — edit. Same rule.
 - `src/components/planner/__tests__/rails.test.tsx` — edit. Same rule.
 - `src/components/planner/__tests__/timeline.test.ts` — new. The sort contract, on its own.
-- `src/server/repos/itinerary.ts` — edit. `reorderDayTimeline`.
-- `src/routes/_app/trips/$tripId/-server/plan.ts` — edit. `reorderPlanFn` widens.
-- `src/routes/_app/trips/$tripId/-ui/plan-model.ts` — edit. Builds the merged sequence.
+- `src/routes/_app/trips/$tripId/-server/__tests__/plan-reorder.test.ts` — new. The widened reorder
+  handler, including the inherited mirror call. The route-local `__tests__` directory follows
+  `src/routes/(auth)/-lib/__tests__` and `src/routes/api/tiles/-lib/__tests__`, which already exist.
+- `src/server/repos/itinerary.ts` — edit. `reorderDayTimeline`. Shared with `07-S9`
+  (`07-collaboration-and-sharing.md`, wave 3), which reads the same module a wave later for its
+  upcoming-assignments query; different waves, so the two never run together, and this stage adds a
+  function rather than reshaping one `07-S9` will read.
+- `src/routes/_app/trips/$tripId/-server/plan.ts` — edit. `reorderPlanFn` widens, and
+  `loadPlanBoard`'s superseded three-field `notes` projection (`:140-146`, populated at `:220-224`) is
+  **deleted**: since `01-S2` the notes are read from `-server/day-notes.ts` and nothing consumes it.
+  Inherited from `07-S1` (`07-…`, wave 1), whose room-mirror calls are in this file — see the
+  obligation below.
+- `src/routes/_app/trips/$tripId/-ui/plan-model.ts` — edit. Builds the merged sequence from the board
+  and from `PlanNotesPayload`.
 - `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` — edit. The drag path and the refusal message.
 - `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` — edit. A note's row menu, beside the stop's.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
 - `e2e/trips-core-s4.visual.spec.ts` — new. This stage's own spec file.
 - `e2e/__screenshots__/trips-core-s4.visual.spec.ts/` — new. Its own baseline directory.
 
-All four planner core files are named here, and **this is the only wave-2 stage that names any of
-them**, which is the schedule the Area brief fixes.
+All four planner core files are named here, and **this is the only wave-2 stage in any plan that names
+any of them**, which is the schedule the Area brief fixes.
 
 `src/server/repos/days.ts` is **not** here. `reorderDayTimeline` lives in `itinerary.ts` and reaches
 the note rows through the `dayNotesRepository` that `days.ts` already exports (`:26`), so the note
 module is unchanged and the two-table write still has exactly one home.
+`src/routes/_app/trips/$tripId/-server/day-notes.ts` is **not** here either: this stage reads its
+payload and calls no function it owns, and the note's four writes keep working unchanged through the
+merge.
+
+**The inheritance obligation, because this file passed through another plan first.** `07-S1` edited
+`-server/plan.ts` in wave 1 to add a `mirrorToRoom` call after each of its eight writers. This stage
+widens `reorderPlanFn`'s input from `assignmentIds` to `items: Array<{ kind, id }>` and dispatches to
+`reorderDayTimeline` — a change to the body of a function that now ends in one of those calls. **The
+mirror call survives the widening**, and mirrors one `day` upsert per touched day exactly as it did
+before, now carrying the merged order. Verification carries the case: a reorder still publishes to the
+room, asserted against the mirror rather than inferred from the D1 write.
 
 ### Data and migration
 
@@ -1159,13 +1377,21 @@ two-table batch is bounded by the tenant on both sides.
 
 **Server function — `src/routes/_app/trips/$tripId/-server/plan.ts`.** `reorderPlanFn` is widened
 rather than duplicated. Its `days` array entries carry `items: Array<{ kind, id }>` in place of
-`assignmentIds`, and the handler dispatches per day to `reorderDayTimeline`. `schedulePlaceFn`,
-`unschedulePlaceFn` and `rankIdeasFn` are untouched: an idea has no position among notes, and the
-ideas column is still a list of places only.
+`assignmentIds`, and the handler dispatches per day to `reorderDayTimeline`. The `mirrorToRoom` call
+`07-S1` added at the end of that handler in wave 1 stays exactly where it is and now carries the
+merged order. `schedulePlaceFn`, `unschedulePlaceFn` and `rankIdeasFn` are untouched: an idea has no
+position among notes, and the ideas column is still a list of places only.
+
+**The one deletion in this module.** `loadPlanBoard`'s `PlanBoardDay.notes` projection goes. Since
+`01-S2` the planner's notes arrive from `-server/day-notes.ts` with their icon, their detail and their
+position, and `plan-model.ts` merges from there; the board's three-field copy has had no reader since
+wave 1 and keeping two projections of one record is how they start to disagree. `PlanBoardDay` loses
+one field and gains nothing — a narrowing of a payload type, so the compiler names every reader, and
+`pnpm typecheck` is the proof that none is left.
 
 **Zod v4.** `z.strictObject()` with the `error` parameter; the item is
 `z.strictObject({ kind: z.enum(['stop', 'note']), id })` reusing the module's existing `id` schema
-(`:68`); the per-day array is capped, as the existing validator already caps its own, so one request
+(`:69`); the per-day array is capped, as the existing validator already caps its own, so one request
 cannot ask for an unbounded batch.
 
 **Authorisation.** Unchanged in shape and decided in the repository: `writableTrip` (`:97-106`)
@@ -1217,7 +1443,9 @@ position order it already has today. It lives in `src/components/planner/orderin
 about notes, and `mapPlacesOf` has the same property. `DaySection` renders one `SortableContext` over
 `items`; `StopRow` and the `NoteRow` `01-S2` created are the two renderers, and neither is rewritten.
 `plan-actions.tsx` gains `NoteMenu` alongside its existing `StopMenu`, built on the same shipped
-`DropdownMenu`. No new primitive from `src/components/ui` is required and none is proposed.
+`DropdownMenu`. No new primitive from `src/components/ui` is required and none is proposed, and the
+note's detail keeps rendering through `src/lib/markdown` exactly as `01-S2` wired it — this stage
+imports that module and does not re-implement, extend or fork it.
 
 **The extension point `BKG-10` fills.** `PlannerItem` is a union and `mergeDayTimeline` reads only
 `{ id, position, time }`, so a third kind is one variant in the union, one prefix in the id space and
@@ -1297,9 +1525,17 @@ Functions covered: `reorderDayTimeline`.
 - `src/components/planner/__tests__/rails.test.tsx` — extended. A day renders one list, notes and stops
   interleave in the merged order, and the empty-day drop target appears only when the whole sequence
   is empty.
+- `src/routes/_app/trips/$tripId/-server/__tests__/plan-reorder.test.ts` — new, and it exists for the
+  inheritance obligation above. Driven the way `src/server/fns/__tests__/atlas.test.ts` drives a
+  server function: an `AsyncLocalStorage` installed under the framework's global symbol before the
+  module is imported dynamically, `#/routes/_app/-server/context` mocked for the scope, and
+  `#/server/fns/context` mocked so `mirrorToRoom` is a spy. Three cases: a merged reorder writes the
+  merged order through `reorderDayTimeline`; **the same call still mirrors one `day` upsert per
+  touched day**, which is the `07-S1` behaviour this stage must not drop; and a mirror that rejects
+  does not fail the save, because D1 is the record and the room is a signal.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
-the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
+`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
 `01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
 `--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s4.visual.spec.ts`. This stage's `describe`
 declares `/trips/$tripId/plan` with `map: true` and calls `auditServerClock` over its own table.
@@ -1663,8 +1899,11 @@ Rows unblocked: `TRP-02` (`01-S8`) and `TRP-06` (`01-S9`) directly.
 ### Owned paths
 
 - `src/server/repos/trip-guests.ts` — new. The guest record and the participant read model.
-- `src/server/repos/index.ts` — edit. Two export lines; no other repository module is touched.
-- `src/server/repos/trips.ts` — edit. The membership guards named below.
+- `src/server/repos/index.ts` — edit. Two export lines; no other repository module is touched. Shared
+  with `07-S10` (`07-collaboration-and-sharing.md`, wave 5), which adds its own export line a wave
+  later; different waves, and both edits are additions to the same barrel.
+- `src/server/repos/trips.ts` — edit. The membership guards named below. Shared with `01-S1` (wave 1)
+  and `07-S6` (`07-…`, wave 2), both earlier; this stage adds to what they left.
 - `src/routes/_app/trips/$tripId/-server/people.ts` — new. The stage's server functions.
 - `src/routes/_app/trips/$tripId/people.tsx` — new. The route.
 - `src/routes/_app/trips/$tripId/-ui/people-screen.tsx` — new. The screen.
@@ -2005,7 +2244,9 @@ Rows unblocked: none. No row in `gap-rows.json` names `TRP-01`.
 - `src/routes/_app/-lib/__tests__/view-mode.test.ts` — new. The route-local helper directory has no
   `__tests__` today; this stage creates it, following `src/routes/(auth)/-lib/__tests__` and
   `src/routes/api/tiles/-lib/__tests__`, which already do.
-- `src/routes/_app/-server/overview.ts` — edit. `loadTrips` and `loadDashboard` payloads.
+- `src/routes/_app/-server/overview.ts` — edit. `loadTrips` and `loadDashboard` payloads. Shared with
+  `00-S5` (`00-foundations.md`, wave 0) and `01-S1` (wave 1), both closed long before this stage
+  opens; this stage widens two loaders and moves nothing.
 - `src/server/repos/trip-guests.ts` — edit. `countTripPeople`.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
 - `e2e/trips-core-s7.visual.spec.ts` — new. This stage's own spec file.
@@ -2207,7 +2448,13 @@ same form becomes the edit sheet `01-S1` opened.
 
 ### Reference rows
 
-- `TRP-02` partial → **done**, with the stock-photo search path named under **Blockers**.
+- `TRP-02` partial → **partial**, deliberately, with one of the row's five capabilities deferred and
+  the deferral written out under **Blockers** with its reason, its target stage and its target wave.
+  What closes here: the dates-to-duration linkage, the full ISO-4217 currency picker, the cover image
+  by drop, by paste and by file picker, the reminder presets, and the initial-members selection. What
+  does not: the **stock-photo search** the row's name lists as the fourth way to reach a cover, which
+  needs an image provider nobody has chosen. `TRP-04` is the only row that depends on `TRP-02`, and it
+  depends on the reminder control, which ships here — so the partial status blocks nothing.
 
 Sourced from `wiki: Creating-a-Trip` for the field set, the date-and-duration linkage, the accounting
 currency, the cover image, the reminder choice and the initial-members selection.
@@ -2449,21 +2696,41 @@ On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this 
 
 ### Blockers
 
-**One, and it removes one of four ways into a control rather than the control.**
+**One, and it removes one of four ways into a control rather than the control. It is why this stage
+leaves `TRP-02` at partial.**
 
 - **Capability:** a stock-photo search for the cover image — type a query, choose a result, store the
-  image with its attribution.
+  image with its attribution. It is the fourth of the four ways the row's name lists into the cover
+  field, after drop, paste and picker.
 - **It is not a package.** No dependency outside the `docs/SPEC.md` §3 pinned set would supply it;
-  nothing is installed and neither `package.json` nor `pnpm-lock.yaml` is edited. It is a **third-party
-  service with unread commercial terms**, the same class of blocker `11-S3` in
-  `11-boundaries-and-blockers.md` already holds four other capabilities in.
-- **Disposition: defer**, recorded in `11-boundaries-and-blockers.md`. The terms that decide it are the
-  ones `11-S3` names for every provider: whether a paid, subscription-funded product may use the tier at
-  all, what may be cached and for how long, and what attribution is owed on screen — the last of which
-  is a design constraint on the trip card and the hero, not just on the picker.
+  nothing is installed and neither `package.json` nor `pnpm-lock.yaml` is edited. It is a
+  **third-party service with unread commercial terms**, which is `11-S3`'s class of blocker rather
+  than `11-S2`'s.
+- **It is not in `11-S3`'s register, and this file does not pretend otherwise.** Measured against
+  `docs/plans/11-boundaries-and-blockers.md` as it stands: `11-S3` records **fifteen** rows waiting on
+  **three** open provider decisions — geocoding and place search, weather, and foreign-exchange rates
+  — and an image provider is none of the three. `TRP-02` does not appear in that stage's table at all;
+  the only row of this plan that does is `TRP-05`, under rates. So the deferral is recorded **here**,
+  in the stage that owns the capability, and filing it into `11-S3` is listed as a contract extension
+  by the run that wrote this plan rather than asserted as already done.
+- **Disposition: defer**, with the same shape `01-S5` uses for its own deferral:
+  - **Deferred to:** `01-S12`, **target wave 6** — the wave `01-S11` already sits in for the other
+    provider-blocked capability in this plan, so the two land together if the decisions do.
+  - **Why not hand-roll:** there is nothing to hand-roll. `11-S2`'s **hand-roll a restricted subset**
+    fallback applies to a missing _package_, where the work is ours to do; this is a missing
+    _catalogue of licensed photographs_, and no amount of our code produces one.
+  - **Why not drop:** the requirement is real, the column it would write already exists, and the three
+    ways that do ship write to the same field — so the day a provider is chosen, the picker gains a
+    fourth tab and nothing else changes.
+  - **What unblocks it:** a provider decision of the kind `11-S3` governs — whether a paid,
+    subscription-funded product may use the tier at all, what may be cached and for how long, and what
+    attribution is owed on screen. That last one is a design constraint on the trip card and the hero
+    rather than on the picker alone, which is exactly why it is not a detail to settle inside a form
+    stage.
 - **What ships instead:** the other three ways in — drop, paste, choose — all of which write to our own
   R2 bucket through the existing file path, cost nothing per request and carry no attribution
-  obligation. No disabled fourth tab is rendered promising a search that has no provider.
+  obligation. No disabled fourth tab is rendered promising a search that has no provider, and no copy
+  anywhere on the form mentions one.
 
 No binding is added to `wrangler.jsonc`. `01-S1` and `01-S6` must have closed, which waves 1 and 4
 guarantee, and `DOC-01` must have closed for the upload path, which wave 1 guarantees.
@@ -2962,6 +3229,77 @@ On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this 
 
 None. No package outside the `docs/SPEC.md` §3 pinned set, no binding added to `wrangler.jsonc` — the
 reminder rides the `TASKS` queue and the `*/15` cron that are already declared and already wired — and
-no third-party service. Two rows in other plans gate it and both close earlier: `ACC-05`
+no third-party service. Two rows gate it and both close earlier: `ACC-05`
 (`09-account-and-settings.md`, wave 2) for the channel the reminder is delivered on, and `TRP-02`
-(`01-S8`, wave 5) for the form the control lives in.
+(`01-S8`, wave 5) for the form the control lives in. `TRP-02` lands at partial rather than done, and
+that changes nothing here: what `01-S8` defers is the cover image's stock-photo search, and what this
+stage needs from it is the reminder control, which `01-S8` ships.
+
+## Cross-plan collisions
+
+Two stages in the same wave that both take an exclusive disposition — `edit`, `new`, `create`,
+`delete` — on one file clobber each other, because the runs that execute a wave go in parallel.
+`append` is the documented cooperative disposition and is not a collision. This is checked by
+measurement rather than by reading the sibling plans, because a plan can only read the siblings that
+existed when it was written, and round 8 produced two real collisions in a set where every plan
+carried an acceptance criterion about it.
+
+The command and its output, verbatim, run against the plan set as it stood when this file was last
+written — `00-foundations.md`, `01-trips-core.md`, `04-budget-and-currencies.md`,
+`07-collaboration-and-sharing.md`, `09-account-and-settings.md`, `11-boundaries-and-blockers.md` and
+`12-verification-protocol.md`. Sibling plans were being written concurrently, so the totals on the
+first line move as plans land; what must not move is the third line.
+
+```text
+$ node scripts/ultrabuild/check-plan-collisions.mjs 01
+plans 7 · stages 37 · owned paths 204
+
+5 stage(s) state no parseable wave and cannot be checked: 04-S7 11-S1 11-S2 11-S3 04-S2
+
+no same-wave exclusive collisions
+
+touched by more than one plan in different waves (5) — legal; each plan must name the other:
+  src/routes/_app/-server/overview.ts
+      00-foundations.md  00-S5  wave 0  (edit)
+      01-trips-core.md  01-S1  wave 1  (edit)
+      01-trips-core.md  01-S7  wave 5  (edit)
+  src/server/repos/trips.ts
+      01-trips-core.md  01-S1  wave 1  (edit)
+      01-trips-core.md  01-S6  wave 4  (edit)
+      07-collaboration-and-sharing.md  07-S6  wave 2  (edit)
+  src/server/repos/itinerary.ts
+      01-trips-core.md  01-S4  wave 2  (edit)
+      07-collaboration-and-sharing.md  07-S9  wave 3  (edit)
+  src/routes/_app/trips/$tripId/-server/plan.ts
+      01-trips-core.md  01-S4  wave 2  (edit)
+      07-collaboration-and-sharing.md  07-S1  wave 1  (edit)
+  src/server/repos/index.ts
+      01-trips-core.md  01-S6  wave 4  (edit)
+      07-collaboration-and-sharing.md  07-S10  wave 5  (edit)
+```
+
+**No same-wave exclusive collision involves this plan.** The one that did — `01-S2` and `07-S1` both
+claiming `src/routes/_app/trips/$tripId/-server/plan.ts` as `edit` in wave 1 — is resolved by this
+plan yielding the file, and the resolution is argued in full under **The four planner core files**.
+
+**Every cross-wave path the check lists is named in its owning stage, with the sibling stage id.**
+
+| Path                                            | This plan's stages | Sibling stages            | Where it is named                         |
+| ----------------------------------------------- | ------------------ | ------------------------- | ----------------------------------------- |
+| `src/routes/_app/-server/overview.ts`           | `01-S1`, `01-S7`   | `00-S5` (`00-…`, wave 0)  | **Owned paths** of `01-S1` and of `01-S7` |
+| `src/server/repos/trips.ts`                     | `01-S1`, `01-S6`   | `07-S6` (`07-…`, wave 2)  | **Owned paths** of `01-S1` and of `01-S6` |
+| `src/server/repos/itinerary.ts`                 | `01-S4`            | `07-S9` (`07-…`, wave 3)  | **Owned paths** of `01-S4`                |
+| `src/routes/_app/trips/$tripId/-server/plan.ts` | `01-S4`            | `07-S1` (`07-…`, wave 1)  | **Owned paths** of `01-S4`, and the brief |
+| `src/server/repos/index.ts`                     | `01-S6`            | `07-S10` (`07-…`, wave 5) | **Owned paths** of `01-S6`                |
+
+The five stages the check cannot read are `04-S2`, `04-S7`, `11-S1`, `11-S2` and `11-S3`, none of them
+this plan's: their `### Stage id` line does not carry `` `<id>` · Wave <n> ``, so the parser cannot
+place them in a wave. **Every stage in this file states its wave in that exact form**, which is what
+makes this plan checkable at all — a stage with no wave is invisible to the check and silently exempt
+from it. The two files that carry those five are not this plan's to edit, and the fix is filed as a
+contract extension rather than made here.
+
+`src/lib/markdown/**`, `src/routes/_app/trips/$tripId/-server/day-notes.ts` and
+`src/routes/_app/trips/$tripId/plan.tsx` are new claims of `01-S2` and appear nowhere else in the
+plan set, in any wave. Four rows in other plans consume the markdown module rather than re-owning it;
+that obligation is written into `01-S2`'s **Owned paths** and into entry 5 of `11-S2`'s register.

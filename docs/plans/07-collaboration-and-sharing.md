@@ -45,22 +45,57 @@ only two unauthenticated surfaces in the product.
 
 #### The rows this plan closes
 
-| Row      | Status now | Stage    | Wave the stage runs in       |
-| -------- | ---------- | -------- | ---------------------------- |
-| `COL-01` | partial    | `07-S1`  | 1                            |
-| `COL-06` | done       | `07-S1`  | 1 (held done, not rebuilt)   |
-| `COL-02` | partial    | `07-S2`  | 1                            |
-| `COL-03` | partial    | `07-S3`  | 2                            |
-| `COL-07` | partial    | `07-S4`  | 2 (one behaviour to `07-S8`) |
-| `COL-08` | partial    | `07-S5`  | 2                            |
-| `COL-10` | absent     | `07-S6`  | 2                            |
-| `COL-04` | partial    | `07-S7`  | 3                            |
-| `COL-09` | absent     | `07-S9`  | 3                            |
-| `COL-05` | absent     | `07-S8`  | 4 (earliest 3 — see below)   |
-| `COL-11` | absent     | `07-S10` | 5                            |
+| Row      | Status now                       | Stage    | Wave the stage runs in       |
+| -------- | -------------------------------- | -------- | ---------------------------- |
+| `COL-01` | partial                          | `07-S1`  | 1                            |
+| `COL-02` | partial                          | `07-S2`  | 1                            |
+| `COL-03` | partial                          | `07-S3`  | 2                            |
+| `COL-07` | partial                          | `07-S4`  | 2 (one behaviour to `07-S8`) |
+| `COL-08` | partial                          | `07-S5`  | 2                            |
+| `COL-10` | absent                           | `07-S6`  | 2                            |
+| `COL-04` | partial                          | `07-S7`  | 3                            |
+| `COL-06` | recorded done, **measured open** | `07-S7`  | 3                            |
+| `COL-09` | absent                           | `07-S9`  | 3                            |
+| `COL-05` | absent                           | `07-S8`  | 4 (earliest 3 — see below)   |
+| `COL-11` | absent                           | `07-S10` | 5                            |
 
-Every row is closed by exactly one stage. Two schedules differ from the mechanical wave in
-`README.md`, and both are stated rather than left to be noticed:
+Every row is closed by exactly one stage, and no row is deferred out of this plan.
+
+#### `COL-06` is recorded **done** in the matrix and is not done, with the greps that refute it
+
+The matrix's evidence for `COL-06` reads "…and `tombstone()` in `src/server/fns/context.ts`
+mirroring it into the room so other connected members see the replacement immediately". `README.md`
+requires a plan that contradicts a row to say so and show its own measurement, so here it is, four
+greps at HEAD:
+
+- **No `tombstone()` is mirrored for a message.** `deleteMessageFn`
+  (`src/server/fns/collab.ts:114-125`) mirrors `patch('trip', data.tripId, { chatChangedAt: … })`.
+  A census of every mirror helper in the tree — `grep -rhoE "patch\('[a-z-]+'|tombstone\('[a-z-]+'" src/` —
+  returns `trip` 18, `route` 3, `reservation` 3, `packing-item` 3, `note` 2, `expense` 2 and one
+  tombstone each for `route`, `reservation`, `packing-item`, `note` and `expense`. There is no
+  message kind in `TRIP_ENTITY_KINDS` (`src/server/do/protocol.ts:50-60`) and no
+  `tombstone('message'…)` anywhere.
+- **Nothing can render a tombstone, because the reader hides the row.** `listMessages`
+  (`src/server/repos/collab.ts:123-133`) filters `isNull(collabMessages.deletedAt)`, and its own
+  doc comment at `:122` says so: "Soft-deleted messages are excluded." A deleted message vanishes
+  from the transcript on the next read.
+- **There is no deleter.** `collab_messages` (`src/server/db/schema.ts:1057-1082`) has `deleted_at`
+  and no deleter column; `grep -rn deletedBy src/` returns nothing. `deleteMessage`
+  (`src/server/repos/collab.ts:167-176`) writes `deletedAt` alone, and it permits a workspace
+  `owner`/`admin` to delete somebody else's message, so the deleter is genuinely not derivable from
+  the row.
+- **There is no tombstone rendering.** `grep -n deleted src/components/modules/collab/thread.tsx`
+  returns two toast strings at `:158-159` and nothing else.
+
+So the one thing `COL-06` names — a visible tombstone naming the deleter and the time, shown to
+everyone — exists in no layer. What is true is the half the matrix inferred from: the delete is
+soft, and it does reach peers, as a `trip` signal that makes their loaders re-read. That is the
+correct wire shape under the contract `07-S1` fixes and it is not changed. The row is therefore
+carried as **recorded done, measured open → done** by `07-S7`, the stage that owns the message row,
+and `07-S3` is written without assuming a tombstone it would have had nothing to render.
+
+Two schedules differ from the mechanical wave in `README.md`, and both are stated rather than left
+to be noticed:
 
 - **`07-S8` runs in wave 4 although `COL-05`'s edges allow wave 3.** It and `07-S7` both change the
   rendered message row, and two stages in one wave may not name one file. Its dependency
@@ -70,17 +105,29 @@ Every row is closed by exactly one stage. Two schedules differ from the mechanic
   website field as a scheme-checked link chip and `07-S8` attaches the preview to it, changing no
   note surface.
 
-Edges into other plans, each named with the plan file, the row and the wave that supplies it:
+Edges into other plans. Three of the four supplying plans exist on disk and their stage ids are
+read out of them, not described:
 
-| This stage | Needs                                               | Supplied by                                                           |
-| ---------- | --------------------------------------------------- | --------------------------------------------------------------------- |
-| `07-S4`    | `DOC-01` — a file record and its upload path        | `06-documents-and-media.md`, the stage that closes `DOC-01`, wave 1   |
-| `07-S6`    | `MNY-07` — the frozen-rate columns on money rows    | `04-budget-and-currencies.md`, the stage that closes `MNY-07`, wave 1 |
-| `07-S9`    | `TRP-08` — the merged day timeline and its ordering | `01-trips-core.md`, the stage that closes `TRP-08`, wave 2            |
-| `07-S10`   | `TRP-11` — trip membership, roles and removal       | `01-trips-core.md`, the stage that closes `TRP-11`, wave 4            |
+| This stage | Needs                                               | Supplied by                                                   |
+| ---------- | --------------------------------------------------- | ------------------------------------------------------------- |
+| `07-S6`    | `MNY-07` — the frozen-rate columns on money rows    | `04-budget-and-currencies.md`, stage `04-S1`, wave 1          |
+| `07-S9`    | `TRP-08` — the merged day timeline and its ordering | `01-trips-core.md`, stage `01-S4`, wave 2                     |
+| `07-S10`   | `TRP-11` — trip membership, roles and removal       | `01-trips-core.md`, stage `01-S6`, wave 4                     |
+| `07-S4`    | `DOC-01` — a file record and its upload path        | `06-documents-and-media.md` — **the file does not yet exist** |
 
-Those four plans mint their own stage ids; until they do, this plan cites the row and the wave,
-which is what `README.md` says a row id is for.
+Each of the three is a stage id read off the sibling file, not a paraphrase: `04-S1` names `MNY-07`
+in its **Reference rows** and runs in wave 1, `01-S4` names `TRP-08` and runs in wave 2, `01-S6`
+names `TRP-11` and runs in wave 4. Each stage below repeats its own edge with the same stage id
+under **Blockers**, so a reader who opens one stage does not have to come back here for it.
+
+`DOC-01` is the one edge that cannot be given a stage id today, and the reason is a measurement
+rather than a convention: `ls docs/plans` returns eight plan files — `00`, `01`, `04`, `07`, `09`,
+`10`, `11`, `12` — and `06-documents-and-media.md` is not among them, so `DOC-01` has no stage to
+name yet.
+`gap-rows.json` puts `DOC-01` in wave 1, which is what `07-S4` schedules against. When that plan is
+written, the stage that closes `DOC-01` is filled in here and in `07-S4`'s **Blockers**; until then
+`07-S4` waits on the row rather than inventing an upload path of its own, which is what its
+**Blockers** section already says.
 
 #### The sub-feature seam, and why `07-S2` cuts it
 
@@ -119,30 +166,43 @@ renders nothing is placeholder copy wearing a switch.
   in different files even inside one baseline directory. This is an extension of a rule that lives
   in a file this plan does not own; it is carried as a contract extension, not applied silently.
 
-#### Cross-plan claims, measured against the plans that exist
+#### Cross-plan claims, measured with the checker rather than by reading siblings
 
-Three files in this plan's wave-1 stages could be wanted by another plan in the same wave. All three
-were checked against `01-trips-core.md` as it stands, and the result is one real collision, one
-avoided, and one clear:
+The previous revision of this section resolved a file contention by argument — "`07-S1` runs after
+`01-S2` has closed" — after checking exactly one sibling plan while asserting it had checked them
+all. That was wrong twice: a same-wave claim is a clobber whatever order two runs are launched in,
+and the sibling this section did not open, `04-budget-and-currencies.md`, was claiming
+`src/server/do/protocol.ts` in wave 1 at the same time `07-S1` was.
 
-| File                                            | This plan | Measured in `01-trips-core.md`                            | Outcome                                        |
-| ----------------------------------------------- | --------- | --------------------------------------------------------- | ---------------------------------------------- |
-| `src/routes/_app/trips/$tripId/-server/plan.ts` | `07-S1`   | Claimed by `01-S2`, wave 1, in its own four-file schedule | **Collision — resolved by order, below**       |
-| `src/server/repos/trips.ts`                     | `07-S2`   | Claimed by `01-S1`, wave 1, and `01-S6`, wave 4           | **Avoided** — `07-S2` uses `collab.ts` instead |
-| `src/routes/_app/trips/$tripId/route.tsx`       | `07-S1`   | Cited once as evidence, claimed by no stage               | Clear                                          |
+The judgement is therefore no longer made here. `scripts/ultrabuild/check-plan-collisions.mjs`
+parses every plan's **Owned paths** and reports same-wave exclusive collisions and cross-wave
+sharers; its full output for this plan is pasted verbatim under **Cross-plan collisions** at the end
+of this file, and every path it lists is named in the stage that owns it together with the sibling
+stage id. Three things this plan does because of that run, each recorded where the reader will need
+it:
 
-**The one collision, with a single disposition.** `01-S2` and `07-S1` both need
-`-server/plan.ts` in wave 1, and two stages in one wave may not name one file. The resolution is
-order, not negotiation: **`07-S1` runs after `01-S2` has closed.** The direction is not a
-preference — `01-S2` rewrites that module's day-note handling while `07-S1` adds eight additive
-mirror calls to writers that already exist, so the additive change rebasing onto the rewrite is
-cheap and the reverse is not. If a schedule cannot sequence them inside wave 1, `07-S1` moves to
-wave 2 whole; nothing depending on it is earlier than wave 2 in any case, because `COL-03`,
-`COL-07`, `COL-08` and `COL-10` are all wave-2 rows.
+- **`src/server/do/protocol.ts` is not an owned path of any stage here.** `07-S1` declares no new
+  entity kind — `day` and `stop` are already in `TRIP_ENTITY_KINDS` and merely have no producer —
+  so the only edit it ever wanted there was a documentation comment, which is not worth a claim on
+  a file that two plans reach for. The field vocabularies are written down in `07-S1` instead. The
+  wire contract that governs a future kind is still stated in `07-S1`, because the rule outlives the
+  stage.
+- **`src/routes/_app/trips/$tripId/-server/plan.ts` is claimed by `07-S1` in wave 1 and by `01-S4`
+  in wave 2.** Different waves, so this is legal and is named on both sides here and in `07-S1`'s
+  **Owned paths**. It was a wave-1 collision with `01-S2` when this plan was first written; that
+  stage has since moved its day-note writers into a new module of its own, which the checker now
+  confirms.
+- **The remaining cross-wave sharers are `src/server/fns/collab.ts` (`00-S2`, wave 0),
+  `src/server/queue/types.ts` and `src/server/queue/consumer.ts` (`00-S4`, wave 0),
+  `src/server/repos/trips.ts` (`01-S1` wave 1, `01-S6` wave 4), `src/server/repos/itinerary.ts`
+  (`01-S4`, wave 2) and `src/server/repos/index.ts` (`01-S6`, wave 4).** Each is named in the stage
+  of this plan that owns it, with the sibling stage id and its wave, so the ordering constraint
+  travels with the stage and not only with this brief.
 
-`07-S6` also names `src/server/repos/trips.ts`, in wave 2, where `01-trips-core.md` names it in no
-stage — measured against that file's own stage waves, which put its two claims on that module in
-waves 1 and 4. That claim is therefore clear as both plans stand.
+Sibling plans are being written concurrently, so this is a snapshot and not a proof for all time.
+The rule that survives the snapshot: **re-run the checker before scheduling**, and if a wave-1 stage
+of another plan re-claims `-server/plan.ts`, `07-S1` yields — see its **Blockers** for the exact
+fallback and what it costs.
 
 `02-places-and-maps.md` does not exist yet. When it does, it is the other plan most likely to want
 `-server/plan.ts` for `MAP-01` in wave 1, and the same rule applies to it: this plan's claim is the
@@ -168,12 +228,13 @@ transitive in-degree in the whole matrix — twenty of the eighty-nine rows reac
   already exist and are not rebuilt. What this stage adds is the subscription: one socket for the
   whole trip workspace instead of one component on one tab, the planner's missing mirror, and the
   reconnect behaviour written down as a contract rather than left as an emergent property.
-- `COL-06` done → **done**, held. Soft deletion with a visible tombstone naming the deleter is the
-  one realtime behaviour that already works end to end: `deleteMessage` in `src/server/fns/collab.ts`
-  writes `collab_messages.deleted_at` and mirrors a `tombstone()` patch, so every connected member
-  sees the replacement immediately. This stage moves the subscription that carries that patch, which
-  is precisely the change that could break it, so the row is held by this stage with a regression
-  case rather than left unattended in a stage that never touches it.
+
+This stage closes `COL-01` and no other row. An earlier revision also held `COL-06` here, on the
+claim that message deletion "already mirrors a `tombstone()` patch"; the greps in the Area brief
+refute that claim in every layer, so the row moved to `07-S7`, which owns the message row and can
+actually render a tombstone. What this stage inherits from that row is a regression it must not
+cause: the delete path's `trip` signal has to keep reaching peers across the subscription move, and
+the unit test list below holds it.
 
 One behaviour named in `COL-01` is **deferred outside this plan, not to a later stage**: a
 client-side queue of _mutations_ made while the browser is offline. Writes in this product never
@@ -193,11 +254,12 @@ Sourcing for the behaviour: `wiki: Real-Time-Sync`.
 - `src/components/modules/collab/presence-bar.tsx` — edit. Stops opening its own socket and reads
   the shared connection.
 - `src/routes/_app/trips/$tripId/route.tsx` — edit. The trip workspace layout, which is where the
-  single subscription is mounted. Claimed for wave 1; see the brief.
+  single subscription is mounted. Claimed in wave 1 and claimed by no stage of any other plan, per
+  the checker output at the end of this file.
 - `src/routes/_app/trips/$tripId/-server/plan.ts` — edit. The eight planner writers gain their
-  mirror calls. Claimed for wave 1; see the brief.
-- `src/server/do/protocol.ts` — edit. Documentation of the `day` and `stop` field vocabularies
-  inside the existing schemas. No new constant, no new kind, no change to any limit.
+  mirror calls. **Shared across waves with `01-S4` (`01-trips-core.md`, wave 2)**, which rewrites the
+  merged day ordering in the same module; this claim is wave 1 and therefore lands first, and `01-S4`
+  rebases onto eight additive call sites rather than the reverse.
 - `src/components/modules/collab/__tests__/use-trip-room.test.ts` — new.
 - `e2e/collaboration-and-sharing.visual.spec.ts` — new, this plan's spec file.
 - `e2e/__screenshots__/collaboration-and-sharing.visual.spec.ts/` — new, this stage's own baselines
@@ -206,6 +268,15 @@ Sourcing for the behaviour: `wiki: Real-Time-Sync`.
 The barrel `src/components/modules/collab/index.ts` is **not** claimed here: `07-S2` holds it in the
 same wave, so the trip layout imports the provider from the module directly rather than through the
 barrel, and no export is added that would have no consumer.
+
+`src/server/do/protocol.ts` is **not** claimed here either, and the reason is the wire contract
+below rather than a scheduling dodge: this stage declares no entity kind, no message type, no
+constant and no limit change, because `day` and `stop` have been in `TRIP_ENTITY_KINDS` since the
+module was written (`src/server/do/protocol.ts:50-60`) and are missing only a producer. The one
+edit an earlier revision wanted there was a documentation comment naming the two field
+vocabularies, and those vocabularies are written into this stage instead, under **Server** below. A
+comment is not worth an exclusive claim on a module another plan's wave-1 stage was reaching for at
+the same time.
 
 No route file is added or renamed, so the generated route tree does not change and
 `pnpm generate-routes` is not run by this stage.
@@ -236,6 +307,19 @@ as `07-S2` does.
   one `day` upsert per touched day carrying the new order; an unschedule mirrors a `stop` tombstone.
   The mirror is awaited but never able to fail the save: `mirrorToRoom` already swallows an
   unreachable room into a structured warning, and that behaviour is the reason D1 stays the record.
+- **The `day` and `stop` field vocabularies, written here because the protocol module is not an
+  owned path.** Both kinds are already declared in `TRIP_ENTITY_KINDS`; what has never been fixed is
+  which field names a producer may put in a patch for them, and two producers inventing two spellings
+  is how a per-field last-write-wins model quietly stops merging. A `stop` patch is keyed by the
+  `day_assignments` row id and carries only `dayId`, `placeId`, `orderIndex`, `startTime`, `endTime`,
+  `durationMinutes`, `transportMode`, `notes` and `reservationStatus` — the column names of that
+  table (`src/server/db/schema.ts:530-560`), camel-cased exactly as the row type already spells them,
+  so a reader never has to map a wire name onto a column. A `day` patch is keyed by the `days` row id
+  and carries `date` and `orderVersion`, a monotonically increasing integer that says "this day's
+  sequence changed" without shipping the sequence, because the sequence is what the loader re-reads.
+  Every value in both is a scalar; no patch carries a list, an object or a row. That keeps a frame
+  far inside the 32 KiB ceiling by construction rather than by measurement, and it is the whole
+  reason a reorder of forty stops costs one small `day` patch instead of forty `stop` patches.
 - **Zod.** No new input schema. `src/server/do/protocol.ts` already validates every frame on both
   sides through `parseClientMessage`, and this stage adds no message type.
 - **Authorisation.** Unchanged and re-stated because it is the part a reader must not have to infer.
@@ -249,11 +333,15 @@ as `07-S2` does.
 - **The wire contract, stated so no later stage regresses it.** These four sentences are the part of
   `COL-01` that is a contract rather than a feature:
   1. **The Durable Object already exists and is addressed by trip id.** One room per trip,
-     `namespace.get(namespace.idFromName(tripId))`; the trip id is the shard key. No stage may
+     `namespace.get(namespace.idFromName(tripId))` — the line and its comment are at
+     `src/server/do/trip-room-client.ts:33-34` — and the trip id is the shard key. No stage may
      introduce a room that is not per-trip, and no stage may address one by anything else.
   2. **A new patch type is declared in `src/server/do/protocol.ts` and nowhere else**, by extending
-     `TRIP_ENTITY_KINDS` and giving the kind its Zod shape in the same module. This stage adds none:
-     `day` and `stop` are already declared and merely had no producer.
+     `TRIP_ENTITY_KINDS` and giving the kind its Zod shape in the same module, inside the limits in
+     point 3 and never by raising one. This stage adds none — `day` and `stop` are already declared
+     (`:50-60`) and merely had no producer — which is exactly why the module is not one of its owned
+     paths. A later stage that genuinely needs a kind claims the module in a wave where the checker
+     shows it free, and no stage of this plan does.
   3. **The declared limits are the limits.** 32 KiB per frame
      (`TRIP_ROOM_MAX_MESSAGE_BYTES`), 40 messages per second per connection (`TRIP_ROOM_RATE_LIMIT`),
      50 patches per message, 64 fields per patch, 2000 entities per snapshot. A patch that would not
@@ -332,8 +420,10 @@ search parameter or a props path a caller could set.
   inside the coalescing window produce exactly one invalidation and a fourth after it produces a
   second; (c) `applied` advances to the room's version so the next `hello` asks for a delta;
   (d) a `protocol-mismatch` error frame moves the status to offline and stops claiming to be live;
-  (e) the tombstone regression that holds `COL-06`: a `delete` patch for a message is delivered to
-  the consumer as a commit signal and the hook renders nothing from its fields.
+  (e) the regression the delete path needs from this stage: a `trip` patch carrying only a changed-at
+  marker — the exact shape `deleteMessageFn` mirrors today at `src/server/fns/collab.ts:121-123` —
+  reaches the consumer as one invalidation, and the hook renders nothing from the patch's fields, so
+  `07-S7` can build a tombstone on a re-read rather than on a frame.
 - Playwright, with the port resolved rather than assumed:
 
   ```sh
@@ -393,6 +483,16 @@ The `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
   reason that is not the design. The status there is deferred and this stage does not fix it; it
   records that its `mobile-safari` baselines carry the risk and reports any difference of that shape
   rather than pinning anything.
+- **The one file contention, with a fallback that costs the schedule and not the row.**
+  `src/routes/_app/trips/$tripId/-server/plan.ts` is this stage's only owned path another plan
+  touches: `01-S4` holds it in wave 2, which is legal and lands after this stage. It was a wave-1
+  collision with `01-S2` until that stage moved its day-note writers into a module of its own, so
+  the checker is re-run before this stage is scheduled and not trusted from this sentence. If a
+  wave-1 stage of another plan claims the module again, this stage yields it and the eight mirror
+  calls move to the earliest wave in which the checker reports it free — wave 3 as the plans stand,
+  because `01-S4` holds wave 2 — while the subscription, which is what `COL-03`, `ADD-04` and
+  `ACC-05` actually wait on, still ships in wave 1. The cost of that fallback is one extra run and a
+  planner that is not yet live to a peer; the cost of ignoring it is two runs writing one file.
 - No package is required. No binding is required. No row in another plan gates this stage.
 
 ## Stage 07-S2 — The collaboration panel and its four sub-features
@@ -429,7 +529,12 @@ Sourcing: `wiki: Collab-Addon`.
 - `src/server/fns/collab-notes.ts` — new. The notes board's reader and its writers.
 - `src/server/fns/collab-polls.ts` — new. The polls board's reader and its writers.
 - `src/server/fns/collab.ts` — delete. Its contents move into the three modules above unchanged in
-  behaviour.
+  behaviour. **Shared across waves with `00-S2` (`00-foundations.md`, wave 0)**, which makes this
+  module the first production caller of notification dispatch — a posted trip message notifies the
+  other trip members. Wave 0 closes before this wave opens, so what this stage moves is the module
+  _with_ that call already in it, and the message writer's new home is checked for it before the old
+  module is removed. Deleting a notification call while splitting a file is exactly the kind of loss
+  a diff makes easy to miss.
 - `src/components/modules/collab/notes-board.tsx` — new, from `collab-board.tsx`.
 - `src/components/modules/collab/polls-board.tsx` — new, from `collab-board.tsx`.
 - `src/components/modules/collab/collab-board.tsx` — delete.
@@ -620,9 +725,16 @@ long conversation silently loses its beginning. This stage adds the page, the "L
 the run-based grouping that stops a burst of messages from one person repeating their name and
 avatar six times, and the composer's key contract.
 
-The repository already pages: `listMessages` (`src/server/repos/collab.ts:123`) returns a
-`CursorPage` over an id that is itself a keyset cursor, and it already excludes soft-deleted rows.
-No SQL is written by this stage.
+The repository already pages: `listMessages` (`src/server/repos/collab.ts:123-133`) returns a
+`CursorPage` over an id that is itself a keyset cursor. No SQL is written by this stage.
+
+**What this stage deliberately does not assume.** That same reader excludes soft-deleted rows
+(`isNull(collabMessages.deletedAt)` at `:129`), so a deleted message is absent from a page rather
+than present as a tombstone. `COL-06`'s stage, `07-S7` in wave 3, is the one that changes that and
+adds the deleter it needs; this stage is written against the reader as it is, and its grouping model
+gains the tombstone as a run-breaking case there. Writing the grouping now as though tombstones
+already arrived would be a rule with nothing to match it — which is how the previous revision of
+this plan came to hold three stages on a behaviour no layer implemented.
 
 Sourcing: `wiki: Collab-Chat`.
 
@@ -676,8 +788,9 @@ the edit instant and the soft-delete instant. No migration is generated and noth
 - **Grouping.** Consecutive messages from one author inside a five-minute window render as one run:
   the first row carries avatar, name and time, the rest carry the body alone, indented to the same
   measure so the column edge stays straight. A run is broken by a different author, by the window
-  closing, by a day boundary, and by a deleted message's tombstone, which always renders as its own
-  row. A day boundary renders a centred divider with the date on `--color-surface-2`.
+  closing and by a day boundary. The model's run-breaking test is written as a predicate over one
+  row rather than as a list of three cases, so `07-S7` adds the tombstone as a fourth without
+  reshaping it. A day boundary renders a centred divider with the date on `--color-surface-2`.
 - **Jumbo glyphs.** A message whose entire trimmed body is one to three emoji renders at
   `--text-title` size with no bubble, which is a visual affordance and not a parsing feature: the
   test is written over `Intl.Segmenter`'s grapheme segmentation and falls back to rendering normally
@@ -725,7 +838,7 @@ suite's existing `createScope()` fixtures.
 
 - Gate, in order: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 - Unit tests in `src/components/modules/collab/__tests__/thread-model.test.ts`: a run breaks on
-  author, on the five-minute window, on a day boundary and on a tombstone; three emoji qualify for
+  author, on the five-minute window and on a day boundary; three emoji qualify for
   the jumbo rendering and four do not; an emoji with a skin-tone modifier counts as one grapheme;
   a body with an emoji and a word does not qualify; the day divider is emitted once per day and not
   once per message.
@@ -1179,6 +1292,10 @@ Sourcing: `wiki: Public-Share-Links`.
 - `src/routes/shared/-ui/guest-sections.tsx` — new. One section per enabled scope.
 - `src/server/fns/sharing.ts` — new. The owner-side link management.
 - `src/server/repos/trips.ts` — edit. Token hashing, the unscoped resolver and the scope factory.
+  **Shared across waves with `01-S1` (`01-trips-core.md`, wave 1) and `01-S6` (wave 4)**, which own
+  the trip lifecycle writers and the trip-member panel in the same module; this claim is wave 2, it
+  sits between them, and it adds two functions beside the four share-link functions that already
+  exist rather than touching anything either of those stages changes.
 - `src/routes/_app/trips/$tripId/collab.tsx` — edit. The trigger for the share dialog.
 - `src/components/modules/collab/share-dialog.tsx` — new.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append.
@@ -1394,34 +1511,62 @@ The six items of `docs/SPEC.md` §7 apply unchanged, exactly as under `07-S1`.
   and this stage is written so that it is not blocked by it: the guest renders frozen rates and never
   calls a provider. If `MNY-07`'s columns have not landed, the guest renders source amounts only and
   the stage still closes.
-- `COL-10 → MNY-07` is supplied by `04-budget-and-currencies.md`, the stage that closes `MNY-07`, in
-  wave 1.
+- `COL-10 → MNY-07` is supplied by `04-budget-and-currencies.md`, stage `04-S1`, in wave 1 — the
+  stage that gives every receipt its own currency and freezes the rate it was booked at.
 - No package is required. No binding is required: the digest is computed with `crypto.subtle`, which
   the Workers runtime supplies, and the rate-limit bucket uses the `KV` binding that already exists.
 
-## Stage 07-S7 — Reactions and quote replies
+## Stage 07-S7 — Reactions, quote replies and the deletion tombstone
 
 ### Stage id
 
-`07-S7` · Wave 3 · effort **S**.
+`07-S7` · Wave 3 · effort **M**. Recorded as **S** for `COL-04` alone; this stage also closes
+`COL-06`, which the matrix records as done and which the Area brief's greps show is not.
 
 ### Reference rows
 
-`COL-04` partial → **done**. Reactions and replies work: six fixed reactions toggle optimistically
-through `toggleReactionFn`, and a reply writes `collab_messages.reply_to_id`. Three affordances are
-missing — a composer emoji picker, a quick-reaction gesture on a message, and a way to see who
-reacted — and one is a small design decision worth naming: hovering to reveal reactors is a
-pointer-only affordance, so it ships as a hover **and** as a focusable control, because a keyboard
-reader is not a second-class reader.
+- `COL-04` partial → **done**. Reactions and replies work: six fixed reactions toggle optimistically
+  through `toggleReactionFn`, and a reply writes `collab_messages.reply_to_id`. Three affordances
+  are missing — a composer emoji picker, a quick-reaction gesture on a message, and a way to see who
+  reacted — and one is a small design decision worth naming: hovering to reveal reactors is a
+  pointer-only affordance, so it ships as a hover **and** as a focusable control, because a keyboard
+  reader is not a second-class reader.
+- `COL-06` recorded **done**, measured **open** → **done**. The row asks for a visible tombstone
+  naming the deleter and the time, shown to everyone. The Area brief gives the four greps that
+  refute the matrix's evidence; in one line each: the delete mirrors `patch('trip', …)` and not a
+  `tombstone()` (`src/server/fns/collab.ts:114-125`), the reader hides deleted rows outright
+  (`src/server/repos/collab.ts:123-133`), the table has no deleter column
+  (`src/server/db/schema.ts:1057-1082`), and the thread renders no tombstone
+  (`src/components/modules/collab/thread.tsx`, where `deleted` appears only in two toast strings at
+  `:158-159`). This stage lands all three missing halves — the deleter, the reader change and the
+  rendering — and it lands them here rather than in `07-S3` for a measured reason as well as a
+  thematic one: the tombstone is a presentation of the message row, which is this stage's subject,
+  and `src/server/repos/collab.ts` is already held in wave 2 by `07-S4`, so a wave-2 stage cannot
+  take it.
+
+What is **not** changed is the wire shape, and this is the part of `COL-06` that was always right:
+deletion stays a soft delete announced as a `trip` signal, the peer's loader re-reads D1, and no
+message content ever travels in a frame. No entity kind is added, so `src/server/do/protocol.ts` is
+untouched by this stage as by every other stage of this plan.
 
 Sourcing: `wiki: Collab-Chat`.
 
 ### Owned paths
 
 - `src/components/modules/collab/thread.tsx` — edit.
+- `src/components/modules/collab/thread-model.ts` — edit. Created by `07-S3` in wave 2; the
+  run-breaking predicate gains the tombstone case and the tombstone's own label formatting.
 - `src/components/modules/collab/emoji-picker.tsx` — new. A bounded, categorised picker over a
   curated set — not a full emoji index, which would be a data dependency this stage does not have.
+- `src/server/fns/collab-thread.ts` — edit. Created by `07-S2` in wave 1 and last edited by `07-S3`
+  in wave 2; the delete writer records the deleter and the reader serialises the tombstone.
+- `src/server/repos/collab.ts` — edit. The two message functions named under **Server** below.
+  Held by `07-S4` in wave 2 and by `07-S8` in wave 4; this claim is wave 3 and contends with
+  neither.
 - `src/components/modules/collab/__tests__/emoji-picker.test.ts` — new.
+- `src/components/modules/collab/__tests__/tombstone.test.ts` — new. The deleted-row rules, in
+  their own file so `07-S3`'s `thread-model.test.ts` is not contended across waves for a diff this
+  stage can keep separate.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append.
 - `e2e/collaboration-and-sharing.visual.spec.ts` — append.
 - `e2e/__screenshots__/collaboration-and-sharing.visual.spec.ts/` — this stage's own baselines only.
@@ -1430,18 +1575,63 @@ No route file changes, so `pnpm generate-routes` is not run.
 
 ### Data and migration
 
-None. `collab_message_reactions` and `collab_messages.reply_to_id` both exist and are already
-written. No migration is generated and nothing is backfilled.
+`collab_message_reactions` and `collab_messages.reply_to_id` both exist and are already written, so
+`COL-04` needs nothing.
+
+`COL-06` needs **one additive column**, filed to `00-foundations.md` as the wave-2 schema stage's
+requirement so it lands before wave 3 opens. This section states the requirement; the schema module
+is not an owned path of this stage and is never edited here.
+
+| Table             | Column       | Type   | Null | Default | Index                               |
+| ----------------- | ------------ | ------ | ---- | ------- | ----------------------------------- |
+| `collab_messages` | `deleted_by` | `text` | yes  | none    | none — read with the row it sits on |
+
+Nullable, and it stays nullable for ever: every row written before this stage has a `deleted_at`
+with no deleter, and the reader has to render those anyway. It follows the schema module's
+`userRef()` convention — plain text with no Drizzle foreign key — because the domain schema never
+imports the authentication schema, which is why `collab_messages.user_id` is spelled the same way
+(`src/server/db/schema.ts:1057-1082`). No index: the column is never a predicate, only a projection,
+and D1 charges a row written for every indexed column on every write.
+
+No `CHECK`. Rollback safety is the reason the column is not `NOT NULL` and not defaulted: a Worker
+rolled back to before this stage writes `deleted_at` alone and reads a reader that filters deleted
+rows out, which is exactly the behaviour it shipped with.
+
+Backfills nothing. Existing soft-deleted rows keep a null deleter and render the tombstone in its
+unattributed form — "Message removed" with the time — which is the honest rendering of a fact the
+database does not hold. Inventing a deleter for them would be a fabricated audit trail.
 
 ### Server (repo, server function, Zod)
 
-- **Repository.** None added, none changed. The rows this stage writes belong to
-  `src/server/repos/collab.ts` — `toggleReaction` and `listReactions` — which already carry the
-  toggle semantics and the reactor ids, and which build every query on `tenantFilter()`, so
-  `organization_id` leads each read and is stamped on each insert.
-- **Server function.** None added. The picker and the gesture both call the existing
-  `toggleReactionFn`; adding a second writer for the same row would be the duplicate implementation
-  `README.md` calls a defect.
+- **Repository.** `src/server/repos/collab.ts`, and two existing functions change rather than
+  multiply. Both are built on `tenantFilter()` from `src/server/repos/base.ts`, which starts every
+  predicate from `eq(table.organizationId, scope.ctx.organizationId)` and lets a caller only `AND`
+  onto it, and both write through `createTenantRepository`, which stamps `organization_id` rather
+  than accepting it:
+  - `deleteMessage` (`:167-176`) keeps its authorship-or-moderator guard exactly as written and adds
+    `deletedBy: scope.ctx.userId` to the same update. The deleter is the session's user and is never
+    a value the caller supplies; there is no parameter for it.
+  - `listMessages` (`:123-133`) stops filtering deleted rows out and instead **projects them
+    empty**: the `isNull(collabMessages.deletedAt)` predicate is removed, and a row with a
+    `deleted_at` is mapped at the repository boundary to a record whose `body` is the empty string
+    and whose reply link, file link and edit instant are null, carrying only `id`, `userId`,
+    `createdAt`, `deletedAt` and `deletedBy`. The deleted text therefore never leaves D1 — not to a
+    server function, not to a payload, not to a client that knows how to open developer tools. A
+    reader that merely hid the body in the component would be a different and much weaker promise.
+  - Two guards follow from that change and are stated so they are not discovered as bugs:
+    `editMessage` and `toggleReaction` refuse a row whose `deleted_at` is set, because a tombstone
+    is not editable and not reactable, and `postMessage` refuses a `reply_to_id` naming a deleted
+    row — a quote of nothing is worse than no quote.
+  - `listReactions` is unchanged. It is keyed to the ids on the page, and a tombstone's id simply
+    has no tallies once the guard above is in place.
+- **Server function.** No new endpoint, for either row. The picker and the quick-reaction gesture
+  both call the existing `toggleReactionFn`, and deletion keeps calling the existing delete writer,
+  which after `07-S2`'s split lives in `src/server/fns/collab-thread.ts`; adding a second writer for
+  either row would be the duplicate implementation `README.md` calls a defect. What changes in that
+  module is the read side: the payload carries the tombstone's five fields and nothing more, and the
+  delete keeps mirroring the `trip` signal it mirrors today (`src/server/fns/collab.ts:121-123`
+  before the split), because a commit frame is a signal and the tombstone is rendered from the
+  re-read.
 - **Zod.** The existing reaction input is tightened rather than extended: the emoji is validated
   against the curated set as a `z.enum` instead of a free string, so the reaction column can only
   ever hold a glyph the product renders. That is a narrowing of accepted input, not of the column,
@@ -1449,9 +1639,14 @@ written. No migration is generated and nothing is backfilled.
   there are none, the set has not changed — would still read.
 - **Authorisation.** Unchanged: `appScope()` then `requireTrip`, and the message id is re-resolved
   in the caller's scope so a foreign id is a `NotFoundError`. A reaction is always attributed to the
-  session's user; the client cannot name a reactor.
-- Nothing slow, nothing enqueued. Each toggle mirrors the message's own `note`-free patch — the
-  message entity — so peers re-read.
+  session's user; the client cannot name a reactor. Deletion keeps the rule the repository already
+  enforces — the author, or a workspace `owner`/`admin` — read from the scope at call time, and the
+  deleter recorded on the row is that same session user, which is what makes the tombstone's
+  attribution true rather than decorative.
+- Nothing slow, nothing enqueued. Every write here — a toggle, a reply, a delete — mirrors the same
+  `trip` signal patch the collaboration writers already mirror, carrying a changed-at marker and no
+  content, so peers re-read from D1. No new entity kind is declared and `src/server/do/protocol.ts`
+  is untouched, inside the 32 KiB frame and 40 messages-per-second ceilings `07-S1` fixes.
 
 ### UI (route, components)
 
@@ -1471,15 +1666,38 @@ written. No migration is generated and nothing is backfilled.
   "smiling face" and nothing else. The count is `tabular-nums`.
 - **The reply strip.** Replying pins a strip above the composer showing the quoted author and a
   single truncated line, with a dismiss control; the sent message renders the quote inline above its
-  own body, and clicking the quote scrolls the original into view and flashes it for 220 ms.
+  own body, and clicking the quote scrolls the original into view and flashes it for 220 ms. A quote
+  whose original has since been deleted renders the tombstone's own line instead of the text, so the
+  transcript never shows words that were withdrawn.
+- **The tombstone row.** A deleted message keeps its place in the transcript and renders as its own
+  row, never inside a run: an inset line on `--color-surface-2` with a hairline of
+  `--color-edge-faint`, no bubble, no avatar, a `Trash2` glyph at 14px in `--color-ink-4`, and one
+  sentence in `--text-caption` on `--color-ink-3` — "Message removed by {name} · {time}" when the
+  deleter is known, "Message removed · {time}" when the row predates the column. The time uses the
+  same formatter as every other timestamp in the thread and is `tabular-nums`. The row carries no
+  action: no reaction control, no reply control, no row menu, and it is not a focus stop, because
+  there is nothing to do with it. Its accessible text is the same sentence, so a screen reader hears
+  what a sighted reader sees rather than an empty list item. **No live region is added**, and that is
+  a decision rather than an omission: `grep -n "aria-live\|role=\"status\"" src/components/modules/collab/thread.tsx`
+  returns nothing today, the only live region in the module is the presence bar's
+  (`presence-bar.tsx:91`), and a transcript-wide region would announce every incoming message from
+  every peer, which is a worse experience than the one it fixes. The tombstone sits in reading order
+  where the message was, and is read there.
 - **States.** The picker's search-less grid cannot be empty, so its only states are rest, hover,
   focus-visible and active per glyph; the reaction chip has rest, hover, focus-visible, active,
   a pending state while the toggle is in flight (the count holds its width so the row does not
-  reflow), and a disabled state for a viewer who may not react. The thread's own empty, skeleton and
-  error states are `07-S3`'s and are unchanged.
+  reflow), and a disabled state for a viewer who may not react. The delete control has rest, hover,
+  focus-visible, active, disabled (a viewer who may not moderate) and loading, and it confirms
+  through the shared `ConfirmDialog` naming what deletion does — the text goes for everyone and a
+  marker stays. The thread's own empty, skeleton and error states are `07-S3`'s and are unchanged; a
+  transcript that is nothing but tombstones is not an empty state and is not treated as one, because
+  "everything here was deleted" is a true and useful thing to see.
 - **Tokens.** None missing. `--color-surface-2`, `--color-brand-subtle` for a chip the viewer is in,
-  `--shadow-popover` with its re-declared dark counterpart, `--radius-full`, `--space-1`/`--space-2`,
-  `--duration-fast`.
+  `--shadow-popover` with its re-declared dark counterpart, `--radius-full`, `--radius-lg` for the
+  tombstone's inset, `--color-edge-faint`, `--color-ink-3` and `--color-ink-4` for its text and
+  glyph, `--text-caption`, `--space-1`/`--space-2`, `--duration-fast`. Both `--color-ink-3` on
+  `--color-surface-2` and its dark counterpart are re-checked against WCAG 2.2 AA rather than
+  assumed, because a tombstone is quiet by design and quiet is where contrast is usually lost.
 
 ### Quota
 
@@ -1489,29 +1707,61 @@ it is not sold, and the trip that bounds it is metered. Nothing is added to `res
 unique index on (message, user, emoji) makes a duplicate reaction unrepresentable, and the curated
 set bounds the distinct glyphs per message to its own size.
 
+`COL-06` creates **no** row at all: a delete is an update of two columns on a row that already
+exists and was already counted, and the tombstone is a projection of it. What it changes is a read
+cost, and the change is stated rather than left to be discovered: deleted rows are no longer
+filtered out, so a page of 50 messages can contain tombstones and the page still reads 50 rows —
+D1 bills rows scanned, and the removed `isNull` predicate was a filter over the same index walk
+rather than a narrowing of it — with the filter in place the walk had to step past deleted rows to
+fill a page, so the scan after this change is no larger than before and is usually smaller. Storage
+does not grow either: no body is lengthened, and the only bytes added are a `deleted_by` value on
+rows that have been deleted.
+
 ### Tenant isolation test
 
 A new `describe` block appended to the isolation suite. In A's scope: toggle a reaction on one of B's
 message ids — `NotFoundError`, and B's reaction rows unchanged; list reactions for a set of ids that
 mixes A's and B's, asserting only A's are returned rather than the call failing, because a mixed read
 must not become a way to probe existence; and post a reply whose `reply_to_id` is one of B's messages
-— `NotFoundError`, never a re-scoped parent. Functions covered: `toggleReaction`, `listReactions` and
-`postMessage` in `src/server/repos/collab.ts`.
+— `NotFoundError`, never a re-scoped parent.
+
+The deletion cases in the same block, because this stage changes two functions that read and write
+across the boundary: delete one of B's messages by id in A's scope — `NotFoundError`, with B's row
+byte-identical afterwards including `deleted_at` and `deleted_by`; list B's trip's messages in A's
+scope — an empty page, not B's tombstones, so the reader change does not turn deleted rows into a
+way to see that a conversation exists; and, in B's own scope, delete a message and assert that
+`deleted_by` holds B's acting user and that the returned record's `body` is empty while the stored
+row still belongs to B's organization. Every one of those runs through `tenantFilter()` and none of
+them is reachable without a `TenantScope`.
+
+Functions covered: `toggleReaction`, `listReactions`, `postMessage`, `deleteMessage`, `editMessage`
+and `listMessages` in `src/server/repos/collab.ts`.
 
 ### Verification
 
 - Gate, in order: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+- Migration review, because this stage's column travels in the wave-2 schema stage's migration: one
+  `ALTER TABLE collab_messages ADD COLUMN deleted_by text`, no `__new_collab_messages` rebuild, no
+  `DROP`, one journal entry.
 - Unit tests in `src/components/modules/collab/__tests__/emoji-picker.test.ts`: arrow-key movement
   wraps within a row and moves between rows; Home and End reach the ends of a row; the insertion
   places the glyph at the caret and not at the end; and the curated set contains no duplicate glyph,
   which is the kind of thing only a test notices.
+- Unit tests in `src/components/modules/collab/__tests__/tombstone.test.ts`: a deleted row breaks a
+  run on both sides, so the messages before and after it never join; a deleted row with a null
+  deleter renders the unattributed sentence and not the string "null" or "undefined"; the projected
+  record carries no body, so a test that asks for the body of a deleted message gets the empty string
+  from the model rather than the original text; a quote whose target is deleted renders the tombstone
+  line; and a tombstone exposes no action and no focus stop.
 - Playwright, the invocation of `07-S1` with this stage's own `test.describe`.
-- Browser evidence at 360, 1280 and 2560 in both themes, in three declared states, because none of
+- Browser evidence at 360, 1280 and 2560 in both themes, in four declared states, because none of
   this stage's output is visible at rest: the quick-reaction popover open, reached with
   `--click '[data-part="message-react"]'`; the reactor tooltip open, reached with
-  `--hover '[data-part="reaction-chip"]'`; and the reply strip pinned, reached with
-  `--click '[data-part="message-reply"]'`. Each selector is verified by a `count()` of at least 1 in
-  the spec before the frame is taken. Frames under
+  `--hover '[data-part="reaction-chip"]'`; the reply strip pinned, reached with
+  `--click '[data-part="message-reply"]'`; and a transcript containing a tombstone between two
+  runs, selector `[data-part="message-tombstone"]`, reached from a fixture that seeds a deleted
+  message rather than by deleting one during the frame, so the frame is reproducible. Each selector
+  is verified by a `count()` of at least 1 in the spec before the frame is taken. Frames under
   `.claude/ultrabuild/shots/<slug>/round-<n>/07-S7/`.
 - Layout shift after the settle mark, per engine, measured across a reaction toggle, which is the
   shift a held-width count exists to prevent. WebKit stated as unsupported.
@@ -1522,16 +1772,22 @@ must not become a way to probe existence; and post a reply whose `reply_to_id` i
 The six items of `docs/SPEC.md` §7 apply unchanged, exactly as under `07-S1`.
 
 - [ ] Spacing on the 4px grid from `--space-*`. No eyeballed one-off margins.
-- [ ] Hover, focus-visible, active, disabled and loading on every glyph, chip and row action.
+- [ ] Hover, focus-visible, active, disabled and loading on every glyph, chip, row action and the
+      delete control with its confirmation.
 - [ ] Empty, skeleton and error states on `--color-surface-2` — inherited from `07-S3` for the
-      thread and re-verified here, with the reaction chip's own pending state added.
+      thread and re-verified here, with the reaction chip's own pending state and the tombstone's
+      inset surface added; a transcript of nothing but tombstones is not shown as empty.
 - [ ] Motion 150–260ms on `--ease-out-quint`, transform and opacity only,
-      `prefers-reduced-motion: reduce` honoured.
-- [ ] Light and dark parity, with dark shadows re-declared rather than reused.
-- [ ] 360px, 1280px and 2560px; at 360 the picker is a bottom sheet and the quick reactions are
-      44px targets.
+      `prefers-reduced-motion: reduce` honoured; a message replaced by its tombstone cross-fades in
+      place at 150ms and does not collapse its height.
+- [ ] Light and dark parity, with dark shadows re-declared rather than reused, and the tombstone's
+      quiet ink re-checked for AA on `--color-surface-2` in both.
+- [ ] 360px, 1280px and 2560px; at 360 the picker is a bottom sheet, the quick reactions are
+      44px targets and the tombstone keeps its sentence on one line by truncating the name, never
+      the time.
 - [ ] Keyboard reachable end to end: every gesture has a keyboard equivalent, the reactor list is
-      focus-reachable, WCAG 2.2 AA in both themes.
+      focus-reachable, the tombstone is announced but is not a focus stop, WCAG 2.2 AA in both
+      themes.
 - [ ] Zero console errors or warnings, and zero layout shift after paint.
 
 ### Blockers
@@ -1541,6 +1797,16 @@ The six items of `docs/SPEC.md` §7 apply unchanged, exactly as under `07-S1`.
 - No package is required — the curated glyph set is data in this repository, not a dependency, and
   that is exactly why it is curated. No binding is required. `COL-04 → COL-03` is satisfied by
   `07-S3` in wave 2.
+- `COL-06` has no edge in `gap-rows.json`, because the matrix records it as done. It nonetheless
+  waits on two things inside this plan and they are named rather than assumed: `07-S3`, which
+  creates `thread-model.ts` in wave 2, and the wave-2 foundations schema stage, which supplies
+  `collab_messages.deleted_by`. If the column has not landed, this stage does **not** ship a
+  half-tombstone attributed to nobody — it waits, because an unattributed tombstone is precisely the
+  behaviour the row exists to replace.
+- One measurement recorded rather than acted on: `src/server/repos/collab.ts` is edited by `07-S4`
+  in wave 2 and by `07-S8` in wave 4 as well as by this stage in wave 3. Three waves, three stages,
+  no overlap — but the module is the busiest file in this plan, so each of the three states its wave
+  here and the checker output at the end of the file is the record.
 
 ## Stage 07-S8 — Link previews
 
@@ -1566,10 +1832,15 @@ Sourcing: `wiki: Collab-Chat`.
 - `src/lib/link-preview.ts` — new. URL extraction, normalisation and the metadata parser. Pure and
   isomorphic; no fetch, no Cloudflare import.
 - `src/server/queue/handlers/link-preview.ts` — new. The outbound fetch and the cache.
-- `src/server/queue/types.ts` — edit. The task kind and its payload schema.
-- `src/server/queue/consumer.ts` — edit. The handler registration and its `case`.
+- `src/server/queue/types.ts` — edit. The task kind and its payload schema. **Shared across waves
+  with `00-S4` (`00-foundations.md`, wave 0)**, which registers the statistics-recomputation kind in
+  the same table; wave 0 closes long before this wave, and this stage adds one member to a union
+  rather than reshaping it.
+- `src/server/queue/consumer.ts` — edit. The handler registration and its `case`. **Shared across
+  waves with `00-S4` (wave 0)** for the same reason and in the same `switch`.
 - `src/server/repos/collab.ts` — edit. Reading and writing the preview record on a message and a
-  note.
+  note. Held by `07-S4` in wave 2 and by `07-S7` in wave 3; this claim is wave 4 and contends with
+  neither.
 - `src/server/fns/collab-thread.ts` — edit. Enqueue on post; serialise the preview on read.
 - `src/components/modules/collab/link-preview-card.tsx` — new.
 - `src/components/modules/collab/thread.tsx` — edit. One call site for the card.
@@ -1679,7 +1950,10 @@ transcript is exactly the traffic burst this stage's budget exists to prevent.
   the card. `empty` — the page gave nothing usable — renders a single-line link chip with the host,
   which is the same chip `07-S4`'s note website uses, so the two surfaces agree. `failed` renders
   the same chip, because a reader does not need to know our fetcher had a bad day. There is no error
-  banner: a preview is an enhancement and its failure is not an event.
+  banner: a preview is an enhancement and its failure is not an event. A message deleted after it
+  was posted renders **no** card in any of the four states: `07-S7`'s reader projects a deleted row
+  empty, so the preview columns never reach the client — the tombstone is one line and nothing else,
+  and a preview surviving its message would be the leak that the empty projection exists to prevent.
 - **Tokens.** None missing. `--color-surface-2` for the card ground, `--color-edge-faint` for its
   hairline, `--radius-lg`, `--space-2`/`--space-3`, `--duration-fast` for the fade-in.
 - **Motion.** The card cross-fades in at 150 ms on `--ease-out-quint` in the space the skeleton
@@ -1787,7 +2061,10 @@ Sourcing: `wiki: Collab-Whats-Next`.
 
 - `src/server/fns/collab-next.ts` — new. The payload builder and nothing else; the widget writes
   nothing.
-- `src/server/repos/itinerary.ts` — edit. The upcoming read and the participant read.
+- `src/server/repos/itinerary.ts` — edit. The upcoming read and the participant read. **Shared
+  across waves with `01-S4` (`01-trips-core.md`, wave 2)**, which builds the merged day timeline in
+  the same module; this claim is wave 3 and reads the ordering that stage lands rather than
+  redefining it.
 - `src/components/modules/collab/whats-next.tsx` — new.
 - `src/components/modules/collab/next-model.ts` — new. Grouping and the day labels, pure.
 - `src/components/modules/collab/modules.ts` — edit. Registers the fourth sub-feature.
@@ -1908,9 +2185,9 @@ The six items of `docs/SPEC.md` §7 apply unchanged, exactly as under `07-S1`.
 
 ### Blockers
 
-- `COL-09 → TRP-08` is supplied by `01-trips-core.md`, the stage that closes `TRP-08`, in wave 2.
-  That row owns the merged day timeline and the ordering this widget reads; if it has not landed,
-  this stage waits rather than inventing a second ordering.
+- `COL-09 → TRP-08` is supplied by `01-trips-core.md`, stage `01-S4`, in wave 2. That stage owns
+  the merged day timeline and the ordering this widget reads; if it has not landed, this stage waits
+  rather than inventing a second ordering.
 - `COL-09 → COL-02` is satisfied by `07-S2` in wave 1.
 - The abbreviated-month deferral of `12-verification-protocol.md` §7.2 applies to this stage's
   baselines.
@@ -1945,7 +2222,9 @@ Sourcing: `wiki: Invite-Links`.
 - `src/routes/join/-server/join.ts` — new. Token resolution, the sign-in round trip and the join.
 - `src/routes/join/-ui/join-card.tsx` — new. The landing card and its four states.
 - `src/server/repos/invites.ts` — new. The invite record's repository.
-- `src/server/repos/index.ts` — edit. One export line for the new module.
+- `src/server/repos/index.ts` — edit. One export line for the new module. **Shared across waves
+  with `01-S6` (`01-trips-core.md`, wave 4)**, which exports its own additions from the same barrel;
+  this claim is wave 5, so the line is appended to a file that already carries `01-S6`'s.
 - `src/server/fns/sharing.ts` — edit. The owner-side invite controls, beside the share-link controls
   `07-S6` put there.
 - `src/components/modules/collab/share-dialog.tsx` — edit. The invite tab.
@@ -2001,8 +2280,10 @@ Backfills nothing: the table is new and every trip starts with no invite link.
      id and the least privileged role.
   4. **The join is not performed with that scope.** Adding a member is done in the _joining user's
      own_ authenticated context: the visitor signs in or registers, returns to the same URL, and only
-     then is the row written, with the joining user's session as the identity and the invite row as
-     the authorisation. A scope derived from a link may read; it may never write a membership.
+     then is the row written — through the existing `addTripMember`
+     (`src/server/repos/trips.ts:434-441`), never through an insert of this stage's own — with the
+     joining user's session as the identity and the invite row as the authorisation. A scope derived
+     from a link may read; it may never write a membership.
   5. The invited role is the row's, never the request's. A joiner cannot ask for `owner`.
 - **The sign-in round trip.** An anonymous visitor sees the trip's name, who invited them, and one
   action. It carries them to the existing sign-in route with a redirect back to this URL — the same
@@ -2069,18 +2350,46 @@ Backfills nothing: the table is new and every trip starts with no invite link.
 
 ### Quota
 
-Creates two countable rows, and they are treated differently on purpose. The **invite link** is one
-row per trip, structurally capped by its own unique index, not sold and not metered — nothing is
-added to `resolveLimits()` or `PLAN_QUOTAS` for it. The **trip membership** it creates is a
-different matter: seats are a catalogue metric, and `src/server/repos/members.ts` already calls
-`assertQuota` before adding one. The join therefore goes through that existing path and inherits its
-ceiling; it does **not** insert a member row directly, which would be the way a link becomes a way
-around a plan. No new metric is added, so no case is added to
-`src/server/billing/__tests__/limits.test.ts`, and the isolation and quota behaviour of the member
-path is the one that already ships.
+Creates two countable rows, and the honest accounting of them is shorter than the wrong one an
+earlier revision of this stage wrote. That revision said the join "goes through
+`src/server/repos/members.ts`, which already calls `assertQuota`". Both halves are wrong, and the
+greps are one line each:
 
-The per-IP bucket on the public resolution is the other ceiling and is the one that bounds
-unauthenticated cost.
+- `src/server/repos/members.ts:152-160` is the **workspace** member writer: `addMember` asserts the
+  `members` metric, which `resolveLimits()` maps from the catalogue's `seats`
+  (`src/server/billing/limits.ts:76`, `:226`). It writes the authentication schema's `member` table
+  — workspace membership — and has nothing to do with a trip.
+- The trip-member writer is `addTripMember` (`src/server/repos/trips.ts:434-441`). It parses its
+  input, calls `requireTrip`, and inserts through `tripMembersRepository`. **It asserts no quota at
+  all**, and there is no `trip_members`-shaped metric in `resolveLimits()` or in `PLAN_QUOTAS` for
+  it to assert.
+
+So the accounting is this:
+
+- **The invite link** is one row per trip, structurally capped by the unique index on `trip_id`
+  that the table declares. It is not sold and not metered; nothing is added to `resolveLimits()` or
+  `PLAN_QUOTAS` for it, and no case to `src/server/billing/__tests__/limits.test.ts`.
+- **The trip membership** is a row in `trip_members`, written by calling `addTripMember` — this
+  stage inserts no member row of its own, because a second writer for a membership row is exactly
+  how a link becomes a way around whatever ceiling that writer later grows. It consumes **no seat**,
+  and that is a consequence of this stage's own workspace rule rather than a loophole: a joiner must
+  already be a member of the trip's organization, so their seat was asserted by `addMember` when
+  they were added to the workspace, and joining a trip inside a workspace they already belong to
+  sells nothing new. Claiming a seat ceiling here would be doubly false — the wrong writer, and a
+  ceiling that cannot be reached by this path.
+- **What actually bounds trip membership**, therefore, is the workspace seat count: every trip
+  member is an organization member, so a trip can never hold more members than the workspace has
+  seats. That is a derived bound and it is the one this stage relies on.
+
+Adding a metered `trip_members` metric would be a catalogue change — a key in `PLAN_QUOTAS`, a
+resolver arm in `resolveLimits()`, a published number, a case in the equivalence test and an
+`assertQuota` call inside `addTripMember` — and it is **not** this stage's to make: that writer
+belongs to `TRP-11`, which `01-S6` closes in wave 4. It is recorded here as a finding for that stage
+rather than invented here, because a ceiling asserted in two places drifts, and a ceiling published
+in none is not a ceiling.
+
+The per-IP bucket on the public resolution is this stage's real ceiling and the one that bounds
+unauthenticated cost, exactly as under `07-S6`.
 
 ### Tenant isolation test
 
@@ -2141,11 +2450,97 @@ The six items of `docs/SPEC.md` §7 apply unchanged, exactly as under `07-S1`.
 
 ### Blockers
 
-- `COL-11 → TRP-11` is supplied by `01-trips-core.md`, the stage that closes `TRP-11`, in wave 4.
-  That row owns trip membership, its roles and its removal path; this stage adds a way in and must
-  not invent a membership writer of its own. If it has not landed, this stage waits.
+- `COL-11 → TRP-11` is supplied by `01-trips-core.md`, stage `01-S6`, in wave 4 — "Who is on this
+  trip, including the people without accounts". That stage owns trip membership, its roles and its
+  removal path; this stage adds a way in and must not invent a membership writer of its own. If it
+  has not landed, this stage waits.
 - No package is required. No binding is required: the digest uses `crypto.subtle` and the bucket
   uses the existing `KV` binding.
 - One observation recorded rather than acted on, because it belongs to another row:
   `closeTripRoom` still has no caller after this stage. Evicting a live socket is what **removal**
   from a trip needs, not what an invite link needs, and its first caller belongs to `TRP-11`.
+
+## Cross-plan collisions
+
+Run against the plan set as it stands, with this plan's ordinal:
+
+```text
+$ node scripts/ultrabuild/check-plan-collisions.mjs 07
+plans 8 · stages 43 · owned paths 250
+
+5 stage(s) state no parseable wave and cannot be checked: 04-S7 11-S1 11-S2 11-S3 04-S2
+
+no same-wave exclusive collisions
+
+touched by more than one plan in different waves (7) — legal; each plan must name the other:
+  src/server/fns/collab.ts
+      00-foundations.md  00-S2  wave 0  (edit)
+      07-collaboration-and-sharing.md  07-S2  wave 1  (delete)
+  src/server/queue/types.ts
+      00-foundations.md  00-S4  wave 0  (edit)
+      07-collaboration-and-sharing.md  07-S8  wave 4  (edit)
+  src/server/queue/consumer.ts
+      00-foundations.md  00-S4  wave 0  (edit)
+      07-collaboration-and-sharing.md  07-S8  wave 4  (edit)
+  src/server/repos/trips.ts
+      01-trips-core.md  01-S1  wave 1  (edit)
+      01-trips-core.md  01-S6  wave 4  (edit)
+      07-collaboration-and-sharing.md  07-S6  wave 2  (edit)
+  src/server/repos/itinerary.ts
+      01-trips-core.md  01-S4  wave 2  (edit)
+      07-collaboration-and-sharing.md  07-S9  wave 3  (edit)
+  src/routes/_app/trips/$tripId/-server/plan.ts
+      01-trips-core.md  01-S4  wave 2  (edit)
+      07-collaboration-and-sharing.md  07-S1  wave 1  (edit)
+  src/server/repos/index.ts
+      01-trips-core.md  01-S6  wave 4  (edit)
+      07-collaboration-and-sharing.md  07-S10  wave 5  (edit)
+```
+
+**No same-wave exclusive collision involves this plan**, which is the state this section exists to
+prove rather than to assert. Every path the run lists under _touched by more than one plan in
+different waves_ is legal — waves are sequential — and each is named in the stage of this plan that
+owns it, with the sibling stage id, so a reader who opens a stage sees its constraint without coming
+back here:
+
+| Path                                            | Owned here by    | Sibling stage and wave                                 |
+| ----------------------------------------------- | ---------------- | ------------------------------------------------------ |
+| `src/routes/_app/trips/$tripId/-server/plan.ts` | `07-S1`, wave 1  | `01-S4` (`01-trips-core.md`), wave 2                   |
+| `src/server/fns/collab.ts`                      | `07-S2`, wave 1  | `00-S2` (`00-foundations.md`), wave 0                  |
+| `src/server/repos/trips.ts`                     | `07-S6`, wave 2  | `01-S1` wave 1 and `01-S6` wave 4 (`01-trips-core.md`) |
+| `src/server/repos/itinerary.ts`                 | `07-S9`, wave 3  | `01-S4` (`01-trips-core.md`), wave 2                   |
+| `src/server/queue/types.ts`                     | `07-S8`, wave 4  | `00-S4` (`00-foundations.md`), wave 0                  |
+| `src/server/queue/consumer.ts`                  | `07-S8`, wave 4  | `00-S4` (`00-foundations.md`), wave 0                  |
+| `src/server/repos/index.ts`                     | `07-S10`, wave 5 | `01-S6` (`01-trips-core.md`), wave 4                   |
+
+`src/server/repos/__tests__/tenant-isolation.test.ts` and
+`e2e/collaboration-and-sharing.visual.spec.ts` are shared by many stages and are not in that table
+on purpose: both are `append` on every stage that names them, which is the documented cooperative
+disposition and is not a collision. The checker agrees — it filters `append` out before it compares.
+
+#### Three limits of this run, measured rather than assumed
+
+- **Five stages state no parseable wave and are therefore invisible to the comparison**: `04-S7`,
+  `11-S1`, `11-S2`, `11-S3`, and an entry the run prints as `04-S2` which is not the real one. That
+  fifth entry is an example heading inside a fenced code block at
+  `12-verification-protocol.md:26`, which the parser reads as a stage because it splits on a
+  `## Stage` line without respecting code fences; the real `04-S2` states wave 1 and is checked.
+  `04-S7` and the three `11-*` stages are unscheduled by design and say so in their own text. None
+  of the five is a file of this plan, so none can be fixed from here; each is reported as a contract
+  extension.
+- **The parser reads an owned path written as a list item — a dash, the path in backticks, an em
+  dash, then the mode — and does not read a table row.** That is how this plan's wave-1 claim on
+  `src/server/do/protocol.ts` and `04-S2`'s claim on the same module both sat in the plan set for a
+  whole round without the checker seeing either: `04-S2` listed its owned paths as a Markdown table.
+  It has since been rewritten as a list, and both stages have now dropped the module — this plan
+  because it declares no entity kind, `04-S2` because it stopped declaring one. Nobody claims
+  `src/server/do/protocol.ts` today, which is the correct outcome and not a stalemate: a stage that
+  genuinely needs a kind takes the module in a wave where the checker shows it free.
+- **`04-S2`'s own note still describes this plan as taking that module "in the same wave".** That
+  sentence was true when it was written and is not any more. It lives in a file this plan does not
+  own, so it is reported rather than edited.
+
+The sibling plans were being written while this one was, and two more of them (`09` and `10`)
+appeared during this stage's own revision. A snapshot is not a proof: **re-run the checker before
+scheduling any stage of this plan**, and treat this section as the record of one run rather than a
+standing guarantee.
