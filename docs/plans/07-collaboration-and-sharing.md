@@ -59,7 +59,16 @@ only two unauthenticated surfaces in the product.
 | `COL-05` | absent                           | `07-S8`  | 4 (earliest 3 — see below)   |
 | `COL-11` | absent                           | `07-S10` | 5                            |
 
-Every row is closed by exactly one stage, and no row is deferred out of this plan.
+Every row is closed by exactly one stage, and no row is deferred out of this plan. The table above
+is the authority for that mapping, because a row id appears in more than one stage's **Reference
+rows** and the two uses must not be confused: a stage **closes** a row only where it writes the row
+id followed by a status arrow — `` `COL-05` absent → **done** `` — and every other mention is a
+cross-reference naming the stage that does. Exactly two rows are mentioned in a **Reference rows**
+section that is not their own, and both mentions exist to stop a reader assuming the work happens
+where they are reading it:
+`COL-05` is named by `07-S4`, which defers one behaviour to `07-S8` and says so, and `COL-06` is
+named by `07-S1`, which used to hold it, and by `07-S3`, which is written against a reader `07-S7`
+later changes.
 
 #### `COL-06` is recorded **done** in the matrix and is not done, with the greps that refute it
 
@@ -1704,8 +1713,9 @@ database does not hold. Inventing a deleter for them would be a fabricated audit
 Creates a countable row — a reaction — and it is not metered, for the same reason a message is not:
 it is not sold, and the trip that bounds it is metered. Nothing is added to `resolveLimits()` or
 `PLAN_QUOTAS`, and no case to the equivalence test. The bound that does apply is structural: the
-unique index on (message, user, emoji) makes a duplicate reaction unrepresentable, and the curated
-set bounds the distinct glyphs per message to its own size.
+composite primary key on (`message_id`, `user_id`, `emoji`) — `collab_message_reactions` declares it
+as a `primaryKey({ columns: … })` rather than as a unique index — makes a duplicate reaction
+unrepresentable, and the curated set bounds the distinct glyphs per message to its own size.
 
 `COL-06` creates **no** row at all: a delete is an update of two columns on a row that already
 exists and was already counted, and the tombstone is a projection of it. What it changes is a read
@@ -2046,11 +2056,15 @@ The six items of `docs/SPEC.md` §7 apply unchanged, exactly as under `07-S1`.
 `COL-09` absent → **done**. A compact widget showing the next few scheduled things across the whole
 trip, grouped by day, with the people expected at each.
 
-The join table it needs exists and is unread: `assignment_participants` is a composite-primary-key
-table with `setAssignmentParticipants` in `src/server/repos/itinerary.ts` and no caller anywhere.
-This stage is its first reader, which also means the widget must behave correctly when the table is
-empty — and it does: an assignment with no participants shows every trip member, because "everyone"
-is the honest reading of "nobody was singled out".
+The join table it needs exists and has no reader: `assignment_participants` is a
+composite-primary-key table (`src/server/db/schema.ts:564-579`) whose only writer is
+`setAssignmentParticipants` (`src/server/repos/itinerary.ts:364`). The precise claim, because "no
+caller anywhere" would be refuted by one grep: `grep -rn setAssignmentParticipants src` returns the
+definition, the development seeder at `src/routes/api/dev/-seed/apply-trip.ts:264` and the isolation
+suite — **no production caller and no reader of any kind**. This stage is its first reader, which
+also means the widget must behave correctly when the table is empty — and it does: an assignment
+with no participants shows every trip member, because "everyone" is the honest reading of "nobody
+was singled out".
 
 This stage also registers the fourth sub-feature in `07-S2`'s registry, with its toggle, because the
 toggle now has something to switch.
@@ -2466,9 +2480,9 @@ Run against the plan set as it stands, with this plan's ordinal:
 
 ```text
 $ node scripts/ultrabuild/check-plan-collisions.mjs 07
-plans 8 · stages 43 · owned paths 250
+plans 8 · stages 48 · owned paths 282
 
-5 stage(s) state no parseable wave and cannot be checked: 04-S7 11-S1 11-S2 11-S3 04-S2
+4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
 no same-wave exclusive collisions
 
@@ -2520,14 +2534,16 @@ disposition and is not a collision. The checker agrees — it filters `append` o
 
 #### Three limits of this run, measured rather than assumed
 
-- **Five stages state no parseable wave and are therefore invisible to the comparison**: `04-S7`,
-  `11-S1`, `11-S2`, `11-S3`, and an entry the run prints as `04-S2` which is not the real one. That
-  fifth entry is an example heading inside a fenced code block at
-  `12-verification-protocol.md:26`, which the parser reads as a stage because it splits on a
-  `## Stage` line without respecting code fences; the real `04-S2` states wave 1 and is checked.
-  `04-S7` and the three `11-*` stages are unscheduled by design and say so in their own text. None
-  of the five is a file of this plan, so none can be fixed from here; each is reported as a contract
-  extension.
+- **Four stages state no parseable wave and are therefore invisible to the comparison**: `11-S1`,
+  `11-S2`, `11-S3`, and an entry the run prints as `04-S2` which is not the real one. That fourth
+  entry is an example heading inside a fenced code block at `12-verification-protocol.md:26`, which
+  the parser reads as a stage because it splits on a `## Stage` line without respecting code fences;
+  the real `04-S2` states wave 1 and is checked. The three `11-*` stages are unscheduled by design
+  and say so in their own text. None of the four is a file of this plan, so none can be fixed from
+  here; each is reported as a contract extension. An earlier run of the same command listed a fifth,
+  `04-S7`; that stage has since been given a wave in its own file, which is the change that took the
+  count from five to four and is the reason this section insists on the re-run below rather than on
+  its own numbers.
 - **The parser reads an owned path written as a list item — a dash, the path in backticks, an em
   dash, then the mode — and does not read a table row.** That is how this plan's wave-1 claim on
   `src/server/do/protocol.ts` and `04-S2`'s claim on the same module both sat in the plan set for a

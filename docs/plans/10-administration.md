@@ -19,10 +19,10 @@ shared-file protocol by `README.md`. Nothing below restates them.
   `src/routes/_app/-server/shell.ts:129` derives as `roleSatisfies(role, 'admin')`. Not one control
   on the screen writes anything.
 - **The console is one page, reachable from one place.** The only link into it is the account-menu
-  item at `src/components/layout/user-menu.tsx:94-101`, rendered only when `user.isAdmin` is true.
+  item at `src/components/layout/user-menu.tsx:95-102`, rendered only when `user.isAdmin` is true.
   There is no per-tab URL, so no part of the console can be bookmarked, linked to a colleague or
   reached with the browser's back button; and the settings section index
-  (`src/routes/_app/-ui/settings-nav.tsx:41-77`) lists six sections and does not mention the console
+  (`src/routes/_app/-ui/settings-nav.tsx:42-79`) lists six sections and does not mention the console
   at all.
 - **The membership repository is complete and almost entirely unreached.**
   `src/server/repos/members.ts` already implements `listMemberProfiles` (`:118`), `changeMemberRole`
@@ -40,7 +40,7 @@ shared-file protocol by `README.md`. Nothing below restates them.
   `src/server/repos/audit.ts` implements `recordAudit` (`:60`), a keyset-paged `listAuditLog`
   (`:93`), `listEntityHistory` (`:111`), `countAuditActions` (`:126`) and `pruneAuditLog` (`:141`).
   Every `audit_log` row in a running workspace today comes from the dev seeder, which inserts
-  through the repository object directly (`src/routes/api/dev/-seed/apply.ts:668-672`).
+  through the repository object directly (`src/routes/api/dev/-seed/apply.ts:669-676`).
 - **Authorisation has exactly one implementation, and it is small.** `src/server/repos/context.ts`
   ranks three roles (`:15-16`) and offers `hasAtLeastRole` (`:117`), `assertRole` (`:122`) and
   `assertCanAdminister` (`:136`). Repository-wide, the only module that calls any of them is
@@ -120,7 +120,7 @@ path is not rebuilt, not duplicated and not touched. The one thing missing betwe
 a way to create the row, and that is this stage.
 
 **The organization plugin's limits are respected, never re-derived.** They are already configured at
-`src/server/auth/index.ts:233-253` and this stage reads them rather than inventing a second set:
+`src/server/auth/index.ts:234-254` and this stage reads them rather than inventing a second set:
 
 | Configured limit                     | Value                                    | How this stage respects it                                                                  |
 | ------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -212,21 +212,33 @@ No column, no index, no migration, nothing to backfill. Instants stay epoch mill
   - `revokeInvitationFn` — `POST`. Delegates to `cancelInvitation`.
   - `changeMemberRoleFn` — `POST`. Delegates to `changeMemberRole`.
   - `removeMemberFn` — `POST`. Delegates to `removeMember`; the same function is what "leave this
-    workspace" calls, because the repository already permits self-removal (`:187-191`).
+    workspace" calls, because the repository already permits self-removal (`:189-191`).
 - **Zod v4.** Every input is a `z.strictObject`, so an unknown key is a rejection rather than a
   silently ignored field:
   - `inviteMemberFn`: `{ email: z.email({ error: 'Enter the address to invite.' }), role: z.enum(ORGANIZATION_ROLES) }`.
   - `resendInvitationFn` / `revokeInvitationFn`: `{ invitationId: z.string().trim().min(1).max(64) }`.
   - `changeMemberRoleFn`: `{ memberId: …, role: z.enum(ORGANIZATION_ROLES) }`.
   - `removeMemberFn`: `{ memberId: … }`.
-    The expiry is **never** accepted from the client: it is computed server-side as
-    `now + INVITATION_TTL_SECONDS`. Validation here is shape only.
+    The expiry is **never** accepted from the client: no input schema above carries an `expiresAt`
+    field, and because every one is a `z.strictObject` a client that sends one is rejected rather
+    than ignored. It is computed server-side as `now + INVITATION_TTL_SECONDS`. Validation here is
+    shape only.
+
+  **Why the constant has to become an export, stated because it is the one line of this stage that
+  touches a file outside the module.** `createInvitationInput` requires `expiresAt`
+  (`src/server/repos/members.ts:52-56`: `instantSchema`, not optional and with no default), so
+  something above the repository must supply the instant. Today the only thing that knows the
+  window is the plugin configuration, where `INVITATION_TTL_SECONDS` is a module-private constant
+  (`src/server/auth/index.ts:37`) read at `:240` and `:251`. The alternative — a second seven-day
+  literal in the server function — is exactly how the invitation email's stated expiry and the row's
+  real expiry drift apart, so the constant is exported and read from its one declaration.
+
 - **Authorisation is decided in the repository, and only there.** `createInvitation`,
   `cancelInvitation`, `changeMemberRole`, `removeMember` and the new `refreshInvitationExpiry` each
   call `assertCanAdminister(scope.ctx, …)` before they touch a row, and `removeMember` additionally
   permits the caller to remove themselves. The server functions decide nothing: a well-formed
   `memberId` from the client is not an authorised one, and a server function is reachable without
-  the route that renders its UI. The two last-owner guards (`:174-177`, `:190-193`) are the
+  the route that renders its UI. The two last-owner guards (`:180-182`, `:192-194`) are the
   repository's, and the UI only mirrors them by disabling a control it knows will be refused.
 - **Email, never inline.** The invitation email is enqueued on `TASKS` through `queueAuthEmail`
   (`src/server/auth/email.ts:286`) with the existing `auth.organization-invitation` message kind
@@ -317,7 +329,7 @@ This stage's writes consume **`members`**, the metric the catalogue sells as sea
 - The assertion sites already exist and are inside the repository, before the write:
   `addMember` calls `assertQuota(scope, 'members', await countMembers(scope))`
   (`src/server/repos/members.ts:160`), and `createInvitation` asserts against **members plus
-  outstanding invitations** (`:270-277`), so a workspace cannot oversubscribe its plan by inviting
+  outstanding invitations** (`:272-277`), so a workspace cannot oversubscribe its plan by inviting
   more people than it can seat. `refreshInvitationExpiry` creates no row and asserts nothing.
 - The plugin's `membershipLimit` of 100 and `invitationLimit` of 50 are the outer envelope. The plan
   quota is stricter on every published plan, so the quota is what refuses and the published number
@@ -387,6 +399,20 @@ Functions covered: `listMemberProfiles`, `listInvitationsWithInviter`, `getInvit
 - **Console must be silent.** `watchConsole(page, route)` is attached before navigation in every
   test in this stage's `describe`, including the frame-only ones, and the report's `fatal` list is
   asserted empty at the end of each. `TOLERATED_CONSOLE_WARNINGS` is not extended.
+- **Layout shift after paint**, which `12-verification-protocol.md` §6 requires of every stage
+  alongside the console verdict, and which nothing in `e2e/` or `capture.mjs` measures today. The
+  shape is fixed there and is not re-derived here: a `PerformanceObserver` for `layout-shift`
+  installed as an **init script** before the document exists, accumulating `entry.value` only where
+  `hadRecentInput` is false; `visit()` then `settle()`; `performance.now()` read as the mark;
+  and the sum of entries after the mark asserted to be `0`. The budget is zero **after the settle
+  mark**, never from navigation.
+  The seam is built by whichever of this plan's stages runs first — `10-S2` in wave 1 — and lives in
+  `e2e/administration.visual.spec.ts`, which every stage here shares; this stage calls it rather than
+  writing a second one. What this stage exercises after the mark is the state it declares: opening the
+  invite dialog and opening the row menu must move nothing behind them. Reported per engine, with the
+  WebKit reading stated as a **skip and not a pass** — measured there, `layout-shift` is absent from
+  `PerformanceObserver.supportedEntryTypes` and `observe()` does not throw, so a WebKit score of
+  `0` means "unsupported".
 - **Comparison budget.** `maxDiffPixelRatio` is not raised, not globally, not per project, not per
   call.
 
@@ -420,8 +446,8 @@ On top of those, the `docs/SPEC.md` §2 clauses, ticked against every surface th
 
 ### Blockers
 
-None that stop the stage. Three dependencies and one cross-plan requirement, all stated before
-scheduling rather than discovered mid-run:
+None that stop the stage. Two dependencies, the freeze, one inherited harness precondition and one
+cross-plan requirement, all stated before scheduling rather than discovered mid-run:
 
 - The audit write path is `00-S3` (`00-foundations.md`, wave 0), which closes before wave 1 opens.
 - The notification preference matrix that lists `organization.invited` ships with `ACC-05`
@@ -429,6 +455,21 @@ scheduling rather than discovered mid-run:
   layer, and the switch is already on disk.
 - No package outside the `docs/SPEC.md` §3 pinned set is needed, no binding is added to
   `wrangler.jsonc`, and no third-party service is introduced.
+- **Inherited harness precondition — `12-verification-protocol.md` §7.1, and it is blocking for this
+  stage's baselines rather than for its code.** That section names `/admin` explicitly: it is one of
+  two screens printing a `formatRelative` string, and the instants those strings are derived from are
+  seeded from a single `new Date()` in `applySeed()` (`src/routes/api/dev/-seed/apply.ts:232`), so
+  they move on every re-seed. Neither pin reaches them — `x-pt-server-today` answers a **calendar
+  day** through `serverToday()` while these are epoch-millisecond columns, and `FROZEN_NOW` holds an
+  in-page `Date.now()`. Confirmed still true at HEAD: `src/routes/_app/admin.tsx:303` renders
+  `formatRelative(row.createdAt, now)` against `now = Date.now()` taken at `:67`, and `/admin`
+  appears in no route table under `e2e/` today, so nothing has ever baselined it. §7.1's status is
+  **deferred, blocking for the first stage that baselines `/admin`** — which this plan is. Designing
+  the seam is not this stage's side effect to take on; what this stage owes is to name it, and to keep
+  the unpinned string out of the comparison the way §5 permits and only that way: through the
+  `relativeTime` declaration and the `RELATIVE_TIME_SITES` entry `10-S2` adds, which pins the
+  string first so the excluded rectangle is constant on every run. A widened mask or a raised
+  `maxDiffPixelRatio` is not the remedy and is forbidden.
 - **Cross-plan requirement.** `src/routes/_app/settings/organization.tsx` keeps a read-only member
   list once this stage ships the writable one in the console. A cross-link from that screen to the
   console's Members tab belongs to the plan that owns the settings area,
@@ -454,7 +495,7 @@ supplies `trail()` in `src/server/audit/trail.ts`: a non-throwing wrapper over `
 resolves the request's IP and user agent, swallows its own failures so an audit write can never fail
 the action it records, and takes the actor from the scope rather than from the caller. Until it
 lands, this screen reads a trail that only the dev seeder appends to
-(`src/routes/api/dev/-seed/apply.ts:668-672`) — which is the exact condition this row exists to end.
+(`src/routes/api/dev/-seed/apply.ts:669-676`) — which is the exact condition this row exists to end.
 Wave 0 closes before wave 1 opens, so by the time this stage runs the trail has production rows in
 it.
 
@@ -535,7 +576,7 @@ no backfill.
     actor filter offers only people who have actually done something.
   - `countAuditEntries(scope)` — the tenant's total row count, which `10-S3` uses to replace the
     console's "Audit entries" figure. Measured: that `StatCard` today renders `data.audit.length`
-    (`src/routes/_app/admin.tsx:145-151`), which is the length of a 25-row page and therefore stops
+    (`src/routes/_app/admin.tsx:147-152`), which is the length of a 25-row page and therefore stops
     counting at 25.
 - **Server functions — `src/routes/_app/-server/audit.ts`,** both scoped through `appScope()`.
   - `loadAuditPage` — `createServerFn({ method: 'GET' })`. Takes the filters and the cursor, returns
@@ -677,8 +718,32 @@ Functions covered: `listAuditLog`, `listAuditActors`, `countAuditEntries`.
   `variants`, `fixed`, `pinned` — scoped to the trail's own time cell, and claims the helper file.
   The only other claimant in the plan set is `01-trips-core.md` `01-S5` in wave 2, so the file has
   one writer per wave; a further stage that wants it declares a module-local helper instead.
+- **The third thing a spec with a `relativeTime` route owes, and the one that is easiest to skip
+  because it asserts nothing: `auditRelativeTime()`'s report is read, not discarded.** It returns
+  sentences rather than failing, deliberately — how many clock-derived strings a screen shows is the
+  calendar's decision, so counting them cannot tell a moved fixture apart from a deleted string. A
+  non-empty return therefore means that run's exclusion covered nothing and the whole frame was
+  compared, and that has exactly two causes: a legitimate one, where the pinned day sits past the
+  rows carrying the string, and a defect, where the string was quietly removed. **This stage's
+  evidence says which of the two it is**, in words, rather than presenting the run as green.
+  `auditServerClock(page, ADMINISTRATION_ROUTES)` is the half that does fail, in both directions,
+  and it is what proves the declaration against the streamed payload.
 - **Console must be silent.** `watchConsole(page, route)` attached before navigation in every test,
   `fatal` asserted empty at the end of each, `TOLERATED_CONSOLE_WARNINGS` not extended.
+- **Layout shift after paint**, which `12-verification-protocol.md` §6 requires of every stage
+  alongside the console verdict, and which nothing in `e2e/` or `capture.mjs` measures today. The
+  shape is fixed there and is not re-derived here: a `PerformanceObserver` for `layout-shift`
+  installed as an **init script** before the document exists, accumulating `entry.value` only where
+  `hadRecentInput` is false; `visit()` then `settle()`; `performance.now()` read as the mark;
+  and the sum of entries after the mark asserted to be `0`. The budget is zero **after the settle
+  mark**, never from navigation.
+  This stage is the plan's earliest wave and therefore **builds the seam**, in
+  `e2e/administration.visual.spec.ts` and nowhere else — it is a few lines of init script in this
+  plan's own spec file, not a change to `e2e/helpers/shoot.ts`, so it cannot disturb another plan's
+  measurement. What it exercises after the mark is the trail's own risk: applying a filter and paging
+  Older must not move the table under the reader's cursor, and the skeleton must occupy the row height
+  the real rows land in. Reported per engine, with the WebKit reading stated as a skip because
+  `layout-shift` is a Chromium-only entry type and `observe()` fails silently there.
 - **Comparison budget.** `maxDiffPixelRatio` is not raised.
 
 ### Definition of done
@@ -705,7 +770,8 @@ The `docs/SPEC.md` §2 clauses, ticked against the trail, the filters, the sheet
 
 ### Blockers
 
-None that stop the stage. Two dependencies and one requirement on another plan:
+None that stop the stage. Two dependencies, one requirement on another plan, and one inherited
+harness precondition:
 
 - `00-S3` (`00-foundations.md`, wave 0) supplies `trail()` and the first production call sites. Wave
   0 closes before wave 1 opens.
@@ -714,6 +780,21 @@ None that stop the stage. Two dependencies and one requirement on another plan:
   this is a **foundations requirement** on `00-foundations.md` and not a file this stage touches.
   Until it lands the retention window is policy without enforcement, which is a stated gap rather
   than a hidden one.
+- **Inherited harness precondition — `12-verification-protocol.md` §7.1, and it is blocking for this
+  stage's baselines rather than for its code.** That section names `/admin` explicitly: it is one of
+  two screens printing a `formatRelative` string, and the instants those strings are derived from are
+  seeded from a single `new Date()` in `applySeed()` (`src/routes/api/dev/-seed/apply.ts:232`), so
+  they move on every re-seed. Neither pin reaches them — `x-pt-server-today` answers a **calendar
+  day** through `serverToday()` while these are epoch-millisecond columns, and `FROZEN_NOW` holds an
+  in-page `Date.now()`. Confirmed still true at HEAD: `src/routes/_app/admin.tsx:303` renders
+  `formatRelative(row.createdAt, now)` against `now = Date.now()` taken at `:67`, and `/admin`
+  appears in no route table under `e2e/` today, so nothing has ever baselined it. §7.1's status is
+  **deferred, blocking for the first stage that baselines `/admin`** — which this plan is. Designing
+  the seam is not this stage's side effect to take on; what this stage owes is to name it, and to keep
+  the unpinned string out of the comparison the way §5 permits and only that way: through the
+  `relativeTime` declaration and the `RELATIVE_TIME_SITES` entry `10-S2` adds, which pins the
+  string first so the excluded rectangle is constant on every run. A widened mask or a raised
+  `maxDiffPixelRatio` is not the remedy and is forbidden.
 - No package outside the `docs/SPEC.md` §3 pinned set, no binding added to `wrangler.jsonc`, no
   third-party service.
 
@@ -747,8 +828,8 @@ busiest-actions panel are kept exactly as they are and moved, not rewritten.
    the single page because the tab shell does not exist before this wave. Each is a component under
    `src/components/administration/`, so this stage moves an import and not a screen.
 3. **A way in from where an administrator already is.** The only path into the console is the
-   account-menu item at `src/components/layout/user-menu.tsx:94-101`. The settings section index
-   (`src/routes/_app/-ui/settings-nav.tsx:41-77`) lists six sections and none of them is the
+   account-menu item at `src/components/layout/user-menu.tsx:95-102`. The settings section index
+   (`src/routes/_app/-ui/settings-nav.tsx:42-79`) lists six sections and none of them is the
    console, so the person managing workspace defaults has no route to the workspace's
    administration.
 
@@ -776,14 +857,23 @@ Rows unblocked: `ADM-03` (`10-S4`, wave 5), which mounts a tab into the shell th
 - `src/routes/_app/admin/-ui/console-tabs.tsx` — new. The declarative tab list and the strip that
   renders it. `10-S4` (wave 5) adds its own entry to this file; the two stages are in different
   waves, so the file has one writer at a time.
+- `src/routes/_app/admin/-ui/__tests__/console-tabs.test.tsx` — new. The active-tab matcher's test,
+  named under **Verification**.
 - `src/routes/_app/-server/overview.ts` — edit, and the edit is confined to `loadAdmin`
   (`:430-451`): the audit page it fetches for a stat count is replaced by `countAuditEntries` from
   `10-S2`, because that card renders `data.audit.length` today and therefore stops counting at 25.
-  **This file is touched by three other stages, in other waves, and they are named here as the
-  shared-path protocol requires:** `00-foundations.md` `00-S5` (wave 0), `01-trips-core.md` `01-S1`
-  (wave 1) and `01-trips-core.md` `01-S7` (wave 5). No stage in wave 4 claims it, so there is no
-  same-wave collision; the check output at the foot of this file is the measurement.
+  **This file is touched by four other stages, in other waves, and every one of them is named here as
+  the shared-path protocol requires:** `00-foundations.md` `00-S5` (wave 0), `01-trips-core.md`
+  `01-S1` (wave 1), `09-account-and-settings.md` `09-S7` (wave 2, which exposes the notification
+  answer and its actionable list) and `01-trips-core.md` `01-S7` (wave 5). This stage is wave 4 and
+  shares the file with none of them concurrently; the check output at the foot of this file is the
+  measurement, and `09-S7` names `10-S3` reciprocally at `docs/plans/09-account-and-settings.md:1852-1855`.
 - `src/routes/_app/-ui/settings-nav.tsx` — edit. One conditional entry, described under **UI**.
+  **This file is touched by one other plan, in an earlier wave, and it is named here for the same
+  reason:** `09-account-and-settings.md` `09-S8` (wave 3), which lands the responsive settings shell
+  this stage's seventh entry sits inside. This stage is wave 4, so the shell exists before the entry
+  is added to it and the two never run together; that plan names `10-S3` reciprocally at
+  `docs/plans/09-account-and-settings.md:2210-2212`.
 - `e2e/administration.visual.spec.ts` — append. One `test.describe` and the three new routes added
   to `ADMINISTRATION_ROUTES`.
 - `e2e/__screenshots__/administration.visual.spec.ts/` — append.
@@ -827,28 +917,61 @@ already exist and moves markup between files.
   the gate; the generated tree is committed with the diff and never edited by hand.
 - **The tab strip.** `Tabs` with `TabsList` and `TabsTrigger` from `src/components/ui/tabs.tsx`, in
   the `underline` variant, with each trigger rendered `asChild` around a router `Link` —
-  `TabsTriggerProps` extends Radix's own trigger props (`src/components/ui/tabs.tsx:146-152`), so
+  `TabsTriggerProps` extends Radix's own trigger props (`src/components/ui/tabs.tsx:157-163`), so
   `asChild` is available and no second tab implementation is written. The active value is derived
   from the matched pathname, so the strip is a view of the URL rather than a second source of truth.
   Tabs are declared once in `console-tabs.tsx` as `{ to, label, icon }`, which is what lets `10-S4`
   add one line rather than edit a strip.
+
+  **One constraint on that composition, measured rather than assumed, because getting it wrong costs
+  a run.** `asChild` puts a Radix `Slot` in the trigger's place and a `Slot` accepts exactly one
+  child. `TabsTrigger` renders up to three — an icon wrapper when `icon` is passed, the children, and
+  a badge wrapper when `badge` is passed (`src/components/ui/tabs.tsx:197-206`). So the tab's glyph
+  is rendered **inside the `Link`**, next to the label, and the trigger's own `icon` prop is left
+  unset; passing both `asChild` and `icon` hands `Slot` two children and throws at render. The
+  declaration's `icon` field is therefore consumed by `console-tabs.tsx` when it builds the `Link`'s
+  contents, not forwarded to `TabsTrigger`. `badge` is unused by this plan for the same reason;
+  a stage that later wants a count on a tab puts it inside the `Link` too.
+
 - **The entry point.** `src/routes/_app/-ui/settings-nav.tsx` gains a seventh entry, "Workspace
   admin", with a `ShieldCheck` glyph and the caption "Members, activity and permissions", rendered
-  only when the session's admin flag is true — read through the router's `_app` context, the same
-  flag `src/routes/_app/-server/shell.ts:129` already computes, so no new plumbing and no second
-  notion of who is an admin. It sits below a `Separator` at the end of the list, because it leaves
-  the settings area rather than being a section of it. For a non-admin the entry is absent, not
-  disabled.
+  only when the session's admin flag is true — the same flag `src/routes/_app/-server/shell.ts:129`
+  computes as `roleSatisfies(role, 'admin')`, so there is no new plumbing and no second notion of who
+  is an admin. It sits below a `Separator` at the end of the list, because it leaves the settings
+  area rather than being a section of it. For a non-admin the entry is absent, not disabled.
+
+  **Two things about that file that decide how the entry is written, both measured, because the
+  obvious approach reaches outside this stage's ownership.**
+
+  1. `SettingsNav()` takes **no props** (`src/routes/_app/-ui/settings-nav.tsx:110`) and its only
+     caller is `src/routes/_app/settings/route.tsx:39`, which is **not** an owned path of this stage
+     and must not be edited to thread a flag through. The flag is therefore read inside
+     `settings-nav.tsx` with `useRouteContext({ from: '/_app' })`, which reaches the `shell` the
+     `_app` route puts on the context in its own `beforeLoad` (`src/routes/_app/route.tsx:20-32`) —
+     the same accessor `AppShell` uses at `:43`. The component keeps its zero-prop signature and the
+     caller stays untouched.
+  2. `SettingsSectionLink['to']` is a closed union of the six settings paths
+     (`src/routes/_app/-ui/settings-nav.tsx:28-34`), deliberately so that each entry type-checks
+     against the generated route tree rather than against a string. Adding the console means widening
+     that union with `'/admin'`, which is a one-line change in the same file and is only valid after
+     `pnpm generate-routes` has published the route. The union is kept closed; it is not relaxed to
+     `string`.
+
+  The gate this entry reads is UX and nothing more: it decides what to render. What may actually be
+  read behind the console is decided in the repository, per `10-S4`.
+
 - **Components reused:** `Tabs`, `TabsList`, `TabsTrigger`, `Card`, `StatCard`, `Progress`, `Alert`,
   `Button`, `Separator`, `SectionLabel`, `EmptyState`, `Skeleton`, `ScrollArea`, plus
   `PageHeader`, `AppFrame` and `AppSections` from `src/components/layout`, and the two
   administration panels from `10-S1` and the trail from `10-S2`. No new primitive.
 - **States.**
   - _Tab content pending:_ each tab route ships its own `pendingComponent` reusing the existing
-    `HeaderSkeleton`, `StatsSkeleton` and `RowsSkeleton` scaffolding, on `--color-surface-2`, so the
+    `HeaderSkeleton`, `StatsSkeleton` and `RowsSkeleton` scaffolding from
+    `src/routes/_app/-ui/scaffold.tsx`, on `--color-surface-2`, so the
     strip stays put and only the panel below it changes — that is the whole point of moving the gate
     and the header into the layout.
-  - _Tab content error:_ each tab route ships an `errorComponent` using `ErrorPanel` with a title
+  - _Tab content error:_ each tab route ships an `errorComponent` using `ErrorPanel`
+    (`src/components/layout/error-state.tsx`) with a title
     naming that tab, drawn on `--color-surface-2`, so a failing audit query does not blank the
     console.
   - _Not an admin:_ the layout's designed locked state, kept from the current file — an
@@ -859,10 +982,15 @@ already exist and moves markup between files.
   scrollbar, each tab at least 44px tall, and the page header collapses to title plus one action.
   At 1280px the strip sits under the header at full width. At 2560px the console holds the content
   measure the rest of the app uses; the tabs do not spread to the window's edges.
-- **Motion.** The active underline scales from its centre over `--duration-base` on
-  `--ease-out-quint` — transform only, so nothing in the row is laid out twice — which is the
-  behaviour `TabsTrigger` already implements. Tab content crossfades over 150ms. Reduced motion
-  removes both.
+- **Motion.** The active underline scales from its centre — transform only, so nothing in the row is
+  laid out twice — which is the behaviour `TabsTrigger` already implements at
+  `src/components/ui/tabs.tsx:185-187` with the `duration-base` and `ease-out-quint` utilities.
+  Measured, and stated because it is the kind of thing a plan gets wrong from memory: **there is no
+  `--duration-base` token.** `duration-base` is a project `@utility`
+  (`src/styles/styles.css:688-690`) that resolves to `var(--duration)`, the 220ms token declared at
+  `src/styles/tokens.css:696`; the siblings are `duration-fast` → `--duration-fast` (150ms) and
+  `duration-slow` → `--duration-slow` (320ms). This stage adds no motion of its own to the strip.
+  Tab content crossfades over `--duration-fast`. Reduced motion removes both.
 - **Keyboard and a11y.** The strip is a `nav` with an accessible name; because the triggers are
   links, Tab moves through them and Return follows, which is the correct model for tabs that are
   routes. The active tab carries `aria-current="page"`. Focus lands in the tab panel after
@@ -888,11 +1016,14 @@ case that would restate another stage's.
 
 - **Command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`. The
   route regeneration runs before the gate: `pnpm generate-routes`.
-- **Unit tests.** `src/routes/_app/admin/-ui/__tests__/console-tabs.test.tsx` is **not** added;
-  instead the tab strip's one piece of logic — deriving the active tab from a pathname, including
-  the index tab at `/admin` and the deepest match winning — is tested as a pure function exported
-  from `console-tabs.tsx`, in that same test file. The declarative tab list is data and needs no
-  test; the matcher is where a bug would live.
+- **Unit test — `src/routes/_app/admin/-ui/__tests__/console-tabs.test.tsx`,** listed under **Owned
+  paths**. The strip has exactly one piece of logic worth a test and the test covers that and nothing
+  else: `activeTabFor(pathname)`, a pure function exported from `console-tabs.tsx` alongside the
+  declarative list, resolves `/admin` to the Overview tab, `/admin/members` and `/admin/audit` to
+  their own, an unknown `/admin/…` path to Overview rather than to nothing, and a deeper path such as
+  `/admin/audit` against a hypothetical `/admin/audit/…` child to the deepest match. It is a pure
+  function precisely so it can be tested without rendering a router. The declarative tab list beside
+  it is data and is not asserted key by key; a test that restates a literal has tested the test.
 - **Browser evidence.** Three routes — `/admin`, `/admin/members`, `/admin/audit` — at 360px, 1280px
   and 2560px, in light and dark. That is eighteen frames, and the stage owes them because it ships
   three surfaces. Two declared non-resting states, each with its selector verified against a running
@@ -920,6 +1051,18 @@ case that would restate another stage's.
 - **Console must be silent.** `watchConsole(page, route)` attached before navigation in every test,
   `fatal` asserted empty at the end of each. A React hydration report is not tolerable and cannot be
   tolerated: the route split is exactly the kind of change that produces one.
+- **Layout shift after paint**, which `12-verification-protocol.md` §6 requires of every stage
+  alongside the console verdict, and which nothing in `e2e/` or `capture.mjs` measures today. The
+  shape is fixed there and is not re-derived here: a `PerformanceObserver` for `layout-shift`
+  installed as an **init script** before the document exists, accumulating `entry.value` only where
+  `hadRecentInput` is false; `visit()` then `settle()`; `performance.now()` read as the mark;
+  and the sum of entries after the mark asserted to be `0`. The budget is zero **after the settle
+  mark**, never from navigation.
+  It matters more here than anywhere else in the plan: this stage splits one route into four, and the
+  tab strip is the element most able to move a panel after paint. What it exercises after the mark is
+  a navigation between two tabs — the strip must not shift when the panel below it changes, which is
+  the whole reason the gate and the page header moved into the layout. The seam is `10-S2`'s, in this
+  plan's shared spec file. Reported per engine, WebKit stated as a skip.
 - **Comparison budget.** `maxDiffPixelRatio` is not raised. The route split moves pixels; the
   baselines for `/admin` are re-recorded with `--update-snapshots` **as a stated decision**, because
   the URL that produced them now serves a different composition, and the re-recorded frames travel
@@ -949,13 +1092,31 @@ entry:
 
 ### Blockers
 
-None that stop the stage. Two ordering facts and one file-sharing note:
+None that stop the stage. Two ordering facts, one file-sharing note and one inherited harness
+precondition:
 
 - `10-S1` (wave 3) and `10-S2` (wave 1) must have landed, because this stage mounts their components
   rather than writing them. Both are in earlier waves, which is what the wave order guarantees.
-- `src/routes/_app/-server/overview.ts` is shared with `00-S5`, `01-S1` and `01-S7`, all in other
-  waves; the check at the foot of this file is the measurement, and this stage's edit is confined to
-  the one stat count inside `loadAdmin`.
+- `src/routes/_app/-server/overview.ts` is shared with `00-S5` (wave 0), `01-S1` (wave 1), `09-S7`
+  (wave 2) and `01-S7` (wave 5), and `src/routes/_app/-ui/settings-nav.tsx` with `09-S8` (wave 3) —
+  every one of them in a wave other than this stage's wave 4. The check at the foot of this file is
+  the measurement, not a reading of the sibling plans, and this stage's edit to `overview.ts` is
+  confined to the one stat count inside `loadAdmin`.
+- **Inherited harness precondition — `12-verification-protocol.md` §7.1, and it is blocking for this
+  stage's baselines rather than for its code.** That section names `/admin` explicitly: it is one of
+  two screens printing a `formatRelative` string, and the instants those strings are derived from are
+  seeded from a single `new Date()` in `applySeed()` (`src/routes/api/dev/-seed/apply.ts:232`), so
+  they move on every re-seed. Neither pin reaches them — `x-pt-server-today` answers a **calendar
+  day** through `serverToday()` while these are epoch-millisecond columns, and `FROZEN_NOW` holds an
+  in-page `Date.now()`. Confirmed still true at HEAD: `src/routes/_app/admin.tsx:303` renders
+  `formatRelative(row.createdAt, now)` against `now = Date.now()` taken at `:67`, and `/admin`
+  appears in no route table under `e2e/` today, so nothing has ever baselined it. §7.1's status is
+  **deferred, blocking for the first stage that baselines `/admin`** — which this plan is. Designing
+  the seam is not this stage's side effect to take on; what this stage owes is to name it, and to keep
+  the unpinned string out of the comparison the way §5 permits and only that way: through the
+  `relativeTime` declaration and the `RELATIVE_TIME_SITES` entry `10-S2` adds, which pins the
+  string first so the excluded rectangle is constant on every run. A widened mask or a raised
+  `maxDiffPixelRatio` is not the remedy and is forbidden.
 - No package outside the `docs/SPEC.md` §3 pinned set, no binding added to `wrangler.jsonc`, no
   third-party service.
 
@@ -1056,7 +1217,7 @@ a wave-0 requirement in `00-foundations.md`, which owns `src/server/db/schema.ts
 
 **Why not the column that already exists.** `organization_settings.features` is a `JsonRecord` too,
 and it would fit mechanically. It is not used, because it is the workspace feature-flag record that
-`getEffectiveSettings` returns to every screen (`src/server/repos/settings.ts:221`), and putting two
+`getEffectiveSettings` returns to every screen (`src/server/repos/settings.ts:284`), and putting two
 vocabularies in one flat record makes an action key and a feature flag collide on a name with no way
 to tell which one an entry was.
 
@@ -1242,6 +1403,17 @@ false` — the screen prints no clock-derived string — and is covered by the e
 - **Console must be silent.** `watchConsole(page, route)` attached before navigation in every test,
   `fatal` asserted empty at the end of each, including the frame-only tests, because a warning that
   only appears in dark at 360px is exactly the kind nobody finds by hand.
+- **Layout shift after paint**, which `12-verification-protocol.md` §6 requires of every stage
+  alongside the console verdict, and which nothing in `e2e/` or `capture.mjs` measures today. The
+  shape is fixed there and is not re-derived here: a `PerformanceObserver` for `layout-shift`
+  installed as an **init script** before the document exists, accumulating `entry.value` only where
+  `hadRecentInput` is false; `visit()` then `settle()`; `performance.now()` read as the mark;
+  and the sum of entries after the mark asserted to be `0`. The budget is zero **after the settle
+  mark**, never from navigation.
+  What this stage exercises after the mark is the save bar: it rises when the grid becomes dirty, and
+  a bar that reflows the last rows of a sixteen-row grid is exactly the defect this clause is about —
+  which is why it is pinned within the panel rather than floating. The seam is `10-S2`'s, in this
+  plan's shared spec file. Reported per engine, WebKit stated as a skip.
 - **Comparison budget.** `maxDiffPixelRatio` is not raised.
 
 ### Definition of done
@@ -1267,7 +1439,8 @@ The `docs/SPEC.md` §2 clauses, ticked against the grid, the save bar and the re
 
 ### Blockers
 
-None that stop the stage. One foundations requirement, one cross-plan requirement, and the freeze:
+None that stop the stage. One foundations requirement, one cross-plan requirement, one inherited
+precondition that turns out **not** to apply, and the freeze:
 
 - **Foundations requirement:** the nullable `permissions` JSON column on `organization_settings`,
   specified under **Data and migration**. `src/server/db/schema.ts` is one of the six shared paths,
@@ -1280,26 +1453,37 @@ None that stop the stage. One foundations requirement, one cross-plan requiremen
   here; until it lands, that affordance is hidden by the UI and enforced by the collaboration
   repository's own existing rules, which is the status quo and not a regression this stage
   introduces.
+- **`12-verification-protocol.md` §7.1 does not reach this stage, and the reason is checked rather
+  than assumed.** §7.1 is blocking for a stage that baselines `/admin`, `/notifications` or any
+  surface printing a `formatRelative` string, and `10-S1`, `10-S2` and `10-S3` each carry it. This
+  stage baselines `/admin/permissions` only. The grid prints no instant of any kind — no timestamp
+  column, no expiry, no "last changed" line — and the console layout it renders inside is a page
+  header and a tab strip, neither of which prints one either; the two `formatRelative` call sites in
+  the product are `src/routes/_app/notifications.tsx` and `src/routes/_app/admin.tsx:303`, and the
+  second is the activity list `10-S2` replaces and `10-S3` moves to `/admin/audit`. That is why this
+  stage's route declares `relativeTime: false`, and why `auditServerClock()` — which fails in both
+  directions — is what proves the declaration rather than a reading of the JSX.
 - No package outside the `docs/SPEC.md` §3 pinned set is needed, no binding is added to
   `wrangler.jsonc`, and no third-party service is introduced.
 
 ## Cross-plan collisions
 
-Run at the time of writing, and pasted verbatim, because a judgement re-made by hand every round is
+Run at the time of writing and pasted verbatim, because a judgement re-made by hand every round is
 eventually made wrong. `node scripts/ultrabuild/check-plan-collisions.mjs 10`:
 
 ```
-plans 8 · stages 43 · owned paths 250
+plans 8 · stages 48 · owned paths 284
 
-5 stage(s) state no parseable wave and cannot be checked: 04-S7 11-S1 11-S2 11-S3 04-S2
+4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
 no same-wave exclusive collisions
 
-touched by more than one plan in different waves (4) — legal; each plan must name the other:
+touched by more than one plan in different waves (5) — legal; each plan must name the other:
   src/routes/_app/-server/overview.ts
       00-foundations.md  00-S5  wave 0  (edit)
       01-trips-core.md  01-S1  wave 1  (edit)
       01-trips-core.md  01-S7  wave 5  (edit)
+      09-account-and-settings.md  09-S7  wave 2  (edit)
       10-administration.md  10-S3  wave 4  (edit)
   e2e/helpers/shoot.ts
       01-trips-core.md  01-S5  wave 2  (edit)
@@ -1310,25 +1494,52 @@ touched by more than one plan in different waves (4) — legal; each plan must n
   src/server/repos/members.ts
       09-account-and-settings.md  09-S3  wave 1  (edit)
       10-administration.md  10-S1  wave 3  (edit)
+  src/routes/_app/-ui/settings-nav.tsx
+      09-account-and-settings.md  09-S8  wave 3  (edit)
+      10-administration.md  10-S3  wave 4  (edit)
 ```
 
 Reading it:
 
 - **No same-wave exclusive collision involves this plan.** No stage here shares an exclusive
   disposition on a file with another stage in the same wave, inside this plan or across the set.
-- **Four paths are touched by more than one plan in different waves, which is legal, and each one is
-  named in the stage that owns it here.** `src/routes/_app/-server/overview.ts` is named in `10-S3`'s
-  **Owned paths** with `00-S5` (wave 0), `01-S1` (wave 1) and `01-S7` (wave 5).
-  `e2e/helpers/shoot.ts` is named in `10-S2`'s **Owned paths** with `01-S5` (wave 2).
-  `src/server/auth/index.ts` and `src/server/repos/members.ts` are both named in `10-S1`'s **Owned
-  paths** with `09-S3` (wave 1).
-- **The five stages the check cannot read are not this plan's.** They are in
-  `04-budget-and-currencies.md` and `11-boundaries-and-blockers.md`, and a stage with no parseable
-  wave is invisible to the check rather than safe. Every stage in this file states its wave on its
-  `### Stage id` line, so all four are checked.
+  Note the shape of that guarantee: the check is over stages that state a wave, so the line above it
+  is part of the same reading and not a footnote.
+- **Five paths are touched by more than one plan in different waves, which is legal, and every one of
+  them is named in the stage that owns it here, with the sibling stage id and its wave.**
+
+  | Path                                   | Owned here by   | Named siblings                                    |
+  | -------------------------------------- | --------------- | ------------------------------------------------- |
+  | `src/routes/_app/-server/overview.ts`  | `10-S3`, wave 4 | `00-S5` w0 · `01-S1` w1 · `09-S7` w2 · `01-S7` w5 |
+  | `e2e/helpers/shoot.ts`                 | `10-S2`, wave 1 | `01-S5` w2                                        |
+  | `src/server/auth/index.ts`             | `10-S1`, wave 3 | `09-S3` w1                                        |
+  | `src/server/repos/members.ts`          | `10-S1`, wave 3 | `09-S3` w1                                        |
+  | `src/routes/_app/-ui/settings-nav.tsx` | `10-S3`, wave 4 | `09-S8` w3                                        |
+
+  Each of those is named in the stage's **Owned paths**, not only in this table, because that is the
+  list an orchestrator fans out against. Two of them are new since the previous run of this check —
+  `09-S7` on `overview.ts` and `09-S8` on `settings-nav.tsx` — and both appeared because
+  `09-account-and-settings.md` was written after this file's first draft. That is the protocol
+  working, not an exception to it: the plan written second names the sibling, and re-running the
+  check is how the second writer finds out. `09-account-and-settings.md` names `10-S3` in both
+  directions already, so the pair is reciprocal.
+
+- **The four stages the check cannot read are not this plan's.** `04-S2` is in
+  `04-budget-and-currencies.md`; `11-S1`, `11-S2` and `11-S3` are in
+  `11-boundaries-and-blockers.md`. A stage with no parseable wave is **invisible to the check rather
+  than proven safe**, so the "no same-wave exclusive collisions" line above is clean only with
+  respect to the stages that do state one: if one of those four later declares a wave and claims a
+  path this plan owns in that same wave, the collision was always there and merely became visible.
+  Giving them a wave belongs to the plans that own them and is not a thing this plan may edit —
+  it is carried out of this file as a contract extension. All four of **this** plan's stages state a
+  wave on their `### Stage id` line — `10-S1` wave 3, `10-S2` wave 1, `10-S3` wave 4, `10-S4`
+  wave 5 — so every one of them is inside the check.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` is claimed by three stages here and by stages
   in every other plan, and is absent from both lists because every claimant marks it `append`, which
-  is the documented cooperative pattern and not a collision.
-- The plan set was still being written while this was measured. A later round re-runs the check; a
-  path that appears in it afterwards is named by whichever plan is written second, which is the
-  protocol and not an exception to it.
+  is the documented cooperative pattern and not a collision. The same is true of
+  `e2e/administration.visual.spec.ts`, which `10-S2` creates in wave 1 and the other three append a
+  `test.describe` to.
+- **The counts in the pasted output move between rounds, and that is expected rather than alarming.**
+  The plan set is still being written; `plans 8 · stages 48 · owned paths 284` is what was measured
+  on 2026-08-24 for this file. A later round re-runs the command and re-pastes it, and a path that
+  appears then is named by whichever plan is written second.

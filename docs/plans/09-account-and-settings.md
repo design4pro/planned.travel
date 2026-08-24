@@ -2,7 +2,7 @@
 
 Eight rows of the 89-row matrix live here, plus the one Extensibility row that survives the hosted
 multi-tenant boundary. Seven of the eight are `ACC-*`; the eighth, `ACC-08`, is excluded and is
-argued in `11-boundaries-and-blockers.md` rather than planned here.
+argued in `docs/plans/11-boundaries-and-blockers.md` rather than planned here.
 
 This is the cheapest high-visibility slice in the repository, and the reason is specific: two shipped
 screens carry dead affordances whose server halves are already complete, so the work is a route and a
@@ -63,32 +63,44 @@ already returns `signedIn`, so both redirecting stages **read** that module and 
 
 ### User-visible copy language, fixed once for the whole plan
 
-**English, `en-GB`.** It is not a preference: `src/lib/format.ts:35` pins `const LOCALE = 'en-GB'`,
-the module's header states there is exactly one date formatter in the product and a second must not
-be added, and the frozen CLDR month table at `:38` is the `en-GB` set. Sentence case in headings and
-buttons, no exclamation marks, no second person plural, and the same vocabulary the shipped screens
-use — "workspace" for an organization row, "trip" for a `trips` row, "traveller" for a member.
+**English, `en-GB`.** It is not a preference. Measured at the commit this plan was written against,
+`src/lib/format.ts:35` pins `const LOCALE = 'en-GB'` and the frozen CLDR month table at `:38` is the
+`en-GB` set; the module's header states there is exactly one date formatter in the product and a
+second must not be added. Sentence case in headings and buttons, no exclamation marks, no second
+person plural, and the same vocabulary the shipped screens use — "workspace" for an organization row,
+"trip" for a `trips` row, "traveller" for a member.
+
+**The citation is a line number and line numbers move, so here is the invariant behind it.** That
+module is being re-shaped by the localisation work `docs/SPEC.md` §8 governs: measured on disk while
+this revision was written, `src/lib/format.ts` has become a module whose every function takes a
+trailing `locale` defaulting to `en`, which its own header at `:13-17` says "resolves to `en-GB`, the
+tag this module has always pinned — so every existing caller's output is unchanged to the byte". The
+sentence "there is exactly one date formatter in the product; do not add a second one" survives that
+rewrite verbatim (`:8-9`). So the rule every stage below obeys is stated against the invariant rather
+than the constant: **English source copy, `en-GB` output, formatted through that one module and never
+through an `Intl` object a stage constructs itself.** A stage that finds `LOCALE` gone has found the
+locale work landed, not a wrong plan — it should check the header, not the line.
 
 Every stage below restates this under **UI**, so no stage has to invent one. `ACC-06` would make the
-language a runtime choice; it is blocked, and until it is unblocked `en-GB` is the only language the
-product speaks.
+language a runtime choice; `09-S5` records why this plan does not build it, and until it lands
+`en-GB` is the only language these eight stages write.
 
 ### The rows, their waves and their stages
 
-| Row      | Stage   | Wave | Moves           |
-| -------- | ------- | ---- | --------------- |
-| `ACC-03` | `09-S1` | 1    | partial → done  |
-| `ACC-02` | `09-S2` | 1    | partial → done  |
-| `ACC-01` | `09-S3` | 1    | partial → done  |
-| `ACC-07` | `09-S4` | 1    | absent → done   |
+| Row      | Stage   | Wave | Moves                          |
+| -------- | ------- | ---- | ------------------------------ |
+| `ACC-03` | `09-S1` | 1    | partial → done                 |
+| `ACC-02` | `09-S2` | 1    | partial → done                 |
+| `ACC-01` | `09-S3` | 1    | partial → done                 |
+| `ACC-07` | `09-S4` | 1    | absent → done                  |
 | `ACC-06` | `09-S5` | 1    | partial → partial, **BLOCKED** |
-| `EXT-04` | `09-S6` | 1    | absent → done   |
-| `ACC-05` | `09-S7` | 2    | partial → done  |
-| `ACC-04` | `09-S8` | 3    | partial → done  |
+| `EXT-04` | `09-S6` | 1    | absent → done                  |
+| `ACC-05` | `09-S7` | 2    | partial → done                 |
+| `ACC-04` | `09-S8` | 3    | partial → done                 |
 
 The wave column is `README.md`'s table, unchanged. `ACC-08` is not in it: it is excluded on
 architectural grounds and on the dependency freeze, and both arguments live in
-`11-boundaries-and-blockers.md` (`11-S1` for the conflict-authority argument, `11-S2` entry 4 for the
+`docs/plans/11-boundaries-and-blockers.md` (`11-S1` for the conflict-authority argument, `11-S2` entry 4 for the
 absent client-side database). Its named hosted equivalent is `ACC-07`, which `09-S4` builds.
 
 ### What this plan takes from other plans rather than rebuilding
@@ -318,7 +330,31 @@ The equivalent boundary here is **user to user**, and it is tested — in
 
 ### Verification
 
+**How this is run.** `docs/plans/12-verification-protocol.md` owns the procedure: §2 the commands
+and the three project names, §3 the frame set and the declared-state rule, §4 the spec-file split
+this stage's file obeys, §5 the pixel budget, §6 the two assertions every stage owes. This block
+names only what is specific to `/passkeys`.
+
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**The Playwright run, written out in full.** There is no `test:e2e`, no `test:visual` and no
+`playwright` script, and `docs/SPEC.md` §3 freezes `package.json` so none may be added:
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/account-and-settings.visual.spec.ts
+```
+
+Both browser projects run: `chromium` at 1440x900 and `mobile-safari` on WebKit at 393x659. Those
+are the gate's viewports and are separate from the evidence widths below — the gate proves nothing
+changed, the frames prove the thing is good. `--project=setup` is re-run whenever a cached session
+starts redirecting to `/login`; without `PLAYWRIGHT_BASE_URL` the config waits on port 3000 until the
+global timeout. Baselines are recorded with `--update-snapshots` on the run that mints them, and
+only for the frames this stage's own `test.describe` block produces; `maxDiffPixelRatio` stays at
+`0.002` and `threshold` at `0.2` — neither is raised, per §5, and a failing comparison is either the
+renderer's or the product's.
 
 **Unit tests, by file and invariant.**
 
@@ -434,7 +470,7 @@ enrolment endpoints.
 2. **There is no server-side enrolment window.** The upstream behaviour the row describes as a
    fifteen-minute window has no equivalent in the installed library: the secret is durable from the
    moment `enable` returns. What this stage ships instead is stated plainly under **UI** — the screen
-   expires the secret it is *displaying* after fifteen minutes and restarts enrolment, which re-rolls
+   expires the secret it is _displaying_ after fifteen minutes and restarts enrolment, which re-rolls
    the secret because `enable` overwrites the existing row (`index.mjs:153-158`). The security
    property that matters — the factor is not active until a code proves it — comes from the library,
    not from a timer.
@@ -483,13 +519,13 @@ eight-attempt, fifteen-minute lockout; `twoFactorClient()` is already in the bro
 `twoFactorClient()` contributes — the endpoint list is measured in
 `node_modules/better-auth/dist/plugins/two-factor/client.d.mts` under `pathMethods`:
 
-| Call                                        | Endpoint                              | What it returns                       |
-| ------------------------------------------- | ------------------------------------- | ------------------------------------- |
-| `authClient.twoFactor.enable({ password })` | `POST /two-factor/enable`             | `{ totpURI, backupCodes }`            |
-| `authClient.twoFactor.verifyTotp({ code })` | `POST /two-factor/verify-totp`        | activates the factor on first success |
-| `authClient.twoFactor.getTotpUri({ password })` | `POST /two-factor/get-totp-uri`   | `{ totpURI }`, for re-adding a device |
-| `authClient.twoFactor.generateBackupCodes({ password })` | `POST /two-factor/generate-backup-codes` | a fresh set of ten     |
-| `authClient.twoFactor.disable({ password })` | `POST /two-factor/disable`           | clears the factor                     |
+| Call                                                     | Endpoint                                 | What it returns                       |
+| -------------------------------------------------------- | ---------------------------------------- | ------------------------------------- |
+| `authClient.twoFactor.enable({ password })`              | `POST /two-factor/enable`                | `{ totpURI, backupCodes }`            |
+| `authClient.twoFactor.verifyTotp({ code })`              | `POST /two-factor/verify-totp`           | activates the factor on first success |
+| `authClient.twoFactor.getTotpUri({ password })`          | `POST /two-factor/get-totp-uri`          | `{ totpURI }`, for re-adding a device |
+| `authClient.twoFactor.generateBackupCodes({ password })` | `POST /two-factor/generate-backup-codes` | a fresh set of ten                    |
+| `authClient.twoFactor.disable({ password })`             | `POST /two-factor/disable`               | clears the factor                     |
 
 Every failure goes through `toAuthFailure` from `src/lib/auth/client.ts:56-67`, so the screen branches
 on a code, detects `429` by status, and renders a message the server already made safe. No second
@@ -615,7 +651,29 @@ is unreachable with one, which is the redirect this stage adds and which the spe
 
 ### Verification
 
+**How this is run.** `docs/plans/12-verification-protocol.md` owns the procedure. §3 binds hardest
+here: enrolment is four states deep and none of them is the resting one, so every state below is
+declared with the selector that reaches it and the way that selector was verified to exist.
+
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**The Playwright run, written out in full.** There is no `test:e2e`, no `test:visual` and no
+`playwright` script, and `docs/SPEC.md` §3 freezes `package.json` so none may be added:
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/account-and-settings.visual.spec.ts -g '09-S2'
+```
+
+Both browser projects run: `chromium` at 1440x900 and `mobile-safari` on WebKit at 393x659. Those
+are the gate's viewports and are separate from the evidence widths below — the gate proves nothing
+changed, the frames prove the thing is good. `--project=setup` is re-run whenever a cached session
+starts redirecting to `/login`; without `PLAYWRIGHT_BASE_URL` the config waits on port 3000 until the
+global timeout. Baselines are recorded with `--update-snapshots` under the same `-g` filter, so no
+earlier stage's frames are re-recorded; `maxDiffPixelRatio` stays at `0.002` and `threshold` at `0.2` — neither is raised, per §5, and a
+failing comparison is either the renderer's or the product's.
 
 **Unit tests, by file and invariant.**
 
@@ -995,7 +1053,30 @@ The read-only functions this stage calls — `countMembers`, `listMemberProfiles
 
 ### Verification
 
+**How this is run.** `docs/plans/12-verification-protocol.md` owns the procedure. Two of its clauses
+bind this stage in particular: §6, because a destructive dialog is exactly where an unhandled
+rejection reaches the console, and §5, because a re-record here would be re-recording a screen three
+stages share.
+
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**The Playwright run, written out in full.** There is no `test:e2e`, no `test:visual` and no
+`playwright` script, and `docs/SPEC.md` §3 freezes `package.json` so none may be added:
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/account-and-settings.visual.spec.ts -g '09-S3'
+```
+
+Both browser projects run: `chromium` at 1440x900 and `mobile-safari` on WebKit at 393x659. Those
+are the gate's viewports and are separate from the evidence widths below — the gate proves nothing
+changed, the frames prove the thing is good. `--project=setup` is re-run whenever a cached session
+starts redirecting to `/login`; without `PLAYWRIGHT_BASE_URL` the config waits on port 3000 until the
+global timeout. Baselines are recorded with `--update-snapshots` under the same `-g` filter;
+`maxDiffPixelRatio` stays at `0.002` and `threshold` at `0.2` — neither is raised, per §5, and a
+failing comparison is either the renderer's or the product's.
 
 **Unit tests, by file and invariant.**
 
@@ -1112,7 +1193,7 @@ source file to import those packages. `generateSW` is therefore not a preference
 strategy available under the freeze, and every decision below follows from it.
 
 **`ACC-08` is not this stage.** Offline trip bundles, a pending-change queue and a conflict console
-are excluded in `11-boundaries-and-blockers.md` — `11-S1` on the grounds that a second conflict
+are excluded in `docs/plans/11-boundaries-and-blockers.md` — `11-S1` on the grounds that a second conflict
 authority would compete with the per-trip Durable Object, and `11-S2` entry 4 on the grounds that the
 client-side database it needs is absent. That file names `ACC-07` as the hosted equivalent, and this
 stage is it.
@@ -1266,9 +1347,32 @@ and third of those directly, in the case listed under **Verification**.
 
 ### Verification
 
+**How this is run.** `docs/plans/12-verification-protocol.md` owns the procedure, and this is the one
+stage that could break it: §2 records that `vite dev` is what `resolve-port.sh` resolves, what the
+gate's `webServer` starts and what every capture frame is taken against, so `devOptions.enabled:
+false` is a verification requirement and not only a build preference.
+
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 `pnpm build` carries more weight here than in any other stage in this plan: it is the only place the
 plugin runs, and the stage inspects its output rather than trusting it.
+
+**The Playwright run, written out in full.** There is no `test:e2e`, no `test:visual` and no
+`playwright` script, and `docs/SPEC.md` §3 freezes `package.json` so none may be added:
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/account-and-settings.visual.spec.ts -g '09-S4'
+```
+
+Both browser projects run: `chromium` at 1440x900 and `mobile-safari` on WebKit at 393x659. Those
+are the gate's viewports and are separate from the evidence widths below — the gate proves nothing
+changed, the frames prove the thing is good. `--project=setup` is re-run whenever a cached session
+starts redirecting to `/login`; without `PLAYWRIGHT_BASE_URL` the config waits on port 3000 until the
+global timeout. Baselines are recorded with `--update-snapshots` under the same `-g` filter;
+`maxDiffPixelRatio` stays at `0.002` and `threshold` at `0.2` — neither is raised, per §5, and a
+failing comparison is either the renderer's or the product's.
 
 **Unit tests, by file and invariant.**
 
@@ -1399,19 +1503,23 @@ Nothing is filed for a wave-0 foundations schema stage.
 this row describes would be read-side work over data that is already stored and already scoped, and
 designing it before the runtime exists would fix its shape around a mechanism nobody has chosen.
 
-One constraint is recorded because it binds whoever does eventually build it: `src/lib/format.ts`
-pins `const LOCALE = 'en-GB'` at `:35`, freezes the abbreviated month names in a table at `:38-54`
-because the Worker runtime and WebKit disagree about them, and states in its own header that there is
-exactly one date formatter in the product and a second must not be added. Locale must therefore be
-threaded **through** that module, never around it, and the frozen table extended per locale rather
-than replaced by a runtime lookup. A stage that adds a second formatter has broken the product's
+One constraint is recorded because it binds whoever does eventually build it, and it has been
+re-measured rather than carried forward. At the commit this plan was written against,
+`src/lib/format.ts` pinned `const LOCALE = 'en-GB'` at `:35` and froze the abbreviated month names in
+a table at `:38-54`, because the Worker runtime and WebKit disagree about them. On disk while this
+revision was written, that module has already taken the shape the constraint implies: every function
+carries a trailing `locale` defaulting to `en`, the frozen values have moved into `./format-tables`,
+and the header at `:8-9` still says there is exactly one date formatter in the product and a second
+must not be added. Either way the rule is the same and it is the reason this stage exists: locale is
+threaded **through** that module, never around it, and a divergent platform value is frozen in a
+table rather than looked up at runtime. A stage that adds a second formatter has broken the product's
 typography before it has translated a word.
 
 ### UI (route, components)
 
 **No route and no component.** The one UI consequence to state is what every other stage in this plan
-already states: **the user-visible copy language is English, `en-GB`**, sentence case, matching
-`src/lib/format.ts:35`. That is not a placeholder awaiting this row — it is the product's language
+already states: **the user-visible copy language is English, `en-GB`**, sentence case, matching the
+one formatter in `src/lib/format.ts`. That is not a placeholder awaiting this row — it is the product's language
 until this row ships, and a stage that writes copy in anything else, or that leaves a string
 un-written pending translation, has invented a mechanism this stage exists to prevent.
 
@@ -1434,8 +1542,16 @@ for the writes it makes to them.
 
 ### Verification
 
+**How this would be run, when it is.** `docs/plans/12-verification-protocol.md` owns the procedure,
+and it is cited here to say what this stage does not owe and why, rather than to leave the heading
+empty. A blocked stage that quoted a command it never runs would be a stage that looks verified.
+
 **The command gate still applies, and it is trivially satisfied:** `pnpm lint`, `pnpm typecheck`,
 `pnpm test`, `pnpm build`, all unchanged because no source file is touched.
+
+**No Playwright invocation is owed.** This stage ships no surface and appends no `test.describe`
+block, so there is nothing to point a project at. The re-planned stage that unblocks the row owes
+the full invocation, both projects, and the frame set named below.
 
 **No unit tests**, because there is no new logic.
 
@@ -1474,7 +1590,9 @@ any other way would be ticking a box nobody looked at.
 
 ### Blockers
 
-**Two, and the stage does not start until both are resolved.**
+**Two. The first is the package; the second is that the work has since been given an owner who is
+not this plan.** Both are stated so that nobody schedules this stage, and so that nobody reads its
+absence as the feature having been forgotten.
 
 **1 — The missing capability: a locale and message runtime.** A message catalogue with plural and
 gender selection, and locale-aware routing of every formatted date, number and currency. No such
@@ -1495,18 +1613,38 @@ other in this file.
   product single-language indefinitely with no stated bound, and **drop** would contradict a row the
   matrix scores as real demand.
 
-**2 — A reconciliation that is not a dependency on any plan.** `gap-rows.json` records that this row
-is being built **on `main`**, not on this branch: commits `bbaec51` and `7e50241` add `src/lib/i18n/**`
-— catalogue, negotiation, plural, interpolation, provider and types, with message catalogues — plus
-`src/lib/fonts.ts` and several hundred lines across `src/styles/styles.css` and
-`src/styles/tokens.css`, none of which this branch has. Two of those files are shared paths governed
-by `00-foundations.md` and may not be claimed by a feature stage in any wave.
+**2 — The row now has an owner, and it is not this plan. This is the blocker that matters.**
+`gap-rows.json` recorded that the row was being built on `main` rather than on this branch — commits
+`bbaec51` and `7e50241` adding `src/lib/i18n/**` (catalogue, negotiation, plural, interpolation,
+provider and types), `src/lib/fonts.ts`, and several hundred lines across `src/styles/styles.css` and
+`src/styles/tokens.css`. Re-measured while this revision was written, that is understated in two ways
+that change what this stage may do:
 
-So the re-planned stage's first act is not code: it is to diff this branch against `main`, establish
-what already exists, and re-specify only the gap. **It must not re-specify what is already there.**
-A stage that rebuilds a catalogue subsystem that already exists on `main` would produce the worst
-possible outcome under `README.md`'s rules — a second implementation of a shipped thing, in files two
-plans both claim.
+- **`docs/SPEC.md` has grown a §8 that governs the row directly**, and it settles the questions this
+  stage was holding open. It fixes the exact set of twenty-three BCP-47 tags and their native names;
+  it makes the message layer, the plural rules and the interpolation **ours**, restating §3's freeze
+  rather than waiting for it to be lifted; it fixes server-side negotiation before first paint
+  (user → workspace → `Accept-Language` → `en`) with `<html lang>` and `<html dir>` server-rendered;
+  it makes `ar` a designed right-to-left layout rather than a flip; it carries the cross-runtime
+  formatting rule this stage records under **Server**; and it fixes the catalogue layout as
+  `src/lib/i18n/messages/<locale>/<namespace>.ts` over ten named namespaces, saying in as many words
+  that the layout is contract rather than a builder's choice.
+- **The subsystem is materialising in this checkout, not only on `main`.** `src/lib/i18n/` and the
+  re-shaped `src/lib/format.ts` are present and measurable here.
+
+So the chosen fallback in blocker 1 is not a proposal any more — §8 is the decision, and it says
+hand-roll. What remains true, and is the whole reason this stage stays **BLOCKED** rather than
+becoming buildable, is that the work is owned elsewhere: §8 gives `src/lib/i18n/messages/<tag>/`
+wholly to the localisation items, and `src/styles/styles.css` and `src/styles/tokens.css` are shared
+paths `00-foundations.md` governs and no feature stage may claim in any wave. A stage in **this**
+plan that wrote a catalogue, a negotiator or a token would produce the worst outcome
+`README.md` describes: a second implementation of a shipped thing, in files two plans both claim.
+
+The re-planned stage's first act is therefore not code and not design. It is to diff this branch
+against `main` and against §8, establish what already exists, and re-specify **only** the gap —
+which, on the evidence above, may be nothing more than the language picker §8 rule 7 puts in
+settings, and even that must be checked against `09-S8`'s ownership of the settings shell before it
+is claimed. **It must not re-specify what is already there.**
 
 ---
 
@@ -1543,7 +1681,7 @@ content rather than a preference:
   way to display it and a sanitiser question follows immediately. That is exactly why `01-S2` chose
   **defer** for `TRP-09` in this same wave.
 - Help articles are **first-party**: written in this repository, reviewed in a pull request, compiled
-  with the application. Content that is authored in TypeScript can be *typed* rather than *parsed*.
+  with the application. Content that is authored in TypeScript can be _typed_ rather than _parsed_.
   A discriminated union of content blocks gives the compiler the job a parser would otherwise do at
   runtime, removes the untrusted-input surface completely, and makes a broken cross-reference a
   `pnpm typecheck` failure instead of a dead link a reader finds.
@@ -1716,7 +1854,29 @@ fail.
 
 ### Verification
 
+**How this is run.** `docs/plans/12-verification-protocol.md` owns the procedure: §4's split rule
+puts this stage's tests in this plan's own spec file rather than in `e2e/visual.spec.ts`, and §3
+fixes the frame set for both of the routes below.
+
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**The Playwright run, written out in full.** There is no `test:e2e`, no `test:visual` and no
+`playwright` script, and `docs/SPEC.md` §3 freezes `package.json` so none may be added:
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/account-and-settings.visual.spec.ts -g '09-S6'
+```
+
+Both browser projects run: `chromium` at 1440x900 and `mobile-safari` on WebKit at 393x659. Those
+are the gate's viewports and are separate from the evidence widths below — the gate proves nothing
+changed, the frames prove the thing is good. `--project=setup` is re-run whenever a cached session
+starts redirecting to `/login`; without `PLAYWRIGHT_BASE_URL` the config waits on port 3000 until the
+global timeout. Baselines are recorded with `--update-snapshots` under the same `-g` filter;
+`maxDiffPixelRatio` stays at `0.002` and `threshold` at `0.2` — neither is raised, per §5, and a
+failing comparison is either the renderer's or the product's.
 
 **Unit tests, by file and invariant.**
 
@@ -1845,6 +2005,8 @@ twelve more transitively.
 - `src/routes/_app/-server/overview.ts` — edit. Exposes the answer and the actionable list.
 - `src/routes/_app/-server/settings.ts` — edit. Adds the bulk preference write.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
+- `e2e/helpers/account-and-settings.ts` — new. The module-local clock helper argued under
+  **Verification**, declared here rather than editing the shared `e2e/helpers/shoot.ts`.
 - `e2e/account-and-settings.visual.spec.ts` — append.
 - `e2e/__screenshots__/account-and-settings.visual.spec.ts/` — append.
 
@@ -2008,7 +2170,29 @@ Repository functions covered: `respondToNotification`, `setPreference`, `listAct
 
 ### Verification
 
+**How this is run.** `docs/plans/12-verification-protocol.md` owns the procedure. §4's relative-time
+rules and §7.1's unpinned-instant precondition both land on this stage, because it is the first to
+baseline `/notifications`; both are answered below rather than inherited silently.
+
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**The Playwright run, written out in full.** There is no `test:e2e`, no `test:visual` and no
+`playwright` script, and `docs/SPEC.md` §3 freezes `package.json` so none may be added:
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/account-and-settings.visual.spec.ts -g '09-S7'
+```
+
+Both browser projects run: `chromium` at 1440x900 and `mobile-safari` on WebKit at 393x659. Those
+are the gate's viewports and are separate from the evidence widths below — the gate proves nothing
+changed, the frames prove the thing is good. `--project=setup` is re-run whenever a cached session
+starts redirecting to `/login`; without `PLAYWRIGHT_BASE_URL` the config waits on port 3000 until the
+global timeout. Baselines are recorded with `--update-snapshots` under the same `-g` filter;
+`maxDiffPixelRatio` stays at `0.002` and `threshold` at `0.2` — neither is raised, per §5, and a
+failing comparison is either the renderer's or the product's.
 
 **Unit tests, by file and invariant.**
 
@@ -2037,17 +2221,45 @@ Every selector is a `data-part` attribute this stage publishes, verified with
 from `scripts/ultrabuild/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` and `--auth`, under
 `.claude/ultrabuild/shots/<slug>/round-<n>/09-S7/`.
 
-**The spec file.** Appends a `test.describe` block named for this stage. **`/notifications` prints a
-relative time** — `formatRelative` at `src/routes/_app/notifications.tsx:24` — and that is a shape
+**The spec file, and the clock string it has to hold still.** Appends a `test.describe` block named
+for this stage. **`/notifications` prints a relative time** — `formatRelative` at
+`src/routes/_app/notifications.tsx:24`, rendered at `:259-261` — and that is a shape
 `RELATIVE_TIME_SITES` does not know: its three entries are the trip-card countdown, the dashboard
-hero stat and the journey backlog reason. So `countRelativeTime()` would return `0`, the mask would
-cover nothing, and the string would sit inside the comparison at full size until the morning it
-changed. This stage therefore **adds the fourth entry** — `source`, `within`, `region`, `drifts`,
-`variants`, `fixed`, `pinned`, the same fields the existing three carry — and **claims
-`e2e/helpers/shoot.ts` as an edit**. It is legal: the file is not one of `README.md`'s six shared
-paths, and the one other stage that claims it, `01-S5` in `01-trips-core.md`, is wave 2 as well —
-so before this stage is scheduled, one of the two must move or the two must be sequenced. That is
-recorded under **Blockers** rather than discovered during the run.
+hero stat and the journey backlog reason. Left alone the string sits inside the comparison and the
+frame fails on a morning nobody designed. §7.1 of `docs/plans/12-verification-protocol.md` is the
+matching precondition — the instant behind it is one of the seed-time values `applySeed()` derives
+from a single `new Date()`, which neither `x-pt-server-today` nor `FROZEN_NOW` reaches — and this
+stage is the first in the repository to baseline that screen, so it inherits it.
+
+**The shared table is not claimed, and the measurement says it does not have to be.** Three things,
+read in `e2e/helpers/shoot.ts` rather than assumed:
+
+- `shoot()` (`:2146-2165`) pins with `pinRelativeTime(page, route)` and masks with
+  `maskFor(page, route)`, and **both** read the module-level `RELATIVE_TIME_SITES` constant
+  (`:698`, `:714`). `relativeTimeRegion()` and `relativeTimeRegions()` are module-private, so a
+  fourth site declared anywhere else cannot reach the mask. Masking this string would therefore
+  require editing `e2e/helpers/shoot.ts` — which `01-S5` (`01-trips-core.md`) claims in this same
+  wave, and `README.md` allows one claimant per wave. This stage yields, which is exactly what
+  `docs/plans/12-verification-protocol.md` §4 instructs: the second stage to want a shared helper
+  declares a module-local one instead.
+- **Pinning does not need the shared table, and pinning is the half that matters.** The pin is a
+  text rewrite any spec can perform; `e2e/helpers/account-and-settings.ts` exports the site
+  descriptor for the notification timestamp and a `pinAccountRelativeTime(page)` that writes the
+  fixed string over every match, called immediately **before** `shoot()` — the same ordering
+  `shoot()` itself uses, and for the reason its own comment gives at `:2140-2145`: a text change can
+  be a layout change, so it must land before the height that decides the viewport is measured.
+- **The mask would add nothing geometric here, and the file says why.** The timestamp is a `<p>` —
+  a block element filling its column, carrying `tabular-nums` — so its box never depended on the
+  string. That is exactly the `journey` case recorded on `RELATIVE_TIME_SITES` at `:568-570`, whose
+  baselines did not move when pinning was introduced, "which is the expected answer: its region is a
+  block element, so its box never depended on the string in the first place". A pinned block-level
+  string is a constant picture on every run and every calendar day, which is the whole property the
+  mask exists to buy.
+
+So the stage ships pinning without masking, states that as the cost of yielding the shared file, and
+does not pretend the two are equivalent: a future stage that legitimately owns `e2e/helpers/shoot.ts`
+may fold the fourth entry in, and nothing here has to change when it does, because the module-local
+descriptor carries the same fields the shared ones do.
 
 The spec calls `auditServerClock(page, <its own route table>)` once, and reads
 `auditRelativeTime()`'s report rather than discarding it: a non-empty return means the exclusion
@@ -2086,7 +2298,10 @@ On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this 
 
 ### Blockers
 
-**Three, none of which stops the stage, and all three stated before it is scheduled.**
+**Two, neither of which stops the stage, and both stated before it is scheduled.** A third —
+contention with `01-S5` over `e2e/helpers/shoot.ts` — was resolved rather than carried, by measuring
+that this stage needs pinning and not masking; the measurement and the yield are under
+**Verification**.
 
 **1 — Two of the four channels have no transport, and are excluded rather than deferred.** The schema
 offers `in_app | email | push | webhook` (`src/server/db/schema.ts:244`). `00-S2` measured that
@@ -2109,16 +2324,7 @@ effect — that is precisely the class of defect this plan exists to repair — 
 Neither needs a package, so neither is an entry in `11-S2`'s register; both belong in
 `11-boundaries-and-blockers.md` as channel decisions and are named here for whoever amends it.
 
-**2 — One shared helper file, one wave.** As recorded under **Verification**, this stage needs a
-fourth `RELATIVE_TIME_SITES` entry in `e2e/helpers/shoot.ts`, and `01-S5` claims the same file in the
-same wave. `12-verification-protocol.md` is explicit: two stages in one wave may not both claim it,
-and the second to want it declares a module-local helper instead. **This stage yields**: if `01-S5`
-is scheduled in the same run, this stage declares its own `e2e/helpers/account-and-settings.ts` with
-the entry and imports the shared list rather than editing it. Either way the mask exists; only its
-address moves.
-
-**3 — A dependency on another plan's row, cited with its wave.** `00-S2` (`00-foundations.md`, wave
-0) must have landed. Without it the inbox has no production rows and the matrix governs nothing, so
+**2 — A dependency on another plan's row, cited with its wave.** `00-S2` (`00-foundations.md`, wave 0) must have landed. Without it the inbox has no production rows and the matrix governs nothing, so
 this stage cannot be scheduled before it — which is what the wave column already says and what this
 entry makes explicit.
 
@@ -2156,11 +2362,11 @@ nothing reads is exactly that defect, wearing a different hat. So this stage shi
 where a surface exists to obey it, and defers the rest **with the stage that owns the obeying
 surface named**:
 
-| Behaviour            | Deferred to                                                       | Why                                                                       |
-| -------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Temperature unit     | `DOC-08`, `06-documents-and-media.md`, wave 6                     | Nothing in the product shows a temperature until per-day weather ships.   |
-| Route labels         | `MAP-09`, `02-places-and-maps.md`, wave 4                         | There is no route overlay to label.                                       |
-| Blur booking codes   | `BKG-06`, `03-reservations-and-transport.md`, wave 1              | The booking desk owns the field that would be blurred, and its plan owns that file. |
+| Behaviour          | Deferred to                                          | Why                                                                                 |
+| ------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Temperature unit   | `DOC-08`, `06-documents-and-media.md`, wave 6        | Nothing in the product shows a temperature until per-day weather ships.             |
+| Route labels       | `MAP-09`, `02-places-and-maps.md`, wave 4            | There is no route overlay to label.                                                 |
+| Blur booking codes | `BKG-06`, `03-reservations-and-transport.md`, wave 1 | The booking desk owns the field that would be blurred, and its plan owns that file. |
 
 Each deferral is a column plus a switch that arrives **with** its surface, in one stage, so the
 switch and the thing it governs are always shipped together. The six that do ship here —
@@ -2220,11 +2426,11 @@ stage's to write.** `src/server/db/schema.ts` is one of `README.md`'s six shared
 stage may claim it, so the requirement is stated here and becomes a wave-0 foundations stage in
 `00-foundations.md`:
 
-| Column        | Type                     | Null | Default | Constraint                                              |
-| ------------- | ------------------------ | ---- | ------- | ------------------------------------------------------- |
-| `time_format` | `text`                   | yes  | none    | `enumCheck` over `12h \| 24h`                           |
-| `density`     | `text`                   | yes  | none    | `enumCheck` over `comfortable \| compact`               |
-| `text_scale`  | `integer`                | yes  | none    | `CHECK ("text_scale" IS NULL OR BETWEEN 90 AND 125)`    |
+| Column        | Type      | Null | Default | Constraint                                           |
+| ------------- | --------- | ---- | ------- | ---------------------------------------------------- |
+| `time_format` | `text`    | yes  | none    | `enumCheck` over `12h \| 24h`                        |
+| `density`     | `text`    | yes  | none    | `enumCheck` over `comfortable \| compact`            |
+| `text_scale`  | `integer` | yes  | none    | `CHECK ("text_scale" IS NULL OR BETWEEN 90 AND 125)` |
 
 Nullable with no default, deliberately, because that is how every existing override on this table
 works: `locale`, `timezone`, `currency`, `week_starts_on`, `date_format`, `distance_unit` and
@@ -2392,7 +2598,29 @@ Repository functions covered: `updateUserSettings`, `getUserSettings`, `getEffec
 
 ### Verification
 
+**How this is run.** `docs/plans/12-verification-protocol.md` owns the procedure. §5 is the clause to
+read before touching a baseline here: density and text scaling move type metrics across every
+screen, so a re-record is a decision this stage argues in its diff, never a reflex.
+
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+**The Playwright run, written out in full.** There is no `test:e2e`, no `test:visual` and no
+`playwright` script, and `docs/SPEC.md` §3 freezes `package.json` so none may be added:
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/account-and-settings.visual.spec.ts -g '09-S8'
+```
+
+Both browser projects run: `chromium` at 1440x900 and `mobile-safari` on WebKit at 393x659. Those
+are the gate's viewports and are separate from the evidence widths below — the gate proves nothing
+changed, the frames prove the thing is good. `--project=setup` is re-run whenever a cached session
+starts redirecting to `/login`; without `PLAYWRIGHT_BASE_URL` the config waits on port 3000 until the
+global timeout. Baselines are recorded with `--update-snapshots` under the same `-g` filter;
+`maxDiffPixelRatio` stays at `0.002` and `threshold` at `0.2` — neither is raised, per §5, and a
+failing comparison is either the renderer's or the product's.
 
 **Unit tests, by file and invariant.**
 
@@ -2496,14 +2724,17 @@ any other in this file. No binding is added to `wrangler.jsonc`. No third-party 
 
 ## Cross-plan collisions
 
-Run against the whole plan set as it stood when this file was written, filtered to the rows that
-involve plan 09:
+Run against the whole plan set, filtered to the rows that involve plan 09. The two header lines are a
+snapshot: sibling plans are revised in the same round, so `stages`, `owned paths` and the wave-less
+list all move without anything in this file changing. **The two things this paste asserts, and the
+two an auditor should re-run, are the verdict — no same-wave exclusive collision involving plan 09 —
+and the path table under it.**
 
 ```
 $ node scripts/ultrabuild/check-plan-collisions.mjs 09
-plans 8 · stages 48 · owned paths 282
+plans 8 · stages 48 · owned paths 284
 
-5 stage(s) state no parseable wave and cannot be checked: 04-S7 11-S1 11-S2 11-S3 04-S2
+4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
 no same-wave exclusive collisions
 
@@ -2536,13 +2767,13 @@ the repair-at-the-destination convention in the area brief is what took it down 
 **Each of the five cross-wave paths is named in its owning stage, with the sibling stage id**, as the
 script's own instruction requires:
 
-| Path                                     | Named in         | Siblings named there                                |
-| ---------------------------------------- | ---------------- | --------------------------------------------------- |
-| `src/routes/_app/-server/settings.ts`    | `09-S7`, `09-S8` | `00-S3` (wave 0); and each other                    |
-| `src/routes/_app/-server/overview.ts`    | `09-S7`          | `00-S5` (0), `01-S1` (1), `01-S7` (5), `10-S3` (4)  |
-| `src/server/auth/index.ts`               | `09-S3`          | `10-S1` (wave 3)                                    |
-| `src/server/repos/members.ts`            | `09-S3`          | `10-S1` (wave 3)                                    |
-| `src/routes/_app/-ui/settings-nav.tsx`   | `09-S8`          | `10-S3` (wave 4)                                    |
+| Path                                   | Named in         | Siblings named there                               |
+| -------------------------------------- | ---------------- | -------------------------------------------------- |
+| `src/routes/_app/-server/settings.ts`  | `09-S7`, `09-S8` | `00-S3` (wave 0); and each other                   |
+| `src/routes/_app/-server/overview.ts`  | `09-S7`          | `00-S5` (0), `01-S1` (1), `01-S7` (5), `10-S3` (4) |
+| `src/server/auth/index.ts`             | `09-S3`          | `10-S1` (wave 3)                                   |
+| `src/server/repos/members.ts`          | `09-S3`          | `10-S1` (wave 3)                                   |
+| `src/routes/_app/-ui/settings-nav.tsx` | `09-S8`          | `10-S3` (wave 4)                                   |
 
 `src/server/repos/__tests__/tenant-isolation.test.ts` is claimed by three stages here and by fifteen
 across the other plans, always as `append`. That is the documented cooperative pattern and the script
@@ -2551,8 +2782,16 @@ The same is true of `e2e/account-and-settings.visual.spec.ts`, which `09-S1` min
 stage in this plan appends to — `playwright.config.ts`'s `snapshotPathTemplate` keys every baseline
 by test name, so two stages sharing one spec file cannot overwrite each other's pixels.
 
-**Two findings the run reports that this plan cannot fix from inside its own file**, recorded so they
-are not lost: five stages elsewhere state no parseable wave — `04-S2` and `04-S7` in
-`04-budget-and-currencies.md`, and `11-S1`, `11-S2` and `11-S3` in
-`11-boundaries-and-blockers.md` — and a stage with no wave is invisible to the same-wave check. Every
-stage in this file states its wave in the required ``<id>` · Wave <n> · effort **S|M|L**.` form.
+**One finding the run reports that this plan cannot fix from inside its own file**, recorded so it is
+not lost: four stages elsewhere state no parseable wave — `04-S2` in `04-budget-and-currencies.md`,
+and `11-S1`, `11-S2` and `11-S3` in `docs/plans/11-boundaries-and-blockers.md` — and a stage with no
+wave is invisible to the same-wave check, so none of the four can be cleared of a collision it might
+be in. All eight stages in this file state their wave in the required
+``<id>` · Wave <n> · effort **S|M|L**.` form, which is what makes the "no same-wave exclusive
+collisions" line above a result rather than an absence of evidence.
+
+**The one shared path this plan deliberately does not claim** is `e2e/helpers/shoot.ts`. `09-S7`
+wanted a fourth `RELATIVE_TIME_SITES` entry in it and `01-S5` claims the same file in the same wave;
+rather than contend, `09-S7` measured that it needs pinning and not masking and declared
+`e2e/helpers/account-and-settings.ts` instead. The measurement is under that stage's **Verification**
+and it is why this file appears in no row above.

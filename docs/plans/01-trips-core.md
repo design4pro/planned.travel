@@ -70,20 +70,30 @@ edited by this plan, and no edge is re-pointed.
 
 ## Order of the stages, and the edges it satisfies
 
-`gap-rows.json` records seven `dependsOn` edges that touch a `TRP-*` row. Every one is satisfied by
-the table above, and each is checked here rather than left to a reader's arithmetic. `X → Y` reads
-"X depends on Y", so Y's stage must be in a strictly earlier wave.
+`gap-rows.json` records **eight** `dependsOn` edges whose source is a `TRP-*` row — the count is
+`TRP-01`, `TRP-02`, `TRP-05`, `TRP-06`, `TRP-08` and `TRP-11` with one each and `TRP-04` with two.
+Every one is satisfied by the stage table above, and each is checked here rather than left to a
+reader's arithmetic. `X → Y` reads "X depends on Y", so Y's stage must be in a strictly earlier wave.
 
 | Edge              | Y's stage and wave | X's stage and wave | Satisfied |
 | ----------------- | ------------------ | ------------------ | --------- |
 | `TRP-01 → TRP-03` | `01-S1`, wave 1    | `01-S7`, wave 5    | yes       |
 | `TRP-02 → TRP-11` | `01-S6`, wave 4    | `01-S8`, wave 5    | yes       |
 | `TRP-04 → TRP-02` | `01-S8`, wave 5    | `01-S10`, wave 6   | yes       |
-| `TRP-04 → ACC-05` | `09-…`, wave 2     | `01-S10`, wave 6   | yes       |
-| `TRP-05 → MNY-07` | `04-…`, wave 1     | `01-S5`, wave 2    | yes       |
+| `TRP-04 → ACC-05` | `09-S7`, wave 2    | `01-S10`, wave 6   | yes       |
+| `TRP-05 → MNY-07` | `04-S1`, wave 1    | `01-S5`, wave 2    | yes       |
 | `TRP-06 → TRP-11` | `01-S6`, wave 4    | `01-S9`, wave 5    | yes       |
 | `TRP-08 → TRP-09` | `01-S2`, wave 1    | `01-S4`, wave 2    | yes       |
-| `TRP-11 → ADM-02` | `10-…`, wave 3     | `01-S6`, wave 4    | yes       |
+| `TRP-11 → ADM-02` | `10-S1`, wave 3    | `01-S6`, wave 4    | yes       |
+
+Nine further edges point **into** a `TRP-*` row from another area — `BKG-05`, `BKG-10`, `MNY-06`,
+`LST-02`, `DOC-08`, `COL-09`, `COL-11`, `ACC-04` and `ADM-03`. Those are obligations on the plans
+that own those rows, not on this one. What this plan owes them is that the row each waits on closes
+no later than the wave `README.md` records for it, and it does: `TRP-06` closes in wave 5 against
+`BKG-05` and `DOC-08` in wave 6, `TRP-08` in wave 2 against `BKG-10` and `COL-09` in wave 3, `TRP-11`
+in wave 4 against `LST-02`, `COL-11` and `ADM-03` in wave 5, `TRP-03` in wave 1 against `MNY-06` in
+wave 2, and `TRP-05` in wave 2 against `ACC-04` in wave 3. The one stage this plan schedules later
+than the wave table's earliest is `01-S7`, and `TRP-01` is depended on by nothing.
 
 Two orderings are stronger than the edge set requires, and both are deliberate rather than
 accidental, so a reader does not go looking for an edge that is not there:
@@ -310,8 +320,12 @@ Rows unblocked: `TRP-01` (`01-S7`) directly.
   copied; the module keeps its four loaders and its two notification writes. The move carries
   `00-S5`'s reminder scheduling call intact — that wave-0 stage edits this same function, closes
   before wave 1 opens, and its `syncTripReminder(…, { previous: null })` call travels with the
-  function rather than being re-derived. Three stages touch this module across three waves and no two
-  share one: `00-S5` (`00-foundations.md`, wave 0), this stage in wave 1, and `01-S7` in wave 5.
+  function rather than being re-derived. **Five stages touch this module across five waves and no two
+  share one**, which is what makes the shared claim legal: `00-S5` (`00-foundations.md`, wave 0), this
+  stage in wave 1, `09-S7` (`09-account-and-settings.md`, wave 2) for the unread-count answer, `10-S3`
+  (`10-administration.md`, wave 4) for the audit count inside `loadAdmin`, and `01-S7` in wave 5. Each
+  of the four siblings names this stage in return; the measurement is the check output at the foot of
+  this file.
 - `src/routes/_app/-ui/trip-actions.tsx` — new. The per-trip action menu, the destructive
   confirmations and the edit sheet.
 - `src/routes/_app/-ui/trip-card.tsx` — edit. Mounts the action menu on `TripTile`.
@@ -807,12 +821,12 @@ round trip on the client, because the loader resolves before the route paints.
 **Components.** `NoteRow` in `src/components/planner/note-row.tsx` renders one note: the chosen icon
 in a `--color-surface-inset` tile, the headline in the UI face, the optional time in
 `tabular-nums`, the detail rendered through `src/lib/markdown` and clamped to two lines with the rest
-behind a disclosure, and an actions cluster. `DaySection` renders the run of notes and an add-note control in the day
-header. The editor, `NoteDialog` in `-ui/note-dialog.tsx`, reuses `Dialog`, `Field`, `Input`,
-`Textarea`, `Button`, `IconButton`, `Alert`, `Spinner` and `Tooltip` from `src/components/ui`, plus a
-radio group of icon buttons built on the shipped `RadioGroup` (`src/components/ui/radio-group.tsx`)
-so the picker is one tab stop with arrow-key movement rather than twenty tab stops. Nothing is added
-to `src/components/ui`, which this plan never claims.
+behind a disclosure, and an actions cluster. `DaySection` renders the run of notes and an add-note
+control in the day header. The editor, `NoteDialog` in `-ui/note-dialog.tsx`, reuses `Dialog`,
+`Field`, `Input`, `Textarea`, `Button`, `IconButton`, `Alert`, `Spinner` and `Tooltip` from
+`src/components/ui`, plus a radio group of icon buttons built on the shipped `RadioGroup`
+(`src/components/ui/radio-group.tsx`) so the picker is one tab stop with arrow-key movement rather
+than twenty tab stops. Nothing is added to `src/components/ui`, which this plan never claims.
 
 **The markdown detail, and the subset it renders.** `TRP-09` says the detail is markdown, no markdown
 parser and no HTML sanitiser is in the pinned dependency set, and
@@ -951,12 +965,12 @@ absent, which is the intended coupling.
   detail renders no disclosure at all.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
-`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes out
-in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for this
-stage's own baselines and nobody else's — against `e2e/trips-core-s2.visual.spec.ts`. This stage's `describe` block declares
-`/trips/$tripId/plan` for a seeded trip, marks it `map: true` — the route renders `[data-map-ready]`
-and `settleMap()` fails a route that renders the marker without declaring it — and calls
-`auditServerClock` over its own route table.
+`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
+out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
+this stage's own baselines and nobody else's — against `e2e/trips-core-s2.visual.spec.ts`.
+This stage's `describe` block declares `/trips/$tripId/plan` for a seeded trip, marks it `map: true`
+— the route renders `[data-map-ready]` and `settleMap()` fails a route that renders the marker
+without declaring it — and calls `auditServerClock` over its own route table.
 
 Frames: the planner at 360, 1280 and 2560 in both themes for the resting screen, and **two** declared
 non-resting sets, because the two states this stage exists to add are both invisible at rest — the
@@ -1189,13 +1203,13 @@ tenant-scoped. The memory can never widen access; at worst it names a route that
   eighth tab without revisiting this module.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
-the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
-`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
-`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s3.visual.spec.ts`. This stage's `describe`
-block asserts the behaviour end to end in one engine-independent test — visit
-`/trips/<id>/costs`, navigate to `/trips`, click back into the trip, and assert the URL is the costs
-tab — and takes its frames of the strip in its non-default state, which is the point of the stage and
-is not visible at rest:
+`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
+out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
+this stage's own baselines and nobody else's — against `e2e/trips-core-s3.visual.spec.ts`.
+This stage's `describe` block asserts the behaviour end to end in one engine-independent test —
+visit `/trips/<id>/costs`, navigate to `/trips`, click back into the trip, and assert the URL is the
+costs tab — and takes its frames of the strip in its non-default state, which is the point of the
+stage and is not visible at rest:
 
 ```sh
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
@@ -1535,10 +1549,11 @@ Functions covered: `reorderDayTimeline`.
   does not fail the save, because D1 is the record and the room is a signal.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
-`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
-`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
-`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s4.visual.spec.ts`. This stage's `describe`
-declares `/trips/$tripId/plan` with `map: true` and calls `auditServerClock` over its own table.
+`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
+out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
+this stage's own baselines and nobody else's — against `e2e/trips-core-s4.visual.spec.ts`.
+This stage's `describe` declares `/trips/$tripId/plan` with `map: true` and calls `auditServerClock`
+over its own table.
 
 Frames: the planner resting at 360, 1280 and 2560 in both themes, plus a declared mid-drag set, since
 a drag is the state the stage exists to change and a resting rail is not evidence about it:
@@ -1649,7 +1664,10 @@ Rows unblocked: none.
 - `src/lib/__tests__/clock-zones.test.ts` — new.
 - `e2e/helpers/shoot.ts` — edit, and this stage is the **only** wave-2 stage that claims it; `01-S4`
   states in its own Verification block that it does not. One entry is added to
-  `RELATIVE_TIME_SITES`; nothing else in the module changes.
+  `RELATIVE_TIME_SITES`; nothing else in the module changes. One sibling plan claims the same file in
+  a different wave and for the same one-entry reason: `10-S2` (`10-administration.md`, wave 1), for
+  the audit trail's relative timestamps. Wave 1 closes before wave 2 opens, `10-S2` names this stage
+  in return, and neither stage touches the other's entry.
 - `e2e/trips-core-s5.visual.spec.ts` — new. This stage's own spec file.
 - `e2e/__screenshots__/trips-core-s5.visual.spec.ts/` — new. Its own baseline directory.
 
@@ -1780,10 +1798,10 @@ top-to-bottom as the day moves; and the tick alignment computes the delay to the
 rather than a fixed 60000, which is what stops the clock drifting a second per hour.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
-the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
-`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
-`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s5.visual.spec.ts`. This stage's `describe`
-declares `/dashboard` and calls `auditServerClock` over its own route table.
+`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
+out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
+this stage's own baselines and nobody else's — against `e2e/trips-core-s5.visual.spec.ts`.
+This stage's `describe` declares `/dashboard` and calls `auditServerClock` over its own route table.
 
 **The `RELATIVE_TIME_SITES` entry, which is the whole reason this stage claims a shared helper.** The
 clock prints a live, client-derived time string. `12-verification-protocol.md` §4 measures that
@@ -2144,12 +2162,12 @@ intact and the trip's owner first; removing the last owner is refused; and a mem
 workspace no longer appears as an invitable profile.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
-the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
-`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
-`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s6.visual.spec.ts`. This stage's `describe`
-declares `/trips/$tripId/people` — a route no existing spec knows about — and calls `auditServerClock`
-over its own route table, which is the only check that reads a route's declaration against the
-streamed payload and is called nowhere else for a module route.
+`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
+out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
+this stage's own baselines and nobody else's — against `e2e/trips-core-s6.visual.spec.ts`.
+This stage's `describe` declares `/trips/$tripId/people` — a route no existing spec knows about —
+and calls `auditServerClock` over its own route table, which is the only check that reads a route's
+declaration against the streamed payload and is called nowhere else for a module route.
 
 Frames: `/trips/<id>/people` at 360, 1280 and 2560 in both themes, plus a declared non-resting set for
 the invite picker, which is the affordance the stage is about:
@@ -2245,8 +2263,10 @@ Rows unblocked: none. No row in `gap-rows.json` names `TRP-01`.
   `__tests__` today; this stage creates it, following `src/routes/(auth)/-lib/__tests__` and
   `src/routes/api/tiles/-lib/__tests__`, which already do.
 - `src/routes/_app/-server/overview.ts` — edit. `loadTrips` and `loadDashboard` payloads. Shared with
-  `00-S5` (`00-foundations.md`, wave 0) and `01-S1` (wave 1), both closed long before this stage
-  opens; this stage widens two loaders and moves nothing.
+  four stages in four earlier waves, all closed long before this stage opens: `00-S5`
+  (`00-foundations.md`, wave 0), `01-S1` (wave 1), `09-S7` (`09-account-and-settings.md`, wave 2) and
+  `10-S3` (`10-administration.md`, wave 4). This stage is the last of the five, it widens two loaders
+  and moves nothing, and each sibling names it in return.
 - `src/server/repos/trip-guests.ts` — edit. `countTripPeople`.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
 - `e2e/trips-core-s7.visual.spec.ts` — new. This stage's own spec file.
@@ -2378,10 +2398,11 @@ reading a clock — the signature that fails to compile if somebody moves the co
 component.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
-the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
-`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
-`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s7.visual.spec.ts`. This stage's `describe`
-declares `/trips` and `/dashboard` and calls `auditServerClock` over its own route table.
+`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
+out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
+this stage's own baselines and nobody else's — against `e2e/trips-core-s7.visual.spec.ts`.
+This stage's `describe` declares `/trips` and `/dashboard` and calls `auditServerClock` over its own
+route table.
 
 Both routes already print clock-derived strings that `RELATIVE_TIME_SITES` covers — the trip-card
 countdown badge and the dashboard hero's start stat are two of its three entries — so
@@ -2644,11 +2665,11 @@ there.
   date range can never both be submitted, which is the invariant the server's validator also holds.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
-the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
-`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
-`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s8.visual.spec.ts`. The stage's `describe`
-declares `/trips` and calls `auditServerClock` over its own route table; `e2e/helpers/shoot.ts` is not
-claimed, because a form prints no clock-derived string.
+`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
+out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
+this stage's own baselines and nobody else's — against `e2e/trips-core-s8.visual.spec.ts`.
+The stage's `describe` declares `/trips` and calls `auditServerClock` over its own route table;
+`e2e/helpers/shoot.ts` is not claimed, because a form prints no clock-derived string.
 
 Frames: the dialog open is the stage, so the resting `/trips` set is owed and the open dialog is
 declared:
@@ -2917,11 +2938,11 @@ client-supplied identifier in the ring that is not already validated on the way 
   the width is read back from the preference module on mount; and every existing case still passes.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
-the three `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations
-`01-S1` writes out in full — `--project=setup` once, then this stage's own spec, then
-`--update-snapshots` for this stage's own baselines and nobody else's — against `e2e/trips-core-s9.visual.spec.ts`. This stage's `describe`
-declares `/trips/$tripId/plan` with `map: true` and calls `auditServerClock` over its own route table.
-`e2e/helpers/shoot.ts` is not claimed.
+`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
+out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
+this stage's own baselines and nobody else's — against `e2e/trips-core-s9.visual.spec.ts`.
+This stage's `describe` declares `/trips/$tripId/plan` with `map: true` and calls `auditServerClock`
+over its own route table. `e2e/helpers/shoot.ts` is not claimed.
 
 Frames: the workspace resting at 360, 1280 and 2560 in both themes, plus three declared states, because
 every one of this stage's four outcomes is a state the screen is not in when it loads:
@@ -3173,10 +3194,11 @@ records its `put` and `delete` calls:
    other.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
-`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes out
-in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for this
-stage's own baselines and nobody else's — against `e2e/trips-core-s10.visual.spec.ts`. This stage's `describe` declares
-`/trips` — the surface the form opens over — and calls `auditServerClock` over its own route table.
+`PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
+out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
+this stage's own baselines and nobody else's — against `e2e/trips-core-s10.visual.spec.ts`.
+This stage's `describe` declares `/trips` — the surface the form opens over — and calls
+`auditServerClock` over its own route table.
 
 The resolved-date line is derived from the trip's start date and the chosen offset, both of which are
 fixture data rather than the clock, so it is stable on every calendar day and `e2e/helpers/shoot.ts` is
@@ -3246,23 +3268,30 @@ carried an acceptance criterion about it.
 
 The command and its output, verbatim, run against the plan set as it stood when this file was last
 written — `00-foundations.md`, `01-trips-core.md`, `04-budget-and-currencies.md`,
-`07-collaboration-and-sharing.md`, `09-account-and-settings.md`, `11-boundaries-and-blockers.md` and
-`12-verification-protocol.md`. Sibling plans were being written concurrently, so the totals on the
-first line move as plans land; what must not move is the third line.
+`07-collaboration-and-sharing.md`, `09-account-and-settings.md`, `10-administration.md`,
+`11-boundaries-and-blockers.md` and `12-verification-protocol.md`. Sibling plans were being rewritten
+**while this file was being written**, and the drift was watched rather than assumed: the owned-path
+total moved 282 → 283 → 284 and the unparseable-stage count moved 5 → 4 across three runs within the
+same hour, entirely from other plans' edits. So the first line and the seventh are a timestamp, not a
+claim; the two lines that carry this plan's obligation and must not move are the fifth — **no
+same-wave exclusive collision** — and the six stanzas under the seventh, every one of which is
+answered in the table below.
 
 ```text
 $ node scripts/ultrabuild/check-plan-collisions.mjs 01
-plans 7 · stages 37 · owned paths 204
+plans 8 · stages 48 · owned paths 284
 
-5 stage(s) state no parseable wave and cannot be checked: 04-S7 11-S1 11-S2 11-S3 04-S2
+4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
 no same-wave exclusive collisions
 
-touched by more than one plan in different waves (5) — legal; each plan must name the other:
+touched by more than one plan in different waves (6) — legal; each plan must name the other:
   src/routes/_app/-server/overview.ts
       00-foundations.md  00-S5  wave 0  (edit)
       01-trips-core.md  01-S1  wave 1  (edit)
       01-trips-core.md  01-S7  wave 5  (edit)
+      09-account-and-settings.md  09-S7  wave 2  (edit)
+      10-administration.md  10-S3  wave 4  (edit)
   src/server/repos/trips.ts
       01-trips-core.md  01-S1  wave 1  (edit)
       01-trips-core.md  01-S6  wave 4  (edit)
@@ -3273,6 +3302,9 @@ touched by more than one plan in different waves (5) — legal; each plan must n
   src/routes/_app/trips/$tripId/-server/plan.ts
       01-trips-core.md  01-S4  wave 2  (edit)
       07-collaboration-and-sharing.md  07-S1  wave 1  (edit)
+  e2e/helpers/shoot.ts
+      01-trips-core.md  01-S5  wave 2  (edit)
+      10-administration.md  10-S2  wave 1  (edit)
   src/server/repos/index.ts
       01-trips-core.md  01-S6  wave 4  (edit)
       07-collaboration-and-sharing.md  07-S10  wave 5  (edit)
@@ -3281,23 +3313,35 @@ touched by more than one plan in different waves (5) — legal; each plan must n
 **No same-wave exclusive collision involves this plan.** The one that did — `01-S2` and `07-S1` both
 claiming `src/routes/_app/trips/$tripId/-server/plan.ts` as `edit` in wave 1 — is resolved by this
 plan yielding the file, and the resolution is argued in full under **The four planner core files**.
+`01-S2` no longer names that path at all, which is why the third stanza above reads as it does; the
+wave-2 claim that remains is `01-S4`'s, and wave 1 has closed by then.
 
-**Every cross-wave path the check lists is named in its owning stage, with the sibling stage id.**
+**Every cross-wave path the check lists is named in its owning stage, with the sibling stage id.** All
+six, in the order the check prints them:
 
-| Path                                            | This plan's stages | Sibling stages            | Where it is named                         |
-| ----------------------------------------------- | ------------------ | ------------------------- | ----------------------------------------- |
-| `src/routes/_app/-server/overview.ts`           | `01-S1`, `01-S7`   | `00-S5` (`00-…`, wave 0)  | **Owned paths** of `01-S1` and of `01-S7` |
-| `src/server/repos/trips.ts`                     | `01-S1`, `01-S6`   | `07-S6` (`07-…`, wave 2)  | **Owned paths** of `01-S1` and of `01-S6` |
-| `src/server/repos/itinerary.ts`                 | `01-S4`            | `07-S9` (`07-…`, wave 3)  | **Owned paths** of `01-S4`                |
-| `src/routes/_app/trips/$tripId/-server/plan.ts` | `01-S4`            | `07-S1` (`07-…`, wave 1)  | **Owned paths** of `01-S4`, and the brief |
-| `src/server/repos/index.ts`                     | `01-S6`            | `07-S10` (`07-…`, wave 5) | **Owned paths** of `01-S6`                |
+| Path                                            | This plan's stages | Sibling stages, with wave                                                    | Where this plan names them                |
+| ----------------------------------------------- | ------------------ | ---------------------------------------------------------------------------- | ----------------------------------------- |
+| `src/routes/_app/-server/overview.ts`           | `01-S1`, `01-S7`   | `00-S5` (`00-…`, wave 0), `09-S7` (`09-…`, wave 2), `10-S3` (`10-…`, wave 4) | **Owned paths** of `01-S1` and of `01-S7` |
+| `src/server/repos/trips.ts`                     | `01-S1`, `01-S6`   | `07-S6` (`07-…`, wave 2)                                                     | **Owned paths** of `01-S1` and of `01-S6` |
+| `src/server/repos/itinerary.ts`                 | `01-S4`            | `07-S9` (`07-…`, wave 3)                                                     | **Owned paths** of `01-S4`                |
+| `src/routes/_app/trips/$tripId/-server/plan.ts` | `01-S4`            | `07-S1` (`07-…`, wave 1)                                                     | **Owned paths** of `01-S4`, and the brief |
+| `e2e/helpers/shoot.ts`                          | `01-S5`            | `10-S2` (`10-…`, wave 1)                                                     | **Owned paths** of `01-S5`                |
+| `src/server/repos/index.ts`                     | `01-S6`            | `07-S10` (`07-…`, wave 5)                                                    | **Owned paths** of `01-S6`                |
 
-The five stages the check cannot read are `04-S2`, `04-S7`, `11-S1`, `11-S2` and `11-S3`, none of them
-this plan's: their `### Stage id` line does not carry `` `<id>` · Wave <n> ``, so the parser cannot
-place them in a wave. **Every stage in this file states its wave in that exact form**, which is what
-makes this plan checkable at all — a stage with no wave is invisible to the check and silently exempt
-from it. The two files that carry those five are not this plan's to edit, and the fix is filed as a
-contract extension rather than made here.
+Two of the six entries are newer than this plan's first draft and were added by sibling plans landing
+after it: `09-S7` and `10-S3` joined `overview.ts`, and `e2e/helpers/shoot.ts` is a path `10-S2` took
+in wave 1 for the same one-line reason `01-S5` takes it in wave 2. Both siblings name this plan's
+stages in their own **Owned paths**, so the naming obligation is met from both directions rather than
+asserted from one. Neither is a collision: no two of the five `overview.ts` claims share a wave, and
+`10-S2`'s wave 1 closes before `01-S5`'s wave 2 opens.
+
+The stages the check cannot read are `04-S2`, `11-S1`, `11-S2` and `11-S3` — **none of them this
+plan's**, and the count moved from five to four while this file was being written, because a
+concurrent run gave `04-S7` its wave line. Their `### Stage id` line does not carry
+`` `<id>` · Wave <n> ``, so the parser cannot place them in a wave. **Every stage in this file states
+its wave in that exact form**, which is what makes this plan checkable at all — a stage with no wave
+is invisible to the check and silently exempt from it. The two files that carry those four are not
+this plan's to edit, and the fix is filed as a contract extension rather than made here.
 
 `src/lib/markdown/**`, `src/routes/_app/trips/$tripId/-server/day-notes.ts` and
 `src/routes/_app/trips/$tripId/plan.tsx` are new claims of `01-S2` and appear nowhere else in the

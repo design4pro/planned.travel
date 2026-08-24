@@ -34,11 +34,18 @@ stage below extends a working screen rather than building one, and a stage that 
 | `MNY-04` | 2    | `04-S4` | partial → done                                                                     |
 | `MNY-06` | 2    | `04-S5` | partial → done                                                                     |
 | `MNY-03` | 3    | `04-S6` | partial → done                                                                     |
-| —        | —    | `04-S7` | closes no row; it lands the one behaviour `04-S1` defers, once a decision is taken |
+| —        | 6    | `04-S7` | closes no row; it lands the one behaviour `04-S1` defers, once a decision is taken |
 
-Waves are read straight off the table in `README.md` and no row is moved. `04-S7` has no wave because
-it cannot be scheduled at all until the provider decision recorded in `11-boundaries-and-blockers.md`
-(`11-S3`) is taken; it is written now so the deferral in `04-S1` points at a stage id rather than at
+Waves are read straight off the table in `README.md` and no row is moved. `04-S7` closes no row, so
+no wave in that table implies one for it; it states **wave 6** — the last wave `README.md` defines,
+and the earliest wave it could ever occupy, since everything it would enable sits in waves 1 to 3.
+That is a floor and not a release date: the stage is **additionally** gated on the provider decision
+recorded in `11-boundaries-and-blockers.md` (`11-S3`), and wave 6 opening does not by itself make it
+schedulable. The wave is stated rather than left blank because a stage with no parseable wave is
+invisible to `scripts/ultrabuild/check-plan-collisions.mjs`, which buckets every wave-less stage
+together and can only report that it could not check them — and `04-S7` claims
+`src/server/repos/rates.ts` exclusively, which is exactly the kind of claim that has to be
+checkable. `04-S7` is written now so that the deferral in `04-S1` points at a stage id rather than at
 an intention.
 
 ## Money conventions that bind every stage in this file
@@ -297,7 +304,7 @@ precisely the third state:
 `resolveDisplayCurrency()` in `src/lib/money.ts` is the only reader of that distinction. The single
 existing consumer of the effective currency, `src/routes/_app/-server/settings.ts:121`, is the
 settings screen's own display of the value and is unaffected; `getEffectiveSettings()`
-(`src/server/repos/settings.ts:196`) is not edited by this stage. `ACC-04` owns the control that sets
+(`src/server/repos/settings.ts:254`) is not edited by this stage. `ACC-04` owns the control that sets
 the preference and inherits the three states and their labels from here.
 
 ### UI (route, components)
@@ -1088,7 +1095,7 @@ freeze.** `11-boundaries-and-blockers.md` (`11-S2`) already looked at this row a
 
 | Widget                      | Built on                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Category donut              | Hand-written SVG arc geometry in `category-donut.tsx`, coloured from the `--color-data-*` palette `04-S2` filed, framed by `Card` and `SectionLabel`, legend rows built from `Badge` and `Tooltip`. `ProgressRing` (`src/components/ui/progress.tsx:142`) is read for its `stroke-dasharray` technique and is **not** duplicated — it is single-valued by design, and a multi-segment ring is a different component rather than a variant of it. |
+| Category donut              | Hand-written SVG arc geometry in `category-donut.tsx`, coloured from the `--color-data-*` palette `04-S2` filed, framed by `Card` and `SectionLabel`, legend rows built from `Badge` and `Tooltip`. `ProgressRing` (`src/components/ui/progress.tsx:150`) is read for its `stroke-dasharray` technique and is **not** duplicated — it is single-valued by design, and a multi-segment ring is a different component rather than a variant of it. |
 | Per-member proportional bar | `member-bar.tsx`, a flex track of token-coloured segments with `AvatarStack` for the faces and `Progress` (`src/components/ui/progress.tsx:42`) reused unchanged wherever a single-valued bar is what the row actually needs — a planned-versus-spent row, for instance.                                                                                                                                                                         |
 | Spend sparkline             | `Sparkline` (`src/components/ui/sparkline.tsx`) reused as-is on the inverse total tile, fed by `dailySeries` which `src/components/costs/data.ts` already computes. No second trend curve is written.                                                                                                                                                                                                                                            |
 
@@ -1850,8 +1857,15 @@ pinned set, no binding, no third-party service.
 
 ### Stage id
 
-`04-S7` · **Unscheduled — it has no wave and cannot be given one until a decision outside this plan
-is taken.** Effort **S** for the code, and the decision it waits on carries a cost rather than an
+`04-S7` · Wave 6 · effort **S**.
+
+Wave 6 is a floor, not a start date. It is the last wave `README.md` defines and the earliest one
+this stage could ever occupy — every row it enables sits in wave 1, 2 or 3 — and the stage is
+**additionally** gated on the provider decision recorded in `11-boundaries-and-blockers.md`
+(`11-S3`). Wave 6 opening does not release it; the decision does, and until then it is not
+scheduled. The wave is stated anyway because a stage that states none is invisible to
+`scripts/ultrabuild/check-plan-collisions.mjs`, and this stage takes `src/server/repos/rates.ts`
+exclusively. Effort **S** covers the code; the decision it waits on carries a cost rather than an
 effort.
 
 ### Reference rows
@@ -1882,10 +1896,14 @@ more than these four files, the seam `04-S1` built was wrong and that is the fin
 workaround.
 
 The isolation suite is `append`, not `edit`: the case this stage owns is the cache-key rule, which is
-its own subject and its own block, so it never edits the block `04-S1` wrote. That matters more here
-than elsewhere, because this stage has **no wave** until its decision is taken and an exclusive claim
-by an unscheduled stage cannot be checked against anything — `check-plan-collisions.mjs` groups every
-wave-less stage together and can only report that it could not check them.
+its own subject and its own block, so it never edits the block `04-S1` wrote.
+
+Its two exclusive claims — `src/server/repos/rates.ts` and its test — are both held by `04-S1` in
+wave 1, four waves earlier, so they are cross-wave and legal rather than a collision. That is a
+**checked** result and not an asserted one, which is the reason this stage states wave 6 in its
+**Stage id** rather than leaving the wave blank: `check-plan-collisions.mjs` buckets every wave-less
+stage into one group and can only report that it could not check them, so a wave-less stage holding
+a module exclusively is a claim nobody can verify.
 
 ### Data and migration
 
@@ -1921,6 +1939,14 @@ The rules it must satisfy, all of which are contracts `04-S1` already relies on:
   outage must not become an invented rate.
 - The call rate is a metered outbound cost a noisy tenant can inflict on every other, so its ceiling
   belongs in `resolveLimits()` like every other ceiling, never in a constant inside this module.
+
+**This stage writes no row and adds no SQL**, which is why it names no table and files no migration.
+The one tenant-scoped query in the module is `findLatestFrozenRate`, shipped by `04-S1`: it starts
+from `tenantFilter()` in `src/server/repos/base.ts`, so every statement carries
+`organization_id = ?` as its leading predicate before the trip predicate is `AND`-ed on. This stage
+does not touch it, does not widen it and does not add a second read beside it — the port it
+implements is an outbound `fetch` and a `KV` read, neither of which reaches D1 at all. The isolation
+block appended below asserts that separation rather than assuming it.
 
 **No server function, no new Zod input, no UI.** The surfaces already exist and call `resolveRate`;
 this stage changes what that call can answer with. The one visible change is that display-currency
@@ -2020,9 +2046,9 @@ node scripts/ultrabuild/check-plan-collisions.mjs 04
 Output, pasted whole:
 
 ```
-plans 7 · stages 37 · owned paths 204
+plans 8 · stages 48 · owned paths 284
 
-5 stage(s) state no parseable wave and cannot be checked: 04-S7 11-S1 11-S2 11-S3 04-S2
+4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
 no same-wave exclusive collisions
 
@@ -2038,6 +2064,8 @@ touched by more than one plan in different waves (2) — legal; each plan must n
       04-budget-and-currencies.md  04-S3  wave 2  (edit)
       04-budget-and-currencies.md  04-S6  wave 3  (edit)
 ```
+
+The script exits `0`.
 
 ### Reading it, line by line
 
@@ -2063,33 +2091,39 @@ the rule asks for:
   starts from its landed edit rather than from HEAD.
 - `src/server/fns/costs.ts` — held by `00-S2` in wave 0, named the same way in the same three stages.
 
-**The two wave-less lines are not this plan's stages failing to state a wave.** The check reports
-`04-S7` and `04-S2` among five. `04-S7` is this file's, and it is unscheduled on purpose: it cannot
-be given a wave until the provider decision in `11-boundaries-and-blockers.md` (`11-S3`) is taken,
-which is stated in its **Stage id** and argued in its **Blockers**. The `04-S2` in that list is
-**not** this file's `04-S2`, which states `Wave 1` and parses: it is the illustrative
-`## Stage 04-S2` heading inside the code fence at `12-verification-protocol.md:26`, which the script
-reads as a stage because it cannot tell a fenced example from a real heading. `11-S1`, `11-S2` and
-`11-S3` belong to the register plan and are outside this file's ownership. Every one of this file's
-scheduled stages states its wave in its `### Stage id` line, in the form the script parses:
+**No stage of this file is in the wave-less list any more, and that was a repair rather than a
+coincidence.** An earlier draft left `04-S7` with no wave on the grounds that it is gated on a
+decision outside this plan. The check reported it as uncheckable, which mattered: `04-S7` takes
+`src/server/repos/rates.ts` and its test exclusively, and an exclusive claim nobody can check is the
+exact shape the rule exists to catch. `04-S7` now states **wave 6** — a floor, since everything it
+enables sits in waves 1 to 3, not a release date, since the `11-S3` decision still gates it — and the
+check now places its two claims four waves after `04-S1`'s, which is cross-wave and legal.
 
-| Stage   | Wave        | Effort |
-| ------- | ----------- | ------ |
-| `04-S1` | 1           | L      |
-| `04-S2` | 1           | L      |
-| `04-S3` | 2           | M      |
-| `04-S4` | 2           | M      |
-| `04-S5` | 2           | M      |
-| `04-S6` | 3           | M      |
-| `04-S7` | unscheduled | S      |
+The four lines that remain are all outside this file's ownership. `11-S1`, `11-S2` and `11-S3` belong
+to the register plan. The `04-S2` in that list is **not** this file's `04-S2`, which states `Wave 1`
+and parses: it is the illustrative `## Stage 04-S2` heading inside the code fence at
+`12-verification-protocol.md:26`, which the script reads as a stage because it cannot tell a fenced
+example from a real heading. Every stage of this file states its wave in its `### Stage id` line, in
+the form the script parses:
+
+| Stage   | Wave | Effort |
+| ------- | ---- | ------ |
+| `04-S1` | 1    | L      |
+| `04-S2` | 1    | L      |
+| `04-S3` | 2    | M      |
+| `04-S4` | 2    | M      |
+| `04-S5` | 2    | M      |
+| `04-S6` | 3    | M      |
+| `04-S7` | 6    | S      |
 
 **One thing the output cannot tell anyone, said here instead.** The header counts are a snapshot of a
-set that two other runs were still writing: `09-account-and-settings.md` appeared during this run,
-and `01-trips-core.md` and `07-collaboration-and-sharing.md` both grew between two invocations
-minutes apart. So `plans 7 · stages 37 · owned paths 204` will not reproduce exactly, and it is not
-the part that matters. The two findings under it are properties of **this** file's ownership —
-nothing this plan claims exclusively is claimed by a sibling in the same wave, and the two paths it
-shares across waves are named in the stages that own them — and those hold until a sibling changes
-what it claims. The stage that executes any part of this file re-runs the script first, reads the
-same three things, and treats a new same-wave line as a blocker rather than a note. That re-run is
-part of this plan's gate, not an optional courtesy.
+set several runs are still writing: it read `plans 7 · stages 37 · owned paths 204` one round ago,
+`… owned paths 282`, then `283`, then `284` across three invocations of this one, minutes apart,
+because `10-administration.md` appeared in between and four sibling plans were dirty in the working
+tree the whole time. So the header will not reproduce exactly, and it is not the part that matters.
+The three findings under it are properties of **this** file's ownership — nothing this plan claims
+exclusively is claimed by a sibling in the same wave, the two paths it shares across waves are named
+in the stages that own them, and no stage of this file is invisible to the check — and those hold
+until a sibling changes what it claims. The stage that executes any part of this file re-runs
+the script first, reads the same three things, and treats a new same-wave line as a blocker rather
+than a note. That re-run is part of this plan's gate, not an optional courtesy.
