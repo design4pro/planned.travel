@@ -188,23 +188,14 @@ export const Pagination = React.forwardRef<HTMLElement, PaginationProps>(
           />
 
           {compact ? (
-            <span className="px-2 text-label font-medium tabular-nums text-ink-2">
+            <span className="px-2 text-label tabular-nums text-ink-2">
               {ui.t('ui.pagination.current', {
                 page: formatNumber(clamped, ui.locale),
                 pageCount: formatNumber(safePageCount, ui.locale),
               })}
             </span>
           ) : (
-            /*
-             * The numbers wrap; the arrows never do. Measured at 360px with
-             * nine pages: the row wants 364px, so an unwrapped list gives the
-             * whole document a horizontal scrollbar — `docs/SPEC.md` §2 asks for
-             * a designed layout at 360px, not a squeezed one. Wrapping inside
-             * the list keeps `‹` and `›` where the thumb expects them and lets
-             * the pages take a second centred row. `compact` is still the
-             * deliberate phone treatment when a caller wants one line.
-             */
-            <ol className="flex min-w-0 flex-wrap items-center justify-center gap-1">
+            <ol className="flex items-center gap-1">
               {items.map((item, index) =>
                 typeof item === 'number' ? (
                   <li key={`page-${item}`}>

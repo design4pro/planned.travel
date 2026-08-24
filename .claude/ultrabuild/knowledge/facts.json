@@ -454,9 +454,9 @@
   },
   {
     "id": "reference-dashboard-needs-its-own-login",
-    "claim": "The reference product's /dashboard cannot be photographed: demo.liketrek.com requires its own sign-in and the human's inherited browser session is not authenticated to it.",
+    "claim": "The reference product gates its whole authenticated area behind its own sign-in, and the inherited browser session holds no account there. Measured for /dashboard in round 5 and for /settings?tab=display in round 7: both redirect to /login?redirect=... with title 'TREK'. No authenticated reference screen can be photographed, so no authenticated blind pair can be formed. Public surfaces - the landing page and the reference's own login/register - ARE reachable, so auth-i18n can still be paired.",
     "evidence": "Ego Lite opened https://demo.liketrek.com/dashboard; pageInfo() returned url https://demo.liketrek.com/login?redirect=%2Fdashboard, title \"TREK\". snapshotText() shows a Sign In form with input[placeholder=\"your@email.com\"] and a password field, plus a \"Change language\" button. No dashboard content in the tree.",
-    "measuredIn": "i18n round 5",
+    "measuredIn": "i18n rounds 5 and 7",
     "scope": [
       "capture",
       "critic",
@@ -466,7 +466,7 @@
   },
   {
     "id": "ego-lite-hangs-on-the-reference-host",
-    "claim": "Ego Lite hangs against demo.liketrek.com, and a heredoc killed mid-run leaves the named task space wedged so every later heredoc reusing that name also hangs.",
+    "claim": "Ego Lite hangs against demo.liketrek.com, and a heredoc killed mid-run leaves the named task space wedged so every later heredoc reusing that name also hangs. UPDATE round 7: it did NOT hang - one navigation plus waitForNetworkIdle plus pageInfo returned well under a minute. Treat the hang as intermittent rather than certain, and always finish a task space with keep:false.",
     "evidence": "Three runs, three timeouts: 5m00s (4-viewport loop), 2m50s (single captureScreenshot in the same space, no navigation), 3m20s (fresh space name, fresh openOrReuseTab). completeTaskSpace(name,{keep:false}) returned promptly both times and cleared it. Use a fresh space name after any kill.",
     "measuredIn": "i18n round 5",
     "scope": [
@@ -616,5 +616,90 @@
       "capture"
     ],
     "invalidatesWhen": "the settings baselines are refreshed after settings-module-i18n is accepted"
+  },
+  {
+    "id": "computed-fontfamily-is-worthless-here",
+    "claim": "`getComputedStyle(el).fontFamily.split(',')[0]` is worthless as a per-script font check in this repo — it is always 'Geist', because the :lang() rules re-order the TAIL of the stack. Use CDP CSS.getPlatformFontsForNode.",
+    "evidence": "On the live /settings/language, a [lang=\"ko\"] chip reported first family 'Geist' from getComputedStyle, while CSS.getPlatformFontsForNode on the same node reported 'Noto Sans KR'. Full CDP sweep over the chips: ko→Noto Sans KR, ja→Noto Sans JP, zh-Hans→Noto Sans SC, zh-Hant→Noto Sans TC, ar→Noto Sans Arabic, el→Noto Sans, en/ru→Geist. All 24 chip boxes measured exactly 44px at 1440 and 360.",
+    "measuredIn": "i18n round 7",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "how-to-open-a-radix-select",
+    "claim": "On /settings/organization neither Playwright `.click()` nor a raw mouse.down/up opens a Radix Select; `focus()` + `Space` does. This narrows the settled fact, which credited mouse.down/up.",
+    "evidence": "trigger.boundingBox() → mouse.move to centre → mouse.down() → mouse.up() → 400 ms wait gave 0 `[role=option]`. The same trigger with `await lang.focus(); await page.keyboard.press('Space')` gave 23 options, with lang attributes present and ar carrying dir=\"rtl\". All six triggers on that screen also read their selected label correctly ('GBP — Pound sterling', 'English', 'London', '23 Jun 2026', 'Monday', 'Kilometres').",
+    "measuredIn": "i18n round 7",
+    "scope": [
+      "builder",
+      "capture",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "radix-select-hides-the-document",
+    "claim": "Radix Select marks the rest of the document aria-hidden while its listbox is open, so a Playwright ROLE locator stops matching the trigger the instant it opens — which is how 'Enter does not open SimpleSelect' came to be measured. Read aria-expanded and option counts through page.evaluate raw DOM queries, never getByRole, when probing an open Radix Select.",
+    "evidence": "Chromium + e2e/.auth/demo.json on http://localhost:3000/settings: after page.keyboard.press('Enter'), `getByRole('combobox').first().getAttribute('aria-expanded')` threw TimeoutError after 30000ms ('waiting for getByRole(\"combobox\").first()'), while in the same state `document.querySelector('[role=\"combobox\"]').getAttribute('aria-expanded')` read \"true\" with 9 [role=option], 1 [role=listbox] and an aria-hidden=true ancestor on the trigger. Enter, Space, ArrowDown and ArrowUp all gave the identical reading.",
+    "measuredIn": "i18n round 7",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical",
+      "capture"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "radix-placeholder-sentinel",
+    "claim": "Radix Select shows its own placeholder only for the empty-string sentinel. A STORED value that no option carries is not that sentinel, so the trigger renders the supplied children and an empty box — the second half of the /settings blank-trigger defect, now fixed in SimpleSelect by naming the placeholder itself plus data-placeholder.",
+    "evidence": "jsdom: `<SimpleSelect options={[{value:'gbp'},{value:'jpy'}]} value=\"en-GB\" placeholder=\"Pick\" />` gave trigger.textContent === \"\" (measured via an assertion sentinel). After the fix the same render contains 'Choose a currency' and carries data-placeholder, in the browser DOM and in renderToStaticMarkup.",
+    "measuredIn": "i18n round 7",
+    "scope": [
+      "builder",
+      "auditor",
+      "critic"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "vitest-swallows-console-log",
+    "claim": "vitest in this repo swallows console.log from test bodies, so a probe that logs prints nothing. Surface a measurement by asserting the value against a sentinel string and reading it out of the AssertionError.",
+    "evidence": "`npx vitest run <probe>.test.tsx` with console.log in each case printed 'Test Files 1 passed / Tests 5 passed' and no log lines at all; rewriting to `expect(`${key} expanded=${...}`).toBe('MEASURE')` printed \"expected '{Enter} expanded=true options=2' to be 'MEASURE'\" for every case.",
+    "measuredIn": "i18n round 7",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "the-visual-lens-is-waived-per-item-not-globally",
+    "claim": "docs/SPEC.md section 8's rule for an unobtainable reference is implemented by `visualLens: 'no-reference'` on the item, set by the ORCHESTRATOR and recorded in run.json. It waives ONLY the A/B comparison in ultrabuild.js's verdict assembler. `url` is deliberately kept so the capture still runs and the frames remain the evidence the auditor and the human read; every other lens stays exactly as strict. It is never set by a builder and never by default.",
+    "evidence": "Three rejections were caused by the missing branch: ui-primitives-i18n-rtl in rounds 5 and 6 and settings-module-i18n in round 7, each for a demo host we hold no credentials for and none for their own work. Only settings-module-i18n and app-shell-i18n carry the flag; auth-i18n does not, because the reference login screen is public and pairable.",
+    "measuredIn": "i18n round 7, orchestrator patch",
+    "scope": [
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": "someone signs the reference demo in, at which point the flag comes off and the pair is required again"
+  },
+  {
+    "id": "settings-baselines-refreshed-after-inspection",
+    "claim": "The four /settings baselines were refreshed in round 7 AFTER reading the actual frame and the diff frame, not because the gate was red. Every difference traced to a criterion the item was told to satisfy: a Language entry added to the nav (shifting five rows), the off-spec LOCALES dropdown replaced by 'English - Chosen on its own screen' plus a Change link, and hint copy now coming from messages/en/settings.ts. The suite returned to 134 passed / 5 skipped / 0 failed.",
+    "evidence": "test-results/visual-authenticated-routes-settings-renders-in-light-chromium/{settings-light-actual,settings-light-diff}.png were both read before the refresh. Refresh was scoped with -g \"settings renders in\", touching exactly four files under e2e/__screenshots__.",
+    "measuredIn": "i18n round 7, orchestrator",
+    "scope": [
+      "mechanical",
+      "capture"
+    ],
+    "invalidatesWhen": "the settings screen changes again"
   }
 ]

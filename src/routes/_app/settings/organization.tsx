@@ -13,6 +13,11 @@ import {
   EmptyState,
   Field,
   Progress,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   SimpleSelect,
   Skeleton,
   Table,
@@ -22,63 +27,31 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui'
+import { planFromUnknown } from '#/lib/plans'
+import {
+  DEFAULT_LOCALE,
+  SUPPORTED_LOCALES,
+  isSupportedLocale,
+  localeDescriptor,
+  useLocale,
+  useTranslate,
+} from '#/lib/i18n'
 import {
   loadOrganizationSettings,
   saveWorkspaceDefaults,
 } from '../-server/settings'
-import {
-  formatDate,
-  formatNumber,
-  humaniseToken,
-  pluralise,
-} from '../-lib/format'
+import { formatDate, formatNumber } from '../-lib/format'
 import { SettingsRow, SettingsSection } from '../-ui/settings-nav'
+import {
+  currencyOptions,
+  dateFormatOptions,
+  distanceOptions,
+  roleLabel,
+  timeZoneOptions,
+  weekStartOptions,
+} from './-lib/regional'
 
-const CURRENCIES: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'EUR', label: 'EUR — Euro' },
-  { value: 'GBP', label: 'GBP — Pound sterling' },
-  { value: 'USD', label: 'USD — US dollar' },
-  { value: 'CHF', label: 'CHF — Swiss franc' },
-  { value: 'PLN', label: 'PLN — Polish złoty' },
-  { value: 'SEK', label: 'SEK — Swedish krona' },
-  { value: 'JPY', label: 'JPY — Japanese yen' },
-]
-
-const LOCALES: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'en-GB', label: 'English (United Kingdom)' },
-  { value: 'en-US', label: 'English (United States)' },
-  { value: 'de-DE', label: 'German (Germany)' },
-  { value: 'fr-FR', label: 'French (France)' },
-  { value: 'pl-PL', label: 'Polish (Poland)' },
-]
-
-const TIMEZONES: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'UTC', label: 'UTC' },
-  { value: 'Europe/London', label: 'London' },
-  { value: 'Europe/Paris', label: 'Paris' },
-  { value: 'Europe/Berlin', label: 'Berlin' },
-  { value: 'Europe/Warsaw', label: 'Warsaw' },
-  { value: 'America/New_York', label: 'New York' },
-  { value: 'Asia/Tokyo', label: 'Tokyo' },
-]
-
-const DATE_FORMATS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'dd MMM yyyy', label: '23 Jun 2026' },
-  { value: 'dd/MM/yyyy', label: '23/06/2026' },
-  { value: 'MM/dd/yyyy', label: '06/23/2026' },
-  { value: 'yyyy-MM-dd', label: '2026-06-23' },
-]
-
-const WEEK_STARTS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: '1', label: 'Monday' },
-  { value: '0', label: 'Sunday' },
-  { value: '6', label: 'Saturday' },
-]
-
-const DISTANCE_UNITS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'metric', label: 'Kilometres' },
-  { value: 'imperial', label: 'Miles' },
-]
+import type { Locale } from '#/lib/i18n'
 
 const ROLE_TONE: Record<string, 'accent' | 'brand' | 'neutral'> = {
   owner: 'accent',
@@ -89,19 +62,92 @@ const ROLE_TONE: Record<string, 'accent' | 'brand' | 'neutral'> = {
 export const Route = createFileRoute('/_app/settings/organization')({
   loader: () => loadOrganizationSettings(),
   pendingComponent: OrganizationPending,
-  errorComponent: ({ error }) => (
-    <ErrorPanel error={error} title="The workspace did not load" />
-  ),
+  errorComponent: OrganizationError,
   component: OrganizationPage,
 })
+
+function OrganizationError({ error }: { error: unknown }) {
+  const t = useTranslate()
+  return <ErrorPanel error={error} title={t('settings.workspace.error')} />
+}
+
+/**
+ * The workspace language, from the same twenty-three-tag registry the picker
+ * reads — never a list of region-tagged values labelled in English.
+ *
+ * It stays a select rather than becoming a second chip grid: this is one row in
+ * a column of six defaults, and the traveller-facing grid lives on its own
+ * screen at `/settings/language`. Built from the composable `Select` parts rather
+ * than `SimpleSelect` for one reason — every item needs its own `lang`, and for
+ * Arabic its own `dir`. `src/styles/styles.css` re-orders the font stack under
+ * `:lang(ja)`, `:lang(ko)` and `:lang(zh-Hant)`, and Hangul in particular cannot
+ * be reached by stack order alone because Noto Sans SC and TC both claim 한, 국
+ * and 어 in their served unicode-range. Without the attribute, 한국어 renders in
+ * the Simplified Chinese face and a screen reader says it in an English voice.
+ *
+ * The trigger is given its label as children for the same reason `SimpleSelect`
+ * does: Radix builds `Select.Content` in a layout effect, which never runs on the
+ * server, so a portalled `ItemText` leaves a server-rendered trigger empty until
+ * hydration.
+ */
+function WorkspaceLanguageSelect({
+  value,
+  disabled,
+  ariaLabel,
+  onChange,
+}: {
+  value: Locale
+  disabled: boolean
+  ariaLabel: string
+  onChange: (next: Locale) => void
+}) {
+  const selected = localeDescriptor(value)
+
+  return (
+    <Select
+      value={value}
+      disabled={disabled}
+      onValueChange={(next) => {
+        if (isSupportedLocale(next)) onChange(next)
+      }}
+    >
+      <SelectTrigger aria-label={ariaLabel}>
+        <span
+          lang={selected.tag}
+          dir={selected.dir === 'rtl' ? 'rtl' : undefined}
+        >
+          <SelectValue>{selected.nativeName}</SelectValue>
+        </span>
+      </SelectTrigger>
+      <SelectContent>
+        {SUPPORTED_LOCALES.map((descriptor) => (
+          <SelectItem
+            key={descriptor.tag}
+            value={descriptor.tag}
+            lang={descriptor.tag}
+            dir={descriptor.dir === 'rtl' ? 'rtl' : undefined}
+          >
+            {descriptor.nativeName}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
 
 function OrganizationPage() {
   const data = Route.useLoaderData()
   const router = useRouter()
+  const t = useTranslate()
+  const locale = useLocale()
+
+  const storedLocale: Locale = isSupportedLocale(data.defaults.locale)
+    ? data.defaults.locale
+    : DEFAULT_LOCALE
 
   const [saving, setSaving] = useState(false)
   const [currency, setCurrency] = useState(data.defaults.currency)
-  const [locale, setLocale] = useState(data.defaults.locale)
+  const [workspaceLocale, setWorkspaceLocale] = useState<Locale>(storedLocale)
   const [timezone, setTimezone] = useState(data.defaults.timezone)
   const [dateFormat, setDateFormat] = useState(data.defaults.dateFormat)
   const [weekStartsOn, setWeekStartsOn] = useState(
@@ -111,7 +157,7 @@ function OrganizationPage() {
 
   const dirty =
     currency !== data.defaults.currency ||
-    locale !== data.defaults.locale ||
+    workspaceLocale !== storedLocale ||
     timezone !== data.defaults.timezone ||
     dateFormat !== data.defaults.dateFormat ||
     weekStartsOn !== String(data.defaults.weekStartsOn) ||
@@ -121,13 +167,22 @@ function OrganizationPage() {
   const seatsFull =
     data.seats.used + data.invitations.length >= data.seats.limit
 
+  const memberCount = t('settings.workspace.members.count', {
+    count: data.members.length,
+    value: formatNumber(data.members.length, locale),
+  })
+  const invitationCount = t('settings.workspace.invitations.count', {
+    count: data.invitations.length,
+    value: formatNumber(data.invitations.length, locale),
+  })
+
   async function save(): Promise<void> {
     setSaving(true)
     try {
       await saveWorkspaceDefaults({
         data: {
           defaultCurrency: currency,
-          locale,
+          locale: workspaceLocale,
           timezone,
           dateFormat,
           weekStartsOn: Number.parseInt(weekStartsOn, 10),
@@ -135,38 +190,34 @@ function OrganizationPage() {
         },
       })
       await router.invalidate()
-      toast.success('Workspace defaults saved')
-    } catch (cause) {
-      toast.error('Could not save the workspace defaults', {
-        description:
-          cause instanceof Error && cause.message.length > 0
-            ? cause.message
-            : 'Check your connection and try again.',
+      toast.success(t('settings.workspace.defaults.saved'))
+    } catch {
+      // Authored, not the server's own sentence: the only way this write fails
+      // for a viewer the screen let near it is the role assertion in
+      // `updateOrganizationSettings`, and that is what the copy explains.
+      toast.error(t('settings.workspace.defaults.saveFailed'), {
+        description: t('settings.workspace.defaults.saveFailedBody'),
       })
     } finally {
       setSaving(false)
     }
   }
 
-  /** Options that must always include whatever is currently stored. */
-  function withStored(
-    options: ReadonlyArray<{ value: string; label: string }>,
-    stored: string,
-  ): Array<{ value: string; label: string }> {
-    const list = options.map((option) => ({ ...option }))
-    return list.some((option) => option.value === stored)
-      ? list
-      : [{ value: stored, label: stored }, ...list]
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <SettingsSection
         title={data.organization.name}
-        description={`${humaniseToken(data.plan)} plan · created ${formatDate(data.organization.createdAt) ?? 'recently'}`}
+        description={t('settings.workspace.summary.description', {
+          plan: planFromUnknown(data.plan)?.name ?? data.plan,
+          date:
+            formatDate(data.organization.createdAt, locale) ??
+            t('settings.workspace.summary.createdRecently'),
+        })}
         actions={
           <Button asChild variant="secondary" size="sm" shape="pill">
-            <Link to="/settings/billing">Plan &amp; billing</Link>
+            <Link to="/settings/billing">
+              {t('settings.workspace.summary.billingAction')}
+            </Link>
           </Button>
         }
       >
@@ -176,12 +227,14 @@ function OrganizationPage() {
             max={Math.max(data.seats.limit, 1)}
             size="sm"
             tone={seatRatio > 0.9 ? 'warning' : 'brand'}
-            label="Seats used"
-            valueText={`${formatNumber(data.seats.used)} of ${formatNumber(data.seats.limit)}`}
+            label={t('settings.workspace.seats.label')}
+            valueText={t('settings.workspace.seats.value', {
+              used: formatNumber(data.seats.used, locale),
+              limit: formatNumber(data.seats.limit, locale),
+            })}
           />
           <p className="text-caption text-ink-3">
-            Outstanding invitations count against your seats, so a workspace can
-            never oversubscribe the plan it pays for.
+            {t('settings.workspace.seats.note')}
           </p>
         </div>
       </SettingsSection>
@@ -189,32 +242,42 @@ function OrganizationPage() {
       {seatsFull ? (
         <Alert
           tone="warning"
-          title="Every seat on this plan is taken"
+          title={t('settings.workspace.seatsFull.title')}
           actions={
             <Button asChild variant="secondary" size="sm" shape="pill">
-              <Link to="/settings/billing">Add seats</Link>
+              <Link to="/settings/billing">
+                {t('settings.workspace.seatsFull.action')}
+              </Link>
             </Button>
           }
         >
-          {`${pluralise(data.seats.used, 'member')} and ${pluralise(data.invitations.length, 'pending invitation')} fill all ${formatNumber(data.seats.limit)} seats.`}
+          {t('settings.workspace.seatsFull.body', {
+            members: memberCount,
+            invitations: invitationCount,
+            limit: formatNumber(data.seats.limit, locale),
+          })}
         </Alert>
       ) : null}
 
       <SettingsSection
-        title="Members"
-        description="Everyone who can see the trips, the money and the files in this workspace."
+        title={t('settings.workspace.members.title')}
+        description={t('settings.workspace.members.description')}
         actions={
           <Badge tone="neutral" size="lg" icon={<Users />}>
-            {pluralise(data.members.length, 'member')}
+            {memberCount}
           </Badge>
         }
       >
-        <Table label="Members of this workspace" fixed>
+        <Table label={t('settings.workspace.members.tableLabel')} fixed>
           <TableHeader>
             <TableRow>
-              <TableHead>Person</TableHead>
-              <TableHead className="w-28">Role</TableHead>
-              <TableHead className="w-32">Joined</TableHead>
+              <TableHead>{t('settings.workspace.members.person')}</TableHead>
+              <TableHead className="w-28">
+                {t('settings.workspace.members.role')}
+              </TableHead>
+              <TableHead className="w-32">
+                {t('settings.workspace.members.joined')}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -235,10 +298,12 @@ function OrganizationPage() {
                 </TableCell>
                 <TableCell>
                   <Badge tone={ROLE_TONE[member.role] ?? 'neutral'} size="sm">
-                    {humaniseToken(member.role)}
+                    {roleLabel(t, member.role)}
                   </Badge>
                 </TableCell>
-                <TableCell muted>{formatDate(member.joinedAt)}</TableCell>
+                <TableCell muted>
+                  {formatDate(member.joinedAt, locale)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -246,15 +311,15 @@ function OrganizationPage() {
       </SettingsSection>
 
       <SettingsSection
-        title="Invitations"
-        description="People who have been invited but have not joined yet."
+        title={t('settings.workspace.invitations.title')}
+        description={t('settings.workspace.invitations.description')}
       >
         {data.invitations.length === 0 ? (
           <EmptyState
             size="sm"
             icon={<MailPlus />}
-            title="No outstanding invitations"
-            description="Everyone invited to this workspace has already joined."
+            title={t('settings.workspace.invitations.emptyTitle')}
+            description={t('settings.workspace.invitations.emptyBody')}
           />
         ) : (
           <ul className="flex flex-col">
@@ -267,12 +332,14 @@ function OrganizationPage() {
                   {invitation.email}
                 </span>
                 <Badge tone="outline" size="sm">
-                  {invitation.role === null
-                    ? 'Member'
-                    : humaniseToken(invitation.role)}
+                  {roleLabel(t, invitation.role)}
                 </Badge>
                 <span className="text-caption tabular-nums text-ink-4">
-                  expires {formatDate(invitation.expiresAt) ?? 'soon'}
+                  {t('settings.workspace.invitations.expires', {
+                    date:
+                      formatDate(invitation.expiresAt, locale) ??
+                      t('settings.workspace.invitations.expiresSoon'),
+                  })}
                 </span>
               </li>
             ))}
@@ -281,8 +348,8 @@ function OrganizationPage() {
       </SettingsSection>
 
       <SettingsSection
-        title="Shared defaults"
-        description="What a new trip and a new member start with. Anyone can override these for themselves in their profile."
+        title={t('settings.workspace.defaults.title')}
+        description={t('settings.workspace.defaults.description')}
         actions={
           data.canAdminister ? (
             <Button
@@ -291,105 +358,102 @@ function OrganizationPage() {
               shape="pill"
               disabled={!dirty}
               loading={saving}
-              loadingLabel="Saving the workspace defaults"
+              loadingLabel={t('settings.workspace.defaults.saving')}
               onClick={() => {
                 void save()
               }}
             >
               <Save aria-hidden />
-              Save changes
+              {t('settings.action.save')}
             </Button>
           ) : (
             <Badge tone="outline" size="lg">
-              Read only
+              {t('settings.workspace.defaults.readOnly')}
             </Badge>
           )
         }
       >
         <div className="flex flex-col">
           <SettingsRow
-            label="Default currency"
-            hint="New trips are budgeted in this."
+            label={t('settings.workspace.currency.label')}
+            hint={t('settings.workspace.currency.hint')}
             control={
               <Field>
                 <SimpleSelect
-                  options={withStored(CURRENCIES, data.defaults.currency)}
+                  options={currencyOptions(t, data.defaults.currency)}
                   value={currency}
                   disabled={!data.canAdminister}
                   onValueChange={setCurrency}
-                  ariaLabel="Default currency"
+                  ariaLabel={t('settings.workspace.currency.label')}
                 />
               </Field>
             }
           />
           <SettingsRow
-            label="Language"
+            label={t('settings.workspace.language.label')}
+            hint={t('settings.workspace.language.hint')}
             control={
               <Field>
-                <SimpleSelect
-                  options={withStored(LOCALES, data.defaults.locale)}
-                  value={locale}
+                <WorkspaceLanguageSelect
+                  value={workspaceLocale}
                   disabled={!data.canAdminister}
-                  onValueChange={setLocale}
-                  ariaLabel="Language"
+                  ariaLabel={t('settings.workspace.language.label')}
+                  onChange={setWorkspaceLocale}
                 />
               </Field>
             }
           />
           <SettingsRow
-            label="Time zone"
+            label={t('settings.workspace.timezone.label')}
             control={
               <Field>
                 <SimpleSelect
-                  options={withStored(TIMEZONES, data.defaults.timezone)}
+                  options={timeZoneOptions(data.defaults.timezone)}
                   value={timezone}
                   disabled={!data.canAdminister}
                   onValueChange={setTimezone}
-                  ariaLabel="Time zone"
+                  ariaLabel={t('settings.workspace.timezone.label')}
                 />
               </Field>
             }
           />
           <SettingsRow
-            label="Date format"
+            label={t('settings.workspace.dateFormat.label')}
             control={
               <Field>
                 <SimpleSelect
-                  options={withStored(DATE_FORMATS, data.defaults.dateFormat)}
+                  options={dateFormatOptions(locale, data.defaults.dateFormat)}
                   value={dateFormat}
                   disabled={!data.canAdminister}
                   onValueChange={setDateFormat}
-                  ariaLabel="Date format"
+                  ariaLabel={t('settings.workspace.dateFormat.label')}
                 />
               </Field>
             }
           />
           <SettingsRow
-            label="Week starts on"
+            label={t('settings.workspace.weekStart.label')}
             control={
               <Field>
                 <SimpleSelect
-                  options={withStored(
-                    WEEK_STARTS,
+                  options={weekStartOptions(
+                    locale,
                     String(data.defaults.weekStartsOn),
                   )}
                   value={weekStartsOn}
                   disabled={!data.canAdminister}
                   onValueChange={setWeekStartsOn}
-                  ariaLabel="Week starts on"
+                  ariaLabel={t('settings.workspace.weekStart.label')}
                 />
               </Field>
             }
           />
           <SettingsRow
-            label="Distance"
+            label={t('settings.workspace.distance.label')}
             control={
               <Field>
                 <SimpleSelect
-                  options={withStored(
-                    DISTANCE_UNITS,
-                    data.defaults.distanceUnit,
-                  )}
+                  options={distanceOptions(t)}
                   value={distanceUnit}
                   disabled={!data.canAdminister}
                   onValueChange={(next) => {
@@ -397,7 +461,7 @@ function OrganizationPage() {
                       setDistanceUnit(next)
                     }
                   }}
-                  ariaLabel="Distance"
+                  ariaLabel={t('settings.workspace.distance.label')}
                 />
               </Field>
             }
@@ -409,9 +473,10 @@ function OrganizationPage() {
 }
 
 function OrganizationPending() {
+  const t = useTranslate()
   return (
     <div aria-busy="true" className="flex flex-col gap-6">
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{t('ui.status.loading')}</span>
       <Card className="space-y-4">
         <Skeleton className="h-5 w-48" radius="sm" />
         <Skeleton className="h-1.5 w-full" radius="full" />

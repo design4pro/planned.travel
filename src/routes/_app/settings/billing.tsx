@@ -34,23 +34,27 @@ import {
   TableRow,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import {
   BILLING_INTERVALS,
   FREE_PLAN,
   PLANS,
   PLAN_LIST,
   QUOTA_KEYS,
-  QUOTA_LABELS,
   clampSeats,
   formatPlanAmount,
-  formatQuota,
-  formatQuotaUsage,
+  formatStorage,
   isUnlimited,
   monthlyEquivalent,
   planById,
   yearlySavingPercent,
 } from '#/lib/plans'
-import { formatDate, formatMoneyMinor } from '../-lib/format'
+import {
+  formatDate,
+  formatMoneyMinor,
+  formatNumber,
+  formatPercent,
+} from '../-lib/format'
 import {
   loadBilling,
   openBillingPortal,
@@ -58,6 +62,7 @@ import {
 } from '../-server/billing'
 import { SettingsSection } from '../-ui/settings-nav'
 
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type { BillingInterval, BillingState, Plan, QuotaKey } from '#/lib/plans'
 import type { InvoiceSummary } from '#/server/billing/checkout'
 import type { Entitlements, QuotaState } from '#/server/billing/types'
@@ -85,11 +90,14 @@ export const Route = createFileRoute('/_app/settings/billing')({
   }),
   loader: () => loadBilling(),
   pendingComponent: BillingPending,
-  errorComponent: ({ error }) => (
-    <ErrorPanel error={error} title="Billing did not load" />
-  ),
+  errorComponent: BillingError,
   component: BillingPage,
 })
+
+function BillingError({ error }: { error: unknown }) {
+  const t = useTranslate()
+  return <ErrorPanel error={error} title={t('settings.billing.error')} />
+}
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -98,21 +106,35 @@ function rankOf(planId: Plan['id']): number {
   return PLAN_LIST.findIndex((plan) => plan.id === planId)
 }
 
+/**
+ * The nine Stripe subscription states, each with the key that names it and the
+ * tone it wears. Keys, not sentences, because a module-scope table cannot be
+ * translated and a literal checked against `MessageKey` cannot be misspelled.
+ */
 const STATUS_BADGES: {
   readonly [K in BillingState]: {
-    label: string
+    label: MessageKey
     tone: 'success' | 'warning' | 'danger' | 'neutral' | 'brand'
   }
 } = {
-  none: { label: 'No subscription', tone: 'neutral' },
-  trialing: { label: 'Trial', tone: 'brand' },
-  active: { label: 'Active', tone: 'success' },
-  past_due: { label: 'Payment failed', tone: 'warning' },
-  unpaid: { label: 'Unpaid', tone: 'danger' },
-  paused: { label: 'Paused', tone: 'neutral' },
-  canceled: { label: 'Cancelled', tone: 'neutral' },
-  incomplete: { label: 'Incomplete', tone: 'warning' },
-  incomplete_expired: { label: 'Expired', tone: 'neutral' },
+  none: { label: 'settings.billing.status.none', tone: 'neutral' },
+  trialing: { label: 'settings.billing.status.trialing', tone: 'brand' },
+  active: { label: 'settings.billing.status.active', tone: 'success' },
+  past_due: { label: 'settings.billing.status.past_due', tone: 'warning' },
+  unpaid: { label: 'settings.billing.status.unpaid', tone: 'danger' },
+  paused: { label: 'settings.billing.status.paused', tone: 'neutral' },
+  canceled: { label: 'settings.billing.status.canceled', tone: 'neutral' },
+  incomplete: { label: 'settings.billing.status.incomplete', tone: 'warning' },
+  incomplete_expired: {
+    label: 'settings.billing.status.incomplete_expired',
+    tone: 'neutral',
+  },
+}
+
+const QUOTA_LABEL_KEYS: { readonly [K in QuotaKey]: MessageKey } = {
+  seats: 'settings.billing.quota.seats',
+  trips: 'settings.billing.quota.trips',
+  storageBytes: 'settings.billing.quota.storageBytes',
 }
 
 /** Days from now until an ISO instant, floored. Negative once it has passed. */
@@ -124,42 +146,51 @@ function daysFromNow(iso: string | null): number | null {
 }
 
 /** The one line under the plan name that says what happens next, and when. */
-function renewalLine(state: Entitlements): string {
-  const on = formatDate(state.currentPeriodEnd)
+function renewalLine(
+  t: Translate,
+  locale: Locale,
+  state: Entitlements,
+): string {
+  const on = formatDate(state.currentPeriodEnd, locale)
 
   if (state.trialing) {
     const left = daysFromNow(state.trialEndsAt)
     if (left !== null && left >= 0) {
       return left === 0
-        ? 'Your trial ends today. Add a card to keep every module unlocked.'
-        : `Your trial ends in ${left} ${left === 1 ? 'day' : 'days'}. No card needed until then.`
+        ? t('settings.billing.renewal.trialEndsToday')
+        : t('settings.billing.renewal.trialEndsIn', {
+            count: left,
+            value: formatNumber(left, locale),
+          })
     }
-    return 'Your trial has ended.'
+    return t('settings.billing.renewal.trialEnded')
   }
 
   if (state.cancelAtPeriodEnd) {
     return on === null
-      ? 'This plan is set to end and will not renew.'
-      : `This plan ends on ${on}. Nothing is deleted — the paid modules simply lock.`
+      ? t('settings.billing.renewal.endsNoDate')
+      : t('settings.billing.renewal.endsOn', { date: on })
   }
 
   switch (state.status) {
     case 'past_due':
-      return 'The last payment did not go through. Update your card to avoid losing the paid modules.'
+      return t('settings.billing.renewal.pastDue')
     case 'unpaid':
-      return 'This subscription is unpaid and the paid modules are locked.'
+      return t('settings.billing.renewal.unpaid')
     case 'paused':
-      return 'This subscription is paused. Resume it whenever you are ready to travel again.'
+      return t('settings.billing.renewal.paused')
     case 'canceled':
     case 'incomplete_expired':
-      return 'Choose a plan below to unlock reservations, the journal and offline maps again.'
+      return t('settings.billing.renewal.lapsed')
     case 'incomplete':
-      return 'Stripe is still waiting for this payment to be confirmed.'
+      return t('settings.billing.renewal.incomplete')
     case 'none':
-      return 'Two trips at a time, on the house. Upgrade whenever you outgrow it.'
+      return t('settings.billing.renewal.free')
     case 'active':
     case 'trialing':
-      return on === null ? 'Renews automatically.' : `Renews on ${on}.`
+      return on === null
+        ? t('settings.billing.renewal.auto')
+        : t('settings.billing.renewal.renewsOn', { date: on })
   }
 }
 
@@ -184,27 +215,69 @@ function meterTone(quota: QuotaState): 'brand' | 'warning' | 'danger' {
   return quota.ratio >= 0.8 ? 'warning' : 'brand'
 }
 
-const QUOTA_NOUN: Record<QuotaKey, string> = {
-  seats: 'seat',
-  trips: 'trip slot',
-  storageBytes: 'byte',
+/**
+ * A quota amount in its own units, grouped for the locale.
+ *
+ * `formatQuota` and `formatQuotaUsage` in `src/lib/plans.ts` answer with
+ * `String(n)`, which prints `1234` with no separator in all twenty-three
+ * languages — §8's rule on numbers a reader sees. Storage keeps the binary
+ * units R2 bills in; a count goes through the locale's own grouping.
+ */
+function quotaAmount(key: QuotaKey, value: number, locale: Locale): string {
+  return key === 'storageBytes'
+    ? formatStorage(value)
+    : formatNumber(value, locale)
 }
 
-function quotaHint(key: QuotaKey, quota: QuotaState): string {
-  if (isUnlimited(quota.limit)) return 'No limit on this plan'
+/** A quota's ceiling, or the word for having none. */
+function quotaCeiling(
+  t: Translate,
+  key: QuotaKey,
+  limit: number | null,
+  locale: Locale,
+): string {
+  return isUnlimited(limit)
+    ? t('settings.billing.quota.unlimited')
+    : quotaAmount(key, limit, locale)
+}
+
+function quotaHint(
+  t: Translate,
+  key: QuotaKey,
+  quota: QuotaState,
+  locale: Locale,
+): string {
+  if (isUnlimited(quota.limit)) return t('settings.billing.quota.noLimit')
   // Being *over* a limit and being exactly *at* one are different situations, and
   // a workspace that inherited members from a richer plan is genuinely over.
   // Telling it "you have used every seat" understated the problem by three seats.
   if (quota.used > quota.limit) {
     const over = quota.used - quota.limit
-    return key === 'storageBytes'
-      ? `${formatQuotaUsage(key, over)} over this plan's limit`
-      : `${over} ${QUOTA_NOUN[key]}${over === 1 ? '' : 's'} over this plan's limit`
+    if (key === 'storageBytes') {
+      return t('settings.billing.quota.over.storage', {
+        value: formatStorage(over),
+      })
+    }
+    return t(
+      key === 'seats'
+        ? 'settings.billing.quota.over.seats'
+        : 'settings.billing.quota.over.trips',
+      { count: over, value: formatNumber(over, locale) },
+    )
   }
   if (quota.remaining === null || quota.remaining === 0) {
-    return `You have used every ${QUOTA_NOUN[key]} on this plan`
+    switch (key) {
+      case 'seats':
+        return t('settings.billing.quota.exhausted.seats')
+      case 'trips':
+        return t('settings.billing.quota.exhausted.trips')
+      default:
+        return t('settings.billing.quota.exhausted.storage')
+    }
   }
-  return `${formatQuotaUsage(key, quota.remaining)} left`
+  return t('settings.billing.quota.left', {
+    value: quotaAmount(key, quota.remaining, locale),
+  })
 }
 
 /* --------------------------------------------------------------------- page */
@@ -213,6 +286,7 @@ function BillingPage() {
   const data = Route.useLoaderData()
   const search = Route.useSearch()
   const router = useRouter()
+  const t = useTranslate()
 
   const state = data.entitlements
   const plan = planById(state.planId)
@@ -236,13 +310,13 @@ function BillingPage() {
     try {
       const { url } = await run()
       window.location.assign(url)
-    } catch (cause) {
+    } catch {
       setPending(null)
-      toast.error('Stripe could not be reached', {
-        description:
-          cause instanceof Error
-            ? cause.message
-            : 'Check your connection and try again in a moment.',
+      // Authored copy, not the thrown message: a Stripe error string is written
+      // for an operator's log and reaches this screen in English whatever the
+      // reader's language.
+      toast.error(t('settings.billing.stripe.failed'), {
+        description: t('settings.billing.stripe.failedBody'),
       })
     }
   }
@@ -271,7 +345,7 @@ function BillingPage() {
       {search.checkout === 'complete' ? (
         <Alert
           tone="success"
-          title="Payment received"
+          title={t('settings.billing.checkout.completeTitle')}
           actions={
             <Button
               variant="ghost"
@@ -281,25 +355,27 @@ function BillingPage() {
                 void router.invalidate()
               }}
             >
-              Refresh
+              {t('settings.billing.refresh')}
             </Button>
           }
         >
-          Your new plan is being applied. It appears here the moment Stripe
-          confirms it — usually within a few seconds.
+          {t('settings.billing.checkout.completeBody')}
         </Alert>
       ) : null}
 
       {search.checkout === 'cancelled' ? (
-        <Alert tone="neutral" title="Checkout cancelled">
-          Nothing was charged and your plan has not changed.
+        <Alert
+          tone="neutral"
+          title={t('settings.billing.checkout.cancelledTitle')}
+        >
+          {t('settings.billing.checkout.cancelledBody')}
         </Alert>
       ) : null}
 
       {search.portal === true ? (
         <Alert
           tone="info"
-          title="Back from Stripe"
+          title={t('settings.billing.portal.backTitle')}
           actions={
             <Button
               variant="ghost"
@@ -309,22 +385,21 @@ function BillingPage() {
                 void router.invalidate()
               }}
             >
-              Refresh
+              {t('settings.billing.refresh')}
             </Button>
           }
         >
-          Anything you changed there lands here as soon as Stripe confirms it.
+          {t('settings.billing.portal.backBody')}
         </Alert>
       ) : null}
 
       {data.canManage ? null : (
         <Alert
           tone="info"
-          title="You are a member of this workspace"
+          title={t('settings.billing.readOnly.title')}
           icon={<Lock />}
         >
-          Only an owner or an admin can change the subscription. Everything
-          below is read-only for you.
+          {t('settings.billing.readOnly.body')}
         </Alert>
       )}
 
@@ -342,8 +417,8 @@ function BillingPage() {
       <UsageMeters state={state} />
 
       <SettingsSection
-        title="Plans"
-        description="Change plan whenever you like. Upgrades are prorated to the day; a downgrade waits until the period you have paid for is over."
+        title={t('settings.billing.plans.title')}
+        description={t('settings.billing.plans.description')}
         actions={<IntervalToggle value={interval} onChange={setInterval} />}
       >
         <div className="grid gap-4 xl:grid-cols-3">
@@ -393,6 +468,8 @@ function PlanHero({
   onManagePayment: () => void
   onCancel: () => void
 }) {
+  const t = useTranslate()
+  const locale = useLocale()
   const badge = STATUS_BADGES[state.status]
   const paid = plan.id !== FREE_PLAN.id
   const interval = billedInterval(state)
@@ -405,7 +482,7 @@ function PlanHero({
       <div className="flex flex-col gap-6 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
         <div className="min-w-0">
           <SectionLabel className="text-inverse-muted" icon={<Sparkles />}>
-            Current plan
+            {t('settings.billing.hero.label')}
           </SectionLabel>
 
           <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
@@ -413,31 +490,33 @@ function PlanHero({
               {plan.name}
             </h2>
             <Badge tone={badge.tone} size="sm" dot>
-              {badge.label}
+              {t(badge.label)}
             </Badge>
             {state.cancelAtPeriodEnd ? (
               <Badge tone="inverse" size="sm">
-                Ends at period close
+                {t('settings.billing.hero.endsAtPeriod')}
               </Badge>
             ) : null}
           </div>
 
           <p className="mt-3 max-w-prose text-label leading-relaxed text-inverse-muted">
-            {renewalLine(state)}
+            {renewalLine(t, locale, state)}
           </p>
         </div>
 
         <div className="flex shrink-0 flex-col items-start gap-4 lg:items-end">
-          <div className="lg:text-right">
+          <div className="lg:text-end">
             <p className="flex items-baseline gap-1.5 lg:justify-end">
               <span className="font-display text-display leading-none font-extrabold tracking-tighter tabular-nums text-inverse-on">
                 {price === null
-                  ? 'Free'
+                  ? t('settings.billing.price.free')
                   : formatPlanAmount(total, price.currency)}
               </span>
               {price === null ? null : (
                 <span className="text-subtitle font-medium text-inverse-muted">
-                  {price.interval === 'yearly' ? '/ year' : '/ month'}
+                  {price.interval === 'yearly'
+                    ? t('settings.billing.hero.perYear')
+                    : t('settings.billing.hero.perMonth')}
                 </span>
               )}
             </p>
@@ -445,10 +524,15 @@ function PlanHero({
               {price === null
                 ? // The trip ceiling in force, not the catalogue's: a free workspace
                   // can legitimately have been given head-room by hand.
-                  `${formatQuota('trips', state.limits.trips)} trips, one traveller`
+                  t('settings.billing.hero.freeAllowance', {
+                    trips: quotaCeiling(t, 'trips', state.limits.trips, locale),
+                  })
                 : price.perSeat
-                  ? `${state.seats} members × ${formatPlanAmount(price.amount, price.currency)}`
-                  : 'One traveller'}
+                  ? t('settings.billing.hero.perSeatLine', {
+                      seats: formatNumber(state.seats, locale),
+                      price: formatPlanAmount(price.amount, price.currency),
+                    })
+                  : t('settings.billing.hero.singleTraveller')}
             </p>
           </div>
 
@@ -461,10 +545,10 @@ function PlanHero({
                 icon={<CreditCard />}
                 disabled={!state.hasStripeCustomer}
                 loading={pending === 'portal:paymentMethod'}
-                loadingLabel="Opening Stripe"
+                loadingLabel={t('settings.billing.stripe.opening')}
                 onClick={onManagePayment}
               >
-                Payment method
+                {t('settings.billing.hero.paymentMethod')}
               </Button>
               {paid ? (
                 <Button
@@ -473,10 +557,10 @@ function PlanHero({
                   shape="pill"
                   className="text-inverse-muted hover:bg-inverse-surface hover:text-inverse-on"
                   loading={pending === 'portal:cancel'}
-                  loadingLabel="Opening Stripe"
+                  loadingLabel={t('settings.billing.stripe.opening')}
                   onClick={onCancel}
                 >
-                  Cancel plan
+                  {t('settings.billing.hero.cancel')}
                 </Button>
               ) : null}
             </div>
@@ -490,33 +574,35 @@ function PlanHero({
 /* --------------------------------------------------------------- usage meters */
 
 function UsageMeters({ state }: { state: Entitlements }) {
+  const t = useTranslate()
+  const locale = useLocale()
+
   return (
     <SettingsSection
-      title="Usage"
-      description="Counted live, so a meter is never stale. Limits follow the plan in force right now."
+      title={t('settings.billing.usage.title')}
+      description={t('settings.billing.usage.description')}
     >
       <div className="flex flex-col gap-5">
         {QUOTA_KEYS.map((key) => {
           const quota = state.quotas[key]
           const unlimited = isUnlimited(quota.limit)
+          const name = t(QUOTA_LABEL_KEYS[key])
           return (
             <div key={key} className="min-w-0">
               <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <p className="text-label font-medium text-ink">
-                  {QUOTA_LABELS[key]}
-                </p>
+                <p className="text-label font-medium text-ink">{name}</p>
                 <p className="flex items-baseline gap-1.5 text-caption tabular-nums text-ink-3">
                   <span className="font-semibold text-ink">
-                    {formatQuotaUsage(key, quota.used)}
+                    {quotaAmount(key, quota.used, locale)}
                   </span>
                   <span aria-hidden>/</span>
                   {unlimited ? (
                     <span className="inline-flex items-center gap-1">
                       <InfinityIcon aria-hidden className="size-3.5" />
-                      Unlimited
+                      {t('settings.billing.quota.unlimited')}
                     </span>
                   ) : (
-                    <span>{formatQuota(key, quota.limit)}</span>
+                    <span>{quotaCeiling(t, key, quota.limit, locale)}</span>
                   )}
                 </p>
               </div>
@@ -532,7 +618,7 @@ function UsageMeters({ state }: { state: Entitlements }) {
                 <Progress
                   value={quota.ratio * 100}
                   tone={meterTone(quota)}
-                  aria-label={`${QUOTA_LABELS[key]} used`}
+                  aria-label={t('settings.billing.quota.used', { quota: name })}
                 />
               )}
 
@@ -542,7 +628,7 @@ function UsageMeters({ state }: { state: Entitlements }) {
                   quota.exceeded ? 'text-danger' : 'text-ink-4',
                 )}
               >
-                {quotaHint(key, quota)}
+                {quotaHint(t, key, quota, locale)}
               </p>
             </div>
           )
@@ -561,12 +647,14 @@ function IntervalToggle({
   value: BillingInterval
   onChange: (next: BillingInterval) => void
 }) {
+  const t = useTranslate()
+  const locale = useLocale()
   const saving = Math.max(...PLAN_LIST.map(yearlySavingPercent))
 
   return (
     <div
       role="group"
-      aria-label="Billing interval"
+      aria-label={t('settings.billing.interval.label')}
       className="inline-flex items-center gap-0.5 rounded-full bg-track p-1"
     >
       {BILLING_INTERVALS.map((option) => {
@@ -585,10 +673,14 @@ function IntervalToggle({
                 : 'text-ink-3 hover:text-ink-2',
             )}
           >
-            {option === 'monthly' ? 'Monthly' : 'Yearly'}
+            {option === 'monthly'
+              ? t('settings.billing.interval.monthly')
+              : t('settings.billing.interval.yearly')}
             {option === 'yearly' && saving > 0 ? (
               <span className="rounded-full bg-success-soft px-1.5 text-micro font-bold tabular-nums text-success">
-                −{saving}%
+                {t('settings.billing.interval.saving', {
+                  value: formatPercent(saving / 100, locale),
+                })}
               </span>
             ) : null}
           </button>
@@ -597,8 +689,6 @@ function IntervalToggle({
     </div>
   )
 }
-
-const SEAT_OPTION_LABEL = (count: number): string => `${count} members`
 
 function PlanOption({
   plan,
@@ -621,6 +711,9 @@ function PlanOption({
   onChoose: () => void
   onDowngradeToFree: () => void
 }) {
+  const t = useTranslate()
+  const locale = useLocale()
+
   const price = plan.prices[interval]
   const isCurrentPlan = plan.id === state.planId
   const isCurrent =
@@ -633,16 +726,16 @@ function PlanOption({
     price === null ? 0 : price.amount * (price.perSeat ? seatCount : 1)
 
   const label = isCurrent
-    ? 'Current plan'
+    ? t('settings.billing.plan.current')
     : plan.id === FREE_PLAN.id
-      ? 'Move to Free'
+      ? t('settings.billing.plan.moveTo', { plan: plan.name })
       : isCurrentPlan
         ? interval === 'yearly'
-          ? 'Switch to yearly'
-          : 'Switch to monthly'
+          ? t('settings.billing.plan.switchYearly')
+          : t('settings.billing.plan.switchMonthly')
         : delta > 0
-          ? `Upgrade to ${plan.name}`
-          : `Change to ${plan.name}`
+          ? t('settings.billing.plan.upgradeTo', { plan: plan.name })
+          : t('settings.billing.plan.changeTo', { plan: plan.name })
 
   const seatOptions = plan.seatBased
     ? Array.from(
@@ -652,7 +745,13 @@ function PlanOption({
         },
         (_, index) => {
           const count = plan.seatRange.min + index
-          return { value: String(count), label: SEAT_OPTION_LABEL(count) }
+          return {
+            value: String(count),
+            label: t('settings.billing.plan.seatOption', {
+              count,
+              value: formatNumber(count, locale),
+            }),
+          }
         },
       )
     : []
@@ -676,11 +775,11 @@ function PlanOption({
           </div>
           {isCurrent ? (
             <Badge tone="brand" size="sm" className="shrink-0">
-              Current
+              {t('settings.billing.plan.currentBadge')}
             </Badge>
           ) : plan.recommended ? (
             <Badge tone="neutral" size="sm" className="shrink-0">
-              Popular
+              {t('settings.billing.plan.popular')}
             </Badge>
           ) : null}
         </div>
@@ -689,26 +788,35 @@ function PlanOption({
           <p className="flex items-baseline gap-1.5">
             <span className="font-display text-title leading-none font-extrabold tracking-tighter tabular-nums text-ink">
               {price === null
-                ? 'Free'
+                ? t('settings.billing.price.free')
                 : formatPlanAmount(monthlyEquivalent(price), price.currency)}
             </span>
             {price === null ? null : (
               <span className="text-caption font-medium text-ink-3">
-                {price.perSeat ? '/ member / month' : '/ month'}
+                {price.perSeat
+                  ? t('settings.billing.plan.perMemberMonth')
+                  : t('settings.billing.plan.perMonth')}
               </span>
             )}
           </p>
           <p className="mt-1 text-caption tabular-nums text-ink-4">
             {price === null
-              ? 'Always free, no card'
+              ? t('settings.billing.plan.alwaysFree')
               : interval === 'yearly'
-                ? `${formatPlanAmount(total, price.currency)} billed yearly`
-                : `${formatPlanAmount(total, price.currency)} billed monthly`}
+                ? t('settings.billing.plan.billedYearly', {
+                    amount: formatPlanAmount(total, price.currency),
+                  })
+                : t('settings.billing.plan.billedMonthly', {
+                    amount: formatPlanAmount(total, price.currency),
+                  })}
           </p>
         </div>
 
         {plan.seatBased && !isCurrent ? (
-          <Field label="Members" hint="Change it any time — billing follows.">
+          <Field
+            label={t('settings.billing.plan.members')}
+            hint={t('settings.billing.plan.membersHint')}
+          >
             <SimpleSelect
               size="sm"
               options={seatOptions}
@@ -742,7 +850,7 @@ function PlanOption({
           block
           disabled={!canManage || isCurrent}
           loading={busy}
-          loadingLabel="Opening Stripe"
+          loadingLabel={t('settings.billing.stripe.opening')}
           iconAfter={isCurrent ? undefined : <ArrowUpRight />}
           onClick={plan.id === FREE_PLAN.id ? onDowngradeToFree : onChoose}
         >
@@ -757,16 +865,22 @@ function PlanOption({
 
 const INVOICE_TONES: {
   readonly [K in InvoiceSummary['status']]: {
-    label: string
+    label: MessageKey
     tone: 'success' | 'warning' | 'danger' | 'neutral'
   }
 } = {
-  paid: { label: 'Paid', tone: 'success' },
-  open: { label: 'Due', tone: 'warning' },
-  draft: { label: 'Draft', tone: 'neutral' },
-  void: { label: 'Void', tone: 'neutral' },
-  uncollectible: { label: 'Uncollectible', tone: 'danger' },
+  paid: { label: 'settings.billing.invoice.paid', tone: 'success' },
+  open: { label: 'settings.billing.invoice.open', tone: 'warning' },
+  draft: { label: 'settings.billing.invoice.draft', tone: 'neutral' },
+  void: { label: 'settings.billing.invoice.void', tone: 'neutral' },
+  uncollectible: {
+    label: 'settings.billing.invoice.uncollectible',
+    tone: 'danger',
+  },
 }
+
+/** Stands in for a date or a link a Stripe record simply does not carry. */
+const ABSENT = '—'
 
 function InvoiceHistory({
   invoices,
@@ -784,6 +898,9 @@ function InvoiceHistory({
   pending: string | null
   onOpenPortal: () => void
 }) {
+  const t = useTranslate()
+  const locale = useLocale()
+
   const portalButton = canManage ? (
     <Button
       variant="secondary"
@@ -792,10 +909,10 @@ function InvoiceHistory({
       icon={<Receipt />}
       disabled={!hasCustomer}
       loading={pending === 'portal:home'}
-      loadingLabel="Opening Stripe"
+      loadingLabel={t('settings.billing.stripe.opening')}
       onClick={onOpenPortal}
     >
-      Billing portal
+      {t('settings.billing.invoices.portal')}
     </Button>
   ) : null
 
@@ -805,15 +922,15 @@ function InvoiceHistory({
   if (unavailable) {
     return (
       <SettingsSection
-        title="Invoices"
-        description="Every receipt for this workspace, newest first."
+        title={t('settings.billing.invoices.title')}
+        description={t('settings.billing.invoices.description')}
         actions={portalButton}
       >
         <EmptyState
           tone="warning"
           icon={<Receipt />}
-          title="Receipts are not loading"
-          description="Stripe did not answer in time for the history. Everything above is live; open the billing portal for the full record, or come back in a moment."
+          title={t('settings.billing.invoices.unavailableTitle')}
+          description={t('settings.billing.invoices.unavailableBody')}
         />
       </SettingsSection>
     )
@@ -822,17 +939,17 @@ function InvoiceHistory({
   if (invoices.length === 0) {
     return (
       <SettingsSection
-        title="Invoices"
-        description="Every receipt for this workspace, newest first."
+        title={t('settings.billing.invoices.title')}
+        description={t('settings.billing.invoices.description')}
         actions={portalButton}
       >
         <EmptyState
           icon={<FileText />}
-          title="No invoices yet"
+          title={t('settings.billing.invoices.emptyTitle')}
           description={
             hasCustomer
-              ? 'The first receipt appears here as soon as a billing period closes.'
-              : 'This workspace has never been charged. Choose a paid plan and the receipts will collect here.'
+              ? t('settings.billing.invoices.emptyCustomer')
+              : t('settings.billing.invoices.emptyNoCustomer')
           }
         />
       </SettingsSection>
@@ -841,20 +958,29 @@ function InvoiceHistory({
 
   return (
     <SettingsSection
-      title="Invoices"
-      description="Every receipt for this workspace, newest first."
+      title={t('settings.billing.invoices.title')}
+      description={t('settings.billing.invoices.description')}
       actions={portalButton}
       className="overflow-hidden"
     >
-      <Table label="Invoice history" containerClassName="-mx-1">
+      <Table
+        label={t('settings.billing.invoices.tableLabel')}
+        containerClassName="-mx-1"
+      >
         <TableHeader>
           <TableRow>
-            <TableHead>Invoice</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead className="hidden sm:table-cell">Period</TableHead>
-            <TableHead numeric>Amount</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="sr-only">Receipt</TableHead>
+            <TableHead>{t('settings.billing.invoices.number')}</TableHead>
+            <TableHead>{t('settings.billing.invoices.date')}</TableHead>
+            <TableHead className="hidden sm:table-cell">
+              {t('settings.billing.invoices.period')}
+            </TableHead>
+            <TableHead numeric>
+              {t('settings.billing.invoices.amount')}
+            </TableHead>
+            <TableHead>{t('settings.billing.invoices.status')}</TableHead>
+            <TableHead className="sr-only">
+              {t('settings.billing.invoices.receipt')}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -866,23 +992,23 @@ function InvoiceHistory({
                   {invoice.number}
                 </TableCell>
                 <TableCell muted>
-                  {formatDate(invoice.createdAt) ?? '—'}
+                  {formatDate(invoice.createdAt, locale) ?? ABSENT}
                 </TableCell>
                 <TableCell muted className="hidden sm:table-cell">
-                  {formatDate(invoice.periodStart) ?? '—'} —{' '}
-                  {formatDate(invoice.periodEnd) ?? '—'}
+                  {formatDate(invoice.periodStart, locale) ?? ABSENT} —{' '}
+                  {formatDate(invoice.periodEnd, locale) ?? ABSENT}
                 </TableCell>
                 <TableCell numeric>
-                  {formatMoneyMinor(invoice.total, invoice.currency)}
+                  {formatMoneyMinor(invoice.total, invoice.currency, locale)}
                 </TableCell>
                 <TableCell>
                   <Badge tone={badge.tone} size="sm">
-                    {badge.label}
+                    {t(badge.label)}
                   </Badge>
                 </TableCell>
                 <TableCell align="end">
                   {invoice.hostedUrl === null && invoice.pdfUrl === null ? (
-                    <span className="text-caption text-ink-4">—</span>
+                    <span className="text-caption text-ink-4">{ABSENT}</span>
                   ) : (
                     <Button asChild variant="ghost" size="sm" shape="pill">
                       <a
@@ -890,7 +1016,7 @@ function InvoiceHistory({
                         target="_blank"
                         rel="noreferrer noopener"
                       >
-                        View
+                        {t('settings.billing.invoices.view')}
                         <ExternalLink aria-hidden />
                       </a>
                     </Button>
@@ -912,9 +1038,10 @@ function Bar({ className }: { className?: string }): ReactNode {
 }
 
 function BillingPending() {
+  const t = useTranslate()
   return (
     <div aria-busy="true" className="flex flex-col gap-6">
-      <span className="sr-only">Loading billing</span>
+      <span className="sr-only">{t('settings.billing.loading')}</span>
 
       <Card
         variant="inverse"
@@ -925,7 +1052,7 @@ function BillingPending() {
           <Bar className="h-7 w-40 bg-inverse-surface" />
           <Bar className="h-3 w-64 bg-inverse-surface" />
         </div>
-        <div className="space-y-3 lg:text-right">
+        <div className="space-y-3 lg:text-end">
           <Bar className="h-10 w-32 bg-inverse-surface" />
           <Bar className="h-3 w-24 bg-inverse-surface" />
         </div>

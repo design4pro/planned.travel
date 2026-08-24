@@ -58,16 +58,6 @@
     ]
   },
   {
-    "id": "rebaseline-settings-after-the-rewrite",
-    "title": "The settings visual baselines are knowingly stale and must be refreshed once the screen settles",
-    "why": "They show 'Workspace default - en-GB' where the screen now renders '- en', and pass only because maxDiffPixelRatio absorbs the difference - so the gate cannot currently see a regression in that region. Refreshing them now is wrong too: settings-module-i18n rewrites the screen next round, and re-baselining twice means whichever change lands second is never actually compared.",
-    "decision": "Refresh the settings frames with --update-snapshots ONCE settings-module-i18n is accepted, and say so in that round report. Never raise the tolerance.",
-    "paths": [
-      "e2e/__screenshots__/visual.spec.ts/settings-light-chromium.png",
-      "e2e/__screenshots__/visual.spec.ts/settings-dark-chromium.png"
-    ]
-  },
-  {
     "id": "negotiate-docstrings-say-en-gb",
     "title": "Two docstrings in an accepted item still claim the workspace locale defaults to en-GB",
     "why": "Migration 0002 and src/server/db/schema.ts make the default `en`. The prose in src/lib/i18n/negotiate.ts now states the opposite, and this repo grades comment/measurement agreement. It is a two-line correction in a file owned by i18n-core-runtime, which is already accepted.",

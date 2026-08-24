@@ -111,7 +111,7 @@ describe('SimpleSelect', () => {
     expect(screen.getAllByRole('option')).toHaveLength(options.length)
   })
 
-  it('falls back to the placeholder for a value no option carries', () => {
+  it('shows the placeholder for the empty value', () => {
     render(
       <SimpleSelect
         options={options}
@@ -120,9 +120,111 @@ describe('SimpleSelect', () => {
         placeholder="Choose a currency"
       />,
     )
+    const trigger = screen.getByRole('combobox', { name: 'Currency' })
+    expect(trigger.textContent).toContain('Choose a currency')
+    expect(trigger.hasAttribute('data-placeholder')).toBe(true)
+  })
+
+  /**
+   * The state a schema change leaves behind, and the second half of the
+   * blank-trigger defect.
+   *
+   * Radix shows its own placeholder only for its "nothing chosen" sentinel, the
+   * empty string. A *stored* value that no option carries — measured on
+   * `/settings`, where the traveller's language override had been canonicalised
+   * to `en` while the control still offered `en-GB` — is not that sentinel, so
+   * Radix rendered the supplied children, and the children were `undefined`.
+   * The control was an empty box with a clean console, and saving it wrote a
+   * value that made the next load blank as well.
+   *
+   * `SimpleSelect` names the placeholder itself in that case, and carries
+   * `data-placeholder` so it is muted exactly like an untouched control: the
+   * honest picture, because the stored value is not one of the offered ones.
+   */
+  it('falls back to the placeholder for a value no option carries', () => {
+    render(
+      <SimpleSelect
+        options={options}
+        value="chf"
+        ariaLabel="Currency"
+        placeholder="Choose a currency"
+      />,
+    )
+    const trigger = screen.getByRole('combobox', { name: 'Currency' })
+    expect(trigger.textContent).toContain('Choose a currency')
+    expect(trigger.hasAttribute('data-placeholder')).toBe(true)
+  })
+
+  it('carries the orphaned-value placeholder in the server HTML too', () => {
+    const html = renderToStaticMarkup(
+      <SimpleSelect
+        options={options}
+        value="chf"
+        ariaLabel="Currency"
+        placeholder="Choose a currency"
+      />,
+    )
+    expect(html).toContain('Choose a currency')
+  })
+
+  /**
+   * WCAG 2.1.1 on the control every settings screen mounts.
+   *
+   * The WAI-ARIA select-only combobox pattern opens on Enter, Space, ArrowDown
+   * and ArrowUp, and an earlier audit reported Enter alone leaving
+   * `aria-expanded="false"` with zero options on `/settings`. It did not
+   * reproduce — Chromium, keyboard only, on the settled tree: all four keys give
+   * `aria-expanded="true"`, one `[role="listbox"]` and nine options. The report
+   * was an artefact of reading the trigger through a role locator *after* it
+   * opened, because Radix marks the rest of the document `aria-hidden` while the
+   * listbox is up and a role query then stops matching the trigger at all.
+   *
+   * These cases exist so that a regression in the trigger's key handling is
+   * caught here, in a harness that reads the DOM directly, rather than by an
+   * audit that has to disambiguate itself first.
+   */
+  for (const key of ['{Enter}', ' ', '{ArrowDown}', '{ArrowUp}'] as const) {
+    it(`opens the listbox on ${key === ' ' ? 'Space' : key.slice(1, -1)}`, async () => {
+      const user = userEvent.setup()
+      render(<SimpleSelect options={options} ariaLabel="Currency" />)
+      const trigger = screen.getByRole('combobox', { name: 'Currency' })
+      trigger.focus()
+      expect(trigger.getAttribute('aria-expanded')).toBe('false')
+
+      await user.keyboard(key)
+
+      expect(trigger.getAttribute('aria-expanded')).toBe('true')
+      expect(document.querySelectorAll('[role="listbox"]')).toHaveLength(1)
+      expect(document.querySelectorAll('[role="option"]')).toHaveLength(
+        options.length,
+      )
+    })
+  }
+
+  it('commits a keyboard choice without a pointer', async () => {
+    const user = userEvent.setup()
+    const onValueChange = vi.fn()
+    render(
+      <SimpleSelect
+        options={options}
+        ariaLabel="Currency"
+        onValueChange={onValueChange}
+      />,
+    )
+    screen.getByRole('combobox', { name: 'Currency' }).focus()
+    await user.keyboard('{Enter}')
+    await user.keyboard('{ArrowDown}')
+    await user.keyboard('{Enter}')
+    expect(onValueChange).toHaveBeenCalledWith('jpy')
+  })
+
+  it('announces the popup it owns', () => {
+    render(<SimpleSelect options={options} ariaLabel="Currency" />)
     expect(
-      screen.getByRole('combobox', { name: 'Currency' }).textContent,
-    ).toContain('Choose a currency')
+      screen
+        .getByRole('combobox', { name: 'Currency' })
+        .getAttribute('aria-haspopup'),
+    ).toBe('listbox')
   })
 
   it('picks up the invalid and disabled state from a surrounding Field', () => {
