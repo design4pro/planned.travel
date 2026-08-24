@@ -1143,12 +1143,135 @@
     "measuredIn": "round-11"
   },
   {
-    "id": "the-overflow-affix-is-inverted-in-fourteen-locales",
+    "id": "the-overflow-affix-is-inverted-in-thirteen-locales",
     "measuredIn": "round-11",
     "appliesTo": [
       "builder",
       "auditor"
     ],
-    "claim": "The `ui.badge.overflow` / `ui.avatar.more` affix inversion the round-11 auditor pinned on translations-germanic is in FOURTEEN locales, not three. Measured by grepping both keys across every shipped catalogue: en is '{max}+' / '+{hidden}'; de, nl, sv, ar, el, tr, hu, id, vi, cs, pl, ru and uk all ship '+{max}' / '{hidden}+', the same inversion in the same direction. Only ja, zh-Hans and zh-Hant differ honestly (fullwidth '＋', a real typographic difference) and ko writes a real Korean phrase ('외 {hidden}'). Every builder independently hit the same wall and made the same move, so this is a contract defect, not three translators' carelessness: PROPER_NOUNS in src/lib/i18n/__tests__/parity.test.ts is [], the no-byte-identical check therefore forbids a glyph-only value from staying identical to English, and a Germanic or Slavic translator has no honest way to ship '{max}+'. Fixing it means extending the allow-list (owned by i18n-core-runtime) FIRST; a builder told to restore '{max}+' without that lands straight back in a red parity suite."
+    "claim": "The `ui.badge.overflow` / `ui.avatar.more` affix inversion the round-11 auditor pinned on translations-germanic is in THIRTEEN locales, not three. Measured by grepping both keys across every shipped catalogue: en is '{max}+' / '+{hidden}'; de, nl, sv, ar, el, tr, hu, id, vi, cs, pl, ru and uk all ship '+{max}' / '{hidden}+', the same inversion in the same direction. Only ja, zh-Hans and zh-Hant differ honestly (fullwidth '＋', a real typographic difference) and ko writes a real Korean phrase ('외 {hidden}'). Every builder independently hit the same wall and made the same move, so this is a contract defect, not three translators' carelessness: PROPER_NOUNS in src/lib/i18n/__tests__/parity.test.ts is [], the no-byte-identical check therefore forbids a glyph-only value from staying identical to English, and a Germanic or Slavic translator has no honest way to ship '{max}+'. Fixing it means extending the allow-list (owned by i18n-core-runtime) FIRST; a builder told to restore '{max}+' without that lands straight back in a red parity suite.",
+    "correction": "Round 12 recounted: 13, not 14. The seventeen non-English catalogues split 13 inverted + 3 fullwidth (ja, zh-Hans, zh-Hant) + 1 real phrase (ko)."
+  },
+  {
+    "claim": "A missing t() key now produces TS2345 naming MessageKey at BOTH arities, not just the one with a params object. This updates the settled t-missing-key-diagnostic fact, which recorded that a bare call fell back to TS2554 'Expected 2 arguments, but got 1'. The `MessageKey extends TKey ? [params?: MessageParams]` first branch of TranslateArgs is what fixed it.",
+    "evidence": "Probe file src/lib/i18n/__diagnostic-probe.ts calling `t('shell.no-such-key')` and `t('shell.no-such-key', { name: 'x' })`, run through ./node_modules/.bin/tsc --noEmit: BOTH lines reported `error TS2345: Argument of type '\"shell.no-such-key\"' is not assignable to parameter of type 'MessageKey'.` Zero TS2554. Probe deleted immediately afterwards; `ls` confirms it is gone.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "a-missing-t-key-now-produces-ts2345-naming",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "`import.meta.glob('./messages/*/*.ts')` keeps the one-chunk-per-file property that round 1 measured for an explicit per-locale importer: every catalogue file becomes its own chunk, none is inlined into the entry, and no chunk mixes two locales.",
+    "evidence": "SSR `vite build` (build.ssr:true, rollupOptions.input=src/lib/i18n/catalogue.ts, configFile:false) over the tree at 73 catalogue files: 73 chunks emitted, 73 dynamic import() specifiers in the entry, all 73 distinct. Entry is 13,961 bytes and contains none of 'Sprache', 'Wyjazdy', 'العربية' or 'nav.trips'. Scanning every chunk for both 'Sprache' and 'Wyjazdy' found 0 chunks carrying both. GOTCHA: a vite config living in the scratchpad cannot resolve `vite` — symlink the repo's node_modules into the scratchpad first. Probe dir and symlink removed afterwards.",
+    "scope": [
+      "builder",
+      "mechanical",
+      "auditor"
+    ],
+    "id": "-import-meta-glob-messages-ts-keeps-the",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "`grep` in this environment (rewritten to `rtk grep` by the user's hook) can return exit 1 for a string that provably exists in the file. Do not conclude a check is absent from a grep miss — confirm with sed or node before acting.",
+    "evidence": "`grep -n \"untranslated\" src/lib/i18n/__tests__/parity.test.ts` exited 1 with no output, and `grep -n \"untranslated:\" -A 12` likewise printed nothing, while `sed -n '150,180p'` on the same file printed the `untranslated:` property of the ParityReport literal at that moment. A subsequent Edit against text taken from the sed output applied cleanly.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "-grep-in-this-environment-rewritten-to-rtk",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The parity suite no longer needs a PROPER_NOUNS entry for a glyph-only message. `isUntranslatable()` in parity.test.ts exempts any message whose every branch, after `{placeholder}` removal, contains no `\\p{L}` in any script — so `'{max}+'` and `'+{hidden}'` may stay byte-identical to English in every locale. The round-11 'extend the allow-list first' advice is now obsolete.",
+    "evidence": "Restored de/nl/sv `badge.overflow` to '{max}+' and `avatar.more` to '+{hidden}', making all three byte-identical to en. Before the edit: 6 failed / 167 passed. After: 6 failed / 167 passed — the identical six, named ca, es, fr, it, pt-BR. A standalone diff script confirms `identical 2 ['ui.avatar.more','ui.badge.overflow']` for each of de/nl/sv, yet no untranslated assertion fires for them. `grep -n PROPER_NOUNS` still shows `= []` at line 55.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-parity-suite-no-longer-needs-a-proper",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Locale copy length is checkable as an element-for-element diff, not just a count: on this demo fixture English clips 51 nodes at 360px and 32 at 1440px across /dashboard, /settings, /settings/{language,security,workspace,billing}, /notifications and /admin. A locale whose clipped SET differs from English's has too-long copy; a matching set means the clips are the seeded data, not the translation.",
+    "evidence": "Playwright chromium with e2e/.auth/demo.json on port 3001, `[...document.querySelectorAll('main *, header *, nav *')].filter(e => e.scrollWidth > e.clientWidth + 1)`. en 51@360 / 32@1440; de 51/32, nl 51/31, sv 51/32, all with an EMPTY extra-vs-English diff and maxOverflow 0. The one real defect it caught was `shell.dashboard.hero.travellersHint` at 360: de 135>107 and sv 109>107 against en 107=107; nl 18 chars passed. Switching locale needs `goto(..., {waitUntil:'networkidle'})` + `scrollIntoViewIfNeeded()` before `.click()` on `[data-testid=\"locale-chip-<tag>\"]`.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "id": "locale-copy-length-is-checkable-as-an-element",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The German dashboard hero date wraps to two lines at 360px while en, nl and sv stay on one. It comes from src/lib/format.ts plus the frozen CLDR tables, not from any catalogue key, so no translation item can fix it.",
+    "evidence": "Measured the leaf node holding the range at 360x800 on /dashboard: en '9 – 20 Oct 2026' h=16, nl '9 – 20 okt 2026' h=16, sv '9 – 20 okt. 2026' h=16, de '9. – 20. Okt. 2026' h=33. Container clientWidth is 107px in all four. German's ordinal points plus the four-letter 'Okt.' are what push it over; the sibling stat cell in the same 2x2 grid stays 16px, so the row's baselines go uneven in de only.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-german-dashboard-hero-date-wraps-to-two",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The structural `isUntranslatable` exemption has landed in src/lib/i18n/__tests__/parity.test.ts, so a value containing no letter in any script (once `{tokens}` are stripped) may be byte-identical to English. `PROPER_NOUNS` is still `[]` and is not what unblocks the affix keys.",
+    "evidence": "parity.test.ts defines `const LETTER = /\\p{L}/u` and `isUntranslatable(message)` = `!branchesOf(message).some(b => LETTER.test(b.replace(TOKEN,'')))`. After restoring '{max}+' and '+{hidden}' in es/fr/it/ca/pt-BR, `pnpm exec vitest run src/lib/i18n/__tests__/parity.test.ts` = PASS (177) FAIL (0), and full `pnpm test` = 114 files / 3168 tests / 0 failed.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-structural-isuntranslatable-exemption-has-landed-in-src",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Locale-specific clipping on /dashboard's reservation meta is caused by the frozen CLDR date table plus a hard-coded ' · ' join in src/routes/_app/dashboard.tsx, not by catalogue copy — pt-BR and ru clip there, de and es do not.",
+    "evidence": "Playwright chromium at 360 on /dashboard, filtering `main *` for scrollWidth > clientWidth on `.text-caption`: pt-BR gave 'sex., 9 de out. · 15:00 – 11:00' 156>148 plus three more; ru gave 'пт, 9 окт. · 15:00 – 11:00' 132>126 plus three more; de and es both returned []. dashboard.tsx:514-520 builds the line from formatDate()/formatTimeRange() and `.join(' · ')`.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "locale-specific-clipping-on-dashboard-s-reservation-meta",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "es/fr/it/ca/pt-BR all resolve to plural categories one,many,other on this runtime (CLDR 42+ added `many` to the Romance locales), so a two-branch one/other translation of an English plural message is a parity gap in these five locales.",
+    "evidence": "node -e \"new Intl.PluralRules(l).resolvedOptions().pluralCategories\" gives es/fr/it/ca/pt-BR → one,many,other and en → one,other. Every plural message in the five shipped catalogues carries all three and the parity suite's pluralGaps axis is empty for them.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "es-fr-it-ca-pt-br-all-resolve",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The i18n parity suite is now fully green; the entire repo gate is green with zero failures.",
+    "evidence": "pnpm test at this tree: Test Files 114 passed (114), Tests 3168 passed (3168), exit 0. Previous rounds reported 6-23 parity failures.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-i18n-parity-suite-is-now-fully-green",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The dev server for this worktree is already up on port 3001; resolve-port.sh reused it without --start.",
+    "evidence": "scripts/ultrabuild/resolve-port.sh printed 'resolve-port: reusing the server already answering on 3001' then '3001', exit 0.",
+    "scope": [
+      "mechanical",
+      "capture"
+    ],
+    "id": "the-dev-server-for-this-worktree-is-already",
+    "measuredIn": "round-11"
   }
 ]

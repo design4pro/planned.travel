@@ -90,5 +90,17 @@
     "title": "The parity suite has no way to say \"this value has nothing to translate\"",
     "why": "PROPER_NOUNS is [] and its docstring only admits proper nouns - a product name, a brand, a currency code. A numeric affix notation like \"{max}+\" is the same category (no translatable content) but does not fit that wording, so fourteen translators corrupted the notation instead of asking for the allow-list.",
     "decision": "Round 12: i18n-core-runtime widens the allow-list and its docstring to cover glyph-only values, then each translation item restores its own two keys."
+  },
+  {
+    "id": "parity-test-carries-two-raw-nul-bytes",
+    "title": "`parity.test.ts` is a binary file to git, grep and diff",
+    "why": "Round 12 wrote the branch separator in `branchesOf(...).join(...)` as a literal NUL character in the source rather than the escape `'\\u0000'`. The intent is right - a separator no message can contain - but the byte makes `file` report \"data\", `git diff` refuse to render the file, and plain `grep` skip it with \"Binary file matches\". Measured: 2 NUL bytes at lines 172 and 173; the file is otherwise valid UTF-8.",
+    "decision": "Round 14 verification pass: i18n-core-runtime owns the file and swaps the two literals for the escape sequence. No behaviour changes - the separator stays the same character."
+  },
+  {
+    "id": "ten-locales-still-carry-the-inverted-affix",
+    "title": "The structural exemption makes the inverted affix invisible instead of fixing it",
+    "why": "Round 12 replaced the no-byte-identical rule with a structural exemption: a value with no letter in any script is never reported as untranslated. That is the right rule, but it also means the ten locales owned by items the round did not carry - ar, el, tr, hu, id, vi, cs, pl, ru, uk - now ship '+{max}' / '{hidden}+' with nothing red to show for it. de, nl and sv were repaired; the rest were not.",
+    "decision": "Round 13 carries translations-rtl-hellenic, translations-slavic and translations-cjk, each restoring its own locales. Explicit work, because no test will surface it any more."
   }
 ]

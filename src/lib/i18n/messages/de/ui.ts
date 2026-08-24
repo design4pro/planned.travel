@@ -46,14 +46,21 @@ const messages = {
     other: '{others} weitere Personen',
   },
   /**
-   * The figure leads and the marker follows, which is how a German reader meets
-   * a capped count on a crowded list. The face is `aria-hidden`, so the exact
-   * number is spoken from `avatar.overflow` either way.
+   * German writes this exactly as English does: the sign leads and means "and
+   * this many more beyond the faces you can see". Putting it after the figure
+   * would turn it into "drei oder mehr", which is false — one of those people
+   * is already on screen. The face is `aria-hidden`, so the exact number is
+   * spoken from `avatar.overflow` either way.
    */
-  'avatar.more': '{hidden}+',
+  'avatar.more': '+{hidden}',
 
   /* --------------------------------------------------------------- badge */
-  'badge.overflow': '+{max}',
+  /**
+   * "99+" is the German notation too — figure first, marker after, read as
+   * "neunundneunzig oder mehr". The mirrored form "+99" would announce that
+   * ninety-nine new items had just arrived, which is a different fact.
+   */
+  'badge.overflow': '{max}+',
 
   /* ------------------------------------------------------------ calendar */
   'calendar.label.date': 'Datum wählen',

@@ -44,14 +44,21 @@ const messages = {
     other: '{others} personer till',
   },
   /**
-   * The figure leads and the marker follows, the way a Swedish reader meets a
-   * capped count. The face is `aria-hidden`, so the exact number is spoken from
-   * `avatar.overflow` either way.
+   * Swedish sets this as English does: the sign leads and means "and this many
+   * more than the faces on screen". Behind the figure it would read "tre eller
+   * fler", which is wrong — one of the three is already showing. The face is
+   * `aria-hidden`, so the exact number is spoken from `avatar.overflow`
+   * either way.
    */
-  'avatar.more': '{hidden}+',
+  'avatar.more': '+{hidden}',
 
   /* --------------------------------------------------------------- badge */
-  'badge.overflow': '+{max}',
+  /**
+   * A capped count is written "99+" in Swedish too — figure first, marker
+   * after, read as "nittionio eller fler". The mirrored "+99" would announce
+   * ninety-nine newly arrived items, which is a different fact.
+   */
+  'badge.overflow': '{max}+',
 
   /* ------------------------------------------------------------ calendar */
   'calendar.label.date': 'Välj ett datum',

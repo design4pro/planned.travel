@@ -183,7 +183,7 @@ const messages = {
   'dashboard.upNext': 'Närmast',
   'dashboard.openPlan': 'Öppna dagsplanen',
   'dashboard.hero.travellers': 'Ressällskap',
-  'dashboard.hero.travellersHint': 'i den här arbetsytan',
+  'dashboard.hero.travellersHint': 'i arbetsytan',
   'dashboard.hero.dates': 'Resdatum',
   'dashboard.hero.datesUnset': 'Inte satta',
   'dashboard.hero.datesHint': { one: '{days} dag', other: '{days} dagar' },

@@ -45,14 +45,21 @@ const messages = {
     other: 'nog {others} personen',
   },
   /**
-   * The figure leads and the marker follows, the way a Dutch reader meets a
-   * capped count. The face is `aria-hidden`, so the exact number is spoken from
+   * Dutch sets this the way English does: the sign first, meaning "and this
+   * many more than the faces shown". Moving it behind the figure would read as
+   * "drie of meer", which is untrue — one of the three is already visible. The
+   * face is `aria-hidden`, so the exact number is spoken from
    * `avatar.overflow` either way.
    */
-  'avatar.more': '{hidden}+',
+  'avatar.more': '+{hidden}',
 
   /* --------------------------------------------------------------- badge */
-  'badge.overflow': '+{max}',
+  /**
+   * Dutch writes a capped count "99+" — figure, then marker, read as
+   * "negenennegentig of meer". The mirrored "+99" would say that
+   * ninety-nine new ones had just come in, which is a different claim.
+   */
+  'badge.overflow': '{max}+',
 
   /* ------------------------------------------------------------ calendar */
   'calendar.label.date': 'Kies een datum',

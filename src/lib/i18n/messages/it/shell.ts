@@ -1,0 +1,400 @@
+/**
+ * Everything the application shell says, in Italian.
+ *
+ * Authored from `../en/shell.ts`, never from another product's catalogue
+ * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
+ * and `__tests__/parity.test.ts` checks the placeholders and the plural
+ * branches.
+ *
+ * **Register.** «Tu» throughout, matching `./ui.ts` and `./settings.ts`.
+ *
+ * **Plural.** `Intl.PluralRules('it')` reports `one`, `many` and `other`;
+ * `many` is CLDR's branch for the millions and inflects like `other`.
+ *
+ * **Feature names are translated, not borrowed.** «Atlas», «Vacay» and
+ * «Journey» would be English words in an Italian nav, so each one says what its
+ * screen is: la mappa del mondo, le vacanze, il diario. «File» stays, because
+ * that is the Italian word for a file and not an untranslated one.
+ */
+
+import type { TranslationOf } from '../../types'
+import type En from '../en/shell'
+
+const messages = {
+  /* -------------------------------------------------------------- navigation */
+  'nav.primary': 'Sezioni principali',
+  'nav.mobile': 'Sezioni',
+  'nav.dashboardLink': 'Pannello di planned.travel',
+  'nav.homeLink': 'Pagina iniziale di planned.travel',
+  'nav.newTrip': 'Nuovo viaggio',
+
+  'nav.trips': 'I miei viaggi',
+  'nav.trips.short': 'Viaggi',
+  'nav.vacay': 'Vacanze',
+  'nav.vacay.short': 'Vacanze',
+  'nav.atlas': 'Mappa del mondo',
+  'nav.atlas.short': 'Mappa',
+  'nav.journey': 'Diario',
+  'nav.journey.short': 'Diario',
+
+  /* ---------------------------------------------------------- trip sub-nav */
+  'trip.nav.label': 'Sezioni del viaggio',
+  'trip.nav.back': 'Viaggi',
+  'trip.nav.share': 'Condividi',
+  'trip.nav.shareLabel': 'Condividi questo viaggio',
+  'trip.tab.plan': 'Programma',
+  'trip.tab.transports': 'Spostamenti',
+  'trip.tab.book': 'Prenotazioni',
+  'trip.tab.lists': 'Liste',
+  'trip.tab.costs': 'Spese',
+  'trip.tab.files': 'File',
+  'trip.tab.collab': 'Gruppo',
+
+  /* ------------------------------------------------------------ user menu */
+  'account.menu': 'Menu dell’account',
+  'account.settings': 'Impostazioni',
+  'account.billing': 'Piano e fatturazione',
+  'account.admin': 'Amministrazione',
+  'account.signOut': 'Esci',
+  'account.signingOut': 'Uscita in corso…',
+  'account.signOutFailed': 'Non è stato possibile uscire',
+  'account.signOutFailedBody': 'Controlla la connessione e riprova.',
+
+  /* --------------------------------------------------------- theme switcher */
+  'theme.label': 'Aspetto',
+  'theme.light': 'Chiaro',
+  'theme.dark': 'Scuro',
+  'theme.system': 'Come il sistema',
+  'theme.state.light': 'chiaro',
+  'theme.state.dark': 'scuro',
+  'theme.state.system': 'come il sistema',
+  'theme.trigger': 'Tema: {state}. Cambia tema',
+
+  /* ------------------------------------------------------------------ bell */
+  'bell.none': 'Notifiche, nessuna da leggere',
+  'bell.unread': {
+    one: 'Notifiche, {unread} da leggere',
+    many: 'Notifiche, {unread} da leggere',
+    other: 'Notifiche, {unread} da leggere',
+  },
+
+  /* ----------------------------------------------------------------- inbox */
+  'inbox.eyebrow': 'Posta in arrivo',
+  'inbox.title': 'Notifiche',
+  'inbox.error': 'La posta in arrivo non si è caricata',
+  'inbox.allRead': 'È tutto letto',
+  'inbox.unread': {
+    one: '{unread} messaggio da leggere',
+    many: '{unread} messaggi da leggere',
+    other: '{unread} messaggi da leggere',
+  },
+  'inbox.markAll': 'Segna tutto come letto',
+  'inbox.markingAll': 'Sto segnando tutto come letto',
+  'inbox.cleared': 'Posta in arrivo in pari',
+  'inbox.markAllFailed': 'Non è stato possibile segnare tutto come letto',
+  'inbox.retryHint': 'Controlla la connessione e riprova.',
+  'inbox.filter.all': 'Tutto',
+  'inbox.filter.unread': 'Da leggere',
+  'inbox.waiting': {
+    one: '{invitations} invito in attesa',
+    many: '{invitations} inviti in attesa',
+    other: '{invitations} inviti in attesa',
+  },
+  'inbox.empty.title': 'La posta in arrivo è vuota',
+  'inbox.empty.body':
+    'Qui arrivano gli inviti ai viaggi, le modifiche al programma, i promemoria delle prenotazioni e i conti saldati.',
+  'inbox.empty.action': 'Torna al pannello',
+  'inbox.emptyUnread.title': 'Niente da leggere',
+  'inbox.emptyUnread.body':
+    'Hai letto tutto. Passa a Tutto per rivedere lo storico.',
+  'inbox.emptyUnread.action': 'Mostra tutto',
+  'inbox.row.new': 'Nuovo',
+  'inbox.row.accepted': 'Accettato',
+  'inbox.row.declined': 'Rifiutato',
+  'inbox.row.open': 'Apri',
+  'inbox.row.markRead': 'Letta',
+  'inbox.row.markingRead': 'Sto segnando come letta',
+  'inbox.row.markReadFailed': 'Non è stato possibile segnarla come letta',
+  'inbox.preferences':
+    'Scegli quali di queste arrivano nella posta, nella tua email e sul telefono.',
+  'inbox.preferencesAction': 'Impostazioni delle notifiche',
+
+  /* ----------------------------------------------- stored notification copy */
+  'notification.trip.invited.title': 'Ti hanno invitato a {tripTitle}',
+  'notification.trip.invited.body': '{actorName} ti ha aggiunto al viaggio.',
+  'notification.trip.updated.title': '{tripTitle} è cambiato',
+  'notification.trip.updated.body': '{actorName} ha modificato il programma.',
+  'notification.trip.member_added.title':
+    '{memberName} si è unito a {tripTitle}',
+  'notification.trip.member_added.body':
+    'Ora vede l’itinerario, le prenotazioni e le spese.',
+  'notification.trip.member_removed.title':
+    '{memberName} ha lasciato {tripTitle}',
+  'notification.trip.member_removed.body':
+    'Il suo accesso al viaggio è finito.',
+  'notification.trip.starting_soon.title': {
+    one: '{tripTitle} inizia tra {days} giorno',
+    many: '{tripTitle} inizia tra {days} giorni',
+    other: '{tripTitle} inizia tra {days} giorni',
+  },
+  'notification.trip.starting_soon.body':
+    'È il momento di rivedere la lista dei bagagli e le prenotazioni.',
+  'notification.reservation.reminder.title': 'Manca poco a {title}',
+  'notification.reservation.reminder.body':
+    'Controlla l’orario e il codice di conferma sulla prenotazione.',
+  'notification.reservation.confirmed.title': '{title} è confermata',
+  'notification.reservation.confirmed.body':
+    'La prenotazione risulta confermata su {tripTitle}.',
+  'notification.expense.added.title': '{actorName} ha aggiunto una spesa',
+  'notification.expense.added.body': '{title}, su {tripTitle}.',
+  'notification.expense.settled.title': '{actorName} ha saldato il conto',
+  'notification.expense.settled.body': 'Il saldo di {tripTitle} è pagato.',
+  'notification.list.assigned.title': '{actorName} ti ha assegnato una voce',
+  'notification.list.assigned.body': '{title}, su {tripTitle}.',
+  'notification.collab.message.title': '{actorName} ha scritto in {tripTitle}',
+  'notification.collab.message.body': '«{preview}»',
+  'notification.collab.poll.title': 'C’è un sondaggio aperto su {tripTitle}',
+  'notification.collab.poll.body': '«{question}»',
+  'notification.organization.invited.title':
+    'Ti hanno invitato in {organizationName}',
+  'notification.organization.invited.body':
+    'Accetta per entrare nello spazio di lavoro e in tutto ciò che vi è condiviso.',
+  'notification.journey.published.title': '{title} è stato pubblicato',
+  'notification.journey.published.body':
+    'Ora chiunque abbia il link può leggere il diario.',
+  'notification.billing.plan_changed.title': 'Il tuo piano è cambiato',
+  'notification.billing.plan_changed.body':
+    '{organizationName} ora è sul piano {plan}.',
+  'notification.fallback.title': 'Qualcosa è cambiato nel tuo spazio di lavoro',
+  'notification.fallback.body': 'Apri il viaggio per vedere che cosa.',
+
+  /* ------------------------------------------------------------- dashboard */
+  'dashboard.error': 'Il pannello non si è caricato',
+  'dashboard.blank.title': 'Il tuo prossimo viaggio comincia qui',
+  'dashboard.blank.body':
+    'Crea un viaggio, segna sulla mappa i posti che vuoi vedere e planned.travel costruirà il programma giorno per giorno intorno a loro.',
+  'dashboard.blank.action': 'Organizza un viaggio',
+  'dashboard.blank.secondary': 'Vedi la tua mappa del mondo',
+
+  'dashboard.upNext': 'Prossima tappa',
+  'dashboard.openPlan': 'Apri il programma',
+  'dashboard.hero.travellers': 'Viaggiatori',
+  'dashboard.hero.travellersHint': 'in questo spazio',
+  'dashboard.hero.dates': 'Date',
+  'dashboard.hero.datesUnset': 'Non impostate',
+  'dashboard.hero.datesHint': {
+    one: '{days} giorno',
+    many: '{days} giorni',
+    other: '{days} giorni',
+  },
+  'dashboard.hero.datesMissing': 'Aggiungi le date per creare i giorni',
+  'dashboard.hero.startsIn': 'Inizia tra',
+  'dashboard.hero.started': 'Iniziato da',
+  'dashboard.hero.today': 'Oggi',
+  'dashboard.hero.startUnknown': 'senza data di partenza',
+  'dashboard.hero.startToday': 'buon viaggio',
+  /**
+   * The label over the numeral already says «da», so the unit under it is only
+   * the word for a day — Italian would otherwise read the tile twice.
+   */
+  'dashboard.hero.startPast': {
+    one: 'giorno',
+    many: 'giorni',
+    other: 'giorni',
+  },
+  'dashboard.hero.startFuture': {
+    one: 'giorno',
+    many: 'giorni',
+    other: 'giorni',
+  },
+  'dashboard.hero.places': 'Luoghi',
+  'dashboard.hero.placesNone': 'ancora niente sulla mappa',
+  'dashboard.hero.placesHint': 'sulla mappa',
+
+  'dashboard.stat.countries': 'Paesi visitati',
+  'dashboard.stat.countriesUnit': 'su {total}',
+  'dashboard.stat.countriesNone': 'Segna un paese per aprire la tua mappa',
+  'dashboard.stat.visits': {
+    one: '{visits} visita registrata',
+    many: '{visits} visite registrate',
+    other: '{visits} visite registrate',
+  },
+  'dashboard.stat.trips': 'Viaggi in tutto',
+  'dashboard.stat.tripsCaption':
+    '{planning} in preparazione · {booked} con prenotazione',
+  'dashboard.stat.places': 'Luoghi sulla mappa',
+  'dashboard.stat.placesNone': 'Ancora niente sulla mappa',
+  'dashboard.stat.placesAcross': {
+    one: 'in {trips} viaggio',
+    many: 'in {trips} viaggi',
+    other: 'in {trips} viaggi',
+  },
+  'dashboard.stat.bookings': 'Prenotazioni confermate',
+  'dashboard.stat.bookingsNone': 'Nessuna prenotazione in arrivo',
+  'dashboard.stat.bookingsSoon': {
+    one: '{bookings} prenotazione in arrivo',
+    many: '{bookings} prenotazioni in arrivo',
+    other: '{bookings} prenotazioni in arrivo',
+  },
+
+  'dashboard.trips.label': 'I tuoi viaggi',
+  'dashboard.trips.all': 'Tutti i viaggi',
+  'dashboard.trips.empty.title': 'Ancora nessun viaggio',
+  'dashboard.trips.empty.body':
+    'Tutto quello che organizzi comparirà qui, dal più recente.',
+  'dashboard.trips.empty.action': 'Crea un viaggio',
+
+  'dashboard.bookings.label': 'Prenotazioni in arrivo',
+  'dashboard.bookings.empty.title': 'Ancora niente di prenotato',
+  'dashboard.bookings.empty.body':
+    'Soggiorni, tavoli e biglietti confermati compaiono qui mano a mano che si avvicina la data.',
+
+  'dashboard.pipeline.label': 'Viaggi per fase',
+  'dashboard.pipeline.empty':
+    'Niente in corso. Il tuo primo viaggio riempirà queste fasi.',
+  'dashboard.pipeline.favourites': {
+    one: '{favourites} preferito',
+    many: '{favourites} preferiti',
+    other: '{favourites} preferiti',
+  },
+  'dashboard.pipeline.archived': {
+    one: '{archived} viaggio archiviato',
+    many: '{archived} viaggi archiviati',
+    other: '{archived} viaggi archiviati',
+  },
+
+  'dashboard.storage.label': 'Spazio',
+  'dashboard.storage.count': '{used} di {limit}',
+  'dashboard.storage.files': {
+    one: '{files} file su tutti i viaggi, foto e biglietti compresi.',
+    many: '{files} file su tutti i viaggi, foto e biglietti compresi.',
+    other: '{files} file su tutti i viaggi, foto e biglietti compresi.',
+  },
+  'dashboard.storage.more': 'Ti serve più spazio?',
+  'dashboard.storage.plans': 'Vedi i piani',
+
+  /* ----------------------------------------------------------------- admin */
+  'admin.error': 'La console di amministrazione non si è caricata',
+  'admin.denied.title': 'Qui entrano solo gli amministratori dello spazio',
+  'admin.denied.body':
+    'Se ti serve, chiedi a un proprietario o a un amministratore di questo spazio di cambiare il tuo ruolo.',
+  'admin.denied.action': 'Torna al pannello',
+  'admin.eyebrow': 'Amministrazione dello spazio',
+  'admin.description': 'Piano {plan} · creazione {date}',
+  'admin.createdUnknown': 'da poco',
+  'admin.workspaceSettings': 'Impostazioni dello spazio',
+  'admin.billing': 'Piano e fatturazione',
+
+  'admin.invitations.title': {
+    one: '{invitations} invito ancora in sospeso',
+    many: '{invitations} inviti ancora in sospeso',
+    other: '{invitations} inviti ancora in sospeso',
+  },
+  'admin.invitations.body':
+    'Ogni invito in sospeso occupa uno dei posti che il tuo piano paga.',
+  'admin.invitations.action': 'Rivedi gli inviti',
+
+  'admin.stat.members': 'Membri',
+  'admin.stat.membersCaption': {
+    one: '{invitations} invito in sospeso',
+    many: '{invitations} inviti in sospeso',
+    other: '{invitations} inviti in sospeso',
+  },
+  'admin.stat.storage': 'Spazio',
+  'admin.stat.storageUnit': 'di {limit}',
+  'admin.stat.storageUnlimited': 'senza tetto',
+  'admin.stat.storageCaption': 'File, foto ed esportazioni',
+  'admin.stat.audit': 'Voci di registro',
+  'admin.stat.auditCaption': 'Qui sotto trovi l’attività più recente',
+  'admin.stat.plan': 'Piano',
+  'admin.stat.planCaption': 'Le quote si applicano al livello dei dati',
+
+  'admin.quotas.label': 'Quote',
+  'admin.quotas.count': {
+    one: '{metrics} metrica',
+    many: '{metrics} metriche',
+    other: '{metrics} metriche',
+  },
+  'admin.quotas.unlimited': 'Illimitato',
+  'admin.quotas.value': '{used} su {limit}',
+
+  'admin.members.label': 'Membri',
+  'admin.members.table': 'Membri di questo spazio di lavoro',
+  'admin.members.person': 'Persona',
+  'admin.members.role': 'Ruolo',
+  'admin.members.joined': 'Iscrizione',
+
+  'admin.activity.label': 'Attività recente',
+  'admin.activity.empty.title': 'Ancora niente di registrato',
+  'admin.activity.empty.body':
+    'Ogni scrittura che conta viene aggiunta al registro nel momento in cui avviene.',
+  'admin.activity.workspace': 'lo spazio di lavoro stesso',
+  'admin.actions.label': 'Azioni più frequenti',
+  'admin.actions.count': {
+    one: '{actions} azione',
+    many: '{actions} azioni',
+    other: '{actions} azioni',
+  },
+
+  /* ---------------------------------------------------------- domain words */
+  'tripStatus.draft': 'Bozza',
+  'tripStatus.planning': 'In preparazione',
+  'tripStatus.booked': 'Prenotato',
+  'tripStatus.active': 'In corso',
+  'tripStatus.completed': 'Concluso',
+  'tripStatus.archived': 'Archiviato',
+
+  'bookingStatus.none': 'Non prenotata',
+  'bookingStatus.pending': 'In attesa',
+  'bookingStatus.confirmed': 'Confermata',
+  'bookingStatus.cancelled': 'Annullata',
+  'bookingStatus.completed': 'Conclusa',
+
+  'bookingType.accommodation': 'Alloggio',
+  'bookingType.restaurant': 'Tavolo',
+  'bookingType.activity': 'Attività',
+  'bookingType.tour': 'Escursione',
+  'bookingType.ticket': 'Biglietto',
+  'bookingType.transport': 'Trasporto',
+  'bookingType.other': 'Prenotazione',
+
+  'role.owner': 'Proprietario',
+  'role.admin': 'Amministratore',
+  'role.member': 'Membro',
+
+  'metric.trips': 'Viaggi',
+  'metric.places': 'Luoghi',
+  'metric.members': 'Membri',
+  'metric.files': 'File',
+  'metric.storage_bytes': 'Spazio',
+  'metric.collections': 'Raccolte',
+  'metric.journeys': 'Diari',
+
+  /* -------------------------------------------------------------- failures */
+  'error.title': 'Questo non si è caricato',
+  'error.body':
+    'Non è andato perso niente. Riprova e, se continua, mandaci il dettaglio qui sotto.',
+  'error.retry': 'Riprova',
+  'error.dashboard': 'Torna al pannello',
+  'error.unknown': 'La richiesta è fallita prima di concludersi.',
+  'error.root': 'Siamo usciti di rotta',
+  'error.session': 'Il tuo accesso allo spazio di lavoro è cambiato',
+
+  'notFound.eyebrow': 'Errore 404',
+  'notFound.title': 'Questa pagina non è sulla mappa',
+  'notFound.body':
+    'Il link potrebbe essere vecchio, oppure il viaggio a cui puntava è stato spostato o eliminato.',
+  'notFound.trips': 'Tutti i viaggi',
+  'notFound.rootBody':
+    'Abbiamo cercato lungo tutta la rotta. L’indirizzo potrebbe avere un refuso, oppure la pagina si è spostata.',
+  'notFound.home': 'Torna alla pagina iniziale',
+  'notFound.plans': 'Vedi i piani',
+
+  'session.noWorkspace':
+    'Il tuo account non è ancora collegato a uno spazio di lavoro. Esci e rientra per finire di configurarlo.',
+  'session.membershipRemoved':
+    'La tua appartenenza a questo spazio di lavoro è stata revocata.',
+} satisfies TranslationOf<typeof En>
+
+export default messages

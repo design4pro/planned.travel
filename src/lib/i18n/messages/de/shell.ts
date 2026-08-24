@@ -197,7 +197,7 @@ const messages = {
   'dashboard.upNext': 'Als Nächstes',
   'dashboard.openPlan': 'Ablauf öffnen',
   'dashboard.hero.travellers': 'Mitreisende',
-  'dashboard.hero.travellersHint': 'in diesem Arbeitsbereich',
+  'dashboard.hero.travellersHint': 'im Arbeitsbereich',
   'dashboard.hero.dates': 'Reisedaten',
   'dashboard.hero.datesUnset': 'Offen',
   'dashboard.hero.datesHint': { one: '{days} Tag', other: '{days} Tage' },
