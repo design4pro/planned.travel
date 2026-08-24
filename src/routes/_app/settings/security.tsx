@@ -236,7 +236,7 @@ function SecurityPage() {
                     void signOut()
                   }}
                 >
-                  <LogOut aria-hidden />
+                  <LogOut aria-hidden data-mirror-rtl />
                   {t('settings.security.signOut.label')}
                 </Button>
               </div>

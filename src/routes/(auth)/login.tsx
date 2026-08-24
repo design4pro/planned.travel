@@ -11,8 +11,8 @@ import {
   thrownToAuthFailure,
   toAuthFailure,
 } from '#/lib/auth/client'
+import { useTranslate } from '#/lib/i18n'
 import { describeCallbackError, describeFailure } from './-lib/errors'
-import { loginSchema } from './-lib/schemas'
 import { safeRedirect } from './-lib/redirect'
 import { loadAuthConfig } from './-server/config'
 import { AuthShell } from './-ui/auth-shell'
@@ -24,6 +24,7 @@ import {
   PasskeyButton,
   PasswordInput,
   SocialButtons,
+  useAuthSchemas,
   visibleError,
 } from './-ui/form'
 
@@ -58,6 +59,8 @@ function LoginPage() {
   const search = Route.useSearch()
   const { config } = Route.useRouteContext()
   const target = safeRedirect(search.redirect)
+  const t = useTranslate()
+  const schemas = useAuthSchemas()
 
   const [failure, setFailure] = React.useState<AuthMessage | null>(() =>
     search.error ? describeCallbackError(search.error) : null,
@@ -79,11 +82,11 @@ function LoginPage() {
 
   const form = useForm({
     defaultValues: DEFAULTS,
-    validators: { onChange: loginSchema },
+    validators: { onChange: schemas.login },
     onSubmit: async ({ value }) => {
       setFailure(null)
       // Re-parsed rather than reused: the schema is what lowercases the address.
-      const parsed = loginSchema.safeParse(value)
+      const parsed = schemas.login.safeParse(value)
       if (!parsed.success) return
 
       const { data, error } = await authClient.signIn.email({
@@ -151,18 +154,18 @@ function LoginPage() {
 
   return (
     <AuthShell
-      eyebrow="Welcome back"
-      heading="Sign in to planned.travel"
-      description="Pick up your itineraries, budgets and lists exactly where you left them."
+      eyebrow={t('auth.login.eyebrow')}
+      heading={t('auth.login.heading')}
+      description={t('auth.login.description')}
       footer={
         <>
-          New here?{' '}
+          {t('auth.login.newHere')}{' '}
           <Link
             to="/register"
             search={search.redirect ? { redirect: search.redirect } : {}}
             className="rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
           >
-            Create an account
+            {t('auth.login.createAccount')}
           </Link>
         </>
       }
@@ -178,7 +181,7 @@ function LoginPage() {
               disabled={busy}
               onSelect={(provider) => void signInWithProvider(provider)}
             />
-            <OrDivider label="or use your email" />
+            <OrDivider label={t('auth.divider.orEmail')} />
           </>
         ) : null}
 
@@ -193,7 +196,7 @@ function LoginPage() {
             <form.Field name="email">
               {(field) => (
                 <Field
-                  label="Email address"
+                  label={t('auth.field.email')}
                   htmlFor={field.name}
                   error={visibleError(field.state.meta)}
                 >
@@ -207,7 +210,7 @@ function LoginPage() {
                     spellCheck={false}
                     inputMode="email"
                     size="lg"
-                    placeholder="you@example.com"
+                    placeholder={t('auth.field.email.placeholder')}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -220,7 +223,7 @@ function LoginPage() {
             <form.Field name="password">
               {(field) => (
                 <Field
-                  label="Password"
+                  label={t('auth.field.password')}
                   htmlFor={field.name}
                   error={visibleError(field.state.meta)}
                   action={
@@ -228,7 +231,7 @@ function LoginPage() {
                       to="/forgot-password"
                       className="rounded-sm font-medium text-brand underline decoration-brand/30 underline-offset-4 focus-ring hover:decoration-brand"
                     >
-                      Forgot password?
+                      {t('auth.login.forgot')}
                     </Link>
                   }
                 >
@@ -237,8 +240,9 @@ function LoginPage() {
                     name={field.name}
                     autoComplete="current-password"
                     size="lg"
-                    placeholder="Your password"
-                    revealLabel="password"
+                    placeholder={t('auth.field.password.placeholder')}
+                    showLabel={t('auth.password.show')}
+                    hideLabel={t('auth.password.hide')}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -263,7 +267,7 @@ function LoginPage() {
                     htmlFor={field.name}
                     className="text-label text-ink-2 select-none"
                   >
-                    Keep me signed in on this device
+                    {t('auth.login.remember')}
                   </label>
                 </div>
               )}
@@ -282,10 +286,10 @@ function LoginPage() {
                   size="lg"
                   block
                   loading={isSubmitting || handingOff}
-                  loadingLabel="Signing you in"
+                  loadingLabel={t('auth.login.submitting')}
                   disabled={!canSubmit || busy}
                 >
-                  Sign in
+                  {t('auth.login.submit')}
                 </Button>
               )}
             </form.Subscribe>
@@ -316,5 +320,5 @@ function PasskeyDivider() {
     )
   }, [])
   if (!supported) return null
-  return <OrDivider label="or" />
+  return <OrDivider />
 }

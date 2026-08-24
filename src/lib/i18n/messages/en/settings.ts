@@ -471,8 +471,16 @@ const messages = {
    * copy, which §8.6 does not admit. The mapping from a plan id to these keys is
    * `../../../routes/_app/settings/-lib/plan-copy.ts`.
    *
-   * A plan name is a proper noun — the word on the invoice — so a translation
-   * may legitimately keep it as it stands.
+   * A plan *name* is translated like every other word here, and this file used
+   * to say the opposite — that it was a proper noun a translation could keep as
+   * it stands. It cannot: `__tests__/parity.test.ts` reads a value byte-identical
+   * to English as untranslated copy, its proper-noun allow-list is empty, and it
+   * belongs to another item, so a translator told to leave `Free` alone was being
+   * set an impossible task. What is stable across languages is the plan *id* —
+   * `free`, `solo`, `crew` — which is what `src/lib/plans.ts`, Stripe and the
+   * invoice carry, and no reader ever sees. The word on the screen is a word:
+   * `Gratis`, `無料`, and whatever each language calls travelling alone or in a
+   * group.
    */
   'billing.plan.free.name': 'Free',
   'billing.plan.free.tagline': 'Plan your next two trips',

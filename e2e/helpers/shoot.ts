@@ -7,9 +7,9 @@ import type { BrowserContext, Locator, Page } from '@playwright/test'
  * Screenshot helpers for the visual gate.
  *
  * The gate that `/ultrabuild` runs needs frames that only change when the design
- * changes. Six things otherwise make a baseline flap, and each one has its own
- * seam so that a regression in one can never be hidden by another. Five of those
- * seams close inside this file; the sixth is closed in the Worker and audited
+ * changes. Seven things otherwise make a baseline flap, and each one has its own
+ * seam so that a regression in one can never be hidden by another. Six of those
+ * seams close inside this file; the fourth is closed in the Worker and audited
  * here, for reasons written out under "What this file could not pin".
  *
  * 1. **Paint timing** — fonts, hydration, entrance motion, in-flight images.
@@ -59,10 +59,15 @@ import type { BrowserContext, Locator, Page } from '@playwright/test'
  *    `classifyConsoleMessage()`, two anchored patterns, and nothing wider than
  *    that: a warning the app writes itself stays fatal even when it quotes one of
  *    them, and a React hydration report is not a warning at all.
+ * 7. **The language the fixture speaks** — every authenticated frame is a picture
+ *    of a sentence, and which language the Worker writes it in is a mutable D1
+ *    column that `/settings/language` exists to change. `pinDemoLanguage()`, once
+ *    per run in the setup project, puts the demo traveller back on the workspace
+ *    default and reports the one part of that it cannot set itself.
  *
  * ## What this file could not pin
  *
- * Seams 1, 2, 3, 5 and 6 close completely from inside `e2e/`. Seam 4 never could,
+ * Seams 1, 2, 3, 5, 6 and 7 close completely from inside `e2e/`. Seam 4 never could,
  * and the reason is worth keeping written down so nobody spends another round
  * rediscovering it — or tries to solve it from here again.
  *
@@ -182,7 +187,69 @@ export async function cacheSession(
     return false
   }
   await page.context().storageState({ path: AUTH_STATE })
+  await pinDemoLanguage(page)
   return true
+}
+
+/**
+ * The demo traveller's language, put back to the workspace's before a run.
+ *
+ * Every authenticated baseline is a picture of a *sentence*, and which sentence
+ * the Worker renders is a mutable D1 column: `user_settings.locale`. Nothing in
+ * this file used to touch it, and `/settings/language` exists to change it — so
+ * one exploratory click, one interrupted spec, or one agent driving the picker
+ * by hand leaves the shared fixture speaking another language, and every
+ * authenticated frame in the suite fails on words rather than on design. That
+ * is not a hypothetical: it was found set to `ar`, which red-lined 29 tests,
+ * and the diff a reader is handed for that is a page of mirrored Arabic with no
+ * indication that the *fixture* moved rather than the product.
+ *
+ * The reset is the product's own writer — the follow-the-workspace chip, which
+ * clears the override to `NULL` — rather than a SQL statement or a guessed
+ * server-function URL. Three consequences, all wanted: the state it lands in is
+ * exactly the state the committed baselines were recorded in (that chip is the
+ * selected one in every `settings-language-*` frame); it exercises the same
+ * write the screen offers, so a pin that stops working is a defect worth
+ * knowing about; and it needs no privilege the demo account does not have.
+ *
+ * It runs once per run, in the setup project, because it is the only place a
+ * write belongs — a per-test reset would be a write per frame against a
+ * database every worker shares.
+ *
+ * The workspace default itself is not ours to set: it is `organization_settings`
+ * and an owner's to change. So the pin verifies rather than assumes, and reports
+ * the one thing it cannot fix.
+ */
+export async function pinDemoLanguage(page: Page): Promise<boolean> {
+  const chip = page.locator('[data-testid="locale-chip-workspace"]')
+  try {
+    await page.goto('/settings/language')
+    await chip.waitFor({ state: 'visible', timeout: 15_000 })
+    if ((await chip.getAttribute('data-selected')) === null) {
+      await chip.click()
+      await expect(chip).toHaveAttribute('data-selected', '', {
+        timeout: 15_000,
+      })
+    }
+    const lang = await page
+      .locator('html')
+      .evaluate((node: HTMLElement) => node.lang)
+    if (lang !== 'en') {
+      console.warn(
+        `[shoot] the demo workspace supplies "${lang}", not "en" — every ` +
+          `authenticated baseline was recorded in English. Reset it under ` +
+          `/settings/organization, or re-run: node scripts/seed/seed.mjs`,
+      )
+      return false
+    }
+    return true
+  } catch (cause: unknown) {
+    console.warn(
+      `[shoot] could not pin the demo traveller's language: ` +
+        `${cause instanceof Error ? cause.message : String(cause)}`,
+    )
+    return false
+  }
 }
 
 /** The cached session, or null when there is none worth using. */

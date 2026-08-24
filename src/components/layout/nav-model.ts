@@ -12,6 +12,7 @@ import {
   Users,
 } from 'lucide-react'
 
+import type { MessageKey } from '#/lib/i18n'
 import type { LucideIcon } from 'lucide-react'
 
 /**
@@ -22,9 +23,14 @@ export type PrimaryNavTo = '/dashboard' | '/vacay' | '/atlas' | '/journey'
 
 export interface NavItem {
   readonly id: string
-  readonly label: string
+  /**
+   * Message keys rather than sentences: a module-scope array cannot call a hook,
+   * and a literal checked against `MessageKey` fails to compile when it is wrong
+   * (`docs/SPEC.md` §8.2 — no key resolves to English at run time).
+   */
+  readonly label: MessageKey
   /** Bottom tab bars have far less room than the desktop pill nav. */
-  readonly shortLabel: string
+  readonly shortLabel: MessageKey
   readonly to: PrimaryNavTo
   readonly icon: LucideIcon
   /** URL prefixes that light this item up, so deep pages keep their context. */
@@ -35,32 +41,32 @@ export interface NavItem {
 export const PRIMARY_NAV: ReadonlyArray<NavItem> = [
   {
     id: 'trips',
-    label: 'My Trips',
-    shortLabel: 'Trips',
+    label: 'shell.nav.trips',
+    shortLabel: 'shell.nav.trips.short',
     to: '/dashboard',
     icon: Briefcase,
     matches: ['/dashboard', '/trips', '/collections'],
   },
   {
     id: 'vacay',
-    label: 'Vacay',
-    shortLabel: 'Vacay',
+    label: 'shell.nav.vacay',
+    shortLabel: 'shell.nav.vacay.short',
     to: '/vacay',
     icon: CalendarDays,
     matches: ['/vacay'],
   },
   {
     id: 'atlas',
-    label: 'Atlas',
-    shortLabel: 'Atlas',
+    label: 'shell.nav.atlas',
+    shortLabel: 'shell.nav.atlas.short',
     to: '/atlas',
     icon: Globe,
     matches: ['/atlas'],
   },
   {
     id: 'journey',
-    label: 'Journey',
-    shortLabel: 'Journey',
+    label: 'shell.nav.journey',
+    shortLabel: 'shell.nav.journey.short',
     to: '/journey',
     icon: Compass,
     matches: ['/journey'],
@@ -83,17 +89,22 @@ export type TripTabTo =
 
 export interface TripTab {
   readonly id: string
-  readonly label: string
+  readonly label: MessageKey
   readonly to: TripTabTo
   readonly icon: LucideIcon
 }
 
 export const TRIP_TABS: ReadonlyArray<TripTab> = [
-  { id: 'plan', label: 'Plan', to: '/trips/$tripId/plan', icon: Map },
-  { id: 'transports', label: 'Transports', to: '/trips/$tripId/transports', icon: PlaneTakeoff },
-  { id: 'book', label: 'Book', to: '/trips/$tripId/book', icon: Ticket },
-  { id: 'lists', label: 'Lists', to: '/trips/$tripId/lists', icon: ListChecks },
-  { id: 'costs', label: 'Costs', to: '/trips/$tripId/costs', icon: Coins },
-  { id: 'files', label: 'Files', to: '/trips/$tripId/files', icon: Paperclip },
-  { id: 'collab', label: 'Collab', to: '/trips/$tripId/collab', icon: Users },
+  { id: 'plan', label: 'shell.trip.tab.plan', to: '/trips/$tripId/plan', icon: Map },
+  {
+    id: 'transports',
+    label: 'shell.trip.tab.transports',
+    to: '/trips/$tripId/transports',
+    icon: PlaneTakeoff,
+  },
+  { id: 'book', label: 'shell.trip.tab.book', to: '/trips/$tripId/book', icon: Ticket },
+  { id: 'lists', label: 'shell.trip.tab.lists', to: '/trips/$tripId/lists', icon: ListChecks },
+  { id: 'costs', label: 'shell.trip.tab.costs', to: '/trips/$tripId/costs', icon: Coins },
+  { id: 'files', label: 'shell.trip.tab.files', to: '/trips/$tripId/files', icon: Paperclip },
+  { id: 'collab', label: 'shell.trip.tab.collab', to: '/trips/$tripId/collab', icon: Users },
 ]

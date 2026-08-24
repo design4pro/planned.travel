@@ -799,5 +799,166 @@
       "builder"
     ],
     "invalidatesWhen": "the translation packs land and parity goes green"
+  },
+  {
+    "id": "logical-inset-follows-own-direction",
+    "claim": "`inset-inline-end` resolves against the element's OWN `direction` in Chromium, so the repo's `[dir='rtl'] :is(time, output, [data-numeric]) { direction: ltr }` rule silently un-mirrors any absolutely-positioned element that carries `data-numeric`. Put the bidi isolation on an inner span, never on the positioned box.",
+    "evidence": "Isolated probe (Chromium, `<html dir=\"rtl\">`, two identical `position:absolute; inset-inline-end: -2px` badges): with `data-numeric` -> computed `direction: ltr`, `right: -2px`, `left: 22px`, box at the parent's physical RIGHT; without it -> `direction: rtl`, `left: -2px`, `right: 22px`, box at the LEFT. Reproduced in the live app: the unread badge measured [215,231] against a bell of [193,229] in an `ar` document; after moving `data-numeric` to an inner span it measures [191,207]. Tailwind 4.3.3 does emit `.-end-0\\.5 { inset-inline-end: calc(var(--spacing) * -0.5) }`, so the class was never the problem.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "capture"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "how-to-reach-ar-in-the-live-app",
+    "claim": "Reaching `ar` in the live app requires writing the traveller's preference through /settings/language - `Accept-Language` loses to the stored value - and because `messages/ar/` does not exist, an `ar` document renders every string as its own key. Those keys are unbreakable single tokens, so they manufacture horizontal overflow that does not exist in `en`.",
+    "evidence": "A Playwright context sending `accept-language: ar,ar-SA;q=0.9` to /dashboard still got `<html lang=\"en\" dir=\"ltr\">`. Clicking `[data-testid=\"locale-chip-ar\"]` gave `lang=\"ar\" dir=\"rtl\"` and headings reading `shell.dashboard.openPlan`. Measured `documentElement.scrollWidth - clientWidth`: ar -> 36 (dashboard 1440), 60 (dashboard 360), 85 (notifications 360); en -> 0 at 360, 1440 and 2560 on /dashboard, /notifications and /admin. Restore with the `locale-chip-workspace` chip and verify `lang` before finishing - e2e/helpers/shoot.ts's `pinDemoLanguage()` exists because a run once left it on `ar` and red-lined 29 tests.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "loader-payload-is-seroval",
+    "claim": "A TanStack Start loader payload cannot be rewritten wholesale in a Playwright route handler: it is seroval, which emits a repeated object once and back-references it by `i`, so replacing or emptying a node breaks a reference elsewhere. Nulling one field while re-parking its node into another array works. The serverFn URL is base64 of `{file, export}`, which is how you target one loader.",
+    "evidence": "`/_serverFn/<base64>` decodes to `{\"file\":\"/src/routes/_app/-server/overview.ts?tss-serverfn-split\",\"export\":\"loadDashboard_createServerFn_handler\"}`. Body shape: `{t:10,i:0,p:{k:[...],v:[...]}}`, where `{t:1,s}` is a string, `{t:0,s}` a number, `{t:2,s:0}` null, `{t:9,a:[],o:0}` an array. Setting `upNext` to `{t:2,s:0}` and emptying `mine`/`upcoming`/`reservations` produced `SerovalDeserializationError` and the route's error boundary; setting `upNext` to null while pushing its original node into `upcoming.a` rendered the empty hero with a clean console. `route.abort()` on the same URL is enough for the error state, and a 6s delay in the handler plus a 2.2s wait reaches the pendingComponent (Router's default `pendingMs` is 1s, so screenshotting at 900ms shows nothing).",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "capture",
+      "builder",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "npx-tsc-is-the-wrong-typescript",
+    "claim": "`npx tsc` in this repo resolves a DIFFERENT, older TypeScript than the pinned one and invents TS2792/TS7006 errors on test files; the pinned binary is clean. Always run `./node_modules/.bin/tsc --noEmit` (what `pnpm typecheck` runs).",
+    "evidence": "`npx tsc --noEmit` printed \"Cannot find module 'node:fs' … set the 'moduleResolution' option\" for src/routes/(auth)/-lib/__tests__/copy-rules.test.ts plus implicit-any params on `it.each`. `./node_modules/.bin/tsc --version` = 6.0.3 and `./node_modules/.bin/tsc --noEmit | grep -c .` = 0 on the same tree.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "builder",
+      "mechanical",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "auth-screens-mirror-server-side",
+    "claim": "The (auth) screens are fully server-negotiated and mirror without a single `[dir]` selector of their own: an `Accept-Language: ar` request yields lang=ar/dir=rtl and the grid, the field affordances and the decorative art all flip. Measurable in one page.evaluate, no session needed.",
+    "evidence": "Playwright chromium, extraHTTPHeaders accept-language ar vs en-GB on http://localhost:3001/login: `aside` left 0 vs 778.375, `main` left 826.8 vs 165.2; password field paddingInlineEnd 44px, reveal button left-of-field 0px (ar) vs 346px of a 390px field (en), borderStartStartRadius 0 / borderEndEndRadius 12px in both; `aside svg` computed `scale` '-1 1' vs 'none'; `input[type=email]` computed direction 'ltr' in ar. h1 textContent was 'auth.login.heading' because messages/ar/ does not exist.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "failed-signin-console-noise",
+    "claim": "Deliberately failing a sign-in in dev puts two entries in the browser console that are NOT product defects: a 401 resource error and a relayed Better Auth server warning. Resting auth pages are console-silent, so only an interaction probe sees them.",
+    "evidence": "Same probe: after submitting nobody@planned.travel, console captured \"error: Failed to load resource: the server responded with a status of 401 (Unauthorized)\" and \"warning: %c[Server]%c … WARN [Better Auth]: User not found\". The 24 resting frames (6 routes x light/dark x 1440/360) captured an empty console array.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "capture",
+      "critic",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "auth-flag-breaks-login-capture",
+    "claim": "scripts/ultrabuild/capture.mjs --auth photographs the WRONG screen for /login: a valid demo session redirects /login into the authenticated app, and the script's guard (which only rejects redirects TO /login) reports captureValid true anyway. Capture unauthenticated screens without --auth.",
+    "evidence": "Run 1 with --auth on http://localhost:3001/login produced eight frames whose content is the dashboard (Tokyo & Kyoto trip cards, Trips/Vacay/Atlas/Journey tab bar, 'COUNTRIES VISITED 12 of 195'), warnings [] and captureValid true. The identical command without --auth produced the Sign in form.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "the-reference-has-no-dark-theme",
+    "claim": "The reference product has no dark theme - it ignores prefers-color-scheme entirely - so no dark blind pair can ever be formed against it, in any round.",
+    "evidence": "Playwright chromium on https://demo.liketrek.com/login: getComputedStyle(document.body).backgroundColor is rgb(255,255,255) at all four viewports under both colorScheme 'light' and colorScheme 'dark'. The 1440 dark full-page PNG is the light design.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "setup-project-pins-the-demo-locale",
+    "claim": "`pnpm exec playwright test --project=setup` now resets the demo traveller's locale, because cacheSession() calls the new pinDemoLanguage() in e2e/helpers/shoot.ts. A run that finds authenticated frames in the wrong language no longer needs a hand-repair — and a fixture left in `ar` by an interactive probe costs nothing.",
+    "evidence": "Set the fixture to `ja` by clicking [data-testid=\"locale-chip-ja\"] (verified document.documentElement.lang === 'ja'), ran `PLAYWRIGHT_BASE_URL=http://localhost:3001 pnpm exec playwright test --project=setup` (PASS 1), then re-read /settings/language: lang='en' and the selected chip is locale-chip-workspace, which is the state every committed settings-language baseline holds.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "capture",
+      "mechanical",
+      "builder"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "missing-catalogue-renders-keys",
+    "claim": "Switching locale renders the toast — and every other string — as bare message keys for the 22 locales whose catalogue directory does not exist yet. That is the i18n runtime's designed behaviour, not a defect of the screen that switched, and it disappears when the translations-* items land.",
+    "evidence": "Clicking the `ar` chip on /settings/language: html becomes lang=\"ar\" dir=\"rtl\", the sonner toast reads the literal 'settings.language.saved', and the whole page renders 'settings.page.title', 'shell.nav.atlas' etc. Clicking follow-the-workspace (→ en) immediately gives 'planned.travel now speaks English'. createTranslator has no English branch by design (SPEC §8.2).",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "critic",
+      "auditor",
+      "builder"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "round-9-mobile-failures-are-real",
+    "claim": "The six mobile-safari visual failures this round are NOT the known load flake: they reproduce with identical pixel counts when re-run alone with --project=mobile-safari -g \"renders in\".",
+    "evidence": "Full suite: 7 failed. Isolated re-run of just the mobile-safari 'renders in' frames: 6 failed / 23 passed in 17.2s, with the same numbers (3517, 1493, 1511, 763, 24896, 231610). Contrast with the chromium ECONNRESET spec, which passed alone in 2155ms.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "critic",
+      "auditor",
+      "mechanical",
+      "builder"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "why-six-mobile-frames-are-red-in-round-9",
+    "claim": "The six red mobile-safari frames after round 9 are accounted for and none is an unexplained regression. settings-language light+dark: the PICKER_COLUMNS fix the ORCHESTRATOR asked for in round 8 took the 393px grid from one column to two and shrank the page 572px - it cannot be both the requested fix and a defect. dashboard light: app-shell-i18n rewrote that screen. trips light and atlas light+dark: app-shell-i18n owns src/components/layout/, which frames every authenticated screen, so its avatar change and its nav labels moving into shell.ts shift screens nobody is otherwise touching; the atlas frames additionally carry the known GPU-rasterised map noise. They are deliberately NOT re-baselined: both owning items are still rejected and both screens will change again, and re-baselining twice means whichever change lands second is never compared.",
+    "evidence": "Re-run alone, all six reproduce with identical pixel counts (so not the three-flake load pattern). The atlas light diff shows exactly three regions: the top-right avatar, the four bottom-nav labels, and coastline speckle on the WebGL canvas. git show HEAD:src/components/layout/nav-model.ts carried label: 'My Trips'; src/lib/i18n/messages/en/shell.ts now carries 'nav.trips': 'My trips'.",
+    "measuredIn": "i18n round 9, orchestrator",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "critic",
+      "capture"
+    ],
+    "invalidatesWhen": "app-shell-i18n and settings-module-i18n are both accepted and the frames are refreshed once"
+  },
+  {
+    "id": "nav-copy-normalised-to-sentence-case",
+    "claim": "app-shell-i18n changed one nav label's wording while moving it into the catalogue: 'My Trips' became 'My trips'. It is inside the item's ownership, it matches the house sentence case used by 'New trip', 'Save changes' and 'Follow the workspace', and it is the letter-level diff visible on five mobile baselines. Not a defect - but it is the reason a nav-only frame moved, so do not go hunting for a layout cause.",
+    "evidence": "git show HEAD:src/components/layout/nav-model.ts -> label: 'My Trips'. src/lib/i18n/messages/en/shell.ts:67 -> 'nav.trips': 'My trips'. The short forms ('Trips', 'Vacay', 'Atlas', 'Journey') are unchanged.",
+    "measuredIn": "i18n round 9, orchestrator",
+    "scope": [
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "the label changes again"
   }
 ]

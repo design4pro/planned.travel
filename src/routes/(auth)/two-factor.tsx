@@ -15,8 +15,8 @@ import {
   TabsTrigger,
 } from '#/components/ui'
 import { authClient, toAuthFailure } from '#/lib/auth/client'
+import { useTranslate } from '#/lib/i18n'
 import { describeFailure } from './-lib/errors'
-import { backupCodeSchema, totpSchema } from './-lib/schemas'
 import { safeRedirect } from './-lib/redirect'
 import { AuthShell } from './-ui/auth-shell'
 import {
@@ -24,6 +24,7 @@ import {
   CodeInput,
   FieldStack,
   FormAlert,
+  useAuthSchemas,
   visibleError,
 } from './-ui/form'
 
@@ -48,6 +49,8 @@ const BACKUP_DEFAULTS: BackupCodeValues = { code: '', trustDevice: false }
 function TwoFactorPage() {
   const search = Route.useSearch()
   const target = safeRedirect(search.redirect)
+  const t = useTranslate()
+  const schemas = useAuthSchemas()
 
   const [method, setMethod] = React.useState<Method>('totp')
   const [failure, setFailure] = React.useState<AuthMessage | null>(null)
@@ -64,10 +67,10 @@ function TwoFactorPage() {
 
   const totpForm = useForm({
     defaultValues: TOTP_DEFAULTS,
-    validators: { onChange: totpSchema },
+    validators: { onChange: schemas.totp },
     onSubmit: async ({ value }) => {
       setFailure(null)
-      const parsed = totpSchema.safeParse(value)
+      const parsed = schemas.totp.safeParse(value)
       if (!parsed.success) return
 
       const { error } = await authClient.twoFactor.verifyTotp({
@@ -84,10 +87,10 @@ function TwoFactorPage() {
 
   const backupForm = useForm({
     defaultValues: BACKUP_DEFAULTS,
-    validators: { onChange: backupCodeSchema },
+    validators: { onChange: schemas.backupCode },
     onSubmit: async ({ value }) => {
       setFailure(null)
-      const parsed = backupCodeSchema.safeParse(value)
+      const parsed = schemas.backupCode.safeParse(value)
       if (!parsed.success) return
 
       const { error } = await authClient.twoFactor.verifyBackupCode({
@@ -104,15 +107,15 @@ function TwoFactorPage() {
 
   return (
     <AuthShell
-      eyebrow="Two-factor verification"
-      heading="Confirm it is you"
-      description="Your account is protected by a second factor. Enter the current code from your authenticator app."
+      eyebrow={t('auth.twoFactor.eyebrow')}
+      heading={t('auth.twoFactor.heading')}
+      description={t('auth.twoFactor.description')}
       footer={
         <Link
           to="/login"
           className="rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
         >
-          Start again from sign in
+          {t('auth.twoFactor.back')}
         </Link>
       }
     >
@@ -127,12 +130,12 @@ function TwoFactorPage() {
             setFailure(null)
           }}
         >
-          <TabsList aria-label="Verification method">
+          <TabsList aria-label={t('auth.twoFactor.methods')}>
             <TabsTrigger value="totp" icon={<Smartphone />}>
-              Authenticator
+              {t('auth.twoFactor.totp.tab')}
             </TabsTrigger>
             <TabsTrigger value="backup" icon={<KeyRound />}>
-              Backup code
+              {t('auth.twoFactor.backup.tab')}
             </TabsTrigger>
           </TabsList>
 
@@ -148,11 +151,16 @@ function TwoFactorPage() {
                 <totpForm.Field name="code">
                   {(field) => (
                     <Field
-                      label="Six-digit code"
+                      label={t('auth.twoFactor.totp.label')}
                       htmlFor="totp-code"
                       error={visibleError(field.state.meta)}
-                      hint="Codes refresh every 30 seconds."
+                      hint={t('auth.twoFactor.totp.hint')}
                     >
+                      {/* The two placeholders on this screen are pictures of
+                          the characters a field takes, not copy: a digit mask
+                          reads the same in all twenty-three languages, and a
+                          translation identical to English is what the parity
+                          gate calls untranslated. */}
                       <CodeInput
                         id="totp-code"
                         name={field.name}
@@ -195,10 +203,10 @@ function TwoFactorPage() {
                       block
                       icon={<ShieldCheck />}
                       loading={isSubmitting || handingOff}
-                      loadingLabel="Checking your code"
+                      loadingLabel={t('auth.twoFactor.submitting')}
                       disabled={!canSubmit || handingOff}
                     >
-                      Verify and continue
+                      {t('auth.twoFactor.totp.submit')}
                     </Button>
                   )}
                 </totpForm.Subscribe>
@@ -218,10 +226,10 @@ function TwoFactorPage() {
                 <backupForm.Field name="code">
                   {(field) => (
                     <Field
-                      label="Backup code"
+                      label={t('auth.twoFactor.backup.label')}
                       htmlFor="backup-code"
                       error={visibleError(field.state.meta)}
-                      hint="From the list you saved when you turned on two-factor. Each code works once."
+                      hint={t('auth.twoFactor.backup.hint')}
                     >
                       <Input
                         id="backup-code"
@@ -233,6 +241,7 @@ function TwoFactorPage() {
                         spellCheck={false}
                         maxLength={24}
                         placeholder="xxxxx-xxxxx"
+                        data-numeric
                         className="font-mono tracking-wide numeral"
                         value={field.state.value}
                         onBlur={field.handleBlur}
@@ -270,10 +279,10 @@ function TwoFactorPage() {
                       block
                       icon={<ShieldCheck />}
                       loading={isSubmitting || handingOff}
-                      loadingLabel="Checking your code"
+                      loadingLabel={t('auth.twoFactor.submitting')}
                       disabled={!canSubmit || handingOff}
                     >
-                      Use backup code
+                      {t('auth.twoFactor.backup.submit')}
                     </Button>
                   )}
                 </backupForm.Subscribe>
@@ -298,6 +307,7 @@ function TrustDevice({
   disabled: boolean
   onChange: (checked: boolean) => void
 }) {
+  const t = useTranslate()
   return (
     <div className="flex items-start gap-2.5">
       <Checkbox
@@ -307,10 +317,9 @@ function TrustDevice({
         onCheckedChange={(next) => onChange(next === true)}
       />
       <label htmlFor={id} className="text-label text-ink-2 select-none">
-        Trust this device for 30 days
+        {t('auth.twoFactor.trust.label')}
         <span className="mt-0.5 block text-caption text-ink-3">
-          Skip this step on this browser until then. Only do this on a device
-          that is yours alone.
+          {t('auth.twoFactor.trust.detail')}
         </span>
       </label>
     </div>

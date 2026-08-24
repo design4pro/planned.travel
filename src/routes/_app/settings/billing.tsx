@@ -854,7 +854,7 @@ function PlanOption({
           disabled={!canManage || isCurrent}
           loading={busy}
           loadingLabel={t('settings.billing.stripe.opening')}
-          iconAfter={isCurrent ? undefined : <ArrowUpRight />}
+          iconAfter={isCurrent ? undefined : <ArrowUpRight data-mirror-rtl />}
           onClick={plan.id === FREE_PLAN.id ? onDowngradeToFree : onChoose}
         >
           {label}
@@ -1020,7 +1020,7 @@ function InvoiceHistory({
                         rel="noreferrer noopener"
                       >
                         {t('settings.billing.invoices.view')}
-                        <ExternalLink aria-hidden />
+                        <ExternalLink aria-hidden data-mirror-rtl />
                       </a>
                     </Button>
                   )}

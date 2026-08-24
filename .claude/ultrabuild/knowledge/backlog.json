@@ -65,5 +65,24 @@
     "paths": [
       "src/lib/i18n/negotiate.ts"
     ]
+  },
+  {
+    "id": "capture-auth-flag-breaks-login",
+    "title": "capture.mjs --auth photographs the authenticated app instead of /login",
+    "why": "A valid demo session redirects /login straight into the app, so any capture of a public auth screen taken with --auth is a photograph of the wrong screen. auth-i18n worked around it by hand this round and still won its blind pair, but the next item to photograph a public screen will walk into it.",
+    "decision": "Deferred: the fix is a --no-auth path (or auto-detecting a public route) in scripts/ultrabuild/capture.mjs, and no round needs it until another public screen is judged. Recorded so the workaround is not rediscovered.",
+    "paths": [
+      "scripts/ultrabuild/capture.mjs"
+    ]
+  },
+  {
+    "id": "admin-console-authorises-on-the-client",
+    "title": "SECURITY: /admin serves the member roster, audit trail and quotas to any authenticated member",
+    "why": "loadAdmin has no role check and appScope() defaults to role 'member', while the only gate is the component's isAdmin branch - which TanStack Router resolves AFTER the loader. So a plain member who opens /admin receives names, email addresses, the audit log and every quota figure in the SSR payload while the screen says 'Only workspace admins can open this', and loadAdmin() is callable directly. Pre-existing, not introduced by this run.",
+    "decision": "Assigned to app-shell-i18n as a blocking finding for round 10, since both files are in its ownedPaths and requireOrg({ role: 'admin' }) already exists. Carried here too because it is a live data exposure that outlives this task.",
+    "paths": [
+      "src/routes/_app/-server/overview.ts",
+      "src/routes/_app/admin.tsx"
+    ]
   }
 ]

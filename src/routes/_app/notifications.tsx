@@ -13,16 +13,17 @@ import { z } from 'zod'
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
+import { notificationCopy } from '#/components/layout/notification-copy'
 import { PageHeader } from '#/components/layout/page-header'
 import { Badge, Button, Card, EmptyState } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useI18n, useTranslate } from '#/lib/i18n'
 import {
   loadNotifications,
   readAllNotifications,
   readNotification,
 } from './-server/overview'
-import { formatNumber, formatRelative, pluralise } from './-lib/format'
-import { renderNotification } from './-lib/notifications'
+import { formatNumber, formatRelative } from './-lib/format'
 import {
   FilterBar,
   FilterCount,
@@ -41,24 +42,32 @@ const TYPE_ICON: Record<string, LucideIcon> = {
   navigate: Navigation,
 }
 
+/* ------------------------------------------------------------------ route */
+
 export const Route = createFileRoute('/_app/notifications')({
   validateSearch: z.object({ unread: z.boolean().optional() }),
   loaderDeps: ({ search }) => ({ unread: search.unread }),
   loader: ({ deps }) =>
     loadNotifications({ data: { unreadOnly: deps.unread } }),
   pendingComponent: NotificationsPending,
-  errorComponent: ({ error }) => (
-    <AppFrame>
-      <ErrorPanel error={error} title="Your inbox did not load" />
-    </AppFrame>
-  ),
+  errorComponent: NotificationsError,
   component: NotificationsPage,
 })
+
+function NotificationsError({ error }: { error: unknown }) {
+  const t = useTranslate()
+  return (
+    <AppFrame>
+      <ErrorPanel error={error} title={t('shell.inbox.error')} />
+    </AppFrame>
+  )
+}
 
 function NotificationsPage() {
   const data = Route.useLoaderData()
   const search = Route.useSearch()
   const router = useRouter()
+  const { t, locale } = useI18n()
   const [busy, setBusy] = useState(false)
 
   const unreadOnly = search.unread === true
@@ -68,10 +77,10 @@ function NotificationsPage() {
     try {
       await readAllNotifications()
       await router.invalidate()
-      toast.success('Inbox cleared')
+      toast.success(t('shell.inbox.cleared'))
     } catch {
-      toast.error('Could not mark everything read', {
-        description: 'Check your connection and try again.',
+      toast.error(t('shell.inbox.markAllFailed'), {
+        description: t('shell.inbox.retryHint'),
       })
     } finally {
       setBusy(false)
@@ -82,12 +91,15 @@ function NotificationsPage() {
     <AppFrame>
       <AppSections>
         <PageHeader
-          eyebrow="Inbox"
-          title="Notifications"
+          eyebrow={t('shell.inbox.eyebrow')}
+          title={t('shell.inbox.title')}
           description={
             data.unreadCount === 0
-              ? 'Everything is read'
-              : `${pluralise(data.unreadCount, 'unread message')}`
+              ? t('shell.inbox.allRead')
+              : t('shell.inbox.unread', {
+                  count: data.unreadCount,
+                  unread: formatNumber(data.unreadCount, locale),
+                })
           }
           actions={
             <Button
@@ -96,13 +108,13 @@ function NotificationsPage() {
               shape="pill"
               disabled={data.unreadCount === 0}
               loading={busy}
-              loadingLabel="Marking everything read"
+              loadingLabel={t('shell.inbox.markingAll')}
               onClick={() => {
                 void markEverythingRead()
               }}
             >
               <CheckCheck aria-hidden />
-              Mark all read
+              {t('shell.inbox.markAll')}
             </Button>
           }
         >
@@ -112,47 +124,58 @@ function NotificationsPage() {
               search={{}}
               className={filterLinkClass(!unreadOnly)}
             >
-              Everything
+              {t('shell.inbox.filter.all')}
             </Link>
             <Link
               to="/notifications"
               search={{ unread: true }}
               className={filterLinkClass(unreadOnly)}
             >
-              Unread
-              <FilterCount>{formatNumber(data.unreadCount)}</FilterCount>
+              {t('shell.inbox.filter.unread')}
+              <FilterCount>
+                {formatNumber(data.unreadCount, locale)}
+              </FilterCount>
             </Link>
             {data.actionableCount === 0 ? null : (
               <span className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-warning-soft px-3 text-caption font-semibold text-warning">
                 <CircleAlert aria-hidden className="size-3.5" />
-                {pluralise(data.actionableCount, 'invitation')} waiting
+                {t('shell.inbox.waiting', {
+                  count: data.actionableCount,
+                  invitations: formatNumber(data.actionableCount, locale),
+                })}
               </span>
             )}
           </FilterBar>
         </PageHeader>
 
         {data.items.length === 0 ? (
-          <Card variant="dashed" padding="none">
+          <Card variant="dashed" padding="none" className="bg-surface-2">
             <EmptyState
               size="lg"
               tone="brand"
               icon={<Inbox />}
-              title={unreadOnly ? 'Nothing unread' : 'Your inbox is empty'}
+              title={
+                unreadOnly
+                  ? t('shell.inbox.emptyUnread.title')
+                  : t('shell.inbox.empty.title')
+              }
               description={
                 unreadOnly
-                  ? 'You have read everything. Switch to Everything to look back through the history.'
-                  : 'Trip invitations, plan changes, booking reminders and settled balances all arrive here.'
+                  ? t('shell.inbox.emptyUnread.body')
+                  : t('shell.inbox.empty.body')
               }
               action={
                 unreadOnly ? (
                   <Button asChild variant="secondary" shape="pill">
                     <Link to="/notifications" search={{}}>
-                      Show everything
+                      {t('shell.inbox.emptyUnread.action')}
                     </Link>
                   </Button>
                 ) : (
                   <Button asChild variant="primary" shape="pill">
-                    <Link to="/dashboard">Back to the dashboard</Link>
+                    <Link to="/dashboard">
+                      {t('shell.inbox.empty.action')}
+                    </Link>
                   </Button>
                 )
               }
@@ -160,8 +183,12 @@ function NotificationsPage() {
           </Card>
         ) : (
           <Panel
-            label={unreadOnly ? 'Unread' : 'Everything'}
-            count={formatNumber(data.items.length)}
+            label={
+              unreadOnly
+                ? t('shell.inbox.filter.unread')
+                : t('shell.inbox.filter.all')
+            }
+            count={formatNumber(data.items.length, locale)}
             flush
           >
             <ul>
@@ -175,13 +202,11 @@ function NotificationsPage() {
         )}
 
         <Card className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-label text-ink-3">
-            Choose which of these reach your inbox, your email and your phone.
-          </p>
+          <p className="text-label text-ink-3">{t('shell.inbox.preferences')}</p>
           <Button asChild variant="secondary" size="sm" shape="pill">
             <Link to="/settings/notifications">
               <Bell aria-hidden />
-              Notification settings
+              {t('shell.inbox.preferencesAction')}
             </Link>
           </Button>
         </Card>
@@ -192,8 +217,9 @@ function NotificationsPage() {
 
 function NotificationRow({ item }: { item: NotificationCard }) {
   const router = useRouter()
+  const { t, tStored, locale } = useI18n()
   const [busy, setBusy] = useState(false)
-  const copy = renderNotification(item)
+  const copy = notificationCopy(item, { locale, t, tStored })
   const Icon = TYPE_ICON[item.type] ?? Info
   const now = Date.now()
 
@@ -203,16 +229,25 @@ function NotificationRow({ item }: { item: NotificationCard }) {
       await readNotification({ data: { notificationId: item.id } })
       await router.invalidate()
     } catch {
-      toast.error('Could not mark that read')
+      toast.error(t('shell.inbox.row.markReadFailed'))
     } finally {
       setBusy(false)
     }
   }
 
   return (
+    /*
+     * Two columns on a phone, three from `sm` up, and the actions move rather
+     * than being written twice. Beside the sentence at 360px they left the title
+     * about ninety pixels to wrap in, which is a squeezed desktop row and not a
+     * designed mobile one (SPEC §2); underneath it they get the full measure.
+     * `col-start-*` is direction-agnostic, so `ar` mirrors the whole grid.
+     */
     <div
       className={cn(
-        'flex min-w-0 items-start gap-3 px-5 py-4 not-last:border-b not-last:border-edge-faint',
+        'grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2.5 px-5 py-4',
+        'sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-y-0',
+        'not-last:border-b not-last:border-edge-faint',
         item.isRead ? '' : 'bg-brand-subtle/40',
       )}
     >
@@ -227,7 +262,7 @@ function NotificationRow({ item }: { item: NotificationCard }) {
         <Icon aria-hidden className="size-4" />
       </span>
 
-      <div className="min-w-0 flex-1">
+      <div className="col-start-2 row-start-1 min-w-0">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2.5 gap-y-1">
           <p
             className={cn(
@@ -239,7 +274,7 @@ function NotificationRow({ item }: { item: NotificationCard }) {
           </p>
           {item.isRead ? null : (
             <Badge tone="brand" size="sm">
-              New
+              {t('shell.inbox.row.new')}
             </Badge>
           )}
           {item.response === null ? null : (
@@ -247,7 +282,9 @@ function NotificationRow({ item }: { item: NotificationCard }) {
               tone={item.response === 'accepted' ? 'success' : 'neutral'}
               size="sm"
             >
-              {item.response === 'accepted' ? 'Accepted' : 'Declined'}
+              {item.response === 'accepted'
+                ? t('shell.inbox.row.accepted')
+                : t('shell.inbox.row.declined')}
             </Badge>
           )}
         </div>
@@ -256,15 +293,18 @@ function NotificationRow({ item }: { item: NotificationCard }) {
             {copy.body}
           </p>
         )}
-        <p className="mt-1 text-caption tabular-nums text-ink-4">
-          {formatRelative(item.createdAt, now)}
+        <p
+          data-numeric
+          className="mt-1 text-caption tabular-nums text-ink-4"
+        >
+          {formatRelative(item.createdAt, now, locale)}
         </p>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
+      <div className="col-start-2 flex shrink-0 flex-wrap items-center gap-1.5 sm:col-start-3 sm:row-start-1">
         {item.actionUrl === null ? null : (
           <Button asChild variant="ghost" size="sm" shape="pill">
-            <a href={item.actionUrl}>Open</a>
+            <a href={item.actionUrl}>{t('shell.inbox.row.open')}</a>
           </Button>
         )}
         {item.isRead ? null : (
@@ -273,13 +313,13 @@ function NotificationRow({ item }: { item: NotificationCard }) {
             size="sm"
             shape="pill"
             loading={busy}
-            loadingLabel="Marking read"
+            loadingLabel={t('shell.inbox.row.markingRead')}
             onClick={() => {
               void markRead()
             }}
           >
             <CheckCheck aria-hidden />
-            Read
+            {t('shell.inbox.row.markRead')}
           </Button>
         )}
       </div>
@@ -292,7 +332,7 @@ function NotificationsPending() {
     <AppFrame>
       <AppSections>
         <HeaderSkeleton />
-        <Card padding="none">
+        <Card variant="inset" padding="none">
           <RowsSkeleton rows={6} />
         </Card>
       </AppSections>

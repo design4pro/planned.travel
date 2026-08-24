@@ -33,18 +33,16 @@
  * chip click is visible before the toast has faded.
  */
 import { createServerFn } from '@tanstack/react-start'
-import { z } from 'zod'
 
 import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
 import { resolveLocaleTag } from '#/lib/i18n/negotiate'
-import { DISTANCE_UNITS } from '#/server/db/schema'
 import {
   ensureOrganizationSettings,
   ensureUserSettings,
   updateUserSettings,
 } from '#/server/repos'
 import { appScope } from '../../-server/context'
-import { overrideOrNull } from '../../-server/settings'
+import { overrideOrNull, regionalSettingsInput } from '../../-server/settings'
 
 import type { Locale } from '#/lib/i18n'
 
@@ -95,22 +93,23 @@ export const loadLanguageSettings = createServerFn({ method: 'GET' }).handler(
 
 /* ------------------------------------------------------------------- regional */
 
-/** `''` clears an override so the workspace default takes over again. */
-const optionalOverride = z.string().trim().max(64)
-
 /**
  * The five regional overrides the profile form edits — and not the sixth.
+ *
+ * Derived from the six rather than restated as five. The trimming, the 64-byte
+ * ceiling and the `''`-clears-the-override sentinel are one boundary rule for
+ * these columns, and a second copy of it here was a second place for it to
+ * drift: a widened ceiling on one side and not the other is a payload D1 takes
+ * from one screen and refuses from the next. `.omit()` keeps the rule where the
+ * columns are declared and says the only thing this input adds, which is what
+ * it *cannot* carry.
  *
  * Zod strips a key an object schema does not declare, so a payload carrying
  * `locale` reaches the handler without one. The language screen is the only
  * writer of that column.
  */
-export const regionalOverridesInput = z.object({
-  timezone: optionalOverride,
-  currency: optionalOverride,
-  dateFormat: optionalOverride,
-  weekStartsOn: z.number().int().min(0).max(6).nullable(),
-  distanceUnit: z.union([z.literal(''), z.enum(DISTANCE_UNITS)]),
+export const regionalOverridesInput = regionalSettingsInput.omit({
+  locale: true,
 })
 
 export const saveRegionalOverrides = createServerFn({ method: 'POST' })

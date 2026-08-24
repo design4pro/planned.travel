@@ -242,7 +242,7 @@ function ProfilePage() {
                 <Button asChild variant="secondary" size="sm" shape="pill">
                   <Link to="/settings/language">
                     {t('settings.profile.language.action')}
-                    <ChevronRight aria-hidden />
+                    <ChevronRight aria-hidden data-mirror-rtl />
                   </Link>
                 </Button>
               </div>

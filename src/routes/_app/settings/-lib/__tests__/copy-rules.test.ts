@@ -191,6 +191,68 @@ describe('the module reads correctly in Arabic', () => {
       expect(found).toEqual([])
     },
   )
+
+  /**
+   * The glyphs whose meaning is "the direction reading travels".
+   *
+   * `src/styles/styles.css` declares the mirror once, as
+   * `[dir='rtl'] [data-mirror-rtl] { scale: -1 1 }`, and states the contract:
+   * the attribute is valueless, it sits on the glyph itself, and it belongs on
+   * an icon that points the way a sentence runs — never on one whose direction
+   * is physical (a clock, a compass, a play triangle), never on
+   * ChevronDown/ChevronUp, which have no handedness, and never on
+   * ArrowRightLeft, which would flip into itself.
+   *
+   * This module carried four of them unmarked — the `ChevronRight` on the
+   * profile screen's link to this section, the `ArrowUpRight` on every plan
+   * card's call to action, the `ExternalLink` on an invoice, and the `LogOut`
+   * on the sign-out button — so each one pointed out of the sentence in Arabic
+   * instead of along it. The utility check above cannot see that: an icon is a
+   * component, not a class. `lucide-react` names them consistently enough to
+   * read off the source, which is the only place this rule is checkable at
+   * all — the attribute's absence is silent in every runtime that is not RTL.
+   */
+  const HANDED_GLYPHS = [
+    'ArrowLeft',
+    'ArrowRight',
+    'ArrowUpRight',
+    'ArrowDownLeft',
+    'ChevronLeft',
+    'ChevronRight',
+    'ChevronsLeft',
+    'ChevronsRight',
+    'CornerDownLeft',
+    'ExternalLink',
+    'Forward',
+    'IndentIncrease',
+    'LogIn',
+    'LogOut',
+    'MoveLeft',
+    'MoveRight',
+    'PanelLeft',
+    'PanelRight',
+    'Redo2',
+    'Reply',
+    'Send',
+    'SendHorizontal',
+    'SkipBack',
+    'SkipForward',
+    'Undo2',
+  ]
+
+  it.each(SOURCES.map((source) => [source.path.split('/').at(-1), source]))(
+    '%s mirrors every handed icon it renders',
+    (_name, source) => {
+      const pattern = new RegExp(
+        `<(?:${HANDED_GLYPHS.join('|')})\\b[^>]*>`,
+        'g',
+      )
+      const unmarked = [
+        ...withoutComments(source.text).matchAll(pattern),
+      ].filter((match) => !match[0].includes('data-mirror-rtl'))
+      expect(unmarked.map((match) => match[0])).toEqual([])
+    },
+  )
 })
 
 describe('the catalogue and the screens agree', () => {

@@ -12,7 +12,13 @@ import {
 import { Card, Skeleton } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { formatDate, formatMoneyMinor, formatNumber } from '#/lib/format'
-import { localeDescriptor, useLocale, useTranslate } from '#/lib/i18n'
+import {
+  createTranslator,
+  loadCatalogue,
+  localeDescriptor,
+  useLocale,
+  useTranslate,
+} from '#/lib/i18n'
 import { saveLanguagePreference } from '../-server/settings'
 import { SettingsSection } from '../-ui/settings-nav'
 import { loadLanguageSettings } from './-server/preferences'
@@ -107,10 +113,28 @@ function LanguagePage() {
       // answered, as `en`.
       setChoice(saved.locale ?? FOLLOW_WORKSPACE)
       await router.invalidate()
+      const inForceNow = resolve(saved.locale ?? FOLLOW_WORKSPACE)
+      // Announced in the language that was just switched on, not the one being
+      // left. `t` is the translator this render closed over, so a traveller
+      // moving to German was told so in English — the one sentence on the
+      // screen that must prove the change took effect, printed in the proof's
+      // own contradiction. The root loader has already resolved this locale's
+      // catalogue by the time `invalidate()` settles, so the load below is a
+      // cache read (`peekCatalogue`'s map, filled by `loadCatalogue`) rather
+      // than a second fetch.
+      //
+      // A locale whose catalogue is still empty renders the key, deliberately:
+      // `createTranslator` has no English branch, because `docs/SPEC.md` §8.2
+      // bans the silent fallback that hides a hole. Until the translation items
+      // land, this toast says what every other string on the page says — and it
+      // is the same sentence in every locale the moment they do.
+      const spoken = createTranslator(
+        inForceNow,
+        await loadCatalogue(inForceNow),
+      )
       toast.success(
-        t('settings.language.saved', {
-          language: localeDescriptor(resolve(saved.locale ?? FOLLOW_WORKSPACE))
-            .nativeName,
+        spoken('settings.language.saved', {
+          language: localeDescriptor(inForceNow).nativeName,
         }),
       )
     } catch {
@@ -162,6 +186,7 @@ function LanguagePage() {
           </div>
 
           <LanguagePicker
+            className={PICKER_COLUMNS}
             value={choice}
             workspaceDefault={workspaceDefault}
             pending={pending}
@@ -244,6 +269,54 @@ const SAMPLE_SHELL =
 const MICRO_LINE = 'h-[calc(var(--text-micro)*var(--text-micro--line-height))]'
 const LABEL_LINE = 'h-[calc(var(--text-label)*var(--text-label--line-height))]'
 
+/**
+ * Two columns of chips on a phone, instead of twenty-three stacked rows.
+ *
+ * The picker's own track floor is 10.5rem, measured so that the widest native
+ * name never truncates at the width a settings panel gives it on a laptop. Two
+ * of those tracks and their 8px gap need 344px, and this card's body measures
+ * 319px on the reference phone — 393 less the app frame's 2 × 16px inset, the
+ * card's own 2 × 20px padding and its hairline — so `auto-fill` fell to a single
+ * column and the whole affordance became a list the reader scrolls 1,100px past.
+ * That is the "squeezed desktop" `docs/SPEC.md` §2 rules out for mobile, and it
+ * is the one width where this screen has to be a designed layout rather than the
+ * same layout narrower.
+ *
+ * Two changes, both measured in Chromium *and* WebKit at 393px, because the
+ * mobile baseline is recorded in WebKit and the two engines round text metrics
+ * differently:
+ *
+ * - The track floor drops to 9.5rem below `sm`. That changes the column *count*
+ *   and nothing else — the tracks are `1fr`, so two of them still share the
+ *   whole row at 155.5px each.
+ * - The chips' inline padding drops from 12px to 8px at the same width. Without
+ *   it the two columns are 2px too mean for their own copy: both engines put
+ *   `Português (Brasil)` at 108px against a 106px box and `Bahasa Indonesia` at
+ *   107px, so the grid gained a column by cropping the two longest names, and a
+ *   picker that ellipsises the language you are looking for is worse than one
+ *   extra row of scrolling. 8px returns 112px of name box against that 108px,
+ *   and lands on the 4px grid where the alternatives (10px, a 6px gap) do not.
+ *
+ * Below ~384px there is no honest second column left, and `auto-fill` returns to
+ * one — the right answer at 360px rather than a cropped name.
+ *
+ * **Why it is written here.** `GRID` and the chip live in
+ * `src/components/settings/language-picker.tsx`, which belongs to another item;
+ * this screen is the picker's host and owns how wide its own card is, so the
+ * rule travels through the `className` that component publishes for it rather
+ * than through an edit to a file this item does not own. `> div:last-child` is
+ * the grid in both the loaded picker (a `SectionLabel` div, then the radiogroup)
+ * and in `LanguagePickerSkeleton` (a label line box, then the same grid), which
+ * is how one selector holds the two to the same shape — and it has to, because
+ * the skeleton's whole contract is being the height of the thing it replaces.
+ * The padding rule finds no `[role=radio]` in the skeleton, whose chips are
+ * fixed-height bars with no padding to change, so that contract survives it.
+ */
+const PICKER_COLUMNS = [
+  'max-sm:[&>div:last-child]:grid-cols-[repeat(auto-fill,minmax(min(100%,9.5rem),1fr))]',
+  'max-sm:[&_[role=radio]]:px-2',
+].join(' ')
+
 /** A skeleton bar centred in the line box the loaded text will occupy. */
 function BarInLine({ box, width }: { box: string; width: string }) {
   return (
@@ -266,7 +339,7 @@ function LanguagePending() {
             <BarInLine box={LABEL_LINE} width="w-20" />
           </div>
         </div>
-        <LanguagePickerSkeleton />
+        <LanguagePickerSkeleton className={PICKER_COLUMNS} />
       </Card>
       <Card className="space-y-4">
         <Skeleton className="h-4 w-48" radius="sm" />

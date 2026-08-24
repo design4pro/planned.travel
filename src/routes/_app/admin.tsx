@@ -27,15 +27,10 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui'
-import { formatStorage } from '#/lib/plans'
+import { useI18n, useTranslate } from '#/lib/i18n'
+import { formatStorage, planFromUnknown } from '#/lib/plans'
 import { loadAdmin } from './-server/overview'
-import {
-  formatDate,
-  formatNumber,
-  formatRelative,
-  humaniseToken,
-  pluralise,
-} from './-lib/format'
+import { formatDate, formatNumber, formatRelative } from './-lib/format'
 import {
   HeaderSkeleton,
   Panel,
@@ -44,40 +39,80 @@ import {
   StatsSkeleton,
 } from './-ui/scaffold'
 
+import type { MessageKey, Translate } from '#/lib/i18n'
+
 const ROLE_TONE: Record<string, 'accent' | 'brand' | 'neutral'> = {
   owner: 'accent',
   admin: 'brand',
   member: 'neutral',
 }
 
+/**
+ * The workspace roles and the quota metrics, as message keys.
+ *
+ * Both are closed sets in `src/server/auth/tenant.ts` and `resolveQuotas`, so
+ * the tables are total. A token a later migration adds falls through to itself —
+ * a reportable data value rather than an English word posing as translated copy.
+ */
+const ROLE_LABEL: Record<string, MessageKey | undefined> = {
+  owner: 'shell.role.owner',
+  admin: 'shell.role.admin',
+  member: 'shell.role.member',
+}
+
+const METRIC_LABEL: Record<string, MessageKey | undefined> = {
+  trips: 'shell.metric.trips',
+  places: 'shell.metric.places',
+  members: 'shell.metric.members',
+  files: 'shell.metric.files',
+  storage_bytes: 'shell.metric.storage_bytes',
+  collections: 'shell.metric.collections',
+  journeys: 'shell.metric.journeys',
+}
+
+function labelFor(
+  table: Record<string, MessageKey | undefined>,
+  token: string,
+  t: Translate,
+): string {
+  const key = table[token]
+  return key === undefined ? token : t(key)
+}
+
 export const Route = createFileRoute('/_app/admin')({
   loader: () => loadAdmin(),
   pendingComponent: AdminPending,
-  errorComponent: ({ error }) => (
-    <AppFrame>
-      <ErrorPanel error={error} title="The admin console did not load" />
-    </AppFrame>
-  ),
+  errorComponent: AdminError,
   component: AdminPage,
 })
+
+function AdminError({ error }: { error: unknown }) {
+  const t = useTranslate()
+  return (
+    <AppFrame>
+      <ErrorPanel error={error} title={t('shell.admin.error')} />
+    </AppFrame>
+  )
+}
 
 function AdminPage() {
   const data = Route.useLoaderData()
   const { shell } = Route.useRouteContext()
+  const { t, locale } = useI18n()
   const now = Date.now()
 
   if (!shell.session.user.isAdmin) {
     return (
       <AppFrame>
-        <Card variant="dashed" padding="none">
+        <Card variant="dashed" padding="none" className="bg-surface-2">
           <EmptyState
             size="lg"
             icon={<ShieldCheck />}
-            title="Only workspace admins can open this"
-            description="Ask an owner or an admin of this workspace to change your role if you need it."
+            title={t('shell.admin.denied.title')}
+            description={t('shell.admin.denied.body')}
             action={
               <Button asChild variant="primary" shape="pill">
-                <Link to="/dashboard">Back to the dashboard</Link>
+                <Link to="/dashboard">{t('shell.admin.denied.action')}</Link>
               </Button>
             }
           />
@@ -87,24 +122,32 @@ function AdminPage() {
   }
 
   const storage = data.limits.find((row) => row.metric === 'storage_bytes')
+  // The plan's own name is a product name, not copy: it lives in
+  // `src/lib/plans.ts` and reads the same in every locale.
+  const planName = planFromUnknown(data.plan)?.name ?? data.plan
 
   return (
     <AppFrame>
       <AppSections>
         <PageHeader
-          eyebrow="Workspace admin"
+          eyebrow={t('shell.admin.eyebrow')}
           title={data.organization.name}
-          description={`${humaniseToken(data.plan)} plan · created ${formatDate(data.organization.createdAt) ?? 'recently'}`}
+          description={t('shell.admin.description', {
+            plan: planName,
+            date:
+              formatDate(data.organization.createdAt, locale) ??
+              t('shell.admin.createdUnknown'),
+          })}
           actions={
             <>
               <Button asChild variant="secondary" size="sm" shape="pill">
                 <Link to="/settings/organization">
                   <Building2 aria-hidden />
-                  Workspace settings
+                  {t('shell.admin.workspaceSettings')}
                 </Link>
               </Button>
               <Button asChild variant="primary" size="sm" shape="pill">
-                <Link to="/settings/billing">Plan &amp; billing</Link>
+                <Link to="/settings/billing">{t('shell.admin.billing')}</Link>
               </Button>
             </>
           }
@@ -113,15 +156,19 @@ function AdminPage() {
         {data.pendingInvitations === 0 ? null : (
           <Alert
             tone="info"
-            title={`${pluralise(data.pendingInvitations, 'invitation')} still outstanding`}
+            title={t('shell.admin.invitations.title', {
+              count: data.pendingInvitations,
+              invitations: formatNumber(data.pendingInvitations, locale),
+            })}
             actions={
               <Button asChild variant="secondary" size="sm" shape="pill">
-                <Link to="/settings/organization">Review invitations</Link>
+                <Link to="/settings/organization">
+                  {t('shell.admin.invitations.action')}
+                </Link>
               </Button>
             }
           >
-            Every outstanding invitation counts against the seats your plan pays
-            for.
+            {t('shell.admin.invitations.body')}
           </Alert>
         )}
 
@@ -129,47 +176,58 @@ function AdminPage() {
           <StatCard
             tone="inverse"
             icon={<Users />}
-            label="Members"
-            value={data.members.length}
-            caption={`${formatNumber(data.pendingInvitations)} invitations pending`}
+            label={t('shell.admin.stat.members')}
+            value={formatNumber(data.members.length, locale)}
+            caption={t('shell.admin.stat.membersCaption', {
+              count: data.pendingInvitations,
+              invitations: formatNumber(data.pendingInvitations, locale),
+            })}
           />
           <StatCard
             icon={<Database />}
-            label="Storage"
+            label={t('shell.admin.stat.storage')}
             value={storage === undefined ? '—' : formatStorage(storage.used)}
             unit={
               storage === undefined
                 ? undefined
-                : `of ${storage.limit === null ? 'unlimited' : formatStorage(storage.limit)}`
+                : t('shell.admin.stat.storageUnit', {
+                    limit:
+                      storage.limit === null
+                        ? t('shell.admin.stat.storageUnlimited')
+                        : formatStorage(storage.limit),
+                  })
             }
-            caption="Files, photos and exports"
+            caption={t('shell.admin.stat.storageCaption')}
           />
           <StatCard
             icon={<Activity />}
-            label="Audit entries"
-            value={data.audit.length}
-            caption="Most recent activity shown below"
+            label={t('shell.admin.stat.audit')}
+            value={formatNumber(data.audit.length, locale)}
+            caption={t('shell.admin.stat.auditCaption')}
           />
           <StatCard
             icon={<ShieldCheck />}
-            label="Plan"
-            value={humaniseToken(data.plan)}
-            caption="Quotas are enforced at the repository boundary"
+            label={t('shell.admin.stat.plan')}
+            value={planName}
+            caption={t('shell.admin.stat.planCaption')}
           />
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-8">
           <div className="flex min-w-0 flex-col gap-6">
             <Panel
-              label="Quotas"
-              count={pluralise(data.limits.length, 'metric')}
+              label={t('shell.admin.quotas.label')}
+              count={t('shell.admin.quotas.count', {
+                count: data.limits.length,
+                metrics: formatNumber(data.limits.length, locale),
+              })}
             >
               <ul className="flex flex-col gap-4">
                 {data.limits.map((row) => {
                   const isStorage = row.metric === 'storage_bytes'
                   const used = isStorage
                     ? formatStorage(row.used)
-                    : formatNumber(row.used)
+                    : formatNumber(row.used, locale)
                   // An uncapped metric arrives as `null`, and a bar with no ceiling has
                   // no ratio to draw: show it filled, the way the billing meters do,
                   // rather than a red bar against a ceiling of one.
@@ -181,8 +239,11 @@ function AdminPage() {
                           max={1}
                           size="sm"
                           tone="brand"
-                          label={humaniseToken(row.metric)}
-                          valueText={`${used} / Unlimited`}
+                          label={labelFor(METRIC_LABEL, row.metric, t)}
+                          valueText={t('shell.admin.quotas.value', {
+                            used,
+                            limit: t('shell.admin.quotas.unlimited'),
+                          })}
                         />
                       </li>
                     )
@@ -202,12 +263,13 @@ function AdminPage() {
                               ? 'warning'
                               : 'brand'
                         }
-                        label={humaniseToken(row.metric)}
-                        valueText={
-                          isStorage
-                            ? `${used} / ${formatStorage(row.limit)}`
-                            : `${used} / ${formatNumber(row.limit)}`
-                        }
+                        label={labelFor(METRIC_LABEL, row.metric, t)}
+                        valueText={t('shell.admin.quotas.value', {
+                          used,
+                          limit: isStorage
+                            ? formatStorage(row.limit)
+                            : formatNumber(row.limit, locale),
+                        })}
                       />
                     </li>
                   )
@@ -216,17 +278,25 @@ function AdminPage() {
             </Panel>
 
             <Panel
-              label="Members"
-              count={formatNumber(data.members.length)}
+              label={t('shell.admin.members.label')}
+              count={formatNumber(data.members.length, locale)}
               flush
               bodyClassName="p-0"
             >
-              <Table label="Members of this workspace" fixed>
+              <Table label={t('shell.admin.members.table')} fixed>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Person</TableHead>
-                    <TableHead className="w-28">Role</TableHead>
-                    <TableHead className="w-32">Joined</TableHead>
+                    <TableHead>{t('shell.admin.members.person')}</TableHead>
+                    <TableHead className="w-28">
+                      {t('shell.admin.members.role')}
+                    </TableHead>
+                    {/* At 360px a fixed 128px date column left the person
+                        column too narrow to hold a name, so the join date is
+                        dropped there rather than truncated: `/settings/organization`
+                        is where a member's history belongs anyway. */}
+                    <TableHead className="hidden w-32 sm:table-cell">
+                      {t('shell.admin.members.joined')}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -254,10 +324,12 @@ function AdminPage() {
                           tone={ROLE_TONE[member.role] ?? 'neutral'}
                           size="sm"
                         >
-                          {humaniseToken(member.role)}
+                          {labelFor(ROLE_LABEL, member.role, t)}
                         </Badge>
                       </TableCell>
-                      <TableCell muted>{formatDate(member.joinedAt)}</TableCell>
+                      <TableCell muted className="hidden sm:table-cell">
+                        {formatDate(member.joinedAt, locale)}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -267,11 +339,11 @@ function AdminPage() {
 
           <aside className="flex min-w-0 flex-col gap-6">
             <Panel
-              label="Recent activity"
+              label={t('shell.admin.activity.label')}
               count={
                 data.audit.length === 0
                   ? undefined
-                  : formatNumber(data.audit.length)
+                  : formatNumber(data.audit.length, locale)
               }
               flush
             >
@@ -280,8 +352,8 @@ function AdminPage() {
                   <EmptyState
                     size="sm"
                     icon={<ScrollText />}
-                    title="Nothing recorded yet"
-                    description="Every write that matters is appended to the audit trail as it happens."
+                    title={t('shell.admin.activity.empty.title')}
+                    description={t('shell.admin.activity.empty.body')}
                   />
                 </div>
               ) : (
@@ -290,17 +362,30 @@ function AdminPage() {
                     <li key={row.id}>
                       <PanelRow>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate font-mono text-caption text-ink-2">
+                          {/* An action name and an entity id are identifiers, not
+                              copy: `code` sets them in the mono face and the
+                              direction layer keeps them left-to-right in `ar`. */}
+                          <code className="block truncate font-mono text-caption text-ink-2">
                             {row.action}
-                          </p>
+                          </code>
                           <p className="truncate text-caption text-ink-4">
-                            {row.entityType === null
-                              ? 'workspace'
-                              : `${row.entityType}${row.entityId === null ? '' : ` · ${row.entityId.slice(0, 8)}`}`}
+                            {row.entityType === null ? (
+                              t('shell.admin.activity.workspace')
+                            ) : (
+                              <code className="font-mono">
+                                {row.entityType}
+                                {row.entityId === null
+                                  ? ''
+                                  : ` · ${row.entityId.slice(0, 8)}`}
+                              </code>
+                            )}
                           </p>
                         </div>
-                        <span className="shrink-0 text-caption tabular-nums text-ink-4">
-                          {formatRelative(row.createdAt, now)}
+                        <span
+                          data-numeric
+                          className="shrink-0 text-caption tabular-nums text-ink-4"
+                        >
+                          {formatRelative(row.createdAt, now, locale)}
                         </span>
                       </PanelRow>
                     </li>
@@ -311,8 +396,11 @@ function AdminPage() {
 
             {data.actionCounts.length === 0 ? null : (
               <Panel
-                label="Busiest actions"
-                count={pluralise(data.actionCounts.length, 'action')}
+                label={t('shell.admin.actions.label')}
+                count={t('shell.admin.actions.count', {
+                  count: data.actionCounts.length,
+                  actions: formatNumber(data.actionCounts.length, locale),
+                })}
               >
                 <ul className="flex flex-col gap-3">
                   {data.actionCounts.map((row) => (
@@ -322,8 +410,8 @@ function AdminPage() {
                         max={Math.max(data.actionCounts[0]?.value ?? 1, 1)}
                         size="xs"
                         tone="accent"
-                        label={<span className="font-mono">{row.action}</span>}
-                        valueText={formatNumber(row.value)}
+                        label={<code className="font-mono">{row.action}</code>}
+                        valueText={formatNumber(row.value, locale)}
                       />
                     </li>
                   ))}
@@ -344,10 +432,10 @@ function AdminPending() {
         <HeaderSkeleton />
         <StatsSkeleton />
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-8">
-          <Card padding="none">
+          <Card variant="inset" padding="none">
             <RowsSkeleton rows={6} />
           </Card>
-          <Card padding="none">
+          <Card variant="inset" padding="none">
             <RowsSkeleton rows={4} />
           </Card>
         </div>

@@ -83,9 +83,9 @@ export function MenuRadioItem({
   ...props
 }: ComponentPropsWithoutRef<typeof DropdownMenu.RadioItem>) {
   return (
-    <DropdownMenu.RadioItem className={cn(itemClass, 'pr-8', className)} {...props}>
+    <DropdownMenu.RadioItem className={cn(itemClass, 'pe-8', className)} {...props}>
       {children}
-      <DropdownMenu.ItemIndicator className="absolute right-2.5 flex items-center text-brand">
+      <DropdownMenu.ItemIndicator className="absolute end-2.5 flex items-center text-brand">
         <Check className="size-4" strokeWidth={2.5} />
       </DropdownMenu.ItemIndicator>
     </DropdownMenu.RadioItem>

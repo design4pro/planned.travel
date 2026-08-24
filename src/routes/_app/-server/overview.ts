@@ -543,6 +543,16 @@ const createTripSchema = z
       value.endDate === '' ||
       value.endDate >= value.startDate,
     {
+      /**
+       * Defence in depth, and the one English string in this module.
+       *
+       * `-ui/new-trip-dialog.tsx` computes `datesOutOfOrder` and both disables
+       * the save button and names the problem on the Return field, so this
+       * refinement is never the sentence a reader sees — it is what stops a
+       * hand-rolled request from writing a backwards range. A key here would
+       * render as `shell.…` in whatever surfaced it, which is worse than a
+       * diagnostic in the source language.
+       */
       message: 'The return date cannot be before the departure date.',
       path: ['endDate'],
     },

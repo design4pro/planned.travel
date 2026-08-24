@@ -4,9 +4,15 @@
  *
  * `_app/route.tsx` calls this once in `beforeLoad`, which is what stops a child
  * loader from ever running for an anonymous visitor.
+ *
+ * The two states it cannot render around — a session with no workspace, and a
+ * membership revoked while the tab was open — are thrown, and their sentences
+ * are resolved here against the catalogue rather than written as English
+ * literals (`docs/SPEC.md` §8.6). See {@link shellFailure} for why the locale on
+ * that path comes from `Accept-Language`.
  */
 import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
+import { getRequest, getRequestHeader } from '@tanstack/react-start/server'
 
 import { getAuth } from '#/server/auth'
 import { authDb } from '#/server/auth/db'
@@ -18,7 +24,9 @@ import { getSession } from '#/server/auth/session'
 import { isOrganizationRole, roleSatisfies } from '#/server/auth/tenant'
 import { getDb } from '#/server/db/client'
 import { countUnread, createScope, getOrganization } from '#/server/repos'
+import { createTranslator, loadCatalogue, negotiate } from '#/lib/i18n'
 
+import type { MessageKey } from '#/lib/i18n'
 import type { OrganizationRole } from '#/server/auth/tenant'
 import type {
   ShellOrganization,
@@ -29,6 +37,22 @@ export interface ShellPayload {
   readonly session: ShellSession
   readonly unreadCount: number
   readonly role: OrganizationRole
+}
+
+/**
+ * A fatal shell state, in the reader's language.
+ *
+ * `Accept-Language` is the only signal available on this path, and deliberately
+ * so: both callers have already failed to resolve a workspace, and
+ * `getEffectiveSettings` — where the stored preference lives — needs the very
+ * tenant scope that could not be built. §8.3's chain ends at the header and then
+ * at `en`, which is exactly what is left.
+ */
+async function shellFailure(key: MessageKey): Promise<Error> {
+  const locale = negotiate({
+    acceptLanguage: getRequestHeader('accept-language') ?? null,
+  })
+  return new Error(createTranslator(locale, await loadCatalogue(locale))(key))
 }
 
 /** Narrows Better Auth's organization list without trusting its shape. */
@@ -87,9 +111,7 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
       (await firstOrganizationIdFor(auth, session.user.id))
 
     if (organizationId === null) {
-      throw new Error(
-        'Your account is not attached to a workspace yet. Sign out and back in to finish setting it up.',
-      )
+      throw await shellFailure('shell.session.noWorkspace')
     }
 
     const role = await membershipRoleFor(auth, {
@@ -97,7 +119,7 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
       organizationId,
     })
     if (!isOrganizationRole(role)) {
-      throw new Error('Your membership of this workspace has been removed.')
+      throw await shellFailure('shell.session.membershipRemoved')
     }
 
     const scope = createScope(getDb(), {
