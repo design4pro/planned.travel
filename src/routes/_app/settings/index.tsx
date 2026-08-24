@@ -20,9 +20,10 @@ import {
   Skeleton,
 } from '#/components/ui'
 import { localeDescriptor, useLocale, useTranslate } from '#/lib/i18n'
-import { loadProfile, saveRegionalSettings } from '../-server/settings'
+import { loadProfile } from '../-server/settings'
 import { formatDate } from '../-lib/format'
 import { SettingsRow, SettingsSection } from '../-ui/settings-nav'
+import { saveRegionalOverrides } from './-server/preferences'
 import {
   FOLLOW_DEFAULT,
   currencyLabel,
@@ -52,6 +53,11 @@ import {
  * Kingdom)" stored a value the select could not name and left the trigger blank
  * on the next load. The language row below is a signpost to `/settings/language`,
  * where the twenty-three native names have room to be read.
+ *
+ * **And this form no longer writes that column.** It saves through
+ * `saveRegionalOverrides`, whose input does not declare `locale`, so the tag
+ * this screen read at load time can never be written back over one the language
+ * screen set in another tab. One column, one writer.
  */
 export const Route = createFileRoute('/_app/settings/')({
   loader: () => loadProfile(),
@@ -107,12 +113,13 @@ function ProfilePage() {
   async function save(): Promise<void> {
     setSaving(true)
     try {
-      await saveRegionalSettings({
+      // Five fields, and no `locale`. The write this form used to make carried
+      // the tag its loader data was rendered with, so a second tab left open
+      // while the traveller changed language in the first put the stale one
+      // back on Save changes. `saveRegionalOverrides` cannot reach that column:
+      // its input does not declare it, so it is not in the `SET` clause.
+      await saveRegionalOverrides({
         data: {
-          // The locale this form holds is the one already stored. It is not
-          // editable here, and re-sending it is what keeps the write from
-          // clearing the override the language screen set.
-          locale: data.overrides.locale ?? '',
           timezone: timezone === FOLLOW_DEFAULT ? '' : timezone,
           currency: currency === FOLLOW_DEFAULT ? '' : currency,
           dateFormat: dateFormat === FOLLOW_DEFAULT ? '' : dateFormat,

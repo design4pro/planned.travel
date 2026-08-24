@@ -111,6 +111,17 @@ const messages = {
   /* ------------------------------------------------------- select family */
   /** Shown by `Select` and `Combobox` while nothing is chosen. */
   'select.placeholder': 'Select…',
+  /**
+   * A saved value the option list no longer offers — what a schema change or a
+   * withdrawn currency leaves behind. This is the compact form, shown on the
+   * control itself beside a warning glyph, so keep it short; `{value}` is the
+   * stored value verbatim, which is the only handle the reader has on what was
+   * dropped and is never translated.
+   */
+  'select.unavailable': 'Unavailable: {value}',
+  /** The same fact as a sentence, for a screen reader. */
+  'select.unavailableHint':
+    'The saved choice {value} is no longer available. Choose another.',
   'combobox.search': 'Search',
   'combobox.empty': 'No matches',
   'combobox.clear': 'Clear selection',

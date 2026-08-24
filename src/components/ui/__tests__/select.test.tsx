@@ -137,11 +137,15 @@ describe('SimpleSelect', () => {
    * The control was an empty box with a clean console, and saving it wrote a
    * value that made the next load blank as well.
    *
-   * `SimpleSelect` names the placeholder itself in that case, and carries
-   * `data-placeholder` so it is muted exactly like an untouched control: the
-   * honest picture, because the stored value is not one of the offered ones.
+   * Filling it with the placeholder cured the blank box and introduced a quieter
+   * defect in its place: a control that had dropped a saved preference was
+   * indistinguishable from one nobody had ever set. So it says so instead. The
+   * three channels below are the contract — the stored value on the face of the
+   * control, a state attribute the warning tone and border hang off, and a
+   * sentence a screen reader reaches through `aria-describedby` no matter which
+   * of the three ways this control got its name.
    */
-  it('falls back to the placeholder for a value no option carries', () => {
+  it('says a stored value was dropped rather than looking untouched', () => {
     render(
       <SimpleSelect
         options={options}
@@ -151,11 +155,34 @@ describe('SimpleSelect', () => {
       />,
     )
     const trigger = screen.getByRole('combobox', { name: 'Currency' })
-    expect(trigger.textContent).toContain('Choose a currency')
-    expect(trigger.hasAttribute('data-placeholder')).toBe(true)
+    expect(trigger.textContent).toContain('Unavailable: chf')
+    expect(trigger.textContent).not.toContain('Choose a currency')
+    expect(trigger.hasAttribute('data-orphaned')).toBe(true)
+    // Not muted as untouched: that was the misreading.
+    expect(trigger.hasAttribute('data-placeholder')).toBe(false)
+
+    const describedBy = trigger.getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+    expect(document.getElementById(describedBy ?? '')?.textContent).toBe(
+      'The saved choice chf is no longer available. Choose another.',
+    )
   })
 
-  it('carries the orphaned-value placeholder in the server HTML too', () => {
+  it('leaves an untouched control untouched', () => {
+    render(
+      <SimpleSelect
+        options={options}
+        value=""
+        ariaLabel="Currency"
+        placeholder="Choose a currency"
+      />,
+    )
+    const trigger = screen.getByRole('combobox', { name: 'Currency' })
+    expect(trigger.hasAttribute('data-orphaned')).toBe(false)
+    expect(trigger.getAttribute('aria-describedby')).toBeNull()
+  })
+
+  it('keeps the dropped-value signal in the server HTML too', () => {
     const html = renderToStaticMarkup(
       <SimpleSelect
         options={options}
@@ -164,7 +191,24 @@ describe('SimpleSelect', () => {
         placeholder="Choose a currency"
       />,
     )
-    expect(html).toContain('Choose a currency')
+    expect(html).toContain('Unavailable: chf')
+    expect(html).toContain('data-orphaned')
+  })
+
+  it('keeps a Field’s own description alongside the control’s', () => {
+    render(
+      <Field label="Currency" error="Pick one">
+        <SimpleSelect options={options} value="chf" />
+      </Field>,
+    )
+    const ids = (
+      screen.getByRole('combobox').getAttribute('aria-describedby') ?? ''
+    ).split(' ')
+    const text = ids.map((id) => document.getElementById(id)?.textContent)
+    expect(text).toContain(
+      'The saved choice chf is no longer available. Choose another.',
+    )
+    expect(text).toContain('Pick one')
   })
 
   /**

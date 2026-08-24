@@ -340,9 +340,17 @@ export const PINNED_YEAR = 2026
  *
  * The three `relativeTime` routes are exactly the three whose loader payload
  * carries the server's `today` — verified by reading the SSR document for all
- * six: `/dashboard`, `/trips` and `/journey` each contain one `today:"…"`, and
- * `/atlas`, `/vacay` and `/settings` contain none. `auditServerClock()` re-checks
- * that on every run, in both directions.
+ * seven: `/dashboard`, `/trips` and `/journey` each contain one `today:"…"`, and
+ * `/atlas`, `/vacay`, `/settings` and `/settings/language` contain none.
+ * `auditServerClock()` re-checks that on every run, in both directions.
+ *
+ * `/settings/language` is a route rather than a section of `/settings` because a
+ * twenty-four-option grid of native names cannot live in a `SettingsRow`, and it
+ * is photographed for the same reason it exists: it is the one screen whose whole
+ * subject is a control, so a regression in the chip grid — its wrap at 360px, the
+ * per-script line box, the selected treatment in either theme — shows up nowhere
+ * else in this table. Its loader reads two rows and no date, which is why it
+ * declares neither `relativeTime` nor `map`.
  *
  * `/atlas` is the one route with a live map, and the flag and the canvas have to
  * travel together: `settleMap()` fails a route that renders a `[data-map-ready]`
@@ -359,6 +367,7 @@ export const APP_ROUTES: ReadonlyArray<RouteCase> = [
   { name: 'journey', path: '/journey', ready: 'main', relativeTime: true },
   { name: 'vacay', path: `/vacay?year=${PINNED_YEAR}`, ready: 'main' },
   { name: 'settings', path: '/settings', ready: 'main' },
+  { name: 'settings-language', path: '/settings/language', ready: 'main' },
 ]
 
 /**

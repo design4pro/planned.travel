@@ -525,4 +525,48 @@ describe('the directory itself', () => {
       if (guard !== undefined) expect(source).toContain(guard)
     })
   }
+
+  /**
+   * The inline half, and the hole the two tables above could not see.
+   *
+   * A utility class is not the only way to write a transform. `progress.tsx`
+   * positioned its determinate fill with an inline
+   * `style={{ transform: 'translateX(-75%)' }}`, which no regex over Tailwind
+   * class names can match — and because the reduced-motion block in
+   * `src/styles/styles.css` resets `transform` to `none !important` on
+   * `[data-motion-transform]`, that single declaration painted **every**
+   * determinate bar as a completely full track for any reader with
+   * reduce-motion on. It survived three rounds: both directions were correct,
+   * every locale was correct, the console was clean, and the class-level guard
+   * above had nothing to look at.
+   *
+   * So inline declarations are inventoried the same way class ones are, and
+   * `transform` in particular is banned outright. `translate`, `scale` and
+   * `rotate` are separate CSS properties — measured against the installed
+   * Tailwind 4.3.3, which compiles `translate-x-*` to `translate` and
+   * `-scale-x-100` to `scale` — and they are not what that rule resets. An
+   * inline `transform` is therefore one of two mistakes: motion, which belongs
+   * in a class where the reset can reach it, or a value, which must never be
+   * reset at all.
+   */
+  const INLINE_TRANSFORM =
+    /\b(?:transform|translate|scale|rotate)\s*:\s*(?:`[^`]*`|'[^']*'|"[^"]*"|[\w.%-]+)/g
+
+  /** Every inline transform-family declaration in the directory, and its reason. */
+  const DECIDED_INLINE: Readonly<
+    Partial<Record<string, ReadonlyArray<string>>>
+  > = {
+    // The value, not motion: `translate` survives the reduced-motion reset,
+    // and the track's own `rtl:-scale-x-100` turns it round for Arabic.
+    'progress.tsx': ['translate: `-${100 - drawn}% 0`'],
+  }
+
+  for (const name of files) {
+    it(`${name} has decided every inline transform it uses`, () => {
+      const source = code(readFileSync(join(directory, name), 'utf8'))
+      const found = source.match(INLINE_TRANSFORM) ?? []
+      expect(found).toEqual(DECIDED_INLINE[name] ?? [])
+      expect(found.filter((entry) => entry.startsWith('transform'))).toEqual([])
+    })
+  }
 })

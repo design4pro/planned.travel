@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Select as SelectPrimitive } from 'radix-ui'
-import { Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, TriangleAlert } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import { useFieldControl } from './field'
@@ -80,6 +80,17 @@ export const SelectTrigger = React.forwardRef<
           'focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring',
           'data-[state=open]:border-brand',
           'data-[placeholder]:text-ink-4',
+          /*
+           * A value the option list no longer carries. Set by `SimpleSelect`,
+           * which is the only part of this family that knows every option's
+           * text; the boundary and the value both take the warning tone, and the
+           * glyph beside them is what stops colour from being the only channel
+           * (WCAG 1.4.1). Measured: #8a5305 on `--color-surface` is 6.33:1 and
+           * the dark ramp's #e0a32e is 7.68:1, so the text passes AA and the
+           * border clears the 3:1 that 1.4.11 asks of a control boundary.
+           */
+          'data-[orphaned]:border-warning data-[orphaned]:text-warning',
+          'data-[orphaned]:hover:border-warning',
           'disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-4 disabled:hover:border-edge-strong',
           'aria-[invalid=true]:border-danger aria-[invalid=true]:outline-danger',
           fieldSizes[size],
@@ -321,20 +332,30 @@ export const SimpleSelect = React.forwardRef<
      * (`''`), so a value of `en` made it render the supplied children, and the
      * children were `undefined`.
      *
-     * Naming the placeholder ourselves in that case is the honest picture: the
-     * control has nothing this reader can act on, so it reads exactly like an
-     * untouched one. `undefined` — never `null` — stays the value for the
-     * genuinely-empty case, because Radix reads "the caller supplied the text"
-     * off `children !== undefined` and a nullish child would block its own
-     * portal and leave the trigger blank again.
+     * The first fix put the placeholder there, which stopped the blank box but
+     * told the reader nothing: a control that has quietly dropped a saved
+     * preference looked exactly like one nobody had ever touched, and the only
+     * way to find out was to notice the wrong currency on an invoice. So the
+     * orphaned case says so — in the trigger, in the warning tone the trigger
+     * defines above, with a glyph so the tone is not carrying the meaning alone,
+     * and in a sentence a screen reader gets through `aria-describedby`, which
+     * is the one route that works whether the control is named by `ariaLabel`,
+     * by a surrounding `Field` or by its own text.
+     *
+     * `undefined` — never `null` — stays the child for the genuinely-empty case,
+     * because Radix reads "the caller supplied the text" off `children
+     * !== undefined` and a nullish child would block its own portal and leave the
+     * trigger blank again.
      */
     const orphaned = chosen !== '' && selectedLabel === undefined
+    const notice = React.useId()
     /*
      * Radix spreads the trigger's own props *after* its `data-placeholder`, so
-     * this wins, and `data-[placeholder]:text-ink-4` mutes the orphaned case the
-     * same way it mutes an empty one. Undefined leaves Radix's own answer alone.
+     * this wins. The empty value is muted like an untouched control; the orphaned
+     * one is not, because it is not untouched. Undefined leaves Radix's own
+     * answer alone.
      */
-    const placeholderFlag = selectedLabel === undefined ? '' : undefined
+    const placeholderFlag = chosen === '' ? '' : undefined
 
     return (
       <SelectPrimitive.Root
@@ -350,12 +371,26 @@ export const SimpleSelect = React.forwardRef<
           invalid={invalid}
           className={className}
           aria-label={ariaLabel}
+          aria-describedby={orphaned ? notice : undefined}
           data-placeholder={placeholderFlag}
+          data-orphaned={orphaned ? '' : undefined}
+          leading={
+            orphaned ? (
+              <TriangleAlert size={iconSizes[size]} className="text-warning" />
+            ) : undefined
+          }
         >
           <SelectValue placeholder={placeholderText}>
-            {orphaned ? placeholderText : selectedLabel}
+            {orphaned
+              ? t('ui.select.unavailable', { value: chosen })
+              : selectedLabel}
           </SelectValue>
         </SelectTrigger>
+        {orphaned ? (
+          <span id={notice} className="sr-only">
+            {t('ui.select.unavailableHint', { value: chosen })}
+          </span>
+        ) : null}
         <SelectContent>
           {options.map((option) => (
             <SelectItem

@@ -61,6 +61,7 @@ import {
   startPlanChange,
 } from '../-server/billing'
 import { SettingsSection } from '../-ui/settings-nav'
+import { PLAN_COPY } from './-lib/plan-copy'
 
 import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type { BillingInterval, BillingState, Plan, QuotaKey } from '#/lib/plans'
@@ -487,7 +488,7 @@ function PlanHero({
 
           <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
             <h2 className="font-display text-title font-bold tracking-tight text-inverse-on">
-              {plan.name}
+              {t(PLAN_COPY[plan.id].name)}
             </h2>
             <Badge tone={badge.tone} size="sm" dot>
               {t(badge.label)}
@@ -725,17 +726,19 @@ function PlanOption({
   const total =
     price === null ? 0 : price.amount * (price.perSeat ? seatCount : 1)
 
+  const copy = PLAN_COPY[plan.id]
+  const name = t(copy.name)
   const label = isCurrent
     ? t('settings.billing.plan.current')
     : plan.id === FREE_PLAN.id
-      ? t('settings.billing.plan.moveTo', { plan: plan.name })
+      ? t('settings.billing.plan.moveTo', { plan: name })
       : isCurrentPlan
         ? interval === 'yearly'
           ? t('settings.billing.plan.switchYearly')
           : t('settings.billing.plan.switchMonthly')
         : delta > 0
-          ? t('settings.billing.plan.upgradeTo', { plan: plan.name })
-          : t('settings.billing.plan.changeTo', { plan: plan.name })
+          ? t('settings.billing.plan.upgradeTo', { plan: name })
+          : t('settings.billing.plan.changeTo', { plan: name })
 
   const seatOptions = plan.seatBased
     ? Array.from(
@@ -769,9 +772,9 @@ function PlanOption({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h3 className="font-display text-subtitle font-bold tracking-tight text-ink">
-              {plan.name}
+              {t(copy.name)}
             </h3>
-            <p className="mt-0.5 text-caption text-ink-3">{plan.tagline}</p>
+            <p className="mt-0.5 text-caption text-ink-3">{t(copy.tagline)}</p>
           </div>
           {isCurrent ? (
             <Badge tone="brand" size="sm" className="shrink-0">
@@ -829,13 +832,13 @@ function PlanOption({
         <Separator weight="faint" />
 
         <ul className="flex min-w-0 flex-col gap-2">
-          {plan.features.slice(0, 4).map((feature) => (
-            <li key={feature.label} className="flex min-w-0 gap-2">
+          {copy.features.map((feature) => (
+            <li key={feature} className="flex min-w-0 gap-2">
               <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full bg-brand-subtle text-brand">
                 <Check aria-hidden className="size-2.5" strokeWidth={3} />
               </span>
               <span className="min-w-0 text-caption leading-relaxed text-ink-2">
-                {feature.label}
+                {t(feature)}
               </span>
             </li>
           ))}

@@ -42,8 +42,25 @@ export type ProgressProps = Omit<
 
 /**
  * A determinate bar, or an indeterminate sweep when `value` is `null`. The fill
- * moves with `translateX` on a full-width element rather than by animating
- * `width`, so a value ticking up never triggers a layout pass.
+ * is a full-width element pushed off the track by the `translate` property
+ * rather than sized with `width`, so a value ticking up never triggers a layout
+ * pass.
+ *
+ * Why `translate` and not `transform`. The two paint identically, but they are
+ * different CSS properties, and `src/styles/styles.css` resets exactly one of
+ * them: `[data-motion-transform] { transform: none !important }` inside the
+ * reduced-motion block, so that nothing translates, scales or rotates for a
+ * reader who asked us not to. A fill *positioned* with `transform` is caught by
+ * that reset — measured: every determinate bar painted a full track for anyone
+ * with reduce-motion on, which is a 40%-spent budget reading as spent. The
+ * offset is not motion, it is the value, and it has to survive.
+ *
+ * `translate` does survive it, and it is the same property Tailwind compiles
+ * `translate-x-*` to — which is why the switch thumb and the segmented tab pill
+ * already land correctly under the same reset. The transition still collapses,
+ * because the reduced-motion block also caps every `transition-duration`, so the
+ * fill arrives at the right place with no animation rather than at the wrong
+ * place with none.
  */
 export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
   (
@@ -94,11 +111,11 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
           max={max}
           className={cn(
             'relative w-full overflow-hidden rounded-full bg-surface-inset',
-            // The fill is a transform along the x axis — the one thing in this
-            // directory that no logical property can express — and the sweep
-            // keyframes are the same. Mirroring the whole track under RTL turns
-            // both round at once, and the track itself is a symmetrical pill, so
-            // there is nothing else in here for the flip to damage.
+            // The fill moves along the x axis — the one thing in this directory
+            // that no logical property can express — and the sweep keyframes do
+            // too. Mirroring the whole track under RTL turns both round at once,
+            // and the track itself is a symmetrical pill, so there is nothing
+            // else in here for the flip to damage.
             'rtl:-scale-x-100',
             trackSizes[size],
             className,
@@ -106,7 +123,17 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
           {...props}
         >
           <ProgressPrimitive.Indicator
-            data-motion-transform=""
+            /*
+             * Both attributes belong to the sweep and neither to the value. The
+             * sweep is a `transform` keyframe, so the reduced-motion reset must
+             * reach it; a frozen sweep would then sit at whichever position the
+             * base style gives it — a solid full track, indistinguishable from
+             * "finished" — so `data-motion-loop` swaps the movement for the
+             * gentle opacity pulse that block defines. A determinate fill has
+             * nothing to freeze: its offset is data, carried on `translate`.
+             */
+            data-motion-transform={indeterminate ? '' : undefined}
+            data-motion-loop={indeterminate ? '' : undefined}
             className={cn(
               'size-full rounded-full',
               tones[tone],
@@ -117,9 +144,7 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
                 : 'transition-transform duration-slow ease-out-quint',
             )}
             style={
-              indeterminate
-                ? undefined
-                : { transform: `translateX(-${100 - drawn}%)` }
+              indeterminate ? undefined : { translate: `-${100 - drawn}% 0` }
             }
           />
         </ProgressPrimitive.Root>

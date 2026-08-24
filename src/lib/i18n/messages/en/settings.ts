@@ -29,9 +29,13 @@
  *   why the two `LOCALES` lists this file replaced — eight and five
  *   region-tagged values labelled `English (United Kingdom)` — are gone rather
  *   than translated.
- * - *The plan catalogue.* Plan names, taglines and feature bullets live in
- *   `src/lib/plans.ts`, which the billing screen reads as data. Those belong to
- *   that module's own item.
+ * - *Plan prices and limits.* An amount, a seat ceiling and a storage quota are
+ *   facts about the product and stay in `src/lib/plans.ts`; the billing screen
+ *   reads them as data and formats them for the locale. The *words* — a plan's
+ *   name, its tagline, its feature bullets — are `billing.plan.<id>.*` below,
+ *   because English inside an Arabic shell is exactly what §8.6 forbids. The
+ *   marketing pages and the Stripe product description keep reading the English
+ *   in `plans.ts`, where an operator's record is what is wanted.
  *
  * **Numbers.** §8's rule on numbers inside messages: `count` picks the CLDR
  * plural branch and is never rendered. A number a reader sees arrives as
@@ -457,6 +461,43 @@ const messages = {
   'billing.interval.yearly': 'Yearly',
   /** The saving badge on the yearly pill. `{value}` is already formatted. */
   'billing.interval.saving': 'Save {value}',
+  /**
+   * The three plans, named and described.
+   *
+   * `src/lib/plans.ts` carries an English `name`, `tagline` and `features` for
+   * every plan, and keeps them: the marketing pages read them and Stripe is sent
+   * one as a product description, where English is the operator's record. On a
+   * settings screen it is an untranslated string in the middle of translated
+   * copy, which §8.6 does not admit. The mapping from a plan id to these keys is
+   * `../../../routes/_app/settings/-lib/plan-copy.ts`.
+   *
+   * A plan name is a proper noun — the word on the invoice — so a translation
+   * may legitimately keep it as it stands.
+   */
+  'billing.plan.free.name': 'Free',
+  'billing.plan.free.tagline': 'Plan your next two trips',
+  'billing.plan.free.feature.trips': 'Two trips at a time',
+  'billing.plan.free.feature.itinerary': 'Day-by-day itinerary and map',
+  'billing.plan.free.feature.lists': 'Packing lists and simple budgets',
+  'billing.plan.free.feature.atlas':
+    'The world map that tracks where you have been',
+  'billing.plan.solo.name': 'Solo',
+  'billing.plan.solo.tagline': 'For the traveller who plans everything',
+  'billing.plan.solo.feature.trips': 'Unlimited trips',
+  'billing.plan.solo.feature.modules':
+    'Every planning module — reservations, journal, budgets, packing',
+  'billing.plan.solo.feature.offline':
+    'Offline maps you download before you fly',
+  'billing.plan.solo.feature.export': 'PDF and calendar export',
+  'billing.plan.crew.name': 'Crew',
+  'billing.plan.crew.tagline': 'For families, friends and small teams',
+  'billing.plan.crew.feature.members': 'Up to ten members, billed per person',
+  'billing.plan.crew.feature.realtime':
+    'Real-time collaboration with live cursors',
+  'billing.plan.crew.feature.everything': 'Unlimited trips and every module',
+  'billing.plan.crew.feature.storage':
+    'Shared room for everyone’s photos and documents',
+
   'billing.plan.current': 'Current plan',
   'billing.plan.currentBadge': 'Current',
   'billing.plan.popular': 'Popular',

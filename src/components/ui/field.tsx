@@ -34,19 +34,25 @@ type ControlAriaProps = {
 
 /**
  * Called by Input / Textarea / the Select and Combobox triggers. Anything the
- * caller passed explicitly always wins over the value the surrounding `Field`
- * would have supplied.
+ * caller passed explicitly wins over the value the surrounding `Field` would
+ * have supplied — with one exception, because `aria-describedby` is an id *list*
+ * rather than a value. A control that describes itself (a select naming a stored
+ * choice its options no longer offer, say) and a `Field` that describes it with
+ * an error message are both right, and replacing one with the other drops a
+ * message a screen reader would otherwise read. The caller's ids come first, so
+ * the control's own words are heard before the row's.
  */
 export function useFieldControl(own: ControlAriaProps): ControlAriaProps {
   const field = useField()
   if (!field) return own
 
-  const inherited = [field.errorId, field.hintId].filter(Boolean).join(' ')
+  const describedBy = [own['aria-describedby'], field.errorId, field.hintId]
+    .filter(Boolean)
+    .join(' ')
 
   return {
     id: own.id ?? field.controlId,
-    'aria-describedby':
-      own['aria-describedby'] ?? (inherited === '' ? undefined : inherited),
+    'aria-describedby': describedBy === '' ? undefined : describedBy,
     'aria-invalid': own['aria-invalid'] ?? (field.invalid || undefined),
     disabled: own.disabled ?? (field.disabled || undefined),
   }

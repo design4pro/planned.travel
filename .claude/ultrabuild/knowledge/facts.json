@@ -701,5 +701,103 @@
       "capture"
     ],
     "invalidatesWhen": "the settings screen changes again"
+  },
+  {
+    "id": "chips-inert-until-hydrated",
+    "claim": "The language chips are server-rendered and inert until React hydrates, so a keyboard commit sent right after `waitForSelector('[role=\"radiogroup\"]')` fires a click that reaches no handler — no POST, no toast, no state change. Wait for a `__reactProps` key on a chip before driving the picker.",
+    "evidence": "Measured twice on http://localhost:3000/settings/language with e2e/.auth/demo.json. Probe A: focus `[data-testid=\"locale-chip-en\"]`, press Enter immediately → document.activeElement was the chip, aria-checked stayed on `locale-chip-workspace`, zero POST responses, `[data-sonner-toaster]` absent. Probe B: identical script with one `page.evaluate` in between → the click listener recorded `locale-chip-en`, POST 200 on `saveLanguagePreference_createServerFn_handler`, toast text 'planned.travel now speaks English'. Reliable gate: `Object.keys(chip).some(k => k.startsWith('__reactProps'))`.",
+    "measuredIn": "i18n round 8",
+    "scope": [
+      "capture",
+      "mechanical",
+      "critic"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "no-timeout-binary-on-this-mac",
+    "claim": "`timeout` is not available on this machine's zsh, so wrapping an ego-browser heredoc in it fails with command not found (exit 127) rather than guarding the known intermittent hang - use the Bash tool's own timeout parameter instead.",
+    "evidence": "`timeout 240 ego-browser nodejs <<'SCRIPT' ...` returned \"(eval):1: command not found: timeout\", exit=127; the identical heredoc without the wrapper succeeded.",
+    "measuredIn": "i18n round 8",
+    "scope": [
+      "capture",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "motion-transform-guard-misses-translate",
+    "claim": "`[data-motion-transform] { transform: none !important }` in the reduced-motion block does NOT touch the `translate`, `scale` or `rotate` properties that Tailwind 4.3.3 compiles `translate-x-*` and `-scale-x-*` to, so a position expressed as a class survives it while an inline `transform` does not.",
+    "evidence": "Compiled with the installed tailwindcss compile() API: `.translate-x-1/2` emits `translate: var(--tw-translate-x) var(--tw-translate-y)`, `.-scale-x-100` emits `scale:`, and `.transition-transform` emits `transition-property: transform, translate, scale, rotate`. Measured in Chromium against dist/client/assets/styles-*.css with reducedMotion:'reduce': a Progress value=40 fill reads computed translate '-60%' and occupies 0→125px of a 312px track, while the same fill written as `transform: translateX(-60%)` occupied the full 312px.",
+    "measuredIn": "i18n round 8",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "computed-style-mid-transition",
+    "claim": "getComputedStyle read immediately after focusing or disabling any element in src/components/ui returns the MID-TRANSITION value, because `transitionBase` transitions color, background-color, border-color and outline-color — which reads exactly like a broken utility. Wait ~400ms before asserting a state colour.",
+    "evidence": "Same orphaned Select trigger, Chromium: sampled straight after focus, outlineColor was rgb(138,83,5) (the pre-focus currentColor) and outlineWidth 2px; after a 400ms wait the same node reads rgb(37,98,86) = --color-ring #256256. Identically, `el.disabled = true` then an immediate read gave backgroundColor rgb(255,255,255) where a 500ms wait gives rgb(243,241,237) = --color-surface-2. A bare probe button with no transition showed the ring colour instantly, which is how the false 'outline-ring is a no-op' reading was disproved.",
+    "measuredIn": "i18n round 8",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "playwright-writes-missing-baselines",
+    "claim": "Playwright itself writes the missing PNGs on a \"snapshot doesn't exist\" failure, without --update-snapshots. They land untracked in e2e/__screenshots__ and must be reviewed, not assumed to be a baseline refresh someone performed.",
+    "evidence": "I never passed --update-snapshots; after the run `git status --porcelain e2e/__screenshots__` shows exactly four `??` entries: settings-language-{light,dark}-{chromium,mobile-safari}.png.",
+    "measuredIn": "i18n round 8",
+    "scope": [
+      "capture",
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "port-3000-belongs-to-another-project",
+    "claim": "Port 3000 is claimed by an unrelated `paperclip-run` checkout that ALSO answers /api/dev/seed with 200, and for a while two servers held 3000 at once - the foreign one on 127.0.0.1 and ours on [::1] - so which one answered `localhost:3000` depended on resolution order. resolve-port.sh rejected the foreign one on cwd and moved this tree to 3001, which is the only reason round 8's measurements are trustworthy. Our 3000 server has been killed so the port is unambiguously not ours; this worktree lives on 3001.",
+    "evidence": "lsof showed pid 31780 cwd .../paperclip-run-des-244-.../apps/web on 127.0.0.1:3000 and pid 99936 (ours) on [::1]:3000. Round 8's gate ran against PLAYWRIGHT_BASE_URL=http://localhost:3001, whose listener pid 33383 has cwd /Users/rafalwolak/dev/cloudflare/planned.travel.",
+    "measuredIn": "i18n round 8",
+    "scope": [
+      "mechanical",
+      "builder",
+      "capture",
+      "auditor"
+    ],
+    "invalidatesWhen": "the paperclip run stops and 3000 frees up"
+  },
+  {
+    "id": "fixed-mobile-nav-paints-mid-page",
+    "claim": "In a fullPage capture the mobile bottom nav paints at the VIEWPORT position, i.e. partway down the image, and appears to overlap whatever content is there. It is `fixed inset-x-0 bottom-0` in src/components/layout/mobile-nav.tsx. It is a capture artefact, NOT an overlap defect - do not file it, and do not 'fix' the layout because of it.",
+    "evidence": "Read off e2e/__screenshots__/visual.spec.ts/settings-language-light-mobile-safari.png, where the Trips/Vacay/Atlas/Journey bar sits across the language chip grid and clips the Arabic chip. grep of src/components/layout/mobile-nav.tsx line 16 confirms the fixed positioning.",
+    "measuredIn": "i18n round 8, orchestrator",
+    "scope": [
+      "critic",
+      "auditor",
+      "capture",
+      "builder"
+    ],
+    "invalidatesWhen": "the mobile nav stops being position-fixed"
+  },
+  {
+    "id": "only-parity-is-red-now",
+    "claim": "As of round 8 the ONLY red anywhere in this repo is the 23-test i18n parity suite. typecheck, lint and build are clean, Playwright is 138 passed / 5 skipped / 0 failed with the four new settings-language frames included, and unit tests are 2868 of 2891. Any new red is therefore this round’s doing and must not be attributed to a pre-existing floor.",
+    "evidence": "Measured by the orchestrator against port 3001 after killing the contested 3000 server: playwright 138/5/0, vitest Test Files 1 failed | 105 passed (106), Tests 23 failed | 2868 passed (2891).",
+    "measuredIn": "i18n round 8, orchestrator re-measurement",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "builder"
+    ],
+    "invalidatesWhen": "the translation packs land and parity goes green"
   }
 ]

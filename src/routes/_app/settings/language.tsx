@@ -13,8 +13,9 @@ import { Card, Skeleton } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { formatDate, formatMoneyMinor, formatNumber } from '#/lib/format'
 import { localeDescriptor, useLocale, useTranslate } from '#/lib/i18n'
-import { loadProfile, saveLanguagePreference } from '../-server/settings'
+import { saveLanguagePreference } from '../-server/settings'
 import { SettingsSection } from '../-ui/settings-nav'
+import { loadLanguageSettings } from './-server/preferences'
 
 import type { LocaleChoice } from '#/components/settings'
 import type { Locale } from '#/lib/i18n'
@@ -52,9 +53,16 @@ import type { Locale } from '#/lib/i18n'
  * its font stack and every string on every open screen change together, in
  * place, from one source. A local swap would have to reproduce that and would
  * disagree with the next full load.
+ *
+ * **Why the loader is `loadLanguageSettings` and not `loadProfile`.** This
+ * screen draws three values, and `loadProfile` pays six D1 reads for eleven —
+ * one of them `listMemberProfiles`, an unbounded `member INNER JOIN user` over
+ * the tenant. Scanning a member table to print a sample date is the read-path
+ * posture `docs/ARCHITECTURE.md` §6 rules out; the loader in
+ * `./-server/preferences` reads the two rows this screen is about.
  */
 export const Route = createFileRoute('/_app/settings/language')({
-  loader: () => loadProfile(),
+  loader: () => loadLanguageSettings(),
   pendingComponent: LanguagePending,
   errorComponent: LanguageError,
   component: LanguagePage,
@@ -76,9 +84,9 @@ function LanguagePage() {
   const t = useTranslate()
   const locale = useLocale()
 
-  const workspaceDefault = data.workspaceDefaults.locale
+  const workspaceDefault = data.workspace
   const [choice, setChoice] = useState<LocaleChoice>(
-    data.overrides.locale ?? FOLLOW_WORKSPACE,
+    data.override ?? FOLLOW_WORKSPACE,
   )
   const [pending, setPending] = useState<LocaleChoice | null>(null)
 
@@ -190,11 +198,7 @@ function LanguagePage() {
           />
           <Sample
             label={t('settings.language.sample.money')}
-            value={formatMoneyMinor(
-              SAMPLE_MINOR,
-              data.effective.currency,
-              locale,
-            )}
+            value={formatMoneyMinor(SAMPLE_MINOR, data.currency, locale)}
           />
         </dl>
       </SettingsSection>
