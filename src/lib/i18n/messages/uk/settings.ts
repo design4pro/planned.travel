@@ -18,6 +18,15 @@
  *
  * **«Тариф», not «план»**: Ukrainian keeps «план» for a trip's itinerary, so
  * the subscription is a tariff everywhere it is named on its own.
+ *
+ * **Два жорсткі піксельні бюджети**, виміряні в Chromium на `/settings` при
+ * 1440 (обидва `.truncate`, тож зайве обрізається, а не переноситься):
+ * підпис під кожним посиланням бічної навігації — 196 px, а кнопка
+ * регіонального `Select` — 206 px. Англійський оригінал сягає 189 px і
+ * 212 px відповідно, тож дослівний, довший переклад обрізається. Тому
+ * `nav.workspace.hint` — «Учасники та типові значення» (167 px), а
+ * `regional.workspaceDefault` починається з «Із простору — » (180 px із
+ * найдовшим значенням), а не з «Налаштування простору — » (240 px).
  */
 
 import type { TranslationOf } from '../../types'
@@ -33,17 +42,17 @@ const messages = {
 
   'nav.label': 'Розділи налаштувань',
   'nav.profile': 'Профіль',
-  'nav.profile.hint': 'Ви і те, як читаються дати та гроші',
+  'nav.profile.hint': 'Ви і ваш формат дат та грошей',
   'nav.language': 'Мова',
   'nav.language.hint': 'Мова, якою говорить кожен екран',
   'nav.appearance': 'Вигляд',
   'nav.appearance.hint': 'Тема, анімація та карта',
   'nav.security': 'Безпека',
-  'nav.security.hint': 'Пароль, другий фактор, ключі доступу',
+  'nav.security.hint': 'Пароль, другий фактор, ключі',
   'nav.notifications': 'Повідомлення',
   'nav.notifications.hint': 'Вхідні, пошта й телефон',
   'nav.workspace': 'Простір',
-  'nav.workspace.hint': 'Учасники та спільні налаштування',
+  'nav.workspace.hint': 'Учасники та типові значення',
   'nav.billing': 'Оплата',
   'nav.billing.hint': 'Тариф, місця та рахунки',
 
@@ -56,7 +65,7 @@ const messages = {
   'role.member': 'Учасник',
 
   /* -------------------------------------------------- regional option labels */
-  'regional.workspaceDefault': 'Налаштування простору — {value}',
+  'regional.workspaceDefault': 'Із простору — {value}',
   'regional.currency.AUD': 'австралійський долар',
   'regional.currency.CAD': 'канадський долар',
   'regional.currency.CHF': 'швейцарський франк',

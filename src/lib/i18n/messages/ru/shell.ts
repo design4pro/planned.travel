@@ -20,6 +20,12 @@
  * notification names a person whose gender we do not know. Nothing below agrees
  * with `{actorName}`: the copy uses a verbal noun («Расчёт от …») or the present
  * tense, both genderless.
+ *
+ * **Плитка героя на дашборде — 107 px**, измерено в Chromium на `/dashboard`
+ * при 360; и подпись, и её пояснение стоят в `.truncate`. «Путешественники»
+ * набирает 127 px в верхнем регистре и обрезается, поэтому здесь «Спутники»
+ * (68 px) — те, кто едет вместе с вами, — а пояснение сокращено до
+ * «в пространстве» (90 px вместо 121 px).
  */
 
 import type { TranslationOf } from '../../types'
@@ -186,8 +192,8 @@ const messages = {
 
   'dashboard.upNext': 'Ближайшая поездка',
   'dashboard.openPlan': 'Открыть план',
-  'dashboard.hero.travellers': 'Путешественники',
-  'dashboard.hero.travellersHint': 'в этом пространстве',
+  'dashboard.hero.travellers': 'Спутники',
+  'dashboard.hero.travellersHint': 'в пространстве',
   'dashboard.hero.dates': 'Даты поездки',
   'dashboard.hero.datesUnset': 'Не заданы',
   'dashboard.hero.datesHint': {

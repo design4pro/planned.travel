@@ -21,6 +21,15 @@
  * Polish keeps „plan” for the itinerary and says „abonament” where the sentence
  * is about what the workspace pays for, so a bare `Plan` label never reads as
  * the day-by-day plan of a trip.
+ *
+ * **Dwa twarde budżety pikselowe**, zmierzone w Chromium na `/settings` przy
+ * 1440 (oba `.truncate`, więc nadmiar zostaje ucięty, a nie zawinięty):
+ * podpowiedź pod każdym odnośnikiem nawigacji bocznej ma 196 px, a przycisk
+ * regionalnego `Select` 206 px. Angielski oryginał sięga odpowiednio 189 px i
+ * 212 px, więc dosłowny, dłuższy przekład zostaje przycięty. Dlatego
+ * `nav.security.hint` brzmi „Hasło, drugi składnik i klucze" (159 px), a
+ * `regional.workspaceDefault` zaczyna się od „Z przestrzeni — " (175 px z
+ * najdłuższą wartością), nie od „Ustawienie przestrzeni — " (235 px).
  */
 
 import type { TranslationOf } from '../../types'
@@ -42,7 +51,7 @@ const messages = {
   'nav.appearance': 'Wygląd',
   'nav.appearance.hint': 'Motyw, animacje i mapa',
   'nav.security': 'Bezpieczeństwo',
-  'nav.security.hint': 'Hasło, drugi składnik, klucze dostępu',
+  'nav.security.hint': 'Hasło, drugi składnik i klucze',
   'nav.notifications': 'Powiadomienia',
   'nav.notifications.hint': 'Skrzynka, e-mail i telefon',
   'nav.workspace': 'Przestrzeń',
@@ -58,7 +67,7 @@ const messages = {
   'role.member': 'Członek',
 
   /* -------------------------------------------------- regional option labels */
-  'regional.workspaceDefault': 'Ustawienie przestrzeni — {value}',
+  'regional.workspaceDefault': 'Z przestrzeni — {value}',
   'regional.currency.AUD': 'dolar australijski',
   'regional.currency.CAD': 'dolar kanadyjski',
   'regional.currency.CHF': 'frank szwajcarski',

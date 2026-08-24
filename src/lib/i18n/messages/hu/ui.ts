@@ -102,7 +102,7 @@ const messages = {
   'pagination.next': 'Következő oldal',
   'pagination.last': 'Utolsó oldal',
   'pagination.page': '{page}. oldal',
-  'pagination.current': '{pageCount} oldal közül a {page}.',
+  'pagination.current': '{page}. oldal / {pageCount}',
   'pagination.summary': '{total} elem közül {from}–{to} látható',
 } satisfies TranslationOf<typeof En>
 

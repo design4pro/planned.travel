@@ -123,52 +123,53 @@ const messages = {
   'inbox.preferencesAction': 'Értesítési beállítások',
 
   /* ----------------------------------------------- stored notification copy */
-  'notification.trip.invited.title': 'Meghívták a {tripTitle} utazásra',
+  'notification.trip.invited.title': 'Meghívták erre az utazásra: {tripTitle}',
   'notification.trip.invited.body': '{actorName} hozzáadta Önt az utazáshoz.',
-  'notification.trip.updated.title': 'A {tripTitle} frissült',
+  'notification.trip.updated.title': 'Frissült az utazás: {tripTitle}',
   'notification.trip.updated.body': '{actorName} módosította a tervet.',
   'notification.trip.member_added.title':
-    '{memberName} csatlakozott a {tripTitle} utazáshoz',
+    '{memberName} csatlakozott az utazáshoz: {tripTitle}',
   'notification.trip.member_added.body':
     'Látja az útitervet, a foglalásokat és a költségeket.',
   'notification.trip.member_removed.title':
-    '{memberName} kilépett a {tripTitle} utazásból',
+    '{memberName} kilépett az utazásból: {tripTitle}',
   'notification.trip.member_removed.body':
     'Az utazáshoz való hozzáférése megszűnt.',
   'notification.trip.starting_soon.title': {
-    one: 'A {tripTitle} {days} nap múlva indul',
-    other: 'A {tripTitle} {days} nap múlva indul',
+    one: '{days} nap múlva indul: {tripTitle}',
+    other: '{days} nap múlva indul: {tripTitle}',
   },
   'notification.trip.starting_soon.body':
     'Ideje átnézni a csomaglistát és a foglalásokat.',
-  'notification.reservation.reminder.title': 'A {title} hamarosan következik',
+  'notification.reservation.reminder.title': 'Hamarosan következik: {title}',
   'notification.reservation.reminder.body':
     'Az időpontot és a visszaigazoló kódot a foglalásnál találja.',
-  'notification.reservation.confirmed.title': 'A {title} megerősítve',
+  'notification.reservation.confirmed.title': 'Megerősítve: {title}',
   'notification.reservation.confirmed.body':
-    'A foglalás megerősítettként szerepel a {tripTitle} utazásban.',
+    'A foglalás megerősítettként szerepel ebben az utazásban: {tripTitle}.',
   'notification.expense.added.title': '{actorName} költséget rögzített',
-  'notification.expense.added.body': '{title} a {tripTitle} utazásban.',
+  'notification.expense.added.body': '{title} — utazás: {tripTitle}.',
   'notification.expense.settled.title': '{actorName} kiegyenlítette a számlát',
   'notification.expense.settled.body':
-    'A {tripTitle} utazás egyenlege ki van fizetve.',
+    'Az egyenleg ki van fizetve ebben az utazásban: {tripTitle}.',
   'notification.list.assigned.title': '{actorName} Önhöz rendelt egy tételt',
-  'notification.list.assigned.body': '{title} a {tripTitle} utazásban.',
+  'notification.list.assigned.body': '{title} — utazás: {tripTitle}.',
   'notification.collab.message.title':
-    '{actorName} írt a {tripTitle} utazásban',
+    '{actorName} írt ebben az utazásban: {tripTitle}',
   'notification.collab.message.body': '„{preview}”',
-  'notification.collab.poll.title': 'Szavazás indult a {tripTitle} utazásban',
+  'notification.collab.poll.title':
+    'Szavazás indult ebben az utazásban: {tripTitle}',
   'notification.collab.poll.body': '„{question}”',
   'notification.organization.invited.title':
-    'Meghívták a {organizationName} munkaterületre',
+    'Meghívták erre a munkaterületre: {organizationName}',
   'notification.organization.invited.body':
     'Fogadja el, és csatlakozik a munkaterülethez és mindenhez, amit ott megosztanak.',
-  'notification.journey.published.title': 'A {title} megjelent',
+  'notification.journey.published.title': 'Megjelent: {title}',
   'notification.journey.published.body':
     'A linkkel mostantól bárki elolvashatja a naplót.',
   'notification.billing.plan_changed.title': 'Megváltozott a csomagja',
   'notification.billing.plan_changed.body':
-    'A {organizationName} mostantól a {plan} csomagot használja.',
+    '{organizationName} mostantól ezt a csomagot használja: {plan}.',
   'notification.fallback.title': 'Valami megváltozott a munkaterületén',
   'notification.fallback.body':
     'Nyissa meg az utazást, hogy lássa, mi volt az.',
@@ -253,7 +254,7 @@ const messages = {
   },
 
   'dashboard.storage.label': 'Tárhely',
-  'dashboard.storage.count': '{used} a {limit} keretből',
+  'dashboard.storage.count': '{used} / {limit}',
   'dashboard.storage.files': {
     one: '{files} fájl az összes utazásban, a fotókkal és a jegyekkel együtt.',
     other:

@@ -18,6 +18,15 @@
  *
  * **«Тариф», not «план»**: Russian keeps «план» for a trip's itinerary, so the
  * subscription is a tariff everywhere it is named on its own.
+ *
+ * **Два жёстких пиксельных бюджета**, измеренных в Chromium на `/settings`
+ * при 1440 (оба `.truncate`, поэтому лишнее обрезается, а не переносится):
+ * подпись под каждой ссылкой боковой навигации — 196 px, а кнопка
+ * регионального `Select` — 206 px. Английский оригинал доходит до 189 px и
+ * 212 px соответственно, так что дословный, более длинный перевод обрезается.
+ * Поэтому `nav.language.hint` — «Язык, которым говорят экраны» (179 px), а
+ * `regional.workspaceDefault` начинается с «Пространство — » (197 px с самым
+ * длинным значением), а не с «Настройка пространства — » (261 px).
  */
 
 import type { TranslationOf } from '../../types'
@@ -33,13 +42,13 @@ const messages = {
 
   'nav.label': 'Разделы настроек',
   'nav.profile': 'Профиль',
-  'nav.profile.hint': 'Вы и то, как читаются даты и деньги',
+  'nav.profile.hint': 'Вы и ваш формат дат и денег',
   'nav.language': 'Язык',
-  'nav.language.hint': 'Язык, на котором говорит каждый экран',
+  'nav.language.hint': 'Язык, которым говорят экраны',
   'nav.appearance': 'Оформление',
   'nav.appearance.hint': 'Тема, анимация и карта',
   'nav.security': 'Безопасность',
-  'nav.security.hint': 'Пароль, второй фактор, ключи доступа',
+  'nav.security.hint': 'Пароль, второй фактор и ключи',
   'nav.notifications': 'Уведомления',
   'nav.notifications.hint': 'Входящие, почта и телефон',
   'nav.workspace': 'Пространство',
@@ -56,7 +65,7 @@ const messages = {
   'role.member': 'Участник',
 
   /* -------------------------------------------------- regional option labels */
-  'regional.workspaceDefault': 'Настройка пространства — {value}',
+  'regional.workspaceDefault': 'Пространство — {value}',
   'regional.currency.AUD': 'австралийский доллар',
   'regional.currency.CAD': 'канадский доллар',
   'regional.currency.CHF': 'швейцарский франк',

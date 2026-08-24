@@ -1273,5 +1273,132 @@
     ],
     "id": "the-dev-server-for-this-worktree-is-already",
     "measuredIn": "round-11"
+  },
+  {
+    "claim": "The demo fixture's locale is contended mid-round: a capture that clicks a locale chip and then navigates can be repainted in ANOTHER agent's locale before the screenshot lands. Re-read document.documentElement.lang immediately before page.screenshot and retry the whole chip-click if it drifted.",
+    "evidence": "A capture loop that set lang='hu' (waitForFunction passed), then goto('/dashboard', networkidle) + 400ms, produced a fully RUSSIAN dashboard PNG — 'Мои поездки', 'БЛИЖАЙШАЯ ПОЕЗДКА', 'ХРАНИЛИЩЕ'. The /notifications frame from the same context was correctly Hungarian. Adding a post-navigation `lang === tag` guard with up to 4 retries produced correct frames for hu/ar/el/tr on the first attempt each.",
+    "scope": [
+      "capture",
+      "builder",
+      "critic"
+    ],
+    "id": "the-demo-fixture-s-locale-is-contended-mid",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "There are TWO live shots slugs with different inodes and BOTH carry this round's round-10 item directories: .claude/ultrabuild/shots/i18n/round-10 and .claude/ultrabuild/shots/wersje-jezykowe-aplikacji-na-podstawie-zrodla-ht/round-10. Each already held app-shell-i18n/ and settings-module-i18n/ from parallel builders. A reader looking in only one will think half the round's frames are missing.",
+    "evidence": "stat -f '%i %N' gives 422053193 for i18n/round-10 and 422510865 for wersje-.../round-10 — distinct directories, not a symlink. `find` shows i18n/round-10/app-shell-i18n/*.png (admin-ar-dark-1440.png, dashboard-ar-light-360.png, state-dashboard-empty-dark-360.png …) and `ls` shows the same two item names under wersje-.../round-10.",
+    "scope": [
+      "capture",
+      "auditor",
+      "critic"
+    ],
+    "id": "there-are-two-live-shots-slugs-with-different",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A locale-copy overflow audit must filter on `.truncate` specifically and print textContent, not just count clipped nodes. The raw clipped-node count is dominated by seeded English data and by an RTL Progress-track artefact, both of which are noise; the real copy defects hide as a handful of .truncate Select triggers at 360px.",
+    "evidence": "Playwright chromium, 360px, /settings: filtering `main *, nav *` on scrollWidth > clientWidth + 1 AND classList.contains('truncate') printed exactly the offenders with their text — el 'Προεπιλογή χώρου εργασίας — 23 Ιουν 2026' 279>236 (plus 3 more), hu 'Munkaterületi alapérték — 23 jún. 2026' 241>236, tr 'Çalışma alanı varsayılanı — 23 Haz 2026' 247>236, en []. Meanwhile ar's raw clipped count on /dashboard was 14 vs en's 8-10, but the whole extra set deduped to one class signature: 'DIV.relative w-full overflow-hidden rounded-full bg-surface-inset' — the Progress track under dir=rtl, which is overflow-hidden and therefore invisible.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "a-locale-copy-overflow-audit-must-filter-on",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Translated copy can be sized against a `.truncate` budget exactly, without editing a file and re-measuring: sample the target element's computed style in the live page, feed it to a canvas 2d context (including `letterSpacing` and applying `textTransform: uppercase` yourself), and `measureText` candidate strings. The canvas number equals the element's scrollWidth to the pixel.",
+    "evidence": "Playwright chromium + e2e/.auth/demo.json on http://localhost:3001/settings at 1440. Sampled `span.hidden.truncate.text-caption` (font 'normal 400 12px/16.2px Geist, …', clientWidth 196). The live element's textContent was 'Мова, якою говорить кожен екран' with scrollWidth 196; canvas measureText of that same string returned 196. The four hard budgets measured this way: settings nav hint 196px, regional Select trigger 206px, dashboard hero stat tile 107px (11px/600/0.88px letter-spacing/uppercase), dashboard section label 95px. English's own widest values are 189px and 212px respectively — i.e. English already overflows the Select trigger, so 'fits English' is the wrong bar; measure the number.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "translated-copy-can-be-sized-against-a-truncate",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The session scratchpad is SHARED between concurrently running agents, and a file you wrote there can be silently overwritten mid-session by another agent's file of the same name. A scratch script's output can therefore change under you and manufacture a phantom defect. Give scratch files an item-unique name, and re-verify any surprising result with a freshly written file.",
+    "evidence": "I wrote `<scratchpad>/diff.mjs` and ran it (output format `===== cs (en keys 859) =====`, orphan 0). Later the identical command printed a completely different format (`cs/auth: en=248 loc=256 … orphan=8`) listing 'validation.passwordShort.few' as an orphan — another agent's script that flattens plural branches into dotted keys, where a Slavic few/many branch looks like an extra key. `head -5` on the path showed source I never wrote. Re-running an identically-scoped check from a fresh `verify-slavic-$$.mjs` gave missing=0 orphan=0 tokendiff=0 identical=0 pluralGap=0 shapeDrift=0 blank=0 for all four locales, agreeing with the parity suite's 177 passing assertions. The scratchpad also held 40+ files from other items (round11.json, fix_hu.py, ultrabuild-round13.js …).",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-session-scratchpad-is-shared-between-concurrently-running",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "An overflow scan over `main *, header *, nav *` counts Skeleton shimmers, whose `::before` sweep is far wider than the box, so the same locale scores differently run to run (ru went 55 -> 64 with no code change). Filtering to leaf nodes (`children.length === 0 && textContent.trim()`) makes the count stable and comparable: English is then exactly 22 clipped leaves at BOTH 360 and 1440 on this demo fixture, versus the 51/32 the unfiltered scan reports.",
+    "evidence": "Same 8 authenticated pages, Playwright chromium port 3001. Unfiltered repeat runs of ru gave 55 then 64 at 360 and 32 then 41 at 1440; the extra rows were all `DIV.relative w-full overflow-hidden rounded-…` with EMPTY textContent and ratios like 294<529 and 1046<2071 — Skeletons mid-load. With the leaf filter plus a 700ms settle: en 22/22, cs 22/22, pl 25/25, ru 26/22, uk 26/26, and every non-English extra was a dashboard date caption. The 22 English leaves are five seeded reservation titles ('Hotel Gracery Shinjuku · 2 twin rooms' 233>165 etc.) plus sr-only avatar names at clientWidth 1.",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "id": "an-overflow-scan-over-main-header-nav-counts",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The demo auth fixture is currently pinned to Ukrainian, so every authenticated Playwright frame renders in `uk` against English baselines. This is one root cause behind all 19 screenshot failures — do not treat them as 19 independent layout regressions.",
+    "evidence": "test-results/visual-authenticated-routes-dashboard-renders-in-light-chromium/error-context.md page snapshot contains 'Панель planned.travel', 'Основні розділи', 'Мої поїздки', 'Нова поїздка', 'Тема: як у системі'. The day-boundary spec's own text diff prints Ukrainian ('2 дні тому' vs '1 день тому'). A full run (which includes the setup project that calls pinDemoLanguage()) did NOT reset it back to en.",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor",
+      "builder"
+    ],
+    "id": "the-demo-auth-fixture-is-currently-pinned-to",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Non-Playwright gate is fully green on this tree: typecheck, lint, build all exit 0 and vitest is 3168/3168 across 114 files with zero parity failures.",
+    "evidence": "pnpm typecheck exit 0 (no output); pnpm lint exit 0 ('ESLint: No issues found'); pnpm test exit 0 (Test Files 114 passed (114), Tests 3168 passed (3168), 11.09s); pnpm build exit 0 ('✓ built in 1.52s').",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "non-playwright-gate-is-fully-green-on-this",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The dev server for this worktree was already up on 3001 and resolve-port.sh reused it without starting anything, so --start was a no-op this round.",
+    "evidence": "scripts/ultrabuild/resolve-port.sh --start printed 'resolve-port: reusing the server already answering on 3001' then '3001', exit 0.",
+    "scope": [
+      "mechanical",
+      "capture"
+    ],
+    "id": "the-dev-server-for-this-worktree-was-already",
+    "measuredIn": "round-11"
+  },
+  {
+    "id": "a-dirty-demo-locale-row-fails-nineteen-baselines-at-once",
+    "appliesTo": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "claim": "Nineteen red screenshot comparisons across every authenticated route can be ONE root cause: `[shoot] could not pin the demo traveller's language`. A builder that verifies a translation by clicking a chip on /settings/language writes a real value into user_settings.locale, and every later frame is then a picture of the wrong language. Measured after round 13: user_settings held locale='uk' for the demo traveller and 'pl' for a second user, while organization_settings held 'en'. Before blaming nineteen frames on nineteen layout faults, grep the Playwright output for '[shoot] could not pin' - it is printed once, by the setup project, far above the failure list.",
+    "measuredIn": "round-13"
+  },
+  {
+    "id": "pindemolanguage-clicks-before-hydration",
+    "appliesTo": [
+      "builder",
+      "auditor"
+    ],
+    "claim": "`pinDemoLanguage()` in e2e/helpers/shoot.ts navigates with a bare `page.goto('/settings/language')` and then waits only for the chip to be VISIBLE before clicking it. A visible chip is not a hydrated chip, and this is the same race already measured in round 11 for locale-switching probes, where the fix was `waitUntil: 'networkidle'` plus `scrollIntoViewIfNeeded()`. The click lands, nothing happens, `data-selected` never arrives and the helper reports it cannot pin. So the mechanism that exists to clean a dirty locale row is defeated by the very condition it exists to clean up after.",
+    "measuredIn": "round-13"
+  },
+  {
+    "id": "a-content-filter-can-kill-one-builder-and-only-one",
+    "appliesTo": [
+      "orchestrator"
+    ],
+    "claim": "Round 13 lost `build:translations-cjk` to 'API Error: Output blocked by content filtering policy' while the other six agents finished normally. It is not a usage limit and not a crash: the round completes, reports 6 done / 1 error, and the item simply stays at its previous status. Treat it like any other unfinished item - re-carry it next round - rather than as a reason to re-run the whole round.",
+    "measuredIn": "round-13"
   }
 ]

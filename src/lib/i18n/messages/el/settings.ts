@@ -53,7 +53,7 @@ const messages = {
   'role.member': 'Μέλος',
 
   /* -------------------------------------------------- regional option labels */
-  'regional.workspaceDefault': 'Προεπιλογή χώρου εργασίας — {value}',
+  'regional.workspaceDefault': 'Του χώρου εργασίας — {value}',
   'regional.currency.AUD': 'Δολάριο Αυστραλίας',
   'regional.currency.CAD': 'Δολάριο Καναδά',
   'regional.currency.CHF': 'Φράγκο Ελβετίας',

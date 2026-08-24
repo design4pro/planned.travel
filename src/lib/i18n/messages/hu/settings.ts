@@ -56,7 +56,7 @@ const messages = {
   'role.member': 'Tag',
 
   /* -------------------------------------------------- regional option labels */
-  'regional.workspaceDefault': 'Munkaterületi alapérték — {value}',
+  'regional.workspaceDefault': 'A munkaterületről — {value}',
   'regional.currency.AUD': 'ausztrál dollár',
   'regional.currency.CAD': 'kanadai dollár',
   'regional.currency.CHF': 'svájci frank',
@@ -143,9 +143,9 @@ const messages = {
   'appearance.theme.darkHint': 'Meleg szénszürke, soha nem fekete',
   'appearance.theme.system': 'Rendszer',
   'appearance.theme.systemHint': 'Az eszközt követi',
-  'appearance.theme.showing': 'Most a {palette} paletta látszik.',
+  'appearance.theme.showing': 'Jelenleg ez a paletta látszik: {palette}.',
   'appearance.theme.showingSystem':
-    'Most a {palette} paletta látszik, az eszközét követve.',
+    'Jelenleg ez a paletta látszik: {palette} — az eszközét követve.',
   'appearance.palette.light': 'világos',
   'appearance.palette.dark': 'sötét',
   'appearance.motion.title': 'Mozgás és térképek',
@@ -165,7 +165,7 @@ const messages = {
   'security.error': 'A biztonsági beállítások nem töltődtek be',
   'security.unverified.title': 'Az e-mail-címe még nincs megerősítve',
   'security.unverified.body':
-    'A jelszó-visszaállításokat és az utazási meghívókat a {email} címre küldjük. A megerősítés az, ami bizonyítja, hogy a cím az Öné.',
+    'A jelszó-visszaállításokat és az utazási meghívókat erre a címre küldjük: {email}. A megerősítés az, ami bizonyítja, hogy a cím az Öné.',
   'security.unverified.action': 'Küldje el újra a linket',
   'security.signin.title': 'Belépés',
   'security.signin.description':
@@ -255,12 +255,12 @@ const messages = {
   'workspace.summary.createdRecently': 'nemrég',
   'workspace.summary.billingAction': 'Csomag és számlázás',
   'workspace.seats.label': 'Használt helyek',
-  'workspace.seats.value': '{used} a {limit} helyből',
+  'workspace.seats.value': '{used} / {limit}',
   'workspace.seats.note':
     'A nyitott meghívók beleszámítanak a helyekbe, így egy munkaterület soha nem lépheti túl azt a csomagot, amelyet fizet.',
   'workspace.seatsFull.title': 'Ebben a csomagban minden hely betöltve',
   'workspace.seatsFull.body':
-    '{members} és {invitations} kitölti mind a {limit} helyet.',
+    '{members} és {invitations} tölti be az összes helyet ({limit}).',
   'workspace.seatsFull.action': 'Helyek hozzáadása',
   'workspace.members.count': {
     one: '{value} tag',

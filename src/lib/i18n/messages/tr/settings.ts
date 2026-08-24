@@ -57,7 +57,7 @@ const messages = {
   'role.member': 'Üye',
 
   /* -------------------------------------------------- regional option labels */
-  'regional.workspaceDefault': 'Çalışma alanı varsayılanı — {value}',
+  'regional.workspaceDefault': 'Çalışma alanından — {value}',
   'regional.currency.AUD': 'Avustralya doları',
   'regional.currency.CAD': 'Kanada doları',
   'regional.currency.CHF': 'İsviçre frangı',

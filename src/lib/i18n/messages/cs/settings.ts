@@ -18,6 +18,15 @@
  *
  * **„Tarif“, not „plán“**: Czech keeps „plán“ for a trip's itinerary, so the
  * subscription is a tariff everywhere it is named on its own.
+ *
+ * **Dva tvrdé pixelové rozpočty**, změřené v Chromiu na `/settings` při 1440
+ * (obojí `.truncate`, takže přetečení text uřízne, ne zalomí): nápověda pod
+ * každým odkazem v postranní navigaci má 196 px a spouštěč regionálního
+ * `Select` 206 px. Anglický originál jde na 189 px, resp. 212 px, takže
+ * doslovný delší překlad se ořízne. Proto je `nav.language.hint` „Jazyk,
+ * kterým mluví celá aplikace" (184 px) a `regional.workspaceDefault` začíná
+ * „Podle prostoru — " (185 px i s nejdelší hodnotou), ne rozvláčnějším
+ * „Nastavení prostoru — " (211 px).
  */
 
 import type { TranslationOf } from '../../types'
@@ -35,7 +44,7 @@ const messages = {
   'nav.profile': 'Profil',
   'nav.profile.hint': 'Vy a zápis dat i peněz',
   'nav.language': 'Jazyk',
-  'nav.language.hint': 'Jazyk, kterým mluví každá obrazovka',
+  'nav.language.hint': 'Jazyk, kterým mluví celá aplikace',
   'nav.appearance': 'Vzhled',
   'nav.appearance.hint': 'Téma, animace a mapa',
   'nav.security': 'Zabezpečení',
@@ -56,7 +65,7 @@ const messages = {
   'role.member': 'Člen',
 
   /* -------------------------------------------------- regional option labels */
-  'regional.workspaceDefault': 'Nastavení prostoru — {value}',
+  'regional.workspaceDefault': 'Podle prostoru — {value}',
   'regional.currency.AUD': 'australský dolar',
   'regional.currency.CAD': 'kanadský dolar',
   'regional.currency.CHF': 'švýcarský frank',

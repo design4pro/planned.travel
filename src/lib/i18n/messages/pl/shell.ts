@@ -20,6 +20,13 @@
  * is therefore written so that no word agrees with `{actorName}` — a passive
  * ("Plan zmieniony przez {actorName}"), a verbal noun ("Rozliczenie od
  * {actorName}") or the present tense, which is genderless in Polish.
+ *
+ * **Etykieta sekcji na dashboardzie — 95 px**, zmierzone w Chromium na
+ * `/dashboard` przy 360: licznik obok niej jest `shrink-0`, więc cała reszta
+ * wiersza przypada na `.truncate`. „Twoje wyjazdy" wersalikami zajmuje
+ * 104 px i zostaje ucięte, dlatego `dashboard.trips.label` to samo
+ * „Wyjazdy" (57 px) — polszczyzna w nagłówkach i tak opuszcza zaimek
+ * dzierżawczy, który angielski zachowuje.
  */
 
 import type { TranslationOf } from '../../types'
@@ -248,7 +255,7 @@ const messages = {
     other: '{bookings} rezerwacji w drodze',
   },
 
-  'dashboard.trips.label': 'Twoje wyjazdy',
+  'dashboard.trips.label': 'Wyjazdy',
   'dashboard.trips.all': 'Wszystkie wyjazdy',
   'dashboard.trips.empty.title': 'Jeszcze żadnych wyjazdów',
   'dashboard.trips.empty.body':
