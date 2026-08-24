@@ -87,16 +87,23 @@ language a runtime choice; `09-S5` records why this plan does not build it, and 
 
 ### The rows, their waves and their stages
 
-| Row      | Stage   | Wave | Moves                          |
-| -------- | ------- | ---- | ------------------------------ |
-| `ACC-03` | `09-S1` | 1    | partial → done                 |
-| `ACC-02` | `09-S2` | 1    | partial → done                 |
-| `ACC-01` | `09-S3` | 1    | partial → done                 |
-| `ACC-07` | `09-S4` | 1    | absent → done                  |
-| `ACC-06` | `09-S5` | 1    | partial → partial, **BLOCKED** |
-| `EXT-04` | `09-S6` | 1    | absent → done                  |
-| `ACC-05` | `09-S7` | 2    | partial → done                 |
-| `ACC-04` | `09-S8` | 3    | partial → done                 |
+| Row      | Stage   | Wave | Moves                             |
+| -------- | ------- | ---- | --------------------------------- |
+| `ACC-03` | `09-S1` | 1    | partial → done                    |
+| `ACC-02` | `09-S2` | 1    | partial → done                    |
+| `ACC-01` | `09-S3` | 1    | partial → done                    |
+| `ACC-07` | `09-S4` | 1    | absent → done                     |
+| `ACC-06` | `09-S5` | 1    | partial → partial, **BLOCKED**    |
+| `EXT-04` | `09-S6` | 1    | absent → done                     |
+| `ACC-05` | `09-S7` | 2    | partial → done                    |
+| `ACC-04` | `09-S8` | 3    | partial → partial, **stays open** |
+
+Two rows do not reach **done**, and both say so in the same words as the stage that owns them.
+`ACC-06` is blocked outright (`09-S5`). `ACC-04` is the interesting one: `09-S8` closes five of the
+nine behaviours the row names and defers the other four, because the surface each of those four
+would govern belongs to another plan or does not exist yet. The ledger records
+`partial → partial` because that is what the stage records; a plan whose summary table and whose
+stage disagree about a row is a plan that has stopped being readable.
 
 The wave column is `README.md`'s table, unchanged. `ACC-08` is not in it: it is excluded on
 architectural grounds and on the dependency freeze, and both arguments live in
@@ -2010,14 +2017,21 @@ twelve more transitively.
 - `e2e/account-and-settings.visual.spec.ts` — append.
 - `e2e/__screenshots__/account-and-settings.visual.spec.ts/` — append.
 
-**Two files in this list are touched by more than one plan, in different waves, and both are named
-here as `check-plan-collisions.mjs` requires.** `src/routes/_app/-server/overview.ts` is edited by
-`00-S5` in wave 0 (`00-foundations.md`), by `01-S1` in wave 1 and `01-S7` in wave 5
-(`01-trips-core.md`), and by `10-S3` in wave 4 (`10-administration.md`); this stage is wave 2 and
-shares the file with none of them concurrently.
-`src/routes/_app/-server/settings.ts` is edited by `00-S3` in wave 0 (`00-foundations.md`) and by
-`09-S8` in wave 3 of this plan. `src/server/repos/notifications.ts` is deliberately **not** claimed:
-every function this stage needs already exists there.
+**Three files in this list are touched by more than one plan, in different waves, and each is named
+here with its sibling stage id as `check-plan-collisions.mjs` requires.**
+
+- `src/routes/_app/-server/overview.ts` — `00-S5` wave 0 (`00-foundations.md`), `01-S1` wave 1 and
+  `01-S7` wave 5 (`01-trips-core.md`), `10-S3` wave 4 (`10-administration.md`). This stage is wave 2
+  and shares the file with none of them concurrently.
+- `src/routes/_app/-server/settings.ts` — `00-S3` wave 0 (`00-foundations.md`), `02-S2` wave 1
+  (`02-places-and-maps.md`), `03-S6` wave 4 (`03-reservations-and-transport.md`), and `09-S8` wave 3
+  of this plan. Five stages, five distinct waves.
+- `src/routes/_app/-lib/notifications.ts` — `05-S1` wave 3 (`05-packing-and-todos.md`), which adds
+  its own event to the same catalogue. This stage is wave 2 and lands the grouping that stage's entry
+  will slot into.
+
+`src/server/repos/notifications.ts` is deliberately **not** claimed: every function this stage needs
+already exists there.
 
 ### Data and migration
 
@@ -2342,8 +2356,8 @@ this plan.
 
 ### Reference rows
 
-- `ACC-04` partial → **partial**, and the three behaviours that do not close here are named below
-  with the stage that will close each. This is the one row in this plan that does not reach **done**,
+- `ACC-04` partial → **partial**, and the four behaviours that do not close here are named below
+  with the target that will close each. This is the one row in this plan that does not reach **done**,
   and the justification is a rule this plan applies to itself.
 
 Sourced from `wiki: Preferences` and `wiki: Appearance` for the behaviours: regional and display
@@ -2362,16 +2376,24 @@ nothing reads is exactly that defect, wearing a different hat. So this stage shi
 where a surface exists to obey it, and defers the rest **with the stage that owns the obeying
 surface named**:
 
-| Behaviour          | Deferred to                                          | Why                                                                                 |
-| ------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Temperature unit   | `DOC-08`, `06-documents-and-media.md`, wave 6        | Nothing in the product shows a temperature until per-day weather ships.             |
-| Route labels       | `MAP-09`, `02-places-and-maps.md`, wave 4            | There is no route overlay to label.                                                 |
-| Blur booking codes | `BKG-06`, `03-reservations-and-transport.md`, wave 1 | The booking desk owns the field that would be blurred, and its plan owns that file. |
+| Behaviour          | Deferred to                                            | Why                                                                                                                                                                 |
+| ------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Temperature unit   | `DOC-08`, `06-documents-and-media.md`, wave 6          | Nothing in the product shows a temperature until per-day weather ships.                                                                                             |
+| Route labels       | `MAP-09`, `02-places-and-maps.md`, wave 4              | There is no route overlay to label.                                                                                                                                 |
+| Blur booking codes | `BKG-06`, `03-reservations-and-transport.md`, wave 1   | The booking desk owns the field that would be blurred, and its plan owns that file.                                                                                 |
+| Interface density  | a token stage in `00-foundations.md`, wave unscheduled | There is no density hook in `src/`, and the only file that could carry one is `src/styles/tokens.css`, which no feature stage may own. Argued in full under **UI**. |
 
 Each deferral is a column plus a switch that arrives **with** its surface, in one stage, so the
-switch and the thing it governs are always shipped together. The six that do ship here —
-12/24-hour time, colour scheme, custom accent with a contrast badge, density, text scaling and
-widget selection — all have a surface that obeys them on the day they land.
+switch and the thing it governs are always shipped together. The five that do ship here —
+12/24-hour time, colour scheme, custom accent with a contrast badge, text scaling and widget
+selection — all have a surface that obeys them on the day they land.
+
+**The fourth deferral is this stage's own rule turned on this stage.** An earlier revision of this
+plan shipped a density switch that wrote a `data-density` attribute onto the document element "that
+the existing utility layer keys off". Measured: `grep -rn 'data-density' src/` returns nothing, so
+there is no such layer, and this stage's **Owned paths** contain no stylesheet in which to write
+one. That switch would have governed nothing — the precise defect the other seven stages in this
+file exist to remove — so it is deferred rather than shipped, and what it needs is filed below.
 
 **The currency work this stage depends on and does not duplicate.** The regional section shows an
 accounting-currency override, and it must not grow a second opinion about money.
@@ -2396,32 +2418,43 @@ Rows unblocked: none. `ACC-04` has no dependants in `gap-rows.json`.
 ### Owned paths
 
 - `src/routes/_app/settings/index.tsx` — edit. The regional section gains the time format.
-- `src/routes/_app/settings/appearance.tsx` — edit. Colour scheme, accent, density, text scaling,
-  widgets.
+- `src/routes/_app/settings/appearance.tsx` — edit. Colour scheme, accent, text scaling, widgets.
 - `src/routes/_app/-ui/settings-nav.tsx` — edit. The shell work described under **UI**.
 - `src/routes/_app/-server/settings.ts` — edit. The loaders and writers widen.
 - `src/server/repos/settings.ts` — edit. `updateUserSettingsInput` widens; no new function.
-- `src/lib/display-preferences.ts` — new. The contrast computation, the density and scale
-  vocabularies, and the pure resolution each screen shares.
+- `src/lib/display-preferences.ts` — new. The contrast computation, the text-scale vocabulary, and
+  the pure resolution each screen shares.
 - `src/lib/__tests__/display-preferences.test.ts` — new.
-- `src/lib/theme.ts` — edit. The pre-paint bootstrap applies accent, density and scale alongside the
+- `src/lib/theme.ts` — edit. The pre-paint bootstrap applies accent and text scale alongside the
   theme it already applies.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
 - `e2e/account-and-settings.visual.spec.ts` — append.
 - `e2e/__screenshots__/account-and-settings.visual.spec.ts/` — append.
 
-**Two files here are touched by more than one plan, in different waves, and both are named as
-`check-plan-collisions.mjs` requires.** `src/routes/_app/-server/settings.ts` is edited by `00-S3` in
-wave 0 (`00-foundations.md`, which audits a workspace-defaults change) and by `09-S7` in wave 2 of
-this plan: three stages, three waves, no concurrency. `src/routes/_app/-ui/settings-nav.tsx` is
-edited by `10-S3` in wave 4 (`10-administration.md`), which adds its own console section to the
-index; this stage is wave 3 and lands the responsive shell that stage will build on. `src/routes/_app/settings/index.tsx` is also
-edited by `09-S3` in wave 1 — same plan, earlier wave, so the two never run together.
-`src/styles/tokens.css` is **not** claimed and no token is added; see **UI**.
+**Four files here are touched by more than one plan, in different waves, and each is named with its
+sibling stage id as `check-plan-collisions.mjs` requires.**
+
+- `src/routes/_app/-server/settings.ts` — `00-S3` wave 0 (`00-foundations.md`, which audits a
+  workspace-defaults change), `02-S2` wave 1 (`02-places-and-maps.md`), `03-S6` wave 4
+  (`03-reservations-and-transport.md`) and `09-S7` wave 2 of this plan. Five stages, five waves, no
+  concurrency.
+- `src/server/repos/settings.ts` — `02-S2` wave 1 and `03-S6` wave 4, both widening the same
+  `updateUserSettingsInput` for their own preference. This stage is wave 3, between them, and adds
+  fields rather than reshaping the input, so the three edits compose.
+- `src/routes/_app/settings/appearance.tsx` — `02-S2` wave 1 (the map-style preference) and `03-S6`
+  wave 4. This stage is wave 3 and adds sections to a screen `02-S2` has already extended.
+- `src/routes/_app/-ui/settings-nav.tsx` — `10-S3` wave 4 (`10-administration.md`), which adds its
+  own console section to the index, and `02-S10` wave 5 (`02-places-and-maps.md`). This stage is
+  wave 3 and lands the responsive shell both will build on.
+
+`src/routes/_app/settings/index.tsx` is also edited by `09-S3` in wave 1 — same plan, earlier wave,
+so the two never run together, and the script does not list it as a cross-plan path.
+`src/styles/tokens.css` is **not** claimed and no token is added; the density requirement that would
+have needed one is filed under **UI** instead of written.
 
 ### Data and migration
 
-**Three additive columns on `user_settings`, and they are a foundations requirement rather than this
+**Two additive columns on `user_settings`, and they are a foundations requirement rather than this
 stage's to write.** `src/server/db/schema.ts` is one of `README.md`'s six shared paths and no feature
 stage may claim it, so the requirement is stated here and becomes a wave-0 foundations stage in
 `00-foundations.md`:
@@ -2429,7 +2462,6 @@ stage may claim it, so the requirement is stated here and becomes a wave-0 found
 | Column        | Type      | Null | Default | Constraint                                           |
 | ------------- | --------- | ---- | ------- | ---------------------------------------------------- |
 | `time_format` | `text`    | yes  | none    | `enumCheck` over `12h \| 24h`                        |
-| `density`     | `text`    | yes  | none    | `enumCheck` over `comfortable \| compact`            |
 | `text_scale`  | `integer` | yes  | none    | `CHECK ("text_scale" IS NULL OR BETWEEN 90 AND 125)` |
 
 Nullable with no default, deliberately, because that is how every existing override on this table
@@ -2444,16 +2476,18 @@ rollback keeps working because the previous Worker simply never selects the thre
 the next numbered migration in the wave-0 series; it **backfills nothing**, because a null override
 is already the correct value for every existing row.
 
-The three deferred behaviours' columns are not requested here — each arrives with the stage that
-ships its switch, so that no column exists in the schema for longer than it is unused.
+The four deferred behaviours' columns are not requested here — **including `density`**, which is why
+the table above has two rows and not three. Each arrives with the stage that ships its switch, so no
+column exists in the schema for longer than it is unused, and no reader of the schema is misled into
+thinking a preference is stored that nothing reads.
 
 ### Server (repo, server function, Zod)
 
 **Repository — `src/server/repos/settings.ts`, edited.** No new function; `updateUserSettingsInput`
-(`:76`) widens by the three fields, each optional and nullable so that `null` clears an override and
-`undefined` leaves it alone — the semantics `updateUserSettings` already has. `getEffectiveSettings`
-(`:196`) gains the three fields in its resolution, user over workspace over a written fallback, in
-the one place that resolution lives.
+(`:76`) widens by the two new fields plus `accent_colour`, each optional and nullable so that `null`
+clears an override and `undefined` leaves it alone — the semantics `updateUserSettings` already has.
+`getEffectiveSettings` (`:196`) gains the same fields in its resolution, user over workspace over a
+written fallback, in the one place that resolution lives.
 
 **`organization_id` scoping, stated rather than assumed.** `userSettingsRepository` is
 `createTenantRepository(userSettings, 'user settings')` (`:46`), which stamps `organization_id` from
@@ -2464,15 +2498,15 @@ and `user_settings_org_user_unq` makes the pair unique. No SQL is written outsid
 **Server functions — `src/routes/_app/-server/settings.ts`, edited.** No new function is added;
 four existing ones widen:
 
-- `loadProfile` returns the three new effective values and the three new overrides beside the seven it
+- `loadProfile` returns the two new effective values and the two new overrides beside the seven it
   already returns (`:118-135`).
 - `saveRegionalSettings` (`:153`) takes `timeFormat` on the same `''`-clears-the-override convention
   its six siblings use.
-- `loadAppearance` (`:194`) returns `density`, `textScale` and the resolved accent.
-- `saveAppearance` (`:212`) takes `accentColour`, `density` and `textScale`.
+- `loadAppearance` (`:194`) returns `textScale` and the resolved accent.
+- `saveAppearance` (`:212`) takes `accentColour` and `textScale`.
 
-**Zod v4 on every input.** `z.strictObject` for both writers; `z.enum(['12h', '24h'])` and
-`z.enum(['comfortable', 'compact'])` rather than free strings; `z.number().int().min(90).max(125)`
+**Zod v4 on every input.** `z.strictObject` for both writers; `z.enum(['12h', '24h'])` rather than a
+free string; `z.number().int().min(90).max(125)`
 for the scale, matching the CHECK constraint exactly so the boundary and the column agree; the accent
 is a hex colour validated by an explicit regular expression rather than by a loose string, with the
 `error` parameter carrying the message. Validation is shape, not permission.
@@ -2510,7 +2544,7 @@ index type-check against the generated route tree.
 it rendered by the product's own formatter, so the reader sees `17:30` or `5:30 pm` rather than a
 label. The sample uses `src/lib/format.ts` and no second formatter is introduced.
 
-**Appearance gains four.**
+**Appearance gains four controls, and says out loud why a fifth is missing.**
 
 - **Colour scheme.** A row of accent presets drawn from the token set's own brand and accent ramps,
   plus a custom swatch. Each preset is a `radio` in a `RadioGroup` with an accessible name, not a
@@ -2522,9 +2556,21 @@ label. The sample uses `src/lib/format.ts` and no second formatter is introduced
   helper text says which theme fails and by how much. The computation is `contrastRatio()` in
   `src/lib/display-preferences.ts`, a pure function over sRGB relative luminance with published test
   vectors.
-- **Density.** Two options, applied as a `data-density` attribute on the document element that the
-  existing utility layer keys off. No token is added and `src/styles/tokens.css` is not claimed:
-  density selects between spacing steps that already exist rather than introducing new values.
+- **Density — not shipped by this stage, and the requirement is filed instead.** The measurement
+  first: `grep -rn 'data-density' src/` returns nothing, so nothing in the product keys off such an
+  attribute, and this stage owns no stylesheet in which to make one mean something. Nor is the gap
+  one line of CSS. `src/styles/tokens.css:503-521` declares a **strict** 4px grid —
+  `--space-N === N * 4px`, with the comment at `:503-504` recording that Tailwind's own step is
+  aligned to it — so a compact density is either a second spacing scale in the token contract or a
+  per-component override layer, and both are amendments to `docs/DESIGN.md`'s grid rather than uses
+  of it. `00-foundations.md:44-51` reserves `src/styles/tokens.css` to one token stage per wave and
+  says exactly what a feature stage does when it needs one: state the requirement under its own
+  heading and stop. So, stated: **a density scale wants (1) a `--density-*` step set in
+  `src/styles/tokens.css`, declared in all three places `docs/DESIGN.md` requires, and (2) a
+  `docs/DESIGN.md` amendment permitting a second scale beside the 4px grid; the switch, its
+  `user_settings.density` column and its `data-density` attribute then ship in one later stage
+  together with them.** Until that stage exists there is no density control on this screen — not a
+  disabled one, not a "coming soon" one, and no column in the schema pretending otherwise.
 - **Text scaling.** A `Slider` from 90% to 125% in five-point steps, applied as a `font-size`
   percentage on the document element. Because the whole type scale is expressed in `rem`, one
   property scales every screen, and because the step is bounded at 125% no layout is asked to survive
@@ -2535,7 +2581,7 @@ label. The sample uses `src/lib/format.ts` and no second formatter is introduced
 
 **Applied before paint, not after.** `src/lib/theme.ts:30` already carries a bootstrap script that
 reads the theme from `localStorage` and writes `data-theme` and `color-scheme` onto the document
-element before React hydrates. Accent, density and scale join it, from their own keys, mirrored by
+element before React hydrates. Accent and text scale join it, from their own keys, mirrored by
 the appearance screen on save exactly as the theme control already mirrors its own. Applying them
 after hydration instead would produce a visible re-skin on every load, which is the layout shift the
 definition of done forbids. The script keeps its `try/catch`, because private browsing can make
@@ -2557,9 +2603,9 @@ definition of done forbids. The script keeps its `try/catch`, because private br
   rather than the section being blocked, which is the pattern `settings/notifications.tsx` already
   uses.
 
-**Motion.** The density and scale changes are the only ones that move layout, and they are applied
-without a transition on purpose: animating a reflow is the one thing `docs/DESIGN.md`'s motion rules
-forbid outright. The accent change cross-fades the preview swatch at 150ms on `--ease-out-quint`.
+**Motion.** The text-scale change is the only one that moves layout, and it is applied without a
+transition on purpose: animating a reflow is the one thing `docs/DESIGN.md`'s motion rules forbid
+outright. The accent change cross-fades the preview swatch at 150ms on `--ease-out-quint`.
 `prefers-reduced-motion: reduce` collapses it to none, and the reduce-motion switch already on this
 screen keeps its meaning.
 
@@ -2599,8 +2645,8 @@ Repository functions covered: `updateUserSettings`, `getUserSettings`, `getEffec
 ### Verification
 
 **How this is run.** `docs/plans/12-verification-protocol.md` owns the procedure. §5 is the clause to
-read before touching a baseline here: density and text scaling move type metrics across every
-screen, so a re-record is a decision this stage argues in its diff, never a reflex.
+read before touching a baseline here: text scaling moves type metrics across every screen, so a
+re-record is a decision this stage argues in its diff, never a reflex.
 
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
@@ -2627,8 +2673,8 @@ failing comparison is either the renderer's or the product's.
 - `src/lib/__tests__/display-preferences.test.ts` — `contrastRatio()` reproduces the published values
   for black on white (21:1) and for two mid-tone pairs to one decimal; the AA and AAA thresholds are
   applied at 4.5 and 7 for normal text; a malformed hex is rejected rather than silently treated as
-  black; the density and scale vocabularies round-trip through their storage form; a scale outside
-  90–125 is refused at the same boundary the CHECK constraint uses.
+  black; the text-scale vocabulary round-trips through its storage form; a scale outside 90–125 is
+  refused at the same boundary the CHECK constraint uses.
 - The four isolation cases above, in the shared isolation file.
 - The existing `src/server/repos/__tests__` suite for settings is extended rather than replaced where
   `updateUserSettingsInput` widens, so a field added without a test fails review rather than passing
@@ -2647,6 +2693,11 @@ stage exists as much as the preferences are. Declared non-resting states:
 - `--state scale-max`, with the text-scale slider at 125% at 360px, which is where a scaled layout
   breaks if it is going to.
 
+One further check belongs to the deferral rather than to a frame: with the stage's own branch
+checked out, `grep -rn 'data-density\|density' src/routes/_app/settings/ src/lib/display-preferences.ts`
+must return nothing. A density control that survives review is a switch that governs nothing, and
+this is the cheapest way to prove it did not.
+
 Every selector is a `data-part` attribute this stage publishes, verified with
 `page.locator(sel).count() === 1` against a running dev server before any frame is filed. Frames come
 from `scripts/ultrabuild/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` and `--auth`, under
@@ -2661,11 +2712,11 @@ the runnable form of "applied before paint". `e2e/helpers/shoot.ts` is not claim
 **Console must be silent**, asserted through `watchConsole` on every test, with no addition to
 `TOLERATED_CONSOLE_WARNINGS`.
 
-**Layout shift after paint.** This is the stage where the clause has teeth, because density and text
-scale change layout by design. The measurement distinguishes the two cases: shift caused by the
-reader moving the slider carries `hadRecentInput` and is excluded by the protocol; shift on **load**,
-after the settle mark, with a non-default density and scale already stored, must be `0` — which is
-what the pre-paint bootstrap is for and what would fail if it were applied after hydration instead.
+**Layout shift after paint.** This is the stage where the clause has teeth, because text scale
+changes layout by design. The measurement distinguishes the two cases: shift caused by the reader
+moving the slider carries `hadRecentInput` and is excluded by the protocol; shift on **load**, after
+the settle mark, with a non-default scale already stored, must be `0` — which is what the pre-paint
+bootstrap is for and what would fail if it were applied after hydration instead.
 Gated on `supportedEntryTypes`, with the WebKit skip reported as a skip.
 
 ### Definition of done
@@ -2711,11 +2762,18 @@ surfaces. Both are earlier waves, which is why this stage is wave 3. If `01-S5` 
 section is not shipped and the row's deferral table gains a fourth line rather than the stage
 inventing a second store.
 
-**3 — Three deferred behaviours, dispositioned rather than dropped.** Temperature unit, route labels
-and booking-code blurring are listed with their owning rows and waves under **Reference rows**. The
-disposition is **defer**, and the deferral has a shape rather than a hope: each is one nullable
-column and one control, shipped by the stage that owns the surface obeying it, so the switch and its
-effect are never separated by a wave.
+**3 — Four deferred behaviours, dispositioned rather than dropped.** Temperature unit, route labels,
+booking-code blurring and interface density are listed with their owning targets and waves under
+**Reference rows**. The disposition is **defer**, and the deferral has a shape rather than a hope:
+each is one nullable column and one control, shipped by the stage that owns the surface obeying it,
+so the switch and its effect are never separated by a wave.
+
+Density is the one of the four whose owning stage does **not** yet exist, so it is the one to watch.
+Its requirement — a `--density-*` step set in `src/styles/tokens.css` and the `docs/DESIGN.md`
+amendment that permits a second scale beside the strict 4px grid — is written out under **UI** in the
+form `00-foundations.md:44-51` prescribes, and it is a genuine blocker on the behaviour rather than
+on this stage: `ACC-04` therefore closes at `partial`, which is what the row ledger in the area brief
+records.
 
 No package is installed and neither `package.json` nor `pnpm-lock.yaml` is edited by this stage or by
 any other in this file. No binding is added to `wrangler.jsonc`. No third-party service is involved.
@@ -2732,15 +2790,17 @@ and the path table under it.**
 
 ```
 $ node scripts/ultrabuild/check-plan-collisions.mjs 09
-plans 8 · stages 48 · owned paths 284
+plans 13 · stages 91 · owned paths 550
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
 no same-wave exclusive collisions
 
-touched by more than one plan in different waves (5) — legal; each plan must name the other:
+touched by more than one plan in different waves (8) — legal; each plan must name the other:
   src/routes/_app/-server/settings.ts
       00-foundations.md  00-S3  wave 0  (edit)
+      02-places-and-maps.md  02-S2  wave 1  (edit)
+      03-reservations-and-transport.md  03-S6  wave 4  (edit)
       09-account-and-settings.md  09-S7  wave 2  (edit)
       09-account-and-settings.md  09-S8  wave 3  (edit)
   src/routes/_app/-server/overview.ts
@@ -2749,31 +2809,53 @@ touched by more than one plan in different waves (5) — legal; each plan must n
       01-trips-core.md  01-S7  wave 5  (edit)
       09-account-and-settings.md  09-S7  wave 2  (edit)
       10-administration.md  10-S3  wave 4  (edit)
+  src/server/repos/settings.ts
+      02-places-and-maps.md  02-S2  wave 1  (edit)
+      03-reservations-and-transport.md  03-S6  wave 4  (edit)
+      09-account-and-settings.md  09-S8  wave 3  (edit)
+  src/routes/_app/settings/appearance.tsx
+      02-places-and-maps.md  02-S2  wave 1  (edit)
+      03-reservations-and-transport.md  03-S6  wave 4  (edit)
+      09-account-and-settings.md  09-S8  wave 3  (edit)
+  src/routes/_app/-ui/settings-nav.tsx
+      02-places-and-maps.md  02-S10  wave 5  (edit)
+      09-account-and-settings.md  09-S8  wave 3  (edit)
+      10-administration.md  10-S3  wave 4  (edit)
+  src/routes/_app/-lib/notifications.ts
+      05-packing-and-todos.md  05-S1  wave 3  (edit)
+      09-account-and-settings.md  09-S7  wave 2  (edit)
   src/server/auth/index.ts
       09-account-and-settings.md  09-S3  wave 1  (edit)
       10-administration.md  10-S1  wave 3  (edit)
   src/server/repos/members.ts
       09-account-and-settings.md  09-S3  wave 1  (edit)
       10-administration.md  10-S1  wave 3  (edit)
-  src/routes/_app/-ui/settings-nav.tsx
-      09-account-and-settings.md  09-S8  wave 3  (edit)
-      10-administration.md  10-S3  wave 4  (edit)
 ```
 
 **No same-wave exclusive collision involves this plan.** That is the result the plan is written to
 produce rather than one it discovered: `security.tsx` was the file three wave-1 rows all wanted, and
 the repair-at-the-destination convention in the area brief is what took it down to one claimant.
 
-**Each of the five cross-wave paths is named in its owning stage, with the sibling stage id**, as the
-script's own instruction requires:
+**Each of the eight cross-wave paths is named in its owning stage, with the sibling stage id**, as
+the script's own instruction requires:
 
-| Path                                   | Named in         | Siblings named there                               |
-| -------------------------------------- | ---------------- | -------------------------------------------------- |
-| `src/routes/_app/-server/settings.ts`  | `09-S7`, `09-S8` | `00-S3` (wave 0); and each other                   |
-| `src/routes/_app/-server/overview.ts`  | `09-S7`          | `00-S5` (0), `01-S1` (1), `01-S7` (5), `10-S3` (4) |
-| `src/server/auth/index.ts`             | `09-S3`          | `10-S1` (wave 3)                                   |
-| `src/server/repos/members.ts`          | `09-S3`          | `10-S1` (wave 3)                                   |
-| `src/routes/_app/-ui/settings-nav.tsx` | `09-S8`          | `10-S3` (wave 4)                                   |
+| Path                                      | Named in         | Siblings named there                                  |
+| ----------------------------------------- | ---------------- | ----------------------------------------------------- |
+| `src/routes/_app/-server/settings.ts`     | `09-S7`, `09-S8` | `00-S3` (0), `02-S2` (1), `03-S6` (4); and each other |
+| `src/routes/_app/-server/overview.ts`     | `09-S7`          | `00-S5` (0), `01-S1` (1), `01-S7` (5), `10-S3` (4)    |
+| `src/routes/_app/-lib/notifications.ts`   | `09-S7`          | `05-S1` (3)                                           |
+| `src/server/repos/settings.ts`            | `09-S8`          | `02-S2` (1), `03-S6` (4)                              |
+| `src/routes/_app/settings/appearance.tsx` | `09-S8`          | `02-S2` (1), `03-S6` (4)                              |
+| `src/routes/_app/-ui/settings-nav.tsx`    | `09-S8`          | `02-S10` (5), `10-S3` (4)                             |
+| `src/server/auth/index.ts`                | `09-S3`          | `10-S1` (3)                                           |
+| `src/server/repos/members.ts`             | `09-S3`          | `10-S1` (3)                                           |
+
+The list grew from five paths to eight between rounds, and not one of the three new rows is a
+collision this plan created: `02-places-and-maps.md`, `03-reservations-and-transport.md` and
+`05-packing-and-todos.md` were written after the first paste and each claimed a settings file this
+plan already claimed in a different wave. That is the arrangement the script calls legal, and the
+only obligation it creates is the naming above — which is why the paste is re-run and re-read on
+every revision rather than trusted from the round it was first taken in.
 
 `src/server/repos/__tests__/tenant-isolation.test.ts` is claimed by three stages here and by fifteen
 across the other plans, always as `append`. That is the documented cooperative pattern and the script

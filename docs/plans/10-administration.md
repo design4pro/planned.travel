@@ -82,6 +82,35 @@ it may start in on its `### Stage id` line, and that field — not the position 
 file — is what an orchestrator schedules against. In wave order the file runs `10-S2` (1), `10-S1`
 (3), `10-S3` (4), `10-S4` (5).
 
+### One authorization boundary, and the one thing a route may do about it
+
+Three of the four stages below add a role assertion to a repository read or write, so the rule they
+share is written once here instead of four times, and each stage points at it.
+
+- **The repository decides, and nothing else does.** Every assertion in this plan —
+  `assertCanAdminister` today, `assertAction` after `10-S4` — is called inside the repository
+  function, before the query, in the same preamble as the tenant filter and the quota check. No
+  route, `beforeLoad`, loader, server function or component in this plan decides whether a caller
+  may do something.
+- **A loader may skip a call it knows will be refused, and that skip is not a decision.** It changes
+  what is rendered, never what is permitted: the server function stays reachable without the route
+  that renders its UI, and calling it anyway still ends in the repository's `ForbiddenError`.
+- **Why that distinction is load-bearing here rather than pedantic.** The console's loader is
+  unconditional today — `loader: () => loadAdmin()` (`src/routes/_app/admin.tsx:54`) runs for
+  everyone, and `loadAdmin` reads the audit trail at
+  `src/routes/_app/-server/overview.ts:450` — while the designed locked state is a component-level
+  check that only runs once the loader has already resolved (`src/routes/_app/admin.tsx:69-87`). Add
+  an assertion to `listAuditLog` without touching that loader and a non-admin who opens `/admin`
+  gets the route's red error panel instead of the sentence explaining what happened. `10-S2`
+  therefore makes the console's loader conditional on the admin flag the `_app` route already puts
+  on the router context (`src/routes/_app/route.tsx:20-32`), returns `null` for a non-admin, and
+  keeps the locked state drawn exactly as it is; `10-S3` carries the same shape into every tab route
+  it creates. That is the only route-level change either stage makes, and it is stated in both.
+- **It also closes something that reads as a defect today.** A non-admin's browser currently
+  receives the entire admin payload — every member profile, twenty-five audit rows, the workspace's
+  quota usage — and then renders a locked state over the top of it. After `10-S2` the payload is
+  never fetched for them at all.
+
 ### What this plan does not own
 
 None of the six shared paths of `README.md` is claimed by any stage here. Two consequences are
@@ -536,9 +565,19 @@ real rows in it.
 - `src/routes/_app/-server/audit.ts` — new. The stage's server functions.
 - `src/components/administration/audit-trail.tsx` — new. The paged, filterable table.
 - `src/components/administration/audit-entry-sheet.tsx` — new. One entry in full.
+- `src/components/administration/console-locked.tsx` — new, and it is a move rather than a design:
+  the `EmptyState` currently written inline at `src/routes/_app/admin.tsx:69-87` becomes a props-free
+  component with the same glyph, the same sentence and the same link. It is extracted here because
+  two files need it after this stage — this route now that the gate reads `null` loader data, and
+  `10-S3`'s console layout in wave 4 — and because inline route markup cannot be tested or asserted
+  against. Nothing about it changes visually.
 - `src/components/administration/__tests__/audit-trail.test.tsx` — new.
-- `src/routes/_app/admin.tsx` — edit. Replaces the 25-row activity list with the trail panel. In
-  wave 4 `10-S3` moves the same component to `/admin/audit` unchanged.
+- `src/components/administration/__tests__/console-locked.test.tsx` — new.
+- `src/routes/_app/admin.tsx` — edit. Two changes. It replaces the 25-row activity list with the
+  trail panel; and it makes the route's loader conditional on the session's admin flag, so the
+  designed locked state survives the assertion this stage adds to the repository — the rule is in
+  the area brief and the mechanics are under **Server** below. In wave 4 `10-S3` moves the same
+  component to `/admin/audit` unchanged and inherits the same loader shape.
 - `src/server/repos/__tests__/audit.test.ts` — new.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block, distinct
   from `00-S3`'s: that one covers `recordAudit` and the existing reads, this one covers the two
@@ -590,20 +629,51 @@ no backfill.
 …optional(), after: z.iso.datetime().optional(), before: z.iso.datetime().optional(), cursor:
 …nullish(), limit: z.number().int().min(1).max(100).optional() })`. The repository re-parses the
   same input, and that redundancy is kept: a server function is not the only way into a repository.
-- **Authorisation.** Reading the trail is an administrator's action and is asserted in the
-  repository, not in the route: `listAuditLog`, `listAuditActors` and `countAuditEntries` call
-  `assertCanAdminister(scope.ctx, 'read the audit trail')` before they query. `10-S4` later replaces
-  that fixed floor with the `audit.read` action key resolved from the workspace's matrix, without
-  moving the decision anywhere else. `listEntityHistory` keeps its current behaviour and is not
-  changed by this stage.
+- **Authorisation is asserted in the repository, and the console's loader is changed so the
+  designed locked state survives it.** Reading the trail is an administrator's action:
+  `listAuditLog`, `listAuditActors`, `countAuditActions` and `countAuditEntries` each call
+  `assertCanAdminister(scope.ctx, 'read the audit trail')` before they query. `listEntityHistory`
+  keeps its current behaviour and is not changed by this stage.
+
+  That assertion has one consequence outside the repository, and this stage is the one that must
+  handle it, in a file it already owns. Measured at HEAD: `loadAdmin`
+  (`src/routes/_app/-server/overview.ts:430-451`) calls `listAuditLog` at `:450` and
+  `countAuditActions` at `:451`, and the console's route loads it unconditionally —
+  `loader: () => loadAdmin()` (`src/routes/_app/admin.tsx:54`) — while the locked state is a
+  component-level check that runs only after the loader resolved (`:69-87`). Left alone, a
+  non-admin's visit to `/admin` would throw in the loader and render the route's `errorComponent`
+  (`:56-60`) instead of the explanation that `10-S3` keeps and photographs. So this stage changes
+  the loader to
+  `loader: ({ context }) => (context.shell.session.user.isAdmin ? loadAdmin() : null)` — the flag is
+  already on the router context, put there by the `_app` route's own `beforeLoad`
+  (`src/routes/_app/route.tsx:20-32`) — and the component's guard becomes a check on `null` loader
+  data rather than on the flag, with the `EmptyState` markup unchanged.
+
+  **That is a skip, not a second authorization path**, per the area brief: `loadAuditPage` and
+  `loadAdmin` stay reachable without the route, and a non-admin who calls either directly still gets
+  `ForbiddenError` from the repository. The test that proves it is named under **Verification**.
+  Skipping the fetch also stops shipping the whole admin payload to a browser that is about to
+  render a locked state over it.
+
+  **The floor stays fixed at `admin` and is deliberately outside `10-S4`'s matrix.** The trail is
+  evidence about what administrators did, so who may read it is not itself an administrable setting:
+  an owner who could raise `audit.read` above `admin` could hide their own actions from the people
+  the trail exists to hold accountable. `audit.read` is therefore not one of the catalogue's sixteen
+  keys, and `assertCanAdminister` keeps these four callers after `10-S4` rather than becoming a
+  parallel mechanism with nothing left to do.
+
 - **Nothing slow, nothing realtime.** No queue message, no `TripRoom` patch. The trail is a read.
 
 ### UI (route, components)
 
 - **Route.** No new route file. In wave 1 the panel replaces the activity list in the console's
   aside at `src/routes/_app/admin.tsx` and becomes the console's main-column panel, keeping the
-  route's loader, its admin gate and its default SSR. In wave 4 `10-S3` mounts the identical
-  component at `/admin/audit`.
+  route's default SSR. The route's loader gains the one conditional described under **Server**, and
+  the admin gate itself is kept: the same `EmptyState` with the same `ShieldCheck` glyph, the same
+  sentence and the same link back to the dashboard, reached now from `null` loader data rather than
+  from the flag. Nothing about that surface changes visually, which is what lets `10-S3` move it
+  into the console layout and photograph it. In wave 4 `10-S3` mounts the identical trail component
+  at `/admin/audit`.
 - **Components reused from `src/components/ui`:** `Table` and its parts, `Card`, `Badge`, `Avatar`,
   `Button`, `IconButton`, `Sheet` with `SheetHeader`/`SheetBody`, `Combobox`, `SimpleSelect`,
   `DateRangePicker`, `Chip`, `EmptyState`, `Alert`, `Skeleton`, `SkeletonText`, `ScrollArea`,
@@ -667,10 +737,12 @@ not repeat it. In A's scope:
   never B's entries.
 - `listAuditActors` in A returns only actors who have entries in A.
 - `countAuditEntries` in A counts only A's rows, and is unchanged after B writes ten entries.
-- A non-admin scope in A calling any of the three raises `ForbiddenError`, and B's data is untouched
-  after every case.
+- `countAuditActions` in A tallies only A's rows, so B's busiest actions can never appear in A's
+  panel.
+- A non-admin scope in A calling any of the four raises `ForbiddenError` before any query runs, and
+  B's data is untouched after every case.
 
-Functions covered: `listAuditLog`, `listAuditActors`, `countAuditEntries`.
+Functions covered: `listAuditLog`, `listAuditActors`, `countAuditActions`, `countAuditEntries`.
 
 ### Verification
 
@@ -679,11 +751,30 @@ Functions covered: `listAuditLog`, `listAuditActors`, `countAuditEntries`.
   ends and rejects a `before` earlier than its `after`; the cursor returns the next page with no
   overlap and no gap; `listAuditActors` de-duplicates; `countAuditEntries` counts rows the filters
   would exclude, because it is a total and not a filtered count; a non-admin scope raises
-  `ForbiddenError` from all three.
+  `ForbiddenError` from all four of the reads this stage gates.
 - **Unit test — `src/components/administration/__tests__/audit-trail.test.tsx`:** the unfiltered
   empty state and the filtered empty state are different components with different actions; Older is
   disabled when the page has no next cursor; an entry with null IP and null user agent renders the
   sheet without empty rows.
+- **The loader conditional is tested from the side that can be tested, and the side that cannot is
+  named rather than claimed.** It is the one change this stage makes outside a repository, so it
+  gets its own evidence:
+  - `src/server/repos/__tests__/audit.test.ts` — a non-admin scope calling `listAuditLog`,
+    `listAuditActors`, `countAuditActions` or `countAuditEntries` raises `ForbiddenError` before any
+    query runs. This is what proves the skip is not what protects the data: delete the loader
+    conditional and the rendering changes, the permission does not.
+  - `src/components/administration/__tests__/console-locked.test.tsx` — the extracted locked state
+    renders its heading, its explanation and a link to `/dashboard`, and renders no workspace data
+    of any kind. That is the assertion the inline markup could never carry.
+  - **What cannot be photographed today, measured rather than assumed.** The harness holds exactly
+    one session, the demo owner's: `e2e/auth.setup.ts` caches `DEMO_EMAIL`
+    (`e2e/helpers/shoot.ts:136`) and the seeder mints a signable password for the owner alone —
+    `src/routes/api/dev/-seed/bootstrap.ts:11-15` says so in as many words ("the collaborators are
+    deliberately created without a credential account … cannot sign in"), so no member-role account
+    can sign in. A frame of the
+    locked state therefore needs a fixture that does not exist. It is recorded under **Blockers**
+    as a harness requirement on the seeder, which this plan does not own, and it is the only
+    declared state in this stage with no frame attached.
 - **Browser evidence.** Route `/admin` (wave 4 onward `/admin/audit`), at 360px, 1280px and 2560px,
   in light and dark. Three declared non-resting states, each with its selector verified against a
   running server by asserting a count of exactly one inside this stage's own spec before capture:
@@ -795,6 +886,16 @@ harness precondition:
   `relativeTime` declaration and the `RELATIVE_TIME_SITES` entry `10-S2` adds, which pins the
   string first so the excluded rectangle is constant on every run. A widened mask or a raised
   `maxDiffPixelRatio` is not the remedy and is forbidden.
+- **Harness requirement — a member-role fixture that can sign in.** The locked state this stage
+  keeps, and that `10-S3` mounts in the console layout, cannot be photographed by anyone: the seeder
+  creates the four collaborators without a credential account on purpose
+  (`src/routes/api/dev/-seed/bootstrap.ts:11-15`) and the suite caches one session, the owner's
+  (`e2e/auth.setup.ts`). One seeded person with a signable password and the `member` role, plus a
+  second cached storage state, would make the state photographable in this plan and in every other
+  plan that hides an affordance behind a role. Both files belong to the seeder and the harness, which
+  this plan does not own, so it is recorded here and carried out of the file as a contract extension
+  rather than reached into. It blocks a frame, not the stage: the state's behaviour is asserted by
+  the repository and component tests named under **Verification**.
 - No package outside the `docs/SPEC.md` §3 pinned set, no binding added to `wrangler.jsonc`, no
   third-party service.
 
@@ -836,7 +937,7 @@ busiest-actions panel are kept exactly as they are and moved, not rewritten.
 **One deviation from the sourced behaviour, argued rather than slipped in.** Upstream a non-admin
 sees no entry point and the page does not exist for them. Here the entry point is likewise absent
 from every navigation surface for a non-admin — that part matches — but a direct hit on `/admin` or
-on a tab URL keeps the explanatory locked state that `src/routes/_app/admin.tsx:70-84` already
+on a tab URL keeps the explanatory locked state that `src/routes/_app/admin.tsx:69-87` already
 renders, rather than becoming a bare not-found. The reason is that tab URLs are linkable by design
 after this stage, so the most likely visitor to a console URL without the role is a member an
 administrator just sent a link to, and "ask an owner to change your role" is the answer they need.
@@ -849,7 +950,8 @@ Rows unblocked: `ADM-03` (`10-S4`, wave 5), which mounts a tab into the shell th
   is served by the new layout plus its index child, which is the shape
   `src/routes/_app/settings/route.tsx` and `settings/index.tsx` already use.
 - `src/routes/_app/admin/route.tsx` — new. The console layout: page header, admin gate, tab strip,
-  `<Outlet />`.
+  `<Outlet />`. The gate renders `10-S2`'s `console-locked.tsx` rather than re-writing the markup a
+  third time.
 - `src/routes/_app/admin/index.tsx` — new. The Overview tab: the four stat cards and the quotas
   panel, moved unchanged.
 - `src/routes/_app/admin/members.tsx` — new. Mounts `10-S1`'s two panels.
@@ -869,10 +971,12 @@ Rows unblocked: `ADM-03` (`10-S4`, wave 5), which mounts a tab into the shell th
   shares the file with none of them concurrently; the check output at the foot of this file is the
   measurement, and `09-S7` names `10-S3` reciprocally at `docs/plans/09-account-and-settings.md:1852-1855`.
 - `src/routes/_app/-ui/settings-nav.tsx` — edit. One conditional entry, described under **UI**.
-  **This file is touched by one other plan, in an earlier wave, and it is named here for the same
-  reason:** `09-account-and-settings.md` `09-S8` (wave 3), which lands the responsive settings shell
-  this stage's seventh entry sits inside. This stage is wave 4, so the shell exists before the entry
-  is added to it and the two never run together; that plan names `10-S3` reciprocally at
+  **This file is touched by two other plans, one in an earlier wave and one in a later wave, and both
+  are named here as the shared-path protocol requires:** `09-account-and-settings.md` `09-S8`
+  (wave 3), which lands the responsive settings shell this stage's seventh entry sits inside, and
+  `02-places-and-maps.md` `02-S10` (wave 5), which adds an entry of its own. This stage is wave 4, so
+  the shell exists before the entry is added to it and the later entry is added after both; no two of
+  the three ever run together. `09-account-and-settings.md` names `10-S3` reciprocally at
   `docs/plans/09-account-and-settings.md:2210-2212`.
 - `e2e/administration.visual.spec.ts` — append. One `test.describe` and the three new routes added
   to `ADMINISTRATION_ROUTES`.
@@ -905,6 +1009,15 @@ already exist and moves markup between files.
   scope with `appScope()` and every repository it calls asserts its own role floor —
   `assertCanAdminister` today, the matrix's action key after `10-S4`. A tab route's `beforeLoad` is
   never a data boundary and this stage adds none.
+- **Each tab's loader carries the conditional `10-S2` established, and for the same reason.** The
+  repository refuses an administrator's read to a member, so a loader that fetches anyway turns the
+  layout's locked state into three error panels. Every tab loader here is therefore
+  `({ context }) => (context.shell.session.user.isAdmin ? load…() : null)`, reading the flag the
+  `_app` route puts on the router context (`src/routes/_app/route.tsx:20-32`), and the layout renders
+  `console-locked.tsx` — `10-S2`'s extraction of the markup that ships today — instead of the
+  `<Outlet />` when the flag is false. Per the area brief this is a skip and not a second
+  authorization path: each of those server functions stays reachable without its route, and calling
+  one still ends in `ForbiddenError`.
 - Nothing slow, nothing queued, nothing realtime.
 
 ### UI (route, components)
@@ -962,8 +1075,9 @@ already exist and moves markup between files.
 
 - **Components reused:** `Tabs`, `TabsList`, `TabsTrigger`, `Card`, `StatCard`, `Progress`, `Alert`,
   `Button`, `Separator`, `SectionLabel`, `EmptyState`, `Skeleton`, `ScrollArea`, plus
-  `PageHeader`, `AppFrame` and `AppSections` from `src/components/layout`, and the two
-  administration panels from `10-S1` and the trail from `10-S2`. No new primitive.
+  `PageHeader`, `AppFrame` and `AppSections` from `src/components/layout`, and from
+  `src/components/administration/` the two panels `10-S1` built, the trail `10-S2` built and
+  `console-locked.tsx`. No new primitive and no new product component.
 - **States.**
   - _Tab content pending:_ each tab route ships its own `pendingComponent` reusing the existing
     `HeaderSkeleton`, `StatsSkeleton` and `RowsSkeleton` scaffolding from
@@ -974,8 +1088,10 @@ already exist and moves markup between files.
     (`src/components/layout/error-state.tsx`) with a title
     naming that tab, drawn on `--color-surface-2`, so a failing audit query does not blank the
     console.
-  - _Not an admin:_ the layout's designed locked state, kept from the current file — an
-    `EmptyState` with a `ShieldCheck` glyph, the reason, and a link back to the dashboard.
+  - _Not an admin:_ the layout's designed locked state, `console-locked.tsx`, which is the markup
+    shipping today at `src/routes/_app/admin.tsx:69-87` extracted by `10-S2` and mounted here
+    unchanged — an `EmptyState` with a `ShieldCheck` glyph, the reason, and a link back to the
+    dashboard. One surface for all four tab URLs, because the layout holds it.
   - _Empty:_ the console itself has no list of its own; the lists belong to the tabs and carry the
     empty states their stages designed.
 - **Responsive.** At 360px the tab strip is a horizontally scrollable row with momentum and no
@@ -1028,8 +1144,13 @@ case that would restate another stage's.
   and 2560px, in light and dark. That is eighteen frames, and the stage owes them because it ships
   three surfaces. Two declared non-resting states, each with its selector verified against a running
   server by asserting a count of exactly one in this stage's spec: `[data-part="console-tabs"]` with
-  the strip scrolled to its end at 360px, and the locked state reached by driving the same route
-  with a non-admin session.
+  the strip scrolled to its end at 360px, and `[data-part="console-tab-panel"]` after a tab
+  navigation, which is what the layout-shift reading below is taken against. The locked state is the
+  third state this stage renders and it is **not** in that list: no member-role account can sign in
+  against the current fixture (`src/routes/api/dev/-seed/bootstrap.ts:11-15`), so it is covered by
+  `10-S2`'s component test and carried as the harness requirement that stage records under
+  **Blockers**. Declaring a capture the harness cannot take would make the run look greener than it
+  is.
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
@@ -1098,8 +1219,8 @@ precondition:
 - `10-S1` (wave 3) and `10-S2` (wave 1) must have landed, because this stage mounts their components
   rather than writing them. Both are in earlier waves, which is what the wave order guarantees.
 - `src/routes/_app/-server/overview.ts` is shared with `00-S5` (wave 0), `01-S1` (wave 1), `09-S7`
-  (wave 2) and `01-S7` (wave 5), and `src/routes/_app/-ui/settings-nav.tsx` with `09-S8` (wave 3) —
-  every one of them in a wave other than this stage's wave 4. The check at the foot of this file is
+  (wave 2) and `01-S7` (wave 5), and `src/routes/_app/-ui/settings-nav.tsx` with `09-S8` (wave 3) and
+  `02-S10` (wave 5) — every one of them in a wave other than this stage's wave 4. The check at the foot of this file is
   the measurement, not a reading of the sibling plans, and this stage's edit to `overview.ts` is
   confined to the one stat count inside `loadAdmin`.
 - **Inherited harness precondition — `12-verification-protocol.md` §7.1, and it is blocking for this
@@ -1149,7 +1270,11 @@ same three-line preamble.
 
 - **No route decides.** A `beforeLoad`, a loader guard or a `redirect` is UX. A server function is a
   public endpoint reachable without the route that renders its UI, so a route-level check protects
-  nothing, and this stage adds none.
+  nothing, and this stage adds none. The one thing a loader in this plan does — skipping a call it
+  knows the repository will refuse, so the reader gets the designed locked state instead of an error
+  panel — is not an exception to that: it changes what is rendered, never what is permitted, the
+  server function stays reachable without its route, and the call still ends in `ForbiddenError` if
+  it is made. The area brief states the rule; `10-S2` and `10-S3` are the two stages that apply it.
 - **No component decides.** Nothing under `src/components/**` may import from `server/`, and a
   component that hides a control has hidden a control, not prevented a write.
 - **No server function decides.** A server function builds a scope with `appScope()` and calls a
@@ -1162,10 +1287,21 @@ same three-line preamble.
   (`src/routes/_app/trips/$tripId/collab.tsx:86`) hides a moderation affordance; its counterpart is
   the `collab.moderate` key, whose assertion belongs to the collaboration repository that
   `07-collaboration-and-sharing.md` owns and is stated to that plan rather than reached into here.
-- **`assertCanAdminister` is not replaced by a parallel mechanism; it becomes a caller of this one.**
-  It is the only role assertion with callers in the repository layer today, all six of them in
-  `src/server/repos/members.ts`. After this stage it resolves its floor from the matrix instead of
-  from the constant `admin`, so there is one resolution path, not two.
+- **`assertCanAdminister` is not extended into a parallel mechanism; its call sites move.** It is
+  the only role assertion with callers in the repository layer today, and all six of them are in
+  `src/server/repos/members.ts` (`:81`, `:153`, `:176`, `:190`, `:261`, `:303`), with a seventh
+  arriving with `10-S1`'s `refreshInvitationExpiry` in wave 3. Every one of the seven governs an
+  action the catalogue sells, so every one becomes `await assertAction(scope, '<key>')` — that is
+  this stage's edit to `members.ts`, listed in **Owned paths** and mapped key by key under
+  **Server**. `assertCanAdminister` itself is left exactly as it is, in a file this stage does not
+  own, and keeps the callers `10-S2` gave it: the four audit reads, whose floor is fixed at `admin`
+  by design because the trail is evidence about administrators and an owner who could raise
+  `audit.read` could hide their own actions from the people it exists to hold accountable. So the
+  boundary carries two assertions and one rule for choosing between them — an action in the
+  catalogue is asserted with `assertAction`, an action deliberately outside it with
+  `assertCanAdminister` — and one implementation of the role comparison underneath both, which is
+  `hasAtLeastRole` (`src/server/repos/context.ts:117`). What there is not, anywhere, is a second
+  place that decides.
 
 Rows unblocked: none. This is the last stage in the plan.
 
@@ -1176,9 +1312,26 @@ Rows unblocked: none. This is the last stage in the plan.
   the matrix screen can render labels without a round trip.
 - `src/lib/__tests__/permissions.test.ts` — new.
 - `src/server/repos/permissions.ts` — new. The repository module for the stored overrides and the
-  enforcement primitive.
-- `src/server/repos/context.ts` — edit. `assertCanAdminister` resolves its floor through the
-  matrix; `hasAtLeastRole`, `assertRole` and the role ranking are unchanged.
+  enforcement primitive. It imports `hasAtLeastRole` and `ForbiddenError` from
+  `src/server/repos/context.ts` and adds no second role comparison. **`context.ts` is deliberately
+  not an owned path:** `assertCanAdminister` cannot resolve a stored matrix without becoming
+  asynchronous and taking a scope rather than a context, which would change the signature of the one
+  helper the whole repository layer shares. Moving seven call sites is a smaller and more honest
+  change than re-typing a shared helper, and it leaves that helper with real callers rather than as
+  a wrapper nothing needs.
+- `src/server/repos/members.ts` — edit, and the edit is seven single-line call-site changes and
+  nothing else: each `assertCanAdminister(scope.ctx, …)` becomes `await assertAction(scope, '<key>')`
+  per the mapping table under **Server**. Measured, because whether this is a one-line change or a
+  refactor depends on it: every function holding one of those calls is already `async` and already
+  returns a promise — `updateOrganization` (`:77`), `addMember` (`:152`), `changeMemberRole` (`:171`),
+  `removeMember` (`:187`), `createInvitation` (`:257`), `cancelInvitation` (`:299`) — so no signature
+  changes, no caller changes, and no route, server function or component is touched. The seventh site
+  is inside `refreshInvitationExpiry`, which `10-S1` adds as an `async` function in wave 3. **This
+  file is touched by two other stages, both in earlier waves, and both are named here as the
+  shared-path protocol requires:** `10-S1` (this plan, wave 3), which appends three functions, and
+  `09-account-and-settings.md` `09-S3` (wave 1), which appends `deleteWorkspace`. This stage is wave
+  5 and therefore the last of the three writers; the two appends are disjoint from each other and
+  from these seven lines, so each writer meets what the previous one left.
 - `src/server/repos/__tests__/permissions.test.ts` — new.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
 - `src/routes/_app/admin/-server/permissions.ts` — new. The stage's two server functions.
@@ -1244,13 +1397,39 @@ to tell which one an entry was.
     records `permissions.updated` through `trail()`. Behind `assertAction(scope, 'workspace.settings')`.
   - `resetPermissionMatrix(scope)` — writes NULL, records `permissions.reset`. Same floor.
   - `assertAction(scope, actionKey)` — resolves the workspace's floor for the key and raises
-    `ForbiddenError(actionKey, allowedRoles)` when `hasAtLeastRole` is false. This is the enforcement
-    primitive, and it is the only one.
-- **The read is cached, and the cache is the existing one.** `assertAction` runs before writes that
-  are already doing D1 work, but it must not add a round trip to every one of them. The matrix is
-  read once per request and memoised on the scope object for that request's lifetime, the same
-  lifetime `resolveQuotas` already assumes. It is not cached in KV: a permission change that takes
-  60 seconds to bind is a permission change that did not happen when the administrator was watching.
+    `ForbiddenError(actionKey, allowedRoles)` when `hasAtLeastRole` (`context.ts:117`) is false. It
+    is `async`, because resolving a floor reads a row. This is the enforcement primitive, and it is
+    the only one.
+- **The seven call sites this stage moves, key by key.** They are the whole of the edit to
+  `src/server/repos/members.ts`:
+
+  | Call site                                   | Today                                              | After                                             |
+  | ------------------------------------------- | -------------------------------------------------- | ------------------------------------------------- |
+  | `updateOrganization` (`:81`)                | `assertCanAdminister(ctx, 'rename the workspace')` | `await assertAction(scope, 'workspace.settings')` |
+  | `addMember` (`:153`)                        | `assertCanAdminister(ctx, 'add a member')`         | `await assertAction(scope, 'member.invite')`      |
+  | `changeMemberRole` (`:176`)                 | `assertCanAdminister(ctx, 'change a member role')` | `await assertAction(scope, 'member.role_change')` |
+  | `removeMember` (`:190`)                     | `assertCanAdminister(ctx, 'remove a member')`      | `await assertAction(scope, 'member.remove')`      |
+  | `createInvitation` (`:261`)                 | `assertCanAdminister(ctx, 'invite a member')`      | `await assertAction(scope, 'member.invite')`      |
+  | `cancelInvitation` (`:303`)                 | `assertCanAdminister(ctx, 'cancel an invitation')` | `await assertAction(scope, 'member.invite')`      |
+  | `refreshInvitationExpiry` (`10-S1`, wave 3) | `assertCanAdminister(ctx, …)`                      | `await assertAction(scope, 'member.invite')`      |
+
+  `member.invite` governs the invitation lifecycle as a whole — mint, resend, revoke — because a role
+  that may invite may undo its own mistake, and a workspace that had to grant "invite" and "revoke"
+  separately would grant both anyway. `removeMember`'s self-removal branch (`:189-191`) is untouched
+  and stays outside the matrix: leaving a workspace is not an administrative action and no floor may
+  make it one.
+
+- **The read is memoised per scope, and it needs no change to `base.ts`.** `assertAction` runs before
+  writes that are already doing D1 work, but it must not add a round trip to each of them. The
+  resolved matrix is held in a module-level `WeakMap<TenantScope, Promise<ResolvedMatrix>>` inside
+  `src/server/repos/permissions.ts`, keyed by the scope object itself. That works, and works without
+  touching a shared file, because `createScope()` returns a fresh frozen object per call
+  (`src/server/repos/base.ts:51-53`) and `appScope()` builds exactly one of them per server-function
+  invocation (`src/routes/_app/-server/context.ts`) — so the key's lifetime is the call's lifetime and
+  the entry is collectable the moment the call ends. Stated precisely rather than generously: a
+  request that builds two scopes reads the row twice, which is one extra indexed single-row read on a
+  page that is already reading several. It is **not** cached in KV: a permission change that takes 60
+  seconds to bind is a permission change that did not happen while the administrator was watching.
 - **Server functions — `src/routes/_app/admin/-server/permissions.ts`,** both scoped through
   `appScope()`.
   - `loadPermissionMatrix` — `GET`. The effective matrix, the defaults, and which rows are
@@ -1346,9 +1525,14 @@ against B's rows:
 - `resetPermissionMatrix` in A leaves B's stored record intact.
 - `assertAction` in B resolves B's floors, not A's: with A having raised `file.upload` to `owner`, an
   admin in B may still upload.
+- The moved call sites resolve per tenant too: with A having lowered `member.invite` to `member`, a
+  member scope in B calling `createInvitation` still raises `ForbiddenError` and B gains no
+  invitation row — a customisation cannot leak across the boundary through the assertion any more
+  than through a query.
 
 Functions covered: `getPermissionMatrix`, `savePermissionMatrix`, `resetPermissionMatrix`,
-`assertAction`.
+`assertAction`, and through it `createInvitation`, `cancelInvitation`, `changeMemberRole`,
+`removeMember`, `addMember` and `updateOrganization` in `src/server/repos/members.ts`.
 
 ### Verification
 
@@ -1367,9 +1551,15 @@ Functions covered: `getPermissionMatrix`, `savePermissionMatrix`, `resetPermissi
   6. raising any action above `owner` is refused at the write;
   7. a batch save is all-or-nothing: one invalid entry rejects the submission and the stored record
      is byte-for-byte what it was;
-  8. `assertCanAdminister` resolves through the matrix — a workspace that lowers `member.invite` to
-     `member` lets a member call `createInvitation`, and one that has not still refuses;
-  9. the matrix is read once per request: two `assertAction` calls in one scope issue one query.
+  8. the seven moved call sites resolve through the matrix — a workspace that lowers `member.invite`
+     to `member` lets a member call `createInvitation` and `cancelInvitation`, and one that has not
+     still refuses both with `ForbiddenError` naming the key; `removeMember` still lets a member
+     remove themselves at every setting, because self-removal is outside the matrix;
+  9. `assertCanAdminister` is unchanged and still refuses a member on the four audit reads whatever
+     the matrix says, so the fixed floor cannot be lowered by a customisation;
+  10. the matrix is read once per scope: two `assertAction` calls against one scope object issue one
+      query, and a second scope issues a second one — the `WeakMap` is keyed by scope identity and
+      the test asserts both halves rather than only the cheap one.
 - **Catalogue test — `src/lib/__tests__/permissions.test.ts`:** all sixteen keys match the dotted
   regex the audit boundary enforces; keys are unique; every key has a label, a description, a group
   and a default; `mergeOverrides` is pure and never mutates its inputs.
@@ -1472,7 +1662,7 @@ Run at the time of writing and pasted verbatim, because a judgement re-made by h
 eventually made wrong. `node scripts/ultrabuild/check-plan-collisions.mjs 10`:
 
 ```
-plans 8 · stages 48 · owned paths 284
+plans 13 · stages 91 · owned paths 553
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -1488,41 +1678,57 @@ touched by more than one plan in different waves (5) — legal; each plan must n
   e2e/helpers/shoot.ts
       01-trips-core.md  01-S5  wave 2  (edit)
       10-administration.md  10-S2  wave 1  (edit)
+  src/routes/_app/-ui/settings-nav.tsx
+      02-places-and-maps.md  02-S10  wave 5  (edit)
+      09-account-and-settings.md  09-S8  wave 3  (edit)
+      10-administration.md  10-S3  wave 4  (edit)
   src/server/auth/index.ts
       09-account-and-settings.md  09-S3  wave 1  (edit)
       10-administration.md  10-S1  wave 3  (edit)
   src/server/repos/members.ts
       09-account-and-settings.md  09-S3  wave 1  (edit)
       10-administration.md  10-S1  wave 3  (edit)
-  src/routes/_app/-ui/settings-nav.tsx
-      09-account-and-settings.md  09-S8  wave 3  (edit)
-      10-administration.md  10-S3  wave 4  (edit)
+      10-administration.md  10-S4  wave 5  (edit)
 ```
 
 Reading it:
 
 - **No same-wave exclusive collision involves this plan.** No stage here shares an exclusive
-  disposition on a file with another stage in the same wave, inside this plan or across the set.
-  Note the shape of that guarantee: the check is over stages that state a wave, so the line above it
-  is part of the same reading and not a footnote.
+  disposition on a file with another stage in the same wave, inside this plan or across the thirteen
+  plans the check now reads. Note the shape of that guarantee: the check is over stages that state a
+  wave, so the line above it is part of the same reading and not a footnote.
 - **Five paths are touched by more than one plan in different waves, which is legal, and every one of
   them is named in the stage that owns it here, with the sibling stage id and its wave.**
 
-  | Path                                   | Owned here by   | Named siblings                                    |
-  | -------------------------------------- | --------------- | ------------------------------------------------- |
-  | `src/routes/_app/-server/overview.ts`  | `10-S3`, wave 4 | `00-S5` w0 · `01-S1` w1 · `09-S7` w2 · `01-S7` w5 |
-  | `e2e/helpers/shoot.ts`                 | `10-S2`, wave 1 | `01-S5` w2                                        |
-  | `src/server/auth/index.ts`             | `10-S1`, wave 3 | `09-S3` w1                                        |
-  | `src/server/repos/members.ts`          | `10-S1`, wave 3 | `09-S3` w1                                        |
-  | `src/routes/_app/-ui/settings-nav.tsx` | `10-S3`, wave 4 | `09-S8` w3                                        |
+  | Path                                   | Owned here by           | Named siblings                                    |
+  | -------------------------------------- | ----------------------- | ------------------------------------------------- |
+  | `src/routes/_app/-server/overview.ts`  | `10-S3`, wave 4         | `00-S5` w0 · `01-S1` w1 · `09-S7` w2 · `01-S7` w5 |
+  | `e2e/helpers/shoot.ts`                 | `10-S2`, wave 1         | `01-S5` w2                                        |
+  | `src/routes/_app/-ui/settings-nav.tsx` | `10-S3`, wave 4         | `09-S8` w3 · `02-S10` w5                          |
+  | `src/server/auth/index.ts`             | `10-S1`, wave 3         | `09-S3` w1                                        |
+  | `src/server/repos/members.ts`          | `10-S1` w3 · `10-S4` w5 | `09-S3` w1                                        |
 
   Each of those is named in the stage's **Owned paths**, not only in this table, because that is the
-  list an orchestrator fans out against. Two of them are new since the previous run of this check —
-  `09-S7` on `overview.ts` and `09-S8` on `settings-nav.tsx` — and both appeared because
-  `09-account-and-settings.md` was written after this file's first draft. That is the protocol
-  working, not an exception to it: the plan written second names the sibling, and re-running the
-  check is how the second writer finds out. `09-account-and-settings.md` names `10-S3` in both
-  directions already, so the pair is reciprocal.
+  list an orchestrator fans out against.
+
+  Two lines moved since the previous run of this check, and both moved for a reason worth stating
+  rather than for a reason worth hiding:
+
+  - `src/server/repos/members.ts` now carries a third claimant, `10-S4` in wave 5. That is this
+    round's correction: the stage's enforcement design always required moving seven
+    `assertCanAdminister` call sites in that file, and the file was missing from its ownership, which
+    made the stage unimplementable without a violation. Wave 3 then wave 5 inside one plan is
+    sequential by construction, and `09-S3` in wave 1 precedes both.
+  - `src/routes/_app/-ui/settings-nav.tsx` gained `02-S10` in wave 5, because
+    `02-places-and-maps.md` was written after this file's previous draft. That is the protocol
+    working rather than an exception to it: the plan written second names the sibling, and re-running
+    the check is how the second writer finds out.
+
+  What did **not** move is as load-bearing: `src/server/repos/base.ts` and
+  `src/server/repos/context.ts` appear in no stage's ownership here. An earlier draft of `10-S4`
+  needed both — a memo field on the scope and an asynchronous `assertCanAdminister` — and both
+  requirements were designed out rather than claimed, because a stage that edits the file every
+  repository in the codebase imports is a stage that collides with everything eventually.
 
 - **The four stages the check cannot read are not this plan's.** `04-S2` is in
   `04-budget-and-currencies.md`; `11-S1`, `11-S2` and `11-S3` are in
@@ -1534,12 +1740,13 @@ Reading it:
   it is carried out of this file as a contract extension. All four of **this** plan's stages state a
   wave on their `### Stage id` line — `10-S1` wave 3, `10-S2` wave 1, `10-S3` wave 4, `10-S4`
   wave 5 — so every one of them is inside the check.
-- `src/server/repos/__tests__/tenant-isolation.test.ts` is claimed by three stages here and by stages
-  in every other plan, and is absent from both lists because every claimant marks it `append`, which
-  is the documented cooperative pattern and not a collision. The same is true of
-  `e2e/administration.visual.spec.ts`, which `10-S2` creates in wave 1 and the other three append a
-  `test.describe` to.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` is claimed by the three stages here that add
+  a repository function — `10-S1`, `10-S2` and `10-S4` — and by stages in every other plan, and is
+  absent from both lists because every claimant marks it `append`, which is the documented
+  cooperative pattern and not a collision. `10-S3` adds no repository function and therefore claims
+  it not at all. The same append pattern covers `e2e/administration.visual.spec.ts`, which `10-S2`
+  creates in wave 1 and the other three add a `test.describe` to.
 - **The counts in the pasted output move between rounds, and that is expected rather than alarming.**
-  The plan set is still being written; `plans 8 · stages 48 · owned paths 284` is what was measured
-  on 2026-08-24 for this file. A later round re-runs the command and re-pastes it, and a path that
-  appears then is named by whichever plan is written second.
+  `plans 13 · stages 91 · owned paths 553` is what was measured on 2026-08-25 for this file, against
+  eight plans and 48 stages a round earlier. A later round re-runs the command and re-pastes it, and
+  a path that appears then is named by whichever plan is written second.

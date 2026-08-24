@@ -186,18 +186,32 @@ shorthand elsewhere as `-ui/plan-screen.tsx`, `-ui/plan-actions.tsx`, `-ui/plan-
 carry. Prefixed `$tripId` is a route parameter directory, not a shell variable, and a stage that
 writes it into a command quotes it.
 
-**At most one stage per wave names any of the four**, counting the stages of every other plan and not
-only this one. The schedule below is the whole of it, and a stage added later that breaks it is
-rejected before it is scheduled:
+**Each of the four is named by at most one stage per wave**, counting the stages of every other plan
+and not only this one. The schedule below is the whole of it as measured by
+`scripts/ultrabuild/check-plan-collisions.mjs` at the foot of this file, and a stage added later that
+breaks it is rejected before it is scheduled:
 
 | Wave | Stage                          | Which of the four it holds                 |
 | ---- | ------------------------------ | ------------------------------------------ |
 | 1    | `07-S1` (`07-…`, another plan) | `-server/plan.ts`                          |
 | 1    | `01-S2`                        | `-ui/plan-model.ts`, `-ui/plan-screen.tsx` |
 | 2    | `01-S4`                        | all four                                   |
+| 3    | `02-S4` (`02-…`, another plan) | `-ui/plan-screen.tsx`                      |
+| 3    | `02-S5` (`02-…`)               | `-ui/plan-actions.tsx`                     |
+| 4    | `02-S7` (`02-…`)               | `-ui/plan-model.ts`, `-server/plan.ts`     |
+| 4    | `03-S5` (`03-…`, another plan) | `-ui/plan-screen.tsx`                      |
 | 5    | `01-S9`                        | `-ui/plan-screen.tsx`                      |
+| 5    | `02-S9` (`02-…`)               | `-ui/plan-model.ts`, `-server/plan.ts`     |
+| 5    | `02-S10` (`02-…`)              | `-ui/plan-actions.tsx`                     |
+| 6    | `02-S11` (`02-…`)              | `-ui/plan-actions.tsx`                     |
+| 6    | `03-S8` (`03-…`)               | `-ui/plan-model.ts`, `-server/plan.ts`     |
 
-No other stage in this file names one, and in waves 3, 4 and 6 nobody holds them at all.
+No other stage in this file names one. Eight of the twelve rows belong to sibling plans that were
+written after this file's first draft — `02-places-and-maps.md` and `03-reservations-and-transport.md`
+— and every one of them lands in a wave where no other stage holds the same file, so the rule survives
+their arrival rather than merely predating it. Two waves carry three holders each (3 and 5) and none
+carries two claims on one file, which is the property that matters: the check reports **no same-wave
+exclusive collision**.
 
 **Wave 1 of `-server/plan.ts` belongs to another plan, and this one yields it.** An earlier draft of
 `01-S2` claimed `-server/plan.ts` as `edit` in wave 1, and so does `07-S1` of
@@ -683,6 +697,20 @@ Rows unblocked: `TRP-08` (`01-S4`) directly.
 - `e2e/trips-core-s2.visual.spec.ts` — new. This stage's own spec file.
 - `e2e/__screenshots__/trips-core-s2.visual.spec.ts/` — new. Its own baseline directory.
 
+**The six shared paths this stage claims, and every stage of every plan that touches one in a later
+wave.** Measured with `scripts/ultrabuild/check-plan-collisions.mjs`, not read off the siblings; the
+run and its output are at the foot of this file. No entry shares wave 1 with this stage, which is
+what makes each claim legal.
+
+| Path                                     | Later claims, with wave                                                                  |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `src/routes/_app/trips/$tripId/plan.tsx` | `03-S5` (`03-…`, wave 4)                                                                 |
+| `-ui/plan-model.ts`                      | `01-S4` (wave 2), `02-S7` (`02-…`, wave 4), `02-S9` (wave 5), `03-S8` (`03-…`, wave 6)   |
+| `-ui/plan-screen.tsx`                    | `01-S4` (wave 2), `02-S4` (wave 3), `03-S5` (wave 4), `01-S9` (wave 5)                   |
+| `src/components/planner/day-section.tsx` | `01-S4` (wave 2), `02-S4` (wave 3), `03-S5` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6) |
+| `src/components/planner/types.ts`        | `01-S4` (wave 2), `03-S5` (wave 4), `03-S8` (wave 6)                                     |
+| `src/components/planner/index.ts`        | `01-S4` (wave 2), `03-S5` (wave 4)                                                       |
+
 Two of the four planner core files are named here — `-ui/plan-model.ts` and `-ui/plan-screen.tsx` —
 and no stage of any plan names either of those two in wave 1 except this one, which is the schedule
 **The four planner core files** fixes.
@@ -1079,8 +1107,8 @@ column.
 
 ### Stage id
 
-`01-S3` · Wave 1 · effort **S**. The smallest stage in the plan, and the one that mints the local
-preference module the two later client-preference stages reuse.
+`01-S3` · Wave 1 · effort **S**. The smallest stage in the plan, and the one that mints the browser
+preference module the three later client-preference stages reuse — `01-S5`, `01-S7` and `01-S9`.
 
 ### Reference rows
 
@@ -1103,9 +1131,12 @@ Rows unblocked: none. `TRP-07` has no dependants in `gap-rows.json`.
 ### Owned paths
 
 - `src/lib/local-preference.ts` — new. A `useSyncExternalStore`-backed reader and writer for a
-  namespaced browser preference, storage-failure tolerant.
+  namespaced browser preference, storage-failure tolerant, with the storage **area** — `local` or
+  `session` — a required part of every preference's declaration rather than a default baked into the
+  module.
 - `src/lib/__tests__/local-preference.test.ts` — new.
-- `src/lib/trip-tab.ts` — new. The tab vocabulary check and the per-trip key, isomorphic and pure.
+- `src/lib/trip-tab.ts` — new. The tab vocabulary check and the trip-tab preference declaration
+  (`planned.trip-tab`, area `local`), isomorphic and free of storage access of its own.
 - `src/lib/__tests__/trip-tab.test.ts` — new.
 - `src/components/layout/trip-sub-nav.tsx` — edit. Records the active tab on activation.
 - `src/routes/_app/trips/$tripId/index.tsx` — edit. The redirect reads the remembered tab.
@@ -1122,9 +1153,10 @@ start, date format, distance unit, map style, accent colour and reduce-motion, a
 this shape. No column is filed for the foundations schema stage, and no migration is generated.
 
 The trade-off is stated rather than hidden: the preference does not follow the user to a second
-device. Two later stages make the same call for the same reason — the dashboard view mode (`01-S7`)
-and the widget visibility (`01-S5`) — and all three go through the one module this stage mints, so
-that a future stage which does want them on the server has one place to change and not three.
+device. Three later stages make the same call for the same reason — the widget visibility (`01-S5`),
+the trips view mode (`01-S7`) and the planner layout (`01-S9`) — and all four go through the one
+module this stage mints, so that a future stage which does want them on the server has one place to
+change and not four.
 
 ### Server (repo, server function, Zod)
 
@@ -1135,9 +1167,9 @@ because an empty heading is indistinguishable from an author who never asked.
 The one server-side seam it touches is the isomorphism of `beforeLoad`, which is a correctness
 question rather than a data one. `src/routes/_app/trips/$tripId/index.tsx:9-11` throws
 `redirect({ to: '/trips/$tripId/plan', replace: true })` from `beforeLoad`, and `beforeLoad` runs on
-the server for a cold load and in the browser for a client navigation. `window.sessionStorage` does
-not exist in the first case. The rule this stage fixes: the redirect reads the remembered tab **only
-when `typeof window !== 'undefined'`**, and falls back to `plan` otherwise. A cold load of
+the server for a cold load and in the browser for a client navigation. Neither `window.localStorage`
+nor `window.sessionStorage` exists in the first case. The rule this stage fixes: the redirect reads
+the remembered tab **only when `typeof window !== 'undefined'`**, and falls back to `plan` otherwise. A cold load of
 `/trips/<id>` therefore lands on the plan and a client navigation lands on the remembered tab, which
 is the honest behaviour and is what the stage's evidence has to show — not a hydration mismatch
 dressed as a feature.
@@ -1152,12 +1184,119 @@ place and keeps its path.
 `motion` active pill, its horizontal scroll on narrow viewports and its two-row narrow layout are
 untouched — the stage is a memory, not a redesign, and the strip already meets the bar.
 
-**The storage contract.** Keys are namespaced under this product's own prefix, `planned.` , matching
-`THEME_STORAGE_KEY = 'planned.theme'` (`src/lib/theme.ts:18`); the per-trip key is
-`planned.trip-tab.<tripId>`. `sessionStorage` rather than `localStorage`, because "where I was in this
-trip" is a property of a working session and a week-old memory is a surprise. Every read and every
-write is wrapped in `try`/`catch` for the same reason `src/lib/theme.ts:52-59` wraps its own: storage
-access itself throws in Safari private browsing, and a preference is never worth a white screen.
+**The storage contract, and the lifetime decision it forces.** Keys are namespaced under this
+product's own prefix, `planned.`, matching `THEME_STORAGE_KEY = 'planned.theme'`
+(`src/lib/theme.ts:18`). The module exposes two factories and no free-floating getters, so no caller
+can reach a storage object directly:
+
+```ts
+export type PreferenceArea = 'local' | 'session'
+
+export function definePreference<T>(spec: {
+  readonly key: `planned.${string}`
+  readonly area: PreferenceArea
+  readonly fallback: T
+  readonly parse: (raw: string) => T | undefined
+}): Preference<T>
+
+export function defineKeyedPreference<T>(spec: {
+  readonly key: `planned.${string}`
+  readonly area: PreferenceArea
+  readonly limit: number
+  readonly fallback: T
+  readonly parse: (raw: string) => T | undefined
+}): KeyedPreference<T>
+```
+
+`Preference<T>` is `read()`, `write(next)` and `subscribe(listener)`; `KeyedPreference<T>` is the same
+surface with an owner id — a trip id — as the first argument. React reads them through two hooks over
+`useSyncExternalStore`, exported from the same module:
+
+```ts
+export function useLocalPreference<T>(
+  pref: Preference<T>,
+): readonly [T, (next: T) => void]
+
+export function useKeyedPreference<T>(
+  pref: KeyedPreference<T>,
+  ownerId: string,
+): readonly [T, (next: T) => void]
+```
+
+`useLocalPreference` is the name two sibling plans already import — `03-S6`
+(`03-reservations-and-transport.md`, wave 4) and `09-S8` (`09-account-and-settings.md`, wave 3) both
+name it in their **Components** list — so it is fixed here and not renamed later.
+
+**`area` is required and has no default.** That is the whole point of the signature. How long a
+preference lives is a product decision, and a defaulted lifetime is a decision nobody took: pinning
+the module to `sessionStorage` would have quietly thrown away the behaviour of three of its four
+consumer stages and half of the fourth, two of them against a `gap-rows.json` row that asks in as
+many words for the choice to be _persisted_. The template-literal type on `key` makes an unnamespaced key a compile error rather
+than a review note.
+
+**Every preference in this plan, its area and the reason.** No stage may add a sixth without adding
+a row here.
+
+| Preference                  | Stage   | Shape                                                      | Area      | Why that lifetime                                                                                                                                                   |
+| --------------------------- | ------- | ---------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `planned.trip-tab`          | `01-S3` | keyed by trip id, `limit` 24                               | `local`   | `TRP-07` asks for per-trip tab **persistence**. A reader who works a trip's costs on Monday and reopens it on Thursday is owed the costs tab, not the plan.         |
+| `planned.dashboard-widgets` | `01-S5` | one record: which widgets are shown, the pinned zones      | `local`   | Hiding a widget and choosing time zones is configuration. Re-hiding the converter every morning is not a preference, it is a chore.                                 |
+| `planned.trips-view`        | `01-S7` | one record: last chosen mode, archived fold open           | `local`   | `TRP-01` reads "grid/list view modes **persisted** client-side". Session lifetime would fail the row on its own wording.                                            |
+| `planned.planner-layout`    | `01-S9` | keyed by trip id, `limit` 8: rail widths, detail minimised | `local`   | A rail dragged to the width a reader can work at is a workspace setting; making them drag it again tomorrow is the defect the handle was built to remove.           |
+| `planned.planner-days`      | `01-S9` | keyed by trip id, `limit` 8: which days are unfolded       | `session` | The only one that is genuinely a sitting. Which days you have open is where you are in this piece of work, and a fold restored a week later hides days added since. |
+
+**Two sibling stages consume this module from other plans, and the area field is what they need.**
+`03-S6` stores a per-trip booking-group fold and a per-session type filter, and its own text says the first is `localStorage`
+and the second `sessionStorage` — two lifetimes from one module, which is exactly the choice the
+`area` field exists to express and which a module pinned to one storage object could not have served.
+`09-S8` renders `01-S5`'s widget-visibility record as a settings surface and mints no second store;
+it reads and writes the same declaration, which is why that declaration lives in a module and not
+inside a component. Both sit behind the wave-1 stage that mints the module, and `09-S8`'s wave 3
+sits behind the wave-2 stage that declares the record it renders. Any declaration a sibling plan adds states its area
+in its own stage, under the same rule this table applies here.
+
+**Why the two per-trip preferences are one bounded record and not one key per trip.** A key per trip
+in `localStorage` grows without bound and nothing ever collects it: a workspace with four hundred
+trips over three years leaves four hundred dead keys behind, which is the real reason a session area
+looked attractive in the first place. Instead each keyed preference is a single key holding
+`{ v: 1, entries: [[tripId, value], ...] }`, most-recently-touched first and truncated at `limit`, so
+the store is self-pruning and its worst case is a few hundred bytes. `v` is a version stamp: a
+payload that does not carry the current one is discarded whole rather than migrated, because a
+preference is cheap to lose and expensive to guess at.
+
+There is deliberately **no composed-key escape hatch**: `definePreference` takes a literal key and a
+caller who wants per-trip state uses `defineKeyedPreference`, because the alternative is the
+unbounded key set this paragraph just ruled out. `03-S6`'s `planned.book-groups.<tripId>` is that
+same shape written the other way; it gets the behaviour it describes from the keyed factory under one
+bounded key, and reconciling the spelling belongs in that plan's stage rather than in an edit made
+here to a file this plan does not own.
+
+**Failure and cross-tab behaviour.** Every read and every write is wrapped in `try`/`catch` for the
+same reason `src/lib/theme.ts:52-59` wraps its own: storage access itself throws in Safari private
+browsing, and a preference is never worth a white screen. A value that fails `parse` is treated as
+absent. For the `local` area the module attaches one `window.addEventListener('storage')` listener so
+a second tab's write reaches this tab's subscribers; because that event never fires in the tab that
+wrote, `write()` notifies its own subscribers directly. The `session` area is per-tab by
+construction, so no cross-tab event exists for it and no listener is attached.
+
+**First paint, which is where a `local` preference can become a layout shift.** `read()` returns the
+fallback when `typeof window === 'undefined'`, and both hooks pass a `getServerSnapshot` returning
+the same fallback, so server HTML and the hydrating client agree byte for byte and React re-renders with
+the stored value in the commit after. That gap is invisible for a preference that moves no box and
+visible for one that does. The module therefore carries one rule in its docstring, and each consumer
+states how it satisfies it: **a stored preference is never the sole source of a layout-affecting
+first paint.**
+
+- `01-S3` — the remembered tab is a redirect decision taken in `beforeLoad`, in the browser only. The
+  strip never renders one tab and then another; a cold load lands on `plan` and says so above.
+- `01-S5` — the reference column reserves a fixed height inside the route's existing pending
+  component, so which widgets are folded changes nothing outside the column.
+- `01-S7` — the mode is projected into the route's own `view` search parameter. The URL is the truth
+  that the server and the browser both read; the preference only supplies the default for an in-app
+  navigation.
+- `01-S9` — the workspace paints behind its first-open splash and the rails take their stored width
+  before it exits, and the rails are overlays above the map canvas, so a width is a repaint and never
+  a document reflow.
 
 **States.** No list, so no empty state, no skeleton and no error surface of its own — stated rather
 than skipped, and the box below is ticked against the tab strip re-checked after the edit. The tab
@@ -1182,7 +1321,7 @@ and touches no repository. `src/server/repos/__tests__/tenant-isolation.test.ts`
 **Owned paths** and is not edited.
 
 The adjacent risk is worth naming once, because it is the one way a client-side memory can leak: the
-key is namespaced by trip id, and a trip id is not a secret but it is also not a capability — landing
+record is keyed by trip id, and a trip id is not a secret but it is also not a capability — landing
 on a remembered tab for a trip the session can no longer read produces the route's own
 `notFoundComponent` (`src/routes/_app/trips/$tripId/route.tsx:21-25`) because the loader is still
 tenant-scoped. The memory can never widen access; at worst it names a route that then refuses.
@@ -1194,22 +1333,38 @@ tenant-scoped. The memory can never widen access; at worst it names a route that
 **Unit tests.**
 
 - `src/lib/__tests__/local-preference.test.ts` — reading with no stored value returns the fallback; a
-  stored value that fails the caller's guard returns the fallback rather than propagating; a `getItem`
-  that throws returns the fallback and does not rethrow; a `setItem` that throws is swallowed;
-  subscribers are notified on write and unsubscribed cleanly.
-- `src/lib/__tests__/trip-tab.test.ts` — the key is derived from the trip id and is stable; an unknown
-  tab id read back from storage resolves to `plan`, so a renamed tab cannot strand a user on a dead
-  route; the seven ids match `TRIP_TABS` exactly, which is the assertion that fails if someone adds an
-  eighth tab without revisiting this module.
+  stored value that fails the caller's guard returns the fallback rather than propagating; a payload
+  whose `v` is not the current one is discarded whole rather than half-read; a `getItem` that throws
+  returns the fallback and does not rethrow; a `setItem` that throws is swallowed; subscribers are
+  notified on write and unsubscribed cleanly.
+- `src/lib/__tests__/local-preference.test.ts`, the area cases, which are the ones that fail if
+  somebody re-pins the module to one storage object — an `area: 'local'` preference writes to
+  `localStorage` and to nothing else, and still reads back after `sessionStorage.clear()`; an
+  `area: 'session'` preference writes to `sessionStorage` and leaves `localStorage` untouched; a
+  `storage` event for the watched key updates a `local` subscriber and a `storage` event for another
+  key does not; no listener is attached for a `session` preference. The jsdom environment supplies
+  both storage objects and dispatchable `StorageEvent`s, so this is measured rather than asserted.
+- `src/lib/__tests__/local-preference.test.ts`, the keyed cases — writing past `limit` drops the
+  least-recently-touched entry and never the one just written; reading an id that was pruned returns
+  the fallback; touching an existing id reorders without growing the record.
+- `src/lib/__tests__/trip-tab.test.ts` — the declaration names area `local`, which is the assertion
+  that fails if the lifetime is changed without changing this plan; an unknown tab id read back from
+  storage resolves to `plan`, so a renamed tab cannot strand a user on a dead route; the seven ids
+  match `TRIP_TABS` exactly, which is the assertion that fails if someone adds an eighth tab without
+  revisiting this module.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
 `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
 out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
 this stage's own baselines and nobody else's — against `e2e/trips-core-s3.visual.spec.ts`.
-This stage's `describe` block asserts the behaviour end to end in one engine-independent test —
-visit `/trips/<id>/costs`, navigate to `/trips`, click back into the trip, and assert the URL is the
-costs tab — and takes its frames of the strip in its non-default state, which is the point of the
-stage and is not visible at rest:
+This stage's `describe` block asserts the behaviour end to end in two engine-independent tests. The
+first is the memory itself — visit `/trips/<id>/costs`, navigate to `/trips`, click back into the
+trip, and assert the URL is the costs tab. The second is the **lifetime**, which is the assertion a
+session-scoped store would fail: open a second page in the same browser context and walk it into the
+same trip, and the costs tab is still the one that opens. `sessionStorage` is per tab by
+construction, so that second page is the cheapest measurement that tells the two areas apart from
+outside the code. It then takes its frames of the strip in its non-default state, which is the point
+of the stage and is not visible at rest:
 
 ```sh
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
@@ -1328,6 +1483,24 @@ Rows unblocked: `BKG-10` (`03-…`, wave 3) directly; `TRP-06` (`01-S9`) reads t
 
 All four planner core files are named here, and **this is the only wave-2 stage in any plan that names
 any of them**, which is the schedule the Area brief fixes.
+
+**The eleven shared paths this stage claims, and every stage of every plan that touches one in
+another wave.** Measured with `scripts/ultrabuild/check-plan-collisions.mjs`; the run and its output
+are at the foot of this file. Nothing below sits in wave 2.
+
+| Path                                                | Other claims, with wave                                                                          |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `src/components/planner/ordering.ts`                | `03-S5` (`03-…`, wave 4)                                                                         |
+| `src/components/planner/plan-dnd.ts`                | `03-S5` (wave 4)                                                                                 |
+| `src/components/planner/__tests__/ordering.test.ts` | `03-S5` (wave 4)                                                                                 |
+| `src/components/planner/day-section.tsx`            | `01-S2` (wave 1), `02-S4` (`02-…`, wave 3), `03-S5` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6) |
+| `src/components/planner/types.ts`                   | `01-S2` (wave 1), `03-S5` (wave 4), `03-S8` (wave 6)                                             |
+| `src/components/planner/index.ts`                   | `01-S2` (wave 1), `03-S5` (wave 4)                                                               |
+| `-ui/plan-model.ts`                                 | `01-S2` (wave 1), `02-S7` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6)                           |
+| `-ui/plan-screen.tsx`                               | `01-S2` (wave 1), `02-S4` (wave 3), `03-S5` (wave 4), `01-S9` (wave 5)                           |
+| `-ui/plan-actions.tsx`                              | `02-S5` (wave 3), `02-S10` (wave 5), `02-S11` (wave 6)                                           |
+| `-server/plan.ts`                                   | `07-S1` (`07-…`, wave 1), `02-S7` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6)                   |
+| `src/server/repos/itinerary.ts`                     | `07-S9` (wave 3), `02-S9` (wave 5)                                                               |
 
 `src/server/repos/days.ts` is **not** here. `reorderDayTimeline` lives in `itinerary.ts` and reaches
 the note rows through the `dayNotesRepository` that `days.ts` already exports (`:26`), so the note
@@ -1660,7 +1833,10 @@ Rows unblocked: none.
   row, trip mix, bookings and storage meter are untouched.
 - `src/routes/_app/-ui/dashboard-widgets.tsx` — new. The column, the sheet, the visibility control.
 - `src/routes/_app/-ui/timezone-clock.tsx` — new. The clock widget.
-- `src/lib/clock-zones.ts` — new. Pure: zone validation, the label, the offset line, the ordering.
+- `src/lib/clock-zones.ts` — new. Pure: zone validation, the label, the offset line, the ordering,
+  and the reference column's one preference declaration — `planned.dashboard-widgets`, area `local`,
+  holding both which widgets are shown and which zones are pinned, since the zones are half of that
+  record.
 - `src/lib/__tests__/clock-zones.test.ts` — new.
 - `e2e/helpers/shoot.ts` — edit, and this stage is the **only** wave-2 stage that claims it; `01-S4`
   states in its own Verification block that it does not. One entry is added to
@@ -1676,20 +1852,28 @@ Rows unblocked: none.
 **No schema change and no migration, and the decision is argued rather than assumed.**
 
 The per-widget visibility is a per-browser preference, stored through the
-`src/lib/local-preference.ts` module `01-S3` minted, under `planned.dashboard-widgets`. It is not a
-column. `user_settings` (`src/server/db/schema.ts:1827-1856`) carries theme, locale, timezone,
+`src/lib/local-preference.ts` module `01-S3` minted, as one `definePreference` declaration under
+`planned.dashboard-widgets` with **`area: 'local'`** — the lifetime is written into the declaration
+and is covered by this stage's own unit test, because a widget the reader turned off yesterday that
+is back this morning is not a preference at all. It is not a column. `user_settings` (`src/server/db/schema.ts:1827-1856`) carries theme, locale, timezone,
 currency, week start, date format, distance unit, map style, accent colour, reduce-motion and an
 onboarding stamp — every one of them a setting that must follow the account to a second device.
 Whether a reference column is folded on this laptop is not in that class, and adding a column plus a
 write path plus a resolver for it would put a D1 write on a checkbox.
 
-The trade-off, stated rather than hidden: the fold does not follow the user to another device. This
-is the same call `01-S3` made for the remembered tab and `01-S7` makes for the view mode, all three go
-through the same module, and if a later stage decides the preference should be an account setting
-there is one place to change.
+The trade-off, stated rather than hidden: the fold does not follow the user to another device — it
+survives the browser being closed, which is the lifetime that matters here, but a second laptop
+starts from the default set. This is the same call `01-S3` made for the remembered tab, `01-S7` makes
+for the view mode and `01-S9` makes for the rail widths; all four go through the same module with an
+explicit area, and if a later stage decides the preference should be an account setting there is one
+place to change.
 
-The chosen time zones are stored the same way, as IANA zone identifiers validated against the
-runtime's own zone list. `user_settings.timezone` already exists and this stage reads nothing from
+The chosen time zones live in the same record and therefore share its `local` area, as IANA zone
+identifiers validated against the runtime's own zone list on the way in and on the way out. One
+sibling stage reads this record rather than minting its own: `09-S8` (`09-account-and-settings.md`,
+wave 3) renders the visibility list as a settings surface, a wave after this stage declares it, and
+its own text says it "mints no second one". That is the second reason the declaration lives in a
+module instead of inside the component that draws the column. `user_settings.timezone` already exists and this stage reads nothing from
 it — see the next heading for why.
 
 ### Server (repo, server function, Zod)
@@ -1790,7 +1974,9 @@ arrives entirely through `loadDashboard`, which is tenant-scoped and untouched.
 
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
-**Unit tests.** `src/lib/__tests__/clock-zones.test.ts` — an unknown zone identifier is rejected
+**Unit tests.** `src/lib/__tests__/clock-zones.test.ts` — the preference declaration names
+`area: 'local'`, which is the case that fails if a later edit gives the column a session lifetime and
+makes a reader re-hide the same widget every morning; an unknown zone identifier is rejected
 rather than passed to `Intl`; the offset line is signed and correct across a zone with a
 half-hour offset, which is where a naive integer-hours implementation fails; the label is derived from
 the identifier without hard-coding a city list; zones sort by offset then label, so the column reads
@@ -1917,9 +2103,12 @@ Rows unblocked: `TRP-02` (`01-S8`) and `TRP-06` (`01-S9`) directly.
 ### Owned paths
 
 - `src/server/repos/trip-guests.ts` — new. The guest record and the participant read model.
-- `src/server/repos/index.ts` — edit. Two export lines; no other repository module is touched. Shared
-  with `07-S10` (`07-collaboration-and-sharing.md`, wave 5), which adds its own export line a wave
-  later; different waves, and both edits are additions to the same barrel.
+- `src/server/repos/index.ts` — edit. Two export lines; no other repository module is touched. Three
+  sibling stages touch the same barrel in three other waves and none in wave 4: `06-S3`
+  (`06-documents-and-media.md`, wave 2) and `06-S5` (wave 3), both as `append`, which is the
+  cooperative disposition and not a collision at all, and `07-S10`
+  (`07-collaboration-and-sharing.md`, wave 5), which adds its own export line a wave later. Every one
+  of the four edits is an addition to the same list of re-exports; none reorders or removes a line.
 - `src/server/repos/trips.ts` — edit. The membership guards named below. Shared with `01-S1` (wave 1)
   and `07-S6` (`07-…`, wave 2), both earlier; this stage adds to what they left.
 - `src/routes/_app/trips/$tripId/-server/people.ts` — new. The stage's server functions.
@@ -2258,7 +2447,8 @@ Rows unblocked: none. No row in `gap-rows.json` names `TRP-01`.
 - `src/routes/_app/dashboard.tsx` — edit.
 - `src/routes/_app/-ui/trip-card.tsx` — edit.
 - `src/routes/_app/-ui/trip-list-row.tsx` — new. The list mode's row.
-- `src/routes/_app/-lib/view-mode.ts` — new. The view-mode vocabulary and its key.
+- `src/routes/_app/-lib/view-mode.ts` — new. The view-mode vocabulary, the `planned.trips-view`
+  preference declaration (area `local`) and the search-parameter resolution rule.
 - `src/routes/_app/-lib/__tests__/view-mode.test.ts` — new. The route-local helper directory has no
   `__tests__` today; this stage creates it, following `src/routes/(auth)/-lib/__tests__` and
   `src/routes/api/tiles/-lib/__tests__`, which already do.
@@ -2279,9 +2469,12 @@ and a second implementation of it would be the defect this list is meant to prev
 
 **No schema change and no migration.** Every column is present: `trips.is_archived` and
 `trips.is_favourite` (`src/server/db/schema.ts:355-356`), `trips.start_date`/`end_date` for the
-progress figure, and `trip_guests` from `01-S6`. The view mode is a per-browser preference through
-`src/lib/local-preference.ts`, for the reasons `01-S3` and `01-S5` already argued, and is not a
-column. Nothing is filed for the wave-5 foundations schema stage.
+progress figure, and `trip_guests` from `01-S6`. The view mode and the archived fold are one
+per-browser record through `src/lib/local-preference.ts` — `planned.trips-view`, **`area: 'local'`**
+— and not a column, for the reasons `01-S3` and `01-S5` already argued. The area is not a detail
+here: `TRP-01` asks for "grid/list view modes **persisted** client-side", so a session lifetime would
+fail the row on its own wording, and a reader who prefers the list would be handed the grid back
+every morning. Nothing is filed for the wave-5 foundations schema stage.
 
 **One measured read-cost note, because this screen is the one that could regress it.** D1 bills rows
 **read**, not rows returned. `countTripPeople` therefore counts in one grouped query over
@@ -2322,6 +2515,19 @@ control.
 **Route.** None added or moved; `pnpm generate-routes` is not run and `src/routeTree.gen.ts` is not an
 owned path.
 
+**Where the mode lives, and why it is in the URL as well as in storage.** `view` joins the route's
+existing `validateSearch` schema (`trips/index.tsx:30-34`) as `z.enum(['grid', 'list']).optional()`.
+The URL is the truth that the server and the browser both read, so the first render — cold, streamed,
+hydrated, or shared as a link — is already in the right mode and no box moves after paint. Storage
+supplies only the default: the switch writes `planned.trips-view` and navigates with `replace: true`,
+and an in-app navigation to `/trips` with no `view` reads the remembered mode in `beforeLoad` under
+the same `typeof window !== 'undefined'` guard `01-S3` established, then redirects once. A cold load
+of a bookmarked `/trips` carrying no `view` stays in grid, which is the same honest contract `01-S3`
+states for the tab and is preferable to a page that paints one layout and swaps to another.
+`loaderDeps` narrows to the three data-bearing keys — `status`, `q`, `scope` — so changing the mode
+re-renders and never re-invokes `loadTrips`; today it forwards the whole search object
+(`trips/index.tsx:37`), which would put a D1 read on a layout toggle.
+
 **The two modes, and why list is not a narrow grid.** Grid keeps the existing `TripTile` — cover art,
 title, countdown badge, place count, action menu. List is a different information order for a
 different question: one row per trip, dense, with the dates and the status legible in a vertical scan,
@@ -2336,7 +2542,10 @@ nights, places, travelling companions. All three are display-face numerals with 
 is what the `StatCard` pattern in `docs/DESIGN.md` is for and what `HeroStat` (`:235`) already renders.
 
 **The archived section** sits at the foot of the trips index as a `disclosure` — a real button with
-`aria-expanded` and a `Chip` carrying the count — collapsed by default and remembered per browser. Its
+`aria-expanded` and a `Chip` carrying the count — collapsed by default, and its open state is the
+second field of the same `planned.trips-view` record, so it outlives the session with the mode. It is
+below the fold of every viewport this plan photographs, so resolving it after hydration moves nothing
+that is on screen. Its
 rows carry Copy, Restore and Delete permanently, which are `01-S1`'s `copyTripFn`, `restoreTripFn` and
 `deleteTripFn`; no new write is added.
 
@@ -2351,8 +2560,9 @@ rows carry Copy, Restore and Delete permanently, which are `01-S1`'s `copyTripFn
   affordance. An archived section with nothing in it is not rendered at all rather than rendered
   empty, because a fold that opens onto nothing is a broken promise.
 - _Skeleton._ `CardsSkeleton` in grid mode and a new rows skeleton of the same row height in list mode,
-  both on `--color-surface-2`; the mode is read before first paint from the preference module so the
-  skeleton matches the layout that is about to arrive and the page does not swap shape after hydration.
+  both on `--color-surface-2`. The skeleton reads the mode from the `view` search parameter, which is
+  known on the server and on the client alike, so it always matches the layout that is about to
+  arrive and the page never swaps shape after hydration.
 - _Error._ The route's existing `ErrorPanel` is kept. A failed lifecycle write from a row's menu keeps
   the row and surfaces the reason in a toast, which is `01-S1`'s contract.
 - _Every control._ Rest, hover, focus-visible, active, disabled and loading on the mode switch, the
@@ -2391,8 +2601,12 @@ Functions covered: `countTripPeople`.
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
 **Unit tests.** `src/routes/_app/-lib/__tests__/view-mode.test.ts`, over the pure module: an unknown
-stored value resolves to grid rather than crashing; the key is a single exported constant, so the
-skeleton and the list cannot read two different ones; and the elapsed fraction is clamped to `0..1`, is
+stored value resolves to grid rather than crashing; the preference declaration names `area: 'local'`,
+which is the case that fails if the mode is ever given a session lifetime and stops satisfying
+`TRP-01`; the record is a single exported declaration, so the skeleton, the switch and the
+`beforeLoad` seed cannot read two different keys; a URL that already carries `view` is returned
+unchanged rather than overridden by the stored mode, which is the rule that keeps a shared link
+meaning what it says; and the elapsed fraction is clamped to `0..1`, is
 zero before the start date, is one after the end date, and takes today as an argument rather than
 reading a clock — the signature that fails to compile if somebody moves the computation into the
 component.
@@ -2425,7 +2639,14 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
 
 and a second run at `--state archive-open --click '[data-part="trip-archive-disclosure"]'`. Both
 selectors are stable published attributes, each verified with a `page.locator(sel).count()` of 1
-against the running server before the capture runs. The 2560 frames are read for the defect a card
+against the running server before the capture runs. Because the mode is in the URL, `--url
+"http://localhost:$PORT/trips?view=list"` reaches the same frame with no click at all; the click path
+is the one that ships because it also exercises the write and the `replace: true` navigation, and the
+URL form is recorded here as the fallback for a run where the control moves. The spec adds one
+non-visual assertion beside them: while the mode is switched, it counts the requests the page makes
+to the server-function endpoint behind `loadTrips` and expects **zero**, which is the measurement
+that fails if `loaderDeps` is left forwarding the whole search object and a layout toggle starts
+costing a D1 read. The 2560 frames are read for the defect a card
 grid produces at that width — four columns of stretched cover art instead of a bounded measure.
 
 **Console.** `watchConsole` attached, `fatal` empty in every test, tolerance list untouched. **Layout
@@ -2788,12 +3009,20 @@ the day detail this stage builds, which is why its surviving edge is `DOC-08 →
 
 ### Owned paths
 
-- `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` — edit.
+- `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` — edit. Four sibling stages touch this file in
+  four earlier waves and none in wave 5: `01-S2` (wave 1), `01-S4` (wave 2), `02-S4`
+  (`02-places-and-maps.md`, wave 3) and `03-S5` (`03-reservations-and-transport.md`, wave 4). This
+  stage is the last of the five and is the one that extracts the chrome, so every earlier edit has
+  landed before the module is split.
 - `src/routes/_app/trips/$tripId/-ui/plan-workspace.tsx` — new. The workspace chrome extracted:
   the rail widths, the resize handles, the splash and the narrow-viewport overlays.
 - `src/routes/_app/trips/$tripId/-ui/day-detail.tsx` — new.
 - `src/routes/_app/trips/$tripId/-ui/plan-undo.ts` — new. The undo ring, pure.
 - `src/routes/_app/trips/$tripId/-ui/__tests__/plan-undo.test.ts` — new.
+- `src/routes/_app/trips/$tripId/-ui/plan-layout.ts` — new. Pure: the two workspace preference
+  declarations with their areas, and the width clamp. It exists as its own module so the lifetimes
+  are assertable without rendering the workspace.
+- `src/routes/_app/trips/$tripId/-ui/__tests__/plan-layout.test.ts` — new.
 - `src/components/planner/rail.tsx` — edit. The rail accepts a width and publishes a resize handle.
 - `src/components/planner/__tests__/rails.test.tsx` — edit.
 - `e2e/trips-core-s9.visual.spec.ts` — new. This stage's own spec file.
@@ -2811,12 +3040,23 @@ stay exactly where they are, because those are the reasons the screen is a scree
 
 ### Data and migration
 
-**No schema change and no migration.** Rail widths, the day-detail minimised flag and the day
-expand/collapse state are per-browser preferences through `src/lib/local-preference.ts`, for the reason
-`01-S3` argued and under the same `planned.` namespace, keyed by trip where they are per-trip. The undo
-ring is in memory only and is deliberately not persisted: an undo offered after a reload would reverse
-an edit the reader has forgotten making, and possibly one somebody else has since built on. Nothing is
-filed for the wave-5 foundations schema stage.
+**No schema change and no migration.** The workspace's arrangement is per-browser through
+`src/lib/local-preference.ts`, for the reason `01-S3` argued and under the same `planned.` namespace,
+and it is **two declarations with two different lifetimes** rather than one convenient bag:
+
+- `planned.planner-layout` — **`area: 'local'`**, keyed by trip id with `limit` 8, holding the two
+  rail widths and the day-detail minimised flag. A rail dragged to the width a reader can actually
+  work at is a workspace setting; forgetting it overnight would make them drag it again tomorrow,
+  which is the defect the handle exists to remove.
+- `planned.planner-days` — **`area: 'session'`**, keyed by trip id with `limit` 8, holding which days
+  are unfolded. This is the one preference in the plan that is genuinely a sitting: which days you
+  have open is where you are in this piece of work, and a fold restored a week later hides the days
+  a collaborator has added since. It is the only `session` consumer of the module, and `01-S3`'s
+  table says so.
+
+The undo ring is in memory only and is deliberately not persisted at all: an undo offered after a
+reload would reverse an edit the reader has forgotten making, and possibly one somebody else has
+since built on. Nothing is filed for the wave-5 foundations schema stage.
 
 ### Server (repo, server function, Zod)
 
@@ -2845,7 +3085,12 @@ the client.
 **Resizing, and the reason it is not a mouse-only affordance.** Each rail's inner edge carries a
 handle with `role="separator"`, `aria-orientation="vertical"`, `aria-valuenow`, `aria-valuemin`,
 `aria-valuemax` and an accessible name. It drags with a pointer and it moves with arrow keys, `Home`
-and `End` when focused, in 16px steps. Width is clamped to a readable band and persisted per browser.
+and `End` when focused, in 16px steps. Width is clamped to a readable band and kept in
+`planned.planner-layout` (area `local`), applied to the rail as a CSS custom property in a layout
+effect so the stored width is committed before the browser paints the hydrated frame — and behind the
+first-open splash, which is still on screen while the map's first style resolves. Because both rails
+are overlays above the full-bleed canvas, a corrected width repaints a floating panel and never
+reflows the document.
 The camera is told: the existing fold-aware padding already recomputes when a rail folds, and this
 stage feeds it the width as well, so resizing a rail keeps a pin out from under it exactly as folding
 one does.
@@ -2933,6 +3178,13 @@ client-supplied identifier in the ring that is not already validated on the way 
   board to the arrangement before it; undoing twice reverses two edits in order; a rejected inverse
   drops its entry rather than retrying; and the ring is cleared when the loader's own order lands from
   a different source, so an undo can never fight a collaborator's write.
+- `src/routes/_app/trips/$tripId/-ui/__tests__/plan-layout.test.ts` — `planned.planner-layout` names
+  `area: 'local'` and `planned.planner-days` names `area: 'session'`. These two cases are the reason
+  the module is separate: they fail if a later edit collapses the workspace's two lifetimes into one,
+  in either direction — a rail width forgotten overnight, or a week-old day fold restored over days a
+  collaborator has since added. The clamp is covered here too: a stored width outside the readable
+  band resolves to the nearest end rather than being honoured, so a record written by an older build
+  with a wider band cannot hand back a rail that covers the map.
 - `src/components/planner/__tests__/rails.test.tsx` — extended, not rewritten. The handle exposes
   `role="separator"` with a name and the three ARIA values; arrow keys move it and clamp at both ends;
   the width is read back from the preference module on mount; and every existing case still passes.
@@ -3266,26 +3518,24 @@ measurement rather than by reading the sibling plans, because a plan can only re
 existed when it was written, and round 8 produced two real collisions in a set where every plan
 carried an acceptance criterion about it.
 
-The command and its output, verbatim, run against the plan set as it stood when this file was last
-written — `00-foundations.md`, `01-trips-core.md`, `04-budget-and-currencies.md`,
-`07-collaboration-and-sharing.md`, `09-account-and-settings.md`, `10-administration.md`,
-`11-boundaries-and-blockers.md` and `12-verification-protocol.md`. Sibling plans were being rewritten
-**while this file was being written**, and the drift was watched rather than assumed: the owned-path
-total moved 282 → 283 → 284 and the unparseable-stage count moved 5 → 4 across three runs within the
-same hour, entirely from other plans' edits. So the first line and the seventh are a timestamp, not a
-claim; the two lines that carry this plan's obligation and must not move are the fifth — **no
-same-wave exclusive collision** — and the six stanzas under the seventh, every one of which is
-answered in the table below.
+The command and its output, verbatim, run against the full plan set — thirteen files, including the
+five area plans that did not exist when this one was first drafted. Sibling plans are rewritten
+**while this file is being written**, and the drift is watched rather than assumed: within one hour
+the plan count moved 8 → 13, the stage count 48 → 91, and the owned-path total 284 → 554 → 553,
+entirely from other plans' edits and this stage's own two new modules. So the first line and the
+seventh are a timestamp, not a claim; the two lines that carry this plan's obligation and must not
+move are the fifth — **no same-wave exclusive collision** — and the sixteen stanzas under the
+seventh, every one of which is answered in the table below.
 
 ```text
 $ node scripts/ultrabuild/check-plan-collisions.mjs 01
-plans 8 · stages 48 · owned paths 284
+plans 13 · stages 91 · owned paths 553
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
 no same-wave exclusive collisions
 
-touched by more than one plan in different waves (6) — legal; each plan must name the other:
+touched by more than one plan in different waves (16) — legal; each plan must name the other:
   src/routes/_app/-server/overview.ts
       00-foundations.md  00-S5  wave 0  (edit)
       01-trips-core.md  01-S1  wave 1  (edit)
@@ -3296,54 +3546,122 @@ touched by more than one plan in different waves (6) — legal; each plan must n
       01-trips-core.md  01-S1  wave 1  (edit)
       01-trips-core.md  01-S6  wave 4  (edit)
       07-collaboration-and-sharing.md  07-S6  wave 2  (edit)
+  src/routes/_app/trips/$tripId/plan.tsx
+      01-trips-core.md  01-S2  wave 1  (edit)
+      03-reservations-and-transport.md  03-S5  wave 4  (edit)
+  src/routes/_app/trips/$tripId/-ui/plan-model.ts
+      01-trips-core.md  01-S2  wave 1  (edit)
+      01-trips-core.md  01-S4  wave 2  (edit)
+      02-places-and-maps.md  02-S7  wave 4  (edit)
+      02-places-and-maps.md  02-S9  wave 5  (edit)
+      03-reservations-and-transport.md  03-S8  wave 6  (edit)
+  src/routes/_app/trips/$tripId/-ui/plan-screen.tsx
+      01-trips-core.md  01-S2  wave 1  (edit)
+      01-trips-core.md  01-S4  wave 2  (edit)
+      01-trips-core.md  01-S9  wave 5  (edit)
+      02-places-and-maps.md  02-S4  wave 3  (edit)
+      03-reservations-and-transport.md  03-S5  wave 4  (edit)
+  src/components/planner/day-section.tsx
+      01-trips-core.md  01-S2  wave 1  (edit)
+      01-trips-core.md  01-S4  wave 2  (edit)
+      02-places-and-maps.md  02-S4  wave 3  (edit)
+      02-places-and-maps.md  02-S9  wave 5  (edit)
+      03-reservations-and-transport.md  03-S5  wave 4  (edit)
+      03-reservations-and-transport.md  03-S8  wave 6  (edit)
+  src/components/planner/types.ts
+      01-trips-core.md  01-S2  wave 1  (edit)
+      01-trips-core.md  01-S4  wave 2  (edit)
+      03-reservations-and-transport.md  03-S5  wave 4  (edit)
+      03-reservations-and-transport.md  03-S8  wave 6  (edit)
+  src/components/planner/index.ts
+      01-trips-core.md  01-S2  wave 1  (edit)
+      01-trips-core.md  01-S4  wave 2  (edit)
+      03-reservations-and-transport.md  03-S5  wave 4  (edit)
+  src/components/planner/ordering.ts
+      01-trips-core.md  01-S4  wave 2  (edit)
+      03-reservations-and-transport.md  03-S5  wave 4  (edit)
+  src/components/planner/plan-dnd.ts
+      01-trips-core.md  01-S4  wave 2  (edit)
+      03-reservations-and-transport.md  03-S5  wave 4  (edit)
+  src/components/planner/__tests__/ordering.test.ts
+      01-trips-core.md  01-S4  wave 2  (edit)
+      03-reservations-and-transport.md  03-S5  wave 4  (edit)
   src/server/repos/itinerary.ts
       01-trips-core.md  01-S4  wave 2  (edit)
+      02-places-and-maps.md  02-S9  wave 5  (edit)
       07-collaboration-and-sharing.md  07-S9  wave 3  (edit)
   src/routes/_app/trips/$tripId/-server/plan.ts
       01-trips-core.md  01-S4  wave 2  (edit)
+      02-places-and-maps.md  02-S7  wave 4  (edit)
+      02-places-and-maps.md  02-S9  wave 5  (edit)
+      03-reservations-and-transport.md  03-S8  wave 6  (edit)
       07-collaboration-and-sharing.md  07-S1  wave 1  (edit)
+  src/routes/_app/trips/$tripId/-ui/plan-actions.tsx
+      01-trips-core.md  01-S4  wave 2  (edit)
+      02-places-and-maps.md  02-S5  wave 3  (edit)
+      02-places-and-maps.md  02-S10  wave 5  (edit)
+      02-places-and-maps.md  02-S11  wave 6  (edit)
   e2e/helpers/shoot.ts
       01-trips-core.md  01-S5  wave 2  (edit)
       10-administration.md  10-S2  wave 1  (edit)
   src/server/repos/index.ts
       01-trips-core.md  01-S6  wave 4  (edit)
+      06-documents-and-media.md  06-S3  wave 2  (append)
+      06-documents-and-media.md  06-S5  wave 3  (append)
       07-collaboration-and-sharing.md  07-S10  wave 5  (edit)
 ```
 
 **No same-wave exclusive collision involves this plan.** The one that did — `01-S2` and `07-S1` both
 claiming `src/routes/_app/trips/$tripId/-server/plan.ts` as `edit` in wave 1 — is resolved by this
 plan yielding the file, and the resolution is argued in full under **The four planner core files**.
-`01-S2` no longer names that path at all, which is why the third stanza above reads as it does; the
-wave-2 claim that remains is `01-S4`'s, and wave 1 has closed by then.
+`01-S2` no longer names that path at all; the wave-2 claim that remains is `01-S4`'s, and wave 1 has
+closed by then.
 
 **Every cross-wave path the check lists is named in its owning stage, with the sibling stage id.** All
-six, in the order the check prints them:
+sixteen, in the order the check prints them:
 
-| Path                                            | This plan's stages | Sibling stages, with wave                                                    | Where this plan names them                |
-| ----------------------------------------------- | ------------------ | ---------------------------------------------------------------------------- | ----------------------------------------- |
-| `src/routes/_app/-server/overview.ts`           | `01-S1`, `01-S7`   | `00-S5` (`00-…`, wave 0), `09-S7` (`09-…`, wave 2), `10-S3` (`10-…`, wave 4) | **Owned paths** of `01-S1` and of `01-S7` |
-| `src/server/repos/trips.ts`                     | `01-S1`, `01-S6`   | `07-S6` (`07-…`, wave 2)                                                     | **Owned paths** of `01-S1` and of `01-S6` |
-| `src/server/repos/itinerary.ts`                 | `01-S4`            | `07-S9` (`07-…`, wave 3)                                                     | **Owned paths** of `01-S4`                |
-| `src/routes/_app/trips/$tripId/-server/plan.ts` | `01-S4`            | `07-S1` (`07-…`, wave 1)                                                     | **Owned paths** of `01-S4`, and the brief |
-| `e2e/helpers/shoot.ts`                          | `01-S5`            | `10-S2` (`10-…`, wave 1)                                                     | **Owned paths** of `01-S5`                |
-| `src/server/repos/index.ts`                     | `01-S6`            | `07-S10` (`07-…`, wave 5)                                                    | **Owned paths** of `01-S6`                |
+| Path                                                 | This plan's stages        | Sibling stages, with wave                                                 | Where this plan names them                                    |
+| ---------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `src/routes/_app/-server/overview.ts`                | `01-S1`, `01-S7`          | `00-S5` (wave 0), `09-S7` (wave 2), `10-S3` (wave 4)                      | **Owned paths** of `01-S1` and of `01-S7`                     |
+| `src/server/repos/trips.ts`                          | `01-S1`, `01-S6`          | `07-S6` (wave 2)                                                          | **Owned paths** of `01-S1` and of `01-S6`                     |
+| `src/routes/_app/trips/$tripId/plan.tsx`             | `01-S2`                   | `03-S5` (wave 4)                                                          | **Owned paths** of `01-S2`, shared-path table                 |
+| `src/routes/_app/trips/$tripId/-ui/plan-model.ts`    | `01-S2`, `01-S4`          | `02-S7` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6)                      | Both stages' shared-path tables, and the four-file schedule   |
+| `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx`  | `01-S2`, `01-S4`, `01-S9` | `02-S4` (wave 3), `03-S5` (wave 4)                                        | All three stages' **Owned paths**, and the four-file schedule |
+| `src/components/planner/day-section.tsx`             | `01-S2`, `01-S4`          | `02-S4` (wave 3), `03-S5` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6)    | Both stages' shared-path tables                               |
+| `src/components/planner/types.ts`                    | `01-S2`, `01-S4`          | `03-S5` (wave 4), `03-S8` (wave 6)                                        | Both stages' shared-path tables                               |
+| `src/components/planner/index.ts`                    | `01-S2`, `01-S4`          | `03-S5` (wave 4)                                                          | Both stages' shared-path tables                               |
+| `src/components/planner/ordering.ts`                 | `01-S4`                   | `03-S5` (wave 4)                                                          | `01-S4`'s shared-path table                                   |
+| `src/components/planner/plan-dnd.ts`                 | `01-S4`                   | `03-S5` (wave 4)                                                          | `01-S4`'s shared-path table                                   |
+| `src/components/planner/__tests__/ordering.test.ts`  | `01-S4`                   | `03-S5` (wave 4)                                                          | `01-S4`'s shared-path table                                   |
+| `src/server/repos/itinerary.ts`                      | `01-S4`                   | `07-S9` (wave 3), `02-S9` (wave 5)                                        | **Owned paths** of `01-S4`, shared-path table                 |
+| `src/routes/_app/trips/$tripId/-server/plan.ts`      | `01-S4`                   | `07-S1` (wave 1), `02-S7` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6)    | **Owned paths** of `01-S4`, the brief, the four-file schedule |
+| `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` | `01-S4`                   | `02-S5` (wave 3), `02-S10` (wave 5), `02-S11` (wave 6)                    | `01-S4`'s shared-path table, and the four-file schedule       |
+| `e2e/helpers/shoot.ts`                               | `01-S5`                   | `10-S2` (wave 1)                                                          | **Owned paths** of `01-S5`                                    |
+| `src/server/repos/index.ts`                          | `01-S6`                   | `06-S3` (wave 2, `append`), `06-S5` (wave 3, `append`), `07-S10` (wave 5) | **Owned paths** of `01-S6`                                    |
 
-Two of the six entries are newer than this plan's first draft and were added by sibling plans landing
-after it: `09-S7` and `10-S3` joined `overview.ts`, and `e2e/helpers/shoot.ts` is a path `10-S2` took
-in wave 1 for the same one-line reason `01-S5` takes it in wave 2. Both siblings name this plan's
-stages in their own **Owned paths**, so the naming obligation is met from both directions rather than
-asserted from one. Neither is a collision: no two of the five `overview.ts` claims share a wave, and
-`10-S2`'s wave 1 closes before `01-S5`'s wave 2 opens.
+Sibling plans are named by file the first time each appears above: `00-foundations.md`,
+`02-places-and-maps.md`, `03-reservations-and-transport.md`, `06-documents-and-media.md`,
+`07-collaboration-and-sharing.md`, `09-account-and-settings.md` and `10-administration.md`.
+
+Ten of the sixteen paths are new to this section since this plan's first draft, and all ten are the
+planner cluster claimed by `02-…` and `03-…`; three of the six that were already here gained further
+siblings, among them the two `append` claims on the repository barrel from `06-…`. None is a
+collision. In every one of the sixteen, no two claims
+share a wave, and the two `06-…` claims are `append`, which is cooperative by construction. The
+naming obligation is met from this side for all sixteen; where a sibling also names this plan — `00-S5`,
+`09-S7`, `10-S3`, `07-S1`, `07-S6`, `07-S9`, `07-S10` and `10-S2` do — it is met from both.
 
 The stages the check cannot read are `04-S2`, `11-S1`, `11-S2` and `11-S3` — **none of them this
-plan's**, and the count moved from five to four while this file was being written, because a
-concurrent run gave `04-S7` its wave line. Their `### Stage id` line does not carry
-`` `<id>` · Wave <n> ``, so the parser cannot place them in a wave. **Every stage in this file states
-its wave in that exact form**, which is what makes this plan checkable at all — a stage with no wave
-is invisible to the check and silently exempt from it. The two files that carry those four are not
-this plan's to edit, and the fix is filed as a contract extension rather than made here.
+plan's**. Their `### Stage id` line does not carry `` `<id>` · Wave <n> ``, so the parser cannot place
+them in a wave. **Every stage in this file states its wave in that exact form**, which is what makes
+this plan checkable at all — a stage with no wave is invisible to the check and silently exempt from
+it. The two files that carry those four are not this plan's to edit, and the fix is filed as a
+contract extension rather than made here.
 
-`src/lib/markdown/**`, `src/routes/_app/trips/$tripId/-server/day-notes.ts` and
-`src/routes/_app/trips/$tripId/plan.tsx` are new claims of `01-S2` and appear nowhere else in the
-plan set, in any wave. Four rows in other plans consume the markdown module rather than re-owning it;
-that obligation is written into `01-S2`'s **Owned paths** and into entry 5 of `11-S2`'s register.
+`src/lib/markdown/**`, `src/routes/_app/trips/$tripId/-server/day-notes.ts`, `src/lib/local-preference.ts`,
+`src/lib/trip-tab.ts`, `src/lib/clock-zones.ts`, `src/routes/_app/-lib/view-mode.ts` and
+`src/routes/_app/trips/$tripId/-ui/plan-layout.ts` are new claims of this plan and appear nowhere else
+in the plan set, in any wave — which is what makes the browser-preference module a single home for
+five preferences rather than five scattered readers of `window.localStorage`. Four rows in other plans
+consume the markdown module rather than re-owning it; that obligation is written into `01-S2`'s
+**Owned paths** and into entry 5 of `11-S2`'s register.

@@ -309,17 +309,84 @@ rather than merely unlikely.
 `(organization_id, category_id)`.
 
 **`packing_items.category` is not dropped, not renamed and not narrowed by this stage.** That is the
-migration ritual's rule and it is also the backfill plan: the generated migration adds the column and
-backfills nothing, and the repository's category writer creates one `packing_categories` row per
-distinct non-null `category` string in a list the first time that list is read through the new path,
-then sets `category_id` on the matching rows. Until then a row with `category_id = null` and a
-non-null `category` renders in a read-only group named by the string — so a rollback to the previous
-Worker keeps working, which is the entire point. Dropping `category` is a separate migration in a
-later wave, after the rollback window, and is not this stage's to schedule.
+migration ritual's rule, and it is what makes a rollback safe: a row with `category_id = null` and a
+non-null `category` still renders, in a read-only group named by the string, so the previous Worker
+keeps working against the new schema — `ARCHITECTURE.md` §9 row 12, which is the whole point.
+Dropping `category` is a separate migration in a later wave, after the rollback window, and is not
+this stage's to schedule.
 
-Migration name is whatever `pnpm db:generate` mints as `0003_*.sql` in the wave-3 schema stage. It
-backfills nothing at SQL level; the backfill is the lazy repository path described above, which is
-tenant-scoped and therefore cannot be done in a migration anyway.
+**The migration backfills nothing, and no read path writes.** Its name is whatever `pnpm db:generate`
+mints as `0003_*.sql` in the wave-3 schema stage of `00-foundations.md`; it creates two tables, adds
+one nullable column, creates their indexes, and touches no existing row. Every read this stage adds
+issues `SELECT` and nothing else, and so does `loadTripLists` — the
+`createServerFn({ method: 'GET' })` at `src/routes/_app/-server/trip.ts:462` that the route's loader
+calls to reach them. That is a rule with a reason rather than a preference: a loader answers an SSR
+`GET` document request, so a write placed there re-runs on every refresh, every router prefetch and
+every crawl, runs concurrently with itself the moment two travellers open the same trip, and would
+insert straight into `packing_categories_list_name_unq` — the unique index this same stage
+introduces — from a call site with no way to report the failure and no user action to attribute it
+to. **No stage in this file writes a row from a loader, from a `GET` server function or from a
+component.**
+
+**Existing string groups are adopted on the first write to that list, by one named function.**
+`adoptStringCategories(scope, listId)` in `src/server/repos/lists.ts` — a path this stage owns,
+specified under **Server** below, covered in `src/server/repos/__tests__/lists-categories.test.ts`
+and in the isolation suite — is the only code anywhere that turns a `category` string into a
+`packing_categories` row. It has exactly two callers, both `POST` write paths that have already
+resolved the list through `packingListsRepository.requireById` in the caller's scope:
+`createListCategory` and `assignItemToCategory`. Every other category writer this stage adds takes a
+`categoryId`, which cannot exist before adoption has run, so a third call site would be unreachable
+and none is added.
+
+**Why adoption cannot race the unique index.** It is a scoped read followed by two statements handed
+to `runBatch` (`src/server/repos/batch.ts:35`), which D1 executes as one atomic round trip and the
+test driver executes sequentially:
+
+1. The read: distinct `category` and `min(sort_order)` over the list's items, built from
+   `tenantFilter()` with `list_id = ?`, `category IS NOT NULL` and `category_id IS NULL`, grouped by
+   `category` and ordered by that minimum. The minimum is what keeps adopted groups in the order the
+   traveller is already looking at.
+2. The insert: `scope.db.insert(packingCategories)` with one row per name, `id` from `newId()`,
+   `sortOrder` from the minimum above, `organizationId` taken from `scope.ctx.organizationId` in the
+   same expression that builds the row, and
+   `.onConflictDoNothing({ target: [packingCategories.listId, packingCategories.name] })`. The unique
+   index becomes the arbiter of a concurrent second call rather than its victim: the loser inserts
+   nothing and raises nothing. This is the one insert in the module that does not go through
+   `packingCategoriesRepository.insertMany`, for the stated reason that the handle has no conflict
+   clause (`src/server/repos/base.ts:189-203`); the tenant column is still stamped from the scope and
+   still cannot arrive from the caller, and the isolation case below is what proves it.
+3. The update: one correlated statement over `packing_items`, filtered by `tenantFilter()`, the list
+   id, `category_id IS NULL` and `category IS NOT NULL`, setting
+
+   ```sql
+   category_id = (
+     SELECT c.id FROM packing_categories c
+     WHERE c.list_id = packing_items.list_id AND c.name = packing_items.category
+   )
+   ```
+
+   It reads whichever row won step 2, so no id is carried back into the Worker between the two
+   writes, and `category_id IS NULL` makes a repeat call match zero rows instead of rewriting
+   anything.
+
+Neither write depends on a value the request read before the batch, so two overlapping adoptions
+converge on the same rows in either order, and a list with no string groups produces an insert of zero
+rows and an update that matches zero rows.
+
+**The ceiling applies to adoption too, and adoption is all-or-nothing.** `adoptStringCategories`
+counts the distinct strings against `MAX_CATEGORIES_PER_LIST` before it writes and refuses the whole
+conversion if the list would end up over it, raising the same `RepositoryError`
+(`src/server/repos/context.ts:29`) with code `LIST_LIMIT` that the bound below raises — never
+`QuotaExceededError`, because there is no plan metric behind it and a `QUOTA_EXCEEDED` code would
+send the UI to offer an upgrade that would not help. Half-adopting a list, some rows on records and
+some still on strings with nothing on screen telling them apart, is the one outcome worse than not
+adopting it.
+
+**A list nobody writes to is not a stalled migration.** It renders exactly as it does today, out of
+the string, in a group with no collapse, no rename, no reorder and no people chip, and its header
+carries one sentence of authored copy saying that adding a group converts it. Rows a rolled-back
+previous Worker writes after the migration carry a string and a null `category_id` too, and the same
+first write adopts them — there is no second repair path, no cron and no queue job.
 
 ### Server (repo, server function, Zod)
 
@@ -339,8 +406,11 @@ new `createTenantRepository(packingCategories, 'list category')` handle:
   category leaves its items in the list with `category_id = null`, which the schema's
   `ON DELETE SET NULL` guarantees; the items are not deleted with it, and the surface says so.
 - `setCategoryCollapsed(scope, categoryId, isCollapsed)`.
-- `reorderListCategories(scope, listId, orderedIds)` — one `batch` so a half-applied order is never
-  observable, matching how `applyTemplateToTrip` (`:342`) already reasons about partial writes.
+- `reorderListCategories(scope, listId, orderedIds)` — one `runBatch`
+  (`src/server/repos/batch.ts:35`), so a half-applied order is never observable. Read that helper
+  rather than `applyTemplateToTrip` (`:342`) for the shape: the docstring at `:5-7` states the same
+  intent, but the function issues two awaited writes rather than a batch, and this stage neither
+  changes it nor cites it as a precedent.
 - `setCategoryAssignees(scope, categoryId, userIds)` — resolves the category in scope, resolves the
   trip's membership through `listTripMembers` (`src/server/repos/trips.ts:403`), rejects any id that
   is not a member of that trip, then replaces the join rows in one batch. It returns the ids that were
@@ -350,12 +420,20 @@ new `createTenantRepository(packingCategories, 'list category')` handle:
   and no items. It refuses a list that has either, so it can never be the reason a row disappears.
 - `assignItemToCategory(scope, itemId, categoryId | null)`, and `category_id` added to the item
   inputs at `:78-88` alongside the existing `category`.
+- `adoptStringCategories(scope, listId)` — the single owner of the string-to-record conversion,
+  specified statement by statement under **Data and migration** above. It is `Promise<number>`,
+  returning how many categories it created so a caller can tell an adoption from a no-op, it is
+  called only by `createListCategory` and `assignItemToCategory`, and it is called by no read, no
+  loader and no `GET` server function. Two properties are the point and both are tested: it is
+  idempotent, because the update matches on `category_id IS NULL`; and it is safe under concurrency,
+  because the insert carries `onConflictDoNothing` against `packing_categories_list_name_unq` and the
+  update is correlated rather than carrying ids across the two writes.
 
 **The bound this stage enforces, in place of a quota metric.** `MAX_CATEGORIES_PER_LIST = 40` and
 `MAX_ITEMS_PER_LIST = 500` are constants in the repository, asserted with a `count()` inside the
-caller's scope before every insert, and a breach raises the module's existing validation error rather
-than a bare SQL failure. 500 is not arbitrary: it is the ceiling `createTemplateInput.items` already
-imposes on a template (`:109`), and a list you cannot save as a template is a worse outcome than a
+caller's scope before every insert, and a breach raises `RepositoryError`
+(`src/server/repos/context.ts:29`) with code `LIST_LIMIT` rather than a bare SQL failure. 500 is not
+arbitrary: it is the ceiling `createTemplateInput.items` already imposes on a template (`:109`), and a list you cannot save as a template is a worse outcome than a
 list you cannot extend. See the plan-level section above for why no `assertQuota` call site exists.
 
 **Server functions — `src/server/fns/lists.ts`, edit.** Six, all `POST`, all opening with
@@ -450,6 +528,15 @@ outcome. No new primitive is needed, so no requirement is filed against `src/com
 - **Category empty** (a category whose items were all moved out): a single muted row reading "Nothing
   in this group yet" with the inline composer focused behind it, not a full empty-state block — a
   category is a row group, and a card-sized empty state inside a list reads as an error.
+- **Legacy group** (items still carrying a `category` string and a null `category_id` — every list
+  that has not been written to since the migration): the header renders its name and its counts and
+  nothing else, with no collapse chevron, no overflow menu and no people chip, on `--color-surface-2`
+  with a `SectionLabel` reading "Ungrouped heading" and one line beneath it: "Add a group to this
+  list and these headings become groups you can rename, collapse and share." That sentence is copy
+  authored for this product, and the affordance it points at is the toolbar's ordinary "Add a group"
+  button — the first write, which is what calls `adoptStringCategories`. The reader is never shown a
+  migration to run, a progress bar for one, or a state that differs between two people looking at the
+  same list.
 - **Filtered empty** (Open with everything packed, or Done with nothing packed): distinct copy from
   the two above — "Everything here is packed" with a `success`-toned check glyph for the first,
   "Nothing has been ticked yet" for the second. A filter that hides every row must never be
@@ -535,8 +622,10 @@ B's `listId`; `setCategoryAssignees` with B's `categoryId`, and with A's own cat
 who is only a member of B's trip — that one must reject the id rather than silently drop it, because a
 silently dropped assignee is indistinguishable from a successful one on screen;
 `assignItemToCategory` with A's item and B's `categoryId`, and with B's item and A's `categoryId`;
-`seedStarterCategories` with B's `listId`. Afterwards `packingCategoriesRepository.count(beta.scope)`
-is unchanged and B's category names are re-read and compared.
+`seedStarterCategories` with B's `listId`; and `adoptStringCategories` with B's `listId`, which must
+raise before it reads anything and must leave every one of B's items on its string with
+`category_id` still null. Afterwards `packingCategoriesRepository.count(beta.scope)` is unchanged and
+B's category names are re-read and compared.
 
 ### Verification
 
@@ -552,7 +641,18 @@ is unchanged and B's category names are re-read and compared.
   rejected and neither row changes; deleting a category sets `category_id` to null on its items and
   deletes no item; `setCategoryAssignees` is idempotent, returns only the added ids on a repeat call,
   and rejects a non-member; `seedStarterCategories` refuses a list that already has items; the two
-  bounds raise at the ceiling and not one row before it.
+  bounds raise at the ceiling and not one row before it. Adoption has six cases of its own, because it
+  is the one write in this stage that no user asked for directly: it creates one category per distinct
+  string, in `min(sort_order)` order, and sets `category_id` on exactly the items that carried that
+  string; a second call creates nothing and updates nothing, and every `updated_at` on the categories
+  is unchanged; two calls whose inserts both run before either update — the interleaving the conflict
+  target exists for — still leave one category per name and no item on a null `category_id`; a list
+  with no string groups performs no insert and no update; a list whose distinct strings would breach
+  `MAX_CATEGORIES_PER_LIST` raises `LIST_LIMIT` and leaves every item on its string, adopting none of
+  them; and — the case that keeps a write from creeping back into a read path — calling
+  `listListCategories`, `listTripCategories` and `loadTripLists`'s repository half against a list full
+  of string groups leaves `packingCategoriesRepository.count(scope)` at zero, which is the assertion
+  that a read never writes.
 - `src/components/modules/lists/__tests__/list-utils.test.ts` — extended: grouping keys off
   `categoryId` when it is present and off the legacy `category` string when it is not; a legacy group
   sorts after every record group and is marked read-only; `selectAllState` over a collapsed category
@@ -2057,12 +2157,12 @@ On top of those, for every surface this stage ships:
 
 ## Cross-plan collisions
 
-Run at the end of writing this file, over the twelve plan files present in `docs/plans/` at that
-moment, pasted verbatim:
+Re-run after every revision of this file, over the thirteen plan files present in `docs/plans/` at
+that moment, pasted verbatim:
 
 ```
 $ node scripts/ultrabuild/check-plan-collisions.mjs 05
-plans 13 · stages 80 · owned paths 498
+plans 13 · stages 91 · owned paths 553
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -2137,9 +2237,10 @@ symptom is an unexplained entry in that list rather than an error.
 **Two things the output cannot say, said here instead.**
 
 1. **The header counts will not reproduce.** They read `plans 8 · stages 48 · owned paths 284` when
-   this file was started, `plans 12 · stages 71 · owned paths 448` twenty minutes later, and
-   `plans 13 · stages 80 · owned paths 498` on the run pasted above, because five sibling plans were
-   being written by other agents in the same window — `03-reservations-and-transport.md`'s claim on
+   this file was started, `plans 12 · stages 71 · owned paths 448` twenty minutes later,
+   `plans 13 · stages 80 · owned paths 498` a round after that, and
+   `plans 13 · stages 91 · owned paths 553` on the run pasted above, because sibling plans were being
+   written and revised by other agents in the same window — `03-reservations-and-transport.md`'s claim on
    the trip loader appeared between two of those runs. The counts are a snapshot of a set several runs
    are still writing. The three findings under them are properties of **this** file's ownership and
    hold until a sibling changes what it claims.
