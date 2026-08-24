@@ -6,13 +6,11 @@
  * loader from ever running for an anonymous visitor.
  *
  * The two states it cannot render around — a session with no workspace, and a
- * membership revoked while the tab was open — are thrown, and their sentences
- * are resolved here against the catalogue rather than written as English
- * literals (`docs/SPEC.md` §8.6). See {@link shellFailure} for why the locale on
- * that path comes from `Accept-Language`.
+ * membership revoked while the tab was open — are thrown as message *keys*, not
+ * as sentences. See {@link shellFailure}.
  */
 import { createServerFn } from '@tanstack/react-start'
-import { getRequest, getRequestHeader } from '@tanstack/react-start/server'
+import { getRequest } from '@tanstack/react-start/server'
 
 import { getAuth } from '#/server/auth'
 import { authDb } from '#/server/auth/db'
@@ -24,13 +22,12 @@ import { getSession } from '#/server/auth/session'
 import { isOrganizationRole, roleSatisfies } from '#/server/auth/tenant'
 import { getDb } from '#/server/db/client'
 import { countUnread, createScope, getOrganization } from '#/server/repos'
-import { createTranslator, loadCatalogue, negotiate } from '#/lib/i18n'
 
-import type { MessageKey } from '#/lib/i18n'
 import type { OrganizationRole } from '#/server/auth/tenant'
 import type {
   ShellOrganization,
   ShellSession,
+  ShellStateKey,
 } from '#/components/layout/session'
 
 export interface ShellPayload {
@@ -40,19 +37,20 @@ export interface ShellPayload {
 }
 
 /**
- * A fatal shell state, in the reader's language.
+ * A fatal shell state, as the key the error boundary will resolve.
  *
- * `Accept-Language` is the only signal available on this path, and deliberately
- * so: both callers have already failed to resolve a workspace, and
- * `getEffectiveSettings` — where the stored preference lives — needs the very
- * tenant scope that could not be built. §8.3's chain ends at the header and then
- * at `en`, which is exactly what is left.
+ * The sentence used to be composed here, against `Accept-Language` — the only
+ * signal this path has, because both callers have already failed to resolve the
+ * very workspace the stored language preference hangs off. That put the one
+ * screen a blocked traveller sees in a language the document around it may not
+ * be in. Throwing the key moves the resolution to
+ * `src/components/layout/error-state.tsx`, which renders inside the document's
+ * own `I18nProvider` and therefore in the locale §8.3 negotiated before first
+ * paint. `Error.message` is the field that survives the server-function
+ * boundary, so the key travels as the message and nothing else changes.
  */
-async function shellFailure(key: MessageKey): Promise<Error> {
-  const locale = negotiate({
-    acceptLanguage: getRequestHeader('accept-language') ?? null,
-  })
-  return new Error(createTranslator(locale, await loadCatalogue(locale))(key))
+function shellFailure(key: ShellStateKey): Error {
+  return new Error(key)
 }
 
 /** Narrows Better Auth's organization list without trusting its shape. */
@@ -111,7 +109,7 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
       (await firstOrganizationIdFor(auth, session.user.id))
 
     if (organizationId === null) {
-      throw await shellFailure('shell.session.noWorkspace')
+      throw shellFailure('shell.session.noWorkspace')
     }
 
     const role = await membershipRoleFor(auth, {
@@ -119,7 +117,7 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
       organizationId,
     })
     if (!isOrganizationRole(role)) {
-      throw await shellFailure('shell.session.membershipRemoved')
+      throw shellFailure('shell.session.membershipRemoved')
     }
 
     const scope = createScope(getDb(), {

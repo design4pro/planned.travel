@@ -4,6 +4,7 @@ import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 import { Wordmark } from './brand'
 import { ActionButton, Panel, buttonClass } from './kit'
+import { shellStateOf } from './session'
 
 import type { Translate } from '#/lib/i18n'
 import type { ErrorComponentProps } from '@tanstack/react-router'
@@ -32,12 +33,23 @@ export interface ErrorPanelProps {
 
 /**
  * The recoverable error surface. It always offers a way forward — retry the
- * same route, or leave for a page that is known to work — and it shows the real
- * message rather than a shrug, because a person reporting a bug needs it.
+ * same route, or leave for a page that is known to work.
+ *
+ * Two kinds of failure land here and they are not shown the same way. An
+ * unexpected throw gets the generic sentence plus the real message in the
+ * monospace detail chip, because a person reporting a bug needs it. A *named*
+ * shell state — the two `SHELL_STATE_KEYS` the authenticated shell throws when
+ * a session has no workspace or a membership has just been revoked — is authored
+ * copy that already explains itself, so it is printed as prose and the detail
+ * chip is dropped entirely. Setting a translated sentence in the diagnostic
+ * face, under a heading that says something went off route and beside a line
+ * telling the reader to forward what is below, described the product's own
+ * message as a fault.
  */
 export function ErrorPanel({ error, onRetry, title, className }: ErrorPanelProps) {
   const router = useRouter()
   const t = useTranslate()
+  const state = shellStateOf(error)
 
   function retry(): void {
     if (onRetry) {
@@ -54,18 +66,20 @@ export function ErrorPanel({ error, onRetry, title, className }: ErrorPanelProps
       </span>
       <div className="space-y-1.5">
         <h2 className="font-display text-subtitle text-ink">
-          {title ?? t('shell.error.title')}
+          {state === null ? (title ?? t('shell.error.title')) : t('shell.error.session')}
         </h2>
         <p className="mx-auto max-w-md text-label leading-relaxed text-ink-3">
-          {t('shell.error.body')}
+          {state === null ? t('shell.error.body') : t(state)}
         </p>
       </div>
-      {/* `code` keeps the detail left-to-right inside Arabic prose: the
-          direction layer in `src/styles/styles.css` pins the run so a stack
-          frame does not reorder around its punctuation. */}
-      <code className="max-w-lg break-words rounded-md bg-surface-2 px-3 py-2 font-mono text-caption text-ink-2">
-        {detailOf(error, t)}
-      </code>
+      {state === null ? (
+        /* `code` keeps the detail left-to-right inside Arabic prose: the
+           direction layer in `src/styles/styles.css` pins the run so a stack
+           frame does not reorder around its punctuation. */
+        <code className="max-w-lg break-words rounded-md bg-surface-2 px-3 py-2 font-mono text-caption text-ink-2">
+          {detailOf(error, t)}
+        </code>
+      ) : null}
       <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
         <ActionButton onClick={retry}>
           <RotateCw aria-hidden className="size-4" />

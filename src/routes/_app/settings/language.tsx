@@ -9,7 +9,7 @@ import {
   LanguagePicker,
   LanguagePickerSkeleton,
 } from '#/components/settings'
-import { Card, Skeleton } from '#/components/ui'
+import { Skeleton } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { formatDate, formatMoneyMinor, formatNumber } from '#/lib/format'
 import {
@@ -25,6 +25,7 @@ import { loadLanguageSettings } from './-server/preferences'
 
 import type { LocaleChoice } from '#/components/settings'
 import type { Locale } from '#/lib/i18n'
+import type { ReactNode } from 'react'
 
 /**
  * The language screen: twenty-three languages, each written in its own script.
@@ -101,19 +102,50 @@ function LanguagePage() {
     return value === FOLLOW_WORKSPACE ? workspaceDefault : value
   }
 
+  /**
+   * The click, in two halves that fail differently.
+   *
+   * Only the first half can be rolled back. Once `saveLanguagePreference`
+   * resolves, `user_settings.locale` holds the new tag and `<html lang>` is one
+   * `invalidate()` away from agreeing with it — so a rejection *after* that
+   * point is not "the save failed", and answering it by putting the chip back
+   * and saying "you are still reading English" leaves both the control and the
+   * sentence contradicting the row and the document. The two halves therefore
+   * get one `try` each: the write may be undone, and what follows it may only
+   * be reported.
+   */
   async function choose(next: LocaleChoice): Promise<void> {
     const previous = choice
     setPending(next)
     setChoice(next)
+
+    let landed: LocaleChoice
     try {
       const saved = await saveLanguagePreference({
         data: { locale: next === FOLLOW_WORKSPACE ? '' : next },
       })
       // What D1 now holds, not what the click hoped for: `en-GB` is stored, and
       // answered, as `en`.
-      setChoice(saved.locale ?? FOLLOW_WORKSPACE)
+      landed = saved.locale ?? FOLLOW_WORKSPACE
+    } catch {
+      // Nothing was written, so back to the value that is still in D1, and an
+      // authored sentence — never a server error message, which is written for
+      // an operator's log rather than for a traveller who has just been told
+      // their language did change.
+      setChoice(previous)
+      setPending(null)
+      toast.error(t('settings.language.saveFailed'), {
+        description: t('settings.language.saveFailedBody', {
+          language: localeDescriptor(resolve(previous)).nativeName,
+        }),
+      })
+      return
+    }
+
+    setChoice(landed)
+    const inForceNow = resolve(landed)
+    try {
       await router.invalidate()
-      const inForceNow = resolve(saved.locale ?? FOLLOW_WORKSPACE)
       // Announced in the language that was just switched on, not the one being
       // left. `t` is the translator this render closed over, so a traveller
       // moving to German was told so in English — the one sentence on the
@@ -138,13 +170,13 @@ function LanguagePage() {
         }),
       )
     } catch {
-      // Back to the value that is still in D1, and an authored sentence — never
-      // a server error message, which is written for an operator's log rather
-      // than for a traveller who has just been told their language did change.
-      setChoice(previous)
-      toast.error(t('settings.language.saveFailed'), {
-        description: t('settings.language.saveFailedBody', {
-          language: localeDescriptor(resolve(previous)).nativeName,
+      // The row was written and the chip is right; a loader on this screen or
+      // the catalogue chunk for the new language was not. Said in the language
+      // the reader is still looking at, because the switch is exactly what did
+      // not finish — and the selection stays where D1 put it.
+      toast.warning(t('settings.language.reload.title'), {
+        description: t('settings.language.reload.body', {
+          language: localeDescriptor(inForceNow).nativeName,
         }),
       })
     } finally {
@@ -170,7 +202,7 @@ function LanguagePage() {
               <Languages className="size-4" />
             </span>
             <span className="min-w-0">
-              <span className="block text-micro font-semibold tracking-label uppercase text-ink-4">
+              <span className={cn('block truncate', MICRO_TEXT)}>
                 {following
                   ? t('settings.language.state.workspace')
                   : t('settings.language.state.yours')}
@@ -197,14 +229,7 @@ function LanguagePage() {
             followWorkspaceLabel={t('settings.language.followWorkspace')}
           />
 
-          <div className="flex flex-col gap-1.5 text-caption leading-relaxed text-ink-3">
-            <p>
-              {following
-                ? t('settings.language.state.hint.workspace')
-                : t('settings.language.state.hint.override')}
-            </p>
-            <p>{t('settings.language.legal')}</p>
-          </div>
+          <Hints state={following ? 'workspace' : 'yours'} />
         </div>
       </SettingsSection>
 
@@ -232,15 +257,55 @@ function LanguagePage() {
 }
 
 /**
+ * The two sentences under the grid, stacked into one grid cell.
+ *
+ * Only one of them is true at a time and they are different lengths, so a block
+ * that renders just the applicable one is one height in each state — and a
+ * third height in the loading shape, which knows neither which sentence applies
+ * nor how many lines it takes at this width. Stacking both in the same cell
+ * makes the block as tall as the longer of the two always: in either state, in
+ * the pending shape, and in a language whose sentences run half again as long.
+ * A reserved `min-h` cannot promise that — it would need a line count per
+ * breakpoint per language, and would be wrong the first time a translator wrote
+ * a longer sentence.
+ *
+ * `invisible` is `visibility: hidden`, which keeps the box (that is the whole
+ * point) and takes the words out of the accessibility tree, so a screen reader
+ * hears the one sentence that applies rather than both.
+ */
+function Hints({ state }: { state: 'yours' | 'workspace' | 'pending' }) {
+  const t = useTranslate()
+  return (
+    <div className="flex flex-col gap-1.5 text-caption leading-relaxed text-ink-3">
+      <div className="grid">
+        <p className={cn(HINT_CELL, state !== 'yours' && 'invisible')}>
+          {t('settings.language.state.hint.override')}
+        </p>
+        <p className={cn(HINT_CELL, state !== 'workspace' && 'invisible')}>
+          {t('settings.language.state.hint.workspace')}
+        </p>
+        {state === 'pending' ? (
+          <Skeleton className={cn(HINT_CELL, 'my-1')} radius="sm" />
+        ) : null}
+      </div>
+      {/* Static copy, so the loading shape shows it rather than shimmering it. */}
+      <p>{t('settings.language.legal')}</p>
+    </div>
+  )
+}
+
+/**
  * One preview figure. `tabular-nums` because every one of these three changes
  * the moment a chip is clicked, and a proportional comma jitters the row.
+ *
+ * `value` is a node rather than a string so the loading shape is this same
+ * component with a bar in it, which is the only way the box, its padding and
+ * its two line heights cannot drift apart between the two states.
  */
-function Sample({ label, value }: { label: string; value: string }) {
+function Sample({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className={SAMPLE_SHELL}>
-      <dt className="mb-1 text-micro font-semibold tracking-label uppercase text-ink-4">
-        {label}
-      </dt>
+      <dt className={cn('mb-1 truncate', MICRO_TEXT)}>{label}</dt>
       <dd className="truncate text-label font-medium tabular-nums text-ink">
         {value}
       </dd>
@@ -268,6 +333,24 @@ const SAMPLE_SHELL =
   'min-w-0 rounded-md border border-edge-faint bg-surface-2 px-3.5 py-3'
 const MICRO_LINE = 'h-[calc(var(--text-micro)*var(--text-micro--line-height))]'
 const LABEL_LINE = 'h-[calc(var(--text-label)*var(--text-label--line-height))]'
+
+/**
+ * The eyebrow above a value, and why it is always `truncate`d.
+ *
+ * A single line box is only worth reserving if the text can never take two, and
+ * "Supplied by the workspace" in an 11px uppercase face tracked at 0.08em is
+ * 200px of ink against the 206px this panel's text column measures at 360px —
+ * so the German or Ukrainian for it would have wrapped, and the loading shape
+ * that reserved one line would have been a line short of the thing it was
+ * holding space for. `truncate` makes the box one line by construction in all
+ * twenty-three languages, which is the same reason the name beneath it carries
+ * one.
+ */
+const MICRO_TEXT =
+  'text-micro font-semibold tracking-label uppercase text-ink-4'
+
+/** Both hint sentences occupy this one cell, so the taller of them sizes it. */
+const HINT_CELL = 'col-start-1 row-start-1'
 
 /**
  * Two columns of chips on a phone, instead of twenty-three stacked rows.
@@ -326,34 +409,68 @@ function BarInLine({ box, width }: { box: string; width: string }) {
   )
 }
 
+/**
+ * The loading shape, which is the loaded screen with three values missing.
+ *
+ * It is built from the same `SettingsSection` and the same two headings, not
+ * from a bare `Card`. Measured before it was: a `Card` takes its own default
+ * `p-5` and draws no header band, so the pending screen stood 241.75px short of
+ * the one it was holding space for at 1440px and 296.81px short at 393px, and
+ * the 8px of inner width that `px-6` gives back at `sm` also turned the chip
+ * grid from five columns into six — the loader settling therefore removed a
+ * whole row of chips *and* moved everything below it, which is the layout shift
+ * `docs/SPEC.md` §2 rules out and worse than shipping no skeleton at all.
+ *
+ * A section's title and its description are not data: they are catalogue copy
+ * this component can read as well as the loaded one can. Rendering them for
+ * real is what makes the two header bands the same height at every width and in
+ * every language — a skeleton bar standing in for a heading that wraps to two
+ * lines at 393px is the same defect one card smaller. What shimmers is exactly
+ * what the loader knows and this component does not: the locale in force, which
+ * chip is selected, which of the two hints applies, and the three sample
+ * figures.
+ */
 function LanguagePending() {
   const t = useTranslate()
   return (
     <div aria-busy="true" className="flex flex-col gap-6">
       <span className="sr-only">{t('ui.status.loading')}</span>
-      <Card className="space-y-5">
-        <div className={STATE_SHELL}>
-          <Skeleton className="size-9 shrink-0" radius="full" />
-          <div className="min-w-0 flex-1">
-            <BarInLine box={MICRO_LINE} width="w-32" />
-            <BarInLine box={LABEL_LINE} width="w-20" />
-          </div>
-        </div>
-        <LanguagePickerSkeleton className={PICKER_COLUMNS} />
-      </Card>
-      <Card className="space-y-4">
-        <Skeleton className="h-4 w-48" radius="sm" />
-        <div className="grid gap-4 sm:grid-cols-3">
-          {Array.from({ length: 3 }, (_, index) => (
-            <div key={index} className={SAMPLE_SHELL}>
-              <div className="mb-1">
-                <BarInLine box={MICRO_LINE} width="w-16" />
-              </div>
-              <BarInLine box={LABEL_LINE} width="w-24" />
+      <SettingsSection
+        title={t('settings.language.section.title')}
+        description={t('settings.language.section.description')}
+      >
+        <div className="flex min-w-0 flex-col gap-5">
+          <div className={STATE_SHELL}>
+            <Skeleton className="size-9 shrink-0" radius="full" />
+            <div className="min-w-0 flex-1">
+              <BarInLine box={MICRO_LINE} width="w-32" />
+              <BarInLine box={LABEL_LINE} width="w-20" />
             </div>
-          ))}
+          </div>
+          <LanguagePickerSkeleton className={PICKER_COLUMNS} />
+          <Hints state="pending" />
         </div>
-      </Card>
+      </SettingsSection>
+
+      <SettingsSection
+        title={t('settings.language.sample.title')}
+        description={t('settings.language.sample.description')}
+      >
+        <dl className="grid gap-4 sm:grid-cols-3">
+          <Sample
+            label={t('settings.language.sample.date')}
+            value={<BarInLine box={LABEL_LINE} width="w-24" />}
+          />
+          <Sample
+            label={t('settings.language.sample.number')}
+            value={<BarInLine box={LABEL_LINE} width="w-20" />}
+          />
+          <Sample
+            label={t('settings.language.sample.money')}
+            value={<BarInLine box={LABEL_LINE} width="w-16" />}
+          />
+        </dl>
+      </SettingsSection>
     </div>
   )
 }

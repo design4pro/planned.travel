@@ -25,15 +25,30 @@
  * well as compile time: renaming one orphans every row already in D1, which is
  * why `notification.fallback.*` exists.
  *
+ * **What a stored placeholder may hold.** A proper noun (a trip title, a
+ * person's name, a workspace), a piece of the reader's own content (a chat
+ * preview, a poll question), or a number the render path groups for the reader.
+ * Never a date or a time the *writer* formatted: the row is read months later by
+ * someone whose language the writer never knew, so `reservation.reminder` says
+ * what to check rather than interpolating `19:00 on Monday 12 October`, which
+ * would be English on all twenty-three screens for the life of the row.
+ *
  * **What is deliberately not here.**
  *
  * - *Identifiers.* An audit action (`billing.plan_changed`), an entity id and a
  *   country flag are the same string in every language. They are rendered as
  *   data, in a monospace face, exactly so a reader knows they are not prose.
- * - *Plan names.* `Free`, `Solo` and `Crew` are product names and live in
- *   `src/lib/plans.ts`; the admin console reads them from there. A key whose
- *   translation is byte-identical to English is what `parity.test.ts` calls
- *   untranslated copy.
+ * - *Plan names.* `Free`, `Solo` and `Crew` are words a reader sees, so they are
+ *   catalogue keys — `settings.billing.plan.<id>.name`, authored by the billing
+ *   screen that owns that namespace. The admin console reads those same keys
+ *   rather than `src/lib/plans.ts`, which keeps the English an operator's record
+ *   wants, and rather than declaring a second `shell.plan.*` copy of three words
+ *   twenty-two translators would have to keep in step.
+ * - *Unit symbols.* `MB`, `GB` and the rest are IEC symbols, not English, and
+ *   they are composed in code beside an already-grouped number exactly the way
+ *   `formatDistance` composes `km` in `src/lib/format.ts`. A `'{size} MB'` key
+ *   would be byte-identical in twenty-two catalogues, which `parity.test.ts`
+ *   reads as untranslated copy.
  * - *CLDR facts.* Dates, weekdays, relative times, grouped numbers and the
  *   interval dash come from `src/lib/format.ts`, frozen against the
  *   workerd/WebKit divergence §8.5 calls a defect.
@@ -171,8 +186,15 @@ const messages = {
   'notification.trip.starting_soon.body':
     'Time to check the packing list and the bookings.',
   'notification.reservation.reminder.title': '{title} is coming up',
+  /**
+   * No `{when}`. The reminder used to interpolate a date the *writer* had
+   * already formatted, which put an English sentence fragment on all
+   * twenty-three screens and stayed there for the life of the row. The time and
+   * the confirmation code both live on the booking the row links to, so the
+   * sentence points at them instead.
+   */
   'notification.reservation.reminder.body':
-    '{when} — the confirmation is on the booking.',
+    'Check the time and the confirmation code on the booking.',
   'notification.reservation.confirmed.title': '{title} is confirmed',
   'notification.reservation.confirmed.body':
     'The booking has been marked confirmed on {tripTitle}.',
@@ -227,8 +249,17 @@ const messages = {
   'dashboard.hero.today': 'Today',
   'dashboard.hero.startUnknown': 'no start date',
   'dashboard.hero.startToday': 'good luck out there',
-  'dashboard.hero.startPast': 'days ago',
-  'dashboard.hero.startFuture': 'days',
+  /**
+   * The unit under the countdown numeral, and a plural message because of it.
+   *
+   * The figure is the tile's oversized display numeral and the unit is the line
+   * beneath it, so the two cannot share a sentence — but the unit still agrees
+   * with the count in most of the twenty-three, and `ar` alone needs four
+   * branches where English needs two. §8's rule holds: `count` selects the
+   * branch and is never printed, because the reader is already looking at it.
+   */
+  'dashboard.hero.startPast': { one: 'day ago', other: 'days ago' },
+  'dashboard.hero.startFuture': { one: 'day', other: 'days' },
   'dashboard.hero.places': 'Places',
   'dashboard.hero.placesNone': 'nothing mapped yet',
   'dashboard.hero.placesHint': 'on the map',
@@ -396,6 +427,14 @@ const messages = {
   'error.dashboard': 'Back to dashboard',
   'error.unknown': 'The request failed before it could finish.',
   'error.root': 'Something went off route',
+  /**
+   * The heading over a *named* shell state rather than over a thrown
+   * diagnostic. The two `session.*` sentences below are authored copy, so the
+   * boundary prints them as prose and drops the monospace detail chip — a
+   * translated sentence set in the diagnostic face, under "Something went off
+   * route", reads as a stack frame the reader is being asked to forward.
+   */
+  'error.session': 'Your workspace access has changed',
 
   'notFound.eyebrow': 'Error 404',
   'notFound.title': 'This page is not on the map',
@@ -409,9 +448,14 @@ const messages = {
 
   /**
    * Two states the shell cannot render around: a session with no workspace, and
-   * a membership revoked while the tab was open. Both are thrown from
-   * `src/routes/_app/-server/shell.ts` and land in the error boundary, so both
-   * are resolved on the server against the request's negotiated locale.
+   * a membership revoked while the tab was open.
+   *
+   * `src/routes/_app/-server/shell.ts` throws the *key*, and the boundary
+   * resolves it — so the sentence is rendered in the locale the document was
+   * negotiated into rather than in whatever `Accept-Language` the failing
+   * request happened to carry, and the server side of the shell needs no
+   * catalogue of its own. `SHELL_STATE_KEYS` in
+   * `src/components/layout/session.ts` is the contract between the two halves.
    */
   'session.noWorkspace':
     'Your account is not attached to a workspace yet. Sign out and back in to finish setting it up.',

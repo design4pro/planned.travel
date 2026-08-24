@@ -4,8 +4,8 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import settings from '#/lib/i18n/messages/en/settings'
-import { PLAN_IDS, PLAN_LIST } from '#/lib/plans'
-import { PLAN_COPY } from '../plan-copy'
+import { PLANS, PLAN_IDS, PLAN_LIST } from '#/lib/plans'
+import { PLAN_ALLOWANCE_CLAIMS, PLAN_COPY } from '../plan-copy'
 
 /**
  * The billing screen's plan copy, and the rule that put it in the catalogue.
@@ -76,5 +76,63 @@ describe('the screen no longer reads the English catalogue', () => {
 
   it('renders a plan name from the catalogue instead', () => {
     expect(BILLING).toContain('PLAN_COPY')
+  })
+})
+
+/**
+ * The numbers the copy spells out, checked against the plans that own them.
+ *
+ * `plans.ts` is the single source of truth for what a subscription may do, and
+ * the catalogue restates three of its numbers as words so a translator can put
+ * the count in their own grammar. That is a duplicated fact, and the reasoning
+ * in `../plan-copy.ts` used to admit the trade without guarding it: the two
+ * agreed, and nothing kept them agreeing. This is the guard. It reads the limit
+ * out of `plans.ts`, spells it, and requires the shipped English sentence to
+ * contain that word — so the sentence fails here the moment either side moves.
+ */
+const ALLOWANCE_WORDS = new Map<number, string>([
+  [1, 'one'],
+  [2, 'two'],
+  [10, 'ten'],
+])
+
+/** How this module's copy writes an allowance. `null` is unlimited. */
+function spellAllowance(limit: number | null): string {
+  if (limit === null) return 'unlimited'
+  const word = ALLOWANCE_WORDS.get(limit)
+  // A ceiling with no word yet: the sentence cannot be spelling it, so the
+  // assertion below fails and names the number that needs one.
+  return word ?? String(limit)
+}
+
+describe('the copy states the allowances the plans actually carry', () => {
+  it.each(PLAN_ALLOWANCE_CLAIMS.map((claim) => [claim.key, claim]))(
+    '%s spells the live limit',
+    (_key, claim) => {
+      const limit = PLANS[claim.plan].limits[claim.quota]
+      const word = spellAllowance(limit)
+      const short = claim.key.replace(/^settings\./, '')
+      const value = settings[short as keyof typeof settings]
+      expect(typeof value).toBe('string')
+      expect(String(value).toLowerCase()).toMatch(
+        new RegExp(`\\b${word}\\b`, 'u'),
+      )
+    },
+  )
+
+  it('names a key the catalogue carries in every claim', () => {
+    for (const claim of PLAN_ALLOWANCE_CLAIMS) {
+      expect(Object.keys(settings)).toContain(
+        claim.key.replace(/^settings\./, ''),
+      )
+    }
+  })
+
+  it('claims every plan whose allowance the copy words rather than formats', () => {
+    // A plan absent from the table is a plan whose sentences carry no number,
+    // and this is what notices when a new one is written with one.
+    expect(
+      [...new Set(PLAN_ALLOWANCE_CLAIMS.map((claim) => claim.plan))].sort(),
+    ).toEqual([...PLAN_IDS].sort())
   })
 })

@@ -100,9 +100,9 @@ describe('the app shell ships no English literal', () => {
         'notification-bell.tsx',
         'error-state.tsx',
         'not-found.tsx',
-        'route-fallback.tsx',
         'kit.tsx',
         'menu.tsx',
+        'storage-size.ts',
         'dashboard.tsx',
         'notifications.tsx',
         'admin.tsx',
@@ -189,6 +189,30 @@ describe('the shell reads correctly in Arabic', () => {
     )
     expect(unmirrored).toEqual([])
   })
+
+  /**
+   * `data-numeric` is bidi isolation, not a numeric typeface.
+   *
+   * The rule behind it — `[dir='rtl'] :is(time, output, [data-numeric])` in
+   * `src/styles/styles.css` — sets `direction: ltr`, which is right for a run
+   * that is only digits and neutral punctuation and wrong for anything holding a
+   * word. It was on three shell containers that print a localised date or a
+   * relative time, so `23 يونيو 2026` came out with its month behind its year
+   * and `قبل 3 أيام` read backwards. `tabular-nums` is the class those elements
+   * actually wanted, and the same stylesheet gives it to `[data-numeric]` too,
+   * which is how the conflation happened.
+   *
+   * One legitimate use is left in the whole shell: the bell's overflow marker,
+   * where a neutral `+` sits beside a digit inside an Arabic document. The
+   * assertion is an inventory rather than a ban, so adding a second one is a
+   * deliberate act with a reason written next to it.
+   */
+  it('isolates a numeric run only where the run is numeric', () => {
+    const carriers = SOURCES.filter((source) =>
+      withoutComments(source.text).includes('data-numeric'),
+    ).map((source) => source.name)
+    expect(carriers).toEqual(['notification-bell.tsx'])
+  })
 })
 
 /**
@@ -272,6 +296,48 @@ describe('the catalogue and the shell agree', () => {
   it('reads the fallback pair directly, so a renamed event still says something', () => {
     expect(used.has(`${STORED_PREFIX}fallback.title`)).toBe(true)
     expect(used.has(`${STORED_PREFIX}fallback.body`)).toBe(true)
+  })
+
+  /**
+   * A unit word printed beside a count it does not contain still has to agree
+   * with it. The countdown tile on the dashboard puts the figure in its display
+   * numeral and the unit on the line below, so the unit is a plural message
+   * whose `count` selects the branch and is never rendered — English needs two
+   * branches, `ar` needs four, and the bare words these keys used to hold
+   * offered a translator neither.
+   */
+  it.each(['dashboard.hero.startPast', 'dashboard.hero.startFuture'])(
+    '%s is a plural message rather than a bare unit word',
+    (key) => {
+      const message: unknown = shell[key as keyof typeof shell]
+      expect(typeof message).toBe('object')
+      expect(message).toMatchObject({
+        one: expect.any(String),
+        other: expect.any(String),
+      })
+    },
+  )
+
+  /**
+   * A stored row is read months after it was written, by someone whose language
+   * the writer never knew, so a placeholder may hold a proper noun, the reader's
+   * own content or a number the render path groups — never a date the *writer*
+   * formatted. `reservation.reminder` interpolated `19:00 on Monday 12 October`
+   * and printed it in all twenty-three.
+   */
+  it('interpolates no writer-formatted date into a stored template', () => {
+    const stored = Object.entries(shell).filter(([key]) =>
+      key.startsWith(STORED_PREFIX),
+    )
+    const dateish = stored.flatMap(([key, message]) =>
+      (typeof message === 'string'
+        ? [message]
+        : Object.values(message as Record<string, string>)
+      )
+        .filter((branch) => /\{(?:when|date|time|at)\}/.test(branch))
+        .map(() => key),
+    )
+    expect(dateish).toEqual([])
   })
 
   it('reads the primitive catalogue rather than duplicating it', () => {

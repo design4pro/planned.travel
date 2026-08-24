@@ -11,9 +11,11 @@ import {
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { PageHeader } from '#/components/layout/page-header'
+import { formatStorageSize } from '#/components/layout/storage-size'
 import {
   Alert,
   Avatar,
+  AvatarStack,
   Badge,
   Button,
   Card,
@@ -28,7 +30,6 @@ import {
   TableRow,
 } from '#/components/ui'
 import { useI18n, useTranslate } from '#/lib/i18n'
-import { formatStorage, planFromUnknown } from '#/lib/plans'
 import { loadAdmin } from './-server/overview'
 import { formatDate, formatNumber, formatRelative } from './-lib/format'
 import {
@@ -39,7 +40,8 @@ import {
   StatsSkeleton,
 } from './-ui/scaffold'
 
-import type { MessageKey, Translate } from '#/lib/i18n'
+import type { AdminPayload } from './-server/overview'
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 
 const ROLE_TONE: Record<string, 'accent' | 'brand' | 'neutral'> = {
   owner: 'accent',
@@ -70,6 +72,31 @@ const METRIC_LABEL: Record<string, MessageKey | undefined> = {
   journeys: 'shell.metric.journeys',
 }
 
+/**
+ * The three catalogue plans, by the name a reader sees.
+ *
+ * The words come from the `settings` namespace rather than from
+ * `src/lib/plans.ts`, which is the decision the billing screen recorded: a plan
+ * *price* and a plan *quota* are facts and stay in `plans.ts`, a plan *name* is a
+ * word on a screen. Reading the billing screen's keys rather than declaring
+ * `shell.plan.*` keeps one spelling of `Crew` in the product instead of two for
+ * twenty-two translators to hold in step. An id the catalogue does not know falls
+ * through to itself — a reportable value, not an English word posing as copy.
+ *
+ * The mapping is declared here rather than imported from
+ * `./settings/-lib/plan-copy.ts`, which carries the same three keys plus the
+ * taglines and feature bullets the comparison cards need. That module belongs to
+ * the settings item and is scoped by TanStack's `-` convention to the screens
+ * beside it; the two should converge on one home once it has settled, and this
+ * console needs only the `name` third of it in the shape its three sibling
+ * tables above already use.
+ */
+const PLAN_NAME: Record<string, MessageKey | undefined> = {
+  free: 'settings.billing.plan.free.name',
+  solo: 'settings.billing.plan.solo.name',
+  crew: 'settings.billing.plan.crew.name',
+}
+
 function labelFor(
   table: Record<string, MessageKey | undefined>,
   token: string,
@@ -77,6 +104,13 @@ function labelFor(
 ): string {
   const key = table[token]
   return key === undefined ? token : t(key)
+}
+
+/** A quota's used or limit side, in the units that metric is measured in. */
+function metricValue(metric: string, value: number, locale: Locale): string {
+  return metric === 'storage_bytes'
+    ? formatStorageSize(value, locale)
+    : formatNumber(value, locale)
 }
 
 export const Route = createFileRoute('/_app/admin')({
@@ -97,34 +131,41 @@ function AdminError({ error }: { error: unknown }) {
 
 function AdminPage() {
   const data = Route.useLoaderData()
-  const { shell } = Route.useRouteContext()
+
+  /*
+   * `null` is the server saying "not for you", and it is the only gate.
+   * `session.user.isAdmin` used to decide this in the component while the loader
+   * ran regardless, so the roster, the emails, the audit trail and the quotas
+   * were already in the page a member was told they could not see.
+   */
+  return data === null ? <AdminDenied /> : <AdminConsole data={data} />
+}
+
+function AdminDenied() {
+  const t = useTranslate()
+  return (
+    <AppFrame>
+      <Card variant="dashed" padding="none" className="bg-surface-2">
+        <EmptyState
+          size="lg"
+          icon={<ShieldCheck />}
+          title={t('shell.admin.denied.title')}
+          description={t('shell.admin.denied.body')}
+          action={
+            <Button asChild variant="primary" shape="pill">
+              <Link to="/dashboard">{t('shell.admin.denied.action')}</Link>
+            </Button>
+          }
+        />
+      </Card>
+    </AppFrame>
+  )
+}
+
+function AdminConsole({ data }: { data: AdminPayload }) {
   const { t, locale } = useI18n()
-  const now = Date.now()
-
-  if (!shell.session.user.isAdmin) {
-    return (
-      <AppFrame>
-        <Card variant="dashed" padding="none" className="bg-surface-2">
-          <EmptyState
-            size="lg"
-            icon={<ShieldCheck />}
-            title={t('shell.admin.denied.title')}
-            description={t('shell.admin.denied.body')}
-            action={
-              <Button asChild variant="primary" shape="pill">
-                <Link to="/dashboard">{t('shell.admin.denied.action')}</Link>
-              </Button>
-            }
-          />
-        </Card>
-      </AppFrame>
-    )
-  }
-
   const storage = data.limits.find((row) => row.metric === 'storage_bytes')
-  // The plan's own name is a product name, not copy: it lives in
-  // `src/lib/plans.ts` and reads the same in every locale.
-  const planName = planFromUnknown(data.plan)?.name ?? data.plan
+  const planName = labelFor(PLAN_NAME, data.plan, t)
 
   return (
     <AppFrame>
@@ -186,7 +227,11 @@ function AdminPage() {
           <StatCard
             icon={<Database />}
             label={t('shell.admin.stat.storage')}
-            value={storage === undefined ? '—' : formatStorage(storage.used)}
+            value={
+              storage === undefined
+                ? '—'
+                : formatStorageSize(storage.used, locale)
+            }
             unit={
               storage === undefined
                 ? undefined
@@ -194,7 +239,7 @@ function AdminPage() {
                     limit:
                       storage.limit === null
                         ? t('shell.admin.stat.storageUnlimited')
-                        : formatStorage(storage.limit),
+                        : formatStorageSize(storage.limit, locale),
                   })
             }
             caption={t('shell.admin.stat.storageCaption')}
@@ -208,7 +253,20 @@ function AdminPage() {
           <StatCard
             icon={<ShieldCheck />}
             label={t('shell.admin.stat.plan')}
-            value={planName}
+            /* The only tile on the product whose display numeral is a word, so
+               the only one that can meet a run with no break opportunity in it.
+               A plan name is one short word in every language we ship, but a
+               locale whose catalogue has not landed falls back to the key, and
+               `settings.billing.plan.crew.name` measures 523px at the display
+               size inside a 328px column — enough to widen the whole stat grid
+               and give the page 221px of horizontal scroll at 360.
+               `wrap-anywhere`, not `wrap-break-word`: `overflow-wrap:
+               break-word` breaks a word to avoid painting outside its box but
+               does not lower the element's *min-content* size, so the grid's
+               auto column still measured the unbroken run and sized itself to
+               it. Wrapping is handed to an element of ours rather than asked of
+               `StatCard`, whose numerals must never break mid-figure. */
+            value={<span className="wrap-anywhere">{planName}</span>}
             caption={t('shell.admin.stat.planCaption')}
           />
         </div>
@@ -224,10 +282,7 @@ function AdminPage() {
             >
               <ul className="flex flex-col gap-4">
                 {data.limits.map((row) => {
-                  const isStorage = row.metric === 'storage_bytes'
-                  const used = isStorage
-                    ? formatStorage(row.used)
-                    : formatNumber(row.used, locale)
+                  const used = metricValue(row.metric, row.used, locale)
                   // An uncapped metric arrives as `null`, and a bar with no ceiling has
                   // no ratio to draw: show it filled, the way the billing meters do,
                   // rather than a red bar against a ceiling of one.
@@ -266,9 +321,7 @@ function AdminPage() {
                         label={labelFor(METRIC_LABEL, row.metric, t)}
                         valueText={t('shell.admin.quotas.value', {
                           used,
-                          limit: isStorage
-                            ? formatStorage(row.limit)
-                            : formatNumber(row.limit, locale),
+                          limit: metricValue(row.metric, row.limit, locale),
                         })}
                       />
                     </li>
@@ -280,6 +333,24 @@ function AdminPage() {
             <Panel
               label={t('shell.admin.members.label')}
               count={formatNumber(data.members.length, locale)}
+              /* The roster's faces beside its heading — the shipped
+                 `AvatarStack`, whose `+n` tail and whose spoken party list are
+                 both composed through the catalogue and `formatList`, so the
+                 overflow chip reads `+3` in `en` and takes this locale's own
+                 sign order and grouping everywhere else. `-space-x-*` compiles
+                 to `margin-inline-end`, so the overlap stacks the other way
+                 round in `ar` without a rule of its own. */
+              action={
+                <AvatarStack
+                  size="sm"
+                  max={5}
+                  people={data.members.map((member) => ({
+                    id: member.memberId,
+                    name: member.name,
+                    src: member.image,
+                  }))}
+                />
+              }
               flush
               bodyClassName="p-0"
             >
@@ -381,11 +452,15 @@ function AdminPage() {
                             )}
                           </p>
                         </div>
-                        <span
-                          data-numeric
-                          className="shrink-0 text-caption tabular-nums text-ink-4"
-                        >
-                          {formatRelative(row.createdAt, now, locale)}
+                        {/* No `data-numeric` here. A relative time is prose with
+                            a figure in it — `قبل 3 أيام` — and the direction
+                            layer's `direction: ltr` would push the Arabic words
+                            to the wrong side of their own number. The attribute
+                            belongs to a run that is *only* digits and
+                            punctuation; `tabular-nums` is what this needs, and
+                            it says so itself. */}
+                        <span className="shrink-0 text-caption tabular-nums text-ink-4">
+                          {formatRelative(row.createdAt, data.now, locale)}
                         </span>
                       </PanelRow>
                     </li>

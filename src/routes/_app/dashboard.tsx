@@ -13,6 +13,7 @@ import {
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
+import { formatStorageSize } from '#/components/layout/storage-size'
 import {
   Badge,
   Button,
@@ -23,7 +24,6 @@ import {
   StatCard,
 } from '#/components/ui'
 import { useI18n, useTranslate } from '#/lib/i18n'
-import { formatStorage } from '#/lib/plans'
 import { loadDashboard } from './-server/overview'
 import {
   countryFlag,
@@ -295,12 +295,21 @@ function startsInValue(
   return formatNumber(Math.abs(startsIn), locale)
 }
 
+/**
+ * The unit under the countdown, agreeing with the figure above it.
+ *
+ * `count` selects the CLDR branch and is never printed — the reader is looking
+ * at the numeral in the same tile. The two keys used to be the bare words
+ * `days ago` and `days`, which read as `Starts in / 1 / days` in English and
+ * gave a translator of Polish or Arabic no branch to inflect.
+ */
 function startsInHint(startsIn: number | null, t: Translate): string {
   if (startsIn === null) return t('shell.dashboard.hero.startUnknown')
   if (startsIn === 0) return t('shell.dashboard.hero.startToday')
+  const count = Math.abs(startsIn)
   return startsIn < 0
-    ? t('shell.dashboard.hero.startPast')
-    : t('shell.dashboard.hero.startFuture')
+    ? t('shell.dashboard.hero.startPast', { count })
+    : t('shell.dashboard.hero.startFuture', { count })
 }
 
 function HeroStat({
@@ -319,10 +328,13 @@ function HeroStat({
       <dt className="mb-2 truncate text-micro font-semibold tracking-label uppercase text-inverse-muted">
         {label}
       </dt>
-      {/* `data-numeric` isolates the run: a date range or a grouped figure
-          inside Arabic prose otherwise reorders around its own dash. */}
+      {/* No `data-numeric`. Three of these four tiles hold nothing but a grouped
+          numeral, which is already an isolated run — and the fourth holds a
+          formatted date range, whose month name is Arabic prose that the
+          direction layer's `direction: ltr` would push behind its own year.
+          `tabular-nums` is the part every tile actually wants, and it is a class
+          rather than an attribute that also carries bidi meaning. */}
       <dd
-        data-numeric
         className={
           compact
             ? 'font-display text-label leading-tight font-bold tabular-nums text-inverse-on'
@@ -557,14 +569,20 @@ function TripMix({ data }: { data: DashboardPayload }) {
         </ul>
       )}
       <Separator className="my-4" />
-      <div className="flex items-center justify-between gap-3 text-caption text-ink-3">
-        <span>
+      {/* `flex-wrap`, because these two phrases are the widest pair of
+          translations in the rail. Measured at 360px in a locale whose
+          catalogue has not landed yet: the un-wrapping row measured 383px of
+          content in a 286px card and pushed the whole document sideways. A pair
+          that does not fit now takes a second line instead — and in a locale
+          that fits, nothing moves. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-caption text-ink-3">
+        <span className="min-w-0">
           {t('shell.dashboard.pipeline.favourites', {
             count: data.tripTotals.favourites,
             favourites: formatNumber(data.tripTotals.favourites, locale),
           })}
         </span>
-        <span>
+        <span className="min-w-0">
           {t('shell.dashboard.pipeline.archived', {
             count: data.tripTotals.archived,
             archived: formatNumber(data.tripTotals.archived, locale),
@@ -584,8 +602,8 @@ function StorageMeter({ data }: { data: DashboardPayload }) {
     <Panel
       label={t('shell.dashboard.storage.label')}
       count={t('shell.dashboard.storage.count', {
-        used: formatStorage(used),
-        limit: formatStorage(limit),
+        used: formatStorageSize(used, locale),
+        limit: formatStorageSize(limit, locale),
       })}
     >
       <div className="flex items-start gap-3">
@@ -614,9 +632,11 @@ function StorageMeter({ data }: { data: DashboardPayload }) {
         </div>
       </div>
       <Separator className="my-4" />
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-caption text-ink-3">
-          <Coins aria-hidden className="size-3.5" />
+      {/* Same wrap as the pipeline footer above, for the same measurement: a
+          prompt and its link are a sentence's worth of copy in a 286px card. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <span className="flex min-w-0 items-center gap-2 text-caption text-ink-3">
+          <Coins aria-hidden className="size-3.5 shrink-0" />
           {t('shell.dashboard.storage.more')}
         </span>
         <Button asChild variant="link" size="sm">

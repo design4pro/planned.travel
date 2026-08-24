@@ -29,7 +29,7 @@
  */
 
 import type { MessageKey } from '#/lib/i18n'
-import type { PlanId } from '#/lib/plans'
+import type { PlanId, QuotaKey } from '#/lib/plans'
 
 export interface PlanCopy {
   readonly name: MessageKey
@@ -74,3 +74,64 @@ export const PLAN_COPY: { readonly [K in PlanId]: PlanCopy } = {
     ],
   },
 }
+
+/**
+ * Every sentence above that spells out a number `src/lib/plans.ts` owns.
+ *
+ * Writing a plan's allowance as a word — "Two trips at a time", "Up to ten
+ * members" — is what lets a translator put the count in their own language
+ * instead of receiving a bare `2` and a separator they cannot move. The price of
+ * it is a second copy of a fact: `PLANS.free.limits.trips` is `2` and so is that
+ * sentence, and nothing in a type notices when one of them changes.
+ *
+ * This table is that notice. Each row says which key restates which quota of
+ * which plan, and `__tests__/plan-copy.test.ts` spells the *live* limit out of
+ * `plans.ts` and requires the shipped English to contain that word — so raising
+ * the free trip ceiling to three, or rewriting the sentence to claim three,
+ * fails there rather than on a customer's screen. A row is what a copy edit that
+ * introduces a new number has to add; a claim whose limit no longer has a word
+ * fails loudly rather than passing quietly.
+ *
+ * Only English is guarded, and deliberately: a translation says "zwei" or "十",
+ * which no lookup of ours can check, and §8.9 gives that judgement to the
+ * translator. What the guard protects is the source every translation is made
+ * from.
+ */
+export interface PlanAllowanceClaim {
+  /** The catalogue key whose sentence states the allowance. */
+  readonly key: MessageKey
+  readonly plan: PlanId
+  /** The quota of that plan the sentence is about. */
+  readonly quota: QuotaKey
+}
+
+export const PLAN_ALLOWANCE_CLAIMS: ReadonlyArray<PlanAllowanceClaim> = [
+  { key: 'settings.billing.plan.free.tagline', plan: 'free', quota: 'trips' },
+  {
+    key: 'settings.billing.plan.free.feature.trips',
+    plan: 'free',
+    quota: 'trips',
+  },
+  { key: 'settings.billing.renewal.free', plan: 'free', quota: 'trips' },
+  { key: 'settings.billing.hero.freeAllowance', plan: 'free', quota: 'seats' },
+  {
+    key: 'settings.billing.plan.solo.feature.trips',
+    plan: 'solo',
+    quota: 'trips',
+  },
+  {
+    key: 'settings.billing.hero.singleTraveller',
+    plan: 'solo',
+    quota: 'seats',
+  },
+  {
+    key: 'settings.billing.plan.crew.feature.members',
+    plan: 'crew',
+    quota: 'seats',
+  },
+  {
+    key: 'settings.billing.plan.crew.feature.everything',
+    plan: 'crew',
+    quota: 'trips',
+  },
+]

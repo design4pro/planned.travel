@@ -194,7 +194,7 @@ function NotificationsPage() {
             <ul>
               {data.items.map((item) => (
                 <li key={item.id}>
-                  <NotificationRow item={item} />
+                  <NotificationRow item={item} now={data.now} />
                 </li>
               ))}
             </ul>
@@ -215,13 +215,25 @@ function NotificationsPage() {
   )
 }
 
-function NotificationRow({ item }: { item: NotificationCard }) {
+/**
+ * One row. `now` arrives from the loader rather than being read here: a
+ * `Date.now()` in a component body runs once during SSR and again during
+ * hydration, and a row sitting on the "45 seconds" or the "7 days" boundary
+ * between the two renders a different sentence each time — a text mismatch React
+ * reports in the console, which §2 counts as a defect.
+ */
+function NotificationRow({
+  item,
+  now,
+}: {
+  item: NotificationCard
+  now: number
+}) {
   const router = useRouter()
   const { t, tStored, locale } = useI18n()
   const [busy, setBusy] = useState(false)
   const copy = notificationCopy(item, { locale, t, tStored })
   const Icon = TYPE_ICON[item.type] ?? Info
-  const now = Date.now()
 
   async function markRead(): Promise<void> {
     setBusy(true)
@@ -293,10 +305,11 @@ function NotificationRow({ item }: { item: NotificationCard }) {
             {copy.body}
           </p>
         )}
-        <p
-          data-numeric
-          className="mt-1 text-caption tabular-nums text-ink-4"
-        >
+        {/* No `data-numeric`. A relative time is a sentence with a figure in it
+            — `قبل 3 أيام` — and the direction layer pins a `data-numeric` run to
+            `direction: ltr`, which would reorder those Arabic words around their
+            own number. `tabular-nums` is the part a changing timestamp needs. */}
+        <p className="mt-1 text-caption tabular-nums text-ink-4">
           {formatRelative(item.createdAt, now, locale)}
         </p>
       </div>

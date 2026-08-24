@@ -177,6 +177,29 @@ export async function cacheSession(
   page: Page,
   baseURL: string | undefined,
 ): Promise<boolean> {
+  if (!(await storeSession(page, baseURL))) {
+    return false
+  }
+  await pinDemoLanguage(page)
+  return true
+}
+
+/**
+ * The sign-in and the cache file, and nothing else.
+ *
+ * Split out so that the fallback path in `useSession()` can reach the session
+ * without reaching the *pin*. `pinDemoLanguage()` writes to the shared fixture,
+ * and `useSession()` is called from a `beforeEach` — so while the two were one
+ * function, a run with no cached session (the documented filtered-run case)
+ * performed a navigation and a D1 write inside every authenticated test, once
+ * per worker, against a database every worker shares. That contradicts the pin's
+ * own contract of running once per run in the setup project, which is the only
+ * place a write to the fixture belongs.
+ */
+async function storeSession(
+  page: Page,
+  baseURL: string | undefined,
+): Promise<boolean> {
   await mkdir(dirname(AUTH_STATE), { recursive: true })
   if (!(await signIn(page, baseURL))) {
     await writeFile(
@@ -187,7 +210,6 @@ export async function cacheSession(
     return false
   }
   await page.context().storageState({ path: AUTH_STATE })
-  await pinDemoLanguage(page)
   return true
 }
 
@@ -214,7 +236,10 @@ export async function cacheSession(
  *
  * It runs once per run, in the setup project, because it is the only place a
  * write belongs — a per-test reset would be a write per frame against a
- * database every worker shares.
+ * database every worker shares. That is enforced by the call graph rather than
+ * asserted in prose: the one caller is `cacheSession()`, which `auth.setup.ts`
+ * alone runs, and the sign-in fallback a filtered run needs goes to
+ * `storeSession()` instead, which touches no fixture data.
  *
  * The workspace default itself is not ours to set: it is `organization_settings`
  * and an owner's to change. So the pin verifies rather than assumes, and reports
@@ -230,6 +255,23 @@ export async function pinDemoLanguage(page: Page): Promise<boolean> {
       await expect(chip).toHaveAttribute('data-selected', '', {
         timeout: 15_000,
       })
+      // That attribute is optimistic: the picker's host moves the selection
+      // before the POST answers, so the control never stalls under a click. The
+      // pin therefore confirms itself against the *server* — a fresh document,
+      // negotiated from the row the write was meant to change. Reading
+      // `html.lang` off the optimistic page instead raced the write, and losing
+      // that race made this helper report that the workspace supplies a
+      // language it does not.
+      await page.reload()
+      await chip.waitFor({ state: 'visible', timeout: 15_000 })
+      if ((await chip.getAttribute('data-selected')) === null) {
+        console.warn(
+          `[shoot] the demo traveller's language override did not clear — ` +
+            `/settings/language still shows a language of their own after a ` +
+            `reload. Every authenticated baseline was recorded without one.`,
+        )
+        return false
+      }
     }
     const lang = await page
       .locator('html')
@@ -276,7 +318,10 @@ export async function useSession(
     await context.addCookies(stored.cookies)
     return true
   }
-  return cacheSession(page, baseURL)
+  // Deliberately not `cacheSession()`: this runs from a `beforeEach`, and the
+  // language pin that function performs is a write to the shared fixture that
+  // belongs to the setup project alone.
+  return storeSession(page, baseURL)
 }
 
 /** True when the browser context currently holds a usable session. */

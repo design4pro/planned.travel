@@ -4,13 +4,24 @@
  * `src/server/repos/notifications.ts` keeps a notification as `titleKey` +
  * `bodyKey` + a `params` record and never as a rendered sentence, "so a
  * notification written a year ago still renders in the reader's current
- * language". This module is the render half of that bargain, and it is the whole
- * of it: there is no second table of English templates anywhere in the product.
+ * language". This module is the render half of that bargain, and it is the only
+ * path any surface uses: nothing in the product renders a notification through
+ * anything else.
  *
- * It lives beside the chrome rather than in a route helper because two surfaces
- * read the same rows — the inbox screen and, when a row grows a preview, the
- * bell — and because it is pure, so it can be tested without a session, a
- * request or a browser.
+ * It is not, however, the only such table *in the tree*.
+ * `src/routes/_app/-lib/notifications.ts` still holds the English catalogue this
+ * module replaced, plus the `NOTIFICATION_EVENTS` and `CHANNEL_LABELS` lists the
+ * preferences screen used to draw. Nothing imports any of it — the preferences
+ * screen now declares its own axes as message keys — so it is dead, and it is
+ * dead in a file this item does not own. Deleting it is a one-line change for
+ * whoever owns `src/routes/_app/-lib/**`; until then, this comment is the record
+ * that a second English catalogue exists and is unreachable, rather than a claim
+ * that it does not exist.
+ *
+ * This module lives beside the chrome rather than in a route helper because two
+ * surfaces read the same rows — the inbox screen and, when a row grows a
+ * preview, the bell — and because it is pure, so it can be tested without a
+ * session, a request or a browser.
  */
 
 import { formatNumber } from '#/lib/format'

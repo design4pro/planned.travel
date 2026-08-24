@@ -489,14 +489,14 @@
   },
   {
     "id": "three-flakes-under-full-suite-load",
-    "claim": "Under full-suite load this machine flakes about three mobile-safari specs per run - pricing-dark, legal-privacy-dark and the reduced-motion focus spec - and they pass individually and disappear on a clean re-run. Same family as the countries-test-timeout refutation: measure a suspicious failure again on its own before filing it.",
-    "evidence": "Run 1 after the server restart: 3 failed. Each of the three re-run alone with --project=mobile-safari -g: passed in 2.2-4.4s. Run 2 of the identical suite on the identical tree: 134 passed, 0 failed.",
-    "measuredIn": "i18n round 5, orchestrator re-measurement",
+    "claim": "Under full-suite load this machine flakes a small number of specs, and the reliable discriminator is a DURATION blow-up plus passing in isolation - not the number of consecutive failures. 'reduced motion still moves focus into the click surface' failed two full runs in a row after round 10, which my earlier bar called real, then the very next identical run was 138 passed / 5 skipped / 0 failed. Under load it takes 31.2s; alone it takes 4.6s. Treat a 5x-plus slowdown with no pixel diff as contention, and require three consecutive full-suite failures before calling such a spec broken.",
+    "evidence": "Run 1 after the server restart: 3 failed. Each of the three re-run alone with --project=mobile-safari -g: passed in 2.2-4.4s. Run 2 of the identical suite on the identical tree: 134 passed, 0 failed. Round 10: two consecutive full-suite failures of the chromium reduced-motion spec at 31.2s, a pass in isolation at 4.6s, then a clean full suite at 138 passed / 5 skipped / 0 failed on the same tree. The machine is now also carrying an unrelated paperclip dev server.",
+    "measuredIn": "i18n rounds 5 and 10",
     "scope": [
       "mechanical",
       "auditor"
     ],
-    "invalidatesWhen": "the same spec fails in two consecutive full runs"
+    "invalidatesWhen": "the same spec fails in three consecutive full runs, or fails with a pixel diff rather than a timeout"
   },
   {
     "id": "never-timeout-the-port-script",
@@ -960,5 +960,65 @@
       "mechanical"
     ],
     "invalidatesWhen": "the label changes again"
+  },
+  {
+    "id": "never-fake-a-loader-payload",
+    "claim": "A real server-side `null` returned from a TanStack Start server function reaches the route component as `null` on both the SSR and the client-navigation path — but a hand-forged `{\"t\":2,\"s\":0}` body in a Playwright route handler deserialises to `undefined`, which looks exactly like a broken null check. Force the branch in the handler and revert, do not fake the wire.",
+    "evidence": "Measured on /admin at http://localhost:3001. With `loadAdmin` temporarily returning null unconditionally: SSR `document.body` contains 'Only workspace admins', client navigation through the user menu's Admin Link gives the same, zero console errors. With the handler untouched and `route.fulfill({body: JSON.stringify({t:2,s:0})})` instead: 'TypeError: Cannot read properties of undefined (reading \\'limits\\')' from AdminConsole. Also note a loader only crosses the wire on a CLIENT navigation — a `page.goto` runs it during SSR, so `page.route` on /_serverFn/ never fires and an injected plain <a> triggers a full page load rather than a router navigation.",
+    "measuredIn": "i18n round 10",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "wrap-anywhere-not-break-word",
+    "claim": "Tailwind's `wrap-break-word` (overflow-wrap: break-word) does NOT reduce an element's min-content size, so an unbreakable token inside a grid whose implicit column is `auto` still widens the whole grid and scrolls the document. `wrap-anywhere` (overflow-wrap: anywhere) does. Both compile in tailwindcss 4.3.3, as does `break-all`.",
+    "evidence": "Measured at 360px on /admin in an `ar` document (keys render as tokens because messages/ar/ is absent): `settings.billing.plan.crew.name` in a StatCard value measured 523px inside a 328px column and gave `documentElement.scrollWidth - clientWidth === 221`. With `break-words` on an inner span the leaf stopped overflowing but the document stayed at 221. With `wrap-anywhere` it went to 0. `compile()` from the installed tailwindcss emits `.wrap-anywhere{overflow-wrap:anywhere}`, `.wrap-break-word{overflow-wrap:break-word}`, `.break-all{word-break:break-all}`. Also measured: `space-x-*`/`-space-x-*` emit `margin-inline-end`, so an AvatarStack mirrors under dir=rtl with no rule of its own.",
+    "measuredIn": "i18n round 10",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "clock-pin-reaches-the-empty-state",
+    "claim": "The `x-pt-server-today` header reaches the dashboard's empty state honestly — pinning it far in the future makes `upNext` null and the reservation rail empty with no payload surgery. Rewriting a seroval loader payload by hand to null a field is not worth attempting; it corrupts the graph and lands on the error boundary.",
+    "evidence": "A Playwright context with extraHTTPHeaders {'x-pt-server-today':'2031-01-15'} on /dashboard rendered 'Your next trip starts here' plus 'Nothing booked yet', overflow 0, no product console errors — only the documented gstatic CORS failures the pin causes. The alternative (parsing the /_serverFn/ body, replacing vals[upNext] with {t:2,s:0} and pushing the original node into upcoming.a) produced 'TypeError: Cannot read properties of undefined (reading \\'reservations\\')'. Restoring the demo fixture after a probe that clicks 'Read': `curl -X POST 'http://localhost:3001/api/dev/seed?force=1'` then `playwright test --project=setup` puts the bell back to 'Notifications, 3 unread' and the language chip back to locale-chip-workspace.",
+    "measuredIn": "i18n round 10",
+    "scope": [
+      "builder",
+      "capture"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "seven-mobile-baselines-refreshed-in-round-10",
+    "claim": "The seven red mobile-safari frames were refreshed in round 10, one targeted -g run each, after reading the atlas and journey diffs. Every difference traced to work that was asked for: app-shell-i18n's avatar change and its nav labels moving into shell.ts (it owns src/components/layout/, which frames every authenticated screen, which is why trips, journey and atlas moved at all), the two-column mobile picker fix the orchestrator requested in round 8, and the known GPU speckle on the WebGL map canvases. Exactly seven files changed - no collateral - and the suite went to 138 passed / 5 skipped / 0 failed.",
+    "evidence": "The failing set was identical across three consecutive full runs before the refresh, and all seven actual frames measured 393px wide, so the width instability an earlier round warned about did not reproduce. git status after the refresh listed exactly the seven intended PNGs.",
+    "measuredIn": "i18n round 10, orchestrator",
+    "scope": [
+      "mechanical",
+      "capture",
+      "critic"
+    ],
+    "invalidatesWhen": "any of those screens changes again"
+  },
+  {
+    "id": "the-translation-workload-measured",
+    "claim": "The English source is 1,005 keys across four namespaces - auth 297, settings 398, shell 260, ui 50 - so the six translation packs owe 22 locales x 1,005 = about 22,110 strings between them. The heaviest single pack is romance at five locales. Parity fails identically for an absent locale and an incomplete one, so a pack that cannot finish should finish WHOLE locales and name the missing ones: a complete locale is shippable progress, a half-finished one is not.",
+    "evidence": "Counted with grep -cE \"^\\s+'\" over src/lib/i18n/messages/en/*.ts: auth.ts 297, settings.ts 398, shell.ts 260, ui.ts 50. Only four of SPEC section 8's ten namespaces exist, because the other six belong to items deferred by scope in round 4.",
+    "measuredIn": "i18n round 10, orchestrator",
+    "scope": [
+      "builder",
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": "a new en namespace file appears or a deferred item is un-deferred"
   }
 ]

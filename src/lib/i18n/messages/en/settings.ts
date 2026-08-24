@@ -165,6 +165,15 @@ const messages = {
   'language.saveFailed': 'Your language was not changed',
   'language.saveFailedBody':
     'Nothing was lost and you are still reading {language}. Check your connection, then pick again.',
+  /**
+   * The other failure: the row *was* written, and only the page turning round
+   * behind it was not. Telling that reader "your language was not changed"
+   * would contradict both the database and the chip they are looking at, so it
+   * gets its own pair of sentences — saved, not switched, reload to read it.
+   */
+  'language.reload.title': 'Your language is saved',
+  'language.reload.body':
+    'This page could not finish switching to {language}. Reload it to read the product in your new language.',
   'language.sample.title': 'How dates and numbers will read',
   'language.sample.description':
     'The same three values, written the way this language writes them.',

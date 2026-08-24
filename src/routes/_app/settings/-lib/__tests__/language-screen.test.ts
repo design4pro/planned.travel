@@ -79,3 +79,77 @@ describe('the picker and its skeleton share one column rule', () => {
     }
   })
 })
+
+describe('only the write itself can be rolled back', () => {
+  /**
+   * The commit is two `try` blocks, and the split is the whole point.
+   *
+   * `saveLanguagePreference`, `router.invalidate()` and `loadCatalogue()` used
+   * to share one, whose `catch` treated all three as "the save failed": it put
+   * the chip back and said "you are still reading English". A catalogue chunk
+   * that fails to fetch after a successful write therefore left D1 holding the
+   * new tag and `<html lang>` already flipped, with the control and the sentence
+   * both contradicting the document. Nothing about that is visible to `tsc`, and
+   * re-joining the blocks is a two-line edit.
+   */
+  const BLOCKS = [
+    ...CODE.matchAll(/\n {4}try \{\n([\s\S]*?)\n {4}\} catch \{/g),
+  ]
+
+  it('commits inside two blocks, not one', () => {
+    expect(BLOCKS).toHaveLength(2)
+  })
+
+  it('keeps the invalidation and the catalogue out of the write block', () => {
+    const write = BLOCKS[0]?.[1] ?? ''
+    expect(write).toContain('saveLanguagePreference(')
+    expect(write).not.toContain('router.invalidate')
+    expect(write).not.toContain('loadCatalogue')
+  })
+
+  it('rolls the selection back from the write block alone', () => {
+    const after = CODE.slice(CODE.indexOf('} catch {'))
+    const [failedWrite, failedSwitch] = after.split(/\n {4}try \{/)
+    expect(failedWrite).toContain('setChoice(previous)')
+    expect(failedWrite).toContain('toast.error(')
+    // The row was written, so the second failure may report and nothing else.
+    expect(failedSwitch).not.toContain('setChoice(previous)')
+    expect(failedSwitch).toContain('router.invalidate')
+    expect(failedSwitch).toContain('toast.warning(')
+  })
+})
+
+describe('the loading shape is the loaded screen with its values missing', () => {
+  it('frames both states with the same section component', () => {
+    // A bare `Card` takes its own `p-5` and draws no header band, which is what
+    // made the pending screen 241.75px shorter than the one it replaced at
+    // 1440px and 296.81px shorter at 393px — and, through 8px of inner width,
+    // gave the chip grid six columns against the loaded five.
+    const sections = [...CODE.matchAll(/<SettingsSection\b/g)]
+    expect(sections).toHaveLength(4)
+    expect(CODE).not.toContain('<Card')
+  })
+
+  it('reads its headings from the catalogue rather than shimmering them', () => {
+    for (const key of [
+      'settings.language.section.title',
+      'settings.language.section.description',
+      'settings.language.sample.title',
+      'settings.language.sample.description',
+    ]) {
+      expect([...CODE.matchAll(new RegExp(`'${key}'`, 'g'))]).toHaveLength(2)
+    }
+  })
+
+  it('stacks both hints so neither state nor loading changes the height', () => {
+    // `min-h` would need a line count per breakpoint per language; one grid cell
+    // holding both sentences is as tall as the longer of them by construction.
+    expect(CODE).toMatch(/<Hints state="pending"/)
+    expect(CODE).toMatch(/<Hints state=\{/)
+    const hints = /function Hints\(([\s\S]*?)\n\}/.exec(CODE)?.[1] ?? ''
+    expect(hints).toContain("'settings.language.state.hint.override'")
+    expect(hints).toContain("'settings.language.state.hint.workspace'")
+    expect([...hints.matchAll(/HINT_CELL/g)].length).toBeGreaterThanOrEqual(2)
+    expect(hints).toContain('invisible')
+  })
+})

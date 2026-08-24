@@ -8,6 +8,14 @@ import { PRIMARY_NAV, isPathActive } from './nav-model'
  * desktop one. Thumb-reachable, safe-area padded, and the active tab is marked
  * by both colour and a short rule so it does not rely on hue alone.
  *
+ * **There is no navigation drawer, deliberately.** The shell has exactly four
+ * primary sections, which is the number a tab bar shows all of at once at 360px;
+ * a drawer would hide all four behind a button, cost a tap and an animation to
+ * reach any of them, and add a focus trap and a scrim to keyboard-test. So the
+ * three surfaces that mirror under `dir="rtl"` are this bar, `top-nav.tsx` and
+ * the `pill-nav.tsx` inside it, and there is no fourth. If a later module needs
+ * a sheet, `src/components/ui` already ships one — the chrome does not.
+ *
  * Every inset is logical (`start-0`/`end-0` rather than `inset-x-0`), because
  * `ar` turns the whole bar round and the four tabs then read right to left with
  * the active rule still over the tab it belongs to. The label is a single

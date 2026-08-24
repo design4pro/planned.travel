@@ -18,9 +18,14 @@ import type { ComponentPropsWithRef, ComponentPropsWithoutRef } from 'react'
  * `AvatarStack` to render its `+n` tail through the catalogue and its party
  * through `formatList` left this one still writing ASCII digits with an English
  * sign order, and a reader would have got whichever the next author happened to
- * import. They are gone rather than translated, and `user-menu.tsx` now takes
- * its `Avatar` from `#/components/ui` — so the fixed primitive has a consumer in
- * the chrome and there is exactly one face in the product.
+ * import.
+ *
+ * Both of those primitives now have a consumer in the shell rather than merely
+ * no rival: `user-menu.tsx` takes its `Avatar` from `#/components/ui`, and the
+ * admin console's member panel heads itself with the shipped `AvatarStack`, so
+ * the localised `+n` tail and the `formatList` party summary are on a screen. A
+ * removed rival and an unconsumed original are the same defect wearing different
+ * clothes.
  *
  * `Panel`, `SectionLabel` and the two skeletons below are the same shape as
  * `Card`, `SectionLabel` and `Skeleton` in `src/components/ui` and should end up
