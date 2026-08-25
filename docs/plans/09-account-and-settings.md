@@ -825,7 +825,8 @@ dependant for `ACC-01`.
 **Two files in this list are touched by more than one plan, in different waves, and both are named
 here as `check-plan-collisions.mjs` requires.** `src/server/auth/index.ts` and
 `src/server/repos/members.ts` are both edited by `10-S1` in wave 3 (`10-administration.md`), which
-owns member and invitation administration; this stage is wave 1 and shares neither file with it
+owns member and invitation administration, and `src/server/repos/members.ts` is edited again by
+`10-S4` in wave 5 of the same plan; this stage is wave 1 and shares neither file with either of them
 concurrently. The `deleteWorkspace` function this stage mints is the one that stage will find
 already present, and the workspace-level affordance for it belongs to that plan rather than to this
 one.
@@ -937,8 +938,12 @@ configuration exactly as it stands, and no plugin is added or removed.
 **Zod v4 on every input.** `z.strictObject` for the change-password and change-email payloads,
 `z.email()` for the address — the v4 top-level format, not `z.string().email()` — and the `error`
 parameter for messages. Password length is checked against `MIN_PASSWORD_LENGTH` and
-`MAX_PASSWORD_LENGTH`, which `src/server/auth/index.ts:38-39` already exports, rather than against a
-second pair of numbers.
+`MAX_PASSWORD_LENGTH` rather than against a second pair of numbers, and each half takes them from the
+copy it is allowed to see: the **server** function imports them from `src/server/auth/index.ts:40-41`,
+and the **client** form imports them from `src/routes/(auth)/-lib/schemas.ts:16,18`, a module whose
+only import is `zod` and whose own comments say each constant is kept in step with the server one. The
+client must not reach for `#/server/auth` — that would pull the auth configuration into the browser
+bundle — and it must not hardcode `10`, which would be the third copy.
 
 **The Better Auth client calls this stage uses:** `authClient.changePassword({ currentPassword,
 newPassword, revokeOtherSessions })`, `authClient.changeEmail({ newEmail, callbackURL })`,
@@ -972,10 +977,46 @@ is a step of this stage for the two new files.
 
 **Components, reused not rebuilt.** `Card`, `Button`, `Field`, `Input`, `Alert`, `Badge`, `Dialog`,
 `Avatar`, `Skeleton`, `Spinner`, `Progress`, `Separator`, `SectionLabel` and `Tooltip` from
-`src/components/ui`; `SettingsRow` and `SettingsSection` from `src/routes/_app/-ui/settings-nav.tsx`,
-imported and not edited, so the Profile screen keeps the row rhythm the other five sections use; and
-`PasswordStrength`, which already exists on the registration screen and is the one strength meter in
-the product.
+`src/components/ui`; and `SettingsRow` and `SettingsSection` from
+`src/routes/_app/-ui/settings-nav.tsx`, imported and not edited, so the Profile screen keeps the row
+rhythm the other five sections use.
+
+**The strength meter is a requirement this stage files, not a component it reuses, and
+`/settings/password` ships without one.** Measured rather than assumed: the meter is
+`PasswordStrength` at `src/routes/(auth)/register.tsx:84`, a **module-local function that is not
+exported**, sitting beside an equally local `scorePassword` (`:72`) and two local label and fill
+tables (`:52-64`). It is the one strength meter in the product and exactly one screen can reach it.
+An earlier revision of this stage listed it among the components it reuses; that was not buildable,
+and the two shapes that would make it buildable are both refused here:
+
+- **Export it from `src/routes/(auth)/register.tsx`.** That file is in no stage's **Owned paths** in
+  any plan — measured with `grep -rn 'register.tsx' docs/plans/*.md`, which returns only this
+  sentence's neighbours — so editing it is an ownership violation, and importing one route module's
+  internals from another route group is an import direction the repository uses nowhere.
+- **Copy the twenty lines into `src/routes/_app/settings/-ui/`.** A second implementation of a thing
+  that already ships, which `docs/SPEC.md` §6 and `00-foundations.md`'s primitive rule both call a
+  defect rather than a merge conflict.
+
+**The correct fix is the third shape, and it belongs to a stage this plan may not write.** Promote
+the meter to `src/components/ui/password-strength.tsx` as a presentation primitive taking `value` and
+`minLength` as props — no fetch, no `server/` import, which is what `docs/SPEC.md` §6 requires of
+that directory — export it from `src/components/ui/index.ts`, give it a test beside the other 42
+primitives' tests, and delete the local copy so `register.tsx` imports it instead of declaring it.
+`00-foundations.md:52` reserves `src/components/ui/**` to one primitive stage per wave, and `:43`
+states that a feature stage whose **Owned paths** contains one of the six shared files "is malformed
+and is rejected before it is scheduled". So this stage does what that ritual prescribes: **it writes
+the requirement here and stops.** No wave-1 primitive stage exists at the time of writing, and this
+stage does not depend on one.
+
+**What the screen renders instead is the written rule, which is what the product already does on the
+same job.** `src/routes/(auth)/reset-password.tsx:139` sets a new password with a `description`
+sentence and no meter, and that screen is finished. `/settings/password` carries the same sentence —
+"Pick something at least 10 characters long. A short phrase is easier to remember and harder to
+guess." — as the `Field` description on the new-password input, so the reader is told the rule before
+they type rather than after they submit. The rule itself is enforced twice and neither enforcement
+involves the meter: `z.strictObject` on the client and `MIN_PASSWORD_LENGTH` in the server function,
+described under **Server** above. When the primitive lands the screen gains it with one import and a
+re-record of the two frames that contain that input; nothing else in this stage changes.
 
 **The Profile screen's three new areas.**
 
@@ -1016,7 +1057,8 @@ leave at 150ms, transform and opacity only. The portrait preview cross-fades at 
 `prefers-reduced-motion: reduce` collapses all three to opacity.
 
 **Tokens.** None missing; nothing is filed for a foundations token stage. The upload's byte counts
-and the password strength score are `tabular-nums`.
+and the storage ceiling they are measured against are `tabular-nums`, which is every number on this
+stage's surfaces that changes.
 
 **Copy language: English, `en-GB`**, sentence case, as fixed in the area brief above.
 
@@ -2790,7 +2832,7 @@ and the path table under it.**
 
 ```
 $ node scripts/ultrabuild/check-plan-collisions.mjs 09
-plans 13 · stages 91 · owned paths 550
+plans 13 · stages 91 · owned paths 540
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -2830,7 +2872,26 @@ touched by more than one plan in different waves (8) — legal; each plan must n
   src/server/repos/members.ts
       09-account-and-settings.md  09-S3  wave 1  (edit)
       10-administration.md  10-S1  wave 3  (edit)
+      10-administration.md  10-S4  wave 5  (edit)
 ```
+
+And the reference check, re-run in the same revision, because a plan that cites a sibling stage id
+which no `## Stage` heading defines sends whoever builds it to a file that does not exist:
+
+```
+$ node scripts/ultrabuild/check-plan-refs.mjs 09
+
+plan 09: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
+```
+
+**Zero dangling references, and no missing Playwright invocation.** Every `NN-Sn` token this file
+cites — `00-S2`, `00-S3`, `00-S5`, `01-S1`, `01-S2`, `01-S3`, `01-S5`, `01-S6`, `01-S7`, `01-S8`,
+`02-S2`, `02-S10`, `03-S6`, `04-S1`, `04-S2`, `04-S5`, `04-S7`, `05-S1`, `10-S1`, `10-S3`, `10-S4`,
+`11-S1`, `11-S2`, `11-S3` and this plan's own eight — is defined by a `## Stage` heading in the plan
+whose prefix it carries. The second
+count is the one that matters for an area plan: each of the eight stages writes its
+`pnpm exec playwright test` line out in full under **Verification**, because `docs/SPEC.md` §3 freezes
+`package.json` and there is no `test:e2e` script to hide behind.
 
 **No same-wave exclusive collision involves this plan.** That is the result the plan is written to
 produce rather than one it discovered: `security.tsx` was the file three wave-1 rows all wanted, and
@@ -2848,7 +2909,7 @@ the script's own instruction requires:
 | `src/routes/_app/settings/appearance.tsx` | `09-S8`          | `02-S2` (1), `03-S6` (4)                              |
 | `src/routes/_app/-ui/settings-nav.tsx`    | `09-S8`          | `02-S10` (5), `10-S3` (4)                             |
 | `src/server/auth/index.ts`                | `09-S3`          | `10-S1` (3)                                           |
-| `src/server/repos/members.ts`             | `09-S3`          | `10-S1` (3)                                           |
+| `src/server/repos/members.ts`             | `09-S3`          | `10-S1` (3), `10-S4` (5)                              |
 
 The list grew from five paths to eight between rounds, and not one of the three new rows is a
 collision this plan created: `02-places-and-maps.md`, `03-reservations-and-transport.md` and
@@ -2864,11 +2925,41 @@ The same is true of `e2e/account-and-settings.visual.spec.ts`, which `09-S1` min
 stage in this plan appends to — `playwright.config.ts`'s `snapshotPathTemplate` keys every baseline
 by test name, so two stages sharing one spec file cannot overwrite each other's pixels.
 
-**One finding the run reports that this plan cannot fix from inside its own file**, recorded so it is
-not lost: four stages elsewhere state no parseable wave — `04-S2` in `04-budget-and-currencies.md`,
-and `11-S1`, `11-S2` and `11-S3` in `docs/plans/11-boundaries-and-blockers.md` — and a stage with no
-wave is invisible to the same-wave check, so none of the four can be cleared of a collision it might
-be in. All eight stages in this file state their wave in the required
+**The script's fourth line — "4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2
+11-S3 04-S2" — reads as an open risk and is not one.** An earlier revision of this section filed it
+as a finding this plan could not fix, and named `04-budget-and-currencies.md` as the source of the
+wave-less `04-S2`. That attribution was wrong. Each of the four was traced to the file the parser
+actually read it from:
+
+| Stage reported | Read from                                  | What it is                                                                                                                                                                     |
+| -------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `04-S2`        | `docs/plans/12-verification-protocol.md`   | Not a stage. A fenced `md` example at `:25-27` illustrating the container rule, whose sample heading is `## Stage 04-S2 — Freeze the rate a converted amount was computed at`. |
+| `11-S1`        | `docs/plans/11-boundaries-and-blockers.md` | A real stage whose `### Stage id` line reads ``11-S1` — The ten hosted-model exclusions. Wave 1.` (`:56`).                                                                     |
+| `11-S2`        | `docs/plans/11-boundaries-and-blockers.md` | The same shape at `:321`.                                                                                                                                                      |
+| `11-S3`        | `docs/plans/11-boundaries-and-blockers.md` | The same shape at `:596`.                                                                                                                                                      |
+
+**The real `04-S2` states its wave correctly.** `04-budget-and-currencies.md:584` opens
+`## Stage 04-S2 — Let a trip name its own cost categories` and `:588` reads
+``04-S2` · Wave 1 · effort **L**.` — the required form exactly, and
+`check-plan-collisions.mjs:90` filters it out of the report for that reason. The `04-S2` that survives
+that filter is the fenced one, and the line prints ids without the file each came from (`:93`), which
+is what made the wrong attribution easy: `check-plan-collisions.mjs:39` globs `/^\d\d-.*\.md$/`, so
+`12-verification-protocol.md` is in the plan set, and `:44` splits on `/^## (?=Stage )/m` without
+stripping fenced blocks, so a code sample that shows the container rule is indexed as a stage that
+obeys it.
+
+**None of the four can be in a collision, for a reason stronger than the wave.** A stage collides
+only through its **Owned paths**, and all four own nothing: `11-S1`, `11-S2` and `11-S3` each write
+"None. This stage creates and edits no repository file" under that heading
+(`11-boundaries-and-blockers.md:229`, `:532`, `:627`), and the fenced `04-S2` has no owned-paths list
+because it is three lines of illustration. So the script's fourth line is an artefact of the parse
+plus a formatting difference in one register plan, not an unchecked corner of the wave graph, and
+this plan files nothing against it. Fixing the parse would mean editing
+`scripts/ultrabuild/check-plan-collisions.mjs`, and re-stating three `### Stage id` lines would mean
+editing `11-boundaries-and-blockers.md`; neither is this plan's file, so both are reported and
+neither is touched.
+
+All eight stages in this file state their wave in the required
 ``<id>` · Wave <n> · effort **S|M|L**.` form, which is what makes the "no same-wave exclusive
 collisions" line above a result rather than an absence of evidence.
 

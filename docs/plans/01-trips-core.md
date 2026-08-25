@@ -169,8 +169,8 @@ reading would build something that already exists or miss something that does no
    is forbidden by the migration ritual.
 4. **`createDayNote` accepts a day from another tenant.** `src/server/repos/days.ts:229-237` parses
    its input and inserts, calling neither `requireTrip` nor `requireTripDay` — unlike every
-   comparable writer, e.g. `addTripMember` (`src/server/repos/trips.ts:428-434`) and
-   `createShareLink` (`:497-503`). Because `createTenantRepository().insert` stamps the **caller's**
+   comparable writer, e.g. `addTripMember` (`src/server/repos/trips.ts:434-441`) and
+   `createShareLink` (`:486-492`). Because `createTenantRepository().insert` stamps the **caller's**
    `organization_id`, a well-formed `dayId` belonging to organization B is written as a row owned by
    A that points at B's day. It is unreachable today only because no server function calls it. `01-S2`
    is the stage that gives it one, so `01-S2` fixes it and adds the isolation case that proves it —
@@ -295,14 +295,79 @@ claimant in the whole plan set is `10-S2` in wave 1, a different wave, and the c
 foot of this file is the measurement of that. Every stage's block imports its helpers from
 `./helpers/shoot.ts` and re-implements none of them.
 
+## Multi-row writes, and the three D1 limits that bound them
+
+Three stages in this plan write more than one row in one logical step — the trip copy in `01-S1`, the
+note reorder in `01-S2`, the merged reorder in `01-S4`. The mechanism is fixed here once so that no
+stage re-derives it and no stage writes a call that cannot compile.
+
+**`scope.db.batch()` does not exist.** `TenantScope['db']` is the abstract Drizzle handle — measured,
+`readonly db: Database` at `src/server/repos/base.ts:43`, where `Database` is
+`BaseSQLiteDatabase<'async', unknown>` at `src/server/db/types.ts:14` — and `batch()` is a D1 driver
+method that abstract type does not carry.
+The repository layer's one batching helper is `runBatch(scope, statements)`
+(`src/server/repos/batch.ts:35`), which feature-detects the driver, calls `db.batch()` when it is
+there and awaits the statements in order when it is not — which is what makes the same code run under
+the in-memory test driver. Measured callers at HEAD: `src/server/repos/collab.ts:333`,
+`src/server/repos/places.ts:326`, `src/server/repos/vacay.ts:428` and
+`src/server/repos/itinerary.ts:343` — the last of which is inside `reorderAssignments`, the very
+function `01-S4` widens. Every stage below calls `runBatch`; none names `scope.db.batch`.
+
+**The three limits, read from Cloudflare's published D1 platform limits rather than assumed**,
+because each of them is a real ceiling this plan can hit:
+
+| Limit                              | Value  | What it binds here                                               |
+| ---------------------------------- | ------ | ---------------------------------------------------------------- |
+| Bound parameters per statement     | 100    | A multi-row `INSERT` — the copy's places, assignments and notes. |
+| SQL statement length               | 100 KB | The same statements, from the other side.                        |
+| Duration of a whole `batch()` call | 30 s   | How many statements one `runBatch` may carry.                    |
+
+The first two apply to **each statement inside a batch**, not to the batch as a whole. That has one
+consequence the copy has to respect: `insertMany` (`src/server/repos/base.ts:189-204`) sends
+`rows × columns` bound parameters in **one** statement and does **not** chunk, so a caller inserting
+many rows chunks at `floor(100 / columns)` rows per call. That divisor is a named constant beside the
+limit it came from, and it is held by a unit test rather than by a comment — the rule
+`00-foundations.md` states for the queue producer, applied to the other batching surface.
+
+**And the rule `batch.ts` states in its own header:** _a batch that rewrites a whole itinerary belongs
+in a queue consumer, not in a request path._ This plan obeys it by splitting on whether the write is
+bounded by one day or by the trip's whole inventory:
+
+- **Bounded, so it stays in the request path.** `01-S2`'s `reorderDayNotes` and `01-S4`'s
+  `reorderDayTimeline` each rewrite the positions of **one day**, which is a handful of `UPDATE`
+  statements of three bound parameters each. One `runBatch`, inside the server function, is right.
+- **Unbounded, so it is enqueued.** `01-S1`'s copy duplicates every place, assignment and note in the
+  source trip, and the `places` ceiling is `UNLIMITED` on every paid tier — `PLAN_QUOTAS.business`
+  at `src/server/db/types.ts:63-69`, where `UNLIMITED` is `Number.POSITIVE_INFINITY` (`:20`) — so the
+  row count has no product bound at all. It runs in a `trip-copy` queue consumer. `01-S1` says how,
+  and what the request path still does synchronously.
+
 ## Shared paths this plan never claims
 
 `README.md`'s six shared paths are absent from every **Owned paths** list below:
 `src/server/db/schema.ts`, `src/server/worker.ts`, `wrangler.jsonc`, `src/styles/tokens.css`,
-`src/components/ui/**` and `src/routeTree.gen.ts`. Three stages need a schema change and each files it
-as a requirement under **Data and migration** for the wave's foundations schema stage to collect;
-none needs a new token or a new primitive, and each says so. `package.json` and `pnpm-lock.yaml` are
-not edited by anything here.
+`src/components/ui/**` and `src/routeTree.gen.ts`. None of the ten stages needs a new token or a new
+primitive, and each says so. `package.json` and `pnpm-lock.yaml` are not edited by anything here.
+
+**Three stages need a schema change, and each files it one wave early.** The filing rule is
+`00-foundations.md`'s, stated at the end of `00-S1`'s **Data and migration**: a schema stage "absorbs
+any **Data and migration** requirement filed by a wave-1 stage", so the wave-_n_ schema stage collects
+what wave _n+1_ asked for and wave _n+1_ opens against a schema that already has it. A stage that
+filed to the schema stage of its **own** wave would run against a column that does not exist yet.
+This plan therefore files as follows, and every **Data and migration** heading below names the same
+target:
+
+| Filing stage | Its wave | Files to                                              | What                              |
+| ------------ | -------- | ----------------------------------------------------- | --------------------------------- |
+| `01-S1`      | 1        | `00-S1` (`00-foundations.md`, wave 0)                 | `trips.copy_pending_at`, nullable |
+| `01-S2`      | 1        | `00-S1` (`00-foundations.md`, wave 0)                 | `day_notes.detail`, nullable      |
+| `01-S6`      | 4        | the wave-3 schema stage, minted by `00-S1`'s register | the `trip_guests` table           |
+
+The wave-3 schema stage does not exist yet by id: `00-foundations.md`'s stage register mints the
+per-wave shared-file stages "when the wave opens", and a wave with no filed requirement mints none.
+`01-S6` files against that register rather than against an id, which is what the register is for. The
+seven stages that need no column say so under their own **Data and migration** heading and name the
+schema stage they would have filed to, so a reader can tell "nothing to file" from "forgot to ask".
 
 `src/routeTree.gen.ts` has the one mechanical exception `README.md` grants: `01-S6` adds a route file,
 runs `pnpm generate-routes`, and the regenerated tree travels in its diff without ever being
@@ -323,8 +388,11 @@ and both would be a cross-tenant data leak here.
 
 ### Stage id
 
-`01-S1` · Wave 1 · effort **M**. The first stage of the plan and the one the trip list, the creation
-dialog and the reminder preference all write through.
+`01-S1` · Wave 1 · effort **L**. The first stage of the plan and the one the trip list, the creation
+dialog and the reminder preference all write through. Recorded as **M** in `gap-rows.json`, and the
+difference is one thing the matrix did not price: the copy is the only unbounded write in this plan,
+so it is a queue handler and a two-phase surface rather than one repository function. That is argued
+under **Server** and bounded under **Quota**.
 
 ### Reference rows
 
@@ -334,11 +402,31 @@ Sourced from `wiki: My-Trips-Dashboard` for which actions belong to an active tr
 archived one, and from `wiki: Creating-a-Trip` for the field set edit shares with creation.
 
 **Contradiction with the row, stated with evidence.** The row's evidence is accurate and is the
-cheapest movement in this plan: `src/server/repos/trips.ts` already defines `updateTrip` (`:349`),
-`archiveTrip` (`:377`), `restoreTrip` (`:381`), `setTripFavourite` (`:385`) and `deleteTrip` (`:394`),
+cheapest movement in this plan: `src/server/repos/trips.ts` already defines `updateTrip` (`:340`),
+`archiveTrip` (`:369`), `restoreTrip` (`:373`), `setTripFavourite` (`:377`) and `deleteTrip` (`:386`),
 and none of the five has a caller anywhere in `src/`. This stage is almost entirely a missing write
 path, exactly as `README.md` says the dominant gap in this repository is. The one genuinely new
-repository function is the copy.
+repository function is the copy, and it is the only part of this stage that is not cheap movement.
+
+**Two cross-plan obligations land here, both assigned to `TRP-03` by name in `00-foundations.md`.**
+They are listed under **Reference rows** rather than buried in prose because a reader checking whether
+this plan carries what wave 0 handed it should find them in one place:
+
+1. **The reminder has to be cancelled as well as re-anchored.** `00-S5`'s **UI** heading says
+   `TRP-03` "must call `syncTripReminder` when `start_date` or `reminder_days` changes, and
+   `cancelReminder` when a trip is archived or deleted", passing the pre-write anchor as `previous`.
+   The re-anchoring on edit is `01-S10`'s, in wave 6, because it ships with the control whose
+   semantics it implements. **The cancel on archive and on delete is this stage's**, because this is
+   the stage that gives `archiveTrip` and `deleteTrip` their first caller — a reminder that outlives
+   the trip it points at is created the moment those paths become reachable, not six waves later. How
+   it is done is under **Server**.
+2. **A trip write moves every member's travel statistics.** `00-S4`'s **Server** heading records that
+   `tripCount`, `dayCount`, `placeCount`, `cityCount` and `spendMinor` are workspace-wide, that a
+   write changing `trips.country_codes` or `trips.start_date` also moves every member's year-row
+   `countryCount`, and that "those write paths belong to `01-trips-core.md` and
+   `04-budget-and-currencies.md` … it records the requirement here so neither plan invents a second
+   recompute". This stage is where the trip write paths get their callers, so this stage enqueues the
+   `travel-stats` envelopes `00-S4` defined. It writes no aggregate of its own.
 
 **Two deletes, and why we ship one.** The reference offers Delete on an active trip and Permanently
 delete on an archived one, which is two recoverable states plus a terminal one. We ship one terminal
@@ -370,12 +458,28 @@ Rows unblocked: `TRP-01` (`01-S7`) directly.
 - `src/routes/_app/-ui/trip-card.tsx` — edit. Mounts the action menu on `TripTile`.
 - `src/routes/_app/-ui/new-trip-dialog.tsx` — edit, and the edit is one import specifier: it calls
   `createTripFn` from its new module.
-- `src/server/repos/trips.ts` — edit. Adds `copyTrip` and the trip-role guard the writers share.
+- `src/server/repos/trips.ts` — edit. Adds the copy's two halves — `startTripCopy` and
+  `copyTripContents` — and the trip-role guard the writers share.
   Three stages touch this module across three waves and no two share one: this stage in wave 1,
   `07-S6` (`07-collaboration-and-sharing.md`, wave 2) for the share-link writers, and `01-S6` in
   wave 4 for the membership guards. Each adds functions; none reshapes one the others call.
+- `src/server/queue/handlers/trip-copy.ts` — new. The consumer half of the copy: the inventory, in
+  chunks, off the request path.
+- `src/server/queue/handlers/__tests__/trip-copy.test.ts` — new.
+- `src/server/queue/types.ts` — edit. Adds the `trip-copy` kind and its payload schema — one member
+  on a union, not a reshape. **Shared across waves with `00-S4` (`00-foundations.md`, wave 0)**,
+  which adds the `travel-stats` kind and the `DB` binding to `TaskBindings` in the same file, and
+  with `07-S8` (`07-collaboration-and-sharing.md`, wave 4), which adds the link-preview kind. Wave 0
+  closes before this wave opens and wave 4 opens after it closes, so no two of the three run together.
+- `src/server/queue/consumer.ts` — edit. Registers the handler and its `case`. **Shared across waves
+  with `00-S4` (wave 0) and `07-S8` (wave 4)**, for the same reason and in the same `switch`.
 - `src/server/repos/__tests__/trip-lifecycle.test.ts` — new. The stage's own repository tests, in a
   new file so that no wave-1 stage has to contend for `repositories.test.ts`.
+- `src/routes/_app/-server/__tests__/trip-lifecycle-side-effects.test.ts` — new. The reminder cancel
+  and the statistics fan-out, held as assertions. The route-local `__tests__` directory follows
+  `src/routes/(auth)/-lib/__tests__` and `src/routes/api/tiles/-lib/__tests__`, which already exist.
+  `01-S10` adds `trip-reminder.test.ts` to the same directory in wave 6; a different file, five waves
+  apart.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block, under the
   append-only exception in `00-foundations.md`'s tenant procedure.
 - `e2e/trips-core.visual.spec.ts` — new. The plan's single spec file, created here and named as
@@ -387,10 +491,31 @@ Rows unblocked: `TRP-01` (`01-S7`) directly.
 
 ### Data and migration
 
-**No schema change, and no migration.** Every column this stage writes exists:
-`trips.is_archived`, `trips.is_favourite` and `trips.status` at `src/server/db/schema.ts:348-356`,
-each already carrying its `CHECK` (`trips_status_chk`) or its boolean default. Nothing is filed for
-the wave-1 foundations schema stage on this stage's account.
+**One additive column, filed to `00-S1` (`00-foundations.md`, wave 0)** — the wave-0 schema stage,
+which is the one that "absorbs any **Data and migration** requirement filed by a wave-1 stage". This
+stage is wave 1, so it files one wave early and does **not** edit `src/server/db/schema.ts`.
+
+| Table   | Column            | Type      | Null     | Default | CHECK                       |
+| ------- | ----------------- | --------- | -------- | ------- | --------------------------- |
+| `trips` | `copy_pending_at` | `integer` | nullable | none    | none — see the reason below |
+
+Epoch milliseconds, the convention every instant in this schema already uses. Non-null means the
+`trip-copy` job for this trip has not finished; the handler clears it as its last statement. Nullable
+with no default, so a rollback keeps working: the previous Worker never reads the column and every
+existing row is null, which reads correctly as "not copying". No `CHECK` is added and no index: a
+constraint change on SQLite makes drizzle-kit emit a full table rebuild (`drizzle/0001_aspiring_cargill.sql`
+is the precedent), and the column is never a filter — it is read on rows the trip list has already
+selected. The migration backfills nothing.
+
+**Why a column rather than a status value.** `trips.status` is CHECK-constrained to five values
+(`trips_status_chk`, `src/server/db/schema.ts:366`), so adding a sixth is exactly the table rebuild
+the migration ritual tells a stage to avoid. A nullable timestamp is additive, and it carries more
+information than a flag: it says when the copy started, which is what lets the trip list distinguish
+"in flight" from "the consumer died three days ago" without a second column.
+
+Every other column this stage writes exists: `trips.is_archived`, `trips.is_favourite` and
+`trips.status` at `src/server/db/schema.ts:348-356`, each already carrying its `CHECK` or its boolean
+default.
 
 The copy writes only rows whose tables already exist: `trips`, `days`, `places`, `day_assignments`
 and `day_notes`. Ids come from `newId()` through each table's own `pk()` default; dates stay
@@ -401,30 +526,73 @@ place inventory, the day assignments that place those places, and the day notes.
 expenses, settlements, files, reservations, transports, messages, share links or members other than
 the copying user's own owner row. The rule behind that line is one sentence: a copy reproduces the
 **plan**, never the **record of what happened**, and money and documents are the record. The copied
-trip is created with `status: 'planning'`, `is_archived: false`, `is_favourite: false` and no dates,
-so the day run is rebuilt from the source's day count rather than from a stale calendar.
+trip is created with `status: 'planning'`, `is_archived: false`, `is_favourite: false` and **no
+dates**: a copy is a template for a journey that has not been booked yet, and inheriting last April's
+calendar would put every day of it in the past. The day run is copied by count and by title with
+`date: null` on every row, so the shape of the itinerary survives and the calendar does not — the
+reader sets the new dates in the edit sheet and `updateTrip`'s existing `syncTripDays` call
+(`src/server/repos/trips.ts:362-364`) redates the run in one write.
 
 ### Server (repo, server function, Zod)
 
 **Repository — `src/server/repos/trips.ts`.**
 
-- `copyTrip(scope, tripId, input)` — new. Resolves the source with `requireTrip`, asserts quota (see
-  **Quota**), inserts the new trip through `tripsRepository.insert`, reserves a slug with the
-  existing `reserveTripSlug`, inserts the owner membership, then copies days, places, assignments and
-  notes in `scope.db.batch()` groups so a failure part-way leaves no half-trip. SQL stays in this
-  module.
+- `startTripCopy(scope, tripId, input)` — new, and the **synchronous half** of the copy. Resolves the
+  source with `requireTrip`, calls `assertTripRole`, asserts both quotas (see **Quota**), reserves a
+  slug with the existing `reserveTripSlug`, inserts the new trip through `tripsRepository.insert` with
+  `copyPendingAt` set to `Date.now()`, and inserts the caller's `owner` membership. It returns the new
+  trip's id. **It writes exactly two rows**, both O(1) in the source's size — nothing here scales with
+  the day count, the place count or anything else the source happens to hold, which is the property
+  that lets it stay in a POST handler at all.
+- `copyTripContents(scope, sourceTripId, targetTripId)` — new, and the **asynchronous half**, called
+  only by the queue handler. In this order: the day run, then the places, then the day assignments
+  remapped onto the new day ids and the new place ids, then the day notes remapped onto the new day
+  ids; and finally `copy_pending_at` is cleared. It writes through `daysRepository`
+  (`src/server/repos/days.ts:26`), `placesRepository` (`src/server/repos/places.ts:43`),
+  `dayAssignmentsRepository` (`src/server/repos/itinerary.ts:46`) and `dayNotesRepository`
+  (`src/server/repos/days.ts:27`), all of which those modules already export — the same composition
+  `01-S4`'s `reorderDayTimeline` uses to reach note rows from `itinerary.ts`, so the multi-table write
+  still has exactly one home. SQL stays in `src/server/repos`.
+- **The day run is copied, not resynchronised, and that is a measurement rather than a preference.**
+  `syncTripDays` (`src/server/repos/days.ts:149-172`) derives the wanted run from the trip's date
+  range and, when either date is null, takes the `wanted.length === 0` branch that **creates no days
+  at all** — it only clears stale dates on days that already exist. A copy is deliberately dateless
+  (see **Data and migration**), so calling it would leave the copy with an empty itinerary and
+  nowhere to hang the assignments. `copyTripContents` therefore inserts the day rows itself:
+  `day_number` `1..n` from the source's own run, `date: null`, `title` and `notes` carried across,
+  and a map from source day id to target day id that the assignment and note passes then read.
+- **How the inventory is chunked, and where the number comes from.** Each table's rows go in through
+  `insertMany`, which sends one statement carrying `rows × columns` bound parameters and does not
+  chunk (`src/server/repos/base.ts:189-204`). D1 refuses a statement with more than **100 bound
+  parameters**, so `copyTripContents` chunks at `Math.max(1, Math.floor(MAX_BOUND_PARAMETERS / columns))`
+  rows per call, where `MAX_BOUND_PARAMETERS = 100` is a named constant declared at the top of
+  `src/server/repos/trips.ts` with the limit it came from written beside it — the same discipline
+  `00-foundations.md` requires of a queue producer, applied to the other batching surface. The chunk
+  loop is held by a unit test that copies more rows than one chunk can carry, not by a comment.
+  Where several statements go together — the assignment remap — they go
+  through `runBatch(scope, statements)` (`src/server/repos/batch.ts:35`), because `scope.db` has no
+  `batch()` method of its own; see **Multi-row writes** in the Area brief.
+- **Why the split is where it is.** `src/server/repos/batch.ts`'s own header says a batch that
+  rewrites a whole itinerary belongs in a queue consumer, and `TEMPLATE.md` says anything slow is
+  enqueued on `TASKS` and never run inline. The copy is exactly that: `places` is `UNLIMITED` on every
+  paid tier, so a 20 000-place trip is a legal trip and a copy of it is an unbounded write. What the
+  request path keeps is the part with a product bound on it, so the reader gets a trip id and a
+  destination to navigate to inside one round trip.
 - `assertTripRole(scope, tripId, allowed)` — new, and the only new guard. Reads the acting user's
-  role through the existing `tripRoleFor` (`:466-476`) and raises `RepositoryError` with a
+  role through the existing `tripRoleFor` (`:460-470`) and raises `RepositoryError` with a
   `FORBIDDEN` code when it is not in `allowed`. It is called by `updateTrip`, `archiveTrip`,
-  `restoreTrip`, `setTripFavourite`, `deleteTrip` and `copyTrip` **inside the repository**, after
-  `requireTrip` and before the write.
+  `restoreTrip`, `setTripFavourite`, `deleteTrip` and `startTripCopy` **inside the repository**, after
+  `requireTrip` and before the write. `copyTripContents` does not call it: by the time the handler
+  runs, the target trip is the caller's own and the source has already been role-checked; re-checking
+  a role the acting member may have lost in the meantime would abandon a copy the product already
+  promised.
 - The five existing writers are otherwise unchanged in behaviour. `updateTrip` already reconciles the
-  day run through `syncTripDays` when the range moves (`:367-371`), which is why the edit path needs
+  day run through `syncTripDays` when the range moves (`:362-364`), which is why the edit path needs
   no day handling of its own.
 
 **Why the role guard is in the repository and not in the handler.** `TRIP_MEMBER_ROLES` is
 `['owner', 'editor', 'viewer']` (`src/server/db/schema.ts:157`), and `createTrip` already writes an
-`owner` membership for the creator (`src/server/repos/trips.ts:334-339`), so every trip in the
+`owner` membership for the creator (`src/server/repos/trips.ts:325-330`), so every trip in the
 database has exactly one. Today `requireTrip` admits any member of the organization to any trip in
 it, which is correct for a read and too generous for a delete. Putting the check in the repository
 means it holds for the queue consumer and for a future server route as well as for these six server
@@ -437,7 +605,7 @@ The role each write requires:
 | `updateTrip`, `setTripFavourite` | `owner`, `editor` | Editing the plan is what an editor is for.                               |
 | `archiveTrip`, `restoreTrip`     | `owner`, `editor` | Archiving is reversible, so it does not need the stricter role.          |
 | `deleteTrip`                     | `owner`           | Terminal and cascading; `days`, `places` and every child row go with it. |
-| `copyTrip`                       | `owner`, `editor` | Reads the source, writes a new trip the caller then owns.                |
+| `startTripCopy`                  | `owner`, `editor` | Reads the source, writes a new trip the caller then owns.                |
 
 **Server functions — `src/routes/_app/-server/trip-lifecycle.ts`.** Seven, each
 `createServerFn({ method: 'POST' })` except where noted, each resolving its tenant through the
@@ -447,7 +615,7 @@ existing `appScope()` in `-server/context.ts`:
 | -------------------- | ----------------------------------------------------------------------------- | ------------------------------- |
 | `createTripFn`       | moved unchanged from `-server/overview.ts:556`                                | `{ tripId }`                    |
 | `updateTripFn`       | `{ tripId, title?, destination?, startDate?, endDate?, currency?, summary? }` | `{ tripId }`                    |
-| `copyTripFn`         | `{ tripId, title? }`                                                          | `{ tripId }` of the new trip    |
+| `copyTripFn`         | `{ tripId, title? }`                                                          | `{ tripId, copyPending: true }` |
 | `archiveTripFn`      | `{ tripId }`                                                                  | `{ tripId, isArchived: true }`  |
 | `restoreTripFn`      | `{ tripId }`                                                                  | `{ tripId, isArchived: false }` |
 | `setTripFavouriteFn` | `{ tripId, isFavourite }`                                                     | `{ tripId, isFavourite }`       |
@@ -464,8 +632,91 @@ server function contributes nothing but the tenant scope; a well-formed `tripId`
 re-resolved by `requireTrip` inside that scope and is a `NotFoundError` when it belongs to another
 organization. `beforeLoad` guards nothing here and none of these functions relies on one.
 
-Nothing in this stage is slow: no queue envelope, no Durable Object patch. The trip room stays
-invalidation-only, which is how every write in `-server/plan.ts` already behaves.
+**The `trip-copy` task, and the handler that runs it.** `copyTripFn` calls `startTripCopy`, then
+enqueues one envelope through the single-message `enqueueTask` (`src/server/queue/jobs.ts:66`) — one
+message, so there is nothing to chunk on this side — and returns. The envelope is
+`{ kind: 'trip-copy', orgId, id: 'trip-copy:<targetTripId>',
+payload: { sourceTripId, targetTripId, requestedBy } }`. The id is deterministic on the **target**
+id, which is minted by this call and cannot repeat, so a redelivered message copies once, and a
+second Copy click on the same source is a different trip and a different envelope.
+
+- **The kind and its payload** are declared in `src/server/queue/types.ts` as one more member of the
+  `TASK_KINDS` union and one more `z.strictObject()` in the payload map, with the `error` parameter.
+  `runHandler` (`src/server/queue/consumer.ts`) gains the matching `case` and the registry gains the
+  module — measured, a `case` without a registry entry falls through to `unhandled()` and
+  dead-letters, which is how `thumbnail` behaves today, and this stage does not repeat it.
+- **The handler reaches D1 through the binding `00-S4` adds.** `TaskBindings` carries no `DB` at
+  HEAD; `00-S4` (`00-foundations.md`, wave 0) adds it to the same file, and wave 0 closes before this
+  wave opens. No `wrangler.jsonc` change is involved: the `DB` binding already exists on the Worker
+  and the consumer runs in that Worker.
+- **Its scope is rebuilt, never carried.** `createScope()` needs `{ userId, organizationId, role }`.
+  The envelope carries the organization id and the requesting user id, the role is read with
+  `getMembership` (`src/server/repos/members.ts:144`), and a requester who is no longer a member is a
+  **permanent** failure. Every statement the handler then runs is `tenantFilter()`-bound to that
+  organization, so a forged envelope can only copy rows it already owns.
+- **Transient versus permanent, and what each leaves behind.** A D1 or network error throws and the
+  queue retries — the copy is idempotent per chunk because every chunk re-reads the target's current
+  row count before it writes. A permanent error — the source deleted mid-copy, the requester no
+  longer a member, a `places` ceiling crossed by a concurrent write — deletes the target trip through
+  `deleteTrip`, which cascades, and notifies the requester. A copy either completes or leaves
+  nothing; a half-populated trip nobody asked for is worse than no trip.
+- **Two things happen after the last chunk**, in this order: `copy_pending_at` is cleared, and the
+  requester is notified through `notify()` (`src/server/repos/notifications.ts:129`) with a
+  `titleKey`/`bodyKey` pair and a params record — never a rendered sentence, which is the contract
+  that module's own docstring states. The notification write path is `00-S2`'s, in wave 0.
+
+**The travel-statistics envelopes, which are `00-S4`'s obligation on this stage.** `createTripFn`,
+`updateTripFn`, `deleteTripFn` and the `trip-copy` handler each change `tripCount`, `dayCount`,
+`placeCount` and `cityCount` for **every** member of the workspace, and `updateTripFn` also moves the
+year-row `countryCount` when it moves `start_date` or `country_codes`. Each of those four paths
+therefore enqueues the `travel-stats` envelopes `00-S4` defined, with `00-S4`'s deterministic
+`(user, year)` ids so repeats collapse:
+
+- **The recipient set** is the workspace's members, read with `listMembers`
+  (`src/server/repos/members.ts:99`) in the caller's scope — not the trip's members, because the
+  figures are `tenantFilter()`-bound and identical for every member of the organization. `getMembership`
+  (`:144`) is the sibling the handler uses to rebuild its own scope.
+- **The years** are the all-time roll-up (`statYear = 0`) always, plus the year of the trip's
+  `start_date` when it has one, plus the **previous** `start_date`'s year on an edit that moved it.
+- **The fan-out is chunked before it is enqueued, and the bound is not a comment.** This producer
+  scales with membership, which is exactly the shape `00-foundations.md` names: `enqueueTasks`
+  (`src/server/queue/jobs.ts:79-94`) maps every input into one `sendBatch` without chunking, and a
+  `sendBatch` array holds at most 100 messages. So the envelopes go out in chunks of
+  `QUEUE_BATCH_MAX = 100`, declared at the top of `src/routes/_app/-server/trip-lifecycle.ts` beside
+  that citation, and a unit test with 250 envelopes asserts three calls. The 100-member ceiling
+  Better Auth's organization plugin is configured with is a configuration value and not a guarantee,
+  so the chunk loop does not lean on it.
+- **A queue failure never fails the write.** It is caught, logged once with `serializeError`, and the
+  trip write still returns — the same isolation `00-S2` requires of dispatch and `00-S5` of the
+  reminder key. A stale statistics panel is a smaller harm than a save that appears to have failed.
+
+**The reminder, which is `00-S5`'s obligation on this stage.** `00-S5` gives `TRP-03` two duties and
+this stage carries the pair that belongs to the paths it makes reachable:
+
+- **`archiveTripFn` and `deleteTripFn` cancel.** Both read the trip through `requireTrip` before they
+  write — they already must, because that is what authorises the write — so the **pre-write** row is
+  the previous anchor and passing it costs no extra query. Each calls
+  `reminderDueAt({ startDate, reminderDays })` from `src/server/queue/reminder-sync.ts` and, when it
+  answers a number, `cancelReminder(kv, { dueAt, orgId, entity })` from
+  `src/server/queue/reminders.ts:66`. After the row is gone the key cannot be rebuilt:
+  `reminderKey` puts the due time **inside** the key ahead of the organization and the entity
+  (`:38-41`), so there is no prefix that finds it and only a full scan of the index would — the scan
+  the whole design exists to avoid. Cancel before the write, not after, so a failed delete does not
+  leave a cancelled reminder for a trip that still exists.
+- **`restoreTripFn` re-schedules**, through `syncTripReminder(scope, kv, { tripId, previous: null })`.
+  `previous: null` is the honest anchor: the archive cancelled the old key, so there is nothing to
+  cancel and `null` is a value the type demands rather than an argument the call site may omit.
+- **`updateTripFn` re-anchors, and that half is `01-S10`'s**, in wave 6, because it ships with the
+  control whose semantics it implements. Until then an edit leaves the reminder on the old anchor,
+  which is exactly today's behaviour and is not a regression this stage introduces.
+- **A KV failure never fails the write**, on the same rule as above. A trip that archives but keeps
+  its reminder is recoverable; a trip that refuses to archive is not.
+- **Neither `src/server/queue/reminders.ts` nor `src/server/queue/reminder-sync.ts` is an owned
+  path.** Both are `00-S5`'s and both close in wave 0; this stage calls them. A second scheduler
+  would be the defect.
+
+**No Durable Object patch.** The trip room stays invalidation-only, which is how every write in
+`-server/plan.ts` already behaves, and `src/server/do/protocol.ts` is untouched.
 
 ### UI (route, components)
 
@@ -508,6 +759,19 @@ trip, so a screen reader hears "Actions for Lisbon in April" and not five identi
   in a toast, matching the `PlanOrder` rollback in `plan-screen.tsx`. Archive, restore, copy and
   delete are not optimistic: they move a card between sections or remove it, and a card that flickers
   back is worse than a card that waits 200 ms.
+- _Copying._ The copy is two-phase, so the tile has a third resting state and it is designed rather
+  than implied. While `copy_pending_at` is non-null the new tile renders a `Chip` on the cover reading
+  "Copying" with an inline `Spinner`, its cover and its counts sit behind the shipped `Skeleton` at
+  `--color-surface-2`, and the tile is not a link — a trip whose places have not landed is a planner
+  with an empty day list. `aria-busy` is set on the tile and the chip carries the accessible name, so
+  the state is announced rather than only drawn. The action menu on that tile offers Delete alone;
+  every other item is `disabled` with a `Tooltip` naming the reason. The tile clears itself on the
+  route's next load — the trip list already revalidates on focus — and the completion notification
+  `00-S2`'s write path delivers is the second, quieter signal.
+- _Copy failed._ When the handler's permanent path has run, the trip is gone and the requester has a
+  notification carrying the reason. The trip list shows no ghost tile and no error banner of its own:
+  the notification centre is where an asynchronous failure belongs, and inventing a second inbox on
+  the trip grid is how two places come to disagree about what happened.
 
 **Motion.** The menu uses the `DropdownMenu` primitive's own entrance, 220 ms on `--ease-out-quint`
 in, 150 ms out, transform and opacity only. The trigger's reveal is an opacity transition on
@@ -520,24 +784,34 @@ dialog prints carries `tabular-nums`.
 
 ### Quota
 
-Two metrics, both already in the catalogue, both asserted inside the repository before the write.
+Two metrics, both already in the catalogue, both asserted inside the repository before the write, and
+both asserted **in the synchronous half** so that a copy which cannot fit is refused where the reader
+is looking rather than in a consumer they cannot see.
 
-- **`trips`.** `copyTrip` creates a trip row. It calls
+- **`trips`.** `startTripCopy` creates a trip row. It calls
   `assertQuota(scope, 'trips', await tripsRepository.count(scope))` as its **first** write-path
   statement, before the insert and before any child row, copying `createTrip`'s call at
   `src/server/repos/trips.ts:315`. Usage is a live `COUNT(*)`, never `usage_records`. The metric is a
   catalogue metric resolved by `resolveLimits()` in `src/server/billing/limits.ts:227` and is
   deliberately absent from `PLAN_QUOTAS`; nothing is added to either.
-- **`places`.** A copy also duplicates the source's place inventory, which is metered.
-  `copyTrip` calls `assertQuota(scope, 'places', <live count> )` once, before inserting the copied
-  places and with the count of places it is about to write included in the projection, so a copy that
-  would cross the ceiling fails before it writes any of them rather than half-way through. `places` is
-  a `PLAN_QUOTAS` metric (`src/server/db/types.ts:43`) already resolved for `createPlace`
+- **`places`.** A copy also duplicates the source's place inventory, which is metered. `startTripCopy`
+  reads the source's place count — one indexed `COUNT(*)` through `placesRepository.count`, because
+  `places` leads `places_org_trip_idx` with `organization_id` — and calls
+  `assertQuota(scope, 'places', <live tenant count> + <source count>)` **before** it inserts the trip
+  row. The projection is the point: asserting the current usage alone would admit a copy that crosses
+  the ceiling on its four-hundredth row, inside a consumer, hours after the reader was told it worked.
+  `places` is a `PLAN_QUOTAS` metric (`src/server/db/types.ts:43`) already resolved for `createPlace`
   (`src/server/repos/places.ts:269`).
+- **The handler asserts again, and the second assertion is not redundant.** Between the enqueue and
+  the consumer another write can have taken the headroom, so `copyTripContents` re-asserts `places`
+  with the live count before each chunk. A failure there is the permanent path: the target trip is
+  deleted and the requester is notified. Re-asserting per chunk rather than once is what makes a
+  retried chunk safe.
 
 No metric is added, so `src/server/billing/__tests__/limits.test.ts` gains no case and is not named
-in **Owned paths**. The other six writes create no row: they update or delete one that already
-counted.
+in **Owned paths**. The other six writes create no countable row: they update or delete one that
+already counted. The `trip-copy` envelope itself is not metered — a queue message is not a sold unit,
+and it is bounded at exactly one per copy by the deterministic id on the target trip.
 
 ### Tenant isolation test
 
@@ -546,30 +820,86 @@ One new `describe('trip lifecycle')` block appended to
 fixtures the file already constructs for `alpha` and `beta`.
 
 In A's scope, against B's trip id: `updateTrip`, `archiveTrip`, `restoreTrip`, `setTripFavourite`,
-`deleteTrip` and `copyTrip` each raise `NotFoundError`, and B's trip row, day run, places and
+`deleteTrip` and `startTripCopy` each raise `NotFoundError`, and B's trip row, day run, places and
 assignments are byte-identical afterwards. Then, in A's scope with A's own trip: the acting user is
 demoted to `viewer` through `updateTripMember` and `deleteTrip` raises the `FORBIDDEN`
 `RepositoryError` rather than a `NotFoundError` — the two failures must stay distinguishable, because
 one means "not yours" and the other means "not allowed", and collapsing them tells an attacker
 whether a trip exists.
 
-Functions covered: `copyTrip`, `assertTripRole`, `updateTrip`, `archiveTrip`, `restoreTrip`,
-`setTripFavourite`, `deleteTrip`.
+Then the asynchronous half, which is where a two-phase copy could leak across a boundary and a
+one-phase copy could not. In A's scope, `copyTripContents(scopeA, bTripId, aTargetTripId)` raises
+`NotFoundError` from the `requireTrip` on the source and writes nothing into A's target — a foreign
+source id is not a readable source id, and this is the assertion that proves the envelope is not a
+cross-tenant read primitive. Then the mirror: `copyTripContents(scopeA, aSourceTripId, bTripId)`
+raises `NotFoundError` on the target, so a forged envelope cannot graft A's inventory onto B's trip.
+Both are run again with the scope built the way the handler builds it — `createScope()` from the
+envelope's organization id — to show that the rejection comes from the tenant filter and not from the
+server function that is absent in a consumer.
+
+Functions covered: `startTripCopy`, `copyTripContents`, `assertTripRole`, `updateTrip`,
+`archiveTrip`, `restoreTrip`, `setTripFavourite`, `deleteTrip`.
 
 ### Verification
 
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
-**Unit tests.** `src/server/repos/__tests__/trip-lifecycle.test.ts`, new, holding four invariants:
+**Unit tests.** `src/server/repos/__tests__/trip-lifecycle.test.ts`, new, holding seven invariants:
 
-1. A copy reproduces the plan and not the record — the new trip has the source's day count, place
-   count, assignment count and note count, and zero expenses, files, reservations and share links.
+1. A copy reproduces the plan and not the record — after `startTripCopy` and `copyTripContents` the
+   new trip has the source's day count, place count, assignment count and note count, and zero
+   expenses, files, reservations and share links.
 2. A copy is independent — editing the copy's assignments leaves the source's `order_index` values
    unchanged.
-3. `assertTripRole` admits `owner` and `editor` for an archive and only `owner` for a delete, and the
+3. **`startTripCopy` writes exactly two rows.** After it and before the handler runs, the target has
+   its trip row and its owner membership and **nothing else** — zero days, zero places, zero
+   assignments, zero notes — and `copy_pending_at` is non-null. This is the assertion that fails if
+   somebody folds the two halves back together.
+   A fourth invariant sits with it: `syncTripDays` on a dateless trip returns without creating a day
+   (`src/server/repos/days.ts:155-172`), so the copied run comes from `copyTripContents` and the test
+   asserts the day count against the source rather than against the date range.
+4. **The chunk bound holds.** A source with more places than one statement's `floor(100 / columns)`
+   rows produces the expected number of `insertMany` calls and copies every row exactly once. Written
+   against an unchunked implementation it fails on the call count, which is the point of writing it
+   as a count rather than as a total.
+5. **`copy_pending_at` is cleared exactly once**, as the handler's last statement, and a re-run of
+   `copyTripContents` against an already-complete target copies nothing a second time.
+6. `assertTripRole` admits `owner` and `editor` for an archive and only `owner` for a delete, and the
    refusal is a `RepositoryError`, not a `NotFoundError`.
-4. `deleteTrip` cascades — after it, `days`, `places`, `day_assignments` and `day_notes` for that trip
+7. `deleteTrip` cascades — after it, `days`, `places`, `day_assignments` and `day_notes` for that trip
    return zero rows in the same scope.
+
+**Unit tests.** `src/server/queue/handlers/__tests__/trip-copy.test.ts`, new, against the in-memory
+driver `src/server/repos/__tests__/harness.ts` builds and a fake `TASKS`:
+
+1. A handled message copies the inventory, clears `copy_pending_at` and writes one notification row
+   for the requester.
+2. The same message delivered twice leaves one copy — the deterministic id is asserted, and the
+   second delivery finds `copy_pending_at` already null and returns without writing.
+3. A requester who is no longer a member fails **permanently** — `TaskPermanentError`, not a retry —
+   and the target trip is gone afterwards.
+4. A `places` ceiling crossed between the enqueue and the consumer is the same permanent path, and
+   the target trip is gone afterwards. The complementary case is the one that matters most: a
+   transient D1 rejection **throws** so the queue retries, and the target trip is still there.
+5. The handler never reads outside the envelope's organization, which is the unit-level companion to
+   the isolation block above.
+
+**Unit tests.** `src/routes/_app/-server/__tests__/trip-lifecycle-side-effects.test.ts`, new, against
+a fake KV and a fake `TASKS` that record their calls in order — the two cross-plan obligations, held
+as assertions rather than as prose:
+
+1. `archiveTripFn` and `deleteTripFn` each issue exactly one `delete` for the key the **pre-write**
+   anchor implies, and issue it before the D1 write, and issue none when `reminderDueAt` answers
+   `null`.
+2. `restoreTripFn` calls `syncTripReminder` with `previous: null` and writes one key.
+3. A KV rejection does not propagate: the archive still returns and the trip is archived.
+4. `createTripFn`, `updateTripFn`, `deleteTripFn` and the `trip-copy` handler each enqueue the
+   `travel-stats` envelopes for every workspace member, with `00-S4`'s deterministic ids, and a
+   workspace of 250 members produces three `enqueueTasks` calls of at most 100 envelopes each.
+5. A queue rejection does not propagate either.
+
+That file is a new owned path and is listed as one below; it lives beside the module it tests, which
+is the route-local `__tests__` convention `src/routes/(auth)/-lib/__tests__` already sets.
 
 Plus the isolation block above, which runs inside `pnpm test` with everything else.
 
@@ -603,8 +933,8 @@ already covers it. A non-empty return from `auditRelativeTime()` is read and rep
 discarded.
 
 **The frames.** `/trips`, light and dark, at 360, 1280 and 2560 — six for the resting screen. This
-stage's outcome is a state the screen is not in when it loads, so it owes two more sets, declared with
-their selectors:
+stage's outcome is a state the screen is not in when it loads, so it owes three more sets, declared
+with their selectors:
 
 ```sh
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
@@ -614,12 +944,18 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --state menu-open --click '[data-part="trip-actions-trigger"]'
 ```
 
-and a second run with `--state delete-confirm` clicking through to the confirmation. The two
-selectors are stable attributes the product publishes — `[data-part="trip-actions-trigger"]` and
-`[data-part="trip-delete-dialog"]` — not class names and not nth-child paths, and **each is verified
-against the running server with a `page.locator(sel).count()` of 1 before the capture is run**, not
-by reading the JSX. `PT_SERVER_TODAY=2026-08-20` matches `BASELINE_DAY` (`e2e/helpers/shoot.ts:1014`)
-and the header `playwright.config.ts` sends; omitting it photographs a different day.
+and a second run with `--state delete-confirm` clicking through to the confirmation, and a third with
+`--state copy-pending`, which is the state the queue split creates and which a resting frame would
+never show: the fixture seeds one trip with a non-null `copy_pending_at`, so the tile renders its
+"Copying" chip, its skeletonised counts and its single-item menu. The three selectors are stable
+attributes the product publishes — `[data-part="trip-actions-trigger"]`,
+`[data-part="trip-delete-dialog"]` and `[data-part="trip-copy-pending"]` — not class names and not
+nth-child paths, and **each is verified against the running server with a `page.locator(sel).count()`
+of 1 before the capture is run**, not by reading the JSX. The copy-pending frame is the one this
+stage would be judged on wrongly without: an asynchronous copy that shows the reader nothing is
+indistinguishable from a copy that failed. `PT_SERVER_TODAY=2026-08-20` matches `BASELINE_DAY`
+(`e2e/helpers/shoot.ts:1014`) and the header `playwright.config.ts` sends; omitting it photographs a
+different day.
 
 Frames go to `.claude/ultrabuild/shots/<slug>/round-<n>/01-S1/` and nowhere else — not the repository
 root, not `docs/`.
@@ -661,6 +997,14 @@ None. Every package this stage needs is in the `docs/SPEC.md` §3 pinned set —
 menu and dialog primitives, `lucide-react` for the icons, `sonner` for the toast, `zod` for the
 inputs — no binding is added to `wrangler.jsonc`, no third-party service is called, and no row in
 another plan gates it.
+
+**Three wave-0 stages gate it and all three close before wave 1 opens**, so none is a blocker; they
+are named because a stage that consumes another stage's output owes the reader that list. `00-S1`
+generates the migration for `trips.copy_pending_at`. `00-S4` adds `DB` to `TaskBindings` in
+`src/server/queue/types.ts`, without which no queue handler can reach D1, and defines the
+`travel-stats` envelope this stage enqueues. `00-S5` supplies `reminderDueAt` and `syncTripReminder`
+in `src/server/queue/reminder-sync.ts`, which this stage calls and does not own. `00-S2`'s
+notification write path is used for the copy's completion message and is also wave 0.
 
 ## Stage 01-S2 — A day note becomes something you can write
 
@@ -766,8 +1110,10 @@ of `11-S2`'s register speaking, not this stage.
 
 ### Data and migration
 
-**One additive column, filed as a requirement for the wave-1 foundations schema stage.** This stage
-does not edit `src/server/db/schema.ts`.
+**One additive column, filed to `00-S1` (`00-foundations.md`, wave 0)** — the wave-0 schema stage,
+which is the one that "absorbs any **Data and migration** requirement filed by a wave-1 stage". This
+stage is wave 1, so it files one wave early and does **not** edit `src/server/db/schema.ts`. Filing
+to the schema stage of this stage's **own** wave would put the column behind the code that reads it.
 
 | Table       | Column   | Type   | Null     | Default | CHECK                       |
 | ----------- | -------- | ------ | -------- | ------- | --------------------------- |
@@ -819,7 +1165,12 @@ no renumbering pass. No second convention is introduced.
   `detail: longTextSchema.nullish()`. `body` keeps `longTextSchema.min(1)` and stays required.
 - **`reorderDayNotes(scope, dayId, noteIds)`** — new. Resolves the day, refuses ids that are not that
   day's notes rather than rejecting the whole call, and writes `sort_order` from array position so the
-  run renormalises to `0..n-1` on every move. One `scope.db.batch()`. This is the same
+  run renormalises to `0..n-1` on every move. One `runBatch(scope, statements)` from
+  `src/server/repos/batch.ts:35` — **not** `scope.db.batch()`, which does not exist on the abstract
+  Drizzle handle and would not typecheck; `reorderAssignments` (`src/server/repos/itinerary.ts:343`)
+  is the shipped example of the same call. The statements are one `UPDATE` per note of one day, three
+  bound parameters each, so the write stays far inside D1's 100-parameter ceiling and belongs in the
+  request path rather than in a queue — see **Multi-row writes** in the Area brief. This is the same
   self-healing contract `reorderPlanFn` (`-server/plan.ts:256`) already uses for assignments, and it
   is deliberately the same so that `01-S4` can merge the two number lines without reconciling two
   philosophies.
@@ -1000,9 +1351,9 @@ Functions covered: `createDayNote`, `updateDayNote`, `deleteDayNote`, `reorderDa
 
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
-The migration this stage filed is generated and applied by the wave-1 foundations schema stage, not
-here; this stage's gate runs against the schema that stage produced and fails loudly if `detail` is
-absent, which is the intended coupling.
+The migration this stage filed is generated and applied by `00-S1` in wave 0, not here; this stage's
+gate runs against the schema that stage produced and fails loudly if `detail` is absent, which is the
+intended coupling.
 
 **Unit tests.**
 
@@ -1138,8 +1489,8 @@ no HTML sanitiser** — the runtime dependencies are `@dnd-kit/*`, `@tanstack/*`
   writing another one.
 
 Nothing else blocks this stage: no binding is added to `wrangler.jsonc`, no third-party service is
-called, and the only other plan it waits on is the wave-1 foundations schema stage for the `detail`
-column.
+called, and the only other plan it waits on is `00-S1` (`00-foundations.md`, wave 0) for the `detail`
+column, which closes before this wave opens.
 
 ## Stage 01-S3 — A trip reopens on the tab you left it on
 
@@ -1191,7 +1542,8 @@ navigation convenience, not an account setting: it is worthless on a second devi
 every click, and writing it to D1 would put a round trip and a row write on the path of a tab click.
 `user_settings` (`src/server/db/schema.ts:1827-1856`) carries theme, locale, timezone, currency, week
 start, date format, distance unit, map style, accent colour and reduce-motion, and none of those has
-this shape. No column is filed for the foundations schema stage, and no migration is generated.
+this shape. No column is filed for `00-S1` or for any later schema stage, and no migration is
+generated.
 
 The trade-off is stated rather than hidden: the preference does not follow the user to a second
 device. Three later stages make the same call for the same reason — the widget visibility (`01-S5`),
@@ -1566,8 +1918,8 @@ room, asserted against the mirror rather than inferred from the D1 write.
 
 **No schema change and no migration.** Both position columns exist and both are `real`:
 `day_assignments.order_index` (`src/server/db/schema.ts:544`, `NOT NULL DEFAULT 0`) and
-`day_notes.sort_order` (`:596`, through the shared `sortOrder()` helper). Nothing is filed for the
-wave-2 foundations schema stage on this stage's account.
+`day_notes.sort_order` (`:596`, through the shared `sortOrder()` helper). This stage is wave 2, so
+its schema stage would be the wave-1 one; nothing is filed for it on this stage's account.
 
 **One number line, two columns, stated once.** The merged position space is not a new column; it is
 the agreement that for a given day, `day_assignments.order_index` and `day_notes.sort_order` are read
@@ -1593,11 +1945,23 @@ already rejects a day belonging to another trip), reads the day's current stop i
 one delete behind should still be able to reorder the rows that do exist, which is the rule
 `-server/plan.ts:269-272` already states — appends any known id the client omitted at its current
 relative position so a partial list cannot silently delete an item's position, and then writes
-positions `0..n-1` into the two tables in a single `scope.db.batch()`.
+positions `0..n-1` into the two tables through **one `runBatch(scope, statements)` call**
+(`src/server/repos/batch.ts:35`).
 
-`db.batch()` is a real transaction on D1: statements run sequentially and a failure rolls the whole
+`runBatch` is the repository layer's only batching helper, and it is the reason this stage does not
+write `scope.db.batch(...)`: `TenantScope['db']` is the abstract Drizzle handle and carries no
+`batch` method, so that call would not typecheck. `runBatch` feature-detects the driver, uses
+`db.batch()` where it exists and awaits the statements in order where it does not — which is what
+lets the same code run under the in-memory test driver. It is already the call inside
+`reorderAssignments` (`src/server/repos/itinerary.ts:343`), the very function this stage widens, so
+the widening keeps a call it inherits rather than introducing one.
+
+On D1 that batch is a real transaction: statements run sequentially and a failure rolls the whole
 sequence back. That is the property the merged space needs, because a half-applied reorder is a day
-whose two columns disagree about one number line.
+whose two columns disagree about one number line. The batch is bounded by one day — one `UPDATE` per
+item, three bound parameters each — so it stays inside D1's 100-parameter-per-statement ceiling and
+inside the 30 s a whole batch call may take, which is why this write stays in the request path while
+`01-S1`'s copy does not. **Multi-row writes** in the Area brief states both limits once.
 
 SQL stays in this module. Both halves of the write are `organization_id`-scoped and neither can be
 made otherwise: the assignment rows go through `dayAssignmentsRepository` and the note rows through the
@@ -2185,8 +2549,11 @@ mechanical exception `README.md` grants.
 
 ### Data and migration
 
-**One additive table, filed as a requirement for the wave-4 foundations schema stage.** This stage
-does not edit `src/server/db/schema.ts`.
+**One additive table, filed as a requirement for the wave-3 foundations schema stage.** This stage
+is wave 4 and files one wave early, under the rule `00-S1` states — a schema stage collects what the
+**next** wave asked for, so the table lands before this stage's wave opens. That stage has no id yet:
+`00-foundations.md`'s stage register mints the per-wave shared-file stages "when the wave opens", and
+this filing is what makes the wave-3 one exist. This stage does not edit `src/server/db/schema.ts`.
 
 `trip_guests`, following the conventions every existing domain table follows:
 
@@ -2240,7 +2607,7 @@ times there.
 **Duplicate names.** A second guest with a name already on the trip is stored with an appended
 ordinal, and the ordinal climbs until the unique index accepts it. The mechanism is the one this
 repository already uses for a colliding trip slug — `reserveTripSlug`
-(`src/server/repos/trips.ts:161-179`), a bounded attempt loop against a `count`, falling back to a
+(`src/server/repos/trips.ts:163-180`), a bounded attempt loop against a `count`, falling back to a
 time-suffixed value rather than looping forever. The point is not tidiness: two identical names in a
 participant picker is how a cost gets split onto the wrong person.
 
@@ -2535,12 +2902,14 @@ per-browser record through `src/lib/local-preference.ts` — `planned.trips-view
 — and not a column, for the reasons `01-S3` and `01-S5` already argued. The area is not a detail
 here: `TRP-01` asks for "grid/list view modes **persisted** client-side", so a session lifetime would
 fail the row on its own wording, and a reader who prefers the list would be handed the grid back
-every morning. Nothing is filed for the wave-5 foundations schema stage.
+every morning. This stage is wave 5, so its schema stage would be the wave-4 one; nothing is filed
+for it.
 
 **One measured read-cost note, because this screen is the one that could regress it.** D1 bills rows
 **read**, not rows returned. `countTripPeople` therefore counts in one grouped query over
 `(organization_id, trip_id)` for the whole page of trips, exactly as `countTripsByStatus`
-(`src/server/repos/trips.ts:276-283`) and `countPlacesPerTrip` already do — never one query per card.
+(`src/server/repos/trips.ts:268-292`) and `countPlacesPerTrip` already do — never one query per
+card.
 Both `trip_members` and `trip_guests` lead their composite index with `organization_id`, so the scan
 is bounded by the tenant.
 
@@ -2767,12 +3136,12 @@ currency, the cover image, the reminder choice and the initial-members selection
 title, destination, two dates and currency, from a nine-entry currency list at `:31-40` — over
 `createTripFn`. It already validates the date order in the browser and disables the save while the
 title is empty, and `createTrip` already reserves the slug, writes the owner membership and builds the
-day run (`src/server/repos/trips.ts:307-345`). The gap is the field set, not the plumbing.
+day run (`src/server/repos/trips.ts:311-338`). The gap is the field set, not the plumbing.
 
 **Two corrections to the row, measured.** First, the row says no upload path writes
 `trips.cover_image_key` or `cover_image_url`. That is right, and the missing half is only the upload:
 both columns exist (`src/server/db/schema.ts:350-351`), `updateTripInput` already accepts both
-(`src/server/repos/trips.ts:71-72`), and `TripTile` already renders a cover. Second, the currency list
+(`src/server/repos/trips.ts:70-71`), and `TripTile` already renders a cover. Second, the currency list
 does not need to be hand-written to reach parity: `Intl.supportedValuesOf('currency')` is supplied by
 the runtime with no dependency and no network call, and it is a complete ISO-4217 set rather than
 somebody's list of 165. The nine-entry list stays as the pinned favourites shown first, which is a
@@ -2804,7 +3173,8 @@ put one file in two plans. The new module imports the favourites from it and add
 **No schema change and no migration.** Every field maps to a column that exists:
 `trips.title`, `summary`, `destination`, `start_date`, `end_date`, `currency`, `cover_image_key`,
 `cover_image_url`, `reminder_days` (`src/server/db/schema.ts:338-354`), and the initial members are
-`trip_members` rows. Nothing is filed for the wave-5 foundations schema stage.
+`trip_members` rows. This stage is wave 5, so its schema stage would be the wave-4 one; nothing is
+filed for it.
 
 **Where the duration lives, and why it is not a column.** The form offers a duration when neither date
 is set, and derives it when both are. It is never stored: the trip's day run is the duration, and
@@ -2820,7 +3190,7 @@ convention.
 ### Server (repo, server function, Zod)
 
 **Repository.** No new function. `createTrip` and `updateTrip` already accept every field, already
-enforce the date order through `assertDateOrder` (`src/server/repos/trips.ts:398-406`) and already
+enforce the date order through `assertDateOrder` (`src/server/repos/trips.ts:390-396`) and already
 reconcile the day run. The one repository behaviour this stage relies on and must not weaken is that
 `assertDateOrder` is server-side: the browser's own check at `new-trip-dialog.tsx:74-75` is a courtesy
 and the `trips_date_order_chk` constraint (`src/server/db/schema.ts:369-372`) is the backstop.
@@ -3126,7 +3496,8 @@ and it is **two declarations with two different lifetimes** rather than one conv
 
 The undo ring is in memory only and is deliberately not persisted at all: an undo offered after a
 reload would reverse an edit the reader has forgotten making, and possibly one somebody else has
-since built on. Nothing is filed for the wave-5 foundations schema stage.
+since built on. This stage is wave 5, so its schema stage would be the wave-4 one; nothing is filed
+for it.
 
 ### Server (repo, server function, Zod)
 
@@ -3391,8 +3762,8 @@ Rows unblocked: none. `TRP-04` is a leaf.
 ### Data and migration
 
 **No schema change and no migration.** `trips.reminder_days` exists with its default and its `CHECK`,
-and the reminder index lives in KV rather than D1. Nothing is filed for the wave-6 foundations schema
-stage.
+and the reminder index lives in KV rather than D1. This stage is wave 6, so its schema stage would be
+the wave-5 one; nothing is filed for it.
 
 **Zero is the off switch, and it needs no column.** `reminder_days = 0` means no reminder, which the
 non-negative `CHECK` already permits and `reminderDueAt` already answers `null` for. A separate
@@ -3602,23 +3973,34 @@ that it was verified. Both outputs are pasted verbatim below.
 The command and its output, verbatim, run against the full plan set — thirteen files, including the
 five area plans that did not exist when this one was first drafted. Sibling plans are rewritten
 **while this file is being written**, and the drift is watched rather than assumed: within one hour
-the plan count moved 8 → 13, the stage count 48 → 91, and the owned-path total 284 → 554 → 553 → 535.
-The last of those moves is this plan's own and is worth naming: the twenty per-stage spec and baseline
-paths an earlier draft claimed are now the two shared ones `12-verification-protocol.md` §4 fixes, so
-eighteen owned paths left this file. The rest of the drift is other plans' edits. So the first line
-and the seventh are a timestamp, not a claim; the two lines that carry this plan's obligation and must
-not move are the fifth — **no same-wave exclusive collision** — and the sixteen stanzas under the
-seventh, every one of which is answered in the table below.
+the plan count moved 8 → 13, the stage count 48 → 91, and the owned-path total 284 → 554 → 553 → 535
+→ 541. The two moves that are this plan's own are worth naming. The twenty per-stage spec and baseline
+paths an earlier draft claimed became the two shared ones `12-verification-protocol.md` §4 fixes, so
+eighteen owned paths left this file; and this revision added six back — the `trip-copy` handler, its
+test, `src/server/queue/types.ts`, `src/server/queue/consumer.ts`, the reminder-and-statistics
+side-effect test, and nothing else — when `01-S1`'s copy moved out of the request path. The rest of
+the drift is other plans' edits. So the first line and the seventh are a timestamp, not a claim; the
+two lines that carry this plan's obligation and must not move are the fifth — **no same-wave exclusive
+collision** — and the eighteen stanzas under the seventh, every one of which is answered in the table
+below.
 
 ```text
 $ node scripts/ultrabuild/check-plan-collisions.mjs 01
-plans 13 · stages 91 · owned paths 535
+plans 13 · stages 91 · owned paths 541
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
 no same-wave exclusive collisions
 
-touched by more than one plan in different waves (16) — legal; each plan must name the other:
+touched by more than one plan in different waves (18) — legal; each plan must name the other:
+  src/server/queue/types.ts
+      00-foundations.md  00-S4  wave 0  (edit)
+      01-trips-core.md  01-S1  wave 1  (edit)
+      07-collaboration-and-sharing.md  07-S8  wave 4  (edit)
+  src/server/queue/consumer.ts
+      00-foundations.md  00-S4  wave 0  (edit)
+      01-trips-core.md  01-S1  wave 1  (edit)
+      07-collaboration-and-sharing.md  07-S8  wave 4  (edit)
   src/routes/_app/-server/overview.ts
       00-foundations.md  00-S5  wave 0  (edit)
       01-trips-core.md  01-S1  wave 1  (edit)
@@ -3672,6 +4054,7 @@ touched by more than one plan in different waves (16) — legal; each plan must 
   src/server/repos/itinerary.ts
       01-trips-core.md  01-S4  wave 2  (edit)
       02-places-and-maps.md  02-S9  wave 5  (edit)
+      03-reservations-and-transport.md  03-S8  wave 6  (edit)
       07-collaboration-and-sharing.md  07-S9  wave 3  (edit)
   src/routes/_app/trips/$tripId/-server/plan.ts
       01-trips-core.md  01-S4  wave 2  (edit)
@@ -3699,6 +4082,7 @@ $ echo $?
 ```text
 $ node scripts/ultrabuild/check-plan-refs.mjs 01
 
+
 plan 01: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
 $ echo $?
 0
@@ -3721,10 +4105,12 @@ plan yielding the file, and the resolution is argued in full under **The four pl
 closed by then.
 
 **Every cross-wave path the check lists is named in its owning stage, with the sibling stage id.** All
-sixteen, in the order the check prints them:
+eighteen, in the order the check prints them:
 
 | Path                                                 | This plan's stages        | Sibling stages, with wave                                                 | Where this plan names them                                    |
 | ---------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `src/server/queue/types.ts`                          | `01-S1`                   | `00-S4` (wave 0), `07-S8` (wave 4)                                        | **Owned paths** of `01-S1`                                    |
+| `src/server/queue/consumer.ts`                       | `01-S1`                   | `00-S4` (wave 0), `07-S8` (wave 4)                                        | **Owned paths** of `01-S1`                                    |
 | `src/routes/_app/-server/overview.ts`                | `01-S1`, `01-S7`          | `00-S5` (wave 0), `09-S7` (wave 2), `10-S3` (wave 4)                      | **Owned paths** of `01-S1` and of `01-S7`                     |
 | `src/server/repos/trips.ts`                          | `01-S1`, `01-S6`          | `07-S6` (wave 2)                                                          | **Owned paths** of `01-S1` and of `01-S6`                     |
 | `src/routes/_app/trips/$tripId/plan.tsx`             | `01-S2`                   | `03-S5` (wave 4)                                                          | **Owned paths** of `01-S2`, shared-path table                 |
@@ -3746,13 +4132,23 @@ Sibling plans are named by file the first time each appears above: `00-foundatio
 `02-places-and-maps.md`, `03-reservations-and-transport.md`, `06-documents-and-media.md`,
 `07-collaboration-and-sharing.md`, `09-account-and-settings.md` and `10-administration.md`.
 
-Ten of the sixteen paths are new to this section since this plan's first draft, and all ten are the
-planner cluster claimed by `02-…` and `03-…`; three of the six that were already here gained further
-siblings, among them the two `append` claims on the repository barrel from `06-…`. None is a
-collision. In every one of the sixteen, no two claims
-share a wave, and the two `06-…` claims are `append`, which is cooperative by construction. The
-naming obligation is met from this side for all sixteen; where a sibling also names this plan — `00-S5`,
-`09-S7`, `10-S3`, `07-S1`, `07-S6`, `07-S9`, `07-S10` and `10-S2` do — it is met from both.
+Ten of the eighteen paths are new to this section since this plan's first draft, and all ten are the
+planner cluster claimed by `02-…` and `03-…`; two more arrived with this revision, the queue registry
+pair `01-S1` now claims; three of the six that were already here gained further siblings, among them
+the two `append` claims on the repository barrel from `06-…`. None is a collision. In every one of the
+eighteen, no two claims share a wave, and the two `06-…` claims are `append`, which is cooperative by
+construction. The naming obligation is met from this side for all eighteen; where a sibling also names
+this plan — `00-S5`, `09-S7`, `10-S3`, `07-S1`, `07-S6`, `07-S9`, `07-S10` and `10-S2` do — it is met
+from both.
+
+**Two of the eighteen are named from one side only, and that is stated rather than glossed.**
+`src/server/queue/types.ts` and `src/server/queue/consumer.ts` are claimed by `00-S4` in wave 0 and by
+`07-S8` in wave 4, and neither of those two stages names `01-S1` — they were written before this
+revision existed and neither file is this plan's to edit. The obligation the acceptance criterion
+places on this plan is met: both paths are named in `01-S1`'s **Owned paths** with both sibling stage
+ids and both waves. The reciprocal note is filed as a contract extension. Nothing about the schedule
+depends on it: wave 0 closes before wave 1 opens and wave 4 opens after it closes, so the three claims
+cannot run together whether or not the siblings mention this one.
 
 The stages the check cannot read are `04-S2`, `11-S1`, `11-S2` and `11-S3` — **none of them this
 plan's**. Their `### Stage id` line does not carry `` `<id>` · Wave <n> ``, so the parser cannot place
@@ -3762,7 +4158,9 @@ it. The two files that carry those four are not this plan's to edit, and the fix
 contract extension rather than made here.
 
 `src/lib/markdown/**`, `src/routes/_app/trips/$tripId/-server/day-notes.ts`, `src/lib/local-preference.ts`,
-`src/lib/trip-tab.ts`, `src/lib/clock-zones.ts`, `src/routes/_app/-lib/view-mode.ts` and
+`src/lib/trip-tab.ts`, `src/lib/clock-zones.ts`, `src/routes/_app/-lib/view-mode.ts`,
+`src/server/queue/handlers/trip-copy.ts`,
+`src/routes/_app/-server/__tests__/trip-lifecycle-side-effects.test.ts` and
 `src/routes/_app/trips/$tripId/-ui/plan-layout.ts` are new claims of this plan and appear nowhere else
 in the plan set, in any wave — which is what makes the browser-preference module a single home for
 five preferences rather than five scattered readers of `window.localStorage`. Four rows in other plans

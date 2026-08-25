@@ -1,40 +1,34 @@
 # Open findings, per plan
 
-Generated from `.claude/ultrabuild/items.json` by the /ultrabuild orchestrator. **This file is
-not hand-written and not audited** — it is a register, so that a run executing one of these
-plans knows what its own auditors had not yet resolved.
+Generated from `.claude/ultrabuild/items.json` by the /ultrabuild orchestrator. **This file is not
+hand-written and not audited** — it is a register, so a run executing one of these plans knows what
+its own auditors had not yet resolved.
 
-A plan marked **verified** passed an adversarial audit with zero blocking findings. A plan with
-open findings is still usable — the findings are specific, and each names the stage it belongs
-to — but the run that executes it should resolve them first.
+A plan marked **verified** passed an adversarial audit with zero blocking findings. A plan with open
+findings is still usable — each finding is specific and names the stage it belongs to — but the run
+that executes it should resolve them first.
 
 | plan | status | open blocking |
 |---|---|---|
 | `00-foundations.md` | **verified** | — |
-| `01-trips-core.md` | open | 4 |
-| `02-places-and-maps.md` | open | 1 |
+| `01-trips-core.md` | **verified** | — |
+| `02-places-and-maps.md` | open | 2 |
 | `03-reservations-and-transport.md` | open | 2 |
 | `04-budget-and-currencies.md` | open | 3 |
 | `05-packing-and-todos.md` | open | 3 |
 | `06-documents-and-media.md` | open | 2 |
 | `07-collaboration-and-sharing.md` | **verified** | — |
-| `08-product-modules.md` | open | 1 |
-| `09-account-and-settings.md` | open | 2 |
-| `10-administration.md` | open | 2 |
+| `08-product-modules.md` | open | 3 |
+| `09-account-and-settings.md` | open | 1 |
+| `10-administration.md` | **verified** | — |
 | `11-boundaries-and-blockers.md` | **verified** | — |
 | `12-verification-protocol.md` | **verified** | — |
 | `README.md` | **verified** | — |
 
-## `01-trips-core.md`
-
-- Three stages prescribe `scope.db.batch()`, which does not exist on `TenantScope['db']` and will not typecheck; the repo's one batching implementation, `runBatch()`, is ignored — including inside the very function 01-S4 widens. _(line 1596)_
-- 01-S1 specifies `copyTrip` copying a whole itinerary inline in a POST request path and asserts "Nothing in this stage is slow", contradicting `src/server/repos/batch.ts`'s own header rule and TEMPLATE.md's queue rule. The copy is unbounded on the paid tiers. _(line 467)_
-- A cross-plan obligation that 00-S5 explicitly assigns to this plan — `cancelReminder` on the archive and delete paths — is not carried by any stage. 01-S1 owns TRP-03 and never mentions it. _(line 467)_
-- 01-S2 and 01-S6 file their schema requirements to the schema stage of their own wave, which under 00-foundations.md's stated convention collects the *next* wave's needs. Both stages would run against a schema that does not yet have what they need. _(line 769)_
-
 ## `02-places-and-maps.md`
 
-- 02-S2 plans a hand-rolled radio group for the basemap picker and does not name `RadioGroup`/`RadioCard` from src/components/ui, in the same bullet that invokes the "a second implementation is a defect" rule. A builder following this text will duplicate an existing, unused primitive. _(line 656)_
+- 02-S7 and 02-S9 both say they "extend" `src/routes/_app/trips/$tripId/-ui/__tests__/plan-model.test.ts`, but that directory does not exist at HEAD and no stage in any plan lists the file under Owned paths. Two stages in different waves would create/edit an undeclared file, invisible to check-plan-collisions.mjs. _(line 1917)_
+- 02-S2's Owned paths omits two files the same stage states it writes: `src/server/repos/__tests__/tenant-isolation.test.ts` (append) and `src/lib/map/__tests__/style.test.ts` (extend). Every other stage in this plan that appends to the isolation test declares it; 02-S2 is the sole omission. _(line 568)_
 
 ## `03-reservations-and-transport.md`
 
@@ -60,15 +54,11 @@ to — but the run that executes it should resolve them first.
 
 ## `08-product-modules.md`
 
-- 08-S9 cites its MAP-02 dependency as wave 2 when it is wave 6 and BLOCKED, then closes ADD-10 as done anyway _(line 2967)_
+- 08-S3 asserts `getTrip` raises NotFoundError for a foreign trip id; it returns `null`. The stage's headline tenant-isolation case cannot pass as written. _(line 932)_
+- 08-S4 states `getCollection` "resolves through `requireById` and throws"; it calls `findById` and returns `null`. _(line 1316)_
+- 08-S4's "point of the block" tenant case requires `setCollectionPlaceLabels` to reject a foreign label id; the shipped function silently drops it and resolves. _(line 1320)_
 
 ## `09-account-and-settings.md`
 
-- 09-S3 plans to reuse `PasswordStrength`, which is a non-exported module-local function in a file no stage owns — the stage cannot be built without an ownership violation or a duplicate primitive _(line 977)_
-- The Cross-plan collisions section misattributes the wave-less `04-S2` to 04-budget-and-currencies.md, which states its wave correctly; the real source is a fenced example in 12-verification-protocol.md that the collision script parses as a stage _(line 2868)_
-
-## `10-administration.md`
-
-- 10-S4's permission matrix permits `member.invite` to be lowered to `member`, while 10-S1's invite input accepts any role including `owner` — a privilege-escalation path the stage's own invariants block does not cover. _(line 1446)_
-- 10-S4 enumerates seven `assertCanAdminister` call sites in members.ts and asserts the helper's remaining callers are "the four audit reads" — wrong at wave 5, because 09-S3 (wave 1) adds an eighth in the same file, which 10-S4 itself names as a shared path. _(line 1291)_
+- Seven stages ship copy on `src/routes/_app` screens — squarely inside docs/SPEC.md §8's declared scope — but no stage names an `src/lib/i18n/messages/en/<namespace>.ts` file, so the plan assigns the English catalogue for its own screens to nobody and the fan-out contract cannot satisfy §8. _(line 64)_
 

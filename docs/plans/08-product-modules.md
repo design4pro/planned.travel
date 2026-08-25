@@ -63,24 +63,50 @@ from `listTravelStats` through `loadAtlas`, while `recomputeTravelStats`
 (`src/server/repos/atlas.ts:792`) is called only by the dev seeder. Marking a country moves the map
 and leaves every figure beside it frozen at its seeded value.
 
-### The rows this plan closes
+### The rows this plan moves, and how far it moves each
 
-| Row      | Stage    | Wave | Status         |
-| -------- | -------- | ---- | -------------- |
-| `ADD-02` | `08-S1`  | 1    | partial → done |
-| `ADD-05` | `08-S2`  | 1    | partial → done |
-| `ADD-07` | `08-S3`  | 1    | partial → done |
-| `ADD-09` | `08-S4`  | 1    | partial → done |
-| `ADD-03` | `08-S5`  | 2    | partial → done |
-| `ADD-06` | `08-S6`  | 2    | partial → done |
-| `ADD-08` | `08-S7`  | 2    | absent → done  |
-| `ADD-04` | `08-S8`  | 3    | partial → done |
-| `ADD-10` | `08-S9`  | 3    | absent → done  |
-| —        | `08-S10` | 3    | closes no row  |
+| Row      | Stage    | Wave | Status               |
+| -------- | -------- | ---- | -------------------- |
+| `ADD-02` | `08-S1`  | 1    | partial → done       |
+| `ADD-05` | `08-S2`  | 1    | partial → done       |
+| `ADD-07` | `08-S3`  | 1    | partial → done       |
+| `ADD-09` | `08-S4`  | 1    | partial → done       |
+| `ADD-03` | `08-S5`  | 2    | partial → done       |
+| `ADD-06` | `08-S6`  | 2    | partial → done       |
+| `ADD-08` | `08-S7`  | 2    | absent → done        |
+| `ADD-04` | `08-S8`  | 3    | partial → done       |
+| `ADD-10` | `08-S9`  | 3    | absent → **partial** |
+| —        | `08-S10` | 3    | closes no row        |
 
 `08-S10` closes no row deliberately, in the shape `00-foundations.md` uses for its four write-path
 stages: it is the enforcement of the module entitlements the other nine stages ship behind, and it
 is named by each of them rather than re-decided in each of them.
+
+### One row closes as partial, and the rule that decides which
+
+A row closes **done** when every path it names is reachable on the screen, even where a detail inside
+a path is degraded and said to be: a photograph refused because its format cannot be converted here
+(`08-S7`), an address the traveller types because no geocoder fills it, a region marked from a list
+because no sub-national geometry is shipped (`08-S2`). A row closes **partial** when a whole path it
+names has **no entry point at all**, because then nothing on the surface stands in for it and a
+reader of the matrix would be told a lie.
+
+`ADD-10` is the one row in this file in that position. Of the three ways it names of getting a place
+into a collection, two ship in `08-S9` — saving a place from a trip into several lists at once, and
+copying a set of places between lists without duplicating them. The third, search-and-add, needs the
+place search owned by `02-places-and-maps.md` `02-S13`, and **`02-S13` is wave 6 and is BLOCKED**:
+that plan does not schedule it, and it waits on Gate A — the geocoding and place-search provider
+decision owned by `docs/plans/11-boundaries-and-blockers.md` `11-S3`, which has no provider and no
+budget. `08-S9` therefore ships every path that does not need a geocoder, leaves the search entry
+point **absent rather than stubbed**, builds no second search, and records the row as
+`absent → partial` with `02-S13` named as the stage that closes it. Nothing else in this file
+inherits that residue.
+
+One discrepancy, recorded rather than corrected. `11-S3`'s register lists `MAP-02` at wave 2. The
+authority for a wave is the `### Stage id` line of the stage that owns the row, and that is
+`02-S13` · Wave 6 in `02-places-and-maps.md`, which also carries **BLOCKED** in its `## Stage`
+heading. This plan cites the stage, not the register, and the register's stale figure is filed for
+the owner of `11-boundaries-and-blockers.md` rather than edited from a file that does not own it.
 
 ### One row is excluded, and it is not planned here
 
@@ -2658,7 +2684,8 @@ that decides who may do any of it.
 
 ### Reference rows
 
-- `ADD-10` absent → **done**.
+- `ADD-10` absent → **partial**. The residue, its owner and the rule that makes it a `partial`
+  rather than a `done` are stated below and in the area brief.
 
 Sourced from `wiki: Collections-Places` for the behaviour set — saving a place into one or several
 lists at once, copying a set of places between lists without producing duplicates, a detail view of
@@ -2667,11 +2694,19 @@ selection, and a sharing setting per list. Described here against `collection_pl
 `collection_labels` and `collections`, which already exist.
 
 `dependsOn` names `ADD-09` and `MAP-02`. `ADD-09` is `08-S4`, wave 1, in this file. **`MAP-02` is
-`02-places-and-maps.md`, wave 2** — place search and the import paths. Its consequence is scoped
-rather than assumed: this stage ships every path into a collection that does not need a geocoder, and
-the search-and-add path **consumes `MAP-02`'s search component** when it lands. It does not build a
-second search, and if `MAP-02` has not landed the search entry point is absent rather than stubbed —
-a disabled control with no explanation is worse than no control.
+owned by `02-places-and-maps.md` `02-S13`, which is wave 6 and is BLOCKED** — that plan writes the
+stage out in full, schedules none of it, and holds it behind Gate A, the geocoding and place-search
+provider decision owned by `docs/plans/11-boundaries-and-blockers.md` `11-S3`. There is no date on
+which it lands, and this stage plans as if it never does.
+
+That is why the row **does not close here**. Search-and-add is one of the three ways `ADD-10` names
+of getting a place into a list, it has no entry point without a geocoder, and nothing on this screen
+can stand in for it — so the row is recorded `absent → partial`, `02-S13` is named as the stage that
+closes it, and this stage claims only what a traveller can actually do. The other two ways ship in
+full. The consequence is scoped rather than assumed: every path into a collection that does not need
+a geocoder ships now, the search-and-add path **consumes `02-S13`'s search component** on the day it
+exists, and until then the search entry point is absent rather than stubbed — a disabled control with
+no explanation is worse than no control. This stage builds no second search and no second geocoder.
 
 **Two contradictions with the row, stated with evidence.**
 
@@ -2823,7 +2858,8 @@ the feature, not an accident: a saved place survives the trip it came from being
   - _Empty:_ the screen's existing "Nothing saved here yet" copy currently promises three ways to
     save a place. This stage makes two of them real and **rewrites the third promise out** rather
     than leaving copy that describes a path the product does not have — the empty state offers "Add a
-    place" and "Copy from a trip", and gains the search entry point when `MAP-02` lands.
+    place" and "Copy from a trip", and gains the search entry point on the day `02-S13` lands — not
+    before, since `MAP-02` is BLOCKED behind Gate A.
   - _Filtered to nothing:_ the existing state keeps its reset action and gains the hidden count.
   - _Empty map:_ when no place in the list has coordinates, the map is not rendered and a line says
     which places are missing them, with a link to fix the first one.
@@ -2964,10 +3000,15 @@ dialog and the sharing dialog:
 
 ### Blockers
 
-- **`MAP-02` gates the search-and-add path only.** `02-places-and-maps.md`, wave 2. Disposition:
-  **scope**, not defer — every other path into a collection ships here, and the search entry point is
-  absent rather than disabled until that row lands. This stage builds no second search and no second
-  geocoder.
+- **`MAP-02` gates the search-and-add path, and it is BLOCKED.** The row is owned by
+  `02-places-and-maps.md` `02-S13`, **wave 6**, whose `## Stage` heading carries **BLOCKED** and
+  whose own text says it is not scheduled until Gate A closes. Gate A — a geocoding and place-search
+  provider with terms a subscription-funded product may use, and a budget — is owned by
+  `docs/plans/11-boundaries-and-blockers.md` `11-S3` and has neither. Disposition: **scope**, and
+  the row closes `partial` rather than `done` because of it — every other path into a collection
+  ships here, the search entry point is absent rather than disabled, and `02-S13` is what closes
+  `ADD-10`. This stage builds no second search and no second geocoder, and it does not wait: nothing
+  it ships depends on `02-S13` having landed.
 - **A public collection is not offered.** `collections.visibility` allows `public` and nothing can
   serve it: there is no `public_token` column and no unauthenticated route. Disposition: **defer**.
   It needs a column and a route, and a wave-3 stage has no wave-0 window to file the column through.
@@ -3297,6 +3338,22 @@ touched by more than one plan in different waves (3) — legal; each plan must n
 
 ```
 plan 08: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
+```
+
+Both commands were re-run after this round's correction to `08-S9` and returned the output above
+byte for byte, which is the reason the blocks are unchanged.
+
+**One thing neither check verifies, learned the expensive way.** Both read stage _ids_; neither reads
+the _wave_ or the _status_ a citation attributes to a sibling stage. `08-S9` cited `MAP-02` as
+"wave 2" — the figure in `11-S3`'s register — while the stage that owns the row, `02-S13`, states
+`Wave 6` on its `### Stage id` line and **BLOCKED** in its `## Stage` heading, and the stage then
+closed `ADD-10` as `done` on the strength of a dependency that is not scheduled. `check-plan-refs`
+passed on it, because the token resolved. So a citation of a sibling's wave or status is read from
+that sibling's own `### Stage id` and `## Stage` lines, every time, and never from a register that
+summarises it:
+
+```sh
+grep -n '^## Stage 02-S13' -A 4 docs/plans/02-places-and-maps.md
 ```
 
 Every `NN-Sn` token this file cites — `00-S1`, `00-S2`, `00-S3`, `00-S4`, `01-S1`, `01-S2`, `01-S5`,

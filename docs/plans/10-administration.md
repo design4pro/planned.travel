@@ -167,12 +167,16 @@ workspace travels before a trip can seat them. `ADM-01` and `ADM-03` are also do
 ### Owned paths
 
 - `src/routes/_app/-server/administration.ts` — new. The stage's server functions.
-- `src/server/repos/members.ts` — edit. Two read helpers and one expiry write, named under
-  **Server** below. No existing function's signature changes. **This file is touched by one other
-  plan, in an earlier wave, and it is named here as the shared-path protocol requires:**
-  `09-account-and-settings.md` `09-S3`, wave 1, which adds `deleteWorkspace` to it. That addition
-  and these three are disjoint functions in one module and the waves are sequential, so the second
-  writer appends to what the first left.
+- `src/server/repos/members.ts` — edit. Two read helpers, one expiry write and one guard, all named
+  under **Server** below: three added functions, plus a single-line role ceiling inside three
+  existing ones — `addMember` (`:165`), `changeMemberRole` (`:177`) and `createInvitation` (`:281`).
+  No existing function's signature changes and no existing caller moves. **This file is touched by
+  one other plan, in an earlier wave, and it is named here as the shared-path protocol requires:**
+  `09-account-and-settings.md` `09-S3`, wave 1, which adds `deleteWorkspace` to it. That addition is
+  a fourth function in the same module, disjoint from these three and from the three guard lines, and
+  the waves are sequential, so the second writer appends to what the first left. `10-S4` in wave 5 is
+  the third writer; what it changes there — seven `assertCanAdminister` call sites, three of which
+  sit above these guard lines rather than on them — is stated in its own **Owned paths**.
 - `src/server/auth/index.ts` — edit, and it is an export change only: `INVITATION_TTL_SECONDS`,
   `ORGANIZATION_MEMBERSHIP_LIMIT` and `ORGANIZATION_INVITATION_LIMIT` become named exports and the
   plugin configuration reads them from the same declarations. No behaviour changes, no plugin option
@@ -269,6 +273,44 @@ No column, no index, no migration, nothing to backfill. Instants stay epoch mill
   `memberId` from the client is not an authorised one, and a server function is reachable without
   the route that renders its UI. The two last-owner guards (`:180-182`, `:192-194`) are the
   repository's, and the UI only mirrors them by disabling a control it knows will be refused.
+- **A granted role may never outrank the granter. This is the third guard, and it is the one thing
+  in this stage that has to be written rather than reused.** Measured at HEAD, nothing enforces it:
+  `addMember` stamps `values.role ?? 'member'` (`src/server/repos/members.ts:165`),
+  `changeMemberRole` writes `roleSchema.parse(role)` (`:177`) and `createInvitation` stamps
+  `values.role ?? 'member'` (`:281`), each behind `assertCanAdminister`, which admits `admin` as well
+  as `owner` (`src/server/repos/context.ts:136-140`). So an administrator can seat an `owner` today —
+  by inviting an address they control and accepting it — and that is a privilege escalation with no
+  guard in front of it. This stage adds one line to each of the three, and only those three, because
+  they are the only functions in the codebase that write a role:
+
+  ```
+  if (!hasAtLeastRole(scope.ctx, granted)) {
+    throw new ForbiddenError(`grant the ${granted} role`, rolesAtOrAbove(granted))
+  }
+  ```
+
+  `hasAtLeastRole` (`src/server/repos/context.ts:117`) is the one implementation of the role
+  comparison and is imported, not re-written; `ForbiddenError` is the error the layer already raises
+  for an insufficient role, and its `required` argument renders as "requires one of: owner", which is
+  the true answer to "who could have done this". `rolesAtOrAbove` is a one-line local helper in
+  `members.ts` — `ORGANIZATION_ROLES.slice(0, ORGANIZATION_ROLES.indexOf(granted) + 1)` — and it is
+  written that way rather than over `ROLE_RANK` for a reason worth one clause: `ROLE_RANK` is
+  module-private in `context.ts` (`:16`), so reaching it would mean exporting it, and `context.ts` is
+  a file no stage in this plan owns. `ORGANIZATION_ROLES` is already exported from
+  `src/server/db/auth-schema.ts:26`, is already imported by `members.ts` (`:17`), and is already
+  ordered most-privileged first — `['owner', 'admin', 'member']` — which is the ordering the helper
+  needs and the same one the UI's select renders in.
+
+- **The ceiling sits on the mint, not on the accept, and that placement is load-bearing.** An
+  invitation is accepted through Better Auth's own organization API
+  (`src/routes/(auth)/accept-invitation.$invitationId.tsx:120`), which reads the role off the
+  `invitation` row and writes the `member` row itself without passing through this repository. A
+  ceiling applied only at acceptance would therefore never run. Checking the role at the moment it is
+  written onto the invitation is what makes the row safe wherever it is later redeemed.
+- **What the ceiling deliberately does not cover.** Removal is not bounded by it: an admin may remove
+  an owner, which gains the admin nothing, and the last-owner guard (`:192-194`) already stops the
+  only version of that with teeth — removing every owner. Self-removal stays permitted at every role.
+  Stating the exclusion is the point; a guard whose edges are not written down grows one silently.
 - **Email, never inline.** The invitation email is enqueued on `TASKS` through `queueAuthEmail`
   (`src/server/auth/email.ts:286`) with the existing `auth.organization-invitation` message kind
   (`:44`), whose subject, HTML and plain-text bodies already render. Nothing is sent from the
@@ -299,9 +341,12 @@ No column, no index, no migration, nothing to backfill. Instants stay epoch mill
   `src/components/administration/` listed in **Owned paths**; they take data as props and never
   import from `server/`.
 - **The member list.** One row per person: `Avatar` plus name and email, a role control, the joined
-  date, and a row menu. The role control is a `SimpleSelect` of Owner / Admin / Member, disabled
-  with a `Tooltip` reason when the row is the workspace's last owner or when the caller is not an
-  admin. The row menu offers "Change role" (focuses the select), "Remove from workspace", and — on
+  date, and a row menu. The role control is a `SimpleSelect` listing the roles at or below the
+  caller's own, in `ORGANIZATION_ROLES` order — an owner sees Owner / Admin / Member, an admin sees
+  Admin / Member — which mirrors the repository's ceiling and decides nothing; a row already held by
+  someone senior to the caller renders their role as a `Badge` rather than as a control. It is
+  disabled with a `Tooltip` reason when the row is the workspace's last owner or when the caller is
+  not an admin. The row menu offers "Change role" (focuses the select), "Remove from workspace", and — on
   the caller's own row — "Leave workspace" instead. Removal opens a destructive `Dialog` naming the
   person and stating what they lose; the confirm button carries `loading` while the request is in
   flight and the dialog stays mounted until it resolves, so the spinner is visible rather than the
@@ -310,7 +355,8 @@ No column, no index, no migration, nothing to backfill. Instants stay epoch mill
   and the expiry as a relative string with `tabular-nums`. An invitation whose `expires_at` has
   passed is rendered as an expired row with `warning` tone and its only action is Resend. Actions
   are Resend and Revoke; Revoke confirms in the same destructive `Dialog` pattern.
-- **The invite form.** A `Dialog` with an email `Field`, a role `SimpleSelect` defaulting to Member,
+- **The invite form.** A `Dialog` with an email `Field`, a role `SimpleSelect` defaulting to Member
+  and offering only the roles at or below the caller's own — the same mirror of the same ceiling —
   and a seat line reading "4 of 10 seats used" in `tabular-nums`, which switches to `warning` tone at
   the last seat and to `danger` with the submit button disabled when the plan is full — the same
   ceiling `assertQuota` will enforce, shown before the request rather than after it. A duplicate
@@ -393,10 +439,23 @@ Functions covered: `listMemberProfiles`, `listInvitationsWithInviter`, `getInvit
   than a second one; `refreshInvitationExpiry` moves `expires_at` forward and leaves `status`
   untouched; the expiry stamped by the server function equals `now + INVITATION_TTL_SECONDS` read
   from the plugin's own constant.
+- **Unit tests for the role ceiling, in the same file, named separately because they are the guard
+  this stage adds rather than one it inherits:** an `admin` scope calling `createInvitation` with
+  `role: 'owner'` raises `ForbiddenError`, the error names `owner` as the role required, and
+  `listInvitations` afterwards returns no new row — the refusal is before the write, not a rollback
+  after it; the same admin scope may still invite at `admin` and at `member`; an `owner` scope may
+  invite at every role; `changeMemberRole` from an `admin` scope to `owner` raises `ForbiddenError`
+  and the member's stored role is unchanged, while the same call to `admin` succeeds; `addMember`
+  refuses the same way, which is what keeps the ceiling true for the one caller outside this stage
+  (`src/routes/api/dev/-seed/bootstrap.ts:336`, which runs in an owner scope and is therefore
+  unaffected); and removal is proved **not** to be bounded by the ceiling — an `admin` scope may
+  remove an `owner` who is not the last one, because the guard is about granting authority and not
+  about ranking people.
 - **Unit test — `src/components/administration/__tests__/invite-member-dialog.test.tsx`:** the
   submit button is disabled while the seat count equals the ceiling; a malformed address surfaces as
   a field error and no request is made; the pending state disables the form rather than the dialog
-  unmounting.
+  unmounting; the role select offers exactly the roles at or below the caller's own, so an admin's
+  options are Admin and Member and an owner's are all three.
 - **Browser evidence.** Route `/admin` (wave 4 onward `/admin/members`), at 360px, 1280px and
   2560px, in light and dark — twelve frames, plus the interaction states below, which are the point
   of this stage and are not visible at rest:
@@ -659,8 +718,12 @@ no backfill.
   evidence about what administrators did, so who may read it is not itself an administrable setting:
   an owner who could raise `audit.read` above `admin` could hide their own actions from the people
   the trail exists to hold accountable. `audit.read` is therefore not one of the catalogue's sixteen
-  keys, and `assertCanAdminister` keeps these four callers after `10-S4` rather than becoming a
-  parallel mechanism with nothing left to do.
+  keys, and `assertCanAdminister` keeps these four callers after `10-S4`. They are not the only ones
+  it keeps, and the exact count matters enough to state here rather than leave to that stage:
+  `deleteWorkspace`, which `09-account-and-settings.md` `09-S3` adds to `src/server/repos/members.ts`
+  in wave 1, calls it too and also stays outside the catalogue, so the helper ends the plan with five
+  callers in two modules rather than becoming a parallel mechanism with nothing left to do. `10-S4`
+  enumerates all five.
 
 - **Nothing slow, nothing realtime.** No queue message, no `TripRoom` patch. The trail is a read.
 
@@ -1287,17 +1350,47 @@ same three-line preamble.
   (`src/routes/_app/trips/$tripId/collab.tsx:86`) hides a moderation affordance; its counterpart is
   the `collab.moderate` key, whose assertion belongs to the collaboration repository that
   `07-collaboration-and-sharing.md` owns and is stated to that plan rather than reached into here.
-- **`assertCanAdminister` is not extended into a parallel mechanism; its call sites move.** It is
-  the only role assertion with callers in the repository layer today, and all six of them are in
-  `src/server/repos/members.ts` (`:81`, `:153`, `:176`, `:190`, `:261`, `:303`), with a seventh
-  arriving with `10-S1`'s `refreshInvitationExpiry` in wave 3. Every one of the seven governs an
-  action the catalogue sells, so every one becomes `await assertAction(scope, '<key>')` — that is
-  this stage's edit to `members.ts`, listed in **Owned paths** and mapped key by key under
-  **Server**. `assertCanAdminister` itself is left exactly as it is, in a file this stage does not
-  own, and keeps the callers `10-S2` gave it: the four audit reads, whose floor is fixed at `admin`
-  by design because the trail is evidence about administrators and an owner who could raise
-  `audit.read` could hide their own actions from the people it exists to hold accountable. So the
-  boundary carries two assertions and one rule for choosing between them — an action in the
+- **`assertCanAdminister` is not extended into a parallel mechanism; most of its call sites move.**
+  It is the only role assertion with callers in the repository layer today, and all six of them are
+  in `src/server/repos/members.ts` (`:81`, `:153`, `:176`, `:190`, `:261`, `:303`). Two more arrive
+  in that same file before this stage runs, and the count has to be taken at wave 5 rather than at
+  HEAD, because a stage that plans against the wrong number edits a line that is no longer the only
+  one of its kind:
+
+  | Call site in `members.ts` at wave 5 | Arrives with                          | Wave | This stage     |
+  | ----------------------------------- | ------------------------------------- | ---- | -------------- |
+  | `updateOrganization` (`:81`)        | on disk at HEAD                       | —    | moves          |
+  | `addMember` (`:153`)                | on disk at HEAD                       | —    | moves          |
+  | `changeMemberRole` (`:176`)         | on disk at HEAD                       | —    | moves          |
+  | `removeMember` (`:190`)             | on disk at HEAD                       | —    | moves          |
+  | `createInvitation` (`:261`)         | on disk at HEAD                       | —    | moves          |
+  | `cancelInvitation` (`:303`)         | on disk at HEAD                       | —    | moves          |
+  | `refreshInvitationExpiry`           | `10-S1`, this plan                    | 3    | moves          |
+  | `deleteWorkspace`                   | `09-S3`, `09-account-and-settings.md` | 1    | **left alone** |
+
+  Eight sites, seven moved. Each of the seven governs an action the catalogue sells, so each becomes
+  `await assertAction(scope, '<key>')` — that is this stage's whole edit to `members.ts`, listed in
+  **Owned paths** and mapped key by key under **Server**.
+
+  **The eighth is `deleteWorkspace`, and it stays on `assertCanAdminister` for the same reason the
+  audit reads do.** Destroying the workspace is not an administrable setting: a floor a workspace can
+  lower is a floor an attacker inside the workspace can lower, and there is no undo behind this one —
+  the `organization` row cascades all fifty-seven domain tables. `workspace.delete` is therefore not
+  one of the catalogue's sixteen keys, exactly as `audit.read` is not, and the function keeps the
+  fixed assertion `09-S3` wrote. Two consequences are stated rather than assumed:
+  - **After this stage `assertCanAdminister` has five callers, in two modules** — the four audit
+    reads `10-S2` added to `src/server/repos/audit.ts`, and `deleteWorkspace` in
+    `src/server/repos/members.ts`. It is not left as a wrapper nothing needs, and this plan never
+    claims it is down to four.
+  - **One discrepancy inside `09-S3` is named and not repaired here.** That stage's tenant-isolation
+    case reads "a scope whose role is not `owner` is refused by `assertCanAdminister`"
+    (`docs/plans/09-account-and-settings.md`), while the helper admits `admin` as well
+    (`src/server/repos/context.ts:136-140`). Whether workspace deletion is owner-only or
+    administrator-level is a decision belonging to the stage that mints the function, in wave 1, not
+    to a wave-5 edit from another plan reaching into a line it did not write. It is carried out of
+    this file as a cross-plan note.
+
+  So the boundary carries two assertions and one rule for choosing between them — an action in the
   catalogue is asserted with `assertAction`, an action deliberately outside it with
   `assertCanAdminister` — and one implementation of the role comparison underneath both, which is
   `hasAtLeastRole` (`src/server/repos/context.ts:117`). What there is not, anywhere, is a second
@@ -1326,12 +1419,19 @@ Rows unblocked: none. This is the last stage in the plan.
   returns a promise — `updateOrganization` (`:77`), `addMember` (`:152`), `changeMemberRole` (`:171`),
   `removeMember` (`:187`), `createInvitation` (`:257`), `cancelInvitation` (`:299`) — so no signature
   changes, no caller changes, and no route, server function or component is touched. The seventh site
-  is inside `refreshInvitationExpiry`, which `10-S1` adds as an `async` function in wave 3. **This
-  file is touched by two other stages, both in earlier waves, and both are named here as the
-  shared-path protocol requires:** `10-S1` (this plan, wave 3), which appends three functions, and
+  is inside `refreshInvitationExpiry`, which `10-S1` adds as an `async` function in wave 3. **An
+  eighth call site exists in this file at wave 5 and is deliberately not touched:**
+  `deleteWorkspace`, added by `09-S3` in wave 1, keeps its `assertCanAdminister` because workspace
+  deletion is outside the catalogue — the reasoning is under **Server**. So the diff to this file is
+  seven lines changed, one line of the same shape left exactly as it stands, and no line added.
+  **This file is touched by two other stages, both in earlier waves, and both are named here as the
+  shared-path protocol requires:** `10-S1` (this plan, wave 3), which adds three functions and one
+  role-ceiling line inside each of `addMember`, `changeMemberRole` and `createInvitation`, and
   `09-account-and-settings.md` `09-S3` (wave 1), which appends `deleteWorkspace`. This stage is wave
-  5 and therefore the last of the three writers; the two appends are disjoint from each other and
-  from these seven lines, so each writer meets what the previous one left.
+  5 and therefore the last of the three writers. The three writes are disjoint line by line:
+  `09-S3`'s is a new function, `10-S1`'s guards sit inside the function bodies **below** the
+  assertion line, and this stage's seven changes are the assertion lines themselves — so each writer
+  meets what the previous one left and none of them re-flows another's hunk.
 - `src/server/repos/__tests__/permissions.test.ts` — new.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
 - `src/routes/_app/admin/-server/permissions.ts` — new. The stage's two server functions.
@@ -1385,6 +1485,20 @@ to tell which one an entry was.
   audit entry read alike. The module is pure data plus two pure functions —
   `defaultMinimumRole(key)` and `mergeOverrides(defaults, stored)` — and imports nothing from
   `server/`.
+- **The sixteen defaults are fixed here, and every one reproduces what the product does today**, so
+  installing the matrix changes no workspace's behaviour until an administrator edits it. They are
+  measured off HEAD rather than chosen, which is also what makes the "unset column" test case
+  meaningful:
+
+  | Default  | Keys                                                                                                                                                               | Why that is today's behaviour                                                                                                                                                                                                                                                                                         |
+  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `member` | `trip.create`, `trip.edit`, `trip.delete`, `trip.archive`, `place.edit`, `booking.edit`, `expense.edit`, `list.edit`, `file.upload`, `file.delete`, `share.create` | No role gate stands on any of these eleven paths. Outside `src/server/repos/context.ts` itself, the only module calling any of its three role helpers is `src/server/repos/members.ts`, and `RequireOrgOptions.role` (`src/server/auth/tenant.ts:108-110`) defaults to `member` with no product call site raising it. |
+  | `admin`  | `collab.moderate`                                                                                                                                                  | The affordance is already hidden from members, by `shell.role !== 'member'` at `src/routes/_app/trips/$tripId/collab.tsx:86`. The key is the server-side counterpart that check has never had.                                                                                                                        |
+  | `admin`  | `member.invite`, `member.role_change`, `member.remove`, `workspace.settings`                                                                                       | The six `assertCanAdminister` call sites in `members.ts` map onto these four keys, and that helper floors at `admin` (`src/server/repos/context.ts:136-140`).                                                                                                                                                         |
+
+  A default is a starting floor and not a fixed point: any of the sixteen may be raised as far as
+  `owner`, and any except the three the invariants below pin may be lowered as far as `member`.
+
 - **Repository — `src/server/repos/permissions.ts`.** All SQL for this stage lives here. It reads
   and writes exactly one column of one row, and it reaches that row only through
   `organizationSettingsRepository` and `ensureOrganizationSettings` from `./settings`, so there is
@@ -1415,7 +1529,9 @@ to tell which one an entry was.
 
   `member.invite` governs the invitation lifecycle as a whole — mint, resend, revoke — because a role
   that may invite may undo its own mistake, and a workspace that had to grant "invite" and "revoke"
-  separately would grant both anyway. `removeMember`'s self-removal branch (`:189-191`) is untouched
+  separately would grant both anyway. It governs **which** roles may invite and never **at what role**
+  they may seat someone: that second question is answered by `10-S1`'s ceiling, one line below each of
+  these three assertions in the same functions, and the matrix has no row that can move it. `removeMember`'s self-removal branch (`:189-191`) is untouched
   and stays outside the matrix: leaving a workspace is not an administrative action and no floor may
   make it one.
 
@@ -1442,12 +1558,41 @@ to tell which one an entry was.
   `z.strictObject({ confirm: z.literal(true, { error: 'Confirm the reset.' }) })`, which is the
   second of the two steps and is not a UI-only ceremony. Validation is shape; permission is the
   repository's.
-- **Two invariants the matrix may not violate, enforced in the repository at write time.**
-  `member.role_change` and `member.remove` may never be lowered below `admin`, because a workspace
-  that lets a member change roles has let a member grant themselves everything else in the
-  catalogue; and no action may be raised above `owner`, which would be an action nobody can perform.
-  Both are refused with a `RepositoryError` carrying a code the screen renders as a field error on
-  the offending row.
+- **Three invariants the matrix may not violate, enforced in the repository at write time, and one
+  guard that is not the matrix's to lift.** Each of the three is refused inside
+  `savePermissionMatrix` before the write, with a `RepositoryError` carrying a code the screen
+  renders as a field error on the offending row.
+  1. **`member.role_change` and `member.remove` may never fall below `admin`.** A workspace that
+     lets a member change roles has let a member hand themselves every other floor in the catalogue.
+  2. **`workspace.settings` may never fall below `admin`.** It is the key that governs
+     `savePermissionMatrix` and `resetPermissionMatrix` themselves, so lowering it hands the whole
+     grid — every other floor at once — to the role it was lowered to. A key that can lower its own
+     floor is not a setting, it is a hole; this is the same reasoning that keeps `audit.read` and
+     `workspace.delete` out of the catalogue entirely, applied to the one key that cannot be kept
+     out because saving the matrix has to be governed by something.
+  3. **No action may be raised above `owner`,** which would be an action nobody in the workspace can
+     perform.
+
+  **The fourth guard is the role ceiling, it lives outside the matrix, and it is what makes lowering
+  `member.invite` safe.** `10-S1` (wave 3) makes `addMember`, `changeMemberRole` and
+  `createInvitation` refuse a role that outranks `scope.ctx.role`. That comparison is between the
+  actor and the role being granted; no floor can express it and therefore no floor can relax it, so
+  it is not a row in this grid and cannot be edited from this screen. The two guards are independent
+  and an escalation needs both to fail:
+
+  | Workspace setting                        | What a `member` can then do      | What still stops the escalation                                |
+  | ---------------------------------------- | -------------------------------- | -------------------------------------------------------------- |
+  | `member.invite` at `admin` (default)     | nothing — `assertAction` refuses | the matrix floor                                               |
+  | `member.invite` lowered to `member`      | mint an invitation at `member`   | `10-S1`'s ceiling refuses `admin` and `owner` on the same call |
+  | `member.role_change` — cannot be lowered | —                                | invariant 1                                                    |
+  | `workspace.settings` — cannot be lowered | —                                | invariant 2                                                    |
+
+  So `member.invite` stays lowerable, which is the point of selling a matrix at all: a workspace that
+  wants its members to bring colleagues in can have that, and the worst a member can do with it is
+  seat another member. Without the ceiling this row would have to be locked at `admin` like
+  invariant 1, and the plan would be shipping a grid whose most-wanted row is disabled. The
+  permission tests name both halves of the pair, and neither is assumed from the other.
+
 - **Audit.** `permissions.updated` carries the changed keys and their new floors in the entry's flat
   metadata record; `permissions.reset` carries the count of rows that were customised. Both go
   through `trail()` and neither can fail the write.
@@ -1468,8 +1613,11 @@ to tell which one an entry was.
   group. Each row is a `RadioGroup` of three options — Member, Admin, Owner — with the action's
   label as the group's accessible name, so a screen reader hears "Delete a trip: Admin, selected"
   rather than a column position. A row whose value differs from its default carries a "Customised"
-  `Badge`; a row locked by the two invariants renders its Member option disabled with a `Tooltip`
-  giving the reason rather than silently refusing on save.
+  `Badge`. The three rows invariant 1 and invariant 2 pin — `member.role_change`, `member.remove`
+  and `workspace.settings` — render their Member option disabled with a `Tooltip` giving that row's
+  own reason, rather than silently refusing on save. `member.invite` is **not** one of them and its
+  Member option is live, with a hint under the row stating what a member may then do: invite at
+  Member only, because nobody can grant a role above their own.
 - **Batch save.** Changes are local until saved. A save bar appears at the foot of the panel when the
   grid is dirty — "3 changes", a Discard button, and a Save button with `loading` — pinned within the
   panel rather than floating over the page, so it never covers a row it is about to change. Saving
@@ -1546,8 +1694,8 @@ Functions covered: `getPermissionMatrix`, `savePermissionMatrix`, `resetPermissi
   3. a stored override that lowers a floor admits the role it names, and the write proceeds;
   4. an unrecognised key in the stored record is ignored and the rest of the record still resolves,
      so a rollback to a Worker with a smaller catalogue keeps working;
-  5. lowering `member.role_change` or `member.remove` below `admin` is refused at the write, and the
-     stored record is unchanged;
+  5. lowering `member.role_change`, `member.remove` or `workspace.settings` below `admin` is refused
+     at the write — three cases, not one — and the stored record is unchanged after each;
   6. raising any action above `owner` is refused at the write;
   7. a batch save is all-or-nothing: one invalid entry rejects the submission and the stored record
      is byte-for-byte what it was;
@@ -1555,9 +1703,16 @@ Functions covered: `getPermissionMatrix`, `savePermissionMatrix`, `resetPermissi
      to `member` lets a member call `createInvitation` and `cancelInvitation`, and one that has not
      still refuses both with `ForbiddenError` naming the key; `removeMember` still lets a member
      remove themselves at every setting, because self-removal is outside the matrix;
-  9. `assertCanAdminister` is unchanged and still refuses a member on the four audit reads whatever
-     the matrix says, so the fixed floor cannot be lowered by a customisation;
-  10. the matrix is read once per scope: two `assertAction` calls against one scope object issue one
+  9. **the lowered `member.invite` does not become an escalation path, proved as a pair rather than
+     inferred from `10-S1`:** in a workspace that has lowered it, a `member` scope calling
+     `createInvitation` with `role: 'member'` succeeds, the same scope calling it with `role: 'admin'`
+     and with `role: 'owner'` raises `ForbiddenError` from `10-S1`'s ceiling and writes no row, and
+     `changeMemberRole` from that scope is still refused by the matrix at its pinned `admin` floor —
+     so neither guard is standing in for the other;
+  10. `assertCanAdminister` is unchanged and still refuses a member on the five callers that keep it
+      — the four audit reads and `deleteWorkspace` — whatever the matrix says, so a fixed floor
+      cannot be lowered by a customisation;
+  11. the matrix is read once per scope: two `assertAction` calls against one scope object issue one
       query, and a second scope issues a second one — the `WeakMap` is keyed by scope identity and
       the test asserts both halves rather than only the cheap one.
 - **Catalogue test — `src/lib/__tests__/permissions.test.ts`:** all sixteen keys match the dotted
@@ -1565,8 +1720,10 @@ Functions covered: `getPermissionMatrix`, `savePermissionMatrix`, `resetPermissi
   and a default; `mergeOverrides` is pure and never mutates its inputs.
 - **Component test — `src/components/administration/__tests__/permission-matrix.test.tsx`:** the
   save bar appears only when the grid is dirty and reports the exact change count; Discard restores
-  every row; a locked option is disabled with its reason exposed as an accessible description; the
-  reset dialog's confirm is not the initially focused control.
+  every row; the three pinned rows have their Member option disabled with the reason exposed as an
+  accessible description, and `member.invite`'s Member option is asserted **not** to be among them,
+  so a later tightening of the grid cannot quietly disable the row this stage argues must stay open;
+  the reset dialog's confirm is not the initially focused control.
 - **Browser evidence.** `/admin/permissions` at 360px, 1280px and 2560px in light and dark — six
   frames at rest — plus three declared non-resting states, each with its selector verified against a
   running server by asserting a count of exactly one in this stage's spec before capture:
@@ -1658,11 +1815,11 @@ precondition that turns out **not** to apply, and the freeze:
 
 ## Cross-plan collisions
 
-Run at the time of writing and pasted verbatim, because a judgement re-made by hand every round is
-eventually made wrong. `node scripts/ultrabuild/check-plan-collisions.mjs 10`:
+Both checks are run at the time of writing and pasted verbatim, because a judgement re-made by hand
+every round is eventually made wrong. First, `node scripts/ultrabuild/check-plan-collisions.mjs 10`:
 
 ```
-plans 13 · stages 91 · owned paths 553
+plans 13 · stages 91 · owned paths 541
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -1691,8 +1848,20 @@ touched by more than one plan in different waves (5) — legal; each plan must n
       10-administration.md  10-S4  wave 5  (edit)
 ```
 
-Reading it:
+Then `node scripts/ultrabuild/check-plan-refs.mjs 10`:
 
+```
+plan 10: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
+```
+
+Reading them:
+
+- **Zero dangling stage references.** Every `NN-Sn` token this file cites is defined by a `## Stage`
+  heading in the plan whose prefix it carries — `01-S6`, `00-S2`, `00-S3`, `00-S5`, `09-S3`, `09-S7`,
+  `09-S8`, `02-S10`, `01-S1`, `01-S5`, `01-S7`, `04-S2`, `11-S1`–`11-S3` and this file's own four.
+  The check is also what proves the four stages this file names as unparseable still exist under the
+  ids it gives them. And it reports no plan missing a Playwright invocation, which for this file is
+  the four `pnpm exec playwright test` blocks under the four **Verification** headings.
 - **No same-wave exclusive collision involves this plan.** No stage here shares an exclusive
   disposition on a file with another stage in the same wave, inside this plan or across the thirteen
   plans the check now reads. Note the shape of that guarantee: the check is over stages that state a
@@ -1747,6 +1916,14 @@ Reading it:
   it not at all. The same append pattern covers `e2e/administration.visual.spec.ts`, which `10-S2`
   creates in wave 1 and the other three add a `test.describe` to.
 - **The counts in the pasted output move between rounds, and that is expected rather than alarming.**
-  `plans 13 · stages 91 · owned paths 553` is what was measured on 2026-08-25 for this file, against
-  eight plans and 48 stages a round earlier. A later round re-runs the command and re-pastes it, and
+  `plans 13 · stages 91 · owned paths 541` is what was measured on 2026-08-25 for this file, against
+  `553` on the previous round's run of the same command, and against eight plans with 48 stages a
+  round before that. This file's own contribution is **49 owned-path bullets, unchanged by this
+  round's edits** — the same 49 the check parses from the previous commit's copy, measured by running
+  the check's own parser over both versions — so the whole of the difference is sibling plans being
+  edited while this one is. Measured directly during this round: three runs of the command inside one
+  hour returned `538`, `540` and `541` while the two lists below the counts came back byte-identical
+  every time, and `ls -lT docs/plans` put four sibling plans' modification times inside the same hour.
+  A total that moves is therefore not by itself a finding; the lists are the guarantee, and both were
+  re-read against the run pasted above. A later round re-runs the command and re-pastes it, and
   a path that appears then is named by whichever plan is written second.

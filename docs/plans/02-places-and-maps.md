@@ -647,22 +647,63 @@ a settings screen that 500s on a stale string is a worse product than one that s
 
 - **Route.** No new route file, therefore no `pnpm generate-routes`. `/settings/appearance` keeps its
   default SSR.
-- **Components.** Reused from `src/components/ui` and named because a second implementation is a
-  defect: `Card`, `SectionLabel`, `Field`, `Skeleton`, `Alert`, `Spinner`, and the focus ring and
-  transition helpers already exported from `src/components/ui`. Reused from `src/components/map`:
-  `MapCanvas` itself, at `interactive={false}` with `cooperativeGestures`, is the live preview — the
-  product's own renderer previewing the product's own cartography, rather than a screenshot that goes
-  stale. New: `src/routes/_app/-ui/basemap-picker.tsx`, a radio group of preview tiles.
-- **The grid.** A `role="radiogroup"` of five entries — workspace default, automatic, paper, charcoal,
-  quiet — each a real radio with a visible label, so the whole control is one tab stop with arrow-key
-  movement, and each carries the same hover lift, `focus-visible` ring, active press and disabled
-  wash as every other selectable card in the product. The selected entry is marked with a checked
-  radio and a brand-coloured hairline, never with colour alone.
+- **Components.** Reused from `src/components/ui`, imported through the barrel at
+  `src/components/ui/index.ts` the way every screen imports primitives today
+  (`src/routes/_app/settings/appearance.tsx:7`), and named here because a second implementation of an
+  existing primitive is a defect. The selection control itself is **`RadioGroup` plus `RadioCard`**
+  from `src/components/ui/radio-group.tsx`. Around it: `Card`, `SectionLabel`, `Field`, `Skeleton`,
+  `Alert`, `Spinner`, and the `focusRing`, `transitionBase` and `disabledState` helpers from
+  `src/components/ui/shared.ts`. Reused from `src/components/map`: `MapCanvas` itself, at
+  `interactive={false}` with `cooperativeGestures`, is the live preview, so the product's own renderer
+  previews the product's own cartography rather than a screenshot that goes stale. New:
+  `src/routes/_app/-ui/basemap-picker.tsx`, which composes those primitives, supplies the five
+  catalogue entries and mounts the preview. It defines no selection control of its own.
+- **`RadioGroup` and `RadioCard` are the control, not a suggestion.** Measured at HEAD, because this
+  is the bullet a builder is most likely to skip: `src/components/ui/radio-group.tsx` exports
+  `RadioGroup` (`:20`), `Radio` (`:46`), `RadioGroupItem` (`:83`) and `RadioCard` (`:157`), all
+  re-exported from `#/components/ui` (`src/components/ui/index.ts:35`), and
+  `grep -rn 'RadioCard\|RadioGroupItem' src --include='*.tsx' --include='*.ts'` returns **no match
+  outside that file**. The module is shipped, tokenised and unconsumed, and unconsumed is not absent:
+  building a second selectable-card control here is exactly the defect the previous bullet names.
+  `RadioCard` already carries what this grid needs, on the tokens this plan would otherwise re-derive:
+  `label`, `description`, `icon` and `meta` slots; a checked state of `--color-brand` border,
+  `--color-brand-subtle` fill and `shadow-card`; the `animate-pop-in` check badge that keeps selection
+  from being colour-only; and hover, `focus-visible`, active and disabled through `transitionBase`,
+  `focusRing` and `disabledState`. What this stage adds is the swatch it passes as `icon`, and nothing
+  else. If the swatch genuinely wants to become a full-bleed preview tile rather than a 36px leading
+  glyph, that is a prop on `RadioCard` in `src/components/ui/radio-group.tsx`, and
+  `src/components/ui/**` belongs to one primitive stage per wave in `00-foundations.md`, never to a
+  feature stage. The ritual that file fixes applies unchanged: state the requirement here, under this
+  **UI** heading, and stop; it is minted as a primitive stage there, and the leading-glyph form ships
+  meanwhile. Do not fork the primitive into `-ui/`, and do not list
+  `src/components/ui/radio-group.tsx` under this stage's owned paths, which would make the stage
+  malformed.
+- **The nearest precedent on that screen is the wrong one, and is out of scope.** The theme picker two
+  rows above lives in the same file this stage edits and is a hand-rolled `aria-pressed` `<button>`
+  grid with its own focus, transition and checked classes
+  (`src/routes/_app/settings/appearance.tsx:95-145`). It predates the primitive. Copying its shape is
+  how this stage would end up with a hand-rolled radio group, so it is named to be avoided rather than
+  imitated. It is equally **not** converted here: that would widen this stage's diff into a file
+  `09-S8` reworks in wave 3, so the conversion belongs to that stage, and this stage leaves the theme
+  grid byte-identical.
+- **The grid.** One `RadioGroup` whose `value` is the effective basemap id and whose `onValueChange`
+  saves, holding five `RadioCard` entries: workspace default, automatic, paper, charcoal, quiet. Radix
+  supplies the roving tabindex, so the whole group is one tab stop and arrow keys move and select,
+  which is why this is a real radio set rather than five buttons that behave like one. Each entry has
+  a visible label and a one-line `description`, so selection reads without colour, and the checked
+  entry additionally shows the brand border and the check badge. Every entry inherits the same hover,
+  `focus-visible`, active and disabled treatment as every other `RadioCard` in the product, because it
+  is the same component.
 - **The hook this stage publishes**, per the Area brief's register: each entry carries
-  `data-part="basemap-option"` and `value="<catalogue id>"` on its radio input, in
-  `src/routes/_app/-ui/basemap-picker.tsx`, which this stage owns. It is a new attribute — nothing
-  under `src/routes/_app/settings/**` publishes a `data-part` today — and it exists so the state
-  frame below has a selector that survives a restyle.
+  `data-part="basemap-option"` and `value="<catalogue id>"`, both spread through `RadioCard` onto the
+  element Radix renders, in `src/routes/_app/-ui/basemap-picker.tsx`, which this stage owns. Measured
+  rather than assumed, because the selector in the Verification block depends on it:
+  `@radix-ui/react-radio-group@1.4.7` renders a radio item as
+  `<button type="button" role="radio" data-state="…" value="<value>">` (`RadioTrigger` in its
+  `dist/index.mjs`), so `value` is a real attribute on the matched element and there is no `<input>`
+  to target. It is a new attribute, nothing under `src/routes/_app/settings/**`
+  publishes a `data-part` today, and it exists so the state frame below has a selector that survives a
+  restyle.
 - **The preview.** One `MapCanvas` beside the grid, framed on a fixed extent with a handful of sample
   pins, that re-styles as the selection changes. Only one canvas is mounted; the tiles in the grid are
   cheap static swatches built from the catalogue's own palette tokens, because five live WebGL
