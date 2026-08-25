@@ -1807,5 +1807,15 @@
     ],
     "id": "the-dev-server-for-this-worktree-is-up",
     "measuredIn": "round-11"
+  },
+  {
+    "id": "reverting-source-leaves-the-dev-server-serving-errors",
+    "measuredIn": "round-17",
+    "appliesTo": [
+      "mechanical",
+      "capture",
+      "builder"
+    ],
+    "claim": "Removing source files a running dev server has already loaded makes it answer 500 on unrelated routes. Measured after banking the atlas work on a branch: /pricing, /login, /legal/terms and /trips all returned 'should not be an error response' in Playwright, five failures across public and authenticated specs, while typecheck, lint, unit tests and build were all clean. Killing the listener, deleting node_modules/.vite and restarting took the same suite to 137 passed / 1 failed. Anything that removes or moves source must restart the dev server before the gate runs, or the gate reports the server's stale module graph as application defects."
   }
 ]
