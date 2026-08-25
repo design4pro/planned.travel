@@ -1918,5 +1918,26 @@
     ],
     "id": "resolve-port-sh-start-reused-an-already-running-owne",
     "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "In plan 13, the only transitions into the community_trips live set (status != 'withdrawn') are submitPublication's insert and its withdrawn→in_review update; no 13-S2 curator verdict re-enters a withdrawn row, so guarding submitPublication alone is sufficient and 13-S2's 'creates no countable row' Quota heading stays true.",
+    "evidence": "grep over docs/plans/13-community-gallery.md: face 5 'Publish again' (line 434) routes through submitPublication; 13-S2's verdict list (~line 648) only sets 'withdrawn' on hard remove and moves rows between live statuses otherwise; 13-S2 Quota heading (post-line 721) asserts status-transitions-only.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "in-plan-13-the-only-transitions-into-the-community-t",
+    "measuredIn": "plans-for-plugins run, round 4"
+  },
+  {
+    "claim": "resolve-port.sh --start reused the owned server on 3002 and the full gate is green end to end",
+    "evidence": "resolve-port printed 'reusing the server already answering on 3002'; playwright 138/0/5, vitest 3457/0, typecheck/lint/build all exit 0",
+    "scope": [
+      "mechanical",
+      "capture",
+      "auditor"
+    ],
+    "id": "resolve-port-sh-start-reused-the-owned-server-on-300",
+    "measuredIn": "plans-for-plugins run, round 4"
   }
 ]
