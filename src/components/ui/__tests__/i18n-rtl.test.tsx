@@ -4,16 +4,24 @@ import './test-env'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { addDays } from 'date-fns'
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { I18nProvider } from '#/lib/i18n'
+import { AvatarStack } from '../avatar-stack'
+import { CountBadge } from '../badge'
 import { Calendar } from '../calendar'
 import { Chip } from '../chip'
+import { DateRangePicker } from '../date-range-picker'
 import { Pagination } from '../pagination'
+import { Progress } from '../progress'
 import { Sheet, SheetContent, SheetTitle } from '../sheet'
+import { Skeleton } from '../skeleton'
+import { Slider } from '../slider'
 import { Spinner } from '../spinner'
+import { StatCard } from '../stat-card'
 import { Switch } from '../switch'
 import { Tabs, TabsList, TabsTrigger } from '../tabs'
 
@@ -204,6 +212,194 @@ describe('directional glyphs', () => {
     // Both arrows, and neither of the page buttons.
     expect(container.querySelectorAll('[data-mirror-rtl]')).toHaveLength(2)
   })
+
+  it('mirrors a rising delta, because a rise reads towards the start', () => {
+    const { container } = render(
+      <StatCard
+        label="Spend"
+        value="12"
+        trend={{ direction: 'up', value: '+4' }}
+      />,
+    )
+    expect(container.querySelectorAll('[data-mirror-rtl]')).toHaveLength(1)
+  })
+
+  it('leaves a flat delta alone, because a dash flips into itself', () => {
+    const { container } = render(
+      <StatCard
+        label="Spend"
+        value="12"
+        trend={{ direction: 'flat', value: '0' }}
+      />,
+    )
+    expect(container.querySelectorAll('[data-mirror-rtl]')).toHaveLength(0)
+  })
+
+  it('turns the skeleton shimmer round rather than letting it run backwards', () => {
+    const { container } = render(<Skeleton data-testid="block" />)
+    const block = screen.getByTestId('block')
+    expect(block.className).toContain('before:animate-shimmer')
+    expect(block.className).toContain('rtl:before:-scale-x-100')
+    // The pulse variant is opacity only, so it has nothing to turn round.
+    render(<Skeleton animation="pulse" data-testid="pulse" />, {
+      container: container.appendChild(document.createElement('div')),
+    })
+    expect(screen.getByTestId('pulse').className).not.toContain('scale-x')
+  })
+})
+
+/**
+ * Numbers a primitive writes itself.
+ *
+ * A number the caller hands in is the caller's to format, but these four write
+ * their own, and `String(n)` was ASCII digits with an ASCII group separator in
+ * every locale — the wrong separator in German, and a percent sign welded to the
+ * wrong end of the figure in Turkish. They go through `src/lib/format.ts`, whose
+ * tables are frozen against the workerd/WebKit divergence §8.5 calls a defect,
+ * and the affixes that used to be part of a template string are catalogue keys,
+ * so a translator can put the sign on the side their script puts it on.
+ *
+ * The locales here are chosen to make the assertions readable: German groups
+ * with a full stop and Turkish puts the percent sign in front, where French
+ * would have needed U+202F and U+00A0 spelled out as escapes. Measured while
+ * writing this: `intlLocale: 'ar'` in the frozen table resolves to CLDR's
+ * `latn` numbering system, so Arabic renders `1,234` rather than `١٢٣٤` — the
+ * Arabic-Indic digits belong to `ar-EG`, which we do not ship.
+ */
+describe('a number a primitive writes for itself', () => {
+  it('puts the percent sign where the locale puts it', () => {
+    render(withLocale('tr', {}, <Progress value={42} label="Budget" />))
+    expect(screen.getByText('%42')).not.toBeNull()
+  })
+
+  it('groups the figure the way the locale groups', () => {
+    render(
+      withLocale('de', {}, <Progress value={1234} max={10000} label="B" />),
+    )
+    expect(screen.getByText('12 %')).not.toBeNull()
+  })
+
+  it('lets an explicit valueText win over the primitive’s own', () => {
+    render(
+      withLocale(
+        'de',
+        {},
+        <Progress value={42} label="Budget" valueText="5 GB" />,
+      ),
+    )
+    expect(screen.getByText('5 GB')).not.toBeNull()
+  })
+
+  it('takes the count badge’s cap marker from the catalogue', () => {
+    render(
+      withLocale(
+        'de',
+        { 'ui.badge.overflow': '{max}+' },
+        <CountBadge count={1234} />,
+      ),
+    )
+    expect(screen.getByText('99+')).not.toBeNull()
+  })
+
+  it('groups a count that is under the cap', () => {
+    render(withLocale('de', {}, <CountBadge count={1234} max={9999} />))
+    expect(screen.getByText('1.234')).not.toBeNull()
+  })
+
+  /**
+   * A plural message's number is two things at once, and §8 splits them.
+   *
+   * `count` chooses the CLDR branch — one branch in Japanese, six in Arabic —
+   * and never reaches the sentence. The figure the reader sees goes through the
+   * frozen formatter first and arrives as an already-grouped string, because a
+   * raw `{count}` renders ASCII digits with no separator in every one of the
+   * twenty-three locales. German is the readable assertion: it groups with a
+   * full stop, so `1.234` proves the formatter ran and `1234` proves it did not.
+   */
+  it('groups the figure in a plural message while count still picks the branch', () => {
+    const from = new Date(2026, 0, 1)
+    render(
+      withLocale(
+        'de',
+        {
+          'ui.dateRange.nights': {
+            one: '{nights} Nacht',
+            other: '{nights} Nächte',
+          },
+        },
+        <DateRangePicker
+          ariaLabel="Reisedaten"
+          presets={[]}
+          value={{ from, to: addDays(from, 1234) }}
+        />,
+      ),
+    )
+    expect(
+      screen.getByRole('button', { name: 'Reisedaten' }).textContent,
+    ).toContain('1.234 Nächte')
+  })
+
+  it('takes the singular branch from count, not from the formatted string', () => {
+    const from = new Date(2026, 0, 1)
+    render(
+      withLocale(
+        'de',
+        {
+          'ui.dateRange.nights': {
+            one: '{nights} Nacht',
+            other: '{nights} Nächte',
+          },
+        },
+        <DateRangePicker
+          ariaLabel="Reisedaten"
+          presets={[]}
+          value={{ from, to: addDays(from, 1) }}
+        />,
+      ),
+    )
+    expect(
+      screen.getByRole('button', { name: 'Reisedaten' }).textContent,
+    ).toContain('1 Nacht')
+  })
+
+  it('lets an RTL catalogue move the overflow sign to the other side', () => {
+    render(
+      withLocale(
+        'ar',
+        { ...AR, 'ui.avatar.more': '{hidden}+' },
+        <AvatarStack
+          people={[
+            { id: '1', name: 'Mira' },
+            { id: '2', name: 'Tomas' },
+            { id: '3', name: 'Ana' },
+          ]}
+          max={1}
+        />,
+      ),
+    )
+    expect(screen.getByText('2+')).not.toBeNull()
+  })
+
+  it('groups a slider bubble, and steps aside for an explicit formatter', () => {
+    const { rerender } = render(
+      withLocale('de', {}, <Slider showValue value={[2500]} max={5000} />),
+    )
+    expect(screen.getByText('2.500')).not.toBeNull()
+
+    rerender(
+      withLocale(
+        'de',
+        {},
+        <Slider
+          showValue
+          value={[2500]}
+          max={5000}
+          formatValue={(next) => `${next} km`}
+        />,
+      ) as never,
+    )
+    expect(screen.getByText('2500 km')).not.toBeNull()
+  })
 })
 
 /**
@@ -260,6 +456,117 @@ describe('the directory itself', () => {
         PHYSICAL,
       )
       expect(found ?? []).toEqual([])
+    })
+  }
+
+  /**
+   * The other half of §8.4, and the harder one.
+   *
+   * A transform, a `transform-origin` and a gradient direction have **no**
+   * logical spelling in CSS: there is no `translate-inline`, no
+   * `transform-origin: inline-start`, and `linear-gradient()` takes physical
+   * keywords only. So the utilities below cannot be converted, only *decided*,
+   * and each occurrence has to be one of exactly three things:
+   *
+   * - a **centring half** — `-translate-x-1/2` under `left-1/2`, which lands on
+   *   the same pixel in both directions and needs no sign at all;
+   * - a **signed custom property** resolved once from the negotiated direction,
+   *   which is what `switch.tsx` and `tabs.tsx` do and why: Tailwind compiles
+   *   `rtl:` to a zero-specificity `:where()`, so two competing `translate`
+   *   utilities would be settled by emission order rather than by intent;
+   * - a **mirrored ancestor** — an `rtl:-scale-x-100` that turns the whole
+   *   symmetrical box round, which is how `progress.tsx` reverses its
+   *   indeterminate sweep and `skeleton.tsx` its shimmer.
+   *
+   * The table is the whole inventory. A new unguarded `translate-x-*` fails
+   * here, which is the only place it would fail before someone opened Arabic.
+   */
+  const PHYSICAL_TRANSFORM = new RegExp(
+    [
+      String.raw`-?translate-x-[^\s'"\`]+`,
+      String.raw`\borigin-(?:left|right)\b`,
+      String.raw`\bfloat-(?:left|right)\b`,
+      String.raw`\bbg-(?:linear|gradient)-to-(?:l|r)\b`,
+    ].join('|'),
+    'g',
+  )
+
+  /** Every occurrence in the directory, and the decision that covers it. */
+  const DECIDED: Readonly<Partial<Record<string, ReadonlyArray<string>>>> = {
+    // Centred over the viewport; symmetrical, so no sign.
+    'fab.tsx': ['-translate-x-1/2'],
+    // The value bubble over a thumb, and a tick mark. Both centred.
+    'slider.tsx': ['-translate-x-1/2', '-translate-x-1/2'],
+    // Signed once from `dir`, so the thumb never leaves the track.
+    'switch.tsx': ['translate-x-0', 'translate-x-(--thumb-travel)'],
+    // Signed once from `dir`, so the pill walks with the reader.
+    'tabs.tsx': ['translate-x-[calc(var(--tab-index)*var(--tab-dir)*100%)]'],
+    // Read through the track's own `rtl:-scale-x-100`.
+    'progress.tsx': ['origin-left'],
+    // Read through the pseudo-element's own `rtl:before:-scale-x-100`.
+    'skeleton.tsx': ['bg-linear-to-r'],
+  }
+
+  /** The mirror or the sign that makes an entry above correct. */
+  const GUARD: Readonly<Partial<Record<string, string>>> = {
+    'switch.tsx': "dir === 'rtl'",
+    'tabs.tsx': "dir === 'rtl'",
+    'progress.tsx': 'rtl:-scale-x-100',
+    'skeleton.tsx': 'rtl:before:-scale-x-100',
+  }
+
+  for (const name of files) {
+    it(`${name} has decided every physical transform it uses`, () => {
+      const source = code(readFileSync(join(directory, name), 'utf8'))
+      expect(source.match(PHYSICAL_TRANSFORM) ?? []).toEqual(
+        DECIDED[name] ?? [],
+      )
+      const guard = GUARD[name]
+      if (guard !== undefined) expect(source).toContain(guard)
+    })
+  }
+
+  /**
+   * The inline half, and the hole the two tables above could not see.
+   *
+   * A utility class is not the only way to write a transform. `progress.tsx`
+   * positioned its determinate fill with an inline
+   * `style={{ transform: 'translateX(-75%)' }}`, which no regex over Tailwind
+   * class names can match — and because the reduced-motion block in
+   * `src/styles/styles.css` resets `transform` to `none !important` on
+   * `[data-motion-transform]`, that single declaration painted **every**
+   * determinate bar as a completely full track for any reader with
+   * reduce-motion on. It survived three rounds: both directions were correct,
+   * every locale was correct, the console was clean, and the class-level guard
+   * above had nothing to look at.
+   *
+   * So inline declarations are inventoried the same way class ones are, and
+   * `transform` in particular is banned outright. `translate`, `scale` and
+   * `rotate` are separate CSS properties — measured against the installed
+   * Tailwind 4.3.3, which compiles `translate-x-*` to `translate` and
+   * `-scale-x-100` to `scale` — and they are not what that rule resets. An
+   * inline `transform` is therefore one of two mistakes: motion, which belongs
+   * in a class where the reset can reach it, or a value, which must never be
+   * reset at all.
+   */
+  const INLINE_TRANSFORM =
+    /\b(?:transform|translate|scale|rotate)\s*:\s*(?:`[^`]*`|'[^']*'|"[^"]*"|[\w.%-]+)/g
+
+  /** Every inline transform-family declaration in the directory, and its reason. */
+  const DECIDED_INLINE: Readonly<
+    Partial<Record<string, ReadonlyArray<string>>>
+  > = {
+    // The value, not motion: `translate` survives the reduced-motion reset,
+    // and the track's own `rtl:-scale-x-100` turns it round for Arabic.
+    'progress.tsx': ['translate: `-${100 - drawn}% 0`'],
+  }
+
+  for (const name of files) {
+    it(`${name} has decided every inline transform it uses`, () => {
+      const source = code(readFileSync(join(directory, name), 'utf8'))
+      const found = source.match(INLINE_TRANSFORM) ?? []
+      expect(found).toEqual(DECIDED_INLINE[name] ?? [])
+      expect(found.filter((entry) => entry.startsWith('transform'))).toEqual([])
     })
   }
 })

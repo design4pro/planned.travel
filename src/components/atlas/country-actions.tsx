@@ -15,10 +15,12 @@ import {
   useAction,
   useOptimistic,
 } from '#/components/modules/shared'
+import { useAtlasI18n } from '#/components/map'
 import { cn } from '#/lib/cn'
 import { countryName } from '#/lib/atlas/country-names'
-import { UNRECORDED_VISIT_LABEL, visitSpan } from '#/lib/atlas/visit-span'
-import { pluralise } from '#/lib/format'
+import { visitSpan } from '#/lib/atlas/visit-span'
+import { formatNumber } from '#/lib/format'
+import { visitLine } from './visit-copy'
 import {
   addCountryToBucketListFn,
   markCountryVisitedFn,
@@ -27,6 +29,7 @@ import {
 } from '#/server/fns/atlas'
 
 import type { ConfirmRequest } from '#/components/modules/shared'
+import type { Locale, Translate } from '#/lib/i18n'
 import type { AtlasCountryState } from '#/server/fns/atlas'
 
 /**
@@ -288,14 +291,21 @@ interface RowCopy {
 /**
  * The recorded days, printed once.
  *
- * `visitSpan` writes the single-day case as "Visited 4 Dec 2021", which is right
- * on a record card and wrong twice over here: under a row already headed
- * "Visited", and inside a sentence that has already said "recorded visit". Every
- * other shape it returns is a bare span and is used as it stands.
+ * The single-day case is the date alone: this row is already headed "Visited",
+ * and the sentence below has already said "recorded visit". `visitLine()` is
+ * the shared reading, so the days here and the days in the record above cannot
+ * disagree about a country.
  */
-function spanLine(visit: CountryActionsVisit): string {
-  const span = visitSpan(visit.firstVisitedOn, visit.lastVisitedOn)
-  return span.kind === 'single' ? span.date.label : span.summary
+function spanLine(
+  visit: CountryActionsVisit,
+  t: Translate,
+  locale: Locale,
+): string {
+  return visitLine(
+    visitSpan(visit.firstVisitedOn, visit.lastVisitedOn),
+    t,
+    locale,
+  )
 }
 
 /**
@@ -311,51 +321,71 @@ function spanLine(visit: CountryActionsVisit): string {
 function visitCopy(
   visited: boolean,
   visit: CountryActionsVisit | null,
+  t: Translate,
+  locale: Locale,
 ): RowCopy {
   if (!visited) {
     return {
-      title: 'Not visited',
-      caption: 'A visit with no trip behind it.',
+      title: t('atlas.actions.visit.absent.title'),
+      caption: t('atlas.actions.visit.absent.caption'),
     }
   }
   if (visit === null) {
-    return { title: 'Visited', caption: UNRECORDED_VISIT_LABEL }
+    return {
+      title: t('atlas.actions.visit.title'),
+      caption: t('atlas.record.datesUnrecorded'),
+    }
   }
-  const dates = spanLine(visit)
+  const dates = spanLine(visit, t, locale)
   return {
-    title: 'Visited',
+    title: t('atlas.actions.visit.title'),
     // The tally is only worth the words when it is more than one, and the
     // record above this block already carries the count as a badge.
     caption:
       visit.visitCount > 1
-        ? `${pluralise(visit.visitCount, 'visit')} · ${dates}`
+        ? t('atlas.actions.visit.caption', {
+            visits: t('atlas.record.visits', {
+              count: visit.visitCount,
+              visits: formatNumber(visit.visitCount, locale),
+            }),
+            dates,
+          })
         : dates,
   }
 }
 
 /** What the bucket-list row says, in the same three shapes. */
-function goalCopy(listed: boolean, goal: CountryActionsGoal | null): RowCopy {
+function goalCopy(
+  listed: boolean,
+  goal: CountryActionsGoal | null,
+  t: Translate,
+): RowCopy {
   if (!listed) {
     return {
-      title: 'Not on the list',
-      caption: 'Somewhere you mean to go.',
+      title: t('atlas.actions.goal.absent.title'),
+      caption: t('atlas.actions.goal.absent.caption'),
     }
   }
   if (goal === null) {
-    return { title: 'On the bucket list', caption: 'Waiting for its turn.' }
+    return {
+      title: t('atlas.actions.goal.title'),
+      caption: t('atlas.actions.goal.waiting'),
+    }
   }
   if (goal.isAchieved) {
     return {
-      title: 'Ticked off the list',
-      caption: 'You got there. The entry stays as the record.',
+      title: t('atlas.actions.goal.achieved.title'),
+      caption: t('atlas.actions.goal.achieved.caption'),
     }
   }
   return {
-    title: 'On the bucket list',
+    title: t('atlas.actions.goal.title'),
     caption:
       goal.targetYear === null
-        ? 'Waiting for its turn.'
-        : `Aiming for ${goal.targetYear}.`,
+        ? t('atlas.actions.goal.waiting')
+        : // A year is written out, never grouped: `2,027` is a quantity, and
+          // every numbering system the twenty-three tags carry is `latn`.
+          t('atlas.actions.goal.target', { year: String(goal.targetYear) }),
   }
 }
 
@@ -400,41 +430,46 @@ interface RowControl {
 }
 
 /** The atlas row's control, in both directions. */
-function visitControl(intent: RowIntent, name: string): RowControl {
+function visitControl(
+  intent: RowIntent,
+  name: string,
+  t: Translate,
+): RowControl {
   return intent === 'remove'
     ? {
         intent,
-        label: 'Remove',
-        restName: `Remove ${name} from your atlas`,
-        busyName: `Removing ${name} from your atlas`,
+        label: t('atlas.actions.button.remove'),
+        restName: t('atlas.actions.visit.remove.name', { name }),
+        busyName: t('atlas.actions.visit.remove.busy', { name }),
       }
     : {
         intent,
-        label: 'Mark visited',
-        restName: `Mark visited, ${name}`,
-        busyName: `Marking ${name} as visited`,
+        label: t('atlas.actions.button.mark'),
+        restName: t('atlas.actions.visit.add.name', { name }),
+        busyName: t('atlas.actions.visit.add.busy', { name }),
       }
 }
 
 /** The bucket-list row's control, in both directions. */
-function goalControl(intent: RowIntent, name: string): RowControl {
+function goalControl(
+  intent: RowIntent,
+  name: string,
+  t: Translate,
+): RowControl {
   return intent === 'remove'
     ? {
         intent,
-        label: 'Remove',
-        restName: `Remove ${name} from your bucket list`,
-        busyName: `Removing ${name} from your bucket list`,
+        label: t('atlas.actions.button.remove'),
+        restName: t('atlas.actions.goal.remove.name', { name }),
+        busyName: t('atlas.actions.goal.remove.busy', { name }),
       }
     : {
         intent,
-        label: 'Add to list',
-        restName: `Add to list, ${name}`,
-        busyName: `Adding ${name} to your bucket list`,
+        label: t('atlas.actions.button.add'),
+        restName: t('atlas.actions.goal.add.name', { name }),
+        busyName: t('atlas.actions.goal.add.busy', { name }),
       }
 }
-
-/** The resting line under the rows. Replaced by a failure, never by silence. */
-const HINT = 'Both take effect straight away, and both can be undone here.'
 
 /**
  * True when the visit is somebody's travel history rather than the undo of a
@@ -450,13 +485,33 @@ function hasVisitHistory(visit: CountryActionsVisit): boolean {
   )
 }
 
-/** What a confirmed removal says it is about to clear. */
-function visitLossLine(visit: CountryActionsVisit): string {
+/**
+ * What a confirmed removal says it is about to clear.
+ *
+ * The two optional clauses are keys of their own rather than English fragments
+ * spliced into a translated sentence, so the bracket and the comma belong to
+ * whoever is writing the language.
+ */
+function visitLossLine(
+  visit: CountryActionsVisit,
+  t: Translate,
+  locale: Locale,
+): string {
   const span = visitSpan(visit.firstVisitedOn, visit.lastVisitedOn)
-  const dates = span.kind === 'unrecorded' ? '' : ` (${spanLine(visit)})`
-  const note =
-    (visit.note ?? '').trim() === '' ? '' : ', and the note you wrote with it'
-  return `${pluralise(visit.visitCount, 'recorded visit')}${dates} would be cleared${note}. Your trips and saved places are not touched.`
+  return t('atlas.actions.confirm.visit.body', {
+    count: visit.visitCount,
+    visits: formatNumber(visit.visitCount, locale),
+    dates:
+      span.kind === 'unrecorded'
+        ? ''
+        : t('atlas.actions.confirm.visit.dates', {
+            span: spanLine(visit, t, locale),
+          }),
+    note:
+      (visit.note ?? '').trim() === ''
+        ? ''
+        : t('atlas.actions.confirm.visit.note'),
+  })
 }
 
 /* ------------------------------------------------------------- transport */
@@ -468,10 +523,6 @@ function visitLossLine(visit: CountryActionsVisit): string {
  */
 const TRANSPORT_FAILURE =
   /failed to fetch|load failed|network ?error|network request failed/i
-
-/** The one sentence a reader gets when the request never reached the server. */
-const OFFLINE_MESSAGE =
-  'Your device could not reach the server. Check the connection and try again.'
 
 /**
  * Wraps a write so a transport failure arrives in our own voice.
@@ -486,13 +537,14 @@ const OFFLINE_MESSAGE =
  */
 function readable<TInput, TResult>(
   write: (input: TInput) => Promise<TResult>,
+  offline: () => string,
 ): (input: TInput) => Promise<TResult> {
   return async (input: TInput): Promise<TResult> => {
     try {
       return await write(input)
     } catch (cause) {
       if (cause instanceof Error && TRANSPORT_FAILURE.test(cause.message)) {
-        throw new Error(OFFLINE_MESSAGE, { cause })
+        throw new Error(offline(), { cause })
       }
       throw cause
     }
@@ -500,14 +552,25 @@ function readable<TInput, TResult>(
 }
 
 /**
- * Wrapped once at module scope, not per render: `useAction` memoises `run` on
- * the function it was handed, and a fresh wrapper every render would hand it a
- * new identity every time.
+ * The four writes, wrapped once per translator rather than once per render.
+ *
+ * `useAction` memoises `run` on the function it was handed, so a fresh wrapper
+ * every render would hand it a new identity every time. `t` is itself memoised
+ * — the provider rebuilds it only when the locale or the catalogue changes, and
+ * the no-provider branch is a frozen module constant — so keying the memo on it
+ * gives the same stability while letting the offline sentence be the reader's.
  */
-const markVisited = readable(markCountryVisitedFn)
-const unmarkVisited = readable(unmarkCountryVisitedFn)
-const addGoalToList = readable(addCountryToBucketListFn)
-const dropGoalFromList = readable(removeCountryFromBucketListFn)
+function useWrites(t: Translate) {
+  return React.useMemo(() => {
+    const offline = (): string => t('atlas.actions.offline')
+    return {
+      mark: readable(markCountryVisitedFn, offline),
+      unmark: readable(unmarkCountryVisitedFn, offline),
+      addGoal: readable(addCountryToBucketListFn, offline),
+      dropGoal: readable(removeCountryFromBucketListFn, offline),
+    }
+  }, [t])
+}
 
 /* ------------------------------------------------------------------ answers */
 
@@ -681,6 +744,8 @@ export const CountryActions = React.forwardRef<
     { countryCode, visit, bucketGoal, headingLevel = 4, className, ...props },
     ref,
   ) => {
+    const { locale, t } = useAtlasI18n()
+    const writes = useWrites(t)
     const rowId = React.useId()
     const code = countryCode.trim().toUpperCase()
     const name = countryName(code)
@@ -725,17 +790,17 @@ export const CountryActions = React.forwardRef<
 
     const closeConfirm = React.useCallback(() => setConfirm(null), [])
 
-    const mark = useAction(markVisited, {
-      success: 'Marked as visited',
-      description: `${name} is on your atlas.`,
-      failure: `${name} was not marked`,
-      fallback: 'The change did not reach the server. Try again in a moment.',
+    const mark = useAction(writes.mark, {
+      success: t('atlas.actions.toast.marked'),
+      description: t('atlas.actions.toast.markedBody', { name }),
+      failure: t('atlas.actions.toast.markFailed', { name }),
+      fallback: t('atlas.actions.toast.fallback'),
     })
-    const unmark = useAction(unmarkVisited, {
-      success: 'Removed from your atlas',
-      description: `${name} is no longer marked as visited.`,
-      failure: `${name} was not removed`,
-      fallback: 'The change did not reach the server. Try again in a moment.',
+    const unmark = useAction(writes.unmark, {
+      success: t('atlas.actions.toast.unmarked'),
+      description: t('atlas.actions.toast.unmarkedBody', { name }),
+      failure: t('atlas.actions.toast.unmarkFailed', { name }),
+      fallback: t('atlas.actions.toast.fallback'),
       onSuccess: closeConfirm,
       // A confirmation that stays open over a failure hides the only durable
       // copy of the reason: the strip lives under the rows, behind the modal's
@@ -744,17 +809,17 @@ export const CountryActions = React.forwardRef<
       // take again.
       onError: closeConfirm,
     })
-    const addGoal = useAction(addGoalToList, {
-      success: 'Added to your bucket list',
-      description: `${name} is somewhere you mean to go.`,
-      failure: `${name} was not added`,
-      fallback: 'The change did not reach the server. Try again in a moment.',
+    const addGoal = useAction(writes.addGoal, {
+      success: t('atlas.actions.toast.listed'),
+      description: t('atlas.actions.toast.listedBody', { name }),
+      failure: t('atlas.actions.toast.listFailed', { name }),
+      fallback: t('atlas.actions.toast.fallback'),
     })
-    const dropGoal = useAction(dropGoalFromList, {
-      success: 'Removed from your bucket list',
-      description: `${name} is no longer on the list.`,
-      failure: `${name} was not removed`,
-      fallback: 'The change did not reach the server. Try again in a moment.',
+    const dropGoal = useAction(writes.dropGoal, {
+      success: t('atlas.actions.toast.unlisted'),
+      description: t('atlas.actions.toast.unlistedBody', { name }),
+      failure: t('atlas.actions.toast.unlistFailed', { name }),
+      fallback: t('atlas.actions.toast.fallback'),
       onSuccess: closeConfirm,
       onError: closeConfirm,
     })
@@ -952,9 +1017,9 @@ export const CountryActions = React.forwardRef<
       }
       if (visit !== null && hasVisitHistory(visit)) {
         setConfirm({
-          title: `Remove ${name} from your atlas?`,
-          description: visitLossLine(visit),
-          confirmLabel: 'Remove',
+          title: t('atlas.actions.confirm.visit.title', { name }),
+          description: visitLossLine(visit, t, locale),
+          confirmLabel: t('atlas.actions.button.remove'),
           onConfirm: runUnmark,
         })
         return
@@ -975,10 +1040,9 @@ export const CountryActions = React.forwardRef<
       const itemId = goal.id
       if (goal.isAchieved) {
         setConfirm({
-          title: `Remove ${name} from your bucket list?`,
-          description:
-            'It is already ticked off, so this also removes the record that you got there. Your atlas and your trips are not touched.',
-          confirmLabel: 'Remove',
+          title: t('atlas.actions.confirm.goal.title', { name }),
+          description: t('atlas.actions.confirm.goal.body'),
+          confirmLabel: t('atlas.actions.button.remove'),
           onConfirm: () => runDropGoal(itemId),
         })
         return
@@ -986,8 +1050,8 @@ export const CountryActions = React.forwardRef<
       runDropGoal(itemId)
     }
 
-    const visitText = visitCopy(visited, visit)
-    const goalText = goalCopy(listed, goalRow)
+    const visitText = visitCopy(visited, visit, t, locale)
+    const goalText = goalCopy(listed, goalRow, t)
     const Heading = HEADINGS[headingLevel]
     const visitTitleId = `${rowId}-visit`
     const goalTitleId = `${rowId}-goal`
@@ -996,8 +1060,8 @@ export const CountryActions = React.forwardRef<
     /** Busy on the control itself, which is not the same as busy in the block. */
     const visitBusy = visitPending && !confirming
     const goalBusy = goalPending && !confirming
-    const visitAction = visitControl(visitIntent, name)
-    const goalAction = goalControl(goalIntent, name)
+    const visitAction = visitControl(visitIntent, name, t)
+    const goalAction = goalControl(goalIntent, name, t)
 
     return (
       <div
@@ -1009,7 +1073,7 @@ export const CountryActions = React.forwardRef<
         className={cn(layout.root, className)}
         {...props}
       >
-        <SectionLabel as={Heading}>Your record</SectionLabel>
+        <SectionLabel as={Heading}>{t('atlas.actions.label')}</SectionLabel>
 
         <div className={layout.rows}>
           <div
@@ -1097,7 +1161,9 @@ export const CountryActions = React.forwardRef<
 
         <p ref={messageRef} data-part="message" className={layout.message}>
           {message.text === '' ? (
-            <span className={cn(layout.messageText, 'text-ink-3')}>{HINT}</span>
+            <span className={cn(layout.messageText, 'text-ink-3')}>
+              {t('atlas.actions.hint')}
+            </span>
           ) : (
             <>
               <TriangleAlert

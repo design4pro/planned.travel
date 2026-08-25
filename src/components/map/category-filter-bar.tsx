@@ -10,7 +10,9 @@ import {
   focusRing,
   transitionBase,
 } from '#/components/ui'
+import { formatNumber } from '#/lib/format'
 import { CategoryIcon } from './category-icon'
+import { useAtlasCopy, useAtlasI18n } from './copy'
 import { useRovingFocus } from './use-roving-focus'
 
 import type { MapCategory } from './types'
@@ -28,6 +30,7 @@ export interface CategoryFilterBarProps {
   /** Total places, shown on the "All" chip. */
   readonly total?: number
   readonly className?: string
+  /** Accessible name for the toolbar. Defaults to the translated one. */
   readonly label?: string
 }
 
@@ -54,11 +57,16 @@ function CategoryButton({
   onToggle,
   item,
 }: CategoryButtonProps) {
+  const { locale, t } = useAtlasI18n()
   const vars: CategoryVars = { '--map-category': category.colour }
   const hint =
     count === undefined
       ? category.name
-      : `${category.name} · ${count} ${count === 1 ? 'place' : 'places'}`
+      : t('atlas.map.filter.category', {
+          count,
+          name: category.name,
+          places: formatNumber(count, locale),
+        })
 
   return (
     <Tooltip content={hint} side="bottom">
@@ -82,7 +90,7 @@ function CategoryButton({
         <span
           aria-hidden="true"
           className={cn(
-            'absolute right-1 bottom-1 size-1.5 rounded-full bg-(--map-category)',
+            'absolute end-1 bottom-1 size-1.5 rounded-full bg-(--map-category)',
             selected && 'ring-1 ring-accent-on/40',
           )}
         />
@@ -108,8 +116,9 @@ export function CategoryFilterBar({
   counts,
   total,
   className,
-  label = 'Filter places by category',
+  label,
 }: CategoryFilterBarProps) {
+  const t = useAtlasCopy()
   const selectedSet = React.useMemo(() => new Set(selected), [selected])
   // The "All" chip is the first item in the roving order.
   const roving = useRovingFocus({
@@ -129,7 +138,7 @@ export function CategoryFilterBar({
   return (
     <TooltipProvider delayDuration={400} skipDelayDuration={200}>
       <GlassToolbar
-        label={label}
+        label={label ?? t('atlas.map.filter.label')}
         onKeyDown={roving.onKeyDown}
         className={cn(
           // `z-map-overlay`, not `z-dropdown`: map chrome sits below the app nav
@@ -150,7 +159,7 @@ export function CategoryFilterBar({
           className="shrink-0"
           {...roving.itemProps(0)}
         >
-          All
+          {t('atlas.map.filter.all')}
         </Chip>
 
         {categories.map((category, index) => (

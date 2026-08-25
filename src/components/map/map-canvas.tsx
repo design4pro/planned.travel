@@ -54,6 +54,7 @@ import {
   MapProvider,
 } from './map-context'
 import { BasemapNotice, MapEngineNotice } from './basemap-notice'
+import { useAtlasCopy } from './copy'
 import { MapAttribution } from './map-attribution'
 
 import type { MapOptions } from 'maplibre-gl'
@@ -294,6 +295,7 @@ export function MapCanvas({
   children,
   chrome,
 }: MapCanvasProps) {
+  const t = useAtlasCopy()
   const containerRef = React.useRef<HTMLDivElement | null>(null)
   const [gl, setGl] = React.useState<MapLibreModule | null>(null)
   const [map, setMap] = React.useState<MapLibreMap | null>(null)
@@ -795,7 +797,7 @@ export function MapCanvas({
         >
           <span className="flex items-center gap-2 rounded-full bg-glass px-3 py-1.5 text-caption text-ink-3 ring-1 ring-glass-edge ring-inset backdrop-glass">
             <Spinner size="xs" label={null} />
-            Loading map
+            {t('atlas.map.loading')}
           </span>
         </div>
       ) : null}

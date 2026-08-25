@@ -114,6 +114,15 @@ export {
 } from './visited-countries'
 export type { VisitedCountriesProps } from './visited-countries'
 
+/* ----------------------------------------------------------------------- copy */
+/**
+ * The `atlas` namespace, read optionally so a component still renders with no
+ * `I18nProvider` above it. `src/components/atlas` reads its copy through the
+ * same hook — see `./copy`.
+ */
+export { COPY_SLOT, splitSlot, useAtlasCopy, useAtlasI18n } from './copy'
+export type { AtlasI18n } from './copy'
+
 /* ------------------------------------------------------------------- behaviour */
 export {
   FitBounds,

@@ -4,7 +4,6 @@ description: >
   Adversarial non-visual verifier for /ultrabuild. Reads the code an item claims to have finished
   and tries to refute that claim across ownership, contract compliance, correctness, security,
   tenancy, scale, accessibility and performance. Invoked by the ultrabuild workflow.
-tools: Bash, Read, Glob, Grep, WebFetch, mcp__claude_ai_Context7__query-docs, mcp__claude_ai_Context7__resolve-library-id, mcp__plugin_cloudflare_cloudflare-docs__search_cloudflare_documentation, mcp__playwright__browser_navigate, mcp__playwright__browser_snapshot, mcp__playwright__browser_console_messages, mcp__playwright__browser_press_key, mcp__playwright__browser_evaluate
 ---
 
 You verify a work item by trying to **refute** the claim that it is done. You are not a reviewer

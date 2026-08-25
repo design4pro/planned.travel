@@ -1,9 +1,14 @@
 import { useState } from 'react'
-import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { BadgeCheck, Building2, Save, TriangleAlert } from 'lucide-react'
+import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import {
+  BadgeCheck,
+  Building2,
+  ChevronRight,
+  Save,
+  TriangleAlert,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
-import { ErrorPanel } from '#/components/layout/error-state'
 import {
   Avatar,
   Badge,
@@ -13,120 +18,115 @@ import {
   SimpleSelect,
   Skeleton,
 } from '#/components/ui'
-import { loadProfile, saveRegionalSettings } from '../-server/settings'
-import { formatDate, humaniseToken } from '../-lib/format'
+import { localeDescriptor, useLocale, useTranslate } from '#/lib/i18n'
+import { loadProfile } from '../-server/settings'
+import { formatDate } from '../-lib/format'
 import { SettingsRow, SettingsSection } from '../-ui/settings-nav'
+import { saveRegionalOverrides } from './-server/preferences'
+import { RouteError } from './-ui/route-error'
+import {
+  FOLLOW_DEFAULT,
+  currencyLabel,
+  currencyOptions,
+  dateFormatLabel,
+  dateFormatOptions,
+  distanceLabel,
+  distanceOptions,
+  roleLabel,
+  timeZoneLabel,
+  timeZoneOptions,
+  weekStartLabel,
+  weekStartOptions,
+  withWorkspaceDefault,
+} from './-lib/regional'
 
-const DEFAULT = 'default'
-
-const LOCALES: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'en-GB', label: 'English (United Kingdom)' },
-  { value: 'en-US', label: 'English (United States)' },
-  { value: 'de-DE', label: 'German (Germany)' },
-  { value: 'fr-FR', label: 'French (France)' },
-  { value: 'es-ES', label: 'Spanish (Spain)' },
-  { value: 'it-IT', label: 'Italian (Italy)' },
-  { value: 'pl-PL', label: 'Polish (Poland)' },
-  { value: 'ja-JP', label: 'Japanese (Japan)' },
-]
-
-const TIMEZONES: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'UTC', label: 'UTC' },
-  { value: 'Europe/London', label: 'London' },
-  { value: 'Europe/Dublin', label: 'Dublin' },
-  { value: 'Europe/Paris', label: 'Paris' },
-  { value: 'Europe/Berlin', label: 'Berlin' },
-  { value: 'Europe/Warsaw', label: 'Warsaw' },
-  { value: 'Europe/Madrid', label: 'Madrid' },
-  { value: 'America/New_York', label: 'New York' },
-  { value: 'America/Chicago', label: 'Chicago' },
-  { value: 'America/Los_Angeles', label: 'Los Angeles' },
-  { value: 'Asia/Tokyo', label: 'Tokyo' },
-  { value: 'Asia/Singapore', label: 'Singapore' },
-  { value: 'Australia/Sydney', label: 'Sydney' },
-]
-
-const CURRENCIES: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'EUR', label: 'EUR — Euro' },
-  { value: 'GBP', label: 'GBP — Pound sterling' },
-  { value: 'USD', label: 'USD — US dollar' },
-  { value: 'CHF', label: 'CHF — Swiss franc' },
-  { value: 'PLN', label: 'PLN — Polish złoty' },
-  { value: 'SEK', label: 'SEK — Swedish krona' },
-  { value: 'JPY', label: 'JPY — Japanese yen' },
-  { value: 'AUD', label: 'AUD — Australian dollar' },
-  { value: 'CAD', label: 'CAD — Canadian dollar' },
-]
-
-const DATE_FORMATS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'dd MMM yyyy', label: '23 Jun 2026' },
-  { value: 'dd/MM/yyyy', label: '23/06/2026' },
-  { value: 'MM/dd/yyyy', label: '06/23/2026' },
-  { value: 'yyyy-MM-dd', label: '2026-06-23' },
-]
-
-const WEEK_STARTS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: '1', label: 'Monday' },
-  { value: '0', label: 'Sunday' },
-  { value: '6', label: 'Saturday' },
-]
-
-const DISTANCE_UNITS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'metric', label: 'Kilometres' },
-  { value: 'imperial', label: 'Miles' },
-]
-
+/**
+ * The traveller's own profile, and the five regional overrides that follow the
+ * workspace until they are set.
+ *
+ * **There is no language select here any more.** There used to be one, offering
+ * eight region-tagged values with English labels — `en-GB` shown as "English
+ * (United Kingdom)" — none of which is a tag the product ships and every one of
+ * which broke §8's rule that a language is named in its own language and script.
+ * It also wrote the same `user_settings.locale` column the picker writes, and
+ * `resolveLocaleTag` collapses `en-GB` to `en`, so choosing "English (United
+ * Kingdom)" stored a value the select could not name and left the trigger blank
+ * on the next load. The language row below is a signpost to `/settings/language`,
+ * where the twenty-three native names have room to be read.
+ *
+ * **And this form no longer writes that column.** It saves through
+ * `saveRegionalOverrides`, whose input does not declare `locale`, so the tag
+ * this screen read at load time can never be written back over one the language
+ * screen set in another tab. One column, one writer.
+ */
 export const Route = createFileRoute('/_app/settings/')({
   loader: () => loadProfile(),
   pendingComponent: ProfilePending,
-  errorComponent: ({ error }) => (
-    <ErrorPanel error={error} title="Your profile did not load" />
-  ),
+  errorComponent: ProfileError,
   component: ProfilePage,
 })
+
+function ProfileError({ error }: { error: unknown }) {
+  const t = useTranslate()
+  return <RouteError error={error} title={t('settings.profile.error')} />
+}
 
 function ProfilePage() {
   const data = Route.useLoaderData()
   const router = useRouter()
+  const t = useTranslate()
+  const locale = useLocale()
 
   const [saving, setSaving] = useState(false)
-  const [locale, setLocale] = useState(data.overrides.locale ?? DEFAULT)
-  const [timezone, setTimezone] = useState(data.overrides.timezone ?? DEFAULT)
-  const [currency, setCurrency] = useState(data.overrides.currency ?? DEFAULT)
+  const [timezone, setTimezone] = useState(
+    data.overrides.timezone ?? FOLLOW_DEFAULT,
+  )
+  const [currency, setCurrency] = useState(
+    data.overrides.currency ?? FOLLOW_DEFAULT,
+  )
   const [dateFormat, setDateFormat] = useState(
-    data.overrides.dateFormat ?? DEFAULT,
+    data.overrides.dateFormat ?? FOLLOW_DEFAULT,
   )
   const [weekStartsOn, setWeekStartsOn] = useState(
     data.overrides.weekStartsOn === null
-      ? DEFAULT
+      ? FOLLOW_DEFAULT
       : String(data.overrides.weekStartsOn),
   )
   const [distanceUnit, setDistanceUnit] = useState(
-    data.overrides.distanceUnit ?? DEFAULT,
+    data.overrides.distanceUnit ?? FOLLOW_DEFAULT,
   )
 
   const dirty =
-    locale !== (data.overrides.locale ?? DEFAULT) ||
-    timezone !== (data.overrides.timezone ?? DEFAULT) ||
-    currency !== (data.overrides.currency ?? DEFAULT) ||
-    dateFormat !== (data.overrides.dateFormat ?? DEFAULT) ||
+    timezone !== (data.overrides.timezone ?? FOLLOW_DEFAULT) ||
+    currency !== (data.overrides.currency ?? FOLLOW_DEFAULT) ||
+    dateFormat !== (data.overrides.dateFormat ?? FOLLOW_DEFAULT) ||
     weekStartsOn !==
       (data.overrides.weekStartsOn === null
-        ? DEFAULT
+        ? FOLLOW_DEFAULT
         : String(data.overrides.weekStartsOn)) ||
-    distanceUnit !== (data.overrides.distanceUnit ?? DEFAULT)
+    distanceUnit !== (data.overrides.distanceUnit ?? FOLLOW_DEFAULT)
+
+  const languageInForce = localeDescriptor(
+    data.overrides.locale ?? data.workspaceDefaults.locale,
+  )
 
   async function save(): Promise<void> {
     setSaving(true)
     try {
-      await saveRegionalSettings({
+      // Five fields, and no `locale`. The write this form used to make carried
+      // the tag its loader data was rendered with, so a second tab left open
+      // while the traveller changed language in the first put the stale one
+      // back on Save changes. `saveRegionalOverrides` cannot reach that column:
+      // its input does not declare it, so it is not in the `SET` clause.
+      await saveRegionalOverrides({
         data: {
-          locale: locale === DEFAULT ? '' : locale,
-          timezone: timezone === DEFAULT ? '' : timezone,
-          currency: currency === DEFAULT ? '' : currency,
-          dateFormat: dateFormat === DEFAULT ? '' : dateFormat,
+          timezone: timezone === FOLLOW_DEFAULT ? '' : timezone,
+          currency: currency === FOLLOW_DEFAULT ? '' : currency,
+          dateFormat: dateFormat === FOLLOW_DEFAULT ? '' : dateFormat,
           weekStartsOn:
-            weekStartsOn === DEFAULT ? null : Number.parseInt(weekStartsOn, 10),
+            weekStartsOn === FOLLOW_DEFAULT
+              ? null
+              : Number.parseInt(weekStartsOn, 10),
           distanceUnit:
             distanceUnit === 'metric' || distanceUnit === 'imperial'
               ? distanceUnit
@@ -134,32 +134,21 @@ function ProfilePage() {
         },
       })
       await router.invalidate()
-      toast.success('Preferences saved')
+      toast.success(t('settings.profile.regional.saved'))
     } catch {
-      toast.error('Could not save that', {
-        description: 'Check your connection and try again.',
+      toast.error(t('settings.profile.regional.saveFailed'), {
+        description: t('settings.error.retryBody'),
       })
     } finally {
       setSaving(false)
     }
   }
 
-  /** Prepends the "follow the workspace" option to a curated list. */
-  function withDefault(
-    options: ReadonlyArray<{ value: string; label: string }>,
-    fallback: string,
-  ): Array<{ value: string; label: string }> {
-    return [
-      { value: DEFAULT, label: `Workspace default — ${fallback}` },
-      ...options,
-    ]
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <SettingsSection
-        title="Your account"
-        description="Your name and email come from the account you sign in with."
+        title={t('settings.profile.account.title')}
+        description={t('settings.profile.account.description')}
       >
         <div className="flex flex-wrap items-center gap-5">
           <Avatar name={data.user.name} src={data.user.image} size="xl" />
@@ -177,15 +166,15 @@ function ProfilePage() {
                 }
               >
                 {data.user.emailVerified
-                  ? 'Email verified'
-                  : 'Email not verified'}
+                  ? t('settings.profile.email.verified')
+                  : t('settings.profile.email.unverified')}
               </Badge>
               <Badge tone="brand" size="sm">
-                {humaniseToken(data.membership.role)}
+                {roleLabel(t, data.membership.role)}
               </Badge>
               {data.user.twoFactorEnabled ? (
                 <Badge tone="success" size="sm">
-                  Two-factor on
+                  {t('settings.profile.twoFactor.on')}
                 </Badge>
               ) : null}
             </div>
@@ -194,21 +183,27 @@ function ProfilePage() {
 
         <dl className="mt-6 grid gap-4 border-t border-edge-faint pt-5 sm:grid-cols-3">
           <Figure
-            label="Workspace"
+            label={t('settings.profile.figure.workspace')}
             value={data.membership.organizationName}
             icon
           />
-          <Figure label="Role" value={humaniseToken(data.membership.role)} />
           <Figure
-            label="Member since"
-            value={formatDate(data.membership.joinedAt) ?? 'Unknown'}
+            label={t('settings.profile.figure.role')}
+            value={roleLabel(t, data.membership.role)}
+          />
+          <Figure
+            label={t('settings.profile.figure.joined')}
+            value={
+              formatDate(data.membership.joinedAt, locale) ??
+              t('settings.profile.figure.joinedUnknown')
+            }
           />
         </dl>
       </SettingsSection>
 
       <SettingsSection
-        title="Dates, money and units"
-        description="These override the workspace defaults for you alone. Leave one on the default and it follows the workspace."
+        title={t('settings.profile.regional.title')}
+        description={t('settings.profile.regional.description')}
         actions={
           <Button
             variant="primary"
@@ -216,116 +211,132 @@ function ProfilePage() {
             shape="pill"
             disabled={!dirty}
             loading={saving}
-            loadingLabel="Saving your preferences"
+            loadingLabel={t('settings.profile.regional.saving')}
             onClick={() => {
               void save()
             }}
           >
             <Save aria-hidden />
-            Save changes
+            {t('settings.action.save')}
           </Button>
         }
       >
         <div className="flex flex-col">
           <SettingsRow
-            label="Language"
-            hint="Used for month names and number grouping."
+            label={t('settings.profile.language.label')}
+            hint={
+              <>
+                <span
+                  lang={languageInForce.tag}
+                  dir={languageInForce.dir === 'rtl' ? 'rtl' : undefined}
+                  className="font-medium text-ink-2"
+                >
+                  {languageInForce.nativeName}
+                </span>
+                {' · '}
+                {t('settings.profile.language.hint')}
+              </>
+            }
             control={
-              <Field>
-                <SimpleSelect
-                  options={withDefault(LOCALES, data.workspaceDefaults.locale)}
-                  value={locale}
-                  onValueChange={setLocale}
-                  ariaLabel="Language"
-                />
-              </Field>
+              <div className="flex sm:justify-end">
+                <Button asChild variant="secondary" size="sm" shape="pill">
+                  <Link to="/settings/language">
+                    {t('settings.profile.language.action')}
+                    <ChevronRight aria-hidden data-mirror-rtl />
+                  </Link>
+                </Button>
+              </div>
             }
           />
           <SettingsRow
-            label="Time zone"
-            hint="Departure and arrival times are shown against this."
+            label={t('settings.profile.timezone.label')}
+            hint={t('settings.profile.timezone.hint')}
             control={
               <Field>
                 <SimpleSelect
-                  options={withDefault(
-                    TIMEZONES,
-                    data.workspaceDefaults.timezone,
+                  options={withWorkspaceDefault(
+                    t,
+                    timeZoneOptions(data.overrides.timezone ?? ''),
+                    timeZoneLabel(data.workspaceDefaults.timezone),
                   )}
                   value={timezone}
                   onValueChange={setTimezone}
-                  ariaLabel="Time zone"
+                  ariaLabel={t('settings.profile.timezone.label')}
                 />
               </Field>
             }
           />
           <SettingsRow
-            label="Currency"
-            hint="New trips start in this currency; each trip can override it."
+            label={t('settings.profile.currency.label')}
+            hint={t('settings.profile.currency.hint')}
             control={
               <Field>
                 <SimpleSelect
-                  options={withDefault(
-                    CURRENCIES,
-                    data.workspaceDefaults.currency,
+                  options={withWorkspaceDefault(
+                    t,
+                    currencyOptions(t, data.overrides.currency ?? ''),
+                    currencyLabel(t, data.workspaceDefaults.currency),
                   )}
                   value={currency}
                   onValueChange={setCurrency}
-                  ariaLabel="Currency"
+                  ariaLabel={t('settings.profile.currency.label')}
                 />
               </Field>
             }
           />
           <SettingsRow
-            label="Date format"
+            label={t('settings.profile.dateFormat.label')}
             control={
               <Field>
                 <SimpleSelect
-                  options={withDefault(
-                    DATE_FORMATS,
-                    data.workspaceDefaults.dateFormat,
+                  options={withWorkspaceDefault(
+                    t,
+                    dateFormatOptions(locale, data.overrides.dateFormat ?? ''),
+                    dateFormatLabel(data.workspaceDefaults.dateFormat, locale),
                   )}
                   value={dateFormat}
                   onValueChange={setDateFormat}
-                  ariaLabel="Date format"
+                  ariaLabel={t('settings.profile.dateFormat.label')}
                 />
               </Field>
             }
           />
           <SettingsRow
-            label="Week starts on"
-            hint="Applies to every calendar, including the vacay year grid."
+            label={t('settings.profile.weekStart.label')}
+            hint={t('settings.profile.weekStart.hint')}
             control={
               <Field>
                 <SimpleSelect
-                  options={withDefault(
-                    WEEK_STARTS,
-                    WEEK_STARTS.find(
-                      (option) =>
-                        option.value ===
-                        String(data.workspaceDefaults.weekStartsOn),
-                    )?.label ?? 'Monday',
+                  options={withWorkspaceDefault(
+                    t,
+                    weekStartOptions(
+                      locale,
+                      data.overrides.weekStartsOn === null
+                        ? ''
+                        : String(data.overrides.weekStartsOn),
+                    ),
+                    weekStartLabel(data.workspaceDefaults.weekStartsOn, locale),
                   )}
                   value={weekStartsOn}
                   onValueChange={setWeekStartsOn}
-                  ariaLabel="Week starts on"
+                  ariaLabel={t('settings.profile.weekStart.label')}
                 />
               </Field>
             }
           />
           <SettingsRow
-            label="Distance"
+            label={t('settings.profile.distance.label')}
             control={
               <Field>
                 <SimpleSelect
-                  options={withDefault(
-                    DISTANCE_UNITS,
-                    data.workspaceDefaults.distanceUnit === 'imperial'
-                      ? 'Miles'
-                      : 'Kilometres',
+                  options={withWorkspaceDefault(
+                    t,
+                    distanceOptions(t),
+                    distanceLabel(t, data.workspaceDefaults.distanceUnit),
                   )}
                   value={distanceUnit}
                   onValueChange={setDistanceUnit}
-                  ariaLabel="Distance"
+                  ariaLabel={t('settings.profile.distance.label')}
                 />
               </Field>
             }
@@ -361,9 +372,10 @@ function Figure({
 }
 
 function ProfilePending() {
+  const t = useTranslate()
   return (
     <div aria-busy="true" className="flex flex-col gap-6">
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{t('ui.status.loading')}</span>
       <Card className="flex items-center gap-5">
         <Skeleton className="size-14 shrink-0" radius="full" />
         <div className="flex-1 space-y-2.5">

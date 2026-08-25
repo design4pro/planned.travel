@@ -1,0 +1,87 @@
+name: Update e2e baselines
+
+# Manual only. Regenerating baselines is how a real regression gets laundered
+# into an accepted picture, so it is never something a push does on its own:
+# somebody asks for it, and somebody reviews the resulting diff image by image.
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: What changed in the design that makes the current baselines wrong?
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  CI: 'true'
+  VITE_STRIPE_PRICE_SOLO_MONTHLY: ${{ vars.VITE_STRIPE_PRICE_SOLO_MONTHLY }}
+  VITE_STRIPE_PRICE_SOLO_YEARLY: ${{ vars.VITE_STRIPE_PRICE_SOLO_YEARLY }}
+  VITE_STRIPE_PRICE_CREW_MONTHLY: ${{ vars.VITE_STRIPE_PRICE_CREW_MONTHLY }}
+  VITE_STRIPE_PRICE_CREW_YEARLY: ${{ vars.VITE_STRIPE_PRICE_CREW_YEARLY }}
+
+jobs:
+  update:
+    name: Re-record the Linux baselines
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # The same image the gate runs in, for the same reason: a baseline recorded
+    # anywhere else is a baseline the gate cannot match.
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+
+      # The container runs as a different uid than the one that owns the
+      # checkout, and git refuses to operate on a tree it thinks belongs to
+      # somebody else.
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Prepare the e2e environment
+        uses: ./.github/actions/e2e-env
+        with:
+          cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          cloudflare-account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          tiles-key: ${{ vars.E2E_TILES_KEY }}
+
+      # A frame that fails for a reason other than a moved pixel — a dirty
+      # console, an unpinned clock — still fails here, and the run stops before
+      # it can write a baseline of a broken screen.
+      - name: Re-record
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+        run: pnpm exec playwright test --update-snapshots
+
+      - name: Open a pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- e2e/__screenshots__; then
+            echo '::notice title=No change::the re-recorded frames are identical to the committed ones'
+            exit 0
+          fi
+
+          branch="claude/e2e-baselines-${GITHUB_RUN_ID}"
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b "$branch"
+          git add e2e/__screenshots__
+          git commit -m "test(e2e): re-record Linux baselines
+
+          $REASON"
+          git push origin "$branch"
+          gh pr create \
+            --title 'test(e2e): re-record Linux baselines' \
+            --body "Recorded by \`update-snapshots\` run ${GITHUB_RUN_ID}.
+
+          **Reason given:** ${REASON}
+
+          Review every changed image: an accepted baseline is an accepted design." \
+            --base main --head "$branch"

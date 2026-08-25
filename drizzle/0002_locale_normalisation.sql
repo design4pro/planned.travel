@@ -25,6 +25,18 @@ PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE UNIQUE INDEX `organization_settings_org_unq` ON `organization_settings` (`organization_id`);--> statement-breakpoint
 -- Normalise the locale columns onto the twenty-three tags the product ships (docs/SPEC.md §8).
 --
+-- Everything above this line is `pnpm db:generate --name locale_normalisation` output, unedited:
+-- drizzle-kit's SQLite table-recreation idiom for the one thing SQLite cannot ALTER, a column
+-- default (`organization_settings.locale`, `'en-GB'` → `'en'`). That claim is checked rather than
+-- asserted — `src/server/repos/__tests__/settings-locale.test.ts` re-derives those statements from
+-- `drizzle/meta/0001_snapshot.json` plus the live schema through `drizzle-kit/api`, the same pair
+-- `db:generate` diffs, and fails if this file's DDL half has drifted from them by one character.
+--
+-- drizzle-kit emits DDL and never data, so the normalisation of the rows already in the column is
+-- appended below by hand. The two halves are one migration because either without the other is a
+-- broken state: a new default with legacy rows still unmapped, or mapped rows that the next insert
+-- re-poisons.
+--
 -- The recreation above only changes what a *new* row defaults to. Every workspace created before
 -- this migration still stores `en-GB`, and the regional-format control wrote `pl-PL`, `ja-JP` and
 -- `de-DE` into the same column, so a membership test against the shipped set would answer "no" for

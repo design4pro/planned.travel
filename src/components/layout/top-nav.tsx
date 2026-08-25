@@ -1,6 +1,7 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { Wordmark } from './brand'
 import { buttonClass } from './kit'
 import { NotificationBell } from './notification-bell'
@@ -19,16 +20,21 @@ export interface TopNavProps {
  * The one persistent bar: wordmark, centred section switcher, account actions.
  * Translucent over the canvas so long pages keep a sense of depth while
  * scrolling, and never taller than `--nav-h` so `pt-nav` offsets stay honest.
+ *
+ * The account cluster is pushed out with `ms-auto`, not `ml-auto`: under
+ * `dir="rtl"` the wordmark belongs on the right and the cluster on the left, and
+ * a physical margin would have parked them on top of each other.
  */
 export function TopNav({ session, unreadCount = 0 }: TopNavProps) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const t = useTranslate()
 
   return (
     <header className="sticky top-0 z-nav border-b border-edge-faint bg-canvas/85 pt-safe backdrop-blur-xl">
       <div className="mx-auto flex h-nav max-w-content items-center gap-3 px-4 sm:px-6 lg:px-8">
         <Link
           to="/dashboard"
-          aria-label="planned.travel dashboard"
+          aria-label={t('shell.nav.dashboardLink')}
           className="shrink-0 rounded-md focus-ring"
         >
           <Wordmark />
@@ -38,20 +44,20 @@ export function TopNav({ session, unreadCount = 0 }: TopNavProps) {
           <PillNav pathname={pathname} />
         </div>
 
-        <div className="ml-auto flex items-center gap-1 lg:ml-0">
+        <div className="ms-auto flex items-center gap-1 lg:ms-0">
           <Link
             to="/trips"
             className={cn(
               buttonClass({ variant: 'primary', size: 'sm' }),
-              'mr-1 hidden xl:inline-flex',
+              'me-1 hidden xl:inline-flex',
             )}
           >
             <Plus aria-hidden className="size-4" strokeWidth={2.5} />
-            New trip
+            {t('shell.nav.newTrip')}
           </Link>
           <ThemeToggle />
           <NotificationBell unreadCount={unreadCount} />
-          <div className="ml-1">
+          <div className="ms-1">
             <UserMenu session={session} />
           </div>
         </div>

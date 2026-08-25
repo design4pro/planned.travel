@@ -13,6 +13,7 @@ import {
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
+import { formatStorageSize } from '#/components/layout/storage-size'
 import {
   Badge,
   Button,
@@ -22,7 +23,7 @@ import {
   Separator,
   StatCard,
 } from '#/components/ui'
-import { formatStorage } from '#/lib/plans'
+import { useI18n, useTranslate } from '#/lib/i18n'
 import { loadDashboard } from './-server/overview'
 import {
   countryFlag,
@@ -32,8 +33,6 @@ import {
   formatNumber,
   formatTimeRange,
   formatWeekday,
-  humaniseToken,
-  pluralise,
 } from './-lib/format'
 import { RESERVATION_STATUS_TONE, TRIP_STATUS_TONE, toneFor } from './-lib/tone'
 import {
@@ -45,22 +44,73 @@ import {
 } from './-ui/scaffold'
 import { TripGrid } from './-ui/trip-card'
 
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type {
   DashboardPayload,
   ReservationCard,
   TripCard,
 } from './-server/overview'
 
+/** Every country on the map, so "of 195" is a formatted figure and not a word. */
+const COUNTRIES_IN_THE_WORLD = 195
+
+/**
+ * A status column is a token, but a status badge is prose. The three closed
+ * enumerations this screen shows get one key each; anything a future migration
+ * adds falls through to the raw token, which is a data value a reader can report
+ * rather than an English sentence pretending to be copy.
+ */
+const TRIP_STATUS_LABEL: Record<string, MessageKey | undefined> = {
+  draft: 'shell.tripStatus.draft',
+  planning: 'shell.tripStatus.planning',
+  booked: 'shell.tripStatus.booked',
+  active: 'shell.tripStatus.active',
+  completed: 'shell.tripStatus.completed',
+  archived: 'shell.tripStatus.archived',
+}
+
+const BOOKING_STATUS_LABEL: Record<string, MessageKey | undefined> = {
+  none: 'shell.bookingStatus.none',
+  pending: 'shell.bookingStatus.pending',
+  confirmed: 'shell.bookingStatus.confirmed',
+  cancelled: 'shell.bookingStatus.cancelled',
+  completed: 'shell.bookingStatus.completed',
+}
+
+const BOOKING_TYPE_LABEL: Record<string, MessageKey | undefined> = {
+  accommodation: 'shell.bookingType.accommodation',
+  restaurant: 'shell.bookingType.restaurant',
+  activity: 'shell.bookingType.activity',
+  tour: 'shell.bookingType.tour',
+  ticket: 'shell.bookingType.ticket',
+  transport: 'shell.bookingType.transport',
+  other: 'shell.bookingType.other',
+}
+
+function labelFor(
+  table: Record<string, MessageKey | undefined>,
+  token: string,
+  t: Translate,
+): string {
+  const key = table[token]
+  return key === undefined ? token : t(key)
+}
+
 export const Route = createFileRoute('/_app/dashboard')({
   loader: () => loadDashboard(),
   pendingComponent: DashboardPending,
-  errorComponent: ({ error }) => (
-    <AppFrame>
-      <ErrorPanel error={error} title="The dashboard did not load" />
-    </AppFrame>
-  ),
+  errorComponent: DashboardError,
   component: DashboardPage,
 })
+
+function DashboardError({ error }: { error: unknown }) {
+  const t = useTranslate()
+  return (
+    <AppFrame>
+      <ErrorPanel error={error} title={t('shell.dashboard.error')} />
+    </AppFrame>
+  )
+}
 
 function DashboardPage() {
   const data = Route.useLoaderData()
@@ -89,28 +139,32 @@ function DashboardPage() {
 /* ----------------------------------------------------------------- up next */
 
 function UpNext({ data }: { data: DashboardPayload }) {
+  const { t, locale } = useI18n()
   const trip = data.upNext
 
   if (trip === null) {
     return (
-      <Card variant="dashed" padding="none">
+      /* The designed nothing sits on `--color-surface-2` rather than on the bare
+         canvas, so the invitation reads as a place on the page in both themes
+         instead of a dashed outline around the background. */
+      <Card variant="dashed" padding="none" className="bg-surface-2">
         <EmptyState
           size="lg"
           tone="brand"
           icon={<Compass />}
-          title="Your next trip starts here"
-          description="Create a trip, drop the places you want to see on the map, and planned.travel will build the day-by-day plan around them."
+          title={t('shell.dashboard.blank.title')}
+          description={t('shell.dashboard.blank.body')}
           action={
             <Button asChild variant="primary" shape="pill" size="lg">
               <Link to="/trips">
                 <Plus aria-hidden strokeWidth={2.5} />
-                Plan a trip
+                {t('shell.dashboard.blank.action')}
               </Link>
             </Button>
           }
           secondaryAction={
             <Button asChild variant="ghost" shape="pill" size="lg">
-              <Link to="/atlas">See your atlas</Link>
+              <Link to="/atlas">{t('shell.dashboard.blank.secondary')}</Link>
             </Button>
           }
         />
@@ -120,7 +174,7 @@ function UpNext({ data }: { data: DashboardPayload }) {
 
   const startsIn = daysUntil(trip.startDate, data.today)
   const length = daysBetween(trip.startDate, trip.endDate)
-  const range = formatDateRange(trip.startDate, trip.endDate)
+  const range = formatDateRange(trip.startDate, trip.endDate, locale)
 
   return (
     <Card
@@ -131,7 +185,7 @@ function UpNext({ data }: { data: DashboardPayload }) {
       {trip.coverImageUrl === null ? (
         <span
           aria-hidden
-          className="pointer-events-none absolute -top-32 -right-24 size-80 rounded-full bg-brand/30 blur-3xl"
+          className="pointer-events-none absolute -top-32 -end-24 size-80 rounded-full bg-brand/30 blur-3xl"
         />
       ) : (
         <>
@@ -152,10 +206,10 @@ function UpNext({ data }: { data: DashboardPayload }) {
               size="sm"
               className="uppercase tracking-label"
             >
-              Up next
+              {t('shell.dashboard.upNext')}
             </Badge>
             <Badge tone={toneFor(TRIP_STATUS_TONE, trip.status)} size="sm">
-              {humaniseToken(trip.status)}
+              {labelFor(TRIP_STATUS_LABEL, trip.status, t)}
             </Badge>
             {trip.countryCodes.length > 0 ? (
               <span aria-hidden className="text-label">
@@ -166,8 +220,9 @@ function UpNext({ data }: { data: DashboardPayload }) {
 
           <Button asChild variant="inverse" shape="pill" size="sm">
             <Link to="/trips/$tripId/plan" params={{ tripId: trip.id }}>
-              Open the plan
-              <ArrowUpRight aria-hidden />
+              {t('shell.dashboard.openPlan')}
+              {/* "Onward" is a reading direction, so the arrow turns round in `ar`. */}
+              <ArrowUpRight aria-hidden data-mirror-rtl />
             </Link>
           </Button>
         </div>
@@ -188,48 +243,73 @@ function UpNext({ data }: { data: DashboardPayload }) {
 
         <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-inverse-edge sm:grid-cols-4">
           <HeroStat
-            label="Travellers"
-            value={formatNumber(data.counts.members)}
-            hint="in this workspace"
+            label={t('shell.dashboard.hero.travellers')}
+            value={formatNumber(data.counts.members, locale)}
+            hint={t('shell.dashboard.hero.travellersHint')}
           />
           <HeroStat
-            label="Trip dates"
-            value={range ?? 'Not set'}
+            label={t('shell.dashboard.hero.dates')}
+            value={range ?? t('shell.dashboard.hero.datesUnset')}
             hint={
               length === null
-                ? 'Add dates to build days'
-                : pluralise(length, 'day')
+                ? t('shell.dashboard.hero.datesMissing')
+                : t('shell.dashboard.hero.datesHint', {
+                    count: length,
+                    days: formatNumber(length, locale),
+                  })
             }
             compact
           />
           <HeroStat
-            label={startsIn !== null && startsIn < 0 ? 'Started' : 'Starts in'}
-            value={
-              startsIn === null
-                ? '—'
-                : startsIn === 0
-                  ? 'Today'
-                  : formatNumber(Math.abs(startsIn))
+            label={
+              startsIn !== null && startsIn < 0
+                ? t('shell.dashboard.hero.started')
+                : t('shell.dashboard.hero.startsIn')
             }
-            hint={
-              startsIn === null
-                ? 'no start date'
-                : startsIn === 0
-                  ? 'good luck out there'
-                  : startsIn < 0
-                    ? 'days ago'
-                    : 'days'
-            }
+            value={startsInValue(startsIn, locale, t)}
+            hint={startsInHint(startsIn, t)}
           />
           <HeroStat
-            label="Places"
-            value={formatNumber(trip.placeCount)}
-            hint={trip.placeCount === 0 ? 'nothing mapped yet' : 'on the map'}
+            label={t('shell.dashboard.hero.places')}
+            value={formatNumber(trip.placeCount, locale)}
+            hint={
+              trip.placeCount === 0
+                ? t('shell.dashboard.hero.placesNone')
+                : t('shell.dashboard.hero.placesHint')
+            }
           />
         </dl>
       </div>
     </Card>
   )
+}
+
+/** An em dash for "no date", `Today` for the day itself, otherwise the figure. */
+function startsInValue(
+  startsIn: number | null,
+  locale: Locale,
+  t: Translate,
+): string {
+  if (startsIn === null) return '—'
+  if (startsIn === 0) return t('shell.dashboard.hero.today')
+  return formatNumber(Math.abs(startsIn), locale)
+}
+
+/**
+ * The unit under the countdown, agreeing with the figure above it.
+ *
+ * `count` selects the CLDR branch and is never printed — the reader is looking
+ * at the numeral in the same tile. The two keys used to be the bare words
+ * `days ago` and `days`, which read as `Starts in / 1 / days` in English and
+ * gave a translator of Polish or Arabic no branch to inflect.
+ */
+function startsInHint(startsIn: number | null, t: Translate): string {
+  if (startsIn === null) return t('shell.dashboard.hero.startUnknown')
+  if (startsIn === 0) return t('shell.dashboard.hero.startToday')
+  const count = Math.abs(startsIn)
+  return startsIn < 0
+    ? t('shell.dashboard.hero.startPast', { count })
+    : t('shell.dashboard.hero.startFuture', { count })
 }
 
 function HeroStat({
@@ -248,6 +328,12 @@ function HeroStat({
       <dt className="mb-2 truncate text-micro font-semibold tracking-label uppercase text-inverse-muted">
         {label}
       </dt>
+      {/* No `data-numeric`. Three of these four tiles hold nothing but a grouped
+          numeral, which is already an isolated run — and the fourth holds a
+          formatted date range, whose month name is Arabic prose that the
+          direction layer's `direction: ltr` would push behind its own year.
+          `tabular-nums` is the part every tile actually wants, and it is a class
+          rather than an attribute that also carries bidi meaning. */}
       <dd
         className={
           compact
@@ -265,6 +351,7 @@ function HeroStat({
 /* --------------------------------------------------------------- stat row */
 
 function StatRow({ data }: { data: DashboardPayload }) {
+  const { t, locale } = useI18n()
   const planning =
     data.tripTotals.byStatus.find((row) => row.status === 'planning')?.value ??
     0
@@ -276,9 +363,11 @@ function StatRow({ data }: { data: DashboardPayload }) {
       <StatCard
         tone="inverse"
         icon={<Globe />}
-        label="Countries visited"
-        value={data.atlas.countryCount}
-        unit="of 195"
+        label={t('shell.dashboard.stat.countries')}
+        value={formatNumber(data.atlas.countryCount, locale)}
+        unit={t('shell.dashboard.stat.countriesUnit', {
+          total: formatNumber(COUNTRIES_IN_THE_WORLD, locale),
+        })}
         caption={
           // Caption and flags share one line rather than stacking. The extra row
           // set this tile's height, and because the four tiles are a single grid
@@ -286,8 +375,11 @@ function StatRow({ data }: { data: DashboardPayload }) {
           <span className="flex items-center justify-between gap-3">
             <span className="min-w-0 truncate">
               {data.atlas.visitCount === 0
-                ? 'Mark a country to start your atlas'
-                : `${pluralise(data.atlas.visitCount, 'visit')} recorded`}
+                ? t('shell.dashboard.stat.countriesNone')
+                : t('shell.dashboard.stat.visits', {
+                    count: data.atlas.visitCount,
+                    visits: formatNumber(data.atlas.visitCount, locale),
+                  })}
             </span>
             {data.atlas.countryCodes.length === 0 ? null : (
               <span aria-hidden className="shrink-0 text-label">
@@ -299,28 +391,37 @@ function StatRow({ data }: { data: DashboardPayload }) {
       />
       <StatCard
         icon={<CalendarDays />}
-        label="Trips total"
-        value={data.tripTotals.total}
-        caption={`${formatNumber(planning)} planning · ${formatNumber(booked)} booked`}
+        label={t('shell.dashboard.stat.trips')}
+        value={formatNumber(data.tripTotals.total, locale)}
+        caption={t('shell.dashboard.stat.tripsCaption', {
+          planning: formatNumber(planning, locale),
+          booked: formatNumber(booked, locale),
+        })}
       />
       <StatCard
         icon={<MapPin />}
-        label="Places mapped"
-        value={data.counts.places}
+        label={t('shell.dashboard.stat.places')}
+        value={formatNumber(data.counts.places, locale)}
         caption={
           data.counts.places === 0
-            ? 'Nothing on the map yet'
-            : `across ${pluralise(data.tripTotals.total, 'trip')}`
+            ? t('shell.dashboard.stat.placesNone')
+            : t('shell.dashboard.stat.placesAcross', {
+                count: data.tripTotals.total,
+                trips: formatNumber(data.tripTotals.total, locale),
+              })
         }
       />
       <StatCard
         icon={<Ticket />}
-        label="Bookings confirmed"
-        value={data.counts.reservations}
+        label={t('shell.dashboard.stat.bookings')}
+        value={formatNumber(data.counts.reservations, locale)}
         caption={
           data.reservations.length === 0
-            ? 'No bookings coming up'
-            : `${pluralise(data.reservations.length, 'booking')} on the way`
+            ? t('shell.dashboard.stat.bookingsNone')
+            : t('shell.dashboard.stat.bookingsSoon', {
+                count: data.reservations.length,
+                bookings: formatNumber(data.reservations.length, locale),
+              })
         }
       />
     </div>
@@ -330,6 +431,7 @@ function StatRow({ data }: { data: DashboardPayload }) {
 /* ------------------------------------------------------------- your trips */
 
 function YourTrips({ data }: { data: DashboardPayload }) {
+  const { t, locale } = useI18n()
   const trips: Array<TripCard> = [
     ...data.mine,
     ...data.upcoming.filter(
@@ -339,13 +441,13 @@ function YourTrips({ data }: { data: DashboardPayload }) {
 
   return (
     <Panel
-      label="Your trips"
-      count={trips.length === 0 ? undefined : formatNumber(trips.length)}
+      label={t('shell.dashboard.trips.label')}
+      count={trips.length === 0 ? undefined : formatNumber(trips.length, locale)}
       action={
         <Button asChild variant="ghost" size="sm" shape="pill">
           <Link to="/trips">
-            All trips
-            <ArrowUpRight aria-hidden />
+            {t('shell.dashboard.trips.all')}
+            <ArrowUpRight aria-hidden data-mirror-rtl />
           </Link>
         </Button>
       }
@@ -355,11 +457,11 @@ function YourTrips({ data }: { data: DashboardPayload }) {
           variant="plain"
           size="sm"
           icon={<Compass />}
-          title="No trips yet"
-          description="Everything you plan will show up here, newest first."
+          title={t('shell.dashboard.trips.empty.title')}
+          description={t('shell.dashboard.trips.empty.body')}
           action={
             <Button asChild variant="secondary" shape="pill" size="sm">
-              <Link to="/trips">Create a trip</Link>
+              <Link to="/trips">{t('shell.dashboard.trips.empty.action')}</Link>
             </Button>
           }
         />
@@ -377,13 +479,15 @@ function NextBookings({
 }: {
   reservations: ReadonlyArray<ReservationCard>
 }) {
+  const { t, locale } = useI18n()
+
   return (
     <Panel
-      label="Upcoming reservations"
+      label={t('shell.dashboard.bookings.label')}
       count={
         reservations.length === 0
           ? undefined
-          : formatNumber(reservations.length)
+          : formatNumber(reservations.length, locale)
       }
       flush
     >
@@ -392,8 +496,8 @@ function NextBookings({
           <EmptyState
             size="sm"
             icon={<Ticket />}
-            title="Nothing booked yet"
-            description="Confirmed stays, tables and tickets appear here as their dates approach."
+            title={t('shell.dashboard.bookings.empty.title')}
+            description={t('shell.dashboard.bookings.empty.body')}
           />
         </div>
       ) : (
@@ -409,18 +513,19 @@ function NextBookings({
                 </p>
                 <p className="truncate text-caption text-ink-3">
                   {[
-                    formatWeekday(row.startDate),
-                    formatTimeRange(row.startTime, row.endTime),
+                    formatWeekday(row.startDate, locale),
+                    formatTimeRange(row.startTime, row.endTime, locale),
                   ]
                     .filter((part) => part !== null)
-                    .join(' · ') || humaniseToken(row.type)}
+                    .join(' · ') ||
+                    labelFor(BOOKING_TYPE_LABEL, row.type, t)}
                 </p>
               </div>
               <Badge
                 tone={toneFor(RESERVATION_STATUS_TONE, row.status)}
                 size="sm"
               >
-                {humaniseToken(row.status)}
+                {labelFor(BOOKING_STATUS_LABEL, row.status, t)}
               </Badge>
             </PanelRow>
           ))}
@@ -431,6 +536,7 @@ function NextBookings({
 }
 
 function TripMix({ data }: { data: DashboardPayload }) {
+  const { t, locale } = useI18n()
   const total = Math.max(
     data.tripTotals.byStatus.reduce((sum, row) => sum + row.value, 0),
     1,
@@ -438,11 +544,13 @@ function TripMix({ data }: { data: DashboardPayload }) {
   const rows = data.tripTotals.byStatus.filter((row) => row.value > 0)
 
   return (
-    <Panel label="Trip pipeline" count={formatNumber(data.tripTotals.total)}>
+    <Panel
+      label={t('shell.dashboard.pipeline.label')}
+      count={formatNumber(data.tripTotals.total, locale)}
+    >
       {rows.length === 0 ? (
         <p className="text-label text-ink-3">
-          Nothing in the pipeline. Your first trip will break this down by
-          stage.
+          {t('shell.dashboard.pipeline.empty')}
         </p>
       ) : (
         <ul className="flex flex-col gap-3.5">
@@ -453,30 +561,50 @@ function TripMix({ data }: { data: DashboardPayload }) {
                 max={total}
                 size="sm"
                 tone={row.status === 'active' ? 'success' : 'brand'}
-                label={humaniseToken(row.status)}
-                valueText={formatNumber(row.value)}
+                label={labelFor(TRIP_STATUS_LABEL, row.status, t)}
+                valueText={formatNumber(row.value, locale)}
               />
             </li>
           ))}
         </ul>
       )}
       <Separator className="my-4" />
-      <div className="flex items-center justify-between gap-3 text-caption text-ink-3">
-        <span>{pluralise(data.tripTotals.favourites, 'favourite')}</span>
-        <span>{pluralise(data.tripTotals.archived, 'archived trip')}</span>
+      {/* `flex-wrap`, because these two phrases are the widest pair of
+          translations in the rail. Measured at 360px in a locale whose
+          catalogue has not landed yet: the un-wrapping row measured 383px of
+          content in a 286px card and pushed the whole document sideways. A pair
+          that does not fit now takes a second line instead — and in a locale
+          that fits, nothing moves. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-caption text-ink-3">
+        <span className="min-w-0">
+          {t('shell.dashboard.pipeline.favourites', {
+            count: data.tripTotals.favourites,
+            favourites: formatNumber(data.tripTotals.favourites, locale),
+          })}
+        </span>
+        <span className="min-w-0">
+          {t('shell.dashboard.pipeline.archived', {
+            count: data.tripTotals.archived,
+            archived: formatNumber(data.tripTotals.archived, locale),
+          })}
+        </span>
       </div>
     </Panel>
   )
 }
 
 function StorageMeter({ data }: { data: DashboardPayload }) {
+  const { t, locale } = useI18n()
   const used = data.storage.usedBytes
   const limit = Math.max(data.storage.limitBytes, 1)
 
   return (
     <Panel
-      label="Storage"
-      count={`${formatStorage(used)} of ${formatStorage(limit)}`}
+      label={t('shell.dashboard.storage.label')}
+      count={t('shell.dashboard.storage.count', {
+        used: formatStorageSize(used, locale),
+        limit: formatStorageSize(limit, locale),
+      })}
     >
       <div className="flex items-start gap-3">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-ink-3">
@@ -496,19 +624,25 @@ function StorageMeter({ data }: { data: DashboardPayload }) {
             }
           />
           <p className="text-caption text-ink-3">
-            {pluralise(data.counts.files, 'file')} across every trip, including
-            photos and tickets.
+            {t('shell.dashboard.storage.files', {
+              count: data.counts.files,
+              files: formatNumber(data.counts.files, locale),
+            })}
           </p>
         </div>
       </div>
       <Separator className="my-4" />
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-caption text-ink-3">
-          <Coins aria-hidden className="size-3.5" />
-          Need more room?
+      {/* Same wrap as the pipeline footer above, for the same measurement: a
+          prompt and its link are a sentence's worth of copy in a 286px card. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <span className="flex min-w-0 items-center gap-2 text-caption text-ink-3">
+          <Coins aria-hidden className="size-3.5 shrink-0" />
+          {t('shell.dashboard.storage.more')}
         </span>
         <Button asChild variant="link" size="sm">
-          <Link to="/settings/billing">See plans</Link>
+          <Link to="/settings/billing">
+            {t('shell.dashboard.storage.plans')}
+          </Link>
         </Button>
       </div>
     </Panel>
@@ -517,6 +651,12 @@ function StorageMeter({ data }: { data: DashboardPayload }) {
 
 /* --------------------------------------------------------------- skeleton */
 
+/**
+ * The loading state, sized to the layout it replaces so the page settles instead
+ * of reflowing. The two list cards are `inset` — `--color-surface-2` — which is
+ * how a reader tells "this region is still arriving" from "this region is a card
+ * with nothing in it".
+ */
 function DashboardPending() {
   return (
     <AppFrame>
@@ -524,10 +664,10 @@ function DashboardPending() {
         <HeaderSkeleton />
         <StatsSkeleton />
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem] xl:gap-8">
-          <Card padding="none">
+          <Card variant="inset" padding="none">
             <RowsSkeleton rows={4} />
           </Card>
-          <Card padding="none">
+          <Card variant="inset" padding="none">
             <RowsSkeleton rows={3} />
           </Card>
         </div>

@@ -3,69 +3,84 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Laptop, Moon, Sun } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { ErrorPanel } from '#/components/layout/error-state'
 import { Card, Field, SimpleSelect, Skeleton, Switch } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { useTheme } from '#/lib/theme'
 import { loadAppearance, saveAppearance } from '../-server/settings'
 import { SettingsRow, SettingsSection } from '../-ui/settings-nav'
+import { RouteError } from './-ui/route-error'
 
+import type { MessageKey } from '#/lib/i18n'
 import type { ThemeMode } from '#/lib/theme'
 import type { LucideIcon } from 'lucide-react'
 
+/**
+ * The three theme cards carry message keys rather than sentences, for the same
+ * reason the settings index does: a module-scope array cannot be translated, and
+ * a literal key checked against `MessageKey` fails to compile if it is wrong.
+ */
 const THEMES: ReadonlyArray<{
   mode: ThemeMode
-  label: string
-  hint: string
+  label: MessageKey
+  hint: MessageKey
   icon: LucideIcon
   swatch: string
 }> = [
   {
     mode: 'light',
-    label: 'Light',
-    hint: 'Warm paper, all day',
+    label: 'settings.appearance.theme.light',
+    hint: 'settings.appearance.theme.lightHint',
     icon: Sun,
     swatch: 'bg-canvas',
   },
   {
     mode: 'dark',
-    label: 'Dark',
-    hint: 'Warm charcoal, never black',
+    label: 'settings.appearance.theme.dark',
+    hint: 'settings.appearance.theme.darkHint',
     icon: Moon,
     swatch: 'bg-inverse',
   },
   {
     mode: 'system',
-    label: 'System',
-    hint: 'Follow the device',
+    label: 'settings.appearance.theme.system',
+    hint: 'settings.appearance.theme.systemHint',
     icon: Laptop,
     swatch: 'bg-linear-to-br from-canvas to-inverse',
   },
 ]
 
-const MAP_STYLES: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'workspace', label: 'Follow the workspace' },
-  { value: 'planned-light', label: 'Paper — light' },
-  { value: 'planned-dark', label: 'Charcoal — dark' },
+const WORKSPACE_MAP_STYLE = 'workspace'
+
+const MAP_STYLES: ReadonlyArray<{ value: string; label: MessageKey }> = [
+  { value: WORKSPACE_MAP_STYLE, label: 'settings.appearance.map.workspace' },
+  { value: 'planned-light', label: 'settings.appearance.map.light' },
+  { value: 'planned-dark', label: 'settings.appearance.map.dark' },
 ]
 
 export const Route = createFileRoute('/_app/settings/appearance')({
   loader: () => loadAppearance(),
   pendingComponent: AppearancePending,
-  errorComponent: ({ error }) => (
-    <ErrorPanel error={error} title="Appearance did not load" />
-  ),
+  errorComponent: AppearanceError,
   component: AppearancePage,
 })
+
+function AppearanceError({ error }: { error: unknown }) {
+  const t = useTranslate()
+  return <RouteError error={error} title={t('settings.appearance.error')} />
+}
 
 function AppearancePage() {
   const data = Route.useLoaderData()
   const router = useRouter()
   const theme = useTheme()
+  const t = useTranslate()
 
   const [reduceMotion, setReduceMotion] = useState(data.reduceMotion)
   const [mapStyle, setMapStyle] = useState(
-    data.mapStyle === data.workspaceMapStyle ? 'workspace' : data.mapStyle,
+    data.mapStyle === data.workspaceMapStyle
+      ? WORKSPACE_MAP_STYLE
+      : data.mapStyle,
   )
   const [busy, setBusy] = useState(false)
 
@@ -77,22 +92,29 @@ function AppearancePage() {
       await saveAppearance({ data: patch })
       await router.invalidate()
     } catch {
-      toast.error('Could not save that', {
-        description: 'The change is applied here but was not stored.',
+      toast.error(t('settings.appearance.saveFailed'), {
+        description: t('settings.appearance.saveFailedBody'),
       })
     } finally {
       setBusy(false)
     }
   }
 
+  const palette =
+    theme.resolved === 'dark'
+      ? t('settings.appearance.palette.dark')
+      : t('settings.appearance.palette.light')
+
   return (
     <div className="flex flex-col gap-6">
       <SettingsSection
-        title="Theme"
-        description="Both themes are designed, not inverted. Pick the one you read most comfortably."
+        title={t('settings.appearance.theme.title')}
+        description={t('settings.appearance.theme.description')}
       >
         <fieldset>
-          <legend className="sr-only">Theme</legend>
+          <legend className="sr-only">
+            {t('settings.appearance.theme.title')}
+          </legend>
           <div className="grid gap-3 sm:grid-cols-3">
             {THEMES.map((option) => {
               const active = theme.mode === option.mode
@@ -107,7 +129,7 @@ function AppearancePage() {
                     void persist({ theme: option.mode })
                   }}
                   className={cn(
-                    'flex flex-col gap-3 rounded-lg border p-4 text-left focus-ring',
+                    'flex flex-col gap-3 rounded-lg border p-4 text-start focus-ring',
                     'transition-[background-color,border-color,box-shadow] duration-base ease-out-quint',
                     'disabled:pointer-events-none disabled:opacity-60',
                     active
@@ -133,10 +155,10 @@ function AppearancePage() {
                         active ? 'text-brand' : 'text-ink',
                       )}
                     >
-                      {option.label}
+                      {t(option.label)}
                     </span>
                     <span className="block text-caption text-ink-3">
-                      {option.hint}
+                      {t(option.hint)}
                     </span>
                   </span>
                 </button>
@@ -145,22 +167,23 @@ function AppearancePage() {
           </div>
         </fieldset>
         <p className="mt-4 text-caption text-ink-3">
-          Currently showing the {theme.resolved} palette
-          {theme.mode === 'system' ? ', following your device' : ''}.
+          {theme.mode === 'system'
+            ? t('settings.appearance.theme.showingSystem', { palette })
+            : t('settings.appearance.theme.showing', { palette })}
         </p>
       </SettingsSection>
 
-      <SettingsSection title="Motion and maps">
+      <SettingsSection title={t('settings.appearance.motion.title')}>
         <div className="flex flex-col">
           <SettingsRow
-            label="Reduce motion"
-            hint="Collapses entrance animations to a simple fade. Your operating system's own reduce-motion setting is always respected as well."
+            label={t('settings.appearance.motion.label')}
+            hint={t('settings.appearance.motion.hint')}
             control={
               <div className="flex sm:justify-end">
                 <Switch
                   checked={reduceMotion}
                   disabled={busy}
-                  aria-label="Reduce motion"
+                  aria-label={t('settings.appearance.motion.label')}
                   onCheckedChange={(next) => {
                     setReduceMotion(next)
                     void persist({ reduceMotion: next })
@@ -170,22 +193,27 @@ function AppearancePage() {
             }
           />
           <SettingsRow
-            label="Map style"
-            hint="The basemap used on the planner and the atlas."
+            label={t('settings.appearance.map.label')}
+            hint={t('settings.appearance.map.hint')}
             control={
               <Field>
                 <SimpleSelect
-                  options={MAP_STYLES.map((option) => ({ ...option }))}
+                  options={MAP_STYLES.map((option) => ({
+                    value: option.value,
+                    label: t(option.label),
+                  }))}
                   value={mapStyle}
                   disabled={busy}
                   onValueChange={(next) => {
                     setMapStyle(next)
                     void persist({
                       mapStyle:
-                        next === 'workspace' ? data.workspaceMapStyle : next,
+                        next === WORKSPACE_MAP_STYLE
+                          ? data.workspaceMapStyle
+                          : next,
                     })
                   }}
-                  ariaLabel="Map style"
+                  ariaLabel={t('settings.appearance.map.label')}
                 />
               </Field>
             }
@@ -197,9 +225,10 @@ function AppearancePage() {
 }
 
 function AppearancePending() {
+  const t = useTranslate()
   return (
     <div aria-busy="true" className="flex flex-col gap-6">
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{t('ui.status.loading')}</span>
       <Card className="space-y-4">
         <Skeleton className="h-4 w-24" radius="sm" />
         <div className="grid gap-3 sm:grid-cols-3">

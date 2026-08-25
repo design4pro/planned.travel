@@ -47,11 +47,11 @@ describe('MapLegend', () => {
     const user = userEvent.setup()
     render(<MapLegend categories={CATEGORIES} />)
 
-    const toggle = screen.getByRole('button', { name: 'Collapse legend' })
+    const toggle = screen.getByRole('button', { name: 'Collapse Legend' })
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
 
     await user.click(toggle)
-    const expand = screen.getByRole('button', { name: 'Expand legend' })
+    const expand = screen.getByRole('button', { name: 'Expand Legend' })
     expect(expand.getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByText('Landmarks')).toBeNull()
   })

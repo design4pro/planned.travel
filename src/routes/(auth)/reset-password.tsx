@@ -6,14 +6,21 @@ import { z } from 'zod'
 
 import { Button, Field } from '#/components/ui'
 import { authClient, toAuthFailure } from '#/lib/auth/client'
-import { describeCallbackError, describeFailure } from './-lib/errors'
-import { MIN_PASSWORD_LENGTH, resetPasswordSchema } from './-lib/schemas'
+import { formatNumber } from '#/lib/format'
+import { useI18n } from '#/lib/i18n'
+import {
+  LINK_INCOMPLETE,
+  describeCallbackError,
+  describeFailure,
+} from './-lib/errors'
+import { MIN_PASSWORD_LENGTH } from './-lib/schemas'
 import { AuthShell } from './-ui/auth-shell'
 import {
   AuthPanel,
   FieldStack,
   FormAlert,
   PasswordInput,
+  useAuthSchemas,
   visibleError,
 } from './-ui/form'
 
@@ -39,16 +46,18 @@ const DEFAULTS: ResetPasswordValues = { password: '', confirmPassword: '' }
 
 function ResetPasswordPage() {
   const { token, error } = Route.useSearch()
+  const { t, locale } = useI18n()
+  const schemas = useAuthSchemas()
   const [failure, setFailure] = React.useState<AuthMessage | null>(null)
   const [done, setDone] = React.useState(false)
 
   const form = useForm({
     defaultValues: DEFAULTS,
-    validators: { onChange: resetPasswordSchema },
+    validators: { onChange: schemas.resetPassword },
     onSubmit: async ({ value }) => {
       if (!token) return
       setFailure(null)
-      const parsed = resetPasswordSchema.safeParse(value)
+      const parsed = schemas.resetPassword.safeParse(value)
       if (!parsed.success) return
 
       const { error: resetError } = await authClient.resetPassword({
@@ -63,36 +72,33 @@ function ResetPasswordPage() {
     },
   })
 
+  const backToSignIn = (
+    <Link
+      to="/login"
+      className="rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
+    >
+      {t('auth.reset.back')}
+    </Link>
+  )
+
   /* --------------------------------------------------- the link went stale */
 
   if (!token) {
-    const message = error
-      ? describeCallbackError(error)
-      : {
-          title: 'This link is incomplete',
-          detail:
-            'Password reset links carry a one-time token. Open the most recent email, or request a fresh link.',
-          tone: 'warning' as const,
-        }
+    // A `?error=` names what went wrong; its absence means the link arrived
+    // without a token at all, which is its own message rather than a code.
+    const message = error ? describeCallbackError(error) : LINK_INCOMPLETE
 
     return (
       <AuthShell
-        eyebrow="Password reset"
-        heading="That link cannot be used"
-        description="Reset links expire after an hour and work only once — the safest possible trade."
-        footer={
-          <Link
-            to="/login"
-            className="rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
-          >
-            Back to sign in
-          </Link>
-        }
+        eyebrow={t('auth.reset.eyebrow')}
+        heading={t('auth.reset.stale.heading')}
+        description={t('auth.reset.stale.description')}
+        footer={backToSignIn}
       >
         <AuthPanel>
           <FormAlert message={message} />
           <Button variant="primary" size="lg" block asChild>
-            <Link to="/forgot-password">Request a new link</Link>
+            <Link to="/forgot-password">{t('auth.reset.stale.action')}</Link>
           </Button>
         </AuthPanel>
       </AuthShell>
@@ -104,9 +110,9 @@ function ResetPasswordPage() {
   if (done) {
     return (
       <AuthShell
-        eyebrow="Password reset"
-        heading="Your new password is set"
-        description="Every other session has been signed out, so anyone who had the old password no longer has a way in."
+        eyebrow={t('auth.reset.eyebrow')}
+        heading={t('auth.reset.done.heading')}
+        description={t('auth.reset.done.description')}
       >
         <AuthPanel>
           <div className="flex items-start gap-3.5">
@@ -115,15 +121,15 @@ function ResetPasswordPage() {
             </span>
             <div className="min-w-0">
               <p className="text-label font-semibold text-ink">
-                Signed out everywhere else
+                {t('auth.reset.done.title')}
               </p>
               <p className="mt-1 text-caption text-ink-3">
-                Sign in with your new password to carry on planning.
+                {t('auth.reset.done.body')}
               </p>
             </div>
           </div>
           <Button variant="primary" size="lg" block className="mt-6" asChild>
-            <Link to="/login">Sign in</Link>
+            <Link to="/login">{t('auth.reset.done.action')}</Link>
           </Button>
         </AuthPanel>
       </AuthShell>
@@ -134,17 +140,13 @@ function ResetPasswordPage() {
 
   return (
     <AuthShell
-      eyebrow="Password reset"
-      heading="Choose a new password"
-      description={`Pick something at least ${MIN_PASSWORD_LENGTH} characters long. A short phrase is easier to remember and harder to guess.`}
-      footer={
-        <Link
-          to="/login"
-          className="rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
-        >
-          Back to sign in
-        </Link>
-      }
+      eyebrow={t('auth.reset.eyebrow')}
+      heading={t('auth.reset.heading')}
+      description={t('auth.reset.description', {
+        count: MIN_PASSWORD_LENGTH,
+        value: formatNumber(MIN_PASSWORD_LENGTH, locale),
+      })}
+      footer={backToSignIn}
     >
       <AuthPanel>
         <FormAlert message={failure} onDismiss={() => setFailure(null)} />
@@ -159,7 +161,7 @@ function ResetPasswordPage() {
             <form.Field name="password">
               {(field) => (
                 <Field
-                  label="New password"
+                  label={t('auth.field.newPassword')}
                   htmlFor={field.name}
                   error={visibleError(field.state.meta)}
                 >
@@ -168,8 +170,9 @@ function ResetPasswordPage() {
                     name={field.name}
                     autoComplete="new-password"
                     size="lg"
-                    placeholder="A phrase you will remember"
-                    revealLabel="new password"
+                    placeholder={t('auth.field.newPassword.placeholder')}
+                    showLabel={t('auth.password.showNew')}
+                    hideLabel={t('auth.password.hideNew')}
                     autoFocus
                     value={field.state.value}
                     onBlur={field.handleBlur}
@@ -182,7 +185,7 @@ function ResetPasswordPage() {
             <form.Field name="confirmPassword">
               {(field) => (
                 <Field
-                  label="Confirm new password"
+                  label={t('auth.field.confirmNewPassword')}
                   htmlFor={field.name}
                   error={visibleError(field.state.meta)}
                 >
@@ -191,8 +194,9 @@ function ResetPasswordPage() {
                     name={field.name}
                     autoComplete="new-password"
                     size="lg"
-                    placeholder="Type it once more"
-                    revealLabel="password confirmation"
+                    placeholder={t('auth.field.confirmPassword.placeholder')}
+                    showLabel={t('auth.password.showConfirm')}
+                    hideLabel={t('auth.password.hideConfirm')}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -215,10 +219,10 @@ function ResetPasswordPage() {
                   block
                   icon={<KeyRound />}
                   loading={isSubmitting}
-                  loadingLabel="Saving your password"
+                  loadingLabel={t('auth.reset.submitting')}
                   disabled={!canSubmit}
                 >
-                  Set new password
+                  {t('auth.reset.submit')}
                 </Button>
               )}
             </form.Subscribe>

@@ -11,11 +11,14 @@ import {
 
 import { Badge, Button, Separator } from '#/components/ui'
 import { authClient, toAuthFailure } from '#/lib/auth/client'
+import { formatDate } from '#/lib/format'
+import { useI18n, useTranslate } from '#/lib/i18n'
 import { describeFailure } from './-lib/errors'
 import { DEFAULT_REDIRECT, loginHrefFor } from './-lib/redirect'
+import { roleCopy } from './-lib/roles'
 import { loadInvitation } from './-server/invitation'
 import { AuthShell } from './-ui/auth-shell'
-import { AuthPanel, FormAlert } from './-ui/form'
+import { AuthPanel, EmailSentence, FormAlert } from './-ui/form'
 
 import type { AuthMessage } from './-lib/errors'
 import type { InvitationSummary } from './-server/invitation'
@@ -28,31 +31,15 @@ export const Route = createFileRoute('/(auth)/accept-invitation/$invitationId')(
   },
 )
 
-/** Role names as the product says them, not as the database spells them. */
-const ROLE_COPY: Record<string, string> = {
-  owner: 'Owner — full control, including billing',
-  admin: 'Admin — manage trips, members and settings',
-  member: 'Member — plan trips alongside everyone else',
-}
-
-function roleDescription(role: string): string {
-  return ROLE_COPY[role] ?? `${role} — access set by the workspace owner`
-}
-
-function formatExpiry(iso: string | null): string | null {
-  if (!iso) return null
-  const when = new Date(iso)
-  if (Number.isNaN(when.getTime())) return null
-  return when.toLocaleDateString(undefined, {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
 /** The workspace card at the heart of every state on this screen. */
 function InvitationDetails({ invitation }: { invitation: InvitationSummary }) {
-  const expires = formatExpiry(invitation.expiresAt)
+  const { t, locale } = useI18n()
+  // Formatted by the pinned formatter, never by the platform: `docs/SPEC.md`
+  // §8.5 treats a workerd/WebKit divergence in a date as a defect, and this one
+  // is server-rendered and then hydrated.
+  const expires = formatDate(invitation.expiresAt, locale)
+  const role = roleCopy(invitation.role)
+
   return (
     <div className="rounded-lg border border-edge-faint bg-surface-2 p-5">
       <div className="flex items-start gap-3.5">
@@ -64,7 +51,10 @@ function InvitationDetails({ invitation }: { invitation: InvitationSummary }) {
             {invitation.organizationName}
           </p>
           <p className="mt-0.5 truncate text-caption text-ink-3">
-            Invited as {invitation.email}
+            <EmailSentence
+              text={t('auth.invitation.invitedAs', { email: invitation.email })}
+              email={invitation.email}
+            />
           </p>
         </div>
       </div>
@@ -73,28 +63,47 @@ function InvitationDetails({ invitation }: { invitation: InvitationSummary }) {
 
       <dl className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <dt className="text-caption text-ink-3">Your role</dt>
+          <dt className="text-caption text-ink-3">
+            {t('auth.invitation.role')}
+          </dt>
           <dd className="min-w-0">
-            <Badge tone="brand">{invitation.role}</Badge>
+            <Badge tone="brand">
+              {role ? t(role.badge) : invitation.role}
+            </Badge>
           </dd>
         </div>
         <div className="flex items-start justify-between gap-3">
-          <dt className="shrink-0 text-caption text-ink-3">Means</dt>
-          <dd className="text-right text-caption text-ink-2">
-            {roleDescription(invitation.role)}
+          <dt className="shrink-0 text-caption text-ink-3">
+            {t('auth.invitation.means')}
+          </dt>
+          <dd className="text-end text-caption text-ink-2">
+            {role
+              ? t(role.meaning)
+              : t('auth.invitation.role.other', { role: invitation.role })}
           </dd>
         </div>
         {invitation.invitedByEmail ? (
           <div className="flex items-center justify-between gap-3">
-            <dt className="shrink-0 text-caption text-ink-3">Invited by</dt>
-            <dd className="min-w-0 truncate text-caption text-ink-2">
+            <dt className="shrink-0 text-caption text-ink-3">
+              {t('auth.invitation.invitedBy')}
+            </dt>
+            <dd dir="ltr" className="min-w-0 truncate text-caption text-ink-2">
               {invitation.invitedByEmail}
             </dd>
           </div>
         ) : null}
         {expires ? (
           <div className="flex items-center justify-between gap-3">
-            <dt className="shrink-0 text-caption text-ink-3">Expires</dt>
+            <dt className="shrink-0 text-caption text-ink-3">
+              {t('auth.invitation.expires')}
+            </dt>
+            {/* `numeral` for tabular figures, and deliberately NOT
+                `data-numeric`: that attribute pins a run to `direction: ltr`,
+                which is right for a code or a time range glued together by
+                neutral characters and wrong for a formatted date. An Arabic
+                date is Arabic prose — `23 يونيو 2026` reads right to left — so
+                pinning it reversed the reading order to year-month-day. It
+                takes the paragraph's direction, like the sentence it is. */}
             <dd className="text-caption text-ink-2 numeral">{expires}</dd>
           </div>
         ) : null}
@@ -106,6 +115,7 @@ function InvitationDetails({ invitation }: { invitation: InvitationSummary }) {
 function AcceptInvitationPage() {
   const view = Route.useLoaderData()
   const { invitationId } = Route.useParams()
+  const t = useTranslate()
 
   const [failure, setFailure] = React.useState<AuthMessage | null>(null)
   const [accepting, setAccepting] = React.useState(false)
@@ -150,13 +160,15 @@ function AcceptInvitationPage() {
   if (declined) {
     return (
       <AuthShell
-        eyebrow="Invitation declined"
-        heading="No problem — nothing was shared"
-        description="The workspace owner has been told, and this link can no longer be used."
+        eyebrow={t('auth.invitation.declined.eyebrow')}
+        heading={t('auth.invitation.declined.heading')}
+        description={t('auth.invitation.declined.description')}
       >
         <AuthPanel>
           <Button variant="secondary" size="lg" block asChild>
-            <Link to={DEFAULT_REDIRECT}>Go to your dashboard</Link>
+            <Link to={DEFAULT_REDIRECT}>
+              {t('auth.invitation.declined.action')}
+            </Link>
           </Button>
         </AuthPanel>
       </AuthShell>
@@ -168,35 +180,36 @@ function AcceptInvitationPage() {
   if (view.state === 'anonymous') {
     return (
       <AuthShell
-        eyebrow="Workspace invitation"
-        heading="Sign in to see your invitation"
-        description="Invitations are tied to the email address they were sent to, so we need to know who you are before we can show you this one."
+        eyebrow={t('auth.invitation.eyebrow')}
+        heading={t('auth.invitation.anonymous.heading')}
+        description={t('auth.invitation.anonymous.description')}
         footer={
           <>
-            No account yet?{' '}
+            {t('auth.invitation.anonymous.noAccount')}{' '}
             <a
               href={`/register?redirect=${encodeURIComponent(invitationPath)}`}
               className="rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
             >
-              Create one with the invited address
+              {t('auth.invitation.anonymous.register')}
             </a>
           </>
         }
       >
         <AuthPanel>
           <p className="text-body text-ink-2">
-            Use the address the invitation was sent to. We will bring you
-            straight back here afterwards.
+            {t('auth.invitation.anonymous.body')}
           </p>
           <Button
             variant="primary"
             size="lg"
             block
             className="mt-6"
-            iconAfter={<ArrowRight />}
+            iconAfter={<ArrowRight data-mirror-rtl />}
             asChild
           >
-            <a href={loginHrefFor(invitationPath)}>Sign in to continue</a>
+            <a href={loginHrefFor(invitationPath)}>
+              {t('auth.invitation.anonymous.action')}
+            </a>
           </Button>
         </AuthPanel>
       </AuthShell>
@@ -206,17 +219,18 @@ function AcceptInvitationPage() {
   /* -------------------------------------------- signed in as the wrong person */
 
   if (view.state === 'mismatch') {
+    const signedInAs = view.signedInAs
     return (
       <AuthShell
-        eyebrow="Workspace invitation"
-        heading="This invitation is for another address"
-        description="You are signed in as someone else, so this one is not yours to accept."
+        eyebrow={t('auth.invitation.eyebrow')}
+        heading={t('auth.invitation.mismatch.heading')}
+        description={t('auth.invitation.mismatch.description')}
         footer={
           <Link
             to="/login"
             className="rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
           >
-            Back to sign in
+            {t('auth.invitation.mismatch.back')}
           </Link>
         }
       >
@@ -227,11 +241,15 @@ function AcceptInvitationPage() {
             </span>
             <div className="min-w-0">
               <p className="text-label font-semibold text-ink">
-                Signed in as {view.signedInAs}
+                <EmailSentence
+                  text={t('auth.invitation.mismatch.title', {
+                    email: signedInAs,
+                  })}
+                  email={signedInAs}
+                />
               </p>
               <p className="mt-1 text-caption text-ink-3">
-                Sign out and back in with the address the invitation was sent
-                to, or ask for a new invitation to this account.
+                {t('auth.invitation.mismatch.body')}
               </p>
             </div>
           </div>
@@ -240,10 +258,12 @@ function AcceptInvitationPage() {
             size="lg"
             block
             className="mt-6"
-            iconAfter={<ArrowRight />}
+            iconAfter={<ArrowRight data-mirror-rtl />}
             asChild
           >
-            <a href={loginHrefFor(invitationPath)}>Switch account</a>
+            <a href={loginHrefFor(invitationPath)}>
+              {t('auth.invitation.mismatch.action')}
+            </a>
           </Button>
         </AuthPanel>
       </AuthShell>
@@ -253,17 +273,18 @@ function AcceptInvitationPage() {
   /* ---------------------------------------------- email not confirmed yet */
 
   if (view.state === 'unverified') {
+    const signedInAs = view.signedInAs
     return (
       <AuthShell
-        eyebrow="Workspace invitation"
-        heading="Confirm your email to join"
-        description="Workspaces only accept confirmed addresses, so nobody can be added by a typo."
+        eyebrow={t('auth.invitation.eyebrow')}
+        heading={t('auth.invitation.unverified.heading')}
+        description={t('auth.invitation.unverified.description')}
         footer={
           <Link
             to="/verify-email"
             className="rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
           >
-            Resend the confirmation email
+            {t('auth.invitation.unverified.resend')}
           </Link>
         }
       >
@@ -274,16 +295,22 @@ function AcceptInvitationPage() {
             </span>
             <div className="min-w-0">
               <p className="text-label font-semibold text-ink">
-                {view.signedInAs} is not confirmed yet
+                <EmailSentence
+                  text={t('auth.invitation.unverified.title', {
+                    email: signedInAs,
+                  })}
+                  email={signedInAs}
+                />
               </p>
               <p className="mt-1 text-caption text-ink-3">
-                Open the confirmation link in your inbox, then return to this
-                page. The invitation will be waiting.
+                {t('auth.invitation.unverified.body')}
               </p>
             </div>
           </div>
           <Button variant="primary" size="lg" block className="mt-6" asChild>
-            <Link to="/verify-email">Confirm my email</Link>
+            <Link to="/verify-email">
+              {t('auth.invitation.unverified.action')}
+            </Link>
           </Button>
         </AuthPanel>
       </AuthShell>
@@ -295,15 +322,15 @@ function AcceptInvitationPage() {
   if (view.state === 'unavailable') {
     return (
       <AuthShell
-        eyebrow="Workspace invitation"
-        heading="This invitation is no longer available"
-        description="Invitations last seven days, and they retire the moment they are used or withdrawn."
+        eyebrow={t('auth.invitation.eyebrow')}
+        heading={t('auth.invitation.unavailable.heading')}
+        description={t('auth.invitation.unavailable.description')}
         footer={
           <Link
             to={DEFAULT_REDIRECT}
             className="rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
           >
-            Go to your dashboard
+            {t('auth.invitation.unavailable.dashboard')}
           </Link>
         }
       >
@@ -314,11 +341,10 @@ function AcceptInvitationPage() {
             </span>
             <div className="min-w-0">
               <p className="text-label font-semibold text-ink">
-                Nothing to accept here
+                {t('auth.invitation.unavailable.title')}
               </p>
               <p className="mt-1 text-caption text-ink-3">
-                Ask whoever invited you to send a fresh invitation, and this
-                page will show it straight away.
+                {t('auth.invitation.unavailable.body')}
               </p>
             </div>
           </div>
@@ -333,9 +359,11 @@ function AcceptInvitationPage() {
 
   return (
     <AuthShell
-      eyebrow="Workspace invitation"
-      heading={`Join ${view.invitation.organizationName}`}
-      description="Accepting adds you to this workspace and shares its trips, budgets and lists with you."
+      eyebrow={t('auth.invitation.eyebrow')}
+      heading={t('auth.invitation.heading', {
+        workspace: view.invitation.organizationName,
+      })}
+      description={t('auth.invitation.description')}
       wide
     >
       <AuthPanel>
@@ -349,11 +377,11 @@ function AcceptInvitationPage() {
             block
             icon={<Check />}
             loading={accepting}
-            loadingLabel="Joining the workspace"
+            loadingLabel={t('auth.invitation.accepting')}
             disabled={busy && !accepting}
             onClick={() => void accept()}
           >
-            Accept invitation
+            {t('auth.invitation.accept')}
           </Button>
           <Button
             variant="secondary"
@@ -361,17 +389,16 @@ function AcceptInvitationPage() {
             block
             icon={<X />}
             loading={declining}
-            loadingLabel="Declining"
+            loadingLabel={t('auth.invitation.declining')}
             disabled={busy && !declining}
             onClick={() => void decline()}
           >
-            Decline
+            {t('auth.invitation.decline')}
           </Button>
         </div>
 
         <p className="mt-4 text-caption text-ink-4">
-          You can leave a workspace at any time from its settings, and nothing
-          you create outside it is ever shared.
+          {t('auth.invitation.reassurance')}
         </p>
       </AuthPanel>
     </AuthShell>

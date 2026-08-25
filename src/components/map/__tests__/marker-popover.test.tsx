@@ -2,7 +2,23 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
+import { DEFAULT_LOCALE, createTranslator } from '#/lib/i18n'
+import source from '#/lib/i18n/messages/en/atlas'
 import { MarkerPopover, markerLabel } from '../marker-popover'
+
+/**
+ * The source catalogue, bound exactly as `useAtlasI18n()` binds it with no
+ * provider above the tree. Building it here rather than reaching into the
+ * component's own module also proves every key the label uses exists.
+ */
+const t = createTranslator(
+  DEFAULT_LOCALE,
+  Object.fromEntries(
+    Object.entries(source).map(([key, message]) => [`atlas.${key}`, message]),
+  ),
+)
+const label = (input: Parameters<typeof markerLabel>[0]): string =>
+  markerLabel(input, t, DEFAULT_LOCALE)
 
 describe('MarkerPopover', () => {
   it('shows the place, its category and its address', () => {
@@ -56,7 +72,7 @@ describe('MarkerPopover', () => {
 describe('markerLabel', () => {
   it('folds the whole card into one accessible name', () => {
     expect(
-      markerLabel({
+      label({
         name: 'Sensoji',
         categoryName: 'Landmarks',
         address: '2-3-1 Asakusa',
@@ -70,14 +86,14 @@ describe('markerLabel', () => {
   })
 
   it('says only what is known', () => {
-    expect(markerLabel({ name: 'A place' })).toBe('A place')
-    expect(markerLabel({ name: 'A place', address: null, rating: null })).toBe(
+    expect(label({ name: 'A place' })).toBe('A place')
+    expect(label({ name: 'A place', address: null, rating: null })).toBe(
       'A place',
     )
   })
 
   it('keeps day zero-safe and does not claim an unvisited place is visited', () => {
-    expect(markerLabel({ name: 'A place', dayNumber: 1, visited: false })).toBe(
+    expect(label({ name: 'A place', dayNumber: 1, visited: false })).toBe(
       'A place, day 1',
     )
   })

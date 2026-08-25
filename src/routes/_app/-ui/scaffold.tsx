@@ -7,6 +7,7 @@
  */
 import { Card, SectionLabel, Skeleton, SkeletonText } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
@@ -232,9 +233,10 @@ export function RowsSkeleton({
   rows?: number
   className?: string
 }) {
+  const t = useTranslate()
   return (
     <div aria-busy="true" className={cn('flex flex-col', className)}>
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{t('ui.status.loading')}</span>
       {Array.from({ length: rows }, (_, index) => (
         <div
           key={index}
@@ -260,12 +262,13 @@ export function CardsSkeleton({
   cards?: number
   className?: string
 }) {
+  const t = useTranslate()
   return (
     <div
       aria-busy="true"
       className={cn('grid gap-4 sm:grid-cols-2 xl:grid-cols-3', className)}
     >
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{t('ui.status.loading')}</span>
       {Array.from({ length: cards }, (_, index) => (
         <Card key={index} padding="none" className="overflow-hidden">
           <Skeleton className="h-28 w-full rounded-none" />
@@ -288,12 +291,13 @@ export function StatsSkeleton({
   tiles?: number
   className?: string
 }) {
+  const t = useTranslate()
   return (
     <div
       aria-busy="true"
       className={cn('grid gap-4 sm:grid-cols-2 xl:grid-cols-4', className)}
     >
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{t('ui.status.loading')}</span>
       {Array.from({ length: tiles }, (_, index) => (
         <Card key={index} className="space-y-4">
           <Skeleton className="h-3 w-24" radius="sm" />
@@ -307,6 +311,7 @@ export function StatsSkeleton({
 
 /** The page-title band, so the header does not pop in after the body. */
 export function HeaderSkeleton({ className }: { className?: string }) {
+  const t = useTranslate()
   return (
     <Card
       aria-busy="true"
@@ -315,12 +320,12 @@ export function HeaderSkeleton({ className }: { className?: string }) {
         className,
       )}
     >
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{t('ui.status.loading')}</span>
       <div className="space-y-2.5">
         <Skeleton className="h-3 w-24" radius="sm" />
         <Skeleton className="h-7 w-52" radius="sm" />
       </div>
-      <Skeleton className="h-10 w-32 sm:ml-auto" radius="full" />
+      <Skeleton className="h-10 w-32 sm:ms-auto" radius="full" />
     </Card>
   )
 }

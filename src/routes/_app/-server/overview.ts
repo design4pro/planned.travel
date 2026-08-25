@@ -10,6 +10,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import {
+  RepositoryError,
   countAuditActions,
   countPlacesPerTrip,
   countUnread,
@@ -17,7 +18,6 @@ import {
   getAtlasSummary,
   getDashboardSummary,
   getOrganization,
-  listActionable,
   listAuditLog,
   listCollectionsWithCounts,
   listJourneysWithCounts,
@@ -27,14 +27,16 @@ import {
   listTrips,
   markAllRead,
   markRead,
+  notificationsRepository,
   resolveQuotas,
 } from '#/server/repos'
+import { roleSatisfies } from '#/server/auth/tenant'
 import { serverToday } from '#/server/clock'
 import { appScope } from './context'
 import { isoOfRequired } from './serialise'
 
 import type { JsonRecord } from '#/server/db/schema'
-import type { Reservation, Trip } from '#/server/db/types'
+import type { Notification, Reservation, Trip } from '#/server/db/types'
 
 /* ------------------------------------------------------------------- shapes */
 
@@ -318,10 +320,35 @@ export interface NotificationCard {
 }
 
 export interface NotificationsPayload {
+  /**
+   * The instant the page was read, so the rows' relative times are composed
+   * against one clock. Read on the server and carried on the payload: a
+   * `Date.now()` in a component runs twice, once during SSR and once during
+   * hydration, and a row sitting on the "45 seconds" or the "7 days" boundary
+   * then renders two different strings and React reports a text mismatch.
+   */
+  readonly now: number
   readonly items: ReadonlyArray<NotificationCard>
   readonly nextCursor: string | null
   readonly unreadCount: number
+  /**
+   * Rows on this page still waiting for an accept or a decline.
+   *
+   * Counted from the page rather than from the whole table. `listActionable`
+   * takes no limit, so asking it for a `.length` put an unbounded select on
+   * every inbox page view — and a repository function that returns every
+   * matching row is not a counter. The number the chip shows is now about the
+   * list underneath it, which is also what a reader standing next to that list
+   * reads it as. An exact workspace-wide figure needs a `countActionable` in
+   * `src/server/repos/notifications.ts`, which this item does not own.
+   */
   readonly actionableCount: number
+}
+
+/** Rows a reader still has to answer: an invitation, a poll, a request. */
+function actionableIn(items: ReadonlyArray<Notification>): number {
+  return items.filter((row) => row.type === 'action' && row.response === null)
+    .length
 }
 
 export const loadNotifications = createServerFn({ method: 'GET' })
@@ -330,19 +357,19 @@ export const loadNotifications = createServerFn({ method: 'GET' })
     const scope = await appScope()
     const userId = scope.ctx.userId
 
-    const [page, unreadCount, actionable] = await Promise.all([
+    const [page, unreadCount] = await Promise.all([
       listNotifications(scope, userId, {
         unreadOnly: data.unreadOnly,
         limit: 50,
       }),
       countUnread(scope, userId),
-      listActionable(scope, userId),
     ])
 
     return {
+      now: Date.now(),
       nextCursor: page.nextCursor,
       unreadCount,
-      actionableCount: actionable.length,
+      actionableCount: actionableIn(page.items),
       items: page.items.map((row) => ({
         id: row.id,
         type: row.type,
@@ -361,10 +388,35 @@ export const loadNotifications = createServerFn({ method: 'GET' })
     }
   })
 
+/**
+ * Marks one row read.
+ *
+ * The repository's `markRead` is tenant-scoped but not recipient-scoped, so on
+ * its own it let any member of a workspace mark a colleague's notification read
+ * by posting its id — an inbox is per person, not per workspace. The row is
+ * therefore read and its recipient checked before the write, and a row belonging
+ * to someone else is refused exactly as a row belonging to another workspace is:
+ * as if it were not there. Authorisation is never the client's to decide
+ * (`docs/SPEC.md` §5), and the client here only ever holds ids the reader was
+ * served.
+ *
+ * The narrower fix is a `recipientUserId` parameter on the repository function,
+ * which this item does not own.
+ */
 export const readNotification = createServerFn({ method: 'POST' })
   .validator(z.object({ notificationId: z.string().trim().min(1).max(64) }))
   .handler(async ({ data }): Promise<{ readonly unreadCount: number }> => {
     const scope = await appScope()
+    const row = await notificationsRepository.requireById(
+      scope,
+      data.notificationId,
+    )
+    if (row.recipientUserId !== scope.ctx.userId) {
+      throw new RepositoryError(
+        'That notification belongs to another member of this workspace.',
+        'NOT_THE_RECIPIENT',
+      )
+    }
     await markRead(scope, data.notificationId)
     return { unreadCount: await countUnread(scope, scope.ctx.userId) }
   })
@@ -399,6 +451,8 @@ export interface AdminAuditRow {
 }
 
 export interface AdminPayload {
+  /** One clock for the audit trail's relative times; see {@link NotificationsPayload.now}. */
+  readonly now: number
   readonly organization: {
     readonly id: string
     readonly name: string
@@ -427,9 +481,29 @@ export interface AdminPayload {
   }>
 }
 
+/**
+ * The admin console's read, or `null` when the caller may not have it.
+ *
+ * `null` rather than a thrown 403, because "you are not an admin here" is a
+ * designed screen and not a fault: the route renders the denial state from it,
+ * the same way an empty list renders an empty state. What matters is that the
+ * decision is made *here*. The component used to gate itself on
+ * `session.user.isAdmin` while this loader ran unconditionally, so a plain
+ * member who opened `/admin` was served the whole member roster — names and
+ * email addresses — the audit trail and every quota figure inside the SSR
+ * payload, and then shown a polite panel saying they could not see it. A gate
+ * that runs after the data has been sent is not a gate (`docs/SPEC.md` §5:
+ * authorisation is never the client's decision).
+ *
+ * Nine repository reads sit behind this check, so refusing early is also the
+ * cheaper path.
+ */
 export const loadAdmin = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<AdminPayload> => {
+  async (): Promise<AdminPayload | null> => {
     const scope = await appScope()
+    if (!roleSatisfies(scope.ctx.role, 'admin')) {
+      return null
+    }
 
     const [
       organization,
@@ -454,6 +528,7 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
     ])
 
     return {
+      now: Date.now(),
       organization: {
         id: organization.id,
         name: organization.name,
@@ -543,6 +618,16 @@ const createTripSchema = z
       value.endDate === '' ||
       value.endDate >= value.startDate,
     {
+      /**
+       * Defence in depth, and the one English string in this module.
+       *
+       * `-ui/new-trip-dialog.tsx` computes `datesOutOfOrder` and both disables
+       * the save button and names the problem on the Return field, so this
+       * refinement is never the sentence a reader sees — it is what stops a
+       * hand-rolled request from writing a backwards range. A key here would
+       * render as `shell.…` in whatever surfaced it, which is worse than a
+       * diagnostic in the source language.
+       */
       message: 'The return date cannot be before the departure date.',
       path: ['endDate'],
     },

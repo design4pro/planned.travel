@@ -117,8 +117,17 @@ const NAME_LINE = 'leading-7'
  * does NOT change: `text-label` already carries 500, and swapping to 600 on
  * commit would re-measure the name and pull `Bahasa Indonesia` into an
  * ellipsis the moment it was chosen.
+ *
+ * Split in two so the shadow can be left off rather than turned off. Measured:
+ * `tailwind-merge` reads `shadow-card` as a shadow *colour*, not a shadow size
+ * — `card` is not on its size scale and `src/lib/cn.ts` registers no shadow
+ * group — so `cn('shadow-card', 'shadow-none')` keeps both classes and the CSS
+ * source order decides which box-shadow paints. Composing the flat treatment
+ * and adding the shadow to it makes the disabled case exact instead of
+ * hopeful.
  */
-const CHIP_SELECTED = 'border-brand bg-brand-subtle text-brand shadow-card'
+const CHIP_SELECTED_FLAT = 'border-brand bg-brand-subtle text-brand'
+const CHIP_SELECTED = `${CHIP_SELECTED_FLAT} shadow-card`
 
 /**
  * The lift is 1px and it moves the chip's own `translate`, so it paints without
@@ -156,6 +165,33 @@ const CHIP_SELECTED_HOVER = 'hover:border-brand-hover'
  * written keeps full ink and gains a spinner: it is the one being watched.
  */
 const CHIP_BUSY_UNSELECTED = 'text-ink-3'
+
+/**
+ * How the whole group looks when the host route turns it off.
+ *
+ * The same argument as the busy lock, one step further. `disabled:opacity-60`
+ * used to carry this and measured 3.41:1 on the twenty-three unchosen options
+ * — and, worse, 2.56:1 on the chosen one, so the single piece of information a
+ * locked picker still has to convey, *which language is in force*, was the
+ * least legible thing on it. WCAG 1.4.3 does exempt a disabled control, but
+ * `src/components/ui/shared.ts` already settled the house answer for a control
+ * that carries its own label (`disabledLabelled`): repaint, never fade, because
+ * fading dims the label along with the fill and the result reads as a broken
+ * component rather than a waiting one.
+ *
+ * So the unchosen options recede to the inset fill and the hairline border —
+ * `--color-ink-3` on `--color-surface-2` is 6.22:1 in light and 7.01:1 in dark
+ * — while the chosen one keeps its brand treatment at 6.02:1 / 6.88:1, minus
+ * the shadow that makes it look raised and clickable. The group reads locked
+ * because twenty-three chips went flat, not because the answer went grey.
+ *
+ * Distinct from the busy lock on purpose: busy keeps the `--color-surface` fill
+ * and the `--color-edge-strong` boundary and adds `cursor-progress` plus a
+ * spinner, because it is a control mid-write rather than a control switched
+ * off.
+ */
+const CHIP_OFF = 'pointer-events-none'
+const CHIP_REST_OFF = 'border-edge bg-surface-2 text-ink-3'
 
 /**
  * One wrapped grid at every width, from 360px to 2560px — never a dropdown at
@@ -399,15 +435,26 @@ export function LanguagePicker({
               className={cn(
                 CHIP_BASE,
                 item.descriptor === null && 'col-span-full',
-                selected ? CHIP_SELECTED : CHIP_REST,
-                !busy &&
-                  !disabled && [
-                    CHIP_INTERACTIVE,
-                    selected ? CHIP_SELECTED_HOVER : CHIP_REST_HOVER,
-                  ],
-                busy && 'cursor-progress',
-                busy && !writing && !selected && CHIP_BUSY_UNSELECTED,
-                'disabled:pointer-events-none disabled:opacity-60 disabled:shadow-none',
+                selected
+                  ? disabled
+                    ? CHIP_SELECTED_FLAT
+                    : CHIP_SELECTED
+                  : CHIP_REST,
+                // Exactly one of the three moods, chosen from props rather
+                // than from a `disabled:` variant: the state is known at
+                // render time, so leaning on variant ordering to settle which
+                // colour wins would be a specificity puzzle with no upside.
+                disabled
+                  ? [CHIP_OFF, !selected && CHIP_REST_OFF]
+                  : busy
+                    ? [
+                        'cursor-progress',
+                        !writing && !selected && CHIP_BUSY_UNSELECTED,
+                      ]
+                    : [
+                        CHIP_INTERACTIVE,
+                        selected ? CHIP_SELECTED_HOVER : CHIP_REST_HOVER,
+                      ],
               )}
             >
               <span className={cn('truncate', NAME_LINE)}>
