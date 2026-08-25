@@ -106,11 +106,21 @@
   {
     "id": "plans-cite-lost-gap-rows",
     "title": "Plans 03 and 13 still cite .claude/ultrabuild/recon/gap-rows.json, which exists nowhere",
-    "why": "Plan 03 references it as a readable artifact in ten places (incl. an executable one-liner) and plan 13's area brief cites \"the recon inventory\"; the artifact was never committed and is unrecoverable. An executing run following those instructions hits a missing file. The round-1 acceptance named only repo-data/repo-ui/repo-platform.md, so these survived.",
+    "why": "Round-7 measurement: grep -rln gap-rows docs/plans/ lists 00, 01, 02, 04, 06, 07, 09, 11, 12, 14, README.md and TEMPLATE.md (plans 03 and 13 are being cleaned by this run). The artifact was never committed and is unrecoverable; e.g. 09-account-and-settings.md:2697-2701 asserts a runnable command over the lost row store. Authored by the original planning run, registered here so an executing run treats those citations as historical.",
     "decision": "Carried as minor findings on accepted items rather than reopening them; fix in the next round that legitimately touches each plan, or in a citation-hygiene item after conversion.",
     "paths": [
-      "docs/plans/03-reservations-and-transport.md",
-      "docs/plans/13-community-gallery.md"
+      "docs/plans/00-foundations.md",
+      "docs/plans/01-trips-core.md",
+      "docs/plans/02-places-and-maps.md",
+      "docs/plans/04-budget-and-currencies.md",
+      "docs/plans/06-documents-and-media.md",
+      "docs/plans/07-collaboration-and-sharing.md",
+      "docs/plans/09-account-and-settings.md",
+      "docs/plans/11-boundaries-and-blockers.md",
+      "docs/plans/12-verification-protocol.md",
+      "docs/plans/14-dashboard-mascot.md",
+      "docs/plans/README.md",
+      "docs/plans/TEMPLATE.md"
     ]
   },
   {

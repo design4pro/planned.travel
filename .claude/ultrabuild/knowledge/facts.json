@@ -1939,5 +1939,66 @@
     ],
     "id": "resolve-port-sh-start-reused-the-owned-server-on-300",
     "measuredIn": "plans-for-plugins run, round 4"
+  },
+  {
+    "claim": "The claim 'nothing depends on BKG-08' is re-derivable at HEAD without the lost recon store: grep -rn 'BKG-08' docs/plans/ excluding the 03 plan prints exactly three lines, none of them an edge or Rows-unblocked entry.",
+    "evidence": "/usr/bin/grep -rn 'BKG-08' docs/plans/ | /usr/bin/grep -v '^docs/plans/03-' -> docs/plans/README.md:212 (wave-table row), docs/plans/11-boundaries-and-blockers.md:613 (11-S3 waiting table) and :740 (prose). This command is now the plan's own 03-S3 verification one-liner.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "the-claim-nothing-depends-on-bkg-08-is-re-derivable-",
+    "measuredIn": "plans-for-plugins run, round 7"
+  },
+  {
+    "claim": "Plan 03's 03-S6 citation set has zero drift at be08f34: every settings/members line number and all nine ensure/update caller sites match the plan text exactly.",
+    "evidence": "/usr/bin/grep -n at this HEAD: getUserSettings :211, ensureUserSettings :219, updateUserSettings :228, getEffectiveSettings :271 in src/server/repos/settings.ts; getMembership :144 in members.ts; callers apply.ts:288-289, preferences.ts:87/:119, -server/settings.ts:122/:232/:247/:279/:303 — all identical to the plan's cited lines.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "plan-03-s-03-s6-citation-set-has-zero-drift-at-be08f",
+    "measuredIn": "plans-for-plugins run, round 7"
+  },
+  {
+    "claim": "The drop-unknown-ids rule plan 03 cites lives in the reorderPlanFn jsdoc at src/routes/_app/trips/$tripId/-server/plan.ts:252-254, not the :269-272 the round-5 audit noted as drifted.",
+    "evidence": "/usr/bin/grep -n 'Ids that do not belong|delete behind should still' on the file returns 252 and 254; the plan now cites :252-254.",
+    "scope": [
+      "builder",
+      "auditor",
+      "critic"
+    ],
+    "id": "the-drop-unknown-ids-rule-plan-03-cites-lives-in-the",
+    "measuredIn": "plans-for-plugins run, round 7"
+  },
+  {
+    "claim": "check-plan-collisions.mjs matches a `<tag>` placeholder Owned-path as ONE literal path per namespace, so same-wave collisions on the 44 real messages/<tag>/{trips,marketing}.ts files are invisible to it; the cross-check is grep over sibling plans' Owned paths.",
+    "evidence": "Checker output at HEAD lists src/lib/i18n/messages/en/settings.ts but no messages/<tag>/* row despite plan 13 claiming <tag>/trips.ts in 3 stages; /usr/bin/grep -rn 'messages/' over plans 01-08,10 returns no trips.ts or marketing.ts claim in any locale.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "check-plan-collisions-mjs-matches-a-tag-placeholder-",
+    "measuredIn": "plans-for-plugins run, round 7"
+  },
+  {
+    "claim": "The checker's four unparseable-wave stages (11-S1, 11-S2, 11-S3, 04-S2) are an empty blind spot for plan 13: 11-S1..S3 own zero paths and 04-S2's 15 paths are all budget-module files.",
+    "evidence": "Parsed each stage's Owned paths block with the checker's own regex: 11-S1/S2/S3 -> [], 04-S2 -> 15 paths under src/server/repos/cost-categories*, src/routes/_app/trips/$tripId/-costs/*, e2e/budget-and-currencies.*.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "the-checker-s-four-unparseable-wave-stages-11-s1-11-",
+    "measuredIn": "plans-for-plugins run, round 7"
+  },
+  {
+    "claim": "docs/plans/03-reservations-and-transport.md was dirtied by a parallel agent mid-session; repo-root git status is not this item's changedPaths.",
+    "evidence": "git status --porcelain docs/plans/ at session start showed only ' M docs/plans/13-community-gallery.md'; the same command at session end additionally shows ' M docs/plans/03-reservations-and-transport.md' with no edit of mine.",
+    "scope": [
+      "auditor",
+      "mechanical"
+    ],
+    "id": "docs-plans-03-reservations-and-transport-md-was-dirt",
+    "measuredIn": "plans-for-plugins run, round 7"
   }
 ]

@@ -4,10 +4,11 @@ The trip's paperwork: the bookings a traveller reads back to a stranger at a des
 them, the stay that covers a run of nights, and the confirmation file that could fill all three in
 without anybody retyping it.
 
-Ten rows of `.claude/ultrabuild/recon/gap-rows.json` carry the `BKG-` prefix. Two of them do not
-survive the hosted multi-tenant boundary and are disposed of in `11-boundaries-and-blockers.md`; one
-is blocked on a commercial decision nobody in this repository can take; the remaining seven are
-built here, in eight stages.
+Ten rows carry the `BKG-` prefix in the materialised wave table in `docs/plans/README.md` — the
+surviving record of the recon row store, which itself exists nowhere on disk or in git history. Two
+of them do not survive the hosted multi-tenant boundary and are disposed of in
+`11-boundaries-and-blockers.md`; one is blocked on a commercial decision nobody in this repository
+can take; the remaining seven are built here, in eight stages.
 
 ## What is on disk today
 
@@ -83,12 +84,14 @@ exact shape `11-S1` refused.
 `BKG-08` has a stage — `03-S3` — because a row that is invisible is a row that gets rediscovered and
 half-built. That stage closes nothing, owns no repository file and builds no surface. It records what
 the capability needs, what it would cost and which decision in `11-S3` it waits on. **No stage in
-this plan is scheduled behind it.** Measured over `gap-rows.json`: no row anywhere in the 89 lists
-`BKG-08` in its `dependsOn`, so nothing is held up by leaving it where it is.
+this plan is scheduled behind it.** Re-measurable at any HEAD: `grep -rn "BKG-08" docs/plans/`
+returns only this plan, the `README.md` wave-table row that parks it in wave 2, and the
+`11-boundaries-and-blockers.md` decision record — no edge table or "Rows unblocked" line anywhere
+names `BKG-08` as a supplier, so nothing is held up by leaving it where it is.
 
 ## The order of the stages, and the dependency edges it satisfies
 
-`X → Y` reads "X depends on Y", the direction `gap-rows.json` uses.
+`X → Y` reads "X depends on Y", the direction the cut-edge table in `docs/plans/README.md` uses.
 
 | Edge              | Supplier                                       | Satisfied because |
 | ----------------- | ---------------------------------------------- | ----------------- |
@@ -152,18 +155,18 @@ The instruction that produced this file asks that "`BKG-07` is sequenced before 
 made and recorded, and it contradicts the criterion in the same list that says stage order must
 satisfy every `dependsOn` edge. Measured, three ways:
 
-1. `.claude/ultrabuild/recon/gap-rows.json` gives `BKG-07` a `dependsOn` of `["BKG-06"]`. `BKG-06`'s
-   own `dependsOn` is empty.
-2. `.claude/ultrabuild/recon/gap-cuts.json` records the removed edge as `BKG-06 → BKG-07` with the
-   reason "The transport record must exist before the airport picker and station-chain editor can
-   edit its endpoints." The surviving edge is the other one.
-3. `docs/plans/README.md` repeats that cut in its own table and places `BKG-06` in wave 1 and
-   `BKG-07` in wave 2, and states that any change to the edge set is a change to `gap-rows.json` and
-   `gap-cuts.json` **first**.
+1. The cut-edge table in `docs/plans/README.md` records the removed edge as `BKG-06 → BKG-07` with
+   the reason "The transport record must exist before its endpoint pickers can edit it." The
+   surviving edge is the other one: `BKG-07 → BKG-06`.
+2. The same file's wave table places `BKG-06` in wave 1 and `BKG-07` in wave 2 on this plan's rows,
+   which is that edge applied.
+3. The edge table above in this file materialises `BKG-07 → BKG-06` as an edge every stage order
+   here must satisfy.
 
 So this plan sequences `BKG-06` (`03-S1`, wave 1) before `BKG-07` (`03-S2`, wave 2), and `BKG-07`
 before `BKG-10` (`03-S5`, wave 4) — which is the half of the instruction that the edge set does
-support, and which `BKG-10`'s own `dependsOn` of `["TRP-08", "BKG-06", "BKG-07"]` requires. Reversing
+support, and which the three `BKG-10` edges in the table above (`BKG-10 → TRP-08`,
+`BKG-10 → BKG-06`, `BKG-10 → BKG-07`) require. Reversing
 the first pair would put the station-chain editor in front of the record it edits, and the stage that
 executed it would have nothing to open.
 
@@ -182,8 +185,10 @@ to match a count would break existing rows against a `CHECK` constraint for no p
 which is a floor and not a fixture. Two stages here sit one wave above their floor, each because the
 floor would have put two exclusive claims on one file in one wave — which
 `scripts/ultrabuild/check-plan-collisions.mjs` reports as a clobber, correctly, because that is what
-it is. Neither move violates an edge: **nothing in `gap-rows.json` depends on `BKG-03` or on
-`BKG-10`**, so no other plan slips by a single wave.
+it is. Neither move violates an edge: **no plan file names `BKG-03` or `BKG-10` as a supplier** —
+re-measurable with `grep -rn "BKG-03\|BKG-10" docs/plans/`, whose every cross-plan hit is a
+disposition, a host-and-seam note or an edge pointing the other way — so no other plan slips by a
+single wave.
 
 - **`03-S7` (`BKG-03`) states wave 5**, floor 4. `BKG-01` and `BKG-03` both land in wave 4 and both
   need the desk route `src/routes/_app/trips/$tripId/book.tsx`. The alternative — splitting the desk
@@ -961,8 +966,9 @@ describes the capability, the call pattern, the cache and the attribution, and p
 user, without naming a provider, assuming a free tier, writing a client for an unnamed service, or
 shipping a degraded version to avoid asking.
 
-**No stage is scheduled behind it.** Measured over `gap-rows.json`: no row lists `BKG-08` in its
-`dependsOn`. Nothing in this plan, and nothing in any sibling plan, waits on it.
+**No stage is scheduled behind it.** Re-measurable at any HEAD: `grep -rn "BKG-08" docs/plans/`
+names it only here, in the `README.md` wave table and in the `11-boundaries-and-blockers.md`
+decision record. Nothing in this plan, and nothing in any sibling plan, waits on it.
 
 ### Owned paths
 
@@ -1053,17 +1059,18 @@ for a stage that writes no code means they must be untouched.
 
 **No code runs, and there is no browser evidence** — no frame set at 360px, 1280px or 2560px, in
 either theme, because there is no surface to photograph. This stage is verified as a record, by the
-same checks `11-S1` uses on itself: the row id resolves in `.claude/ultrabuild/recon/gap-rows.json`, its
-wave matches the table in `docs/plans/README.md`, and the claim that nothing depends on it is
-re-derivable in one command:
+same checks `11-S1` uses on itself: the row id appears in the wave table in `docs/plans/README.md`
+against wave 2 of this plan, and the claim that nothing depends on it is re-derivable in one
+command:
 
 ```sh
-node -e 'const r=require("./.claude/ultrabuild/recon/gap-rows.json");
-console.log(r.filter(x=>(x.dependsOn||[]).includes("BKG-08")).map(x=>x.id))'
+grep -rn 'BKG-08' docs/plans/ | grep -v '^docs/plans/03-'
 ```
 
-It must print `[]`. If it ever prints anything else, this stage is no longer safely parked and the
-plan that added the edge owns the consequence.
+It must print lines from exactly two files and no third: the `README.md` wave-table row, and the
+`11-boundaries-and-blockers.md` decision-record rows (`11-S3`'s waiting table and its prose). If it
+ever prints an edge table or a "Rows unblocked" line naming `BKG-08` as a supplier, this stage is
+no longer safely parked and the plan that added the edge owns the consequence.
 
 **Console and layout shift** are not applicable: no surface is shipped. Stated rather than skipped, so
 the omission is a decision and not an oversight.
@@ -1597,7 +1604,9 @@ The consequence is one design decision and one honest trade-off, both under **Se
 **not** affected is the seam `01-S4` describes: one variant, one prefix, one renderer, exactly as
 promised.
 
-Rows unblocked: none. No row in `gap-rows.json` lists `BKG-10` in its `dependsOn`.
+Rows unblocked: none. No plan file names `BKG-10` as a supplier — every cross-plan mention
+(`grep -rn "BKG-10" docs/plans/`) is the opposite edge, `BKG-10 → TRP-08`, or a host-and-seam note
+about it.
 
 ### Owned paths
 
@@ -1685,8 +1694,9 @@ and performs no conversion.
   and the segment rows of one day from array index, in a single `scope.db.batch()`, which on D1 is a
   real transaction: statements run sequentially and a failure rolls the whole sequence back. It drops
   an incoming id that is not on that day rather than rejecting the whole call — a tab one delete
-  behind should still be able to reorder the rows that do exist, which is the rule
-  `-server/plan.ts:269-272` already states — and appends any known id the client omitted at its
+  behind should still be able to reorder the rows that do exist, which is the rule the jsdoc at
+  `-server/plan.ts:252-254` already states over `reorderPlanFn` — and appends any known id the
+  client omitted at its
   current relative position, so a partial list cannot silently delete a position.
 
 **Server function — `src/routes/_app/trips/$tripId/-server/plan-transports.ts`, a module of its own.**

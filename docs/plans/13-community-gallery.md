@@ -52,8 +52,11 @@ This feature carries its own names; none is carried from the reference.
 
 #### No matrix row exists for this scope
 
-The 89-row matrix predates this feature: no `gap-rows.json` id names a community gallery, and the
-recon inventory confirms nothing in `docs/plans/` covered it before this file. The scope is minted
+The 89-row matrix predates this feature, and the claim rests on artifacts that exist: the matrix's
+row ids survive where the sibling plans quote them, and none of those quotations names this scope —
+measured at this HEAD, `grep -rn "community"` and `grep -rn "curation"` over plans `00`–`12` both
+match nothing, and every `gallery` hit in a sibling is `08-product-modules.md`'s photo-journal
+gallery, a different thing under the same word. The scope is minted
 by this plan from the task brief, so every stage's **Reference rows** heading states that no
 matrix row is closed, and the sourcing citation is `wiki: Plugins` (behaviour of the
 community-sharing plugin) plus the neighbouring pages named per stage. One consequence for a
@@ -188,28 +191,49 @@ below.
 
 #### Cross-plan collisions, measured against the sibling plans at HEAD
 
-Checked with `node scripts/ultrabuild/check-plan-collisions.mjs 13` over the plan set as it
-stands, plus a by-hand read of every sibling claim on each shared file. Every share this plan
-takes is cross-wave, which is the documented cooperative pattern:
+Checked with `node scripts/ultrabuild/check-plan-collisions.mjs` over the plan set as it stands,
+plus a by-hand read of every sibling claim on each shared file. Every share this plan takes is
+cross-wave, which is the documented cooperative pattern. Dispositions below are the checker's own
+readings, not this plan's paraphrase:
 
-| File this plan touches                                | This plan              | Other claimants (stage, wave)                             |
-| ----------------------------------------------------- | ---------------------- | --------------------------------------------------------- |
-| `src/server/queue/types.ts`                           | `13-S1` w3, `13-S4` w6 | `00-S4` w0, `01-S1` w1, `07-S8` w4                        |
-| `src/server/queue/consumer.ts`                        | `13-S1` w3, `13-S4` w6 | `00-S4` w0, `01-S1` w1, `07-S8` w4                        |
-| `src/routes/_app/trips/$tripId/collab.tsx`            | `13-S2` w4             | `07-S6` w2, `07-S9` w3                                    |
-| `src/server/repos/index.ts`                           | `13-S1` w3 (append)    | `06-S3` w2, `06-S5` w3, `01-S6` w4, `07-S10` w5 (appends) |
-| `src/routes/_app/-server/shell.ts`                    | `13-S2` w4             | `02-S2` w1, `08-S10` w3                                   |
-| `src/components/layout/user-menu.tsx`                 | `13-S2` w4             | `09-S6` w1                                                |
-| `src/components/marketing/chrome.tsx`                 | `13-S3` w5             | none — no sibling plan claims it                          |
-| `src/server/repos/__tests__/tenant-isolation.test.ts` | appends                | appends everywhere — the documented cooperative file      |
+| File this plan touches                                | This plan                                 | Other claimants (stage, wave, disposition)                                              |
+| ----------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------- |
+| `src/server/queue/types.ts`                           | `13-S1` w3, `13-S4` w6 (edits)            | `00-S4` w0, `01-S1` w1, `07-S8` w4 (edits)                                              |
+| `src/server/queue/consumer.ts`                        | `13-S1` w3, `13-S4` w6 (edits)            | `00-S4` w0, `01-S1` w1, `07-S8` w4 (edits)                                              |
+| `src/routes/_app/trips/$tripId/collab.tsx`            | `13-S2` w4 (edit)                         | `07-S2` w1, `07-S6` w2, `07-S9` w3 (edits)                                              |
+| `src/server/repos/index.ts`                           | `13-S1` w3 (append)                       | `06-S3` w2 (append), `06-S5` w3 (append), `01-S6` w4 (**edit**), `07-S10` w5 (**edit**) |
+| `src/routes/_app/-server/shell.ts`                    | `13-S2` w4 (edit)                         | `02-S2` w1, `08-S10` w3 (edits)                                                         |
+| `src/components/layout/user-menu.tsx`                 | `13-S2` w4 (edit)                         | `09-S6` w1 (edit)                                                                       |
+| `src/components/marketing/chrome.tsx`                 | `13-S3` w5 (edit)                         | none — no sibling plan claims it                                                        |
+| `src/lib/i18n/messages/en/settings.ts`                | `13-S2` w4 (append)                       | `09-S1` w1 (new), `09-S2`/`09-S3`/`09-S6` w1, `09-S7` w2, `09-S8` w3 (appends)          |
+| `src/lib/i18n/messages/{en,<tag>}/trips.ts`           | `13-S1` w3 (mint), `13-S2` w4, `13-S4` w6 | none — no sibling plan names any `messages/*/trips.ts` file                             |
+| `src/lib/i18n/messages/{en,<tag>}/marketing.ts`       | `13-S3` w5 (mint), `13-S4` w6             | none — no sibling plan names any `messages/*/marketing.ts` file                         |
+| `src/server/repos/__tests__/tenant-isolation.test.ts` | appends                                   | appends everywhere — the documented cooperative file                                    |
 
 `src/server/repos/index.ts` in wave 3 is an append beside `06-S5`'s wave-3 append — the
-cooperative disposition, two added export lines that cannot contend. One placement was moved by
-this very check: the publish trigger's edit to `collab.tsx` cannot sit in wave 3, because `07-S9`
-holds that file in wave 3 for its own widget — so the trigger (and the in-app mount of the
-publish dialog) belongs to `13-S2` in wave 4, and `13-S1` ships the dialog as a built, tested,
-not-yet-mounted component. Everything else this plan
-owns is newly created under paths no sibling names: `src/server/repos/community.ts`,
+cooperative disposition, two added export lines that cannot contend in the one wave they share.
+`01-S6` (wave 4) and `07-S10` (wave 5) take **edit** dispositions on that barrel, not appends —
+exclusive claims, each alone in its wave, so the share stays legal cross-wave; the earlier reading
+of "all appends" was this table's error, corrected against the checker. `collab.tsx` is plan 07's
+file for three consecutive waves — `07-S2` recomposes the screen in wave 1, `07-S6` adds its
+share trigger in wave 2, `07-S9` its widget in wave 3 — and one placement here was moved by this
+very check: the publish trigger's edit cannot sit in wave 3 beside `07-S9`, so the trigger (and
+the in-app mount of the publish dialog) belongs to `13-S2` in wave 4, and `13-S1` ships the
+dialog as a built, tested, not-yet-mounted component. The catalogue rows carry a stated limit of
+the tool: the 22 non-English entries are written with the `<tag>` placeholder, which the checker
+matches as one literal path per namespace, so the sibling cross-check for those 44 real files is
+the grep in the row — no sibling plan's Owned paths name any `messages/*/trips.ts` or
+`messages/*/marketing.ts` path, in any locale including `en`.
+
+Re-run at this round's HEAD after these corrections, the checker reports —
+
+> no same-wave exclusive collisions
+
+— and exits 0, over `plans 15 · stages 96 · owned paths 591`. Its one blind spot travels with the
+quote: four sibling stages (`11-S1`, `11-S2`, `11-S3`, `04-S2`) state no parseable wave and
+cannot be checked; `11-S1`–`11-S3` own no paths at all and `04-S2`'s fifteen paths are all
+budget-module files this plan never touches, so the blind spot is empty for this plan. Everything
+else this plan owns is newly created under paths no sibling names: `src/server/repos/community.ts`,
 `src/server/fns/community.ts`, `src/server/community/`, `src/components/gallery/`,
 `src/routes/gallery/`, `src/routes/_app/curation.tsx`, `src/routes/_app/-server/curation.ts`,
 `src/server/queue/handlers/community-*.ts`, `e2e/community-gallery.visual.spec.ts`.
@@ -225,10 +249,17 @@ stage re-decides it:
 | Publish dialog, saved trips, materialise flow, notifications   | `trips`     | `gallery.*`  |
 | Curation console                                               | `settings`  | `curation.*` |
 
-`src/lib/i18n/messages/en/trips.ts` and `messages/en/marketing.ts` do not exist at HEAD and no
-sibling plan claims them; the first stage here that needs each one mints it if it is still absent
-at execution time, and appends otherwise — the same convention `09-account-and-settings.md` fixed
-for `messages/en/settings.ts`, which does exist and is only ever appended to. Every stage ships
+The `trips` and `marketing` namespace files do not exist at HEAD **in any of the 23 locales** —
+`src/lib/i18n/messages/<locale>/` holds exactly `atlas`, `auth`, `settings`, `shell` and `ui`
+today — and no sibling plan claims any of them; so the first stage here that needs each file
+mints it if it is still absent at execution time, and appends otherwise, for the English file and
+its 22 siblings alike. `messages/en/settings.ts` is the different case: it exists at HEAD and is
+plan 09's file first — minted by `09-S1` (wave 1, disposition `new`), appended by `09-S2`,
+`09-S3` and `09-S6` in wave 1, `09-S7` in wave 2 and `09-S8` in wave 3 — so `13-S2`'s wave-4
+append lands after every plan-09 claim, which is what makes it the cooperative disposition rather
+than a contended one. And the parity suite is green at this HEAD, which turns the next sentence
+from policy into a gate: a stage that adds an English key without its 22 translations goes red
+the same run. Every stage ships
 its keys in **all 23 locales** — the English source plus the 22 translations, each made from our
 English per `docs/SPEC.md` §8.9 — and passes the parity suite
 (`src/lib/i18n/__tests__/parity.test.ts`) before it closes. The 22 non-English tags are the fixed
@@ -259,8 +290,10 @@ duplicate. Described here in planned.travel's vocabulary; no text is carried acr
 - `src/server/repos/community.ts` — new. The publication repository: scoped writers, the
   gallery-space readers, the quota assertion.
 - `src/server/repos/index.ts` — append. One export line beside the existing re-exports. Sibling
-  appends: `06-S3` (wave 2), `06-S5` (wave 3), `01-S6` (wave 4), `07-S10` (wave 5) — all appends,
-  the cooperative disposition.
+  claims, dispositions per the collision checker: `06-S3` (wave 2, append), `06-S5` (wave 3,
+  append — the same-wave neighbour, cooperative beside this append), `01-S6` (wave 4, **edit**),
+  `07-S10` (wave 5, **edit**). The two edits are exclusive claims in waves this stage is not in,
+  so the share is the legal cross-wave pattern.
 - `src/server/community/snapshot.ts` — new. The snapshot document type, its Zod schema, its
   version constant and the builder that assembles it from the repositories.
 - `src/server/fns/community.ts` — new. `submitToGalleryFn`, `withdrawFromGalleryFn`,
@@ -278,8 +311,10 @@ duplicate. Described here in planned.travel's vocabulary; no text is carried acr
   (later) curation copy.
 - `src/lib/i18n/messages/en/trips.ts` — new if absent at execution time, append otherwise. The
   `gallery.*` keys of this stage.
-- `src/lib/i18n/messages/<tag>/trips.ts` — append, for each of the 22 non-English tags fixed in
-  the area brief (`ar` … `zh-Hant`): the same keys, translated from our English.
+- `src/lib/i18n/messages/<tag>/trips.ts` — new if absent at execution time, append otherwise,
+  for each of the 22 non-English tags fixed in the area brief (`ar` … `zh-Hant`): the same keys,
+  translated from our English. None of these files exists at HEAD, so the mint convention applies
+  to them exactly as it does to the `en` file above.
 - `src/server/repos/__tests__/community.test.ts` — new.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
 - `src/server/community/__tests__/snapshot.test.ts` — new.
@@ -352,7 +387,9 @@ clear of the open FX-provider decision in `11-S3`.
   (`src/server/repos/base.ts:287`). Scoped functions: `getPublicationForTrip(scope, tripId)`,
   `submitPublication(scope, input)` — insert or, when the `(org, trip)` row exists, an update
   that bumps `version`, resets `status` to `'in_review'`, clears `review_note` and stamps
-  `submitted_by`/`submitted_at`; `withdrawPublication(scope, publicationId)`;
+  `submitted_by`/`submitted_at`; on both paths it guards the live count with `assertQuota`
+  exactly when the write moves the row into the live set, per this stage's **Quota** heading;
+  `withdrawPublication(scope, publicationId)`;
   `markSnapshotBuilt(scope, publicationId, { snapshotKey, dayCount, placeCount })`. Every read is
   built on `tenantFilter()` (`base.ts:86`); `organization_id` is stamped, never accepted.
 - **Gallery-space readers** (the argued unscoped family, named `*ForGallery`): none in this stage
@@ -459,9 +496,15 @@ This stage creates a countable row and the metric **does not yet exist**:
 - **Call site:** inside the repository, before the write — `submitPublication` in
   `src/server/repos/community.ts` calls
   `assertQuota(scope, 'community_trips', await communityTripsRepository.count(scope, /* live statuses */))`
-  (`assertQuota` at `src/server/repos/base.ts:430`) **only on the insert path**. A re-share
-  updates the existing row and consumes nothing — the metric counts publications, not versions.
-  The count is read live, never cached (`docs/ARCHITECTURE.md` §4 rule 1).
+  (`assertQuota` at `src/server/repos/base.ts:430`) **whenever the write moves the row into the
+  live set** — that is, when no `(org, trip)` row exists (the insert path) **and** when the
+  existing row's `status` is `'withdrawn'` (the update path behind face 5's "Publish again",
+  which re-enters review and re-joins the live count). The guard and the metric share one
+  definition of live: the row being written is not in the pre-write count in either case, so the
+  same call with the same live count is correct on both paths. When the existing row is already
+  live (`in_review`, `changes_requested`, `published`), a re-share bumps `version` and consumes
+  nothing — the row is already counted; the metric counts publications, not versions. The count
+  is read live, never cached (`docs/ARCHITECTURE.md` §4 rule 1).
 - R2 snapshot objects ride the publisher's existing `storage_bytes` accounting the same way other
   `FILES` writes do; object first, assert second, compensating delete on throw, mirroring
   `src/server/repos/files.ts`.
@@ -477,9 +520,11 @@ scope against B's rows: `getPublicationForTrip` with B's trip id — `NotFoundEr
 `withdrawPublication`, `markSnapshotBuilt`.
 
 `src/server/repos/__tests__/community.test.ts` additionally holds the non-tenant invariants: the
-unique `(org, trip)` re-share semantics (second submit bumps `version`, does not insert), the
-quota assertion firing on the insert path and not the update path, and
-`getPublicationRecordForRelease` returning no snapshot content.
+unique `(org, trip)` re-share semantics (second submit bumps `version`, does not insert); the
+quota assertion firing on the insert path **and** on a withdrawn→`in_review` resubmission, and
+not firing when an already-live row is resubmitted; a workspace at its `community_trips` ceiling
+being refused when it republishes a withdrawn row (the transition that would otherwise raise the
+live count past the limit); and `getPublicationRecordForRelease` returning no snapshot content.
 
 ### Verification
 
@@ -581,8 +626,13 @@ mechanics — is our own design.
   "Publish to the Gallery" trigger beside the share-link trigger `07-S6` (wave 2) placed there,
   because "share with a link" and "share with the world" are one mental shelf. The trigger
   carries `data-part="gallery-publish-trigger"` for the capture harness. **Shared across waves**
-  with `07-S6` (wave 2) and `07-S9` (wave 3); this claim is wave 4, alone in it.
+  with `07-S2` (wave 1, the recomposition that owns the screen's shape), `07-S6` (wave 2) and
+  `07-S9` (wave 3) — the file is plan 07's for three consecutive waves; this claim is wave 4,
+  alone in it, which the collision checker confirms: its run at this HEAD reports
+  `no same-wave exclusive collisions` and exits 0.
 - `src/lib/i18n/messages/en/settings.ts` — append. The `curation.*` keys and nothing else.
+  Plan 09's file first: minted by `09-S1` (wave 1, `new`), appended by `09-S2`/`09-S3`/`09-S6`
+  (wave 1), `09-S7` (wave 2) and `09-S8` (wave 3); this wave-4 append lands after all of them.
 - `src/lib/i18n/messages/<tag>/settings.ts` — append, for each of the 22 non-English tags fixed
   in the area brief: the same keys, translated from our English.
 - `src/lib/i18n/messages/en/trips.ts` — append. The two verdict notification key pairs.
@@ -779,8 +829,10 @@ The six items of `docs/SPEC.md` §7 apply unchanged.
   curation gate fails closed, which is the correct failure mode but not a shippable stage.
 - **`02-S2`** (`02-places-and-maps.md`, wave 1), **`08-S10`** (`08-product-modules.md`, wave 3)
   and **`09-S6`** (`09-account-and-settings.md`, wave 1) precede the cross-wave edits to
-  `shell.ts` and `user-menu.tsx` this stage makes; **`07-S6`** (wave 2) and **`07-S9`** (wave 3)
-  precede the `collab.tsx` edit that mounts the publish trigger beside their work.
+  `shell.ts` and `user-menu.tsx` this stage makes; **`07-S2`** (wave 1), **`07-S6`** (wave 2) and
+  **`07-S9`** (wave 3) precede the `collab.tsx` edit that mounts the publish trigger beside their
+  work; plan 09's six claims on `messages/en/settings.ts` (waves 1–3) precede this stage's
+  append.
 - No package, no new binding.
 
 ## Stage 13-S3 — The public Gallery: browse and detail, served from KV
@@ -799,9 +851,10 @@ remain excluded — only the browsing value crosses, none of the plugin machiner
 Behaviour sourced from `wiki: Plugins`: the browse page leads with the newest publication as a
 hero and lists the rest as a searchable card grid with location, author and count facts; the
 detail page shows the day-by-day itinerary beside an interactive map with a pin for every place
-that carries coordinates. Visual weaknesses of the reference surface recorded in recon — cold
-grey cards, dead horizontal space, no motion, no designed empty states — are the bar this stage
-is designed to beat, with our own warmth, art and states.
+that carries coordinates. The visual weaknesses the reference product's own screens carry —
+observed while studying `wiki: Plugins` and its neighbouring pages: cold grey cards, dead
+horizontal space, no motion, no designed empty states — are the bar this stage is designed to
+beat, with our own warmth, art and states.
 
 ### Owned paths
 
@@ -819,8 +872,10 @@ is designed to beat, with our own warmth, art and states.
   and footer, linking `/gallery`. No sibling plan claims this file in any wave.
 - `src/lib/i18n/messages/en/marketing.ts` — new if absent at execution time, append otherwise.
   The `gallery.*` keys of the anonymous surface.
-- `src/lib/i18n/messages/<tag>/marketing.ts` — append, for each of the 22 non-English tags fixed
-  in the area brief: the same keys, translated from our English.
+- `src/lib/i18n/messages/<tag>/marketing.ts` — new if absent at execution time, append
+  otherwise, for each of the 22 non-English tags fixed in the area brief: the same keys,
+  translated from our English. None of these files exists at HEAD, so this stage mints them
+  exactly as it mints the `en` file above.
 - `src/components/gallery/__tests__/trip-art.test.tsx` — new.
 - `src/routes/gallery/-server/__tests__/gallery.test.ts` — new.
 - `e2e/community-gallery.visual.spec.ts` — append. This stage's `test.describe`.
@@ -1174,8 +1229,10 @@ z.string().trim().min(1).max(1000) }, { error: … })`. Any signed-in member of 
   authenticated server fn — the KV-only rule governs the anonymous path, and this read is
   authenticated by definition.
 - **States.** Thread empty: "No suggestions yet — travelled this route? Say so." on
-  `--color-surface-2` with the composer directly beneath (the empty state invites, never
-  dead-ends). Thread skeleton: three row bones. Thread error: inline `Alert` with retry.
+  `--color-surface-2`, illustration: an inline-SVG speech-bubble-over-dotted-route motif — a
+  quiet bubble hovering above a short dashed path, drawn for this surface in the same hand as
+  `13-S2`'s stamped-passport art and `13-S3`'s zero-data trip-art variant, our own art — with
+  the composer directly beneath (the empty state invites, never dead-ends). Thread skeleton: three row bones. Thread error: inline `Alert` with retry.
   Composer: disabled while posting, error state on refusal (rate bucket) naming the wait.
   Saved rail: absent when empty (the browse page is complete without it — stated as the
   designed empty state of an optional rail), skeleton none (deferred, reserved-space-free),
