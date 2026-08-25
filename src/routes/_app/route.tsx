@@ -6,8 +6,6 @@ import { ImpersonationBar } from '#/components/layout/impersonation-bar'
 import { MobileNav } from '#/components/layout/mobile-nav'
 import { NotFoundPanel } from '#/components/layout/not-found'
 import { TopNav } from '#/components/layout/top-nav'
-import { SHELL_BOTTOM_CLASS } from '#/lib/atlas/layout'
-import { cn } from '#/lib/cn'
 import { loadShell } from './-server/shell'
 
 /**
@@ -59,20 +57,25 @@ export const Route = createFileRoute('/_app')({
  * inside, which is how the whole shell moves down by exactly one bar and how a
  * shell without one keeps precisely the geometry it had.
  *
- * **Both edges of the viewport are reserved here, and only here.** The top one
- * is the bar's row; the bottom one is `MobileNav`, which is `fixed` below `lg`
- * and therefore displaces nothing and covers the last row of whatever is behind
- * it. The wrapper around the outlet gives that box real height —
- * {@link SHELL_BOTTOM_CLASS}, assembled from the same `MOBILE_TAB_BAR` list
- * every chrome expression in the product reads — so no route can render under
- * the tab bar and no route has to remember not to. Per-route padding cannot
- * stand in for it: `AppFrame`'s `bleed` branch has none by design, and a screen
- * that renders no `AppFrame` at all still renders inside this shell.
+ * **The top edge of the viewport is the shell's; the bottom edge is not.** The
+ * bar's row is reserved here because nothing below the shell knows the bar
+ * exists. `MobileNav` is the opposite case: it is `fixed` below `lg`, and the
+ * two things that clear it already exist and are not this component's. The
+ * content well reserves the gutter — `AppFrame` ships
+ * `pb-[calc(var(--safe-bottom)+6rem)] lg:pb-16` and says so in its own docblock
+ * — and a full-bleed slice stops at the bar's top edge by arithmetic, out of
+ * `MOBILE_TAB_BAR` in `src/lib/atlas/layout.ts`. A third reservation around the
+ * outlet stacks on both: a second 65px box beneath the 96px the content well
+ * already pads leaves 31 + 65 = 96px of canvas visible below the bar instead of
+ * the 31px gutter that was designed, on every non-bleed screen below `lg`. It
+ * shipped once, and the full-page mobile baselines were re-recorded around it
+ * before it was caught.
  *
  * `data-app-shell` is the marker the stylesheet's `scroll-padding-bottom` is
- * scoped by. That reservation is the same box in scroll geometry rather than in
- * layout — where the browser stops when it scrolls something into view — and it
- * belongs to this document alone, not to the marketing tree or the auth tree.
+ * scoped by. That is scroll geometry rather than layout — where the browser
+ * stops when it scrolls something into view, which no amount of padding on an
+ * ancestor can decide — and it belongs to this document alone, not to the
+ * marketing tree or the auth tree.
  */
 function AppShell() {
   const { shell } = Route.useRouteContext()
@@ -90,9 +93,7 @@ function AppShell() {
         unreadCount={shell.unreadCount}
         belowImpersonationBar={impersonated}
       />
-      <div className={cn('flex flex-1 flex-col', SHELL_BOTTOM_CLASS)}>
-        <Outlet />
-      </div>
+      <Outlet />
       <MobileNav />
     </div>
   )

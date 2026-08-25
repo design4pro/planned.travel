@@ -1325,6 +1325,89 @@ describe('banning an account', () => {
     })
   })
 
+  it('does not put back a ban the account was not under', async () => {
+    // A leftover expiry on an account that is not banned. The plugin's own verbs cannot produce it —
+    // `unbanUser` nulls all three columns together — but `/admin/update-user` writes the record
+    // free-form and a `wrangler d1 execute` reaches the column directly. Keyed on the expiry alone,
+    // the compensation would leave a *failed* ban having banned an account that was not banned:
+    // strictly worse than the state it exists to prevent.
+    const target = seedUser({
+      banned: false,
+      banExpires: new Date(Date.now() + 3 * 86_400_000),
+    })
+    const banSpy = vi
+      .spyOn(getAuth().api, 'banUser')
+      .mockRejectedValue(new Error('D1_ERROR: database is locked'))
+
+    await expect(
+      ban({ userId: target.id, reason: 'permanent' }),
+    ).rejects.toThrow('D1_ERROR')
+
+    // One attempt, the permanent ban that failed. No compensating second call.
+    expect(banSpy).toHaveBeenCalledTimes(1)
+    const row = userRow(target.id)
+    expect(row.banned).toBe(0)
+    expect(row.ban_expires).toBeNull()
+    expect(
+      records().find(
+        (record) =>
+          record.msg === 'console could not restore the ban it cleared',
+      ),
+    ).toBeUndefined()
+    // The clearing write stands, a human made it, and §4.3 audits an unban without exception — and
+    // the pair of payloads says what it really was: a stale expiry cleared, not a ban lifted.
+    const rows = await auditRows()
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      action: 'platform.user.unbanned',
+      entityId: target.id,
+      actorKind: 'human',
+      actorUserId: operatorId,
+      actorRole: 'admin',
+    })
+    expect(rows[0]?.changes?.before).toMatchObject({ banned: false })
+    expect(rows[0]?.changes?.after).toMatchObject({
+      banned: false,
+      banExpiresAt: null,
+    })
+  })
+
+  it('does not put back a ban that had already lapsed as a one-second one', async () => {
+    // `banExpires` in the past is a ban the plugin lifts at the account's next sign-in
+    // (`databaseHooks.session.create.before`), so the effective state is already "not banned" and
+    // the remaining time is negative. Clamped to a second, as an earlier version did, the
+    // compensation imposed a ban nobody ever asked for.
+    const target = seedUser({
+      banned: true,
+      banReason: 'first offence',
+      banExpires: new Date('2020-01-01T00:00:00.000Z'),
+    })
+    const banSpy = vi
+      .spyOn(getAuth().api, 'banUser')
+      .mockRejectedValue(new Error('D1_ERROR: database is locked'))
+
+    await expect(
+      ban({ userId: target.id, reason: 'permanent' }),
+    ).rejects.toThrow('D1_ERROR')
+
+    expect(banSpy).toHaveBeenCalledTimes(1)
+    const row = userRow(target.id)
+    expect(row.banned).toBe(0)
+    expect(row.ban_expires).toBeNull()
+    expect(row.ban_reason).toBeNull()
+    const rows = await auditRows()
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      action: 'platform.user.unbanned',
+      entityId: target.id,
+      actorKind: 'human',
+    })
+    expect(rows[0]?.changes?.before).toMatchObject({
+      banned: true,
+      banReason: 'first offence',
+    })
+  })
+
   it('refuses the operator own account before anything is called', async () => {
     await expect(
       ban({ userId: operatorId, reason: 'oops' }),
@@ -1516,41 +1599,85 @@ describe('setting a password', () => {
     ).toBe(200)
   })
 
-  it('refuses the operator own account, which the revocation would sign out before the write', async () => {
-    const revokeSpy = vi.spyOn(getAuth().api, 'revokeUserSessions')
-    const setSpy = vi.spyOn(getAuth().api, 'setUserPassword')
+  it('sets the operator own password and signs them out with it', async () => {
+    // The console offers this verb on the operator's own row deliberately
+    // (`src/routes/_app/console/-ui/user-actions.tsx`): an operator who has left a session on a
+    // machine they no longer control wants exactly this, and the copy says so in the first person.
+    // A refusal here would make that affordance fail every time it was pressed.
+    const secret = 'the-operator-own-new-passphrase'
 
-    await expect(
-      setPassword({
-        userId: operatorId,
-        newPassword: 'a-passphrase-for-the-operator',
-      }),
-    ).rejects.toMatchObject({ code: 'target-is-self' })
+    await setPassword({ userId: operatorId, newPassword: secret })
 
-    // Refused before either step, so nothing about the operator's account moved.
-    expect(revokeSpy).not.toHaveBeenCalled()
-    expect(setSpy).not.toHaveBeenCalled()
-    expect(await auditRows()).toEqual([])
-    expect(sessionCount(operatorId)).toBe(1)
-    const live = await authGet('/get-session', jarHeader(callerJar))
-    const body: { user: { id: string } } | null = await live.json()
-    expect(body?.user.id).toBe(operatorId)
-    // Still the credential they arrived with, and the one they asked for never landed.
+    // Both halves landed: the credential moved, and every session the operator held ended with it —
+    // including the one that made the call.
+    expect(
+      await authPost('/sign-in/email', {
+        email: OPERATOR_EMAIL,
+        password: secret,
+      }).then((response) => response.status),
+    ).toBe(200)
     expect(
       await authPost('/sign-in/email', {
         email: OPERATOR_EMAIL,
         password: PASSWORD,
       }).then((response) => response.status),
-    ).toBe(200)
+    ).not.toBe(200)
+
+    const password = await rowsFor('platform.user.password_set')
+    expect(password).toHaveLength(1)
+    expect(password[0]).toMatchObject({
+      entityId: operatorId,
+      actorKind: 'human',
+      actorUserId: operatorId,
+      actorRole: 'admin',
+    })
+    const revoked = await rowsFor('platform.session.revoked_all')
+    expect(revoked).toHaveLength(1)
+    expect(revoked[0]?.changes?.before).toMatchObject({
+      userId: operatorId,
+      sessions: 1,
+    })
+    expect(await ledgerText()).not.toContain(secret)
   })
 
-  it('cannot set its own password even in the order the handler uses, which is why the refusal is here', async () => {
-    // The measurement behind that refusal, taken against `better-auth@1.7.1` rather than argued from
+  it('writes the operator own credential first, because the revocation ends the call otherwise', async () => {
+    // The one target on which the handler's usual order cannot run. Reversed, the credential write
+    // still carries its own row as its next statement, so REPAIR 57's invariant holds either way:
+    // no step that can reject stands between a committed credential change and its ledger row.
+    const seen: Array<string> = []
+    const realRevoke = getAuth().api.revokeUserSessions
+    const realSet = getAuth().api.setUserPassword
+    vi.spyOn(getAuth().api, 'revokeUserSessions').mockImplementation(
+      async (options) => {
+        seen.push(
+          `revoke after ${(await rowsFor('platform.user.password_set')).length} row(s)`,
+        )
+        return realRevoke(options)
+      },
+    )
+    vi.spyOn(getAuth().api, 'setUserPassword').mockImplementation(
+      async (options) => {
+        seen.push(
+          `set after ${(await rowsFor('platform.user.password_set')).length} row(s)`,
+        )
+        return realSet(options)
+      },
+    )
+
+    await setPassword({
+      userId: operatorId,
+      newPassword: 'a-perfectly-ordinary-passphrase',
+    })
+
+    expect(seen).toEqual(['set after 0 row(s)', 'revoke after 1 row(s)'])
+  })
+
+  it('cannot write its own credential after revoking its own session, which is why that order is reversed', async () => {
+    // The measurement behind the reversal, taken against `better-auth@1.7.1` rather than argued from
     // the handler. `/admin/set-user-password` runs behind `adminMiddleware`, which re-resolves the
     // caller from `headers` on entry — so once the revocation has deleted the operator's own session
-    // row and its blob, the credential write answers `UNAUTHORIZED`. Aimed at the operator, this
-    // handler's two steps cannot both succeed in either order: revoke-then-write signs them out and
-    // never changes the password, and write-then-revoke is the state REPAIR 57 exists to prevent.
+    // row and its blob, the credential write answers `UNAUTHORIZED`: signed out of every device,
+    // told the call failed, password unchanged.
     const headers = new Headers({ cookie: jarHeader(callerJar) })
 
     await getAuth().api.revokeUserSessions({

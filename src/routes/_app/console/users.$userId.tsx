@@ -1,4 +1,9 @@
-import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import {
+  Link,
+  createFileRoute,
+  notFound,
+  useRouter,
+} from '@tanstack/react-router'
 import {
   ArrowLeft,
   Building2,
@@ -28,6 +33,7 @@ import {
   displayPlatformRole,
   formatConsoleInstant,
   platformActionTone,
+  readConsoleFailure,
 } from '#/components/console'
 import {
   Alert,
@@ -50,11 +56,11 @@ import { UserActions } from './-ui/user-actions'
 import { formatDate, formatNumber, trimmedOrNull } from '../-lib/format'
 import { MetaGrid, MetaStrip, Panel, RowsSkeleton } from '../-ui/scaffold'
 
+import type { ConsoleAuditEntry } from '#/server/fns/console/account'
 import type {
-  ConsoleAuditEntry,
-  ConsoleMembership,
   ConsoleSubscription,
-} from './-server/account-reads'
+  ConsoleWorkspace,
+} from './-server/account-billing'
 import type { ConsoleSession } from '#/server/fns/console/projections'
 
 /**
@@ -67,10 +73,15 @@ import type { ConsoleSession } from '#/server/fns/console/projections'
  * to be listed, and there is no address for "this person" to send anybody to.
  *
  * **Four panels, from one loader call.** `loadConsoleAccount` runs `getPlatformUserFn`,
- * `listPlatformSessionsFn` and `readAccountContext` together: each passes `requirePermission` and
- * each projects its rows before they leave the server — a `session` row's `token` is the live
- * credential and never crosses the wire. None of them is audited: `docs/ACCESS.md` §4.2 closes the
- * vocabulary at thirty-one mutations and says in as many words that reads are not among them.
+ * `listPlatformSessionsFn` and `readAccountContext` together, then one billing statement over the
+ * organization ids they returned: each passes `requirePermission` and each projects its rows before
+ * they leave the server — a `session` row's `token` is the live credential and never crosses the
+ * wire. None of them is audited: `docs/ACCESS.md` §4.2 closes the vocabulary at thirty-one mutations
+ * and says in as many words that reads are not among them. No statement and no adapter read is
+ * written under `src/routes/**`: the ledger query lives in `src/server/catalog/audit.ts` beside the
+ * only writer of the table it reads, the `member` and `organization` reads go through Better Auth's
+ * own adapter in `src/server/fns/console`, and the plan beside each workspace comes from the billing
+ * repository.
  *
  * The four are the four questions an operator arrives with. *Where does this person belong* is the
  * workspaces panel, with the membership role beside each — the workspace vocabulary, which
@@ -82,13 +93,29 @@ import type { ConsoleSession } from '#/server/fns/console/projections'
  * that table exists instead of a per-entity revision log.
  */
 export const Route = createFileRoute('/_app/console/users/$userId')({
-  loader: async ({ params }) =>
-    await loadConsoleAccount({ data: { userId: params.userId } }),
+  /**
+   * An id that names nobody is a `404`, not a `500`.
+   *
+   * `notFound()` here is what makes the console shell's `notFoundComponent` reachable — without it
+   * that configuration was dead, and a mistyped id answered HTTP 500 under the copy "Nothing was
+   * lost. Try again", which is advice that cannot work for an account that does not exist. The
+   * refusal is not thrown by the server function any more: it reports the absence, and the decision
+   * about what that means to a *route* is taken here.
+   */
+  loader: async ({ params }) => {
+    const result = await loadConsoleAccount({
+      data: { userId: params.userId },
+    })
+    if (!result.found) {
+      throw notFound()
+    }
+    return result.detail
+  },
   pendingComponent: AccountPending,
   errorComponent: ({ error }) => (
     <ErrorPanel
       className="bg-surface-2"
-      error={error}
+      error={readConsoleFailure(error)}
       title="That account did not load"
     />
   ),
@@ -257,7 +284,7 @@ function WorkspacesPanel({
   memberships,
   truncated,
 }: {
-  readonly memberships: ReadonlyArray<ConsoleMembership>
+  readonly memberships: ReadonlyArray<ConsoleWorkspace>
   readonly truncated: boolean
 }) {
   return (

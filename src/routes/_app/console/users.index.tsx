@@ -1,7 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { FileQuestion, Search, SearchX, Users } from 'lucide-react'
-import { z } from 'zod'
 
 import { ErrorPanel } from '#/components/layout/error-state'
 import {
@@ -10,6 +9,7 @@ import {
   PlatformRoleBadge,
   VerificationMark,
   displayPlatformRole,
+  readConsoleFailure,
 } from '#/components/console'
 import {
   Button,
@@ -26,35 +26,22 @@ import {
   TableRow,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import {
+  CONSOLE_USERS_DEFAULT_DIRECTION,
+  CONSOLE_USERS_DEFAULT_SORT,
+  consoleUsersSearchSchema,
+} from './-lib/search'
 import { CONSOLE_USERS_PAGE_SIZE, loadConsoleUsers } from './-server/users'
 import { CreateAccountButton } from './-ui/create-account'
 import { UserActions } from './-ui/user-actions'
 import { formatDate, formatNumber } from '../-lib/format'
 import { Panel, RowsSkeleton } from '../-ui/scaffold'
 
+import type { ConsoleUsersSearch } from './-lib/search'
 import type { ConsoleUser } from '#/server/fns/console/projections'
 
-/**
- * The addressable state of this screen.
- *
- * Every control writes here rather than into component state, so a filtered, sorted page is a URL
- * somebody can send to the admin next to them and the back button walks the reader's own history.
- * Nothing carries a `.default()`: a default in the schema is re-serialised into the address on every
- * navigation, and `/console/users` would immediately become
- * `/console/users?sort=createdAt&dir=desc&page=1`. The defaults live where they are used instead.
- */
-const searchSchema = z.object({
-  q: z.string().trim().max(120).optional(),
-  /** Which column the search text is matched against; `list-users` accepts exactly one. */
-  in: z.enum(['email', 'name']).optional(),
-  role: z.enum(['admin', 'curator']).optional(),
-  status: z.enum(['active', 'suspended']).optional(),
-  sort: z.enum(['createdAt', 'updatedAt', 'name', 'email']).optional(),
-  dir: z.enum(['asc', 'desc']).optional(),
-  page: z.number().int().min(1).max(4_000).optional(),
-})
-
-type UsersSearch = z.infer<typeof searchSchema>
+/** The address this screen reads and writes. See `./-lib/search`. */
+type UsersSearch = ConsoleUsersSearch
 
 /**
  * The accounts table. Its guard is one level up, in `users.tsx`, so this screen and the account
@@ -72,7 +59,7 @@ type UsersSearch = z.infer<typeof searchSchema>
  * one that is inert says so by being disabled rather than by looking available.
  */
 export const Route = createFileRoute('/_app/console/users/')({
-  validateSearch: searchSchema,
+  validateSearch: consoleUsersSearchSchema,
   loaderDeps: ({ search }) => search,
   loader: async ({ deps }) =>
     await loadConsoleUsers({
@@ -81,8 +68,8 @@ export const Route = createFileRoute('/_app/console/users/')({
         field: deps.in ?? 'email',
         ...(deps.role === undefined ? {} : { role: deps.role }),
         ...(deps.status === undefined ? {} : { status: deps.status }),
-        sortBy: deps.sort ?? 'createdAt',
-        sortDirection: deps.dir ?? 'desc',
+        sortBy: deps.sort ?? CONSOLE_USERS_DEFAULT_SORT,
+        sortDirection: deps.dir ?? CONSOLE_USERS_DEFAULT_DIRECTION,
         page: deps.page ?? 1,
       },
     }),
@@ -90,7 +77,7 @@ export const Route = createFileRoute('/_app/console/users/')({
   errorComponent: ({ error }) => (
     <ErrorPanel
       className="bg-surface-2"
-      error={error}
+      error={readConsoleFailure(error)}
       title="The accounts list did not load"
     />
   ),
@@ -193,8 +180,8 @@ function ConsoleUsersPage() {
     setQuery(search.q ?? '')
   }, [search.q])
 
-  const sort = search.sort ?? 'createdAt'
-  const dir = search.dir ?? 'desc'
+  const sort = search.sort ?? CONSOLE_USERS_DEFAULT_SORT
+  const dir = search.dir ?? CONSOLE_USERS_DEFAULT_DIRECTION
   const pageCount = Math.max(1, Math.ceil(data.total / CONSOLE_USERS_PAGE_SIZE))
   const filtered =
     (search.q !== undefined && search.q.length > 0) ||

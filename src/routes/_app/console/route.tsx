@@ -1,10 +1,11 @@
-import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
+import { Link, Outlet, createFileRoute, redirect } from '@tanstack/react-router'
+import { UserRoundSearch } from 'lucide-react'
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
-import { NotFoundPanel } from '#/components/layout/not-found'
 import { PageHeader } from '#/components/layout/page-header'
-import { PlatformRoleBadge } from '#/components/console'
+import { PlatformRoleBadge, readConsoleFailure } from '#/components/console'
+import { Button, Card, EmptyState } from '#/components/ui'
 import { loadConsoleAccess } from './-server/access'
 import { ConsoleNav } from './-ui/console-nav'
 
@@ -39,14 +40,13 @@ export const Route = createFileRoute('/_app/console')({
     }
     return { consoleAccess: result.access }
   },
-  notFoundComponent: () => (
-    <AppFrame>
-      <NotFoundPanel />
-    </AppFrame>
-  ),
+  notFoundComponent: ConsoleNotFound,
   errorComponent: ({ error }) => (
     <AppFrame>
-      <ErrorPanel error={error} title="The console did not load" />
+      <ErrorPanel
+        error={readConsoleFailure(error)}
+        title="The console did not load"
+      />
     </AppFrame>
   ),
   component: ConsoleLayout,
@@ -76,6 +76,45 @@ function ConsoleLayout() {
             <Outlet />
           </div>
         </div>
+      </AppSections>
+    </AppFrame>
+  )
+}
+
+/**
+ * The console's own "no such thing", and the reason it is not `NotFoundPanel`.
+ *
+ * That component is the product's in-app 404 and its copy is written for the product's subject —
+ * "the trip it pointed at was moved or deleted", with *All trips* beside *Back to dashboard*. An
+ * operator who mistyped an account id is not looking for a trip, and sending them to the trip list
+ * from a platform console is the wrong door. This says what was not found and offers the two places
+ * the answer actually is.
+ *
+ * It became reachable when `users.$userId` started answering an unknown id with `notFound()` instead
+ * of letting a `409` refusal written for a dialog reach the error boundary as a `500`. Before that
+ * this configuration existed and nothing could get to it.
+ */
+function ConsoleNotFound() {
+  return (
+    <AppFrame>
+      <AppSections>
+        <Card className="bg-surface-2">
+          <EmptyState
+            icon={<UserRoundSearch />}
+            title="No such account"
+            description="Nothing on the platform carries that id. It may have been deleted since the link was made, or the address may have been mistyped."
+            action={
+              <Button asChild variant="primary">
+                <Link to="/console/users">All accounts</Link>
+              </Button>
+            }
+            secondaryAction={
+              <Button asChild variant="secondary">
+                <Link to="/console">Console overview</Link>
+              </Button>
+            }
+          />
+        </Card>
       </AppSections>
     </AppFrame>
   )

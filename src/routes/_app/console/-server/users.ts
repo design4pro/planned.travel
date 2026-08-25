@@ -34,8 +34,10 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
+import { readAccountContext } from '#/server/fns/console/account'
+import { ConsoleActionError } from '#/server/fns/console/errors'
 import { listPlatformSessionsFn } from '#/server/fns/console/sessions'
-import { readAccountContext } from './account-reads'
+import { readAccountBilling } from './account-billing'
 import {
   banPlatformUserFn,
   createPlatformUserFn,
@@ -47,11 +49,12 @@ import {
   unbanPlatformUserFn,
 } from '#/server/fns/console/users'
 
-import type { ConsoleAccountContext } from './account-reads'
+import type { ConsoleAuditEntry } from '#/server/fns/console/account'
 import type {
   ConsoleSession,
   ConsoleUser,
 } from '#/server/fns/console/projections'
+import type { ConsoleSubscription, ConsoleWorkspace } from './account-billing'
 
 /** One page of the accounts table. Twenty-five rows fill a laptop without a scroll to the pager. */
 export const CONSOLE_USERS_PAGE_SIZE = 25
@@ -145,14 +148,46 @@ export const loadConsoleUsers = createServerFn({ method: 'GET' })
     }
   })
 
+/**
+ * Everything the account screen renders beside the identity card.
+ *
+ * Three layers meet here and none of them leaks into another: the workspaces and the ledger come
+ * from `#/server/fns/console/account`, whose statement against `platform_audit_log` lives in
+ * `src/server/catalog` and whose `member`/`organization` reads go through Better Auth's own adapter;
+ * the plan beside each workspace comes from `./account-billing`, which calls the billing repository
+ * and writes no SQL of its own.
+ */
 export interface ConsoleAccountDetail {
   readonly account: ConsoleUser
   readonly sessions: ReadonlyArray<ConsoleSession>
   /** The account holds more sessions than one call enumerates. */
   readonly truncated: boolean
-  /** Workspaces, what they pay for, and the ledger — see `./account-reads`. */
-  readonly context: ConsoleAccountContext
+  readonly context: ConsoleAccountRelations
 }
+
+export interface ConsoleAccountRelations {
+  readonly memberships: ReadonlyArray<ConsoleWorkspace>
+  /** True when the account belongs to more workspaces than the panel lists. */
+  readonly membershipsTruncated: boolean
+  readonly subscriptions: ReadonlyArray<ConsoleSubscription>
+  readonly audit: ReadonlyArray<ConsoleAuditEntry>
+  /** True when the ledger holds more rows than the timeline shows. */
+  readonly auditTruncated: boolean
+}
+
+/**
+ * What one account screen resolved to: the account, or the fact that there is no such account.
+ *
+ * A union rather than a rejection, because the two are different HTTP answers and the difference was
+ * measured on this screen. An id that names nobody used to reach `readTargetUser`, which raises a
+ * `409` refusal written for a *dialog* — "That account no longer exists" — and a loader that lets it
+ * through answers `500` with that sentence in an error panel. Meanwhile `console/route.tsx` carries
+ * a `notFoundComponent` that nothing could ever reach. Reporting the absence instead lets the loader
+ * throw `notFound()`, which is what that component is for.
+ */
+export type ConsoleAccountResult =
+  | { readonly found: false }
+  | { readonly found: true; readonly detail: ConsoleAccountDetail }
 
 /**
  * One account: who it is, what it holds, where it belongs and what has been done to it.
@@ -160,20 +195,50 @@ export interface ConsoleAccountDetail {
  * Every panel behind one loader call rather than one call per panel. The screen is a single page and
  * a page that resolved four sessions to draw itself would be four times `docs/ARCHITECTURE.md`
  * §2.1's budget for one; the reads run together, so the wall-clock cost is the slowest of them.
+ *
+ * Only `target-not-found` is caught. Every other refusal — a `curator` who reached this, an account
+ * whose sessions could not be enumerated — is a real failure and reaches the error boundary as one.
  */
 export const loadConsoleAccount = createServerFn({ method: 'GET' })
   .validator(z.object({ userId }))
-  .handler(async ({ data }): Promise<ConsoleAccountDetail> => {
-    const [account, sessions, context] = await Promise.all([
-      getPlatformUserFn({ data: { userId: data.userId } }),
-      listPlatformSessionsFn({ data: { userId: data.userId } }),
-      readAccountContext(data.userId),
-    ])
+  .handler(async ({ data }): Promise<ConsoleAccountResult> => {
+    let account
+    let sessions
+    let context
+    try {
+      ;[account, sessions, context] = await Promise.all([
+        getPlatformUserFn({ data: { userId: data.userId } }),
+        listPlatformSessionsFn({ data: { userId: data.userId } }),
+        readAccountContext(data.userId),
+      ])
+    } catch (cause) {
+      if (
+        cause instanceof ConsoleActionError &&
+        cause.code === 'target-not-found'
+      ) {
+        return { found: false }
+      }
+      throw cause
+    }
+
+    // The billing lookup needs the organization ids, so it cannot join the three above. It is one
+    // statement whatever the ids are, and it is the only read on this page that waits for another.
+    const billing = await readAccountBilling(context.memberships)
+
     return {
-      account,
-      sessions: sessions.sessions,
-      truncated: sessions.truncated,
-      context,
+      found: true,
+      detail: {
+        account,
+        sessions: sessions.sessions,
+        truncated: sessions.truncated,
+        context: {
+          memberships: billing.workspaces,
+          membershipsTruncated: context.membershipsTruncated,
+          subscriptions: billing.subscriptions,
+          audit: context.audit,
+          auditTruncated: context.auditTruncated,
+        },
+      },
     }
   })
 

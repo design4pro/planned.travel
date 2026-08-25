@@ -117,8 +117,8 @@ export const APP_HEADER: ReadonlyArray<ChromeInset> = [
  * indicator. It is `fixed`, so it covers whatever is behind it rather than
  * displacing it: a full-bleed slice has to stop at its top edge or the map shows
  * through it, and the browser has to be told not to scroll anything into the row
- * it occupies. {@link BOTTOM_CLEARANCE_CSS} is that second reservation, and this
- * list is the one place either of them is measured.
+ * it occupies. {@link BOTTOM_CLEARANCE_CSS} is that second one, and this list is
+ * the one place either of them is measured.
  */
 export const MOBILE_TAB_BAR: ReadonlyArray<ChromeInset> = [
   { name: 'tab bar hairline', css: '1px', px: () => 1 },
@@ -178,50 +178,46 @@ export const APP_HEADER_TOP_CLASS =
   'top-[calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px)]'
 
 /**
- * The tab bar's box as a CSS length.
+ * The tab bar's box as a CSS length, for the scroll reservation in
+ * `src/styles/styles.css`.
  *
- * The bar is `fixed`: it takes no space and covers what is behind it. Two
- * separate reservations answer that, and both read this one expression —
- * `AppShell`'s {@link SHELL_BOTTOM_CLASS}, which gives the box real height at
- * the foot of the outlet, and the `scroll-padding-bottom` beside it in
- * `src/styles/styles.css`, which tells the browser where to stop when it scrolls
- * something into view. Published from the list that measures the bar so none of
- * the three can disagree about how tall it is.
+ * The bar is `fixed`: it takes no space and covers what is behind it, so the
+ * browser will happily scroll a focused field into the row it occupies. The
+ * stylesheet answers that with `scroll-padding-bottom`, which changes where the
+ * browser stops and changes no element's size — the one reservation that can be
+ * made across a whole document without moving a single existing screen. This is
+ * the expression it uses, published from the list that measures the bar so the
+ * two cannot disagree.
+ *
+ * There is deliberately no *layout* twin of it on the shell. Both kinds of
+ * screen already clear the bar, each in the way that suits it: the content well
+ * pads for it (`AppFrame` ships `pb-[calc(var(--safe-bottom)+6rem)] lg:pb-16`)
+ * and a full-bleed slice stops at its top edge by arithmetic ({@link
+ * sliceHeight}). Padding the outlet as well stacks a second box on both — 96px
+ * against a 65px bar — and turns an intended gutter into dead canvas at the foot
+ * of every authenticated screen below `lg`.
  */
 export const BOTTOM_CLEARANCE_CSS = insetSumCss(MOBILE_TAB_BAR)
 
 /**
- * What `AppShell` reserves at the foot of the outlet, per breakpoint.
+ * The row the fixed tab bar occupies at the foot of a full-bleed screen.
  *
- * The top edge of the viewport is the shell's — `--impersonation-h` — and so is
- * the bottom one. Below `lg` the tab bar is `fixed`, so it displaces nothing and
- * covers the last row of whatever is behind it; from `lg` it is not rendered at
- * all and there is nothing to clear.
+ * Not a reservation and nothing carries it as padding: it is the space the slice
+ * declines to take. Below `lg` {@link sliceHeight} stops at the bar's top edge,
+ * and because the shell root is `min-h-svh` its `flex-1` outlet stretches over
+ * that row anyway — so the document measures exactly one viewport, with the last
+ * row of it behind the bar and holding nothing. From `lg` the bar is not
+ * rendered and there is no row.
  *
- * It is reserved *once, around the outlet* rather than per route, because a
- * route is free not to use the content well: `AppFrame`'s `bleed` branch is the
- * map surfaces, and a screen that renders neither still renders inside this
- * shell. A reservation that only exists where a component remembered to add it
- * is not a reservation.
- *
- * The arithmetic composes exactly with {@link sliceHeight}: a full-bleed slice
- * already stops at the bar's top edge below `lg`, so adding the same box back
- * underneath it leaves {@link documentHeight} at precisely one viewport at both
- * breakpoints, rather than one viewport minus a bar.
+ * It is here because {@link documentHeight} has to account for it to be an
+ * assertion about a real document rather than about the sum of two boxes. A
+ * model that stopped at the slice would report a phone screen as one viewport
+ * *minus a bar*, and the next person to make that number come out even would add
+ * the padding back.
  */
-export function shellBottomReserve(wide: boolean): ReadonlyArray<ChromeInset> {
+export function shellBottomGap(wide: boolean): ReadonlyArray<ChromeInset> {
   return wide ? [] : MOBILE_TAB_BAR
 }
-
-/**
- * That reservation, as the Tailwind utilities `AppShell` ships.
- *
- * Literal source text, like {@link SLICE_HEIGHT_CLASS} and for the same reason —
- * a class assembled at runtime generates no CSS. `pb-tab-bar` is declared beside
- * `pb-safe` in `src/styles/styles.css` from {@link BOTTOM_CLEARANCE_CSS}, and
- * `src/styles/__tests__/layout-tokens.test.ts` asserts the two agree.
- */
-export const SHELL_BOTTOM_CLASS = 'pb-tab-bar lg:pb-0'
 
 /** Every inset the slice gives up, at one breakpoint. */
 function sliceInsets(wide: boolean): ReadonlyArray<ChromeInset> {
@@ -254,12 +250,12 @@ export function tripSliceHeight(env: ChromeEnvironment, wide: boolean): number {
 /**
  * How tall the document ends up on a trip screen that owns the viewport.
  *
- * The header and the sub-navigation are both in flow, the tab bar is `fixed`,
- * and the shell reserves the tab bar's box under the outlet — so this is those
- * three plus the slice. Anything over `viewport` is a scrollbar on a screen that
- * has declared it owns the viewport — and this expression was two pixels over
- * it, one for each hairline, until the planner's height was derived from these
- * lists rather than written out by hand.
+ * The header and the sub-navigation are both in flow and the tab bar is `fixed`,
+ * so this is those two, the slice, and the row the slice leaves the bar
+ * ({@link shellBottomGap}). Anything over `viewport` is a scrollbar on a screen
+ * that has declared it owns the viewport — and this expression was two pixels
+ * over it, one for each hairline, until the planner's height was derived from
+ * these lists rather than written out by hand.
  */
 export function tripDocumentHeight(
   env: ChromeEnvironment,
@@ -271,7 +267,7 @@ export function tripDocumentHeight(
   return (
     insetSum(chrome, env) +
     tripSliceHeight(env, wide) +
-    insetSum(shellBottomReserve(wide), env)
+    insetSum(shellBottomGap(wide), env)
   )
 }
 
@@ -317,16 +313,18 @@ export function sliceHeight(env: ChromeEnvironment, wide: boolean): number {
 /**
  * How tall the document ends up with the slice in it.
  *
- * The app shell is `min-h-svh` around a header, a `flex-1` outlet and the box it
- * reserves for the tab bar, so this is the header, the slice and that box.
- * Anything over `viewport` is a scrollbar on a screen that has declared it owns
- * the viewport; anything under it is dead canvas below a full-bleed surface.
+ * The app shell is `min-h-svh` around a header and a `flex-1` outlet, and the
+ * tab bar is `fixed`, so this is the header, the slice and the row the slice
+ * leaves the bar ({@link shellBottomGap}) — which the outlet stretches over
+ * rather than anything padding for it. Anything over `viewport` is a scrollbar
+ * on a screen that has declared it owns the viewport; anything under it is dead
+ * canvas below a full-bleed surface.
  */
 export function documentHeight(env: ChromeEnvironment, wide: boolean): number {
   return (
     insetSum(APP_HEADER, env) +
     sliceHeight(env, wide) +
-    insetSum(shellBottomReserve(wide), env)
+    insetSum(shellBottomGap(wide), env)
   )
 }
 

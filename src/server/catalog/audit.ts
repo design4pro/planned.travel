@@ -33,11 +33,15 @@
  *   request changed nothing, and a log of attempts is a different table from a log of changes.
  */
 
-import { inArray, lt } from 'drizzle-orm'
+import { and, desc, eq, inArray, lt } from 'drizzle-orm'
 import { z } from 'zod'
 import { resolvePlatformRole } from '#/server/auth/access'
 import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
-import { PLATFORM_AUDIT_ACTIONS, platformAuditLog } from '#/server/db/schema'
+import {
+  PLATFORM_AUDIT_ACTIONS,
+  PLATFORM_AUDIT_ENTITY_TYPES,
+  platformAuditLog,
+} from '#/server/db/schema'
 import { serializeError } from '#/server/observability'
 import type { PlatformActor } from '#/server/auth/guard'
 import type {
@@ -46,6 +50,7 @@ import type {
   PlatformAuditAction,
   PlatformAuditChanges,
   PlatformAuditEntityType,
+  PlatformAuditLogEntry,
 } from '#/server/db/types'
 import type { LogFields, Logger } from '#/server/observability'
 
@@ -767,6 +772,98 @@ export async function appendPlatformAudit(
     },
     lastCause,
   )
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Reads
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * One ledger row, exactly as `platform_audit_log` stores it.
+ *
+ * Deliberately not a projection: this module owns the statement, not the screen. Turning a `Date`
+ * into a string, a role into a badge or a `changes` payload into a diff are all presentation, and
+ * every one of them belongs above the read rather than inside the only place the table is queried.
+ */
+export type PlatformAuditEntityRow = Pick<
+  PlatformAuditLogEntry,
+  | 'id'
+  | 'action'
+  | 'entityType'
+  | 'actorKind'
+  | 'actorRole'
+  | 'actorUserId'
+  | 'createdAt'
+  | 'changes'
+>
+
+/** How the timeline is asked for. Bounded here so no caller can ask for the whole table. */
+export interface PlatformAuditEntityQuery {
+  readonly entityType: PlatformAuditEntityType
+  readonly entityId: string
+  /** Rows to return, 1 to {@link PLATFORM_AUDIT_READ_MAX}. Ask for one more than you show. */
+  readonly limit: number
+}
+
+/**
+ * The ceiling on one timeline page.
+ *
+ * The table is append-only and only ever grows, so an unbounded read of one entity's history is a
+ * statement whose size is decided by how long the product has been running. Fifty is far above what
+ * any screen shows and far below what would materialise a page nobody scrolls.
+ */
+export const PLATFORM_AUDIT_READ_MAX = 50
+
+const auditEntityQuerySchema = z.object({
+  entityType: z.enum(PLATFORM_AUDIT_ENTITY_TYPES),
+  entityId: z.string().trim().min(1).max(128),
+  limit: z.number().int().min(1).max(PLATFORM_AUDIT_READ_MAX),
+})
+
+/**
+ * docs/ACCESS.md §4.4's timeline query — the read this table exists for.
+ *
+ * One `select`, one table, no join: `platform_audit_log` filtered by `(entity_type, entity_id)` and
+ * ordered newest first, which is precisely what `platform_audit_log_entity_idx` was created to
+ * serve. It lives here because SPEC §6 puts every statement against the nine global tables in this
+ * directory and nowhere else, beside {@link appendPlatformAudit} — the append and the timeline are
+ * two halves of one table's contract, and splitting them across layers is how the ordering below
+ * ends up restated somewhere it can drift.
+ *
+ * `id` breaks the tie on `created_at`. That column is a millisecond stamp, and two rows written by
+ * the same call share it — without the tiebreak the two halves of a password reset swap places
+ * between renders of the same page.
+ *
+ * **It decides no authorisation and writes no row.** `requirePermission` has answered before the
+ * caller reached this (SPEC §5), and §4.2 closes the audit vocabulary at thirty-one *mutations* —
+ * reads are not among them, so reading the ledger does not append to it.
+ */
+export async function readPlatformAuditByEntity(
+  db: Database,
+  query: PlatformAuditEntityQuery,
+): Promise<ReadonlyArray<PlatformAuditEntityRow>> {
+  const { entityType, entityId, limit } = auditEntityQuerySchema.parse(query)
+
+  return db
+    .select({
+      id: platformAuditLog.id,
+      action: platformAuditLog.action,
+      entityType: platformAuditLog.entityType,
+      actorKind: platformAuditLog.actorKind,
+      actorRole: platformAuditLog.actorRole,
+      actorUserId: platformAuditLog.actorUserId,
+      createdAt: platformAuditLog.createdAt,
+      changes: platformAuditLog.changes,
+    })
+    .from(platformAuditLog)
+    .where(
+      and(
+        eq(platformAuditLog.entityType, entityType),
+        eq(platformAuditLog.entityId, entityId),
+      ),
+    )
+    .orderBy(desc(platformAuditLog.createdAt), desc(platformAuditLog.id))
+    .limit(limit)
 }
 
 /* -------------------------------------------------------------------------------------------------

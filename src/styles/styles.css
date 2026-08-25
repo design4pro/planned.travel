@@ -313,21 +313,6 @@
   margin-bottom: var(--safe-bottom);
 }
 
-/* The mobile tab bar's whole box — hairline, row and home indicator — as real
-   height. `AppShell` puts it under the outlet so the bar, which is `fixed` and
-   therefore displaces nothing, can never cover the foot of a screen. The
-   companion to `--impersonation-h` at the other edge, and the twin of the
-   `scroll-padding-bottom` further down: this one changes what the document
-   measures, that one changes where the browser stops.
-
-   `MOBILE_TAB_BAR` in `src/lib/atlas/layout.ts` is the list all three read, and
-   `src/styles/__tests__/layout-tokens.test.ts` asserts the length below is
-   exactly its sum. Released from `lg` at the call site, where the bar is not
-   rendered at all. */
-@utility pb-tab-bar {
-  padding-bottom: calc(1px + 4rem + var(--safe-bottom));
-}
-
 /* Frosted-glass ground for panels floated over the map. */
 @utility backdrop-glass {
   -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
@@ -544,13 +529,16 @@
 
   /* Where the browser stops scrolling, in the one document that has a tab bar.
      -------------------------------------------------------------------------
-     `AppShell` reserves the bar's box as real height under the outlet
-     (`pb-tab-bar`), so nothing *lays out* underneath it. This is the other half:
+     Every screen already clears the bar in layout, each in the way that suits
+     it: the content well pads for it (`AppFrame`) and a full-bleed slice stops
+     at its top edge (`sliceHeight`). None of that moves a *scroll position* —
      the bar is `fixed`, so it still covers whatever the browser scrolls into the
-     last row of the screen — a field focused near the foot of a long form, an
-     anchor, a `scrollIntoView` from a validation error — and that is scroll
-     geometry rather than layout. Both halves are needed and neither substitutes
-     for the other.
+     last row of the screen: a field focused near the foot of a long form, an
+     anchor, a `scrollIntoView` from a validation error. That is what this rule
+     is for, and it is the whole of the shell's business at this edge. Padding
+     the outlet as well would stack a third box on the two above — 96px of
+     content-well gutter against a 65px bar — which is dead canvas rather than
+     clearance, and is why there is no layout twin of this rule.
 
      Scroll padding belongs to the scroll container, which is the viewport, so it
      is set on `html` and scoped by what `html` contains: only the authenticated

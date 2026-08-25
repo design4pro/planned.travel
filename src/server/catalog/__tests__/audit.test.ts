@@ -41,11 +41,13 @@ import {
   PLATFORM_AUDIT_ENTITY_BY_PREFIX,
   PLATFORM_AUDIT_PRUNE_BATCH_SIZE,
   PLATFORM_AUDIT_PRUNE_MAX_BATCHES,
+  PLATFORM_AUDIT_READ_MAX,
   PLATFORM_AUDIT_RETENTION_DAYS,
   PLATFORM_SYSTEM_ACTOR,
   appendPlatformAudit,
   entityTypeForAction,
   prunePlatformAuditLog,
+  readPlatformAuditByEntity,
 } from '../audit'
 import { createPlatformTables } from './platform-tables'
 import type { PlatformActionName, PlatformAuditEntryInput, PlatformSystemActor } from '../audit'
@@ -993,5 +995,156 @@ describe('prunePlatformAuditLog', () => {
 
     expect(result.deleted).toBe(1)
     expect(calls).toEqual(['info'])
+  })
+})
+
+describe('readPlatformAuditByEntity', () => {
+  let tables: PlatformTables
+
+  beforeEach(async () => {
+    tables = await createPlatformTables()
+  })
+
+  afterEach(() => {
+    tables.close()
+  })
+
+  const AT = new Date('2026-08-23T04:17:00.000Z')
+
+  async function seed(
+    entityId: string,
+    offsetMs: number,
+    overrides: Partial<{
+      id: string
+      action: PlatformActionName
+      entityType: 'user' | 'session'
+    }> = {},
+  ): Promise<void> {
+    await tables.db.insert(platformAuditLog).values({
+      ...(overrides.id === undefined ? {} : { id: overrides.id }),
+      actorUserId: 'usr_operator',
+      actorKind: 'human',
+      actorRole: 'admin',
+      tokenId: null,
+      action: overrides.action ?? 'platform.user.role_changed',
+      entityType: overrides.entityType ?? 'user',
+      entityId,
+      changes: { before: { role: 'user' }, after: { role: 'curator' } },
+      createdAt: new Date(AT.getTime() + offsetMs),
+    })
+  }
+
+  it('returns one entity timeline newest first and nobody else', async () => {
+    await seed('usr_subject', 0)
+    await seed('usr_subject', 2_000)
+    await seed('usr_bystander', 1_000)
+
+    const rows = await readPlatformAuditByEntity(tables.db, {
+      entityType: 'user',
+      entityId: 'usr_subject',
+      limit: 10,
+    })
+
+    expect(rows).toHaveLength(2)
+    expect(rows.map((row) => row.createdAt.toISOString())).toEqual([
+      new Date(AT.getTime() + 2_000).toISOString(),
+      AT.toISOString(),
+    ])
+  })
+
+  it('filters on entity_type as well as entity_id', async () => {
+    await seed('shared_id', 0)
+    await seed('shared_id', 1_000, {
+      action: 'platform.session.revoked',
+      entityType: 'session',
+    })
+
+    const rows = await readPlatformAuditByEntity(tables.db, {
+      entityType: 'user',
+      entityId: 'shared_id',
+      limit: 10,
+    })
+
+    expect(rows.map((row) => row.entityType)).toEqual(['user'])
+  })
+
+  it('breaks a shared millisecond on id, so two rows from one call keep their order', async () => {
+    // `created_at` is a millisecond stamp and the two halves of a password reset share it. Without
+    // the tiebreak the panel reorders itself between renders of the same page.
+    await seed('usr_subject', 0, { id: 'aud_aaa' })
+    await seed('usr_subject', 0, { id: 'aud_zzz' })
+
+    const first = await readPlatformAuditByEntity(tables.db, {
+      entityType: 'user',
+      entityId: 'usr_subject',
+      limit: 10,
+    })
+    const second = await readPlatformAuditByEntity(tables.db, {
+      entityType: 'user',
+      entityId: 'usr_subject',
+      limit: 10,
+    })
+
+    expect(first.map((row) => row.id)).toEqual(['aud_zzz', 'aud_aaa'])
+    expect(second.map((row) => row.id)).toEqual(first.map((row) => row.id))
+  })
+
+  it('honours the limit, which is how a caller learns there are more', async () => {
+    await seed('usr_subject', 0)
+    await seed('usr_subject', 1_000)
+    await seed('usr_subject', 2_000)
+
+    const rows = await readPlatformAuditByEntity(tables.db, {
+      entityType: 'user',
+      entityId: 'usr_subject',
+      limit: 2,
+    })
+
+    expect(rows).toHaveLength(2)
+  })
+
+  it('hands back the changes payload verbatim, undiffed', async () => {
+    await seed('usr_subject', 0)
+
+    const [row] = await readPlatformAuditByEntity(tables.db, {
+      entityType: 'user',
+      entityId: 'usr_subject',
+      limit: 1,
+    })
+
+    expect(row.changes).toEqual({
+      before: { role: 'user' },
+      after: { role: 'curator' },
+    })
+  })
+
+  it('refuses an unbounded read rather than materialising the whole table', async () => {
+    await expect(
+      readPlatformAuditByEntity(tables.db, {
+        entityType: 'user',
+        entityId: 'usr_subject',
+        limit: PLATFORM_AUDIT_READ_MAX + 1,
+      }),
+    ).rejects.toThrow()
+
+    await expect(
+      readPlatformAuditByEntity(tables.db, {
+        entityType: 'user',
+        entityId: '   ',
+        limit: 10,
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('writes nothing: reading the ledger is not one of the thirty-one mutations', async () => {
+    await seed('usr_subject', 0)
+
+    await readPlatformAuditByEntity(tables.db, {
+      entityType: 'user',
+      entityId: 'usr_subject',
+      limit: 10,
+    })
+
+    expect(await tables.db.select().from(platformAuditLog)).toHaveLength(1)
   })
 })

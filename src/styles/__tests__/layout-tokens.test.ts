@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { BOTTOM_CLEARANCE_CSS, SHELL_BOTTOM_CLASS } from '#/lib/atlas/layout'
+import { BOTTOM_CLEARANCE_CSS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
 
 /**
@@ -140,26 +140,26 @@ describe('the chrome offsets that read the bar', () => {
     )
   })
 
-  it('reserves the mobile tab bar’s box as real height, not as scroll geometry', () => {
-    // The bottom edge's counterpart to `--impersonation-h` at the top. The bar
-    // is `fixed`, so nothing gives it room unless something is told to: this
-    // utility is what `AppShell` puts under the outlet, and its length comes
-    // from `MOBILE_TAB_BAR` so the reservation and the bar cannot disagree about
-    // how tall it is.
+  it('clears the mobile tab bar in scroll geometry and nowhere else', () => {
+    // The bottom edge is not the shell's to lay out. `AppFrame` already pads the
+    // content well for the bar and a full-bleed slice already stops at its top
+    // edge, so a third box under the outlet is dead canvas rather than
+    // clearance — 96px of gutter against a 65px bar, at 360px and at 768px.
+    // What neither of those can do is move a scroll position, which is what the
+    // rule below is for and all it is for.
     const css = stylesheet().replace(/\s+/g, '')
-    expect(css).toContain(
-      `@utilitypb-tab-bar{padding-bottom:${BOTTOM_CLEARANCE_CSS.replace(/\s+/g, '')};}`,
-    )
-    expect(SHELL_BOTTOM_CLASS).toContain('pb-tab-bar')
-    // …and released from `lg`, where there is no tab bar to clear.
-    expect(SHELL_BOTTOM_CLASS).toContain('lg:pb-0')
+    expect(css).not.toContain('pb-tab-bar')
+    // Anchored, because `scroll-padding-bottom` carries the same expression one
+    // rule below and an unanchored search matches its tail.
+    expect(css).not.toMatch(/[;{]padding-bottom:calc\(1px\+4rem/)
   })
 
   it('stops the browser scrolling anything under it, in that document only', () => {
-    // The same box in scroll geometry: `scroll-padding-bottom` moves where the
-    // browser stops when it scrolls a focused field or an anchor into view, and
-    // changes no element's size. Both halves are needed — the reservation above
-    // cannot move a scroll position, and this one cannot give an element room.
+    // `scroll-padding-bottom` moves where the browser stops when it scrolls a
+    // focused field or an anchor into view, and changes no element's size — the
+    // one reservation that can be made across a whole document without moving a
+    // single existing screen. The expression comes from `MOBILE_TAB_BAR`, so it
+    // and the bar cannot disagree about how tall it is.
     const css = stylesheet().replace(/\s+/g, '')
     expect(css).toContain(
       `html:has([data-app-shell]){scroll-padding-bottom:${BOTTOM_CLEARANCE_CSS.replace(/\s+/g, '')};}`,

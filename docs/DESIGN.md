@@ -56,27 +56,37 @@ Required token families — name them exactly this way:
   and fails if `sonner` restacks itself. A z token that a third-party stylesheet ignores is
   decoration, and this is the one band where that is a safety property rather than a nicety.
 
-  Both edges of the viewport are the shell's, not a route's. `--impersonation-h` reserves the top
-  one. Below `lg` the mobile tab bar is `fixed`, so it displaces nothing and covers the last row
-  of whatever is behind it — and `src/routes/_app/route.tsx` therefore wraps `<Outlet />` in a
-  single element carrying `pb-tab-bar lg:pb-0` (`SHELL_BOTTOM_CLASS`), which gives that box real
-  height: hairline, row and `--safe-bottom`, released from `lg` where the bar is not rendered.
-  Once around the outlet rather than per route, because a route is free not to use the content
-  well: `AppFrame`'s `bleed` branch has no padding by design and a screen that renders no
-  `AppFrame` at all still renders inside this shell.
+  **The top edge of the viewport is the shell's. The bottom edge is not, and reserving it there a
+  second time is a regression.** `--impersonation-h` is the top one, and it has to be the shell's
+  because nothing below the shell knows the bar exists. Below `lg` the mobile tab bar is `fixed`,
+  so it displaces nothing and covers the last row of whatever is behind it — but the two things
+  that clear it already exist, one per kind of screen: the content well pads for it
+  (`AppFrame` ships `pb-[calc(var(--safe-bottom)+6rem)] lg:pb-16` and says so in its own
+  docblock), and a full-bleed slice stops at its top edge by arithmetic, out of `MOBILE_TAB_BAR`.
+  A third reservation around `<Outlet />` stacks on both: a second 65px box beneath the 96px the
+  content well already pads leaves 31 + 65 = 96px of canvas visible below the bar instead of the
+  31px gutter that was designed, on every non-bleed authenticated screen at 360 and 768. It
+  shipped once, and every full-page mobile baseline in the suite was re-recorded around it before
+  it was caught.
 
-  Its twin is scroll geometry, not layout: `html:has([data-app-shell])` carries
-  `scroll-padding-bottom` of the same expression, so the browser also stops short of the bar when
-  it scrolls a focused field or an anchor into view. Neither substitutes for the other, and the
+  What the shell does own at that edge is scroll geometry, which no padding on an ancestor can
+  supply: `html:has([data-app-shell])` carries `scroll-padding-bottom` of the bar's whole box, so
+  the browser stops short of it when it scrolls a focused field or an anchor into view. The
   selector is scoped because only this document has a tab bar — the marketing tree and the auth
   tree have no bottom chrome to clear.
 
-  Every chrome expression in the product — both reservations included — is assembled from the
-  inset lists in `src/lib/atlas/layout.ts` for the same reason `--impersonation-h` is a token: a
-  hand-written `calc()` that forgets a hairline is a screen that overflows its own viewport by a
-  pixel per term, and it does it silently. `documentHeight()` and `tripDocumentHeight()` sum the
-  header, the slice and the shell's bottom box, and the tests beside that file assert both land on
-  exactly one viewport at both breakpoints, with the impersonation bar present and absent.
+  It shipped because a full-height screenshot composites a `position: fixed` element into the
+  middle of a tall page, so a correctly-cleared bar photographs as if it were covering cards. That
+  frame is not evidence about a fixed element in a scrolling viewport, and a capture artefact read
+  as a defect produced a real one.
+
+  Every chrome expression in the product is assembled from the inset lists in
+  `src/lib/atlas/layout.ts` for the same reason `--impersonation-h` is a token: a hand-written
+  `calc()` that forgets a hairline is a screen that overflows its own viewport by a pixel per
+  term, and it does it silently. `documentHeight()` and `tripDocumentHeight()` sum the header, the
+  slice and the row the slice leaves the fixed bar — which the shell's `min-h-svh` stretches over
+  rather than pads for — and the tests beside that file assert both land on exactly one viewport
+  at both breakpoints, with the impersonation bar present and absent.
 
 ## Starting palette (tune it, keep the structure)
 

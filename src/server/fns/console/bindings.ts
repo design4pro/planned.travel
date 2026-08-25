@@ -27,13 +27,24 @@ import { getAuth } from '#/server/auth'
 import { getSession } from '#/server/auth/session'
 import { getDb } from '#/server/db/client'
 import { loggerFromEnv } from '#/server/observability'
-import { createSessionPageReader, readPlatformRole } from './adapter-reads'
+import {
+  createSessionPageReader,
+  readAccountMemberships,
+  readAccountNames,
+  readOrganizations,
+  readPlatformRole,
+} from './adapter-reads'
 import { enumerateSessionRows } from './session-keys'
 
 import type { AuthSession } from '#/server/auth/session'
 import type { Database } from '#/server/db/types'
 import type { Logger } from '#/server/observability'
-import type { AuthReadAdapter, PlatformRoleRead } from './adapter-reads'
+import type {
+  AuthReadAdapter,
+  MemberRow,
+  OrganizationRow,
+  PlatformRoleRead,
+} from './adapter-reads'
 import type {
   SessionEnumeration,
   SessionKeyStore,
@@ -103,4 +114,26 @@ export async function readSessionRows(
 /** {@link readPlatformRole} bound to the shipped adapter. */
 export async function readUserRole(userId: string): Promise<PlatformRoleRead> {
   return readPlatformRole(authReadAdapter, userId)
+}
+
+/** {@link readAccountMemberships} bound to the shipped adapter. */
+export async function readMemberships(
+  userId: string,
+  limit: number,
+): Promise<ReadonlyArray<MemberRow>> {
+  return readAccountMemberships(authReadAdapter, userId, limit)
+}
+
+/** {@link readOrganizations} bound to the shipped adapter. */
+export async function readWorkspaces(
+  organizationIds: ReadonlyArray<string>,
+): Promise<ReadonlyArray<OrganizationRow>> {
+  return readOrganizations(authReadAdapter, organizationIds)
+}
+
+/** {@link readAccountNames} bound to the shipped adapter. */
+export async function readNames(
+  userIds: ReadonlyArray<string>,
+): Promise<ReadonlyMap<string, string | null>> {
+  return readAccountNames(authReadAdapter, userIds)
 }

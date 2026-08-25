@@ -25,26 +25,27 @@
  *   human action with no operator on the row. The two `data` payloads this file builds are Zod
  *   objects with closed key sets — `{ name }` and `{ email, emailVerified }` — so the column is not
  *   reachable from the console at all, and the ban verbs are the only path to it.
- * - **A permanent ban clears a stale expiry, and restores the old ban if the second step fails.**
- *   `banUser` cannot write `banExpires: null` and `unbanUser` is the only endpoint that can, so the
- *   transition is two calls; {@link applyBan} carries the compensation that keeps a failure from
- *   leaving the account *un*banned. One audit row either way: the clearing write is machinery, not
- *   an event.
- * - **Setting a password ends the account's sessions, and the credential write goes last.**
- *   `/admin/set-user-password` touches no session, and the operator use case for the verb is a
- *   compromised account - so the revocation belongs to the verb rather than beside it. It runs
- *   *before* the password changes, and carries its own row before the next statement does anything,
- *   so no step that can reject ever stands between a committed credential change and its ledger row.
- *   See {@link setPlatformUserPasswordFn}.
- * - **No account may aim one of these at itself.** A self-ban, a self-delete and a self-demotion all
- *   remove the operator's own way back in, and the last of them can leave a platform with no `admin`
- *   at all - there is no seat reservation in the model and no recovery path in the product. A
- *   self-targeted password set is refused for a fourth reason, measured rather than reasoned: the
- *   revocation that verb performs deletes the caller's own session, and `/admin/set-user-password`
- *   re-resolves that session behind `adminMiddleware`, so the credential write that follows answers
- *   `UNAUTHORIZED` - signed out everywhere, told it failed, password unchanged. All four are refused
- *   before the target is read, and only the last of them has a self-service equivalent (Settings,
- *   under Security).
+ * - **A permanent ban clears a stale expiry, and restores the ban the account actually held if the
+ *   second step fails.** `banUser` cannot write `banExpires: null` and `unbanUser` is the only
+ *   endpoint that can, so the transition is two calls; {@link applyBan} carries the compensation
+ *   that keeps a failure from leaving the account *un*banned - and keys it on `banned` and on
+ *   remaining time, so a leftover expiry over an unbanned or already-lapsed account is never put
+ *   back as a ban that was never imposed. One audit row on the way through: the clearing write is
+ *   machinery, not an event.
+ * - **Setting a password ends the account's sessions, and each step carries its own row before the
+ *   next one runs.** `/admin/set-user-password` touches no session, and the operator use case for
+ *   the verb is a compromised account - so the revocation belongs to the verb rather than beside it.
+ *   On another account the revocation goes first; on the operator's own it cannot, because
+ *   `adminMiddleware` re-resolves the caller and the credential write behind a self-revocation
+ *   answers `UNAUTHORIZED`. Either way nothing that can reject stands between a committed credential
+ *   change and its ledger row. See {@link setPlatformUserPasswordFn}.
+ * - **Three of these may not be aimed at the operator's own account.** A self-ban, a self-delete and
+ *   a self-demotion all remove the operator's own way back in, and the last of them can leave a
+ *   platform with no `admin` at all - there is no seat reservation in the model and no recovery path
+ *   in the product. All three are refused before the target is read. Setting a password and revoking
+ *   every session are deliberately *not* among them: both are legitimate aimed at oneself - an
+ *   operator who has left a session on a machine they no longer control wants exactly this - and
+ *   neither removes a way back in.
  *
  * Reads are not audited, here or over MCP (docs/ACCESS.md §4.2). `platform.user.get` does not exist,
  * and neither does a log field shaped like one — see `ConsoleRead` in `./context`.
@@ -426,39 +427,43 @@ export const setPlatformUserRoleFn = createServerFn({ method: 'POST' })
  * endpoint. So a version of this function that only changed the credential left the attacker signed
  * in on the old one, which is the opposite of what an operator pressing it believes they are doing.
  *
- * **The credential write is the last statement in the call, and that ordering is the whole design of
- * this handler.** An earlier version set the password first and revoked afterwards, which put an
- * unguarded `revokeUserSessions` between a committed credential change and its ledger row: one
- * ordinary D1 transient there and the password *had* changed, no `platform.user.password_set` row
- * existed for it, the target's sessions were still live on the old credential, and the operator was
- * told the call had failed - the single state in this directory that is both irreversible and
- * invisible afterwards. Reversed, every step that can reject happens while the account still holds
- * the credential it arrived with, so a failure anywhere leaves a retryable state and an honest error:
- * at worst the account has been signed out of everything - which is the direction remediation was
- * going anyway, and which carries its own row before the next statement runs. After
- * `setUserPassword` returns, only `recordConsoleAction` remains, and neither it nor
- * `appendPlatformAudit` beneath it throws: an append that cannot be written is reported as an
- * `error` line naming the action, the actor and the entity, never as a rejected promise.
+ * **Nothing that can reject ever stands between the credential write and its ledger row, and that
+ * invariant - not a fixed order of the two steps - is the design of this handler.** An earlier
+ * version set the password and then revoked, which put an unguarded `revokeUserSessions` between a
+ * committed credential change and its row: one ordinary D1 transient there and the password *had*
+ * changed, no `platform.user.password_set` row existed for it, the target's sessions were still live
+ * on the old credential, and the operator was told the call had failed - the single state in this
+ * directory that is both irreversible and invisible afterwards. Each step now carries its own audit
+ * append as its last statement, and neither `recordConsoleAction` nor `appendPlatformAudit` beneath
+ * it throws: an append that cannot be written is reported as an `error` line naming the action, the
+ * actor and the entity, never as a rejected promise. So whichever step runs first, the one that
+ * commits is recorded before anything that can fail runs again.
  *
- * What that ordering does not cover, stated rather than left to be discovered: a sign-in *with the
- * old credential*, landing in the few milliseconds between the revocation and the write, creates a
- * session this call has already passed. That is a race an attacker must already hold the password to
- * run, it is bounded by one request, and the account's next remediation reaches it - against a
- * failure mode that was unbounded in time and undetectable in the ledger. Re-sweeping after the
- * write would only move an unguarded plugin call back in front of an append.
+ * **On another account the revocation goes first**, because then every step that can reject happens
+ * while the account still holds the credential it arrived with: a failure anywhere leaves a
+ * retryable state and an honest error, and at worst the account has been signed out of everything -
+ * the direction remediation was going anyway, carrying its own row.
  *
- * **The operator's own account is refused, and that refusal is what makes the ordering safe rather
- * than merely correct.** `/admin/set-user-password` runs behind the plugin's `adminMiddleware`,
- * which re-resolves the caller from `headers` on entry - so aimed at the operator's own id, the
- * revocation a few lines above has just deleted the caller's own D1 `session` row and its KV blob,
- * and the credential write that follows answers `UNAUTHORIZED`. The operator would be signed out of
- * every device, told the call failed, and their password would never have changed: the one
- * combination of this handler's two steps that leaves the account worse off than it started. Putting
- * the credential write back in front only trades that for the state REPAIR 57 exists to prevent. So
- * the target is refused here, before either step, on the same line of reasoning as the self-ban and
- * the self-demotion above it - and unlike those two it costs the operator nothing, because changing
- * one's own password is a self-service flow already: Settings, under Security. `readTargetUser` runs
- * after the refusal, so a self-target never reaches the plugin at all.
+ * **On the operator's own account the order is reversed, and it has to be.**
+ * `/admin/set-user-password` runs behind the plugin's `adminMiddleware`, which re-resolves the
+ * caller from `headers` on entry (`getAuthoritativeSessionFromCtx`) - so once the revocation has
+ * deleted the caller's own D1 `session` row, the credential write behind it answers `UNAUTHORIZED`:
+ * signed out of every device, told the call failed, password unchanged. Revoke-first is not a
+ * stricter version of this verb aimed at oneself, it is a version that cannot work. Writing the
+ * credential first costs nothing the invariant above protects - the row is appended before the
+ * revocation begins - and it is what makes the affordance real: an operator who has left a session
+ * on a machine they no longer control presses this to change the credential *and* end that session,
+ * and `src/routes/_app/console/-ui/user-actions.tsx` offers it on their own row deliberately, in
+ * copy written in the first person. A failed revocation there leaves the new password in force,
+ * audited, with the sessions still live and an error the operator can act on by pressing *Revoke
+ * every session*. Unlike a self-ban or a self-demotion, this verb removes no way back in.
+ *
+ * What neither order covers, stated rather than left to be discovered: a sign-in *with the old
+ * credential* landing in the few milliseconds between the two steps creates a session this call has
+ * already passed. That is a race an attacker must already hold the password to run, it is bounded by
+ * one request, and the account's next remediation reaches it - against a failure mode that was
+ * unbounded in time and undetectable in the ledger. Re-sweeping afterwards would only put an
+ * unguarded plugin call back in front of an append.
  *
  * Two statements and two rows, because two things happened. §4.2 gives "every session of one account
  * is revoked" its own action under `session:revoke`, and folding it into the password row would hide
@@ -475,53 +480,66 @@ export const setPlatformUserPasswordFn = createServerFn({ method: 'POST' })
       user: ['set-password'],
       session: ['revoke'],
     })
-    refuseSelfTarget(
-      call,
-      data.userId,
-      'You cannot set your own password from the console. Change it in Settings, under Security.',
-    )
     const before = await readTargetUser(call, data.userId)
 
-    // Before anything else, so a purge that cannot finish leaves the account exactly as it was found
-    // rather than half-remediated. See `clearSessionCache`.
-    const purge = await clearSessionCache(
-      call,
-      data.userId,
-      PLATFORM_ACTIONS.USER_PASSWORD_SET,
-    )
+    /** Ends every session the account holds, and writes the row that says so. */
+    const revokeEverySession = async (): Promise<number> => {
+      // Before the plugin call, so a purge that cannot finish leaves the account exactly as it was
+      // found rather than half-remediated. See `clearSessionCache`.
+      const purge = await clearSessionCache(
+        call,
+        before.id,
+        PLATFORM_ACTIONS.USER_PASSWORD_SET,
+      )
 
-    await platformApi().revokeUserSessions({
-      body: { userId: data.userId },
-      headers: call.headers,
-    })
-    await endSessionIndex(call, data.userId, PLATFORM_ACTIONS.USER_PASSWORD_SET)
-    await recordConsoleAction(call, {
-      action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
-      // `entity_type` is `session` under this prefix and no single session was touched, so no
-      // session id is claimed. The account and the count live in `changes`.
-      entityId: null,
-      changes: {
-        before: { userId: before.id, sessions: purge.enumerated },
-        after: { userId: before.id, sessions: 0 },
-      },
-    })
+      await platformApi().revokeUserSessions({
+        body: { userId: before.id },
+        headers: call.headers,
+      })
+      await endSessionIndex(call, before.id, PLATFORM_ACTIONS.USER_PASSWORD_SET)
+      await recordConsoleAction(call, {
+        action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
+        // `entity_type` is `session` under this prefix and no single session was touched, so no
+        // session id is claimed. The account and the count live in `changes`.
+        entityId: null,
+        changes: {
+          before: { userId: before.id, sessions: purge.enumerated },
+          after: { userId: before.id, sessions: 0 },
+        },
+      })
 
-    // Last, and last for a reason: nothing that can reject stands between the credential write and
-    // the row that records it.
-    await platformApi().setUserPassword({
-      body: { userId: data.userId, newPassword: data.newPassword },
-      headers: call.headers,
-    })
-    await recordConsoleAction(call, {
-      action: PLATFORM_ACTIONS.USER_PASSWORD_SET,
-      entityId: before.id,
-      changes: {
-        before: auditUserState(before),
-        after: auditUserState(before),
-      },
-    })
+      return purge.enumerated
+    }
 
-    return { userId: before.id, revoked: purge.enumerated }
+    /** Writes the credential, and the row that records it as its next statement. */
+    const setCredential = async (): Promise<void> => {
+      await platformApi().setUserPassword({
+        body: { userId: before.id, newPassword: data.newPassword },
+        headers: call.headers,
+      })
+      await recordConsoleAction(call, {
+        action: PLATFORM_ACTIONS.USER_PASSWORD_SET,
+        entityId: before.id,
+        changes: {
+          before: auditUserState(before),
+          after: auditUserState(before),
+        },
+      })
+    }
+
+    // Aimed at the operator's own account the credential goes first, because the revocation deletes
+    // the caller's own session and `adminMiddleware` re-resolves it: revoke-first answers
+    // `UNAUTHORIZED` and changes nothing. Aimed at anyone else the revocation goes first, so every
+    // step that can reject runs while the account still holds the credential it arrived with.
+    if (call.actor.userId === before.id) {
+      await setCredential()
+      return { userId: before.id, revoked: await revokeEverySession() }
+    }
+
+    const revoked = await revokeEverySession()
+    await setCredential()
+
+    return { userId: before.id, revoked }
   })
 
 /**
@@ -592,16 +610,36 @@ export const deletePlatformUserFn = createServerFn({ method: 'POST' })
  * original failure is re-thrown. A compensation that itself fails is raised at `error` naming the
  * account, because at that point only a human can put it right.
  *
- * **And it is audited when it fails, which is the one branch that leaves a state nobody asked for.**
- * A compensation that succeeds leaves the account banned as it was found and writes nothing, because
- * nothing moved. A compensation that fails leaves it *unbanned* — a real change of ban state,
- * performed deliberately by a human, and docs/ACCESS.md §4.3 audits an unban without exception. The
- * two `/admin/ban-user` and `/admin/unban-user` paths sit in `SELF_AUDITING_BAN_PATHS`
+ * **What the compensation restores is the ban the account *held*, which is not the same question as
+ * whether the column held a date.** Two states reach the clearing write with a `ban_expires` that
+ * describes no live ban, and restoring from the column alone would invent one in both:
+ *
+ * - `banned: false` with a leftover expiry. The plugin's own verbs cannot produce it — `unbanUser`
+ *   nulls all three columns together — but `/admin/update-user` writes the record free-form, an
+ *   operator can reach the column through a `wrangler d1 execute`, and a partial write leaves it. An
+ *   account that was not banned would come out of a *failed* ban banned, which is the one outcome
+ *   worse than the state this compensation exists to prevent.
+ * - An expiry already in the past. `banExpires < now` is a ban the plugin lifts at the account's
+ *   next sign-in (`databaseHooks.session.create.before`), so the account's effective state is
+ *   already "not banned" and the remaining time is negative. Clamping that to a second, as an
+ *   earlier version did, restored a one-second ban nobody ever imposed.
+ *
+ * In both the clearing write has left exactly the state the account was effectively in, so there is
+ * nothing to put back and the compensation does not run.
+ *
+ * **The unban is audited on every branch that leaves it standing**, which is what `banned` decides
+ * and the expiry does not. A compensation that succeeds leaves the account banned as it was found
+ * and writes nothing, because nothing moved. Every other path out of the clearing write leaves the
+ * ban columns cleared by a deliberate human call — a compensation that failed, or one that was
+ * never owed — and docs/ACCESS.md §4.3 audits an unban without exception. The two
+ * `/admin/ban-user` and `/admin/unban-user` paths sit in `SELF_AUDITING_BAN_PATHS`
  * (`src/server/auth/index.ts`) precisely because this directory promises to append the human row, so
  * the tripwire writes nothing here and this is the only place that row can come from. `unbanUser`
  * writes exactly `{ banned: false, banReason: null, banExpires: null }`
  * (`better-auth@1.7.1`, `dist/plugins/admin/routes.mjs`), so the `after` payload states what landed
- * rather than guessing at it.
+ * rather than guessing at it — and where `before` already said `banned: false`, the row is honest
+ * about that too: the pair of payloads is what tells the reader a stale expiry was cleared rather
+ * than a ban lifted.
  */
 async function applyBan(
   call: ConsoleCall,
@@ -625,29 +663,11 @@ async function applyBan(
     return platformUserSchema.parse(result.user)
   }
 
-  const seconds =
-    expiresInDays === undefined ? undefined : expiresInDays * SECONDS_PER_DAY
-
-  if (seconds !== undefined || !before.banExpires) {
-    return ban(reason, seconds)
-  }
-
-  await platformApi().unbanUser({
-    body: { userId: targetId },
-    headers: call.headers,
-  })
-
-  try {
-    return await ban(reason, undefined)
-  } catch (cause) {
-    // At least a second, because zero is falsy to the plugin and would be read as "permanent" —
-    // which is the state this compensation exists to avoid claiming on the operator's behalf.
-    const remaining = Math.max(
-      1,
-      Math.ceil((before.banExpires.getTime() - Date.now()) / 1000),
-    )
+  /** Puts the cleared ban back, or reports that only a human can now. */
+  const restore = async (seconds: number): Promise<boolean> => {
     try {
-      await ban(before.banReason ?? reason, remaining)
+      await ban(before.banReason ?? reason, seconds)
+      return true
     } catch (restoreFailure) {
       call.logger.error(
         'console could not restore the ban it cleared',
@@ -659,20 +679,48 @@ async function applyBan(
           actorRole: call.actor.role,
         },
       )
-      await recordConsoleAction(call, {
-        action: PLATFORM_ACTIONS.USER_UNBANNED,
-        entityId: targetId,
-        changes: {
-          before: auditUserState(before),
-          after: {
-            ...auditUserState(before),
-            banned: false,
-            banReason: null,
-            banExpiresAt: null,
-          },
-        },
-      })
+      return false
     }
+  }
+
+  const seconds =
+    expiresInDays === undefined ? undefined : expiresInDays * SECONDS_PER_DAY
+  const staleExpiry = before.banExpires
+
+  if (seconds !== undefined || !staleExpiry) {
+    return ban(reason, seconds)
+  }
+
+  await platformApi().unbanUser({
+    body: { userId: targetId },
+    headers: call.headers,
+  })
+
+  try {
+    return await ban(reason, undefined)
+  } catch (cause) {
+    // What the account actually held, rather than what the column said. `banned: false` means the
+    // clearing write took nothing away, and an expiry already past means the plugin would have
+    // lifted the ban at the next sign-in anyway — in both, the state now standing *is* the state
+    // this call found, and there is nothing to compensate for.
+    const remainingMs = before.banned ? staleExpiry.getTime() - Date.now() : 0
+    if (remainingMs > 0 && (await restore(Math.ceil(remainingMs / 1000)))) {
+      throw cause
+    }
+
+    await recordConsoleAction(call, {
+      action: PLATFORM_ACTIONS.USER_UNBANNED,
+      entityId: targetId,
+      changes: {
+        before: auditUserState(before),
+        after: {
+          ...auditUserState(before),
+          banned: false,
+          banReason: null,
+          banExpiresAt: null,
+        },
+      },
+    })
     throw cause
   }
 }
