@@ -1,0 +1,406 @@
+/**
+ * Everything the application shell says, in Catalan.
+ *
+ * Authored from `../en/shell.ts`, never from another product's catalogue
+ * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
+ * and `__tests__/parity.test.ts` checks the placeholders and the plural
+ * branches.
+ *
+ * **Register.** Second person singular, with an action written as an
+ * imperative — «Comparteix», «Obre», «Torna-ho a provar» — matching `./ui.ts`
+ * and `./settings.ts`.
+ *
+ * **Plural.** `Intl.PluralRules('ca')` reports `one`, `many` and `other`;
+ * `many` is CLDR's branch for the millions and inflects like `other`.
+ *
+ * **Feature names are translated, not borrowed.** «Atlas», «Vacay» and
+ * «Journey» would be English words in a Catalan nav, so each says what its
+ * screen is: el mapa del món, les vacances, el diari.
+ *
+ * **Dates.** Nothing here restates a date format: the Catalan month, weekday
+ * and short-date forms are frozen in `src/lib/format-tables.ts`, where they
+ * were pinned because workerd and WebKit disagreed about them.
+ */
+
+import type { TranslationOf } from '../../types'
+import type En from '../en/shell'
+
+const messages = {
+  /* -------------------------------------------------------------- navigation */
+  'nav.primary': 'Seccions principals',
+  'nav.mobile': 'Seccions',
+  'nav.dashboardLink': 'Tauler de planned.travel',
+  'nav.homeLink': 'Inici de planned.travel',
+  'nav.newTrip': 'Viatge nou',
+
+  'nav.trips': 'Els meus viatges',
+  'nav.trips.short': 'Viatges',
+  'nav.vacay': 'Vacances',
+  'nav.vacay.short': 'Vacances',
+  'nav.atlas': 'Mapa del món',
+  'nav.atlas.short': 'Mapa',
+  'nav.journey': 'Diari',
+  'nav.journey.short': 'Diari',
+
+  /* ---------------------------------------------------------- trip sub-nav */
+  'trip.nav.label': 'Seccions del viatge',
+  'trip.nav.back': 'Viatges',
+  'trip.nav.share': 'Comparteix',
+  'trip.nav.shareLabel': 'Comparteix aquest viatge',
+  'trip.tab.plan': 'Itinerari',
+  'trip.tab.transports': 'Trajectes',
+  'trip.tab.book': 'Reserves',
+  'trip.tab.lists': 'Llistes',
+  'trip.tab.costs': 'Despeses',
+  'trip.tab.files': 'Fitxers',
+  'trip.tab.collab': 'Grup',
+
+  /* ------------------------------------------------------------ user menu */
+  'account.menu': 'Menú del compte',
+  'account.settings': 'Configuració',
+  'account.billing': 'Pla i facturació',
+  'account.admin': 'Administració',
+  'account.signOut': 'Tanca la sessió',
+  'account.signingOut': 'S’està tancant la sessió…',
+  'account.signOutFailed': 'No s’ha pogut tancar la sessió',
+  'account.signOutFailedBody': 'Comprova la connexió i torna-ho a provar.',
+
+  /* --------------------------------------------------------- theme switcher */
+  'theme.label': 'Aparença',
+  'theme.light': 'Clar',
+  'theme.dark': 'Fosc',
+  'theme.system': 'Com el sistema',
+  'theme.state.light': 'clar',
+  'theme.state.dark': 'fosc',
+  'theme.state.system': 'com el sistema',
+  'theme.trigger': 'Tema: {state}. Canvia el tema',
+
+  /* ------------------------------------------------------------------ bell */
+  'bell.none': 'Notificacions, cap per llegir',
+  'bell.unread': {
+    one: 'Notificacions, {unread} per llegir',
+    many: 'Notificacions, {unread} per llegir',
+    other: 'Notificacions, {unread} per llegir',
+  },
+
+  /* ----------------------------------------------------------------- inbox */
+  'inbox.eyebrow': 'Safata d’entrada',
+  'inbox.title': 'Notificacions',
+  'inbox.error': 'La safata no s’ha carregat',
+  'inbox.allRead': 'Està tot llegit',
+  'inbox.unread': {
+    one: '{unread} missatge per llegir',
+    many: '{unread} missatges per llegir',
+    other: '{unread} missatges per llegir',
+  },
+  'inbox.markAll': 'Marca-ho tot com a llegit',
+  'inbox.markingAll': 'S’està marcant tot com a llegit',
+  'inbox.cleared': 'Safata al dia',
+  'inbox.markAllFailed': 'No s’ha pogut marcar tot com a llegit',
+  'inbox.retryHint': 'Comprova la connexió i torna-ho a provar.',
+  'inbox.filter.all': 'Tot',
+  'inbox.filter.unread': 'Per llegir',
+  'inbox.waiting': {
+    one: '{invitations} invitació esperant',
+    many: '{invitations} invitacions esperant',
+    other: '{invitations} invitacions esperant',
+  },
+  'inbox.empty.title': 'La safata és buida',
+  'inbox.empty.body':
+    'Aquí arriben les invitacions a viatges, els canvis de pla, els recordatoris de reserva i els comptes saldats.',
+  'inbox.empty.action': 'Torna al tauler',
+  'inbox.emptyUnread.title': 'Res per llegir',
+  'inbox.emptyUnread.body':
+    'Ho has llegit tot. Passa a Tot per repassar l’historial.',
+  'inbox.emptyUnread.action': 'Mostra-ho tot',
+  'inbox.row.new': 'Nova',
+  'inbox.row.accepted': 'Acceptada',
+  'inbox.row.declined': 'Rebutjada',
+  'inbox.row.open': 'Obre',
+  'inbox.row.markRead': 'Llegida',
+  'inbox.row.markingRead': 'S’està marcant com a llegida',
+  'inbox.row.markReadFailed': 'No s’ha pogut marcar com a llegida',
+  'inbox.preferences':
+    'Tria quines d’aquestes arriben a la safata, al correu i al telèfon.',
+  'inbox.preferencesAction': 'Configuració de les notificacions',
+
+  /* ----------------------------------------------- stored notification copy */
+  'notification.trip.invited.title': 'T’han convidat a {tripTitle}',
+  'notification.trip.invited.body': '{actorName} t’ha afegit al viatge.',
+  'notification.trip.updated.title': '{tripTitle} ha canviat',
+  'notification.trip.updated.body': '{actorName} ha canviat el pla.',
+  'notification.trip.member_added.title':
+    '{memberName} s’ha unit a {tripTitle}',
+  'notification.trip.member_added.body':
+    'Ja pot veure l’itinerari, les reserves i els diners.',
+  'notification.trip.member_removed.title':
+    '{memberName} ha deixat {tripTitle}',
+  'notification.trip.member_removed.body':
+    'El seu accés al viatge s’ha acabat.',
+  'notification.trip.starting_soon.title': {
+    one: '{tripTitle} comença d’aquí a {days} dia',
+    many: '{tripTitle} comença d’aquí a {days} dies',
+    other: '{tripTitle} comença d’aquí a {days} dies',
+  },
+  'notification.trip.starting_soon.body':
+    'Bon moment per repassar la llista d’equipatge i les reserves.',
+  'notification.reservation.reminder.title': '{title} és a tocar',
+  'notification.reservation.reminder.body':
+    'Comprova l’hora i el codi de confirmació a la reserva.',
+  'notification.reservation.confirmed.title': '{title} està confirmada',
+  'notification.reservation.confirmed.body':
+    'La reserva consta com a confirmada a {tripTitle}.',
+  'notification.expense.added.title': '{actorName} ha afegit una despesa',
+  'notification.expense.added.body': '{title}, a {tripTitle}.',
+  'notification.expense.settled.title': '{actorName} ha saldat el compte',
+  'notification.expense.settled.body': 'El saldo de {tripTitle} està pagat.',
+  'notification.list.assigned.title': '{actorName} t’ha assignat una tasca',
+  'notification.list.assigned.body': '{title}, a {tripTitle}.',
+  'notification.collab.message.title': '{actorName} ha escrit a {tripTitle}',
+  'notification.collab.message.body': '«{preview}»',
+  'notification.collab.poll.title': 'Hi ha una votació oberta a {tripTitle}',
+  'notification.collab.poll.body': '«{question}»',
+  'notification.organization.invited.title':
+    'T’han convidat a {organizationName}',
+  'notification.organization.invited.body':
+    'Accepta per entrar a l’espai de treball i a tot el que s’hi comparteix.',
+  'notification.journey.published.title': '{title} ja està publicat',
+  'notification.journey.published.body':
+    'Qualsevol que tingui l’enllaç ja pot llegir el diari.',
+  'notification.billing.plan_changed.title': 'El teu pla ha canviat',
+  'notification.billing.plan_changed.body':
+    '{organizationName} ara té el pla {plan}.',
+  'notification.fallback.title':
+    'Alguna cosa ha canviat al teu espai de treball',
+  'notification.fallback.body': 'Obre el viatge per veure què ha estat.',
+
+  /* ------------------------------------------------------------- dashboard */
+  'dashboard.error': 'El tauler no s’ha carregat',
+  'dashboard.blank.title': 'El teu pròxim viatge comença aquí',
+  'dashboard.blank.body':
+    'Crea un viatge, marca al mapa els llocs que vols veure i planned.travel muntarà el pla dia a dia al seu voltant.',
+  'dashboard.blank.action': 'Prepara un viatge',
+  'dashboard.blank.secondary': 'Mira el teu mapa del món',
+
+  'dashboard.upNext': 'A continuació',
+  'dashboard.openPlan': 'Obre el pla',
+  'dashboard.hero.travellers': 'Viatgers',
+  'dashboard.hero.travellersHint': 'en aquest espai',
+  'dashboard.hero.dates': 'Dates',
+  'dashboard.hero.datesUnset': 'Sense definir',
+  'dashboard.hero.datesHint': {
+    one: '{days} dia',
+    many: '{days} dies',
+    other: '{days} dies',
+  },
+  'dashboard.hero.datesMissing': 'Afegeix dates per crear els dies',
+  'dashboard.hero.startsIn': 'Comença en',
+  'dashboard.hero.started': 'Començat fa',
+  'dashboard.hero.today': 'Avui',
+  'dashboard.hero.startUnknown': 'sense data d’inici',
+  'dashboard.hero.startToday': 'bon viatge',
+  /**
+   * The label over the numeral already carries «fa», so the unit under it is
+   * only the word for a day — Catalan would otherwise say it twice.
+   */
+  'dashboard.hero.startPast': {
+    one: 'dia',
+    many: 'dies',
+    other: 'dies',
+  },
+  'dashboard.hero.startFuture': {
+    one: 'dia',
+    many: 'dies',
+    other: 'dies',
+  },
+  'dashboard.hero.places': 'Llocs',
+  'dashboard.hero.placesNone': 'encara no hi ha res al mapa',
+  'dashboard.hero.placesHint': 'al mapa',
+
+  'dashboard.stat.countries': 'Països visitats',
+  'dashboard.stat.countriesUnit': 'de {total}',
+  'dashboard.stat.countriesNone': 'Marca un país per començar el teu mapa',
+  'dashboard.stat.visits': {
+    one: '{visits} visita registrada',
+    many: '{visits} visites registrades',
+    other: '{visits} visites registrades',
+  },
+  'dashboard.stat.trips': 'Viatges en total',
+  'dashboard.stat.tripsCaption':
+    '{planning} en preparació · {booked} amb reserva',
+  'dashboard.stat.places': 'Llocs al mapa',
+  'dashboard.stat.placesNone': 'Encara no hi ha res al mapa',
+  'dashboard.stat.placesAcross': {
+    one: 'en {trips} viatge',
+    many: 'en {trips} viatges',
+    other: 'en {trips} viatges',
+  },
+  'dashboard.stat.bookings': 'Reserves confirmades',
+  'dashboard.stat.bookingsNone': 'No hi ha reserves pròximes',
+  'dashboard.stat.bookingsSoon': {
+    one: '{bookings} reserva en camí',
+    many: '{bookings} reserves en camí',
+    other: '{bookings} reserves en camí',
+  },
+
+  'dashboard.trips.label': 'Els teus viatges',
+  'dashboard.trips.all': 'Tots els viatges',
+  'dashboard.trips.empty.title': 'Encara no hi ha viatges',
+  'dashboard.trips.empty.body':
+    'Tot el que preparis apareixerà aquí, primer el més recent.',
+  'dashboard.trips.empty.action': 'Crea un viatge',
+
+  'dashboard.bookings.label': 'Pròximes reserves',
+  'dashboard.bookings.empty.title': 'Encara no hi ha res reservat',
+  'dashboard.bookings.empty.body':
+    'Els allotjaments, les taules i les entrades confirmades apareixen aquí a mesura que s’acosta la data.',
+
+  'dashboard.pipeline.label': 'Viatges per etapa',
+  'dashboard.pipeline.empty':
+    'No hi ha res en marxa. El teu primer viatge repartirà això per etapes.',
+  'dashboard.pipeline.favourites': {
+    one: '{favourites} preferit',
+    many: '{favourites} preferits',
+    other: '{favourites} preferits',
+  },
+  'dashboard.pipeline.archived': {
+    one: '{archived} viatge arxivat',
+    many: '{archived} viatges arxivats',
+    other: '{archived} viatges arxivats',
+  },
+
+  'dashboard.storage.label': 'Emmagatzematge',
+  'dashboard.storage.count': '{used} de {limit}',
+  'dashboard.storage.files': {
+    one: '{files} fitxer entre tots els viatges, fotos i bitllets inclosos.',
+    many: '{files} fitxers entre tots els viatges, fotos i bitllets inclosos.',
+    other: '{files} fitxers entre tots els viatges, fotos i bitllets inclosos.',
+  },
+  'dashboard.storage.more': 'Necessites més espai?',
+  'dashboard.storage.plans': 'Mira els plans',
+
+  /* ----------------------------------------------------------------- admin */
+  'admin.error': 'La consola d’administració no s’ha carregat',
+  'admin.denied.title': 'Això només ho obren els administradors de l’espai',
+  'admin.denied.body':
+    'Si ho necessites, demana a un propietari o a un administrador d’aquest espai que et canviï el rol.',
+  'admin.denied.action': 'Torna al tauler',
+  'admin.eyebrow': 'Administració de l’espai',
+  'admin.description': 'Pla {plan} · creat {date}',
+  'admin.createdUnknown': 'fa poc',
+  'admin.workspaceSettings': 'Configuració de l’espai',
+  'admin.billing': 'Pla i facturació',
+
+  'admin.invitations.title': {
+    one: '{invitations} invitació sense resposta',
+    many: '{invitations} invitacions sense resposta',
+    other: '{invitations} invitacions sense resposta',
+  },
+  'admin.invitations.body':
+    'Cada invitació pendent ocupa una de les places que paga el teu pla.',
+  'admin.invitations.action': 'Revisa les invitacions',
+
+  'admin.stat.members': 'Membres',
+  'admin.stat.membersCaption': {
+    one: '{invitations} invitació pendent',
+    many: '{invitations} invitacions pendents',
+    other: '{invitations} invitacions pendents',
+  },
+  'admin.stat.storage': 'Emmagatzematge',
+  'admin.stat.storageUnit': 'de {limit}',
+  'admin.stat.storageUnlimited': 'sense sostre',
+  'admin.stat.storageCaption': 'Fitxers, fotos i exportacions',
+  'admin.stat.audit': 'Entrades d’auditoria',
+  'admin.stat.auditCaption': 'Aquí sota tens l’activitat més recent',
+  'admin.stat.plan': 'Pla',
+  'admin.stat.planCaption': 'Les quotes s’apliquen a la capa de dades',
+
+  'admin.quotas.label': 'Quotes',
+  'admin.quotas.count': {
+    one: '{metrics} mètrica',
+    many: '{metrics} mètriques',
+    other: '{metrics} mètriques',
+  },
+  'admin.quotas.unlimited': 'Sense límit',
+  'admin.quotas.value': '{used} de {limit}',
+
+  'admin.members.label': 'Membres',
+  'admin.members.table': 'Membres d’aquest espai de treball',
+  'admin.members.person': 'Persona',
+  'admin.members.role': 'Rol',
+  'admin.members.joined': 'S’hi va unir',
+
+  'admin.activity.label': 'Activitat recent',
+  'admin.activity.empty.title': 'Encara no hi ha res registrat',
+  'admin.activity.empty.body':
+    'Cada canvi que compta s’afegeix al registre en el moment que passa.',
+  'admin.activity.workspace': 'el mateix espai de treball',
+  'admin.actions.label': 'Accions més freqüents',
+  'admin.actions.count': {
+    one: '{actions} acció',
+    many: '{actions} accions',
+    other: '{actions} accions',
+  },
+
+  /* ---------------------------------------------------------- domain words */
+  'tripStatus.draft': 'Esborrany',
+  'tripStatus.planning': 'En preparació',
+  'tripStatus.booked': 'Reservat',
+  'tripStatus.active': 'En marxa',
+  'tripStatus.completed': 'Acabat',
+  'tripStatus.archived': 'Arxivat',
+
+  'bookingStatus.none': 'Sense reserva',
+  'bookingStatus.pending': 'Pendent',
+  'bookingStatus.confirmed': 'Confirmada',
+  'bookingStatus.cancelled': 'Cancel·lada',
+  'bookingStatus.completed': 'Feta',
+
+  'bookingType.accommodation': 'Allotjament',
+  'bookingType.restaurant': 'Taula',
+  'bookingType.activity': 'Activitat',
+  'bookingType.tour': 'Excursió',
+  'bookingType.ticket': 'Entrada',
+  'bookingType.transport': 'Trajecte',
+  'bookingType.other': 'Reserva',
+
+  'role.owner': 'Propietari',
+  'role.admin': 'Administrador',
+  'role.member': 'Membre',
+
+  'metric.trips': 'Viatges',
+  'metric.places': 'Llocs',
+  'metric.members': 'Membres',
+  'metric.files': 'Fitxers',
+  'metric.storage_bytes': 'Emmagatzematge',
+  'metric.collections': 'Col·leccions',
+  'metric.journeys': 'Diaris',
+
+  /* -------------------------------------------------------------- failures */
+  'error.title': 'Això no s’ha carregat',
+  'error.body':
+    'No s’ha perdut res. Torna-ho a provar i, si continua passant, envia’ns el detall de sota.',
+  'error.retry': 'Torna-ho a provar',
+  'error.dashboard': 'Torna al tauler',
+  'error.unknown': 'La petició ha fallat abans d’acabar.',
+  'error.root': 'Ens hem sortit de la ruta',
+  'error.session': 'El teu accés a l’espai de treball ha canviat',
+
+  'notFound.eyebrow': 'Pàgina 404',
+  'notFound.title': 'Aquesta pàgina no és al mapa',
+  'notFound.body':
+    'Pot ser que l’enllaç sigui antic, o que el viatge que assenyalava s’hagi mogut o esborrat.',
+  'notFound.trips': 'Tots els viatges',
+  'notFound.rootBody':
+    'Hem mirat per tota la ruta. Pot ser que l’adreça tingui una errada, o que la pàgina hagi canviat de lloc.',
+  'notFound.home': 'Torna a l’inici',
+  'notFound.plans': 'Mira els plans',
+
+  'session.noWorkspace':
+    'El teu compte encara no està lligat a cap espai de treball. Tanca la sessió i torna a entrar per acabar de configurar-lo.',
+  'session.membershipRemoved':
+    'S’ha retirat la teva pertinença a aquest espai de treball.',
+} satisfies TranslationOf<typeof En>
+
+export default messages

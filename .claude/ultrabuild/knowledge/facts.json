@@ -485,5 +485,1474 @@
       "builder"
     ],
     "invalidatesWhen": "the i18n work lands and its baselines are refreshed by whoever owns them"
+    "id": "recon-cache-double-wrap",
+    "claim": "The workflow already returns each recon entry AS `{hash, result}`, so the persist step must write that value VERBATIM. Wrapping it again produces `{hash, result:{hash, result:{topic,facts,...}}}`, and the next round hands the inner wrapper to the workflow as if it were the reader payload. Nothing errors: the run logs `recon reused for: <key>`, `r.topic` and `r.facts` are simply undefined, and that reader contributes an EMPTY section to the digest every builder, critic and auditor reads. Before trusting a cache entry, assert `result.topic` is a string and `result.facts` is non-empty — a matching hash is not proof the payload survived.",
+    "evidence": "Measured in round 5: recon/stack.json and recon/reference.json were both double-wrapped, so the digest carried 0 of 36 stack facts (plus 20 risks) and 0 of 33 reference facts. Their inner hashes matched their outer ones, which is why the hash check passed. recon/contract.json and recon/codebase.json, written verbatim, were single-wrapped and intact. Unwrapping restored 69 facts and 26 risks. Rounds 3, 4 and the first round-5 attempt all reused the degraded pair.",
+    "measuredIn": "i18n round 5, second attempt",
+    "scope": [
+      "mechanical"
+    ],
+    "invalidatesWhen": "the persist step writes the returned recon entry verbatim and validates topic/facts before reuse"
+  },
+  {
+    "id": "shadow-token-is-a-colour",
+    "claim": "tailwind-merge in this repo treats `shadow-<token>` as a shadow COLOUR, not a shadow size, so `cn('shadow-card', 'shadow-none')` keeps both classes and CSS source order decides which box-shadow paints. Never rely on `shadow-none` to cancel a token shadow — compose the class list so the shadow is left off instead.",
+    "evidence": "A test asserting the disabled+selected chip's className `not.toContain('shadow-card')` failed with both `shadow-card` and `shadow-none` present in the merged list. `grep -n shadow src/lib/cn.ts` returns nothing, so no shadow class group is registered in `extendTailwindMerge` and `card` is not on tailwind-merge's built-in shadow size scale.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "mount-free-component-probe",
+    "claim": "A component that no route mounts can still be measured in a real browser without touching any file outside ownership: create a programmatic Vite dev server in the scratchpad (`configFile: false`, `resolve: { tsconfigPaths: true }`, `plugins: [viteReact()]`), `ssrLoadModule()` the component and `src/lib/fonts.ts`, render with `renderToStaticMarkup`, inline `dist/client/assets/styles-*.css` plus the real `FONT_STYLESHEET_HREF`, and drive the resulting file:// page with Playwright.",
+    "evidence": "Produced heights, baselines, column counts, contrast ratios, per-script platform fonts and hover/focus/active/reduced-motion computed styles for LanguagePicker with zero repo files added. Two gotchas measured: a script living outside the repo cannot resolve `vite`/`@playwright/test`, so symlink the repo's node_modules into the scratchpad first; and `playwright` is not installed — the package is `@playwright/test`. Regexing the font href out of fonts.ts yields the raw template literal (`css2?${FONT_FAMILIES.map(`) and loads zero real faces; importing the module gives the real URL and 28 loaded faces.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "capture"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "one-box-one-baseline-across-scripts",
+    "claim": "With the eight-family stylesheet and per-chip `lang`, all seven scripts share one 44px box and one 26px baseline, and CDP confirms each chip gets its own face — so the fixed `h-11` + `leading-7` construction makes 'zero layout shift after paint' true for the catalogue swap rather than merely likely.",
+    "evidence": "Playwright chromium, unpinned context, 28 faces loaded, zero gstatic/googleapis request failures. Chip height {44} and strut-measured baseline {26} were single-valued sets across en/el/ru/ar/ja/ko/zh-Hans/zh-Hant/vi/cs/id/pt-BR at 360, 393, 768, 1024, 1440 and 2560 in both light and dark. `CSS.getPlatformFontsForNode`: Geist / Noto Sans / Noto Sans Arabic / Noto Sans JP / Noto Sans KR / Noto Sans SC / Noto Sans TC respectively. Skeleton-minus-loaded height delta was 0.00px in all twelve combinations.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "critic",
+      "capture"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "drizzle-generate-in-a-sandbox",
+    "claim": "drizzle-kit generate can be run entirely in a sandbox, so a 'this file is generated' claim is checkable without writing to drizzle/ — but the `out` path MUST be repo-relative, because drizzle-kit prefixes it with './'.",
+    "evidence": "An absolute `out` failed with `ENOENT: open './/private/tmp/.../out/meta/0000_snapshot.json'`. With `out: 'node_modules/.dzprobe'` pre-seeded with `cp -R drizzle/meta` plus the 0000/0001 .sql files, and the schema default temporarily set to 'en', `npx drizzle-kit generate --config <scratch>/drizzle.config.ts --name locale_normalisation` wrote 0002_locale_normalisation.sql byte-identical to lines 1-25 of the shipped drizzle/0002_locale_normalisation.sql (sole diff: the shipped file appends '--> statement-breakpoint' to line 25 to join the hand-written data block). Also generated meta/_journal.json idx 2 and meta/0002_snapshot.json. drizzle/ and src/server/db/schema.ts were both clean in `git status` afterwards.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "throwaway-d1-for-migration-tests",
+    "claim": "`wrangler d1 migrations apply … --local --persist-to <dir>` gives a throwaway D1 for a from-empty migration test, so you can prove `pnpm db:migrate:local` semantics without touching the shared .wrangler/state a running dev server owns.",
+    "evidence": "`npx wrangler d1 migrations apply planned-travel-db --local --persist-to <scratch>/d1state` reported 0000 ✅, 0001 ✅, 0002 ✅ (13 commands for 0002, no error). The resulting DB: `locale` text DEFAULT 'en' NOT NULL, no leftover `__locale_normalisation` table, d1_migrations holds all three rows, PRAGMA foreign_key_check and integrity_check both clean. On the shared local D1, `pnpm db:migrate:local` says 'No migrations to apply!' — 0002 was recorded there at 2026-08-23 08:32:55.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "healthy-probe-dead-server",
+    "claim": "A server that passes resolve-port.sh can still be dead for every authenticated screen: port 3006 answers /api/dev/seed with 200 while `/node_modules/.vite/deps/motion_react.js?v=6f0f8d75` returns 504 'Outdated Optimize Dep', so `src/routes/_app/route.tsx` fails its dynamic import and every `_app` route renders the 'Something went off route' boundary. Four successive full reloads did not recover it.",
+    "evidence": "Playwright with e2e/.auth/demo.json on /settings/appearance: page.url() stays on /settings/appearance (session is valid) but the first h1/h2 is 'Something went off route' on passes 0-3, and the only >=400 responses are two hits on that deps URL. `ls node_modules/.vite/deps/` no longer contains motion_react.js. Workaround that DID produce evidence: build an SSR harness with `npx vite build -c <config> ` (ssr:true, external react/react-dom/react-dom/server/react/jsx-runtime, alias '#'->src), renderToStaticMarkup the primitives, link the real dist/client/assets/styles-*.css, and screenshot the file:// page — CSS-accurate, no dev server needed.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "capture",
+      "mechanical",
+      "critic"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "rtl-pseudo-element-mirroring",
+    "claim": "`rtl:before:-scale-x-100` genuinely reaches the pseudo-element in Tailwind 4.3.3 and composes with a keyframe `transform` rather than replacing it, which is the only way to reverse a physical gradient plus a translateX sweep at once.",
+    "evidence": "tailwindcss compile() emits `.rtl\\:before\\:-scale-x-100:where(:dir(rtl), [dir=\"rtl\"], [dir=\"rtl\"] *)::before { --tw-scale-x: calc(100% * -1); scale: var(--tw-scale-x) var(--tw-scale-y) }` — the standalone `scale` property, not `transform`. Measured in Chromium against the built stylesheet: `getComputedStyle(el, '::before').scale` on a `<Skeleton>` is `none` under `<html dir=\"ltr\">` and `-1 1` under `<html dir=\"rtl\">`.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "arabic-uses-latin-digits",
+    "claim": "`LOCALE_FORMATS.ar.intlLocale` is the bare tag `'ar'`, whose CLDR default numbering system is `latn` — so `formatNumber(1234,'ar')` is `1,234`, NOT `١٢٣٤`. Arabic-Indic digits belong to `ar-EG` / `ar-u-nu-arab`, which we do not ship. Percent in `ar` also carries U+200E marks.",
+    "evidence": "node: `new Intl.NumberFormat('ar').format(1234)` -> \"1,234\"; percent style -> \"42‎%‎\". Confirmed in-browser through the harness: the ar frames render `2,500` and `+99` in Latin digits. Contrast `tr` -> \"%42\" (sign prefixed) and `de` -> \"1.234\" / \"42 %\". Practical consequence: a test asserting Arabic-Indic digits from this codebase will always fail, and `fr` grouping uses U+202F with U+00A0 before `%`, so `de` and `tr` are the readable locales to assert against.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "reference-dashboard-needs-its-own-login",
+    "claim": "The reference product gates its whole authenticated area behind its own sign-in, and the inherited browser session holds no account there. Measured for /dashboard in round 5 and for /settings?tab=display in round 7: both redirect to /login?redirect=... with title 'TREK'. No authenticated reference screen can be photographed, so no authenticated blind pair can be formed. Public surfaces - the landing page and the reference's own login/register - ARE reachable, so auth-i18n can still be paired.",
+    "evidence": "Ego Lite opened https://demo.liketrek.com/dashboard; pageInfo() returned url https://demo.liketrek.com/login?redirect=%2Fdashboard, title \"TREK\". snapshotText() shows a Sign In form with input[placeholder=\"your@email.com\"] and a password field, plus a \"Change language\" button. No dashboard content in the tree.",
+    "measuredIn": "i18n rounds 5 and 7",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "ego-lite-hangs-on-the-reference-host",
+    "claim": "Ego Lite hangs against demo.liketrek.com, and a heredoc killed mid-run leaves the named task space wedged so every later heredoc reusing that name also hangs. UPDATE round 7: it did NOT hang - one navigation plus waitForNetworkIdle plus pageInfo returned well under a minute. Treat the hang as intermittent rather than certain, and always finish a task space with keep:false.",
+    "evidence": "Three runs, three timeouts: 5m00s (4-viewport loop), 2m50s (single captureScreenshot in the same space, no navigation), 3m20s (fresh space name, fresh openOrReuseTab). completeTaskSpace(name,{keep:false}) returned promptly both times and cleared it. Use a fresh space name after any kill.",
+    "measuredIn": "i18n round 5",
+    "scope": [
+      "capture"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "playwright-green-once-the-server-is-healthy",
+    "claim": "Round 5s mechanical gate reported 71 identical Playwright failures; every one was the dead dependency optimiser, not our code. Clearing `node_modules/.vite` and restarting the dev server takes the same commit to 134 passed / 5 skipped / 0 failed - the exact pre-round baseline. A whole route suite failing on ONE error shape, with zero screenshot comparisons anywhere in the output, is a statement about the server, never about the diff.",
+    "evidence": "Measured at the round-5 tree: first run after the restart gave 131 passed / 3 failed (mobile-safari pricing-dark, legal-privacy-dark, reduced-motion focus); all three passed run individually, and a second full run gave 134 passed / 5 skipped / 0 failed. The 504 on /node_modules/.vite/deps/motion_react.js was reproduced by hand with curl while /api/dev/seed still answered 200.",
+    "measuredIn": "i18n round 5, orchestrator re-measurement",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "builder",
+      "capture"
+    ],
+    "invalidatesWhen": "a route suite fails with more than one distinct error shape, or a pixel diff appears"
+  },
+  {
+    "id": "three-flakes-under-full-suite-load",
+    "claim": "Under full-suite load this machine flakes a small number of specs, and the reliable discriminator is a DURATION blow-up plus passing in isolation - not the number of consecutive failures. 'reduced motion still moves focus into the click surface' failed two full runs in a row after round 10, which my earlier bar called real, then the very next identical run was 138 passed / 5 skipped / 0 failed. Under load it takes 31.2s; alone it takes 4.6s. Treat a 5x-plus slowdown with no pixel diff as contention, and require three consecutive full-suite failures before calling such a spec broken.",
+    "evidence": "Run 1 after the server restart: 3 failed. Each of the three re-run alone with --project=mobile-safari -g: passed in 2.2-4.4s. Run 2 of the identical suite on the identical tree: 134 passed, 0 failed. Round 10: two consecutive full-suite failures of the chromium reduced-motion spec at 31.2s, a pass in isolation at 4.6s, then a clean full suite at 138 passed / 5 skipped / 0 failed on the same tree. The machine is now also carrying an unrelated paperclip dev server.",
+    "measuredIn": "i18n rounds 5 and 10",
+    "scope": [
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": "the same spec fails in three consecutive full runs, or fails with a pixel diff rather than a timeout"
+  },
+  {
+    "id": "never-timeout-the-port-script",
+    "claim": "Do not run `scripts/ultrabuild/resolve-port.sh --start` under a short Bash timeout. The script polls for readiness after nohup-ing the server, and a SIGTERM to the script takes the server down with it - so the round loses the very server it just started. With a cold `.vite` cache the first identifying request needs several seconds, which is exactly when the naive timeout fires. Give it a long timeout, or spawn `vite dev --port <p>` detached and poll separately.",
+    "evidence": "Measured: after `rm -rf node_modules/.vite`, `--start` was killed at 5m (exit 143). Its log shows VITE ready on port 3000 at 00:07, yet nothing was listening afterwards. Re-spawned detached with nohup + disown: the server survived and answered /api/dev/seed in 4.46s on the first request.",
+    "measuredIn": "i18n round 5, orchestrator re-measurement",
+    "scope": [
+      "mechanical",
+      "builder",
+      "capture"
+    ],
+    "invalidatesWhen": "resolve-port.sh stops polling in the foreground"
+  },
+  {
+    "id": "settings-selects-are-broken-and-pre-existing",
+    "claim": "The /settings SimpleSelect defect was TWO things, and only one of them was what round 5 measured. The empty trigger was real and is now FIXED (all six triggers render their selected label). The 'opens zero options' half was partly a probe artefact: Playwright's .click() does not reliably drive a Radix Select, and a real mouse.down/up sequence opens it with 9 options. What survives is narrow and genuine: Enter does not open the control, while Space, ArrowDown and ArrowUp all do.",
+    "evidence": "Measured on the settled round-6 tree at /settings, keyboard only: Enter -> aria-expanded=false, 0 options; Space/ArrowDown/ArrowUp -> aria-expanded=true, 9 options, 1 [role=listbox]. Trigger is role=combobox on a BUTTON with aria-haspopup absent; Tab reaches it after 16 presses. Round 5 measured the same screen before the fix: all six triggers textContent '' and .click() yielding 0 options.",
+    "measuredIn": "i18n rounds 5 and 6, orchestrator re-measurement",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "capture"
+    ],
+    "invalidatesWhen": "Enter opens the listbox"
+  },
+  {
+    "id": "db-generate-runs-in-place",
+    "claim": "`pnpm db:generate --name <slug>` can be run in place on this repo and produces complete drizzle bookkeeping; the snapshot diff is the only reliable way to prove a migration carries no unrelated schema drift.",
+    "evidence": "Ran it after changing one column default: wrote drizzle/0002_locale_normalisation.sql (7 statements), drizzle/meta/0002_snapshot.json and _journal.json idx 2 (when=1787524764378). A flattened key-by-key diff of 0001_snapshot.json vs 0002_snapshot.json showed exactly three changed keys: .id, .prevId, and tables.organization_settings.columns.locale.default \"'en-GB'\" -> \"'en'\". From-empty apply: `npx wrangler d1 migrations apply planned-travel-db --local --persist-to <scratch>/d1state` = 0000/0001/0002 all ✅, 13 commands for 0002, resulting DDL `locale text DEFAULT 'en' NOT NULL`, integrity_check ok. On the shared local D1 `pnpm db:migrate:local` = \"No migrations to apply!\".",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "builder",
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "prove-generated-sql-in-vitest",
+    "claim": "A \"this file is db:generate output\" claim is testable from vitest without shelling out: `generateSQLiteDrizzleJson`/`generateSQLiteMigration` from drizzle-kit/api reproduce a migration's DDL half from `drizzle/meta/<prev>_snapshot.json` (parsed straight off disk as the `prev` argument) plus the live schema.",
+    "evidence": "In src/server/repos/__tests__/settings-locale.test.ts: JSON.parse of drizzle/meta/0001_snapshot.json cast to `Awaited<ReturnType<typeof generateSQLiteDrizzleJson>>`, then `generateSQLiteMigration(previous, await generateSQLiteDrizzleJson({...authSchema, ...domainSchema}))` returns 7 statements that equal the file's first 7 breakpoint-split, trimmed statements exactly. Test runs in ~1.2s total for the 26-test file because the harness already pays the same drizzle-kit cost once per process.",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "prove-your-slice-in-a-copy",
+    "claim": "In a checkout shared with parallel items you can still prove your own slice typechecks and builds: rsync the tree to the scratchpad excluding node_modules/.git, symlink the real node_modules in, and restore the other item's dirty files from HEAD with `git --git-dir=<repo>/.git show HEAD:<path>`.",
+    "evidence": "Repo-root `pnpm typecheck` reported exactly one error (src/components/ui/select.tsx(300,7) TS2322) from another builder's in-flight edit. In the scratch copy with the 6 dirty src/components/ui + src/lib/i18n/messages/en/ui.ts files reverted to HEAD, `./node_modules/.bin/tsc --noEmit` exited 0 and `./node_modules/.bin/vite build` completed (\"✓ built in 1.47s\", full client+server output). Cost: one rsync, no repo files touched — `git status --porcelain` over my owned paths stayed exactly my 8 files.",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "select-ssr-gap-is-real",
+    "claim": "The reported SimpleSelect defect is a real SSR gap in the primitive, not a dead dev server, and it is measurable in vitest without a browser: Radix builds Select.Content's offscreen DocumentFragment in a layout effect, which never runs on the server, so a server-rendered trigger is empty until hydration. This is now fixed and locked by a test.",
+    "evidence": "Before the change, `renderToStaticMarkup(<SimpleSelect options={[{value:'gbp',label:'British pound'}]} value=\"gbp\" />)` emitted `<span class=\"truncate\"><span style=\"pointer-events:none\"></span></span>` and did not contain 'British pound'. After it, the same markup contains the label, and a Playwright context with javaScriptEnabled:false on /settings reads 'Workspace default — en' and 'GBP — Pound sterling' off the triggers. Meanwhile the SAME commit on a healthy server already passed every interactive check: 9 options on click, aria-expanded true, zero console errors — so a browser probe alone cannot tell this defect from a hydration failure. Use renderToStaticMarkup.",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "ui-only-item-browser-harness",
+    "claim": "A src/components/ui-only item CAN be measured in a real browser with no repo file added, via an SSR gallery harness — but the harness MUST mount `Direction.DirectionProvider` or it manufactures a phantom RTL overflow defect.",
+    "evidence": "Recipe that worked: scratchpad `npx vite build -c cfg.mjs` with build.ssr:true, rollupOptions.input=gallery.tsx, external react/react-dom/react-dom/server/react/jsx-runtime, alias '#'->src; then renderToStaticMarkup, inline `dist/client/assets/styles-*.css`, screenshot the file:// page with Playwright. Yielded --thumb-travel 1rem→-1rem, progress scale none→'-1 1', skeleton ::before scale none→'-1 1', --tab-dir 1→-1, weekday 'Mon'→'الاثنين'. THE GOTCHA: without DirectionProvider, Radix Tabs.Root emits dir=\"ltr\", so `start-1` on the segmented pill anchors to the physical LEFT and the pill lands at L=-293 — document.scrollWidth 1193 vs clientWidth 900. Adding the provider takes it to 900/900. Same for the probe scripts: symlink the repo node_modules in, and the package is '@playwright/test', not 'playwright-core'.",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "rtl-reorders-english-dates",
+    "claim": "Forcing dir=\"rtl\" on a page whose copy is still English reorders a formatted date — '19 Aug 2026' renders as 'Aug 2026 19'. That is a UAX#9 capture artefact, NOT a product defect, because a real `ar` reader gets Arabic month names from the frozen table.",
+    "evidence": "Measured on /settings after `document.documentElement.setAttribute('dir','rtl')`: the <dd> textContent is exactly '19 Aug 2026' with computed direction rtl and unicode-bidi isolate, yet it paints 'Aug 2026 19'. UAX#9 N1 treats EN as R, so the space between '19' (EN) and 'Aug' (L) has no matching pair, N2 gives it the RTL embedding level, and the two level-2 runs are then laid out right-to-left against each other. formatDate(..., 'ar') returns '19 مارس 2026', which is native RTL and orders correctly, so the condition that produces this never occurs in the shipped product.",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "a-url-with-no-reachable-reference-is-a-permanent-reject",
+    "claim": "ultrabuild.js:1172 pushes a rejection reason whenever there is no visual verdict AND the item carries `url` or `referenceUrl`. Acceptance text cannot reach that rule - the verdict assembler never reads acceptance - so an item with a url whose reference cannot be photographed is rejected EVERY round no matter how good its work is. For a library item with no screen of its own, the fix is to remove `url`, which is the mechanism the workflow already provides.",
+    "evidence": "ui-primitives-i18n-rtl was rejected in rounds 5 and 6 with the identical reason 'no blind pair', zero blocking findings against its own work, and abWinner null. language-picker and locale-persistence both reached accepted-pending-gate with no pair either - and neither carries a url. Removing the url from ui-primitives-i18n-rtl is the whole fix.",
+    "measuredIn": "i18n round 6, orchestrator diagnosis",
+    "scope": [
+      "mechanical"
+    ],
+    "invalidatesWhen": "the verdict assembler learns to read an acceptance criterion that waives the visual lens"
+  },
+  {
+    "id": "settings-baselines-are-stale-under-tolerance",
+    "claim": "The committed settings visual baselines still show 'Workspace default - en-GB' while the live screen renders '- en'. The four frames pass only because the difference fits under maxDiffPixelRatio, which means the gate is currently blind to that region of the screen. Do NOT raise the tolerance and do NOT re-baseline mid-rebuild: settings-module-i18n rewrites this screen next, and re-baselining twice hides whichever change lands second.",
+    "evidence": "Reported independently by the round-6 auditor on locale-persistence and on ui-primitives-i18n-rtl, both naming e2e/__screenshots__/visual.spec.ts/settings-light-chromium.png. The full suite is 134 passed / 5 skipped / 0 failed with the stale frames in place.",
+    "measuredIn": "i18n round 6",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "capture"
+    ],
+    "invalidatesWhen": "the settings baselines are refreshed after settings-module-i18n is accepted"
+  },
+  {
+    "id": "computed-fontfamily-is-worthless-here",
+    "claim": "`getComputedStyle(el).fontFamily.split(',')[0]` is worthless as a per-script font check in this repo — it is always 'Geist', because the :lang() rules re-order the TAIL of the stack. Use CDP CSS.getPlatformFontsForNode.",
+    "evidence": "On the live /settings/language, a [lang=\"ko\"] chip reported first family 'Geist' from getComputedStyle, while CSS.getPlatformFontsForNode on the same node reported 'Noto Sans KR'. Full CDP sweep over the chips: ko→Noto Sans KR, ja→Noto Sans JP, zh-Hans→Noto Sans SC, zh-Hant→Noto Sans TC, ar→Noto Sans Arabic, el→Noto Sans, en/ru→Geist. All 24 chip boxes measured exactly 44px at 1440 and 360.",
+    "measuredIn": "i18n round 7",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "how-to-open-a-radix-select",
+    "claim": "On /settings/organization neither Playwright `.click()` nor a raw mouse.down/up opens a Radix Select; `focus()` + `Space` does. This narrows the settled fact, which credited mouse.down/up.",
+    "evidence": "trigger.boundingBox() → mouse.move to centre → mouse.down() → mouse.up() → 400 ms wait gave 0 `[role=option]`. The same trigger with `await lang.focus(); await page.keyboard.press('Space')` gave 23 options, with lang attributes present and ar carrying dir=\"rtl\". All six triggers on that screen also read their selected label correctly ('GBP — Pound sterling', 'English', 'London', '23 Jun 2026', 'Monday', 'Kilometres').",
+    "measuredIn": "i18n round 7",
+    "scope": [
+      "builder",
+      "capture",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "radix-select-hides-the-document",
+    "claim": "Radix Select marks the rest of the document aria-hidden while its listbox is open, so a Playwright ROLE locator stops matching the trigger the instant it opens — which is how 'Enter does not open SimpleSelect' came to be measured. Read aria-expanded and option counts through page.evaluate raw DOM queries, never getByRole, when probing an open Radix Select.",
+    "evidence": "Chromium + e2e/.auth/demo.json on http://localhost:3000/settings: after page.keyboard.press('Enter'), `getByRole('combobox').first().getAttribute('aria-expanded')` threw TimeoutError after 30000ms ('waiting for getByRole(\"combobox\").first()'), while in the same state `document.querySelector('[role=\"combobox\"]').getAttribute('aria-expanded')` read \"true\" with 9 [role=option], 1 [role=listbox] and an aria-hidden=true ancestor on the trigger. Enter, Space, ArrowDown and ArrowUp all gave the identical reading.",
+    "measuredIn": "i18n round 7",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical",
+      "capture"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "radix-placeholder-sentinel",
+    "claim": "Radix Select shows its own placeholder only for the empty-string sentinel. A STORED value that no option carries is not that sentinel, so the trigger renders the supplied children and an empty box — the second half of the /settings blank-trigger defect, now fixed in SimpleSelect by naming the placeholder itself plus data-placeholder.",
+    "evidence": "jsdom: `<SimpleSelect options={[{value:'gbp'},{value:'jpy'}]} value=\"en-GB\" placeholder=\"Pick\" />` gave trigger.textContent === \"\" (measured via an assertion sentinel). After the fix the same render contains 'Choose a currency' and carries data-placeholder, in the browser DOM and in renderToStaticMarkup.",
+    "measuredIn": "i18n round 7",
+    "scope": [
+      "builder",
+      "auditor",
+      "critic"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "vitest-swallows-console-log",
+    "claim": "vitest in this repo swallows console.log from test bodies, so a probe that logs prints nothing. Surface a measurement by asserting the value against a sentinel string and reading it out of the AssertionError.",
+    "evidence": "`npx vitest run <probe>.test.tsx` with console.log in each case printed 'Test Files 1 passed / Tests 5 passed' and no log lines at all; rewriting to `expect(`${key} expanded=${...}`).toBe('MEASURE')` printed \"expected '{Enter} expanded=true options=2' to be 'MEASURE'\" for every case.",
+    "measuredIn": "i18n round 7",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "the-visual-lens-is-waived-per-item-not-globally",
+    "claim": "docs/SPEC.md section 8's rule for an unobtainable reference is implemented by `visualLens: 'no-reference'` on the item, set by the ORCHESTRATOR and recorded in run.json. It waives ONLY the A/B comparison in ultrabuild.js's verdict assembler. `url` is deliberately kept so the capture still runs and the frames remain the evidence the auditor and the human read; every other lens stays exactly as strict. It is never set by a builder and never by default.",
+    "evidence": "Three rejections were caused by the missing branch: ui-primitives-i18n-rtl in rounds 5 and 6 and settings-module-i18n in round 7, each for a demo host we hold no credentials for and none for their own work. Only settings-module-i18n and app-shell-i18n carry the flag; auth-i18n does not, because the reference login screen is public and pairable.",
+    "measuredIn": "i18n round 7, orchestrator patch",
+    "scope": [
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": "someone signs the reference demo in, at which point the flag comes off and the pair is required again"
+  },
+  {
+    "id": "settings-baselines-refreshed-after-inspection",
+    "claim": "The four /settings baselines were refreshed in round 7 AFTER reading the actual frame and the diff frame, not because the gate was red. Every difference traced to a criterion the item was told to satisfy: a Language entry added to the nav (shifting five rows), the off-spec LOCALES dropdown replaced by 'English - Chosen on its own screen' plus a Change link, and hint copy now coming from messages/en/settings.ts. The suite returned to 134 passed / 5 skipped / 0 failed.",
+    "evidence": "test-results/visual-authenticated-routes-settings-renders-in-light-chromium/{settings-light-actual,settings-light-diff}.png were both read before the refresh. Refresh was scoped with -g \"settings renders in\", touching exactly four files under e2e/__screenshots__.",
+    "measuredIn": "i18n round 7, orchestrator",
+    "scope": [
+      "mechanical",
+      "capture"
+    ],
+    "invalidatesWhen": "the settings screen changes again"
+  },
+  {
+    "id": "chips-inert-until-hydrated",
+    "claim": "The language chips are server-rendered and inert until React hydrates, so a keyboard commit sent right after `waitForSelector('[role=\"radiogroup\"]')` fires a click that reaches no handler — no POST, no toast, no state change. Wait for a `__reactProps` key on a chip before driving the picker.",
+    "evidence": "Measured twice on http://localhost:3000/settings/language with e2e/.auth/demo.json. Probe A: focus `[data-testid=\"locale-chip-en\"]`, press Enter immediately → document.activeElement was the chip, aria-checked stayed on `locale-chip-workspace`, zero POST responses, `[data-sonner-toaster]` absent. Probe B: identical script with one `page.evaluate` in between → the click listener recorded `locale-chip-en`, POST 200 on `saveLanguagePreference_createServerFn_handler`, toast text 'planned.travel now speaks English'. Reliable gate: `Object.keys(chip).some(k => k.startsWith('__reactProps'))`.",
+    "measuredIn": "i18n round 8",
+    "scope": [
+      "capture",
+      "mechanical",
+      "critic"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "no-timeout-binary-on-this-mac",
+    "claim": "`timeout` is not available on this machine's zsh, so wrapping an ego-browser heredoc in it fails with command not found (exit 127) rather than guarding the known intermittent hang - use the Bash tool's own timeout parameter instead.",
+    "evidence": "`timeout 240 ego-browser nodejs <<'SCRIPT' ...` returned \"(eval):1: command not found: timeout\", exit=127; the identical heredoc without the wrapper succeeded.",
+    "measuredIn": "i18n round 8",
+    "scope": [
+      "capture",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "motion-transform-guard-misses-translate",
+    "claim": "`[data-motion-transform] { transform: none !important }` in the reduced-motion block does NOT touch the `translate`, `scale` or `rotate` properties that Tailwind 4.3.3 compiles `translate-x-*` and `-scale-x-*` to, so a position expressed as a class survives it while an inline `transform` does not.",
+    "evidence": "Compiled with the installed tailwindcss compile() API: `.translate-x-1/2` emits `translate: var(--tw-translate-x) var(--tw-translate-y)`, `.-scale-x-100` emits `scale:`, and `.transition-transform` emits `transition-property: transform, translate, scale, rotate`. Measured in Chromium against dist/client/assets/styles-*.css with reducedMotion:'reduce': a Progress value=40 fill reads computed translate '-60%' and occupies 0→125px of a 312px track, while the same fill written as `transform: translateX(-60%)` occupied the full 312px.",
+    "measuredIn": "i18n round 8",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "computed-style-mid-transition",
+    "claim": "getComputedStyle read immediately after focusing or disabling any element in src/components/ui returns the MID-TRANSITION value, because `transitionBase` transitions color, background-color, border-color and outline-color — which reads exactly like a broken utility. Wait ~400ms before asserting a state colour.",
+    "evidence": "Same orphaned Select trigger, Chromium: sampled straight after focus, outlineColor was rgb(138,83,5) (the pre-focus currentColor) and outlineWidth 2px; after a 400ms wait the same node reads rgb(37,98,86) = --color-ring #256256. Identically, `el.disabled = true` then an immediate read gave backgroundColor rgb(255,255,255) where a 500ms wait gives rgb(243,241,237) = --color-surface-2. A bare probe button with no transition showed the ring colour instantly, which is how the false 'outline-ring is a no-op' reading was disproved.",
+    "measuredIn": "i18n round 8",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "playwright-writes-missing-baselines",
+    "claim": "Playwright itself writes the missing PNGs on a \"snapshot doesn't exist\" failure, without --update-snapshots. They land untracked in e2e/__screenshots__ and must be reviewed, not assumed to be a baseline refresh someone performed.",
+    "evidence": "I never passed --update-snapshots; after the run `git status --porcelain e2e/__screenshots__` shows exactly four `??` entries: settings-language-{light,dark}-{chromium,mobile-safari}.png.",
+    "measuredIn": "i18n round 8",
+    "scope": [
+      "capture",
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "port-3000-belongs-to-another-project",
+    "claim": "Port 3000 is claimed by an unrelated `paperclip-run` checkout that ALSO answers /api/dev/seed with 200, and for a while two servers held 3000 at once - the foreign one on 127.0.0.1 and ours on [::1] - so which one answered `localhost:3000` depended on resolution order. resolve-port.sh rejected the foreign one on cwd and moved this tree to 3001, which is the only reason round 8's measurements are trustworthy. Our 3000 server has been killed so the port is unambiguously not ours; this worktree lives on 3001.",
+    "evidence": "lsof showed pid 31780 cwd .../paperclip-run-des-244-.../apps/web on 127.0.0.1:3000 and pid 99936 (ours) on [::1]:3000. Round 8's gate ran against PLAYWRIGHT_BASE_URL=http://localhost:3001, whose listener pid 33383 has cwd /Users/rafalwolak/dev/cloudflare/planned.travel.",
+    "measuredIn": "i18n round 8",
+    "scope": [
+      "mechanical",
+      "builder",
+      "capture",
+      "auditor"
+    ],
+    "invalidatesWhen": "the paperclip run stops and 3000 frees up"
+  },
+  {
+    "id": "fixed-mobile-nav-paints-mid-page",
+    "claim": "In a fullPage capture the mobile bottom nav paints at the VIEWPORT position, i.e. partway down the image, and appears to overlap whatever content is there. It is `fixed inset-x-0 bottom-0` in src/components/layout/mobile-nav.tsx. It is a capture artefact, NOT an overlap defect - do not file it, and do not 'fix' the layout because of it.",
+    "evidence": "Read off e2e/__screenshots__/visual.spec.ts/settings-language-light-mobile-safari.png, where the Trips/Vacay/Atlas/Journey bar sits across the language chip grid and clips the Arabic chip. grep of src/components/layout/mobile-nav.tsx line 16 confirms the fixed positioning.",
+    "measuredIn": "i18n round 8, orchestrator",
+    "scope": [
+      "critic",
+      "auditor",
+      "capture",
+      "builder"
+    ],
+    "invalidatesWhen": "the mobile nav stops being position-fixed"
+  },
+  {
+    "id": "only-parity-is-red-now",
+    "claim": "As of round 8 the ONLY red anywhere in this repo is the 23-test i18n parity suite. typecheck, lint and build are clean, Playwright is 138 passed / 5 skipped / 0 failed with the four new settings-language frames included, and unit tests are 2868 of 2891. Any new red is therefore this round’s doing and must not be attributed to a pre-existing floor.",
+    "evidence": "Measured by the orchestrator against port 3001 after killing the contested 3000 server: playwright 138/5/0, vitest Test Files 1 failed | 105 passed (106), Tests 23 failed | 2868 passed (2891).",
+    "measuredIn": "i18n round 8, orchestrator re-measurement",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "builder"
+    ],
+    "invalidatesWhen": "the translation packs land and parity goes green"
+  },
+  {
+    "id": "logical-inset-follows-own-direction",
+    "claim": "`inset-inline-end` resolves against the element's OWN `direction` in Chromium, so the repo's `[dir='rtl'] :is(time, output, [data-numeric]) { direction: ltr }` rule silently un-mirrors any absolutely-positioned element that carries `data-numeric`. Put the bidi isolation on an inner span, never on the positioned box.",
+    "evidence": "Isolated probe (Chromium, `<html dir=\"rtl\">`, two identical `position:absolute; inset-inline-end: -2px` badges): with `data-numeric` -> computed `direction: ltr`, `right: -2px`, `left: 22px`, box at the parent's physical RIGHT; without it -> `direction: rtl`, `left: -2px`, `right: 22px`, box at the LEFT. Reproduced in the live app: the unread badge measured [215,231] against a bell of [193,229] in an `ar` document; after moving `data-numeric` to an inner span it measures [191,207]. Tailwind 4.3.3 does emit `.-end-0\\.5 { inset-inline-end: calc(var(--spacing) * -0.5) }`, so the class was never the problem.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "capture"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "how-to-reach-ar-in-the-live-app",
+    "claim": "Reaching `ar` in the live app requires writing the traveller's preference through /settings/language - `Accept-Language` loses to the stored value - and because `messages/ar/` does not exist, an `ar` document renders every string as its own key. Those keys are unbreakable single tokens, so they manufacture horizontal overflow that does not exist in `en`.",
+    "evidence": "A Playwright context sending `accept-language: ar,ar-SA;q=0.9` to /dashboard still got `<html lang=\"en\" dir=\"ltr\">`. Clicking `[data-testid=\"locale-chip-ar\"]` gave `lang=\"ar\" dir=\"rtl\"` and headings reading `shell.dashboard.openPlan`. Measured `documentElement.scrollWidth - clientWidth`: ar -> 36 (dashboard 1440), 60 (dashboard 360), 85 (notifications 360); en -> 0 at 360, 1440 and 2560 on /dashboard, /notifications and /admin. Restore with the `locale-chip-workspace` chip and verify `lang` before finishing - e2e/helpers/shoot.ts's `pinDemoLanguage()` exists because a run once left it on `ar` and red-lined 29 tests.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "loader-payload-is-seroval",
+    "claim": "A TanStack Start loader payload cannot be rewritten wholesale in a Playwright route handler: it is seroval, which emits a repeated object once and back-references it by `i`, so replacing or emptying a node breaks a reference elsewhere. Nulling one field while re-parking its node into another array works. The serverFn URL is base64 of `{file, export}`, which is how you target one loader.",
+    "evidence": "`/_serverFn/<base64>` decodes to `{\"file\":\"/src/routes/_app/-server/overview.ts?tss-serverfn-split\",\"export\":\"loadDashboard_createServerFn_handler\"}`. Body shape: `{t:10,i:0,p:{k:[...],v:[...]}}`, where `{t:1,s}` is a string, `{t:0,s}` a number, `{t:2,s:0}` null, `{t:9,a:[],o:0}` an array. Setting `upNext` to `{t:2,s:0}` and emptying `mine`/`upcoming`/`reservations` produced `SerovalDeserializationError` and the route's error boundary; setting `upNext` to null while pushing its original node into `upcoming.a` rendered the empty hero with a clean console. `route.abort()` on the same URL is enough for the error state, and a 6s delay in the handler plus a 2.2s wait reaches the pendingComponent (Router's default `pendingMs` is 1s, so screenshotting at 900ms shows nothing).",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "capture",
+      "builder",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "npx-tsc-is-the-wrong-typescript",
+    "claim": "`npx tsc` in this repo resolves a DIFFERENT, older TypeScript than the pinned one and invents TS2792/TS7006 errors on test files; the pinned binary is clean. Always run `./node_modules/.bin/tsc --noEmit` (what `pnpm typecheck` runs).",
+    "evidence": "`npx tsc --noEmit` printed \"Cannot find module 'node:fs' … set the 'moduleResolution' option\" for src/routes/(auth)/-lib/__tests__/copy-rules.test.ts plus implicit-any params on `it.each`. `./node_modules/.bin/tsc --version` = 6.0.3 and `./node_modules/.bin/tsc --noEmit | grep -c .` = 0 on the same tree.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "builder",
+      "mechanical",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "auth-screens-mirror-server-side",
+    "claim": "The (auth) screens are fully server-negotiated and mirror without a single `[dir]` selector of their own: an `Accept-Language: ar` request yields lang=ar/dir=rtl and the grid, the field affordances and the decorative art all flip. Measurable in one page.evaluate, no session needed.",
+    "evidence": "Playwright chromium, extraHTTPHeaders accept-language ar vs en-GB on http://localhost:3001/login: `aside` left 0 vs 778.375, `main` left 826.8 vs 165.2; password field paddingInlineEnd 44px, reveal button left-of-field 0px (ar) vs 346px of a 390px field (en), borderStartStartRadius 0 / borderEndEndRadius 12px in both; `aside svg` computed `scale` '-1 1' vs 'none'; `input[type=email]` computed direction 'ltr' in ar. h1 textContent was 'auth.login.heading' because messages/ar/ does not exist.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "failed-signin-console-noise",
+    "claim": "Deliberately failing a sign-in in dev puts two entries in the browser console that are NOT product defects: a 401 resource error and a relayed Better Auth server warning. Resting auth pages are console-silent, so only an interaction probe sees them.",
+    "evidence": "Same probe: after submitting nobody@planned.travel, console captured \"error: Failed to load resource: the server responded with a status of 401 (Unauthorized)\" and \"warning: %c[Server]%c … WARN [Better Auth]: User not found\". The 24 resting frames (6 routes x light/dark x 1440/360) captured an empty console array.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "capture",
+      "critic",
+      "mechanical"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "auth-flag-breaks-login-capture",
+    "claim": "scripts/ultrabuild/capture.mjs --auth photographs the WRONG screen for /login: a valid demo session redirects /login into the authenticated app, and the script's guard (which only rejects redirects TO /login) reports captureValid true anyway. Capture unauthenticated screens without --auth.",
+    "evidence": "Run 1 with --auth on http://localhost:3001/login produced eight frames whose content is the dashboard (Tokyo & Kyoto trip cards, Trips/Vacay/Atlas/Journey tab bar, 'COUNTRIES VISITED 12 of 195'), warnings [] and captureValid true. The identical command without --auth produced the Sign in form.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "the-reference-has-no-dark-theme",
+    "claim": "The reference product has no dark theme - it ignores prefers-color-scheme entirely - so no dark blind pair can ever be formed against it, in any round.",
+    "evidence": "Playwright chromium on https://demo.liketrek.com/login: getComputedStyle(document.body).backgroundColor is rgb(255,255,255) at all four viewports under both colorScheme 'light' and colorScheme 'dark'. The 1440 dark full-page PNG is the light design.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "setup-project-pins-the-demo-locale",
+    "claim": "`pnpm exec playwright test --project=setup` now resets the demo traveller's locale, because cacheSession() calls the new pinDemoLanguage() in e2e/helpers/shoot.ts. A run that finds authenticated frames in the wrong language no longer needs a hand-repair — and a fixture left in `ar` by an interactive probe costs nothing.",
+    "evidence": "Set the fixture to `ja` by clicking [data-testid=\"locale-chip-ja\"] (verified document.documentElement.lang === 'ja'), ran `PLAYWRIGHT_BASE_URL=http://localhost:3001 pnpm exec playwright test --project=setup` (PASS 1), then re-read /settings/language: lang='en' and the selected chip is locale-chip-workspace, which is the state every committed settings-language baseline holds.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "capture",
+      "mechanical",
+      "builder"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "missing-catalogue-renders-keys",
+    "claim": "Switching locale renders the toast — and every other string — as bare message keys for the 22 locales whose catalogue directory does not exist yet. That is the i18n runtime's designed behaviour, not a defect of the screen that switched, and it disappears when the translations-* items land.",
+    "evidence": "Clicking the `ar` chip on /settings/language: html becomes lang=\"ar\" dir=\"rtl\", the sonner toast reads the literal 'settings.language.saved', and the whole page renders 'settings.page.title', 'shell.nav.atlas' etc. Clicking follow-the-workspace (→ en) immediately gives 'planned.travel now speaks English'. createTranslator has no English branch by design (SPEC §8.2).",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "critic",
+      "auditor",
+      "builder"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "round-9-mobile-failures-are-real",
+    "claim": "The six mobile-safari visual failures this round are NOT the known load flake: they reproduce with identical pixel counts when re-run alone with --project=mobile-safari -g \"renders in\".",
+    "evidence": "Full suite: 7 failed. Isolated re-run of just the mobile-safari 'renders in' frames: 6 failed / 23 passed in 17.2s, with the same numbers (3517, 1493, 1511, 763, 24896, 231610). Contrast with the chromium ECONNRESET spec, which passed alone in 2155ms.",
+    "measuredIn": "i18n round 9",
+    "scope": [
+      "critic",
+      "auditor",
+      "mechanical",
+      "builder"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "why-six-mobile-frames-are-red-in-round-9",
+    "claim": "The six red mobile-safari frames after round 9 are accounted for and none is an unexplained regression. settings-language light+dark: the PICKER_COLUMNS fix the ORCHESTRATOR asked for in round 8 took the 393px grid from one column to two and shrank the page 572px - it cannot be both the requested fix and a defect. dashboard light: app-shell-i18n rewrote that screen. trips light and atlas light+dark: app-shell-i18n owns src/components/layout/, which frames every authenticated screen, so its avatar change and its nav labels moving into shell.ts shift screens nobody is otherwise touching; the atlas frames additionally carry the known GPU-rasterised map noise. They are deliberately NOT re-baselined: both owning items are still rejected and both screens will change again, and re-baselining twice means whichever change lands second is never compared.",
+    "evidence": "Re-run alone, all six reproduce with identical pixel counts (so not the three-flake load pattern). The atlas light diff shows exactly three regions: the top-right avatar, the four bottom-nav labels, and coastline speckle on the WebGL canvas. git show HEAD:src/components/layout/nav-model.ts carried label: 'My Trips'; src/lib/i18n/messages/en/shell.ts now carries 'nav.trips': 'My trips'.",
+    "measuredIn": "i18n round 9, orchestrator",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "critic",
+      "capture"
+    ],
+    "invalidatesWhen": "app-shell-i18n and settings-module-i18n are both accepted and the frames are refreshed once"
+  },
+  {
+    "id": "nav-copy-normalised-to-sentence-case",
+    "claim": "app-shell-i18n changed one nav label's wording while moving it into the catalogue: 'My Trips' became 'My trips'. It is inside the item's ownership, it matches the house sentence case used by 'New trip', 'Save changes' and 'Follow the workspace', and it is the letter-level diff visible on five mobile baselines. Not a defect - but it is the reason a nav-only frame moved, so do not go hunting for a layout cause.",
+    "evidence": "git show HEAD:src/components/layout/nav-model.ts -> label: 'My Trips'. src/lib/i18n/messages/en/shell.ts:67 -> 'nav.trips': 'My trips'. The short forms ('Trips', 'Vacay', 'Atlas', 'Journey') are unchanged.",
+    "measuredIn": "i18n round 9, orchestrator",
+    "scope": [
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "the label changes again"
+  },
+  {
+    "id": "never-fake-a-loader-payload",
+    "claim": "A real server-side `null` returned from a TanStack Start server function reaches the route component as `null` on both the SSR and the client-navigation path — but a hand-forged `{\"t\":2,\"s\":0}` body in a Playwright route handler deserialises to `undefined`, which looks exactly like a broken null check. Force the branch in the handler and revert, do not fake the wire.",
+    "evidence": "Measured on /admin at http://localhost:3001. With `loadAdmin` temporarily returning null unconditionally: SSR `document.body` contains 'Only workspace admins', client navigation through the user menu's Admin Link gives the same, zero console errors. With the handler untouched and `route.fulfill({body: JSON.stringify({t:2,s:0})})` instead: 'TypeError: Cannot read properties of undefined (reading \\'limits\\')' from AdminConsole. Also note a loader only crosses the wire on a CLIENT navigation — a `page.goto` runs it during SSR, so `page.route` on /_serverFn/ never fires and an injected plain <a> triggers a full page load rather than a router navigation.",
+    "measuredIn": "i18n round 10",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "wrap-anywhere-not-break-word",
+    "claim": "Tailwind's `wrap-break-word` (overflow-wrap: break-word) does NOT reduce an element's min-content size, so an unbreakable token inside a grid whose implicit column is `auto` still widens the whole grid and scrolls the document. `wrap-anywhere` (overflow-wrap: anywhere) does. Both compile in tailwindcss 4.3.3, as does `break-all`.",
+    "evidence": "Measured at 360px on /admin in an `ar` document (keys render as tokens because messages/ar/ is absent): `settings.billing.plan.crew.name` in a StatCard value measured 523px inside a 328px column and gave `documentElement.scrollWidth - clientWidth === 221`. With `break-words` on an inner span the leaf stopped overflowing but the document stayed at 221. With `wrap-anywhere` it went to 0. `compile()` from the installed tailwindcss emits `.wrap-anywhere{overflow-wrap:anywhere}`, `.wrap-break-word{overflow-wrap:break-word}`, `.break-all{word-break:break-all}`. Also measured: `space-x-*`/`-space-x-*` emit `margin-inline-end`, so an AvatarStack mirrors under dir=rtl with no rule of its own.",
+    "measuredIn": "i18n round 10",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "clock-pin-reaches-the-empty-state",
+    "claim": "The `x-pt-server-today` header reaches the dashboard's empty state honestly — pinning it far in the future makes `upNext` null and the reservation rail empty with no payload surgery. Rewriting a seroval loader payload by hand to null a field is not worth attempting; it corrupts the graph and lands on the error boundary.",
+    "evidence": "A Playwright context with extraHTTPHeaders {'x-pt-server-today':'2031-01-15'} on /dashboard rendered 'Your next trip starts here' plus 'Nothing booked yet', overflow 0, no product console errors — only the documented gstatic CORS failures the pin causes. The alternative (parsing the /_serverFn/ body, replacing vals[upNext] with {t:2,s:0} and pushing the original node into upcoming.a) produced 'TypeError: Cannot read properties of undefined (reading \\'reservations\\')'. Restoring the demo fixture after a probe that clicks 'Read': `curl -X POST 'http://localhost:3001/api/dev/seed?force=1'` then `playwright test --project=setup` puts the bell back to 'Notifications, 3 unread' and the language chip back to locale-chip-workspace.",
+    "measuredIn": "i18n round 10",
+    "scope": [
+      "builder",
+      "capture"
+    ],
+    "invalidatesWhen": null
+  },
+  {
+    "id": "seven-mobile-baselines-refreshed-in-round-10",
+    "claim": "The seven red mobile-safari frames were refreshed in round 10, one targeted -g run each, after reading the atlas and journey diffs. Every difference traced to work that was asked for: app-shell-i18n's avatar change and its nav labels moving into shell.ts (it owns src/components/layout/, which frames every authenticated screen, which is why trips, journey and atlas moved at all), the two-column mobile picker fix the orchestrator requested in round 8, and the known GPU speckle on the WebGL map canvases. Exactly seven files changed - no collateral - and the suite went to 138 passed / 5 skipped / 0 failed.",
+    "evidence": "The failing set was identical across three consecutive full runs before the refresh, and all seven actual frames measured 393px wide, so the width instability an earlier round warned about did not reproduce. git status after the refresh listed exactly the seven intended PNGs.",
+    "measuredIn": "i18n round 10, orchestrator",
+    "scope": [
+      "mechanical",
+      "capture",
+      "critic"
+    ],
+    "invalidatesWhen": "any of those screens changes again"
+  },
+  {
+    "id": "the-translation-workload-measured",
+    "claim": "The English source is 1,005 keys across four namespaces - auth 297, settings 398, shell 260, ui 50 - so the six translation packs owe 22 locales x 1,005 = about 22,110 strings between them. The heaviest single pack is romance at five locales. Parity fails identically for an absent locale and an incomplete one, so a pack that cannot finish should finish WHOLE locales and name the missing ones: a complete locale is shippable progress, a half-finished one is not.",
+    "evidence": "Counted with grep -cE \"^\\s+'\" over src/lib/i18n/messages/en/*.ts: auth.ts 297, settings.ts 398, shell.ts 260, ui.ts 50. Only four of SPEC section 8's ten namespaces exist, because the other six belong to items deferred by scope in round 4.",
+    "measuredIn": "i18n round 10, orchestrator",
+    "scope": [
+      "builder",
+      "mechanical",
+      "auditor"
+    ],
+    "invalidatesWhen": "a new en namespace file appears or a deferred item is un-deferred"
+  },
+  {
+    "claim": "The settings screen has two hard pixel budgets a translation can silently blow: the nav hint under each section link is 198px and the regional select trigger is 206px, both `.truncate`. English itself already runs 5px over on the date row, so 'within ~5px of English' is the real bar, not 'fits'.",
+    "evidence": "Playwright chromium at 1440 and 2560 on http://localhost:3001/settings, `[...document.querySelectorAll('.truncate')].filter(e => e.scrollWidth > e.clientWidth + 1)`. en: one row, 206<211. de before fixing: 198<246, 198<221, 198<225, 198<208 plus 206<271 on four select triggers. After shortening the hints and changing the prefix to 'Vom Arbeitsbereich — ': de one row at 206<216, nl zero rows, sv one row at 206<208.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "id": "the-settings-screen-has-two-hard-pixel-budgets",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Switching the demo fixture's locale from Playwright needs `goto(..., { waitUntil: 'networkidle' })` before clicking the chip — with `domcontentloaded` the click lands before hydration, silently does nothing, and `waitForFunction(lang === tag)` times out even at 60s. The `locale-chip-workspace` chip resolves to lang 'en', not 'workspace'. The fixture is also contended: a parallel agent moved it sv → en → id → vi mid-probe.",
+    "evidence": "Identical script, only the waitUntil differing: domcontentloaded → TimeoutError at 60000ms with log: []; networkidle → `document.documentElement.lang` becomes 'de' within ~3s and the h1 reads 'Einstellungen'. Mid-run the probe recorded lang=en then lang=id ('Pengaturan') then lang=vi ('Thông báo') on consecutive navigations while the script had set sv. `playwright test --project=setup` restores it (1 passed).",
+    "scope": [
+      "builder",
+      "capture"
+    ],
+    "id": "switching-the-demo-fixture-s-locale-from-playwright",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "At 360px the floating action button covers the fourth mobile-nav tab in EVERY locale including English, so a translated fourth label that looks clipped in a 360 frame is not a translation defect.",
+    "evidence": "Measured on /settings at 360x800 with the demo session: the four tabs occupy exactly 0-90, 90-180, 180-270 and 270-360 in en, de, nl and sv alike, and the FAB occupies 292-352 in all four. en labels Trips/Vacay/Atlas/Journey, de Reisen/Urlaub/Karte/Tagebuch, nl Reizen/Vakantie/Kaart/Dagboek, sv Resor/Semester/Karta/Dagbok — every label fits its 90px cell; only the FAB overlaps.",
+    "scope": [
+      "critic",
+      "auditor",
+      "capture"
+    ],
+    "id": "at-360px-the-floating-action-button-covers-the",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A Playwright probe that clicks a locale chip must load /settings/language with waitUntil:'networkidle' and call scrollIntoViewIfNeeded() before .click(); with waitUntil:'domcontentloaded' the click lands pre-hydration and document.documentElement.lang never changes.",
+    "evidence": "Measured on http://localhost:3001/settings/language with e2e/.auth/demo.json: domcontentloaded + chip.click() then waitForFunction(lang==='ar') threw TimeoutError after 20000ms with an empty log. The identical script with networkidle + scrollIntoViewIfNeeded gave lang='ar' dir='rtl' and h1 'الإعدادات' within 4s, and then drove all 24 chips across 48 viewport/theme combinations without a single miss.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "id": "a-playwright-probe-that-clicks-a-locale-chip",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Node 26's native TS type-stripping imports the catalogue files directly by absolute path, so a full key/value/token/plural diff of any locale against `en` runs as a plain .mjs script in about a second — no vitest process, no repo file added.",
+    "evidence": "`node scratch/diff.mjs ar el tr hu` with `await import('/abs/.../messages/ar/shell.ts')` returned the default export for all 16 files; the `import type En from '../en/auth'` and `satisfies TranslationOf<...>` lines strip cleanly. Output gave enTop/trTop/missing/orphan/identical/tokendiff per namespace and is what found hu/auth.ts absent and proved ar/el/tr complete, before the parity suite was ever run.",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "node-26-s-native-ts-type-stripping-imports",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Locale-specific text clipping is measurable as scrollWidth > clientWidth over `main *, header *, nav *`, and on this demo fixture English clips exactly 11 nodes at BOTH 360 and 1440 — five seeded reservation titles plus the sr-only avatar name. Any count above 11 is translated copy that is too long, not a screen defect.",
+    "evidence": "Measured across /dashboard, /settings, /settings/language, /settings/security, /settings/workspace, /settings/billing, /notifications, /admin. Baseline en=11 at 360 and 11 at 1440. Before copy fixes: el=18/27, hu=13, tr=12, ar=11. After: all four = 11 with an element-for-element identical set. The Greek case was traced to bookingStatus.confirmed rendering an 81px vs 71px badge, which shrank the sibling meta column from 155px to 126px.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "locale-specific-text-clipping-is-measurable-as-scrollwidth",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Vietnamese tone stacks render in the real Geist and MuseoModerno Vietnamese subsets, not a fallback face, and cost zero layout shift — measurable with no dev server and no repo file added.",
+    "evidence": "Scratchpad harness: esbuild-bundled the en/id/vi catalogues to .mjs, rendered them into a file:// page with `dist/client/assets/styles-CfaXwTeV.css` inlined and the real FONT_STYLESHEET_HREF imported from src/lib/fonts.ts, then Playwright chromium + CDP CSS.getPlatformFontsForNode. Result: 8 faces loaded, 0 failed requests; body/nav en→Geist:130 id→Geist:163 vi→Geist:146, display en/id/vi all →MuseoModerno. Chip heights were {en:[44x7], id:[44x7], vi:[44x7]} — one value across all three locales in light and dark.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "id": "vietnamese-tone-stacks-render-in-the-real-geist",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "`satisfies TranslationOf<typeof En>` is a complete key-parity gate at compile time for a translation catalogue: `pnpm typecheck` rejects both a missing key and an invented one, so a translator gets the full diff before running vitest.",
+    "evidence": "TranslationOf maps `readonly [K in keyof TSource]: Message` with no `?`, and the value is an object literal, so excess-property checking applies. Measured: after writing id/vi ui+shell+auth, `./node_modules/.bin/tsc --noEmit` printed nothing and the subsequent parity run showed zero `id`/`vi` failures across all seven parity assertions — the type check had already caught everything.",
+    "scope": [
+      "builder",
+      "mechanical"
+    ],
+    "id": "-satisfies-translationof-typeof-en-is-a-complete",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The i18n parity suite is now down to 8 failures covering only ca/es/fr/it/pt-BR/nl/sv (the romance and germanic packs) plus the aggregate locale-count test. de and hu, which were red in earlier rounds, are green.",
+    "evidence": "`pnpm test` at this tree: Test Files 1 failed | 112 passed (113), Tests 8 failed | 3147 passed (3155). The named failures are exactly `the shipped catalogues > {ca,es,fr,it,pt-BR,nl,sv} > carries every key English carries` plus `carries a file for every locale, once English carries any key`. Earlier in the same session the run also listed de and hu; parallel items landed them mid-round.",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "critic"
+    ],
+    "id": "the-i18n-parity-suite-is-now-down-to",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The i18n parity suite has shrunk from 23 failures to 6, and the remaining ones are the romance pack (ca, es, fr, it, pt-BR) missing the ui.* namespace plus one whole-catalogue file-presence test. Other packs (cs, el, hu, ja, ko, pl, ru, tr, uk, zh-Hans, zh-Hant, ar) now pass.",
+    "evidence": "pnpm test: Test Files 1 failed | 112 passed (113), Tests 6 failed | 3149 passed (3155). Named failures: 'carries a file for every locale, once English carries any key' plus ca/es/fr/it/pt-BR 'carries every key English carries'; every diff key printed is a ui.* key.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-i18n-parity-suite-has-shrunk-from-23",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Playwright is fully green against port 3001 on this tree, including all settings-language frames — no visual regressions this round.",
+    "evidence": "PLAYWRIGHT_BASE_URL=http://localhost:3001 pnpm exec playwright test → PASS (138) FAIL (0) skipped (5), 64968ms, no timeout flakes.",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "capture"
+    ],
+    "id": "playwright-is-fully-green-against-port-3001-on",
+    "measuredIn": "round-11"
+  },
+  {
+    "id": "the-overflow-affix-is-inverted-in-thirteen-locales",
+    "measuredIn": "round-11",
+    "appliesTo": [
+      "builder",
+      "auditor"
+    ],
+    "claim": "The `ui.badge.overflow` / `ui.avatar.more` affix inversion the round-11 auditor pinned on translations-germanic is in THIRTEEN locales, not three. Measured by grepping both keys across every shipped catalogue: en is '{max}+' / '+{hidden}'; de, nl, sv, ar, el, tr, hu, id, vi, cs, pl, ru and uk all ship '+{max}' / '{hidden}+', the same inversion in the same direction. Only ja, zh-Hans and zh-Hant differ honestly (fullwidth '＋', a real typographic difference) and ko writes a real Korean phrase ('외 {hidden}'). Every builder independently hit the same wall and made the same move, so this is a contract defect, not three translators' carelessness: PROPER_NOUNS in src/lib/i18n/__tests__/parity.test.ts is [], the no-byte-identical check therefore forbids a glyph-only value from staying identical to English, and a Germanic or Slavic translator has no honest way to ship '{max}+'. Fixing it means extending the allow-list (owned by i18n-core-runtime) FIRST; a builder told to restore '{max}+' without that lands straight back in a red parity suite.",
+    "correction": "Round 12 recounted: 13, not 14. The seventeen non-English catalogues split 13 inverted + 3 fullwidth (ja, zh-Hans, zh-Hant) + 1 real phrase (ko)."
+  },
+  {
+    "claim": "A missing t() key now produces TS2345 naming MessageKey at BOTH arities, not just the one with a params object. This updates the settled t-missing-key-diagnostic fact, which recorded that a bare call fell back to TS2554 'Expected 2 arguments, but got 1'. The `MessageKey extends TKey ? [params?: MessageParams]` first branch of TranslateArgs is what fixed it.",
+    "evidence": "Probe file src/lib/i18n/__diagnostic-probe.ts calling `t('shell.no-such-key')` and `t('shell.no-such-key', { name: 'x' })`, run through ./node_modules/.bin/tsc --noEmit: BOTH lines reported `error TS2345: Argument of type '\"shell.no-such-key\"' is not assignable to parameter of type 'MessageKey'.` Zero TS2554. Probe deleted immediately afterwards; `ls` confirms it is gone.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "a-missing-t-key-now-produces-ts2345-naming",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "`import.meta.glob('./messages/*/*.ts')` keeps the one-chunk-per-file property that round 1 measured for an explicit per-locale importer: every catalogue file becomes its own chunk, none is inlined into the entry, and no chunk mixes two locales.",
+    "evidence": "SSR `vite build` (build.ssr:true, rollupOptions.input=src/lib/i18n/catalogue.ts, configFile:false) over the tree at 73 catalogue files: 73 chunks emitted, 73 dynamic import() specifiers in the entry, all 73 distinct. Entry is 13,961 bytes and contains none of 'Sprache', 'Wyjazdy', 'العربية' or 'nav.trips'. Scanning every chunk for both 'Sprache' and 'Wyjazdy' found 0 chunks carrying both. GOTCHA: a vite config living in the scratchpad cannot resolve `vite` — symlink the repo's node_modules into the scratchpad first. Probe dir and symlink removed afterwards.",
+    "scope": [
+      "builder",
+      "mechanical",
+      "auditor"
+    ],
+    "id": "-import-meta-glob-messages-ts-keeps-the",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "`grep` in this environment (rewritten to `rtk grep` by the user's hook) can return exit 1 for a string that provably exists in the file. Do not conclude a check is absent from a grep miss — confirm with sed or node before acting.",
+    "evidence": "`grep -n \"untranslated\" src/lib/i18n/__tests__/parity.test.ts` exited 1 with no output, and `grep -n \"untranslated:\" -A 12` likewise printed nothing, while `sed -n '150,180p'` on the same file printed the `untranslated:` property of the ParityReport literal at that moment. A subsequent Edit against text taken from the sed output applied cleanly.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "-grep-in-this-environment-rewritten-to-rtk",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The parity suite no longer needs a PROPER_NOUNS entry for a glyph-only message. `isUntranslatable()` in parity.test.ts exempts any message whose every branch, after `{placeholder}` removal, contains no `\\p{L}` in any script — so `'{max}+'` and `'+{hidden}'` may stay byte-identical to English in every locale. The round-11 'extend the allow-list first' advice is now obsolete.",
+    "evidence": "Restored de/nl/sv `badge.overflow` to '{max}+' and `avatar.more` to '+{hidden}', making all three byte-identical to en. Before the edit: 6 failed / 167 passed. After: 6 failed / 167 passed — the identical six, named ca, es, fr, it, pt-BR. A standalone diff script confirms `identical 2 ['ui.avatar.more','ui.badge.overflow']` for each of de/nl/sv, yet no untranslated assertion fires for them. `grep -n PROPER_NOUNS` still shows `= []` at line 55.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-parity-suite-no-longer-needs-a-proper",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Locale copy length is checkable as an element-for-element diff, not just a count: on this demo fixture English clips 51 nodes at 360px and 32 at 1440px across /dashboard, /settings, /settings/{language,security,workspace,billing}, /notifications and /admin. A locale whose clipped SET differs from English's has too-long copy; a matching set means the clips are the seeded data, not the translation.",
+    "evidence": "Playwright chromium with e2e/.auth/demo.json on port 3001, `[...document.querySelectorAll('main *, header *, nav *')].filter(e => e.scrollWidth > e.clientWidth + 1)`. en 51@360 / 32@1440; de 51/32, nl 51/31, sv 51/32, all with an EMPTY extra-vs-English diff and maxOverflow 0. The one real defect it caught was `shell.dashboard.hero.travellersHint` at 360: de 135>107 and sv 109>107 against en 107=107; nl 18 chars passed. Switching locale needs `goto(..., {waitUntil:'networkidle'})` + `scrollIntoViewIfNeeded()` before `.click()` on `[data-testid=\"locale-chip-<tag>\"]`.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "id": "locale-copy-length-is-checkable-as-an-element",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The German dashboard hero date wraps to two lines at 360px while en, nl and sv stay on one. It comes from src/lib/format.ts plus the frozen CLDR tables, not from any catalogue key, so no translation item can fix it.",
+    "evidence": "Measured the leaf node holding the range at 360x800 on /dashboard: en '9 – 20 Oct 2026' h=16, nl '9 – 20 okt 2026' h=16, sv '9 – 20 okt. 2026' h=16, de '9. – 20. Okt. 2026' h=33. Container clientWidth is 107px in all four. German's ordinal points plus the four-letter 'Okt.' are what push it over; the sibling stat cell in the same 2x2 grid stays 16px, so the row's baselines go uneven in de only.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-german-dashboard-hero-date-wraps-to-two",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The structural `isUntranslatable` exemption has landed in src/lib/i18n/__tests__/parity.test.ts, so a value containing no letter in any script (once `{tokens}` are stripped) may be byte-identical to English. `PROPER_NOUNS` is still `[]` and is not what unblocks the affix keys.",
+    "evidence": "parity.test.ts defines `const LETTER = /\\p{L}/u` and `isUntranslatable(message)` = `!branchesOf(message).some(b => LETTER.test(b.replace(TOKEN,'')))`. After restoring '{max}+' and '+{hidden}' in es/fr/it/ca/pt-BR, `pnpm exec vitest run src/lib/i18n/__tests__/parity.test.ts` = PASS (177) FAIL (0), and full `pnpm test` = 114 files / 3168 tests / 0 failed.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-structural-isuntranslatable-exemption-has-landed-in-src",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Locale-specific clipping on /dashboard's reservation meta is caused by the frozen CLDR date table plus a hard-coded ' · ' join in src/routes/_app/dashboard.tsx, not by catalogue copy — pt-BR and ru clip there, de and es do not.",
+    "evidence": "Playwright chromium at 360 on /dashboard, filtering `main *` for scrollWidth > clientWidth on `.text-caption`: pt-BR gave 'sex., 9 de out. · 15:00 – 11:00' 156>148 plus three more; ru gave 'пт, 9 окт. · 15:00 – 11:00' 132>126 plus three more; de and es both returned []. dashboard.tsx:514-520 builds the line from formatDate()/formatTimeRange() and `.join(' · ')`.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "locale-specific-clipping-on-dashboard-s-reservation-meta",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "es/fr/it/ca/pt-BR all resolve to plural categories one,many,other on this runtime (CLDR 42+ added `many` to the Romance locales), so a two-branch one/other translation of an English plural message is a parity gap in these five locales.",
+    "evidence": "node -e \"new Intl.PluralRules(l).resolvedOptions().pluralCategories\" gives es/fr/it/ca/pt-BR → one,many,other and en → one,other. Every plural message in the five shipped catalogues carries all three and the parity suite's pluralGaps axis is empty for them.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "es-fr-it-ca-pt-br-all-resolve",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The i18n parity suite is now fully green; the entire repo gate is green with zero failures.",
+    "evidence": "pnpm test at this tree: Test Files 114 passed (114), Tests 3168 passed (3168), exit 0. Previous rounds reported 6-23 parity failures.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-i18n-parity-suite-is-now-fully-green",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The dev server for this worktree is already up on port 3001; resolve-port.sh reused it without --start.",
+    "evidence": "scripts/ultrabuild/resolve-port.sh printed 'resolve-port: reusing the server already answering on 3001' then '3001', exit 0.",
+    "scope": [
+      "mechanical",
+      "capture"
+    ],
+    "id": "the-dev-server-for-this-worktree-is-already",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The demo fixture's locale is contended mid-round: a capture that clicks a locale chip and then navigates can be repainted in ANOTHER agent's locale before the screenshot lands. Re-read document.documentElement.lang immediately before page.screenshot and retry the whole chip-click if it drifted.",
+    "evidence": "A capture loop that set lang='hu' (waitForFunction passed), then goto('/dashboard', networkidle) + 400ms, produced a fully RUSSIAN dashboard PNG — 'Мои поездки', 'БЛИЖАЙШАЯ ПОЕЗДКА', 'ХРАНИЛИЩЕ'. The /notifications frame from the same context was correctly Hungarian. Adding a post-navigation `lang === tag` guard with up to 4 retries produced correct frames for hu/ar/el/tr on the first attempt each.",
+    "scope": [
+      "capture",
+      "builder",
+      "critic"
+    ],
+    "id": "the-demo-fixture-s-locale-is-contended-mid",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "There are TWO live shots slugs with different inodes and BOTH carry this round's round-10 item directories: .claude/ultrabuild/shots/i18n/round-10 and .claude/ultrabuild/shots/wersje-jezykowe-aplikacji-na-podstawie-zrodla-ht/round-10. Each already held app-shell-i18n/ and settings-module-i18n/ from parallel builders. A reader looking in only one will think half the round's frames are missing.",
+    "evidence": "stat -f '%i %N' gives 422053193 for i18n/round-10 and 422510865 for wersje-.../round-10 — distinct directories, not a symlink. `find` shows i18n/round-10/app-shell-i18n/*.png (admin-ar-dark-1440.png, dashboard-ar-light-360.png, state-dashboard-empty-dark-360.png …) and `ls` shows the same two item names under wersje-.../round-10.",
+    "scope": [
+      "capture",
+      "auditor",
+      "critic"
+    ],
+    "id": "there-are-two-live-shots-slugs-with-different",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A locale-copy overflow audit must filter on `.truncate` specifically and print textContent, not just count clipped nodes. The raw clipped-node count is dominated by seeded English data and by an RTL Progress-track artefact, both of which are noise; the real copy defects hide as a handful of .truncate Select triggers at 360px.",
+    "evidence": "Playwright chromium, 360px, /settings: filtering `main *, nav *` on scrollWidth > clientWidth + 1 AND classList.contains('truncate') printed exactly the offenders with their text — el 'Προεπιλογή χώρου εργασίας — 23 Ιουν 2026' 279>236 (plus 3 more), hu 'Munkaterületi alapérték — 23 jún. 2026' 241>236, tr 'Çalışma alanı varsayılanı — 23 Haz 2026' 247>236, en []. Meanwhile ar's raw clipped count on /dashboard was 14 vs en's 8-10, but the whole extra set deduped to one class signature: 'DIV.relative w-full overflow-hidden rounded-full bg-surface-inset' — the Progress track under dir=rtl, which is overflow-hidden and therefore invisible.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "a-locale-copy-overflow-audit-must-filter-on",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Translated copy can be sized against a `.truncate` budget exactly, without editing a file and re-measuring: sample the target element's computed style in the live page, feed it to a canvas 2d context (including `letterSpacing` and applying `textTransform: uppercase` yourself), and `measureText` candidate strings. The canvas number equals the element's scrollWidth to the pixel.",
+    "evidence": "Playwright chromium + e2e/.auth/demo.json on http://localhost:3001/settings at 1440. Sampled `span.hidden.truncate.text-caption` (font 'normal 400 12px/16.2px Geist, …', clientWidth 196). The live element's textContent was 'Мова, якою говорить кожен екран' with scrollWidth 196; canvas measureText of that same string returned 196. The four hard budgets measured this way: settings nav hint 196px, regional Select trigger 206px, dashboard hero stat tile 107px (11px/600/0.88px letter-spacing/uppercase), dashboard section label 95px. English's own widest values are 189px and 212px respectively — i.e. English already overflows the Select trigger, so 'fits English' is the wrong bar; measure the number.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "translated-copy-can-be-sized-against-a-truncate",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The session scratchpad is SHARED between concurrently running agents, and a file you wrote there can be silently overwritten mid-session by another agent's file of the same name. A scratch script's output can therefore change under you and manufacture a phantom defect. Give scratch files an item-unique name, and re-verify any surprising result with a freshly written file.",
+    "evidence": "I wrote `<scratchpad>/diff.mjs` and ran it (output format `===== cs (en keys 859) =====`, orphan 0). Later the identical command printed a completely different format (`cs/auth: en=248 loc=256 … orphan=8`) listing 'validation.passwordShort.few' as an orphan — another agent's script that flattens plural branches into dotted keys, where a Slavic few/many branch looks like an extra key. `head -5` on the path showed source I never wrote. Re-running an identically-scoped check from a fresh `verify-slavic-$$.mjs` gave missing=0 orphan=0 tokendiff=0 identical=0 pluralGap=0 shapeDrift=0 blank=0 for all four locales, agreeing with the parity suite's 177 passing assertions. The scratchpad also held 40+ files from other items (round11.json, fix_hu.py, ultrabuild-round13.js …).",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-session-scratchpad-is-shared-between-concurrently-running",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "An overflow scan over `main *, header *, nav *` counts Skeleton shimmers, whose `::before` sweep is far wider than the box, so the same locale scores differently run to run (ru went 55 -> 64 with no code change). Filtering to leaf nodes (`children.length === 0 && textContent.trim()`) makes the count stable and comparable: English is then exactly 22 clipped leaves at BOTH 360 and 1440 on this demo fixture, versus the 51/32 the unfiltered scan reports.",
+    "evidence": "Same 8 authenticated pages, Playwright chromium port 3001. Unfiltered repeat runs of ru gave 55 then 64 at 360 and 32 then 41 at 1440; the extra rows were all `DIV.relative w-full overflow-hidden rounded-…` with EMPTY textContent and ratios like 294<529 and 1046<2071 — Skeletons mid-load. With the leaf filter plus a 700ms settle: en 22/22, cs 22/22, pl 25/25, ru 26/22, uk 26/26, and every non-English extra was a dashboard date caption. The 22 English leaves are five seeded reservation titles ('Hotel Gracery Shinjuku · 2 twin rooms' 233>165 etc.) plus sr-only avatar names at clientWidth 1.",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "id": "an-overflow-scan-over-main-header-nav-counts",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The demo auth fixture is currently pinned to Ukrainian, so every authenticated Playwright frame renders in `uk` against English baselines. This is one root cause behind all 19 screenshot failures — do not treat them as 19 independent layout regressions.",
+    "evidence": "test-results/visual-authenticated-routes-dashboard-renders-in-light-chromium/error-context.md page snapshot contains 'Панель planned.travel', 'Основні розділи', 'Мої поїздки', 'Нова поїздка', 'Тема: як у системі'. The day-boundary spec's own text diff prints Ukrainian ('2 дні тому' vs '1 день тому'). A full run (which includes the setup project that calls pinDemoLanguage()) did NOT reset it back to en.",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor",
+      "builder"
+    ],
+    "id": "the-demo-auth-fixture-is-currently-pinned-to",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Non-Playwright gate is fully green on this tree: typecheck, lint, build all exit 0 and vitest is 3168/3168 across 114 files with zero parity failures.",
+    "evidence": "pnpm typecheck exit 0 (no output); pnpm lint exit 0 ('ESLint: No issues found'); pnpm test exit 0 (Test Files 114 passed (114), Tests 3168 passed (3168), 11.09s); pnpm build exit 0 ('✓ built in 1.52s').",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "non-playwright-gate-is-fully-green-on-this",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The dev server for this worktree was already up on 3001 and resolve-port.sh reused it without starting anything, so --start was a no-op this round.",
+    "evidence": "scripts/ultrabuild/resolve-port.sh --start printed 'resolve-port: reusing the server already answering on 3001' then '3001', exit 0.",
+    "scope": [
+      "mechanical",
+      "capture"
+    ],
+    "id": "the-dev-server-for-this-worktree-was-already",
+    "measuredIn": "round-11"
+  },
+  {
+    "id": "a-dirty-demo-locale-row-fails-nineteen-baselines-at-once",
+    "appliesTo": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "claim": "Nineteen red screenshot comparisons across every authenticated route can be ONE root cause: `[shoot] could not pin the demo traveller's language`. A builder that verifies a translation by clicking a chip on /settings/language writes a real value into user_settings.locale, and every later frame is then a picture of the wrong language. Measured after round 13: user_settings held locale='uk' for the demo traveller and 'pl' for a second user, while organization_settings held 'en'. Before blaming nineteen frames on nineteen layout faults, grep the Playwright output for '[shoot] could not pin' - it is printed once, by the setup project, far above the failure list.",
+    "measuredIn": "round-13"
+  },
+  {
+    "id": "pindemolanguage-clicks-before-hydration",
+    "appliesTo": [
+      "builder",
+      "auditor"
+    ],
+    "claim": "`pinDemoLanguage()` in e2e/helpers/shoot.ts navigates with a bare `page.goto('/settings/language')` and then waits only for the chip to be VISIBLE before clicking it. A visible chip is not a hydrated chip, and this is the same race already measured in round 11 for locale-switching probes, where the fix was `waitUntil: 'networkidle'` plus `scrollIntoViewIfNeeded()`. The click lands, nothing happens, `data-selected` never arrives and the helper reports it cannot pin. So the mechanism that exists to clean a dirty locale row is defeated by the very condition it exists to clean up after.",
+    "measuredIn": "round-13"
+  },
+  {
+    "id": "a-content-filter-can-kill-one-builder-and-only-one",
+    "appliesTo": [
+      "orchestrator"
+    ],
+    "claim": "Round 13 lost `build:translations-cjk` to 'API Error: Output blocked by content filtering policy' while the other six agents finished normally. It is not a usage limit and not a crash: the round completes, reports 6 done / 1 error, and the item simply stays at its previous status. Treat it like any other unfinished item - re-carry it next round - rather than as a reason to re-run the whole round.",
+    "measuredIn": "round-13"
+  },
+  {
+    "claim": "`router.invalidate()` resolves BEFORE a failed loader is committed to match state, because a plain invalidation serves the matches their existing data and refetches in the background. `router.invalidate({ forcePending: true })` runs the load in the foreground and makes the post-condition observable.",
+    "evidence": "Instrumented `refreshed()` on /settings/language and aborted only the `loadLanguageSettings` serverFn (targeted by base64-decoding the `/_serverFn/<id>` path). With plain `invalidate()`: at check time all four matches read `__root__=success /_app=success /_app/settings=success /_app/settings/language=success` and `router.state.status` was `idle`; a later read of the same array showed `/_app/settings/language=error`, the ErrorPanel was on screen, and the toast was `success`. With `{ forcePending: true }`: the check-time array already read `/_app/settings/language=error` and the toast was `warning`. Source confirms it — `runClientTransaction` in @tanstack/router-core 1.171.25 commits inside `startTransition` and only then calls `runBackground(...)`.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "-router-invalidate-resolves-before-a-failed-loader",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A specific TanStack Start loader can be failed or delayed in isolation by base64-decoding the `/_serverFn/<id>` path segment and matching the export name — `route.abort()` for the error state, a `setTimeout` before `route.continue()` for the pending state. Aborting on the raw URL pattern instead hits `loadShell`/`negotiateRequestLocale` and lands you on the ROOT boundary rather than the route's own.",
+    "evidence": "`Buffer.from(id,'base64').toString()` yields `{\"file\":\"/src/routes/_app/settings/-server/preferences.ts?tss-serverfn-split\",\"export\":\"loadLanguageSettings_createServerFn_handler\"}`. A blanket abort on `**/_serverFn/**` GETs killed `loadShell_createServerFn_handler` first and rendered `RootErrorBoundary` ('Ми збилися з маршруту' + 'Failed to fetch'); filtering on the decoded export name produced the route's own ErrorPanel and, with a 6s delay instead, `[aria-busy=\"true\"]` and the pendingComponent after a 2.2s wait.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "id": "a-specific-tanstack-start-loader-can-be-failed",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The session scratchpad's `node_modules` symlink is deleted by concurrently running agents mid-session, so a probe script that worked five minutes ago fails with ERR_MODULE_NOT_FOUND for '@playwright/test'. Re-create the symlink in the same command that runs the script.",
+    "evidence": "`node <scratch>/smi18n-probe2.mjs` ran fine, then failed with \"Cannot find package '@playwright/test' imported from <scratch>/smi18n-probe2.mjs\" with no edit of mine in between; `ln -sfn <repo>/node_modules <scratch>/node_modules` immediately before the run fixed it, and it had to be repeated three separate times during one session.",
+    "scope": [
+      "builder",
+      "capture",
+      "mechanical"
+    ],
+    "id": "the-session-scratchpad-s-node-modules-symlink-is",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The reference product's authenticated settings screen is STILL gated in round 14 — /settings?tab=display redirects to its own login. No authenticated reference frame has ever been obtained and none was this round either.",
+    "evidence": "Ego Lite 0.4.7.1 / Chromium 150, fresh task space: openOrReuseTab('https://demo.liketrek.com/settings?tab=display') then pageInfo() returned url 'https://demo.liketrek.com/login?redirect=%2Fsettings%3Ftab%3Ddisplay', title 'TREK', w 1184 h 802. One navigation, no hang, under a minute.",
+    "scope": [
+      "capture",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-reference-product-s-authenticated-settings-screen-is",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "capture.mjs --click '[data-testid=\"locale-chip-ar\"]' --settle 900 reaches the real selected-RTL state on /settings/language without any hydration workaround — the settled networkidle/scrollIntoViewIfNeeded recipe is already inside the script.",
+    "evidence": "All eight selected-rtl frames rendered Arabic RTL; selected-rtl-1440-light-A.png read back shows h1 'الإعدادات', mirrored nav, the العربية chip checked, and the toast 'planned.travel يتحدث الآن العربية'. captureValid true, warnings [], console.fatal [].",
+    "scope": [
+      "capture",
+      "builder"
+    ],
+    "id": "capture-mjs-click-data-testid-locale-chip-ar",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A --settle 900 on a chip click photographs the confirmation toast while it is still on screen, where it overlaps the consent paragraph below the chip grid. That overlap is the toast's normal life, not a layout defect.",
+    "evidence": "selected-rtl-1440-light-A.png: the toast card sits at roughly y=755-815 across the paragraph beginning 'اختيارك الخاص...'. The resting frames from the same run, same viewport, show that paragraph unobstructed.",
+    "scope": [
+      "critic",
+      "auditor"
+    ],
+    "id": "a-settle-900-on-a-chip-click-photographs",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The four CJK catalogues were already complete on disk before this round and are now committed; English's true unique key count is 859, not the 1,005 the item prompt states.",
+    "evidence": "git log shows 3c1daf3 committed ja/ko/zh-Hans/zh-Hant, and `git status --porcelain` over the four owned dirs listed only my single edit. Importing the .ts catalogues in node: en = auth 244 + settings 331 + shell 235 + ui 49 = 859 unique keys, and each of the four locales carries 859 with missing=0 orphans=0 shapeDrift=0 tokenDrift=0 pluralGaps=0 blanks=0 untranslated=0. The 1,005 figure is `grep -cE \"^\\s+'\"` = 297/398/260/50, which counts plural-branch and multi-line-string continuation lines as keys.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-four-cjk-catalogues-were-already-complete-on",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A CJK translation can be sized against the 206px `.truncate` Select-trigger budget without editing a file: sample the live element's computed style into a canvas 2d context and measureText the candidates. The canvas number tracks the element's scrollWidth to within ~2%.",
+    "evidence": "Live ja /settings trigger measured scrollWidth 235 for `ワークスペースの初期値 — 23 6月 2026`; canvas at the sampled font ('600 13px Geist, …' with the eight-family CJK tail) returned 239 for the same string, ratio 0.983. Candidates at the same font: ワークスペース既定 212 (still over 206), 共有の初期値 175, ワークスペース 186. Shipped 共有の初期値 and the live re-measure came back with zero clipped .truncate nodes at 1440 in both themes. Gotcha: `[...document.querySelectorAll('.truncate')]` also matches the 196px settings nav hint, so filter on clientWidth before sampling or you calibrate against the wrong budget.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "id": "a-cjk-translation-can-be-sized-against-the",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Under fixture contention, pin the locale BEFORE EVERY FRAME and retry, rather than pinning once and looping viewports/themes. Pin-once loses most of a run to drift; re-pin-per-frame lost nothing.",
+    "evidence": "Identical routes and combos, same session: pin-once-then-loop produced 15 frames reporting `DRIFT->en`/`DRIFT->pl`/`DRIFT->ru` out of 32 (a parallel agent moved the demo row mid-run). Restructuring to pin() inside the per-frame loop with up to 4 attempts, plus a post-navigation `document.documentElement.lang === tag` guard AND an error-boundary check on document.body, produced 32/32 captured and all four locales reported CLEAN. Also note a crashed earlier run had already written screenshots to the output dir, so clear the directory before a re-capture or stale/error-boundary frames get filed as evidence.",
+    "scope": [
+      "capture",
+      "builder"
+    ],
+    "id": "under-fixture-contention-pin-the-locale-before-every",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The dashboard reservation-meta clipping in ru/uk/pl IS catalogue copy, not the frozen CLDR table — the bookingStatus badge steals width from the sibling meta column one pixel for one. This refutes the standing 'not catalogue copy' fact for the ru case.",
+    "evidence": "Playwright chromium at 360 on /dashboard, measuring the row's leaf nodes: badge 'Confirmed' 71px → meta 155 (no clip); 'Potvrzeno' 70 → 156; 'Potwierdzona' 90 → 136 (Sunday row 150>136); 'Підтверджена' 97 → 129 (151>129); 'Подтверждена' 100 → 126 (140>126). After shortening confirmed to Przyjęta/Принята/Прийнята the same measurement gives meta 166/164/157 and zero clipped date lines, with no change to dashboard.tsx or format.ts.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-dashboard-reservation-meta-clipping-in-ru-uk",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "formatDate ends with an abbreviation point in ru ('11 сент. 2026 г.') and uk ('11 вер. 2026 р.'), so any catalogue sentence writing '{date}.' prints a doubled full stop on screen. cs ('11. 9. 2026') and pl ('11 wrz 2026') end in a digit and are safe.",
+    "evidence": "A vitest probe importing #/lib/format printed en=[11 Sept 2026] cs=[11. 9. 2026] pl=[11 wrz 2026] ru=[11 сент. 2026 г.] uk=[11 вер. 2026 р.]. The live /settings/billing renewal line then read 'Продлится 11 сент. 2026 г..' before the fix. Only two en keys put a period straight after a formatted date: settings billing.renewal.renewsOn and billing.renewal.endsOn.",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "id": "formatdate-ends-with-an-abbreviation-point-in-ru",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The Plans panel header on /settings/billing gives its `actions` slot a 326px content box at 360px wide (left 17, right 343), and the cadence pill is shrink-0 so anything wider paints outside the card rather than wrapping.",
+    "evidence": "Playwright chromium 360x800 with e2e/.auth/demo.json on http://localhost:3001/settings/billing, reading the toggle's and the header's getBoundingClientRect: headerLeft 17 / headerRight 343 in every locale; toggleRight en 262, cs 290, uk 316, pl 346, ru 352. docOverflow stayed 0 in all cases, so the document scrollbar never reveals this — only the card edge does.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "id": "the-plans-panel-header-on-settings-billing-gives",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Vitest is now 3179 tests across 114 files, all passing — up 11 tests from the 3168 recorded last round, and still zero parity failures.",
+    "evidence": "pnpm test: Test Files 114 passed (114), Tests 3179 passed (3179), 10.76s.",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "critic"
+    ],
+    "id": "vitest-is-now-3179-tests-across-114-files",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Playwright is fully green against port 3001 with no flakes: 138 passed, 5 skipped, 0 failed in 56.8s on the first run, no retries needed.",
+    "evidence": "PLAYWRIGHT_BASE_URL=http://localhost:3001 pnpm exec playwright test -> 'PASS (138) FAIL (0) skipped (5)  Time: 56850ms'.",
+    "scope": [
+      "mechanical",
+      "capture"
+    ],
+    "id": "playwright-is-fully-green-against-port-3001-with",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The literal `import.meta.glob('./messages/*/*.ts')` still emits exactly one chunk per catalogue file at the current 92-file catalogue, with no locale content inlined into the entry and no chunk mixing two locales. This updates the settled 73-file measurement.",
+    "evidence": "Scratchpad SSR `vite build` (configFile:false, build.ssr:true, rollupOptions.input=src/lib/i18n/catalogue.ts) over the tree at 92 catalogue files: 92 chunks in assets/, 92 dynamic import() specifiers in the 15,590-byte entry, all 92 distinct. Entry contains none of 'Sprache' / 'Wyjazdy' / 'العربية' / 'nav.trips' / 'Reisen'. Scanning every chunk: 1 carries German, 2 carry Polish, 0 carry both. Gotcha unchanged: symlink the repo's node_modules into the scratchpad or the config cannot resolve `vite`.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-literal-import-meta-glob-messages-ts-still",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "src/lib/i18n/__tests__/parity.test.ts is no longer a binary file. It now reads as UTF-8 text, plain `grep` matches it, and its `git diff` will render from the next commit onward.",
+    "evidence": "Before: `file` -> 'data'; `grep -c \"u0000\"` exited 1. After replacing the two literal U+0000 characters at lines 172-173 with the escape `\u0000`: `file` -> 'Unicode text, UTF-8 text'; `grep -c \"u0000\"` -> 2; `prettier --check` clean; the i18n suite still passes 256/256. `git diff --stat` on the WORKING TREE still prints 'Bin 14784 -> 14794' because the pre-fix blob is the binary side of the comparison — that resolves once the change is committed.",
+    "scope": [
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "src-lib-i18n-tests-parity-test-ts-is",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The whole repo gate is green at this tree with the fix applied — including the i18n parity suite, which earlier rounds carried red.",
+    "evidence": "pnpm typecheck exit 0 (no output); pnpm lint exit 0 ('ESLint: No issues found'); pnpm test exit 0 (Test Files 114 passed (114), Tests 3179 passed (3179), 11.04s); pnpm build exit 0 ('✓ built in 1.48s'). The i18n slice alone: `vitest run src/lib/i18n` = 9 files / 256 tests passed in 794ms. Any new red this round is therefore the round's doing, not a pre-existing floor.",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "critic"
+    ],
+    "id": "the-whole-repo-gate-is-green-at-this",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The overflow affix's correct token order in Arabic depends on whether the host element carries `data-numeric`, and the two hosts in this repo differ - so the two affix keys must NOT be repaired in the same direction. CountBadge is isolated (direction:ltr) so logical order == painted order and ar must write '{max}+' exactly like English; the AvatarStack overflow face is bare, inherits dir=rtl, and the bidi algorithm reverses the run, so ar must write '{hidden}+' to PAINT '+2'.",
+    "evidence": "Chromium against dist/client/assets/styles-CfaXwTeV.css, reproducing each component's real markup under <html dir=rtl lang=ar>, wrapping each logical character in an inline span and sorting by getBoundingClientRect().left: isolated dir=ltr logical '99+' -> paints '99+', logical '+99' -> paints '+99'. Bare dir=rtl logical '+2' -> paints '2+', logical '2+' -> paints '+2', logical '+99' -> paints '99+', logical '99+' -> paints '+99'. Wrapping in zero-effect spans does not perturb bidi resolution.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-overflow-affix-s-correct-token-order-in",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The 206px `.truncate` Select trigger on /settings is a budget English ITSELF fails, so 'fits the box' is the wrong acceptance bar - the right one is 'no wider than English on the same row'. English measures 211px live and 217px on its longest sample date.",
+    "evidence": "Playwright chromium + e2e/.auth/demo.json at 1440 on http://localhost:3001/settings, filtering .truncate on clientWidth within 4px of 206: en 'Workspace default - 23 Jun 2026' 211>206 CLIPPED. Canvas measureText at the element's own sampled font ('normal 500 13px/18.2px Geist, ...') gives en worst case 217px. Before my fix: el 227 live / 220 canvas, hu 226 canvas at '2026. szept. 23.', tr 209 live. After: tr and hu clip nothing at 360 or 1440; el 213>206, two pixels past English.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-206px-truncate-select-trigger-on-settings-is",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A locale's own `nav.workspace.hint` already contains the short idiomatic phrase for 'shared defaults', which makes it the right source for shortening an overlong `regional.workspaceDefault` prefix - no new terminology has to be invented and the catalogue stays internally consistent.",
+    "evidence": "el nav.workspace.hint = 'Mele kai koines proepiloges' -> prefix 'Koini proepilogi'; tr = 'Uyeler ve ortak varsayilanlar' -> 'Ortak varsayilan'; hu = 'Tagok es kozos alapertekek' -> 'Kozos alapertek'. All three measured under the 206px budget on the longest sample date (189/176/195px range) where the literal genitive renderings measured 220/210/226px.",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "id": "a-locale-s-own-nav-workspace-hint-already",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The dashboard reservation-meta clipping is governed exactly by meta = 226 - (status badge width) per row at 360px, and canvas measureText at the badge's own sampled font plus its 12px horizontal padding predicts the live badge width to the pixel. A translator can therefore size a status word before editing a file.",
+    "evidence": "Playwright chromium + e2e/.auth/demo.json at 360 on /dashboard. en badge 'Confirmed' 71px -> meta 155/155 (every date line fits exactly, zero slack). id 'Terkonfirmasi' 89px -> meta 137, date lines 142 and 146 clip. vi 'Da xac nhan' 81px -> meta 145, date lines to 169 clip. Canvas at the sampled 'normal 600 11px/13.2px Geist' with letterSpacing 0.44px plus pad 12 returned exactly 89 for 'Terkonfirmasi', equal to the live getBoundingClientRect width. After shipping 'Dipastikan' (73) and 'Da chot' (56) the date lines fit in both locales.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-dashboard-reservation-meta-clipping-is-governed-exactly",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "English is not the pass mark on /settings: the regional Select trigger clips in English itself (211>206) on the date row. The correct bar is the measured number plus 'clips no row English does not'. Measured this way, id ships 0 non-seed clips and vi 1, against en's 1.",
+    "evidence": "Probe over /settings, /settings/language, /settings/workspace, /settings/billing, /dashboard, /notifications, /settings/security and /admin at 360 and 1440, filtering `main *, header *, nav *` for .truncate with scrollWidth > clientWidth+1 and excluding the five seeded English reservation titles (Gracery/Skytree/teamLab/Kyubey/Hakone). en produced exactly one row: 'Workspace default - 23 Jun 2026' 211>206. id produced none. vi produced one, 'Mac dinh chung - 23 Thang 6 2026' 219>206, the same row.",
+    "scope": [
+      "builder",
+      "critic",
+      "capture"
+    ],
+    "id": "english-is-not-the-pass-mark-on-settings",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The Vietnamese dashboard hero date wraps to two lines at 360px while Indonesian's stays on one, and no catalogue key is involved - it is src/lib/format.ts plus the frozen CLDR table, so no translation item can fix it. This is the vi analogue of the already-settled German case.",
+    "evidence": "Screenshot .claude/ultrabuild/shots/i18n/round-15/translations-sea/vi-dashboard-360-light.png shows '9 - 20 thg 10, 2026' on two lines inside the 107px NGAY DI tile; id-dashboard-360-dark.png shows '9 - 20 Okt 2026' on one line in the same tile. Neither string has a key in messages/*/shell.ts - both are produced by formatDateRange in src/lib/format.ts against the frozen month table.",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "id": "the-vietnamese-dashboard-hero-date-wraps-to-two",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The whole mechanical gate is green on this tree: typecheck, lint, test (3179/3179 across 114 files), build and Playwright (138 passed / 5 skipped / 0 failed) all exit 0 on the first run, no flakes and no retries.",
+    "evidence": "pnpm typecheck exit 0; pnpm lint exit 0; pnpm test exit 0 (Test Files 114 passed (114), Tests 3179 passed (3179), 10.96s); pnpm build exit 0 ('✓ built in 1.48s'); PLAYWRIGHT_BASE_URL=http://localhost:3001 pnpm exec playwright test exit 0 ('5 skipped / 138 passed (1.0m)'), and grep -c 'could not pin' over the run log returned 0.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-whole-mechanical-gate-is-green-on-this",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The reference product's /dashboard is still auth-gated in round 16 — a fourth independent confirmation. No authenticated reference frame has ever been obtained, so app-shell-i18n can never form a blind pair and future rounds should stop paying the Ego Lite cost for it.",
+    "evidence": "Ego Lite 0.4.7.1 / Chromium 150, fresh task space 'ultrabuild app-shell-i18n r16': openOrReuseTab('https://demo.liketrek.com/dashboard', {wait:true,timeout:30}) + waitForNetworkIdle + pageInfo() returned url 'https://demo.liketrek.com/login?redirect=%2Fdashboard', title 'TREK'. One navigation, no hang, well under a minute. completeTaskSpace(..., {keep:false}) returned promptly.",
+    "scope": [
+      "capture",
+      "critic"
+    ],
+    "id": "the-reference-product-s-dashboard-is-still-auth",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The dashboard capture is completely clean this round: 8 frames, captureValid true, zero warnings and an empty console in all three classification buckets — so any defect the critic finds in these frames is a layout/copy judgement, not a capture artefact.",
+    "evidence": "node scripts/ultrabuild/capture.mjs --url http://localhost:3001/dashboard --label B --viewports 1440x900,768x1024,360x800,2560x1440 --themes light,dark --auth printed console.fatal [], notTheApp [], toolchainBroken [], warnings [], captureValid true, 8 files 327-429 KB each.",
+    "scope": [
+      "critic",
+      "auditor"
+    ],
+    "id": "the-dashboard-capture-is-completely-clean-this-round",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The committed Playwright visual baselines photograph exactly two viewports — chromium 1440x900 and mobile-safari 393x852 — so `2xl:` (>=1536) and the `sm`..`lg` band (640-1023) are design zones no baseline can see. A screen can therefore be recomposed for large and tablet viewports with the mechanical gate staying green and e2e/__screenshots__ untouched.",
+    "evidence": "playwright.config.ts:125 `viewport: { width: 1440, height: 900 }` for the chromium project and devices['iPhone 15'] (393x852) for mobile-safari. Measured: an auth-shell rewrite whose every composition change was gated to `2xl:` and `sm:...lg:hidden` took `-g \"login|register|forgot\"` from 6 pixel failures (22309px diff on forgot-password-light, ratio 0.02) to PASS (13) FAIL (0), and the full suite to PASS (138) FAIL (0) skipped (5).",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-committed-playwright-visual-baselines-photograph-exactly-two",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The round-16 auth-i18n B frames are not evidence about this tree: /login renders its H1, its Wordmark link and its ThemeToggle at every viewport and theme, and both HEAD and the working tree contained that markup when those frames were shot. A frame showing an empty band where a heading belongs, with no space reserved for a header that is unconditional in the source, is a stale or foreign build — check the server before filing it as a design defect.",
+    "evidence": "Playwright chromium against the resolve-port.sh server on 3001, 360/768/1440/2560 x light/dark: h1 textContent 'Sign in to planned.travel' in all eight, box [165,169,448,30] at 1440, fontFamily 'MuseoModerno, \"Planned Display Fallback\"'; header box [48,32,682,36] with innerHTML `<a aria-label=\"planned.travel home\" href=\"/\">` plus the toggle button. `git show HEAD:src/routes/(auth)/-ui/auth-shell.tsx` contains the same unconditional <header> and <h1>.",
+    "scope": [
+      "critic",
+      "capture",
+      "auditor"
+    ],
+    "id": "the-round-16-auth-i18n-b-frames-are",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "A form's submitting state is only observable if the endpoint is slowed: on this local server the sign-in round trip resolves inside 120ms, so a bare click-then-read reports disabled=false / no spinner and looks like a missing loading state. `page.route('**/api/auth/sign-in/**', delay then continue)` makes it readable.",
+    "evidence": "Same page, same button. Read at +120ms after click: {disabled:false, busy:null, spinner:false}. With a 2500ms route delay and a 700ms wait: {disabled:true, busy:'true', spinner:true, text:'دخولجارٍ تسجيل دخولك'} under Accept-Language: ar and {…, text:'Sign inSigning you in'} under en — the Button's loadingLabel rendered alongside the resting label.",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "id": "a-form-s-submitting-state-is-only-observable",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "scripts/ultrabuild/capture.mjs cannot photograph a non-English locale: it hardcodes `locale: 'en-GB'` on the browser context and has no Accept-Language or locale flag. Any item whose point is a non-English auth screen cannot be captured by it as-is.",
+    "evidence": "grep of scripts/ultrabuild/capture.mjs line 184 shows `locale: 'en-GB',` inside newContext; the argument parser (lines 92-94) only recognises --url --out --label --viewports --themes --auth --hover --click --settle, no locale or header option.",
+    "scope": [
+      "capture",
+      "mechanical"
+    ],
+    "id": "scripts-ultrabuild-capture-mjs-cannot-photograph-a-non",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Ego Lite reaches demo.liketrek.com/login fine at its native size, but cdp('Emulation.setDeviceMetricsOverride') reliably wedges the task space on this target. Playwright chromium does the reference-side viewports cleanly IF you use waitUntil:'domcontentloaded' - 'networkidle' never fires on that site and times out at 60s.",
+    "evidence": "Ego: a plain openOrReuseTab + captureScreenshot returned '1200x818|https://demo.liketrek.com/login|/var/folders/.../ego-browser-shot-45674-1.png' in seconds; the very next heredoc doing only setDeviceMetricsOverride(1440x900)+pageInfo produced zero output and was killed at 240s (a prior 4-viewport loop was killed at 420s). Playwright: goto with waitUntil:'networkidle' threw TimeoutError 60000ms; the identical script with 'domcontentloaded' + 3.5s settle captured all four viewports, each reporting innerWidth/innerHeight exactly 1440x900 / 360x800 / 768x1024 / 2560x1440.",
+    "scope": [
+      "capture"
+    ],
+    "id": "ego-lite-reaches-demo-liketrek-com-login-fine",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "`sharp` is NOT installed in this repo, so image post-processing (masking wordmarks) has to go through a Playwright page: read the PNG as a base64 data URL, draw it plus the mask rects onto a canvas in page.evaluate, and write back canvas.toDataURL. Element rects for the mask come from a separate measuring pass at the same viewport, and map 1:1 onto capture.mjs output because it shoots fullPage at deviceScaleFactor 1.",
+    "evidence": "`import sharp from 'sharp'` failed with ERR_MODULE_NOT_FOUND even with the repo node_modules symlinked into the scratchpad. The canvas route masked 12 of 13 frames in one run. Our lockups are `a.rounded-md.focus-ring` and the `p.font-display` in the aside, both with textContent exactly 'planned.travel' (measured at 1440: [48,32.1,170,35.8] and [834.4,56,549.6,24]).",
+    "scope": [
+      "capture"
+    ],
+    "id": "-sharp-is-not-installed-in-this-repo",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Tailwind 4.3.3 emits every logical inset utility (`.end-*`, `.start-*`) BEFORE the physical ones (`.right-*`, `.left-*`) in the built stylesheet, and tailwind-merge keeps both, so a physical inset always beats a logical one on the same element. Consequence: a logical base class plus a physical override is safe; the reverse silently loses.",
+    "evidence": "dist/client/assets/styles-*.css: byte offset of `.end-4{` is 14903, `.right-4{` is 16241, `.right-auto{` is 16403. `cn('right-2','end-4')` returns 'right-2 end-4' — both survive. This is why MapCorner's corners could be made logical without breaking plan-screen, which overrides them with `right-(--plan-controls)`.",
+    "scope": [
+      "builder"
+    ],
+    "id": "tailwind-4-3-3-emits-every-logical-inset",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Forcing `document.documentElement.dir='rtl'` on an English /atlas document is NOT a valid RTL probe: the shelf stays LTR because Radix `Tabs.Root` emits its own `dir=\"ltr\"` from DirectionProvider, which still holds the server-negotiated direction. Only pinning the real locale exercises the screen's RTL layout.",
+    "evidence": "Injected dir=rtl at 1440: page chrome mirrored (nav, search pill, zoom cluster) but the shelf header, stat grid, continent row and legend all kept LTR order. Pinning `ar` through [data-testid=\"locale-chip-ar\"] on the same tree mirrored all of them. Same DirectionProvider gotcha the ui-primitives item measured for a gallery harness.",
+    "scope": [
+      "capture",
+      "critic",
+      "builder"
+    ],
+    "id": "forcing-document-documentelement-dir-rtl-on-an-english",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "e2e/__screenshots__/visual.spec.ts/atlas-light-chromium-darwin.png is stale against HEAD and fails independently of any round-17 diff; atlas-dark passes. Do not attribute `atlas renders in light` to a code change without cropping the baseline first.",
+    "evidence": "Rendered both PNGs into a file:// page at 2.5-4x with image-rendering:pixelated: baseline reads 'My Trips' and 'Counted across finished trips'; the actual reads 'My trips' and 'Across every trip on your record'. `git show HEAD:src/lib/i18n/messages/en/shell.ts` has `'nav.trips': 'My trips'` (since 4fc921d) and `git show HEAD:src/components/atlas/atlas-panel.tsx` has caption=\"Across every trip on your record\" (since 730f5d8). Diff is 2675px, ratio 0.01, stable across three runs.",
+    "scope": [
+      "capture",
+      "mechanical",
+      "auditor",
+      "critic"
+    ],
+    "id": "e2e-screenshots-visual-spec-ts-atlas-light-chromium",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The 22 parity failures this round are a single new namespace, not 22 independent translation regressions: every missing key printed is atlas.*, so an atlas English catalogue landed without any locale pack following it.",
+    "evidence": "pnpm test diff output for each of the 22 locales lists only atlas.search.* / atlas.* keys; the previous round recorded 3179/3179 with zero parity failures, and this round is 3433 passed / 22 failed across 3455.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-22-parity-failures-this-round-are-a",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Playwright's atlas-light chromium failure is stable, not the load flake: the same 2675-pixel count was produced on both of Playwright's own retake attempts within the single test.",
+    "evidence": "Call log shows two 'taking page screenshot' passes, both reporting '2675 pixels (ratio 0.01 of all image pixels) are different', ending in 'captured a stable screenshot'.",
+    "scope": [
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "playwright-s-atlas-light-chromium-failure-is-stable",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The dev server for this worktree is up on 3001 and resolve-port.sh --start reused it without starting anything; the shoot helper's language pin worked (zero 'could not pin' lines).",
+    "evidence": "scripts/ultrabuild/resolve-port.sh --start printed 'resolve-port: reusing the server already answering on 3001' then '3001'; grep -c 'could not pin' over the full Playwright log returned 0.",
+    "scope": [
+      "capture",
+      "mechanical"
+    ],
+    "id": "the-dev-server-for-this-worktree-is-up",
+    "measuredIn": "round-11"
+  },
+  {
+    "id": "reverting-source-leaves-the-dev-server-serving-errors",
+    "measuredIn": "round-17",
+    "appliesTo": [
+      "mechanical",
+      "capture",
+      "builder"
+    ],
+    "claim": "Removing source files a running dev server has already loaded makes it answer 500 on unrelated routes. Measured after banking the atlas work on a branch: /pricing, /login, /legal/terms and /trips all returned 'should not be an error response' in Playwright, five failures across public and authenticated specs, while typecheck, lint, unit tests and build were all clean. Killing the listener, deleting node_modules/.vite and restarting took the same suite to 137 passed / 1 failed. Anything that removes or moves source must restart the dev server before the gate runs, or the gate reports the server's stale module graph as application defects."
   }
 ]

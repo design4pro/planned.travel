@@ -195,7 +195,20 @@ export const Pagination = React.forwardRef<HTMLElement, PaginationProps>(
               })}
             </span>
           ) : (
-            <ol className="flex items-center gap-1">
+            /*
+             * The numbers wrap; the arrows never do. Measured at 360px with
+             * nine pages: the row wants 364px, so an unwrapped list gives the
+             * whole document a horizontal scrollbar — `docs/SPEC.md` §2 asks for
+             * a designed layout at 360px, not a squeezed one. Wrapping inside
+             * the list keeps `‹` and `›` where the thumb expects them and lets
+             * the pages take a second centred row. `compact` is still the
+             * deliberate phone treatment when a caller wants one line.
+             *
+             * This has been reverted once already, silently, in a round that
+             * touched nothing else here — hence the assertion in
+             * `__tests__/pagination.test.tsx` that names these three classes.
+             */
+            <ol className="flex min-w-0 flex-wrap items-center justify-center gap-1">
               {items.map((item, index) =>
                 typeof item === 'number' ? (
                   <li key={`page-${item}`}>

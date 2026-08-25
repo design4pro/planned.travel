@@ -5,19 +5,43 @@
  * parameters do not survive being threaded through a wrapper without either an
  * `any` or a wall of pass-through generics, so each screen keeps its own
  * `form.Field` / `form.Subscribe` calls and reuses the presentation below.
+ *
+ * Every word these components say comes out of the `auth` catalogue through
+ * `t()`, including the ones only a screen reader hears - the reveal control on a
+ * password field, the sentence a button announces while it is busy. These are
+ * the only screens with no session behind them, so the language is whatever
+ * `Accept-Language` negotiated and there is no stored preference to correct it
+ * with (`docs/SPEC.md` §8.3, §8.6).
  */
 import * as React from 'react'
 import { Eye, EyeOff, Fingerprint } from 'lucide-react'
 
 import { Alert, Button, Input, Separator } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useI18n, useTranslate } from '#/lib/i18n'
 import { isPasskeySupported } from '#/lib/auth/client'
+import { createAuthSchemas } from '../-lib/schemas'
 
 import type { InputProps } from '#/components/ui'
 import type { AuthMessage } from '../-lib/errors'
+import type { AuthSchemas } from '../-lib/schemas'
 import type { SocialProviderId } from '../-server/config'
 
 /* -------------------------------------------------------------- validation */
+
+/**
+ * The seven form schemas, carrying this reader's language.
+ *
+ * A Zod message is fixed when the schema is built, so the schemas cannot be
+ * module constants; they are memoised on the translator instead, which
+ * `I18nProvider` keeps stable for the life of a locale. TanStack Form compares
+ * the validator by identity, so a fresh object every render would re-run
+ * validation on every keystroke.
+ */
+export function useAuthSchemas(): AuthSchemas {
+  const { t, locale } = useI18n()
+  return React.useMemo(() => createAuthSchemas({ t, locale }), [t, locale])
+}
 
 /**
  * The first message out of a field's validation state.
@@ -73,9 +97,43 @@ export function FieldStack({ children }: { children: React.ReactNode }) {
 }
 
 /**
+ * A sentence with one email address set into it, emphasised.
+ *
+ * The whole sentence is one catalogue key, because splitting it at the address
+ * would fix the English word order onto twenty-two other grammars. The address
+ * is found in the rendered string instead, and carries `dir="ltr"`: an address
+ * is Latin in every locale, and inside Arabic prose the bidi algorithm reorders
+ * a bare one around its `@`. The `dir` attribute is what isolates the run - the
+ * HTML rendering spec gives any element with `dir` `unicode-bidi: isolate`, so
+ * no stylesheet has to know about this.
+ */
+export function EmailSentence({
+  text,
+  email,
+}: {
+  text: string
+  email: string
+}) {
+  const at = email.length > 0 ? text.indexOf(email) : -1
+  if (at < 0) return <>{text}</>
+  return (
+    <>
+      {text.slice(0, at)}
+      <span dir="ltr" className="font-semibold text-ink">
+        {email}
+      </span>
+      {text.slice(at + email.length)}
+    </>
+  )
+}
+
+/**
  * The server's verdict on the last submit. Rendered above the fields so a
- * screen reader meets it before the inputs it is complaining about, and keyed
- * so a repeated failure re-announces instead of sitting silently.
+ * screen reader meets it before the inputs it is complaining about.
+ *
+ * The message arrives as a pair of catalogue keys rather than as sentences, so
+ * an API failure is described in the reader's language rather than in the
+ * language the endpoint happens to be written in - see `../-lib/errors.ts`.
  */
 export function FormAlert({
   message,
@@ -84,27 +142,29 @@ export function FormAlert({
   message: AuthMessage | null
   onDismiss?: () => void
 }) {
+  const t = useTranslate()
   if (!message) return null
   return (
     <Alert
       tone={message.tone}
       size="sm"
-      title={message.title}
+      title={t(message.titleKey)}
       onDismiss={onDismiss}
       className="mb-5"
     >
-      {message.detail.length > 0 ? message.detail : null}
+      {t(message.detailKey)}
     </Alert>
   )
 }
 
 /** A hairline with a word set into it. Separates social sign-in from the form. */
-export function OrDivider({ label = 'or' }: { label?: string }) {
+export function OrDivider({ label }: { label?: string }) {
+  const t = useTranslate()
   return (
     <div className="my-6 flex items-center gap-3" aria-hidden="true">
       <Separator className="flex-1" />
       <span className="text-micro font-semibold uppercase tracking-label text-ink-4">
-        {label}
+        {label ?? t('auth.divider.or')}
       </span>
       <Separator className="flex-1" />
     </div>
@@ -114,8 +174,10 @@ export function OrDivider({ label = 'or' }: { label?: string }) {
 /* ------------------------------------------------------------------ inputs */
 
 export type PasswordInputProps = Omit<InputProps, 'type' | 'trailing'> & {
-  /** Announced on the reveal control; distinguishes two fields on one screen. */
-  revealLabel?: string
+  /** Announced on the reveal control while the password is hidden. */
+  showLabel: string
+  /** Announced on the same control once it is revealed. */
+  hideLabel: string
 }
 
 /**
@@ -123,12 +185,18 @@ export type PasswordInputProps = Omit<InputProps, 'type' | 'trailing'> & {
  *
  * The toggle is a real focusable button placed over the control rather than
  * passed to `Input`'s `trailing` slot, because that slot is `aria-hidden` —
- * correct for units and glyphs, wrong for something you can press.
+ * correct for units and glyphs, wrong for something you can press. Both of its
+ * names are supplied whole rather than assembled from a verb and a field name:
+ * several of the twenty-three languages inflect the noun after "show", which a
+ * sentence glued together from two keys cannot express.
+ *
+ * It sits on the inline end of the field, so in `ar` it is on the left, where
+ * the caret leaves off.
  */
 export const PasswordInput = React.forwardRef<
   HTMLInputElement,
   PasswordInputProps
->(({ className, revealLabel = 'password', ...props }, ref) => {
+>(({ className, showLabel, hideLabel, ...props }, ref) => {
   const [revealed, setRevealed] = React.useState(false)
   const Glyph = revealed ? EyeOff : Eye
 
@@ -137,19 +205,22 @@ export const PasswordInput = React.forwardRef<
       <Input
         ref={ref}
         type={revealed ? 'text' : 'password'}
-        className={cn('pr-11', className)}
+        className={cn('pe-11', className)}
         {...props}
       />
       <button
         type="button"
         onClick={() => setRevealed((current) => !current)}
         aria-pressed={revealed}
-        aria-label={`${revealed ? 'Hide' : 'Show'} ${revealLabel}`}
+        aria-label={revealed ? hideLabel : showLabel}
         disabled={props.disabled}
         className={cn(
-          'absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-md text-ink-4',
-          'transition-[color,background-color] duration-fast ease-out-quint',
-          'hover:text-ink focus-ring-inset disabled:pointer-events-none disabled:opacity-45',
+          'absolute inset-y-0 end-0 grid w-11 place-items-center rounded-e-md text-ink-4',
+          'transition-[color] duration-fast ease-out-quint',
+          // Ink only: a background tint here would paint over the field's own
+          // border on the inline end, since the control spans its border box.
+          'hover:text-ink active:text-ink-2',
+          'focus-ring-inset disabled:pointer-events-none disabled:opacity-45',
         )}
       >
         <Glyph className="size-4" aria-hidden="true" />
@@ -163,6 +234,10 @@ PasswordInput.displayName = 'PasswordInput'
  * The six-digit authenticator input. Wide tracking and tabular figures so the
  * digits read as a code rather than as a word, and every browser autofill hint
  * a one-time code can carry.
+ *
+ * `data-numeric` pins the run left-to-right: a code is digits in every locale,
+ * and under `dir="rtl"` the surrounding paragraph would otherwise reorder the
+ * separators a reader pastes with it.
  */
 export const CodeInput = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, ...props }, ref) => (
@@ -174,6 +249,7 @@ export const CodeInput = React.forwardRef<HTMLInputElement, InputProps>(
       autoCorrect="off"
       spellCheck={false}
       size="lg"
+      data-numeric
       className={cn(
         'text-center font-display text-2xl font-bold tracking-widest numeral',
         className,
@@ -231,6 +307,7 @@ const PROVIDER_MARKS: Record<SocialProviderId, () => React.JSX.Element> = {
   apple: AppleMark,
 }
 
+/** Trademarks, so they are data rather than copy and are never translated. */
 const PROVIDER_NAMES: Record<SocialProviderId, string> = {
   google: 'Google',
   apple: 'Apple',
@@ -242,22 +319,27 @@ export interface SocialButtonsProps {
   pending: SocialProviderId | null
   disabled: boolean
   onSelect: (provider: SocialProviderId) => void
-  /** "Continue with" on sign-in, "Sign up with" on registration. */
-  verb?: string
+  /** Which sentence a single button says: sign-in, or registration. */
+  intent?: 'signIn' | 'signUp'
 }
 
 /**
  * Rendered only for providers this environment has credentials for — the list
  * comes from the server, so a half-configured deployment never shows a button
  * that leads to an error page.
+ *
+ * With two or more providers the buttons carry only the mark and the name, which
+ * is the same string in every locale; a lone button gets the full sentence, and
+ * that sentence is where the reader's language shows.
  */
 export function SocialButtons({
   providers,
   pending,
   disabled,
   onSelect,
-  verb = 'Continue with',
+  intent = 'signIn',
 }: SocialButtonsProps) {
+  const t = useTranslate()
   if (providers.length === 0) return null
   return (
     <div
@@ -268,6 +350,7 @@ export function SocialButtons({
     >
       {providers.map((provider) => {
         const Mark = PROVIDER_MARKS[provider]
+        const name = PROVIDER_NAMES[provider]
         return (
           <Button
             key={provider}
@@ -276,13 +359,15 @@ export function SocialButtons({
             block
             icon={<Mark />}
             loading={pending === provider}
-            loadingLabel={`Opening ${PROVIDER_NAMES[provider]}`}
+            loadingLabel={t('auth.social.opening', { provider: name })}
             disabled={disabled && pending !== provider}
             onClick={() => onSelect(provider)}
           >
             {providers.length > 1
-              ? PROVIDER_NAMES[provider]
-              : `${verb} ${PROVIDER_NAMES[provider]}`}
+              ? name
+              : intent === 'signUp'
+                ? t('auth.social.signUp', { provider: name })
+                : t('auth.social.continue', { provider: name })}
           </Button>
         )
       })}
@@ -294,7 +379,6 @@ export interface PasskeyButtonProps {
   pending: boolean
   disabled: boolean
   onSelect: () => void
-  label?: string
 }
 
 /**
@@ -306,8 +390,8 @@ export function PasskeyButton({
   pending,
   disabled,
   onSelect,
-  label = 'Sign in with a passkey',
 }: PasskeyButtonProps) {
+  const t = useTranslate()
   const [supported, setSupported] = React.useState(false)
   React.useEffect(() => setSupported(isPasskeySupported()), [])
 
@@ -319,11 +403,11 @@ export function PasskeyButton({
       block
       icon={<Fingerprint />}
       loading={pending}
-      loadingLabel="Waiting for your device"
+      loadingLabel={t('auth.passkey.waiting')}
       disabled={disabled && !pending}
       onClick={onSelect}
     >
-      {label}
+      {t('auth.passkey.action')}
     </Button>
   )
 }

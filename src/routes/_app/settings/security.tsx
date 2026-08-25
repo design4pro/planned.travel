@@ -11,25 +11,51 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { ErrorPanel } from '#/components/layout/error-state'
 import { SIGN_OUT_ENDPOINT } from '#/components/layout/session'
 import { Alert, Badge, Button, Card, Skeleton } from '#/components/ui'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadSecurity } from '../-server/settings'
 import { formatDate } from '../-lib/format'
 import { SettingsRow, SettingsSection } from '../-ui/settings-nav'
+import { RouteError } from './-ui/route-error'
+
+import type { ReactNode } from 'react'
 
 export const Route = createFileRoute('/_app/settings/security')({
   loader: () => loadSecurity(),
   pendingComponent: SecurityPending,
-  errorComponent: ({ error }) => (
-    <ErrorPanel error={error} title="Security did not load" />
-  ),
+  errorComponent: SecurityError,
   component: SecurityPage,
 })
+
+function SecurityError({ error }: { error: unknown }) {
+  const t = useTranslate()
+  return <RouteError error={error} title={t('settings.security.error')} />
+}
+
+/** A row label with its glyph, so the four sign-in rows scan as one column. */
+function RowLabel({
+  icon,
+  children,
+}: {
+  icon: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span aria-hidden className="text-ink-4">
+        {icon}
+      </span>
+      {children}
+    </span>
+  )
+}
 
 function SecurityPage() {
   const data = Route.useLoaderData()
   const router = useRouter()
+  const t = useTranslate()
+  const locale = useLocale()
   const [signingOut, setSigningOut] = useState(false)
 
   async function signOut(): Promise<void> {
@@ -47,8 +73,8 @@ function SecurityPage() {
       // An untyped href: the sign-in routes live outside this tree.
       window.location.assign('/login')
     } catch {
-      toast.error('Could not sign you out', {
-        description: 'Check your connection and try again.',
+      toast.error(t('settings.security.signOut.failed'), {
+        description: t('settings.security.signOut.failedBody'),
       })
       setSigningOut(false)
     }
@@ -59,30 +85,30 @@ function SecurityPage() {
       {data.emailVerified ? null : (
         <Alert
           tone="warning"
-          title="Your email address is not verified yet"
+          title={t('settings.security.unverified.title')}
           actions={
             <Button asChild variant="secondary" size="sm" shape="pill">
               {/* The verification flow lives outside the authenticated tree. */}
-              <a href="/verify-email">Send the link again</a>
+              <a href="/verify-email">
+                {t('settings.security.unverified.action')}
+              </a>
             </Button>
           }
         >
-          Password resets and trip invitations are sent to {data.email}.
-          Verifying it is what proves the address is yours.
+          {t('settings.security.unverified.body', { email: data.email })}
         </Alert>
       )}
 
       <SettingsSection
-        title="Sign-in"
-        description="How you prove it is you. Two-factor and passkeys are both stronger than a password alone."
+        title={t('settings.security.signin.title')}
+        description={t('settings.security.signin.description')}
       >
         <div className="flex flex-col">
           <SettingsRow
             label={
-              <span className="inline-flex items-center gap-2">
-                <MailCheck aria-hidden className="size-4 text-ink-4" />
-                Email address
-              </span>
+              <RowLabel icon={<MailCheck className="size-4" />}>
+                {t('settings.security.email.label')}
+              </RowLabel>
             }
             hint={data.email}
             control={
@@ -92,7 +118,9 @@ function SecurityPage() {
                   size="lg"
                   icon={data.emailVerified ? <BadgeCheck /> : <TriangleAlert />}
                 >
-                  {data.emailVerified ? 'Verified' : 'Unverified'}
+                  {data.emailVerified
+                    ? t('settings.security.email.verified')
+                    : t('settings.security.email.unverified')}
                 </Badge>
               </div>
             }
@@ -100,49 +128,16 @@ function SecurityPage() {
 
           <SettingsRow
             label={
-              <span className="inline-flex items-center gap-2">
-                <KeyRound aria-hidden className="size-4 text-ink-4" />
-                Password
-              </span>
+              <RowLabel icon={<KeyRound className="size-4" />}>
+                {t('settings.security.password.label')}
+              </RowLabel>
             }
-            hint="Change it whenever you like — you will be sent a one-time link rather than asked for the old one."
+            hint={t('settings.security.password.hint')}
             control={
               <div className="flex sm:justify-end">
                 <Button asChild variant="secondary" size="sm" shape="pill">
-                  <a href="/reset-password">Change password</a>
-                </Button>
-              </div>
-            }
-          />
-
-          <SettingsRow
-            label={
-              <span className="inline-flex items-center gap-2">
-                <ShieldCheck aria-hidden className="size-4 text-ink-4" />
-                Two-factor authentication
-              </span>
-            }
-            hint={
-              data.twoFactorEnabled
-                ? 'A code from your authenticator app is required on every new sign-in.'
-                : 'Add a six-digit code from an authenticator app on top of your password.'
-            }
-            control={
-              <div className="flex items-center gap-2 sm:justify-end">
-                <Badge
-                  tone={data.twoFactorEnabled ? 'success' : 'neutral'}
-                  size="lg"
-                >
-                  {data.twoFactorEnabled ? 'On' : 'Off'}
-                </Badge>
-                <Button
-                  asChild
-                  variant={data.twoFactorEnabled ? 'ghost' : 'secondary'}
-                  size="sm"
-                  shape="pill"
-                >
-                  <a href="/two-factor">
-                    {data.twoFactorEnabled ? 'Manage' : 'Turn on'}
+                  <a href="/reset-password">
+                    {t('settings.security.password.action')}
                   </a>
                 </Button>
               </div>
@@ -151,16 +146,54 @@ function SecurityPage() {
 
           <SettingsRow
             label={
-              <span className="inline-flex items-center gap-2">
-                <Fingerprint aria-hidden className="size-4 text-ink-4" />
-                Passkeys
-              </span>
+              <RowLabel icon={<ShieldCheck className="size-4" />}>
+                {t('settings.security.twoFactor.label')}
+              </RowLabel>
             }
-            hint="Sign in with the fingerprint reader, Face ID or a security key instead of typing anything."
+            hint={
+              data.twoFactorEnabled
+                ? t('settings.security.twoFactor.onHint')
+                : t('settings.security.twoFactor.offHint')
+            }
+            control={
+              <div className="flex items-center gap-2 sm:justify-end">
+                <Badge
+                  tone={data.twoFactorEnabled ? 'success' : 'neutral'}
+                  size="lg"
+                >
+                  {data.twoFactorEnabled
+                    ? t('settings.security.twoFactor.on')
+                    : t('settings.security.twoFactor.off')}
+                </Badge>
+                <Button
+                  asChild
+                  variant={data.twoFactorEnabled ? 'ghost' : 'secondary'}
+                  size="sm"
+                  shape="pill"
+                >
+                  <a href="/two-factor">
+                    {data.twoFactorEnabled
+                      ? t('settings.security.twoFactor.manage')
+                      : t('settings.security.twoFactor.enable')}
+                  </a>
+                </Button>
+              </div>
+            }
+          />
+
+          <SettingsRow
+            label={
+              <RowLabel icon={<Fingerprint className="size-4" />}>
+                {t('settings.security.passkeys.label')}
+              </RowLabel>
+            }
+            hint={t('settings.security.passkeys.hint')}
             control={
               <div className="flex sm:justify-end">
                 <Button asChild variant="secondary" size="sm" shape="pill">
-                  <a href="/passkeys">Manage passkeys</a>
+                  <a href="/passkeys">
+                    {t('settings.security.passkeys.action')}
+                  </a>
                 </Button>
               </div>
             }
@@ -169,24 +202,28 @@ function SecurityPage() {
       </SettingsSection>
 
       <SettingsSection
-        title="This session"
-        description="The browser you are reading this in."
+        title={t('settings.security.session.title')}
+        description={t('settings.security.session.description')}
       >
         <div className="flex flex-col">
           <SettingsRow
-            label="Signed in as"
+            label={t('settings.security.session.label')}
             hint={data.email}
             control={
-              <p className="text-label tabular-nums text-ink-3 sm:text-right">
+              <p className="text-label tabular-nums text-ink-3 sm:text-end">
                 {data.sessionExpiresAt === null
-                  ? 'No expiry recorded'
-                  : `Expires ${formatDate(data.sessionExpiresAt) ?? 'soon'}`}
+                  ? t('settings.security.session.noExpiry')
+                  : t('settings.security.session.expires', {
+                      date:
+                        formatDate(data.sessionExpiresAt, locale) ??
+                        t('settings.security.session.expiresSoon'),
+                    })}
               </p>
             }
           />
           <SettingsRow
-            label="Sign out"
-            hint="Ends this session and returns you to the sign-in page. Other devices stay signed in."
+            label={t('settings.security.signOut.label')}
+            hint={t('settings.security.signOut.hint')}
             control={
               <div className="flex sm:justify-end">
                 <Button
@@ -194,13 +231,13 @@ function SecurityPage() {
                   size="sm"
                   shape="pill"
                   loading={signingOut}
-                  loadingLabel="Signing out"
+                  loadingLabel={t('settings.security.signOut.pending')}
                   onClick={() => {
                     void signOut()
                   }}
                 >
-                  <LogOut aria-hidden />
-                  Sign out
+                  <LogOut aria-hidden data-mirror-rtl />
+                  {t('settings.security.signOut.label')}
                 </Button>
               </div>
             }
@@ -212,9 +249,10 @@ function SecurityPage() {
 }
 
 function SecurityPending() {
+  const t = useTranslate()
   return (
     <div aria-busy="true" className="flex flex-col gap-6">
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{t('ui.status.loading')}</span>
       <Card className="space-y-5">
         {Array.from({ length: 4 }, (_, index) => (
           <div key={index} className="flex items-center justify-between gap-6">

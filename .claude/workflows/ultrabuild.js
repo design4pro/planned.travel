@@ -1168,6 +1168,23 @@ function verdictFor(row) {
     if (visual.verdict !== 'ACCEPT') reasons.push('visual critic REJECTED')
     if (abWinner !== 'ours') reasons.push(`blind A/B winner: ${abWinner}`)
     if (visual.confidence === 'low') reasons.push('critic confidence low')
+  } else if (item.visualLens === 'no-reference') {
+    /*
+     * The reference half cannot be obtained, and that is not this item's failure.
+     *
+     * docs/SPEC.md section 8 "Who owns the visual judgement" says what happens when no pair
+     * exists: our side is still captured and the item is judged on our frames plus code, tests and
+     * accessibility, never on a mismatched pair. This branch is what implements that sentence.
+     * Without it the rule was unreachable, because the verdict assembler never reads acceptance
+     * criteria: ui-primitives-i18n-rtl was rejected in rounds 5 and 6, and settings-module-i18n in
+     * round 7, all three times for a demo host we hold no credentials for and never for their work.
+     *
+     * It is set BY THE ORCHESTRATOR, per item, with the reason recorded in run.json - never by a
+     * builder and never by default. `url` is deliberately kept so the capture still runs: the
+     * frames are the evidence the auditor and the human read. Only the A/B comparison is waived,
+     * and every other lens stays exactly as strict.
+     */
+    log(`visual lens waived for ${item.id}: reference unobtainable (${(cap && cap.skippedReason) || 'no reason given'})`)
   } else if (item.url || item.referenceUrl) {
     reasons.push(cap && cap.skippedReason ? `no blind pair: ${cap.skippedReason}` : 'no visual verdict')
   }

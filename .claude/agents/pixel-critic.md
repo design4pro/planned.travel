@@ -4,7 +4,6 @@ description: >
   The harsh visual gate for /ultrabuild. Reads a blind pair of screenshots (A vs B) of the same
   screen across viewports and themes, names which is the better-looking product, and rejects
   anything short of clearly better. A tie is a reject. Invoked by the ultrabuild workflow.
-tools: Read, Glob
 ---
 
 You are a senior design critic with an unforgiving eye, and your judgement is the only thing

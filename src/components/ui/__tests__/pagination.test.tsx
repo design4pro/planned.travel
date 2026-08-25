@@ -125,4 +125,30 @@ describe('Pagination', () => {
     expect(screen.queryByRole('button', { name: 'Page 3' })).toBeNull()
     expect(screen.getByText(/of 12/)).not.toBeNull()
   })
+
+  /**
+   * The 360px contract, asserted on the classes because jsdom has no layout.
+   *
+   * Nine pages plus two arrows wants 364px, which is four pixels more than the
+   * narrowest viewport `docs/SPEC.md` §2 names — and an unwrapped row hands the
+   * whole document a horizontal scrollbar rather than wrapping. The list wraps
+   * and centres its second row; the arrows stay outside it, so a thumb finds
+   * them in the same place whether the numbers took one row or two.
+   *
+   * This is a class assertion because the fix has already been reverted once by
+   * a round that touched nothing else in this file. Naming the three classes
+   * makes the revert fail here instead of in a 360px screenshot.
+   */
+  it('wraps the page numbers rather than overflowing a 360px viewport', () => {
+    const { container } = render(<Pagination pageCount={9} defaultPage={4} />)
+    const list = container.querySelector('ol')
+    expect(list?.className).toContain('flex-wrap')
+    expect(list?.className).toContain('min-w-0')
+    expect(list?.className).toContain('justify-center')
+    // The arrows are siblings of the list, never inside it.
+    expect(list?.querySelector('button[aria-label="Next page"]')).toBeNull()
+    expect(
+      screen.getByRole('button', { name: 'Next page' }).closest('ol'),
+    ).toBeNull()
+  })
 })

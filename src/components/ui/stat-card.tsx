@@ -16,10 +16,20 @@ export type StatTrend = {
   inverted?: boolean
 }
 
+/**
+ * The delta glyph, and which of the three mirrors.
+ *
+ * Both diagonals point the way the series runs, which is the way the reader
+ * reads: a rise in Arabic climbs towards the left. `src/styles/styles.css` keeps
+ * the whole mirror contract in one place and names `ArrowUpRight` in it for
+ * exactly this reason, and flipping only the x axis leaves the up/down meaning —
+ * the part that is physical rather than textual — untouched. `Minus` is
+ * symmetrical, so it is left out: mirroring it would flip it into itself.
+ */
 const trendIcon = {
-  up: ArrowUpRight,
-  down: ArrowDownRight,
-  flat: Minus,
+  up: { icon: ArrowUpRight, handed: true },
+  down: { icon: ArrowDownRight, handed: true },
+  flat: { icon: Minus, handed: false },
 } as const
 
 /**
@@ -146,7 +156,8 @@ export const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
         ? t.value
         : valueTones[valueTone]
     const { figure, suffix } = splitUnit(value)
-    const TrendIcon = trend ? trendIcon[trend.direction] : null
+    const trendGlyph = trend ? trendIcon[trend.direction] : null
+    const TrendIcon = trendGlyph?.icon ?? null
     const good = trend
       ? trend.direction === 'flat'
         ? 'flat'
@@ -183,8 +194,12 @@ export const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
                 tone === 'inverse' && 'bg-inverse-surface text-inverse-on',
               )}
             >
-              <TrendIcon size={12} aria-hidden="true" />
-              {trend.value}
+              <TrendIcon
+                size={12}
+                aria-hidden="true"
+                data-mirror-rtl={trendGlyph?.handed ? '' : undefined}
+              />
+              <span data-numeric="">{trend.value}</span>
             </span>
           ) : null}
         </div>
@@ -223,7 +238,6 @@ export const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
               </span>
             ) : null}
           </div>
-
         </div>
 
         {/* Label and numeral read as one block; the quiet lines sit on the

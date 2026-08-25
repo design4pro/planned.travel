@@ -18,17 +18,15 @@ import {
   transitionBase,
   useControllableState,
 } from '#/components/ui'
+import { useAtlasCopy, useAtlasI18n } from '#/components/map'
 import { cn } from '#/lib/cn'
 import { countryName } from '#/lib/atlas/country-names'
-import { UNRECORDED_VISIT_LABEL, visitSpan } from '#/lib/atlas/visit-span'
-import {
-  countryFlag,
-  formatNumber,
-  humaniseToken,
-  trimmedOrNull,
-} from '#/lib/format'
+import { visitSpan } from '#/lib/atlas/visit-span'
+import { countryFlag, formatNumber, trimmedOrNull } from '#/lib/format'
+import { continentLabel, continentLabelOrUnknown } from './continent'
+import { visitCells } from './visit-copy'
 
-import type { VisitSpan } from '#/lib/atlas/visit-span'
+import type { MessageKey, Translate } from '#/lib/i18n'
 
 /**
  * The visited countries, as a list you can actually operate.
@@ -137,9 +135,9 @@ export type CountriesListSort = (typeof SORT_VALUES)[number]
 
 interface SortDefinition {
   /** What the control shows. */
-  readonly label: string
+  readonly label: MessageKey
   /** The order written out, so a reader never has to infer it from the rows. */
-  readonly statement: string
+  readonly statement: MessageKey
   readonly compare: (
     left: CountriesListCountry,
     right: CountriesListCountry,
@@ -148,13 +146,13 @@ interface SortDefinition {
 
 const SORTS: Readonly<Record<CountriesListSort, SortDefinition>> = {
   code: {
-    label: 'Country code',
-    statement: 'Ordered by country code, A to Z.',
+    label: 'atlas.list.sort.code',
+    statement: 'atlas.list.sort.codeStatement',
     compare: () => 0,
   },
   name: {
-    label: 'Country name',
-    statement: 'Ordered by country name, A to Z, then country code.',
+    label: 'atlas.list.sort.name',
+    statement: 'atlas.list.sort.nameStatement',
     compare: (left, right) =>
       compareText(
         collationKey(countryName(left.countryCode)),
@@ -162,24 +160,32 @@ const SORTS: Readonly<Record<CountriesListSort, SortDefinition>> = {
       ),
   },
   recent: {
-    label: 'Most recent visit',
-    statement: 'Ordered by the most recent visit first, then country code.',
+    label: 'atlas.list.sort.recent',
+    statement: 'atlas.list.sort.recentStatement',
     // An empty string sorts last under a descending comparison, which is where
     // a country with no recorded date belongs: unknown is not "a long time ago".
     compare: (left, right) =>
       compareText(right.lastVisitedOn ?? '', left.lastVisitedOn ?? ''),
   },
   visits: {
-    label: 'Most visits',
-    statement: 'Ordered by the most visits first, then country code.',
+    label: 'atlas.list.sort.visits',
+    statement: 'atlas.list.sort.visitsStatement',
     compare: (left, right) => right.visitCount - left.visitCount,
   },
 }
 
-const SORT_OPTIONS = SORT_VALUES.map((value) => ({
-  value,
-  label: SORTS[value].label,
-}))
+/**
+ * The order control's options, in the reader's language.
+ *
+ * Built per render rather than at module scope: the labels are copy, and copy
+ * resolved once when the module was first evaluated would be frozen in whatever
+ * language the first render happened to be.
+ */
+function sortOptions(
+  t: Translate,
+): Array<{ value: CountriesListSort; label: string }> {
+  return SORT_VALUES.map((value) => ({ value, label: t(SORTS[value].label) }))
+}
 
 /**
  * The list in a stated order, deterministically.
@@ -205,69 +211,7 @@ export function sortCountries(
 
 /* --------------------------------------------------------------------- dates */
 
-/** One labelled date on a row, machine-readable where a real day exists. */
-interface DateCell {
-  readonly label: string
-  readonly value: string
-  /** `YYYY-MM-DD` for a `<time>`, or `null` when the cell carries words. */
-  readonly iso: string | null
-}
-
-/**
- * The span's four shapes as row cells.
- *
- * The vocabulary matches `CountryRecord`, so a country reads the same way in
- * the list and in the record the list opens. A single visit is one cell: two
- * cells holding the same day under two headings reads as a bug, and eight of
- * our twelve seeded countries were visited exactly once.
- */
-function dateCells(span: VisitSpan): ReadonlyArray<DateCell> {
-  switch (span.kind) {
-    case 'single':
-      return [{ label: 'Visited', value: span.date.label, iso: span.date.iso }]
-    case 'range':
-      return [
-        { label: 'First visit', value: span.first.label, iso: span.first.iso },
-        { label: 'Last visit', value: span.last.label, iso: span.last.iso },
-      ]
-    case 'partial':
-      return span.edge === 'first'
-        ? [
-            {
-              label: 'First visit',
-              value: span.date.label,
-              iso: span.date.iso,
-            },
-            { label: 'Last visit', value: 'Not recorded', iso: null },
-          ]
-        : [
-            { label: 'First visit', value: 'Not recorded', iso: null },
-            {
-              label: 'Last visit',
-              value: span.date.label,
-              iso: span.date.iso,
-            },
-          ]
-    case 'unrecorded':
-      return [
-        { label: 'Visit dates', value: UNRECORDED_VISIT_LABEL, iso: null },
-      ]
-  }
-}
-
 /* -------------------------------------------------------------------- layout */
-
-/**
- * Copy for a country the bundled geometry has no separate polygon for.
- *
- * The reason is stated as the true one. Natural Earth's 1:110m cut folds a
- * dependency or an overseas department into its parent sovereign state, which is
- * why GF, SJ, HK and MO are missing - not size. French Guiana is 83,534 km²,
- * larger than Austria, and telling a reader it is "too small to outline" is a
- * factual untruth in a product about places.
- */
-const NO_OUTLINE_NOTICE =
-  'Folded into its parent state by the world outlines, so there is nothing to frame on the map.'
 
 /**
  * Held as class strings rather than typed twice, so `CountriesListSkeleton` is
@@ -283,7 +227,7 @@ const layout = {
   sort: 'w-auto min-w-40',
   list: 'min-w-0',
   item: 'not-last:border-b not-last:border-edge-faint',
-  row: 'relative isolate flex w-full min-w-0 items-start gap-3 px-4 py-3 text-left sm:px-5',
+  row: 'relative isolate flex w-full min-w-0 items-start gap-3 px-4 py-3 text-start sm:px-5',
   /**
    * The interaction wash, painted over the row's ground and under its text.
    *
@@ -297,7 +241,7 @@ const layout = {
    */
   wash: 'absolute inset-0 -z-10',
   /** Always in the layout, so selection can only ever repaint it. */
-  rail: 'absolute inset-y-0 left-0 w-1',
+  rail: 'absolute inset-y-0 start-0 w-1',
   flag: 'grid size-10 shrink-0 place-items-center rounded-md border border-edge-faint bg-surface-2 text-subtitle leading-none',
   /**
    * One grid, two arrangements, and the dates ahead of the prose in both.
@@ -378,7 +322,7 @@ export interface CountriesListProps extends Omit<
   readonly sort?: CountriesListSort
   readonly defaultSort?: CountriesListSort
   readonly onSortChange?: (sort: CountriesListSort) => void
-  /** Accessible name for the listbox. */
+  /** Accessible name for the listbox. Defaults to the translated one. */
   readonly label?: string
   /**
    * Replaces the "nothing visited yet" panel — for a host that has filtered the
@@ -399,13 +343,14 @@ export const CountriesList = React.forwardRef<
       sort,
       defaultSort = 'code',
       onSortChange,
-      label = 'Visited countries',
+      label,
       emptyState,
       className,
       ...props
     },
     ref,
   ) => {
+    const { locale, t } = useAtlasI18n()
     const baseId = React.useId()
     const [order, setOrder] = useControllableState<CountriesListSort>({
       value: sort,
@@ -579,8 +524,8 @@ export const CountriesList = React.forwardRef<
               variant="filled"
               tone="brand"
               icon={<Compass />}
-              title="No countries on the map yet"
-              description="A country lands here the moment a visit is recorded against it, with the first arrival, the latest one and how many times you have been."
+              title={t('atlas.list.empty.title')}
+              description={t('atlas.list.empty.body')}
               className="m-4 sm:m-5"
             />
           )}
@@ -594,21 +539,26 @@ export const CountriesList = React.forwardRef<
     const announcement =
       statusCountry === undefined
         ? ''
-        : `${countryName(statusCountry.countryCode)} selected.${
-            statusCountry.hasOutline ? '' : ` ${NO_OUTLINE_NOTICE}`
-          }`
+        : statusCountry.hasOutline
+          ? t('atlas.list.announce.selected', {
+              name: countryName(statusCountry.countryCode),
+            })
+          : t('atlas.list.announce.selectedUnframed', {
+              name: countryName(statusCountry.countryCode),
+              reason: t('atlas.list.noOutline'),
+            })
 
     return (
       <div ref={ref} className={cn(layout.root, className)} {...props}>
         <div className={layout.toolbar}>
           <p id={statementId} className={layout.statement}>
-            {SORTS[order].statement}
+            {t(SORTS[order].statement)}
           </p>
           <SimpleSelect
             size="sm"
             className={layout.sort}
-            ariaLabel="Order countries"
-            options={SORT_OPTIONS}
+            ariaLabel={t('atlas.list.sort.label')}
+            options={sortOptions(t)}
             value={order}
             onValueChange={(value) => {
               const next = SORT_VALUES.find((candidate) => candidate === value)
@@ -619,7 +569,7 @@ export const CountriesList = React.forwardRef<
 
         <ul
           role="listbox"
-          aria-label={label}
+          aria-label={label ?? t('atlas.panel.list.label')}
           aria-describedby={statementId}
           className={layout.list}
           onKeyDown={onKeyDown}
@@ -627,8 +577,10 @@ export const CountriesList = React.forwardRef<
           {rows.map((row, index) => {
             const code = normaliseCode(row.countryCode)
             const name = countryName(code)
-            const cells = dateCells(
+            const cells = visitCells(
               visitSpan(row.firstVisitedOn, row.lastVisitedOn),
+              t,
+              locale,
             )
             const note = trimmedOrNull(row.note)
             /**
@@ -640,7 +592,7 @@ export const CountriesList = React.forwardRef<
              * with nothing after it and joined an empty segment into the row's
              * accessible name, which a screen reader reads as a doubled comma.
              */
-            const region = trimmedOrNull(row.continent)
+            const region = continentLabel(row.continent, t)
             const isSelected = index === selectedIndex
             const quiet = isSelected ? 'text-ink-2' : 'text-ink-3'
             const noteId = note === null ? undefined : `${baseId}-note-${code}`
@@ -661,11 +613,17 @@ export const CountriesList = React.forwardRef<
                   aria-selected={isSelected}
                   aria-label={[
                     name,
-                    region === null
-                      ? 'continent not recorded'
-                      : humaniseToken(region),
-                    ...cells.map((cell) => `${cell.label} ${cell.value}`),
-                    `${formatNumber(row.visitCount)} ${row.visitCount === 1 ? 'visit' : 'visits'}`,
+                    continentLabelOrUnknown(row.continent, t),
+                    ...cells.map((cell) =>
+                      t('atlas.list.row.cell', {
+                        label: cell.label,
+                        value: cell.value,
+                      }),
+                    ),
+                    t('atlas.record.visits', {
+                      count: row.visitCount,
+                      visits: formatNumber(row.visitCount, locale),
+                    }),
                   ].join(', ')}
                   aria-describedby={describedBy}
                   tabIndex={index === activeIndex ? 0 : -1}
@@ -730,9 +688,7 @@ export const CountriesList = React.forwardRef<
                           &middot;
                         </span>
                         <span className="min-w-0 truncate">
-                          {region === null
-                            ? 'Continent not recorded'
-                            : humaniseToken(region)}
+                          {region ?? t('atlas.continent.unknown')}
                         </span>
                       </span>
                     </span>
@@ -793,7 +749,9 @@ export const CountriesList = React.forwardRef<
                               aria-hidden="true"
                               className="mt-0.5 shrink-0"
                             />
-                            <span className="min-w-0">{NO_OUTLINE_NOTICE}</span>
+                            <span className="min-w-0">
+                              {t('atlas.list.noOutline')}
+                            </span>
                           </span>
                         )}
                       </span>
@@ -801,11 +759,11 @@ export const CountriesList = React.forwardRef<
                   </span>
 
                   <span data-part="count" className={layout.count}>
-                    <span className={layout.countValue}>
-                      {formatNumber(row.visitCount)}
+                    <span data-numeric="" className={layout.countValue}>
+                      {formatNumber(row.visitCount, locale)}
                     </span>
                     <span className={cn(layout.countLabel, quiet)}>
-                      {row.visitCount === 1 ? 'visit' : 'visits'}
+                      {t('atlas.record.visitsUnit', { count: row.visitCount })}
                     </span>
                   </span>
                 </button>
@@ -876,7 +834,7 @@ function Bar({
         radius="sm"
         className={cn(
           'absolute inset-y-0.5',
-          align === 'end' ? 'right-0' : 'left-0',
+          align === 'end' ? 'end-0' : 'start-0',
           width,
         )}
       />
@@ -900,56 +858,63 @@ export type CountriesListSkeletonProps =
 export const CountriesListSkeleton = React.forwardRef<
   HTMLDivElement,
   CountriesListSkeletonProps
->(({ rows = 4, className, ...props }, ref) => (
-  <div
-    ref={ref}
-    aria-busy="true"
-    className={cn(layout.root, className)}
-    {...props}
-  >
-    <span className="sr-only">Loading visited countries</span>
+>(({ rows = 4, className, ...props }, ref) => {
+  const t = useAtlasCopy()
 
-    <div aria-hidden="true" className={layout.toolbar}>
-      <Bar width="w-full" className={cn(layout.statement, 'max-w-56')} />
-      {/* The `sm` field height, so the toolbar does not resize on arrival. */}
-      <Skeleton radius="md" className="h-8 w-40 shrink-0" />
-    </div>
+  return (
+    <div
+      ref={ref}
+      aria-busy="true"
+      className={cn(layout.root, className)}
+      {...props}
+    >
+      <span className="sr-only">{t('atlas.list.loading')}</span>
 
-    <ul aria-hidden="true" className={layout.list}>
-      {Array.from({ length: rows }, (_, index) => (
-        <li key={index} className={layout.item}>
-          <div className={layout.row}>
-            <Skeleton radius="md" className="size-10 shrink-0" />
-            <div className={layout.body}>
-              <div className={layout.identity}>
-                <div className={layout.nameRow}>
-                  <Bar width="w-32 max-w-full" className={layout.name} />
+      <div aria-hidden="true" className={layout.toolbar}>
+        <Bar width="w-full" className={cn(layout.statement, 'max-w-56')} />
+        {/* The `sm` field height, so the toolbar does not resize on arrival. */}
+        <Skeleton radius="md" className="h-8 w-40 shrink-0" />
+      </div>
+
+      <ul aria-hidden="true" className={layout.list}>
+        {Array.from({ length: rows }, (_, index) => (
+          <li key={index} className={layout.item}>
+            <div className={layout.row}>
+              <Skeleton radius="md" className="size-10 shrink-0" />
+              <div className={layout.body}>
+                <div className={layout.identity}>
+                  <div className={layout.nameRow}>
+                    <Bar width="w-32 max-w-full" className={layout.name} />
+                  </div>
+                  <Bar width="w-24 max-w-full" className={layout.meta} />
                 </div>
-                <Bar width="w-24 max-w-full" className={layout.meta} />
-              </div>
-              {/* Two cells, which at every width reserve exactly what one
+                {/* Two cells, which at every width reserve exactly what one
                   cell reserves: side by side below `md`, and the two rows of
                   the label column from `md` up. A single-visit country — most
                   of them — therefore lands in the space already held for it. */}
-              <div data-part="dates" className={layout.dates}>
-                {['first', 'last'].map((cell) => (
-                  <div key={cell} className={layout.dateCell}>
-                    <Bar width="w-14" className={layout.dateLabel} />
-                    <Bar width="w-20 max-w-full" className={layout.dateValue} />
-                  </div>
-                ))}
+                <div data-part="dates" className={layout.dates}>
+                  {['first', 'last'].map((cell) => (
+                    <div key={cell} className={layout.dateCell}>
+                      <Bar width="w-14" className={layout.dateLabel} />
+                      <Bar
+                        width="w-20 max-w-full"
+                        className={layout.dateValue}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className={layout.count}>
+                <Bar width="w-5" align="end" className={layout.countValue} />
+                <Bar width="w-8" align="end" className={layout.countLabel} />
               </div>
             </div>
-            <div className={layout.count}>
-              <Bar width="w-5" align="end" className={layout.countValue} />
-              <Bar width="w-8" align="end" className={layout.countLabel} />
-            </div>
-          </div>
-        </li>
-      ))}
-    </ul>
-  </div>
-))
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+})
 CountriesListSkeleton.displayName = 'CountriesListSkeleton'
 
 /* -------------------------------------------------------------------- error */
@@ -970,30 +935,34 @@ export type CountriesListErrorProps = React.ComponentPropsWithoutRef<'div'> & {
 export const CountriesListError = React.forwardRef<
   HTMLDivElement,
   CountriesListErrorProps
->(({ onRetry, retrying = false, className, ...props }, ref) => (
-  <div ref={ref} className={cn(layout.root, className)} {...props}>
-    <EmptyState
-      variant="filled"
-      tone="warning"
-      icon={<TriangleAlert />}
-      title="Your countries did not load"
-      description="The atlas could not read your visited countries just now. Nothing has been lost — they are still recorded."
-      className="m-4 sm:m-5"
-      action={
-        onRetry === undefined ? undefined : (
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<RotateCw />}
-            loading={retrying}
-            loadingLabel="Loading your countries"
-            onClick={onRetry}
-          >
-            Try again
-          </Button>
-        )
-      }
-    />
-  </div>
-))
+>(({ onRetry, retrying = false, className, ...props }, ref) => {
+  const t = useAtlasCopy()
+
+  return (
+    <div ref={ref} className={cn(layout.root, className)} {...props}>
+      <EmptyState
+        variant="filled"
+        tone="warning"
+        icon={<TriangleAlert />}
+        title={t('atlas.list.error.title')}
+        description={t('atlas.list.error.body')}
+        className="m-4 sm:m-5"
+        action={
+          onRetry === undefined ? undefined : (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<RotateCw />}
+              loading={retrying}
+              loadingLabel={t('atlas.list.error.retrying')}
+              onClick={onRetry}
+            >
+              {t('atlas.list.error.retry')}
+            </Button>
+          )
+        }
+      />
+    </div>
+  )
+})
 CountriesListError.displayName = 'CountriesListError'

@@ -251,3 +251,27 @@ src/lib/i18n/messages/<locale>/<namespace>.ts     one flat object of keys, defau
 render them. `src/routes/__root.tsx` is owned by `locale-negotiation-shell`, and that item is what
 imports `fonts.ts`, deletes the second hard-coded copy of the font URL, and sets `<html lang>` and
 `<html dir>`. An item is never held to an acceptance criterion it does not own the file to satisfy.
+
+### Who owns the visual judgement
+
+An item is blind-judged on a SCREEN. An item that owns only a library — `src/components/ui/**`,
+`src/lib/**` — has no screen of its own, and round 5 rejected `ui-primitives-i18n-rtl` for "no blind
+pair" on that basis alone, having found nothing blocking in its actual work. Such an item is judged
+on its code, its tests and its stated contract, and the visual judgement of the screens that mount
+it belongs to those screens' items. An item never manufactures a route to become photographable.
+
+The reference half can also simply be unavailable: `demo.liketrek.com` puts its authenticated
+screens behind its own sign-in, which we hold no credentials for. When no pair exists, our side is
+still captured and the item is judged on our frames plus code, tests and accessibility — never on a
+mismatched pair, because a pair of two different surfaces sends the critic after an artefact of the
+capture. A missing reference is never grounds to relax §2; it raises the bar, because our side then
+has to be defensible with no foil beside it.
+
+### Numbers inside messages
+
+A plural message's `count` selects the CLDR branch and nothing else. Any number a reader SEES goes
+through the locale-aware formatter and is interpolated as an already-formatted string — raw
+substitution renders ASCII digits with no group separator in all 23 locales. Note what the platform
+actually does before asserting on it: `ar` as a bare tag carries the `latn` numbering system, so
+Arabic correctly renders `1,234` and never Arabic-Indic digits, which belong to `ar-EG` /
+`ar-u-nu-arab` and are not tags we ship.

@@ -1,14 +1,21 @@
 /**
  * The settings section index, and the frame every settings section renders in.
  *
- * Kept out of the route file so the five sections can share it without importing
- * from each other's route modules.
+ * Kept out of the route file so the seven sections can share it without
+ * importing from each other's route modules.
+ *
+ * The index carries message *keys* rather than sentences. A `SECTIONS` array of
+ * English strings cannot be translated at module scope — `t()` needs the
+ * catalogue the request negotiated — and a literal key checked against
+ * `MessageKey` is what makes a typo here a compile error instead of a nav item
+ * that renders its own key.
  */
 import { Link } from '@tanstack/react-router'
 import {
   Bell,
   Building2,
   CreditCard,
+  Languages,
   Palette,
   ShieldCheck,
   UserRound,
@@ -16,7 +23,9 @@ import {
 
 import { Card } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 
+import type { MessageKey } from '#/lib/i18n'
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -27,13 +36,14 @@ import type { ReactNode } from 'react'
 interface SettingsSectionLink {
   readonly to:
     | '/settings'
+    | '/settings/language'
     | '/settings/appearance'
     | '/settings/security'
     | '/settings/notifications'
     | '/settings/organization'
     | '/settings/billing'
-  readonly label: string
-  readonly description: string
+  readonly label: MessageKey
+  readonly description: MessageKey
   readonly icon: LucideIcon
   /** Only the index entry must match exactly; the rest own their subtrees. */
   readonly exact?: boolean
@@ -42,39 +52,45 @@ interface SettingsSectionLink {
 const SECTIONS: ReadonlyArray<SettingsSectionLink> = [
   {
     to: '/settings',
-    label: 'Profile',
-    description: 'You, and how dates and money read',
+    label: 'settings.nav.profile',
+    description: 'settings.nav.profile.hint',
     icon: UserRound,
     exact: true,
   },
   {
+    to: '/settings/language',
+    label: 'settings.nav.language',
+    description: 'settings.nav.language.hint',
+    icon: Languages,
+  },
+  {
     to: '/settings/appearance',
-    label: 'Appearance',
-    description: 'Theme, motion and the map',
+    label: 'settings.nav.appearance',
+    description: 'settings.nav.appearance.hint',
     icon: Palette,
   },
   {
     to: '/settings/security',
-    label: 'Security',
-    description: 'Password, two-factor, passkeys',
+    label: 'settings.nav.security',
+    description: 'settings.nav.security.hint',
     icon: ShieldCheck,
   },
   {
     to: '/settings/notifications',
-    label: 'Notifications',
-    description: 'Inbox, email and push',
+    label: 'settings.nav.notifications',
+    description: 'settings.nav.notifications.hint',
     icon: Bell,
   },
   {
     to: '/settings/organization',
-    label: 'Workspace',
-    description: 'Members and shared defaults',
+    label: 'settings.nav.workspace',
+    description: 'settings.nav.workspace.hint',
     icon: Building2,
   },
   {
     to: '/settings/billing',
-    label: 'Billing',
-    description: 'Plan, seats and invoices',
+    label: 'settings.nav.billing',
+    description: 'settings.nav.billing.hint',
     icon: CreditCard,
   },
 ]
@@ -108,8 +124,10 @@ function ItemBody({
 }
 
 export function SettingsNav() {
+  const t = useTranslate()
+
   return (
-    <nav aria-label="Settings sections" className="min-w-0">
+    <nav aria-label={t('settings.nav.label')} className="min-w-0">
       <ul className="scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0">
         {SECTIONS.map((section) => (
           <li key={section.to} className="shrink-0 lg:min-w-0 lg:shrink">
@@ -120,8 +138,8 @@ export function SettingsNav() {
             >
               <section.icon aria-hidden className={ICON_CLASS} />
               <ItemBody
-                label={section.label}
-                description={section.description}
+                label={t(section.label)}
+                description={t(section.description)}
               />
             </Link>
           </li>
@@ -139,7 +157,7 @@ export interface SettingsSectionProps {
   className?: string
 }
 
-/** The card every settings section sits in, so all six are framed identically. */
+/** The card every settings section sits in, so all seven are framed identically. */
 export function SettingsSection({
   title,
   description,

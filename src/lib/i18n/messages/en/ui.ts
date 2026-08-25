@@ -62,11 +62,34 @@ const messages = {
   'avatar.status.away': '{name} is away',
   'avatar.status.busy': '{name} is busy',
   'avatar.status.offline': '{name} is offline',
-  /** The tail of an avatar stack's accessible name: "…, Mira and 3 others". */
+  /**
+   * The tail of an avatar stack's accessible name: "…, Mira and 3 others".
+   *
+   * `{others}` arrives already grouped for the locale; `count` is present only
+   * to pick the plural branch and is never rendered. §8's rule on numbers
+   * inside messages: a raw substitution would read `1234` in every one of the
+   * twenty-three locales, where German wants `1.234`.
+   */
   'avatar.overflow': {
-    one: '{count} other',
-    other: '{count} others',
+    one: '{others} other',
+    other: '{others} others',
   },
+  /**
+   * The face at the end of a crowded stack. `{hidden}` arrives already grouped
+   * in this locale's digits — the name is not `count` on purpose, because
+   * `count` is reserved for the number that selects a plural branch and reaches
+   * the template unformatted. The sign is on this side of it only because
+   * English puts it there; an Arabic translator moves it.
+   */
+  'avatar.more': '+{hidden}',
+
+  /* --------------------------------------------------------------- badge */
+  /**
+   * A count that has run past the badge's cap: `99+`. The number arrives
+   * already grouped, and the marker's side is the translator's to choose, the
+   * same way `avatar.more`'s is.
+   */
+  'badge.overflow': '{max}+',
 
   /* ------------------------------------------------------------ calendar */
   'calendar.label.date': 'Choose a date',
@@ -88,6 +111,17 @@ const messages = {
   /* ------------------------------------------------------- select family */
   /** Shown by `Select` and `Combobox` while nothing is chosen. */
   'select.placeholder': 'Select…',
+  /**
+   * A saved value the option list no longer offers — what a schema change or a
+   * withdrawn currency leaves behind. This is the compact form, shown on the
+   * control itself beside a warning glyph, so keep it short; `{value}` is the
+   * stored value verbatim, which is the only handle the reader has on what was
+   * dropped and is never translated.
+   */
+  'select.unavailable': 'Unavailable: {value}',
+  /** The same fact as a sentence, for a screen reader. */
+  'select.unavailableHint':
+    'The saved choice {value} is no longer available. Choose another.',
   'combobox.search': 'Search',
   'combobox.empty': 'No matches',
   'combobox.clear': 'Clear selection',
@@ -107,13 +141,20 @@ const messages = {
   'dateRange.value': '{start} – {end}',
   /** The first end is chosen and the reader is still picking the second. */
   'dateRange.valuePending': '{start} — …',
+  /**
+   * The night count beside a chosen range, and the same figure spelled out
+   * under the calendar. `{nights}` is already grouped for the locale and is the
+   * only thing the reader sees; `count` selects the plural branch and stops
+   * there, so `ja` gets one branch and `ar` all six without either of them
+   * inheriting English digits.
+   */
   'dateRange.nights': {
-    one: '{count} night',
-    other: '{count} nights',
+    one: '{nights} night',
+    other: '{nights} nights',
   },
   'dateRange.nightsSelected': {
-    one: '{count} night selected',
-    other: '{count} nights selected',
+    one: '{nights} night selected',
+    other: '{nights} nights selected',
   },
 
   /* ---------------------------------------------------------- pagination */

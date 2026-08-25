@@ -10,14 +10,32 @@ import {
   toast,
 } from '#/components/ui'
 import { cameraMotion } from '#/lib/map/camera'
+import { useAtlasCopy } from './copy'
 import { useMapBearing, useMapContext, useMapZoom } from './map-context'
 import { useRovingFocus } from './use-roving-focus'
 
 import type { LngLat } from '#/lib/map/bounds'
 
-/** Where a floating control group sits inside the map. */
+/**
+ * Where a floating control group sits inside the map.
+ *
+ * `left` and `right` name the *reading* order's start and end rather than the
+ * screen's: the corners below are emitted as logical insets, so an `ar` document
+ * mirrors the whole map chrome along with the rest of the page (SPEC §8.4). The
+ * MapLibre canvas underneath is never mirrored — a map is not a paragraph — so
+ * every floating element states its own placement rather than inheriting one.
+ *
+ * A screen that wants a physically fixed corner writes `left-*`/`right-*` on
+ * `className` and wins: Tailwind emits the physical inset utilities after the
+ * logical ones, so the physical declaration is the later one in the cascade.
+ */
 export type MapCorner =
-  'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right'
+  /** Nothing at all: the host places the group itself. */
+  | 'custom'
 
 /**
  * Width of the control column, in pixels.
@@ -39,10 +57,11 @@ const COLUMN: ColumnVars = { '--map-controls-w': `${MAP_CONTROLS_WIDTH}px` }
  * place these offsets are not simply the 16px gutter.
  */
 const CORNERS: Readonly<Record<MapCorner, string>> = {
-  'top-left': 'top-4 left-4',
-  'top-right': 'top-4 right-4',
-  'bottom-left': 'bottom-4 left-4',
-  'bottom-right': 'right-4 bottom-10',
+  'top-left': 'top-4 start-4',
+  'top-right': 'top-4 end-4',
+  'bottom-left': 'bottom-4 start-4',
+  'bottom-right': 'end-4 bottom-10',
+  custom: '',
 }
 
 export interface MapControlsProps {
@@ -57,7 +76,7 @@ export interface MapControlsProps {
   readonly locateZoom?: number
   /** Called with the reader's position once it is known. */
   readonly onLocate?: (position: LngLat) => void
-  /** Accessible name for the toolbar. */
+  /** Accessible name for the toolbar. Defaults to the translated one. */
   readonly label?: string
 }
 
@@ -85,8 +104,10 @@ export function MapControls({
   showLocate = true,
   locateZoom = 14,
   onLocate,
-  label = 'Map controls',
+  label,
 }: MapControlsProps) {
+  const t = useAtlasCopy()
+  const name = label ?? t('atlas.map.controls.label')
   const { map } = useMapContext()
   const zoom = useMapZoom(1)
   const bearing = useMapBearing()
@@ -139,9 +160,8 @@ export function MapControls({
       },
       () => {
         setLocating(false)
-        toast.error('We could not get your location.', {
-          description:
-            'Check that location access is allowed for this site, then try again.',
+        toast.error(t('atlas.map.controls.locateFailed'), {
+          description: t('atlas.map.controls.locateFailedBody'),
         })
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 },
@@ -160,7 +180,7 @@ export function MapControls({
   return (
     <TooltipProvider delayDuration={400} skipDelayDuration={200}>
       <GlassToolbar
-        label={label}
+        label={name}
         orientation="vertical"
         onKeyDown={roving.onKeyDown}
         style={COLUMN}
@@ -172,12 +192,12 @@ export function MapControls({
       >
         {showZoom ? (
           <>
-            <Tooltip content="Zoom in" side="left">
+            <Tooltip content={t('atlas.map.controls.zoomIn')} side="left">
               <IconButton
                 variant="glass"
                 size="sm"
                 shape="pill"
-                label="Zoom in"
+                label={t('atlas.map.controls.zoomIn')}
                 icon={<Plus size={16} strokeWidth={2.5} />}
                 className="shadow-none ring-0"
                 disabled={atMax}
@@ -185,12 +205,12 @@ export function MapControls({
                 {...roving.itemProps(zoomInIndex)}
               />
             </Tooltip>
-            <Tooltip content="Zoom out" side="left">
+            <Tooltip content={t('atlas.map.controls.zoomOut')} side="left">
               <IconButton
                 variant="glass"
                 size="sm"
                 shape="pill"
-                label="Zoom out"
+                label={t('atlas.map.controls.zoomOut')}
                 icon={<Minus size={16} strokeWidth={2.5} />}
                 className="shadow-none ring-0"
                 disabled={atMin}
@@ -202,12 +222,12 @@ export function MapControls({
         ) : null}
 
         {showCompass ? (
-          <Tooltip content="Face north" side="left">
+          <Tooltip content={t('atlas.map.controls.north')} side="left">
             <IconButton
               variant="glass"
               size="sm"
               shape="pill"
-              label="Face north"
+              label={t('atlas.map.controls.north')}
               icon={
                 <Navigation
                   size={15}
@@ -224,12 +244,12 @@ export function MapControls({
         ) : null}
 
         {withLocate ? (
-          <Tooltip content="Find my location" side="left">
+          <Tooltip content={t('atlas.map.controls.locate')} side="left">
             <IconButton
               variant="glass"
               size="sm"
               shape="pill"
-              label="Find my location"
+              label={t('atlas.map.controls.locate')}
               icon={<LocateFixed size={15} strokeWidth={2} />}
               className="shadow-none ring-0"
               loading={locating}

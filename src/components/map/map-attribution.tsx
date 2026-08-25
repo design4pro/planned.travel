@@ -3,6 +3,7 @@ import * as React from 'react'
 import { cn } from '#/lib/cn'
 import { MAP_ATTRIBUTION } from '#/lib/map/style'
 import { focusRing } from '#/components/ui'
+import { useAtlasCopy } from './copy'
 import { useAttributionSlot, useMapContext } from './map-context'
 
 import type { MapCredit } from '#/lib/map/style'
@@ -78,6 +79,7 @@ export const MapAttribution = React.forwardRef<
   HTMLDivElement,
   MapAttributionProps
 >(({ className, ...props }, ref) => {
+  const t = useAtlasCopy()
   const { basemap } = useMapContext()
   useAttributionSlot()
 
@@ -91,13 +93,16 @@ export const MapAttribution = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        'pointer-events-none absolute right-2 bottom-2 z-map-overlay flex items-center',
+        // Logical, so the credit sits at the end of the reading order in `ar`
+        // as it does in `en`. A host that needs it physically placed overrides
+        // with `right-*`/`left-*`, which Tailwind emits later and so wins.
+        'pointer-events-none absolute end-2 bottom-2 z-map-overlay flex items-center',
         'rounded-full bg-glass px-2.5 py-1 text-caption text-ink-3 ring-1 ring-glass-edge ring-inset backdrop-glass',
         className,
       )}
       {...props}
     >
-      <span className="sr-only">Map data from</span>
+      <span className="sr-only">{t('atlas.map.attribution.label')}</span>
       <MapCreditList credits={MAP_ATTRIBUTION} />
     </div>
   )

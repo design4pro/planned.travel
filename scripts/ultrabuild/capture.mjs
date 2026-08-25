@@ -57,8 +57,31 @@ const DEV_TOOLBAR = '[data-testid="tanstack_devtools"]'
  * a blocking console error, and failed two finished items in round 9 of the atlas run.
  */
 const NOT_THE_APP = [
-  { why: "Vite's dev client and HMR machinery", url: /\/@vite\/|\/@react-refresh|\/@id\/|\/@fs\// },
+  {
+    why: "Vite's dev client and HMR machinery",
+    url: /\/@vite\/|\/@react-refresh|\/@id\/|\/@fs\//,
+  },
   { why: 'the React DevTools bridge', url: /react[-_]devtools/i },
+]
+
+/**
+ * The dev server's dependency optimiser has gone stale, which is neither the app's fault nor
+ * something to excuse.
+ *
+ * Excusing it would be worse than failing on it. When `/node_modules/.vite/deps/*` answers 504 the
+ * dynamic import of `src/routes/_app/route.tsx` fails, every `_app` route renders its error
+ * boundary, and a capture that swallowed the message would file eight photographs of "Something
+ * went off route" as a clean result. Round 4 failed a finished item on it as if it were an app
+ * error; round 5 photographed a dead server for a whole item and lost 71 Playwright specs to the
+ * same cause. Both readings were wrong in different directions, so it gets its own verdict: the
+ * CAPTURE is invalid, the item is unjudged, and the fix is named.
+ */
+const TOOLCHAIN_BROKEN = [
+  {
+    why: 'the Vite dependency optimiser is stale — `rm -rf node_modules/.vite` and restart the dev server, then re-capture. The page renders its error boundary until you do, so any frame taken now is worthless.',
+    url: /\/node_modules\/\.vite\/deps\//,
+    text: /504|Outdated Optimize Dep/i,
+  },
 ]
 
 function args() {
@@ -172,7 +195,10 @@ async function main() {
       const target = route.request().url()
       if (!target.startsWith(origin)) return route.continue()
       return route.continue({
-        headers: { ...route.request().headers(), 'x-pt-server-today': serverToday },
+        headers: {
+          ...route.request().headers(),
+          'x-pt-server-today': serverToday,
+        },
       })
     })
   }
@@ -182,13 +208,19 @@ async function main() {
     const type = msg.type()
     if (type !== 'error' && type !== 'warning') return
     const from = msg.location()?.url ?? ''
-    const excused = NOT_THE_APP.find((rule) => rule.url.test(from))
+    const text = msg.text().slice(0, 400)
+    const broken = TOOLCHAIN_BROKEN.find(
+      (rule) => rule.url.test(from) && rule.text.test(text),
+    )
+    const excused = broken
+      ? undefined
+      : NOT_THE_APP.find((rule) => rule.url.test(from))
     consoleMessages.push({
       type,
-      text: msg.text().slice(0, 400),
+      text,
       from,
-      verdict: excused ? 'not-the-app' : 'fatal',
-      why: excused?.why,
+      verdict: broken ? 'toolchain-broken' : excused ? 'not-the-app' : 'fatal',
+      why: broken?.why ?? excused?.why,
     })
   })
 
@@ -231,12 +263,19 @@ async function main() {
         h: window.innerHeight,
       }))
       if (measured.w !== vp.w) {
-        warnings.push(`viewport ${vp.w} measured as ${measured.w} — frame not filed`)
+        warnings.push(
+          `viewport ${vp.w} measured as ${measured.w} — frame not filed`,
+        )
         continue
       }
 
       const path = `${outDir}/${statePrefix}${vp.name}-${theme}-${label}.png`
-      await page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })
+      await page.screenshot({
+        path,
+        fullPage: true,
+        animations: 'disabled',
+        caret: 'hide',
+      })
       const { size } = await stat(path)
 
       // A flat frame compresses to almost nothing. This is the cheap version of "did the canvas
@@ -256,23 +295,36 @@ async function main() {
 
   const fatal = consoleMessages.filter((m) => m.verdict === 'fatal')
   const excused = consoleMessages.filter((m) => m.verdict === 'not-the-app')
+  const broken = consoleMessages.filter((m) => m.verdict === 'toolchain-broken')
   console.log(
     JSON.stringify(
       {
         files,
         console: {
-          fatal: fatal.map((m) => `${m.type}: ${m.text}${m.from ? ` — at ${m.from}` : ''}`),
+          fatal: fatal.map(
+            (m) => `${m.type}: ${m.text}${m.from ? ` — at ${m.from}` : ''}`,
+          ),
           notTheApp: excused.map((m) => `${m.text.slice(0, 120)} (${m.why})`),
+          toolchainBroken: [...new Set(broken.map((m) => m.why))],
         },
         warnings,
+        captureValid: broken.length === 0,
       },
       null,
       2,
     ),
   )
+  if (broken.length) {
+    console.error(
+      `capture: THESE FRAMES ARE INVALID — ${[...new Set(broken.map((m) => m.why))].join(' ')}`,
+    )
+    process.exit(2)
+  }
 }
 
 main().catch((error) => {
-  console.error(`capture: ${error instanceof Error ? error.message : String(error)}`)
+  console.error(
+    `capture: ${error instanceof Error ? error.message : String(error)}`,
+  )
   process.exit(1)
 })

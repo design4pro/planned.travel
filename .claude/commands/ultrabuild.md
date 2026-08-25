@@ -1,7 +1,6 @@
 ---
 description: Fan out sub-agents, loop, and adversarially critique until the task meets docs/SPEC.md — deterministic every run
 argument-hint: <task description> | resume | status | stop
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Workflow, Skill, ScheduleWakeup, TodoWrite, TaskOutput, WebFetch, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_resize, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_console_messages, mcp__plugin_playwright_playwright__browser_evaluate, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # /ultrabuild — run the standard perfection loop

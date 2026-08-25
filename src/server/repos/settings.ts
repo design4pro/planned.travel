@@ -31,7 +31,7 @@ import {
   userSettings,
 } from '#/server/db/schema'
 import { createTenantRepository } from './base'
-import { RepositoryError } from './context'
+import { RepositoryError, assertCanAdminister } from './context'
 import {
   colourSchema,
   currencySchema,
@@ -77,10 +77,17 @@ const weekStartSchema = z.number().int().min(0).max(6)
  * language at best. The predecessor was `z.string().min(2).max(16)`, which let
  * `__proto__` and `constructor` reach the negotiator through a settings form.
  *
+ * `LOCALE_TAGS` *is* `SUPPORTED_LOCALES`, one field narrower: that module
+ * declares it as `SUPPORTED_LOCALES.map((entry) => entry.tag)`, because
+ * `SUPPORTED_LOCALES` holds `{ tag, nativeName, dir }` descriptors and `z.enum`
+ * takes strings. Enumerating the descriptors here instead would be a second
+ * derivation of the same list, which is the thing this comment exists to
+ * forbid. Both are exported from the one registry file and neither can drift.
+ *
  * The canonicalising step in front of the enum is not politeness, it is the
  * data. `organization_settings.locale` defaulted to `en-GB` for every workspace
- * created before this migration, the demo dataset still declares `en-GB`, and
- * the regional-format picker wrote `pl-PL` and `ja-JP`. A bare membership test
+ * created before `drizzle/0002_locale_normalisation.sql`, and the
+ * regional-format picker wrote `pl-PL` and `ja-JP`. A bare membership test
  * would reject all of them and hand every existing workspace a validation
  * error on the next save. So a tag is first put through {@link resolveLocaleTag}
  * — the same case-fold, alias table and BCP-47 truncation the negotiator uses,
@@ -164,10 +171,20 @@ export async function ensureOrganizationSettings(
   return existing ?? organizationSettingsRepository.insert(scope, { locale: DEFAULT_LOCALE })
 }
 
+/**
+ * Writes the workspace defaults. Owners and admins only.
+ *
+ * This row is the fallback every member without a personal override reads — its language, currency,
+ * timezone, date format, week start and distance unit. So the gate belongs here rather than in the
+ * caller: `updateOrganization` next door gates a workspace *rename* the same way, and a check that
+ * lives in a route handler is a check the next caller forgets. It runs before
+ * {@link ensureOrganizationSettings} so a refused write costs no `INSERT` either.
+ */
 export async function updateOrganizationSettings(
   scope: TenantScope,
   input: UpdateOrganizationSettingsInput,
 ): Promise<OrganizationSettings> {
+  assertCanAdminister(scope.ctx, 'change the workspace defaults')
   const row = await ensureOrganizationSettings(scope)
   return organizationSettingsRepository.requireUpdate(
     scope,
