@@ -12,7 +12,7 @@ the same file. The stage shape is fixed by `TEMPLATE.md` and is not negotiable p
 
 ---
 
-## The fourteen files
+## The fifteen files
 
 Every file in this directory is listed here. There are no others, and nothing outside this list may
 be added without amending this table first.
@@ -33,6 +33,7 @@ be added without amending this table first.
 | `10-administration.md`             | The workspace console: member and invitation administration, workspace-wide defaults, the audit write path and audit reading.                                |
 | `11-boundaries-and-blockers.md`    | The ten rows that do not port to hosted multi-tenant, their named hosted equivalents, and every row blocked by the SPEC §3 freeze.                           |
 | `12-verification-protocol.md`      | How a stage proves itself: the command gate, unit and isolation tests, the e2e/visual evidence format, viewports, themes and console rules.                  |
+| `13-content-studio.md`             | The operator content plane: Studio roles and audit, content stores with versioned translations, the block editor and media library, the public site as data, announcements, and managed legal documents with acceptance. Waves 7-11, above the matrix set. |
 
 ### Filename scheme
 
@@ -45,7 +46,7 @@ never spawns a second file, it grows another stage.
 ## The naming rule that binds every plan file
 
 `docs/SPEC.md` §1 is a clean-room rule, and it binds documents in this directory exactly as it binds
-code. Every file this plan set creates — the fourteen above — obeys all five of these:
+code. Every file this plan set creates — the fifteen above — obeys all five of these:
 
 1. The upstream project is called **"the reference product"**. Its name, wordmark and logo appear in
    none of these files: not in prose, not in a heading, not in a filename, not in a URL. (`SPEC.md`
