@@ -12,7 +12,7 @@ the same file. The stage shape is fixed by `TEMPLATE.md` and is not negotiable p
 
 ---
 
-## The fourteen files
+## The sixteen files
 
 Every file in this directory is listed here. There are no others, and nothing outside this list may
 be added without amending this table first.
@@ -33,6 +33,8 @@ be added without amending this table first.
 | `10-administration.md`             | The workspace console: member and invitation administration, workspace-wide defaults, the audit write path and audit reading.                                |
 | `11-boundaries-and-blockers.md`    | The ten rows that do not port to hosted multi-tenant, their named hosted equivalents, and every row blocked by the SPEC §3 freeze.                           |
 | `12-verification-protocol.md`      | How a stage proves itself: the command gate, unit and isolation tests, the e2e/visual evidence format, viewports, themes and console rules.                  |
+| `13-community-gallery.md`          | The Trip Gallery — publish a trip as a reviewed snapshot, the curation queue, anonymous browse and detail served from KV, suggestions and saved trips.       |
+| `14-dashboard-mascot.md`           | Nomi, the original dashboard-hero character — a client-side state machine over days to departure, the flap countdown, the pause control, the static pose.    |
 
 ### Filename scheme
 
@@ -45,7 +47,7 @@ never spawns a second file, it grows another stage.
 ## The naming rule that binds every plan file
 
 `docs/SPEC.md` §1 is a clean-room rule, and it binds documents in this directory exactly as it binds
-code. Every file this plan set creates — the fourteen above — obeys all five of these:
+code. Every file this plan set creates — the sixteen above — obeys all five of these:
 
 1. The upstream project is called **"the reference product"**. Its name, wordmark and logo appear in
    none of these files: not in prose, not in a heading, not in a filename, not in a URL. (`SPEC.md`
@@ -248,6 +250,23 @@ looking for a missing edge:
   multi-tenant boundary, so it is planned in `09-account-and-settings.md` alongside the other
   account-adjacent surfaces rather than with the three out-of-scope Extensibility rows.
 
+### Plans 13 and 14 carry no gap row
+
+The 89-row matrix predates both plans: no `gap-rows.json` id names a community gallery or a
+dashboard mascot. Their scope was minted from a later task brief, after the matrix closed, so
+neither appears in the table above — the table is unchanged, no row moves, and no edge is re-cut.
+Their placement is derived instead from the dependencies their own stages cite:
+
+- `13-community-gallery.md` starts in **wave 3** (`13-S1`) and runs one stage per wave through
+  **wave 6** (`13-S4`). Wave 3 is the earliest wave open to it: its tables and its quota metric
+  are wave-0 foundations requirements filed to `00-S1`'s register (landing with the schema work
+  that closes before wave 3 opens), and its row-derived-scope read design leans on the share-link
+  infrastructure `07-S6` (row `COL-10`) ships in wave 2. `13-S2` sits in wave 4 rather than 3
+  because `07-S9` holds `src/routes/_app/trips/$tripId/collab.tsx` in wave 3.
+- `14-dashboard-mascot.md` is a single stage, `14-S1`, in **wave 3** — the earliest wave in which
+  `src/routes/_app/dashboard.tsx` is unclaimed (`01-S5` holds it in wave 2, `01-S7` in wave 5).
+  It needs nothing from wave 0 and closes no row.
+
 ### Re-deriving the table
 
 The table is mechanical. `gap-rows.json` already carries the nine cuts, so no disposition is applied
@@ -266,6 +285,28 @@ rows.forEach((r) => console.log(wave(r.id), r.id))
 
 Any change to `gap-rows.json` that alters a wave is a change to this file first and to the affected
 plan second — never the other way round.
+
+---
+
+## Coverage
+
+With sixteen files, the register states its completeness claim once, here, so no plan has to
+carry it:
+
+- Plans `00`–`10` plan the **in-scope surface**, area by area, across the 89 matrix rows.
+- `11-boundaries-and-blockers.md` **bounds** the rows that do not port to hosted multi-tenant,
+  each with a recorded disposition.
+- `12-verification-protocol.md` is **protocol**: it owns how every stage proves itself and plans
+  no feature of its own.
+- `13-community-gallery.md` and `14-dashboard-mascot.md` deliver **first-party** the value of the
+  two plugins the reference product ships: the Trip Gallery and Nomi, the dashboard character.
+  The plugin **runtime** itself stays excluded exactly as `11-boundaries-and-blockers.md` records
+  under `EXT-01`, `EXT-02` and `EXT-03` — no plugin host, no widget slots, no provider hooks —
+  while the two shipped plugins' value is now planned, not bounded, in `13` and `14`.
+
+Every feature area of the reference product is therefore either **planned** (`00`–`10`,
+`13`–`14`), **consciously bounded** (`11`), or **protocol** (`12`). A feature that fits none of
+those three is a gap in this register and is filed by amending it, never by an unregistered file.
 
 ---
 

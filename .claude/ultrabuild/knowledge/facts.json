@@ -1825,5 +1825,98 @@
     ],
     "id": "the-settled-22-failure-216-key-parity-gap-has-shrunk",
     "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "The 8-locale atlas parity gap named in this item's brief had already shrunk to 5 at this tree: de/nl/sv atlas.ts existed untracked and complete (217/217 keys, one/other plurals), so only ca/es/fr/it/pt-BR were missing.",
+    "evidence": "vitest JSON reporter on parity.test.ts before any edit: 5 failed assertions naming exactly ca, es, fr, it, pt-BR; node import diff of de/nl/sv atlas.ts vs en gave missing:[] orphan:[] for all three.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "the-8-locale-atlas-parity-gap-named-in-this-item-s-b",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "The atlas namespace's en-identical homograph set for the Western Romance locales is fr 'Europe', es 'Asia', it 'Africa'/'Asia'/'Oceania', ca 'Oceania'+'Regions', pt-BR 'Oceania' — each needs an in-catalogue synonym since PROPER_NOUNS stays [].",
+    "evidence": "Byte-compared natural translations against en values per key; after shipping the synonym forms (Continent européen, Continente asiático, Continente africano/asiatico, Australia e Oceania variants, Regions marcades) the parity untranslated axis reports zero and the suite is PASS (177/0).",
+    "scope": [
+      "builder"
+    ],
+    "id": "the-atlas-namespace-s-en-identical-homograph-set-for",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "Writing literal U+00A0 characters directly in catalogue string values (instead of   escapes) survives prettier and eslint unchanged, but makes Edit-tool old_strings typed with plain spaces fail to match.",
+    "evidence": "perl scan found \\xc2\\xa0 bytes at fr/atlas.ts lines 62, 65, 290, 304, 341, 351 exactly where composed; prettier --check and eslint pass on the file; six Edit calls using ASCII spaces at those positions all returned 'String to replace not found'.",
+    "scope": [
+      "builder",
+      "mechanical"
+    ],
+    "id": "writing-literal-u-00a0-characters-directly-in-catalo",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "On departure day the dashboard hero renders the word key shell.dashboard.hero.today, never a numeral 0 — any mascot/countdown design promising a '0' figure disagrees with the shipped hero.",
+    "evidence": "src/routes/_app/dashboard.tsx:294: `if (startsIn === 0) return t('shell.dashboard.hero.today')` inside startsInValue (declared :288); startsInHint at :308 likewise returns shell.dashboard.hero.startToday for 0.",
+    "scope": [
+      "builder",
+      "auditor",
+      "critic"
+    ],
+    "id": "on-departure-day-the-dashboard-hero-renders-the-word",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "listUpcomingTrips keeps null-endDate trips only while startDate >= today, so an open-ended trip is last seen on its own departure day; past-end and started-open-ended inputs are unreachable through the dashboard loader.",
+    "evidence": "src/server/repos/trips.ts:240: `or(gte(trips.endDate, today), and(isNull(trips.endDate), gte(trips.startDate, today)))` — the plan's earlier 'only while endDate >= today' reading omitted the second branch.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "listupcomingtrips-keeps-null-enddate-trips-only-whil",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "pnpm test is fully green at this tree: the settled 8-locale atlas.search.* parity failure floor is gone",
+    "evidence": "pnpm test at this worktree: 118 files passed, 3457 tests passed, 0 failed (43s). git status shows untracked src/lib/i18n/messages/{ca,de,es,fr,it,nl,pt-BR,sv}/atlas.ts landed by parallel agents mid-round.",
+    "scope": [
+      "mechanical",
+      "builder",
+      "auditor"
+    ],
+    "id": "pnpm-test-is-fully-green-at-this-tree-the-settled-8-",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "scripts/ultrabuild/check-plan-refs.mjs validates stage-id citations in docs/plans/README.md too, not just plan files, so README amendments citing stage ids must use ids that exist in the named sibling",
+    "evidence": "After adding citations of 00-S1, 07-S6, 07-S9, 01-S5, 01-S7, 13-S1..S4, 14-S1 to README.md, node scripts/ultrabuild/check-plan-refs.mjs reported '15 plans: 0 dangling stage reference(s)' and exit 0.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "scripts-ultrabuild-check-plan-refs-mjs-validates-sta",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "pnpm test is fully green now - the 8 settled parity failures (atlas.search.* for ca/de/es/fr/it/nl/pt-BR/sv) no longer occur",
+    "evidence": "vitest run at this tree: Test Files 118 passed, Tests 3457 passed, 0 failed",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "pnpm-test-is-fully-green-now-the-8-settled-parity-fa",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "resolve-port.sh --start reused an already-running owned server on port 3002; the full Playwright suite passes 138/0/5 against it",
+    "evidence": "resolve-port: reusing the server already answering on 3002; PASS (138) FAIL (0) skipped (5) in 86.7s",
+    "scope": [
+      "capture",
+      "mechanical"
+    ],
+    "id": "resolve-port-sh-start-reused-an-already-running-owne",
+    "measuredIn": "plans-for-plugins run, round 3"
   }
 ]
