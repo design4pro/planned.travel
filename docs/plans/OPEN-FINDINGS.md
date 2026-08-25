@@ -38,6 +38,9 @@ re-measured. Plans 13 and 14 were authored and audited in that same run.
   an artifact that exists nowhere on disk or in git history. Treat those citations as historical;
   the materialised wave table in `docs/plans/README.md` is the surviving source. Tracked as
   `plans-cite-lost-gap-rows` in `.claude/ultrabuild/knowledge/backlog.json`.
+- `03-reservations-and-transport.md` line 1689: the drop-unknown-ids rule is attributed to
+  `-server/plan.ts:269-272`; it actually lives in the jsdoc at `plan.ts:252-254` (round-5 audit,
+  passage outside any edited hunk). Re-measure rather than trust the number.
 - `13-community-gallery.md`: the cross-plan collision table omits 07-S2 (wave 1) as a claimant of
   `src/routes/_app/trips/$tripId/collab.tsx`; 13-S1 calls the sibling claims on
   `src/server/repos/index.ts` "all appends" while 01-S6 and 07-S10 mark theirs "edit"; 13-S4's

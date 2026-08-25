@@ -112,5 +112,13 @@
       "docs/plans/03-reservations-and-transport.md",
       "docs/plans/13-community-gallery.md"
     ]
+  },
+  {
+    "id": "vi-atlas-lan-toi-terminology",
+    "title": "vi atlas.ts uses 'lần tới' as the noun for a visit, colliding with its 'next time' sense elsewhere in the vi catalogue",
+    "why": "Round-5 auditor note on an accepted item; a terminology nit, not a parity or correctness failure. Fix in the next round that legitimately touches messages/vi/.",
+    "paths": [
+      "src/lib/i18n/messages/vi/atlas.ts"
+    ]
   }
 ]
