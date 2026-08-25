@@ -13,12 +13,12 @@ that executes it should resolve them first.
 | `00-foundations.md` | **verified** | — |
 | `01-trips-core.md` | **verified** | — |
 | `02-places-and-maps.md` | **verified** | — |
-| `03-reservations-and-transport.md` | open | 1 |
+| `03-reservations-and-transport.md` | open | 2 |
 | `04-budget-and-currencies.md` | **verified** | — |
 | `05-packing-and-todos.md` | **verified** | — |
 | `06-documents-and-media.md` | **verified** | — |
 | `07-collaboration-and-sharing.md` | **verified** | — |
-| `08-product-modules.md` | open | 3 |
+| `08-product-modules.md` | open | 1 |
 | `09-account-and-settings.md` | **verified** | — |
 | `10-administration.md` | **verified** | — |
 | `11-boundaries-and-blockers.md` | **verified** | — |
@@ -27,11 +27,10 @@ that executes it should resolve them first.
 
 ## `03-reservations-and-transport.md`
 
-- 03-S7 mints a duplicate TASKS accessor: `taskQueue()` already exists, is exported, and is already used with `enqueueTask`. The stage's 'must not be reimplemented' measurement missed the one producer helper that exists. _(line 2347)_
+- 03-S1 and 03-S2 mirror to a `transport` Durable Object entity kind that does not exist; the real kind is `route`, and `patch('transport', …)` is a TypeScript error _(line 423)_
+- 03-S6's tenant-isolation case asserts `updateUserSettings` rejects a foreign member id; the function ensures-and-inserts instead, so the specified test cannot pass _(line 1866)_
 
 ## `08-product-modules.md`
 
-- Area brief and 08-S3's Stage id both claim "three" files move out of src/routes/_app/-ui/ and that 08-S3 owns all of them, contradicting the plan's own consolidated move table, which lists TWO moves and assigns world-map.tsx to 08-S2. Both stages are Wave 1, so an implementer following the area brief has 08-S3 and 08-S2 both moving src/routes/_app/-ui/world-map.tsx concurrently — the same-wave exclusive collision the wave rule exists to prevent, and one check-plan-collisions.mjs cannot see because only 08-S2 declares the path. _(line 348)_
-- 08-S1's Data and migration section justifies "no index" with a vacay_user_years composite index that does not exist. The shipped indexes are (plan_id, user_id, year) unique — organization_id absent entirely — plus (organization_id, plan_id) and (organization_id, user_id, year). No index over (organization_id, plan_id, user_id, year) exists, and none leads with organization_id while carrying all three of plan_id, user_id and year. The conclusion survives by accident (the org+plan prefix covers the predicate); the stated reason is false and carries no file:line citation. _(line 288)_
-- Two stages assert that organization_id is "the leading column of EVERY composite index" on tables where it is not, and 08-S4 uses that assertion as its tenant-safety argument ("A label row therefore cannot be written into another workspace even by a handler that forgot to check"). journey_entries and collection_labels each carry composite indexes led by a non-tenant column. The safety conclusion is separately supported by createTenantRepository stamping organization_id on insert, but the premise is a false, uncited claim about shipped schema — and the strong wording appears alongside five correct uses of the weaker "a composite index", so it reads as measured when it was not. _(line 922)_
+- 08-S1's "Measured at HEAD, not recalled" paragraph cites two exported identifiers that do not exist at HEAD and three line numbers that are only valid in another session's uncommitted working tree _(line 214)_
 

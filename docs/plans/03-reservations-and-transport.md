@@ -2322,7 +2322,16 @@ must not build a second one:
   `src/server/queue/types.ts:16` (the kind), `:156` (the payload map), `:181` (the envelope arm),
   `src/server/queue/consumer.ts:37`, `:81` and `:103-104` (the import, the registry and the switch),
   and `src/server/queue/handlers/booking-import.ts` (the handler). **Nothing calls `enqueueTask` with
-  that kind, anywhere.** The handler has never run in this product.
+  that kind, anywhere.** The handler has never run in this product. What is absent is the _call_, and
+  only the call: the producer helpers it needs are both already written and already used together.
+  `enqueueTask(queue, input)` (`src/server/queue/jobs.ts:66`) builds the envelope, validates it
+  through `taskEnvelopeSchema` and sends it; `taskQueue()` (`src/server/auth/env.ts:87`) returns the
+  `TASKS` binding. `grep -rn "taskQueue" src/` returns exactly three lines and no more — that
+  declaration, its import at `src/server/auth/email.ts:2`, and the repo's one live producer,
+  `await enqueueTask(taskQueue(), { kind: 'email', … })` at `src/server/auth/email.ts:289`. **This
+  stage therefore adds no queue accessor of its own**, and the earlier draft of it that did was
+  wrong: a second accessor beside an exported one that already compiles against `enqueueTask` is a
+  duplicate, not a convenience.
 - **The missing UI entry point.** No route, dialog, button or drop target in `src/routes` or
   `src/components` mentions an import. There is nothing a reader could click.
 
@@ -2337,6 +2346,15 @@ the contract the producer satisfies; the producer builds that object and does no
 `StagedImport`, `StagedReservation` and `stagedImportKey` are imported from the handler module rather
 than re-declared, so the staged shape has exactly one definition.
 
+**The producer half is reused too, and this is the second thing the stage must not reimplement.** The
+enqueue is written as `enqueueTask(taskQueue(), …)`, importing `enqueueTask` from
+`#/server/queue/jobs` and `taskQueue` from `#/server/auth/env` — the same two symbols, in the same
+combination, that `src/server/auth/email.ts:289` already ships. Neither module is an owned path and
+neither is edited. That `taskQueue()`'s declared return type (`Queue<unknown>`) satisfies
+`enqueueTask`'s `TaskQueue` port is not an assumption: `email.ts:289` makes exactly that call and the
+repository typechecks clean, so the compatibility is measured rather than hoped for. Nothing in this
+stage reads `env.TASKS` directly, and nothing in it imports `cloudflare:workers`.
+
 Rows unblocked: none. No row lists `BKG-03` in its `dependsOn`.
 
 ### Owned paths
@@ -2344,9 +2362,6 @@ Rows unblocked: none. No row lists `BKG-03` in its `dependsOn`.
 - `src/server/fns/booking-import.ts` — new. The producer, the staged read and the confirm. A module of
   its own rather than an edit to `src/server/fns/reservations.ts`, which `03-S6` and `03-S4` hold in
   other waves and which has nothing to do with a queue.
-- `src/server/fns/context.ts` — edit. One accessor, `tasksQueue()`, beside the existing
-  `filesBucket()`, so a handler reaches the binding the same way it already reaches R2 and never
-  imports `cloudflare:workers` from anywhere else.
 - `src/components/modules/book/import-dialog.tsx` — new. The entry point, the review list and the
   confirm.
 - `src/components/modules/book/import-drafts.ts` — new. The pure mapping from a staged row to a review
@@ -2363,8 +2378,12 @@ Rows unblocked: none. No row lists `BKG-03` in its `dependsOn`.
 - `e2e/__screenshots__/reservations-and-transport.visual.spec.ts/` — append.
 
 `src/server/queue/handlers/booking-import.ts`, `src/server/queue/consumer.ts`,
-`src/server/queue/types.ts` and `src/server/queue/jobs.ts` are **not** owned paths and are not edited.
-The engine is complete; this stage attaches to it.
+`src/server/queue/types.ts`, `src/server/queue/jobs.ts`, `src/server/auth/env.ts` and
+`src/server/fns/context.ts` are **not** owned paths and are not edited. The engine is complete and so
+is the producer helper; this stage attaches to both. In particular `src/server/fns/context.ts` gains
+nothing: `appScope()` is imported from it exactly as every other module in `src/server/fns` imports
+it, and the queue binding arrives through `taskQueue()` rather than through a new sibling of
+`filesBucket()`.
 
 ### Data and migration
 
@@ -2425,7 +2444,7 @@ format: z.enum(['ics', 'json']) })`.
   shared bucket, and the one thing a producer must never do is take one. Then:
 
   ```ts
-  await enqueueTask(tasksQueue(), {
+  await enqueueTask(taskQueue(), {
     kind: 'booking-import',
     orgId: scope.ctx.organizationId,
     id: `booking-import:${file.id}`,
@@ -2976,7 +2995,7 @@ is a measurement.
 ### `node scripts/ultrabuild/check-plan-collisions.mjs 03`
 
 ```
-plans 13 · stages 91 · owned paths 545
+plans 13 · stages 91 · owned paths 544
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -3169,16 +3188,30 @@ All eight stages of this file state their wave in the parsed form, so none is in
 several runs are still writing. While this file was being written the check reported, in order,
 `plans 8 · stages 48`, `plans 9 · stages 56`, `plans 13 · stages 80`, `plans 13 · stages 84`,
 `plans 13 · stages 87`, `plans 13 · stages 91 · owned paths 550`, `plans 13 · stages 91 · owned
-paths 538`, `plans 13 · stages 91 · owned paths 544`, `plans 13 · stages 91 · owned paths 543` and,
-on the revision that produced the section you are reading, `plans 13 · stages 91 · owned paths 545`.
+paths 538`, `plans 13 · stages 91 · owned paths 544`, `plans 13 · stages 91 · owned paths 543`,
+`plans 13 · stages 91 · owned paths 545` and, on the revision that produced the section you are
+reading, `plans 13 · stages 91 · owned paths 544`.
 The unique-path count moved by fifteen between two runs minutes apart, and three times more on
-revisions that added **no unique owned path to this file at all** — the last of them is the revision
+revisions that added **no unique owned path to this file at all** — one of them is the revision
 that repaired `03-S6`, which added one owned-path bullet,
 `src/routes/_app/trips/$tripId/transports.tsx`, on a path `03-S1` had already claimed, so it added
 nothing to `byPath` and the total still rose by two. The `544` → `543` step was measured the same way:
 the check was re-run against this file's own previous revision, unmodified, and returned `543` as
 well, so the drop came from a sibling plan and not from anything here. Sibling plans were dirty in the
 working tree throughout.
+
+**The last step, `545` → `544`, is the one exception: it is this file's own doing and can be
+attributed exactly.** This revision deleted a single owned-path bullet — `src/server/fns/context.ts`
+under `03-S7`, which was there to add a second `TASKS` accessor beside `filesBucket()`. That helper
+already exists as `taskQueue()` (`src/server/auth/env.ts:87`) and is already used with `enqueueTask`
+at `src/server/auth/email.ts:289`, so the bullet was a duplicate rather than a claim, and `03-S7`
+now reuses both symbols instead. No other plan claimed that path, which is why removing it moved the
+unique-path total by exactly one and changed nothing else in the output: the seventeen cross-wave
+entries and the `no same-wave exclusive collisions` line are byte-identical to the previous run. The
+general lesson is the one `03-S7` now states in its own prose — **before a stage lists a helper as a
+new file or a new export, grep for the helper, not only for the feature**. Grepping for
+`booking-import` found the engine and correctly found no producer; only grepping for `taskQueue`
+found the accessor that made half the producer unnecessary.
 So the header will not reproduce, and it is not the part that matters. The findings under it are
 properties of **this** file's ownership and hold only until a sibling changes what it claims. Any
 agent executing a stage of this file therefore **re-runs both scripts before it writes a line**, reads

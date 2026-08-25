@@ -285,9 +285,29 @@ once.
 | `vacay_years`      | `year`                                                    | exists, created by `ensureYear`  |
 | `vacay_plans`      | the five settings columns listed under **Reference rows** | exist, `NOT NULL` with defaults  |
 
-No migration, no backfill, no index. `vacay_user_years` is already keyed on
-`(organization_id, plan_id, user_id, year)` with `organization_id` leading, which is the only shape
-this stage queries by.
+No migration, no backfill, and **no index is added** — but not for the reason an earlier draft of
+this stage gave, which was a composite index that does not exist. Measured on the shipped table
+(`src/server/db/schema.ts:1629-1631`), `vacay_user_years` carries exactly three indexes:
+
+| Index                                 | Columns, in order                     | Line   |
+| ------------------------------------- | ------------------------------------- | ------ |
+| `vacay_user_years_plan_user_year_unq` | `plan_id`, `user_id`, `year` (unique) | `1629` |
+| `vacay_user_years_org_plan_idx`       | `organization_id`, `plan_id`          | `1630` |
+| `vacay_user_years_org_user_year_idx`  | `organization_id`, `user_id`, `year`  | `1631` |
+
+**There is no index over `(organization_id, plan_id, user_id, year)`, and the unique one carries no
+tenant column at all** — do not write either into a query plan from memory. This stage reads and
+writes one row at a time by all four columns, and the `(organization_id, plan_id)` prefix of
+`vacay_user_years_org_plan_idx` already serves that predicate: one plan-year holds one row per
+traveller, so the residual scan is the plan's member count, and a fourth index would cost one extra
+row written on every entitlement edit for a saving D1 cannot bill. The unique index is not a tenant
+guard either. What it does is make `setEntitlement`'s read-then-write safe under a race:
+`setEntitlement` (`src/server/repos/vacay.ts:307-342`) resolves the plan, looks the row up with
+`findOne` and then either `requireUpdate`s it or inserts — it is **not** an `onConflict` upsert — so
+two concurrent first-time edits for one traveller-year collide on
+`vacay_user_years_plan_user_year_unq` rather than leaving two rows behind. This stage never argues
+tenant safety from an index; that argument is `tenantFilter()` and the insert stamp, both stated
+under **Server**.
 
 ### Server (repo, server function, Zod)
 
@@ -345,8 +365,11 @@ this stage queries by.
 - **The module gets a home.** `src/components/vacay/` is created by this stage, as SPEC §6 requires
   for a module's product components. Nothing moves into it from `src/routes/_app/-ui/` — the leave
   planner keeps its whole composition inside `vacay.tsx` today, so what lands here is extracted from
-  the route file rather than moved between directories. `08-S3` owns the three files that do move out
-  of `-ui/`, and lists them.
+  the route file rather than moved between directories. **Exactly two files move out of `-ui/` in this
+  plan, and neither of them is this stage's**: `src/routes/_app/-ui/world-map.tsx` is `08-S2`'s and
+  `src/routes/_app/-ui/create-dialogs.tsx` is `08-S3`'s. The consolidated table of both — one row per
+  source file, one owner per row — is kept once, under `08-S3`'s **UI** heading, and no file appears
+  in it twice.
 - **Components reused, not rebuilt** — from `src/components/ui`: `Dialog`, `Button`, `Input`,
   `Switch`, `Progress`, `Card`, `Skeleton`, `EmptyState`, `Alert`, `Badge`, `Avatar`, `Toast` via
   `sonner`. From `src/components/layout`: `PageHeader`, `AppFrame`, `AppSections`. From the route's
@@ -822,8 +845,10 @@ The `docs/SPEC.md` §2 clauses, ticked against the regions section and the bucke
 ### Stage id
 
 `08-S3` · Wave 1 · effort **M**. Renaming, re-covering, retiring and deleting a journal; the trips it
-draws on; and the place anchors those trips contribute. Also the stage that moves this plan's three
-misplaced compositions into module directories.
+draws on; and the place anchors those trips contribute. Also the stage that retires
+`src/routes/_app/-ui/create-dialogs.tsx` into two module directories, and that carries this plan's
+consolidated table of the **two** files moving out of `-ui/` — the other, `world-map.tsx`, moves in
+`08-S2`, which is the only stage that names it.
 
 ### Reference rows
 
@@ -918,10 +943,18 @@ from `newId()`. No migration, no backfill, no index.
 - **Tenant scoping, stated rather than implied.** Both new functions are built on `tenantFilter()`
   from `src/server/repos/base.ts`, which always begins
   `eq(table.organizationId, scope.ctx.organizationId)` and lets a caller only `AND` further
-  predicates onto it. `journeys` and `journey_entries` each carry `organization_id NOT NULL` as the
-  leading column of every composite index, and `createTenantRepository` stamps it on insert and omits
-  it from the caller's payload type — so an anchor imported into a journal is written under the
-  caller's workspace and no other, by construction rather than by discipline.
+  predicates onto it. `journeys` and `journey_entries` each carry `organization_id NOT NULL`, and each
+  carries at least one composite index led by it — `journeys_org_owner_idx`
+  (`src/server/db/schema.ts:1356`) and `journey_entries_org_journey_idx` (`:1392`). **Not every
+  composite index on those tables leads with the tenant column**: `journey_entries_journey_date_idx`
+  (`:1393`) and `journey_entries_journey_sort_idx` (`:1394`) both lead with `journey_id`. An index is
+  therefore a performance fact in this plan and never a safety argument. The safety argument is the
+  code path, and it is sufficient on its own: every read is narrowed by `tenantFilter()`, and
+  `createTenantRepository` stamps `organization_id` on insert from `scope.ctx` and omits it from the
+  caller's payload type (`src/server/repos/base.ts:196-200`, whose own comment reads "The tenant
+  column is stamped here and cannot be overridden by the caller's payload"). An anchor imported into
+  a journal is written under the caller's workspace and no other, by construction rather than by
+  discipline.
 - **Server functions — `src/routes/_app/-server/journal.ts`**, all `POST`:
   `updateJourneyFn`, `setJourneyStatusFn` (publish, unpublish, archive), `deleteJourneyFn` and
   `importTripPlacesFn`. Each returns the shape its screen re-reads, and the route invalidates
@@ -1227,11 +1260,19 @@ index.
   implementation.
 - **Tenant scoping, stated rather than implied.** Every one of them is built on `tenantFilter()`
   from `src/server/repos/base.ts`, which begins
-  `eq(table.organizationId, scope.ctx.organizationId)`; `collections`, `collection_labels` and
-  `collection_place_labels` each carry `organization_id NOT NULL` as the leading column of every
-  composite index, and `createTenantRepository` / `createTenantTableAccess` stamp it on insert. A
-  label row therefore cannot be written into another workspace even by a handler that forgot to
-  check.
+  `eq(table.organizationId, scope.ctx.organizationId)`. `collections`, `collection_labels` and
+  `collection_place_labels` each carry `organization_id NOT NULL` as a column, and the first two each
+  carry a composite index led by it — `collections_org_owner_idx` (`src/server/db/schema.ts:1220`)
+  and `collection_labels_org_collection_idx` (`:1287`). **The tenant column does not lead every
+  composite index on them, and on the join table it leads none**: `collection_labels_collection_sort_idx`
+  (`:1288`) leads with `collection_id`, and `collection_place_labels` indexes `organization_id` alone
+  (`:1306`) under a composite primary key of `(collection_place_id, label_id)` (`:1305`). None of that
+  is the safety argument and none of it is offered as one. **The safety argument is that
+  `createTenantRepository` / `createTenantTableAccess` stamp `organization_id` from `scope.ctx` on
+  every insert and omit it from the caller's payload type** (`src/server/repos/base.ts:196-200`), so
+  a label row cannot be written into another workspace even by a handler that forgot to check — the
+  handler is given no way to express the wrong workspace. What an index would buy is a narrower scan,
+  and this stage adds none.
 - **Server functions — `src/routes/_app/-server/collections.ts`**, all `POST`:
   `updateCollectionFn`, `deleteCollectionFn`, `setPlaceStatusFn`, `createLabelFn`, `deleteLabelFn`
   and `setPlaceLabelsFn`. Each returns the row the screen re-reads.
@@ -2831,9 +2872,13 @@ the feature, not an accident: a saved place survives the trip it came from being
   the enforced number.
 - **Tenant scoping, stated rather than implied.** Every read and write is built on `tenantFilter()`
   from `src/server/repos/base.ts`, which begins
-  `eq(table.organizationId, scope.ctx.organizationId)`; `collection_places` and
-  `collection_place_labels` each carry `organization_id NOT NULL` as the leading column of a
-  composite index, and the two-sided calls — save-from-trip, bulk copy, copy-to-trip — resolve
+  `eq(table.organizationId, scope.ctx.organizationId)`; `collection_places` carries
+  `organization_id NOT NULL` as the leading column of a composite index
+  (`collection_places_org_collection_idx`, `src/server/db/schema.ts:1258`) and
+  `collection_place_labels` carries it as a single-column index (`:1306`) — the join table's own
+  composite is its primary key, `(collection_place_id, label_id)`, which carries no tenant column, so
+  the guarantee here is the insert stamp of `src/server/repos/base.ts:196-200` and not the index. The
+  two-sided calls — save-from-trip, bulk copy, copy-to-trip — resolve
   **both** ids inside the caller's own scope before a single row is written, which is the property
   the isolation cases below exist to hold.
 - **Server functions — `src/routes/_app/-server/collections.ts`**, all `POST` except the first:
@@ -3351,7 +3396,7 @@ that already existed.
 `node scripts/ultrabuild/check-plan-collisions.mjs 08` — exit status `0`:
 
 ```
-plans 13 · stages 91 · owned paths 545
+plans 13 · stages 91 · owned paths 544
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -3379,11 +3424,28 @@ touched by more than one plan in different waves (3) — legal; each plan must n
 plan 08: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
 ```
 
-Both commands were re-run after this round's corrections to `08-S3`, `08-S4` and `08-S9` — three
-repository-behaviour claims that read confidently and were wrong, listed at the end of this section —
-and both blocks above are that re-run's verbatim output. The only figure that moved is the corpus
-total (`owned paths` 538 → 545, from sibling plans edited in the same round); this plan's own rows,
-and the verdict that matters, are identical.
+Both commands were re-run after this round's corrections to `08-S1`, `08-S3`, `08-S4` and `08-S9` —
+one miscounted move and three false claims about shipped schema, all six listed at the end of this
+section — and both blocks above are that re-run's verbatim output. The only figure that has moved
+across three re-runs is the corpus total (`owned paths` 538 → 545 → 544, from sibling plans edited in
+the same rounds); this plan's own rows, and the verdict that matters, are identical each time.
+
+**The move that the check could not see, and the reason this section now lists prose counts as well as
+paths.** `check-plan-collisions.mjs` reads **Owned paths**, so it can only find a collision both
+stages declare. This round's blocking finding was the opposite shape: the area-facing prose in `08-S1`
+and the `### Stage id` of `08-S3` both said `08-S3` moved **three** files out of
+`src/routes/_app/-ui/`, while the consolidated table under `08-S3`'s **UI** heading listed **two** and
+assigned `src/routes/_app/-ui/world-map.tsx` to `08-S2`. `08-S2` and `08-S3` are both wave 1, so an
+implementer who followed the prose would have had two concurrent stages moving one file — the exact
+same-wave exclusive collision the wave rule exists to prevent, and one the check reports as clean
+because only `08-S2` declares the path. The consolidated table is now the single authority: two rows,
+two source files, one owner each, and every other mention of the moves points at it rather than
+restating a count. The count is checkable by hand in one line, and it must equal the number of table
+rows:
+
+```sh
+grep -c '^  | `src/routes/_app/-ui/' docs/plans/08-product-modules.md
+```
 
 **One thing neither check verifies, learned the expensive way.** Both read stage _ids_; neither reads
 the _wave_ or the _status_ a citation attributes to a sibling stage. `08-S9` cited `MAP-02` as
@@ -3456,18 +3518,34 @@ The four stages the check reports as stating no parseable wave (`11-S1`, `11-S2`
 `04-S2`) belong to other plans; a stage with no wave is invisible to the check, and every stage in
 this file states one on its `### Stage id` line.
 
-### Three claims about shipped code that this file got wrong, and how each was measured
+### Six claims about shipped code that this file got wrong, and how each was measured
 
-Recorded here rather than silently corrected, because all three read as confident statements of fact
-and each would have sent an implementer to write a test that cannot pass. The rule they establish:
-**a nullable read and a throwing read are different contracts, and which one a repository function
-has is decided by whether it calls `findById` or `requireById` — read the body, never the name.**
+Recorded here rather than silently corrected, because every one of them read as a confident statement
+of fact and each would have sent an implementer to write a test that cannot pass. Two rules come out
+of them.
 
-| Was written                                                                | Is actually true                                                                                                                                                                                                                         | Measured by                                                                          |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `08-S3`: a foreign trip id resolved through `getTrip` is a `NotFoundError` | `getTrip` (`src/server/repos/trips.ts:223`) delegates to `findById` and returns `null`. The stage now names `tripsRepository.requireById` (`:45`)                                                                                        | `grep -n 'export async function getTrip' -A 3 src/server/repos/trips.ts`             |
-| `08-S4`: `getCollection` "resolves through `requireById` and throws"       | `getCollection` (`src/server/repos/collections.ts:159`) calls `findById` and returns `null`; the throw is on `collectionsRepository.requireById`                                                                                         | `grep -n 'export async function getCollection' -A 5 src/server/repos/collections.ts` |
-| `08-S4`: `setCollectionPlaceLabels` rejects a foreign **label** id         | It **drops** it and resolves: the label re-read is narrowed by `tenantFilter()` and by the place's own collection (`collections.ts:449-459`), and the returned array simply omits it. Only a foreign `collectionPlaceId` throws (`:446`) | `sed -n '440,472p' src/server/repos/collections.ts`                                  |
+**A nullable read and a throwing read are different contracts, and which one a repository function
+has is decided by whether it calls `findById` or `requireById` — read the body, never the name.** That
+is what the first three cost.
+
+**An index is a performance fact, never a tenant guard — and an index asserted from memory is usually
+wrong.** That is what the last three cost. The tenant guarantee in this repo is `tenantFilter()` on
+every read and the insert stamp at `src/server/repos/base.ts:196-200` on every write, and both hold
+whatever the indexes look like. Every index claim remaining in this file now names the index, its
+columns in order and its line in `src/server/db/schema.ts`, and can be re-checked in one command:
+
+```sh
+grep -n "index('journey_entries\|index('collection_\|index('vacay_user_years" src/server/db/schema.ts
+```
+
+| Was written                                                                                                                                                                                  | Is actually true                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Measured by                                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `08-S3`: a foreign trip id resolved through `getTrip` is a `NotFoundError`                                                                                                                   | `getTrip` (`src/server/repos/trips.ts:223`) delegates to `findById` and returns `null`. The stage now names `tripsRepository.requireById` (`:45`)                                                                                                                                                                                                                                                                                                                                                                                                | `grep -n 'export async function getTrip' -A 3 src/server/repos/trips.ts`             |
+| `08-S4`: `getCollection` "resolves through `requireById` and throws"                                                                                                                         | `getCollection` (`src/server/repos/collections.ts:159`) calls `findById` and returns `null`; the throw is on `collectionsRepository.requireById`                                                                                                                                                                                                                                                                                                                                                                                                 | `grep -n 'export async function getCollection' -A 5 src/server/repos/collections.ts` |
+| `08-S4`: `setCollectionPlaceLabels` rejects a foreign **label** id                                                                                                                           | It **drops** it and resolves: the label re-read is narrowed by `tenantFilter()` and by the place's own collection (`collections.ts:449-459`), and the returned array simply omits it. Only a foreign `collectionPlaceId` throws (`:446`)                                                                                                                                                                                                                                                                                                         | `sed -n '440,472p' src/server/repos/collections.ts`                                  |
+| `08-S1`: `vacay_user_years` is "already keyed on `(organization_id, plan_id, user_id, year)` with `organization_id` leading"                                                                 | No such index exists. The three shipped indexes are `vacay_user_years_plan_user_year_unq` on `(plan_id, user_id, year)` — no tenant column at all — `vacay_user_years_org_plan_idx` on `(organization_id, plan_id)` and `vacay_user_years_org_user_year_idx` on `(organization_id, user_id, year)`. The conclusion ("no index") survived, on the `(organization_id, plan_id)` prefix; the stated reason did not                                                                                                                                  | `awk 'NR>=1628 && NR<=1632 {print NR": "$0}' src/server/db/schema.ts`                |
+| `08-S3` and `08-S4`: `organization_id` is the leading column of **every** composite index on `journeys`, `journey_entries`, `collections`, `collection_labels` and `collection_place_labels` | It is not, on three of the five. `journey_entries_journey_date_idx` (`:1393`) and `journey_entries_journey_sort_idx` (`:1394`) lead with `journey_id`; `collection_labels_collection_sort_idx` (`:1288`) leads with `collection_id`; `collection_place_labels` has no composite index on the tenant column at all — `organization_id` alone (`:1306`), under a primary key of `(collection_place_id, label_id)` (`:1305`). `08-S4` had used the false premise as its tenant-safety argument; both stages now argue from the insert stamp instead | `awk '/= sqliteTable/{t=$0} /index\(/{print NR": "t" "$0}' src/server/db/schema.ts`  |
+| `08-S1` and `08-S3`: **three** files move out of `src/routes/_app/-ui/` and `08-S3` owns all three                                                                                           | **Two** do, and they have different owners in the same wave: `world-map.tsx` → `08-S2`, `create-dialogs.tsx` → `08-S3`. Followed as written, two wave-1 stages would have moved one file concurrently. The consolidated table under `08-S3`'s **UI** heading is now the only place the moves are counted                                                                                                                                                                                                                                         | `grep -c '^  \| .src/routes/_app/-ui/' docs/plans/08-product-modules.md`             |
 
 A fourth statement in `08-S4` described `setCollectionPlaceLabels` as replacing its join rows "inside
 `runBatch`". It does not — `grep -c runBatch src/server/repos/collections.ts` is `0`, and the shipped
