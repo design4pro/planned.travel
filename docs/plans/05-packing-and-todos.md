@@ -31,7 +31,10 @@ Two measurements that decide how the stages below are shaped:
   `deleteTemplate` (`:332`) and `createTemplateFromList` (`:379`) have no caller anywhere in `src/`
   outside `src/server/repos/__tests__/`. `grep -rn` over `src` for the three names returns
   `repositories.test.ts:63,64,331,340` and `tenant-isolation.test.ts:103,347` and nothing else. The
-  work in `05-S2` is therefore three server functions and a surface, not a repository.
+  work in `05-S2` is therefore two server functions and a surface, not a repository — and the shape of
+  that surface is decided by the same measurement, because the module exposes an insert and a delete
+  for a template and **no update at all**: renaming one, or flipping its `is_shared` column, has no
+  write path, so `05-S2` draws neither control and says so where a reader will look for it.
 - **The lists module constructs no `Intl` formatter.** A `grep -rn` for `Intl.` over
   `src/components/modules/lists/` and the lists route returns nothing. That matters for the gate: the
   seven ad-hoc `month: 'short'` call sites `12-verification-protocol.md` §7.2 defers on all render
@@ -1004,9 +1007,15 @@ than assuming it** in the Playwright case named under **Verification**.
 on `(organization_id, name)` (`src/server/db/schema.ts:955`), and `createTemplateFromList` defaults
 the template's name to the list's name (`:381-386`). Saving the same list twice therefore raises a
 SQLite `UNIQUE` violation, which reaches the browser as a 500 rather than as "you already have a
-template called that". The stage resolves the name before it inserts, using the bounded attempt loop
-`reserveTripSlug` already establishes in this codebase (`src/server/repos/trips.ts:162-179`), and the
-surface offers to overwrite instead when the collision is the user's own template.
+template called that". The stage never lets the insert be the thing that discovers the clash: it reads
+the workspace's templates first, and then takes one of two paths, each of which is a named composition
+of repository functions that already ship and neither of which needs one that does not. **Save as a
+copy** resolves a free name with the bounded attempt loop `reserveTripSlug` already establishes in this
+codebase (`src/server/repos/trips.ts:162-179`) and then calls `createTemplateFromList`
+(`src/server/repos/lists.ts:379`). **Replace** calls `deleteTemplate` (`:332`) on the clashing template
+and then `createTemplateFromList` under the freed name. Both are spelled out under **Server** with
+their ordering, the failure window the ordering creates, and the atomic version this stage
+deliberately does not build.
 
 **Deliberate divergence, stated loudly.** Upstream, applying a template merges its groups into the
 one packing list a trip has, by group name. Here a trip has many lists — `packing_lists` has shipped
@@ -1023,7 +1032,7 @@ its own and not a footnote on this one.
 
 ### Owned paths
 
-- `src/server/fns/list-templates.ts` — new. This stage's three server functions.
+- `src/server/fns/list-templates.ts` — new. This stage's two server functions.
 - `src/server/fns/__tests__/list-templates.test.ts` — new.
 - `src/components/modules/lists/list-dialogs.tsx` — edit. `TemplateDialog` gains the library.
 - `src/components/modules/lists/list-toolbar.tsx` — edit. The two template affordances. Created by
@@ -1039,6 +1048,14 @@ that already ship stay where they are; this stage adds three new ones in a modul
 imports the same repository. Nothing is duplicated: `src/server/fns/list-templates.ts` contains no
 copy of `loadListTemplatesFn` or `applyListTemplateFn`.
 
+**This stage owns no file under `src/server/repos`, and that is a constraint on what it may ship
+rather than a note about tidiness.** Every row it writes is written by a function that already exists
+in `src/server/repos/lists.ts`; where no such function exists, the affordance is not drawn. Two
+affordances fall on the wrong side of that line and are named where a reader will look for them — a
+rename control and a shared/private toggle, both of which would need an update this repository does
+not expose. They are filed as a follow-up under **Server**, with the signature they need, and they
+appear in no wireframe, no state list and no test in this stage.
+
 This stage adds no route file, so `pnpm generate-routes` is not one of its steps, and
 `src/routeTree.gen.ts` is not listed.
 
@@ -1050,18 +1067,43 @@ template, groups, rows — is expressed by this schema as template plus rows car
 two tables instead of three and is what the shipped `applyTemplateToTrip` already reads. No column, no
 index, no CHECK, no migration, nothing filed against `00-foundations.md`.
 
-`packing_templates.is_shared` (`:948`) already exists and already defaults to `true`. This stage gives
-it a meaning it has never had: `true` is a workspace template every member may apply, `false` is one
-only its creator sees. Both are read through the tenant scope, so neither is visible outside the
-workspace under any value.
+`packing_templates.is_shared` (`:948`) already exists and already defaults to `true`, and **this stage
+gives it no new meaning and never writes it.** `createTemplateFromList` does not forward an `isShared`
+value to `createTemplate` (`:379-397`), and no shipped function updates the column, so a
+shared/private toggle here would be a control with nothing behind it. Giving the column a meaning
+needs one repository write in `src/server/repos/lists.ts`; `05-S3` holds that module exclusively in
+wave 4 and `05-S5` in wave 5, so no wave this stage can be scheduled in is free to add it. It is filed
+as a follow-up under **Server**. Every template this stage writes is therefore a workspace template,
+which is what the column's default already says, and the library shows no badge claiming otherwise.
+Every template is read through the tenant scope, so none is visible outside the workspace under any
+value of the column.
 
 ### Server (repo, server function, Zod)
 
-**Repository.** No new SQL and no edit to `src/server/repos/lists.ts` — `05-S3` holds that module
-exclusively in wave 4, and this stage does not need it. It composes `createTemplate`,
-`createTemplateFromList`, `deleteTemplate`, `listTemplates` (`:296`) and `listTemplateItems` (`:300`),
-all of which are already tenant-scoped through `packingTemplatesRepository` and
-`packingTemplateItemsRepository` (`:43-46`).
+**Repository. No new SQL, no new repository function and no edit to `src/server/repos/lists.ts`** —
+`05-S3` holds that module exclusively in wave 4. Every write this stage performs is therefore a call
+to a function that already ships, and the whole set is three lines long:
+
+| Call                                                 | Where                           | What it writes                                                    |
+| ---------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------- |
+| `createTemplateFromList(scope, listId, name)`        | `src/server/repos/lists.ts:379` | one `packing_templates` row plus its `packing_template_items`     |
+| `deleteTemplate(scope, templateId)`                  | `:332`                          | removes one template; its rows go with it by FK cascade           |
+| `applyTemplateToTrip(scope, { templateId, tripId })` | `:342`                          | one `packing_lists` row plus its `packing_items`, already reached |
+
+The third already has a caller — `applyListTemplateFn` (`src/server/fns/lists.ts:314`) — and this
+stage neither adds nor edits it; it is listed because the surface this stage builds is where that
+write is invoked from. The reads are `listTemplates` (`:296`), `listTemplateItems` (`:300`) and
+`listTripLists` (`:121`). All of them are tenant-scoped through `packingListsRepository`, `packingTemplatesRepository`
+and `packingTemplateItemsRepository` (`:41-46`) — which is what makes the `organization_id` scoping
+of this stage a property of the code rather than a promise in a plan: those handles come from
+`createTenantRepository` (`src/server/repos/base.ts`), which stamps `organization_id` from the scope
+on every insert and omits it from the caller's payload type, and every read starts from
+`tenantFilter()`, whose first predicate is `eq(table.organizationId, scope.ctx.organizationId)` and
+which callers can only narrow. Neither of this stage's server functions can name a workspace, and
+neither has an `organizationId` in its input. None of the six calls is reached by calling a
+repository handle method from the server function: nothing under `src/server/fns/**` does that
+today — measured, `grep -rn 'Repository\.' src/server/fns src/routes/_app/-server` returns nothing —
+and this stage does not introduce the idiom.
 
 **The two functions this stage composes were both changed by `05-S1`, and it consumes the changed
 versions.** `applyTemplateToTrip` now mints `packing_categories` rows rather than writing group
@@ -1072,36 +1114,76 @@ representations. Neither signature changed, so this stage's call sites are unaff
 behaviour it depends on is `05-S1`'s and not HEAD's, which is why `05-S1` is named in **Blockers**
 below with a wave and not merely mentioned.
 
-**Server functions — `src/server/fns/list-templates.ts`, new**, each opening with `appScope()`:
+**Server functions — `src/server/fns/list-templates.ts`, new. Two, not three**, each opening with
+`appScope()`:
 
-| Function               | Method | Returns                           | Authorisation                                                                                 |
-| ---------------------- | ------ | --------------------------------- | --------------------------------------------------------------------------------------------- |
-| `saveListAsTemplateFn` | POST   | `{ templateId, name, itemCount }` | `requireTrip` on the trip, then `createTemplateFromList` resolves the list in the same scope  |
-| `deleteListTemplateFn` | POST   | `{ templateId }`                  | `deleteTemplate` → `requireRemove`, so a foreign id is a `NotFoundError` before anything runs |
-| `renameListTemplateFn` | POST   | `{ templateId, name }`            | `packingTemplatesRepository.requireUpdate` in the caller's scope                              |
+| Function               | Method | Input                            | Returns                                                                              | Authorisation                                                                                 |
+| ---------------------- | ------ | -------------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `saveListAsTemplateFn` | POST   | `{ tripId, listId, name, mode }` | `{ status: 'saved', templateId, name, itemCount }` or `{ status: 'conflict', name }` | `requireTrip` on the trip, then `createTemplateFromList` re-reads the list in the same scope  |
+| `deleteListTemplateFn` | POST   | `{ templateId }`                 | `{ templateId }`                                                                     | `deleteTemplate` → `requireRemove`, so a foreign id is a `NotFoundError` before anything runs |
 
 `saveListAsTemplateFn`'s subject is a template rather than a `packing_items` row, so it takes the
 list-shaped half of the plan-level realtime convention —
 `patch('trip', data.tripId, { listsChangedAt: Date.now() })` — and emits no item patch, because it
-created no item. The other two mirror nothing, because a template is workspace state and not trip
-state, and firing a trip patch for it would wake a Durable Object that has nothing to hear.
+created no item. `deleteListTemplateFn` mirrors nothing, because a template is workspace state and not
+trip state, and firing a trip patch for it would wake a Durable Object that has nothing to hear.
 
-**Name resolution, in the repository's caller rather than in SQL.** Before inserting,
-`saveListAsTemplateFn` counts templates in the caller's scope whose name equals the requested one. If
-one exists and `overwrite` is false, it returns `{ conflict: true }` and writes nothing — the surface
-then offers "Replace it" or "Save as a copy", and the copy path appends an ordinal until the unique
-index accepts it, bounded to eight attempts with a time-suffixed fallback, exactly as
-`reserveTripSlug` does. A UNIQUE violation must never reach the browser as a 500.
+**`mode` is the whole of the conflict behaviour, and each of its three values is a write path that
+exists.** It is `'new' | 'copy' | 'replace'`, and before any of them writes, the function reads
+`listTemplates(scope)` and looks for the requested name — a scoped read, case-insensitively compared
+so "Ski kit" and "ski kit" do not both slip past a comparison and then collide inside SQLite, whose
+unique index is case-sensitive.
 
-**Zod v4.** `z.strictObject()` on all three inputs; `tripId` and `listId` as the bounded id shape;
-`name` as `z.string().trim().min(1).max(120)` with an `error` message; `overwrite` as `z.boolean()`
-defaulting to `false`; `isShared` as `z.boolean()`. Validation is shape. The repository re-parses on
-the way in and that redundancy is kept.
+- **`'new'`** — the default, and what the save form sends first. If the name is free,
+  `createTemplateFromList(scope, listId, name)` writes the template. If it is taken, the function
+  returns `{ status: 'conflict', name }` **and writes nothing**; the dialog then offers the other two
+  values as the two buttons described under **UI**.
+- **`'copy'`** — resolve a free name by appending an ordinal (`Ski kit 2`, `Ski kit 3`, …) against the
+  names already read, bounded to eight attempts with a time-suffixed fallback exactly as
+  `reserveTripSlug` (`src/server/repos/trips.ts:162-179`) does, then
+  `createTemplateFromList(scope, listId, resolvedName)`. The resolved name is returned so the surface
+  can show it before it is committed.
+- **`'replace'`** — `deleteTemplate(scope, existing.id)` **and then**
+  `createTemplateFromList(scope, listId, name)`. Both functions ship, both are tenant-scoped: the
+  delete is a `requireRemove`, so a template belonging to another workspace is a `NotFoundError`
+  before anything is removed, and the create re-reads the list in the same scope. Deleting the old
+  template takes its rows with it — `packing_template_items.template_id` is `ON DELETE CASCADE`
+  (`src/server/db/schema.ts:967-969`), the same cascade `deleteList`
+  (`src/server/repos/lists.ts:220-222`) already relies on instead of deleting its items itself.
 
-**Nothing slow runs inline.** A template save is one read of a list's rows and one batched insert,
-both bounded by `MAX_ITEMS_PER_LIST` from `05-S1` and by `createTemplateInput.items`' own cap of 500
-(`src/server/repos/lists.ts:112`). There is no export, no email and no external call, so nothing is
-enqueued on `TASKS`.
+**The failure window that ordering creates, and why it is still the right ordering.** The delete has to
+come first: the unique index on `(organization_id, name)` will not accept the replacement while the
+original holds the name, and the only alternative — insert under a temporary name, delete the
+original, rename the replacement — needs an update this repository does not expose. So there is a
+window, one D1 round trip wide, in which the workspace holds neither template. The function does not
+swallow a failure inside it: it returns a distinct `template_replace_failed` result and the dialog says
+what happened in those terms — the old template was removed, the new one was not written, **the list it
+was made from is untouched**, and the same button retries. That last clause is the argument. A template
+is a copy of a list; the list is still on the screen behind the dialog, so the worst case costs one
+click and loses nothing the reader authored. This is stated here rather than discovered later.
+
+**The atomic version, filed and not built.** One repository function —
+`replaceTemplateFromList(scope, templateId, listId)`, whose delete and inserts go to `runBatch`
+(`src/server/repos/batch.ts:35`), which hands D1 one batch and therefore one transaction — closes
+that window completely. It belongs in `src/server/repos/lists.ts`, which `05-S3` holds exclusively in
+wave 4 and `05-S5` in wave 5, so no
+wave this stage can run in is free to take it. It is filed as a follow-up against this plan's hand-off
+together with `updateTemplateMeta(scope, templateId, { name?, isShared? })` — the same missing update
+seen from the other side, and what a rename control and a shared/private toggle would each need. **The
+follow-up is not a prerequisite of this stage and nothing here is written as though it had landed:
+there is no rename control and no shared/private switch in this library, and no test asserts one.**
+
+**Zod v4.** `z.strictObject()` on both inputs; `tripId`, `listId` and `templateId` as the bounded id
+shape; `name` as `z.string().trim().min(1).max(120)` with an `error` message; `mode` as
+`z.enum(['new', 'copy', 'replace'])` defaulting to `'new'`. Validation is shape and never
+authorisation — a well-formed template id is not an authorised one, which is why every path above
+lands on `requireTrip` or `requireRemove`. The repository re-parses on the way in and that redundancy
+is kept.
+
+**Nothing slow runs inline.** A save is one read of a list's rows and one batched insert; a replace
+adds one delete in front of it. Both are bounded by `MAX_ITEMS_PER_LIST` from `05-S1` and by
+`createTemplateInput.items`' own cap of 500 (`src/server/repos/lists.ts:112`). There is no export, no
+email and no external call, so nothing is enqueued on `TASKS`.
 
 ### UI (route, components)
 
@@ -1116,14 +1198,18 @@ enqueued on `TASKS`.
   rendered disabled with a tooltip here — an always-present control that is always disabled on a new
   workspace teaches people to ignore that corner of the toolbar.
 - `list-dialogs.tsx`'s `TemplateDialog` becomes the workspace library: a list of templates, each row
-  showing its name, its row count with `tabular-nums`, its four-name sample and its
-  workspace-or-private state, with **Apply**, **Rename** and **Delete** per row. Saving happens in the
-  same dialog on a second tab, so "keep this" and "reuse that" are one surface rather than two.
+  showing its name, its row count with `tabular-nums` and its four-name sample, with **Apply** and
+  **Delete** per row. Saving happens in the same dialog on a second tab, so "keep this" and "reuse
+  that" are one surface rather than two. **Two controls a reader might expect are deliberately
+  absent** — renaming a template and marking one private — because no shipped repository function can
+  perform either, and the follow-up that would add them is named under **Server**. A row therefore
+  carries exactly the two actions the repository can actually execute, and no badge asserts a
+  shared-or-private state the product cannot change.
 
 **Primitives reused:** `Dialog`, `Tabs` (its `segmented` variant, `tabs.tsx:189`), `Button`,
-`IconButton`, `Input`, `Field`, `Badge`, `Chip`, `Switch` for the workspace-or-private toggle,
-`EmptyState`, `Skeleton`, `Alert`, `Tooltip`, `Separator`, `ScrollArea`, `toast`. No new primitive,
-so nothing is filed against `src/components/ui`.
+`IconButton`, `Input`, `Field`, `Badge`, `Chip`, `EmptyState`, `Skeleton`, `Spinner`, `Alert`,
+`Tooltip`, `Separator`, `ScrollArea`, `toast`. No new primitive, so nothing is filed against
+`src/components/ui`.
 
 **States.**
 
@@ -1135,17 +1221,30 @@ so nothing is filed against `src/components/ui`.
   called on open, so this state is genuinely reached on every slow connection.
 - **Error:** `Alert` with `tone="danger"` inside the dialog body, naming the failure and offering
   "Try again"; the dialog stays open, because closing it would lose the name the user typed.
-- **Conflict:** not an error state — an inline `Alert` with `tone="warning"` and two buttons,
-  "Replace it" and "Save as a copy", with the copy's resolved name shown before it is committed.
+- **Conflict:** not an error state — an inline `Alert` with `tone="warning"` reading "You already have
+  a template called Ski kit", and two buttons that send the two remaining `mode` values: **Replace it**
+  (`mode: 'replace'`) and **Save as a copy** (`mode: 'copy'`), the second showing the resolved name the
+  server computed — "Saves as Ski kit 2" — before it is committed. The primary of the two is the copy,
+  because it is the one that cannot lose anything.
+- **Replace confirmation:** Replace it is destructive and says so before it runs — a nested
+  confirmation naming the template it removes and its row count, on the same pattern as the delete
+  confirmation below, and its button reads "Replace" rather than "OK". While it runs, the button holds
+  a `Spinner`; the pair of buttons is `disabled` for the duration so a second click cannot start a
+  second delete.
+- **Replace failed:** the one state the ordering under **Server** makes possible — `Alert` with
+  `tone="danger"`, reading that the old template was removed, the new one was not saved and the list is
+  unchanged, with a "Save again" button that re-sends `mode: 'new'`, which now finds the name free.
+  This state is reachable in a test and is asserted there rather than being assumed rare.
 - **Delete confirmation:** a nested confirmation inside the dialog naming the template and its row
-  count, because deleting a template is the one action here that cannot be undone.
+  count, because deleting a template cannot be undone.
 - **Loading:** the row's own Apply button becomes `disabled` with a `Spinner` in place of its icon;
   the rest of the library stays interactive.
 
 **Interaction states** — hover, `focus-visible`, active, disabled, loading — on all of: the two
-toolbar controls, the tab triggers, every per-row action, the save form's submit, the workspace
-toggle, and the confirmation's two buttons. The dialog traps focus, restores it to the trigger on
-close and closes on Escape, which `Dialog` already provides and this stage does not re-implement.
+toolbar controls, the tab triggers, every per-row action, the save form's submit, the conflict
+`Alert`'s two buttons, and each confirmation's two buttons. The dialog traps focus, restores it to
+the trigger on close and closes on Escape, which `Dialog` already provides and this stage does not
+re-implement.
 
 **Motion.** The dialog's own enter/exit is the primitive's (220ms in, 150ms out, `--ease-out-quint`);
 the tab's active pill slides at `--duration-fast`; a saved row enters with a 24ms-staggered fade
@@ -1165,7 +1264,10 @@ capped measure; the library does not grow to fill a 2560px viewport.
 table (`schema.ts:323`).
 
 The bound this stage enforces instead: `MAX_TEMPLATES_PER_WORKSPACE = 100`, checked with a scoped
-`count()` in `saveListAsTemplateFn` before the insert, raising the module's validation error. A
+`count()` in `saveListAsTemplateFn` before the insert, raising the module's validation error. The
+check is skipped for `mode: 'replace'` — it deletes one template before it writes one, so the count
+cannot rise, and refusing a replace at the ceiling would strand a full workspace with no way to
+update a template it already has. A
 template's own row count is already bounded at 500 by `createTemplateInput.items`
 (`src/server/repos/lists.ts:112`), so the worst case a workspace can reach is bounded on both axes.
 
@@ -1176,10 +1278,10 @@ Appended to `src/server/repos/__tests__/tenant-isolation.test.ts` as one new `de
 this block needs is present.
 
 Covered: `listTemplates` in A's scope never returns B's template; `listTemplateItems` with B's
-`templateId` returns nothing; `deleteTemplate` and the rename path with B's `templateId` are
-`NotFoundError`; `createTemplateFromList` with B's `listId` is a `NotFoundError` and writes no
-template row. Afterwards B's template is re-read by id in B's scope and its name and row count are
-unchanged.
+`templateId` returns nothing; `deleteTemplate` with B's `templateId` is a `NotFoundError`, which is
+also what makes `mode: 'replace'` safe across tenants, since that is the call it starts with;
+`createTemplateFromList` with B's `listId` is a `NotFoundError` and writes no template row.
+Afterwards B's template is re-read by id in B's scope and its name and row count are unchanged.
 
 **`applyTemplateToTrip` is deliberately absent from this block**, and that is not an omission this
 stage can be read as having made. `05-S1` gives that function a raw `scope.db.insert` for the
@@ -1196,11 +1298,23 @@ than strings.
 **Command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
 **Unit tests.** `src/server/fns/__tests__/list-templates.test.ts` — saving a list produces a template
-whose row count equals the list's; saving the same list twice without `overwrite` returns
-`{ conflict: true }` and writes nothing; with `overwrite` it replaces the rows and keeps one template;
-the copy path appends an ordinal and never raises a UNIQUE violation; the eight-attempt bound falls
-back to a time-suffixed name rather than looping; `MAX_TEMPLATES_PER_WORKSPACE` raises at the ceiling
-and not one row before it.
+whose row count equals the list's; saving the same list twice with `mode: 'new'` returns
+`{ status: 'conflict' }`, writes nothing, and leaves the first template's rows byte-identical;
+`mode: 'copy'` appends an ordinal, never raises a UNIQUE violation and leaves **two** templates; the
+eight-attempt bound falls back to a time-suffixed name rather than looping; a name differing only in
+case is treated as a clash rather than inserted beside the original; `MAX_TEMPLATES_PER_WORKSPACE`
+raises at the ceiling and not one row before it.
+
+**The replace path gets three cases of its own**, because it is the one composition in this stage that
+writes twice. `mode: 'replace'` leaves exactly one template with that name, whose rows equal the
+list's current rows and whose id is **new** — the assertion that distinguishes a real replace from an
+update this repository cannot perform, and the reason the dialog re-reads the library afterwards
+rather than patching a row in place. The old template's `packing_template_items` are gone, asserted by
+counting rows for the retired id, which is what proves the FK cascade is doing the work the plan says
+it does rather than leaving orphans. And with `createTemplateFromList` stubbed to reject, the function
+returns `template_replace_failed`, the workspace has no template of that name, the source list still
+has every one of its items, and re-sending `mode: 'new'` succeeds — the recovery path stated under
+**Server**, executed rather than promised.
 
 **Two cases that assert the behaviour this stage inherits rather than owns**, in the same file,
 because a dependency nobody checks is a dependency that silently regresses. Applying a template whose
@@ -1226,7 +1340,7 @@ asserted empty in every test in the block, including the frame-only ones.
 `TOLERATED_CONSOLE_WARNINGS` is not extended.
 
 **Frames.** This stage's outcome is entirely a non-resting state, so the resting board set is owed
-_and_ three declared sets are:
+_and_ five declared sets are:
 
 ```sh
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
@@ -1237,8 +1351,10 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
 ```
 
 and again with `--state save --click '[data-part="template-save"]'` and with `--state conflict`,
-which the spec reaches by saving twice. A fourth, `--state applied`, photographs the list an apply
-produced — this stage's actual outcome, and the frame in which a regressed writer migration would be
+which the spec reaches by saving twice and which photographs the warning `Alert` and its two buttons;
+a fourth, `--state replace-confirm`, clicks **Replace it** and photographs the confirmation before it
+runs, because a destructive step nobody looked at is a destructive step nobody designed. A fifth,
+`--state applied`, photographs the list an apply produced — this stage's actual outcome, and the frame in which a regressed writer migration would be
 visible rather than merely asserted: a legacy header has no chevron and no avatar stack, so the
 difference is in the picture. The same test asserts
 `page.locator('[data-part="category-legacy"]').count()` is `0` inside that list and that every group
@@ -2475,7 +2591,7 @@ broken on the other.
 
 ```
 $ node scripts/ultrabuild/check-plan-collisions.mjs 05
-plans 13 · stages 91 · owned paths 543
+plans 13 · stages 91 · owned paths 545
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -2569,12 +2685,15 @@ symptom is an unexplained entry in that list rather than an error.
 1. **The header counts will not reproduce.** They read `plans 8 · stages 48 · owned paths 284` when
    this file was started, `plans 12 · stages 71 · owned paths 448` twenty minutes later,
    `plans 13 · stages 80 · owned paths 498` a round after that, `plans 13 · stages 91 · owned
-paths 553` a round after that, and `plans 13 · stages 91 · owned paths 543` on the run pasted
-   above, because sibling plans were being written and revised by other agents in the same window.
-   `03-reservations-and-transport.md`'s claim on the trip loader appeared between two of those runs,
-   and the 553 → 543 step happened between two runs ten minutes apart during this revision, with no
-   owned-path bullet in **this** file changed by either: `git status --porcelain docs/plans/` at that
-   moment listed `02`, `03`, `04` and `09` as modified alongside this file. The counts are a snapshot
+paths 553` a round after that, `plans 13 · stages 91 · owned paths 543` a revision after that, and
+   `plans 13 · stages 91 · owned paths 545` on the run pasted above, which is the current one —
+   because sibling plans were being written and revised by other agents in the same window.
+   `03-reservations-and-transport.md`'s claim on the trip loader appeared between two of those runs;
+   the 553 → 543 step happened between two runs ten minutes apart during an earlier revision and the
+   543 → 545 step between that revision and this one, with no owned-path bullet in **this** file
+   changed by any of them — this revision removed a server function from `05-S2` and changed no path
+   it owns. `git status --porcelain docs/plans/` at those moments listed `02`, `03`, `04` and `09` as
+   modified alongside this file. The counts are a snapshot
    of a set several agents are still writing. The three findings under them are properties of **this**
    file's ownership and hold until a sibling changes what it claims.
 2. **A clean result is perishable, so re-running both is part of this plan's gate.** The stage that

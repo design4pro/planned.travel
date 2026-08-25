@@ -1924,18 +1924,29 @@ Rows unblocked: none. No row lists `BKG-01` in its `dependsOn`.
 - `src/components/modules/book/grouping.ts` — edit. A second grouping beside the one it already has.
 - `src/components/modules/book/__tests__/grouping.test.ts` — edit. Extended, never rewritten.
 - `src/components/modules/transports/legs-timeline.tsx` — edit. The leg card's booking code obeys the
-  same preference. This plan's fourth claim on that file, at wave 4; `03-S1` holds it in wave 1 and
-  `03-S2` in wave 2.
-- `src/routes/_app/trips/$tripId/book.tsx` — edit. Passes the reader's preference through.
-- `src/server/fns/reservations.ts` — edit. The desk payload carries the marker and the preference.
-  Shared with `00-S3` (`00-foundations.md`, wave 0) and `03-S4` (wave 3).
+  same preference, taking it as a prop; a `components/modules` component never fetches. This plan's
+  fourth claim on that file, at wave 4; `03-S1` holds it in wave 1 and `03-S2` in wave 2.
+- `src/routes/_app/trips/$tripId/transports.tsx` — edit. The loader reads the preference beside the
+  transport desk and hands it to `LegsTimeline`. Owned here because without it the leg card's mask has
+  no channel: `src/server/fns/transports.ts` and `src/routes/_app/-server/trip.ts` are both held by
+  earlier waves of this plan and neither is claimable at wave 4, so the preference reaches the
+  transports tab through the route or not at all. This plan's third claim on that file, at wave 4;
+  `03-S1` holds it in wave 1 and `03-S2` in wave 2. **No sibling plan claims it in any wave**, which
+  is why it does not appear in the collision check's cross-plan list.
+- `src/routes/_app/trips/$tripId/book.tsx` — edit. The loader reads the same preference beside the
+  desk payload, in one `Promise.all`, and passes it through.
+- `src/server/fns/reservations.ts` — edit. The desk payload carries the import marker. Shared with
+  `00-S3` (`00-foundations.md`, wave 0) and `03-S4` (wave 3).
 - `src/routes/_app/settings/appearance.tsx` — edit. The switch, in the section that already holds the
   reader's display choices. Shared with `02-S2` (`02-places-and-maps.md`, wave 1, the basemap
   catalogue) and `09-S8` (`09-account-and-settings.md`, wave 3); three stages, three waves.
-- `src/routes/_app/-server/settings.ts` — edit. The writer widens by one field. Shared with `00-S3`
-  (`00-foundations.md`, wave 0), `02-S2` (wave 1), `09-S7` (wave 2) and `09-S8` (wave 3), all earlier.
-- `src/server/repos/settings.ts` — edit. `updateUserSettingsInput` widens; no new function. Shared with
-  `02-S2` (wave 1) and `09-S8` (wave 3).
+- `src/routes/_app/-server/settings.ts` — edit. The appearance loader and the appearance writer each
+  widen by one field, and one small reader — `loadDisplayPreferences` — is added for the two trip tabs.
+  Shared with `00-S3` (`00-foundations.md`, wave 0), `02-S2` (wave 1), `09-S7` (wave 2) and `09-S8`
+  (wave 3), all earlier.
+- `src/server/repos/settings.ts` — edit. Three edits in one file — the write validator, the
+  `EffectiveSettings` interface and the object literal `getEffectiveSettings` returns — and no new
+  function. Shared with `02-S2` (wave 1) and `09-S8` (wave 3).
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append.
 - `e2e/reservations-and-transport.visual.spec.ts` — append.
 - `e2e/__screenshots__/reservations-and-transport.visual.spec.ts/` — append.
@@ -1989,18 +2000,78 @@ wave-3 schema stage for this stage, `imported_at` on the wave-2 one for `03-S4` 
 
 ### Server (repo, server function, Zod)
 
-**Repository — `src/server/repos/settings.ts`.** `updateUserSettingsInput` gains
-`maskConfirmationCodes: z.boolean().optional()`. No new function: `getEffectiveSettings` already
-merges the workspace default with the traveller's override and already returns the whole row, so the
-new field arrives everywhere the old ones do. The workspace-level default is deliberately **not**
-added — a workspace cannot decide on a member's behalf whether their own screen is shoulder-safe.
+**Repository — `src/server/repos/settings.ts`. Three edits, none of them optional, and no new
+function.**
 
-**Server function — `src/server/fns/reservations.ts`.** Two changes.
+- `updateUserSettingsInput` gains `maskConfirmationCodes: z.boolean().optional()`, one line beside
+  `reduceMotion: z.boolean().optional()` at `:134`. Without it the key never survives the write:
+  `updateUserSettings` (`:211-222`) passes its input through `updateUserSettingsInput.parse`, and a
+  `z.object` **strips** an unknown key rather than refusing it, so the switch would report success and
+  save nothing.
+- `EffectiveSettings` gains `readonly maskConfirmationCodes: boolean`, beside
+  `readonly reduceMotion: boolean` at `:249`.
+- The object literal `getEffectiveSettings` returns gains one more key,
+  `maskConfirmationCodes: user?.maskConfirmationCodes ?? false`, in the idiom of
+  `reduceMotion: user?.reduceMotion ?? false` at `:283`.
 
-- `loadBookingDeskFn` gains two fields on its payload: `maskCodes: boolean`, read from the caller's
-  own effective settings, and `importedAt` per booking row. Neither is a new query: the settings read
-  is one row by `(organization_id, user_id)` on an existing unique index, and the marker rides on the
-  reservation row already being selected.
+**Why the third edit exists, stated because the sentence it replaces was false.** An earlier revision
+of this stage claimed `getEffectiveSettings` "already returns the whole row, so the new field arrives
+everywhere the old ones do". It does not, and the difference is the whole feature. Measured at
+`src/server/repos/settings.ts:254-287`: the function reads two rows under one `Promise.all` and then
+**hand-builds an object literal, field by field** — twelve named keys, no spread of either row, so
+every value it exposes is a value someone wrote out. A column added to `user_settings` and to the
+write validator therefore reaches **no reader at all** until the interface and that literal both name
+it, and this stage would have shipped a switch that writes a boolean nothing can ever read: a dead
+masking feature that passes `pnpm typecheck`, `pnpm lint` and a row-level test.
+
+`reduce_motion` is the precedent for the whole chain and shows how many sites a display preference has
+to be named in — the column (`src/server/db/schema.ts:1842`), the write validator (`:134`), the
+interface (`:249`), the returned literal (`:283`), the appearance payload type
+(`src/routes/_app/-server/settings.ts:237`), the payload literal (`:253`), the writer's validator
+(`:265`) and the writer's pass-through (`:273`). Eight, and this preference needs the same eight plus
+the one reader below. The regression test is in **Tenant isolation test**, and it asserts through
+`getEffectiveSettings` rather than through the stored row for exactly this reason.
+
+The workspace-level default is deliberately **not** added — a workspace cannot decide on a member's
+behalf whether their own screen is shoulder-safe — so `organization_settings` is untouched,
+`updateOrganizationSettingsInput` gains nothing, and the `?? false` above is the whole precedence
+rule.
+
+**Scoping, because this stage does write a row.** `user_settings` carries `organization_id NOT NULL`
+(`src/server/db/schema.ts:1831`, through `orgRef()`) and is reached only through
+`userSettingsRepository`, built by `createTenantRepository(userSettings, 'user settings')`
+(`src/server/repos/settings.ts:57`). So `updateUserSettings` matches on
+`organization_id = scope.ctx.organizationId` before the row id can be considered, and the insert
+`ensureUserSettings` may make stamps the same value rather than accepting one from the caller. The
+row is always located by `(scope.ctx.organizationId, scope.ctx.userId)`; no user id, organization id
+or settings row id crosses the wire from the client, and this stage adds no raw `db.select()`
+anywhere — SQL stays in `src/server/repos`.
+
+**Server function — `src/routes/_app/-server/settings.ts`. Four edits and one new reader.**
+
+- `AppearancePayload` gains `readonly maskConfirmationCodes: boolean` (`:237` idiom) and
+  `loadAppearance` fills it from `userRow.maskConfirmationCodes` (`:253` idiom), which is what puts the
+  switch's current position on the appearance screen.
+- `saveAppearance`'s validator gains `maskConfirmationCodes: z.boolean().optional()` (`:265` idiom)
+  and its handler forwards it into `updateUserSettings` (`:273` idiom). Authorisation is unchanged and
+  is the point: the preference is written for the **session's own** user id through `appScope()`,
+  never for a user id the client names.
+- `loadDisplayPreferences` is added — a `createServerFn({ method: 'GET' })` returning
+  `{ readonly maskConfirmationCodes: boolean }` read from `getEffectiveSettings(await appScope())`. It
+  is the single channel both trip tabs use, so the precedence rule stays in the repository and no
+  screen re-derives it. Its cost is measured rather than assumed: `getEffectiveSettings` runs
+  `ensureOrganizationSettings` and `getUserSettings` under one `Promise.all`
+  (`src/server/repos/settings.ts:258-261`), two single-row reads on indexes that already exist, and
+  `ensureOrganizationSettings` inserts the workspace settings row on a workspace that has never opened
+  the settings screen (`:163-164`) — idempotent, at most once ever, and the same ensure that
+  `-server/settings.ts:121` already makes.
+
+**Server function — `src/server/fns/reservations.ts`. The marker, and only the marker.**
+
+- `loadBookingDeskFn` gains `importedAt` per booking row. That is not a new query: the marker rides on
+  the reservation row already being selected. It carries **no** masking flag — an earlier draft put
+  `maskCodes` on this payload, which would have left the transports tab needing a second,
+  differently-shaped copy of one boolean. One value, one reader, one shape.
 - `updateBookingFn` calls `clearReservationImported(scope, reservation.id)` **after** the update has
   succeeded and inside the same handler, so that saving a booking is what clears its marker. It is
   called unconditionally rather than behind a "was it set" read: the function is idempotent, a second
@@ -2010,19 +2081,18 @@ added — a workspace cannot decide on a member's behalf whether their own scree
   effect `03-S4` adds reports `ledger: 'failed'`; the desk surfaces it as a warning rather than
   turning a saved booking into an error a reader will retry into a duplicate.
 
-**Server function — `src/routes/_app/-server/settings.ts`.** The existing appearance writer accepts
-one more boolean. Its authorisation is unchanged and is the point: a preference is written for the
-**session's own** user id, never for a user id the client names.
-
 **Zod.** v4 idiom, `z.boolean()`, no coercion — a checkbox that posts the string `"false"` is a client
 bug and must fail loudly rather than be coerced into `true`.
 
-**Nothing is enqueued.** All three reads are single-row.
+**Nothing is enqueued.** Every read this stage adds is a single row, by primary key or by an index
+that already exists.
 
 ### UI (route, components)
 
-**Route.** None added or moved; `pnpm generate-routes` is not run and `src/routeTree.gen.ts` is not an
-owned path.
+**Route.** Two route files are edited in place — `src/routes/_app/trips/$tripId/book.tsx` and
+`src/routes/_app/trips/$tripId/transports.tsx` — and each loader gains one parallel server-function
+call. **No route file is added, moved or renamed**, so `pnpm generate-routes` is not run and
+`src/routeTree.gen.ts` is not an owned path.
 
 **Components.** `Switch`, `Chip`, `Badge`, `Button`, `IconButton`, `Tooltip` and `EmptyState` from
 `src/components/ui`; `FilterRow`, `ModulePanel` and `CopyValue` from `src/components/modules/shared`;
@@ -2052,8 +2122,22 @@ store.**
   masked run of the same character count, revealed on hover, on focus and on tap, and never copied
   into the DOM as plain text before the reveal. It stays selectable and stays copyable through the
   existing `CopyValue` control, because masking is about a shoulder, not about the reader's own
-  clipboard. The same rule applies to a leg's booking code on the transports tab, which is why that
-  file is owned here.
+  clipboard. The same rule applies to a leg's booking code on the transports tab, and the flag gets
+  there the same way it gets to the desk: `legs-timeline.tsx` takes `maskCodes` as a required prop —
+  a `components/modules` component never fetches and never imports from `server/` — and
+  `transports.tsx` supplies it from `loadDisplayPreferences`, called in the same `Promise.all` as the
+  transport desk loader so the tab still settles in one round trip. That is why both files, and the
+  route, are owned here.
+- **The switch that turns it on**, on the appearance screen, as a `SettingsRow` whose control is a
+  `Switch` labelled "Hide confirmation codes until I ask", with a one-line hint that says what it
+  protects and what it does not — codes yes, prices no. It carries
+  `data-part="mask-confirmation-codes"` so the capture can reach the preference the way a reader
+  would, and it saves in the idiom the reduce-motion row already uses
+  (`src/routes/_app/settings/appearance.tsx:153-171`): local state moves first, `saveAppearance`
+  follows, and a failure leaves the switch where the reader put it with an inline retry rather than
+  snapping back. It joins whichever section `09-S8` leaves behind when it rebuilds that screen one
+  wave earlier — today the row would sit in `Motion and maps`, which is a section name this stage
+  does not assume will survive.
 
 **States.**
 
@@ -2109,6 +2193,18 @@ handed to A's own write is rejected rather than honoured. B's row is re-read aft
 `clearReservationImported` itself, are already covered by the block `03-S4` appends — this stage
 calls that function and does not define it — so neither is duplicated here.
 
+**One case in that block is not about isolation, and it belongs there because this is the only test
+file this stage owns.** A writes `maskConfirmationCodes: true` through `updateUserSettings`; then
+`(await getEffectiveSettings(alpha.tenant.scope)).maskConfirmationCodes` must be `true` and
+`(await getEffectiveSettings(beta.tenant.scope)).maskConfirmationCodes` must be `false`, in the
+`alpha.tenant.scope` / `beta.tenant.scope` idiom that file's settings block already uses. The assertion is
+deliberately made through the **merge** and not through the stored row: a column that reaches
+`user_settings` but never reaches the literal at `src/server/repos/settings.ts:268-286` passes a row
+assertion and fails this one, which is precisely the defect an earlier revision of this stage was
+about to ship. The file already imports `getEffectiveSettings` (`:130`) and already asserts on it for
+locale (`:1163`, `:1176-1177`), so the case is one more `expect` in an established idiom rather than
+new machinery.
+
 ### Verification
 
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
@@ -2121,7 +2217,8 @@ calls that function and does not define it — so neither is duplicated here.
   group rather than the unfiltered list.
 - New cases in the same file for the mask: a code of nine characters masks to nine; an empty code
   masks to nothing rather than to a row of dots that implies a code exists.
-- `src/server/repos/__tests__/tenant-isolation.test.ts` — the block above.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — the block above, including the
+  `getEffectiveSettings` case, which is the one test that would have caught the dead field.
 
 **Browser evidence.** Route `/trips/demo-trip-01-tokyo-and-kyoto/book`, six frames at 360, 1280 and
 2560 in both themes, plus **three declared states**, because three of this stage's four behaviours are
@@ -2136,6 +2233,15 @@ Every selector is an attribute this stage adds and every one is proven to resolv
 assertion in the spec before a frame is filed. The resting set is still owed: a collapsed group is
 judged against the expanded one it came from. `PT_SERVER_TODAY=2026-08-20`, invocation as `03-S1`
 quotes it.
+
+**And two frames of the second obeying surface**, route
+`/trips/demo-trip-01-tokyo-and-kyoto/transports` at 1280 in both themes with the preference on, as
+`--state code-masked`. A frame of the desk says nothing about whether the leg card obeys the switch,
+and a preference that half the product ignores is the defect a critic files first. The preference is
+set for the seeded reader before the frame is taken, through the appearance screen's own switch
+(`--click '[data-part="mask-confirmation-codes"]'` on `/settings/appearance`) rather than by writing
+the row from the spec, so the frame is evidence about the whole chain — switch, writer, merge, reader
+— and not only about the renderer.
 
 **Console** silent, `fatal` empty, no addition to `TOLERATED_CONSOLE_WARNINGS`. **Layout shift** after
 the settle mark asserted `0` on Chromium — the disclosure and the reveal are both `hadRecentInput` and
@@ -2176,9 +2282,12 @@ file and replaces its two local formatters with `formatWeekday` and `formatDate`
 `src/lib/format.ts` itself is not edited and is not an owned path. Disposition: **substitute**.
 
 **One dependency on another plan, satisfied by the wave order.** `ACC-04` is closed by `09-S8`
-(`09-account-and-settings.md`, wave 3), which builds the appearance screen this stage adds a switch
-to; this stage is wave 4. If `09-S8` has not landed, this stage ships the desk and holds the switch,
-rather than adding a control to a screen that is about to be rebuilt.
+(`09-account-and-settings.md`, wave 3), which builds the appearance screen this stage adds a row to;
+this stage is wave 4, so it lands on the rebuilt screen. If `09-S8` has **not** landed, this stage
+still ships the row on `appearance.tsx` as it stands: the row is additive, the reduce-motion row two
+lines above it proves the idiom, and `09-S8` carries it across when it rebuilds. Holding the switch
+and shipping the masking would be the same defect this stage was rejected for once already, in
+mirror image — a reader that no writer can reach. Disposition: **substitute**, never defer.
 
 No package outside the pinned set, no binding absent from `wrangler.jsonc`, no third-party service.
 
@@ -2867,7 +2976,7 @@ is a measurement.
 ### `node scripts/ultrabuild/check-plan-collisions.mjs 03`
 
 ```
-plans 13 · stages 91 · owned paths 543
+plans 13 · stages 91 · owned paths 545
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -3017,8 +3126,9 @@ stage already sat. And `src/components/modules/book/booking-dialog.tsx` became a
 `06-documents-and-media.md` claimed it for `06-S6` in wave 4 while this file was being revised — the
 three claims are in three different waves, so it is legal, and all three now name the other two.
 
-Two paths this plan claims are absent from the list because **no sibling plan claims them at all**:
-`src/server/repos/transports.ts` (`03-S1` w1, `03-S2` w2, `03-S5` w4) and
+Three paths this plan claims are absent from the list because **no sibling plan claims them at all**:
+`src/server/repos/transports.ts` (`03-S1` w1, `03-S2` w2, `03-S5` w4),
+`src/routes/_app/trips/$tripId/transports.tsx` (`03-S1` w1, `03-S2` w2, `03-S6` w4) and
 `src/server/repos/reservations.ts` (`03-S4` w3). The second of those is worth reading twice, because
 its absence from the collision list is also a **constraint**: `03-S4` is the only stage in the plan
 set that may edit it, in any wave, so every write to a `reservations` column that any later stage of
@@ -3059,12 +3169,16 @@ All eight stages of this file state their wave in the parsed form, so none is in
 several runs are still writing. While this file was being written the check reported, in order,
 `plans 8 · stages 48`, `plans 9 · stages 56`, `plans 13 · stages 80`, `plans 13 · stages 84`,
 `plans 13 · stages 87`, `plans 13 · stages 91 · owned paths 550`, `plans 13 · stages 91 · owned
-paths 538`, `plans 13 · stages 91 · owned paths 544` and, on the revision that produced the section
-you are reading, `plans 13 · stages 91 · owned paths 543` — the unique-path count moved by fifteen
-between two runs minutes apart, and twice more on revisions that added **no owned path to this file
-at all**. The last of those was measured directly: the check was re-run against this file's own
-previous revision, unmodified, and returned `543` as well, so the drop came from a sibling plan and
-not from anything here. Sibling plans were dirty in the working tree throughout.
+paths 538`, `plans 13 · stages 91 · owned paths 544`, `plans 13 · stages 91 · owned paths 543` and,
+on the revision that produced the section you are reading, `plans 13 · stages 91 · owned paths 545`.
+The unique-path count moved by fifteen between two runs minutes apart, and three times more on
+revisions that added **no unique owned path to this file at all** — the last of them is the revision
+that repaired `03-S6`, which added one owned-path bullet,
+`src/routes/_app/trips/$tripId/transports.tsx`, on a path `03-S1` had already claimed, so it added
+nothing to `byPath` and the total still rose by two. The `544` → `543` step was measured the same way:
+the check was re-run against this file's own previous revision, unmodified, and returned `543` as
+well, so the drop came from a sibling plan and not from anything here. Sibling plans were dirty in the
+working tree throughout.
 So the header will not reproduce, and it is not the part that matters. The findings under it are
 properties of **this** file's ownership and hold only until a sibling changes what it claims. Any
 agent executing a stage of this file therefore **re-runs both scripts before it writes a line**, reads

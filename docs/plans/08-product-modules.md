@@ -902,9 +902,12 @@ from `newId()`. No migration, no backfill, no index.
   `updateJourney` (`:516`), `publishJourney` (`:534`) / `unpublishJourney` (`:546`) and
   `deleteJourney` (`:556`). Two are added, both built on `tenantFilter()` and the module's existing
   repository objects:
-  - `listJourneyTripIds(scope, journeyId)` — the distinct `source_trip_id` across the journal's
-    entries, unioned with `journeys.trip_id`. One indexed read on
-    `journey_entries_org_journey_idx`.
+  - `listJourneyTripIds(scope, journeyId)` — resolves the journal through
+    `journeysRepository.requireById(scope, journeyId)` (`src/server/repos/journey.ts:63`), then reads
+    the distinct `source_trip_id` across the journal's entries, unioned with `journeys.trip_id`. One
+    indexed read on `journey_entries_org_journey_idx`. It resolves the parent first **so that a
+    foreign journal id throws rather than returning `[]`** — an empty array and a refusal are
+    different answers and the tenant test asserts the refusal.
   - `importTripPlaceAnchors(scope, journeyId, tripId)` — resolves both ids inside the scope, reads
     the trip's places, and inserts one `type: 'place'` entry per place that the journal does not
     already anchor, carrying `source_trip_id`, `source_place_id`, `location_name`, the lat/lng pair
@@ -929,10 +932,14 @@ from `newId()`. No migration, no backfill, no index.
 - **Authorisation, decided in the handler.** `journeys.owner_user_id` decides destructive actions:
   deleting a journal or changing its status is the owner's, and any member of the workspace may
   import anchors into a journal they can see. Both ids are resolved through
-  `journeysRepository.requireById(scope, …)` and `getTrip(scope, …)` first, so a well-formed id from
-  another workspace is a `NotFoundError` before any rule is applied — a well-formed id is not an
-  authorised id. Deleting is confirmed on the client and irreversible on the server; the copy says
-  so, and `journey_entries` and `journey_photos` cascade with the row.
+  `journeysRepository.requireById(scope, …)` (`src/server/repos/journey.ts:63`) and
+  `tripsRepository.requireById(scope, …)` (`src/server/repos/trips.ts:45`) first, so a well-formed id
+  from another workspace is a `NotFoundError` before any rule is applied — a well-formed id is not an
+  authorised id. **Not `getTrip`**: `getTrip` (`src/server/repos/trips.ts:223`) delegates to
+  `tripsRepository.findById` and returns `null` for a foreign id, so it cannot be the guard — the
+  throwing sibling on the same repository object is, and every stage of this plan that resolves a
+  trip names `requireById` for that reason. Deleting is confirmed on the client and irreversible on
+  the server; the copy says so, and `journey_entries` and `journey_photos` cascade with the row.
 - Nothing enqueued and nothing slow: an import is bounded by one trip's places and runs in one batch.
   No realtime patch — a journal has no room and no presence.
 
@@ -1212,7 +1219,8 @@ index.
 ### Server (repo, server function, Zod)
 
 - **Repository — `src/server/repos/collections.ts`.** Six existing functions carry this stage and no
-  function is added: `updateCollection` (`:309`), `deleteCollection` (`:326`),
+  function is added; exactly one body changes, named in the last bullet of this section:
+  `updateCollection` (`:309`), `deleteCollection` (`:326`),
   `setCollectionPlaceStatus` (`:410`), `createLabel` (`:427`), `deleteLabel` (`:436`) and
   `setCollectionPlaceLabels` (`:441`). `updateCollection` already reserves a new slug through
   `reserveSlug` when the name changes, so renaming a collection keeps its URL honest without a second
@@ -1237,8 +1245,13 @@ index.
   a three-value enum with no member entity behind it, so `organization` and `private` cannot be told
   apart without one, and `08-S9` is where roles land. This stage says that in place rather than
   pretending the enum already gates anything.
-- No queue, no realtime, nothing slow. Each write is one indexed statement;
-  `setCollectionPlaceLabels` replaces the join rows for one place inside `runBatch`.
+- No queue, no realtime, nothing slow. Each write is one indexed statement, except
+  `setCollectionPlaceLabels`, which today is a **pair**: `collectionPlaceLabelsAccess.removeWhere`
+  followed by `insertMany` (`src/server/repos/collections.ts:461-470`), not a batch — this stage
+  changes those two calls into one `runBatch(scope, [...])` from `src/server/repos/batch.ts:35`, which
+  is the plan's only modification to an existing repository function body here, so a failure between
+  the delete and the insert can no longer leave a place with none of its labels. The sixteen-element
+  cap on the input keeps the batch bounded.
 
 ### UI (route, components)
 
@@ -1310,16 +1323,32 @@ once for the plan.
 Added to `src/server/repos/__tests__/tenant-isolation.test.ts` as one `describe` block.
 
 In A's scope, against B's ids: `updateCollection`, `deleteCollection`, `setCollectionPlaceStatus`,
-`createLabel` (parented on B's collection), `deleteLabel` and `setCollectionPlaceLabels` each reject
-with `NotFoundError`, and B's `collections`, `collection_labels` and `collection_place_labels` rows
-are byte-identical afterwards. Then the reverse read: `getCollection(scopeB, aCollectionId)` and
-`listLabels(scopeB, aCollectionId)` — the first resolves through `requireById` and throws, the second
-returns `[]`, and both are asserted so that neither shape is mistaken for the other.
+`createLabel` (parented on B's collection), `deleteLabel`, and `setCollectionPlaceLabels` called with
+**B's `collectionPlaceId`**, each reject with `NotFoundError` — each resolves its own row through
+`requireById`, `requireUpdate` or `requireRemove` first (`src/server/repos/collections.ts:309`,
+`:326`, `:410`, `:427`, `:436`, `:446`) — and B's `collections`, `collection_labels` and
+`collection_place_labels` rows are byte-identical afterwards.
 
-One case is the point of the block: `setCollectionPlaceLabels(scopeA, aPlaceId, [bLabelId])` — A's
-own place, one of B's labels. It must reject and write no join row, because the join table is the one
-place where two ids from two workspaces could meet in a single statement, and a filter on only one of
-them would look correct.
+Then the reverse read, and the two shapes are **not** the same:
+`getCollection(scopeB, aCollectionId)` resolves to **`null`** — it delegates to
+`collectionsRepository.findById` (`src/server/repos/collections.ts:159-164`) and does not throw — and
+`listLabels(scopeB, aCollectionId)` returns `[]`. The throwing shape is asserted separately, on
+`collectionsRepository.requireById(scopeB, aCollectionId)`, which does raise `NotFoundError`. All
+three are asserted, because a test that expects a rejection from a read that was built to return a
+nullable would fail against correct code and teach the wrong contract.
+
+One case is the point of the block, and its expected outcome is a **filtered write, not a rejection**:
+`setCollectionPlaceLabels(scopeA, aPlaceId, [bLabelId])` — A's own place, one of B's labels. The
+shipped function resolves the place, then re-reads the requested label ids through
+`collectionLabelsRepository.findMany` narrowed by both `tenantFilter()` and
+`eq(collectionLabels.collectionId, place.collectionId)` (`src/server/repos/collections.ts:449-459`),
+so a foreign label id survives neither filter: the call **resolves**, its returned array does **not**
+contain `bLabelId`, and no `collection_place_labels` row referencing it is written. Assert all three —
+the resolution, the returned array and a zero row count for that label id — because the join table is
+the one place where two ids from two workspaces could meet in a single statement, and a filter on only
+one of them would look correct. Assert the same for `[aLabelId, bLabelId]`, where the returned array
+must be exactly `[aLabelId]`: a drop that also dropped the caller's own label would pass a test that
+only looked for the absence of `bLabelId`.
 
 Functions covered: `getCollection`, `listCollectionPlaces`, `listLabels`, `updateCollection`,
 `deleteCollection`, `setCollectionPlaceStatus`, `createLabel`, `deleteLabel`,
@@ -1334,8 +1363,10 @@ Functions covered: `getCollection`, `listCollectionPlaces`, `listLabels`, `updat
     results; status and label narrow together; a place carrying a deleted label is not hidden by a
     stale id in the URL.
   - `src/routes/_app/-server/__tests__/collections.test.ts` — a duplicate label name returns a field
-    error rather than a five-hundred; a non-owner cannot delete a collection but can set a status;
-    a foreign id is a `NotFoundError`; the sixteen-label cap rejects a seventeenth.
+    error rather than a five-hundred; a non-owner cannot delete a collection but can set a status; a
+    foreign **`collectionId`** or **`collectionPlaceId`** is a `NotFoundError`, while a foreign
+    **`labelId`** inside `labelIds` is dropped and the call resolves without it, which is the shipped
+    contract and not a second one; the sixteen-label cap rejects a seventeenth.
   - `src/components/collections/__tests__/status-picker.test.tsx` — the badge is the trigger and is
     reachable by keyboard, the optimistic value rolls back on rejection, and the accessible name of
     the trigger includes both the place and the current status.
@@ -2784,7 +2815,12 @@ the feature, not an accident: a saved place survives the trip it came from being
   - `listCollectionPlacesFiltered(scope, input)` — the narrowing `08-S4` deliberately left on the
     client, moved to the server now that a list can grow: statuses as an `IN`, labels as an
     **any-of** over the join, and a keyset page on `sort_order` then id. Built on `tenantFilter()`
-    like everything else in the module.
+    like everything else in the module. It **resolves the collection through
+    `collectionsRepository.requireById(scope, input.collectionId)` before it reads**, deliberately
+    unlike its sibling `listCollectionPlaces` (`src/server/repos/collections.ts:214`), which filters
+    only and therefore answers a foreign collection id with `[]`. A paged read must be able to say
+    "no such list" rather than "this list is empty", because the caller pages until it is told to
+    stop; the tenant test asserts both shapes so neither is mistaken for the other.
 - **The quota assertion this module has never had.** `addCollectionPlace`,
   `saveTripPlaceToCollection` and `copyPlacesToCollection` all grow `collection_places`, which no
   ceiling has ever counted. All three now call
@@ -2906,7 +2942,10 @@ Added to `src/server/repos/__tests__/tenant-isolation.test.ts` as one `describe`
 In A's scope, against B's ids: `addCollectionPlace` parented on B's collection,
 `updateCollectionPlace`, `deleteCollectionPlace`, `saveTripPlaceToCollection` with B's place id, and
 `listCollectionPlacesFiltered` on B's collection each reject with `NotFoundError`, and B's
-`collection_places` count is unchanged.
+`collection_places` count is unchanged. Beside it, the contrasting shape:
+`listCollectionPlaces(scopeA, { collectionId: bCollectionId })` returns `[]` — it is a `findMany`
+with no parent resolution (`src/server/repos/collections.ts:214`) and does not throw. Both are
+asserted, so the new paged read's refusal is not read as a property the whole module already had.
 
 Three cases are the point of the block, and each is a two-id call where one filter would look
 sufficient:
@@ -3312,7 +3351,7 @@ that already existed.
 `node scripts/ultrabuild/check-plan-collisions.mjs 08` — exit status `0`:
 
 ```
-plans 13 · stages 91 · owned paths 538
+plans 13 · stages 91 · owned paths 545
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -3340,8 +3379,11 @@ touched by more than one plan in different waves (3) — legal; each plan must n
 plan 08: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
 ```
 
-Both commands were re-run after this round's correction to `08-S9` and returned the output above
-byte for byte, which is the reason the blocks are unchanged.
+Both commands were re-run after this round's corrections to `08-S3`, `08-S4` and `08-S9` — three
+repository-behaviour claims that read confidently and were wrong, listed at the end of this section —
+and both blocks above are that re-run's verbatim output. The only figure that moved is the corpus
+total (`owned paths` 538 → 545, from sibling plans edited in the same round); this plan's own rows,
+and the verdict that matters, are identical.
 
 **One thing neither check verifies, learned the expensive way.** Both read stage _ids_; neither reads
 the _wave_ or the _status_ a citation attributes to a sibling stage. `08-S9` cited `MAP-02` as
@@ -3405,12 +3447,29 @@ concurrently and would clobber each other; consecutive waves run in order and th
 what the earlier one left.
 
 **One caveat on the measurement, stated because it is the same caveat that produced round 8's two
-collisions.** The run above reports 13 plan files, 91 stages and 538 owned paths — twelve fewer
-paths than the previous run recorded against this file, of which two are this plan's: the move and
-the deletion of `src/routes/_app/-ui/cover-art.tsx` were withdrawn from `08-S3` for the reason given
-there. The other ten moved in sibling plans between the two runs, which is the caveat itself. At least four other plan files in this directory were being written while this one was. The output is therefore a snapshot, not a
-proof about a set that has stopped moving. It should be re-run — the command is one line and its exit
+collisions.** The run above reports 13 plan files, 91 stages and 545 owned paths — the total moves
+every round because sibling plans are edited in the same round this one is: at least four other plan
+files in this directory were being written while this one was. The output is therefore a snapshot,
+not a proof about a set that has stopped moving. It should be re-run — the command is one line and its exit
 status is 1 on a collision, so a stage can gate on it — before any wave of this plan is scheduled.
 The four stages the check reports as stating no parseable wave (`11-S1`, `11-S2`, `11-S3` and
 `04-S2`) belong to other plans; a stage with no wave is invisible to the check, and every stage in
 this file states one on its `### Stage id` line.
+
+### Three claims about shipped code that this file got wrong, and how each was measured
+
+Recorded here rather than silently corrected, because all three read as confident statements of fact
+and each would have sent an implementer to write a test that cannot pass. The rule they establish:
+**a nullable read and a throwing read are different contracts, and which one a repository function
+has is decided by whether it calls `findById` or `requireById` — read the body, never the name.**
+
+| Was written                                                                | Is actually true                                                                                                                                                                                                                         | Measured by                                                                          |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `08-S3`: a foreign trip id resolved through `getTrip` is a `NotFoundError` | `getTrip` (`src/server/repos/trips.ts:223`) delegates to `findById` and returns `null`. The stage now names `tripsRepository.requireById` (`:45`)                                                                                        | `grep -n 'export async function getTrip' -A 3 src/server/repos/trips.ts`             |
+| `08-S4`: `getCollection` "resolves through `requireById` and throws"       | `getCollection` (`src/server/repos/collections.ts:159`) calls `findById` and returns `null`; the throw is on `collectionsRepository.requireById`                                                                                         | `grep -n 'export async function getCollection' -A 5 src/server/repos/collections.ts` |
+| `08-S4`: `setCollectionPlaceLabels` rejects a foreign **label** id         | It **drops** it and resolves: the label re-read is narrowed by `tenantFilter()` and by the place's own collection (`collections.ts:449-459`), and the returned array simply omits it. Only a foreign `collectionPlaceId` throws (`:446`) | `sed -n '440,472p' src/server/repos/collections.ts`                                  |
+
+A fourth statement in `08-S4` described `setCollectionPlaceLabels` as replacing its join rows "inside
+`runBatch`". It does not — `grep -c runBatch src/server/repos/collections.ts` is `0`, and the shipped
+body is a `removeWhere` followed by an `insertMany` (`:461-470`). That sentence now reads as the
+change the stage makes rather than as the state it finds, which is the only honest way to keep it.

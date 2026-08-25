@@ -30,7 +30,7 @@ stage below extends a working screen rather than building one, and a stage that 
 | -------- | ---- | ------- | ---------------------------------------------------------------------------------- |
 | `MNY-07` | 1    | `04-S1` | partial → done, with one behaviour deferred to `04-S7` and its reason stated       |
 | `MNY-05` | 1    | `04-S1` | done → done — one column added because this stage mints the display currency       |
-| `MNY-01` | 1    | `04-S2` | partial → done                                                                     |
+| `MNY-01` | 1    | `04-S2` | partial → done, with one behaviour deferred to `04-S3` and its reason stated       |
 | `MNY-02` | 2    | `04-S3` | partial → done                                                                     |
 | `MNY-04` | 2    | `04-S4` | partial → done                                                                     |
 | `MNY-06` | 2    | `04-S5` | partial → done                                                                     |
@@ -910,7 +910,41 @@ spec, under the rule stated in the brief above.
   drag-reorder, a delete that names its consequence, and a stable colour shared with the chart
   `04-S4` draws.
 
-No behaviour of this row is deferred. Sourced from `wiki: Budget-Tracking`.
+**One behaviour of this row is deferred, to `04-S3` in wave 2, and the reason is an ownership
+measurement rather than a preference.** Filing an expense into a trip-defined category is a write to
+`expenses.cost_category_id`, and that column can only be written from the expense writers —
+`createExpense` and `updateExpense` in `src/server/repos/expenses.ts`, reached through
+`createExpenseFn` and `updateExpenseFn` in `src/server/fns/costs.ts`. Both modules are held
+**exclusively in wave 1** by `04-S1`, whose own **Owned paths** take them for the settlement-currency
+work and say in the same breath that it touches neither expense writer. A second exclusive wave-1
+claim on either module would clobber that edit, which is exactly what
+`node scripts/ultrabuild/check-plan-collisions.mjs 04` exists to catch, so this stage claims neither
+module. `04-S3` is the first stage that can: it is wave 2, it already owns both, its **Server**
+section already carries `costCategoryId` as a nullable id re-resolved through this stage's
+repository, its **Tenant isolation test** already carries both cross-tenant category cases, and its
+**Verification** already carries the `NULL`-resolves-to-the-legacy-label test. Nothing new is asked
+of `04-S3`; what changes is that this stage stops claiming that half.
+
+**What wave 1 therefore actually ships, stated so nobody reads more into this stage than it
+delivers.** A trip owns its categories — add, rename, reorder, delete with a named consequence, a
+stable palette index — and every surface that groups money renders an expense's grouping through the
+resolver this stage ships: `cost_category_id` when it is set, the eight-value `category` enum through
+the existing label map when it is not. Until `04-S3` lands, `cost_category_id` is `NULL` on every
+row, so every expense resolves through the enum and the screen renders what it renders at HEAD plus
+the reader's own categories beside it. Two consequences follow, and both are designed for rather than
+discovered:
+
+- The delete dialog's count is real and reads `0` for every category in wave 1, because nothing can
+  file an expense into one yet. That is the truth about the data, not a placeholder, and the dialog
+  says so in words rather than pluralising a zero.
+- `deleteTripCostCategory`'s reassign and remove branches are SQL against `expenses` and can live
+  nowhere but a repository, so they land here with the rest of this entity's SQL rather than waiting
+  for `04-S3`. They are exercised in wave 1 by `src/server/repos/__tests__/cost-categories.test.ts`
+  against rows the test seeds directly, and become reachable from the product the moment `04-S3`
+  lands the writer edit. Writing them now is the point: a delete path that learns about filed
+  expenses one wave after the column exists is a delete path that orphans rows in between.
+
+Sourced from `wiki: Budget-Tracking`.
 
 `04-S3` and `04-S4` both depend on this stage and are in the next wave, which is why it is here.
 
@@ -922,6 +956,20 @@ No behaviour of this row is deferred. Sourced from `wiki: Budget-Tracking`.
 - `src/routes/_app/trips/$tripId/costs.tsx` — edit. The route's search schema only.
 - `src/routes/_app/trips/$tripId/-costs/categories.tsx` — edit.
 - `src/routes/_app/trips/$tripId/-costs/category-editor.tsx` — new.
+- `src/routes/_app/trips/$tripId/-costs/category-model.ts` — new. The pure half of this stage: the
+  grouping resolver described above, and the mapping from a row to the palette position its swatch
+  class comes from. It **calls** `swatchFor()` (`src/routes/_app/-lib/tone.ts:157`), which already
+  cycles with `index % CATEGORY_SWATCHES.length`, and re-implements neither that function nor the
+  array behind it — a second swatch resolver would be the defect, and `tone.ts` is the foundations
+  stage's to extend, not this one's. No JSX and no import of `#/components/ui`, so the module is
+  collectable by the `server` project; `tone.ts` is a module of class-name strings and imports
+  nothing that needs a DOM. `src/routes/_app/-ui/plan-model.ts` is the precedent for a route-local
+  model module beside the screen that uses it.
+- `src/routes/_app/trips/$tripId/-costs/__tests__/category-model.test.ts` — new. `.ts` and not
+  `.tsx` on a measurement: `vitest.config.ts:49-51` includes `src/routes/**/*.test.ts` in the
+  **node** project only, and the `ui` project's globs (`:35-36`) reach `src/components/**` and
+  `src/lib/**` and never `src/routes/**`. A `.test.tsx` under this directory would be collected by
+  nothing and would pass by never running.
 - `src/routes/_app/trips/$tripId/-costs/screen.tsx` — edit.
 - `src/routes/_app/trips/$tripId/-costs/expense-list.tsx` — edit.
 - `src/routes/_app/trips/$tripId/-costs/actions.ts` — edit.
@@ -982,9 +1030,12 @@ can undo. The product's own cascade is explicit and lives in the repository — 
 **Backfill: none.** No `INSERT ... SELECT`, no `UPDATE`. Existing expenses keep their eight-value
 `category` and a `NULL` `cost_category_id`, and the read path resolves an expense's grouping as
 _`cost_category_id` when set, otherwise the `category` enum rendered through the label map that
-already exists_. Both columns keep being written on every expense write until a later plan retires
-the enum, which is not this plan's to do; that is what makes the rollback honest rather than
-theoretical.
+already exists_. That resolver is what this stage ships, in `-costs/category-model.ts`; the write
+that can first set the column belongs to `04-S3`, per the deferral under **Reference rows**, and from
+that stage on both columns keep being written on every expense write until a later plan retires the
+enum, which is not this plan's to do. The enum column is never dropped here, and that is what makes
+the rollback honest rather than theoretical: a previous Worker that has never heard of
+`cost_category_id` keeps reading `expenses.category` and keeps rendering every row.
 
 A trip's first category write seeds nothing implicitly: the editor's empty state offers a one-click
 "start from the standard eight", which is a write the reader asked for. A lazy seed on a **read**
@@ -1053,8 +1104,10 @@ SSR stays the default; the screen is data-shaped, not map-shaped, and has no rea
 grip, the pencil, the trash), `Button`, `Dialog` (the delete confirmation), `Select` (choose where
 orphaned expenses go), `Badge`, `SectionLabel`, `EmptyState`, `Skeleton`, `Tooltip`, `Alert`. Drag
 uses `@dnd-kit`, already in the pinned set and already the reordering idiom of
-`-ui/plan-screen.tsx`. New product component: `-costs/category-editor.tsx`, route-local because it is
-bound to this screen's payload; no new primitive is filed to `00-foundations.md`.
+`-ui/plan-screen.tsx`. New product modules, both route-local because both are bound to this screen's
+payload: `-costs/category-editor.tsx`, the editor itself, and `-costs/category-model.ts`, the pure
+grouping resolver and palette-index lookup it and the ledger both read. No new primitive is filed to
+`00-foundations.md`.
 
 **States.**
 
@@ -1069,8 +1122,11 @@ bound to this screen's payload; no new primitive is filed to `00-foundations.md`
   previous order rather than leaving a half-applied one.
 - _Loading_ — the add button carries `loading`; a row being renamed or reordered is `aria-busy` with
   its controls `disabled`, so a second drag cannot race the first.
-- _Destructive_ — the delete dialog names the count ("7 expenses are filed here") and requires an
-  explicit choice between moving them and deleting them. No default, no silent cascade.
+- _Destructive_ — the delete dialog names the count from `countCategoryExpenses` and requires an
+  explicit choice between moving those expenses and deleting them. No default, no silent cascade. The
+  count is read from the database rather than illustrated: in wave 1 it is `0` for every category,
+  because nothing can file an expense into one until `04-S3`, and the dialog reads "Nothing is filed
+  here yet" for that case rather than pluralising a zero.
 
 **Tokens — one requirement filed.** The palette is a **token requirement for
 `00-foundations.md`**: `--color-data-1` … `--color-data-8`, plus a `-soft` companion for each,
@@ -1111,12 +1167,16 @@ In A's scope: read, list, update and delete B's categories by id — `NotFoundEr
 category parented on B's trip id — `NotFoundError`. Reorder using an id list that contains one of B's
 category ids — `NotFoundError`, and no partial reorder is left behind. Delete one of B's categories
 with `reassignTo` pointing at one of A's — `NotFoundError`, and B's expenses are untouched. Finally,
-file one of A's expenses into one of B's categories — `NotFoundError`, because a well-formed foreign
-id is never silently re-scoped onto the caller's organization.
+delete one of A's categories with `reassignTo` pointing at one of B's — `NotFoundError`, and the
+delete does not proceed with the reassignment quietly dropped, because a well-formed foreign id is
+never silently re-scoped onto the caller's organization.
 
 B's category and expense rows are compared byte-for-byte before and after. Functions covered: all six
-exported from `src/server/repos/cost-categories.ts`, plus the category argument of `createExpense`
-and `updateExpense` in `src/server/repos/expenses.ts`.
+exported from `src/server/repos/cost-categories.ts`. The category argument of `createExpense` and
+`updateExpense` is **not** covered here and is not this stage's to cover: those two writers belong to
+`04-S3`, per the deferral under **Reference rows**, and `04-S3`'s own `describe` block already
+asserts both directions of it — patching B's expense onto one of A's categories, and patching one of
+A's expenses onto one of B's.
 
 ### Verification
 
@@ -1132,9 +1192,19 @@ database already carrying `0000` and `0001`.
 
 - `src/server/repos/__tests__/cost-categories.test.ts` (new) — a reorder is a permutation and the
   resulting order is stable across a re-read; `colour_index` cycles rather than repeating adjacently;
-  delete-with-reassign moves every expense and deletes none; delete-with-remove deletes exactly the
-  expenses of that category and no others; the per-trip ceiling raises before the write, not after;
-  an expense with a `NULL` `cost_category_id` still resolves to its legacy enum label.
+  the per-trip ceiling raises before the write, not after; and both delete branches, exercised
+  against expense rows the test seeds directly with a `cost_category_id`, because no product write
+  path sets one until `04-S3` — delete-with-reassign moves every expense of that category and deletes
+  none, delete-with-remove deletes exactly the expenses of that category and no others, and each runs
+  as one `db.batch()` so a failure in the second statement leaves the category and its expenses as
+  they were.
+- `src/routes/_app/trips/$tripId/-costs/__tests__/category-model.test.ts` (new) — the grouping
+  resolver, both branches: a row carrying a `cost_category_id` resolves to that category's name and
+  palette index, and a row carrying `NULL` — which in wave 1 is every row — resolves to the legacy
+  enum's existing label. Also that a `colour_index` past the end of the palette still resolves to a
+  swatch class — the wrap is `swatchFor`'s, already at `src/routes/_app/-lib/tone.ts:157-159`, and
+  the test asserts this stage keeps routing through it rather than indexing the array itself, which
+  is the mistake that renders a swatch with no colour token behind it.
 
 **Browser evidence.** `describe` block `04-S2 — trip cost categories` in
 `e2e/budget-and-currencies.visual.spec.ts`, using the shared helpers and re-implementing none.
@@ -1266,6 +1336,16 @@ groups by.
   stage adds editing in place on the row the reader is already looking at, an add-row pinned to the
   bottom of each day group, the per-person and per-day divisors the ledger is missing, and the three
   derived per-unit figures.
+- **`MNY-01`'s one deferred behaviour lands here, and the row stays closed by `04-S2` rather than by
+  this stage.** `04-S2` (wave 1) ships the trip's category entity and the grouping resolver but
+  cannot write `expenses.cost_category_id`: the only two modules from which that column can be
+  written — `src/server/repos/expenses.ts` and `src/server/fns/costs.ts` — are held exclusively in
+  wave 1 by `04-S1`, and a second exclusive wave-1 claim would clobber it. This stage owns both, one
+  wave later, so `createExpenseInput` and `updateExpenseInput` gain `costCategoryId` here (see
+  **Server**), the two cross-tenant category cases are in this stage's isolation block, and from here
+  on an expense carries the category its trip defined instead of only the fixed enum. This adds no
+  module, no column and no wave to this stage; it is the same edit to the same two files, with one
+  more field on the input schema.
 
 **What the ledger is at HEAD, measured, because the shape of it decides the whole stage.**
 `src/routes/_app/trips/$tripId/-costs/expense-list.tsx` is 209 lines and renders **no table**: it
@@ -1449,7 +1529,8 @@ id (`NotFoundError`). B's rows are compared before and after. Functions covered:
 computed from the amount and the divisors and are absent, not zero, when a divisor is `NULL`; a
 per-unit figure of a converted expense is derived from the accounting amount, not from the source
 amount; an expense whose `cost_category_id` is `NULL` still resolves to its legacy enum label through
-the helper `04-S2` ships, which is the ledger's guard against a row losing its label; and a partial
+the resolver `04-S2` ships in `-costs/category-model.ts`, which this stage imports rather than
+re-implements and which is the ledger's guard against a row losing its label; and a partial
 patch merges through `applyOps` (`src/components/costs/data.ts:266`) without clearing the fields it
 omits.
 
@@ -1534,8 +1615,12 @@ desktop and mobile; nothing left behind; no file outside **Owned paths** touched
 
 ### Blockers
 
-**Nothing stops this stage.** No package outside the pinned set, no binding, no third-party service,
-and the one row it depends on — `MNY-01`, wave 1 — closes in `04-S2` before wave 2 opens.
+**Nothing stops this stage.** No package outside the pinned set, no binding, no third-party service.
+`MNY-01`, the row it depends on, is closed by `04-S2` in wave 1, which lands before wave 2 opens —
+every part of it except the one behaviour `04-S2` defers to here, the write that files an expense
+into a trip-defined category, which this stage lands because it is the first stage that can own the
+expense writers. That is stated in `04-S2`'s **Reference rows** and carried above in this stage's
+**Reference rows**, **Server**, **Tenant isolation test** and **Verification** sections.
 
 **One precondition inherited from the harness, recorded here because `12-verification-protocol.md`
 §7.2 requires the stage that baselines a trip tab to carry it rather than absorb it.** Every stage in
@@ -2900,7 +2985,7 @@ node scripts/ultrabuild/check-plan-collisions.mjs 04
 Output, pasted whole:
 
 ```
-plans 13 · stages 91 · owned paths 543
+plans 13 · stages 91 · owned paths 545
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -2959,7 +3044,7 @@ and its declared states.
 ### Reading it, line by line
 
 **No same-wave exclusive collision involves this plan.** That is the result the check exists for, and
-it was not free: reaching it changed three things.
+it was not free: reaching it changed four things.
 
 - `04-S2` no longer names `src/server/do/protocol.ts`. The check found `07-S1`
   (`07-collaboration-and-sharing.md`) holding that module exclusively **in the same wave**, and two
@@ -2971,6 +3056,17 @@ it was not free: reaching it changed three things.
   a new module there would either have been unreachable or would have needed a second claim on the
   barrel. The dialog is route-local instead, at
   `src/routes/_app/trips/$tripId/-costs/currency-rebase-dialog.tsx`, and has exactly one caller.
+- **`04-S2` no longer claims a write path it cannot own**, which is the repair this round made and
+  the one the check pointed straight at. `expenses.cost_category_id` can be written from exactly two
+  modules, `src/server/repos/expenses.ts` and `src/server/fns/costs.ts`, and the output above puts
+  `04-S1` on both **in wave 1** — the same wave as `04-S2`. A second exclusive claim there would have
+  been the collision this section reports the absence of; instead `04-S2` defers that one behaviour
+  to `04-S3`, which is wave 2, already owns both modules, and already carried the isolation cases and
+  the resolver assertion for it. `MNY-01` is still closed by exactly one stage, `04-S2`, with the
+  deferral written into its **Reference rows** — the shape `04-S1` already uses for `MNY-07`. The
+  repair also added two owned paths to `04-S2`, `-costs/category-model.ts` and its test under
+  `-costs/__tests__/`, so the resolver `04-S2` ships is covered by a test `04-S2` owns rather than by
+  `04-S3`'s a wave later; neither path is claimed by any other stage in any plan.
 - **Every stage now names `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/`, not only
   `04-S1`.** An earlier draft listed the baseline directory once, in the stage that creates it, while
   the other six each ran `--update-snapshots` for their own `describe` block —
@@ -3016,13 +3112,16 @@ the form the script parses:
 **One thing the output cannot tell anyone, said here instead.** The header counts are a snapshot of a
 set several runs are still writing: it read `plans 7 · stages 37 · owned paths 204` two rounds ago,
 then `282`, `283` and `284` across three invocations minutes apart, then `553`, and it reads
-`plans 13 · stages 91 · owned paths 543` above — the six baseline-directory claims added here, and a
+`plans 13 · stages 91 · owned paths 545` above — the six baseline-directory claims added here, and a
 sibling plan's own repairs taken away, inside one round. Every remaining area plan landed in between
 and sibling plans were dirty in the working tree the whole time; it read `544` at the start of the
 round the currency repairs landed in and `543` at the end of it, while **this file's own owned paths
 parsed as 69 in both, the identical set** — measured by parsing the `### Owned paths` blocks out of
 this file at `HEAD` and in the working tree and diffing them, not assumed from the fact that no
-bullet was retyped. So the header will not reproduce exactly, it moves for reasons that are not this
+bullet was retyped. The round after that one took this file to **71**, by adding the two `04-S2`
+paths named above and changing no other bullet; the output pasted at the top of this section is the
+one recorded after they were added, and the header moved by two with them. So the header will not
+reproduce exactly, it moves for reasons that are not this
 file's, and it is not the part that matters.
 
 The findings under it are properties of **this** file's ownership — nothing this plan claims
