@@ -6,6 +6,8 @@ import { ImpersonationBar } from '#/components/layout/impersonation-bar'
 import { MobileNav } from '#/components/layout/mobile-nav'
 import { NotFoundPanel } from '#/components/layout/not-found'
 import { TopNav } from '#/components/layout/top-nav'
+import { SHELL_BOTTOM_CLASS } from '#/lib/atlas/layout'
+import { cn } from '#/lib/cn'
 import { loadShell } from './-server/shell'
 
 /**
@@ -56,6 +58,21 @@ export const Route = createFileRoute('/_app')({
  * `data-impersonated` raises `--impersonation-h` from `0rem` for everything
  * inside, which is how the whole shell moves down by exactly one bar and how a
  * shell without one keeps precisely the geometry it had.
+ *
+ * **Both edges of the viewport are reserved here, and only here.** The top one
+ * is the bar's row; the bottom one is `MobileNav`, which is `fixed` below `lg`
+ * and therefore displaces nothing and covers the last row of whatever is behind
+ * it. The wrapper around the outlet gives that box real height —
+ * {@link SHELL_BOTTOM_CLASS}, assembled from the same `MOBILE_TAB_BAR` list
+ * every chrome expression in the product reads — so no route can render under
+ * the tab bar and no route has to remember not to. Per-route padding cannot
+ * stand in for it: `AppFrame`'s `bleed` branch has none by design, and a screen
+ * that renders no `AppFrame` at all still renders inside this shell.
+ *
+ * `data-app-shell` is the marker the stylesheet's `scroll-padding-bottom` is
+ * scoped by. That reservation is the same box in scroll geometry rather than in
+ * layout — where the browser stops when it scrolls something into view — and it
+ * belongs to this document alone, not to the marketing tree or the auth tree.
  */
 function AppShell() {
   const { shell } = Route.useRouteContext()
@@ -64,6 +81,7 @@ function AppShell() {
   return (
     <div
       className="flex min-h-svh flex-col bg-canvas"
+      data-app-shell=""
       data-impersonated={impersonated ? '' : undefined}
     >
       <ImpersonationBar session={shell.session} />
@@ -72,7 +90,9 @@ function AppShell() {
         unreadCount={shell.unreadCount}
         belowImpersonationBar={impersonated}
       />
-      <Outlet />
+      <div className={cn('flex flex-1 flex-col', SHELL_BOTTOM_CLASS)}>
+        <Outlet />
+      </div>
       <MobileNav />
     </div>
   )

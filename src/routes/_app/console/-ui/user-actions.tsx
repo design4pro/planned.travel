@@ -7,16 +7,24 @@
  * `requirePermission` again, and a control this component chose to disable is a courtesy rather than
  * a boundary.
  *
- * **What is disabled, and why each one is disabled rather than left to fail.**
+ * **What is unavailable, why, and why it still takes focus.**
+ *
+ * An unavailable action is rendered by {@link UnavailableAction}: `aria-disabled`, its reason
+ * printed under its label, and `onSelect` prevented — deliberately *not* Radix's `disabled`. A
+ * `disabled` menu item is skipped by Radix's roving focus, so a keyboard user cannot land on it and
+ * never hears that it exists, let alone why it is off; this module's own rationale below is that a
+ * reason beside a control answers the question a 409 two seconds later only reports, and that
+ * reason has to be reachable for the claim to be true. WCAG 2.2 §2.4.11 wants the focused thing
+ * visible, not skipped, and an `aria-disabled` item is announced as unavailable while staying in the
+ * order. It cannot be activated: the handler is `preventDefault` and the server refuses it anyway.
  *
  * - *Impersonate* is off on the operator's own row (there is nobody to become), on a banned account
  *   (`impersonateUser` mints a session the account's own ban forbids) and on another `admin`
  *   (§2.4 grants `user:impersonate-admins` to no role at all, ours included). All three are refused
- *   server-side too; the difference is that a disabled item with a reason beside it answers the
- *   question, and a 409 two seconds later only reports it.
- * - *Change role*, *Ban* and *Delete* are off on the operator's own row. A self-demotion can leave a
- *   platform with no `admin` at all - the model reserves no seat and the product ships no recovery
- *   path - and a self-ban or self-delete removes the operator's own way back in.
+ *   server-side too.
+ * - *Change role*, *Suspend* and *Delete* are off on the operator's own row. A self-demotion can
+ *   leave a platform with no `admin` at all - the model reserves no seat and the product ships no
+ *   recovery path - and a self-ban or self-delete removes the operator's own way back in.
  * - *Lift the ban* appears only on a banned account, and *Ban* only on one that is not, because they
  *   are two states of one fact rather than two commands.
  *
@@ -72,6 +80,7 @@ import { ConsoleActionDialog } from './action-dialog'
 
 import type { ShellPlatformRole } from '#/components/layout/session'
 import type { ConsoleUser } from '#/server/fns/console/projections'
+import type { ReactNode } from 'react'
 
 /** Which panel is open. `null` is the resting state and the only one without a dialog. */
 type OpenAction =
@@ -123,6 +132,16 @@ export interface UserActionsProps {
   readonly self: boolean
   /** Reloads whatever is showing the account once an action has landed. */
   readonly onChanged: () => Promise<void> | void
+  /**
+   * What to do after a delete, when reloading is the wrong answer.
+   *
+   * The accounts list wants `onChanged`: the row is gone and the page it was on is still there. The
+   * account screen does not, and the difference was measured rather than reasoned about — deleting
+   * from `/console/users/$userId` invalidated the router, the loader re-ran for the id that had just
+   * been removed, and the screen settled on "That account did not load" underneath an "Account
+   * deleted" success toast. A page cannot reload a row it has just deleted; it has to leave.
+   */
+  readonly onDeleted?: () => Promise<void> | void
   readonly align?: 'start' | 'end'
 }
 
@@ -130,6 +149,7 @@ export function UserActions({
   user,
   self,
   onChanged,
+  onDeleted,
   align = 'end',
 }: UserActionsProps) {
   const router = useRouter()
@@ -140,7 +160,20 @@ export function UserActions({
   const [duration, setDuration] = useState('permanent')
   const [password, setPassword] = useState('')
 
-  const targetIsAdmin = currentRole === 'admin'
+  /**
+   * Why impersonation is off, or `null` when it is on.
+   *
+   * One expression rather than three booleans read at the call site, so the control and the sentence
+   * beside it can never disagree about which of the three refusals applies. All three are refused by
+   * `requirePermission` and by `impersonateUser` as well; this only decides what the reader is told.
+   */
+  const impersonationBlock: string | null = self
+    ? 'There is nobody to become — this is your own account.'
+    : user.banned
+      ? 'The account is suspended, so it holds no session to wear.'
+      : currentRole === 'admin'
+        ? 'No role on the platform may impersonate an admin, including yours.'
+        : null
 
   const close = useCallback(() => {
     setOpen(null)
@@ -221,11 +254,13 @@ export function UserActions({
 
   const remove = useCallback(async (): Promise<void> => {
     await deleteConsoleAccount({ data: { userId: user.id } })
-    await settle(
-      'Account deleted',
-      `${user.name} and everything attached to the account are gone.`,
-    )
-  }, [settle, user.id, user.name])
+    // Never `settle` here: on the account screen `onChanged` re-runs a loader for the id that no
+    // longer exists. The caller that has somewhere to go says so.
+    await (onDeleted ?? onChanged)()
+    toast.success('Account deleted', {
+      description: `${user.name} and everything attached to the account are gone.`,
+    })
+  }, [onChanged, onDeleted, user.id, user.name])
 
   return (
     <>
@@ -238,27 +273,45 @@ export function UserActions({
             size="sm"
           />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align={align} className="min-w-60">
+        {/* A ceiling as well as a floor. The reason under an unavailable action is a sentence, and
+            without a maximum Radix sizes the panel to the longest of them — measured at 510px on a
+            1440 viewport, which is a third of the screen for a row menu. Bounded, the sentence wraps
+            to two lines and the menu keeps a menu's proportions. */}
+        <DropdownMenuContent align={align} className="min-w-64 max-w-80">
           <DropdownMenuLabel>Account</DropdownMenuLabel>
-          <DropdownMenuItem
-            icon={<ShieldCheck />}
-            disabled={self}
-            onSelect={() => {
-              setRole(currentRole)
-              setOpen('role')
-            }}
-          >
-            Change platform role
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            icon={<ArrowRightLeft />}
-            disabled={self || user.banned || targetIsAdmin}
-            onSelect={() => {
-              setOpen('impersonate')
-            }}
-          >
-            Impersonate
-          </DropdownMenuItem>
+          {self ? (
+            <UnavailableAction
+              icon={<ShieldCheck />}
+              label="Change platform role"
+              reason="Not on your own account — a self-demotion can leave the platform with no admin."
+            />
+          ) : (
+            <DropdownMenuItem
+              icon={<ShieldCheck />}
+              onSelect={() => {
+                setRole(currentRole)
+                setOpen('role')
+              }}
+            >
+              Change platform role
+            </DropdownMenuItem>
+          )}
+          {impersonationBlock === null ? (
+            <DropdownMenuItem
+              icon={<ArrowRightLeft />}
+              onSelect={() => {
+                setOpen('impersonate')
+              }}
+            >
+              Impersonate
+            </DropdownMenuItem>
+          ) : (
+            <UnavailableAction
+              icon={<ArrowRightLeft />}
+              label="Impersonate"
+              reason={impersonationBlock}
+            />
+          )}
 
           <DropdownMenuSeparator />
           <DropdownMenuLabel>Credentials</DropdownMenuLabel>
@@ -291,11 +344,16 @@ export function UserActions({
             >
               Lift the suspension
             </DropdownMenuItem>
+          ) : self ? (
+            <UnavailableAction
+              icon={<Ban />}
+              label="Suspend the account"
+              reason="Not on your own account — a self-suspension takes away your own way back in."
+            />
           ) : (
             <DropdownMenuItem
               icon={<Ban />}
               destructive
-              disabled={self}
               onSelect={() => {
                 setReason('')
                 setDuration('permanent')
@@ -305,16 +363,23 @@ export function UserActions({
               Suspend the account
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem
-            icon={<Trash2 />}
-            destructive
-            disabled={self}
-            onSelect={() => {
-              setOpen('delete')
-            }}
-          >
-            Delete the account
-          </DropdownMenuItem>
+          {self ? (
+            <UnavailableAction
+              icon={<Trash2 />}
+              label="Delete the account"
+              reason="Not on your own account — there is no way back from it."
+            />
+          ) : (
+            <DropdownMenuItem
+              icon={<Trash2 />}
+              destructive
+              onSelect={() => {
+                setOpen('delete')
+              }}
+            >
+              Delete the account
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -514,5 +579,44 @@ export function UserActions({
         </p>
       </ConsoleActionDialog>
     </>
+  )
+}
+
+/**
+ * An action this row cannot take, with the reason under it and its place in the focus order intact.
+ *
+ * Deliberately not `<DropdownMenuItem disabled>`. Radix removes a disabled item from its roving
+ * focus, so a keyboard user steps straight past it: the item is on screen, the reason is on screen,
+ * and neither is reachable without a mouse. `aria-disabled` keeps the item in the order, announces
+ * it as unavailable, and lets the reason be read — while `onSelect` refuses the activation, so
+ * nothing can be triggered by landing on it and pressing Enter.
+ *
+ * The highlight is kept, quietly. An item that takes focus and shows nothing is worse than one that
+ * cannot take it at all, so the focused state is a recessed surface rather than the hover tint the
+ * live items use — present enough to see, different enough not to look actionable.
+ */
+function UnavailableAction({
+  icon,
+  label,
+  reason,
+}: {
+  readonly icon: ReactNode
+  readonly label: string
+  readonly reason: string
+}) {
+  return (
+    <DropdownMenuItem
+      icon={icon}
+      aria-disabled="true"
+      className="items-start text-ink-3 data-[highlighted]:bg-surface-2 data-[highlighted]:text-ink-3"
+      onSelect={(event) => {
+        event.preventDefault()
+      }}
+    >
+      <span className="flex flex-col gap-0.5 whitespace-normal">
+        <span>{label}</span>
+        <span className="text-caption leading-snug text-ink-4">{reason}</span>
+      </span>
+    </DropdownMenuItem>
   )
 }

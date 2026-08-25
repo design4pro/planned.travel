@@ -1,7 +1,10 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import {
   ArrowLeft,
+  Building2,
   Check,
+  CreditCard,
+  History,
   Minus,
   MonitorSmartphone,
   TriangleAlert,
@@ -11,14 +14,24 @@ import { ErrorPanel } from '#/components/layout/error-state'
 import {
   AccountIdentity,
   AccountStatus,
+  AuditChangeList,
+  AuditDot,
+  AuditActorBadge,
   PLATFORM_ROLE_VOCABULARY,
   PlatformRoleBadge,
+  SubscriptionStatusBadge,
+  describeAuditActor,
+  describePlan,
+  describePlatformAction,
   describeUserAgent,
+  describeWorkspaceRole,
   displayPlatformRole,
   formatConsoleInstant,
+  platformActionTone,
 } from '#/components/console'
 import {
   Alert,
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -35,8 +48,13 @@ import { loadConsoleAccount } from './-server/users'
 import { RevokeSessionButton } from './-ui/session-actions'
 import { UserActions } from './-ui/user-actions'
 import { formatDate, formatNumber, trimmedOrNull } from '../-lib/format'
-import { MetaGrid, Panel, RowsSkeleton } from '../-ui/scaffold'
+import { MetaGrid, MetaStrip, Panel, RowsSkeleton } from '../-ui/scaffold'
 
+import type {
+  ConsoleAuditEntry,
+  ConsoleMembership,
+  ConsoleSubscription,
+} from './-server/account-reads'
 import type { ConsoleSession } from '#/server/fns/console/projections'
 
 /**
@@ -48,11 +66,20 @@ import type { ConsoleSession } from '#/server/fns/console/projections'
  * edits a row inline behind a pencil, so a suspension has no reason beside it, a session has nowhere
  * to be listed, and there is no address for "this person" to send anybody to.
  *
- * **Two reads behind one call.** `loadConsoleAccount` runs `getPlatformUserFn` and
- * `listPlatformSessionsFn` together: both pass `requirePermission` and both project their rows
- * before they leave the server — a `session` row's `token` is the live credential and never crosses
- * the wire. Neither read is audited: `docs/ACCESS.md` §4.2 closes the vocabulary at thirty-one
- * mutations and says in as many words that reads are not among them.
+ * **Four panels, from one loader call.** `loadConsoleAccount` runs `getPlatformUserFn`,
+ * `listPlatformSessionsFn` and `readAccountContext` together: each passes `requirePermission` and
+ * each projects its rows before they leave the server — a `session` row's `token` is the live
+ * credential and never crosses the wire. None of them is audited: `docs/ACCESS.md` §4.2 closes the
+ * vocabulary at thirty-one mutations and says in as many words that reads are not among them.
+ *
+ * The four are the four questions an operator arrives with. *Where does this person belong* is the
+ * workspaces panel, with the membership role beside each — the workspace vocabulary, which
+ * `docs/SPEC.md` §5 forbids conflating with the platform one and which this screen is the one place
+ * in the product to show side by side. *What is being paid* is the subscription panel, and only for
+ * the workspaces this account owns, because a member of somebody else's crew workspace is not who it
+ * bills. *What is signed in* is the sessions table. *What has been done* is the ledger, read from
+ * `platform_audit_log` by `(entity_type, entity_id)` — §4.4's timeline query, and the stated reason
+ * that table exists instead of a per-entity revision log.
  */
 export const Route = createFileRoute('/_app/console/users/$userId')({
   loader: async ({ params }) =>
@@ -69,13 +96,26 @@ export const Route = createFileRoute('/_app/console/users/$userId')({
 })
 
 function ConsoleAccountPage() {
-  const { account, sessions, truncated } = Route.useLoaderData()
+  const { account, sessions, truncated, context } = Route.useLoaderData()
   const { shell } = Route.useRouteContext()
   const router = useRouter()
   const role = displayPlatformRole(account.role)
   const self = account.id === shell.session.user.id
 
   async function refresh(): Promise<void> {
+    await router.invalidate()
+  }
+
+  /**
+   * Where to go once this account no longer exists.
+   *
+   * Never `refresh()`: the loader would re-run for the id that was just removed and settle on "That
+   * account did not load" underneath an "Account deleted" toast — a screen whose two halves say
+   * opposite things, measured on this page. The list is where the operator was, and it is still
+   * there.
+   */
+  async function leaveAfterDelete(): Promise<void> {
+    await router.navigate({ to: '/console/users', replace: true })
     await router.invalidate()
   }
 
@@ -92,9 +132,12 @@ function ConsoleAccountPage() {
       </Button>
 
       <Card className="flex flex-col gap-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        {/* On a phone the identity takes the whole row and the standing wraps under it. Sharing the
+            row left the name and the address about seventy pixels wide — "Mika Tan…" over an
+            ellipsis — which is the one thing this card exists to say. */}
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
           <AccountIdentity
-            className="min-w-0 flex-1"
+            className="min-w-0 basis-full sm:flex-1 sm:basis-auto"
             size="xl"
             name={account.name}
             email={account.email}
@@ -104,7 +147,12 @@ function ConsoleAccountPage() {
           />
           <div className="flex shrink-0 items-center gap-2">
             <PlatformRoleBadge role={role} size="lg" />
-            <UserActions user={account} self={self} onChanged={refresh} />
+            <UserActions
+              user={account}
+              self={self}
+              onChanged={refresh}
+              onDeleted={leaveAfterDelete}
+            />
           </div>
         </div>
 
@@ -169,13 +217,313 @@ function ConsoleAccountPage() {
 
       <AuthorityPanel role={role} />
 
+      <WorkspacesPanel
+        memberships={context.memberships}
+        truncated={context.membershipsTruncated}
+      />
+
+      <SubscriptionPanel
+        subscriptions={context.subscriptions}
+        owns={context.memberships.some(
+          (membership) => membership.role === 'owner',
+        )}
+      />
+
       <SessionsPanel
         userId={account.id}
         sessions={sessions}
         truncated={truncated}
         onChanged={refresh}
       />
+
+      <AuditPanel entries={context.audit} truncated={context.auditTruncated} />
     </div>
+  )
+}
+
+/**
+ * The workspaces this account belongs to, and the role it holds inside each.
+ *
+ * The two vocabularies meet on this screen and nowhere else, so they are kept in different shapes
+ * rather than different shades: the platform role is the glyphed weight ladder in the header card,
+ * and the workspace role is plain text in a column headed "Role". `docs/SPEC.md` §5's rule is that
+ * they must never be conflated, and two badges that differ only by tone is how that starts.
+ *
+ * The plan column is the workspace's, not this person's — it is here because "which workspace is
+ * this, exactly" is the question a name and a slug half answer, and a `Business` beside a name is
+ * the fastest way to tell two workspaces called "Design" apart.
+ */
+function WorkspacesPanel({
+  memberships,
+  truncated,
+}: {
+  readonly memberships: ReadonlyArray<ConsoleMembership>
+  readonly truncated: boolean
+}) {
+  return (
+    <Panel
+      label="Workspaces"
+      count={
+        memberships.length === 0 ? undefined : formatNumber(memberships.length)
+      }
+      toolbar={
+        truncated ? (
+          <p className="rounded-md bg-surface-2 px-3 py-2 text-caption text-ink-3">
+            This account belongs to more workspaces than the{' '}
+            {formatNumber(memberships.length)} listed here.
+          </p>
+        ) : undefined
+      }
+      flush
+    >
+      {memberships.length === 0 ? (
+        <div className="p-5">
+          <EmptyState
+            variant="filled"
+            size="sm"
+            icon={<Building2 />}
+            title="In no workspace"
+            description="This account belongs to no workspace yet. One is provisioned the first time it signs in, and any it is invited to appear here."
+          />
+        </div>
+      ) : (
+        <>
+          <div className="hidden sm:block">
+            <Table label="Workspaces" fixed>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Workspace</TableHead>
+                  <TableHead className="w-28">Role</TableHead>
+                  <TableHead className="w-28">Plan</TableHead>
+                  <TableHead className="w-32">Joined</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {memberships.map((membership) => (
+                  <TableRow key={membership.organizationId}>
+                    <TableCell truncate>
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="truncate font-medium text-ink">
+                          {membership.name}
+                        </span>
+                        <span className="truncate font-mono text-caption text-ink-4">
+                          {membership.slug}
+                        </span>
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        tone={
+                          membership.role === 'owner' ? 'outline' : 'neutral'
+                        }
+                        size="sm"
+                      >
+                        {describeWorkspaceRole(membership.role)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell muted>{describePlan(membership.plan)}</TableCell>
+                    <TableCell muted className="tabular-nums">
+                      {formatDate(membership.joinedAt) ?? '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <ul className="flex flex-col sm:hidden">
+            {memberships.map((membership) => (
+              <li
+                key={membership.organizationId}
+                className="flex flex-col gap-2 px-4 py-4 not-last:border-b not-last:border-edge-faint"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-label font-medium text-ink">
+                    {membership.name}
+                  </p>
+                  <p className="truncate font-mono text-caption text-ink-4">
+                    {membership.slug}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <Badge
+                    tone={membership.role === 'owner' ? 'outline' : 'neutral'}
+                    size="sm"
+                  >
+                    {describeWorkspaceRole(membership.role)}
+                  </Badge>
+                  <span className="text-caption text-ink-3">
+                    {describePlan(membership.plan)}
+                  </span>
+                  <span className="ml-auto text-caption tabular-nums text-ink-4">
+                    Joined {formatDate(membership.joinedAt) ?? '—'}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </Panel>
+  )
+}
+
+/**
+ * What the workspaces this account *owns* are paying for.
+ *
+ * Two empty states rather than one, because they mean different things and lead to different next
+ * steps. An account that owns no workspace has nothing to bill and never will from here; an account
+ * that owns one with no `subscriptions` row is on the free tier and has simply never been through
+ * checkout. Collapsing the two into "No subscription" would tell an operator chasing a payment
+ * problem the same thing in both cases.
+ */
+function SubscriptionPanel({
+  subscriptions,
+  owns,
+}: {
+  readonly subscriptions: ReadonlyArray<ConsoleSubscription>
+  readonly owns: boolean
+}) {
+  return (
+    <Panel label="Subscription" bodyClassName="flex flex-col gap-5">
+      {subscriptions.length === 0 ? (
+        <EmptyState
+          variant="filled"
+          size="sm"
+          icon={<CreditCard />}
+          title={owns ? 'On the free plan' : 'Nothing bills to this account'}
+          description={
+            owns
+              ? 'The workspace this account owns has never been through checkout, so it carries no subscription record and runs on the free plan’s quotas.'
+              : 'This account owns no workspace. A member of somebody else’s workspace is not who that workspace bills, so there is nothing here to collect.'
+          }
+        />
+      ) : (
+        subscriptions.map((subscription) => (
+          <div
+            key={subscription.organizationId}
+            className="flex min-w-0 flex-col gap-3 not-last:border-b not-last:border-edge-faint not-last:pb-5"
+          >
+            <div className="flex flex-wrap items-center gap-2.5">
+              <p className="min-w-0 truncate text-label font-semibold text-ink">
+                {subscription.organizationName}
+              </p>
+              <Badge tone="outline" size="sm">
+                {describePlan(subscription.plan)}
+              </Badge>
+              <SubscriptionStatusBadge status={subscription.status} />
+              {subscription.cancelAtPeriodEnd ? (
+                <Badge tone="warning" size="sm">
+                  Ends at period close
+                </Badge>
+              ) : null}
+            </div>
+            <MetaStrip
+              items={[
+                {
+                  label: 'Seats',
+                  value: `${formatNumber(subscription.seats)} of ${formatNumber(subscription.seatLimit)}`,
+                },
+                {
+                  label:
+                    subscription.cancelAtPeriodEnd || subscription.trialEndsAt
+                      ? 'Ends'
+                      : 'Renews',
+                  value:
+                    formatDate(
+                      subscription.trialEndsAt ?? subscription.currentPeriodEnd,
+                    ) ?? '—',
+                },
+              ]}
+            />
+          </div>
+        ))
+      )}
+    </Panel>
+  )
+}
+
+/**
+ * Everything the platform has done to this account, newest first.
+ *
+ * This is `docs/ACCESS.md` §4.4's timeline query and the reason `platform_audit_log` exists at all
+ * rather than a revision table per entity: one three-column index, `(entity_type, entity_id,
+ * created_at)`, serves this panel whole. Until it shipped the ledger had a writer and no reader,
+ * which made the argument for the table unbacked by anything anybody could look at.
+ *
+ * A rail with a dot per entry rather than a table. The rows are of unequal height by nature — a role
+ * change moves one field and a suspension moves three — and a table forces the tallest row's height
+ * on every other one. The rail also carries the one thing the reference's history view drops: what
+ * actually moved, as a before and an after, instead of the raw payload in a cell.
+ */
+function AuditPanel({
+  entries,
+  truncated,
+}: {
+  readonly entries: ReadonlyArray<ConsoleAuditEntry>
+  readonly truncated: boolean
+}) {
+  return (
+    <Panel
+      label="Audit history"
+      count={entries.length === 0 ? undefined : formatNumber(entries.length)}
+      toolbar={
+        truncated ? (
+          <p className="rounded-md bg-surface-2 px-3 py-2 text-caption text-ink-3">
+            The ledger holds more entries than this. The platform audit trail is
+            append-only and kept for four hundred days.
+          </p>
+        ) : undefined
+      }
+    >
+      {entries.length === 0 ? (
+        <EmptyState
+          variant="filled"
+          size="sm"
+          icon={<History />}
+          title="Nothing has been done to this account"
+          description="Every role change, suspension, password reset, session revocation and impersonation is written here with the operator’s name on it. Nobody has touched this one."
+        />
+      ) : (
+        <ol className="relative flex flex-col gap-5">
+          {/* The rail. Absolutely positioned so it cannot add a row of its own, and stopped short of
+              the last dot so the thread ends at the oldest entry rather than trailing past it. */}
+          <span
+            aria-hidden
+            className="absolute top-2 bottom-2 left-1 w-px bg-edge-faint"
+          />
+          {entries.map((entry) => {
+            const actor = describeAuditActor(entry.actorKind, entry.actorName)
+            return (
+              <li key={entry.id} className="flex min-w-0 gap-3.5">
+                <AuditDot tone={platformActionTone(entry.action)} />
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                    <p className="text-label font-semibold text-ink">
+                      {describePlatformAction(entry.action)}
+                    </p>
+                    <p className="text-caption tabular-nums text-ink-4">
+                      {formatConsoleInstant(entry.at)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <p className="min-w-0 text-caption text-ink-3">
+                      {actor.name}
+                      {actor.detail === null ? '' : ` · ${actor.detail}`}
+                    </p>
+                    <AuditActorBadge
+                      kind={entry.actorKind}
+                      role={entry.actorRole}
+                    />
+                  </div>
+                  <AuditChangeList payload={entry.changes} />
+                </div>
+              </li>
+            )
+          })}
+        </ol>
+      )}
+    </Panel>
   )
 }
 
@@ -391,8 +739,32 @@ function AccountPending() {
           ))}
         </div>
       </Card>
+      {/* One block per panel the screen settles into — authority, workspaces, subscription,
+          sessions, ledger — so nothing below the fold jumps when the data lands. */}
+      <Card className="flex flex-col gap-3 bg-surface-2">
+        <Skeleton className="h-3 w-32" radius="sm" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Skeleton className="h-24 w-full" radius="md" />
+          <Skeleton className="h-24 w-full" radius="md" />
+        </div>
+      </Card>
+      <Card padding="none" className="bg-surface-2">
+        <RowsSkeleton rows={2} />
+      </Card>
       <Card padding="none" className="bg-surface-2">
         <RowsSkeleton rows={3} />
+      </Card>
+      <Card className="flex flex-col gap-4 bg-surface-2">
+        <Skeleton className="h-3 w-28" radius="sm" />
+        {[0, 1, 2].map((index) => (
+          <div key={index} className="flex gap-3.5">
+            <Skeleton className="mt-1.5 size-2.5 shrink-0" radius="full" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-3 w-2/5" radius="sm" />
+              <Skeleton className="h-2.5 w-3/5" radius="sm" />
+            </div>
+          </div>
+        ))}
       </Card>
     </div>
   )

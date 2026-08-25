@@ -712,7 +712,9 @@ test.describe('the impersonation warning bar', () => {
       }, testInfo) => {
         test.skip(
           testInfo.project.name !== 'chromium',
-          'captured once, at two explicit widths, rather than once per project viewport',
+          'captured once, at two explicit widths, rather than once per project viewport — ' +
+            'so four skips is this block\'s steady state, and "the impersonation bar has its four ' +
+            'committed baselines" in "the gate itself" is what tells the two apart',
         )
         await applyTheme(page, theme)
         await page.clock.setFixedTime(new Date(FROZEN_NOW))
@@ -773,6 +775,39 @@ test.describe('the impersonation warning bar', () => {
 })
 
 test.describe('the gate itself', () => {
+  /**
+   * The impersonation bar's four frames exist on disk, named the way the capture names them.
+   *
+   * This test exists because a skip count was twice read as a regression. The bar's capture is
+   * chromium-only by design — two explicit widths rather than whatever viewport each project
+   * happens to carry — so a two-project run reports four skips, and *four skips* is also what a run
+   * would report if the fixture had silently stopped minting a session. Two very different states,
+   * one number, and a round already spent itself rewriting a fixture that worked.
+   *
+   * So the steady state is asserted rather than described. A green line here beside those four skips
+   * says the frames were recorded and are still committed; the skips beside a red line here would be
+   * the regression the number was mistaken for. It reads the directory rather than trusting a list:
+   * a baseline that was deleted, renamed or never written fails on the file it cannot find.
+   */
+  test('the impersonation bar has its four committed baselines', async () => {
+    const { readdir } = await import('node:fs/promises')
+    const { fileURLToPath } = await import('node:url')
+    const directory = fileURLToPath(
+      new URL('./__screenshots__/visual.spec.ts/', import.meta.url),
+    )
+    const present = new Set(await readdir(directory))
+
+    for (const width of [360, 1440]) {
+      for (const theme of THEMES) {
+        const name = `impersonation-bar-${String(width)}-${theme}-chromium.png`
+        expect(
+          present.has(name),
+          `${name} is missing: docs/ACCESS.md §6.1 makes this bar the one piece of chrome that may never be absent, dismissed or covered, and an unrecorded frame is one nothing compares`,
+        ).toBe(true)
+      }
+    }
+  })
+
   test('every relative-time pattern matches its own corpus', () => {
     expect(
       RELATIVE_TIME_SITES.length,

@@ -313,6 +313,21 @@
   margin-bottom: var(--safe-bottom);
 }
 
+/* The mobile tab bar's whole box — hairline, row and home indicator — as real
+   height. `AppShell` puts it under the outlet so the bar, which is `fixed` and
+   therefore displaces nothing, can never cover the foot of a screen. The
+   companion to `--impersonation-h` at the other edge, and the twin of the
+   `scroll-padding-bottom` further down: this one changes what the document
+   measures, that one changes where the browser stops.
+
+   `MOBILE_TAB_BAR` in `src/lib/atlas/layout.ts` is the list all three read, and
+   `src/styles/__tests__/layout-tokens.test.ts` asserts the length below is
+   exactly its sum. Released from `lg` at the call site, where the bar is not
+   rendered at all. */
+@utility pb-tab-bar {
+  padding-bottom: calc(1px + 4rem + var(--safe-bottom));
+}
+
 /* Frosted-glass ground for panels floated over the map. */
 @utility backdrop-glass {
   -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
@@ -525,28 +540,40 @@
     scroll-behavior: smooth;
     scrollbar-color: var(--color-scrollbar-thumb) transparent;
     scrollbar-width: thin;
-    /* The bottom edge of the viewport belongs to the mobile tab bar, which is
-       `fixed` and therefore covers whatever the browser scrolls into the last
-       row of the screen — a field focused near the foot of a long form, an
-       anchor, a `scrollIntoView` from a validation error. This is where the
-       browser is told to stop, and it costs no layout at all: no element
-       changes size, so a content well that already clears the bar is untouched
-       and the one place the reservation has to hold is the one that could not
-       hold it on its own. The top edge needs no twin: the sticky header and the
-       impersonation bar above it are cleared per anchor with `scroll-mt-*`,
-       and a global term here would offset those a second time.
+  }
 
-       The three terms are the bar's hairline, its own row — `h-16`, the same
-       4rem as `--nav-h`, written as the literal the component ships — and the
-       home indicator. `MOBILE_TAB_BAR` in `src/lib/atlas/layout.ts` publishes
-       exactly this expression as `BOTTOM_CLEARANCE_CSS`, and the test beside
-       the token file asserts the two agree. */
+  /* Where the browser stops scrolling, in the one document that has a tab bar.
+     -------------------------------------------------------------------------
+     `AppShell` reserves the bar's box as real height under the outlet
+     (`pb-tab-bar`), so nothing *lays out* underneath it. This is the other half:
+     the bar is `fixed`, so it still covers whatever the browser scrolls into the
+     last row of the screen — a field focused near the foot of a long form, an
+     anchor, a `scrollIntoView` from a validation error — and that is scroll
+     geometry rather than layout. Both halves are needed and neither substitutes
+     for the other.
+
+     Scroll padding belongs to the scroll container, which is the viewport, so it
+     is set on `html` and scoped by what `html` contains: only the authenticated
+     shell renders the tab bar, and the marketing tree, the auth tree and the
+     error document have no bottom chrome to clear. Applied to every document, it
+     is a reservation against a bar two of them do not have.
+
+     The top edge needs no twin: the sticky header and the impersonation bar
+     above it are cleared per anchor with `scroll-mt-*`, and a global term here
+     would offset those a second time.
+
+     The three terms are the bar's hairline, its own row — `h-16`, the same 4rem
+     as `--nav-h`, written as the literal the component ships — and the home
+     indicator. `MOBILE_TAB_BAR` in `src/lib/atlas/layout.ts` publishes exactly
+     this expression as `BOTTOM_CLEARANCE_CSS`, and the test beside the token
+     file asserts the two agree. */
+  html:has([data-app-shell]) {
     scroll-padding-bottom: calc(1px + 4rem + var(--safe-bottom));
   }
 
   /* From `lg` the tab bar is gone and so is its reservation. */
   @media (width >= 64rem) {
-    html {
+    html:has([data-app-shell]) {
       scroll-padding-bottom: 0px;
     }
   }

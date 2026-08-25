@@ -10,6 +10,7 @@ import {
   SEARCH_HEIGHT,
   SHELF_CLASS,
   SHELF_FALLBACK,
+  SHELL_BOTTOM_CLASS,
   SLICE_HEIGHT_CLASS,
   TRIP_RAIL_STICKY_CLASS,
   TRIP_SLICE_HEIGHT_CLASS,
@@ -24,6 +25,7 @@ import {
   insetSumCss,
   mercatorY,
   shelfClear,
+  shellBottomReserve,
   sliceHeight,
   sliceHeightCss,
   tripDocumentHeight,
@@ -88,7 +90,7 @@ describe('the viewport slice', () => {
       )
     }
     const phone = { ...PHONE, impersonationHeight: IMPERSONATION_BAR }
-    expect(documentHeight(phone, false)).toBeLessThan(PHONE.viewport)
+    expect(documentHeight(phone, false)).toBe(PHONE.viewport)
     expect(sliceHeight(phone, false)).toBe(
       sliceHeight(PHONE, false) - IMPERSONATION_BAR,
     )
@@ -134,9 +136,10 @@ describe('the viewport slice', () => {
     expect(sliceHeight(PHONE, false)).toBe(
       PHONE.viewport - headerHeight - barHeight,
     )
-    // The bar is fixed, so it costs the slice height without costing document
-    // height: the page still fits inside one viewport.
-    expect(documentHeight(PHONE, false)).toBeLessThan(PHONE.viewport)
+    // The bar is fixed, so it costs the slice its height — and the shell hands
+    // the same box back underneath the outlet, which is what leaves the page
+    // exactly one viewport tall rather than one viewport minus a bar.
+    expect(documentHeight(PHONE, false)).toBe(PHONE.viewport)
   })
 
   it('never leaves a negative slice on an absurdly short viewport', () => {
@@ -178,7 +181,7 @@ describe('the trip planner’s slice', () => {
   it('fits the phone too, tab bar and both safe areas included', () => {
     for (const impersonationHeight of [0, IMPERSONATION_BAR]) {
       const env = { ...PHONE, impersonationHeight }
-      expect(tripDocumentHeight(env, false)).toBeLessThanOrEqual(env.viewport)
+      expect(tripDocumentHeight(env, false)).toBe(env.viewport)
       expect(tripSliceHeight(env, false)).toBeGreaterThan(0)
     }
   })
@@ -194,15 +197,17 @@ describe('the trip planner’s slice', () => {
       'sub-nav hairline',
     ])
     expect(tripSliceHeight(DESKTOP, false)).toBe(
-      tripSliceHeight(DESKTOP, true) -
-        44 -
-        insetSum(MOBILE_TAB_BAR, DESKTOP),
+      tripSliceHeight(DESKTOP, true) - 44 - insetSum(MOBILE_TAB_BAR, DESKTOP),
     )
   })
 
   it('ships the same expression it computes, at both breakpoints', () => {
-    expect(TRIP_SLICE_HEIGHT_CLASS.base).toBe(`h-[${tripSliceHeightCss(false)}]`)
-    expect(TRIP_SLICE_HEIGHT_CLASS.lg).toBe(`lg:h-[${tripSliceHeightCss(true)}]`)
+    expect(TRIP_SLICE_HEIGHT_CLASS.base).toBe(
+      `h-[${tripSliceHeightCss(false)}]`,
+    )
+    expect(TRIP_SLICE_HEIGHT_CLASS.lg).toBe(
+      `lg:h-[${tripSliceHeightCss(true)}]`,
+    )
   })
 })
 
@@ -216,14 +221,46 @@ describe('the chrome offsets the shell hands out', () => {
     )
   })
 
-  it('publishes the mobile tab bar’s whole box for the scroll reservation', () => {
-    // `scroll-padding-bottom` in `src/styles/styles.css` is where the browser is
-    // told to stop; this is the expression it uses, and the token file's own
+  it('publishes the mobile tab bar’s whole box for both reservations', () => {
+    // `pb-tab-bar` on the shell is the box as layout and
+    // `scroll-padding-bottom` in `src/styles/styles.css` is the same box as
+    // scroll geometry; this is the expression both use, and the token file's own
     // test asserts the stylesheet still carries it.
     expect(BOTTOM_CLEARANCE_CSS).toBe('calc(1px+4rem+var(--safe-bottom))')
     expect(insetSum(MOBILE_TAB_BAR, PHONE)).toBe(
       1 + PHONE.navHeight + PHONE.safeBottom,
     )
+  })
+
+  it('reserves the tab bar’s box under the outlet, and only below lg', () => {
+    // The bottom edge's counterpart to `--impersonation-h`: the bar is `fixed`,
+    // so without this the last row of every screen renders underneath it. From
+    // `lg` the bar is not rendered and reserving for it would be dead canvas.
+    expect(shellBottomReserve(false)).toEqual(MOBILE_TAB_BAR)
+    expect(shellBottomReserve(true)).toEqual([])
+    expect(insetSum(shellBottomReserve(false), PHONE)).toBe(
+      insetSum(MOBILE_TAB_BAR, PHONE),
+    )
+  })
+
+  it('ships that reservation as the classes the shell actually carries', () => {
+    // Literal source text: Tailwind reads it statically, and a `pb-` assembled
+    // at runtime generates no CSS at all. `pb-tab-bar` is declared in
+    // `src/styles/styles.css` from `BOTTOM_CLEARANCE_CSS`.
+    expect(SHELL_BOTTOM_CLASS).toBe('pb-tab-bar lg:pb-0')
+  })
+
+  it('leaves the document one viewport tall on a phone, bar or no bar', () => {
+    // The whole point of the two edges being the shell's: at 360px with the
+    // warning bar on screen, a full-bleed route still measures exactly the
+    // viewport rather than overflowing by a bar or falling short by one.
+    for (const impersonationHeight of [0, IMPERSONATION_BAR]) {
+      for (const viewport of [610, 659, 852]) {
+        const env = { ...PHONE, viewport, impersonationHeight }
+        expect(documentHeight(env, false)).toBe(viewport)
+        expect(tripDocumentHeight(env, false)).toBe(viewport)
+      }
+    }
   })
 })
 

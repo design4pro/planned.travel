@@ -51,7 +51,24 @@ export function AccountIdentity({
 
   return (
     <span className={cn('flex min-w-0 items-center gap-3', className)}>
-      <Avatar name={name} src={image} size={size} />
+      {/*
+        Hidden from assistive technology, and that is the whole point of the wrapper.
+
+        `Avatar` carries its own accessible name — an `sr-only` copy of it inside the initials
+        fallback, and `alt={name}` on the image — because it is used on its own elsewhere, where a
+        circle with two letters in it would otherwise be announced as nothing. Here the name is
+        printed one node to the right, so every row of the accounts table announced the person twice
+        and the account screen's header announced them twice again. The avatar is decorative in this
+        composition: it repeats the name it sits beside and adds nothing a reader cannot already
+        hear.
+
+        The duplicate had a second victim worth recording. `consoleAccountPath()` in
+        `e2e/helpers/shoot.ts` reads the account link out of the accounts document, and an earlier
+        version of it matched on proximity to the name — which found the avatar's hidden copy a few
+        hundred bytes ahead of the real link and photographed the row above for four rounds of
+        baselines.
+      */}
+      <Avatar aria-hidden="true" name={name} src={image} size={size} />
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="flex min-w-0 items-center gap-2">
           <span className="min-w-0 truncate font-medium text-ink">

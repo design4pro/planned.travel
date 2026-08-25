@@ -102,6 +102,15 @@ const impersonationResultSchema = z.object({
  * The audit row is appended after the cookies are on the response, which is docs/ACCESS.md §4.3's
  * ordering applied to an action whose "row change" is a cookie: the swap has happened by then, so
  * the ledger cannot record an impersonation that did not begin.
+ *
+ * **The body is parsed before any of those cookies is forwarded**, and the order is not cosmetic.
+ * TanStack merges the event's `Set-Cookie` values onto whatever response leaves the handler, an
+ * error response included - so forwarding first and parsing second means a plugin body this schema
+ * cannot read still swaps the browser into the impersonated session, while the screen reports a
+ * failure and the ledger holds no `platform.user.impersonation_started` row for a session that is
+ * live for the next fifteen minutes. Parsed first, that failure leaves the operator exactly where
+ * they were: the plugin's own session row expires unused, no cookie moved, and §4.3's "audited
+ * without exception" stays true because there was no impersonation to audit.
  */
 export const startImpersonationFn = createServerFn({ method: 'POST' })
   .validator(startImpersonationInputSchema)
@@ -144,9 +153,14 @@ export const startImpersonationFn = createServerFn({ method: 'POST' })
         throw refineImpersonationFailure(cause)
       })
 
-    const forwarded = forwardAuthCookies(result.headers)
+    // Parsed before a single cookie is forwarded. TanStack merges the event's `Set-Cookie` onto a
+    // non-ok response too, so the reverse order lands the operator *inside* the impersonated session
+    // while the screen reports the parse failure, with no `platform.user.impersonation_started` row
+    // anywhere. Nothing below can reject: `forwardAuthCookies` is one `setResponseHeader`, and
+    // `recordConsoleAction` never throws.
     const parsed = impersonationResultSchema.parse(result.response)
     const expiresAt = parsed.session.expiresAt
+    const forwarded = forwardAuthCookies(result.headers)
 
     await recordConsoleAction(
       call,

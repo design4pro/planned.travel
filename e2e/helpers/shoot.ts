@@ -2217,6 +2217,14 @@ export const CONSOLE_ROUTES: ReadonlyArray<RouteCase> = [
  * committed frame. This one holds none, so the panel shows its designed empty state and the frame is
  * the same every run. It is also the fixture's `curator`, which is what puts the middle rung of the
  * role scale in the picture.
+ *
+ * **The seed gives this account a password now, so "holds none" is a property somebody can break.**
+ * The three collaborators are signable, because a curator who cannot sign in cannot demonstrate that
+ * they see the catalogue and not the accounts tab. Signing in as one of them locally leaves a live
+ * session, and this frame then carries a session row with two wall-clock instants in it. That is a
+ * real diff and not a flake: revoke it from the account's own actions menu — *Revoke every session*
+ * — and the frame comes back. The seed cannot do it for you: a session lives in KV as well as D1,
+ * and only the product's own path takes down both.
  */
 export const CONSOLE_ACCOUNT_NAME = 'Mika Tanaka'
 
@@ -2255,11 +2263,17 @@ export async function hasPlatformConsole(page: Page): Promise<boolean> {
  *
  * **Matched inside the anchor, not by proximity to the name.** The obvious version of this - find
  * the name, take the nearest `href` before it - photographed the *previous* row for four rounds of
- * baselines without anyone noticing, because `Avatar` renders the same name a second time as a
+ * baselines without anyone noticing, because `Avatar` rendered the same name a second time as a
  * screen-reader label a few hundred bytes ahead of the link, and the nearest href before *that* is
  * the row above. The frames looked entirely plausible: a real account screen, for the wrong account,
  * committed under a name that says otherwise. So the anchor's own text is what decides, which is the
  * property the row actually guarantees - the account's name is the link.
+ *
+ * That duplicate is gone: `AccountIdentity` now marks the avatar `aria-hidden`, because the name it
+ * repeated is printed one node to the right and every row was announcing the person twice. The
+ * matching rule stays as it is anyway. It was never a workaround for the duplicate - it is the only
+ * rule that says what this function means, and proximity would go wrong again the first time
+ * anything else in a row carried the same string.
  */
 export async function consoleAccountPath(page: Page): Promise<string | null> {
   const response = await page.request.get(CONSOLE_ACCOUNTS_ROUTE.path, {

@@ -35,6 +35,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import { listPlatformSessionsFn } from '#/server/fns/console/sessions'
+import { readAccountContext } from './account-reads'
 import {
   banPlatformUserFn,
   createPlatformUserFn,
@@ -46,6 +47,7 @@ import {
   unbanPlatformUserFn,
 } from '#/server/fns/console/users'
 
+import type { ConsoleAccountContext } from './account-reads'
 import type {
   ConsoleSession,
   ConsoleUser,
@@ -148,26 +150,30 @@ export interface ConsoleAccountDetail {
   readonly sessions: ReadonlyArray<ConsoleSession>
   /** The account holds more sessions than one call enumerates. */
   readonly truncated: boolean
+  /** Workspaces, what they pay for, and the ledger — see `./account-reads`. */
+  readonly context: ConsoleAccountContext
 }
 
 /**
- * One account and its live sessions.
+ * One account: who it is, what it holds, where it belongs and what has been done to it.
  *
- * Both reads in one call rather than two from the loader: each console call resolves the session
- * against KV, and `docs/ARCHITECTURE.md` §2.1 budgets one of those per server function rather than
- * one per panel.
+ * Every panel behind one loader call rather than one call per panel. The screen is a single page and
+ * a page that resolved four sessions to draw itself would be four times `docs/ARCHITECTURE.md`
+ * §2.1's budget for one; the reads run together, so the wall-clock cost is the slowest of them.
  */
 export const loadConsoleAccount = createServerFn({ method: 'GET' })
   .validator(z.object({ userId }))
   .handler(async ({ data }): Promise<ConsoleAccountDetail> => {
-    const [account, sessions] = await Promise.all([
+    const [account, sessions, context] = await Promise.all([
       getPlatformUserFn({ data: { userId: data.userId } }),
       listPlatformSessionsFn({ data: { userId: data.userId } }),
+      readAccountContext(data.userId),
     ])
     return {
       account,
       sessions: sessions.sessions,
       truncated: sessions.truncated,
+      context,
     }
   })
 

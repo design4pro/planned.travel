@@ -30,12 +30,21 @@
  *   transition is two calls; {@link applyBan} carries the compensation that keeps a failure from
  *   leaving the account *un*banned. One audit row either way: the clearing write is machinery, not
  *   an event.
- * - **Setting a password ends the account's sessions.** `/admin/set-user-password` touches no
- *   session, and the operator use case for the verb is a compromised account.
+ * - **Setting a password ends the account's sessions, and the credential write goes last.**
+ *   `/admin/set-user-password` touches no session, and the operator use case for the verb is a
+ *   compromised account - so the revocation belongs to the verb rather than beside it. It runs
+ *   *before* the password changes, and carries its own row before the next statement does anything,
+ *   so no step that can reject ever stands between a committed credential change and its ledger row.
+ *   See {@link setPlatformUserPasswordFn}.
  * - **No account may aim one of these at itself.** A self-ban, a self-delete and a self-demotion all
  *   remove the operator's own way back in, and the last of them can leave a platform with no `admin`
- *   at all - there is no seat reservation in the model and no recovery path in the product. All
- *   three are refused before the target is read.
+ *   at all - there is no seat reservation in the model and no recovery path in the product. A
+ *   self-targeted password set is refused for a fourth reason, measured rather than reasoned: the
+ *   revocation that verb performs deletes the caller's own session, and `/admin/set-user-password`
+ *   re-resolves that session behind `adminMiddleware`, so the credential write that follows answers
+ *   `UNAUTHORIZED` - signed out everywhere, told it failed, password unchanged. All four are refused
+ *   before the target is read, and only the last of them has a self-service equivalent (Settings,
+ *   under Security).
  *
  * Reads are not audited, here or over MCP (docs/ACCESS.md §4.2). `platform.user.get` does not exist,
  * and neither does a log field shaped like one — see `ConsoleRead` in `./context`.
@@ -406,8 +415,8 @@ export const setPlatformUserRoleFn = createServerFn({ method: 'POST' })
   })
 
 /**
- * Sets an account's password **and ends every session it holds**.
- * `platform.user.password_set`, then `platform.session.revoked_all`.
+ * Ends every session an account holds **and then** sets its password.
+ * `platform.session.revoked_all`, then `platform.user.password_set`.
  *
  * **The revocation is the point of the verb, not a courtesy beside it.** The operator use case is a
  * compromised account, and `/admin/set-user-password` touches no session at all: it routes to
@@ -416,6 +425,40 @@ export const setPlatformUserRoleFn = createServerFn({ method: 'POST' })
  * the self-service reset route and the phone-number and email-OTP plugins - and none of them is this
  * endpoint. So a version of this function that only changed the credential left the attacker signed
  * in on the old one, which is the opposite of what an operator pressing it believes they are doing.
+ *
+ * **The credential write is the last statement in the call, and that ordering is the whole design of
+ * this handler.** An earlier version set the password first and revoked afterwards, which put an
+ * unguarded `revokeUserSessions` between a committed credential change and its ledger row: one
+ * ordinary D1 transient there and the password *had* changed, no `platform.user.password_set` row
+ * existed for it, the target's sessions were still live on the old credential, and the operator was
+ * told the call had failed - the single state in this directory that is both irreversible and
+ * invisible afterwards. Reversed, every step that can reject happens while the account still holds
+ * the credential it arrived with, so a failure anywhere leaves a retryable state and an honest error:
+ * at worst the account has been signed out of everything - which is the direction remediation was
+ * going anyway, and which carries its own row before the next statement runs. After
+ * `setUserPassword` returns, only `recordConsoleAction` remains, and neither it nor
+ * `appendPlatformAudit` beneath it throws: an append that cannot be written is reported as an
+ * `error` line naming the action, the actor and the entity, never as a rejected promise.
+ *
+ * What that ordering does not cover, stated rather than left to be discovered: a sign-in *with the
+ * old credential*, landing in the few milliseconds between the revocation and the write, creates a
+ * session this call has already passed. That is a race an attacker must already hold the password to
+ * run, it is bounded by one request, and the account's next remediation reaches it - against a
+ * failure mode that was unbounded in time and undetectable in the ledger. Re-sweeping after the
+ * write would only move an unguarded plugin call back in front of an append.
+ *
+ * **The operator's own account is refused, and that refusal is what makes the ordering safe rather
+ * than merely correct.** `/admin/set-user-password` runs behind the plugin's `adminMiddleware`,
+ * which re-resolves the caller from `headers` on entry - so aimed at the operator's own id, the
+ * revocation a few lines above has just deleted the caller's own D1 `session` row and its KV blob,
+ * and the credential write that follows answers `UNAUTHORIZED`. The operator would be signed out of
+ * every device, told the call failed, and their password would never have changed: the one
+ * combination of this handler's two steps that leaves the account worse off than it started. Putting
+ * the credential write back in front only trades that for the state REPAIR 57 exists to prevent. So
+ * the target is refused here, before either step, on the same line of reasoning as the self-ban and
+ * the self-demotion above it - and unlike those two it costs the operator nothing, because changing
+ * one's own password is a self-service flow already: Settings, under Security. `readTargetUser` runs
+ * after the refusal, so a self-target never reaches the plugin at all.
  *
  * Two statements and two rows, because two things happened. §4.2 gives "every session of one account
  * is revoked" its own action under `session:revoke`, and folding it into the password row would hide
@@ -432,34 +475,26 @@ export const setPlatformUserPasswordFn = createServerFn({ method: 'POST' })
       user: ['set-password'],
       session: ['revoke'],
     })
+    refuseSelfTarget(
+      call,
+      data.userId,
+      'You cannot set your own password from the console. Change it in Settings, under Security.',
+    )
     const before = await readTargetUser(call, data.userId)
 
-    // Before the credential changes, so a purge that cannot finish leaves the account exactly as it
-    // was found rather than half-remediated. See `clearSessionCache`.
+    // Before anything else, so a purge that cannot finish leaves the account exactly as it was found
+    // rather than half-remediated. See `clearSessionCache`.
     const purge = await clearSessionCache(
       call,
       data.userId,
       PLATFORM_ACTIONS.USER_PASSWORD_SET,
     )
 
-    await platformApi().setUserPassword({
-      body: { userId: data.userId, newPassword: data.newPassword },
-      headers: call.headers,
-    })
     await platformApi().revokeUserSessions({
       body: { userId: data.userId },
       headers: call.headers,
     })
     await endSessionIndex(call, data.userId, PLATFORM_ACTIONS.USER_PASSWORD_SET)
-
-    await recordConsoleAction(call, {
-      action: PLATFORM_ACTIONS.USER_PASSWORD_SET,
-      entityId: before.id,
-      changes: {
-        before: auditUserState(before),
-        after: auditUserState(before),
-      },
-    })
     await recordConsoleAction(call, {
       action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
       // `entity_type` is `session` under this prefix and no single session was touched, so no
@@ -468,6 +503,21 @@ export const setPlatformUserPasswordFn = createServerFn({ method: 'POST' })
       changes: {
         before: { userId: before.id, sessions: purge.enumerated },
         after: { userId: before.id, sessions: 0 },
+      },
+    })
+
+    // Last, and last for a reason: nothing that can reject stands between the credential write and
+    // the row that records it.
+    await platformApi().setUserPassword({
+      body: { userId: data.userId, newPassword: data.newPassword },
+      headers: call.headers,
+    })
+    await recordConsoleAction(call, {
+      action: PLATFORM_ACTIONS.USER_PASSWORD_SET,
+      entityId: before.id,
+      changes: {
+        before: auditUserState(before),
+        after: auditUserState(before),
       },
     })
 

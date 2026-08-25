@@ -2,9 +2,10 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import { Dialog, DialogContent, DialogTitle } from '#/components/ui'
 import { ImpersonationBar } from '../impersonation-bar'
 
 import type { ShellSession } from '../session'
@@ -127,27 +128,36 @@ describe('the impersonation bar', () => {
     })
   })
 
-  it('gives each identity its own share of the row, so neither can vanish', () => {
-    // At 360px a single truncating line put both names in competition and the
-    // operator, being last, lost — the bar stopped answering the one question it
-    // exists to answer. jsdom does not lay anything out, so what is asserted is
-    // the mechanism: two elements, each clipping only itself, and a ceiling on
-    // the operator's share so a long account name can shorten it but never
-    // delete it.
+  it('gives each identity a line of its own where the row is narrow', () => {
+    // At 360px the identity column is about 190px. One shared line put the two
+    // names in competition and the operator, being last, lost it; capping the
+    // operator at half the row stopped it vanishing but stranded the account's
+    // unused slack, so a long operator name was still clipped with a quarter of
+    // its own line empty beside it. jsdom lays nothing out, so what is asserted
+    // is the mechanism: the column stacks below `sm` and only becomes a row from
+    // `sm`, and neither span carries a width ceiling that could hold space back
+    // from the other.
     render(<ImpersonationBar session={sessionWith(true)} />)
     const bar = screen.getByRole('region', { name: 'Impersonated session' })
 
     const identity = bar.querySelector('p')
+    expect(identity?.className).toContain('flex-col')
+    expect(identity?.className).toContain('sm:flex-row')
+
     const [acted, operator] = [...(identity?.children ?? [])]
     expect(acted.textContent).toContain('Kasia Nowak')
     expect(operator.textContent).toContain('Rafal Wolak')
-    // Each clips only itself, and the operator's share has a floor: it does not
-    // shrink, and its ceiling is half the row.
+    // Each clips only itself…
     expect(acted.className).toContain('truncate')
-    expect(acted.className).toContain('shrink')
     expect(operator.className).toContain('truncate')
-    expect(operator.className).toContain('shrink-0')
-    expect(operator.className).toContain('max-w-[50%]')
+    expect(acted.className).toContain('min-w-0')
+    expect(operator.className).toContain('min-w-0')
+    // …and neither is given a ceiling or refused the right to shrink, which is
+    // what leaves the sharing to the space actually available.
+    for (const span of [acted, operator]) {
+      expect(span.className).not.toMatch(/\bmax-w-/)
+      expect(span.className).not.toMatch(/\bshrink-0\b/)
+    }
     expect(acted.contains(operator)).toBe(false)
   })
 
@@ -210,6 +220,51 @@ describe('the impersonation bar', () => {
     for (const label of ['Dismiss', 'Close', 'Hide']) {
       expect(screen.queryByRole('button', { name: label })).toBeNull()
     }
+  })
+
+  it('stays reachable while a modal traps focus inside itself', async () => {
+    // A Radix modal takes the bar away three separate times: `hideOthers()`
+    // marks it `aria-hidden`, `DismissableLayer` puts `pointer-events: none` on
+    // the body, and `FocusScope` pulls focus back into the panel. ACCESS §6.1
+    // says the one control that ends somebody else's session may not be covered
+    // — and a focus trap covers it as surely as a toast does.
+    render(
+      <>
+        <ImpersonationBar session={sessionWith(true)} />
+        <Dialog open>
+          <DialogContent hideClose>
+            <DialogTitle>Suspend this account</DialogTitle>
+            <button type="button">Inside the dialog</button>
+          </DialogContent>
+        </Dialog>
+      </>,
+    )
+
+    const inside = await screen.findByRole('button', {
+      name: 'Inside the dialog',
+    })
+    await waitFor(() => {
+      expect(document.activeElement).toBe(inside)
+    })
+
+    // AT: found by role at all, which means the subtree is not `aria-hidden`.
+    const bar = screen.getByRole('region', { name: 'Impersonated session' })
+    expect(bar.getAttribute('aria-hidden')).toBeNull()
+    expect(bar.getAttribute('aria-live')).toBe('off')
+    // Pointer: the body is inert, this is not, and its band is above the modal.
+    expect(bar.className).toContain('pointer-events-auto')
+    expect(bar.className).toContain('z-impersonation')
+
+    // Keyboard: the chord the button publishes as `aria-keyshortcuts`, pressed
+    // from inside the panel, lands focus on the exit — and it stays there.
+    const control = screen.getByRole('button', { name: 'End impersonation' })
+    expect(control.getAttribute('aria-keyshortcuts')).toBe('Alt+Shift+E')
+    fireEvent.keyDown(inside, { code: 'KeyE', altKey: true, shiftKey: true })
+    await waitFor(() => {
+      expect(document.activeElement).toBe(control)
+    })
+    fireEvent.focusIn(control)
+    expect(document.activeElement).toBe(control)
   })
 
   it('ends the session, throws away the loaders, and lands on the operator’s own screen', async () => {
@@ -275,7 +330,9 @@ describe('the impersonation bar', () => {
     exit.end.mockRejectedValue(new Error(internal))
     render(<ImpersonationBar session={sessionWith(true)} />)
 
-    await user().click(screen.getByRole('button', { name: 'End impersonation' }))
+    await user().click(
+      screen.getByRole('button', { name: 'End impersonation' }),
+    )
 
     await waitFor(() => {
       expect(notify.error).toHaveBeenCalled()
@@ -289,6 +346,31 @@ describe('the impersonation bar', () => {
     expect(options.description).toMatch(/Reload the page/)
   })
 
+  it('reports the exit that happened, not the refresh that did not', async () => {
+    // The session is already the operator's own by the time the router is
+    // touched. Reporting a failed `invalidate` as "could not end impersonation"
+    // tells somebody holding their own credential that they are still holding
+    // somebody else's — the more dangerous of the two wrong answers.
+    router.invalidate.mockRejectedValue(new Error('loader blew up'))
+    render(<ImpersonationBar session={sessionWith(true)} />)
+
+    await user().click(
+      screen.getByRole('button', { name: 'End impersonation' }),
+    )
+
+    await waitFor(() => {
+      expect(notify.success).toHaveBeenCalled()
+    })
+    expect(notify.error).not.toHaveBeenCalled()
+    const [title, options] = notify.success.mock.calls[0] as [
+      string,
+      { description?: string },
+    ]
+    expect(title).toBe('Impersonation ended')
+    // …and it says what is still owed, rather than pretending nothing happened.
+    expect(options.description).toMatch(/Reload the page/)
+  })
+
   it('recognises the exit’s own refusal and answers it in kind', async () => {
     // `ConsoleActionError` crosses the serialization boundary as data, so the
     // code is read structurally rather than with `instanceof`.
@@ -299,7 +381,9 @@ describe('the impersonation bar', () => {
     )
     render(<ImpersonationBar session={sessionWith(true)} />)
 
-    await user().click(screen.getByRole('button', { name: 'End impersonation' }))
+    await user().click(
+      screen.getByRole('button', { name: 'End impersonation' }),
+    )
 
     await waitFor(() => {
       expect(notify.error).toHaveBeenCalled()

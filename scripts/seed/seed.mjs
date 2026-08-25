@@ -173,6 +173,32 @@ function describeCredential(report) {
   }
 }
 
+/**
+ * The platform standing the fixture writes, printed so the console's claims can be checked by hand.
+ *
+ * A hint, not a source of truth: `PLATFORM_STANDING` in `src/routes/api/dev/-seed/bootstrap.ts` is
+ * what actually writes these, and the addresses come from the dataset beside it. It is repeated here
+ * because the seed report is the only place anybody is told the fixture exists, and a console that
+ * ships three roles has two of them that can only be *observed* by signing in as them — a curator
+ * seeing the catalogue and no accounts tab, and a plain user being turned away from `/console`
+ * altogether. All four share the password above.
+ */
+const PLATFORM_FIXTURE = [
+  ['rafal@planned.travel', 'admin — opens /console and every account action'],
+  ['mika@planned.travel', 'curator — the catalogue only, no accounts tab'],
+  ['jonas@planned.travel', 'user — /console redirects to /dashboard'],
+  ['priya@planned.travel', 'user, suspended — sign-in is refused with the repo copy'],
+]
+
+function printPlatformFixture() {
+  out('')
+  out('  Platform console')
+  for (const [email, standing] of PLATFORM_FIXTURE) {
+    out(`    ${email.padEnd(22)} ${standing}`)
+  }
+  out('    Every one of them signs in with the seed password.')
+}
+
 function printReport(report) {
   if (report.skipped) {
     out('Already seeded — nothing to do.')
@@ -182,6 +208,7 @@ function printReport(report) {
     // on a run that wrote no data — which is the run people make most often.
     out(`  owner            ${report.ownerEmail}`)
     out(`  password         ${describeCredential(report)}`)
+    printPlatformFixture()
     out('')
     out('Re-run with --force to rebuild the demo workspace from the dataset.')
     return
@@ -195,6 +222,7 @@ function printReport(report) {
   out(`  members          ${report.members} (${report.usersCreated} user rows created)`)
   out(`  categories       ${report.categories}`)
   out(`  moods            ${report.moods}`)
+  printPlatformFixture()
   out('')
   out('  Trips')
   for (const trip of report.trips) {

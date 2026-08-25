@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { BOTTOM_CLEARANCE_CSS } from '#/lib/atlas/layout'
+import { BOTTOM_CLEARANCE_CSS, SHELL_BOTTOM_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
 
 /**
@@ -140,19 +140,39 @@ describe('the chrome offsets that read the bar', () => {
     )
   })
 
-  it('stops the browser scrolling anything under the mobile tab bar', () => {
-    // The bottom edge's counterpart to `--impersonation-h` at the top, and
-    // deliberately scroll geometry rather than layout: `scroll-padding-bottom`
-    // moves where the browser stops and changes no element's size, so a content
-    // well that already clears the bar keeps exactly the height it had. The
-    // expression comes from `MOBILE_TAB_BAR`, so the reservation and the bar
-    // cannot disagree about how tall it is.
+  it('reserves the mobile tab bar’s box as real height, not as scroll geometry', () => {
+    // The bottom edge's counterpart to `--impersonation-h` at the top. The bar
+    // is `fixed`, so nothing gives it room unless something is told to: this
+    // utility is what `AppShell` puts under the outlet, and its length comes
+    // from `MOBILE_TAB_BAR` so the reservation and the bar cannot disagree about
+    // how tall it is.
     const css = stylesheet().replace(/\s+/g, '')
     expect(css).toContain(
-      `scroll-padding-bottom:${BOTTOM_CLEARANCE_CSS.replace(/\s+/g, '')};`,
+      `@utilitypb-tab-bar{padding-bottom:${BOTTOM_CLEARANCE_CSS.replace(/\s+/g, '')};}`,
     )
+    expect(SHELL_BOTTOM_CLASS).toContain('pb-tab-bar')
     // …and released from `lg`, where there is no tab bar to clear.
+    expect(SHELL_BOTTOM_CLASS).toContain('lg:pb-0')
+  })
+
+  it('stops the browser scrolling anything under it, in that document only', () => {
+    // The same box in scroll geometry: `scroll-padding-bottom` moves where the
+    // browser stops when it scrolls a focused field or an anchor into view, and
+    // changes no element's size. Both halves are needed — the reservation above
+    // cannot move a scroll position, and this one cannot give an element room.
+    const css = stylesheet().replace(/\s+/g, '')
+    expect(css).toContain(
+      `html:has([data-app-shell]){scroll-padding-bottom:${BOTTOM_CLEARANCE_CSS.replace(/\s+/g, '')};}`,
+    )
     expect(css).toContain('scroll-padding-bottom:0px;')
+    // Scoped, because only the authenticated shell renders a tab bar: an
+    // unscoped rule reserves against bottom chrome the marketing tree, the auth
+    // tree and the error document do not have.
+    expect(
+      [...stylesheet().matchAll(/scroll-padding-bottom:/g)],
+      'declarations of scroll-padding-bottom',
+    ).toHaveLength(2)
+    expect(css).not.toContain('html{scroll-padding-bottom')
   })
 
   it('leaves the nav row itself measuring the nav row', () => {

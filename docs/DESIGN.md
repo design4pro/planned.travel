@@ -57,11 +57,26 @@ Required token families — name them exactly this way:
   decoration, and this is the one band where that is a safety property rather than a nicety.
 
   Both edges of the viewport are the shell's, not a route's. `--impersonation-h` reserves the top
-  one; below `lg` the mobile tab bar is `fixed` and covers the bottom, so `AppShell` reserves its
-  whole box — row, hairline and `--safe-bottom` — once around the outlet. Every chrome expression
-  in the product is assembled from the inset lists in `src/lib/atlas/layout.ts` for the same
-  reason `--impersonation-h` is a token: a hand-written `calc()` that forgets a hairline is a
-  screen that overflows its own viewport by a pixel per term, and it does it silently.
+  one. Below `lg` the mobile tab bar is `fixed`, so it displaces nothing and covers the last row
+  of whatever is behind it — and `src/routes/_app/route.tsx` therefore wraps `<Outlet />` in a
+  single element carrying `pb-tab-bar lg:pb-0` (`SHELL_BOTTOM_CLASS`), which gives that box real
+  height: hairline, row and `--safe-bottom`, released from `lg` where the bar is not rendered.
+  Once around the outlet rather than per route, because a route is free not to use the content
+  well: `AppFrame`'s `bleed` branch has no padding by design and a screen that renders no
+  `AppFrame` at all still renders inside this shell.
+
+  Its twin is scroll geometry, not layout: `html:has([data-app-shell])` carries
+  `scroll-padding-bottom` of the same expression, so the browser also stops short of the bar when
+  it scrolls a focused field or an anchor into view. Neither substitutes for the other, and the
+  selector is scoped because only this document has a tab bar — the marketing tree and the auth
+  tree have no bottom chrome to clear.
+
+  Every chrome expression in the product — both reservations included — is assembled from the
+  inset lists in `src/lib/atlas/layout.ts` for the same reason `--impersonation-h` is a token: a
+  hand-written `calc()` that forgets a hairline is a screen that overflows its own viewport by a
+  pixel per term, and it does it silently. `documentHeight()` and `tripDocumentHeight()` sum the
+  header, the slice and the shell's bottom box, and the tests beside that file assert both land on
+  exactly one viewport at both breakpoints, with the impersonation bar present and absent.
 
 ## Starting palette (tune it, keep the structure)
 

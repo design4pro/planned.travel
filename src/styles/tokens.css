@@ -650,8 +650,13 @@
    `:root`, so the marketing tree, the auth tree and every portal keep the zero
    above and their geometry is untouched.
 
-   3.5rem carries two lines of chrome type (11px label over 12px identity) with
-   a 12px rhythm above and below, at every width from 360px up. */
+   One row at both of the bar's shapes. From `sm` that is an 11px label over one
+   12px identity line — 29px of type with a 13px rhythm above and below. Below
+   `sm` the two identities take a line each, because at 360px a shared line
+   cannot name both, so the same label sits over 32px of identity and the rhythm
+   closes to 5px. Denser at the narrow width, and deliberately: the alternative
+   was a taller bar at one breakpoint, which would make the row a length that
+   changes under the offsets composing it. */
 [data-impersonated] {
   --impersonation-h: 3.5rem; /* 56px */
 }

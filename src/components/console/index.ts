@@ -17,5 +17,7 @@
 export * from './account-identity'
 export * from './failure'
 export * from './instant'
+export * from './ledger'
 export * from './user-agent'
 export * from './vocabulary'
+export * from './workspace'

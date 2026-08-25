@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
-import { Search, SearchX, Users } from 'lucide-react'
+import { FileQuestion, Search, SearchX, Users } from 'lucide-react'
 import { z } from 'zod'
 
 import { ErrorPanel } from '#/components/layout/error-state'
@@ -114,6 +114,71 @@ const FIELD_OPTIONS = [
   { value: 'name', label: 'Name' },
 ]
 
+/* -------------------------------------------------------------------------------------------------
+ * Which of the two row layouts is mounted
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Tailwind's `md`, the width at which the table replaces the cards. Kept beside the classes that use
+ * it, because the two must agree: a query that disagreed with the breakpoint would unmount the
+ * layout that is on screen.
+ */
+const WIDE_QUERY = '(min-width: 48rem)'
+
+/**
+ * `both` is the server's answer and the first client frame's; after that exactly one is mounted.
+ *
+ * Hiding one layout with `hidden md:block` and the other with `md:hidden` puts *both* in the
+ * document, so a full page of twenty-five accounts mounted fifty action menus and rendered every row
+ * twice. Unmounting the one that is not showing is the fix, and doing it without a flash is the
+ * constraint: a component that decided from `matchMedia` alone would render a desktop table into a
+ * 360px server response and then swap it for cards on the first client frame, which is a visible
+ * layout shift after paint and exactly what `docs/SPEC.md` §2 forbids.
+ *
+ * So the server snapshot is `both`. The server renders what it renders today — the CSS hides one of
+ * them, so the painted frame is unchanged — React hydrates against that same markup, and only then
+ * does the store's real value arrive and drop the layout that was never visible. Nothing moves,
+ * because what leaves the document had `display: none` on it.
+ */
+type RowLayout = 'both' | 'table' | 'cards'
+
+function subscribeToWidth(onChange: () => void): () => void {
+  if (
+    typeof window === 'undefined' ||
+    typeof window.matchMedia !== 'function'
+  ) {
+    return () => undefined
+  }
+  const query = window.matchMedia(WIDE_QUERY)
+  query.addEventListener('change', onChange)
+  return () => {
+    query.removeEventListener('change', onChange)
+  }
+}
+
+function readRowLayout(): RowLayout {
+  if (
+    typeof window === 'undefined' ||
+    typeof window.matchMedia !== 'function'
+  ) {
+    return 'both'
+  }
+  return window.matchMedia(WIDE_QUERY).matches ? 'table' : 'cards'
+}
+
+/** The hydration snapshot. Constant, so React never reports a mismatch against the server's markup. */
+function serverRowLayout(): RowLayout {
+  return 'both'
+}
+
+function useRowLayout(): RowLayout {
+  return useSyncExternalStore(
+    subscribeToWidth,
+    readRowLayout,
+    serverRowLayout,
+  )
+}
+
 function ConsoleUsersPage() {
   const data = Route.useLoaderData()
   const search = Route.useSearch()
@@ -135,6 +200,17 @@ function ConsoleUsersPage() {
     (search.q !== undefined && search.q.length > 0) ||
     search.role !== undefined ||
     search.status !== undefined
+  /**
+   * An address that points past the last page, which is a different thing from a search that matched
+   * nobody and must not borrow its copy.
+   *
+   * `/console/users?page=7` against four accounts used to render "Nothing matches those filters" and
+   * a *Clear filters* button, next to a header reading "4 total", with no filter set — three
+   * statements on one card that could not all be true. The offset is simply beyond the end, and the
+   * only useful control is the one that goes back to the start.
+   */
+  const pastTheEnd = data.users.length === 0 && data.page > pageCount
+  const layout = useRowLayout()
 
   /** Every control lands here, and every control resets the page: page 7 of a new filter is nowhere. */
   function apply(next: Partial<UsersSearch>): void {
@@ -270,7 +346,9 @@ function ConsoleUsersPage() {
           </div>
         }
         footer={
-          data.total > CONSOLE_USERS_PAGE_SIZE ? (
+          // Never beside the past-the-end state: a pager whose current page does not exist has no
+          // honest position to mark, and that state carries its own way back.
+          data.total > CONSOLE_USERS_PAGE_SIZE && !pastTheEnd ? (
             <>
               <Pagination
                 className="hidden sm:flex"
@@ -302,42 +380,85 @@ function ConsoleUsersPage() {
           ) : undefined
         }
       >
-        {data.users.length === 0 ? (
+        {data.users.length > 0 ? (
+          <>
+            {layout === 'cards' ? null : (
+              <UsersTable
+                users={data.users}
+                selfId={shell.session.user.id}
+                directionOf={directionOf}
+                onSort={sortBy}
+                onChanged={refresh}
+              />
+            )}
+            {layout === 'table' ? null : (
+              <UsersCards
+                users={data.users}
+                selfId={shell.session.user.id}
+                onChanged={refresh}
+              />
+            )}
+          </>
+        ) : pastTheEnd ? (
           <div className="p-5">
             <EmptyState
               variant="filled"
-              icon={<SearchX />}
-              title="Nothing matches those filters"
-              description="No account on the platform answers this search. Widen it, or clear the filters to see everybody."
+              icon={<FileQuestion />}
+              title="That page is past the end"
+              description={
+                data.total === 1
+                  ? 'There is one account in this view, and page 1 is the only page it has.'
+                  : `There are ${formatNumber(data.total)} accounts in this view, which is ${pageCount === 1 ? 'a single page' : `${formatNumber(pageCount)} pages`}. Page ${formatNumber(data.page)} is beyond it.`
+              }
               action={
                 <Button
                   variant="primary"
                   size="sm"
                   shape="pill"
                   onClick={() => {
-                    apply({ q: undefined, role: undefined, status: undefined })
+                    void navigate({ search: { ...search, page: undefined } })
                   }}
                 >
-                  Clear filters
+                  Back to the first page
                 </Button>
               }
             />
           </div>
         ) : (
-          <>
-            <UsersTable
-              users={data.users}
-              selfId={shell.session.user.id}
-              directionOf={directionOf}
-              onSort={sortBy}
-              onChanged={refresh}
+          <div className="p-5">
+            <EmptyState
+              variant="filled"
+              icon={<SearchX />}
+              title={
+                filtered
+                  ? 'Nothing matches those filters'
+                  : 'No accounts to show'
+              }
+              description={
+                filtered
+                  ? 'No account on the platform answers this search. Widen it, or clear the filters to see everybody.'
+                  : 'This view is empty. Nothing is filtered, so there is nothing here to widen.'
+              }
+              action={
+                filtered ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    shape="pill"
+                    onClick={() => {
+                      apply({
+                        q: undefined,
+                        role: undefined,
+                        status: undefined,
+                      })
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                ) : undefined
+              }
             />
-            <UsersCards
-              users={data.users}
-              selfId={shell.session.user.id}
-              onChanged={refresh}
-            />
-          </>
+          </div>
         )}
       </Panel>
     </div>

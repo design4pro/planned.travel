@@ -612,6 +612,23 @@ let callerJar: CookieJar = new Map()
  * `Set-Cookie` assertion is made on the thing the browser would receive.
  */
 async function duringRequest(call: () => Promise<void>): Promise<Response> {
+  const attempt = await attemptDuringRequest(call)
+  if (attempt.failures.length > 0) {
+    throw attempt.failures[0]
+  }
+  return attempt.response
+}
+
+/**
+ * The same request scope, handing back the response *and* whatever the handler threw.
+ *
+ * The two are separate facts and one case needs both: a handler that rejects still leaves its
+ * headers on the response the runtime builds, which is exactly how a forwarded `Set-Cookie` can
+ * survive an error the operator is shown. {@link duringRequest} re-raises for every other case.
+ */
+async function attemptDuringRequest(
+  call: () => Promise<void>,
+): Promise<{ response: Response; failures: Array<unknown> }> {
   // h3 turns a thrown error into a `Response` — a refusal carrying `status: 403` really does leave
   // the Worker as a 403, which is worth knowing and is not what these tests are asserting. The
   // failure is caught here and re-raised after the response exists, so a case can inspect the error
@@ -640,10 +657,7 @@ async function duringRequest(call: () => Promise<void>): Promise<Response> {
     new Request(`${BASE_URL}/_serverFn/console`, { method: 'POST', headers }),
     {},
   )
-  if (failures.length > 0) {
-    throw failures[0]
-  }
-  return response
+  return { response, failures }
 }
 
 /**
@@ -1430,6 +1444,137 @@ describe('setting a password', () => {
     })
   })
 
+  it('sets the credential last, after the revocation and after the row that records it', async () => {
+    // The ordering *is* the handler. Everything that can reject runs while the account still holds
+    // the credential it arrived with, so the credential write is the last statement in the call and
+    // only `recordConsoleAction` — which never throws, and neither does `appendPlatformAudit`
+    // beneath it — stands between it and its row.
+    const targetId = await seedAccountWithPassword('ordered@planned.travel')
+    callerJar = await jarFromSignIn(OPERATOR_EMAIL)
+
+    const seen: Array<string> = []
+    const realRevoke = getAuth().api.revokeUserSessions
+    const realSet = getAuth().api.setUserPassword
+    vi.spyOn(getAuth().api, 'revokeUserSessions').mockImplementation(
+      async (options) => {
+        seen.push(
+          `revoke after ${(await rowsFor('platform.session.revoked_all')).length} row(s)`,
+        )
+        return realRevoke(options)
+      },
+    )
+    vi.spyOn(getAuth().api, 'setUserPassword').mockImplementation(
+      async (options) => {
+        seen.push(
+          `set after ${(await rowsFor('platform.session.revoked_all')).length} row(s)`,
+        )
+        return realSet(options)
+      },
+    )
+
+    await setPassword({
+      userId: targetId,
+      newPassword: 'a-perfectly-ordinary-passphrase',
+    })
+
+    expect(seen).toEqual(['revoke after 0 row(s)', 'set after 1 row(s)'])
+  })
+
+  it('leaves the credential alone when the revocation rejects, rather than changing it unrecorded', async () => {
+    // The failure this ordering exists for. With the credential written first, an ordinary transient
+    // out of `revokeUserSessions` left the password changed, no `platform.user.password_set` row for
+    // it anywhere, the target's sessions still live on the old credential, and the operator told the
+    // call had failed — irreversible and invisible at once.
+    const targetId = await seedAccountWithPassword('transient@planned.travel')
+    callerJar = await jarFromSignIn(OPERATOR_EMAIL)
+    const setSpy = vi.spyOn(getAuth().api, 'setUserPassword')
+    vi.spyOn(getAuth().api, 'revokeUserSessions').mockRejectedValue(
+      new Error('D1_ERROR: database is locked'),
+    )
+    const refused = 'a-passphrase-that-never-lands'
+
+    await expect(
+      setPassword({ userId: targetId, newPassword: refused }),
+    ).rejects.toThrow('D1_ERROR')
+
+    expect(setSpy).not.toHaveBeenCalled()
+    expect(await rowsFor('platform.user.password_set')).toEqual([])
+    expect(await rowsFor('platform.session.revoked_all')).toEqual([])
+    // The account is exactly as it was found: the credential it arrived with still signs in, and the
+    // one the operator asked for does not. Pressing the button again is the whole remedy.
+    expect(
+      await authPost('/sign-in/email', {
+        email: 'transient@planned.travel',
+        password: refused,
+      }).then((r) => r.status),
+    ).not.toBe(200)
+    expect(
+      await authPost('/sign-in/email', {
+        email: 'transient@planned.travel',
+        password: PASSWORD,
+      }).then((r) => r.status),
+    ).toBe(200)
+  })
+
+  it('refuses the operator own account, which the revocation would sign out before the write', async () => {
+    const revokeSpy = vi.spyOn(getAuth().api, 'revokeUserSessions')
+    const setSpy = vi.spyOn(getAuth().api, 'setUserPassword')
+
+    await expect(
+      setPassword({
+        userId: operatorId,
+        newPassword: 'a-passphrase-for-the-operator',
+      }),
+    ).rejects.toMatchObject({ code: 'target-is-self' })
+
+    // Refused before either step, so nothing about the operator's account moved.
+    expect(revokeSpy).not.toHaveBeenCalled()
+    expect(setSpy).not.toHaveBeenCalled()
+    expect(await auditRows()).toEqual([])
+    expect(sessionCount(operatorId)).toBe(1)
+    const live = await authGet('/get-session', jarHeader(callerJar))
+    const body: { user: { id: string } } | null = await live.json()
+    expect(body?.user.id).toBe(operatorId)
+    // Still the credential they arrived with, and the one they asked for never landed.
+    expect(
+      await authPost('/sign-in/email', {
+        email: OPERATOR_EMAIL,
+        password: PASSWORD,
+      }).then((response) => response.status),
+    ).toBe(200)
+  })
+
+  it('cannot set its own password even in the order the handler uses, which is why the refusal is here', async () => {
+    // The measurement behind that refusal, taken against `better-auth@1.7.1` rather than argued from
+    // the handler. `/admin/set-user-password` runs behind `adminMiddleware`, which re-resolves the
+    // caller from `headers` on entry — so once the revocation has deleted the operator's own session
+    // row and its blob, the credential write answers `UNAUTHORIZED`. Aimed at the operator, this
+    // handler's two steps cannot both succeed in either order: revoke-then-write signs them out and
+    // never changes the password, and write-then-revoke is the state REPAIR 57 exists to prevent.
+    const headers = new Headers({ cookie: jarHeader(callerJar) })
+
+    await getAuth().api.revokeUserSessions({
+      body: { userId: operatorId },
+      headers,
+    })
+
+    const failure = await getAuth()
+      .api.setUserPassword({
+        body: { userId: operatorId, newPassword: 'a-passphrase-that-cannot' },
+        headers,
+      })
+      .catch((cause: unknown) => cause)
+
+    expect(failure).toBeInstanceOf(Error)
+    expect(failure).toMatchObject({ status: 'UNAUTHORIZED' })
+    expect(
+      await authPost('/sign-in/email', {
+        email: OPERATOR_EMAIL,
+        password: 'a-passphrase-that-cannot',
+      }).then((response) => response.status),
+    ).not.toBe(200)
+  })
+
   it('keeps the password out of the log lines as well', async () => {
     const target = seedUser()
     const secret = 'another-long-passphrase'
@@ -2054,6 +2199,46 @@ describe('impersonation', () => {
     await expect(impersonate({ userId: operatorId })).rejects.toMatchObject({
       code: 'target-is-self',
     })
+  })
+
+  it('forwards nothing when the plugin body cannot be read, rather than swapping the session behind an error', async () => {
+    // The failure the parse-before-forward order exists for. TanStack merges whatever
+    // `setResponseHeader` put on the event onto the response it builds — an error response included
+    // — so cookies forwarded before the body was known good land the operator *inside* the
+    // impersonated session while the screen reports the failure, and docs/ACCESS.md §4.3's
+    // "audited without exception" is false for a session that is live for the next fifteen minutes.
+    const worn = seedUser({ name: 'Unreadable Body' })
+    const real = getAuth().api.impersonateUser
+    vi.spyOn(getAuth().api, 'impersonateUser').mockImplementation(
+      async (options) => {
+        const result = await real(options)
+        // A body the boundary schema cannot read, with the real `Set-Cookie` set beside it: version
+        // skew in the dependency, which is the whole reason the response is parsed at all.
+        const { headers, response } = result as unknown as {
+          headers: Headers
+          response: Record<string, unknown>
+        }
+        // Two casts through `unknown`, once each way, because the endpoint's declared return type
+        // is the bare body: `returnHeaders: true` is resolved at runtime from the argument, not in
+        // the type, so the shape the handler actually receives is unrepresentable here.
+        return { headers, response: { ...response, session: null } } as unknown as Awaited<
+          ReturnType<typeof real>
+        >
+      },
+    )
+
+    const attempt = await attemptDuringRequest(async () => {
+      await startImpersonationFn({ data: { userId: worn.id } })
+    })
+
+    expect(attempt.failures).toHaveLength(1)
+    // Not one value, and the plugin really did set six of them on the result this call discarded.
+    expect(attempt.response.headers.getSetCookie()).toEqual([])
+    expect(await auditRows()).toEqual([])
+    // The operator's own cookies are untouched, so the browser is still the operator.
+    const still = await authGet('/get-session', jarHeader(callerJar))
+    const body: { user: { id: string } } | null = await still.json()
+    expect(body?.user.id).toBe(operatorId)
   })
 
   it('ends an impersonation, restoring the operator session and naming them as the actor', async () => {
