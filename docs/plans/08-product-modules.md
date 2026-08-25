@@ -25,7 +25,13 @@ let a member change anything was never written.
   `ensurePlan` (`:142`) and `getPlanOverview` (`:572`). `updatePlan` (`:181`), `setEntitlement`
   (`:307`), `setEntry` (`:366`), `setEntryRange` (`:400`), `removeEntry` (`:447`),
   `addCompanyHoliday` (`:486`), `addHolidayCalendar` (`:524`), `invitePlanMember` (`:207`),
-  `setPlanMemberStatus` (`:224`) and `setUserColour` (`:248`) have no caller outside the dev seeder.
+  `setPlanMemberStatus` (`:224`) and `setUserColour` (`:248`) have no caller in production code — no
+  screen and no server function reaches any of them. The dev seeder
+  (`src/routes/api/dev/-seed/apply.ts`) exercises most, and the repository suites already cover
+  `setEntitlement`, `setEntry` and `setEntryRange`
+  (`src/server/repos/__tests__/repositories.test.ts:469-490`) plus `addCompanyHoliday`,
+  `addHolidayCalendar` and `setUserColour` (`__tests__/tenant-isolation.test.ts:460-468`), so
+  tenant-scope tests for these writes already exist and are extended, not duplicated.
 - **The world-map tracker.** `src/routes/_app/atlas.tsx` delegates to `-ui/atlas-screen.tsx` (1,019
   lines), which composes `src/components/atlas/` — `country-overlay.tsx`, `atlas-panel.tsx`,
   `country-actions.tsx`, `country-search.tsx`, `countries-list.tsx`, `country-card.tsx`,
@@ -34,10 +40,12 @@ let a member change anything was never written.
   `unmarkCountryVisitedFn` (`:485`), `addCountryToBucketListFn` (`:547`) and
   `removeCountryFromBucketListFn` (`:585`). The half that is not built is everything below country
   level and everything beside it: `markRegionVisited` (`src/server/repos/atlas.ts:221`) is reached
-  only by the seeder, `unmarkRegionVisited` (`:244`) and `listVisitedRegions` (`:210`) are reached by
-  nothing, and `createBucketListItem` (`:269`), `updateBucketListItem` (`:280`),
-  `achieveBucketListItem` (`:293`) and `deleteBucketListItem` (`:314`) are reachable only through the
-  two country-shaped wrappers, so a bucket list that models `kind` cannot hold a city or a walk.
+  only by the seeder and the atlas repository suite
+  (`__tests__/atlas-country-facts.test.ts:520`), `unmarkRegionVisited` (`:244`) and
+  `listVisitedRegions` (`:210`) are reached by nothing, and `createBucketListItem` (`:269`),
+  `updateBucketListItem` (`:280`), `achieveBucketListItem` (`:293`) and `deleteBucketListItem`
+  (`:314`) are reachable on a screen only through the two country-shaped wrappers, so a bucket list
+  that models `kind` cannot hold a city or a walk.
 - **The travel journal.** `src/routes/_app/journey/index.tsx` (614 lines) and
   `$journeyId.tsx` (384 lines) render `loadJourneys`, `loadJournalOverview` and `loadJourneyStory`.
   The story screen's empty state reads "This journey has no entries yet" and invites the reader to
@@ -54,13 +62,16 @@ let a member change anything was never written.
   `updateCollection` (`src/server/repos/collections.ts:309`), `deleteCollection` (`:326`),
   `addCollectionPlace` (`:330`), `saveTripPlaceToCollection` (`:363`), `updateCollectionPlace`
   (`:398`), `setCollectionPlaceStatus` (`:410`), `deleteCollectionPlace` (`:420`), `createLabel`
-  (`:427`), `deleteLabel` (`:436`) and `setCollectionPlaceLabels` (`:441`) have no caller. The
+  (`:427`), `deleteLabel` (`:436`) and `setCollectionPlaceLabels` (`:441`) have no caller in
+  production code — the repository suites reach `addCollectionPlace`, `saveTripPlaceToCollection`,
+  `createLabel` and `setCollectionPlaceLabels`; no screen or server function reaches any. The
   screen's own empty state promises that a place can be saved "from the map, from another trip, or
   straight from a recommendation" (`$collectionId.tsx:161`). None of those three is reachable.
 
 And one consumer reads numbers nothing in production writes. `AtlasPanel` renders the statistics
 from `listTravelStats` through `loadAtlas`, while `recomputeTravelStats`
-(`src/server/repos/atlas.ts:792`) is called only by the dev seeder. Marking a country moves the map
+(`src/server/repos/atlas.ts:792`) is called only by the dev seeder and the repository suite
+(`__tests__/repositories.test.ts:451`), never from a request path. Marking a country moves the map
 and leaves every figure beside it frozen at its seeded value.
 
 ### The rows this plan moves, and how far it moves each
@@ -322,10 +333,10 @@ under **Server**.
   read and write it makes is an existing `tenantFilter()`-bound call — the function adds no SQL of
   its own, which is why it belongs in this module rather than anywhere else.
 
-  Why a recompute rather than a running total: `carried_over_days` is a stored column
-  (`getPlanOverview:604` reads it directly), and editing an allowance three years back would
-  otherwise leave every later year wrong with nothing to notice it. The published number is the
-  computed number.
+  Why a recompute rather than a running total: `carried_over_days` is a stored column —
+  `getPlanOverview` reads it directly at `src/server/repos/vacay.ts:607` — and editing an allowance
+  three years back would otherwise leave every later year wrong with nothing to notice it. The
+  published number is the computed number.
 
 - **Server functions — `src/routes/_app/-server/vacay.ts`**, all `POST`:
   - `setEntitlementFn` — one traveller's allowance and carry-over for one year; returns the
@@ -459,7 +470,7 @@ Functions covered: `ensurePlan`, `updatePlan`, `ensureYear`, `setEntitlement`, `
   - `src/routes/_app/-server/__tests__/vacay.test.ts` — a member setting a colleague's allowance is
     rejected while the plan owner's identical call succeeds; a foreign plan id is a `NotFoundError`;
     `updateVacayPlanFn` with carry-over turned off returns balances whose `carriedOverDays` is zero,
-    matching `getPlanOverview:604`.
+    matching the zeroing branch at `getPlanOverview` (`src/server/repos/vacay.ts:607`).
   - `src/components/vacay/__tests__/entitlement-panel.test.tsx` — the tile commits on `Enter` and
     reverts on `Escape`; the input is reachable from the tile by keyboard alone; a rejected write
     leaves the typed value in the field and renders the alert.
@@ -2493,7 +2504,9 @@ invitation nobody is told about is not an invitation.
 into one balance list, and `vacay.tsx:174-215` already renders the traveller list with per-person
 swatches and used-day counts. Nothing in that is redesigned. What is missing is every write behind
 it: `invitePlanMember` (`:207`), `setPlanMemberStatus` (`:224`), `removePlanMember` (`:234`) and
-`setUserColour` (`:248`) are reached only by the dev seeder.
+`setUserColour` (`:248`) have no production caller — the dev seeder reaches all but
+`removePlanMember`, which nothing calls, and `setUserColour` is also exercised by
+`src/server/repos/__tests__/tenant-isolation.test.ts:468`.
 
 **A contradiction with the row, stated with evidence.** The row expects "live sync over named
 events". **We have exactly one realtime primitive and it is addressed by trip id.** Measured:

@@ -1575,17 +1575,6 @@
     "invalidatesWhen": "the checkout at /Users/rafalwolak/dev/test/trek is removed"
   },
   {
-    "claim": "pnpm test at the current tree carries 22 pre-existing failures in src/lib/i18n/__tests__/parity.test.ts — every non-English locale is missing the same 216 atlas.* keys — and they are independent of any docs/plans edit.",
-    "evidence": "vitest run of parity.test.ts with docs/plans/03 change stashed: numFailedTests 22, first missing key atlas.actions.button.add, 216-key list identical to the run with the change applied; git status shows src/ clean, so the gap is at HEAD, presumably an in-flight translations item.",
-    "scope": [
-      "mechanical",
-      "auditor",
-      "builder"
-    ],
-    "id": "pnpm-test-at-the-current-tree-carries-22-pre-existin",
-    "measuredIn": "plans-for-plugins run, round 1"
-  },
-  {
     "claim": "src/server/repos/settings.ts drifted roughly +7..+17 lines against plan 03's citations: updateUserSettingsInput.reduceMotion :141, updateUserSettings :228-239, ensureUserSettings :219-226, getUserSettings :211-217, EffectiveSettings.reduceMotion :266, getEffectiveSettings :271-304 with its Promise.all :275-278 and return literal :285-303; -server/settings.ts: AppearancePayload.reduceMotion :269, loadAppearance fill :285, saveAppearance validator :297, pass-through :305.",
     "evidence": "grep -n / sed measurements at this run's tree, written into the corrected plan text and re-checkable with the same greps.",
     "scope": [
@@ -1743,5 +1732,98 @@
       "builder"
     ],
     "invalidatesWhen": "the seed writes deterministic membership dates (seed-relative-dates backlog)"
+  },
+  {
+    "claim": "Every module write function plan 08 lists as unreachable HAS unit-test callers: repositories.test.ts covers setEntitlement/setEntryRange/setEntry (469-490), createBucketListItem/achieveBucketListItem (431-436) and recomputeTravelStats (451/461); tenant-isolation.test.ts covers setEntitlement/setEntry/addCompanyHoliday/addHolidayCalendar/setUserColour (460-468) plus addCollectionPlace/saveTripPlaceToCollection/createLabel/setCollectionPlaceLabels; atlas-country-facts.test.ts covers markRegionVisited (520). A stage implementing these writes must extend those suites, not create duplicates.",
+    "evidence": "/usr/bin/grep -rn over src/server/repos/__tests__/ for each function name, line numbers as listed; journey tests reach only addPhoto and createEntry.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "every-module-write-function-plan-08-lists-as-unreach",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "removePlanMember (repos/vacay.ts:234), removeEntry (:447), unmarkRegionVisited (atlas.ts:244) and listVisitedRegions (:210) have zero callers anywhere — not the seeder, not any test; the dev seeder (src/routes/api/dev/-seed/apply.ts) calls 8 of the 10 unreachable vacay writes (all except setEntry and removeEntry).",
+    "evidence": "grep -rn for each name across src excluding the defining repo file returned only apply.ts imports/calls (updatePlan:548, invitePlanMember:565, setUserColour:566, setPlanMemberStatus:570, setEntitlement:579, addHolidayCalendar:589, addCompanyHoliday:592, setEntryRange:601, markRegionVisited:526, recomputeTravelStats:536) and the test hits listed above.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "removeplanmember-repos-vacay-ts-234-removeentry-447-",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "The whole citation set of docs/plans/08-product-modules.md is line-accurate at this HEAD after commit 6f61a05 — the source tree has not drifted under it, so a re-audit only needs to spot-check files another in-flight item touches (currently src/lib/i18n/messages/*/atlas.ts).",
+    "evidence": "~198 backticked file:line citations extracted with /usr/bin/grep -nE and each verified by sed/grep against the cited file; the only corrections needed were two getPlanOverview:604 → vacay.ts:607 precision fixes and the five caller-claim rewrites.",
+    "scope": [
+      "auditor",
+      "critic"
+    ],
+    "id": "the-whole-citation-set-of-docs-plans-08-product-modu",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "The parity untranslated axis flags genuine cross-language homographs in the atlas namespace — cs/pl 'Region', pl 'Oceania', id 'Asia' — and with PROPER_NOUNS deliberately [], the fix has to be an in-catalogue synonym, not a test edit: cs 'Oblast', pl 'Region kraju', pl 'Australia i Oceania', id 'Benua'-prefixed continents (vi's Châu prefix is the in-repo precedent).",
+    "evidence": "vitest run of parity.test.ts flagged exactly atlas.panel.bucket.kind.region (cs, pl), atlas.continent.oceania (pl) and atlas.continent.asia (id); after the synonym edits the same run reports zero failures for all six locales.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "the-parity-untranslated-axis-flags-genuine-cross-lan",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "After this item, the only red left in parity.test.ts is 8 locales missing atlas.ts entirely: ca de es fr it nl pt-BR sv — ar, el, ja, ko, ru, uk, zh-Hans and zh-Hant atlas packs landed from parallel agents mid-session (untracked in git status).",
+    "evidence": "vitest JSON reporter at 1787686673: numFailedTests 8, every failure named 'carries every key English carries'; git status --porcelain src/lib/i18n lists 14 untracked atlas.ts files of which only 6 are this item's.",
+    "scope": [
+      "builder",
+      "mechanical"
+    ],
+    "id": "after-this-item-the-only-red-left-in-parity-test-ts-",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "The rtk hook's [RTK:PASSTHROUGH] truncation corrupts any large stdout piped between commands, so vitest --reporter=json must be written with --outputFile and read from disk, never piped to node",
+    "evidence": "`vitest run --reporter=json | node -e JSON.parse` failed with 'Output truncated (62517 chars → 2000 chars)' injected into the stream; the identical run with --outputFile parsed cleanly",
+    "scope": [
+      "builder",
+      "mechanical",
+      "auditor"
+    ],
+    "id": "the-rtk-hook-s-rtk-passthrough-truncation-corrupts-a",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "en/atlas.ts carries 217 flat keys at this tree, not the 247 the item briefs recall; 13 of them are plural messages and the parity suite checks only missing categories, so writing exactly the resolved CLDR set per locale passes both the 'gap' and 'exact' readings",
+    "evidence": "Object.keys(en).length === 217 measured by direct Node import of the file; parity.test.ts compare() pluralGaps loop at lines 137-149 only pushes undefined categories",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "en-atlas-ts-carries-217-flat-keys-at-this-tree-not-t",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "The parity suite's per-locale assertions can be attributed from the JSON reporter by the locale token inside fullName ('the shipped catalogues <tag> carries every key…'), which is how a builder proves its slice green while the repo gate stays red",
+    "evidence": "Parsed testResults[].assertionResults[].fullName from the outputFile run: 8 failures, all naming ca/de/es/fr/it/nl/pt-BR/sv, zero naming ar/el/ru/uk/ja/ko/zh-Hans/zh-Hant",
+    "scope": [
+      "builder",
+      "mechanical"
+    ],
+    "id": "the-parity-suite-s-per-locale-assertions-can-be-attr",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "The settled 22-failure / 216-key parity gap has shrunk: pnpm test now fails only 8 parity tests, restricted to ca/de/es/fr/it/nl/pt-BR/sv and only the atlas.search.* keys; ar/el/tr/hu/ja/ko/etc. now pass.",
+    "evidence": "vitest run at this tree: Tests 8 failed | 3449 passed; failing suite src/lib/i18n/__tests__/parity.test.ts:400, missing list is exclusively atlas.search.* for those eight locales.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-settled-22-failure-216-key-parity-gap-has-shrunk",
+    "measuredIn": "plans-for-plugins run, round 2"
   }
 ]

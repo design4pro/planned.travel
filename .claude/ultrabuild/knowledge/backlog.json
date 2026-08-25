@@ -102,5 +102,15 @@
     "title": "The structural exemption makes the inverted affix invisible instead of fixing it",
     "why": "Round 12 replaced the no-byte-identical rule with a structural exemption: a value with no letter in any script is never reported as untranslated. That is the right rule, but it also means the ten locales owned by items the round did not carry - ar, el, tr, hu, id, vi, cs, pl, ru, uk - now ship '+{max}' / '{hidden}+' with nothing red to show for it. de, nl and sv were repaired; the rest were not.",
     "decision": "Round 13 carries translations-rtl-hellenic, translations-slavic and translations-cjk, each restoring its own locales. Explicit work, because no test will surface it any more."
+  },
+  {
+    "id": "plans-cite-lost-gap-rows",
+    "title": "Plans 03 and 13 still cite .claude/ultrabuild/recon/gap-rows.json, which exists nowhere",
+    "why": "Plan 03 references it as a readable artifact in ten places (incl. an executable one-liner) and plan 13's area brief cites \"the recon inventory\"; the artifact was never committed and is unrecoverable. An executing run following those instructions hits a missing file. The round-1 acceptance named only repo-data/repo-ui/repo-platform.md, so these survived.",
+    "decision": "Carried as minor findings on accepted items rather than reopening them; fix in the next round that legitimately touches each plan, or in a citation-hygiene item after conversion.",
+    "paths": [
+      "docs/plans/03-reservations-and-transport.md",
+      "docs/plans/13-community-gallery.md"
+    ]
   }
 ]
