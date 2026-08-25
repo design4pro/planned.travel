@@ -1742,5 +1742,70 @@
     ],
     "id": "-sharp-is-not-installed-in-this-repo",
     "measuredIn": "round-11"
+  },
+  {
+    "claim": "Tailwind 4.3.3 emits every logical inset utility (`.end-*`, `.start-*`) BEFORE the physical ones (`.right-*`, `.left-*`) in the built stylesheet, and tailwind-merge keeps both, so a physical inset always beats a logical one on the same element. Consequence: a logical base class plus a physical override is safe; the reverse silently loses.",
+    "evidence": "dist/client/assets/styles-*.css: byte offset of `.end-4{` is 14903, `.right-4{` is 16241, `.right-auto{` is 16403. `cn('right-2','end-4')` returns 'right-2 end-4' — both survive. This is why MapCorner's corners could be made logical without breaking plan-screen, which overrides them with `right-(--plan-controls)`.",
+    "scope": [
+      "builder"
+    ],
+    "id": "tailwind-4-3-3-emits-every-logical-inset",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Forcing `document.documentElement.dir='rtl'` on an English /atlas document is NOT a valid RTL probe: the shelf stays LTR because Radix `Tabs.Root` emits its own `dir=\"ltr\"` from DirectionProvider, which still holds the server-negotiated direction. Only pinning the real locale exercises the screen's RTL layout.",
+    "evidence": "Injected dir=rtl at 1440: page chrome mirrored (nav, search pill, zoom cluster) but the shelf header, stat grid, continent row and legend all kept LTR order. Pinning `ar` through [data-testid=\"locale-chip-ar\"] on the same tree mirrored all of them. Same DirectionProvider gotcha the ui-primitives item measured for a gallery harness.",
+    "scope": [
+      "capture",
+      "critic",
+      "builder"
+    ],
+    "id": "forcing-document-documentelement-dir-rtl-on-an-english",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "e2e/__screenshots__/visual.spec.ts/atlas-light-chromium-darwin.png is stale against HEAD and fails independently of any round-17 diff; atlas-dark passes. Do not attribute `atlas renders in light` to a code change without cropping the baseline first.",
+    "evidence": "Rendered both PNGs into a file:// page at 2.5-4x with image-rendering:pixelated: baseline reads 'My Trips' and 'Counted across finished trips'; the actual reads 'My trips' and 'Across every trip on your record'. `git show HEAD:src/lib/i18n/messages/en/shell.ts` has `'nav.trips': 'My trips'` (since 4fc921d) and `git show HEAD:src/components/atlas/atlas-panel.tsx` has caption=\"Across every trip on your record\" (since 730f5d8). Diff is 2675px, ratio 0.01, stable across three runs.",
+    "scope": [
+      "capture",
+      "mechanical",
+      "auditor",
+      "critic"
+    ],
+    "id": "e2e-screenshots-visual-spec-ts-atlas-light-chromium",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The 22 parity failures this round are a single new namespace, not 22 independent translation regressions: every missing key printed is atlas.*, so an atlas English catalogue landed without any locale pack following it.",
+    "evidence": "pnpm test diff output for each of the 22 locales lists only atlas.search.* / atlas.* keys; the previous round recorded 3179/3179 with zero parity failures, and this round is 3433 passed / 22 failed across 3455.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-22-parity-failures-this-round-are-a",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "Playwright's atlas-light chromium failure is stable, not the load flake: the same 2675-pixel count was produced on both of Playwright's own retake attempts within the single test.",
+    "evidence": "Call log shows two 'taking page screenshot' passes, both reporting '2675 pixels (ratio 0.01 of all image pixels) are different', ending in 'captured a stable screenshot'.",
+    "scope": [
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "playwright-s-atlas-light-chromium-failure-is-stable",
+    "measuredIn": "round-11"
+  },
+  {
+    "claim": "The dev server for this worktree is up on 3001 and resolve-port.sh --start reused it without starting anything; the shoot helper's language pin worked (zero 'could not pin' lines).",
+    "evidence": "scripts/ultrabuild/resolve-port.sh --start printed 'resolve-port: reusing the server already answering on 3001' then '3001'; grep -c 'could not pin' over the full Playwright log returned 0.",
+    "scope": [
+      "capture",
+      "mechanical"
+    ],
+    "id": "the-dev-server-for-this-worktree-is-up",
+    "measuredIn": "round-11"
   }
 ]
