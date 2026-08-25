@@ -1,5 +1,7 @@
 import * as React from 'react'
 
+import { useAtlasI18n } from './copy'
+
 /**
  * Roving tabindex for a toolbar.
  *
@@ -8,6 +10,14 @@ import * as React from 'react'
  * keyboard user is worse off than with plain buttons, because their browser's
  * expectations no longer match what the widget does. This hook keeps that promise
  * in about forty lines, for any toolbar that renders its own items.
+ *
+ * A horizontal toolbar swaps its two keys under `dir="rtl"`, because the arrow
+ * a reader presses is the one pointing where the *next* control is drawn, and in
+ * an Arabic document that is ArrowLeft. WAI-ARIA's toolbar pattern says so
+ * outright, and a strip that mirrors visually while its keys do not is worse
+ * than one that never mirrored: everything looks right and nothing behaves.
+ * A vertical toolbar is unaffected — writing direction has no opinion about
+ * up and down.
  */
 export type RovingOrientation = 'horizontal' | 'vertical'
 
@@ -37,6 +47,7 @@ export function useRovingFocus({
   orientation = 'horizontal',
   loop = true,
 }: RovingFocusOptions): RovingFocus {
+  const { dir } = useAtlasI18n()
   const [activeIndex, setActiveIndex] = React.useState(0)
   const nodes = React.useRef<Array<HTMLButtonElement | null>>([])
   const refs = React.useRef(
@@ -59,8 +70,14 @@ export function useRovingFocus({
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLElement>) => {
       if (count === 0) return
-      const forward = orientation === 'horizontal' ? 'ArrowRight' : 'ArrowDown'
-      const backward = orientation === 'horizontal' ? 'ArrowLeft' : 'ArrowUp'
+      const inline =
+        dir === 'rtl'
+          ? { forward: 'ArrowLeft', backward: 'ArrowRight' }
+          : { forward: 'ArrowRight', backward: 'ArrowLeft' }
+      const forward =
+        orientation === 'horizontal' ? inline.forward : 'ArrowDown'
+      const backward =
+        orientation === 'horizontal' ? inline.backward : 'ArrowUp'
 
       const move = (delta: number): void => {
         event.preventDefault()
@@ -81,7 +98,7 @@ export function useRovingFocus({
         focusAt(count - 1)
       }
     },
-    [active, count, focusAt, loop, orientation],
+    [active, count, dir, focusAt, loop, orientation],
   )
 
   const itemProps = React.useCallback(

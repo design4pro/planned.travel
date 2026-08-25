@@ -18,6 +18,8 @@ import {
   fitMapToBounds,
   useMapContext,
 } from '#/components/map'
+import { useI18n, useTranslate } from '#/lib/i18n'
+import { formatNumber } from '#/lib/format'
 import {
   SHELF_CLASS,
   SHELF_VAR,
@@ -187,7 +189,7 @@ const WELL = cn(
   'pointer-events-none absolute top-0 bottom-0 mx-auto max-w-content',
   // A pixel in from each edge of the overhanging box below, which puts it back
   // on the slice's own edges: the overhang belongs to the drawing, not to the
-  // chrome floating over it.
+  // chrome floating over it. Symmetric, so it needs no logical form.
   'right-px left-px',
 )
 
@@ -241,10 +243,16 @@ const PANEL_BOX = cn(
  */
 const SEARCH_BOX = cn(
   // `w-auto` is load-bearing: the pill's own root is `w-full`, which on an
-  // absolutely positioned element beats a left/right pair and pushed it 84px
-  // past the right edge of the screen, straight under the zoom cluster.
-  'pointer-events-auto absolute top-3 right-18 left-3 w-auto z-map-overlay',
-  'lg:top-4 lg:right-auto lg:left-4 lg:w-88',
+  // absolutely positioned element beats a start/end pair and pushed it 84px
+  // past the far edge of the screen, straight under the zoom cluster.
+  //
+  // Logical insets throughout, so the whole composition mirrors in `ar`: the
+  // search takes the inline start at every width and the zoom cluster the
+  // inline end, exactly as they do in `en`. The canvas under them is not
+  // mirrored — a map is not a paragraph — so each of these states its own side
+  // rather than inheriting one.
+  'pointer-events-auto absolute top-3 end-18 start-3 w-auto z-map-overlay',
+  'lg:top-4 lg:end-auto lg:start-4 lg:w-88',
 )
 
 /**
@@ -266,12 +274,12 @@ const SEARCH_BOX = cn(
  */
 const CHROME = {
   controls: cn(
-    'pointer-events-auto top-3 right-3 bottom-auto',
-    'lg:top-auto lg:right-4 lg:bottom-(--atlas-clear)',
+    'pointer-events-auto top-3 end-3 bottom-auto',
+    'lg:top-auto lg:end-4 lg:bottom-(--atlas-clear)',
   ),
   credit: cn(
-    'top-auto right-auto bottom-(--atlas-clear) left-3',
-    'lg:top-4 lg:right-4 lg:bottom-auto lg:left-auto',
+    'top-auto end-auto bottom-(--atlas-clear) start-3',
+    'lg:top-4 lg:end-4 lg:bottom-auto lg:start-auto',
   ),
 } as const
 
@@ -384,13 +392,16 @@ function AtlasChrome({
           // The 72px the pill gives up on a phone belongs to the zoom cluster.
           // With no cluster there is nothing to give it up for, and the gap
           // reads as a control that failed to draw.
-          failed && 'right-3',
+          failed && 'end-3',
         )}
       />
 
       {failed ? null : (
         <MapControls
-          position="bottom-right"
+          // `custom`: every inset this screen needs is logical and stated
+          // below, and a physical corner from the module would win over it in
+          // the cascade. See `MapCorner`.
+          position="custom"
           // Zoom and compass, and deliberately no "find my location".
           //
           // Two reasons, and the second one is the screen's own contract. This
@@ -515,6 +526,7 @@ export interface AtlasScreenProps {
 }
 
 export function AtlasScreen({ atlas }: AtlasScreenProps) {
+  const { locale, t } = useI18n()
   const [containerRef, box] = useMeasuredBox()
   const [shelfRef, shelfBox] = useMeasuredBox()
   const wide = useIsWide()
@@ -751,8 +763,11 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
 
   const worldLabel =
     atlas.countryCount === 0
-      ? 'World map. No countries marked as visited yet.'
-      : `World map with ${atlas.countryCount} of ${WORLD_COUNTRY_COUNT} countries marked as visited.`
+      ? t('atlas.screen.world.empty')
+      : t('atlas.screen.world.summary', {
+          visited: formatNumber(atlas.countryCount, locale),
+          total: formatNumber(WORLD_COUNTRY_COUNT, locale),
+        })
 
   return (
     <div ref={containerRef} className={SLICE} style={shelfStyle}>
@@ -982,6 +997,8 @@ export interface AtlasScreenErrorProps {
  * the reader less than nothing.
  */
 export function AtlasScreenError({ error }: AtlasScreenErrorProps) {
+  const t = useTranslate()
+
   return (
     <div className={SLICE}>
       <div className={DRAWING}>
@@ -994,7 +1011,7 @@ export function AtlasScreenError({ error }: AtlasScreenErrorProps) {
       </div>
       <div className="absolute inset-0 grid place-items-center p-4">
         <div className="w-full max-w-md">
-          <ErrorPanel error={error} title="The atlas did not load" />
+          <ErrorPanel error={error} title={t('atlas.screen.error.title')} />
         </div>
       </div>
     </div>

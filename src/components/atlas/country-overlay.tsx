@@ -7,6 +7,7 @@ import { IconButton, ScrollArea } from '#/components/ui'
 import {
   VISITED_COUNTRY_ZOOM,
   VisitedCountries,
+  useAtlasCopy,
   useMapContext,
 } from '#/components/map'
 import {
@@ -1263,7 +1264,7 @@ const layout = {
    */
   surface: cn(
     'pointer-events-auto relative flex max-h-(--pt-max-h) w-full flex-col overflow-hidden',
-    'rounded-lg border border-map-card-edge bg-map-card text-left shadow-popover',
+    'rounded-lg border border-map-card-edge bg-map-card text-start shadow-popover',
     'focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring',
     // Dismissed, and therefore no longer a target. The layer fades for 150ms and
     // for every one of them the panel used to stay hit-testable, so a press
@@ -1303,7 +1304,7 @@ const layout = {
    */
   facts: cn(
     'w-full max-w-full rounded-none border-0 shadow-none 2xl:w-full',
-    '[&_[data-part=header]]:pr-12',
+    '[&_[data-part=header]]:pe-12',
     // Side by side the two columns are never the same height — the action block
     // carries two rows and a message strip — and a fact grid that stopped ninety
     // pixels short of the panel's own edge read as a card that had failed to
@@ -1331,7 +1332,7 @@ const layout = {
    */
   actionsColumn: cn(
     'flex min-h-0 min-w-0 flex-1 flex-col border-t border-edge-faint',
-    '@md:w-96 @md:flex-none @md:border-t-0 @md:border-l',
+    '@md:w-96 @md:flex-none @md:border-t-0 @md:border-s',
   ),
   /**
    * The action block's scroll region, and the one thing the primitive cannot
@@ -1362,7 +1363,7 @@ const layout = {
    * around it is the stacking context that keeps the pair from reaching the app
    * header.
    */
-  close: 'absolute top-2 right-2 z-map-surface',
+  close: 'absolute top-2 end-2 z-map-surface',
 } as const
 
 /* ----------------------------------------------------------------- presence */
@@ -1985,6 +1986,7 @@ function CountryPanel({
   onInteractOutside,
   onFocusOutside,
 }: CountryPanelProps) {
+  const t = useAtlasCopy()
   const name = countryFacts(factColumns(countryCode, country)).name
   const panelRef = React.useRef<HTMLDivElement | null>(null)
 
@@ -2080,7 +2082,7 @@ function CountryPanel({
       <DialogPrimitive.Close asChild>
         <IconButton
           icon={<X />}
-          label={`Close ${name}`}
+          label={t('atlas.overlay.close', { name })}
           size="sm"
           variant="ghost"
           className={layout.close}

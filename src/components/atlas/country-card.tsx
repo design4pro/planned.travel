@@ -8,15 +8,13 @@ import {
   focusRing,
   transitionBase,
 } from '#/components/ui'
+import { useAtlasCopy, useAtlasI18n } from '#/components/map'
 import { cn } from '#/lib/cn'
-import {
-  ABSENT_FACT_LABEL,
-  ABSENT_FACT_MARK,
-  countryFacts,
-} from '#/lib/atlas/country-facts'
+import { ABSENT_FACT_MARK, countryFacts } from '#/lib/atlas/country-facts'
 import { countryName } from '#/lib/atlas/country-names'
-import { countryFlag } from '#/lib/format'
+import { countryFlag, formatMonthYear, formatNumber } from '#/lib/format'
 
+import type { Locale, Translate } from '#/lib/i18n'
 import type {
   CountryFactMonth,
   CountryFactSource,
@@ -187,7 +185,7 @@ const layout = {
    * the four cells it prints, so a host can measure it once and anchor to it.
    * A fact card that cuts its own last row in half reads as a fault.
    */
-  card: 'w-72 2xl:w-80 max-w-full rounded-lg text-left',
+  card: 'w-72 2xl:w-80 max-w-full rounded-lg text-start',
   /**
    * A single-line pill: fixed height, so a row of them never staggers. It takes
    * the same density step as the card at `2xl` — two surfaces of the same family
@@ -219,7 +217,7 @@ const layout = {
    * line adds no height, which is what lets the mark exist at all: the card is
    * anchored to a country and its height is a promise to whatever anchored it.
    */
-  mark: 'ml-auto shrink-0',
+  mark: 'ms-auto shrink-0',
   /**
    * `truncate` rather than a wrap: the name is the card's identity line and the
    * card's height is a promise to whatever anchored it. "South Georgia & South
@@ -230,7 +228,7 @@ const layout = {
   /** Two columns, two rows: trips and places over first trip and last trip. */
   grid: 'grid grid-cols-2',
   cell: 'min-w-0 px-4 py-3 2xl:px-5 2xl:py-4',
-  cellRule: 'border-r border-edge-faint',
+  cellRule: 'border-e border-edge-faint',
   rowRule: 'border-t border-edge-faint',
   /**
    * The unit label's type, stated so a strut can measure the same as a real
@@ -361,17 +359,37 @@ function FactCell({
   )
 }
 
-/** A month, or an em dash that a screen reader hears as words. */
-function MonthValue({ month }: { readonly month: CountryFactMonth }) {
-  if (month.value === null || month.iso === null) {
+/**
+ * A month, or an em dash that a screen reader hears as words.
+ *
+ * The printable month is re-derived here rather than taken off
+ * `CountryFactMonth.value`, which `#/lib/atlas/country-facts` renders in the
+ * source locale. Both go through `formatMonthYear()`, the product's single
+ * frozen formatter, so the only difference is which locale's frozen table it
+ * reads — never which library named the month.
+ */
+function MonthValue({
+  month,
+  source,
+  locale,
+  t,
+}: {
+  readonly month: CountryFactMonth
+  /** The raw day column the month was coarsened from. */
+  readonly source: string | null
+  readonly locale: Locale
+  readonly t: Translate
+}) {
+  const printed = source === null ? null : formatMonthYear(source, locale)
+  if (month.iso === null || printed === null) {
     return (
       <>
         <span aria-hidden="true">{ABSENT_FACT_MARK}</span>
-        <span className="sr-only">{ABSENT_FACT_LABEL}</span>
+        <span className="sr-only">{t('atlas.card.absent')}</span>
       </>
     )
   }
-  return <time dateTime={month.iso}>{month.value}</time>
+  return <time dateTime={month.iso}>{printed}</time>
 }
 
 /** A non-breaking space: an empty line box that still has a real height. */
@@ -444,7 +462,7 @@ function LineSkeleton({
       <span className="invisible">{STRUT}</span>
       <Skeleton
         radius="sm"
-        className={cn('absolute inset-y-0.5 left-0 bg-map-card-inset', width)}
+        className={cn('absolute inset-y-0.5 start-0 bg-map-card-inset', width)}
       />
     </span>
   )
@@ -568,6 +586,7 @@ export const CountryCard = React.forwardRef<HTMLElement, CountryCardProps>(
       ...rest
     } = props
     const Heading = HEADINGS[headingLevel]
+    const { locale, t } = useAtlasI18n()
     const facts = countryFacts({
       countryCode,
       tripCount,
@@ -587,6 +606,16 @@ export const CountryCard = React.forwardRef<HTMLElement, CountryCardProps>(
     // or the whole grid recedes.
     const figureTier =
       facts.source === 'none' ? layout.figureAbsent : layout.figure
+    /**
+     * Which of the two records the four cells speak for. `countryFacts()` has
+     * already decided it — the trip columns win whenever there is a trip, and
+     * the visit columns answer for the manual half of the atlas — so the card
+     * only picks the words, and picks the raw day columns from the same side so
+     * the months and their headings can never come from different records.
+     */
+    const spoken = facts.source === 'visits'
+    const firstOn = spoken ? firstVisitedOn : firstTripOn
+    const lastOn = spoken ? lastVisitedOn : lastTripOn
 
     return (
       <article
@@ -618,40 +647,52 @@ export const CountryCard = React.forwardRef<HTMLElement, CountryCardProps>(
 
         <dl className={layout.grid}>
           <FactCell
-            label={facts.tally.label}
+            label={t(spoken ? 'atlas.card.visits' : 'atlas.card.trips', {
+              count: facts.tally.count,
+            })}
             rule
             row={false}
             valueClassName={figureTier}
           >
-            {facts.tally.value}
+            {formatNumber(facts.tally.count, locale)}
           </FactCell>
           <FactCell
-            label={facts.places.label}
+            label={t('atlas.card.places', { count: facts.places.count })}
             rule={false}
             row={false}
             valueClassName={figureTier}
           >
-            {facts.places.value}
+            {formatNumber(facts.places.count, locale)}
           </FactCell>
           <FactCell
-            label={facts.first.label}
+            label={t(spoken ? 'atlas.card.firstVisit' : 'atlas.card.firstTrip')}
             rule
             row
             valueClassName={
-              facts.first.value === null ? layout.monthAbsent : layout.month
+              facts.first.iso === null ? layout.monthAbsent : layout.month
             }
           >
-            <MonthValue month={facts.first} />
+            <MonthValue
+              month={facts.first}
+              source={firstOn}
+              locale={locale}
+              t={t}
+            />
           </FactCell>
           <FactCell
-            label={facts.last.label}
+            label={t(spoken ? 'atlas.card.lastVisit' : 'atlas.card.lastTrip')}
             rule={false}
             row
             valueClassName={
-              facts.last.value === null ? layout.monthAbsent : layout.month
+              facts.last.iso === null ? layout.monthAbsent : layout.month
             }
           >
-            <MonthValue month={facts.last} />
+            <MonthValue
+              month={facts.last}
+              source={lastOn}
+              locale={locale}
+              t={t}
+            />
           </FactCell>
         </dl>
 
@@ -695,6 +736,7 @@ export const CountryCardSkeleton = React.forwardRef<
   HTMLDivElement,
   CountryCardSkeletonProps
 >(({ pointer = 'none', countryCode, className, ...props }, ref) => {
+  const t = useAtlasCopy()
   const code = countryCode?.trim().toUpperCase()
   return (
     <div
@@ -707,8 +749,8 @@ export const CountryCardSkeleton = React.forwardRef<
     >
       <span className="sr-only">
         {code === undefined
-          ? 'Loading this country'
-          : `Loading ${countryName(code)}`}
+          ? t('atlas.card.loading')
+          : t('atlas.card.loadingNamed', { name: countryName(code) })}
       </span>
 
       <div aria-hidden="true">
@@ -807,6 +849,7 @@ export const CountryCardError = React.forwardRef<
     },
     ref,
   ) => {
+    const t = useAtlasCopy()
     const code = countryCode.trim().toUpperCase()
     return (
       <div
@@ -838,17 +881,17 @@ export const CountryCardError = React.forwardRef<
                 one-word last line in a card this small reads as a truncation
                 the reader is meant to do something about. */}
             <p className="text-balance text-caption text-ink-2">
-              These figures did not load. Nothing has been lost.
+              {t('atlas.card.error.body')}
             </p>
             {onRetry === undefined ? null : (
               <Button
                 variant="secondary"
                 size="sm"
                 loading={retrying}
-                loadingLabel="Loading this country"
+                loadingLabel={t('atlas.card.loading')}
                 onClick={onRetry}
               >
-                Try again
+                {t('atlas.card.error.retry')}
               </Button>
             )}
           </div>

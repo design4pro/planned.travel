@@ -2,7 +2,11 @@ import * as React from 'react'
 import { MapPinOff, SearchX } from 'lucide-react'
 
 import { Combobox, Field, GlassPanel, Spinner } from '#/components/ui'
-import { VISITED_COUNTRY_ZOOM, useMapContext } from '#/components/map'
+import {
+  VISITED_COUNTRY_ZOOM,
+  useAtlasI18n,
+  useMapContext,
+} from '#/components/map'
 import {
   boundsToTuple,
   cameraMotion,
@@ -15,13 +19,11 @@ import {
   searchCountries,
 } from '#/lib/atlas/country-search'
 import { cn } from '#/lib/cn'
-import {
-  countryFlag,
-  formatNumber,
-  humaniseToken,
-} from '#/routes/_app/-lib/format'
+import { countryFlag, formatNumber } from '#/routes/_app/-lib/format'
+import { continentLabelOrUnknown } from './continent'
 
 import type { ComboboxOption } from '#/components/ui'
+import type { Locale, Translate } from '#/lib/i18n'
 import type { MapLibreMap } from '#/components/map'
 import type { EdgePadding, MapBounds } from '#/lib/map'
 import type {
@@ -137,11 +139,6 @@ function frameCountry(
 
 /* ---------------------------------------------------------------------- copy */
 
-const FIELD_LABEL = 'Find a country'
-
-/** What the field says while the record is still being read. */
-const LOADING_LABEL = 'Loading your countries'
-
 /**
  * The sentence a country with no bundled outline gets, in the field and out loud.
  *
@@ -149,15 +146,10 @@ const LOADING_LABEL = 'Loading your countries'
  * gone wrong: the 1:110m cut the atlas draws with holds no polygon this small,
  * the record is intact, and the only thing the reader loses is the camera move.
  */
-function noFrameSentence(name: string, visited: boolean): string {
+function noFrameSentence(name: string, visited: boolean, t: Translate): string {
   return visited
-    ? `${name} has no outline at world scale, so the map has nothing to frame. Its record is unaffected.`
-    : `${name} has no outline at world scale, so the map has nothing to frame.`
-}
-
-/** Plural agreement, pulled out so the sentences below stay readable. */
-function countryWord(count: number): string {
-  return count === 1 ? 'country' : 'countries'
+    ? t('atlas.search.unframedVisited', { name })
+    : t('atlas.search.unframed', { name })
 }
 
 /** What the list holds right now, as the live region needs to describe it. */
@@ -185,29 +177,40 @@ interface ListState {
  * must not become a lie if one ever does — and a selection pinned above the
  * record is named, because it is a row the record's own count does not include.
  */
-function resultSentence(list: ListState): string {
+function resultSentence(list: ListState, t: Translate, locale: Locale): string {
   const { folded, typed, shown, total, pinned } = list
   const selection =
-    pinned === null ? '' : ` ${pinned} is selected and listed first.`
+    pinned === null
+      ? ''
+      : ` ${t('atlas.search.results.pinned', { name: pinned })}`
 
   if (folded === '') {
     if (total === 0) {
       return pinned === null
-        ? 'No countries on your record yet. Type to search every country in the world.'
-        : `${pinned} is selected. No countries on your record yet — type to search every country in the world.`
+        ? t('atlas.search.results.empty')
+        : t('atlas.search.results.emptyPinned', { name: pinned })
     }
-    const counted = `${formatNumber(total)} ${countryWord(total)} on your record.`
+    const counted = t('atlas.search.results.record', {
+      count: total,
+      countries: formatNumber(total, locale),
+    })
     const capped =
-      shown < total ? ` Showing the first ${formatNumber(shown)}.` : ''
+      shown < total
+        ? ` ${t('atlas.search.results.capped', { shown: formatNumber(shown, locale) })}`
+        : ''
     return `${counted}${capped}${selection}`
   }
 
-  const term = `“${typed.trim()}”`
-  if (total === 0) return `No country matches ${term}.`
-  if (shown < total) {
-    return `${formatNumber(total)} ${countryWord(total)} match ${term}. Showing the first ${formatNumber(shown)}.`
-  }
-  return `${formatNumber(total)} ${countryWord(total)} ${total === 1 ? 'matches' : 'match'} ${term}.`
+  const term = `\u201C${typed.trim()}\u201D`
+  if (total === 0) return t('atlas.search.results.none', { term })
+  const matched = t('atlas.search.results.matches', {
+    count: total,
+    countries: formatNumber(total, locale),
+    term,
+  })
+  return shown < total
+    ? `${matched} ${t('atlas.search.results.capped', { shown: formatNumber(shown, locale) })}`
+    : matched
 }
 
 /**
@@ -219,20 +222,27 @@ function resultSentence(list: ListState): string {
  * country without going near a calendar, and the record the selection opens
  * prints both ends of the visit span properly.
  */
-function describeEntry(entry: CountrySearchEntry): string {
+function describeEntry(
+  entry: CountrySearchEntry,
+  t: Translate,
+  locale: Locale,
+): string {
   const parts: Array<string> = []
   if (entry.visit === null) {
-    parts.push('Not visited yet')
+    parts.push(t('atlas.search.entry.notVisited'))
   } else {
     parts.push(
-      entry.visit.continent === null
-        ? 'Continent not recorded'
-        : humaniseToken(entry.visit.continent),
-      `${formatNumber(entry.visit.visitCount)} ${entry.visit.visitCount === 1 ? 'visit' : 'visits'}`,
+      continentLabelOrUnknown(entry.visit.continent, t),
+      t('atlas.record.visits', {
+        count: entry.visit.visitCount,
+        visits: formatNumber(entry.visit.visitCount, locale),
+      }),
     )
   }
-  if (countryBounds(entry.code) === null) parts.push('no map outline')
-  return parts.join(' · ')
+  if (countryBounds(entry.code) === null) {
+    parts.push(t('atlas.search.entry.noOutline'))
+  }
+  return parts.join(t('atlas.search.entry.separator'))
 }
 
 /* -------------------------------------------------------------------- layout */
@@ -250,7 +260,7 @@ const layout = {
   control: 'relative flex w-full min-w-0 items-center',
   hint: 'flex min-w-0 items-start gap-1.5 rounded-md bg-info-soft px-2 py-1 text-info',
   /** Clear of the trailing chevron, which owns the last 28px of the field. */
-  spinner: 'pointer-events-none absolute top-1/2 right-9 -translate-y-1/2',
+  spinner: 'pointer-events-none absolute top-1/2 end-9 -translate-y-1/2',
   empty: 'flex flex-col items-center gap-1.5',
   emptyTitle: 'block text-label font-semibold text-ink',
   emptyBody: 'block max-w-64 text-balance text-caption text-ink-3',
@@ -309,7 +319,7 @@ export const CountrySearch = React.forwardRef<
       selectedCode,
       onSelect,
       padding,
-      label = FIELD_LABEL,
+      label,
       loading = false,
       disabled = false,
       className,
@@ -317,6 +327,9 @@ export const CountrySearch = React.forwardRef<
     },
     ref,
   ) => {
+    const { locale, t } = useAtlasI18n()
+    const fieldLabel = label ?? t('atlas.search.label')
+    const loadingLabel = t('atlas.search.loading')
     const { map } = useMapContext()
     const [query, setQuery] = React.useState('')
 
@@ -386,14 +399,14 @@ export const CountrySearch = React.forwardRef<
       return rows.map((entry) => ({
         value: entry.code,
         label: entry.name,
-        description: describeEntry(entry),
+        description: describeEntry(entry, t, locale),
         icon: (
           <span aria-hidden="true" className="leading-none">
             {countryFlag(entry.code)}
           </span>
         ),
       }))
-    }, [outcome, pinned])
+    }, [locale, outcome, pinned, t])
 
     /**
      * Announce what the list now holds.
@@ -407,15 +420,19 @@ export const CountrySearch = React.forwardRef<
     React.useEffect(() => {
       if (outcome === null || holdStatus.current) return
       setStatus(
-        resultSentence({
-          folded: outcome.query,
-          typed: query,
-          shown: outcome.matches.length,
-          total: outcome.total,
-          pinned: pinned?.name ?? null,
-        }),
+        resultSentence(
+          {
+            folded: outcome.query,
+            typed: query,
+            shown: outcome.matches.length,
+            total: outcome.total,
+            pinned: pinned?.name ?? null,
+          },
+          t,
+          locale,
+        ),
       )
-    }, [outcome, pinned, query])
+    }, [locale, outcome, pinned, query, t])
 
     const announce = (sentence: string): void => {
       holdStatus.current = true
@@ -429,7 +446,7 @@ export const CountrySearch = React.forwardRef<
 
       if (code === null) {
         setUnframed(null)
-        announce('Selection cleared.')
+        announce(t('atlas.search.cleared'))
         return
       }
 
@@ -439,7 +456,10 @@ export const CountrySearch = React.forwardRef<
       if (bounds === null) {
         setUnframed(code)
         announce(
-          `${name} selected. ${noFrameSentence(name, entry?.visited ?? false)}`,
+          t('atlas.search.announce.unframed', {
+            name,
+            reason: noFrameSentence(name, entry?.visited ?? false, t),
+          }),
         )
         return
       }
@@ -448,8 +468,8 @@ export const CountrySearch = React.forwardRef<
       const moved = map !== null && frameCountry(map, bounds, padding)
       announce(
         moved
-          ? `${name} selected. The map is framing it.`
-          : `${name} selected.`,
+          ? t('atlas.search.announce.framing', { name })
+          : t('atlas.search.announce.selected', { name }),
       )
     }
 
@@ -480,7 +500,7 @@ export const CountrySearch = React.forwardRef<
                   className="mt-0.5 shrink-0"
                 />
                 <span className="min-w-0">
-                  {noFrameSentence(stranded.name, stranded.visited)}
+                  {noFrameSentence(stranded.name, stranded.visited, t)}
                 </span>
               </span>
             )
@@ -499,23 +519,30 @@ export const CountrySearch = React.forwardRef<
               clearable
               loading={loading}
               disabled={disabled || loading}
-              ariaLabel={label}
+              ariaLabel={fieldLabel}
               placeholder={
-                loading ? LOADING_LABEL : (selectedEntry?.name ?? label)
+                loading ? loadingLabel : (selectedEntry?.name ?? fieldLabel)
               }
-              searchPlaceholder="Country name or code"
+              searchPlaceholder={t('atlas.search.placeholder')}
               onSearchChange={(next) => {
                 holdStatus.current = false
                 setQuery(next)
               }}
-              emptyMessage={<Nothing query={query} total={entries.length} />}
+              emptyMessage={
+                <Nothing
+                  query={query}
+                  total={entries.length}
+                  t={t}
+                  locale={locale}
+                />
+              }
               contentClassName={layout.options}
             />
             {loading ? (
               <span className={layout.spinner}>
                 <Spinner
                   size="md"
-                  label={LOADING_LABEL}
+                  label={loadingLabel}
                   className="text-ink-3"
                 />
               </span>
@@ -553,9 +580,13 @@ CountrySearch.displayName = 'CountrySearch'
 function Nothing({
   query,
   total,
+  t,
+  locale,
 }: {
   readonly query: string
   readonly total: number
+  readonly t: Translate
+  readonly locale: Locale
 }) {
   const term = query.trim()
   return (
@@ -563,13 +594,15 @@ function Nothing({
       <SearchX size={18} className="text-ink-3" aria-hidden="true" />
       <span className={layout.emptyTitle}>
         {term === ''
-          ? 'Nothing on your record yet'
-          : `No country matches “${term}”`}
+          ? t('atlas.search.empty.title')
+          : t('atlas.search.empty.noMatchTitle', { term })}
       </span>
       <span className={layout.emptyBody}>
         {term === ''
-          ? 'Type a country name, or its two-letter code, to find it on the map.'
-          : `Check the spelling, or try the two-letter code — PT finds Portugal. All ${formatNumber(total)} countries are searchable, whether or not you have been.`}
+          ? t('atlas.search.empty.body')
+          : t('atlas.search.empty.noMatchBody', {
+              countries: formatNumber(total, locale),
+            })}
       </span>
     </span>
   )

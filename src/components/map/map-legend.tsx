@@ -8,6 +8,8 @@ import {
   SectionLabel,
   transitionBase,
 } from '#/components/ui'
+import { formatNumber } from '#/lib/format'
+import { useAtlasI18n } from './copy'
 import { ClusterPin, DayPin } from './pins'
 import { CategoryIcon } from './category-icon'
 
@@ -16,17 +18,20 @@ import type { MapCategory } from './types'
 
 type CategoryVars = React.CSSProperties & Record<'--map-category', string>
 
+/** The same four logical corners the control cluster uses — see `MapCorner`. */
 const CORNERS: Readonly<Record<MapCorner, string>> = {
-  'top-left': 'top-4 left-4',
-  'top-right': 'top-4 right-4',
-  'bottom-left': 'bottom-4 left-4',
-  'bottom-right': 'right-4 bottom-10',
+  'top-left': 'top-4 start-4',
+  'top-right': 'top-4 end-4',
+  'bottom-left': 'bottom-4 start-4',
+  'bottom-right': 'end-4 bottom-10',
+  custom: '',
 }
 
 export interface MapLegendProps {
   readonly categories: ReadonlyArray<MapCategory>
   /** Place count per category id. Rendered with tabular numerals. */
   readonly counts?: Readonly<Record<string, number>>
+  /** Overrides the panel's own heading. Defaults to the translated one. */
   readonly title?: string
   /** Explains the numbered pin and the cluster badge. Default `true`. */
   readonly showPinKey?: boolean
@@ -46,12 +51,14 @@ export interface MapLegendProps {
 export function MapLegend({
   categories,
   counts,
-  title = 'Legend',
+  title,
   showPinKey = true,
   position = 'bottom-left',
   defaultOpen = true,
   className,
 }: MapLegendProps) {
+  const { locale, t } = useAtlasI18n()
+  const heading = title ?? t('atlas.map.legend.title')
   const [open, setOpen] = React.useState(defaultOpen)
   const bodyId = React.useId()
 
@@ -75,8 +82,8 @@ export function MapLegend({
             size="xs"
             label={
               open
-                ? `Collapse ${title.toLowerCase()}`
-                : `Expand ${title.toLowerCase()}`
+                ? t('atlas.map.legend.collapse', { title: heading })
+                : t('atlas.map.legend.expand', { title: heading })
             }
             aria-expanded={open}
             aria-controls={bodyId}
@@ -91,7 +98,7 @@ export function MapLegend({
           />
         }
       >
-        {title}
+        {heading}
       </SectionLabel>
 
       {open ? (
@@ -121,8 +128,11 @@ export function MapLegend({
                       {category.name}
                     </span>
                     {typeof count === 'number' ? (
-                      <span className="shrink-0 text-caption text-ink-4 tabular-nums">
-                        {count}
+                      <span
+                        data-numeric=""
+                        className="shrink-0 text-caption text-ink-4 tabular-nums"
+                      >
+                        {formatNumber(count, locale)}
                       </span>
                     ) : null}
                   </li>
@@ -143,18 +153,22 @@ export function MapLegend({
                   day={2}
                   size="sm"
                   interactive={false}
-                  label="Example day pin"
+                  label={t('atlas.map.legend.dayPin')}
                 />
-                <span className="text-caption text-ink-3">Itinerary day</span>
+                <span className="text-caption text-ink-3">
+                  {t('atlas.map.legend.dayPinMeaning')}
+                </span>
               </li>
               <li className="flex items-center gap-2">
                 <ClusterPin
                   count={6}
                   weight="sm"
                   interactive={false}
-                  label="Example grouped pin"
+                  label={t('atlas.map.legend.clusterPin')}
                 />
-                <span className="text-caption text-ink-3">Grouped places</span>
+                <span className="text-caption text-ink-3">
+                  {t('atlas.map.legend.clusterPinMeaning')}
+                </span>
               </li>
             </ul>
           ) : null}

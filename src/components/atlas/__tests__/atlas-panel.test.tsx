@@ -1074,15 +1074,15 @@ describe('holding still', () => {
   })
 
   /**
-   * The right-hand end of the progress row is anchored to the right, so a box
-   * that shrinks to its text moves its own left edge when the webfont arrives —
-   * a layout shift for a value that never changed.
+   * The far end of the progress row is anchored to the inline end, so a box
+   * that shrinks to its text moves its own leading edge when the webfont
+   * arrives — a layout shift for a value that never changed.
    */
   it('gives the progress value a stated width rather than its text width', () => {
     const { container } = panel()
     const value = within(container).getByText(/to go/)
     expect(value.className).toContain('w-16')
-    expect(value.className).toContain('text-right')
+    expect(value.className).toContain('text-end')
     expect(value.className).toContain('tabular-nums')
   })
 })

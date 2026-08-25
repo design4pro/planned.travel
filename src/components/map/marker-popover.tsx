@@ -3,7 +3,11 @@ import { MapPin, Star } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import { transitionBase } from '#/components/ui'
+import { formatNumber } from '#/lib/format'
 import { CategoryIcon } from './category-icon'
+import { useAtlasI18n } from './copy'
+
+import type { Locale, Translate } from '#/lib/i18n'
 
 /** Stars a rating can carry, matching `places.rating`. */
 const MAX_RATING = 5
@@ -77,82 +81,93 @@ export const MarkerPopover = React.forwardRef<
       ...props
     },
     ref,
-  ) => (
-    <div
-      ref={ref}
-      aria-hidden={decorative ? true : undefined}
-      className={cn(
-        'w-60 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-edge bg-surface text-left shadow-popover',
-        transitionBase,
-        className,
-      )}
-      {...props}
-    >
-      {typeof imageUrl === 'string' && imageUrl !== '' ? (
-        <img
-          src={imageUrl}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className="aspect-[16/10] w-full border-b border-edge-faint object-cover"
-        />
-      ) : null}
+  ) => {
+    const { locale, t } = useAtlasI18n()
 
-      <div className="p-3">
-        <p className="line-clamp-2 text-label font-semibold text-ink">{name}</p>
-
-        {meta ? <p className="mt-0.5 text-caption text-ink-3">{meta}</p> : null}
-
-        {category || typeof rating === 'number' ? (
-          <div className="mt-1.5 flex items-center justify-between gap-2">
-            {category ? (
-              <span className="flex min-w-0 items-center gap-1.5 text-caption text-ink-3">
-                <span
-                  className="grid size-4 shrink-0 place-items-center rounded-full"
-                  style={{ color: category.colour ?? 'var(--color-brand)' }}
-                >
-                  <CategoryIcon name={category.icon} size={11} />
-                </span>
-                <span className="truncate">{category.name}</span>
-              </span>
-            ) : (
-              <span />
-            )}
-            {typeof rating === 'number' ? (
-              <span className="flex shrink-0 items-center gap-1">
-                <Rating value={rating} />
-                <span className="sr-only">
-                  Rated {Math.round(rating)} out of {MAX_RATING}
-                </span>
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-
-        {typeof address === 'string' && address !== '' ? (
-          <p className="mt-2 flex items-start gap-1.5 text-caption text-ink-4">
-            <MapPin
-              size={12}
-              strokeWidth={2}
-              className="mt-0.5 shrink-0"
-              aria-hidden="true"
-            />
-            <span className="line-clamp-2">{address}</span>
-          </p>
-        ) : null}
-      </div>
-
-      <span
-        aria-hidden="true"
+    return (
+      <div
+        ref={ref}
+        aria-hidden={decorative ? true : undefined}
         className={cn(
-          'absolute left-1/2 size-2 -translate-x-1/2 rotate-45 border-edge bg-surface',
-          side === 'bottom'
-            ? '-bottom-1 border-r border-b'
-            : '-top-1 border-t border-l',
+          'w-60 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-edge bg-surface text-start shadow-popover',
+          transitionBase,
+          className,
         )}
-      />
-    </div>
-  ),
+        {...props}
+      >
+        {typeof imageUrl === 'string' && imageUrl !== '' ? (
+          <img
+            src={imageUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="aspect-[16/10] w-full border-b border-edge-faint object-cover"
+          />
+        ) : null}
+
+        <div className="p-3">
+          <p className="line-clamp-2 text-label font-semibold text-ink">
+            {name}
+          </p>
+
+          {meta ? (
+            <p className="mt-0.5 text-caption text-ink-3">{meta}</p>
+          ) : null}
+
+          {category || typeof rating === 'number' ? (
+            <div className="mt-1.5 flex items-center justify-between gap-2">
+              {category ? (
+                <span className="flex min-w-0 items-center gap-1.5 text-caption text-ink-3">
+                  <span
+                    className="grid size-4 shrink-0 place-items-center rounded-full"
+                    style={{ color: category.colour ?? 'var(--color-brand)' }}
+                  >
+                    <CategoryIcon name={category.icon} size={11} />
+                  </span>
+                  <span className="truncate">{category.name}</span>
+                </span>
+              ) : (
+                <span />
+              )}
+              {typeof rating === 'number' ? (
+                <span className="flex shrink-0 items-center gap-1">
+                  <Rating value={rating} />
+                  <span className="sr-only">
+                    {t('atlas.map.place.rating', {
+                      rating: formatNumber(Math.round(rating), locale),
+                      max: formatNumber(MAX_RATING, locale),
+                    })}
+                  </span>
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+
+          {typeof address === 'string' && address !== '' ? (
+            <p className="mt-2 flex items-start gap-1.5 text-caption text-ink-4">
+              <MapPin
+                size={12}
+                strokeWidth={2}
+                className="mt-0.5 shrink-0"
+                aria-hidden="true"
+              />
+              <span className="line-clamp-2">{address}</span>
+            </p>
+          ) : null}
+        </div>
+
+        <span
+          aria-hidden="true"
+          className={cn(
+            'absolute left-1/2 size-2 -translate-x-1/2 rotate-45 border-edge bg-surface',
+            side === 'bottom'
+              ? '-bottom-1 border-r border-b'
+              : '-top-1 border-t border-l',
+          )}
+        />
+      </div>
+    )
+  },
 )
 MarkerPopover.displayName = 'MarkerPopover'
 
@@ -163,21 +178,36 @@ MarkerPopover.displayName = 'MarkerPopover'
  * be marked decorative and a screen-reader user still hears the category, the
  * address and the rating instead of just "Sensō-ji, button".
  */
-export function markerLabel(input: {
-  readonly name: string
-  readonly categoryName?: string | null
-  readonly address?: string | null
-  readonly rating?: number | null
-  readonly dayNumber?: number | null
-  readonly visited?: boolean
-}): string {
+export function markerLabel(
+  input: {
+    readonly name: string
+    readonly categoryName?: string | null
+    readonly address?: string | null
+    readonly rating?: number | null
+    readonly dayNumber?: number | null
+    readonly visited?: boolean
+  },
+  t: Translate,
+  locale: Locale,
+): string {
   const parts: Array<string> = [input.name]
   if (input.categoryName) parts.push(input.categoryName)
-  if (typeof input.dayNumber === 'number') parts.push(`day ${input.dayNumber}`)
+  if (typeof input.dayNumber === 'number') {
+    parts.push(
+      t('atlas.map.place.clause.day', {
+        day: formatNumber(input.dayNumber, locale),
+      }),
+    )
+  }
   if (input.address) parts.push(input.address)
   if (typeof input.rating === 'number') {
-    parts.push(`rated ${Math.round(input.rating)} out of ${MAX_RATING}`)
+    parts.push(
+      t('atlas.map.place.clause.rating', {
+        rating: formatNumber(Math.round(input.rating), locale),
+        max: formatNumber(MAX_RATING, locale),
+      }),
+    )
   }
-  if (input.visited === true) parts.push('visited')
-  return parts.join(', ')
+  if (input.visited === true) parts.push(t('atlas.map.place.clause.visited'))
+  return parts.join(t('atlas.map.place.clause.separator'))
 }
