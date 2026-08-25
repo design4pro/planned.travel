@@ -67,22 +67,26 @@ export default {
       case RETENTION_CRON:
         // This slot has two jobs, and only one of them is written.
         //
+        // Not written: the R2 half this expression was registered for. `wrangler.jsonc` documents
+        // `17 4 * * 1` as the weekly retention prune of expired backups and export artifacts, and
+        // `BACKUP_RETENTION_DAYS` is a declared var nothing acts on. Adding the audit prune beside it
+        // must not make that gap invisible in Workers Observability, so the warn the branch carried
+        // before this handler existed stays — one line per week, naming the half that is missing.
+        //
+        // It is emitted *first* for a reason that is not stylistic: the prune is the one function in
+        // that module documented as able to reject, so a warn sequenced after it would go missing in
+        // exactly the week this slot is unhealthy — the week the signal is worth having.
+        logger.warn('cron half has no handler yet', {
+          cron: controller.cron,
+          pending: 'backup and export artifact retention',
+          retentionDays: env.BACKUP_RETENTION_DAYS,
+        })
         // Written: the 400-day prune of `platform_audit_log` (docs/ACCESS.md §4.3). It is the only
         // delete path that table has, it selects by `created_at` alone, it acts as an explicit
         // `system` actor, and it logs its own row count — so there is nothing to report here that
         // the writer has not already emitted.
         await prunePlatformAuditLog(createDb(env.DB), PLATFORM_SYSTEM_ACTOR, logger, {
           now: new Date(controller.scheduledTime),
-        })
-        // Not written: the R2 half this expression was registered for. `wrangler.jsonc` documents
-        // `17 4 * * 1` as the weekly retention prune of expired backups and export artifacts, and
-        // `BACKUP_RETENTION_DAYS` is a declared var nothing acts on. Adding the audit prune beside it
-        // must not make that gap invisible in Workers Observability, so the warn the branch carried
-        // before this handler existed stays — one line per week, naming the half that is missing.
-        logger.warn('cron half has no handler yet', {
-          cron: controller.cron,
-          pending: 'backup and export artifact retention',
-          retentionDays: env.BACKUP_RETENTION_DAYS,
         })
         return
       case BACKUP_CRON:

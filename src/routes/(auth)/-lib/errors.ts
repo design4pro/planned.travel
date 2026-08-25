@@ -29,6 +29,23 @@ const OFFLINE: AuthMessage = {
   tone: 'warning',
 }
 
+/**
+ * The one sentence a suspended account is ever shown, and the only copy of it.
+ *
+ * Exported because Better Auth's `admin` plugin throws its own `BANNED_USER` error out of
+ * `session.create.before` with `bannedUserMessage` as the message, and that option is configured
+ * from this constant in `src/server/auth/admin-options.ts` so the two cannot drift. The default it
+ * replaces — "You have been banned from this application. Please contact support if you believe
+ * this is an error." — is developer copy: it names an "application" nobody calls us, and it points
+ * at a support desk we do not have.
+ *
+ * The string is declared here rather than in the server module on purpose. Copy belongs to the
+ * screen that renders it, and this module has no runtime imports at all, so the server can read it
+ * without the auth bundle ever having to import anything out of `src/server`.
+ */
+export const BANNED_USER_MESSAGE =
+  'This account is suspended and cannot sign in. If you believe that is a mistake, reply to any email from planned.travel and a person will look into it.'
+
 const UNEXPECTED: AuthMessage = {
   title: 'Something went wrong',
   detail: 'That did not work. Please try again in a moment.',
@@ -45,6 +62,15 @@ const BY_CODE: Record<string, AuthMessage | undefined> = {
   INVALID_PASSWORD: {
     title: 'Those details do not match',
     detail: 'Check the email address and password and try again.',
+    tone: 'danger',
+  },
+  /**
+   * Thrown by the `admin` plugin's session hook, so it arrives on sign-in rather than on any
+   * screen the account is already inside (docs/ACCESS.md §4.3).
+   */
+  BANNED_USER: {
+    title: 'This account is suspended',
+    detail: BANNED_USER_MESSAGE,
     tone: 'danger',
   },
   CREDENTIAL_ACCOUNT_NOT_FOUND: {

@@ -18,10 +18,13 @@
  *   `platform_audit_log` carries no `organization_id`, so the tenant layer — whose whole purpose is
  *   to make a forgotten tenant filter inexpressible — cannot reach it, and handing that layer a
  *   fabricated context to get here would destroy the one guarantee it exists to give. Nothing in
- *   `src/server/catalog/**` imports anything from `src/server/repos/**` — not the tenant repository
- *   factory, not the barrel, not a deep module — and the test beside this file greps the whole
- *   directory, tests included, for both needles. The shared dotted-action rule the two logs must
- *   not drift apart on (§4.2) therefore comes from {@link AUDIT_ACTION_PATTERN} in
+ *   `src/server/catalog/**` *reaches* `src/server/repos/**` — not the tenant repository factory,
+ *   not the barrel, not a deep module, not a relative path, and not through a module two hops
+ *   away. That is a property of the module graph rather than of any file's text, so the guard
+ *   beside this file walks the graph from every module in this directory, tests included, instead
+ *   of grepping it: a grep can express a naming rule and cannot express reachability, and two
+ *   successive spellings of it passed while the graph was growing. The shared dotted-action rule
+ *   the two logs must not drift apart on (§4.2) comes from {@link AUDIT_ACTION_PATTERN} in
  *   `src/server/db/audit-action.ts`, a leaf module that imports nothing: reading it from the tenant
  *   log instead would satisfy §4.2 and quietly pull the tenant repository factory — which that
  *   module calls at evaluation time — into this file's module graph.
@@ -116,8 +119,18 @@ export const ALWAYS_AUDITED_ACTIONS = Object.freeze([
   PLATFORM_ACTIONS.USER_IMPERSONATION_ENDED,
 ] as const)
 
+/**
+ * A {@link PlatformActor} narrowed to the kind docs/ACCESS.md §4.1 describes as "the platform
+ * itself": no user, no role, no credential. The retention prune takes this rather than the wider
+ * type, so the compiler refuses a human on the only delete path the table has and the runtime check
+ * in {@link prunePlatformAuditLog} answers for callers a compiler cannot reach.
+ */
+export type PlatformSystemActor = PlatformActor & {
+  readonly actorKind: 'system'
+}
+
 /** The platform acting on its own behalf — cron, matcher, prune (docs/ACCESS.md §4.1). */
-export const PLATFORM_SYSTEM_ACTOR: PlatformActor = Object.freeze({
+export const PLATFORM_SYSTEM_ACTOR: PlatformSystemActor = Object.freeze({
   userId: null,
   actorKind: 'system',
   role: null,
@@ -164,24 +177,157 @@ const identifierSchema = z.string().trim().min(1).max(64)
 /** An IPv6 address with a zone id is the longest thing this column can legitimately hold. */
 const IP_MAX_LENGTH = 64
 
-/** The tenant log's `shortTextSchema` bound, so the two logs cap their request fields alike. */
-const USER_AGENT_MAX_LENGTH = 200
+/**
+ * The `User-Agent` bound, and it is deliberately not the tenant log's 200.
+ *
+ * docs/ACCESS.md §4.1 says this column holds the header verbatim and nothing else, so the bound has
+ * to sit above every header a real client sends or it turns ordinary traffic into refusals: current
+ * browser strings run past 200 characters once client-hints-era fragments are appended, and the
+ * tenant log's `shortTextSchema` caps a *form field* rather than a request header. 512 leaves that
+ * headroom while still bounding the row.
+ */
+const USER_AGENT_MAX_LENGTH = 512
+
+/** Keys per side of `changes`. A field list this long is a payload, not a diff. */
+const CHANGES_MAX_KEYS = 64
+
+/** Serialised length of any one value inside `changes`, which is where a long string arrives. */
+const CHANGES_MAX_VALUE_LENGTH = 1_024
+
+/** Serialised length of the whole `{ before, after }` payload. */
+const CHANGES_MAX_SERIALISED_LENGTH = 8_192
 
 /**
- * A request field copied verbatim from an attacker-controlled header, bounded.
+ * A field that was measured and found unwritable, and what was measured — the log line's payload.
  *
- * Bounded by **truncation** rather than by rejection, and the difference is the whole reason this
- * helper exists. `ip` and `user_agent` reach this module straight off the wire into an append-only
- * table with a 400-day window (docs/ACCESS.md §4.1), so an unbounded value is a header-sized row
- * that nothing ever deletes — but refusing an oversized one would throw away the entire entry, and
- * for the four verbs of §4.3 a lost entry is precisely the gap that section says must not exist. A
- * value trimmed to nothing becomes `NULL`, which is what §4.1 already says a missing header records.
+ * Every bound in this module refuses the offending *field* and keeps the entry, because the entry
+ * is what §4.3 says must exist. A refusal is therefore never silent: it is one structured line
+ * naming the field, the reason, the measurement and the limit, at the same severity a failed append
+ * of the same action would get. Truncating instead would put a value in an append-only column that
+ * is indistinguishable, thirteen months later, from one the client actually sent.
  */
-function requestTextSchema(max: number): z.ZodType<string | null, string> {
-  return z
-    .string()
-    .transform((value) => value.trim().slice(0, max))
-    .transform((value) => (value.length === 0 ? null : value))
+interface FieldRefusal {
+  readonly field: string
+  readonly reason: string
+  readonly measured: number
+  readonly limit: number
+  readonly key?: string
+}
+
+interface Bounded<T> {
+  readonly value: T | null
+  readonly refusal: FieldRefusal | null
+}
+
+/**
+ * `ip` and `user_agent` arrive straight off the wire, so both are attacker-controlled text landing
+ * in an append-only table with a 400-day window (docs/ACCESS.md §4.1).
+ *
+ * A value that trims to nothing is `NULL`, which is what §4.1 already says a missing header records.
+ * A value past the bound is refused rather than trimmed to fit: a truncated `User-Agent` is a
+ * plausible-looking header nobody sent, and a truncated `ip` is a different address entirely.
+ */
+function boundRequestField(
+  field: string,
+  raw: string | null | undefined,
+  limit: number,
+): Bounded<string> {
+  if (raw === null || raw === undefined) {
+    return { value: null, refusal: null }
+  }
+  const trimmed = raw.trim()
+  if (trimmed.length === 0) {
+    return { value: null, refusal: null }
+  }
+  if (trimmed.length > limit) {
+    return {
+      value: null,
+      refusal: {
+        field,
+        reason: 'longer-than-column-bound',
+        measured: trimmed.length,
+        limit,
+      },
+    }
+  }
+  return { value: trimmed, refusal: null }
+}
+
+/**
+ * `lib.es5.d.ts` types `JSON.stringify` as returning `string`, and it does not: `undefined`, a
+ * function and a symbol all serialise to `undefined`. This says so in the signature, which is what
+ * lets the caller handle that case without the compiler calling the check impossible.
+ */
+function serialise(value: unknown): string | undefined {
+  return JSON.stringify(value)
+}
+
+/** `JSON.stringify` on a cycle, a `BigInt` or a throwing `toJSON` — length is unknowable, so −1. */
+function serialisedLength(value: unknown): number {
+  try {
+    return serialise(value)?.length ?? 0
+  } catch {
+    return -1
+  }
+}
+
+function boundChangeSide(side: Record<string, unknown> | null, which: string): FieldRefusal | null {
+  if (side === null) {
+    return null
+  }
+  const keys = Object.keys(side)
+  if (keys.length > CHANGES_MAX_KEYS) {
+    return {
+      field: 'changes',
+      reason: 'too-many-keys',
+      measured: keys.length,
+      limit: CHANGES_MAX_KEYS,
+      key: which,
+    }
+  }
+  for (const key of keys) {
+    const length = serialisedLength(side[key])
+    if (length < 0 || length > CHANGES_MAX_VALUE_LENGTH) {
+      return {
+        field: 'changes',
+        reason: length < 0 ? 'unserialisable-value' : 'value-longer-than-bound',
+        measured: length,
+        limit: CHANGES_MAX_VALUE_LENGTH,
+        key: `${which}.${key}`,
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * `changes` is the one field a caller fills with somebody else's text — a profile update carries the
+ * name and the email the account typed — so it needs the same three bounds a request header gets,
+ * measured on the key count, on each value and on the serialised whole. Unbounded, one
+ * `platform.user.updated` can put a header-sized row into a table that keeps it for 400 days and
+ * says nothing about it.
+ */
+function boundChanges(changes: PlatformAuditChanges | null): Bounded<PlatformAuditChanges> {
+  if (changes === null) {
+    return { value: null, refusal: null }
+  }
+
+  const length = serialisedLength(changes)
+  if (length < 0 || length > CHANGES_MAX_SERIALISED_LENGTH) {
+    return {
+      value: null,
+      refusal: {
+        field: 'changes',
+        reason: length < 0 ? 'unserialisable-payload' : 'payload-longer-than-bound',
+        measured: length,
+        limit: CHANGES_MAX_SERIALISED_LENGTH,
+      },
+    }
+  }
+
+  const refusal =
+    boundChangeSide(changes.before, 'before') ?? boundChangeSide(changes.after, 'after')
+  return refusal === null ? { value: changes, refusal: null } : { value: null, refusal }
 }
 
 const changeSideSchema = z.record(z.string(), z.unknown()).nullable()
@@ -193,7 +339,22 @@ const changesSchema: z.ZodType<PlatformAuditChanges> = z.object({
 })
 
 /**
- * The actor, validated into exactly the four shapes `platform_audit_log`'s `CHECK` constraints
+ * The platform acting on its own behalf: no user, no role, no credential.
+ *
+ * It is a schema of its own as well as a member of the union below, because the retention prune
+ * takes this one rather than the union. SPEC §5 and docs/ACCESS.md §4.3 both say the only delete
+ * path this table has runs as an `actor_kind: 'system'` actor, and a function that validates the
+ * *shape* of an actor accepts any well-formed human on that path.
+ */
+const systemActorSchema = z.object({
+  actorKind: z.literal('system'),
+  userId: z.null(),
+  role: z.null(),
+  tokenId: z.null(),
+})
+
+/**
+ * The actor, validated into exactly the three shapes `platform_audit_log`'s `CHECK` constraints
  * accept, so a malformed attribution is refused here rather than by SQLite three frames later.
  *
  * `role` stays a free string on the two identified kinds because it is `user.role` verbatim — a
@@ -213,12 +374,7 @@ const platformActorSchema = z.discriminatedUnion('actorKind', [
     role: z.string().nullable(),
     tokenId: identifierSchema,
   }),
-  z.object({
-    actorKind: z.literal('system'),
-    userId: z.null(),
-    role: z.null(),
-    tokenId: z.null(),
-  }),
+  systemActorSchema,
 ])
 
 /**
@@ -240,18 +396,24 @@ const actionSchema = z
   .regex(AUDIT_ACTION_PATTERN, 'must be a lowercase dotted action')
   .pipe(z.enum(PLATFORM_AUDIT_ACTIONS))
 
+/**
+ * The entry, validated for *shape*. Size is bounded after this, not in here, and on purpose: a
+ * `max()` on these three fields would reject the whole entry, and for the four verbs of §4.3 a lost
+ * entry is precisely the gap that section says must not exist. The bounds refuse the field and keep
+ * the row — see {@link FieldRefusal}.
+ */
 const platformAuditEntrySchema = z.object({
   action: actionSchema,
   /** The row the action touched. `null` only for an action whose entity does not exist yet. */
   entityId: identifierSchema.nullable(),
   changes: changesSchema.nullish(),
   /** The request IP, verbatim, bounded at {@link IP_MAX_LENGTH}. */
-  ip: requestTextSchema(IP_MAX_LENGTH).nullish(),
+  ip: z.string().nullish(),
   /**
    * The request's `User-Agent` header, verbatim and nothing else, bounded at
    * {@link USER_AGENT_MAX_LENGTH}.
    */
-  userAgent: requestTextSchema(USER_AGENT_MAX_LENGTH).nullish(),
+  userAgent: z.string().nullish(),
 })
 
 /**
@@ -276,20 +438,36 @@ export type PlatformAuditEntryInput = Omit<z.input<typeof platformAuditEntrySche
  * The append
  * ---------------------------------------------------------------------------------------------- */
 
-function buildRow(actor: PlatformActor, entry: PlatformAuditEntryInput): NewPlatformAuditLogEntry {
+interface BuiltRow {
+  readonly row: NewPlatformAuditLogEntry
+  /** The fields the bounds refused, if any. The row is written without them. */
+  readonly refusals: ReadonlyArray<FieldRefusal>
+}
+
+function buildRow(actor: PlatformActor, entry: PlatformAuditEntryInput): BuiltRow {
   const parsedActor = platformActorSchema.parse(actor)
   const parsed = platformAuditEntrySchema.parse(entry)
+
+  const ip = boundRequestField('ip', parsed.ip, IP_MAX_LENGTH)
+  const userAgent = boundRequestField('userAgent', parsed.userAgent, USER_AGENT_MAX_LENGTH)
+  const changes = boundChanges(parsed.changes ?? null)
+
   return {
-    actorUserId: parsedActor.userId,
-    actorKind: parsedActor.actorKind,
-    actorRole: parsedActor.actorKind === 'system' ? null : resolvePlatformRole(parsedActor.role),
-    tokenId: parsedActor.tokenId,
-    action: parsed.action,
-    entityType: entityTypeForAction(parsed.action),
-    entityId: parsed.entityId,
-    changes: parsed.changes ?? null,
-    ip: parsed.ip ?? null,
-    userAgent: parsed.userAgent ?? null,
+    row: {
+      actorUserId: parsedActor.userId,
+      actorKind: parsedActor.actorKind,
+      actorRole: parsedActor.actorKind === 'system' ? null : resolvePlatformRole(parsedActor.role),
+      tokenId: parsedActor.tokenId,
+      action: parsed.action,
+      entityType: entityTypeForAction(parsed.action),
+      entityId: parsed.entityId,
+      changes: changes.value,
+      ip: ip.value,
+      userAgent: userAgent.value,
+    },
+    refusals: [ip.refusal, userAgent.refusal, changes.refusal].filter(
+      (refusal): refusal is FieldRefusal => refusal !== null,
+    ),
   }
 }
 
@@ -338,6 +516,12 @@ function failureFields(actor: PlatformActor, entry: PlatformAuditEntryInput): Lo
  * exception": for those the insert is attempted twice and a second failure is reported at `error`,
  * the highest level `Logger` has (there is no `fatal`). Everything else is attempted once and
  * reported at `warn`.
+ *
+ * `ip`, `user_agent` and `changes` are bounded, and an oversized one costs that field rather than
+ * the entry: it is dropped, one line at the same severity records what was measured and why, and
+ * the row is written without it. Neither half of that is optional — an unbounded field is a
+ * header-sized row in a table that keeps it for 400 days, and a silently shortened one is evidence
+ * this module rewrote.
  */
 export async function appendPlatformAudit(
   db: Database,
@@ -346,26 +530,39 @@ export async function appendPlatformAudit(
   logger: Logger,
 ): Promise<void> {
   const critical = isAlwaysAudited(entry.action)
-  const report = (message: string, cause: unknown, fields: LogFields): void => {
+  const report = (message: string, fields: LogFields, cause?: unknown): void => {
     emitSafely(() => {
       if (critical) {
         logger.error(message, cause, fields)
       } else {
-        logger.warn(message, { ...fields, ...serializeError(cause) })
+        logger.warn(message, cause === undefined ? fields : { ...fields, ...serializeError(cause) })
       }
     })
   }
 
-  let row: NewPlatformAuditLogEntry
+  let built: BuiltRow
   try {
-    row = buildRow(actor, entry)
+    built = buildRow(actor, entry)
   } catch (cause) {
-    report('platform audit entry rejected', cause, {
-      ...failureFields(actor, entry),
-      attempts: 0,
-    })
+    report('platform audit entry rejected', { ...failureFields(actor, entry), attempts: 0 }, cause)
     return
   }
+
+  // A refused field is recorded before the insert is attempted, so the line exists even if the
+  // append then fails: the two are separate incidents and the row's missing column has to be
+  // explainable on its own thirteen months later.
+  for (const refusal of built.refusals) {
+    report('platform audit field refused', {
+      ...failureFields(actor, entry),
+      refusedField: refusal.field,
+      refusedKey: refusal.key,
+      reason: refusal.reason,
+      measured: refusal.measured,
+      limit: refusal.limit,
+    })
+  }
+
+  const row = built.row
 
   const maxAttempts = critical ? 2 : 1
   let lastCause: unknown
@@ -378,11 +575,15 @@ export async function appendPlatformAudit(
     }
   }
 
-  report('platform audit append failed', lastCause, {
-    ...failureFields(actor, entry),
-    entityType: row.entityType,
-    attempts: maxAttempts,
-  })
+  report(
+    'platform audit append failed',
+    {
+      ...failureFields(actor, entry),
+      entityType: row.entityType,
+      attempts: maxAttempts,
+    },
+    lastCause,
+  )
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -396,12 +597,25 @@ export async function appendPlatformAudit(
 export const PLATFORM_AUDIT_PRUNE_BATCH_SIZE = 200
 
 /**
- * Statements per run, so one invocation removes at most 10 000 rows and a backlog drains over
- * several weeks instead of turning one cron tick into an isolate-killing statement. A run that hits
- * the cap says so in its log line, which is the signal to widen it deliberately rather than by
- * discovering an out-of-memory error.
+ * Statements per run: 250 of them, so one weekly invocation removes at most 50 000 rows.
+ *
+ * The number is a rate, not a size. The prune has to remove at least a week's writes every week or
+ * the table grows past its 400-day window for ever, so the ceiling is what decides the busiest
+ * platform this schedule can serve: 50 000 a week is a sustained 7 100 audit rows a day, which is
+ * far above any volume the console, the catalogue and the MCP surface produce together. The earlier
+ * 10 000 was a sustained 1 430 a day, which a bulk catalogue import can exceed on its own.
+ *
+ * Raising it costs nothing the bound was protecting against, because the bound that matters is
+ * {@link PLATFORM_AUDIT_PRUNE_BATCH_SIZE}: each statement still names at most 200 ids, so no single
+ * query grows with the backlog. What grows is the number of sequential D1 round trips — 250 of them
+ * at a few milliseconds each, on a cron with no user waiting on it, and almost no CPU because only
+ * 200 ids are materialised at a time.
+ *
+ * A run that still hits the cap reports `drained: false`, and docs/ARCHITECTURE.md §9 names that as
+ * a number worth alerting on — so {@link prunePlatformAuditLog} raises it at `error` rather than
+ * leaving it as one field in a weekly `info` line nobody reads.
  */
-export const PLATFORM_AUDIT_PRUNE_MAX_BATCHES = 50
+export const PLATFORM_AUDIT_PRUNE_MAX_BATCHES = 250
 
 export interface PrunePlatformAuditLogResult {
   /** Rows removed by this run. */
@@ -417,10 +631,15 @@ export interface PrunePlatformAuditLogResult {
  *
  * The weekly retention cron is the only delete path this table has (docs/ACCESS.md §4.3). It selects
  * by `created_at` and by nothing else — no action, no actor, no entity — because a prune that can
- * filter is a prune that can be asked to remove one inconvenient row. It takes an explicit
- * {@link PlatformActor} like every other write on this path (SPEC §5), normally
- * {@link PLATFORM_SYSTEM_ACTOR}, and audits nothing about itself: how many rows it removed is a
- * structured log line, not a row in the table it just pruned.
+ * filter is a prune that can be asked to remove one inconvenient row. It audits nothing about
+ * itself: how many rows it removed is a structured log line, not a row in the table it just pruned.
+ *
+ * It takes an explicit {@link PlatformActor} like every other write on this path (SPEC §5) and
+ * refuses one that is not `actor_kind: 'system'` — {@link PLATFORM_SYSTEM_ACTOR} is the only actor
+ * this function has. §4.3 states that property of the only delete path an append-only table has,
+ * and a function that validates an actor's *shape* accepts any well-formed human on it. There is no
+ * HTTP route here today, so this is defence in depth rather than a live hole; it is asserted
+ * because Faza E puts a console surface within reach of everything on this module.
  *
  * The delete is batched. An unbounded `DELETE … RETURNING id` materialises every removed id into the
  * isolate purely to obtain a count, so a backlog from a bulk import or a burst of `agent` rows would
@@ -430,7 +649,7 @@ export interface PrunePlatformAuditLogResult {
  */
 export async function prunePlatformAuditLog(
   db: Database,
-  actor: PlatformActor,
+  actor: PlatformSystemActor,
   logger: Logger,
   options: {
     readonly now?: Date
@@ -438,7 +657,7 @@ export async function prunePlatformAuditLog(
     readonly maxBatches?: number
   } = {},
 ): Promise<PrunePlatformAuditLogResult> {
-  const parsedActor = platformActorSchema.parse(actor)
+  const parsedActor = systemActorSchema.parse(actor)
   const now = options.now ?? new Date()
   const cutoff = new Date(now.getTime() - PLATFORM_AUDIT_RETENTION_DAYS * DAY_MS)
   const batchSize = options.batchSize ?? PLATFORM_AUDIT_PRUNE_BATCH_SIZE
@@ -473,16 +692,28 @@ export async function prunePlatformAuditLog(
   }
 
   emitSafely(() => {
-    logger.info('platform audit retention prune', {
+    const fields: LogFields = {
       deleted,
       batches,
       drained,
       batchSize,
+      maxBatches,
       retentionDays: PLATFORM_AUDIT_RETENTION_DAYS,
       cutoff: cutoff.toISOString(),
       actorKind: parsedActor.actorKind,
       actorUserId: parsedActor.userId,
-    })
+    }
+
+    if (drained) {
+      logger.info('platform audit retention prune', fields)
+      return
+    }
+
+    // docs/ARCHITECTURE.md §9: `drained: false` is the signal that the ceiling has stopped being a
+    // safety margin and started being a leak — the table is now growing past its retention window
+    // and every following week will look the same. Raised at `error` so it is an alertable line
+    // rather than a field inside a routine weekly `info`.
+    logger.error('platform audit retention prune did not drain', undefined, fields)
   })
 
   return { deleted, batches, drained }

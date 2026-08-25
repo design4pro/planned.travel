@@ -4,11 +4,11 @@
  * `src/server/repos/__tests__/harness.ts` builds the whole relational model the same way and is the
  * right tool for a tenant repository test. It cannot be the tool here: it imports `../base` and
  * hands back a `TenantScope`, so a `src/server/catalog/**` test that used it would pull the tenant
- * repository into the global-table path — the exact reach SPEC §5 forbids and the grep beside this
- * file exists to catch. That grep names the tenant repository factory and any import from the
- * tenant repository directory, and it scans the whole of `src/server/catalog`, tests included, so
- * neither needle is spelled out anywhere in here. This fixture is deliberately the smaller thing
- * rather than a second copy of that one: two tables, no tenant, no scope, no seeding.
+ * repository into the global-table path — the exact reach SPEC §5 forbids and `isolation.test.ts`
+ * beside this file exists to catch. That check walks the module graph from every module in this
+ * directory, this fixture included, so an import taken here for convenience is as visible as one
+ * taken in `audit.ts`. This fixture is deliberately the smaller thing rather than a second copy of
+ * that one: two tables, no tenant, no scope, no seeding.
  *
  * The DDL is generated from the Drizzle schema itself (`drizzle-kit/api`), so the real column types,
  * the five real `CHECK` constraints of docs/ACCESS.md §4.1 and the real `token_id` foreign key are

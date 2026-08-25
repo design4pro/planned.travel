@@ -5,19 +5,24 @@
  *    prefix with an `entity_type`. Both are asserted against the names spelled out below rather than
  *    against the schema's own array, so a change made in one place and not the other is a failure
  *    here and not a silent agreement between two copies of the same mistake.
- * 2. **The global-table path never reaches through the tenant layer.** SPEC §5 forbids it by name,
- *    and the guard is a grep over the whole directory — tests included, because a fixture imported
- *    across that boundary reaches it exactly as a production import would. It is a standing check
- *    that must still pass in Faza C when `repo.ts` arrives beside this file, not a Faza B formality.
+ * 2. **The global-table path never reaches through the tenant layer.** SPEC §5 forbids it by name.
+ *    That invariant is reachability rather than text, so it lives in `isolation.test.ts` beside this
+ *    file as a walk of the module graph — a standing check that must still pass in Faza C when
+ *    `repo.ts` arrives beside `audit.ts`, not a Faza B formality.
  * 3. **An append never fails a caller.** §4.3: the mutation has already committed by the time the
  *    row is written, so a rejected append is a logging incident and never a `500` — including when
  *    the logging backend is what failed.
  * 4. **The four ban and impersonation verbs are audited without exception.** They are retried once
  *    and then raised at the highest severity the logger has, and the line names the action and the
  *    actor so the gap in the ledger is identifiable afterwards.
- * 5. **The prune is bounded.** It is the only delete path the table has, it selects by `created_at`
- *    alone, it acts as an explicit `system` actor, and it sizes its statements off a constant rather
- *    than off however large the backlog happens to be.
+ * 5. **Every field a caller does not control the size of is bounded, and a refusal is recorded.**
+ *    `ip`, `user_agent` and `changes` all land verbatim in an append-only table with a 400-day
+ *    window. An oversized one costs that field and not the entry, and never leaves a shortened
+ *    value behind that reads thirteen months later as something a client actually sent.
+ * 6. **The prune is bounded and is the platform's.** It is the only delete path the table has, it
+ *    selects by `created_at` alone, it refuses an actor that is not `system`, it sizes its
+ *    statements off a constant rather than off the backlog, and it says so loudly when a run leaves
+ *    rows behind.
  */
 
 import { readFileSync, readdirSync } from 'node:fs'
@@ -40,7 +45,7 @@ import {
   prunePlatformAuditLog,
 } from '../audit'
 import { createPlatformTables } from './platform-tables'
-import type { PlatformActionName, PlatformAuditEntryInput } from '../audit'
+import type { PlatformActionName, PlatformAuditEntryInput, PlatformSystemActor } from '../audit'
 import type { PlatformTables } from './platform-tables'
 import type { PlatformActor } from '#/server/auth/guard'
 import type { LogRecord, LogSink, Logger } from '#/server/observability'
@@ -92,7 +97,10 @@ const OPERATOR: PlatformActor = {
 
 function memoryLogger(): { logger: Logger; records: Array<LogRecord> } {
   const sink: LogSink & { records: Array<LogRecord> } = createMemorySink()
-  return { logger: createLogger({ level: 'debug', sink }), records: sink.records }
+  return {
+    logger: createLogger({ level: 'debug', sink }),
+    records: sink.records,
+  }
 }
 
 /** A logging backend that is down — the ordinary way a sink fails. */
@@ -144,13 +152,19 @@ describe('the platform action vocabulary', () => {
     const needle = `${characterClass}+(?:[._]${characterClass}+)*`
 
     const sourceRoot = fileURLToPath(new URL('../../../', import.meta.url))
-    const files = readdirSync(sourceRoot, { recursive: true, withFileTypes: true })
+    const files = readdirSync(sourceRoot, {
+      recursive: true,
+      withFileTypes: true,
+    })
       .filter((entry) => entry.isFile() && /\.tsx?$/.test(entry.name))
       .map((entry) => `${entry.parentPath}/${entry.name}`)
 
     expect(files.length).toBeGreaterThan(100)
     const occurrences = files
-      .map((file) => ({ file, count: readFileSync(file, 'utf8').split(needle).length - 1 }))
+      .map((file) => ({
+        file,
+        count: readFileSync(file, 'utf8').split(needle).length - 1,
+      }))
       .filter((entry) => entry.count > 0)
 
     const declaration = `${sourceRoot}server/db/audit-action.ts`
@@ -241,31 +255,6 @@ describe('the writer boundary', () => {
   })
 })
 
-describe('the global-table path', () => {
-  it('never reaches through the tenant repository layer, tests included', () => {
-    // SPEC §5: these tables must never be reached through `base.ts` or the tenant repository
-    // factory. The second needle deliberately stops before the closing quote: an earlier form of
-    // this check carried one, so it matched only the barrel import and printed a clean zero while
-    // four deep imports of the tenant repository directory sat in this directory. Both needles are
-    // assembled from fragments rather than written out, because this file lives inside the tree the
-    // check scans and a test asserting a string's absence must not be the line that supplies it.
-    const tenantFactory = ['create', 'Tenant', 'Repository'].join('')
-    const reposPath = `from '#/server/${'repos'}`
-
-    const directory = fileURLToPath(new URL('../', import.meta.url))
-    const files = readdirSync(directory, { recursive: true, withFileTypes: true })
-      .filter((entry) => entry.isFile() && /\.tsx?$/.test(entry.name))
-      .map((entry) => `${entry.parentPath}/${entry.name}`)
-
-    expect(files.length).toBeGreaterThan(0)
-    for (const file of files) {
-      const source = readFileSync(file, 'utf8')
-      expect(source, `${file} imports the tenant repository factory`).not.toContain(tenantFactory)
-      expect(source, `${file} imports from the tenant repository directory`).not.toContain(reposPath)
-    }
-  })
-})
-
 describe('appendPlatformAudit', () => {
   let tables: PlatformTables
 
@@ -285,7 +274,12 @@ describe('appendPlatformAudit', () => {
       tables.db,
       // `user.role` is a comma-joined column, so the row records the highest role held rather than
       // the string — §4.1 stores the role as a fact about the event.
-      { userId: 'usr_operator', actorKind: 'human', role: 'curator,admin', tokenId: null },
+      {
+        userId: 'usr_operator',
+        actorKind: 'human',
+        role: 'curator,admin',
+        tokenId: null,
+      },
       {
         action: PLATFORM_ACTIONS.USER_ROLE_CHANGED,
         entityId,
@@ -308,7 +302,10 @@ describe('appendPlatformAudit', () => {
     expect(row.actorKind).toBe('human')
     expect(row.actorRole).toBe('admin')
     expect(row.tokenId).toBeNull()
-    expect(row.changes).toEqual({ before: { role: 'user' }, after: { role: 'curator' } })
+    expect(row.changes).toEqual({
+      before: { role: 'user' },
+      after: { role: 'curator' },
+    })
     expect(row.ip).toBe('203.0.113.7')
     expect(row.userAgent).toBe('Mozilla/5.0 (console)')
     expect(records).toHaveLength(0)
@@ -337,10 +334,34 @@ describe('appendPlatformAudit', () => {
     expect(row.tokenId).toBeNull()
   })
 
-  it('bounds the two attacker-controlled request fields by truncating, not by dropping the row', async () => {
-    // `user_agent` is a request header stored verbatim (§4.1) into an append-only table with a
-    // 400-day window, so it has to be capped. Refusing an oversized one instead would throw the
-    // whole entry away, and for a ban that is exactly the gap §4.3 says must not exist.
+  it('keeps a User-Agent longer than the tenant log would accept', async () => {
+    // §4.1 says this column holds the header verbatim, so the bound has to sit above what real
+    // clients send rather than at the tenant log's 200-character form-field cap. A 300-character UA
+    // is ordinary traffic and is stored whole.
+    const { logger, records } = memoryLogger()
+    const entityId = newId()
+    const userAgent = `Mozilla/5.0 ${'x'.repeat(288)}`
+
+    await appendPlatformAudit(
+      tables.db,
+      OPERATOR,
+      { action: PLATFORM_ACTIONS.USER_BANNED, entityId, userAgent },
+      logger,
+    )
+
+    const rows = await tables.db
+      .select()
+      .from(platformAuditLog)
+      .where(eq(platformAuditLog.entityId, entityId))
+    expect(rows[0]?.userAgent).toBe(userAgent)
+    expect(records).toHaveLength(0)
+  })
+
+  it('refuses an oversized request field, records the refusal, and still writes the row', async () => {
+    // Neither half of this is optional. Unbounded, `user_agent` is a header-sized row in a table
+    // that keeps it for 400 days; truncated, it is a plausible-looking string nobody sent, and §4.1
+    // says the column holds the header verbatim — so the field is dropped and one line says what was
+    // measured. Dropping the *entry* instead would be the gap §4.3 says must not exist for a ban.
     const { logger, records } = memoryLogger()
     const entityId = newId()
 
@@ -362,9 +383,117 @@ describe('appendPlatformAudit', () => {
       .where(eq(platformAuditLog.entityId, entityId))
     const row = rows[0]
     expect(row).toBeDefined()
-    expect(row.ip).toHaveLength(64)
-    expect(row.ip?.startsWith('203.0.113.7')).toBe(true)
-    expect(row.userAgent).toHaveLength(200)
+    expect(row.ip).toBeNull()
+    expect(row.userAgent).toBeNull()
+
+    // One line per refused field, at the severity the action itself would be reported at.
+    expect(records.map((record) => record.refusedField)).toEqual(['ip', 'userAgent'])
+    expect(records.every((record) => record.level === 'error')).toBe(true)
+    expect(records[0]?.measured).toBe(511)
+    expect(records[0]?.limit).toBe(64)
+    expect(records[1]?.measured).toBe(4_096)
+    expect(records[1]?.limit).toBe(512)
+    expect(records[0]?.action).toBe('platform.user.banned')
+    expect(records[0]?.actorUserId).toBe('usr_operator')
+  })
+
+  it('bounds `changes` by size, by key count and by value length', async () => {
+    // The field Faza C and E feed user-controlled profile strings into. Unbounded it took a ~600 KB
+    // payload into an append-only table without a single log record.
+    const oversized: ReadonlyArray<[string, PlatformAuditEntryInput['changes'], string]> = [
+      [
+        'a payload past the serialised bound',
+        { before: null, after: { bio: 'x'.repeat(600_000) } },
+        'payload-longer-than-bound',
+      ],
+      [
+        'one value past the per-value bound',
+        { before: { name: 'y'.repeat(2_000) }, after: null },
+        'value-longer-than-bound',
+      ],
+      [
+        'more keys than a diff has',
+        {
+          before: null,
+          after: Object.fromEntries(
+            Array.from({ length: 65 }, (_value, index) => [`field${index}`, index]),
+          ),
+        },
+        'too-many-keys',
+      ],
+    ]
+
+    for (const [name, changes, reason] of oversized) {
+      const { logger, records } = memoryLogger()
+      const entityId = newId()
+
+      await appendPlatformAudit(
+        tables.db,
+        OPERATOR,
+        { action: PLATFORM_ACTIONS.USER_UPDATED, entityId, changes },
+        logger,
+      )
+
+      const rows = await tables.db
+        .select()
+        .from(platformAuditLog)
+        .where(eq(platformAuditLog.entityId, entityId))
+      expect(rows, name).toHaveLength(1)
+      expect(rows[0]?.changes, name).toBeNull()
+      expect(records, name).toHaveLength(1)
+      expect(records[0]?.refusedField, name).toBe('changes')
+      expect(records[0]?.reason, name).toBe(reason)
+      expect(records[0]?.level, name).toBe('warn')
+    }
+  })
+
+  it('refuses a `changes` payload that cannot be serialised at all', async () => {
+    // A cycle or a `BigInt` reaches SQLite as a throw from the driver's own JSON step, which would
+    // cost the entry rather than the field.
+    const { logger, records } = memoryLogger()
+    const entityId = newId()
+    const cyclic: Record<string, unknown> = {}
+    cyclic.self = cyclic
+
+    await appendPlatformAudit(
+      tables.db,
+      OPERATOR,
+      {
+        action: PLATFORM_ACTIONS.USER_UPDATED,
+        entityId,
+        changes: { before: null, after: cyclic },
+      },
+      logger,
+    )
+
+    const rows = await tables.db
+      .select()
+      .from(platformAuditLog)
+      .where(eq(platformAuditLog.entityId, entityId))
+    expect(rows[0]?.changes).toBeNull()
+    expect(records[0]?.reason).toBe('unserialisable-payload')
+  })
+
+  it('writes a `changes` payload inside the bounds untouched', async () => {
+    const { logger, records } = memoryLogger()
+    const entityId = newId()
+    const changes = {
+      before: { email: 'old@example.com' },
+      after: { email: 'new@example.com' },
+    }
+
+    await appendPlatformAudit(
+      tables.db,
+      OPERATOR,
+      { action: PLATFORM_ACTIONS.USER_EMAIL_SET, entityId, changes },
+      logger,
+    )
+
+    const rows = await tables.db
+      .select()
+      .from(platformAuditLog)
+      .where(eq(platformAuditLog.entityId, entityId))
+    expect(rows[0]?.changes).toEqual(changes)
     expect(records).toHaveLength(0)
   })
 
@@ -375,7 +504,12 @@ describe('appendPlatformAudit', () => {
     await appendPlatformAudit(
       tables.db,
       OPERATOR,
-      { action: PLATFORM_ACTIONS.USER_BANNED, entityId, ip: '   ', userAgent: '' },
+      {
+        action: PLATFORM_ACTIONS.USER_BANNED,
+        entityId,
+        ip: '   ',
+        userAgent: '',
+      },
       logger,
     )
 
@@ -442,7 +576,12 @@ describe('appendPlatformAudit', () => {
     await expect(
       appendPlatformAudit(
         tables.db,
-        { userId: 'usr_operator', actorKind: 'human', role: 'admin', tokenId: 'tok_1' },
+        {
+          userId: 'usr_operator',
+          actorKind: 'human',
+          role: 'admin',
+          tokenId: 'tok_1',
+        },
         { action: PLATFORM_ACTIONS.USER_BANNED, entityId: 'usr_target' },
         logger,
       ),
@@ -504,7 +643,12 @@ describe('appendPlatformAudit', () => {
     // refuses it here so the row never reaches SQLite, and the caller still returns normally.
     await appendPlatformAudit(
       tables.db,
-      { userId: 'usr_operator', actorKind: 'human', role: 'admin', tokenId: 'tok_1' },
+      {
+        userId: 'usr_operator',
+        actorKind: 'human',
+        role: 'admin',
+        tokenId: 'tok_1',
+      },
       { action: PLATFORM_ACTIONS.USER_BANNED, entityId: 'usr_target' },
       logger,
     )
@@ -563,7 +707,9 @@ describe('prunePlatformAuditLog', () => {
     await seedRow(500, 'ancient')
     const { logger, records } = memoryLogger()
 
-    await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, { now: NOW })
+    await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, {
+      now: NOW,
+    })
 
     expect(records).toHaveLength(1)
     const record = records[0]
@@ -625,27 +771,67 @@ describe('prunePlatformAuditLog', () => {
     })
 
     expect(result).toEqual({ deleted: 4, batches: 2, drained: false })
+    // docs/ARCHITECTURE.md §9 names `drained: false` as a number worth alerting on: it means the
+    // ceiling has stopped being a safety margin and the table is now growing past its window. A
+    // field inside a routine weekly `info` line is not an alertable signal, so the whole line moves
+    // to the top of the severity scale.
+    expect(records).toHaveLength(1)
+    expect(records[0]?.level).toBe('error')
     expect(records[0]?.drained).toBe(false)
+    expect(records[0]?.deleted).toBe(4)
     // The remainder is not lost, only deferred: next week's tick carries on from here.
     expect(await tables.db.select().from(platformAuditLog)).toHaveLength(1)
   })
 
-  it('bounds a default run the way the sibling cron in the same switch is bounded', () => {
+  it('bounds each statement the way the sibling cron in the same switch is bounded', () => {
+    // The statement bound is what stops one tick becoming an isolate-killing query, and it matches
+    // `sweepReminders`. The run bound is a *rate*: 250 × 200 clears 50 000 rows a week, a sustained
+    // 7 100 audit rows a day, where the earlier 10 000 a week could be exceeded by one bulk import.
     expect(PLATFORM_AUDIT_PRUNE_BATCH_SIZE).toBe(200)
-    expect(PLATFORM_AUDIT_PRUNE_MAX_BATCHES).toBe(50)
+    expect(PLATFORM_AUDIT_PRUNE_MAX_BATCHES).toBe(250)
   })
 
-  it('refuses a malformed actor rather than acting as one', async () => {
+  it('refuses an actor that is not the platform itself, and deletes nothing', async () => {
+    // docs/ACCESS.md §4.3: the only delete path an append-only table has runs as an `actor_kind`
+    // `system` actor. Validating the *shape* of an actor accepts any well-formed human on it, which
+    // is what this rejects. The compiler refuses the same call — the cast is what a caller outside
+    // TypeScript, or a Faza E console surface built on a widened variable, would do by accident.
+    await seedRow(500, 'ancient')
+    const { logger, records } = memoryLogger()
+
+    const human: PlatformActor = {
+      userId: 'usr_operator',
+      actorKind: 'human',
+      role: 'admin',
+      tokenId: null,
+    }
+
+    await expect(
+      prunePlatformAuditLog(tables.db, human as PlatformSystemActor, logger, {
+        now: NOW,
+      }),
+    ).rejects.toThrow()
+
+    expect(await tables.db.select().from(platformAuditLog)).toHaveLength(1)
+    expect(records).toHaveLength(0)
+  })
+
+  it('refuses a malformed system actor rather than acting as one', async () => {
     // SPEC §5: always an explicit platform actor. A `system` actor carrying a user id is not one of
-    // the four shapes §4.1's CHECK constraints accept, and the prune is not the place to discover
-    // that a caller invented a fifth.
+    // the three shapes §4.1's CHECK constraints accept, and the prune is not the place to discover
+    // that a caller invented a fourth.
     await seedRow(500, 'ancient')
     const { logger } = memoryLogger()
 
     await expect(
       prunePlatformAuditLog(
         tables.db,
-        { userId: 'usr_operator', actorKind: 'system', role: null, tokenId: null },
+        {
+          userId: 'usr_operator',
+          actorKind: 'system',
+          role: null,
+          tokenId: null,
+        },
         logger,
         { now: NOW },
       ),
