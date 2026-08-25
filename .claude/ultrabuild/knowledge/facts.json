@@ -138,12 +138,139 @@
     "invalidatesWhen": "never — it is a property of judging by pictures"
   },
   {
+    "id": "gap-rows-not-a-dag",
+    "claim": "The dependsOn edges in .claude/ultrabuild/recon/gap-rows.json are NOT a DAG and cannot be topologically sorted as written — they contain nine mutual A->B / B->A pairs. Any wave ordering must cut edges explicitly and record which ones it cut.",
+    "evidence": "Measured by the plan-index builder in round 1 while deriving the wave table. A naive topological sort lands TRP-11 in wave 4 and disagrees with the recon summary, which names it one of four wave-1 leaders.",
+    "measuredIn": "this run, round 1",
+    "scope": [
+      "builder",
+      "auditor"
+    ]
+  },
+  {
     "id": "copy-surface-inventory",
     "claim": "The translatable surface is ~1,415 unique candidate strings across 263 .ts/.tsx files under src/routes and src/components. It is heavily concentrated: src/routes/_app 680, src/components/modules 316, src/routes/api 267, src/routes/(auth) 146, src/components/marketing 82, src/components/atlas 79, src/components/costs 68, src/routes/legal 65, src/components/layout 45, src/components/ui 28, src/components/map 22, src/components/planner 9.",
     "evidence": "Measured before round 1 by scanning JSX text nodes plus copy-bearing props (title|label|hint|description|placeholder|aria-label|message|heading|subtitle|cta|empty|error) over both trees, excluding __tests__. The src/routes/api figure is mostly server JSON and error text rather than screen copy — do not assume all 267 are user-facing. It is an upper bound, not a key count.",
     "measuredIn": "i18n run, preflight",
     "scope": [
       "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "gap-rows.json is rewritten with an acyclic dependsOn"
+  },
+  {
+    "id": "markdown-not-prettier-clean",
+    "claim": "New markdown under docs/ passes pnpm lint untouched — eslint never sees it — but hand-written markdown is NOT prettier-clean: prettier rewrites table column padding and converts *emphasis* to _emphasis_. Run pnpm exec prettier --write on every markdown file you create.",
+    "evidence": "Measured in round 1 on docs/plans/README.md and docs/plans/TEMPLATE.md.",
+    "measuredIn": "this run, round 1",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "prettier stops covering markdown"
+  },
+  {
+    "id": "repo-gate-red-at-head",
+    "claim": "SUPERSEDED AND WRONG AS ORIGINALLY WRITTEN. It claimed the Playwright gate was red at this branch HEAD with 44 failures, on the evidence that git diff since the baseline commit was empty. The diff was empty for THIS worktree; the server under test was not this worktree. Rounds 1-3 measured main (2433 src/ insertions ahead, incl. 376 lines of styles.css and tokens.css, which is what the page-height differences actually were); rounds 4-5 measured servers with no .dev.vars. This branch has NEVER had its Playwright leg honestly measured.",
+    "evidence": "resolve-port.sh identified a server by GET /api/dev/seed, which every git worktree of this repo answers identically. Three worktrees were running. Confirmed by lsof: the process on the port it handed back had cwd in a different worktree. Fixed: is_ours() now also requires the listening process cwd to equal , verified to refuse the other worktrees servers.",
+    "measuredIn": "this run, rounds 1-5, corrected in round 5",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical",
+      "capture"
+    ],
+    "invalidatesWhen": "a Playwright run is completed against a server whose cwd is this worktree and whose env includes .dev.vars"
+  },
+  {
+    "id": "no-repair-pass-while-gate-red",
+    "claim": "The workflow's in-round repair pass is guarded on `mechanicalGreen`. While the repo gate stays red, a rejected item gets exactly ONE build attempt per round and no same-round retry, so every rejection costs a whole round. Budget maxRounds accordingly rather than assuming three attempts per item.",
+    "evidence": "Read at .claude/workflows/ultrabuild.js line 1230: the `while` loop requires itemRound < MAX_ITEM_ROUNDS AND rejected items AND mechanicalGreen. Rounds 1 and 2 each carried exactly one build of plan-index-and-conventions.",
+    "measuredIn": "this run, round 2",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "invalidatesWhen": "the repo gate goes green, or the guard changes"
+  },
+  {
+    "id": "docs-items-are-auditor-only",
+    "claim": "An item with neither `url` nor `referenceUrl` is NOT penalised for having no visual verdict — verdictFor() guards that reason behind `else if (item.url || item.referenceUrl)`. A documentation item is therefore judged by the auditor alone, and only BLOCKING audit findings reject it; minor ones are recorded and carried.",
+    "evidence": "Read at .claude/workflows/ultrabuild.js lines 1163-1172. Confirmed by round 2, where plan-index-and-conventions was rejected with the single reason \"1 blocking audit finding(s)\" while carrying five minor ones.",
+    "measuredIn": "this run, round 2",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "verdictFor() stops guarding the visual reason on url/referenceUrl"
+  },
+  {
+    "id": "warm-the-server-before-the-round",
+    "claim": "A dev server started INSIDE the round is not a measuring instrument. A cold Vite SSR server, under the concurrent load of `pnpm build` and `pnpm test` in the same round, answers HTTP 500 on routes it has not transformed yet, and a session cached against a different port makes every authenticated spec skip. The orchestrator warms the server, seeds, and refreshes the session BEFORE launching a round, and the round reuses it.",
+    "evidence": "Round 4 of this run: the mechanical agent found no server, started one on 3006, and reported \"16 failed, 66 skipped, 55 passed (23.8s). All 16 failures are HTTP 500 from the dev server on auth/legal routes\" — against the settled 44-failed / 5-skipped / 88-passed baseline measured on a warm 3005 in rounds 1, 2 and 3. Same commit, same tree, three times the skips and a quarter of the runtime: the number describes the server, not the code.",
+    "measuredIn": "this run, round 4",
+    "scope": [
+      "mechanical",
+      "capture",
+      "auditor"
+    ],
+    "invalidatesWhen": "the gate stops depending on a dev server, or playwright.config.ts owns its own warmed webServer"
+  },
+  {
+    "id": "plan-claims-must-cite-a-line",
+    "claim": "A plan stage that asserts how existing code behaves must cite the file and line, because the assertions that read most confidently are the ones most often wrong. Three of round 4's five blocking findings were false claims about this repo, each refuted by one grep.",
+    "evidence": "Round 4, docs/plans/00-foundations.md: a \"100-member organization ceiling\" that does not exist (SEAT_LIMIT_CEILING is 100_000 at src/server/billing/limits.ts:82, and the largest published plan sells seats: 10); listTripMembers said to raise NotFoundError for a foreign trip id when src/server/repos/trips.ts:403 returns [] via findMany; recomputeTravelStats described as per-traveller when its aggregates are tenant-scoped. Each would have sent a future implementation run to write a test that cannot pass.",
+    "measuredIn": "this run, round 4",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "never — it is a discipline, not a measurement"
+  },
+  {
+    "id": "dev-vars-not-in-worktree",
+    "claim": ".dev.vars is gitignored, so git worktree add never brings it. Without it Better Auth has no BETTER_AUTH_SECRET, /login and /register return HTTP 500, and every authenticated Playwright spec skips rather than fails. Copy it from the main checkout as the first step in any new worktree.",
+    "evidence": "Rounds 4 and 5 both measured servers without it: 66 specs skipped and every failure traced to that one cause. The main checkout has .dev.vars (3960 bytes); this worktree had only .dev.vars.example until round 5.",
+    "measuredIn": "this run, round 5",
+    "scope": [
+      "mechanical",
+      "capture",
+      "builder"
+    ],
+    "invalidatesWhen": "the app stops needing a secret to boot auth"
+  },
+  {
+    "id": "dev-server-does-not-outlive-its-task",
+    "claim": "A dev server started from an agent background shell does NOT survive that task ending — the harness takes the process tree down with it, and a POSIX::setsid wrapper was tried and changed nothing. Do not try to hand a warm server from the orchestrator to the next round. Let each round own its own: the mechanical agent starts one and it lives as long as that agent runs, which is all the gate needs.",
+    "evidence": "Measured three times in round 5. Each time resolve-port.sh printed \"started and answering\" and the next command got connection refused, with bash reporting \"Terminated: 15\" against the vite job.",
+    "measuredIn": "this run, round 5",
+    "scope": [
+      "mechanical",
+      "capture"
+    ],
+    "invalidatesWhen": "the harness stops reaping background process trees"
+  },
+  {
+    "id": "plan-collisions-are-measurable",
+    "claim": "Cross-plan owned-path collisions must be checked with scripts/ultrabuild/check-plan-collisions.mjs, not by reading sibling plans. Two stages in the same wave that both take an exclusive disposition (edit/new/create/delete) on one file clobber each other; \"append\" is the documented cooperative pattern and is not a collision.",
+    "evidence": "Round 8 wrote three area plans in parallel and produced two real collisions despite every plan carrying an acceptance criterion about it, because each plan could only read the siblings that existed when it started, and one checked a single sibling while asserting it had checked them all. The script finds 01-S2 vs 07-S1 on -server/plan.ts in wave 1.",
+    "measuredIn": "this run, round 8",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "invalidatesWhen": "the plan set stops being written concurrently"
+  },
+  {
+    "id": "foreign-work-in-this-worktree",
+    "claim": "Another session is editing src/ in this worktree. NEVER commit with  from here — stage only docs/plans, .claude/ultrabuild, scripts/ultrabuild and .gitignore, or a round commit will absorb someone else's in-flight work under a message that does not describe it.",
+    "evidence": "Measured after round 8: src/lib/map/pmtiles.ts, src/routes/api/tiles/-lib/serve.ts, their tests and docs/ARCHITECTURE.md were modified 53 minutes earlier by the repo owner, fixing the tile 404 this run had filed. Unit tests went 2243 -> 2245 and the webkit 404 console failures disappeared mid-run.",
+    "measuredIn": "this run, round 8",
+    "scope": [
+      "builder",
+      "mechanical",
       "auditor"
     ],
     "invalidatesWhen": "extraction has begun and the catalogue is the better count — re-measure from the catalogue, not from the components"
@@ -348,6 +475,16 @@
     "invalidatesWhen": "all six translations-* items have shipped their messages/<tag>/ directories"
   },
   {
+    "id": "red-gate-is-foreign-work",
+    "claim": "As of round 10 the repo gate is red ENTIRELY because of other sessions' uncommitted work, not because of anything this run touched. Do not chase it, do not re-baseline, and do not let it be read as a defect of a plan document.",
+    "evidence": "pnpm test: 23 failures, every one in src/lib/i18n/__tests__/parity.test.ts, which git reports as UNTRACKED - another session's in-flight i18n work. Playwright: 4 failures, all the /atlas snapshot (light+dark, chromium and mobile-safari, 3305-4226 pixels), stale since the repo owner fixed the pmtiles range path in e24d0e1 so the map now renders tiles it previously failed to fetch. typecheck, lint and build are clean, and 2669 of 2692 unit tests pass.",
+    "measuredIn": "this run, round 10",
+    "scope": [
+      "mechanical",
+      "auditor",
+      "builder"
+    ],
+    "invalidatesWhen": "the i18n work lands and its baselines are refreshed by whoever owns them"
     "id": "recon-cache-double-wrap",
     "claim": "The workflow already returns each recon entry AS `{hash, result}`, so the persist step must write that value VERBATIM. Wrapping it again produces `{hash, result:{hash, result:{topic,facts,...}}}`, and the next round hands the inner wrapper to the workflow as if it were the reader payload. Nothing errors: the run logs `recon reused for: <key>`, `r.topic` and `r.facts` are simply undefined, and that reader contributes an EMPTY section to the digest every builder, critic and auditor reads. Before trusting a cache entry, assert `result.topic` is a string and `result.facts` is non-empty — a matching hash is not proof the payload survived.",
     "evidence": "Measured in round 5: recon/stack.json and recon/reference.json were both double-wrapped, so the digest carried 0 of 36 stack facts (plus 20 risks) and 0 of 33 reference facts. Their inner hashes matched their outer ones, which is why the hash check passed. recon/contract.json and recon/codebase.json, written verbatim, were single-wrapped and intact. Unwrapping restored 69 facts and 26 risks. Rounds 3, 4 and the first round-5 attempt all reused the degraded pair.",

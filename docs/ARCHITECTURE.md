@@ -86,7 +86,12 @@ built to never pay R2 twice:
    most 6 deep, 512 bytes total, with a known map-data extension, resolve at all. Everything
    else is a 404 that never touches the bucket.
 2. Resolve the archive. `basemap.pmtiles` is an alias for the `TILES_ARCHIVE_KEY` var; any
-   other path is used as the R2 key verbatim.
+   other path is used as the R2 key verbatim. A named key that is not in the bucket is a 404 —
+   the caller asked for something that does not exist. The alias resolving to nothing published
+   is a **204**: an absent archive is a deployment state the map has a designed screen for
+   (`BasemapNotice`), not a mistake the caller made, and answering it with an error status put a
+   console error on every map screen in every checkout that has no archive. See `notPublished()`
+   in `-lib/serve.ts`.
 3. Load object metadata (size + entity tag) from the Cache API, falling back to one R2 `head`.
    This is what makes a _new_ range cheap: the size is needed to clamp an open-ended or suffix
    range and to answer `If-None-Match`, and without the cached metadata every range would cost
@@ -363,7 +368,7 @@ What the model actually says:
 | --- | ------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | D1 unavailable or timing out                      | all authenticated reads and writes        | `checkReadiness` probe (`src/server/observability/health.ts`); error-rate spike on `outcome=error` | read-only queries are auto-retried by D1 (up to 2); writes are wrapped in explicit idempotent retries; the marketing pages never touch D1 so the front door stays up |
 | 2   | KV read returns stale data                        | one tenant sees a stale plan for ≤ 60 s   | plan mismatch between webhook log and quota decision                                               | 60 s TTL plus explicit invalidation from the webhook; usage never cached; entitlement downgrades take effect on the next check, never mid-request                    |
-| 3   | R2 object missing or replaced under a live key    | map degrades to no basemap                | `x-tiles-cache` miss rate, 404 rate on `/api/tiles/*`                                              | metadata entry is dropped on a 404; cached slices are dropped on entity-tag mismatch, so a replaced archive can never be served half-old, half-new                   |
+| 3   | R2 object missing or replaced under a live key    | map degrades to no basemap                | `x-tiles-cache` miss rate; 204 rate on the alias, 404 rate on a named key                          | metadata is dropped when a read finds the object gone; slices are dropped on entity-tag mismatch, so a replaced archive can never be served half-old, half-new       |
 | 4   | Cache API `put`/`match` failure                   | one uncached read, higher R2 op count     | `tile cache operation failed` warning line                                                         | every cache call is wrapped; a fault degrades to an R2 read and never fails the request                                                                              |
 | 5   | A trip room gets hot (many editors, huge patches) | one trip                                  | DO CPU/duration metrics; client-visible rate-limit errors                                          | 32 KiB frames, 40 msg/s per connection, bounded patch log and tombstone TTL; the object is the only thing that slows down                                            |
 | 6   | Durable Object evicted mid-session                | one trip's clients reconnect              | reconnect rate                                                                                     | clients re-handshake and resnapshot via `partysocket`; D1 holds the durable record, so the worst case is replaying recent patches                                    |

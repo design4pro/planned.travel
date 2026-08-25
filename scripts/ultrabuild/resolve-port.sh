@@ -25,29 +25,30 @@ START=0
 repo_root() { cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd; }
 ROOT="$(repo_root)"
 
-# Identity, not liveness — and identity means THIS WORKING TREE, not merely this application.
+# Identity, not liveness — and identity means THIS WORKING TREE, not merely this project.
 #
-# /api/dev/seed is this repo's own endpoint, so a match proves the responder is a dev build of this
-# app rather than the unrelated project that has owned port 3000 on this machine. That is necessary
-# and it is not sufficient: a git worktree under .claude/worktrees/ is the same app on a different
-# branch, answers the same endpoint, and is indistinguishable over HTTP. One did exactly that. A
-# whole /ultrabuild round photographed a sibling worktree's checkout on port 3005 and filed 44
-# visual failures against code that was never rendered, and a hand check of "does this reproduce on
-# main?" confirmed the failures against the same wrong server. Nothing in the HTTP answer could have
-# revealed it.
+# /api/dev/seed is this repo's own endpoint, so a match proves the server is a dev build of this
+# app. That is necessary and it is not sufficient: every git worktree of this repo answers it
+# identically. Measured, and expensively — this machine was running three worktrees at once, and
+# the probe happily handed back main's server on 3005 and a third worktree's on 3001. Five rounds
+# of Playwright results were therefore measured against source the branch under test did not have
+# (main was 2433 insertions ahead, including 376 lines of styles.css and tokens.css), and the
+# page-height differences that produced were reported as regressions of this branch.
 #
-# So the probe is two-sided: the endpoint proves it is our app, and the listening process's working
-# directory proves it is our checkout.
-is_ours() {
-  curl -fsS -m 3 "http://localhost:$1/api/dev/seed" 2>/dev/null | grep -q '"ok"' || return 1
-  local pid cwd
+# So the second half of the check asks the kernel whose tree the listening process is actually
+# serving, and only a process whose cwd is $ROOT counts as ours.
+serving_root() {
+  local pid
   pid="$(lsof -nP -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null | head -1)"
   [[ -n "$pid" ]] || return 1
-  cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | grep '^n' | cut -c2-)"
-  if [[ "$cwd" != "$ROOT" ]]; then
-    echo >&2 "resolve-port: port $1 answers as this app but runs from $cwd, not $ROOT — skipping it"
-    return 1
-  fi
+  lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1
+}
+
+is_ours() {
+  curl -fsS -m 3 "http://localhost:$1/api/dev/seed" 2>/dev/null | grep -q '"ok"' || return 1
+  local cwd
+  cwd="$(serving_root "$1")" || return 1
+  [[ "$cwd" == "$ROOT" ]]
 }
 
 port_free() {
@@ -85,6 +86,10 @@ fi
 # winning. Calling vite directly means the port we asked for is the port we get.
 LOG="${TMPDIR:-/tmp}/ultrabuild-dev-$FREE.log"
 echo >&2 "resolve-port: no server in the pool — starting one on $FREE (log: $LOG)"
+# A server started from an agent's background shell does NOT outlive that shell here: the harness
+# takes the whole tree down when the task ends, and a POSIX::setsid wrapper was tried and changed
+# nothing. So do not plan on a server surviving between rounds — each round's own agent starts one
+# and uses it for as long as it runs, which is all the gate actually needs.
 (cd "$ROOT" && nohup pnpm exec vite dev --port "$FREE" >"$LOG" 2>&1 &)
 
 for _ in $(seq 1 60); do

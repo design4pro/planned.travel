@@ -46,6 +46,17 @@
     ]
   },
   {
+    "id": "four-leader-rows",
+    "claim": "COL-01, ACC-05, TRP-11 and MNY-07 are the four rows the most other rows depend on.",
+    "why": "Measured on the edge set and refuted. By transitive in-degree the top five are COL-01 20, ACC-05 16, ADM-02 10, TRP-11 8, MNY-01 8; by direct in-degree DOC-01 leads with 6. Only COL-01 and ACC-05 lead on both readings. MNY-07 and TRP-11 belong early for reasons the graph does not express, which is a different argument and must be made as one.",
+    "cost": "one blocking and one minor finding, and a wave-table acceptance criterion that could not be satisfied — two rounds",
+    "blindSafe": true,
+    "scope": [
+      "builder",
+      "auditor"
+    ]
+  },
+  {
     "id": "visual-gate-red-on-main",
     "claim": "The Playwright chromium visual project is red on main with ~44 failures, so the repo has a pre-existing red floor this run must carry or fix.",
     "why": "Every one of those failures was photographed against port 3005, a dev server belonging to a sibling git worktree. Measured on a server started from this checkout: 132 passed, 5 skipped, 0 unexpected, with round 1's changes already in the tree. There is no red floor. See the port-identity-is-the-worktree fact.",
