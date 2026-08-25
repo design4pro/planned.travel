@@ -52,13 +52,14 @@ import {
   readUserRole,
 } from './bindings'
 import { ConsoleActionError } from './errors'
-import { sessionTokensFrom } from './session-keys'
+import { sessionTokensOf } from './session-keys'
 
 import type { PlatformPermissionRequest } from '#/server/auth/access'
 import type { PlatformActor } from '#/server/auth/guard'
 import type { AuthSession } from '#/server/auth/session'
 import type { PlatformAuditEntryInput } from '#/server/catalog/audit'
 import type { LogFields, Logger } from '#/server/observability'
+import type { SessionTokens } from './session-keys'
 
 /**
  * An authorised platform action, with everything the audit row and the plugin call both need.
@@ -229,9 +230,17 @@ export async function recordConsoleAction(
   )
 }
 
-/** The target's live session tokens — the KV keys their cached blobs are stored under. */
+/**
+ * The target's live session tokens - the KV keys their cached blobs are stored under - and whether
+ * the enumeration reached the end of them.
+ *
+ * The flag is carried rather than dropped because every caller has something to do with it: a ban
+ * that could not enumerate every session raises an `error` line naming what it left behind, and a
+ * revoke-by-id that did not find its session says so honestly instead of reporting a live session
+ * as already ended.
+ */
 export async function readSessionTokens(
   userId: string,
-): Promise<ReadonlyArray<string>> {
-  return sessionTokensFrom(await readSessionRows(userId))
+): Promise<SessionTokens> {
+  return sessionTokensOf(await readSessionRows(userId))
 }

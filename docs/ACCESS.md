@@ -563,8 +563,8 @@ the retention rather than restating them, so there is one list and it is this on
 | `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link`. The mapping to `action` is in §4.2 |
 | `entity_id`     | text                                                   | yes  | The row the action touched. `NULL` only for an action whose entity does not exist yet or no longer does                                                          |
 | `changes`       | text, JSON                                             | yes  | `{ before, after }` - the fields that moved, on both sides                                                                                                       |
-| `ip`            | text                                                   | yes  | The request IP, verbatim. `NULL` for `system`                                                                                                                    |
-| `user_agent`    | text                                                   | yes  | The request's `User-Agent` header, verbatim, and nothing else. `NULL` when the request sent none                                                                 |
+| `ip`            | text                                                   | yes  | The request IP, bounded (§4.1a). `NULL` for `system`                                                                                                             |
+| `user_agent`    | text                                                   | yes  | The request's `User-Agent` header and nothing else, bounded (§4.1a). `NULL` when the request sent none                                                           |
 | `created_at`    | `createdAt()`                                          | no   | Append time                                                                                                                                                      |
 
 This shape adopts the change `docs/CATALOG.md` files as its §13.9 and sketches in its §2.12 - a
@@ -598,6 +598,25 @@ non-additive recreate instead.
 
 `actor_kind` additionally carries the ordinary single-column `enumCheck()` named in the type
 column, so five constraints ship in total.
+
+### 4.1a Why `ip` and `user_agent` are bounded rather than verbatim
+
+The two columns hold attacker-controlled request headers and this table is append-only with
+400-day retention, so "verbatim" as an unqualified promise meant an unbounded write on every
+platform mutation. Faza B's auditor demonstrated the cost with a probe rather than an argument.
+Both are therefore capped, and a value that exceeds the cap is stored truncated **with an explicit
+mark**, never silently shortened and never replaced by `NULL`: `NULL` on `user_agent` already
+means "the request sent none", and collapsing a refusal into that value would make the row report
+the wrong fact about a request thirteen months later, when the log line explaining it has long
+aged out.
+
+Two consequences worth stating, because both were found by measurement:
+
+- A client can send a header that already ends with the truncation mark, so a forged
+  "this was truncated" row is not distinguishable from a genuine one by the mark alone. The mark
+  is a reader's aid, not evidence; nothing in the product may branch on it.
+- The bound belongs to the writer, not to the schema. Changing it is a code change, not a
+  migration, which is the reason it is expressed here as a rule rather than as a column type.
 
 **`entity_type` is narrowed in TypeScript, not in SQL, and that is deliberate.** The type column
 above says plain `text` for it while marking `actor_kind` as `text, enumCheck()`, and the
@@ -864,6 +883,15 @@ The rest follows from that sentence:
   whose owner later becomes `admin` is revoked by that role change, in the same call, audited as
   `platform.token.revoked` - a role promotion must not silently upgrade a credential that is
   sitting in someone's `~/.claude.json`.
+
+  **Which phase owes this, settled in Faza B.** The revocation rides on the role change, so it
+  reads like console work - but it can only revoke credentials that a surface has issued, and this
+  phase issues none. Faza B creates the `staff_api_tokens` table and stops there, by the user's
+  decision of 23.08: issuance, revocation and the `console/tokens` screen all land in Faza E,
+  where §5's other rules already live. Until then the table is empty, so the rule above is
+  vacuously satisfied rather than unimplemented. Faza B's console role-change function carries a
+  header note pointing here, so the gap is a stated deferral instead of something a later reader
+  has to discover. A Faza E round that ships issuance without this revocation ships a real hole.
 - Tokens are stored hashed with `MCP_TOKEN_PEPPER` and shown once. Rotating the pepper invalidates
   every issued token at once, which is the break-glass control.
 - Every token has an `expires_at`. A token without an expiry is not issuable.

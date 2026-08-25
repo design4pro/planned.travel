@@ -15,10 +15,13 @@
  * 4. **The four ban and impersonation verbs are audited without exception.** They are retried once
  *    and then raised at the highest severity the logger has, and the line names the action and the
  *    actor so the gap in the ledger is identifiable afterwards.
- * 5. **Every field a caller does not control the size of is bounded, and a refusal is recorded.**
- *    `ip`, `user_agent` and `changes` all land verbatim in an append-only table with a 400-day
- *    window. An oversized one costs that field and not the entry, and never leaves a shortened
- *    value behind that reads thirteen months later as something a client actually sent.
+ * 5. **Every field a caller does not control the size of is bounded, and the bound is recorded in
+ *    the row as well as in the log.** `ip`, `user_agent` and `changes` all land verbatim in an
+ *    append-only table with a 400-day window. An oversized value costs that value and never the
+ *    entry, never the rest of the diff (§4.4) and never the truth of the row: what is written in
+ *    its place says that it was bounded, because `NULL` on those columns already means "the request
+ *    sent none" (§4.1) and a silently shortened string reads thirteen months later as one a client
+ *    actually sent.
  * 6. **The prune is bounded and is the platform's.** It is the only delete path the table has, it
  *    selects by `created_at` alone, it refuses an actor that is not `system`, it sizes its
  *    statements off a constant rather than off the backlog, and it says so loudly when a run leaves
@@ -357,11 +360,13 @@ describe('appendPlatformAudit', () => {
     expect(records).toHaveLength(0)
   })
 
-  it('refuses an oversized request field, records the refusal, and still writes the row', async () => {
-    // Neither half of this is optional. Unbounded, `user_agent` is a header-sized row in a table
-    // that keeps it for 400 days; truncated, it is a plausible-looking string nobody sent, and §4.1
-    // says the column holds the header verbatim — so the field is dropped and one line says what was
-    // measured. Dropping the *entry* instead would be the gap §4.3 says must not exist for a ban.
+  it('bounds an oversized request field in the row itself, and still writes the entry', async () => {
+    // Three rules meet on this row. Unbounded, `user_agent` is a header-sized value in a table that
+    // keeps it for 400 days. Written as `NULL`, it claims the request sent no header — which is what
+    // §4.1 says `NULL` means there, and is a different fact from the one that happened. Shortened
+    // without a mark, it is a plausible string nobody sent. So the head is kept, the shortening is
+    // stated in the value, and one line records the measurement. Dropping the *entry* instead would
+    // be the gap §4.3 says must not exist for a ban.
     const { logger, records } = memoryLogger()
     const entityId = newId()
 
@@ -383,11 +388,20 @@ describe('appendPlatformAudit', () => {
       .where(eq(platformAuditLog.entityId, entityId))
     const row = rows[0]
     expect(row).toBeDefined()
-    expect(row.ip).toBeNull()
-    expect(row.userAgent).toBeNull()
 
-    // One line per refused field, at the severity the action itself would be reported at.
-    expect(records.map((record) => record.refusedField)).toEqual(['ip', 'userAgent'])
+    // Not `NULL`: a bounded field and a missing header have to stay tellable apart once the log line
+    // has aged out and only the row is left.
+    expect(row.ip).not.toBeNull()
+    expect(row.userAgent).not.toBeNull()
+    expect(row.ip).toHaveLength(64)
+    expect(row.userAgent).toHaveLength(512)
+    expect(row.ip?.startsWith('203.0.113.7')).toBe(true)
+    expect(row.ip?.endsWith('…[truncated from 511 characters]')).toBe(true)
+    expect(row.userAgent?.startsWith('AAAA')).toBe(true)
+    expect(row.userAgent?.endsWith('…[truncated from 4096 characters]')).toBe(true)
+
+    // One line per bounded field, at the severity the action itself would be reported at.
+    expect(records.map((record) => record.boundedField)).toEqual(['ip', 'userAgent'])
     expect(records.every((record) => record.level === 'error')).toBe(true)
     expect(records[0]?.measured).toBe(511)
     expect(records[0]?.limit).toBe(64)
@@ -397,59 +411,79 @@ describe('appendPlatformAudit', () => {
     expect(records[0]?.actorUserId).toBe('usr_operator')
   })
 
-  it('bounds `changes` by size, by key count and by value length', async () => {
-    // The field Faza C and E feed user-controlled profile strings into. Unbounded it took a ~600 KB
-    // payload into an append-only table without a single log record.
-    const oversized: ReadonlyArray<[string, PlatformAuditEntryInput['changes'], string]> = [
-      [
-        'a payload past the serialised bound',
-        { before: null, after: { bio: 'x'.repeat(600_000) } },
-        'payload-longer-than-bound',
-      ],
-      [
-        'one value past the per-value bound',
-        { before: { name: 'y'.repeat(2_000) }, after: null },
-        'value-longer-than-bound',
-      ],
-      [
-        'more keys than a diff has',
-        {
-          before: null,
-          after: Object.fromEntries(
-            Array.from({ length: 65 }, (_value, index) => [`field${index}`, index]),
-          ),
+  it('bounds the offending key of `changes` and keeps the rest of the diff', async () => {
+    // §4.4 says the before/after diff is why this log exists instead of a revision table. An earlier
+    // form of this dropped the whole payload because one value was long, which throws away the
+    // evidence in order to avoid storing it. The long value keeps its head and says it was cut; both
+    // its neighbours and the other side of the diff are written untouched.
+    const { logger, records } = memoryLogger()
+    const entityId = newId()
+
+    await appendPlatformAudit(
+      tables.db,
+      OPERATOR,
+      {
+        action: PLATFORM_ACTIONS.USER_UPDATED,
+        entityId,
+        changes: {
+          before: { name: 'y'.repeat(2_000), email: 'old@example.com' },
+          after: { name: 'Ada', email: 'new@example.com' },
         },
-        'too-many-keys',
-      ],
-    ]
+      },
+      logger,
+    )
 
-    for (const [name, changes, reason] of oversized) {
-      const { logger, records } = memoryLogger()
-      const entityId = newId()
+    const rows = await tables.db
+      .select()
+      .from(platformAuditLog)
+      .where(eq(platformAuditLog.entityId, entityId))
+    const changes = rows[0]?.changes
+    const before = changes?.before
 
-      await appendPlatformAudit(
-        tables.db,
-        OPERATOR,
-        { action: PLATFORM_ACTIONS.USER_UPDATED, entityId, changes },
-        logger,
-      )
+    expect(before?.email).toBe('old@example.com')
+    expect(changes?.after).toEqual({ name: 'Ada', email: 'new@example.com' })
+    expect(before?.name).toHaveLength(512)
+    expect(String(before?.name).endsWith('…[truncated from 2000 characters]')).toBe(true)
 
-      const rows = await tables.db
-        .select()
-        .from(platformAuditLog)
-        .where(eq(platformAuditLog.entityId, entityId))
-      expect(rows, name).toHaveLength(1)
-      expect(rows[0]?.changes, name).toBeNull()
-      expect(records, name).toHaveLength(1)
-      expect(records[0]?.refusedField, name).toBe('changes')
-      expect(records[0]?.reason, name).toBe(reason)
-      expect(records[0]?.level, name).toBe('warn')
-    }
+    expect(records).toHaveLength(1)
+    expect(records[0]?.boundedField).toBe('changes')
+    expect(records[0]?.boundedKey).toBe('before.name')
+    expect(records[0]?.reason).toBe('value-longer-than-bound')
+    expect(records[0]?.measured).toBe(2_002)
+    expect(records[0]?.level).toBe('warn')
   })
 
-  it('refuses a `changes` payload that cannot be serialised at all', async () => {
+  it('replaces an oversized value that is not a string with a mark, in place', async () => {
+    // A nested object has no head worth keeping, so the key stays and the value says what it was.
+    const { logger, records } = memoryLogger()
+    const entityId = newId()
+
+    await appendPlatformAudit(
+      tables.db,
+      OPERATOR,
+      {
+        action: PLATFORM_ACTIONS.USER_UPDATED,
+        entityId,
+        changes: { before: null, after: { profile: { note: 'x'.repeat(1_000) }, role: 'curator' } },
+      },
+      logger,
+    )
+
+    const rows = await tables.db
+      .select()
+      .from(platformAuditLog)
+      .where(eq(platformAuditLog.entityId, entityId))
+    const after = rows[0]?.changes?.after
+
+    expect(after?.role).toBe('curator')
+    expect(after?.profile).toBe('[refused: oversized value, 1011 characters]')
+    expect(records[0]?.boundedKey).toBe('after.profile')
+    expect(records[0]?.reason).toBe('value-longer-than-bound')
+  })
+
+  it('keeps a value it cannot serialise as a mark rather than losing the diff', async () => {
     // A cycle or a `BigInt` reaches SQLite as a throw from the driver's own JSON step, which would
-    // cost the entry rather than the field.
+    // cost the entry rather than the value.
     const { logger, records } = memoryLogger()
     const entityId = newId()
     const cyclic: Record<string, unknown> = {}
@@ -461,7 +495,7 @@ describe('appendPlatformAudit', () => {
       {
         action: PLATFORM_ACTIONS.USER_UPDATED,
         entityId,
-        changes: { before: null, after: cyclic },
+        changes: { before: null, after: { self: cyclic, email: 'new@example.com' } },
       },
       logger,
     )
@@ -470,8 +504,117 @@ describe('appendPlatformAudit', () => {
       .select()
       .from(platformAuditLog)
       .where(eq(platformAuditLog.entityId, entityId))
-    expect(rows[0]?.changes).toBeNull()
-    expect(records[0]?.reason).toBe('unserialisable-payload')
+    const after = rows[0]?.changes?.after
+
+    expect(after?.email).toBe('new@example.com')
+    expect(after?.self).toBe('[refused: unserialisable value]')
+    expect(records[0]?.reason).toBe('unserialisable-value')
+    expect(records[0]?.boundedKey).toBe('after.self')
+  })
+
+  it('drops keys past the per-side key bound, which is the one case a key is lost', async () => {
+    // There is nowhere to write a mark for a key that is not in the object, so this is the single
+    // case the log line is the only record. A diff with sixty-five fields on one side is a payload.
+    const { logger, records } = memoryLogger()
+    const entityId = newId()
+
+    await appendPlatformAudit(
+      tables.db,
+      OPERATOR,
+      {
+        action: PLATFORM_ACTIONS.USER_UPDATED,
+        entityId,
+        changes: {
+          before: null,
+          after: Object.fromEntries(
+            Array.from({ length: 65 }, (_value, index) => [`field${index}`, index]),
+          ),
+        },
+      },
+      logger,
+    )
+
+    const rows = await tables.db
+      .select()
+      .from(platformAuditLog)
+      .where(eq(platformAuditLog.entityId, entityId))
+    const after = rows[0]?.changes?.after
+
+    expect(Object.keys(after ?? {})).toHaveLength(32)
+    expect(after?.field0).toBe(0)
+    expect(after?.field64).toBeUndefined()
+    expect(records).toHaveLength(1)
+    expect(records[0]?.reason).toBe('too-many-keys')
+    expect(records[0]?.boundedKey).toBe('after')
+    expect(records[0]?.measured).toBe(65)
+    expect(records[0]?.limit).toBe(32)
+  })
+
+  it('drops a key whose own name is past the bound', async () => {
+    const { logger, records } = memoryLogger()
+    const entityId = newId()
+
+    await appendPlatformAudit(
+      tables.db,
+      OPERATOR,
+      {
+        action: PLATFORM_ACTIONS.USER_UPDATED,
+        entityId,
+        changes: { before: null, after: { ['k'.repeat(65)]: 1, email: 'new@example.com' } },
+      },
+      logger,
+    )
+
+    const rows = await tables.db
+      .select()
+      .from(platformAuditLog)
+      .where(eq(platformAuditLog.entityId, entityId))
+
+    expect(rows[0]?.changes?.after).toEqual({ email: 'new@example.com' })
+    expect(records[0]?.reason).toBe('key-name-longer-than-bound')
+    expect(records[0]?.measured).toBe(65)
+  })
+
+  it('bounds the whole payload largest-first when every value is individually legal', async () => {
+    // Thirty small values are as large as one big one, so the per-value bound is not the last word.
+    // What the payload bound must not do is disappear: every value it replaces leaves its key behind
+    // carrying a mark, and the run reports how many it had to touch.
+    const { logger, records } = memoryLogger()
+    const entityId = newId()
+    const side = (fill: string): Record<string, unknown> =>
+      Object.fromEntries(
+        Array.from({ length: 32 }, (_value, index) => [`field${index}`, fill.repeat(500)]),
+      )
+
+    await appendPlatformAudit(
+      tables.db,
+      OPERATOR,
+      {
+        action: PLATFORM_ACTIONS.USER_UPDATED,
+        entityId,
+        changes: { before: side('a'), after: side('b') },
+      },
+      logger,
+    )
+
+    const rows = await tables.db
+      .select()
+      .from(platformAuditLog)
+      .where(eq(platformAuditLog.entityId, entityId))
+    const changes = rows[0]?.changes
+
+    expect(JSON.stringify(changes).length).toBeLessThanOrEqual(16_384)
+    expect(Object.keys(changes?.before ?? {})).toHaveLength(32)
+    expect(Object.keys(changes?.after ?? {})).toHaveLength(32)
+
+    const marked = Object.values(changes?.before ?? {}).filter(
+      (value) => typeof value === 'string' && value.startsWith('[refused: payload bound'),
+    )
+    expect(marked.length).toBeGreaterThan(0)
+
+    const line = records.find((record) => record.reason === 'payload-longer-than-bound')
+    expect(line?.boundedField).toBe('changes')
+    expect(Number(line?.replaced)).toBeGreaterThan(0)
   })
 
   it('writes a `changes` payload inside the bounds untouched', async () => {

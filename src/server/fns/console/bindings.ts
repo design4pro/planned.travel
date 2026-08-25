@@ -25,12 +25,12 @@ import { getAuth } from '#/server/auth'
 import { getSession } from '#/server/auth/session'
 import { getDb } from '#/server/db/client'
 import { loggerFromEnv } from '#/server/observability'
-import { SESSION_TOKEN_LIMIT } from './session-keys'
+import { enumerateSessionRows } from './session-keys'
 
 import type { AuthSession } from '#/server/auth/session'
 import type { Database } from '#/server/db/types'
 import type { Logger } from '#/server/observability'
-import type { SessionKeyStore } from './session-keys'
+import type { SessionEnumeration, SessionKeyStore } from './session-keys'
 
 /** Better Auth's server-side API surface, in process. Never the HTTP router — docs/ACCESS.md §2.6. */
 export type PlatformApi = ReturnType<typeof getAuth>['api']
@@ -73,27 +73,38 @@ export function sessionKeyStore(): SessionKeyStore {
  *
  * Straight through Better Auth's own database adapter rather than a Drizzle statement of ours:
  * `session` is an auth-owned table, the adapter already knows its field mapping, and this keeps the
- * read on the same layer as every other auth read in the product. It is emphatically *not*
- * `internalAdapter.listSessions`, which consults secondary storage first and answers `[]` when the
- * KV index is missing — the exact reading this whole path exists to stop trusting.
+ * read on the same layer as every other auth read in the product - no SQL is written in
+ * `src/server/fns`. It is emphatically *not* `internalAdapter.listSessions`, and not
+ * `auth.api.listUserSessions` above it: both consult secondary storage and answer `[]` when the KV
+ * index is missing, which is the exact reading this whole path exists to stop trusting. The
+ * plugin's in-process endpoints carry every session *mutation* - `revokeUserSession`,
+ * `revokeUserSessions`, `banUser` - and what they cannot supply is an authoritative list.
+ * docs/ARCHITECTURE.md §4 rule 2 says where an authoritative list comes from: "any read-your-own-write
+ * path must read D1, not the cache".
+ *
  * `session_user_id_idx` is what makes the predicate cheap, and `storeSessionInDatabase: true` is
  * what makes D1 the durable record rather than a mirror.
  *
- * It is also why the console's session list does not use `auth.api.listUserSessions`: that endpoint
- * reads the same KV index, and every mutation on this path deliberately drops the cached blobs it
- * would then walk. One source, and it is the one that survives its own cache.
- *
- * Bounded at {@link SESSION_TOKEN_LIMIT}; see the note there for why the bound is not optional.
+ * **Ordered by `id`, and paged.** `id` is unique, so it is a total order: offset paging over it
+ * neither drops a row between pages nor repeats one. `createdAt` is a millisecond stamp two sessions
+ * can share, and an unstable sort under paging loses rows silently - a lost row here is a live
+ * session a ban never reaches. The walk, its ceiling and its measured `truncated` flag belong to
+ * {@link enumerateSessionRows}, so the rule is unit-testable without a database and this function
+ * stays what the rest of this file is: a handle and nothing more.
  */
 export async function readSessionRows(
   userId: string,
-): Promise<ReadonlyArray<unknown>> {
+): Promise<SessionEnumeration> {
   const context = await getAuth().$context
-  return context.adapter.findMany<unknown>({
-    model: 'session',
-    where: [{ field: 'userId', value: userId }],
-    limit: SESSION_TOKEN_LIMIT,
-  })
+  return enumerateSessionRows((offset, limit) =>
+    context.adapter.findMany<unknown>({
+      model: 'session',
+      where: [{ field: 'userId', value: userId }],
+      sortBy: { field: 'id', direction: 'asc' },
+      limit,
+      offset,
+    }),
+  )
 }
 
 const userRoleSchema = z.object({ role: z.string().nullish() })

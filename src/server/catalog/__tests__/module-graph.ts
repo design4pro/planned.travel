@@ -26,6 +26,19 @@
  * - **Type-only imports count as edges.** They are erased at build time, so an `import type` from
  *   the tenant layer evaluates none of it today. It is still the line somebody deletes the `type`
  *   from, and the boundary this guards is a design boundary rather than a bundling one.
+ * - **A specifier in prose is not an edge, and a specifier this walk cannot read is not silence.**
+ *   Two blind spots were found in the first form of this walker by probing it rather than by
+ *   reading it: an `import()` written with a template literal was invisible, and the scan ran over
+ *   comments, so a docblock spelling an import created an edge nobody had written. Both are closed
+ *   below — {@link scanSpecifiers} reads template literals and reports every `import()` argument it
+ *   cannot resolve to a literal, and an edge has to survive the comment stripper or stand at a
+ *   statement position to be followed.
+ * - **An import statement is an edge whatever the stripper thought.** Stripping comments is only
+ *   safe if losing one cannot lose an edge, so the scan runs twice — over the source and over
+ *   {@link codeOf} of it — and anything written at a statement position is walked even when the
+ *   stripped pass missed it. This file is a scanner and not a parser; that union is what stops a
+ *   scanning mistake from becoming a hole. Whatever is left over is a specifier that appears in
+ *   prose alone, and it is reported as `commentOnly` rather than followed.
  *
  * Neither this file nor the test beside it spells the factory's identifier. Both live inside the
  * directory the older text check scans, and a file that supplies the string whose absence is being
@@ -65,17 +78,52 @@ interface PackageManifest {
   readonly main?: string
 }
 
-/** Every way a module specifier can appear in ESM or CJS source, `export … from` included. */
-const SPECIFIER_PATTERNS: ReadonlyArray<RegExp> = [
+/**
+ * `import … from`, `export … from` and bare `import '…'`.
+ *
+ * A static import's specifier is a string literal by grammar — a template literal is a syntax error
+ * there — so these two patterns need no backtick. The call forms below do.
+ */
+const STATIC_PATTERNS: ReadonlyArray<RegExp> = [
   /\bfrom\s*['"]([^'"]+)['"]/g,
-  /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
   /^\s*import\s*['"]([^'"]+)['"]/gm,
-  /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
 ]
 
-export function specifiersIn(source: string): Array<string> {
+/** `import(…)` and `require(…)`, argument and all, so an argument that is not a literal is seen. */
+const CALL_PATTERN = /\b(import|require)\s*\(\s*([^)]*?)\s*\)/g
+
+/** `'x'`, `"x"` or `` `x` `` — one quote, matched by the same quote, and nothing after it. */
+const LITERAL_ARGUMENT = /^(['"`])([^\n]*)\1$/
+
+export interface SpecifierScan {
+  /** Specifiers this walk can follow. */
+  readonly specifiers: ReadonlyArray<string>
+  /**
+   * `import(…)` and `require(…)` arguments that are not a literal — a computed path, or a template
+   * with an interpolation in it. They are reported rather than skipped: an edge this walk cannot
+   * resolve is exactly the shape a reachability check must not pass over in silence.
+   */
+  readonly dynamic: ReadonlyArray<string>
+}
+
+/**
+ * Specifiers written where a module specifier can only be code: at the start of a line, as an
+ * `import`/`export` statement.
+ *
+ * This is the recovery path for the comment stripper, and it is what makes stripping safe to base
+ * edges on. A docblock line begins with `*` or `//` and never matches; a real import statement the
+ * stripper mis-parsed its way past does match, and is walked anyway. So prose costs nothing and a
+ * parsing mistake in {@link codeOf} costs nothing either.
+ */
+const STATEMENT_PATTERNS: ReadonlyArray<RegExp> = [
+  /^[\t ]*(?:import|export)\b[^\n]*?\bfrom\s*['"]([^'"]+)['"]/gm,
+  /^[\t ]*import\s*['"]([^'"]+)['"]/gm,
+]
+
+/** The subset of `source`'s specifiers that stand at a statement position. */
+export function statementSpecifiers(source: string): Array<string> {
   const found: Array<string> = []
-  for (const pattern of SPECIFIER_PATTERNS) {
+  for (const pattern of STATEMENT_PATTERNS) {
     pattern.lastIndex = 0
     let match = pattern.exec(source)
     while (match) {
@@ -84,6 +132,45 @@ export function specifiersIn(source: string): Array<string> {
     }
   }
   return found
+}
+
+/** Every module specifier in `source`, and every one it could not read. */
+export function scanSpecifiers(source: string): SpecifierScan {
+  const specifiers: Array<string> = []
+  const dynamic: Array<string> = []
+
+  for (const pattern of STATIC_PATTERNS) {
+    pattern.lastIndex = 0
+    let match = pattern.exec(source)
+    while (match) {
+      // A specifier carrying `${` is not a path: it is text inside a template literal that happens
+      // to read like an import. Reported rather than resolved, for the same reason a computed
+      // `import()` argument is.
+      if (match[1].includes('${')) {
+        dynamic.push(`from '${match[1]}'`)
+      } else {
+        specifiers.push(match[1])
+      }
+      match = pattern.exec(source)
+    }
+  }
+
+  CALL_PATTERN.lastIndex = 0
+  let call = CALL_PATTERN.exec(source)
+  while (call) {
+    const argument = call[2]
+    const literal = LITERAL_ARGUMENT.exec(argument)
+    const value = literal === null ? null : literal[2]
+
+    if (value === null || value.includes('${')) {
+      dynamic.push(`${call[1]}(${argument})`)
+    } else {
+      specifiers.push(value)
+    }
+    call = CALL_PATTERN.exec(source)
+  }
+
+  return { specifiers, dynamic }
 }
 
 const REPOSITORY_ROOT = realpathSync(process.cwd())
@@ -99,10 +186,12 @@ const SOURCE_ROOT = join(REPOSITORY_ROOT, 'src')
  * which is how a text check ends up either wrong or silenced. Strings and template literals are
  * preserved: a name that appears in one is being handled as data, and the check should see it.
  *
- * One stated limitation: a regular-expression literal containing `//` starts a line comment to this
- * scanner, so an identifier written after one on the same line is missed. The primary assertion is
- * structural — no reachable module is under the tenant layer at all — and this is the supplement
- * that catches a *re-implementation* rather than an import.
+ * This is a scanner and not a parser, so a regular-expression literal can still confuse it — an
+ * unescaped `//` inside a character class reads as a line comment to it. That cannot turn into a
+ * hole in the invariant, because {@link moduleGraphFrom} walks the union of this function's output
+ * and {@link statementSpecifiers} of the raw source: an import statement is an edge whatever this
+ * function made of the line above it. The one mis-read handled here directly is `\/` immediately
+ * before the `/` that closes a regular expression, which is not the start of a comment.
  */
 export function codeOf(source: string): string {
   const out: Array<string> = []
@@ -112,7 +201,7 @@ export function codeOf(source: string): string {
     const char = source[index]
     const next = source[index + 1]
 
-    if (char === '/' && next === '/') {
+    if (char === '/' && next === '/' && source[index - 1] !== '\\') {
       while (index < source.length && source[index] !== '\n') index += 1
       continue
     }
@@ -351,9 +440,17 @@ export interface ModuleGraph {
   readonly builtins: ReadonlyArray<string>
   /** First-party specifiers that resolved to no file — reported rather than passed over. */
   readonly unresolved: ReadonlyArray<string>
+  /** `import()`/`require()` arguments that are not literals, so this walk cannot follow them. */
+  readonly dynamic: ReadonlyArray<string>
+  /**
+   * Specifiers found in the source but not in the comment-stripped source. Prose that spells an
+   * import is the ordinary cause and is not an edge; a specifier the stripper mis-read is the other
+   * one, which is why these are reported rather than dropped.
+   */
+  readonly commentOnly: ReadonlyArray<ExternalEdge>
 }
 
-/** Breadth-first over every first-party module the roots reach. */
+/** Breadth-first over every first-party module the roots reach, following code edges only. */
 export function moduleGraphFrom(
   roots: ReadonlyArray<string>,
   conditions: ReadonlyArray<string>,
@@ -362,6 +459,8 @@ export function moduleGraphFrom(
   const external: Array<ExternalEdge> = []
   const builtins = new Set<string>()
   const unresolved: Array<string> = []
+  const dynamic: Array<string> = []
+  const commentOnly: Array<ExternalEdge> = []
   const queue: Array<string> = roots.map((root) => realpathSync(root))
 
   while (queue.length > 0) {
@@ -370,7 +469,34 @@ export function moduleGraphFrom(
     if (modules.has(file)) continue
     modules.add(file)
 
-    for (const specifier of specifiersIn(readFileSync(file, 'utf8'))) {
+    const source = readFileSync(file, 'utf8')
+    const code = scanSpecifiers(codeOf(source))
+    const whole = scanSpecifiers(source)
+
+    for (const argument of code.dynamic) {
+      dynamic.push(`${argument} (in ${file})`)
+    }
+
+    // An edge is what the comment-stripped source holds, plus anything written at a statement
+    // position that the stripper did not report. The second half is why a mis-parse in `codeOf`
+    // cannot become a missing edge, and the first half is why a docblock cannot become one.
+    const edges = new Set([...code.specifiers, ...statementSpecifiers(source)])
+
+    // What is left is a specifier that appears only in prose. It is reported rather than dropped,
+    // because "nothing here mentions the tenant layer at all" is worth being able to read, and
+    // resolved so the report says where the mention points.
+    for (const specifier of whole.specifiers) {
+      if (edges.has(specifier) || isBuiltin(specifier)) continue
+
+      const target = resolveFirstParty(specifier, file)
+      commentOnly.push({
+        specifier,
+        importer: file,
+        file: target === undefined ? resolveExternal(specifier, file, conditions) : target,
+      })
+    }
+
+    for (const specifier of edges) {
       if (isBuiltin(specifier)) {
         builtins.add(`${specifier} (imported by ${file})`)
         continue
@@ -398,6 +524,8 @@ export function moduleGraphFrom(
     external,
     builtins: [...builtins],
     unresolved,
+    dynamic,
+    commentOnly,
   }
 }
 

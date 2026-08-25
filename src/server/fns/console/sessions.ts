@@ -23,10 +23,14 @@ import { z } from 'zod'
 
 import { PLATFORM_ACTIONS } from '#/server/catalog/audit'
 import { platformApi, readSessionRows, sessionKeyStore } from './bindings'
-import { openConsoleCall, recordConsoleAction } from './context'
+import {
+  openConsoleCall,
+  readSessionTokens,
+  recordConsoleAction,
+} from './context'
 import { ConsoleActionError } from './errors'
 import { platformSessionSchema, toConsoleSession } from './projections'
-import { purgeSessionKeys, sessionTokensFrom } from './session-keys'
+import { purgeSessionKeys } from './session-keys'
 
 import type { ConsoleSession, PlatformSessionRow } from './projections'
 
@@ -47,34 +51,64 @@ export const revokePlatformSessionInputSchema = z.object({
 })
 export const revokePlatformUserSessionsInputSchema = z.object({ userId })
 
-/** The account's live sessions, newest first. Reads are not audited (docs/ACCESS.md §4.2). */
-async function readSessions(
-  id: string,
-): Promise<ReadonlyArray<PlatformSessionRow>> {
-  const rows = await readSessionRows(id)
-  return z
-    .array(platformSessionSchema)
-    .parse(rows)
-    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+/** What one account holds, and whether the enumeration reached the end of it. */
+interface SessionListing {
+  readonly sessions: ReadonlyArray<PlatformSessionRow>
+  readonly truncated: boolean
 }
 
-/** One account's sessions. Not audited. */
+/**
+ * The account's live sessions, newest first. Reads are not audited (docs/ACCESS.md §4.2).
+ *
+ * The enumeration is ordered by `id` so that offset paging is stable; the display order is applied
+ * here, afterwards, in memory. Two orders because they answer different questions - one has to be a
+ * total order over a paged read, the other has to put the session an operator is looking for at the
+ * top - and conflating them is what makes a paged read lose rows.
+ */
+async function readSessions(id: string): Promise<SessionListing> {
+  const enumeration = await readSessionRows(id)
+  const sessions = z
+    .array(platformSessionSchema)
+    .parse(enumeration.rows)
+    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+  return { sessions, truncated: enumeration.truncated }
+}
+
+/**
+ * One account's sessions. Not audited.
+ *
+ * `truncated` leaves with the page rather than being swallowed: a screen that showed six hundred
+ * sessions as though they were all of them would be making the same claim a silent `LIMIT` makes,
+ * and the operator deciding whether to revoke one session or all of them is exactly the reader who
+ * needs to know the difference.
+ */
 export const listPlatformSessionsFn = createServerFn({ method: 'GET' })
   .validator(listPlatformSessionsInputSchema)
-  .handler(async ({ data }): Promise<ReadonlyArray<ConsoleSession>> => {
-    const call = await openConsoleCall({ session: ['list'] })
-    const sessions = await readSessions(data.userId)
+  .handler(
+    async ({
+      data,
+    }): Promise<{
+      sessions: ReadonlyArray<ConsoleSession>
+      truncated: boolean
+    }> => {
+      const call = await openConsoleCall({ session: ['list'] })
+      const listing = await readSessions(data.userId)
 
-    call.logger.info('console platform read', {
-      action: 'platform.session.list',
-      actorUserId: call.actor.userId,
-      actorRole: call.actor.role,
-      entityId: data.userId,
-      returned: sessions.length,
-    })
+      call.logger.info('console platform read', {
+        action: 'platform.session.list',
+        actorUserId: call.actor.userId,
+        actorRole: call.actor.role,
+        entityId: data.userId,
+        returned: listing.sessions.length,
+        truncated: listing.truncated,
+      })
 
-    return sessions.map(toConsoleSession)
-  })
+      return {
+        sessions: listing.sessions.map(toConsoleSession),
+        truncated: listing.truncated,
+      }
+    },
+  )
 
 /** Revokes one session of one account. `platform.session.revoked`. */
 export const revokePlatformSessionFn = createServerFn({ method: 'POST' })
@@ -82,14 +116,24 @@ export const revokePlatformSessionFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<{ sessionId: string }> => {
     const call = await openConsoleCall({ session: ['revoke'] })
 
-    const target = (await readSessions(data.userId)).find(
+    const listing = await readSessions(data.userId)
+    const target = listing.sessions.find(
       (session) => session.id === data.sessionId,
     )
     if (!target) {
-      throw new ConsoleActionError(
-        'target-not-found',
-        'That session has already ended.',
-      )
+      // The two refusals are deliberately not one. An enumeration that reached the end of the
+      // account's sessions is entitled to say the named one is gone; an enumeration that stopped at
+      // the ceiling is not, and reporting a session it never looked at as ended would leave a live
+      // session behind while telling the operator it had been dealt with.
+      throw listing.truncated
+        ? new ConsoleActionError(
+            'target-beyond-cap',
+            'This account holds more sessions than the console lists in one call, and that session was not among them. Revoke all of its sessions instead.',
+          )
+        : new ConsoleActionError(
+            'target-not-found',
+            'That session has already ended.',
+          )
     }
 
     await platformApi().revokeUserSession({
@@ -128,35 +172,58 @@ export const revokePlatformSessionFn = createServerFn({ method: 'POST' })
  */
 export const revokePlatformUserSessionsFn = createServerFn({ method: 'POST' })
   .validator(revokePlatformUserSessionsInputSchema)
-  .handler(async ({ data }): Promise<{ revoked: number }> => {
-    const call = await openConsoleCall({ session: ['revoke'] })
+  .handler(
+    async ({ data }): Promise<{ revoked: number; truncated: boolean }> => {
+      const call = await openConsoleCall({ session: ['revoke'] })
 
-    const tokens = sessionTokensFrom(await readSessionRows(data.userId))
+      const enumerated = await readSessionTokens(data.userId)
 
-    await platformApi().revokeUserSessions({
-      body: { userId: data.userId },
-      headers: call.headers,
-    })
-
-    const purge = await purgeSessionKeys(sessionKeyStore(), data.userId, tokens)
-
-    await recordConsoleAction(call, {
-      action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
-      entityId: null,
-      changes: {
-        before: { userId: data.userId, sessions: tokens.length },
-        after: { userId: data.userId, sessions: 0 },
-      },
-    })
-
-    if (purge.failed > 0 || purge.truncated) {
-      call.logger.warn('console session revocation left keys behind', {
-        action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
-        entityId: data.userId,
-        actorUserId: call.actor.userId,
-        ...purge,
+      await platformApi().revokeUserSessions({
+        body: { userId: data.userId },
+        headers: call.headers,
       })
-    }
 
-    return { revoked: tokens.length }
-  })
+      const purge = await purgeSessionKeys(
+        sessionKeyStore(),
+        data.userId,
+        enumerated,
+      )
+
+      await recordConsoleAction(call, {
+        action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
+        entityId: null,
+        changes: {
+          before: {
+            userId: data.userId,
+            sessions: enumerated.tokens.length,
+            // Recorded because it qualifies the count beside it: the D1 rows are all gone either way
+            // (`deleteUserSessions` deletes them by predicate), and what a truncated enumeration
+            // leaves behind is cached blobs this call could not name.
+            truncated: enumerated.truncated,
+          },
+          after: { userId: data.userId, sessions: 0 },
+        },
+      })
+
+      if (purge.failed > 0 || purge.truncated) {
+        // `error` rather than `warn`: a surviving blob still resolves through `findSession`, so this
+        // is a session that is revoked in D1 and answerable from KV until its TTL expires.
+        call.logger.error(
+          'console session revocation left keys behind',
+          undefined,
+          {
+            action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
+            entityId: data.userId,
+            actorUserId: call.actor.userId,
+            actorRole: call.actor.role,
+            ...purge,
+          },
+        )
+      }
+
+      return {
+        revoked: enumerated.tokens.length,
+        truncated: enumerated.truncated,
+      }
+    },
+  )

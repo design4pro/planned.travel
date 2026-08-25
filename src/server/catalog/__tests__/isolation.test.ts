@@ -14,20 +14,27 @@
  * so a test that spells out the string whose absence it asserts is the line that supplies it.
  *
  * The controls matter as much as the assertions, because a walker that resolves nothing also reports
- * a clean graph. Five of them run below: a relative edge into the tenant layer has to be seen, an
+ * a clean graph. Eight of them run below: a relative edge into the tenant layer has to be seen, an
  * aliased one two hops away has to be seen, an unresolvable specifier has to be reported rather than
  * skipped, a factory call has to be told apart from a docblock that names one, and the resolver has
  * to answer differently under two condition sets — which is how this file knows it is walking the
  * graph the bundler builds rather than Node's `require` graph, the round-3 lesson
  * `src/server/auth/__tests__/access.test.ts` records.
  *
+ * The last three close the two blind spots the walker was probed for and found to have. A dynamic
+ * import written with a template literal was invisible to it, and an import spelled inside a comment
+ * created an edge nobody had written. Both are pinned here on real files: a template specifier is
+ * followed, an argument that cannot be read is reported instead of skipped, and the same import
+ * written once as prose and once as code produces a reported non-edge and a walked one.
+ *
  * This becomes load-bearing in Faza C, when `repo.ts` lands beside `audit.ts` and the directory has
  * a second reason to want a repository.
  */
 
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it } from 'vitest'
 import {
   BROWSER_CONDITIONS,
   NODE_CONDITIONS,
@@ -37,6 +44,8 @@ import {
   moduleGraphFrom,
   modulesUnder,
   resolveExternal,
+  scanSpecifiers,
+  statementSpecifiers,
 } from './module-graph'
 import type { ModuleGraph } from './module-graph'
 
@@ -106,6 +115,9 @@ describe('the shipped global-table path', () => {
 
       expect(tenantModules(graph)).toEqual([])
       expect(modulesEvaluatingTheFactory(graph)).toEqual([])
+      // An edge this walk cannot read is not an edge it may assume is clean: a computed or
+      // interpolated `import()` argument would leave the answer above unprovable.
+      expect(graph.dynamic).toEqual([])
     },
   )
 
@@ -143,6 +155,13 @@ describe('the whole directory, tests included', () => {
 
 describe('the walk itself', () => {
   const importer = join(CATALOG_DIRECTORY, 'audit.ts')
+  /** Outside the repository, so a probe file is never a module the walk above has to reason about. */
+  const probeDirectory = mkdtempSync(join(realpathSync(tmpdir()), 'catalog-graph-'))
+  const tenantModule = realpathSync(join(SOURCE_ROOT, 'server', 'repos', 'base.ts'))
+
+  afterAll(() => {
+    rmSync(probeDirectory, { recursive: true, force: true })
+  })
 
   it('sees a relative edge into the tenant layer', () => {
     // The round-5 probe, run as a control instead of as an edit: `src/server/repos/audit.ts` reaches
@@ -180,6 +199,62 @@ describe('the walk itself', () => {
 
   it('reports a specifier it cannot resolve rather than inventing a file', () => {
     expect(resolveExternal('nowhere-at-all', importer, WORKER_CONDITIONS)).toBeNull()
+  })
+
+  it('follows a dynamic import written as a template literal', () => {
+    // The first blind spot, found by probing the walker rather than by reading it: the argument of
+    // an `import()` is a string literal in three spellings and the walker read two of them.
+    const scan = scanSpecifiers('const later = await import(`./module-graph`)')
+
+    expect(scan.specifiers).toEqual(['./module-graph'])
+    expect(scan.dynamic).toEqual([])
+  })
+
+  it('reports an import argument it cannot read rather than passing over it', () => {
+    // An interpolated or computed specifier is unresolvable, and a reachability check that skips it
+    // is asserting about a graph it has not seen. Both forms are reported, neither is followed.
+    const interpolated = scanSpecifiers('await import(`./${name}`)')
+    const computed = scanSpecifiers('await import(resolved)')
+
+    expect(interpolated.specifiers).toEqual([])
+    expect(interpolated.dynamic).toEqual(['import(`./${name}`)'])
+    expect(computed.specifiers).toEqual([])
+    expect(computed.dynamic).toEqual(['import(resolved)'])
+  })
+
+  it('makes no edge out of prose, and makes one out of the same line as code', () => {
+    // The second blind spot: the scan ran over comments, so a docblock explaining this boundary
+    // created an edge into the layer it was explaining. Both halves are pinned, because a stripper
+    // that removes the comment and the code alike would pass the first half on its own.
+    const mentioned = join(probeDirectory, 'mentioned.ts')
+    writeFileSync(mentioned, `// the rule: never import from '${tenantModule}'\nexport const a = 1\n`)
+    const mentionedGraph = moduleGraphFrom([mentioned], WORKER_CONDITIONS)
+
+    expect(tenantModules(mentionedGraph)).toEqual([])
+    expect(mentionedGraph.commentOnly.map((edge) => edge.file)).toEqual([tenantModule])
+
+    const imported = join(probeDirectory, 'imported.ts')
+    writeFileSync(imported, `import { tenantFilter } from '${tenantModule}'\nexport const b = tenantFilter\n`)
+    const importedGraph = moduleGraphFrom([imported], WORKER_CONDITIONS)
+
+    expect(tenantModules(importedGraph)).toContain(tenantModule)
+    expect(importedGraph.commentOnly).toEqual([])
+  })
+
+  it('takes an import statement as an edge whatever the comment stripper made of it', () => {
+    // Stripping comments is only safe if losing one cannot lose an edge, and `codeOf` is a scanner
+    // rather than a parser — a regular expression can still read to it as a comment. So the walk
+    // takes the union of the stripped source and everything standing at a statement position, and
+    // the second half only earns its place if it can tell those apart. Both directions, on the two
+    // shapes that matter: a line that is an import, and a line that talks about one.
+    expect(statementSpecifiers("import { moduleGraphFrom } from './module-graph'\n")).toEqual([
+      './module-graph',
+    ])
+    expect(statementSpecifiers("export { codeOf } from './module-graph'\n")).toEqual([
+      './module-graph',
+    ])
+    expect(statementSpecifiers(" * the rule: never import from './module-graph' here\n")).toEqual([])
+    expect(statementSpecifiers("// import { codeOf } from './module-graph'\n")).toEqual([])
   })
 
   it('tells a factory call apart from a docblock that names one', () => {

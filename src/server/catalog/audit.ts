@@ -180,8 +180,8 @@ const IP_MAX_LENGTH = 64
 /**
  * The `User-Agent` bound, and it is deliberately not the tenant log's 200.
  *
- * docs/ACCESS.md §4.1 says this column holds the header verbatim and nothing else, so the bound has
- * to sit above every header a real client sends or it turns ordinary traffic into refusals: current
+ * docs/ACCESS.md §4.1 says this column holds the header verbatim, so the bound has to sit above
+ * every header a real client sends or it turns ordinary traffic into rewritten evidence: current
  * browser strings run past 200 characters once client-hints-era fragments are appended, and the
  * tenant log's `shortTextSchema` caps a *form field* rather than a request header. 512 leaves that
  * headroom while still bounding the row.
@@ -189,29 +189,72 @@ const IP_MAX_LENGTH = 64
 const USER_AGENT_MAX_LENGTH = 512
 
 /** Keys per side of `changes`. A field list this long is a payload, not a diff. */
-const CHANGES_MAX_KEYS = 64
+const CHANGES_MAX_KEYS = 32
+
+/** Length of one key's *name*. Long enough for any field this product has, short enough to bound. */
+const CHANGES_MAX_KEY_LENGTH = 64
 
 /** Serialised length of any one value inside `changes`, which is where a long string arrives. */
-const CHANGES_MAX_VALUE_LENGTH = 1_024
+const CHANGES_MAX_VALUE_LENGTH = 512
 
-/** Serialised length of the whole `{ before, after }` payload. */
-const CHANGES_MAX_SERIALISED_LENGTH = 8_192
+/** Serialised length of the whole `{ before, after }` payload, after every value is bounded. */
+const CHANGES_MAX_SERIALISED_LENGTH = 16_384
+
+/* -------------------------------------------------------------------------------------------------
+ * Bounds
+ *
+ * Three fields arrive at a size this module does not control — `ip`, `user_agent` and `changes` —
+ * and all three land in an append-only table with a 400-day window. Unbounded, one
+ * `platform.user.updated` puts a header-sized row somewhere nothing will ever read it from again.
+ *
+ * Two rules govern how a bound is applied, and both exist because an earlier form of this broke
+ * something docs/ACCESS.md states elsewhere:
+ *
+ * - **Never `NULL`.** §4.1 already gives `NULL` a meaning on both request columns — "the request
+ *   sent none" on `user_agent`, `system` on `ip`. Writing a refused value as `NULL` makes the row
+ *   assert something about the request that is not true, and the log line that would have explained
+ *   it is gone long before the row is.
+ * - **Never silently.** Whatever is written in place of an oversized value says so in the value
+ *   itself, so a reader thirteen months later can tell a bounded field from one a client sent. The
+ *   log line records the measurement as well, but the row does not depend on it.
+ *
+ * Together those give one behaviour: keep as much of the evidence as the bound allows, mark what
+ * was done to it, and report it. A bound never costs the entry — §4.3 says the four ban and
+ * impersonation verbs are audited without exception, and an entry dropped because a `User-Agent`
+ * was long is exactly the gap that sentence forbids.
+ * ---------------------------------------------------------------------------------------------- */
+
+/** Marks a value this module shortened, and carries the length it shortened it from. */
+function truncationMark(measured: number): string {
+  return `…[truncated from ${measured} characters]`
+}
+
+/** Marks a value this module could not keep at all, written in place of the value. */
+function refusalMark(reason: string, measured: number | null): string {
+  return measured === null ? `[refused: ${reason}]` : `[refused: ${reason}, ${measured} characters]`
+}
+
+/** `value` cut to fit `limit` *including* the mark, so the bound holds on what is actually written. */
+function truncateWithMark(value: string, limit: number): string {
+  const mark = truncationMark(value.length)
+  return `${value.slice(0, Math.max(0, limit - mark.length))}${mark}`
+}
 
 /**
- * A field that was measured and found unwritable, and what was measured — the log line's payload.
+ * A field that was measured and found too large, and what was measured — the log line's payload.
  *
- * Every bound in this module refuses the offending *field* and keeps the entry, because the entry
- * is what §4.3 says must exist. A refusal is therefore never silent: it is one structured line
- * naming the field, the reason, the measurement and the limit, at the same severity a failed append
- * of the same action would get. Truncating instead would put a value in an append-only column that
- * is indistinguishable, thirteen months later, from one the client actually sent.
+ * A bound is never applied silently: it is one structured line naming the field, the reason, the
+ * measurement and the limit, at the same severity a failed append of the same action would get.
  */
 interface FieldRefusal {
   readonly field: string
   readonly reason: string
   readonly measured: number
   readonly limit: number
+  /** Which part of `changes` it is about — `before`, or `before.displayName`. */
   readonly key?: string
+  /** How many values the whole-payload bound had to replace, when that is what fired. */
+  readonly replaced?: number
 }
 
 interface Bounded<T> {
@@ -224,8 +267,9 @@ interface Bounded<T> {
  * in an append-only table with a 400-day window (docs/ACCESS.md §4.1).
  *
  * A value that trims to nothing is `NULL`, which is what §4.1 already says a missing header records.
- * A value past the bound is refused rather than trimmed to fit: a truncated `User-Agent` is a
- * plausible-looking header nobody sent, and a truncated `ip` is a different address entirely.
+ * A value past the bound keeps its head and gains a mark: the head is what identifies the client,
+ * and the mark is what stops a shortened header reading, thirteen months later, as one somebody
+ * actually sent. `NULL` is not available for that case — it is already spoken for.
  */
 function boundRequestField(
   field: string,
@@ -239,18 +283,18 @@ function boundRequestField(
   if (trimmed.length === 0) {
     return { value: null, refusal: null }
   }
-  if (trimmed.length > limit) {
-    return {
-      value: null,
-      refusal: {
-        field,
-        reason: 'longer-than-column-bound',
-        measured: trimmed.length,
-        limit,
-      },
-    }
+  if (trimmed.length <= limit) {
+    return { value: trimmed, refusal: null }
   }
-  return { value: trimmed, refusal: null }
+  return {
+    value: truncateWithMark(trimmed, limit),
+    refusal: {
+      field,
+      reason: 'longer-than-column-bound',
+      measured: trimmed.length,
+      limit,
+    },
+  }
 }
 
 /**
@@ -271,63 +315,197 @@ function serialisedLength(value: unknown): number {
   }
 }
 
-function boundChangeSide(side: Record<string, unknown> | null, which: string): FieldRefusal | null {
-  if (side === null) {
-    return null
-  }
-  const keys = Object.keys(side)
-  if (keys.length > CHANGES_MAX_KEYS) {
+interface BoundedValue {
+  readonly value: unknown
+  readonly refusal: FieldRefusal | null
+}
+
+/**
+ * One entry of one side of the diff.
+ *
+ * The key survives whatever happens to its value, and that is docs/ACCESS.md §4.4 in practice: the
+ * before/after diff is why this log exists instead of a revision table, so "one field was too long"
+ * must not cost the other nineteen — and must not cost the knowledge that this field moved either.
+ * A long string keeps its head; anything else is replaced by a mark naming its size.
+ */
+function boundValue(which: string, key: string, value: unknown): BoundedValue {
+  const measured = serialisedLength(value)
+
+  if (measured < 0) {
     return {
-      field: 'changes',
-      reason: 'too-many-keys',
-      measured: keys.length,
-      limit: CHANGES_MAX_KEYS,
-      key: which,
+      value: refusalMark('unserialisable value', null),
+      refusal: {
+        field: 'changes',
+        key: `${which}.${key}`,
+        reason: 'unserialisable-value',
+        measured,
+        limit: CHANGES_MAX_VALUE_LENGTH,
+      },
     }
   }
-  for (const key of keys) {
-    const length = serialisedLength(side[key])
-    if (length < 0 || length > CHANGES_MAX_VALUE_LENGTH) {
-      return {
-        field: 'changes',
-        reason: length < 0 ? 'unserialisable-value' : 'value-longer-than-bound',
-        measured: length,
-        limit: CHANGES_MAX_VALUE_LENGTH,
-        key: `${which}.${key}`,
+  if (measured <= CHANGES_MAX_VALUE_LENGTH) {
+    return { value, refusal: null }
+  }
+
+  return {
+    value:
+      typeof value === 'string'
+        ? truncateWithMark(value, CHANGES_MAX_VALUE_LENGTH)
+        : refusalMark('oversized value', measured),
+    refusal: {
+      field: 'changes',
+      key: `${which}.${key}`,
+      reason: 'value-longer-than-bound',
+      measured,
+      limit: CHANGES_MAX_VALUE_LENGTH,
+    },
+  }
+}
+
+interface BoundedSide {
+  readonly value: Record<string, unknown>
+  readonly refusals: ReadonlyArray<FieldRefusal>
+}
+
+/** One side of the diff, key by key, in the order the caller wrote them. */
+function boundSide(which: string, side: Record<string, unknown>): BoundedSide {
+  const refusals: Array<FieldRefusal> = []
+  const named = Object.keys(side).filter((key) => {
+    if (key.length <= CHANGES_MAX_KEY_LENGTH) {
+      return true
+    }
+    refusals.push({
+      field: 'changes',
+      key: `${which}.${key.slice(0, CHANGES_MAX_KEY_LENGTH)}`,
+      reason: 'key-name-longer-than-bound',
+      measured: key.length,
+      limit: CHANGES_MAX_KEY_LENGTH,
+    })
+    return false
+  })
+
+  if (named.length > CHANGES_MAX_KEYS) {
+    // The one case where a key is lost rather than marked: there is nowhere to write a mark for a
+    // key that is not in the object. A diff with this many fields on one side is a payload.
+    refusals.push({
+      field: 'changes',
+      key: which,
+      reason: 'too-many-keys',
+      measured: named.length,
+      limit: CHANGES_MAX_KEYS,
+    })
+  }
+
+  const value: Record<string, unknown> = {}
+  for (const key of named.slice(0, CHANGES_MAX_KEYS)) {
+    const bounded = boundValue(which, key, side[key])
+    value[key] = bounded.value
+    if (bounded.refusal !== null) {
+      refusals.push(bounded.refusal)
+    }
+  }
+
+  return { value, refusals }
+}
+
+/**
+ * The last-resort bound: thirty small values are as large as one big one.
+ *
+ * Values are replaced largest first, so the field most likely to be a payload goes before the fields
+ * most likely to be a diff, and every replacement leaves the key behind with a mark on it. Each pass
+ * marks one previously-unmarked key, so the loop is bounded by the key count and terminates.
+ */
+function fitSerialisedBound(changes: PlatformAuditChanges): Bounded<PlatformAuditChanges> {
+  const measured = serialisedLength(changes)
+  if (measured >= 0 && measured <= CHANGES_MAX_SERIALISED_LENGTH) {
+    return { value: changes, refusal: null }
+  }
+
+  const sides: ReadonlyArray<readonly [string, Record<string, unknown> | null]> = [
+    ['before', changes.before],
+    ['after', changes.after],
+  ]
+  const marked = new Set<string>()
+  let replaced = 0
+
+  for (;;) {
+    const length = serialisedLength(changes)
+    if (length >= 0 && length <= CHANGES_MAX_SERIALISED_LENGTH) {
+      break
+    }
+
+    let biggest: { which: string; side: Record<string, unknown>; key: string; size: number } | null =
+      null
+    for (const [which, side] of sides) {
+      if (side === null) {
+        continue
+      }
+      for (const key of Object.keys(side)) {
+        if (marked.has(`${which}.${key}`)) {
+          continue
+        }
+        const size = serialisedLength(side[key])
+        if (biggest === null || size > biggest.size) {
+          biggest = { which, side, key, size }
+        }
       }
     }
+    if (biggest === null) {
+      break
+    }
+
+    biggest.side[biggest.key] = refusalMark('payload bound', biggest.size)
+    marked.add(`${biggest.which}.${biggest.key}`)
+    replaced += 1
   }
-  return null
+
+  return {
+    value: changes,
+    refusal: {
+      field: 'changes',
+      reason: 'payload-longer-than-bound',
+      measured,
+      limit: CHANGES_MAX_SERIALISED_LENGTH,
+      replaced,
+    },
+  }
+}
+
+interface BoundedChanges {
+  readonly value: PlatformAuditChanges | null
+  readonly refusals: ReadonlyArray<FieldRefusal>
 }
 
 /**
  * `changes` is the one field a caller fills with somebody else's text — a profile update carries the
- * name and the email the account typed — so it needs the same three bounds a request header gets,
- * measured on the key count, on each value and on the serialised whole. Unbounded, one
- * `platform.user.updated` can put a header-sized row into a table that keeps it for 400 days and
- * says nothing about it.
+ * name and the email the account typed — so it needs a bound on each key name, on each value, on the
+ * key count and on the serialised whole.
+ *
+ * What it does *not* do is throw the diff away. An earlier form of this dropped the entire payload
+ * because one value was too long, which discards the evidence docs/ACCESS.md §4.4 says this log
+ * exists to hold, in order to avoid storing it. The offending value is bounded; every other key is
+ * written untouched.
  */
-function boundChanges(changes: PlatformAuditChanges | null): Bounded<PlatformAuditChanges> {
+function boundChanges(changes: PlatformAuditChanges | null): BoundedChanges {
   if (changes === null) {
-    return { value: null, refusal: null }
+    return { value: null, refusals: [] }
   }
 
-  const length = serialisedLength(changes)
-  if (length < 0 || length > CHANGES_MAX_SERIALISED_LENGTH) {
-    return {
-      value: null,
-      refusal: {
-        field: 'changes',
-        reason: length < 0 ? 'unserialisable-payload' : 'payload-longer-than-bound',
-        measured: length,
-        limit: CHANGES_MAX_SERIALISED_LENGTH,
-      },
-    }
-  }
+  const before = changes.before === null ? null : boundSide('before', changes.before)
+  const after = changes.after === null ? null : boundSide('after', changes.after)
+  const fitted = fitSerialisedBound({
+    before: before === null ? null : before.value,
+    after: after === null ? null : after.value,
+  })
 
-  const refusal =
-    boundChangeSide(changes.before, 'before') ?? boundChangeSide(changes.after, 'after')
-  return refusal === null ? { value: changes, refusal: null } : { value: null, refusal }
+  return {
+    value: fitted.value,
+    refusals: [
+      ...(before === null ? [] : before.refusals),
+      ...(after === null ? [] : after.refusals),
+      ...(fitted.refusal === null ? [] : [fitted.refusal]),
+    ],
+  }
 }
 
 const changeSideSchema = z.record(z.string(), z.unknown()).nullable()
@@ -399,7 +577,7 @@ const actionSchema = z
 /**
  * The entry, validated for *shape*. Size is bounded after this, not in here, and on purpose: a
  * `max()` on these three fields would reject the whole entry, and for the four verbs of §4.3 a lost
- * entry is precisely the gap that section says must not exist. The bounds refuse the field and keep
+ * entry is precisely the gap that section says must not exist. The bounds act on the value and keep
  * the row — see {@link FieldRefusal}.
  */
 const platformAuditEntrySchema = z.object({
@@ -407,11 +585,11 @@ const platformAuditEntrySchema = z.object({
   /** The row the action touched. `null` only for an action whose entity does not exist yet. */
   entityId: identifierSchema.nullable(),
   changes: changesSchema.nullish(),
-  /** The request IP, verbatim, bounded at {@link IP_MAX_LENGTH}. */
+  /** The request IP, verbatim up to {@link IP_MAX_LENGTH} and marked past it. */
   ip: z.string().nullish(),
   /**
-   * The request's `User-Agent` header, verbatim and nothing else, bounded at
-   * {@link USER_AGENT_MAX_LENGTH}.
+   * The request's `User-Agent` header and nothing else, verbatim up to
+   * {@link USER_AGENT_MAX_LENGTH} and marked past it.
    */
   userAgent: z.string().nullish(),
 })
@@ -440,7 +618,7 @@ export type PlatformAuditEntryInput = Omit<z.input<typeof platformAuditEntrySche
 
 interface BuiltRow {
   readonly row: NewPlatformAuditLogEntry
-  /** The fields the bounds refused, if any. The row is written without them. */
+  /** The fields a bound had to act on, if any. The row is written with them marked. */
   readonly refusals: ReadonlyArray<FieldRefusal>
 }
 
@@ -465,9 +643,12 @@ function buildRow(actor: PlatformActor, entry: PlatformAuditEntryInput): BuiltRo
       ip: ip.value,
       userAgent: userAgent.value,
     },
-    refusals: [ip.refusal, userAgent.refusal, changes.refusal].filter(
-      (refusal): refusal is FieldRefusal => refusal !== null,
-    ),
+    refusals: [
+      ...[ip.refusal, userAgent.refusal].filter(
+        (refusal): refusal is FieldRefusal => refusal !== null,
+      ),
+      ...changes.refusals,
+    ],
   }
 }
 
@@ -517,11 +698,12 @@ function failureFields(actor: PlatformActor, entry: PlatformAuditEntryInput): Lo
  * the highest level `Logger` has (there is no `fatal`). Everything else is attempted once and
  * reported at `warn`.
  *
- * `ip`, `user_agent` and `changes` are bounded, and an oversized one costs that field rather than
- * the entry: it is dropped, one line at the same severity records what was measured and why, and
- * the row is written without it. Neither half of that is optional — an unbounded field is a
- * header-sized row in a table that keeps it for 400 days, and a silently shortened one is evidence
- * this module rewrote.
+ * `ip`, `user_agent` and `changes` are bounded, and an oversized one costs that *value* rather than
+ * the entry or the rest of the diff: it is shortened or replaced by a mark that says so, one line at
+ * the same severity records what was measured and why, and the row is written with the mark in
+ * place. None of that is optional — an unbounded field is a header-sized row in a table that keeps
+ * it for 400 days, a silently shortened one is evidence this module rewrote, and a `NULL` one claims
+ * the request sent nothing (docs/ACCESS.md §4.1) when it in fact sent too much.
  */
 export async function appendPlatformAudit(
   db: Database,
@@ -548,17 +730,18 @@ export async function appendPlatformAudit(
     return
   }
 
-  // A refused field is recorded before the insert is attempted, so the line exists even if the
-  // append then fails: the two are separate incidents and the row's missing column has to be
+  // A bounded field is recorded before the insert is attempted, so the line exists even if the
+  // append then fails: the two are separate incidents, and the mark left in the row has to be
   // explainable on its own thirteen months later.
   for (const refusal of built.refusals) {
-    report('platform audit field refused', {
+    report('platform audit field bounded', {
       ...failureFields(actor, entry),
-      refusedField: refusal.field,
-      refusedKey: refusal.key,
+      boundedField: refusal.field,
+      boundedKey: refusal.key,
       reason: refusal.reason,
       measured: refusal.measured,
       limit: refusal.limit,
+      replaced: refusal.replaced,
     })
   }
 

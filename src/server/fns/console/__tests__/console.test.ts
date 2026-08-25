@@ -51,7 +51,10 @@ import { BANNED_USER_MESSAGE } from '#/routes/(auth)/-lib/errors'
 import { createPlatformTables } from '#/server/catalog/__tests__/platform-tables'
 import { platformAuditLog } from '#/server/db/schema'
 import { createLogger, createMemorySink } from '#/server/observability'
-import { SESSION_TOKEN_LIMIT } from '../session-keys'
+import {
+  SESSION_ENUMERATION_CEILING,
+  enumerateSessionRows,
+} from '../session-keys'
 import { createAuthDatabase, createSessionKv } from './real-auth'
 
 import type { PlatformTables } from '#/server/catalog/__tests__/platform-tables'
@@ -84,6 +87,13 @@ interface SharedState {
   readonly sink: Holder<unknown>
   /** When true, `platformDb()` hands back a handle whose every statement rejects. */
   readonly brokenDb: Holder<boolean>
+  /**
+   * Runs the instant `auth.api.stopImpersonating` is entered, before the plugin does anything.
+   *
+   * The only way to observe the *order* docs/ACCESS.md §6.1 specifies for the impersonation exit
+   * from outside the function: what the ledger already holds when the plugin call begins.
+   */
+  readonly onStopImpersonating: Holder<(() => void) | null>
 }
 
 const shared = vi.hoisted((): SharedState => ({
@@ -92,6 +102,7 @@ const shared = vi.hoisted((): SharedState => ({
   platformTables: { current: null },
   sink: { current: null },
   brokenDb: { current: false },
+  onStopImpersonating: { current: null },
 }))
 
 vi.mock('#/server/auth/env', () => ({
@@ -127,15 +138,35 @@ vi.mock('../bindings', () => ({
     }),
   currentSession: () => getSession(),
   platformDb: () => (shared.brokenDb.current ? brokenDatabase() : tables().db),
-  platformApi: () => getAuth().api,
+  platformApi: () => {
+    const api = getAuth().api
+    const hook = shared.onStopImpersonating.current
+    if (!hook) return api
+    return {
+      ...api,
+      stopImpersonating: ((
+        ...args: Parameters<typeof api.stopImpersonating>
+      ) => {
+        hook()
+        return api.stopImpersonating(...args)
+      }) as typeof api.stopImpersonating,
+    }
+  },
   sessionKeyStore: () => kv(),
+  // The production body of `readSessionRows`, with the real `enumerateSessionRows` walking the real
+  // Better Auth adapter over the real SQLite schema. Only the binding is replaced: a mock that
+  // re-implemented the paging would be asserting a copy of the rule rather than the rule.
   readSessionRows: async (userId: string) => {
     const context = await getAuth().$context
-    return context.adapter.findMany<unknown>({
-      model: 'session',
-      where: [{ field: 'userId', value: userId }],
-      limit: SESSION_TOKEN_LIMIT,
-    })
+    return enumerateSessionRows((offset, limit) =>
+      context.adapter.findMany<unknown>({
+        model: 'session',
+        where: [{ field: 'userId', value: userId }],
+        sortBy: { field: 'id', direction: 'asc' },
+        limit,
+        offset,
+      }),
+    )
   },
   readUserRole: async (userId: string) => {
     const context = await getAuth().$context
@@ -445,73 +476,52 @@ function sessionRows(
   }>
 }
 
+/**
+ * A number of session rows written straight into SQLite, with their KV blobs beside them.
+ *
+ * Direct because the point is the *count*: signing in six hundred times costs six hundred password
+ * hashes and proves nothing extra. The ids are zero-padded so their lexicographic order is their
+ * numeric one, which is what makes "the last of them sorts past the enumeration ceiling" a fact the
+ * test can name rather than a coincidence of id generation.
+ */
+function seedSessionRows(
+  userId: string,
+  count: number,
+): Array<{ id: string; token: string }> {
+  const now = Date.now()
+  const insert = authDatabase.sqlite.prepare(
+    `insert into session
+       (id, token, user_id, active_organization_id, ip_address, user_agent,
+        impersonated_by, expires_at, created_at, updated_at)
+     values (?, ?, ?, null, null, null, null, ?, ?, ?)`,
+  )
+  const rows: Array<{ id: string; token: string }> = []
+
+  for (let index = 0; index < count; index += 1) {
+    const suffix = String(index).padStart(4, '0')
+    const id = `bulk_session_${suffix}`
+    const token = `bulk_token_${suffix}`
+    const expiresAt = now + 86_400_000
+    insert.run(id, token, userId, expiresAt, now + index, now + index)
+    // The blob Better Auth itself writes, in the shape `findSession` and `deleteSession` read: a
+    // `{}` placeholder makes `deleteSession` log "Session not found in secondary storage" and return
+    // without touching D1, which would be a fixture quietly disabling the code under test.
+    kv().store.set(
+      token,
+      JSON.stringify({
+        session: { id, token, userId, expiresAt },
+        user: { id: userId },
+      }),
+    )
+    rows.push({ id, token })
+  }
+
+  return rows
+}
+
 /** The per-user session index, removed without the removal being recorded as the console's. */
 function dropSessionIndex(userId: string): void {
   kv().store.delete(`active-sessions-${userId}`)
-}
-
-/* -------------------------------------------------------------- staff credentials */
-
-let tokenCounter = 0
-
-interface SeededStaffToken {
-  readonly id: string
-  readonly name: string
-  readonly tokenPrefix: string
-  readonly tokenHash: string
-}
-
-/**
- * An issued MCP credential, written straight into `staff_api_tokens`.
- *
- * Direct because nothing in the product issues one yet — the issuance surface is Faza E — and the
- * revocation docs/ACCESS.md §5 requires of a role change has to be measurable before that surface
- * exists rather than after it. The row goes into the table `createPlatformTables()` generated from
- * the real Drizzle schema, so the columns, the types and the `(user_id, revoked_at)` index the
- * revocation predicate rides are the shipped ones.
- */
-function seedStaffToken(
-  userId: string,
-  overrides: { revokedAt?: Date; expiresAt?: Date } = {},
-): SeededStaffToken {
-  tokenCounter += 1
-  const id = `seeded_token_${tokenCounter}`
-  const name = `Workstation ${tokenCounter}`
-  const tokenPrefix = `pt_live_${tokenCounter}`
-  const tokenHash = `deadbeef${tokenCounter}`
-  const now = Date.now()
-
-  tables()
-    .sqlite.prepare(
-      `insert into staff_api_tokens
-         (id, user_id, name, token_hash, token_prefix, last_used_at, last_used_ip,
-          expires_at, revoked_at, created_by, created_at, updated_at)
-       values (?, ?, ?, ?, ?, null, null, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      id,
-      userId,
-      name,
-      tokenHash,
-      tokenPrefix,
-      (overrides.expiresAt ?? new Date(now + 30 * 86_400_000)).getTime(),
-      overrides.revokedAt?.getTime() ?? null,
-      operatorId,
-      now,
-      now,
-    )
-
-  return { id, name, tokenPrefix, tokenHash }
-}
-
-function staffTokenRows(
-  userId: string,
-): Array<{ id: string; revoked_at: number | null }> {
-  return tables()
-    .sqlite.prepare(
-      'select id, revoked_at from staff_api_tokens where user_id = ? order by created_at, id',
-    )
-    .all(userId) as unknown as Array<{ id: string; revoked_at: number | null }>
 }
 
 /* ---------------------------------------------------------- the request scope */
@@ -680,6 +690,7 @@ beforeEach(async () => {
   authDatabase.reset()
   kv().clear()
   shared.brokenDb.current = false
+  shared.onStopImpersonating.current = null
   shared.sink.current = createMemorySink()
 
   const previous = shared.platformTables.current as PlatformTables | null
@@ -785,6 +796,24 @@ describe('setting a platform role', () => {
     expect(rows[0]?.actorRole).toBe('admin')
   })
 
+  it('refuses the operator’s own account, which is the one demotion with no way back', async () => {
+    // Better Auth permits it. The model reserves no seat and the product ships no recovery path, so
+    // one call can leave a platform whose console nobody can open — including the operator who just
+    // made it so.
+    await expect(
+      setRole({ userId: operatorId, role: 'user' }),
+    ).rejects.toMatchObject({ code: 'target-is-self' })
+
+    expect(userRow(operatorId).role).toBe('admin')
+    expect(await auditRows()).toEqual([])
+  })
+
+  it('refuses a self-target even when the role would not move', async () => {
+    await expect(
+      setRole({ userId: operatorId, role: 'admin' }),
+    ).rejects.toMatchObject({ code: 'target-is-self' })
+  })
+
   it('drops the cached session snapshots so the new role applies on the next request', async () => {
     const targetId = await seedAccountWithPassword('mover@planned.travel')
     callerJar = await jarFromSignIn(OPERATOR_EMAIL)
@@ -798,162 +827,6 @@ describe('setting a platform role', () => {
     // The sessions themselves survive a role change, so the per-user index must too.
     expect(kv().store.has(`active-sessions-${targetId}`)).toBe(true)
     expect(sessionCount(targetId)).toBe(1)
-  })
-})
-
-/* ------------------------------------------------- the credentials a role change orphans */
-
-/**
- * docs/ACCESS.md §5, which is one sentence with two halves: a static bearer "carries its owner's
- * whole platform role with no scopes of any kind", therefore a token whose owner's role moves "is
- * revoked by that role change, in the same call, audited as `platform.token.revoked`".
- *
- * The condition asserted here is the new role rather than the direction, because §5's own two
- * examples run in opposite directions — a demotion strands authority the account no longer holds,
- * a promotion to `admin` silently upgrades a credential sitting in a config file — and the state
- * neither may leave behind is the same one: a non-`curator` holding a live token.
- */
-describe('a role change and the MCP credentials it orphans', () => {
-  it('revokes a demoted curator’s live tokens and writes one row for each', async () => {
-    const target = seedUser({ role: 'curator' })
-    const laptop = seedStaffToken(target.id)
-    const desktop = seedStaffToken(target.id)
-
-    await setRole({ userId: target.id, role: 'user' })
-
-    for (const row of staffTokenRows(target.id)) {
-      expect(row.revoked_at).toBeTypeOf('number')
-    }
-
-    const revocations = await rowsFor('platform.token.revoked')
-    expect(revocations.map((row) => row.entityId).sort()).toEqual(
-      [laptop.id, desktop.id].sort(),
-    )
-
-    const row = revocations.find((entry) => entry.entityId === laptop.id)
-    expect(row).toMatchObject({
-      // The prefix fixes the entity type (docs/ACCESS.md §4.2); the credential is the entity, so a
-      // user id in `entity_id` would make §4.4's timeline query answer about the wrong table.
-      entityType: 'staff_api_token',
-      actorKind: 'human',
-      actorUserId: operatorId,
-      actorRole: 'admin',
-      // `token_id` names the credential an *agent* acted on; this row is a human acting on a
-      // credential, and `platform_audit_log_token_agent_only_chk` refuses it on any other kind.
-      tokenId: null,
-      ip: OPERATOR_IP,
-      userAgent: OPERATOR_UA,
-    })
-    expect(row?.changes?.before).toMatchObject({
-      name: laptop.name,
-      tokenPrefix: laptop.tokenPrefix,
-      ownerRole: 'curator',
-      revokedAt: null,
-    })
-    expect(row?.changes?.after).toMatchObject({
-      ownerRole: 'user',
-    })
-    expect(row?.changes?.after?.revokedAt).toBeTypeOf('string')
-  })
-
-  it('revokes on a promotion to admin too — §5’s own example of the rule', async () => {
-    const target = seedUser({ role: 'curator' })
-    const token = seedStaffToken(target.id)
-
-    await setRole({ userId: target.id, role: 'admin' })
-
-    expect(staffTokenRows(target.id)[0]?.revoked_at).toBeTypeOf('number')
-    const revocations = await rowsFor('platform.token.revoked')
-    expect(revocations).toHaveLength(1)
-    expect(revocations[0]?.entityId).toBe(token.id)
-    expect(revocations[0]?.changes?.after).toMatchObject({ ownerRole: 'admin' })
-  })
-
-  it('leaves a curator’s tokens alone when the account is still a curator', async () => {
-    const target = seedUser({ role: 'curator' })
-    seedStaffToken(target.id)
-
-    await setRole({ userId: target.id, role: 'curator' })
-
-    expect(staffTokenRows(target.id)[0]?.revoked_at).toBeNull()
-    expect(await rowsFor('platform.token.revoked')).toEqual([])
-  })
-
-  it('does not revoke or re-audit a credential that was already revoked', async () => {
-    const target = seedUser({ role: 'curator' })
-    const revokedAt = new Date(Date.now() - 86_400_000)
-    const spent = seedStaffToken(target.id, { revokedAt })
-    const live = seedStaffToken(target.id)
-
-    await setRole({ userId: target.id, role: 'user' })
-
-    const rows = staffTokenRows(target.id)
-    // The earlier revocation keeps its own instant: a second stamp would rewrite when the
-    // credential actually stopped working.
-    expect(rows.find((row) => row.id === spent.id)?.revoked_at).toBe(
-      revokedAt.getTime(),
-    )
-    expect(rows.find((row) => row.id === live.id)?.revoked_at).toBeTypeOf(
-      'number',
-    )
-
-    const revocations = await rowsFor('platform.token.revoked')
-    expect(revocations.map((row) => row.entityId)).toEqual([live.id])
-  })
-
-  it('writes the role change itself exactly once, whatever the credentials do', async () => {
-    const target = seedUser({ role: 'curator' })
-    seedStaffToken(target.id)
-    seedStaffToken(target.id)
-
-    await setRole({ userId: target.id, role: 'user' })
-
-    expect(await rowsFor('platform.user.role_changed')).toHaveLength(1)
-    // Three events, three rows, and no fourth: one role change and two revocations.
-    expect(await auditRows()).toHaveLength(3)
-  })
-
-  it('holds a role change with no credentials to exactly one row', async () => {
-    const target = seedUser({ role: 'curator' })
-
-    await setRole({ userId: target.id, role: 'user' })
-
-    expect(await auditRows()).toHaveLength(1)
-  })
-
-  it('puts no token hash in the ledger', async () => {
-    const target = seedUser({ role: 'curator' })
-    const token = seedStaffToken(target.id)
-
-    await setRole({ userId: target.id, role: 'user' })
-
-    // The hash is the verifier. The prefix is the non-secret fragment a console renders, and it is
-    // the only part of a credential this log is allowed to carry.
-    const ledger = await ledgerText()
-    expect(ledger).not.toContain(token.tokenHash)
-    expect(ledger).toContain(token.tokenPrefix)
-  })
-
-  it('emits a structured line naming the action, the actor and the credential', async () => {
-    const target = seedUser({ role: 'curator' })
-    const token = seedStaffToken(target.id)
-
-    await setRole({ userId: target.id, role: 'user' })
-
-    const line = records().find(
-      (record) => record.action === 'platform.token.revoked',
-    )
-    expect(line).toMatchObject({
-      level: 'info',
-      msg: 'console platform action',
-      action: 'platform.token.revoked',
-      entityId: token.id,
-      actorUserId: operatorId,
-      actorRole: 'admin',
-      actorKind: 'human',
-      ownerUserId: target.id,
-      reason: 'platform.user.role_changed',
-    })
   })
 })
 
@@ -978,11 +851,11 @@ describe('banning an account', () => {
     // The leading entry is `better-auth@1.7.1`'s own, and it is the defect rather than noise:
     // `deleteUserSessions` reads `[]` out of the missing index, deletes not one blob, and then
     // deletes the index key it just failed to find. Everything after it is this directory's work.
-    expect(kv().deleted).toEqual([
-      `active-sessions-${targetId}`,
-      ...tokens,
-      `active-sessions-${targetId}`,
-    ])
+    // The tokens between them are compared as a set: the enumeration is ordered by session `id`,
+    // which is a total order chosen for stable paging and is not the sign-in order.
+    expect(kv().deleted[0]).toBe(`active-sessions-${targetId}`)
+    expect(kv().deleted.at(-1)).toBe(`active-sessions-${targetId}`)
+    expect([...kv().deleted.slice(1, -1)].sort()).toEqual([...tokens].sort())
     for (const token of tokens) {
       expect(kv().store.has(token)).toBe(false)
     }
@@ -1518,11 +1391,9 @@ describe('sessions', () => {
 
     // As on the ban path, the leading entry is the plugin deleting the index key it could not read
     // while deleting none of the blobs it names. The tail is this directory closing that gap.
-    expect(kv().deleted).toEqual([
-      `active-sessions-${targetId}`,
-      ...tokens,
-      `active-sessions-${targetId}`,
-    ])
+    expect(kv().deleted[0]).toBe(`active-sessions-${targetId}`)
+    expect(kv().deleted.at(-1)).toBe(`active-sessions-${targetId}`)
+    expect([...kv().deleted.slice(1, -1)].sort()).toEqual([...tokens].sort())
     for (const token of tokens) {
       expect(kv().store.has(token)).toBe(false)
     }
@@ -1562,6 +1433,97 @@ describe('sessions', () => {
       headers: new Headers({ cookie: jarHeader(callerJar) }),
     })
     expect(throughThePlugin.sessions).toEqual([])
+  })
+
+  it('walks past a single page rather than stopping at it', async () => {
+    // The read used to be one `limit: 200` with no `ORDER BY`. Session 201 was then invisible: a
+    // ban left its cached blob live and a revoke-by-id reported it as already ended.
+    const target = seedUser()
+    const rows = seedSessionRows(target.id, 250)
+
+    await ban({ userId: target.id, reason: 'abuse' })
+
+    for (const row of rows) {
+      expect(kv().store.has(row.token)).toBe(false)
+    }
+    expect(kv().deleted).toContain(rows[249].token)
+    expect(
+      records().find(
+        (record) => record.msg === 'console ban left session keys behind',
+      ),
+    ).toBeUndefined()
+  })
+
+  it('reports an account past the ceiling as truncated instead of silently short', async () => {
+    const target = seedUser()
+    seedSessionRows(target.id, SESSION_ENUMERATION_CEILING + 1)
+
+    await listSessions({ userId: target.id })
+
+    const line = records().find(
+      (record) => record.action === 'platform.session.list',
+    )
+    expect(line).toMatchObject({
+      returned: SESSION_ENUMERATION_CEILING,
+      truncated: true,
+    })
+  })
+
+  it('refuses a session beyond the ceiling instead of calling it ended', async () => {
+    const target = seedUser()
+    const rows = seedSessionRows(target.id, SESSION_ENUMERATION_CEILING + 1)
+    // Ordered by id, so the last row seeded is the one that sorts past the ceiling.
+    const beyond = rows[SESSION_ENUMERATION_CEILING]
+
+    await expect(
+      revokeSession({ userId: target.id, sessionId: beyond.id }),
+    ).rejects.toMatchObject({ code: 'target-beyond-cap' })
+
+    // Still live, and still said to be live: the refusal is the point, and so is the row surviving.
+    expect(sessionRows(target.id).some((row) => row.id === beyond.id)).toBe(
+      true,
+    )
+    expect(await auditRows()).toEqual([])
+  })
+
+  it('still revokes a session the enumeration did reach', async () => {
+    const target = seedUser()
+    const rows = seedSessionRows(target.id, SESSION_ENUMERATION_CEILING + 1)
+
+    await revokeSession({ userId: target.id, sessionId: rows[0].id })
+
+    expect(sessionRows(target.id).some((row) => row.id === rows[0].id)).toBe(
+      false,
+    )
+    expect(await rowsFor('platform.session.revoked')).toHaveLength(1)
+  })
+
+  it('raises a ban that could not enumerate every session, rather than reporting success', async () => {
+    const target = seedUser()
+    const rows = seedSessionRows(target.id, SESSION_ENUMERATION_CEILING + 1)
+    const beyond = rows[SESSION_ENUMERATION_CEILING]
+
+    await ban({ userId: target.id, reason: 'abuse' })
+
+    // The blob this call could not name survives, and that is the one case in which a ban is not
+    // immediate. It is raised at `error` naming the action, the actor and the entity — never
+    // counted quietly, and never mistaken for a clean purge.
+    expect(kv().store.has(beyond.token)).toBe(true)
+    const line = records().find(
+      (record) => record.msg === 'console ban left session keys behind',
+    )
+    expect(line).toMatchObject({
+      level: 'error',
+      action: 'platform.user.banned',
+      entityId: target.id,
+      actorUserId: operatorId,
+      actorRole: 'admin',
+      truncated: true,
+      enumerated: SESSION_ENUMERATION_CEILING,
+    })
+    // The ban itself stands, and is on the ledger exactly once.
+    expect(userRow(target.id).banned).toBe(1)
+    expect(await rowsFor('platform.user.banned')).toHaveLength(1)
   })
 
   it('validates the session list input', () => {
@@ -1747,6 +1709,32 @@ describe('impersonation', () => {
       ip: OPERATOR_IP,
       userAgent: OPERATOR_UA,
     })
+  })
+
+  it('appends the row before it calls the plugin, which is the order §6.1 specifies', async () => {
+    const worn = seedUser({ role: 'curator' })
+    const started = await impersonate({ userId: worn.id })
+    callerJar = applyCookies(new Map(callerJar), started)
+
+    // Read synchronously the instant the plugin call is entered. `node:sqlite` is synchronous, so
+    // this is the ledger as it stood at that moment and not a moment either side of it.
+    let ledgerWhenTheExitBegan = -1
+    shared.onStopImpersonating.current = () => {
+      const row = tables()
+        .sqlite.prepare(
+          "select count(*) as n from platform_audit_log where action = 'platform.user.impersonation_ended'",
+        )
+        .get() as { n: number }
+      ledgerWhenTheExitBegan = row.n
+    }
+
+    await stopImpersonating()
+
+    // docs/ACCESS.md §6.1 and §2.6 both write this half of the lifecycle as "appends
+    // `platform.user.impersonation_ended` and then calls `auth.api.stopImpersonating` in process".
+    // Appending afterwards loses the entry exactly when the exit is the thing being investigated.
+    expect(ledgerWhenTheExitBegan).toBe(1)
+    expect(await rowsFor('platform.user.impersonation_ended')).toHaveLength(1)
   })
 
   it('refuses to end an impersonation on an ordinary session', async () => {

@@ -17,7 +17,9 @@
  * `/admin/stop-impersonating` is closed with the other fourteen paths, so
  * {@link stopImpersonationFn} is the only way out of an impersonated session that exists —
  * §6.1's **End impersonation** button calls it, and there is no fallback behind it. It is written
- * and tested with the same care as its opposite for that reason.
+ * and tested with the same care as its opposite for that reason, and it is the one function here
+ * whose audit row is appended *before* the plugin call, because §6.1 and §2.6 both specify that
+ * order for the exit by name.
  *
  * **Why a banned target is refused here rather than left to the plugin.** `impersonateUser` creates
  * a session, and the `admin` plugin's `session.create.before` hook rejects a banned user with
@@ -169,36 +171,51 @@ export const startImpersonationFn = createServerFn({ method: 'POST' })
  *
  * There is no input to validate beyond its absence — see {@link stopImpersonationInputSchema}.
  *
- * The append follows the plugin call, for the reason docs/ACCESS.md §4.3 gives generally: the change
- * commits, then the entry is appended. §6.1 narrates the two the other way round, and appending
- * first would put an `impersonation_ended` row in an append-only ledger for an exit that then
- * failed — a row nothing can ever retract. The actor was resolved before the call, so nothing about
- * the append depends on the session that has just been swapped away.
+ * **The append comes first**, which is docs/ACCESS.md §6.1 and §2.6 in the order both write it: the
+ * End impersonation action "appends `platform.user.impersonation_ended` and then calls
+ * `auth.api.stopImpersonating` in process". It is the one place in this directory where the entry
+ * precedes the mutation, and the difference between the two orders is which failure the ledger
+ * survives. Appending afterwards loses the entry for an exit that happened, and it loses it in the
+ * exact circumstances an audit log is read afterwards; appending first can leave an entry for an
+ * exit that then failed, which is a row a reader can reconcile against the impersonation that is
+ * still live. §4.3 says these four verbs are audited without exception, and this order is what makes
+ * that true of the half of the lifecycle nothing else can record.
+ *
+ * The residual risk is named rather than hidden: {@link openImpersonationExit} has already
+ * established that this session *is* an impersonated one, so the only way the call below still fails
+ * is a missing or unreadable signed `admin_session` cookie — a session that cannot be exited at all,
+ * whose row then reads as the attempt it was. The actor was resolved before either step, so nothing
+ * about the append depends on the session that is about to be swapped away.
  */
 export const stopImpersonationFn = createServerFn({ method: 'POST' })
   .validator(stopImpersonationInputSchema)
   .handler(async (): Promise<{ userId: string }> => {
     const exit = await openImpersonationExit()
 
+    await recordConsoleAction(exit, {
+      action: PLATFORM_ACTIONS.USER_IMPERSONATION_ENDED,
+      entityId: exit.targetUserId,
+      changes: {
+        before: { impersonating: exit.targetUserId },
+        after: { impersonating: null },
+      },
+    })
+
     const result = await platformApi().stopImpersonating({
       headers: exit.headers,
       returnHeaders: true,
     })
 
+    // Every cookie the plugin set, on our own response and separately — the whole effect of the
+    // exit. Zero forwarded here would mean the operator stays inside the impersonated session with
+    // a ledger row saying they left it, so the count is logged rather than discarded.
     const forwarded = forwardAuthCookies(result.headers)
-
-    await recordConsoleAction(
-      exit,
-      {
-        action: PLATFORM_ACTIONS.USER_IMPERSONATION_ENDED,
-        entityId: exit.targetUserId,
-        changes: {
-          before: { impersonating: exit.targetUserId },
-          after: { impersonating: null },
-        },
-      },
-      { cookiesForwarded: forwarded },
-    )
+    exit.logger.info('console impersonation exit cookies forwarded', {
+      action: PLATFORM_ACTIONS.USER_IMPERSONATION_ENDED,
+      entityId: exit.targetUserId,
+      actorUserId: exit.actor.userId,
+      cookiesForwarded: forwarded,
+    })
 
     return { userId: exit.targetUserId }
   })

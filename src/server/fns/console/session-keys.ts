@@ -18,6 +18,13 @@
  * with the index key deleted last so a concurrent reader never sees an index pointing at blobs that
  * are already gone.
  *
+ * **Both halves of that enumeration live here**: {@link enumerateSessionRows} holds the paging rule
+ * and {@link purgeSessionKeys} holds the deletion, because the two are one claim — "every session
+ * this account holds is gone" — and a bound on the first silently weakens the second. The walk is
+ * paged and deterministically ordered rather than capped at one read: a single `LIMIT 200` with no
+ * `ORDER BY` reports a live session past the cap as already ended, and hands a ban a token list
+ * that is missing exactly the sessions nobody counted.
+ *
  * **The honest bound.** A KV delete is immediate in the colo that served it and eventually
  * consistent elsewhere — up to the read's `cacheTtl`, which defaults to 60 seconds. "Immediate"
  * here means "immediate where the ban was issued, and within the KV convergence window everywhere
@@ -43,17 +50,81 @@ export function activeSessionsIndexKey(userId: string): string {
 }
 
 /**
- * How many session rows one ban enumerates.
+ * How many session rows one D1 read asks for.
  *
- * A Workers invocation is capped at 1000 external-service operations, and the number of live
- * sessions an account holds is influenced by whoever holds the account — so the loop is bounded
- * rather than sized off the data. 200 is far above any legitimate account (a session per device per
- * browser) and far below the cap, leaving room for the D1 read, the plugin's own writes and the
- * audit append in the same request. When the bound bites, {@link SessionKeyPurge.truncated} says so
- * and the caller raises it: the remaining blobs expire on their own TTL, which is the one case
- * where a ban is not immediate and it must not pass silently.
+ * The enumeration is paged rather than capped at a single read, so an account holding more sessions
+ * than one page is walked rather than truncated — a session past the cap that a truncated read never
+ * saw is a session a ban leaves live and a revoke-by-id reports as already ended, which is the
+ * failure this whole path exists to prevent.
  */
-export const SESSION_TOKEN_LIMIT = 200
+export const SESSION_PAGE_SIZE = 200
+
+/**
+ * Where the walk stops, and why it stops anywhere.
+ *
+ * A Workers invocation is capped at 1000 external-service operations, and every enumerated token
+ * costs one KV delete on the ban path — so the ceiling is a budget rather than a guess about how
+ * many sessions an account "should" have, and it is set well below the cap to leave room for the
+ * plugin's own writes and the audit append in the same request. Six hundred is three pages.
+ *
+ * Reaching it is not silent truncation: {@link SessionEnumeration.truncated} is resolved by asking
+ * for one row past the ceiling, so it is a fact rather than a suspicion, and every caller acts on
+ * it — the ban raises an `error` line naming what it could not purge, and a revoke-by-id that did
+ * not find its session refuses with `target-beyond-cap` instead of claiming the session had ended.
+ */
+export const SESSION_ENUMERATION_CEILING = 600
+
+/**
+ * One page of `session` rows, however the caller reads them.
+ *
+ * A function rather than a handle, so {@link enumerateSessionRows} holds the paging rule and nothing
+ * else: `./bindings` supplies the Better Auth adapter behind it in production, and a test supplies a
+ * page function over an array. The rows stay `unknown` because the paging rule does not care what a
+ * session row looks like — {@link sessionTokensFrom} is where that is decided.
+ */
+export type SessionRowPage = (
+  offset: number,
+  limit: number,
+) => Promise<ReadonlyArray<unknown>>
+
+/** The rows one enumeration saw, and whether it saw all of them. */
+export interface SessionEnumeration {
+  readonly rows: ReadonlyArray<unknown>
+  /** True when the account holds at least one session past {@link SESSION_ENUMERATION_CEILING}. */
+  readonly truncated: boolean
+}
+
+/**
+ * Walks an account's session rows a page at a time, in the caller's order, up to the ceiling.
+ *
+ * The order is the caller's and must be a *total* one — `./bindings` sorts by `id`, which is unique,
+ * rather than by `createdAt`, which is a millisecond stamp two sessions can share. An unstable sort
+ * under offset paging drops rows between pages and duplicates others, and a dropped row here is a
+ * live session a ban never reached.
+ */
+export async function enumerateSessionRows(
+  page: SessionRowPage,
+): Promise<SessionEnumeration> {
+  const rows: Array<unknown> = []
+
+  while (rows.length < SESSION_ENUMERATION_CEILING) {
+    const limit = Math.min(
+      SESSION_PAGE_SIZE,
+      SESSION_ENUMERATION_CEILING - rows.length,
+    )
+    const batch = await page(rows.length, limit)
+    rows.push(...batch)
+    if (batch.length < limit) {
+      return { rows, truncated: false }
+    }
+  }
+
+  // One row past the ceiling, so "truncated" is measured rather than assumed. An account holding
+  // exactly the ceiling would otherwise be reported as truncated for ever, and the two callers that
+  // act on the flag would both act on a fact that is not one.
+  const overflow = await page(SESSION_ENUMERATION_CEILING, 1)
+  return { rows, truncated: overflow.length > 0 }
+}
 
 /**
  * A session blob lives under its *raw token* as the KV key — no prefix, no namespace
@@ -84,6 +155,28 @@ export function sessionTokensFrom(
   return tokens
 }
 
+/**
+ * The tokens an enumeration saw, carrying its own honesty about whether it saw all of them.
+ *
+ * The flag travels with the tokens rather than being re-derived from their count, which is what a
+ * single-page read used to do: `enumerated >= limit` cannot tell an account holding exactly the
+ * limit from one holding more, and both callers of the flag act on it.
+ */
+export interface SessionTokens {
+  readonly tokens: ReadonlyArray<string>
+  readonly truncated: boolean
+}
+
+/** The tokens of an enumeration, with its truncation carried across unchanged. */
+export function sessionTokensOf(
+  enumeration: SessionEnumeration,
+): SessionTokens {
+  return {
+    tokens: sessionTokensFrom(enumeration.rows),
+    truncated: enumeration.truncated,
+  }
+}
+
 /** The slice of `KVNamespace` this module uses, so a test can supply the whole of it. */
 export interface SessionKeyStore {
   delete: (key: string) => Promise<void>
@@ -96,14 +189,14 @@ export interface SessionKeyPurge {
   readonly deleted: number
   /** Keys whose delete was rejected. Their cached blobs stay readable until their TTL expires. */
   readonly failed: number
-  /** True when the account holds at least {@link SESSION_TOKEN_LIMIT} sessions and some were not enumerated. */
+  /** True when the account holds sessions past {@link SESSION_ENUMERATION_CEILING}, unpurged. */
   readonly truncated: boolean
 }
 
 async function deleteKeys(
   store: SessionKeyStore,
   keys: ReadonlyArray<string>,
-  enumerated: number,
+  enumerated: SessionTokens,
 ): Promise<SessionKeyPurge> {
   const outcomes = await Promise.allSettled(
     keys.map((key) => store.delete(key)),
@@ -113,10 +206,10 @@ async function deleteKeys(
   ).length
 
   return {
-    enumerated,
+    enumerated: enumerated.tokens.length,
     deleted: keys.length - failed,
     failed,
-    truncated: enumerated >= SESSION_TOKEN_LIMIT,
+    truncated: enumerated.truncated,
   }
 }
 
@@ -137,12 +230,12 @@ async function deleteKeys(
 export async function purgeSessionKeys(
   store: SessionKeyStore,
   userId: string,
-  tokens: ReadonlyArray<string>,
+  enumerated: SessionTokens,
 ): Promise<SessionKeyPurge> {
   return deleteKeys(
     store,
-    [...new Set(tokens), activeSessionsIndexKey(userId)],
-    tokens.length,
+    [...new Set(enumerated.tokens), activeSessionsIndexKey(userId)],
+    enumerated,
   )
 }
 
@@ -163,7 +256,7 @@ export async function purgeSessionKeys(
  */
 export async function invalidateSessionSnapshots(
   store: SessionKeyStore,
-  tokens: ReadonlyArray<string>,
+  enumerated: SessionTokens,
 ): Promise<SessionKeyPurge> {
-  return deleteKeys(store, [...new Set(tokens)], tokens.length)
+  return deleteKeys(store, [...new Set(enumerated.tokens)], enumerated)
 }

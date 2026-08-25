@@ -29,25 +29,32 @@
  *   the plugin auto-unbans on the next sign-in. `unbanUser` is the only endpoint that writes `null`
  *   there, so a permanent ban over an existing expiry runs it first. One audit row either way: the
  *   clearing write is machinery, not an event.
- * - **A role change takes the account's MCP credentials with it.** An issued `staff_api_tokens` row
- *   carries its owner's whole platform role and has no scopes, so a role change that left it alone
- *   would hand a demoted account authority it no longer holds and a promoted one authority nobody
- *   granted. docs/ACCESS.md §5 requires the revocation in the same call, audited as
- *   `platform.token.revoked`; `./staff-tokens` holds the statement and this file makes the call.
+ * - **No account may aim one of these at itself.** A self-ban, a self-delete and a self-demotion all
+ *   remove the operator's own way back in, and the last of them can leave a platform with no `admin`
+ *   at all - there is no seat reservation in the model and no recovery path in the product. All
+ *   three are refused before the target is read.
  *
  * Reads are not audited, here or over MCP (docs/ACCESS.md §4.2). `platform.user.get` does not exist.
+ *
+ * **What is deliberately not here: the MCP credential half of a role change.** docs/ACCESS.md §5
+ * requires a role change to revoke the account's `staff_api_tokens` rows in the same call, audited
+ * as `platform.token.revoked`. That statement cannot be written from `src/server/fns` - SPEC §6 puts
+ * all SQL in `server/repos` and names `server/catalog` as its single exception, and a second
+ * exception is a change to that contract rather than a file placement. It also has nothing to revoke
+ * in this phase: Faza B ships the `staff_api_tokens` *table* and no issuance surface at all, so the
+ * table is empty by construction and the revocation is unreachable code guarding a state that cannot
+ * exist yet. Issuance, its console surface and the revocation that belongs with them are one concept
+ * (SPEC §8) and land together in Faza E, against `src/server/catalog/repo.ts`. Reported with this
+ * item rather than half-built here.
  */
 
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '#/server/auth'
-import {
-  PLATFORM_ROLES_BY_PRECEDENCE,
-  resolvePlatformRole,
-} from '#/server/auth/access'
+import { PLATFORM_ROLES_BY_PRECEDENCE } from '#/server/auth/access'
 import { PLATFORM_ACTIONS } from '#/server/catalog/audit'
-import { platformApi, platformDb, sessionKeyStore } from './bindings'
+import { platformApi, sessionKeyStore } from './bindings'
 import {
   openConsoleCall,
   readSessionTokens,
@@ -59,10 +66,8 @@ import {
   toConsoleUser,
 } from './projections'
 import { invalidateSessionSnapshots, purgeSessionKeys } from './session-keys'
-import { revokeStaffApiTokensOf, staffTokenAuditState } from './staff-tokens'
 import { readTargetUser, refuseSelfTarget } from './target'
 
-import type { PlatformRole } from '#/server/auth/access'
 import type { ConsoleCall } from './context'
 import type { ConsoleUser } from './projections'
 
@@ -192,66 +197,14 @@ async function invalidateSnapshots(
   id: string,
   action: string,
 ): Promise<void> {
-  const tokens = await readSessionTokens(id)
-  const purge = await invalidateSessionSnapshots(sessionKeyStore(), tokens)
+  const enumerated = await readSessionTokens(id)
+  const purge = await invalidateSessionSnapshots(sessionKeyStore(), enumerated)
   if (purge.failed > 0 || purge.truncated) {
     call.logger.warn('console session snapshot invalidation incomplete', {
       action,
       entityId: id,
       ...purge,
     })
-  }
-}
-
-/**
- * Revokes the MCP credentials a role change has just orphaned, one `platform.token.revoked` row
- * each (docs/ACCESS.md §5).
- *
- * **The condition is the new role, not the direction of the change.** §5 issues tokens to `curator`
- * accounts only, so "this account is not a curator and holds a live token" is the state that must
- * never survive a call — whether the account was demoted to `user` (the credential outlives the
- * authority it was granted with) or promoted to `admin` (the credential silently becomes a
- * full-platform bearer, which §5 says a role promotion "must not" do). Reading it as one invariant
- * rather than two transitions also makes the call self-healing: a retry after a failure re-evaluates
- * the same condition against the row as it now is.
- *
- * **One row per token, never one row for the set.** `platform.token.*` fixes `entity_type` to
- * `staff_api_token` (docs/ACCESS.md §4.2), so a single row for three credentials would have to leave
- * `entity_id` null or put a user id in a column §4.4's timeline query reads as a token id. Each
- * revocation is its own event and names its own credential.
- *
- * **A failure here is raised, not swallowed.** The neighbouring KV purges log and continue, because
- * an undeleted session blob dies on its own TTL and a partial ban is worse than a reported one. A
- * credential has no such ceiling: it lives until its `expires_at`, up to a year away. So a rejected
- * `UPDATE` propagates and the operator sees it — the role change has already committed and is
- * already on the ledger by then, and repeating the call is both safe and the fix.
- */
-async function revokeOrphanedStaffTokens(
-  call: ConsoleCall,
-  ownerId: string,
-  beforeRole: PlatformRole,
-  afterRole: PlatformRole,
-): Promise<void> {
-  if (afterRole === 'curator') {
-    return
-  }
-
-  const revokedAt = new Date()
-  const revoked = await revokeStaffApiTokensOf(platformDb(), ownerId, revokedAt)
-
-  for (const token of revoked) {
-    await recordConsoleAction(
-      call,
-      {
-        action: PLATFORM_ACTIONS.TOKEN_REVOKED,
-        entityId: token.id,
-        changes: {
-          before: staffTokenAuditState(token, beforeRole, null),
-          after: staffTokenAuditState(token, afterRole, token.revokedAt),
-        },
-      },
-      { ownerUserId: ownerId, reason: PLATFORM_ACTIONS.USER_ROLE_CHANGED },
-    )
   }
 }
 
@@ -438,26 +391,24 @@ export const setPlatformUserEmailFn = createServerFn({ method: 'POST' })
  * Sets an account's platform role, and takes the MCP credentials that role justified with it.
  * `platform.user.role_changed`, plus one `platform.token.revoked` per credential revoked.
  *
- * **Two statements, because the call performs two actions.** `user:set-role` authorises the role
- * change; docs/ACCESS.md §2.4 puts revoking a credential behind `session:revoke`, "because a live
- * token is a live session by another name". Both are `admin`-only in §2.1 and §2.2, so asking for
- * the pair narrows nothing that was reachable before — it states, at the one place authorisation is
- * decided, the whole of what this function is about to do. A guard that was asked for half of an
- * action is not a guard for the other half.
+ * **The operator's own account is refused.** An `admin` demoting itself is one call away from a
+ * platform whose console nobody can open: the model reserves no seat, the product ships no recovery
+ * path, and the row this function is about to write would be the last one anybody could write.
+ * Better Auth permits it, which is precisely why the refusal is here.
  *
- * The order is docs/ACCESS.md §4.3's applied twice: the role change commits, its row is appended,
- * and only then are the credentials revoked and their own rows appended. Appending the role change
- * first is deliberate — it is the event an operator performed, and a failure in the revocation that
- * follows must not be able to erase it from the ledger. See {@link revokeOrphanedStaffTokens} for
- * why that failure is the one thing in this file that is raised rather than logged.
+ * `user:set-role` is the whole of what this call needs. docs/ACCESS.md §5 also has a role change
+ * revoke the account's MCP credentials, which would add `session:revoke` - see this file's header
+ * for why that half is Faza E's rather than absent by oversight.
  */
 export const setPlatformUserRoleFn = createServerFn({ method: 'POST' })
   .validator(setPlatformUserRoleInputSchema)
   .handler(async ({ data }): Promise<ConsoleUser> => {
-    const call = await openConsoleCall({
-      user: ['set-role'],
-      session: ['revoke'],
-    })
+    const call = await openConsoleCall({ user: ['set-role'] })
+    refuseSelfTarget(
+      call,
+      data.userId,
+      'You cannot change your own platform role. Ask another admin to do it.',
+    )
     const before = await readTargetUser(call, data.userId)
 
     const result = await platformApi().setRole({
@@ -476,15 +427,6 @@ export const setPlatformUserRoleFn = createServerFn({ method: 'POST' })
       entityId: row.id,
       changes: { before: auditUserState(before), after: auditUserState(row) },
     })
-
-    // `resolvePlatformRole` and never a string compare: `user.role` is a comma-joined string for a
-    // multi-role account, and Better Auth splits it the same way when it answers `hasPermission`.
-    await revokeOrphanedStaffTokens(
-      call,
-      row.id,
-      resolvePlatformRole(before.role ?? null),
-      resolvePlatformRole(row.role ?? null),
-    )
 
     return toConsoleUser(row)
   })
@@ -542,12 +484,16 @@ export const deletePlatformUserFn = createServerFn({ method: 'POST' })
     )
     const before = await readTargetUser(call, data.userId)
 
-    const tokens = await readSessionTokens(data.userId)
+    const enumerated = await readSessionTokens(data.userId)
     await platformApi().removeUser({
       body: { userId: data.userId },
       headers: call.headers,
     })
-    const purge = await purgeSessionKeys(sessionKeyStore(), data.userId, tokens)
+    const purge = await purgeSessionKeys(
+      sessionKeyStore(),
+      data.userId,
+      enumerated,
+    )
 
     await recordConsoleAction(call, {
       action: PLATFORM_ACTIONS.USER_DELETED,
@@ -580,7 +526,7 @@ export const banPlatformUserFn = createServerFn({ method: 'POST' })
 
     // Enumerated first: `banUser` deletes the D1 rows, and after that there is nothing left to read
     // the KV key names from.
-    const tokens = await readSessionTokens(data.userId)
+    const enumerated = await readSessionTokens(data.userId)
 
     // A permanent ban over a leftover expiry: `banUser` cannot write `banExpires: null`, and a
     // stale one auto-unbans the account on its next sign-in. See this file's header.
@@ -603,7 +549,11 @@ export const banPlatformUserFn = createServerFn({ method: 'POST' })
     })
     const row = platformUserSchema.parse(result.user)
 
-    const purge = await purgeSessionKeys(sessionKeyStore(), data.userId, tokens)
+    const purge = await purgeSessionKeys(
+      sessionKeyStore(),
+      data.userId,
+      enumerated,
+    )
 
     await recordConsoleAction(call, {
       action: PLATFORM_ACTIONS.USER_BANNED,
@@ -612,10 +562,14 @@ export const banPlatformUserFn = createServerFn({ method: 'POST' })
     })
 
     if (purge.failed > 0 || purge.truncated) {
+      // The one case in which a ban is not immediate, raised rather than counted: a blob this call
+      // could not delete keeps resolving through `findSession` with a `banned: false` snapshot
+      // inside it until its own TTL expires.
       call.logger.error('console ban left session keys behind', undefined, {
         action: PLATFORM_ACTIONS.USER_BANNED,
         entityId: row.id,
         actorUserId: call.actor.userId,
+        actorRole: call.actor.role,
         ...purge,
       })
     } else {

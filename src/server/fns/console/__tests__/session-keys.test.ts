@@ -13,11 +13,14 @@ import { describe, expect, it } from 'vitest'
 
 import {
   ACTIVE_SESSIONS_INDEX_PREFIX,
-  SESSION_TOKEN_LIMIT,
+  SESSION_ENUMERATION_CEILING,
+  SESSION_PAGE_SIZE,
   activeSessionsIndexKey,
+  enumerateSessionRows,
   invalidateSessionSnapshots,
   purgeSessionKeys,
   sessionTokensFrom,
+  sessionTokensOf,
 } from '../session-keys'
 import { createSessionKv } from './real-auth'
 
@@ -62,11 +65,10 @@ describe('purgeSessionKeys', () => {
     // `deleteUserSessions` deletes nothing at all.
     expect(kv.store.has(activeSessionsIndexKey('user_1'))).toBe(false)
 
-    const purge = await purgeSessionKeys(kv, 'user_1', [
-      'token_a',
-      'token_b',
-      'token_c',
-    ])
+    const purge = await purgeSessionKeys(kv, 'user_1', {
+      tokens: ['token_a', 'token_b', 'token_c'],
+      truncated: false,
+    })
 
     expect(kv.deleted).toEqual([
       'token_a',
@@ -87,7 +89,7 @@ describe('purgeSessionKeys', () => {
     const kv = createSessionKv()
     kv.store.set(activeSessionsIndexKey('user_2'), '["stale"]')
 
-    await purgeSessionKeys(kv, 'user_2', [])
+    await purgeSessionKeys(kv, 'user_2', { tokens: [], truncated: false })
 
     expect(kv.deleted).toEqual(['active-sessions-user_2'])
     expect(kv.store.size).toBe(0)
@@ -97,11 +99,10 @@ describe('purgeSessionKeys', () => {
     const kv = createSessionKv()
     kv.failing.add('token_b')
 
-    const purge = await purgeSessionKeys(kv, 'user_3', [
-      'token_a',
-      'token_b',
-      'token_c',
-    ])
+    const purge = await purgeSessionKeys(kv, 'user_3', {
+      tokens: ['token_a', 'token_b', 'token_c'],
+      truncated: false,
+    })
 
     // Stopping at the first rejection would leave the *rest* of the account's sessions live.
     expect(kv.deleted).toEqual([
@@ -116,22 +117,119 @@ describe('purgeSessionKeys', () => {
 
   it('deletes a repeated token once', async () => {
     const kv = createSessionKv()
-    const purge = await purgeSessionKeys(kv, 'user_4', ['t', 't', 't'])
+    const purge = await purgeSessionKeys(kv, 'user_4', {
+      tokens: ['t', 't', 't'],
+      truncated: false,
+    })
     expect(kv.deleted).toEqual(['t', 'active-sessions-user_4'])
     expect(purge.enumerated).toBe(3)
   })
 
-  it('flags a truncated enumeration so a partial ban cannot pass silently', async () => {
+  it('carries a truncated enumeration through so a partial ban cannot pass silently', async () => {
     const kv = createSessionKv()
-    const tokens = Array.from(
-      { length: SESSION_TOKEN_LIMIT },
-      (_, i) => `t${i}`,
-    )
 
-    const purge = await purgeSessionKeys(kv, 'user_5', tokens)
+    const purge = await purgeSessionKeys(kv, 'user_5', {
+      tokens: ['token_a'],
+      truncated: true,
+    })
 
+    // The flag is the enumeration's and is carried, never re-derived from the token count: an
+    // account holding exactly the ceiling and an account holding more than it produce the same
+    // count and are not the same situation.
     expect(purge.truncated).toBe(true)
-    expect(purge.enumerated).toBe(SESSION_TOKEN_LIMIT)
+    expect(purge.enumerated).toBe(1)
+  })
+})
+
+describe('enumerateSessionRows', () => {
+  /** A page function over a fixed list, recording exactly what each call asked for. */
+  function pagerOver(total: number): {
+    page: (offset: number, limit: number) => Promise<ReadonlyArray<unknown>>
+    calls: Array<{ offset: number; limit: number }>
+  } {
+    const rows = Array.from({ length: total }, (_, index) => ({
+      token: `t${index}`,
+    }))
+    const calls: Array<{ offset: number; limit: number }> = []
+    return {
+      calls,
+      async page(offset, limit) {
+        calls.push({ offset, limit })
+        return rows.slice(offset, offset + limit)
+      },
+    }
+  }
+
+  it('takes one page when the account holds less than a page of sessions', async () => {
+    const pager = pagerOver(3)
+
+    const enumeration = await enumerateSessionRows(pager.page)
+
+    expect(enumeration.rows).toHaveLength(3)
+    expect(enumeration.truncated).toBe(false)
+    expect(pager.calls).toEqual([{ offset: 0, limit: SESSION_PAGE_SIZE }])
+  })
+
+  it('walks past the page size rather than stopping at it', async () => {
+    // The defect this replaced: a single `limit: 200` read reported session 201 as non-existent,
+    // so a ban left its blob live and a revoke-by-id called it already ended.
+    const pager = pagerOver(SESSION_PAGE_SIZE + 5)
+
+    const enumeration = await enumerateSessionRows(pager.page)
+
+    expect(enumeration.rows).toHaveLength(SESSION_PAGE_SIZE + 5)
+    expect(enumeration.truncated).toBe(false)
+    expect(pager.calls).toEqual([
+      { offset: 0, limit: SESSION_PAGE_SIZE },
+      { offset: SESSION_PAGE_SIZE, limit: SESSION_PAGE_SIZE },
+    ])
+  })
+
+  it('stops at the ceiling and says so', async () => {
+    const pager = pagerOver(SESSION_ENUMERATION_CEILING + 1)
+
+    const enumeration = await enumerateSessionRows(pager.page)
+
+    expect(enumeration.rows).toHaveLength(SESSION_ENUMERATION_CEILING)
+    expect(enumeration.truncated).toBe(true)
+    // The last call is the overflow probe: one row past the ceiling, which is what turns
+    // "truncated" from a suspicion into a measurement.
+    expect(pager.calls.at(-1)).toEqual({
+      offset: SESSION_ENUMERATION_CEILING,
+      limit: 1,
+    })
+  })
+
+  it('does not call an account holding exactly the ceiling truncated', async () => {
+    const pager = pagerOver(SESSION_ENUMERATION_CEILING)
+
+    const enumeration = await enumerateSessionRows(pager.page)
+
+    expect(enumeration.rows).toHaveLength(SESSION_ENUMERATION_CEILING)
+    expect(enumeration.truncated).toBe(false)
+  })
+
+  it('never asks for more rows than the ceiling leaves room for', async () => {
+    const pager = pagerOver(SESSION_ENUMERATION_CEILING + 100)
+
+    await enumerateSessionRows(pager.page)
+
+    const asked = pager.calls
+      .filter((call) => call.limit > 1)
+      .reduce((sum, call) => sum + call.limit, 0)
+    expect(asked).toBe(SESSION_ENUMERATION_CEILING)
+  })
+})
+
+describe('sessionTokensOf', () => {
+  it('carries the truncation across with the tokens', async () => {
+    expect(
+      sessionTokensOf({ rows: [{ token: 'a' }], truncated: true }),
+    ).toEqual({ tokens: ['a'], truncated: true })
+    expect(sessionTokensOf({ rows: [], truncated: false })).toEqual({
+      tokens: [],
+      truncated: false,
+    })
   })
 })
 
@@ -142,7 +240,10 @@ describe('invalidateSessionSnapshots', () => {
     kv.store.set('token_a', '{}')
     kv.store.set(index, '["token_a"]')
 
-    await invalidateSessionSnapshots(kv, ['token_a'])
+    await invalidateSessionSnapshots(kv, {
+      tokens: ['token_a'],
+      truncated: false,
+    })
 
     // The sessions survive a role change; only what they *say* about their user is stale. Purging
     // the index here would leave live sessions unreferenced — the defect, not the fix.

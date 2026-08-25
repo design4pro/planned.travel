@@ -28,6 +28,17 @@ export type ConsoleRefusalCode =
   | 'target-is-admin'
   /** `stopImpersonating` on a session that is not an impersonated one. */
   | 'not-impersonating'
+  /**
+   * The account holds more sessions than one call enumerates, and the named one was not among the
+   * ones this call saw.
+   *
+   * Its own code rather than `target-not-found`, because the two lead to opposite actions: "that
+   * session has already ended" invites the operator to move on, and this one says the session may
+   * well be live and the way to end it is to revoke every session of the account at once. Reporting
+   * a session the enumeration never reached as ended is precisely the silent truncation this code
+   * exists to make impossible.
+   */
+  | 'target-beyond-cap'
 
 /**
  * A console action refusing its target.
