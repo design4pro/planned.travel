@@ -66,6 +66,16 @@ Stated once here and not re-argued per stage, though each stage restates the par
   `docs/DESIGN.md`. Every amount, every rate, every percentage, every count on every surface any
   stage in this file ships. There is no exception, and "the figure is inside a `StatCard` already"
   is not one — the stage checks the rendered element, not the ancestor.
+- **A row's two denominations never mix, and a column name says which one it is in.** A money row in
+  this area can carry an **accounting** figure — `amount_minor` with `currency`, always the trip's own
+  currency, which is what every share, balance, aggregate and settlement is denominated in — and a
+  **receipt** figure, `original_amount_minor` with `original_currency`, which is what the reader read
+  off the paper. Anything derived from a row (a share, a per-line amount, a total) states which of the
+  two it is in, and a child row that has no currency column of its own is named for the denomination
+  it inherits. This is not pedantry: writing a receipt-currency figure into an accounting-currency
+  column is silent, passes every same-currency test, and puts every balance on the trip out by the
+  exchange rate. `04-S6` carries the worked example, because that is the stage where an earlier draft
+  did precisely that.
 - **Netting order is fixed**: balances are netted in the trip's own accounting currency first and
   converted for the reader exactly once, at the end. Converting per expense and then summing lets
   rounding drift re-open a cleared trip into phantom one-unit debts, which is a defect that arrives
@@ -96,7 +106,10 @@ carries only `currency` (`schema.ts:844-871`). A payment made in a currency othe
 exactly the case `MNY-03` has to record, and it cannot be recorded at all until those columns exist.
 `00-foundations.md` reaches the same conclusion from the same measurement and mints it as stage
 `00-S1`; `04-S1` below states the requirement in the identical shape and does not restate the
-migration itself, because the schema module is shared and wave 0 owns it.
+migration itself, because the schema module is shared and wave 0 owns it. `04-S1` files **one**
+further column into that same migration — `user_settings.display_currency`, under the absorption
+clause `00-S1` writes for exactly this case — and says there why the reader's display preference
+cannot live on the column that already carries the currency a new trip starts in.
 
 **2. `MNY-07`'s live-rate half cannot be built by any stage in this file.** The row asks for a
 per-user display currency "at live rates". A live rate needs an outbound provider, no provider is
@@ -263,8 +276,8 @@ here.
   never recomputed — and this stage neither rebuilds nor reverses it. What lands here is the rest of
   the row: settlement payments under the identical rule, the minor-to-minor conversion arithmetic the
   rest of this file needs, a suggested converted figure derived from a rate this workspace has
-  already used for that pair, and the three-state per-user display preference including its two
-  states that need no outbound call.
+  already used for that pair, and a per-user display-currency preference on a column of its own, in
+  the two states that need no outbound call.
 - `MNY-05` done → **done**. The comma-separated export at `src/components/costs/data.ts:477` already
   carries the source amount, the source currency and the rate as their own columns. This stage adds
   one column — the amount in the reader's display currency — because this stage is where a display
@@ -286,8 +299,12 @@ Behaviour sourced from `wiki: Currencies`, restated in our own vocabulary.
   is changed; `impliedRate` and `formatExchangeRate` in particular are read by this stage and edited
   by nobody in it.
 - `src/lib/__tests__/money.test.ts` — edit.
-- `src/server/repos/rates.ts` — new. The frozen-rate read and the `resolveRate` seam with its KV
-  cache. No writer of a single expense or settlement ever calls into it.
+- `src/server/repos/rates.ts` — new. The frozen-rate read, the `resolveRate` seam with its KV cache,
+  and the only reader and only writer of the `user_settings.display_currency` column filed below.
+  The module answers one question — "what currency does this reader see, and what rate gets them
+  there" — and the preference is its first half. **Server** states why that preference is not written
+  through the settings repository, and the answer is a measured wave-1 ownership fact rather than a
+  taste. No writer of a single expense or settlement ever calls into any of it.
 - `src/server/repos/__tests__/rates.test.ts` — new.
 - `src/server/repos/expenses.ts` — edit. `createSettlement` only. `createExpense` and `updateExpense`
   are not touched by this stage.
@@ -318,6 +335,16 @@ from HEAD.
 stage in this file: the schema module and `drizzle/`, the token file, `src/components/ui/**`, the
 Worker entry, the Wrangler config, the generated route tree, and the two dependency manifests. The
 first two belong to wave 0; the rest are shared or generated and no feature stage names them.
+
+**The two settings modules are excluded for a different reason, and it is a measured one.**
+`src/server/repos/settings.ts` and `src/routes/_app/-server/settings.ts` are both held **in wave 1**
+by `02-S2` (`02-places-and-maps.md`), which narrows the map-style preference in them;
+`node scripts/ultrabuild/check-plan-collisions.mjs` prints `02-S2 wave 1 (edit)` against both paths,
+and this stage is wave 1 too. Two exclusive claims in one wave clobber each other, so this stage
+takes neither, and the display preference it ships reaches `user_settings` without editing either
+module — how, and why that is not a second settings writer, is under **Server**. The settings
+screens are excluded on the same evidence: `src/routes/_app/settings/index.tsx` is held by `09-S3`
+(wave 1) and `09-S8` (wave 3), and `appearance.tsx` by `02-S2` (wave 1).
 
 `src/routes/_app/trips/$tripId/-costs/**` is not claimed either: `04-S2` holds that directory for
 wave 1, and this stage reaches the screen through the components and the loader payload it does own.
@@ -350,6 +377,29 @@ already in `amount_minor` and `currency`. The three new columns stay `NULL` on t
 read path treats that triple of nulls as exactly one thing: _this payment was made in the accounting
 currency, no conversion happened, and the implied rate is 1_. That reading is asserted by a unit
 test rather than assumed, so a future stage cannot quietly redefine `NULL` as "unknown".
+
+**One further column, on `user_settings`, filed to the same migration under `00-S1`'s own absorption
+clause.** That clause is not an inference — `00-foundations.md` writes it out: "Before this stage
+closes, it also absorbs any **Data and migration** requirement filed by a wave-1 stage in plans
+01–11, so that wave 1 opens against one migration rather than eleven." The three `settlements`
+columns above are the precondition `00-S1` records, in `00-S1`'s own shape and with nothing changed
+about it; this fourth column is a wave-1 requirement filed into the same run:
+
+| Column             | Type      | Meaning                                                                                                          |
+| ------------------ | --------- | ---------------------------------------------------------------------------------------------------------------- |
+| `display_currency` | `text(3)` | The reader's display preference. `NULL` means none. Declared as `currency('display_currency')`, the same helper. |
+
+Nullable, no default, no CHECK — the shape every other override on that table already has (`locale`,
+`timezone`, `currency`, `week_starts_on`, `date_format`, `distance_unit`, `map_style`,
+`src/server/db/schema.ts:1834-1840`), and for the same reason a default is refused there: it would
+make "not chosen" indistinguishable from "chosen to be the default". No index — the row is reached by
+user id through `user_settings_org_user_unq` and this column is never a filter.
+
+**Backfill for it: none, and `NULL` means what the screen already does.** Every existing row keeps
+`NULL`, and `NULL` renders each trip in that trip's own accounting currency — which is exactly what
+`/trips/$tripId/costs` renders at HEAD. The migration therefore changes no pixel for any existing
+reader, and the first non-null value can only arrive from the one control this stage ships. The
+previous Worker keeps working against the new table because it never selects the column.
 
 `expenses` needs no migration and **no new write path**. `original_amount_minor`,
 `original_currency` and `exchange_rate` exist (`schema.ts:793-795`), `drizzle/0001_aspiring_cargill.sql:14`
@@ -398,9 +448,17 @@ where a _live_ one will one day come from. All SQL is here.
   display conversion in `loadCosts`, which changes what a figure looks like and never what is
   stored, and `changeTripCurrency` in `04-S5`, which the reader confirms against a preview. The unit
   test below pins that call graph so a later stage cannot widen it by accident.
+- `getDisplayCurrency(scope, userId)` and `setDisplayCurrency(scope, code | null)` — the reader's
+  display preference, read from and written to the single `user_settings.display_currency` column
+  filed under **Data and migration**. They live here rather than in `src/server/repos/settings.ts`
+  for the ownership reason set out below, and they are the module's only writes: nothing else in
+  `rates.ts` writes a row at all. `setDisplayCurrency` resolves the row by
+  `organization_id` **and** the caller's own `user_id` inside the scope, and stores `NULL` for "each
+  trip in its own currency" rather than a reserved code.
 - The KV read/write follows the shape `src/server/billing/entitlements.ts:110-136` already
   established: a malformed or stale-shaped entry is a miss, never an error, and the TTL is a named
-  constant beside the reason for its length.
+  constant beside the reason for its length. Only the rate path uses it: a preference is one row read
+  by primary key and is never cached, so it can never be stale.
 
 **Repository — `src/server/repos/expenses.ts` (edit).** **One** writer changes, and it is the
 settlement writer.
@@ -441,6 +499,15 @@ settlement writer.
   reason at the top of this section. Its existing mirror is unchanged: it already tells the room the
   trip's money moved (`costs.ts:477-480`) rather than sending a phantom entity, and no new patch kind
   is declared.
+- `setDisplayCurrencyFn` (new, `method: 'POST'`) persists the reader's choice: a body of
+  `{ code: string | null }`, `code` validated by the existing `currencySchema`
+  (`src/server/repos/validation.ts:55`) when present, and `null` for "each trip in its own currency".
+  It calls `setDisplayCurrency` in `src/server/repos/rates.ts` and touches nothing else. It writes
+  the caller's **own** row and never accepts a user id from the body: the row is resolved from
+  `appScope()`, because a well-formed user id is not a permission to write that user's preferences.
+  It lives in `src/server/fns/costs.ts` because that is the module this stage owns and the only
+  screen that offers the control is the costs screen; the two settings modules are held by `02-S2` in
+  this same wave and are not touched.
 - `createExpenseFn` and `updateExpenseFn` are **not edited by this stage**. Their currency inputs are
   complete.
 
@@ -456,21 +523,86 @@ server function resolves `appScope()` and re-resolves the trip through `requireT
 from the browser is a claim, not an authorisation, and a foreign one is a `NotFoundError`. Nothing
 here is slow enough to enqueue, and nothing new goes to `TASKS`.
 
-**The display preference has three states and needs no new column.** `user_settings.currency`
-(`schema.ts:1836`) is a nullable `text(3)`, and ISO-4217 reserves `XXX` for "no currency", which is
-precisely the third state:
+**The display preference gets a column of its own, and the reason is a measurement rather than a
+preference for tidiness.** An earlier revision of this stage stored it in `user_settings.currency`
+(`src/server/db/schema.ts:1836`) with ISO-4217's `XXX` — "no currency" — as a sentinel meaning "show
+each trip in its own currency", and asserted that the column's one existing consumer was unaffected.
+It is not. That column is already spoken for, and the shipped surface that speaks for it contradicts
+the sentinel three separate ways:
 
-| Stored value | Meaning                                                                                                               |
-| ------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `NULL`       | Unset. Falls back to the workspace default (`organization_settings.default_currency`) — today's behaviour, unchanged. |
-| `'XXX'`      | An explicit choice: show each trip in its own accounting currency.                                                    |
-| Any ISO code | Convert every trip into that code — the half deferred to `04-S7`.                                                     |
+- **It already means something else, on screen, in words.** `src/routes/_app/settings/index.tsx:261-263`
+  labels it **Currency** with the hint "New trips start in this currency; each trip can override it."
+  That is the accounting default a new trip inherits, and it is what `getEffectiveSettings()` returns
+  as `currency` (`src/server/repos/settings.ts:254,277`). Two meanings on one column is how a
+  preference screen starts lying to the reader about what they chose.
+- **The sentinel cannot be rendered by the control that owns the column.** The value is bound raw
+  into a `SimpleSelect` (`src/routes/_app/settings/index.tsx:266-274`) whose options are
+  `withDefault(CURRENCIES, …)` — the follow-the-workspace option (`:148-156`) plus nine ISO codes
+  (`:49-58`). `XXX` is in neither list, so a stored sentinel matches no option and the control falls
+  back to its placeholder: the reader is shown an empty currency field they never emptied, on a
+  screen this stage does not own and could not fix.
+- **A save on an unrelated field would silently delete it.** `regionalSettingsInput`
+  (`src/routes/_app/-server/settings.ts:185-192`) carries `currency: optionalOverride` and the writer
+  persists all six overrides together, so the next time the reader changes their time zone the
+  sentinel is overwritten with whatever the currency picker was showing. A preference another screen
+  destroys without mentioning it is worse than no preference at all.
 
-`resolveDisplayCurrency()` in `src/lib/money.ts` is the only reader of that distinction. The single
-existing consumer of the effective currency, `src/routes/_app/-server/settings.ts:121`, is the
-settings screen's own display of the value and is unaffected; `getEffectiveSettings()`
-(`src/server/repos/settings.ts:254`) is not edited by this stage. `ACC-04` owns the control that sets
-the preference and inherits the three states and their labels from here.
+So the sentinel is dropped and the nullable `user_settings.display_currency` column filed under
+**Data and migration** carries it instead. Two stored states, and no reserved code doing duty as a
+flag:
+
+| Stored value     | Meaning                                                                                                                                                                                  |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NULL`           | No preference. Every trip's figures render in that trip's own accounting currency (`trips.currency`). This is what the screen does at HEAD and what every row holds after the migration. |
+| An ISO-4217 code | Render every trip's figures converted into that code. When it equals the trip's own currency nothing converts and no rate is consulted.                                                  |
+
+`resolveDisplayCurrency({ preference, tripCurrency })` in `src/lib/money.ts` is the only reader of
+that distinction: pure, no I/O, returning `{ mode: 'per-trip' | 'fixed', code }` — the exact shape
+`loadCosts` puts in its payload. `user_settings.currency` keeps precisely the meaning its screen
+gives it, `getEffectiveSettings()` is not edited, and `regionalSettingsInput` is not widened.
+
+**The menu offers three choices over those two states, and says which is which.** "Each trip in its
+own currency" writes `NULL`. The workspace's own default, named with its code, writes that code — and
+the item says the code it is writing, because a menu item that promised to _follow_ an admin setting
+would be promising a link this column does not have. Any code this trip has already frozen a rate
+against is offered and enabled. Every other code in `CURRENCY_OPTIONS` is rendered **disabled with
+the reason in its description**, which is the half `04-S7` unblocks.
+
+**Where the column is read and written, and why not through the settings repository.** Both settings
+modules are held in this same wave by `02-S2` (`02-places-and-maps.md`) — measured, not assumed; see
+**Owned paths** — so this stage edits neither, and it needs to edit neither:
+
+- **Read.** `getUserSettings(scope, userId)` (`src/server/repos/settings.ts:194`) already returns the
+  whole row through `userSettingsRepository.findOne`, so the new column arrives in its result the
+  moment the migration lands and the module needs no edit for it. `loadCosts` imports that function
+  and edits nothing in the module it comes from. It returns `null` for a member who has never had a
+  settings row written, and `null` reads as "no preference" — the same state a `NULL` column means, so
+  the two absences do not need telling apart.
+- **Write.** One function, `setDisplayCurrency(scope, code | null)`, in `src/server/repos/rates.ts` —
+  the module this stage mints — and it is written against a precedent rather than invented:
+  `markUserOnboarded` (`src/server/repos/settings.ts:224-234`) is already a one-column writer on this
+  table that calls `ensureUserSettings` and then `userSettingsRepository.requireUpdate(scope, row.id,
+…)` without going through `updateUserSettingsInput`. `setDisplayCurrency` does exactly that, for
+  exactly one column, through the same tenant-scoped handle (`settings.ts:57`) — so the SQL still
+  lives in `src/server/repos/` as `docs/SPEC.md` §6 requires, the row is resolved by
+  `organization_id` + `user_id` inside the caller's scope before it is touched, and the only thing
+  that differs from the precedent is which module the function is declared in.
+
+`updateUserSettingsInput` (`src/server/repos/settings.ts:124-136`) is deliberately **not** widened
+and `display_currency` is deliberately absent from `regionalSettingsInput`. That absence is the
+guard: the regional form cannot touch the display preference even by accident, `02-S2` (wave 1),
+`09-S8` (wave 3) and `03-S6` (wave 4) each widen that input for their own field without ever meeting
+this stage, and the repository has exactly one writer of this column.
+
+**Two sibling stages that live near this column, and what each of them actually says.** `09-S8`
+(`ACC-04`, `09-account-and-settings.md`, wave 3) ships the regional **accounting** override and
+states in its own brief that it "writes **no** rate, performs **no** conversion, and re-bases
+**nothing**" — so it neither ships nor needs this preference, and nothing here obliges it to. If a
+later run wants the display preference on that screen as well, the file and the wave are `09-S8`'s
+and the resolver is the one above rather than a second opinion. And `COL-10` (`07-S6`'s guest viewer,
+`07-collaboration-and-sharing.md`) resolves the sharer's `user_settings.currency` and then
+`trips.currency`, and performs no live conversion at all; since this stage leaves that column's
+meaning exactly as it found it, the guest viewer resolves the same value after this stage as before.
 
 ### UI (route, components)
 
@@ -510,10 +642,15 @@ Three surfaces change, and only in the ways listed:
   derived rate as its hint. It is a foreign-currency field set the payment dialog does not have today
   (`payment-dialog.tsx:208-220` offers only the trip currency), so this is new work and not a rebuild.
   `wiki: Currencies` states the same rule for payments and this is where we honour it.
-- **Toolbar.** A compact display-currency indicator: the code, and a menu offering "each trip in its
-  own currency" plus the workspace default. Codes that would need a live rate are rendered
-  **disabled with the reason in their description**, not hidden — a control that silently omits the
-  thing a reader is looking for is worse than one that explains itself.
+- **Toolbar.** A compact display-currency indicator — the code the figures on screen are in — and a
+  `DropdownMenu` behind it with the three choices the server section fixes: "Each trip in its own
+  currency" (writes `NULL`), the workspace's default named with its code, and every code this trip
+  has already frozen a rate against. Choosing one calls `setDisplayCurrencyFn` and reloads the
+  payload. Codes that would need a live rate are rendered **disabled with the reason in their
+  description**, not hidden — a control that silently omits the thing a reader is looking for is
+  worse than one that explains itself. The indicator is the selector
+  `[data-part="display-currency"]`, which `04-S7` re-uses to photograph those same options once they
+  are enabled.
 
 **States, named rather than gestured at.**
 
@@ -546,7 +683,9 @@ and collapses under `prefers-reduced-motion: reduce`.
 ### Quota
 
 **This stage creates no countable row.** It adds fields to `expenses` and `settlements` rows that an
-existing write path already creates, and neither table is metered: `USAGE_METRICS` and `PLAN_QUOTAS`
+existing write path already creates, and it sets one column on the reader's own `user_settings` row,
+which `ensureUserSettings` (`src/server/repos/settings.ts:202`) already creates for every member on
+first read. None of the three tables is metered: `USAGE_METRICS` and `PLAN_QUOTAS`
 (`src/server/db/types.ts:41`) carry `places`, `files`, `exports`, `collections` and `journeys`, and
 the catalogue sells `members`, `trips` and `storage_bytes`. Expense volume is bounded by trip count,
 which is metered upstream in `trips.createTrip`.
@@ -568,10 +707,18 @@ settlement by id; record a settlement carrying the three new source fields onto 
 byte-identical afterwards. Then the mirror case: A's own new settlement is read back in B's scope by
 id and is a `NotFoundError`.
 
-Functions covered: `findLatestFrozenRate` and `resolveRate` in `src/server/repos/rates.ts`;
-`createSettlement` in `src/server/repos/expenses.ts`. `createExpense` and `updateExpense` are not
-covered here — they are unchanged by this stage and their isolation cases already exist in that
-file.
+The display preference gets its own case in the same block, because it is the one write this stage
+makes outside the money tables. A user who is a member of both organizations has a `user_settings`
+row in each: setting a display currency in A's scope changes A's row and leaves B's row
+byte-identical, and reading it back in B's scope returns B's value rather than A's. Then the
+crossing case: `setDisplayCurrency` called in A's scope for a user who is a member of B only writes
+nothing and raises `NotFoundError` — the row is resolved by `organization_id` **and** `user_id`
+inside the scope, so a foreign membership is unreachable rather than merely unlikely.
+
+Functions covered: `findLatestFrozenRate`, `resolveRate` and `setDisplayCurrency` in
+`src/server/repos/rates.ts`; `createSettlement` in `src/server/repos/expenses.ts`. `createExpense`
+and `updateExpense` are not covered here — they are unchanged by this stage and their isolation cases
+already exist in that file.
 
 The rate cache gets its own assertion, because it is the one thing here that is deliberately shared:
 a cache key is a currency pair and a date, which is a public fact and correctly shared across
@@ -587,12 +734,18 @@ The test asserts a key derived from tenant data cannot be constructed by the mod
 - `src/lib/__tests__/money.test.ts` (edit) — the conversion arithmetic. `1000 JPY` minor to `EUR`
   minor and back is not off by a factor of a hundred; a three-digit currency (`KWD`) converts
   correctly in both directions; conversion rounds half-up exactly once; `convertMinor(x, 1, c, c)`
-  is the identity for every currency in `CURRENCY_OPTIONS`; `resolveDisplayCurrency` returns three
-  distinguishable results for `NULL`, `'XXX'` and a code.
+  is the identity for every currency in `CURRENCY_OPTIONS`; and `resolveDisplayCurrency` returns
+  `mode: 'per-trip'` with the trip's own code for a `NULL` preference, `mode: 'fixed'` for a stored
+  code, and `mode: 'per-trip'` again when the stored code equals the trip's own — the case that must
+  consult no rate. No reserved code is a control value anywhere in the function, which is the
+  regression test for the sentinel this stage removed.
 - `src/server/repos/__tests__/rates.test.ts` (new) — `resolveRate` prefers a manual rate over a
   frozen one, a frozen one over the cache and the cache over the port; it returns `null` rather than
   a guess when nothing answers; a malformed cache entry is a miss and not a throw;
-  `findLatestFrozenRate` returns the most recent observation and ignores rows from another trip. And
+  `findLatestFrozenRate` returns the most recent observation and ignores rows from another trip.
+  `setDisplayCurrency` round-trips a code and round-trips `NULL`, and writing `NULL` after a code
+  restores the per-trip rendering rather than leaving the previous code behind — the state machine
+  has two states and both are reachable in both directions. And
   the rule at the top of the server section, pinned as a test rather than left as prose: no export of
   `rates.ts` is reachable from `createExpense`, `updateExpense` or `createSettlement`, so a later
   stage cannot quietly make a stored per-row `exchange_rate` come from anywhere but the amount pair.
@@ -2094,20 +2247,34 @@ and does not write `drizzle/`.
 
 **`expense_ticket_lines`** — one line of an itemised receipt:
 
-| Column                      | Type                           | Notes                                                                                                                                                                                                                         |
-| --------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                        | `text` PK                      | `newId()`.                                                                                                                                                                                                                    |
-| `organization_id`           | `text` NOT NULL                | `orgRef()`, leading column of every index.                                                                                                                                                                                    |
-| `trip_id`                   | `text` NOT NULL                | References `trips.id`, cascade. Carried so the tenant filter never needs a join.                                                                                                                                              |
-| `expense_id`                | `text` NOT NULL                | References `expenses.id`, cascade — the line has no meaning without its receipt.                                                                                                                                              |
-| `label`                     | `text` NOT NULL                |                                                                                                                                                                                                                               |
-| `amount_minor`              | `integer` NOT NULL default `0` | In the minor unit of the parent expense's **source** currency, paired with that row's `original_currency`; the line carries no currency column of its own, so a line can never disagree with its receipt. `nonNegativeCheck`. |
-| `participants`              | `text` json                    | The user ids sharing this line.                                                                                                                                                                                               |
-| `sort_order`                | `real`                         | `sortOrder()`.                                                                                                                                                                                                                |
-| `created_at` / `updated_at` | `integer`                      | `timestamps()`.                                                                                                                                                                                                               |
+| Column                      | Type                           | Notes                                                                                                                                                                                                                                                                                                          |
+| --------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                        | `text` PK                      | `newId()`.                                                                                                                                                                                                                                                                                                     |
+| `organization_id`           | `text` NOT NULL                | `orgRef()`, leading column of every index.                                                                                                                                                                                                                                                                     |
+| `trip_id`                   | `text` NOT NULL                | References `trips.id`, cascade. Carried so the tenant filter never needs a join.                                                                                                                                                                                                                               |
+| `expense_id`                | `text` NOT NULL                | References `expenses.id`, cascade — the line has no meaning without its receipt.                                                                                                                                                                                                                               |
+| `label`                     | `text` NOT NULL                |                                                                                                                                                                                                                                                                                                                |
+| `receipt_amount_minor`      | `integer` NOT NULL default `0` | The figure printed on that line of the receipt, an integer in the minor unit of the **receipt currency** defined below. The line carries no currency column of its own, so a line can never disagree with its receipt, and the name says which of the parent's two denominations it is in. `nonNegativeCheck`. |
+| `participants`              | `text` json                    | The user ids sharing this line.                                                                                                                                                                                                                                                                                |
+| `sort_order`                | `real`                         | `sortOrder()`.                                                                                                                                                                                                                                                                                                 |
+| `created_at` / `updated_at` | `integer`                      | `timestamps()`.                                                                                                                                                                                                                                                                                                |
 
 Indexes: `expense_ticket_lines_org_expense_idx` on `(organization_id, expense_id)` and
 `expense_ticket_lines_expense_sort_idx` on `(expense_id, sort_order)`.
+
+**"Receipt currency" is defined once, here, and every stage sentence below uses it in exactly this
+sense.** The receipt currency of an expense is `original_currency` when that column is set and
+`currency` when it is `NULL` — that is, the denomination the reader actually read off the piece of
+paper. `expenses.currency` is the **accounting** currency, always the trip's own, and
+`expenses.amount_minor` and `expense_shares.share_minor` are always in it
+(`src/server/db/schema.ts:791-795`, `:830`). A ticket line is denominated in the receipt currency and
+never in the accounting currency, which is why the column is named `receipt_amount_minor` rather than
+`amount_minor`: an earlier draft of this stage called it `amount_minor`, said it held the source
+currency, and then wrote the sum of the lines into `expenses.amount_minor`. On a foreign receipt that
+stores a source-currency figure in an accounting-currency column and derives every `share_minor` from
+it — the whole trip's balances wrong by the exchange rate, silently, with every same-currency test
+still green. The conversion step that draft was missing is stated in full under **Server**, and the
+column name is what stops the mistake being re-made by reading the schema alone.
 
 **Why participants are JSON rather than a join table.** They are never queried across receipts: they
 exist to compute shares at write time and to restore the editor on re-open. The queryable truth stays
@@ -2125,7 +2292,11 @@ still reads every row it wrote.
 **Backfill: none.** Existing expenses keep their split method and have no ticket lines; a row with no
 lines and a non-`ticket` method behaves exactly as it does today.
 
-Money stays integer minor units with a `text(3)` ISO-4217 currency on the parent row.
+Money stays integer minor units. Both of a receipt's denominations live on the parent row and are
+paired with their own `text(3)` ISO-4217 code there — `amount_minor` with `currency`,
+`original_amount_minor` with `original_currency` — and a line carries a minor-unit integer in the
+receipt currency and no code of its own, so there is exactly one place a currency can be recorded and
+exactly one thing it can mean.
 
 ### Server (repo, server function, Zod)
 
@@ -2171,13 +2342,59 @@ keep being validated to sum to the total.
 
 **Repository — `src/server/repos/expenses.ts` (edit).**
 
-- `computeShares` delegates its remainder handling to the shared helper and gains the `ticket` method:
-  shares are the per-line amounts divided among each line's own participants by the same rule, then
-  summed per participant. Each line seeds its own rotation from its own canonical string —
-  `` `${lineAmountMinor}|${label}|${orderedParticipantIds.join(',')}` `` — so a line needs no id
-  either and the editor's per-line preview matches the written shares before any row exists. A ticket
-  expense's `amount_minor` is the sum of its lines, computed on the server, never accepted from the
-  client.
+- `computeShares` delegates its remainder handling to the shared helper and gains the `ticket`
+  method, **which is a weighted split and not a second splitter**. The lines decide the weights; the
+  existing rule then divides the accounting total. In order:
+
+  1. Each line's `receipt_amount_minor` is divided among that line's own participants **by the same
+     helper**, seeded from its own canonical string
+     `` `${receiptAmountMinor}|${label}|${orderedParticipantIds.join(',')}` `` — no line id is needed,
+     so a line the reader has not saved yet previews identically. A participant's weight is the sum of
+     the per-line integers they were handed. Because the helper is exact on every line, the weights
+     are **integers summing exactly to `L`**, the receipt total: no rational is carried, nothing is
+     rounded at this step, and the receipt-space arithmetic can never disagree with itself. Weights
+     are receipt-currency quantities, and they are the **only** thing the lines contribute.
+  2. The single split then divides `expenses.amount_minor` — the accounting total, in the trip's own
+     currency — across those weights, through the one deterministic remainder helper above, seeded
+     from `` `${amountMinor}|${spentOn}|${orderedParticipantIds.join(',')}` `` exactly as every other
+     method is. So `Σ share_minor = amount_minor` identically, and `expense_shares` stays wholly in
+     the accounting currency, which is the only currency it has a column for.
+
+  **No line is ever converted, and no figure is converted twice.** The helper runs twice, but in two
+  different spaces and with two different jobs: in step 1 it partitions the receipt total `L` into
+  integer weights, entirely inside the receipt currency; in step 2 it partitions the accounting total
+  `amount_minor`, entirely inside the accounting currency. Conversion itself happens exactly once, at
+  the parent row, which is the netting order the money conventions at the top of this file fix. A
+  fifteen-line foreign receipt therefore crosses the currency boundary once and not fifteen times,
+  which is the difference between a balance that clears and a set of phantom one-unit debts.
+
+- **What the lines write into the parent row, stated as an assignment because that is what an
+  implementer needs.** Let `L` be the sum of every line's `receipt_amount_minor`, computed on the
+  server and never accepted from the client.
+
+  - **Receipt in the trip's own currency** (the common case, `original_currency IS NULL`):
+    `amount_minor := L`. `L` is already an accounting-currency figure, so there is no conversion and
+    the source triple stays `NULL`.
+  - **Foreign receipt** (`original_currency` set): `original_amount_minor := L`, and `amount_minor`
+    is the converted total **the reader supplied** in the field the expense dialog has carried since
+    HEAD (`src/components/costs/expense-dialog.tsx:332-356`) — itemising a receipt changes which
+    figure the source amount comes from, and changes nothing about where the converted one comes
+    from. `exchange_rate` is then derived by `impliedRate(L, amountMinor)`, the same derivation
+    `toRepoInput` already runs (`src/server/fns/costs.ts:283-301`). **This stage introduces no rate
+    input and no automatic conversion of a receipt total**, exactly as `04-S1` fixed for every other
+    money write in this file.
+  - A foreign ticket receipt submitted with lines but no converted total is refused with
+    `RepositoryError('...', 'CONVERSION_INCOMPLETE')` — the same refusal, with the same reason,
+    `04-S1` gives a foreign settlement. Nothing is written and the editor keeps the reader's lines.
+
+- **Re-basing composes with this and needs no change to `04-S5`.** Step 7 of that stage's batch
+  recomputes every `share_minor` from the row's stored `expense_shares.weight` after a trip changes
+  accounting currency. Ticket mode therefore **stores the weights it derived** into that existing
+  column, normalised exactly as every other method's weights are, so a re-based ticket expense
+  re-splits correctly from data `04-S5` already reads — and `04-S5`, which lands a wave earlier, is
+  neither edited nor named as an owned path by this stage. The lines themselves are untouched by a
+  re-base: `receipt_amount_minor` is a fact about a piece of paper, and a trip changing its
+  accounting currency does not change what the receipt said.
 - Ticket lines are written and replaced inside one `db.batch()` with the shares they imply, so a
   receipt is never half-itemised.
 - `markShareSettled` gains its first caller and is not rewritten: it is correct and unreached, which
@@ -2203,9 +2420,14 @@ room under the existing `expense` kind — no new patch kind, so `src/server/do/
 owned path of this stage.
 
 **Zod (v4).** `z.strictObject()` with `error`; ticket lines as a bounded array (at most 50) of
-`{ label, amountMinor, participants }` with `participants` a non-empty unique id array; a refinement
-that at least one line exists when the method is `ticket`; `z.iso.date()` on `settledOn`. Validation
-is shape; membership and permission are decided in the handler and the repository.
+`{ label, receiptAmountMinor, participants }`, `receiptAmountMinor` a non-negative integer and
+`participants` a non-empty unique id array; a refinement that at least one line exists when the
+method is `ticket`; a refinement that a foreign receipt in `ticket` mode carries the converted total,
+so the all-three-or-none source rule `04-S1` fixed still holds when the source figure comes from the
+lines; and no field anywhere in the body called a rate. `z.iso.date()` on `settledOn`. **No total is
+accepted for a ticket expense's source amount** — the server sums the lines — which is expressed at
+the boundary by the field simply not existing on the input. Validation is shape; membership and
+permission are decided in the handler and the repository.
 
 ### UI (route, components)
 
@@ -2228,8 +2450,13 @@ rebuild it for a stage that had no change to make to it.
 - The custom-amount mode will not save until the lines balance exactly to the total, and the
   difference is shown as a signed figure the whole time, so the reader is corrected while they type
   rather than at submit.
-- Ticket mode sums its lines into the expense total; the total field becomes read-only with a tooltip
-  saying which lines produced it.
+- Ticket mode sums its lines into the receipt total, so **the amount field the lines produce becomes
+  read-only** with a tooltip naming the lines that produced it. On a receipt in the trip's own
+  currency that is the one amount field. On a foreign receipt it is the **source** field that locks;
+  the converted field stays editable, because that figure is the reader's bank statement and not
+  arithmetic this product is entitled to invent — the derived-rate rule `04-S1` states, applied to an
+  itemised receipt. Both figures carry `tabular-nums`, and the currency code sits beside each so it
+  is never ambiguous which denomination a reader is looking at.
 
 **States.**
 
@@ -2303,10 +2530,17 @@ writers in `src/server/repos/expenses.ts`.
 - `src/server/repos/__tests__/expenses-split.test.ts` (new) — the repository's shares match the
   client preview for identical inputs, byte for byte, **on the create path as well as the update
   path**: the preview is computed from a form state with no expense id at all, the row is then
-  written, and the stored `expense_shares` are compared against that preview element by element; a ticket expense's total equals the sum of its
-  lines and a client-supplied total is ignored; per-line participants produce per-participant sums
-  that add back to the receipt total exactly; a percentage split still has to add to 100; an exact
-  split still has to balance; `markShareSettled` moves nothing in the balances, which is a
+  written, and the stored `expense_shares` are compared against that preview element by element; a
+  ticket expense's receipt total equals the sum of its lines and a client-supplied total is ignored;
+  per-line participants produce per-participant shares that add back to `expenses.amount_minor`
+  exactly, and the weights those lines produced are integers adding back to the receipt total `L`
+  exactly — the two spaces are asserted separately, because a test that only checks the accounting
+  sum passes even when the receipt-space arithmetic is wrong; **the foreign-receipt case, which is the one an earlier draft got wrong** — a `JPY`
+  receipt of four lines on a `EUR` trip stores `Σ` lines in `original_amount_minor`, the reader's
+  converted figure in `amount_minor`, `impliedRate` of the pair in `exchange_rate`, and shares that
+  sum to `amount_minor` and **not** to the yen total, with a same-currency ticket receipt asserted in
+  the same test to produce identical shares to the equal split it degenerates into; a percentage
+  split still has to add to 100; an exact split still has to balance; `markShareSettled` moves nothing in the balances, which is a
   property of the code rather than a wish — `getMemberBalances` sums `expense_shares.share_minor`
   with no predicate on `is_settled` (`src/server/repos/expenses.ts`), so a paid flag records that a
   debt was cleared outside the ledger without changing the arithmetic, and the test pins that so a
@@ -2666,7 +2900,7 @@ node scripts/ultrabuild/check-plan-collisions.mjs 04
 Output, pasted whole:
 
 ```
-plans 13 · stages 91 · owned paths 544
+plans 13 · stages 91 · owned paths 543
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -2782,10 +3016,14 @@ the form the script parses:
 **One thing the output cannot tell anyone, said here instead.** The header counts are a snapshot of a
 set several runs are still writing: it read `plans 7 · stages 37 · owned paths 204` two rounds ago,
 then `282`, `283` and `284` across three invocations minutes apart, then `553`, and it reads
-`plans 13 · stages 91 · owned paths 544` above — the six baseline-directory claims added here, and a
+`plans 13 · stages 91 · owned paths 543` above — the six baseline-directory claims added here, and a
 sibling plan's own repairs taken away, inside one round. Every remaining area plan landed in between
-and sibling plans were dirty in the working tree the whole time. So the header will not reproduce
-exactly, and it is not the part that matters.
+and sibling plans were dirty in the working tree the whole time; it read `544` at the start of the
+round the currency repairs landed in and `543` at the end of it, while **this file's own owned paths
+parsed as 69 in both, the identical set** — measured by parsing the `### Owned paths` blocks out of
+this file at `HEAD` and in the working tree and diffing them, not assumed from the fact that no
+bullet was retyped. So the header will not reproduce exactly, it moves for reasons that are not this
+file's, and it is not the part that matters.
 
 The findings under it are properties of **this** file's ownership — nothing this plan claims
 exclusively is claimed by a sibling in the same wave, the two paths it shares across waves are named

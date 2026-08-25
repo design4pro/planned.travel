@@ -867,13 +867,38 @@ and `expandBounds()` in `src/lib/map/bounds.ts` handle the single-place and zero
 
 `README.md` names protecting what is already ahead of the reference product as a rule of this
 directory. A row that is done and unguarded is a row the next stage breaks by accident, and five
-stages in this plan add things to the same map. So this stage **changes no camera code**: it writes
-the executable description of the current behaviour, and it lands the plan's spec file.
+stages in this plan add things to the same map. So this stage **changes no camera code**: it locks the
+seams of the current behaviour that nothing yet asserts, and it lands the plan's spec file.
+
+**Most of the camera is already under test, and an earlier draft of this stage was wrong to imply
+otherwise.** Counted rather than assumed, on this branch:
+
+| Behaviour                                                                                                                                                                   | Already asserted at                                                         |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `boundsForPoints()` returns `null` for an empty set and for a set with no valid coordinate                                                                                  | `src/lib/map/__tests__/bounds.test.ts:68`                                   |
+| an invalid point is skipped rather than poisoning the rectangle                                                                                                             | `bounds.test.ts:73`                                                         |
+| a single place collapses to a zero-span box, which `expandBounds()` widens to a neighbourhood                                                                               | `bounds.test.ts:83` and `:162`                                              |
+| a pair spanning the antimeridian frames as the narrow arc, and does not cross on floating-point noise                                                                       | `bounds.test.ts:94`, `:104`, `:121`, `:144`                                 |
+| `resolvePadding()` fills the edges the caller omitted; `clampPadding()` scales insets down on a 360px container and survives a container with no size                       | `bounds.test.ts:244`, `:254`, `:259`, `:275`                                |
+| `boundsKey()` is equal for equal values regardless of identity, and ignores differences below a metre                                                                       | `bounds.test.ts:228`, `:236`                                                |
+| `cameraMotion()` collapses to a single frame under `prefers-reduced-motion`                                                                                                 | `src/lib/map/__tests__/camera.test.ts:52`                                   |
+| `cameraPadding()` clears the shelf, the search pill and the zoom cluster, and leaves room to draw at 360→2560                                                               | `src/lib/atlas/__tests__/layout.test.ts:123`                                |
+| `worldZoom()`/`WORLD_CENTRE` make one world span the container's longer edge                                                                                                | `layout.test.ts:159`                                                        |
+| `FitBounds` frames the trip on `load`, carries a caller inset to the camera, does nothing when disabled, and does **not** re-fit when the caller rebuilds an identical list | `src/components/map/__tests__/markers.test.tsx:372`, `:396`, `:424`, `:437` |
+
+**This stage rewrites none of those and adds no second copy of any of them.** Doing so would put
+duplicate assertions into four files this stage does not own, which is the specific defect that got an
+earlier draft of it rejected. What is left uncovered is narrower and entirely inside
+`fitMapToBounds()` and the `FitBounds` effect — the four invariants listed under **Verification**,
+each of which was confirmed absent by `grep -rnE 'FIT_MAX_ZOOM|fitMapToBounds' src`: fourteen lines
+across five source files — `fit-bounds.tsx`, `map/index.ts`, `plan-screen.tsx`, `atlas-screen.tsx`
+and `country-search.tsx` — and zero inside a `__tests__` directory.
 
 Behaviour sourced as `wiki: Map-Features`. Recorded as a difference rather than a gap: the reference
 has no default-centre setting either and computes its opening camera the same way; where we are ahead
-is the chrome-aware padding and the unmapped-extent cap, and neither has a test that would notice if
-it went away.
+is the chrome-aware padding and the unmapped-extent cap. The padding is already asserted as a pure
+function (`layout.test.ts` above); what no test notices today is the cap actually reaching MapLibre,
+which is the gap this stage closes.
 
 ### Owned paths
 
@@ -884,14 +909,29 @@ it went away.
   `snapshotPathTemplate` gives it, which cannot collide with an existing one.
 - `e2e/helpers/places-and-maps.ts` — new. The module-local helper: resolving the seeded trip by its
   accessible name from `/trips`, and the plan's own route table.
-- `src/lib/map/__tests__/camera-contract.test.ts` — new. The pure half of the camera, asserted.
-- `src/components/map/__tests__/fit-bounds.test.tsx` — new. The component half.
+- `src/components/map/__tests__/fit-bounds.test.tsx` — new. The only unit-test file this stage adds,
+  and it covers only the four seams the table above shows are uncovered. It carries its own hoisted
+  MapLibre fake, which is this repository's established pattern rather than a duplication:
+  `map-canvas.test.tsx:32`, `markers.test.tsx:19` and `visited-countries.test.tsx:90` each declare
+  their own `FakeMap`, and there is no shared map harness module to import.
 
-**Deliberately not owned, and this is the point of the stage:** `src/components/map/fit-bounds.tsx`,
-`src/lib/map/bounds.ts` and `src/lib/atlas/layout.ts` are **not** in this list and are not edited by
-any stage in this file. `e2e/helpers/shoot.ts` is not claimed either — `10-S2` claims it in wave 1
-and `01-S5` in wave 2, and a third claimant in wave 1 would be a same-wave collision. Anything this
-plan needs from the shared settle lives in `e2e/helpers/places-and-maps.ts` instead.
+**Deliberately not owned, and this is the point of the stage.** Two groups.
+
+_The camera implementation_, which no stage in this file edits: `src/components/map/fit-bounds.tsx`,
+`src/lib/map/bounds.ts`, `src/lib/atlas/layout.ts`.
+
+_The tests that already cover it_, which this stage must not duplicate and must not rewrite:
+`src/lib/map/__tests__/bounds.test.ts`, `src/lib/map/__tests__/camera.test.ts`,
+`src/lib/atlas/__tests__/layout.test.ts` and `src/components/map/__tests__/markers.test.tsx`. The
+last of those is claimed by `02-S7` in wave 4 for marker badge and spiderfy behaviour, and by no
+other stage in any plan; `02-S3` is in wave 1 and does not claim it, so it adds no second claimant
+and no within-plan hand-off. If the execution of this stage finds itself wanting to touch any of
+those four files, the stage is wrong and the finding belongs in `docs/plans/OPEN-FINDINGS.md`, not
+in an edit.
+
+`e2e/helpers/shoot.ts` is not claimed either — `10-S2` claims it in wave 1 and `01-S5` in wave 2, and
+a third claimant in wave 1 would be a same-wave collision. Anything this plan needs from the shared
+settle lives in `e2e/helpers/places-and-maps.ts` instead.
 
 ### Data and migration
 
@@ -945,19 +985,36 @@ repository function and invents one is padding.
 
 The command gate, in order: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
-Unit tests this stage adds, by file and invariant:
+Unit tests this stage adds — one file, four invariants, and every one of them checked against the
+coverage table under **Reference rows** so that none of it restates an assertion that already exists:
 
-- `src/lib/map/__tests__/camera-contract.test.ts` — `boundsForPoints()` returns `null` for an empty
-  set and for a set with no valid coordinate; a single point produces a zero-span box that
-  `expandBounds()` widens to its documented minimum rather than to nothing; a two-point set spanning
-  the antimeridian frames as the narrow arc rather than as the wide complement; and `resolvePadding()`
-  and `clampPadding()` never return a padding wider than the box they are given, which is the failure
-  that silently turns a fit into a no-op.
-- `src/components/map/__tests__/fit-bounds.test.tsx` — `fitMapToBounds()` passes `FIT_MAX_ZOOM` when
-  the archive covers the extent and `FIT_MAX_ZOOM_UNMAPPED` when it does not; it honours
-  `prefers-reduced-motion` by jumping rather than flying; and it is called again when the point set
-  changes identity but **not** when it changes only reference, because a re-fit on every render is a
-  camera that fights the reader.
+- `src/components/map/__tests__/fit-bounds.test.tsx` — **the zoom ceiling reaches MapLibre.**
+  `fitMapToBounds()` passes `maxZoom: FIT_MAX_ZOOM` when the caller names none, and passes a
+  caller-supplied ceiling through unchanged — which is the mechanism `plan-screen.tsx:1425` uses to
+  send `FIT_MAX_ZOOM_UNMAPPED` for a trip outside the published archive. Read the value off the
+  recorded `fitBounds` options, so the test fails if the default is removed or the option is dropped
+  on the floor. `grep -rn 'FIT_MAX_ZOOM' src` returns eight lines across three files — `fit-bounds.tsx`,
+  `map/index.ts` and `plan-screen.tsx` — and none of them is in a `__tests__` directory.
+- …**the motion decision reaches MapLibre too.** `cameraMotion()` is already asserted in isolation
+  (`camera.test.ts:52`); what is not asserted is that `fitMapToBounds()` forwards its `animate` and
+  `duration` to `map.fitBounds`, and that an explicit `animate: false` from the caller wins over an
+  unreduced preference. The existing `FitBounds` cases read only `options.padding`
+  (`markers.test.tsx:396`), so this reads a different field and duplicates nothing.
+- …**a canvas with no area is a deferral, not a failed fit.** `fitMapToBounds()` returns without
+  calling `fitBounds` when the container measures below 1px on either axis, and calls `map.resize()`
+  first when the canvas and the container disagree about their size. Both are the guards against
+  MapLibre logging "Map cannot fit within canvas…" and leaving the camera where it was, and the
+  existing harness deliberately gives its fake a size (`markers.test.tsx:31-42`) so that neither is
+  exercised anywhere today. Record `resize()` calls on the fake to assert the second.
+- …**the effect re-fits when the rectangle's value changes.** `markers.test.tsx:437` asserts the
+  negative half — a rebuilt but identical list does not drag the camera back. The positive half is
+  untested: a genuinely different point set, and a changed `fitKey` over an unchanged set, must each
+  produce exactly one further fit. Without it, the memo that makes the negative half true could
+  silently start suppressing every re-fit and no test would notice.
+
+The stage adds **no** case to `bounds.test.ts`, `camera.test.ts`, `layout.test.ts` or
+`markers.test.tsx`. If executing it produces a diff in any of those four files, the execution is
+wrong.
 
 Browser evidence:
 

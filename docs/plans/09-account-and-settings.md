@@ -2597,27 +2597,84 @@ reduce-motion and map style. It is right about all nine missing items.
 **The rule that decides what ships, and it is this plan's own.** Every other stage here exists to
 remove an affordance that promises something and delivers nothing. A preference switch whose value
 nothing reads is exactly that defect, wearing a different hat. So this stage ships a switch only
-where a surface exists to obey it, and defers the rest **with the stage that owns the obeying
-surface named**:
+where a surface exists to obey it. The rest are disposed of one at a time, and each disposition names
+either the stage that owns the obeying surface or, where there is none, the reason there is none:
 
-| Behaviour          | Deferred to                                            | Why                                                                                                                                                                 |
-| ------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Temperature unit   | `DOC-08`, `06-documents-and-media.md`, wave 6          | Nothing in the product shows a temperature until per-day weather ships.                                                                                             |
-| Route labels       | `MAP-09`, `02-places-and-maps.md`, wave 4              | There is no route overlay to label.                                                                                                                                 |
-| Blur booking codes | `BKG-06`, `03-reservations-and-transport.md`, wave 1   | The booking desk owns the field that would be blurred, and its plan owns that file.                                                                                 |
-| Interface density  | a token stage in `00-foundations.md`, wave unscheduled | There is no density hook in `src/`, and the only file that could carry one is `src/styles/tokens.css`, which no feature stage may own. Argued in full under **UI**. |
+| Behaviour          | Disposition           | Destination — the stage that owns the surface it must obey        |
+| ------------------ | --------------------- | ----------------------------------------------------------------- |
+| Temperature unit   | defer, behind a block | `DOC-08` → `06-S7`, `06-documents-and-media.md`, wave 6 — BLOCKED |
+| Route labels       | defer                 | `MAP-09` → `02-S12`, `02-places-and-maps.md`, wave 6              |
+| Blur booking codes | defer                 | `BKG-01` → `03-S6`, `03-reservations-and-transport.md`, wave 4    |
+| Interface density  | drop at this tier     | none, and the absence is the point — read the fourth bullet       |
 
-Each deferral is a column plus a switch that arrives **with** its surface, in one stage, so the
-switch and the thing it governs are always shipped together. The five that do ship here —
-12/24-hour time, colour scheme, custom accent with a contrast badge, text scaling and widget
-selection — all have a surface that obeys them on the day they land.
+**Every destination in that table was re-read in the sibling plan that owns it, because an earlier
+revision of this table got three of the four wrong** — a row named for the wrong reference row, two
+waves taken from `README.md`'s floor rather than from the owning stage, and one destination that is
+not a stage at all. The corrected form of each, with the citation that decides it:
 
-**The fourth deferral is this stage's own rule turned on this stage.** An earlier revision of this
+- **Temperature unit → `06-S7`, and that stage is itself BLOCKED.** The `### Stage id` under
+  `## Stage 06-S7` in `06-documents-and-media.md` reads
+  ``06-S7` · Wave 6 · effort **S**. **BLOCKED.**`, and the block is a commercial decision
+  recorded outside both plans: `11-S3`'s register in `docs/plans/11-boundaries-and-blockers.md` lists
+  `DOC-08` as waiting on a weather provider, and `06-S7` restates why a "free for non-commercial use"
+  endpoint is unusable to a product that charges through Stripe. So this is a deferral **onto a
+  blocked stage**, which is a weaker promise than the other two and is labelled as one rather than
+  dressed up as a schedule. It costs this stage nothing to honour: that stage's own **Data and
+  migration** already places the unit preference "beside the other display preferences in
+  `src/lib/display-preferences.ts`, which `09-S8` (`09-account-and-settings.md`, wave 3) creates" and
+  files no column for it, so the file this stage creates is the agreed destination and the switch
+  waits on the provider decision, not on us.
+- **Route labels → `02-S12`, wave 6, not wave 4.** The `### Stage id` under
+  `## Stage 02-S12 — Transport drawn on the map, and only when it is asked for` reads
+  ``02-S12` · Wave 6 · effort **L**.`, and that stage is the one that draws the endpoint pills and the
+  flight label a label switch would govern. The wave 4 in the earlier revision came from a floor and
+  not from the owning plan: `README.md:226` places `MAP-09` in wave 4 and `11-S3`'s table repeats it,
+  while `02-places-and-maps.md` schedules the stage two waves later and argues the move in its own
+  **Owned paths**. `README.md:190` reads that table as "_this stage may start once every wave above it
+  is closed_" and `:178-180` calls its wave column mechanical — a floor rather than an assignment — so
+  the owning stage's line wins. One consequence is named rather than assumed: `02-S12`'s **Owned paths**
+  do **not** include `src/routes/_app/settings/appearance.tsx`, so shipping the switch means that
+  stage claiming the file in wave 6 — which is free, because this plan's last claim on it is wave 3
+  and `03-S6`'s is wave 4, and `check-plan-collisions.mjs` accordingly reports no same-wave contention
+  on it. That claim is a change to a sibling plan and is reported as one, never written here. `02-S12`
+  is not blocked: it draws great-circle arcs and defers road-following lines, so the routing decision
+  in `11-S3` gates neither the overlay nor its labels.
+- **Blur booking codes → `BKG-01` and `03-S6`, wave 4 — the sibling plan corrected this one and it is
+  right on both counts.** The paragraph headed "Where the switch lives, and the disagreement with a
+  sibling plan that decides it" in `03-reservations-and-transport.md` names the earlier revision of
+  this very table, agrees with the rule that a switch ships in the stage that obeys it, and disagrees
+  with the address: `BKG-01` is the row whose own name carries the masked confirmation code, `BKG-06`
+  is a transports row that happens to share the field, and a wave-1 switch would have added a control
+  to `appearance.tsx` in the wave **before** this stage rebuilds that screen's appearance section.
+  `03-S6` states Wave 4 in its own `### Stage id`, already claims `appearance.tsx`,
+  `src/routes/_app/-server/settings.ts` and `src/server/repos/settings.ts` in that wave, and files
+  `user_settings.mask_confirmation_codes` in its own **Data and migration**. This plan accepts the correction whole: the address changes, the
+  rule does not, and no column for it is requested from the wave-0 schema stage here.
+- **Interface density → nowhere, so it is dropped at this tier rather than deferred.** Naming "a token
+  stage in `00-foundations.md`, wave unscheduled" as a destination, as the earlier revision did, named
+  a stage that does not exist — `00-foundations.md` defines exactly five stages, `00-S1` through
+  `00-S5`, and none of them is a token stage. Measured twice more before dropping it:
+  `grep -rn 'data-density' src/` returns nothing, and `grep -rlni 'density' docs/plans/` matches this
+  file and no other, so no stage anywhere in the thirteen plans is waiting to obey such a switch. What
+  density needs is not a stage but two amendments — a second spacing scale in `src/styles/tokens.css`
+  beside the strict 4px grid at `:503-521`, and a `docs/DESIGN.md` amendment permitting one — and both
+  are argued in full under **UI**. It is recorded here as a display decision for whoever next amends
+  `docs/plans/11-boundaries-and-blockers.md`, in the same shape `09-S7` uses for the push and webhook
+  channels, and this stage ships no control, no column and no "coming soon".
+
+The three deferrals are each a column plus a switch that arrives **with** its surface, in one stage,
+so the switch and the thing it governs are always shipped together; the fourth is a decision not to
+ship either. The five behaviours that do ship here — 12/24-hour time, colour scheme, custom accent
+with a contrast badge, text scaling and widget selection — all have a surface that obeys them on the
+day they land.
+
+**The fourth disposition is this stage's own rule turned on this stage.** An earlier revision of this
 plan shipped a density switch that wrote a `data-density` attribute onto the document element "that
 the existing utility layer keys off". Measured: `grep -rn 'data-density' src/` returns nothing, so
 there is no such layer, and this stage's **Owned paths** contain no stylesheet in which to write
 one. That switch would have governed nothing — the precise defect the other seven stages in this
-file exist to remove — so it is deferred rather than shipped, and what it needs is filed below.
+file exist to remove — so it is dropped rather than shipped, and what it would take to revive it is
+filed below under **UI** instead of half-built here.
 
 **The currency work this stage depends on and does not duplicate.** The regional section shows an
 accounting-currency override, and it must not grow a second opinion about money.
@@ -2637,7 +2694,22 @@ change to this screen's shape.
 mints no second one; if `01-S5` has not landed, the section is not shipped rather than shipped
 against a store this stage invented.
 
-Rows unblocked: none. `ACC-04` has no dependants in `gap-rows.json`.
+Rows unblocked: **`BKG-01`** — the reservations panel and card — which is the one row in
+`.claude/ultrabuild/recon/gap-rows.json` whose `dependsOn` names `ACC-04`. An earlier revision of this
+stage claimed the row had no dependants; that was wrong, and one command settles it:
+`node -e "const r=require('./.claude/ultrabuild/recon/gap-rows.json');console.log(r.filter(x=>(x.dependsOn||[]).includes('ACC-04')).map(x=>x.id))"`
+prints `[ 'BKG-01' ]`.
+
+The edge is scheduled rather than merely acknowledged, and the sibling plan records it in the same
+direction: `03-reservations-and-transport.md:100` carries `BKG-01 → ACC-04` in its edge table, naming
+the supplier as this plan's `09-S8` in wave 3 and noting that `03-S6` is wave 4. So the dependant
+lands one wave after this stage and the two never run together. What `03-S6` takes from here is
+concrete: the appearance screen's display section that this stage rebuilds, into which it adds one
+`Switch`; and a `getEffectiveSettings` already widened by this stage's fields, so its own
+`mask_confirmation_codes` arrives through that one resolution rather than a second one. The ordering
+is `03-S6`'s own argument too, under the same paragraph heading, which is why the masking switch
+moved to wave 4 instead
+of shipping in wave 1 against a screen this stage had not yet rebuilt.
 
 ### Owned paths
 
@@ -2702,10 +2774,12 @@ rollback keeps working because the previous Worker simply never selects the thre
 the next numbered migration in the wave-0 series; it **backfills nothing**, because a null override
 is already the correct value for every existing row.
 
-The four deferred behaviours' columns are not requested here — **including `density`**, which is why
-the table above has two rows and not three. Each arrives with the stage that ships its switch, so no
-column exists in the schema for longer than it is unused, and no reader of the schema is misled into
-thinking a preference is stored that nothing reads.
+No column is requested here for any of the four dispositions above — **including `density`**, which is
+why the table has two rows and not three, and **including `mask_confirmation_codes`**, which `03-S6`
+files in its own **Data and migration** for the wave-4 schema stage. Each deferred column arrives with
+the stage that ships its switch, and the dropped one arrives never, so no column exists in the schema
+for longer than it is unused and no reader of the schema is misled into thinking a preference is
+stored that nothing reads.
 
 ### Server (repo, server function, Zod)
 
@@ -3021,7 +3095,7 @@ and the path table under it.**
 
 ```
 $ node scripts/ultrabuild/check-plan-collisions.mjs 09
-plans 13 · stages 91 · owned paths 544
+plans 13 · stages 91 · owned paths 543
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -3074,10 +3148,12 @@ plan 09: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocatio
 ```
 
 **Zero dangling references, and no missing Playwright invocation.** Every `NN-Sn` token this file
-cites — `00-S2`, `00-S3`, `00-S5`, `01-S1`, `01-S2`, `01-S3`, `01-S5`, `01-S6`, `01-S7`, `01-S8`,
-`02-S2`, `02-S10`, `03-S6`, `04-S1`, `04-S2`, `04-S5`, `04-S7`, `05-S1`, `10-S1`, `10-S3`, `10-S4`,
-`11-S1`, `11-S2`, `11-S3` and this plan's own eight — is defined by a `## Stage` heading in the plan
-whose prefix it carries. The second
+cites — `00-S1`, `00-S2`, `00-S3`, `00-S5`, `01-S1`, `01-S2`, `01-S3`, `01-S5`, `01-S6`, `01-S7`,
+`01-S8`, `02-S2`, `02-S10`, `02-S12`, `03-S6`, `04-S1`, `04-S2`, `04-S5`, `04-S7`, `05-S1`, `06-S7`,
+`10-S1`, `10-S3`, `10-S4`, `11-S1`, `11-S2`, `11-S3` and this plan's own eight — is defined by a
+`## Stage` heading in the plan whose prefix it carries. Three of those tokens are new in this
+revision: `02-S12` and `06-S7` are the corrected destinations in `09-S8`'s disposition table, and
+`00-S1` was cited all along and simply missing from this list. The second
 count is the one that matters for an area plan: each of the eight stages writes its
 `pnpm exec playwright test` line out in full under **Verification**, because `docs/SPEC.md` §3 freezes
 `package.json` and there is no `test:e2e` script to hide behind.

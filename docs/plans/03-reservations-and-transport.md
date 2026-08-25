@@ -110,9 +110,12 @@ on that table: `03-S6` (wave 4) clears `reservations.imported_at` when a reader 
 writer — and neither can smuggle the value through the booking payload, because both validators in
 front of it are `z.object`s that strip an unknown key without complaining. `03-S4` therefore mints
 `markReservationsImported` and `clearReservationImported` alongside its own `linkReservationExpense`,
-three and two waves before their callers exist. The full argument is in that stage's **Server**
-section; it is repeated here because a reader checking the wave order is the reader most likely to
-ask why a wave-3 stage exports a function nothing in wave 3 calls.
+three and two waves before their callers exist — **and files `reservations.imported_at` itself**, in
+its own **Data and migration** section, because a repository function cannot be written in wave 3
+against a column a wave-5 stage files for a later migration. The full argument is in that stage's
+**Server** section; it is repeated here because a reader checking the wave order is the reader most
+likely to ask why a wave-3 stage exports a function nothing in wave 3 calls and declares a column
+nothing in wave 3 reads.
 
 Three edges point **out** of this file and are named with the plan that supplies them, as the
 sibling plans do:
@@ -229,27 +232,47 @@ effort **S|M|L**. `` on the line under `### Stage id`, because a stage with no p
 
 `README.md` forbids any feature stage from claiming `src/server/db/schema.ts`, `src/server/worker.ts`,
 `wrangler.jsonc`, `src/styles/tokens.css`, `src/components/ui/**` or `src/routeTree.gen.ts`. **No
-stage below lists any of them under Owned paths.** What this plan needs from wave 0, gathered here
-once and restated by the stage that needs it:
+stage below lists any of them under Owned paths.** Every schema change this plan needs is therefore
+filed onto a schema stage of `00-foundations.md`, and this section says **which one**, because an
+earlier draft filed all six onto the wave-0 stage and five of them had no owner.
 
-| Requirement                             | Asked by | Kind            |
-| --------------------------------------- | -------- | --------------- |
-| `transports.arrival_day_id`             | `03-S1`  | additive column |
-| `transport_legs` table                  | `03-S2`  | additive table  |
-| `reservations.expense_id`               | `03-S4`  | additive column |
-| `user_settings.mask_confirmation_codes` | `03-S6`  | additive column |
-| `reservations.imported_at`              | `03-S7`  | additive column |
-| `day_accommodations.reservation_id`     | `03-S8`  | additive column |
+**How the filing works, read off `00-foundations.md` rather than assumed.** Its shared-file table
+gives `src/server/db/schema.ts` to "**one schema stage per wave**", whose ritual is to "collect every
+column and table **the next wave** asked for", and its **stage register** mints the wave-1 through
+wave-6 instances "when the wave opens, taking the next free `00-S<k>` id". So the supplier of a
+requirement filed by a stage in wave _n_ is the schema stage of wave _n − 1_, and only a wave-1 filer
+is supplied by `00-S1` — which is exactly what `00-S1`'s own closing clause says it absorbs
+("any **Data and migration** requirement filed by a wave-1 stage in plans 01–11"). A requirement from
+a later wave that names `00-S1` names a stage that has already closed and will not carry it.
 
-**Asking for a column is not the same as being able to write it**, and two rows of that table are
-written by a stage other than the one that asks. `src/server/repos/reservations.ts` is claimed exactly
-once in this plan, by `03-S4` in wave 3; `reservations.expense_id` is asked for and written by that
-same stage, while `reservations.imported_at` is specified by `03-S7` but its writer
-(`markReservationsImported`) and its clearer (`clearReservationImported`) are minted by `03-S4`, three
-and two waves before `03-S6` and `03-S7` call them. A column whose asking stage owns no repository
-file is a column silently stripped by the `z.object` standing in front of it — the defect `03-S8`
-records against `day_accommodations.reservation_id` and closes by owning two lines of
-`src/server/repos/itinerary.ts` in the one wave where that file is free.
+| Requirement                             | Asked by, in wave | Supplier: `00-foundations.md` schema stage         | Kind            |
+| --------------------------------------- | ----------------- | -------------------------------------------------- | --------------- |
+| `transports.arrival_day_id`             | `03-S1`, wave 1   | `00-S1`, wave 0 — named, and inside its own clause | additive column |
+| `transport_legs` table                  | `03-S2`, wave 2   | the **wave-1** schema stage of the register        | additive table  |
+| `reservations.expense_id`               | `03-S4`, wave 3   | the **wave-2** schema stage of the register        | additive column |
+| `reservations.imported_at`              | `03-S4`, wave 3   | the **wave-2** schema stage of the register        | additive column |
+| `user_settings.mask_confirmation_codes` | `03-S6`, wave 4   | the **wave-3** schema stage of the register        | additive column |
+| `day_accommodations.reservation_id`     | `03-S8`, wave 6   | the **wave-5** schema stage of the register        | additive column |
+
+The wave-1, wave-2, wave-3 and wave-5 stages have no id yet, because the register mints ids as waves
+open; they are cited by wave, which is the only stable name they have, and the filing stage restates
+the requirement under its own **Data and migration** heading exactly as the ritual requires. Four
+`pnpm db:generate` runs across the plan's life, not one, which is what "one schema stage per wave"
+means.
+
+**`reservations.imported_at` is asked for by `03-S4`, not by the stage whose behaviour needs it**,
+and that is the whole reason this table changed. `src/server/repos/reservations.ts` is claimed exactly
+once in this plan, by `03-S4` in wave 3, so `markReservationsImported` and `clearReservationImported`
+can only be minted there — and a repository function cannot be written in wave 3 against a column that
+arrives in wave 4. Filing the column with its writer puts the two in the same wave and makes the stage
+compile; `03-S7` (wave 5) and `03-S6` (wave 4) then read and call, and neither declares a column.
+
+**Asking for a column is not the same as being able to write it.** A column whose asking stage owns no
+repository file is a column silently stripped by the `z.object` standing in front of it — the defect
+`03-S8` records against `day_accommodations.reservation_id` and closes by owning two lines of
+`src/server/repos/itinerary.ts` in the one wave where that file is free. Every requirement above is
+filed by a stage that either owns the writing repository itself (`03-S1`, `03-S4`, `03-S6`, `03-S8`)
+or creates the table outright (`03-S2`).
 
 Every one is additive: nullable or defaulted, nothing dropped, nothing renamed, nothing narrowed, so
 a rollback keeps working against the new schema (`ARCHITECTURE.md` §9). No stage needs a token that
@@ -334,7 +357,12 @@ the stage which clears it.
 
 ### Data and migration
 
-**One additive column, and it belongs to the wave-0 foundations schema stage, not here.**
+**One additive column, filed onto `00-S1`, the wave-0 schema stage of `00-foundations.md`, not
+declared here.** This stage is wave 1, so `00-S1` is its supplier by the register's own rule — and it
+is the one requirement in this plan that falls inside `00-S1`'s closing clause verbatim, which absorbs
+"any **Data and migration** requirement filed by a wave-1 stage in plans 01–11". The other five
+requirements of this plan are filed onto later schema stages; the table under **The six shared paths**
+says which.
 
 - `transports.arrival_day_id` — `text`, **nullable**, `REFERENCES days(id) ON DELETE SET NULL`, with
   `index('transports_arrival_day_idx').on(t.arrivalDayId)`. It sits beside the existing
@@ -635,7 +663,12 @@ Rows unblocked: `BKG-10` (`03-S5`, wave 4).
 
 ### Data and migration
 
-**One additive table, stated here and created by the wave-0 foundations schema stage.**
+**One additive table, stated here and created by the wave-1 schema stage of `00-foundations.md`.**
+This stage is wave 2, and the register in that file mints one schema stage per wave whose ritual is to
+collect what **the next wave** asked for — so the supplier is the wave-1 instance, not `00-S1`, whose
+closing clause absorbs wave-1 filers only and which has already closed by the time this stage runs.
+The requirement is filed under this heading, which is the ritual `00-foundations.md` prescribes, and
+it is restated in this plan's shared-paths table with its supplier named.
 
 `transport_legs` — the segments of one transport record, ordered.
 
@@ -1106,9 +1139,9 @@ wave 4).
 
 - `src/server/repos/reservations.ts` — edit. Three new exported writers and **no change to any
   existing validator**: the assignment guard an earlier draft of this stage claimed here is already
-  on disk (`:49` and `:204-213`, measured below), and the two columns wave 0 supplies —
-  `expense_id` and `imported_at` — are deliberately kept out of `reservationFields` so that no
-  client payload can set either. **This is the plan's only claim on the file, in any wave**, which
+  on disk (`:49` and `:204-213`, measured below), and the two columns this stage files onto the
+  wave-2 schema stage — `expense_id` and `imported_at` — are deliberately kept out of
+  `reservationFields` so that no client payload can set either. **This is the plan's only claim on the file, in any wave**, which
   is why the import marker's writer and clearer are minted here rather than in `03-S7` (wave 5) and
   `03-S6` (wave 4), the two stages that call them.
 - `src/server/fns/reservations.ts` — edit. The two write validators gain the assignment; the price
@@ -1154,8 +1187,13 @@ statement it rests on ("`expenses` has no reservation reference") remains true. 
 
 ### Data and migration
 
-**One additive column, belonging to the wave-0 foundations schema stage. No widening of any file this
-stage does not own.**
+**Two additive columns, both filed onto the wave-2 schema stage of `00-foundations.md`. No widening
+of any file this stage does not own.**
+
+This stage is wave 3, so its supplier is the wave-2 instance of the per-wave schema stage the register
+in `00-foundations.md` mints — not `00-S1`, whose closing clause absorbs wave-1 filers only. Both
+columns land in that one `pnpm db:generate` run, one wave ahead of this stage, which is what makes the
+three writers below compilable the moment this stage opens.
 
 - `reservations.expense_id` — `text`, **nullable**, `REFERENCES expenses(id) ON DELETE SET NULL`, with
   `index('reservations_expense_idx').on(t.expenseId)`, declared beside the eight indexes the table
@@ -1173,8 +1211,24 @@ stage does not own.**
   `src/server/repos/expenses.ts`. `createExpenseInput` (`:107`) already accepts every field this stage
   supplies — `tripId`, `title`, `amountMinor`, `currency`, `category`, `dayId`, `placeId`, `spentOn`
   — so not one line of that file changes.
-- Migration: the next ordinal `pnpm db:generate` mints. It **backfills nothing** — every existing
-  booking keeps a null link, which reads as "this booking has no cost line", which is true.
+- `reservations.imported_at` — `integer('imported_at', { mode: 'timestamp_ms' })`, **nullable**, with
+  `index('reservations_org_imported_at_idx').on(t.organizationId, t.importedAt)` so the desk can find
+  the unchecked rows without a scan. It is set when a confirmed import writes a row (`03-S7`, wave 5)
+  and cleared the first time a person opens and saves that booking (`03-S6`, wave 4). **It is asked
+  for here, in the stage that owns the only repository claim on this table**, because a repository
+  function cannot be written in wave 3 against a column that a wave-3 or wave-4 stage files for a
+  later migration. `03-S7`'s **Data and migration** section restates the column as already on disk and
+  files nothing.
+- **Why an instant and not a boolean.** The behaviour the desk needs is "a machine wrote this and
+  nobody has checked it", and an instant answers that question _and_ says when, at the same width the
+  schema already uses for `read_at`, `onboarded_at` and `onboarding_completed_at`. It also lets a later
+  stage sweep or sort by it without a second column. This is a deliberate divergence from the
+  reference's boolean, taken in our own idiom, and it is the reason the marker in `03-S6` is worded as
+  it is.
+- Migration: the next ordinal `pnpm db:generate` mints, carrying both columns. It **backfills
+  nothing** — every existing booking keeps a null link, which reads as "this booking has no cost
+  line", and a null marker, which reads as "typed by a person"; both are true of every row in the
+  database today.
 
 `reservations.assignment_id` needs no schema work **and no validator work**: the column, its FK to
 `day_assignments` and its index are already on disk (`:705-707`, `:735`), and so are its Zod field and
@@ -1242,10 +1296,13 @@ than left standing, because a stage nobody can fail is a stage nobody can verify
   the caller never has to ask first.
 
 **Why the two marker writers are minted in this stage, whose subject is the stop link and the ledger
-line.** `reservations.imported_at` is a wave-0 column (this plan's requirements table, above). It is
-specified by `03-S7`, set by `03-S7`'s confirm in wave 5, and cleared by `03-S6` in wave 4 — and
-**neither of those stages owns `src/server/repos/reservations.ts`. This stage is the only one in the
-plan set that does, in any wave.** Left where they were, both writes were unexecutable in the worst
+line.** `reservations.imported_at` is **this stage's own column**, filed in its **Data and migration**
+section above onto the wave-2 schema stage, so it is on disk one wave before this stage opens. It is
+set by `03-S7`'s confirm in wave 5 and cleared by `03-S6` in wave 4 — and **neither of those stages
+owns `src/server/repos/reservations.ts`. This stage is the only one in the plan set that does, in any
+wave.** That is why the column is asked for here rather than by the stage whose behaviour needs it: a
+column and the only function that may write it have to reach the same wave, and this is the wave in
+which the file is free. Left where they were, both writes were unexecutable in the worst
 way available: `createReservationInput` and `updateReservationInput` are `z.object`s, so an
 `importedAt` handed to `createReservation` or `updateReservation` is **not** an error — it is
 silently **stripped** before the insert. Every imported row would land with a null marker, the desk's
@@ -1488,9 +1545,10 @@ stops, because the alternative is a second opinion about money.
 draft did ask and the request landed nowhere. It needs **no** change to `src/server/repos/expenses.ts`
 and **no** change to `src/server/fns/costs.ts`. It does not need `createExpenseInput` or
 `updateExpenseInput` widened, it does not need a `findExpenseByReservation` read, and it does not need
-`04-S3` to reverse the deferral it states in its own prose. The single schema requirement,
-`reservations.expense_id`, is on a table this stage's own repository owns and is listed in this plan's
-wave-0 requirements table alongside the other five. Verified with
+`04-S3` to reverse the deferral it states in its own prose. Both schema requirements,
+`reservations.expense_id` and `reservations.imported_at`, are on a table this stage's own repository
+owns, and both are filed onto the wave-2 schema stage of `00-foundations.md` — the supplier this
+plan's shared-paths table names for a wave-3 filer. Verified with
 `node scripts/ultrabuild/check-plan-collisions.mjs 03`, whose output is pasted at the foot of this
 file: `src/server/repos/expenses.ts` appears under no stage of this plan, in any wave.
 
@@ -1594,7 +1652,8 @@ stated there rather than left for whoever executes this to discover.
 (`src/server/db/schema.ts:652`) and `transports.arrival_day_id` (`03-S1`) for a whole-record row;
 `transport_legs.departure_day_id`, `arrival_day_id` and `sort_order` (`03-S2`) for a segment row;
 `transports.sort_order` (`:679`, through the shared `sortOrder()` helper) for the record's own
-position. Nothing is filed for the wave-0 schema stage on this stage's account.
+position. **Nothing is filed for any schema stage on this stage's account**, so the register in
+`00-foundations.md` mints nothing for wave 3 because of this stage.
 
 **One number line, three tables, stated once.** For a given day, `day_assignments.order_index`,
 `day_notes.sort_order` and — from this stage — `transports.sort_order` or
@@ -1894,7 +1953,9 @@ only the address changes.
 
 ### Data and migration
 
-**One additive column, belonging to the wave-0 foundations schema stage.**
+**One additive column, filed onto the wave-3 schema stage of `00-foundations.md`.** This stage is
+wave 4, so its supplier is the wave-3 instance of the per-wave schema stage that file's register mints
+— not `00-S1`, whose closing clause absorbs wave-1 filers only and which closed three waves earlier.
 
 - `user_settings.mask_confirmation_codes` — `integer('mask_confirmation_codes', { mode: 'boolean' })
 .notNull().default(false)`, in the idiom of `reduce_motion` two lines above it
@@ -1911,17 +1972,19 @@ with `tabular-nums`, and the masking this stage adds covers the confirmation cod
 price: hiding what a trip costs from the person paying for it would be a different feature and a
 worse one.
 
-**The import marker is `03-S7`'s column, read here — and cleared here through `03-S4`'s writer.**
-`reservations.imported_at` is specified in that stage's **Data and migration**, because the stage
-that first writes a column should be the one that specifies it. This stage reads it, renders the
-marker, and clears it. **It does not claim `src/server/repos/reservations.ts`** — `03-S4` holds that
+**The import marker is `03-S4`'s column, read here — and cleared here through `03-S4`'s writer.**
+`reservations.imported_at` is declared in that stage's **Data and migration** and filed onto the
+wave-2 schema stage, because a column and the only repository that may write it have to reach the same
+wave, and wave 3 is the one wave in which `src/server/repos/reservations.ts` is free. It is therefore
+already on disk two waves before this stage opens. This stage reads it, renders the marker, and clears
+it. **It does not claim `src/server/repos/reservations.ts`** — `03-S4` holds that
 file in wave 3 and is the plan's only claimant — and it adds `importedAt` to no validator, because
 `updateReservationInput` is a `z.object` that would strip the key without raising and the marker
 would simply never clear. The clearing is therefore a named repository function,
 `clearReservationImported(scope, reservationId)`, minted by `03-S4` one wave earlier and called from
 `updateBookingFn` in `src/server/fns/reservations.ts`, which this stage does own. Both columns are
-listed in this plan's wave-0 schema-requirements table and land together in that one
-`pnpm db:generate` run — four and five waves ahead of the stages that use them, which is what makes
+listed in this plan's shared-paths table with their supplier named: `mask_confirmation_codes` on the
+wave-3 schema stage for this stage, `imported_at` on the wave-2 one for `03-S4` — which is what makes
 `03-S4` able to mint a writer for a column neither `03-S6` nor `03-S7` may declare.
 
 ### Server (repo, server function, Zod)
@@ -2196,25 +2259,20 @@ The engine is complete; this stage attaches to it.
 
 ### Data and migration
 
-**One additive column, belonging to the wave-0 foundations schema stage.**
+**No schema change, and nothing filed onto any schema stage.** The one column this stage's behaviour
+turns on is already on disk when it opens.
 
-- `reservations.imported_at` — `integer('imported_at', { mode: 'timestamp_ms' })`, **nullable**, with
-  `index('reservations_org_imported_at_idx').on(t.organizationId, t.importedAt)` so the desk can find
-  the unchecked rows without a scan. Set at the moment a confirmed import writes the row; cleared to
-  null the first time a person opens and saves that booking.
-- **Its write path is `03-S4`'s, one wave earlier, and that is deliberate.** This stage owns no
-  repository file, so it cannot widen a validator or add a writer; `03-S4` (wave 3) is the plan's
-  only claimant of `src/server/repos/reservations.ts` and mints `markReservationsImported` and
-  `clearReservationImported` there. The column is specified here because this is the stage whose
-  behaviour needs it; it is written here through that function and nowhere else.
-- **Why an instant and not a boolean.** The behaviour needed is "a machine wrote this and nobody has
-  checked it", and an instant answers that question _and_ says when, at the same width the schema
-  already uses for `read_at`, `onboarded_at` and `onboarding_completed_at`. It also lets a later stage
-  sweep or sort by it without a second column. This is a deliberate divergence from the reference's
-  boolean, taken in our own idiom, and it is the reason the marker in `03-S6` is worded as it is.
-- Migration: the next ordinal `pnpm db:generate` mints. It **backfills nothing** — every existing
-  reservation keeps a null, which reads as "typed by a person", which is true of every row in the
-  database today.
+- `reservations.imported_at` — declared by **`03-S4`** in wave 3 and supplied by the **wave-2** schema
+  stage of `00-foundations.md`, two waves before this stage runs. A nullable `timestamp_ms` integer,
+  indexed as `reservations_org_imported_at_idx (organization_id, imported_at)`. This stage sets it,
+  through the function named below, and never declares it.
+- **Why it is asked for there and not here, even though this is the stage that first writes it.**
+  This stage owns no repository file, so it can neither widen a validator nor add a writer; `03-S4`
+  (wave 3) is the plan's only claimant of `src/server/repos/reservations.ts` in any wave, and a
+  repository function cannot be written against a column that has not been migrated yet. Column and
+  writer therefore travel together in wave 3, and this stage — three `##` blocks and two waves later —
+  finds both waiting for it. `03-S4`'s **Data and migration** section carries the column's full
+  specification, its index and the argument for an instant rather than a boolean.
 
 **Money on an imported row.** A staged row carries no amount today — the calendar and JSON shapes the
 engine reads do not reliably contain one — so a confirmed import writes `price_minor` null rather than
@@ -2573,7 +2631,8 @@ Rows unblocked: none. No row lists `BKG-05` in its `dependsOn`.
 **Why that one-line widening is claimed here rather than filed elsewhere.** Both validators are
 `z.object`s, so an unknown `reservationId` is not an error — it is silently **stripped** before the
 insert, and the stay would be written with a null link while every test that only checked the return
-value passed. A column supplied by wave 0 that no validator will carry is a column that does nothing.
+value passed. A column supplied by a schema stage that no validator will carry is a column that does
+nothing.
 An earlier draft of this plan made exactly that mistake one stage away, on
 `src/server/repos/expenses.ts`, and `03-S4`'s **Owned paths** section records it; the difference here
 is that `itinerary.ts` is genuinely free in this stage's wave, so the fix is to own the two lines
@@ -2581,7 +2640,10 @@ rather than to route around them.
 
 ### Data and migration
 
-**One additive column, belonging to the wave-0 foundations schema stage.**
+**One additive column, filed onto the wave-5 schema stage of `00-foundations.md`.** This stage is
+wave 6, so its supplier is the wave-5 instance of the per-wave schema stage that file's register mints
+— not `00-S1`, whose closing clause absorbs wave-1 filers only. It is the last requirement this plan
+files, and the only one filed after wave 3.
 
 - `day_accommodations.reservation_id` — `text`, **nullable**,
   `REFERENCES reservations(id) ON DELETE SET NULL`, with
@@ -2805,7 +2867,7 @@ is a measurement.
 ### `node scripts/ultrabuild/check-plan-collisions.mjs 03`
 
 ```
-plans 13 · stages 91 · owned paths 544
+plans 13 · stages 91 · owned paths 543
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -2997,10 +3059,12 @@ All eight stages of this file state their wave in the parsed form, so none is in
 several runs are still writing. While this file was being written the check reported, in order,
 `plans 8 · stages 48`, `plans 9 · stages 56`, `plans 13 · stages 80`, `plans 13 · stages 84`,
 `plans 13 · stages 87`, `plans 13 · stages 91 · owned paths 550`, `plans 13 · stages 91 · owned
-paths 538` and, on the revision that produced the section you are reading, `plans 13 · stages 91 ·
-owned paths 544` — the unique-path count moved by fifteen between two runs minutes apart, and by six
-more on a revision that added **no owned path to this file at all**, with sibling plans dirty in the
-working tree throughout.
+paths 538`, `plans 13 · stages 91 · owned paths 544` and, on the revision that produced the section
+you are reading, `plans 13 · stages 91 · owned paths 543` — the unique-path count moved by fifteen
+between two runs minutes apart, and twice more on revisions that added **no owned path to this file
+at all**. The last of those was measured directly: the check was re-run against this file's own
+previous revision, unmodified, and returned `543` as well, so the drop came from a sibling plan and
+not from anything here. Sibling plans were dirty in the working tree throughout.
 So the header will not reproduce, and it is not the part that matters. The findings under it are
 properties of **this** file's ownership and hold only until a sibling changes what it claims. Any
 agent executing a stage of this file therefore **re-runs both scripts before it writes a line**, reads

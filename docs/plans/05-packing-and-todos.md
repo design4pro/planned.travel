@@ -14,16 +14,16 @@ product rather than a checklist.
 Measured at HEAD, not assumed. Every claim names the file it was read from, because the part of a
 plan most often wrong is the part that asserts how existing code behaves.
 
-| Layer      | What exists                                                                                                                                                                                                                                                                                                                      |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Schema     | `packing_lists` (`src/server/db/schema.ts:877-902`), `packing_items` (`:905-937`), `packing_templates` (`:941-960`), `packing_template_items` (`:962-980`). `LIST_KINDS` is `packing · todo · shopping · documents` (`:205`) and `ITEM_PRIORITIES` is `low · normal · high` (`:206`); both are CHECK-constrained on their table. |
-| Repository | `src/server/repos/lists.ts`, 397 lines. Four `createTenantRepository` handles (`:41-46`), four Zod inputs, four reads and eleven writes. Every query is `tenantFilter()`-built or goes through a repository handle; there is no raw `db.select()` anywhere in the module.                                                        |
-| Server     | `src/server/fns/lists.ts`, 336 lines, eleven `createServerFn`s: list create/update/delete/reset (`:86,108,129,143`), item create/update/delete (`:158,184,205`), bulk done (`:223`), reorder (`:250`), template list and template apply (`:290,314`).                                                                            |
-| Loader     | `loadTripLists` in `src/routes/_app/-server/trip.ts:462-503` — every list of the trip, each with its items and a progress roll-up, plus the trip's people.                                                                                                                                                                       |
-| Route      | `/trips/$tripId/lists` — `src/routes/_app/trips/$tripId/lists.tsx`, 151 lines, with `ListsPending` as `pendingComponent` and `ErrorPanel` as `errorComponent`. Four `StatCard`s and a trip-wide `Progress` sit above the board.                                                                                                  |
-| Screen     | `src/components/modules/lists/`: `lists-board.tsx` (1151), `list-dialogs.tsx` (709), `list-utils.ts` (207), `types.ts` (35), `index.ts` (31), and `__tests__/list-utils.test.ts`.                                                                                                                                                |
-| Formatting | `src/lib/format.ts` owns `formatDate`, `formatNumber`, `formatWeight`, `formatPercent`, `pluralise` and the frozen CLDR month table. `src/routes/_app/-lib/format.ts` re-exports it and re-implements nothing.                                                                                                                   |
-| Realtime   | Every list write already mirrors into the trip's Durable Object as `patch('trip', tripId, { listsChangedAt: Date.now() })` (`src/server/fns/lists.ts:100-102`). `packing-item` is already a declared entity kind (`src/server/do/protocol.ts:57`).                                                                               |
+| Layer      | What exists                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Schema     | `packing_lists` (`src/server/db/schema.ts:877-902`), `packing_items` (`:905-937`), `packing_templates` (`:941-960`), `packing_template_items` (`:962-980`). `LIST_KINDS` is `packing · todo · shopping · documents` (`:205`) and `ITEM_PRIORITIES` is `low · normal · high` (`:206`); both are CHECK-constrained on their table.                                                                                                                                                                                                                           |
+| Repository | `src/server/repos/lists.ts`, 397 lines. Four `createTenantRepository` handles (`:41-46`), four Zod inputs, four reads and eleven writes. Every query is `tenantFilter()`-built or goes through a repository handle; there is no raw `db.select()` anywhere in the module.                                                                                                                                                                                                                                                                                  |
+| Server     | `src/server/fns/lists.ts`, 336 lines, eleven `createServerFn`s: list create/update/delete/reset (`:86,108,129,143`), item create/update/delete (`:158,184,205`), bulk done (`:223`), reorder (`:250`), template list and template apply (`:290,314`).                                                                                                                                                                                                                                                                                                      |
+| Loader     | `loadTripLists` in `src/routes/_app/-server/trip.ts:462-503` — every list of the trip, each with its items and a progress roll-up, plus the trip's people.                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Route      | `/trips/$tripId/lists` — `src/routes/_app/trips/$tripId/lists.tsx`, 151 lines, with `ListsPending` as `pendingComponent` and `ErrorPanel` as `errorComponent`. Four `StatCard`s and a trip-wide `Progress` sit above the board.                                                                                                                                                                                                                                                                                                                            |
+| Screen     | `src/components/modules/lists/`: `lists-board.tsx` (1151), `list-dialogs.tsx` (709), `list-utils.ts` (207), `types.ts` (35), `index.ts` (31), and `__tests__/list-utils.test.ts`.                                                                                                                                                                                                                                                                                                                                                                          |
+| Formatting | `src/lib/format.ts` owns `formatDate`, `formatNumber`, `formatWeight`, `formatPercent`, `pluralise` and the frozen CLDR month table. `src/routes/_app/-lib/format.ts` re-exports it and re-implements nothing. The lists **board** does not: `lists-board.tsx:136` declares a second, locale-blind `formatWeight` and uses it at `:650,653,972`, so the same screen prints 2 000 g twice in two spellings. `05-S1` deletes it.                                                                                                                             |
+| Realtime   | Two mirror shapes ship, not one. **List-shaped** writes stamp the trip — `patch('trip', tripId, { listsChangedAt: Date.now() })` at `src/server/fns/lists.ts:103,124,137,151,269,332`. **Item-shaped** writes address the row — `patch('packing-item', item.id, { listId, name, isDone })` at `:175`, `patch('packing-item', itemId, { name })` at `:200`, one `patch('packing-item', itemId, { isDone })` per id at `:243`, and `tombstone('packing-item', itemId)` at `:213`. `packing-item` is a declared entity kind (`src/server/do/protocol.ts:57`). |
 
 Two measurements that decide how the stages below are shaped:
 
@@ -66,9 +66,23 @@ Stated once here; each stage restates the part it uses.
 
 - **Weight is an `integer` count of grams.** `packing_items.weight_grams` and
   `packing_lists.weight_limit_grams` are both plain integers, both guarded by `nonNegativeCheck`
-  (`schema.ts:934,901`), and `formatWeight` (`src/lib/format.ts:552`) is the only renderer. No stage
-  stores a decimal kilogram, and no stage adds an imperial unit — the unit is a data decision, and
-  changing it later would mean rewriting rows rather than a formatter.
+  (`schema.ts:934,901`). No stage stores a decimal kilogram, and no stage adds an imperial unit — the
+  unit is a data decision, and changing it later would mean rewriting rows rather than a formatter.
+- **There are two weight renderers at HEAD, they disagree, and both print on the lists tab.**
+  `formatWeight` in `src/lib/format.ts:552` is the shared one: locale-aware through `formatNumber`,
+  and it drops a trailing zero because it rounds to `Math.round(kilos * 10) / 10` before formatting.
+  A second, private `formatWeight` is declared at `src/components/modules/lists/lists-board.tsx:136`
+  and used at `:650`, `:653` and `:972`; it is locale-blind and ends in `.toFixed(1)`. Measured
+  consequence on one screen: 2 000 g prints as **`2 kg`** in the "Pack weight" `StatCard`, which
+  imports the shared function (`src/routes/_app/trips/$tripId/lists.tsx:17,90`), and as **`2.0 kg`**
+  in the panel footer four hundred pixels below it. In a locale whose decimal separator is a comma the
+  two disagree on every fractional value. **`05-S1` deletes the private declaration** — it owns
+  `lists-board.tsx` and moves all three of its call sites into the new `list-panel.tsx` and
+  `item-row.tsx`, so it is the stage that decides what those call sites import — and every later stage
+  in this file reads from `src/lib/format.ts` and adds no third implementation.
+- **`src/lib/format.ts` is claimed by no stage in this file.** The shared `formatWeight` is used as it
+  is; nothing here changes its rounding, its signature or its unit thresholds, so no stage needs to
+  own it and no stage's frames depend on a change to it.
 - **Every number that can change carries `font-variant-numeric: tabular-nums`.** Item counts, packed
   counts, gram totals, percentage complete, badge counts on a filter, the weight-limit figure. There
   is no exception, and "it is inside a `StatCard` already" is not one: the stage checks the element
@@ -78,11 +92,35 @@ Stated once here; each stage restates the part it uses.
   the leading column of its composite indexes. A well-formed trip, list or item id arriving from the
   browser is not an authorised one: it is re-resolved inside the caller's scope, and a foreign id is a
   `NotFoundError`.
-- **Realtime fan-out reuses the `trip` entity kind.** Every stage that writes mirrors with
-  `patch('trip', tripId, { listsChangedAt: Date.now() })`, exactly as `createListFn` already does
-  (`src/server/fns/lists.ts:100-102`). **No stage in this file edits `src/server/do/protocol.ts`.**
-  That is deliberate: adding an entity kind to a shared module is how `04-S2` and `07-S1` collided in
-  an earlier round, and the changed-at stamp already causes every peer to invalidate and re-read.
+- **Realtime fan-out reuses the two entity kinds that already ship, and a stage picks by the shape of
+  what it wrote.** Both kinds are already declared, so **no stage in this file edits
+  `src/server/do/protocol.ts`** — adding an entity kind to a shared module is how `04-S2` and `07-S1`
+  collided in an earlier round.
+  - **A write whose subject is a list, a category, a bag or a template** mirrors
+    `patch('trip', tripId, { listsChangedAt: Date.now() })`, exactly as `createListFn` does
+    (`src/server/fns/lists.ts:103`). The stamp makes every peer invalidate and re-read, which is
+    the right granularity when the answer is "the shape of this tab changed".
+  - **A write whose subject is one `packing_items` row** mirrors
+    `patch('packing-item', itemId, { …changed fields })`, and a delete mirrors
+    `tombstone('packing-item', itemId)`, exactly as the four shipped item writers do
+    (`:175`, `:200`, `:213`, `:243`). This is not decoration. The room stores a
+    `{ value, version, at, by }` record **per field per entity** and merges a patch field by field
+    (`src/server/do/trip-room.ts:623-644`), so an item patch produces a commit entry carrying only
+    the fields that moved and a reconnecting peer catches up with that delta instead of re-reading the
+    tab; the `overwrote` notice at `:634-640` is computable only because the granularity is a field.
+    Downgrading an item write to the trip stamp does not corrupt anything — D1 is the durable record
+    and the stamp does force a correct re-read — but it discards the delta and the notice, and it puts
+    two of this module's write paths on two different conventions for no reason. A stage that has
+    written one row mirrors that row.
+  - **A stage that writes both in one handler emits both**, item patches first and the trip stamp
+    last, in the single `mirrorToRoom` array the helper already takes
+    (`src/server/fns/context.ts:51-72`) — one round trip to the room, not two.
+  - **The 50-patch ceiling does not bind this path, and a stage must not assume it does.**
+    `TRIP_ROOM_MAX_PATCHES_PER_MESSAGE` is 50 (`src/server/do/protocol.ts:24`) and is enforced by
+    `clientMessageSchema` (`:147`), the socket path. The server-commit route validates each patch and
+    counts none (`src/server/do/trip-room.ts:868-897`), which is how the shipped
+    `setListItemsDoneFn` legally mirrors up to 200. A bulk item write in this file keeps its own
+    `.max()` at or below the 200 that function already uses and states the number in its Zod section.
 - **No stage adds a route file.** The todo surface in `05-S4` is a validated search parameter on the
   route that already exists, so `pnpm generate-routes` is run by no stage here and
   `src/routeTree.gen.ts` appears in no **Owned paths** list. The alternative — a `/trips/$tripId/todos`
@@ -111,7 +149,7 @@ has to keep working against the new schema.
 So the answer for this area is not "no ceiling", it is **a ceiling in the repository rather than in
 the catalogue**. Every stage that inserts states the bound it enforces, where it is enforced, and the
 error it raises. The precedent already exists in this module: `createTemplateInput.items` is capped at
-500 rows (`src/server/repos/lists.ts:109`), enforced in Zod, with no metric behind it. Packing rows
+500 rows (`src/server/repos/lists.ts:112`), enforced in Zod, with no metric behind it. Packing rows
 are small, are already bounded transitively by the `trips` metric — which _is_ sold and _is_ asserted
 in `createTrip` — and a tenant that wants a million of them has to buy the trips first.
 
@@ -230,9 +268,12 @@ stage is blocked rather than adapted: a second dispatcher is the defect `00-S2` 
 
 - `src/lib/lists/starter-set.ts` — new. The starter content a new packing list opens with, as data.
 - `src/lib/lists/__tests__/starter-set.test.ts` — new.
-- `src/server/repos/lists.ts` — edit. Category access, the starter insert, the assignment writer.
-  Also held by `05-S3` in wave 4 and `05-S5` in wave 5; different waves, and each edit starts from the
-  previous one.
+- `src/server/repos/lists.ts` — edit. Category access, the starter insert, the assignment writer, and
+  the migration of **every existing writer of `packing_items.category` in this module** onto
+  `category_id` — including `applyTemplateToTrip` (`:342`) and `createTemplateFromList` (`:379`),
+  which no later stage may reach because `05-S3` holds this module exclusively in wave 4. Also held
+  by `05-S3` in wave 4 and `05-S5` in wave 5; different waves, and each edit starts from the previous
+  one.
 - `src/server/repos/__tests__/lists-categories.test.ts` — new.
 - `src/server/fns/lists.ts` — edit. The category write path. Also held by `05-S4` (wave 4) and `05-S5`
   (wave 5).
@@ -244,7 +285,8 @@ stage is blocked rather than adapted: a second dispatcher is the defect `00-S2` 
 - `src/routes/_app/-lib/notifications.ts` — edit. One catalogue entry for the new event key. Held by
   `09-S7` (`09-account-and-settings.md`, wave 2) one wave earlier; this stage adds an entry to what it
   leaves.
-- `src/components/modules/lists/lists-board.tsx` — edit. Reduced to the panel grid and its states.
+- `src/components/modules/lists/lists-board.tsx` — edit. Reduced to the panel grid and its states,
+  and the private `formatWeight` at `:136` is **deleted** here rather than carried into the split.
   Also held by `05-S3` in wave 4.
 - `src/components/modules/lists/list-panel.tsx` — new. One list: header, toolbar slot, categories.
   Also held by `05-S3` in wave 4.
@@ -351,10 +393,13 @@ test driver executes sequentially:
    same expression that builds the row, and
    `.onConflictDoNothing({ target: [packingCategories.listId, packingCategories.name] })`. The unique
    index becomes the arbiter of a concurrent second call rather than its victim: the loser inserts
-   nothing and raises nothing. This is the one insert in the module that does not go through
-   `packingCategoriesRepository.insertMany`, for the stated reason that the handle has no conflict
-   clause (`src/server/repos/base.ts:189-203`); the tenant column is still stamped from the scope and
-   still cannot arrive from the caller, and the isolation case below is what proves it.
+   nothing and raises nothing. This is one of the two inserts this stage writes as a raw builder
+   rather than through `packingCategoriesRepository.insertMany` — the other is inside
+   `applyTemplateToTrip`, specified under **Server** below — and the two reasons are different and
+   both stated: the handle carries no conflict clause, and it awaits immediately
+   (`src/server/repos/base.ts:189-203`) so it cannot be composed into a `runBatch` statement array.
+   In both, the tenant column is stamped from `scope.ctx.organizationId` and still cannot arrive from
+   the caller, and the isolation cases below are what prove it.
 3. The update: one correlated statement over `packing_items`, filtered by `tenantFilter()`, the list
    id, `category_id IS NULL` and `category IS NOT NULL`, setting
 
@@ -399,8 +444,8 @@ new `createTenantRepository(packingCategories, 'list category')` handle:
   stitched in memory, the same shape `listTripListsWithProgress` (`:145`) already uses for its counts.
 - `createListCategory(scope, { listId, name, colour })` — `packingListsRepository.requireById` first,
   so a foreign `listId` is a `NotFoundError` before anything is inserted; then the name check; then
-  insert with `sortOrder` one past the current maximum, the same `nextItemSortOrder` idea already at
-  `:238-246`.
+  insert with `sortOrder` one past the current maximum, the same `nextItemSortOrder` helper already
+  at `:243-251`.
 - `renameListCategory(scope, categoryId, name)` and `deleteListCategory(scope, categoryId)` —
   `requireUpdate` and `requireRemove`, so a foreign id raises rather than doing nothing. Deleting a
   category leaves its items in the list with `category_id = null`, which the schema's
@@ -419,7 +464,7 @@ new `createTenantRepository(packingCategories, 'list category')` handle:
 - `seedStarterCategories(scope, listId)` — inserts the starter set for a list that has no categories
   and no items. It refuses a list that has either, so it can never be the reason a row disappears.
 - `assignItemToCategory(scope, itemId, categoryId | null)`, and `category_id` added to the item
-  inputs at `:78-88` alongside the existing `category`.
+  inputs at `:79-89` alongside the existing `category`.
 - `adoptStringCategories(scope, listId)` — the single owner of the string-to-record conversion,
   specified statement by statement under **Data and migration** above. It is `Promise<number>`,
   returning how many categories it created so a caller can tell an adoption from a no-op, it is
@@ -429,15 +474,63 @@ new `createTenantRepository(packingCategories, 'list category')` handle:
   because the insert carries `onConflictDoNothing` against `packing_categories_list_name_unq` and the
   update is correlated rather than carrying ids across the two writes.
 
+**Every writer of `packing_items.category` in this module moves onto `category_id` here, and this is
+the only stage that can do it.** The legacy state described under **UI** below is defined as "a row
+carrying a `category` string and a null `category_id`". Any writer left setting the string and not
+the id would therefore mint fresh rows straight into a read-only group — a group with no collapse, no
+rename and no people chip — and the reader would have no way to tell a row they created a second ago
+from a row that predates the migration. `grep -n "category" src/server/repos/lists.ts` finds exactly
+three functions that write the column and one that reads it, and this stage changes all four:
+
+| Function                            | Line           | Reads or writes                            | What changes                                                                                                                                                                                    |
+| ----------------------------------- | -------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createListItem` / `updateListItem` | `:229`, `:253` | write, via `itemFields` `:79-89`           | `categoryId` joins `category` on the input. A caller that sends `categoryId` gets a record; a caller that sends only `category` goes through `assignItemToCategory`, which adopts first.        |
+| `applyTemplateToTrip`               | `:342`         | write                                      | Creates the categories the template implies **before** it inserts the items, and sets `category_id` on every one of them. Specified step by step below.                                         |
+| `createTemplateFromList`            | `:379`         | read (and writes `packing_template_items`) | Reads each item's group name from its `packing_categories` row when `category_id` is set, falling back to the `category` string when it is not, so saving an unadopted list keeps its headings. |
+| `seedStarterCategories`             | new            | write                                      | Inserts categories first and then items that already carry `category_id`. It never writes a string it would have to adopt later.                                                                |
+
+**`applyTemplateToTrip`, restated.** It keeps its present contract — one template, one new list,
+re-read rather than trusting `RETURNING`, both ids resolved in the caller's scope first — and gains
+one step in the middle. `packing_template_items.category` (`src/server/db/schema.ts:970`) is a group
+name on a template row, which is the same information a `packing_categories` row carries, so:
+
+1. Insert the list through `packingListsRepository.insert`, as today (`:353-358`), which returns the
+   row the function needs and stamps the tenant column out of the caller's reach.
+2. Take the template items' distinct non-null `category` values in `min(sort_order)` order and mint
+   one `packing_categories` row per name on the new list, `id` from `newId()`, `sortOrder` from that
+   minimum.
+3. Insert the items with `category_id` taken from the name→id map minted in step 2, **and**
+   `category` still set to the same string.
+
+**Steps 2 and 3 are one `runBatch`** (`src/server/repos/batch.ts:35`), so a list whose rows exist but
+whose groups do not is never observable. Both are raw `scope.db.insert(...)` builders rather than
+repository-handle calls, because a handle awaits immediately (`src/server/repos/base.ts:189-203`
+returns a `Promise<Array<Row>>`) and therefore cannot be composed into a statement array;
+`organizationId` is written from `scope.ctx.organizationId` in the same expression that builds each
+row, exactly as `adoptStringCategories` does, and the isolation case below is what proves the caller
+cannot supply it. The list insert in step 1 stays a separate awaited write — the ids in step 3 depend
+on it — so this stage narrows the window rather than closing it, and **it corrects the module
+docstring at `:5-7` to say so** instead of leaving a comment that claims the whole copy is one batch
+when it never has been.
+
+Step 3's dual write is the migration ritual's rule and not belt-and-braces: `category` is not dropped
+by this stage, so a rolled-back previous Worker — which reads the string and does not know the column
+exists — must still find a group name on every row it renders (`ARCHITECTURE.md` §9 row 12).
+`adoptStringCategories` is **not** called from here and gains no third call site: the categories are
+minted from the template, not adopted from the list, and the list holds no row until step 3 runs.
+`MAX_CATEGORIES_PER_LIST` and `MAX_ITEMS_PER_LIST` are both checked against the template's counts
+before the batch is assembled, so a 500-row template does not get half-applied and then refused.
+
 **The bound this stage enforces, in place of a quota metric.** `MAX_CATEGORIES_PER_LIST = 40` and
 `MAX_ITEMS_PER_LIST = 500` are constants in the repository, asserted with a `count()` inside the
 caller's scope before every insert, and a breach raises `RepositoryError`
 (`src/server/repos/context.ts:29`) with code `LIST_LIMIT` rather than a bare SQL failure. 500 is not
-arbitrary: it is the ceiling `createTemplateInput.items` already imposes on a template (`:109`), and a list you cannot save as a template is a worse outcome than a
-list you cannot extend. See the plan-level section above for why no `assertQuota` call site exists.
+arbitrary: it is the ceiling `createTemplateInput.items` already imposes on a template (`:112`), and
+a list you cannot save as a template is a worse outcome than a list you cannot extend. See the
+plan-level section above for why no `assertQuota` call site exists.
 
-**Server functions — `src/server/fns/lists.ts`, edit.** Six, all `POST`, all opening with
-`appScope()` then `requireTrip(scope, data.tripId)`, which is the module's existing shape at `:88-89`:
+**Server functions — `src/server/fns/lists.ts`, edit.** Seven, all `POST`, all opening with
+`appScope()` then `requireTrip(scope, data.tripId)`, which is the module's existing shape at `:89-90`:
 
 | Function                  | Returns                            | What it does                                     |
 | ------------------------- | ---------------------------------- | ------------------------------------------------ |
@@ -447,14 +540,34 @@ list you cannot extend. See the plan-level section above for why no `assertQuota
 | `setCategoryCollapsedFn`  | `{ categoryId, isCollapsed }`      | Persists the collapse                            |
 | `reorderListCategoriesFn` | `{ listId }`                       | Applies an explicit order                        |
 | `setCategoryAssigneesFn`  | `{ categoryId, notified: number }` | Replaces assignees and dispatches                |
+| `moveItemToCategoryFn`    | `{ itemId, categoryId }`           | Moves one row between groups, or out of any      |
 
-Each mirrors with `patch('trip', data.tripId, { listsChangedAt: Date.now() })` and nothing else, per
-the plan-level convention. `deleteListCategoryFn` returns `orphanedItems` so the toast can say what
-actually happened instead of "deleted".
+Every one of those six writes a category and not a `packing_items` row, so all six mirror
+`patch('trip', data.tripId, { listsChangedAt: Date.now() })` and nothing else, which is the
+list-shaped half of the plan-level realtime convention. `deleteListCategoryFn` returns
+`orphanedItems` so the toast can say what actually happened instead of "deleted"; the rows it
+orphaned keep their ids, so no tombstone is emitted for any of them.
+
+**A seventh function, and the one item-shaped mirror this stage adds.** `moveItemToCategoryFn`
+(`POST`, returning `{ itemId, categoryId }`) is what the drag between two category sections and the
+row menu's "Move to" both call. It writes exactly one `packing_items` row through
+`assignItemToCategory`, so per the plan-level convention it mirrors
+`patch('packing-item', data.itemId, { categoryId: data.categoryId })` — the row that moved, not the
+whole tab. `deleteListCategoryFn` is the counter-example that keeps the rule readable: it changes
+`category_id` on up to `MAX_ITEMS_PER_LIST` rows at once through `ON DELETE SET NULL`, so it stamps
+the trip rather than emitting five hundred patches, and it says so here rather than leaving a reader
+to wonder which way the rule cut.
+
+**The two shipped item writers gain the field this stage introduces.** `updateListItemFn` (`:184`)
+already mirrors `patch('packing-item', data.itemId, { name: data.name })`; its `itemFields` schema
+(`:57-64`) gains `categoryId`, and its patch payload gains the same key, so a rename and a regroup
+issued in one request arrive as one patch carrying two fields. `createListItemFn` (`:158`) already
+mirrors `patch('packing-item', item.id, { listId, name, isDone })`; `categoryId` joins that payload.
+Neither call site is converted to the trip stamp, and neither gains a second mirror.
 
 **Zod v4, at the boundary.** `z.strictObject()` for every input, `error` for every message, ids as the
 module's existing bounded `rowId` (`:31`), the category name as `z.string().trim().min(1).max(60)`,
-the colour reusing the module's hex refinement at `:39-47`, `userIds` as
+the colour reusing the module's hex refinement at `:38-46`, `userIds` as
 `z.array(rowId).max(50)`. Validation is shape. It decides nothing about permission.
 
 **Authorisation, decided in the handler and again in the repository.** A server function is a public
@@ -506,6 +619,19 @@ The split moves code; it does not rewrite behaviour. `SortableItems`, `SortableI
 `AssigneeMenu` and `InlineItemComposer` (`lists-board.tsx:751,842,1008,1073`) move into
 `item-row.tsx` and `category-section.tsx` with their `@dnd-kit` wiring intact.
 
+**One thing the split does change, because carrying it across would entrench a defect.** The private
+`formatWeight` at `lists-board.tsx:136` is **deleted, not moved.** Its three call sites land in the
+new files — the packed-of-allowance line at `:650,653` in `list-panel.tsx`, the per-row figure at
+`:972` in `item-row.tsx` — and all three import `formatWeight` from `#/lib/format` instead, which is
+what the "Pack weight" `StatCard` on this same screen already does
+(`src/routes/_app/trips/$tripId/lists.tsx:17,90`). The two functions are not equivalent: the private
+one ends in `.toFixed(1)` and takes no locale, so 2 000 g reads `2.0 kg` in the panel and `2 kg` in
+the card twenty rows above it, and every fractional kilogram takes a full stop in a locale that uses a
+comma. After this stage `grep -rn "function formatWeight" src` returns exactly one line,
+`src/lib/format.ts:552`, and the unit test named under **Verification** asserts it. This is the one
+piece of behaviour the split alters, it alters it toward the value already on screen, and no
+subsequent stage in this file adds a weight renderer of its own.
+
 **Primitives reused, all from `src/components/ui` and none re-implemented:** `Card`, `Checkbox`,
 `Chip` (the filter pills — it already has a `selected` variant, `chip.tsx:39-93`), `Badge` and
 `CountBadge` for the per-category counts, `IconButton` for the collapse toggle and row actions,
@@ -537,6 +663,19 @@ outcome. No new primitive is needed, so no requirement is filed against `src/com
   button — the first write, which is what calls `adoptStringCategories`. The reader is never shown a
   migration to run, a progress bar for one, or a state that differs between two people looking at the
   same list.
+
+  **This state is reachable only backwards in time, and that is a property this stage has to keep.**
+  It renders for a list nobody has written to since the migration, and for rows a rolled-back previous
+  Worker wrote afterwards. It must never render for something the reader just did. That is why the
+  writer migration under **Server** above is part of this stage and not a later one: after it, every
+  path that creates a `packing_items` row — the composer, the starter set, `applyTemplateToTrip`, and
+  therefore `05-S2`'s "Apply a template" — sets `category_id`, so the row it produces lands in a real
+  group with a chevron, a menu and a people chip. A stage that shipped the legacy state without
+  shipping the writer migration would put every freshly applied template into a read-only group, and
+  the reader would have no way to tell that from a genuinely old list. The Playwright case named under
+  **Verification** applies a template and asserts the resulting header carries the collapse control,
+  which is exactly the assertion that fails if a writer is missed.
+
 - **Filtered empty** (Open with everything packed, or Done with nothing packed): distinct copy from
   the two above — "Everything here is packed" with a `success`-toned check glyph for the first,
   "Nothing has been ticked yet" for the second. A filter that hides every row must never be
@@ -622,10 +761,15 @@ B's `listId`; `setCategoryAssignees` with B's `categoryId`, and with A's own cat
 who is only a member of B's trip — that one must reject the id rather than silently drop it, because a
 silently dropped assignee is indistinguishable from a successful one on screen;
 `assignItemToCategory` with A's item and B's `categoryId`, and with B's item and A's `categoryId`;
-`seedStarterCategories` with B's `listId`; and `adoptStringCategories` with B's `listId`, which must
+`seedStarterCategories` with B's `listId`; `adoptStringCategories` with B's `listId`, which must
 raise before it reads anything and must leave every one of B's items on its string with
-`category_id` still null. Afterwards `packingCategoriesRepository.count(beta.scope)` is unchanged and
-B's category names are re-read and compared.
+`category_id` still null; and `applyTemplateToTrip` twice, once with B's `templateId` onto A's trip
+and once with A's `templateId` onto B's trip, because this stage gives that function a raw
+`scope.db.insert` and a raw insert is exactly where a stamped tenant column can be lost. Both must be
+a `NotFoundError`, and after both `packingCategoriesRepository.count(beta.scope)` and
+`packingItemsRepository.count(beta.scope)` are unchanged. Afterwards
+`packingCategoriesRepository.count(beta.scope)` is unchanged and B's category names are re-read and
+compared.
 
 ### Verification
 
@@ -653,10 +797,37 @@ B's category names are re-read and compared.
   `listListCategories`, `listTripCategories` and `loadTripLists`'s repository half against a list full
   of string groups leaves `packingCategoriesRepository.count(scope)` at zero, which is the assertion
   that a read never writes.
+
+  The writer migration gets five cases of its own in the same file, and they are the cases that
+  decide whether `05-S2` ships a usable feature or a read-only one:
+  `applyTemplateToTrip` over a template whose rows carry three distinct group names creates exactly
+  three `packing_categories` rows on the new list, in `min(sort_order)` order, and **every** copied
+  item comes back with a non-null `category_id` — asserted as `items.every(i => i.categoryId !== null)`
+  rather than by sampling one row; the same call also leaves `category` set on every row, which is the
+  rollback half of the dual write and would otherwise be silently dropped by a future refactor; a
+  template whose rows carry no group name at all creates zero categories and still copies every row;
+  a template that would breach `MAX_CATEGORIES_PER_LIST` or `MAX_ITEMS_PER_LIST` raises `LIST_LIMIT`
+  and creates **no list**, so a refused apply leaves nothing behind to clean up; and
+  `createTemplateFromList` over a list whose items are on `category_id` records reproduces the
+  category **names** on the template rows, while the same call over an unadopted list reproduces the
+  strings — one function, both representations, so saving a list is never the operation that loses its
+  headings.
+
 - `src/components/modules/lists/__tests__/list-utils.test.ts` — extended: grouping keys off
   `categoryId` when it is present and off the legacy `category` string when it is not; a legacy group
   sorts after every record group and is marked read-only; `selectAllState` over a collapsed category
   still counts its items.
+- `src/lib/__tests__/format-locale.test.ts` is **not** edited — this stage owns nothing under
+  `src/lib/format.ts` and adds no case to its suite. The single-renderer invariant is asserted where
+  the duplicate lived instead. The panel footer's sentence — three clauses assembled inline at
+  `lists-board.tsx:650-654`, "… packed", "of a … allowance" and "— over the limit" — becomes a pure
+  `weightSummary(weightGrams, weightLimitGrams)` in
+  `list-utils.ts`, beside `progressOf` and for the same reason — a string a component assembles inline
+  is a string no test can reach — and `list-utils.test.ts` asserts that for 2 000 g it contains
+  `formatWeight(2000)` imported from `#/lib/format`. That is precisely the assertion the deleted
+  `.toFixed(1)` implementation fails (`2.0 kg`) and the shared one passes (`2 kg`), so the duplicate
+  cannot return without turning a test red. The per-row figure in `item-row.tsx` calls
+  `formatWeight` directly with no intermediate string, so it needs no helper and gets none.
 
 **Playwright.** `PLAYWRIGHT_BASE_URL` is always passed, because the config otherwise waits on port
 3000 until the global timeout:
@@ -676,6 +847,21 @@ including the ones that only take a frame. It adds no entry to `TOLERATED_CONSOL
 is the gate's own contract and is not widened to make one stage green. It imports `visit`, `settle`,
 `shoot`, `applyTheme`, `useSession` and `watchConsole` from `./helpers/shoot.ts` and re-implements
 none of them.
+
+**Two non-visual assertions in the same spec, both of which fail if a writer was missed.** They take
+no frame and exist because the defect they catch is invisible in a screenshot of a seeded trip.
+
+1. **A newly created row is never legacy.** Add one item through the inline composer into a category
+   the test created in the same run, then assert the row's own group header exposes
+   `[data-part="category-collapse"]`. A legacy header publishes no such attribute, so the assertion is
+   the difference between a record group and a string group stated as a locator count.
+2. **An applied template lands in real groups.** Apply a workspace template through the affordance
+   `05-S2` ships — the spec skips this case with a named reason when `05-S2` has not landed, rather
+   than asserting nothing — and assert that every category header inside the resulting list exposes
+   `[data-part="category-collapse"]` and that `[data-part="category-legacy"]` resolves to zero inside
+   it. This is the regression net for the whole writer migration: if `applyTemplateToTrip` is left
+   writing strings, the second locator is non-zero and the case fails with a count rather than with a
+   pixel difference nobody can attribute.
 
 **The trip id is not a constant.** `$tripId` is `trips.id`, minted by `newId()` at seed time
 (`src/routes/_app/-ui/trip-card.tsx:113` links with `params={{ tripId: trip.id }}`), so neither the
@@ -698,12 +884,17 @@ header is attached only when it is set (`scripts/ultrabuild/capture.mjs:168-178`
 `BASELINE_DAY` from `e2e/helpers/shoot.ts:1014`, the same value the gate sends. A stage that pins the
 capture to one day and the gate to another has photographed two products.
 
-The two selectors are `data-part` attributes this stage publishes on the collapse toggle and the
-people trigger, chosen over class names because a class does not survive a restyle. **A plan cannot
-verify a selector for a surface it has not built**; the executing stage verifies each with
-`await page.locator(sel).count()` returning 1 against a running server _before_ it runs
-`capture.mjs`, and records the count in its evidence. A selector that resolves to nothing makes
-`capture.mjs` throw at `--click`, which costs a round.
+This stage publishes three `data-part` attributes, chosen over class names because a class does not
+survive a restyle: `category-collapse` on the collapse toggle, `category-people` on the people
+trigger, and `category-legacy` on a legacy header's wrapper. The third exists only so the two
+assertions above can be counts rather than screenshots, and it is the attribute that makes "is this
+group a record or a string" answerable from outside React. A record header carries the first two and
+never the third; a legacy header carries the third and neither of the others. **A plan cannot verify a
+selector for a surface it has not built**; the executing stage verifies each with
+`await page.locator(sel).count()` against a running server _before_ it runs `capture.mjs` — 1 for the
+two clicked selectors, 0 for `category-legacy` on a list the stage has just written to — and records
+the counts in its evidence. A selector that resolves to nothing makes `capture.mjs` throw at
+`--click`, which costs a round.
 
 The skeleton and error states are not reachable by clicking. The skeleton is photographed in the spec
 behind a `page.route()` that delays the loader's response; the error state behind a `page.route()`
@@ -759,8 +950,9 @@ On top of those, for every surface this stage ships:
   package, and neither `package.json` nor `pnpm-lock.yaml` is edited by anything here.
 - **`12-verification-protocol.md` §7.2 does not apply to this stage**, and the measurement is
   recorded rather than assumed: a `grep -rn` for `Intl.` over `src/components/modules/lists/` and the
-  lists route returns nothing, so no abbreviated-month string renders on this tab. The stage adds none either — dates go through `formatDate` in `src/lib/format.ts`, which
-  answers from the frozen CLDR table.
+  lists route returns nothing, so no abbreviated-month string renders on this tab. The stage adds
+  none either — dates go through `formatDate` in `src/lib/format.ts`, which answers from the frozen
+  CLDR table.
 - **§7.3 still applies**, as it applies to every stage: nothing in the repository pins the browser
   revisions, so these baselines are a single-machine regression net rather than cross-machine truth. A
   `mobile-safari` difference this stage cannot attribute is reported here and the comparison budget is
@@ -788,6 +980,21 @@ rows into a trip inside one scope, re-reading rather than trusting `RETURNING`; 
 sample, which is exactly the "a name alone is not enough to choose between two packing lists"
 problem; and `list-dialogs.tsx` consumes both. This stage does not touch any of it.
 
+**What `05-S1` already did to it, without which this stage would ship a read-only feature.** At HEAD
+`applyTemplateToTrip` copies `packing_template_items.category` into `packing_items.category` as a
+string (`:361-372`). `05-S1` defines a row carrying a `category` string and a null `category_id` as
+the **legacy group**: a header with no collapse chevron, no rename, no reorder and no people chip.
+Left alone, the single affordance this stage exists to ship — applying a template — would therefore
+mint a brand-new list that the reader cannot restructure, indistinguishable on screen from a list
+that predates the migration. That is not a defect this stage can repair: `05-S3` holds
+`src/server/repos/lists.ts` exclusively in wave 4 and two stages may not edit one module in parallel.
+It is repaired one wave earlier instead. `05-S1` migrates **every** writer of `packing_items.category`
+in that module onto `category_id`, `applyTemplateToTrip` among them — it mints one
+`packing_categories` row per distinct template group name on the new list, batched with the item
+insert, and still writes the string for rollback. This stage therefore inherits a function that
+produces real groups, adds no repository code of its own, and **asserts the inherited behaviour rather
+than assuming it** in the Playwright case named under **Verification**.
+
 **What is unreached, and is therefore the stage.** `createTemplate` (`:310`), `deleteTemplate`
 (`:332`) and `createTemplateFromList` (`:379`) have no caller in `src/` outside `__tests__`. Measured:
 `grep -rn` over `src` for the three names returns `repositories.test.ts:63,64,331,340` and
@@ -805,8 +1012,10 @@ surface offers to overwrite instead when the collision is the user's own templat
 one packing list a trip has, by group name. Here a trip has many lists — `packing_lists` has shipped
 since the first migration and the screen renders several side by side — so a template lands as **its
 own list**, which is what `applyTemplateToTrip` already does. Applying is additive in the sense that
-matters: nothing that exists is removed, and group names carry across so a template's rows land under
-the names the template chose (`:361-372`). Merging into a _selected_ list is a different behaviour,
+matters: nothing that exists is removed, and group names carry across — as `packing_categories` rows
+on the new list after `05-S1`, not as the strings the function writes at HEAD (`:361-372`) — so a
+template's rows land under the names the template chose, in groups the reader can immediately rename,
+collapse, reorder and share. Merging into a _selected_ list is a different behaviour,
 would need a new repository function, and is not planned here; if it is ever wanted it is a stage of
 its own and not a footnote on this one.
 
@@ -848,10 +1057,20 @@ workspace under any value.
 
 ### Server (repo, server function, Zod)
 
-**Repository.** No new SQL and no edit to `src/server/repos/lists.ts` — this stage does not hold that
-module in this wave and does not need it. It composes `createTemplate`, `createTemplateFromList`,
-`deleteTemplate`, `listTemplates` (`:296`) and `listTemplateItems` (`:300`), all of which are already
-tenant-scoped through `packingTemplatesRepository` and `packingTemplateItemsRepository` (`:43-46`).
+**Repository.** No new SQL and no edit to `src/server/repos/lists.ts` — `05-S3` holds that module
+exclusively in wave 4, and this stage does not need it. It composes `createTemplate`,
+`createTemplateFromList`, `deleteTemplate`, `listTemplates` (`:296`) and `listTemplateItems` (`:300`),
+all of which are already tenant-scoped through `packingTemplatesRepository` and
+`packingTemplateItemsRepository` (`:43-46`).
+
+**The two functions this stage composes were both changed by `05-S1`, and it consumes the changed
+versions.** `applyTemplateToTrip` now mints `packing_categories` rows rather than writing group
+strings, so the "Apply" action produces a list whose groups are records. `createTemplateFromList` now
+reads each item's group name from its category record when `category_id` is set and from the
+`category` string when it is not, so "Save as template" round-trips a list's headings in both
+representations. Neither signature changed, so this stage's call sites are unaffected — but the
+behaviour it depends on is `05-S1`'s and not HEAD's, which is why `05-S1` is named in **Blockers**
+below with a wave and not merely mentioned.
 
 **Server functions — `src/server/fns/list-templates.ts`, new**, each opening with `appScope()`:
 
@@ -861,9 +1080,11 @@ tenant-scoped through `packingTemplatesRepository` and `packingTemplateItemsRepo
 | `deleteListTemplateFn` | POST   | `{ templateId }`                  | `deleteTemplate` → `requireRemove`, so a foreign id is a `NotFoundError` before anything runs |
 | `renameListTemplateFn` | POST   | `{ templateId, name }`            | `packingTemplatesRepository.requireUpdate` in the caller's scope                              |
 
-`saveListAsTemplateFn` mirrors with `patch('trip', data.tripId, { listsChangedAt: Date.now() })`; the
-other two mirror nothing, because a template is workspace state and not trip state, and firing a trip
-patch for it would wake a Durable Object that has nothing to hear.
+`saveListAsTemplateFn`'s subject is a template rather than a `packing_items` row, so it takes the
+list-shaped half of the plan-level realtime convention —
+`patch('trip', data.tripId, { listsChangedAt: Date.now() })` — and emits no item patch, because it
+created no item. The other two mirror nothing, because a template is workspace state and not trip
+state, and firing a trip patch for it would wake a Durable Object that has nothing to hear.
 
 **Name resolution, in the repository's caller rather than in SQL.** Before inserting,
 `saveListAsTemplateFn` counts templates in the caller's scope whose name equals the requested one. If
@@ -879,7 +1100,7 @@ the way in and that redundancy is kept.
 
 **Nothing slow runs inline.** A template save is one read of a list's rows and one batched insert,
 both bounded by `MAX_ITEMS_PER_LIST` from `05-S1` and by `createTemplateInput.items`' own cap of 500
-(`src/server/repos/lists.ts:109`). There is no export, no email and no external call, so nothing is
+(`src/server/repos/lists.ts:112`). There is no export, no email and no external call, so nothing is
 enqueued on `TASKS`.
 
 ### UI (route, components)
@@ -946,7 +1167,7 @@ table (`schema.ts:323`).
 The bound this stage enforces instead: `MAX_TEMPLATES_PER_WORKSPACE = 100`, checked with a scoped
 `count()` in `saveListAsTemplateFn` before the insert, raising the module's validation error. A
 template's own row count is already bounded at 500 by `createTemplateInput.items`
-(`src/server/repos/lists.ts:109`), so the worst case a workspace can reach is bounded on both axes.
+(`src/server/repos/lists.ts:112`), so the worst case a workspace can reach is bounded on both axes.
 
 ### Tenant isolation test
 
@@ -957,9 +1178,18 @@ this block needs is present.
 Covered: `listTemplates` in A's scope never returns B's template; `listTemplateItems` with B's
 `templateId` returns nothing; `deleteTemplate` and the rename path with B's `templateId` are
 `NotFoundError`; `createTemplateFromList` with B's `listId` is a `NotFoundError` and writes no
-template row; `applyTemplateToTrip` with B's `templateId` onto A's trip, and with A's template onto
-B's trip, are both `NotFoundError` and leave both trips' list counts unchanged. Afterwards B's
-template is re-read by id in B's scope and its name and row count are unchanged.
+template row. Afterwards B's template is re-read by id in B's scope and its name and row count are
+unchanged.
+
+**`applyTemplateToTrip` is deliberately absent from this block**, and that is not an omission this
+stage can be read as having made. `05-S1` gives that function a raw `scope.db.insert` for the
+categories it mints, so the stage that introduces the raw insert is the stage that owns proving the
+tenant column survives it, and it covers both directions — B's template onto A's trip and A's
+template onto B's trip — in its own `'packing categories'` block. Repeating the pair here would put
+two identical cases in one file under two headings, and the day one of them is updated the other
+becomes a quiet lie. What this stage asserts about the function instead is behavioural and lives in
+`src/server/fns/__tests__/list-templates.test.ts`: that applying produces category records rather
+than strings.
 
 ### Verification
 
@@ -971,6 +1201,16 @@ whose row count equals the list's; saving the same list twice without `overwrite
 the copy path appends an ordinal and never raises a UNIQUE violation; the eight-attempt bound falls
 back to a time-suffixed name rather than looping; `MAX_TEMPLATES_PER_WORKSPACE` raises at the ceiling
 and not one row before it.
+
+**Two cases that assert the behaviour this stage inherits rather than owns**, in the same file,
+because a dependency nobody checks is a dependency that silently regresses. Applying a template whose
+rows carry group names returns a list on which `listListCategories` reports one category per distinct
+name and on which every item has a non-null `category_id` — the assertion that `05-S1`'s writer
+migration is present and that this stage's one affordance does not produce a read-only list. Saving
+that same list straight back as a template reproduces the same group names on the template's rows, so
+apply-then-save is a round trip and not a lossy one. Both call the repository directly; neither
+duplicates the cases `05-S1` already holds in `lists-categories.test.ts`, which cover the function's
+own edge behaviour — these two cover **this stage's composition of it**.
 
 **Playwright**, with `PLAYWRIGHT_BASE_URL` always passed:
 
@@ -997,7 +1237,13 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
 ```
 
 and again with `--state save --click '[data-part="template-save"]'` and with `--state conflict`,
-which the spec reaches by saving twice. The three `data-part` selectors are published by this stage;
+which the spec reaches by saving twice. A fourth, `--state applied`, photographs the list an apply
+produced — this stage's actual outcome, and the frame in which a regressed writer migration would be
+visible rather than merely asserted: a legacy header has no chevron and no avatar stack, so the
+difference is in the picture. The same test asserts
+`page.locator('[data-part="category-legacy"]').count()` is `0` inside that list and that every group
+header in it exposes `[data-part="category-collapse"]`, using the attributes `05-S1` publishes. The
+`data-part` selectors are published by this stage or by `05-S1`;
 each is verified with `await page.locator(sel).count()` returning 1 against a running server before
 `capture.mjs` runs, and the counts go in the evidence. The library's empty state is photographed by
 pointing the same capture at a workspace with no templates, which the spec produces by deleting the
@@ -1047,9 +1293,16 @@ On top of those, for every surface this stage ships:
 
 ### Blockers
 
-- **`05-S1` must have landed**, because the toolbar this stage extends is created there and because a
-  template's rows carry group names that only mean something once groups are records. Wave 3 closes
-  before wave 4 opens.
+- **`05-S1` (wave 3) must have landed, and this is the hardest dependency in the file.** Three
+  separate things this stage ships depend on it, and only the first is cosmetic. (a) `list-toolbar.tsx`,
+  which hosts both of this stage's controls, is created there. (b) `applyTemplateToTrip` writes group
+  strings at HEAD; `05-S1` moves it onto `packing_categories` records. Without that, the single
+  affordance this stage exists to ship produces a list stuck in `05-S1`'s read-only legacy state, and
+  **no stage in wave 4 can repair it** because `05-S3` holds `src/server/repos/lists.ts` exclusively
+  in this wave. (c) `createTemplateFromList` reads an item's group name; without `05-S1` it reads only
+  the string, so saving an adopted list back to the library would silently drop every heading. Wave 3
+  closes before wave 4 opens, so this is a sequencing statement — but if this stage is scheduled early
+  it is **blocked, not adapted**, and it does not reach into the repository module to fix it itself.
 - **No package is missing**, and none is installed.
 - **§7.2 does not apply**, on the same measurement `05-S1` records: the lists module constructs no
   `Intl` formatter, and this stage adds none.
@@ -1075,8 +1328,18 @@ whatever has not been assigned, and the totals that recompute as rows move.
 `packing_lists.weight_limit_grams` both ship (`src/server/db/schema.ts:919,891`), both are guarded by
 `nonNegativeCheck` (`:934,901`), `listTripListsWithProgress` (`src/server/repos/lists.ts:145-181`)
 already sums weight per list in SQL, and the lists route already renders pack weight and the heaviest
-list as `StatCard`s (`src/routes/_app/trips/$tripId/lists.tsx:82-93`). `formatWeight`
-(`src/lib/format.ts:552`) is the only weight renderer and stays that way.
+list as `StatCard`s (`src/routes/_app/trips/$tripId/lists.tsx:82-93`).
+
+**Weight rendering, stated as it actually is.** At HEAD there are **two** `formatWeight`
+implementations and they disagree: the shared one at `src/lib/format.ts:552`, and a private one at
+`src/components/modules/lists/lists-board.tsx:136` whose `.toFixed(1)` prints 2 000 g as `2.0 kg`
+where the shared one prints `2 kg` — on this same screen, twenty rows apart. `05-S1` deletes the
+private declaration when it splits that file and points its three call sites at `#/lib/format`, so by
+the time this stage runs there is one renderer. This stage **consumes** it and adds none: every gram
+figure it introduces — the per-bag total, the bag's limit, the over-limit delta and the unassigned
+bucket's total — calls `formatWeight` from `#/lib/format`, and `src/lib/format.ts` appears in no
+**Owned paths** list in this file. If `05-S1` has not landed, this stage is blocked on it for the
+reason recorded in **Blockers**, not free to import whichever of the two it finds.
 
 **What is missing is the container.** There is no bag entity, so a weight can be totalled per list but
 never per case, and nothing can carry a limit that means "this is what the airline will accept".
@@ -1206,8 +1469,24 @@ neither the new tables nor the new column.
 | `assignItemToBagFn`  | POST   | `{ itemId, bagId }`        |
 | `assignItemsToBagFn` | POST   | `{ bagId, moved }`         |
 
-Every one mirrors with `patch('trip', data.tripId, { listsChangedAt: Date.now() })` and declares no
-new entity kind, per the plan-level convention — `src/server/do/protocol.ts` is not edited.
+No entity kind is declared and `src/server/do/protocol.ts` is not edited; the six split across the
+plan-level convention's two halves by what each of them wrote:
+
+- `createBagFn`, `updateBagFn`, `deleteBagFn` and `setBagMembersFn` write a bag or its join rows, so
+  they mirror `patch('trip', data.tripId, { listsChangedAt: Date.now() })` and nothing else.
+  `deleteBagFn` releases up to a whole list's rows to the bucket through `ON DELETE SET NULL`, which
+  is why it takes the trip stamp rather than emitting a patch per released row — the same cut
+  `05-S1` makes for `deleteListCategoryFn`, and made the same way so a reader meets one rule twice
+  rather than two rules once.
+- `assignItemToBagFn` writes exactly one `packing_items` row, so it mirrors
+  `patch('packing-item', data.itemId, { bagId: data.bagId })`, matching the four item writers that
+  already ship (`src/server/fns/lists.ts:175,200,213,243`).
+- `assignItemsToBagFn` is the bulk form and emits one `patch('packing-item', itemId, { bagId })` per
+  id, exactly as `setListItemsDoneFn` (`:243`) already does for `isDone`. Its Zod bound is
+  `z.array(rowId).max(200)`, at the ceiling that function uses; the 50-patch limit
+  (`src/server/do/protocol.ts:24`) governs `clientMessageSchema` and not the server-commit route
+  (`src/server/do/trip-room.ts:868-897`), which is why 200 is legal here and is stated rather than
+  assumed.
 
 **Read path — `src/routes/_app/trips/$tripId/-server/bags.ts`, new.** One `GET` server function,
 `loadTripBagsFn`, validated on `{ tripId }`, opening with `appScope()` then `requireTrip`. It returns
@@ -1220,7 +1499,7 @@ for a tab's own server module; the reason this stage uses it rather than the sha
 
 **Zod v4.** `z.strictObject()` throughout; `name` as `z.string().trim().min(1).max(60)` with an
 `error`; `weightLimitGrams` as `z.number().int().min(0).max(500_000).nullable()`, matching the bound
-`src/server/fns/lists.ts:55` already applies to a list's limit; `colour` reusing the module's hex
+`src/server/fns/lists.ts:54` already applies to a list's limit; `colour` reusing the module's hex
 refinement; `bagId` nullable to express "back to the bucket"; `itemIds` as `z.array(rowId).max(200)`.
 
 **Authorisation.** Decided in the handler and again in the repository, never in `beforeLoad`. Every
@@ -1428,8 +1707,11 @@ On top of those, for every surface this stage ships:
 
 ### Blockers
 
-- **`05-S1` must have landed** — the item row and the list panel this stage edits are created there.
-  Wave 3 closes before wave 4 opens.
+- **`05-S1` must have landed** — the item row and the list panel this stage edits are created there,
+  and it is also the stage that deletes the private `formatWeight` at `lists-board.tsx:136`. Every
+  gram figure this stage prints imports the shared one from `#/lib/format`; scheduled before `05-S1`,
+  it would either import a duplicate that is about to be deleted or add a third. Wave 3 closes before
+  wave 4 opens.
 - **The wave-4 schema stage must have landed**, carrying `packing_bags`, `packing_bag_members` and
   `packing_items.bag_id`. The requirement is filed above; the module is not edited here.
 - **No package is missing.** `vaul` backs `Sheet`, `radix-ui` backs `Popover`, both are pinned. None
@@ -1464,7 +1746,7 @@ needs exists too: `createListItemFn`, `updateListItemFn`, `deleteListItemFn` and
 `src/server/repos/lists.ts` is not edited here — `05-S3` holds it this wave.
 
 **What is missing** is the surface, and two fields the write path does not accept: `itemFields` in
-`src/server/fns/lists.ts:56-63` validates `name`, `category`, `quantity`, `weightGrams`, `assignedTo`
+`src/server/fns/lists.ts:57-64` validates `name`, `category`, `quantity`, `weightGrams`, `assignedTo`
 and `priority`, and carries **neither `description` nor `dueDate`** — so the two columns that make a
 task a task cannot be written from the browser at all.
 
@@ -1532,11 +1814,11 @@ and re-covered by the isolation cases below rather than assumed.
 
 **Server functions — `src/server/fns/lists.ts`, edit.**
 
-- `itemFields` (`:56-63`) gains `description` as `z.string().trim().max(2000)` and `dueDate` as
+- `itemFields` (`:57-64`) gains `description` as `z.string().trim().max(2000)` and `dueDate` as
   `z.iso.date().or(z.literal(''))`, where `''` means "no date" — the shape a cleared `DatePicker`
   produces, and the same `orNull` convention `createListFn` already uses for an empty owner
   (`src/server/fns/lists.ts:96`). Both flow into `createListItemFn` and `updateListItemFn`, whose
-  repository inputs already accept them (`src/server/repos/lists.ts:78-88`): the columns and the
+  repository inputs already accept them (`src/server/repos/lists.ts:79-89`): the columns and the
   repository Zod were always ready, and only the boundary schema was not.
 - `loadTripTodosFn` — `GET`, validated on `{ tripId }`, opening with `appScope()` then
   `requireTrip`. It returns the trip's `todo`-kind lists with their rows, each row carrying its
@@ -1561,8 +1843,20 @@ A well-formed id from the browser is not an authorised id, and `beforeLoad` deci
 **Zod v4.** `z.strictObject()` on the new input, `z.iso.date()` rather than a hand-rolled regex, the
 `error` parameter for every message. Validation is shape, not permission.
 
-**Nothing slow inline**, nothing enqueued, and the existing `patch('trip', …)` mirror is reused
-unchanged.
+**Nothing slow inline** and nothing enqueued.
+
+**Realtime, restated because this stage adds no server function and could look as though it adds no
+mirror either.** It widens `itemFields` (`src/server/fns/lists.ts:57-64`) with `description` and
+`dueDate`, so the two writers that consume it — `createListItemFn` (`:158`) and `updateListItemFn`
+(`:184`) — start persisting two more columns of a `packing_items` row. Those two already mirror
+`patch('packing-item', …)` (`:175`, `:200`), and per the plan-level convention the two new fields
+join **that** payload rather than being answered by a trip stamp: `updateListItemFn` sends
+`patch('packing-item', data.itemId, { name, dueDate, description })`, so a peer whose detail pane is
+open on that task sees the due date change without re-reading the tab, and the room's per-field
+version tracking keeps a concurrent tick on the same row from being clobbered by a concurrent date
+edit. Neither writer is converted to `patch('trip', …)`, no writer gains a second mirror, and no new
+entity kind is declared — `src/server/do/protocol.ts` is not edited. `loadTripTodosFn` is a `GET` and
+mirrors nothing, because it writes nothing.
 
 ### UI (route, components)
 
@@ -1930,8 +2224,25 @@ the only place it lives — a check in the handler alone would be reachable arou
 | `copyItemToMyListFn` | `{ itemId }` — the **new** row's id  | Returns the copy so the surface can scroll to it         |
 | `setItemBringerFn`   | `{ itemId, assignedTo }`             | Validated against `listTripParticipants`                 |
 
-All four mirror with `patch('trip', data.tripId, { listsChangedAt: Date.now() })` and declare no new
-entity kind; `src/server/do/protocol.ts` is not edited.
+No entity kind is declared and `src/server/do/protocol.ts` is not edited. All four write a
+`packing_items` row or its satellite rows, so all four take the item-shaped half of the plan-level
+convention, and two of them need a second patch as well:
+
+- `setItemBringerFn` writes one column of one row, so it emits one patch carrying that column:
+  `patch('packing-item', data.itemId, { assignedTo: data.assignedTo })`.
+- `setItemAudienceFn` changes the row's `audience` column and replaces its `packing_item_viewers`
+  rows. The viewers are not a `packing-item` entity, and a viewer list is not a field a peer renders
+  directly — what a peer renders is whether the row is visible to them at all, which is a re-read.
+  So it emits both: `patch('packing-item', data.itemId, { audience: data.audience })` **and** the trip
+  stamp, in one `mirrorToRoom` array, per the convention's third clause.
+- `toggleItemHelperFn` writes only a pledge row, so it emits
+  `patch('packing-item', data.itemId, { helperCount })` — the count is what the row renders, and
+  sending it means a peer's chip updates without a re-read.
+- `copyItemToMyListFn` creates a **new** row, so it mirrors that row the way `createListItemFn`
+  (`src/server/fns/lists.ts:175`) mirrors its own — one
+  `patch('packing-item', <the copy's id>, { listId, name, isDone: false })` — and adds the trip stamp,
+  because a list gained a row and the reader's own list panel has to re-count. The source row is
+  untouched and gets no patch.
 
 **Audience inheritance on create, at the boundary.** `createListItemFn` gains an `audience` field
 defaulting to `everyone`, and the board sends the audience of the **view the row was created in** —
@@ -2157,12 +2468,14 @@ On top of those, for every surface this stage ships:
 
 ## Cross-plan collisions
 
-Re-run after every revision of this file, over the thirteen plan files present in `docs/plans/` at
-that moment, pasted verbatim:
+Both checks are re-run after every revision of this file, over the thirteen plan files present in
+`docs/plans/` at that moment, and both outputs are pasted verbatim. They are not interchangeable:
+the first reads **ownership**, the second reads **references**, and a plan can be clean on one while
+broken on the other.
 
 ```
 $ node scripts/ultrabuild/check-plan-collisions.mjs 05
-plans 13 · stages 91 · owned paths 553
+plans 13 · stages 91 · owned paths 543
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -2179,7 +2492,24 @@ touched by more than one plan in different waves (2) — legal; each plan must n
       09-account-and-settings.md  09-S7  wave 2  (edit)
 ```
 
-The script exits `0`.
+```
+$ node scripts/ultrabuild/check-plan-refs.mjs 05
+
+plan 05: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
+```
+
+Both scripts exit `0`.
+
+**What the second one asserts, since a zero is easy to skim past.** Every `NN-Sn` token this file
+cites resolves to a `## Stage` heading that actually exists in the plan whose prefix it carries.
+`grep -oE '\b[0-9]{2}-S[0-9]+\b'` over this file returns seventeen distinct ids: this plan's own five,
+plus `00-S2`, `01-S2`, `01-S6`, `03-S2`, `04-S2`, `06-S6`, `07-S1`, `07-S2`, `09-S7`, `11-S1`, `11-S2`
+and `11-S3`. A
+dangling one is how a stage acquires a dependency on something nobody wrote, and this file leans on
+cross-plan ids more than most: `05-S1` alone cites four of them. The second clause is why every stage
+here spells its Playwright invocation out in full with `PLAYWRIGHT_BASE_URL` in front of it — there is
+no `test:e2e` script and `docs/SPEC.md` §3 forbids adding one, so a plan that cites a script name
+instead has advertised that nobody ran it.
 
 **No same-wave exclusive collision involves this plan, and reaching that changed one stage.** The
 first run of the check reported exactly one:
@@ -2238,14 +2568,22 @@ symptom is an unexplained entry in that list rather than an error.
 
 1. **The header counts will not reproduce.** They read `plans 8 · stages 48 · owned paths 284` when
    this file was started, `plans 12 · stages 71 · owned paths 448` twenty minutes later,
-   `plans 13 · stages 80 · owned paths 498` a round after that, and
-   `plans 13 · stages 91 · owned paths 553` on the run pasted above, because sibling plans were being
-   written and revised by other agents in the same window — `03-reservations-and-transport.md`'s claim on
-   the trip loader appeared between two of those runs. The counts are a snapshot of a set several runs
-   are still writing. The three findings under them are properties of **this** file's ownership and
-   hold until a sibling changes what it claims.
-2. **A clean result is perishable, so re-running it is part of this plan's gate.** The stage that
-   executes any part of this file runs `node scripts/ultrabuild/check-plan-collisions.mjs 05` first,
-   reads the same three things — no same-wave line involving `05-*`, every cross-wave path named in
-   its owning stage, no `05-*` stage in the wave-less list — and treats a new same-wave line as a
-   blocker rather than as a note. It is one command and it is not optional.
+   `plans 13 · stages 80 · owned paths 498` a round after that, `plans 13 · stages 91 · owned
+paths 553` a round after that, and `plans 13 · stages 91 · owned paths 543` on the run pasted
+   above, because sibling plans were being written and revised by other agents in the same window.
+   `03-reservations-and-transport.md`'s claim on the trip loader appeared between two of those runs,
+   and the 553 → 543 step happened between two runs ten minutes apart during this revision, with no
+   owned-path bullet in **this** file changed by either: `git status --porcelain docs/plans/` at that
+   moment listed `02`, `03`, `04` and `09` as modified alongside this file. The counts are a snapshot
+   of a set several agents are still writing. The three findings under them are properties of **this**
+   file's ownership and hold until a sibling changes what it claims.
+2. **A clean result is perishable, so re-running both is part of this plan's gate.** The stage that
+   executes any part of this file runs `node scripts/ultrabuild/check-plan-collisions.mjs 05` and
+   `node scripts/ultrabuild/check-plan-refs.mjs 05` before it writes a line of code, and reads four
+   things: no same-wave line involving `05-*`, every cross-wave path named in its owning stage, no
+   `05-*` stage in the wave-less list, and zero dangling references. A new same-wave line or a new
+   dangling reference is a blocker, not a note. It is two commands and neither is optional. Reading
+   the sibling plans by hand instead is what an earlier round did, and it produced two real collisions
+   despite every plan carrying an acceptance criterion about it — a plan can only read the siblings
+   that exist at the moment it is written, and the scripts read the ones that exist at the moment they
+   are run.
