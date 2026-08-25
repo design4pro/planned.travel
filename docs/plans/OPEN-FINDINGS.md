@@ -33,15 +33,13 @@ re-measured. Plans 13 and 14 were authored and audited in that same run.
 
 ## Non-blocking notes for executing runs
 
-- `03-reservations-and-transport.md` and `13-community-gallery.md` still cite
-  `.claude/ultrabuild/recon/gap-rows.json` (03: ten places, including a verification one-liner),
-  an artifact that exists nowhere on disk or in git history. Treat those citations as historical;
-  the materialised wave table in `docs/plans/README.md` is the surviving source. Tracked as
+- Eleven plans authored by the original planning run (`00`, `01`, `02`, `04`, `06`, `07`, `09`,
+  `11`, `12`, `14`) plus `TEMPLATE.md` still cite `.claude/ultrabuild/recon/gap-rows.json`, an
+  artifact that exists nowhere on disk or in git history; plans `03` and `13` were cleaned in the
+  plans-for-plugins run (zero hits). Treat the remaining citations as historical — the materialised
+  wave table in `docs/plans/README.md` is the surviving record. Tracked as
   `plans-cite-lost-gap-rows` in `.claude/ultrabuild/knowledge/backlog.json`.
-- `03-reservations-and-transport.md` line 1689: the drop-unknown-ids rule is attributed to
-  `-server/plan.ts:269-272`; it actually lives in the jsdoc at `plan.ts:252-254` (round-5 audit,
-  passage outside any edited hunk). Re-measure rather than trust the number.
-- `13-community-gallery.md`: the cross-plan collision table omits 07-S2 (wave 1) as a claimant of
-  `src/routes/_app/trips/$tripId/collab.tsx`; 13-S1 calls the sibling claims on
-  `src/server/repos/index.ts` "all appends" while 01-S6 and 07-S10 mark theirs "edit"; 13-S4's
-  thread empty state names copy but no illustration. Re-check these three while executing plan 13.
+- `README.md` (round-8 audit): the wave-table footnote ("Row detail … stays in gap-rows.json") and
+  the "Extend, never recreate" bullet citing `repo-data.md`/`repo-ui.md`/`repo-platform.md` still
+  speak of the lost recon store in the present tense. Read them as historical provenance, not as
+  readable files.

@@ -2000,5 +2000,57 @@
     ],
     "id": "docs-plans-03-reservations-and-transport-md-was-dirt",
     "measuredIn": "plans-for-plugins run, round 7"
+  },
+  {
+    "claim": "The collision checker's unparseable '04-S2' is a phantom stage minted from the fenced example heading in docs/plans/12-verification-protocol.md, not plan 04's real stage — the splitter does not respect code fences.",
+    "evidence": "Splitting 12-verification-protocol.md with the checker's own /^## (?=Stage )/m regex yields a chunk id '04-S2' (the ```md example at line 26, '## Stage 04-S2 — Freeze the rate…') with null wave and zero parsed owned paths; plan 04's real 04-S2 at 04-budget-and-currencies.md:900 parses '`04-S2` · Wave 1' and 15 owned paths, so it never appears in the noWave list.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "the-collision-checker-s-unparseable-04-s2-is-a-phant",
+    "measuredIn": "plans-for-plugins run, round 8"
+  },
+  {
+    "claim": "11-S1 owns one path (docs/plans/11-boundaries-and-blockers.md) but the checker parses it as zero because the Owned paths block states it in prose, not a bullet — the checker's owned regex only matches lines starting with '-' or '*'.",
+    "evidence": "11-boundaries-and-blockers.md:229ff reads '`docs/plans/11-boundaries-and-blockers.md` — edit. This is the single repository path this plan owns…' with no leading bullet; the checker regex /^\\s*[-*]\\s*`([^`]+)`…/ returns no match on that block, which is why 11-S1 sits in the noWave-zero-paths report despite owning a path.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "11-s1-owns-one-path-docs-plans-11-boundaries-and-blo",
+    "measuredIn": "plans-for-plugins run, round 8"
+  },
+  {
+    "claim": "Plan 11's EXT rows are: EXT-01 plugin system/host (hosted equivalent none), EXT-02 plugin provider hooks AND the plugin activity audit (value redirected to MAP-07/DOC-06/ADD-05/ADD-08/ACC-05/ADM-04), EXT-03 built-in agent-protocol server (hosted equivalent none); the phrase 'widget slot' appears nowhere in plan 11 — only in 14-dashboard-mascot.md lines 22 and 143.",
+    "evidence": "/usr/bin/grep -n 'EXT-0[123]' and -i 'widget' over docs/plans/11-boundaries-and-blockers.md (widget only at :746, a currency 'converter widget'); sed -n '185,235p' shows the three row texts; grep -n 'widget slot' hits only 14-dashboard-mascot.md:22,143.",
+    "scope": [
+      "auditor",
+      "critic",
+      "builder"
+    ],
+    "id": "plan-11-s-ext-rows-are-ext-01-plugin-system-host-hos",
+    "measuredIn": "plans-for-plugins run, round 8"
+  },
+  {
+    "claim": "docs/plans/README.md no longer cites the lost recon store as runnable: the sh re-derivation block is replaced by 'The table is the surviving record', and edge/wave changes are routed to the README's own cut and wave tables. OPEN-FINDINGS.md is now explicitly exempted from the sixteen-file table as the one generated file.",
+    "evidence": "git diff docs/plans/README.md at this tree (+26/-27); check-plan-refs.mjs '15 plans: 0 dangling stage reference(s)' and check-plan-collisions.mjs exit 0 after the edit.",
+    "scope": [
+      "auditor",
+      "builder"
+    ],
+    "id": "docs-plans-readme-md-no-longer-cites-the-lost-recon-",
+    "measuredIn": "plans-for-plugins run, round 8"
+  },
+  {
+    "claim": "The full Playwright suite against the reused owned server on 3002 is effectively green: 137/1/5 with the sole failure being an ECONNRESET in hasSession that passes in isolation.",
+    "evidence": "resolve-port.sh --start printed 'reusing the server already answering on 3002'; full run 1 failed / 137 passed / 5 skipped; the failing spec re-run alone: PASS (2) FAIL (0) in 7.2s.",
+    "scope": [
+      "mechanical",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-full-playwright-suite-against-the-reused-owned-s",
+    "measuredIn": "plans-for-plugins run, round 8"
   }
 ]

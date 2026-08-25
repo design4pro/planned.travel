@@ -230,9 +230,21 @@ Re-run at this round's HEAD after these corrections, the checker reports —
 > no same-wave exclusive collisions
 
 — and exits 0, over `plans 15 · stages 96 · owned paths 591`. Its one blind spot travels with the
-quote: four sibling stages (`11-S1`, `11-S2`, `11-S3`, `04-S2`) state no parseable wave and
-cannot be checked; `11-S1`–`11-S3` own no paths at all and `04-S2`'s fifteen paths are all
-budget-module files this plan never touches, so the blind spot is empty for this plan. Everything
+quote: four stages (`11-S1`, `11-S2`, `11-S3`, `04-S2`) state no parseable wave and cannot be
+checked. Measured one by one at this HEAD rather than recalled: `11-S1` owns exactly one path —
+`docs/plans/11-boundaries-and-blockers.md` itself, stated in its Owned paths section as prose
+rather than a bullet, which is why the checker's bullet regex parses it as zero — while `11-S2`
+and `11-S3` name none; this plan never touches that document. The unparseable `04-S2` is not
+plan 04's stage at all: it is the fenced example heading in
+`docs/plans/12-verification-protocol.md` (the `Stage 04-S2 — Freeze the rate…` sample inside a
+fenced `md` code block), which the fence-blind splitter reads as a stage, and that phantom chunk
+parses zero owned paths. Plan 04's real `04-S2` states Wave 1, so it is fully checked and outside
+the blind spot; for the record its fifteen parsed paths are not "all budget-module files this
+plan never touches": the fifteenth is `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/`
+— that stage's baselines directory, an append this plan does not write — and the thirteenth is
+`src/server/repos/__tests__/tenant-isolation.test.ts`, the documented cooperative file this plan
+appends to as well, a shared append rather than an untouched file. The blind spot is therefore
+empty for this plan. Everything
 else this plan owns is newly created under paths no sibling names: `src/server/repos/community.ts`,
 `src/server/fns/community.ts`, `src/server/community/`, `src/components/gallery/`,
 `src/routes/gallery/`, `src/routes/_app/curation.tsx`, `src/routes/_app/-server/curation.ts`,
@@ -275,10 +287,12 @@ two background task kinds every later stage consumes.
 
 ### Reference rows
 
-**No `gap-rows.json` entry exists for this scope.** The 89-row matrix predates it; the scope is
-minted by this plan from the task brief. The `EXT-01`/`EXT-02`/`EXT-03` boundary rows in
-`11-boundaries-and-blockers.md` remain excluded — the plugin runtime is not ported, only the
-feature's value, per the hosted-equivalent doctrine.
+**No row of the 89-row reference matrix covers this scope.** The matrix predates the feature —
+its row ids survive only where sibling plans quote them (the store behind them was never
+committed; `docs/plans/README.md` records the loss), and none of the quoted ids names community
+sharing; the scope is minted by this plan from the task brief. The `EXT-01`/`EXT-02`/`EXT-03`
+boundary rows in `11-boundaries-and-blockers.md` remain excluded — the plugin runtime is not
+ported, only the feature's value, per the hosted-equivalent doctrine.
 
 Behaviour sourced from `wiki: Plugins`: a workspace shares one of its own trips to a public
 gallery; sharing is admin-gated; a trip already shared shows its shared state instead of a second
@@ -589,8 +603,9 @@ because the Collab tab was wave-3-contended (area brief, collision table).
 
 ### Reference rows
 
-**No `gap-rows.json` entry exists for this scope** — the matrix predates it; the scope is minted
-by this plan from the task brief. `EXT-01`/`EXT-02`/`EXT-03` in `11-boundaries-and-blockers.md`
+**No row of the 89-row reference matrix covers this scope** — the matrix predates it, and its
+row ids survive only where sibling plans quote them; the scope is minted by this plan from the
+task brief. `EXT-01`/`EXT-02`/`EXT-03` in `11-boundaries-and-blockers.md`
 remain excluded: the reference's review mechanism (a pull request reviewed on an external code
 host) is precisely the machinery this plan replaces with a first-party queue, per the
 hosted-equivalent doctrine.
@@ -844,8 +859,9 @@ and the screens the blind critic will judge this feature by.
 
 ### Reference rows
 
-**No `gap-rows.json` entry exists for this scope** — the matrix predates it; the scope is minted
-by this plan from the task brief. `EXT-01`/`EXT-02`/`EXT-03` in `11-boundaries-and-blockers.md`
+**No row of the 89-row reference matrix covers this scope** — the matrix predates it, and its
+row ids survive only where sibling plans quote them; the scope is minted by this plan from the
+task brief. `EXT-01`/`EXT-02`/`EXT-03` in `11-boundaries-and-blockers.md`
 remain excluded — only the browsing value crosses, none of the plugin machinery.
 
 Behaviour sourced from `wiki: Plugins`: the browse page leads with the newest publication as a
@@ -1051,8 +1067,9 @@ saved copy to a real, editable trip.
 
 ### Reference rows
 
-**No `gap-rows.json` entry exists for this scope** — the matrix predates it; the scope is minted
-by this plan from the task brief. `EXT-01`/`EXT-02`/`EXT-03` in `11-boundaries-and-blockers.md`
+**No row of the 89-row reference matrix covers this scope** — the matrix predates it, and its
+row ids survive only where sibling plans quote them; the scope is minted by this plan from the
+task brief. `EXT-01`/`EXT-02`/`EXT-03` in `11-boundaries-and-blockers.md`
 remain excluded: the reference hosts its per-trip conversation on an external discussion-thread
 service and its imports through the same third-party machinery; both are replaced first-party
 here, per the hosted-equivalent doctrine.
