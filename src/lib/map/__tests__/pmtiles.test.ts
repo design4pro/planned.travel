@@ -114,6 +114,15 @@ describe('probeBasemap', () => {
     })
   })
 
+  it('reads the alias answering 204 as nothing published, not as a broken file', async () => {
+    const fetchImpl = stub(() => new Response(null, { status: 204 }))
+    await expect(probeBasemap({ fetchImpl })).resolves.toEqual({
+      status: 'unavailable',
+      url: '/api/tiles/basemap.pmtiles',
+      reason: 'missing',
+    })
+  })
+
   it('rejects an object that is not a Protomaps archive', async () => {
     const fetchImpl = stub(
       () => new Response(new ArrayBuffer(PMTILES_HEADER_LENGTH), { status: 206 }),
