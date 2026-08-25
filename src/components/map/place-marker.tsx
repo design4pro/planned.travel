@@ -6,6 +6,7 @@ import { clusterPoints, clusterWeight, expansionZoom } from '#/lib/map/cluster'
 import { useMapContext, useMapZoom } from './map-context'
 import { MapMarker } from './map-marker'
 import { ClusterPin, PlacePin } from './pins'
+import { useAtlasI18n } from './copy'
 import { MarkerPopover, markerLabel } from './marker-popover'
 
 import type { MapCluster } from '#/lib/map/cluster'
@@ -52,6 +53,7 @@ export function PlaceMarker({
   onSelect,
   onHoverChange,
 }: PlaceMarkerProps) {
+  const { locale, t } = useAtlasI18n()
   const { map } = useMapContext()
   const [open, setOpen] = React.useState(false)
   const [flipped, setFlipped] = React.useState(false)
@@ -74,14 +76,18 @@ export function PlaceMarker({
     onHoverChange?.(null)
   }, [onHoverChange])
 
-  const label = markerLabel({
-    name: place.name,
-    categoryName: category?.name ?? null,
-    address: place.address ?? null,
-    rating: place.rating ?? null,
-    dayNumber: place.dayNumber ?? null,
-    visited: place.isVisited,
-  })
+  const label = markerLabel(
+    {
+      name: place.name,
+      categoryName: category?.name ?? null,
+      address: place.address ?? null,
+      rating: place.rating ?? null,
+      dayNumber: place.dayNumber ?? null,
+      visited: place.isVisited,
+    },
+    t,
+    locale,
+  )
 
   return (
     <MapMarker lng={place.lng} lat={place.lat} elevated={open || selected}>

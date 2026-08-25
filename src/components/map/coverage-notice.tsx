@@ -3,11 +3,15 @@ import { Compass, X } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import { GlassPanel, IconButton, SectionLabel } from '#/components/ui'
+import { formatNumber } from '#/lib/format'
+import { COPY_SLOT, splitSlot, useAtlasI18n } from './copy'
 
 import type { CoverageReport } from '#/lib/map/coverage'
 
-export interface CoverageNoticeProps
-  extends Omit<React.ComponentPropsWithoutRef<'div'>, 'children'> {
+export interface CoverageNoticeProps extends Omit<
+  React.ComponentPropsWithoutRef<'div'>,
+  'children'
+> {
   readonly coverage: CoverageReport
   /** Shows a dismiss button. A note on a map that cannot get out of the way is a nuisance. */
   readonly onDismiss?: () => void
@@ -32,12 +36,23 @@ export const CoverageNotice = React.forwardRef<
   HTMLDivElement,
   CoverageNoticeProps
 >(({ coverage, onDismiss, className, ...props }, ref) => {
+  const { locale, t } = useAtlasI18n()
   if (coverage.status !== 'outside' && coverage.status !== 'partial') {
     return null
   }
 
   const partial = coverage.status === 'partial'
-  const places = coverage.outside === 1 ? 'place' : 'places'
+  /**
+   * The sentence is split at the slot rather than assembled from two halves, so
+   * a translator keeps the word order and the emphasised figure still lands
+   * inside the clause it belongs to.
+   */
+  const [lead, tail] = splitSlot(
+    t('atlas.map.coverage.partial.body', {
+      count: coverage.outside,
+      outside: COPY_SLOT,
+    }),
+  )
 
   return (
     <GlassPanel
@@ -66,34 +81,34 @@ export const CoverageNotice = React.forwardRef<
         </span>
         <div className="min-w-0">
           <SectionLabel as="h2">
-            {partial ? 'Partial street detail' : 'No street detail here'}
+            {partial
+              ? t('atlas.map.coverage.partial.title')
+              : t('atlas.map.coverage.none.title')}
           </SectionLabel>
           <p className="mt-1 text-caption text-ink-2">
             {partial ? (
               <>
-                The published map data stops short of{' '}
-                <span className="font-semibold tabular-nums text-ink">
-                  {coverage.outside}
-                </span>{' '}
-                of this trip&rsquo;s {places}. They are drawn at their real
-                positions on our own coastlines.
+                {lead}
+                <span
+                  data-numeric=""
+                  className="font-semibold tabular-nums text-ink"
+                >
+                  {formatNumber(coverage.outside, locale)}
+                </span>
+                {tail}
               </>
             ) : (
-              <>
-                Streets are not published for this region yet. The coastlines,
-                the pins and the routes between them are all real — only the
-                buildings and roads are missing.
-              </>
+              t('atlas.map.coverage.none.body')
             )}
           </p>
         </div>
         {onDismiss ? (
           <IconButton
             icon={<X />}
-            label="Dismiss the map coverage note"
+            label={t('atlas.map.coverage.dismiss')}
             size="xs"
             variant="ghost"
-            className="-mt-1 -mr-1 shrink-0"
+            className="-mt-1 -me-1 shrink-0"
             onClick={onDismiss}
           />
         ) : null}

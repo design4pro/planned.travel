@@ -31,6 +31,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '#/components/ui'
+import { useAtlasCopy, useAtlasI18n } from '#/components/map'
 import { cn } from '#/lib/cn'
 import { countryName } from '#/lib/atlas/country-names'
 import {
@@ -39,8 +40,8 @@ import {
   formatNumber,
   formatPercent,
   humaniseToken,
-  pluralise,
 } from '#/lib/format'
+import { continentLabel } from './continent'
 import { AtlasLegend, AtlasLegendSkeleton } from './atlas-legend'
 import { CountriesList, CountriesListSkeleton } from './countries-list'
 import { CountryActions } from './country-actions'
@@ -48,6 +49,7 @@ import { CountryRecord, CountryRecordSkeleton } from './country-record'
 
 import type { CountriesListCountry } from './countries-list'
 import type { CountryActionsGoal, CountryActionsVisit } from './country-actions'
+import type { MessageKey, Translate } from '#/lib/i18n'
 
 /**
  * The atlas's floating panel: everything the map cannot say, over the map.
@@ -191,14 +193,14 @@ function useShelfOpensByDefault(): boolean {
  * appended rather than dropped, because the column is free text and a row that
  * says "Antarctica" is data, not a bug.
  */
-const CONTINENTS = [
-  'Africa',
-  'Asia',
-  'Europe',
-  'North America',
-  'Oceania',
-  'South America',
-] as const
+const CONTINENTS: ReadonlyArray<readonly [string, MessageKey]> = [
+  ['Africa', 'atlas.continent.africa'],
+  ['Asia', 'atlas.continent.asia'],
+  ['Europe', 'atlas.continent.europe'],
+  ['North America', 'atlas.continent.northAmerica'],
+  ['Oceania', 'atlas.continent.oceania'],
+  ['South America', 'atlas.continent.southAmerica'],
+]
 
 /** One continent's tally, exactly as the atlas summary returns it. */
 export interface AtlasPanelContinent {
@@ -207,13 +209,16 @@ export interface AtlasPanelContinent {
 }
 
 interface ContinentCell {
+  /** The stored English name, folded — the cell's stable hook for a test. */
   readonly key: string
+  /** What the reader sees. */
   readonly label: string
   readonly countryCount: number
 }
 
 function continentCells(
   rows: ReadonlyArray<AtlasPanelContinent>,
+  t: Translate,
 ): ReadonlyArray<ContinentCell> {
   /** Folded case-insensitively, because the column is free text. */
   const counts = new Map<string, { label: string; total: number }>()
@@ -223,16 +228,18 @@ function continentCells(
     const key = name.toLowerCase()
     const seen = counts.get(key)
     counts.set(key, {
-      label: seen?.label ?? humaniseToken(name),
+      // Translated where the value is one the product itself writes, and
+      // tidied rather than dropped where it is something else.
+      label: seen?.label ?? continentLabel(name, t) ?? humaniseToken(name),
       total: (seen?.total ?? 0) + row.countryCount,
     })
   }
 
-  const canonical = CONTINENTS.map((label) => {
-    const key = label.toLowerCase()
+  const canonical = CONTINENTS.map(([english, message]) => {
+    const key = english.toLowerCase()
     const seen = counts.get(key)
     counts.delete(key)
-    return { key, label, countryCount: seen?.total ?? 0 }
+    return { key, label: t(message), countryCount: seen?.total ?? 0 }
   })
 
   // Anything the column holds that is not one of the six is data, not a bug.
@@ -285,6 +292,32 @@ export interface AtlasPanelBucketItem {
   readonly countryCode: string | null
   readonly targetYear: number | null
   readonly isAchieved: boolean
+}
+
+/**
+ * The second line of a bucket-list row: what kind of entry it is, the country
+ * it names, and the year it is aimed at.
+ *
+ * The kind is one of three values `bucket_list_items.kind` may hold, so each
+ * one has a key; anything else the column ever grows is tidied rather than
+ * dropped. The year is written out and never grouped — `2,027` is a quantity,
+ * and every one of the twenty-three tags carries the `latn` numbering system.
+ */
+function bucketMeta(row: AtlasPanelBucketItem, t: Translate): string {
+  const parts: Array<string> = [
+    row.kind === 'country'
+      ? t('atlas.panel.bucket.kind.country')
+      : row.kind === 'region'
+        ? t('atlas.panel.bucket.kind.region')
+        : row.kind === 'place'
+          ? t('atlas.panel.bucket.kind.place')
+          : humaniseToken(row.kind),
+  ]
+  if (row.countryCode !== null) parts.push(countryName(row.countryCode))
+  if (row.targetYear !== null) {
+    parts.push(t('atlas.panel.bucket.target', { year: String(row.targetYear) }))
+  }
+  return parts.join(' \u00B7 ')
 }
 
 /* ------------------------------------------------------------------- layout */
@@ -529,6 +562,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
     },
     ref,
   ) => {
+    const { locale, t } = useAtlasI18n()
     const bodyId = React.useId()
     /**
      * What the toggle says, what a screen reader is told, and what one press of
@@ -546,8 +580,8 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
       bucketAchieved ?? bucketList.filter((row) => row.isAchieved).length
     const hidden = Math.max(total - bucketList.length, 0)
     const cells = React.useMemo(
-      () => continentCells(byContinent),
-      [byContinent],
+      () => continentCells(byContinent, t),
+      [byContinent, t],
     )
 
     const selectedKey =
@@ -632,22 +666,31 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
           <div data-part="panel-header" className={layout.header}>
             <div className={layout.headline}>
               <div className="min-w-0">
-                <SectionLabel as="h2">World coverage</SectionLabel>
+                <SectionLabel as="h2">
+                  {t('atlas.panel.coverage.label')}
+                </SectionLabel>
                 <p className="mt-0.5 flex min-w-0 items-baseline gap-1.5">
                   <span
                     data-part="coverage"
                     data-numeric=""
                     className={layout.hero}
                   >
-                    {formatNumber(stats.countryCount)}
+                    {formatNumber(stats.countryCount, locale)}
                   </span>
                   <span className={layout.heroUnit}>
-                    of {formatNumber(stats.worldCount)}
+                    {t('atlas.panel.coverage.unit', {
+                      total: formatNumber(stats.worldCount, locale),
+                    })}
                   </span>
                 </p>
                 <p data-part="coverage-caption" className={layout.heroCaption}>
-                  {formatPercent(share)} of the world &middot;{' '}
-                  {pluralise(stats.visitCount, 'visit')}
+                  {t('atlas.panel.coverage.caption', {
+                    share: formatPercent(share, locale),
+                    visits: t('atlas.record.visits', {
+                      count: stats.visitCount,
+                      visits: formatNumber(stats.visitCount, locale),
+                    }),
+                  })}
                 </p>
               </div>
             </div>
@@ -659,19 +702,23 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                 size="sm"
                 tone="brand"
                 label={
-                  <span className="text-ink-2">Towards every country</span>
+                  <span className="text-ink-2">
+                    {t('atlas.panel.progress.label')}
+                  </span>
                 }
                 valueText={
-                  // A stated width, right-aligned, because this end of the row
-                  // is anchored to the right: let the box shrink to its text and
+                  // A stated width, aligned to the inline end, because that is
+                  // the edge the row anchors to: let the box shrink to its text and
                   // the webfont arriving moves its left edge, which is a layout
                   // shift after paint for a string whose value never changed.
                   // 4rem holds "195 to go" in both faces with room over.
-                  <span className="inline-block w-16 text-right tabular-nums text-ink-2">
-                    {formatNumber(
-                      Math.max(stats.worldCount - stats.countryCount, 0),
-                    )}{' '}
-                    to go
+                  <span className="inline-block w-16 text-end tabular-nums text-ink-2">
+                    {t('atlas.panel.progress.remaining', {
+                      remaining: formatNumber(
+                        Math.max(stats.worldCount - stats.countryCount, 0),
+                        locale,
+                      ),
+                    })}
                   </span>
                 }
               />
@@ -683,7 +730,11 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
             <IconButton
               variant="subtle"
               size="sm"
-              label={open ? 'Hide atlas details' : 'Show atlas details'}
+              label={
+                open
+                  ? t('atlas.panel.toggle.hide')
+                  : t('atlas.panel.toggle.show')
+              }
               aria-expanded={open}
               aria-controls={bodyId}
               onClick={() => onExpandedChange(!open)}
@@ -708,27 +759,30 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
               className={layout.toggle}
             />
 
-            <TabsList aria-label="Atlas sections" className={layout.tabs}>
+            <TabsList
+              aria-label={t('atlas.panel.tabs.label')}
+              className={layout.tabs}
+            >
               <TabsTrigger
                 value="country"
                 icon={<MapPinned />}
                 className={layout.tab}
               >
-                Country
+                {t('atlas.panel.tab.country')}
               </TabsTrigger>
               <TabsTrigger
                 value="stats"
                 icon={<Globe />}
                 className={layout.tab}
               >
-                Stats
+                {t('atlas.panel.tab.stats')}
               </TabsTrigger>
               <TabsTrigger
                 value="bucket"
                 icon={<Telescope />}
                 className={layout.tab}
               >
-                Bucket list
+                {t('atlas.panel.tab.bucket')}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -765,11 +819,11 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                     <Button
                       variant="ghost"
                       size="sm"
-                      icon={<ArrowLeft />}
+                      icon={<ArrowLeft data-mirror-rtl />}
                       onClick={onClearSelection}
                       className="mb-2 self-start lg:hidden"
                     >
-                      All countries
+                      {t('atlas.panel.back')}
                     </Button>
                   )}
 
@@ -781,13 +835,13 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       icon={<Compass />}
                       title={
                         countries.length === 0
-                          ? 'Your map is still blank'
-                          : 'Pick a country'
+                          ? t('atlas.panel.empty.blank.title')
+                          : t('atlas.panel.empty.pick.title')
                       }
                       description={
                         countries.length === 0
-                          ? 'Mark a country as visited and it fills in on the map here, with its first and last visit, how many times you have been and whatever you wrote about it.'
-                          : 'Choose one on the map, in the search field or from the list, and its full record opens here — first visit, last visit, the tally and your note.'
+                          ? t('atlas.panel.empty.blank.body')
+                          : t('atlas.panel.empty.pick.body')
                       }
                     />
                   ) : (
@@ -913,7 +967,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                     countries={countries}
                     selectedCode={selectedCode}
                     onSelect={onSelect}
-                    label="Visited countries"
+                    label={t('atlas.panel.list.label')}
                   />
                 </ScrollArea>
               </div>
@@ -935,62 +989,78 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                     <StatCard
                       className={layout.statCard}
                       icon={<Landmark />}
-                      label="Places"
-                      value={formatNumber(stats.placeCount ?? 0)}
+                      label={t('atlas.panel.stat.places')}
+                      value={formatNumber(stats.placeCount ?? 0, locale)}
                       caption={
                         (stats.placeCount ?? 0) === 0
-                          ? 'Nothing pinned on a trip yet'
-                          : 'Sights, stays and stops saved'
+                          ? t('atlas.panel.stat.placesNone')
+                          : t('atlas.panel.stat.placesCaption')
                       }
                     />
                     <StatCard
                       className={layout.statCard}
                       icon={<MapPin />}
-                      label="Regions"
-                      value={formatNumber(stats.regionCount)}
+                      label={t('atlas.panel.stat.regions')}
+                      value={formatNumber(stats.regionCount, locale)}
                       caption={
                         stats.regionCount === 0
-                          ? 'No regions marked yet'
-                          : 'States, provinces, prefectures'
+                          ? t('atlas.panel.stat.regionsNone')
+                          : t('atlas.panel.stat.regionsCaption')
                       }
                     />
                     <StatCard
                       className={layout.statCard}
                       icon={<Flag />}
-                      label="Visits"
-                      value={formatNumber(stats.visitCount)}
-                      caption="Every recorded arrival"
+                      label={t('atlas.panel.stat.visits')}
+                      value={formatNumber(stats.visitCount, locale)}
+                      caption={t('atlas.panel.stat.visitsCaption')}
                     />
                     <StatCard
                       className={layout.statCard}
                       icon={<PlaneTakeoff />}
-                      label="Trips"
-                      value={formatNumber(stats.tripCount ?? 0)}
+                      label={t('atlas.panel.stat.trips')}
+                      value={formatNumber(stats.tripCount ?? 0, locale)}
                       caption={
-                        stats.distanceMetres === null
-                          ? 'Finished trips only'
-                          : formatDistance(stats.distanceMetres, 'metric')
+                        stats.distanceMetres === null ? (
+                          t('atlas.panel.stat.tripsCaption')
+                        ) : (
+                          // A figure and its unit are one run. Left bare in an
+                          // Arabic paragraph the bidi algorithm resolves the
+                          // space between them to the paragraph's own
+                          // direction and lays the two out as separate runs,
+                          // so `128,400 km` paints as `km 128,400`. The
+                          // stylesheet gives `[data-numeric]` its own `ltr`
+                          // direction for exactly this, and it goes on an
+                          // inner span rather than on a positioned box.
+                          <span data-numeric="">
+                            {formatDistance(
+                              stats.distanceMetres,
+                              'metric',
+                              locale,
+                            )}
+                          </span>
+                        )
                       }
                     />
                     <StatCard
                       className={layout.statCard}
                       icon={<MapPinned />}
-                      label="Cities"
-                      value={formatNumber(stats.cityCount ?? 0)}
-                      caption="Towns you slept or stopped in"
+                      label={t('atlas.panel.stat.cities')}
+                      value={formatNumber(stats.cityCount ?? 0, locale)}
+                      caption={t('atlas.panel.stat.citiesCaption')}
                     />
                     <StatCard
                       className={layout.statCard}
                       icon={<Sun />}
-                      label="Days away"
-                      value={formatNumber(stats.dayCount ?? 0)}
-                      caption="Across every trip on your record"
+                      label={t('atlas.panel.stat.days')}
+                      value={formatNumber(stats.dayCount ?? 0, locale)}
+                      caption={t('atlas.panel.stat.daysCaption')}
                     />
                   </div>
 
                   <div>
                     <SectionLabel as="h3" className="mb-1.5">
-                      Countries by continent
+                      {t('atlas.panel.continents.label')}
                     </SectionLabel>
                     <dl className={layout.continentRow}>
                       {cells.map((cell) => (
@@ -1014,7 +1084,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                                 : 'text-ink',
                             )}
                           >
-                            {formatNumber(cell.countryCount)}
+                            {formatNumber(cell.countryCount, locale)}
                           </dd>
                         </div>
                       ))}
@@ -1030,8 +1100,8 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                   variant="filled"
                   size="sm"
                   icon={<Sparkles />}
-                  title="Nothing on the list"
-                  description="Somewhere you have always meant to go. Add it, and tick it off when you get there."
+                  title={t('atlas.panel.bucket.empty.title')}
+                  description={t('atlas.panel.bucket.empty.body')}
                 />
               ) : (
                 <>
@@ -1040,11 +1110,14 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                     className="mb-2"
                     action={
                       <span className="text-caption tabular-nums text-ink-2">
-                        {formatNumber(achieved)} of {formatNumber(total)} done
+                        {t('atlas.panel.bucket.progress', {
+                          done: formatNumber(achieved, locale),
+                          total: formatNumber(total, locale),
+                        })}
                       </span>
                     }
                   >
-                    Bucket list
+                    {t('atlas.panel.bucket.label')}
                   </SectionLabel>
                   <ScrollArea axis="vertical" className="min-h-0 flex-1">
                     <ul className="min-w-0">
@@ -1076,13 +1149,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                               {row.name}
                             </p>
                             <p className="truncate text-caption tabular-nums text-ink-3">
-                              {humaniseToken(row.kind)}
-                              {row.countryCode === null
-                                ? ''
-                                : ` · ${countryName(row.countryCode)}`}
-                              {row.targetYear === null
-                                ? ''
-                                : ` · by ${row.targetYear}`}
+                              {bucketMeta(row, t)}
                             </p>
                           </div>
                           {row.isAchieved ? (
@@ -1091,7 +1158,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                               size="sm"
                               className="shrink-0"
                             >
-                              Done
+                              {t('atlas.panel.bucket.done')}
                             </Badge>
                           ) : (
                             <Badge
@@ -1099,7 +1166,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                               size="sm"
                               className="shrink-0"
                             >
-                              To go
+                              {t('atlas.panel.bucket.toGo')}
                             </Badge>
                           )}
                         </li>
@@ -1111,8 +1178,10 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                         list is told what the bottom of the list is. */}
                     {hidden === 0 ? null : (
                       <p className="border-t border-edge-faint px-1 pt-2.5 text-caption tabular-nums text-ink-3">
-                        {pluralise(hidden, 'more entry', 'more entries')} on
-                        your list, not shown here.
+                        {t('atlas.panel.bucket.hidden', {
+                          count: hidden,
+                          entries: formatNumber(hidden, locale),
+                        })}
                       </p>
                     )}
                   </ScrollArea>
@@ -1146,65 +1215,73 @@ AtlasPanel.displayName = 'AtlasPanel'
 export const AtlasPanelSkeleton = React.forwardRef<
   HTMLDivElement,
   React.ComponentPropsWithoutRef<'div'>
->(({ className, ...props }, ref) => (
-  <GlassPanel
-    ref={ref}
-    radius="2xl"
-    padding="none"
-    floating={false}
-    aria-busy="true"
-    className={cn(layout.root, className)}
-    {...props}
-  >
-    <span className="sr-only">Loading your atlas</span>
+>(({ className, ...props }, ref) => {
+  const t = useAtlasCopy()
 
-    <div data-part="panel-header" aria-hidden="true" className={layout.header}>
-      <div className={layout.headline}>
-        <div className="min-w-0 flex-1">
-          <Skeleton radius="sm" className="h-3 w-28" />
-          <Skeleton radius="md" className="mt-2 h-9 w-32" />
-          <Skeleton radius="sm" className="mt-1.5 h-3 w-40" />
+  return (
+    <GlassPanel
+      ref={ref}
+      radius="2xl"
+      padding="none"
+      floating={false}
+      aria-busy="true"
+      className={cn(layout.root, className)}
+      {...props}
+    >
+      <span className="sr-only">{t('atlas.panel.loading')}</span>
+
+      <div
+        data-part="panel-header"
+        aria-hidden="true"
+        className={layout.header}
+      >
+        <div className={layout.headline}>
+          <div className="min-w-0 flex-1">
+            <Skeleton radius="sm" className="h-3 w-28" />
+            <Skeleton radius="md" className="mt-2 h-9 w-32" />
+            <Skeleton radius="sm" className="mt-1.5 h-3 w-40" />
+          </div>
         </div>
-      </div>
-      {/* The progress column's own box. It is the flexible element in the
+        {/* The progress column's own box. It is the flexible element in the
           header row from `lg`, so leaving it out of the loading shape let the
           tab strip slide left against the headline and then jump back when the
           read landed. */}
-      <div className={layout.progress}>
-        <div className="mb-1.5 flex items-baseline justify-between gap-3">
-          <Skeleton radius="sm" className="h-3 w-36" />
-          <Skeleton radius="sm" className="h-3 w-16" />
+        <div className={layout.progress}>
+          <div className="mb-1.5 flex items-baseline justify-between gap-3">
+            <Skeleton radius="sm" className="h-3 w-36" />
+            <Skeleton radius="sm" className="h-3 w-16" />
+          </div>
+          <Skeleton radius="full" className="h-1.5 w-full" />
         </div>
-        <Skeleton radius="full" className="h-1.5 w-full" />
-      </div>
 
-      {/* The collapse toggle's own box, so the headline column is the width it
+        {/* The collapse toggle's own box, so the headline column is the width it
           will be rather than 44px wider until the read lands. */}
-      <Skeleton radius="full" className={cn(layout.toggle, 'size-8')} />
+        <Skeleton radius="full" className={cn(layout.toggle, 'size-8')} />
 
-      {/* The `sm` segmented track's own height and the tab strip's own place on
+        {/* The `sm` segmented track's own height and the tab strip's own place on
           the grid, so nothing moves or resizes when the read lands. */}
-      <Skeleton radius="full" className={cn(layout.tabs, 'h-9 lg:w-88')} />
-    </div>
+        <Skeleton radius="full" className={cn(layout.tabs, 'h-9 lg:w-88')} />
+      </div>
 
-    <div aria-hidden="true" className={cn(layout.body, 'hidden lg:flex')}>
-      <div className={layout.split}>
-        <div className={layout.splitPane}>
-          <CountryRecordSkeleton />
+      <div aria-hidden="true" className={cn(layout.body, 'hidden lg:flex')}>
+        <div className={layout.split}>
+          <div className={layout.splitPane}>
+            <CountryRecordSkeleton />
+          </div>
+          <div
+            className={cn(
+              layout.splitPane,
+              'rounded-lg border border-edge-faint bg-surface',
+            )}
+          >
+            <CountriesListSkeleton rows={3} />
+          </div>
         </div>
-        <div
-          className={cn(
-            layout.splitPane,
-            'rounded-lg border border-edge-faint bg-surface',
-          )}
-        >
-          <CountriesListSkeleton rows={3} />
+        <div className={layout.footer}>
+          <AtlasLegendSkeleton />
         </div>
       </div>
-      <div className={layout.footer}>
-        <AtlasLegendSkeleton />
-      </div>
-    </div>
-  </GlassPanel>
-))
+    </GlassPanel>
+  )
+})
 AtlasPanelSkeleton.displayName = 'AtlasPanelSkeleton'

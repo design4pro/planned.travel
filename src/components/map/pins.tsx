@@ -4,7 +4,9 @@ import { cva } from 'class-variance-authority'
 
 import { cn } from '#/lib/cn'
 import { focusRing, transitionBase } from '#/components/ui'
+import { formatNumber } from '#/lib/format'
 import { CategoryIcon } from './category-icon'
+import { useAtlasI18n } from './copy'
 
 import type { VariantProps } from 'class-variance-authority'
 
@@ -119,22 +121,27 @@ export const DayPin = React.forwardRef<HTMLButtonElement, DayPinProps>(
   (
     { day, size, active, label, interactive = true, className, ...props },
     ref,
-  ) => (
-    <PinShell
-      ref={ref}
-      interactive={interactive}
-      label={label ?? `Day ${day}`}
-      className={cn(
-        dayPinVariants({ size, active }),
-        'font-display font-bold tabular-nums leading-none',
-        interactive && 'hover:scale-105 active:scale-100',
-        className,
-      )}
-      {...props}
-    >
-      <span aria-hidden="true">{day}</span>
-    </PinShell>
-  ),
+  ) => {
+    const { locale, t } = useAtlasI18n()
+    const numeral = formatNumber(day, locale)
+
+    return (
+      <PinShell
+        ref={ref}
+        interactive={interactive}
+        label={label ?? t('atlas.map.pin.day', { day: numeral })}
+        className={cn(
+          dayPinVariants({ size, active }),
+          'font-display font-bold tabular-nums leading-none',
+          interactive && 'hover:scale-105 active:scale-100',
+          className,
+        )}
+        {...props}
+      >
+        <span aria-hidden="true">{numeral}</span>
+      </PinShell>
+    )
+  },
 )
 DayPin.displayName = 'DayPin'
 
@@ -201,6 +208,7 @@ export const PlacePin = React.forwardRef<HTMLButtonElement, PlacePinProps>(
     },
     ref,
   ) => {
+    const { locale } = useAtlasI18n()
     const [imageFailed, setImageFailed] = React.useState(false)
     const showImage =
       typeof imageUrl === 'string' && imageUrl !== '' && !imageFailed
@@ -239,7 +247,7 @@ export const PlacePin = React.forwardRef<HTMLButtonElement, PlacePinProps>(
               'bg-accent px-1 text-micro font-bold text-accent-on tabular-nums ring-2 ring-surface',
             )}
           >
-            {dayNumber}
+            {formatNumber(dayNumber, locale)}
           </span>
         ) : null}
 
@@ -296,26 +304,31 @@ export interface ClusterPinProps
  * detail that stops a cluster being mistaken for a single very important place.
  */
 export const ClusterPin = React.forwardRef<HTMLButtonElement, ClusterPinProps>(
-  ({ count, weight, label, interactive = true, className, ...props }, ref) => (
-    <PinShell
-      ref={ref}
-      interactive={interactive}
-      label={label ?? `${count} places — zoom in to separate them`}
-      className={cn(
-        clusterPinVariants({ weight }),
-        interactive && 'hover:scale-105 active:scale-100',
-        className,
-      )}
-      {...props}
-    >
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute -inset-1.5 rounded-full bg-accent/12"
-      />
-      <span className="relative leading-none" aria-hidden="true">
-        {count}
-      </span>
-    </PinShell>
-  ),
+  ({ count, weight, label, interactive = true, className, ...props }, ref) => {
+    const { locale, t } = useAtlasI18n()
+    const numeral = formatNumber(count, locale)
+
+    return (
+      <PinShell
+        ref={ref}
+        interactive={interactive}
+        label={label ?? t('atlas.map.pin.cluster', { count, places: numeral })}
+        className={cn(
+          clusterPinVariants({ weight }),
+          interactive && 'hover:scale-105 active:scale-100',
+          className,
+        )}
+        {...props}
+      >
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-1.5 rounded-full bg-accent/12"
+        />
+        <span className="relative leading-none" aria-hidden="true">
+          {numeral}
+        </span>
+      </PinShell>
+    )
+  },
 )
 ClusterPin.displayName = 'ClusterPin'
