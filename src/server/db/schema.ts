@@ -2119,8 +2119,9 @@ export const staffApiTokens = sqliteTable(
  * that exists. The two columns sit side by side for that reason and not by oversight.
  *
  * **`token_id` is `on delete restrict`, which is the only action this table can actually take.**
- * docs/ACCESS.md §4.1's type column writes the clause as `on delete set null`, and `SET NULL` is
- * unreachable here by construction: SQLite re-evaluates `CHECK` constraints on the implicit
+ * docs/ACCESS.md §4.1's type column says `on delete restrict` and its §5 carries the reasoning.
+ * The wording it replaced was `on delete set null`, which is unreachable here by construction:
+ * SQLite re-evaluates `CHECK` constraints on the implicit
  * `UPDATE` that `SET NULL` performs, and `platform_audit_log_agent_token_chk` demands a non-`NULL`
  * `token_id` on precisely the rows — the `agent` ones — that are the only rows able to reference a
  * token at all. Every `SET NULL` the action could perform therefore violates that `CHECK` and
@@ -2129,23 +2130,24 @@ export const staffApiTokens = sqliteTable(
  * what happens, fails with a foreign-key message rather than a constraint the caller did not
  * mention, and changes no outcome — for an append-only log, keeping the `token_id` is the better
  * of the two anyway, and nothing hard-deletes a `staff_api_tokens` row in the first place because
- * revocation writes `revoked_at` (docs/ACCESS.md §5). The divergence from §4.1's wording is
- * reported as a finding with this item rather than edited into that file, which is the
- * specification. The behaviour is pinned by tests in
+ * revocation writes `revoked_at` (docs/ACCESS.md §5). The earlier divergence from §4.1's wording
+ * was reported as a finding and amended there, in that file's own commit; nothing here and in
+ * docs/DEPLOY.md §5 disagrees with it any more. The behaviour is pinned by tests in
  * `src/server/db/__tests__/platform-schema.test.ts` rather than left as prose, since it cannot be
  * changed after `0004` ships without a table recreate (docs/DEPLOY.md §5).
  *
  * **Four cross-column `CHECK`s, because the two obvious ones only cover half of each rule.**
- * docs/ACCESS.md §4.1 states two invariants — `actor_user_id` and `actor_role` are `NULL` only when
- * `actor_kind` is `system`, and `token_id` is non-`NULL` *exactly* when `actor_kind` is `agent` —
- * and each is a biconditional. `agent ⇒ token_id NOT NULL` and `system ⇒ everything NULL` are the
- * forward halves; without the converses a `human` row could carry a `token_id` and a `human` or an
- * `agent` row could carry no actor at all, all three accepted by a direct insert.
+ * docs/ACCESS.md §4.1 lists four, and the Notes column they come from states two biconditionals:
+ * `actor_user_id` and `actor_role` are `NULL` only when `actor_kind` is `system`, and `token_id`
+ * is non-`NULL` *exactly* when `actor_kind` is `agent`. `agent ⇒ token_id NOT NULL` and
+ * `system ⇒ everything NULL` are the forward halves; without the converses a `human` row could
+ * carry a `token_id` and a `human` or an `agent` row could carry no actor at all, all three
+ * accepted by a direct insert.
  * `platform_audit_log_token_agent_only_chk` and `platform_audit_log_actor_identity_chk` close those
- * converses, so the shipped table enforces what §4.1 says rather than a weaker reading of it. Four
- * is an extension of that contract, never a relaxation; the amendment to §4.1's own "two
- * invariants" sentence is reported with this item rather than made here, because that file is the
- * specification and is not ours to edit.
+ * converses, so the shipped table enforces what §4.1 says rather than a weaker reading of it. The
+ * two extra constraints shipped first and §4.1's "two invariants" sentence was amended to four
+ * afterwards, as a finding reported against that file and applied in its own commit: an extension
+ * of the contract, never a relaxation.
  *
  * All four are declared in the `CREATE TABLE` rather than added later: adding a `CHECK` to an
  * existing table escalates drizzle-kit to a table recreate, which docs/DEPLOY.md §5 counts as

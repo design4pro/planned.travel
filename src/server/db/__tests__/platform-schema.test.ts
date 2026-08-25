@@ -13,9 +13,10 @@
  *    `docs/ACCESS.md` §4.1 are cross-column, so nothing in TypeScript enforces them. The harness
  *    generates its DDL from this very schema through `drizzle-kit/api` and runs it on `node:sqlite`,
  *    so the constraints exercised here are the ones the migration ships.
- * 3. **Half a biconditional.** §4.1's two invariants each say "exactly when", and the obvious
- *    `CHECK` for each covers only the forward direction: `agent ⇒ token` leaves a `human` row free
- *    to carry a credential, and `system ⇒ no actor` leaves every other kind free to carry none.
+ * 3. **Half a biconditional.** The two rules §4.1's Notes column states each say "exactly when",
+ *    which is why §4.1 lists four `CHECK`s: the obvious one for each rule covers only the forward
+ *    direction, so `agent ⇒ token` leaves a `human` row free to carry a credential and
+ *    `system ⇒ no actor` leaves every other kind free to carry none.
  *    Both converses are constraints too, and the cases below insert the three rows that used to be
  *    accepted so a regression is a failing test rather than a quiet hole in the log.
  * 4. **A vocabulary column narrowed nowhere.** `entity_type` and `action` carry no `CHECK` on
@@ -29,6 +30,7 @@
 import { beforeEach, afterEach, describe, expect, expectTypeOf, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { getTableConfig } from 'drizzle-orm/sqlite-core'
+import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
 import { session, user } from '#/server/db/auth-schema'
 import {
   PLATFORM_ACTOR_ROLES,
@@ -179,9 +181,9 @@ describe('platform_audit_log declaration', () => {
     expect(references).toHaveLength(1)
     expect(references[0]?.columns.map((column) => column.name)).toEqual(['token_id'])
     expect(references[0]?.foreignColumns.map((column) => column.name)).toEqual(['id'])
-    // `restrict` rather than docs/ACCESS.md §4.1's `set null`, because `SET NULL` is unreachable
-    // here: it violates the agent CHECK on the only rows able to name a token, so the DELETE was
-    // always refused. The clause now says that. The two tests further down pin the behaviour.
+    // `restrict`, which is what docs/ACCESS.md §4.1's type column says. `SET NULL` — the wording
+    // it replaced — is unreachable here: it violates the agent CHECK on the only rows able to name
+    // a token, so the DELETE was always refused. The two tests further down pin the behaviour.
     expect(config.foreignKeys[0]?.onDelete).toBe('restrict')
   })
 })
@@ -224,12 +226,15 @@ describe('the four vocabulary columns, narrowed in TypeScript', () => {
     ).toBe(true)
   })
 
-  it('types action against the dotted-action regex the tenant log already enforces', () => {
+  it('types action against the dotted-action regex both logs enforce', () => {
     // The shape rule of docs/ACCESS.md §4.2, restated here only as a property of the list. The
-    // regex itself is `src/server/repos/audit.ts`'s, and §4.2 requires the writer to import it
-    // rather than re-declare it; this assertion is about the vocabulary, not about the validator.
+    // regex lives in `src/server/db/audit-action.ts`, the leaf module both logs read it from, and
+    // §4.2 requires every reader to import it rather than re-declare it — a second spelling of the
+    // character class is a second vocabulary, and it would drift silently because it would keep
+    // passing. So this file imports it too; the assertion is about the vocabulary, not the
+    // validator.
     for (const action of PLATFORM_AUDIT_ACTIONS) {
-      expect(action).toMatch(/^[a-z0-9]+(?:[._][a-z0-9]+)*$/)
+      expect(action).toMatch(AUDIT_ACTION_PATTERN)
       expect(action.length).toBeLessThanOrEqual(64)
     }
   })
@@ -468,11 +473,12 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
   })
 
   it('refuses to hard-delete a credential an agent row still names', async () => {
-    // The outcome docs/ACCESS.md §4.1 writes as `on delete set null` was never reachable: SQLite
-    // re-evaluates CHECKs on the implicit UPDATE that SET NULL performs, and the agent CHECK
-    // demands a non-NULL token_id on exactly the rows able to reference a token, so the DELETE
-    // aborted against a constraint the caller never mentioned. `restrict` produces the same
-    // outcome and names it: the history keeps its attribution, and the refusal reads as one.
+    // `on delete set null`, which docs/ACCESS.md §4.1 said before it was amended to `restrict`,
+    // was never a reachable outcome: SQLite re-evaluates CHECKs on the implicit UPDATE that SET
+    // NULL performs, and the agent CHECK demands a non-NULL token_id on exactly the rows able to
+    // reference a token, so the DELETE aborted against a constraint the caller never mentioned.
+    // `restrict` produces the same outcome and names it: the history keeps its attribution, and
+    // the refusal reads as one.
     const tokenId = await seedToken()
     await append({ actorKind: 'agent', actorUserId: newId(), actorRole: 'curator', tokenId })
 

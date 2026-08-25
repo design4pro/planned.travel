@@ -237,16 +237,20 @@ an append-only log. Both are narrowed with Drizzle's `$type` instead, which emit
 therefore appears nowhere in this file; a value outside either list fails `pnpm typecheck` at the
 insert, and that is the whole of the guarantee for those two columns.
 
-One line in `0004` does not match `docs/ACCESS.md` §4.1 as written, and the difference is
-deliberate: `platform_audit_log.token_id` ships as `ON DELETE restrict` where §4.1's type column
-says `on delete set null`. `SET NULL` is unreachable on this table — SQLite re-evaluates `CHECK`
-constraints on the implicit `UPDATE` that `SET NULL` performs, and the agent rule demands a
-non-`NULL` `token_id` on exactly the rows able to name a token, so the `DELETE` was always refused
-and always reported against a constraint the caller never mentioned. `restrict` changes no outcome
-and names the one that happens. Operationally it means a `staff_api_tokens` row with agent history
-cannot be hard-deleted; nothing tries, because §5 revokes a credential by writing `revoked_at`.
-The divergence from §4.1's wording is reported as a finding against that document rather than
-edited into it.
+`0004` matches `docs/ACCESS.md` §4.1 line for line, including the one line that used to differ.
+`platform_audit_log.token_id` ships as `ON DELETE restrict`, and §4.1's type column says
+`on delete restrict` as well; §5 there carries the reasoning. The wording it replaced was
+`on delete set null`, which named an outcome this table cannot produce: SQLite re-evaluates
+`CHECK` constraints on the implicit `UPDATE` that `SET NULL` performs, and §4.1's two token rules
+demand a non-`NULL` `token_id` on exactly the rows able to name one, so the parent `DELETE` was
+refused either way - and refused against a constraint the caller never mentioned. Both files now
+name the behaviour that was already happening, so there is nothing here for a deploy operator to
+reconcile between them.
+
+What `restrict` costs operationally: a `staff_api_tokens` row that any `platform_audit_log` row
+attributes to cannot be hard-deleted. Nothing tries. `docs/ACCESS.md` §5 revokes a credential by
+stamping `revoked_at` and never deleting the row, which is what keeps "which agent did this, on
+whose authority, with which token" answerable in one indexed query.
 
 ---
 
