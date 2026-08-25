@@ -34,6 +34,40 @@ Every screen is judged by an adversarial critic that compares it **blind, side b
 against the reference demo and must independently choose ours as the better-looking product.
 "It works" is not done. "It looks as good" is not done. It must look *better*.
 
+### Where the reference demo actually is
+
+Recorded in Faza B, after ten rounds in which the critic compared against a screenshot nobody
+could point at. The operator runs the reference locally:
+
+- **Live instance:** `https://app.trek.orb.local/`, served by OrbStack. Two things break a naive
+  capture and both are quiet failures rather than errors. The certificate is self-signed, so a
+  client without `--insecure` (or the Playwright equivalent) gets a connection error that reads
+  like the host being down; and the hostname resolves through OrbStack's own resolver, so a plain
+  `host`/`dig` lookup returns NXDOMAIN while `curl` succeeds. Neither means the instance is
+  unavailable.
+- **Source clone:** `/Users/rafalwolak/dev/test/trek`. §1 governs it: read it to learn *what* a
+  feature does, never to copy how it does it.
+- **Authenticated screens need a session.** The admin surface is at `/admin` behind an
+  `adminRequired` guard, and the product's own screens are behind a login, so an unauthenticated
+  capture photographs a sign-in form and compares *that* to our console - a verdict that looks
+  real and means nothing. The first-boot credentials are environment variables in the clone's
+  `docker-compose.yml`; read them from there rather than from anywhere else, and never copy them
+  into this repo.
+
+**Capture hygiene, and it is not a nicety.** Reference captures are written **outside this
+repository**. Faza B round 10 left a 743 KB reference screenshot untracked at the repo root, which
+§1 forbids anywhere in this repo - untracked is still in the repo. `/*.png` is gitignored now,
+but the rule is the point: the clean-room boundary survived ten rounds of comparing and was broken
+by the mechanics of comparing, not by anyone copying anything.
+
+**What the reference cannot settle.** Its admin surface is a tabbed users table with modals, and
+it has no per-account detail screen at all. Everything `docs/ACCESS.md` requires of
+`/_app/console/users/$userId` - the organizations an account belongs to and the role it holds in
+each, the audit timeline read from `platform_audit_log`, the subscription - is ours by contract
+rather than by parity. Asking the reference about those panels returns nothing, so a round that
+treats a missing panel as "the reference doesn't have it either" has misread which document it is
+building against.
+
 Specifically:
 - Pixel-honest spacing on an 4px grid. No eyeballed one-off margins.
 - Every interactive element has hover, focus-visible, active, disabled and loading states.
