@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
+import { BOTTOM_CLEARANCE_CSS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
 
 /**
@@ -137,6 +138,21 @@ describe('the chrome offsets that read the bar', () => {
     expect(css).toContain(
       '@utility pt-nav {\n  padding-top: calc(var(--nav-h) + var(--impersonation-h));\n}',
     )
+  })
+
+  it('stops the browser scrolling anything under the mobile tab bar', () => {
+    // The bottom edge's counterpart to `--impersonation-h` at the top, and
+    // deliberately scroll geometry rather than layout: `scroll-padding-bottom`
+    // moves where the browser stops and changes no element's size, so a content
+    // well that already clears the bar keeps exactly the height it had. The
+    // expression comes from `MOBILE_TAB_BAR`, so the reservation and the bar
+    // cannot disagree about how tall it is.
+    const css = stylesheet().replace(/\s+/g, '')
+    expect(css).toContain(
+      `scroll-padding-bottom:${BOTTOM_CLEARANCE_CSS.replace(/\s+/g, '')};`,
+    )
+    // …and released from `lg`, where there is no tab bar to clear.
+    expect(css).toContain('scroll-padding-bottom:0px;')
   })
 
   it('leaves the nav row itself measuring the nav row', () => {

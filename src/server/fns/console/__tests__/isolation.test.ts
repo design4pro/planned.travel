@@ -2,7 +2,7 @@
  * The boundaries this directory is defined by, asserted against the module graph rather than
  * against prose.
  *
- * Four of them, and each was a stated risk before it was a test:
+ * Five of them, and each was a stated risk before it was a test:
  *
  * - **No tenant scope, ever.** SPEC §5: a console action has no organization, and handing the
  *   tenant layer a fabricated one to reach global rows "destroys the single guarantee it was built
@@ -13,6 +13,9 @@
  * - **One binding seam.** `cloudflare:workers` is imported by `./bindings` and by nothing else, so
  *   every other module in the directory can be driven with a fake environment — which is what makes
  *   the guard, the ordering and the audit append testable as themselves rather than as mocks.
+ * - **The seam holds no query.** The same fact that makes `./bindings` unloadable in this project
+ *   makes anything written inside it untestable, and a query nobody executes is a rule pinned to a
+ *   copy of itself.
  * - **No Better Auth client.** The console talks to server functions. Giving the browser bundle an
  *   admin vocabulary would be building against fifteen paths that answer `404` (docs/ACCESS.md
  *   §2.6), and the exact search that closes it is reproduced here.
@@ -93,6 +96,21 @@ describe('the binding seam', () => {
       .filter((importer) => importer.startsWith(`${CONSOLE_DIR}/`))
 
     expect(importers).toEqual([join(CONSOLE_DIR, 'bindings.ts')])
+  })
+
+  it('holds no database query, because a query written there can only be tested against a copy', () => {
+    // The measured reason this rule exists. `../bindings` cannot be loaded by the `server` project
+    // at all, so the test that drives the console replaces it wholesale — and while the two adapter
+    // queries lived there, the mock factory carried a restatement of both. Deleting the expiry
+    // predicate or the `id` sort from the shipped file left every console test green, which made
+    // two repairs pinned to those clauses unenforceable. Queries live in `./adapter-reads`, take
+    // their adapter as an argument, and are executed by the tests as themselves.
+    const offenders = productionCode.filter(
+      ({ file, code }) =>
+        file !== join(CONSOLE_DIR, 'adapter-reads.ts') &&
+        (code.includes('findMany') || code.includes('findOne')),
+    )
+    expect(offenders.map((entry) => entry.file)).toEqual([])
   })
 })
 

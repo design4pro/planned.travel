@@ -20,8 +20,10 @@ import {
 import { getSession } from '#/server/auth/session'
 import { isOrganizationRole, roleSatisfies } from '#/server/auth/tenant'
 import { getDb } from '#/server/db/client'
+import { createLogger } from '#/server/observability'
 import { countUnread, createScope, getOrganization } from '#/server/repos'
 
+import type { Logger } from '#/server/observability'
 import type { AuthSession, OrganizationRole } from '#/server/auth/tenant'
 import type {
   ShellImpersonator,
@@ -76,6 +78,18 @@ async function listShellOrganizations(
   }
 }
 
+/**
+ * Memoised per isolate, the way `src/server/fns/context.ts` holds its own: the
+ * logger carries no request state, and the shell is on the path of every
+ * authenticated document.
+ */
+let shellLogger: Logger | undefined
+
+function shellLog(): Logger {
+  shellLogger ??= createLogger({ context: { component: 'app-shell' } })
+  return shellLogger
+}
+
 /** The columns the warning bar needs off the operator's own row, and no others. */
 const operatorRowSchema = z.object({
   id: z.string().min(1),
@@ -98,6 +112,22 @@ const operatorRowSchema = z.object({
  * which is rare by construction and short-lived by §6.2. A failure degrades to
  * the id rather than taking the shell down: a bar that cannot name the operator
  * must still say that there is one.
+ *
+ * Deliberately not exported, however convenient a direct unit test would be:
+ * this module is imported by `_app/route.tsx`, so anything exported from it
+ * survives the server-function transform into the client graph, and this
+ * function reaches `getAuth()` — which reaches `cloudflare:workers`, which the
+ * browser build cannot resolve. Measured, not assumed: exporting it fails
+ * `pnpm build` with `Rolldown failed to resolve import "cloudflare:workers"`.
+ * The shape of the two branches below is asserted from the source instead.
+ *
+ * **Both degradations are reported.** They are not the same event and neither is
+ * nothing: a row that is missing or malformed is a `warn` about the auth schema,
+ * and a read that threw is an `error` about the adapter. Swallowed silently, a
+ * lookup that fails on every request renders an opaque user id in the product's
+ * loudest warning for the whole life of the session with nothing anywhere to say
+ * why. The bar still renders either way — the log is the signal, not the
+ * fallback.
  */
 async function readOperator(userId: string): Promise<ShellImpersonator> {
   try {
@@ -109,10 +139,20 @@ async function readOperator(userId: string): Promise<ShellImpersonator> {
     })
     const parsed = operatorRowSchema.safeParse(row)
     if (!parsed.success) {
+      shellLog().warn('impersonation operator row unreadable', {
+        operatorUserId: userId,
+        found: row !== null && row !== undefined,
+        fields: parsed.error.issues
+          .map((issue) => issue.path.join('.'))
+          .join(','),
+      })
       return { id: userId, name: null, email: null }
     }
     return { id: userId, name: parsed.data.name, email: parsed.data.email }
-  } catch {
+  } catch (cause) {
+    shellLog().error('impersonation operator lookup failed', cause, {
+      operatorUserId: userId,
+    })
     return { id: userId, name: null, email: null }
   }
 }

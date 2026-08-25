@@ -19,11 +19,14 @@ import type { ShellSession } from '../session'
  */
 const exit = vi.hoisted(() => ({ end: vi.fn() }))
 const router = vi.hoisted(() => ({ invalidate: vi.fn(), navigate: vi.fn() }))
+/** The toast surface, captured: what the operator is told is under test here. */
+const notify = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
 
 vi.mock('#/server/fns/console/impersonation', () => ({
   endImpersonationFn: exit.end,
 }))
 vi.mock('@tanstack/react-router', () => ({ useRouter: () => router }))
+vi.mock('sonner', () => ({ toast: notify }))
 
 /** A promise this test settles by hand, so "in flight" is a state it can hold. */
 function deferred<T>(): {
@@ -84,6 +87,20 @@ describe('the impersonation bar', () => {
     expect(screen.queryByRole('region')).toBeNull()
   })
 
+  it('installs no clock on an ordinary session', () => {
+    // The countdown lives in an inner component that only an impersonated
+    // session mounts. Called from the outer one it would be unconditional — a
+    // one-second interval and a `setState` per tick on every authenticated page
+    // of every session in the product, to render nothing.
+    const interval = vi.spyOn(globalThis, 'setInterval')
+    render(<ImpersonationBar session={sessionWith(false)} />)
+    expect(interval).not.toHaveBeenCalled()
+
+    render(<ImpersonationBar session={sessionWith(true)} />)
+    expect(interval).toHaveBeenCalled()
+    interval.mockRestore()
+  })
+
   it('names the account being acted on and the operator acting', async () => {
     render(<ImpersonationBar session={sessionWith(true)} />)
 
@@ -108,6 +125,30 @@ describe('the impersonation bar', () => {
     await waitFor(() => {
       expect(timer.textContent).toBe('14:57')
     })
+  })
+
+  it('gives each identity its own share of the row, so neither can vanish', () => {
+    // At 360px a single truncating line put both names in competition and the
+    // operator, being last, lost — the bar stopped answering the one question it
+    // exists to answer. jsdom does not lay anything out, so what is asserted is
+    // the mechanism: two elements, each clipping only itself, and a ceiling on
+    // the operator's share so a long account name can shorten it but never
+    // delete it.
+    render(<ImpersonationBar session={sessionWith(true)} />)
+    const bar = screen.getByRole('region', { name: 'Impersonated session' })
+
+    const identity = bar.querySelector('p')
+    const [acted, operator] = [...(identity?.children ?? [])]
+    expect(acted.textContent).toContain('Kasia Nowak')
+    expect(operator.textContent).toContain('Rafal Wolak')
+    // Each clips only itself, and the operator's share has a floor: it does not
+    // shrink, and its ceiling is half the row.
+    expect(acted.className).toContain('truncate')
+    expect(acted.className).toContain('shrink')
+    expect(operator.className).toContain('truncate')
+    expect(operator.className).toContain('shrink-0')
+    expect(operator.className).toContain('max-w-[50%]')
+    expect(acted.contains(operator)).toBe(false)
   })
 
   it('falls back to the operator id when the row could not be named', () => {
@@ -223,5 +264,50 @@ describe('the impersonation bar', () => {
       expect(button.hasAttribute('disabled')).toBe(false)
     })
     expect(router.navigate).not.toHaveBeenCalled()
+  })
+
+  it('tells the operator what to do rather than repeating the failure', async () => {
+    // The plugin answers a missing signed `admin_session` cookie with an
+    // internal 500 describing its own lookup. Rendered verbatim, an operator
+    // holding somebody else's live credential reads a stack-trace fragment
+    // instead of an instruction.
+    const internal = 'Failed to find admin session'
+    exit.end.mockRejectedValue(new Error(internal))
+    render(<ImpersonationBar session={sessionWith(true)} />)
+
+    await user().click(screen.getByRole('button', { name: 'End impersonation' }))
+
+    await waitFor(() => {
+      expect(notify.error).toHaveBeenCalled()
+    })
+    const [title, options] = notify.error.mock.calls[0] as [
+      string,
+      { description?: string },
+    ]
+    expect(title).toBe('Could not end impersonation')
+    expect(options.description).not.toContain(internal)
+    expect(options.description).toMatch(/Reload the page/)
+  })
+
+  it('recognises the exit’s own refusal and answers it in kind', async () => {
+    // `ConsoleActionError` crosses the serialization boundary as data, so the
+    // code is read structurally rather than with `instanceof`.
+    exit.end.mockRejectedValue(
+      Object.assign(new Error('not impersonating'), {
+        code: 'not-impersonating',
+      }),
+    )
+    render(<ImpersonationBar session={sessionWith(true)} />)
+
+    await user().click(screen.getByRole('button', { name: 'End impersonation' }))
+
+    await waitFor(() => {
+      expect(notify.error).toHaveBeenCalled()
+    })
+    const [, options] = notify.error.mock.calls[0] as [
+      string,
+      { description?: string },
+    ]
+    expect(options.description).toMatch(/already your own/)
   })
 })

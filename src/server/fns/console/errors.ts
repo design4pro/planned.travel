@@ -77,6 +77,32 @@ export class ConsoleActionError extends Error {
   }
 }
 
+/**
+ * A console action stopped because a fact its audit row must carry could not be established.
+ *
+ * Not a {@link ConsoleActionError}, and the difference is the whole reason it is a second class.
+ * That one is a `409` about the *target's state* - the operator may act and this account cannot
+ * receive it - and its codes are a closed vocabulary a screen renders as advice about the target.
+ * This is a `500`: the operator may act, the target is fine, and the dependency did not answer. No
+ * code, because there is nothing for a screen to branch on; the only honest instruction is to try
+ * again, and it is in the message.
+ *
+ * It exists for one caller. The impersonation exit writes the *operator's* platform role into
+ * `platform_audit_log.actor_role` as a value, and the read behind it can fail. Every failure used to
+ * arrive as `null`, and `resolvePlatformRole(null)` is `'user'` - so a failed read was written into
+ * the ledger as a fact about an operator who must have held `admin`, indistinguishable from a plain
+ * account and unrecoverable, because docs/ACCESS.md §4.1 makes `actor_role` a value precisely so
+ * nothing can re-derive it later. Refusing the action and raising at `error` is the cheaper failure.
+ */
+export class ConsoleUnattributableError extends Error {
+  readonly status = 500
+
+  constructor(message: string) {
+    super(message)
+    this.name = 'ConsoleUnattributableError'
+  }
+}
+
 /* ---------------------------------------------------- reading Better Auth's own refusals */
 
 /**

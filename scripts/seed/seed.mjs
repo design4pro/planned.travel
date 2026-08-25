@@ -290,7 +290,7 @@ async function main() {
     clearTimeout(timer)
   }
 
-  await dropCachedVisualSession(options.force)
+  await dropCachedVisualSession()
   printReport(body)
 }
 
@@ -303,9 +303,18 @@ async function main() {
  * That cost a full round: two items were rejected on a visual gate that was measuring a stale
  * cookie rather than the code under test. Deleting the file here, rather than asking every caller
  * to remember, is the mechanical version of the instruction.
+ *
+ * It runs on **every** seed rather than only on `--force`, which it did not used to. The seed now
+ * writes the demo owner's platform role (`applyPlatformStanding` in
+ * `src/routes/api/dev/-seed/bootstrap.ts`), and a role is not only a column: Better Auth's
+ * secondary storage keeps a copy of the whole `user` row inside each cached session blob, and
+ * `findSession` answers from that blob in preference to D1. A direct role write leaves every
+ * already-minted session carrying the role the account held *before* it, for up to the session's
+ * thirty-day lifetime - so a warm reseed followed by a run that reuses the cached cookie would
+ * photograph `/console` redirecting to `/dashboard` and report it as a broken guard. Dropping the
+ * file forces one fresh sign-in, which reads the row and writes a blob that agrees with it.
  */
-async function dropCachedVisualSession(force) {
-  if (!force) return
+async function dropCachedVisualSession() {
   const { rm } = await import('node:fs/promises')
   await rm('e2e/.auth/demo.json', { force: true })
 }

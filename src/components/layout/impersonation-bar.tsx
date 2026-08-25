@@ -13,7 +13,7 @@ import { cn } from '#/lib/cn'
 // from an impersonated session that exists.
 import { endImpersonationFn } from '#/server/fns/console/impersonation'
 
-import type { ShellSession } from './session'
+import type { ShellImpersonator, ShellSession } from './session'
 
 /**
  * The persistent warning that this session is not the operator's own.
@@ -22,16 +22,20 @@ import type { ShellSession } from './session'
  * decision in the markup below rather than a preference:
  *
  * - **It is on every screen under `/_app`.** Rendered by `AppShell`, which is
- *   the only wrapper with a session in scope, so no route can omit it and no
- *   route can scroll it away. It is first in the shell's DOM, which is what
+ *   the only wrapper with a session in scope, so no route can omit the bar and
+ *   no route can scroll it away. It is first in the shell's DOM, which is what
  *   makes the End button the first tab stop and keeps the reading order and the
  *   visual order the same thing.
  * - **It cannot be dismissed.** There is no close control anywhere in this file.
  *   A dismissible warning about a live credential for somebody else's account is
  *   a warning that will be dismissed.
  * - **It says who, and who by.** The account being acted on and the operator
- *   acting are both named at every width from 360px up; the copy shortens rather
- *   than dropping either of them.
+ *   acting share one row, and each holds its own share of it: the account takes
+ *   the space the operator does not need, and the operator can never be given
+ *   less than half. A single truncating line put both names in competition and
+ *   the operator, being last, lost — at 360px it disappeared entirely, which is
+ *   the one question the bar exists to answer. Neither name can now be truncated
+ *   away, at any width from 360px up; the surrounding words shorten instead.
  * - **It counts down.** The remaining life comes from the session's own
  *   `expiresAt` rather than from §6.2's 900-second constant, so a session the
  *   plugin minted with a different duration is described honestly.
@@ -89,6 +93,12 @@ function speakRemaining(seconds: number): string {
  * the same string, and the difference is a hydration warning on a page that owes
  * zero of them. The slot it renders into has a fixed width, so filling it costs
  * no layout shift.
+ *
+ * It is called from {@link ImpersonatedSessionBar} and therefore only ever runs
+ * on a session that actually has a bar. A hook cannot be conditional, so a
+ * countdown installed in the outer component would have put a one-second
+ * interval and a `setState` per tick on every authenticated page of every
+ * ordinary session — which is all of them but a handful.
  */
 function useRemainingSeconds(expiresAt: string): number | null {
   const [remaining, setRemaining] = useState<number | null>(null)
@@ -114,10 +124,63 @@ function useRemainingSeconds(expiresAt: string): number | null {
   return remaining
 }
 
+/**
+ * The refusal code a console server function carries, read structurally.
+ *
+ * `ConsoleActionError` is thrown on the server and arrives here across the
+ * serialization boundary, so `instanceof` is meaningless and the class is not
+ * imported — reading the one field the type promises is both cheaper and honest
+ * about what actually survives the trip.
+ */
+function refusalCode(cause: unknown): string | null {
+  if (typeof cause !== 'object' || cause === null || !('code' in cause)) {
+    return null
+  }
+  return typeof cause.code === 'string' ? cause.code : null
+}
+
+/**
+ * What to tell an operator whose exit failed.
+ *
+ * Never `cause.message`. The exit's own failures are Better Auth's — the plugin
+ * answers a missing signed `admin_session` cookie with an internal 500 whose
+ * text describes its own lookup — and an operator holding somebody else's live
+ * credential needs an instruction, not a stack-trace fragment. Its opposite,
+ * `refineImpersonationFailure` in `src/server/fns/console/impersonation.ts`,
+ * refines the entry the same way and for the same reason.
+ */
+function describeExitFailure(cause: unknown): string {
+  switch (refusalCode(cause)) {
+    case 'not-impersonating':
+      return 'This session is already your own. Reload the page and the bar will be gone.'
+    default:
+      return 'You are still signed in as this account. Reload the page and try again. If it refuses twice, sign out to end the session.'
+  }
+}
+
 export function ImpersonationBar({ session }: ImpersonationBarProps) {
+  const operator = session.impersonatedBy
+
+  // Everything below this line — the countdown's interval among it — belongs to
+  // a session that has a bar. See `useRemainingSeconds`.
+  if (operator === null) {
+    return null
+  }
+
+  return <ImpersonatedSessionBar session={session} operator={operator} />
+}
+
+interface ImpersonatedSessionBarProps {
+  session: ShellSession
+  operator: ShellImpersonator
+}
+
+function ImpersonatedSessionBar({
+  session,
+  operator,
+}: ImpersonatedSessionBarProps) {
   const router = useRouter()
   const [ending, setEnding] = useState(false)
-  const operator = session.impersonatedBy
   const remaining = useRemainingSeconds(session.expiresAt)
 
   const end = useCallback(async (): Promise<void> => {
@@ -136,17 +199,10 @@ export function ImpersonationBar({ session }: ImpersonationBarProps) {
     } catch (cause) {
       setEnding(false)
       toast.error('Could not end impersonation', {
-        description:
-          cause instanceof Error && cause.message.length > 0
-            ? cause.message
-            : 'Reload the page and try again.',
+        description: describeExitFailure(cause),
       })
     }
   }, [router])
-
-  if (operator === null) {
-    return null
-  }
 
   const operatorName = operator.name ?? operator.email ?? operator.id
   const expired = remaining !== null && remaining <= 0
@@ -177,18 +233,26 @@ export function ImpersonationBar({ session }: ImpersonationBarProps) {
           <span className="text-micro uppercase text-warning">
             Impersonated session
           </span>
-          <p className="truncate text-caption text-ink">
-            <span className="font-semibold">
+          {/* Two shares of one row rather than one line both names compete for.
+              The account shrinks and the operator does not, so a long account
+              name shortens itself rather than pushing the operator out; the
+              operator's own ceiling is half the row, so it can never take the
+              account's place either. Neither span grows, which keeps the two
+              names beside each other instead of at opposite ends of a 1440px
+              bar. */}
+          <p className="flex min-w-0 items-baseline gap-1 text-caption text-ink">
+            <span className="min-w-0 shrink truncate font-semibold">
               <span className="hidden sm:inline">Acting as </span>
               {session.user.name}
+              <span className="hidden font-normal text-ink-2 lg:inline">
+                {' '}
+                ({session.user.email})
+              </span>
             </span>
-            <span className="hidden text-ink-2 lg:inline">
-              {' '}
-              ({session.user.email})
-            </span>
-            <span className="text-ink-2">
-              <span className="hidden sm:inline"> · started by </span>
-              <span className="sm:hidden"> · by </span>
+            <span className="min-w-0 max-w-[50%] shrink-0 truncate text-ink-2">
+              <span aria-hidden>· </span>
+              <span className="hidden sm:inline">started by </span>
+              <span className="sm:hidden">by </span>
               {operatorName}
             </span>
           </p>

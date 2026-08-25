@@ -101,6 +101,15 @@ interface SharedState {
    * audit append. Nothing else in this file can produce it.
    */
   readonly sessionPagesReject: Holder<boolean>
+  /**
+   * When true, the adapter behind the operator's role read rejects.
+   *
+   * The impersonation exit is the only caller, and the row it writes carries the operator's role as
+   * a value — so "the read failed" and "the column is NULL" have to arrive as different things or
+   * an admin's exit is recorded under `actor_role: 'user'`. This switch is what makes the first of
+   * those two reachable.
+   */
+  readonly roleReadRejects: Holder<boolean>
 }
 
 const shared = vi.hoisted((): SharedState => ({
@@ -111,6 +120,7 @@ const shared = vi.hoisted((): SharedState => ({
   brokenDb: { current: false },
   onStopImpersonating: { current: null },
   sessionPagesReject: { current: false },
+  roleReadRejects: { current: false },
 }))
 
 vi.mock('#/server/auth/env', () => ({
@@ -137,80 +147,67 @@ vi.mock('#/server/auth/email', () => ({
   queueAuthEmail: async () => undefined,
 }))
 
-vi.mock('../bindings', () => ({
-  consoleLogger: () =>
-    createLogger({
-      level: 'debug',
-      sink: sink(),
-      context: { component: 'console-fn' },
-    }),
-  currentSession: () => getSession(),
-  platformDb: () => (shared.brokenDb.current ? brokenDatabase() : tables().db),
-  platformApi: () => {
-    const api = getAuth().api
-    const hook = shared.onStopImpersonating.current
-    if (!hook) return api
-    return {
-      ...api,
-      stopImpersonating: ((
-        ...args: Parameters<typeof api.stopImpersonating>
-      ) => {
-        hook()
-        return api.stopImpersonating(...args)
-      }) as typeof api.stopImpersonating,
-    }
-  },
-  sessionKeyStore: () => kv(),
-  // The production bodies of `sessionPageReader` and `readSessionRows`, with the real
-  // `enumerateSessionRows` and the real purge walking the real Better Auth adapter over the real
-  // SQLite schema — the expiry predicate and the `id` order included, because both are properties
-  // under test. Only the binding is replaced: a mock that re-implemented the paging would be
-  // asserting a copy of the rule rather than the rule.
-  sessionPageReader: (userId: string) => {
-    const liveAt = new Date()
-    return async (offset: number, limit: number) => {
-      if (shared.sessionPagesReject.current) {
-        throw new Error('D1_ERROR: database is locked')
+vi.mock('../bindings', async () => {
+  // The *shipped* reads, not a copy of them. `../bindings` cannot be loaded here at all — it imports
+  // `cloudflare:workers` — so this factory replaces it, and everything it once re-implemented inline
+  // now comes from `../adapter-reads`, which takes its adapter as an argument for exactly this
+  // reason. What is supplied below is the Worker environment: the real `auth.api`, the real Better
+  // Auth database adapter over the real SQLite schema, a `Map`-backed `SESSIONS` namespace and a
+  // real `platform_audit_log`. The expiry predicate, the `id` order and the single expiry instant
+  // are therefore under test as the code that ships, not as a restatement of it.
+  const { createSessionPageReader, readPlatformRole } =
+    await import('../adapter-reads')
+  const adapter = async () => (await getAuth().$context).adapter
+
+  return {
+    consoleLogger: () =>
+      createLogger({
+        level: 'debug',
+        sink: sink(),
+        context: { component: 'console-fn' },
+      }),
+    currentSession: () => getSession(),
+    platformDb: () =>
+      shared.brokenDb.current ? brokenDatabase() : tables().db,
+    platformApi: () => {
+      const api = getAuth().api
+      const hook = shared.onStopImpersonating.current
+      if (!hook) return api
+      return {
+        ...api,
+        stopImpersonating: ((
+          ...args: Parameters<typeof api.stopImpersonating>
+        ) => {
+          hook()
+          return api.stopImpersonating(...args)
+        }) as typeof api.stopImpersonating,
       }
-      const context = await getAuth().$context
-      return context.adapter.findMany<unknown>({
-        model: 'session',
-        where: [
-          { field: 'userId', value: userId },
-          { field: 'expiresAt', operator: 'gt' as const, value: liveAt },
-        ],
-        sortBy: { field: 'id', direction: 'asc' as const },
-        limit,
-        offset,
-      })
-    }
-  },
-  readSessionRows: async (userId: string) => {
-    const liveAt = new Date()
-    return enumerateSessionRows(async (offset, limit) => {
-      const context = await getAuth().$context
-      return context.adapter.findMany<unknown>({
-        model: 'session',
-        where: [
-          { field: 'userId', value: userId },
-          { field: 'expiresAt', operator: 'gt' as const, value: liveAt },
-        ],
-        sortBy: { field: 'id', direction: 'asc' as const },
-        limit,
-        offset,
-      })
-    })
-  },
-  readUserRole: async (userId: string) => {
-    const context = await getAuth().$context
-    const row = await context.adapter.findOne<{ role?: string | null }>({
-      model: 'user',
-      where: [{ field: 'id', value: userId }],
-      select: ['role'],
-    })
-    return row?.role ?? null
-  },
-}))
+    },
+    sessionKeyStore: () => kv(),
+    // The one wrapper, and it injects a fault rather than re-stating a query: nothing else in this
+    // file can make a *page read* reject, which is the failure the post-mutation snapshot drop has
+    // to absorb without losing the audit row.
+    sessionPageReader: (userId: string) => {
+      const page = createSessionPageReader(adapter, userId)
+      return async (offset: number, limit: number) => {
+        if (shared.sessionPagesReject.current) {
+          throw new Error('D1_ERROR: database is locked')
+        }
+        return page(offset, limit)
+      }
+    },
+    readSessionRows: async (userId: string) =>
+      enumerateSessionRows(createSessionPageReader(adapter, userId)),
+    readUserRole: async (userId: string) => {
+      if (shared.roleReadRejects.current) {
+        return readPlatformRole(async () => {
+          throw new Error('D1_ERROR: database is locked')
+        }, userId)
+      }
+      return readPlatformRole(adapter, userId)
+    },
+  }
+})
 
 /* ------------------------------------------------------------- the real modules */
 
@@ -219,7 +216,8 @@ vi.mock('../bindings', () => ({
 const { getAuth } = await import('#/server/auth')
 const { getSession } = await import('#/server/auth/session')
 const { AuthRequirementError } = await import('#/server/auth/tenant')
-const { ConsoleActionError } = await import('../errors')
+const { ConsoleActionError, ConsoleUnattributableError } =
+  await import('../errors')
 const {
   endImpersonationFn,
   endImpersonationInputSchema,
@@ -756,6 +754,7 @@ beforeEach(async () => {
   shared.brokenDb.current = false
   shared.onStopImpersonating.current = null
   shared.sessionPagesReject.current = false
+  shared.roleReadRejects.current = false
   shared.sink.current = createMemorySink()
 
   const previous = shared.platformTables.current as PlatformTables | null
@@ -2122,6 +2121,49 @@ describe('impersonation', () => {
       code: 'not-impersonating',
     })
     expect(await auditRows()).toEqual([])
+  })
+
+  it('refuses to end an impersonation it cannot attribute, rather than recording the operator as a plain account', async () => {
+    const worn = seedUser({ role: 'curator' })
+    const started = await impersonate({ userId: worn.id })
+    callerJar = applyCookies(new Map(callerJar), started)
+
+    const stopSpy = vi.spyOn(getAuth().api, 'stopImpersonating')
+    shared.roleReadRejects.current = true
+
+    await expect(endImpersonation()).rejects.toBeInstanceOf(
+      ConsoleUnattributableError,
+    )
+
+    // The append comes first on this path, so a refusal that happened after it would have left a
+    // row behind. It must not: `resolvePlatformRole(null)` is `'user'`, and a row saying an
+    // `admin`'s exit was performed by a `user` is a fact nothing can re-derive later
+    // (docs/ACCESS.md §4.1 records `actor_role` as a value for exactly that reason).
+    expect(await rowsFor('platform.user.impersonation_ended')).toEqual([])
+    expect(stopSpy).not.toHaveBeenCalled()
+  })
+
+  it('raises a line naming the action, the actor and the entity when it cannot read the role', async () => {
+    const worn = seedUser({ role: 'curator' })
+    const started = await impersonate({ userId: worn.id })
+    callerJar = applyCookies(new Map(callerJar), started)
+    shared.roleReadRejects.current = true
+
+    await endImpersonation().catch(() => undefined)
+
+    const incident = records().find(
+      (record) =>
+        record.msg ===
+        'console could not read the platform role of the operator ending an impersonation',
+    )
+    expect(incident?.level).toBe('error')
+    expect(incident).toMatchObject({
+      action: 'platform.user.impersonation_ended',
+      actorUserId: operatorId,
+      actorKind: 'human',
+      entityId: worn.id,
+      reason: 'unreadable',
+    })
   })
 
   it('refuses to end an impersonation with no session at all', async () => {

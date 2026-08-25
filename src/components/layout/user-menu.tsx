@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
-import { ChevronDown, CreditCard, LoaderCircle, LogOut, Settings, ShieldCheck } from 'lucide-react'
+import {
+  ChevronDown,
+  CreditCard,
+  LoaderCircle,
+  LogOut,
+  Settings,
+  ShieldCheck,
+  SlidersHorizontal,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '#/lib/cn'
 import { Avatar, transitionBase } from './kit'
@@ -96,9 +104,35 @@ export function UserMenu({ session }: { session: ShellSession }) {
           <MenuItem asChild>
             <Link to="/admin">
               <ShieldCheck aria-hidden className="size-4 text-ink-4" />
-              Admin
+              Workspace admin
             </Link>
           </MenuItem>
+        ) : null}
+
+        {/*
+          The platform console, kept visibly apart from the workspace panel above it.
+
+          Two different vocabularies live one line from each other here, and `docs/SPEC.md` §5 says
+          they must never be conflated: `isAdmin` is this person's membership role in the workspace
+          they are currently looking at, and `isPlatformAdmin` / `isCurator` is their standing on
+          the product itself. An owner of their own workspace is `isAdmin` and almost certainly
+          `platformRole: 'user'`. So the two entries get their own separator band, their own glyph —
+          a second ShieldCheck would read as the same destination twice — and labels that name what
+          each one governs rather than both saying "Admin".
+
+          `docs/ACCESS.md` §2.3: the entry is not rendered for a `user`, which is nearly everybody.
+          Hiding it is a courtesy; the console's own `beforeLoad` guard is the boundary.
+        */}
+        {user.isPlatformAdmin || user.isCurator ? (
+          <>
+            <MenuSeparator />
+            <MenuItem asChild>
+              <Link to="/console">
+                <SlidersHorizontal aria-hidden className="size-4 text-brand" />
+                Platform console
+              </Link>
+            </MenuItem>
+          </>
         ) : null}
 
         <MenuSeparator />

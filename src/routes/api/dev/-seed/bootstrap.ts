@@ -28,7 +28,7 @@ import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, getAuth } from '#/server/auth
 import { authDb } from '#/server/auth/db'
 import { firstOrganizationIdFor, membershipRoleFor } from '#/server/auth/provisioning'
 import { addMember, createScope } from '#/server/repos'
-import { SEED_ANCHOR_INSTANT, people } from './dataset'
+import { SEED_ANCHOR_INSTANT, instantOn, people } from './dataset'
 import { membershipInstants } from './fixture-rows'
 import { stableId } from './stable-id'
 import type { OrganizationRole } from '#/server/db/auth-schema'
@@ -315,6 +315,10 @@ export async function resolveWorkspace(
     )
   }
 
+  // Every run, warm or cold: a re-seed over an existing workspace never reaches
+  // `ensureWorkspacePeople`, and the console has no subject without this.
+  await applyPlatformStanding()
+
   return {
     organizationId: owner.organizationId,
     ownerUserId: owner.userId,
@@ -373,6 +377,101 @@ async function anchorAuthRows(
 }
 
 /**
+ * The platform standing the four demo accounts hold, which is a different vocabulary from the
+ * workspace roles beside it and must never be confused with them (docs/SPEC.md §5).
+ *
+ * `people[].role` in the dataset is `owner` / `admin` / `member`: membership of *this workspace*.
+ * What this table sets is `user.role`, `user.banned`, `user.ban_reason` and `user.ban_expires` —
+ * standing on the *product*. An owner of their own workspace is almost always `platformRole: 'user'`,
+ * and the two disagreeing is the normal case rather than a bug.
+ *
+ * It exists because the platform console has no subject without it. Every screen under `/console`
+ * needs an `admin` to open it, the role scale needs a `curator` to be a scale rather than a
+ * yes/no, and the accounts table's suspended treatment — the one place `--color-danger` appears —
+ * has nothing to render unless somebody is suspended. A visual baseline recorded against a database
+ * where none of that is true photographs a redirect to `/dashboard` and looks like evidence.
+ *
+ * The demo owner is the `admin` because that is the one account the e2e suite can sign in as.
+ *
+ * `banExpires` is anchored like every other date in the fixture (`instantOn`), never `new Date()`:
+ * the accounts table prints it, and a suspension that expires "in 45 days from whenever you seeded"
+ * would put a different string in the baseline every morning.
+ */
+const PLATFORM_STANDING: ReadonlyArray<{
+  readonly key: PersonKey
+  readonly role: string | null
+  readonly banned: boolean
+  readonly banReason: string | null
+  readonly banExpires: Date | null
+}> = [
+  {
+    key: 'rafal',
+    role: 'admin',
+    banned: false,
+    banReason: null,
+    banExpires: null,
+  },
+  {
+    key: 'mika',
+    role: 'curator',
+    banned: false,
+    banReason: null,
+    banExpires: null,
+  },
+  { key: 'jonas', role: null, banned: false, banReason: null, banExpires: null },
+  {
+    key: 'priya',
+    role: null,
+    banned: true,
+    banReason: 'Sharing a workspace login with a third party. Suspended pending review.',
+    banExpires: instantOn(45),
+  },
+]
+
+/**
+ * Writes the platform standing directly, which is the one place in the product that is allowed to.
+ *
+ * docs/ACCESS.md §8.1 bootstraps the first `admin` with a direct database statement and §8.2 says
+ * every role afterwards goes through the console, "because a role that arrives without an audit
+ * entry is a role nobody can account for later". This is §8.1's path, run against a development
+ * fixture: there is no operator to attribute the grant to and no `platform_audit_log` row is
+ * written, exactly as the bootstrap does not write one. It is behind `import.meta.env.DEV` with the
+ * rest of the seed and reaches no production bundle.
+ *
+ * Resolved by address rather than from a caller's id map, and called from **both** seed paths, so it
+ * lands on a warm database too. A re-run over an already-seeded workspace stops at the
+ * `demo.seed` marker long before the collaborator rows are touched, and a fixture that only existed
+ * on the cold path would be missing from every checkout that had ever been seeded before it was
+ * written - which is every checkout that matters.
+ *
+ * Idempotent, and it writes all four columns on every account it names, including the nulls. A
+ * fixture that only ever *added* standing could not take it away again, so a database seeded once
+ * against an older table would keep whatever it was given the first time and drift away from the
+ * standing every other clone has.
+ */
+async function applyPlatformStanding(): Promise<void> {
+  const db = authDb()
+  const emailFor = new Map(people.map((person) => [person.key, person.email]))
+
+  for (const standing of PLATFORM_STANDING) {
+    const email = emailFor.get(standing.key)
+    if (email === undefined) {
+      continue
+    }
+    await db
+      .update(user)
+      .set({
+        role: standing.role,
+        banned: standing.banned,
+        banReason: standing.banReason,
+        banExpires: standing.banExpires,
+        updatedAt: SEED_ANCHOR_INSTANT,
+      })
+      .where(eq(user.email, email))
+  }
+}
+
+/**
  * Creates the collaborator user rows, joins them to the workspace and builds a scope for each.
  *
  * Membership goes through the repository, so the seat quota and the "never remove the last owner"
@@ -395,6 +494,9 @@ export async function ensureWorkspacePeople(
   }
 
   await anchorAuthRows(workspace, ids)
+  // After the anchor, which rewrites `updatedAt` on every one of these rows: the standing write
+  // carries the same instant, so the two cannot leave the four accounts with different clocks.
+  await applyPlatformStanding()
 
   const scopes = new Map<PersonKey, TenantScope>()
   for (const person of people) {

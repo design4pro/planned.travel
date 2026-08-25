@@ -2018,7 +2018,7 @@ const fontsUnblocked = new WeakSet<Page>()
  * runs several times in some specs and Playwright keeps every handler it is
  * given.
  */
-async function unblockCrossOriginFonts(page: Page): Promise<void> {
+export async function unblockCrossOriginFonts(page: Page): Promise<void> {
   if (fontsUnblocked.has(page)) {
     return
   }
@@ -2162,4 +2162,205 @@ export async function shoot(
     fullPage: false,
     mask: maskFor(page, route),
   })
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The platform console
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The console's own routes, kept out of `APP_ROUTES` on purpose.
+ *
+ * Three reasons, and none of them is tidiness. The account screen's path carries a `$userId` that
+ * only the running database can supply, so it cannot be a constant in a table every audit iterates.
+ * The whole tree is behind a *platform role* rather than merely behind a session, so a run against a
+ * database seeded before that fixture existed has to skip these rather than photograph the redirect
+ * to `/dashboard` — which is a frame that looks like evidence and is not. And `APP_ROUTES` is
+ * documented as the six screens the product's own navigation reaches; the console is reached from
+ * the user menu, by an operator who already knows it is there.
+ *
+ * They are still audited by the same machinery: `frame()` runs `auditRelativeTime()` over them, and
+ * the spec runs `auditServerClock()` over the same list, so a console screen that starts printing a
+ * clock-derived string is as fatal here as anywhere else.
+ *
+ * `/console/users` is photographed under an explicit sort, and that is load-bearing rather than
+ * decorative. The demo fixture anchors every account's `created_at` to the same instant, so the
+ * default `created_at desc` ordering has no tiebreaker and SQLite is free to return the four rows in
+ * any order it likes — a baseline recorded under it would hold whatever order that database file
+ * happened to produce. `?sort=name&dir=asc` is a total order over the fixture, and it photographs
+ * the sort control in its active state as well.
+ */
+const CONSOLE_OVERVIEW_ROUTE: RouteCase = {
+  name: 'console',
+  path: '/console',
+  ready: 'main',
+}
+
+/** Named, because the impersonation fixture drives a control on this exact screen. */
+export const CONSOLE_ACCOUNTS_ROUTE: RouteCase = {
+  name: 'console-users',
+  path: '/console/users?sort=name&dir=asc',
+  ready: 'main',
+}
+
+export const CONSOLE_ROUTES: ReadonlyArray<RouteCase> = [
+  CONSOLE_OVERVIEW_ROUTE,
+  CONSOLE_ACCOUNTS_ROUTE,
+]
+
+/**
+ * The account the `/console/users/$userId` baseline is recorded against.
+ *
+ * A collaborator rather than the demo owner, and specifically one that has never signed in. The
+ * account screen lists live sessions with their start and expiry instants, and those are minted by
+ * the wall clock at sign-in — the operator's own account would put two moving timestamps in a
+ * committed frame. This one holds none, so the panel shows its designed empty state and the frame is
+ * the same every run. It is also the fixture's `curator`, which is what puts the middle rung of the
+ * role scale in the picture.
+ */
+export const CONSOLE_ACCOUNT_NAME = 'Mika Tanaka'
+
+/**
+ * True when the signed-in account can actually open the console.
+ *
+ * Asked over `page.request` rather than by navigating, and that is a repair rather than a
+ * preference. The guard is a `beforeLoad` redirect, so the honest question is which response the
+ * server gives — and a probe that answered it by *navigating* left the page half way through loading
+ * the client entry, which `frame()` then cancelled with its own `goto`. Chromium swallows the
+ * aborted module import; WebKit reports it as `pageerror: Importing a module script failed`, and the
+ * gate reads a page error as fatal whatever produced it. Every console frame failed on
+ * `mobile-safari` and none on `chromium`, which is exactly the shape of a defect that gets blamed on
+ * the code under test.
+ *
+ * `page.request` shares the page's cookie jar and the context's headers, so this is the same
+ * request the browser would make, and `maxRedirects: 0` is what makes the redirect readable instead
+ * of followed: a `user`-role session is sent to `/dashboard`, an anonymous one to `/login`, and both
+ * are "no console".
+ */
+export async function hasPlatformConsole(page: Page): Promise<boolean> {
+  const response = await page.request.get('/console', {
+    maxRedirects: 0,
+    failOnStatusCode: false,
+  })
+  return response.status() === 200
+}
+
+/**
+ * The account screen's path, read out of the accounts document rather than hardcoded.
+ *
+ * The demo collaborators carry ids derived from their addresses, so a literal would work today and
+ * would be a silent lie the first time that derivation changed. Taken over `page.request` for the
+ * same reason as {@link hasPlatformConsole}: the caller's next act is a `goto`, and a navigation
+ * here would be the one it cancels.
+ *
+ * **Matched inside the anchor, not by proximity to the name.** The obvious version of this - find
+ * the name, take the nearest `href` before it - photographed the *previous* row for four rounds of
+ * baselines without anyone noticing, because `Avatar` renders the same name a second time as a
+ * screen-reader label a few hundred bytes ahead of the link, and the nearest href before *that* is
+ * the row above. The frames looked entirely plausible: a real account screen, for the wrong account,
+ * committed under a name that says otherwise. So the anchor's own text is what decides, which is the
+ * property the row actually guarantees - the account's name is the link.
+ */
+export async function consoleAccountPath(page: Page): Promise<string | null> {
+  const response = await page.request.get(CONSOLE_ACCOUNTS_ROUTE.path, {
+    failOnStatusCode: false,
+  })
+  if (!response.ok()) {
+    return null
+  }
+  const html = await response.text()
+  const links = /href="(\/console\/users\/[^"]+)"/g
+  for (const link of html.matchAll(links)) {
+    const closed = html.indexOf('</a>', link.index)
+    if (closed < 0) {
+      continue
+    }
+    if (html.slice(link.index, closed).includes(CONSOLE_ACCOUNT_NAME)) {
+      return link[1]
+    }
+  }
+  return null
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The impersonation warning bar
+ * ---------------------------------------------------------------------------------------------- */
+
+/** The account the impersonation fixture wears: a plain `user`, never an admin (docs/ACCESS.md §2.4). */
+export const IMPERSONATION_TARGET_NAME = 'Jonas Berg'
+
+/** The bar itself. One selector, used by the fixture, the mask and the capture. */
+export const IMPERSONATION_BAR = '[aria-label="Impersonated session"]'
+
+/**
+ * The live countdown inside it, which is the one thing in that bar a baseline cannot hold.
+ *
+ * `docs/ACCESS.md` §6.2 gives an impersonated session 900 seconds and §6.1 requires the remaining
+ * time on screen as a live figure. The session is minted against the wall clock and the page's clock
+ * is frozen at `FROZEN_NOW`, so the two disagree by however far the fixture's day is from the
+ * recording day — the figure is neither 15:00 nor stable. It is excluded from the comparison, and
+ * nothing else about the bar is.
+ */
+export const IMPERSONATION_TIMER = `${IMPERSONATION_BAR} [role="timer"]`
+
+/**
+ * Mints an impersonated session by driving the console, which is the only way there is.
+ *
+ * Not a database fixture and not a forged cookie: `/api/auth/admin/impersonate-user` answers `404`
+ * (docs/ACCESS.md §2.6), so the account list's own action is the entire surface. Going through it
+ * means the frame this produces is the frame an operator produces, and that the two audit rows
+ * either side of it are written exactly as they are in production.
+ *
+ * Returns `false` when the console is unreachable, so a run against an unseeded database skips with
+ * a reason instead of failing on a control it never found.
+ */
+export async function beginImpersonation(page: Page): Promise<boolean> {
+  await unblockCrossOriginFonts(page)
+  if (!(await hasPlatformConsole(page))) {
+    return false
+  }
+  await page.goto(CONSOLE_ACCOUNTS_ROUTE.path, {
+    waitUntil: 'domcontentloaded',
+  })
+  // Settled, not merely loaded. The row menu is a Radix trigger, so it does nothing at all until
+  // React has claimed the tree - a click on the server's markup is a click on an inert button, and
+  // the failure it produces is a timeout on the menu item that never opened.
+  await settle(page, CONSOLE_ACCOUNTS_ROUTE)
+  await page
+    .getByRole('button', { name: `Actions for ${IMPERSONATION_TARGET_NAME}` })
+    .first()
+    .click()
+  await page.getByRole('menuitem', { name: 'Impersonate' }).click()
+  await page.getByRole('button', { name: 'Start impersonating' }).click()
+  await page.locator(IMPERSONATION_BAR).waitFor({ timeout: 15_000 })
+  // The action swaps the cookie and then sends the router to `/dashboard`, and that navigation is
+  // still in flight when the bar first paints. Leaving it in flight makes the next `goto` a race
+  // the caller loses with "interrupted by another navigation" - so the fixture hands the browser
+  // back settled rather than mid-move.
+  await page.waitForURL('**/dashboard', { timeout: 15_000 })
+  return true
+}
+
+/**
+ * Hands the operator their own session back.
+ *
+ * Always run, including after a failed assertion: the browser context is thrown away with the test,
+ * but the session row and its `admin_session` cookie are the product's, and leaving one live would
+ * leave a `platform.user.impersonation_started` in the ledger with no `_ended` beside it — which
+ * docs/ACCESS.md §4.3 defines as the signature of a session that lapsed rather than one that was
+ * closed.
+ */
+export async function endImpersonationFixture(page: Page): Promise<void> {
+  const end = page.getByRole('button', { name: 'End impersonation' })
+  if ((await end.count()) === 0) {
+    return
+  }
+  // The control is a React button, so a click before hydration lands on inert markup and the bar
+  // simply stays. The route is whatever the caller left the browser on, and `settle()` only ever
+  // reads `ready` and `map` off the case it is handed.
+  await settle(page, { name: 'shell', path: page.url(), ready: 'main' })
+  await end.first().click()
+  await page
+    .locator(IMPERSONATION_BAR)
+    .waitFor({ state: 'detached', timeout: 15_000 })
 }

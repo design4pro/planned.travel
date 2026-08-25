@@ -49,3 +49,8 @@ e2e/.auth
 
 # Local MCP server config. Developer-specific, never shared.
 .mcp.json
+
+# Round captures land at the repo root and must never be committed. SPEC §1: a reference
+# screenshot is an asset of the product it came from, and this repo is clean-room.
+/*.png
+!billing-light.png

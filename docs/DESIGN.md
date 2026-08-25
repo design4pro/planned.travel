@@ -46,6 +46,23 @@ Required token families — name them exactly this way:
   keeps exactly the geometry it had. Layout and z values are theme-independent: declare them once
   on the bare `:root`, never in the two dark blocks.
 
+  **A band binds nothing until the library inside it is bound.** Our toasts are `sonner`'s, and
+  `sonner` pins its own container at `z-index: 999999999` — so for as long as `--z-toast` was
+  merely declared, the tier above it described a layer nothing occupied while the real toast
+  layer sat over the End impersonation control. `src/styles/styles.css` therefore carries
+  `:root [data-sonner-toaster] { z-index: var(--z-toast) }`: one specificity step above the
+  library's own selector, so it wins without `!important` and without depending on which
+  stylesheet the browser saw last. `src/styles/__tests__/toast-stacking.test.ts` reads both files
+  and fails if `sonner` restacks itself. A z token that a third-party stylesheet ignores is
+  decoration, and this is the one band where that is a safety property rather than a nicety.
+
+  Both edges of the viewport are the shell's, not a route's. `--impersonation-h` reserves the top
+  one; below `lg` the mobile tab bar is `fixed` and covers the bottom, so `AppShell` reserves its
+  whole box — row, hairline and `--safe-bottom` — once around the outlet. Every chrome expression
+  in the product is assembled from the inset lists in `src/lib/atlas/layout.ts` for the same
+  reason `--impersonation-h` is a token: a hand-written `calc()` that forgets a hairline is a
+  screen that overflows its own viewport by a pixel per term, and it does it silently.
+
 ## Starting palette (tune it, keep the structure)
 
 Light — warm paper, not clinical white:

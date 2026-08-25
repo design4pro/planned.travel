@@ -83,6 +83,8 @@ export interface ChromeEnvironment {
    * whole viewport.
    */
   readonly impersonationHeight: number
+  /** `--subnav-h`, in CSS pixels. 3rem in the token file. */
+  readonly subnavHeight: number
 }
 
 /**
@@ -112,11 +114,18 @@ export const APP_HEADER: ReadonlyArray<ChromeInset> = [
 
 /**
  * The mobile tab bar, in full — `border-t` around `h-16`, plus the home
- * indicator. It is `fixed`, so it adds nothing to the document's height; the
- * slice still has to stop at its top edge or the map shows through it.
+ * indicator. It is `fixed`, so it covers whatever is behind it rather than
+ * displacing it: a full-bleed slice has to stop at its top edge or the map shows
+ * through it, and the browser has to be told not to scroll anything into the row
+ * it occupies. {@link BOTTOM_CLEARANCE_CSS} is that second reservation, and this
+ * list is the one place either of them is measured.
  */
 export const MOBILE_TAB_BAR: ReadonlyArray<ChromeInset> = [
   { name: 'tab bar hairline', css: '1px', px: () => 1 },
+  // `h-16` in `src/components/layout/mobile-nav.tsx`, written as the literal it
+  // is rather than as `--nav-h`: the two are the same 4rem today, and the token
+  // names the *header's* row. The test beside this file asserts they agree, so
+  // the day one of them moves is a red test rather than a two-pixel mystery.
   { name: 'tab bar row', css: '4rem', px: () => 64 },
   {
     name: 'bottom safe area',
@@ -125,10 +134,135 @@ export const MOBILE_TAB_BAR: ReadonlyArray<ChromeInset> = [
   },
 ]
 
+/**
+ * The trip workspace's own chrome: the band under the app header carrying the
+ * trip's name and its tabs.
+ *
+ * `src/components/layout/trip-sub-nav.tsx` is `sticky … border-b` around an
+ * `h-subnav` row, and below `lg` it puts the trip's name on a row of its own
+ * above that. Both rows and the hairline are real layout, and the planner's own
+ * viewport slice sits underneath all of them.
+ */
+export const TRIP_SUBNAV: ReadonlyArray<ChromeInset> = [
+  { name: 'trip name row', css: '2.75rem', px: () => 44 },
+  { name: 'tab row', css: 'var(--subnav-h)', px: (env) => env.subnavHeight },
+  { name: 'sub-nav hairline', css: '1px', px: () => 1 },
+]
+
+/** From `lg` the trip's name shares the tab row, so that row goes away. */
+export const TRIP_SUBNAV_WIDE: ReadonlyArray<ChromeInset> = TRIP_SUBNAV.slice(1)
+
+/** A list of insets summed as a CSS length: `calc(a + b + c)`. */
+export function insetSumCss(insets: ReadonlyArray<ChromeInset>): string {
+  return `calc(${insets.map((inset) => inset.css).join('+')})`
+}
+
+/** The same list summed in CSS pixels. */
+export function insetSum(
+  insets: ReadonlyArray<ChromeInset>,
+  env: ChromeEnvironment,
+): number {
+  return insets.reduce((total, inset) => total + inset.px(env), 0)
+}
+
+/**
+ * Where a bar pinned under the app header has to stick.
+ *
+ * The header's whole border box, hairline included — which is the term the two
+ * sub-navigations were missing, so each of them sat one pixel high and painted
+ * over the header's own hairline. A literal string because Tailwind reads source
+ * text; the test asserts it is exactly {@link insetSumCss} of
+ * {@link APP_HEADER}, so the two cannot drift.
+ */
+export const APP_HEADER_TOP_CLASS =
+  'top-[calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px)]'
+
+/**
+ * The tab bar's box as a CSS length, for the scroll reservation in
+ * `src/styles/styles.css`.
+ *
+ * The bar is `fixed`: it takes no space and covers what is behind it, so the
+ * browser will happily scroll a focused field into the row it occupies. The
+ * stylesheet answers that with `scroll-padding-bottom`, which changes where the
+ * browser stops and changes no element's size — the one reservation that can be
+ * made globally without moving a single existing screen. This is the expression
+ * it uses, published from the list that measures the bar so the two cannot
+ * disagree.
+ */
+export const BOTTOM_CLEARANCE_CSS = insetSumCss(MOBILE_TAB_BAR)
+
 /** Every inset the slice gives up, at one breakpoint. */
 function sliceInsets(wide: boolean): ReadonlyArray<ChromeInset> {
   return wide ? APP_HEADER : [...APP_HEADER, ...MOBILE_TAB_BAR]
 }
+
+/** Every inset the trip planner's own slice gives up, at one breakpoint. */
+function tripSliceInsets(wide: boolean): ReadonlyArray<ChromeInset> {
+  return wide
+    ? [...APP_HEADER, ...TRIP_SUBNAV_WIDE]
+    : [...APP_HEADER, ...TRIP_SUBNAV, ...MOBILE_TAB_BAR]
+}
+
+/** The trip planner's slice height as a CSS length, from its own insets. */
+export function tripSliceHeightCss(wide: boolean): string {
+  const terms = tripSliceInsets(wide)
+    .map((inset) => `-${inset.css}`)
+    .join('')
+  return `calc(100svh${terms})`
+}
+
+/** The same height in CSS pixels. */
+export function tripSliceHeight(
+  env: ChromeEnvironment,
+  wide: boolean,
+): number {
+  return tripSliceInsets(wide).reduce(
+    (height, inset) => height - inset.px(env),
+    env.viewport,
+  )
+}
+
+/**
+ * How tall the document ends up on a trip screen that owns the viewport.
+ *
+ * The header and the sub-navigation are both in flow and the tab bar is `fixed`,
+ * so this is those two plus the slice. Anything over `viewport` is a scrollbar on
+ * a screen that has declared it owns the viewport — and this expression was two
+ * pixels over it, one for each hairline, until the planner's height was derived
+ * from these lists rather than written out by hand.
+ */
+export function tripDocumentHeight(
+  env: ChromeEnvironment,
+  wide: boolean,
+): number {
+  const chrome = wide
+    ? [...APP_HEADER, ...TRIP_SUBNAV_WIDE]
+    : [...APP_HEADER, ...TRIP_SUBNAV]
+  return insetSum(chrome, env) + tripSliceHeight(env, wide)
+}
+
+/**
+ * The collaboration rail, pinned below both bars with a gutter of its own.
+ *
+ * Not a viewport slice: the rail scrolls with the page until it reaches the foot
+ * of the chrome and then stays. It composes the same list for the same reason —
+ * a rail that stops one pixel high tucks its top edge under the sub-navigation's
+ * hairline, which reads as a rendering fault rather than as a sticky element.
+ */
+export const TRIP_RAIL_STICKY_CLASS =
+  'xl:top-[calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+var(--subnav-h)+1px+1.5rem)]'
+
+/**
+ * The trip planner's slice, as the two Tailwind utilities the screen ships.
+ *
+ * The same contract as {@link SLICE_HEIGHT_CLASS}: literal strings, because a
+ * class assembled at runtime generates no CSS, with a test asserting each one
+ * carries exactly {@link tripSliceHeightCss} for its breakpoint.
+ */
+export const TRIP_SLICE_HEIGHT_CLASS = {
+  base: 'h-[calc(100svh-var(--safe-top)-var(--impersonation-h)-var(--nav-h)-1px-2.75rem-var(--subnav-h)-1px-1px-4rem-var(--safe-bottom))]',
+  lg: 'lg:h-[calc(100svh-var(--safe-top)-var(--impersonation-h)-var(--nav-h)-1px-var(--subnav-h)-1px)]',
+} as const
 
 /** The slice's height as a CSS length, from the insets themselves. */
 export function sliceHeightCss(wide: boolean): string {
@@ -154,8 +288,7 @@ export function sliceHeight(env: ChromeEnvironment, wide: boolean): number {
  * `viewport` is a scrollbar on a screen that has declared it owns the viewport.
  */
 export function documentHeight(env: ChromeEnvironment, wide: boolean): number {
-  const header = APP_HEADER.reduce((total, inset) => total + inset.px(env), 0)
-  return header + sliceHeight(env, wide)
+  return insetSum(APP_HEADER, env) + sliceHeight(env, wide)
 }
 
 /**

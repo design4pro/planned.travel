@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   APP_HEADER,
+  APP_HEADER_TOP_CLASS,
+  BOTTOM_CLEARANCE_CSS,
   CHROME_GAP,
   CHROME_GUTTER,
   MOBILE_TAB_BAR,
@@ -9,15 +11,24 @@ import {
   SHELF_CLASS,
   SHELF_FALLBACK,
   SLICE_HEIGHT_CLASS,
+  TRIP_RAIL_STICKY_CLASS,
+  TRIP_SLICE_HEIGHT_CLASS,
+  TRIP_SUBNAV,
+  TRIP_SUBNAV_WIDE,
   WORLD_CENTRE,
   WORLD_FRAME_CSS,
   WORLD_TILE_SIZE,
   cameraPadding,
   documentHeight,
+  insetSum,
+  insetSumCss,
   mercatorY,
   shelfClear,
   sliceHeight,
   sliceHeightCss,
+  tripDocumentHeight,
+  tripSliceHeight,
+  tripSliceHeightCss,
   worldFrameLift,
   worldSize,
   worldZoom,
@@ -32,6 +43,7 @@ const DESKTOP: ChromeEnvironment = {
   safeBottom: 0,
   navHeight: 64,
   impersonationHeight: 0,
+  subnavHeight: 48,
 }
 
 /** A phone with both safe areas, which is where the tab bar arithmetic bites. */
@@ -41,6 +53,7 @@ const PHONE: ChromeEnvironment = {
   safeBottom: 34,
   navHeight: 64,
   impersonationHeight: 0,
+  subnavHeight: 48,
 }
 
 /**
@@ -135,6 +148,82 @@ describe('the viewport slice', () => {
   it('ships the same expression it computes, at both breakpoints', () => {
     expect(SLICE_HEIGHT_CLASS.base).toBe(`h-[${sliceHeightCss(false)}]`)
     expect(SLICE_HEIGHT_CLASS.lg).toBe(`lg:h-[${sliceHeightCss(true)}]`)
+  })
+})
+
+describe('the trip planner’s slice', () => {
+  it('leaves the document exactly one viewport tall from lg up', () => {
+    // The regression this case exists for: the planner's height was written by
+    // hand and omitted both hairlines, so the signature screen overflowed its
+    // own viewport by exactly two pixels with every other test green.
+    for (const viewport of [740, 836, 900, 1024, 1440]) {
+      expect(tripDocumentHeight({ ...DESKTOP, viewport }, true)).toBe(viewport)
+    }
+  })
+
+  it('still fits one viewport with the impersonation bar on screen', () => {
+    for (const viewport of [740, 836, 900, 1024, 1440]) {
+      const env = {
+        ...DESKTOP,
+        viewport,
+        impersonationHeight: IMPERSONATION_BAR,
+      }
+      expect(tripDocumentHeight(env, true)).toBe(viewport)
+      expect(tripSliceHeight(env, true)).toBe(
+        tripSliceHeight({ ...DESKTOP, viewport }, true) - IMPERSONATION_BAR,
+      )
+    }
+  })
+
+  it('fits the phone too, tab bar and both safe areas included', () => {
+    for (const impersonationHeight of [0, IMPERSONATION_BAR]) {
+      const env = { ...PHONE, impersonationHeight }
+      expect(tripDocumentHeight(env, false)).toBeLessThanOrEqual(env.viewport)
+      expect(tripSliceHeight(env, false)).toBeGreaterThan(0)
+    }
+  })
+
+  it('carries both sub-navigation rows below lg and one from lg up', () => {
+    expect(TRIP_SUBNAV.map((inset) => inset.name)).toEqual([
+      'trip name row',
+      'tab row',
+      'sub-nav hairline',
+    ])
+    expect(TRIP_SUBNAV_WIDE.map((inset) => inset.name)).toEqual([
+      'tab row',
+      'sub-nav hairline',
+    ])
+    expect(tripSliceHeight(DESKTOP, false)).toBe(
+      tripSliceHeight(DESKTOP, true) -
+        44 -
+        insetSum(MOBILE_TAB_BAR, DESKTOP),
+    )
+  })
+
+  it('ships the same expression it computes, at both breakpoints', () => {
+    expect(TRIP_SLICE_HEIGHT_CLASS.base).toBe(`h-[${tripSliceHeightCss(false)}]`)
+    expect(TRIP_SLICE_HEIGHT_CLASS.lg).toBe(`lg:h-[${tripSliceHeightCss(true)}]`)
+  })
+})
+
+describe('the chrome offsets the shell hands out', () => {
+  it('pins a sub-navigation under the app header’s whole border box', () => {
+    // One pixel short and the sub-navigation paints over the header's hairline,
+    // which reads as a rendering fault rather than as a sticky element.
+    expect(APP_HEADER_TOP_CLASS).toBe(`top-[${insetSumCss(APP_HEADER)}]`)
+    expect(TRIP_RAIL_STICKY_CLASS).toContain(
+      insetSumCss([...APP_HEADER, ...TRIP_SUBNAV_WIDE]).slice(0, -1),
+    )
+  })
+
+  it('publishes the mobile tab bar’s whole box for the scroll reservation', () => {
+    // `scroll-padding-bottom` in `src/styles/styles.css` is where the browser is
+    // told to stop; this is the expression it uses, and the token file's own
+    // test asserts the stylesheet still carries it.
+    expect(BOTTOM_CLEARANCE_CSS).toBe('calc(1px+4rem+var(--safe-bottom))')
+    expect(insetSum(MOBILE_TAB_BAR, PHONE)).toBe(
+      1 + PHONE.navHeight + PHONE.safeBottom,
+    )
   })
 })
 

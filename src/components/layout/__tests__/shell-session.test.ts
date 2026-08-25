@@ -1,4 +1,8 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { describe, expect, it, vi } from 'vitest'
 
 import type {
@@ -142,5 +146,62 @@ describe('the shell session', () => {
       expect(shell.user.platformRole, String(role)).toBe('user')
       expect(shell.user.isPlatformAdmin, String(role)).toBe(false)
     }
+  })
+})
+
+describe('naming the operator behind an impersonated session', () => {
+  /**
+   * Asserted from the source rather than by calling it.
+   *
+   * `readOperator` cannot be exported: this module is imported by
+   * `_app/route.tsx`, so an export survives the server-function transform into
+   * the client graph and drags `getAuth()` - and therefore `cloudflare:workers`
+   * - into the browser build, which cannot resolve it. Measured, not assumed:
+   * `pnpm build` fails with `Rolldown failed to resolve import
+   * "cloudflare:workers"`. What is worth pinning is the shape of the two
+   * failure paths: a lookup that degrades to an opaque id on every request must
+   * leave a signal behind, and the version this replaced had a bare `catch {}`
+   * that left none.
+   */
+  const source = readFileSync(
+    join(
+      dirname(fileURLToPath(import.meta.url)),
+      '..',
+      '..',
+      '..',
+      'routes',
+      '_app',
+      '-server',
+      'shell.ts',
+    ),
+    'utf8',
+  )
+
+  const operatorRead = source.slice(
+    source.indexOf('async function readOperator'),
+    source.indexOf('export interface ShellSessionInput'),
+  )
+
+  it('reports a row it could not read', () => {
+    expect(operatorRead.length).toBeGreaterThan(0)
+    expect(operatorRead).toContain('shellLog().warn(')
+    expect(operatorRead).toContain('operatorUserId: userId')
+  })
+
+  it('reports a read that threw as an error, not as a shrug', () => {
+    expect(operatorRead).toContain('} catch (cause) {')
+    expect(operatorRead).toContain('shellLog().error(')
+    // The bare `catch {}` this replaced: no binding, no log, no signal at all.
+    expect(operatorRead).not.toMatch(/}\s*catch\s*\{\s*\n\s*return/)
+  })
+
+  it('still hands the bar something to render either way', () => {
+    // Two degradations, one fallback: a bar that cannot name the operator must
+    // still say that there is one.
+    expect([
+      ...operatorRead.matchAll(
+        /return \{ id: userId, name: null, email: null \}/g,
+      ),
+    ]).toHaveLength(2)
   })
 })

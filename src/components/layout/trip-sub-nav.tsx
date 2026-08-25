@@ -1,6 +1,7 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { ChevronLeft, Share2 } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
+import { APP_HEADER_TOP_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
 import { TRIP_TABS } from './nav-model'
 
@@ -23,7 +24,14 @@ export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
   const transition = reduceMotion ? { duration: 0 } : { duration: 0.26, ease: EASE_OUT_QUINT }
 
   return (
-    <div className="sticky top-[calc(var(--safe-top)+var(--nav-h)+var(--impersonation-h))] z-nav border-b border-inverse-edge bg-inverse text-inverse-on">
+    <div
+      className={cn(
+        // The app header's whole border box, hairline included, from the one
+        // list that measures it — see `src/lib/atlas/layout.ts`.
+        'sticky z-nav border-b border-inverse-edge bg-inverse text-inverse-on',
+        APP_HEADER_TOP_CLASS,
+      )}
+    >
       {/* Narrow viewports get the trip context on its own line. */}
       <div className="mx-auto flex h-11 max-w-content items-center gap-2 px-4 sm:px-6 lg:hidden">
         <BackToTrips />

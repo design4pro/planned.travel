@@ -63,7 +63,7 @@ import {
 
 import { requirePermission } from '#/server/auth/guard'
 import { AuthRequirementError } from '#/server/auth/tenant'
-import { appendPlatformAudit } from '#/server/catalog/audit'
+import { PLATFORM_ACTIONS, appendPlatformAudit } from '#/server/catalog/audit'
 import { serializeError } from '#/server/observability'
 import {
   consoleLogger,
@@ -73,7 +73,7 @@ import {
   sessionKeyStore,
   sessionPageReader,
 } from './bindings'
-import { ConsoleActionError } from './errors'
+import { ConsoleActionError, ConsoleUnattributableError } from './errors'
 import { deleteSessionIndexKey, purgeSessionBlobs } from './session-keys'
 
 import type { PlatformPermissionRequest } from '#/server/auth/access'
@@ -182,6 +182,20 @@ export async function openConsoleCall(
  * impersonator in `actor_user_id` and the target in `entity_id`. Their role is read from the `user`
  * row rather than from the session in hand, which carries the worn account's role and would
  * attribute the operator's action to whatever the target happens to be.
+ *
+ * **A role that could not be read stops the exit rather than guessing at one.** The read answers
+ * `{ ok: false }` for a row that is missing, unparseable or unreachable, and every one of those used
+ * to arrive as `null` — which `resolvePlatformRole` turns into `'user'` on the way into the ledger.
+ * An operator who must have held `admin` to begin an impersonation would then be recorded ending it
+ * as a plain account, with nothing anywhere saying the read had failed, and docs/ACCESS.md §4.1
+ * records `actor_role` as a value precisely so the row cannot be re-derived afterwards. A ledger
+ * that names the wrong role is worse than one that is missing a row and says so at `error`.
+ *
+ * The refusal is bounded in the one way that matters: an impersonated session lives 900 seconds
+ * (docs/ACCESS.md §6.2), so an operator held up by a transient D1 failure retries the button, and an
+ * operator whose own account has genuinely gone is returned to nothing in a quarter of an hour
+ * regardless — `stopImpersonating` resolves the operator's *session* through the same missing row
+ * and answers `500` on its own in that case.
  */
 export async function openImpersonationExit(): Promise<ImpersonationExit> {
   const session = await currentSession()
@@ -200,19 +214,38 @@ export async function openImpersonationExit(): Promise<ImpersonationExit> {
     )
   }
 
+  const logger = consoleLogger()
+  const role = await readUserRole(operatorId)
+  if (!role.ok) {
+    logger.error(
+      'console could not read the platform role of the operator ending an impersonation',
+      undefined,
+      {
+        action: PLATFORM_ACTIONS.USER_IMPERSONATION_ENDED,
+        entityId: session.user.id,
+        actorUserId: operatorId,
+        actorKind: 'human',
+        reason: role.reason,
+      },
+    )
+    throw new ConsoleUnattributableError(
+      'Your own account could not be read, so ending this impersonation cannot be recorded. Nothing was changed - try again.',
+    )
+  }
+
   return {
     session,
     actor: {
       userId: operatorId,
       actorKind: 'human',
-      role: await readUserRole(operatorId),
+      role: role.role,
       tokenId: null,
     },
     targetUserId: session.user.id,
     headers: getRequest().headers,
     ip: requestIp(),
     userAgent: getRequestHeader('user-agent') ?? null,
-    logger: consoleLogger(),
+    logger,
   }
 }
 
@@ -404,9 +437,27 @@ export async function endSessionIndex(
  * "write D1 in the smallest possible transaction → invalidate the KV cache keys the write touched".
  * A blob is `{ session, user }` and `findSession` reads it in preference to D1, so an account whose
  * platform role has just been lowered keeps the old role - and `requirePermission` reads exactly
- * that field - until the blob expires. Dropping it costs the account's next request one D1 read
- * (`storeSessionInDatabase` is on, so `findSession` falls through and re-caches) and makes the
- * change take effect on that request instead of on the next sign-in.
+ * that field - until the blob expires. Dropping it makes the change take effect on the account's
+ * next request instead of on its next sign-in.
+ *
+ * **What that costs, stated correctly, because the whole ban design was chosen on a cost
+ * argument.** It is not one D1 read on the next request; it is a D1 read on *every* request the
+ * session makes from here on. Nothing re-creates the blob: `findSession` returns the D1 row on a KV
+ * miss and writes nothing back, `updateSession` opens with a `secondaryStorage.get` and returns
+ * early when the key is absent, so even the `updateAge` refresh does not restore it, and the cookie
+ * cache that would otherwise have absorbed the miss was removed outright when ban immediacy was
+ * chosen over a staleness window (`better-auth@1.7.1`, `dist/db/internal-adapter.mjs` and
+ * `src/server/auth/session.ts`). The bound is therefore the session's remaining life - up to the
+ * 30-day lifetime - or the account signing in again, whichever comes first.
+ *
+ * That cost is accepted knowingly and is not a defect to optimise away here. D1 is authoritative,
+ * one indexed session+user read is the cheapest correct answer available, and the alternative is a
+ * cached blob whose `user.role` is the field `requirePermission` decides authorisation on: a
+ * demoted curator keeping `catalog:publish` for up to thirty days is an authorisation bug, not a
+ * cache-tuning question. Re-minting the blob ourselves would mean writing Better Auth's own cache
+ * format from outside the library, which is the class of coupling that breaks silently on a bump.
+ * docs/ARCHITECTURE.md §4's "KV, session - TTL session lifetime" line stops describing these
+ * sessions from the moment of the write; correcting that document belongs to its owner.
  *
  * **After the mutation, not before, and that is the opposite of {@link clearSessionCache} on
  * purpose.** These endpoints route through `internalAdapter.updateUser`, which queues a
