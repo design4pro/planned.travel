@@ -8,24 +8,24 @@ A plan marked **verified** passed an adversarial audit with zero blocking findin
 findings is still usable — each finding is specific and names the stage it belongs to — but the run
 that executes it should resolve them first.
 
-| plan | status | open blocking |
-| --- | --- | --- |
-| `00-foundations.md` | **verified** | — |
-| `01-trips-core.md` | **verified** | — |
-| `02-places-and-maps.md` | **verified** | — |
-| `03-reservations-and-transport.md` | **verified** | — |
-| `04-budget-and-currencies.md` | **verified** | — |
-| `05-packing-and-todos.md` | **verified** | — |
-| `06-documents-and-media.md` | **verified** | — |
-| `07-collaboration-and-sharing.md` | **verified** | — |
-| `08-product-modules.md` | **verified** | — |
-| `09-account-and-settings.md` | **verified** | — |
-| `10-administration.md` | **verified** | — |
-| `11-boundaries-and-blockers.md` | **verified** | — |
-| `12-verification-protocol.md` | **verified** | — |
-| `13-community-gallery.md` | **verified** | — |
-| `14-dashboard-mascot.md` | **verified** | — |
-| `README.md` | **verified** | — |
+| plan                               | status       | open blocking |
+| ---------------------------------- | ------------ | ------------- |
+| `00-foundations.md`                | **verified** | —             |
+| `01-trips-core.md`                 | **verified** | —             |
+| `02-places-and-maps.md`            | **verified** | —             |
+| `03-reservations-and-transport.md` | **verified** | —             |
+| `04-budget-and-currencies.md`      | **verified** | —             |
+| `05-packing-and-todos.md`          | **verified** | —             |
+| `06-documents-and-media.md`        | **verified** | —             |
+| `07-collaboration-and-sharing.md`  | **verified** | —             |
+| `08-product-modules.md`            | **verified** | —             |
+| `09-account-and-settings.md`       | **verified** | —             |
+| `10-administration.md`             | **verified** | —             |
+| `11-boundaries-and-blockers.md`    | **verified** | —             |
+| `12-verification-protocol.md`      | **verified** | —             |
+| `13-community-gallery.md`          | **verified** | —             |
+| `14-dashboard-mascot.md`           | **verified** | —             |
+| `README.md`                        | **verified** | —             |
 
 Plans 03 and 08 were re-verified in the plans-for-plugins run: 03's `transport` entity-kind error
 and unpassable 03-S6 isolation case are rewritten against HEAD, and 08-S1's citations are
