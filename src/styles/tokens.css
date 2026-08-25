@@ -528,13 +528,107 @@
   --radius-2xl: 28px;
   --radius-full: 9999px;
 
-  /* ------------------------------------------------------------------- type */
+  /* ------------------------------------------------------------------- type
+     A stack has no light and dark value to declare, so like every other token
+     in this second `:root` block it is stated once.
+
+     The product ships in 23 languages, and the two pinned faces cover neither
+     half of that alphabet: measured against the Google Fonts API, Geist serves
+     Latin, Latin-ext, Cyrillic and Vietnamese, and MuseoModerno serves Latin,
+     Latin-ext and Vietnamese only. Greek, Arabic, Han, Kana and Hangul have no
+     subset in either. Six Noto companions — Noto Sans for Greek, Noto Sans
+     Arabic, and the four Han/Kana/Hangul cuts below — are requested in the same
+     stylesheet by `src/lib/fonts.ts` and close that gap. They are named here
+     *ahead of* the generic system entries so a Greek, Arabic, Han, Kana or
+     Hangul glyph can never resolve to an unstyled platform default.
+
+     ORDER inside a stack is coverage order, not preference — the browser takes
+     the first family that owns the codepoint — and two rules govern it:
+
+     1. A WEB FACE IS FOLLOWED IMMEDIATELY BY ITS OWN COMPENSATOR, never by
+        another web face first. The metric-compensated `local()` faces declared
+        in `styles.css` are available on the first frame; a web face is not,
+        until it lands. So a second web face slipped in between a face and its
+        compensator is the one thing that can draw those codepoints with the
+        wrong metrics, for as long as the first face is in flight. `Noto Sans`
+        between `MuseoModerno` and `Planned Display Fallback` was exactly that
+        hole: measured in Chromium at 100px, a Latin heading drawn by Noto Sans
+        while MuseoModerno was still downloading gave a 136px line box on a
+        107px baseline against MuseoModerno's own 160px on 115px, so every
+        heading on the page dropped 8px the moment the display face arrived.
+     2. A COMPENSATOR'S `unicode-range` IS CONFINED to the scripts of the face
+        it stands in for, so being early costs nothing further down. That is
+        why `Planned Display Fallback` carries no Cyrillic — MuseoModerno has
+        none either, Cyrillic headings are drawn by `Noto Sans` behind it, and
+        `Planned Cyrillic Fallback` is what stands in for *that*.
+
+     `Noto Sans` and `Noto Sans Arabic` still precede the Han faces, which also
+     carry Greek, Cyrillic and Latin and would otherwise claim them. */
+
+  /* Han, Kana and Hangul. The four faces are one type family cut four ways, so
+     a shared ideograph gets a different shape in each: 直 and 骨 are drawn one
+     way for a reader of Simplified Chinese and another for a reader of
+     Japanese. Simplified leads by default because it is the widest of the four;
+     `styles.css` re-orders this list under `:lang()` so a Japanese, Korean or
+     Traditional-Chinese reader — or a single chip in the language picker that
+     carries its own `lang` — gets its own shapes.
+
+     Hangul is why that `:lang()` re-order is not a nicety. Counted over the
+     `unicode-range` of the served stylesheet, `Noto Sans KR` claims all 11,172
+     Hangul syllables while `Noto Sans SC` claims 80 and `Noto Sans TC` 49 — and
+     한, 국 and 어 are all inside those 80. Ordering alone therefore cannot route
+     Korean to `Noto Sans KR`, because moving it up the list would hand it every
+     ideograph as well. Korean text reaches its own face by carrying `lang="ko"`,
+     which is exactly what the picker chip and a Korean page both do. */
+  --font-han: 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR';
+
+  /* The compensators for the four faces above — the only three that ride at the
+     tail of a stack, because the four Han cuts are one group with one set of
+     metrics and the scripts they draw are disjoint from everything before them.
+     Kana is a family of its own rather than a range inside the Han one for a
+     measured reason: `local('PingFang SC Regular')` matches first inside the
+     Han face and PingFang SC draws no kana at all, so a Japanese line fell
+     through every compensator to an unadjusted platform face and moved on swap.
+     A family is skipped for a codepoint its matched face has no glyph for, so
+     the fix is a separate family whose locals are Japanese.
+
+     Every other compensator is named beside the web face it stands in for,
+     inside the two stacks below. */
+  --font-cjk-fallback:
+    'Planned Kana Fallback', 'Planned Han Fallback', 'Planned Hangul Fallback';
+
+  /* Last resort, after every face we control has failed to load and failed to
+     match a local. Split in two because the display voice is rounded and the UI
+     voice is not. */
+  --font-system:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-system-display:
+    'Avenir Next', 'Trebuchet MS', ui-rounded, system-ui, sans-serif;
+
+  /* Face, compensator, face, compensator — the pairing is the order.
+
+     `--font-display` reads: MuseoModerno draws Latin and Vietnamese and
+     `Planned Display Fallback` holds that shape while it downloads; Noto Sans
+     picks up Greek and the Cyrillic MuseoModerno has no subset for, with
+     `Planned Greek Fallback` and `Planned Cyrillic Fallback` behind it; then
+     Arabic, then the Han group, each with its own. `--font-ui` reads the same
+     way with Geist and `Planned Latin Fallback` at the head — Geist carries its
+     own Cyrillic, so the Latin compensator claims that range and the Cyrillic
+     one is never reached in this stack.
+
+     Neither stack ends on a bare family: `--font-system` and
+     `--font-system-display` are the last resort for a reader who has none of
+     the locals the compensators name. */
   --font-display:
-    'MuseoModerno', 'Avenir Next', 'Trebuchet MS', ui-rounded, system-ui,
-    sans-serif;
+    'MuseoModerno', 'Planned Display Fallback', 'Noto Sans',
+    'Planned Greek Fallback', 'Planned Cyrillic Fallback', 'Noto Sans Arabic',
+    'Planned Arabic Fallback', var(--font-han), var(--font-cjk-fallback),
+    var(--font-system-display);
   --font-ui:
-    'Geist', 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    Roboto, 'Helvetica Neue', Arial, sans-serif;
+    'Geist', 'Geist Sans', 'Planned Latin Fallback', 'Noto Sans',
+    'Planned Greek Fallback', 'Noto Sans Arabic', 'Planned Arabic Fallback',
+    var(--font-han), var(--font-cjk-fallback), var(--font-system);
   --font-mono:
     ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', 'Liberation Mono',
     monospace;

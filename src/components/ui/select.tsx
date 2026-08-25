@@ -4,6 +4,7 @@ import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import { useFieldControl } from './field'
+import { useUiCopy } from './copy'
 import {
   fieldSizes,
   iconSizes,
@@ -64,7 +65,7 @@ export const SelectTrigger = React.forwardRef<
         ref={ref}
         className={cn(
           'group flex w-full items-center justify-between gap-2 rounded-md border border-edge-strong bg-surface text-ink',
-          'text-left select-none',
+          'text-start select-none',
           transitionBase,
           'hover:border-ink-4',
           'focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring',
@@ -162,7 +163,7 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
   ({ className, icon, description, children, ...props }, ref) => (
     <SelectPrimitive.Item
       ref={ref}
-      className={cn(menuItemBase, 'pr-8', className)}
+      className={cn(menuItemBase, 'pe-8', className)}
       {...props}
     >
       {icon ? (
@@ -181,7 +182,7 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
           </span>
         ) : null}
       </span>
-      <SelectPrimitive.ItemIndicator className="absolute right-2.5 grid place-items-center text-brand">
+      <SelectPrimitive.ItemIndicator className="absolute end-2.5 grid place-items-center text-brand">
         <Check size={14} aria-hidden="true" />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
@@ -231,6 +232,7 @@ export type SimpleSelectProps = Omit<
   'children'
 > & {
   options: Array<SelectOption>
+  /** Overrides the empty-value text. Left out, it says "Select…". */
   placeholder?: string
   size?: FieldSize
   invalid?: boolean
@@ -247,7 +249,7 @@ export const SimpleSelect = React.forwardRef<
   (
     {
       options,
-      placeholder = 'Select…',
+      placeholder,
       size = 'md',
       invalid,
       className,
@@ -256,32 +258,37 @@ export const SimpleSelect = React.forwardRef<
       ...props
     },
     ref,
-  ) => (
-    <SelectPrimitive.Root {...props}>
-      <SelectTrigger
-        ref={ref}
-        id={triggerId}
-        size={size}
-        invalid={invalid}
-        className={className}
-        aria-label={ariaLabel}
-      >
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem
-            key={option.value}
-            value={option.value}
-            disabled={option.disabled}
-            icon={option.icon}
-            description={option.description}
-          >
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </SelectPrimitive.Root>
-  ),
+  ) => {
+    const t = useUiCopy()
+    return (
+      <SelectPrimitive.Root {...props}>
+        <SelectTrigger
+          ref={ref}
+          id={triggerId}
+          size={size}
+          invalid={invalid}
+          className={className}
+          aria-label={ariaLabel}
+        >
+          <SelectValue
+            placeholder={placeholder ?? t('ui.select.placeholder')}
+          />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={option.value}
+              disabled={option.disabled}
+              icon={option.icon}
+              description={option.description}
+            >
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </SelectPrimitive.Root>
+    )
+  },
 )
 SimpleSelect.displayName = 'SimpleSelect'

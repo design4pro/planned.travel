@@ -3,6 +3,7 @@ import { Switch as SwitchPrimitive } from 'radix-ui'
 
 import { cn } from '#/lib/cn'
 import { useFieldControl } from './field'
+import { useUiI18n } from './copy'
 import { disabledState, focusRing, transitionBase } from './shared'
 
 const trackSizes = {
@@ -12,10 +13,23 @@ const trackSizes = {
 } as const
 
 const thumbSizes = {
-  sm: 'size-3.5 data-[state=checked]:translate-x-3.5',
-  md: 'size-4.5 data-[state=checked]:translate-x-4',
-  lg: 'size-5.5 data-[state=checked]:translate-x-5',
+  sm: 'size-3.5',
+  md: 'size-4.5',
+  lg: 'size-5.5',
 } as const
+
+/**
+ * How far the thumb travels, per size, and why it is a custom property.
+ *
+ * The travel is a transform, so no logical property covers it: under `dir="rtl"`
+ * the track is mirrored and an unchanged `translate-x` would slide the thumb
+ * straight out of it. Two competing utilities would not settle the question
+ * either — Tailwind v4 compiles `rtl:` to a zero-specificity `:where()`, so
+ * `rtl:-translate-x-4` beside `translate-x-4` is decided by whichever the
+ * compiler emits last. A single signed value, resolved once from the negotiated
+ * direction, has no such ambiguity.
+ */
+const thumbTravel = { sm: '0.875rem', md: '1rem', lg: '1.25rem' } as const
 
 export type SwitchProps = React.ComponentPropsWithoutRef<
   typeof SwitchPrimitive.Root
@@ -29,6 +43,7 @@ export type SwitchProps = React.ComponentPropsWithoutRef<
  */
 export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
   ({ className, size = 'md', disabled, id, ...props }, ref) => {
+    const { dir } = useUiI18n()
     const field = useFieldControl({
       id,
       'aria-describedby': props['aria-describedby'],
@@ -54,10 +69,16 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       >
         <SwitchPrimitive.Thumb
           data-motion-transform=""
+          style={
+            {
+              '--thumb-travel': `${dir === 'rtl' ? '-' : ''}${thumbTravel[size]}`,
+            } as React.CSSProperties
+          }
           className={cn(
             'pointer-events-none block rounded-full bg-surface shadow-card',
             'transition-transform duration-fast ease-out-quint',
             'data-[state=unchecked]:translate-x-0',
+            'data-[state=checked]:translate-x-(--thumb-travel)',
             thumbSizes[size],
           )}
         />

@@ -55,12 +55,20 @@ export const ariaDisabledState =
 /**
  * Transform and opacity plus the paint-only properties. Never `width`,
  * `height`, `top` or `margin` — layout is not animated in this system.
+ *
+ * `translate`, `scale` and `rotate` are named alongside `transform` because
+ * Tailwind v4 compiles `-translate-y-px`, `scale-98` and `rotate-180` to those
+ * three standalone CSS properties rather than to `transform` — measured against
+ * the pinned compiler, which also expands the built-in `transition-transform`
+ * to exactly this set. Listing only `transform`, as this constant used to, left
+ * every hover lift and every press in the directory snapping instantly while
+ * the class that produced it looked animated.
  */
 export const transitionBase =
-  'transition-[color,background-color,border-color,outline-color,box-shadow,transform,opacity] duration-fast ease-out-quint'
+  'transition-[color,background-color,border-color,outline-color,box-shadow,transform,translate,scale,rotate,opacity] duration-fast ease-out-quint'
 
 export const transitionSlow =
-  'transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-base ease-out-quint'
+  'transition-[color,background-color,border-color,box-shadow,transform,translate,scale,rotate,opacity] duration-base ease-out-quint'
 
 /** Full-bleed scrim behind Dialog and Sheet. */
 export const overlaySurface =

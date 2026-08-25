@@ -2,17 +2,23 @@
    planned.travel — Tailwind v4 entry
    --------------------------------------------------------------------------
    Order matters:
-     1. Google Fonts (must precede every non-@import rule).
-     2. Tailwind, which installs `@layer theme, base, components, utilities`.
-     3. `./tokens.css`, which lands UNLAYERED and therefore always outranks
+     1. Tailwind, which installs `@layer theme, base, components, utilities`.
+     2. `./tokens.css`, which lands UNLAYERED and therefore always outranks
         the `@layer theme` block that `@theme inline` emits.
-     4. `@theme inline`, which teaches Tailwind our token names so
+     3. `@theme inline`, which teaches Tailwind our token names so
         `bg-canvas`, `text-ink-3`, `rounded-xl`, `shadow-card`,
         `ease-out-quint`, `text-micro`, `tracking-label` … all resolve to the
         live custom property (and therefore respond to the theme switch).
+
+   The web fonts are deliberately NOT imported here. An `@import url(…)` inside
+   this file is only discovered once this stylesheet has itself downloaded and
+   parsed, which puts the font request a whole round trip behind first paint.
+   The href and its two preconnect origins are declared as data in
+   `src/lib/fonts.ts` and rendered by the document shell in `<head>`, where the
+   preload scanner finds them immediately — and where there is exactly one copy
+   of the URL to keep in step with the stacks in `tokens.css`.
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=MuseoModerno:wght@400;500;700;800&display=swap');
 @import 'tailwindcss';
 @import './tokens.css';
 
@@ -202,6 +208,474 @@
 
   /* ------------------------------------------------------------------ layout */
   --blur-glass: var(--blur-glass);
+}
+
+/* ==========================================================================
+   Metric-compensated fallback faces
+   --------------------------------------------------------------------------
+   Every web font in `src/lib/fonts.ts` is requested with `display=swap`, which
+   means a zero-second block period: the first frame is painted in whatever the
+   platform can supply, and the real face replaces it moments later. That second
+   moment is where layout shift comes from, and SPEC §2 allows none of it.
+
+   So each script gets a named face that wraps the platform fonts most likely to
+   own it and then *overrides their vertical metrics* with the metrics of the
+   web font it stands in for. `ascent-override`, `descent-override` and
+   `line-gap-override` are absolute — a percentage of the font size, not of the
+   local font's own em — so the substituted line box and the baseline inside it
+   are identical whichever local font the reader happens to have, on any
+   platform. When the web font arrives, nothing moves.
+
+   Every number below was read out of the shipped font binaries (`head`,
+   `hhea` and `OS/2`), all of which use a 1000-unit em:
+
+     face                asc     desc    gap   x-height  cap
+     Geist               1.005   0.295   0     0.530     0.710
+     MuseoModerno        1.145   0.445   0     0.510     0.700
+     Noto Sans           1.069   0.293   0     0.536     0.714
+     Noto Sans Arabic    1.374   0.738   0     0.536     0.714
+     Noto Sans SC/TC/JP  1.160   0.288   0     0.543     0.733
+     Noto Sans KR        1.160   0.288   0     0.543     0.733
+     Arial (the local)   0.905   0.212   0.033 0.5186    0.7163
+
+   `size-adjust` is the optical half of the job, and it is only stated where a
+   single number is true across platforms. Arial and its metric clone Liberation
+   Sans are installed on macOS, Windows and most Linux desktops and share an
+   x-height of 0.5186, so the Latin, Display and Greek faces can be scaled onto
+   Geist's, MuseoModerno's and Noto Sans's x-heights exactly — the display face
+   borrows the Latin face's locals rather than a rounded one for exactly that
+   reason: a rounded local buys a closer *voice* for the ~100ms of the swap
+   period and pays for it with an x-height nobody has measured, which is the
+   wrong trade when the whole point of the face is that nothing moves.
+   `--font-system-display` still carries the rounded voice as the last resort
+   underneath, for a reader who has none of these locals at all.
+
+   The Arabic, Han and Hangul locals disagree with each other far too widely for
+   one ratio to be honest (Geeza Pro 0.491 vs Segoe UI 0.500; Hiragino Sans GB
+   0.545 vs Apple SD Gothic Neo 0.502), and an x-height is not a meaningful
+   measure of an Arabic or an ideographic face in any case — those three take
+   the vertical overrides only.
+
+   Per CSS Fonts 4 the overrides are resolved against the *adjusted* em, so each
+   percentage below is the target ratio divided by its own `size-adjust`.
+
+   Every `local()` below names a font FACE, not a font family, because that is
+   what the property matches: a full name (`PingFang SC Regular`) or a PostScript
+   name (`PingFangSC-Regular`), never the family the font menu shows. Measured
+   in Chromium 150 on macOS: `local('PingFang SC')` never matches, so before
+   this the Han and Hangul compensators were inert and a Japanese line box moved
+   3.4% while a Korean baseline moved 12.9% the moment the web face landed.
+   Windows and Linux faces whose family and full name are the same string
+   (`Microsoft YaHei`, `Malgun Gothic`, `Meiryo`) need only the one spelling.
+
+   And `src` and `unicode-range` answer two different questions. The range
+   decides which family is ASKED for a codepoint; `src` decides which installed
+   face answers, and the first `local()` that matches wins the family outright.
+   If that face has no glyph, the family is skipped and the codepoint carries on
+   down the stack — past every remaining compensator, to a platform font with no
+   overrides at all. That is why Kana is its own family below rather than a
+   range inside the Han one: PingFang SC matches first there and draws no kana.
+
+   There is one compensated face per WEB face per script it actually draws, and
+   each one sits IMMEDIATELY behind that face in the stack. Both halves are
+   load-bearing, and both were measured in Chromium 150 at `font-size: 100px`,
+   with the stylesheet allowed and single `woff2` files blocked to hold a face
+   in flight:
+
+     stack / state                       line box   baseline   drawn by
+     `--font-display` Latin, loaded        160px      115px    MuseoModerno
+     … MuseoModerno in flight, this file   158px      114px    Planned Display
+     … MuseoModerno in flight, before      136px      107px    Noto Sans
+     `--font-ui` Kana, loaded              145px      116px    Noto Sans JP
+     … Noto Sans JP in flight, this file   146px      116px    Planned Kana
+     … Noto Sans JP in flight, before      150px      113px    (no compensator)
+
+   The two "before" rows are what this file did until the ordering rule and the
+   Kana face landed: 15% of line box and 8px of baseline on every heading, 3.4%
+   and 3px on every Japanese line. The two rows above them are 1.3%/0.9% and
+   0.7%/0.0%. Every other script measures the same way — Latin UI 131 against
+   130 on a 101px baseline, Greek 137 against 136 on 107, Cyrillic display 158
+   against 160 on 114 against 115, Arabic 211 on 137 exactly, Han and Hangul 146
+   against 145 on 116 — so no script's swap moves a line by more than 2%.
+   ========================================================================== */
+
+/* Stands in for Geist: Latin, Latin-ext, Vietnamese, Cyrillic. This is the face
+   that paints the entire product on a cold load, so it is the one that decides
+   whether the page settles or jumps. */
+@font-face {
+  font-family: 'Planned Latin Fallback';
+  src:
+    local('Arial'), local('Liberation Sans'), local('Helvetica Neue'),
+    local('Roboto'), local('Segoe UI');
+  font-display: swap;
+  size-adjust: 102.2%; /* 0.530 ÷ 0.5186 */
+  ascent-override: 98.34%; /* 1.005 ÷ 1.022 */
+  descent-override: 28.87%; /* 0.295 ÷ 1.022 */
+  line-gap-override: 0%;
+  unicode-range:
+    U+0000-024F, U+0259, U+0300-036F, U+0400-052F, U+1E00-1EFF, U+2000-206F,
+    U+20A0-20CF, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+/* Stands in for MuseoModerno, and for nothing else. It sits IMMEDIATELY after
+   it in `--font-display`, ahead of every other web face in that stack, and the
+   position is the whole of the fix a round of this file got wrong: a `local()`
+   family is available on the first frame, so it can only ever be reached while
+   the face in front of it is in flight — but a *second web face* placed in
+   between is reached then too, and draws the heading with its own metrics.
+   `Noto Sans` used to sit there. Measured in Chromium at `font-size: 100px`
+   with MuseoModerno's own file blocked and Noto Sans's allowed, a Latin heading
+   came out as a 136px line box on a 107px baseline against MuseoModerno's
+   160/115 — a 15% line box and 8px of baseline, handed back the instant the
+   display face landed.
+
+   Its `unicode-range` stops where MuseoModerno's own subsets stop, so being
+   early costs nothing: Latin, Latin-ext and Vietnamese only. Cyrillic and Greek
+   headings fall past it to `Noto Sans`, which is what actually draws them. */
+@font-face {
+  font-family: 'Planned Display Fallback';
+  src:
+    local('Arial'), local('Liberation Sans'), local('Helvetica Neue'),
+    local('Roboto'), local('Segoe UI');
+  font-display: swap;
+  size-adjust: 98.34%; /* 0.510 ÷ 0.5186 */
+  ascent-override: 116.43%; /* 1.145 ÷ 0.9834 */
+  descent-override: 45.25%; /* 0.445 ÷ 0.9834 */
+  line-gap-override: 0%;
+  unicode-range:
+    U+0000-024F, U+0259, U+0300-036F, U+1D00-1DBF, U+1E00-1EFF, U+2000-206F,
+    U+20A0-20CF, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+/* Stands in for `Noto Sans` over Cyrillic, and appears in `--font-display`
+   alone: `MuseoModerno` has no Cyrillic subset at all, so a Russian or
+   Ukrainian heading is drawn by Noto Sans and has to be compensated to the face
+   that actually draws it. The UI stack never reaches this family, because Geist
+   carries its own Cyrillic and `Planned Latin Fallback` claims the range four
+   places earlier with Geist's numbers.
+
+   What it moves is the optical size, not the line box: the block's strut comes
+   from the first available face in the stack, which is `Planned Display
+   Fallback`, so a Cyrillic heading and a Latin one settle on the same line box.
+   Measured at 100px, a Cyrillic run is 314.7px wide through this face and
+   311.2px through the Latin compensator — the 103.36% x-height match that keeps
+   the text from visibly growing when Noto Sans arrives. */
+@font-face {
+  font-family: 'Planned Cyrillic Fallback';
+  src:
+    local('Arial'), local('Liberation Sans'), local('Helvetica Neue'),
+    local('Roboto'), local('Segoe UI');
+  font-display: swap;
+  size-adjust: 103.36%; /* 0.536 ÷ 0.5186 */
+  ascent-override: 103.42%; /* 1.069 ÷ 1.0336 */
+  descent-override: 28.35%; /* 0.293 ÷ 1.0336 */
+  line-gap-override: 0%;
+  unicode-range: U+0400-052F, U+1C80-1C8F, U+2DE0-2DFF, U+A640-A69F;
+}
+
+/* Stands in for Noto Sans over Greek — the one script Geist does not carry at
+   all, and the reason `el` exists in the picker at the same weight as `en`. It
+   sits immediately behind `Noto Sans` in both stacks, which is where every
+   compensator sits relative to the face it stands in for. */
+@font-face {
+  font-family: 'Planned Greek Fallback';
+  src:
+    local('Arial'), local('Liberation Sans'), local('Helvetica Neue'),
+    local('Roboto'), local('Segoe UI');
+  font-display: swap;
+  size-adjust: 103.36%; /* 0.536 ÷ 0.5186 */
+  ascent-override: 103.42%; /* 1.069 ÷ 1.0336 */
+  descent-override: 28.35%; /* 0.293 ÷ 1.0336 */
+  line-gap-override: 0%;
+  unicode-range: U+0370-03FF, U+1F00-1FFF;
+}
+
+/* Stands in for Noto Sans Arabic. Its 2.112 em ink height is why `:lang(ar)`
+   below re-leads the type scale rather than trusting the Latin one. */
+@font-face {
+  font-family: 'Planned Arabic Fallback';
+  src:
+    local('Geeza Pro Regular'), local('GeezaPro'), local('Segoe UI'),
+    local('Noto Sans Arabic Regular'), local('Tahoma'), local('Arial');
+  font-display: swap;
+  ascent-override: 137.4%;
+  descent-override: 73.8%;
+  line-gap-override: 0%;
+  unicode-range:
+    U+0600-06FF, U+0750-077F, U+0870-08FF, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+/* Stands in for Kana, and it is a family of its own rather than a range inside
+   the Han compensator below because of how `src` and `unicode-range` divide the
+   work. `unicode-range` decides which family is *asked*; `src` decides which
+   installed face answers, and the first `local()` that matches wins the whole
+   family. `local('PingFang SC Regular')` matches on macOS and PingFang SC draws
+   no kana at all — so a hiragana codepoint asked the Han family, got a face
+   with no glyph for it, and fell through every compensator in the stack to an
+   unadjusted platform font. Measured in Chromium at 100px before this face
+   existed, a Japanese line box was 148.8px in the fallback state against
+   144.8px once Noto Sans JP landed: the 3.4% shift that made the Han
+   compensator look like it covered Kana when it never had.
+
+   The locals here are Japanese, in the order a reader is likely to have them,
+   and the overrides are Noto Sans JP's — the same numbers as the Han face,
+   because the four Noto CJK cuts share one set of metrics. */
+@font-face {
+  font-family: 'Planned Kana Fallback';
+  src:
+    local('Hiragino Sans W3'), local('HiraginoSans-W3'),
+    local('Hiragino Kaku Gothic ProN W3'), local('HiraKakuProN-W3'),
+    local('Yu Gothic Regular'), local('YuGothic-Regular'), local('Meiryo'),
+    local('MS Gothic'), local('Noto Sans CJK JP Regular'),
+    local('Source Han Sans JP Regular');
+  font-display: swap;
+  ascent-override: 116%;
+  descent-override: 28.8%;
+  line-gap-override: 0%;
+  unicode-range: U+3040-30FF, U+31F0-31FF, U+FF61-FF9F;
+}
+
+/* Stands in for the three Han faces. `line-gap-override` is doing real work
+   here: Hiragino Sans GB declares a half-em line gap, which would open every
+   ideographic line by 7.5px at body size and then close it again the instant
+   the web font landed.
+
+   The range stops short of U+3040-30FF and U+FF61-FF9F, which the Kana face
+   above claims: a Chinese local is the right answer for an ideograph and the
+   wrong one for a kana, and the split is what lets each be answered by a face
+   that has the glyph. */
+@font-face {
+  font-family: 'Planned Han Fallback';
+  src:
+    local('PingFang SC Regular'), local('PingFangSC-Regular'),
+    local('Hiragino Sans W3'), local('HiraginoSans-W3'),
+    local('Hiragino Sans GB W3'), local('Microsoft YaHei'), local('Meiryo'),
+    local('Noto Sans CJK SC Regular'), local('Source Han Sans SC Regular');
+  font-display: swap;
+  ascent-override: 116%;
+  descent-override: 28.8%;
+  line-gap-override: 0%;
+  unicode-range:
+    U+2E80-2FFF, U+3000-303F, U+3100-312F, U+3190-319F, U+31C0-31FF,
+    U+3200-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FE30-FE4F, U+FF00-FF60,
+    U+FFA0-FFEF, U+20000-2FA1F;
+}
+
+/* Stands in for Noto Sans KR, which is the only one of the four that carries
+   Hangul — so Korean is reached by coverage rather than by stack order. */
+@font-face {
+  font-family: 'Planned Hangul Fallback';
+  src:
+    local('Apple SD Gothic Neo Regular'), local('AppleSDGothicNeo-Regular'),
+    local('Malgun Gothic'), local('Noto Sans CJK KR Regular'),
+    local('NanumGothic'), local('Source Han Sans KR Regular');
+  font-display: swap;
+  ascent-override: 116%;
+  descent-override: 28.8%;
+  line-gap-override: 0%;
+  unicode-range: U+1100-11FF, U+3130-318F, U+A960-A97F, U+AC00-D7FF;
+}
+
+/* ==========================================================================
+   Script layer — what changes when the page is not in Latin
+   --------------------------------------------------------------------------
+   These rules are unlayered and therefore outrank `tokens.css`, which is
+   imported above them at the same specificity. They only ever re-state tokens;
+   no component needs to know they exist.
+
+   `:lang()` matches the element carrying the language *and everything inside
+   it*, so one attribute on `<html>` re-types a whole page, and one attribute on
+   a single language-picker chip re-types just that chip inside an otherwise
+   English page. The stacks have to be restated in full rather than varying
+   `--font-han` alone: a `var()` inside a custom property is substituted where
+   the property is *declared*, so redefining `--font-han` further down the tree
+   would leave an already-resolved `--font-ui` untouched.
+   ========================================================================== */
+
+:lang(ja) {
+  --font-han: 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans KR';
+  --font-display:
+    'MuseoModerno', 'Planned Display Fallback', 'Noto Sans',
+    'Planned Greek Fallback', 'Planned Cyrillic Fallback', 'Noto Sans Arabic',
+    'Planned Arabic Fallback', var(--font-han), var(--font-cjk-fallback),
+    var(--font-system-display);
+  --font-ui:
+    'Geist', 'Geist Sans', 'Planned Latin Fallback', 'Noto Sans',
+    'Planned Greek Fallback', 'Noto Sans Arabic', 'Planned Arabic Fallback',
+    var(--font-han), var(--font-cjk-fallback), var(--font-system);
+}
+
+:lang(ko) {
+  --font-han: 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans TC';
+  --font-display:
+    'MuseoModerno', 'Planned Display Fallback', 'Noto Sans',
+    'Planned Greek Fallback', 'Planned Cyrillic Fallback', 'Noto Sans Arabic',
+    'Planned Arabic Fallback', var(--font-han), var(--font-cjk-fallback),
+    var(--font-system-display);
+  --font-ui:
+    'Geist', 'Geist Sans', 'Planned Latin Fallback', 'Noto Sans',
+    'Planned Greek Fallback', 'Noto Sans Arabic', 'Planned Arabic Fallback',
+    var(--font-han), var(--font-cjk-fallback), var(--font-system);
+}
+
+:lang(zh-Hant) {
+  --font-han: 'Noto Sans TC', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR';
+  --font-display:
+    'MuseoModerno', 'Planned Display Fallback', 'Noto Sans',
+    'Planned Greek Fallback', 'Planned Cyrillic Fallback', 'Noto Sans Arabic',
+    'Planned Arabic Fallback', var(--font-han), var(--font-cjk-fallback),
+    var(--font-system-display);
+  --font-ui:
+    'Geist', 'Geist Sans', 'Planned Latin Fallback', 'Noto Sans',
+    'Planned Greek Fallback', 'Noto Sans Arabic', 'Planned Arabic Fallback',
+    var(--font-han), var(--font-cjk-fallback), var(--font-system);
+}
+
+/* `font-family` inherits as an *already resolved* list, so the three rules above
+   only reach a whole page — `<html lang="ja">` re-resolves `--font-ui` where
+   `body` declares it, and everything below inherits the answer. An element that
+   carries its own `lang` in an otherwise English page — one chip in the language
+   picker, a place name quoted inside English prose — inherits that English list
+   instead and has to ask again.
+
+   This one rule is therefore LAYERED while its three neighbours above are not,
+   and which layer it lands in is load-bearing twice over. Specificity is only
+   consulted between declarations in the *same* layer, and an unlayered one
+   outranks every layered one whatever its selector — so written outside a layer
+   this rule beats `.font-display` and `.font-mono` in `@layer utilities` even at
+   zero specificity, and strips the display face off every element carrying its
+   own `lang`, which is every chip in the language picker. `@layer base` is not
+   the answer either: preflight puts `button, input, select, textarea { font:
+   inherit }` in that same layer at specificity (0,0,1), which beats `:where()`
+   and hands a `<button lang="ja">` the English list straight back — measured.
+
+   `components` is the one layer that sits above both: after base, so preflight
+   loses; before utilities, so `font-display` and `font-mono` win. `:where()`
+   stays so that a component's own `[lang]`-scoped rule outranks it too. */
+@layer components {
+  :where([lang]:lang(ja), [lang]:lang(ko), [lang]:lang(zh-Hant)) {
+    font-family: var(--font-ui);
+  }
+}
+
+/* Arabic is the one script in the set that cannot wear the Latin type scale.
+
+   Tracking: the scale tightens headings by up to -0.035em, and letter-spacing
+   in Arabic does not space letters, it *breaks the joins between them* — the
+   cursive equivalent of setting a word with gaps inside it. Every tracking
+   token is therefore zeroed rather than reduced.
+
+   Leading: Noto Sans Arabic spans 1.374 em above the baseline and 0.738 below,
+   2.112 em in all, against Geist's 1.300. Anything under that is negative
+   leading, and the display steps — the hero sits at 0.95 — would overlap
+   outright. The values below are the smallest that keep stacked vowel marks
+   clear of the line above at each step. */
+:lang(ar) {
+  --text-hero--letter-spacing: 0;
+  --text-headline--letter-spacing: 0;
+  --text-display--letter-spacing: 0;
+  --text-title--letter-spacing: 0;
+  --text-subtitle--letter-spacing: 0;
+  --text-micro--letter-spacing: 0;
+  --tracking-label: 0;
+  --tracking-wide: 0;
+  --tracking-tight: 0;
+  --tracking-tighter: 0;
+
+  --text-hero--line-height: 1.12;
+  --text-headline--line-height: 1.16;
+  --text-display--line-height: 1.2;
+  --text-title--line-height: 1.32;
+  --text-subtitle--line-height: 1.55;
+  --text-body--line-height: 1.75;
+  --text-label--line-height: 1.6;
+  --text-caption--line-height: 1.55;
+  --text-micro--line-height: 1.45;
+}
+
+/* ==========================================================================
+   Direction layer — the part of RTL that no utility can say
+   --------------------------------------------------------------------------
+   Tailwind v4 already compiles `ms-*`, `pe-*`, `start-*`, `text-start`,
+   `border-s`, `rounded-s-*` to real logical properties, and `rtl:` to
+   `:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *)`, so a component mirrors
+   itself with utilities and never needs a `[dir]` selector of its own. Setting
+   `dir="rtl"` on `<html>` is enough to reach all of them.
+
+   What remains is bidi, which has no utility anywhere: a run of digits inside
+   Arabic prose is only weakly left-to-right, so the neutral characters glueing
+   it together — the en dash in a date range, the colon in a time, the slash in
+   a ratio — are re-ordered by the surrounding paragraph and "3–7 Sep" comes out
+   backwards. Isolating the elements that carry numbers pins each run to its own
+   embedding level. It is scoped to RTL because that is the only direction where
+   the bidi algorithm has anything to decide.
+
+   Everything below is the whole of that job for the product. SPEC §8.4 asks for
+   a *designed* RTL rather than a flipped one, so nothing here flips a layout —
+   the three rules are the three things a component genuinely cannot say, and a
+   component that reaches for a `[dir]` selector of its own is a defect.
+   ========================================================================== */
+
+[dir='rtl'] :is(time, output, [data-numeric]) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Content that is Latin by definition and stays Latin in every locale: an
+   address, a URL, a phone number, a code sample, a keyboard shortcut. Arabic
+   makes these unreadable — `user@planned.travel` reorders around the `@` and
+   `https://` loses its slashes to the paragraph direction — and no utility
+   expresses "this element's *content* has a direction of its own". The field's
+   own box still mirrors with the form around it; only the run inside is pinned. */
+[dir='rtl']
+  :is(
+    input[type='email'],
+    input[type='url'],
+    input[type='tel'],
+    code,
+    kbd,
+    samp
+  ) {
+  direction: ltr;
+  text-align: start;
+}
+
+/* Directional icons mirror (SPEC §8.4): a back chevron, a "next" arrow, a
+   send glyph all point the wrong way once the page runs right to left, while a
+   clock, a close cross or a chevron that only means "expand" must not move.
+   That distinction is semantic, so the component names it with an attribute and
+   this rule does the flip — one place, rather than an `rtl:-scale-x-100` on
+   thirty icons.
+
+   `scale` rather than `transform`, for one reason that outweighs the rest: the
+   reduced-motion block below resets `transform` on `[data-motion-transform]`,
+   and a mirror written as `transform: scaleX(-1)` would be wiped there — an
+   arrow pointing the wrong way for exactly the readers least able to re-orient
+   themselves. `scale` is a separate property and survives it, and it also
+   composes with `rotate-*` and `translate-*`, which Tailwind v4.3 compiles to
+   their own properties too (measured against the installed compiler).
+
+   The one thing it does not compose with is `scale-*`, which compiles to this
+   same property. An icon that both mirrors and scales puts the scale on its
+   wrapper.
+
+   THE CONTRACT, so a consumer never has to guess. The attribute is boolean and
+   valueless — `<ArrowRight data-mirror-rtl />` — and it belongs on the glyph
+   itself, never on a wrapper that also carries text. It goes on an icon whose
+   meaning is "the direction reading travels": ArrowLeft, ArrowRight, MoveLeft,
+   MoveRight, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+   ArrowUpRight, ArrowDownLeft, CornerDownLeft, Undo2, Redo2, Reply, Forward,
+   Send, SendHorizontal, LogIn, LogOut, PanelLeft, PanelRight, SkipBack,
+   SkipForward, IndentIncrease. It must NOT go on a glyph whose direction is
+   physical rather than textual — a clock face, a compass, a play triangle, a
+   logo — nor on ChevronDown/ChevronUp, which have no handedness, nor on
+   ArrowRightLeft, which is symmetrical and would flip into itself.
+
+   The rule lives here rather than as thirty `rtl:-scale-x-100` utilities so
+   that the decision is auditable in one place; the components that carry the
+   attribute are owned by `src/components/ui` and `src/components/layout`. */
+[dir='rtl'] [data-mirror-rtl] {
+  scale: -1 1;
 }
 
 /* ==========================================================================

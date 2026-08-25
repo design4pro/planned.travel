@@ -6,7 +6,6 @@ import {
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
-  format,
   isAfter,
   isBefore,
   isSameDay,
@@ -18,8 +17,51 @@ import {
 } from 'date-fns'
 
 import { cn } from '#/lib/cn'
+import { formatList, formatNumber, monthName, weekdayName } from '#/lib/format'
 import { IconButton } from './icon-button'
+import { useUiCopy, useUiI18n } from './copy'
 import { focusRing, transitionBase, useControllableState } from './shared'
+
+import type { UiI18n } from './copy'
+
+/**
+ * Month and weekday names come from the frozen CLDR tables in
+ * `src/lib/format-tables.ts`, never from a live `Intl` call and never from
+ * `date-fns`' English defaults. `docs/SPEC.md` §8.5 is explicit about why: this
+ * grid is rendered first in workerd and then hydrated in the traveller's
+ * browser, and the two runtimes disagree about several of these names — Greek
+ * inflects a bare month differently, and Arabic, Catalan and Russian disagree
+ * about abbreviated weekdays. A disagreement here is a hydration error on a
+ * screen that looked perfect in Chrome.
+ *
+ * The *order* of the parts is catalogue copy rather than table data, so
+ * `ui.calendar.monthYear` and `ui.calendar.day` carry patterns a translator can
+ * reorder into `2026年3月` without anybody inventing a month name.
+ */
+
+/**
+ * A local calendar day as the `YYYY-MM-DD` column `src/lib/format.ts` parses.
+ *
+ * The formatters there read a date with UTC getters, because every date this
+ * product stores is a calendar day rather than an instant. A `Date` picked out
+ * of this grid is local midnight, so handing it over directly would move a
+ * September evening in Tokyo into the previous day. Writing the local
+ * year/month/day out as the column form is the conversion, and it is the only
+ * one either picker needs.
+ */
+export function isoDay(date: Date): string {
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+/** `March 2026`, `marzec 2026`, `2026年3月` — the table's name, the catalogue's order. */
+function monthHeading(month: Date, ui: UiI18n): string {
+  return ui.t('ui.calendar.monthYear', {
+    month: monthName(month.getMonth(), ui.locale, 'long') ?? '',
+    year: String(month.getFullYear()),
+  })
+}
 
 /** A half-open selection: `to` is absent while the reader is mid-pick. */
 export type DateRange = { from: Date; to?: Date }
@@ -81,6 +123,7 @@ function CalendarGrid({
   hoveredDate,
   onHover,
   registerDay,
+  ui,
   ...props
 }: InternalProps & {
   month: Date
@@ -88,6 +131,7 @@ function CalendarGrid({
   hoveredDate: Date | null
   onHover: (date: Date | null) => void
   registerDay: (key: string, node: HTMLButtonElement | null) => void
+  ui: UiI18n
 }) {
   const { mode, range, onDayPick, weekStartsOn = 1, markedDates } = props
   const days = daysOfMonthGrid(month, weekStartsOn)
@@ -114,7 +158,10 @@ function CalendarGrid({
     <div className="min-w-0">
       <table
         role="grid"
-        aria-label={`${format(month, 'MMMM yyyy')} — ${props.label}`}
+        aria-label={ui.t('ui.calendar.grid', {
+          month: monthHeading(month, ui),
+          label: props.label,
+        })}
         className="w-full border-collapse"
       >
         <thead>
@@ -123,10 +170,10 @@ function CalendarGrid({
               <th
                 key={day.toISOString()}
                 scope="col"
-                abbr={format(day, 'EEEE')}
-                className="pb-1.5 text-micro font-semibold uppercase tracking-label text-ink-4"
+                abbr={weekdayName(day.getDay(), ui.locale, 'long') ?? undefined}
+                className="px-1 pb-1.5 text-micro font-semibold uppercase tracking-label whitespace-nowrap text-ink-4"
               >
-                {format(day, 'EEEEEE')}
+                {weekdayName(day.getDay(), ui.locale, 'short')}
               </th>
             ))}
           </tr>
@@ -160,12 +207,12 @@ function CalendarGrid({
                         isStart &&
                         previewEnd &&
                         !isEnd &&
-                        'rounded-l-full bg-brand-subtle',
+                        'rounded-s-full bg-brand-subtle',
                       mode === 'range' &&
                         isEnd &&
                         start &&
                         !isStart &&
-                        'rounded-r-full bg-brand-subtle',
+                        'rounded-e-full bg-brand-subtle',
                     )}
                   >
                     <button
@@ -174,7 +221,14 @@ function CalendarGrid({
                       tabIndex={isSameDay(day, focusedDate) ? 0 : -1}
                       disabled={disabled}
                       aria-current={today ? 'date' : undefined}
-                      aria-label={format(day, 'EEEE d MMMM yyyy')}
+                      aria-label={ui.t('ui.calendar.day', {
+                        weekday:
+                          weekdayName(day.getDay(), ui.locale, 'long') ?? '',
+                        day: formatNumber(day.getDate(), ui.locale),
+                        month:
+                          monthName(day.getMonth(), ui.locale, 'long') ?? '',
+                        year: String(day.getFullYear()),
+                      })}
                       onClick={() => onDayPick(day)}
                       onPointerEnter={() => onHover(day)}
                       onFocus={() => onHover(day)}
@@ -194,7 +248,7 @@ function CalendarGrid({
                           'cursor-not-allowed text-ink-4/50 line-through decoration-1',
                       )}
                     >
-                      {format(day, 'd')}
+                      {formatNumber(day.getDate(), ui.locale)}
                       {marked && !selected ? (
                         <span
                           className="absolute bottom-1 size-1 rounded-full bg-brand"
@@ -227,6 +281,8 @@ function CalendarBase(props: InternalProps) {
     footer,
     weekStartsOn = 1,
   } = props
+
+  const ui = useUiI18n()
 
   const [visibleMonth, setVisibleMonth] = useControllableState<Date>({
     value: month,
@@ -268,9 +324,14 @@ function CalendarBase(props: InternalProps) {
   }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    // The horizontal arrows follow the reading direction, not the screen: in an
+    // RTL grid the next day sits to the *left* of today, so ArrowLeft advances.
+    // Vertical movement is a week either way — rows stack downwards in every
+    // script this product ships.
+    const forward = ui.dir === 'rtl' ? -1 : 1
     const moves: Record<string, number | undefined> = {
-      ArrowLeft: -1,
-      ArrowRight: 1,
+      ArrowLeft: -forward,
+      ArrowRight: forward,
       ArrowUp: -7,
       ArrowDown: 7,
     }
@@ -320,8 +381,8 @@ function CalendarBase(props: InternalProps) {
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <IconButton
-          icon={<ChevronLeft />}
-          label="Previous month"
+          icon={<ChevronLeft data-mirror-rtl />}
+          label={ui.t('ui.calendar.previousMonth')}
           size="sm"
           variant="ghost"
           disabled={!canGoBack}
@@ -334,13 +395,13 @@ function CalendarBase(props: InternalProps) {
               className="text-label font-semibold text-ink"
               aria-hidden="true"
             >
-              {format(current, 'MMMM yyyy')}
+              {monthHeading(current, ui)}
             </span>
           ))}
         </div>
         <IconButton
-          icon={<ChevronRight />}
-          label="Next month"
+          icon={<ChevronRight data-mirror-rtl />}
+          label={ui.t('ui.calendar.nextMonth')}
           size="sm"
           variant="ghost"
           disabled={!canGoForward}
@@ -351,8 +412,12 @@ function CalendarBase(props: InternalProps) {
       {/* The visible month is announced once, politely — a reader paging through
           months hears "March 2026" rather than forty-two day names. */}
       <span role="status" aria-live="polite" className="sr-only">
-        Showing{' '}
-        {months.map((current) => format(current, 'MMMM yyyy')).join(' and ')}
+        {ui.t('ui.calendar.showing', {
+          months: formatList(
+            months.map((current) => monthHeading(current, ui)),
+            ui.locale,
+          ),
+        })}
       </span>
 
       <div
@@ -370,6 +435,7 @@ function CalendarBase(props: InternalProps) {
             hoveredDate={hoveredDate}
             onHover={setHoveredDate}
             registerDay={registerDay}
+            ui={ui}
             onDayPick={(date) => {
               setFocusedDate(date)
               onDayPick(date)
@@ -401,17 +467,20 @@ export type CalendarProps = CalendarBaseProps & {
  * calendar is one tab stop.
  */
 export const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
-  ({ selected, onSelect, label = 'Choose a date', ...props }, ref) => (
-    <div ref={ref}>
-      <CalendarBase
-        {...props}
-        mode="single"
-        label={label}
-        range={selected ? { from: selected, to: selected } : null}
-        onDayPick={(date) => onSelect?.(date)}
-      />
-    </div>
-  ),
+  ({ selected, onSelect, label, ...props }, ref) => {
+    const t = useUiCopy()
+    return (
+      <div ref={ref}>
+        <CalendarBase
+          {...props}
+          mode="single"
+          label={label ?? t('ui.calendar.label.date')}
+          range={selected ? { from: selected, to: selected } : null}
+          onDayPick={(date) => onSelect?.(date)}
+        />
+      </div>
+    )
+  },
 )
 Calendar.displayName = 'Calendar'
 
@@ -429,43 +498,33 @@ export type RangeCalendarProps = CalendarBaseProps & {
 export const RangeCalendar = React.forwardRef<
   HTMLDivElement,
   RangeCalendarProps
->(
-  (
-    {
-      selected,
-      onSelect,
-      label = 'Choose a date range',
-      numberOfMonths = 2,
-      ...props
-    },
-    ref,
-  ) => {
-    const [range, setRange] = useControllableState<DateRange | null>({
-      value: selected,
-      defaultValue: null,
-      onChange: onSelect,
-    })
+>(({ selected, onSelect, label, numberOfMonths = 2, ...props }, ref) => {
+  const t = useUiCopy()
+  const [range, setRange] = useControllableState<DateRange | null>({
+    value: selected,
+    defaultValue: null,
+    onChange: onSelect,
+  })
 
-    const pick = (date: Date) => {
-      if (!range || range.to || isBefore(date, range.from)) {
-        setRange({ from: date })
-        return
-      }
-      setRange({ from: range.from, to: date })
+  const pick = (date: Date) => {
+    if (!range || range.to || isBefore(date, range.from)) {
+      setRange({ from: date })
+      return
     }
+    setRange({ from: range.from, to: date })
+  }
 
-    return (
-      <div ref={ref}>
-        <CalendarBase
-          {...props}
-          mode="range"
-          label={label}
-          numberOfMonths={numberOfMonths}
-          range={range}
-          onDayPick={pick}
-        />
-      </div>
-    )
-  },
-)
+  return (
+    <div ref={ref}>
+      <CalendarBase
+        {...props}
+        mode="range"
+        label={label ?? t('ui.calendar.label.range')}
+        numberOfMonths={numberOfMonths}
+        range={range}
+        onDayPick={pick}
+      />
+    </div>
+  )
+})
 RangeCalendar.displayName = 'RangeCalendar'

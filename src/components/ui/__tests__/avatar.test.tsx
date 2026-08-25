@@ -93,8 +93,10 @@ describe('AvatarStack', () => {
   it('drops the counter when everyone fits', () => {
     render(<AvatarStack people={people.slice(0, 2)} max={4} />)
     expect(screen.queryByText(/^\+/)).toBeNull()
+    // Two names are joined by this locale's conjunction, not by a comma: the
+    // summary goes through `formatList`, which is frozen per locale.
     expect(
-      screen.getByRole('group', { name: 'Amelia Voss, Jonas Reyes' }),
+      screen.getByRole('group', { name: 'Amelia Voss and Jonas Reyes' }),
     ).not.toBeNull()
   })
 

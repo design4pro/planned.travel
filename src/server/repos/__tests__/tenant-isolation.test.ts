@@ -128,7 +128,9 @@ import {
   appSettingsStore,
   ensureOrganizationSettings,
   getEffectiveSettings,
+  getUserSettings,
   organizationSettingsRepository,
+  updateOrganizationSettings,
   updateUserSettings,
   userSettingsRepository,
 } from '../settings'
@@ -691,7 +693,7 @@ const cases: ReadonlyArray<IsolationCase> = [
   isolationCase('subscriptions', subscriptionsRepository, (w) => w.subscriptionId, { seats: 99 }),
   isolationCase('usage records', usageRecordsRepository, (w) => w.usageRecordId, { value: 99 }),
   isolationCase('workspace settings', organizationSettingsRepository, (w) => w.organizationSettingsId, {
-    locale: 'de-DE',
+    locale: 'de',
   }),
   isolationCase('user settings', userSettingsRepository, (w) => w.userSettingsId, {
     theme: 'light',
@@ -1157,10 +1159,22 @@ describe('tenant isolation', () => {
     })
 
     it('keeps effective settings inside the tenant', async () => {
-      await updateUserSettings(beta.tenant.scope, { locale: 'pt-PT' })
+      await updateUserSettings(beta.tenant.scope, { locale: 'pt-BR' })
       const settings = await getEffectiveSettings(alpha.tenant.scope)
-      expect(settings.locale).toBe('en-GB')
+      // `en` rather than the `en-GB` this column used to hold: every read is narrowed to one of the
+      // twenty-three shipped tags, so a workspace on the legacy default still resolves.
+      expect(settings.locale).toBe('en')
       expect(settings.theme).toBe('dark')
+    })
+
+    it('writes a language into the caller’s workspace only', async () => {
+      await updateOrganizationSettings(alpha.tenant.scope, { locale: 'ja' })
+      await updateUserSettings(alpha.tenant.scope, { locale: 'ko' })
+
+      expect((await ensureOrganizationSettings(beta.tenant.scope)).locale).toBe('en')
+      expect((await getUserSettings(beta.tenant.scope))?.locale ?? null).toBeNull()
+      expect((await getEffectiveSettings(beta.tenant.scope)).locale).toBe('en')
+      expect((await getEffectiveSettings(alpha.tenant.scope)).locale).toBe('ko')
     })
 
     it('keeps the trip itinerary inside the tenant', async () => {

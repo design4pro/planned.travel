@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { cva } from 'class-variance-authority'
 
 import { cn } from '#/lib/cn'
+import { useUiCopy } from './copy'
 import { disabledState, focusRing, transitionBase } from './shared'
 
 import type { VariantProps } from 'class-variance-authority'
@@ -104,6 +105,7 @@ export type ChipProps = Omit<
     count?: number
     /** Adds the remove affordance. Its own button, so it has its own name. */
     onRemove?: () => void
+    /** Overrides the remove button's name. Left out, it says "Remove". */
     removeLabel?: string
   }
 
@@ -121,65 +123,68 @@ export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
       icon,
       count,
       onRemove,
-      removeLabel = 'Remove',
+      removeLabel,
       children,
       type,
       ...props
     },
     ref,
-  ) => (
-    <span className="relative inline-flex">
-      <button
-        ref={ref}
-        type={type ?? 'button'}
-        aria-pressed={selected ?? false}
-        data-selected={selected ? '' : undefined}
-        className={cn(
-          chipVariants({ tone, selected, size }),
-          onRemove && 'pr-7',
-          className,
-        )}
-        {...props}
-      >
-        {icon ? (
-          <span
-            className="grid place-items-center [&_svg]:size-3.5"
-            aria-hidden="true"
-          >
-            {icon}
-          </span>
-        ) : null}
-        {children}
-        {typeof count === 'number' ? (
-          <span
+  ) => {
+    const t = useUiCopy()
+    return (
+      <span className="relative inline-flex">
+        <button
+          ref={ref}
+          type={type ?? 'button'}
+          aria-pressed={selected ?? false}
+          data-selected={selected ? '' : undefined}
+          className={cn(
+            chipVariants({ tone, selected, size }),
+            onRemove && 'pe-7',
+            className,
+          )}
+          {...props}
+        >
+          {icon ? (
+            <span
+              className="grid place-items-center [&_svg]:size-3.5"
+              aria-hidden="true"
+            >
+              {icon}
+            </span>
+          ) : null}
+          {children}
+          {typeof count === 'number' ? (
+            <span
+              className={cn(
+                'ms-0.5 rounded-full px-1.5 text-caption font-semibold tabular-nums',
+                selected ? 'bg-accent-on/15' : 'bg-surface-inset',
+              )}
+            >
+              {count}
+            </span>
+          ) : null}
+        </button>
+
+        {onRemove ? (
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label={removeLabel ?? t('ui.action.remove')}
             className={cn(
-              'ml-0.5 rounded-full px-1.5 text-caption font-semibold tabular-nums',
-              selected ? 'bg-accent-on/15' : 'bg-surface-inset',
+              'absolute top-1/2 end-1 grid size-5 -translate-y-1/2 place-items-center rounded-full',
+              transitionBase,
+              focusRing,
+              selected
+                ? 'text-accent-on/70 hover:bg-accent-on/15'
+                : 'text-ink-4 hover:bg-hover hover:text-ink',
             )}
           >
-            {count}
-          </span>
+            <X size={12} strokeWidth={2.5} aria-hidden="true" />
+          </button>
         ) : null}
-      </button>
-
-      {onRemove ? (
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label={removeLabel}
-          className={cn(
-            'absolute top-1/2 right-1 grid size-5 -translate-y-1/2 place-items-center rounded-full',
-            transitionBase,
-            focusRing,
-            selected
-              ? 'text-accent-on/70 hover:bg-accent-on/15'
-              : 'text-ink-4 hover:bg-hover hover:text-ink',
-          )}
-        >
-          <X size={12} strokeWidth={2.5} aria-hidden="true" />
-        </button>
-      ) : null}
-    </span>
-  ),
+      </span>
+    )
+  },
 )
 Chip.displayName = 'Chip'

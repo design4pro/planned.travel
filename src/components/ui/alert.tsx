@@ -10,6 +10,7 @@ import { cva } from 'class-variance-authority'
 
 import { cn } from '#/lib/cn'
 import { IconButton } from './icon-button'
+import { useUiCopy } from './copy'
 
 import type { VariantProps } from 'class-variance-authority'
 import type { LucideIcon } from 'lucide-react'
@@ -58,6 +59,7 @@ export type AlertProps = React.ComponentPropsWithoutRef<'div'> &
     /** Buttons or links under the copy. */
     actions?: React.ReactNode
     onDismiss?: () => void
+    /** Overrides the close button's name. Left out, it says "Dismiss". */
     dismissLabel?: string
   }
 
@@ -76,12 +78,13 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
       icon,
       actions,
       onDismiss,
-      dismissLabel = 'Dismiss',
+      dismissLabel,
       children,
       ...props
     },
     ref,
   ) => {
+    const t = useUiCopy()
     const Glyph = toneIcons[tone ?? 'info']
     return (
       <div
@@ -90,7 +93,7 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
         aria-live={tone === 'danger' ? 'assertive' : 'polite'}
         className={cn(
           alertVariants({ tone, size }),
-          onDismiss && 'pr-11',
+          onDismiss && 'pe-11',
           className,
         )}
         {...props}
@@ -126,11 +129,11 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
         {onDismiss ? (
           <IconButton
             icon={<X />}
-            label={dismissLabel}
+            label={dismissLabel ?? t('ui.action.dismiss')}
             size="xs"
             variant="ghost"
             onClick={onDismiss}
-            className="absolute top-2.5 right-2.5"
+            className="absolute top-2.5 end-2.5"
           />
         ) : null}
       </div>

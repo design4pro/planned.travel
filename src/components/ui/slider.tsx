@@ -99,6 +99,8 @@ export const Slider = React.forwardRef<HTMLSpanElement, SliderProps>(
               {showValue ? (
                 <span
                   className={cn(
+                    // Centred over the thumb: symmetrical, so it needs no
+                    // direction of its own.
                     'pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 rounded-sm bg-inverse px-1.5 py-0.5',
                     'text-caption font-semibold tabular-nums text-inverse-on shadow-elevated',
                   )}
@@ -116,7 +118,10 @@ export const Slider = React.forwardRef<HTMLSpanElement, SliderProps>(
               <span
                 key={tick}
                 className="absolute top-0 h-1 w-px -translate-x-1/2 rounded-full bg-edge-strong/70"
-                style={{ left: `${((tick - min) / span) * 100}%` }}
+                // The scale runs from the inline start, so the ticks are placed
+                // from it too: Radix reverses the track under `dir="rtl"` and a
+                // physical `left` would have left them behind.
+                style={{ insetInlineStart: `${((tick - min) / span) * 100}%` }}
               />
             ))}
           </div>

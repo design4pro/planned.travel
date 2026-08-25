@@ -1,5 +1,14 @@
 [
   {
+    "id": "namespaces-dts-must-die",
+    "title": "src/lib/i18n/messages/namespaces.d.ts is scaffolding and nobody owns its removal",
+    "why": "It declares ten global wildcard ambient modules so types.ts can import namespace files that do not exist yet. Every real messages/en/<ns>.ts shadows it, so it is inert — but a wildcard ambient declaration that outlives its purpose will silently type an absent namespace as present, which is exactly what the parity gate exists to prevent. Delete it the moment all ten en namespace files exist.",
+    "decision": "The orchestrator deletes it, not a builder — no item owns it.",
+    "paths": [
+      "src/lib/i18n/messages/namespaces.d.ts"
+    ]
+  },
+  {
     "id": "seed-relative-dates",
     "title": "The demo fixture must not decide what the gate photographs",
     "why": "Absolute seeded dates mean the Worker chooses WHICH ROWS a screen shows by comparing them against its own today, so baselines change size and toHaveScreenshot refuses two images of different size before it consults any tolerance. Measured: /dashboard shrinks 43px on 2026-08-21, /atlas grows 43px on 2026-08-24, the reservations rail is empty for good after 2026-10-12.",

@@ -79,7 +79,7 @@ export const DropdownMenuItem = React.forwardRef<
         menuItemBase,
         destructive &&
           'text-danger data-[highlighted]:bg-danger-soft data-[highlighted]:text-danger',
-        inset && 'pl-8',
+        inset && 'ps-8',
         className,
       )}
       {...props}
@@ -94,7 +94,7 @@ export const DropdownMenuItem = React.forwardRef<
       ) : null}
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {shortcut ? (
-        <span className="ml-auto shrink-0 text-caption tracking-wide text-ink-4">
+        <span className="ms-auto shrink-0 text-caption tracking-wide text-ink-4">
           {shortcut}
         </span>
       ) : null}
@@ -113,10 +113,10 @@ export const DropdownMenuCheckboxItem = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <MenuPrimitive.CheckboxItem
     ref={ref}
-    className={cn(menuItemBase, 'pl-8', className)}
+    className={cn(menuItemBase, 'ps-8', className)}
     {...props}
   >
-    <MenuPrimitive.ItemIndicator className="absolute left-2.5 grid place-items-center text-brand">
+    <MenuPrimitive.ItemIndicator className="absolute start-2.5 grid place-items-center text-brand">
       <Check size={14} strokeWidth={3} aria-hidden="true" />
     </MenuPrimitive.ItemIndicator>
     <span className="min-w-0 flex-1 truncate">{children}</span>
@@ -130,10 +130,10 @@ export const DropdownMenuRadioItem = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <MenuPrimitive.RadioItem
     ref={ref}
-    className={cn(menuItemBase, 'pl-8', className)}
+    className={cn(menuItemBase, 'ps-8', className)}
     {...props}
   >
-    <MenuPrimitive.ItemIndicator className="absolute left-2.5 grid place-items-center text-brand">
+    <MenuPrimitive.ItemIndicator className="absolute start-2.5 grid place-items-center text-brand">
       <Circle size={7} className="fill-current" aria-hidden="true" />
     </MenuPrimitive.ItemIndicator>
     <span className="min-w-0 flex-1 truncate">{children}</span>
@@ -193,8 +193,9 @@ export const DropdownMenuSubTrigger = React.forwardRef<
     <span className="min-w-0 flex-1 truncate">{children}</span>
     <ChevronRight
       size={14}
-      className="ml-auto shrink-0 text-ink-4"
+      className="ms-auto shrink-0 text-ink-4"
       aria-hidden="true"
+      data-mirror-rtl
     />
   </MenuPrimitive.SubTrigger>
 ))

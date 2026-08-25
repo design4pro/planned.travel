@@ -5,6 +5,14 @@
  * `user_settings` holds a traveller's personal overrides of the same fields. {@link getEffectiveSettings}
  * is the merge every screen should read, so the precedence rule lives in exactly one place.
  *
+ * **The locale columns hold a shipped tag and nothing else.** {@link localeSchema} narrows every
+ * write to the twenty-three tags of `src/lib/i18n/locales.ts`, canonicalising a legacy `en-GB` or
+ * `pl-PL` on the way in, and {@link getEffectiveSettings} narrows every read the same way, so a row
+ * written before that rule existed still resolves rather than silently falling through to
+ * `Accept-Language`. Nothing here is cached: `docs/ARCHITECTURE.md` §4 lists no settings key, and
+ * rule 2 of that section is why it stays that way — a locale write is read back on the next request
+ * from D1, so the read-your-own-write path can never serve KV's up-to-60-second stale answer.
+ *
  * `app_settings` is instance-wide deployment configuration and has no `organization_id`. It is reached
  * through the {@link appSettingsStore} helpers, which take a plain {@link Database} rather than a
  * {@link TenantScope} —
@@ -13,6 +21,8 @@
 
 import { asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
+import { DEFAULT_LOCALE, LOCALE_TAGS } from '#/lib/i18n/locales'
+import { negotiate, resolveLocaleTag } from '#/lib/i18n/negotiate'
 import {
   DISTANCE_UNITS,
   THEME_PREFERENCES,
@@ -30,6 +40,7 @@ import {
   instantSchema,
   shortTextSchema,
 } from './validation'
+import type { Locale } from '#/lib/i18n'
 import type { JsonRecord } from '#/server/db/schema'
 import type {
   AppSetting,
@@ -55,7 +66,39 @@ const jsonRecordSchema: z.ZodType<JsonRecord> = z.record(
 )
 
 const weekStartSchema = z.number().int().min(0).max(6)
-const localeSchema = z.string().trim().min(2).max(16)
+
+/**
+ * A stored locale, narrowed to the twenty-three tags `docs/SPEC.md` §8 ships.
+ *
+ * The set is `z.enum(LOCALE_TAGS)` over the frozen registry in
+ * `src/lib/i18n/locales.ts`, never a list re-typed here: a twenty-fourth
+ * language must be one edit in one table, and a column that can hold a tag the
+ * message layer has no catalogue for is a screen rendered in the wrong
+ * language at best. The predecessor was `z.string().min(2).max(16)`, which let
+ * `__proto__` and `constructor` reach the negotiator through a settings form.
+ *
+ * The canonicalising step in front of the enum is not politeness, it is the
+ * data. `organization_settings.locale` defaulted to `en-GB` for every workspace
+ * created before this migration, the demo dataset still declares `en-GB`, and
+ * the regional-format picker wrote `pl-PL` and `ja-JP`. A bare membership test
+ * would reject all of them and hand every existing workspace a validation
+ * error on the next save. So a tag is first put through {@link resolveLocaleTag}
+ * — the same case-fold, alias table and BCP-47 truncation the negotiator uses,
+ * so `en-GB` → `en`, `pt-PT` → `pt-BR`, `zh-Hant-TW` → `zh-Hant` — and only
+ * what that cannot canonicalise is rejected. The column therefore holds a
+ * shipped tag and nothing else, whatever the caller sent.
+ *
+ * The bound is on the *input* so a 16 kB header pasted into a form is refused
+ * before any work happens; `resolveLocaleTag` bounds its own walk as well.
+ */
+export const localeSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(64)
+  .transform((tag) => resolveLocaleTag(tag) ?? tag)
+  .pipe(z.enum(LOCALE_TAGS))
+
 const timezoneSchema = z.string().trim().min(1).max(64)
 const dateFormatSchema = z.string().trim().min(1).max(32)
 const mapStyleSchema = z.string().trim().min(1).max(64)
@@ -71,7 +114,12 @@ export const updateOrganizationSettingsInput = z.object({
   features: jsonRecordSchema.nullish(),
   onboardedAt: instantSchema.nullish(),
 })
-export type UpdateOrganizationSettingsInput = z.infer<typeof updateOrganizationSettingsInput>
+/**
+ * What a caller may send. It is the schema's *input* type, so a legacy tag such
+ * as `en-GB` still compiles and is canonicalised by the parse; the row that
+ * reaches D1 always carries the narrowed {@link Locale}.
+ */
+export type UpdateOrganizationSettingsInput = z.input<typeof updateOrganizationSettingsInput>
 
 export const updateUserSettingsInput = z.object({
   theme: z.enum(THEME_PREFERENCES).optional(),
@@ -86,7 +134,8 @@ export const updateUserSettingsInput = z.object({
   reduceMotion: z.boolean().optional(),
   onboardingCompletedAt: instantSchema.nullish(),
 })
-export type UpdateUserSettingsInput = z.infer<typeof updateUserSettingsInput>
+/** As {@link UpdateOrganizationSettingsInput}: the input side, canonicalised on parse. */
+export type UpdateUserSettingsInput = z.input<typeof updateUserSettingsInput>
 
 /* -------------------------------------------------------------------------------------------------
  * Workspace settings
@@ -99,12 +148,20 @@ export async function getOrganizationSettings(
   return rows[0] ?? null
 }
 
-/** Returns the workspace settings row, creating it with schema defaults on first use. */
+/**
+ * Returns the workspace settings row, creating it with schema defaults on first use.
+ *
+ * The locale is the one default written out rather than left to the column, because the column's
+ * default is a string in the DDL and {@link DEFAULT_LOCALE} is the registry's answer to the same
+ * question. Drizzle inlines a static `.default()` into the `INSERT` client-side, so the DDL default
+ * is not even consulted on this path — stating it here is what actually decides the value, and it
+ * keeps "the language a fresh workspace speaks" in the same table as the twenty-three tags.
+ */
 export async function ensureOrganizationSettings(
   scope: TenantScope,
 ): Promise<OrganizationSettings> {
   const existing = await getOrganizationSettings(scope)
-  return existing ?? organizationSettingsRepository.insert(scope, {})
+  return existing ?? organizationSettingsRepository.insert(scope, { locale: DEFAULT_LOCALE })
 }
 
 export async function updateOrganizationSettings(
@@ -180,7 +237,8 @@ export async function markUserOnboarded(
 /** The settings a screen should actually use: workspace defaults with the traveller's overrides on top. */
 export interface EffectiveSettings {
   readonly theme: (typeof THEME_PREFERENCES)[number]
-  readonly locale: string
+  /** Always one of the twenty-three shipped tags — never a stored value verbatim. */
+  readonly locale: Locale
   readonly timezone: string
   readonly currency: string
   readonly weekStartsOn: number
@@ -209,7 +267,12 @@ export async function getEffectiveSettings(
 
   return {
     theme: z.enum(THEME_PREFERENCES).catch('system').parse(user?.theme ?? 'system'),
-    locale: user?.locale ?? organization.locale,
+    // Same normalisation, same precedence and same fallback the request-time negotiator runs, because
+    // it *is* that function: a row written before the picker existed can hold `en-GB`, `pl-PL` or
+    // free text, and a caller that asked for the effective settings must never be handed a tag the
+    // message layer has no catalogue for. An override that cannot be canonicalised defers to the
+    // workspace exactly as an absent one does; if neither resolves, `en`.
+    locale: negotiate({ user: user?.locale, workspace: organization.locale }),
     timezone: user?.timezone ?? organization.timezone,
     currency: user?.currency ?? organization.defaultCurrency,
     weekStartsOn: user?.weekStartsOn ?? organization.weekStartsOn,
