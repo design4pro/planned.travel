@@ -75,7 +75,7 @@ function CollabPage() {
             // 12rem of slack, not 6: the panel is sticky *below* the page header,
             // so at the top of the page its foot — and therefore the composer —
             // otherwise sat under the fold.
-            className="xl:sticky xl:top-[calc(var(--nav-h)+var(--subnav-h)+var(--safe-top)+1.5rem)] xl:max-h-[calc(100svh-var(--nav-h)-var(--subnav-h)-12rem)]"
+            className="xl:sticky xl:top-[calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+var(--subnav-h)+1.5rem)] xl:max-h-[calc(100svh-var(--impersonation-h)-var(--nav-h)-var(--subnav-h)-12rem)]"
             bodyClassName="flex min-h-0 flex-col px-5 py-3"
           >
             <Thread

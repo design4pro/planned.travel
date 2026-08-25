@@ -23,7 +23,7 @@ export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
   const transition = reduceMotion ? { duration: 0 } : { duration: 0.26, ease: EASE_OUT_QUINT }
 
   return (
-    <div className="sticky top-[calc(var(--nav-h)+var(--safe-top))] z-nav border-b border-inverse-edge bg-inverse text-inverse-on">
+    <div className="sticky top-[calc(var(--safe-top)+var(--nav-h)+var(--impersonation-h))] z-nav border-b border-inverse-edge bg-inverse text-inverse-on">
       {/* Narrow viewports get the trip context on its own line. */}
       <div className="mx-auto flex h-11 max-w-content items-center gap-2 px-4 sm:px-6 lg:hidden">
         <BackToTrips />

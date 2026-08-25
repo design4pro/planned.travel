@@ -76,7 +76,7 @@ export function HonestProof() {
     <Section
       id="honest"
       aria-labelledby="honest-heading"
-      className="scroll-mt-[var(--nav-h)]"
+      className="scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))]"
     >
       <SectionIntro
         headingId="honest-heading"

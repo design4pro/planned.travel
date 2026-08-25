@@ -52,8 +52,8 @@ function PlanPending() {
       <div
         className={
           'relative isolate w-full overflow-hidden bg-surface-inset ' +
-          'h-[calc(100svh-var(--safe-top)-var(--nav-h)-2.75rem-var(--subnav-h)-4rem-var(--safe-bottom))] ' +
-          'lg:h-[calc(100svh-var(--safe-top)-var(--nav-h)-var(--subnav-h))]'
+          'h-[calc(100svh-var(--safe-top)-var(--impersonation-h)-var(--nav-h)-2.75rem-var(--subnav-h)-4rem-var(--safe-bottom))] ' +
+          'lg:h-[calc(100svh-var(--safe-top)-var(--impersonation-h)-var(--nav-h)-var(--subnav-h))]'
         }
       >
         <GlassPanel

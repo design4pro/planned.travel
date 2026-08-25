@@ -146,7 +146,7 @@ function PlansBand({
     <section
       id="plans"
       aria-labelledby="plans-heading"
-      className="relative isolate scroll-mt-[var(--nav-h)] overflow-hidden border-b border-edge-faint"
+      className="relative isolate scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))] overflow-hidden border-b border-edge-faint"
     >
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-x-0 top-0 h-[26rem] bg-linear-to-b from-brand-subtle via-canvas to-canvas" />
@@ -228,7 +228,7 @@ function Comparison() {
       id="compare"
       tone="tint"
       aria-labelledby="compare-heading"
-      className="scroll-mt-[var(--nav-h)]"
+      className="scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))]"
     >
       <SectionIntro
         headingId="compare-heading"
@@ -333,7 +333,7 @@ function Questions() {
     <Section
       id="questions"
       aria-labelledby="questions-heading"
-      className="scroll-mt-[var(--nav-h)]"
+      className="scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))]"
     >
       <SectionIntro
         headingId="questions-heading"

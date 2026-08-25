@@ -37,8 +37,25 @@ export type ConsoleRefusalCode =
    * well be live and the way to end it is to revoke every session of the account at once. Reporting
    * a session the enumeration never reached as ended is precisely the silent truncation this code
    * exists to make impossible.
+   *
+   * It is also what the purge's runaway-loop guard raises (`./session-keys`), on the one path where
+   * an account holds more sessions than a single Worker invocation could ever clear. That refusal
+   * happens before any mutation, for the same reason: half a purge carried into a ban is a live
+   * session no later call can name.
    */
   | 'target-beyond-cap'
+  /**
+   * The target's cached session blobs could not all be deleted, so the mutation was not attempted.
+   *
+   * The refusal is the whole point of the code. A ban, a session revocation and an administrative
+   * password reset each delete the account's KV session blobs *before* they change anything, because
+   * `findSession` answers from those blobs in preference to D1 and the snapshot inside one still
+   * says `banned: false`. If a blob survives, the mutation would report success while the account
+   * stayed signed in - and once the mutation has run, the D1 rows naming those tokens are gone and
+   * nothing can reach them again. Refusing leaves the account exactly as it was found, with every
+   * token still named in D1, so the operator can simply try again.
+   */
+  | 'sessions-still-cached'
 
 /**
  * A console action refusing its target.

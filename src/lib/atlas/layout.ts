@@ -12,7 +12,9 @@
  * existed, and every one of them had already drifted:
  *
  * **The chrome above and below the slice.** The app header is `border-b`, so its
- * box is `--safe-top + --nav-h + 1px`; the mobile tab bar is `border-t`, so its
+ * box is `--safe-top + --impersonation-h + --nav-h + 1px` — the impersonation
+ * bar is `0rem` on every ordinary session and one whole row while an operator is
+ * wearing somebody else's account; the mobile tab bar is `border-t`, so its
  * box is `1px + 4rem + --safe-bottom`. The slice's height expression omitted both
  * hairlines, which put the document at `100svh + 1px` from `lg` up — a full-bleed
  * screen that scrolls by one pixel — and ran the map two pixels under the tab bar
@@ -70,18 +72,40 @@ export interface ChromeEnvironment {
   readonly safeBottom: number
   /** `--nav-h`, in CSS pixels. 4rem in the token file. */
   readonly navHeight: number
+  /**
+   * `--impersonation-h`, in CSS pixels.
+   *
+   * `0` on every ordinary session, and the warning bar's whole border box while
+   * `AppShell` is rendering one (`docs/ACCESS.md` §6.1). It is an inset like any
+   * other rather than a special case, which is the only way this file can stay
+   * true of both states: a term that is zero most of the time is still a term,
+   * and the one it would otherwise be missing from is the screen that owns the
+   * whole viewport.
+   */
+  readonly impersonationHeight: number
 }
 
 /**
  * The app header, in full.
  *
- * `src/components/layout/top-nav.tsx` is `sticky top-0 border-b … pt-safe`
- * around an `h-nav` row, so its border box is all three of these. `--nav-h` names
- * the row and nothing else; the hairline is real layout and every viewport-height
+ * `src/components/layout/top-nav.tsx` is `sticky … border-b` around an `h-nav`
+ * row, so its border box is the nav row and the hairline. `--nav-h` names the row
+ * and nothing else; the hairline is real layout and every viewport-height
  * expression in the product has to account for it.
+ *
+ * The safe area and the impersonation bar are listed above the nav because that
+ * is the order they occupy: the bar carries `pt-safe` and pins at the viewport
+ * top when it exists, and the nav carries it and pins there when it does not.
+ * Either way the distance from the top of the screen to the foot of the chrome is
+ * this list, summed, and the bar's term is `0rem` in the ordinary case.
  */
 export const APP_HEADER: ReadonlyArray<ChromeInset> = [
   { name: 'top safe area', css: 'var(--safe-top)', px: (env) => env.safeTop },
+  {
+    name: 'impersonation bar',
+    css: 'var(--impersonation-h)',
+    px: (env) => env.impersonationHeight,
+  },
   { name: 'nav row', css: 'var(--nav-h)', px: (env) => env.navHeight },
   { name: 'nav hairline', css: '1px', px: () => 1 },
 ]
@@ -143,8 +167,8 @@ export function documentHeight(env: ChromeEnvironment, wide: boolean): number {
  * the arithmetic above.
  */
 export const SLICE_HEIGHT_CLASS = {
-  base: 'h-[calc(100svh-var(--safe-top)-var(--nav-h)-1px-1px-4rem-var(--safe-bottom))]',
-  lg: 'lg:h-[calc(100svh-var(--safe-top)-var(--nav-h)-1px)]',
+  base: 'h-[calc(100svh-var(--safe-top)-var(--impersonation-h)-var(--nav-h)-1px-1px-4rem-var(--safe-bottom))]',
+  lg: 'lg:h-[calc(100svh-var(--safe-top)-var(--impersonation-h)-var(--nav-h)-1px)]',
 } as const
 
 /* -------------------------------------------------------------------- shelf */

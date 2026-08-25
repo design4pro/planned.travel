@@ -45,7 +45,7 @@ function TripLayout() {
 function TripPending() {
   return (
     <>
-      <div className="sticky top-[calc(var(--nav-h)+var(--safe-top))] z-nav border-b border-inverse-edge bg-inverse">
+      <div className="sticky top-[calc(var(--safe-top)+var(--nav-h)+var(--impersonation-h))] z-nav border-b border-inverse-edge bg-inverse">
         <div className="mx-auto flex h-subnav max-w-content items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Skeleton
             className="h-6 w-16 shrink-0 bg-inverse-surface"

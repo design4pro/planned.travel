@@ -1069,8 +1069,8 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
           'relative isolate w-full overflow-hidden',
           // The map owns the whole viewport slice below the two navigation bars,
           // minus the mobile tab bar and the device's own safe areas.
-          'h-[calc(100svh-var(--safe-top)-var(--nav-h)-2.75rem-var(--subnav-h)-4rem-var(--safe-bottom))]',
-          'lg:h-[calc(100svh-var(--safe-top)-var(--nav-h)-var(--subnav-h))]',
+          'h-[calc(100svh-var(--safe-top)-var(--impersonation-h)-var(--nav-h)-2.75rem-var(--subnav-h)-4rem-var(--safe-bottom))]',
+          'lg:h-[calc(100svh-var(--safe-top)-var(--impersonation-h)-var(--nav-h)-var(--subnav-h))]',
         )}
       >
         <MapCanvas

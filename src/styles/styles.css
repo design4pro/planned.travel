@@ -238,18 +238,34 @@
 @utility z-toast {
   z-index: var(--z-toast);
 }
+/* The impersonation warning bar, above the toast tier and everything under it —
+   docs/ACCESS.md §6.1. Nothing else may use this band. */
+@utility z-impersonation {
+  z-index: var(--z-impersonation);
+}
 
+/* The nav's own row. `--nav-h` names that row and nothing else, which is why
+   this pair does *not* compose the impersonation offset: the bar is a second
+   row above the nav, not a taller nav, and a header that grew by the bar's
+   height would leave its contents floating in the middle of it. The two rules
+   below, which measure the distance from the top of the viewport to the foot of
+   the chrome, are the ones that compose it. */
 @utility h-nav {
   height: var(--nav-h);
 }
 @utility min-h-nav {
   min-height: var(--nav-h);
 }
+/* Where the chrome ends: the nav row plus the impersonation bar above it, which
+   is `0rem` unless the shell is rendering one. */
 @utility top-nav {
-  top: var(--nav-h);
+  top: calc(var(--nav-h) + var(--impersonation-h));
 }
 @utility pt-nav {
-  padding-top: var(--nav-h);
+  padding-top: calc(var(--nav-h) + var(--impersonation-h));
+}
+@utility h-impersonation {
+  height: var(--impersonation-h);
 }
 @utility h-subnav {
   height: var(--subnav-h);

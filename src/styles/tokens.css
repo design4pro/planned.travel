@@ -603,8 +603,26 @@
   --z-overlay: 60;
   --z-modal: 70;
   --z-toast: 80;
+  /* The impersonation warning bar (docs/ACCESS.md §6.1), and the only thing
+     above the toast tier. A toast that covered the one control which ends a
+     session borrowed from somebody else's account is the failure that document
+     exists to prevent, so the bar outranks every layer including the one that
+     announces the action it just performed. Nothing else may claim this band.
+     Exported by `styles.css` as `@utility z-impersonation`. */
+  --z-impersonation: 90;
   --nav-h: 4rem; /* 64px */
   --subnav-h: 3rem; /* 48px */
+  /* The impersonation bar's own row, and the amount every piece of chrome under
+     it moves down while it is on screen.
+
+     Zero here, and raised only on the shell subtree that actually renders the
+     bar (the rule below). That is what lets every offset in the product compose
+     `var(--impersonation-h)` unconditionally: with no bar the term resolves to
+     `0rem` and the geometry is exactly what it was, so a design-neutral offset
+     cannot turn into a visual regression, and with the bar present no consumer
+     can account for half of it. `--subnav-h` is the precedent — a second chrome
+     row is a length, not a special case. */
+  --impersonation-h: 0rem;
   --content-max: 90rem; /* 1440px */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -622,4 +640,18 @@
 
   /* ------------------------------------------------------------------- misc */
   --blur-glass: 20px;
+}
+
+/* The one subtree that renders the impersonation bar: `AppShell` marks its root
+   with `data-impersonated` and everything inside inherits the raised row.
+   Declared here, beside the token it changes, rather than as a length inside a
+   component — a bar height that lived in JSX would be the one number in the
+   layout that no token file knows about. Scoped to that element rather than to
+   `:root`, so the marketing tree, the auth tree and every portal keep the zero
+   above and their geometry is untouched.
+
+   3.5rem carries two lines of chrome type (11px label over 12px identity) with
+   a 12px rhythm above and below, at every width from 360px up. */
+[data-impersonated] {
+  --impersonation-h: 3.5rem; /* 56px */
 }

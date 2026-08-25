@@ -15,11 +15,18 @@
  *
  * **Both halves, and the second one is the one that gets forgotten.**
  * `/admin/stop-impersonating` is closed with the other fourteen paths, so
- * {@link stopImpersonationFn} is the only way out of an impersonated session that exists —
+ * {@link endImpersonationFn} is the only way out of an impersonated session that exists —
  * §6.1's **End impersonation** button calls it, and there is no fallback behind it. It is written
  * and tested with the same care as its opposite for that reason, and it is the one function here
  * whose audit row is appended *before* the plugin call, because §6.1 and §2.6 both specify that
  * order for the exit by name.
+ *
+ * **The exit's name is frozen.** docs/ACCESS.md §6.1 names the button and the function together as
+ * `endImpersonation`, and the app shell's **End impersonation** control is wired against it, so the
+ * code moved to the document rather than the other way round. The `Fn` suffix is this directory's
+ * universal convention for a `createServerFn` export — its opposite is `startImpersonationFn` — and
+ * `endImpersonation` is the action the document names. Anything that renames this back to
+ * `stopImpersonating`, matching the plugin endpoint behind it, breaks the shell.
  *
  * **Why a banned target is refused here rather than left to the plugin.** `impersonateUser` creates
  * a session, and the `admin` plugin's `session.create.before` hook rejects a banned user with
@@ -58,7 +65,7 @@ export const startImpersonationInputSchema = z.object({
  * identifies the exit; a client that sends a target id is trying to end somebody else's
  * impersonation and is refused at the boundary rather than ignored.
  */
-export const stopImpersonationInputSchema = z.object({}).strict()
+export const endImpersonationInputSchema = z.object({}).strict()
 
 /**
  * The impersonated session, as the caller needs it.
@@ -169,7 +176,7 @@ export const startImpersonationFn = createServerFn({ method: 'POST' })
 /**
  * Ends an impersonated session and restores the operator's own. `platform.user.impersonation_ended`.
  *
- * There is no input to validate beyond its absence — see {@link stopImpersonationInputSchema}.
+ * There is no input to validate beyond its absence — see {@link endImpersonationInputSchema}.
  *
  * **The append comes first**, which is docs/ACCESS.md §6.1 and §2.6 in the order both write it: the
  * End impersonation action "appends `platform.user.impersonation_ended` and then calls
@@ -187,8 +194,8 @@ export const startImpersonationFn = createServerFn({ method: 'POST' })
  * whose row then reads as the attempt it was. The actor was resolved before either step, so nothing
  * about the append depends on the session that is about to be swapped away.
  */
-export const stopImpersonationFn = createServerFn({ method: 'POST' })
-  .validator(stopImpersonationInputSchema)
+export const endImpersonationFn = createServerFn({ method: 'POST' })
+  .validator(endImpersonationInputSchema)
   .handler(async (): Promise<{ userId: string }> => {
     const exit = await openImpersonationExit()
 

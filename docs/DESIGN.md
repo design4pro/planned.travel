@@ -37,7 +37,14 @@ Required token families — name them exactly this way:
   `--text-display|title|subtitle|body|label|caption` each with a paired line-height.
 - **Motion**: `--ease-out-quint: cubic-bezier(.23,1,.32,1)`, `--ease-drawer`,
   `--duration-fast 150ms`, `--duration 220ms`, `--duration-slow 320ms`.
-- **Layout**: `--z-nav|dropdown|overlay|modal|toast`, `--nav-h`, `--safe-top`, `--safe-bottom`.
+- **Layout**: `--z-nav|dropdown|overlay|modal|toast|impersonation`, `--nav-h`, `--subnav-h`,
+  `--impersonation-h`, `--safe-top`, `--safe-bottom`. `--z-impersonation` is the top of the
+  stack, one band above `--z-toast`: `docs/ACCESS.md` §6.1 requires that nothing can cover the
+  control which ends an impersonated session, and a toast is the layer most likely to try.
+  `--impersonation-h` is that bar's row and is `0rem` everywhere except the shell subtree
+  rendering it, so every chrome offset composes it unconditionally and a shell without the bar
+  keeps exactly the geometry it had. Layout and z values are theme-independent: declare them once
+  on the bare `:root`, never in the two dark blocks.
 
 ## Starting palette (tune it, keep the structure)
 

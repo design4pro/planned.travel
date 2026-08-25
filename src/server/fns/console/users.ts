@@ -5,36 +5,40 @@
  * plugin's own HTTP surface answers `404` to a browser and `auth.api.<endpoint>` stays fully usable
  * in process. Every function below therefore reads the same way and in the same order: validate the
  * input with Zod, `openConsoleCall` (which is `requirePermission` and the §6.4 impersonation veto),
- * read the target's before-state, call the plugin in process, invalidate the KV session snapshots
- * the write touched, then `recordConsoleAction` — one structured log line and exactly one
- * `platform_audit_log` row.
+ * read the target's before-state, deal with the KV session cache, call the plugin in process, then
+ * `recordConsoleAction` — one structured log line and one `platform_audit_log` row per action.
  *
- * Four things this file does that the plugin does not, each because leaving it to the plugin was
+ * Five things this file does that the plugin does not, each because leaving it to the plugin was
  * measured or read to be wrong rather than assumed to be:
  *
- * - **A ban deletes the target's KV session blobs, enumerated from D1.** `auth.api.banUser` calls
- *   `deleteUserSessions`, which walks the eventually-consistent `active-sessions-<userId>` index and
- *   deletes nothing when that key is missing — while `findSession` keeps resolving each surviving
- *   blob and answering with the `banned: false` user snapshot inside it. See `./session-keys` for
- *   the whole of that argument and the bound on "immediate".
+ * - **The paths that end an account's sessions delete its KV blobs first, walking D1 to
+ *   exhaustion.** `auth.api.banUser` calls `deleteUserSessions`, which walks the eventually-
+ *   consistent `active-sessions-<userId>` index and deletes nothing when that key is missing — while
+ *   `findSession` keeps resolving each surviving blob and answering with the `banned: false` user
+ *   snapshot inside it. It also deletes every D1 `session` row by predicate, which is why the purge
+ *   goes first and why it is refused rather than truncated: after the plugin has run, a blob this
+ *   call did not delete is one nothing anywhere can name again. See `./session-keys` and
+ *   `clearSessionCache` for the whole of that argument and the bound on "immediate".
  * - **No ban ever travels through `/admin/update-user`.** That endpoint accepts `banned` in its
  *   free-form `data` record, and a ban taken that way lands on `src/server/auth/index.ts`'s
  *   auto-unban tripwire, which records it as `actor_kind: 'system'` with a null actor: a deliberate
  *   human action with no operator on the row. The two `data` payloads this file builds are Zod
  *   objects with closed key sets — `{ name }` and `{ email, emailVerified }` — so the column is not
  *   reachable from the console at all, and the ban verbs are the only path to it.
- * - **A permanent ban clears a stale expiry first.** `banUser` builds `banExpires: undefined` when
- *   no `banExpiresIn` is given, and the adapter factory skips `undefined` on an update — so
- *   re-banning permanently over an expired temporary ban leaves the old `ban_expires` in place and
- *   the plugin auto-unbans on the next sign-in. `unbanUser` is the only endpoint that writes `null`
- *   there, so a permanent ban over an existing expiry runs it first. One audit row either way: the
- *   clearing write is machinery, not an event.
+ * - **A permanent ban clears a stale expiry, and restores the old ban if the second step fails.**
+ *   `banUser` cannot write `banExpires: null` and `unbanUser` is the only endpoint that can, so the
+ *   transition is two calls; {@link applyBan} carries the compensation that keeps a failure from
+ *   leaving the account *un*banned. One audit row either way: the clearing write is machinery, not
+ *   an event.
+ * - **Setting a password ends the account's sessions.** `/admin/set-user-password` touches no
+ *   session, and the operator use case for the verb is a compromised account.
  * - **No account may aim one of these at itself.** A self-ban, a self-delete and a self-demotion all
  *   remove the operator's own way back in, and the last of them can leave a platform with no `admin`
  *   at all - there is no seat reservation in the model and no recovery path in the product. All
  *   three are refused before the target is read.
  *
- * Reads are not audited, here or over MCP (docs/ACCESS.md §4.2). `platform.user.get` does not exist.
+ * Reads are not audited, here or over MCP (docs/ACCESS.md §4.2). `platform.user.get` does not exist,
+ * and neither does a log field shaped like one — see `ConsoleRead` in `./context`.
  *
  * **What is deliberately not here: the MCP credential half of a role change.** docs/ACCESS.md §5
  * requires a role change to revoke the account's `staff_api_tokens` rows in the same call, audited
@@ -54,22 +58,24 @@ import { z } from 'zod'
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '#/server/auth'
 import { PLATFORM_ROLES_BY_PRECEDENCE } from '#/server/auth/access'
 import { PLATFORM_ACTIONS } from '#/server/catalog/audit'
-import { platformApi, sessionKeyStore } from './bindings'
+import { platformApi } from './bindings'
 import {
+  clearSessionCache,
+  dropSessionSnapshots,
+  endSessionIndex,
   openConsoleCall,
-  readSessionTokens,
   recordConsoleAction,
+  recordConsoleRead,
 } from './context'
 import {
   auditUserState,
   platformUserSchema,
   toConsoleUser,
 } from './projections'
-import { invalidateSessionSnapshots, purgeSessionKeys } from './session-keys'
 import { readTargetUser, refuseSelfTarget } from './target'
 
 import type { ConsoleCall } from './context'
-import type { ConsoleUser } from './projections'
+import type { ConsoleUser, PlatformUserRow } from './projections'
 
 /* ------------------------------------------------------------------ inputs */
 
@@ -184,30 +190,6 @@ export const unbanPlatformUserInputSchema = z.object({ userId })
 
 const SECONDS_PER_DAY = 86_400
 
-/**
- * Drops the cached session blobs of an account whose row has just changed
- * (docs/ARCHITECTURE.md §2.2: invalidate the KV keys the write touched, in the same request).
- *
- * The sessions stay live; what goes is the stale `{ session, user }` snapshot `findSession` would
- * otherwise answer with, so the change takes effect on the account's next request rather than on
- * its next sign-in.
- */
-async function invalidateSnapshots(
-  call: ConsoleCall,
-  id: string,
-  action: string,
-): Promise<void> {
-  const enumerated = await readSessionTokens(id)
-  const purge = await invalidateSessionSnapshots(sessionKeyStore(), enumerated)
-  if (purge.failed > 0 || purge.truncated) {
-    call.logger.warn('console session snapshot invalidation incomplete', {
-      action,
-      entityId: id,
-      ...purge,
-    })
-  }
-}
-
 /* ------------------------------------------------------------------- reads */
 
 /**
@@ -264,10 +246,7 @@ export const listPlatformUsersFn = createServerFn({ method: 'GET' })
       })
 
       const rows = z.array(platformUserSchema).parse(result.users)
-      call.logger.info('console platform read', {
-        action: 'platform.user.list',
-        actorUserId: call.actor.userId,
-        actorRole: call.actor.role,
+      recordConsoleRead(call, 'users', {
         returned: rows.length,
         total: result.total,
       })
@@ -288,12 +267,7 @@ export const getPlatformUserFn = createServerFn({ method: 'GET' })
     const call = await openConsoleCall({ user: ['get'] })
     const row = await readTargetUser(call, data.userId)
 
-    call.logger.info('console platform read', {
-      action: 'platform.user.get',
-      actorUserId: call.actor.userId,
-      actorRole: call.actor.role,
-      entityId: row.id,
-    })
+    recordConsoleRead(call, 'user', { entityId: row.id })
 
     return toConsoleUser(row)
   })
@@ -341,7 +315,7 @@ export const updatePlatformUserFn = createServerFn({ method: 'POST' })
     })
     const row = platformUserSchema.parse(updated)
 
-    await invalidateSnapshots(call, data.userId, PLATFORM_ACTIONS.USER_UPDATED)
+    await dropSessionSnapshots(call, data.userId, PLATFORM_ACTIONS.USER_UPDATED)
     await recordConsoleAction(call, {
       action: PLATFORM_ACTIONS.USER_UPDATED,
       entityId: row.id,
@@ -373,7 +347,7 @@ export const setPlatformUserEmailFn = createServerFn({ method: 'POST' })
     })
     const row = platformUserSchema.parse(updated)
 
-    await invalidateSnapshots(
+    await dropSessionSnapshots(
       call,
       data.userId,
       PLATFORM_ACTIONS.USER_EMAIL_SET,
@@ -417,7 +391,7 @@ export const setPlatformUserRoleFn = createServerFn({ method: 'POST' })
     })
     const row = platformUserSchema.parse(result.user)
 
-    await invalidateSnapshots(
+    await dropSessionSnapshots(
       call,
       data.userId,
       PLATFORM_ACTIONS.USER_ROLE_CHANGED,
@@ -432,7 +406,20 @@ export const setPlatformUserRoleFn = createServerFn({ method: 'POST' })
   })
 
 /**
- * Sets an account's password. `platform.user.password_set`.
+ * Sets an account's password **and ends every session it holds**.
+ * `platform.user.password_set`, then `platform.session.revoked_all`.
+ *
+ * **The revocation is the point of the verb, not a courtesy beside it.** The operator use case is a
+ * compromised account, and `/admin/set-user-password` touches no session at all: it routes to
+ * `internalAdapter.updatePassword` and returns (`better-auth@1.7.1`, `dist/plugins/admin/routes.mjs`).
+ * `revokeSessionsOnPasswordReset`, which this product does set, is read in exactly three places -
+ * the self-service reset route and the phone-number and email-OTP plugins - and none of them is this
+ * endpoint. So a version of this function that only changed the credential left the attacker signed
+ * in on the old one, which is the opposite of what an operator pressing it believes they are doing.
+ *
+ * Two statements and two rows, because two things happened. §4.2 gives "every session of one account
+ * is revoked" its own action under `session:revoke`, and folding it into the password row would hide
+ * a session revocation from the timeline query in §4.4 that reads by `entity_type = 'session'`.
  *
  * `changes` records that a password was set and never what it was set to: both sides carry
  * `auditUserState`, which has no password key, and the value never leaves the argument it arrived
@@ -440,20 +427,31 @@ export const setPlatformUserRoleFn = createServerFn({ method: 'POST' })
  */
 export const setPlatformUserPasswordFn = createServerFn({ method: 'POST' })
   .validator(setPlatformUserPasswordInputSchema)
-  .handler(async ({ data }): Promise<{ userId: string }> => {
-    const call = await openConsoleCall({ user: ['set-password'] })
+  .handler(async ({ data }): Promise<{ userId: string; revoked: number }> => {
+    const call = await openConsoleCall({
+      user: ['set-password'],
+      session: ['revoke'],
+    })
     const before = await readTargetUser(call, data.userId)
+
+    // Before the credential changes, so a purge that cannot finish leaves the account exactly as it
+    // was found rather than half-remediated. See `clearSessionCache`.
+    const purge = await clearSessionCache(
+      call,
+      data.userId,
+      PLATFORM_ACTIONS.USER_PASSWORD_SET,
+    )
 
     await platformApi().setUserPassword({
       body: { userId: data.userId, newPassword: data.newPassword },
       headers: call.headers,
     })
+    await platformApi().revokeUserSessions({
+      body: { userId: data.userId },
+      headers: call.headers,
+    })
+    await endSessionIndex(call, data.userId, PLATFORM_ACTIONS.USER_PASSWORD_SET)
 
-    await invalidateSnapshots(
-      call,
-      data.userId,
-      PLATFORM_ACTIONS.USER_PASSWORD_SET,
-    )
     await recordConsoleAction(call, {
       action: PLATFORM_ACTIONS.USER_PASSWORD_SET,
       entityId: before.id,
@@ -462,8 +460,18 @@ export const setPlatformUserPasswordFn = createServerFn({ method: 'POST' })
         after: auditUserState(before),
       },
     })
+    await recordConsoleAction(call, {
+      action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
+      // `entity_type` is `session` under this prefix and no single session was touched, so no
+      // session id is claimed. The account and the count live in `changes`.
+      entityId: null,
+      changes: {
+        before: { userId: before.id, sessions: purge.enumerated },
+        after: { userId: before.id, sessions: 0 },
+      },
+    })
 
-    return { userId: before.id }
+    return { userId: before.id, revoked: purge.enumerated }
   })
 
 /**
@@ -484,16 +492,20 @@ export const deletePlatformUserFn = createServerFn({ method: 'POST' })
     )
     const before = await readTargetUser(call, data.userId)
 
-    const enumerated = await readSessionTokens(data.userId)
+    // Before `removeUser`, which deletes the `session` rows the token names live in. Afterwards
+    // there is nothing left to read them from, and a blob nobody can name keeps resolving through
+    // `findSession` for a deleted account.
+    const purge = await clearSessionCache(
+      call,
+      data.userId,
+      PLATFORM_ACTIONS.USER_DELETED,
+    )
+
     await platformApi().removeUser({
       body: { userId: data.userId },
       headers: call.headers,
     })
-    const purge = await purgeSessionKeys(
-      sessionKeyStore(),
-      data.userId,
-      enumerated,
-    )
+    await endSessionIndex(call, data.userId, PLATFORM_ACTIONS.USER_DELETED)
 
     await recordConsoleAction(call, {
       action: PLATFORM_ACTIONS.USER_DELETED,
@@ -503,19 +515,137 @@ export const deletePlatformUserFn = createServerFn({ method: 'POST' })
     call.logger.info('console purged session keys', {
       action: PLATFORM_ACTIONS.USER_DELETED,
       entityId: before.id,
-      ...purge,
+      enumerated: purge.enumerated,
+      deleted: purge.deleted,
     })
 
     return { userId: before.id }
   })
 
 /**
+ * Applies the ban itself, in whichever of the two shapes the target's current state needs.
+ *
+ * Permanent is the awkward one, and it is awkward because of the dependency rather than by choice.
+ * `banUser` builds `banExpires: ctx.body.banExpiresIn ? getDate(…) : opts?.defaultBanExpiresIn ?
+ * getDate(…) : void 0` and the adapter factory drops `undefined` on an update, so a permanent ban
+ * over a leftover expiry leaves the old `ban_expires` in place and the plugin auto-unbans the
+ * account at its next sign-in. `unbanUser` is the only endpoint in the plugin that writes `null`
+ * there. There is no single-step form: `banExpiresIn: 0` is falsy and takes the same branch, and a
+ * hundred-year expiry would put a date in a column the console and the ledger both read as "this
+ * ban ends".
+ *
+ * So the transition is two steps, and the failure path restores what it found. If the clearing
+ * `unbanUser` succeeds and the `banUser` behind it rejects — a D1 transient, or `NOT_FOUND` if the
+ * row moved — the account would otherwise be left silently *un*banned while the operator reads an
+ * error: the weaker state, arrived at by a call that was asking for a stronger one. The compensation
+ * re-applies the ban the target held a moment ago, reason and remaining time and all, before the
+ * original failure is re-thrown. A compensation that itself fails is raised at `error` naming the
+ * account, because at that point only a human can put it right.
+ *
+ * **And it is audited when it fails, which is the one branch that leaves a state nobody asked for.**
+ * A compensation that succeeds leaves the account banned as it was found and writes nothing, because
+ * nothing moved. A compensation that fails leaves it *unbanned* — a real change of ban state,
+ * performed deliberately by a human, and docs/ACCESS.md §4.3 audits an unban without exception. The
+ * two `/admin/ban-user` and `/admin/unban-user` paths sit in `SELF_AUDITING_BAN_PATHS`
+ * (`src/server/auth/index.ts`) precisely because this directory promises to append the human row, so
+ * the tripwire writes nothing here and this is the only place that row can come from. `unbanUser`
+ * writes exactly `{ banned: false, banReason: null, banExpires: null }`
+ * (`better-auth@1.7.1`, `dist/plugins/admin/routes.mjs`), so the `after` payload states what landed
+ * rather than guessing at it.
+ */
+async function applyBan(
+  call: ConsoleCall,
+  targetId: string,
+  reason: string,
+  expiresInDays: number | undefined,
+  before: PlatformUserRow,
+): Promise<PlatformUserRow> {
+  const ban = async (
+    banReason: string,
+    seconds: number | undefined,
+  ): Promise<PlatformUserRow> => {
+    const result = await platformApi().banUser({
+      body: {
+        userId: targetId,
+        banReason,
+        ...(seconds === undefined ? {} : { banExpiresIn: seconds }),
+      },
+      headers: call.headers,
+    })
+    return platformUserSchema.parse(result.user)
+  }
+
+  const seconds =
+    expiresInDays === undefined ? undefined : expiresInDays * SECONDS_PER_DAY
+
+  if (seconds !== undefined || !before.banExpires) {
+    return ban(reason, seconds)
+  }
+
+  await platformApi().unbanUser({
+    body: { userId: targetId },
+    headers: call.headers,
+  })
+
+  try {
+    return await ban(reason, undefined)
+  } catch (cause) {
+    // At least a second, because zero is falsy to the plugin and would be read as "permanent" —
+    // which is the state this compensation exists to avoid claiming on the operator's behalf.
+    const remaining = Math.max(
+      1,
+      Math.ceil((before.banExpires.getTime() - Date.now()) / 1000),
+    )
+    try {
+      await ban(before.banReason ?? reason, remaining)
+    } catch (restoreFailure) {
+      call.logger.error(
+        'console could not restore the ban it cleared',
+        restoreFailure,
+        {
+          action: PLATFORM_ACTIONS.USER_BANNED,
+          entityId: targetId,
+          actorUserId: call.actor.userId,
+          actorRole: call.actor.role,
+        },
+      )
+      await recordConsoleAction(call, {
+        action: PLATFORM_ACTIONS.USER_UNBANNED,
+        entityId: targetId,
+        changes: {
+          before: auditUserState(before),
+          after: {
+            ...auditUserState(before),
+            banned: false,
+            banReason: null,
+            banExpiresAt: null,
+          },
+        },
+      })
+    }
+    throw cause
+  }
+}
+
+/**
  * Bans an account and takes its live sessions with it. `platform.user.banned`.
  *
- * The order is the mechanism and not a style: the tokens are enumerated from D1 **before**
- * `banUser` deletes those rows, and the KV blobs are deleted by name **after** it has, because
- * `updateUser` queues a `refreshUserSessions` that would otherwise rewrite the blobs this function
- * had just removed.
+ * **The order is the mechanism.** Every cached session blob is deleted *before* `banUser` runs,
+ * because `banUser` deletes the `session` rows by predicate and the per-user KV index goes with
+ * them — so a blob this function has not deleted by then is a blob nothing anywhere can name again,
+ * resolving through `findSession` with a `banned: false` snapshot inside it and re-cached by
+ * `updateAge` on every request. That is not a bounded leak, it is a permanent one, and it cannot be
+ * noticed afterwards except by a session that should not exist continuing to work. The purge
+ * therefore walks D1 to exhaustion and the ban is refused outright if it could not finish, which
+ * leaves the account exactly as it was found with every token still named in D1.
+ *
+ * Purging first is safe against the plugin's own writes, which was the objection an earlier version
+ * of this comment raised: `updateUser` queues `refreshUserSessions`, and that function does
+ * `const cached = await secondaryStorage.get(token); if (!cached) return;` — it skips a token whose
+ * blob is already gone and never recreates one (`better-auth@1.7.1`, `dist/db/internal-adapter.mjs`).
+ * The one thing it can rewrite is a blob created *between* the purge and the ban by a sign-in that
+ * beat the ban by milliseconds, and that session is necessarily in the index it just wrote, so
+ * `deleteUserSessions` reaches it. The two halves cover each other's case.
  */
 export const banPlatformUserFn = createServerFn({ method: 'POST' })
   .validator(banPlatformUserInputSchema)
@@ -524,36 +654,21 @@ export const banPlatformUserFn = createServerFn({ method: 'POST' })
     refuseSelfTarget(call, data.userId, 'You cannot ban your own account.')
     const before = await readTargetUser(call, data.userId)
 
-    // Enumerated first: `banUser` deletes the D1 rows, and after that there is nothing left to read
-    // the KV key names from.
-    const enumerated = await readSessionTokens(data.userId)
-
-    // A permanent ban over a leftover expiry: `banUser` cannot write `banExpires: null`, and a
-    // stale one auto-unbans the account on its next sign-in. See this file's header.
-    if (data.expiresInDays === undefined && before.banExpires) {
-      await platformApi().unbanUser({
-        body: { userId: data.userId },
-        headers: call.headers,
-      })
-    }
-
-    const result = await platformApi().banUser({
-      body: {
-        userId: data.userId,
-        banReason: data.reason,
-        ...(data.expiresInDays === undefined
-          ? {}
-          : { banExpiresIn: data.expiresInDays * SECONDS_PER_DAY }),
-      },
-      headers: call.headers,
-    })
-    const row = platformUserSchema.parse(result.user)
-
-    const purge = await purgeSessionKeys(
-      sessionKeyStore(),
+    const purge = await clearSessionCache(
+      call,
       data.userId,
-      enumerated,
+      PLATFORM_ACTIONS.USER_BANNED,
     )
+
+    const row = await applyBan(
+      call,
+      data.userId,
+      data.reason,
+      data.expiresInDays,
+      before,
+    )
+
+    await endSessionIndex(call, data.userId, PLATFORM_ACTIONS.USER_BANNED)
 
     await recordConsoleAction(call, {
       action: PLATFORM_ACTIONS.USER_BANNED,
@@ -561,24 +676,12 @@ export const banPlatformUserFn = createServerFn({ method: 'POST' })
       changes: { before: auditUserState(before), after: auditUserState(row) },
     })
 
-    if (purge.failed > 0 || purge.truncated) {
-      // The one case in which a ban is not immediate, raised rather than counted: a blob this call
-      // could not delete keeps resolving through `findSession` with a `banned: false` snapshot
-      // inside it until its own TTL expires.
-      call.logger.error('console ban left session keys behind', undefined, {
-        action: PLATFORM_ACTIONS.USER_BANNED,
-        entityId: row.id,
-        actorUserId: call.actor.userId,
-        actorRole: call.actor.role,
-        ...purge,
-      })
-    } else {
-      call.logger.info('console purged session keys', {
-        action: PLATFORM_ACTIONS.USER_BANNED,
-        entityId: row.id,
-        ...purge,
-      })
-    }
+    call.logger.info('console purged session keys', {
+      action: PLATFORM_ACTIONS.USER_BANNED,
+      entityId: row.id,
+      enumerated: purge.enumerated,
+      deleted: purge.deleted,
+    })
 
     return toConsoleUser(row)
   })

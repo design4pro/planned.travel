@@ -31,6 +31,7 @@ const DESKTOP: ChromeEnvironment = {
   safeTop: 0,
   safeBottom: 0,
   navHeight: 64,
+  impersonationHeight: 0,
 }
 
 /** A phone with both safe areas, which is where the tab bar arithmetic bites. */
@@ -39,7 +40,15 @@ const PHONE: ChromeEnvironment = {
   safeTop: 59,
   safeBottom: 34,
   navHeight: 64,
+  impersonationHeight: 0,
 }
+
+/**
+ * `--impersonation-h` while the warning bar is on screen: 3.5rem in the token
+ * file, and the one term that is zero for almost every session and non-zero for
+ * exactly the sessions that most need the map to be the right size.
+ */
+const IMPERSONATION_BAR = 56
 
 describe('the viewport slice', () => {
   it('leaves the document exactly one viewport tall from lg up', () => {
@@ -47,6 +56,48 @@ describe('the viewport slice', () => {
       const env = { ...DESKTOP, viewport }
       expect(documentHeight(env, true)).toBe(viewport)
     }
+  })
+
+  it('still fits one viewport with the impersonation bar on screen', () => {
+    // The bar moves the top of the slice down by its whole row. A model that
+    // does not know about it leaves `/atlas` overflowing by exactly one bar
+    // during an impersonated session, with every other assertion here still
+    // green — which is the drift this case exists to catch.
+    for (const viewport of [740, 836, 900, 1024, 1440]) {
+      const env = {
+        ...DESKTOP,
+        viewport,
+        impersonationHeight: IMPERSONATION_BAR,
+      }
+      expect(documentHeight(env, true)).toBe(viewport)
+      expect(sliceHeight(env, true)).toBe(
+        sliceHeight({ ...DESKTOP, viewport }, true) - IMPERSONATION_BAR,
+      )
+    }
+    const phone = { ...PHONE, impersonationHeight: IMPERSONATION_BAR }
+    expect(documentHeight(phone, false)).toBeLessThan(PHONE.viewport)
+    expect(sliceHeight(phone, false)).toBe(
+      sliceHeight(PHONE, false) - IMPERSONATION_BAR,
+    )
+  })
+
+  it('carries the impersonation bar as its own inset, above the nav row', () => {
+    // Its position in the list is the order the chrome occupies: the bar clears
+    // the display cutout when it exists, so it sits between the safe area and
+    // the nav row rather than under the hairline.
+    expect(APP_HEADER.map((inset) => inset.name)).toEqual([
+      'top safe area',
+      'impersonation bar',
+      'nav row',
+      'nav hairline',
+    ])
+    expect(sliceHeightCss(true)).toContain(
+      '-var(--safe-top)-var(--impersonation-h)-var(--nav-h)',
+    )
+    // Zero-valued by default, so an ordinary session's geometry is untouched.
+    expect(sliceHeight(DESKTOP, true)).toBe(
+      DESKTOP.viewport - DESKTOP.navHeight - 1,
+    )
   })
 
   it('accounts for the app header hairline, not just the nav row', () => {

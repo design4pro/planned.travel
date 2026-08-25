@@ -101,7 +101,7 @@ export function LegalDocument({
       </Alert>
 
       <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] lg:gap-14">
-        <aside className="min-w-0 lg:sticky lg:top-[calc(var(--nav-h)+2rem)] lg:self-start">
+        <aside className="min-w-0 lg:sticky lg:top-[calc(var(--nav-h)+var(--impersonation-h)+2rem)] lg:self-start">
           <nav aria-label="On this page">
             <SectionLabel as="h2">Contents</SectionLabel>
             <ol className="mt-3 flex flex-col gap-1">
@@ -155,7 +155,7 @@ export function LegalDocument({
                 key={section.id}
                 id={section.id}
                 aria-labelledby={`${section.id}-heading`}
-                className="scroll-mt-[calc(var(--nav-h)+1.5rem)]"
+                className="scroll-mt-[calc(var(--nav-h)+var(--impersonation-h)+1.5rem)]"
               >
                 <h2
                   id={`${section.id}-heading`}

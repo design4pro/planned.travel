@@ -30,7 +30,11 @@ import { enumerateSessionRows } from './session-keys'
 import type { AuthSession } from '#/server/auth/session'
 import type { Database } from '#/server/db/types'
 import type { Logger } from '#/server/observability'
-import type { SessionEnumeration, SessionKeyStore } from './session-keys'
+import type {
+  SessionEnumeration,
+  SessionKeyStore,
+  SessionRowPage,
+} from './session-keys'
 
 /** Better Auth's server-side API surface, in process. Never the HTTP router — docs/ACCESS.md §2.6. */
 export type PlatformApi = ReturnType<typeof getAuth>['api']
@@ -69,42 +73,68 @@ export function sessionKeyStore(): SessionKeyStore {
 }
 
 /**
- * The target's session rows, read from D1.
+ * A page function over one account's **live** session rows, read from D1.
  *
  * Straight through Better Auth's own database adapter rather than a Drizzle statement of ours:
  * `session` is an auth-owned table, the adapter already knows its field mapping, and this keeps the
  * read on the same layer as every other auth read in the product - no SQL is written in
  * `src/server/fns`. It is emphatically *not* `internalAdapter.listSessions`, and not
  * `auth.api.listUserSessions` above it: both consult secondary storage and answer `[]` when the KV
- * index is missing, which is the exact reading this whole path exists to stop trusting. The
- * plugin's in-process endpoints carry every session *mutation* - `revokeUserSession`,
- * `revokeUserSessions`, `banUser` - and what they cannot supply is an authoritative list.
- * docs/ARCHITECTURE.md §4 rule 2 says where an authoritative list comes from: "any read-your-own-write
- * path must read D1, not the cache".
+ * index is missing, which is the exact reading this whole path exists to stop trusting. That was
+ * once handed down as a repair instruction and then withdrawn once the endpoint was read - it
+ * reports "no sessions" in precisely the case a ban most needs to see them - so the adapter read is
+ * a decision on the record and not a layering oversight to tidy away. The plugin's in-process
+ * endpoints carry every session *mutation* - `revokeUserSession`, `revokeUserSessions`, `banUser` -
+ * and what they cannot supply is an authoritative list. docs/ARCHITECTURE.md §4 rule 2 says where an
+ * authoritative list comes from: "any read-your-own-write path must read D1, not the cache".
  *
  * `session_user_id_idx` is what makes the predicate cheap, and `storeSessionInDatabase: true` is
  * what makes D1 the durable record rather than a mirror.
  *
- * **Ordered by `id`, and paged.** `id` is unique, so it is a total order: offset paging over it
- * neither drops a row between pages nor repeats one. `createdAt` is a millisecond stamp two sessions
- * can share, and an unstable sort under paging loses rows silently - a lost row here is a live
- * session a ban never reaches. The walk, its ceiling and its measured `truncated` flag belong to
- * {@link enumerateSessionRows}, so the rule is unit-testable without a database and this function
- * stays what the rest of this file is: a handle and nothing more.
+ * **Expired rows are excluded.** With `storeSessionInDatabase` a row is deleted only lazily, on the
+ * next `findSession` that resolves it, so an account accumulates a row for every device it never
+ * returns to. Without this predicate the console would list sessions that ended weeks ago as live
+ * and `platform.session.revoked` would be written for one of them. Excluding them costs the purge
+ * nothing: `getSession` refuses a cached blob whose `expiresAt` has passed and deletes it on the
+ * spot (`better-auth@1.7.1`, `dist/api/routes/session.mjs`), so an expired blob cannot authenticate
+ * anybody whether or not this call removed it.
+ *
+ * **One instant for the whole walk.** The expiry bound is captured when the reader is built rather
+ * than re-evaluated per page: a predicate that moved between pages would shift the result set under
+ * offset paging and drop rows, and a dropped row here is a live session a ban never reaches.
+ *
+ * **Ordered by `id`.** `id` is unique, so it is a total order: offset paging over it neither drops a
+ * row between pages nor repeats one. `createdAt` is a millisecond stamp two sessions can share, and
+ * an unstable sort under paging loses rows silently.
+ */
+export function sessionPageReader(userId: string): SessionRowPage {
+  const liveAt = new Date()
+  return async (offset, limit) => {
+    const context = await getAuth().$context
+    return context.adapter.findMany<unknown>({
+      model: 'session',
+      where: [
+        { field: 'userId', value: userId },
+        { field: 'expiresAt', operator: 'gt', value: liveAt },
+      ],
+      sortBy: { field: 'id', direction: 'asc' },
+      limit,
+      offset,
+    })
+  }
+}
+
+/**
+ * The account's live session rows for the console's list, bounded by `SESSION_LIST_CEILING`.
+ *
+ * The bound belongs to the list and to nothing else - see `./session-keys`, where the purge walks
+ * the same pages to exhaustion, because a list that stops early is honest and a purge that stops
+ * early leaves a live session nobody can name afterwards.
  */
 export async function readSessionRows(
   userId: string,
 ): Promise<SessionEnumeration> {
-  const context = await getAuth().$context
-  return enumerateSessionRows((offset, limit) =>
-    context.adapter.findMany<unknown>({
-      model: 'session',
-      where: [{ field: 'userId', value: userId }],
-      sortBy: { field: 'id', direction: 'asc' },
-      limit,
-      offset,
-    }),
-  )
+  return enumerateSessionRows(sessionPageReader(userId))
 }
 
 const userRoleSchema = z.object({ role: z.string().nullish() })

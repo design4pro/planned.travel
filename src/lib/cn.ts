@@ -44,9 +44,34 @@ const twMerge = extendTailwindMerge({
        * `floating` — has to be able to be told otherwise. Left out of this
        * list, `cn('z-dropdown', 'z-map-overlay')` kept both classes and
        * stylesheet order decided the winner.
+       *
+       * `impersonation` is the top of the stack, one band above `toast`
+       * (`--z-impersonation: 90`) and therefore above `modal` too: docs/ACCESS.md
+       * §6.1 requires that nothing can cover the control which ends a session
+       * borrowed from somebody else's account. It has to be listed for the same
+       * reason as the tier below it — `cn('z-toast', 'z-impersonation')` with
+       * one of them missing from this group keeps both classes and lets
+       * stylesheet order decide, which is exactly the bug this comment
+       * documents, with the highest-stakes control in the product on the losing
+       * side of it.
+       *
+       * The list is every `@utility z-*` in `src/styles/styles.css`, and it is
+       * closed: a name that ships a utility and is absent here merges wrongly
+       * and silently.
        */
       z: [
-        { z: ['map-overlay', 'nav', 'dropdown', 'overlay', 'modal', 'toast'] },
+        {
+          z: [
+            'map-overlay',
+            'map-surface',
+            'nav',
+            'dropdown',
+            'overlay',
+            'modal',
+            'toast',
+            'impersonation',
+          ],
+        },
       ],
       animate: [
         {

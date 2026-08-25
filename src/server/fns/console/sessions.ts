@@ -14,23 +14,27 @@
  * Revoking one session goes through the plugin whole: `internalAdapter.deleteSession` deletes the
  * KV blob, repairs the per-user index and deletes the D1 row, in that order, and needs no help.
  * Revoking *all* of them does not: `deleteUserSessions` enumerates from the same index this file
- * refuses to trust, so the all-sessions path enumerates the tokens from D1 first and deletes their
- * keys by name afterwards, exactly as the ban path does.
+ * refuses to trust. So the all-sessions path deletes every cached blob **first**, walking D1 to
+ * exhaustion, and only then calls the plugin — exactly as the ban path does, and for exactly its
+ * reason. `revokeUserSessions` deletes every D1 `session` row by predicate, so a blob still cached
+ * after it has run is one nothing anywhere can name again; a purge that cannot finish therefore
+ * refuses the revocation rather than half-performing it.
  */
 
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import { PLATFORM_ACTIONS } from '#/server/catalog/audit'
-import { platformApi, readSessionRows, sessionKeyStore } from './bindings'
+import { platformApi, readSessionRows } from './bindings'
 import {
+  clearSessionCache,
+  endSessionIndex,
   openConsoleCall,
-  readSessionTokens,
   recordConsoleAction,
+  recordConsoleRead,
 } from './context'
 import { ConsoleActionError } from './errors'
 import { platformSessionSchema, toConsoleSession } from './projections'
-import { purgeSessionKeys } from './session-keys'
 
 import type { ConsoleSession, PlatformSessionRow } from './projections'
 
@@ -59,6 +63,12 @@ interface SessionListing {
 
 /**
  * The account's live sessions, newest first. Reads are not audited (docs/ACCESS.md §4.2).
+ *
+ * "Live" is a predicate and not a manner of speaking: `./bindings` excludes rows whose `expiresAt`
+ * has passed. With `storeSessionInDatabase` a row is deleted only lazily, on the next `findSession`
+ * that resolves it, so an account accumulates one for every device it never comes back to — and
+ * without the predicate the console would render sessions that ended weeks ago as current, and
+ * `revokePlatformSessionFn` would happily write `platform.session.revoked` for one of them.
  *
  * The enumeration is ordered by `id` so that offset paging is stable; the display order is applied
  * here, afterwards, in memory. Two orders because they answer different questions - one has to be a
@@ -94,10 +104,7 @@ export const listPlatformSessionsFn = createServerFn({ method: 'GET' })
       const call = await openConsoleCall({ session: ['list'] })
       const listing = await readSessions(data.userId)
 
-      call.logger.info('console platform read', {
-        action: 'platform.session.list',
-        actorUserId: call.actor.userId,
-        actorRole: call.actor.role,
+      recordConsoleRead(call, 'sessions', {
         entityId: data.userId,
         returned: listing.sessions.length,
         truncated: listing.truncated,
@@ -172,58 +179,44 @@ export const revokePlatformSessionFn = createServerFn({ method: 'POST' })
  */
 export const revokePlatformUserSessionsFn = createServerFn({ method: 'POST' })
   .validator(revokePlatformUserSessionsInputSchema)
-  .handler(
-    async ({ data }): Promise<{ revoked: number; truncated: boolean }> => {
-      const call = await openConsoleCall({ session: ['revoke'] })
+  .handler(async ({ data }): Promise<{ revoked: number }> => {
+    const call = await openConsoleCall({ session: ['revoke'] })
 
-      const enumerated = await readSessionTokens(data.userId)
+    // Before the plugin call, and refused rather than truncated if it cannot finish, for the same
+    // reason the ban path is: `revokeUserSessions` deletes every D1 `session` row by predicate,
+    // and a blob left cached after that is one nothing can name again. See `clearSessionCache`.
+    const purge = await clearSessionCache(
+      call,
+      data.userId,
+      PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
+    )
 
-      await platformApi().revokeUserSessions({
-        body: { userId: data.userId },
-        headers: call.headers,
-      })
+    await platformApi().revokeUserSessions({
+      body: { userId: data.userId },
+      headers: call.headers,
+    })
 
-      const purge = await purgeSessionKeys(
-        sessionKeyStore(),
-        data.userId,
-        enumerated,
-      )
+    await endSessionIndex(
+      call,
+      data.userId,
+      PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
+    )
 
-      await recordConsoleAction(call, {
-        action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
-        entityId: null,
-        changes: {
-          before: {
-            userId: data.userId,
-            sessions: enumerated.tokens.length,
-            // Recorded because it qualifies the count beside it: the D1 rows are all gone either way
-            // (`deleteUserSessions` deletes them by predicate), and what a truncated enumeration
-            // leaves behind is cached blobs this call could not name.
-            truncated: enumerated.truncated,
-          },
-          after: { userId: data.userId, sessions: 0 },
-        },
-      })
+    await recordConsoleAction(call, {
+      action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
+      entityId: null,
+      changes: {
+        before: { userId: data.userId, sessions: purge.enumerated },
+        after: { userId: data.userId, sessions: 0 },
+      },
+    })
 
-      if (purge.failed > 0 || purge.truncated) {
-        // `error` rather than `warn`: a surviving blob still resolves through `findSession`, so this
-        // is a session that is revoked in D1 and answerable from KV until its TTL expires.
-        call.logger.error(
-          'console session revocation left keys behind',
-          undefined,
-          {
-            action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
-            entityId: data.userId,
-            actorUserId: call.actor.userId,
-            actorRole: call.actor.role,
-            ...purge,
-          },
-        )
-      }
+    call.logger.info('console purged session keys', {
+      action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
+      entityId: data.userId,
+      enumerated: purge.enumerated,
+      deleted: purge.deleted,
+    })
 
-      return {
-        revoked: enumerated.tokens.length,
-        truncated: enumerated.truncated,
-      }
-    },
-  )
+    return { revoked: purge.enumerated }
+  })
