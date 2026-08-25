@@ -46,10 +46,10 @@ producer for the export handler, no feed endpoint, no weather anything.
 | -------- | ------------ | ---- | -------------------------------------------------------------------------- |
 | `DOC-01` | `06-S1`      | 1    | partial → done                                                             |
 | `DOC-03` | `06-S2`      | 2    | absent → done                                                              |
-| `DOC-06` | `06-S3`      | 2    | partial → done, with the journal-book variant deferred and named           |
+| `DOC-06` | `06-S3`      | 2    | partial → done for the trip plan; the journey book stays open and unowned  |
 | `DOC-02` | `06-S4`      | 3    | partial → done                                                             |
 | `DOC-07` | `06-S5`      | 3    | absent → done                                                              |
-| `DOC-04` | `06-S6`      | 4    | partial → done, with the booking-side entry point deferred and named       |
+| `DOC-04` | `06-S6`      | 4    | partial → done, both entry points: the file side and the booking side      |
 | `DOC-08` | `06-S7`      | 6    | absent → absent. **BLOCKED** on a provider decision that is not ours here. |
 | `DOC-05` | **no stage** | —    | out-of-scope; see below                                                    |
 
@@ -779,22 +779,42 @@ distance between a finished piece of infrastructure and a thing a traveller can 
 
 ### Reference rows
 
-- `DOC-06` partial → **done**, with one variant deferred and named. The row's recorded gap is
-  precise and this stage closes exactly it: "`repo-platform.md` §4 confirms nothing enqueues it and
-  there is no UI trigger". A complete queue handler with no producer is not a half-built feature, it
-  is a whole feature nobody can reach.
-- **Deferred to `08-S7`** (`08-product-modules.md`, wave 2, which closes `ADD-08`). Its host screen,
-  its photo model and its cover image all belong there, and `08-S7` claims none of this stage's paths
-  — including `src/server/queue/handlers/pdf-export.ts`, which it does not mention at all, so the
-  renderer this stage extends stays this stage's. The reason the variant is deferred rather than
-  half-shipped here: the only thing this stage could ship without that screen is a second
-  document builder with no button, and this repository already carries eight unreachable write paths
-  (`repo-data.md` §7). Adding a ninth to be able to tick a row would be the defect this plan set
-  exists to stop.
+- `DOC-06` partial → **done for the trip-plan document, which is the whole of the row's recorded
+  gap**: "`repo-platform.md` §4 confirms nothing enqueues it and there is no UI trigger". A complete
+  queue handler with no producer is not a half-built feature, it is a whole feature nobody can reach,
+  and this stage builds the producer and the entry point it was missing.
+- **The journey-book variant of `DOC-06` is left OPEN, owned by nobody, and named here as unowned.**
+  The row's name also asks for "journey book (A4 landscape, count-driven photo layouts)". This stage
+  does not build it and **does not defer it to another stage either**, because the only candidate,
+  `08-S7` (`08-product-modules.md`, wave 2, which closes `ADD-08`), plans no export of any kind: it
+  never mentions PDF, this row, or this stage. Writing "deferred to `08-S7`" would have marked a
+  behaviour done in this plan while it was planned in neither — which is precisely the defect this
+  file was rejected for at `06-S6`, and it is not going to be repeated here in different words.
 
-`gap-rows.json` records `DOC-06 → ADD-07`. That edge is carried entirely by the deferred variant;
-the trip-plan export reads trips, days, assignments, places and reservations, none of which the
-journal module owns. `ADD-07` is wave 1 in any case, so the edge is satisfied either way.
+**Why the journey book is genuinely a different piece of work rather than a section this stage could
+have added, in two measurements.** Both are properties of `src/server/queue/types.ts`, which this
+stage must not edit — `00-S4` (`00-foundations.md`, wave 0) and `07-S8`
+(`07-collaboration-and-sharing.md`, wave 4) hold that file:
+
+1. **`pdfExportPayloadSchema` requires a `tripId`** (`:67-75`, `z.string().min(1).max(64)`), and
+   `journeys.trip_id` (`src/server/db/schema.ts:1338`) is **nullable** — a journal written about no
+   particular trip could not be enqueued at all.
+2. **`exportDocumentSchema` has no shape for an image** (`:42-63`): a section is a heading, an
+   optional note and up to 500 rows of `label`, `value` and optional `meta`, all strings. "Count-driven
+   photo layouts" cannot be expressed in it. Widening it is a change to the payload contract two other
+   stages hold, and this stage's own rule — one payload schema, never a second — forbids the obvious
+   workaround of declaring a parallel one in `fns/`.
+
+So the honest disposition is **open, with an owner to be assigned**: a later stage must widen
+`exportDocumentSchema` in the wave that owns `queue/types.ts`, and mount its entry point on the
+journal screen in a wave `08-S3` (w1), `08-S7` (w2) and `08-S10` (w3) do not hold — wave 4 or later
+for `src/routes/_app/journey/$journeyId.tsx`. That is a stage-shaped piece of work and it is written
+down here so the next planning round can carve it, rather than being hidden inside a row this plan
+calls done.
+
+`gap-rows.json` records `DOC-06 → ADD-07`. That edge is carried entirely by the open journey-book
+variant; the trip-plan export reads trips, days, assignments, places and reservations, none of which
+the journal module owns. `ADD-07` is wave 1 in any case, so the edge is satisfied either way.
 
 Behaviours sourced from `wiki: PDF-Export`. **One deliberate divergence, and it is a divergence
 upward.** The reference has no server-side renderer: it prints through the reader's own browser
@@ -1114,6 +1134,11 @@ The `docs/SPEC.md` §2 visual clauses, ticked for every surface this stage ships
   artifact by its real format rather than promising a PDF it may not have. Adding the binding is a
   cost-model change and the user's decision; it improves fidelity and changes nothing this stage
   builds.
+- **The journey-book variant of `DOC-06` is open and unowned**, for the two schema reasons measured
+  under **Reference rows**. Disposition: **defer, with no owner named**, because naming an owner that
+  has not planned the work is what turns a deferral into a lie. It blocks nothing this stage ships —
+  the trip-plan document is a complete, reachable feature on its own — and it is carried out of this
+  plan as work for the next planning round rather than left implied by a row's status.
 - **`12-verification-protocol.md` §7.2 and §7.3** are inherited as `06-S1` records them: this stage
   baselines the same trip tab.
 
@@ -1147,21 +1172,31 @@ there are (`file-library.tsx:571-597`, a `KindChip` per kind with a `count` prop
   preview affordance.
 - `src/components/modules/files/file-preview.tsx` — new. The document preview and the image
   lightbox, one component with two shapes.
+- `src/components/modules/files/download.ts` — edit. One new export beside `downloadTripFile`, which
+  is re-expressed in terms of it. **Server** below records what this module does today, why the
+  preview cannot use it as it stands, and why the fix belongs inside it rather than beside it.
 - `src/components/modules/files/filters.ts` — new. The bucketing, the counts and the order, as pure
   functions.
-- `src/components/modules/files/index.ts` — append. One export line.
+- `src/components/modules/files/index.ts` — append. Two export lines.
 - `src/components/modules/files/__tests__/filters.test.ts` — new.
 - `src/components/modules/files/__tests__/file-preview.test.tsx` — new.
+- `src/components/modules/files/__tests__/download.test.ts` — new.
+- `e2e/fixtures/documents-and-media/` — new. The six images this stage uploads through the shipped
+  control so the viewer has bytes to show. **Verification** says why a fixture directory is needed at
+  all, which is the least obvious decision in this stage.
 - `e2e/documents-and-media.visual.spec.ts` — append.
 - `e2e/__screenshots__/documents-and-media.visual.spec.ts/` — this stage's own baselines only.
 
 **Cross-wave sharing inside this file, named.** `file-library.tsx` is held by `06-S1` (wave 1) and
 `06-S2` (wave 2); this claim is wave 3 and is the last of the three. `index.ts` is held by `06-S2`
-and `06-S3` in wave 2. No sibling plan claims anything in `src/components/modules/files/`.
+and `06-S3` in wave 2. `download.ts` is claimed by **no other stage in any plan** — measured with
+`grep -rn 'modules/files/download.ts' docs/plans/`, which returns this stage and nothing else — so
+this is its first and only claim, in any wave. `e2e/fixtures/` is claimed by nothing at all; the same
+grep over `e2e/fixtures` returns this stage only. No sibling plan claims anything in
+`src/components/modules/files/`.
 
-Nothing in `src/server/**` is claimed: this stage adds no endpoint. The preview reads bytes through
-the existing `downloadTripFile` helper (`src/components/modules/files/download.ts`), which is
-already a blob-producing wrapper over `downloadTripFileFn`.
+Nothing in `src/server/**` is claimed: this stage adds no endpoint, no repository function, no
+migration and no schema.
 
 None of the six shared paths is claimed, and no route file is added.
 
@@ -1188,16 +1223,58 @@ that is a decision rather than an omission:
   `storage_bytes` like any other byte. A derived object with an independent lifetime is an orphan
   waiting to happen.
 
-So the answer to "what does this stage store and for how long" is **nothing, and not at all**.
+So the answer to "what does this stage store and for how long" is **nothing, and not at all** — in
+the product.
+
+**The one place this stage does put bytes in a bucket is its own evidence run, and it has a retention
+policy too.** The browser block under **Verification** uploads six fixture images into the local
+development bucket, because the demo seeder writes file rows and no objects. Those bytes are deleted
+by the same block's teardown, in the same run that created them, through the shipped delete path — so
+they never accumulate across runs, never enter a deployed bucket, and never appear in the storage
+meter of anything but the machine that ran the suite. A test that leaves bytes behind is a test that
+slowly rewrites its own baseline.
 
 ### Server (repo, server function, Zod)
 
-**Nothing is added — no repository function, no server function, no schema.** This stage is read-side
-work over a payload that already exists (`loadTripFiles`, `src/routes/_app/-server/trip.ts:654-685`,
-which after `06-S2` returns active files with their star state) plus bytes fetched through the
-existing authenticated download function.
+**Nothing is added on the server — no repository function, no server function, no schema.** This
+stage is read-side work over a payload that already exists (`loadTripFiles`,
+`src/routes/_app/-server/trip.ts:654-685`, which after `06-S2` returns active files with their star
+state), plus bytes fetched through `downloadTripFileFn`, which already exists
+(`src/server/fns/files.ts`, the `downloadTripFileFn` handler) and is **not** edited here.
 
-Two server-side rules it must not break, restated because they are what make the preview safe:
+**The one client-side module that does change, and the measurement that forces it.** An earlier draft
+of this stage said the preview would read bytes through the existing `downloadTripFile` helper,
+"already a blob-producing wrapper over `downloadTripFileFn`". It is not one, and the stage would have
+been unbuildable as written. `src/components/modules/files/download.ts` exports exactly one function,
+`downloadTripFile({ tripId, fileId, filename })`, typed
+`Promise<{ readonly filename: string }>`. It calls `downloadTripFileFn`, reads `await
+response.blob()`, and then **spends** the blob: `URL.createObjectURL`, a synthetic `<a download>`,
+`anchor.click()`, `anchor.remove()`, and a `setTimeout` that revokes the object URL sixty seconds
+later. It returns a filename and nothing else. A preview calling it would save the file to the
+reader's disk and still have no bytes to render, and opening the same image twice would leave two
+copies in the downloads folder.
+
+So this stage splits it, **inside the module that owns it**, which is why `download.ts` is an owned
+path above:
+
+- `fetchTripFileBytes({ tripId, fileId })` — new export, returning the `Blob`. Same single
+  authenticated call, same endpoint, no bucket URL and no second network path. On a non-`ok` response
+  it throws a `FileBytesError` carrying `status` and the server's own message, so the caller can tell
+  the **410** (`The stored copy of this file is missing.`) from the 404 and from everything else —
+  which is exactly what the designed error state below needs in order to say the right sentence.
+- `downloadTripFile` — **kept, with its signature, its return type and its observable behaviour
+  unchanged**, re-expressed as `fetchTripFileBytes` followed by the anchor dance it already performs.
+  Its existing callers are untouched. Adding a second fetch path beside it instead would be the
+  duplicate-implementation defect `README.md` names, and the two would drift the first time the
+  refusal shape changed.
+- **The object URL's lifetime belongs to the viewer, not to a timer.** The preview creates one object
+  URL per displayed file and revokes it in the effect cleanup — on close, and on moving to another
+  image — so browsing ninety images holds one blob rather than ninety. The sixty-second
+  `REVOKE_DELAY_MS` in the save path stays where it is and is **not** reused: it exists because a
+  browser may still be reading the blob after the click that saves it, which is not something that
+  happens to an `<img>` whose unmount we control.
+
+Two server-side rules the preview must not break, restated because they are what make it safe:
 
 - **The bytes still leave through the authenticated endpoint.** The preview does not construct a URL
   to the bucket; there is none to construct (`FILES_PUBLIC_BASE` has no reader —
@@ -1255,7 +1332,7 @@ descending. The comparator is in `filters.ts` and is the same one the repository
   so opening a 4 MB photo does not flash an empty dialog; the strip renders skeleton tiles at the
   same size as real ones.
 - _Error_ — a file whose object has gone (the download function answers 410 for exactly this,
-  `src/server/fns/files.ts:293-297`) renders an `Alert` inside the preview saying the stored copy is
+  `src/server/fns/files.ts:294-298`) renders an `Alert` inside the preview saying the stored copy is
   missing, with the row still listed and a way back. That is a real state of this system, not a
   hypothetical: the orphan and sweep paths in `06-S2` can produce it.
 - _Loading_ — the arrows and the strip are `disabled` while the next image's bytes are in flight, and
@@ -1284,7 +1361,7 @@ image renditions, so it adds nothing to `storage_bytes`.
 **No case is appended to `src/server/repos/__tests__/tenant-isolation.test.ts`**, because this stage
 adds no repository function and writes no row. Every byte it renders is fetched through
 `downloadTripFileFn`, which resolves the scope and re-resolves the trip before it touches R2
-(`src/server/fns/files.ts:280-283`), and whose isolation is covered by `06-S1`'s block. Naming that
+(`src/server/fns/files.ts:281-282`), and whose isolation is covered by `06-S1`'s block. Naming that
 here is the point: a stage with nothing to add says which existing case covers it rather than leaving
 the heading to be read as an oversight.
 
@@ -1302,19 +1379,64 @@ the heading to be read as an oversight.
   image stays at the last image rather than wrapping; the viewer navigates only the filtered set;
   an `image/svg+xml` file renders through an `<img>` and exposes no open-in-new-tab action; a 410
   from the download path renders the missing-copy alert rather than an empty frame; focus returns to
-  the invoking row on close.
+  the invoking row on close; and moving from one image to the next revokes the previous object URL
+  exactly once, asserted against a spied `URL.revokeObjectURL`, because a leak here is invisible until
+  a reader's tab is holding ninety photographs.
+- `src/components/modules/files/__tests__/download.test.ts` (new) — `fetchTripFileBytes` returns the
+  blob and creates **no** object URL and no anchor, so the preview path cannot save a file as a side
+  effect; a 410 response throws a `FileBytesError` whose `status` is 410 and whose message is the
+  server's own, and a 404 throws one whose `status` is 404, so the viewer can say two different true
+  sentences; a non-`Response` return value throws rather than being coerced; and `downloadTripFile`
+  still resolves to `{ filename }` and still clicks exactly one anchor with the `download` attribute
+  set to the caller's filename — the regression test for the refactor, written before it.
 
 **Browser evidence.** `describe` block `06-S4 — browsing and preview` in
 `e2e/documents-and-media.visual.spec.ts`.
 
-- Route: `/trips/$tripId/files`, with at least one starred file and several images in the fixture.
-- Frame set: light and dark at **360px, 1280px and 2560px** at rest.
-- **Declared non-resting states**, three, because every one of them is the stage:
-  `--state lightbox` (`--click '[data-part="file-preview-open"]'`),
-  `--state lightbox-strip` (the strip scrolled to a later image), and
-  `--state tab-starred` (`--click '[data-part="files-tab-starred"]'`). Six frames each.
-- All three selectors are `data-part` attributes this stage ships and **each is verified against a
-  running server with `page.locator(sel).count()` returning 1 before any frame is filed.**
+**The demo fixture has file rows and no file bytes. This is measured, and it decides the whole
+block.** The seeder records `trip_files` rows through `recordFile`
+(`src/routes/api/dev/-seed/apply-trip.ts:524-545`) and writes nothing to R2:
+`grep -rn 'FILES|filesBucket|\.put\(' src/routes/api/dev/-seed/` returns no hit, and every seeded row
+carries a hand-authored `storage_key` — `demo/tokyo-and-kyoto/…` in
+`src/routes/api/dev/-seed/dataset/flagship.ts:2482` onwards — under which no object has ever been
+written. `downloadTripFileFn` therefore answers **410 for every seeded file**
+(`src/server/fns/files.ts:294-298`). An earlier draft of this stage declared lightbox frames over the
+seeded images; not one of them could have been produced, and the block would have filed six
+photographs of an error alert while calling them a viewer. So this block gets its bytes the only way
+the product actually offers, through the upload path `06-S1` ships, and it turns the seeded rows into
+the error evidence they genuinely already are.
+
+- Route: `/trips/$tripId/files` on the seeded demo trip.
+- **At rest, filed first and before anything is uploaded**: light and dark at **360px, 1280px and
+  2560px** over the seeded library exactly as `/api/dev/seed` leaves it. Six frames. No row in them
+  carries a wall-clock timestamp, so they are stable from one day to the next.
+- **`--state preview-missing`, filed second and filed from the seeded set.** Opening the preview on a
+  seeded image renders the missing-copy `Alert`, because the stored copy really is absent: a real 410
+  from the real endpoint over a real row, with no `page.route()`, no interception and no fake. Six
+  frames. This is the cheapest honest error evidence in the plan, and it exists because of the
+  fixture's shape rather than in spite of it.
+- **Then the block makes its own bytes.** A setup step attaches the six images in
+  `e2e/fixtures/documents-and-media/` to the hidden input `06-S1` ships, waits for six accepted
+  answers, and then asserts that fetching one of them back returns **200** rather than 410. That
+  assertion is the guard: if the upload path ever regresses, this block fails there instead of
+  quietly filing frames of a broken viewer. The fixtures are flat-colour PNGs authored for this repo —
+  no third-party asset, nothing derived from the reference product — three at 1200×800 and three at
+  800×1200, so the aspect-ratio change between neighbours is real and the layout-shift assertion below
+  has something to prove. Under 60 KB in total.
+- **`--state lightbox`** — the viewer open on the first uploaded image — and **`--state
+lightbox-strip`** — the strip scrolled with a later tile active. Six frames each. Neither frame
+  contains a date, an upload time or a byte count: the header carries the filename and the index, so
+  nothing in them moves with the clock.
+- **`--state tab-starred`.** The tab exists only when something is starred and the seed stars nothing,
+  so the block stars one seeded file through the row affordance `06-S2` ships, waits for the write to
+  settle, files six frames at `--click '[data-part="files-tab-starred"]'`, and unstars it again. The
+  frames are of the seeded library, so they carry the same rows as the at-rest set.
+- **A teardown deletes all six uploads** through the shipped delete path and leaves the star as it
+  found it, so the library, its counts and its storage meter return to the seeded state. If teardown
+  ever fails, the next run's at-rest frames differ and the suite goes red — a loud failure rather than
+  a baseline that drifts one file at a time, which is the failure mode worth choosing.
+- Every `data-part` selector named here is an attribute this stage ships, and **each is verified
+  against a running server with `page.locator(sel).count()` returning 1 before any frame is filed.**
 - The 360px lightbox frame is the one that matters most and is called out: a full-screen viewer with
   a thumbnail strip is where a squeezed desktop shows itself.
 
@@ -1805,14 +1927,21 @@ before a file can be linked to one.
 
 ### Reference rows
 
-- `DOC-04` partial → **done**, with one entry point deferred and named. Many-to-many linking from a
-  file to several places and several reservations, with the file's own note edited in the same place.
-- **Deferred to `03-S4`** (`03-reservations-and-transport.md`, wave 3, which closes `BKG-02`): the
-  reverse picker inside the reservation editor, on the surface that stage owns. The reason it is deferred rather than half-shipped: a
-  component this stage mounted nowhere would be another unreachable path, and the link is fully usable
-  from the file side without it. What this stage does ship for that surface is the read —
-  `listFilesForEntity` becomes correct over the join — so `BKG-02` mounts a picker over a working
-  query rather than building both.
+- `DOC-04` partial → **done**, with **both** entry points. Many-to-many linking from a file to
+  several places and several reservations, with the file's own note edited in the same place;
+  reachable from the file side in the library, and from the booking side in the reservation editor.
+
+**The booking-side entry point is this stage's, and an earlier draft got that wrong.** That draft
+deferred it to `03-S4` (`03-reservations-and-transport.md`, wave 3, which closes `BKG-02`). `03-S4`
+refuses it in writing, under its own **Reference rows**: attachments are "`DOC-04`'s, in
+`06-documents-and-media.md` at wave 4", and that stage "adds no attachment UI and no attachment write,
+and says so here so that nobody builds a second one". Two plans each pointing at the other is how a
+row gets marked done with the behaviour planned nowhere, and it is the exact defect this file was
+rejected for. It is settled here, once, in the direction the dependency already points: the
+`DOC-04 → BKG-02` edge makes the reservation the **record** and this stage the **surface**, so the
+surface is built here, on the editor `03-S4` will have finished one wave earlier. That is the whole
+reason this stage is wave 4, and it is why the booking editor is an owned path below rather than a
+sentence about somebody else's plan.
 
 **One row names `DOC-04` in its `dependsOn`**, counted over `gap-rows.json`: `MAP-03`
 (`02-places-and-maps.md`, wave 5), the place form, which attaches a file to a place through the join
@@ -1825,11 +1954,18 @@ Sourced from `wiki: Documents-and-Files`.
 - `src/server/repos/files.ts` — edit. The link writers and the reverse read.
 - `src/server/fns/files.ts` — edit. Two server functions.
 - `src/components/modules/files/link-dialog.tsx` — new. The assign modal, including the note.
+- `src/components/modules/files/entity-attachments.tsx` — new. The reverse view: the files already
+  linked to one target, with attach and detach. It is a files-module component so that no attachment
+  logic lands in the bookings module and no second implementation is written for the place form.
 - `src/components/modules/files/file-dialogs.tsx` — edit. The details dialog hands the note to the
   link dialog instead of owning two copies of it.
 - `src/components/modules/files/file-library.tsx` — edit. The row's link affordance and its count.
 - `src/components/modules/files/index.ts` — append.
+- `src/components/modules/book/booking-dialog.tsx` — edit. **The booking-side entry point.** One
+  import and one mount: the attachments section, rendered only when the dialog is editing an existing
+  booking. See **UI** for why creating cannot carry it.
 - `src/components/modules/files/__tests__/link-dialog.test.tsx` — new.
+- `src/components/modules/files/__tests__/entity-attachments.test.tsx` — new.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append.
 - `e2e/documents-and-media.visual.spec.ts` — append.
 - `e2e/__screenshots__/documents-and-media.visual.spec.ts/` — this stage's own baselines only.
@@ -1848,6 +1984,16 @@ the coupling rather than removing it.
 `06-S2` (wave 2); `src/components/modules/files/file-library.tsx` by `06-S1`, `06-S2` and `06-S4` in
 waves 1 to 3. Every one is an earlier wave in this file or in foundations, and this stage is the only
 wave-4 stage in this file, so no same-wave claim of any kind remains.
+
+`src/components/modules/book/booking-dialog.tsx` is the one path this stage takes outside its own
+area, and it is named with both its siblings: **`03-S4`** (`03-reservations-and-transport.md`,
+**wave 3**, the stop picker and the ledger notice) and **`03-S8`** (same plan, **wave 6**, the stay
+branch). Three claims, three different waves — 3, 4, 6 — so this is a legal cross-wave path and not a
+clobber, which `node scripts/ultrabuild/check-plan-collisions.mjs 06` reports under its own heading
+and which is transcribed under **Cross-plan collisions** at the end of this file. The claim is kept as
+narrow as a claim can be: one import, one conditional mount, no change to the booking draft, no change
+to `booking-form.ts`, and nothing at all in `src/components/modules/book/index.ts`, which `03-S4`,
+`03-S7` and `03-S8` all hold.
 
 None of the six shared paths is claimed, and no route file is added — `pnpm generate-routes` does not
 run.
@@ -1921,14 +2067,36 @@ exists so that a scripted client cannot turn one file into ten thousand rows.
 
 **Server functions — `src/server/fns/files.ts` (edit).**
 
-| Function              | Method | Input                                                      | Returns                                      |
-| --------------------- | ------ | ---------------------------------------------------------- | -------------------------------------------- |
-| `setTripFileLinksFn`  | POST   | `{ tripId, fileId, targets: [{ type, id }], description }` | `{ links: number }`                          |
-| `listTripFileLinksFn` | GET    | `{ tripId }`                                               | every file's links on this trip, in one read |
+| Function                    | Method | Input                                                      | Returns                                                                                 |
+| --------------------------- | ------ | ---------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `setTripFileLinksFn`        | POST   | `{ tripId, fileId, targets: [{ type, id }], description }` | `{ links: number }`                                                                     |
+| `listTripFileLinksFn`       | GET    | `{ tripId }`                                               | every file's links on this trip, in one read                                            |
+| `listTripFileAttachmentsFn` | GET    | `{ tripId, target: { type, id } }`                         | `{ attached: [file + its whole link set], available: [id, filename, kind, sizeBytes] }` |
 
 `listTripFileLinksFn` is one call for the whole screen, built on `listFileLinksForFiles`, and it is
 what the library reads on mount to fill the per-row count. One indexed query per screen rather than
 one per row, and the loader stays somebody else's.
+
+`listTripFileAttachmentsFn` is the **booking side's** read and the reason `DOC-04` can be called done
+in one stage rather than in two plans that each expect the other to finish it. It composes three reads
+that already exist or are defined above — `listFilesForEntity` for the attached set,
+`listFileLinksForFiles` for those files' whole link sets, and `listTripFiles`
+(`src/server/repos/files.ts:67-80`) for the rest of the trip's files — and returns them in one
+response, so the reservation editor can render both the attached list and the attach picker without a
+second round trip. It adds **no repository function**: it is composition in the handler over SQL that
+lives where all of it lives.
+
+**Why the attached files come back carrying their whole link set, which looks like overreach and is
+not.** Detaching a file from a booking is, in the data model, "this file's link set minus one target",
+and the only writer is `setTripFileLinksFn`, which takes the whole set. Returning each attached file's
+existing links with the read is what lets the booking side compute that set locally and send one
+request. The alternative — a second, narrower writer that removes a single link — would be a second
+write path onto the same table, and the two would disagree about the 50-link cap and the note the
+first time either changed. One writer, two readers.
+
+The `available` list carries **only** `id`, `filename`, `kind` and `sizeBytes`, never link sets and
+never descriptions: it feeds a searchable picker, it is bounded by the `files` quota rather than by
+anything a client chooses, and a picker does not need the rows it is not showing.
 
 The note travels with the links because it is edited in the same dialog, so saving the dialog is one
 request and one optimistic update rather than two that can half-fail. Both mirror to the trip room
@@ -1949,14 +2117,37 @@ per-target resolution inside the scope. Nothing is enqueued; the batch is a hand
 `src/routeTree.gen.ts` is untouched.
 
 **Components.** Existing primitives: `Dialog`, `Checkbox`, `Textarea`, `Field`, `Badge`, `Chip`,
-`Button`, `EmptyState`, `Skeleton`, `Alert`, `ScrollArea`, `toast`, plus `ModulePanel` and `useAction`
-from `src/components/modules/shared`. One new product component, `link-dialog.tsx`. No new primitive.
+`Button`, `IconButton`, `EmptyState`, `Skeleton`, `Alert`, `ScrollArea`, `toast`, plus `ModulePanel`
+and `useAction` from `src/components/modules/shared`. Two new product components, `link-dialog.tsx`
+and `entity-attachments.tsx`. No new primitive.
 
 **The dialog** lists the trip's places and reservations in two labelled groups, each row a `Checkbox`
 with the name and its date or address as secondary text, a search field when either group exceeds a
 dozen rows, and the file's note in a `Textarea` underneath. One Save. The file row in the library
 grows a link affordance showing the current count as a `Badge`, and the count is the same number the
 dialog will open with — a badge that disagrees with what opens is worse than no badge.
+
+**The booking side, which is the entry point this stage stopped deferring.**
+`entity-attachments.tsx` takes a `target` (`{ type, id }`) and a `tripId` and renders the files linked
+to that one row: a compact list of file chips carrying the filename, the kind and the size, each with
+a download action and a detach action, under a section label, plus an **Attach a file** control that
+opens a searchable picker over the trip's other files. Detaching sends that file's link set minus this
+target; attaching sends its set plus this target. Both go through `setTripFileLinksFn`, so the file
+side and the booking side can never disagree about what is linked.
+
+`src/components/modules/book/booking-dialog.tsx` mounts it in exactly one place, and the mount is
+conditional in a way the data forces rather than a way we chose: the dialog's props are
+`booking?: BookingRow` (`booking-dialog.tsx:118`), and the create path has no `booking`, so there is no
+row id for a link to point at until the booking has been saved. So **the section renders only when the
+dialog is editing an existing booking**, and on the create path it renders nothing at all — not a
+disabled shell, not a greyed panel, and above all not a control that writes a link into the void. The
+one sentence a reader gets on the create path is on the save confirmation: the newly saved booking's
+editor is where files are attached, which is the affordance they now have.
+
+No other bookings-module file changes: `booking-form.ts` does not learn about attachments, the draft
+does not carry them, and saving the booking neither reads nor writes a link. The section owns its own
+read and its own writes. That is what keeps this a one-import claim on a file two stages of
+`03-reservations-and-transport.md` also hold.
 
 **States.**
 
@@ -1972,7 +2163,23 @@ dialog will open with — a badge that disagrees with what opens is worse than n
   selection is a worse bug than the refusal.
 - _Loading_ — Save carries `loading`; the checkboxes and the note are `disabled` for that window.
 
-**Tokens.** None missing. The link count carries `tabular-nums`.
+**The booking-side section carries the same four states in its own shapes**, because it is a list and
+the quality bar does not exempt a list for being small:
+
+- _Empty_ — a booking with nothing attached shows an `EmptyState` on `--color-surface-2` saying what
+  an attachment is for on a booking — the confirmation, the ticket, the receipt — with the attach
+  control as its action, rather than an empty box under a heading.
+- _Skeleton_ — `listTripFileAttachmentsFn` is fetched when the editor opens, and the section shows two
+  `Skeleton` chips at the exact height of a real chip, so the dialog does not grow under the reader's
+  cursor when the answer lands.
+- _Error_ — a failed read renders an `Alert` inside the section with a retry, and the rest of the
+  booking editor stays fully usable: a file list that cannot load must not take the booking form down
+  with it. A failed attach or detach puts the chip back exactly as it was and says why.
+- _Loading_ — the attach control carries `loading` while a write is in flight, and the chip being
+  detached is `disabled` rather than removed until the server agrees, so a refusal does not have to
+  resurrect a row the reader watched disappear.
+
+**Tokens.** None missing. The link count and every file size carry `tabular-nums`.
 
 ### Quota
 
@@ -1998,8 +2205,14 @@ which is the case the unique index on `(organization_id, file_id, target_type, t
 possible to test honestly, because `target_id` has no foreign key to narrow it.
 
 Functions covered: `setFileLinks`, `listFileLinks`, `listFileLinksForFiles`, `listFilesForEntity`.
-`listTripFileLinksFn` is covered on the server-function side by the same block, asked for B's trip id
-in A's scope, which is a `NotFoundError` from `requireTrip` before a link is ever read.
+`listTripFileLinksFn` and `listTripFileAttachmentsFn` are covered on the server-function side by the
+same block, each asked for B's trip id in A's scope, which is a `NotFoundError` from `requireTrip`
+before a link is ever read. `listTripFileAttachmentsFn` gets one case of its own beyond that, because
+its `available` list is the widest thing this stage returns: asked in A's scope for A's own trip but
+with **B's reservation id** as the target, it must answer `NotFoundError` from the target resolution
+and must not fall back to returning A's file list with an empty `attached` set — a read that degrades
+into "here is everything, nothing is linked" is how a tenant boundary turns into a directory
+listing.
 
 ### Verification
 
@@ -2011,6 +2224,13 @@ in A's scope, which is a `NotFoundError` from `requireTrip` before a link is eve
   sends exactly the resulting set, not a diff; the note travels in the same request; the 50-link cap
   disables further checkboxes with a stated reason rather than failing on save; the search narrows
   both groups and keeps checked rows visible.
+- `src/components/modules/files/__tests__/entity-attachments.test.tsx` (new) — detaching a file sends
+  that file's whole link set **minus** this target and leaves its other targets intact, which is the
+  invariant that stops the booking side quietly unlinking a file from a place; attaching sends the set
+  plus this target; a failed detach restores the chip and shows the reason; the picker excludes files
+  already attached, so the same file cannot be attached twice; the empty state renders its action
+  rather than a bare heading; and the component renders nothing when given no target, which is the
+  create path of the booking editor.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` (append) — the cases above.
 - The backfill is asserted in the repository tests the wave-0 migration stage owns: after it, a file
   that had `reservation_id` set has exactly one link row of type `reservation`, and a file with all
@@ -2019,14 +2239,29 @@ in A's scope, which is a `NotFoundError` from `requireTrip` before a link is eve
 **Browser evidence.** `describe` block `06-S6 — file links` in
 `e2e/documents-and-media.visual.spec.ts`.
 
-- Route: `/trips/$tripId/files`.
-- Frame set: light and dark at **360px, 1280px and 2560px** at rest, with at least one file already
-  linked so the badge is visible.
+**Two routes, because this stage ships two entry points and a stage that photographs one of them has
+photographed half of itself.**
+
+- Route: `/trips/$tripId/files`. Frame set: light and dark at **360px, 1280px and 2560px** at rest,
+  with at least one file already linked so the badge is visible. The seeded fixture supplies that
+  without any setup: `src/routes/api/dev/-seed/dataset/flagship.ts:2482` onwards writes files carrying
+  `reservationKey` and `transportKey`, and the wave-0 backfill turns exactly those columns into link
+  rows, so the demo trip opens with linked files on the first run after the migration.
 - **Declared non-resting state**: `--state link-dialog` — the dialog open with two rows checked —
-  reached by `--click '[data-part="file-link-open"]'`, a `data-part` this stage ships, **verified
-  against a running server with `page.locator(sel).count()` returning 1 before any frame is filed.**
-- The error frame is reached with `page.route()` failing the save, so the in-dialog `Alert` and the
-  preserved selection are both photographed from a real failure.
+  reached by `--click '[data-part="file-link-open"]'`.
+- Route: `/trips/$tripId/book`, the booking side. Frame set: light and dark at **360px, 1280px and
+  2560px** with the editor open on a **seeded reservation that already has a file linked to it**
+  (`res-gracery` in the same dataset), so the attachments section is photographed populated rather
+  than empty, and a second frame set with `--state attach-picker` — the picker open over the trip's
+  other files. Reached by `--click '[data-part="booking-edit"]'` then
+  `--click '[data-part="file-attach-open"]'`.
+- The 360px booking frame is called out: a dialog that already carries a form gaining a file list is
+  exactly where a small screen turns into a scroll tunnel, and the frame is what proves it did not.
+- Every `data-part` named here is an attribute this stage ships, and **each is verified against a
+  running server with `page.locator(sel).count()` returning 1 before any frame is filed.**
+- The error frames — one per side — are reached with `page.route()` failing the write, so the
+  in-dialog `Alert` with its preserved selection, and the restored chip on the booking side, are both
+  photographed from a real failure rather than from a mocked-up component.
 
 **Console must be silent**, asserted through `watchConsole` in every test in the block.
 
@@ -2055,7 +2290,12 @@ The `docs/SPEC.md` §2 visual clauses, ticked for every surface this stage ships
 - [ ] Responsive 360px → 2560px, where 360px is a designed layout: the dialog becomes a full-height
       sheet with a sticky Save, rather than a desktop dialog with a scrollbar.
 - [ ] Keyboard navigable end to end, sensible focus order, accessible names — each checkbox names the
-      place or booking it links to, not just "link" — WCAG 2.2 AA contrast in both themes.
+      place or booking it links to, not just "link", and each detach control names the file it
+      detaches — WCAG 2.2 AA contrast in both themes.
+- [ ] Both entry points meet every clause above, not just the one on the files screen: the booking
+      editor's attachments section is checked at all three widths, in both themes, with its empty,
+      skeleton, error and loading states, because it is the entry point this stage exists to stop
+      deferring.
 - [ ] Zero console errors or warnings, and zero layout shift after paint.
 - [ ] `font-variant-numeric: tabular-nums` on the link count.
 
@@ -2063,11 +2303,15 @@ The `docs/SPEC.md` §2 visual clauses, ticked for every surface this stage ships
 
 **Two dependencies, no package and no binding.**
 
-- **`03-S4` (`03-reservations-and-transport.md`, wave 3, closing `BKG-02`)** must land first: linking
-  to a reservation needs reservations that can be created and edited. That is the `DOC-04 → BKG-02`
-  edge — and `03-S4` cites the same cut from its own side in its own `03-S4` **Reference rows**,
-  so the two plans agree about which of them is the record and which is the surface. It is why this
-  stage is wave 4.
+- **`03-S4` (`03-reservations-and-transport.md`, wave 3, closing `BKG-02`)** must land first, for two
+  reasons that are now the same reason. Linking to a reservation needs reservations that can be
+  created and edited — that is the `DOC-04 → BKG-02` edge, and `03-S4` cites the same cut from its own
+  side, so the two plans agree about which is the record and which is the surface. And this stage
+  mounts its attachments section into `src/components/modules/book/booking-dialog.tsx`, which `03-S4`
+  edits in wave 3, so this stage starts from that landed edit rather than from HEAD. It is why this
+  stage is wave 4, and why its claim on that file is one import and one conditional mount and nothing
+  else. `03-S8` holds the same file in wave 6 and starts from **this** stage's edit in turn; the three
+  waves are 3, 4 and 6, and none of them runs beside another.
 - **The `trip_file_links` table and its backfill are a wave-0 dependency**, stated above and executed
   by `00-foundations.md`.
 - **`12-verification-protocol.md` §7.2 and §7.3** are inherited as `06-S1` records them.
@@ -2306,18 +2550,21 @@ criterion about it — it is measured:
 
 ```sh
 node scripts/ultrabuild/check-plan-collisions.mjs 06
+node scripts/ultrabuild/check-plan-refs.mjs 06
 ```
 
-Its output at the commit this plan was written against, pasted verbatim:
+The second one is here for the same reason as the first: a stage id cited in prose is a claim about a
+sibling plan, and a `NN-Sn` token that no `## Stage` heading defines is a dangling reference that
+reads exactly like a real one. Both outputs are pasted verbatim.
 
 ```
-plans 13 · stages 84 · owned paths 524
+plans 13 · stages 91 · owned paths 538
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
 no same-wave exclusive collisions
 
-touched by more than one plan in different waves (2) — legal; each plan must name the other:
+touched by more than one plan in different waves (3) — legal; each plan must name the other:
   src/server/fns/files.ts
       00-foundations.md  00-S3  wave 0  (edit)
       06-documents-and-media.md  06-S1  wave 1  (edit)
@@ -2328,16 +2575,33 @@ touched by more than one plan in different waves (2) — legal; each plan must n
       06-documents-and-media.md  06-S3  wave 2  (append)
       06-documents-and-media.md  06-S5  wave 3  (append)
       07-collaboration-and-sharing.md  07-S10  wave 5  (edit)
+  src/components/modules/book/booking-dialog.tsx
+      03-reservations-and-transport.md  03-S4  wave 3  (edit)
+      03-reservations-and-transport.md  03-S8  wave 6  (edit)
+      06-documents-and-media.md  06-S6  wave 4  (edit)
 ```
 
-**No same-wave exclusive collision involves this plan**, which is the line that gates it.
+```
+plan 06: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
+```
 
-**Both cross-wave paths are named in the stage that owns them**, as required:
+**No same-wave exclusive collision involves this plan**, which is the line that gates it. **Zero
+dangling stage references**, which is the line that gates every `03-S4`, `05-S3`, `08-S7`, `11-S1`
+and `02-S11` this file cites at a sibling.
 
-| Path                        | This plan's claims                       | The sibling claims, named where                                                                                                                     |
-| --------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/server/fns/files.ts`   | `06-S1` w1, `06-S2` w2, `06-S6` w4       | `00-S3` (`00-foundations.md`, wave 0, the audit trail) — named under **Owned paths** in all three of `06-S1`, `06-S2` and `06-S6`.                  |
-| `src/server/repos/index.ts` | `06-S3` w2 (append), `06-S5` w3 (append) | `01-S6` (`01-trips-core.md`, wave 4) and `07-S10` (`07-collaboration-and-sharing.md`, wave 5) — named under **Owned paths** in `06-S3` and `06-S5`. |
+**All three cross-wave paths are named in the stage that owns them**, as required:
+
+| Path                                             | This plan's claims                       | The sibling claims, named where                                                                                                                                                                        |
+| ------------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/server/fns/files.ts`                        | `06-S1` w1, `06-S2` w2, `06-S6` w4       | `00-S3` (`00-foundations.md`, wave 0, the audit trail) — named under **Owned paths** in all three of `06-S1`, `06-S2` and `06-S6`.                                                                     |
+| `src/server/repos/index.ts`                      | `06-S3` w2 (append), `06-S5` w3 (append) | `01-S6` (`01-trips-core.md`, wave 4) and `07-S10` (`07-collaboration-and-sharing.md`, wave 5) — named under **Owned paths** in `06-S3` and `06-S5`.                                                    |
+| `src/components/modules/book/booking-dialog.tsx` | `06-S6` w4                               | `03-S4` (`03-reservations-and-transport.md`, wave 3, the stop picker) and `03-S8` (same plan, wave 6, the stay branch) — named under **Owned paths** in `06-S6`, with the reason it is claimed at all. |
+
+**The third row is new, and it is the repair of a defect rather than an extension of scope.** `06-S6`
+used to defer the booking-side attachment picker to `03-S4`, and `03-S4` refuses it in writing. The
+behaviour was therefore planned in neither plan while `DOC-04` was marked done in this one. Taking one
+narrow, correctly-waved claim on the booking editor is what makes the row honest; leaving the claim
+out and marking the row done was the finding.
 
 **One collision existed and was removed rather than argued away.** An earlier draft of `06-S6`
 extended `loadTripFiles` in `src/routes/_app/-server/trip.ts`, and the check reported it against
@@ -2365,15 +2629,18 @@ n `` form. The fourth, `04-S2`, is **not** `04-budget-and-currencies.md`'s `04-S
 `12-verification-protocol.md:26`, which the script reads as a stage because it cannot tell a fenced
 example from a real heading.
 
-**What the header numbers are worth.** `plans 13 · stages 84 · owned paths 524` is a snapshot of a
-set several runs were still writing while this file was being written. It read
+**What the header numbers are worth.** `plans 13 · stages 91 · owned paths 538` is a snapshot of a
+set several runs were still writing while this file was being written — it does not even move
+monotonically, because a sibling plan can drop a claim between two runs of the script, and this one
+read `owned paths 553` minutes before it read `538`. Earlier in the same session it read
 `plans 8 · stages 48 · owned paths 284` at the start of this plan's own session,
 `plans 12 · stages 69 · owned paths 442` an hour later, `plans 12 · stages 71 · owned paths 448`
-twenty minutes after that, `plans 13 · stages 80 · owned paths 498` after that, and the number above
-at the end — because `02-places-and-maps.md`, `03-reservations-and-transport.md`,
-`05-packing-and-todos.md` and `08-product-modules.md` all appeared in between. The header will not
-reproduce exactly and it is not the part that matters. The three findings under it are properties of
-**this** file's ownership and hold until a sibling changes what it claims. **The stage that executes
+twenty minutes after that, `plans 13 · stages 80 · owned paths 498` after that, and
+`plans 13 · stages 84 · owned paths 524` when the previous revision of this section was written —
+because `02-places-and-maps.md`, `03-reservations-and-transport.md`, `05-packing-and-todos.md` and
+`08-product-modules.md` all appeared in between. The header will not reproduce exactly and it is not
+the part that matters. The findings under it are properties of **this** file's ownership and hold
+until a sibling changes what it claims. **The stage that executes
 any part of this file re-runs the script first**, reads the same three things, and treats a new
 same-wave line as a blocker rather than as a note. That re-run is part of this plan's gate, not a
 courtesy.

@@ -29,11 +29,11 @@ Neither screen is a skeleton, and no stage here rewrites one.
 and `deleteLegFn`. Both validate with Zod, both resolve a tenant scope through `appScope()` and both
 mirror into the trip's Durable Object.
 
-**The tables are richer than the screens.** `reservations` (`src/server/db/schema.ts:694-741`)
+**The tables are richer than the screens.** `reservations` (`src/server/db/schema.ts:694-742`)
 already carries `day_id`, `end_day_id`, `place_id`, `assignment_id` and `transport_id`, and only the
 first is ever set from the product. `transports` (`:644-692`) already carries a departure and an
 arrival endpoint each with a code, a coordinate pair and an IANA zone, and the form writes them as
-free text. `day_accommodations` (`:605-642`) is complete — day range, check-in window, check-out,
+free text. `day_accommodations` (`:605-638`) is complete — day range, check-in window, check-out,
 confirmation number, price — and `src/routes/_app/trips/$tripId/-server/plan.ts:218` reads exactly
 one field of it, the name.
 
@@ -113,8 +113,11 @@ sibling plans do:
   that seam and nothing wider.
 - **The expense ledger** that `03-S4` writes into is owned entirely by `04-budget-and-currencies.md`.
   `04-S3` (`MNY-02`, wave 2) owns editing an expense; `04-S1` (`MNY-07`, wave 1) owns the frozen-rate
-  columns. `03-S4` calls `createExpense` and writes no SQL of its own — see its **Server** section for
-  the ownership reason, which is not merely stylistic.
+  columns. `03-S4` calls `createExpense`, `updateExpense` and `getExpense` as they are exported today,
+  changes not one line of `src/server/repos/expenses.ts`, and keeps its half of the link on
+  `reservations.expense_id`, a column on a table it owns. Its **Owned paths** section gives the
+  ownership reason, which is not merely stylistic: `expenses.ts` carries an exclusive claim in every
+  wave from 0 to 3, including `03-S4`'s own.
 - **The file library** that `03-S7` uploads a confirmation file through is `DOC-01`, closed by
   `06-S1` (`06-documents-and-media.md`, wave 1). `03-S7` depends only on behaviour already on disk —
   `uploadTripFileFn`, `recordFile`, the R2 storage key — and not on anything `06-S1` adds, which is
@@ -218,14 +221,14 @@ effort **S|M|L**. `` on the line under `### Stage id`, because a stage with no p
 stage below lists any of them under Owned paths.** What this plan needs from wave 0, gathered here
 once and restated by the stage that needs it:
 
-| Requirement                                               | Asked by | Kind            |
-| --------------------------------------------------------- | -------- | --------------- |
-| `transports.arrival_day_id`                               | `03-S1`  | additive column |
-| `transport_legs` table                                    | `03-S2`  | additive table  |
-| `expenses.reservation_id` + `createExpenseInput` widening | `03-S4`  | additive column |
-| `user_settings.mask_confirmation_codes`                   | `03-S6`  | additive column |
-| `reservations.imported_at`                                | `03-S7`  | additive column |
-| `day_accommodations.reservation_id`                       | `03-S8`  | additive column |
+| Requirement                             | Asked by | Kind            |
+| --------------------------------------- | -------- | --------------- |
+| `transports.arrival_day_id`             | `03-S1`  | additive column |
+| `transport_legs` table                  | `03-S2`  | additive table  |
+| `reservations.expense_id`               | `03-S4`  | additive column |
+| `user_settings.mask_confirmation_codes` | `03-S6`  | additive column |
+| `reservations.imported_at`              | `03-S7`  | additive column |
+| `day_accommodations.reservation_id`     | `03-S8`  | additive column |
 
 Every one is additive: nullable or defaulted, nothing dropped, nothing renamed, nothing narrowed, so
 a rollback keeps working against the new schema (`ARCHITECTURE.md` §9). No stage needs a token that
@@ -314,7 +317,7 @@ the stage which clears it.
 
 - `transports.arrival_day_id` — `text`, **nullable**, `REFERENCES days(id) ON DELETE SET NULL`, with
   `index('transports_arrival_day_idx').on(t.arrivalDayId)`. It sits beside the existing
-  `day_id` (`src/server/db/schema.ts:650`), which from this stage forward is read as the **departure**
+  `day_id` (`src/server/db/schema.ts:652`), which from this stage forward is read as the **departure**
   day. No column is renamed: `day_id` keeps its name, its index (`transports_day_idx`, `:686`) and its
   meaning for every row already written, and the new column is simply the second end of the same
   journey. A rollback reads `day_id` exactly as it does today and ignores a column it does not know.
@@ -764,9 +767,20 @@ it, and it holds no table of its own, so it cannot go stale the way a checked-in
   field and the save button. The add and remove buttons are real `IconButton`s with accessible names
   ("Add a stop after Nagoya"), never bare glyphs.
 
-**Motion.** Inserting or removing a station animates height and opacity at `--duration` on
-`--ease-out-quint`, transform and opacity only, and collapses to an instant swap under
-`prefers-reduced-motion: reduce`. Nothing exceeds 260ms and nothing is linear.
+**Motion, and the property it deliberately does not touch.** `docs/DESIGN.md` — "Transform and
+opacity only. Never animate layout-affecting properties." — rules out the obvious implementation
+here, which is to transition the chain's height as a row is inserted or removed. This stage does not
+do that, and the rule is restated in the stage because a chain editor is exactly the surface on which
+somebody reaches for a height transition by reflex.
+
+What actually animates: an inserted station row mounts at `opacity: 0` and `translateY(-4px)` and
+settles to `opacity: 1` / `translateY(0)` over `--duration` on `--ease-out-quint`; a removed row
+leaves at `--duration-fast` to `opacity: 0` / `translateY(-4px)` and is unmounted on the transition's
+end. The rows below it take their new positions in the same frame the row mounts or unmounts — the
+list's height changes instantly and is never transitioned — so nothing layout-affecting is ever
+interpolated and no reflow is animated. The chevron that folds a leg's detail rotates 90° on
+`transform` alone. Under `prefers-reduced-motion: reduce` both directions collapse to an instant
+mount and unmount with no transition at all. Nothing exceeds 260ms and nothing is linear.
 
 **Tokens.** None missing. The rail is `--color-edge`, the station dot `--color-brand` at rest and
 `--color-accent` when its field has focus, both checked at AA against `--color-surface` and
@@ -1049,7 +1063,7 @@ trip's ledger without a second confirmation.
 **Agreement with the row, and the behaviour deferred by name.** The row is right that the write path
 is complete (`createBookingFn`, `updateBookingFn`, `setBookingStatusFn`, `deleteBookingFn`), that
 `src/components/modules/book/booking-form.ts` (487 lines) already carries a per-type field shape and
-its validation, and that `reservations.assignment_id` (`src/server/db/schema.ts:701-703`) exists with
+its validation, and that `reservations.assignment_id` (`src/server/db/schema.ts:705-707`) exists with
 no UI behind it. Of the three things it names as missing, two are this stage's and one is not:
 
 - **Attachments** — a file linked to a booking — are `DOC-04`'s, in `06-documents-and-media.md` at
@@ -1073,36 +1087,67 @@ wave 4).
 - `src/components/modules/book/booking-form.ts` — edit. The draft gains `assignmentId`; `bookingShape`
   gains the field for the types that can carry it.
 - `src/components/modules/book/booking-dialog.tsx` — edit. The stop picker, and the ledger notice.
+  `06-S6` (`06-documents-and-media.md`, wave 4) and `03-S8` (wave 6) hold this file in later waves;
+  this stage is the first of the three and leaves the file's structure alone for them.
 - `src/components/modules/book/index.ts` — edit.
 - `src/components/modules/book/__tests__/booking-form.test.ts` — edit. Extended, never rewritten.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append.
 - `e2e/reservations-and-transport.visual.spec.ts` — append.
 - `e2e/__screenshots__/reservations-and-transport.visual.spec.ts/` — append.
 
-**The path this stage must not claim, and why that shapes its design.**
-`src/server/repos/expenses.ts` is claimed by `00-S1` (wave 0), `04-S1` (wave 1), `04-S3` (wave 2) and
-`04-S6` (**wave 3 — this stage's own wave**). Two exclusive claims on that file in wave 3 is precisely
-the clobber `check-plan-collisions.mjs` reports, so this stage writes its ledger line by **calling**
-`createExpense` and edits neither that module nor `src/server/fns/costs.ts`, which carries the same
+**The path this stage must not claim, why that shapes its design, and the defect an earlier draft of
+this stage shipped.** `src/server/repos/expenses.ts` is claimed by `00-S1` (wave 0), `04-S1` (wave 1),
+`04-S3` (wave 2) and `04-S6` (**wave 3 — this stage's own wave**). Two exclusive claims on that file
+in wave 3 is precisely the clobber `check-plan-collisions.mjs` reports, so this stage writes its
+ledger line by **calling** `createExpense`, `updateExpense` and `getExpense` exactly as they are
+exported today, and edits neither that module nor `src/server/fns/costs.ts`, which carries the same
 four claimants.
+
+An earlier draft of this stage accepted that constraint and then broke it in the only way that is
+worse than ignoring it: it put the back-link on `expenses.reservation_id`, which requires widening
+`createExpenseInput` and `updateExpenseInput` and adding a `findExpenseByReservation` read, and
+**filed that widening onto `00-S1`**, which does not carry it. Measured: `00-S1`'s **Owned paths**
+entry for that file says "the Zod input for the settlement writer gains the three" currency columns
+and nothing else; and `04-S3`, the wave-2 stage that owns the ledger row itself, states in its own
+prose that `expenses` "has **no** reservation reference at all … and giving it one is
+`03-reservations-and-transport.md`'s column to add, not this stage's." No stage anywhere in the plan
+set supplied it. The stage as written could not have executed.
+
+**The link therefore lives on the side this stage owns outright: `reservations.expense_id`.** The
+direction is the only thing that changes; the behaviour the row asks for is identical, and the
+foreign key does more work pointing this way than it did pointing the other way — see the delete rule
+below. Nothing in `04-budget-and-currencies.md` has to change for this stage to execute: `04-S3`'s
+deferral of a read-only title on a booking-derived expense stands exactly as written, because the
+statement it rests on ("`expenses` has no reservation reference") remains true. The reverse read —
+"which booking produced this line" — is available without touching `expenses.ts` at all, because
+`listTripReservations` already returns the whole reservation row and the link is one of its columns.
 
 ### Data and migration
 
-**One additive column, and one widening that rides with it, both belonging to wave 0.**
+**One additive column, belonging to the wave-0 foundations schema stage. No widening of any file this
+stage does not own.**
 
-- `expenses.reservation_id` — `text`, **nullable**, `REFERENCES reservations(id) ON DELETE SET NULL`,
-  with `index('expenses_reservation_idx').on(t.reservationId)`. It is the back-link that makes the
-  side effect idempotent: without it, editing a booking's price three times leaves three ledger lines
-  and the trip's total is wrong in a way the reader cannot even see the cause of.
-- The **widening** of `createExpenseInput` and `updateExpenseInput` in `src/server/repos/expenses.ts`
-  to accept `reservationId`, plus one read — `findExpenseByReservation(scope, reservationId)`. This is
-  named here as a requirement and **is not built here**: `00-S1` already owns that file in wave 0, so
-  the widening travels with the stage that owns it, one wave before anything in this plan runs.
+- `reservations.expense_id` — `text`, **nullable**, `REFERENCES expenses(id) ON DELETE SET NULL`, with
+  `index('reservations_expense_idx').on(t.expenseId)`, declared beside the eight indexes the table
+  already carries (`src/server/db/schema.ts:728-736`). It is the back-link that makes the side effect
+  idempotent: without it, editing a booking's price three times leaves three ledger lines and the
+  trip's total is wrong in a way the reader cannot even see the cause of.
+- **`ON DELETE SET NULL` is load-bearing in this direction, and it removes code rather than adding
+  it.** A reader who deletes a cost line from the ledger — a screen this plan does not own and cannot
+  change — leaves the booking pointing at a row that is gone. With the link on this side, SQLite nulls
+  the column as part of that delete and the booking is unlinked with no code in this plan running, no
+  cross-module hook, and no scheduled repair. Pointing the other way, that same delete would have
+  needed `04-budget-and-currencies.md` to know about bookings.
+- **Everything the side effect calls already exists and is exported**: `createExpense` (`:288`),
+  `updateExpense` (`:318`), `getExpense` (`:265`) and `deleteExpense` (`:399`) in
+  `src/server/repos/expenses.ts`. `createExpenseInput` (`:107`) already accepts every field this stage
+  supplies — `tripId`, `title`, `amountMinor`, `currency`, `category`, `dayId`, `placeId`, `spentOn`
+  — so not one line of that file changes.
 - Migration: the next ordinal `pnpm db:generate` mints. It **backfills nothing** — every existing
-  expense keeps a null link, which reads as "this line was entered by hand", which is true.
+  booking keeps a null link, which reads as "this booking has no cost line", which is true.
 
 `reservations.assignment_id` needs no schema work: the column, its FK to `day_assignments` and its
-index are already on disk (`:701-703`, `:722`).
+index are already on disk (`:705-707`, `:735`).
 
 **Money, on both sides of the side effect.** `reservations.price_minor` and `expenses.amount_minor`
 are both **integer counts of minor units**, each beside a `text(3)` ISO-4217 currency column, and the
@@ -1115,17 +1160,28 @@ for display only.
 lead their composite index with it (`reservations_org_trip_idx`, `expenses_org_trip_idx`), and every
 statement either repository issues begins at `tenantFilter()` — `eq(table.organizationId,
 scope.ctx.organizationId)` — with callers able only to `AND` predicates onto it. The new
-`expenses.reservation_id` link is bounded by the tenant at both ends: a reservation belonging to
-another organization cannot be reached in order to be linked in the first place.
+`reservations.expense_id` link is bounded by the tenant at both ends: a reservation belonging to
+another organization cannot be reached in order to be linked in the first place, and an expense id
+that resolves in another organization does not resolve through `getExpense(scope, …)` at all, because
+that read begins at the same `tenantFilter()`.
 
 ### Server (repo, server function, Zod)
 
-**Repository — `src/server/repos/reservations.ts`.** `reservationFields` gains
-`assignmentId: idSchema.nullish()`, and `assertReferences` — the private guard at `:187` that already
-proves a `dayId`, an `endDayId`, a `placeId` and a `transportId` belong to the booking's own trip
-inside the caller's own tenant — gains the same proof for the assignment: it is resolved through
-`dayAssignmentsRepository` and its `tripId` is compared with the booking's. A stop id from another
-trip is a `NotFoundError`, not a booking pointing at somebody else's afternoon.
+**Repository — `src/server/repos/reservations.ts`.** Two changes, both inside the file this stage
+owns.
+
+- `reservationFields` gains `assignmentId: idSchema.nullish()`, and `assertReferences` — the private
+  guard at `:187` that already proves a `dayId`, an `endDayId`, a `placeId` and a `transportId` belong
+  to the booking's own trip inside the caller's own tenant — gains the same proof for the assignment:
+  it is resolved through `dayAssignmentsRepository` and its `tripId` is compared with the booking's. A
+  stop id from another trip is a `NotFoundError`, not a booking pointing at somebody else's afternoon.
+- One new exported function, `linkReservationExpense(scope, reservationId, expenseId | null)`. It is
+  the **only** way `reservations.expense_id` is ever written, and `expenseId` is deliberately **not**
+  added to `reservationFields`, so no client payload can set it: the link is a consequence of the
+  server's own side effect, never a field a caller supplies. The function resolves the booking through
+  `reservationsRepository.requireById(scope, …)`, and when the id is non-null resolves the expense
+  through `getExpense(scope, expenseId)` — a read that already exists and needs no widening — and
+  requires its `tripId` to equal the booking's before writing. A mismatch is a `NotFoundError`.
 
 **Server function — `src/server/fns/reservations.ts`.**
 
@@ -1137,17 +1193,37 @@ placeName, startTime }`, read through `getTripItinerary` — a function that alr
   repository function to that module and does not claim it. That matters twice over: `itinerary.ts` is
   claimed by `07-S9` in wave 3, this stage's own wave.
 - **The ledger side effect**, in `createBookingFn` and `updateBookingFn`, after the reservation write
-  succeeds and inside the same handler:
-  - `priceMinor > 0` and no linked expense → `createExpense(scope, { tripId, reservationId, title,
-amountMinor: priceMinor, currency: currency ?? trip.currency, spentOn: startDate ?? trip.startDate,
-category: <mapped from the booking type>, createdBy: scope.ctx.userId })`.
-  - `priceMinor > 0` and a linked expense exists → `updateExpense` with the new amount and title.
-  - `priceMinor === 0` and a linked expense exists → the link is **not** silently deleted. Deleting a
-    ledger line because a price was blanked destroys a record the reader may have split with three
-    other people. Instead the booking is unlinked and the expense survives, and the dialog says so in
-    one sentence before it saves.
-  - The category mapping is total over `RESERVATION_TYPES` and lands inside `EXPENSE_CATEGORIES`
-    (`src/server/db/schema.ts:191`), which the column's `CHECK` constraint enforces anyway.
+  succeeds and inside the same handler. `reservation.expenseId` is the idempotency key for every
+  branch, and it is read from the row that was just written rather than from the request:
+  - `priceMinor > 0` and `expenseId === null` → `createExpense(scope, { tripId, title, amountMinor:
+priceMinor, currency, spentOn, category })`, then `linkReservationExpense(scope, reservation.id,
+expense.id)`. Two writes, and the second is what makes the third save of the same booking an update
+    rather than a fourth ledger line.
+  - `priceMinor > 0` and `expenseId !== null` → `updateExpense(scope, reservation.expenseId, { title,
+amountMinor: priceMinor, currency })`. No new row, no new link.
+  - `priceMinor` cleared or zero and `expenseId !== null` → `linkReservationExpense(scope,
+reservation.id, null)` and **nothing else**. The ledger line is not deleted: deleting it because a
+    price was blanked destroys a record the reader may have split with three other people. The
+    expense survives, unlinked, and the dialog says so in one sentence before it saves.
+  - **Deleting the booking** deletes no expense either, for the same reason, and the row simply goes;
+    the ledger keeps a line that no longer says which booking it came from, which is what the reader
+    would have got had they typed it by hand.
+  - **The three values that are not simply copied**, each with its fallback stated because
+    `createExpenseInput` requires two of them:
+    - `currency` — the booking's `currency` when it has one, otherwise the trip's. Both are
+      `text(3)` ISO-4217 columns and neither is converted; a booking priced in yen produces a ledger
+      line in yen, and turning that into the trip's accounting currency is `04-S5`'s subject and not
+      this stage's.
+    - `spentOn` — `dateSchema` and **required**. The chain is the booking's `start_date`, then the
+      linked day's `date` (`days.date`, `schema.ts:408`), then the trip's `start_date`. All three are
+      nullable, so when every one of them is null **no ledger line is written at all** and the dialog
+      says why in the notice under the price: "Give this booking a date and its cost will be added to
+      the trip's costs." A guessed date on a money row is worse than no row.
+    - `category` — a total mapping over `RESERVATION_TYPES` landing inside `EXPENSE_CATEGORIES`
+      (`src/server/db/schema.ts:192`), which the column's `CHECK` constraint enforces anyway. Total,
+      so a type added later is a compile error rather than a silent `other`.
+  - **No arithmetic anywhere in the side effect.** `price_minor` is assigned to `amount_minor` as one
+    integer to another, per the money rule stated under **Data and migration** above.
 - **The failure rule.** A ledger write that fails must not turn a saved booking into an error the
   reader will retry, producing two bookings. The reservation write is the transaction; the ledger
   write is attempted after it and, on failure, is logged and reported to the client as a
@@ -1186,10 +1262,14 @@ furniture do the rest. **No new primitive, and no new product component.**
   "day 7" both work.
 - Choosing a stop that already sits on a day **fills the empty date** from that day rather than
   leaving the reader to retype it, and never overwrites a date they typed themselves.
-- A **ledger line** notice under the price: "A £42.00 line will be added to this trip's costs" while
-  the price is above zero and no line exists yet; "This booking's cost line will be updated to £48.00"
-  when one does. The notice states the effect before the save, because a side effect the reader
-  discovers afterwards is a side effect they did not agree to.
+- A **ledger line** notice under the price, which states the effect _before_ the save, because a side
+  effect the reader discovers afterwards is a side effect they did not agree to. Four sentences, one
+  per branch of the side effect above: "A £42.00 line will be added to this trip's costs" (above zero,
+  no link yet); "This booking's cost line will be updated to £48.00" (above zero, linked); "This
+  booking's cost line will stay in the trip's costs, no longer linked to this booking" (price cleared,
+  linked); and "Give this booking a date and its cost will be added to the trip's costs" (above zero,
+  no date anywhere in the chain). The money in the first two is `formatMoneyMinor` with
+  `tabular-nums`, in the booking's own currency.
 
 **States.**
 
@@ -1217,22 +1297,33 @@ the notice is `formatMoneyMinor` with `tabular-nums`.
 
 **No countable row of this stage's own**, with one deliberate exception worth naming: the ledger line
 it creates is an `expenses` row, and `expenses` has no metric in `USAGE_METRICS` either — the eight
-`assertQuota` call sites do not include `createExpense`. So this stage neither adds a metric nor
+`assertQuota` call sites do not include `createExpense`, and this stage does not add one, because
+adding a quota call inside `expenses.ts` would mean editing a file it is not allowed to claim. So this stage neither adds a metric nor
 bypasses one; it creates at most one ledger row per booking write, bounded by the bookings the trip
 already bounds. Nothing is added to `resolveLimits()` or `PLAN_QUOTAS`, and
 `src/server/billing/__tests__/limits.test.ts` gains no case.
 
 ### Tenant isolation test
 
-Appended as one `describe` block. Covered: `createReservation`, `updateReservation`, `getReservation`,
-`listTripReservations`, `setReservationStatus`, `deleteReservation`, and the widened
-`assertReferences`.
+Appended to `src/server/repos/__tests__/tenant-isolation.test.ts` as one `describe` block, built on
+the same two-organization `createScope()` fixtures the file already uses. Covered:
+`createReservation`, `updateReservation`, `getReservation`, `listTripReservations`,
+`setReservationStatus`, `deleteReservation`, the widened `assertReferences`, and the new
+`linkReservationExpense`.
 
-The new cases: A creating a booking whose `assignmentId` is one of B's stops is a `NotFoundError`; A
-updating its own booking to point at B's stop is the same; and — the one that matters for the side
-effect — A cannot cause a ledger row to be written into B's organization by any combination of ids,
-which is asserted by counting B's `expenses` rows before and after every attempt. B's reservations and
-B's expenses are both re-read afterwards and must be unchanged.
+The new cases, each scoped by `organization_id` on both sides of the link:
+
+- A creating a booking whose `assignmentId` is one of B's stops is a `NotFoundError`; A updating its
+  own booking to point at B's stop is the same.
+- A calling `linkReservationExpense` with **B's reservation id** is a `NotFoundError` from the
+  `requireById` that opens the function — it never reaches the expense at all.
+- A calling `linkReservationExpense` on **its own booking** with **B's expense id** is a
+  `NotFoundError`, because `getExpense(scopeA, …)` filters on A's `organization_id` and returns null.
+  This is the case that proves the link cannot be used to reach across tenants, and it is the reason
+  the function resolves the expense through a scoped read rather than trusting the id.
+- A cannot cause a ledger row to be written into B's organization by any combination of ids, asserted
+  by counting B's `expenses` rows before and after every attempt. B's reservations and B's expenses
+  are both re-read afterwards and must be unchanged, including `expense_id` on B's bookings.
 
 ### Verification
 
@@ -1243,8 +1334,11 @@ B's expenses are both re-read afterwards and must be unchanged.
 - `src/components/modules/book/__tests__/booking-form.test.ts` — the stop field is offered for every
   type except the stay; choosing a stop fills an empty date and never overwrites a typed one; a draft
   with a stop from a day the trip does not have is invalid.
-- A new case set in the same file for the ledger notice's copy: above zero with no link, above zero
-  with a link, exactly zero with a link.
+- A new case set in the same file for the ledger notice's copy, one per branch: above zero with no
+  link, above zero with a link, price cleared with a link, and above zero with no date anywhere in the
+  `start_date` → day `date` → trip `start_date` chain.
+- The `RESERVATION_TYPES` → `EXPENSE_CATEGORIES` mapping is total, asserted by iterating
+  `RESERVATION_TYPES` and requiring each result to be a member of `EXPENSE_CATEGORIES`.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — the block above.
 
 **Browser evidence.** Route `/trips/demo-trip-01-tokyo-and-kyoto/book`, six frames at 360, 1280 and
@@ -1291,6 +1385,16 @@ Per surface:
 reader is looking at; this stage is wave 3 and creates a row that stage can already edit. If `04-S3`
 has not landed, this stage does not ship the ledger side effect against a ledger it invented — it
 stops, because the alternative is a second opinion about money.
+
+**And one thing this stage explicitly does not ask of any other plan**, stated here because an earlier
+draft did ask and the request landed nowhere. It needs **no** change to `src/server/repos/expenses.ts`
+and **no** change to `src/server/fns/costs.ts`. It does not need `createExpenseInput` or
+`updateExpenseInput` widened, it does not need a `findExpenseByReservation` read, and it does not need
+`04-S3` to reverse the deferral it states in its own prose. The single schema requirement,
+`reservations.expense_id`, is on a table this stage's own repository owns and is listed in this plan's
+wave-0 requirements table alongside the other five. Verified with
+`node scripts/ultrabuild/check-plan-collisions.mjs 03`, whose output is pasted at the foot of this
+file: `src/server/repos/expenses.ts` appears under no stage of this plan, in any wave.
 
 No package outside the pinned set, no binding absent from `wrangler.jsonc`, no third-party service.
 The abbreviated-month defect of `12-verification-protocol.md` §7.2 is inherited by every stage that
@@ -1389,7 +1493,7 @@ stated there rather than left for whoever executes this to discover.
 ### Data and migration
 
 **No schema change and no migration.** Every column this stage reads exists: `transports.day_id`
-(`src/server/db/schema.ts:650`) and `transports.arrival_day_id` (`03-S1`) for a whole-record row;
+(`src/server/db/schema.ts:652`) and `transports.arrival_day_id` (`03-S1`) for a whole-record row;
 `transport_legs.departure_day_id`, `arrival_day_id` and `sort_order` (`03-S2`) for a segment row;
 `transports.sort_order` (`:679`, through the shared `sortOrder()` helper) for the record's own
 position. Nothing is filed for the wave-0 schema stage on this stage's account.
@@ -1650,7 +1754,7 @@ boolean the reference keeps. See **Data and migration**.
 **One deliberate divergence, stated because a critic will notice it.** The reference surfaces a
 transport record inside the bookings list as well as on its own tab. We do not duplicate a journey
 into two lists: the desk lists `reservations`, the transports tab lists `transports`, and a
-reservation of type `transport` that carries a `transport_id` (`src/server/db/schema.ts:704`) shows a
+reservation of type `transport` that carries a `transport_id` (`src/server/db/schema.ts:708`) shows a
 quiet link to the leg it belongs to. One record, one home, one place to edit it — and the reader can
 still walk between them in one click.
 
@@ -1788,10 +1892,19 @@ store.**
   disclosure, the switch and the reveal affordance. The reveal is reachable by keyboard: the code is a
   `button` with an accessible name that says what it does, not a `div` with a mouse handler.
 
-**Motion.** The disclosure animates height and opacity at `--duration` on `--ease-out-quint`; the
-reveal cross-fades at `--duration-fast`; the filter chips do not animate their layout at all, because
-a row that reflows while it is being read is worse than one that snaps. All collapse under
-`prefers-reduced-motion: reduce`.
+**Motion, and the property it deliberately does not touch.** A collapsing group is the second place
+in this plan where the reflex implementation is a height transition, and `docs/DESIGN.md` — "Transform
+and opacity only. Never animate layout-affecting properties." — forbids it. The group body is mounted
+and unmounted rather than transitioned open: on expand the rows enter from `opacity: 0` /
+`translateY(-4px)` to their rest values over `--duration` on `--ease-out-quint`, staggered 24ms and
+capped at eight rows so a forty-booking group does not take a second to finish; on collapse they leave
+at `--duration-fast` on opacity alone and the body unmounts on the last transition end. The panel's
+height changes in the frame the body mounts or unmounts and is never interpolated. The chevron rotates
+90° on `transform`. The reveal of a masked confirmation code cross-fades at `--duration-fast` between
+two absolutely positioned spans of the same measured width, so revealing a code does not move the row
+it sits in. The filter chips do not animate their layout at all, because a row that reflows while it
+is being read is worse than one that snaps. Under `prefers-reduced-motion: reduce` the stagger, the
+translate and the rotation are all dropped and only opacity remains.
 
 **Tokens.** None missing. The marker is `--color-warning-soft` with `--color-warning` text, the mask
 is `--color-ink-4` on `--color-surface-inset`, the group counts are `--color-ink-3` with
@@ -2144,7 +2257,7 @@ argument.**
   plan: `USAGE_METRICS` has none for a booking, and the sold ceiling that bounds them is `trips`. What
   is different here is the amplification — one click can write up to five hundred rows — so the bound
   is stated where it is enforced rather than assumed: `MAX_IMPORT_RESERVATIONS = 500` in the handler
-  (`booking-import.ts:50`) caps what can ever be staged, `MAX_IMPORT_BYTES = 5 * 1024 * 1024` (`:47`)
+  (`booking-import.ts:52`) caps what can ever be staged, `MAX_IMPORT_BYTES = 5 * 1024 * 1024` (`:50`)
   caps what can be read, the confirm validator caps the accepted list at 500, and the staged entry
   expires after `STAGED_IMPORT_TTL_SECONDS` whether it is confirmed or not.
 - No metric is added to `resolveLimits()` and none to `PLAN_QUOTAS`, so
@@ -2266,7 +2379,7 @@ two places.
 
 **Agreement with the row.** It is right that `day_accommodations` is complete —
 `start_day_id`, `end_day_id`, `check_in_time`, `check_in_end_time`, `check_out_time`,
-`confirmation_number`, `price_minor` and `currency` at `src/server/db/schema.ts:605-642` — that
+`confirmation_number`, `price_minor` and `currency` at `src/server/db/schema.ts:605-638` — that
 `src/server/repos/itinerary.ts` has a full repository for it (`createAccommodation`,
 `updateAccommodation`, `deleteAccommodation`, `listTripAccommodations`, `countAccommodationNights`),
 that `-server/plan.ts:218` surfaces only the name, and that `repo-data.md` §7.3 finds
@@ -2282,7 +2395,8 @@ Rows unblocked: none. No row lists `BKG-05` in its `dependsOn`.
   `src/routes/_app/trips/$tripId/-server/` already establishes.
 - `src/components/modules/book/stay-dialog.tsx` — new. The stay branch of the booking dialog.
 - `src/components/modules/book/booking-dialog.tsx` — edit. Choosing the stay type swaps in the stay
-  branch. `03-S4` holds this file in wave 3.
+  branch. `03-S4` (wave 3) and `06-S6` (`06-documents-and-media.md`, wave 4) hold this file in earlier
+  waves; this stage is the last of the three.
 - `src/components/modules/book/booking-form.ts` — edit. The stay draft and its rules. `03-S4` holds
   this file in wave 3.
 - `src/components/modules/book/bookings-timeline.tsx` — edit. A stay card reads as a stay: nights, not
@@ -2302,15 +2416,30 @@ Rows unblocked: none. No row lists `BKG-05` in its `dependsOn`.
   link instead of only its name. `07-S1` (wave 1), `01-S4` (wave 2), `02-S7` (wave 4) and `02-S9`
   (`02-places-and-maps.md`, wave 5) hold this file in earlier waves; `03-S5` deliberately does not,
   and its **Owned paths** heading says why.
+- `src/server/repos/itinerary.ts` — edit, and **only** to let the new column through the two
+  accommodation validators. `createAccommodationInput` (`:93-107`) and `updateAccommodationInput`
+  (`:110-123`) each gain one line, `reservationId: idSchema.nullish()`, and `createAccommodation`
+  (`:389`) gains the reference guard that matches the ones already beside it: when the id is set, the
+  reservation is resolved through `reservationsRepository.requireById(scope, …)` and its `tripId` must
+  equal the stay's, exactly as `requireTripDay` and `requirePlaceOfTrip` already do for the day range
+  and the place. Nothing else in the file is touched, and **no accommodation function is added** — a
+  second `createAccommodation` beside a working one would be a defect, not a plan. `01-S4` (wave 2),
+  `07-S9` (`07-collaboration-and-sharing.md`, wave 3) and `02-S9` (`02-places-and-maps.md`, wave 5)
+  hold this file in earlier waves; **wave 6 is the first in which it is free**, which is where this
+  stage already sits, and `node scripts/ultrabuild/check-plan-collisions.mjs 03` is what proves it
+  rather than a reading of those three files.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append.
 - `e2e/reservations-and-transport.visual.spec.ts` — append.
 - `e2e/__screenshots__/reservations-and-transport.visual.spec.ts/` — append.
 
-`src/server/repos/itinerary.ts` is **not** an owned path. Every repository function this stage needs
-already exists there and is exported; the gap was that nothing called them. Claiming the file to add
-nothing would be the second-worst outcome after not shipping — and it is already claimed by `01-S4`
-(wave 2), `07-S9` (wave 3) and `02-S9` (`02-places-and-maps.md`, wave 5), so the discipline is also
-mechanically enforced.
+**Why that one-line widening is claimed here rather than filed elsewhere.** Both validators are
+`z.object`s, so an unknown `reservationId` is not an error — it is silently **stripped** before the
+insert, and the stay would be written with a null link while every test that only checked the return
+value passed. A column supplied by wave 0 that no validator will carry is a column that does nothing.
+An earlier draft of this plan made exactly that mistake one stage away, on
+`src/server/repos/expenses.ts`, and `03-S4`'s **Owned paths** section records it; the difference here
+is that `itinerary.ts` is genuinely free in this stage's wave, so the fix is to own the two lines
+rather than to route around them.
 
 ### Data and migration
 
@@ -2325,13 +2454,13 @@ mechanically enforced.
 - Migration: the next ordinal `pnpm db:generate` mints. It **backfills nothing** — the four seeded
   stays keep a null link, which reads as "recorded without a booking", which is true.
 
-Everything else exists. In particular `reservations.end_day_id` (`:699`) is already the column a stay's
+Everything else exists. In particular `reservations.end_day_id` (`:703`) is already the column a stay's
 booking needs for its own end, and `RESERVATION_TYPES` already contains `accommodation` (`:176`), so no
 enum is widened and no `CHECK` constraint changes.
 
 **Money and scoping, stated for both records this stage writes.** `day_accommodations.price_minor` and
 `reservations.price_minor` are both **integer counts of minor units**, each beside a `text(3)`
-ISO-4217 `currency` (`:631-632`, `:728-729`), and the stay's nightly figure is never derived by
+ISO-4217 `currency` (`:626-627`, `:721-722`), and the stay's nightly figure is never derived by
 dividing one by the other — a total split by a count of nights is a number nobody was charged, so the
 total is what is stored and the per-night figure is not stored at all. Both tables carry
 `organization_id NOT NULL` and both lead their composite index with it
@@ -2340,12 +2469,19 @@ makes is bounded by `tenantFilter()` on the leading column.
 
 ### Server (repo, server function, Zod)
 
-**No repository function is added.** `createAccommodation` (`src/server/repos/itinerary.ts:389`),
-`updateAccommodation`, `deleteAccommodation`, `listTripAccommodations` and
-`countAccommodationNights` are all present, all `tenantFilter()`-scoped, and all already guard the day
-range: `createAccommodation` resolves both days with `requireTripDay` against the stay's own trip and
-raises a `NotFoundError` when the end day precedes the start. This stage calls them. Adding a second
+**No repository function is added, and one existing pair of validators is widened by one line each.**
+`createAccommodation` (`src/server/repos/itinerary.ts:389`), `updateAccommodation` (`:406`),
+`deleteAccommodation` (`:425`), `listTripAccommodations` (`:166`) and `countAccommodationNights`
+(`:433`) are all present, all `tenantFilter()`-scoped, and all already guard the day range:
+`createAccommodation` resolves both days with `requireTripDay` against the stay's own trip and raises a
+`NotFoundError` when the end day precedes the start. This stage calls them. Adding a second
 `createAccommodation` beside a working one would be a defect, not a plan.
+
+The one change inside that file is the `reservationId` field on `createAccommodationInput` and
+`updateAccommodationInput` plus its reference guard, described under **Owned paths** above with the
+reason it cannot be left to another stage: a `z.object` strips the unknown key rather than rejecting
+it, so without those two lines the co-created stay is written with a null link and no error is raised
+anywhere.
 
 **Server functions — `src/routes/_app/trips/$tripId/-server/stays.ts`.**
 
@@ -2372,7 +2508,11 @@ dates; the dates come from the days themselves, which is the whole point of a da
 
 **Authorisation.** `appScope()`, then `requireTrip`, then the repository's own `requireTripDay` and
 `requirePlaceOfTrip` guards, which are already written and already refuse a day or a place from
-another trip.
+another trip, and then the new `reservationId` guard beside them, which refuses a booking from another
+trip on the same terms. The stay's `reservationId` is never taken from the client payload in
+`createStayFn` — it is the id of the booking the same handler has just written — and in `updateStayFn`
+it is only ever cleared, never re-pointed, so the guard exists for the repository's own contract
+rather than for a path this stage exercises.
 
 **Realtime.** One `mirrorToRoom` patch per action, on the `trip` entity, carrying the stay id and its
 day range — not the whole record, because the room is a notification channel and D1 is the store.
@@ -2517,20 +2657,23 @@ no schema change beyond the one nullable column above.
 
 ## Cross-plan collisions
 
-Required by this plan's acceptance criteria and produced by
-`node scripts/ultrabuild/check-plan-collisions.mjs 03`, pasted verbatim so a reader can re-run it and
-get the same three findings. It is the one heading in this file that is neither a stage block nor part
-of the Area brief; `TEMPLATE.md` asks for no appendix and no status log, and this is neither — it is a
-measurement.
+Required by this plan's acceptance criteria. Two scripts, both run for plan `03` and both pasted
+verbatim so a reader can re-run them and get the same findings. Together they replace reading twelve
+sibling plans by hand, which is the method that produced two real collisions and four dangling
+references in earlier rounds. This is the one heading in this file that is neither a stage block nor
+part of the Area brief; `TEMPLATE.md` asks for no appendix and no status log, and this is neither — it
+is a measurement.
+
+### `node scripts/ultrabuild/check-plan-collisions.mjs 03`
 
 ```
-plans 13 · stages 91 · owned paths 550
+plans 13 · stages 91 · owned paths 538
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
 no same-wave exclusive collisions
 
-touched by more than one plan in different waves (15) — legal; each plan must name the other:
+touched by more than one plan in different waves (17) — legal; each plan must name the other:
   src/server/fns/reservations.ts
       00-foundations.md  00-S3  wave 0  (edit)
       03-reservations-and-transport.md  03-S4  wave 3  (edit)
@@ -2581,6 +2724,11 @@ touched by more than one plan in different waves (15) — legal; each plan must 
   src/components/planner/__tests__/ordering.test.ts
       01-trips-core.md  01-S4  wave 2  (edit)
       03-reservations-and-transport.md  03-S5  wave 4  (edit)
+  src/server/repos/itinerary.ts
+      01-trips-core.md  01-S4  wave 2  (edit)
+      02-places-and-maps.md  02-S9  wave 5  (edit)
+      03-reservations-and-transport.md  03-S8  wave 6  (edit)
+      07-collaboration-and-sharing.md  07-S9  wave 3  (edit)
   src/routes/_app/trips/$tripId/-server/plan.ts
       01-trips-core.md  01-S4  wave 2  (edit)
       02-places-and-maps.md  02-S7  wave 4  (edit)
@@ -2600,15 +2748,42 @@ touched by more than one plan in different waves (15) — legal; each plan must 
       05-packing-and-todos.md  05-S1  wave 3  (edit)
       05-packing-and-todos.md  05-S5  wave 5  (edit)
       07-collaboration-and-sharing.md  07-S2  wave 1  (edit)
+  src/components/modules/book/booking-dialog.tsx
+      03-reservations-and-transport.md  03-S4  wave 3  (edit)
+      03-reservations-and-transport.md  03-S8  wave 6  (edit)
+      06-documents-and-media.md  06-S6  wave 4  (edit)
 ```
 
-**The three findings, read in order.**
+### `node scripts/ultrabuild/check-plan-refs.mjs 03`
+
+```
+plan 03: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
+```
+
+Two things that output has to say, and does: **zero dangling stage references** — every `NN-Sn` token
+cited anywhere in this file is `DEFINED` by a `## Stage` heading in the plan whose prefix it carries,
+including the fourteen citations of stages in `00`, `01`, `02`, `04`, `05`, `06`, `07`, `09` and `11`
+— and **no missing Playwright invocation**, which for an area plan means every stage's **Verification**
+block reaches the runner named in `12-verification-protocol.md` rather than describing a screenshot in
+prose.
+
+**The three findings of the collision check, read in order.**
 
 **1. No same-wave exclusive collision involving this plan.** That is the line which decides whether
 two agents can be sent out at once, and it is the one this file is accountable for. It was not free.
 Two stages state a wave above their row's floor to get it, and one of them — `03-S5` — also gave up
 three files it would rather have owned and split its server work into a route-local module instead.
 The Area brief's third disagreement records both moves with the sibling stage that forced each.
+
+It is also the line that decided the **direction of one foreign key**. `03-S4` needs a link between a
+booking and the ledger line its price produces. `src/server/repos/expenses.ts` carries an exclusive
+claim in every wave from 0 through 3 — `00-S1`, `04-S1`, `04-S3`, `04-S6` — and `03-S4` is wave 3, so
+putting the column on `expenses` would have meant either a same-wave clobber with `04-S6` or a
+widening filed onto a stage that does not carry it. An earlier draft did the second of those, and it
+was a defect: no stage in the plan set supplied it, and `04-S3` states in its own prose that it will
+not. The link is therefore `reservations.expense_id`, on a table this plan's own repository owns, and
+`src/server/repos/expenses.ts` appears under **no stage of this plan in any wave** — which is what the
+absence of that path from the output above says.
 
 **2. Every cross-wave path the check lists is named in the stage that owns it, with the sibling stage
 id and its wave.** The table gathers the same information; the authority is each stage's own **Owned
@@ -2627,10 +2802,20 @@ paths** list.
 | `src/components/planner/ordering.ts`                | `03-S5` w4             | `01-S4` w2                                     |
 | `src/components/planner/plan-dnd.ts`                | `03-S5` w4             | `01-S4` w2                                     |
 | `src/components/planner/__tests__/ordering.test.ts` | `03-S5` w4             | `01-S4` w2                                     |
+| `src/server/repos/itinerary.ts`                     | `03-S8` w6             | `01-S4` w2, `07-S9` w3, `02-S9` w5             |
 | `src/routes/_app/trips/$tripId/-server/plan.ts`     | `03-S8` w6             | `07-S1` w1, `01-S4` w2, `02-S7` w4, `02-S9` w5 |
 | `src/server/repos/settings.ts`                      | `03-S6` w4             | `02-S2` w1, `09-S8` w3                         |
 | `src/routes/_app/settings/appearance.tsx`           | `03-S6` w4             | `02-S2` w1, `09-S8` w3                         |
 | `src/routes/_app/-server/trip.ts`                   | `03-S2` w2             | `07-S2` w1, `05-S1` w3, `05-S5` w5             |
+| `src/components/modules/book/booking-dialog.tsx`    | `03-S4` w3, `03-S8` w6 | `06-S6` w4                                     |
+
+Two entries appeared in that table only in the final pass and are worth naming as such, because both
+arrived from outside this file. `src/server/repos/itinerary.ts` is claimed by `03-S8` for the two
+lines that let `day_accommodations.reservation_id` through `createAccommodationInput` and
+`updateAccommodationInput`; wave 6 is the first wave in which that file is free, which is where the
+stage already sat. And `src/components/modules/book/booking-dialog.tsx` became a cross-plan path when
+`06-documents-and-media.md` claimed it for `06-S6` in wave 4 while this file was being revised — the
+three claims are in three different waves, so it is legal, and all three now name the other two.
 
 Two paths this plan claims are absent from the list because **no sibling plan claims them at all**:
 `src/server/repos/transports.ts` (`03-S1` w1, `03-S2` w2, `03-S5` w4) and
@@ -2667,12 +2852,13 @@ All eight stages of this file state their wave in the parsed form, so none is in
 **What the output cannot tell anyone, said here instead.** The header counts are a snapshot of a set
 several runs are still writing. While this file was being written the check reported, in order,
 `plans 8 · stages 48`, `plans 9 · stages 56`, `plans 13 · stages 80`, `plans 13 · stages 84`,
-`plans 13 · stages 87` and `plans 13 · stages 91` — four sibling plans and forty-three stages appeared
-between the first invocation and the last, and three of those stages took planner files this plan had
-already claimed, twice after a move made to avoid the previous one. So the header will not reproduce,
-and it is not the part that matters. The three findings under it are properties of **this** file's
-ownership and hold only until a sibling changes what it claims. Any agent executing a stage of this
-file therefore **re-runs the script before it writes a line**, reads the same three things, and treats
-a new same-wave line as a blocker rather than as a note. That re-run is part of this plan's gate, not
-a courtesy — and this section is the evidence that the failure mode it guards against is real,
-because it happened three times during the writing of this one file.
+`plans 13 · stages 87`, `plans 13 · stages 91 · owned paths 550` and, on the revision that produced
+the section you are reading, `plans 13 · stages 91 · owned paths 538` — the unique-path count moved by
+fifteen between two runs minutes apart, with four sibling plans dirty in the working tree at the time.
+So the header will not reproduce, and it is not the part that matters. The findings under it are
+properties of **this** file's ownership and hold only until a sibling changes what it claims. Any
+agent executing a stage of this file therefore **re-runs both scripts before it writes a line**, reads
+the same findings, and treats a new same-wave line or a new dangling reference as a blocker rather
+than as a note. That re-run is part of this plan's gate, not a courtesy — and this section is the
+evidence that the failure mode it guards against is real, because it happened four times during the
+writing of this one file.

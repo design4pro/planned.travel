@@ -177,13 +177,38 @@ planned.travel's vocabulary against the eight `vacay_*` tables that already exis
 
 **Two contradictions with the row, both stated with evidence.**
 
-1. The row lists "week start" among the settings. **No column models it.** Measured:
-   `src/server/db/schema.ts` defines `vacay_plans` with `block_weekends`, `holidays_enabled`,
-   `company_holidays_enabled`, `carry_over_enabled` and `default_entitlement_days` and nothing else
-   beyond ids and timestamps; `loadVacay` returns a literal `weekStartsOn: 1`
-   (`src/routes/_app/-server/library.ts:133-134`) and `vacay.tsx:40-48` hard-codes a Monday-first
-   week. This plan opens no migration, so the switch is not built and the grid stays Monday-first.
-   The disposition is under **Blockers**.
+1. The row lists "week start" among the settings. **It is already a shipped setting, at both levels,
+   and this plan adds no second one.** Measured at HEAD, not recalled:
+   `organization_settings.week_starts_on` is `integer('week_starts_on').notNull().default(1)`
+   (`src/server/db/schema.ts:1812`) behind `organization_settings_week_start_chk`,
+   `"week_starts_on" BETWEEN 0 AND 6` (`:1823`); `user_settings.week_starts_on` is the nullable
+   override (`:1837`) behind `user_settings_week_start_chk`,
+   `("week_starts_on" IS NULL OR "week_starts_on" BETWEEN 0 AND 6)` (`:1852-1853`); and the two are
+   merged by one resolver — `weekStartsOn: user?.weekStartsOn ?? organization.weekStartsOn` in
+   `getEffectiveSettings` (`src/server/repos/settings.ts:278`, declared on `EffectiveSettings` at
+   `:244`, the function at `:254`). Both halves are editable by a traveller today: the workspace
+   default at `src/routes/_app/settings/organization.tsx:368` over `workspaceDefaultsInput`
+   (`src/routes/_app/-server/settings.ts:440`), and the personal override at
+   `src/routes/_app/settings/index.tsx:295` over `regionalSettingsInput` (`:190`), whose
+   "Workspace default" option writes `null` and hands the question back to the workspace.
+
+   So there is no missing column, **no CHECK to add and no migration to file** — and `vacay_plans`
+   deliberately does not get a `week_starts_on` of its own. It would be a second authority on a
+   question `organization_settings` and `user_settings` already answer, and the two would disagree
+   the first time a traveller changed one of them; this is the same argument `08-S3` makes against a
+   `journey_trips` join table, applied to a setting instead of a relation.
+
+   The real defect is narrower than the row suggests, and it is **fixed in this plan rather than
+   deferred**: nothing in the leave planner reads the resolved value. `loadVacay` publishes a literal
+   `weekStartsOn: 1` (`src/routes/_app/-server/library.ts:133-134`) that **no consumer reads** —
+   `grep -n weekStartsOn src/routes/_app/vacay.tsx` returns nothing — and the screen hard-codes a
+   Monday-first header instead (`WEEKDAY_INITIALS`, `vacay.tsx:41-49`, rendered at `:337`). The month
+   grid belongs to `08-S5`, so the wiring is `08-S5`'s and is specified there: it reads
+   `getEffectiveSettings` through this module's own server file and rotates the week, and `08-S7`,
+   which holds `library.ts` in wave 2, drops the unread literal in the same wave. This stage neither
+   reads nor writes the setting — an allowance and a carry-over do not care where a week begins — so
+   it is named here as measured fact and nowhere else in `08-S1`.
+
 2. The row calls the plan "auto-created per user". It already is: `ensurePlan`
    (`src/server/repos/vacay.ts:142`) creates the row and its membership on first read, behind the
    `vacay_plans_org_owner_unq` index, and `loadVacay` calls it on every load. That behaviour is
@@ -454,14 +479,13 @@ The `docs/SPEC.md` §2 visual clauses, ticked against the entitlement panel and 
 
 ### Blockers
 
-- **Per-plan week start is not built.** `vacay_plans` has no column for it and this plan opens no
-  migration; the grid stays Monday-first, which is what `loadVacay` and `vacay.tsx` already do.
-  Disposition: **defer**. It needs one additive `integer` column with a `0–6` CHECK, which is a
-  wave-0 requirement a future plan generation files from a wave-1 stage — `00-S1` absorbs
-  requirements filed by wave-1 stages and this stage does not file one, because the setting is not
-  worth a migration on its own.
-- Nothing else. No package outside the SPEC §3 pinned set, no binding absent from `wrangler.jsonc`,
-  no third-party service, and no dependency on an unlanded row in another plan.
+- **None.** No package outside the SPEC §3 pinned set, no binding absent from `wrangler.jsonc`, no
+  third-party service, no migration, and no dependency on an unlanded row in another plan.
+- Week start is explicitly **not** a blocker and is **not** deferred. The column exists on both
+  settings tables with the `0–6` CHECK, the resolver merges them and both editing surfaces ship —
+  every citation is under **Reference rows** above. What is missing is a read, and `08-S5` performs
+  it in wave 2. An earlier draft of this stage recorded a deferred migration here; it was wrong, and
+  it is recorded as wrong so the same claim is not re-derived.
 
 ## Stage 08-S2 — Below country level, and beside it: regions on the record and a bucket list that is not only countries
 
@@ -817,7 +841,6 @@ and this plan opens none.
 - `src/routes/_app/journey/$journeyId.tsx` — edit.
 - `src/routes/_app/collections/index.tsx` — edit. One import line follows the dialog move below; the
   collections stage of this wave, `08-S4`, deliberately does not name this file.
-- `src/components/journey/cover-art.tsx` — new (moved).
 - `src/components/journey/new-journey-dialog.tsx` — new (moved).
 - `src/components/journey/journey-actions.tsx` — new.
 - `src/components/journey/trip-link-dialog.tsx` — new.
@@ -826,7 +849,6 @@ and this plan opens none.
 - `src/components/collections/index.ts` — new. Created with the directory, exporting the moved
   dialog. `08-S4` adds its components in this same wave and imports them by path rather than editing
   this barrel, so two wave-1 stages never hold one file; `08-S9` folds them into it in wave 3.
-- `src/routes/_app/-ui/cover-art.tsx` — delete.
 - `src/routes/_app/-ui/create-dialogs.tsx` — delete.
 - `src/components/journey/__tests__/journey-actions.test.tsx` — new.
 - `src/components/journey/__tests__/trip-link-dialog.test.tsx` — new.
@@ -892,33 +914,57 @@ from `newId()`. No migration, no backfill, no index.
 
 - **Routes.** `/journey` and `/journey/$journeyId` already exist. **No route file is added and
   `pnpm generate-routes` is not run.** SSR stays the default.
-- **The three moves this plan makes, and who owns each.** This is the consolidated table the plan
+- **The two moves this plan makes, and who owns each.** This is the consolidated table the plan
   keeps in one place; no file appears in it twice, and no other stage moves a file out of
   `src/routes/_app/-ui/`.
 
   | From                                     | To                                                                                                             | Owner   |
   | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------- |
   | `src/routes/_app/-ui/world-map.tsx`      | `src/components/atlas/world-map.tsx`                                                                           | `08-S2` |
-  | `src/routes/_app/-ui/cover-art.tsx`      | `src/components/journey/cover-art.tsx`                                                                         | `08-S3` |
   | `src/routes/_app/-ui/create-dialogs.tsx` | `src/components/journey/new-journey-dialog.tsx` **and** `src/components/collections/new-collection-dialog.tsx` | `08-S3` |
 
-  The third row is why one stage owns it: the file holds one dialog for each of two modules, and a
+  The second row is why one stage owns it: the file holds one dialog for each of two modules, and a
   file split across two concurrent stages is exactly what the wave rule exists to prevent. `08-S3`
   therefore performs the whole retirement — both new components, the deletion, and the two import
-  sites in `journey/index.tsx` and `collections/index.tsx` — and `08-S4` names none of those paths.
+  sites, `src/routes/_app/journey/index.tsx:37` and `src/routes/_app/collections/index.tsx:16`, which
+  are the only two importers at HEAD (`grep -rn create-dialogs src/`) and are both named in this
+  stage's **Owned paths**. `08-S4` names none of those paths.
+
+  **`src/routes/_app/-ui/cover-art.tsx` is deliberately not moved, and this plan does not delete
+  it.** An earlier draft of this stage listed it as moved to `src/components/journey/cover-art.tsx`
+  and deleted at source while also declaring `trip-card.tsx` untouched. That could not have built:
+  `src/routes/_app/-ui/trip-card.tsx:13` imports `{ CoverArt, seedFrom }` from `./cover-art`, so the
+  same stage's `pnpm typecheck` and `pnpm build` would both have failed on a file the stage did not
+  own. Repairing it inside this stage would mean editing `trip-card.tsx`, which `01-S1` claims in its
+  **Owned paths** in **wave 1** — the same wave as this stage — and which `01-S7` claims again in
+  wave 5 (`docs/plans/01-trips-core.md`; cited by stage rather than by line, because that file is
+  still being written and a line number into a live sibling is a citation that rots). The wave-1
+  overlap is precisely the same-wave exclusive collision the wave rule exists to prevent, and
+  `node scripts/ultrabuild/check-plan-collisions.mjs 08` would report it.
+
+  The reason it is not simply rescheduled into a later wave is that it is not a journal component at
+  all. It has two importers in two different modules — `trip-card.tsx:13` and
+  `src/routes/_app/journey/index.tsx:36` — so it is neither route-local nor module-owned, and moving
+  it under `src/components/journey/` would make the trips module import from the journal's directory,
+  which is worse than where it sits now. It stays at `src/routes/_app/-ui/cover-art.tsx`, both
+  importers keep their import lines byte-for-byte, and promoting it to a shared home is filed as a
+  cross-plan extension rather than smuggled into a stage that owns one of its two callers. Nothing in
+  this plan depends on the promotion having happened.
 
   Three directories are created here or in `08-S1`, which is what SPEC §6 asks for and what the
   recon recorded as missing: `src/components/vacay/` (`08-S1`), `src/components/journey/` and
   `src/components/collections/` (`08-S3`). `src/components/atlas/` already exists.
   `src/routes/_app/-ui/atlas-screen.tsx` and `scaffold.tsx` stay where they are on a stated rule: a
   file that composes one route is route-local, a file that renders a module concept is a module
-  component. `trip-card.tsx`, `new-trip-dialog.tsx`, `trip-header.tsx`, `trip-map.tsx`,
-  `add-place-dialog.tsx`, `message-composer.tsx` and `settings-nav.tsx` belong to other plans and are
-  not touched.
+  component, and a file two modules import is neither — `cover-art.tsx` is the one instance of the
+  third case and is treated as above. `trip-card.tsx`, `new-trip-dialog.tsx`, `trip-header.tsx`,
+  `trip-map.tsx`, `add-place-dialog.tsx`, `message-composer.tsx` and `settings-nav.tsx` belong to
+  other plans and are not touched by any stage of this plan.
 
 - **Components reused, not rebuilt** — `Dialog`, `DropdownMenu`, `Button`, `IconButton`, `Input`,
-  `Textarea`, `Select`, `Badge`, `Card`, `EmptyState`, `Skeleton`, `Alert`, `Toast`. `CoverArt`
-  moves and keeps its API; `PageHeader`, `Panel` and `HeaderSkeleton` are imported unchanged.
+  `Textarea`, `Select`, `Badge`, `Card`, `EmptyState`, `Skeleton`, `Alert`, `Toast`. `CoverArt` and
+  `seedFrom` keep both their location and their API and are imported from `../-ui/cover-art` exactly
+  as they are today; `PageHeader`, `Panel` and `HeaderSkeleton` are imported unchanged.
 - **New components.**
   - `JourneyActions` — a `DropdownMenu` on the story header and on each list card: rename, edit
     subtitle and cover, publish or unpublish, archive, delete. Destructive items are `danger`-toned
@@ -1365,6 +1411,19 @@ licence, a cost and an outbound subrequest from a Worker. The disposition is und
 this stage ships is the stacking surface over the days a workspace enters itself, which is complete
 on its own terms.
 
+**The week the grid draws stops being a constant, and this is the stage that reads it.** `08-S1`
+measured the setting rather than the row's wording: `organization_settings.week_starts_on`
+(`src/server/db/schema.ts:1812`, CHECK at `:1823`), `user_settings.week_starts_on` (`:1837`, CHECK at
+`:1852-1853`) and one resolver over the pair, `weekStartsOn: user?.weekStartsOn ??
+organization.weekStartsOn` in `getEffectiveSettings` (`src/server/repos/settings.ts:278`), with both
+editing surfaces already shipped at `src/routes/_app/settings/organization.tsx:368` and
+`src/routes/_app/settings/index.tsx:295`. Nothing in the leave planner reads any of it: the header is
+a Monday-first literal (`WEEKDAY_INITIALS`, `vacay.tsx:41-49`, rendered at `:337`) and `loadVacay`
+publishes an unread `weekStartsOn: 1` (`src/routes/_app/-server/library.ts:133-134`). This stage
+consumes the resolved value — see **Server** and **UI** — and adds **no column, no CHECK and no
+migration**, because a per-plan copy would be a second authority on a question the settings tables
+already answer.
+
 ### Owned paths
 
 - `src/server/repos/vacay.ts` — edit. One new read (`listTripDateRanges`); the seven write functions
@@ -1373,8 +1432,11 @@ on its own terms.
 - `src/routes/_app/-server/__tests__/vacay.test.ts` — edit.
 - `src/routes/_app/vacay.tsx` — edit. The grid moves into the module directory and the screen
   composes it.
-- `src/components/vacay/month-grid.tsx` — new. Extracted from `vacay.tsx:310-434` and made
-  interactive.
+- `src/components/vacay/month-grid.tsx` — new. Extracted from `vacay.tsx:310-434`, made interactive,
+  and made to take `weekStartsOn` as a prop rather than to assume Monday. The rotation is a pure
+  function of that number and the seven weekday labels, so it lives with the component it serves and
+  is covered by the component's own test; it is small enough that a separate module would be an
+  abstraction for one caller.
 - `src/components/vacay/day-cell.tsx` — new.
 - `src/components/vacay/range-select.ts` — new. The pure pointer-and-keyboard range model.
 - `src/components/vacay/holiday-manager.tsx` — new.
@@ -1394,9 +1456,12 @@ The four `vacay-*` baselines are re-recorded here for the second of three times,
 wave 1 and before `08-S8` in wave 3. The change is real: every cell gains a focus ring and a hover
 state and the header gains a mode switch.
 
-This stage does **not** claim `src/routes/_app/-server/library.ts`. `08-S7` holds it in wave 2. The
-trip-overlap read this stage needs is therefore added to the module's own server file over a new
-repository read, and `loadVacay` is not touched.
+This stage does **not** claim `src/routes/_app/-server/library.ts`. `08-S7` holds it in wave 2. Both
+reads this stage needs — the trip overlaps and the resolved week start — are therefore added to the
+module's own server file, and `loadVacay` is not touched by this stage. The unread `weekStartsOn: 1`
+literal it still publishes (`library.ts:133-134`) is removed by `08-S7`, in the same wave, as one
+line of the edit it already owns; that is stated in `08-S7`'s **Owned paths** as well, so the removal
+has exactly one owner and this stage's grid does not depend on it having happened.
 
 ### Data and migration
 
@@ -1430,9 +1495,17 @@ Dates stay `YYYY-MM-DD` text. No migration, no backfill, no index.
   same rule: `listTripDateRanges` filters `trips` through `tenantFilter()` and nothing else, so a
   window that spans another workspace's trips returns none of them.
 - **Server functions — `src/routes/_app/-server/vacay.ts`**, all `POST` except the first:
-  - `loadTripOverlapFn` (`GET`) — the year's trip windows, for the dots. Separate from `loadVacay`
-    on purpose: it is the one part of this screen that changes when a trip changes rather than when
-    a leave day does, and keeping it separate lets the grid re-read it alone.
+  - `loadVacayGridFn` (`GET`) — the two things the grid needs that the plan overview does not carry:
+    `tripWindows`, the year's trip date ranges for the dots, and `weekStartsOn`, the resolved
+    preference. The second is one call to `getEffectiveSettings(scope, scope.ctx.userId)`
+    (`src/server/repos/settings.ts:254`) and is read, never written — this stage owns no settings
+    file, mints no second resolver and adds no per-plan column. The returned value is narrowed at
+    the boundary with `z.number().int().min(0).max(6).catch(1)` before it leaves the handler, so a
+    row written before the CHECK existed cannot rotate the header into an undefined index; the CHECK
+    makes that unreachable in D1 and the narrowing makes it unreachable in types as well. Separate
+    from `loadVacay` on purpose: these are the parts of the screen that change when a trip or a
+    preference changes rather than when a leave day does, and keeping them separate lets the grid
+    re-read them alone.
   - `setVacayEntryFn` / `setVacayEntryRangeFn` / `removeVacayEntryFn` — one day, a run of days, and
     a day cleared.
   - `setCompanyHolidayFn` / `removeCompanyHolidayFn` — the same gesture in company mode.
@@ -1473,7 +1546,14 @@ Dates stay `YYYY-MM-DD` text. No migration, no backfill, no index.
     two different facts never share one mark.
   - `MonthGrid` — extracted, and now a roving-tabindex grid: one tab stop per month, arrow keys move
     by day, `PageUp`/`PageDown` by month, `Home`/`End` to the ends of the week, `Shift` plus arrows
-    extends a range. That is the keyboard half of the drag, and it is not optional.
+    extends a range. That is the keyboard half of the drag, and it is not optional. It also takes
+    `weekStartsOn` and rotates with it: the seven column headings, the leading blanks before the
+    first of the month, and `Home`/`End` are all derived from that one number rather than from a
+    Monday-first constant, so a workspace that starts on Sunday reads a Sunday-first year and the
+    weekend inset moves with it instead of staying under columns six and seven. The heading labels
+    keep their existing three-letter form and their existing tone; nothing about the settled picture
+    changes for the default of `1`, which is why the four `vacay-*` baselines re-recorded here differ
+    only by the interactive states named above.
   - `range-select.ts` — the pure model behind both: anchor, focus, direction, and the resolved
     inclusive date list. Pointer drag and `Shift`-arrow produce the same value, so one test covers
     both and they cannot disagree.
@@ -1554,12 +1634,19 @@ Functions covered: `setEntry`, `setEntryRange`, `removeEntry`, `listVacayEntries
   - `src/components/vacay/__tests__/month-grid.test.tsx` — one tab stop per month; arrow keys move
     the roving index without leaving the grid; `Shift`-arrow extends; a cell's accessible name
     carries the date, the kind and any company holiday; the trip marker and the other-traveller
-    marker are two distinct elements with two distinct names.
+    marker are two distinct elements with two distinct names. Plus the rotation, table-driven over
+    `weekStartsOn` of `0`, `1` and `6`: the column headings start on the named day, the first of the
+    month lands in the right column in each of the three, and `Home`/`End` reach that week's own ends
+    rather than Monday's and Sunday's. `6` is in the table because it is the only value at which the
+    weekend straddles the two edges of the row, which is where an off-by-one hides.
   - `src/components/vacay/__tests__/holiday-manager.test.tsx` — a member does not see the company
     controls; the owner does; removing a holiday names the date first.
   - `src/routes/_app/-server/__tests__/vacay.test.ts` — a member's company-holiday write is
     rejected with the named reason; a reversed range is rejected; a 367-day range is rejected and
-    writes nothing; a duplicate day is idempotent rather than an error, from the unique index.
+    writes nothing; a duplicate day is idempotent rather than an error, from the unique index. And
+    for `loadVacayGridFn`: a traveller with no personal override reads the workspace default, an
+    override of `0` wins over a workspace `1`, clearing the override back to `null` returns the
+    workspace value again, and the window returns only the caller's own trips.
 - Playwright, and the frames, per `12-verification-protocol.md` §3, pinned to the same year the gate
   pins:
 
@@ -1924,7 +2011,14 @@ consequence is stated under **Quota** rather than hidden.
 - `src/routes/_app/-server/__tests__/journal.test.ts` — edit.
 - `src/routes/_app/-server/library.ts` — edit. **This stage holds the four-module server file for the
   whole of wave 2**, per the area brief; `08-S3` held it in wave 1 and `08-S9` holds it in wave 3.
-  `JourneyEntryCard` gains the fields the timeline and the map need.
+  `JourneyEntryCard` gains the fields the timeline and the map need. One line that belongs to another
+  module travels with this edit for the single reason that this stage holds the file: `loadVacay`'s
+  `weekStartsOn: 1` (`:133-134`) is deleted from its return shape and from `VacayOverview`
+  (`:77`). It is an unread literal — `grep -n weekStartsOn src/routes/_app/vacay.tsx` returns nothing
+  at HEAD — and `08-S5` reads the resolved setting through `src/routes/_app/-server/vacay.ts`
+  instead, so leaving it would be a second answer to a question one resolver already answers. The
+  deletion has exactly one owner, named here and in `08-S5`, and neither stage depends on the other's
+  ordering within wave 2: `08-S5` never reads the field and nothing else does.
 - `src/routes/_app/journey/$journeyId.tsx` — edit.
 - `src/routes/journal/$token.tsx` — new. The public page. **A new route file, so
   `pnpm generate-routes` runs and the regenerated `src/routeTree.gen.ts` travels with this stage's
@@ -3174,8 +3268,10 @@ every round is eventually made wrong: round 8 produced two real collisions while
 carried an acceptance criterion about avoiding them, because each plan could only read the siblings
 that already existed.
 
+`node scripts/ultrabuild/check-plan-collisions.mjs 08` — exit status `0`:
+
 ```
-plans 13 · stages 91 · owned paths 550
+plans 13 · stages 91 · owned paths 538
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -3196,6 +3292,19 @@ touched by more than one plan in different waves (3) — legal; each plan must n
       02-places-and-maps.md  02-S2  wave 1  (edit)
       08-product-modules.md  08-S10  wave 3  (edit)
 ```
+
+`node scripts/ultrabuild/check-plan-refs.mjs 08` — exit status `0`:
+
+```
+plan 08: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
+```
+
+Every `NN-Sn` token this file cites — `00-S1`, `00-S2`, `00-S3`, `00-S4`, `01-S1`, `01-S2`, `01-S5`,
+`02-S2`, `02-S6`, `04-S1`, `04-S2`, `06-S1`, `06-S2`, `06-S6`, `07-S1`, `07-S6`, `09-S8`, `10-S2`,
+`10-S3`, `11-S1`, `11-S2`, `11-S3` and the ten `08-S*` of this plan — resolves to a `## Stage`
+heading in the plan whose prefix it carries, and every stage carries a Playwright invocation in its
+**Verification** block. Both are the checks' finding, not a claim made by hand: the two commands above replace reading
+eleven sibling plans, and round 12 spent four blocking findings on defects both would have caught.
 
 **No same-wave exclusive collision involves this plan**, which is the result that matters: no stage
 of `08-product-modules.md` shares an exclusive disposition on a file with any stage of any other plan
@@ -3239,8 +3348,10 @@ concurrently and would clobber each other; consecutive waves run in order and th
 what the earlier one left.
 
 **One caveat on the measurement, stated because it is the same caveat that produced round 8's two
-collisions.** The run above reports 13 plan files and 91 stages, and at least four other plan files
-in this directory were being written while this one was. The output is therefore a snapshot, not a
+collisions.** The run above reports 13 plan files, 91 stages and 538 owned paths — twelve fewer
+paths than the previous run recorded against this file, of which two are this plan's: the move and
+the deletion of `src/routes/_app/-ui/cover-art.tsx` were withdrawn from `08-S3` for the reason given
+there. The other ten moved in sibling plans between the two runs, which is the caveat itself. At least four other plan files in this directory were being written while this one was. The output is therefore a snapshot, not a
 proof about a set that has stopped moving. It should be re-run — the command is one line and its exit
 status is 1 on a collision, so a stage can gate on it — before any wave of this plan is scheduled.
 The four stages the check reports as stating no parseable wave (`11-S1`, `11-S2`, `11-S3` and

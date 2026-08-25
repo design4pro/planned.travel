@@ -174,6 +174,149 @@ fails if the framing moves, and every later stage that puts something new on the
 adds a layer or a marker and does not move the camera. A stage that finds itself wanting to change
 the framing has found a blocker to record, not a file to edit.
 
+### Every selector this plan names is one it publishes, and here is the register
+
+A stage's **Verification** block names the selector that reaches its declared state, and
+`docs/plans/12-verification-protocol.md` §3 requires that selector to have been **verified to exist
+against a running server**. An earlier draft of this file wrote "confirmed against a running server"
+under nine stages while every selector it named existed nowhere in `src/`. That is not a small
+wording problem: a selector that resolves to nothing makes `capture.mjs` throw at the shutter, and a
+stage that discovers it during capture has spent a round.
+
+**Measured at HEAD, and this is the fact the rule is built on.** `grep -rn 'data-part' src/` returns
+92 lines. Every one of them is under `src/components/atlas/**` — eight in components, six in that
+module's `__tests__` — plus two in `src/routes/_app/-ui/atlas-screen.tsx` (`:859`, `:869`).
+**`src/components/map/**`, `src/routes/_app/trips/**`, `src/routes/_app/settings/**` and
+`src/components/planner/**` publish none at all.** So every `data-part` this plan names is a hook
+this plan has to add, and no stage may describe one as pre-existing.
+
+Three rules follow, and they bind every Verification block below:
+
+1. **A stage names a `data-part` selector only if it publishes it in a file it owns.** The stage's
+   **UI (route, components)** heading says which file and which element carries the attribute, so the
+   hook travels in the same diff as the thing it names. A stage that needs a hook on a file it does
+   not own does not add one — it uses an attribute the product already publishes, or it names the
+   stage of this plan that does own that file and consumes the hook that stage published, in a later
+   wave.
+2. **"Confirmed to exist" means an assertion that runs, and it runs before any frame is filed.** The
+   stage's own `test.describe` in `e2e/places-and-maps.visual.spec.ts` opens with one test per
+   selector asserting `await expect(page.locator(sel)).toHaveCount(1)` after the state that should
+   contain it is reached. Reading the JSX and believing it is not a verification; the spec passing
+   is, and it is what the stage's evidence cites.
+3. **An attribute the product already publishes beats a new one.** Two exist today and neither needs
+   inventing: `[data-map-ready]` on every map wrapper, which `settleMap()` already audits in both
+   directions; and Radix's own `role` plus accessible name — the place form is a `Dialog.Content`
+   whose `DialogTitle` reads `Add a place to this trip` in create mode and `Edit this place` in edit
+   mode (`src/routes/_app/trips/$tripId/-ui/plan-actions.tsx:363-365`), and the rail's existing
+   button is `getByRole('button', { name: 'Add a place' })`
+   (`src/routes/_app/trips/$tripId/-ui/plan-screen.tsx:1018-1029`). Both are reachable **today**,
+   with no stage of this plan having landed, which is why the two stages that share wave 3 use them
+   rather than each other's hooks.
+
+**The register.** Every `data-part` hook this plan introduces, the file that publishes it, the stage
+that owns that file, and the stages that read it. A selector not in this table does not appear in a
+Verification block.
+
+| Selector                                                                                     | Published in                                              | By       | Read by                   |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------------- | -------- | ------------------------- |
+| `[data-part="basemap-option"]` with `value="<id>"`                                           | `src/routes/_app/-ui/basemap-picker.tsx`                  | `02-S2`  | `02-S2`                   |
+| `[data-part="add-place"]`                                                                    | `src/routes/_app/trips/$tripId/-ui/planner-add-place.tsx` | `02-S4`  | `02-S4`, `02-S10`         |
+| `[data-part="add-place-menu"]`                                                               | same file                                                 | `02-S4`  | `02-S4`, `02-S6`, `02-S8` |
+| `[data-part="add-place-option"]` with `value="<path>"`                                       | same file                                                 | `02-S4`  | `02-S4`, `02-S6`, `02-S8` |
+| `[data-part="drop-overlay"]`                                                                 | same file                                                 | `02-S8`  | `02-S8`                   |
+| `[data-part="planner-canvas"]`                                                               | `src/routes/_app/trips/$tripId/-ui/planner-map-layer.tsx` | `02-S4`  | `02-S4`, `02-S8`          |
+| `[data-part="place-lat"]`, `[data-part="place-lng"]`                                         | `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx`      | `02-S5`  | `02-S5`                   |
+| `[data-part="place-tags"]`                                                                   | same file                                                 | `02-S10` | `02-S10`                  |
+| `[data-part="stop-edit"]`                                                                    | same file, on `StopMenu`'s **Edit place** item (`:175`)   | `02-S11` | `02-S11`                  |
+| `[data-part="place-notes"]`, `[data-part="time-warning"]`                                    | same file                                                 | `02-S11` | `02-S11`                  |
+| `[data-part="import-collection"]`, `[data-part="import-row"]`, `[data-part="import-commit"]` | `src/routes/_app/trips/$tripId/-ui/import-sheet.tsx`      | `02-S6`  | `02-S6`, `02-S8`          |
+| `[data-part="place-pin"]` with `data-days="<count>"`, `[data-part="cluster-pin"]`            | `src/components/map/place-marker.tsx`                     | `02-S7`  | `02-S7`                   |
+| `[data-part="locate-control"]`                                                               | `src/components/map/locate-control.tsx`                   | `02-S7`  | `02-S7`                   |
+| `[data-part="route-pill"]`                                                                   | `src/components/map/route-pill.tsx`                       | `02-S9`  | `02-S9`                   |
+| `[data-part="day-header"]`, `[data-part="stop-lock"]`                                        | `src/components/planner/day-section.tsx`                  | `02-S9`  | `02-S9`                   |
+| `[data-part="day-tools"]`                                                                    | `src/routes/_app/trips/$tripId/-ui/planner-day-tools.tsx` | `02-S9`  | `02-S9`                   |
+| `[data-part="taxonomy-row"]`, `[data-part="taxonomy-edit"]`, `[data-part="taxonomy-delete"]` | `src/routes/_app/-ui/taxonomy-editor.tsx`                 | `02-S10` | `02-S10`                  |
+| `[data-part="transport-toggle"]`, `[data-part="transport-pill"]`                             | `src/routes/_app/trips/$tripId/-ui/planner-map-layer.tsx` | `02-S12` | `02-S12`                  |
+
+Two consequences worth reading off the table. `[data-part="add-place"]` and
+`[data-part="add-place-menu"]` are **two different controls** and not two names for one — the first
+is the primary pill that opens an empty place form, the second is the menu trigger beside it whose
+items are `[data-part="add-place-option"][value="map"]` (`02-S4`), `[value="collection"]` (`02-S6`)
+and `[value="file"]` (`02-S8`). And three files carry hooks from more than one stage —
+`planner-add-place.tsx`, `plan-actions.tsx` and `planner-map-layer.tsx` — in different waves each
+time, which the **Owned paths** tables already record.
+
+### What `capture.mjs` can reach, and what this plan's own spec reaches instead
+
+Measured in `scripts/ultrabuild/capture.mjs`, because an earlier draft of this file wrote capture
+commands that could not reach the states they labelled:
+
+- The argument parser (`:64-80`) builds a **flat `--key value` map**. A second `--click` overwrites
+  the first rather than queueing behind it, so a two-click sequence is not expressible.
+- Per frame, after `settle()` and `quiesce()`, the script applies **at most one `--hover` and then at
+  most one `--click`** (`:218-225`), each `.first()`, each once. There is no `--type`, no paste, no
+  drag, no key press and no way to run anything between them.
+
+So `capture.mjs` reaches exactly one class of state: **one hover and/or one click away from the route
+as it loads.** Everything else in this plan — a menu item behind a menu trigger, a clipboard paste, a
+`dragenter` carrying a file, a permission denial, a map zoomed before a cluster is clicked, a
+workspace with different rows in it — is out of its reach, and a command that claims otherwise throws
+at the shutter.
+
+**The rule.** A stage uses `capture.mjs` for its resting set, and for a declared state only when that
+state is genuinely one hover and/or one click from the loaded route. Every other declared state is
+reached in this plan's own spec, `e2e/places-and-maps.visual.spec.ts`, in the `test.describe` named
+for the stage, and the frames are written from there:
+
+```ts
+await page.screenshot({
+  path: `.claude/ultrabuild/shots/<slug>/round-<n>/<stage-id>/<state>-<width>-<theme>-A.png`,
+  fullPage: true,
+  animations: 'disabled',
+  caret: 'hide',
+})
+```
+
+Five properties of that path, each the reason it is chosen rather than a convenience:
+
+- **It is not a baseline and cannot become one.** `page.screenshot({ path })` outside
+  `e2e/__screenshots__` compares nothing, records nothing and cannot be re-recorded by
+  `--update-snapshots`. `docs/plans/12-verification-protocol.md` §5's prohibition is untouched,
+  because there is no ratio here to widen.
+- **The frames land in the same directory, under the same names, as `capture.mjs`'s.** The stage's
+  evidence says which tool took which set; the critic sees one coherent set either way.
+- **The clock and the fonts are already pinned, and better than in capture.** `playwright.config.ts`
+  sends `x-pt-server-today: 2026-08-20` on both browser projects, and `visit(page, route, theme)`
+  calls `unblockCrossOriginFonts(page)` first (`e2e/helpers/shoot.ts:2036`), so these frames render in
+  the real faces rather than in the metric fallback.
+- **The settle is the gate's own.** `visit()` and `settle()` do the nine-step wait, and `settleMap()`
+  re-applies the two-sided `[data-map-ready]` predicate after every resize and every theme change —
+  a bare wait on `="true"` hangs, and a theme change replaces the whole style document through
+  `setStyle`.
+- **The frame set is unchanged.** Light and dark at 360, 1280 and 2560, six frames per state, with
+  the theme selected by `page.emulateMedia({ colorScheme })` and nothing else, the width set with
+  `page.setViewportSize()` and **read back** through `window.innerWidth` before the shutter — a frame
+  whose measured width is not the intended one is refused rather than filed, exactly as
+  `capture.mjs` refuses it (`:229-236`).
+
+Which stage falls on which side is not left to the reader:
+
+| Stage    | `capture.mjs` takes                                                   | This plan's spec takes                                          |
+| -------- | --------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `02-S1`  | nothing — it renders nothing                                          | —                                                               |
+| `02-S2`  | resting; `basemap-charcoal` (one click)                               | —                                                               |
+| `02-S3`  | resting; `single-place` and `no-coordinates` (each a second `--url`)  | —                                                               |
+| `02-S4`  | resting; `menu-open` (one click)                                      | `armed`, `dropped`                                              |
+| `02-S5`  | resting                                                               | `form-open`, `pasted`                                           |
+| `02-S6`  | resting                                                               | `import-preview`, `import-empty`, `import-error`                |
+| `02-S7`  | resting; `multi-day-badge` (one hover)                                | `spiderfied`, `locate-denied`                                   |
+| `02-S8`  | resting                                                               | `drop-overlay`, `file-review`, `file-rejected`                  |
+| `02-S9`  | resting                                                               | `day-focused`, `after-optimize`, `reorder-error`                |
+| `02-S10` | resting; `category-editing` and `delete-confirm` (one click each)     | `tags-empty`, `tag-picker`                                      |
+| `02-S11` | resting                                                               | `form-edit`, `overlap-warning`, `inline-category`, `save-error` |
+| `02-S12` | resting; `overlay-on` (one click); `overlay-empty` (a second `--url`) | —                                                               |
+| `02-S13` | nothing — BLOCKED                                                     | nothing — BLOCKED                                               |
+
 ### The container rule for stage blocks, fixed here
 
 `TEMPLATE.md` fixes eleven `###` headings and their order but does not say what delimits one stage
@@ -515,6 +658,11 @@ a settings screen that 500s on a stale string is a worse product than one that s
   movement, and each carries the same hover lift, `focus-visible` ring, active press and disabled
   wash as every other selectable card in the product. The selected entry is marked with a checked
   radio and a brand-coloured hairline, never with colour alone.
+- **The hook this stage publishes**, per the Area brief's register: each entry carries
+  `data-part="basemap-option"` and `value="<catalogue id>"` on its radio input, in
+  `src/routes/_app/-ui/basemap-picker.tsx`, which this stage owns. It is a new attribute — nothing
+  under `src/routes/_app/settings/**` publishes a `data-part` today — and it exists so the state
+  frame below has a selector that survives a restyle.
 - **The preview.** One `MapCanvas` beside the grid, framed on a fixed extent with a handful of sample
   pins, that re-styles as the selection changes. Only one canvas is mounted; the tiles in the grid are
   cheap static swatches built from the catalogue's own palette tokens, because five live WebGL
@@ -584,11 +732,17 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
 - **Resting set:** `/settings/appearance`, light and dark, at 360, 1280 and 2560. Six frames.
 - **The declared state, because a resting frame is not evidence about a picker:** the charcoal entry
   selected while the light colour scheme is emulated, which is the only frame that proves the
-  preference is read rather than inferred from the theme. Reached with
-  `--state basemap-charcoal --click '[data-part="basemap-option"][value="planned-dark"]'`. The
-  selector must be confirmed to exist against a running server before capture — `page.locator(sel)
-.count()` returning 1, or the stage's own spec passing — because a selector that resolves to
-  nothing makes `capture.mjs` throw at the shutter and costs a round.
+  preference is read rather than inferred from the theme. It is **one click from the loaded route**,
+  so it is the one state in this stage `capture.mjs` can take, with a second invocation of the
+  command above adding
+  `--state basemap-charcoal --click '[data-part="basemap-option"][value="planned-dark"]'`.
+- **The selector, and how it is verified rather than asserted.** This stage publishes
+  `data-part="basemap-option"` itself, in `src/routes/_app/-ui/basemap-picker.tsx`, which it owns —
+  no `data-part` exists under `src/routes/_app/settings/**` at HEAD. Its `test.describe` opens with
+  a test that navigates to `/settings/appearance` and asserts
+  `await expect(page.locator('[data-part="basemap-option"][value="planned-dark"]')).toHaveCount(1)`.
+  **That test runs before any frame is filed**, and its passing is what the evidence cites; a
+  selector that resolves to nothing makes `capture.mjs` throw at the shutter and costs a round.
 - **The map route the preference actually changes:** `/trips/$tripId/plan` and `/atlas`, one frame
   each at 1280 in light with the charcoal entry saved, to show the setting reaching a real map. The
   trip id is resolved by following the trip's link from `/trips` rather than hard-coded, so the frame
@@ -775,9 +929,13 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   **Blockers**.
 - **The declared states**, each with its own frame set and its own `--state` name: `single-place`,
   the trip whose places collapse to one coordinate; and `no-coordinates`, the trip that opens on the
-  world fallback. Both are reached by navigating to a seeded trip that has that shape rather than by
-  mocking, and the spec asserts the resulting camera through the map's own reported centre and zoom,
-  so the assertion survives a restyle.
+  world fallback. Neither needs an interaction — each is **a different trip**, so each is a second
+  invocation of the command above with its own `--url` and `--state single-place` or
+  `--state no-coordinates` and no `--hover` or `--click` at all. That is why both stay inside
+  `capture.mjs`'s reach, and it is the reason this stage names no selector: it has no state behind a
+  gesture. The trips are resolved by following their links from `/trips` rather than hard-coded, and
+  the spec asserts the resulting camera through the map's own reported centre and zoom, so the
+  assertion survives a restyle.
 - The spec declares `map: true` on both map routes; `settleMap()` fails a route that renders a
   `[data-map-ready]` marker without declaring one and a route that declares one and renders none, so
   the declaration cannot rot. It calls `auditServerClock(page, <its own route table>)` once in a
@@ -981,6 +1139,19 @@ Nothing is backfilled. A rollback keeps working against unchanged columns.
 - **The provisional pin.** Between the drop and the save, a marker at the dropped point in the
   accent colour with a dashed ring, so the map answers "here" while the form is open. It is removed
   on cancel and replaced by the real pin on success.
+- **The hooks this stage publishes**, per the Area brief's register, because nothing under
+  `src/routes/_app/trips/**` carries a `data-part` at HEAD. In `planner-add-place.tsx`:
+  `data-part="add-place"` on the primary pill that opens an empty place form, and
+  `data-part="add-place-menu"` on the menu trigger beside it, whose one item this stage ships is
+  `data-part="add-place-option"` with `value="map"`. They are **two controls, not two names for
+  one** — `02-S6` and `02-S8` each add a further `add-place-option` value to the same menu in later
+  waves. In `planner-map-layer.tsx`: `data-part="planner-canvas"` on the layer's own hit surface
+  inside the canvas, which `02-S8` reads in wave 5 for its drop target.
+- **The place form needs no hook and does not get one.** It is a Radix `Dialog.Content` whose title
+  already reads `Add a place to this trip` (`plan-actions.tsx:363-365`), so the state is reached with
+  `getByRole('dialog', { name: 'Add a place to this trip' })` — an accessible name that survives a
+  restyle and, unlike a hook, exists **today**. `plan-actions.tsx` is claimed by `02-S5` in this same
+  wave and this stage must not write to it.
 - **Tokens.** None missing. The crosshair and banner reuse what the picking mode already uses; the
   provisional pin uses `--color-accent` and `--color-accent-on`; the drop animation is a 180 ms
   scale-and-fade on `--ease-out-quint`, transform and opacity only, collapsed to opacity under
@@ -1039,21 +1210,33 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S4" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
-  --state armed --click '[data-part="add-place-menu"]'
+  --state menu-open --click '[data-part="add-place-menu"]'
 ```
 
-- **Resting set:** `/trips/$tripId/plan`, light and dark, at 360, 1280 and 2560. Six frames.
-- **Declared states, because the whole point of this stage is a state the screen is not in when it
-  loads.** `armed` — the crosshair mode with its banner, reached by opening the add control and
-  choosing the map entry; and `dropped` — the place form open over the map with the coordinates
-  filled and the provisional pin visible, reached in the stage's own spec by dispatching a
-  context-click at a fixed canvas offset. Each gets its own six-frame set. The resting set is still
-  owed: an armed state is judged against the rest state it changes from.
-- **Selector discipline.** Both selectors are stable attributes the product publishes —
-  `[data-part="add-place-menu"]` and `[data-part="place-form"]` — never a Tailwind class or an
-  nth-child path. Each is confirmed against a running server before capture, by the stage's own spec
-  passing or by a `page.locator(sel).count()` of 1. A selector that resolves to nothing makes
-  `capture.mjs` throw at the shutter and costs a whole round.
+- **Resting set:** `/trips/$tripId/plan`, light and dark, at 360, 1280 and 2560. Six frames, from the
+  command above with the last line dropped.
+- **The one state `capture.mjs` can reach, and it is the last line above:** `menu-open` — the add
+  menu open with its entries visible, which is one click from the loaded route. It is worth a frame
+  in its own right, because it is the surface `02-S6` and `02-S8` extend.
+- **The two states this stage is actually about are out of `capture.mjs`'s reach, and the Area brief
+  says why:** the parser is a flat key map and the script applies one hover and one click, once
+  (`scripts/ultrabuild/capture.mjs:64-80`, `:218-225`). `armed` needs two clicks — the menu trigger,
+  then its map entry — and `dropped` needs a context-click at a canvas offset, which no flag
+  expresses. Both are therefore taken **in this plan's own spec**, in this stage's `test.describe`,
+  with `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
+  `.claude/ultrabuild/shots/<slug>/round-<n>/02-S4/`, six frames each, light and dark at 360, 1280
+  and 2560, re-settling the map through `settleMap()` after every resize and every theme change. The
+  resting set is still owed: an armed state is judged against the rest state it changes from.
+- **Selector discipline, and every selector below is verified by an assertion that runs.** This stage
+  publishes `data-part="add-place"`, `data-part="add-place-menu"` and
+  `data-part="add-place-option"` in `planner-add-place.tsx` and `data-part="planner-canvas"` in
+  `planner-map-layer.tsx`, both files it owns and both new — nothing under
+  `src/routes/_app/trips/**` publishes a `data-part` at HEAD. The form is reached by role and
+  accessible name instead, `getByRole('dialog', { name: 'Add a place to this trip' })`, because
+  `plan-actions.tsx` belongs to `02-S5` in this same wave. The `test.describe` opens with one test
+  asserting `toHaveCount(1)` for each of the four hooks in the state that should contain it, **and
+  that test runs before any frame is filed** — reading the JSX and believing it is not a
+  verification. No Tailwind class and no nth-child path is used anywhere.
 - The spec declares `map: true` for this route and calls `auditServerClock(page, <its own route
 table>)` once in a describe of its own. No new clock-derived string is printed, so no
   `RELATIVE_TIME_SITES` entry is added and `e2e/helpers/shoot.ts` is not claimed.
@@ -1176,6 +1359,13 @@ anything was pasted.
   parse that fails does not clear the field, does not shout, and leaves the typed text alone — the
   reader may be halfway through typing a number, and a field that erases itself mid-keystroke is
   worse than no help at all.
+- **The hooks this stage publishes**, per the Area brief's register: `data-part="place-lat"` and
+  `data-part="place-lng"` on the two coordinate inputs in `plan-actions.tsx`, which this stage owns
+  in wave 3. They are new — no `data-part` exists under `src/routes/_app/trips/**` at HEAD — and they
+  are the only hooks this stage names. It deliberately names **none** on the add control: that
+  control lives in `planner-add-place.tsx`, which `02-S4` owns **in this same wave**, so its hooks
+  may not have landed when this stage runs. The form is opened instead through the button that exists
+  today, `getByRole('button', { name: 'Add a place' })` (`plan-screen.tsx:1018-1029`).
 - **States.** _Empty_ — the pair renders its normal placeholder; there is no list here and this stage
   says so rather than inventing one. _Skeleton_ — not applicable: nothing is fetched. _Error_ — an
   out-of-range value shows the form's existing inline error on `--color-surface-2` and disables
@@ -1219,16 +1409,28 @@ PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S5" \
-  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
-  --state pasted --click '[data-part="add-place"]'
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map
 ```
 
-- **Resting set:** the place form open on `/trips/$tripId/plan`, light and dark, at 360, 1280 and 2560. Six frames.
-- **The declared state:** `pasted` — the form after a `geo:` URI has been pasted into the latitude
-  field, showing both fields filled and the normalised hint. Reached in the stage's own spec through
-  a real clipboard paste event on `[data-part="place-lat"]`, and in capture through `--click` on the
-  add control followed by the spec's own fill. The selector is confirmed to exist against a running
-  server before capture.
+- **Resting set:** `/trips/$tripId/plan` as it loads, light and dark, at 360, 1280 and 2560. Six
+  frames, and that is **everything `capture.mjs` takes for this stage**. It has no `--state`,
+  no `--hover` and no `--click`, because neither state below is one gesture from the loaded route.
+- **The two declared states are taken in this plan's own spec**, in this stage's `test.describe`,
+  with `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
+  `.claude/ultrabuild/shots/<slug>/round-<n>/02-S5/`, six frames each, light and dark at 360, 1280
+  and 2560:
+  - `form-open` — the place form open over the map, reached with
+    `page.getByRole('button', { name: 'Add a place' }).click()`. That button exists **today** at
+    `plan-screen.tsx:1018-1029` and needs nothing from `02-S4`, which shares this wave.
+  - `pasted` — the same form after a real clipboard paste of a `geo:` URI onto
+    `[data-part="place-lat"]`, showing both fields filled and the normalised hint. A paste is a
+    `ClipboardEvent` the spec dispatches; `capture.mjs` has no flag that produces one, which is the
+    measured reason this frame is not its to take.
+- **Selector discipline.** `[data-part="place-lat"]` and `[data-part="place-lng"]` are published by
+  this stage in `plan-actions.tsx`, which it owns. The `test.describe` opens with a test asserting
+  `await expect(page.locator('[data-part="place-lat"]')).toHaveCount(1)` with the form open, and
+  the same for `place-lng`; **that test runs before any frame is filed**, and its passing is what
+  the evidence cites. The form itself is reached by role and accessible name, not by a hook.
 - The spec's route table declares `map: true` for the planner route and calls `auditServerClock()`
   once in its own describe. `e2e/helpers/shoot.ts` is not claimed.
 - **Console must be silent**, asserted with `watchConsole()` in every test. **Layout shift after
@@ -1375,6 +1577,12 @@ reader can override in the preview**, never a constraint enforced by the databas
   _Error_ — a failed load shows an `Alert` on `--color-surface-2` with a retry; a failed commit says
   that nothing was imported, which is true because the batch is one transaction, and offers the same
   retry.
+- **The hooks this stage publishes**, per the Area brief's register: `data-part="import-collection"`
+  on each step-one collection row, `data-part="import-row"` on each step-two place row and
+  `data-part="import-commit"` on the footer's commit button, all in `import-sheet.tsx`, which this
+  stage creates; plus `data-part="add-place-option"` with `value="collection"` on the one menu entry
+  it adds to `planner-add-place.tsx`, extending the hook `02-S4` published in wave 3. `02-S8` reads
+  `import-row` in wave 5 and adds no second copy.
 - **Progress.** The commit is one request, so the button's `loading` state is the whole progress
   affordance; a determinate `Progress` bar for a single round trip would be theatre.
 - **Tokens.** None missing. Surfaces `--color-surface` and `--color-surface-2`, the
@@ -1437,21 +1645,34 @@ PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S6" \
-  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
-  --state import-preview --click '[data-part="import-collection"]'
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map
 ```
 
-- **Resting set:** `/trips/$tripId/plan`, light and dark, at 360, 1280 and 2560. Six frames.
-- **Declared states, each with its own set:** `import-preview`, the second step with a mixed
-  selection and at least one row marked as already on the trip; and `import-empty`, the designed
-  empty state, reached by pointing the sheet at a workspace with no collections through the spec's
-  own fixture rather than by mocking a component.
-- **The error state is reached the way the protocol requires** — `page.route()` returning a failure
-  for the import request — and photographed at 1280 in both themes, because an error surface nobody
-  has looked at is an error surface nobody has designed.
-- Selectors are stable attributes the product publishes: `[data-part="import-collection"]`,
-  `[data-part="import-row"]`, `[data-part="import-commit"]`. Each is confirmed to exist against a
-  running server before capture.
+- **Resting set:** `/trips/$tripId/plan` as it loads, light and dark, at 360, 1280 and 2560. Six
+  frames, and that is everything `capture.mjs` takes here. **No state of this stage is one gesture
+  from the loaded route** — reaching the preview is three clicks, the add menu, then the collection
+  entry, then a collection — and the script applies one hover and one click, once
+  (`scripts/ultrabuild/capture.mjs:64-80`, `:218-225`), with a second `--click` overwriting the
+  first rather than queueing.
+- **The three declared states are taken in this plan's own spec**, in this stage's `test.describe`,
+  with `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
+  `.claude/ultrabuild/shots/<slug>/round-<n>/02-S6/`, six frames each, light and dark at 360, 1280
+  and 2560:
+  - `import-preview` — the second step with a mixed selection and at least one row marked as already
+    on the trip, reached by clicking `[data-part="add-place-menu"]`, then
+    `[data-part="add-place-option"][value="collection"]`, then the first
+    `[data-part="import-collection"]`.
+  - `import-empty` — the designed empty state, reached against a workspace with no collections
+    through the spec's own fixture rather than by mocking a component.
+  - `import-error` — reached the way `docs/plans/12-verification-protocol.md` §3 requires, with
+    `page.route()` returning a failure for the import request. Six frames like the others, because an
+    error surface nobody has looked at is an error surface nobody has designed.
+- **Selector discipline.** `[data-part="import-collection"]`, `[data-part="import-row"]` and
+  `[data-part="import-commit"]` are published by this stage in `import-sheet.tsx`, which it creates;
+  `[data-part="add-place-menu"]` and `[data-part="add-place-option"]` were published by `02-S4` in
+  `planner-add-place.tsx` in wave 3, a file this stage edits only to add one menu entry. The
+  `test.describe` opens with a test asserting `toHaveCount(1)` for each of the five, in the state
+  that should contain it, and **that test runs before any frame is filed**.
 - The spec declares `map: true` for the planner route and calls `auditServerClock()` once in its own
   describe. `e2e/helpers/shoot.ts` is not claimed.
 - **Console must be silent**, `fatal` asserted empty in every test. **Layout shift after paint**
@@ -1606,6 +1827,14 @@ it.
   locate control shows a `Spinner` in place of its icon while a fix is pending, which is a real wait
   and can take seconds. _Error_ — the denied state above, plus a position fix that times out, which
   returns the control to off and says so through a toast rather than a modal.
+- **The hooks this stage publishes**, per the Area brief's register, and this is the first
+  `data-part` anywhere under `src/components/map` — the directory publishes none at HEAD. In
+  `place-marker.tsx`: `data-part="place-pin"` on each pin, carrying `data-days="<count>"` with the
+  number of days that place sits on, and `data-part="cluster-pin"` on each cluster. In
+  `locate-control.tsx`: `data-part="locate-control"`. The `data-days` attribute is not decoration —
+  it is what lets a frame target the multi-day pin specifically instead of whichever pin happens to
+  be first in the DOM, which is the difference between evidence about this stage and a picture of an
+  ordinary marker.
 - **Tokens.** None missing. The accuracy disc uses `--color-brand` at low alpha over
   `--color-brand-subtle`; the denied state uses `--color-danger`; the spiderfy leader lines use
   `--color-edge`. Dark values come from the token set's own dark declarations. Every motion is
@@ -1659,17 +1888,39 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S7" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
-  --state spiderfied --click '[data-part="cluster-pin"]'
+  --state multi-day-badge --hover '[data-part="place-pin"][data-days="3"]'
 ```
 
-- **Resting set:** `/trips/$tripId/plan`, light and dark, at 360, 1280 and 2560. Six frames.
-- **Declared states, each with its own set, because none of them is how the screen loads:**
-  `multi-day-badge`, hovering a pin that carries two day numerals; `spiderfied`, a cluster fanned at
-  maximum zoom; and `locate-denied`, the control's denied state, reached by refusing the geolocation
-  permission through the browser context rather than by mocking the component.
-- Selectors are attributes the product publishes: `[data-part="cluster-pin"]`,
-  `[data-part="place-pin"]`, `[data-part="locate-control"]`. Each is confirmed to exist against a
-  running server before capture — reading the JSX and believing it is not a verification.
+- **Resting set:** `/trips/$tripId/plan`, light and dark, at 360, 1280 and 2560. Six frames, from the
+  command above with the last line dropped.
+- **The one state `capture.mjs` can reach, and it is the last line above:** `multi-day-badge`, a pin
+  that sits on three days with its badge and hover card open. It is **one hover** from the loaded
+  route, and the `data-days="3"` qualifier is what makes `.first()` land on the right pin — an
+  unqualified `[data-part="place-pin"]` would photograph whichever marker MapLibre mounted first and
+  prove nothing.
+- **The two states this stage is actually about are out of `capture.mjs`'s reach**, and the Area
+  brief gives the measurement: one hover and one click, once, per frame
+  (`scripts/ultrabuild/capture.mjs:218-225`). Both are taken **in this plan's own spec**, in this
+  stage's `test.describe`, with
+  `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
+  `.claude/ultrabuild/shots/<slug>/round-<n>/02-S7/`, six frames each, light and dark at 360, 1280
+  and 2560:
+  - `spiderfied` — a cluster fanned at maximum zoom. The zoom is a step in itself: this stage's own
+    unit test asserts that a cluster clicked **below** maximum zoom zooms rather than fans, so a bare
+    `--click` on a cluster from the opening camera would photograph a zoom, not a spiral. The spec
+    drives the map to maximum zoom, re-settles through `settleMap()`, then clicks
+    `[data-part="cluster-pin"]`.
+  - `locate-denied` — the control's denied state, reached with
+    `context.clearPermissions()` and a denial of `geolocation` through the browser context rather
+    than by mocking the component. No `capture.mjs` flag can deny a permission.
+- **Selector discipline.** `[data-part="place-pin"]` with `data-days`, `[data-part="cluster-pin"]`
+  and `[data-part="locate-control"]` are all published by this stage, in `place-marker.tsx` and
+  `locate-control.tsx`, both of which it owns as the wave-4 owner of `src/components/map`. All three
+  are new: `grep -rn 'data-part' src/components/map` returns nothing at HEAD. The `test.describe`
+  opens with a test asserting `toHaveCount(1)` for `[data-part="place-pin"][data-days="3"]` and
+  `[data-part="locate-control"]`, and at least one for `[data-part="cluster-pin"]` at the zoom where
+  a cluster exists; **that test runs before any frame is filed**, and reading the JSX and believing
+  it is not a verification.
 - The spec declares `map: true` and re-settles the map after every resize and every theme change,
   through the two-sided `[data-map-ready]` predicate rather than a bare wait on `="true"`, which
   hangs. `auditServerClock()` is called once in its own describe.
@@ -1806,6 +2057,13 @@ inventing columns for data no screen reads would be a schema change with no read
   about which of the three happened. _Loading_ — the commit button's `loading` state, as in `02-S6`.
 - **The file-size guard is a designed state too.** Above a stated size the reader is told the file is
   too large before anything is parsed, rather than the tab freezing while a parser walks it.
+- **The hooks this stage publishes**, per the Area brief's register: `data-part="drop-overlay"` on
+  the overlay panel and `data-part="add-place-option"` with `value="file"` on the menu entry, both in
+  `planner-add-place.tsx`, which this stage edits in wave 5 and `02-S4` created in wave 3. It
+  publishes **no others**: `[data-part="planner-canvas"]` is `02-S4`'s, in `planner-map-layer.tsx`, a
+  file this stage does not own and does not edit; `[data-part="import-row"]` is `02-S6`'s, in
+  `import-sheet.tsx`, which this stage edits to add a second source and where it adds no second copy
+  of the hook.
 - **Tokens.** None missing. Overlay on `--color-overlay` at `--z-overlay`, panel on
   `--color-surface`, counts in `tabular-nums`.
 
@@ -1861,20 +2119,34 @@ PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S8" \
-  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
-  --state drop-overlay --hover '[data-part="planner-canvas"]'
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map
 ```
 
-- **Resting set:** `/trips/$tripId/plan`, light and dark, at 360, 1280 and 2560. Six frames.
-- **Declared states, each with its own set:** `drop-overlay`, the overlay raised by a synthetic
-  `dragenter` carrying a file payload, which the stage's own spec dispatches; and `file-review`, the
-  review sheet listing what a fixture file parsed to. The fixture lives beside the spec, is a handful
-  of points, and is the stage's own — it is not added to the seed dataset, which this stage does not
-  own.
-- **The error state** is reached through the product: dropping a fixture with no recognisable
-  geometry, photographed at 1280 in both themes.
-- Selectors are published attributes: `[data-part="planner-canvas"]`, `[data-part="drop-overlay"]`,
-  `[data-part="import-row"]`. Each is confirmed against a running server before capture.
+- **Resting set:** `/trips/$tripId/plan` as it loads, light and dark, at 360, 1280 and 2560. Six
+  frames, and that is everything `capture.mjs` takes here. It carries **no `--state`, no `--hover`
+  and no `--click`**, and the reason is the one an earlier draft of this stage got wrong: a drop
+  overlay is raised by a `dragenter` carrying a file payload, and `--hover` dispatches a pointer
+  move. A hover over the canvas raises nothing, so a frame labelled `drop-overlay` and reached by
+  `--hover` would have been a picture of the resting screen under a name that says otherwise. The
+  script has no drag flag at all (`scripts/ultrabuild/capture.mjs:64-80`, `:218-225`).
+- **All three declared states are taken in this plan's own spec**, in this stage's `test.describe`,
+  with `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
+  `.claude/ultrabuild/shots/<slug>/round-<n>/02-S8/`, six frames each, light and dark at 360, 1280
+  and 2560:
+  - `drop-overlay` — the overlay raised by a synthetic `dragenter` carrying a file payload, which the
+    spec dispatches with `page.dispatchEvent()` and a `DataTransfer` built in the page.
+  - `file-review` — the review sheet listing what a fixture file parsed to, reached through the menu
+    entry `[data-part="add-place-option"][value="file"]` and
+    `page.setInputFiles()`. The fixture lives beside the spec, is a handful of points, and is this
+    stage's own — it is not added to the seed dataset, which this stage does not own.
+  - `file-rejected` — a fixture with no recognisable geometry, which is the third of the three
+    distinct failures this stage designs and the one most likely to be shipped as a generic message.
+- **Selector discipline.** `[data-part="drop-overlay"]` and
+  `[data-part="add-place-option"][value="file"]` are published by this stage in
+  `planner-add-place.tsx`, which it owns in wave 5. `[data-part="import-row"]` was published by
+  `02-S6` in `import-sheet.tsx` in wave 4 and is read unchanged. The `test.describe` opens with a
+  test asserting `toHaveCount(1)` for the first two in the state that should contain them and at
+  least one `import-row` in the review state; **that test runs before any frame is filed**.
 - The spec declares `map: true` and calls `auditServerClock()` once in its own describe.
 - **Console must be silent**, `fatal` asserted empty in every test — including the drag path, where a
   browser warning about a rejected data transfer is the kind that only appears under the gesture.
@@ -2070,6 +2342,14 @@ locked)`, built on the repository's existing tenant-scoped update path so `organ
   so the rail re-derives from the reloaded payload exactly as it does after a drag. **If that
   re-derivation does not happen, this stage stops and records it** rather than editing a file it does
   not own; the check is one of its unit tests and one of its browser assertions, not an assumption.
+- **The hooks this stage publishes**, per the Area brief's register: `data-part="route-pill"` on the
+  segment pill in `route-pill.tsx`, which it creates; `data-part="day-tools"` on the day footer in
+  `planner-day-tools.tsx`, which `02-S4` created in wave 3 and this stage extends;
+  `data-part="day-header"` on the day heading and `data-part="stop-lock"` on the lock toggle, both in
+  `src/components/planner/day-section.tsx`, which this stage owns in wave 5. All four are new —
+  neither `src/components/map` nor `src/components/planner` publishes a `data-part` at HEAD — and the
+  two on `day-section.tsx` are attributes on elements that already exist rather than new elements, so
+  the additive-edit promise this stage makes to `03-S8` in wave 6 is kept.
 - **Tokens.** None missing. The pill uses the existing glass panel treatment and `--color-ink-2` on
   `--color-surface`; the locked indicator uses `--color-ink-3`; the reorder animates rows by
   transform at `--duration` on `--ease-out-quint`, capped at eight staggered rows and collapsed to
@@ -2123,21 +2403,31 @@ PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S9" \
-  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
-  --state day-focused --click '[data-part="day-header"]'
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map
 ```
 
-- **Resting set:** `/trips/$tripId/plan`, light and dark, at 360, 1280 and 2560. Six frames.
-- **Declared states, each with its own set:** `day-focused`, one day in focus at a zoom above 12 so
-  the segment pills are visible along its line, which is the state the stage is about and is not how
-  the screen loads; and `after-optimize`, the moment after a reorder, with the undo affordance
-  present.
-- **The error state** is reached with `page.route()` failing the reorder request, and the frame must
-  show the rail back in its previous order with the alert — a frame showing the new order under an
-  error message would be the bug this assertion exists to catch.
-- Selectors are published attributes: `[data-part="day-header"]`, `[data-part="day-tools"]`,
-  `[data-part="route-pill"]`, `[data-part="stop-lock"]`. Each is confirmed against a running server
-  before capture.
+- **Resting set:** `/trips/$tripId/plan` as it loads, light and dark, at 360, 1280 and 2560. Six
+  frames, and that is everything `capture.mjs` takes here. It carries no `--state`, no `--hover` and
+  no `--click`: none of the three states below is one gesture from the loaded route.
+- **All three declared states are taken in this plan's own spec**, in this stage's `test.describe`,
+  with `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
+  `.claude/ultrabuild/shots/<slug>/round-<n>/02-S9/`, six frames each, light and dark at 360, 1280
+  and 2560:
+  - `day-focused` — one day in focus **at a zoom above 12**, so the segment pills are legible along
+    its line. Two steps, not one: the spec clicks `[data-part="day-header"]`, then drives the map to
+    that zoom and re-settles through `settleMap()`. A single `--click` would have photographed the
+    pills at the opening fit zoom, where they are the size the camera chose rather than the size this
+    stage designed.
+  - `after-optimize` — the moment after a reorder, with the undo affordance present. Reached by
+    clicking the day tools' **Shorten this day**, which is itself behind the day footer.
+  - `reorder-error` — `page.route()` failing the reorder request. The frame must show the rail back
+    in its **previous** order with the alert; a frame showing the new order under an error message
+    would be the bug this assertion exists to catch.
+- **Selector discipline.** `[data-part="day-header"]`, `[data-part="stop-lock"]`,
+  `[data-part="day-tools"]` and `[data-part="route-pill"]` are all published by this stage, in
+  `day-section.tsx`, `planner-day-tools.tsx` and `route-pill.tsx`, every one of them a file it owns
+  in wave 5. All four are new. The `test.describe` opens with a test asserting `toHaveCount(1)` for
+  each in the state that should contain it, and **that test runs before any frame is filed**.
 - The spec declares `map: true` and re-settles after every resize and theme change. `auditServerClock()`
   is called once in its own describe.
 - **Console must be silent** in every test. **Layout shift after paint** asserted `0` in Chromium
@@ -2314,6 +2604,12 @@ schema changes to avoid them:
   _Loading_ — the acting row is disabled with a `Spinner` in place of its action icon; the rest of
   the table stays usable, because a whole table going grey for one rename is a worse answer than a
   single row doing so.
+- **The hooks this stage publishes**, per the Area brief's register: `data-part="taxonomy-row"` on
+  each row, `data-part="taxonomy-edit"` on its rename control and `data-part="taxonomy-delete"` on
+  its delete control, all in `taxonomy-editor.tsx`, which this stage creates; and
+  `data-part="place-tags"` on the `MultiCombobox` trigger in `plan-actions.tsx`, which this stage
+  owns in wave 5. All four are new — nothing under `src/routes/_app/settings/**` or
+  `src/routes/_app/trips/**` publishes a `data-part` at HEAD.
 - **Tokens.** None missing. Swatches carry the stored hex as a CSS custom property, which is data and
   not a hard-coded colour; every surface, radius, shadow and easing comes from the token set, and the
   contrast of a stored swatch against both themes is handled by pairing it with a token-driven
@@ -2382,16 +2678,30 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
 - **Resting set:** `/settings/places`, light and dark, at 360, 1280 and 2560. Six frames. The route
   carries no map, so no `--map` and no `map: true` declaration — and `settleMap()` audits that in
   both directions, so a wrong declaration here fails rather than passes quietly.
-- **Declared states, each with its own set:** `category-editing`, a row in its rename-and-recolour
-  state; `delete-confirm`, the confirmation naming how many places it will orphan, which is the copy
-  most likely to be got wrong and is therefore the frame worth having; and `tags-empty`, the designed
-  empty state, reached against a workspace with no tags.
-- **A second surface, and it owes its own six frames:** the place form's tag picker on
-  `/trips/$tripId/plan`, in its open state with two tags attached, reached with
-  `--state tag-picker --click '[data-part="place-tags"]'`. That route's frames inherit
-  `12-verification-protocol.md` §7.2.
-- Selectors are published attributes: `[data-part="taxonomy-row"]`, `[data-part="taxonomy-delete"]`,
-  `[data-part="place-tags"]`. Each is confirmed against a running server before capture.
+- **Two states are one click from that route, so `capture.mjs` takes both**, as two further
+  invocations of the command above:
+  `--state category-editing --click '[data-part="taxonomy-edit"]'`, a row in its rename-and-recolour
+  state; and `--state delete-confirm --click '[data-part="taxonomy-delete"]'`, the confirmation
+  naming how many places it will orphan, which is the copy most likely to be got wrong and is
+  therefore the frame worth having. Two invocations, not one command: a second `--click` on the same
+  line would overwrite the first, because the script's argument parser is a flat key map
+  (`scripts/ultrabuild/capture.mjs:64-80`).
+- **Two states are not, and are taken in this plan's own spec**, in this stage's `test.describe`,
+  with `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
+  `.claude/ultrabuild/shots/<slug>/round-<n>/02-S10/`, six frames each, light and dark at 360, 1280
+  and 2560:
+  - `tags-empty` — the designed empty state, which needs a workspace with no tags rather than a
+    gesture.
+  - `tag-picker` — **a second surface, and it owes its own six frames**: the place form's tag picker
+    on `/trips/$tripId/plan`, open with two tags attached. Three steps from that route — click
+    `[data-part="add-place"]`, which `02-S4` published in wave 3 and which has therefore landed by
+    wave 5, then `[data-part="place-tags"]`, then attach — so it is out of `capture.mjs`'s reach.
+    That route's frames inherit `12-verification-protocol.md` §7.2.
+- **Selector discipline.** `[data-part="taxonomy-row"]`, `[data-part="taxonomy-edit"]` and
+  `[data-part="taxonomy-delete"]` are published by this stage in `taxonomy-editor.tsx`, and
+  `[data-part="place-tags"]` in `plan-actions.tsx`; it owns both files in wave 5. All four are new.
+  The `test.describe` opens with a test asserting `toHaveCount(1)` for each in the state that should
+  contain it — for `taxonomy-row`, at least one — and **that test runs before any frame is filed**.
 - The spec calls `auditServerClock(page, <its own route table>)` once in its own describe. The new
   settings route prints no clock-derived string, so no `RELATIVE_TIME_SITES` entry is added and
   `e2e/helpers/shoot.ts` is not claimed.
@@ -2541,6 +2851,11 @@ second file-linking model, which would be exactly the duplicate `README.md` call
   the reason and a retry that resubmits the draft; a field-level rejection marks the field and moves
   focus to it. _Loading_ — the submit carries its `loading` state and the dialog cannot be dismissed
   mid-write.
+- **The hooks this stage publishes**, per the Area brief's register, all three in `plan-actions.tsx`,
+  which it owns in wave 6: `data-part="stop-edit"` on `StopMenu`'s **Edit place** item (`:175`),
+  `data-part="place-notes"` on the notes textarea, and `data-part="time-warning"` on each of the two
+  inline warnings. All three are new. `StopMenu` is the right home for the first: the menu already
+  lives in this file, so the hook that opens the form and the form itself travel in one diff.
 - **Tokens.** None missing. The counter and both warnings use existing tone tokens; the counter is
   `tabular-nums` because it changes on every keystroke, which is exactly the case
   `docs/DESIGN.md` names.
@@ -2594,19 +2909,35 @@ PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S11" \
-  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
-  --state form-edit --click '[data-part="stop-edit"]'
+  --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map
 ```
 
-- **Resting set:** the form open in edit mode on `/trips/$tripId/plan`, light and dark, at 360, 1280
-  and 2560. Six frames.
-- **Declared states, each with its own set, because every one of them is the point of the stage:**
-  `overlap-warning`, both time warnings visible at once; and `inline-category`, the combobox showing
-  the create option for a name the workspace does not have.
-- **The error state** is reached with `page.route()` failing the save request, photographed at 1280
-  in both themes, and the frame must still show every field the reader had filled.
-- Selectors are published attributes: `[data-part="stop-edit"]`, `[data-part="place-notes"]`,
-  `[data-part="time-warning"]`. Each is confirmed against a running server before capture.
+- **Resting set:** `/trips/$tripId/plan` as it loads, light and dark, at 360, 1280 and 2560. Six
+  frames, and that is everything `capture.mjs` takes here. It carries no `--state`, no `--hover` and
+  no `--click`: **reaching the form in edit mode is two clicks** — the stop row's
+  `Actions for <name>` trigger, then `[data-part="stop-edit"]` inside the menu it opens — and the
+  script applies one click, once, with a second `--click` overwriting the first
+  (`scripts/ultrabuild/capture.mjs:64-80`, `:218-225`).
+- **All four declared states are taken in this plan's own spec**, in this stage's `test.describe`,
+  with `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
+  `.claude/ultrabuild/shots/<slug>/round-<n>/02-S11/`, six frames each, light and dark at 360, 1280
+  and 2560:
+  - `form-edit` — the form open in edit mode over the map, reached with
+    `page.getByRole('button', { name: /^Actions for / }).first().click()` then
+    `[data-part="stop-edit"]`. The first of those is an accessible name that exists **today**
+    (`plan-actions.tsx:168`), so the path does not depend on a hook this stage has not yet added.
+  - `overlap-warning` — both time warnings visible at once, after the spec fills two overlapping
+    times.
+  - `inline-category` — the combobox showing the create option for a name the workspace does not
+    have.
+  - `save-error` — `page.route()` failing the save request. The frame must still show every field the
+    reader had filled, which is the assertion this state exists for.
+- **Selector discipline.** `[data-part="stop-edit"]`, `[data-part="place-notes"]` and
+  `[data-part="time-warning"]` are published by this stage in `plan-actions.tsx`, which it owns in
+  wave 6, and all three are new. The row's menu trigger is reached by accessible name rather than by
+  a hook, because it is rendered from `plan-screen.tsx`, which this stage does not own. The
+  `test.describe` opens with a test asserting `toHaveCount(1)` for the first two and `toHaveCount(2)`
+  for `time-warning` in the overlap state, and **that test runs before any frame is filed**.
 - The spec declares `map: true` for the planner route and calls `auditServerClock()` once in its own
   describe.
 - **Console must be silent** in every test. **Layout shift after paint** asserted `0` in Chromium
@@ -2781,6 +3112,12 @@ tenant data, and it is never sent to the server.
   is skipped and counted in the control's summary rather than breaking the layer; the layer never
   throws a whole map away for one bad row. _Loading_ — the toggle is disabled while its own fetch is
   in flight and while the board payload is pending.
+- **The hooks this stage publishes**, per the Area brief's register: `data-part="transport-toggle"`
+  on the trip-level control and `data-part="transport-pill"` on each endpoint pill, both in
+  `planner-map-layer.tsx`, which `02-S4` created in wave 3 and this stage extends in wave 6. Both are
+  new. The overlay component itself, `transport-overlay.tsx`, publishes neither: the toggle is chrome
+  and the pills are mounted through `MapMarker` from the layer, so both hooks sit in the file that
+  renders them.
 - **Tokens.** None missing. Lines use the map palette's own transport ramp derived from existing
   colour tokens, pills use the glass panel treatment on `--color-surface`, and every appearance is a
   180–220 ms opacity transition on `--ease-out-quint`, collapsed under
@@ -2840,13 +3177,20 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
 ```
 
 - **Resting set:** `/trips/$tripId/plan` with the overlay off, light and dark, at 360, 1280 and 2560.
-  Six frames. The resting set matters here more than usual: off is the default, and the frame proves
-  the map is not cluttered before anyone asks.
-- **Declared states, each with its own set:** `overlay-on`, the trip's legs drawn with their endpoint
-  pills and a flight label; and `overlay-empty`, the disabled control on a trip with no routable
-  transport, reached against a seeded trip that has none.
-- Selectors are published attributes: `[data-part="transport-toggle"]`, `[data-part="transport-pill"]`.
-  Each is confirmed against a running server before capture.
+  Six frames, from the command above with the last line dropped. The resting set matters here more
+  than usual: off is the default, and the frame proves the map is not cluttered before anyone asks.
+- **Both declared states stay inside `capture.mjs`'s reach, and this is the one stage in the plan
+  where that is true of everything it ships.** `overlay-on` — the trip's legs drawn with their
+  endpoint pills and a flight label — is **one click** on the map's own chrome, which is the last
+  line of the command above. `overlay-empty` — the disabled control on a trip with no routable
+  transport — needs no gesture at all: it is a **different trip**, so it is a second invocation with
+  its own `--url` and `--state overlay-empty` and no `--click`.
+- **Selector discipline.** `[data-part="transport-toggle"]` and `[data-part="transport-pill"]` are
+  published by this stage in `planner-map-layer.tsx`, which this plan owns throughout and this stage
+  edits in wave 6. Both are new. Its `test.describe` opens with a test asserting `toHaveCount(1)` for
+  the toggle on the loaded route and at least one `transport-pill` once the overlay is on, and **that
+  test runs before any frame is filed** — a `--click` on a selector that resolves to nothing makes
+  `capture.mjs` throw at the shutter.
 - The spec declares `map: true` and re-settles the map after every resize and every theme change,
   through the two-sided `[data-map-ready]` predicate — a theme change replaces the whole style
   document through `setStyle` and drops every runtime-added source, so this stage's own layer must be
@@ -3011,6 +3355,15 @@ both themes, under `.claude/ultrabuild/shots/<slug>/round-<n>/02-S13/`; a silent
 layout-shift reading of `0` after the settle mark, which a results list that pushes the form down
 would fail.
 
+Two things it will owe that the Area brief already fixes, written here so the blocked stage inherits
+them rather than re-deriving them. **The hooks are its own to publish**, in the file it creates for
+the search field, and they go into the register when it is unblocked — no selector in this plan
+points at a file this stage does not own. **The results list is not one gesture from a loaded route**
+— it needs a field focused and a query typed, and `capture.mjs` has no `--type` flag
+(`scripts/ultrabuild/capture.mjs:64-80`, `:218-225`) — so its declared states are taken in this
+plan's own spec with `page.screenshot({ path, … })`, exactly as `02-S5` and `02-S11` take theirs.
+`capture.mjs` takes its resting set and nothing else.
+
 The one thing that can be verified **today**, and is this stage's only current assertion: **no
 provider name and no provider client exists anywhere in this plan or in `src/`.** A grep that finds
 one means somebody started this stage while it was blocked.
@@ -3070,12 +3423,13 @@ criterion about it — it is measured.
 
 ```sh
 node scripts/ultrabuild/check-plan-collisions.mjs 02
+node scripts/ultrabuild/check-plan-refs.mjs 02
 ```
 
-Output, pasted in full, at the point this plan was finished:
+Both outputs, pasted in full, at the point this plan was finished. First the collision report:
 
 ```
-plans 13 · stages 91 · owned paths 550
+plans 13 · stages 91 · owned paths 538
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -3110,6 +3464,7 @@ touched by more than one plan in different waves (11) — legal; each plan must 
   src/server/repos/itinerary.ts
       01-trips-core.md  01-S4  wave 2  (edit)
       02-places-and-maps.md  02-S9  wave 5  (edit)
+      03-reservations-and-transport.md  03-S8  wave 6  (edit)
       07-collaboration-and-sharing.md  07-S9  wave 3  (edit)
   src/routes/_app/trips/$tripId/-server/plan.ts
       01-trips-core.md  01-S4  wave 2  (edit)
@@ -3139,7 +3494,15 @@ touched by more than one plan in different waves (11) — legal; each plan must 
       10-administration.md  10-S3  wave 4  (edit)
 ```
 
-**No same-wave exclusive collision involves this plan.** The command exits `0`.
+Then the reference report, which is what replaces reading the sibling plans by hand for the second
+kind of defect — a `NN-Sn` token cited by a stage that no `## Stage` heading in that plan defines:
+
+```
+plan 02: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
+```
+
+**No same-wave exclusive collision involves this plan, zero stage references dangle, and this plan
+carries a Playwright invocation.** Both commands exit `0`.
 
 Two of those rows were collisions when this file was first drafted, and are recorded here rather
 than quietly fixed, because the fix is a design decision a later reader should be able to question:
@@ -3172,5 +3535,5 @@ Three notes on reading the report:
 - **The report is a measurement of a moving target.** `03-reservations-and-transport.md`,
   `05-packing-and-todos.md`, `06-documents-and-media.md` and `08-product-modules.md` all landed while
   this file was being written, and the first of them turned two of this plan's paths into
-  collisions. Re-run the command before executing any stage here; a green result from the day a plan
-  was written is not a green result today.
+  collisions. Re-run **both** commands before executing any stage here; a green result from the day
+  a plan was written is not a green result today.

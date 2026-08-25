@@ -238,13 +238,17 @@ The check is a measurement, not a judgement: the script's current output is past
 **Cross-plan collisions** at the end of this file, and a stage that changes an **Owned paths** list
 re-runs it.
 
-## Two test files, two different answers to the same question
+## Two shared test files, and the one file that stays exclusive
 
-Within-wave **Owned paths** in this plan are disjoint, with exactly one exception, and the exception is
-one somebody else wrote down rather than one this plan invented.
+Within-wave **Owned paths** in this plan are disjoint on every **exclusive** disposition — `new`,
+`edit`, `create`, `delete`. Two files are named by several stages at once under the cooperative
+`append` disposition, which is the documented pattern rather than an exception this plan invented:
+`scripts/ultrabuild/check-plan-collisions.mjs` says so in its own header, naming both of them, and
+treats `append` as a non-collision by construction. A third file that looks like a fourth candidate
+for sharing is deliberately kept exclusive, for a reason that does not apply to the other two.
 
-**`src/server/repos/__tests__/tenant-isolation.test.ts` is shared, because the contract says it may
-be.** `00-foundations.md`'s tenant procedure records it as "the one append-only exception to
+**`src/server/repos/__tests__/tenant-isolation.test.ts` is appended to, because the contract says it
+may be.** `00-foundations.md`'s tenant procedure records it as "the one append-only exception to
 within-wave disjointness", on the reasoning that almost every stage adds a repository function and
 forcing them into separate waves would serialise the whole build for one file. Five stages here name
 it — `01-S1`, `01-S2`, `01-S4`, `01-S6` and `01-S7` — each marked `append`, each adding one new
@@ -252,23 +256,44 @@ it — `01-S1`, `01-S2`, `01-S4`, `01-S6` and `01-S7` — each marked `append`, 
 produce a merge resolved by keeping both. `01-S1` and `01-S2` are the only pair that actually lands in
 the same wave.
 
-**`e2e/<module>.visual.spec.ts` is not shared, and that is a deliberate departure from
-`12-verification-protocol.md` §4, stated rather than smuggled.** That section says a plan adds one
-spec file and its stages "share the file and are told apart by their `test.describe` block". That rule
-and `README.md`'s within-wave disjointness rule cannot both hold for any plan with two stages in one
-wave, and this plan has three in wave 1 and three in wave 5. The protocol resolves the identical clash
-for `e2e/helpers/shoot.ts` in favour of disjointness — "two stages in the same wave may not both claim
-it, and the second one to want it declares a module-local helper instead" — and this plan applies the
-same resolution one level up: **one spec file per stage**, `e2e/trips-core-s<k>.visual.spec.ts`, each
-with its own baseline directory.
+**`e2e/trips-core.visual.spec.ts` is appended to for the same reason and on the same authority.**
+`12-verification-protocol.md` §4 fixes both the name and the sharing: a module plan adds
+`e2e/<module>.visual.spec.ts`, where `<module>` is the plan's area name in the same kebab-case as its
+plan file — so `01-trips-core.md` produces `e2e/trips-core.visual.spec.ts` — and "one spec file per
+plan file, not one per stage: stages within a plan share the file and are told apart by their
+`test.describe` block". This plan does exactly that. `01-S1` creates the file, marked `new`, and the
+nine later stages are each marked `append`, each adding one `test.describe` block whose name is its
+stage id and title. The plan's baseline directory,
+`e2e/__screenshots__/trips-core.visual.spec.ts/`, carries the same dispositions: created by `01-S1`,
+appended to by every later stage, which records only the frames its own block takes.
 
-Everything the protocol's rule was protecting is preserved. `e2e/visual.spec.ts` is never appended to
-and never split, so its 52 approved baselines are untouched. `snapshotPathTemplate` in
-`playwright.config.ts` gives every spec file its own baseline directory, so no stage's frames can
-collide with or disturb another's — which is the mechanical property that makes the split safe rather
-than merely convenient. Every spec imports the shared helpers from `e2e/helpers/shoot.ts` and
-re-implements none of them, and `e2e/helpers/shoot.ts` itself is claimed by exactly one stage in the
-whole plan, `01-S5`, which needs a `RELATIVE_TIME_SITES` entry for its live clock.
+Three properties make that sharing safe within a wave, and each is a property of the file rather than
+a hope about the agents:
+
+- **Every block is self-contained.** A stage's block declares its own local route table, calls
+  `auditServerClock(page, <that table>)` over it inside its own `describe`, and asserts its own
+  frames. No stage edits a line another stage wrote, so two agents appending two independent blocks
+  to the end of one file in one wave produce a merge resolved by keeping both — the identical shape
+  as the five appends to `tenant-isolation.test.ts` above.
+- **Re-recording is narrowed to the block that owns it.** `--update-snapshots` over the whole file
+  would re-record baselines a stage did not design, so every stage's Verification block narrows it
+  with `-g '<stage-id>'`. `-g` matches the full test title, and every block's title begins with its
+  stage id, so the filter is exact and a stage can only ever rewrite its own pixels.
+- **The directory is mechanically isolated from every other plan.** `snapshotPathTemplate` in
+  `playwright.config.ts` is `{snapshotDir}/{testFileName}/{arg}-{projectName}{ext}`, so this plan's
+  baselines live under a directory named after this plan's spec file and cannot collide with or
+  disturb `e2e/visual.spec.ts`'s 52 approved frames or any sibling plan's. `e2e/visual.spec.ts` is
+  never appended to and never split.
+
+**`e2e/helpers/shoot.ts` is the file that stays exclusive, and the difference is what it is.** It is
+a shared module where a claimant edits an existing table — `RELATIVE_TIME_SITES` — rather than adding
+an independent block, so two stages wanting it in one wave really would clobber each other. The
+protocol's own answer applies unchanged: "two stages in the same wave may not both claim it, and the
+second one to want it declares a module-local helper instead". Exactly one stage in this plan claims
+it, `01-S5` in wave 2, which needs a `RELATIVE_TIME_SITES` entry for its live clock; the only other
+claimant in the whole plan set is `10-S2` in wave 1, a different wave, and the check output at the
+foot of this file is the measurement of that. Every stage's block imports its helpers from
+`./helpers/shoot.ts` and re-implements none of them.
 
 ## Shared paths this plan never claims
 
@@ -353,9 +378,11 @@ Rows unblocked: `TRP-01` (`01-S7`) directly.
   new file so that no wave-1 stage has to contend for `repositories.test.ts`.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block, under the
   append-only exception in `00-foundations.md`'s tenant procedure.
-- `e2e/trips-core-s1.visual.spec.ts` — new. This stage's spec file; see **the spec-file split** in
-  the Area brief for why each stage carries its own rather than sharing one.
-- `e2e/__screenshots__/trips-core-s1.visual.spec.ts/` — new. Its own baseline directory, which
+- `e2e/trips-core.visual.spec.ts` — new. The plan's single spec file, created here and named as
+  `12-verification-protocol.md` §4 requires: `<module>` is this plan's area name in the same
+  kebab-case as its plan file. This stage adds the first `test.describe` block; the nine later stages
+  append their own. See **Two shared test files** in the Area brief.
+- `e2e/__screenshots__/trips-core.visual.spec.ts/` — new. The plan's baseline directory, which
   `snapshotPathTemplate` guarantees cannot collide with or disturb any existing baseline.
 
 ### Data and migration
@@ -552,15 +579,22 @@ explicitly to everything:
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/trips-core-s1.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/trips-core.visual.spec.ts
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/trips-core-s1.visual.spec.ts --update-snapshots
+  e2e/trips-core.visual.spec.ts -g '01-S1' --update-snapshots
 ```
 
-`e2e/trips-core-s1.visual.spec.ts` imports every helper from
+The third invocation is narrowed with `-g` and that is not decoration. `e2e/trips-core.visual.spec.ts`
+is the plan's single spec file — `12-verification-protocol.md` §4 — and nine later stages append their
+own `test.describe` blocks to it, so `--update-snapshots` over the whole file would re-record
+baselines this stage did not design. `-g` matches the full test title and every block's title begins
+with its stage id, so the filter is exact. Every later stage of this plan runs the same three lines
+with its own id in the `-g`.
+
+`e2e/trips-core.visual.spec.ts` imports every helper from
 `./helpers/shoot.ts` — `visit`, `settle`, `shoot`, `applyTheme`, `THEMES`, `useSession`,
-`watchConsole` — and re-implements none of them. It declares its own route table for `/trips` and
-calls `auditServerClock(page, <that table>)` once in a `describe` of its own, because
+`watchConsole` — and re-implements none of them. This stage's block declares its own route table for
+`/trips` and calls `auditServerClock(page, <that table>)` once inside that block, because
 `auditServerClock` is called only over `APP_ROUTES` in `e2e/visual.spec.ts:310` and a route declared
 in a module spec is otherwise audited by nothing. It does **not** claim `e2e/helpers/shoot.ts`: the
 only clock-derived string on this stage's surface is the trip card's countdown badge, which is
@@ -694,8 +728,11 @@ Rows unblocked: `TRP-08` (`01-S4`) directly.
   file so no wave-1 stage contends for `rails.test.tsx`.
 - `src/server/repos/__tests__/day-notes.test.ts` — new.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
-- `e2e/trips-core-s2.visual.spec.ts` — new. This stage's own spec file.
-- `e2e/__screenshots__/trips-core-s2.visual.spec.ts/` — new. Its own baseline directory.
+- `e2e/trips-core.visual.spec.ts` — append. One new `test.describe` block, named `01-S2` and this
+  stage's title, in the plan's single spec file that `01-S1` creates. It declares its own route table
+  and edits no other block.
+- `e2e/__screenshots__/trips-core.visual.spec.ts/` — append. Only the frames this stage's own block
+  records; `--update-snapshots` is narrowed with `-g '01-S2'` so no other block is re-recorded.
 
 **The six shared paths this stage claims, and every stage of every plan that touches one in a later
 wave.** Measured with `scripts/ultrabuild/check-plan-collisions.mjs`, not read off the siblings; the
@@ -994,8 +1031,9 @@ absent, which is the intended coupling.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
 `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
-out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
-this stage's own baselines and nobody else's — against `e2e/trips-core-s2.visual.spec.ts`.
+out in full — `--project=setup` once, then the plan's spec, then `--update-snapshots` narrowed to
+this stage's own `describe` block with `-g '01-S2'`, so no other block's baselines are re-recorded — against
+`e2e/trips-core.visual.spec.ts`, the plan's single spec file.
 This stage's `describe` block declares `/trips/$tripId/plan` for a seeded trip, marks it `map: true`
 — the route renders `[data-map-ready]` and `settleMap()` fails a route that renders the marker
 without declaring it — and calls `auditServerClock` over its own route table.
@@ -1140,8 +1178,11 @@ Rows unblocked: none. `TRP-07` has no dependants in `gap-rows.json`.
 - `src/lib/__tests__/trip-tab.test.ts` — new.
 - `src/components/layout/trip-sub-nav.tsx` — edit. Records the active tab on activation.
 - `src/routes/_app/trips/$tripId/index.tsx` — edit. The redirect reads the remembered tab.
-- `e2e/trips-core-s3.visual.spec.ts` — new. This stage's own spec file.
-- `e2e/__screenshots__/trips-core-s3.visual.spec.ts/` — new. Its own baseline directory.
+- `e2e/trips-core.visual.spec.ts` — append. One new `test.describe` block, named `01-S3` and this
+  stage's title, in the plan's single spec file that `01-S1` creates. It declares its own route table
+  and edits no other block.
+- `e2e/__screenshots__/trips-core.visual.spec.ts/` — append. Only the frames this stage's own block
+  records; `--update-snapshots` is narrowed with `-g '01-S3'` so no other block is re-recorded.
 
 ### Data and migration
 
@@ -1355,8 +1396,9 @@ tenant-scoped. The memory can never widen access; at worst it names a route that
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
 `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
-out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
-this stage's own baselines and nobody else's — against `e2e/trips-core-s3.visual.spec.ts`.
+out in full — `--project=setup` once, then the plan's spec, then `--update-snapshots` narrowed to
+this stage's own `describe` block with `-g '01-S3'`, so no other block's baselines are re-recorded — against
+`e2e/trips-core.visual.spec.ts`, the plan's single spec file.
 This stage's `describe` block asserts the behaviour end to end in two engine-independent tests. The
 first is the memory itself — visit `/trips/<id>/costs`, navigate to `/trips`, click back into the
 trip, and assert the URL is the costs tab. The second is the **lifetime**, which is the assertion a
@@ -1478,8 +1520,11 @@ Rows unblocked: `BKG-10` (`03-…`, wave 3) directly; `TRP-06` (`01-S9`) reads t
 - `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` — edit. The drag path and the refusal message.
 - `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` — edit. A note's row menu, beside the stop's.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
-- `e2e/trips-core-s4.visual.spec.ts` — new. This stage's own spec file.
-- `e2e/__screenshots__/trips-core-s4.visual.spec.ts/` — new. Its own baseline directory.
+- `e2e/trips-core.visual.spec.ts` — append. One new `test.describe` block, named `01-S4` and this
+  stage's title, in the plan's single spec file that `01-S1` creates. It declares its own route table
+  and edits no other block.
+- `e2e/__screenshots__/trips-core.visual.spec.ts/` — append. Only the frames this stage's own block
+  records; `--update-snapshots` is narrowed with `-g '01-S4'` so no other block is re-recorded.
 
 All four planner core files are named here, and **this is the only wave-2 stage in any plan that names
 any of them**, which is the schedule the Area brief fixes.
@@ -1723,8 +1768,9 @@ Functions covered: `reorderDayTimeline`.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
 `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
-out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
-this stage's own baselines and nobody else's — against `e2e/trips-core-s4.visual.spec.ts`.
+out in full — `--project=setup` once, then the plan's spec, then `--update-snapshots` narrowed to
+this stage's own `describe` block with `-g '01-S4'`, so no other block's baselines are re-recorded — against
+`e2e/trips-core.visual.spec.ts`, the plan's single spec file.
 This stage's `describe` declares `/trips/$tripId/plan` with `map: true` and calls `auditServerClock`
 over its own table.
 
@@ -1813,13 +1859,16 @@ needs a provider stops at the decision** — it does not name a provider, does n
 does not write a client for an unnamed service, and does not ship a feature degraded into
 uselessness to avoid asking.
 
-- **Deferred to:** `01-S11`, **target wave 6**.
+- **Deferred to:** a stage this file mints when the decision lands, taking the next free id after
+  `01-S10`, **target wave 6**. The id is deliberately not written down before the stage that carries
+  it exists: a cited `NN-Sn` token that no `## Stage` heading defines is a dangling reference, and
+  `scripts/ultrabuild/check-plan-refs.mjs` fails the plan on one.
 - **Why it is not minted as a stage block now:** its shape is decided by terms nobody has read yet.
   What a provider licenses us to cache, for how long, and what attribution it requires on screen are
   the three things that decide the widget's data path and its layout, and all three are unknown. A
   stage block written before them would be a guess wearing the format of a plan.
-- **What unblocks it:** the provider decision recorded in `11-S3`. `01-S11` is minted in this file on
-  the day that decision lands, takes the next free id, and moves `TRP-05` partial → done.
+- **What unblocks it:** the provider decision recorded in `11-S3`. The stage is minted in this file
+  on the day that decision lands, takes the next free id, and moves `TRP-05` partial → done.
 
 A free tier is not evidence a capability is free to us: this product charges for subscriptions
 through Stripe, so a "free for non-commercial use" tier is unavailable at any traffic level. That is
@@ -1844,8 +1893,11 @@ Rows unblocked: none.
   a different wave and for the same one-entry reason: `10-S2` (`10-administration.md`, wave 1), for
   the audit trail's relative timestamps. Wave 1 closes before wave 2 opens, `10-S2` names this stage
   in return, and neither stage touches the other's entry.
-- `e2e/trips-core-s5.visual.spec.ts` — new. This stage's own spec file.
-- `e2e/__screenshots__/trips-core-s5.visual.spec.ts/` — new. Its own baseline directory.
+- `e2e/trips-core.visual.spec.ts` — append. One new `test.describe` block, named `01-S5` and this
+  stage's title, in the plan's single spec file that `01-S1` creates. It declares its own route table
+  and edits no other block.
+- `e2e/__screenshots__/trips-core.visual.spec.ts/` — append. Only the frames this stage's own block
+  records; `--update-snapshots` is narrowed with `-g '01-S5'` so no other block is re-recorded.
 
 ### Data and migration
 
@@ -1957,7 +2009,7 @@ minute.
 metric is added to `resolveLimits()` and none to `PLAN_QUOTAS`, so
 `src/server/billing/__tests__/limits.test.ts` gains no case and is not an owned path. The deferred
 converter will not create a row either — a conversion is a read of a cached rate — but its cache and
-its provider terms are `01-S11`'s to argue, not this stage's to pre-empt.
+its provider terms belong to the deferred rate stage above, not to this one to pre-empt.
 
 ### Tenant isolation test
 
@@ -1985,8 +2037,9 @@ rather than a fixed 60000, which is what stops the clock drifting a second per h
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
 `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
-out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
-this stage's own baselines and nobody else's — against `e2e/trips-core-s5.visual.spec.ts`.
+out in full — `--project=setup` once, then the plan's spec, then `--update-snapshots` narrowed to
+this stage's own `describe` block with `-g '01-S5'`, so no other block's baselines are re-recorded — against
+`e2e/trips-core.visual.spec.ts`, the plan's single spec file.
 This stage's `describe` declares `/dashboard` and calls `auditServerClock` over its own route table.
 
 **The `RELATIVE_TIME_SITES` entry, which is the whole reason this stage claims a shared helper.** The
@@ -2057,7 +2110,8 @@ On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this 
   `11-boundaries-and-blockers.md` lists `TRP-05` among the rows waiting on it, together with the two
   terms that decide the cost more than the per-call price does: what may be cached and for how long,
   and what attribution is owed on screen.
-- **Target:** `01-S11`, wave 6, minted here when the decision lands.
+- **Target:** the next free id in this file, wave 6, minted here when the decision lands and not
+  cited before then.
 - **What this stage does about it:** nothing. It ships the column, the fold and the clock, and the
   converter is absent rather than stubbed. A disabled control promising a feature that has no provider
   is worse than no control, and `11-S3` forbids shipping one degraded into uselessness to avoid asking.
@@ -2119,8 +2173,11 @@ Rows unblocked: `TRP-02` (`01-S8`) and `TRP-06` (`01-S9`) directly.
   surface.
 - `src/server/repos/__tests__/trip-guests.test.ts` — new.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
-- `e2e/trips-core-s6.visual.spec.ts` — new. This stage's own spec file.
-- `e2e/__screenshots__/trips-core-s6.visual.spec.ts/` — new. Its own baseline directory.
+- `e2e/trips-core.visual.spec.ts` — append. One new `test.describe` block, named `01-S6` and this
+  stage's title, in the plan's single spec file that `01-S1` creates. It declares its own route table
+  and edits no other block.
+- `e2e/__screenshots__/trips-core.visual.spec.ts/` — append. Only the frames this stage's own block
+  records; `--update-snapshots` is narrowed with `-g '01-S6'` so no other block is re-recorded.
 
 `src/routeTree.gen.ts` is **not** an owned path and is never hand-edited. `pnpm generate-routes` is a
 step of this stage (see **UI**) and the regenerated tree travels in the diff, which is the one
@@ -2352,8 +2409,9 @@ workspace no longer appears as an invitable profile.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
 `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
-out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
-this stage's own baselines and nobody else's — against `e2e/trips-core-s6.visual.spec.ts`.
+out in full — `--project=setup` once, then the plan's spec, then `--update-snapshots` narrowed to
+this stage's own `describe` block with `-g '01-S6'`, so no other block's baselines are re-recorded — against
+`e2e/trips-core.visual.spec.ts`, the plan's single spec file.
 This stage's `describe` declares `/trips/$tripId/people` — a route no existing spec knows about —
 and calls `auditServerClock` over its own route table, which is the only check that reads a route's
 declaration against the streamed payload and is called nowhere else for a module route.
@@ -2459,8 +2517,11 @@ Rows unblocked: none. No row in `gap-rows.json` names `TRP-01`.
   and moves nothing, and each sibling names it in return.
 - `src/server/repos/trip-guests.ts` — edit. `countTripPeople`.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
-- `e2e/trips-core-s7.visual.spec.ts` — new. This stage's own spec file.
-- `e2e/__screenshots__/trips-core-s7.visual.spec.ts/` — new. Its own baseline directory.
+- `e2e/trips-core.visual.spec.ts` — append. One new `test.describe` block, named `01-S7` and this
+  stage's title, in the plan's single spec file that `01-S1` creates. It declares its own route table
+  and edits no other block.
+- `e2e/__screenshots__/trips-core.visual.spec.ts/` — append. Only the frames this stage's own block
+  records; `--update-snapshots` is narrowed with `-g '01-S7'` so no other block is re-recorded.
 
 `src/routes/_app/-ui/trip-actions.tsx` is **not** here: the menu `01-S1` built is reused as it stands,
 and a second implementation of it would be the defect this list is meant to prevent.
@@ -2613,8 +2674,9 @@ component.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
 `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
-out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
-this stage's own baselines and nobody else's — against `e2e/trips-core-s7.visual.spec.ts`.
+out in full — `--project=setup` once, then the plan's spec, then `--update-snapshots` narrowed to
+this stage's own `describe` block with `-g '01-S7'`, so no other block's baselines are re-recorded — against
+`e2e/trips-core.visual.spec.ts`, the plan's single spec file.
 This stage's `describe` declares `/trips` and `/dashboard` and calls `auditServerClock` over its own
 route table.
 
@@ -2727,8 +2789,11 @@ Rows unblocked: `TRP-04` (`01-S10`) directly.
 - `src/lib/currency-list.ts` — new. Pinned favourites, the runtime set, and the search over both.
 - `src/lib/__tests__/currency-list.test.ts` — new.
 - `src/routes/_app/-ui/__tests__/trip-form.test.tsx` — new. The date-and-duration linkage.
-- `e2e/trips-core-s8.visual.spec.ts` — new. This stage's own spec file.
-- `e2e/__screenshots__/trips-core-s8.visual.spec.ts/` — new. Its own baseline directory.
+- `e2e/trips-core.visual.spec.ts` — append. One new `test.describe` block, named `01-S8` and this
+  stage's title, in the plan's single spec file that `01-S1` creates. It declares its own route table
+  and edits no other block.
+- `e2e/__screenshots__/trips-core.visual.spec.ts/` — append. Only the frames this stage's own block
+  records; `--update-snapshots` is narrowed with `-g '01-S8'` so no other block is re-recorded.
 
 `src/lib/money.ts` is deliberately **not** claimed: `CURRENCY_OPTIONS` (`:40-73`) is a curated list
 with a reason written above it, `04-budget-and-currencies.md` reads that module, and widening it would
@@ -2887,8 +2952,9 @@ there.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
 `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
-out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
-this stage's own baselines and nobody else's — against `e2e/trips-core-s8.visual.spec.ts`.
+out in full — `--project=setup` once, then the plan's spec, then `--update-snapshots` narrowed to
+this stage's own `describe` block with `-g '01-S8'`, so no other block's baselines are re-recorded — against
+`e2e/trips-core.visual.spec.ts`, the plan's single spec file.
 The stage's `describe` declares `/trips` and calls `auditServerClock` over its own route table;
 `e2e/helpers/shoot.ts` is not claimed, because a form prints no clock-derived string.
 
@@ -2956,8 +3022,9 @@ leaves `TRP-02` at partial.**
   in the stage that owns the capability, and filing it into `11-S3` is listed as a contract extension
   by the run that wrote this plan rather than asserted as already done.
 - **Disposition: defer**, with the same shape `01-S5` uses for its own deferral:
-  - **Deferred to:** `01-S12`, **target wave 6** — the wave `01-S11` already sits in for the other
-    provider-blocked capability in this plan, so the two land together if the decisions do.
+  - **Deferred to:** a stage this file mints when the decision lands, **target wave 6** — the same
+    wave `01-S5`'s deferred rate capability targets, so the two land together if the decisions do.
+    Neither id is cited before the stage that carries it exists, for the reason `01-S5` gives.
   - **Why not hand-roll:** there is nothing to hand-roll. `11-S2`'s **hand-roll a restricted subset**
     fallback applies to a missing _package_, where the work is ours to do; this is a missing
     _catalogue of licensed photographs_, and no amount of our code produces one.
@@ -3025,8 +3092,11 @@ the day detail this stage builds, which is why its surviving edge is `DOC-08 →
 - `src/routes/_app/trips/$tripId/-ui/__tests__/plan-layout.test.ts` — new.
 - `src/components/planner/rail.tsx` — edit. The rail accepts a width and publishes a resize handle.
 - `src/components/planner/__tests__/rails.test.tsx` — edit.
-- `e2e/trips-core-s9.visual.spec.ts` — new. This stage's own spec file.
-- `e2e/__screenshots__/trips-core-s9.visual.spec.ts/` — new. Its own baseline directory.
+- `e2e/trips-core.visual.spec.ts` — append. One new `test.describe` block, named `01-S9` and this
+  stage's title, in the plan's single spec file that `01-S1` creates. It declares its own route table
+  and edits no other block.
+- `e2e/__screenshots__/trips-core.visual.spec.ts/` — append. Only the frames this stage's own block
+  records; `--update-snapshots` is narrowed with `-g '01-S9'` so no other block is re-recorded.
 
 `-ui/plan-model.ts`, `-ui/plan-actions.tsx` and `-server/plan.ts` are **not** claimed: this stage
 changes how the workspace is arranged, not what it holds or what it writes. It is the only wave-5
@@ -3191,8 +3261,9 @@ client-supplied identifier in the ring that is not already validated on the way 
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
 `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
-out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
-this stage's own baselines and nobody else's — against `e2e/trips-core-s9.visual.spec.ts`.
+out in full — `--project=setup` once, then the plan's spec, then `--update-snapshots` narrowed to
+this stage's own `describe` block with `-g '01-S9'`, so no other block's baselines are re-recorded — against
+`e2e/trips-core.visual.spec.ts`, the plan's single spec file.
 This stage's `describe` declares `/trips/$tripId/plan` with `map: true` and calls `auditServerClock`
 over its own route table. `e2e/helpers/shoot.ts` is not claimed.
 
@@ -3308,8 +3379,11 @@ Rows unblocked: none. `TRP-04` is a leaf.
 - `src/routes/_app/-ui/trip-form.tsx` — edit. The reminder control's presets, custom range and copy.
 - `src/routes/_app/-server/trip-lifecycle.ts` — edit. `updateTripFn` re-anchors the reminder.
 - `src/routes/_app/-server/__tests__/trip-reminder.test.ts` — new. The re-anchoring seam.
-- `e2e/trips-core-s10.visual.spec.ts` — new. This stage's own spec file.
-- `e2e/__screenshots__/trips-core-s10.visual.spec.ts/` — new. Its own baseline directory.
+- `e2e/trips-core.visual.spec.ts` — append. One new `test.describe` block, named `01-S10` and this
+  stage's title, in the plan's single spec file that `01-S1` creates. It declares its own route table
+  and edits no other block.
+- `e2e/__screenshots__/trips-core.visual.spec.ts/` — append. Only the frames this stage's own block
+  records; `--update-snapshots` is narrowed with `-g '01-S10'` so no other block is re-recorded.
 
 `src/server/queue/reminders.ts` and `src/server/queue/reminder-sync.ts` are **not** claimed: both are
 `00-S5`'s, both closed in wave 0, and this stage calls them. A second scheduler would be the defect.
@@ -3447,8 +3521,9 @@ records its `put` and `delete` calls:
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
 `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes
-out in full — `--project=setup` once, then this stage's own spec, then `--update-snapshots` for
-this stage's own baselines and nobody else's — against `e2e/trips-core-s10.visual.spec.ts`.
+out in full — `--project=setup` once, then the plan's spec, then `--update-snapshots` narrowed to
+this stage's own `describe` block with `-g '01-S10'`, so no other block's baselines are re-recorded — against
+`e2e/trips-core.visual.spec.ts`, the plan's single spec file.
 This stage's `describe` declares `/trips` — the surface the form opens over — and calls
 `auditServerClock` over its own route table.
 
@@ -3518,18 +3593,26 @@ measurement rather than by reading the sibling plans, because a plan can only re
 existed when it was written, and round 8 produced two real collisions in a set where every plan
 carried an acceptance criterion about it.
 
+Two checks, not one, and both are run rather than reasoned about. `check-plan-collisions.mjs` answers
+the ownership question above. `check-plan-refs.mjs` answers two more that cost four blocking findings
+in an earlier round: every `NN-Sn` token this file cites must be **defined** by a `## Stage` heading in
+the plan whose prefix it carries, and an area plan must actually invoke Playwright rather than assert
+that it was verified. Both outputs are pasted verbatim below.
+
 The command and its output, verbatim, run against the full plan set — thirteen files, including the
 five area plans that did not exist when this one was first drafted. Sibling plans are rewritten
 **while this file is being written**, and the drift is watched rather than assumed: within one hour
-the plan count moved 8 → 13, the stage count 48 → 91, and the owned-path total 284 → 554 → 553,
-entirely from other plans' edits and this stage's own two new modules. So the first line and the
-seventh are a timestamp, not a claim; the two lines that carry this plan's obligation and must not
-move are the fifth — **no same-wave exclusive collision** — and the sixteen stanzas under the
+the plan count moved 8 → 13, the stage count 48 → 91, and the owned-path total 284 → 554 → 553 → 535.
+The last of those moves is this plan's own and is worth naming: the twenty per-stage spec and baseline
+paths an earlier draft claimed are now the two shared ones `12-verification-protocol.md` §4 fixes, so
+eighteen owned paths left this file. The rest of the drift is other plans' edits. So the first line
+and the seventh are a timestamp, not a claim; the two lines that carry this plan's obligation and must
+not move are the fifth — **no same-wave exclusive collision** — and the sixteen stanzas under the
 seventh, every one of which is answered in the table below.
 
 ```text
 $ node scripts/ultrabuild/check-plan-collisions.mjs 01
-plans 13 · stages 91 · owned paths 553
+plans 13 · stages 91 · owned paths 535
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -3609,7 +3692,27 @@ touched by more than one plan in different waves (16) — legal; each plan must 
       06-documents-and-media.md  06-S3  wave 2  (append)
       06-documents-and-media.md  06-S5  wave 3  (append)
       07-collaboration-and-sharing.md  07-S10  wave 5  (edit)
+$ echo $?
+0
 ```
+
+```text
+$ node scripts/ultrabuild/check-plan-refs.mjs 01
+
+plan 01: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
+$ echo $?
+0
+```
+
+**Neither of the two shared test files appears in either list, and that is the check agreeing rather
+than the check missing them.** `src/server/repos/__tests__/tenant-isolation.test.ts` is claimed by
+five stages here and by stages of several sibling plans, and `e2e/trips-core.visual.spec.ts` by ten
+stages here; every one of those claims outside `01-S1`'s creating `new` is `append`, and the script
+excludes `append` from `EXCLUSIVE` by construction — its own header names both a module's visual spec
+and the isolation test as the two files the cooperative pattern exists for. The visual spec is
+additionally absent from the cross-plan list because no sibling plan names it: `snapshotPathTemplate`
+gives this plan its own baseline directory, and each sibling area plan owns exactly one spec file of
+its own under the same §4 rule.
 
 **No same-wave exclusive collision involves this plan.** The one that did — `01-S2` and `07-S1` both
 claiming `src/routes/_app/trips/$tripId/-server/plan.ts` as `edit` in wave 1 — is resolved by this
