@@ -1505,12 +1505,35 @@ and this stage reuses both rather than inventing a second way to turn a secret i
 Sourced from `wiki: Calendar-Feeds`. Three of its properties are ours to decide differently and are
 decided here, each with its reason:
 
-- **"All trips" means all trips in this workspace that this person can see.** The reference is
-  single-tenant, so "every trip you own or joined" is unambiguous. Ours is not: a person belongs to
-  organizations through `member`, and a feed row carries an `organization_id` like every other row.
-  A workspace feed therefore covers the trips of one workspace, and somebody in two workspaces
-  subscribes twice. Merging them would be the first row in this product whose contents cross a tenant
+- **A workspace feed contains exactly the trips that person's own `/trips` screen contains, and the
+  repository read that produces it is named here so the two cannot drift.** The reference is
+  single-tenant, so "every trip you own or joined" is unambiguous. Ours is not, and there are two
+  candidate answers in this codebase, so the choice is made once, here, rather than implied twice.
+  **Workspace membership, not trip membership, is this product's read boundary** - measured, not
+  assumed: `requireTrip` is `tripsRepository.requireById(scope, tripId)` with no member predicate
+  (`src/server/repos/trips.ts:152`), and the trips screen loads
+  `listTrips(scope, { archived: false, ... })` (`src/routes/_app/-server/overview.ts:266`), which has
+  no user predicate either (`src/server/repos/trips.ts:210`). `listTripsForUser`
+  (`src/server/repos/trips.ts:414`) does filter through `trip_members`, but its only caller is the
+  dashboard's "yours" rail (`src/server/repos/dashboard.ts:69`); it is an affordance, not a permission
+  boundary, and this stage does not promote it into one.
+
+  So a workspace feed is built from **one** read - `listTrips(scope, { archived: false, limit: 100 })`
+  inside the scope of step 5 below - with the ended-more-than-90-days floor applied as a pure
+  predicate over the returned rows against `trips.end_date` (`schema.ts:345`), because
+  `listTripsInput` (`src/server/repos/trips.ts:98-107`) carries no date filter and this stage may not
+  add SQL to a repository file it does not own. A feed that showed less than the screen would be a
+  support ticket; one that showed more would be a leak; equal is neither, and it is the only answer
+  that needs no second visibility model.
+
+  Two consequences, stated as consequences rather than left as omissions. **The link carries every
+  non-archived trip of that workspace, including trips its owner never joined** - so the dialog says
+  that in those words before the link is revealed (see **UI**), because the mitigation for a wide
+  bearer credential is that the person issuing it knows how wide it is, next to rotation, revocation
+  and the resolve-time membership check in step 3. And **somebody in two workspaces subscribes
+  twice**: merging them would be the first row in this product whose contents cross a tenant
   boundary, and no URL is worth that.
+
 - **The token is stored as a digest, never as the secret.** `07-S6` establishes it for share links
   and its argument is identical here: a leaked database row must not yield a working URL.
 - **No time-zone blocks are emitted at all**, so there is nothing to deduplicate. See below.
@@ -1656,22 +1679,53 @@ in the product a request without a session can reach:**
 2. The secret is hashed and matched against the unique digest index. A miss, a revoked row and an
    expired row are **the same 404**, with the same body — nothing distinguishes "never existed" from
    "was turned off", because the difference is information about somebody's trip.
-3. The tenant comes from the matched row: `createScope(getDb(), { organizationId: feed.organizationId, userId: feed.userId, role: 'member' })`.
+3. **The owner's workspace membership is revalidated on every single request, and this is where
+   offboarding is answered.** A provisional least-privileged scope is built from the matched row -
+   `createScope(getDb(), { organizationId: feed.organizationId, userId: feed.userId, role: 'member' })` -
+   and used for exactly one read, `getMembership(scope, feed.userId)`
+   (`src/server/repos/members.ts:144`). Its provisional role decides nothing, because that read
+   filters on `organization_id` and `user_id` and on nothing else. `null` is **the same 404 as step
+   2, with the same body**. That one indexed lookup on `member_organization_id_user_id_unique`
+   (`src/server/db/auth-schema.ts:220`) closes all three ways an owner stops belonging: removed from
+   the workspace (`removeMember` hard-deletes the row through `requireRemove`,
+   `src/server/repos/members.ts:187`), the workspace itself deleted, and the account deleted, since
+   `member.user_id` references `user.id` `on delete cascade` (`src/server/db/auth-schema.ts:213-215`).
+   The check sits at resolve time rather than in the offboarding paths **deliberately**: a feed that
+   dies only when some other stage remembers to sweep it is a feed that outlives the person, and this
+   stage owns none of those files. It is a **deny, not a revoke** - nothing is written, so a person
+   removed by mistake and re-added has their existing devices working again on the next poll, with no
+   re-issue and no new URL.
+4. **"Removed from the trip" is a different question, and the answer is that it changes nothing -
+   because it changes nothing in the app either.** `trip_members` is a collaborator list, not a read
+   gate: `requireTrip` is tenant-scoped only (`src/server/repos/trips.ts:152`), so a workspace member
+   who was never added to a trip can already open it on screen. A trip feed therefore keeps serving
+   after its owner's `trip_members` row is deleted, exactly as their browser would, and stops when
+   their **workspace** membership goes in step 3, when the trip is deleted (the feed row cascades with
+   it), or when they rotate or revoke. This is written down because the absence of a `tripRoleFor`
+   call here is a decision and not a gap: `tripRoleFor` (`src/server/repos/trips.ts:460`) exists, and
+   calling it would make the feed narrower than the screen, which the **Reference rows** section has
+   already refused.
+5. The tenant of every content read is then the matched row carrying the **live** role from step 3:
+   `createScope(getDb(), { organizationId: feed.organizationId, userId: feed.userId, role: membership.role })`.
    The identity is the feed's owner, which is what makes "the trips this person can see" a defined
-   thing, and the role is the least privileged one in the enum.
-4. Every read after that is an ordinary tenant-scoped repository call, and a trip feed re-resolves its
-   trip through `requireTrip` inside that scope, so even a corrupted row cannot read across a
-   boundary.
-5. The only write the visit can cause is `touchFeed`, in the same scope.
-6. **A session on the request is ignored.** If the fetch happens to carry our cookies — a person
+   thing, and the role is read from `member` rather than assumed, so an owner demoted to `member`
+   serves a member's feed on the next fetch. A `role` value outside `ORGANIZATION_ROLES` fails
+   `requireTenantContext` (`src/server/repos/context.ts:96`); the route maps **every** resolution
+   failure, that one included, to the same 404 rather than to a 500, so a corrupt row leaks nothing
+   and pages nobody.
+6. Every read after that is an ordinary tenant-scoped repository call - `listTrips` for a workspace
+   feed, `requireTrip` for a trip feed - so even a corrupted row cannot read across a boundary.
+7. The only write the visit can cause is `touchFeed`, in the same scope.
+8. **A session on the request is ignored.** If the fetch happens to carry our cookies — a person
    pasting the URL into their own browser — the response is still the feed the token names and
    nothing more. A token that could be upgraded by the reader's own session would return different
    bytes to different readers of the same URL, which is not a calendar feed.
 
 **The safety rule the UI must carry, stated here because it is a security property and not a
-sentence.** The token in the URL **is** the credential: anyone holding the link reads that trip's
-places, times, addresses, notes and confirmation details with no account and no audit trail beyond
-`serve_count`. So: the dialog says so in plain words before the link is revealed, not in a footnote;
+sentence.** The token in the URL **is** the credential: anyone holding the link reads the places,
+times, addresses, notes and confirmation details of every trip the feed covers - one trip for a trip
+feed, every non-archived trip of the workspace for a workspace feed - with no account and no audit
+trail beyond `serve_count`. So: the dialog says so in plain words before the link is revealed, not in a footnote;
 the link is shown once on issue and thereafter only through an explicit "show" action; the response
 carries `cache-control: private, no-store` and `x-robots-tag: noindex, nofollow` so an intermediary
 or a crawler does not keep a copy; and the panel offers Rotate and Turn off side by side with the
@@ -1771,8 +1825,11 @@ screen, because both answer the same question — how does this trip leave the a
 - the subscription, behind an explicit enable step, with the three hand-off paths a calendar
   application understands: an add-by-URL link, a `webcal://` link the operating system routes, and the
   raw `https://` URL behind a "show link" disclosure;
-- for the workspace feed, the same controls on a second tab, with the scope written out: this
-  workspace's trips, excluding archived ones and trips that ended more than 90 days ago.
+- for the workspace feed, the same controls on a second tab, with the scope written out in the words
+  the resolver actually implements - **every non-archived trip in this workspace, including trips you
+  are not a collaborator on, minus the ones that ended more than 90 days ago** - placed above the
+  enable control and tied to it with `aria-describedby`, so nobody issues a workspace link believing
+  it carries only their own trips.
 - **Rotate** and **Turn off**, each behind a `ConfirmDialog` that says what breaks — rotation kills
   every device already subscribed, and both are irreversible in the direction that matters.
 
@@ -1847,7 +1904,12 @@ Functions covered: `issueFeed`, `rotateFeed`, `revokeFeed`, `listFeeds`, `getFee
   `T000000Z`; the same assignment on a European daylight-saving transition day emits the offset that
   applies on that date rather than the one that applies today; a reservation with no date produces no
   event; the workspace feed excludes an archived trip and one that ended 91 days before the pinned
-  day and includes one that ended 89 days before it; a UID is unchanged across a token rotation.
+  day and includes one that ended 89 days before it; a workspace feed includes a trip whose owner has
+  no `trip_members` row, which is the visibility rule argued in **Reference rows** rather than an
+  accident; deleting the owner's `member` row makes the resolver answer with the same 404 body an
+  unknown digest gets, and re-inserting that row makes the same URL serve again with no re-issue; a
+  trip feed still serves after its owner's `trip_members` row is deleted; a UID is unchanged across a
+  token rotation.
 - `src/server/repos/__tests__/calendar-feeds.test.ts` (new) — as above.
 
 **Browser evidence.** `describe` block `06-S5 — calendar subscription` in
@@ -2558,7 +2620,7 @@ sibling plan, and a `NN-Sn` token that no `## Stage` heading defines is a dangli
 reads exactly like a real one. Both outputs are pasted verbatim.
 
 ```
-plans 13 · stages 91 · owned paths 538
+plans 13 · stages 91 · owned paths 543
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -2629,10 +2691,11 @@ n `` form. The fourth, `04-S2`, is **not** `04-budget-and-currencies.md`'s `04-S
 `12-verification-protocol.md:26`, which the script reads as a stage because it cannot tell a fenced
 example from a real heading.
 
-**What the header numbers are worth.** `plans 13 · stages 91 · owned paths 538` is a snapshot of a
+**What the header numbers are worth.** `plans 13 · stages 91 · owned paths 543` is a snapshot of a
 set several runs were still writing while this file was being written — it does not even move
 monotonically, because a sibling plan can drop a claim between two runs of the script, and this one
-read `owned paths 553` minutes before it read `538`. Earlier in the same session it read
+read `owned paths 553` minutes before it read `538`, then `543` on the re-run that produced the block
+above. Earlier in the same session it read
 `plans 8 · stages 48 · owned paths 284` at the start of this plan's own session,
 `plans 12 · stages 69 · owned paths 442` an hour later, `plans 12 · stages 71 · owned paths 448`
 twenty minutes after that, `plans 13 · stages 80 · owned paths 498` after that, and

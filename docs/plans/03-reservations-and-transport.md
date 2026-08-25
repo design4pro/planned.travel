@@ -103,6 +103,17 @@ this plan is scheduled behind it.** Measured over `gap-rows.json`: no row anywhe
 | `BKG-05 → TRP-06` | `01-trips-core.md`, `01-S9`, wave 5            | `03-S8` is wave 6 |
 | `BKG-05 → BKG-02` | `03-S4`, wave 3                                | `03-S8` is wave 6 |
 
+**One edge the row graph does not carry, and the wave order has to.** `src/server/repos/reservations.ts`
+is claimed **once** in this plan, by `03-S4` in wave 3, and two later stages write columns that live
+on that table: `03-S6` (wave 4) clears `reservations.imported_at` when a reader saves a booking, and
+`03-S7` (wave 5) sets it when an import is confirmed. Neither owns the file, so neither can add a
+writer — and neither can smuggle the value through the booking payload, because both validators in
+front of it are `z.object`s that strip an unknown key without complaining. `03-S4` therefore mints
+`markReservationsImported` and `clearReservationImported` alongside its own `linkReservationExpense`,
+three and two waves before their callers exist. The full argument is in that stage's **Server**
+section; it is repeated here because a reader checking the wave order is the reader most likely to
+ask why a wave-3 stage exports a function nothing in wave 3 calls.
+
 Three edges point **out** of this file and are named with the plan that supplies them, as the
 sibling plans do:
 
@@ -229,6 +240,16 @@ once and restated by the stage that needs it:
 | `user_settings.mask_confirmation_codes` | `03-S6`  | additive column |
 | `reservations.imported_at`              | `03-S7`  | additive column |
 | `day_accommodations.reservation_id`     | `03-S8`  | additive column |
+
+**Asking for a column is not the same as being able to write it**, and two rows of that table are
+written by a stage other than the one that asks. `src/server/repos/reservations.ts` is claimed exactly
+once in this plan, by `03-S4` in wave 3; `reservations.expense_id` is asked for and written by that
+same stage, while `reservations.imported_at` is specified by `03-S7` but its writer
+(`markReservationsImported`) and its clearer (`clearReservationImported`) are minted by `03-S4`, three
+and two waves before `03-S6` and `03-S7` call them. A column whose asking stage owns no repository
+file is a column silently stripped by the `z.object` standing in front of it — the defect `03-S8`
+records against `day_accommodations.reservation_id` and closes by owning two lines of
+`src/server/repos/itinerary.ts` in the one wave where that file is free.
 
 Every one is additive: nullable or defaulted, nothing dropped, nothing renamed, nothing narrowed, so
 a rollback keeps working against the new schema (`ARCHITECTURE.md` §9). No stage needs a token that
@@ -1064,7 +1085,12 @@ trip's ledger without a second confirmation.
 is complete (`createBookingFn`, `updateBookingFn`, `setBookingStatusFn`, `deleteBookingFn`), that
 `src/components/modules/book/booking-form.ts` (487 lines) already carries a per-type field shape and
 its validation, and that `reservations.assignment_id` (`src/server/db/schema.ts:705-707`) exists with
-no UI behind it. Of the three things it names as missing, two are this stage's and one is not:
+no UI behind it. It is more finished than the row says: the column is **already** carried by
+`reservationFields` (`src/server/repos/reservations.ts:49`) and **already** guarded against the
+booking's own trip inside the caller's own tenant (`:204-213`), so the gap is the server function and
+the screen, not the repository — measured under **Server**, below, because an earlier draft of this
+stage got it wrong in the expensive direction. Of the three things the row names as missing, two are
+this stage's and one is not:
 
 - **Attachments** — a file linked to a booking — are `DOC-04`'s, in `06-documents-and-media.md` at
   wave 4. The column already exists (`trip_files.reservation_id`, `:996`, with its index at `:1019`),
@@ -1078,9 +1104,13 @@ wave 4).
 
 ### Owned paths
 
-- `src/server/repos/reservations.ts` — edit. `assertReferences` (`:187`) already guards `dayId`,
-  `endDayId`, `placeId` and `transportId` against the booking's own trip; the assignment reference
-  joins them, and the expense link is written through the ledger's own repository.
+- `src/server/repos/reservations.ts` — edit. Three new exported writers and **no change to any
+  existing validator**: the assignment guard an earlier draft of this stage claimed here is already
+  on disk (`:49` and `:204-213`, measured below), and the two columns wave 0 supplies —
+  `expense_id` and `imported_at` — are deliberately kept out of `reservationFields` so that no
+  client payload can set either. **This is the plan's only claim on the file, in any wave**, which
+  is why the import marker's writer and clearer are minted here rather than in `03-S7` (wave 5) and
+  `03-S6` (wave 4), the two stages that call them.
 - `src/server/fns/reservations.ts` — edit. The two write validators gain the assignment; the price
   side effect is orchestrated here. Shared with `00-S3` (`00-foundations.md`, wave 0), which adds an
   audit call to the same file three waves earlier; different waves, so the two never run together.
@@ -1146,8 +1176,9 @@ stage does not own.**
 - Migration: the next ordinal `pnpm db:generate` mints. It **backfills nothing** — every existing
   booking keeps a null link, which reads as "this booking has no cost line", which is true.
 
-`reservations.assignment_id` needs no schema work: the column, its FK to `day_assignments` and its
-index are already on disk (`:705-707`, `:735`).
+`reservations.assignment_id` needs no schema work **and no validator work**: the column, its FK to
+`day_assignments` and its index are already on disk (`:705-707`, `:735`), and so are its Zod field and
+its reference guard (`src/server/repos/reservations.ts:49` and `:204-213`).
 
 **Money, on both sides of the side effect.** `reservations.price_minor` and `expenses.amount_minor`
 are both **integer counts of minor units**, each beside a `text(3)` ISO-4217 currency column, and the
@@ -1167,14 +1198,24 @@ that read begins at the same `tenantFilter()`.
 
 ### Server (repo, server function, Zod)
 
-**Repository — `src/server/repos/reservations.ts`.** Two changes, both inside the file this stage
-owns.
+**Repository — `src/server/repos/reservations.ts`.** Three new exported functions, and **not one
+line of change to `reservationFields`, `createReservationInput`, `updateReservationInput` or
+`assertReferences`**.
 
-- `reservationFields` gains `assignmentId: idSchema.nullish()`, and `assertReferences` — the private
-  guard at `:187` that already proves a `dayId`, an `endDayId`, a `placeId` and a `transportId` belong
-  to the booking's own trip inside the caller's own tenant — gains the same proof for the assignment:
-  it is resolved through `dayAssignmentsRepository` and its `tripId` is compared with the booking's. A
-  stop id from another trip is a `NotFoundError`, not a booking pointing at somebody else's afternoon.
+**What an earlier draft of this stage claimed here, and what is on disk.** That draft named two
+repository deliverables: adding `assignmentId` to `reservationFields`, and widening
+`assertReferences` so an assignment is proved to belong to the booking's own trip. **Both are
+already implemented.** Measured: `reservationFields` declares `assignmentId: idSchema.nullish()` at
+`src/server/repos/reservations.ts:49`, so the field survives both validators; and
+`assertReferences` — declared at `:187`, the line that draft cited — carries its assignment arm at
+`:204-213`, selecting `dayAssignments.tripId` under `tenantFilter(scope, dayAssignments, …)` and
+raising `NotFoundError('day assignment', …)` when the row's `tripId` is not the booking's. A stop id
+from another trip, or from another tenant, is therefore already a `NotFoundError` and this stage
+adds nothing to that guard. The repository half of the stop link is finished; **what is missing is
+the path from the form to it**, which is the server-function and UI work below, and which is what
+`BKG-02` is actually short of. A deliverable that would ship a zero-line diff is restated rather
+than left standing, because a stage nobody can fail is a stage nobody can verify.
+
 - One new exported function, `linkReservationExpense(scope, reservationId, expenseId | null)`. It is
   the **only** way `reservations.expense_id` is ever written, and `expenseId` is deliberately **not**
   added to `reservationFields`, so no client payload can set it: the link is a consequence of the
@@ -1182,6 +1223,46 @@ owns.
   `reservationsRepository.requireById(scope, …)`, and when the id is non-null resolves the expense
   through `getExpense(scope, expenseId)` — a read that already exists and needs no widening — and
   requires its `tripId` to equal the booking's before writing. A mismatch is a `NotFoundError`.
+
+- One new exported function, **`markReservationsImported(scope, reservationIds)`**, returning the
+  number of rows it marked. It parses its argument with `z.array(idSchema).min(1).max(500)` — the
+  same 500-row ceiling the import engine already applies, so the bound is the engine's and not a
+  second opinion — and writes through
+  `reservationsRepository.updateWhere(scope, inArray(reservations.id, ids), { importedAt: Date.now() })`:
+  **one statement for the whole batch**, whose `where` begins at `tenantFilter()` like every other
+  statement in the file, so an id belonging to another organization matches no row rather than
+  raising, and the returned count is the number of rows that were genuinely the caller's.
+  `imported_at` is an epoch-millisecond instant, per this plan's date conventions, and `Date.now()`
+  is read once for the batch so every row of one import carries the same instant.
+- One new exported function, **`clearReservationImported(scope, reservationId)`**, returning the
+  updated row. It writes `{ importedAt: null }` through
+  `reservationsRepository.requireUpdate(scope, reservationId, …)`, so a booking id that is not the
+  caller's is a `NotFoundError` raised by the same scoped read every other writer in this file uses.
+  It is idempotent: clearing a marker that is already null writes null again and returns the row, so
+  the caller never has to ask first.
+
+**Why the two marker writers are minted in this stage, whose subject is the stop link and the ledger
+line.** `reservations.imported_at` is a wave-0 column (this plan's requirements table, above). It is
+specified by `03-S7`, set by `03-S7`'s confirm in wave 5, and cleared by `03-S6` in wave 4 — and
+**neither of those stages owns `src/server/repos/reservations.ts`. This stage is the only one in the
+plan set that does, in any wave.** Left where they were, both writes were unexecutable in the worst
+way available: `createReservationInput` and `updateReservationInput` are `z.object`s, so an
+`importedAt` handed to `createReservation` or `updateReservation` is **not** an error — it is
+silently **stripped** before the insert. Every imported row would land with a null marker, the desk's
+"Unchecked import" badge would never appear on any booking, the clearing interaction would be a
+no-op, and every test that asserted on the functions' return values would pass. That is the same
+defect `03-S8` records against `day_accommodations.reservation_id`, found the same way; the
+difference is that `src/server/repos/itinerary.ts` is genuinely free in `03-S8`'s wave, whereas this
+file is free only in wave 3 — so the writers are minted here, three and two waves ahead of their
+callers, instead of being claimed twice or filed onto a stage that does not carry the file.
+
+**And why they are functions rather than two more fields.** Putting `importedAt` into
+`reservationFields` would put the marker on the public booking payload, and a caller who can set
+`imported_at` can also clear it: a hand-typed booking could be marked as machine-written, and an
+import could mark its own rows as already checked. The marker is a statement the **server** makes
+about its own writes, so it is written by these two functions and by nothing else —
+`createReservation` and `updateReservation` never touch it. That is the same argument, for the same
+reason, that keeps `expenseId` off `reservationFields` two bullets above.
 
 **Server function — `src/server/fns/reservations.ts`.**
 
@@ -1231,12 +1312,15 @@ reservation.id, null)` and **nothing else**. The ledger line is not deleted: del
   ledger" retry — the booking is saved, and the reader is told exactly what did not happen.
 
 **Zod.** v4 idiom throughout, `z.object` with bounded strings, `z.enum` for the type and status, the
-`error` parameter where the message is read by a person. Validation is shape; the assignment's
-ownership is decided in the repository, inside the tenant scope.
+`error` parameter where the message is read by a person, and `z.array(idSchema).min(1).max(500)` on
+the marker writer's id list. Validation is shape; the assignment's ownership is decided in the
+repository, inside the tenant scope, by the guard that is already there.
 
 **Authorisation.** `appScope()`, then `requireTrip`, then `assertReferences` inside the repository.
 Three layers, and the last one is the only one that can see whether the id the client sent is the
-caller's to use.
+caller's to use. The two marker writers add no fourth layer and need none: one resolves through
+`requireUpdate` and the other through a `tenantFilter()`ed `updateWhere`, so both are inside the
+same scope.
 
 **Nothing is enqueued.** Both writes are single-row and fast; the room mirror is the existing
 `patch('reservation', …)` call, unchanged in shape.
@@ -1308,8 +1392,8 @@ already bounds. Nothing is added to `resolveLimits()` or `PLAN_QUOTAS`, and
 Appended to `src/server/repos/__tests__/tenant-isolation.test.ts` as one `describe` block, built on
 the same two-organization `createScope()` fixtures the file already uses. Covered:
 `createReservation`, `updateReservation`, `getReservation`, `listTripReservations`,
-`setReservationStatus`, `deleteReservation`, the widened `assertReferences`, and the new
-`linkReservationExpense`.
+`setReservationStatus`, `deleteReservation`, `assertReferences` as it already stands, and the three
+new writers `linkReservationExpense`, `markReservationsImported` and `clearReservationImported`.
 
 The new cases, each scoped by `organization_id` on both sides of the link:
 
@@ -1324,6 +1408,20 @@ The new cases, each scoped by `organization_id` on both sides of the link:
 - A cannot cause a ledger row to be written into B's organization by any combination of ids, asserted
   by counting B's `expenses` rows before and after every attempt. B's reservations and B's expenses
   are both re-read afterwards and must be unchanged, including `expense_id` on B's bookings.
+- A calling `markReservationsImported` with a list that mixes **one of its own booking ids with one
+  of B's** marks exactly one row: the return value is `1`, A's booking comes back with an
+  `imported_at` set, and B's booking is re-read and still null. This is the case that proves the bulk
+  writer filters on the tenant and not merely on the id list, and it is the reason the function
+  returns a count rather than `void` — a silent no-op on a foreign id is indistinguishable from
+  success without one.
+- A calling `clearReservationImported` on **B's** booking is a `NotFoundError` from `requireUpdate`,
+  and B's `imported_at` is re-read afterwards and unchanged. A calling it twice on its own booking
+  succeeds twice, which is the idempotence the desk relies on when a reader saves the same booking
+  again.
+- Neither marker function can be reached through a booking payload: `createReservation` and
+  `updateReservation` are each called with an `importedAt` in their input and the written row's
+  `imported_at` is asserted to be unchanged, which is the regression test for the strip defect this
+  stage exists to close.
 
 ### Verification
 
@@ -1813,10 +1911,18 @@ with `tabular-nums`, and the masking this stage adds covers the confirmation cod
 price: hiding what a trip costs from the person paying for it would be a different feature and a
 worse one.
 
-**The import marker is `03-S7`'s column, read here.** `reservations.imported_at` is specified in that
-stage's **Data and migration**, because the stage that writes a column should be the one that
-specifies it. This stage reads it and renders the marker. Both are wave-0 requirements and land
-together, one wave before either stage runs.
+**The import marker is `03-S7`'s column, read here — and cleared here through `03-S4`'s writer.**
+`reservations.imported_at` is specified in that stage's **Data and migration**, because the stage
+that first writes a column should be the one that specifies it. This stage reads it, renders the
+marker, and clears it. **It does not claim `src/server/repos/reservations.ts`** — `03-S4` holds that
+file in wave 3 and is the plan's only claimant — and it adds `importedAt` to no validator, because
+`updateReservationInput` is a `z.object` that would strip the key without raising and the marker
+would simply never clear. The clearing is therefore a named repository function,
+`clearReservationImported(scope, reservationId)`, minted by `03-S4` one wave earlier and called from
+`updateBookingFn` in `src/server/fns/reservations.ts`, which this stage does own. Both columns are
+listed in this plan's wave-0 schema-requirements table and land together in that one
+`pnpm db:generate` run — four and five waves ahead of the stages that use them, which is what makes
+`03-S4` able to mint a writer for a column neither `03-S6` nor `03-S7` may declare.
 
 ### Server (repo, server function, Zod)
 
@@ -1826,10 +1932,20 @@ merges the workspace default with the traveller's override and already returns t
 new field arrives everywhere the old ones do. The workspace-level default is deliberately **not**
 added — a workspace cannot decide on a member's behalf whether their own screen is shoulder-safe.
 
-**Server function — `src/server/fns/reservations.ts`.** `loadBookingDeskFn` gains two fields on its
-payload: `maskCodes: boolean`, read from the caller's own effective settings, and `importedAt` per
-booking row. Neither is a new query: the settings read is one row by `(organization_id, user_id)` on
-an existing unique index, and the marker rides on the reservation row already being selected.
+**Server function — `src/server/fns/reservations.ts`.** Two changes.
+
+- `loadBookingDeskFn` gains two fields on its payload: `maskCodes: boolean`, read from the caller's
+  own effective settings, and `importedAt` per booking row. Neither is a new query: the settings read
+  is one row by `(organization_id, user_id)` on an existing unique index, and the marker rides on the
+  reservation row already being selected.
+- `updateBookingFn` calls `clearReservationImported(scope, reservation.id)` **after** the update has
+  succeeded and inside the same handler, so that saving a booking is what clears its marker. It is
+  called unconditionally rather than behind a "was it set" read: the function is idempotent, a second
+  read to avoid a null-to-null write would cost more than the write, and a marker that survives a save
+  because of a race is the one failure the reader would notice. If that call throws, the booking is
+  still saved and the handler reports `marker: 'failed'` on its result, exactly as the ledger side
+  effect `03-S4` adds reports `ledger: 'failed'`; the desk surfaces it as a warning rather than
+  turning a saved booking into an error a reader will retry into a duplicate.
 
 **Server function — `src/routes/_app/-server/settings.ts`.** The existing appearance writer accepts
 one more boolean. Its authorisation is unchanged and is the point: a preference is written for the
@@ -1926,8 +2042,9 @@ Appended as one `describe` block, covering the one repository function this stag
 The cases: A cannot update B's settings row by id — a `NotFoundError`, never a row re-scoped into A's
 organization; A's write does not create a settings row in B's organization; and a member id from B
 handed to A's own write is rejected rather than honoured. B's row is re-read afterwards and its
-`mask_confirmation_codes` must be exactly what it was. `loadBookingDeskFn`'s reservation reads are
-already covered by the block `03-S4` appends and are not duplicated here.
+`mask_confirmation_codes` must be exactly what it was. `loadBookingDeskFn`'s reservation reads, and
+`clearReservationImported` itself, are already covered by the block `03-S4` appends — this stage
+calls that function and does not define it — so neither is duplicated here.
 
 ### Verification
 
@@ -2085,6 +2202,11 @@ The engine is complete; this stage attaches to it.
   `index('reservations_org_imported_at_idx').on(t.organizationId, t.importedAt)` so the desk can find
   the unchecked rows without a scan. Set at the moment a confirmed import writes the row; cleared to
   null the first time a person opens and saves that booking.
+- **Its write path is `03-S4`'s, one wave earlier, and that is deliberate.** This stage owns no
+  repository file, so it cannot widen a validator or add a writer; `03-S4` (wave 3) is the plan's
+  only claimant of `src/server/repos/reservations.ts` and mints `markReservationsImported` and
+  `clearReservationImported` there. The column is specified here because this is the stage whose
+  behaviour needs it; it is written here through that function and nowhere else.
 - **Why an instant and not a boolean.** The behaviour needed is "a machine wrote this and nobody has
   checked it", and an instant answers that question _and_ says when, at the same width the schema
   already uses for `read_at`, `onboarded_at` and `onboarding_completed_at`. It also lets a later stage
@@ -2108,10 +2230,20 @@ is not durable state, and giving it a table would make it something a tenant has
 
 ### Server (repo, server function, Zod)
 
-**No repository module is added.** The confirm writes through `createReservation`
-(`src/server/repos/reservations.ts:226`), which is where the tenant scope, the reference guards and
-the `organization_id` stamp already live. No SQL is written outside `src/server/repos/**`, and no
-repository file is claimed — which also keeps this stage off `03-S4`'s and `03-S6`'s paths.
+**No repository module is added, and no repository file is claimed.** The confirm writes through
+`createReservation` (`src/server/repos/reservations.ts:226`), which is where the tenant scope, the
+reference guards and the `organization_id` stamp already live, and it stamps the marker through
+**`markReservationsImported(scope, ids)`** — an exported function of that same module, minted by
+`03-S4` in wave 3 for exactly this call. No SQL is written outside `src/server/repos/**`, and this
+stage stays off `03-S4`'s and `03-S6`'s paths entirely.
+
+**Why the marker is a function call and not a field on the insert.** `createReservationInput` is a
+`z.object`, so an `importedAt` passed to `createReservation` is not rejected — it is **stripped**, and
+every imported row would land with a null marker while this stage's tests, which assert on the
+returned rows, went on passing. The column would exist, the badge would never appear, and nothing
+would say why. `03-S4`'s **Server** section states the same argument from the owning side and adds the
+second half of it: a client that could set the marker could also clear it, so the marker is written by
+the server about its own writes and by nothing else.
 
 **Server functions — `src/server/fns/booking-import.ts`.**
 
@@ -2160,7 +2292,11 @@ format: z.enum(['ics', 'json']) })`.
   `z.object({ tripId, jobId, accept: z.array(z.string().min(1).max(128)).max(500) })`, where each
   entry identifies a staged row by its index-and-external-id pair. It re-reads the staged import,
   re-checks the scope, maps each accepted row into the shape `createReservation` takes, writes them,
-  sets `imported_at` on each, mirrors one `trip` patch into the room so other tabs refresh once rather
+  and then marks the whole batch with **one** `markReservationsImported(scope, writtenIds)` call —
+  one statement for up to 500 rows rather than one per row, which is also why that function takes a
+  list. It asserts the returned count equals the number of rows it wrote; a shortfall means an id it
+  had just created did not resolve inside its own scope, which is a bug rather than a user error and
+  is logged as one. It then mirrors one `trip` patch into the room so other tabs refresh once rather
   than five hundred times, and **deletes the KV entry** so a confirm cannot be replayed. Rows the
   reader deselected are simply never written.
 
@@ -2268,8 +2404,9 @@ argument.**
 ### Tenant isolation test
 
 Appended as one `describe` block. The repository functions it covers are `createReservation` and
-`getFile`; the cases are about the **three ids this stage takes from a client**, which is where an
-import can leak:
+`getFile`; `markReservationsImported` is covered by the block `03-S4` appends, which is where it is
+defined, and is not duplicated here. The cases are about the **three ids this stage takes from a
+client**, which is where an import can leak:
 
 - A calling `startBookingImportFn` with a `fileId` belonging to B is a `NotFoundError`, and **no
   message is enqueued** — asserted against a queue double that records sends, because "did not write"
@@ -2279,7 +2416,8 @@ import can leak:
   B's `orgId` is refused, even though the KV key resolves — this is the case that exists because KV is
   not tenant-scoped by construction the way a repository is.
 - A confirm can never write a reservation into B's organization: B's reservation rows are counted
-  before and after every attempt and must be identical.
+  before and after every attempt and must be identical, and B's `imported_at` values are re-read and
+  unchanged — a refused confirm must not leave a marker behind on a row it was not allowed to touch.
 
 ### Verification
 
@@ -2667,7 +2805,7 @@ is a measurement.
 ### `node scripts/ultrabuild/check-plan-collisions.mjs 03`
 
 ```
-plans 13 · stages 91 · owned paths 538
+plans 13 · stages 91 · owned paths 544
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -2819,7 +2957,13 @@ three claims are in three different waves, so it is legal, and all three now nam
 
 Two paths this plan claims are absent from the list because **no sibling plan claims them at all**:
 `src/server/repos/transports.ts` (`03-S1` w1, `03-S2` w2, `03-S5` w4) and
-`src/server/repos/reservations.ts` (`03-S4` w3). Two more are absent because every claim on them is an
+`src/server/repos/reservations.ts` (`03-S4` w3). The second of those is worth reading twice, because
+its absence from the collision list is also a **constraint**: `03-S4` is the only stage in the plan
+set that may edit it, in any wave, so every write to a `reservations` column that any later stage of
+this file needs — `expense_id` for `03-S4` itself, `imported_at` for `03-S6` and `03-S7` — has to be
+minted there as an exported function. A stage that cannot claim a repository file cannot widen the
+`z.object` in front of it either, and an unknown key handed to a `z.object` is stripped rather than
+refused. Two more are absent because every claim on them is an
 `append`, which is the documented cooperative pattern rather than a collision:
 `src/server/repos/__tests__/tenant-isolation.test.ts`, appended by every stage here and by some thirty
 across the other plans, and `e2e/reservations-and-transport.visual.spec.ts` with its baseline
@@ -2852,9 +2996,11 @@ All eight stages of this file state their wave in the parsed form, so none is in
 **What the output cannot tell anyone, said here instead.** The header counts are a snapshot of a set
 several runs are still writing. While this file was being written the check reported, in order,
 `plans 8 · stages 48`, `plans 9 · stages 56`, `plans 13 · stages 80`, `plans 13 · stages 84`,
-`plans 13 · stages 87`, `plans 13 · stages 91 · owned paths 550` and, on the revision that produced
-the section you are reading, `plans 13 · stages 91 · owned paths 538` — the unique-path count moved by
-fifteen between two runs minutes apart, with four sibling plans dirty in the working tree at the time.
+`plans 13 · stages 87`, `plans 13 · stages 91 · owned paths 550`, `plans 13 · stages 91 · owned
+paths 538` and, on the revision that produced the section you are reading, `plans 13 · stages 91 ·
+owned paths 544` — the unique-path count moved by fifteen between two runs minutes apart, and by six
+more on a revision that added **no owned path to this file at all**, with sibling plans dirty in the
+working tree throughout.
 So the header will not reproduce, and it is not the part that matters. The findings under it are
 properties of **this** file's ownership and hold only until a sibling changes what it claims. Any
 agent executing a stage of this file therefore **re-runs both scripts before it writes a line**, reads

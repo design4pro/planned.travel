@@ -123,8 +123,15 @@ directory are `new` in `04-S1` and `append` in every later stage, under the same
 `00-foundations.md` gives the isolation suite** — a stage adds its own `describe` block at the end
 and edits nobody else's, so two stages landing together produce a merge resolved by keeping both.
 Baseline files are named per frame, and a frame name always begins with the stage id, so two stages
-cannot write the same PNG. Every stage still lists the path under **Owned paths**, marked `new` or
-`append`, because an auditor diffs the actual changes against that list.
+cannot write the same PNG.
+
+**Both paths are listed under Owned paths by every stage, not only by the one that creates them.**
+The spec file and `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` travel together:
+`playwright.config.ts:49-50` derives the baseline directory from the spec's file name, so a stage
+that runs `--update-snapshots` for its own `describe` block writes PNGs into that directory whether
+it named it or not. A stage that writes into a path it did not declare fails `docs/SPEC.md` §7 item 6
+however good the pixels are, and an auditor diffs the actual changes against the list. So each of the
+seven stages below names both, marked `new` in `04-S1` and `append` in `04-S2` through `04-S7`.
 
 The same treatment is asked of `src/server/repos/__tests__/tenant-isolation.test.ts`, where
 `00-foundations.md` already grants it.
@@ -137,6 +144,106 @@ plan that writes its ownership as a table contributes **zero** paths to the coll
 still reading as though it had been checked. This file was in that state and its clean result meant
 nothing; the last section of this file records what the check said once the form was fixed, and what
 had to change to make it say it.
+
+## The harness every stage in this file runs
+
+`docs/SPEC.md` §7 item 4 asks for a feature "visually verified in a real browser, light and dark,
+desktop and mobile" and names no tool. `12-verification-protocol.md` §2 makes that runnable and §8
+fixes what a finished stage leaves behind. This section writes the two invocations out once, in the
+form every stage below repeats with its own route, stage id and declared states — because an
+invocation nobody quoted is an invocation nobody ran, and a plan that asserts visual verification
+without one has asserted something unfalsifiable.
+
+**The port is resolved, never assumed.** `playwright.config.ts:9-10` reads `PLAYWRIGHT_BASE_URL` and
+falls back to `http://localhost:3000`, starting its own `webServer` when the variable is unset. Port
+3000 is not guaranteed to be this application on a developer machine, and a suite pointed at a
+stranger's server reports failures that look like product defects.
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)      # --start only if the pool is empty
+```
+
+**The gate.** `package.json` declares no `test:e2e`, no `test:visual` and no `playwright` script, and
+`docs/SPEC.md` §3 freezes `package.json`, so no stage may add one and every stage writes the
+invocation out in full:
+
+```sh
+# once, and again whenever an authenticated route starts redirecting to /login
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+
+# this plan's spec, both browser projects — chromium at 1440x900 and mobile-safari at 393x659
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts
+
+# record only the running stage's own baselines, selected by its describe-block name
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S1'
+```
+
+`--update-snapshots` writes into `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/`, which
+`playwright.config.ts:49-50` derives from the spec's file name. That is why every stage in this file
+lists that directory under **Owned paths**. `maxDiffPixelRatio` stays at `0.002` and `threshold` at
+`0.2`: `12-verification-protocol.md` §5 forbids raising either, globally, per project or per call,
+and no stage here does.
+
+**The frames a blind critic looks at.** `scripts/ultrabuild/capture.mjs` takes those and deliberately
+writes nothing under `e2e/__screenshots__`. The clock pin is not a default — the header interceptor
+is installed only `if (serverToday)` (`scripts/ultrabuild/capture.mjs:168-169`) — and `2026-08-20` is
+not a free choice: it is `BASELINE_DAY` in `e2e/helpers/shoot.ts` and the same string
+`playwright.config.ts` sends, so a stage that omits it photographs one day next to baselines recorded
+on another.
+
+```sh
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S1" \
+  --label B --auth \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark
+```
+
+Six frames per surface — light and dark at 360, 1280 and 2560 — per `12-verification-protocol.md` §3,
+and no stage negotiates that set down. `$TRIP_ID` is the seeded demo trip's id, read from `/trips`
+rather than hard-coded into a plan that would rot on the next re-seed. `--auth` refuses to file a
+frame that landed on `/login`, which is what a stale `e2e/.auth/demo.json` produces, and the fix is
+the `--project=setup` line above. The pin reaches only `vite dev`: `serverToday()` reads the header
+inside an `if (import.meta.env.DEV)` branch (`src/server/clock.ts:73-90`) that the production build
+folds out, so every capture in this file is pointed at the dev server the port script resolves and
+never at `pnpm preview` or a deployed Worker. Frames go to
+`.claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/<stage-id>/` and nowhere else — not the
+repository root, not `docs/` — and scratch scripts go to the session scratchpad and are deleted after
+use.
+
+Nothing in this file is captured with `--map`. `/trips/$tripId/costs` renders no `[data-map-ready]`
+marker, and `settleMap()` fails a route that declares one and renders none.
+
+**One measured limit, which decides how each declared state is reached.** `capture.mjs` applies at
+most one `--hover` and then at most one `--click` per invocation, in that order
+(`scripts/ultrabuild/capture.mjs:218-224`); it has no `--press`, no keyboard driver and no request
+interception. `12-verification-protocol.md` §3 sanctions two routes to a declared state, and this
+file uses both by that measurement rather than by preference:
+
+- a state **one hover or one click** from the resting route is taken by `capture.mjs`, and the stage
+  quotes that invocation with its selector;
+- a state needing **two steps, a keyboard focus ring** — `:focus-visible` does not appear on a mouse
+  click, so a clicked frame is not evidence about it — **or a failed request** is reached inside this
+  plan's own spec, and its frame is written with `page.screenshot({ path: testInfo.outputPath(name) })`
+  into `test-results/` (`playwright.config.ts:51`, already git-ignored) and then copied into the same
+  round and stage directory as the resting set. Both browsers write to a temporary path first, so the
+  copy is a step that was being taken anyway.
+
+Every selector a stage passes to `--hover` or `--click` is verified to exist against a running server
+before capture — `page.locator(sel).count()` returning 1 — because a selector that resolves to
+nothing makes `capture.mjs` throw at the flag and costs the round. Reading the JSX and believing it
+is not a verification.
+
+**Two harness preconditions this file inherits, recorded rather than rediscovered.** Every stage here
+baselines `/trips/$tripId/costs`, which is a trip tab, so `12-verification-protocol.md` §7.2 applies:
+seven call sites still build their own `Intl.DateTimeFormat` with `month: 'short'`, two of them in
+`src/components/costs/data.ts`, and workerd and WebKit disagree on the abbreviation. Each stage
+records it under **Blockers** rather than absorbing it, and no stage in this file widens a diff budget
+to hide it. And §7.3: the browser revisions behind these baselines are pinned by nothing in the
+repository, so a green comparison here proves this file changed nothing on this machine and is not a
+claim that the design renders identically on another.
 
 ## Stage 04-S1 — Give a payment its own currency, and give the reader a currency to read in
 
@@ -510,7 +617,9 @@ because a route declared in a module spec is in nobody else's `APP_ROUTES`.
   field revealed and its derived rate hint showing. The dialog is opened through the settle-up
   panel's existing `Settle` button (`-costs/rail.tsx:159-169`), which this stage neither owns nor
   changes; the currency is then switched through `[data-part="payment-currency"]`, the control this
-  stage does ship. The frame is named `--state foreign-payment`. Six more frames. The expense dialog
+  stage does ship. Two clicks, so this set is the spec's rather than `capture.mjs`'s — see the
+  harness block below — and its frames are named `foreign-payment-<width>-<theme>.png`. Six more
+  frames. The expense dialog
   is **not** a declared state of this stage: its foreign-currency layout ships at HEAD and this stage
   changes only the initial value of one field, so photographing it would be evidence about somebody
   else's work.
@@ -532,6 +641,38 @@ script, accumulating `entry.value` where `hadRecentInput` is false; `visit()` th
 entries after the mark is asserted to be `0`. The assertion is gated on
 `PerformanceObserver.supportedEntryTypes` including `layout-shift`, so the `mobile-safari` project
 records a stated skip rather than a false pass, and the value is reported either way.
+
+**The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
+here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
+`capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
+(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+compares.
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)
+
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S1'
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S1" \
+  --label B --auth \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark
+```
+
+**The two non-resting sets are the spec's, not `capture.mjs`'s, and the reason is measured.**
+`foreign-payment` is two clicks from rest — the settle-up panel's `Settle` button, then
+`[data-part="payment-currency"]` — and `capture.mjs` applies at most one `--click` per invocation
+(`scripts/ultrabuild/capture.mjs:218-224`). The fallback-notice set needs `page.route()` to fail the
+rate lookup, which no capture flag reaches. Both are therefore driven inside this plan's spec, the
+route `12-verification-protocol.md` §3 sanctions alongside the flags, and each frame is written with
+`page.screenshot({ path: testInfo.outputPath(name) })` — `name` being `foreign-payment-<width>-<theme>.png`
+— into `test-results/` (`playwright.config.ts:51`) and copied into the same round and stage directory
+as the resting set. Six frames each, at the same three widths in both themes.
 
 ### Definition of done
 
@@ -577,9 +718,27 @@ On top of those, the `docs/SPEC.md` §2 visual clauses, ticked for every surface
   When the decision lands, `04-S7` implements the port and nothing above it changes.
 
 No package outside the `docs/SPEC.md` §3 pinned set is needed: the conversion is arithmetic, the
-formatting is `Intl`, the cache is the `KV` binding that already exists. No new binding is required —
-`11-S3` records that a fourth cron trigger for a rate refresh is **report only**, because a refresh
-can ride the existing `*/15` sweep or a KV TTL.
+formatting is `Intl`, the cache is the `KV` binding that already exists.
+
+**No new binding and no new cron trigger is required either**, and that is checkable against
+`wrangler.jsonc` rather than borrowed from another plan. `11-boundaries-and-blockers.md` (`11-S3`)
+registers `BROWSER`, `AI` and the image-transformation binding as the three absent ones and lists
+`KV` among the seven already declared; it says nothing about cron triggers, and this stage does not
+put words in it. `wrangler.jsonc:107-114` declares three triggers — the quarter-hourly reminder
+sweep, a nightly export and a weekly prune — and a cached rate needs none of them, because it expires
+on its own KV TTL and is re-fetched by the next reader who needs it. Adding a fourth would in any
+case be an edit to `wrangler.jsonc`, a shared path that no stage in this file names.
+
+**One precondition inherited from the harness, recorded here because `12-verification-protocol.md`
+§7.2 requires the stage that baselines a trip tab to carry it rather than absorb it.** Every stage in
+this file baselines `/trips/$tripId/costs`, which is a trip tab, and seven call sites still construct
+their own `Intl.DateTimeFormat` with `month: 'short'` — two of them in `src/components/costs/data.ts`
+— which workerd and WebKit abbreviate differently. Disposition: **report**. None of those files is in
+this stage's **Owned paths**, so it repairs none of them; it widens no diff budget, which §5 of the
+same file forbids outright; and it attributes a `mobile-safari` difference of that shape rather than
+re-recording a baseline over it. §7.3 rides with it: nothing in the repository pins the browser
+revisions behind these baselines, so a green comparison proves this stage changed nothing on this
+machine and is not a claim about a second one.
 
 ## Stage 04-S2 — Let a trip name its own cost categories
 
@@ -617,6 +776,12 @@ No behaviour of this row is deferred. Sourced from `wiki: Budget-Tracking`.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
 - `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block, added at
   the end and editing nobody else's.
+- `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — append. The baseline directory
+  `playwright.config.ts:49-50` derives from that spec's file name, so
+  `--update-snapshots -g '04-S2'` writes this stage's own frames into it whether the stage
+  names it or not. It is named because writing into a path a stage did not declare fails
+  `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
+  this stage adds its own PNGs and overwrites nobody else's.
 
 `src/routes/_app/trips/$tripId/costs.tsx` is an **existing** route file whose `validateSearch`
 schema currently enumerates the eight fixed categories; it is edited, not created, so
@@ -841,6 +1006,48 @@ with nothing added to `TOLERATED_CONSOLE_WARNINGS`.
 one, then assert the accumulated value after the mark is `0`. Gated on `supportedEntryTypes`, with
 the WebKit skip stated rather than presented as a pass.
 
+**The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
+here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
+`capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
+(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+compares.
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)
+
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S2'
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S2" \
+  --label B --auth \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S2" \
+  --label B --auth --state rename \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark \
+  --click '[data-part="category-rename"]' --settle 800
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S2" \
+  --label B --auth --state delete-confirm \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark \
+  --click '[data-part="category-delete"]' --settle 800
+```
+
+Both declared states are one click from rest, so both are `capture.mjs`'s to take and both selectors
+appear in the invocation above. Two frame sets this stage still owes are not: the empty state needs a
+trip with no categories, and the keyboard reorder needs `@dnd-kit`'s keyboard sensor, which
+`capture.mjs` cannot drive (`scripts/ultrabuild/capture.mjs:218-224` — one hover, one click, no key
+presses). Both are reached in the spec and their frames copied into the same stage directory.
+
 ### Definition of done
 
 The six items of `docs/SPEC.md` §7 apply unchanged: build succeeds; lint and typecheck are clean with
@@ -879,6 +1086,17 @@ precedent at `src/server/fns/costs.ts:478-480`. The durable fix is for `00-found
 that module per wave the way it governs the schema; that is filed as a change to `README.md` and
 `00-foundations.md`, neither of which this stage owns or edits, and it is **not** a blocker for this
 stage, which now needs nothing from either.
+
+**One precondition inherited from the harness, recorded here because `12-verification-protocol.md`
+§7.2 requires the stage that baselines a trip tab to carry it rather than absorb it.** Every stage in
+this file baselines `/trips/$tripId/costs`, which is a trip tab, and seven call sites still construct
+their own `Intl.DateTimeFormat` with `month: 'short'` — two of them in `src/components/costs/data.ts`
+— which workerd and WebKit abbreviate differently. Disposition: **report**. None of those files is in
+this stage's **Owned paths**, so it repairs none of them; it widens no diff budget, which §5 of the
+same file forbids outright; and it attributes a `mobile-safari` difference of that shape rather than
+re-recording a baseline over it. §7.3 rides with it: nothing in the repository pins the browser
+revisions behind these baselines, so a green comparison proves this stage changed nothing on this
+machine and is not a claim about a second one.
 
 ## Stage 04-S3 — Edit the ledger where the reader is looking
 
@@ -944,6 +1162,12 @@ Sourced from `wiki: Budget-Tracking`.
 - `src/components/costs/__tests__/data.test.ts` — edit.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
 - `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
+- `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — append. The baseline directory
+  `playwright.config.ts:49-50` derives from that spec's file name, so
+  `--update-snapshots -g '04-S3'` writes this stage's own frames into it whether the stage
+  names it or not. It is named because writing into a path a stage did not declare fails
+  `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
+  this stage adds its own PNGs and overwrites nobody else's.
 
 Disjoint from the other two wave-2 stages, checked with
 `node scripts/ultrabuild/check-plan-collisions.mjs 04` rather than by reading them: `04-S4` owns
@@ -1094,6 +1318,46 @@ omits.
 measured with the init-script observer, marked after `settle()`, then a field opened, edited and
 committed, asserted `0` after the mark, gated on `supportedEntryTypes` with the WebKit skip stated.
 
+**The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
+here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
+`capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
+(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+compares.
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)
+
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S3'
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S3" \
+  --label B --auth \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S3" \
+  --label B --auth --state field-edit \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark \
+  --click '[data-part="expense-field-amount"]' --settle 800
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S3" \
+  --label B --auth --state add-row \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark \
+  --click '[data-part="expense-add-row"]' --settle 800
+```
+
+Both declared states are one click from rest and are taken by `capture.mjs` with the selectors above.
+The keyboard contract — `Enter` commits, `Escape` reverts, `Tab` moves to the next field — is proved
+in the spec rather than in a frame, because a screenshot cannot show which key produced it.
+
 ### Definition of done
 
 The six items of `docs/SPEC.md` §7 apply unchanged: build succeeds; lint and typecheck clean with no
@@ -1117,8 +1381,19 @@ desktop and mobile; nothing left behind; no file outside **Owned paths** touched
 
 ### Blockers
 
-None. No package outside the pinned set, no binding, no third-party service, and the one row this
-stage depends on — `MNY-01`, wave 1 — closes in `04-S2` before wave 2 opens.
+**Nothing stops this stage.** No package outside the pinned set, no binding, no third-party service,
+and the one row it depends on — `MNY-01`, wave 1 — closes in `04-S2` before wave 2 opens.
+
+**One precondition inherited from the harness, recorded here because `12-verification-protocol.md`
+§7.2 requires the stage that baselines a trip tab to carry it rather than absorb it.** Every stage in
+this file baselines `/trips/$tripId/costs`, which is a trip tab, and seven call sites still construct
+their own `Intl.DateTimeFormat` with `month: 'short'` — two of them in `src/components/costs/data.ts`
+— which workerd and WebKit abbreviate differently. Disposition: **report**. None of those files is in
+this stage's **Owned paths**, so it repairs none of them; it widens no diff budget, which §5 of the
+same file forbids outright; and it attributes a `mobile-safari` difference of that shape rather than
+re-recording a baseline over it. §7.3 rides with it: nothing in the repository pins the browser
+revisions behind these baselines, so a green comparison proves this stage changed nothing on this
+machine and is not a claim about a second one.
 
 ## Stage 04-S4 — Show where the money went, drawn by hand
 
@@ -1146,6 +1421,12 @@ Sourced from `wiki: Budget-Tracking`.
 - `src/routes/_app/trips/$tripId/-costs/rail.tsx` — edit.
 - `src/routes/_app/trips/$tripId/-costs/stat-tiles.tsx` — edit.
 - `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
+- `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — append. The baseline directory
+  `playwright.config.ts:49-50` derives from that spec's file name, so
+  `--update-snapshots -g '04-S4'` writes this stage's own frames into it whether the stage
+  names it or not. It is named because writing into a path a stage did not declare fails
+  `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
+  this stage adds its own PNGs and overwrites nobody else's.
 
 `src/server/repos/__tests__/tenant-isolation.test.ts` is **not** named: this stage writes no row and
 adds no repository function, so it has no isolation case to add. See **Tenant isolation test** below
@@ -1273,9 +1554,11 @@ palette index are stable across re-renders, so a colour never changes because a 
 - **Declared non-resting state**, because the hover link is the entire point of the row and a
   resting frame is not evidence about it: a legend row hovered with its segment highlighted, reached
   by `--hover` on `[data-part="donut-legend-row"]`, framed as `--state legend-hover`; and the same
-  link driven from the other direction by focusing a segment, framed as `--state segment-focus`.
-  Both selectors are stable `data-part` attributes this stage ships and are verified with
-  `page.locator(sel).count()` against a running server before capture.
+  link driven from the other direction by focusing a segment with the keyboard, framed as
+  `segment-focus`. The first is one hover from rest and is `capture.mjs`'s; the second is the spec's,
+  because `:focus-visible` does not appear on a mouse click and `capture.mjs` drives no keys — the
+  harness block below states it. Both selectors are stable `data-part` attributes this stage ships and
+  are verified with `page.locator(sel).count()` against a running server before capture.
 - The loading frame is reached through the component's own `pending` prop rather than by racing the
   network.
 - At 2560px the rail must not stretch the donut into a decorative void; the frame is what proves it.
@@ -1283,6 +1566,42 @@ palette index are stable across re-renders, so a colour never changes because a 
 **Console must be silent**, asserted through `watchConsole` in every test of the block. **No layout
 shift after paint**: init-script observer, mark after `settle()`, then hover a legend row and resize,
 assert `0` after the mark, gated on `supportedEntryTypes` with the WebKit skip stated.
+
+**The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
+here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
+`capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
+(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+compares.
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)
+
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S4'
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S4" \
+  --label B --auth \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S4" \
+  --label B --auth --state legend-hover \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark \
+  --hover '[data-part="donut-legend-row"]' --settle 800
+```
+
+`legend-hover` is one hover from rest and is `capture.mjs`'s. `segment-focus` is not, and the reason
+is a property of the platform rather than of the script: `:focus-visible` does not appear on a mouse
+click, so a clicked frame would photograph the wrong ring. It is reached in the spec by tabbing to the
+segment and its frames are written with `page.screenshot({ path: testInfo.outputPath(name) })` into
+`test-results/` and copied across. The loading set is reached the same way, through the component's own
+`pending` prop rather than by racing the network.
 
 ### Definition of done
 
@@ -1305,10 +1624,22 @@ desktop and mobile; nothing left behind; no file outside **Owned paths** touched
 
 ### Blockers
 
-None, and one thing deliberately not attempted. No charting package is added — the freeze in
-`docs/SPEC.md` §3 covers `package.json` and `pnpm-lock.yaml` absolutely, `11-S2` already recorded
-this row as buildable without one, and anything that would genuinely need a charting grammar is
-BLOCKED and recorded in `11-boundaries-and-blockers.md` rather than built around.
+**Nothing stops this stage, and one thing is deliberately not attempted.** No charting package is
+added — the freeze in `docs/SPEC.md` §3 covers `package.json` and `pnpm-lock.yaml` absolutely,
+`11-S2` already recorded this row as buildable without one, and anything that would genuinely need a
+charting grammar is BLOCKED and recorded in `11-boundaries-and-blockers.md` rather than built
+around.
+
+**One precondition inherited from the harness, recorded here because `12-verification-protocol.md`
+§7.2 requires the stage that baselines a trip tab to carry it rather than absorb it.** Every stage in
+this file baselines `/trips/$tripId/costs`, which is a trip tab, and seven call sites still construct
+their own `Intl.DateTimeFormat` with `month: 'short'` — two of them in `src/components/costs/data.ts`
+— which workerd and WebKit abbreviate differently. Disposition: **report**. None of those files is in
+this stage's **Owned paths**, so it repairs none of them; it widens no diff budget, which §5 of the
+same file forbids outright; and it attributes a `mobile-safari` difference of that shape rather than
+re-recording a baseline over it. §7.3 rides with it: nothing in the repository pins the browser
+revisions behind these baselines, so a green comparison proves this stage changed nothing on this
+machine and is not a claim about a second one.
 
 ## Stage 04-S5 — Change a trip's accounting currency without moving any money
 
@@ -1361,6 +1692,12 @@ Sourced from `wiki: Currencies`.
 - `src/routes/_app/trips/$tripId/-costs/screen.tsx` — edit. Mounts the dialog and holds its state.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
 - `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
+- `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — append. The baseline directory
+  `playwright.config.ts:49-50` derives from that spec's file name, so
+  `--update-snapshots -g '04-S5'` writes this stage's own frames into it whether the stage
+  names it or not. It is named because writing into a path a stage did not declare fails
+  `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
+  this stage adds its own PNGs and overwrites nobody else's.
 
 **Why the dialog is route-local rather than a module in `src/components/costs/`.** An earlier draft
 put it there and claimed no share of `src/components/costs/index.ts`, which is the barrel every
@@ -1591,14 +1928,49 @@ which is the same assertion from the other side. Functions covered: `previewCurr
 - **Declared non-resting state**: the re-basing dialog open with a preview loaded and its worked
   example rendered, reached by
   `--click` on `[data-part="trip-currency-change"]`, framed as `--state rebase-preview`; and the
-  refusal, reached with `page.route()` failing the preview, framed as `--state rebase-error`. Both
-  selectors are stable `data-part` attributes this stage ships, verified with
-  `page.locator(sel).count()` against a running server before capture.
+  refusal, reached with `page.route()` failing the preview, framed as `rebase-error`. The first is one
+  click from rest and is `capture.mjs`'s; the second is the spec's, because no capture flag can fail a
+  request — the harness block below states it. Both selectors are stable `data-part` attributes this
+  stage ships, verified with `page.locator(sel).count()` against a running server before capture.
 
 **Console must be silent**, asserted through `watchConsole`. **No layout shift after paint**:
 init-script observer, mark after `settle()`, open the dialog and let the preview land, assert `0`
 after the mark — the skeleton is sized to its result precisely so this passes — gated on
 `supportedEntryTypes` with the WebKit skip stated.
+
+**The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
+here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
+`capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
+(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+compares.
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)
+
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S5'
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S5" \
+  --label B --auth \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S5" \
+  --label B --auth --state rebase-preview \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark \
+  --click '[data-part="trip-currency-change"]' --settle 800
+```
+
+`--settle 800` is the preview's budget, not a guess at it: the dialog's skeleton is sized to its
+result precisely so the frame is stable once the preview lands. `rebase-error` is not `capture.mjs`'s
+— it needs `page.route()` to fail the preview request, which the script has no flag for — so it is
+reached in the spec and its six frames copied into the same stage directory.
 
 ### Definition of done
 
@@ -1632,6 +2004,17 @@ no surface changes.
 `TRP-03` (`01-trips-core.md`, wave 1) is neither a dependency nor a blocker: it may call this stage's
 server function from the trip edit surface, and if it slips or never does, this stage still ships its
 own entry point in the money toolbar and closes `MNY-06` on its own.
+
+**One precondition inherited from the harness, recorded here because `12-verification-protocol.md`
+§7.2 requires the stage that baselines a trip tab to carry it rather than absorb it.** Every stage in
+this file baselines `/trips/$tripId/costs`, which is a trip tab, and seven call sites still construct
+their own `Intl.DateTimeFormat` with `month: 'short'` — two of them in `src/components/costs/data.ts`
+— which workerd and WebKit abbreviate differently. Disposition: **report**. None of those files is in
+this stage's **Owned paths**, so it repairs none of them; it widens no diff budget, which §5 of the
+same file forbids outright; and it attributes a `mobile-safari` difference of that shape rather than
+re-recording a baseline over it. §7.3 rides with it: nothing in the repository pins the browser
+revisions behind these baselines, so a green comparison proves this stage changed nothing on this
+machine and is not a claim about a second one.
 
 ## Stage 04-S6 — Split a receipt fairly and clear the debts
 
@@ -1688,6 +2071,12 @@ Sourced from `wiki: Budget-Tracking`.
   recorded as paid.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
 - `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
+- `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — append. The baseline directory
+  `playwright.config.ts:49-50` derives from that spec's file name, so
+  `--update-snapshots -g '04-S6'` writes this stage's own frames into it whether the stage
+  names it or not. It is named because writing into a path a stage did not declare fails
+  `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
+  this stage adds its own PNGs and overwrites nobody else's.
 
 `src/components/costs/payment-dialog.tsx` and `-costs/rail.tsx` were on an earlier draft of this list
 and are **not** claimed: the accept-a-suggestion path they would have carried already exists and
@@ -1933,11 +2322,13 @@ writers in `src/server/repos/expenses.ts`.
 
 - Route: `/trips/$tripId/costs`. Frame set: light and dark at **360px, 1280px and 2560px** at rest.
 - **Declared non-resting states**, because every one of them is the point of the row: the split
-  editor in ticket mode with two lines and different participants on each, reached by `--click` on
-  `[data-part="split-mode-ticket"]`, framed as `--state ticket`; and a participant chip in its
-  included-and-paid state, reached by `--click` on `[data-part="share-paid-toggle"]`, framed as
-  `--state chip-paid`. Each selector is a stable `data-part` attribute this stage ships and each is
-  verified with `page.locator(sel).count()` returning 1 against a running server before capture. The
+  editor in ticket mode with two lines and different participants on each, reached through
+  `[data-part="split-mode-ticket"]`, framed as `ticket`; and a participant chip in its
+  included-and-paid state, reached through `[data-part="share-paid-toggle"]`, framed as `chip-paid`.
+  Both live inside the expense dialog, so both take two steps and both are the spec's rather than
+  `capture.mjs`'s — the harness block below states it. Each selector is a stable `data-part` attribute
+  this stage ships and each is verified with `page.locator(sel).count()` returning 1 against a running
+  server before capture. The
   settle-up panel is **not** a declared state of this stage: it already renders its transfers and its
   `Settle` button at HEAD, this stage changes neither, and photographing a surface a stage did not
   touch is evidence about somebody else's work.
@@ -1947,6 +2338,38 @@ writers in `src/server/repos/expenses.ts`.
 shift after paint**: init-script observer, mark after `settle()`, then switch split modes, add a
 ticket line and toggle a share paid, assert `0` after the mark, gated on `supportedEntryTypes` with
 the WebKit skip stated.
+
+**The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
+here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
+`capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
+(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+compares.
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)
+
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S6'
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S6" \
+  --label B --auth \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark
+```
+
+**Neither declared state is one step from rest, so neither is `capture.mjs`'s.** The split editor
+lives inside the expense dialog, so `ticket` needs the dialog opened and then
+`[data-part="split-mode-ticket"]` clicked, and `chip-paid` needs the dialog, a participant chip and
+then `[data-part="share-paid-toggle"]`; `capture.mjs` applies one `--click` per invocation
+(`scripts/ultrabuild/capture.mjs:218-224`). Both are driven in this plan's spec and their frames
+written with `page.screenshot({ path: testInfo.outputPath(name) })` into `test-results/`
+(`playwright.config.ts:51`) and copied into the same round and stage directory as the resting set —
+six frames each, three widths, both themes. The unbalanced-split error frame is reached the same way,
+by typing an unbalanced value rather than by mocking anything.
 
 ### Definition of done
 
@@ -1973,11 +2396,22 @@ desktop and mobile; nothing left behind; no file outside **Owned paths** touched
 
 ### Blockers
 
-None. This stage writes no settlement column and needs no rate: the settlement source triple lands
-in wave 0 (`00-S1`) and is written by `04-S1` in wave 1, both of which close before wave 3 opens. Its
-one schema requirement — the `expense_ticket_lines` table and the fifth `split_method` value — is
-filed above to the schema stage of the wave that closes before this one. No package outside the
-pinned set, no binding, no third-party service.
+**Nothing stops this stage.** It writes no settlement column and needs no rate: the settlement source
+triple lands in wave 0 (`00-S1`) and is written by `04-S1` in wave 1, both of which close before wave
+3 opens. Its one schema requirement — the `expense_ticket_lines` table and the fifth `split_method`
+value — is filed above to the schema stage of the wave that closes before this one. No package
+outside the pinned set, no binding, no third-party service.
+
+**One precondition inherited from the harness, recorded here because `12-verification-protocol.md`
+§7.2 requires the stage that baselines a trip tab to carry it rather than absorb it.** Every stage in
+this file baselines `/trips/$tripId/costs`, which is a trip tab, and seven call sites still construct
+their own `Intl.DateTimeFormat` with `month: 'short'` — two of them in `src/components/costs/data.ts`
+— which workerd and WebKit abbreviate differently. Disposition: **report**. None of those files is in
+this stage's **Owned paths**, so it repairs none of them; it widens no diff budget, which §5 of the
+same file forbids outright; and it attributes a `mobile-safari` difference of that shape rather than
+re-recording a baseline over it. §7.3 rides with it: nothing in the repository pins the browser
+revisions behind these baselines, so a green comparison proves this stage changed nothing on this
+machine and is not a claim about a second one.
 
 ## Stage 04-S7 — Turn a chosen rate provider on behind the seam that already exists
 
@@ -2016,6 +2450,12 @@ Four rows across three other plans wait on the same decision and become buildabl
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. Its own new `describe` block for
   the cache-key rule below, editing none of the existing ones.
 - `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
+- `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — append. The baseline directory
+  `playwright.config.ts:49-50` derives from that spec's file name, so
+  `--update-snapshots -g '04-S7'` writes this stage's own frames into it whether the stage
+  names it or not. It is named because writing into a path a stage did not declare fails
+  `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
+  this stage adds its own PNGs and overwrites nobody else's.
 
 Deliberately small. `04-S1` builds the port, the cache, the refusal path and every surface that
 consumes a rate; this stage supplies one implementation of the port. If landing a provider requires
@@ -2124,6 +2564,40 @@ measured as in every other stage of this file: init-script observer, mark after 
 display currency, assert `0` after the mark, gated on `supportedEntryTypes` with the WebKit skip
 stated.
 
+**The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
+here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
+`capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
+(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+compares.
+
+```sh
+PORT=$(scripts/ultrabuild/resolve-port.sh)
+
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S7'
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S7" \
+  --label B --auth \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark
+
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+  --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
+  --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S7" \
+  --label B --auth --state display-menu \
+  --viewports 360x800,1280x900,2560x1440 --themes light,dark \
+  --click '[data-part="display-currency"]' --settle 800
+```
+
+One click from rest, so `capture.mjs` takes it. The frame is worth taking twice — once before this
+stage lands, with the currencies that need a provider disabled, and once after, with them enabled —
+because the difference between those two rings is the entire visible outcome of the stage, and the
+disabled set already exists as `04-S1`'s evidence.
+
 ### Definition of done
 
 The six items of `docs/SPEC.md` §7 apply unchanged: build succeeds; lint and typecheck clean with no
@@ -2160,13 +2634,30 @@ package is installed — the freeze covers `package.json` and `pnpm-lock.yaml` a
 Until then `04-S1`'s shipped behaviour stands on its own: the reader supplies the rate their receipt
 shows, the workspace remembers the last rate used for that pair, and nothing is ever invented.
 
+**One precondition inherited from the harness, recorded here because `12-verification-protocol.md`
+§7.2 requires the stage that baselines a trip tab to carry it rather than absorb it.** Every stage in
+this file baselines `/trips/$tripId/costs`, which is a trip tab, and seven call sites still construct
+their own `Intl.DateTimeFormat` with `month: 'short'` — two of them in `src/components/costs/data.ts`
+— which workerd and WebKit abbreviate differently. Disposition: **report**. None of those files is in
+this stage's **Owned paths**, so it repairs none of them; it widens no diff budget, which §5 of the
+same file forbids outright; and it attributes a `mobile-safari` difference of that shape rather than
+re-recording a baseline over it. §7.3 rides with it: nothing in the repository pins the browser
+revisions behind these baselines, so a green comparison proves this stage changed nothing on this
+machine and is not a claim about a second one.
+
 ## Cross-plan collisions
 
 Two stages in the same wave that both take an exclusive disposition — `edit`, `new`, `create`,
 `delete` — on one file clobber each other, because the runs that execute them go in parallel.
-`append` is the documented cooperative pattern and is not a collision. This is checked with a script
-rather than by reading the sibling plans, because a plan can only read the siblings that existed when
-it was written, and a judgement that has to be re-made by hand every round is eventually made wrong.
+`append` is the documented cooperative pattern and is not a collision. And a plan that cites a
+sibling's stage id, or that asserts visual verification without ever invoking the harness, is wrong
+in a way a reader will not notice. Both are checked with a script rather than by reading the sibling
+plans, because a plan can only read the siblings that existed when it was written, and a judgement
+that has to be re-made by hand every round is eventually made wrong.
+
+Both are part of this plan's gate. A stage that executes any part of this file runs both first.
+
+### The ownership check
 
 ```sh
 node scripts/ultrabuild/check-plan-collisions.mjs 04
@@ -2175,7 +2666,7 @@ node scripts/ultrabuild/check-plan-collisions.mjs 04
 Output, pasted whole:
 
 ```
-plans 13 · stages 91 · owned paths 553
+plans 13 · stages 91 · owned paths 544
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -2196,10 +2687,45 @@ touched by more than one plan in different waves (2) — legal; each plan must n
 
 The script exits `0`.
 
+### The reference and harness check
+
+```sh
+node scripts/ultrabuild/check-plan-refs.mjs 04
+```
+
+Output, pasted whole:
+
+```
+
+plan 04: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
+```
+
+The script exits `0`, and the blank first line is the script's own leading newline rather than a
+truncation. Both numbers had to be earned.
+
+**Zero dangling stage references.** Every `NN-Sn` token this file cites is defined by a `## Stage`
+heading in the plan whose prefix it carries. One was not: an earlier draft's `04-S1` **Blockers**
+attributed to `11-S3` a disposition making a fourth cron trigger for a rate refresh "report only".
+`11-boundaries-and-blockers.md` contains no such disposition — `11-S3` registers three absent
+bindings and three open provider decisions, and the only sentence about a cron anywhere in that file
+is `11-S1`'s, about a nightly database export. The token `11-S3` resolved, so this check did not
+catch it; an auditor did. The claim is now made against `wrangler.jsonc:107-114` directly, which is
+where a cron trigger can actually be read, and nothing is attributed to a sibling that the sibling
+does not say. **The lesson is the general one:** citing a stage id that exists is not the same as
+citing a stage that says what you claim, and the second half is still a reader's job.
+
+**Zero plans missing a Playwright invocation.** This file was the plan that check was written for. It
+asserted browser evidence in all seven stages while containing no `PLAYWRIGHT_BASE_URL`, no
+`capture.mjs`, no `PT_SERVER_TODAY` and no shot directory anywhere — which is
+`12-verification-protocol.md` §2 and §8 items 2 and 3 unmet, and an unfalsifiable claim rather than a
+plan. `## The harness every stage in this file runs` now states the two invocations once with their
+measured seams, and every stage quotes its own under **Verification** with its route, its stage id
+and its declared states.
+
 ### Reading it, line by line
 
 **No same-wave exclusive collision involves this plan.** That is the result the check exists for, and
-it was not free: reaching it changed two stages.
+it was not free: reaching it changed three things.
 
 - `04-S2` no longer names `src/server/do/protocol.ts`. The check found `07-S1`
   (`07-collaboration-and-sharing.md`) holding that module exclusively **in the same wave**, and two
@@ -2211,6 +2737,14 @@ it was not free: reaching it changed two stages.
   a new module there would either have been unreachable or would have needed a second claim on the
   barrel. The dialog is route-local instead, at
   `src/routes/_app/trips/$tripId/-costs/currency-rebase-dialog.tsx`, and has exactly one caller.
+- **Every stage now names `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/`, not only
+  `04-S1`.** An earlier draft listed the baseline directory once, in the stage that creates it, while
+  the other six each ran `--update-snapshots` for their own `describe` block —
+  `playwright.config.ts:49-50` derives that directory from the spec's file name, so all six wrote
+  PNGs into a path they had not declared, which is `docs/SPEC.md` §7 item 6 broken six times over.
+  `04-S1` holds it `new` and `04-S2` through `04-S7` hold it `append`, which the check accepts
+  because `append` is cooperative: the six do not appear in the collision list, and their frame names
+  begin with the stage id so none can overwrite another's PNG.
 
 **Both cross-wave paths are named in their owning stages, with the sibling stage id**, which is what
 the rule asks for:
@@ -2247,13 +2781,18 @@ the form the script parses:
 
 **One thing the output cannot tell anyone, said here instead.** The header counts are a snapshot of a
 set several runs are still writing: it read `plans 7 · stages 37 · owned paths 204` two rounds ago,
-then `282`, `283` and `284` across three invocations minutes apart, and it reads
-`plans 13 · stages 91 · owned paths 553` above, because every remaining area plan landed in between
+then `282`, `283` and `284` across three invocations minutes apart, then `553`, and it reads
+`plans 13 · stages 91 · owned paths 544` above — the six baseline-directory claims added here, and a
+sibling plan's own repairs taken away, inside one round. Every remaining area plan landed in between
 and sibling plans were dirty in the working tree the whole time. So the header will not reproduce
 exactly, and it is not the part that matters.
-The three findings under it are properties of **this** file's ownership — nothing this plan claims
+
+The findings under it are properties of **this** file's ownership — nothing this plan claims
 exclusively is claimed by a sibling in the same wave, the two paths it shares across waves are named
-in the stages that own them, and no stage of this file is invisible to the check — and those hold
-until a sibling changes what it claims. The stage that executes any part of this file re-runs
-the script first, reads the same three things, and treats a new same-wave line as a blocker rather
-than a note. That re-run is part of this plan's gate, not an optional courtesy.
+in the stages that own them, no stage of this file is invisible to the check, no stage records a
+baseline into a directory it has not declared, every stage id it cites is defined by the plan whose
+prefix it carries, and every stage quotes the harness invocation it runs. Those hold until a sibling
+changes what it claims. The stage that executes any part of this file re-runs **both** scripts first,
+reads the same things, and treats a new same-wave line, a new dangling reference or a lost Playwright
+invocation as a blocker rather than a note. That re-run is part of this plan's gate, not an optional
+courtesy.

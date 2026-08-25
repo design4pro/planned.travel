@@ -85,6 +85,104 @@ Every stage below restates this under **UI**, so no stage has to invent one. `AC
 language a runtime choice; `09-S5` records why this plan does not build it, and until it lands
 `en-GB` is the only language these eight stages write.
 
+### Where this plan's English copy lives
+
+`docs/SPEC.md` §8 rule 9 makes the copy ours to author, and the **Ownership** line of its catalogue
+section assigns the file it is authored in: _One item owns `messages/en/<namespace>.ts` for its own
+screens._ Seven of the eight stages below put English sentences on a screen under `src/routes/_app`,
+which §8 rule 8 puts squarely in scope, so this plan has to name that file and say who writes into
+it. A plan that fixes the copy _language_ and leaves the copy _file_ unassigned has answered half the
+question.
+
+**Measured on disk, not recalled.** The message layer already exists.
+`src/lib/i18n/catalogue.ts` aggregates with `import.meta.glob('./messages/*/*.ts')` and merges one
+locale's namespace files into a single flat bag whose keys are `<namespace>.<key>`.
+`src/lib/i18n/types.ts:48-57` derives the key union from `import type` of all ten **`en`** namespace
+files, and `:54` already reads `import type Settings from './messages/en/settings'` — for a file that
+does not exist. It typechecks only because `src/lib/i18n/messages/namespaces.d.ts` declares a
+wildcard fallback that contributes no keys, and that file's own header says to delete it once all ten
+exist. Exactly one namespace file is written today: `src/lib/i18n/messages/en/ui.ts`, the design
+system's own copy, read through `useUiCopy()` in `src/components/ui/copy.ts`. And
+`grep -rln 'messages/en/' docs/plans` matches exactly two files — this one and `OPEN-FINDINGS.md`,
+the register that recorded the omission this section closes — so no sibling plan claims
+`messages/en/settings.ts` and this plan is the one that has to.
+
+**The namespace is `settings`, for all seven.** `src/lib/i18n/types.ts:115-126` freezes the ten
+names and §8 says an eleventh is a contract change rather than a builder's choice; `settings` is the
+one that names this area. One file therefore serves account, security, preference and handbook copy,
+and what makes that correct rather than a compromise is a property of the runtime: **a namespace is a
+unit of ownership and code-splitting, not an access boundary.** `catalogue.ts` merges every namespace
+of the active locale before a screen reads a key, so `src/components/layout/user-menu.tsx` renders
+`t('settings.help.menuLabel')` without this plan claiming `messages/en/shell.ts` — a file the app
+shell's own work will need and that this plan has no business owning. The other eight namespaces —
+`shell`, `auth`, `trips`, `modules`, `costs`, `atlas`, `journal`, `marketing` — are named by no stage
+here.
+
+**Who writes into it, and under which prefix.** Keys inside the file are unqualified, so
+`'passkeys.title'` in `messages/en/settings.ts` is `t('settings.passkeys.title')` on a screen. The
+prefixes are disjoint, so no two stages can author the same key:
+
+| Stage   | Wave | Disposition | Prefix in the file | What it covers                                                                                        |
+| ------- | ---- | ----------- | ------------------ | ----------------------------------------------------------------------------------------------------- |
+| `09-S1` | 1    | `new`       | `passkeys.*`       | `/passkeys` — the header, the list, the badges, and the empty, skeleton, error and unsupported states |
+| `09-S2` | 1    | `append`    | `twoFactor.*`      | `/settings/two-factor` — the wizard steps, the recovery-code sheet, regenerate, turn off              |
+| `09-S3` | 1    | `append`    | `account.*`        | `/settings/password`, the profile identity block, the deletion dialog, the Security rows it rewords   |
+| `09-S6` | 1    | `append`    | `help.*`           | `/help` and `/help/{slug}` — the chrome, the eight articles, and the user-menu entry                  |
+| `09-S7` | 2    | `append`    | `notification.*`   | the preference matrix, the inbox, and the stored `titleKey`/`bodyKey` messages                        |
+| `09-S8` | 3    | `append`    | `preferences.*`    | the settings index, the regional section, appearance and the responsive shell                         |
+
+**Why `append`, and why appending in the same wave as the stage that mints the file is safe.**
+`scripts/ultrabuild/check-plan-collisions.mjs` counts `edit`, `new`, `create`, `delete`, `replace`
+and `rewrite` as exclusive and treats `append` as the documented cooperative pattern — the same one
+fifteen stages across these plans already use on
+`src/server/repos/__tests__/tenant-isolation.test.ts`. Three of the five appending stages here sit in
+wave 1 beside `09-S1`, so their order is not guaranteed, and the rule that makes that safe is set
+down rather than assumed: **the file's shape is fixed**, by §8 and by the one namespace file that
+already exists — a header docstring, `import type { NamespaceMessages } from '../../types'`, then
+`const messages = { … } as const satisfies NamespaceMessages` and `export default messages`
+(`src/lib/i18n/messages/en/ui.ts`, its first and last lines). A stage that finds the file absent
+creates it in that shape carrying only its own prefix; a stage that finds it present adds its block
+and touches no other block, reorders nothing and reformats nothing. Neither outcome depends on which
+agent ran first.
+
+**Two stages author no key, and each says why rather than being quietly absent.**
+
+- `09-S4` ships `public/manifest.webmanifest`. A web app manifest is a static JSON document the
+  browser fetches once per origin, before any React tree exists; it cannot read the catalogue, and
+  serving a different one per language is a routing change §8 does not ask for. Its `name`,
+  `short_name` and `description` reuse `SITE_NAME` and `DESCRIPTION` from `src/routes/__root.tsx`,
+  and the stage renders no sentence inside the application at all.
+- `09-S5` is blocked and ships no screen.
+
+**The stored-notification keys belong to `09-S7`, and that is the case that matters beyond screens.**
+`src/server/repos/notifications.ts` deliberately stores `titleKey`, `bodyKey` and a `params` record
+instead of a rendered sentence, and `src/lib/i18n/provider.tsx:95` already exports
+`useStoredTranslate()` for exactly that shape. `00-S2` in `00-foundations.md` writes those key strings
+from its dispatch call sites; `09-S7` authors the English messages they name, under
+`settings.notification.event.*`, because it owns both rendering sites — the inbox and the preference
+matrix. A key a dispatcher writes and nobody authors renders as `null`, and this paragraph exists so
+that cannot happen by omission.
+
+**What this hands the translation work, stated rather than discovered.** `09-S6` is the heavy one:
+eight articles of prose become message keys rather than string literals in
+`src/routes/_app/help/-content/articles.ts`, on the order of two hundred keys against the roughly
+forty each other stage adds. Every one of the twenty-two non-`en` catalogues owns its own
+`messages/<tag>/settings.ts` whole, so nothing here collides with them — but this namespace will be
+the largest in the product and the plan says so now rather than letting a translation run discover
+it. If the handbook is ever ruled out of scope the way `src/routes/legal/**` long-form prose already
+is by §8 rule 8, that is an amendment to §8 and an entry in
+`docs/plans/11-boundaries-and-blockers.md`, not a choice a stage may make on its own; so this plan
+plans for the compliant case and names its cost.
+
+**One consequence for the command gate, so no stage reads it as its own bug.**
+`src/lib/i18n/__tests__/parity.test.ts` fails for every `en` key that has no translation yet, which
+is by construction until the per-tag translation work lands: it is already red on this branch for the
+whole of `messages/en/ui.ts`. A stage here adds English keys and therefore adds parity failures, and
+it must **not** write into `messages/<tag>/` to silence them — §8 gives those directories wholly to
+the translation items, so an English-side stage doing that is an ownership violation. Each stage runs
+`pnpm test`, records the parity count before and after its own change, and owns every failure that is
+not that suite.
+
 ### The rows, their waves and their stages
 
 | Row      | Stage   | Wave | Moves                             |
@@ -166,6 +264,10 @@ Rows unblocked: none. `ACC-03` has no dependants in `gap-rows.json`.
 - `src/server/auth/passkey/plugin.ts` — edit. Adds `/passkey/rename`, adds a password check to
   `/passkey/delete`, and adds the per-user ceiling described under **Quota**.
 - `src/server/auth/passkey/__tests__/plugin-endpoints.test.ts` — new.
+- `src/lib/i18n/messages/en/settings.ts` — new. This plan's English catalogue file, minted here
+  because this is the lowest-numbered stage in the plan, carrying only the `passkeys.*` prefix. The
+  area brief's **Where this plan's English copy lives** fixes the file's shape, the prefix table and
+  why five later stages append to it rather than claiming a namespace of their own.
 - `e2e/account-and-settings.visual.spec.ts` — new. This plan's own spec file, minted here because
   this is the lowest-numbered stage in the plan; every later stage appends to it.
 - `e2e/__screenshots__/account-and-settings.visual.spec.ts/` — new. Its baseline directory.
@@ -298,6 +400,13 @@ collapses it to opacity. The dialog uses the primitive's own motion; this stage 
 
 **Copy language: English, `en-GB`**, sentence case, as fixed in the area brief above.
 
+**Where those strings are authored.** In `src/lib/i18n/messages/en/settings.ts` under the
+`passkeys.*` prefix — the file this stage mints. No screen in this stage carries a bare English
+literal: every string above, including the empty state's two sentences, the four badge words and the
+`429` line, is `t('settings.passkeys.<key>')` through `useTranslate()`
+(`src/lib/i18n/provider.tsx:85`). The wording quoted in this stage is the English **source** for
+those keys, not markup.
+
 ### Quota
 
 **No countable row, and a fixed ceiling instead.** A passkey is not a metered entity: the table has
@@ -372,6 +481,13 @@ renderer's or the product's.
   rather than passed through, matching `toTransports` at `:127-135`.
 - `src/server/auth/passkey/__tests__/plugin-endpoints.test.ts` — the five isolation cases above, plus
   the twenty-credential ceiling refusing the twenty-first and leaving twenty rows.
+- **No test is added for `src/lib/i18n/messages/en/settings.ts`, and none would say anything.** The
+  file is data whose shape `as const satisfies NamespaceMessages` already checks, and a key this
+  stage's screens name but the file does not carry is a `pnpm typecheck` error that names the key,
+  because `src/lib/i18n/types.ts` derives `MessageKey` from the file itself. What this stage does
+  record is the parity count: `src/lib/i18n/__tests__/parity.test.ts` is red by construction until
+  the per-tag work lands, so the stage notes the count before and after its own change and owns
+  every `pnpm test` failure that is not that suite.
 
 **Browser evidence.** Route `/passkeys`, both themes, at **360px, 1280px and 2560px** — six resting
 frames. Two declared non-resting states, because the point of this stage is an interaction and a
@@ -494,6 +610,9 @@ Rows unblocked: none. `ACC-02` has no dependants in `gap-rows.json`.
   visitor to the enrolment screen. The challenge itself is not touched.
 - `src/lib/matrix-code/encode.ts` — new. The scannable-code encoder described in `11-S2` entry 6.
 - `src/lib/matrix-code/__tests__/encode.test.ts` — new.
+- `src/lib/i18n/messages/en/settings.ts` — append. The `twoFactor.*` keys and nothing else. `09-S1`
+  mints the file in this same wave; if it has not landed when this stage runs, this stage creates it
+  in the shape the area brief fixes, carrying only its own prefix.
 - `e2e/account-and-settings.visual.spec.ts` — append. This stage's own `test.describe` block, named
   for the stage id and title.
 - `e2e/__screenshots__/account-and-settings.visual.spec.ts/` — append. Its own frames in the shared
@@ -633,6 +752,12 @@ contract requires. `prefers-reduced-motion: reduce` collapses both to opacity.
 `tabular-nums`.
 
 **Copy language: English, `en-GB`**, sentence case, as fixed in the area brief above.
+
+**Where those strings are authored.** In `src/lib/i18n/messages/en/settings.ts` under the
+`twoFactor.*` prefix, appended per the area brief's table. Every wizard step, the recovery-code
+sheet, the regenerate confirmation and the turn-off dialog read `t('settings.twoFactor.<key>')`. The
+recovery codes and the shared secret are data, never keys, and the scannable code's payload is a URI
+the authenticator parses — none of the three is translated.
 
 ### Quota
 
@@ -819,6 +944,8 @@ dependant for `ACC-01`.
 - `src/server/repos/members.ts` — edit. Adds `deleteWorkspace`, described under **Server**.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block, under the
   append-only exception the tenant procedure allows.
+- `src/lib/i18n/messages/en/settings.ts` — append. The `account.*` keys and nothing else, under the
+  same absent-or-present rule as `09-S2`.
 - `e2e/account-and-settings.visual.spec.ts` — append.
 - `e2e/__screenshots__/account-and-settings.visual.spec.ts/` — append.
 
@@ -1061,6 +1188,11 @@ and the storage ceiling they are measured against are `tabular-nums`, which is e
 stage's surfaces that changes.
 
 **Copy language: English, `en-GB`**, sentence case, as fixed in the area brief above.
+
+**Where those strings are authored.** In `src/lib/i18n/messages/en/settings.ts` under the
+`account.*` prefix. That includes the two rows this stage rewords on
+`src/routes/_app/settings/security.tsx`, so the hint that stops promising a one-time link stops
+promising it in every locale rather than only in English.
 
 ### Quota
 
@@ -1374,6 +1506,11 @@ they are test-guarded.
 **Copy language: English, `en-GB`**, sentence case, as fixed in the area brief above. The manifest's
 `name`, `short_name` and `description` are the only user-visible strings this stage adds, and they
 reuse `SITE_NAME` and `DESCRIPTION` from `__root.tsx` rather than inventing a second wording.
+
+**This stage authors no catalogue key**, and the area brief's exemption is the reason rather than an
+oversight: a web app manifest is static JSON the browser fetches once per origin before any React
+tree exists, so it cannot read the catalogue, and this stage renders no sentence inside the
+application. `src/lib/i18n/messages/en/settings.ts` is therefore absent from **Owned paths** above.
 
 ### Quota
 
@@ -1757,6 +1894,9 @@ Rows unblocked: none. `EXT-04` has no dependants in `gap-rows.json`.
 - `src/routes/_app/help/-ui/__tests__/article-body.test.tsx` — new.
 - `src/components/layout/user-menu.tsx` — edit. One entry, so the handbook is reachable from every
   screen rather than only from a link somebody remembers.
+- `src/lib/i18n/messages/en/settings.ts` — append. The `help.*` keys: the chrome, the entry above,
+  and every sentence of the eight articles, because a block carries a key rather than a string. This
+  is the largest block in the file and the area brief says what it costs the translation work.
 - `e2e/account-and-settings.visual.spec.ts` — append.
 - `e2e/__screenshots__/account-and-settings.visual.spec.ts/` — append.
 
@@ -1794,15 +1934,31 @@ about screens only a signed-in reader can open. Nothing about the content is ten
 **The content model**, stated because it is the whole design:
 
 ```
+type HelpKey = Extract<MessageKey, `settings.help.${string}`>
+
 type HelpBlock =
-  | { kind: 'paragraph'; text: string }
-  | { kind: 'heading'; level: 2 | 3; text: string; anchor: string }
-  | { kind: 'list'; ordered: boolean; items: ReadonlyArray<string> }
-  | { kind: 'steps'; items: ReadonlyArray<{ title: string; detail: string }> }
-  | { kind: 'callout'; tone: 'info' | 'warning'; title: string; text: string }
-  | { kind: 'shortcut'; keys: ReadonlyArray<string>; description: string }
-  | { kind: 'link'; to: HelpLinkTarget; label: string; description: string }
+  | { kind: 'paragraph'; text: HelpKey }
+  | { kind: 'heading'; level: 2 | 3; text: HelpKey; anchor: string }
+  | { kind: 'list'; ordered: boolean; items: ReadonlyArray<HelpKey> }
+  | { kind: 'steps'; items: ReadonlyArray<{ title: HelpKey; detail: HelpKey }> }
+  | { kind: 'callout'; tone: 'info' | 'warning'; title: HelpKey; text: HelpKey }
+  | { kind: 'shortcut'; keys: ReadonlyArray<string>; description: HelpKey }
+  | { kind: 'link'; to: HelpLinkTarget; label: HelpKey; description: HelpKey }
 ```
+
+**A block carries a key, never a sentence**, and `HelpKey` is why that costs nothing in safety:
+`MessageKey` is the union `src/lib/i18n/types.ts` derives from the ten English namespace files, so
+narrowing it to the `settings.help.` prefix makes a mistyped or unauthored key a `pnpm typecheck`
+failure that names the key, and makes a key belonging to another part of the product unassignable to
+a block. This is the same compiler-instead-of-parser argument as the union itself, applied to the
+copy rather than the structure, and it is what lets the eight articles be translated by the ordinary
+mechanism instead of becoming the one screen in the product that is permanently English.
+
+Two fields stay plain strings on purpose. `keys` on a `shortcut` is what is physically printed on
+the key — `Esc`, `Ctrl`, `⇧` — which `src/lib/i18n/messages/en/ui.ts` already excludes from
+translation by the same argument: a translated legend names a key the reader's hardware does not
+have.
+`anchor` is a URL fragment rather than copy, and the next paragraph is about it.
 
 `HelpLinkTarget` is a union of the router's own param-free literal paths plus
 `{ article: HelpSlug; anchor?: string }`, which is what makes an internal cross-reference
@@ -1811,8 +1967,11 @@ type-checked. The same pattern already exists in this repository:
 generated route tree rather than as strings, for exactly this reason.
 
 **Anchors are derived once and stored, not computed at render.** Each heading block carries its own
-`anchor`, a lowercase hyphenated slug of its text, so the value in the URL is stable across a copy
-edit that only changes capitalisation, and a test asserts the derivation rather than trusting it.
+`anchor`, a lowercase hyphenated slug of its **English source** text — resolved from
+`src/lib/i18n/messages/en/settings.ts` in the test, never from the key name — so the fragment in a
+shared link survives a copy edit that only changes capitalisation, and is the same fragment for a
+reader in Japanese as for the person who sent it. A test asserts the derivation rather than trusting
+it.
 
 ### UI (route, components)
 
@@ -1835,7 +1994,10 @@ route's own `-ui/` directory, neither fetching data and neither importing from `
 `aria-current="page"` and the same active treatment the settings index uses. Above it, a search
 `Input` inside a `role="search"` landmark with an accessible label, filtering **by title only** —
 which is the row's behaviour and is also the honest one: a full-text filter that silently missed a
-word in a paragraph would be worse than one whose scope the reader can predict. The filter is
+word in a paragraph would be worse than one whose scope the reader can predict. It filters over the
+**rendered** titles rather than the key names, so it searches in whatever language the reader is
+reading, and the active locale's bag is already resolved in the browser so that costs nothing.
+The filter is
 debounced at 150ms, announces its result count through an `aria-live="polite"` region, and clears
 with Escape.
 
@@ -1881,6 +2043,12 @@ writes more prose than any other in the plan, so the rule bites hardest here: th
 nothing is carried across from any other product's documentation, in wording or in structure. The
 eight opening articles are: getting started, planning a trip day by day, money and who owes what,
 packing lists, sharing a trip, your account and security, keyboard shortcuts, and plans and billing.
+
+**Where those strings are authored.** In `src/lib/i18n/messages/en/settings.ts` under the `help.*`
+prefix — and that is the whole of the prose, not only the chrome. A content block carries a
+`MessageKey`, never a sentence, which is what keeps `-content/articles.ts` a structure module and
+makes the handbook translatable by the same mechanism as every button in the product. It is the
+largest single block in that file; the area brief states the cost it hands the translation work.
 
 ### Quota
 
@@ -1931,10 +2099,14 @@ failing comparison is either the renderer's or the product's.
 
 - `src/routes/_app/help/-content/__tests__/content.test.ts` — every slug is unique; every article
   appears exactly once in the table of contents and the contents list no slug that has no article;
-  every heading anchor is unique within its article and matches the derivation rule; every internal
-  cross-reference resolves to an article that exists and, when it carries an anchor, to a heading
-  that exists; no article body is empty; every article has exactly one level-2 heading before any
-  level-3 one, so the outline is well-formed.
+  every heading anchor is unique within its article and matches the derivation rule applied to the
+  English source string the key resolves to; every internal cross-reference resolves to an article
+  that exists and, when it carries an anchor, to a heading that exists; no article body is empty;
+  every article has exactly one level-2 heading before any level-3 one, so the outline is
+  well-formed. Two invariants are about the catalogue rather than the content: every `settings.help.*`
+  key authored in `src/lib/i18n/messages/en/settings.ts` is referenced by at least one block, so a key
+  orphaned by a rewrite is caught here rather than translated twenty-two times for nothing; and every
+  key a block names resolves to a non-empty message, which the type system cannot say.
 - `src/routes/_app/help/-ui/__tests__/article-body.test.tsx` — each block kind renders its expected
   role and accessible name; a `shortcut` renders its keys inside `Kbd`; the title filter matches
   case-insensitively and on a substring; the empty result renders the empty state rather than an
@@ -2054,6 +2226,9 @@ twelve more transitively.
 - `src/routes/_app/-server/overview.ts` — edit. Exposes the answer and the actionable list.
 - `src/routes/_app/-server/settings.ts` — edit. Adds the bulk preference write.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
+- `src/lib/i18n/messages/en/settings.ts` — append. The `notification.*` keys: the matrix, the inbox,
+  and the `settings.notification.event.*` messages that the `titleKey` and `bodyKey` values `00-S2`
+  stores resolve to. Wave 2, so the file exists by now.
 - `e2e/helpers/account-and-settings.ts` — new. The module-local clock helper argued under
   **Verification**, declared here rather than editing the shared `e2e/helpers/shoot.ts`.
 - `e2e/account-and-settings.visual.spec.ts` — append.
@@ -2187,6 +2362,13 @@ check they clicked correctly. `prefers-reduced-motion: reduce` collapses it to o
 **Tokens.** None missing. Unread counts and group counts are `tabular-nums`.
 
 **Copy language: English, `en-GB`**, sentence case, as fixed in the area brief above.
+
+**Where those strings are authored.** In `src/lib/i18n/messages/en/settings.ts` under the
+`notification.*` prefix, and two kinds of key sit there. The screens' own copy is read with
+`useTranslate()`. The `settings.notification.event.*` messages are read with `useStoredTranslate()`
+(`src/lib/i18n/provider.tsx:95`), because they are what the `titleKey` and `bodyKey` columns
+`00-S2` writes resolve to at render time — which is also why the event catalogue in
+`src/routes/_app/-lib/notifications.ts` carries key names rather than labels.
 
 ### Quota
 
@@ -2470,6 +2652,8 @@ Rows unblocked: none. `ACC-04` has no dependants in `gap-rows.json`.
 - `src/lib/theme.ts` — edit. The pre-paint bootstrap applies accent and text scale alongside the
   theme it already applies.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
+- `src/lib/i18n/messages/en/settings.ts` — append. The `preferences.*` keys. Wave 3, so the file and
+  the four wave-1 blocks are already there.
 - `e2e/account-and-settings.visual.spec.ts` — append.
 - `e2e/__screenshots__/account-and-settings.visual.spec.ts/` — append.
 
@@ -2657,6 +2841,11 @@ on the document element at runtime, which is using the token contract rather tha
 
 **Copy language: English, `en-GB`**, sentence case, as fixed in the area brief above.
 
+**Where those strings are authored.** In `src/lib/i18n/messages/en/settings.ts` under the
+`preferences.*` prefix. The contrast badge's three verdicts and the "Workspace default" badge are
+keys like any other; the ratio beside them and the time sample are formatter output, not copy, and
+neither is a key.
+
 ### Quota
 
 **No countable row.** `user_settings` is one row per user per workspace, created by
@@ -2832,7 +3021,7 @@ and the path table under it.**
 
 ```
 $ node scripts/ultrabuild/check-plan-collisions.mjs 09
-plans 13 · stages 91 · owned paths 540
+plans 13 · stages 91 · owned paths 544
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -2924,6 +3113,18 @@ does not count it, correctly: each stage adds its own `describe` block and none 
 The same is true of `e2e/account-and-settings.visual.spec.ts`, which `09-S1` mints and every later
 stage in this plan appends to — `playwright.config.ts`'s `snapshotPathTemplate` keys every baseline
 by test name, so two stages sharing one spec file cannot overwrite each other's pixels.
+
+`src/lib/i18n/messages/en/settings.ts` is the third path of that shape and the newest, so it is worth
+reading against the script's output rather than assuming: it is claimed six times in this plan — once
+as `new` by `09-S1` and five times as `append` — and by **no sibling plan**, which is why it appears
+neither in the collision list nor in the cross-wave table above. The second half of that claim is a
+measurement, not an expectation: `grep -rln 'messages/en/' docs/plans` matches exactly two files —
+this one and `OPEN-FINDINGS.md`, the register that recorded the omission this section closes. Three
+of the five appends are in wave 1 beside the stage that mints the file, and the area brief's
+**Where this plan's English copy lives** is what makes that safe — disjoint key prefixes, a file shape
+fixed by `docs/SPEC.md` §8 and by `src/lib/i18n/messages/en/ui.ts`, and an explicit rule for the stage
+that arrives first. The other nine namespace files are named by no stage here, so nothing this plan
+does can stand in the way of the item that owns `messages/en/shell.ts`.
 
 **The script's fourth line — "4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2
 11-S3 04-S2" — reads as an open risk and is not one.** An earlier revision of this section filed it

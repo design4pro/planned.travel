@@ -572,6 +572,9 @@ excluded rather than reduced.
 - `src/lib/map/palette.ts` — edit. One palette variant per catalogue entry.
 - `src/lib/map/style.ts` — edit. `BasemapStyleOptions` gains a `basemap` field; `basemapStyle()` and
   `mapStyleFor()` read it. No layer id changes, so `MAP_LAYER_IDS` is untouched.
+- `src/lib/map/__tests__/style.test.ts` — edit. The existing suite (14.9K at HEAD) gains the
+  layer-id-parity case named under **Verification**. It is an extension, never a rewrite: no existing
+  assertion in that file is deleted or rephrased.
 - `src/components/map/map-canvas.tsx` — edit. Reads the preference and rebuilds the style when it
   changes, on the same `setStyle` path a theme change already takes.
 - `src/components/map/index.ts` — edit. Re-exports the catalogue and the hook.
@@ -580,6 +583,9 @@ excluded rather than reduced.
 - `src/routes/_app/-server/settings.ts` — edit. Validates the saved id against the catalogue.
 - `src/server/repos/settings.ts` — edit. `mapStyleSchema` narrows from a free 64-char string to the
   catalogue's union.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append. The case under **Tenant isolation
+  test**, added to the existing describe block. Append is the cooperative disposition every stage in
+  every plan takes on this file, so it is not a collision with any of them.
 - `src/routes/_app/-ui/basemap-picker.tsx` — new. The grid, the live preview and the workspace-default
   entry.
 - `src/routes/_app/settings/appearance.tsx` — edit. Replaces the two-option select with the picker.
@@ -1789,6 +1795,11 @@ too and hiding a control by width is a guess about the device rather than about 
 - `src/components/map/__tests__/markers.test.tsx` — edit. Badge and spiderfy behaviour.
 - `src/routes/_app/trips/$tripId/-ui/plan-model.ts` — edit. `mapPlacesOf` (`:237`) carries every day
   a place sits on rather than one.
+- `src/routes/_app/trips/$tripId/-ui/__tests__/plan-model.test.ts` — new, and the `__tests__`
+  directory with it. Measured at HEAD, because "extend" would be a false claim: `plan-model.ts` has
+  **no** test file anywhere in the repo — `find src/routes/_app -type d -name __tests__` returns
+  nothing and `grep -rn plan-model src --include='*.test.ts'` returns nothing — and no stage in any
+  plan claims one. This stage is the first claimant and therefore creates it.
 - `src/routes/_app/trips/$tripId/-server/plan.ts` — edit. The board payload carries a place's full
   set of day assignments.
 - `src/routes/_app/trips/$tripId/-ui/planner-map-layer.tsx` — edit. Mounts the locate control.
@@ -1809,6 +1820,26 @@ id**, per the checker's own report:
 This stage is wave 4 and shares a wave with none of them. Its change to each is additive — a wider
 projection and a wider view model — so `03-S8`, which follows it in wave 6, inherits a payload that
 already carries every assignment rather than one that collapses them.
+
+**Three of its paths are shared with other stages of _this_ plan**, which the collision checker
+cannot report — a path claimed twice inside one file never reaches its cross-plan list — so all three
+are named here by hand. `src/components/map/index.ts` is covered by the rule two paragraphs above:
+one stage per wave owns `src/components/map`, and this is wave 4's. The second needs stating on its
+own:
+`src/routes/_app/trips/$tripId/-ui/__tests__/plan-model.test.ts` is created here in wave 4 and edited
+by this plan's `02-S9` in wave 5 — different waves, so it is a hand-off and not a clobber, and
+`02-S9` names this stage in return. If this stage has not landed when `02-S9` runs, that stage
+creates the file instead; either way exactly one of them creates it and the other appends its own
+`describe` block. `planner-map-layer.tsx` is the third and is already accounted for: `02-S4` creates
+it in wave 3 and `02-S12` edits it in wave 6, both recorded in the Area brief's hook register.
+
+Where the file runs, measured rather than assumed: `vitest.config.ts` puts
+`src/routes/**/*.test.ts` in the **`server`** project (Node, `vitest.setup.node.ts`), not in `ui`,
+whose include list is `src/components/**` and `src/lib/**` only. That is the right world for this
+suite — `plan-model.ts` is a pure view-model module with no DOM and no React — but it means the file
+must stay `.ts` and must not reach for `@testing-library/react`, which is the mistake a builder who
+assumes "it is under `src/routes`, so it is UI" would make. The component-level assertions in this
+stage belong in `src/components/map/__tests__/markers.test.tsx`, which is in `ui`.
 
 ### Data and migration
 
@@ -1914,9 +1945,10 @@ Unit tests this stage adds or extends, by file and invariant:
   three renders the truncated form, while the accessible name lists all three in both cases; clicking
   a cluster below maximum zoom zooms and does not spiderfy, and at maximum zoom spiderfies and does
   not zoom; `Escape` collapses a fanned cluster and returns focus to it.
-- `src/routes/_app/trips/$tripId/-ui/__tests__/plan-model.test.ts` — extended: `mapPlacesOf` carries
-  every day a place occupies, in ascending day order, and a place assigned on another trip
-  contributes none of its days to this one.
+- `src/routes/_app/trips/$tripId/-ui/__tests__/plan-model.test.ts` — **created by this stage**, as
+  the Owned paths block records: `mapPlacesOf` carries every day a place occupies, in ascending day
+  order, and a place assigned on another trip contributes none of its days to this one. It runs in
+  vitest's `server` project, so it imports the view model and plain fixtures and nothing else.
 - A `locate-control` test asserting the three-state cycle, the denied state, and that following stops
   on a user-initiated pan.
 
@@ -2275,6 +2307,10 @@ stated with its reason rather than carried across:
 - `src/components/map/index.ts` — edit. Two exports.
 - `src/routes/_app/trips/$tripId/-ui/plan-model.ts` — edit. `routeDaysOf` (`:300`) also returns each
   day's length and each segment's.
+- `src/routes/_app/trips/$tripId/-ui/__tests__/plan-model.test.ts` — edit. This plan's `02-S7`
+  creates the file in wave 4; this stage appends its own `describe` block to it. If `02-S7` has not
+  landed when this stage runs, this stage creates the file and the `__tests__` directory instead — it
+  exists at neither HEAD nor in any other plan's owned paths.
 - `src/routes/_app/trips/$tripId/-ui/planner-day-tools.tsx` — edit. The day footer: the total, the
   optimize action, the undo that follows it, and the hand-off.
 - `src/components/planner/day-section.tsx` — edit. The lock affordance on a stop row's existing
@@ -2296,6 +2332,19 @@ id**, per the checker's own report:
 | `src/routes/_app/trips/$tripId/-ui/plan-model.ts` | `01-S2` (wave 1), `01-S4` (wave 2), `03-S8` (wave 6), and this plan's `02-S7` (wave 4)                   |
 | `src/routes/_app/trips/$tripId/-server/plan.ts`   | `07-S1` (wave 1), `01-S4` (wave 2), `03-S8` (wave 6), and this plan's `02-S7` (wave 4)                   |
 | `src/server/repos/itinerary.ts`                   | `01-S4` (wave 2), `07-S9` (wave 3)                                                                       |
+
+**One further path is shared inside this plan and is not covered by any rule above**, which the
+collision checker cannot report because a path claimed twice inside one file never reaches its
+cross-plan list: `src/routes/_app/trips/$tripId/-ui/__tests__/plan-model.test.ts`, created by `02-S7`
+in wave 4 and edited here in wave 5. Different waves, so it is a hand-off rather than a clobber, and
+`02-S7` names this stage in return. The file runs in vitest's **`server`** project —
+`vitest.config.ts` includes `src/routes/**/*.test.ts` there and not in `ui` — so this stage's block
+stays plain Node with no DOM; the pill's rendering assertions belong in
+`src/components/map/__tests__/` instead. This stage's other within-plan shares are already accounted
+for: `src/components/map/index.ts` by the one-owner-per-wave rule for `src/components/map`, of which
+this is wave 5's owner, and `planner-day-tools.tsx` by `02-S4`, which creates it in wave 3, and
+`02-S12`, which edits it in wave 6. `src/lib/map/routes.ts`, `day-routes.tsx` and `route-pill.tsx`
+are claimed by no other stage in any plan.
 
 This stage is wave 5 and shares a wave with none of them. `03-S8` follows it into three of the four
 in wave 6, so the lock affordance this stage puts on a stop row must be additive rather than a
@@ -2431,8 +2480,9 @@ Unit tests this stage adds or extends, by file and invariant:
   a tie, returns the input unchanged when every stop is locked, keeps every locked stop at its
   original index while reordering only the free ones, and never produces a longer total than the
   input for a day of three stops, where nearest-neighbour is provably optimal.
-- `src/routes/_app/trips/$tripId/-ui/__tests__/plan-model.test.ts` — extended: `routeDaysOf` returns
-  a per-day and per-segment length, and re-derives a changed order from a reloaded payload, which is
+- `src/routes/_app/trips/$tripId/-ui/__tests__/plan-model.test.ts` — a `describe` block appended to
+  the file `02-S7` creates in wave 4, as the Owned paths block records: `routeDaysOf` returns a
+  per-day and per-segment length, and re-derives a changed order from a reloaded payload, which is
   the seam named under **UI**.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — the cases above.
 
@@ -3470,7 +3520,7 @@ node scripts/ultrabuild/check-plan-refs.mjs 02
 Both outputs, pasted in full, at the point this plan was finished. First the collision report:
 
 ```
-plans 13 · stages 91 · owned paths 538
+plans 13 · stages 91 · owned paths 543
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
@@ -3564,11 +3614,27 @@ settings and shell paths, `02-S4` for `plan-screen.tsx` and `day-section.tsx`, `
 `02-S11` for `plan-actions.tsx`, `02-S7` and `02-S9` for `plan-model.ts` and `-server/plan.ts`,
 `02-S9` for `itinerary.ts` and `day-section.tsx`, and `02-S10` for `settings-nav.tsx`.
 
-Three notes on reading the report:
+Four notes on reading the report:
 
 - **`append` is not a collision**, and several stages here deliberately append: to
   `src/server/repos/__tests__/tenant-isolation.test.ts`, and to this plan's own
   `e2e/places-and-maps.visual.spec.ts` and its baseline directory, which `02-S3` creates in wave 1.
+- **The report is silent about a path two stages of the _same_ plan claim**, which is a gap in the
+  measurement and not a licence. Read from the script: `shared` only collects a path whose owners
+  span more than one file (`new Set(owners.map((o) => o.file)).size > 1`), so a within-plan hand-off
+  never reaches the cross-plan list; only a same-**wave** within-plan pair is caught, and then as a
+  collision. Counted rather than guessed, this plan has **eight** paths claimed exclusively by more
+  than one of its own stages and by no other plan, and every one of the eight is claimed in a
+  different wave each time: `src/components/map/index.ts` (`02-S2` w1, `02-S7` w4, `02-S9` w5,
+  `02-S12` w6), `planner-map-layer.tsx` (`02-S4` w3, `02-S7` w4, `02-S12` w6), `planner-day-tools.tsx`
+  (`02-S4` w3, `02-S9` w5, `02-S12` w6), `planner-add-place.tsx` (`02-S4` w3, `02-S6` w4, `02-S8` w5),
+  `import-sheet.tsx` (`02-S6` w4, `02-S8` w5), `-server/place-import.ts` (`02-S6` w4, `02-S8` w5),
+  `src/server/repos/places.ts` (`02-S6` w4, `02-S11` w6) and
+  `-ui/__tests__/plan-model.test.ts` (`02-S7` w4, `02-S9` w5). The first seven are named in their
+  stages' prose and in the Area brief's hook register. The eighth was the one omission and is the
+  reason this note exists: it exists at neither HEAD nor in any other plan —
+  `find src/routes/_app -type d -name __tests__` returns nothing — so "extend" would have been a
+  false claim about the repo, which is the specific defect a plan is least able to afford.
 - **The four stages the report cannot check** — `11-S1`, `11-S2`, `11-S3` and one stage of
   `04-budget-and-currencies.md` — state no parseable wave in their `### Stage id` line. None of them
   is in this plan; every one of this plan's thirteen stages states its wave in the form the checker

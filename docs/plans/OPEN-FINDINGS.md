@@ -12,14 +12,14 @@ that executes it should resolve them first.
 |---|---|---|
 | `00-foundations.md` | **verified** | — |
 | `01-trips-core.md` | **verified** | — |
-| `02-places-and-maps.md` | open | 2 |
-| `03-reservations-and-transport.md` | open | 2 |
-| `04-budget-and-currencies.md` | open | 3 |
+| `02-places-and-maps.md` | open | 1 |
+| `03-reservations-and-transport.md` | open | 1 |
+| `04-budget-and-currencies.md` | open | 2 |
 | `05-packing-and-todos.md` | open | 3 |
-| `06-documents-and-media.md` | open | 2 |
+| `06-documents-and-media.md` | **verified** | — |
 | `07-collaboration-and-sharing.md` | **verified** | — |
 | `08-product-modules.md` | open | 3 |
-| `09-account-and-settings.md` | open | 1 |
+| `09-account-and-settings.md` | open | 2 |
 | `10-administration.md` | **verified** | — |
 | `11-boundaries-and-blockers.md` | **verified** | — |
 | `12-verification-protocol.md` | **verified** | — |
@@ -27,30 +27,22 @@ that executes it should resolve them first.
 
 ## `02-places-and-maps.md`
 
-- 02-S7 and 02-S9 both say they "extend" `src/routes/_app/trips/$tripId/-ui/__tests__/plan-model.test.ts`, but that directory does not exist at HEAD and no stage in any plan lists the file under Owned paths. Two stages in different waves would create/edit an undeclared file, invisible to check-plan-collisions.mjs. _(line 1917)_
-- 02-S2's Owned paths omits two files the same stage states it writes: `src/server/repos/__tests__/tenant-isolation.test.ts` (append) and `src/lib/map/__tests__/style.test.ts` (extend). Every other stage in this plan that appends to the isolation test declares it; 02-S2 is the sole omission. _(line 568)_
+- 02-S3 rests on a false claim that the camera behaviour is untested; six of the seven invariants it plans to write already exist, so executing the stage as written produces duplicate tests in files the plan never mentions. _(line 875)_
 
 ## `03-reservations-and-transport.md`
 
-- `reservations.imported_at` is a wave-0 column no stage is allowed to write: 03-S7 needs it but explicitly claims no repository file, and 03-S4 (the only stage in this plan owning src/server/repos/reservations.ts) never widens the validators. The value is silently stripped — the exact defect 03-S8 documents for a sibling column. _(line 2113)_
-- 03-S4 states as its repository deliverable two changes that are already on disk: `reservationFields` already has `assignmentId` and `assertReferences` already guards it. The stage cites line :187 while the refuting code sits at :204-213 of the same function. _(line 1173)_
+- Five of the plan's six schema requirements have no owner anywhere in the plan set: they are filed to "the wave-0 foundations schema stage", whose own absorption clause covers only wave-1 filers. As written, 03-S2 has no `transport_legs` table and 03-S4 cannot compile `markReservationsImported`. _(line 236)_
 
 ## `04-budget-and-currencies.md`
 
-- No Playwright invocation anywhere in the plan — no PLAYWRIGHT_BASE_URL, no capture.mjs, no PT_SERVER_TODAY pin, no shot directory — contradicting docs/plans/12-verification-protocol.md §2 and §8 items 2-3, which the acceptance criteria name as the contract for the Verification block. _(line 476)_
-- The baseline directory is named in Owned paths by 04-S1 only; 04-S2 through 04-S7 each write baseline PNGs into a path they do not own, contradicting the plan's own brief and failing SPEC §7 item 6. _(line 126)_
-- 04-S1's Blockers attributes a cron-trigger disposition to 11-S3 that docs/plans/11-boundaries-and-blockers.md does not contain. _(line 581)_
+- 04-S6 gives `expense_ticket_lines.amount_minor` the parent's SOURCE currency, then writes the sum of those lines into `expenses.amount_minor`, which is the TRIP currency column. On a foreign receipt this stores a source-currency figure in an accounting-currency column and derives `expense_shares.share_minor` (also accounting currency) from it. No conversion step is stated anywhere in the stage. _(line 2104)_
+- 04-S1 overloads `user_settings.currency` as the display-currency preference with an `'XXX'` sentinel, and asserts the one existing consumer "is unaffected". The shipped settings screen labels that exact column "New trips start in this currency" and binds the raw value into a SimpleSelect whose option list cannot contain `XXX`, so the sentinel is neither intercepted nor renderable. _(line 469)_
 
 ## `05-packing-and-todos.md`
 
 - "formatWeight is the only renderer ... and stays that way" is false at HEAD: src/components/modules/lists/lists-board.tsx:136 defines a private duplicate that already disagrees with the shared one on the same screen, and no stage removes it. _(line 69)_
 - "Every list write already mirrors ... as patch('trip', tripId, { listsChangedAt })" is false — every item-level write mirrors as patch('packing-item', …) with field payloads — and the plan-level convention built on that falsehood binds every stage's item writes to the coarser stamp. _(line 26)_
 - Applying a template — the whole point of 05-S2/LST-04 — produces a list that renders in the read-only "Legacy group" state 05-S1 introduces, because applyTemplateToTrip writes category strings and no stage in wave 4 may touch the repository to adopt them. _(line 807)_
-
-## `06-documents-and-media.md`
-
-- 06-S5 states two incompatible answers for what a workspace calendar feed returns, and names no repository read to settle it — on an endpoint whose only credential is the URL _(line 1508)_
-- 06-S5's tenant-resolution rules have no offboarding case: a calendar feed keeps serving after its owner is removed from the workspace or the trip _(line 1659)_
 
 ## `08-product-modules.md`
 
@@ -60,5 +52,6 @@ that executes it should resolve them first.
 
 ## `09-account-and-settings.md`
 
-- Seven stages ship copy on `src/routes/_app` screens — squarely inside docs/SPEC.md §8's declared scope — but no stage names an `src/lib/i18n/messages/en/<namespace>.ts` file, so the plan assigns the English catalogue for its own screens to nobody and the fan-out contract cannot satisfy §8. _(line 64)_
+- 09-S8 claims ACC-04 has no dependants; BKG-01 declares dependsOn ACC-04, and the sibling plan records the same edge _(line 2640)_
+- Three of the four rows in 09-S8's deferral table name a destination that does not own the behaviour, is scheduled in a different wave, or is itself BLOCKED _(line 2605)_
 
