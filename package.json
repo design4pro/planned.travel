@@ -26,7 +26,8 @@
     "db:migrate:remote": "wrangler d1 migrations apply planned-travel-db --remote",
     "cf-typegen": "wrangler types",
     "prepare": "husky",
-    "sandcastle": "tsx .sandcastle/main.ts"
+    "sandcastle": "tsx .sandcastle/main.ts",
+    "sandcastle:baselines": "tsx .sandcastle/record-baselines.ts"
   },
   "lint-staged": {
     "*": "prettier --ignore-unknown --write"

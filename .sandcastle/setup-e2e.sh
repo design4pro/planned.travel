@@ -22,6 +22,13 @@ set -euo pipefail
 PORT=3010
 BASE_URL="http://localhost:${PORT}"
 
+# --if-needed: fix-loop re-validation reuses the live dev server — HMR/SSR
+# reload picks up the fix commits, so a restart buys nothing.
+if [ "${1:-}" = "--if-needed" ] && curl -sf -o /dev/null "${BASE_URL}/"; then
+  echo "==> dev server already answering on :${PORT} — skipping e2e env setup"
+  exit 0
+fi
+
 echo "==> .dev.vars (throwaway secrets for this sandbox)"
 cat > .dev.vars <<EOF
 BETTER_AUTH_SECRET=$(openssl rand -base64 32)

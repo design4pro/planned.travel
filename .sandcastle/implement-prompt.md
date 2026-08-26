@@ -41,14 +41,9 @@ Never hand-edit generated files (`src/routeTree.gen.ts` → `pnpm generate-route
 
 Before committing, run `pnpm typecheck`, `pnpm lint` and `pnpm test` and make them pass.
 
-When the task touches UI and you need the Playwright suite, prepare the environment first — once per sandbox:
+You do NOT need to run the Playwright suite yourself: after you finish, the orchestrator runs the full deterministic ladder (`validate.sh`) in this sandbox — including e2e against the `-linux` baselines when your diff touches UI — and resumes your session with a failure digest if it is red. If you want an early e2e signal anyway: `bash .sandcastle/setup-e2e.sh --if-needed`, then `PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm e2e`.
 
-```
-bash .sandcastle/setup-e2e.sh
-PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm e2e
-```
-
-This container is the same Playwright image as CI, so the committed `-linux` baselines are directly comparable. Baselines still change only through the sanctioned paths (never by hand); if your intended change moves pixels, say so in the commit so the PR re-records them. Skip e2e entirely for server-only tasks — the gate runs in CI on the pull request regardless.
+Never run `--update-snapshots` and never edit `e2e/__screenshots__`. If your change intentionally moves pixels, the ISSUE must declare it (a `## Visual change expected` section or the `visual-change-expected` label) — the orchestrator then re-records baselines; an undeclared pixel diff is treated as a regression.
 
 # COMMIT
 
