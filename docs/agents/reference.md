@@ -18,12 +18,16 @@ surfaces below. This file only routes you there and says which surface answers w
    cannot show (above all `/admin`) and for "what happens if…" experiments with real data. Two
    quiet failure modes, both documented in SPEC §2: the certificate is self-signed (clients need
    `--insecure` / `ignoreHTTPSErrors`), and the hostname resolves only through OrbStack's
-   resolver (`dig` says NXDOMAIN while `curl` succeeds). First-boot admin credentials live in the
-   clone's `docker-compose.yml` — read them there, never copy them into this repo.
-3. **Source clone — `/Users/rafalwolak/dev/test/trek` (this machine only).** The last resort,
-   for one question only: _which_ solution the reference reached for and _where_. Read it to
-   learn **what** a feature does — never **how**, and never copy a line. Prefer surfaces 1 and 2;
-   open the clone only when observing behavior cannot answer the question.
+   resolver (`dig` says NXDOMAIN while `curl` succeeds). If the Orb hostname is unreachable, the
+   same instance answers on `http://localhost:3900/login` — try that before concluding it is
+   down. First-boot admin credentials live in the clone's `docker-compose.yml` — read them
+   there, never copy them into this repo.
+3. **Source code — local clone `/Users/rafalwolak/dev/test/trek`, or the public repository
+   `https://github.com/liketrek/TREK` where the clone is absent (cloud/CI agents).** The last
+   resort, for one question only: _which_ solution the reference reached for and _where_. Read it
+   to learn **what** a feature does — never **how**, and never copy a line. The clean-room rule
+   applies identically to both copies. Prefer surfaces 1 and 2; open the source only when
+   observing behavior cannot answer the question.
 
 ## Rules of engagement
 
@@ -38,5 +42,5 @@ surfaces below. This file only routes you there and says which surface answers w
 - **The reference cannot settle everything**: several console/account surfaces are ours by
   contract (docs/ACCESS.md), not by parity — a feature the reference lacks is not evidence we
   should lack it. SPEC §2 lists the known cases.
-- Surfaces 2 and 3 are the operator's machine-local setup; a cloud or CI agent has only
-  surface 1.
+- Surface 2 is the operator's machine-local setup. A cloud or CI agent has surface 1 and, for
+  source questions, the public repository from surface 3 — under the same clean-room rules.

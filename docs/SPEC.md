@@ -59,9 +59,12 @@ three**. The operator's local setup:
   client without `--insecure` (or the Playwright equivalent) gets a connection error that reads
   like the host being down; and the hostname resolves through OrbStack's own resolver, so a plain
   `host`/`dig` lookup returns NXDOMAIN while `curl` succeeds. Neither means the instance is
-  unavailable.
+  unavailable. If the Orb hostname is unreachable anyway, the same instance answers on plain
+  `http://localhost:3900/login` — try that before concluding it is down.
 - **Source clone:** `/Users/rafalwolak/dev/test/trek`. §1 governs it: read it to learn _what_ a
-  feature does, never to copy how it does it.
+  feature does, never to copy how it does it. Where the clone is absent — a cloud or CI agent —
+  the public repository `https://github.com/liketrek/TREK` is the same source under the same §1
+  rules.
 - **Authenticated screens need a session.** The admin surface is at `/admin` behind an
   `adminRequired` guard, and the product's own screens are behind a login, so an unauthenticated
   capture photographs a sign-in form and compares _that_ to our console - a verdict that looks
