@@ -38,6 +38,7 @@ never adds scope of its own, so it is exempt from this table and from the filena
 | `12-verification-protocol.md`      | How a stage proves itself: the command gate, unit and isolation tests, the e2e/visual evidence format, viewports, themes and console rules.                  |
 | `13-community-gallery.md`          | The Trip Gallery — publish a trip as a reviewed snapshot, the curation queue, anonymous browse and detail served from KV, suggestions and saved trips.       |
 | `14-dashboard-mascot.md`           | Nomi, the original dashboard-hero character — a client-side state machine over days to departure, the flap countdown, the pause control, the static pose.    |
+| `15-content-studio.md`             | The operator content plane: Studio roles and audit, content stores with versioned translations, the block editor and media library, the public site as data, announcements, and managed legal documents with acceptance. Waves 7-11, above the matrix set. |
 
 ### Filename scheme
 
