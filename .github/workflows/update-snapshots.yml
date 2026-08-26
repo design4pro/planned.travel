@@ -84,4 +84,4 @@ jobs:
           **Reason given:** ${REASON}
 
           Review every changed image: an accepted baseline is an accepted design." \
-            --base main --head "$branch"
+            --base develop --head "$branch"
