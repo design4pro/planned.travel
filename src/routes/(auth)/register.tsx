@@ -11,8 +11,10 @@ import {
   toAuthFailure,
 } from '#/lib/auth/client'
 import { cn } from '#/lib/cn'
+import { formatNumber } from '#/lib/format'
+import { useI18n, useTranslate } from '#/lib/i18n'
 import { describeCallbackError, describeFailure } from './-lib/errors'
-import { MIN_PASSWORD_LENGTH, registerSchema } from './-lib/schemas'
+import { MIN_PASSWORD_LENGTH } from './-lib/schemas'
 import { safeRedirect } from './-lib/redirect'
 import { loadAuthConfig } from './-server/config'
 import { AuthShell } from './-ui/auth-shell'
@@ -23,9 +25,11 @@ import {
   OrDivider,
   PasswordInput,
   SocialButtons,
+  useAuthSchemas,
   visibleError,
 } from './-ui/form'
 
+import type { MessageKey } from '#/lib/i18n'
 import type { AuthMessage } from './-lib/errors'
 import type { RegisterValues } from './-lib/schemas'
 import type { SocialProviderId } from './-server/config'
@@ -49,13 +53,20 @@ export const Route = createFileRoute('/(auth)/register')({
 
 /* --------------------------------------------------------------- strength */
 
-const STRENGTH_LABELS = [
-  'Too short',
-  'Weak',
-  'Fair',
-  'Strong',
-  'Excellent',
-] as const
+/**
+ * One rung of the meter, as a whole sentence rather than a level glued to the
+ * word "Strength": the five rungs are adjectives, and an adjective agreeing with
+ * a noun is exactly what a two-key assembly cannot express in most of the
+ * twenty-three languages.
+ */
+const STRENGTH_KEYS: ReadonlyArray<MessageKey> = [
+  'auth.strength.tooShort',
+  'auth.strength.weak',
+  'auth.strength.fair',
+  'auth.strength.strong',
+  'auth.strength.excellent',
+]
+
 const STRENGTH_FILLS = [
   'bg-edge-strong',
   'bg-danger',
@@ -82,8 +93,9 @@ function scorePassword(value: string): number {
 }
 
 function PasswordStrength({ value }: { value: string }) {
+  const { t, locale } = useI18n()
   const score = scorePassword(value)
-  const label = STRENGTH_LABELS[score] ?? STRENGTH_LABELS[0]
+  const rung = STRENGTH_KEYS[score] ?? STRENGTH_KEYS[0]
 
   return (
     <div className="mt-2">
@@ -100,8 +112,11 @@ function PasswordStrength({ value }: { value: string }) {
       </div>
       <p className="mt-1.5 text-caption text-ink-3" aria-live="polite">
         {value.length === 0
-          ? `At least ${MIN_PASSWORD_LENGTH} characters. A short phrase beats a clever word.`
-          : `Strength: ${label}`}
+          ? t('auth.strength.hint', {
+              count: MIN_PASSWORD_LENGTH,
+              value: formatNumber(MIN_PASSWORD_LENGTH, locale),
+            })
+          : t(rung)}
       </p>
     </div>
   )
@@ -122,6 +137,8 @@ function RegisterPage() {
   const search = Route.useSearch()
   const { config } = Route.useRouteContext()
   const target = safeRedirect(search.redirect)
+  const t = useTranslate()
+  const schemas = useAuthSchemas()
 
   const [failure, setFailure] = React.useState<AuthMessage | null>(() =>
     search.error ? describeCallbackError(search.error) : null,
@@ -137,10 +154,10 @@ function RegisterPage() {
 
   const form = useForm({
     defaultValues: DEFAULTS,
-    validators: { onChange: registerSchema },
+    validators: { onChange: schemas.register },
     onSubmit: async ({ value }) => {
       setFailure(null)
-      const parsed = registerSchema.safeParse(value)
+      const parsed = schemas.register.safeParse(value)
       if (!parsed.success) return
 
       const { error } = await authClient.signUp.email({
@@ -191,18 +208,18 @@ function RegisterPage() {
 
   return (
     <AuthShell
-      eyebrow="Create your account"
-      heading="Start planning in a couple of minutes"
-      description="One account covers every trip, every travelling companion and every list."
+      eyebrow={t('auth.register.eyebrow')}
+      heading={t('auth.register.heading')}
+      description={t('auth.register.description')}
       footer={
         <>
-          Already have an account?{' '}
+          {t('auth.register.haveAccount')}{' '}
           <Link
             to="/login"
             search={search.redirect ? { redirect: search.redirect } : {}}
             className="rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
           >
-            Sign in
+            {t('auth.register.signIn')}
           </Link>
         </>
       }
@@ -217,9 +234,9 @@ function RegisterPage() {
               pending={socialPending}
               disabled={busy}
               onSelect={(provider) => void signUpWithProvider(provider)}
-              verb="Sign up with"
+              intent="signUp"
             />
-            <OrDivider label="or use your email" />
+            <OrDivider label={t('auth.divider.orEmail')} />
           </>
         ) : null}
 
@@ -234,17 +251,17 @@ function RegisterPage() {
             <form.Field name="name">
               {(field) => (
                 <Field
-                  label="Your name"
+                  label={t('auth.field.name')}
                   htmlFor={field.name}
                   error={visibleError(field.state.meta)}
-                  hint="Shown to the people you plan trips with."
+                  hint={t('auth.field.name.hint')}
                 >
                   <Input
                     id={field.name}
                     name={field.name}
                     autoComplete="name"
                     size="lg"
-                    placeholder="Alex Moreau"
+                    placeholder={t('auth.field.name.placeholder')}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -257,7 +274,7 @@ function RegisterPage() {
             <form.Field name="email">
               {(field) => (
                 <Field
-                  label="Email address"
+                  label={t('auth.field.email')}
                   htmlFor={field.name}
                   error={visibleError(field.state.meta)}
                 >
@@ -271,7 +288,7 @@ function RegisterPage() {
                     spellCheck={false}
                     inputMode="email"
                     size="lg"
-                    placeholder="you@example.com"
+                    placeholder={t('auth.field.email.placeholder')}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -285,7 +302,7 @@ function RegisterPage() {
               {(field) => (
                 <div>
                   <Field
-                    label="Password"
+                    label={t('auth.field.password')}
                     htmlFor={field.name}
                     error={visibleError(field.state.meta)}
                   >
@@ -294,8 +311,9 @@ function RegisterPage() {
                       name={field.name}
                       autoComplete="new-password"
                       size="lg"
-                      placeholder="A phrase you will remember"
-                      revealLabel="password"
+                      placeholder={t('auth.field.newPassword.placeholder')}
+                      showLabel={t('auth.password.show')}
+                      hideLabel={t('auth.password.hide')}
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(event) =>
@@ -312,7 +330,7 @@ function RegisterPage() {
             <form.Field name="confirmPassword">
               {(field) => (
                 <Field
-                  label="Confirm password"
+                  label={t('auth.field.confirmPassword')}
                   htmlFor={field.name}
                   error={visibleError(field.state.meta)}
                 >
@@ -321,8 +339,9 @@ function RegisterPage() {
                     name={field.name}
                     autoComplete="new-password"
                     size="lg"
-                    placeholder="Type it once more"
-                    revealLabel="password confirmation"
+                    placeholder={t('auth.field.confirmPassword.placeholder')}
+                    showLabel={t('auth.password.showConfirm')}
+                    hideLabel={t('auth.password.hideConfirm')}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -355,7 +374,7 @@ function RegisterPage() {
                         htmlFor={field.name}
                         className="text-label text-ink-2 select-none"
                       >
-                        I agree to the terms of service and the privacy notice.
+                        {t('auth.register.terms')}
                       </label>
                     </div>
                     {error ? (
@@ -387,10 +406,10 @@ function RegisterPage() {
                   block
                   icon={<Check />}
                   loading={isSubmitting || handingOff}
-                  loadingLabel="Creating your account"
+                  loadingLabel={t('auth.register.submitting')}
                   disabled={!canSubmit || busy}
                 >
-                  Create account
+                  {t('auth.register.submit')}
                 </Button>
               )}
             </form.Subscribe>

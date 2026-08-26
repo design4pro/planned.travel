@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url'
 import { admin } from 'better-auth/plugins'
 import { defaultRoles } from 'better-auth/plugins/admin/access'
 import { describe, expect, it } from 'vitest'
-import { BANNED_USER_MESSAGE } from '#/routes/(auth)/-lib/errors'
+import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
 import { ac, roles } from '../access'
 import {
   DISABLED_ADMIN_PATHS,
@@ -329,14 +329,16 @@ describe('admin-options.ts is binding-free', () => {
     expect(reach.files).not.toContain(AUTH_ENV_MODULE)
   })
 
-  it('reaches exactly three first-party modules', () => {
+  it('reaches exactly two first-party modules, and neither is under routes/', () => {
+    // It was three. `BANNED_USER_MESSAGE` used to be imported from the auth screens' error module,
+    // which meant a binding-free server module reached into the route tree to read one string.
+    // Localisation turned that module into a code -> message-key map with no sentences left in it,
+    // so the constant moved here, where the plugin option that needs it is configured. The graph
+    // getting *smaller* is the point: a server module has no business importing from routes/.
     expect([...reach.files].sort()).toEqual(
-      [
-        ADMIN_OPTIONS_MODULE,
-        resolvePath(SRC_DIR, 'server/auth/access.ts'),
-        resolvePath(SRC_DIR, 'routes/(auth)/-lib/errors.ts'),
-      ].sort(),
+      [ADMIN_OPTIONS_MODULE, resolvePath(SRC_DIR, 'server/auth/access.ts')].sort(),
     )
+    expect([...reach.files].some((f) => f.includes('/routes/'))).toBe(false)
   })
 
   it('imports exactly the two better-auth access subpaths at run time', () => {

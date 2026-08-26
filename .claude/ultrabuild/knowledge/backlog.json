@@ -1,0 +1,106 @@
+[
+  {
+    "id": "namespaces-dts-must-die",
+    "title": "src/lib/i18n/messages/namespaces.d.ts is scaffolding and nobody owns its removal",
+    "why": "It declares ten global wildcard ambient modules so types.ts can import namespace files that do not exist yet. Every real messages/en/<ns>.ts shadows it, so it is inert — but a wildcard ambient declaration that outlives its purpose will silently type an absent namespace as present, which is exactly what the parity gate exists to prevent. Delete it the moment all ten en namespace files exist.",
+    "decision": "The orchestrator deletes it, not a builder — no item owns it.",
+    "paths": [
+      "src/lib/i18n/messages/namespaces.d.ts"
+    ]
+  },
+  {
+    "id": "seed-relative-dates",
+    "title": "The demo fixture must not decide what the gate photographs",
+    "why": "Absolute seeded dates mean the Worker chooses WHICH ROWS a screen shows by comparing them against its own today, so baselines change size and toHaveScreenshot refuses two images of different size before it consults any tolerance. Measured: /dashboard shrinks 43px on 2026-08-21, /atlas grows 43px on 2026-08-24, the reservations rail is empty for good after 2026-10-12.",
+    "decision": "Deferred by the user in round 6: to be done after the Atlas task, as its own task.",
+    "paths": [
+      "src/routes/api/dev/-seed/dataset/*.ts",
+      "scripts/seed/seed.mjs"
+    ]
+  },
+  {
+    "id": "intl-month-callsites",
+    "title": "Six components still ask the platform for an abbreviated month",
+    "why": "The same hydration bug the atlas gate caught, still latent elsewhere: workerd renders en-GB September as \"Sept\" and WebKit as \"Sep\", so any September date these render server-side throws a React hydration error in Safari. src/lib/format.ts now holds the frozen CLDR table; these six never routed through it. None of these screens is covered by a visual baseline, which is why nothing has failed yet.",
+    "paths": [
+      "src/components/costs/data.ts (two formatters)",
+      "src/components/modules/transports/legs-timeline.tsx",
+      "src/components/modules/collab/collab-board.tsx",
+      "src/components/modules/collab/thread.tsx",
+      "src/components/modules/book/bookings-timeline.tsx",
+      "src/components/modules/files/file-library.tsx"
+    ]
+  },
+  {
+    "id": "gpu-rasterised-baselines",
+    "title": "The mobile-safari atlas baselines are rasterised by a real GPU and nothing pins it",
+    "why": "The two mobile-safari atlas frames contain a WebGL canvas rendered by this machine’s hardware GPU. Nothing in playwright.config.ts forces a software renderer, so the same commit can produce different pixels on CI or on another developer’s machine. Raising maxDiffPixelRatio to absorb that is expressly forbidden by the gate’s own acceptance; the fix is to pin the renderer.",
+    "paths": [
+      "playwright.config.ts"
+    ]
+  },
+  {
+    "id": "interpolate-formats-no-numbers",
+    "title": "interpolate() substitutes raw numbers, so any grouped count renders unlocalised",
+    "why": "A plural message's `count` param is typed `number` because it selects the CLDR branch, and it reaches the template through `String(value)`. So a four-digit count renders `1234` with ASCII digits and no group separator in every one of the 23 locales, while `formatNumber` for the same locale would give `1.234` (de) or `1 234` (fr, U+202F). Only one shipped key hits it today (`ui.dateRange.nights`), and that one is assigned to ui-primitives-i18n-rtl to fix at its own call site. The general fix - a locale-aware numeric substitution inside interpolate(), or a documented pre-formatted-param convention - belongs to whoever owns src/lib/i18n/ and would reopen an accepted item.",
+    "decision": "Deferred: the one shipped occurrence is fixed at its call site this run; the runtime change waits so it does not reopen i18n-core-runtime and ripple through every catalogue item still to be built.",
+    "paths": [
+      "src/lib/i18n/interpolate.ts"
+    ]
+  },
+  {
+    "id": "cn-registers-no-shadow-group",
+    "title": "tailwind-merge does not know this repo shadow tokens, so shadow classes never cancel",
+    "why": "`src/lib/cn.ts` registers no `shadow` class group, and `card`/`elevated`/`dropdown` are not on tailwind-merge's built-in shadow SIZE scale, so it classifies `shadow-card` as a shadow COLOUR. `cn('shadow-card','shadow-none')` therefore keeps BOTH classes and CSS source order decides which box-shadow paints. Every component composing a token shadow with an override is affected. Registering the group is a repo-wide change to how classes merge and could silently alter components nobody is looking at this run, so it is not a change to make inside a localisation task.",
+    "decision": "Deferred as a repo-wide risk. Builders are warned instead by the `shadow-token-is-a-colour` fact: compose the class list so the shadow is left off rather than relying on shadow-none to cancel it.",
+    "paths": [
+      "src/lib/cn.ts"
+    ]
+  },
+  {
+    "id": "negotiate-docstrings-say-en-gb",
+    "title": "Two docstrings in an accepted item still claim the workspace locale defaults to en-GB",
+    "why": "Migration 0002 and src/server/db/schema.ts make the default `en`. The prose in src/lib/i18n/negotiate.ts now states the opposite, and this repo grades comment/measurement agreement. It is a two-line correction in a file owned by i18n-core-runtime, which is already accepted.",
+    "decision": "Deferred rather than reopening an accepted item for two comment lines. Fold it into the next round that legitimately touches src/lib/i18n/.",
+    "paths": [
+      "src/lib/i18n/negotiate.ts"
+    ]
+  },
+  {
+    "id": "capture-auth-flag-breaks-login",
+    "title": "capture.mjs --auth photographs the authenticated app instead of /login",
+    "why": "A valid demo session redirects /login straight into the app, so any capture of a public auth screen taken with --auth is a photograph of the wrong screen. auth-i18n worked around it by hand this round and still won its blind pair, but the next item to photograph a public screen will walk into it.",
+    "decision": "Deferred: the fix is a --no-auth path (or auto-detecting a public route) in scripts/ultrabuild/capture.mjs, and no round needs it until another public screen is judged. Recorded so the workaround is not rediscovered.",
+    "paths": [
+      "scripts/ultrabuild/capture.mjs"
+    ]
+  },
+  {
+    "id": "admin-console-authorises-on-the-client",
+    "title": "SECURITY: /admin serves the member roster, audit trail and quotas to any authenticated member",
+    "why": "loadAdmin has no role check and appScope() defaults to role 'member', while the only gate is the component's isAdmin branch - which TanStack Router resolves AFTER the loader. So a plain member who opens /admin receives names, email addresses, the audit log and every quota figure in the SSR payload while the screen says 'Only workspace admins can open this', and loadAdmin() is callable directly. Pre-existing, not introduced by this run.",
+    "decision": "Assigned to app-shell-i18n as a blocking finding for round 10, since both files are in its ownedPaths and requireOrg({ role: 'admin' }) already exists. Carried here too because it is a live data exposure that outlives this task.",
+    "paths": [
+      "src/routes/_app/-server/overview.ts",
+      "src/routes/_app/admin.tsx"
+    ]
+  },
+  {
+    "id": "glyph-only-values-cannot-pass-the-untranslated-check",
+    "title": "The parity suite has no way to say \"this value has nothing to translate\"",
+    "why": "PROPER_NOUNS is [] and its docstring only admits proper nouns - a product name, a brand, a currency code. A numeric affix notation like \"{max}+\" is the same category (no translatable content) but does not fit that wording, so fourteen translators corrupted the notation instead of asking for the allow-list.",
+    "decision": "Round 12: i18n-core-runtime widens the allow-list and its docstring to cover glyph-only values, then each translation item restores its own two keys."
+  },
+  {
+    "id": "parity-test-carries-two-raw-nul-bytes",
+    "title": "`parity.test.ts` is a binary file to git, grep and diff",
+    "why": "Round 12 wrote the branch separator in `branchesOf(...).join(...)` as a literal NUL character in the source rather than the escape `'\\u0000'`. The intent is right - a separator no message can contain - but the byte makes `file` report \"data\", `git diff` refuse to render the file, and plain `grep` skip it with \"Binary file matches\". Measured: 2 NUL bytes at lines 172 and 173; the file is otherwise valid UTF-8.",
+    "decision": "Round 14 verification pass: i18n-core-runtime owns the file and swaps the two literals for the escape sequence. No behaviour changes - the separator stays the same character."
+  },
+  {
+    "id": "ten-locales-still-carry-the-inverted-affix",
+    "title": "The structural exemption makes the inverted affix invisible instead of fixing it",
+    "why": "Round 12 replaced the no-byte-identical rule with a structural exemption: a value with no letter in any script is never reported as untranslated. That is the right rule, but it also means the ten locales owned by items the round did not carry - ar, el, tr, hu, id, vi, cs, pl, ru, uk - now ship '+{max}' / '{hidden}+' with nothing red to show for it. de, nl and sv were repaired; the rest were not.",
+    "decision": "Round 13 carries translations-rtl-hellenic, translations-slavic and translations-cjk, each restoring its own locales. Explicit work, because no test will surface it any more."
+  }
+]

@@ -5,10 +5,17 @@ import { ArrowLeft, MailCheck, Send } from 'lucide-react'
 
 import { Button, Field, Input } from '#/components/ui'
 import { authClient, toAuthFailure } from '#/lib/auth/client'
+import { useTranslate } from '#/lib/i18n'
 import { describeFailure } from './-lib/errors'
-import { forgotPasswordSchema } from './-lib/schemas'
 import { AuthShell } from './-ui/auth-shell'
-import { AuthPanel, FieldStack, FormAlert, visibleError } from './-ui/form'
+import {
+  AuthPanel,
+  EmailSentence,
+  FieldStack,
+  FormAlert,
+  useAuthSchemas,
+  visibleError,
+} from './-ui/form'
 
 import type { AuthMessage } from './-lib/errors'
 import type { ForgotPasswordValues } from './-lib/schemas'
@@ -23,16 +30,18 @@ export const Route = createFileRoute('/(auth)/forgot-password')({
 const DEFAULTS: ForgotPasswordValues = { email: '' }
 
 function ForgotPasswordPage() {
+  const t = useTranslate()
+  const schemas = useAuthSchemas()
   const [failure, setFailure] = React.useState<AuthMessage | null>(null)
   const [sentTo, setSentTo] = React.useState<string | null>(null)
   const [resending, setResending] = React.useState(false)
 
   const form = useForm({
     defaultValues: DEFAULTS,
-    validators: { onChange: forgotPasswordSchema },
+    validators: { onChange: schemas.forgotPassword },
     onSubmit: async ({ value }) => {
       setFailure(null)
-      const parsed = forgotPasswordSchema.safeParse(value)
+      const parsed = schemas.forgotPassword.safeParse(value)
       if (!parsed.success) return
 
       const { error } = await authClient.requestPasswordReset({
@@ -68,22 +77,22 @@ function ForgotPasswordPage() {
       to="/login"
       className="inline-flex items-center gap-1.5 rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
     >
-      <ArrowLeft className="size-3.5" aria-hidden="true" />
-      Back to sign in
+      {/* Points back the way reading came from, so it mirrors in `ar`. */}
+      <ArrowLeft className="size-3.5" aria-hidden="true" data-mirror-rtl />
+      {t('auth.forgot.back')}
     </Link>
   )
 
   if (sentTo) {
     return (
       <AuthShell
-        eyebrow="Check your inbox"
-        heading="Your reset link is on its way"
+        eyebrow={t('auth.forgot.sent.eyebrow')}
+        heading={t('auth.forgot.sent.heading')}
         description={
-          <>
-            If an account uses{' '}
-            <span className="font-semibold text-ink">{sentTo}</span>, a link to
-            choose a new password is in that inbox now.
-          </>
+          <EmailSentence
+            text={t('auth.forgot.sent.description', { email: sentTo })}
+            email={sentTo}
+          />
         }
         footer={backToSignIn}
       >
@@ -95,11 +104,10 @@ function ForgotPasswordPage() {
             </span>
             <div className="min-w-0">
               <p className="text-label font-semibold text-ink">
-                The link works once, for one hour
+                {t('auth.forgot.sent.title')}
               </p>
               <p className="mt-1 text-caption text-ink-3">
-                Nothing arrived? Check spam, then send it again. Requesting a
-                new link quietly retires the previous one.
+                {t('auth.forgot.sent.body')}
               </p>
             </div>
           </div>
@@ -109,10 +117,10 @@ function ForgotPasswordPage() {
               size="lg"
               block
               loading={resending}
-              loadingLabel="Sending again"
+              loadingLabel={t('auth.forgot.sent.resending')}
               onClick={() => void resend()}
             >
-              Send it again
+              {t('auth.forgot.sent.resend')}
             </Button>
             <Button
               variant="ghost"
@@ -123,7 +131,7 @@ function ForgotPasswordPage() {
                 setFailure(null)
               }}
             >
-              Use a different email
+              {t('auth.forgot.sent.change')}
             </Button>
           </div>
         </AuthPanel>
@@ -133,9 +141,9 @@ function ForgotPasswordPage() {
 
   return (
     <AuthShell
-      eyebrow="Password help"
-      heading="Reset your password"
-      description="Tell us the address on your account and we will email you a link to set a new password."
+      eyebrow={t('auth.forgot.eyebrow')}
+      heading={t('auth.forgot.heading')}
+      description={t('auth.forgot.description')}
       footer={backToSignIn}
     >
       <AuthPanel>
@@ -151,7 +159,7 @@ function ForgotPasswordPage() {
             <form.Field name="email">
               {(field) => (
                 <Field
-                  label="Email address"
+                  label={t('auth.field.email')}
                   htmlFor={field.name}
                   error={visibleError(field.state.meta)}
                 >
@@ -165,7 +173,7 @@ function ForgotPasswordPage() {
                     spellCheck={false}
                     inputMode="email"
                     size="lg"
-                    placeholder="you@example.com"
+                    placeholder={t('auth.field.email.placeholder')}
                     autoFocus
                     value={field.state.value}
                     onBlur={field.handleBlur}
@@ -187,12 +195,12 @@ function ForgotPasswordPage() {
                   variant="primary"
                   size="lg"
                   block
-                  icon={<Send />}
+                  icon={<Send data-mirror-rtl />}
                   loading={isSubmitting}
-                  loadingLabel="Sending your link"
+                  loadingLabel={t('auth.forgot.submitting')}
                   disabled={!canSubmit}
                 >
-                  Email me a reset link
+                  {t('auth.forgot.submit')}
                 </Button>
               )}
             </form.Subscribe>

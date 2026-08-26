@@ -7,7 +7,9 @@ import {
 } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
+import { formatNumber } from '#/lib/format'
 import { IconButton } from './icon-button'
+import { useUiI18n } from './copy'
 import { focusRing, transitionBase, useControllableState } from './shared'
 
 /**
@@ -109,6 +111,7 @@ export const Pagination = React.forwardRef<HTMLElement, PaginationProps>(
     },
     ref,
   ) => {
+    const ui = useUiI18n()
     const [current, setCurrent] = useControllableState<number>({
       value: page,
       defaultValue: defaultPage,
@@ -122,7 +125,17 @@ export const Pagination = React.forwardRef<HTMLElement, PaginationProps>(
 
     const summary =
       totalItems !== undefined && pageSize
-        ? `Showing ${Math.min((clamped - 1) * pageSize + 1, totalItems)}–${Math.min(clamped * pageSize, totalItems)} of ${totalItems}`
+        ? ui.t('ui.pagination.summary', {
+            from: formatNumber(
+              Math.min((clamped - 1) * pageSize + 1, totalItems),
+              ui.locale,
+            ),
+            to: formatNumber(
+              Math.min(clamped * pageSize, totalItems),
+              ui.locale,
+            ),
+            total: formatNumber(totalItems, ui.locale),
+          })
         : null
 
     const items = compact
@@ -137,7 +150,7 @@ export const Pagination = React.forwardRef<HTMLElement, PaginationProps>(
     return (
       <nav
         ref={ref}
-        aria-label="Pagination"
+        aria-label={ui.t('ui.pagination.label')}
         className={cn(
           'flex flex-wrap items-center justify-between gap-3',
           className,
@@ -156,8 +169,8 @@ export const Pagination = React.forwardRef<HTMLElement, PaginationProps>(
         <div className="flex items-center gap-1">
           {showEdges ? (
             <IconButton
-              icon={<ChevronsLeft />}
-              label="First page"
+              icon={<ChevronsLeft data-mirror-rtl />}
+              label={ui.t('ui.pagination.first')}
               size={size === 'sm' ? 'sm' : 'md'}
               variant="ghost"
               disabled={clamped === 1}
@@ -166,8 +179,8 @@ export const Pagination = React.forwardRef<HTMLElement, PaginationProps>(
           ) : null}
 
           <IconButton
-            icon={<ChevronLeft />}
-            label="Previous page"
+            icon={<ChevronLeft data-mirror-rtl />}
+            label={ui.t('ui.pagination.previous')}
             size={size === 'sm' ? 'sm' : 'md'}
             variant="ghost"
             disabled={clamped === 1}
@@ -175,18 +188,35 @@ export const Pagination = React.forwardRef<HTMLElement, PaginationProps>(
           />
 
           {compact ? (
-            <span className="px-2 text-label tabular-nums text-ink-2">
-              Page <span className="font-semibold text-ink">{clamped}</span> of{' '}
-              {safePageCount}
+            <span className="px-2 text-label font-medium tabular-nums text-ink-2">
+              {ui.t('ui.pagination.current', {
+                page: formatNumber(clamped, ui.locale),
+                pageCount: formatNumber(safePageCount, ui.locale),
+              })}
             </span>
           ) : (
-            <ol className="flex items-center gap-1">
+            /*
+             * The numbers wrap; the arrows never do. Measured at 360px with
+             * nine pages: the row wants 364px, so an unwrapped list gives the
+             * whole document a horizontal scrollbar — `docs/SPEC.md` §2 asks for
+             * a designed layout at 360px, not a squeezed one. Wrapping inside
+             * the list keeps `‹` and `›` where the thumb expects them and lets
+             * the pages take a second centred row. `compact` is still the
+             * deliberate phone treatment when a caller wants one line.
+             *
+             * This has been reverted once already, silently, in a round that
+             * touched nothing else here — hence the assertion in
+             * `__tests__/pagination.test.tsx` that names these three classes.
+             */
+            <ol className="flex min-w-0 flex-wrap items-center justify-center gap-1">
               {items.map((item, index) =>
                 typeof item === 'number' ? (
                   <li key={`page-${item}`}>
                     <button
                       type="button"
-                      aria-label={`Page ${item}`}
+                      aria-label={ui.t('ui.pagination.page', {
+                        page: formatNumber(item, ui.locale),
+                      })}
                       aria-current={item === clamped ? 'page' : undefined}
                       onClick={() => goTo(item)}
                       className={cn(
@@ -199,7 +229,7 @@ export const Pagination = React.forwardRef<HTMLElement, PaginationProps>(
                           : 'text-ink-2 hover:bg-hover hover:text-ink active:bg-active',
                       )}
                     >
-                      {item}
+                      {formatNumber(item, ui.locale)}
                     </button>
                   </li>
                 ) : (
@@ -219,8 +249,8 @@ export const Pagination = React.forwardRef<HTMLElement, PaginationProps>(
           )}
 
           <IconButton
-            icon={<ChevronRight />}
-            label="Next page"
+            icon={<ChevronRight data-mirror-rtl />}
+            label={ui.t('ui.pagination.next')}
             size={size === 'sm' ? 'sm' : 'md'}
             variant="ghost"
             disabled={clamped === safePageCount}
@@ -229,8 +259,8 @@ export const Pagination = React.forwardRef<HTMLElement, PaginationProps>(
 
           {showEdges ? (
             <IconButton
-              icon={<ChevronsRight />}
-              label="Last page"
+              icon={<ChevronsRight data-mirror-rtl />}
+              label={ui.t('ui.pagination.last')}
               size={size === 'sm' ? 'sm' : 'md'}
               variant="ghost"
               disabled={clamped === safePageCount}

@@ -281,10 +281,16 @@ describe('clampPadding', () => {
 /**
  * The solver against the geometry it actually has to solve.
  *
- * `boundsForPoints` is where a country's fly-to rectangle comes from, so the
- * antimeridian tie is pinned here on real outlines rather than only on a pair of
- * hand-written vertices: one country that merely looks like a crossing in binary
- * floating point, and two that genuinely are one.
+ * `boundsForPoints` is what every rectangle in `../countries` is ultimately
+ * built out of — a country's frame is a union of ring rectangles solved through
+ * it — so the antimeridian tie is pinned here on real outlines rather than only
+ * on a pair of hand-written vertices: one country that merely looks like a
+ * crossing in binary floating point, and two that genuinely are one.
+ *
+ * `countryBounds` returns a *frame* rather than the extent of everything a
+ * country owns, and the bundled cut draws few enough offshore rings that the
+ * two agree for all four countries below. The framing solver itself is tested
+ * where it lives, in `./countries.test.ts`.
  */
 describe('boundsForPoints, on the bundled outlines', () => {
   it('keeps a western-hemisphere country on the plain line', () => {
@@ -324,5 +330,19 @@ describe('boundsForPoints, on the bundled outlines', () => {
     if (bounds === null) return
     expect(bounds.east).toBeLessThan(180)
     expect(bounds.west).toBeGreaterThan(160)
+  })
+
+  it('frames France on the metropole, on either cut', () => {
+    // The bundled cut draws metropolitan France, Corsica and nothing else, so
+    // this is the frame the finer cut has to keep agreeing with once it adds
+    // Guadeloupe, Martinique, French Guiana, Réunion and Mayotte to the same
+    // feature — 118° of longitude that no camera should ever be fitted to.
+    const france = countryBounds('FR')
+    expect(france).not.toBeNull()
+    if (france === null) return
+    expect(france.east - france.west).toBeLessThan(16)
+    expect(boundsContains(france, [2.35, 48.85]), 'Paris').toBe(true)
+    expect(boundsContains(france, [9.15, 41.97]), 'Corsica').toBe(true)
+    expect(boundsContains(france, [-61.07, 14.6]), 'Martinique').toBe(false)
   })
 })

@@ -20,6 +20,17 @@ export type SkeletonProps = React.ComponentPropsWithoutRef<'div'> & {
  * A placeholder block. Always `aria-hidden` with the surrounding region marked
  * `aria-busy`, so a screen reader hears "loading" once instead of narrating a
  * dozen empty boxes.
+ *
+ * The shimmer sweeps from the edge the reader starts at. Two physical things
+ * make that up — `pt-shimmer` walks `translateX` from `-100%` to `+100%`, and
+ * the highlight is a `to right` gradient — and CSS gives neither a logical
+ * spelling: there is no logical `transform-origin` and no logical gradient
+ * keyword. Mirroring the pseudo-element turns both round at once, which is
+ * exactly what `progress.tsx` does to the indeterminate sweep for the same
+ * reason. It is safe here because the highlight is a symmetrical band on an
+ * empty box, and because `-scale-x-100` compiles to the standalone `scale`
+ * property in Tailwind v4 — it composes with the keyframes' `transform` rather
+ * than replacing it, so the sweep survives the flip.
  */
 export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
   ({ className, radius = 'md', animation = 'shimmer', ...props }, ref) => (
@@ -31,8 +42,11 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
         'relative overflow-hidden bg-surface-inset',
         radii[radius],
         animation === 'pulse' && 'animate-pulse-soft',
-        animation === 'shimmer' &&
-          'before:absolute before:inset-0 before:animate-shimmer before:bg-linear-to-r before:from-transparent before:via-surface/60 before:to-transparent',
+        animation === 'shimmer' && [
+          'before:absolute before:inset-0 before:animate-shimmer',
+          'before:bg-linear-to-r before:from-transparent before:via-surface/60 before:to-transparent',
+          'rtl:before:-scale-x-100',
+        ],
         className,
       )}
       {...props}

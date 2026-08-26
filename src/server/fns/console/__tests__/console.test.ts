@@ -47,7 +47,7 @@ import {
 } from 'vitest'
 import type { z } from 'zod'
 
-import { BANNED_USER_MESSAGE } from '#/routes/(auth)/-lib/errors'
+import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
 import { createPlatformTables } from '#/server/catalog/__tests__/platform-tables'
 import { platformAuditLog } from '#/server/db/schema'
 import { createLogger, createMemorySink } from '#/server/observability'

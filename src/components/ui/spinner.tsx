@@ -1,6 +1,7 @@
 import * as React from 'react'
 
 import { cn } from '#/lib/cn'
+import { useUiCopy } from './copy'
 
 const sizeMap = {
   xs: 12,
@@ -18,9 +19,10 @@ export type SpinnerProps = Omit<
 > & {
   size?: SpinnerSize
   /**
-   * Announced to assistive tech. Pass `null` when the spinner sits inside a
-   * control that already describes the pending state (a loading Button, say),
-   * so screen readers do not hear it twice.
+   * Announced to assistive tech. Left out, it says "Loading" in the reader's
+   * language. Pass `null` when the spinner sits inside a control that already
+   * describes the pending state (a loading Button, say), so screen readers do
+   * not hear it twice.
    */
   label?: string | null
 }
@@ -32,7 +34,9 @@ export type SpinnerProps = Omit<
  * opacity pulse, so the indicator still signals without moving.
  */
 export const Spinner = React.forwardRef<HTMLSpanElement, SpinnerProps>(
-  ({ className, size = 'md', label = 'Loading', ...props }, ref) => {
+  ({ className, size = 'md', label, ...props }, ref) => {
+    const t = useUiCopy()
+    const announced = label === null ? null : (label ?? t('ui.status.loading'))
     const px = sizeMap[size]
     return (
       <span
@@ -42,8 +46,8 @@ export const Spinner = React.forwardRef<HTMLSpanElement, SpinnerProps>(
           className,
         )}
         style={{ width: px, height: px }}
-        role={label ? 'status' : undefined}
-        aria-hidden={label ? undefined : true}
+        role={announced ? 'status' : undefined}
+        aria-hidden={announced ? undefined : true}
         {...props}
       >
         <svg
@@ -70,7 +74,7 @@ export const Spinner = React.forwardRef<HTMLSpanElement, SpinnerProps>(
             className="animate-sweep"
           />
         </svg>
-        {label ? <span className="sr-only">{label}</span> : null}
+        {announced ? <span className="sr-only">{announced}</span> : null}
       </span>
     )
   },

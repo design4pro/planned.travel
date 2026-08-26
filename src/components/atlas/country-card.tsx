@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { TriangleAlert } from 'lucide-react'
+import { CircleDashed, MapPin, Route, TriangleAlert } from 'lucide-react'
 
 import {
   Button,
@@ -8,16 +8,17 @@ import {
   focusRing,
   transitionBase,
 } from '#/components/ui'
+import { useAtlasCopy, useAtlasI18n } from '#/components/map'
 import { cn } from '#/lib/cn'
-import {
-  ABSENT_FACT_LABEL,
-  ABSENT_FACT_MARK,
-  countryFacts,
-} from '#/lib/atlas/country-facts'
+import { ABSENT_FACT_MARK, countryFacts } from '#/lib/atlas/country-facts'
 import { countryName } from '#/lib/atlas/country-names'
-import { countryFlag } from '#/lib/format'
+import { countryFlag, formatMonthYear, formatNumber } from '#/lib/format'
 
-import type { CountryFactMonth } from '#/lib/atlas/country-facts'
+import type { Locale, Translate } from '#/lib/i18n'
+import type {
+  CountryFactMonth,
+  CountryFactSource,
+} from '#/lib/atlas/country-facts'
 
 /**
  * One country, told on the map itself.
@@ -44,8 +45,14 @@ import type { CountryFactMonth } from '#/lib/atlas/country-facts'
  * through a date, and it makes every contrast figure conditional on geography.
  * `--color-map-card` is opaque so the ratios in `tokens.css` are true wherever
  * the card lands, and the boundary against the map is carried by whichever of
- * the face or the hairline wins on that particular fill — never below 3:1 on
- * any of the nine the atlas paints, in either theme.
+ * the face or the hairline wins on that particular fill. Measured against every
+ * ground the card can land on — paper land, hovered land, the sea and the five
+ * steps of the visited ramp — the winning edge never falls below 3.1987:1 in
+ * light (over hovered land) or 3.4754:1 in dark (over the same), well past the
+ * 3:1 a boundary owes, so the card clears WCAG 2.2 1.4.11 wherever the
+ * reader points. The two remaining tokens in the country group are 1px borders
+ * rather than fills; a card edge can only ever coincide with one across a
+ * single pixel, and the fill on both sides of that pixel clears 3:1 on its own.
  *
  * **The type is the whole argument.** The reference this screen is judged
  * against sets its labels at 9px and 10px in whatever the OS falls back to, at
@@ -63,12 +70,39 @@ import type { CountryFactMonth } from '#/lib/atlas/country-facts'
  * labels and the em dash 7.02:1 / 7.18:1, the error sentence 10.71:1 / 11.37:1,
  * its icon 6.33:1 / 7.43:1, and the hairline 4.55:1 / 4.65:1. The floor across
  * the whole card is the 11px label tier, and it clears AA by better than half
- * again in both themes.
+ * again in both themes. The placeholder bars are the one non-text figure the
+ * card owns, and they sit on `--color-map-card-inset` at 1.19:1 light and
+ * 1.20:1 dark — the same reading every other skeleton in the product gives on
+ * a page.
  *
- * **The zero state is designed, not empty.** A country you have not been to
- * still has a card, and it prints `0` twice and an em dash for each month. The
- * dash is `aria-hidden` and paired with words, because a reader hearing "dash"
- * cannot tell a missing date from a broken one.
+ * **Three states, one geometry.** A country with an itinerary prints its trips
+ * and its trip months, headed `Trips · Places · First trip · Last trip`. A
+ * country the traveller marked by hand — no trip behind it, which on a real
+ * record is most of them — prints its visits and its visit months in the same
+ * four cells, headed `Visits · Places · First visit · Last visit`, because the
+ * alternative is a card that says nothing about the very countries the map has
+ * just filled in. A country with nothing recorded at all prints `0` twice and
+ * an em dash for each month, the whole grid set back an ink tier so the
+ * emptiness is legible before any label is read. That is the distinction the
+ * eye makes first — a card that speaks against a card gone quiet. The second
+ * one, between a journey and a visit, is made twice over: by the captions, and
+ * by the record mark at the end of the name line, which is a route, a pin or a
+ * dashed ring. Under a moving pointer a caption is a shape rather than a
+ * sentence, and the glyph answers at that speed. The dash is
+ * `aria-hidden` and paired with words, because a reader hearing "dash" cannot
+ * tell a missing date from a broken one. All three are the same grid, the same
+ * rules and the same type ladder, so the card's height never changes as the
+ * pointer crosses a border — `countryFacts()` chooses the wording and this file
+ * draws whatever it was handed.
+ *
+ * **Both records are passed or the card lies.** The trip columns alone cannot
+ * tell a country nobody has recorded from a country visited three times, and a
+ * host that hands over only those turns every manually marked country into the
+ * empty state — which is exactly what shipped, for three rounds, while the
+ * visit columns were optional and nothing checked them. They are required
+ * props, so that host no longer compiles. `countryFactColumns()` in
+ * `#/lib/atlas/country-facts` projects a whole atlas record into exactly these
+ * props; a host holding one should spread it rather than pick fields.
  *
  * **Every state this surface can be in ships here.** Rest and the zero state
  * are `CountryCard`; the name-only pill is its `compact` variant; loading is
@@ -151,21 +185,39 @@ const layout = {
    * the four cells it prints, so a host can measure it once and anchor to it.
    * A fact card that cuts its own last row in half reads as a fault.
    */
-  card: 'w-72 2xl:w-80 max-w-full rounded-lg text-left',
+  card: 'w-72 2xl:w-80 max-w-full rounded-lg text-start',
   /**
    * A single-line pill: fixed height, so a row of them never staggers. It takes
    * the same density step as the card at `2xl` — two surfaces of the same family
    * can be on screen at once, and one of them growing alone would read as two
    * unrelated objects.
+   *
+   * The ceiling is the card's own measure, not a narrower one of its own. A
+   * pill prints exactly one thing, and a ceiling below the card's clipped the
+   * only thing it has to say: measured across all 250 names in the table, one
+   * of them — `South Georgia & South Sandwich Islands`, 280px — overran the old
+   * 224px and arrived already shortened, on a surface with no second line to
+   * shorten *into*. At the card's own measure none of the 250 does, the two
+   * atlas surfaces read as one object at two sizes, and 288px is a width a
+   * 360px viewport has already been shown to hold, because the card takes it.
    */
   compact:
-    'inline-flex h-8 max-w-56 items-center rounded-full px-3 2xl:h-9 2xl:px-4',
+    'inline-flex h-8 max-w-72 items-center rounded-full px-3 2xl:h-9 2xl:max-w-80 2xl:px-4',
   compactName:
     'min-w-0 truncate font-display text-label font-bold tracking-tight text-ink',
   header:
     'flex items-center gap-2 border-b border-edge-faint px-4 py-3 2xl:px-5 2xl:py-4',
   /** Decoration beside the name, never the label — see the `<span>` below. */
   flag: 'shrink-0 text-label leading-none',
+  /**
+   * The record mark, pushed to the far end of the header line.
+   *
+   * `ml-auto` rather than a spacer, and `shrink-0` so a long name truncates
+   * against it instead of squeezing it away. A 16px glyph inside a 25px name
+   * line adds no height, which is what lets the mark exist at all: the card is
+   * anchored to a country and its height is a promise to whatever anchored it.
+   */
+  mark: 'ms-auto shrink-0',
   /**
    * `truncate` rather than a wrap: the name is the card's identity line and the
    * card's height is a promise to whatever anchored it. "South Georgia & South
@@ -176,7 +228,7 @@ const layout = {
   /** Two columns, two rows: trips and places over first trip and last trip. */
   grid: 'grid grid-cols-2',
   cell: 'min-w-0 px-4 py-3 2xl:px-5 2xl:py-4',
-  cellRule: 'border-r border-edge-faint',
+  cellRule: 'border-e border-edge-faint',
   rowRule: 'border-t border-edge-faint',
   /**
    * The unit label's type, stated so a strut can measure the same as a real
@@ -186,11 +238,76 @@ const layout = {
    */
   label: 'block text-micro font-semibold uppercase tracking-label',
   figure: 'mt-1 block truncate font-display text-title tabular-nums text-ink',
+  /**
+   * The figures of a card with no record behind it, one ink tier back.
+   *
+   * Both noughts or neither, and only on the card where nothing has ever been
+   * written down. `0` is a fact and it stays on the card, but on *that* card it
+   * is a fact about nothing, and the two dashes below it already say so at
+   * `ink-3`; at full `ink` the empty card was the loudest of the three — two
+   * big black noughts announcing an absence — and it took a reading of the
+   * labels to tell it from a country genuinely on the record. Set back a tier,
+   * the whole grid recedes together and the eye sorts the three states before
+   * it reads a word: a card that speaks, or a card that has nothing to say.
+   *
+   * What this must never do is grey a single cell inside a card that carries a
+   * record. A country visited three times with no place saved in it has no
+   * places saved in it, and dimming that one nought made the card read as the
+   * empty state — the very defect the visit reading was added to remove.
+   *
+   * Measured at 7.02:1 light and 7.18:1 dark against the card face — the same
+   * figures the unit labels carry, and comfortably past AA at this size.
+   */
+  figureAbsent:
+    'mt-1 block truncate font-display text-title tabular-nums text-ink-3',
   month: 'mt-1 block truncate text-label font-semibold tabular-nums text-ink-2',
   /** The em dash sits a tier back: it is an absence, not a value. */
   monthAbsent:
     'mt-1 block truncate text-label font-semibold tabular-nums text-ink-3',
 } as const
+
+/**
+ * Which of the three records the card is speaking from, said as a shape.
+ *
+ * The captions already say it in words — `Trips` against `Visits`, `First trip`
+ * against `First visit` — and words are what a reader who is *reading* the card
+ * gets. But this card exists under a moving pointer: it appears, it is glanced
+ * at, and it is replaced by the next country a second later, and at that speed
+ * an 11px caption is a shape rather than a sentence. So the state is also
+ * carried by a glyph at the end of the name line, where the eye already is: a
+ * route for a country with an itinerary behind it, a pin for one the traveller
+ * marked by hand, and a dashed ring for one nothing has ever been written
+ * about.
+ *
+ * It is redundant on purpose. Nothing here is the only carrier of anything —
+ * the glyph is `aria-hidden`, the captions are the accessible reading, and the
+ * two tones say only "there is a record here" against "there is not", which the
+ * receded figures below already say. A reader who cannot resolve a 16px glyph
+ * loses nothing; a reader glancing across a map gains the answer half a beat
+ * earlier.
+ *
+ * `--color-brand` on the card face measures 7.09:1 light and 7.16:1 dark, and
+ * `--color-ink-3` 7.02:1 and 7.18:1 — every one of them past the 3:1 a
+ * non-text graphic owes, several times over.
+ */
+const RECORD_MARKS = {
+  trips: { Glyph: Route, tone: 'text-brand' },
+  visits: { Glyph: MapPin, tone: 'text-brand' },
+  none: { Glyph: CircleDashed, tone: 'text-ink-3' },
+} as const
+
+/** The glyph at the end of the name line, for one of the three records. */
+function RecordMark({ source }: { readonly source: CountryFactSource }) {
+  const { Glyph, tone } = RECORD_MARKS[source]
+  return (
+    <Glyph
+      size={16}
+      aria-hidden="true"
+      data-part="record"
+      className={cn(layout.mark, tone)}
+    />
+  )
+}
 
 /** The pointer element, or nothing when the card is not anchored to anything. */
 function Pointer({ side }: { readonly side: CountryCardPointer }) {
@@ -242,17 +359,37 @@ function FactCell({
   )
 }
 
-/** A month, or an em dash that a screen reader hears as words. */
-function MonthValue({ month }: { readonly month: CountryFactMonth }) {
-  if (month.value === null || month.iso === null) {
+/**
+ * A month, or an em dash that a screen reader hears as words.
+ *
+ * The printable month is re-derived here rather than taken off
+ * `CountryFactMonth.value`, which `#/lib/atlas/country-facts` renders in the
+ * source locale. Both go through `formatMonthYear()`, the product's single
+ * frozen formatter, so the only difference is which locale's frozen table it
+ * reads — never which library named the month.
+ */
+function MonthValue({
+  month,
+  source,
+  locale,
+  t,
+}: {
+  readonly month: CountryFactMonth
+  /** The raw day column the month was coarsened from. */
+  readonly source: string | null
+  readonly locale: Locale
+  readonly t: Translate
+}) {
+  const printed = source === null ? null : formatMonthYear(source, locale)
+  if (month.iso === null || printed === null) {
     return (
       <>
         <span aria-hidden="true">{ABSENT_FACT_MARK}</span>
-        <span className="sr-only">{ABSENT_FACT_LABEL}</span>
+        <span className="sr-only">{t('atlas.card.absent')}</span>
       </>
     )
   }
-  return <time dateTime={month.iso}>{month.value}</time>
+  return <time dateTime={month.iso}>{printed}</time>
 }
 
 /** A non-breaking space: an empty line box that still has a real height. */
@@ -300,10 +437,15 @@ function BodyStrut() {
  * an 18.2px line, not 16. The invisible strut inside makes the browser do the
  * measuring instead.
  *
- * The bar keeps `Skeleton`'s own `--color-surface-inset`, measured at 1.19:1
- * against the light card face and 1.13:1 against the dark one. `--color-surface-2`
- * was tried first and dropped: it lands at 1.13:1 in light and 1.03:1 in dark,
- * where the bars stop being visible at all.
+ * The bar stands on `--color-map-card-inset`, which is the card's own ground
+ * rather than the page's. `Skeleton`'s default `--color-surface-inset` is
+ * measured against `--color-surface`, and over the darker over-map face it
+ * falls to 1.13:1 where the same bar on a page reads 1.20:1 — a third quieter,
+ * for no reason but which surface it happened to borrow. The card's own token
+ * lands on 1.19:1 in light and 1.20:1 in dark against `--color-map-card`, so a
+ * card waiting over the map reads exactly as loud as one waiting on a page.
+ * `--color-surface-2` was tried before either and dropped: it lands at 1.13:1
+ * in light and 1.03:1 in dark, where the bars stop being visible at all.
  */
 function LineSkeleton({
   width,
@@ -320,7 +462,7 @@ function LineSkeleton({
       <span className="invisible">{STRUT}</span>
       <Skeleton
         radius="sm"
-        className={cn('absolute inset-y-0.5 left-0', width)}
+        className={cn('absolute inset-y-0.5 start-0 bg-map-card-inset', width)}
       />
     </span>
   )
@@ -344,13 +486,34 @@ interface CountryCardBaseProps extends Omit<
   readonly decorative?: boolean
 }
 
-/** The full card: name, trips, places, first trip and last trip. */
+/**
+ * The full card: name, the leading tally, places, and the two months.
+ *
+ * Both records are taken, not one, and **both are required**. The trip columns
+ * are the more specific thing to know and win whenever there is a trip; the
+ * visit columns are what the atlas's manual half writes, and they are what most
+ * countries on a real record have instead. A host that hands over only the trip
+ * half cannot tell a country nobody has recorded from a country visited three
+ * times, so every such country renders as the empty state — a defect that
+ * survived three rounds precisely because the visit columns were optional and
+ * the type checker had nothing to say about a host that dropped them. They are
+ * required now, so dropping them is a build failure rather than a card that
+ * quietly prints four dashes over a country the map has just filled in.
+ *
+ * `countryFactColumns()` in `#/lib/atlas/country-facts` projects a whole atlas
+ * record into exactly these eight fields; a host holding one should spread its
+ * result rather than pick fields by hand.
+ */
 export interface CountryCardFactsProps extends CountryCardBaseProps {
   readonly variant?: 'card'
   readonly tripCount: number
   readonly placeCount: number
   readonly firstTripOn: string | null
   readonly lastTripOn: string | null
+  /** Visits on the record, whether or not a trip is attached to any of them. */
+  readonly visitCount: number
+  readonly firstVisitedOn: string | null
+  readonly lastVisitedOn: string | null
   /** The name is a heading; the host decides at what depth. */
   readonly headingLevel?: 2 | 3 | 4
 }
@@ -413,6 +576,9 @@ export const CountryCard = React.forwardRef<HTMLElement, CountryCardProps>(
       placeCount,
       firstTripOn,
       lastTripOn,
+      visitCount,
+      firstVisitedOn,
+      lastVisitedOn,
       headingLevel = 3,
       pointer = 'none',
       decorative = false,
@@ -420,13 +586,36 @@ export const CountryCard = React.forwardRef<HTMLElement, CountryCardProps>(
       ...rest
     } = props
     const Heading = HEADINGS[headingLevel]
+    const { locale, t } = useAtlasI18n()
     const facts = countryFacts({
       countryCode,
       tripCount,
       placeCount,
       firstTripOn,
       lastTripOn,
+      visitCount,
+      firstVisitedOn,
+      lastVisitedOn,
     })
+    // Per card, not per cell. A nought inside a card that carries a record is
+    // a measured fact — a country visited three times with no place saved in
+    // it has *no* places saved in it, and dimming that one figure made the
+    // card read as the empty state it is not, which is the exact defect this
+    // component was widened to remove. So the tier answers one question, once:
+    // is there a record here at all? Either the whole grid speaks at full ink,
+    // or the whole grid recedes.
+    const figureTier =
+      facts.source === 'none' ? layout.figureAbsent : layout.figure
+    /**
+     * Which of the two records the four cells speak for. `countryFacts()` has
+     * already decided it — the trip columns win whenever there is a trip, and
+     * the visit columns answer for the manual half of the atlas — so the card
+     * only picks the words, and picks the raw day columns from the same side so
+     * the months and their headings can never come from different records.
+     */
+    const spoken = facts.source === 'visits'
+    const firstOn = spoken ? firstVisitedOn : firstTripOn
+    const lastOn = spoken ? lastVisitedOn : lastTripOn
 
     return (
       <article
@@ -438,6 +627,9 @@ export const CountryCard = React.forwardRef<HTMLElement, CountryCardProps>(
         // host can find one card without inventing its own id scheme.
         data-country={facts.code}
         data-visited={String(facts.visited)}
+        // Which record the cells speak for, so a host or an end-to-end test can
+        // assert the state without parsing the labels back out of the DOM.
+        data-record={facts.source}
         className={cn(layout.surface, layout.card, transitionBase, className)}
         {...rest}
       >
@@ -450,44 +642,57 @@ export const CountryCard = React.forwardRef<HTMLElement, CountryCardProps>(
           <Heading id={headingId} className={layout.name}>
             {facts.name}
           </Heading>
+          <RecordMark source={facts.source} />
         </div>
 
         <dl className={layout.grid}>
           <FactCell
-            label={facts.trips.label}
+            label={t(spoken ? 'atlas.card.visits' : 'atlas.card.trips', {
+              count: facts.tally.count,
+            })}
             rule
             row={false}
-            valueClassName={layout.figure}
+            valueClassName={figureTier}
           >
-            {facts.trips.value}
+            {formatNumber(facts.tally.count, locale)}
           </FactCell>
           <FactCell
-            label={facts.places.label}
+            label={t('atlas.card.places', { count: facts.places.count })}
             rule={false}
             row={false}
-            valueClassName={layout.figure}
+            valueClassName={figureTier}
           >
-            {facts.places.value}
+            {formatNumber(facts.places.count, locale)}
           </FactCell>
           <FactCell
-            label={facts.first.label}
+            label={t(spoken ? 'atlas.card.firstVisit' : 'atlas.card.firstTrip')}
             rule
             row
             valueClassName={
-              facts.first.value === null ? layout.monthAbsent : layout.month
+              facts.first.iso === null ? layout.monthAbsent : layout.month
             }
           >
-            <MonthValue month={facts.first} />
+            <MonthValue
+              month={facts.first}
+              source={firstOn}
+              locale={locale}
+              t={t}
+            />
           </FactCell>
           <FactCell
-            label={facts.last.label}
+            label={t(spoken ? 'atlas.card.lastVisit' : 'atlas.card.lastTrip')}
             rule={false}
             row
             valueClassName={
-              facts.last.value === null ? layout.monthAbsent : layout.month
+              facts.last.iso === null ? layout.monthAbsent : layout.month
             }
           >
-            <MonthValue month={facts.last} />
+            <MonthValue
+              month={facts.last}
+              source={lastOn}
+              locale={locale}
+              t={t}
+            />
           </FactCell>
         </dl>
 
@@ -531,6 +736,7 @@ export const CountryCardSkeleton = React.forwardRef<
   HTMLDivElement,
   CountryCardSkeletonProps
 >(({ pointer = 'none', countryCode, className, ...props }, ref) => {
+  const t = useAtlasCopy()
   const code = countryCode?.trim().toUpperCase()
   return (
     <div
@@ -543,15 +749,18 @@ export const CountryCardSkeleton = React.forwardRef<
     >
       <span className="sr-only">
         {code === undefined
-          ? 'Loading this country'
-          : `Loading ${countryName(code)}`}
+          ? t('atlas.card.loading')
+          : t('atlas.card.loadingNamed', { name: countryName(code) })}
       </span>
 
       <div aria-hidden="true">
         <div data-part="header" className={layout.header}>
           {/* Matched to a flag glyph's own box rather than to a round number, so
               the header's baseline does not move when the country lands. */}
-          <Skeleton radius="sm" className="h-3.5 w-5 shrink-0" />
+          <Skeleton
+            radius="sm"
+            className="h-3.5 w-5 shrink-0 bg-map-card-inset"
+          />
           {/* `flex-1` is load-bearing: the name line carries `min-w-0` and
               `truncate`, so as a flex item with only an invisible strut inside
               it it would measure four pixels wide and clip its own bar away. */}
@@ -640,6 +849,7 @@ export const CountryCardError = React.forwardRef<
     },
     ref,
   ) => {
+    const t = useAtlasCopy()
     const code = countryCode.trim().toUpperCase()
     return (
       <div
@@ -671,17 +881,17 @@ export const CountryCardError = React.forwardRef<
                 one-word last line in a card this small reads as a truncation
                 the reader is meant to do something about. */}
             <p className="text-balance text-caption text-ink-2">
-              These figures did not load. Nothing has been lost.
+              {t('atlas.card.error.body')}
             </p>
             {onRetry === undefined ? null : (
               <Button
                 variant="secondary"
                 size="sm"
                 loading={retrying}
-                loadingLabel="Loading this country"
+                loadingLabel={t('atlas.card.loading')}
                 onClick={onRetry}
               >
-                Try again
+                {t('atlas.card.error.retry')}
               </Button>
             )}
           </div>

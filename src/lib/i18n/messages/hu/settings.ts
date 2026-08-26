@@ -1,0 +1,483 @@
+/**
+ * Everything the settings module says, in Hungarian.
+ *
+ * Made from `../en/settings.ts` and from nothing else. `docs/SPEC.md` §1 and
+ * §8.9 forbid deriving a catalogue from the reference project's AGPL
+ * translations, so every sentence here was written against our English source.
+ *
+ * **Address.** The polite third person («Ön») throughout, as in
+ * `../hu/shell.ts` — an account screen that switched to the familiar «te»
+ * halfway down would read as two different products.
+ *
+ * **A plan's name is a word, not a mark.** `billing.plan.<id>.name` is
+ * translated like any other noun, because the id — `free`, `solo`, `crew` — is
+ * what `src/lib/plans.ts`, Polar and the invoice carry, and no reader ever sees
+ * it. `Polar`, `PDF` and `Face ID` stay as they are: a company, a format and a
+ * trademark.
+ *
+ * **A language is never named in English**, and never named here either: all
+ * twenty-three come from the frozen registry in `src/lib/i18n/locales.ts`, so no
+ * key below spells one. Currency names take Hungarian's lower-case spelling.
+ */
+
+import type En from '../en/settings'
+import type { TranslationOf } from '../../types'
+
+const messages = {
+  /* ------------------------------------------------------------------ shell */
+  'page.eyebrow': 'Fiók',
+  'page.title': 'Beállítások',
+  'page.description':
+    'Minden, ami Önről, a munkaterületéről és a planned.travel működéséről szól',
+  'page.error': 'A beállítások nem töltődtek be',
+
+  'nav.label': 'Beállítási szakaszok',
+  'nav.profile': 'Profil',
+  'nav.profile.hint': 'Ön, dátumok és összegek',
+  'nav.language': 'Nyelv',
+  'nav.language.hint': 'Minden képernyő nyelve',
+  'nav.appearance': 'Megjelenés',
+  'nav.appearance.hint': 'Téma, mozgás és térkép',
+  'nav.security': 'Biztonság',
+  'nav.security.hint': 'Jelszó, hitelesítés, kulcsok',
+  'nav.notifications': 'Értesítések',
+  'nav.notifications.hint': 'Postafiók, e-mail és telefon',
+  'nav.workspace': 'Munkaterület',
+  'nav.workspace.hint': 'Tagok és közös alapértékek',
+  'nav.billing': 'Számlázás',
+  'nav.billing.hint': 'Csomag, helyek és számlák',
+
+  /* ----------------------------------------------------------------- shared */
+  'action.save': 'Változtatások mentése',
+  'error.retryBody':
+    'Semmi nem veszett el. Ellenőrizze a kapcsolatot, majd próbálja újra.',
+  'role.owner': 'Tulajdonos',
+  'role.admin': 'Adminisztrátor',
+  'role.member': 'Tag',
+
+  /* -------------------------------------------------- regional option labels */
+  /* 206px truncating trigger, and Hungarian dates are the longest we ship:
+     «A munkaterületről» reached 226px on `2026. szept. 23.`, past English's own
+     217px. «Közös alapérték» is the wording `nav.workspace.hint` already uses,
+     and it drops a leading article that was carrying no meaning here. */
+  'regional.workspaceDefault': 'Közös alapérték — {value}',
+  'regional.currency.AUD': 'ausztrál dollár',
+  'regional.currency.CAD': 'kanadai dollár',
+  'regional.currency.CHF': 'svájci frank',
+  'regional.currency.EUR': 'euró',
+  'regional.currency.GBP': 'font sterling',
+  'regional.currency.JPY': 'japán jen',
+  'regional.currency.PLN': 'lengyel zloty',
+  'regional.currency.SEK': 'svéd korona',
+  'regional.currency.USD': 'amerikai dollár',
+  'regional.distance.metric': 'Kilométer',
+  'regional.distance.imperial': 'Mérföld',
+
+  /* ---------------------------------------------------------------- profile */
+  'profile.error': 'A profilja nem töltődött be',
+  'profile.account.title': 'A fiókja',
+  'profile.account.description':
+    'A neve és az e-mail-címe abból a fiókból származik, amellyel belép.',
+  'profile.email.verified': 'E-mail megerősítve',
+  'profile.email.unverified': 'E-mail nincs megerősítve',
+  'profile.twoFactor.on': 'Kétfaktoros belépés bekapcsolva',
+  'profile.figure.workspace': 'Munkaterület',
+  'profile.figure.role': 'Szerepkör',
+  'profile.figure.joined': 'Tag ekkortól',
+  'profile.figure.joinedUnknown': 'Nincs rögzítve',
+  'profile.regional.title': 'Dátumok, összegek és mértékegységek',
+  'profile.regional.description':
+    'Ezek csak Önnél írják felül a munkaterület alapértékeit. Ha egyet alapértéken hagy, azt a munkaterülettől veszi át.',
+  'profile.regional.saving': 'A beállításai mentése folyik',
+  'profile.regional.saved': 'A beállításai elmentve',
+  'profile.regional.saveFailed': 'A beállításai nem lettek elmentve',
+  'profile.language.label': 'Nyelv',
+  'profile.language.hint':
+    'Külön képernyőn választható, ahol minden nyelv a saját írásával szerepel.',
+  'profile.language.action': 'Módosítás',
+  'profile.timezone.label': 'Időzóna',
+  'profile.timezone.hint':
+    'Az indulási és érkezési időpontok ehhez mérten jelennek meg.',
+  'profile.currency.label': 'Pénznem',
+  'profile.currency.hint':
+    'Az új utazások ebben a pénznemben indulnak; minden utazás felülírhatja.',
+  'profile.dateFormat.label': 'Dátumformátum',
+  'profile.weekStart.label': 'A hét kezdőnapja',
+  'profile.weekStart.hint':
+    'Minden naptárra érvényes, a szabadságok évnézetére is.',
+  'profile.distance.label': 'Távolság',
+
+  /* --------------------------------------------------------------- language */
+  'language.error': 'A nyelvi beállításai nem töltődtek be',
+  'language.section.title': 'Nyelv',
+  'language.section.description':
+    'Minden képernyő, minden gomb és minden dátum azon a nyelven olvasható, amelyet itt kiválaszt — huszonhárom nyelv, mindegyik a saját írásával.',
+  'language.label': 'Válasszon nyelvet',
+  'language.followWorkspace': 'A munkaterületet követi',
+  'language.state.yours': 'Az Ön nyelve',
+  'language.state.workspace': 'A munkaterülettől jön',
+  'language.state.hint.override':
+    'Az Ön saját választása. Csak Önre érvényes, minden eszközön, ahonnan belép.',
+  'language.state.hint.workspace':
+    'Nincs saját nyelve, ezért azt olvassa, amire a munkaterület be van állítva. Ezt a tulajdonos vagy egy admin a Munkaterület résznél módosíthatja.',
+  'language.saved': 'A planned.travel mostantól {language} nyelven beszél',
+  'language.saveFailed': 'A nyelve nem változott meg',
+  'language.saveFailedBody':
+    'Semmi nem veszett el, és továbbra is {language} nyelven olvas. Ellenőrizze a kapcsolatot, majd válasszon újra.',
+  'language.reload.title': 'A nyelve elmentve',
+  'language.reload.body':
+    'Ez az oldal nem tudott átváltani erre: {language}. Töltse be újra, hogy a terméket az új nyelvén olvassa.',
+  'language.sample.title': 'Így fognak olvasni a dátumok és a számok',
+  'language.sample.description':
+    'Ugyanaz a három érték, ahogy ez a nyelv írja őket.',
+  'language.sample.date': 'Egy dátum',
+  'language.sample.number': 'Egy szám',
+  'language.sample.money': 'Egy összeg',
+  'language.legal':
+    'A feltételek és az adatvédelmi tájékoztató csak angolul jelennek meg. A termékben minden más le van fordítva.',
+
+  /* ------------------------------------------------------------- appearance */
+  'appearance.error': 'A megjelenés nem töltődött be',
+  'appearance.theme.title': 'Téma',
+  'appearance.theme.description':
+    'Mind a két téma megtervezett, egyik sem a másik kifordítása. Válassza azt, amelyet kényelmesebben olvas.',
+  'appearance.theme.light': 'Világos',
+  'appearance.theme.lightHint': 'Meleg papír, egész nap',
+  'appearance.theme.dark': 'Sötét',
+  'appearance.theme.darkHint': 'Meleg szénszürke, soha nem fekete',
+  'appearance.theme.system': 'Rendszer',
+  'appearance.theme.systemHint': 'Az eszközt követi',
+  'appearance.theme.showing': 'Jelenleg ez a paletta látszik: {palette}.',
+  'appearance.theme.showingSystem':
+    'Jelenleg ez a paletta látszik: {palette} — az eszközét követve.',
+  'appearance.palette.light': 'világos',
+  'appearance.palette.dark': 'sötét',
+  'appearance.motion.title': 'Mozgás és térképek',
+  'appearance.motion.label': 'Kevesebb mozgás',
+  'appearance.motion.hint':
+    'A belépő animációkat egyszerű áttűnésre fogja vissza. Az operációs rendszer saját mozgáscsökkentő beállítását mindig tiszteletben tartjuk.',
+  'appearance.map.label': 'Térkép stílusa',
+  'appearance.map.hint': 'A tervezőben és az atlaszban használt alaptérkép.',
+  'appearance.map.workspace': 'A munkaterületet követi',
+  'appearance.map.light': 'Papír — világos',
+  'appearance.map.dark': 'Szénszürke — sötét',
+  'appearance.saveFailed': 'Ez a módosítás nem lett eltárolva',
+  'appearance.saveFailedBody':
+    'Itt látszik, de a következő eszközön, ahonnan belép, már nem lesz meg.',
+
+  /* --------------------------------------------------------------- security */
+  'security.error': 'A biztonsági beállítások nem töltődtek be',
+  'security.unverified.title': 'Az e-mail-címe még nincs megerősítve',
+  'security.unverified.body':
+    'A jelszó-visszaállításokat és az utazási meghívókat erre a címre küldjük: {email}. A megerősítés az, ami bizonyítja, hogy a cím az Öné.',
+  'security.unverified.action': 'Küldje el újra a linket',
+  'security.signin.title': 'Belépés',
+  'security.signin.description':
+    'Ahogyan bizonyítja, hogy Ön az. A kétfaktoros belépés és a belépési kulcs is erősebb a puszta jelszónál.',
+  'security.email.label': 'E-mail-cím',
+  'security.email.verified': 'Megerősítve',
+  'security.email.unverified': 'Nincs megerősítve',
+  'security.password.label': 'Jelszó',
+  'security.password.hint':
+    'Módosítsa, amikor csak szeretné — egyszer használható linket küldünk, a régit nem kérdezzük.',
+  'security.password.action': 'Jelszó módosítása',
+  'security.twoFactor.label': 'Kétfaktoros hitelesítés',
+  'security.twoFactor.onHint':
+    'Minden új belépéshez kell egy kód a hitelesítő alkalmazásból.',
+  'security.twoFactor.offHint':
+    'Tegyen a jelszava mellé egy hatjegyű kódot egy hitelesítő alkalmazásból.',
+  'security.twoFactor.on': 'Be',
+  'security.twoFactor.off': 'Ki',
+  'security.twoFactor.manage': 'Kezelés',
+  'security.twoFactor.enable': 'Bekapcsolás',
+  'security.passkeys.label': 'Belépési kulcsok',
+  'security.passkeys.hint':
+    'Lépjen be ujjlenyomattal, Face ID-val vagy biztonsági kulccsal, gépelés nélkül.',
+  'security.passkeys.action': 'Belépési kulcsok kezelése',
+  'security.session.title': 'Ez a munkamenet',
+  'security.session.description': 'A böngésző, amelyben ezt olvassa.',
+  'security.session.label': 'Belépve mint',
+  'security.session.expires': 'Lejár: {date}',
+  'security.session.expiresSoon': 'hamarosan',
+  'security.session.noExpiry': 'Nincs rögzített lejárat',
+  'security.signOut.label': 'Kijelentkezés',
+  'security.signOut.hint':
+    'Lezárja ezt a munkamenetet, és visszaviszi a belépési oldalra. A többi eszköz bejelentkezve marad.',
+  'security.signOut.pending': 'Kijelentkezés folyik',
+  'security.signOut.failed': 'A kijelentkezés nem történt meg',
+  'security.signOut.failedBody':
+    'Ellenőrizze a kapcsolatot, majd próbálkozzon újra.',
+
+  /* ---------------------------------------------------------- notifications */
+  'notifications.error': 'Az értesítési beállítások nem töltődtek be',
+  'notifications.title': 'Értesítések',
+  'notifications.description':
+    'Minden kapcsoló csak Önre érvényes. Ha egyet kikapcsol, az esemény ugyanúgy megtörténik — csak nem szólunk róla.',
+  'notifications.caption': 'Melyik értesítés melyik csatornára jut el',
+  'notifications.event': 'Esemény',
+  'notifications.switch': '{event} – {channel} csatornán',
+  'notifications.saveFailed': 'Ez a beállítás nem lett elmentve',
+  'notifications.saveFailedBody':
+    'A kapcsoló visszaállt. Ellenőrizze a kapcsolatot, majd próbálja újra.',
+  'notifications.channel.in_app': 'Alkalmazásban',
+  'notifications.channel.in_app.hint': 'A csengő a felső sávban',
+  'notifications.channel.email': 'E-mail',
+  'notifications.channel.email.hint': 'A belépési címére küldjük',
+  'notifications.channel.push': 'Push-értesítés',
+  'notifications.channel.push.hint': 'Azokon az eszközökön, ahol engedélyezte',
+  'notifications.event.trip.invited': 'Utazási meghívók',
+  'notifications.event.trip.invited.hint':
+    'Valaki hozzáadja Önt egy utazáshoz, amit tervez.',
+  'notifications.event.trip.updated': 'Tervmódosítások',
+  'notifications.event.trip.updated.hint':
+    'Egy nap, egy megálló vagy egy dátum elmozdul egy utazásban, amelyen részt vesz.',
+  'notifications.event.trip.starting_soon': 'Indulási emlékeztetők',
+  'notifications.event.trip.starting_soon.hint':
+    'Egy figyelmeztetés az utazás kezdete előtti napokban.',
+  'notifications.event.reservation.reminder': 'Foglalási emlékeztetők',
+  'notifications.event.reservation.reminder.hint':
+    'Egy szállás, egy asztal vagy egy jegy közeleg.',
+  'notifications.event.expense.added': 'Új költségek',
+  'notifications.event.expense.added.hint':
+    'Valaki elkönyveli egy közös utazás kiadását.',
+  'notifications.event.expense.settled': 'Lezárt egyenlegek',
+  'notifications.event.expense.settled.hint':
+    'Egy egyenleg, amelyben Ön is benne volt, kifizetésre került.',
+  'notifications.event.list.assigned': 'Kiosztott tételek',
+  'notifications.event.list.assigned.hint':
+    'Egy csomag- vagy tennivalólista eleme Önhöz kerül.',
+  'notifications.event.collab.message': 'Utazási beszélgetés',
+  'notifications.event.collab.message.hint':
+    'Új üzenetek egy utazásban, amelyen Ön is ott van.',
+  'notifications.event.organization.invited': 'Munkaterületi meghívók',
+  'notifications.event.organization.invited.hint':
+    'Meghívják egy munkaterületre.',
+
+  /* -------------------------------------------------------------- workspace */
+  'workspace.error': 'A munkaterület nem töltődött be',
+  'workspace.summary.description': '{plan} csomag · létrehozva {date}',
+  'workspace.summary.createdRecently': 'nemrég',
+  'workspace.summary.billingAction': 'Csomag és számlázás',
+  'workspace.seats.label': 'Használt helyek',
+  'workspace.seats.value': '{used} / {limit}',
+  'workspace.seats.note':
+    'A nyitott meghívók beleszámítanak a helyekbe, így egy munkaterület soha nem lépheti túl azt a csomagot, amelyet fizet.',
+  'workspace.seatsFull.title': 'Ebben a csomagban minden hely betöltve',
+  'workspace.seatsFull.body':
+    '{members} és {invitations} tölti be az összes helyet ({limit}).',
+  'workspace.seatsFull.action': 'Helyek hozzáadása',
+  'workspace.members.count': {
+    one: '{value} tag',
+    other: '{value} tag',
+  },
+  'workspace.invitations.count': {
+    one: '{value} nyitott meghívó',
+    other: '{value} nyitott meghívó',
+  },
+  'workspace.members.title': 'Tagok',
+  'workspace.members.description':
+    'Mindenki, aki látja a munkaterület utazásait, pénzügyeit és fájljait.',
+  'workspace.members.tableLabel': 'Ennek a munkaterületnek a tagjai',
+  'workspace.members.person': 'Személy',
+  'workspace.members.role': 'Szerepkör',
+  'workspace.members.joined': 'Csatlakozott',
+  'workspace.invitations.title': 'Meghívók',
+  'workspace.invitations.description':
+    'Akiket meghívtak, de még nem csatlakoztak.',
+  'workspace.invitations.emptyTitle': 'Nincs nyitott meghívó',
+  'workspace.invitations.emptyBody':
+    'Mindenki, akit erre a munkaterületre meghívtak, már csatlakozott.',
+  'workspace.invitations.expires': 'Lejár: {date}',
+  'workspace.invitations.expiresSoon': 'hamarosan',
+  'workspace.defaults.title': 'Közös alapértékek',
+  'workspace.defaults.description':
+    'Ezekkel indul egy új utazás és egy új tag. Bárki felülírhatja őket magának a profiljában.',
+  'workspace.defaults.readOnly': 'Csak olvasható',
+  'workspace.defaults.saving': 'A munkaterületi alapértékek mentése folyik',
+  'workspace.defaults.saved': 'A munkaterületi alapértékek elmentve',
+  'workspace.defaults.saveFailed':
+    'A munkaterületi alapértékek nem lettek elmentve',
+  'workspace.defaults.saveFailedBody':
+    'Csak tulajdonos vagy admin módosíthatja őket. Ellenőrizze a kapcsolatot, majd próbálja újra.',
+  'workspace.currency.label': 'Alapértelmezett pénznem',
+  'workspace.currency.hint': 'Az új utazások ebben készítik a költségvetést.',
+  'workspace.language.label': 'Nyelv',
+  'workspace.language.hint':
+    'Amit egy olyan tag olvas, aki nem választott magának nyelvet.',
+  'workspace.timezone.label': 'Időzóna',
+  'workspace.dateFormat.label': 'Dátumformátum',
+  'workspace.weekStart.label': 'A hét kezdőnapja',
+  'workspace.distance.label': 'Távolság',
+
+  /* ---------------------------------------------------------------- billing */
+  'billing.error': 'A számlázás nem töltődött be',
+  'billing.loading': 'A csomag és a bizonylatok betöltése folyik',
+  'billing.status.none': 'Nincs előfizetés',
+  'billing.status.trialing': 'Próbaidő',
+  'billing.status.active': 'Aktív',
+  'billing.status.past_due': 'A fizetés nem sikerült',
+  'billing.status.unpaid': 'Kifizetetlen',
+  'billing.status.paused': 'Szüneteltetve',
+  'billing.status.canceled': 'Lemondva',
+  'billing.status.incomplete': 'Befejezetlen',
+  'billing.status.incomplete_expired': 'Lejárt',
+
+  'billing.checkout.completeTitle': 'A fizetés megérkezett',
+  'billing.checkout.completeBody':
+    'Az új csomagja életbe lép. Abban a pillanatban megjelenik itt, amikor a Polar visszaigazolja — általában néhány másodperc alatt.',
+  'billing.checkout.cancelledTitle': 'A fizetés megszakadt',
+  'billing.checkout.cancelledBody':
+    'Semmit nem vontunk le, és a csomagja sem változott.',
+  'billing.portal.backTitle': 'Vissza a Polar-tól',
+  'billing.portal.backBody':
+    'Amit ott módosított, ide is megérkezik, amint a Polar visszaigazolja.',
+  'billing.refresh': 'Frissítés',
+  'billing.readOnly.title': 'Ön tagja ennek a munkaterületnek',
+  'billing.readOnly.body':
+    'Az előfizetést csak tulajdonos vagy admin módosíthatja. Az alábbi minden Önnek csak olvasható.',
+
+  'billing.hero.label': 'Jelenlegi csomag',
+  'billing.hero.endsAtPeriod': 'A periódus végén lejár',
+  'billing.hero.perYear': '/ év',
+  'billing.hero.perMonth': '/ hónap',
+  'billing.hero.freeAllowance': '{trips} utazás, egy utazó',
+  'billing.hero.perSeatLine': '{seats} tag × {price}',
+  'billing.hero.singleTraveller': 'Egy utazó',
+  'billing.hero.paymentMethod': 'Fizetési mód',
+  'billing.hero.cancel': 'Csomag lemondása',
+  'billing.price.free': 'Ingyenes',
+  'billing.provider.opening': 'A Polar megnyitása',
+  'billing.provider.failed': 'A Polar nem elérhető',
+  'billing.provider.failedBody':
+    'Semmit nem vontunk le. Ellenőrizze a kapcsolatot, és próbálja újra egy pillanat múlva.',
+
+  'billing.renewal.trialEndsToday':
+    'A próbaideje ma véget ér. Adjon meg kártyát, hogy minden modul nyitva maradjon.',
+  'billing.renewal.trialEndsIn': {
+    one: 'A próbaideje {value} nap múlva véget ér. Addig nem kell kártya.',
+    other: 'A próbaideje {value} nap múlva véget ér. Addig nem kell kártya.',
+  },
+  'billing.renewal.trialEnded': 'A próbaideje véget ért.',
+  'billing.renewal.endsNoDate':
+    'Ez a csomag lejáratra van állítva, és nem újul meg.',
+  'billing.renewal.endsOn':
+    'Ez a csomag {date} napján ér véget. Semmi nem törlődik — a fizetős modulok csak lezárnak.',
+  'billing.renewal.pastDue':
+    'A legutóbbi fizetés nem ment át. Frissítse a kártyáját, hogy ne veszítse el a fizetős modulokat.',
+  'billing.renewal.unpaid':
+    'Ez az előfizetés kifizetetlen, és a fizetős modulok le vannak zárva.',
+  'billing.renewal.paused':
+    'Ez az előfizetés szünetel. Folytassa, amint újra útra készen áll.',
+  'billing.renewal.lapsed':
+    'Válasszon lentebb csomagot, és újra megnyílnak a foglalások, a napló és az offline térképek.',
+  'billing.renewal.incomplete':
+    'A Polar még várja ennek a fizetésnek a visszaigazolását.',
+  'billing.renewal.free':
+    'Két utazás egyszerre, a mi vendégségünk. Váltson feljebb, amikor kinövi.',
+  'billing.renewal.auto': 'Automatikusan megújul.',
+  'billing.renewal.renewsOn': 'Megújul: {date}.',
+
+  'billing.usage.title': 'Használat',
+  'billing.usage.description':
+    'Élőben számoljuk, így egyetlen mérő sem avul el. A korlátok az éppen érvényes csomagot követik.',
+  'billing.quota.seats': 'Tagok',
+  'billing.quota.trips': 'Utazások',
+  'billing.quota.storageBytes': 'Tárhely',
+  'billing.quota.unlimited': 'Korlátlan',
+  'billing.quota.noLimit': 'Ebben a csomagban nincs korlát',
+  'billing.quota.used': 'felhasznált {quota}',
+  'billing.quota.over.seats': {
+    one: '{value} hellyel a csomag korlátja felett',
+    other: '{value} hellyel a csomag korlátja felett',
+  },
+  'billing.quota.over.trips': {
+    one: '{value} utazáshellyel a csomag korlátja felett',
+    other: '{value} utazáshellyel a csomag korlátja felett',
+  },
+  'billing.quota.over.storage': '{value} a csomag korlátja felett',
+  'billing.quota.exhausted.seats': 'Ebben a csomagban minden hely betöltve',
+  'billing.quota.exhausted.trips':
+    'Ebben a csomagban minden utazáshely használatban',
+  'billing.quota.exhausted.storage': 'Ennek a csomagnak a tárhelye megtelt',
+  'billing.quota.left': '{value} maradt',
+
+  'billing.plans.title': 'Csomagok',
+  'billing.plans.description':
+    'Csomagot bármikor váltson. A felfelé váltás napra arányosított; a lefelé váltás megvárja, hogy a kifizetett periódus leteljen.',
+  'billing.interval.label': 'Számlázási időszak',
+  'billing.interval.monthly': 'Havi',
+  'billing.interval.yearly': 'Éves',
+  'billing.interval.saving': '{value} megtakarítás',
+  'billing.plan.free.name': 'Ingyenes',
+  'billing.plan.free.tagline': 'Tervezze meg a következő két utazását',
+  'billing.plan.free.feature.trips': 'Két utazás egyszerre',
+  'billing.plan.free.feature.itinerary': 'Napra bontott útiterv és térkép',
+  'billing.plan.free.feature.lists': 'Csomaglisták és egyszerű költségvetések',
+  'billing.plan.free.feature.atlas':
+    'A világtérkép, amely számon tartja, hol járt',
+  'billing.plan.solo.name': 'Egyéni',
+  'billing.plan.solo.tagline': 'Az utazónak, aki mindent megtervez',
+  'billing.plan.solo.feature.trips': 'Korlátlan utazás',
+  'billing.plan.solo.feature.modules':
+    'Minden tervezőmodul — foglalások, napló, költségvetések, csomagolás',
+  'billing.plan.solo.feature.offline':
+    'Offline térképek, amelyeket indulás előtt letölt',
+  'billing.plan.solo.feature.export': 'PDF- és naptárexport',
+  'billing.plan.crew.name': 'Csapat',
+  'billing.plan.crew.tagline': 'Családoknak, barátoknak és kis csapatoknak',
+  'billing.plan.crew.feature.members':
+    'Legfeljebb tíz tag, fejenkénti számlázással',
+  'billing.plan.crew.feature.realtime':
+    'Valós idejű együttműködés élő kurzorokkal',
+  'billing.plan.crew.feature.everything': 'Korlátlan utazás és minden modul',
+  'billing.plan.crew.feature.storage':
+    'Közös hely mindenki fotóinak és dokumentumainak',
+
+  'billing.plan.current': 'Jelenlegi csomag',
+  'billing.plan.currentBadge': 'Jelenlegi',
+  'billing.plan.popular': 'Népszerű',
+  'billing.plan.moveTo': 'Váltás erre: {plan}',
+  'billing.plan.switchYearly': 'Váltás évesre',
+  'billing.plan.switchMonthly': 'Váltás havira',
+  'billing.plan.upgradeTo': 'Váltás feljebb: {plan}',
+  'billing.plan.changeTo': 'Módosítás erre: {plan}',
+  'billing.plan.perMemberMonth': '/ tag / hónap',
+  'billing.plan.perMonth': '/ hónap',
+  'billing.plan.alwaysFree': 'Mindig ingyenes, kártya nélkül',
+  'billing.plan.billedYearly': '{amount} évente számlázva',
+  'billing.plan.billedMonthly': '{amount} havonta számlázva',
+  'billing.plan.members': 'Tagok',
+  'billing.plan.membersHint': 'Módosítsa bármikor — a számlázás követi.',
+  'billing.plan.seatOption': {
+    one: '{value} tag',
+    other: '{value} tag',
+  },
+
+  'billing.invoices.title': 'Számlák',
+  'billing.invoices.description':
+    'A munkaterület minden bizonylata, a legújabb elöl.',
+  'billing.invoices.portal': 'Számlázási portál',
+  'billing.invoices.unavailableTitle': 'A bizonylatok nem töltődnek be',
+  'billing.invoices.unavailableBody':
+    'A Polar nem válaszolt időben az előzményekhez. Minden, ami fentebb van, élő; a teljes nyilvántartáshoz nyissa meg a számlázási portált, vagy térjen vissza egy pillanat múlva.',
+  'billing.invoices.emptyTitle': 'Még nincs számla',
+  'billing.invoices.emptyCustomer':
+    'Az első bizonylat itt jelenik meg, amint egy számlázási periódus lezárul.',
+  'billing.invoices.emptyNoCustomer':
+    'Ezt a munkaterületet még sosem terheltük meg. Válasszon fizetős csomagot, és itt gyűlnek majd a bizonylatok.',
+  'billing.invoices.tableLabel': 'Számlatörténet',
+  'billing.invoices.number': 'Számla',
+  'billing.invoices.date': 'Dátum',
+  'billing.invoices.period': 'Periódus',
+  'billing.invoices.amount': 'Összeg',
+  'billing.invoices.status': 'Állapot',
+  'billing.invoices.receipt': 'Bizonylat',
+  'billing.invoices.view': 'Megnyitás',
+  'billing.invoice.paid': 'Fizetve',
+  'billing.invoice.open': 'Esedékes',
+  'billing.invoice.draft': 'Vázlat',
+  'billing.invoice.void': 'Érvénytelen',
+  'billing.invoice.uncollectible': 'Behajthatatlan',
+} satisfies TranslationOf<typeof En>
+
+export default messages

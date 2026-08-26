@@ -181,7 +181,7 @@ describe('CountriesList rows', () => {
     render(<CountriesList countries={[{ ...FRANCE, continent: null }]} />)
     expect(screen.getByText('Continent not recorded')).toBeTruthy()
     expect(
-      screen.getByRole('option', { name: /France, continent not recorded/ }),
+      screen.getByRole('option', { name: /France, Continent not recorded/ }),
     ).toBeTruthy()
   })
 
@@ -203,7 +203,7 @@ describe('CountriesList rows', () => {
 
     expect(screen.getByText('Continent not recorded')).toBeTruthy()
     expect(row.getAttribute('aria-label')).toContain(
-      'France, continent not recorded',
+      'France, Continent not recorded',
     )
     expect(row.getAttribute('aria-label')).not.toContain(',,')
     // The middot is decoration beside a value; it never stands on its own.
@@ -212,7 +212,9 @@ describe('CountriesList rows', () => {
   })
 
   it('trims a padded continent rather than printing the padding', () => {
-    render(<CountriesList countries={[{ ...FRANCE, continent: '  Europe  ' }]} />)
+    render(
+      <CountriesList countries={[{ ...FRANCE, continent: '  Europe  ' }]} />,
+    )
     expect(screen.getByText('Europe')).toBeTruthy()
   })
 

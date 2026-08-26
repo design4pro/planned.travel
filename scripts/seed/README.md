@@ -83,10 +83,11 @@ So:
 node scripts/seed/verify.mjs
 ```
 
-Reads the data back out of local D1 through `wrangler d1 execute` and checks the three things that
-would silently ruin the demo: row counts per table, that every expense's shares sum to exactly its
-amount, and that each trip's balances add up to minus its unclaimed spend and nothing else. Add
-`--remote` to point it at the deployed database.
+Reads the data back out of local D1 through `wrangler d1 execute` and checks the four things that
+would silently ruin the demo: row counts per table, that every trip still carries the primary key the
+dataset declares, that every expense's shares sum to exactly its amount, and that each trip's
+balances add up to minus its unclaimed spend and nothing else. It exits non-zero when any of them
+fails. Add `--remote` to point it at the deployed database.
 
 Ad-hoc queries work the same way — note that local D1 caps a compound `SELECT` at a handful of terms,
 so batch `UNION ALL` counters in fives:
@@ -145,14 +146,62 @@ Running it twice does not duplicate rows. Three mechanisms, in order of how ofte
 2. **Rebuild by slug.** A run that *is* going to write addresses each trip, journey and collection by
    its slug and deletes a stale one first, cascading its children away. So a run that crashed half way
    leaves no marker and the next run repairs rather than duplicates. Notifications and audit entries
-   are keyed by message key and action and rebuilt the same way, because a rebuilt trip has a new id
-   and the old rows would otherwise be left pointing at nothing.
+   are keyed by message key and action and rebuilt the same way, because a rebuilt journey or
+   collection has a new id and the old rows would otherwise be left pointing at nothing.
 3. **Upserts everywhere else.** Settings, subscription, usage counters, categories, moods, visited
    countries and regions, vacation entitlements, holidays and day marks all go through repository
    functions that were already find-or-create.
 
 Verified by running it four times: second run skipped in 3 ms, and three consecutive `--force` runs
 produced byte-identical row counts across all 57 counters.
+
+### Trip ids are fixed on purpose
+
+Every trip in the dataset declares its own primary key, and the seed writes that key verbatim:
+
+```
+demo-trip-01-tokyo-and-kyoto
+demo-trip-02-lisbon-long-weekend
+demo-trip-03-dolomites-hut-to-hut
+demo-trip-04-marrakech-riad-week
+demo-trip-05-patagonia-traverse
+```
+
+**Why.** A trip's cover art is a *pure hash of its id* — the contour landform and the colour wash are
+both derived from it, and the wash walks forward on a collision, so one changed id can recolour cards
+whose own id never moved. Left to the schema's generator, `--force` mints a fresh key for every trip
+and silently repaints the whole grid. That is what broke the recorded screenshots of `/trips` and
+`/dashboard`: every glyph, date, chip and edge was pixel-identical, and only the artwork had moved.
+Pinning the key makes a rebuild a no-op as far as the pixels are concerned, so a fresh clone that
+seeds from scratch renders the same cards the baselines were photographed against.
+
+**The rules that keep it true.**
+
+- The ids ascend in the order the applier writes them. `order by id` is the cursor a paginated list
+  pages on, so renumbering one means renumbering the rest.
+- `createTrip` in `src/server/repos/trips.ts` takes the key as an *optional*, Zod-validated input.
+  Omit it — as `createTripFn` and therefore every real user does — and the column's own
+  `$defaultFn` mints a time-sortable random key exactly as before. Nothing about a user's rows
+  changed, and no request body can reach the field.
+- Updating a trip can never move its key: `updateTripInput` deliberately does not carry `id`.
+- `node scripts/seed/verify.mjs` restates the five ids and checks them against the rows in the
+  database, and `src/server/repos/__tests__/trips.test.ts` restates them again against the dataset.
+  Editing one without editing both turns the suite red before it turns a screenshot red.
+- Because the keys are constants rather than per-workspace values, **one database holds one demo
+  workspace.** Seeding a second owner with `--email` into the same D1 file collides on the trips
+  table's primary key. That is the deliberate trade: a key derived from the workspace would be stable
+  across `--force` but not across a fresh database, which is precisely the failure being fixed here.
+- Only trips are pinned. Everything else the seed writes still takes a generated key, because
+  nothing else is drawn from its own identifier.
+
+Each run prints the ids it wrote, under each trip's slug, so two runs can be compared by eye:
+
+```
+  Trips
+    tokyo-and-kyoto
+      id  demo-trip-01-tokyo-and-kyoto
+      days 12 · dayNotes 11 · places 38 · …
+```
 
 ## The people
 

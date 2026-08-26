@@ -112,6 +112,9 @@ export async function applyTrip(context: TripApplyContext, trip: SeedTrip): Prom
   const owner = context.owner
 
   const created = await createTrip(owner, {
+    // The dataset owns this key on purpose — see `SeedTrip.id`. Everything else the seed writes
+    // still takes a generated one, because nothing else is drawn from its own identifier.
+    id: trip.id,
     title: trip.title,
     slug: trip.slug,
     summary: trip.summary,

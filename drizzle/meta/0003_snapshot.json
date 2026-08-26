@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1ee5482b-38c8-4dab-91bf-149706e1ab6f",
-  "prevId": "efbb4bc7-223e-456b-bb4d-772275b489f6",
+  "id": "efbb4bc7-223e-456b-bb4d-772275b489f6",
+  "prevId": "ba2745f2-03c9-4673-b954-5415e7b8eff2",
   "tables": {
     "account": {
       "name": "account",
@@ -7624,27 +7624,6 @@
           "autoincrement": false,
           "default": 1073741824
         },
-        "pending_plan": {
-          "name": "pending_plan",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "pending_interval": {
-          "name": "pending_interval",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "pending_effective_at": {
-          "name": "pending_effective_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -10549,7 +10528,11 @@
   "_meta": {
     "schemas": {},
     "tables": {},
-    "columns": {}
+    "columns": {
+      "\"subscriptions\".\"stripe_customer_id\"": "\"subscriptions\".\"provider_customer_id\"",
+      "\"subscriptions\".\"stripe_subscription_id\"": "\"subscriptions\".\"provider_subscription_id\"",
+      "\"subscriptions\".\"stripe_price_id\"": "\"subscriptions\".\"provider_product_id\""
+    }
   },
   "internal": {
     "indexes": {}

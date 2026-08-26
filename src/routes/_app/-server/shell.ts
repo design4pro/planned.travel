@@ -4,6 +4,10 @@
  *
  * `_app/route.tsx` calls this once in `beforeLoad`, which is what stops a child
  * loader from ever running for an anonymous visitor.
+ *
+ * The two states it cannot render around — a session with no workspace, and a
+ * membership revoked while the tab was open — are thrown as message *keys*, not
+ * as sentences. See {@link shellFailure}.
  */
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
@@ -29,12 +33,30 @@ import type {
   ShellImpersonator,
   ShellOrganization,
   ShellSession,
+  ShellStateKey,
 } from '#/components/layout/session'
 
 export interface ShellPayload {
   readonly session: ShellSession
   readonly unreadCount: number
   readonly role: OrganizationRole
+}
+
+/**
+ * A fatal shell state, as the key the error boundary will resolve.
+ *
+ * The sentence used to be composed here, against `Accept-Language` — the only
+ * signal this path has, because both callers have already failed to resolve the
+ * very workspace the stored language preference hangs off. That put the one
+ * screen a blocked traveller sees in a language the document around it may not
+ * be in. Throwing the key moves the resolution to
+ * `src/components/layout/error-state.tsx`, which renders inside the document's
+ * own `I18nProvider` and therefore in the locale §8.3 negotiated before first
+ * paint. `Error.message` is the field that survives the server-function
+ * boundary, so the key travels as the message and nothing else changes.
+ */
+function shellFailure(key: ShellStateKey): Error {
+  return new Error(key)
 }
 
 /** Narrows Better Auth's organization list without trusting its shape. */
@@ -221,9 +243,7 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
       (await firstOrganizationIdFor(auth, session.user.id))
 
     if (organizationId === null) {
-      throw new Error(
-        'Your account is not attached to a workspace yet. Sign out and back in to finish setting it up.',
-      )
+      throw shellFailure('shell.session.noWorkspace')
     }
 
     const role = await membershipRoleFor(auth, {
@@ -231,7 +251,7 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
       organizationId,
     })
     if (!isOrganizationRole(role)) {
-      throw new Error('Your membership of this workspace has been removed.')
+      throw shellFailure('shell.session.membershipRemoved')
     }
 
     const scope = createScope(getDb(), {

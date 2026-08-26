@@ -68,10 +68,10 @@ describe('platformUserSchema', () => {
     const parsed = platformUserSchema.parse({
       ...USER_ROW,
       twoFactorEnabled: true,
-      stripeCustomerId: 'cus_leak',
+      providerCustomerId: 'cus_leak',
     })
     expect(Object.keys(parsed)).not.toContain('twoFactorEnabled')
-    expect(Object.keys(parsed)).not.toContain('stripeCustomerId')
+    expect(Object.keys(parsed)).not.toContain('providerCustomerId')
   })
 })
 

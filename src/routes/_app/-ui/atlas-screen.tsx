@@ -1,8 +1,10 @@
 import * as React from 'react'
+import { useRouter, useRouterState } from '@tanstack/react-router'
 
 import {
   AtlasPanel,
   AtlasPanelSkeleton,
+  CountryOverlay,
   CountrySearch,
 } from '#/components/atlas'
 import { ErrorPanel } from '#/components/layout/error-state'
@@ -13,10 +15,11 @@ import {
   MapCanvas,
   MapControls,
   VISITED_COUNTRY_ZOOM,
-  VisitedCountries,
   fitMapToBounds,
   useMapContext,
 } from '#/components/map'
+import { useI18n, useTranslate } from '#/lib/i18n'
+import { formatNumber } from '#/lib/format'
 import {
   SHELF_CLASS,
   SHELF_VAR,
@@ -31,7 +34,12 @@ import { cn } from '#/lib/cn'
 import { WORLD_COUNTRY_COUNT } from '../-server/library'
 import { WorldCoverageMap } from './world-map'
 
-import type { AtlasPanelTab } from '#/components/atlas'
+import type {
+  AtlasPanelTab,
+  CountryOverlayCountry,
+  CountryOverlayGoal,
+  CountryOverlayStatus,
+} from '#/components/atlas'
 import type { MapVisitedCountry } from '#/components/map'
 import type { CountrySearchVisit } from '#/lib/atlas/country-search'
 import type { ViewportBox } from '#/lib/atlas/layout'
@@ -99,9 +107,20 @@ import type { AtlasPayload } from '../-server/library'
  *
  * **Selection is one piece of state, reached four ways.** Map click, list row,
  * search result and the record all read and write the same `selected` code, and
- * choosing anywhere opens the record. Hover only adds emphasis, in the paint
- * layer, where `VisitedCountries` handles it — it is never the only route to a
- * country, because `mousemove` does not exist on a phone.
+ * choosing anywhere opens the record. Alongside it travels a monotonic
+ * `selectionToken`, because the map's own panel has to tell "France was chosen
+ * again" from "the chosen country is still France" — a reader who dismisses the
+ * panel and presses the same country is asking for it back.
+ *
+ * **The map answers on the map.** `CountryOverlay` owns everything a pointer or
+ * a press means over the canvas: the hover card, the panel that carries the same
+ * facts plus the two writes, and the paint layer that reports both. It renders
+ * into {@link SURFACE_LAYER}, a sibling of the shelf rather than a child of the
+ * canvas, so a phone's panel can borrow the shelf's four hundred pixels when the
+ * clear map is shorter than the card. Choosing a country no longer forces the
+ * drawer open: that was what left a 393px handset a hundred and fifty pixels of
+ * world with the country it had just been asked about underneath the panel
+ * describing it.
  *
  * **The world is drawn twice, on purpose, and only ever visible once.** Behind
  * the canvas sits the static SVG world (`./world-map`), from the same bundled
@@ -170,7 +189,7 @@ const WELL = cn(
   'pointer-events-none absolute top-0 bottom-0 mx-auto max-w-content',
   // A pixel in from each edge of the overhanging box below, which puts it back
   // on the slice's own edges: the overhang belongs to the drawing, not to the
-  // chrome floating over it.
+  // chrome floating over it. Symmetric, so it needs no logical form.
   'right-px left-px',
 )
 
@@ -189,6 +208,29 @@ const WELL = cn(
  */
 const DRAWING = 'absolute top-0 bottom-0 -right-px -left-px'
 
+/**
+ * Where the map's own hover and click surfaces are drawn.
+ *
+ * Deliberately a sibling of the map rather than a child of it. `MapCanvas` is
+ * `isolate`, so anything inside it is capped at the canvas's own place in the
+ * stack no matter what layer token it claims — a card mounted there could never
+ * pass over the shelf, and on a 360px phone the shelf is the only place a card
+ * carrying a fact grid *and* two actions can borrow four hundred pixels from.
+ * Here it is a peer of both, at `--z-map-surface`: one step above the shelf and
+ * the search pill, and — because the whole slice is `isolate` too — never above
+ * the app header or the mobile tab bar, whatever it claims.
+ *
+ * `pointer-events-none`, like the chrome well above it: this box covers the
+ * entire map, and each surface turns them back on only for itself, so a pan, a
+ * drag and a press on open water all still reach the canvas. `@container`
+ * because the surfaces size themselves against the map rather than against the
+ * window — the panel is a column on a phone and a row from 768px of *map*.
+ */
+const SURFACE_LAYER = cn(
+  'pointer-events-none absolute inset-0 overflow-hidden @container',
+  'z-map-surface',
+)
+
 /** The floating panel's box: gutters, and the product's own content ceiling. */
 const PANEL_BOX = cn(
   'absolute inset-x-3 bottom-3 mx-auto max-w-content',
@@ -201,10 +243,16 @@ const PANEL_BOX = cn(
  */
 const SEARCH_BOX = cn(
   // `w-auto` is load-bearing: the pill's own root is `w-full`, which on an
-  // absolutely positioned element beats a left/right pair and pushed it 84px
-  // past the right edge of the screen, straight under the zoom cluster.
-  'pointer-events-auto absolute top-3 right-18 left-3 w-auto z-map-overlay',
-  'lg:top-4 lg:right-auto lg:left-4 lg:w-88',
+  // absolutely positioned element beats a start/end pair and pushed it 84px
+  // past the far edge of the screen, straight under the zoom cluster.
+  //
+  // Logical insets throughout, so the whole composition mirrors in `ar`: the
+  // search takes the inline start at every width and the zoom cluster the
+  // inline end, exactly as they do in `en`. The canvas under them is not
+  // mirrored — a map is not a paragraph — so each of these states its own side
+  // rather than inheriting one.
+  'pointer-events-auto absolute top-3 end-18 start-3 w-auto z-map-overlay',
+  'lg:top-4 lg:end-auto lg:start-4 lg:w-88',
 )
 
 /**
@@ -226,12 +274,12 @@ const SEARCH_BOX = cn(
  */
 const CHROME = {
   controls: cn(
-    'pointer-events-auto top-3 right-3 bottom-auto',
-    'lg:top-auto lg:right-4 lg:bottom-(--atlas-clear)',
+    'pointer-events-auto top-3 end-3 bottom-auto',
+    'lg:top-auto lg:end-4 lg:bottom-(--atlas-clear)',
   ),
   credit: cn(
-    'top-auto right-auto bottom-(--atlas-clear) left-3',
-    'lg:top-4 lg:right-4 lg:bottom-auto lg:left-auto',
+    'top-auto end-auto bottom-(--atlas-clear) start-3',
+    'lg:top-4 lg:end-4 lg:bottom-auto lg:start-auto',
   ),
 } as const
 
@@ -344,13 +392,16 @@ function AtlasChrome({
           // The 72px the pill gives up on a phone belongs to the zoom cluster.
           // With no cluster there is nothing to give it up for, and the gap
           // reads as a control that failed to draw.
-          failed && 'right-3',
+          failed && 'end-3',
         )}
       />
 
       {failed ? null : (
         <MapControls
-          position="bottom-right"
+          // `custom`: every inset this screen needs is logical and stated
+          // below, and a physical corner from the module would win over it in
+          // the cascade. See `MapCorner`.
+          position="custom"
           // Zoom and compass, and deliberately no "find my location".
           //
           // Two reasons, and the second one is the screen's own contract. This
@@ -475,6 +526,7 @@ export interface AtlasScreenProps {
 }
 
 export function AtlasScreen({ atlas }: AtlasScreenProps) {
+  const { locale, t } = useI18n()
   const [containerRef, box] = useMeasuredBox()
   const [shelfRef, shelfBox] = useMeasuredBox()
   const wide = useIsWide()
@@ -488,7 +540,26 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
    */
   const [expanded, setExpanded] = React.useState<boolean | null>(null)
   const [cameraToken, setCameraToken] = React.useState(0)
+  /**
+   * Bumped once per selection gesture, whichever surface made it.
+   *
+   * The map's own panel needs to know that a country was *chosen*, not merely
+   * that the chosen country changed: a reader who dismisses the panel for France
+   * and then presses France again is asking for it back, and the selected code
+   * never moved.
+   */
+  const [selectionToken, setSelectionToken] = React.useState(0)
   const [mapDrawing, setMapDrawing] = React.useState(false)
+  /**
+   * The layer the map's surfaces render into, once it exists.
+   *
+   * Held as state rather than as a ref because the overlay is a child of the
+   * canvas and has to re-render when the host appears — a ref would hand it
+   * `null` on the one commit that matters and never tell it otherwise.
+   */
+  const [surfaceHost, setSurfaceHost] = React.useState<HTMLDivElement | null>(
+    null,
+  )
   /**
    * Whether the renderer has given up for good.
    *
@@ -569,14 +640,78 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
     [atlas.countries],
   )
 
+  /**
+   * The same record again, carrying the four figures the shelf never needed.
+   *
+   * `countries` above is the list's shape and stops at the visit; the card on
+   * the map prints trips, saved places and the two trip months as well, and the
+   * loader has already counted all four for every country on the record. A
+   * second projection rather than a wider first one, because the list is the
+   * bigger consumer and `CountriesListCountry` is its contract.
+   */
+  const overlayCountries = React.useMemo<ReadonlyArray<CountryOverlayCountry>>(
+    () =>
+      atlas.countries.map((row) => ({
+        countryCode: row.countryCode,
+        tripCount: row.tripCount,
+        placeCount: row.visitedPlaceCount,
+        firstTripOn: row.firstTripOn,
+        lastTripOn: row.lastTripOn,
+        visit: {
+          firstVisitedOn: row.firstVisitedOn,
+          lastVisitedOn: row.lastVisitedOn,
+          visitCount: row.visitCount,
+          note: row.note,
+        },
+      })),
+    [atlas.countries],
+  )
+
+  /**
+   * Every country the bucket list names, not the head of it.
+   *
+   * The shelf shows a bounded slice, which is right for a list somebody reads
+   * and wrong for the question the map asks — "is the country under the pointer
+   * already on it?" — because a country at row forty-one would answer no. The
+   * loader ships an uncapped, country-shaped index for exactly this.
+   */
+  const overlayGoals = React.useMemo<ReadonlyArray<CountryOverlayGoal>>(() => {
+    // The uncapped index carries no target year, and the capped display list
+    // does. Read across the two by country — the same join the shelf makes —
+    // rather than let the map say "waiting for its turn" about an entry the
+    // reader has put a year against.
+    const years = new Map<string, number | null>()
+    for (const row of atlas.bucketList) {
+      if (row.kind !== 'country') continue
+      const code = (row.countryCode ?? '').trim().toUpperCase()
+      if (code !== '') years.set(code, row.targetYear)
+    }
+    return atlas.bucketListCountries.map((row) => ({
+      countryCode: row.countryCode,
+      id: row.itemId,
+      targetYear: years.get(row.countryCode.trim().toUpperCase()) ?? null,
+      isAchieved: row.isAchieved,
+    }))
+  }, [atlas.bucketList, atlas.bucketListCountries])
+
   const allTime = atlas.stats.find((row) => row.statYear === 0) ?? null
 
-  /** Opening the record is what selecting a country means, everywhere. */
+  /**
+   * Opening the record is what selecting a country means, everywhere.
+   *
+   * It no longer forces the shelf open, and that is the phone's whole
+   * composition. A press used to expand the drawer to 58svh, which left a
+   * 393×659 handset about a hundred and fifty pixels of map — the country the
+   * reader had just pressed pushed off the top of the screen by the panel
+   * describing it. The map now answers on the map, at the point of contact, so
+   * the shelf stays its own header and the world keeps three quarters of the
+   * slice. The tab still follows, so opening the shelf shows the same country.
+   */
   const open = React.useCallback((code: string | null) => {
     setSelected(code)
+    setSelectionToken((token) => token + 1)
     if (code === null) return
     setTab('country')
-    setExpanded(true)
   }, [])
 
   /** A list row asks for a frame as well; a map click does not need one. */
@@ -588,10 +723,51 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
     [open],
   )
 
+  /**
+   * Whether the figures on screen are the ones the server currently holds.
+   *
+   * Every write on this screen ends in `router.invalidate()`, which re-reads the
+   * atlas: for that window the trip count, the places count and both trip months
+   * beside a country are the ones from before the press. The map's panel says so
+   * with the card's own skeleton, at the card's own dimensions, so the swap moves
+   * nothing — and says so again if the re-read never comes back, with a retry
+   * that runs the very same invalidation.
+   *
+   * Read off *this route's own match* rather than off the router's global
+   * `isLoading`. The global flag is true for any pending navigation, so pressing
+   * a link to the trip planner put the card into its skeleton and held it there
+   * for the length of a page load that had nothing to do with the atlas — a
+   * loading state answering a question nobody asked. `matches.at(-1)` is the leaf,
+   * which on this screen is `/_app/atlas` by construction, and `isFetching` is
+   * true for exactly the re-read.
+   *
+   * The failed branch is deliberately kept beside it, and it is honest about what
+   * it covers: a loader that throws on the *first* read is caught by the route's
+   * own `errorComponent`, which replaces this whole screen. This is the state
+   * where the payload on screen is stale and the re-read behind it did not come
+   * back — the card says the figures did not arrive rather than printing the old
+   * ones as though they were current.
+   */
+  const router = useRouter()
+  const status = useRouterState({
+    select: (state): CountryOverlayStatus => {
+      const match = state.matches.at(-1)
+      if (match === undefined) return 'ready'
+      if (match.status === 'error') return 'failed'
+      return match.isFetching === false ? 'ready' : 'loading'
+    },
+  })
+  const retry = React.useCallback(() => {
+    void router.invalidate()
+  }, [router])
+
   const worldLabel =
     atlas.countryCount === 0
-      ? 'World map. No countries marked as visited yet.'
-      : `World map with ${atlas.countryCount} of ${WORLD_COUNTRY_COUNT} countries marked as visited.`
+      ? t('atlas.screen.world.empty')
+      : t('atlas.screen.world.summary', {
+          visited: formatNumber(atlas.countryCount, locale),
+          total: formatNumber(WORLD_COUNTRY_COUNT, locale),
+        })
 
   return (
     <div ref={containerRef} className={SLICE} style={shelfStyle}>
@@ -664,10 +840,22 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
             />
           }
         >
-          <VisitedCountries
+          {/* Above the paint layer on purpose: it renders that layer itself,
+              and the pointer listener it registers has to reach MapLibre before
+              the one that reports a country crossing, or the card for a French
+              overseas département would be placed from the position the pointer
+              held one frame earlier. */}
+          <CountryOverlay
             visits={visits}
+            countries={overlayCountries}
+            bucketList={overlayGoals}
             selectedCode={selected}
+            selectionToken={selectionToken}
             onSelect={open}
+            padding={padding}
+            container={surfaceHost}
+            status={status}
+            onRetry={retry}
           />
 
           <AtlasCamera
@@ -678,8 +866,22 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
         </MapCanvas>
       </div>
 
+      {/* Written before the shelf so the two are in document order as well as
+          in the layer stack, and always mounted so the overlay has somewhere to
+          render from its very first commit. */}
+      <div
+        ref={setSurfaceHost}
+        data-part="country-surfaces"
+        className={SURFACE_LAYER}
+      />
+
       <AtlasPanel
         ref={shelfRef}
+        // The one hook the shelf answers to from outside: the map's surfaces
+        // are placed against its box, and a gate that had to find it by class
+        // would be asserting against a Tailwind string rather than against the
+        // composition.
+        data-part="atlas-shelf"
         countries={countries}
         selectedCode={selected}
         onSelect={openAndFrame}
@@ -701,6 +903,15 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
         }}
         byContinent={atlas.byContinent}
         bucketList={atlas.bucketList}
+        // The same uncapped index the map overlay reads, and for the same
+        // reason. `bucketList` above is the head of the list — forty rows — which
+        // is the right shape for something a reader scrolls and the wrong one for
+        // "is the selected country already on it?": a country at row forty-one
+        // answered no, the shelf offered "Add to list" for an entry that was
+        // already there, and the map surface a few hundred pixels above it
+        // answered "On the bucket list" about the very same country at the very
+        // same moment.
+        bucketCountries={atlas.bucketListCountries}
         bucketTotal={atlas.bucketListTotal}
         bucketAchieved={atlas.bucketListAchieved}
         className={cn(
@@ -786,6 +997,8 @@ export interface AtlasScreenErrorProps {
  * the reader less than nothing.
  */
 export function AtlasScreenError({ error }: AtlasScreenErrorProps) {
+  const t = useTranslate()
+
   return (
     <div className={SLICE}>
       <div className={DRAWING}>
@@ -798,7 +1011,7 @@ export function AtlasScreenError({ error }: AtlasScreenErrorProps) {
       </div>
       <div className="absolute inset-0 grid place-items-center p-4">
         <div className="w-full max-w-md">
-          <ErrorPanel error={error} title="The atlas did not load" />
+          <ErrorPanel error={error} title={t('atlas.screen.error.title')} />
         </div>
       </div>
     </div>

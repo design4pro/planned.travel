@@ -4,15 +4,86 @@ import { X } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import { IconButton } from './icon-button'
+import { useUiI18n } from './copy'
+
+import type { Direction } from '#/lib/i18n'
 
 /**
  * The draggable drawer. `vaul` gives it the physics — velocity-aware dismissal,
  * snap points, and input repositioning when the on-screen keyboard appears —
  * on top of Radix Dialog, so focus trapping and Escape still behave.
  *
- * Bottom is the mobile default; `side="right"` is the desktop detail panel.
+ * Bottom is the mobile default; `side="end"` is the desktop detail panel — the
+ * physical right in English and the physical left in Arabic.
+ *
+ * The four physical edges, and why they stay physical.
+ *
+ * `vaul` needs `direction` on the root to know which way the drag goes, and its
+ * vocabulary is physical. The classes below are physical for the same reason and
+ * are *correct* that way: a sheet pinned to the physical left edge rounds its
+ * physical right corners in every script, because that is the edge facing the
+ * page. Swapping them for logical properties would round the wrong corners in
+ * Arabic.
+ *
+ * What is genuinely direction-dependent is which edge a *detail panel* should
+ * come from, and that is what `start` and `end` are for.
  */
+const sideClasses = {
+  bottom:
+    'inset-x-0 bottom-0 mt-24 max-h-[92dvh] rounded-t-2xl border-t pb-safe',
+  top: 'inset-x-0 top-0 mb-24 max-h-[92dvh] rounded-b-2xl border-b pt-safe',
+  left: 'inset-y-0 left-0 w-full max-w-md rounded-r-2xl border-r',
+  right: 'inset-y-0 right-0 w-full max-w-md rounded-l-2xl border-l',
+} as const
+
+/** A physical edge `vaul` and `sideClasses` both understand. */
+export type PhysicalEdge = keyof typeof sideClasses
+
+/**
+ * `start` and `end` are the inline edges: `end` is the right in English and the
+ * left in Arabic, which is where a detail panel belongs in either. Give `Sheet`
+ * and `SheetContent` the same one and both the anchor and the drag follow the
+ * reader.
+ */
+export type SheetSide = PhysicalEdge | 'start' | 'end'
+
+/** The one place a logical edge becomes a physical one. */
+function physicalEdge(side: SheetSide, dir: Direction): PhysicalEdge {
+  if (side === 'start') return dir === 'rtl' ? 'right' : 'left'
+  if (side === 'end') return dir === 'rtl' ? 'left' : 'right'
+  return side
+}
+
 export const Sheet = Drawer.Root
+
+/**
+ * The physical `direction` a logical `side` needs on the root — the one thing
+ * `vaul` cannot work out for itself.
+ *
+ * `vaul` reads `direction` to know which axis the drag runs along and which way
+ * a release dismisses, and its vocabulary is physical: there is no `end`. Left to
+ * the caller, that arithmetic produced a panel anchored to the correct edge that
+ * dragged the *wrong* way in Arabic — the gesture that should have dismissed it
+ * pushed it further open. So the sum lives here, next to the `sideClasses` it has
+ * to agree with:
+ *
+ * ```tsx
+ * const direction = useSheetDirection('end')
+ * <Sheet direction={direction}>
+ *   <SheetContent side="end">…</SheetContent>
+ * </Sheet>
+ * ```
+ *
+ * It is a hook rather than a wrapper around `Drawer.Root` because `vaul` types
+ * its root props as a discriminated union — snap points and `fadeFromIndex` are
+ * mutually exclusive — and a wrapper that re-spreads them collapses the union
+ * and stops type-checking the very props it forwards.
+ */
+export function useSheetDirection(side: SheetSide): PhysicalEdge {
+  const { dir } = useUiI18n()
+  return physicalEdge(side, dir)
+}
+
 export const SheetTrigger = Drawer.Trigger
 export const SheetClose = Drawer.Close
 export const SheetPortal = Drawer.Portal
@@ -30,20 +101,13 @@ export const SheetOverlay = React.forwardRef<
 ))
 SheetOverlay.displayName = 'SheetOverlay'
 
-const sideClasses = {
-  bottom:
-    'inset-x-0 bottom-0 mt-24 max-h-[92dvh] rounded-t-2xl border-t pb-safe',
-  top: 'inset-x-0 top-0 mb-24 max-h-[92dvh] rounded-b-2xl border-b pt-safe',
-  left: 'inset-y-0 left-0 w-full max-w-md rounded-r-2xl border-r',
-  right: 'inset-y-0 right-0 w-full max-w-md rounded-l-2xl border-l',
-} as const
-
-export type SheetSide = keyof typeof sideClasses
-
 export type SheetContentProps = React.ComponentPropsWithoutRef<
   typeof Drawer.Content
 > & {
-  /** Which edge the sheet is anchored to. Must match the root's `direction`. */
+  /**
+   * Which edge the sheet is anchored to. Prefer the logical `start`/`end`, and
+   * give the root the matching `direction` from `useSheetDirection(side)`.
+   */
   side?: SheetSide
   /** Shows the grab handle. On by default for the bottom sheet. */
   handle?: boolean
@@ -60,7 +124,7 @@ export const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
       side = 'bottom',
       handle,
       hideClose = false,
-      closeLabel = 'Close',
+      closeLabel,
       onOpenAutoFocus,
       onCloseAutoFocus,
       children,
@@ -68,7 +132,9 @@ export const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
     },
     ref,
   ) => {
-    const showHandle = handle ?? side === 'bottom'
+    const { dir, t } = useUiI18n()
+    const physicalSide = physicalEdge(side, dir)
+    const showHandle = handle ?? physicalSide === 'bottom'
     /**
      * Where focus goes when the sheet closes.
      *
@@ -86,7 +152,7 @@ export const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
           ref={ref}
           className={cn(
             'fixed z-modal flex flex-col border-edge bg-surface text-ink shadow-modal outline-none',
-            sideClasses[side],
+            sideClasses[physicalSide],
             className,
           )}
           /**
@@ -131,10 +197,10 @@ export const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
             <Drawer.Close asChild>
               <IconButton
                 icon={<X />}
-                label={closeLabel}
+                label={closeLabel ?? t('ui.action.close')}
                 size="sm"
                 variant="ghost"
-                className="absolute top-3.5 right-3.5"
+                className="absolute top-3.5 end-3.5"
               />
             </Drawer.Close>
           )}
@@ -152,7 +218,7 @@ export const SheetHeader = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'shrink-0 border-b border-edge-faint px-5 py-4 pr-14',
+      'shrink-0 border-b border-edge-faint px-5 py-4 pe-14',
       className,
     )}
     {...props}

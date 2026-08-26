@@ -38,7 +38,7 @@ import {
 } from 'drizzle-kit/api'
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { BANNED_USER_MESSAGE } from '#/routes/(auth)/-lib/errors'
+import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
 import { authSchema } from '#/server/db/auth-schema'
 import { DISABLED_ADMIN_PATHS } from '../admin-options'
 import type * as CatalogAudit from '#/server/catalog/audit'

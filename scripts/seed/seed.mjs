@@ -227,6 +227,9 @@ function printReport(report) {
   out('  Trips')
   for (const trip of report.trips) {
     out(`    ${trip.slug}`)
+    // The id is printed rather than hidden: it is fixed by the dataset, and a run that prints a
+    // different one from the last has repainted every cover in the product. See ./README.md.
+    out(`      id  ${trip.counts.tripId}`)
     out(`      ${formatCounts(trip.counts)}`)
   }
   out('')

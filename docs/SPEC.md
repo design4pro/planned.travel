@@ -578,3 +578,118 @@ asks for the browser; this is why.
 3. Tests belong to the owner of the code they test.
 4. A concept whose file set exceeds one item's reasonable size is not a reason to split it. It is
    a reason to make that item the whole round.
+
+## 9. Localisation
+
+The product ships in **23 languages**. The storage layer already exists and is unused for copy:
+`organization_settings.locale` is the workspace default, `user_settings.locale` the traveller's
+override, and `getEffectiveSettings` already merges them. Making those columns decide what the
+screens say is the work.
+
+### Supported locales — the exact set, tagged BCP-47
+
+| Tag | Native name | Tag | Native name |
+|---|---|---|---|
+| `ar` | العربية *(RTL)* | `ko` | 한국어 |
+| `ca` | Català | `nl` | Nederlands |
+| `cs` | Čeština | `pl` | Polski |
+| `de` | Deutsch | `pt-BR` | Português (Brasil) |
+| `el` | Ελληνικά | `ru` | Русский |
+| `en` | English *(source)* | `sv` | Svenska |
+| `es` | Español | `tr` | Türkçe |
+| `fr` | Français | `uk` | Українська |
+| `hu` | Magyar | `vi` | Tiếng Việt |
+| `id` | Bahasa Indonesia | `zh-Hans` | 简体中文 |
+| `it` | Italiano | `zh-Hant` | 繁體中文 |
+| `ja` | 日本語 | | |
+
+A locale is named in **its own language and its own script**, never in English. The tags are
+canonical BCP-47; the reference's non-standard `br` and `gr` are not what we ship.
+
+### Rules
+
+1. **In-house.** §3's dependency freeze holds — there is no i18n package and none is to be added.
+   The message layer, the plural rules and the interpolation are ours, built on the platform `Intl`.
+2. **Source locale is `en`.** Every key exists in every locale. A test proves parity — no missing
+   key, no orphan key, no locale silently falling back to English at runtime.
+3. **Negotiation happens on the server, once, before first paint**: user setting → workspace
+   setting → `Accept-Language` → `en`. `<html lang>` and `<html dir>` are server-rendered. No
+   locale flash, no hydration mismatch, no second render to correct the language.
+4. **`ar` is RTL.** Layout uses logical properties, not `left`/`right`. Directional icons mirror.
+   RTL is a designed layout, exactly as dark mode is, not a flipped afterthought.
+5. **Formatting must agree across runtimes.** `src/lib/format.ts` pins `en-GB` and freezes the
+   CLDR month and weekday tables *because* workerd and WebKit disagree on `Intl` output, and every
+   server-rendered September date threw a hydration error in Safari until it did. The multi-locale
+   formatter inherits that requirement: any locale-dependent name taken from the platform must be
+   proven identical in workerd and WebKit, or frozen in a table. This is the hardest constraint on
+   this task — treat a divergence as a defect, never as a tolerance.
+6. **No untranslated string reaches a screen.** §7.5's ban on placeholder copy covers an
+   English string sitting in a non-English catalogue.
+7. **The language picker** lives in settings, lists every locale in its native name and script,
+   shows the active one, and persists through a reload.
+8. **Scope.** In: `src/routes/(auth)`, `src/routes/_app`, the marketing landing and pricing pages,
+   and every component they render. Out, for now: `src/routes/legal/**` long-form terms and privacy
+   prose, which stays English and says so on the page — translated legal text needs review this
+   build cannot give it.
+9. **Copy is authored, not copied.** §1's clean-room rule governs every catalogue file. Our English
+   copy is our own, and each translation is made from *our* English — never from the reference's
+   catalogues, which are AGPL-licensed source.
+
+### Catalogue layout (fixed — every i18n item builds against this)
+
+Round 2 rejected a runtime that shipped flat `messages/<tag>.ts` files while fifteen downstream
+items owned per-locale directories. The parity test globbed `messages/*.ts`, which does not match
+`messages/de/settings.ts`, so it would have reported green while the product rendered English.
+The layout is therefore part of the contract, not a builder's choice:
+
+```
+src/lib/i18n/messages/<locale>/<namespace>.ts     one flat object of keys, default-exported
+```
+
+**Namespaces — exactly these ten**, and a new one is a contract change, not an edit:
+
+`shell` · `auth` · `trips` · `modules` · `costs` · `atlas` · `journal` · `marketing` ·
+`settings` · `ui`
+
+- `src/lib/i18n/catalogue.ts` aggregates with `import.meta.glob('./messages/*/*.ts')`, so a new
+  namespace file is picked up with no shared index for fifteen items to fight over. Measured in
+  round 1: an explicit per-locale importer emits 23 separate chunks and inlines none of them into
+  the entry — the glob must keep that property.
+- `src/lib/i18n/types.ts` derives the key union from `import type` of the ten **`en`** namespace
+  files. English is the only source of truth for what a key is.
+- The parity test globs `messages/*/*.ts`. It fails on a key in `en` and missing elsewhere, a key
+  present only outside `en`, and a non-`en` value byte-identical to `en` outside a proper-noun
+  allow-list.
+- **Ownership.** One item owns `messages/en/<namespace>.ts` for its own screens. A translation item
+  owns `messages/<tag>/` for its tags, whole. Nothing is shared, so nothing collides.
+
+### Who wires the document shell
+
+`src/lib/fonts.ts` exports the stylesheet href and the preconnect origins **as data**; it does not
+render them. `src/routes/__root.tsx` is owned by `locale-negotiation-shell`, and that item is what
+imports `fonts.ts`, deletes the second hard-coded copy of the font URL, and sets `<html lang>` and
+`<html dir>`. An item is never held to an acceptance criterion it does not own the file to satisfy.
+
+### Who owns the visual judgement
+
+An item is blind-judged on a SCREEN. An item that owns only a library — `src/components/ui/**`,
+`src/lib/**` — has no screen of its own, and round 5 rejected `ui-primitives-i18n-rtl` for "no blind
+pair" on that basis alone, having found nothing blocking in its actual work. Such an item is judged
+on its code, its tests and its stated contract, and the visual judgement of the screens that mount
+it belongs to those screens' items. An item never manufactures a route to become photographable.
+
+The reference half can also simply be unavailable: `demo.liketrek.com` puts its authenticated
+screens behind its own sign-in, which we hold no credentials for. When no pair exists, our side is
+still captured and the item is judged on our frames plus code, tests and accessibility — never on a
+mismatched pair, because a pair of two different surfaces sends the critic after an artefact of the
+capture. A missing reference is never grounds to relax §2; it raises the bar, because our side then
+has to be defensible with no foil beside it.
+
+### Numbers inside messages
+
+A plural message's `count` selects the CLDR branch and nothing else. Any number a reader SEES goes
+through the locale-aware formatter and is interpolated as an already-formatted string — raw
+substitution renders ASCII digits with no group separator in all 23 locales. Note what the platform
+actually does before asserting on it: `ar` as a bare tag carries the `latn` numbering system, so
+Arabic correctly renders `1,234` and never Arabic-Indic digits, which belong to `ar-EG` /
+`ar-u-nu-arab` and are not tags we ship.

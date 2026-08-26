@@ -1,0 +1,375 @@
+/**
+ * Everything the application shell says, in Turkish.
+ *
+ * Made from `../en/shell.ts` and from nothing else. `docs/SPEC.md` §1 and §8.9
+ * forbid deriving a catalogue from the reference project's AGPL translations, so
+ * every sentence here was written against our English source.
+ *
+ * **One word for a subscription.** A paid tier is «paket» throughout this
+ * catalogue, not the loan-word «plan», which Turkish keeps for a plan of action
+ * — and which is what `trip.tab.plan` is. Reading «paket» on the billing rows
+ * and «program» on the itinerary tab is how a Turkish reader tells the two
+ * apart.
+ *
+ * **Two branches that say the same thing.** Turkish takes the singular after a
+ * numeral, so `one` and `other` are deliberately identical wherever a number
+ * precedes the noun. `Intl.PluralRules` still reports both categories for `tr`
+ * and `__tests__/parity.test.ts` requires both.
+ *
+ * **Stored notification copy.** `src/server/repos/notifications.ts` stores a
+ * notification as `titleKey` + `bodyKey` + a `params` record, never as a
+ * rendered sentence, so the `notification.*` pairs below are what a row written
+ * a year ago resolves against today. A reader's own text is set in Turkish
+ * quotation marks, which is the only thing a translator can do to a message that
+ * is nothing but a placeholder.
+ */
+
+import type En from '../en/shell'
+import type { TranslationOf } from '../../types'
+
+const messages = {
+  /* -------------------------------------------------------------- navigation */
+  'nav.primary': 'Ana bölümler',
+  'nav.mobile': 'Bölümler',
+  'nav.dashboardLink': 'planned.travel panosu',
+  'nav.homeLink': 'planned.travel ana sayfası',
+  'nav.newTrip': 'Yeni gezi',
+
+  'nav.trips': 'Gezilerim',
+  'nav.trips.short': 'Geziler',
+  'nav.vacay': 'Tatil',
+  'nav.vacay.short': 'Tatil',
+  'nav.atlas': 'Dünya haritası',
+  'nav.atlas.short': 'Dünya',
+  'nav.journey': 'Günlük',
+  'nav.journey.short': 'Günlük',
+
+  /* ---------------------------------------------------------- trip sub-nav */
+  'trip.nav.label': 'Gezi bölümleri',
+  'trip.nav.back': 'Geziler',
+  'trip.nav.share': 'Paylaş',
+  'trip.nav.shareLabel': 'Bu geziyi paylaş',
+  'trip.tab.plan': 'Program',
+  'trip.tab.transports': 'Ulaşım',
+  'trip.tab.book': 'Rezervasyon',
+  'trip.tab.lists': 'Listeler',
+  'trip.tab.costs': 'Masraflar',
+  'trip.tab.files': 'Dosyalar',
+  'trip.tab.collab': 'Ekip',
+
+  /* ------------------------------------------------------------ user menu */
+  'account.menu': 'Hesap menüsü',
+  'account.settings': 'Ayarlar',
+  'account.billing': 'Paket ve ödeme',
+  'account.admin': 'Yönetim',
+  'account.signOut': 'Çıkış yap',
+  'account.signingOut': 'Çıkış yapılıyor…',
+  'account.signOutFailed': 'Çıkış yapılamadı',
+  'account.signOutFailedBody': 'Bağlantınızı kontrol edip yeniden deneyin.',
+
+  /* --------------------------------------------------------- theme switcher */
+  'theme.label': 'Görünüm',
+  'theme.light': 'Açık',
+  'theme.dark': 'Koyu',
+  'theme.system': 'Sistemle aynı',
+  'theme.state.light': 'açık',
+  'theme.state.dark': 'koyu',
+  'theme.state.system': 'sistemle aynı',
+  'theme.trigger': 'Tema: {state}. Temayı değiştir',
+
+  /* ------------------------------------------------------------------ bell */
+  'bell.none': 'Bildirimler, okunmamış yok',
+  'bell.unread': {
+    one: 'Bildirimler, {unread} okunmamış',
+    other: 'Bildirimler, {unread} okunmamış',
+  },
+
+  /* ----------------------------------------------------------------- inbox */
+  'inbox.eyebrow': 'Gelen kutusu',
+  'inbox.title': 'Bildirimler',
+  'inbox.error': 'Gelen kutunuz yüklenmedi',
+  'inbox.allRead': 'Her şey okundu',
+  'inbox.unread': {
+    one: '{unread} okunmamış mesaj',
+    other: '{unread} okunmamış mesaj',
+  },
+  'inbox.markAll': 'Tümünü okundu say',
+  'inbox.markingAll': 'Tümü okundu sayılıyor',
+  'inbox.cleared': 'Gelen kutusu temizlendi',
+  'inbox.markAllFailed': 'Tümü okundu sayılamadı',
+  'inbox.retryHint': 'Bağlantınızı kontrol edip yeniden deneyin.',
+  'inbox.filter.all': 'Her şey',
+  'inbox.filter.unread': 'Okunmamış',
+  'inbox.waiting': {
+    one: '{invitations} davet bekliyor',
+    other: '{invitations} davet bekliyor',
+  },
+  'inbox.empty.title': 'Gelen kutunuz boş',
+  'inbox.empty.body':
+    'Gezi davetleri, program değişiklikleri, rezervasyon hatırlatmaları ve kapanan hesaplar hep buraya düşer.',
+  'inbox.empty.action': 'Panoya dön',
+  'inbox.emptyUnread.title': 'Okunmamış bir şey yok',
+  'inbox.emptyUnread.body':
+    'Her şeyi okudunuz. Geçmişe bakmak için “Her şey” sekmesine geçin.',
+  'inbox.emptyUnread.action': 'Her şeyi göster',
+  'inbox.row.new': 'Yeni',
+  'inbox.row.accepted': 'Kabul edildi',
+  'inbox.row.declined': 'Reddedildi',
+  'inbox.row.open': 'Aç',
+  'inbox.row.markRead': 'Okundu',
+  'inbox.row.markingRead': 'Okundu işaretleniyor',
+  'inbox.row.markReadFailed': 'Bu okundu sayılamadı',
+  'inbox.preferences':
+    'Bunlardan hangileri gelen kutunuza, e-postanıza ve telefonunuza ulaşsın, siz seçin.',
+  'inbox.preferencesAction': 'Bildirim ayarları',
+
+  /* ----------------------------------------------- stored notification copy */
+  'notification.trip.invited.title': '{tripTitle} gezisine davet edildiniz',
+  'notification.trip.invited.body': '{actorName} sizi geziye ekledi.',
+  'notification.trip.updated.title': '{tripTitle} güncellendi',
+  'notification.trip.updated.body': '{actorName} programı değiştirdi.',
+  'notification.trip.member_added.title':
+    '{memberName}, {tripTitle} gezisine katıldı',
+  'notification.trip.member_added.body':
+    'Artık programı, rezervasyonları ve masrafları görebilir.',
+  'notification.trip.member_removed.title':
+    '{memberName}, {tripTitle} gezisinden ayrıldı',
+  'notification.trip.member_removed.body': 'Geziye erişimi sona erdi.',
+  'notification.trip.starting_soon.title': {
+    one: '{tripTitle} {days} gün sonra başlıyor',
+    other: '{tripTitle} {days} gün sonra başlıyor',
+  },
+  'notification.trip.starting_soon.body':
+    'Valiz listesine ve rezervasyonlara bakma vakti.',
+  'notification.reservation.reminder.title': '{title} yaklaşıyor',
+  'notification.reservation.reminder.body':
+    'Saati ve onay kodunu rezervasyonun üzerinde bulabilirsiniz.',
+  'notification.reservation.confirmed.title': '{title} onaylandı',
+  'notification.reservation.confirmed.body':
+    'Rezervasyon {tripTitle} gezisinde onaylandı olarak işaretlendi.',
+  'notification.expense.added.title': '{actorName} bir masraf ekledi',
+  'notification.expense.added.body': '{tripTitle} gezisinde {title}.',
+  'notification.expense.settled.title': '{actorName} hesabı kapattı',
+  'notification.expense.settled.body': '{tripTitle} gezisindeki bakiye ödendi.',
+  'notification.list.assigned.title': '{actorName} size bir madde atadı',
+  'notification.list.assigned.body': '{tripTitle} gezisinde {title}.',
+  'notification.collab.message.title':
+    '{actorName}, {tripTitle} gezisine yazdı',
+  'notification.collab.message.body': '“{preview}”',
+  'notification.collab.poll.title': '{tripTitle} gezisinde bir anket açıldı',
+  'notification.collab.poll.body': '“{question}”',
+  'notification.organization.invited.title':
+    '{organizationName} çalışma alanına davet edildiniz',
+  'notification.organization.invited.body':
+    'Kabul edin; çalışma alanına ve orada paylaşılan her şeye katılın.',
+  'notification.journey.published.title': '{title} yayımlandı',
+  'notification.journey.published.body':
+    'Bağlantıya sahip herkes günlüğü artık okuyabilir.',
+  'notification.billing.plan_changed.title': 'Paketiniz değişti',
+  'notification.billing.plan_changed.body':
+    '{organizationName} artık {plan} paketinde.',
+  'notification.fallback.title': 'Çalışma alanınızda bir şey değişti',
+  'notification.fallback.body': 'Ne olduğunu görmek için geziyi açın.',
+
+  /* ------------------------------------------------------------- dashboard */
+  'dashboard.error': 'Pano yüklenmedi',
+  'dashboard.blank.title': 'Sıradaki geziniz burada başlıyor',
+  'dashboard.blank.body':
+    'Bir gezi oluşturun, görmek istediğiniz yerleri haritaya bırakın; planned.travel gün gün programı onların çevresine kurar.',
+  'dashboard.blank.action': 'Gezi planla',
+  'dashboard.blank.secondary': 'Dünya haritanıza bakın',
+
+  'dashboard.upNext': 'Sırada',
+  'dashboard.openPlan': 'Programı aç',
+  'dashboard.hero.travellers': 'Yolcular',
+  'dashboard.hero.travellersHint': 'çalışma alanında',
+  'dashboard.hero.dates': 'Gezi tarihleri',
+  'dashboard.hero.datesUnset': 'Belirsiz',
+  'dashboard.hero.datesHint': { one: '{days} gün', other: '{days} gün' },
+  'dashboard.hero.datesMissing': 'Günlerin kurulması için tarih ekleyin',
+  'dashboard.hero.startsIn': 'Başlamasına',
+  'dashboard.hero.started': 'Başladı',
+  'dashboard.hero.today': 'Bugün',
+  'dashboard.hero.startUnknown': 'başlangıç tarihi yok',
+  'dashboard.hero.startToday': 'yolunuz açık olsun',
+  'dashboard.hero.startPast': { one: 'gün önce', other: 'gün önce' },
+  'dashboard.hero.startFuture': { one: 'gün', other: 'gün' },
+  'dashboard.hero.places': 'Yerler',
+  'dashboard.hero.placesNone': 'haritada henüz bir şey yok',
+  'dashboard.hero.placesHint': 'haritada',
+
+  'dashboard.stat.countries': 'Gezilen ülkeler',
+  'dashboard.stat.countriesUnit': '{total} ülkeden',
+  'dashboard.stat.countriesNone':
+    'Haritanızı başlatmak için bir ülke işaretleyin',
+  'dashboard.stat.visits': {
+    one: '{visits} ziyaret kaydedildi',
+    other: '{visits} ziyaret kaydedildi',
+  },
+  'dashboard.stat.trips': 'Toplam gezi',
+  'dashboard.stat.tripsCaption': '{planning} planlanıyor · {booked} rezerve',
+  'dashboard.stat.places': 'Haritaya işlenen yerler',
+  'dashboard.stat.placesNone': 'Haritada henüz bir şey yok',
+  'dashboard.stat.placesAcross': {
+    one: '{trips} gezide',
+    other: '{trips} gezide',
+  },
+  'dashboard.stat.bookings': 'Onaylı rezervasyonlar',
+  'dashboard.stat.bookingsNone': 'Yaklaşan rezervasyon yok',
+  'dashboard.stat.bookingsSoon': {
+    one: '{bookings} rezervasyon yolda',
+    other: '{bookings} rezervasyon yolda',
+  },
+
+  'dashboard.trips.label': 'Gezileriniz',
+  'dashboard.trips.all': 'Tüm geziler',
+  'dashboard.trips.empty.title': 'Henüz gezi yok',
+  'dashboard.trips.empty.body':
+    'Planladığınız her şey, en yenisi başta olacak şekilde burada görünür.',
+  'dashboard.trips.empty.action': 'Gezi oluştur',
+
+  'dashboard.bookings.label': 'Yaklaşan rezervasyonlar',
+  'dashboard.bookings.empty.title': 'Henüz rezervasyon yok',
+  'dashboard.bookings.empty.body':
+    'Onaylı konaklamalar, masalar ve biletler tarihleri yaklaştıkça burada görünür.',
+
+  'dashboard.pipeline.label': 'Gezi akışı',
+  'dashboard.pipeline.empty':
+    'Akışta bir şey yok. İlk geziniz bunu aşamalara böler.',
+  'dashboard.pipeline.favourites': {
+    one: '{favourites} favori',
+    other: '{favourites} favori',
+  },
+  'dashboard.pipeline.archived': {
+    one: '{archived} arşivlenmiş gezi',
+    other: '{archived} arşivlenmiş gezi',
+  },
+
+  'dashboard.storage.label': 'Depolama',
+  'dashboard.storage.count': '{used} / {limit}',
+  'dashboard.storage.files': {
+    one: 'Tüm gezilerde {files} dosya var; fotoğraflar ve biletler dahil.',
+    other: 'Tüm gezilerde {files} dosya var; fotoğraflar ve biletler dahil.',
+  },
+  'dashboard.storage.more': 'Daha fazla yer mi gerekiyor?',
+  'dashboard.storage.plans': 'Paketlere bak',
+
+  /* ----------------------------------------------------------------- admin */
+  'admin.error': 'Yönetim konsolu yüklenmedi',
+  'admin.denied.title': 'Bunu yalnızca çalışma alanı yöneticileri açabilir',
+  'admin.denied.body':
+    'Gerekiyorsa bu çalışma alanının sahibinden ya da bir yöneticisinden rolünüzü değiştirmesini isteyin.',
+  'admin.denied.action': 'Panoya dön',
+  'admin.eyebrow': 'Çalışma alanı yönetimi',
+  'admin.description': '{plan} paketi · {date} tarihinde oluşturuldu',
+  'admin.createdUnknown': 'kısa süre önce',
+  'admin.workspaceSettings': 'Çalışma alanı ayarları',
+  'admin.billing': 'Paket ve ödeme',
+
+  'admin.invitations.title': {
+    one: '{invitations} davet hâlâ açık',
+    other: '{invitations} davet hâlâ açık',
+  },
+  'admin.invitations.body':
+    'Açık kalan her davet, paketinizin ödediği koltuklardan düşer.',
+  'admin.invitations.action': 'Davetleri incele',
+
+  'admin.stat.members': 'Üyeler',
+  'admin.stat.membersCaption': {
+    one: '{invitations} davet beklemede',
+    other: '{invitations} davet beklemede',
+  },
+  'admin.stat.storage': 'Depolama',
+  'admin.stat.storageUnit': '{limit} üzerinden',
+  'admin.stat.storageUnlimited': 'sınır yok',
+  'admin.stat.storageCaption': 'Dosyalar, fotoğraflar ve dışa aktarmalar',
+  'admin.stat.audit': 'Denetim kayıtları',
+  'admin.stat.auditCaption': 'En son etkinlik aşağıda görünüyor',
+  'admin.stat.plan': 'Paket',
+  'admin.stat.planCaption': 'Sınırlar veri deposu sınırında uygulanır',
+
+  'admin.quotas.label': 'Sınırlar',
+  'admin.quotas.count': {
+    one: '{metrics} ölçüm',
+    other: '{metrics} ölçüm',
+  },
+  'admin.quotas.unlimited': 'Sınırsız',
+  'admin.quotas.value': '{limit} üzerinden {used}',
+
+  'admin.members.label': 'Üyeler',
+  'admin.members.table': 'Bu çalışma alanının üyeleri',
+  'admin.members.person': 'Kişi',
+  'admin.members.role': 'Rol',
+  'admin.members.joined': 'Katıldı',
+
+  'admin.activity.label': 'Son etkinlik',
+  'admin.activity.empty.title': 'Henüz kayıt yok',
+  'admin.activity.empty.body':
+    'Önemli olan her yazma işlemi, gerçekleştiği anda denetim kaydına eklenir.',
+  'admin.activity.workspace': 'çalışma alanının kendisi',
+  'admin.actions.label': 'En yoğun işlemler',
+  'admin.actions.count': {
+    one: '{actions} işlem',
+    other: '{actions} işlem',
+  },
+
+  /* ---------------------------------------------------------- domain words */
+  'tripStatus.draft': 'Taslak',
+  'tripStatus.planning': 'Planlanıyor',
+  'tripStatus.booked': 'Rezerve edildi',
+  'tripStatus.active': 'Etkin',
+  'tripStatus.completed': 'Tamamlandı',
+  'tripStatus.archived': 'Arşivlendi',
+
+  'bookingStatus.none': 'Rezerve edilmedi',
+  'bookingStatus.pending': 'Beklemede',
+  'bookingStatus.confirmed': 'Onaylandı',
+  'bookingStatus.cancelled': 'İptal edildi',
+  'bookingStatus.completed': 'Bitti',
+
+  'bookingType.accommodation': 'Konaklama',
+  'bookingType.restaurant': 'Masa',
+  'bookingType.activity': 'Etkinlik',
+  'bookingType.tour': 'Tur',
+  'bookingType.ticket': 'Bilet',
+  'bookingType.transport': 'Ulaşım',
+  'bookingType.other': 'Rezervasyon',
+
+  'role.owner': 'Sahip',
+  'role.admin': 'Yönetici',
+  'role.member': 'Üye',
+
+  'metric.trips': 'Geziler',
+  'metric.places': 'Yerler',
+  'metric.members': 'Üyeler',
+  'metric.files': 'Dosyalar',
+  'metric.storage_bytes': 'Depolama',
+  'metric.collections': 'Koleksiyonlar',
+  'metric.journeys': 'Günlükler',
+
+  /* -------------------------------------------------------------- failures */
+  'error.title': 'Bu yüklenmedi',
+  'error.body':
+    'Hiçbir şey kaybolmadı. Yeniden deneyin; sürerse aşağıdaki ayrıntıyı bize gönderin.',
+  'error.retry': 'Yeniden dene',
+  'error.dashboard': 'Panoya geri dön',
+  'error.unknown': 'İstek tamamlanamadan başarısız oldu.',
+  'error.root': 'Rotadan çıktık',
+  'error.session': 'Çalışma alanı erişiminiz değişti',
+
+  'notFound.eyebrow': 'Hata 404',
+  'notFound.title': 'Bu sayfa haritada yok',
+  'notFound.body':
+    'Bağlantı güncelliğini yitirmiş olabilir ya da işaret ettiği gezi taşınmış veya silinmiş olabilir.',
+  'notFound.trips': 'Tüm geziler',
+  'notFound.rootBody':
+    'Rota boyunca her yere baktık. Adres yanlış yazılmış olabilir ya da sayfa çoktan yola koyulmuş olabilir.',
+  'notFound.home': 'Ana sayfaya dön',
+  'notFound.plans': 'Paketlerimize bakın',
+
+  'session.noWorkspace':
+    'Hesabınız henüz bir çalışma alanına bağlı değil. Kurulumu tamamlamak için çıkış yapıp yeniden girin.',
+  'session.membershipRemoved': 'Bu çalışma alanındaki üyeliğiniz kaldırıldı.',
+} satisfies TranslationOf<typeof En>
+
+export default messages

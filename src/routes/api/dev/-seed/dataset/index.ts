@@ -3,6 +3,10 @@
  *
  * Order matters for trips: the applier walks `trips` in sequence, and later entities (notifications,
  * journeys, the audit trail) reference earlier trips by slug.
+ *
+ * That sequence is also the id sequence. Every trip declares its own primary key (see `SeedTrip.id`)
+ * and those keys ascend in the order below, so `order by id` — the cursor a paginated list uses —
+ * still returns the demo trips newest-first even though nothing about them is time-stamped any more.
  */
 
 import { planById, priceFor } from '#/lib/plans'
@@ -43,7 +47,7 @@ export {
 export { flagshipTrip } from './flagship'
 export { dolomitesTrip, lisbonTrip, marrakechTrip, patagoniaTrip } from './trips'
 
-/** Every trip the seed writes, flagship first. */
+/** Every trip the seed writes, flagship first — and in ascending id order. */
 export const trips: ReadonlyArray<SeedTrip> = [flagshipTrip, ...supportingTrips]
 
 /**
@@ -51,15 +55,27 @@ export const trips: ReadonlyArray<SeedTrip> = [flagshipTrip, ...supportingTrips]
  * the marker. The applier stores it in `app_settings` under `demo.seed`, alongside the anchor the
  * rows were written against.
  *
- * 3 — every date became an offset from `SEED_ANCHOR_DAY` and the applier stopped reading the wall
- * clock, so the rows a workspace holds no longer depend on the day it was seeded.
+ * 3 — two changes reached this version from two branches and both are in effect. Every date became
+ * an offset from `SEED_ANCHOR_DAY` and the applier stopped reading the wall clock, so the rows a
+ * workspace holds no longer depend on the day it was seeded; and every trip gained a fixed primary
+ * key, so a workspace seeded under version 2 still holds generated ones and has to be rebuilt
+ * before its cover art matches the recorded screenshots.
  */
 export const DATASET_VERSION = 3
 
-/** Workspace defaults the demo assumes: sterling, London, Monday weeks. */
+/**
+ * Workspace defaults the demo assumes: English, sterling, London, Monday weeks.
+ *
+ * `locale` is a *language* tag from the twenty-three of `docs/SPEC.md` §8 — the language the
+ * workspace's screens are written in — not a regional-format tag. It read `en-GB`, which is not one
+ * of the twenty-three, so the seeded workspace disagreed with the column's own contract and the
+ * demo exercised a normalisation path no shipped workspace should ever need. The British *formats*
+ * this dataset wants live in `defaultCurrency`, `timezone`, `dateFormat` and `weekStartsOn`, all
+ * unchanged.
+ */
 export const organizationSettings = {
   defaultCurrency: 'GBP',
-  locale: 'en-GB',
+  locale: 'en',
   timezone: 'Europe/London',
   weekStartsOn: 1,
   dateFormat: 'dd MMM yyyy',

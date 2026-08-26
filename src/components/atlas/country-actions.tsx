@@ -15,10 +15,12 @@ import {
   useAction,
   useOptimistic,
 } from '#/components/modules/shared'
+import { useAtlasI18n } from '#/components/map'
 import { cn } from '#/lib/cn'
 import { countryName } from '#/lib/atlas/country-names'
 import { visitSpan } from '#/lib/atlas/visit-span'
-import { pluralise } from '#/lib/format'
+import { formatNumber } from '#/lib/format'
+import { visitLine } from './visit-copy'
 import {
   addCountryToBucketListFn,
   markCountryVisitedFn,
@@ -27,6 +29,8 @@ import {
 } from '#/server/fns/atlas'
 
 import type { ConfirmRequest } from '#/components/modules/shared'
+import type { Locale, Translate } from '#/lib/i18n'
+import type { AtlasCountryState } from '#/server/fns/atlas'
 
 /**
  * The two things a traveller can do to a country without planning a trip to it.
@@ -50,20 +54,64 @@ import type { ConfirmRequest } from '#/components/modules/shared'
  * from two different answers.
  *
  * **The intention paints first, and rolls back where the reader can see it.**
- * `useOptimistic` claims the row's new state the instant the button is pressed
- * and withdraws the claim when the write settles — after the invalidation on
- * success, so the row never flickers through its old value on the way to its new
- * one, and immediately on failure, so the row visibly returns to what it was
- * while the message underneath says why. The claim is keyed by country code, so
- * a reader who selects somewhere else mid-flight cannot inherit the claim.
+ * `useOptimistic` claims the row's new state the instant the button is pressed,
+ * and the claim is withdrawn immediately on failure, so the row visibly returns
+ * to what it was while the message underneath says why. The claim is keyed by
+ * country code, so a reader who selects somewhere else mid-flight cannot inherit
+ * the claim.
  *
- * **Nothing moves.** The message strip under the rows is a fixed two lines of
- * caption at every moment of the block's life — the resting hint, a failure, and
- * the gap between them are all the same 32px — because this block sits above a
- * list inside a scroll container, and a strip that grows on failure pushes the
- * list under the reader's cursor at the exact moment they are reading why
- * something did not save. For the same reason the button keeps one minimum
- * width across every label it can carry.
+ * **A successful claim is held until the loader's answer replaces it, not until
+ * the write returns.** Those are not the same moment and the gap between them is
+ * visible. `useAction.run` resolves after `await router.invalidate()`, which
+ * means the loader has *fetched* — but TanStack Router commits the new
+ * `loaderData` inside a React transition, while withdrawing the claim is a
+ * default-priority update that renders first, with the props the block already
+ * had. Withdrawing on `run` therefore paints the pre-write row again for the
+ * length of the screen's transition render — measured at ~75ms on the atlas at
+ * 360px, with the success toast already on screen saying the opposite. So the
+ * claim is instead held by {@link useClaimHold} until the incoming props carry
+ * the value that was claimed, and dropped after {@link CLAIM_HOLD_MS} if they
+ * never do, so a claim can never outlive the write that made it for good.
+ *
+ * **The offer a claim creates is addressed by the answer that created it.** The
+ * bucket-list entry is removed by row id, and for the whole of the hold above
+ * there is no row in the props to read one from — the claim says the country is
+ * on the list before the loader has said which entry it is. So the id is taken
+ * from the write's own answer, which is the same {@link AtlasCountryState} the
+ * loader will eventually carry, and held beside the claim until the props do.
+ * Without it the "Remove" the claim offers would be a control that runs nothing,
+ * which is the one thing this block is here to prevent. Nothing in the block
+ * ever offers a removal it cannot address: the row's control is derived from
+ * {@link CountryActionsProps.bucketGoal} *or* that held answer, so when there is
+ * neither, the offer is the additive one — which the server treats as
+ * idempotent — rather than a press that goes nowhere.
+ *
+ * **Nothing moves.** The message strip under the rows is a stated box at every
+ * moment of the block's life — the resting hint, a failure, and the gap between
+ * them are all the same height — because this block sits above a list inside a
+ * scroll container, and a strip that grows on failure pushes the list under the
+ * reader's cursor at the exact moment they are reading why something did not
+ * save. The box is two lines of caption where the block is wide and three where
+ * it is narrow enough for the same sentence to wrap further, so the message is
+ * never cut off on a phone either. For the same reason the button keeps one
+ * minimum width across every label it can carry.
+ *
+ * **A phone gets its own composition, not a squeezed copy of the desktop one.**
+ * Under 20rem of container — the card the map anchors on a 360px screen, and the
+ * drawer the shelf opens there — the two rows stop stacking and sit side by
+ * side, each a small card holding the state it is about and the control that
+ * changes it. Stacked, the block is 360px tall and the second control lands a
+ * quarter of a screen below the bottom of a surface with under 300px to give;
+ * side by side it is 183px and both controls are within a hundred of its top. A
+ * reader on a phone should not have to scroll a card that does not look
+ * scrollable to reach the button the card exists for. The trade is the
+ * explanatory caption, kept for a screen reader and dropped from the page —
+ * every date it can carry is already written out in the record directly above
+ * this block, and the state is in the row's own title either way. The 36px
+ * glyph goes with it, because at that width it costs the title the twenty
+ * pixels that keep "On the bucket list" from truncating; the state is carried
+ * instead by the card's own tint, which the rest of the block already uses for
+ * exactly that. From 20rem up nothing about the row changes.
  *
  * **A record with a history behind it is asked about first.** A country marked
  * from this block carries no dates and a single arrival, and taking that back is
@@ -73,6 +121,33 @@ import type { ConfirmRequest } from '#/components/modules/shared'
  * `ConfirmDialog`, which names what is about to be lost rather than asking "are
  * you sure?". A ticked-off bucket-list entry is treated the same way, because it
  * is a record of something that happened rather than an intention.
+ *
+ * **The row paints the claim; the button describes the press.** The two are not
+ * the same sentence and must not be read off the same value. The row's glyph,
+ * title and caption follow the optimistic claim, because that is the state the
+ * reader asked for. The button follows the *write in flight* — `mark.pending`
+ * means the control is marking, whatever the row has already painted — and only
+ * falls back to the claim when nothing is running. Deriving the button from the
+ * claim is how a control ends up announcing "Remove France from your atlas,
+ * busy" one frame after the reader pressed "Mark visited", and offering an
+ * inverse it is `disabled` for. Label, glyph, variant and the announced progress
+ * all come from that one intent, so they cannot disagree with each other either.
+ *
+ * **The name at rest carries the visible label; the name in flight carries the
+ * verb.** While the button is at rest its accessible name begins with the words
+ * printed on it, so voice control can say them and WCAG 2.5.3 holds. While it is
+ * busy there is no visible label to match — the spinner has taken its place — so
+ * the name becomes the sentence describing what is happening, and the same
+ * sentence is passed as the loading label so the two can never drift.
+ *
+ * **The reader keeps their place, and is shown the reason.** `Button` disables
+ * itself while it loads, so the browser drops focus from whichever control was
+ * pressed; the block takes it back when the write settles, and only when the
+ * drop is the one it caused. The failure strip is scrolled into view by the
+ * least amount that works, because this block is mounted inside scroll
+ * containers shorter than it is and a sentence below the fold is a sentence
+ * nobody read. A confirmation that was open over a failed removal stands down
+ * for the same reason: its overlay is the other way to hide that sentence.
  *
  * **The failure is said twice, announced once.** The toast is the announcement
  * (`sonner` owns a live region and speaks it); the strip under the rows is the
@@ -124,45 +199,86 @@ const layout = {
    * needs answered is how wide *it* is, not how wide the window is.
    */
   root: '@container min-w-0',
-  rows: 'mt-2 flex min-w-0 flex-col gap-2',
   /**
-   * Glyph and text on one line, the button under them, and all three on one line
-   * from 20rem of container. Stated as a grid rather than as `flex-wrap`, so the
-   * button either sits in its own column or spans the full width — never a
-   * half-width orphan pushed onto a second line by a long title. 20rem is the
-   * width at which the three columns stop fighting: under it a 360px phone gets
-   * a full-width control instead of a 90px one squeezed against a wrapped title.
+   * Side by side under 20rem of container, stacked above it.
+   *
+   * The narrow case is the map's own card on a 360px screen, which is 288px tall
+   * and holds the country's facts before it gets to this block. Two stacked rows
+   * put the second control a quarter of a screen below the bottom of that card;
+   * two columns put both of them inside the first hundred pixels of the block,
+   * which is the only arrangement in which a phone reader can press either
+   * without scrolling a surface that does not look scrollable.
    */
-  row: 'grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 rounded-lg border border-edge-faint bg-surface-2/60 p-3 @xs:grid-cols-[auto_minmax(0,1fr)_auto]',
+  rows: 'mt-1 grid min-w-0 grid-cols-2 gap-2 @xs:mt-2 @xs:grid-cols-1',
+  /**
+   * Under 20rem: the state on one line and its control under it, in a card of
+   * its own. From 20rem: the glyph, the text and the control on a single line.
+   *
+   * Stated as a grid rather than as `flex-wrap`, so the button either sits in
+   * its own column or spans the full width — never a half-width orphan pushed
+   * onto a second line by a long title. 20rem is the width at which the three
+   * columns stop fighting: under it there is no room for a 36px glyph, a title
+   * and a 120px control on one line without the title losing characters.
+   *
+   * The tint is the narrow half of what the glyph does everywhere else: at that
+   * width the glyph is gone, so the card itself carries whether the state is set
+   * — never alone, because the title says it in words directly inside it.
+   */
+  row: 'grid min-w-0 grid-cols-[minmax(0,1fr)] items-center gap-1 rounded-lg border border-edge-faint bg-surface-2/60 p-2 transition-colors duration-base ease-out-quint @max-xs:data-[set]:border-brand-subtle @max-xs:data-[set]:bg-brand-subtle @xs:grid-cols-[auto_minmax(0,1fr)_auto] @xs:gap-x-3 @xs:gap-y-3 @xs:p-3',
   glyph:
-    'grid size-9 shrink-0 place-items-center rounded-md border border-edge-faint transition-colors duration-base ease-out-quint [&_svg]:size-4',
+    'hidden size-9 shrink-0 place-items-center rounded-md border border-edge-faint transition-colors duration-base ease-out-quint @xs:grid [&_svg]:size-4',
   glyphIdle: 'bg-surface text-ink-3',
   glyphSet: 'bg-brand-subtle text-brand',
   body: 'min-w-0',
   /** One line, always: a wrapped title is the other way a row changes height. */
-  title: 'truncate text-label leading-5 font-semibold text-ink',
+  title: 'truncate text-label leading-4 font-semibold text-ink @xs:leading-5',
   /**
-   * Two lines of caption at a stated 16px leading, whatever it holds.
+   * Two lines of caption at a stated 16px leading from 20rem of container, and
+   * a line only a screen reader hears below it.
    *
    * The row's copy changes the instant a button is pressed — "A visit with no
-   * trip behind it." becomes "Recorded without a trip." — and those two do not
-   * wrap to the same number of lines in a 138px column. Reserving the two lines
-   * every row can need makes the block one height in rest, in flight and after a
-   * failure, which is the whole of §2h's second clause for this surface.
+   * trip behind it." becomes "Dates not recorded", and "Somewhere you mean to
+   * go." becomes "Waiting for its turn." — and no two of those wrap to the same
+   * number of lines in a 138px column. Reserving the two lines every row can
+   * need makes the block one height in rest, in flight and after a failure,
+   * which is the whole of §2h's second clause for this surface.
+   *
+   * On a phone the same two lines are the difference between the second control
+   * being on the card and being under it, and every fact they carry is already
+   * written out in the record above this block. So the sentence stays in the
+   * accessibility tree and leaves the page: `sr-only` is a real element with no
+   * size rather than a hidden one, so nothing is announced twice and nothing is
+   * lost to a reader who cannot see the card in the first place.
    */
   caption:
-    'mt-1 line-clamp-2 h-8 text-caption leading-4 tabular-nums text-ink-2',
+    'sr-only text-caption leading-4 tabular-nums text-ink-2 @xs:not-sr-only @xs:mt-1 @xs:line-clamp-2 @xs:h-8',
   /**
    * One minimum width for every label the row can carry, so the optimistic flip
    * from "Mark visited" to "Remove" cannot resize the row it sits in.
    */
-  action: 'col-span-2 w-full @xs:col-span-1 @xs:w-auto @xs:min-w-30',
+  action: 'w-full @xs:w-auto @xs:min-w-30',
   /**
-   * Two lines of caption at a stated 16px leading: 32px in every state, whether
-   * it holds the hint, a two-line failure or the tail of one fading out.
+   * A stated box at every width, whether it holds the hint, a failure or the
+   * tail of one fading out — and tall enough at each width to hold the longest
+   * sentence the block can be handed.
+   *
+   * Two lines of 16px leading is 32px, and two lines is what a 344px record pane
+   * needs for the longest refusal the server writes. In the 284px card a phone
+   * gets, the same sentence wraps to three, and clipping the third line is
+   * clipping the half of the message that says what to do about it — so the
+   * strip is 48px there. It is a container query rather than a breakpoint
+   * because the block is mounted in two hosts of different widths on the same
+   * screen, and it is stated per width rather than grown on demand because a
+   * strip that grows when a write fails pushes the rows out from under the
+   * reader's cursor at the worst possible moment (SPEC §2h).
+   *
+   * Every step in it is on the grid, the glyph included: a 16px icon against a
+   * 16px first line needs no optical nudge to sit on the same baseline, so the
+   * half-step this row used to carry bought nothing but a value off the scale.
    */
-  message: 'mt-2 flex h-8 items-start gap-1.5',
-  messageText: 'line-clamp-2 text-caption leading-4',
+  message: 'mt-2 flex h-12 items-start gap-2 @xs:h-8',
+  messageText: 'line-clamp-3 text-caption leading-4 @xs:line-clamp-2',
+  messageGlyph: 'size-4 shrink-0 text-danger',
 } as const
 
 /* --------------------------------------------------------------------- copy */
@@ -175,74 +291,185 @@ interface RowCopy {
 /**
  * The recorded days, printed once.
  *
- * `visitSpan` writes the single-day case as "Visited 4 Dec 2021", which is right
- * on a record card and wrong twice over here: under a row already headed
- * "Visited", and inside a sentence that has already said "recorded visit". Every
- * other shape it returns is a bare span and is used as it stands.
+ * The single-day case is the date alone: this row is already headed "Visited",
+ * and the sentence below has already said "recorded visit". `visitLine()` is
+ * the shared reading, so the days here and the days in the record above cannot
+ * disagree about a country.
  */
-function spanLine(visit: CountryActionsVisit): string {
-  const span = visitSpan(visit.firstVisitedOn, visit.lastVisitedOn)
-  return span.kind === 'single' ? span.date.label : span.summary
+function spanLine(
+  visit: CountryActionsVisit,
+  t: Translate,
+  locale: Locale,
+): string {
+  return visitLine(
+    visitSpan(visit.firstVisitedOn, visit.lastVisitedOn),
+    t,
+    locale,
+  )
 }
 
 /**
- * What the atlas row says. The optimistic case — claimed as visited with no row
- * to read yet — states what the write is about to produce, which is a visit with
- * no dates behind it.
+ * What the atlas row says.
+ *
+ * The optimistic case — claimed as visited with no row to read yet — is written
+ * in the *same words* the row it is about to become will use. A mark made from
+ * this block produces a single visit with no days recorded, which the settled
+ * row prints as {@link UNRECORDED_VISIT_LABEL}; a placeholder that said the same
+ * thing differently made the caption change a second time, eighty milliseconds
+ * after the state had stopped changing, for a fact that had not moved.
  */
 function visitCopy(
   visited: boolean,
   visit: CountryActionsVisit | null,
+  t: Translate,
+  locale: Locale,
 ): RowCopy {
   if (!visited) {
     return {
-      title: 'Not visited',
-      caption: 'A visit with no trip behind it.',
+      title: t('atlas.actions.visit.absent.title'),
+      caption: t('atlas.actions.visit.absent.caption'),
     }
   }
   if (visit === null) {
-    return { title: 'Visited', caption: 'Recorded without a trip.' }
+    return {
+      title: t('atlas.actions.visit.title'),
+      caption: t('atlas.record.datesUnrecorded'),
+    }
   }
-  const dates = spanLine(visit)
+  const dates = spanLine(visit, t, locale)
   return {
-    title: 'Visited',
+    title: t('atlas.actions.visit.title'),
     // The tally is only worth the words when it is more than one, and the
     // record above this block already carries the count as a badge.
     caption:
       visit.visitCount > 1
-        ? `${pluralise(visit.visitCount, 'visit')} · ${dates}`
+        ? t('atlas.actions.visit.caption', {
+            visits: t('atlas.record.visits', {
+              count: visit.visitCount,
+              visits: formatNumber(visit.visitCount, locale),
+            }),
+            dates,
+          })
         : dates,
   }
 }
 
 /** What the bucket-list row says, in the same three shapes. */
-function goalCopy(listed: boolean, goal: CountryActionsGoal | null): RowCopy {
+function goalCopy(
+  listed: boolean,
+  goal: CountryActionsGoal | null,
+  t: Translate,
+): RowCopy {
   if (!listed) {
     return {
-      title: 'Not on the list',
-      caption: 'Somewhere you mean to go.',
+      title: t('atlas.actions.goal.absent.title'),
+      caption: t('atlas.actions.goal.absent.caption'),
     }
   }
   if (goal === null) {
-    return { title: 'On the bucket list', caption: 'Waiting for its turn.' }
+    return {
+      title: t('atlas.actions.goal.title'),
+      caption: t('atlas.actions.goal.waiting'),
+    }
   }
   if (goal.isAchieved) {
     return {
-      title: 'Ticked off the list',
-      caption: 'You got there. The entry stays as the record.',
+      title: t('atlas.actions.goal.achieved.title'),
+      caption: t('atlas.actions.goal.achieved.caption'),
     }
   }
   return {
-    title: 'On the bucket list',
+    title: t('atlas.actions.goal.title'),
     caption:
       goal.targetYear === null
-        ? 'Waiting for its turn.'
-        : `Aiming for ${goal.targetYear}.`,
+        ? t('atlas.actions.goal.waiting')
+        : // A year is written out, never grouped: `2,027` is a quantity, and
+          // every numbering system the twenty-three tags carry is `latn`.
+          t('atlas.actions.goal.target', { year: String(goal.targetYear) }),
   }
 }
 
-/** The resting line under the rows. Replaced by a failure, never by silence. */
-const HINT = 'Both take effect straight away, and both can be undone here.'
+/* ------------------------------------------------------------------- intent */
+
+/** Which of the two rows a press came from. */
+type RowName = 'visit' | 'goal'
+
+/** Which way a row's control is pointing: the write it would send if pressed. */
+type RowIntent = 'add' | 'remove'
+
+/**
+ * What the control is for, which is not always what the row currently says.
+ *
+ * A write in flight is the answer whenever there is one, because that is the
+ * press the reader made and the sentence they are owed. Only when both writes
+ * are idle does the row's own state decide, and then it is the optimistic state
+ * — an idle row is a settled row, so the claim and the record agree.
+ */
+function rowIntent(
+  adding: boolean,
+  removing: boolean,
+  set: boolean,
+): RowIntent {
+  if (adding) return 'add'
+  if (removing) return 'remove'
+  return set ? 'remove' : 'add'
+}
+
+/**
+ * Everything the row's button says, in one object so no two of them can be read
+ * off different values.
+ */
+interface RowControl {
+  readonly intent: RowIntent
+  /** Printed on the control. */
+  readonly label: string
+  /** The accessible name at rest. Opens with {@link label}, so 2.5.3 holds. */
+  readonly restName: string
+  /** The accessible name and the announced label while the write is running. */
+  readonly busyName: string
+}
+
+/** The atlas row's control, in both directions. */
+function visitControl(
+  intent: RowIntent,
+  name: string,
+  t: Translate,
+): RowControl {
+  return intent === 'remove'
+    ? {
+        intent,
+        label: t('atlas.actions.button.remove'),
+        restName: t('atlas.actions.visit.remove.name', { name }),
+        busyName: t('atlas.actions.visit.remove.busy', { name }),
+      }
+    : {
+        intent,
+        label: t('atlas.actions.button.mark'),
+        restName: t('atlas.actions.visit.add.name', { name }),
+        busyName: t('atlas.actions.visit.add.busy', { name }),
+      }
+}
+
+/** The bucket-list row's control, in both directions. */
+function goalControl(
+  intent: RowIntent,
+  name: string,
+  t: Translate,
+): RowControl {
+  return intent === 'remove'
+    ? {
+        intent,
+        label: t('atlas.actions.button.remove'),
+        restName: t('atlas.actions.goal.remove.name', { name }),
+        busyName: t('atlas.actions.goal.remove.busy', { name }),
+      }
+    : {
+        intent,
+        label: t('atlas.actions.button.add'),
+        restName: t('atlas.actions.goal.add.name', { name }),
+        busyName: t('atlas.actions.goal.add.busy', { name }),
+      }
+}
 
 /**
  * True when the visit is somebody's travel history rather than the undo of a
@@ -258,13 +485,33 @@ function hasVisitHistory(visit: CountryActionsVisit): boolean {
   )
 }
 
-/** What a confirmed removal says it is about to clear. */
-function visitLossLine(visit: CountryActionsVisit): string {
+/**
+ * What a confirmed removal says it is about to clear.
+ *
+ * The two optional clauses are keys of their own rather than English fragments
+ * spliced into a translated sentence, so the bracket and the comma belong to
+ * whoever is writing the language.
+ */
+function visitLossLine(
+  visit: CountryActionsVisit,
+  t: Translate,
+  locale: Locale,
+): string {
   const span = visitSpan(visit.firstVisitedOn, visit.lastVisitedOn)
-  const dates = span.kind === 'unrecorded' ? '' : ` (${spanLine(visit)})`
-  const note =
-    (visit.note ?? '').trim() === '' ? '' : ', and the note you wrote with it'
-  return `${pluralise(visit.visitCount, 'recorded visit')}${dates} would be cleared${note}. Your trips and saved places are not touched.`
+  return t('atlas.actions.confirm.visit.body', {
+    count: visit.visitCount,
+    visits: formatNumber(visit.visitCount, locale),
+    dates:
+      span.kind === 'unrecorded'
+        ? ''
+        : t('atlas.actions.confirm.visit.dates', {
+            span: spanLine(visit, t, locale),
+          }),
+    note:
+      (visit.note ?? '').trim() === ''
+        ? ''
+        : t('atlas.actions.confirm.visit.note'),
+  })
 }
 
 /* ------------------------------------------------------------- transport */
@@ -276,10 +523,6 @@ function visitLossLine(visit: CountryActionsVisit): string {
  */
 const TRANSPORT_FAILURE =
   /failed to fetch|load failed|network ?error|network request failed/i
-
-/** The one sentence a reader gets when the request never reached the server. */
-const OFFLINE_MESSAGE =
-  'Your device could not reach the server. Check the connection and try again.'
 
 /**
  * Wraps a write so a transport failure arrives in our own voice.
@@ -294,13 +537,14 @@ const OFFLINE_MESSAGE =
  */
 function readable<TInput, TResult>(
   write: (input: TInput) => Promise<TResult>,
+  offline: () => string,
 ): (input: TInput) => Promise<TResult> {
   return async (input: TInput): Promise<TResult> => {
     try {
       return await write(input)
     } catch (cause) {
       if (cause instanceof Error && TRANSPORT_FAILURE.test(cause.message)) {
-        throw new Error(OFFLINE_MESSAGE, { cause })
+        throw new Error(offline(), { cause })
       }
       throw cause
     }
@@ -308,22 +552,64 @@ function readable<TInput, TResult>(
 }
 
 /**
- * Wrapped once at module scope, not per render: `useAction` memoises `run` on
- * the function it was handed, and a fresh wrapper every render would hand it a
- * new identity every time.
+ * The four writes, wrapped once per translator rather than once per render.
+ *
+ * `useAction` memoises `run` on the function it was handed, so a fresh wrapper
+ * every render would hand it a new identity every time. `t` is itself memoised
+ * — the provider rebuilds it only when the locale or the catalogue changes, and
+ * the no-provider branch is a frozen module constant — so keying the memo on it
+ * gives the same stability while letting the offline sentence be the reader's.
  */
-const markVisited = readable(markCountryVisitedFn)
-const unmarkVisited = readable(unmarkCountryVisitedFn)
-const addGoalToList = readable(addCountryToBucketListFn)
-const dropGoalFromList = readable(removeCountryFromBucketListFn)
+function useWrites(t: Translate) {
+  return React.useMemo(() => {
+    const offline = (): string => t('atlas.actions.offline')
+    return {
+      mark: readable(markCountryVisitedFn, offline),
+      unmark: readable(unmarkCountryVisitedFn, offline),
+      addGoal: readable(addCountryToBucketListFn, offline),
+      dropGoal: readable(removeCountryFromBucketListFn, offline),
+    }
+  }, [t])
+}
+
+/* ------------------------------------------------------------------ answers */
+
+/** A bucket-list row the server has confirmed, and the country it is for. */
+interface HeldGoal {
+  readonly code: string
+  readonly goal: CountryActionsGoal
+}
+
+/**
+ * The bucket-list row inside a write's answer, in the shape this block holds.
+ *
+ * Optional at every step on purpose. The answer is a network payload, and the
+ * only thing the block does with a missing one is decline to hold a row it was
+ * not given — which leaves the control offering the additive write, the same
+ * place it started. Narrowing to the three fields the block reads also keeps the
+ * held value from carrying a name or a note that nothing here prints.
+ */
+function goalIn(state: AtlasCountryState | null): CountryActionsGoal | null {
+  const goal = state?.bucketGoal ?? null
+  if (goal === null || goal.id === '') {
+    return null
+  }
+  return {
+    id: goal.id,
+    targetYear: goal.targetYear,
+    isAchieved: goal.isAchieved,
+  }
+}
 
 /* ----------------------------------------------------------------- presence */
 
 /**
  * How long the outgoing message stays mounted for its exit, in step with
- * `--duration-fast` and with the `animate-pop-out` class that plays over it. A
- * number rather than a token read, because the timer lives in JavaScript and the
- * animation lives in CSS; they are stated together here so they cannot drift.
+ * `--duration-fast` and with the transition that plays over it. A number rather
+ * than a token read, because the timer lives in JavaScript and the transition
+ * lives in CSS; they are stated together here so they cannot drift. Nothing
+ * moves when it expires either way — the strip is a stated box, so this only
+ * decides how long an invisible sentence lingers before it is dropped.
  */
 const MESSAGE_EXIT_MS = 150
 
@@ -358,6 +644,94 @@ function useMessagePresence(error: string | null): MessagePresence {
   return { text: shown ?? '', state }
 }
 
+/* --------------------------------------------------------------- settlement */
+
+/**
+ * The longest a settled claim may stand in for an answer that never arrived.
+ *
+ * The claim is normally withdrawn the frame the loader's new row renders, which
+ * is one transition render after the write returns — under a tenth of a second
+ * on the shelf, and this ceiling is never reached. It exists for the case the
+ * happy path cannot cover: a write the server accepted whose row the loader
+ * does not come back with, in which case the block would otherwise paint a
+ * state nothing behind it agrees with, for as long as it stayed mounted. A
+ * second and a bit is long enough that no ordinary commit races it, and short
+ * enough that the row corrects itself while the reader is still looking at it.
+ */
+const CLAIM_HOLD_MS = 1200
+
+interface ClaimHold {
+  /**
+   * Resolves once the row's incoming value reads `want` — or after
+   * {@link CLAIM_HOLD_MS}, whichever comes first. Awaited inside the optimistic
+   * claim, so the claim is withdrawn on the far side of the loader's commit
+   * rather than on the far side of the request.
+   */
+  readonly settled: (want: boolean) => Promise<void>
+  /** Gives up whatever is being waited for, resolving it now. */
+  readonly release: () => void
+}
+
+interface ClaimWaiter {
+  readonly want: boolean
+  readonly resolve: () => void
+  readonly timer: number
+}
+
+/**
+ * Watches one row's incoming value and reports when it catches up with a claim.
+ *
+ * `actual` is read through a ref updated in an effect, because the question is
+ * asked from a promise continuation rather than from a render: by the time the
+ * write has returned, the value in scope is the one the last commit carried, and
+ * the only reliable "has it committed yet" is the commit itself.
+ */
+function useClaimHold(actual: boolean): ClaimHold {
+  const actualRef = React.useRef(actual)
+  const waiterRef = React.useRef<ClaimWaiter | null>(null)
+
+  const release = React.useCallback((): void => {
+    const waiter = waiterRef.current
+    if (waiter === null) return
+    waiterRef.current = null
+    window.clearTimeout(waiter.timer)
+    waiter.resolve()
+  }, [])
+
+  React.useEffect(() => {
+    actualRef.current = actual
+    if (waiterRef.current?.want === actual) {
+      release()
+    }
+  }, [actual, release])
+
+  // Unmounting is the last moment anything can be waited for: the promise has
+  // to be resolved or the claim's `finally` never runs and the reducer keeps a
+  // claim for a block that is gone.
+  React.useEffect(() => release, [release])
+
+  const settled = React.useCallback(
+    (want: boolean): Promise<void> =>
+      new Promise<void>((resolve) => {
+        // A second press supersedes the first: its claim is the newer one and
+        // is the one being painted, so the older claim has nothing left to say.
+        release()
+        if (actualRef.current === want) {
+          resolve()
+          return
+        }
+        const timer = window.setTimeout(() => {
+          waiterRef.current = null
+          resolve()
+        }, CLAIM_HOLD_MS)
+        waiterRef.current = { want, resolve, timer }
+      }),
+    [release],
+  )
+
+  return React.useMemo(() => ({ settled, release }), [settled, release])
+}
+
 /* -------------------------------------------------------------------- block */
 
 const HEADINGS = { 2: 'h2', 3: 'h3', 4: 'h4' } as const
@@ -370,10 +744,17 @@ export const CountryActions = React.forwardRef<
     { countryCode, visit, bucketGoal, headingLevel = 4, className, ...props },
     ref,
   ) => {
+    const { locale, t } = useAtlasI18n()
+    const writes = useWrites(t)
     const rowId = React.useId()
     const code = countryCode.trim().toUpperCase()
     const name = countryName(code)
     const [confirm, setConfirm] = React.useState<ConfirmRequest | null>(null)
+    const messageRef = React.useRef<HTMLParagraphElement | null>(null)
+    const visitRef = React.useRef<HTMLButtonElement | null>(null)
+    const goalRef = React.useRef<HTMLButtonElement | null>(null)
+    /** Which control started the write in flight, so focus can go back to it. */
+    const pressedRef = React.useRef<RowName | null>(null)
 
     /**
      * The claimed state of each row while a write is in flight. Keyed by the
@@ -386,38 +767,80 @@ export const CountryActions = React.forwardRef<
     const visited = overlay.get(visitKey) ?? visit !== null
     const listed = overlay.get(goalKey) ?? bucketGoal !== null
 
+    /**
+     * The bucket-list row the last successful add reported, kept for as long as
+     * the props have not caught up with it.
+     *
+     * Held with the country it belongs to for the same reason the claims are
+     * keyed by country: a row written for France must not be the row a press
+     * removes after the reader has selected Japan.
+     */
+    const [heldGoal, setHeldGoal] = React.useState<HeldGoal | null>(null)
+    /** The props are the record; the held answer only stands in for a gap. */
+    const goalRow =
+      bucketGoal ??
+      (heldGoal !== null && heldGoal.code === code ? heldGoal.goal : null)
+
+    /**
+     * When each row's claim may be given back: the commit that carries the
+     * loader's new answer, not the promise the write returned.
+     */
+    const visitHold = useClaimHold(visit !== null)
+    const goalHold = useClaimHold(bucketGoal !== null)
+
     const closeConfirm = React.useCallback(() => setConfirm(null), [])
 
-    const mark = useAction(markVisited, {
-      success: 'Marked as visited',
-      description: `${name} is on your atlas.`,
-      failure: `${name} was not marked`,
-      fallback: 'The change did not reach the server. Try again in a moment.',
+    const mark = useAction(writes.mark, {
+      success: t('atlas.actions.toast.marked'),
+      description: t('atlas.actions.toast.markedBody', { name }),
+      failure: t('atlas.actions.toast.markFailed', { name }),
+      fallback: t('atlas.actions.toast.fallback'),
     })
-    const unmark = useAction(unmarkVisited, {
-      success: 'Removed from your atlas',
-      description: `${name} is no longer marked as visited.`,
-      failure: `${name} was not removed`,
-      fallback: 'The change did not reach the server. Try again in a moment.',
+    const unmark = useAction(writes.unmark, {
+      success: t('atlas.actions.toast.unmarked'),
+      description: t('atlas.actions.toast.unmarkedBody', { name }),
+      failure: t('atlas.actions.toast.unmarkFailed', { name }),
+      fallback: t('atlas.actions.toast.fallback'),
       onSuccess: closeConfirm,
+      // A confirmation that stays open over a failure hides the only durable
+      // copy of the reason: the strip lives under the rows, behind the modal's
+      // own overlay. Standing the question down puts the reader back on the row
+      // they pressed, with the sentence under it and the offer still there to
+      // take again.
+      onError: closeConfirm,
     })
-    const addGoal = useAction(addGoalToList, {
-      success: 'Added to your bucket list',
-      description: `${name} is somewhere you mean to go.`,
-      failure: `${name} was not added`,
-      fallback: 'The change did not reach the server. Try again in a moment.',
+    const addGoal = useAction(writes.addGoal, {
+      success: t('atlas.actions.toast.listed'),
+      description: t('atlas.actions.toast.listedBody', { name }),
+      failure: t('atlas.actions.toast.listFailed', { name }),
+      fallback: t('atlas.actions.toast.fallback'),
     })
-    const dropGoal = useAction(dropGoalFromList, {
-      success: 'Removed from your bucket list',
-      description: `${name} is no longer on the list.`,
-      failure: `${name} was not removed`,
-      fallback: 'The change did not reach the server. Try again in a moment.',
+    const dropGoal = useAction(writes.dropGoal, {
+      success: t('atlas.actions.toast.unlisted'),
+      description: t('atlas.actions.toast.unlistedBody', { name }),
+      failure: t('atlas.actions.toast.unlistFailed', { name }),
+      fallback: t('atlas.actions.toast.fallback'),
       onSuccess: closeConfirm,
+      onError: closeConfirm,
     })
 
     const visitPending = mark.pending || unmark.pending
     const goalPending = addGoal.pending || dropGoal.pending
     const busy = visitPending || goalPending
+    const visitIntent = rowIntent(mark.pending, unmark.pending, visited)
+    /**
+     * The row a press on the bucket-list control would remove, which is what
+     * decides whether a removal is the thing on offer at all. Reading the
+     * addressable row rather than the painted one is what keeps the offer and
+     * the press in step: "Remove" is shown only where there is something to
+     * send it about.
+     */
+    const goalTarget = listed ? goalRow : null
+    const goalIntent = rowIntent(
+      addGoal.pending,
+      dropGoal.pending,
+      goalTarget !== null,
+    )
 
     /**
      * One strip, four possible writers. Each write clears the other three before
@@ -440,52 +863,163 @@ export const CountryActions = React.forwardRef<
       resetDrop()
     }, [resetVisit, resetUnmark, resetAdd, resetDrop])
 
+    const releaseVisit = visitHold.release
+    const releaseGoal = goalHold.release
+
     // A new country is a new subject: whatever the last one failed at is not
-    // this one's news, and the confirmation raised for it is not this one's
-    // question either.
+    // this one's news, the confirmation raised for it is not this one's
+    // question, and a claim still waiting for the last country's row is waiting
+    // for an answer this block will never read again.
     React.useEffect(() => {
       clearMessages()
       setConfirm(null)
-    }, [code, clearMessages])
+      releaseVisit()
+      releaseGoal()
+      setHeldGoal(null)
+    }, [code, clearMessages, releaseVisit, releaseGoal])
+
+    // The props are the record as soon as they carry one, so the answer that was
+    // standing in for them is dropped rather than left to resurface if the entry
+    // is later removed from somewhere else on the screen.
+    React.useEffect(() => {
+      if (bucketGoal !== null) setHeldGoal(null)
+    }, [bucketGoal])
+
+    /**
+     * Brings the failure into view in whatever is clipping the block.
+     *
+     * This block is mounted inside two scroll containers — a 230px record pane
+     * on a desktop shelf and a shorter drawer on a phone — and the strip sits
+     * under two rows that already fill them, so a reader who pressed a button
+     * at the top of the pane was being told why it failed a hundred pixels
+     * below the fold. `nearest` moves the least it can and does nothing at all
+     * when the strip is already on screen, so nothing jumps for the readers who
+     * could see it anyway. It is deliberately not `smooth`: the sentence should
+     * be readable on the next frame, and the stylesheet pins
+     * `scroll-behavior: auto` under `prefers-reduced-motion` regardless.
+     */
+    React.useEffect(() => {
+      if (error === null) return
+      const node = messageRef.current
+      // Absent in jsdom, where there is nothing to scroll in the first place.
+      if (node === null || typeof node.scrollIntoView !== 'function') return
+      node.scrollIntoView({ block: 'nearest' })
+    }, [error])
+
+    /**
+     * Hands focus back to the control that was pressed.
+     *
+     * `Button` puts a real `disabled` attribute on itself while it loads, which
+     * is right — a control that is working must not be pressed twice — but the
+     * browser drops focus from a control the moment it is disabled, and it
+     * lands on `<body>`. A keyboard reader who pressed "Add to list" was left
+     * at the top of the document with no way back to the row, and no way to
+     * reach the sentence explaining why it did not save. So when the write
+     * settles the block takes focus back, and only in the case it caused:
+     * anything else holding focus — the confirmation dialog, a row the reader
+     * tabbed on to while the write ran — keeps it.
+     */
+    React.useEffect(() => {
+      if (busy) return
+      const pressed = pressedRef.current
+      if (pressed === null) return
+      pressedRef.current = null
+      const active = document.activeElement
+      if (active !== null && active !== document.body) return
+      const node = pressed === 'visit' ? visitRef.current : goalRef.current
+      node?.focus()
+    }, [busy])
+
+    /**
+     * One write, from the press to the moment the claim it made can be given
+     * back.
+     *
+     * `useAction.run` answers `null` for a failure and the server's own state
+     * for a success, and never rejects — so a failure gives the claim back on
+     * the spot, which is the rollback the reader is owed, and a success keeps it
+     * until the row it produced has actually rendered.
+     *
+     * The answer itself is handed to `received` before the claim is held, so a
+     * row that only exists in the server's reply — the bucket-list entry's id —
+     * is on hand for the whole of that hold rather than after it.
+     */
+    async function commit<TResult>(
+      hold: ClaimHold,
+      want: boolean,
+      run: () => Promise<TResult | null>,
+      received?: (result: TResult) => void,
+    ): Promise<void> {
+      const result = await run()
+      if (result === null) return
+      received?.(result)
+      await hold.settled(want)
+    }
 
     function runMark(): void {
       clearMessages()
+      pressedRef.current = 'visit'
       void overlay.claim([[visitKey, true]], () =>
-        mark.run({ data: { countryCode: code } }),
+        commit(visitHold, true, () =>
+          mark.run({ data: { countryCode: code } }),
+        ),
       )
     }
 
     function runUnmark(): void {
       clearMessages()
+      pressedRef.current = 'visit'
       void overlay.claim([[visitKey, false]], () =>
-        unmark.run({ data: { countryCode: code } }),
+        commit(visitHold, false, () =>
+          unmark.run({ data: { countryCode: code } }),
+        ),
       )
     }
 
     function runAddGoal(): void {
       clearMessages()
+      pressedRef.current = 'goal'
       void overlay.claim([[goalKey, true]], () =>
-        addGoal.run({ data: { countryCode: code } }),
+        commit(
+          goalHold,
+          true,
+          () => addGoal.run({ data: { countryCode: code } }),
+          (state) => {
+            // The entry the server wrote, so the "Remove" this claim puts on
+            // screen has the id it needs before the loader supplies one.
+            const goal = goalIn(state)
+            if (goal !== null) setHeldGoal({ code, goal })
+          },
+        ),
       )
     }
 
     function runDropGoal(itemId: string): void {
       clearMessages()
+      pressedRef.current = 'goal'
       void overlay.claim([[goalKey, false]], () =>
-        dropGoal.run({ data: { itemId } }),
+        commit(
+          goalHold,
+          false,
+          () => dropGoal.run({ data: { itemId } }),
+          // The row is gone. Dropping it on success rather than on the press
+          // keeps it standing if the removal is refused, so a failed press
+          // leaves the offer it failed at rather than an invitation to add
+          // something that is already there.
+          () => setHeldGoal(null),
+        ),
       )
     }
 
     function onVisitPress(): void {
-      if (!visited) {
+      if (visitIntent === 'add') {
         runMark()
         return
       }
       if (visit !== null && hasVisitHistory(visit)) {
         setConfirm({
-          title: `Remove ${name} from your atlas?`,
-          description: visitLossLine(visit),
-          confirmLabel: 'Remove',
+          title: t('atlas.actions.confirm.visit.title', { name }),
+          description: visitLossLine(visit, t, locale),
+          confirmLabel: t('atlas.actions.button.remove'),
           onConfirm: runUnmark,
         })
         return
@@ -494,23 +1028,21 @@ export const CountryActions = React.forwardRef<
     }
 
     function onGoalPress(): void {
-      if (!listed) {
+      // The row this control is pointing at, which decides which write the
+      // press sends. With no row to address, the press is the additive one —
+      // the same write the label offers in that state, and one the server
+      // treats as idempotent. No press through this control does nothing.
+      const goal = goalTarget
+      if (goal === null) {
         runAddGoal()
         return
       }
-      if (bucketGoal === null) {
-        // Claimed as listed but with no row to address yet, which is only true
-        // while the add is in flight — and the control is disabled for exactly
-        // that window, so this is a guard rather than a path.
-        return
-      }
-      const itemId = bucketGoal.id
-      if (bucketGoal.isAchieved) {
+      const itemId = goal.id
+      if (goal.isAchieved) {
         setConfirm({
-          title: `Remove ${name} from your bucket list?`,
-          description:
-            'It is already ticked off, so this also removes the record that you got there. Your atlas and your trips are not touched.',
-          confirmLabel: 'Remove',
+          title: t('atlas.actions.confirm.goal.title', { name }),
+          description: t('atlas.actions.confirm.goal.body'),
+          confirmLabel: t('atlas.actions.button.remove'),
           onConfirm: () => runDropGoal(itemId),
         })
         return
@@ -518,13 +1050,18 @@ export const CountryActions = React.forwardRef<
       runDropGoal(itemId)
     }
 
-    const visitText = visitCopy(visited, visit)
-    const goalText = goalCopy(listed, bucketGoal)
+    const visitText = visitCopy(visited, visit, t, locale)
+    const goalText = goalCopy(listed, goalRow, t)
     const Heading = HEADINGS[headingLevel]
     const visitTitleId = `${rowId}-visit`
     const goalTitleId = `${rowId}-goal`
     /** The dialog owns the spinner while it is the control being pressed. */
     const confirming = confirm !== null
+    /** Busy on the control itself, which is not the same as busy in the block. */
+    const visitBusy = visitPending && !confirming
+    const goalBusy = goalPending && !confirming
+    const visitAction = visitControl(visitIntent, name, t)
+    const goalAction = goalControl(goalIntent, name, t)
 
     return (
       <div
@@ -536,11 +1073,12 @@ export const CountryActions = React.forwardRef<
         className={cn(layout.root, className)}
         {...props}
       >
-        <SectionLabel as={Heading}>Your record</SectionLabel>
+        <SectionLabel as={Heading}>{t('atlas.actions.label')}</SectionLabel>
 
         <div className={layout.rows}>
           <div
             data-part="visit-row"
+            data-set={visited ? '' : undefined}
             role="group"
             aria-labelledby={visitTitleId}
             className={layout.row}
@@ -561,24 +1099,30 @@ export const CountryActions = React.forwardRef<
               <p className={layout.caption}>{visitText.caption}</p>
             </div>
             <Button
-              variant={visited ? 'secondary' : 'primary'}
+              ref={visitRef}
+              variant={
+                visitAction.intent === 'remove' ? 'secondary' : 'primary'
+              }
               size="sm"
-              icon={visited ? <CircleMinus /> : <Check />}
-              loading={visitPending && !confirming}
-              loadingLabel={visited ? 'Removing' : 'Marking'}
+              icon={
+                visitAction.intent === 'remove' ? <CircleMinus /> : <Check />
+              }
+              loading={visitBusy}
+              loadingLabel={visitAction.busyName}
               disabled={goalPending}
               aria-label={
-                visited ? `Remove ${name} from your atlas` : undefined
+                visitBusy ? visitAction.busyName : visitAction.restName
               }
               onClick={onVisitPress}
               className={layout.action}
             >
-              {visited ? 'Remove' : 'Mark visited'}
+              {visitAction.label}
             </Button>
           </div>
 
           <div
             data-part="goal-row"
+            data-set={listed ? '' : undefined}
             role="group"
             aria-labelledby={goalTitleId}
             className={layout.row}
@@ -599,31 +1143,32 @@ export const CountryActions = React.forwardRef<
               <p className={layout.caption}>{goalText.caption}</p>
             </div>
             <Button
+              ref={goalRef}
               variant="secondary"
               size="sm"
-              icon={listed ? <CircleMinus /> : <Plus />}
-              loading={goalPending && !confirming}
-              loadingLabel={listed ? 'Removing' : 'Adding'}
+              icon={goalAction.intent === 'remove' ? <CircleMinus /> : <Plus />}
+              loading={goalBusy}
+              loadingLabel={goalAction.busyName}
               disabled={visitPending}
-              aria-label={
-                listed ? `Remove ${name} from your bucket list` : undefined
-              }
+              aria-label={goalBusy ? goalAction.busyName : goalAction.restName}
               onClick={onGoalPress}
               className={layout.action}
             >
-              {listed ? 'Remove' : 'Add to list'}
+              {goalAction.label}
             </Button>
           </div>
         </div>
 
-        <p data-part="message" className={layout.message}>
+        <p ref={messageRef} data-part="message" className={layout.message}>
           {message.text === '' ? (
-            <span className={cn(layout.messageText, 'text-ink-3')}>{HINT}</span>
+            <span className={cn(layout.messageText, 'text-ink-3')}>
+              {t('atlas.actions.hint')}
+            </span>
           ) : (
             <>
               <TriangleAlert
                 aria-hidden="true"
-                className="mt-0.5 size-3.5 shrink-0 text-danger"
+                className={layout.messageGlyph}
               />
               <span
                 data-state={message.state}
@@ -631,7 +1176,16 @@ export const CountryActions = React.forwardRef<
                 className={cn(
                   layout.messageText,
                   'text-danger',
-                  'data-[state=open]:animate-rise data-[state=closed]:animate-pop-out',
+                  // In on `animate-rise` — 220ms of `--ease-out-quint`, opacity
+                  // and transform only — and out on a transition of the same
+                  // curve at `--duration-fast`, rather than on the house
+                  // `animate-pop-out`, whose easing is the one curve this block
+                  // is asked not to use. Under `prefers-reduced-motion` the
+                  // stylesheet collapses both to nothing and pins the transform
+                  // flat through `data-motion-transform`.
+                  'transition-[opacity,transform] duration-fast ease-out-quint',
+                  'data-[state=open]:animate-rise',
+                  'data-[state=closed]:translate-y-1 data-[state=closed]:opacity-0',
                 )}
               >
                 {message.text}

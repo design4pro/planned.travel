@@ -40,7 +40,6 @@
  * array in source is a slot, and a slot gets filled at 2 a.m., so there is no slot.
  */
 
-import { BANNED_USER_MESSAGE } from '#/routes/(auth)/-lib/errors'
 import { ac, roles } from './access'
 import type { AdminOptions } from 'better-auth/plugins/admin'
 
@@ -57,6 +56,24 @@ export const IMPERSONATION_SESSION_SECONDS = 900
  * the raw argument, not its defaulted copy — which is what lets the drift test assert on the shape
  * the running Worker actually has. Read defaults from behaviour, never from here.
  */
+/**
+ * The message Better Auth attaches to its own `BANNED_USER` error.
+ *
+ * Declared here rather than imported from the auth screens, because the plugin throws this out of
+ * `session.create.before` before any request has negotiated a language: there is no locale to key
+ * a translation against at that moment. It is a transport default, not screen copy. What the
+ * suspended account actually reads is chosen by `src/routes/(auth)/-lib/errors.ts`, which maps the
+ * `BANNED_USER` code onto message keys - never onto this sentence - so `docs/SPEC.md` §8.6 holds.
+ *
+ * KNOWN GAP, named rather than papered over: that mapping does not exist yet. `BANNED_USER` has no
+ * entry in `BY_CODE`, so a suspended account currently falls through to `error.unexpected` and
+ * reads "Something went wrong" in its own language. Closing it needs `error.banned.title` and
+ * `error.banned.detail` in the English namespace **and** in all twenty-two translations, which the
+ * §8.2 parity gate requires and which a merge is the wrong place to invent.
+ */
+export const BANNED_USER_MESSAGE =
+  'This account is suspended and cannot sign in. If you believe that is a mistake, reply to any email from planned.travel and a person will look into it.'
+
 export const adminOptions = {
   /**
    * Server-inert, and carried anyway. Nothing in the plugin's server path reads it; it exists so

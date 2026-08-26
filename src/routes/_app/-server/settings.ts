@@ -8,6 +8,8 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
+import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
+import { resolveLocaleTag } from '#/lib/i18n/negotiate'
 import { getSession } from '#/server/auth/session'
 import {
   DISTANCE_UNITS,
@@ -23,6 +25,7 @@ import {
   listMemberProfiles,
   listPendingInvitations,
   listPreferences,
+  localeSchema,
   resolveQuotas,
   setPreference,
   updateOrganizationSettings,
@@ -30,6 +33,8 @@ import {
 } from '#/server/repos'
 import { appScope } from './context'
 import { isoOf, isoOfRequired } from './serialise'
+
+import type { Locale } from '#/lib/i18n'
 
 /* ----------------------------------------------------------------- profile */
 
@@ -41,6 +46,19 @@ export interface RegionalSettings {
   readonly dateFormat: string
   readonly distanceUnit: (typeof DISTANCE_UNITS)[number]
   readonly mapStyle: string
+}
+
+/**
+ * The same six fields, with the locale already narrowed to a shipped tag.
+ *
+ * Every payload below normalises the column it read — a workspace created before the picker existed
+ * still carries `en-GB` — so this is what the values actually are. It is a separate type rather than
+ * a narrowing of {@link RegionalSettings} only because `/settings/organization` still binds its
+ * workspace language to a `SimpleSelect` whose `onValueChange` takes a `string`; that control is the
+ * language picker's job to replace, and `defaults` can be narrowed with it.
+ */
+export interface ResolvedRegionalSettings extends RegionalSettings {
+  readonly locale: Locale
 }
 
 export interface ProfilePayload {
@@ -57,9 +75,10 @@ export interface ProfilePayload {
     readonly joinedAt: string | null
     readonly organizationName: string
   }
-  readonly effective: RegionalSettings
+  readonly effective: ResolvedRegionalSettings
   readonly overrides: {
-    readonly locale: string | null
+    /** `null` is the follow-the-workspace state the picker offers as its own option. */
+    readonly locale: Locale | null
     readonly timezone: string | null
     readonly currency: string | null
     readonly weekStartsOn: number | null
@@ -67,7 +86,7 @@ export interface ProfilePayload {
     readonly distanceUnit: string | null
     readonly mapStyle: string | null
   }
-  readonly workspaceDefaults: RegionalSettings
+  readonly workspaceDefaults: ResolvedRegionalSettings
 }
 
 async function requireSessionUser(): Promise<{
@@ -125,7 +144,7 @@ export const loadProfile = createServerFn({ method: 'GET' }).handler(
         mapStyle: effective.mapStyle,
       },
       overrides: {
-        locale: userRow.locale,
+        locale: resolveLocaleTag(userRow.locale),
         timezone: userRow.timezone,
         currency: userRow.currency,
         weekStartsOn: userRow.weekStartsOn,
@@ -134,7 +153,7 @@ export const loadProfile = createServerFn({ method: 'GET' }).handler(
         mapStyle: userRow.mapStyle,
       },
       workspaceDefaults: {
-        locale: orgRow.locale,
+        locale: resolveLocaleTag(orgRow.locale) ?? DEFAULT_LOCALE,
         timezone: orgRow.timezone,
         currency: orgRow.defaultCurrency,
         weekStartsOn: orgRow.weekStartsOn,
@@ -150,26 +169,88 @@ export const loadProfile = createServerFn({ method: 'GET' }).handler(
 /** `''` clears an override so the workspace default takes over again. */
 const optionalOverride = z.string().trim().max(64)
 
+/**
+ * The locale field of the two settings forms.
+ *
+ * `''` is the picker's follow-the-workspace option and clears the column to `NULL`; anything else
+ * must be a tag the product ships, so this is {@link localeSchema} — `z.enum` over the frozen
+ * registry, with the negotiator's own canonicalisation in front of it — and not the free text the
+ * other five fields still are. A tag D1 would have accepted but the message layer cannot render is
+ * rejected here, at the boundary, rather than surfacing three requests later as a screen in the
+ * wrong language.
+ */
+const localeOverride = z.union([z.literal(''), localeSchema])
+
+/** The six personal overrides, exported so the round-trip is testable without a session. */
+export const regionalSettingsInput = z.object({
+  locale: localeOverride,
+  timezone: optionalOverride,
+  currency: optionalOverride,
+  dateFormat: optionalOverride,
+  weekStartsOn: z.number().int().min(0).max(6).nullable(),
+  distanceUnit: z.union([z.literal(''), z.enum(DISTANCE_UNITS)]),
+})
+
+/**
+ * Turns the empty-string sentinel into the `NULL` the column uses for "follow the workspace".
+ *
+ * The language picker's follow-the-workspace chip and the five `Workspace default` options in the
+ * regional form all submit `''`, and `NULL` is what makes {@link getEffectiveSettings} fall back to
+ * the workspace row. Keeping the two representations converted in one named place is what stops a
+ * sixth field from quietly persisting the empty string as a value in its own right.
+ */
+export function overrideOrNull<T extends string>(value: T | ''): T | null {
+  return value === '' ? null : value
+}
+
+/**
+ * The traveller's language, on its own — one chip click in the language picker.
+ *
+ * {@link regionalSettingsInput} cannot serve that click from either side. It requires all six
+ * regional fields, so a payload carrying only `locale` fails Zod; and every one of those fields
+ * treats `''` as "clear this override", so a client that fills the gaps with empty strings silently
+ * blanks the traveller's timezone, currency, date format and distance unit on the way past. Widening
+ * the six to optional would fix the first problem by handing a client the second one — an optional
+ * `''` is still a write. A separate, narrower input is what makes a locale-only write possible
+ * *without* giving anyone a way to reach a column this write has no business touching:
+ * {@link updateUserSettings} passes the parsed patch through `definedOnly`, so a field this object
+ * does not carry is not in the `SET` clause at all.
+ *
+ * `''` keeps its meaning from {@link regionalSettingsInput}: the follow-the-workspace chip, cleared
+ * to `NULL` by {@link overrideOrNull}.
+ */
+export const languagePreferenceInput = z.object({ locale: localeOverride })
+
+export const saveLanguagePreference = createServerFn({ method: 'POST' })
+  .validator(languagePreferenceInput)
+  .handler(async ({ data }): Promise<{ readonly locale: Locale | null }> => {
+    const scope = await appScope()
+    // `docs/ARCHITECTURE.md` §4 rule 2, as in `saveRegionalSettings`: no cache holds this row, so
+    // there is no key to drop, and the re-negotiation this write is for reads D1 on the next
+    // request rather than KV. The saved value is returned so the caller renders what D1 now holds
+    // instead of the tag it hoped for — `en-GB` is stored, and answered, as `en`.
+    const row = await updateUserSettings(scope, {
+      locale: overrideOrNull(data.locale),
+    })
+    return { locale: resolveLocaleTag(row.locale) }
+  })
+
 export const saveRegionalSettings = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      locale: optionalOverride,
-      timezone: optionalOverride,
-      currency: optionalOverride,
-      dateFormat: optionalOverride,
-      weekStartsOn: z.number().int().min(0).max(6).nullable(),
-      distanceUnit: z.union([z.literal(''), z.enum(DISTANCE_UNITS)]),
-    }),
-  )
+  .validator(regionalSettingsInput)
   .handler(async ({ data }): Promise<{ readonly saved: true }> => {
     const scope = await appScope()
+    // `docs/ARCHITECTURE.md` §4 rule 2: a mutation drops the cached state it invalidates before it
+    // returns. §4's table lists no settings key — plan state, sessions, tiles and queue idempotency
+    // are the four caches — so there is nothing to delete here, and the traveller's next request
+    // negotiates its language from this D1 row rather than from KV's up-to-60-second-stale copy.
+    // A settings cache added later belongs on both sides of that rule, in this handler.
     await updateUserSettings(scope, {
-      locale: data.locale === '' ? null : data.locale,
-      timezone: data.timezone === '' ? null : data.timezone,
-      currency: data.currency === '' ? null : data.currency,
-      dateFormat: data.dateFormat === '' ? null : data.dateFormat,
+      locale: overrideOrNull(data.locale),
+      timezone: overrideOrNull(data.timezone),
+      currency: overrideOrNull(data.currency),
+      dateFormat: overrideOrNull(data.dateFormat),
       weekStartsOn: data.weekStartsOn,
-      distanceUnit: data.distanceUnit === '' ? null : data.distanceUnit,
+      distanceUnit: overrideOrNull(data.distanceUnit),
     })
     return { saved: true }
   })
@@ -355,7 +436,7 @@ export const loadOrganizationSettings = createServerFn({
       createdAt: isoOfRequired(organization.createdAt),
     },
     defaults: {
-      locale: defaults.locale,
+      locale: resolveLocaleTag(defaults.locale) ?? DEFAULT_LOCALE,
       timezone: defaults.timezone,
       currency: defaults.defaultCurrency,
       weekStartsOn: defaults.weekStartsOn,
@@ -382,19 +463,32 @@ export const loadOrganizationSettings = createServerFn({
   }
 })
 
+/** The workspace defaults an owner or admin may set. Exported for the same reason as above. */
+export const workspaceDefaultsInput = z.object({
+  defaultCurrency: z.string().trim().length(3),
+  locale: localeSchema,
+  timezone: z.string().trim().min(1).max(64),
+  dateFormat: z.string().trim().min(1).max(32),
+  weekStartsOn: z.number().int().min(0).max(6),
+  distanceUnit: z.enum(DISTANCE_UNITS),
+})
+
+/**
+ * Writes the workspace defaults. Refused for anyone below `admin`.
+ *
+ * The `canAdminister` flag on {@link OrganizationPayload} disables the form for a plain member, and
+ * that is all it does — a POST is a POST, and the flag is on the far side of the wire. The gate that
+ * decides is {@link updateOrganizationSettings}, which asserts the caller's role from the tenant
+ * scope before it touches the row, exactly as `updateOrganization` gates a workspace rename and
+ * `addMember` gates an invitation. Re-checking here would be a second copy of a rule that has to
+ * hold for every caller of that repository function, not just this one.
+ */
 export const saveWorkspaceDefaults = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      defaultCurrency: z.string().trim().length(3),
-      locale: z.string().trim().min(2).max(16),
-      timezone: z.string().trim().min(1).max(64),
-      dateFormat: z.string().trim().min(1).max(32),
-      weekStartsOn: z.number().int().min(0).max(6),
-      distanceUnit: z.enum(DISTANCE_UNITS),
-    }),
-  )
+  .validator(workspaceDefaultsInput)
   .handler(async ({ data }): Promise<{ readonly saved: true }> => {
     const scope = await appScope()
+    // The workspace language is the fallback every member without an override reads, so this write
+    // changes what other travellers see. Nothing caches it — see the note in `saveRegionalSettings`.
     await updateOrganizationSettings(scope, data)
     return { saved: true }
   })

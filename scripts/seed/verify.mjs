@@ -5,11 +5,16 @@
  *
  *   node scripts/seed/verify.mjs [--remote]
  *
- * Three things are checked, because they are the three that would silently ruin the demo:
+ * Four things are checked, because they are the four that would silently ruin the demo:
  *
  * 1. **Row counts** per table, so an empty screen can be traced to missing rows rather than a bug.
- * 2. **Split integrity** — every expense's shares must sum to exactly its amount.
- * 3. **Balances** per trip and traveller: `paid − share + settled out − settled in`. The sum across a
+ * 2. **Trip identifiers** — each demo trip must still carry the exact primary key the dataset
+ *    declares. A trip's cover art is a pure hash of its id, so a key the seed generated instead of
+ *    reading from the fixture repaints the card and moves every recorded screenshot of it. The ids
+ *    are restated here on purpose rather than imported: a check that reads its expectation from the
+ *    code it is checking cannot fail.
+ * 3. **Split integrity** — every expense's shares must sum to exactly its amount.
+ * 4. **Balances** per trip and traveller: `paid − share + settled out − settled in`. The sum across a
  *    trip must equal minus the total of any expense nobody has claimed, and nothing else.
  *
  * Local D1 caps a compound `SELECT` at a handful of terms, so the count query is issued in small
@@ -84,6 +89,32 @@ const COUNTERS = [
   ['member', 'member'],
 ]
 
+/**
+ * The primary key each demo trip must carry, in the order the applier writes them — which is also
+ * ascending id order, because `order by id` is the cursor every paginated list pages on.
+ *
+ * Kept in step with `src/routes/api/dev/-seed/dataset/{flagship,trips}.ts` by hand. Changing an id
+ * there without changing it here is meant to turn this check red: the recorded screenshots of
+ * `/trips` and `/dashboard` are photographs of exactly these five strings.
+ */
+const DEMO_TRIP_IDS = [
+  'demo-trip-01-tokyo-and-kyoto',
+  'demo-trip-02-lisbon-long-weekend',
+  'demo-trip-03-dolomites-hut-to-hut',
+  'demo-trip-04-marrakech-riad-week',
+  'demo-trip-05-patagonia-traverse',
+]
+
+/** `demo-trip-04-marrakech-riad-week` → `marrakech-riad-week`. */
+function slugOf(id) {
+  return id.replace(/^demo-trip-\d\d-/, '')
+}
+
+const DEMO_TRIP_SQL = `
+SELECT slug, id FROM trips
+WHERE slug IN (${DEMO_TRIP_IDS.map((id) => `'${slugOf(id)}'`).join(', ')})
+ORDER BY id`
+
 const SPLIT_INTEGRITY_SQL = `
 SELECT COUNT(*) AS mismatches FROM (
   SELECT e.id FROM expenses e
@@ -156,6 +187,41 @@ async function counts(remote) {
   return rows
 }
 
+/**
+ * Compares the seeded trips' primary keys against {@link DEMO_TRIP_IDS}, and checks that reading
+ * them back `order by id` returns them in the declared sequence. Returns true when both hold.
+ */
+async function checkTripIdentifiers(remote) {
+  const rows = await query(DEMO_TRIP_SQL, remote)
+  const idBySlug = new Map(rows.map((row) => [String(row.slug), String(row.id)]))
+
+  out('\nTrip identifiers')
+  let held = true
+  for (const expected of DEMO_TRIP_IDS) {
+    const slug = slugOf(expected)
+    const actual = idBySlug.get(slug)
+    const ok = actual === expected
+    held = held && ok
+    out(`  ${slug.padEnd(26)} ${ok ? expected : `${actual ?? 'MISSING'}  EXPECTED ${expected}`}`)
+  }
+
+  const readBack = rows.map((row) => String(row.id))
+  const ordered = readBack.join(' ') === DEMO_TRIP_IDS.join(' ')
+  if (!ordered) {
+    held = false
+    out(`  order by id gives ${readBack.join(', ') || '(no rows)'}`)
+  }
+
+  out(
+    `\n  ${
+      held
+        ? 'Every demo trip carries the id its dataset declares, in the declared order.'
+        : 'TRIP IDS HAVE DRIFTED — re-seed with --force, or the dataset was edited without this list.'
+    }`,
+  )
+  return held
+}
+
 async function main() {
   const remote = process.argv.includes('--remote')
   out(`planned.travel demo data — ${remote ? 'remote' : 'local'} D1\n`)
@@ -167,6 +233,8 @@ async function main() {
     out(`  ${String(row.tbl).padEnd(26)} ${row.n}`)
   }
   out(`\n  ${empty} of ${COUNTERS.length} counters are zero.`)
+
+  const identifiersHeld = await checkTripIdentifiers(remote)
 
   const [{ mismatches }] = await query(SPLIT_INTEGRITY_SQL, remote)
   out(`\nSplit integrity: ${mismatches === 0 ? 'every expense sums to its shares' : `${mismatches} MISMATCHES`}`)
@@ -210,7 +278,7 @@ async function main() {
   }
 
   out(`\n${ok ? 'All money checks passed.' : 'MONEY CHECKS FAILED.'}`)
-  if (!ok) process.exitCode = 1
+  if (!ok || !identifiersHeld) process.exitCode = 1
 }
 
 main().catch((error) => {

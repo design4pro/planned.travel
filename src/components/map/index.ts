@@ -89,17 +89,39 @@ export type { DayRoutesProps } from './day-routes'
  * upgrades itself to the 1:50m cut — `loadCountryDetail()` from `#/lib/map` —
  * as soon as that asset arrives. Two answers a screen may already have rendered
  * move with it: `hasCountryOutline()` starts saying yes to Singapore, Malta and
- * the Maldives, and `countryBounds()` grows to hold a country's offshore
- * territories. Anything that renders either should read it through
- * `subscribeCountryDetail()` rather than once.
+ * the Maldives, and `countryBounds()` sharpens, gaining the Balearics for Spain
+ * and the near Ryukyus for Japan.
+ *
+ * `useCountryDetail()` is how anything outside the map is told. Read it in the
+ * component that renders either answer and put it in the dependency list of the
+ * memo that resolves them — a memo keyed on the record alone resolves once
+ * against the bundled cut and then contradicts the map for the life of the
+ * screen. It is a subscription over process-wide state, so mounting it beside
+ * the map costs no second request.
+ *
+ * `countryBounds()` is a camera frame, not a measurement of how much planet a
+ * country covers: it is grown outwards from the principal landmass, so France
+ * frames as the metropole and Corsica while Réunion, Guadeloupe and French
+ * Guiana stay drawn, filled and hoverable on the layer. Fit it and you have
+ * framed the country the reader named.
  */
 export {
+  useCountryDetail,
   VisitedCountries,
   VISITED_COUNTRY_LAYER_IDS,
   VISITED_COUNTRY_SOURCE_ID,
   VISITED_COUNTRY_ZOOM,
 } from './visited-countries'
 export type { VisitedCountriesProps } from './visited-countries'
+
+/* ----------------------------------------------------------------------- copy */
+/**
+ * The `atlas` namespace, read optionally so a component still renders with no
+ * `I18nProvider` above it. `src/components/atlas` reads its copy through the
+ * same hook — see `./copy`.
+ */
+export { COPY_SLOT, splitSlot, useAtlasCopy, useAtlasI18n } from './copy'
+export type { AtlasI18n } from './copy'
 
 /* ------------------------------------------------------------------- behaviour */
 export {

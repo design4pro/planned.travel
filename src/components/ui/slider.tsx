@@ -2,7 +2,9 @@ import * as React from 'react'
 import { Slider as SliderPrimitive } from 'radix-ui'
 
 import { cn } from '#/lib/cn'
+import { formatNumber } from '#/lib/format'
 import { useField } from './field'
+import { useUiI18n } from './copy'
 import { focusRing, transitionBase } from './shared'
 
 const trackHeights = { sm: 'h-1', md: 'h-1.5', lg: 'h-2' } as const
@@ -14,8 +16,9 @@ export type SliderProps = Omit<
 > & {
   size?: keyof typeof trackHeights
   /**
-   * Renders a value bubble above each thumb. Pass a formatter to control the
-   * text — currency, distance, "3 nights".
+   * Renders a value bubble above each thumb. Left alone, the bubble carries the
+   * bare number grouped for the negotiated locale; pass a formatter to say what
+   * the number *is* — currency, distance, "3 nights".
    */
   showValue?: boolean
   formatValue?: (value: number) => string
@@ -39,7 +42,7 @@ export const Slider = React.forwardRef<HTMLSpanElement, SliderProps>(
       className,
       size = 'md',
       showValue = false,
-      formatValue = (value) => String(value),
+      formatValue,
       ticks,
       minLabel,
       maxLabel,
@@ -52,9 +55,14 @@ export const Slider = React.forwardRef<HTMLSpanElement, SliderProps>(
     },
     ref,
   ) => {
+    const { locale } = useUiI18n()
     const field = useField()
     const values = value ?? defaultValue ?? [min]
     const span = max - min || 1
+    // `String(n)` was ASCII digits and an ASCII decimal point in every locale.
+    // The grouped form is the same one the rest of the product uses, so a bubble
+    // reading 1 200 in French sits beside a caption that says the same.
+    const label = formatValue ?? ((next: number) => formatNumber(next, locale))
 
     return (
       <div className={cn('w-full', showValue && 'pt-7')}>
@@ -99,11 +107,14 @@ export const Slider = React.forwardRef<HTMLSpanElement, SliderProps>(
               {showValue ? (
                 <span
                   className={cn(
+                    // Centred over the thumb: symmetrical, so it needs no
+                    // direction of its own.
                     'pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 rounded-sm bg-inverse px-1.5 py-0.5',
                     'text-caption font-semibold tabular-nums text-inverse-on shadow-elevated',
                   )}
+                  data-numeric=""
                 >
-                  {formatValue(thumbValue)}
+                  {label(thumbValue)}
                 </span>
               ) : null}
             </SliderPrimitive.Thumb>
@@ -116,7 +127,10 @@ export const Slider = React.forwardRef<HTMLSpanElement, SliderProps>(
               <span
                 key={tick}
                 className="absolute top-0 h-1 w-px -translate-x-1/2 rounded-full bg-edge-strong/70"
-                style={{ left: `${((tick - min) / span) * 100}%` }}
+                // The scale runs from the inline start, so the ticks are placed
+                // from it too: Radix reverses the track under `dir="rtl"` and a
+                // physical `left` would have left them behind.
+                style={{ insetInlineStart: `${((tick - min) / span) * 100}%` }}
               />
             ))}
           </div>

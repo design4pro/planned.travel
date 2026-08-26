@@ -4,7 +4,6 @@ description: >
   Implements one /ultrabuild work item to the standard in docs/SPEC.md, scoped strictly to the
   item's owned paths. Knows this repo's pinned stack, token contract, dependency freeze and
   clean-room rule. Invoked by the ultrabuild workflow; not meant to be called directly.
-tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch, mcp__claude_ai_Context7__query-docs, mcp__claude_ai_Context7__resolve-library-id, mcp__plugin_cloudflare_cloudflare-docs__search_cloudflare_documentation, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_resize, mcp__plugin_playwright_playwright__browser_click, mcp__plugin_playwright_playwright__browser_console_messages, mcp__plugin_playwright_playwright__browser_evaluate
 ---
 
 You build one slice of **planned.travel** — a multi-tenant SaaS travel planner on TanStack Start

@@ -1,7 +1,6 @@
 ---
 description: Fan out sub-agents, loop, and adversarially critique until the task meets docs/SPEC.md — deterministic every run
 argument-hint: <task description> | resume | status | stop
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Workflow, Skill, ScheduleWakeup, TodoWrite, TaskOutput, WebFetch, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_resize, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_console_messages, mcp__plugin_playwright_playwright__browser_evaluate, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # /ultrabuild — run the standard perfection loop
@@ -15,6 +14,10 @@ Current run state (empty means no run in progress):
 Accepted / rejected item tally:
 
 !`test -f .claude/ultrabuild/items.json && node -e 'const s=require("./.claude/ultrabuild/items.json").items||[];const c=s.reduce((a,i)=>((a[i.status]=(a[i.status]||0)+1),a),{});console.log(JSON.stringify(c),"of",s.length)' 2>/dev/null || echo 'no items yet'`
+
+Carried knowledge (tracked in git, survives archiving):
+
+!`node -e 'const r=(f)=>{try{return require("./.claude/ultrabuild/knowledge/"+f).length}catch(e){return 0}};console.log(r("facts.json"),"facts ·",r("refuted.json"),"refuted claims ·",r("backlog.json"),"backlog items")'`
 
 ---
 
@@ -36,9 +39,11 @@ and decide whether the loop continues. Do not re-implement the workflow inline.
 If starting a new task:
 
 - `slug` = the task lowercased, non-alphanumerics collapsed to `-`, truncated to 48 chars.
-- If `run.json` exists with a **different** `slug`, move the whole `.claude/ultrabuild/`
-  payload to `.claude/ultrabuild/archive/<old-slug>/` first. Never silently overwrite another
-  run's state.
+- If `run.json` exists with a **different** `slug`, move the run's payload to
+  `.claude/ultrabuild/archive/<old-slug>/` first — `run.json`, `items.json`, `findings.jsonl`,
+  `report.md`, `extensions.json`, `shots/`, `recon/`. Never silently overwrite another run's state.
+  **`knowledge/` does not move.** It is the only thing that crosses runs, and it is why the second
+  run does not rediscover the first one's environment.
 - Write `.claude/ultrabuild/run.json`:
 
 ```json
@@ -58,6 +63,27 @@ If starting a new task:
 If resuming: read `run.json` and `items.json` as-is. **Do not re-derive the task, do not
 re-decompose already-accepted items, do not restate the goal in your own words.** The whole point
 of these files is that round 20 pursues the same objective as round 1.
+
+### `task` is the user's words and does not grow
+
+A previous run's `task` reached 10 KB because every fact the loop established was appended to it as
+prose — verified facts, a port policy, a capture rule, a scope note. That blob then went into the
+recon and decompose prompt of every subsequent round, and it did not survive archiving, so the next
+run began by rediscovering all of it.
+
+Established knowledge goes to `.claude/ultrabuild/knowledge/` instead, and the workflow injects it
+scoped to the agents it applies to:
+
+- **`facts.json`** — something you MEASURED that a later agent would otherwise measure again.
+  `{id, claim, evidence, measuredIn, scope[], invalidatesWhen}`. `scope` is any of `builder`,
+  `capture`, `critic`, `auditor`, `mechanical`.
+- **`refuted.json`** — a claim investigated and found wrong, so it is not filed a fourth time.
+  `{id, claim, why, cost, blindSafe, scope[]}`. Set `blindSafe: true` only when the wording cannot
+  reveal which side of the blind pair is ours; only those reach the critic.
+- **`backlog.json`** — work deliberately deferred, with the diagnosis that produced it.
+
+Write to these when a round settles something. Never write a product decision here — that is the
+user's call, not a fact.
 
 ## Step 2 — Load the contract (read, do not paraphrase)
 
@@ -89,64 +115,29 @@ Run these and fix what is trivially fixable before invoking the workflow.
 - Playwright browsers present → `pnpm exec playwright install` if a launch fails with
   "Executable doesn't exist". Both `chromium` and `webkit` are needed (the config runs a desktop
   Chromium project and a mobile WebKit one).
-- **Dev server: the reserved port range 3010-3020.** Ports **3010 to 3020 belong to ultrabuild and
-  to nothing else**. Everything below 3010 belongs to the developer or to another project — port
-  3000 currently serves an unrelated app — so a round never binds there, never probes there and
-  never kills there.
-
-  This rule exists because it was learned the hard way: six rounds in a row started a server and
-  left it running, because there was no way to tell our process from someone else's and therefore
-  no safe way to clean up. A reserved range makes ownership decidable, so cleanup becomes safe.
-
-  Start of round — reclaim the range, then bind one port in it:
+- **Dev server, and its base URL.** One command owns this:
 
   ```
-  for p in $(seq 3010 3020); do
-    pid=$(lsof -nP -iTCP:$p -sTCP:LISTEN -t 2>/dev/null) && [ -n "$pid" ] && kill $pid
-  done
-  pnpm exec vite dev --port 3010 --strictPort &
-  curl -s -o /dev/null -w '%{http_code}' http://localhost:3010/
+  PORT=$(scripts/ultrabuild/resolve-port.sh --start)
   ```
 
-  **Call `vite` directly, never `pnpm dev`.** The `dev` script in `package.json` is
-  `vite dev --port 3000`, so `pnpm dev -- --port 3010` passes *two* `--port` flags and Vite keeps
-  the first one. This was tried and it bound 3000 — the very port the rule above forbids, which
-  happened to be free at that moment. `pnpm exec vite dev` has no baked-in port and honours the
-  flag.
-
-  `--strictPort` is not optional either: without it Vite silently walks to the next free port and
-  the round loses track of what it bound. If 3010 is genuinely wedged, use 3011, and say which
-  port the round is on in your report.
-
-  End of round — kill it, unconditionally, before you write the report:
-
-  ```
-  for p in $(seq 3010 3020); do
-    pid=$(lsof -nP -iTCP:$p -sTCP:LISTEN -t 2>/dev/null) && [ -n "$pid" ] && kill $pid
-  done
-  ```
-
-  Every Playwright invocation gets `PLAYWRIGHT_BASE_URL=http://localhost:<the port you bound>`
-  passed explicitly. Without it `playwright.config.ts` falls back to `http://localhost:3000`
-  (line 10) with `reuseExistingServer` on (line 129), and the gate photographs whatever unrelated
-  application happens to be answering there — a green run proving nothing about this repo.
-- **Visual verification: Ego Lite first, Playwright for the gate.** `~/.local/bin/ego-browser` is a
-  light Chromium built for agents, and the `ego-browser` skill drives it. Use it for the
-  look-at-the-screen work inside a round: checking a change rendered, grabbing a screenshot for the
-  blind A/B pair, walking a flow by hand. Keep Playwright for what only it does — the committed
-  baseline comparison, cross-browser (the config runs desktop Chromium and mobile WebKit), and the
-  end-to-end specs. A round that only needs to look at a page does not need Playwright and must not
-  start a server for it.
-- **Local D1, before the seed.** Every worktree carries its own `.wrangler/state`, so a worktree
-  that has not run migrations has an empty database and the seed fails with
-  `Failed query: select "id" from "user" …`. Run `pnpm db:migrate:local` first; it is idempotent
-  and reports which migrations were already applied. `--local` only ever touches this worktree.
+  It reuses the lowest port in 3000-3010 that identifies as this app by its own `/api/dev/seed`
+  endpoint, and starts exactly one server only if none does. Do not probe by hand and do not assume
+  3000 — on this machine it has belonged to an unrelated project. Export the resolved port as
+  `PLAYWRIGHT_BASE_URL` for every Playwright invocation this round, or `playwright.config.ts` waits
+  on 3000 forever and hangs the round.
 - **Demo data and the demo session.** The authenticated half of the visual gate signs in as
-  `rafal@planned.travel`. Run `node scripts/seed/seed.mjs --url http://localhost:<port>` if the
+  `rafal@planned.travel`. Run `node scripts/seed/seed.mjs --url http://localhost:$PORT` if the
   authenticated specs report themselves as skipped — it provisions the workspace and reconciles the
   account password, and is idempotent, so running it is always safe. Note the seed script's own port
-  probe only covers 3000-3005, so pass `--url` explicitly — with the reserved range it will never
-  find the port on its own.
+  probe only covers 3000-3005, so pass `--url` explicitly.
+
+  Then refresh the cached session, because a stale one does not fail — it redirects, and the capture
+  files a picture of the login screen:
+
+  ```
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+  ```
 - Baselines: if `e2e/__screenshots__` is empty, seed it once with
   `PLAYWRIGHT_BASE_URL=… pnpm exec playwright test --update-snapshots`. After that **never** pass
   `--update-snapshots` automatically — a gate that rewrites its own baseline cannot fail, and
@@ -159,7 +150,38 @@ Run these and fix what is trivially fixable before invoking the workflow.
 
 ## Step 4 — Invoke the workflow (this is the sub-agent fan-out)
 
-Call it exactly once per round:
+First compute what the workflow cannot compute for itself. It runs in a sandbox with **no
+filesystem**, so every file it needs is handed in through `args`.
+
+**Recon cache.** Four high-effort readers run per round. Across twelve rounds of one run the
+contract reader read 68 KB of documents twelve times for an answer that never changed. Hash each
+reader's inputs and reuse any cached result whose hash still matches:
+
+```
+CONTRACT_HASH=$(git hash-object docs/SPEC.md docs/DESIGN.md docs/ARCHITECTURE.md docs/DEPLOY.md | tr -d '\n')
+STACK_HASH=$(git hash-object package.json pnpm-lock.yaml | tr -d '\n')
+CODEBASE_HASH=$(git rev-parse HEAD)
+REFERENCE_HASH=<run.slug>
+```
+
+For each reader, if `.claude/ultrabuild/recon/<key>.json` exists and its `hash` equals the hash
+above, put its `result` into `args.recon[<key>]`. Otherwise leave it out — the workflow will run
+that reader and hand the fresh result back. Pass all four hashes as `args.reconHashes` either way.
+
+**Item hashes.** So an item whose files did not move is not re-photographed:
+
+```
+git hash-object <each item's ownedPaths, expanded> | tr -d '\n'
+```
+
+one combined hash per item, into `args.itemHashes` keyed by item id. Skip a path that does not exist.
+
+**Priority.** Name the items that unblock the round in `args.priorityItems` — above all, any item
+that is the reason the mechanical gate is red. Alphabetical order used to decide this, and it cost
+four rounds: the one item that could turn the gate green sorted last and was deferred twice while
+every other item was failed for its redness.
+
+Then call it exactly once per round:
 
 ```
 Workflow({
@@ -169,11 +191,22 @@ Workflow({
     slug: <run.slug>,
     round: <run.round + 1>,
     maxItemRounds: <run.maxItemRounds>,
-    onlyItems: <ids of items whose status !== "accepted", or [] on round 1>,
-    knownItems: <contents of items.json, or [] on round 1>
+    onlyItems: <ids of items whose status is "rejected" or "pending", or [] on round 1>,
+    knownItems: <contents of items.json, or [] on round 1>,
+    facts:    <.claude/ultrabuild/knowledge/facts.json>,
+    refuted:  <.claude/ultrabuild/knowledge/refuted.json>,
+    backlog:  <.claude/ultrabuild/knowledge/backlog.json>,
+    recon: <cached reader results that are still valid>,
+    reconHashes: { contract, stack, codebase, reference },
+    itemHashes: <id -> combined hash of its ownedPaths>,
+    priorityItems: <ids that unblock the round>
   }
 })
 ```
+
+An item at `accepted-pending-gate` is **not** in `onlyItems`: both its lenses passed it and only the
+repo gate stands between it and acceptance. Rebuilding it is how finished work got rebuilt for
+someone else's failing test across eight rounds.
 
 This instruction is your authorisation to use the Workflow tool — the command exists to run it.
 On **round 1 only**, print one line first:
@@ -188,11 +221,27 @@ while one is pending.
 ## Step 5 — Persist
 
 - `items.json` ← returned `items` (merged over `knownItems` by `id`; accepted items stay accepted
-  unless the workflow explicitly reopened them).
+  unless the workflow explicitly reopened them). **Store state, not evidence.** Keep each item's
+  fields plus `findings` as `{fingerprint, severity, file, line, summary}` — drop `allFindings`,
+  every `evidence` string, and `contractExtensions`. The evidence lives in `findings.jsonl` and the
+  extensions in `extensions.json`; carrying both again here is what took `items.json` to 188 KB, all
+  of which travelled back into the workflow's `args` every round.
+- Record `hashAtVerdict` on each item the workflow judged this round: the same combined
+  `git hash-object` over its `ownedPaths`, taken **after** the round's edits. That is what lets the
+  next round skip re-photographing an item nobody touched.
 - `findings.jsonl` ← append `newFindings`, one JSON object per line.
+- Close what got fixed: for each entry in `resolvedFindings`, drop that fingerprint from its item's
+  carried `findings`. A finding used to stay on the list until a round happened not to mention it,
+  so builders were handed problems they had already solved.
+- `knowledge/facts.json` ← fold in `learnedFacts`. Give each a stable `id` and `measuredIn`, and
+  drop any that duplicates an existing claim or that is a defect rather than a measurement.
+- `recon/<key>.json` ← for each key in the returned `recon`, write `{hash, result}` verbatim.
 - `report.md` ← regenerate: task, round, per-item status table, each item's critic verdict and
-  A/B winner, open blocking findings, what changed this round.
-- `run.json` ← `round += 1`; `dryRounds = newFindings.length === 0 ? dryRounds + 1 : 0`.
+  A/B winner, open blocking findings, what changed this round. State `accepted-pending-gate`
+  distinctly from `rejected`: the first means done and waiting on the repo, the second means the
+  item's own work failed.
+- `run.json` ← `round += 1`; `dryRounds = newFindings.length === 0 ? dryRounds + 1 : 0`. Do not
+  append prose to `task` — see Step 1.
 - Commit the round's work: `git add -A && git commit` with a message naming the accepted items.
   Skip `git push` when `git remote` is empty (it currently is).
 
@@ -201,7 +250,9 @@ while one is pending.
 Evaluate in this order:
 
 1. **Done** — every item `accepted` **and** `dryRounds >= 2` → `ScheduleWakeup({stop: true})`,
-   print the final report, say plainly that the gate passed.
+   print the final report, say plainly that the gate passed. An item at `accepted-pending-gate` is
+   not done: a green repo is exactly what it is waiting for, so if the gate is green and one is
+   still pending, run one more round to convert it rather than reporting it as a failure.
 2. **Capped** — `round >= maxRounds`, or the token budget is nearly spent → stop the loop and
    report exactly which items are still unaccepted and why. Do not claim success.
 3. **Blocked** — a **contract-level** ambiguity only (the spec contradicts itself, or the task

@@ -73,15 +73,27 @@ export const toast = {
   /**
    * The destructive-action companion: confirm by doing, then offer the way back.
    * Far kinder than an "are you sure?" dialog on an action we can reverse.
+   *
+   * `undoLabel` is required rather than defaulted. This module is imperative —
+   * there is no React tree to read the locale from — so the one word it would
+   * otherwise invent has to come from the caller's own `t('ui.action.undo')`.
+   * An English default here would be an English word on a Polish screen with
+   * nothing to catch it.
    */
   undo: (
     message: React.ReactNode,
     onUndo: () => void,
-    options?: ToastOptions & { undoLabel?: string },
+    options: ToastOptions & { undoLabel: string },
   ) => {
-    const { undoLabel = 'Undo', ...rest } = options ?? {}
+    const { undoLabel, ...rest } = options
     return sonner(message, {
-      icon: <Undo2 className="size-4 text-ink-3" aria-hidden="true" />,
+      icon: (
+        <Undo2
+          className="size-4 text-ink-3"
+          aria-hidden="true"
+          data-mirror-rtl
+        />
+      ),
       duration: 8000,
       action: { label: undoLabel, onClick: onUndo },
       ...rest,

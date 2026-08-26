@@ -6,12 +6,19 @@ import { z } from 'zod'
 
 import { Button, Field, Input } from '#/components/ui'
 import { authClient, toAuthFailure } from '#/lib/auth/client'
+import { useTranslate } from '#/lib/i18n'
 import { describeCallbackError, describeFailure } from './-lib/errors'
-import { resendVerificationSchema } from './-lib/schemas'
 import { DEFAULT_REDIRECT } from './-lib/redirect'
 import { loadVerificationState } from './-server/config'
 import { AuthShell } from './-ui/auth-shell'
-import { AuthPanel, FieldStack, FormAlert, visibleError } from './-ui/form'
+import {
+  AuthPanel,
+  EmailSentence,
+  FieldStack,
+  FormAlert,
+  useAuthSchemas,
+  visibleError,
+} from './-ui/form'
 
 import type { AuthMessage } from './-lib/errors'
 import type { ResendVerificationValues } from './-lib/schemas'
@@ -66,6 +73,8 @@ const DEFAULTS: ResendVerificationValues = { email: '' }
 function VerifyEmailPage() {
   const state = Route.useLoaderData()
   const { error } = Route.useSearch()
+  const t = useTranslate()
+  const schemas = useAuthSchemas()
 
   const [failure, setFailure] = React.useState<AuthMessage | null>(() =>
     error ? describeCallbackError(error) : null,
@@ -90,9 +99,9 @@ function VerifyEmailPage() {
 
   const form = useForm({
     defaultValues: DEFAULTS,
-    validators: { onChange: resendVerificationSchema },
+    validators: { onChange: schemas.resendVerification },
     onSubmit: async ({ value }) => {
-      const parsed = resendVerificationSchema.safeParse(value)
+      const parsed = schemas.resendVerification.safeParse(value)
       if (!parsed.success) return
       await resendTo(parsed.data.email)
     },
@@ -101,29 +110,37 @@ function VerifyEmailPage() {
   /* ------------------------------------------------------ already verified */
 
   if (state.verified) {
+    const confirmed = state.email
     return (
       <AuthShell
-        eyebrow="Email confirmed"
-        heading="You are all set"
-        description="Your address is verified, so invitations, reminders and trip digests will reach you."
+        eyebrow={t('auth.verify.done.eyebrow')}
+        heading={t('auth.verify.done.heading')}
+        description={t('auth.verify.done.description')}
       >
         <AuthPanel>
           <Notice
             tone="success"
             icon={<BadgeCheck className="size-5" aria-hidden="true" />}
-            title="Verified"
+            title={t('auth.verify.done.title')}
           >
-            {state.email ?? 'Your email address'} is confirmed on this account.
+            {confirmed ? (
+              <EmailSentence
+                text={t('auth.verify.done.body', { email: confirmed })}
+                email={confirmed}
+              />
+            ) : (
+              t('auth.verify.done.bodyUnknown')
+            )}
           </Notice>
           <Button
             variant="primary"
             size="lg"
             block
             className="mt-6"
-            iconAfter={<ArrowRight />}
+            iconAfter={<ArrowRight data-mirror-rtl />}
             asChild
           >
-            <Link to="/dashboard">Go to your dashboard</Link>
+            <Link to="/dashboard">{t('auth.verify.done.action')}</Link>
           </Button>
         </AuthPanel>
       </AuthShell>
@@ -136,23 +153,22 @@ function VerifyEmailPage() {
     const email = state.email
     return (
       <AuthShell
-        eyebrow="One last thing"
-        heading="Confirm your email address"
+        eyebrow={t('auth.verify.pending.eyebrow')}
+        heading={t('auth.verify.pending.heading')}
         description={
-          <>
-            We sent a confirmation link to{' '}
-            <span className="font-semibold text-ink">{email}</span>. Opening it
-            keeps your account recoverable and lets trip-mates invite you.
-          </>
+          <EmailSentence
+            text={t('auth.verify.pending.description', { email })}
+            email={email}
+          />
         }
         footer={
           <>
-            Wrong address?{' '}
+            {t('auth.verify.pending.wrongAddress')}{' '}
             <Link
               to="/settings"
               className="rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
             >
-              Change it in settings
+              {t('auth.verify.pending.changeIt')}
             </Link>
           </>
         }
@@ -162,11 +178,15 @@ function VerifyEmailPage() {
           <Notice
             tone="brand"
             icon={<MailCheck className="size-5" aria-hidden="true" />}
-            title={resentTo ? 'Sent again just now' : 'The link lasts 24 hours'}
+            title={
+              resentTo
+                ? t('auth.verify.pending.resentTitle')
+                : t('auth.verify.pending.title')
+            }
           >
             {resentTo
-              ? 'Give it a minute, then check your inbox — and your spam folder.'
-              : 'Nothing in your inbox? Check spam, then send it again.'}
+              ? t('auth.verify.pending.resentBody')
+              : t('auth.verify.pending.body')}
           </Notice>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Button
@@ -174,19 +194,21 @@ function VerifyEmailPage() {
               size="lg"
               block
               loading={resending}
-              loadingLabel="Sending again"
+              loadingLabel={t('auth.verify.pending.resending')}
               onClick={() => void resendTo(email)}
             >
-              Resend confirmation
+              {t('auth.verify.pending.resend')}
             </Button>
             <Button
               variant="primary"
               size="lg"
               block
-              iconAfter={<ArrowRight />}
+              iconAfter={<ArrowRight data-mirror-rtl />}
               asChild
             >
-              <Link to={DEFAULT_REDIRECT}>Continue anyway</Link>
+              <Link to={DEFAULT_REDIRECT}>
+                {t('auth.verify.pending.continue')}
+              </Link>
             </Button>
           </div>
         </AuthPanel>
@@ -198,15 +220,15 @@ function VerifyEmailPage() {
 
   return (
     <AuthShell
-      eyebrow="Email confirmation"
-      heading="Send a new confirmation link"
-      description="Confirmation links last 24 hours and work only once. Tell us your address and a fresh one is on its way."
+      eyebrow={t('auth.verify.request.eyebrow')}
+      heading={t('auth.verify.request.heading')}
+      description={t('auth.verify.request.description')}
       footer={
         <Link
           to="/login"
           className="rounded-sm font-semibold text-brand underline decoration-brand/35 underline-offset-4 focus-ring hover:decoration-brand"
         >
-          Back to sign in
+          {t('auth.verify.request.back')}
         </Link>
       }
     >
@@ -218,10 +240,9 @@ function VerifyEmailPage() {
             <Notice
               tone="success"
               icon={<MailCheck className="size-5" aria-hidden="true" />}
-              title="On its way"
+              title={t('auth.verify.request.sentTitle')}
             >
-              If that address has an account awaiting confirmation, the link is
-              in its inbox now.
+              {t('auth.verify.request.sentBody')}
             </Notice>
             <Button
               variant="secondary"
@@ -230,7 +251,7 @@ function VerifyEmailPage() {
               className="mt-6"
               onClick={() => setResentTo(null)}
             >
-              Use a different email
+              {t('auth.verify.request.change')}
             </Button>
           </>
         ) : (
@@ -245,7 +266,7 @@ function VerifyEmailPage() {
               <form.Field name="email">
                 {(field) => (
                   <Field
-                    label="Email address"
+                    label={t('auth.field.email')}
                     htmlFor={field.name}
                     error={visibleError(field.state.meta)}
                   >
@@ -259,7 +280,7 @@ function VerifyEmailPage() {
                       spellCheck={false}
                       inputMode="email"
                       size="lg"
-                      placeholder="you@example.com"
+                      placeholder={t('auth.field.email.placeholder')}
                       autoFocus
                       value={field.state.value}
                       onBlur={field.handleBlur}
@@ -283,12 +304,12 @@ function VerifyEmailPage() {
                     variant="primary"
                     size="lg"
                     block
-                    icon={<Send />}
+                    icon={<Send data-mirror-rtl />}
                     loading={isSubmitting || resending}
-                    loadingLabel="Sending your link"
+                    loadingLabel={t('auth.verify.request.submitting')}
                     disabled={!canSubmit}
                   >
-                    Send confirmation link
+                    {t('auth.verify.request.submit')}
                   </Button>
                 )}
               </form.Subscribe>

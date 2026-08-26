@@ -37,13 +37,49 @@ vi.mock('#/server/fns/atlas', () => ({
 }))
 vi.mock('@tanstack/react-router', () => ({ useRouter: () => router }))
 
+/** The id the stood-in `addCountryToBucketListFn` reports for a new entry. */
+const CREATED_GOAL_ID = 'goal-created-nz'
+
+/**
+ * The shape every atlas write answers with. Only the bucket-list half is read
+ * by the pane's action block — it is the id an entry created here is removed
+ * by, and the props have none until the loader commits.
+ */
+function answer(
+  bucketGoal: {
+    readonly id: string
+    readonly targetYear: number | null
+    readonly isAchieved: boolean
+  } | null,
+) {
+  return {
+    countryCode: 'NZ',
+    continent: 'Oceania',
+    visit: null,
+    bucketGoal:
+      bucketGoal === null
+        ? null
+        : {
+            id: bucketGoal.id,
+            name: 'New Zealand',
+            targetYear: bucketGoal.targetYear,
+            note: null,
+            isAchieved: bucketGoal.isAchieved,
+            achievedOn: null,
+          },
+  }
+}
+
 beforeEach(() => {
   // `restoreMocks` reaches spies, not the plain `vi.fn()`s held above.
   vi.clearAllMocks()
   router.invalidate.mockResolvedValue(undefined)
-  for (const fn of [atlas.mark, atlas.unmark, atlas.add, atlas.drop]) {
-    fn.mockResolvedValue(undefined)
-  }
+  atlas.mark.mockResolvedValue(answer(null))
+  atlas.unmark.mockResolvedValue(answer(null))
+  atlas.add.mockResolvedValue(
+    answer({ id: CREATED_GOAL_ID, targetYear: null, isAchieved: false }),
+  )
+  atlas.drop.mockResolvedValue(answer(null))
 })
 
 const FRANCE: CountriesListCountry = {
@@ -78,8 +114,12 @@ const STATS: AtlasPanelProps['stats'] = {
   distanceMetres: 82_400_000,
 }
 
-function panel(overrides: Partial<AtlasPanelProps> = {}) {
-  const props: AtlasPanelProps = {
+/**
+ * Split out from {@link panel} so a test that has to re-render the panel with a
+ * changed loader answer can build the second set of props from the first.
+ */
+function props(overrides: Partial<AtlasPanelProps> = {}): AtlasPanelProps {
+  return {
     countries: [FRANCE, JAPAN],
     selectedCode: null,
     onSelect: () => {},
@@ -95,7 +135,10 @@ function panel(overrides: Partial<AtlasPanelProps> = {}) {
     bucketList: [],
     ...overrides,
   }
-  return render(<AtlasPanel {...props} />)
+}
+
+function panel(overrides: Partial<AtlasPanelProps> = {}) {
+  return render(<AtlasPanel {...props(overrides)} />)
 }
 
 /**
@@ -343,6 +386,23 @@ describe('the country section', () => {
     },
   )
 
+  /**
+   * The shelf gives this pane 156px on a phone and a country's facts plus its
+   * two writes are 264px, so the fold is permanent. Fading the last grid step
+   * of the viewport is what makes the fold read as a scroll rather than as a
+   * severed card — and it is on the viewport, not on the scroll root, so the
+   * bar down the right keeps its contrast where it matters most.
+   */
+  it('says the country pane continues past its fold', () => {
+    const { container } = panel({ tab: 'country', selectedCode: 'FR' })
+    const viewport = container.querySelector<HTMLElement>(
+      '[data-radix-scroll-area-viewport]',
+    )
+
+    expect(viewport?.className).toContain('mask-image')
+    expect(viewport?.className).toContain('var(--space-4)')
+  })
+
   it('draws no back button when the host cannot clear the selection', () => {
     panel({ tab: 'country', selectedCode: 'FR' })
     expect(screen.queryByRole('button', { name: 'All countries' })).toBeNull()
@@ -359,8 +419,24 @@ describe('the country section', () => {
     const card = screen.getByRole('article', { name: 'New Zealand' })
     expect(card.textContent).toContain('NZ')
     expect(card.textContent).toContain('Not visited')
-    expect(card.textContent).toContain('Nothing is recorded here yet')
     expect(screen.queryByText('Pick a country')).toBeNull()
+  })
+
+  /**
+   * The card names the country; the block below it states both of its states.
+   * A paragraph between them saying the same thing as the row's own title cost
+   * the shelf thirty-six of the two hundred and thirty pixels it has, and the
+   * second action is what was standing in them.
+   */
+  it('says nothing between the name and the block that the block says itself', () => {
+    panel({ tab: 'country', selectedCode: 'NZ' })
+
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    expect(card.textContent).not.toContain('Nothing is recorded here yet')
+    const heading = within(card).getByRole('heading', { name: 'New Zealand' })
+    // The country's own label, and then straight into the record block.
+    expect(within(card).getByText('Your record')).toBeTruthy()
+    expect(heading.textContent).toBe('New Zealand')
   })
 
   /**
@@ -376,9 +452,45 @@ describe('the country section', () => {
     expect(card.textContent).toContain('Not visited')
     expect(card.textContent).toContain('Not on the list')
 
-    const mark = within(card).getByRole('button', { name: 'Mark visited' })
+    // Named for the country it acts on, so the two additive controls in the
+    // pane are told apart by a screen reader without their surrounding prose.
+    const mark = within(card).getByRole('button', {
+      name: 'Mark visited, New Zealand',
+    })
+    expect(
+      within(card).getByRole('button', {
+        name: 'Add to list, New Zealand',
+      }),
+    ).toBeTruthy()
     await user.click(mark)
     expect(atlas.mark).toHaveBeenCalledWith({ data: { countryCode: 'NZ' } })
+  })
+
+  /**
+   * The pane is the keyboard and touch route to both writes, so the undo the
+   * block promises under them has to be reachable from here too — including in
+   * the window between a successful add and the loader's answer, where the
+   * entry exists on the server and the panel's props do not carry it yet.
+   */
+  it('undoes an add made from the pane, before the loader carries it', async () => {
+    const user = userEvent.setup()
+    panel({ tab: 'country', selectedCode: 'NZ' })
+
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    await user.click(
+      within(card).getByRole('button', { name: 'Add to list, New Zealand' }),
+    )
+
+    const undo = await within(card).findByRole('button', {
+      name: 'Remove New Zealand from your bucket list',
+    })
+    expect((undo as HTMLButtonElement).disabled).toBe(false)
+
+    await user.click(undo)
+    expect(atlas.drop).toHaveBeenCalledWith({
+      data: { itemId: CREATED_GOAL_ID },
+    })
+    expect(atlas.add).toHaveBeenCalledTimes(1)
   })
 
   it('offers the inverse of both writes beside a country on the record', () => {
@@ -410,6 +522,185 @@ describe('the country section', () => {
         name: 'Remove France from your bucket list',
       }),
     ).toBeTruthy()
+  })
+
+  /**
+   * One country is one card and one announcement, in both of the pane's states.
+   * The record used to sit in its own article with the block outside it, which
+   * gave a screen reader two regions for one country and gave React two places
+   * to put the block — see the mid-write test below.
+   */
+  it('carries the record and both writes in one card, not two', () => {
+    panel({ tab: 'country', selectedCode: 'FR' })
+
+    expect(screen.getAllByRole('article', { name: 'France' })).toHaveLength(1)
+    const card = screen.getByRole('article', { name: 'France' })
+    expect(card.textContent).toContain('14 Jul 2011')
+    expect(within(card).getByText('Your record')).toBeTruthy()
+    expect(
+      within(card).getByRole('button', {
+        name: 'Remove France from your atlas',
+      }),
+    ).toBeTruthy()
+    expect(
+      within(card).getByRole('button', { name: 'Add to list, France' }),
+    ).toBeTruthy()
+  })
+
+  /**
+   * The write's answer arrives before the write reports itself finished:
+   * `useAction` awaits `router.invalidate()` inside `run`, so the loader's new
+   * country lands while the pressed control is still disabled and focus is
+   * still parked on `<body>`. When the pane answered that with a different
+   * branch, React threw the whole block away at exactly that moment, the
+   * effect that hands focus back never ran, and a keyboard reader was left at
+   * the top of the document with no way back to the row or to the reason.
+   */
+  it('holds the reader on the control when the record lands mid-write', async () => {
+    const user = userEvent.setup()
+    const NEW_ZEALAND: CountriesListCountry = {
+      countryCode: 'NZ',
+      continent: 'Oceania',
+      firstVisitedOn: null,
+      lastVisitedOn: null,
+      visitCount: 1,
+      note: null,
+      hasOutline: true,
+    }
+    const before = props({ tab: 'country', selectedCode: 'NZ' })
+    const view = render(<AtlasPanel {...before} />)
+
+    // What a successful mark actually does: re-run the loaders, and hand the
+    // panel a record where a moment ago there was none.
+    router.invalidate.mockImplementation(async () => {
+      view.rerender(
+        <AtlasPanel {...before} countries={[FRANCE, JAPAN, NEW_ZEALAND]} />,
+      )
+    })
+
+    const mark = screen.getByRole('button', {
+      name: 'Mark visited, New Zealand',
+    })
+    mark.focus()
+    await user.click(mark)
+
+    const inverse = await screen.findByRole('button', {
+      name: 'Remove New Zealand from your atlas',
+    })
+    // The very same control, turned round — not a fresh one in a fresh block.
+    expect(inverse).toBe(mark)
+    expect(document.activeElement).toBe(inverse)
+    // And the facts the write produced are in the same card as the actions.
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    expect(within(card).getByText('Your record')).toBeTruthy()
+    expect(card.textContent).toContain('Oceania')
+  })
+
+  /**
+   * The other order, which is the one a browser actually runs: the loader
+   * fetches, `router.invalidate()` resolves, and the new `loaderData` is
+   * committed a render later inside a transition. The row must not fall back
+   * through "Not visited" in that gap — the success toast is already on screen
+   * saying the opposite of what it would read.
+   */
+  it('does not flash the pre-write row while the loader commits', async () => {
+    const user = userEvent.setup()
+    const NEW_ZEALAND: CountriesListCountry = {
+      countryCode: 'NZ',
+      continent: 'Oceania',
+      firstVisitedOn: null,
+      lastVisitedOn: null,
+      visitCount: 1,
+      note: null,
+      hasOutline: true,
+    }
+    const before = props({ tab: 'country', selectedCode: 'NZ' })
+    const view = render(<AtlasPanel {...before} />)
+
+    await user.click(
+      screen.getByRole('button', { name: 'Mark visited, New Zealand' }),
+    )
+
+    // The write has returned and the loader has been re-run; nothing has
+    // re-rendered the panel yet.
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    expect(card.textContent).toContain('Visited')
+    expect(card.textContent).not.toContain('Not visited')
+
+    view.rerender(
+      <AtlasPanel {...before} countries={[FRANCE, JAPAN, NEW_ZEALAND]} />,
+    )
+    const settled = screen.getByRole('article', { name: 'New Zealand' })
+    expect(settled.textContent).toContain('Visited')
+    expect(settled.textContent).not.toContain('Not visited')
+  })
+
+  /**
+   * The displayed rows are a bounded slice. A country past the cut used to read
+   * as "not on the list" and offer an add that the server answers with the row
+   * it already had — a success toast for a write that changed nothing, and the
+   * dead button the block exists to avoid.
+   */
+  it('reads the whole list, not the slice, when asked whether a country is on it', () => {
+    panel({
+      tab: 'country',
+      selectedCode: 'NZ',
+      bucketList: [],
+      bucketCountries: [
+        { countryCode: 'NZ', itemId: 'goal-nz', isAchieved: false },
+      ],
+    })
+
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    expect(card.textContent).toContain('On the bucket list')
+    expect(
+      within(card).getByRole('button', {
+        name: 'Remove New Zealand from your bucket list',
+      }),
+    ).toBeTruthy()
+  })
+
+  it('keeps the richer displayed row when the country is in both', () => {
+    panel({
+      tab: 'country',
+      selectedCode: 'FR',
+      bucketList: [
+        {
+          id: 'goal-fr',
+          name: 'France',
+          kind: 'country',
+          countryCode: 'FR',
+          targetYear: 2027,
+          isAchieved: false,
+        },
+      ],
+      bucketCountries: [
+        { countryCode: 'FR', itemId: 'goal-fr', isAchieved: false },
+      ],
+    })
+
+    // Only the displayed row carries the year, so the slice has to win.
+    expect(screen.getByText('Aiming for 2027.')).toBeTruthy()
+  })
+
+  it('falls back to the slice when no uncapped list is handed over', () => {
+    panel({
+      tab: 'country',
+      selectedCode: 'NZ',
+      bucketList: [
+        {
+          id: 'goal-nz',
+          name: 'New Zealand',
+          kind: 'country',
+          countryCode: 'NZ',
+          targetYear: null,
+          isAchieved: false,
+        },
+      ],
+    })
+
+    const card = screen.getByRole('article', { name: 'New Zealand' })
+    expect(card.textContent).toContain('On the bucket list')
   })
 
   it('lists every country beside the record and reports a choice', async () => {
@@ -682,6 +973,45 @@ describe('stacking', () => {
   })
 })
 
+/**
+ * The map paints one hue and lets lightness carry recency, so the key is the
+ * only thing on the screen that says what a shade means. It has been taken out
+ * of the narrow layout once, to buy the country pane the height its two writes
+ * wanted, and that trade is not available: a legend a reader cannot reach on a
+ * phone is WCAG 1.4.1 unmet on the surface where colour is doing the most work.
+ * The height came out of the action block's own composition instead.
+ */
+describe('the map key', () => {
+  it('stays in the panel at every width, whichever section is open', () => {
+    for (const wide of [true, false]) {
+      matchWidth(wide)
+      for (const tab of ['country', 'stats', 'bucket'] as const) {
+        const { container, unmount } = panel({ tab })
+        const legend = container.querySelector('[data-part="legend"]')
+
+        expect(legend).toBeTruthy()
+        // Present in the tree is not the same as on the screen: the footer that
+        // holds it must not be display-none at any width either.
+        expect(legend?.parentElement?.className).not.toContain('hidden')
+        unmount()
+      }
+    }
+  })
+
+  it('names every step in words, so no reader is left decoding a shade', () => {
+    matchWidth(false)
+    const { container } = panel({ tab: 'country' })
+    const steps = [
+      ...container.querySelectorAll('[data-part="legend"] [data-step]'),
+    ]
+
+    expect(steps).toHaveLength(4)
+    for (const step of steps) {
+      expect(step.textContent.trim().length).toBeGreaterThan(0)
+    }
+  })
+})
+
 describe('AtlasPanelSkeleton', () => {
   it('says it is loading once, rather than narrating empty boxes', () => {
     const { container } = render(<AtlasPanelSkeleton />)
@@ -744,15 +1074,15 @@ describe('holding still', () => {
   })
 
   /**
-   * The right-hand end of the progress row is anchored to the right, so a box
-   * that shrinks to its text moves its own left edge when the webfont arrives —
-   * a layout shift for a value that never changed.
+   * The far end of the progress row is anchored to the inline end, so a box
+   * that shrinks to its text moves its own leading edge when the webfont
+   * arrives — a layout shift for a value that never changed.
    */
   it('gives the progress value a stated width rather than its text width', () => {
     const { container } = panel()
     const value = within(container).getByText(/to go/)
     expect(value.className).toContain('w-16')
-    expect(value.className).toContain('text-right')
+    expect(value.className).toContain('text-end')
     expect(value.className).toContain('tabular-nums')
   })
 })

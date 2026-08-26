@@ -3,15 +3,16 @@ import { Link, useRouter } from '@tanstack/react-router'
 import {
   ChevronDown,
   CreditCard,
-  LoaderCircle,
   LogOut,
   Settings,
   ShieldCheck,
   SlidersHorizontal,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Avatar, Spinner } from '#/components/ui'
 import { cn } from '#/lib/cn'
-import { Avatar, transitionBase } from './kit'
+import { useTranslate } from '#/lib/i18n'
+import { transitionBase } from './kit'
 import {
   MenuContent,
   MenuDangerItem,
@@ -31,6 +32,7 @@ import type { ShellSession } from './session'
  */
 export function UserMenu({ session }: { session: ShellSession }) {
   const router = useRouter()
+  const t = useTranslate()
   const [signingOut, setSigningOut] = useState(false)
   const { user, organization } = session
 
@@ -46,8 +48,8 @@ export function UserMenu({ session }: { session: ShellSession }) {
       await router.invalidate()
       await router.navigate({ to: '/login', replace: true })
     } catch {
-      toast.error('Could not sign you out', {
-        description: 'Check your connection and try again.',
+      toast.error(t('shell.account.signOutFailed'), {
+        description: t('shell.account.signOutFailedBody'),
       })
     } finally {
       setSigningOut(false)
@@ -58,11 +60,11 @@ export function UserMenu({ session }: { session: ShellSession }) {
     <MenuRoot>
       <MenuTrigger
         className={cn(
-          'group inline-flex max-w-56 items-center gap-2 rounded-full border border-transparent py-1 pl-1 pr-1 text-label font-medium text-ink focus-ring',
+          'group inline-flex max-w-56 items-center gap-2 rounded-full border border-transparent p-1 text-label font-medium text-ink focus-ring',
           transitionBase,
-          'hover:border-edge hover:bg-surface-2 sm:pr-2.5',
+          'hover:border-edge hover:bg-surface-2 active:bg-surface-inset sm:pe-2.5',
         )}
-        aria-label="Account menu"
+        aria-label={t('shell.account.menu')}
       >
         <Avatar name={user.name} src={user.image} />
         <span className="hidden min-w-0 truncate sm:block">{user.name}</span>
@@ -91,20 +93,20 @@ export function UserMenu({ session }: { session: ShellSession }) {
         <MenuItem asChild>
           <Link to="/settings">
             <Settings aria-hidden className="size-4 text-ink-4" />
-            Settings
+            {t('shell.account.settings')}
           </Link>
         </MenuItem>
         <MenuItem asChild>
           <Link to="/settings/billing">
             <CreditCard aria-hidden className="size-4 text-ink-4" />
-            Plan &amp; billing
+            {t('shell.account.billing')}
           </Link>
         </MenuItem>
         {user.isAdmin ? (
           <MenuItem asChild>
             <Link to="/admin">
               <ShieldCheck aria-hidden className="size-4 text-ink-4" />
-              Workspace admin
+              {t('shell.account.admin')}
             </Link>
           </MenuItem>
         ) : null}
@@ -147,11 +149,11 @@ export function UserMenu({ session }: { session: ShellSession }) {
           }}
         >
           {signingOut ? (
-            <LoaderCircle aria-hidden className="size-4 animate-spin" />
+            <Spinner size="sm" label={null} />
           ) : (
-            <LogOut aria-hidden className="size-4" />
+            <LogOut aria-hidden data-mirror-rtl className="size-4" />
           )}
-          {signingOut ? 'Signing out…' : 'Sign out'}
+          {signingOut ? t('shell.account.signingOut') : t('shell.account.signOut')}
         </MenuDangerItem>
       </MenuContent>
     </MenuRoot>

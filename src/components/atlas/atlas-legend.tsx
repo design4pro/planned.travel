@@ -1,12 +1,15 @@
 import * as React from 'react'
 
 import { SectionLabel, Skeleton } from '#/components/ui'
+import { useAtlasI18n } from '#/components/map'
 import { cn } from '#/lib/cn'
+import { formatNumber } from '#/lib/format'
 import {
   DISTANT_AFTER_YEARS,
   RECENT_WITHIN_YEARS,
 } from '#/lib/map/visit-recency'
 
+import type { Locale, Translate } from '#/lib/i18n'
 import type { VisitRamp } from '#/lib/map/visit-recency'
 
 /**
@@ -66,12 +69,17 @@ interface LegendStep {
 function legendSteps(
   recent: number,
   distant: number,
+  t: Translate,
+  locale: Locale,
 ): ReadonlyArray<LegendStep> {
   return [
     {
       id: 'visitedRecent',
       swatch: 'bg-country-visited-recent ring-country-visited-edge',
-      label: recent === 1 ? 'Within the last year' : `Within ${recent} years`,
+      label: t('atlas.legend.recent', {
+        count: recent,
+        years: formatNumber(recent, locale),
+      }),
     },
     {
       id: 'visited',
@@ -81,17 +89,23 @@ function legendSteps(
       // visit and there is nothing to measure - so a key that claimed only the
       // date range left the reader to guess why an undated country was painted
       // the middle shade.
-      label: `${recent}–${distant} years ago, or undated`,
+      label: t('atlas.legend.middle', {
+        from: formatNumber(recent, locale),
+        to: formatNumber(distant, locale),
+      }),
     },
     {
       id: 'visitedDistant',
       swatch: 'bg-country-visited-distant ring-country-visited-edge',
-      label: `Over ${distant} years ago`,
+      label: t('atlas.legend.distant', {
+        count: distant,
+        years: formatNumber(distant, locale),
+      }),
     },
     {
       id: 'unvisited',
       swatch: 'bg-country-land ring-country-land-edge',
-      label: 'Not visited yet',
+      label: t('atlas.legend.unvisited'),
     },
   ]
 }
@@ -124,8 +138,7 @@ const layout = {
    * box sized by its container rather than by its contents means every swatch
    * and every label is where it was before the font landed.
    */
-  list:
-    'grid min-w-0 flex-1 grid-cols-2 items-center gap-x-4 gap-y-2 sm:grid-cols-4',
+  list: 'grid min-w-0 flex-1 grid-cols-2 items-center gap-x-4 gap-y-2 sm:grid-cols-4',
   item: 'flex min-w-0 items-center gap-2',
   /** A hairline inside the swatch, so a pale fill still has an edge on glass. */
   swatch: 'size-3 shrink-0 rounded-xs ring-1 ring-inset',
@@ -162,8 +175,9 @@ export const AtlasLegend = React.forwardRef<HTMLDivElement, AtlasLegendProps>(
     },
     ref,
   ) => {
+    const { locale, t } = useAtlasI18n()
     const headingId = React.useId()
-    const steps = legendSteps(recentWithinYears, distantAfterYears)
+    const steps = legendSteps(recentWithinYears, distantAfterYears, t, locale)
 
     return (
       <div
@@ -175,7 +189,7 @@ export const AtlasLegend = React.forwardRef<HTMLDivElement, AtlasLegendProps>(
         {...props}
       >
         <SectionLabel as="h3" id={headingId} className={layout.heading}>
-          Last visit
+          {t('atlas.legend.title')}
         </SectionLabel>
 
         {/* `role="list"` because the layout is a grid: Safari drops the
@@ -199,9 +213,7 @@ export const AtlasLegend = React.forwardRef<HTMLDivElement, AtlasLegendProps>(
         {/* Names a tab that is on screen. It read "under Countries" for a
             while, and there is no section by that name: the record and the list
             that spell out every date both live in the Country tab. */}
-        <p className={layout.note}>
-          Shade shows recency only — the Country tab writes out every date.
-        </p>
+        <p className={layout.note}>{t('atlas.legend.note')}</p>
       </div>
     )
   },

@@ -159,7 +159,7 @@ export const RadioCard = React.forwardRef<HTMLButtonElement, RadioCardProps>(
     <RadioGroupPrimitive.Item
       ref={ref}
       className={cn(
-        'group relative flex w-full items-start gap-3 rounded-lg border border-edge bg-surface p-4 text-left',
+        'group relative flex w-full items-start gap-3 rounded-lg border border-edge bg-surface p-4 text-start',
         transitionBase,
         focusRing,
         disabledState,
@@ -200,7 +200,7 @@ export const RadioCard = React.forwardRef<HTMLButtonElement, RadioCardProps>(
 
       <RadioGroupPrimitive.Indicator asChild>
         <span
-          className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-brand text-brand-on shadow-card animate-pop-in"
+          className="absolute -top-1.5 -end-1.5 grid size-5 place-items-center rounded-full bg-brand text-brand-on shadow-card animate-pop-in"
           data-motion-transform=""
         >
           <Check size={12} strokeWidth={3} aria-hidden="true" />

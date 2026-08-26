@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Compass } from 'lucide-react'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { Wordmark } from './brand'
 import { Panel, SectionLabel, buttonClass } from './kit'
 
@@ -9,24 +10,26 @@ import { Panel, SectionLabel, buttonClass } from './kit'
  * routes onward rather than dead-ending them on a apology.
  */
 export function NotFoundPanel({ className }: { className?: string }) {
+  const t = useTranslate()
+
   return (
     <Panel className={cn('flex flex-col items-center gap-5 px-6 py-14 text-center', className)}>
       <span className="flex size-12 items-center justify-center rounded-full bg-surface-2 text-ink-3">
         <Compass aria-hidden className="size-5" />
       </span>
       <div className="space-y-2">
-        <SectionLabel>Error 404</SectionLabel>
-        <h2 className="font-display text-title text-ink">This page is not on the map</h2>
+        <SectionLabel>{t('shell.notFound.eyebrow')}</SectionLabel>
+        <h2 className="font-display text-title text-ink">{t('shell.notFound.title')}</h2>
         <p className="mx-auto max-w-md text-label leading-relaxed text-ink-3">
-          The link may be out of date, or the trip it pointed at was moved or deleted.
+          {t('shell.notFound.body')}
         </p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-2">
         <Link to="/dashboard" className={buttonClass({ variant: 'primary' })}>
-          Back to dashboard
+          {t('shell.error.dashboard')}
         </Link>
         <Link to="/trips" className={buttonClass({ variant: 'secondary' })}>
-          All trips
+          {t('shell.notFound.trips')}
         </Link>
       </div>
     </Panel>
@@ -39,9 +42,15 @@ export function NotFoundPanel({ className }: { className?: string }) {
  * for its own statistics — the error page still looks like the product.
  */
 export function RootNotFound() {
+  const t = useTranslate()
+
   return (
     <div className="flex min-h-svh flex-col bg-canvas px-4 py-8 sm:px-8">
-      <Link to="/" aria-label="planned.travel home" className="w-fit rounded-md focus-ring">
+      <Link
+        to="/"
+        aria-label={t('shell.nav.homeLink')}
+        className="w-fit rounded-md focus-ring"
+      >
         <Wordmark />
       </Link>
 
@@ -54,19 +63,18 @@ export function RootNotFound() {
         </p>
         <div className="space-y-3">
           <h1 className="font-display text-title text-ink sm:text-display">
-            This page is not on the map
+            {t('shell.notFound.title')}
           </h1>
           <p className="mx-auto max-w-lg text-body leading-relaxed text-ink-3">
-            We looked everywhere along the route. The address may be mistyped, or the page has
-            since moved on.
+            {t('shell.notFound.rootBody')}
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-2.5">
           <Link to="/" className={buttonClass({ variant: 'primary', size: 'lg' })}>
-            Back to home
+            {t('shell.notFound.home')}
           </Link>
           <Link to="/pricing" className={buttonClass({ variant: 'secondary', size: 'lg' })}>
-            See the plans
+            {t('shell.notFound.plans')}
           </Link>
         </div>
       </div>

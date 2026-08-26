@@ -2,12 +2,13 @@ import * as React from 'react'
 import { CalendarOff, MapPinOff, PenLine } from 'lucide-react'
 
 import { Badge, SectionLabel, Skeleton, cardVariants } from '#/components/ui'
+import { useAtlasI18n } from '#/components/map'
 import { cn } from '#/lib/cn'
 import { countryName } from '#/lib/atlas/country-names'
-import { UNRECORDED_VISIT_LABEL, visitSpan } from '#/lib/atlas/visit-span'
-import { countryFlag, pluralise, trimmedOrNull } from '#/lib/format'
-
-import type { VisitSpan } from '#/lib/atlas/visit-span'
+import { visitSpan } from '#/lib/atlas/visit-span'
+import { countryFlag, formatNumber, trimmedOrNull } from '#/lib/format'
+import { continentLabel } from './continent'
+import { visitCells, visitGap } from './visit-copy'
 
 /**
  * One visited country, told in full.
@@ -95,7 +96,7 @@ const layout = {
   /** Dividers are drawn per cell rather than with `divide-*`, so a single-cell
       span carries no orphaned rule. */
   dateDivider:
-    'not-last:border-b not-last:border-edge-faint @sm:not-last:border-b-0 @sm:not-last:border-r',
+    'not-last:border-b not-last:border-edge-faint @sm:not-last:border-b-0 @sm:not-last:border-e',
   /** 12px rather than the primitive's 11px: this surface has a hard floor at
       12px, and the label is a value's heading, not panel furniture. */
   dateLabel: 'text-caption',
@@ -107,7 +108,7 @@ const layout = {
       and unlike `wrap-break-word` it also shrinks the paragraph's min-content
       contribution, so the record stays narrow even inside a flex track that
       would otherwise size itself to the longest unbroken run. */
-  note: 'mt-4 border-l-2 border-brand/40 pl-4 text-body wrap-anywhere text-ink-2',
+  note: 'mt-4 border-s-2 border-brand/40 ps-4 text-body wrap-anywhere text-ink-2',
 } as const
 
 export interface CountryRecordProps extends Omit<
@@ -133,90 +134,6 @@ export interface CountryRecordProps extends Omit<
   readonly headingLevel?: 2 | 3 | 4
 }
 
-/** One cell of the dates block: a heading, a value, and a machine date. */
-interface DateCell {
-  readonly label: string
-  readonly value: string
-  readonly iso: string | null
-  /** True when the cell is saying "we do not know" rather than a date. */
-  readonly absent: boolean
-}
-
-/**
- * The span's four shapes, laid out as cells.
- *
- * A range gets two cells, a single visit gets one, a half-recorded pair gets
- * two with one of them honest about the gap, and an empty pair gets one cell
- * carrying words. No shape ever prints the same day twice.
- */
-function dateCells(span: VisitSpan): ReadonlyArray<DateCell> {
-  switch (span.kind) {
-    case 'single':
-      return [
-        {
-          label: 'Visited',
-          value: span.date.label,
-          iso: span.date.iso,
-          absent: false,
-        },
-      ]
-    case 'range':
-      return [
-        {
-          label: 'First visit',
-          value: span.first.label,
-          iso: span.first.iso,
-          absent: false,
-        },
-        {
-          label: 'Last visit',
-          value: span.last.label,
-          iso: span.last.iso,
-          absent: false,
-        },
-      ]
-    case 'partial':
-      return span.edge === 'first'
-        ? [
-            {
-              label: 'First visit',
-              value: span.date.label,
-              iso: span.date.iso,
-              absent: false,
-            },
-            {
-              label: 'Last visit',
-              value: 'Not recorded',
-              iso: null,
-              absent: true,
-            },
-          ]
-        : [
-            {
-              label: 'First visit',
-              value: 'Not recorded',
-              iso: null,
-              absent: true,
-            },
-            {
-              label: 'Last visit',
-              value: span.date.label,
-              iso: span.date.iso,
-              absent: false,
-            },
-          ]
-    case 'unrecorded':
-      return [
-        {
-          label: 'Visit dates',
-          value: UNRECORDED_VISIT_LABEL,
-          iso: null,
-          absent: true,
-        },
-      ]
-  }
-}
-
 export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
   (
     {
@@ -234,16 +151,18 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
     },
     ref,
   ) => {
+    const { locale, t } = useAtlasI18n()
     const headingId = React.useId()
     const Heading = HEADINGS[headingLevel]
     const code = countryCode.trim().toUpperCase()
     const name = countryName(code)
     const span = visitSpan(firstVisitedOn, lastVisitedOn)
-    const cells = dateCells(span)
+    const cells = visitCells(span, t, locale)
     /** Trimmed, so padding a note cannot indent it or leave a blank line. */
     const written = trimmedOrNull(note)
     /**
-     * The same trim guard the note uses, for the same reason.
+     * Translated where the value is one of the seven the product writes, and
+     * `null` where the column is empty.
      *
      * `continent` is validated by `shortTextSchema`, which has no `.min(1)`, so
      * `markCountryVisited({ continent: '' })` stores an empty string. A bare
@@ -252,7 +171,7 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
      * failure, not as missing data. `CountriesList` calls the same helper, so
      * the two cannot disagree about what absent means.
      */
-    const region = trimmedOrNull(continent)
+    const region = continentLabel(continent, t)
 
     return (
       <article
@@ -296,7 +215,10 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
           </div>
 
           <Badge tone="brand" className="shrink-0 tabular-nums">
-            {pluralise(visitCount, 'visit')}
+            {t('atlas.record.visits', {
+              count: visitCount,
+              visits: formatNumber(visitCount, locale),
+            })}
           </Badge>
         </div>
 
@@ -319,7 +241,7 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
                 <dd
                   className={cn(
                     layout.dateValue,
-                    cell.absent
+                    cell.iso === null
                       ? 'flex items-center gap-2 text-ink-3'
                       : 'font-semibold text-ink',
                   )}
@@ -341,7 +263,7 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
             ))}
           </dl>
           {span.kind === 'range' ? (
-            <p className={layout.gap}>{span.gap}</p>
+            <p className={layout.gap}>{visitGap(span.days, t, locale)}</p>
           ) : null}
         </div>
 
@@ -352,7 +274,7 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
         ) : (
           <p className="mt-4 flex items-center gap-2 rounded-md border border-dashed border-edge px-4 py-3 text-caption text-ink-3">
             <PenLine size={14} aria-hidden="true" className="shrink-0" />
-            No note yet
+            {t('atlas.record.note.empty')}
           </p>
         )}
 
@@ -364,11 +286,7 @@ export const CountryRecord = React.forwardRef<HTMLElement, CountryRecordProps>(
             >
               <MapPinOff size={14} />
             </span>
-            <span>
-              The world outlines this map draws are cut at 1:110m, which folds
-              this territory into its parent state - so there is nothing to
-              frame on the map. The visit still counts.
-            </span>
+            <span>{t('atlas.record.noOutline')}</span>
           </p>
         )}
       </article>
@@ -401,7 +319,7 @@ function LineSkeleton({
       <span className="invisible">&nbsp;</span>
       <Skeleton
         radius="sm"
-        className={cn('absolute inset-y-0.5 left-0', width)}
+        className={cn('absolute inset-y-0.5 start-0', width)}
       />
     </span>
   )

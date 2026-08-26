@@ -4,86 +4,240 @@
  * This is the one implementation. `src/routes/_app/-lib/format.ts` re-exports it
  * so the thirty route modules that already import from there keep working, and
  * nothing under `src/components` has to reach into route-private code to format
- * a date - `docs/SPEC.md` §6 puts isomorphic formatters here and calls
- * `src/routes` file-based routes only.
+ * a date — `docs/SPEC.md` §6 puts isomorphic formatters here and calls
+ * `src/routes` file-based routes only. There is exactly one date formatter in
+ * the product; do not add a second one.
  *
- * The locale is pinned rather than taken from the browser: the server renders
- * these strings first, and a locale that differs between the two would produce
- * a hydration mismatch on every date and every amount on the page.
+ * ## Why every function takes a locale, and why almost nothing asks `Intl`
  *
- * **Pinning the locale is not enough for the abbreviated month.** `Intl` resolves
- * `month: 'short'` out of whichever ICU the runtime was built against, and the
- * two runtimes this app renders in disagree: workerd says `6 Sept 2024` where
- * WebKit says `6 Sep 2024`. Same locale, same date, different characters - so
- * every September date on a server-rendered page threw a React hydration error
- * in Safari, which the visual gate reproduced on /atlas across six consecutive
- * runs. The abbreviations are therefore a table in this file rather than a
- * question asked of the platform. The values are the CLDR en-GB set, which is
- * what workerd already produced, so the server's output is unchanged and it is
- * Safari that stops disagreeing.
+ * The product ships in twenty-three languages (§8), so a formatter that pins one
+ * locale is a formatter that renders the wrong language. Every function
+ * therefore takes a trailing `locale`, defaulting to `en` — which resolves to
+ * `en-GB`, the tag this module has always pinned — so every existing caller's
+ * output is unchanged to the byte while a localised screen can pass its own.
  *
- * There is exactly one date formatter in the product. Do not add a second one,
- * and do not "correct" `Sept`.
+ * What it does *not* do is ask the platform. §8.5 makes cross-runtime agreement
+ * the hardest constraint on this build, and it was learned the expensive way:
+ * `Intl` resolves month abbreviations out of whichever ICU the runtime was built
+ * against, workerd says `6 Sept 2024` where WebKit says `6 Sep 2024`, and every
+ * server-rendered September date threw a React hydration error in Safari until
+ * the abbreviations became a table. Measuring all twenty-three locales in
+ * workerd, WebKit and Chromium found nine more fields with the same fault, from
+ * Greek month names to Arabic list separators to the *number of minor units in a
+ * Hungarian forint*. They are all frozen in `./format-tables`, which documents
+ * each divergence and where its value came from.
+ *
+ * Three fields stay live because all three were measured byte-identical in the
+ * three runtimes across all twenty-three locales — decimal and percent grouping,
+ * the narrow currency symbol, and the composed `{ month: 'long', year: 'numeric'
+ * }` form. `e2e/i18n-runtime-parity.spec.ts` re-proves that on every run by
+ * rendering this module's whole surface in WebKit and comparing it against what
+ * the Worker produced, and fails the run on any difference.
  *
  * `countryName` deliberately does *not* live here. It is the one helper in the
- * old module that reaches for `Intl.DisplayNames`, whose region names also differ
+ * old module that reached for `Intl.DisplayNames`, whose region names also differ
  * between workerd and WebKit; the atlas takes its names from the frozen table in
  * `#/lib/atlas/country-names` instead, and keeping the `Intl` version out of this
  * module keeps that dependency out of every chunk that only wants a date.
  */
 
-const LOCALE = 'en-GB'
+/**
+ * The two value imports reach past `#/lib/i18n`'s barrel on purpose, and the
+ * reason is measured. The barrel re-exports `provider.tsx` and `catalogue.ts`,
+ * both of which have module-level side effects — a React import and a
+ * 230-module `import.meta.glob` — so no bundler may tree-shake them away. A
+ * probe that imports nothing but `formatDate` emits 8.2 kB through the barrel
+ * and 1.7 kB through the leaves, and the difference is React and the glob
+ * landing in every chunk that only wanted to print a date.
+ *
+ * Nothing here grows a second locale registry: both leaves are the same frozen
+ * table the barrel re-exports, and the types still come from the barrel, which
+ * is what `docs/SPEC.md` §8 asks for.
+ */
+import { DEFAULT_LOCALE, isSupportedLocale } from '#/lib/i18n/locales'
+import { plural } from '#/lib/i18n/plural'
+import type { Locale } from '#/lib/i18n'
+
+import {
+  CURRENCY_MINOR_DIGITS,
+  DEFAULT_MINOR_DIGITS,
+  LOCALE_FORMATS,
+} from './format-tables'
+import type { LocaleFormats, PluralPatterns } from './format-tables'
 
 const DAY_MS = 86_400_000
-/** CLDR en-GB abbreviated months. Note `Sept`, which is the one WebKit shortens. */
-const MONTHS_SHORT = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sept',
-  'Oct',
-  'Nov',
-  'Dec',
-] as const
 
-/** CLDR en-GB abbreviated weekdays, indexed the way `getUTCDay()` counts. */
-const WEEKDAYS_SHORT = [
-  'Sun',
-  'Mon',
-  'Tue',
-  'Wed',
-  'Thu',
-  'Fri',
-  'Sat',
-] as const
+/** The dash a range is built around, spaced the way an editor would set it. */
+const RANGE_SEPARATOR = ' – '
 
-const dateFormatter = {
-  format: (date: Date): string =>
-    `${date.getUTCDate()} ${MONTHS_SHORT[date.getUTCMonth()]} ${date.getUTCFullYear()}`,
+/** The gap UTS#35 inserts between a currency symbol and its amount. */
+const NBSP = ' '
+
+/**
+ * The bidi marks ICU attaches to a currency symbol. Measured identical in
+ * workerd and WebKit for all 3,657 locale-and-currency pairs the runtimes know,
+ * which is why they can be read from `Intl` rather than frozen.
+ */
+const BIDI_MARK = /[\u200e\u200f\u061c]/g
+
+/**
+ * UTS#35's currency-spacing test, spelled the way ICU spells it: the gap goes in
+ * unless the character facing the amount is in the Unicode *symbol* category.
+ * `€`, `£` and `¥` are symbols and sit flush against the figure; the `r` of `kr`,
+ * the `ł` of `zł` and the full stop of `р.` are not, and take the gap.
+ */
+const SYMBOL = /\p{S}/u
+
+/** The fields a date pattern can carry, longest first so `{MMMM}` wins. */
+const FIELD = /\{(MMMM|MMM|M|d|y|E)\}/g
+
+/**
+ * `Intl` instances, cached per locale at module scope.
+ *
+ * Construction is the expensive part of `Intl` — an SSR pass renders hundreds of
+ * amounts in one locale, and building a formatter per call is how a costs screen
+ * spends its CPU budget on ICU rather than on the page.
+ */
+const monthYearFormatters = new Map<Locale, Intl.DateTimeFormat>()
+const numberFormatters = new Map<Locale, Intl.NumberFormat>()
+const percentFormatters = new Map<Locale, Intl.NumberFormat>()
+const fixedFormatters = new Map<string, Intl.NumberFormat>()
+const currencySymbols = new Map<string, string>()
+
+/** The frozen row for a locale: names, patterns and layouts, no `Intl`. */
+function formatsFor(locale: Locale): LocaleFormats {
+  return LOCALE_FORMATS[locale]
 }
 
-const dayMonthFormatter = {
-  format: (date: Date): string =>
-    `${date.getUTCDate()} ${MONTHS_SHORT[date.getUTCMonth()]}`,
+function monthYearFormatter(locale: Locale): Intl.DateTimeFormat {
+  const cached = monthYearFormatters.get(locale)
+  if (cached !== undefined) {
+    return cached
+  }
+  const made = new Intl.DateTimeFormat(formatsFor(locale).intlLocale, {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+  monthYearFormatters.set(locale, made)
+  return made
 }
 
-const weekdayFormatter = {
-  format: (date: Date): string =>
-    `${WEEKDAYS_SHORT[date.getUTCDay()]} ${date.getUTCDate()} ${MONTHS_SHORT[date.getUTCMonth()]}`,
+function numberFormatter(locale: Locale): Intl.NumberFormat {
+  const cached = numberFormatters.get(locale)
+  if (cached !== undefined) {
+    return cached
+  }
+  const made = new Intl.NumberFormat(formatsFor(locale).intlLocale)
+  numberFormatters.set(locale, made)
+  return made
 }
 
-const monthYearFormatter = new Intl.DateTimeFormat(LOCALE, {
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
+function percentFormatter(locale: Locale): Intl.NumberFormat {
+  const cached = percentFormatters.get(locale)
+  if (cached !== undefined) {
+    return cached
+  }
+  const made = new Intl.NumberFormat(formatsFor(locale).intlLocale, {
+    style: 'percent',
+    maximumFractionDigits: 0,
+  })
+  percentFormatters.set(locale, made)
+  return made
+}
 
-const numberFormatter = new Intl.NumberFormat(LOCALE)
+/** A decimal formatter pinned to a currency's minor-unit digits. */
+function fixedFormatter(locale: Locale, digits: number): Intl.NumberFormat {
+  const key = `${locale}:${digits}`
+  const cached = fixedFormatters.get(key)
+  if (cached !== undefined) {
+    return cached
+  }
+  const made = new Intl.NumberFormat(formatsFor(locale).intlLocale, {
+    style: 'decimal',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })
+  fixedFormatters.set(key, made)
+  return made
+}
+
+/**
+ * The narrow symbol for a currency in this locale — `€`, `¥`, `zł`.
+ *
+ * Read from `Intl` rather than frozen because the symbol is the one part of a
+ * currency that every runtime agreed on, for all twenty-three locales and every
+ * code `Intl.supportedValuesOf('currency')` knows. What they disagreed about is
+ * the *spacing* around it and the number of minor units, and both of those come
+ * from the frozen table.
+ *
+ * `narrowSymbol` is not a cosmetic preference. `en-GB` disambiguates by default —
+ * `JP¥`, `US$`, `CA$` — and three glyphs of prefix in front of a 48px display
+ * numeral is what pushed the costs summary out of its own card. The trip already
+ * names its currency in the header, so the narrow symbol is unambiguous here.
+ */
+function narrowSymbol(locale: Locale, code: string): string {
+  const key = `${locale}:${code}`
+  const cached = currencySymbols.get(key)
+  if (cached !== undefined) {
+    return cached
+  }
+  const parts = new Intl.NumberFormat(formatsFor(locale).intlLocale, {
+    style: 'currency',
+    currency: code,
+    currencyDisplay: 'narrowSymbol',
+  }).formatToParts(0)
+  const at = parts.findIndex((part) => part.type === 'currency')
+  const glyphs = at < 0 ? code : parts[at].value
+  // Thirteen Arabic abbreviations end in a full stop, which is bidi-neutral:
+  // without a mark after it, `د.إ.` borrows its direction from whatever the
+  // sentence puts next to it and reads back to front. ICU emits the mark in the
+  // literal that follows the symbol; the rest of that literal is the spacing,
+  // which is the part the runtimes fight about, so only the mark is kept.
+  const marks = parts
+    .slice(at + 1, at + 2)
+    .filter((part) => part.type === 'literal')
+    .flatMap((part) => part.value.match(BIDI_MARK) ?? [])
+    .join('')
+  const symbol = `${glyphs}${marks}`
+  currencySymbols.set(key, symbol)
+  return symbol
+}
+
+/** Substitutes `{d}`, `{M}`, `{MMM}`, `{MMMM}`, `{y}` and `{E}` into a pattern. */
+function render(pattern: string, fields: Record<string, string>): string {
+  return pattern.replace(
+    FIELD,
+    (match, field: string) => fields[field] ?? match,
+  )
+}
+
+/** Composes one date out of the locale's frozen names and its frozen pattern. */
+function compose(date: Date, formats: LocaleFormats, pattern: string): string {
+  const month = date.getUTCMonth()
+  const weekday = date.getUTCDay()
+  return render(pattern, {
+    d: String(date.getUTCDate()),
+    M: String(month + 1),
+    MMM: (formats.monthsShortInDate ?? formats.monthsShort)[month],
+    MMMM: formats.monthsLong[month],
+    y: String(date.getUTCFullYear()),
+    E: (formats.weekdaysShortInDate ?? formats.weekdaysShort)[weekday],
+  })
+}
+
+/**
+ * Does this locale lead with the day?
+ *
+ * It decides which end of a range collapses. `23 – 30 Jun 2026` drops the
+ * repeated month from the *first* date because English starts with the day;
+ * `2026年6月23日 – 30日` drops it from the *second* because Japanese ends with it.
+ * Collapsing the wrong end produces a date nobody writes.
+ */
+function leadsWithDay(formats: LocaleFormats): boolean {
+  const pattern = formats.patterns.date
+  return pattern.indexOf('{d}') < pattern.indexOf('{y}')
+}
 
 /** Parses a `YYYY-MM-DD` column into a UTC date, or `null` when it is unusable. */
 export function parseIsoDate(value: string | null | undefined): Date | null {
@@ -103,33 +257,115 @@ export function parseInstant(value: string | null | undefined): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
-/** `2026-06-23` → `23 Jun 2026`. */
-export function formatDate(value: string | null | undefined): string | null {
-  const parsed = parseIsoDate(value) ?? parseInstant(value)
-  return parsed === null ? null : dateFormatter.format(parsed)
+/** How wide a month or weekday name is written. */
+export type NameWidth = 'short' | 'long'
+
+/**
+ * The name of a month, standalone: `Sept`, `Σεπτέμβριος`, `wrzesień`.
+ *
+ * Standalone is the distinction that matters. Several locales inflect a month
+ * differently inside a date than they do as a label — Greek writes
+ * `Σεπτεμβρίου` in `15 Σεπτεμβρίου 2026` and `Σεπτέμβριος` on its own — and the
+ * two runtimes do not even agree on which one a bare `{ month: 'long' }` returns.
+ * This is the label form; the date form is composed by `formatDate`.
+ */
+export function monthName(
+  month: number,
+  locale: Locale = DEFAULT_LOCALE,
+  width: NameWidth = 'short',
+): string | null {
+  if (!Number.isInteger(month) || month < 0 || month > 11) {
+    return null
+  }
+  const formats = formatsFor(locale)
+  return width === 'long'
+    ? formats.monthsLong[month]
+    : formats.monthsShort[month]
 }
 
-/** `2026-06-23` → `Tue, 23 Jun`. */
-export function formatWeekday(value: string | null | undefined): string | null {
-  const parsed = parseIsoDate(value) ?? parseInstant(value)
-  return parsed === null ? null : weekdayFormatter.format(parsed)
+/** The name of a weekday, indexed the way `getUTCDay()` counts: `0` is Sunday. */
+export function weekdayName(
+  weekday: number,
+  locale: Locale = DEFAULT_LOCALE,
+  width: NameWidth = 'short',
+): string | null {
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) {
+    return null
+  }
+  const formats = formatsFor(locale)
+  return width === 'long'
+    ? formats.weekdaysLong[weekday]
+    : formats.weekdaysShort[weekday]
 }
 
-/** `2026-06-01` → `June 2026`. */
-export function formatMonthYear(
+/** `2026-06-23` → `23 Jun 2026`, in this locale's own order and script. */
+export function formatDate(
   value: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
 ): string | null {
   const parsed = parseIsoDate(value) ?? parseInstant(value)
-  return parsed === null ? null : monthYearFormatter.format(parsed)
+  if (parsed === null) {
+    return null
+  }
+  const formats = formatsFor(locale)
+  return compose(parsed, formats, formats.patterns.date)
+}
+
+/** `2026-06-23` → `23 Jun`, for a row that already establishes the year. */
+export function formatDayMonth(
+  value: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
+): string | null {
+  const parsed = parseIsoDate(value) ?? parseInstant(value)
+  if (parsed === null) {
+    return null
+  }
+  const formats = formatsFor(locale)
+  return compose(parsed, formats, formats.patterns.dayMonth)
+}
+
+/** `2026-06-23` → `Tue 23 Jun`. */
+export function formatWeekday(
+  value: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
+): string | null {
+  const parsed = parseIsoDate(value) ?? parseInstant(value)
+  if (parsed === null) {
+    return null
+  }
+  const formats = formatsFor(locale)
+  return compose(parsed, formats, formats.patterns.weekdayDate)
+}
+
+/**
+ * `2026-06-01` → `June 2026`.
+ *
+ * The one date form still composed by `Intl`: `{ month: 'long', year: 'numeric' }`
+ * was byte-identical in workerd, WebKit and Chromium for all twenty-three
+ * locales, including the Greek month whose bare form is not, and the parity spec
+ * keeps it that way.
+ */
+export function formatMonthYear(
+  value: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
+): string | null {
+  const parsed = parseIsoDate(value) ?? parseInstant(value)
+  return parsed === null ? null : monthYearFormatter(locale).format(parsed)
 }
 
 /**
  * `23 – 30 Jun 2026`, collapsing the repeated month and year the way an
- * editorial style guide would.
+ * editorial style guide would — from whichever end of the pattern repeats.
+ *
+ * An open-ended range is the one place a formatter would need a connector word,
+ * and words are the catalogue's job: English keeps `From 23 Jun 2026`, and every
+ * other locale gets the language-neutral interval dash rather than a translation
+ * invented here.
  */
 export function formatDateRange(
   start: string | null | undefined,
   end: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
 ): string | null {
   const from = parseIsoDate(start)
   const to = parseIsoDate(end)
@@ -137,22 +373,32 @@ export function formatDateRange(
   if (from === null && to === null) {
     return null
   }
+  const formats = formatsFor(locale)
+  const full = (date: Date): string =>
+    compose(date, formats, formats.patterns.date)
+
   if (from === null) {
-    return to === null ? null : `Until ${dateFormatter.format(to)}`
+    return to === null
+      ? null
+      : formats.patterns.rangeOpenStart.replace('{date}', full(to))
   }
   if (to === null) {
-    return `From ${dateFormatter.format(from)}`
+    return formats.patterns.rangeOpenEnd.replace('{date}', full(from))
   }
   if (from.getTime() === to.getTime()) {
-    return dateFormatter.format(from)
+    return full(from)
   }
   if (from.getUTCFullYear() !== to.getUTCFullYear()) {
-    return `${dateFormatter.format(from)} – ${dateFormatter.format(to)}`
+    return `${full(from)}${RANGE_SEPARATOR}${full(to)}`
   }
-  if (from.getUTCMonth() !== to.getUTCMonth()) {
-    return `${dayMonthFormatter.format(from)} – ${dateFormatter.format(to)}`
-  }
-  return `${from.getUTCDate()} – ${dateFormatter.format(to)}`
+
+  const shared =
+    from.getUTCMonth() === to.getUTCMonth()
+      ? formats.patterns.day
+      : formats.patterns.dayMonth
+  return leadsWithDay(formats)
+    ? `${compose(from, formats, shared)}${RANGE_SEPARATOR}${full(to)}`
+    : `${full(from)}${RANGE_SEPARATOR}${compose(to, formats, shared)}`
 }
 
 /** A `HH:MM` column, trimmed of seconds. Returns `null` for an empty column. */
@@ -167,6 +413,7 @@ export function formatTime(value: string | null | undefined): string | null {
 export function formatTimeRange(
   start: string | null | undefined,
   end: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
 ): string | null {
   const from = formatTime(start)
   const to = formatTime(end)
@@ -174,9 +421,9 @@ export function formatTimeRange(
     return null
   }
   if (from === null) {
-    return `until ${to ?? ''}`
+    return formatsFor(locale).patterns.timeOpenStart.replace('{time}', to ?? '')
   }
-  return to === null ? from : `${from} – ${to}`
+  return to === null ? from : `${from}${RANGE_SEPARATOR}${to}`
 }
 
 /** Whole days from `today` to `value`. Negative when it has already passed. */
@@ -205,14 +452,20 @@ export function daysBetween(
   return Math.round((to.getTime() - from.getTime()) / DAY_MS) + 1
 }
 
-/** `1234` → `1,234`. */
-export function formatNumber(value: number): string {
-  return numberFormatter.format(value)
+/** `1234` → `1,234`, grouped the way this locale groups. */
+export function formatNumber(
+  value: number,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return numberFormatter(locale).format(value)
 }
 
 /** `-3` → `3`, keeping the sign out of a label that already says "ago". */
-export function formatAbsolute(value: number): string {
-  return numberFormatter.format(Math.abs(value))
+export function formatAbsolute(
+  value: number,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return numberFormatter(locale).format(Math.abs(value))
 }
 
 /** A three-letter code we are willing to hand to `Intl`. */
@@ -221,105 +474,227 @@ function currencyCode(currency: string): string {
   return /^[A-Z]{3}$/.test(code) ? code : 'EUR'
 }
 
-/** How many minor units the currency actually has — 2 for EUR, 0 for JPY. */
-function minorDigits(formatter: Intl.NumberFormat): number {
-  return formatter.resolvedOptions().minimumFractionDigits ?? 2
+/**
+ * How many minor units the currency actually has — 2 for EUR, 0 for JPY, 3 for
+ * KWD. Frozen rather than resolved, because workerd and WebKit disagree about
+ * `HUF` and `IDR`, and that disagreement changes the amount rather than its
+ * punctuation.
+ */
+export function minorUnitDigits(currency: string): number {
+  return CURRENCY_MINOR_DIGITS[currencyCode(currency)] ?? DEFAULT_MINOR_DIGITS
+}
+
+/** The currency-spacing gap: empty when a glyph faces the amount, a space otherwise. */
+function currencyGap(template: string, symbol: string): string {
+  const gap = template.indexOf('{g}')
+  if (gap < 0) {
+    return ''
+  }
+  const adjacent =
+    template.indexOf('{s}') < gap ? symbol.slice(-1) : symbol.slice(0, 1)
+  return SYMBOL.test(adjacent) ? '' : NBSP
 }
 
 /**
- * Minor units into the row's own currency: `74912300` JPY → `¥749,123`.
- * `Intl` resolves how many minor units the currency actually has, so a
- * zero-decimal currency is never divided by a hundred it does not use.
+ * Minor units into the row's own currency: `123456` EUR → `€1,234.56`, and
+ * `74912300` JPY → `¥74,912,300`, because a zero-decimal currency is never
+ * divided by a hundred it does not use.
  *
- * `narrowSymbol` is not a cosmetic preference. `en-GB` disambiguates by default
- * — `JP¥`, `US$`, `CA$` — and three glyphs of prefix in front of a 48px display
- * numeral is what pushed the costs summary out of its own card. The trip already
- * names its currency in the header, so the narrow symbol is unambiguous here.
+ * Composed from the locale's frozen layout rather than handed to `Intl` whole.
+ * The symbol and the grouped amount are the parts every runtime agreed on; the
+ * space between them is not — workerd writes `zł 1.234,50` in Indonesian where
+ * WebKit writes `zł1.234,50` — so the layout is a table and the pieces are slotted
+ * into it.
  */
-export function formatMoneyMinor(minor: number, currency: string): string {
-  const formatter = new Intl.NumberFormat(LOCALE, {
-    style: 'currency',
-    currency: currencyCode(currency),
-    currencyDisplay: 'narrowSymbol',
-  })
-  const digits = minorDigits(formatter)
-  return formatter.format(minor / 10 ** digits)
+export function formatMoneyMinor(
+  minor: number,
+  currency: string,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const code = currencyCode(currency)
+  const digits = minorUnitDigits(code)
+  const formats = formatsFor(locale)
+  const symbol = narrowSymbol(locale, code)
+  const template =
+    minor < 0 ? formats.currency.negative : formats.currency.positive
+  const amount = fixedFormatter(locale, digits).format(
+    Math.abs(minor) / 10 ** digits,
+  )
+  return template
+    .replace('{g}', currencyGap(template, symbol))
+    .replace('{s}', symbol)
+    .replace('{n}', amount)
 }
 
 /** The same amount with the symbol dropped — for a column that already names it. */
-export function formatMoneyMinorPlain(minor: number, currency: string): string {
-  const code = currencyCode(currency)
-  const digits = minorDigits(
-    new Intl.NumberFormat(LOCALE, { style: 'currency', currency: code }),
-  )
-  return new Intl.NumberFormat(LOCALE, {
-    style: 'decimal',
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(minor / 10 ** digits)
+export function formatMoneyMinorPlain(
+  minor: number,
+  currency: string,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const digits = minorUnitDigits(currency)
+  return fixedFormatter(locale, digits).format(minor / 10 ** digits)
 }
 
 /** Metres into the traveller's unit, rounded to whole km or miles. */
 export function formatDistance(
   metres: number,
   unit: 'metric' | 'imperial',
+  locale: Locale = DEFAULT_LOCALE,
 ): string {
   if (unit === 'imperial') {
-    return `${numberFormatter.format(Math.round(metres / 1609.344))} mi`
+    return `${formatNumber(Math.round(metres / 1609.344), locale)} mi`
   }
-  return `${numberFormatter.format(Math.round(metres / 1000))} km`
+  return `${formatNumber(Math.round(metres / 1000), locale)} km`
 }
 
 /** Grams into the lightest sensible unit: `840 g`, `2.4 kg`. */
-export function formatWeight(grams: number): string {
+export function formatWeight(
+  grams: number,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
   if (grams < 1000) {
-    return `${numberFormatter.format(grams)} g`
+    return `${formatNumber(grams, locale)} g`
   }
   const kilos = grams / 1000
-  return `${numberFormatter.format(Math.round(kilos * 10) / 10)} kg`
+  return `${formatNumber(Math.round(kilos * 10) / 10, locale)} kg`
 }
 
-/** `0.42` → `42%`. */
-export function formatPercent(ratio: number): string {
-  return `${Math.round(Math.min(Math.max(ratio, 0), 1) * 100)}%`
+/** `0.42` → `42%`, punctuated and placed the way this locale does it. */
+export function formatPercent(
+  ratio: number,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const clamped = Math.min(Math.max(ratio, 0), 1)
+  return percentFormatter(locale).format(Math.round(clamped * 100) / 100)
 }
 
-/** `1 place` / `4 places`, with the count already grouped. */
+/**
+ * The forms a count can take in one locale, keyed by CLDR plural category.
+ *
+ * A locale that has no `one` simply does not carry one; anything the rules
+ * select that is missing falls back to `other`, which every locale has.
+ */
+export type PluralForms = PluralPatterns
+
+/** Picks the form this count takes and puts the grouped count in front of it. */
+function agree(count: number, locale: Locale, forms: PluralForms): string {
+  const form = forms[plural(locale, count)] ?? forms.other
+  return `${formatNumber(count, locale)} ${form}`
+}
+
+/**
+ * `1 place` / `4 places`, with the count already grouped.
+ *
+ * Two shapes, and the split is deliberate. The first takes an English singular
+ * and has **no locale parameter at all**, because English two-form agreement is
+ * only ever right in English: it is pinned to `en`, and it exists so the thirty
+ * screens that predate the catalogue keep rendering while their copy moves into
+ * `t()`. The second is the localised shape — hand it a locale and that locale's
+ * own CLDR forms, and the category comes from `#/lib/i18n`'s plural layer, which
+ * is the one platform call §8.5's measurement cleared for use at render time.
+ *
+ * There is no way to spell "English words in Polish": the shorthand cannot be
+ * given another locale, and the localised form cannot be given a bare English
+ * noun.
+ */
 export function pluralise(
   count: number,
   singular: string,
   plural?: string,
+): string
+export function pluralise(
+  count: number,
+  locale: Locale,
+  forms: PluralForms,
+): string
+export function pluralise(
+  count: number,
+  wordOrLocale: string,
+  pluralOrForms?: string | PluralForms,
 ): string {
-  const word = count === 1 ? singular : (plural ?? `${singular}s`)
-  return `${numberFormatter.format(count)} ${word}`
+  if (typeof pluralOrForms === 'object') {
+    return agree(
+      count,
+      isSupportedLocale(wordOrLocale) ? wordOrLocale : DEFAULT_LOCALE,
+      pluralOrForms,
+    )
+  }
+  return agree(count, DEFAULT_LOCALE, {
+    one: wordOrLocale,
+    other: pluralOrForms ?? `${wordOrLocale}s`,
+  })
 }
 
-/** How long ago an instant was, in the coarse grain a feed actually needs. */
+/**
+ * How long ago an instant was, in the coarse grain a feed actually needs.
+ *
+ * The wording is CLDR's short relative-time form, frozen: `Intl.RelativeTimeFormat`
+ * disagrees with itself between workerd and WebKit in Russian and Traditional
+ * Chinese, and a timestamp that changes on hydration is the same defect as a
+ * month name that does.
+ */
 export function formatRelative(
   value: string | null | undefined,
   now: number,
+  locale: Locale = DEFAULT_LOCALE,
 ): string | null {
   const parsed = parseInstant(value)
   if (parsed === null) {
     return null
   }
+  const formats = formatsFor(locale)
+  const elapsed = (count: number, patterns: PluralForms): string =>
+    (patterns[plural(locale, count)] ?? patterns.other).replace(
+      '{n}',
+      formatNumber(count, locale),
+    )
+
   const seconds = Math.round((now - parsed.getTime()) / 1000)
   if (seconds < 45) {
-    return 'just now'
+    return formats.relative.now
   }
   const minutes = Math.round(seconds / 60)
   if (minutes < 60) {
-    return `${minutes}m ago`
+    return elapsed(minutes, formats.relative.minute)
   }
   const hours = Math.round(minutes / 60)
   if (hours < 24) {
-    return `${hours}h ago`
+    return elapsed(hours, formats.relative.hour)
   }
   const days = Math.round(hours / 24)
   if (days < 7) {
-    return `${days}d ago`
+    return elapsed(days, formats.relative.day)
   }
-  return dateFormatter.format(parsed)
+  return compose(parsed, formats, formats.patterns.date)
+}
+
+/**
+ * `Anna, Iwo and Marek` — a conjunction list in this locale's own punctuation.
+ *
+ * `Intl.ListFormat` is the obvious answer and is the wrong one: WebKit wraps
+ * every Arabic item in U+2068/U+2069 isolate characters and workerd does not, so
+ * a list of travellers rendered on the server is a different string in Safari.
+ * The four separators CLDR actually uses are frozen instead.
+ */
+export function formatList(
+  items: ReadonlyArray<string>,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const parts = items.filter((item) => item.length > 0)
+  if (parts.length === 0) {
+    return ''
+  }
+  if (parts.length === 1) {
+    return parts[0]
+  }
+  const { pair, start, middle, end } = formatsFor(locale).list
+  if (parts.length === 2) {
+    return `${parts[0]}${pair}${parts[1]}`
+  }
+  const last = parts[parts.length - 1]
+  const head = parts.slice(0, -1)
+  return `${head[0]}${start}${head.slice(1).join(middle)}${end}${last}`
 }
 
 /**

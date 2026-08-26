@@ -76,9 +76,22 @@ const tripFields = {
   isArchived: z.boolean().optional(),
 }
 
-export const createTripInput = z.object(tripFields)
+/**
+ * Creation accepts one field an update never may: the primary key itself.
+ *
+ * Omit it and the column's `$defaultFn(newId)` mints a time-sortable random key, which is what
+ * every real user gets. Supply it and the row is keyed by the caller's own string — the seam the
+ * demo fixture uses so a workspace rebuilt from `scripts/seed` keys its trips identically every
+ * time. That matters because a trip's cover art is a pure hash of its id, so a regenerated key
+ * silently repaints the card and moves any screenshot that photographs it.
+ *
+ * It is validated like any other id and it is never reachable from a client: `createTripFn`
+ * builds its repository input field by field, so no request body can reach this key.
+ */
+export const createTripInput = z.object({ ...tripFields, id: idSchema.optional() })
 export type CreateTripInput = z.infer<typeof createTripInput>
 
+/** Deliberately without `id`: a primary key is chosen once, at creation, and never patched. */
 export const updateTripInput = z.object({ ...tripFields, title: titleSchema.optional() })
 export type UpdateTripInput = z.infer<typeof updateTripInput>
 
@@ -290,9 +303,13 @@ function todayIso(): string {
 /**
  * Creates a trip, its unique slug, its owner membership and its day run in one flow. Quota is
  * checked first so a tenant at its plan ceiling never gets a half-built trip.
+ *
+ * `id` is left off the insert unless the caller named one, so the column's own default generator
+ * fires exactly as it does for every real user rather than being handed an `undefined` to fall
+ * back from.
  */
 export async function createTrip(scope: TenantScope, input: CreateTripInput): Promise<Trip> {
-  const values = createTripInput.parse(input)
+  const { id, ...values } = createTripInput.parse(input)
   assertDateOrder(values.startDate, values.endDate)
 
   await assertQuota(scope, 'trips', await tripsRepository.count(scope))
@@ -300,6 +317,7 @@ export async function createTrip(scope: TenantScope, input: CreateTripInput): Pr
   const slug = await reserveTripSlug(scope, values.slug ?? values.title)
   const trip = await tripsRepository.insert(scope, {
     ...values,
+    ...(id === undefined ? {} : { id }),
     slug,
     createdBy: scope.ctx.userId,
   })

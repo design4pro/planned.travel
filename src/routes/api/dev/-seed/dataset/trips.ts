@@ -11,6 +11,9 @@
  * so it is always under way, the Dolomites closed on `day(-61)` so the journal always has something
  * finished to write up, Marrakech is a season behind at `day(-278)`, and Patagonia carries no dates
  * at all. Read them as a timeline around zero and the fixture explains itself.
+ * Each `id` is a fixed constant whose ordinal continues the sequence the flagship opens, because the
+ * applier writes the flagship first and `order by id` has to keep meaning "in the order they were
+ * written". Never renumber one without renumbering the rest.
  */
 
 import { day } from './anchor'
@@ -21,6 +24,7 @@ import type { SeedTrip } from '../types'
  * ---------------------------------------------------------------------------------------------- */
 
 export const lisbonTrip: SeedTrip = {
+  id: 'demo-trip-02-lisbon-long-weekend',
   slug: 'lisbon-long-weekend',
   title: 'Lisbon, slowly',
   summary: 'Six nights in Alfama with no itinerary beyond breakfast and a tram pass.',
@@ -527,6 +531,7 @@ export const lisbonTrip: SeedTrip = {
  * ---------------------------------------------------------------------------------------------- */
 
 export const dolomitesTrip: SeedTrip = {
+  id: 'demo-trip-03-dolomites-hut-to-hut',
   slug: 'dolomites-hut-to-hut',
   title: 'Dolomites, hut to hut',
   summary: 'Eight days walking the Alta Badia and Val Gardena, sleeping in rifugi.',
@@ -1060,6 +1065,7 @@ export const dolomitesTrip: SeedTrip = {
  * ---------------------------------------------------------------------------------------------- */
 
 export const marrakechTrip: SeedTrip = {
+  id: 'demo-trip-04-marrakech-riad-week',
   slug: 'marrakech-riad-week',
   title: 'Marrakech riad week',
   summary: 'A week inside the medina walls, mostly on a roof terrace.',
@@ -1378,6 +1384,7 @@ export const marrakechTrip: SeedTrip = {
  * ---------------------------------------------------------------------------------------------- */
 
 export const patagoniaTrip: SeedTrip = {
+  id: 'demo-trip-05-patagonia-traverse',
   slug: 'patagonia-traverse',
   title: 'Patagonia traverse',
   summary: 'Torres del Paine to El Chaltén. No dates yet — waiting on the February ferry timetable.',

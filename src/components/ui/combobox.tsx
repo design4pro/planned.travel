@@ -5,6 +5,7 @@ import { cn } from '#/lib/cn'
 import { Popover, PopoverContent, PopoverTrigger } from './popover'
 import { Spinner } from './spinner'
 import { useFieldControl } from './field'
+import { useUiCopy } from './copy'
 import {
   fieldSizes,
   focusRing,
@@ -28,7 +29,7 @@ export type ComboboxOption = {
 }
 
 const triggerClasses = [
-  'flex w-full items-center gap-2 rounded-md border border-edge-strong bg-surface text-left text-ink',
+  'flex w-full items-center gap-2 rounded-md border border-edge-strong bg-surface text-start text-ink',
   transitionBase,
   focusRing,
   'hover:border-ink-4',
@@ -79,6 +80,7 @@ function Listbox({
   emptyMessage,
   loading,
 }: ListboxProps) {
+  const t = useUiCopy()
   const activeRef = React.useRef<HTMLDivElement | null>(null)
 
   React.useEffect(() => {
@@ -89,7 +91,7 @@ function Listbox({
     return (
       <div className="flex items-center justify-center gap-2 py-6 text-caption text-ink-3">
         <Spinner size="sm" label={null} />
-        Searching
+        {t('ui.status.searching')}
       </div>
     )
   }
@@ -136,7 +138,7 @@ function Listbox({
                   if (!option.disabled) onPick(option)
                 }}
                 className={cn(
-                  'relative mx-1 flex cursor-default items-center gap-2.5 rounded-md px-2.5 py-2 pr-8',
+                  'relative mx-1 flex cursor-default items-center gap-2.5 rounded-md px-2.5 py-2 pe-8',
                   'text-label text-ink-2',
                   transitionBase,
                   active && 'bg-hover text-ink',
@@ -164,7 +166,7 @@ function Listbox({
                   <Check
                     size={14}
                     strokeWidth={3}
-                    className="absolute right-2.5 text-brand"
+                    className="absolute end-2.5 text-brand"
                     aria-hidden="true"
                   />
                 ) : null}
@@ -268,8 +270,11 @@ export type ComboboxProps = {
   value?: string | null
   defaultValue?: string | null
   onChange?: (value: string | null) => void
+  /** Overrides the empty-value text. Left out, it says "Select…". */
   placeholder?: string
+  /** Overrides the search box's placeholder and its accessible name. */
   searchPlaceholder?: string
+  /** Overrides the no-results line. Left out, it says "No matches". */
   emptyMessage?: React.ReactNode
   size?: FieldSize
   invalid?: boolean
@@ -301,9 +306,9 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
       value,
       defaultValue = null,
       onChange,
-      placeholder = 'Select…',
-      searchPlaceholder = 'Search',
-      emptyMessage = 'No matches',
+      placeholder,
+      searchPlaceholder,
+      emptyMessage,
       size = 'md',
       invalid,
       disabled,
@@ -319,6 +324,8 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
     },
     ref,
   ) => {
+    const t = useUiCopy()
+    const search = searchPlaceholder ?? t('ui.combobox.search')
     const [open, setOpen] = React.useState(false)
     const [query, setQuery] = React.useState('')
     const searchRef = React.useRef<HTMLInputElement | null>(null)
@@ -369,7 +376,7 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
               className={cn(
                 triggerClasses,
                 fieldSizes[size],
-                clearable && selected && 'pr-14',
+                clearable && selected && 'pe-14',
               )}
               {...field}
             >
@@ -387,7 +394,9 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
                   !selectedOption && 'text-ink-4',
                 )}
               >
-                {selectedOption?.label ?? placeholder}
+                {selectedOption?.label ??
+                  placeholder ??
+                  t('ui.select.placeholder')}
               </span>
               <ChevronsUpDown
                 size={iconSizes[size]}
@@ -400,10 +409,10 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
           {clearable && selected && !field.disabled ? (
             <button
               type="button"
-              aria-label="Clear selection"
+              aria-label={t('ui.combobox.clear')}
               onClick={() => setSelected(null)}
               className={cn(
-                'absolute top-1/2 right-8 grid size-6 -translate-y-1/2 place-items-center rounded-full text-ink-4',
+                'absolute top-1/2 end-8 grid size-6 -translate-y-1/2 place-items-center rounded-full text-ink-4',
                 transitionBase,
                 focusRing,
                 'hover:bg-hover hover:text-ink',
@@ -436,12 +445,12 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
               onSearchChange?.(next)
             }}
             onKeyDown={onKeyDown}
-            placeholder={searchPlaceholder}
+            placeholder={search}
             listId={listId}
             activeId={
               visible.length > 0 ? `${listId}-option-${activeIndex}` : undefined
             }
-            ariaLabel={ariaLabel ?? searchPlaceholder}
+            ariaLabel={ariaLabel ?? search}
           />
           <Listbox
             listId={listId}
@@ -453,7 +462,7 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
               setSelected(option.value)
               setOpen(false)
             }}
-            emptyMessage={emptyMessage}
+            emptyMessage={emptyMessage ?? t('ui.combobox.empty')}
             loading={loading}
           />
         </PopoverContent>
@@ -489,9 +498,9 @@ export const MultiCombobox = React.forwardRef<
       value,
       defaultValue = [],
       onChange,
-      placeholder = 'Select…',
-      searchPlaceholder = 'Search',
-      emptyMessage = 'No matches',
+      placeholder,
+      searchPlaceholder,
+      emptyMessage,
       size = 'md',
       invalid,
       disabled,
@@ -507,6 +516,8 @@ export const MultiCombobox = React.forwardRef<
     },
     ref,
   ) => {
+    const t = useUiCopy()
+    const search = searchPlaceholder ?? t('ui.combobox.search')
     const [open, setOpen] = React.useState(false)
     const [query, setQuery] = React.useState('')
     const searchRef = React.useRef<HTMLInputElement | null>(null)
@@ -576,7 +587,9 @@ export const MultiCombobox = React.forwardRef<
             {...field}
           >
             {chosen.length === 0 ? (
-              <span className="px-1 text-label text-ink-4">{placeholder}</span>
+              <span className="px-1 text-label text-ink-4">
+                {placeholder ?? t('ui.select.placeholder')}
+              </span>
             ) : (
               <>
                 {chosen.slice(0, maxVisibleTags).map((option) => (
@@ -596,7 +609,7 @@ export const MultiCombobox = React.forwardRef<
             )}
             <ChevronsUpDown
               size={iconSizes[size]}
-              className="ml-auto shrink-0 text-ink-4"
+              className="ms-auto shrink-0 text-ink-4"
               aria-hidden="true"
             />
           </button>
@@ -623,12 +636,12 @@ export const MultiCombobox = React.forwardRef<
               onSearchChange?.(next)
             }}
             onKeyDown={handleKeyDown}
-            placeholder={searchPlaceholder}
+            placeholder={search}
             listId={listId}
             activeId={
               visible.length > 0 ? `${listId}-option-${activeIndex}` : undefined
             }
-            ariaLabel={ariaLabel ?? searchPlaceholder}
+            ariaLabel={ariaLabel ?? search}
           />
           <Listbox
             listId={listId}
@@ -637,7 +650,7 @@ export const MultiCombobox = React.forwardRef<
             onActiveIndexChange={setActiveIndex}
             isSelected={(option) => selected.includes(option.value)}
             onPick={(option) => toggle(option.value)}
-            emptyMessage={emptyMessage}
+            emptyMessage={emptyMessage ?? t('ui.combobox.empty')}
             loading={loading}
           />
         </PopoverContent>

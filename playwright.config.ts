@@ -76,7 +76,22 @@ const clockPin = { [SERVER_TODAY_HEADER]: BASELINE_DAY }
 export default defineConfig({
   testDir: './e2e',
   snapshotDir: './e2e/__screenshots__',
-  snapshotPathTemplate: '{snapshotDir}/{testFileName}/{arg}-{projectName}{ext}',
+  /**
+   * `{platform}` is in the path because font rasterisation is not portable.
+   *
+   * The same correct page, rendered by the same browser build, antialiases text
+   * differently on macOS and on Linux. At the 0.2% tolerance below that is
+   * enough to fail nearly every frame carrying a paragraph — a difference in
+   * where the pixels came from, not in what the design says. Recording one set
+   * per platform is what lets the gate run both on a laptop and in CI without
+   * either one being a second-class approximation of the other.
+   *
+   * `-darwin` is recorded locally; `-linux` by the `Update e2e baselines`
+   * workflow, which runs in the same container image the gate does. A design
+   * change therefore needs both refreshed. See docs/CLOUD.md §4.
+   */
+  snapshotPathTemplate:
+    '{snapshotDir}/{testFileName}/{arg}-{projectName}-{platform}{ext}',
   outputDir: './test-results',
   fullyParallel: true,
   forbidOnly: isCI,

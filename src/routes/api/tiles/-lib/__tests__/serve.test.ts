@@ -375,6 +375,17 @@ describe('serveTiles', () => {
     expect(app.counts.heads).toBe(1)
   })
 
+  it('answers the alias with 204 when nothing is published under it', async () => {
+    const unpublished = harness(new Map([[ARCHIVE_KEY, objectBytes(1024)]]))
+    const response = await serveTiles(
+      tileRequest('/api/tiles/basemap.pmtiles'),
+      unpublished.runtime,
+    )
+    expect(response.status).toBe(204)
+    expect(response.body).toBeNull()
+    expect(response.headers.get('access-control-allow-origin')).toBe('*')
+  })
+
   it('exposes the range headers to cross-origin map clients', async () => {
     const response = await serveTiles(
       tileRequest(`/api/tiles/${ARCHIVE_KEY}`, {

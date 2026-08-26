@@ -2000,7 +2000,12 @@ export const organizationSettings = sqliteTable(
     id: pk(),
     organizationId: orgRef(),
     defaultCurrency: currency().notNull().default('EUR'),
-    locale: text('locale').notNull().default('en-GB'),
+    // The source locale of `src/lib/i18n/locales.ts` (`DEFAULT_LOCALE`), spelled out because this
+    // file imports nothing outside the schema layer. It was `en-GB`, which is not one of the
+    // twenty-three tags `docs/SPEC.md` §8 ships, and Drizzle inlines a static default into every
+    // `INSERT` client-side — so a stale value here would keep writing off-spec rows however the DDL
+    // reads. `drizzle/0002_locale_normalisation.sql` carries the matching column default.
+    locale: text('locale').notNull().default('en'),
     timezone: text('timezone').notNull().default('UTC'),
     weekStartsOn: integer('week_starts_on').notNull().default(1),
     dateFormat: text('date_format').notNull().default('dd MMM yyyy'),

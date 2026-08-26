@@ -125,6 +125,46 @@ function textResponse(
   return new Response(`${message}\n`, { status, headers })
 }
 
+/**
+ * The answer for a well-formed key that names no object.
+ *
+ * The two cases are not the same failure and must not read the same on the
+ * wire. An explicitly named key is the caller's own string — asking for
+ * `basemaps/typo.pmtiles` is a mistake the caller made, and 404 says so. The
+ * alias is not a caller's string at all: `basemap.pmtiles` is a stable pointer
+ * at whatever `TILES_ARCHIVE_KEY` names today, and whether anything is published
+ * under it is the deployment's business. "Your request was fine; there is
+ * nothing to send" is 204 (RFC 9110 §15.3.5), and this route means it literally.
+ *
+ * That distinction is worth a status code for three reasons.
+ *
+ * The archive is a deploy artefact rather than a repository asset, so an empty
+ * alias is a *designed* state, not an incident: `BasemapNotice` is the screen we
+ * drew for it, and every local checkout lives in it permanently. A browser logs
+ * every 4xx it fetches as a console error, so answering 404 put one
+ * "Failed to load resource" in the console of every map screen in development,
+ * on a request whose negative answer the application asks for on purpose and
+ * handles completely. docs/SPEC.md §2 asks for a clean console and means it; the
+ * fix belongs at the seam that invents the error, not in a tolerance list.
+ *
+ * It also sharpens the ops signal instead of losing it. `docs/ARCHITECTURE.md`
+ * §9 row 3 watches this route for a missing archive, and a 404 rate there mixes
+ * two unrelated populations: keys nobody ever published (typos, probes, crawlers)
+ * and *our* archive having gone. Splitting them means the alias's own 204 rate is
+ * the incident signal, with none of that noise in it.
+ *
+ * And nothing reads the alias for bytes without asking this question first:
+ * `probeBasemap()` in `#/lib/map/pmtiles` runs before any style names a
+ * `pmtiles://` source, and reads 204 as `missing` exactly as it reads 404.
+ */
+function notPublished(kind: 'alias' | 'explicit'): Response {
+  if (kind === 'explicit') return textResponse(404, 'Not found')
+  const headers = new Headers()
+  headers.set('cache-control', 'no-store')
+  applyCors(headers)
+  return new Response(null, { status: 204, headers })
+}
+
 function preflightResponse(): Response {
   const headers = new Headers()
   headers.set('access-control-allow-methods', ALLOWED_METHODS)
@@ -383,7 +423,7 @@ export async function serveTiles(
   const cacheControl = cacheControlFor(resolution.kind)
 
   const meta = await loadMeta(runtime, url.origin, key)
-  if (meta === null) return textResponse(404, 'Not found')
+  if (meta === null) return notPublished(resolution.kind)
 
   const ifNoneMatch = request.headers.get('if-none-match')
   if (etagMatches(ifNoneMatch, meta.etag)) {
@@ -430,7 +470,7 @@ export async function serveTiles(
     const parts = await readMultipart(runtime, key, ranges)
     if (parts === null) {
       forgetInBackground(runtime, metaCacheKey(url.origin, key))
-      return textResponse(404, 'Not found')
+      return notPublished(resolution.kind)
     }
     const boundary = newMultipartBoundary()
     let body: Uint8Array<ArrayBuffer>
@@ -462,7 +502,7 @@ export async function serveTiles(
   const object = await readSlice(runtime, key, single)
   if (object === null) {
     forgetInBackground(runtime, metaCacheKey(url.origin, key))
-    return textResponse(404, 'Not found')
+    return notPublished(resolution.kind)
   }
 
   const length = single === null ? meta.size : rangeLength(single)

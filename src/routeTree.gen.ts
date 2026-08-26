@@ -37,6 +37,7 @@ import { Route as AppJourneyJourneyIdRouteImport } from './routes/_app/journey/$
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app/settings/appearance'
 import { Route as AppSettingsBillingRouteImport } from './routes/_app/settings/billing'
+import { Route as AppSettingsLanguageRouteImport } from './routes/_app/settings/language'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app/settings/notifications'
 import { Route as AppSettingsOrganizationRouteImport } from './routes/_app/settings/organization'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app/settings/security'
@@ -199,6 +200,11 @@ const AppSettingsBillingRoute = AppSettingsBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
+const AppSettingsLanguageRoute = AppSettingsLanguageRouteImport.update({
+  id: '/language',
+  path: '/language',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
 const AppSettingsNotificationsRoute =
   AppSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -327,6 +333,7 @@ export interface FileRoutesByFullPath {
   '/journey/$journeyId': typeof AppJourneyJourneyIdRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/billing': typeof AppSettingsBillingRoute
+  '/settings/language': typeof AppSettingsLanguageRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/organization': typeof AppSettingsOrganizationRoute
   '/settings/security': typeof AppSettingsSecurityRoute
@@ -372,6 +379,7 @@ export interface FileRoutesByTo {
   '/journey/$journeyId': typeof AppJourneyJourneyIdRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/billing': typeof AppSettingsBillingRoute
+  '/settings/language': typeof AppSettingsLanguageRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/organization': typeof AppSettingsOrganizationRoute
   '/settings/security': typeof AppSettingsSecurityRoute
@@ -423,6 +431,7 @@ export interface FileRoutesById {
   '/_app/journey/$journeyId': typeof AppJourneyJourneyIdRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/_app/settings/billing': typeof AppSettingsBillingRoute
+  '/_app/settings/language': typeof AppSettingsLanguageRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/_app/settings/organization': typeof AppSettingsOrganizationRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
@@ -474,6 +483,7 @@ export interface FileRouteTypes {
     | '/journey/$journeyId'
     | '/settings/appearance'
     | '/settings/billing'
+    | '/settings/language'
     | '/settings/notifications'
     | '/settings/organization'
     | '/settings/security'
@@ -519,6 +529,7 @@ export interface FileRouteTypes {
     | '/journey/$journeyId'
     | '/settings/appearance'
     | '/settings/billing'
+    | '/settings/language'
     | '/settings/notifications'
     | '/settings/organization'
     | '/settings/security'
@@ -569,6 +580,7 @@ export interface FileRouteTypes {
     | '/_app/journey/$journeyId'
     | '/_app/settings/appearance'
     | '/_app/settings/billing'
+    | '/_app/settings/language'
     | '/_app/settings/notifications'
     | '/_app/settings/organization'
     | '/_app/settings/security'
@@ -812,6 +824,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsBillingRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
+    '/_app/settings/language': {
+      id: '/_app/settings/language'
+      path: '/language'
+      fullPath: '/settings/language'
+      preLoaderRoute: typeof AppSettingsLanguageRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
     '/_app/settings/notifications': {
       id: '/_app/settings/notifications'
       path: '/notifications'
@@ -986,6 +1005,7 @@ const AppConsoleRouteRouteWithChildren = AppConsoleRouteRoute._addFileChildren(
 interface AppSettingsRouteRouteChildren {
   AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
   AppSettingsBillingRoute: typeof AppSettingsBillingRoute
+  AppSettingsLanguageRoute: typeof AppSettingsLanguageRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
   AppSettingsOrganizationRoute: typeof AppSettingsOrganizationRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
@@ -995,6 +1015,7 @@ interface AppSettingsRouteRouteChildren {
 const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
   AppSettingsBillingRoute: AppSettingsBillingRoute,
+  AppSettingsLanguageRoute: AppSettingsLanguageRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
   AppSettingsOrganizationRoute: AppSettingsOrganizationRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,

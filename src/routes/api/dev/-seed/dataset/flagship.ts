@@ -34,6 +34,7 @@ const GBP_JPY = 195
 const EUR_JPY = 168
 
 export const flagshipTrip: SeedTrip = {
+  id: 'demo-trip-01-tokyo-and-kyoto',
   slug: 'tokyo-and-kyoto',
   title: 'Tokyo & Kyoto',
   summary: 'Twelve days from Shinjuku neon to Kyoto moss gardens, with a Hakone detour.',

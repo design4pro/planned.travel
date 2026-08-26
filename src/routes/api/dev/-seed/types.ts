@@ -309,8 +309,21 @@ export interface SeedFile {
   readonly expenseKey?: string
 }
 
-/** One trip and everything hanging off it. Only `title`, `slug` and `status` are required. */
+/** One trip and everything hanging off it. Every collection below the traveller list is optional. */
 export interface SeedTrip {
+  /**
+   * The trip's primary key, declared here rather than generated.
+   *
+   * This is the one place the dataset names an identifier, and it is deliberate. A trip's cover
+   * art is a pure hash of its id, so a fixture that mints a fresh key on every run repaints every
+   * card in the product and moves any screenshot that photographs one. Fixing the key here is what
+   * makes `--force` a no-op as far as the pixels are concerned.
+   *
+   * Ids ascend in the order {@link SeedTrip} entries are written, so `order by id` — the cursor
+   * every paginated list uses — still returns the demo trips newest-first, exactly as generated
+   * time-sortable keys did.
+   */
+  readonly id: string
   readonly slug: string
   readonly title: string
   readonly summary: string

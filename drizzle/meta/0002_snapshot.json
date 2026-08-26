@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "efbb4bc7-223e-456b-bb4d-772275b489f6",
+  "id": "198d106e-8f99-4587-80d3-64101379a80f",
   "prevId": "ba2745f2-03c9-4673-b954-5415e7b8eff2",
   "tables": {
     "account": {
@@ -5621,7 +5621,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'en-GB'"
+          "default": "'en'"
         },
         "timezone": {
           "name": "timezone",
@@ -7522,22 +7522,22 @@
           "autoincrement": false,
           "default": "'active'"
         },
-        "provider_customer_id": {
-          "name": "provider_customer_id",
+        "stripe_customer_id": {
+          "name": "stripe_customer_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "provider_subscription_id": {
-          "name": "provider_subscription_id",
+        "stripe_subscription_id": {
+          "name": "stripe_subscription_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "provider_product_id": {
-          "name": "provider_product_id",
+        "stripe_price_id": {
+          "name": "stripe_price_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -7647,17 +7647,17 @@
           ],
           "isUnique": true
         },
-        "subscriptions_provider_subscription_unq": {
-          "name": "subscriptions_provider_subscription_unq",
+        "subscriptions_stripe_subscription_unq": {
+          "name": "subscriptions_stripe_subscription_unq",
           "columns": [
-            "provider_subscription_id"
+            "stripe_subscription_id"
           ],
           "isUnique": true
         },
-        "subscriptions_provider_customer_idx": {
-          "name": "subscriptions_provider_customer_idx",
+        "subscriptions_stripe_customer_idx": {
+          "name": "subscriptions_stripe_customer_idx",
           "columns": [
-            "provider_customer_id"
+            "stripe_customer_id"
           ],
           "isUnique": false
         },
@@ -10528,11 +10528,7 @@
   "_meta": {
     "schemas": {},
     "tables": {},
-    "columns": {
-      "\"subscriptions\".\"stripe_customer_id\"": "\"subscriptions\".\"provider_customer_id\"",
-      "\"subscriptions\".\"stripe_subscription_id\"": "\"subscriptions\".\"provider_subscription_id\"",
-      "\"subscriptions\".\"stripe_price_id\"": "\"subscriptions\".\"provider_product_id\""
-    }
+    "columns": {}
   },
   "internal": {
     "indexes": {}

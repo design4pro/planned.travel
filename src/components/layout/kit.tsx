@@ -1,14 +1,38 @@
 import { cva } from 'class-variance-authority'
-import { Avatar as RadixAvatar } from 'radix-ui'
 import { cn } from '#/lib/cn'
 
 import type { VariantProps } from 'class-variance-authority'
-import type { ComponentPropsWithRef, ComponentPropsWithoutRef, ReactNode } from 'react'
+import type { ComponentPropsWithRef, ComponentPropsWithoutRef } from 'react'
 
 /**
  * The application chrome's building blocks. Every value resolves to a token
  * from `src/styles/tokens.css`, so the shell repaints correctly in both themes
  * without a single hardcoded colour, radius or shadow.
+ *
+ * What is here is only what the chrome itself renders. Everything a *screen*
+ * needs is a design-system primitive and lives in `src/components/ui`
+ * (`docs/SPEC.md` §6), and this file used to carry a second, drifting copy of
+ * seven of them — `GlassPanel`, `Divider`, `Fab`, `Badge`, `EmptyState`,
+ * `StatTile`, `AvatarStack` — none of which any file imported. A rival copy of a
+ * primitive is worse than no copy: the round that taught the shipped
+ * `AvatarStack` to render its `+n` tail through the catalogue and its party
+ * through `formatList` left this one still writing ASCII digits with an English
+ * sign order, and a reader would have got whichever the next author happened to
+ * import.
+ *
+ * Both of those primitives now have a consumer in the shell rather than merely
+ * no rival: `user-menu.tsx` takes its `Avatar` from `#/components/ui`, and the
+ * admin console's member panel heads itself with the shipped `AvatarStack`, so
+ * the localised `+n` tail and the `formatList` party summary are on a screen. A
+ * removed rival and an unconsumed original are the same defect wearing different
+ * clothes.
+ *
+ * `Panel`, `SectionLabel` and the two skeletons below are the same shape as
+ * `Card`, `SectionLabel` and `Skeleton` in `src/components/ui` and should end up
+ * being them. They stay for now because four chrome files render them and the
+ * substitution is a visual change (`Card variant="inverse"` steps the shadow up,
+ * and the shipped `Skeleton` sweeps a `::before` rather than an inner span) that
+ * belongs in an item which owns the baselines it would move.
  */
 
 /** Colour/shadow only — layout properties are never animated. */
@@ -36,25 +60,8 @@ export function Panel({
   )
 }
 
-/** Translucent floating panel used above the map. */
-export function GlassPanel({ className, ...props }: ComponentPropsWithoutRef<'div'>) {
-  return (
-    <div
-      className={cn(
-        'rounded-xl border border-glass-edge bg-glass shadow-glass backdrop-glass',
-        className,
-      )}
-      {...props}
-    />
-  )
-}
-
 export function SectionLabel({ className, ...props }: ComponentPropsWithoutRef<'p'>) {
   return <p className={cn('text-micro uppercase text-ink-3', className)} {...props} />
-}
-
-export function Divider({ className, ...props }: ComponentPropsWithoutRef<'div'>) {
-  return <div role="separator" className={cn('h-px w-full bg-edge', className)} {...props} />
 }
 
 /* ------------------------------------------------------------------- buttons */
@@ -88,7 +95,7 @@ export const buttonClass = cva(
   },
 )
 
-export type ButtonVariants = VariantProps<typeof buttonClass>
+type ButtonVariants = VariantProps<typeof buttonClass>
 
 export function ActionButton({
   className,
@@ -122,59 +129,6 @@ export function IconButton({
   )
 }
 
-/** Floating near-black action button, bottom-right, above the content. */
-export function Fab({
-  className,
-  children,
-  type = 'button',
-  ...props
-}: ComponentPropsWithRef<'button'>) {
-  return (
-    <button
-      type={type}
-      className={cn(
-        'fixed bottom-[calc(var(--safe-bottom)+5.5rem)] right-5 z-dropdown inline-flex h-13 items-center gap-2 rounded-full bg-accent px-5 text-label font-semibold text-accent-on shadow-elevated focus-ring',
-        transitionBase,
-        'hover:bg-accent-hover hover:shadow-modal active:translate-y-px',
-        'md:bottom-8 md:right-8',
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </button>
-  )
-}
-
-/* -------------------------------------------------------------------- badges */
-
-const badgeClass = cva(
-  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-micro uppercase',
-  {
-    variants: {
-      tone: {
-        neutral: 'border-edge bg-surface-2 text-ink-2',
-        brand: 'border-transparent bg-brand-subtle text-brand',
-        success: 'border-transparent bg-success-soft text-success',
-        warning: 'border-transparent bg-warning-soft text-warning',
-        danger: 'border-transparent bg-danger-soft text-danger',
-        info: 'border-transparent bg-info-soft text-info',
-        inverse: 'border-inverse-edge bg-inverse text-inverse-on',
-        outline: 'border-edge-strong/50 bg-transparent text-ink-3',
-      },
-    },
-    defaultVariants: { tone: 'neutral' },
-  },
-)
-
-export function Badge({
-  className,
-  tone,
-  ...props
-}: ComponentPropsWithoutRef<'span'> & VariantProps<typeof badgeClass>) {
-  return <span className={cn(badgeClass({ tone }), className)} {...props} />
-}
-
 /* ------------------------------------------------------------------ skeleton */
 
 /** A shimmer, not a blink — it reads as "loading", not as "broken". */
@@ -199,172 +153,6 @@ export function SkeletonLines({ lines = 3, className }: { lines?: number; classN
       {Array.from({ length: lines }, (_, index) => (
         <Skeleton key={index} className={cn('h-3', widths[index % widths.length])} />
       ))}
-    </div>
-  )
-}
-
-/* ---------------------------------------------------------------- emptiness */
-
-export interface EmptyStateProps {
-  icon?: ReactNode
-  title: string
-  description?: string
-  action?: ReactNode
-  /** Dashed outline reads as "there is room for one more here". */
-  variant?: 'plain' | 'dashed'
-  className?: string
-}
-
-export function EmptyState({
-  icon,
-  title,
-  description,
-  action,
-  variant = 'plain',
-  className,
-}: EmptyStateProps) {
-  return (
-    <div
-      className={cn(
-        'flex flex-col items-center justify-center gap-3 rounded-xl px-6 py-14 text-center',
-        variant === 'dashed' && 'border border-dashed border-edge bg-surface/40',
-        className,
-      )}
-    >
-      {icon ? (
-        <span className="mb-1 flex size-12 items-center justify-center rounded-full bg-surface-2 text-ink-3">
-          {icon}
-        </span>
-      ) : null}
-      <h3 className="font-display text-subtitle text-ink">{title}</h3>
-      {description ? (
-        <p className="max-w-xs text-label leading-relaxed text-ink-3">{description}</p>
-      ) : null}
-      {action ? <div className="mt-2">{action}</div> : null}
-    </div>
-  )
-}
-
-/* ----------------------------------------------------------------- statistic */
-
-export interface StatTileProps {
-  label: string
-  value: string
-  unit?: string
-  hint?: string
-  inverse?: boolean
-  className?: string
-  children?: ReactNode
-}
-
-/**
- * Tiny tracked label above an oversized display numeral — the signature of the
- * whole product. `numeral` keeps the baseline from jittering when values change.
- */
-export function StatTile({
-  label,
-  value,
-  unit,
-  hint,
-  inverse = false,
-  className,
-  children,
-}: StatTileProps) {
-  return (
-    <Panel inverse={inverse} className={cn('flex flex-col gap-3 p-5', className)}>
-      <SectionLabel className={inverse ? 'text-inverse-muted' : undefined}>{label}</SectionLabel>
-      <p className="flex items-baseline gap-1.5">
-        <span className="numeral font-display text-[2.5rem] font-bold leading-[0.95] tracking-tighter">
-          {value}
-        </span>
-        {unit ? (
-          <span
-            className={cn(
-              'text-subtitle font-medium',
-              inverse ? 'text-inverse-muted' : 'text-ink-3',
-            )}
-          >
-            {unit}
-          </span>
-        ) : null}
-      </p>
-      {hint ? (
-        <p className={cn('text-caption', inverse ? 'text-inverse-muted' : 'text-ink-3')}>{hint}</p>
-      ) : null}
-      {children}
-    </Panel>
-  )
-}
-
-/* -------------------------------------------------------------------- avatar */
-
-const AVATAR_SIZES = {
-  sm: 'size-7 text-[0.625rem]',
-  md: 'size-8 text-caption',
-  lg: 'size-10 text-label',
-  xl: 'size-14 text-subtitle',
-} as const
-
-export interface AvatarProps {
-  name: string
-  src?: string | null
-  size?: keyof typeof AVATAR_SIZES
-  className?: string
-}
-
-export function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  const first = parts[0] ?? ''
-  const last = parts.length > 1 ? (parts[parts.length - 1] ?? '') : ''
-  return (first.slice(0, 1) + last.slice(0, 1)).toUpperCase()
-}
-
-export function Avatar({ name, src, size = 'md', className }: AvatarProps) {
-  return (
-    <RadixAvatar.Root
-      className={cn(
-        'inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-inverse font-semibold text-inverse-on',
-        AVATAR_SIZES[size],
-        className,
-      )}
-    >
-      {src ? <RadixAvatar.Image src={src} alt="" className="size-full object-cover" /> : null}
-      <RadixAvatar.Fallback className="leading-none" delayMs={src ? 200 : 0}>
-        {initialsOf(name)}
-      </RadixAvatar.Fallback>
-    </RadixAvatar.Root>
-  )
-}
-
-/** Overlapping avatars, capped, with a "+n" tail. */
-export function AvatarStack({
-  people,
-  max = 4,
-  className,
-}: {
-  people: ReadonlyArray<{ name: string; src?: string | null }>
-  max?: number
-  className?: string
-}) {
-  const shown = people.slice(0, max)
-  const overflow = people.length - shown.length
-  return (
-    <div className={cn('flex items-center', className)}>
-      {shown.map((person, index) => (
-        <Avatar
-          key={`${person.name}-${index}`}
-          name={person.name}
-          src={person.src}
-          size="sm"
-          className="-ml-1.5 ring-2 ring-surface first:ml-0"
-        />
-      ))}
-      {overflow > 0 ? (
-        <span className="numeral -ml-1.5 inline-flex size-7 items-center justify-center rounded-full bg-surface-2 text-[0.625rem] font-semibold text-ink-3 ring-2 ring-surface">
-          +{overflow}
-        </span>
-      ) : null}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { ChevronLeft, Share2 } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import { APP_HEADER_TOP_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { TRIP_TABS } from './nav-model'
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const
@@ -21,6 +22,7 @@ export interface TripSubNavProps {
 export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const reduceMotion = useReducedMotion()
+  const t = useTranslate()
   const transition = reduceMotion ? { duration: 0 } : { duration: 0.26, ease: EASE_OUT_QUINT }
 
   return (
@@ -46,7 +48,7 @@ export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
           <p className="max-w-56 truncate font-display text-label font-bold">{tripName}</p>
         </div>
 
-        <nav aria-label="Trip sections" className="min-w-0 flex-1">
+        <nav aria-label={t('shell.trip.nav.label')} className="min-w-0 flex-1">
           <ul className="scrollbar-none flex h-subnav items-center gap-1 overflow-x-auto">
             {TRIP_TABS.map((tab) => {
               const href = tab.to.replace('$tripId', tripId)
@@ -74,7 +76,7 @@ export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
                       />
                     ) : null}
                     <tab.icon aria-hidden strokeWidth={2} className="size-4" />
-                    {tab.label}
+                    {t(tab.label)}
                   </Link>
                 </li>
               )
@@ -89,16 +91,19 @@ export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
 }
 
 function BackToTrips() {
+  const t = useTranslate()
+
   return (
     <Link
       to="/trips"
       className={cn(
-        'inline-flex h-8 shrink-0 items-center gap-1 rounded-full pl-1.5 pr-2.5 text-label font-medium text-inverse-muted focus-ring',
-        'transition-colors duration-base ease-out-quint hover:bg-inverse-surface hover:text-inverse-on',
+        'inline-flex h-8 shrink-0 items-center gap-1 rounded-full ps-1.5 pe-2.5 text-label font-medium text-inverse-muted focus-ring',
+        'transition-colors duration-base ease-out-quint hover:bg-inverse-surface hover:text-inverse-on active:bg-inverse-surface/70',
       )}
     >
-      <ChevronLeft aria-hidden className="size-4" />
-      Trips
+      {/* "Back" is a reading direction, so the chevron turns round in `ar`. */}
+      <ChevronLeft aria-hidden data-mirror-rtl className="size-4" />
+      {t('shell.trip.nav.back')}
     </Link>
   )
 }
@@ -112,11 +117,13 @@ function ShareLink({
   compact?: boolean
   className?: string
 }) {
+  const t = useTranslate()
+
   return (
     <Link
       to="/trips/$tripId/collab"
       params={{ tripId }}
-      aria-label="Share this trip"
+      aria-label={t('shell.trip.nav.shareLabel')}
       className={cn(
         'inline-flex h-8 shrink-0 items-center gap-2 rounded-full border border-inverse-edge bg-inverse-surface px-3 text-label font-medium text-inverse-on focus-ring',
         'transition-colors duration-base ease-out-quint hover:bg-inverse-surface/70',
@@ -124,7 +131,7 @@ function ShareLink({
       )}
     >
       <Share2 aria-hidden className="size-4" />
-      {compact ? null : 'Share'}
+      {compact ? null : t('shell.trip.nav.share')}
     </Link>
   )
 }

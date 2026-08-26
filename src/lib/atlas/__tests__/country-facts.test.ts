@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ABSENT_FACT_LABEL,
   ABSENT_FACT_MARK,
+  countryFactColumns,
   countryFactCount,
   countryFactMonth,
   countryFacts,
@@ -22,6 +23,22 @@ const ALGERIA = {
   placeCount: 0,
   firstTripOn: null,
   lastTripOn: null,
+} as const
+
+/**
+ * The case the whole visit half exists for, and the shape most of a real record
+ * takes: a country the traveller marked by hand, three times, with no trip in
+ * this product behind any of them.
+ */
+const THAILAND = {
+  countryCode: 'TH',
+  tripCount: 0,
+  placeCount: 0,
+  firstTripOn: null,
+  lastTripOn: null,
+  visitCount: 3,
+  firstVisitedOn: '2011-07-14',
+  lastVisitedOn: '2024-09-06',
 } as const
 
 describe('countryFactCount', () => {
@@ -174,17 +191,17 @@ describe('countryFacts', () => {
 
   it('prints both figures grouped', () => {
     const facts = countryFacts({ ...FRANCE, tripCount: 1204, placeCount: 12 })
-    expect(facts.trips.value).toBe('1,204')
+    expect(facts.tally.value).toBe('1,204')
     expect(facts.places.value).toBe('12')
   })
 
   it('agrees the unit with the count', () => {
     const one = countryFacts({ ...FRANCE, tripCount: 1, placeCount: 1 })
-    expect(one.trips.label).toBe('Trip')
+    expect(one.tally.label).toBe('Trip')
     expect(one.places.label).toBe('Place')
 
     const many = countryFacts({ ...FRANCE, tripCount: 2, placeCount: 0 })
-    expect(many.trips.label).toBe('Trips')
+    expect(many.tally.label).toBe('Trips')
     expect(many.places.label).toBe('Places')
   })
 
@@ -203,7 +220,7 @@ describe('countryFacts', () => {
   describe('a country with nothing recorded', () => {
     it('reports zero rather than an absence', () => {
       const facts = countryFacts(ALGERIA)
-      expect(facts.trips.value).toBe('0')
+      expect(facts.tally.value).toBe('0')
       expect(facts.places.value).toBe('0')
       expect(facts.visited).toBe(false)
     })
@@ -221,11 +238,150 @@ describe('countryFacts', () => {
         'Algeria. No trips yet, no places saved. No trip dates recorded.',
       )
     })
+
+    it('names the state, so a card can style it without re-deriving it', () => {
+      expect(countryFacts(ALGERIA).source).toBe('none')
+    })
+
+    it('keeps the trip wording, which is what an empty card should offer', () => {
+      const facts = countryFacts(ALGERIA)
+      expect(facts.tally.label).toBe('Trips')
+      expect(facts.first.label).toBe('First trip')
+      expect(facts.last.label).toBe('Last trip')
+    })
+  })
+
+  /**
+   * The defect this module was widened for. The map fills a country because it
+   * is on the visit record, and a card that reads only the trip aggregates then
+   * prints two zeros and two dashes over a country the same screen has just
+   * painted as visited — while the shelf two hundred pixels below prints its
+   * visit tally. Most of a real record is in exactly this state.
+   */
+  describe('a country visited with no trip behind it', () => {
+    it('draws its figures from the visit record instead', () => {
+      const facts = countryFacts(THAILAND)
+      expect(facts.source).toBe('visits')
+      expect(facts.tally.label).toBe('Visits')
+      expect(facts.tally.count).toBe(3)
+      expect(facts.tally.value).toBe('3')
+    })
+
+    it('prints both visit months rather than two dashes', () => {
+      const facts = countryFacts(THAILAND)
+      expect(facts.first.label).toBe('First visit')
+      expect(facts.first.value).toBe('July 2011')
+      expect(facts.last.label).toBe('Last visit')
+      expect(facts.last.value).toBe('September 2024')
+      expect(facts.last.iso).toBe('2024-09')
+    })
+
+    it('counts as visited, which is what the map is already painting', () => {
+      expect(countryFacts(THAILAND).visited).toBe(true)
+    })
+
+    it('agrees the unit with the tally', () => {
+      const one = countryFacts({ ...THAILAND, visitCount: 1 })
+      expect(one.tally.label).toBe('Visit')
+    })
+
+    it('still prints the places it has, in their own cell', () => {
+      const facts = countryFacts({ ...THAILAND, placeCount: 4 })
+      expect(facts.places.value).toBe('4')
+      expect(facts.source).toBe('visits')
+    })
+
+    it('speaks in visits, not in trips', () => {
+      expect(countryFacts(THAILAND).summary).toBe(
+        'Thailand. 3 visits, no places saved. First visit July 2011, last visit September 2024.',
+      )
+    })
+
+    it('says a single month once', () => {
+      const facts = countryFacts({
+        ...THAILAND,
+        visitCount: 1,
+        firstVisitedOn: '2017-11-08',
+        lastVisitedOn: '2017-11-08',
+      })
+      expect(facts.summary).toBe(
+        'Thailand. 1 visit, no places saved. Visited in November 2017.',
+      )
+    })
+
+    it('is honest when the tally is there and the dates are not', () => {
+      const facts = countryFacts({
+        ...THAILAND,
+        firstVisitedOn: null,
+        lastVisitedOn: null,
+      })
+      expect(facts.source).toBe('visits')
+      expect(facts.tally.value).toBe('3')
+      expect(facts.first.value).toBeNull()
+      expect(facts.last.value).toBeNull()
+      expect(facts.summary).toBe(
+        'Thailand. 3 visits, no places saved. No visit dates recorded.',
+      )
+    })
+  })
+
+  /**
+   * The mirror rule. An itinerary is the more specific thing to know, so a
+   * country that has one keeps the trip reading exactly as it was before the
+   * visit columns existed — the visits are still true, and the atlas panel's
+   * country record is where they are written out in full.
+   */
+  describe('a country with both records', () => {
+    it('reads from the trips and leaves the visit tally to the shelf', () => {
+      const facts = countryFacts({
+        ...FRANCE,
+        tripCount: 1,
+        placeCount: 4,
+        firstTripOn: '2026-08-03',
+        lastTripOn: '2026-08-03',
+        visitCount: 2,
+        firstVisitedOn: '2019-09-21',
+        lastVisitedOn: '2026-08-17',
+      })
+      expect(facts.source).toBe('trips')
+      expect(facts.tally.label).toBe('Trip')
+      expect(facts.tally.value).toBe('1')
+      expect(facts.first.label).toBe('First trip')
+      expect(facts.first.value).toBe('August 2026')
+      expect(facts.last.value).toBe('August 2026')
+    })
+
+    it('prefers a trip date even with no trip counted against it', () => {
+      const facts = countryFacts({
+        ...THAILAND,
+        firstTripOn: '2026-02-01',
+        lastTripOn: '2026-02-01',
+      })
+      expect(facts.source).toBe('trips')
+      expect(facts.tally.value).toBe('0')
+      expect(facts.first.value).toBe('February 2026')
+    })
+
+    it('does not let a saved place alone choose the trip wording', () => {
+      const facts = countryFacts({ ...THAILAND, placeCount: 2 })
+      expect(facts.source).toBe('visits')
+      expect(facts.first.value).toBe('July 2011')
+    })
   })
 
   describe('visited', () => {
     it('is true on a trip alone', () => {
       expect(countryFacts({ ...ALGERIA, tripCount: 1 }).visited).toBe(true)
+    })
+
+    it('is true on a recorded visit alone', () => {
+      expect(countryFacts({ ...ALGERIA, visitCount: 1 }).visited).toBe(true)
+    })
+
+    it('is true on a visit date alone', () => {
+      expect(
+        countryFacts({ ...ALGERIA, firstVisitedOn: '2024-09-06' }).visited,
+      ).toBe(true)
     })
 
     it('is true on a saved place alone', () => {
@@ -274,5 +430,95 @@ describe('the absent-value pair', () => {
   it('is an em dash and the words that stand in for it', () => {
     expect(ABSENT_FACT_MARK).toBe('—')
     expect(ABSENT_FACT_LABEL).toBe('Not recorded')
+  })
+})
+
+/**
+ * The projection every surface spreads.
+ *
+ * The four-dash card came from a host picking four of a record's columns by
+ * hand, so the reading is written down once and asserted here on the three
+ * states a record can be in.
+ */
+describe('countryFactColumns', () => {
+  /** France as the demo workspace seeds it: three visits, no itinerary. */
+  const VISITED_RECORD = {
+    countryCode: 'FR',
+    tripCount: 0,
+    visitedPlaceCount: 0,
+    firstTripOn: null,
+    lastTripOn: null,
+    visitCount: 3,
+    firstVisitedOn: '2011-07-14',
+    lastVisitedOn: '2024-09-06',
+  } as const
+
+  it('carries the visit half across, which is the half that used to be dropped', () => {
+    expect(countryFactColumns(VISITED_RECORD)).toEqual({
+      countryCode: 'FR',
+      tripCount: 0,
+      placeCount: 0,
+      firstTripOn: null,
+      lastTripOn: null,
+      visitCount: 3,
+      firstVisitedOn: '2011-07-14',
+      lastVisitedOn: '2024-09-06',
+    })
+  })
+
+  it('reads a visit-only record as visits and visit months', () => {
+    const facts = countryFacts(countryFactColumns(VISITED_RECORD))
+    expect(facts.source).toBe('visits')
+    expect(facts.visited).toBe(true)
+    expect(facts.tally).toMatchObject({ label: 'Visits', value: '3' })
+    expect(facts.first.value).toBe('July 2011')
+    expect(facts.last.value).toBe('September 2024')
+  })
+
+  it('leaves a record with an itinerary on the trip reading', () => {
+    const facts = countryFacts(
+      countryFactColumns({
+        ...VISITED_RECORD,
+        countryCode: 'PT',
+        tripCount: 1,
+        visitedPlaceCount: 4,
+        firstTripOn: '2026-08-17',
+        lastTripOn: '2026-08-17',
+      }),
+    )
+    expect(facts.source).toBe('trips')
+    expect(facts.tally).toMatchObject({ label: 'Trip', value: '1' })
+    expect(facts.places.value).toBe('4')
+    expect(facts.first.value).toBe('August 2026')
+  })
+
+  it('reads an empty row as the state that has earned its dashes', () => {
+    const facts = countryFacts(
+      countryFactColumns({
+        countryCode: 'DZ',
+        tripCount: 0,
+        visitedPlaceCount: 0,
+        firstTripOn: null,
+        lastTripOn: null,
+        visitCount: 0,
+        firstVisitedOn: null,
+        lastVisitedOn: null,
+      }),
+    )
+    expect(facts.source).toBe('none')
+    expect(facts.visited).toBe(false)
+    expect(facts.first.value).toBeNull()
+    expect(facts.last.value).toBeNull()
+  })
+
+  it('renames only the places column, and folds no figure into another', () => {
+    const columns = countryFactColumns({
+      ...VISITED_RECORD,
+      tripCount: 2,
+      visitedPlaceCount: 7,
+    })
+    expect(columns.placeCount).toBe(7)
+    expect(columns.tripCount).toBe(2)
+    expect(columns.visitCount).toBe(3)
   })
 })
