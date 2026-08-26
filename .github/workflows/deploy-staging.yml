@@ -1,0 +1,140 @@
+name: Deploy staging
+
+# Git Flow's preview leg: every push to `develop` deploys the `staging`
+# environment from wrangler.jsonc. Production stays in deploy.yml, on `main`.
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+# Never run two deploys at once, and never cancel one half-way: an interrupted
+# `d1 migrations apply` would leave the schema between two versions.
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Migrate and deploy to staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: staging
+      url: https://staging.planned.travel
+
+    env:
+      CI: 'true'
+      # `vars` resolves environment-level values over repository-level ones, so
+      # a `staging` GitHub Environment can override these with test-mode ids.
+      VITE_STRIPE_PRICE_SOLO_MONTHLY: ${{ vars.VITE_STRIPE_PRICE_SOLO_MONTHLY }}
+      VITE_STRIPE_PRICE_SOLO_YEARLY: ${{ vars.VITE_STRIPE_PRICE_SOLO_YEARLY }}
+      VITE_STRIPE_PRICE_CREW_MONTHLY: ${{ vars.VITE_STRIPE_PRICE_CREW_MONTHLY }}
+      VITE_STRIPE_PRICE_CREW_YEARLY: ${{ vars.VITE_STRIPE_PRICE_CREW_YEARLY }}
+
+    steps:
+      # The `secrets` context is not available in a job-level `if`, so the gate
+      # is a first step: a fork or a freshly cloned repo without Cloudflare
+      # credentials reports a warning and skips, instead of failing red.
+      - name: Check deploy credentials are configured
+        id: gate
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo 'configured=false' >> "$GITHUB_OUTPUT"
+            echo '::warning title=Deploy skipped::Set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets to enable deploys.'
+          else
+            echo 'configured=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out
+        if: steps.gate.outputs.configured == 'true'
+        uses: actions/checkout@v5
+
+      - name: Set up pnpm
+        if: steps.gate.outputs.configured == 'true'
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        if: steps.gate.outputs.configured == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.x
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.gate.outputs.configured == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate route tree
+        if: steps.gate.outputs.configured == 'true'
+        run: pnpm generate-routes
+
+      # The environment is chosen at BUILD time (docs/DEPLOY.md §7.5): the Vite
+      # plugin flattens the selected env into dist/server/wrangler.json and
+      # writes a .wrangler/deploy/config.json redirect. `wrangler deploy` below
+      # runs without `--env` on purpose — the redirect already points at the
+      # flattened staging config, which carries no env block. The d1 migrations
+      # step does NOT consume that redirect and reads wrangler.jsonc directly,
+      # so it is the one command that needs `--env staging`.
+      - name: Build (staging environment)
+        if: steps.gate.outputs.configured == 'true'
+        run: CLOUDFLARE_ENV=staging pnpm build
+
+      # Cheap insurance against the silent-production gotcha: a build that ran
+      # without CLOUDFLARE_ENV emits the production config, and a deploy from it
+      # would overwrite production. Refuse to continue unless the emitted
+      # config is the staging Worker.
+      - name: Verify the emitted config targets staging
+        if: steps.gate.outputs.configured == 'true'
+        run: |
+          node --input-type=module -e "
+            import { readFileSync } from 'node:fs';
+            const c = JSON.parse(readFileSync('./dist/server/wrangler.json', 'utf8'));
+            if (c.name !== 'planned-travel-staging') {
+              console.error('emitted config is ' + c.name + ', refusing to deploy');
+              process.exit(1);
+            }
+            console.log('emitted config: ' + c.name);
+          "
+
+      # Migrations run first and are additive by policy (see docs/DEPLOY.md), so
+      # the currently deployed Worker keeps serving against the new schema while
+      # the upload completes.
+      - name: Apply D1 migrations
+        if: steps.gate.outputs.configured == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: pnpm
+          # Keep in step with the `wrangler` devDependency in package.json.
+          wranglerVersion: '4.70.0'
+          command: d1 migrations apply planned-travel-db-staging --remote --env staging
+
+      - name: Deploy Worker
+        if: steps.gate.outputs.configured == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          packageManager: pnpm
+          wranglerVersion: '4.70.0'
+          command: deploy
+
+      # Cheap proof that the new version is actually serving: the tile endpoint
+      # exercises the Worker, the R2 binding and the Range path in one request.
+      - name: Smoke-check the deployment
+        if: steps.gate.outputs.configured == 'true'
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --output /dev/null \
+            --write-out 'landing: %{http_code}\n' https://staging.planned.travel/
+          curl --fail --silent --show-error --output /dev/null \
+            --header 'Range: bytes=0-15' \
+            --write-out 'tiles: %{http_code}\n' \
+            https://staging.planned.travel/api/tiles/basemap.pmtiles

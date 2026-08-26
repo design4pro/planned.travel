@@ -118,6 +118,9 @@
     "staging": {
       "name": "planned-travel-staging",
       "workers_dev": true,
+      // Deploying attaches the custom domain, so deploy-staging.yml's smoke
+      // check has a stable hostname without a manual dashboard step.
+      "routes": [{ "pattern": "staging.planned.travel", "custom_domain": true }],
       "placement": { "mode": "smart" },
       "observability": {
         "enabled": true,
