@@ -3,14 +3,14 @@
 //   pnpm exec tsx .sandcastle/architecture-review/architecture-review.ts
 //
 // Runs a single agent over a fresh worktree and prints the <report> block.
-// Sandbox: noSandbox() so the host's Claude CLI auth is used (the docker()
-// path needs CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY in .sandcastle/.env).
+// Sandbox: docker() — auth comes from .sandcastle/.env (CLAUDE_CODE_OAUTH_TOKEN,
+// GH_TOKEN), which sandcastle's env resolver loads and injects itself.
 
 import * as sandcastle from '@ai-hero/sandcastle'
-import { noSandbox } from '@ai-hero/sandcastle/sandboxes/no-sandbox'
+import { docker } from '@ai-hero/sandcastle/sandboxes/docker'
 
 const result = await sandcastle.run({
-  sandbox: noSandbox(),
+  sandbox: docker(),
   name: 'architecture-review',
   maxIterations: 1,
   agent: sandcastle.claudeCode('claude-opus-5'),
