@@ -148,17 +148,6 @@
     ]
   },
   {
-    "id": "copy-surface-inventory",
-    "claim": "The translatable surface is ~1,415 unique candidate strings across 263 .ts/.tsx files under src/routes and src/components. It is heavily concentrated: src/routes/_app 680, src/components/modules 316, src/routes/api 267, src/routes/(auth) 146, src/components/marketing 82, src/components/atlas 79, src/components/costs 68, src/routes/legal 65, src/components/layout 45, src/components/ui 28, src/components/map 22, src/components/planner 9.",
-    "evidence": "Measured before round 1 by scanning JSX text nodes plus copy-bearing props (title|label|hint|description|placeholder|aria-label|message|heading|subtitle|cta|empty|error) over both trees, excluding __tests__. The src/routes/api figure is mostly server JSON and error text rather than screen copy — do not assume all 267 are user-facing. It is an upper bound, not a key count.",
-    "measuredIn": "i18n run, preflight",
-    "scope": [
-      "builder",
-      "auditor"
-    ],
-    "invalidatesWhen": "gap-rows.json is rewritten with an acyclic dependsOn"
-  },
-  {
     "id": "markdown-not-prettier-clean",
     "claim": "New markdown under docs/ passes pnpm lint untouched — eslint never sees it — but hand-written markdown is NOT prettier-clean: prettier rewrites table column padding and converts *emphasis* to _emphasis_. Run pnpm exec prettier --write on every markdown file you create.",
     "evidence": "Measured in round 1 on docs/plans/README.md and docs/plans/TEMPLATE.md.",
@@ -169,19 +158,6 @@
       "mechanical"
     ],
     "invalidatesWhen": "prettier stops covering markdown"
-  },
-  {
-    "id": "repo-gate-red-at-head",
-    "claim": "SUPERSEDED AND WRONG AS ORIGINALLY WRITTEN. It claimed the Playwright gate was red at this branch HEAD with 44 failures, on the evidence that git diff since the baseline commit was empty. The diff was empty for THIS worktree; the server under test was not this worktree. Rounds 1-3 measured main (2433 src/ insertions ahead, incl. 376 lines of styles.css and tokens.css, which is what the page-height differences actually were); rounds 4-5 measured servers with no .dev.vars. This branch has NEVER had its Playwright leg honestly measured.",
-    "evidence": "resolve-port.sh identified a server by GET /api/dev/seed, which every git worktree of this repo answers identically. Three worktrees were running. Confirmed by lsof: the process on the port it handed back had cwd in a different worktree. Fixed: is_ours() now also requires the listening process cwd to equal , verified to refuse the other worktrees servers.",
-    "measuredIn": "this run, rounds 1-5, corrected in round 5",
-    "scope": [
-      "builder",
-      "auditor",
-      "mechanical",
-      "capture"
-    ],
-    "invalidatesWhen": "a Playwright run is completed against a server whose cwd is this worktree and whose env includes .dev.vars"
   },
   {
     "id": "no-repair-pass-while-gate-red",
@@ -463,28 +439,6 @@
     "invalidatesWhen": "the worktrees move out of the repo root, or vite.config.ts loses the ignore list"
   },
   {
-    "id": "parity-red-until-translations-land",
-    "claim": "The i18n parity suite is red BY CONSTRUCTION until the six translation items land, and that redness is not a defect of any English-side item. `src/lib/i18n/messages/en/ui.ts` exists and no `messages/<tag>/` directory does, so the parity test reports every key of every shipped `en` namespace as missing from the other 22 locales. Every further `en/<namespace>.ts` an item ships makes the count worse until `translations-cjk|germanic|romance|rtl-hellenic|sea|slavic` fill their tags, and those six depend on every English-side item. Do NOT repair it from outside a translation item: SPEC §8 gives `messages/<tag>/` wholly to one translation item, so writing a translation from any other item is an ownership violation. An item whose own work is sound is `accepted-pending-gate` here, not rejected.",
-    "evidence": "Measured at commit 9ee20d4 on a dev server proven to be this worktree: `pnpm typecheck` clean, `pnpm lint` clean, `pnpm test` = Test Files 1 failed | 102 passed (103), Tests 23 failed | 2667 passed (2690). Every one of the 23 failures is src/lib/i18n/__tests__/parity.test.ts, and every reported missing key is a `ui.*` key.",
-    "measuredIn": "i18n round 5 preflight",
-    "scope": [
-      "builder",
-      "auditor",
-      "mechanical"
-    ],
-    "invalidatesWhen": "all six translations-* items have shipped their messages/<tag>/ directories"
-  },
-  {
-    "id": "red-gate-is-foreign-work",
-    "claim": "As of round 10 the repo gate is red ENTIRELY because of other sessions' uncommitted work, not because of anything this run touched. Do not chase it, do not re-baseline, and do not let it be read as a defect of a plan document.",
-    "evidence": "pnpm test: 23 failures, every one in src/lib/i18n/__tests__/parity.test.ts, which git reports as UNTRACKED - another session's in-flight i18n work. Playwright: 4 failures, all the /atlas snapshot (light+dark, chromium and mobile-safari, 3305-4226 pixels), stale since the repo owner fixed the pmtiles range path in e24d0e1 so the map now renders tiles it previously failed to fetch. typecheck, lint and build are clean, and 2669 of 2692 unit tests pass.",
-    "measuredIn": "this run, round 10",
-    "scope": [
-      "mechanical",
-      "auditor",
-      "builder"
-    ],
-    "invalidatesWhen": "the i18n work lands and its baselines are refreshed by whoever owns them"
     "id": "recon-cache-double-wrap",
     "claim": "The workflow already returns each recon entry AS `{hash, result}`, so the persist step must write that value VERBATIM. Wrapping it again produces `{hash, result:{hash, result:{topic,facts,...}}}`, and the next round hands the inner wrapper to the workflow as if it were the reader payload. Nothing errors: the run logs `recon reused for: <key>`, `r.topic` and `r.facts` are simply undefined, and that reader contributes an EMPTY section to the digest every builder, critic and auditor reads. Before trusting a cache entry, assert `result.topic` is a string and `result.facts` is non-empty — a matching hash is not proof the payload survived.",
     "evidence": "Measured in round 5: recon/stack.json and recon/reference.json were both double-wrapped, so the digest carried 0 of 36 stack facts (plus 20 risks) and 0 of 33 reference facts. Their inner hashes matched their outer ones, which is why the hash check passed. recon/contract.json and recon/codebase.json, written verbatim, were single-wrapped and intact. Unwrapping restored 69 facts and 26 risks. Rounds 3, 4 and the first round-5 attempt all reused the degraded pair.",
@@ -743,18 +697,6 @@
     "invalidatesWhen": "the verdict assembler learns to read an acceptance criterion that waives the visual lens"
   },
   {
-    "id": "settings-baselines-are-stale-under-tolerance",
-    "claim": "The committed settings visual baselines still show 'Workspace default - en-GB' while the live screen renders '- en'. The four frames pass only because the difference fits under maxDiffPixelRatio, which means the gate is currently blind to that region of the screen. Do NOT raise the tolerance and do NOT re-baseline mid-rebuild: settings-module-i18n rewrites this screen next, and re-baselining twice hides whichever change lands second.",
-    "evidence": "Reported independently by the round-6 auditor on locale-persistence and on ui-primitives-i18n-rtl, both naming e2e/__screenshots__/visual.spec.ts/settings-light-chromium.png. The full suite is 134 passed / 5 skipped / 0 failed with the stale frames in place.",
-    "measuredIn": "i18n round 6",
-    "scope": [
-      "mechanical",
-      "auditor",
-      "capture"
-    ],
-    "invalidatesWhen": "the settings baselines are refreshed after settings-module-i18n is accepted"
-  },
-  {
     "id": "computed-fontfamily-is-worthless-here",
     "claim": "`getComputedStyle(el).fontFamily.split(',')[0]` is worthless as a per-script font check in this repo — it is always 'Geist', because the :lang() rules re-order the TAIL of the stack. Use CDP CSS.getPlatformFontsForNode.",
     "evidence": "On the live /settings/language, a [lang=\"ko\"] chip reported first family 'Geist' from getComputedStyle, while CSS.getPlatformFontsForNode on the same node reported 'Noto Sans KR'. Full CDP sweep over the chips: ko→Noto Sans KR, ja→Noto Sans JP, zh-Hans→Noto Sans SC, zh-Hant→Noto Sans TC, ar→Noto Sans Arabic, el→Noto Sans, en/ru→Geist. All 24 chip boxes measured exactly 44px at 1440 and 360.",
@@ -827,17 +769,6 @@
       "auditor"
     ],
     "invalidatesWhen": "someone signs the reference demo in, at which point the flag comes off and the pair is required again"
-  },
-  {
-    "id": "settings-baselines-refreshed-after-inspection",
-    "claim": "The four /settings baselines were refreshed in round 7 AFTER reading the actual frame and the diff frame, not because the gate was red. Every difference traced to a criterion the item was told to satisfy: a Language entry added to the nav (shifting five rows), the off-spec LOCALES dropdown replaced by 'English - Chosen on its own screen' plus a Change link, and hint copy now coming from messages/en/settings.ts. The suite returned to 134 passed / 5 skipped / 0 failed.",
-    "evidence": "test-results/visual-authenticated-routes-settings-renders-in-light-chromium/{settings-light-actual,settings-light-diff}.png were both read before the refresh. Refresh was scoped with -g \"settings renders in\", touching exactly four files under e2e/__screenshots__.",
-    "measuredIn": "i18n round 7, orchestrator",
-    "scope": [
-      "mechanical",
-      "capture"
-    ],
-    "invalidatesWhen": "the settings screen changes again"
   },
   {
     "id": "chips-inert-until-hydrated",
@@ -924,18 +855,6 @@
       "builder"
     ],
     "invalidatesWhen": "the mobile nav stops being position-fixed"
-  },
-  {
-    "id": "only-parity-is-red-now",
-    "claim": "As of round 8 the ONLY red anywhere in this repo is the 23-test i18n parity suite. typecheck, lint and build are clean, Playwright is 138 passed / 5 skipped / 0 failed with the four new settings-language frames included, and unit tests are 2868 of 2891. Any new red is therefore this round’s doing and must not be attributed to a pre-existing floor.",
-    "evidence": "Measured by the orchestrator against port 3001 after killing the contested 3000 server: playwright 138/5/0, vitest Test Files 1 failed | 105 passed (106), Tests 23 failed | 2868 passed (2891).",
-    "measuredIn": "i18n round 8, orchestrator re-measurement",
-    "scope": [
-      "mechanical",
-      "auditor",
-      "builder"
-    ],
-    "invalidatesWhen": "the translation packs land and parity goes green"
   },
   {
     "id": "logical-inset-follows-own-direction",
@@ -1061,32 +980,6 @@
     "invalidatesWhen": null
   },
   {
-    "id": "round-9-mobile-failures-are-real",
-    "claim": "The six mobile-safari visual failures this round are NOT the known load flake: they reproduce with identical pixel counts when re-run alone with --project=mobile-safari -g \"renders in\".",
-    "evidence": "Full suite: 7 failed. Isolated re-run of just the mobile-safari 'renders in' frames: 6 failed / 23 passed in 17.2s, with the same numbers (3517, 1493, 1511, 763, 24896, 231610). Contrast with the chromium ECONNRESET spec, which passed alone in 2155ms.",
-    "measuredIn": "i18n round 9",
-    "scope": [
-      "critic",
-      "auditor",
-      "mechanical",
-      "builder"
-    ],
-    "invalidatesWhen": null
-  },
-  {
-    "id": "why-six-mobile-frames-are-red-in-round-9",
-    "claim": "The six red mobile-safari frames after round 9 are accounted for and none is an unexplained regression. settings-language light+dark: the PICKER_COLUMNS fix the ORCHESTRATOR asked for in round 8 took the 393px grid from one column to two and shrank the page 572px - it cannot be both the requested fix and a defect. dashboard light: app-shell-i18n rewrote that screen. trips light and atlas light+dark: app-shell-i18n owns src/components/layout/, which frames every authenticated screen, so its avatar change and its nav labels moving into shell.ts shift screens nobody is otherwise touching; the atlas frames additionally carry the known GPU-rasterised map noise. They are deliberately NOT re-baselined: both owning items are still rejected and both screens will change again, and re-baselining twice means whichever change lands second is never compared.",
-    "evidence": "Re-run alone, all six reproduce with identical pixel counts (so not the three-flake load pattern). The atlas light diff shows exactly three regions: the top-right avatar, the four bottom-nav labels, and coastline speckle on the WebGL canvas. git show HEAD:src/components/layout/nav-model.ts carried label: 'My Trips'; src/lib/i18n/messages/en/shell.ts now carries 'nav.trips': 'My trips'.",
-    "measuredIn": "i18n round 9, orchestrator",
-    "scope": [
-      "mechanical",
-      "auditor",
-      "critic",
-      "capture"
-    ],
-    "invalidatesWhen": "app-shell-i18n and settings-module-i18n are both accepted and the frames are refreshed once"
-  },
-  {
     "id": "nav-copy-normalised-to-sentence-case",
     "claim": "app-shell-i18n changed one nav label's wording while moving it into the catalogue: 'My Trips' became 'My trips'. It is inside the item's ownership, it matches the house sentence case used by 'New trip', 'Save changes' and 'Follow the workspace', and it is the letter-level diff visible on five mobile baselines. Not a defect - but it is the reason a nav-only frame moved, so do not go hunting for a layout cause.",
     "evidence": "git show HEAD:src/components/layout/nav-model.ts -> label: 'My Trips'. src/lib/i18n/messages/en/shell.ts:67 -> 'nav.trips': 'My trips'. The short forms ('Trips', 'Vacay', 'Atlas', 'Journey') are unchanged.",
@@ -1133,30 +1026,6 @@
       "capture"
     ],
     "invalidatesWhen": null
-  },
-  {
-    "id": "seven-mobile-baselines-refreshed-in-round-10",
-    "claim": "The seven red mobile-safari frames were refreshed in round 10, one targeted -g run each, after reading the atlas and journey diffs. Every difference traced to work that was asked for: app-shell-i18n's avatar change and its nav labels moving into shell.ts (it owns src/components/layout/, which frames every authenticated screen, which is why trips, journey and atlas moved at all), the two-column mobile picker fix the orchestrator requested in round 8, and the known GPU speckle on the WebGL map canvases. Exactly seven files changed - no collateral - and the suite went to 138 passed / 5 skipped / 0 failed.",
-    "evidence": "The failing set was identical across three consecutive full runs before the refresh, and all seven actual frames measured 393px wide, so the width instability an earlier round warned about did not reproduce. git status after the refresh listed exactly the seven intended PNGs.",
-    "measuredIn": "i18n round 10, orchestrator",
-    "scope": [
-      "mechanical",
-      "capture",
-      "critic"
-    ],
-    "invalidatesWhen": "any of those screens changes again"
-  },
-  {
-    "id": "the-translation-workload-measured",
-    "claim": "The English source is 1,005 keys across four namespaces - auth 297, settings 398, shell 260, ui 50 - so the six translation packs owe 22 locales x 1,005 = about 22,110 strings between them. The heaviest single pack is romance at five locales. Parity fails identically for an absent locale and an incomplete one, so a pack that cannot finish should finish WHOLE locales and name the missing ones: a complete locale is shippable progress, a half-finished one is not.",
-    "evidence": "Counted with grep -cE \"^\\s+'\" over src/lib/i18n/messages/en/*.ts: auth.ts 297, settings.ts 398, shell.ts 260, ui.ts 50. Only four of SPEC section 8's ten namespaces exist, because the other six belong to items deferred by scope in round 4.",
-    "measuredIn": "i18n round 10, orchestrator",
-    "scope": [
-      "builder",
-      "mechanical",
-      "auditor"
-    ],
-    "invalidatesWhen": "a new en namespace file appears or a deferred item is un-deferred"
   },
   {
     "claim": "The settings screen has two hard pixel budgets a translation can silently blow: the nav hint under each section link is 198px and the regional select trigger is 206px, both `.truncate`. English itself already runs 5px over on the date row, so 'within ~5px of English' is the real bar, not 'fits'.",
@@ -1246,50 +1115,6 @@
     "measuredIn": "round-11"
   },
   {
-    "claim": "The i18n parity suite is now down to 8 failures covering only ca/es/fr/it/pt-BR/nl/sv (the romance and germanic packs) plus the aggregate locale-count test. de and hu, which were red in earlier rounds, are green.",
-    "evidence": "`pnpm test` at this tree: Test Files 1 failed | 112 passed (113), Tests 8 failed | 3147 passed (3155). The named failures are exactly `the shipped catalogues > {ca,es,fr,it,pt-BR,nl,sv} > carries every key English carries` plus `carries a file for every locale, once English carries any key`. Earlier in the same session the run also listed de and hu; parallel items landed them mid-round.",
-    "scope": [
-      "mechanical",
-      "auditor",
-      "critic"
-    ],
-    "id": "the-i18n-parity-suite-is-now-down-to",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The i18n parity suite has shrunk from 23 failures to 6, and the remaining ones are the romance pack (ca, es, fr, it, pt-BR) missing the ui.* namespace plus one whole-catalogue file-presence test. Other packs (cs, el, hu, ja, ko, pl, ru, tr, uk, zh-Hans, zh-Hant, ar) now pass.",
-    "evidence": "pnpm test: Test Files 1 failed | 112 passed (113), Tests 6 failed | 3149 passed (3155). Named failures: 'carries a file for every locale, once English carries any key' plus ca/es/fr/it/pt-BR 'carries every key English carries'; every diff key printed is a ui.* key.",
-    "scope": [
-      "builder",
-      "critic",
-      "auditor",
-      "mechanical"
-    ],
-    "id": "the-i18n-parity-suite-has-shrunk-from-23",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "Playwright is fully green against port 3001 on this tree, including all settings-language frames — no visual regressions this round.",
-    "evidence": "PLAYWRIGHT_BASE_URL=http://localhost:3001 pnpm exec playwright test → PASS (138) FAIL (0) skipped (5), 64968ms, no timeout flakes.",
-    "scope": [
-      "mechanical",
-      "auditor",
-      "capture"
-    ],
-    "id": "playwright-is-fully-green-against-port-3001-on",
-    "measuredIn": "round-11"
-  },
-  {
-    "id": "the-overflow-affix-is-inverted-in-thirteen-locales",
-    "measuredIn": "round-11",
-    "appliesTo": [
-      "builder",
-      "auditor"
-    ],
-    "claim": "The `ui.badge.overflow` / `ui.avatar.more` affix inversion the round-11 auditor pinned on translations-germanic is in THIRTEEN locales, not three. Measured by grepping both keys across every shipped catalogue: en is '{max}+' / '+{hidden}'; de, nl, sv, ar, el, tr, hu, id, vi, cs, pl, ru and uk all ship '+{max}' / '{hidden}+', the same inversion in the same direction. Only ja, zh-Hans and zh-Hant differ honestly (fullwidth '＋', a real typographic difference) and ko writes a real Korean phrase ('외 {hidden}'). Every builder independently hit the same wall and made the same move, so this is a contract defect, not three translators' carelessness: PROPER_NOUNS in src/lib/i18n/__tests__/parity.test.ts is [], the no-byte-identical check therefore forbids a glyph-only value from staying identical to English, and a Germanic or Slavic translator has no honest way to ship '{max}+'. Fixing it means extending the allow-list (owned by i18n-core-runtime) FIRST; a builder told to restore '{max}+' without that lands straight back in a red parity suite.",
-    "correction": "Round 12 recounted: 13, not 14. The seventeen non-English catalogues split 13 inverted + 3 fullwidth (ja, zh-Hans, zh-Hant) + 1 real phrase (ko)."
-  },
-  {
     "claim": "A missing t() key now produces TS2345 naming MessageKey at BOTH arities, not just the one with a params object. This updates the settled t-missing-key-diagnostic fact, which recorded that a bare call fell back to TS2554 'Expected 2 arguments, but got 1'. The `MessageKey extends TKey ? [params?: MessageParams]` first branch of TranslateArgs is what fixed it.",
     "evidence": "Probe file src/lib/i18n/__diagnostic-probe.ts calling `t('shell.no-such-key')` and `t('shell.no-such-key', { name: 'x' })`, run through ./node_modules/.bin/tsc --noEmit: BOTH lines reported `error TS2345: Argument of type '\"shell.no-such-key\"' is not assignable to parameter of type 'MessageKey'.` Zero TS2554. Probe deleted immediately afterwards; `ls` confirms it is gone.",
     "scope": [
@@ -1369,17 +1194,6 @@
     "measuredIn": "round-11"
   },
   {
-    "claim": "Locale-specific clipping on /dashboard's reservation meta is caused by the frozen CLDR date table plus a hard-coded ' · ' join in src/routes/_app/dashboard.tsx, not by catalogue copy — pt-BR and ru clip there, de and es do not.",
-    "evidence": "Playwright chromium at 360 on /dashboard, filtering `main *` for scrollWidth > clientWidth on `.text-caption`: pt-BR gave 'sex., 9 de out. · 15:00 – 11:00' 156>148 plus three more; ru gave 'пт, 9 окт. · 15:00 – 11:00' 132>126 plus three more; de and es both returned []. dashboard.tsx:514-520 builds the line from formatDate()/formatTimeRange() and `.join(' · ')`.",
-    "scope": [
-      "builder",
-      "critic",
-      "auditor"
-    ],
-    "id": "locale-specific-clipping-on-dashboard-s-reservation-meta",
-    "measuredIn": "round-11"
-  },
-  {
     "claim": "es/fr/it/ca/pt-BR all resolve to plural categories one,many,other on this runtime (CLDR 42+ added `many` to the Romance locales), so a two-branch one/other translation of an English plural message is a parity gap in these five locales.",
     "evidence": "node -e \"new Intl.PluralRules(l).resolvedOptions().pluralCategories\" gives es/fr/it/ca/pt-BR → one,many,other and en → one,other. Every plural message in the five shipped catalogues carries all three and the parity suite's pluralGaps axis is empty for them.",
     "scope": [
@@ -1387,28 +1201,6 @@
       "auditor"
     ],
     "id": "es-fr-it-ca-pt-br-all-resolve",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The i18n parity suite is now fully green; the entire repo gate is green with zero failures.",
-    "evidence": "pnpm test at this tree: Test Files 114 passed (114), Tests 3168 passed (3168), exit 0. Previous rounds reported 6-23 parity failures.",
-    "scope": [
-      "builder",
-      "critic",
-      "auditor",
-      "mechanical"
-    ],
-    "id": "the-i18n-parity-suite-is-now-fully-green",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The dev server for this worktree is already up on port 3001; resolve-port.sh reused it without --start.",
-    "evidence": "scripts/ultrabuild/resolve-port.sh printed 'resolve-port: reusing the server already answering on 3001' then '3001', exit 0.",
-    "scope": [
-      "mechanical",
-      "capture"
-    ],
-    "id": "the-dev-server-for-this-worktree-is-already",
     "measuredIn": "round-11"
   },
   {
@@ -1420,17 +1212,6 @@
       "critic"
     ],
     "id": "the-demo-fixture-s-locale-is-contended-mid",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "There are TWO live shots slugs with different inodes and BOTH carry this round's round-10 item directories: .claude/ultrabuild/shots/i18n/round-10 and .claude/ultrabuild/shots/wersje-jezykowe-aplikacji-na-podstawie-zrodla-ht/round-10. Each already held app-shell-i18n/ and settings-module-i18n/ from parallel builders. A reader looking in only one will think half the round's frames are missing.",
-    "evidence": "stat -f '%i %N' gives 422053193 for i18n/round-10 and 422510865 for wersje-.../round-10 — distinct directories, not a symlink. `find` shows i18n/round-10/app-shell-i18n/*.png (admin-ar-dark-1440.png, dashboard-ar-light-360.png, state-dashboard-empty-dark-360.png …) and `ls` shows the same two item names under wersje-.../round-10.",
-    "scope": [
-      "capture",
-      "auditor",
-      "critic"
-    ],
-    "id": "there-are-two-live-shots-slugs-with-different",
     "measuredIn": "round-11"
   },
   {
@@ -1475,40 +1256,6 @@
       "auditor"
     ],
     "id": "an-overflow-scan-over-main-header-nav-counts",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The demo auth fixture is currently pinned to Ukrainian, so every authenticated Playwright frame renders in `uk` against English baselines. This is one root cause behind all 19 screenshot failures — do not treat them as 19 independent layout regressions.",
-    "evidence": "test-results/visual-authenticated-routes-dashboard-renders-in-light-chromium/error-context.md page snapshot contains 'Панель planned.travel', 'Основні розділи', 'Мої поїздки', 'Нова поїздка', 'Тема: як у системі'. The day-boundary spec's own text diff prints Ukrainian ('2 дні тому' vs '1 день тому'). A full run (which includes the setup project that calls pinDemoLanguage()) did NOT reset it back to en.",
-    "scope": [
-      "capture",
-      "critic",
-      "auditor",
-      "builder"
-    ],
-    "id": "the-demo-auth-fixture-is-currently-pinned-to",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "Non-Playwright gate is fully green on this tree: typecheck, lint, build all exit 0 and vitest is 3168/3168 across 114 files with zero parity failures.",
-    "evidence": "pnpm typecheck exit 0 (no output); pnpm lint exit 0 ('ESLint: No issues found'); pnpm test exit 0 (Test Files 114 passed (114), Tests 3168 passed (3168), 11.09s); pnpm build exit 0 ('✓ built in 1.52s').",
-    "scope": [
-      "builder",
-      "critic",
-      "auditor",
-      "mechanical"
-    ],
-    "id": "non-playwright-gate-is-fully-green-on-this",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The dev server for this worktree was already up on 3001 and resolve-port.sh reused it without starting anything, so --start was a no-op this round.",
-    "evidence": "scripts/ultrabuild/resolve-port.sh --start printed 'resolve-port: reusing the server already answering on 3001' then '3001', exit 0.",
-    "scope": [
-      "mechanical",
-      "capture"
-    ],
-    "id": "the-dev-server-for-this-worktree-was-already",
     "measuredIn": "round-11"
   },
   {
@@ -1572,17 +1319,6 @@
     "measuredIn": "round-11"
   },
   {
-    "claim": "The reference product's authenticated settings screen is STILL gated in round 14 — /settings?tab=display redirects to its own login. No authenticated reference frame has ever been obtained and none was this round either.",
-    "evidence": "Ego Lite 0.4.7.1 / Chromium 150, fresh task space: openOrReuseTab('https://demo.liketrek.com/settings?tab=display') then pageInfo() returned url 'https://demo.liketrek.com/login?redirect=%2Fsettings%3Ftab%3Ddisplay', title 'TREK', w 1184 h 802. One navigation, no hang, under a minute.",
-    "scope": [
-      "capture",
-      "critic",
-      "auditor"
-    ],
-    "id": "the-reference-product-s-authenticated-settings-screen-is",
-    "measuredIn": "round-11"
-  },
-  {
     "claim": "capture.mjs --click '[data-testid=\"locale-chip-ar\"]' --settle 900 reaches the real selected-RTL state on /settings/language without any hydration workaround — the settled networkidle/scrollIntoViewIfNeeded recipe is already inside the script.",
     "evidence": "All eight selected-rtl frames rendered Arabic RTL; selected-rtl-1440-light-A.png read back shows h1 'الإعدادات', mirrored nav, the العربية chip checked, and the toast 'planned.travel يتحدث الآن العربية'. captureValid true, warnings [], console.fatal [].",
     "scope": [
@@ -1600,17 +1336,6 @@
       "auditor"
     ],
     "id": "a-settle-900-on-a-chip-click-photographs",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The four CJK catalogues were already complete on disk before this round and are now committed; English's true unique key count is 859, not the 1,005 the item prompt states.",
-    "evidence": "git log shows 3c1daf3 committed ja/ko/zh-Hans/zh-Hant, and `git status --porcelain` over the four owned dirs listed only my single edit. Importing the .ts catalogues in node: en = auth 244 + settings 331 + shell 235 + ui 49 = 859 unique keys, and each of the four locales carries 859 with missing=0 orphans=0 shapeDrift=0 tokenDrift=0 pluralGaps=0 blanks=0 untranslated=0. The 1,005 figure is `grep -cE \"^\\s+'\"` = 297/398/260/50, which counts plural-branch and multi-line-string continuation lines as keys.",
-    "scope": [
-      "builder",
-      "critic",
-      "auditor"
-    ],
-    "id": "the-four-cjk-catalogues-were-already-complete-on",
     "measuredIn": "round-11"
   },
   {
@@ -1667,27 +1392,6 @@
     "measuredIn": "round-11"
   },
   {
-    "claim": "Vitest is now 3179 tests across 114 files, all passing — up 11 tests from the 3168 recorded last round, and still zero parity failures.",
-    "evidence": "pnpm test: Test Files 114 passed (114), Tests 3179 passed (3179), 10.76s.",
-    "scope": [
-      "mechanical",
-      "auditor",
-      "critic"
-    ],
-    "id": "vitest-is-now-3179-tests-across-114-files",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "Playwright is fully green against port 3001 with no flakes: 138 passed, 5 skipped, 0 failed in 56.8s on the first run, no retries needed.",
-    "evidence": "PLAYWRIGHT_BASE_URL=http://localhost:3001 pnpm exec playwright test -> 'PASS (138) FAIL (0) skipped (5)  Time: 56850ms'.",
-    "scope": [
-      "mechanical",
-      "capture"
-    ],
-    "id": "playwright-is-fully-green-against-port-3001-with",
-    "measuredIn": "round-11"
-  },
-  {
     "claim": "The literal `import.meta.glob('./messages/*/*.ts')` still emits exactly one chunk per catalogue file at the current 92-file catalogue, with no locale content inlined into the entry and no chunk mixing two locales. This updates the settled 73-file measurement.",
     "evidence": "Scratchpad SSR `vite build` (configFile:false, build.ssr:true, rollupOptions.input=src/lib/i18n/catalogue.ts) over the tree at 92 catalogue files: 92 chunks in assets/, 92 dynamic import() specifiers in the 15,590-byte entry, all 92 distinct. Entry contains none of 'Sprache' / 'Wyjazdy' / 'العربية' / 'nav.trips' / 'Reisen'. Scanning every chunk: 1 carries German, 2 carry Polish, 0 carry both. Gotcha unchanged: symlink the repo's node_modules into the scratchpad or the config cannot resolve `vite`.",
     "scope": [
@@ -1711,17 +1415,6 @@
     "measuredIn": "round-11"
   },
   {
-    "claim": "The whole repo gate is green at this tree with the fix applied — including the i18n parity suite, which earlier rounds carried red.",
-    "evidence": "pnpm typecheck exit 0 (no output); pnpm lint exit 0 ('ESLint: No issues found'); pnpm test exit 0 (Test Files 114 passed (114), Tests 3179 passed (3179), 11.04s); pnpm build exit 0 ('✓ built in 1.48s'). The i18n slice alone: `vitest run src/lib/i18n` = 9 files / 256 tests passed in 794ms. Any new red this round is therefore the round's doing, not a pre-existing floor.",
-    "scope": [
-      "mechanical",
-      "auditor",
-      "critic"
-    ],
-    "id": "the-whole-repo-gate-is-green-at-this",
-    "measuredIn": "round-11"
-  },
-  {
     "claim": "The overflow affix's correct token order in Arabic depends on whether the host element carries `data-numeric`, and the two hosts in this repo differ - so the two affix keys must NOT be repaired in the same direction. CountBadge is isolated (direction:ltr) so logical order == painted order and ar must write '{max}+' exactly like English; the AvatarStack overflow face is bare, inherits dir=rtl, and the bidi algorithm reverses the run, so ar must write '{hidden}+' to PAINT '+2'.",
     "evidence": "Chromium against dist/client/assets/styles-CfaXwTeV.css, reproducing each component's real markup under <html dir=rtl lang=ar>, wrapping each logical character in an inline span and sorting by getBoundingClientRect().left: isolated dir=ltr logical '99+' -> paints '99+', logical '+99' -> paints '+99'. Bare dir=rtl logical '+2' -> paints '2+', logical '2+' -> paints '+2', logical '+99' -> paints '99+', logical '99+' -> paints '+99'. Wrapping in zero-effect spans does not perturb bidi resolution.",
     "scope": [
@@ -1730,17 +1423,6 @@
       "auditor"
     ],
     "id": "the-overflow-affix-s-correct-token-order-in",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The 206px `.truncate` Select trigger on /settings is a budget English ITSELF fails, so 'fits the box' is the wrong acceptance bar - the right one is 'no wider than English on the same row'. English measures 211px live and 217px on its longest sample date.",
-    "evidence": "Playwright chromium + e2e/.auth/demo.json at 1440 on http://localhost:3001/settings, filtering .truncate on clientWidth within 4px of 206: en 'Workspace default - 23 Jun 2026' 211>206 CLIPPED. Canvas measureText at the element's own sampled font ('normal 500 13px/18.2px Geist, ...') gives en worst case 217px. Before my fix: el 227 live / 220 canvas, hu 226 canvas at '2026. szept. 23.', tr 209 live. After: tr and hu clip nothing at 360 or 1440; el 213>206, two pixels past English.",
-    "scope": [
-      "builder",
-      "critic",
-      "auditor"
-    ],
-    "id": "the-206px-truncate-select-trigger-on-settings-is",
     "measuredIn": "round-11"
   },
   {
@@ -1776,49 +1458,6 @@
     "measuredIn": "round-11"
   },
   {
-    "claim": "The Vietnamese dashboard hero date wraps to two lines at 360px while Indonesian's stays on one, and no catalogue key is involved - it is src/lib/format.ts plus the frozen CLDR table, so no translation item can fix it. This is the vi analogue of the already-settled German case.",
-    "evidence": "Screenshot .claude/ultrabuild/shots/i18n/round-15/translations-sea/vi-dashboard-360-light.png shows '9 - 20 thg 10, 2026' on two lines inside the 107px NGAY DI tile; id-dashboard-360-dark.png shows '9 - 20 Okt 2026' on one line in the same tile. Neither string has a key in messages/*/shell.ts - both are produced by formatDateRange in src/lib/format.ts against the frozen month table.",
-    "scope": [
-      "builder",
-      "critic"
-    ],
-    "id": "the-vietnamese-dashboard-hero-date-wraps-to-two",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The whole mechanical gate is green on this tree: typecheck, lint, test (3179/3179 across 114 files), build and Playwright (138 passed / 5 skipped / 0 failed) all exit 0 on the first run, no flakes and no retries.",
-    "evidence": "pnpm typecheck exit 0; pnpm lint exit 0; pnpm test exit 0 (Test Files 114 passed (114), Tests 3179 passed (3179), 10.96s); pnpm build exit 0 ('✓ built in 1.48s'); PLAYWRIGHT_BASE_URL=http://localhost:3001 pnpm exec playwright test exit 0 ('5 skipped / 138 passed (1.0m)'), and grep -c 'could not pin' over the run log returned 0.",
-    "scope": [
-      "builder",
-      "capture",
-      "critic",
-      "auditor",
-      "mechanical"
-    ],
-    "id": "the-whole-mechanical-gate-is-green-on-this",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The reference product's /dashboard is still auth-gated in round 16 — a fourth independent confirmation. No authenticated reference frame has ever been obtained, so app-shell-i18n can never form a blind pair and future rounds should stop paying the Ego Lite cost for it.",
-    "evidence": "Ego Lite 0.4.7.1 / Chromium 150, fresh task space 'ultrabuild app-shell-i18n r16': openOrReuseTab('https://demo.liketrek.com/dashboard', {wait:true,timeout:30}) + waitForNetworkIdle + pageInfo() returned url 'https://demo.liketrek.com/login?redirect=%2Fdashboard', title 'TREK'. One navigation, no hang, well under a minute. completeTaskSpace(..., {keep:false}) returned promptly.",
-    "scope": [
-      "capture",
-      "critic"
-    ],
-    "id": "the-reference-product-s-dashboard-is-still-auth",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The dashboard capture is completely clean this round: 8 frames, captureValid true, zero warnings and an empty console in all three classification buckets — so any defect the critic finds in these frames is a layout/copy judgement, not a capture artefact.",
-    "evidence": "node scripts/ultrabuild/capture.mjs --url http://localhost:3001/dashboard --label B --viewports 1440x900,768x1024,360x800,2560x1440 --themes light,dark --auth printed console.fatal [], notTheApp [], toolchainBroken [], warnings [], captureValid true, 8 files 327-429 KB each.",
-    "scope": [
-      "critic",
-      "auditor"
-    ],
-    "id": "the-dashboard-capture-is-completely-clean-this-round",
-    "measuredIn": "round-11"
-  },
-  {
     "claim": "The committed Playwright visual baselines photograph exactly two viewports — chromium 1440x900 and mobile-safari 393x852 — so `2xl:` (>=1536) and the `sm`..`lg` band (640-1023) are design zones no baseline can see. A screen can therefore be recomposed for large and tablet viewports with the mechanical gate staying green and e2e/__screenshots__ untouched.",
     "evidence": "playwright.config.ts:125 `viewport: { width: 1440, height: 900 }` for the chromium project and devices['iPhone 15'] (393x852) for mobile-safari. Measured: an auth-shell rewrite whose every composition change was gated to `2xl:` and `sm:...lg:hidden` took `-g \"login|register|forgot\"` from 6 pixel failures (22309px diff on forgot-password-light, ratio 0.02) to PASS (13) FAIL (0), and the full suite to PASS (138) FAIL (0) skipped (5).",
     "scope": [
@@ -1829,17 +1468,6 @@
       "mechanical"
     ],
     "id": "the-committed-playwright-visual-baselines-photograph-exactly-two",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The round-16 auth-i18n B frames are not evidence about this tree: /login renders its H1, its Wordmark link and its ThemeToggle at every viewport and theme, and both HEAD and the working tree contained that markup when those frames were shot. A frame showing an empty band where a heading belongs, with no space reserved for a header that is unconditional in the source, is a stale or foreign build — check the server before filing it as a design defect.",
-    "evidence": "Playwright chromium against the resolve-port.sh server on 3001, 360/768/1440/2560 x light/dark: h1 textContent 'Sign in to planned.travel' in all eight, box [165,169,448,30] at 1440, fontFamily 'MuseoModerno, \"Planned Display Fallback\"'; header box [48,32,682,36] with innerHTML `<a aria-label=\"planned.travel home\" href=\"/\">` plus the toggle button. `git show HEAD:src/routes/(auth)/-ui/auth-shell.tsx` contains the same unconditional <header> and <h1>.",
-    "scope": [
-      "critic",
-      "capture",
-      "auditor"
-    ],
-    "id": "the-round-16-auth-i18n-b-frames-are",
     "measuredIn": "round-11"
   },
   {
@@ -1901,51 +1529,6 @@
     "measuredIn": "round-11"
   },
   {
-    "claim": "e2e/__screenshots__/visual.spec.ts/atlas-light-chromium-darwin.png is stale against HEAD and fails independently of any round-17 diff; atlas-dark passes. Do not attribute `atlas renders in light` to a code change without cropping the baseline first.",
-    "evidence": "Rendered both PNGs into a file:// page at 2.5-4x with image-rendering:pixelated: baseline reads 'My Trips' and 'Counted across finished trips'; the actual reads 'My trips' and 'Across every trip on your record'. `git show HEAD:src/lib/i18n/messages/en/shell.ts` has `'nav.trips': 'My trips'` (since 4fc921d) and `git show HEAD:src/components/atlas/atlas-panel.tsx` has caption=\"Across every trip on your record\" (since 730f5d8). Diff is 2675px, ratio 0.01, stable across three runs.",
-    "scope": [
-      "capture",
-      "mechanical",
-      "auditor",
-      "critic"
-    ],
-    "id": "e2e-screenshots-visual-spec-ts-atlas-light-chromium",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The 22 parity failures this round are a single new namespace, not 22 independent translation regressions: every missing key printed is atlas.*, so an atlas English catalogue landed without any locale pack following it.",
-    "evidence": "pnpm test diff output for each of the 22 locales lists only atlas.search.* / atlas.* keys; the previous round recorded 3179/3179 with zero parity failures, and this round is 3433 passed / 22 failed across 3455.",
-    "scope": [
-      "builder",
-      "critic",
-      "auditor",
-      "mechanical"
-    ],
-    "id": "the-22-parity-failures-this-round-are-a",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "Playwright's atlas-light chromium failure is stable, not the load flake: the same 2675-pixel count was produced on both of Playwright's own retake attempts within the single test.",
-    "evidence": "Call log shows two 'taking page screenshot' passes, both reporting '2675 pixels (ratio 0.01 of all image pixels) are different', ending in 'captured a stable screenshot'.",
-    "scope": [
-      "critic",
-      "auditor",
-      "mechanical"
-    ],
-    "id": "playwright-s-atlas-light-chromium-failure-is-stable",
-    "measuredIn": "round-11"
-  },
-  {
-    "claim": "The dev server for this worktree is up on 3001 and resolve-port.sh --start reused it without starting anything; the shoot helper's language pin worked (zero 'could not pin' lines).",
-    "evidence": "scripts/ultrabuild/resolve-port.sh --start printed 'resolve-port: reusing the server already answering on 3001' then '3001'; grep -c 'could not pin' over the full Playwright log returned 0.",
-    "scope": [
-      "capture",
-      "mechanical"
-    ],
-    "id": "the-dev-server-for-this-worktree-is-up",
-    "measuredIn": "round-11"
-  },
-  {
     "id": "reverting-source-leaves-the-dev-server-serving-errors",
     "measuredIn": "round-17",
     "appliesTo": [
@@ -1954,5 +1537,520 @@
       "builder"
     ],
     "claim": "Removing source files a running dev server has already loaded makes it answer 500 on unrelated routes. Measured after banking the atlas work on a branch: /pricing, /login, /legal/terms and /trips all returned 'should not be an error response' in Playwright, five failures across public and authenticated specs, while typecheck, lint, unit tests and build were all clean. Killing the listener, deleting node_modules/.vite and restarting took the same suite to 137 passed / 1 failed. Anything that removes or moves source must restart the dev server before the gate runs, or the gate reports the server's stale module graph as application defects."
+  },
+  {
+    "id": "plans-recon-artifacts-lost",
+    "claim": "The recon artifacts docs/plans/** leans on - .claude/ultrabuild/recon/gap-rows.json, gap-cuts.json, repo-data.md, repo-ui.md, repo-platform.md - exist NOWHERE: not on disk, not in any archive, never committed. The README's re-derivation one-liner cannot run, and the 89 row ids (TRP-01…) survive only where a plan file quotes them. Any new planning work must either regenerate what it needs from the plans themselves or be self-contained; it must not cite those files as if readable.",
+    "evidence": "find over the repo, the main checkout and all four .claude/ultrabuild/archive/*/ dirs returns nothing; git log --all --diff-filter=A over *gap-rows.json is empty. Only knowledge/ is tracked.",
+    "measuredIn": "plans-for-plugins run, round 0",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": "someone regenerates and commits the matrix artifacts"
+  },
+  {
+    "id": "reference-plugins-measured",
+    "claim": "The two plugins the task names live in the local reference checkout at /Users/rafalwolak/dev/test/trek/data/plugins/{community-trips,koffi} - each is tiny: trek-plugin.json + server/index.js + client/index.html. community-trips: a standalone page (type 'page') to browse/view/discuss/share real member trips backed by a fixed GitHub repo via a per-user PAT (PRs for sharing, Discussions for suggestions; egress raw.githubusercontent.com, api.github.com, basemaps.cartocdn.com); Import creates a local read-only draft trip. koffi: a dashboard hero-slot widget (type 'widget', GET /state, permission db:read:trips) - an animated suitcase mascot on the boarding-pass bar whose animations react to days-until-departure (more excited as it nears, split-flap countdown under 7 days, sunglasses while the trip runs, naps only when there is plenty of time).",
+    "evidence": "Read both trek-plugin.json manifests and READMEs at the paths above; file lists measured with find.",
+    "measuredIn": "plans-for-plugins run, round 0",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": "the local reference checkout moves or the plugins are updated"
+  },
+  {
+    "id": "reference-wiki-is-local",
+    "claim": "The reference product's entire wiki is checked out locally as markdown at /Users/rafalwolak/dev/test/trek/wiki/*.md (~60 pages incl. Admin-Plugins.md, Plugin-Development.md, Plugin-Cookbook.md, Addons-Overview.md). Read it there - never fetch GitHub. In plan files cite a page only as `wiki: <Page-Name>` with no URL, per docs/plans/README.md's naming rule.",
+    "evidence": "ls of the wiki dir; the naming rule is docs/plans/README.md 'The naming rule that binds every plan file' items 1-2.",
+    "measuredIn": "plans-for-plugins run, round 0",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "invalidatesWhen": "the checkout at /Users/rafalwolak/dev/test/trek is removed"
+  },
+  {
+    "claim": "src/server/repos/settings.ts drifted roughly +7..+17 lines against plan 03's citations: updateUserSettingsInput.reduceMotion :141, updateUserSettings :228-239, ensureUserSettings :219-226, getUserSettings :211-217, EffectiveSettings.reduceMotion :266, getEffectiveSettings :271-304 with its Promise.all :275-278 and return literal :285-303; -server/settings.ts: AppearancePayload.reduceMotion :269, loadAppearance fill :285, saveAppearance validator :297, pass-through :305.",
+    "evidence": "grep -n / sed measurements at this run's tree, written into the corrected plan text and re-checkable with the same greps.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "src-server-repos-settings-ts-drifted-roughly-7-17-li",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "claim": "No production caller of ensureUserSettings/updateUserSettings passes the optional userId parameter — all nine call sites write the session's own row — so a membership guard there would defend a path no code takes.",
+    "evidence": "grep -rn over src/ excluding __tests__ and the repo module: apply.ts:288-289, preferences.ts:87/:119, -server/settings.ts:122/:232/:247/:279/:303, every one called as (scope) or (scope, patch) with no third argument.",
+    "scope": [
+      "builder",
+      "critic"
+    ],
+    "id": "no-production-caller-of-ensureusersettings-updateuse",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "claim": "Logged-out GitHub wiki pages honor Playwright colorScheme emulation, so a real dark reference frame IS formable for this wiki (unlike demo.liketrek.com).",
+    "evidence": "Playwright chromium, goto domcontentloaded + 3s settle on the TREK wiki: colorScheme dark gave body background rgb(13,17,23), light gave rgb(255,255,255), at all four viewports.",
+    "scope": [
+      "capture"
+    ],
+    "id": "logged-out-github-wiki-pages-honor-playwright-colors",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "claim": "capture.mjs --auth on the root URL '/' photographs the public marketing landing page, not the dashboard - a valid session does not redirect '/' into the app shell.",
+    "evidence": "All eight A frames for plan-03-findings-resolution show 'Plan the trip. Not the spreadsheet.' hero and pricing sections; captureValid true, warnings [].",
+    "scope": [
+      "capture",
+      "critic"
+    ],
+    "id": "capture-mjs-auth-on-the-root-url-photographs-the-pub",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "claim": "src/server/repos/vacay.ts exports exactly 28 functions (grep -cE '^export (async )?function') plus 6 exported *Input z.object consts, not the 36 the plan previously claimed; setEntitlement spans 307-342 with the userId default at :313 and setEntry's default at :369",
+    "evidence": "/usr/bin/grep -cE '^export (async )?function' src/server/repos/vacay.ts -> 28; grep -cE '^export const [a-zA-Z]+Input = z' -> 6; sed -n '307,345p' shows the caller-default line at offset 7 (=313)",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "src-server-repos-vacay-ts-exports-exactly-28-functio",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "claim": "e2e/helpers/shoot.ts route tables now sit at PUBLIC_ROUTES 441-449, APP_ROUTES 490-498 and PINNED_YEAR 462; vacay.tsx layout anchors: Entitlement panel 133-172, Travellers panel 174-215, MonthGrid component 301-437 (mapped 12x at :242), day-cell span 375-409, VacayPending 439-478 of a 478-line file",
+    "evidence": "grep -n 'PUBLIC_ROUTES|APP_ROUTES|PINNED_YEAR' e2e/helpers/shoot.ts and grep -n/sed spans over src/routes/_app/vacay.tsx at this HEAD, all re-checked line by line",
+    "scope": [
+      "builder",
+      "auditor",
+      "critic"
+    ],
+    "id": "e2e-helpers-shoot-ts-route-tables-now-sit-at-public-",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "claim": "The user-level rtk grep hook makes bare `grep` unreliable in this worktree (a pattern provably in docs/plans/08-product-modules.md returned no output); /usr/bin/grep with an absolute or repo-relative path after `cd` works every time",
+    "evidence": "grep -nE '\\.(ts|tsx)...:[0-9]+' docs/plans/08-product-modules.md returned empty; the identical /usr/bin/grep invocation returned 125 matches",
+    "scope": [
+      "builder",
+      "capture",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-user-level-rtk-grep-hook-makes-bare-grep-unrelia",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "claim": "plan-08-head-citations is a docs re-measurement item, not a screen: the finding lives at docs/plans/OPEN-FINDINGS.md and points at docs/plans/08-product-modules.md line ~214 (08-S1 'Measured at HEAD' paragraph).",
+    "evidence": "Read OPEN-FINDINGS.md in this worktree: '08-S1's \"Measured at HEAD, not recalled\" paragraph cites two exported identifiers that do not exist at HEAD and three line numbers that are only valid in another session's uncommitted working tree (line 214)'. No route or component is named anywhere in the finding.",
+    "scope": [
+      "builder",
+      "capture",
+      "critic"
+    ],
+    "id": "plan-08-head-citations-is-a-docs-re-measurement-item",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "claim": "07-S9 (wave 3) holds src/routes/_app/trips/$tripId/collab.tsx, so no other wave-3 stage may edit that file; waves 2 (07-S6) and 3 are taken, wave 4 is free.",
+    "evidence": "node scripts/ultrabuild/check-plan-collisions.mjs reported 'SAME-WAVE EXCLUSIVE COLLISIONS (1): src/routes/_app/trips/$tripId/collab.tsx [wave 3] 07-S9 (edit), 13-S1 (edit)' before the fix; exit 0 after moving the claim to 13-S2 wave 4.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "07-s9-wave-3-holds-src-routes-app-trips-tripid-colla",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "claim": "check-plan-collisions.mjs cannot check 4 stages that state no parseable wave (11-S1, 11-S2, 11-S3, 04-S2), so a same-wave collision involving those stages would be invisible to the script.",
+    "evidence": "Script output header: 'plans 14 · stages 95 · owned paths 577 / 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2'.",
+    "scope": [
+      "auditor",
+      "builder"
+    ],
+    "id": "check-plan-collisions-mjs-cannot-check-4-stages-that",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "claim": "The main checkout no longer holds any 13-*.md under docs/plans — the untracked 13-content-studio.md recorded in this round's settled facts is gone, so ordinal 13 is unambiguous for 13-community-gallery.md.",
+    "evidence": "ls /Users/rafalwolak/dev/cloudflare/planned.travel/docs/plans/ | grep '^13-' returns nothing (exit 1), measured this session.",
+    "scope": [
+      "builder",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-main-checkout-no-longer-holds-any-13-md-under-do",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "claim": "The reference wiki page captures cleanly with Playwright chromium at all four viewports using waitUntil:'domcontentloaded' + 3.5s settle; GitHub branding is maskable in-page via CSS (header, #repository-container-header, footer) plus a TreeWalker replacing /TREK|liketrek/gi in text nodes.",
+    "evidence": "All four B frames rendered full wiki content with innerWidth exactly 1440/768/360/2560; visual read-back of 1440-light-B.png shows content intact and every wordmark blacked out.",
+    "scope": [
+      "capture"
+    ],
+    "id": "the-reference-wiki-page-captures-cleanly-with-playwr",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "claim": "The parity failures and the atlas visual failures share a root: atlas.search.* keys exist only in en, so any atlas UI showing search strings differs from baselines and 22 locale catalogues fail parity.",
+    "evidence": "pnpm test lists the identical 11 atlas.search.* missing keys for every locale; the only new Playwright pixel failures are atlas-light/dark (both projects) plus settings-light.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-parity-failures-and-the-atlas-visual-failures-sh",
+    "measuredIn": "plans-for-plugins run, round 1"
+  },
+  {
+    "id": "worktree-tiles-state-not-in-worktree",
+    "claim": "A fresh git worktree has no .wrangler/state, so the local R2 tiles bucket (planned-travel-tiles, ~480MB) is absent and every atlas page renders the BASEMAP UNAVAILABLE fallback - which fails 4 atlas visual baselines with coastline-shaped diffs. Provision a new worktree by copying .wrangler/state/v3/r2/{planned-travel-tiles,miniflare-R2BucketObject,planned-travel-files} from the main checkout (server stopped), like .dev.vars.",
+    "evidence": "Measured in this worktree: before the copy, atlas-light/dark failed on both projects showing the offline notice; after cp + rsync and a server restart the same four specs pass. Main checkout holds the bucket; worktree had only planned-travel-files.",
+    "measuredIn": "plans-for-plugins run, round 1",
+    "scope": [
+      "mechanical",
+      "capture",
+      "builder"
+    ],
+    "invalidatesWhen": "tiles stop being served from local R2 state"
+  },
+  {
+    "id": "member-since-is-member-created-at",
+    "claim": "The settings screen's MEMBER SINCE value renders member.created_at (the organization membership row), not user.created_at - and every fresh seed stamps it with the seed day, so a freshly provisioned checkout fails settings-light mobile-safari at exactly 1611px against the committed baseline (which shows 19 Aug 2026). Pin it locally with: wrangler d1 execute planned-travel-db --local --command \"UPDATE member SET created_at = 1787162522998\". A --force re-seed resets it - re-pin after any force seed.",
+    "evidence": "Updating user.created_at alone left the spec red at the same 1611px; updating member.created_at took it green. Same class as the seed-relative-dates backlog entry.",
+    "measuredIn": "plans-for-plugins run, round 1",
+    "scope": [
+      "mechanical",
+      "capture",
+      "builder"
+    ],
+    "invalidatesWhen": "the seed writes deterministic membership dates (seed-relative-dates backlog)"
+  },
+  {
+    "claim": "Every module write function plan 08 lists as unreachable HAS unit-test callers: repositories.test.ts covers setEntitlement/setEntryRange/setEntry (469-490), createBucketListItem/achieveBucketListItem (431-436) and recomputeTravelStats (451/461); tenant-isolation.test.ts covers setEntitlement/setEntry/addCompanyHoliday/addHolidayCalendar/setUserColour (460-468) plus addCollectionPlace/saveTripPlaceToCollection/createLabel/setCollectionPlaceLabels; atlas-country-facts.test.ts covers markRegionVisited (520). A stage implementing these writes must extend those suites, not create duplicates.",
+    "evidence": "/usr/bin/grep -rn over src/server/repos/__tests__/ for each function name, line numbers as listed; journey tests reach only addPhoto and createEntry.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "every-module-write-function-plan-08-lists-as-unreach",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "removePlanMember (repos/vacay.ts:234), removeEntry (:447), unmarkRegionVisited (atlas.ts:244) and listVisitedRegions (:210) have zero callers anywhere — not the seeder, not any test; the dev seeder (src/routes/api/dev/-seed/apply.ts) calls 8 of the 10 unreachable vacay writes (all except setEntry and removeEntry).",
+    "evidence": "grep -rn for each name across src excluding the defining repo file returned only apply.ts imports/calls (updatePlan:548, invitePlanMember:565, setUserColour:566, setPlanMemberStatus:570, setEntitlement:579, addHolidayCalendar:589, addCompanyHoliday:592, setEntryRange:601, markRegionVisited:526, recomputeTravelStats:536) and the test hits listed above.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "removeplanmember-repos-vacay-ts-234-removeentry-447-",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "The whole citation set of docs/plans/08-product-modules.md is line-accurate at this HEAD after commit 6f61a05 — the source tree has not drifted under it, so a re-audit only needs to spot-check files another in-flight item touches (currently src/lib/i18n/messages/*/atlas.ts).",
+    "evidence": "~198 backticked file:line citations extracted with /usr/bin/grep -nE and each verified by sed/grep against the cited file; the only corrections needed were two getPlanOverview:604 → vacay.ts:607 precision fixes and the five caller-claim rewrites.",
+    "scope": [
+      "auditor",
+      "critic"
+    ],
+    "id": "the-whole-citation-set-of-docs-plans-08-product-modu",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "The parity untranslated axis flags genuine cross-language homographs in the atlas namespace — cs/pl 'Region', pl 'Oceania', id 'Asia' — and with PROPER_NOUNS deliberately [], the fix has to be an in-catalogue synonym, not a test edit: cs 'Oblast', pl 'Region kraju', pl 'Australia i Oceania', id 'Benua'-prefixed continents (vi's Châu prefix is the in-repo precedent).",
+    "evidence": "vitest run of parity.test.ts flagged exactly atlas.panel.bucket.kind.region (cs, pl), atlas.continent.oceania (pl) and atlas.continent.asia (id); after the synonym edits the same run reports zero failures for all six locales.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "the-parity-untranslated-axis-flags-genuine-cross-lan",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "After this item, the only red left in parity.test.ts is 8 locales missing atlas.ts entirely: ca de es fr it nl pt-BR sv — ar, el, ja, ko, ru, uk, zh-Hans and zh-Hant atlas packs landed from parallel agents mid-session (untracked in git status).",
+    "evidence": "vitest JSON reporter at 1787686673: numFailedTests 8, every failure named 'carries every key English carries'; git status --porcelain src/lib/i18n lists 14 untracked atlas.ts files of which only 6 are this item's.",
+    "scope": [
+      "builder",
+      "mechanical"
+    ],
+    "id": "after-this-item-the-only-red-left-in-parity-test-ts-",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "The rtk hook's [RTK:PASSTHROUGH] truncation corrupts any large stdout piped between commands, so vitest --reporter=json must be written with --outputFile and read from disk, never piped to node",
+    "evidence": "`vitest run --reporter=json | node -e JSON.parse` failed with 'Output truncated (62517 chars → 2000 chars)' injected into the stream; the identical run with --outputFile parsed cleanly",
+    "scope": [
+      "builder",
+      "mechanical",
+      "auditor"
+    ],
+    "id": "the-rtk-hook-s-rtk-passthrough-truncation-corrupts-a",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "en/atlas.ts carries 217 flat keys at this tree, not the 247 the item briefs recall; 13 of them are plural messages and the parity suite checks only missing categories, so writing exactly the resolved CLDR set per locale passes both the 'gap' and 'exact' readings",
+    "evidence": "Object.keys(en).length === 217 measured by direct Node import of the file; parity.test.ts compare() pluralGaps loop at lines 137-149 only pushes undefined categories",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "en-atlas-ts-carries-217-flat-keys-at-this-tree-not-t",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "The parity suite's per-locale assertions can be attributed from the JSON reporter by the locale token inside fullName ('the shipped catalogues <tag> carries every key…'), which is how a builder proves its slice green while the repo gate stays red",
+    "evidence": "Parsed testResults[].assertionResults[].fullName from the outputFile run: 8 failures, all naming ca/de/es/fr/it/nl/pt-BR/sv, zero naming ar/el/ru/uk/ja/ko/zh-Hans/zh-Hant",
+    "scope": [
+      "builder",
+      "mechanical"
+    ],
+    "id": "the-parity-suite-s-per-locale-assertions-can-be-attr",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "The settled 22-failure / 216-key parity gap has shrunk: pnpm test now fails only 8 parity tests, restricted to ca/de/es/fr/it/nl/pt-BR/sv and only the atlas.search.* keys; ar/el/tr/hu/ja/ko/etc. now pass.",
+    "evidence": "vitest run at this tree: Tests 8 failed | 3449 passed; failing suite src/lib/i18n/__tests__/parity.test.ts:400, missing list is exclusively atlas.search.* for those eight locales.",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "the-settled-22-failure-216-key-parity-gap-has-shrunk",
+    "measuredIn": "plans-for-plugins run, round 2"
+  },
+  {
+    "claim": "The 8-locale atlas parity gap named in this item's brief had already shrunk to 5 at this tree: de/nl/sv atlas.ts existed untracked and complete (217/217 keys, one/other plurals), so only ca/es/fr/it/pt-BR were missing.",
+    "evidence": "vitest JSON reporter on parity.test.ts before any edit: 5 failed assertions naming exactly ca, es, fr, it, pt-BR; node import diff of de/nl/sv atlas.ts vs en gave missing:[] orphan:[] for all three.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "the-8-locale-atlas-parity-gap-named-in-this-item-s-b",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "The atlas namespace's en-identical homograph set for the Western Romance locales is fr 'Europe', es 'Asia', it 'Africa'/'Asia'/'Oceania', ca 'Oceania'+'Regions', pt-BR 'Oceania' — each needs an in-catalogue synonym since PROPER_NOUNS stays [].",
+    "evidence": "Byte-compared natural translations against en values per key; after shipping the synonym forms (Continent européen, Continente asiático, Continente africano/asiatico, Australia e Oceania variants, Regions marcades) the parity untranslated axis reports zero and the suite is PASS (177/0).",
+    "scope": [
+      "builder"
+    ],
+    "id": "the-atlas-namespace-s-en-identical-homograph-set-for",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "Writing literal U+00A0 characters directly in catalogue string values (instead of   escapes) survives prettier and eslint unchanged, but makes Edit-tool old_strings typed with plain spaces fail to match.",
+    "evidence": "perl scan found \\xc2\\xa0 bytes at fr/atlas.ts lines 62, 65, 290, 304, 341, 351 exactly where composed; prettier --check and eslint pass on the file; six Edit calls using ASCII spaces at those positions all returned 'String to replace not found'.",
+    "scope": [
+      "builder",
+      "mechanical"
+    ],
+    "id": "writing-literal-u-00a0-characters-directly-in-catalo",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "On departure day the dashboard hero renders the word key shell.dashboard.hero.today, never a numeral 0 — any mascot/countdown design promising a '0' figure disagrees with the shipped hero.",
+    "evidence": "src/routes/_app/dashboard.tsx:294: `if (startsIn === 0) return t('shell.dashboard.hero.today')` inside startsInValue (declared :288); startsInHint at :308 likewise returns shell.dashboard.hero.startToday for 0.",
+    "scope": [
+      "builder",
+      "auditor",
+      "critic"
+    ],
+    "id": "on-departure-day-the-dashboard-hero-renders-the-word",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "listUpcomingTrips keeps null-endDate trips only while startDate >= today, so an open-ended trip is last seen on its own departure day; past-end and started-open-ended inputs are unreachable through the dashboard loader.",
+    "evidence": "src/server/repos/trips.ts:240: `or(gte(trips.endDate, today), and(isNull(trips.endDate), gte(trips.startDate, today)))` — the plan's earlier 'only while endDate >= today' reading omitted the second branch.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "listupcomingtrips-keeps-null-enddate-trips-only-whil",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "pnpm test is fully green at this tree: the settled 8-locale atlas.search.* parity failure floor is gone",
+    "evidence": "pnpm test at this worktree: 118 files passed, 3457 tests passed, 0 failed (43s). git status shows untracked src/lib/i18n/messages/{ca,de,es,fr,it,nl,pt-BR,sv}/atlas.ts landed by parallel agents mid-round.",
+    "scope": [
+      "mechanical",
+      "builder",
+      "auditor"
+    ],
+    "id": "pnpm-test-is-fully-green-at-this-tree-the-settled-8-",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "scripts/ultrabuild/check-plan-refs.mjs validates stage-id citations in docs/plans/README.md too, not just plan files, so README amendments citing stage ids must use ids that exist in the named sibling",
+    "evidence": "After adding citations of 00-S1, 07-S6, 07-S9, 01-S5, 01-S7, 13-S1..S4, 14-S1 to README.md, node scripts/ultrabuild/check-plan-refs.mjs reported '15 plans: 0 dangling stage reference(s)' and exit 0.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "scripts-ultrabuild-check-plan-refs-mjs-validates-sta",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "pnpm test is fully green now - the 8 settled parity failures (atlas.search.* for ca/de/es/fr/it/nl/pt-BR/sv) no longer occur",
+    "evidence": "vitest run at this tree: Test Files 118 passed, Tests 3457 passed, 0 failed",
+    "scope": [
+      "builder",
+      "critic",
+      "auditor",
+      "mechanical"
+    ],
+    "id": "pnpm-test-is-fully-green-now-the-8-settled-parity-fa",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "resolve-port.sh --start reused an already-running owned server on port 3002; the full Playwright suite passes 138/0/5 against it",
+    "evidence": "resolve-port: reusing the server already answering on 3002; PASS (138) FAIL (0) skipped (5) in 86.7s",
+    "scope": [
+      "capture",
+      "mechanical"
+    ],
+    "id": "resolve-port-sh-start-reused-an-already-running-owne",
+    "measuredIn": "plans-for-plugins run, round 3"
+  },
+  {
+    "claim": "In plan 13, the only transitions into the community_trips live set (status != 'withdrawn') are submitPublication's insert and its withdrawn→in_review update; no 13-S2 curator verdict re-enters a withdrawn row, so guarding submitPublication alone is sufficient and 13-S2's 'creates no countable row' Quota heading stays true.",
+    "evidence": "grep over docs/plans/13-community-gallery.md: face 5 'Publish again' (line 434) routes through submitPublication; 13-S2's verdict list (~line 648) only sets 'withdrawn' on hard remove and moves rows between live statuses otherwise; 13-S2 Quota heading (post-line 721) asserts status-transitions-only.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "in-plan-13-the-only-transitions-into-the-community-t",
+    "measuredIn": "plans-for-plugins run, round 4"
+  },
+  {
+    "claim": "resolve-port.sh --start reused the owned server on 3002 and the full gate is green end to end",
+    "evidence": "resolve-port printed 'reusing the server already answering on 3002'; playwright 138/0/5, vitest 3457/0, typecheck/lint/build all exit 0",
+    "scope": [
+      "mechanical",
+      "capture",
+      "auditor"
+    ],
+    "id": "resolve-port-sh-start-reused-the-owned-server-on-300",
+    "measuredIn": "plans-for-plugins run, round 4"
+  },
+  {
+    "claim": "The claim 'nothing depends on BKG-08' is re-derivable at HEAD without the lost recon store: grep -rn 'BKG-08' docs/plans/ excluding the 03 plan prints exactly three lines, none of them an edge or Rows-unblocked entry.",
+    "evidence": "/usr/bin/grep -rn 'BKG-08' docs/plans/ | /usr/bin/grep -v '^docs/plans/03-' -> docs/plans/README.md:212 (wave-table row), docs/plans/11-boundaries-and-blockers.md:613 (11-S3 waiting table) and :740 (prose). This command is now the plan's own 03-S3 verification one-liner.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "the-claim-nothing-depends-on-bkg-08-is-re-derivable-",
+    "measuredIn": "plans-for-plugins run, round 7"
+  },
+  {
+    "claim": "Plan 03's 03-S6 citation set has zero drift at be08f34: every settings/members line number and all nine ensure/update caller sites match the plan text exactly.",
+    "evidence": "/usr/bin/grep -n at this HEAD: getUserSettings :211, ensureUserSettings :219, updateUserSettings :228, getEffectiveSettings :271 in src/server/repos/settings.ts; getMembership :144 in members.ts; callers apply.ts:288-289, preferences.ts:87/:119, -server/settings.ts:122/:232/:247/:279/:303 — all identical to the plan's cited lines.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "plan-03-s-03-s6-citation-set-has-zero-drift-at-be08f",
+    "measuredIn": "plans-for-plugins run, round 7"
+  },
+  {
+    "claim": "The drop-unknown-ids rule plan 03 cites lives in the reorderPlanFn jsdoc at src/routes/_app/trips/$tripId/-server/plan.ts:252-254, not the :269-272 the round-5 audit noted as drifted.",
+    "evidence": "/usr/bin/grep -n 'Ids that do not belong|delete behind should still' on the file returns 252 and 254; the plan now cites :252-254.",
+    "scope": [
+      "builder",
+      "auditor",
+      "critic"
+    ],
+    "id": "the-drop-unknown-ids-rule-plan-03-cites-lives-in-the",
+    "measuredIn": "plans-for-plugins run, round 7"
+  },
+  {
+    "claim": "check-plan-collisions.mjs matches a `<tag>` placeholder Owned-path as ONE literal path per namespace, so same-wave collisions on the 44 real messages/<tag>/{trips,marketing}.ts files are invisible to it; the cross-check is grep over sibling plans' Owned paths.",
+    "evidence": "Checker output at HEAD lists src/lib/i18n/messages/en/settings.ts but no messages/<tag>/* row despite plan 13 claiming <tag>/trips.ts in 3 stages; /usr/bin/grep -rn 'messages/' over plans 01-08,10 returns no trips.ts or marketing.ts claim in any locale.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "check-plan-collisions-mjs-matches-a-tag-placeholder-",
+    "measuredIn": "plans-for-plugins run, round 7"
+  },
+  {
+    "claim": "The checker's four unparseable-wave stages (11-S1, 11-S2, 11-S3, 04-S2) are an empty blind spot for plan 13: 11-S1..S3 own zero paths and 04-S2's 15 paths are all budget-module files.",
+    "evidence": "Parsed each stage's Owned paths block with the checker's own regex: 11-S1/S2/S3 -> [], 04-S2 -> 15 paths under src/server/repos/cost-categories*, src/routes/_app/trips/$tripId/-costs/*, e2e/budget-and-currencies.*.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "the-checker-s-four-unparseable-wave-stages-11-s1-11-",
+    "measuredIn": "plans-for-plugins run, round 7"
+  },
+  {
+    "claim": "docs/plans/03-reservations-and-transport.md was dirtied by a parallel agent mid-session; repo-root git status is not this item's changedPaths.",
+    "evidence": "git status --porcelain docs/plans/ at session start showed only ' M docs/plans/13-community-gallery.md'; the same command at session end additionally shows ' M docs/plans/03-reservations-and-transport.md' with no edit of mine.",
+    "scope": [
+      "auditor",
+      "mechanical"
+    ],
+    "id": "docs-plans-03-reservations-and-transport-md-was-dirt",
+    "measuredIn": "plans-for-plugins run, round 7"
+  },
+  {
+    "claim": "The collision checker's unparseable '04-S2' is a phantom stage minted from the fenced example heading in docs/plans/12-verification-protocol.md, not plan 04's real stage — the splitter does not respect code fences.",
+    "evidence": "Splitting 12-verification-protocol.md with the checker's own /^## (?=Stage )/m regex yields a chunk id '04-S2' (the ```md example at line 26, '## Stage 04-S2 — Freeze the rate…') with null wave and zero parsed owned paths; plan 04's real 04-S2 at 04-budget-and-currencies.md:900 parses '`04-S2` · Wave 1' and 15 owned paths, so it never appears in the noWave list.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "the-collision-checker-s-unparseable-04-s2-is-a-phant",
+    "measuredIn": "plans-for-plugins run, round 8"
+  },
+  {
+    "claim": "11-S1 owns one path (docs/plans/11-boundaries-and-blockers.md) but the checker parses it as zero because the Owned paths block states it in prose, not a bullet — the checker's owned regex only matches lines starting with '-' or '*'.",
+    "evidence": "11-boundaries-and-blockers.md:229ff reads '`docs/plans/11-boundaries-and-blockers.md` — edit. This is the single repository path this plan owns…' with no leading bullet; the checker regex /^\\s*[-*]\\s*`([^`]+)`…/ returns no match on that block, which is why 11-S1 sits in the noWave-zero-paths report despite owning a path.",
+    "scope": [
+      "builder",
+      "auditor"
+    ],
+    "id": "11-s1-owns-one-path-docs-plans-11-boundaries-and-blo",
+    "measuredIn": "plans-for-plugins run, round 8"
+  },
+  {
+    "claim": "Plan 11's EXT rows are: EXT-01 plugin system/host (hosted equivalent none), EXT-02 plugin provider hooks AND the plugin activity audit (value redirected to MAP-07/DOC-06/ADD-05/ADD-08/ACC-05/ADM-04), EXT-03 built-in agent-protocol server (hosted equivalent none); the phrase 'widget slot' appears nowhere in plan 11 — only in 14-dashboard-mascot.md lines 22 and 143.",
+    "evidence": "/usr/bin/grep -n 'EXT-0[123]' and -i 'widget' over docs/plans/11-boundaries-and-blockers.md (widget only at :746, a currency 'converter widget'); sed -n '185,235p' shows the three row texts; grep -n 'widget slot' hits only 14-dashboard-mascot.md:22,143.",
+    "scope": [
+      "auditor",
+      "critic",
+      "builder"
+    ],
+    "id": "plan-11-s-ext-rows-are-ext-01-plugin-system-host-hos",
+    "measuredIn": "plans-for-plugins run, round 8"
+  },
+  {
+    "claim": "docs/plans/README.md no longer cites the lost recon store as runnable: the sh re-derivation block is replaced by 'The table is the surviving record', and edge/wave changes are routed to the README's own cut and wave tables. OPEN-FINDINGS.md is now explicitly exempted from the sixteen-file table as the one generated file.",
+    "evidence": "git diff docs/plans/README.md at this tree (+26/-27); check-plan-refs.mjs '15 plans: 0 dangling stage reference(s)' and check-plan-collisions.mjs exit 0 after the edit.",
+    "scope": [
+      "auditor",
+      "builder"
+    ],
+    "id": "docs-plans-readme-md-no-longer-cites-the-lost-recon-",
+    "measuredIn": "plans-for-plugins run, round 8"
+  },
+  {
+    "claim": "The full Playwright suite against the reused owned server on 3002 is effectively green: 137/1/5 with the sole failure being an ECONNRESET in hasSession that passes in isolation.",
+    "evidence": "resolve-port.sh --start printed 'reusing the server already answering on 3002'; full run 1 failed / 137 passed / 5 skipped; the failing spec re-run alone: PASS (2) FAIL (0) in 7.2s.",
+    "scope": [
+      "mechanical",
+      "critic",
+      "auditor"
+    ],
+    "id": "the-full-playwright-suite-against-the-reused-owned-s",
+    "measuredIn": "plans-for-plugins run, round 8"
   }
 ]

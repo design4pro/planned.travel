@@ -20,13 +20,19 @@ let a member change anything was never written.
   (`src/routes/_app/-server/library.ts:114`) and renders a year switcher, an entitlement panel with
   a `Progress` bar and three figures, a traveller list with per-person colour swatches, a legend and
   twelve month grids. A grid cell is a `<span>` carrying a `title` attribute
-  (`vacay.tsx:375-399`) — not a button, not focusable, and there is nothing to click it for.
-  `src/server/repos/vacay.ts` exports 36 functions; `loadVacay` reaches exactly two of them,
+  (`vacay.tsx:375-409`) — not a button, not focusable, and there is nothing to click it for.
+  `src/server/repos/vacay.ts` exports 28 functions; `loadVacay` reaches exactly two of them,
   `ensurePlan` (`:142`) and `getPlanOverview` (`:572`). `updatePlan` (`:181`), `setEntitlement`
   (`:307`), `setEntry` (`:366`), `setEntryRange` (`:400`), `removeEntry` (`:447`),
   `addCompanyHoliday` (`:486`), `addHolidayCalendar` (`:524`), `invitePlanMember` (`:207`),
-  `setPlanMemberStatus` (`:224`) and `setUserColour` (`:248`) have no caller outside the dev seeder.
-- **The world-map tracker.** `src/routes/_app/atlas.tsx` delegates to `-ui/atlas-screen.tsx` (1,002
+  `setPlanMemberStatus` (`:224`) and `setUserColour` (`:248`) have no caller in production code — no
+  screen and no server function reaches any of them. The dev seeder
+  (`src/routes/api/dev/-seed/apply.ts`) exercises most, and the repository suites already cover
+  `setEntitlement`, `setEntry` and `setEntryRange`
+  (`src/server/repos/__tests__/repositories.test.ts:469-490`) plus `addCompanyHoliday`,
+  `addHolidayCalendar` and `setUserColour` (`__tests__/tenant-isolation.test.ts:460-468`), so
+  tenant-scope tests for these writes already exist and are extended, not duplicated.
+- **The world-map tracker.** `src/routes/_app/atlas.tsx` delegates to `-ui/atlas-screen.tsx` (1,019
   lines), which composes `src/components/atlas/` — `country-overlay.tsx`, `atlas-panel.tsx`,
   `country-actions.tsx`, `country-search.tsx`, `countries-list.tsx`, `country-card.tsx`,
   `country-record.tsx`, `atlas-legend.tsx` — over a MapLibre canvas. This is the one module whose
@@ -34,10 +40,12 @@ let a member change anything was never written.
   `unmarkCountryVisitedFn` (`:485`), `addCountryToBucketListFn` (`:547`) and
   `removeCountryFromBucketListFn` (`:585`). The half that is not built is everything below country
   level and everything beside it: `markRegionVisited` (`src/server/repos/atlas.ts:221`) is reached
-  only by the seeder, `unmarkRegionVisited` (`:244`) and `listVisitedRegions` (`:210`) are reached by
-  nothing, and `createBucketListItem` (`:269`), `updateBucketListItem` (`:280`),
-  `achieveBucketListItem` (`:293`) and `deleteBucketListItem` (`:314`) are reachable only through the
-  two country-shaped wrappers, so a bucket list that models `kind` cannot hold a city or a walk.
+  only by the seeder and the atlas repository suite
+  (`__tests__/atlas-country-facts.test.ts:520`), `unmarkRegionVisited` (`:244`) and
+  `listVisitedRegions` (`:210`) are reached by nothing, and `createBucketListItem` (`:269`),
+  `updateBucketListItem` (`:280`), `achieveBucketListItem` (`:293`) and `deleteBucketListItem`
+  (`:314`) are reachable on a screen only through the two country-shaped wrappers, so a bucket list
+  that models `kind` cannot hold a city or a walk.
 - **The travel journal.** `src/routes/_app/journey/index.tsx` (614 lines) and
   `$journeyId.tsx` (384 lines) render `loadJourneys`, `loadJournalOverview` and `loadJourneyStory`.
   The story screen's empty state reads "This journey has no entries yet" and invites the reader to
@@ -54,13 +62,16 @@ let a member change anything was never written.
   `updateCollection` (`src/server/repos/collections.ts:309`), `deleteCollection` (`:326`),
   `addCollectionPlace` (`:330`), `saveTripPlaceToCollection` (`:363`), `updateCollectionPlace`
   (`:398`), `setCollectionPlaceStatus` (`:410`), `deleteCollectionPlace` (`:420`), `createLabel`
-  (`:427`), `deleteLabel` (`:436`) and `setCollectionPlaceLabels` (`:441`) have no caller. The
+  (`:427`), `deleteLabel` (`:436`) and `setCollectionPlaceLabels` (`:441`) have no caller in
+  production code — the repository suites reach `addCollectionPlace`, `saveTripPlaceToCollection`,
+  `createLabel` and `setCollectionPlaceLabels`; no screen or server function reaches any. The
   screen's own empty state promises that a place can be saved "from the map, from another trip, or
   straight from a recommendation" (`$collectionId.tsx:161`). None of those three is reachable.
 
 And one consumer reads numbers nothing in production writes. `AtlasPanel` renders the statistics
 from `listTravelStats` through `loadAtlas`, while `recomputeTravelStats`
-(`src/server/repos/atlas.ts:792`) is called only by the dev seeder. Marking a country moves the map
+(`src/server/repos/atlas.ts:792`) is called only by the dev seeder and the repository suite
+(`__tests__/repositories.test.ts:451`), never from a request path. Marking a country moves the map
 and leaves every figure beside it frozen at its seeded value.
 
 ### The rows this plan moves, and how far it moves each
@@ -162,7 +173,7 @@ and the existing `src/server/fns/atlas.ts` — and says so under its own **Serve
 **The three existing baselines these screens already have are re-recorded by named stages.**
 `e2e/__screenshots__/visual.spec.ts/` holds four PNGs each for `/atlas`, `/journey` and `/vacay`
 (light and dark × `chromium` and `mobile-safari`), recorded from `APP_ROUTES` in
-`e2e/helpers/shoot.ts:355-362`. A stage that changes the resting pixels of one of those screens
+`e2e/helpers/shoot.ts:490-498`. A stage that changes the resting pixels of one of those screens
 re-records that route's four frames with `--update-snapshots`, lists them explicitly under **Owned
 paths**, and argues the change — `12-verification-protocol.md` §5 forbids widening the ratio, not
 re-recording a frame whose product genuinely changed. §4 freezes `e2e/visual.spec.ts` against
@@ -206,16 +217,16 @@ planned.travel's vocabulary against the eight `vacay_*` tables that already exis
 1. The row lists "week start" among the settings. **It is already a shipped setting, at both levels,
    and this plan adds no second one.** Measured at HEAD, not recalled:
    `organization_settings.week_starts_on` is `integer('week_starts_on').notNull().default(1)`
-   (`src/server/db/schema.ts:1812`) behind `organization_settings_week_start_chk`,
-   `"week_starts_on" BETWEEN 0 AND 6` (`:1823`); `user_settings.week_starts_on` is the nullable
-   override (`:1837`) behind `user_settings_week_start_chk`,
-   `("week_starts_on" IS NULL OR "week_starts_on" BETWEEN 0 AND 6)` (`:1852-1853`); and the two are
+   (`src/server/db/schema.ts:1817`) behind `organization_settings_week_start_chk`,
+   `"week_starts_on" BETWEEN 0 AND 6` (`:1828`); `user_settings.week_starts_on` is the nullable
+   override (`:1842`) behind `user_settings_week_start_chk`,
+   `("week_starts_on" IS NULL OR "week_starts_on" BETWEEN 0 AND 6)` (`:1857-1858`); and the two are
    merged by one resolver — `weekStartsOn: user?.weekStartsOn ?? organization.weekStartsOn` in
-   `getEffectiveSettings` (`src/server/repos/settings.ts:278`, declared on `EffectiveSettings` at
-   `:244`, the function at `:254`). Both halves are editable by a traveller today: the workspace
-   default at `src/routes/_app/settings/organization.tsx:368` over `workspaceDefaultsInput`
-   (`src/routes/_app/-server/settings.ts:440`), and the personal override at
-   `src/routes/_app/settings/index.tsx:295` over `regionalSettingsInput` (`:190`), whose
+   `getEffectiveSettings` (`src/server/repos/settings.ts:295`, declared on `EffectiveSettings` at
+   `:255`, the function at `:271`). Both halves are editable by a traveller today: the workspace
+   default at `src/routes/_app/settings/organization.tsx:434-450` over `workspaceDefaultsInput`
+   (`src/routes/_app/-server/settings.ts:467`), and the personal override at
+   `src/routes/_app/settings/index.tsx:304-326` over `regionalSettingsInput` (`:185`), whose
    "Workspace default" option writes `null` and hands the question back to the workspace.
 
    So there is no missing column, **no CHECK to add and no migration to file** — and `vacay_plans`
@@ -322,10 +333,10 @@ under **Server**.
   read and write it makes is an existing `tenantFilter()`-bound call — the function adds no SQL of
   its own, which is why it belongs in this module rather than anywhere else.
 
-  Why a recompute rather than a running total: `carried_over_days` is a stored column
-  (`getPlanOverview:604` reads it directly), and editing an allowance three years back would
-  otherwise leave every later year wrong with nothing to notice it. The published number is the
-  computed number.
+  Why a recompute rather than a running total: `carried_over_days` is a stored column —
+  `getPlanOverview` reads it directly at `src/server/repos/vacay.ts:607` — and editing an allowance
+  three years back would otherwise leave every later year wrong with nothing to notice it. The
+  published number is the computed number.
 
 - **Server functions — `src/routes/_app/-server/vacay.ts`**, all `POST`:
   - `setEntitlementFn` — one traveller's allowance and carry-over for one year; returns the
@@ -349,7 +360,7 @@ under **Server**.
      before anything is written — a well-formed id from another workspace is a `NotFoundError`, which
      is what the repository already does inside `updatePlan` and `setEntitlement`.
   2. `userId` in `setEntitlementInput` is **optional and defaults to the caller**
-     (`vacay.ts:315`). Setting somebody else's allowance is a plan-owner action: the handler passes
+     (`vacay.ts:313`). Setting somebody else's allowance is a plan-owner action: the handler passes
      an explicit `userId` only when the caller is the plan's `owner_user_id`, and otherwise drops it
      so the repository defaults to `scope.ctx.userId`. A member editing a colleague's allowance is
      rejected in the handler with a message that names the reason, never silently ignored.
@@ -376,7 +387,7 @@ under **Server**.
   own `-ui/scaffold.tsx`: `Panel` and `HeaderSkeleton`, imported and not touched — `04-S1`, `09-S8`
   and `10-S3` also read that file and no stage here writes it.
 - **New components.**
-  - `EntitlementPanel` replaces the read-only panel at `vacay.tsx:132-172`. The oversized display
+  - `EntitlementPanel` replaces the read-only panel at `vacay.tsx:133-172`. The oversized display
     numeral, the `Progress` bar and the three `Figure` tiles stay exactly as designed; what is added
     is an **inline edit**: the "Days" and "Carried" tiles become buttons that swap the figure for a
     numeric `Input` in place, committing on blur or `Enter` and cancelling on `Escape`. Every numeral
@@ -392,7 +403,7 @@ under **Server**.
   - _Entitlement panel, empty:_ a traveller with no `vacay_user_years` row sees the copy that is
     already there ("Set an allowance for this year and your remaining days appear here") now with a
     primary "Set an allowance" `Button` under it, on `--color-surface-2`.
-  - _Skeleton:_ `VacayPending` (`vacay.tsx:437-477`) already ships the shape; this stage extends it
+  - _Skeleton:_ `VacayPending` (`vacay.tsx:439-478`) already ships the shape; this stage extends it
     with the panel's new control row so the skeleton and the settled layout are the same height and
     nothing shifts after paint.
   - _Error:_ a failed write keeps the field open with its value, shows an `Alert` in `danger` tone
@@ -459,7 +470,7 @@ Functions covered: `ensurePlan`, `updatePlan`, `ensureYear`, `setEntitlement`, `
   - `src/routes/_app/-server/__tests__/vacay.test.ts` — a member setting a colleague's allowance is
     rejected while the plan owner's identical call succeeds; a foreign plan id is a `NotFoundError`;
     `updateVacayPlanFn` with carry-over turned off returns balances whose `carriedOverDays` is zero,
-    matching `getPlanOverview:604`.
+    matching the zeroing branch at `getPlanOverview` (`src/server/repos/vacay.ts:607`).
   - `src/components/vacay/__tests__/entitlement-panel.test.tsx` — the tile commits on `Enter` and
     reverts on `Escape`; the input is reachable from the tile by keyboard alone; a rejected write
     leaves the typed value in the field and renders the alert.
@@ -473,7 +484,7 @@ Functions covered: `ensurePlan`, `updatePlan`, `ensureYear`, `setEntitlement`, `
   ```
 
   The spec file this stage creates declares `/vacay?year=2026` in its own route table — the same
-  `PINNED_YEAR` pin `e2e/helpers/shoot.ts:325` gives the gate, because the route defaults its year to
+  `PINNED_YEAR` pin `e2e/helpers/shoot.ts:462` gives the gate, because the route defaults its year to
   the server's clock — and calls `auditServerClock(page, <that table>)` once in a `describe` of its
   own, per `12-verification-protocol.md` §4. `/vacay` declares no `relativeTime` and prints no
   clock-derived string of a shape outside `RELATIVE_TIME_SITES`, so `e2e/helpers/shoot.ts` is not
@@ -584,7 +595,7 @@ and it is honest about being one.
 - `src/components/atlas/world-map.tsx` — new. Moved from `src/routes/_app/-ui/world-map.tsx`.
 - `src/routes/_app/-ui/world-map.tsx` — delete. The other half of the same move.
 - `src/routes/_app/-ui/atlas-screen.tsx` — edit. One import line
-  (`atlas-screen.tsx:33`) follows the move, and the panel gains the regions section's props. No other
+  (`atlas-screen.tsx:35`) follows the move, and the panel gains the regions section's props. No other
   stage in any plan names this file.
 - `src/components/atlas/region-record.tsx` — new. The regions section of the country panel.
 - `src/components/atlas/bucket-list-dialog.tsx` — new. Adding an aspiration that is not a country.
@@ -917,7 +928,7 @@ and this plan opens none.
 `description`, `cover_image_url`, `cover_gradient`, `status` (`draft`/`published`/`archived` behind
 `journeys_status_chk`), `visibility`, `public_token`, `started_on` and `ended_on`.
 `journey_entries` already carries `type` with `place` among its allowed values
-(`schema.ts:220-228`), `source_trip_id`, `source_place_id`, `location_name`, a lat/lng pair with its
+(`schema.ts:220-227`), `source_trip_id`, `source_place_id`, `location_name`, a lat/lng pair with its
 CHECK, and `sort_order` as a `real` for fractional reordering. Dates stay `YYYY-MM-DD` text; ids come
 from `newId()`. No migration, no backfill, no index.
 
@@ -1195,7 +1206,7 @@ label pills, the place cards and creation all ship: `loadCollections`
 **Two contradictions with the row, stated with evidence.**
 
 1. The row calls the place status "three-state". **Ours is five**, and stays five:
-   `COLLECTION_PLACE_STATUSES` (`src/server/db/schema.ts:211-218`) is
+   `COLLECTION_PLACE_STATUSES` (`src/server/db/schema.ts:211-217`) is
    `idea · shortlisted · planned · visited · rejected`, the CHECK constraint
    `collection_places_status_chk` enforces it, and `$collectionId.tsx:28-33` already renders all five
    as filter pills. A three-value cycle would need a migration to narrow a column, which
@@ -1235,7 +1246,7 @@ of the shared create-dialogs module and creates the module directory with it. Th
 own components by path. `08-S9` folds them into the barrel in wave 3.
 
 Neither is any baseline re-recorded: `/collections` is not in `PUBLIC_ROUTES` or `APP_ROUTES`
-(`e2e/helpers/shoot.ts:314-322`, `:355-362`) and `e2e/__screenshots__/visual.spec.ts/` holds no
+(`e2e/helpers/shoot.ts:441-449`, `:490-498`) and `e2e/__screenshots__/visual.spec.ts/` holds no
 frame for it, so this stage's screens are baselined for the first time, in this plan's own spec file
 and its own baseline directory.
 
@@ -1494,11 +1505,12 @@ nobody an allowance day. Described here against `vacay_entries`, `vacay_company_
 `vacay_holiday_calendars`, which already exist.
 
 **What is already done and is not rebuilt.** The read side of this row is finished and is good:
-`vacay.tsx:310-434` renders twelve `MonthGrid`s that colour the traveller's own days from their
-stored swatch, inset weekends, tint company holidays in the warning tone, underline a day somebody
-else is away, and summarise each month's kinds as `Badge`s. None of that is redesigned. What changes
-is that a cell becomes a `<button>`: today it is a `<span>` with a `title` attribute
-(`vacay.tsx:375-399`), which is neither focusable nor announced and has nothing to activate.
+`vacay.tsx` renders twelve `MonthGrid`s (mapped at `:242`, the component at `:301-437`) that colour
+the traveller's own days from their stored swatch, inset weekends, tint company holidays in the
+warning tone, underline a day somebody else is away, and summarise each month's kinds as `Badge`s.
+None of that is redesigned. What changes is that a cell becomes a `<button>`: today it is a `<span>`
+with a `title` attribute (`vacay.tsx:375-409`), which is neither focusable nor announced and has
+nothing to activate.
 
 **A contradiction with the row, stated with evidence.** The row expects public holidays "from an
 external source". **There is no source and this stage does not invent one.** Measured:
@@ -1511,11 +1523,11 @@ on its own terms.
 
 **The week the grid draws stops being a constant, and this is the stage that reads it.** `08-S1`
 measured the setting rather than the row's wording: `organization_settings.week_starts_on`
-(`src/server/db/schema.ts:1812`, CHECK at `:1823`), `user_settings.week_starts_on` (`:1837`, CHECK at
-`:1852-1853`) and one resolver over the pair, `weekStartsOn: user?.weekStartsOn ??
-organization.weekStartsOn` in `getEffectiveSettings` (`src/server/repos/settings.ts:278`), with both
-editing surfaces already shipped at `src/routes/_app/settings/organization.tsx:368` and
-`src/routes/_app/settings/index.tsx:295`. Nothing in the leave planner reads any of it: the header is
+(`src/server/db/schema.ts:1817`, CHECK at `:1828`), `user_settings.week_starts_on` (`:1842`, CHECK at
+`:1857-1858`) and one resolver over the pair, `weekStartsOn: user?.weekStartsOn ??
+organization.weekStartsOn` in `getEffectiveSettings` (`src/server/repos/settings.ts:295`), with both
+editing surfaces already shipped at `src/routes/_app/settings/organization.tsx:434-450` and
+`src/routes/_app/settings/index.tsx:304-326`. Nothing in the leave planner reads any of it: the header is
 a Monday-first literal (`WEEKDAY_INITIALS`, `vacay.tsx:41-49`, rendered at `:337`) and `loadVacay`
 publishes an unread `weekStartsOn: 1` (`src/routes/_app/-server/library.ts:133-134`). This stage
 consumes the resolved value — see **Server** and **UI** — and adds **no column, no CHECK and no
@@ -1530,7 +1542,7 @@ already answer.
 - `src/routes/_app/-server/__tests__/vacay.test.ts` — edit.
 - `src/routes/_app/vacay.tsx` — edit. The grid moves into the module directory and the screen
   composes it.
-- `src/components/vacay/month-grid.tsx` — new. Extracted from `vacay.tsx:310-434`, made interactive,
+- `src/components/vacay/month-grid.tsx` — new. Extracted from `vacay.tsx:301-437`, made interactive,
   and made to take `weekStartsOn` as a prop rather than to assume Monday. The rotation is a pure
   function of that number and the seven weekday labels, so it lives with the component it serves and
   is covered by the component's own test; it is small enough that a separate module would be an
@@ -1596,7 +1608,7 @@ Dates stay `YYYY-MM-DD` text. No migration, no backfill, no index.
   - `loadVacayGridFn` (`GET`) — the two things the grid needs that the plan overview does not carry:
     `tripWindows`, the year's trip date ranges for the dots, and `weekStartsOn`, the resolved
     preference. The second is one call to `getEffectiveSettings(scope, scope.ctx.userId)`
-    (`src/server/repos/settings.ts:254`) and is read, never written — this stage owns no settings
+    (`src/server/repos/settings.ts:271`) and is read, never written — this stage owns no settings
     file, mints no second resolver and adds no per-plan column. The returned value is narrowed at
     the boundary with `z.number().int().min(0).max(6).catch(1)` before it leaves the handler, so a
     row written before the CHECK existed cannot rotate the header into an undefined index; the CHECK
@@ -1616,7 +1628,7 @@ Dates stay `YYYY-MM-DD` text. No migration, no backfill, no index.
   chooses.
 - **Authorisation, decided in the handler.** Two different rules, and the difference is the point:
   - A **personal** entry is the caller's own. `setEntryInput.userId` is optional and defaults to
-    `scope.ctx.userId` (`vacay.ts:93-100`, `:373`); the handler passes an explicit id only for a plan
+    `scope.ctx.userId` (`vacay.ts:93-100`, `:369`); the handler passes an explicit id only for a plan
     owner logging on behalf of a colleague, and otherwise omits it. `08-S8` extends that to accepted
     plan members and says so there.
   - A **company holiday** belongs to the plan and affects everybody on it, so only the plan's
@@ -1893,7 +1905,7 @@ backfill, no index.
   per year plus the all-time roll-up, each with its `by_continent` breakdown and its `computed_at`.
 
   **Why a separate function rather than a wider `loadAtlas`.** Two reasons, and the first is already
-  argued in the codebase. `src/routes/_app/-server/library.ts:289-300` explains that the atlas
+  argued in the codebase. `src/routes/_app/-server/library.ts:291-300` explains that the atlas
   payload is dehydrated into the SSR document on every request, which is why the bucket list is
   capped at forty rows; the year-by-year breakdown is exactly the kind of weight that argument
   excludes, and the statistics live behind a tab that is not open on load. The second reason is the
@@ -2252,7 +2264,7 @@ No migration, no backfill, no index.
     (already a dependency and already used by the planner) and a keyboard alternative that moves a
     photograph with `Ctrl`-arrow, because a drag that has no keyboard equivalent is not navigable.
     The picker offers both a file input and the journal's unattached photographs, which
-    `loadJourneyStory` already counts (`library.ts:648`).
+    `loadJourneyStory` already counts (`library.ts:683`).
   - `ShareDialog` — the token link with a copy button, what the page will show stated in plain
     sentences, and a revoke that says the link stops working immediately.
   - `PublicShell` (`src/routes/journal/-ui/`) — the public page's own chrome: a title, a date range,
@@ -2489,10 +2501,12 @@ invitation nobody is told about is not an invitation.
 
 **What is already done and is not rebuilt.** The merged read ships: `getPlanOverview`
 (`src/server/repos/vacay.ts:572`) already unions the owner, the members and everyone with an entry
-into one balance list, and `vacay.tsx:174-212` already renders the traveller list with per-person
+into one balance list, and `vacay.tsx:174-215` already renders the traveller list with per-person
 swatches and used-day counts. Nothing in that is redesigned. What is missing is every write behind
 it: `invitePlanMember` (`:207`), `setPlanMemberStatus` (`:224`), `removePlanMember` (`:234`) and
-`setUserColour` (`:248`) are reached only by the dev seeder.
+`setUserColour` (`:248`) have no production caller — the dev seeder reaches all but
+`removePlanMember`, which nothing calls, and `setUserColour` is also exercised by
+`src/server/repos/__tests__/tenant-isolation.test.ts:468`.
 
 **A contradiction with the row, stated with evidence.** The row expects "live sync over named
 events". **We have exactly one realtime primitive and it is addressed by trip id.** Measured:
@@ -3121,7 +3135,7 @@ before this stage and each of which names `assertModule` as its gate rather than
 
 **What is measured, and what it means.**
 
-- `src/lib/plans.ts:99-113` declares `PlanModules` as twelve booleans and `:126-139` lists them as
+- `src/lib/plans.ts:99-114` declares `PlanModules` as twelve booleans and `:126-139` lists them as
   `MODULE_KEYS`. `resolveLimits()` (`src/server/billing/limits.ts:216`) resolves them for a tenant
   and returns them inside `EffectiveLimits.limits`, which is `PlanLimits` and therefore includes
   every module flag. `/pricing` renders them as what a plan includes.
