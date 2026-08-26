@@ -54,7 +54,11 @@ pnpm exec wrangler r2 object put \
   --content-type application/octet-stream
 
 echo "==> dev server on :${PORT}"
-pnpm exec vite dev --port "${PORT}" --strictPort > dev-server.log 2>&1 &
+# --host binds v4 and v6: Node's fetch (seed.mjs) resolves localhost to
+# 127.0.0.1 while a default vite bind in this container is ::1-only, which
+# makes the seed unreachable. The container has its own network namespace,
+# so the wide bind exposes nothing.
+pnpm exec vite dev --port "${PORT}" --strictPort --host > dev-server.log 2>&1 &
 for _ in $(seq 1 60); do
   if curl --silent --fail --output /dev/null "${BASE_URL}/"; then
     echo "dev server up"
