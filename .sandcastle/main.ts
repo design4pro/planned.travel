@@ -40,9 +40,15 @@ const PLANNER_MODEL = 'claude-opus-5'
 const IMPLEMENTER_MODEL = 'claude-opus-5'
 const REVIEWER_MODEL = 'claude-opus-5'
 
-// Runs inside the sandbox before each agent starts.
+// Runs inside the sandbox before each agent starts. The first install over
+// the copied darwin node_modules fetches linux binaries — well past the 60 s
+// default hook timeout.
 const hooks = {
-  sandbox: { onSandboxReady: [{ command: 'pnpm install --frozen-lockfile' }] },
+  sandbox: {
+    onSandboxReady: [
+      { command: 'pnpm install --frozen-lockfile', timeoutMs: 600_000 },
+    ],
+  },
 }
 
 // Copy node_modules from the host into the worktree before each sandbox

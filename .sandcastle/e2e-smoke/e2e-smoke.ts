@@ -23,7 +23,11 @@ const result = await sandcastle.run({
   promptFile: './.sandcastle/e2e-smoke/prompt.md',
   hooks: {
     sandbox: {
-      onSandboxReady: [{ command: 'pnpm install --frozen-lockfile' }],
+      // First install over the copied darwin node_modules fetches the linux
+      // binaries — well past the 60 s default hook timeout.
+      onSandboxReady: [
+        { command: 'pnpm install --frozen-lockfile', timeoutMs: 600_000 },
+      ],
     },
   },
   copyToWorktree: ['node_modules', '.e2e-tiles'],
