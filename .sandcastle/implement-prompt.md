@@ -39,7 +39,16 @@ Never hand-edit generated files (`src/routeTree.gen.ts` → `pnpm generate-route
 
 # FEEDBACK LOOPS
 
-Before committing, run `pnpm typecheck`, `pnpm lint` and `pnpm test` and make them pass. Do not run `pnpm e2e` here — the visual suite runs in CI on the pull request.
+Before committing, run `pnpm typecheck`, `pnpm lint` and `pnpm test` and make them pass.
+
+When the task touches UI and you need the Playwright suite, prepare the environment first — once per sandbox:
+
+```
+bash .sandcastle/setup-e2e.sh
+PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm e2e
+```
+
+This container is the same Playwright image as CI, so the committed `-linux` baselines are directly comparable. Baselines still change only through the sanctioned paths (never by hand); if your intended change moves pixels, say so in the commit so the PR re-records them. Skip e2e entirely for server-only tasks — the gate runs in CI on the pull request regardless.
 
 # COMMIT
 
