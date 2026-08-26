@@ -60,7 +60,8 @@ try {
   )
   await run(
     'commit',
-    `git add e2e/__screenshots__ && git commit -m "test(e2e): record -linux baselines in the CI-identical sandbox image"`,
+    // The container's `agent` user has no git identity; set it per-command.
+    `git add e2e/__screenshots__ && git -c user.name=sandcastle -c user.email=sandcastle@planned.travel commit -m "test(e2e): record -linux baselines in the CI-identical sandbox image"`,
   )
   recordedSha = (await run('read sha', 'git rev-parse HEAD')).stdout.trim()
 } finally {
