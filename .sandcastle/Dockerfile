@@ -41,13 +41,15 @@ ARG AGENT_GID=1000
 # already has `ubuntu` (1000) and the Playwright image adds `pwuser`; whichever
 # holds the target UID gets renamed, otherwise a fresh user is created.
 RUN set -eux; \
-  if getent group "$AGENT_GID" >/dev/null; then \
-    groupmod -o -n agent "$(getent group "$AGENT_GID" | cut -d: -f1)"; \
+  existing_group="$(getent group "$AGENT_GID" | cut -d: -f1 || true)"; \
+  if [ -n "$existing_group" ]; then \
+    groupmod -n agent "$existing_group"; \
   else \
     groupadd -o -g "$AGENT_GID" agent; \
   fi; \
-  if getent passwd "$AGENT_UID" >/dev/null; then \
-    usermod -o -l agent -g "$AGENT_GID" -d /home/agent -m "$(getent passwd "$AGENT_UID" | cut -d: -f1)"; \
+  existing_user="$(getent passwd "$AGENT_UID" | cut -d: -f1 || true)"; \
+  if [ -n "$existing_user" ]; then \
+    usermod -l agent -g "$AGENT_GID" -d /home/agent -m "$existing_user"; \
   else \
     useradd -o -u "$AGENT_UID" -g "$AGENT_GID" -d /home/agent -m agent; \
   fi
@@ -55,6 +57,10 @@ USER ${AGENT_UID}:${AGENT_GID}
 
 # Install Claude Code CLI
 RUN curl -fsSL https://claude.ai/install.sh | bash
+
+# Corepack caches per user — prepare the pinned pnpm for the agent user too,
+# so a fresh container does not need the network before its first pnpm call.
+RUN corepack prepare pnpm@10.15.0 --activate
 
 # Add Claude to PATH
 ENV PATH="/home/agent/.local/bin:$PATH"
