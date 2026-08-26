@@ -36,8 +36,21 @@ against the reference demo and must independently choose ours as the better-look
 
 ### Where the reference demo actually is
 
-Recorded in Faza B, after ten rounds in which the critic compared against a screenshot nobody
-could point at. The operator runs the reference locally:
+Recorded in Faza B. There are **three** reference surfaces and they answer different questions;
+confusing them cost this phase a malformed decision and three agents blocked by a safety
+classifier.
+
+1. **The public demo, `https://demo.liketrek.com/dashboard`** - populated with sample data, and
+   the default `referenceUrl` hardcoded in `.claude/workflows/ultrabuild.js` whenever an item
+   does not name its own. This is what the blind critic has compared against since the first
+   visual round, whether or not anyone said so out loud.
+2. **A clean local instance with administrator access** - see below. Use it for the authenticated
+   surfaces the public demo cannot show, above all the admin console.
+3. **The source clone** - use it to see *which* solution the reference reached for and *where*,
+   never to copy it.
+
+A decision about "introducing a live reference" is meaningless unless it says **which of the
+three**. The operator's local setup:
 
 - **Live instance:** `https://app.trek.orb.local/`, served by OrbStack. Two things break a naive
   capture and both are quiet failures rather than errors. The certificate is self-signed, so a

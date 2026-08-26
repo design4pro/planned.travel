@@ -367,6 +367,77 @@ szablonów nie ma miejsca wysyłki - `queueAuthEmail()` ma trzy wywołania, wszy
 To fundament dla wszystkiego dalej: kurator katalogu, moderator treści publicznych i token MCP
 sięgają po ten sam model uprawnień.
 
+**Status: cztery itemy z siedmiu przyjęte, trzy otwarte, zatrzymane świadomie po dwunastu
+rundach.** Warstwa serwerowa stoi i jest udowodniona; powierzchnia konsoli istnieje, renderuje się
+i nie przeszła własnej poprzeczki. Poniżej rozdzielone jest to, co **zmierzone**, od tego, co
+**zadeklarowane** - bo faza spędziła połowę rund na wykrywaniu, że to nie to samo.
+
+### Co jest zrobione i udowodnione
+
+| Item | Co dowozi | Czym udowodnione |
+|---|---|---|
+| B1 schemat + sesja | pięć kolumn pluginu, `platform_audit_log` (12 kolumn, 4 CHECK-i międzykolumnowe, 5 indeksów), `staff_api_tokens`, poszerzona biała lista sesji | migracja `0004` w pełni addytywna, zero `__new_*`, zero `DROP TABLE`; CHECK-i sprawdzone wstawkami do wyemitowanego SQL w `node:sqlite` |
+| B2 słownik + guard | zamknięty słownik sześciu zasobów, trzy role, `requirePermission` jako jedyny autoryzator | macierz 72 komórek w testach; test grafu importów pilnujący, że moduł jest liściowy |
+| B3 rejestracja pluginu | `admin()` w `betterAuth()`, `impersonationSessionDuration: 900`, top-level `disabledPaths` | test dryfu: 15 ścieżek pluginu równa się `DISABLED_ADMIN_PATHS`; test integracyjny dowozi 404 z każdej z nich przy żywej sesji admina |
+| B4 writer audytu | `src/server/catalog/audit.ts` jako jedyny pisarz, prune 400-dniowy, wspólny regex akcji w module liściowym | spacer po grafie modułów zastąpił grepa, który dwukrotnie przepuścił naruszenie; sondy wstawek na wszystkich CHECK-ach |
+
+### Co jest otwarte
+
+- **B5 funkcje serwerowe konsoli** - piętnaście funkcji istnieje i działa. Otwarte: nieprzypisany
+  moduł na 247 linii w tym katalogu bez testu, oraz `applyBan`, którego kompensacja nadal
+  przywraca jednosekundowy ban nad już wygasłym.
+- **B6 pasek impersonacji** - renderuje się, ma odliczanie, jest niezamykalny. Otwarte: przy 360px
+  nazwisko operatora jest ucinane, więc pasek przestaje nazywać, kto działa; `--z-impersonation`
+  nie wiąże sonnera, który maluje powyżej pasma, więc toast nadal może przykryć przycisk kończący
+  cudzą sesję.
+- **B7 ekrany konsoli** - `/console`, `/console/users` i `/console/users/$userId` renderują się,
+  wejście jest w menu konta. Otwarte: surowe SQL w module trasy (drugi wyjątek od SPEC §6),
+  `/console` kosztuje pięć odczytów KV zamiast jednego, oś czasu audytu drukuje surowe id konta
+  i rolę obok etykiet obiecujących angielski, a zły parametr wyszukiwania daje 500 z wypisaną
+  tablicą Zoda.
+
+### Sześć czerwonych baseline'ów - dlaczego zostają czerwone
+
+`atlas dark`, `settings dark` i cztery migawki `console-user`. Te ostatnie zmieniły wymiary
+(1440×2204 → 1440×2078), bo ekran konta dostał trzy panele, których wymaga `docs/ACCESS.md`.
+Odświeżenie ich jest jednolinijkowe i **celowo niezrobione**: bramka, która przepisuje własny
+wzorzec, nie umie oblać, a różnica na `atlas dark` i `settings dark` nie została jeszcze
+wyjaśniona co do przyczyny. Kolejna runda zaczyna od wyjaśnienia tych dwóch, nie od
+`--update-snapshots`.
+
+### Jedna własność, której nikt nie zmierzył ponownie
+
+Audytor rundy 6 **obalił pomiarem** natychmiastowość bana: wpisał `banned=1` do D1, wywołał
+`GET /api/auth/get-session` z ciepłym ciasteczkiem i dostał 200 z `"banned":false`. Powód:
+`disableCookieCache` zdejmuje cache ciasteczka, ale Better Auth nadal rozwiązuje token z KV przed
+D1. B5 zbudował potem czyszczenie kluczy KV i `session-keys.test.ts` pokrywa je porządnie, łącznie
+z przypadkiem, w którym lista przekracza sufit - to była realna dziura, przez którą ban zostawiał
+sesje nieodzyskiwalnie żywe.
+
+Ale to są **testy jednostkowe helperów czyszczenia**, nie powtórzenie tamtego pomiaru.
+Nikt - w tym ja - nie sprawdził ponownie, czy zbanowane konto faktycznie traci dostęp przy
+następnym żądaniu. Dopóki ktoś tego nie zmierzy tą samą metodą, którą to obalono, ta własność jest
+**zadeklarowana, nie udowodniona**, a jest to własność, dla której świadomie zapłaciliśmy odczytem
+KV na każde uwierzytelnione żądanie.
+
+### Cztery błędy orkiestratora, zapisane, żeby się nie powtórzyły
+
+1. Wzorzec grepa izolacji miał domykający apostrof, więc łapał tylko import barrelowy i wypisywał
+   zero przy czterech głębokich importach. Zielone kryterium, które nie umie się zaczerwienić,
+   raportuje się jako dowód.
+2. `REPAIR 20` kazał czytać sesje przez endpoint pluginu; ten czyta indeks KV i zwraca pustą
+   tablicę, gdy klucza brak - czyli raportuje brak sesji dokładnie wtedy, gdy ban musi je zobaczyć.
+   Builder odmówił i miał rację.
+3. `REPAIR 39/41` kazał rezerwować dół pod pasek nawigacji, który nigdy nie zasłaniał treści.
+   Krytyk zastrzegł to w tym samym zdaniu - „even allowing for the capture method" - a orkiestrator
+   zostawił obserwację i wyrzucił zastrzeżenie. Pełnowysokościowy zrzut komponuje element
+   `position:fixed` w środek strony i nie jest dowodem o nim w przewijanym oknie.
+4. `REPAIR 51/63` wymagały przeniesienia kodu **przez granicę itemów**, podczas gdy oba szły
+   równolegle z tymi ścieżkami u różnych właścicieli. Naprawa relokująca kod między itemami wymaga,
+   żeby `ownedPaths` jechały razem z kodem albo żeby itemy scaliły się na tę rundę.
+
+
+
 > **Specyfikacją tej fazy jest `docs/ACCESS.md`, a nie ta sekcja.** Sekcja poniżej to indeks:
 > mówi, co faza obejmuje i jakie decyzje zapadły, a szczegóły wiążące - słownik uprawnień co do
 > komórki, dwanaście kolumn audytu, zamknięty słownik 31 akcji, cztery obowiązkowe testy drift,
