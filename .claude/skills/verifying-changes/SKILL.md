@@ -7,7 +7,7 @@ description: The canonical verification ladder for this repo and how to read its
 
 1. Fast loop while working: `pnpm typecheck`, `pnpm lint`, single vitest files.
 2. Before committing: full `pnpm test`.
-3. Before a PR: `pnpm build`, then `pnpm generate-routes && git diff --exit-code src/routeTree.gen.ts` (CI rejects a stale route tree).
+3. Before a PR: `pnpm build`, then `pnpm generate-routes && git diff --exit-code src/routeTree.gen.ts` (CI rejects a stale route tree). Run this **even when you never touched a route**: `pnpm build`'s vite plugin rewrites the file with a different tail than bare `tsr generate`, so a blanket `git add -A` after a build commits a variant the CI gate rejects.
 4. UI touched: `pnpm e2e` locally (darwin baselines) — and remember the visual gate also runs in CI on the PR (linux baselines). Baselines change only via `pnpm e2e:update` (darwin) or the update-snapshots.yml workflow (linux), never by hand.
 5. In a sandcastle Docker sandbox: `bash .sandcastle/setup-e2e.sh` once (dev.vars, D1 migrations, basemap into the local R2 sim, server on :3010, seed), then `PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm e2e`. The sandbox image is CI's Playwright image, so `-linux` baselines compare directly; each container has its own network namespace, so :3010 never collides between parallel sandboxes.
 
