@@ -25,14 +25,14 @@ public demo as a **visual quality bar**. TREK is AGPL-3.0 with an asserted trade
 - **Never** copy TREK source code, comments, strings, or assets into this repo.
 - **Never** use the name "TREK", its wordmark, or its logo anywhere.
 - Our product is **planned.travel**, with its own branding and its own implementation.
-- A reference clone may exist under the session scratchpad. Read it to understand *what*
+- A reference clone may exist under the session scratchpad. Read it to understand _what_
   a feature does. Write our own code to do it.
 
 ## 2. Quality bar
 
 Every screen is judged by an adversarial critic that compares it **blind, side by side**
 against the reference demo and must independently choose ours as the better-looking product.
-"It works" is not done. "It looks as good" is not done. It must look *better*.
+"It works" is not done. "It looks as good" is not done. It must look _better_.
 
 ### Where the reference demo actually is
 
@@ -43,10 +43,12 @@ classifier.
 1. **The public demo, `https://demo.liketrek.com/dashboard`** - populated with sample data, and
    the default `referenceUrl` hardcoded in `.claude/workflows/ultrabuild.js` whenever an item
    does not name its own. This is what the blind critic has compared against since the first
-   visual round, whether or not anyone said so out loud.
+   visual round, whether or not anyone said so out loud. Its content **resets every hour**, so it
+   is a pristine read-only exhibit: nothing you create there sticks, and nothing you created a
+   moment ago is guaranteed to still exist.
 2. **A clean local instance with administrator access** - see below. Use it for the authenticated
    surfaces the public demo cannot show, above all the admin console.
-3. **The source clone** - use it to see *which* solution the reference reached for and *where*,
+3. **The source clone** - use it to see _which_ solution the reference reached for and _where_,
    never to copy it.
 
 A decision about "introducing a live reference" is meaningless unless it says **which of the
@@ -58,11 +60,11 @@ three**. The operator's local setup:
   like the host being down; and the hostname resolves through OrbStack's own resolver, so a plain
   `host`/`dig` lookup returns NXDOMAIN while `curl` succeeds. Neither means the instance is
   unavailable.
-- **Source clone:** `/Users/rafalwolak/dev/test/trek`. §1 governs it: read it to learn *what* a
+- **Source clone:** `/Users/rafalwolak/dev/test/trek`. §1 governs it: read it to learn _what_ a
   feature does, never to copy how it does it.
 - **Authenticated screens need a session.** The admin surface is at `/admin` behind an
   `adminRequired` guard, and the product's own screens are behind a login, so an unauthenticated
-  capture photographs a sign-in form and compares *that* to our console - a verdict that looks
+  capture photographs a sign-in form and compares _that_ to our console - a verdict that looks
   real and means nothing. The first-boot credentials are environment variables in the clone's
   `docker-compose.yml`; read them from there rather than from anywhere else, and never copy them
   into this repo.
@@ -82,6 +84,7 @@ treats a missing panel as "the reference doesn't have it either" has misread whi
 building against.
 
 Specifically:
+
 - Pixel-honest spacing on an 4px grid. No eyeballed one-off margins.
 - Every interactive element has hover, focus-visible, active, disabled and loading states.
 - Every list has a designed empty state, skeleton loading state, and error state.
@@ -93,29 +96,29 @@ Specifically:
 
 ## 3. Stack (pinned — do not change, do not add deps)
 
-| Concern | Choice |
-|---|---|
-| Framework | TanStack Start (React 19, file-based routing, server functions) |
-| Build | Vite 8 + `@cloudflare/vite-plugin` (`viteEnvironment.name = 'ssr'`) |
-| Runtime | Cloudflare Workers (`nodejs_compat`) |
-| Styling | Tailwind CSS v4 (CSS-first `@theme`), tokens in `src/styles/tokens.css` |
-| Primitives | `radix-ui` (unified pkg) + our own wrappers in `src/components/ui` |
-| Data (relational) | Cloudflare D1 + Drizzle ORM |
-| Cache / sessions | Workers KV |
-| Files / tiles | R2 |
-| Realtime | Durable Objects + WebSockets (`partysocket` client) |
-| Background work | Queues + Cron Triggers |
-| Auth | Better Auth on D1 (email+password, social, passkeys, TOTP) |
-| Billing | Polar.sh (Checkout + Customer Portal + webhooks) |
-| Email | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret. Nine React Email templates in `src/server/email/templates/**`, the message contract and subject lines in `src/server/auth/email.ts`, delivery in `src/server/queue/handlers/email.ts` |
-| Maps | MapLibre GL + Protomaps `.pmtiles` from R2 |
-| Server state | TanStack Query + Start server functions |
-| Forms | TanStack Form + Zod v4 |
-| Icons | `lucide-react` |
-| Motion | `motion` |
-| Drag & drop | `@dnd-kit` |
-| Toasts | `sonner` |
-| Tests | Vitest (unit) + Playwright (e2e/visual) |
+| Concern           | Choice                                                                                                                                                                                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework         | TanStack Start (React 19, file-based routing, server functions)                                                                                                                                                                                             |
+| Build             | Vite 8 + `@cloudflare/vite-plugin` (`viteEnvironment.name = 'ssr'`)                                                                                                                                                                                         |
+| Runtime           | Cloudflare Workers (`nodejs_compat`)                                                                                                                                                                                                                        |
+| Styling           | Tailwind CSS v4 (CSS-first `@theme`), tokens in `src/styles/tokens.css`                                                                                                                                                                                     |
+| Primitives        | `radix-ui` (unified pkg) + our own wrappers in `src/components/ui`                                                                                                                                                                                          |
+| Data (relational) | Cloudflare D1 + Drizzle ORM                                                                                                                                                                                                                                 |
+| Cache / sessions  | Workers KV                                                                                                                                                                                                                                                  |
+| Files / tiles     | R2                                                                                                                                                                                                                                                          |
+| Realtime          | Durable Objects + WebSockets (`partysocket` client)                                                                                                                                                                                                         |
+| Background work   | Queues + Cron Triggers                                                                                                                                                                                                                                      |
+| Auth              | Better Auth on D1 (email+password, social, passkeys, TOTP)                                                                                                                                                                                                  |
+| Billing           | Polar.sh (Checkout + Customer Portal + webhooks)                                                                                                                                                                                                            |
+| Email             | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret. Nine React Email templates in `src/server/email/templates/**`, the message contract and subject lines in `src/server/auth/email.ts`, delivery in `src/server/queue/handlers/email.ts` |
+| Maps              | MapLibre GL + Protomaps `.pmtiles` from R2                                                                                                                                                                                                                  |
+| Server state      | TanStack Query + Start server functions                                                                                                                                                                                                                     |
+| Forms             | TanStack Form + Zod v4                                                                                                                                                                                                                                      |
+| Icons             | `lucide-react`                                                                                                                                                                                                                                              |
+| Motion            | `motion`                                                                                                                                                                                                                                                    |
+| Drag & drop       | `@dnd-kit`                                                                                                                                                                                                                                                  |
+| Toasts            | `sonner`                                                                                                                                                                                                                                                    |
+| Tests             | Vitest (unit) + Playwright (e2e/visual)                                                                                                                                                                                                                     |
 
 **Dependency freeze.** The dependency set is complete. Do **not** run `pnpm add`, and do not
 edit `package.json` or `pnpm-lock.yaml`. If you genuinely need a package that is absent, stop
@@ -167,11 +170,11 @@ defect in a template and neither is fixed by the round that wrote this paragraph
 whichever round next owns `src/server/auth/**` and `src/server/billing/**`.
 
 - **F1 - rendering runs inline on the request path.** `queueAuthEmail()`
-  (`src/server/auth/email.ts`) awaits `renderAuthEmail()` *before* it enqueues, so React's
+  (`src/server/auth/email.ts`) awaits `renderAuthEmail()` _before_ it enqueues, so React's
   streaming renderer and that 540 kB chunk are evaluated inside the request that triggered the
-  mail - a sign-up, a password reset, an invitation. Only *delivery* is queued. §5 says heavy or
+  mail - a sign-up, a password reset, an invitation. Only _delivery_ is queued. §5 says heavy or
   slow work goes to Queues and never inline, and rendering an email is the heavier half of sending
-  one. The fix is to enqueue the message *description* and render inside
+  one. The fix is to enqueue the message _description_ and render inside
   `src/server/queue/handlers/email.ts`; the cost of the fix is that the handler then needs the
   brand and the catalogue the producer has today, which is why it is a follow-up and not a
   one-line move.
@@ -187,7 +190,7 @@ whichever round next owns `src/server/auth/**` and `src/server/billing/**`.
   `billing.payment-failed` and `billing.pack-purchased`, because nothing in
   `src/server/billing/**` sends mail. All six are exercised by
   `src/server/email/__tests__/templates.test.tsx` and by nothing else. They are written and unsent.
-  An earlier revision of this bullet counted *four* unsent templates and described the caller as
+  An earlier revision of this bullet counted _four_ unsent templates and described the caller as
   sending "the five auth kinds". Both numbers were recalled rather than counted. This one is the
   recount, and both of its numbers are one command each:
   `/usr/bin/grep -rn 'queueAuthEmail(' src/ | /usr/bin/grep -v 'auth/email.ts'` lists the **three**
@@ -224,8 +227,8 @@ names columns the schema no longer has. `docs/DEPLOY.md` §5 and §12 record tha
 named exception rather than as a promise the schema cannot keep.
 
 **The user-visible copy moved with the provider, and one string took three rounds to follow.**
-`src/routes/legal/terms.tsx` and `src/routes/pricing.tsx` told the reader that Stripe *calculates
-and shows sales tax*, which under Polar is false, because §1 records Polar as Merchant of Record
+`src/routes/legal/terms.tsx` and `src/routes/pricing.tsx` told the reader that Stripe _calculates
+and shows sales tax_, which under Polar is false, because §1 records Polar as Merchant of Record
 carrying that liability on our behalf. Both were rewritten; the legal pages went first, because
 they are a representation to a customer and not a label on a button. The string that did not move
 with them was minted in `planPriceFootnote()` in `src/components/marketing/plans.tsx`, the one
@@ -266,6 +269,7 @@ both from Google Fonts with `display=swap` and a real fallback stack. Always
 in a component. If a value is missing from the token set, add it to the token file.
 
 **Signature patterns** to reuse (defined once in `src/components/ui`):
+
 - `Card` — `--radius-xl`, `--shadow-card`, hairline `--color-edge-faint` border.
 - `StatCard` — tiny uppercase tracked label above an oversized display numeral, optional
   inline sparkline, optional inverse (near-black) variant.
@@ -277,6 +281,7 @@ in a component. If a value is missing from the token set, add it to the token fi
 ## 5. Architecture
 
 ### Request path
+
 Browser → Cloudflare edge → Worker (TanStack Start SSR + server functions) → D1 / KV / R2 / DO.
 
 > **Reading the paths in this section.** `src/server/catalog/**`, `src/server/mcp/**`,
@@ -285,6 +290,7 @@ Browser → Cloudflare edge → Worker (TanStack Start SSR + server functions) �
 > phase (`docs/ARCHITECTURE.md` §2.5). Everything else this section names exists today.
 
 ### Multi-tenancy
+
 Every domain row is scoped by `organization_id`. A user belongs to one or more organizations
 through `member`. **Every** query goes through a scoped repository in `src/server/repos/**`
 that takes an explicit tenant context — never a raw `db.select()` from a route or component.
@@ -348,11 +354,11 @@ Platform roles come from Better Auth's `admin` plugin, which ships inside the pi
 `better-auth@1.7.1`. Registering it adds no dependency and does not touch §3's freeze. Three
 roles, and no fourth:
 
-| Role | Authority |
-|---|---|
-| `admin` | Full platform authority: user management, roles, bans, session revocation, impersonation, MCP token issuance, everything a `curator` may do. |
-| `curator` | The catalogue, packs, sources and share moderation. Nothing that touches users or sessions. |
-| `user` | Everyone else, which is nearly everyone. No platform surface at all. |
+| Role      | Authority                                                                                                                                    |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `admin`   | Full platform authority: user management, roles, bans, session revocation, impersonation, MCP token issuance, everything a `curator` may do. |
+| `curator` | The catalogue, packs, sources and share moderation. Nothing that touches users or sessions.                                                  |
+| `user`    | Everyone else, which is nearly everyone. No platform surface at all.                                                                         |
 
 `defaultRole: 'user'` - a platform role is only ever raised deliberately. The plugin adds five
 columns and they are the whole storage cost of the model: `user.role`, `user.banned`,
@@ -382,6 +388,7 @@ disagree at precisely the moment an accountant reads them. Payment-method change
 portal-only for the same class of reason - it is what keeps card data outside our PCI scope.
 
 ### Scaling posture (10 → thousands of users)
+
 - Stateless Workers; all state in D1/KV/R2/DO. Horizontal scale is automatic.
 - **Read path**: cache hot reads in KV with short TTL + explicit invalidation on write.
   D1 is never in the critical path for anonymous marketing pages.
@@ -395,6 +402,7 @@ portal-only for the same class of reason - it is what keeps card data outside ou
 - Instrument with Workers Observability; every server function emits structured logs.
 
 ### Bindings (`wrangler.jsonc`)
+
 `DB` (D1) · `KV` (cache) · `SESSIONS` (KV) · `FILES` (R2) · `TILES` (R2) ·
 `TRIP_ROOM` (Durable Object) · `TASKS` (Queue) · secrets via `wrangler secret`.
 
@@ -402,17 +410,17 @@ Non-secret configuration lives in the `vars` block; secrets never appear in `wra
 and the complete list with its acquisition steps lives in `.dev.vars.example`. Six secrets are
 new, spelled exactly this way everywhere:
 
-| Secret | What it is |
-|---|---|
-| `POLAR_ACCESS_TOKEN` | Organization Access Token for every server-side Polar call. It never reaches the browser. |
-| `POLAR_WEBHOOK_SECRET` | Signing secret for the billing webhook endpoint. |
-| `POLAR_SERVER` | `sandbox` or `production`. Selects the API base URL. It sits with the secrets rather than in `vars` so one file switches the whole billing environment, and because sandbox and production are separate accounts with separate tokens and separate product ids. |
-| `FIRECRAWL_API_KEY` | Bearer token for the scrape and crawl calls behind the catalogue pipeline. |
-| `FIRECRAWL_WEBHOOK_SECRET` | HMAC secret verifying crawl callbacks. It is one account-wide value, not one per endpoint. |
-| `MCP_TOKEN_PEPPER` | Hashing pepper for `staff_api_tokens`. Rotating it invalidates every issued MCP token at once, the way rotating `BETTER_AUTH_SECRET` logs everyone out. |
+| Secret                     | What it is                                                                                                                                                                                                                                                      |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POLAR_ACCESS_TOKEN`       | Organization Access Token for every server-side Polar call. It never reaches the browser.                                                                                                                                                                       |
+| `POLAR_WEBHOOK_SECRET`     | Signing secret for the billing webhook endpoint.                                                                                                                                                                                                                |
+| `POLAR_SERVER`             | `sandbox` or `production`. Selects the API base URL. It sits with the secrets rather than in `vars` so one file switches the whole billing environment, and because sandbox and production are separate accounts with separate tokens and separate product ids. |
+| `FIRECRAWL_API_KEY`        | Bearer token for the scrape and crawl calls behind the catalogue pipeline.                                                                                                                                                                                      |
+| `FIRECRAWL_WEBHOOK_SECRET` | HMAC secret verifying crawl callbacks. It is one account-wide value, not one per endpoint.                                                                                                                                                                      |
+| `MCP_TOKEN_PEPPER`         | Hashing pepper for `staff_api_tokens`. Rotating it invalidates every issued MCP token at once, the way rotating `BETTER_AUTH_SECRET` logs everyone out.                                                                                                         |
 
 **Cron.** The weekly catalogue scrape is `0 4 * * 1`. It is registered in `wrangler.jsonc` - in
-the top-level `triggers.crons` list *and* in the `env.staging` override, since a deploy replaces
+the top-level `triggers.crons` list _and_ in the `env.staging` override, since a deploy replaces
 the whole list - and given its `switch (controller.cron)` branch in `src/server/worker.ts` in
 **phase D**. Until that phase it is inert and deliberately absent from both files: registering a
 schedule ahead of its handler makes the next deploy invoke a branch that does not exist. It is
@@ -453,6 +461,7 @@ docs/                spec + architecture notes
 ```
 
 Rules:
+
 - `routeTree.gen.ts` is **generated**. Never hand-edit. Run `pnpm generate-routes`.
 - Components in `components/ui` never fetch data and never import from `server/`.
 - All SQL lives in `server/repos`. Routes call server functions; server functions call repos.
@@ -488,7 +497,7 @@ Rules:
 4. The feature is visually verified in a real browser, light and dark, desktop and mobile.
 5. No TODOs, no placeholder copy, no `console.log`, no commented-out code left behind.
 6. You did not touch files outside your assigned ownership. Work you discover elsewhere is
-   reported, never edited — and if that work is a *concept* rather than a file, §8 governs how
+   reported, never edited — and if that work is a _concept_ rather than a file, §8 governs how
    the next round draws the item that owns it.
 
 ## 8. Decomposition rule: one concept, one owner
@@ -519,12 +528,12 @@ Four corollaries, because each is a mistake this repository has actually made:
 
 Phase A paid for it four times, and each one is on the record:
 
-| # | Round | The concept | What it cost |
-| --- | --- | --- | --- |
-| 1 | 1 | `PlanPrice.priceId` renamed to `productId`, and `planForPriceId` dropped, in `src/lib/plans.ts` | All five consumers — `checkout.ts`, `mapping.ts`, `store.ts`, `limits.ts` and the demo seed — sat in items the round had deferred under a three-item cap. Eight typecheck errors, 338 failing tests, and a `MISSING_EXPORT` at build. |
-| 2 | 1 | `pnpm remove stripe` | The manifest entry left while **31 files** under `src/` still imported it, so those files could not compile at all. It took rounds 2 and 3 to finish, 31 → 12 → 0. |
-| 3 | 3–4 | "14-day free trial, no card needed" | Item 6 owned `billing.tsx`, `pricing.tsx` and `terms.tsx`, so the trial copy was corrected in all three. The string is minted by `planPriceFootnote()` in `src/components/marketing/plans.tsx`, which no item owned — so it survived both rounds on `/` and `/pricing`, beside the same page's FAQ saying Polar takes a card. It took a round 6 item drawn around the *claim* to close it. |
-| 4 | 4 | The same string, **reported fixed** | The evidence was `curl … /pricing \| grep -c 'no card needed'` returning `0`. The string was still being served, twice on each page. A measurement was accepted as a fix, so the round closed a finding it had not touched and round 6 had to reopen it. |
+| #   | Round | The concept                                                                                     | What it cost                                                                                                                                                                                                                                                                                                                                                                               |
+| --- | ----- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | 1     | `PlanPrice.priceId` renamed to `productId`, and `planForPriceId` dropped, in `src/lib/plans.ts` | All five consumers — `checkout.ts`, `mapping.ts`, `store.ts`, `limits.ts` and the demo seed — sat in items the round had deferred under a three-item cap. Eight typecheck errors, 338 failing tests, and a `MISSING_EXPORT` at build.                                                                                                                                                      |
+| 2   | 1     | `pnpm remove stripe`                                                                            | The manifest entry left while **31 files** under `src/` still imported it, so those files could not compile at all. It took rounds 2 and 3 to finish, 31 → 12 → 0.                                                                                                                                                                                                                         |
+| 3   | 3–4   | "14-day free trial, no card needed"                                                             | Item 6 owned `billing.tsx`, `pricing.tsx` and `terms.tsx`, so the trial copy was corrected in all three. The string is minted by `planPriceFootnote()` in `src/components/marketing/plans.tsx`, which no item owned — so it survived both rounds on `/` and `/pricing`, beside the same page's FAQ saying Polar takes a card. It took a round 6 item drawn around the _claim_ to close it. |
+| 4   | 4     | The same string, **reported fixed**                                                             | The evidence was `curl … /pricing \| grep -c 'no card needed'` returning `0`. The string was still being served, twice on each page. A measurement was accepted as a fix, so the round closed a finding it had not touched and round 6 had to reopen it.                                                                                                                                   |
 
 Rows 3 and 4 are the same string twice, because they are two different mistakes. Row 3 is a
 decomposition failure: the round corrected the claim everywhere it looked and nowhere it did not.
@@ -534,7 +543,7 @@ command looked like proof.
 **On a streamed page, a grep of the HTTP response is not evidence. Render it.** Three independent
 reasons that pipeline could not have proved anything, each verified here rather than asserted:
 
-1. **`grep -c` counts matching *lines*, not occurrences.** Our SSR document is one line. A capture
+1. **`grep -c` counts matching _lines_, not occurrences.** Our SSR document is one line. A capture
    of `/pricing` taken while writing this measures 77,875 bytes and contains **zero** newline
    characters, and today's corrected paid-plan footnote occurs in it twice — once per paid card.
    `/usr/bin/grep -c` over that capture answers `1`; `/usr/bin/grep -o … | wc -l` over the same
@@ -548,7 +557,7 @@ reasons that pipeline could not have proved anything, each verified here rather 
    know is on the page before you believe a zero about one you hope is gone.
 3. **A `grep` is not necessarily `grep`, and this page is not text.** In the shell these rounds run
    in, `type grep` answers "shell function", and that function is `ugrep` invoked with
-   `--ignore-files … -I` — `-I` being *skip binary input*. Our served document is binary by that
+   `--ignore-files … -I` — `-I` being _skip binary input_. Our served document is binary by that
    test: it carries three NUL bytes, inside the route ids of the streamed router payload. Handed
    those 77,875 bytes **on stdin** the shell function prints nothing and exits `1`, while
    `/usr/bin/grep -c` on the identical bytes prints `1`. Cutting the capture at the byte before the
@@ -560,7 +569,7 @@ reasons that pipeline could not have proved anything, each verified here rather 
 The general form, which is the rule and not the anecdote: **a grep is evidence about a file; a
 page is evidence about a render.** Anything a user reads is a render, so the claim "the user no
 longer sees X" is closed by loading the page in a browser and counting in
-`document.body.innerText` *and* `document.body.textContent` — they disagree, and by a lot. On
+`document.body.innerText` _and_ `document.body.textContent` — they disagree, and by a lot. On
 `/pricing` at a 1440 px viewport the two read 3,706 and 5,199 characters, because seven `<details>`
 FAQ items are collapsed. Measured in that browser, the sentence "Polar takes a payment method when
 the trial starts" occurs **zero** times in `innerText` and **once** in `textContent`: the first
@@ -588,20 +597,20 @@ screens say is the work.
 
 ### Supported locales — the exact set, tagged BCP-47
 
-| Tag | Native name | Tag | Native name |
-|---|---|---|---|
-| `ar` | العربية *(RTL)* | `ko` | 한국어 |
-| `ca` | Català | `nl` | Nederlands |
-| `cs` | Čeština | `pl` | Polski |
-| `de` | Deutsch | `pt-BR` | Português (Brasil) |
-| `el` | Ελληνικά | `ru` | Русский |
-| `en` | English *(source)* | `sv` | Svenska |
-| `es` | Español | `tr` | Türkçe |
-| `fr` | Français | `uk` | Українська |
-| `hu` | Magyar | `vi` | Tiếng Việt |
-| `id` | Bahasa Indonesia | `zh-Hans` | 简体中文 |
-| `it` | Italiano | `zh-Hant` | 繁體中文 |
-| `ja` | 日本語 | | |
+| Tag  | Native name        | Tag       | Native name        |
+| ---- | ------------------ | --------- | ------------------ |
+| `ar` | العربية _(RTL)_    | `ko`      | 한국어             |
+| `ca` | Català             | `nl`      | Nederlands         |
+| `cs` | Čeština            | `pl`      | Polski             |
+| `de` | Deutsch            | `pt-BR`   | Português (Brasil) |
+| `el` | Ελληνικά           | `ru`      | Русский            |
+| `en` | English _(source)_ | `sv`      | Svenska            |
+| `es` | Español            | `tr`      | Türkçe             |
+| `fr` | Français           | `uk`      | Українська         |
+| `hu` | Magyar             | `vi`      | Tiếng Việt         |
+| `id` | Bahasa Indonesia   | `zh-Hans` | 简体中文           |
+| `it` | Italiano           | `zh-Hant` | 繁體中文           |
+| `ja` | 日本語             |           |                    |
 
 A locale is named in **its own language and its own script**, never in English. The tags are
 canonical BCP-47; the reference's non-standard `br` and `gr` are not what we ship.
@@ -618,7 +627,7 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
 4. **`ar` is RTL.** Layout uses logical properties, not `left`/`right`. Directional icons mirror.
    RTL is a designed layout, exactly as dark mode is, not a flipped afterthought.
 5. **Formatting must agree across runtimes.** `src/lib/format.ts` pins `en-GB` and freezes the
-   CLDR month and weekday tables *because* workerd and WebKit disagree on `Intl` output, and every
+   CLDR month and weekday tables _because_ workerd and WebKit disagree on `Intl` output, and every
    server-rendered September date threw a hydration error in Safari until it did. The multi-locale
    formatter inherits that requirement: any locale-dependent name taken from the platform must be
    proven identical in workerd and WebKit, or frozen in a table. This is the hardest constraint on
@@ -632,7 +641,7 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
    prose, which stays English and says so on the page — translated legal text needs review this
    build cannot give it.
 9. **Copy is authored, not copied.** §1's clean-room rule governs every catalogue file. Our English
-   copy is our own, and each translation is made from *our* English — never from the reference's
+   copy is our own, and each translation is made from _our_ English — never from the reference's
    catalogues, which are AGPL-licensed source.
 
 ### Catalogue layout (fixed — every i18n item builds against this)

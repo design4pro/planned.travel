@@ -9,6 +9,10 @@ Take the current conversation context and codebase understanding and produce a s
 ## Before writing
 
 1. Explore the relevant code using the domain glossary (CONTEXT.md). Challenge fuzzy terms against it.
+   When the feature mirrors the reference product, study how it behaves there first — surfaces and
+   rules in docs/agents/reference.md; cite findings as `wiki: <Page-Name>`, never copy. Reference
+   study happens HERE, in the planning phase — the ticket must carry everything the implementer
+   needs, because AFK agents never browse the reference.
 2. **Sketch the test seams**: name the module boundaries the work will be tested at. Prefer existing seams (the tenant repository boundary is the archetype — see docs/adr/0002); the fewer seams, the better. Confirm the seams with the user before writing.
 3. Check overlap: if the feature touches a concept another open PRD or a remaining `docs/plans` stage owns, stop and resolve ownership first (docs/SPEC.md §8 — one concept, one owner). Name the overlap in the PRD.
 

@@ -30,5 +30,6 @@ Configuration for the mattpocock-skills plugin and project skills:
 - **Issue tracker**: GitHub Issues on `design4pro/planned.travel` — see docs/agents/issue-tracker.md
 - **Triage labels**: see docs/agents/triage-labels.md
 - **Domain docs**: see docs/agents/domain.md
+- **Reference product** (feature and quality benchmark; clean-room rule applies): see docs/agents/reference.md
 
 New work flows: grilling → `/to-spec-project` (PRD issue) → `/to-tickets-project` (vertical-slice sub-issues) → `/implement-project` per ticket in a fresh context. Verification ladder: see the `verifying-changes` skill.
