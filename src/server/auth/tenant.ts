@@ -10,7 +10,13 @@ import type { OrganizationRole } from '#/server/db/auth-schema'
 
 export type { OrganizationRole }
 
-/** The authenticated user, as the app needs it. */
+/**
+ * The authenticated user, as the app needs it.
+ *
+ * The last four fields are Better Auth's `admin` plugin columns (docs/SPEC.md §5). They are read
+ * by the permission guard and by the shell; nothing in the client may write them, and
+ * {@link normaliseSession} is the only door they come through.
+ */
 export type AuthUser = {
   id: string
   email: string
@@ -18,6 +24,16 @@ export type AuthUser = {
   emailVerified: boolean
   image: string | null
   twoFactorEnabled: boolean
+  /**
+   * The platform role, verbatim. `null` for an account that has never been raised, and a value
+   * outside the three platform roles is possible because the column carries no `CHECK`; both
+   * resolve to `user` in the guard, never to "unset, therefore permissive"
+   * (docs/ACCESS.md §1.3).
+   */
+  role: string | null
+  banned: boolean
+  banReason: string | null
+  banExpires: Date | null
 }
 
 /** The active session, as the app needs it. */
@@ -27,6 +43,12 @@ export type AuthSessionRecord = {
   userId: string
   activeOrganizationId: string | null
   expiresAt: Date
+  /**
+   * The operator acting as this session's user, when the session was minted by impersonation.
+   * `null` on every ordinary session. The shell's warning bar renders on this
+   * (docs/ACCESS.md §6.1).
+   */
+  impersonatedBy: string | null
 }
 
 export type AuthSession = {
@@ -69,12 +91,22 @@ export function roleSatisfies(
   return ROLE_RANK[role] <= ROLE_RANK[minimum]
 }
 
-/** Why an auth requirement could not be met. */
+/**
+ * Why an auth requirement could not be met.
+ *
+ * One vocabulary for every denial, tenant and platform alike. The last three are the platform
+ * guard's: a banned account, a role that does not hold the statement, and an impersonated session
+ * reaching for a platform capability §6.4 vetoes. A second denial type beside this one would be a
+ * second answer to "why was this refused".
+ */
 export type AuthFailureReason =
   | 'unauthenticated'
   | 'no-active-organization'
   | 'not-a-member'
   | 'insufficient-role'
+  | 'banned'
+  | 'insufficient-platform-permission'
+  | 'impersonated'
 
 export class AuthRequirementError extends Error {
   readonly reason: AuthFailureReason
@@ -209,6 +241,10 @@ export function normaliseSession(raw: RawSession): AuthSession | null {
       emailVerified: raw.user.emailVerified === true,
       image: asString(raw.user.image),
       twoFactorEnabled: raw.user.twoFactorEnabled === true,
+      role: asString(raw.user.role),
+      banned: raw.user.banned === true,
+      banReason: asString(raw.user.banReason),
+      banExpires: asDate(raw.user.banExpires),
     },
     session: {
       id: sessionId,
@@ -216,6 +252,7 @@ export function normaliseSession(raw: RawSession): AuthSession | null {
       userId: asString(raw.session.userId) ?? userId,
       activeOrganizationId: asString(raw.session.activeOrganizationId),
       expiresAt,
+      impersonatedBy: asString(raw.session.impersonatedBy),
     },
   }
 }

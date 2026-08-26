@@ -21,7 +21,7 @@
  * is what a traveller actually calls their inbox.
  *
  * **Plan names are words, not identifiers.** `free`, `solo` and `crew` are the
- * ids Stripe and the invoice carry and no reader ever sees; the words on the
+ * ids Polar and the invoice carry and no reader ever sees; the words on the
  * screen are `Gratis`, `Perorangan` and `Rombongan`.
  *
  * **Two keys are cut to a measured budget.** Both live in a `.truncate` box
@@ -321,13 +321,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Pembayaran diterima',
   'billing.checkout.completeBody':
-    'Paket baru Anda sedang diterapkan. Ia muncul di sini begitu Stripe mengonfirmasinya — biasanya dalam beberapa detik.',
+    'Paket baru Anda sedang diterapkan. Ia muncul di sini begitu Polar mengonfirmasinya — biasanya dalam beberapa detik.',
   'billing.checkout.cancelledTitle': 'Pembayaran dibatalkan',
   'billing.checkout.cancelledBody':
     'Tidak ada yang ditagih dan paket Anda tidak berubah.',
-  'billing.portal.backTitle': 'Kembali dari Stripe',
+  'billing.portal.backTitle': 'Kembali dari Polar',
   'billing.portal.backBody':
-    'Apa pun yang Anda ubah di sana mendarat di sini begitu Stripe mengonfirmasinya.',
+    'Apa pun yang Anda ubah di sana mendarat di sini begitu Polar mengonfirmasinya.',
   'billing.refresh': 'Segarkan',
   'billing.readOnly.title': 'Anda anggota di ruang kerja ini',
   'billing.readOnly.body':
@@ -343,9 +343,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Metode pembayaran',
   'billing.hero.cancel': 'Batalkan paket',
   'billing.price.free': 'Gratis',
-  'billing.stripe.opening': 'Membuka Stripe',
-  'billing.stripe.failed': 'Stripe tidak bisa dijangkau',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Membuka Polar',
+  'billing.provider.failed': 'Polar tidak bisa dijangkau',
+  'billing.provider.failedBody':
     'Tidak ada yang ditagih. Periksa koneksi Anda lalu coba lagi sebentar lagi.',
 
   'billing.renewal.trialEndsToday':
@@ -368,7 +368,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Pilih paket di bawah untuk membuka lagi pemesanan, jurnal dan peta luring.',
   'billing.renewal.incomplete':
-    'Stripe masih menunggu pembayaran ini dikonfirmasi.',
+    'Polar masih menunggu pembayaran ini dikonfirmasi.',
   'billing.renewal.free':
     'Dua perjalanan sekaligus, gratis. Naikkan paket kapan pun Anda merasa sempit.',
   'billing.renewal.auto': 'Diperpanjang otomatis.',
@@ -454,7 +454,7 @@ const messages = {
   'billing.invoices.portal': 'Portal tagihan',
   'billing.invoices.unavailableTitle': 'Kuitansinya tidak termuat',
   'billing.invoices.unavailableBody':
-    'Stripe tidak menjawab tepat waktu untuk riwayatnya. Semua di atas tetap hidup; buka portal tagihan untuk catatan lengkapnya, atau kembali sebentar lagi.',
+    'Polar tidak menjawab tepat waktu untuk riwayatnya. Semua di atas tetap hidup; buka portal tagihan untuk catatan lengkapnya, atau kembali sebentar lagi.',
   'billing.invoices.emptyTitle': 'Belum ada faktur',
   'billing.invoices.emptyCustomer':
     'Kuitansi pertama muncul di sini begitu satu periode penagihan ditutup.',

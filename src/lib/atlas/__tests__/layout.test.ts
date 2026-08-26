@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   APP_HEADER,
+  APP_HEADER_TOP_CLASS,
+  BOTTOM_CLEARANCE_CSS,
   CHROME_GAP,
   CHROME_GUTTER,
   MOBILE_TAB_BAR,
@@ -9,15 +11,25 @@ import {
   SHELF_CLASS,
   SHELF_FALLBACK,
   SLICE_HEIGHT_CLASS,
+  TRIP_RAIL_STICKY_CLASS,
+  TRIP_SLICE_HEIGHT_CLASS,
+  TRIP_SUBNAV,
+  TRIP_SUBNAV_WIDE,
   WORLD_CENTRE,
   WORLD_FRAME_CSS,
   WORLD_TILE_SIZE,
   cameraPadding,
   documentHeight,
+  insetSum,
+  insetSumCss,
   mercatorY,
   shelfClear,
+  shellBottomGap,
   sliceHeight,
   sliceHeightCss,
+  tripDocumentHeight,
+  tripSliceHeight,
+  tripSliceHeightCss,
   worldFrameLift,
   worldSize,
   worldZoom,
@@ -31,6 +43,8 @@ const DESKTOP: ChromeEnvironment = {
   safeTop: 0,
   safeBottom: 0,
   navHeight: 64,
+  impersonationHeight: 0,
+  subnavHeight: 48,
 }
 
 /** A phone with both safe areas, which is where the tab bar arithmetic bites. */
@@ -39,7 +53,16 @@ const PHONE: ChromeEnvironment = {
   safeTop: 59,
   safeBottom: 34,
   navHeight: 64,
+  impersonationHeight: 0,
+  subnavHeight: 48,
 }
+
+/**
+ * `--impersonation-h` while the warning bar is on screen: 3.5rem in the token
+ * file, and the one term that is zero for almost every session and non-zero for
+ * exactly the sessions that most need the map to be the right size.
+ */
+const IMPERSONATION_BAR = 56
 
 describe('the viewport slice', () => {
   it('leaves the document exactly one viewport tall from lg up', () => {
@@ -47,6 +70,48 @@ describe('the viewport slice', () => {
       const env = { ...DESKTOP, viewport }
       expect(documentHeight(env, true)).toBe(viewport)
     }
+  })
+
+  it('still fits one viewport with the impersonation bar on screen', () => {
+    // The bar moves the top of the slice down by its whole row. A model that
+    // does not know about it leaves `/atlas` overflowing by exactly one bar
+    // during an impersonated session, with every other assertion here still
+    // green — which is the drift this case exists to catch.
+    for (const viewport of [740, 836, 900, 1024, 1440]) {
+      const env = {
+        ...DESKTOP,
+        viewport,
+        impersonationHeight: IMPERSONATION_BAR,
+      }
+      expect(documentHeight(env, true)).toBe(viewport)
+      expect(sliceHeight(env, true)).toBe(
+        sliceHeight({ ...DESKTOP, viewport }, true) - IMPERSONATION_BAR,
+      )
+    }
+    const phone = { ...PHONE, impersonationHeight: IMPERSONATION_BAR }
+    expect(documentHeight(phone, false)).toBe(PHONE.viewport)
+    expect(sliceHeight(phone, false)).toBe(
+      sliceHeight(PHONE, false) - IMPERSONATION_BAR,
+    )
+  })
+
+  it('carries the impersonation bar as its own inset, above the nav row', () => {
+    // Its position in the list is the order the chrome occupies: the bar clears
+    // the display cutout when it exists, so it sits between the safe area and
+    // the nav row rather than under the hairline.
+    expect(APP_HEADER.map((inset) => inset.name)).toEqual([
+      'top safe area',
+      'impersonation bar',
+      'nav row',
+      'nav hairline',
+    ])
+    expect(sliceHeightCss(true)).toContain(
+      '-var(--safe-top)-var(--impersonation-h)-var(--nav-h)',
+    )
+    // Zero-valued by default, so an ordinary session's geometry is untouched.
+    expect(sliceHeight(DESKTOP, true)).toBe(
+      DESKTOP.viewport - DESKTOP.navHeight - 1,
+    )
   })
 
   it('accounts for the app header hairline, not just the nav row', () => {
@@ -70,9 +135,10 @@ describe('the viewport slice', () => {
     expect(sliceHeight(PHONE, false)).toBe(
       PHONE.viewport - headerHeight - barHeight,
     )
-    // The bar is fixed, so it costs the slice height without costing document
-    // height: the page still fits inside one viewport.
-    expect(documentHeight(PHONE, false)).toBeLessThan(PHONE.viewport)
+    // The bar is fixed, so it costs the slice its height and costs the document
+    // nothing: the shell is `min-h-svh`, so its `flex-1` outlet stretches over
+    // the row the slice left and the page is exactly one viewport tall.
+    expect(documentHeight(PHONE, false)).toBe(PHONE.viewport)
   })
 
   it('never leaves a negative slice on an absurdly short viewport', () => {
@@ -84,6 +150,111 @@ describe('the viewport slice', () => {
   it('ships the same expression it computes, at both breakpoints', () => {
     expect(SLICE_HEIGHT_CLASS.base).toBe(`h-[${sliceHeightCss(false)}]`)
     expect(SLICE_HEIGHT_CLASS.lg).toBe(`lg:h-[${sliceHeightCss(true)}]`)
+  })
+})
+
+describe('the trip planner’s slice', () => {
+  it('leaves the document exactly one viewport tall from lg up', () => {
+    // The regression this case exists for: the planner's height was written by
+    // hand and omitted both hairlines, so the signature screen overflowed its
+    // own viewport by exactly two pixels with every other test green.
+    for (const viewport of [740, 836, 900, 1024, 1440]) {
+      expect(tripDocumentHeight({ ...DESKTOP, viewport }, true)).toBe(viewport)
+    }
+  })
+
+  it('still fits one viewport with the impersonation bar on screen', () => {
+    for (const viewport of [740, 836, 900, 1024, 1440]) {
+      const env = {
+        ...DESKTOP,
+        viewport,
+        impersonationHeight: IMPERSONATION_BAR,
+      }
+      expect(tripDocumentHeight(env, true)).toBe(viewport)
+      expect(tripSliceHeight(env, true)).toBe(
+        tripSliceHeight({ ...DESKTOP, viewport }, true) - IMPERSONATION_BAR,
+      )
+    }
+  })
+
+  it('fits the phone too, tab bar and both safe areas included', () => {
+    for (const impersonationHeight of [0, IMPERSONATION_BAR]) {
+      const env = { ...PHONE, impersonationHeight }
+      expect(tripDocumentHeight(env, false)).toBe(env.viewport)
+      expect(tripSliceHeight(env, false)).toBeGreaterThan(0)
+    }
+  })
+
+  it('carries both sub-navigation rows below lg and one from lg up', () => {
+    expect(TRIP_SUBNAV.map((inset) => inset.name)).toEqual([
+      'trip name row',
+      'tab row',
+      'sub-nav hairline',
+    ])
+    expect(TRIP_SUBNAV_WIDE.map((inset) => inset.name)).toEqual([
+      'tab row',
+      'sub-nav hairline',
+    ])
+    expect(tripSliceHeight(DESKTOP, false)).toBe(
+      tripSliceHeight(DESKTOP, true) - 44 - insetSum(MOBILE_TAB_BAR, DESKTOP),
+    )
+  })
+
+  it('ships the same expression it computes, at both breakpoints', () => {
+    expect(TRIP_SLICE_HEIGHT_CLASS.base).toBe(
+      `h-[${tripSliceHeightCss(false)}]`,
+    )
+    expect(TRIP_SLICE_HEIGHT_CLASS.lg).toBe(
+      `lg:h-[${tripSliceHeightCss(true)}]`,
+    )
+  })
+})
+
+describe('the chrome offsets the shell hands out', () => {
+  it('pins a sub-navigation under the app header’s whole border box', () => {
+    // One pixel short and the sub-navigation paints over the header's hairline,
+    // which reads as a rendering fault rather than as a sticky element.
+    expect(APP_HEADER_TOP_CLASS).toBe(`top-[${insetSumCss(APP_HEADER)}]`)
+    expect(TRIP_RAIL_STICKY_CLASS).toContain(
+      insetSumCss([...APP_HEADER, ...TRIP_SUBNAV_WIDE]).slice(0, -1),
+    )
+  })
+
+  it('publishes the mobile tab bar’s whole box for the scroll reservation', () => {
+    // `scroll-padding-bottom` in `src/styles/styles.css` is where the browser is
+    // told to stop; this is the expression it uses, and the token file's own
+    // test asserts the stylesheet still carries it.
+    expect(BOTTOM_CLEARANCE_CSS).toBe('calc(1px+4rem+var(--safe-bottom))')
+    expect(insetSum(MOBILE_TAB_BAR, PHONE)).toBe(
+      1 + PHONE.navHeight + PHONE.safeBottom,
+    )
+  })
+
+  it('counts the row the fixed tab bar occupies, and only below lg', () => {
+    // Not a reservation and nothing pads for it: below `lg` the slice stops at
+    // the bar's top edge and the shell's `min-h-svh` stretches over the row it
+    // left. From `lg` there is no bar and no row. It is a term in
+    // `documentHeight` so that number describes a document rather than the sum
+    // of two boxes — which is what stops the next reader making it come out even
+    // by padding the outlet, and turning a 31px gutter into 96px of dead canvas.
+    expect(shellBottomGap(false)).toEqual(MOBILE_TAB_BAR)
+    expect(shellBottomGap(true)).toEqual([])
+    expect(insetSum(shellBottomGap(false), PHONE)).toBe(
+      insetSum(MOBILE_TAB_BAR, PHONE),
+    )
+  })
+
+  it('leaves the document one viewport tall on a phone, bar or no bar', () => {
+    // The whole point of the top edge being the shell's: at 360px with the
+    // warning bar on screen, a full-bleed route still measures exactly the
+    // viewport rather than overflowing by a bar or falling short by one.
+    for (const impersonationHeight of [0, IMPERSONATION_BAR]) {
+      for (const viewport of [610, 659, 852]) {
+        const env = { ...PHONE, viewport, impersonationHeight }
+        expect(documentHeight(env, false)).toBe(viewport)
+        expect(tripDocumentHeight(env, false)).toBe(viewport)
+      }
+    }
   })
 })
 

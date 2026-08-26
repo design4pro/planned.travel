@@ -275,9 +275,10 @@ winner per screen, what changed, next action. No preamble, no restating the plan
 ## Autonomy (granted) and hard limits (never)
 
 Permitted unattended, no confirmation needed: editing source, `pnpm build|typecheck|lint|test`,
-`pnpm exec playwright test`, running the dev server, taking screenshots, fetching reference URLs,
-`wrangler deploy`, `wrangler d1 migrations apply --local|--remote`, `wrangler versions upload`,
-`git add|commit|push` (fast-forward), Stripe **test**-mode calls.
+`pnpm exec playwright test`, running the dev server **on a port in 3010-3020**, killing any
+listener **in that range** (it is ours by definition), driving `ego-browser`, taking screenshots,
+fetching reference URLs, `wrangler deploy`, `wrangler d1 migrations apply --local|--remote`,
+`wrangler versions upload`, `git add|commit|push` (fast-forward), Polar **sandbox** API calls.
 
 Never, under any circumstance, even if a round seems to need it — stop and ask instead:
 
@@ -285,8 +286,13 @@ Never, under any circumstance, even if a round seems to need it — stop and ask
   deletion of a Cloudflare resource, remote database or bucket.
 - `git push --force`, `git reset --hard` on shared history, `git rebase`/`filter-branch` on `main`,
   or anything that rewrites published commits.
-- Stripe **live**-mode API calls.
+- Polar **production**-mode API calls. Sandbox is fine; production moves real money.
 - `pnpm add` / `pnpm remove`, or editing `package.json` or `pnpm-lock.yaml` — `SPEC.md` §3 freezes
   the dependency set. A genuinely missing package is a finding to report, not a thing to install.
+  **One standing exception, and it is a list of two names rather than a policy:**
+  `@react-email/components` and `react-email` may be installed, in **phase A of the Polar
+  migration and in no other round**, because `SPEC.md` §3 admits them by name. Phase A also
+  **removes** `stripe` in the same round, since that phase deletes the last code importing it.
+  Nothing else is in scope: any other package is still a finding you report and never install.
 - Hand-editing `src/routeTree.gen.ts` (run `pnpm generate-routes`).
 - Introducing the TREK name, mark, source or assets anywhere in this repo.

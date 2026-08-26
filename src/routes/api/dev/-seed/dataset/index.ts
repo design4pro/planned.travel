@@ -32,6 +32,18 @@ export {
   visitedRegions,
 } from './workspace'
 
+export {
+  SEED_ANCHOR_DAY,
+  SEED_ANCHOR_INSTANT,
+  SEED_ANCHOR_YEAR,
+  anchorYearDay,
+  day,
+  daysFromAnchor,
+  historic,
+  instantOn,
+  minutesBeforeAnchor,
+} from './anchor'
+
 export { flagshipTrip } from './flagship'
 export { dolomitesTrip, lisbonTrip, marrakechTrip, patagoniaTrip } from './trips'
 
@@ -40,10 +52,14 @@ export const trips: ReadonlyArray<SeedTrip> = [flagshipTrip, ...supportingTrips]
 
 /**
  * Bumped whenever the dataset changes in a way that should re-seed a workspace that already carries
- * the marker. The applier stores it in `app_settings` under `demo.seed`.
+ * the marker. The applier stores it in `app_settings` under `demo.seed`, alongside the anchor the
+ * rows were written against.
  *
- * Version 3 gave every trip a fixed primary key, so a workspace seeded under version 2 still holds
- * generated ones and has to be rebuilt before its cover art matches the recorded screenshots.
+ * 3 — two changes reached this version from two branches and both are in effect. Every date became
+ * an offset from `SEED_ANCHOR_DAY` and the applier stopped reading the wall clock, so the rows a
+ * workspace holds no longer depend on the day it was seeded; and every trip gained a fixed primary
+ * key, so a workspace seeded under version 2 still holds generated ones and has to be rebuilt
+ * before its cover art matches the recorded screenshots.
  */
 export const DATASET_VERSION = 3
 
@@ -75,7 +91,7 @@ export const organizationSettings = {
  *
  * Only the *plan* is declared here. The tier column, the seat and storage ceilings, the
  * currency and the unit amount are all derived by `rowValuesFromRecord()`, exactly as a
- * Stripe webhook would derive them. Hand-stamping tier-shaped ceilings next to a
+ * billing webhook would derive them. Hand-stamping tier-shaped ceilings next to a
  * catalogue price is what made the demo tell `/settings/billing` one story and `/files`
  * another; there is now no way for the seed to write a row that disagrees with itself.
  */
@@ -84,28 +100,30 @@ export const subscription = {
   interval: 'monthly',
   status: 'active',
   seats: 10,
-  stripeCustomerId: 'cus_demo_planned_travel',
-  stripeSubscriptionId: 'sub_demo_planned_travel',
+  providerCustomerId: 'demo-customer-planned-travel',
+  providerSubscriptionId: 'demo-subscription-planned-travel',
 } as const satisfies {
   planId: PlanId
   interval: BillingInterval
   status: SubscriptionRecord['status']
   seats: number
-  stripeCustomerId: string
-  stripeSubscriptionId: string
+  providerCustomerId: string
+  providerSubscriptionId: string
 }
 
 /**
- * The Stripe price id for the demo plan, when this deployment has one configured.
+ * The provider product id for the demo plan, when this deployment has one configured.
  *
- * Never a made-up `price_…` string: an id the catalogue does not know is worse than no
- * id at all, because it is the first thing the resolver consults and it would resolve to
- * nothing. With no price id configured the tier column and the seat count carry the
- * plan instead, which is the legacy path every pre-catalogue row already takes.
+ * Never a made-up id: one the catalogue does not know is worse than none at all,
+ * because it is the first thing the resolver consults and it would resolve to nothing.
+ * The value comes from the catalogue itself, so it is whatever the deployment's
+ * `VITE_POLAR_PRODUCT_*` variables configured. With none configured the tier column and
+ * the seat count carry the plan instead, which is the legacy path every pre-catalogue
+ * row already takes.
  */
-export function demoStripePriceId(): string | null {
+export function demoProviderProductId(): string | null {
   const price = priceFor(planById(subscription.planId), subscription.interval)
-  return price === null || price.priceId === '' ? null : price.priceId
+  return price === null || price.productId === '' ? null : price.productId
 }
 
 /**
@@ -122,9 +140,9 @@ export function demoSubscriptionRecord(
     status: subscription.status,
     interval: subscription.interval,
     seats: subscription.seats,
-    stripeCustomerId: subscription.stripeCustomerId,
-    stripeSubscriptionId: subscription.stripeSubscriptionId,
-    stripePriceId: demoStripePriceId(),
+    providerCustomerId: subscription.providerCustomerId,
+    providerSubscriptionId: subscription.providerSubscriptionId,
+    providerProductId: demoProviderProductId(),
     currentPeriodStart: period.start,
     currentPeriodEnd: period.end,
     cancelAtPeriodEnd: false,

@@ -11,6 +11,8 @@ import {
 } from '#/components/modules/collab'
 import { ModulePanel } from '#/components/modules/shared'
 import { Card } from '#/components/ui'
+import { TRIP_RAIL_STICKY_CLASS } from '#/lib/atlas/layout'
+import { cn } from '#/lib/cn'
 import { loadTripCollab } from '../../-server/trip'
 import { formatNumber, pluralise } from '../../-lib/format'
 import { HeaderSkeleton, RowsSkeleton } from '../../-ui/scaffold'
@@ -75,7 +77,10 @@ function CollabPage() {
             // 12rem of slack, not 6: the panel is sticky *below* the page header,
             // so at the top of the page its foot — and therefore the composer —
             // otherwise sat under the fold.
-            className="xl:sticky xl:top-[calc(var(--nav-h)+var(--subnav-h)+var(--safe-top)+1.5rem)] xl:max-h-[calc(100svh-var(--nav-h)-var(--subnav-h)-12rem)]"
+            className={cn(
+              'xl:sticky xl:max-h-[calc(100svh-var(--impersonation-h)-var(--nav-h)-1px-var(--subnav-h)-1px-12rem)]',
+              TRIP_RAIL_STICKY_CLASS,
+            )}
             bodyClassName="flex min-h-0 flex-col px-5 py-3"
           >
             <Thread

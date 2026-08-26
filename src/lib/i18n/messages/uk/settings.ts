@@ -328,12 +328,12 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Платіж отримано',
   'billing.checkout.completeBody':
-    'Новий тариф уже застосовується. Він з’явиться тут у ту мить, коли Stripe його підтвердить, — зазвичай за кілька секунд.',
+    'Новий тариф уже застосовується. Він з’явиться тут у ту мить, коли Polar його підтвердить, — зазвичай за кілька секунд.',
   'billing.checkout.cancelledTitle': 'Оплату перервано',
   'billing.checkout.cancelledBody': 'Нічого не списано, і тариф не змінився.',
-  'billing.portal.backTitle': 'Повернення зі Stripe',
+  'billing.portal.backTitle': 'Повернення зі Polar',
   'billing.portal.backBody':
-    'Усе, що ви там змінили, з’явиться тут, щойно Stripe це підтвердить.',
+    'Усе, що ви там змінили, з’явиться тут, щойно Polar це підтвердить.',
   'billing.refresh': 'Оновити',
   'billing.readOnly.title': 'Ви учасник цього простору',
   'billing.readOnly.body':
@@ -349,9 +349,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Спосіб оплати',
   'billing.hero.cancel': 'Відмовитися від тарифу',
   'billing.price.free': 'Безкоштовно',
-  'billing.stripe.opening': 'Відкриваємо Stripe',
-  'billing.stripe.failed': 'Зі Stripe зв’язатися не вдалося',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Відкриваємо Polar',
+  'billing.provider.failed': 'Зі Polar зв’язатися не вдалося',
+  'billing.provider.failedBody':
     'Нічого не списано. Перевірте з’єднання і спробуйте за хвилину.',
 
   'billing.renewal.trialEndsToday':
@@ -376,7 +376,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Виберіть тариф нижче, щоб знову відкрити броні, щоденник і карти офлайн.',
   'billing.renewal.incomplete':
-    'Stripe усе ще чекає на підтвердження цього платежу.',
+    'Polar усе ще чекає на підтвердження цього платежу.',
   'billing.renewal.free':
     'Дві поїздки водночас, за наш рахунок. Тариф вище візьмете, коли стане тісно.',
   'billing.renewal.auto': 'Продовжується автоматично.',
@@ -475,7 +475,7 @@ const messages = {
   'billing.invoices.portal': 'Портал оплати',
   'billing.invoices.unavailableTitle': 'Квитанції не завантажуються',
   'billing.invoices.unavailableBody':
-    'Stripe не встиг відповісти щодо історії. Усе вище — актуальне; повний перелік дивіться в порталі оплати або повернітеся за хвилину.',
+    'Polar не встиг відповісти щодо історії. Усе вище — актуальне; повний перелік дивіться в порталі оплати або повернітеся за хвилину.',
   'billing.invoices.emptyTitle': 'Рахунків ще немає',
   'billing.invoices.emptyCustomer':
     'Перша квитанція з’явиться тут, щойно закриється період оплати.',

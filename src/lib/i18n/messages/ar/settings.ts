@@ -15,8 +15,8 @@
  *
  * **A plan's name is a word, not a mark.** `billing.plan.<id>.name` is
  * translated like any other noun here, because the id — `free`, `solo`, `crew`
- * — is what `src/lib/plans.ts`, Stripe and the invoice carry, and no reader ever
- * sees it. `Stripe` and `PDF` stay as they are: one is a company, the other a
+ * — is what `src/lib/plans.ts`, Polar and the invoice carry, and no reader ever
+ * sees it. `Polar` and `PDF` stay as they are: one is a company, the other a
  * format.
  *
  * **A language is never named in English**, and never named here either: all
@@ -322,12 +322,12 @@ const messages = {
 
   'billing.checkout.completeTitle': 'تم استلام الدفعة',
   'billing.checkout.completeBody':
-    'جارٍ تطبيق خطتك الجديدة. وتظهر هنا لحظة تأكيد Stripe لها — عادةً في ثوانٍ.',
+    'جارٍ تطبيق خطتك الجديدة. وتظهر هنا لحظة تأكيد Polar لها — عادةً في ثوانٍ.',
   'billing.checkout.cancelledTitle': 'أُلغيت عملية الدفع',
   'billing.checkout.cancelledBody': 'لم يُخصم شيء ولم تتغير خطتك.',
-  'billing.portal.backTitle': 'عودة من Stripe',
+  'billing.portal.backTitle': 'عودة من Polar',
   'billing.portal.backBody':
-    'كل ما غيّرته هناك يصل إلى هنا بمجرد أن يؤكده Stripe.',
+    'كل ما غيّرته هناك يصل إلى هنا بمجرد أن يؤكده Polar.',
   'billing.refresh': 'تحديث',
   'billing.readOnly.title': 'أنت عضو في مساحة العمل هذه',
   'billing.readOnly.body':
@@ -343,9 +343,9 @@ const messages = {
   'billing.hero.paymentMethod': 'طريقة الدفع',
   'billing.hero.cancel': 'إلغاء الخطة',
   'billing.price.free': 'مجانًا',
-  'billing.stripe.opening': 'جارٍ فتح Stripe',
-  'billing.stripe.failed': 'تعذّر الوصول إلى Stripe',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'جارٍ فتح Polar',
+  'billing.provider.failed': 'تعذّر الوصول إلى Polar',
+  'billing.provider.failedBody':
     'لم يُخصم شيء. تحقق من اتصالك وأعد المحاولة بعد لحظات.',
 
   'billing.renewal.trialEndsToday':
@@ -370,7 +370,7 @@ const messages = {
     'هذا الاشتراك موقوف مؤقتًا. استأنفه متى استعدت للسفر.',
   'billing.renewal.lapsed':
     'اختر خطة أدناه لتفتح الحجوزات واليوميات والخرائط دون اتصال مرة أخرى.',
-  'billing.renewal.incomplete': 'ما زال Stripe ينتظر تأكيد هذه الدفعة.',
+  'billing.renewal.incomplete': 'ما زال Polar ينتظر تأكيد هذه الدفعة.',
   'billing.renewal.free': 'رحلتان في وقت واحد، على حسابنا. ارتقِ متى ضاقت بك.',
   'billing.renewal.auto': 'يُجدَّد تلقائيًا.',
   'billing.renewal.renewsOn': 'يُجدَّد في {date}.',
@@ -462,7 +462,7 @@ const messages = {
   'billing.invoices.portal': 'بوابة الفواتير',
   'billing.invoices.unavailableTitle': 'الإيصالات لا تُحمّل',
   'billing.invoices.unavailableBody':
-    'لم يجب Stripe في الوقت المناسب للسجل. كل ما فوق مباشر؛ افتح بوابة الفواتير للسجل الكامل، أو عد بعد لحظات.',
+    'لم يجب Polar في الوقت المناسب للسجل. كل ما فوق مباشر؛ افتح بوابة الفواتير للسجل الكامل، أو عد بعد لحظات.',
   'billing.invoices.emptyTitle': 'لا فواتير بعد',
   'billing.invoices.emptyCustomer':
     'يظهر أول إيصال هنا بمجرد انتهاء فترة فاتورة.',

@@ -330,12 +330,12 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Платёж получен',
   'billing.checkout.completeBody':
-    'Новый тариф уже применяется. Он появится здесь в тот момент, когда Stripe его подтвердит, — обычно за несколько секунд.',
+    'Новый тариф уже применяется. Он появится здесь в тот момент, когда Polar его подтвердит, — обычно за несколько секунд.',
   'billing.checkout.cancelledTitle': 'Оплата прервана',
   'billing.checkout.cancelledBody': 'Ничего не списано, и тариф не изменился.',
-  'billing.portal.backTitle': 'Возвращение из Stripe',
+  'billing.portal.backTitle': 'Возвращение из Polar',
   'billing.portal.backBody':
-    'Всё, что вы там изменили, появится здесь, как только Stripe это подтвердит.',
+    'Всё, что вы там изменили, появится здесь, как только Polar это подтвердит.',
   'billing.refresh': 'Обновить',
   'billing.readOnly.title': 'Вы участник этого пространства',
   'billing.readOnly.body':
@@ -351,9 +351,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Способ оплаты',
   'billing.hero.cancel': 'Отказаться от тарифа',
   'billing.price.free': 'Бесплатно',
-  'billing.stripe.opening': 'Открываем Stripe',
-  'billing.stripe.failed': 'Со Stripe связаться не удалось',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Открываем Polar',
+  'billing.provider.failed': 'Со Polar связаться не удалось',
+  'billing.provider.failedBody':
     'Ничего не списано. Проверьте соединение и попробуйте через минуту.',
 
   'billing.renewal.trialEndsToday':
@@ -379,7 +379,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Выберите тариф ниже, чтобы снова открыть брони, дневник и карты офлайн.',
   'billing.renewal.incomplete':
-    'Stripe всё ещё ждёт подтверждения этого платежа.',
+    'Polar всё ещё ждёт подтверждения этого платежа.',
   'billing.renewal.free':
     'Две поездки одновременно, за наш счёт. Тариф повыше возьмёте, когда станет тесно.',
   'billing.renewal.auto': 'Продлевается автоматически.',
@@ -484,7 +484,7 @@ const messages = {
   'billing.invoices.portal': 'Портал оплаты',
   'billing.invoices.unavailableTitle': 'Квитанции не загружаются',
   'billing.invoices.unavailableBody':
-    'Stripe не успел ответить по истории. Всё выше — актуально; полный список смотрите в портале оплаты или вернитесь через минуту.',
+    'Polar не успел ответить по истории. Всё выше — актуально; полный список смотрите в портале оплаты или вернитесь через минуту.',
   'billing.invoices.emptyTitle': 'Счетов пока нет',
   'billing.invoices.emptyCustomer':
     'Первая квитанция появится здесь, как только закроется период оплаты.',

@@ -327,13 +327,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Pagamento ricevuto',
   'billing.checkout.completeBody':
-    'Il piano nuovo si sta applicando. Compare qui appena Stripe lo conferma — di solito in pochi secondi.',
+    'Il piano nuovo si sta applicando. Compare qui appena Polar lo conferma — di solito in pochi secondi.',
   'billing.checkout.cancelledTitle': 'Pagamento annullato',
   'billing.checkout.cancelledBody':
     'Non è stato addebitato niente e il tuo piano non è cambiato.',
-  'billing.portal.backTitle': 'Di ritorno da Stripe',
+  'billing.portal.backTitle': 'Di ritorno da Polar',
   'billing.portal.backBody':
-    'Quello che hai cambiato lì arriva qui appena Stripe lo conferma.',
+    'Quello che hai cambiato lì arriva qui appena Polar lo conferma.',
   'billing.refresh': 'Aggiorna',
   'billing.readOnly.title': 'Sei un membro di questo spazio di lavoro',
   'billing.readOnly.body':
@@ -349,9 +349,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Metodo di pagamento',
   'billing.hero.cancel': 'Disdici il piano',
   'billing.price.free': 'Gratis',
-  'billing.stripe.opening': 'Apertura di Stripe',
-  'billing.stripe.failed': 'Stripe non è raggiungibile',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Apertura di Polar',
+  'billing.provider.failed': 'Polar non è raggiungibile',
+  'billing.provider.failedBody':
     'Non è stato addebitato niente. Controlla la connessione e riprova tra un momento.',
 
   'billing.renewal.trialEndsToday':
@@ -376,7 +376,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Scegli un piano qui sotto per riaprire prenotazioni, diario e mappe offline.',
   'billing.renewal.incomplete':
-    'Stripe aspetta ancora la conferma di questo pagamento.',
+    'Polar aspetta ancora la conferma di questo pagamento.',
   'billing.renewal.free':
     'Due viaggi alla volta, offerti. Cambia piano quando ti staranno stretti.',
   'billing.renewal.auto': 'Si rinnova da solo.',
@@ -467,7 +467,7 @@ const messages = {
   'billing.invoices.portal': 'Portale di fatturazione',
   'billing.invoices.unavailableTitle': 'Le ricevute non si caricano',
   'billing.invoices.unavailableBody':
-    'Stripe non ha risposto in tempo per lo storico. Tutto quello sopra è aggiornato; apri il portale di fatturazione per il registro completo, oppure torna tra un momento.',
+    'Polar non ha risposto in tempo per lo storico. Tutto quello sopra è aggiornato; apri il portale di fatturazione per il registro completo, oppure torna tra un momento.',
   'billing.invoices.emptyTitle': 'Ancora nessuna fattura',
   'billing.invoices.emptyCustomer':
     'La prima ricevuta compare qui appena si chiude un periodo di fatturazione.',

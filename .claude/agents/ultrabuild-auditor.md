@@ -39,7 +39,7 @@ React 19 strictness, and state that desynchronises from the server.
 
 **4. Security and tenancy.** Every server-function input validated with Zod. Every repo call scoped
 to the tenant, with no path that returns another tenant's rows. No authorisation decided on the
-client. Session and cookie handling per `docs/ARCHITECTURE.md`. Stripe webhooks verifying the
+client. Session and cookie handling per `docs/ARCHITECTURE.md`. Polar webhooks verifying the
 signature and idempotent under replay. No secret, key or server-only module reachable from a client
 bundle. `.dev.vars` values never inlined.
 

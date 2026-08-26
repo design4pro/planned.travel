@@ -11,8 +11,8 @@
  *
  * **A plan's name is a word, not a mark.** `billing.plan.<id>.name` is
  * translated like any other noun, because the id — `free`, `solo`, `crew` — is
- * what `src/lib/plans.ts`, Stripe and the invoice carry, and no reader ever sees
- * it. `Stripe`, `PDF` and `Face ID` stay as they are: a company, a format and a
+ * what `src/lib/plans.ts`, Polar and the invoice carry, and no reader ever sees
+ * it. `Polar`, `PDF` and `Face ID` stay as they are: a company, a format and a
  * trademark. `Avro` is the Turkish spelling the language academy prescribes for
  * the currency, not a loan of the English one.
  *
@@ -320,13 +320,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Ödeme alındı',
   'billing.checkout.completeBody':
-    'Yeni paketiniz uygulanıyor. Stripe onayladığı anda burada görünür — genelde birkaç saniye içinde.',
+    'Yeni paketiniz uygulanıyor. Polar onayladığı anda burada görünür — genelde birkaç saniye içinde.',
   'billing.checkout.cancelledTitle': 'Ödeme iptal edildi',
   'billing.checkout.cancelledBody':
     'Hiçbir tahsilat yapılmadı ve paketiniz değişmedi.',
-  'billing.portal.backTitle': 'Stripe’tan dönüş',
+  'billing.portal.backTitle': 'Polar’tan dönüş',
   'billing.portal.backBody':
-    'Orada değiştirdiğiniz her şey, Stripe onaylar onaylamaz buraya iner.',
+    'Orada değiştirdiğiniz her şey, Polar onaylar onaylamaz buraya iner.',
   'billing.refresh': 'Yenile',
   'billing.readOnly.title': 'Bu çalışma alanının bir üyesisiniz',
   'billing.readOnly.body':
@@ -342,9 +342,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Ödeme yöntemi',
   'billing.hero.cancel': 'Paketi iptal et',
   'billing.price.free': 'Ücretsiz',
-  'billing.stripe.opening': 'Stripe açılıyor',
-  'billing.stripe.failed': 'Stripe’a ulaşılamadı',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Polar açılıyor',
+  'billing.provider.failed': 'Polar’a ulaşılamadı',
+  'billing.provider.failedBody':
     'Hiçbir tahsilat yapılmadı. Bağlantınızı kontrol edip biraz sonra yeniden deneyin.',
 
   'billing.renewal.trialEndsToday':
@@ -366,7 +366,7 @@ const messages = {
     'Bu abonelik duraklatıldı. Yeniden yola çıkmaya hazır olduğunuzda sürdürün.',
   'billing.renewal.lapsed':
     'Rezervasyonları, günlüğü ve çevrimdışı haritaları yeniden açmak için aşağıdan bir paket seçin.',
-  'billing.renewal.incomplete': 'Stripe bu ödemenin onaylanmasını bekliyor.',
+  'billing.renewal.incomplete': 'Polar bu ödemenin onaylanmasını bekliyor.',
   'billing.renewal.free':
     'Aynı anda iki gezi, bizden. Size küçük gelmeye başlayınca yükseltin.',
   'billing.renewal.auto': 'Otomatik yenilenir.',
@@ -453,7 +453,7 @@ const messages = {
   'billing.invoices.portal': 'Ödeme portalı',
   'billing.invoices.unavailableTitle': 'Faturalar yüklenmiyor',
   'billing.invoices.unavailableBody':
-    'Stripe geçmiş için zamanında yanıt vermedi. Yukarıdaki her şey canlı; tam kayıt için ödeme portalını açın ya da biraz sonra geri gelin.',
+    'Polar geçmiş için zamanında yanıt vermedi. Yukarıdaki her şey canlı; tam kayıt için ödeme portalını açın ya da biraz sonra geri gelin.',
   'billing.invoices.emptyTitle': 'Henüz fatura yok',
   'billing.invoices.emptyCustomer':
     'İlk fatura, bir ödeme dönemi kapanır kapanmaz burada görünür.',

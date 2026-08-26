@@ -329,13 +329,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Paiement reçu',
   'billing.checkout.completeBody':
-    'Votre nouvelle formule est en cours d’application. Elle apparaît ici dès que Stripe la confirme — en général en quelques secondes.',
+    'Votre nouvelle formule est en cours d’application. Elle apparaît ici dès que Polar la confirme — en général en quelques secondes.',
   'billing.checkout.cancelledTitle': 'Paiement abandonné',
   'billing.checkout.cancelledBody':
     'Rien n’a été débité et votre formule n’a pas changé.',
-  'billing.portal.backTitle': 'De retour de Stripe',
+  'billing.portal.backTitle': 'De retour de Polar',
   'billing.portal.backBody':
-    'Ce que vous y avez changé arrive ici dès que Stripe le confirme.',
+    'Ce que vous y avez changé arrive ici dès que Polar le confirme.',
   'billing.refresh': 'Actualiser',
   'billing.readOnly.title': 'Vous êtes membre de cet espace de travail',
   'billing.readOnly.body':
@@ -351,9 +351,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Moyen de paiement',
   'billing.hero.cancel': 'Résilier la formule',
   'billing.price.free': 'Gratuit',
-  'billing.stripe.opening': 'Ouverture de Stripe',
-  'billing.stripe.failed': 'Stripe est injoignable',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Ouverture de Polar',
+  'billing.provider.failed': 'Polar est injoignable',
+  'billing.provider.failedBody':
     'Rien n’a été débité. Vérifiez votre connexion et réessayez dans un instant.',
 
   'billing.renewal.trialEndsToday':
@@ -378,7 +378,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Choisissez une formule ci-dessous pour rouvrir les réservations, le journal et les cartes hors ligne.',
   'billing.renewal.incomplete':
-    'Stripe attend encore la confirmation de ce paiement.',
+    'Polar attend encore la confirmation de ce paiement.',
   'billing.renewal.free':
     'Deux voyages à la fois, offerts. Changez de formule le jour où cela devient étroit.',
   'billing.renewal.auto': 'Reconduction automatique.',
@@ -472,7 +472,7 @@ const messages = {
   'billing.invoices.portal': 'Portail de facturation',
   'billing.invoices.unavailableTitle': 'Les reçus ne se chargent pas',
   'billing.invoices.unavailableBody':
-    'Stripe n’a pas répondu à temps pour l’historique. Tout ce qui précède est à jour ; ouvrez le portail de facturation pour le relevé complet, ou revenez dans un instant.',
+    'Polar n’a pas répondu à temps pour l’historique. Tout ce qui précède est à jour ; ouvrez le portail de facturation pour le relevé complet, ou revenez dans un instant.',
   'billing.invoices.emptyTitle': 'Aucune facture pour l’instant',
   'billing.invoices.emptyCustomer':
     'Le premier reçu apparaît ici dès qu’une période de facturation se clôture.',

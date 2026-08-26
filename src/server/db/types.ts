@@ -8,7 +8,14 @@
 
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
 import type * as schema from './schema'
-import type { ORGANIZATION_PLANS, USAGE_METRICS } from './schema'
+import type {
+  ORGANIZATION_PLANS,
+  PLATFORM_ACTOR_KINDS,
+  PLATFORM_ACTOR_ROLES,
+  PLATFORM_AUDIT_ACTIONS,
+  PLATFORM_AUDIT_ENTITY_TYPES,
+  USAGE_METRICS,
+} from './schema'
 
 /** Any async SQLite-dialect Drizzle handle. Satisfied by both D1 and the proxy driver. */
 export type Database = BaseSQLiteDatabase<'async', unknown>
@@ -214,3 +221,26 @@ export type UserSettings = typeof schema.userSettings.$inferSelect
 export type NewUserSettings = typeof schema.userSettings.$inferInsert
 export type AppSetting = typeof schema.appSettings.$inferSelect
 export type NewAppSetting = typeof schema.appSettings.$inferInsert
+
+/**
+ * The two global platform tables of `docs/SPEC.md` §5's carve-out. They carry no
+ * `organization_id` and are never reached through a tenant repository; their row types live here
+ * beside every other table so the model has one import site.
+ */
+export type StaffApiToken = typeof schema.staffApiTokens.$inferSelect
+export type NewStaffApiToken = typeof schema.staffApiTokens.$inferInsert
+export type PlatformAuditLogEntry = typeof schema.platformAuditLog.$inferSelect
+export type NewPlatformAuditLogEntry = typeof schema.platformAuditLog.$inferInsert
+
+export type { PlatformAuditChanges } from './schema'
+
+/**
+ * The four closed vocabularies `platform_audit_log` stores, and the four the columns are narrowed
+ * to with `$type` (docs/ACCESS.md §4.1, §4.2). Two of them — {@link PlatformAuditEntityType} and
+ * {@link PlatformAuditAction} — have no SQL `CHECK` behind them on purpose, so these types are the
+ * whole of what stops a value nobody declared reaching an append-only table.
+ */
+export type PlatformActorKind = (typeof PLATFORM_ACTOR_KINDS)[number]
+export type PlatformActorRole = (typeof PLATFORM_ACTOR_ROLES)[number]
+export type PlatformAuditEntityType = (typeof PLATFORM_AUDIT_ENTITY_TYPES)[number]
+export type PlatformAuditAction = (typeof PLATFORM_AUDIT_ACTIONS)[number]

@@ -22,6 +22,13 @@ export const LANDING_ANCHORS: ReadonlyArray<MarketingAnchor> = [
  * The one bar every public page wears: wordmark, optional in-page anchors, and
  * the two calls to action. Translucent over the canvas so a long page keeps a
  * sense of depth as it scrolls under the bar, and never taller than `--nav-h`.
+ *
+ * It pins at `top-0` rather than composing `--impersonation-h` like the app
+ * shell's nav does, and that is not an omission: the marketing tree renders under
+ * `RootDocument`, which carries no session and therefore never renders the
+ * impersonation bar (`docs/ACCESS.md` §6.1). The token is `0rem` on every page
+ * this header appears on. The section anchors below it compose the term anyway,
+ * because a scroll offset costs nothing to keep in one shape across the product.
  */
 export function MarketingHeader({
   anchors = [],
@@ -224,7 +231,7 @@ export function MarketingFooter() {
           <p>&copy; {COPYRIGHT_YEAR} planned.travel</p>
           <p className="sm:text-right">
             Runs on Cloudflare Workers. Map data &copy; OpenStreetMap
-            contributors. Payments handled by Stripe.
+            contributors. Sold and invoiced by Polar, our merchant of record.
           </p>
         </div>
       </div>

@@ -1,11 +1,22 @@
 # planned.travel — local secrets template
 #
 # Copy to `.dev.vars` and fill in. `vite dev` loads this file into the Worker's
-# `env` through Miniflare, exactly like `wrangler secret put` does in production.
+# `env` through Miniflare, exactly as `wrangler secret put` does in production.
 # `.dev.vars` is gitignored; this file must never contain a real value.
 #
-# Non-secret configuration (APP_URL, LOG_LEVEL, TILES_ARCHIVE_KEY, …) is NOT
-# here — it lives in the `vars` block of `wrangler.jsonc` and is checked in.
+# This is the complete secret list docs/SPEC.md §5 and docs/ARCHITECTURE.md
+# §3 both promise lives here: every secret the Worker reads is below, with no
+# omissions. The Worker also reads names that are not secrets, and those are
+# the next paragraph's subject rather than a gap in this one.
+#
+# Non-secret configuration (LOG_LEVEL, EMAIL_FROM, FILES_PUBLIC_BASE, …) is
+# NOT here — it lives in the `vars` block of `wrangler.jsonc` and is checked
+# in. Three names below break that rule deliberately, and each argues the
+# exception in its own comment rather than leaving it silent: the billing
+# environment switch, and the two local overrides in the last section.
+#
+# A `.dev.vars.<environment>` file replaces this one wholesale instead of
+# merging with it, so a staging variant has to redeclare every name below.
 #
 # In production every name below is set with:
 #   wrangler secret put <NAME>            # add --env staging for staging
@@ -35,15 +46,42 @@ APPLE_CLIENT_SECRET=
 APPLE_APP_BUNDLE_IDENTIFIER=
 
 
-# ── Billing (required for anything past the free plan) ───────────────────────
+# ── Billing (optional; every paid plan fails loudly without it) ──────────────
 
-# Stripe dashboard → Developers → API keys. Use the test key locally: sk_test_…
-STRIPE_SECRET_KEY=
+# Polar dashboard → Settings → Developers → New Token. Scope it to exactly
+# checkouts:write, customer_sessions:write, orders:read, subscriptions:read,
+# subscriptions:write, products:read, webhooks:write, webhooks:read — the token
+# is presented as polar_oat_… and can issue refunds, so it stays server-side.
+POLAR_ACCESS_TOKEN=
 
-# Stripe dashboard → Developers → Webhooks → the /api/stripe/webhook endpoint.
-# Locally, `stripe listen --forward-to localhost:3000/api/stripe/webhook`
-# prints a whsec_… value for this variable.
-STRIPE_WEBHOOK_SECRET=
+# Signing secret of the billing webhook endpoint. Which of the two creation
+# paths you used decides where this value comes from, and only one of them
+# lets you choose it. `POST /v1/webhooks/endpoints` takes no `secret` field:
+# Polar generates one and returns it on the 201, so you copy it out of the
+# response. The dashboard → Settings → Webhooks → Add endpoint form is the
+# path that lets you supply your own — its "Set a secret" step, in Polar's
+# words, "you can set your own or generate a random one" — so mint the value
+# first (openssl rand -base64 32) and create the endpoint there if you want
+# this secret set before the endpoint exists. Afterwards neither path can
+# assign one: PATCH /v1/webhooks/endpoints/{id}/secret takes no request body
+# and only regenerates, and the old value stops verifying the moment it
+# returns. Verified against Polar 2026-08-22; docs/DEPLOY.md §9.4 has the
+# citations and the redeploy window.
+POLAR_WEBHOOK_SECRET=
+
+# `sandbox` or `production`, nothing else and no default. This one is not a
+# credential, so it is the exception to the header rule above: sandbox and
+# production are separate Polar accounts, and keeping the environment selector
+# in the same file as the token it pairs with is what stops the two drifting
+# apart. Argued in docs/SPEC.md §5; base URLs in docs/DEPLOY.md §9.3.
+POLAR_SERVER=
+
+# Those three are the whole server side of billing. The client side is four
+# public product ids that Vite inlines at build time; they are not secrets, do
+# not belong in this file, and are named in the build-time section near the
+# bottom. Leave the three above unset and the app still renders — checkout and
+# the customer portal raise a configuration error naming the missing secret
+# instead of half-working.
 
 
 # ── Transactional email (optional; queued mail fails loudly without it) ──────
@@ -68,24 +106,81 @@ D1_DATABASE_ID=
 BROWSER_RENDERING_API_TOKEN=
 
 
+# ── Catalogue scrape (optional; the weekly cron logs and skips without it) ───
+
+# https://www.firecrawl.dev → account → API keys. Bearer token for the scrape
+# and crawl calls behind the catalogue pipeline, used from queue handlers only.
+FIRECRAWL_API_KEY=
+
+# Firecrawl account settings → Advanced tab. It is one account-wide value, not
+# one per endpoint: the same secret signs every delivery to every URL on the
+# account. Set it whenever the key above is set — a key without a secret is
+# the expensive combination, since the crawl is billed and then rejected.
+FIRECRAWL_WEBHOOK_SECRET=
+
+
+# ── MCP staff tokens (optional; the agent surface stays off without it) ──────
+
+# HMAC-SHA256 key over a staff token's raw UTF-8 bytes; the digest is stored
+# as lowercase hex in `staff_api_tokens`, so the console and the MCP server
+# compute the same value and neither side has a fallback. Rotating it
+# invalidates every issued staff token at once, the way rotating
+# BETTER_AUTH_SECRET logs everyone out. See docs/DEPLOY.md §14.3.
+# Generate: openssl rand -base64 32
+MCP_TOKEN_PEPPER=
+
+
 # ── Build-time public values — NOT part of this file ─────────────────────────
 #
-# Stripe *price* ids are inlined into both bundles by Vite, so they are read
-# from `import.meta.env`, not from the Worker environment. Put them in
-# `.env.local` (also gitignored) for local work, and in repository *variables*
-# for CI, since a price id is public information:
+# Polar product ids are inlined into both bundles by Vite, so they are read
+# from `import.meta.env`, not from the Worker environment. They are public — a
+# product id ships in every client-side checkout integration — so they are
+# repository *variables* rather than secrets. Four names, one per purchasable
+# product of the Polar organization (docs/DEPLOY.md §9.1 creates them):
 #
-#   VITE_STRIPE_PRICE_SOLO_MONTHLY=price_…
-#   VITE_STRIPE_PRICE_SOLO_YEARLY=price_…
-#   VITE_STRIPE_PRICE_CREW_MONTHLY=price_…
-#   VITE_STRIPE_PRICE_CREW_YEARLY=price_…
+#   VITE_POLAR_PRODUCT_SOLO_MONTHLY=00000000-0000-0000-0000-000000000000
+#   VITE_POLAR_PRODUCT_SOLO_YEARLY=00000000-0000-0000-0000-000000000000
+#   VITE_POLAR_PRODUCT_CREW_MONTHLY=00000000-0000-0000-0000-000000000000
+#   VITE_POLAR_PRODUCT_CREW_YEARLY=00000000-0000-0000-0000-000000000000
+#
+# Those four lines go in `.env.local` (also gitignored) for local work, and
+# never here: Vite reads `.env.local`, Miniflare reads `.dev.vars`, and a
+# build-time name set in the wrong one is silently empty rather than an error.
+# CI passes the same four names into the build from repository variables, in
+# `.github/workflows/ci.yml` and `.github/workflows/deploy.yml` — the three
+# places move together, or a green build ships a pricing page with nothing on
+# it. `src/lib/plans.ts` is the only reader. Leave one empty and
+# `requirePrice()` throws for that plan and interval alone, so one Upgrade
+# button fails while the other three still open a checkout.
+#
+# Sandbox and production are separate Polar accounts, so the four product ids
+# are different values in the two places: `.env.local` carries the sandbox ids
+# and CI carries the production ones. A sandbox id in a production build does
+# not fail loudly — it opens a checkout for a product that account does not
+# have.
+#
+# The rule runs both ways. Never move a name from the sections above into
+# `.env.local`: while a `.dev.vars` file exists, Cloudflare loads no `.env`
+# file into the Worker's `env`, so the secret would be silently undefined at
+# runtime with no error.
+
+
+# ── Local non-secret overrides (optional; wrangler.jsonc vars win otherwise) ─
 
 # Local dev origin — overrides the production APP_URL in wrangler.jsonc vars.
-APP_URL=http://localhost:3001
+# The port must be the one `pnpm dev` binds, which is 3000 (`vite dev --port
+# 3000` in package.json), and 3000 is also what `appUrl()` in
+# `src/server/auth/env.ts` falls back to when this name is unset. Every auth URL
+# is built from this value, so a port nothing is listening on does not fail
+# loudly — it sends the OAuth callback, the verification link in an email and
+# the PDF-export link to a dead origin. If you deliberately run the dev server
+# on another port, change both this line and the redirect URI registered with
+# each social provider above.
+APP_URL=http://localhost:3000
 
 # Local basemap archive — overrides the dated production TILES_ARCHIVE_KEY in
-# wrangler.jsonc vars. Deployments version the key and never overwrite it, but a local
-# miniflare bucket only holds whatever you put there with
-# `wrangler r2 object put planned-travel-tiles/<key> --file=… --local`, so name that
-# object here rather than renaming it. See docs/DEPLOY.md §7.4.
+# wrangler.jsonc vars. Deployments version that key and never overwrite it, but
+# a local miniflare bucket only holds whatever you put there with `wrangler r2
+# object put planned-travel-tiles/<key> --file=… --local`, so name that object
+# here rather than renaming it. See docs/DEPLOY.md §7.4.
 TILES_ARCHIVE_KEY=basemaps/planet.pmtiles

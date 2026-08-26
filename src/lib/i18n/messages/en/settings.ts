@@ -34,7 +34,7 @@
  *   reads them as data and formats them for the locale. The *words* — a plan's
  *   name, its tagline, its feature bullets — are `billing.plan.<id>.*` below,
  *   because English inside an Arabic shell is exactly what §8.6 forbids. The
- *   marketing pages and the Stripe product description keep reading the English
+ *   marketing pages and the Polar product description keep reading the English
  *   in `plans.ts`, where an operator's record is what is wanted.
  *
  * **Numbers.** §8's rule on numbers inside messages: `count` picks the CLDR
@@ -366,7 +366,7 @@ const messages = {
   /* ---------------------------------------------------------------- billing */
   'billing.error': 'Billing did not load',
   'billing.loading': 'Loading the plan and its receipts',
-  /** The nine Stripe subscription states, as a customer should read them. */
+  /** The nine Polar subscription states, as a customer should read them. */
   'billing.status.none': 'No subscription',
   'billing.status.trialing': 'Trial',
   'billing.status.active': 'Active',
@@ -379,13 +379,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Payment received',
   'billing.checkout.completeBody':
-    'Your new plan is being applied. It appears here the moment Stripe confirms it — usually within a few seconds.',
+    'Your new plan is being applied. It appears here the moment Polar confirms it — usually within a few seconds.',
   'billing.checkout.cancelledTitle': 'Checkout cancelled',
   'billing.checkout.cancelledBody':
     'Nothing was charged and your plan has not changed.',
-  'billing.portal.backTitle': 'Back from Stripe',
+  'billing.portal.backTitle': 'Back from Polar',
   'billing.portal.backBody':
-    'Anything you changed there lands here as soon as Stripe confirms it.',
+    'Anything you changed there lands here as soon as Polar confirms it.',
   'billing.refresh': 'Refresh',
   'billing.readOnly.title': 'You are a member of this workspace',
   'billing.readOnly.body':
@@ -402,9 +402,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Payment method',
   'billing.hero.cancel': 'Cancel plan',
   'billing.price.free': 'Free',
-  'billing.stripe.opening': 'Opening Stripe',
-  'billing.stripe.failed': 'Stripe could not be reached',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Opening Polar',
+  'billing.provider.failed': 'Polar could not be reached',
+  'billing.provider.failedBody':
     'Nothing was charged. Check your connection and try again in a moment.',
 
   /** The one line under the plan name that says what happens next, and when. */
@@ -427,7 +427,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Choose a plan below to unlock reservations, the journal and offline maps again.',
   'billing.renewal.incomplete':
-    'Stripe is still waiting for this payment to be confirmed.',
+    'Polar is still waiting for this payment to be confirmed.',
   'billing.renewal.free':
     'Two trips at a time, on the house. Upgrade whenever you outgrow it.',
   'billing.renewal.auto': 'Renews automatically.',
@@ -474,7 +474,7 @@ const messages = {
    * The three plans, named and described.
    *
    * `src/lib/plans.ts` carries an English `name`, `tagline` and `features` for
-   * every plan, and keeps them: the marketing pages read them and Stripe is sent
+   * every plan, and keeps them: the marketing pages read them and Polar is sent
    * one as a product description, where English is the operator's record. On a
    * settings screen it is an untranslated string in the middle of translated
    * copy, which §8.6 does not admit. The mapping from a plan id to these keys is
@@ -486,7 +486,7 @@ const messages = {
    * to English as untranslated copy, its proper-noun allow-list is empty, and it
    * belongs to another item, so a translator told to leave `Free` alone was being
    * set an impossible task. What is stable across languages is the plan *id* —
-   * `free`, `solo`, `crew` — which is what `src/lib/plans.ts`, Stripe and the
+   * `free`, `solo`, `crew` — which is what `src/lib/plans.ts`, Polar and the
    * invoice carry, and no reader ever sees. The word on the screen is a word:
    * `Gratis`, `無料`, and whatever each language calls travelling alone or in a
    * group.
@@ -541,7 +541,7 @@ const messages = {
   'billing.invoices.portal': 'Billing portal',
   'billing.invoices.unavailableTitle': 'Receipts are not loading',
   'billing.invoices.unavailableBody':
-    'Stripe did not answer in time for the history. Everything above is live; open the billing portal for the full record, or come back in a moment.',
+    'Polar did not answer in time for the history. Everything above is live; open the billing portal for the full record, or come back in a moment.',
   'billing.invoices.emptyTitle': 'No invoices yet',
   'billing.invoices.emptyCustomer':
     'The first receipt appears here as soon as a billing period closes.',

@@ -9,6 +9,13 @@ Cloudflare list prices and platform allowances quoted here were taken from
 `developers.cloudflare.com/workers/platform/pricing/` in **August 2026**. Re-check them before
 committing to a budget; the shape of the model outlives the numbers.
 
+Billing is **Polar.sh**, which is Merchant of Record. Phase A replaced the superseded Stripe
+integration wholesale and removed it: the client is `src/server/billing/polar.ts`, the mounted
+route is `/api/polar/webhook` (`src/routes/api/polar/webhook.ts`), and `grep -ril stripe src/`
+returns nothing. Wherever this document names a billing route, a webhook or a provider behaviour
+it describes the Polar one, in the present tense (`docs/SPEC.md` §1 and §3, `docs/DEPLOY.md` §6
+and §9).
+
 ---
 
 ## 1. Shape of the system
@@ -34,9 +41,10 @@ committing to a budget; the shape of the model outlives the numbers.
 ```
 
 One Worker serves everything: marketing pages, the authenticated app, server functions, the
-Better Auth endpoints, Stripe webhooks, the tile endpoint, the queue consumer and the three
-cron triggers. There is no second service to keep in step, and no cold-start tier: every
-request runs in V8 isolates that are already warm at the PoP that answered the TLS handshake.
+Better Auth endpoints, the billing webhook, the tile endpoint, the queue consumer and the cron
+triggers — three registered today, a fourth from phase D (§2.4). There is no second service to
+keep in step, and no cold-start tier: every request runs in V8 isolates that are already warm at
+the PoP that answered the TLS handshake.
 
 `placement: smart` is set in `wrangler.jsonc`. A request that makes five sequential D1 calls
 pays the Worker→D1 round trip five times; Smart Placement moves the isolate close to the D1
@@ -56,7 +64,7 @@ It is the single biggest latency lever for the authenticated app, and it costs n
 3. **Session.** The auth layer reads the session cookie and resolves it against the `SESSIONS`
    KV namespace (`src/server/auth/secondary-storage.ts`). A KV hot read at the edge is
    sub-millisecond and costs one KV read, versus a D1 round trip plus a row read.
-4. **Tenant context.** `src/server/auth/tenant-context.ts` resolves the active organization and
+4. **Tenant context.** `src/server/auth/tenant.ts` resolves the active organization and
    membership, producing the `TenantScope` that every repository call requires.
 5. **Loaders.** Route loaders call server functions in `src/server/fns/**`, which validate input
    with Zod and call repositories in `src/server/repos/**`. Repositories are the only place SQL
@@ -121,19 +129,89 @@ slices that matter.
 - **Queue producer** → `src/server/queue/jobs.ts` writes a validated, idempotency-keyed
   envelope to `TASKS`; the consumer batches 10 messages with a 5 s timeout, 5 retries, 10 s
   retry delay, and a dead-letter queue.
-- **Cron** → `*/15 * * * *` reminder sweep, `0 3 * * *` nightly D1 export to R2,
-  `17 4 * * 1` weekly retention prune.
+- **Billing webhook** → `/api/polar/webhook`, mounted at `src/routes/api/polar/webhook.ts`.
+  Verify the `v1,` signature on WebCrypto — HMAC-SHA256 over
+  `{webhook-id}.{webhook-timestamp}.{raw body}`, with the 300 s timestamp tolerance §9 states —
+  then claim `webhook-id` in `KV`, make one small inline D1 write, enqueue everything else to
+  `TASKS`, and return 200. Nothing that calls a third party or writes more than one row happens
+  inline (`docs/DEPLOY.md` §9.5 and §9.7). **Invalidation and the queue hand-off are two separate
+  conditions, and neither implies the other** — the difference is deliberate rather than an
+  oversight, and neither of them is "every delivery".
+  `invalidateEntitlements()` has six call sites in `src/server/billing/webhook.ts`, and the rule
+  they follow is *every branch that could have changed what this tenant may do*. That includes the
+  two branches that write no row at all — a refund, and a subscription for a product this
+  deployment does not sell — because both mean the cached answer may now be stale. It excludes two
+  branches that resolve an organization and deliberately leave the key warm: `order.paid` against a
+  subscription that was already healthy, and a retrying order against a row that is neither
+  `active` nor `trialing`. Both of those return without touching D1, so there is nothing a warm
+  entry could now be wrong about, and a delete would only buy a cold read.
+  The `billing.*` task is narrower again. The `subscription.*` branch enqueues only when
+  `movedState()` says the row actually moved, comparing plan, status, seats, interval and
+  `cancel_at_period_end`, because Polar sends the catch-all `subscription.updated` beside the
+  specific event with no ordering guarantee and an unconditional enqueue would notify twice for one
+  real change. `order.paid` enqueues the receipt on every delivery it can attribute to a row.
+  `order.created` and `order.updated` enqueue only on the dunning path — an order that is not
+  `paid` and carries a `next_payment_attempt_at`, against a row that was healthy — which is also
+  the only shape a failed payment has: **Polar has no `order.payment_failed` event.** Its order
+  events are `created`, `updated`, `paid`, `refunded`, `voided` and `unvoided`, and a failed
+  payment is an unpaid order with a retry scheduled on it. `order.refunded` and `checkout.updated`
+  at `succeeded` enqueue nothing — the latter attaches the Polar customer so the billing screen
+  works the instant the browser returns, and leaves the notification to the `subscription.created`
+  already on its way with the whole subscription on it.
+- **Transactional email** → nine React Email templates in `src/server/email/templates/`, rendered
+  by `renderEmailBody()` (`src/server/email/render.ts`) into `{ html, text }`, described by
+  `src/server/auth/email.ts`, and POSTed to the Resend-compatible endpoint by
+  `src/server/queue/handlers/email.ts` with a provider-side idempotency key. The renderer is
+  behind a dynamic `import()` because its workerd build statically pulls ~540 kB of
+  `prettier/standalone`, `prettier/plugins/html` and `html-to-text`, and this module is reachable
+  from Better Auth and therefore from every authenticated request.
+  **Known departure from the inline rule, recorded rather than implied:** `queueAuthEmail()`
+  awaits the render *before* it enqueues, so React's streaming renderer runs inside the request
+  that triggered the mail. Only delivery is queued today. `docs/SPEC.md` §3 carries this as
+  follow-up **F1**, with the reason it is not a one-line move, alongside **F2** — `queueAuthEmail()`
+  has three callers, all Better Auth hooks in `src/server/auth/index.ts`, so **six** of the nine
+  kinds (`auth.email-changed`, `auth.delete-account` and the four `billing.*`) have no dispatch
+  site and are exercised only by `src/server/email/__tests__/templates.test.tsx`.
+- **Cron** → three triggers are registered in `wrangler.jsonc` today: `*/15 * * * *` reminder
+  sweep, `0 3 * * *` nightly D1 export to R2, `17 4 * * 1` weekly retention prune. The `staging`
+  environment overrides that list with `0 3 * * *` alone. A fourth, `0 4 * * 1` for the weekly
+  catalogue scrape, is registered in **phase D** — in the top-level `triggers.crons` list _and_
+  in the `env.staging` override, because a deploy replaces the whole array — and is deliberately
+  absent from `wrangler.jsonc` and unwired in `src/server/worker.ts` until its
+  `switch (controller.cron)` branch exists (`docs/SPEC.md` §5). It is unrelated to the
+  `17 4 * * 1` prune that runs seventeen minutes later the same morning.
+
+### 2.5 The three paths beside the tenant repository
+
+`src/server/repos/**` is the tenant-scoped path §2.1 and §2.2 take, and it remains the only
+place tenant SQL lives. `docs/SPEC.md` §6 puts three siblings beside it, each with its own
+entry rule. None exists on disk yet; each lands with its phase.
+
+- `src/server/catalog/**` (phase C) — the global catalogue tables. They carry no
+  `organization_id`, so they cannot pass through a tenant repository at all, which is why this
+  is the single stated exception to the SQL rule. Its SQL is guarded instead by an explicit
+  platform actor, `requirePermission`, and a `platform_audit_log` write in the same call.
+- `src/server/mcp/**` (phase E) — JSON-RPC transport and tool schemas only. Every tool
+  authorises through the same `requirePermission` the console uses and reaches data through
+  `server/catalog`; it never grows a second authorisation path or a second query layer.
+- `src/server/public/**` (phase F) — the only session-less read path in the Worker, and it holds
+  no SQL of its own. Every response is a named read-only projection with an explicit column
+  whitelist, executed through `server/repos` under the tenant scope derived from the share
+  record it resolved, or through `server/catalog` for published global rows.
 
 ---
 
 ## 3. Binding map
 
 Exactly as configured in `wrangler.jsonc` (production; the `staging` environment mirrors it
-with its own ids and a separate files bucket, sharing only the tiles bucket).
+with its own ids and a separate files bucket, sharing only the tiles bucket). The mirroring is
+of bindings only: `staging` overrides `triggers.crons` with `0 3 * * *` alone, so the reminder
+sweep and the retention prune never fire there, and its queue consumer is deliberately tuned
+smaller (3 retries, concurrency 2) than production's 5 and 4.
 
 | Binding     | Type                                          | Holds                                                                           | Read by                            | Written by                             |
 | ----------- | --------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------- | -------------------------------------- |
-| `DB`        | D1 `planned-travel-db`                        | 57 domain tables + 9 Better Auth tables, `migrations_dir: drizzle`              | every repository                   | server functions, queue handlers, cron |
+| `DB`        | D1 `planned-travel-db`                        | 59 domain tables + 9 Better Auth tables, `migrations_dir: drizzle`              | every repository                   | server functions, queue handlers, cron |
 | `KV`        | KV namespace                                  | plan-state cache (60 s TTL), queue idempotency markers, reminder due-time index | entitlements, queue consumer, cron | mutations, webhook, queue              |
 | `SESSIONS`  | KV namespace                                  | Better Auth session and rate-limit records, 60 s TTL floor                      | nearly every authenticated request | login, session refresh, logout         |
 | `FILES`     | R2 `planned-travel-files`                     | journal photos, imports, generated exports                                      | file routes, PDF/thumbnail jobs    | upload server fn, queue handlers       |
@@ -160,14 +238,14 @@ on a TTL alone to become correct.
 | Browser, tile alias           | `/api/tiles/basemap.pmtiles` | `max-age=3600, s-maxage=31536000` | 1 h in the browser; instantly at the edge when `TILES_ARCHIVE_KEY` changes, because the edge key is the _resolved_ key |
 | Cache API, tile slices        | `…/<key>?__bytes=<ranges>`   | follows `Cache-Control` above     | entity-tag mismatch on read (entry dropped), or repointing the alias                                                   |
 | Cache API, tile metadata      | `…/<key>?__meta=1`           | 24 h                              | entity-tag mismatch, or a 404 on the object (entry dropped)                                                            |
-| KV, plan state                | `billing:plan:<v>:<orgId>`   | 60 s                              | the Stripe webhook, explicitly, on every subscription event                                                            |
+| KV, plan state                | `billing:plan:<version>:<orgId>` | 60 s                              | **two writers, both explicit** — the Polar webhook on every subscription event, and `changePlan()` in the same request that made the change |
 | KV, session                   | Better Auth session id       | session lifetime, 60 s floor      | logout, password change, session revocation                                                                            |
 | KV, queue idempotency         | `task:done:<id>`             | 24 h                              | not invalidated — expiry _is_ the semantics                                                                            |
 
 Three rules that are not negotiable:
 
 1. **Usage counters are never cached.** `src/server/billing/entitlements.ts` caches _plan
-   state_ (which plan, which status, how many seats) because only Stripe changes it, and counts
+   state_ (which plan, which status, how many seats) because only Polar changes it, and counts
    _usage_ live on every check. A cached count would let a tenant burst past a quota inside the
    cache window, which is the one thing the quota system exists to prevent.
 2. **Invalidate on the write path, in the same request.** A mutation that changes cached state
@@ -176,6 +254,46 @@ Three rules that are not negotiable:
 3. **`immutable` is a promise about the key, not the content.** Tile archives are published as
    new keys (`basemaps/planet-2026-08.pmtiles`) and the alias is repointed. Overwriting a key
    that has already been served with `immutable` is a bug, not a deployment step.
+
+### The plan-state key has two writers, and both are named
+
+`billing:plan:<version>:<orgId>` is built by `planStateCacheKey()` in
+`src/server/billing/entitlements.ts`, and the `<version>` segment is the module-private
+`PLAN_STATE_CACHE_VERSION` constant in the same file — **not** a literal to copy into a second
+place. It is bumped whenever `CachedPlanState` changes shape **or meaning**, so a warm entry written by
+older code is ignored rather than misread. It has moved several times as the cached shape grew —
+this table named `v2` when it was first written, a later bump added the scheduled plan change, and
+the bump after that carried an identical shape with a different meaning — the release in which
+that field can finally be non-null. **Read the constant rather than this sentence.** The current
+value is deliberately written in exactly one place, and this document is not it; an earlier
+revision of this paragraph quoted the resolved key here, which made the sentence beside it false
+the moment it did.
+`/usr/bin/grep -n 'const PLAN_STATE_CACHE_VERSION' src/server/billing/entitlements.ts` prints the
+declaration; the only other line that mentions it is the one directly below, where the key is
+assembled.
+
+Only one function deletes the key — `invalidateEntitlements()`, also in `entitlements.ts` — and
+exactly two paths call it:
+
+| Writer | Where | When |
+| --- | --- | --- |
+| The Polar webhook | `src/server/billing/webhook.ts`, six call sites across its subscription, order and checkout branches | Asynchronously, on every delivery that could have changed what the tenant may do — including the two branches that write no row, and excluding the two that resolve an organization and change nothing (§2.4). This is the reconciler and it runs on its own schedule, not ours. |
+| `changePlan()` | `src/server/billing/checkout.ts`, through the local `evictPlanState()` helper, in a `finally` | Synchronously, inside the request that made the change — an in-app upgrade, downgrade or seat resize, which we apply with `PATCH /v1/subscriptions/{id}` rather than through a hosted flow. |
+
+The second writer is not a duplicate of the first, and rule 2 above is why. `changePlan()` mutates
+entitlement state inside our own request, so it owes the whole write shape §2.2 sets out: write D1
+from the provider's answer, *then* delete the key that answer makes stale. Two failure modes were
+walked to get here and both are worth keeping written down:
+
+- **Evicting without writing is inert.** The next read misses, re-reads the same unchanged row and
+  re-caches it for another TTL, so the customer sees the old plan until the webhook lands.
+- **Writing without evicting is worse than stale.** `effectiveLimitsFor()` derives the ceilings
+  from that row, so a Solo→Crew upgrade Polar has already billed would leave `assertWithinLimit`
+  refusing the seats the customer is paying for.
+
+`evictPlanState()` swallows its own failure and logs it, because by the time it runs Polar has
+taken the money: a KV fault must not be reported to a customer as a billing failure, and the 60 s
+TTL plus the webhook's own invalidation close the window behind it.
 
 ---
 
@@ -232,12 +350,12 @@ it was nowhere near, while `/files` and the repositories enforced the row's real
 
 **Authority order.** Later steps override earlier ones:
 
-| # | Source | What it decides |
-| - | ------ | --------------- |
-| 0 | `subscriptions.status` | A row that no longer entitles (`canceled`, `unpaid`, `paused`, `incomplete…`) resolves to Free **with no escapes**: a lapsed subscription grandfathers nothing. |
-| 1 | `stripe_price_id` | The plan. It is what the customer is charged for. A row with no price id, or one this deployment no longer sells, falls back to the legacy `plan` tier column plus the seat count. |
-| 2 | The catalogue in `src/lib/plans.ts` | That plan's own limits — seats (narrowed to the seats purchased), trips, storage, every module switch. `PLAN_QUOTAS[tier]` in `src/server/db/types.ts` supplies **only** the operational metrics the catalogue does not sell: places, files, exports, collections, journeys. |
-| 3 | `seat_limit`, `storage_limit_bytes`, then `quota_overrides` | The last word. This is the deliberate escape hatch that grandfathers a customer above the plan they pay for, and it stays. |
+| #   | Source                                                      | What it decides                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0   | `subscriptions.status`                                      | A row that no longer entitles (`canceled`, `unpaid`, `paused`, `incomplete…`) resolves to Free **with no escapes**: a lapsed subscription grandfathers nothing.                                                                                                                                                                                                                                                   |
+| 1   | `provider_product_id`                                       | The plan. It is what the customer is charged for: the Polar product id, a UUID, since the interval is a property of the product. Phase A renamed it from `stripe_price_id` in migration `0002`, along with the other two provider columns and their indexes (`docs/DEPLOY.md` §9.10). A row with no product id, or one this deployment no longer sells, falls back to the legacy `plan` tier plus the seat count. |
+| 2   | The catalogue in `src/lib/plans.ts`                         | That plan's own limits — seats (narrowed to the seats purchased), trips, storage, every module switch. `PLAN_QUOTAS[tier]` in `src/server/db/types.ts` supplies **only** the operational metrics the catalogue does not sell: places, files, exports, collections, journeys.                                                                                                                                      |
+| 3   | `seat_limit`, `storage_limit_bytes`, then `quota_overrides` | The last word. This is the deliberate escape hatch that grandfathers a customer above the plan they pay for, and it stays.                                                                                                                                                                                                                                                                                        |
 
 Two consequences worth stating out loud. First, **the published number is the enforced number**:
 the Free plan sells two trips at a time and two is what `assertQuota` allows — the old fudge of
@@ -256,9 +374,10 @@ equivalence is the invariant; it is what stops the two from drifting apart again
 The two plan vocabularies are bridged in that one file too: the `plan` column carries a coarse
 tier (`free | starter | pro | business`) under a CHECK constraint and predates the catalogue,
 which sells `free | solo | crew`. `planIdFromRow()` translates one way, `TIER_FOR_PLAN` the
-other, and `ceilingsForPlan()` is what every sanctioned write path — the Stripe webhook via
-`rowValuesFromRecord()`, and the demo seed — stamps onto the ceiling columns, so a freshly
-written row always agrees with its own plan.
+other, and `ceilingsForPlan()` is what every sanctioned write path — the billing webhook via
+`rowValuesFromRecord()` (the Polar webhook handler; the call site survived the provider change
+unmoved, which is why the rename reached the column names and not this seam), and the demo seed —
+stamps onto the ceiling columns, so a freshly written row always agrees with its own plan.
 
 Two reasons this sits at the repository boundary rather than in the route:
 
@@ -357,30 +476,94 @@ What the model actually says:
 - **Realtime is nearly free at this scale** because of hibernation and the 20:1 WebSocket
   message ratio: 10 000 users of live collaboration is ~$0.10 of DO requests.
 - **Revenue context.** Ten paying customers on the entry paid plan cover the platform bill for
-  the first thousand users. Infrastructure is not the constraint on this product; it is
-  bounded, predictable, and an order of magnitude below the Stripe fees on the same revenue.
+  the first thousand users. But "infrastructure is negligible against the merchant-of-record
+  fee" is a claim with a scale attached, and the scale changes the answer by two orders of
+  magnitude — so it is set out below rather than asserted.
+
+**Infrastructure against the Polar fee, at four mixes.** The entry paid plan is Solo at $9/month
+(`src/lib/plans.ts`). Polar's Starter rate takes 5% + 50¢ per transaction, so 95¢ of that $9 —
+an effective **10.6%**, because on a ticket that small the fixed 50¢ dominates. Platform bills
+are the table above, unchanged:
+
+| Paying customers    | Gross / month | Polar fee / month | Platform bill / month | Fee ÷ infrastructure |
+| ------------------- | ------------- | ----------------- | --------------------- | -------------------- |
+| 10 (of 10 users)    | $90           | $9.50             | $6.40                 | 1.5×                 |
+| 10 (of 1 000 users) | $90           | $9.50             | $8.60                 | 1.1×                 |
+| 100 (of 100 users)  | $900          | $95               | $6.60                 | 14×                  |
+| 1 000 (of 1 000)    | $9 000        | $950              | $8.60                 | **110×**             |
+
+Read it in that order. At the ten-user first release §1 provisions for, the fee and the entire
+platform bill are the **same order of magnitude**, and the fee is the larger of the two — so at
+launch neither number is worth optimising and the ten-payers-cover-the-bill sentence above is
+the whole story. Infrastructure is only **two orders of magnitude** smaller than the fee at a
+thousand paying customers, and nowhere below that. What holds at every row is the direction, and
+that is the durable claim: the platform bill grows sublinearly and is bounded by the levers in
+§7, while the fee grows linearly with revenue and its only levers are commercial ones. So
+infrastructure stops being the interesting number the moment the product sells.
+
+The rate is **5% + 50¢ per transaction** on Polar's Starter plan, plus 1.5% on non-US cards and
+$15 per dispute, taken from `polar.sh/docs/merchant-of-record/fees` in **August 2026** and to be
+re-checked on the same terms as the Cloudflare rates above. Starter is the plan assumed here
+because it is what an organization created on or after 27 May 2026 starts on; the 4% + 40¢ Early
+Member rate is grandfathered for older organizations only and is lost permanently on the first
+upgrade, so it is not a number to plan against.
+
+Two things move the fee, and both are commercial rather than architectural, which is why they are
+recorded here as arithmetic and not as a recommendation. **Billing interval:** one 50¢ on a $90
+yearly order instead of twelve 50¢ on $9 brings the effective rate from 10.6% to **5.6%**, and the
+yearly price already exists in `src/lib/plans.ts`. It moves the fee and not net revenue, though:
+that $90 is twelve months sold at a two-month discount, so annual nets $85 a year against
+monthly's $96.60. **Polar plan tier:** Pro is 3.8% + 40¢ plus $20/month, so it saves 21¢ on the
+same $9 ticket and about 96 Solo subscriptions a month recover its own $20. At the thousand-payer
+row that is $742 of transaction fees **plus** the $20 plan fee — **$762** all in, against
+Starter's $950, which carries no plan fee because Starter is free.
 
 ---
 
 ## 9. Failure modes and mitigations
 
-| #   | Failure                                           | Blast radius                              | Detection                                                                                          | Mitigation in the code today                                                                                                                                         |
-| --- | ------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | D1 unavailable or timing out                      | all authenticated reads and writes        | `checkReadiness` probe (`src/server/observability/health.ts`); error-rate spike on `outcome=error` | read-only queries are auto-retried by D1 (up to 2); writes are wrapped in explicit idempotent retries; the marketing pages never touch D1 so the front door stays up |
-| 2   | KV read returns stale data                        | one tenant sees a stale plan for ≤ 60 s   | plan mismatch between webhook log and quota decision                                               | 60 s TTL plus explicit invalidation from the webhook; usage never cached; entitlement downgrades take effect on the next check, never mid-request                    |
-| 3   | R2 object missing or replaced under a live key    | map degrades to no basemap                | `x-tiles-cache` miss rate; 204 rate on the alias, 404 rate on a named key                          | metadata is dropped when a read finds the object gone; slices are dropped on entity-tag mismatch, so a replaced archive can never be served half-old, half-new       |
-| 4   | Cache API `put`/`match` failure                   | one uncached read, higher R2 op count     | `tile cache operation failed` warning line                                                         | every cache call is wrapped; a fault degrades to an R2 read and never fails the request                                                                              |
-| 5   | A trip room gets hot (many editors, huge patches) | one trip                                  | DO CPU/duration metrics; client-visible rate-limit errors                                          | 32 KiB frames, 40 msg/s per connection, bounded patch log and tombstone TTL; the object is the only thing that slows down                                            |
-| 6   | Durable Object evicted mid-session                | one trip's clients reconnect              | reconnect rate                                                                                     | clients re-handshake and resnapshot via `partysocket`; D1 holds the durable record, so the worst case is replaying recent patches                                    |
-| 7   | Queue consumer failing on a poison message        | one job kind                              | retry count, then DLQ depth                                                                        | 5 retries with 10 s delay, then the dead-letter queue; envelopes carry idempotency keys, so redelivery is safe; DLQ diagnostics are kept 14 days                     |
-| 8   | Third-party outage (Stripe, email provider)       | billing changes and notifications delayed | job failure logs, DLQ depth                                                                        | all third-party calls happen in queue handlers, never inline; webhooks are idempotent by event id; Stripe retries on its side and we retry on ours                   |
-| 9   | Stripe webhook replay or forgery                  | billing state                             | signature failures in logs                                                                         | signature verified with WebCrypto and a 300 s tolerance; event ids deduplicated in KV before any state change                                                        |
-| 10  | Runaway range request (huge or many-part)         | one request's CPU and memory              | 400/416 rate on `/api/tiles/*`                                                                     | ≤ 8 range specs, ≤ 8 MiB assembled multipart, ≤ 24 MiB cached per entry, everything above streams without buffering                                                  |
-| 11  | Quota bypass attempt via a new code path          | one tenant over its ceiling               | quota-exceeded counters versus plan                                                                | quotas live at the repository boundary, so a new route or job cannot skip them                                                                                       |
-| 12  | Bad deploy                                        | everything                                | smoke check in `deploy.yml`; error rate in Observability                                           | `wrangler rollback` (see `docs/DEPLOY.md`); migrations are additive so the previous version keeps working against the new schema                                     |
-| 13  | Secret missing or rotated wrongly                 | the feature that needs it                 | first request throws a named error                                                                 | every secret is read through an accessor that fails loudly with the exact `wrangler secret put` command to run                                                       |
-| 14  | Cron trigger missed or overlapping                | reminders late by one tick                | reminder lag in logs                                                                               | the reminder index is idempotent: the sweep enqueues by due-time prefix with deterministic ids, so a double sweep sends one email                                    |
+All fourteen rows describe code that is on disk right now, rows 8 and 9 included: phase A
+replaced the superseded provider integration wholesale, so the Polar handler those two rows
+describe is the mounted one. Every row is present tense and can be checked against the file it
+names. What rows 8 and 9 cannot yet claim is a *walk* — `docs/DEPLOY.md` §9.11's eight-row sandbox
+matrix is unwalked and no credential has been issued, so their evidence is our tests, not Polar's
+agreement. The note under the table says which of their properties is a design target the code
+still owes.
 
+| #   | Failure                                           | Blast radius                              | Detection                                                                                          | Mitigation in the code today (rows 8 and 9: phase A)                                                                                                                                         |
+| --- | ------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | D1 unavailable or timing out                      | all authenticated reads and writes        | `checkReadiness` probe (`src/server/observability/health.ts`); error-rate spike on `outcome=error` | read-only queries are auto-retried by D1 (up to 2); writes are wrapped in explicit idempotent retries; the marketing pages never touch D1 so the front door stays up                         |
+| 2   | KV read returns stale data                        | one tenant sees a stale plan for ≤ 60 s   | plan mismatch between webhook log and quota decision                                               | 60 s TTL plus explicit invalidation from the webhook; usage never cached; entitlement downgrades take effect on the next check, never mid-request                                            |
+| 3   | R2 object missing or replaced under a live key    | map degrades to no basemap                | `x-tiles-cache` miss rate; 204 rate on the alias, 404 rate on a named key                          | metadata is dropped when a read finds the object gone; slices are dropped on entity-tag mismatch, so a replaced archive can never be served half-old, half-new       |
+| 4   | Cache API `put`/`match` failure                   | one uncached read, higher R2 op count     | `tile cache operation failed` warning line                                                         | every cache call is wrapped; a fault degrades to an R2 read and never fails the request                                                                                                      |
+| 5   | A trip room gets hot (many editors, huge patches) | one trip                                  | DO CPU/duration metrics; client-visible rate-limit errors                                          | 32 KiB frames, 40 msg/s per connection, bounded patch log and tombstone TTL; the object is the only thing that slows down                                                                    |
+| 6   | Durable Object evicted mid-session                | one trip's clients reconnect              | reconnect rate                                                                                     | clients re-handshake and resnapshot via `partysocket`; D1 holds the durable record, so the worst case is replaying recent patches                                                            |
+| 7   | Queue consumer failing on a poison message        | one job kind                              | retry count, then DLQ depth                                                                        | 5 retries with 10 s delay, then the dead-letter queue; envelopes carry idempotency keys, so redelivery is safe; DLQ diagnostics are kept 14 days                                             |
+| 8   | Third-party outage (Polar, email provider)        | billing changes and notifications delayed | job failure logs, DLQ depth                                                                        | Third-party calls happen in queue handlers rather than inline; webhooks are idempotent by event id; Polar retries on its side, up to ten times with exponential backoff, and we retry on ours. One inline provider read survives on the plan-change path and the note below names it |
+| 9   | Polar webhook replay or forgery                   | billing state                             | signature failures in logs                                                                         | The `{webhook-id}.{webhook-timestamp}.{raw body}` signature is verified with WebCrypto (HMAC-SHA256) inside a 300 s tolerance; the event id is claimed in KV before any state change, and released again if a handler throws so the provider's retry is free to try once more |
+| 10  | Runaway range request (huge or many-part)         | one request's CPU and memory              | 400/416 rate on `/api/tiles/*`                                                                     | ≤ 8 range specs, ≤ 8 MiB assembled multipart, ≤ 24 MiB cached per entry, everything above streams without buffering                                                                          |
+| 11  | Quota bypass attempt via a new code path          | one tenant over its ceiling               | quota-exceeded counters versus plan                                                                | quotas live at the repository boundary, so a new route or job cannot skip them                                                                                                               |
+| 12  | Bad deploy                                        | everything                                | smoke check in `deploy.yml`; error rate in Observability                                           | `wrangler rollback` (`docs/DEPLOY.md` §12). Migrations are additive, so the previous version keeps working against the new schema — **with the named exceptions §12 registers.** Migration `0002` renamed three columns, so a rollback past the phase-A release needs the schema moved back first; the register in §12 is what says which windows are safe |
+| 13  | Secret missing or rotated wrongly                 | the feature that needs it                 | first request throws a named error                                                                 | every secret is read through an accessor that fails loudly with the exact `wrangler secret put` command to run                                                                               |
+| 14  | Cron trigger missed or overlapping                | reminders late by one tick                | reminder lag in logs                                                                               | the reminder index is idempotent: the sweep enqueues by due-time prefix with deterministic ids, so a double sweep sends one email                                                            |
+
+**The one property row 9 still owes, and where it lives.** §2.4 states the inline rule: nothing
+that calls a third party or writes more than one row happens inline. The mounted Polar handler
+keeps it — every branch makes at most one small D1 write, deletes the plan-state key when what the
+tenant may do could have changed, and hands whatever follows to `TASKS`, which for the subscription
+branches means a `billing.*` task when `movedState()` says the row moved and nothing when it did
+not (§2.4). The exception is not in the webhook at all; it is `changePlan()` in
+`src/server/billing/checkout.ts`, which is a *request* path rather than a webhook one and calls
+`PATCH /v1/subscriptions/{id}` inline on purpose, so the billing screen is already correct when the
+customer is redirected back. That trade is deliberate and bounded: one provider call, one D1 write
+from the answer, one KV delete, no fan-out (§4).
+
+Two properties rows 8 and 9 assert are verified offline and not in the vendor's sandbox: the 300 s
+tolerance and the KV claim on the event id are covered by
+`src/server/billing/__tests__/webhook.test.ts`, including a Standard Webhooks signature vector
+computed out of band so that both halves of the check are not our own implementation. That is the
+strongest evidence available without a credential, and `docs/DEPLOY.md` §9.11 is explicit that it
+is still not a green row.
 ### Numbers worth alerting on
 
 - Worker error rate > 0.5% over 5 minutes.
@@ -389,3 +572,9 @@ What the model actually says:
 - Queue consumer lag > 60 s, or any DLQ message.
 - D1 write p95 > 200 ms, or `rows_written` > 20 M/month (lever 7 territory).
 - D1 database size > 8 GB (lever 7/8 territory).
+- `platform_audit_log` weekly prune reporting `drained: false`. The prune is deliberately bounded
+  so one cron tick cannot become an isolate-killing statement, which means a platform writing more
+  audit rows per week than the ceiling removes never catches up and the table grows past its
+  400-day window for ever. `drained: false` is the signal that the bound has stopped being a safety
+  margin and started being a leak; unalerted, it is a line in a log nobody reads until the table is
+  the largest thing in D1.

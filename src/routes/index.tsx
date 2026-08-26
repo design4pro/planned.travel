@@ -169,7 +169,7 @@ function PricingSummary() {
       id="plans"
       tone="tint"
       aria-labelledby="plans-heading"
-      className="scroll-mt-[var(--nav-h)]"
+      className="scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))]"
     >
       <SectionIntro
         headingId="plans-heading"
@@ -209,7 +209,7 @@ function Questions() {
     <Section
       id="questions"
       aria-labelledby="questions-heading"
-      className="scroll-mt-[var(--nav-h)]"
+      className="scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))]"
     >
       <SectionIntro
         headingId="questions-heading"

@@ -37,6 +37,21 @@ export const INVITATION_STATUSES = [
 
 export type InvitationStatus = (typeof INVITATION_STATUSES)[number]
 
+/**
+ * `user` carries four columns owned by Better Auth's `admin` plugin: `role`, `banned`,
+ * `banReason` and `banExpires` (docs/SPEC.md §5).
+ *
+ * The plugin addresses them by the property keys spelled here — `banReason`, never `ban_reason` —
+ * because `initGetFieldName()` returns a declared field name unchanged and the Drizzle adapter
+ * then reads `schemaModel[fieldName]`. There is no case transform anywhere on that path, so a
+ * snake_case property key typechecks cleanly and throws `BetterAuthError` on the first ban. The
+ * SQL names stay snake_case, which is the whole of the difference.
+ *
+ * `role` carries no `CHECK` and no default on purpose. Platform roles are resolved in the
+ * permission guard, where `NULL` and an unrecognised value both resolve to `user`
+ * (docs/ACCESS.md §1.3); a database constraint would additionally make the plugin's own
+ * comma-joined multi-role form unstorable.
+ */
 export const user = sqliteTable(
   'user',
   {
@@ -50,10 +65,17 @@ export const user = sqliteTable(
     twoFactorEnabled: integer('two_factor_enabled', { mode: 'boolean' })
       .notNull()
       .default(false),
+    role: text('role'),
+    banned: integer('banned', { mode: 'boolean' }).notNull().default(false),
+    banReason: text('ban_reason'),
+    banExpires: integer('ban_expires', { mode: 'timestamp_ms' }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (table) => [uniqueIndex('user_email_unique').on(table.email)],
+  (table) => [
+    uniqueIndex('user_email_unique').on(table.email),
+    index('user_role_idx').on(table.role),
+  ],
 )
 
 export const session = sqliteTable(
@@ -71,6 +93,13 @@ export const session = sqliteTable(
     ),
     ipAddress: text('ip_address'),
     userAgent: text('user_agent'),
+    /**
+     * The `admin` plugin's impersonation marker: the id of the operator acting as this session's
+     * user. Set only on a session minted by `impersonateUser`, and the signal the shell's warning
+     * bar renders on (docs/ACCESS.md §6.1). Property key camelCase, SQL name snake_case, for the
+     * reason spelled out above `user`.
+     */
+    impersonatedBy: text('impersonated_by'),
     expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

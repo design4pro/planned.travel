@@ -336,13 +336,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Płatność przyjęta',
   'billing.checkout.completeBody':
-    'Nowy plan jest właśnie wprowadzany. Pojawi się tutaj w chwili, w której Stripe go potwierdzi — zwykle w kilka sekund.',
+    'Nowy plan jest właśnie wprowadzany. Pojawi się tutaj w chwili, w której Polar go potwierdzi — zwykle w kilka sekund.',
   'billing.checkout.cancelledTitle': 'Płatność przerwana',
   'billing.checkout.cancelledBody':
     'Nic nie zostało obciążone, a plan się nie zmienił.',
-  'billing.portal.backTitle': 'Powrót ze Stripe',
+  'billing.portal.backTitle': 'Powrót ze Polar',
   'billing.portal.backBody':
-    'Wszystko, co tam zmieniono, pojawi się tutaj, gdy Stripe to potwierdzi.',
+    'Wszystko, co tam zmieniono, pojawi się tutaj, gdy Polar to potwierdzi.',
   'billing.refresh': 'Odśwież',
   'billing.readOnly.title': 'Jesteś członkiem tej przestrzeni',
   'billing.readOnly.body':
@@ -358,9 +358,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Metoda płatności',
   'billing.hero.cancel': 'Zrezygnuj z planu',
   'billing.price.free': 'Bezpłatnie',
-  'billing.stripe.opening': 'Otwieranie Stripe',
-  'billing.stripe.failed': 'Nie udało się połączyć ze Stripe',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Otwieranie Polar',
+  'billing.provider.failed': 'Nie udało się połączyć ze Polar',
+  'billing.provider.failedBody':
     'Nic nie zostało obciążone. Sprawdź połączenie i spróbuj za chwilę.',
 
   'billing.renewal.trialEndsToday':
@@ -386,7 +386,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Wybierz plan poniżej, aby znów odblokować rezerwacje, dziennik i mapy offline.',
   'billing.renewal.incomplete':
-    'Stripe wciąż czeka na potwierdzenie tej płatności.',
+    'Polar wciąż czeka na potwierdzenie tej płatności.',
   'billing.renewal.free':
     'Dwa wyjazdy naraz, na nasz koszt. Wyższy plan wybierzesz, kiedy zrobi się ciasno.',
   'billing.renewal.auto': 'Odnawia się automatycznie.',
@@ -487,7 +487,7 @@ const messages = {
   'billing.invoices.portal': 'Portal płatności',
   'billing.invoices.unavailableTitle': 'Rachunki się nie wczytują',
   'billing.invoices.unavailableBody':
-    'Stripe nie odpowiedział na czas z historią. Wszystko powyżej jest aktualne; pełny zapis znajdziesz w portalu płatności albo wróć tu za chwilę.',
+    'Polar nie odpowiedział na czas z historią. Wszystko powyżej jest aktualne; pełny zapis znajdziesz w portalu płatności albo wróć tu za chwilę.',
   'billing.invoices.emptyTitle': 'Jeszcze żadnych faktur',
   'billing.invoices.emptyCustomer':
     'Pierwszy rachunek pojawi się tutaj, gdy zamknie się okres rozliczeniowy.',

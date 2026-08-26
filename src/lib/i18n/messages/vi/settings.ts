@@ -21,7 +21,7 @@
  * which devices are meant.
  *
  * **Plan names are words, not identifiers.** `free`, `solo` and `crew` are the
- * ids Stripe and the invoice carry and no reader ever sees; the words on the
+ * ids Polar and the invoice carry and no reader ever sees; the words on the
  * screen are `Miễn phí`, `Cá nhân` and `Nhóm`.
  *
  * **Two keys are cut to a measured budget.** Both live in a `.truncate` box
@@ -322,13 +322,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Đã nhận thanh toán',
   'billing.checkout.completeBody':
-    'Gói mới của bạn đang được áp. Nó hiện ở đây ngay khi Stripe xác nhận — thường trong vài giây.',
+    'Gói mới của bạn đang được áp. Nó hiện ở đây ngay khi Polar xác nhận — thường trong vài giây.',
   'billing.checkout.cancelledTitle': 'Đã hủy thanh toán',
   'billing.checkout.cancelledBody':
     'Không có khoản nào bị trừ và gói của bạn không đổi.',
-  'billing.portal.backTitle': 'Vừa quay lại từ Stripe',
+  'billing.portal.backTitle': 'Vừa quay lại từ Polar',
   'billing.portal.backBody':
-    'Mọi thay đổi bạn làm bên đó sẽ về đây ngay khi Stripe xác nhận.',
+    'Mọi thay đổi bạn làm bên đó sẽ về đây ngay khi Polar xác nhận.',
   'billing.refresh': 'Làm mới',
   'billing.readOnly.title': 'Bạn là thành viên của không gian này',
   'billing.readOnly.body':
@@ -344,9 +344,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Phương thức thanh toán',
   'billing.hero.cancel': 'Hủy gói',
   'billing.price.free': 'Miễn phí',
-  'billing.stripe.opening': 'Đang mở Stripe',
-  'billing.stripe.failed': 'Không liên lạc được với Stripe',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Đang mở Polar',
+  'billing.provider.failed': 'Không liên lạc được với Polar',
+  'billing.provider.failedBody':
     'Không có khoản nào bị trừ. Kiểm tra kết nối rồi thử lại sau giây lát.',
 
   'billing.renewal.trialEndsToday':
@@ -368,7 +368,7 @@ const messages = {
     'Gói đăng ký này đang tạm dừng. Mở lại bất cứ khi nào bạn sẵn sàng lên đường.',
   'billing.renewal.lapsed':
     'Chọn một gói bên dưới để mở lại phần đặt chỗ, nhật ký và bản đồ ngoại tuyến.',
-  'billing.renewal.incomplete': 'Stripe vẫn đang chờ khoản này được xác nhận.',
+  'billing.renewal.incomplete': 'Polar vẫn đang chờ khoản này được xác nhận.',
   'billing.renewal.free':
     'Hai chuyến cùng lúc, miễn phí. Nâng gói khi nào bạn thấy chật.',
   'billing.renewal.auto': 'Tự động gia hạn.',
@@ -453,7 +453,7 @@ const messages = {
   'billing.invoices.portal': 'Cổng thanh toán',
   'billing.invoices.unavailableTitle': 'Biên nhận không tải được',
   'billing.invoices.unavailableBody':
-    'Stripe không kịp trả lời phần lịch sử. Mọi thứ bên trên vẫn đúng; mở cổng thanh toán để xem đầy đủ, hoặc quay lại sau ít phút.',
+    'Polar không kịp trả lời phần lịch sử. Mọi thứ bên trên vẫn đúng; mở cổng thanh toán để xem đầy đủ, hoặc quay lại sau ít phút.',
   'billing.invoices.emptyTitle': 'Chưa có hóa đơn nào',
   'billing.invoices.emptyCustomer':
     'Biên nhận đầu tiên hiện ở đây ngay khi một kỳ thanh toán khép lại.',

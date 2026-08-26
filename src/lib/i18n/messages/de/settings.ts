@@ -19,7 +19,7 @@
  * **The three plan names are words, not proper nouns.** English calls them
  * Free, Solo and Crew; German reads „Gratis", „Einzel" and „Gruppe". What is
  * stable across languages is the plan *id* in `src/lib/plans.ts`, which the
- * invoice and Stripe carry and no reader ever sees.
+ * invoice and Polar carry and no reader ever sees.
  *
  * **The euro carries its region.** Every other currency in the list is named by
  * the country that issues it — „Britisches Pfund", „US-Dollar" — so the euro is
@@ -330,13 +330,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Zahlung eingegangen',
   'billing.checkout.completeBody':
-    'Dein neuer Tarif wird gerade übernommen. Er erscheint hier, sobald Stripe ihn bestätigt — meist innerhalb weniger Sekunden.',
+    'Dein neuer Tarif wird gerade übernommen. Er erscheint hier, sobald Polar ihn bestätigt — meist innerhalb weniger Sekunden.',
   'billing.checkout.cancelledTitle': 'Bezahlvorgang abgebrochen',
   'billing.checkout.cancelledBody':
     'Es wurde nichts abgebucht und dein Tarif ist unverändert.',
-  'billing.portal.backTitle': 'Zurück von Stripe',
+  'billing.portal.backTitle': 'Zurück von Polar',
   'billing.portal.backBody':
-    'Was du dort geändert hast, landet hier, sobald Stripe es bestätigt.',
+    'Was du dort geändert hast, landet hier, sobald Polar es bestätigt.',
   'billing.refresh': 'Aktualisieren',
   'billing.readOnly.title': 'Du bist Mitglied dieses Arbeitsbereichs',
   'billing.readOnly.body':
@@ -352,9 +352,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Zahlungsmittel',
   'billing.hero.cancel': 'Tarif kündigen',
   'billing.price.free': 'Kostenlos',
-  'billing.stripe.opening': 'Stripe wird geöffnet',
-  'billing.stripe.failed': 'Stripe war nicht erreichbar',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Polar wird geöffnet',
+  'billing.provider.failed': 'Polar war nicht erreichbar',
+  'billing.provider.failedBody':
     'Es wurde nichts abgebucht. Prüfe deine Verbindung und versuche es gleich noch einmal.',
 
   'billing.renewal.trialEndsToday':
@@ -378,7 +378,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Wähle unten einen Tarif, um Buchungen, Tagebuch und Offline-Karten wieder zu öffnen.',
   'billing.renewal.incomplete':
-    'Stripe wartet noch auf die Bestätigung dieser Zahlung.',
+    'Polar wartet noch auf die Bestätigung dieser Zahlung.',
   'billing.renewal.free':
     'Zwei Reisen gleichzeitig, aufs Haus. Wechsle, sobald dir das zu eng wird.',
   'billing.renewal.auto': 'Verlängert sich automatisch.',
@@ -466,7 +466,7 @@ const messages = {
   'billing.invoices.portal': 'Abrechnungsportal',
   'billing.invoices.unavailableTitle': 'Die Belege laden nicht',
   'billing.invoices.unavailableBody':
-    'Stripe hat für die Historie nicht rechtzeitig geantwortet. Alles darüber ist aktuell; öffne für den vollständigen Verlauf das Abrechnungsportal, oder schau gleich noch einmal vorbei.',
+    'Polar hat für die Historie nicht rechtzeitig geantwortet. Alles darüber ist aktuell; öffne für den vollständigen Verlauf das Abrechnungsportal, oder schau gleich noch einmal vorbei.',
   'billing.invoices.emptyTitle': 'Noch keine Rechnungen',
   'billing.invoices.emptyCustomer':
     'Der erste Beleg erscheint hier, sobald eine Abrechnungsperiode endet.',

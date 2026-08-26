@@ -8,6 +8,7 @@
 
 import { and, asc, count, desc, eq, lt } from 'drizzle-orm'
 import { z } from 'zod'
+import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
 import { auditLog } from '#/server/db/schema'
 import { allOf, createTenantRepository, tenantFilter } from './base'
 import { idSchema, shortTextSchema } from './validation'
@@ -33,7 +34,7 @@ export const recordAuditInput = z.object({
     .trim()
     .min(1)
     .max(64)
-    .regex(/^[a-z0-9]+(?:[._][a-z0-9]+)*$/, 'must be a lowercase dotted action'),
+    .regex(AUDIT_ACTION_PATTERN, 'must be a lowercase dotted action'),
   entityType: shortTextSchema.nullish(),
   entityId: idSchema.nullish(),
   metadata: jsonRecordSchema.nullish(),

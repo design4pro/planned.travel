@@ -65,7 +65,7 @@ describe('plan resolution', () => {
     expect(state.planId).toBe('free')
     expect(state.status).toBe('none')
     expect(state.seats).toBe(1)
-    expect(state.hasStripeCustomer).toBe(false)
+    expect(state.hasProviderCustomer).toBe(false)
   })
 
   it('keeps a paid plan while the status still entitles it', () => {
@@ -288,7 +288,7 @@ describe('entitlements', () => {
       exceeded: false,
     })
     expect(state.quotas.storageBytes.ratio).toBeCloseTo(0.5, 5)
-    expect(state.hasStripeCustomer).toBe(false)
+    expect(state.hasProviderCustomer).toBe(false)
   })
 
   it('flags the over-limit workspace a downgrade leaves behind', async () => {
@@ -353,6 +353,81 @@ describe('entitlements', () => {
   })
 })
 
+/* --------------------------------------------------------- scheduled changes */
+
+describe('a change Polar has scheduled but not applied', () => {
+  const SCHEDULED = {
+    planId: 'solo',
+    interval: 'yearly',
+    effectiveAt: new Date('2026-09-01T00:00:00.000Z'),
+  } as const
+
+  it('names what the workspace becomes, never what it is on now', async () => {
+    const { ctx } = context({
+      record: subscriptionRecord({ pendingChange: SCHEDULED }),
+      now: new Date('2026-08-19T12:00:00.000Z'),
+    })
+    const state = await entitlements(ctx)
+
+    // Crew until the period ends, Solo after it. A screen that read `planId` off
+    // the schedule would tell a paying customer they had already lost Crew.
+    expect(state.planId).toBe('crew')
+    expect(state.pendingChange).toEqual(SCHEDULED)
+    expect(state.pendingChange?.effectiveAt).toBeInstanceOf(Date)
+  })
+
+  it('reports nothing scheduled for a workspace whose plan is simply in force', async () => {
+    const { ctx } = context({ record: subscriptionRecord() })
+
+    await expect(entitlements(ctx)).resolves.toMatchObject({
+      pendingChange: null,
+    })
+  })
+
+  it('forgets the schedule the moment its date arrives', async () => {
+    const { ctx } = context({
+      record: subscriptionRecord({ pendingChange: SCHEDULED }),
+      now: SCHEDULED.effectiveAt,
+    })
+
+    // Past this instant Polar has applied the change, so the plan fields above are
+    // the change and a banner still promising it is a lie the customer can check.
+    await expect(entitlements(ctx)).resolves.toMatchObject({
+      pendingChange: null,
+    })
+  })
+
+  it('drops the schedule with the plan when the status stops entitling', async () => {
+    const { ctx } = context({
+      record: subscriptionRecord({ status: 'unpaid', pendingChange: SCHEDULED }),
+      now: new Date('2026-08-19T12:00:00.000Z'),
+    })
+    const state = await entitlements(ctx)
+
+    expect(state.planId).toBe('free')
+    expect(state.pendingChange).toBeNull()
+  })
+
+  it('survives the KV round trip as an ISO instant', async () => {
+    const { harness, ctx } = context({
+      record: subscriptionRecord({ pendingChange: SCHEDULED }),
+      now: new Date('2026-08-19T12:00:00.000Z'),
+    })
+
+    await loadPlanState(ctx)
+    const cached = harness.cache.entries.get(planStateCacheKey(TEST_ORG_ID))
+    expect(cached).toContain('"effectiveAt":"2026-09-01T00:00:00.000Z"')
+
+    // Second read comes from KV, not D1 — the shape has to parse or the cache
+    // silently turns itself off.
+    harness.store.rows.delete(TEST_ORG_ID)
+    await expect(entitlements(ctx)).resolves.toMatchObject({
+      planId: 'crew',
+      pendingChange: SCHEDULED,
+    })
+  })
+})
+
 /* --------------------------------------------------------------------- cache */
 
 describe('plan-state caching', () => {
@@ -391,10 +466,7 @@ describe('plan-state caching', () => {
     expect(harness.cache.entries.has(planStateCacheKey(TEST_ORG_ID))).toBe(
       false,
     )
-    harness.store.rows.set(
-      TEST_ORG_ID,
-      subscriptionRecord({ planId: 'solo', seats: 1 }),
-    )
+    harness.store.seed(subscriptionRecord({ planId: 'solo', seats: 1 }))
     await expect(loadPlanState(ctx)).resolves.toMatchObject({ planId: 'solo' })
   })
 

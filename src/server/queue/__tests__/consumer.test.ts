@@ -12,7 +12,9 @@ import { TaskPermanentError, TaskRetryableError } from '../types'
 import { createLogger, createMemorySink } from '../../observability/logger'
 
 import type { QueueBatchLike, QueueMessageLike, TaskHandlerRegistry } from '../consumer'
-import type { TaskBindings, TaskEnvelope } from '../types'
+import type { TaskBindings, TaskEnvelope, TaskKind } from '../types'
+
+type BillingTaskKind = Extract<TaskKind, `billing.${string}`>
 
 function fakeKv() {
   const store = new Map<string, string>()
@@ -93,6 +95,31 @@ function emailEnvelope(overrides: Partial<TaskEnvelope> = {}): unknown {
       html: '<p>Wheels up at 09:40.</p>',
     },
     ...overrides,
+  }
+}
+
+/**
+ * A Polar webhook id is a 36-character UUID, and the envelope id the billing producer
+ * derives from it is `<providerEventId>:<kind>` — 67 characters for the longest kind.
+ */
+const PROVIDER_EVENT_ID = 'f2b1c0de-9a41-4f3c-8f2e-5b6d7c8e9a01'
+
+function billingTaskId(kind: BillingTaskKind): string {
+  return `${PROVIDER_EVENT_ID}:${kind}`
+}
+
+function billingEnvelope(kind: BillingTaskKind, payload: Record<string, unknown>): unknown {
+  return {
+    id: billingTaskId(kind),
+    orgId: 'org-1',
+    kind,
+    enqueuedAt: 1_700_000_000_000,
+    payload: {
+      kind,
+      organizationId: 'org-1',
+      providerEventId: PROVIDER_EVENT_ID,
+      ...payload,
+    },
   }
 }
 
@@ -212,7 +239,7 @@ describe('consumeTaskBatch', () => {
     expect(dead).toContain('No handler is registered')
   })
 
-  it('accepts the billing envelopes the Stripe webhook actually enqueues', async () => {
+  it('accepts the billing envelopes the provider webhook actually enqueues', async () => {
     const env = fakeEnv()
     const handled: Array<string> = []
     const registry: TaskHandlerRegistry = {
@@ -220,27 +247,61 @@ describe('consumeTaskBatch', () => {
         handled.push(payload.planId)
         return {}
       },
+      'billing.invoice.payment_failed': async (payload) => {
+        handled.push(payload.providerOrderId)
+        return {}
+      },
     }
-    const msg = message({
-      id: 'evt_1:billing.subscription.changed',
-      orgId: 'org-1',
-      kind: 'billing.subscription.changed',
-      enqueuedAt: 1_700_000_000_000,
-      payload: {
-        kind: 'billing.subscription.changed',
-        organizationId: 'org-1',
+    const changed = message(
+      billingEnvelope('billing.subscription.changed', {
         planId: 'crew',
         previousPlanId: 'free',
         status: 'active',
-        stripeEventId: 'evt_1',
-      },
+      }),
+    )
+    const failed = message(
+      billingEnvelope('billing.invoice.payment_failed', {
+        providerOrderId: '7c0f0f4d-6a6f-4f7a-9b0a-2f2a4a6c1d33',
+        attemptCount: 2,
+        nextAttemptAt: '2026-01-04T09:00:00.000Z',
+      }),
+    )
+
+    const result = await consumeTaskBatch(batch([changed, failed]), env, logger(), {
+      registry,
     })
 
-    const result = await consumeTaskBatch(batch([msg]), env, logger(), { registry })
-
-    expect(handled).toEqual(['crew'])
-    expect(result.acked).toBe(1)
+    expect(handled).toEqual(['crew', '7c0f0f4d-6a6f-4f7a-9b0a-2f2a4a6c1d33'])
+    expect(result.acked).toBe(2)
     expect(result.deadLettered).toBe(0)
+  })
+
+  it('derives the same envelope id when the provider redelivers the same event', async () => {
+    const env = fakeEnv()
+    let calls = 0
+    const registry: TaskHandlerRegistry = {
+      'billing.subscription.changed': async () => {
+        calls += 1
+        return {}
+      },
+    }
+    const payload = { planId: 'crew', previousPlanId: 'free', status: 'active' } as const
+    const first = message(billingEnvelope('billing.subscription.changed', payload))
+    const second = message(billingEnvelope('billing.subscription.changed', payload))
+
+    // The id is a pure function of the provider event id and the task kind, so a
+    // redelivery lands on the marker the first delivery wrote instead of a fresh key.
+    expect(second.body).toEqual(first.body)
+
+    await consumeTaskBatch(batch([first]), env, logger(), { registry })
+    await consumeTaskBatch(batch([second]), env, logger(), { registry })
+
+    expect(calls).toBe(1)
+    expect(first.settled.acked).toBe(1)
+    expect(second.settled.acked).toBe(1)
+    expect(env.KV.store.has(taskDoneKey(billingTaskId('billing.subscription.changed')))).toBe(
+      true,
+    )
   })
 
   it('settles every message even when one of them explodes', async () => {

@@ -6,7 +6,7 @@ import type { LegalSection } from '#/components/marketing'
 
 const TITLE = 'Privacy notice — planned.travel'
 const DESCRIPTION =
-  'The plain-English privacy notice template for planned.travel: what we collect, what we refuse to do with it, where it is stored on Cloudflare, which processors touch it, how long we keep it and how to get it back.'
+  'The plain-English privacy notice template for planned.travel: what we collect, what we refuse to do with it, where it is stored on Cloudflare, which third parties touch it, how long we keep it and how to get it back.'
 const URL = 'https://planned.travel/legal/privacy'
 
 const UPDATED = '19 August 2026'
@@ -29,7 +29,7 @@ export const Route = createFileRoute('/legal/privacy')({
 const SUMMARY: ReadonlyArray<string> = [
   'We collect what the product needs to work: your account details, the trips you create, and technical logs.',
   'We do not sell or rent your data, we run no advertising, and we load no third-party analytics or tracking scripts.',
-  'Your trips live in a Cloudflare database and object store scoped to your workspace. Stripe handles payment, so we never hold your card number.',
+  'Your trips live in a Cloudflare database and object store scoped to your workspace. Polar, our merchant of record, sells and invoices the subscription, so we never hold your card number.',
   'You can export your trips at any time, and deleting your account deletes your content.',
   'We hold no security certification today. When we are audited against a standard, we will name the standard here — and not before.',
 ]
@@ -86,9 +86,10 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
           </dd>
           <dt>Billing records</dt>
           <dd>
-            Your Stripe customer and subscription identifiers, the plan you are
-            on, its status and renewal date, and invoice history.{' '}
-            <strong>Not your card number</strong> — that stays with Stripe.
+            Your Polar customer and subscription identifiers, the plan you are
+            on, its status and renewal date, and the order history behind your
+            invoices. <strong>Not your card number</strong> — that stays with
+            Polar, who takes the payment and issues the invoice.
           </dd>
           <dt>Technical records</dt>
           <dd>
@@ -117,8 +118,10 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
             product has to send. This is how we perform our contract with you.
           </li>
           <li>
-            <strong>To take payment</strong> — creating subscriptions, issuing
-            invoices and enforcing plan limits.
+            <strong>To take payment</strong> — opening a subscription with
+            Polar, our merchant of record, and enforcing the plan limits it
+            entitles you to. Polar is the seller on that purchase and issues the
+            invoice; we hold only the identifiers and the plan state it returns.
           </li>
           <li>
             <strong>To keep it secure and working</strong> — rate limiting,
@@ -232,11 +235,15 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
             Hosting, database, object storage, caching and network delivery.
             Sees everything that passes through the service.
           </dd>
-          <dt>Stripe</dt>
+          <dt>Polar</dt>
           <dd>
-            Checkout, subscriptions, invoices and tax. Receives your email
-            address, billing details and the card data you enter directly into
-            their form.
+            Merchant of record. Polar sells the subscription to you as our
+            reseller, so it is the seller on your invoice rather than only a
+            processor acting for us, and it determines, collects and remits the
+            sales tax or VAT on that sale. It receives your email address, the
+            billing details you give it and the card data you enter directly
+            into its checkout; we send it an identifier for your workspace and
+            receive back a plan, a status and an order list.
           </dd>
           <dt>Email delivery</dt>
           <dd>
@@ -258,8 +265,9 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
         </p>
         <p>
           <LegalPlaceholder>
-            [Keep this list current, and hold a data processing agreement with
-            each processor.]
+            [Keep this list current. Hold a data processing agreement with each
+            processor, and note that a merchant of record is an independent
+            controller for the sale it makes rather than a processor of yours.]
           </LegalPlaceholder>
         </p>
       </>
@@ -356,7 +364,7 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
           </li>
           <li>
             Payment card data never reaches our servers; it goes straight from
-            your browser to Stripe.
+            your browser into Polar&rsquo;s checkout.
           </li>
         </ul>
         <p>

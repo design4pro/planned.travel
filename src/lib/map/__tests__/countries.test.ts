@@ -5,7 +5,11 @@ import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { COUNTRY_NAMES } from '#/lib/atlas/country-names'
-import { MAX_MERCATOR_LATITUDE, boundsContains, boundsForPoints } from '../bounds'
+import {
+  MAX_MERCATOR_LATITUDE,
+  boundsContains,
+  boundsForPoints,
+} from '../bounds'
 import {
   COUNTRY_CODE_PROPERTY,
   COUNTRY_DETAIL_URL,
@@ -67,7 +71,11 @@ const SOLVER_DRIFT = 1e-7
 function ringArea(ring: ReadonlyArray<[number, number]>): number {
   let twice = 0
   let latitudes = 0
-  for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index, index += 1) {
+  for (
+    let index = 0, previous = ring.length - 1;
+    index < ring.length;
+    previous = index, index += 1
+  ) {
     twice +=
       ring[previous][0] * ring[index][1] - ring[index][0] * ring[previous][1]
     latitudes += ring[index][1]
@@ -198,9 +206,11 @@ const DETAIL_BUDGET = { raw: 384 * 1024, gzip: 128 * 1024 }
  * bytes from the string it describes. Two of the three rows are measurable from
  * this repository, so they are measured here instead of trusted.
  *
- * `gzip` is the table's own 0.1KiB rounding rather than an exact count, because
- * zlib's output moves by a handful of bytes between Node builds while the figure
- * the table prints does not.
+ * `gzip` is the table's own 0.1KiB rounding rather than an exact count, and it
+ * is asserted to within 1KiB rather than to the rounded string, because zlib's
+ * output moves between Node builds and platforms - by half a KiB between the
+ * macOS and Ubuntu builds of the same Node major - while the figure the table
+ * prints does not.
  */
 const BUDGET_TABLE = {
   bundled: { raw: 62_983, gzipKiB: '25.2' },
@@ -225,9 +235,9 @@ function bundledPayload(): string {
   return [...literal[1].matchAll(/'([^'\n]*)'/g)].map((m) => m[1]).join('')
 }
 
-/** A byte count as the budget table rounds it: KiB to one decimal place. */
-function asKiB(bytes: number): string {
-  return (bytes / 1024).toFixed(1)
+/** How far a byte count sits from a figure the budget table quotes, in KiB. */
+function kiBDrift(bytes: number, quotedKiB: string): number {
+  return Math.abs(bytes / 1024 - Number.parseFloat(quotedKiB))
 }
 
 /** The codes the shipped asset carries, parsed independently of the module. */
@@ -635,7 +645,8 @@ describe('countryBounds', () => {
     for (const feature of countryFeatures().features) {
       const bounds = countryBounds(feature.properties.code)
       if (bounds === null) continue
-      if (landShare(feature, bounds) > 0.999) whole.push(feature.properties.code)
+      if (landShare(feature, bounds) > 0.999)
+        whole.push(feature.properties.code)
     }
     expect(whole.length / countryFeatures().features.length).toBeGreaterThan(
       0.9,
@@ -833,15 +844,21 @@ describe('the finer cut', () => {
     // bundled cut: the 1:110m row named seven bytes the payload does not have.
     const shipped = Buffer.byteLength(DETAIL_ASSET)
     expect(shipped).toBe(BUDGET_TABLE.shipped.raw)
-    expect(asKiB(gzipSync(DETAIL_ASSET, { level: 9 }).length)).toBe(
-      BUDGET_TABLE.shipped.gzipKiB,
-    )
+    expect(
+      kiBDrift(
+        gzipSync(DETAIL_ASSET, { level: 9 }).length,
+        BUDGET_TABLE.shipped.gzipKiB,
+      ),
+    ).toBeLessThan(1)
 
     const bundled = bundledPayload()
     expect(Buffer.byteLength(bundled)).toBe(BUDGET_TABLE.bundled.raw)
-    expect(asKiB(gzipSync(bundled, { level: 9 }).length)).toBe(
-      BUDGET_TABLE.bundled.gzipKiB,
-    )
+    expect(
+      kiBDrift(
+        gzipSync(bundled, { level: 9 }).length,
+        BUDGET_TABLE.bundled.gzipKiB,
+      ),
+    ).toBeLessThan(1)
 
     // And the row is the bundled cut rather than a build of it: the codes, rings
     // and vertices the table prints are the ones `./world` hands out.

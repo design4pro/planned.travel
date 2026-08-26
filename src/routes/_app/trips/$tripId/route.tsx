@@ -5,6 +5,8 @@ import { ErrorPanel } from '#/components/layout/error-state'
 import { NotFoundPanel } from '#/components/layout/not-found'
 import { TripSubNav } from '#/components/layout/trip-sub-nav'
 import { Card, Skeleton } from '#/components/ui'
+import { APP_HEADER_TOP_CLASS } from '#/lib/atlas/layout'
+import { cn } from '#/lib/cn'
 import { loadTripHeader } from '../../-server/trip'
 import { HeaderSkeleton, RowsSkeleton } from '../../-ui/scaffold'
 
@@ -45,7 +47,14 @@ function TripLayout() {
 function TripPending() {
   return (
     <>
-      <div className="sticky top-[calc(var(--nav-h)+var(--safe-top))] z-nav border-b border-inverse-edge bg-inverse">
+      <div
+        className={cn(
+          // The same offset the real sub-navigation pins at, so the skeleton
+          // does not move when the trip lands.
+          'sticky z-nav border-b border-inverse-edge bg-inverse',
+          APP_HEADER_TOP_CLASS,
+        )}
+      >
         <div className="mx-auto flex h-subnav max-w-content items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Skeleton
             className="h-6 w-16 shrink-0 bg-inverse-surface"

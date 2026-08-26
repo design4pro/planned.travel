@@ -18,7 +18,7 @@
  * **The three plan names are words, not proper nouns.** English calls them
  * Free, Solo and Crew; Dutch reads "Gratis", "Alleen" and "Samen" — the way the
  * traveller is actually travelling. What is stable across languages is the plan
- * *id* in `src/lib/plans.ts`, which the invoice and Stripe carry and no reader
+ * *id* in `src/lib/plans.ts`, which the invoice and Polar carry and no reader
  * ever sees.
  *
  * **Currency names are lower case.** Dutch does not capitalise a currency, only
@@ -327,13 +327,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Betaling ontvangen',
   'billing.checkout.completeBody':
-    'Je nieuwe abonnement wordt toegepast. Het verschijnt hier zodra Stripe het bevestigt — meestal binnen een paar seconden.',
+    'Je nieuwe abonnement wordt toegepast. Het verschijnt hier zodra Polar het bevestigt — meestal binnen een paar seconden.',
   'billing.checkout.cancelledTitle': 'Afrekenen afgebroken',
   'billing.checkout.cancelledBody':
     'Er is niets afgeschreven en je abonnement is niet veranderd.',
-  'billing.portal.backTitle': 'Terug van Stripe',
+  'billing.portal.backTitle': 'Terug van Polar',
   'billing.portal.backBody':
-    'Wat je daar hebt gewijzigd komt hier binnen zodra Stripe het bevestigt.',
+    'Wat je daar hebt gewijzigd komt hier binnen zodra Polar het bevestigt.',
   'billing.refresh': 'Vernieuwen',
   'billing.readOnly.title': 'Je bent lid van deze werkruimte',
   'billing.readOnly.body':
@@ -349,9 +349,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Betaalmethode',
   'billing.hero.cancel': 'Abonnement opzeggen',
   'billing.price.free': 'Gratis',
-  'billing.stripe.opening': 'Stripe wordt geopend',
-  'billing.stripe.failed': 'Stripe was niet bereikbaar',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Polar wordt geopend',
+  'billing.provider.failed': 'Polar was niet bereikbaar',
+  'billing.provider.failedBody':
     'Er is niets afgeschreven. Controleer je verbinding en probeer het zo meteen opnieuw.',
 
   'billing.renewal.trialEndsToday':
@@ -375,7 +375,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Kies hieronder een abonnement om boekingen, het dagboek en offline kaarten weer te openen.',
   'billing.renewal.incomplete':
-    'Stripe wacht nog op de bevestiging van deze betaling.',
+    'Polar wacht nog op de bevestiging van deze betaling.',
   'billing.renewal.free':
     'Twee reizen tegelijk, van het huis. Stap over zodra je het te krap vindt.',
   'billing.renewal.auto': 'Wordt automatisch verlengd.',
@@ -463,7 +463,7 @@ const messages = {
   'billing.invoices.portal': 'Facturatieportaal',
   'billing.invoices.unavailableTitle': 'De bonnen laden niet',
   'billing.invoices.unavailableBody':
-    'Stripe antwoordde niet op tijd voor de historie. Alles hierboven is actueel; open het facturatieportaal voor het volledige overzicht, of kom zo terug.',
+    'Polar antwoordde niet op tijd voor de historie. Alles hierboven is actueel; open het facturatieportaal voor het volledige overzicht, of kom zo terug.',
   'billing.invoices.emptyTitle': 'Nog geen facturen',
   'billing.invoices.emptyCustomer':
     'De eerste bon verschijnt hier zodra een factuurperiode wordt afgesloten.',
