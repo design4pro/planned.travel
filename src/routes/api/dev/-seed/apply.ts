@@ -2,7 +2,7 @@
  * The seed orchestrator.
  *
  * Runs the whole demo dataset through `src/server/repos` in dependency order and reports what it
- * wrote. Two properties matter more than anything else here:
+ * wrote. Three properties matter more than anything else here:
  *
  * **Idempotence.** A marker row in `app_settings` records the dataset version once a run has finished
  * completely. A second run sees the marker and does nothing. A run that crashed half way leaves no
@@ -13,6 +13,17 @@
  * **Honesty.** Nothing here writes SQL, stamps an `organization_id` by hand, or reaches around a
  * validation schema. If the repositories would reject a value in production they reject it here, which
  * is why the dataset is worth trusting as a fixture.
+ *
+ * **Determinism.** The values this file writes are a pure function of `./dataset`. Every date and
+ * every instant is measured from `SEED_ANCHOR_INSTANT` rather than from the machine's clock; the one
+ * secret the dataset needs — a published journey's share token — is derived from the journey's slug
+ * rather than drawn from a random source; and every primary key and row stamp comes from
+ * `./fixture-rows` rather than from `newId()` and `new Date()`, because a trip's cover drawing and
+ * its wash colour are hashed straight out of its id and a fresh id repaints a screen nobody edited
+ * while a fresh stamp leaves a sort with nothing to break its ties. The only wall-clock read left is
+ * the stopwatch behind `durationMs`, which is reported and never stored. Two runs a month apart
+ * therefore write the same rows, which is what lets a visual baseline outlive the day it was
+ * recorded.
  */
 
 import {
@@ -55,6 +66,7 @@ import {
   notificationsRepository,
   publishJourney,
   recomputeTravelStats,
+  resolveTags,
   setCollectionPlaceLabels,
   setEntitlement,
   setEntryRange,
@@ -62,6 +74,7 @@ import {
   setPreference,
   setUsage,
   setUserColour,
+  travelStatsRepository,
   updateOrganizationSettings,
   updatePlan,
   updateUserSettings,
@@ -71,15 +84,22 @@ import {
 } from '#/server/repos'
 import { applyTrip } from './apply-trip'
 import { ensureWorkspacePeople, resolveWorkspace } from './bootstrap'
+import { fixtureRows } from './fixture-rows'
+import { stableId } from './stable-id'
 import { rowValuesFromRecord } from '#/server/billing/store'
 import {
   DATASET_VERSION,
+  SEED_ANCHOR_DAY,
+  SEED_ANCHOR_INSTANT,
   auditTrail,
   bucketList,
   collections,
+  daysFromAnchor,
   demoSubscriptionRecord,
   extraCategories,
+  instantOn,
   journeys,
+  minutesBeforeAnchor,
   notificationPreferences,
   notifications,
   organizationSettings,
@@ -91,6 +111,7 @@ import {
   visitedRegions,
 } from './dataset'
 import type { CredentialOutcome } from './bootstrap'
+import type { FixtureRows } from './fixture-rows'
 import type { TripApplyContext, TripCounts } from './apply-trip'
 import type { JsonRecord } from '#/server/db/schema'
 import type { Database } from '#/server/db/types'
@@ -99,7 +120,15 @@ import type { PersonKey } from './types'
 /** `app_settings` key holding the marker that makes a second run a no-op. */
 const MARKER_KEY = 'demo.seed'
 
-const MS_PER_MINUTE = 60_000
+/**
+ * Names per `resolveTags` call.
+ *
+ * Not the fifty `resolveTagsInput` allows: a `tags` row binds seven columns, and D1 refuses a
+ * statement with more than a hundred bound parameters, so one call may create at most fourteen rows
+ * before the insert fails. Twelve leaves room for a column.
+ */
+const TAG_BATCH = 12
+
 /** How far back the inbox and audit sweep looks for rows an earlier run of this dataset wrote. */
 const INBOX_SWEEP_LIMIT = 500
 const MS_PER_DAY = 86_400_000
@@ -160,23 +189,6 @@ export interface SeedReport {
   readonly durationMs: number
 }
 
-function instant(now: Date, minutesAgo: number): Date {
-  return new Date(now.getTime() - minutesAgo * MS_PER_MINUTE)
-}
-
-/** Whole days from `today` to `date`, floored at zero. */
-function daysUntil(today: Date, date: string | null): number {
-  if (date === null) {
-    return 0
-  }
-  const target = Date.parse(`${date}T00:00:00.000Z`)
-  if (Number.isNaN(target)) {
-    return 0
-  }
-  const midnight = Date.parse(`${today.toISOString().slice(0, 10)}T00:00:00.000Z`)
-  return Math.max(Math.round((target - midnight) / MS_PER_DAY), 0)
-}
-
 /** Inclusive number of calendar days in a `YYYY-MM-DD` range. */
 function daysInRange(from: string, to: string): number {
   const start = Date.parse(`${from}T00:00:00.000Z`)
@@ -205,10 +217,15 @@ function resolveParams(
   return resolved
 }
 
-/** 32 hex characters, for the public token of a published journey. */
-function publicToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16))
-  return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+/**
+ * The 32 hex characters a published journey is shared under.
+ *
+ * Derived from the journey's slug rather than drawn from a random source, so a re-seed does not
+ * silently invalidate a share URL somebody kept. See `./stable-id.ts` for why that is safe here and
+ * nowhere else.
+ */
+function publicToken(slug: string): string {
+  return stableId('demo-journey-token', slug, 32)
 }
 
 export interface ApplySeedOptions {
@@ -227,11 +244,39 @@ export interface ApplySeedOptions {
 
 const DEFAULT_OWNER_EMAIL = 'rafal@planned.travel'
 
+/**
+ * Seeds the demo workspace.
+ *
+ * The whole run happens inside one fixture scope: the primary keys and the `created_at` /
+ * `updated_at` stamps come from `./fixture-rows` rather than from the clock and a random source, so
+ * the rows this writes are the same rows every time and the covers drawn from their ids do not move.
+ * See that module for why an id is as load-bearing as a date here.
+ */
 export async function applySeed(db: Database, options: ApplySeedOptions = {}): Promise<SeedReport> {
+  const fixture = fixtureRows()
+  return await fixture.run(() => writeSeed(db, options, fixture))
+}
+
+/**
+ * The run itself, split out so {@link applySeed} can open the fixture scope without indenting it.
+ *
+ * `fixture.section(...)` divides the run into named stretches; see `./fixture-rows` for what that
+ * buys and why the sections are the ones they are. Adding a phase means naming it, and moving one
+ * past another re-records the baselines its rows appear in.
+ */
+async function writeSeed(
+  db: Database,
+  options: ApplySeedOptions,
+  fixture: FixtureRows,
+): Promise<SeedReport> {
   const startedAt = Date.now()
-  const now = new Date()
+  // The fixture's one notion of now, and it is not a clock: see `./dataset/anchor.ts`. Nothing in
+  // this file reads the wall clock except `startedAt`, which measures the run and is never written
+  // to a row — so seeding twice, on two machines, in two calendar months, produces the same rows.
+  const now = SEED_ANCHOR_INSTANT
   const ownerEmail = options.ownerEmail ?? DEFAULT_OWNER_EMAIL
 
+  fixture.section('workspace')
   const resolved = await resolveWorkspace(
     db,
     ownerEmail,
@@ -265,19 +310,20 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
   await markOrganizationOnboarded(owner)
 
   // The subscription comes first on purpose: the free plan seats one person, and the demo needs four.
-  // The row is derived from the plan by `rowValuesFromRecord()` — the same translation the Stripe
+  // The row is derived from the plan by `rowValuesFromRecord()` — the same translation the billing
   // webhook uses — so the tier, the seats, the price and the ceilings cannot drift apart, and the
   // membership writes below still go through the same quota guard rather than around it.
   await upsertSubscription(
     owner,
     rowValuesFromRecord(
       demoSubscriptionRecord(resolved.organizationId, {
-        start: new Date(now.getTime() - 12 * MS_PER_DAY),
-        end: new Date(now.getTime() + 18 * MS_PER_DAY),
+        start: instantOn(-12),
+        end: instantOn(18),
       }),
     ),
   )
 
+  fixture.section('people')
   const seedPeople = await ensureWorkspacePeople(db, resolved)
 
   for (const person of people) {
@@ -305,6 +351,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
 
   /* --------------------------------------------------------------------- taxonomy and mood palette */
 
+  fixture.section('taxonomy')
   await ensureDefaultCategories(owner)
   const knownSlugs = new Set((await listCategories(owner)).map((row) => row.slug))
   for (const category of extraCategories) {
@@ -319,6 +366,19 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
   const moodRows = await listMoods(owner)
   const moodIds = new Map(moodRows.map((row) => [row.key, row.id]))
 
+  // Tags are workspace-scoped and outlive the trip they were typed on, so `resolveTags` inside
+  // `applyTrip` creates them on a cold database and merely finds them on a warm one. That difference
+  // in *how many rows a trip writes* would shift every identifier minted after the first tagged place
+  // in that trip — the covers would hold, but the places under them would not — so the whole tag
+  // vocabulary is created here instead, once, in a section of its own, and the trip pass only ever
+  // looks it up.
+  const tagNames = [
+    ...new Set(trips.flatMap((trip) => (trip.places ?? []).flatMap((place) => place.tags ?? []))),
+  ]
+  for (let start = 0; start < tagNames.length; start += TAG_BATCH) {
+    await resolveTags(owner, tagNames.slice(start, start + TAG_BATCH))
+  }
+
   /* ---------------------------------------------------------------------------------------- trips */
 
   const context: TripApplyContext = {
@@ -326,7 +386,6 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
     scopes: seedPeople.scopes,
     categoryIds,
     colours: new Map<PersonKey, string>(people.map((person) => [person.key, person.colour])),
-    now,
   }
 
   const tripReports: Array<{ slug: string; counts: TripCounts }> = []
@@ -339,6 +398,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
       // A trip present without the completion marker is the debris of an interrupted run.
       await deleteTrip(owner, stale.id)
     }
+    fixture.section(`trip/${trip.slug}`)
     const counts = await applyTrip(context, trip)
     tripReports.push({ slug: trip.slug, counts })
     tripIdBySlug.set(trip.slug, counts.tripId)
@@ -354,6 +414,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
     if (stale !== null) {
       await deleteJourney(owner, stale.id)
     }
+    fixture.section(`journey/${journey.slug}`)
     const created = await createJourney(owner, {
       tripId: journey.tripSlug === undefined ? null : (tripIdBySlug.get(journey.tripSlug) ?? null),
       title: journey.title,
@@ -409,7 +470,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
 
     // The Dolomites write-up is published; Marrakech stays a draft, so both states are on screen.
     if (journey.slug === 'dolomites-hut-to-hut') {
-      await publishJourney(owner, created.id, publicToken())
+      await publishJourney(owner, created.id, publicToken(journey.slug))
     }
   }
 
@@ -421,6 +482,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
     if (stale !== null) {
       await deleteCollection(owner, stale.id)
     }
+    fixture.section(`collection/${collection.slug}`)
     const created = await createCollection(owner, {
       name: collection.name,
       slug: collection.slug,
@@ -473,6 +535,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
 
   /* ---------------------------------------------------------------------------------------- atlas */
 
+  fixture.section('atlas')
   const existingBucket = await listBucketList(owner, resolved.ownerUserId)
   const bucketByName = new Map(existingBucket.map((row) => [row.name, row]))
   for (const item of bucketList) {
@@ -534,16 +597,22 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
 
   for (const stats of travelStats) {
     await recomputeTravelStats(owner, resolved.ownerUserId, stats.statYear)
-    await upsertTravelStats(owner, {
+    const statsRow = await upsertTravelStats(owner, {
       userId: resolved.ownerUserId,
       statYear: stats.statYear,
       distanceMetres: stats.distanceMetres,
       yearStreak: stats.yearStreak,
     })
+    // Both writes above stamp `computedAt` from the wall clock, which is right for a cron rebuild and
+    // wrong for a fixture: it is the last column in this dataset that two runs would disagree about.
+    await travelStatsRepository.requireUpdate(owner, statsRow.id, {
+      computedAt: SEED_ANCHOR_INSTANT,
+    })
   }
 
   /* ---------------------------------------------------------------------------------------- vacay */
 
+  fixture.section('vacay')
   const plan = await ensurePlan(owner, resolved.ownerUserId)
   await updatePlan(owner, plan.id, {
     name: vacay.name,
@@ -614,6 +683,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
   // A run that reaches this point has just rebuilt the trips, so any demo notification from an earlier
   // run points at an id that no longer exists. Clear the rows this dataset owns — identified by their
   // message key — and write them fresh, rather than accumulating a stale copy per run.
+  fixture.section('inbox')
   const datasetTitleKeys = new Set(notifications.map((notification) => notification.titleKey))
   const inbox = await notificationsRepository.findMany(owner, { limit: INBOX_SWEEP_LIMIT })
   for (const row of inbox) {
@@ -629,15 +699,14 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
         ? null
         : (tripIdBySlug.get(notification.entityTripSlug) ?? null)
     const replacements = {
-      days: daysUntil(
-        now,
+      days: daysFromAnchor(
         notification.entityTripSlug === undefined
           ? null
           : (tripStartBySlug.get(notification.entityTripSlug) ?? null),
       ),
       organizationName: organization.name,
     }
-    const createdAt = instant(now, notification.minutesAgo)
+    const createdAt = minutesBeforeAnchor(notification.minutesAgo)
     await notificationsRepository.insert(owner, {
       recipientUserId: resolved.ownerUserId,
       senderUserId: seedPeople.ids.get(notification.sender) ?? resolved.ownerUserId,
@@ -651,13 +720,14 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
       bodyParams: resolveParams(notification.bodyParams, replacements),
       actionUrl: tripId === null ? null : `/trips/${tripId}`,
       isRead: notification.isRead,
-      readAt: notification.isRead ? instant(now, Math.max(notification.minutesAgo - 30, 0)) : null,
+      readAt: notification.isRead ? minutesBeforeAnchor(Math.max(notification.minutesAgo - 30, 0)) : null,
       createdAt,
       updatedAt: createdAt,
     })
     notificationCount += 1
   }
 
+  fixture.section('audit')
   const datasetActions = new Set(auditTrail.map((entry) => entry.action))
   const trail = await auditLogRepository.findMany(owner, { limit: INBOX_SWEEP_LIMIT })
   for (const row of trail) {
@@ -668,7 +738,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
 
   let auditCount = 0
   for (const entry of auditTrail) {
-    const createdAt = instant(now, entry.minutesAgo)
+    const createdAt = minutesBeforeAnchor(entry.minutesAgo)
     await auditLogRepository.insert(owner, {
       actorUserId: resolved.ownerUserId,
       action: entry.action,
@@ -683,6 +753,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
 
   /* -------------------------------------------------------------------------------- usage counters */
 
+  fixture.section('usage')
   const totals = sumTotals(tripReports)
   await setUsage(owner, { metric: 'trips', value: totals.trips })
   await setUsage(owner, { metric: 'places', value: totals.places })
@@ -694,7 +765,7 @@ export async function applySeed(db: Database, options: ApplySeedOptions = {}): P
   await appSettingsStore.set(
     db,
     MARKER_KEY,
-    { version: DATASET_VERSION, seededAt: now.toISOString(), organizationId: resolved.organizationId },
+    { version: DATASET_VERSION, anchor: SEED_ANCHOR_DAY, organizationId: resolved.organizationId },
     'Demo dataset marker written by /api/dev/seed. Delete it to allow a re-seed.',
   )
 

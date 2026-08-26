@@ -110,7 +110,7 @@ function SpotlightBand({ spotlight }: { spotlight: Spotlight }) {
       id={spotlight.id}
       tone={spotlight.tone ?? 'canvas'}
       aria-labelledby={headingId}
-      className="scroll-mt-[var(--nav-h)]"
+      className="scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))]"
     >
       <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
         <div
@@ -219,7 +219,7 @@ export function ModuleGrid() {
       id="modules"
       tone="tint"
       aria-labelledby="modules-heading"
-      className="scroll-mt-[var(--nav-h)]"
+      className="scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))]"
     >
       <SectionIntro
         headingId="modules-heading"

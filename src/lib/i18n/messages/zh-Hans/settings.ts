@@ -265,11 +265,11 @@ const messages = {
   'billing.status.incomplete_expired': '已过期',
   'billing.checkout.completeTitle': '已收到付款',
   'billing.checkout.completeBody':
-    '新方案正在生效。Stripe 一确认，这里就会显示出来——通常几秒钟。',
+    '新方案正在生效。Polar 一确认，这里就会显示出来——通常几秒钟。',
   'billing.checkout.cancelledTitle': '结账已取消',
   'billing.checkout.cancelledBody': '没有扣款，方案也没有变。',
-  'billing.portal.backTitle': '从 Stripe 回来了',
-  'billing.portal.backBody': '你在那边改的内容，Stripe 一确认就会到这里。',
+  'billing.portal.backTitle': '从 Polar 回来了',
+  'billing.portal.backBody': '你在那边改的内容，Polar 一确认就会到这里。',
   'billing.refresh': '刷新',
   'billing.readOnly.title': '你是这个工作区的成员',
   'billing.readOnly.body':
@@ -288,9 +288,9 @@ const messages = {
   'billing.hero.paymentMethod': '支付方式',
   'billing.hero.cancel': '取消方案',
   'billing.price.free': '免费',
-  'billing.stripe.opening': '正在打开 Stripe',
-  'billing.stripe.failed': '连不上 Stripe',
-  'billing.stripe.failedBody': '没有扣款。请检查网络，过一会儿再试。',
+  'billing.provider.opening': '正在打开 Polar',
+  'billing.provider.failed': '连不上 Polar',
+  'billing.provider.failedBody': '没有扣款。请检查网络，过一会儿再试。',
   'billing.renewal.trialEndsToday':
     '试用今天结束。绑一张卡，所有模块就能继续用。',
   'billing.renewal.trialEndsIn': {
@@ -306,7 +306,7 @@ const messages = {
   'billing.renewal.paused': '这个订阅暂停了。等你准备再出发，随时恢复。',
   'billing.renewal.lapsed':
     '想重新用上预订、旅行日志和离线地图，从下面挑一个方案。',
-  'billing.renewal.incomplete': 'Stripe 还在等这笔付款被确认。',
+  'billing.renewal.incomplete': 'Polar 还在等这笔付款被确认。',
   'billing.renewal.free': '同时两趟行程，我们请。等你觉得不够了再升。',
   'billing.renewal.auto': '会自动续期。',
   'billing.renewal.renewsOn': '{date}续期。',
@@ -374,7 +374,7 @@ const messages = {
   'billing.invoices.portal': '账单门户',
   'billing.invoices.unavailableTitle': '收据加载不出来',
   'billing.invoices.unavailableBody':
-    'Stripe 没能及时给出历史记录。上面的内容都是实时的；完整记录可以打开账单门户查看，或者过一会儿再来。',
+    'Polar 没能及时给出历史记录。上面的内容都是实时的；完整记录可以打开账单门户查看，或者过一会儿再来。',
   'billing.invoices.emptyTitle': '还没有发票',
   'billing.invoices.emptyCustomer':
     '第一张收据会在一个计费周期结束时出现在这里。',

@@ -5,10 +5,18 @@
  *
  * Two sentinel param values are understood by the applier and documented on
  * {@link import('../types').SeedNotification}: `@daysUntilTripStart` becomes the whole number of days
- * from today to the referenced trip's start date, and `@organizationName` becomes the workspace name.
- * They exist so the copy stays correct however long after the seed date it is read.
+ * from the fixture anchor to the referenced trip's start date, and `@organizationName` becomes the
+ * workspace name. They exist so the copy agrees with the dates beside it rather than being typed out
+ * twice and left to drift.
+ *
+ * Dates here come in three kinds, and `./anchor.ts` says why each is right. `day(n)` is anything
+ * measured from the fixture's today — a journal entry, an achieved bucket-list line, the leave
+ * somebody booked around a trip. `anchorYearDay('12-24')` is a recurring calendar fact whose label
+ * would start lying if it were translated by days. `historic('2011-07-14')` is travel biography from
+ * before the fixture window, which the atlas colours by recency and no query compares against today.
  */
 
+import { anchorYearDay, day, historic } from './anchor'
 import type {
   SeedAuditEntry,
   SeedBucketListItem,
@@ -48,72 +56,72 @@ export const visitedCountries: ReadonlyArray<SeedVisitedCountry> = [
   {
     countryCode: 'GB',
     continent: 'Europe',
-    visits: ['2010-03-19'],
+    visits: [historic('2010-03-19')],
     note: 'Home. Counted once, for the map.',
   },
   {
     countryCode: 'FR',
     continent: 'Europe',
-    visits: ['2011-07-14', '2018-05-20', '2024-09-06'],
+    visits: [historic('2011-07-14'), historic('2018-05-20'), historic('2024-09-06')],
     note: 'Paris twice, then the Verdon gorge with the climbing club.',
   },
   {
     countryCode: 'IT',
     continent: 'Europe',
-    visits: ['2013-06-01', '2026-06-13'],
+    visits: [historic('2013-06-01'), day(-68)],
     note: 'Rome as a student, then the Dolomites properly.',
   },
-  { countryCode: 'ES', continent: 'Europe', visits: ['2015-04-11'] },
+  { countryCode: 'ES', continent: 'Europe', visits: [historic('2015-04-11')] },
   {
     countryCode: 'PT',
     continent: 'Europe',
-    visits: ['2019-09-21', '2026-08-17'],
+    visits: [historic('2019-09-21'), day(-3)],
     note: 'Porto first, Lisbon this month.',
   },
   {
     countryCode: 'IS',
     continent: 'Europe',
-    visits: ['2022-02-05'],
+    visits: [historic('2022-02-05')],
     note: 'Ring road in February. Do not recommend the ring road in February.',
   },
-  { countryCode: 'AT', continent: 'Europe', visits: ['2023-12-28'] },
+  { countryCode: 'AT', continent: 'Europe', visits: [historic('2023-12-28')] },
   {
     countryCode: 'JP',
     continent: 'Asia',
-    visits: ['2019-04-02'],
+    visits: [historic('2019-04-02')],
     note: 'Ten days in Tokyo for work, three of them actually looking around.',
   },
-  { countryCode: 'TH', continent: 'Asia', visits: ['2017-11-08'] },
+  { countryCode: 'TH', continent: 'Asia', visits: [historic('2017-11-08')] },
   {
     countryCode: 'MA',
     continent: 'Africa',
-    visits: ['2025-11-08'],
+    visits: [day(-285)],
     note: 'A week in the medina, mostly on the roof.',
   },
   {
     countryCode: 'US',
     continent: 'North America',
-    visits: ['2016-08-14', '2023-03-02'],
+    visits: [historic('2016-08-14'), historic('2023-03-02')],
     note: 'Utah and then New York in the snow.',
   },
   {
     countryCode: 'AR',
     continent: 'South America',
-    visits: ['2021-12-04'],
+    visits: [historic('2021-12-04')],
     note: 'Buenos Aires only. Patagonia is still on the list.',
   },
 ]
 
 export const visitedRegions: ReadonlyArray<SeedVisitedRegion> = [
-  { countryCode: 'JP', regionCode: 'JP-13', regionName: 'Tokyo', visitedOn: '2019-04-02' },
-  { countryCode: 'IT', regionCode: 'IT-BZ', regionName: 'South Tyrol', visitedOn: '2026-06-13' },
-  { countryCode: 'IT', regionCode: 'IT-RM', regionName: 'Lazio', visitedOn: '2013-06-01' },
-  { countryCode: 'PT', regionCode: 'PT-11', regionName: 'Lisbon', visitedOn: '2026-08-17' },
-  { countryCode: 'PT', regionCode: 'PT-13', regionName: 'Porto', visitedOn: '2019-09-21' },
-  { countryCode: 'FR', regionCode: 'FR-75', regionName: 'Paris', visitedOn: '2011-07-14' },
-  { countryCode: 'US', regionCode: 'US-NY', regionName: 'New York', visitedOn: '2023-03-02' },
-  { countryCode: 'US', regionCode: 'US-UT', regionName: 'Utah', visitedOn: '2016-08-14' },
-  { countryCode: 'MA', regionCode: 'MA-07', regionName: 'Marrakech-Safi', visitedOn: '2025-11-08' },
+  { countryCode: 'JP', regionCode: 'JP-13', regionName: 'Tokyo', visitedOn: historic('2019-04-02') },
+  { countryCode: 'IT', regionCode: 'IT-BZ', regionName: 'South Tyrol', visitedOn: day(-68) },
+  { countryCode: 'IT', regionCode: 'IT-RM', regionName: 'Lazio', visitedOn: historic('2013-06-01') },
+  { countryCode: 'PT', regionCode: 'PT-11', regionName: 'Lisbon', visitedOn: day(-3) },
+  { countryCode: 'PT', regionCode: 'PT-13', regionName: 'Porto', visitedOn: historic('2019-09-21') },
+  { countryCode: 'FR', regionCode: 'FR-75', regionName: 'Paris', visitedOn: historic('2011-07-14') },
+  { countryCode: 'US', regionCode: 'US-NY', regionName: 'New York', visitedOn: historic('2023-03-02') },
+  { countryCode: 'US', regionCode: 'US-UT', regionName: 'Utah', visitedOn: historic('2016-08-14') },
+  { countryCode: 'MA', regionCode: 'MA-07', regionName: 'Marrakech-Safi', visitedOn: day(-285) },
 ]
 
 export const bucketList: ReadonlyArray<SeedBucketListItem> = [
@@ -180,7 +188,7 @@ export const bucketList: ReadonlyArray<SeedBucketListItem> = [
     lat: 46.6183,
     lng: 12.3055,
     note: 'Ten kilometres anticlockwise so the north faces stay in front of you.',
-    achievedOn: '2026-06-18',
+    achievedOn: day(-63),
     sortOrder: 7,
   },
   {
@@ -190,7 +198,7 @@ export const bucketList: ReadonlyArray<SeedBucketListItem> = [
     lat: 46.6947,
     lng: 12.0855,
     note: 'On the water at 06:15. Second in the queue for the boathouse.',
-    achievedOn: '2026-06-16',
+    achievedOn: day(-65),
     sortOrder: 8,
   },
   {
@@ -198,7 +206,7 @@ export const bucketList: ReadonlyArray<SeedBucketListItem> = [
     name: 'Morocco',
     countryCode: 'MA',
     note: 'A week inside the medina walls. Done, and going back.',
-    achievedOn: '2025-11-08',
+    achievedOn: day(-285),
     sortOrder: 9,
   },
 ]
@@ -224,8 +232,8 @@ export const journeys: ReadonlyArray<SeedJourney> = [
       'probably the right number.',
     coverGradient: 'linear-gradient(135deg, #16794C 0%, #2F6F5E 55%, #131311 100%)',
     tripSlug: 'dolomites-hut-to-hut',
-    startedOn: '2026-06-13',
-    endedOn: '2026-06-20',
+    startedOn: day(-68),
+    endedOn: day(-61),
     entries: [
       {
         type: 'note',
@@ -240,7 +248,7 @@ export const journeys: ReadonlyArray<SeedJourney> = [
           'the point where the scree comes right down to the water and you can hear it settling. By nine ' +
           'the first coach had arrived and it was a completely different place, so we left.\n\n' +
           'Rule for the rest of the week: everything worth seeing is worth seeing at six.',
-        entryDate: '2026-06-16',
+        entryDate: day(-65),
         entryTime: '06:15',
         locationName: 'Lago di Braies, South Tyrol',
         lat: 46.6947,
@@ -274,7 +282,7 @@ export const journeys: ReadonlyArray<SeedJourney> = [
           'different mountain. We ate at seven with about thirty other people, all of whom had walked in, ' +
           'and the dining room smelled entirely of wet socks.\n\n' +
           'Ticked it off the list on the way down. Six years since I first wrote it in the notebook.',
-        entryDate: '2026-06-18',
+        entryDate: day(-63),
         entryTime: '19:40',
         locationName: 'Rifugio Locatelli, Sesto',
         lat: 46.6244,
@@ -304,8 +312,8 @@ export const journeys: ReadonlyArray<SeedJourney> = [
     description: 'One entry, written on the last morning, before the taxi.',
     coverGradient: 'linear-gradient(135deg, #C0392B 0%, #B26B08 60%, #131311 100%)',
     tripSlug: 'marrakech-riad-week',
-    startedOn: '2025-11-08',
-    endedOn: '2025-11-15',
+    startedOn: day(-285),
+    endedOn: day(-278),
     entries: [
       {
         type: 'note',
@@ -320,7 +328,7 @@ export const journeys: ReadonlyArray<SeedJourney> = [
           'Best meal of the week was stall 14 on the square, eaten standing at the counter for the ' +
           'equivalent of four pounds. The most expensive thing we bought was a kilim we were ' +
           'comprehensively out-negotiated on, and it is on the floor of the front room now, so.',
-        entryDate: '2025-11-15',
+        entryDate: day(-278),
         entryTime: '06:40',
         locationName: 'Riad Yasmine, Medina, Marrakech',
         lat: 31.6295,
@@ -593,38 +601,38 @@ export const vacay: SeedVacay = {
     { region: 'PT', label: 'Portugal', colour: '#B26B08', sortOrder: 3 },
   ],
   companyHolidays: [
-    { date: '2026-01-02', label: 'Office closed — New Year' },
-    { date: '2026-05-26', label: 'Company away day' },
-    { date: '2026-08-31', label: 'Summer closure' },
-    { date: '2026-12-24', label: 'Christmas Eve — office closed' },
-    { date: '2026-12-31', label: 'New Year’s Eve — office closed' },
+    { date: anchorYearDay('01-02'), label: 'Office closed — New Year' },
+    { date: anchorYearDay('05-26'), label: 'Company away day' },
+    { date: anchorYearDay('08-31'), label: 'Summer closure' },
+    { date: anchorYearDay('12-24'), label: 'Christmas Eve — office closed' },
+    { date: anchorYearDay('12-31'), label: 'New Year’s Eve — office closed' },
   ],
   entries: [
-    { person: 'rafal', from: '2026-03-11', to: '2026-03-11', kind: 'sick', note: 'Flu.' },
-    { person: 'rafal', from: '2026-05-08', to: '2026-05-08', kind: 'half_day', note: 'Afternoon off for the passport appointment.' },
-    { person: 'rafal', from: '2026-06-15', to: '2026-06-19', kind: 'vacation', note: 'Dolomites.' },
-    { person: 'rafal', from: '2026-08-17', to: '2026-08-21', kind: 'vacation', note: 'Lisbon.' },
-    { person: 'rafal', from: '2026-09-02', to: '2026-09-04', kind: 'remote', note: 'Working from the cottage.' },
-    { person: 'rafal', from: '2026-10-09', to: '2026-10-09', kind: 'vacation', note: 'Japan — travel day.' },
-    { person: 'rafal', from: '2026-10-12', to: '2026-10-16', kind: 'vacation', note: 'Japan.' },
-    { person: 'rafal', from: '2026-10-19', to: '2026-10-20', kind: 'vacation', note: 'Japan — Osaka and home.' },
+    { person: 'rafal', from: day(-162), to: day(-162), kind: 'sick', note: 'Flu.' },
+    { person: 'rafal', from: day(-104), to: day(-104), kind: 'half_day', note: 'Afternoon off for the passport appointment.' },
+    { person: 'rafal', from: day(-66), to: day(-62), kind: 'vacation', note: 'Dolomites.' },
+    { person: 'rafal', from: day(-3), to: day(1), kind: 'vacation', note: 'Lisbon.' },
+    { person: 'rafal', from: day(13), to: day(15), kind: 'remote', note: 'Working from the cottage.' },
+    { person: 'rafal', from: day(50), to: day(50), kind: 'vacation', note: 'Japan — travel day.' },
+    { person: 'rafal', from: day(53), to: day(57), kind: 'vacation', note: 'Japan.' },
+    { person: 'rafal', from: day(60), to: day(61), kind: 'vacation', note: 'Japan — Osaka and home.' },
 
-    { person: 'mika', from: '2026-04-06', to: '2026-04-10', kind: 'vacation', note: 'Family, Osaka.' },
-    { person: 'mika', from: '2026-06-15', to: '2026-06-19', kind: 'vacation', note: 'Dolomites.' },
-    { person: 'mika', from: '2026-10-09', to: '2026-10-09', kind: 'vacation', note: 'Japan — travel day.' },
-    { person: 'mika', from: '2026-10-12', to: '2026-10-16', kind: 'vacation', note: 'Japan.' },
-    { person: 'mika', from: '2026-10-19', to: '2026-10-20', kind: 'vacation', note: 'Japan — Osaka and home.' },
+    { person: 'mika', from: day(-136), to: day(-132), kind: 'vacation', note: 'Family, Osaka.' },
+    { person: 'mika', from: day(-66), to: day(-62), kind: 'vacation', note: 'Dolomites.' },
+    { person: 'mika', from: day(50), to: day(50), kind: 'vacation', note: 'Japan — travel day.' },
+    { person: 'mika', from: day(53), to: day(57), kind: 'vacation', note: 'Japan.' },
+    { person: 'mika', from: day(60), to: day(61), kind: 'vacation', note: 'Japan — Osaka and home.' },
 
-    { person: 'jonas', from: '2026-06-15', to: '2026-06-19', kind: 'vacation', note: 'Dolomites.' },
-    { person: 'jonas', from: '2026-07-20', to: '2026-07-22', kind: 'remote', note: 'Client site, Copenhagen.' },
-    { person: 'jonas', from: '2026-10-09', to: '2026-10-09', kind: 'vacation', note: 'Japan — travel day.' },
-    { person: 'jonas', from: '2026-10-12', to: '2026-10-16', kind: 'vacation', note: 'Japan.' },
-    { person: 'jonas', from: '2026-10-19', to: '2026-10-20', kind: 'vacation', note: 'Japan — Osaka and home.' },
+    { person: 'jonas', from: day(-66), to: day(-62), kind: 'vacation', note: 'Dolomites.' },
+    { person: 'jonas', from: day(-31), to: day(-29), kind: 'remote', note: 'Client site, Copenhagen.' },
+    { person: 'jonas', from: day(50), to: day(50), kind: 'vacation', note: 'Japan — travel day.' },
+    { person: 'jonas', from: day(53), to: day(57), kind: 'vacation', note: 'Japan.' },
+    { person: 'jonas', from: day(60), to: day(61), kind: 'vacation', note: 'Japan — Osaka and home.' },
 
-    { person: 'priya', from: '2026-08-17', to: '2026-08-21', kind: 'vacation', note: 'Lisbon.' },
-    { person: 'priya', from: '2026-10-09', to: '2026-10-09', kind: 'vacation', note: 'Japan — travel day.' },
-    { person: 'priya', from: '2026-10-12', to: '2026-10-16', kind: 'vacation', note: 'Japan.' },
-    { person: 'priya', from: '2026-10-19', to: '2026-10-20', kind: 'vacation', note: 'Japan — Osaka and home.' },
+    { person: 'priya', from: day(-3), to: day(1), kind: 'vacation', note: 'Lisbon.' },
+    { person: 'priya', from: day(50), to: day(50), kind: 'vacation', note: 'Japan — travel day.' },
+    { person: 'priya', from: day(53), to: day(57), kind: 'vacation', note: 'Japan.' },
+    { person: 'priya', from: day(60), to: day(61), kind: 'vacation', note: 'Japan — Osaka and home.' },
   ],
 }
 

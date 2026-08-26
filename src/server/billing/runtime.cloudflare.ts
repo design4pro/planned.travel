@@ -16,7 +16,8 @@
  * `./store`, which is also what keeps the vocabulary bridge in one place.
  *
  * Task hand-off stays: billing tasks are envelope-shaped for the `TASKS` queue with
- * a deterministic id, so a Stripe redelivery cannot enqueue the same follow-up twice.
+ * a deterministic id, so a Polar redelivery — and it will redeliver, up to ten
+ * times — cannot enqueue the same follow-up twice.
  */
 
 import { env } from 'cloudflare:workers'
@@ -30,38 +31,48 @@ import {
   tripsRepository,
 } from '#/server/repos'
 import type { TenantScope } from '#/server/repos'
-import { createStripeClient } from './stripe'
+import { createPolarClient } from './polar'
 import { createSubscriptionStore } from './store'
 import { BillingConfigError } from './types'
-import type Stripe from 'stripe'
 import type {
   BillingLogger,
   BillingRuntime,
   BillingTask,
   BillingTaskQueue,
+  PolarClient,
   UsageReader,
   UsageSnapshot,
 } from './types'
 
 /* ------------------------------------------------------------------ secrets */
 
-export function stripeSecretKey(): string {
-  const value = env.STRIPE_SECRET_KEY
+export function polarAccessToken(): string {
+  const value = env.POLAR_ACCESS_TOKEN
   if (typeof value !== 'string' || value === '') {
     throw new BillingConfigError(
-      'STRIPE_SECRET_KEY is not set. Add it with `wrangler secret put STRIPE_SECRET_KEY`.',
+      'POLAR_ACCESS_TOKEN is not set. Add it with `wrangler secret put POLAR_ACCESS_TOKEN`.',
     )
   }
   return value
 }
 
 /** Empty rather than throwing: the webhook turns an absent secret into a 400. */
-export function stripeWebhookSecret(): string {
-  const value = env.STRIPE_WEBHOOK_SECRET
+export function polarWebhookSecret(): string {
+  const value = env.POLAR_WEBHOOK_SECRET
   return typeof value === 'string' ? value : ''
 }
 
-/** Origin every Stripe return URL is built from, without a trailing slash. */
+/**
+ * `sandbox` or `production`, unvalidated on purpose — `createPolarClient()` is
+ * the one place that decides what an unset or unrecognised value means, so the
+ * failure reads the same whether it comes from a secret or from a caller.
+ */
+export function polarServer(): string | undefined {
+  const value = env.POLAR_SERVER
+  return typeof value === 'string' ? value : undefined
+}
+
+/** Origin every Polar return URL is built from, without a trailing slash. */
 export function billingAppUrl(): string {
   // Declared as a `var` for every environment in wrangler.jsonc, so it is
   // always present; only the trailing slash needs normalising.
@@ -116,7 +127,7 @@ const UNAVAILABLE_USAGE: UsageReader = {
 
 /** Deterministic per event *and* per task, so a redelivery cannot double-send. */
 export function billingTaskId(task: BillingTask): string {
-  return `${task.stripeEventId}:${task.kind}`
+  return `${task.providerEventId}:${task.kind}`
 }
 
 /**
@@ -219,7 +230,7 @@ export function billingRuntime(
   )
 
   // Memoised per runtime, so two operations in one request share one client.
-  let stripe: Stripe | null = null
+  let polar: PolarClient | null = null
 
   return {
     /**
@@ -227,17 +238,20 @@ export function billingRuntime(
      *
      * The billing screen reads the plan in force and the usage meters, and both
      * come from our own database. Constructing the client eagerly meant a
-     * workspace with no `STRIPE_SECRET_KEY` — a fresh self-hosted deployment, or
+     * workspace with no `POLAR_ACCESS_TOKEN` — a fresh self-hosted deployment, or
      * any local checkout — got an error page there instead of its plan, and the
      * missing-secret message was rendered into the browser. Now only the
-     * operations that genuinely talk to Stripe (checkout, the portal, the
-     * invoice list) can fail, and each of those already has its own fallback.
+     * operations that genuinely talk to Polar (checkout, the portal, the order
+     * list) can fail, and each of those already has its own fallback.
      */
-    get stripe(): Stripe {
-      stripe ??= createStripeClient(stripeSecretKey())
-      return stripe
+    get polar(): PolarClient {
+      polar ??= createPolarClient({
+        accessToken: polarAccessToken(),
+        server: polarServer(),
+      })
+      return polar
     },
-    webhookSecret: stripeWebhookSecret(),
+    webhookSecret: polarWebhookSecret(),
     appUrl: billingAppUrl(),
     subscriptions: createSubscriptionStore(db),
     usage:

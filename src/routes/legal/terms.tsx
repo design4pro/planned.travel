@@ -6,7 +6,7 @@ import type { LegalSection } from '#/components/marketing'
 
 const TITLE = 'Terms of service — planned.travel'
 const DESCRIPTION =
-  'The plain-English terms of service template for planned.travel: your account, your trips, plans and payment through Stripe, availability, and how either side can end the agreement.'
+  'The plain-English terms of service template for planned.travel: your account, your trips, plans and payment through Polar as merchant of record, availability, and how either side can end the agreement.'
 const URL = 'https://planned.travel/legal/terms'
 
 const UPDATED = '19 August 2026'
@@ -29,6 +29,7 @@ export const Route = createFileRoute('/legal/terms')({
 const SUMMARY: ReadonlyArray<string> = [
   'Your trips, photographs and notes belong to you. We store them so the product can work, and you can export or delete them whenever you like.',
   'Free costs nothing and does not expire. Paid plans renew until you cancel, and you can cancel from inside the product at any time.',
+  'Subscriptions are sold to you by Polar, our merchant of record. Polar is the seller named on your invoice and it handles the sales tax; we handle the service.',
   'Use planned.travel for planning travel. Do not use it to break the law, to attack the service, or to store other people’s personal data without their knowledge.',
   'We do our best to keep the service up, but we do not promise perfection, and our financial responsibility is limited to what you have paid us.',
   'If you stop paying, nothing is deleted. Paid modules lock; your trips stay where they are.',
@@ -200,13 +201,26 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
         </p>
         <ul>
           <li>
-            Payments are handled by <strong>Stripe</strong>. We never see or
-            store your full card number.
+            <strong>Polar is our merchant of record.</strong> A subscription is
+            sold to you by Polar Software Inc., acting as our reseller, so Polar
+            — not us — is the seller of record and your counterparty on that
+            purchase and on the invoice it issues. We remain your counterparty
+            for the service itself and for everything else in these terms.
           </li>
           <li>
-            Prices are in US dollars and exclude any sales tax, VAT or
-            equivalent that your country adds. Stripe calculates and shows that
-            at checkout.
+            Prices are quoted in US dollars and exclude sales tax, VAT, GST or
+            the local equivalent. As merchant of record, <strong>Polar</strong>{' '}
+            determines which of those applies to you, adds it at checkout,
+            collects it and remits it to the relevant tax authority under its
+            own registrations. We are not the taxable supplier of that sale and
+            we do not set, collect or file that tax.
+          </li>
+          <li>
+            Because Polar issues the invoice, the billing name, address and VAT
+            number printed on it are held and edited with Polar — in the hosted
+            billing portal you reach from your billing settings — rather than in
+            any form of ours. Polar takes the payment too: card details go
+            straight into its checkout and never reach our servers.
           </li>
           <li>
             Seat-based plans are billed per member. Changing the number of seats
@@ -233,20 +247,26 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
       <>
         <ul>
           <li>
-            A free trial needs no card. When it ends, paid modules simply lock —
-            nothing is deleted and you are not charged.
+            A free trial starts in Polar&rsquo;s checkout, which collects a
+            payment method up front and charges it when the trial ends. Cancel
+            before the trial ends and you are not charged at all; nothing is
+            deleted either way, the paid modules simply lock.
           </li>
           <li>
             Paid subscriptions renew automatically at the end of each period
             until you cancel. You can cancel at any time from the billing
-            settings inside the product.
+            settings inside the product, which opens Polar&rsquo;s billing
+            portal.
           </li>
           <li>
             Cancelling stops the next renewal. You keep the paid plan until the
             end of the period you have already paid for.
           </li>
           <li>
-            Our refund position is{' '}
+            Refunds and payment disputes are settled by Polar as seller of
+            record: Polar issues the refund, returns the corresponding tax with
+            it, and handles any chargeback your bank raises. Our refund position
+            is{' '}
             <LegalPlaceholder>
               [state your refund policy, and the statutory cooling-off rights
               that apply in the territories you sell to]
@@ -299,8 +319,10 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
             and the network that serves every request.
           </li>
           <li>
-            <strong>Stripe</strong> — checkout, subscriptions, invoices and tax
-            calculation.
+            <strong>Polar</strong> — merchant of record. Sells the subscription
+            to you as our reseller, runs the checkout and the billing portal,
+            issues the invoice, and determines, collects and remits the sales
+            tax or VAT on it.
           </li>
           <li>
             <strong>OpenStreetMap contributors</strong> — the map data our

@@ -15,7 +15,7 @@
  * **The three plan names are words, not proper nouns.** English calls them
  * Free, Solo and Crew; Swedish reads "Gratis", "Enskild" and "Grupp". What is
  * stable across languages is the plan *id* in `src/lib/plans.ts`, which the
- * invoice and Stripe carry and no reader ever sees.
+ * invoice and Polar carry and no reader ever sees.
  *
  * **Two things Swedish must not borrow from English.** Currency names are lower
  * case, and "mile" is not "mil": a Swedish mil is ten kilometres, so the
@@ -322,13 +322,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Betalningen har kommit fram',
   'billing.checkout.completeBody':
-    'Ditt nya abonnemang håller på att tas i bruk. Det syns här så fort Stripe bekräftar det — oftast inom några sekunder.',
+    'Ditt nya abonnemang håller på att tas i bruk. Det syns här så fort Polar bekräftar det — oftast inom några sekunder.',
   'billing.checkout.cancelledTitle': 'Betalningen avbröts',
   'billing.checkout.cancelledBody':
     'Ingenting drogs och ditt abonnemang är oförändrat.',
-  'billing.portal.backTitle': 'Tillbaka från Stripe',
+  'billing.portal.backTitle': 'Tillbaka från Polar',
   'billing.portal.backBody':
-    'Det du ändrade där landar här så fort Stripe bekräftar det.',
+    'Det du ändrade där landar här så fort Polar bekräftar det.',
   'billing.refresh': 'Uppdatera',
   'billing.readOnly.title': 'Du är medlem i den här arbetsytan',
   'billing.readOnly.body':
@@ -344,9 +344,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Betalsätt',
   'billing.hero.cancel': 'Säg upp abonnemanget',
   'billing.price.free': 'Gratis',
-  'billing.stripe.opening': 'Stripe öppnas',
-  'billing.stripe.failed': 'Stripe gick inte att nå',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Polar öppnas',
+  'billing.provider.failed': 'Polar gick inte att nå',
+  'billing.provider.failedBody':
     'Ingenting drogs. Kontrollera din uppkoppling och försök igen om en stund.',
 
   'billing.renewal.trialEndsToday':
@@ -370,7 +370,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Välj ett abonnemang nedan för att låsa upp bokningar, dagboken och offlinekartor igen.',
   'billing.renewal.incomplete':
-    'Stripe väntar fortfarande på att den här betalningen ska bekräftas.',
+    'Polar väntar fortfarande på att den här betalningen ska bekräftas.',
   'billing.renewal.free':
     'Två resor åt gången, på huset. Byt upp dig när du växer ur det.',
   'billing.renewal.auto': 'Förnyas automatiskt.',
@@ -461,7 +461,7 @@ const messages = {
   'billing.invoices.portal': 'Faktureringsportalen',
   'billing.invoices.unavailableTitle': 'Kvittona läses inte in',
   'billing.invoices.unavailableBody':
-    'Stripe svarade inte i tid för historiken. Allt ovanför är aktuellt; öppna faktureringsportalen för hela redovisningen, eller titta förbi om en stund.',
+    'Polar svarade inte i tid för historiken. Allt ovanför är aktuellt; öppna faktureringsportalen för hela redovisningen, eller titta förbi om en stund.',
   'billing.invoices.emptyTitle': 'Inga fakturor än',
   'billing.invoices.emptyCustomer':
     'Det första kvittot dyker upp här så fort en faktureringsperiod avslutas.',

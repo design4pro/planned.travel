@@ -20,6 +20,7 @@ import { Route as authTwoFactorRouteImport } from './routes/(auth)/two-factor'
 import { Route as authVerifyEmailRouteImport } from './routes/(auth)/verify-email'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppAtlasRouteImport } from './routes/_app/atlas'
+import { Route as AppConsoleRouteRouteImport } from './routes/_app/console/route'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppSettingsRouteRouteImport } from './routes/_app/settings/route'
@@ -29,6 +30,8 @@ import { Route as LegalTermsRouteImport } from './routes/legal/terms'
 import { Route as authAcceptInvitationInvitationIdRouteImport } from './routes/(auth)/accept-invitation.$invitationId'
 import { Route as AppCollectionsIndexRouteImport } from './routes/_app/collections/index'
 import { Route as AppCollectionsCollectionIdRouteImport } from './routes/_app/collections/$collectionId'
+import { Route as AppConsoleIndexRouteImport } from './routes/_app/console/index'
+import { Route as AppConsoleUsersRouteImport } from './routes/_app/console/users'
 import { Route as AppJourneyIndexRouteImport } from './routes/_app/journey/index'
 import { Route as AppJourneyJourneyIdRouteImport } from './routes/_app/journey/$journeyId'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
@@ -42,9 +45,11 @@ import { Route as AppTripsIndexRouteImport } from './routes/_app/trips/index'
 import { Route as AppTripsTripIdRouteRouteImport } from './routes/_app/trips/$tripId/route'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiDevSeedRouteImport } from './routes/api/dev/seed'
-import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
+import { Route as ApiPolarWebhookRouteImport } from './routes/api/polar/webhook'
 import { Route as ApiTilesSplatRouteImport } from './routes/api/tiles/$'
 import { Route as ApiTripRoomTripIdRouteImport } from './routes/api/trip-room/$tripId'
+import { Route as AppConsoleUsersIndexRouteImport } from './routes/_app/console/users.index'
+import { Route as AppConsoleUsersUserIdRouteImport } from './routes/_app/console/users.$userId'
 import { Route as AppTripsTripIdIndexRouteImport } from './routes/_app/trips/$tripId/index'
 import { Route as AppTripsTripIdBookRouteImport } from './routes/_app/trips/$tripId/book'
 import { Route as AppTripsTripIdCollabRouteImport } from './routes/_app/trips/$tripId/collab'
@@ -108,6 +113,11 @@ const AppAtlasRoute = AppAtlasRouteImport.update({
   path: '/atlas',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppConsoleRouteRoute = AppConsoleRouteRouteImport.update({
+  id: '/console',
+  path: '/console',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -155,6 +165,16 @@ const AppCollectionsCollectionIdRoute =
     path: '/collections/$collectionId',
     getParentRoute: () => AppRouteRoute,
   } as any)
+const AppConsoleIndexRoute = AppConsoleIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppConsoleRouteRoute,
+} as any)
+const AppConsoleUsersRoute = AppConsoleUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AppConsoleRouteRoute,
+} as any)
 const AppJourneyIndexRoute = AppJourneyIndexRouteImport.update({
   id: '/journey/',
   path: '/journey/',
@@ -221,9 +241,9 @@ const ApiDevSeedRoute = ApiDevSeedRouteImport.update({
   path: '/api/dev/seed',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
-  id: '/api/stripe/webhook',
-  path: '/api/stripe/webhook',
+const ApiPolarWebhookRoute = ApiPolarWebhookRouteImport.update({
+  id: '/api/polar/webhook',
+  path: '/api/polar/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTilesSplatRoute = ApiTilesSplatRouteImport.update({
@@ -235,6 +255,16 @@ const ApiTripRoomTripIdRoute = ApiTripRoomTripIdRouteImport.update({
   id: '/api/trip-room/$tripId',
   path: '/api/trip-room/$tripId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppConsoleUsersIndexRoute = AppConsoleUsersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppConsoleUsersRoute,
+} as any)
+const AppConsoleUsersUserIdRoute = AppConsoleUsersUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => AppConsoleUsersRoute,
 } as any)
 const AppTripsTripIdIndexRoute = AppTripsTripIdIndexRouteImport.update({
   id: '/',
@@ -281,6 +311,7 @@ const AppTripsTripIdTransportsRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/pricing': typeof PricingRoute
+  '/console': typeof AppConsoleRouteRouteWithChildren
   '/settings': typeof AppSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
@@ -298,6 +329,7 @@ export interface FileRoutesByFullPath {
   '/trips/$tripId': typeof AppTripsTripIdRouteRouteWithChildren
   '/accept-invitation/$invitationId': typeof authAcceptInvitationInvitationIdRoute
   '/collections/$collectionId': typeof AppCollectionsCollectionIdRoute
+  '/console/users': typeof AppConsoleUsersRouteWithChildren
   '/journey/$journeyId': typeof AppJourneyJourneyIdRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/billing': typeof AppSettingsBillingRoute
@@ -307,13 +339,15 @@ export interface FileRoutesByFullPath {
   '/settings/security': typeof AppSettingsSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
-  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/polar/webhook': typeof ApiPolarWebhookRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
   '/api/trip-room/$tripId': typeof ApiTripRoomTripIdRoute
   '/collections/': typeof AppCollectionsIndexRoute
+  '/console/': typeof AppConsoleIndexRoute
   '/journey/': typeof AppJourneyIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/trips/': typeof AppTripsIndexRoute
+  '/console/users/$userId': typeof AppConsoleUsersUserIdRoute
   '/trips/$tripId/book': typeof AppTripsTripIdBookRoute
   '/trips/$tripId/collab': typeof AppTripsTripIdCollabRoute
   '/trips/$tripId/costs': typeof AppTripsTripIdCostsRoute
@@ -321,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/trips/$tripId/lists': typeof AppTripsTripIdListsRoute
   '/trips/$tripId/plan': typeof AppTripsTripIdPlanRoute
   '/trips/$tripId/transports': typeof AppTripsTripIdTransportsRoute
+  '/console/users/': typeof AppConsoleUsersIndexRoute
   '/trips/$tripId/': typeof AppTripsTripIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -350,13 +385,15 @@ export interface FileRoutesByTo {
   '/settings/security': typeof AppSettingsSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
-  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/polar/webhook': typeof ApiPolarWebhookRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
   '/api/trip-room/$tripId': typeof ApiTripRoomTripIdRoute
   '/collections': typeof AppCollectionsIndexRoute
+  '/console': typeof AppConsoleIndexRoute
   '/journey': typeof AppJourneyIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/trips': typeof AppTripsIndexRoute
+  '/console/users/$userId': typeof AppConsoleUsersUserIdRoute
   '/trips/$tripId/book': typeof AppTripsTripIdBookRoute
   '/trips/$tripId/collab': typeof AppTripsTripIdCollabRoute
   '/trips/$tripId/costs': typeof AppTripsTripIdCostsRoute
@@ -364,6 +401,7 @@ export interface FileRoutesByTo {
   '/trips/$tripId/lists': typeof AppTripsTripIdListsRoute
   '/trips/$tripId/plan': typeof AppTripsTripIdPlanRoute
   '/trips/$tripId/transports': typeof AppTripsTripIdTransportsRoute
+  '/console/users': typeof AppConsoleUsersIndexRoute
   '/trips/$tripId': typeof AppTripsTripIdIndexRoute
 }
 export interface FileRoutesById {
@@ -371,6 +409,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteRouteWithChildren
   '/pricing': typeof PricingRoute
+  '/_app/console': typeof AppConsoleRouteRouteWithChildren
   '/_app/settings': typeof AppSettingsRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/login': typeof authLoginRoute
@@ -388,6 +427,7 @@ export interface FileRoutesById {
   '/_app/trips/$tripId': typeof AppTripsTripIdRouteRouteWithChildren
   '/(auth)/accept-invitation/$invitationId': typeof authAcceptInvitationInvitationIdRoute
   '/_app/collections/$collectionId': typeof AppCollectionsCollectionIdRoute
+  '/_app/console/users': typeof AppConsoleUsersRouteWithChildren
   '/_app/journey/$journeyId': typeof AppJourneyJourneyIdRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/_app/settings/billing': typeof AppSettingsBillingRoute
@@ -397,13 +437,15 @@ export interface FileRoutesById {
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
-  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/polar/webhook': typeof ApiPolarWebhookRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
   '/api/trip-room/$tripId': typeof ApiTripRoomTripIdRoute
   '/_app/collections/': typeof AppCollectionsIndexRoute
+  '/_app/console/': typeof AppConsoleIndexRoute
   '/_app/journey/': typeof AppJourneyIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/trips/': typeof AppTripsIndexRoute
+  '/_app/console/users/$userId': typeof AppConsoleUsersUserIdRoute
   '/_app/trips/$tripId/book': typeof AppTripsTripIdBookRoute
   '/_app/trips/$tripId/collab': typeof AppTripsTripIdCollabRoute
   '/_app/trips/$tripId/costs': typeof AppTripsTripIdCostsRoute
@@ -411,6 +453,7 @@ export interface FileRoutesById {
   '/_app/trips/$tripId/lists': typeof AppTripsTripIdListsRoute
   '/_app/trips/$tripId/plan': typeof AppTripsTripIdPlanRoute
   '/_app/trips/$tripId/transports': typeof AppTripsTripIdTransportsRoute
+  '/_app/console/users/': typeof AppConsoleUsersIndexRoute
   '/_app/trips/$tripId/': typeof AppTripsTripIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -418,6 +461,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/pricing'
+    | '/console'
     | '/settings'
     | '/forgot-password'
     | '/login'
@@ -435,6 +479,7 @@ export interface FileRouteTypes {
     | '/trips/$tripId'
     | '/accept-invitation/$invitationId'
     | '/collections/$collectionId'
+    | '/console/users'
     | '/journey/$journeyId'
     | '/settings/appearance'
     | '/settings/billing'
@@ -444,13 +489,15 @@ export interface FileRouteTypes {
     | '/settings/security'
     | '/api/auth/$'
     | '/api/dev/seed'
-    | '/api/stripe/webhook'
+    | '/api/polar/webhook'
     | '/api/tiles/$'
     | '/api/trip-room/$tripId'
     | '/collections/'
+    | '/console/'
     | '/journey/'
     | '/settings/'
     | '/trips/'
+    | '/console/users/$userId'
     | '/trips/$tripId/book'
     | '/trips/$tripId/collab'
     | '/trips/$tripId/costs'
@@ -458,6 +505,7 @@ export interface FileRouteTypes {
     | '/trips/$tripId/lists'
     | '/trips/$tripId/plan'
     | '/trips/$tripId/transports'
+    | '/console/users/'
     | '/trips/$tripId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -487,13 +535,15 @@ export interface FileRouteTypes {
     | '/settings/security'
     | '/api/auth/$'
     | '/api/dev/seed'
-    | '/api/stripe/webhook'
+    | '/api/polar/webhook'
     | '/api/tiles/$'
     | '/api/trip-room/$tripId'
     | '/collections'
+    | '/console'
     | '/journey'
     | '/settings'
     | '/trips'
+    | '/console/users/$userId'
     | '/trips/$tripId/book'
     | '/trips/$tripId/collab'
     | '/trips/$tripId/costs'
@@ -501,12 +551,14 @@ export interface FileRouteTypes {
     | '/trips/$tripId/lists'
     | '/trips/$tripId/plan'
     | '/trips/$tripId/transports'
+    | '/console/users'
     | '/trips/$tripId'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/pricing'
+    | '/_app/console'
     | '/_app/settings'
     | '/(auth)/forgot-password'
     | '/(auth)/login'
@@ -524,6 +576,7 @@ export interface FileRouteTypes {
     | '/_app/trips/$tripId'
     | '/(auth)/accept-invitation/$invitationId'
     | '/_app/collections/$collectionId'
+    | '/_app/console/users'
     | '/_app/journey/$journeyId'
     | '/_app/settings/appearance'
     | '/_app/settings/billing'
@@ -533,13 +586,15 @@ export interface FileRouteTypes {
     | '/_app/settings/security'
     | '/api/auth/$'
     | '/api/dev/seed'
-    | '/api/stripe/webhook'
+    | '/api/polar/webhook'
     | '/api/tiles/$'
     | '/api/trip-room/$tripId'
     | '/_app/collections/'
+    | '/_app/console/'
     | '/_app/journey/'
     | '/_app/settings/'
     | '/_app/trips/'
+    | '/_app/console/users/$userId'
     | '/_app/trips/$tripId/book'
     | '/_app/trips/$tripId/collab'
     | '/_app/trips/$tripId/costs'
@@ -547,6 +602,7 @@ export interface FileRouteTypes {
     | '/_app/trips/$tripId/lists'
     | '/_app/trips/$tripId/plan'
     | '/_app/trips/$tripId/transports'
+    | '/_app/console/users/'
     | '/_app/trips/$tripId/'
   fileRoutesById: FileRoutesById
 }
@@ -565,7 +621,7 @@ export interface RootRouteChildren {
   authAcceptInvitationInvitationIdRoute: typeof authAcceptInvitationInvitationIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiDevSeedRoute: typeof ApiDevSeedRoute
-  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  ApiPolarWebhookRoute: typeof ApiPolarWebhookRoute
   ApiTilesSplatRoute: typeof ApiTilesSplatRoute
   ApiTripRoomTripIdRoute: typeof ApiTripRoomTripIdRoute
 }
@@ -649,6 +705,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAtlasRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/_app/console': {
+      id: '/_app/console'
+      path: '/console'
+      fullPath: '/console'
+      preLoaderRoute: typeof AppConsoleRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -711,6 +774,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/collections/$collectionId'
       preLoaderRoute: typeof AppCollectionsCollectionIdRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    '/_app/console/': {
+      id: '/_app/console/'
+      path: '/'
+      fullPath: '/console/'
+      preLoaderRoute: typeof AppConsoleIndexRouteImport
+      parentRoute: typeof AppConsoleRouteRoute
+    }
+    '/_app/console/users': {
+      id: '/_app/console/users'
+      path: '/users'
+      fullPath: '/console/users'
+      preLoaderRoute: typeof AppConsoleUsersRouteImport
+      parentRoute: typeof AppConsoleRouteRoute
     }
     '/_app/journey/': {
       id: '/_app/journey/'
@@ -803,11 +880,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDevSeedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/stripe/webhook': {
-      id: '/api/stripe/webhook'
-      path: '/api/stripe/webhook'
-      fullPath: '/api/stripe/webhook'
-      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+    '/api/polar/webhook': {
+      id: '/api/polar/webhook'
+      path: '/api/polar/webhook'
+      fullPath: '/api/polar/webhook'
+      preLoaderRoute: typeof ApiPolarWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/tiles/$': {
@@ -823,6 +900,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/trip-room/$tripId'
       preLoaderRoute: typeof ApiTripRoomTripIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/console/users/': {
+      id: '/_app/console/users/'
+      path: '/'
+      fullPath: '/console/users/'
+      preLoaderRoute: typeof AppConsoleUsersIndexRouteImport
+      parentRoute: typeof AppConsoleUsersRoute
+    }
+    '/_app/console/users/$userId': {
+      id: '/_app/console/users/$userId'
+      path: '/$userId'
+      fullPath: '/console/users/$userId'
+      preLoaderRoute: typeof AppConsoleUsersUserIdRouteImport
+      parentRoute: typeof AppConsoleUsersRoute
     }
     '/_app/trips/$tripId/': {
       id: '/_app/trips/$tripId/'
@@ -883,6 +974,34 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppConsoleUsersRouteChildren {
+  AppConsoleUsersUserIdRoute: typeof AppConsoleUsersUserIdRoute
+  AppConsoleUsersIndexRoute: typeof AppConsoleUsersIndexRoute
+}
+
+const AppConsoleUsersRouteChildren: AppConsoleUsersRouteChildren = {
+  AppConsoleUsersUserIdRoute: AppConsoleUsersUserIdRoute,
+  AppConsoleUsersIndexRoute: AppConsoleUsersIndexRoute,
+}
+
+const AppConsoleUsersRouteWithChildren = AppConsoleUsersRoute._addFileChildren(
+  AppConsoleUsersRouteChildren,
+)
+
+interface AppConsoleRouteRouteChildren {
+  AppConsoleUsersRoute: typeof AppConsoleUsersRouteWithChildren
+  AppConsoleIndexRoute: typeof AppConsoleIndexRoute
+}
+
+const AppConsoleRouteRouteChildren: AppConsoleRouteRouteChildren = {
+  AppConsoleUsersRoute: AppConsoleUsersRouteWithChildren,
+  AppConsoleIndexRoute: AppConsoleIndexRoute,
+}
+
+const AppConsoleRouteRouteWithChildren = AppConsoleRouteRoute._addFileChildren(
+  AppConsoleRouteRouteChildren,
+)
+
 interface AppSettingsRouteRouteChildren {
   AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
   AppSettingsBillingRoute: typeof AppSettingsBillingRoute
@@ -932,6 +1051,7 @@ const AppTripsTripIdRouteRouteWithChildren =
   AppTripsTripIdRouteRoute._addFileChildren(AppTripsTripIdRouteRouteChildren)
 
 interface AppRouteRouteChildren {
+  AppConsoleRouteRoute: typeof AppConsoleRouteRouteWithChildren
   AppSettingsRouteRoute: typeof AppSettingsRouteRouteWithChildren
   AppAdminRoute: typeof AppAdminRoute
   AppAtlasRoute: typeof AppAtlasRoute
@@ -947,6 +1067,7 @@ interface AppRouteRouteChildren {
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppConsoleRouteRoute: AppConsoleRouteRouteWithChildren,
   AppSettingsRouteRoute: AppSettingsRouteRouteWithChildren,
   AppAdminRoute: AppAdminRoute,
   AppAtlasRoute: AppAtlasRoute,
@@ -980,7 +1101,7 @@ const rootRouteChildren: RootRouteChildren = {
   authAcceptInvitationInvitationIdRoute: authAcceptInvitationInvitationIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiDevSeedRoute: ApiDevSeedRoute,
-  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  ApiPolarWebhookRoute: ApiPolarWebhookRoute,
   ApiTilesSplatRoute: ApiTilesSplatRoute,
   ApiTripRoomTripIdRoute: ApiTripRoomTripIdRoute,
 }

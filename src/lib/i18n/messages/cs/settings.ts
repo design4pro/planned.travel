@@ -329,13 +329,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Platba přijata',
   'billing.checkout.completeBody':
-    'Nový tarif se právě nasazuje. Objeví se tady v okamžiku, kdy ho Stripe potvrdí — obvykle za pár sekund.',
+    'Nový tarif se právě nasazuje. Objeví se tady v okamžiku, kdy ho Polar potvrdí — obvykle za pár sekund.',
   'billing.checkout.cancelledTitle': 'Platba přerušena',
   'billing.checkout.cancelledBody':
     'Nic jsme neúčtovali a váš tarif se nezměnil.',
-  'billing.portal.backTitle': 'Zpátky ze Stripe',
+  'billing.portal.backTitle': 'Zpátky ze Polar',
   'billing.portal.backBody':
-    'Cokoli jste tam změnili, se tady objeví, jak to Stripe potvrdí.',
+    'Cokoli jste tam změnili, se tady objeví, jak to Polar potvrdí.',
   'billing.refresh': 'Obnovit',
   'billing.readOnly.title': 'Jste členem tohoto prostoru',
   'billing.readOnly.body':
@@ -351,9 +351,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Způsob platby',
   'billing.hero.cancel': 'Zrušit tarif',
   'billing.price.free': 'Bez platby',
-  'billing.stripe.opening': 'Otevírám Stripe',
-  'billing.stripe.failed': 'Se Stripe se nepodařilo spojit',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Otevírám Polar',
+  'billing.provider.failed': 'Se Polar se nepodařilo spojit',
+  'billing.provider.failedBody':
     'Nic jsme neúčtovali. Zkontrolujte připojení a zkuste to za chvíli.',
 
   'billing.renewal.trialEndsToday':
@@ -376,7 +376,7 @@ const messages = {
     'Toto předplatné je pozastavené. Obnovte ho, až budete zase na cestách.',
   'billing.renewal.lapsed':
     'Vyberte níže tarif a znovu odemknete rezervace, deník i offline mapy.',
-  'billing.renewal.incomplete': 'Stripe stále čeká, až se tato platba potvrdí.',
+  'billing.renewal.incomplete': 'Polar stále čeká, až se tato platba potvrdí.',
   'billing.renewal.free':
     'Dvě cesty naráz, na náš účet. Vyšší tarif si vezmete, až vám to přestane stačit.',
   'billing.renewal.auto': 'Obnovuje se automaticky.',
@@ -469,7 +469,7 @@ const messages = {
   'billing.invoices.portal': 'Platební portál',
   'billing.invoices.unavailableTitle': 'Doklady se nenačítají',
   'billing.invoices.unavailableBody':
-    'Stripe nestihl odpovědět s historií. Všechno výše je aktuální; celý záznam najdete v platebním portálu, nebo se za chvíli vraťte.',
+    'Polar nestihl odpovědět s historií. Všechno výše je aktuální; celý záznam najdete v platebním portálu, nebo se za chvíli vraťte.',
   'billing.invoices.emptyTitle': 'Zatím žádné faktury',
   'billing.invoices.emptyCustomer':
     'První doklad se tu objeví, jak se uzavře fakturační období.',

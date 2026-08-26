@@ -328,13 +328,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Pagament rebut',
   'billing.checkout.completeBody':
-    'El teu pla nou s’està aplicant. Apareix aquí així que Stripe el confirma, normalment en pocs segons.',
+    'El teu pla nou s’està aplicant. Apareix aquí així que Polar el confirma, normalment en pocs segons.',
   'billing.checkout.cancelledTitle': 'Pagament cancel·lat',
   'billing.checkout.cancelledBody':
     'No s’ha cobrat res i el teu pla no ha canviat.',
-  'billing.portal.backTitle': 'De tornada des de Stripe',
+  'billing.portal.backTitle': 'De tornada des de Polar',
   'billing.portal.backBody':
-    'El que hi hagis canviat arriba aquí així que Stripe ho confirma.',
+    'El que hi hagis canviat arriba aquí així que Polar ho confirma.',
   'billing.refresh': 'Actualitza',
   'billing.readOnly.title': 'Ets membre d’aquest espai de treball',
   'billing.readOnly.body':
@@ -350,9 +350,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Forma de pagament',
   'billing.hero.cancel': 'Cancel·la el pla',
   'billing.price.free': 'Gratuït',
-  'billing.stripe.opening': 'S’està obrint Stripe',
-  'billing.stripe.failed': 'No s’ha pogut arribar a Stripe',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'S’està obrint Polar',
+  'billing.provider.failed': 'No s’ha pogut arribar a Polar',
+  'billing.provider.failedBody':
     'No s’ha cobrat res. Comprova la connexió i torna-ho a provar d’aquí a un moment.',
 
   'billing.renewal.trialEndsToday':
@@ -377,7 +377,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Tria un pla de sota per tornar a obrir les reserves, el diari i els mapes sense connexió.',
   'billing.renewal.incomplete':
-    'Stripe encara espera la confirmació d’aquest pagament.',
+    'Polar encara espera la confirmació d’aquest pagament.',
   'billing.renewal.free':
     'Dos viatges alhora, de franc. Millora el pla quan se’t quedi petit.',
   'billing.renewal.auto': 'Es renova sol.',
@@ -470,7 +470,7 @@ const messages = {
   'billing.invoices.portal': 'Portal de facturació',
   'billing.invoices.unavailableTitle': 'Els rebuts no es carreguen',
   'billing.invoices.unavailableBody':
-    'Stripe no ha contestat a temps per a l’historial. Tot el que hi ha a dalt és en directe; obre el portal de facturació per veure el registre complet, o torna d’aquí a un moment.',
+    'Polar no ha contestat a temps per a l’historial. Tot el que hi ha a dalt és en directe; obre el portal de facturació per veure el registre complet, o torna d’aquí a un moment.',
   'billing.invoices.emptyTitle': 'Encara no hi ha factures',
   'billing.invoices.emptyCustomer':
     'El primer rebut apareix aquí així que es tanqui un període de facturació.',

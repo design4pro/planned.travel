@@ -44,27 +44,95 @@ import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
 const ID_RANDOM_LENGTH = 16
 const ID_TIME_LENGTH = 9
 
+/** Column defaults a fixture supplies for itself, in place of the clock and the random source. */
+export interface SuppliedRowDefaults {
+  /** Stands in for {@link newId}. Must return the same 25-character shape. */
+  readonly id: () => string
+  /** Stands in for the wall clock behind `created_at` and `updated_at`. */
+  readonly now: () => Date
+}
+
+/**
+ * The defaults in force for the write currently in progress.
+ *
+ * `null` in every request the product serves, which is what {@link newId} being unchanged means: no
+ * deployed write path can reach {@link withSuppliedRowDefaults}, so no deployed write path sees
+ * anything but `Date.now()` and `nanoid`. It exists for the demo fixture, whose rows have to be the
+ * *same* rows on every run — a cover drawing, a wash colour and a grid's de-duplication walk are all
+ * pure functions of a record's id, so a fixture that mints a new id per run repaints screens nobody
+ * edited and reddens a visual baseline that is still correct about the product.
+ *
+ * Module scope rather than an `AsyncLocalStorage`, deliberately and with a cost. This file is
+ * reachable from the client graph — routes read its enum tuples for their forms — so importing
+ * `node:async_hooks` here fails the browser bundle outright. The cost is that the override is
+ * isolate-wide while it is installed, so a write racing the seed inside the same *development*
+ * isolate would be handed fixture values. That is bounded by {@link withSuppliedRowDefaults} being
+ * unreachable outside `/api/dev/seed`, which `import.meta.env.DEV` compiles out of a production
+ * build.
+ */
+let supplied: SuppliedRowDefaults | null = null
+
 /**
  * Time-sortable, URL-safe, 25 character identifier: a base-36 millisecond timestamp followed by
  * 16 random characters. Sorting by `id` is therefore sorting by creation time, which lets every
  * paginated list use the primary key as a stable cursor.
  */
 export function newId(): string {
+  if (supplied !== null) {
+    return supplied.id()
+  }
   return `${Date.now().toString(36).padStart(ID_TIME_LENGTH, '0')}${nanoid(ID_RANDOM_LENGTH)}`
+}
+
+/** The instant a mutated row is stamped with when the caller does not name one itself. */
+function rowInstant(): Date {
+  return supplied === null ? new Date() : supplied.now()
+}
+
+/**
+ * Runs `write` with every {@link newId} and every unstamped `created_at` / `updated_at` inside it
+ * answered by `defaults`.
+ *
+ * **Fixtures only.** The one caller is the demo seed in `src/routes/api/dev/-seed`, which is behind
+ * `import.meta.env.DEV` and compiled out of a production bundle;
+ * `-seed/__tests__/fixture-rows.test.ts` reads the tree back off disk and fails if a second caller
+ * appears. A real identifier is drawn from a real random source, and an application write that
+ * supplied its own would be handing an attacker the shape of the next primary key.
+ *
+ * `defaults.id` must return an identifier of the same shape `newId()` does — a base-36 instant
+ * followed by sixteen characters — and `defaults.now` must advance, or the ordering that every
+ * keyset cursor in `src/server/repos` depends on stops meaning creation order. The defaults are
+ * restored on the way out however `write` ends, and two of these do not nest: a second one inside
+ * the first is a caller that has lost track of its own sections, and it throws rather than quietly
+ * stealing them.
+ */
+export async function withSuppliedRowDefaults<T>(
+  defaults: SuppliedRowDefaults,
+  write: () => Promise<T>,
+): Promise<T> {
+  if (supplied !== null) {
+    throw new Error(
+      'withSuppliedRowDefaults: defaults are already installed for this write; these do not nest',
+    )
+  }
+  supplied = defaults
+  try {
+    return await write()
+  } finally {
+    supplied = null
+  }
 }
 
 const pk = () => text('id').primaryKey().$defaultFn(newId)
 
 const createdAt = () =>
-  integer('created_at', { mode: 'timestamp_ms' })
-    .notNull()
-    .$defaultFn(() => new Date())
+  integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(rowInstant)
 
 const updatedAt = () =>
   integer('updated_at', { mode: 'timestamp_ms' })
     .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdateFn(() => new Date())
+    .$defaultFn(rowInstant)
+    .$onUpdateFn(rowInstant)
 
 const timestamps = () => ({ createdAt: createdAt(), updatedAt: updatedAt() })
 
@@ -124,6 +192,16 @@ const geo = () => ({ lat: real('lat'), lng: real('lng') })
  * ---------------------------------------------------------------------------------------------- */
 
 export const ORGANIZATION_PLANS = ['free', 'starter', 'pro', 'business'] as const
+/**
+ * The plans we *sell*, which is a different vocabulary from the coarse tier above:
+ * `plan` is what the quota guards read, these are what a customer is told they are on.
+ * Mirrors `PLAN_IDS` in `src/lib/plans.ts`, which this file cannot import because that
+ * module reads `import.meta.env` at load time and `drizzle-kit generate` runs it under
+ * plain Node. The two tuples are held in step by a test rather than by an import.
+ */
+export const PLAN_CATALOGUE_IDS = ['free', 'solo', 'crew'] as const
+/** Mirrors `BILLING_INTERVALS` in `src/lib/plans.ts`, on the same terms. */
+export const BILLING_INTERVALS = ['monthly', 'yearly'] as const
 export const SUBSCRIPTION_STATUSES = [
   'trialing',
   'active',
@@ -246,8 +324,104 @@ export const NOTIFICATION_CHANNELS = ['in_app', 'email', 'push', 'webhook'] as c
 export const THEME_PREFERENCES = ['system', 'light', 'dark'] as const
 export const DISTANCE_UNITS = ['metric', 'imperial'] as const
 
+/**
+ * Who a `platform_audit_log` row is attributed to (docs/ACCESS.md §4.1). `human` is a signed-in
+ * platform role acting through the console, `agent` an MCP call authenticated by a
+ * `staff_api_tokens` bearer, `system` the platform itself — cron, matcher, prune.
+ */
+export const PLATFORM_ACTOR_KINDS = ['human', 'agent', 'system'] as const
+
+/**
+ * The platform role an audit row records its actor as holding **at the moment of the action**
+ * (docs/ACCESS.md §4.1). `user.role` is mutable and this column is not, which is the whole reason
+ * the role is stored rather than joined.
+ *
+ * The same three names are enumerated once more, as the keys of `roles` in
+ * `src/server/auth/access.ts`, and that is deliberate rather than an oversight. This file is
+ * reachable from the client graph and from `drizzle-kit`, so it carries the vocabulary of every
+ * column it declares itself instead of importing an authorisation module to type one; the two
+ * lists are held together by a drift test in `__tests__/platform-schema.test.ts` that fails the
+ * moment a fourth role is added to either without the other.
+ */
+export const PLATFORM_ACTOR_ROLES = ['admin', 'curator', 'user'] as const
+
+/**
+ * The eight entities a platform action can touch (docs/ACCESS.md §4.2).
+ *
+ * A TypeScript vocabulary, not a database constraint: `entity_type` is plain `text` in §4.1's
+ * column table, so a ninth entity costs an amendment to §4.2's mapping rather than a recreate of
+ * an append-only log.
+ */
+export const PLATFORM_AUDIT_ENTITY_TYPES = [
+  'catalog_place',
+  'catalog_ingest',
+  'place_pack',
+  'catalog_source',
+  'user',
+  'session',
+  'staff_api_token',
+  'share_link',
+] as const
+
+/**
+ * The thirty-one actions a `platform_audit_log` row can carry, in the order docs/ACCESS.md §4.2
+ * tables them. The list is closed there and closed here: a new action is an amendment to that
+ * table, made in the commit that adds the code writing it.
+ *
+ * Sixteen take the two-segment `<entity_type>.<verb>` form, and fifteen take the three-segment
+ * `platform.<entity>.<verb>` form because their entities — user, session, credential, share — are
+ * named identically in the tenant audit log of §4.5, where a bare `user.created` read out of a
+ * view spanning both tables would be attributable to neither.
+ *
+ * Like {@link PLATFORM_AUDIT_ENTITY_TYPES} this is a TypeScript vocabulary rather than a SQL
+ * `CHECK`, for the reason §4.1 gives: the list grows by amendment, and a `CHECK` would price each
+ * amendment at a recreate of an append-only table that may not be recreated.
+ */
+export const PLATFORM_AUDIT_ACTIONS = [
+  'catalog_place.created',
+  'catalog_place.updated',
+  'catalog_place.published',
+  'catalog_place.retired',
+  'catalog_place.status_changed',
+  'catalog_place.licence_escalated',
+  'catalog_ingest.promoted',
+  'catalog_ingest.merged',
+  'catalog_ingest.rejected',
+  'place_pack.created',
+  'place_pack.places_set',
+  'place_pack.published',
+  'catalog_source.run_started',
+  'place_pack.retired',
+  'catalog_source.enabled',
+  'catalog_source.disabled',
+  'platform.user.created',
+  'platform.user.updated',
+  'platform.user.role_changed',
+  'platform.user.banned',
+  'platform.user.unbanned',
+  'platform.user.deleted',
+  'platform.user.password_set',
+  'platform.user.email_set',
+  'platform.user.impersonation_started',
+  'platform.user.impersonation_ended',
+  'platform.session.revoked',
+  'platform.session.revoked_all',
+  'platform.token.issued',
+  'platform.token.revoked',
+  'platform.share.revoked',
+] as const
+
 /** JSON payload shapes stored in `text({ mode: 'json' })` columns. */
 export type JsonRecord = Record<string, string | number | boolean | null>
+/**
+ * The `changes` payload on `platform_audit_log`: the fields that moved, on both sides. Nested by
+ * definition, so the flat {@link JsonRecord} the tenant log's `metadata` column uses does not fit
+ * it and is deliberately not reused.
+ */
+export type PlatformAuditChanges = {
+  before: Record<string, unknown> | null
+  after: Record<string, unknown> | null
+}
 export type PollOption = { id: string; label: string }
 export type OpeningHours = Array<{ day: number; opens: string; closes: string }>
 export type ShareScopes = {
@@ -263,7 +437,7 @@ export type QuotaOverrides = Partial<Record<(typeof USAGE_METRICS)[number], numb
 export type ContinentCounts = Record<string, number>
 
 /* -------------------------------------------------------------------------------------------------
- * Billing — written by the Stripe webhook handler, read by the quota guards
+ * Billing — written by the billing provider's webhook handler, read by the quota guards
  * ---------------------------------------------------------------------------------------------- */
 
 export const subscriptions = sqliteTable(
@@ -273,9 +447,9 @@ export const subscriptions = sqliteTable(
     organizationId: orgRef(),
     plan: text('plan').notNull().default('free'),
     status: text('status').notNull().default('active'),
-    stripeCustomerId: text('stripe_customer_id'),
-    stripeSubscriptionId: text('stripe_subscription_id'),
-    stripePriceId: text('stripe_price_id'),
+    providerCustomerId: text('provider_customer_id'),
+    providerSubscriptionId: text('provider_subscription_id'),
+    providerProductId: text('provider_product_id'),
     seats: integer('seats').notNull().default(1),
     currency: currency(),
     unitAmountMinor: minor('unit_amount_minor'),
@@ -290,12 +464,31 @@ export const subscriptions = sqliteTable(
     quotaOverrides: text('quota_overrides', { mode: 'json' }).$type<QuotaOverrides>(),
     seatLimit: integer('seat_limit').notNull().default(10),
     storageLimitBytes: integer('storage_limit_bytes').notNull().default(1_073_741_824),
+    /**
+     * A plan change the provider has accepted but has not applied yet — an upgrade
+     * lands at once, a downgrade waits for the period the customer has paid for to
+     * end. All three are null together or set together; a partial triple is read as
+     * no scheduled change, because a change we cannot date is one we cannot describe.
+     *
+     * `pending_plan` holds a **catalogue** plan id (`PLAN_CATALOGUE_IDS` —
+     * `free`/`solo`/`crew`), a different vocabulary from the coarse `plan` tier column
+     * above. They carry no CHECK constraint, unlike every other enum column in this
+     * file, and the exception is deliberate: SQLite cannot attach a constraint to a
+     * live table, so drizzle-kit answers one with a `__new_subscriptions` recreate that
+     * drops and rebuilds the table — which on D1 would run without the
+     * `PRAGMA foreign_keys=OFF` it emits, and would take `subscriptions_status_chk`
+     * with it. The value tuples above are enforced by `upsertSubscriptionInput` in
+     * `src/server/repos/billing.ts`, which is the only way a row is ever written.
+     */
+    pendingPlan: text('pending_plan'),
+    pendingInterval: text('pending_interval'),
+    pendingEffectiveAt: integer('pending_effective_at', { mode: 'timestamp_ms' }),
     ...timestamps(),
   },
   (t) => [
     uniqueIndex('subscriptions_org_unq').on(t.organizationId),
-    uniqueIndex('subscriptions_stripe_subscription_unq').on(t.stripeSubscriptionId),
-    index('subscriptions_stripe_customer_idx').on(t.stripeCustomerId),
+    uniqueIndex('subscriptions_provider_subscription_unq').on(t.providerSubscriptionId),
+    index('subscriptions_provider_customer_idx').on(t.providerCustomerId),
     index('subscriptions_status_idx').on(t.status),
     index('subscriptions_current_period_end_idx').on(t.currentPeriodEnd),
     enumCheck('subscriptions_plan_chk', t.plan, ORGANIZATION_PLANS),
@@ -1874,4 +2067,173 @@ export const appSettings = sqliteTable(
     ...timestamps(),
   },
   (t) => [index('app_settings_updated_at_idx').on(t.updatedAt)],
+)
+
+/* -------------------------------------------------------------------------------------------------
+ * Platform tables — global, never tenant-scoped
+ *
+ * Two of the nine tables docs/SPEC.md §5 carves out of "every domain row is scoped by
+ * organization_id". They carry no `organization_id`, they are never reachable through
+ * `createTenantRepository()` or `src/server/repos/base.ts`, and every mutation that touches them
+ * takes an explicit platform actor instead of a tenant context.
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * MCP bearer credentials (docs/CATALOG.md §2.10). A token's authority is its owner's platform
+ * role, never a per-token scope list, so there is one authorisation model rather than two.
+ *
+ * `token_hash` is the lowercase hex `HMAC-SHA256(key = MCP_TOKEN_PEPPER, message = token)`; the
+ * plaintext is shown once at creation and never stored. `expires_at` is mandatory — the console
+ * offers 30 / 90 / 365 days and nothing unbounded — and revocation sets `revoked_at` rather than
+ * deleting the row, so a revoked credential's history stays attributable.
+ */
+export const staffApiTokens = sqliteTable(
+  'staff_api_tokens',
+  {
+    id: pk(),
+    userId: userRef('user_id').notNull(),
+    name: text('name').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    tokenPrefix: text('token_prefix').notNull(),
+    lastUsedAt: integer('last_used_at', { mode: 'timestamp_ms' }),
+    lastUsedIp: text('last_used_ip'),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
+    createdBy: userRef('created_by').notNull(),
+    ...timestamps(),
+  },
+  (t) => [
+    uniqueIndex('staff_api_tokens_token_hash_unq').on(t.tokenHash),
+    index('staff_api_tokens_user_revoked_idx').on(t.userId, t.revokedAt),
+    index('staff_api_tokens_expires_at_idx').on(t.expiresAt),
+    index('staff_api_tokens_created_by_idx').on(t.createdBy),
+  ],
+)
+
+/**
+ * The platform audit log (docs/ACCESS.md §4.1). Twelve columns and no thirteenth; in particular no
+ * `organization_id`, because a platform action belongs to no tenant.
+ *
+ * Append-only. Rows are never updated, and the only delete path is the retention prune on
+ * `created_at`. Its single writer is `src/server/catalog/audit.ts`.
+ *
+ * **Why `actor_user_id` has no foreign key while `token_id` does.** `userRef()` is a bare text
+ * column by house convention, so this file never imports the auth module's schema — see the header
+ * of this file. `staff_api_tokens` lives here, so `token_id` carries a real foreign key, and with
+ * it the referential guarantee that "everything that arrived on this credential" joins to a row
+ * that exists. The two columns sit side by side for that reason and not by oversight.
+ *
+ * **`token_id` is `on delete restrict`, which is the only action this table can actually take.**
+ * docs/ACCESS.md §4.1's type column says `on delete restrict` and its §5 carries the reasoning.
+ * The wording it replaced was `on delete set null`, which is unreachable here by construction:
+ * SQLite re-evaluates `CHECK` constraints on the implicit
+ * `UPDATE` that `SET NULL` performs, and `platform_audit_log_agent_token_chk` demands a non-`NULL`
+ * `token_id` on precisely the rows — the `agent` ones — that are the only rows able to reference a
+ * token at all. Every `SET NULL` the action could perform therefore violates that `CHECK` and
+ * SQLite aborts the whole `DELETE`, so the declared clause and the observed behaviour disagreed:
+ * it read as "the history loses its attribution" and did "the delete is refused". `RESTRICT` says
+ * what happens, fails with a foreign-key message rather than a constraint the caller did not
+ * mention, and changes no outcome — for an append-only log, keeping the `token_id` is the better
+ * of the two anyway, and nothing hard-deletes a `staff_api_tokens` row in the first place because
+ * revocation writes `revoked_at` (docs/ACCESS.md §5). The earlier divergence from §4.1's wording
+ * was reported as a finding and amended there, in that file's own commit; nothing here and in
+ * docs/DEPLOY.md §5 disagrees with it any more. The behaviour is pinned by tests in
+ * `src/server/db/__tests__/platform-schema.test.ts` rather than left as prose, since it cannot be
+ * changed after `0004` ships without a table recreate (docs/DEPLOY.md §5).
+ *
+ * **Four cross-column `CHECK`s, because the two obvious ones only cover half of each rule.**
+ * docs/ACCESS.md §4.1 lists four, and the Notes column they come from states two biconditionals:
+ * `actor_user_id` and `actor_role` are `NULL` only when `actor_kind` is `system`, and `token_id`
+ * is non-`NULL` *exactly* when `actor_kind` is `agent`. `agent ⇒ token_id NOT NULL` and
+ * `system ⇒ everything NULL` are the forward halves; without the converses a `human` row could
+ * carry a `token_id` and a `human` or an `agent` row could carry no actor at all, all three
+ * accepted by a direct insert.
+ * `platform_audit_log_token_agent_only_chk` and `platform_audit_log_actor_identity_chk` close those
+ * converses, so the shipped table enforces what §4.1 says rather than a weaker reading of it. The
+ * two extra constraints shipped first and §4.1's "two invariants" sentence was amended to four
+ * afterwards, as a finding reported against that file and applied in its own commit: an extension
+ * of the contract, never a relaxation.
+ *
+ * All four are declared in the `CREATE TABLE` rather than added later: adding a `CHECK` to an
+ * existing table escalates drizzle-kit to a table recreate, which docs/DEPLOY.md §5 counts as
+ * non-additive.
+ *
+ * **`entity_type` and `action` carry no `CHECK`, and are narrowed by `$type` instead.** §4.1's
+ * type column marks `actor_kind` as `text, enumCheck()` and `entity_type` as plain `text`, with
+ * the eight values in the Notes column; `action` is closed in §4.2 by the same kind of list and is
+ * plain `text` too. Both vocabularies grow by amendment, in the commit that adds the code writing
+ * the new name, and a `CHECK` would price each of those amendments at a recreate of a table that
+ * may not be recreated.
+ *
+ * That reasoning only holds if the narrowing exists somewhere, so all four vocabulary columns
+ * carry `$type`: {@link PLATFORM_AUDIT_ACTIONS} on `action`,
+ * {@link PLATFORM_AUDIT_ENTITY_TYPES} on `entity_type`, {@link PLATFORM_ACTOR_KINDS} on
+ * `actor_kind` and {@link PLATFORM_ACTOR_ROLES} on `actor_role`. A value outside any of the four
+ * fails `pnpm typecheck` at the insert, which is the whole of the guarantee for the two with no
+ * `CHECK` behind them and the first line of it for the two that have one. `$type` is a type-level
+ * cast that emits no SQL — the `changes` column has carried one since `0004` and generates plain
+ * `text` — so adding these moved no migration.
+ */
+export const platformAuditLog = sqliteTable(
+  'platform_audit_log',
+  {
+    id: pk(),
+    /** The human, or the owner of the MCP token. `NULL` only when `actor_kind` is `system`. */
+    actorUserId: userRef('actor_user_id'),
+    actorKind: text('actor_kind').notNull().$type<(typeof PLATFORM_ACTOR_KINDS)[number]>(),
+    /** The platform role held at the moment of the action — `user.role` is mutable, this is not. */
+    actorRole: text('actor_role').$type<(typeof PLATFORM_ACTOR_ROLES)[number]>(),
+    /** The credential the call arrived on. Non-`NULL` exactly when `actor_kind` is `agent`. */
+    tokenId: text('token_id').references(() => staffApiTokens.id, {
+      onDelete: 'restrict',
+    }),
+    action: text('action').notNull().$type<(typeof PLATFORM_AUDIT_ACTIONS)[number]>(),
+    entityType: text('entity_type')
+      .notNull()
+      .$type<(typeof PLATFORM_AUDIT_ENTITY_TYPES)[number]>(),
+    entityId: text('entity_id'),
+    changes: text('changes', { mode: 'json' }).$type<PlatformAuditChanges>(),
+    ip: text('ip'),
+    /** The request's `User-Agent` header, verbatim, and nothing else. */
+    userAgent: text('user_agent'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    // The §4.4 timeline query filters on (entity_type, entity_id) and orders by created_at, so this
+    // three-column index serves it whole and no two-column index is created beside it.
+    index('platform_audit_log_entity_idx').on(t.entityType, t.entityId, t.createdAt),
+    index('platform_audit_log_actor_idx').on(t.actorUserId, t.createdAt),
+    index('platform_audit_log_action_idx').on(t.action, t.createdAt),
+    index('platform_audit_log_token_idx').on(t.tokenId),
+    index('platform_audit_log_created_at_idx').on(t.createdAt),
+    enumCheck('platform_audit_log_actor_kind_chk', t.actorKind, PLATFORM_ACTOR_KINDS),
+    // The two forward halves are declared first, deliberately. SQLite reports the first constraint a
+    // row violates in declaration order, and a `system` row naming a token breaks a forward rule and
+    // a converse one at once; naming it against the kind it claimed to be is the sharper of the two
+    // messages. `src/server/db/__tests__/platform-schema.test.ts` pins the order and the names.
+    // An agent row names its credential.
+    check(
+      'platform_audit_log_agent_token_chk',
+      sql.raw(`("actor_kind" <> 'agent' OR "token_id" IS NOT NULL)`),
+    ),
+    // A system row names no actor, no role and no credential.
+    check(
+      'platform_audit_log_system_actor_chk',
+      sql.raw(
+        `("actor_kind" <> 'system' OR ("actor_user_id" IS NULL AND "actor_role" IS NULL AND "token_id" IS NULL))`,
+      ),
+    ),
+    // Nothing but an agent row may name a credential.
+    check(
+      'platform_audit_log_token_agent_only_chk',
+      sql.raw(`("token_id" IS NULL OR "actor_kind" = 'agent')`),
+    ),
+    // Every kind but system names both an actor and the role it held at the time.
+    check(
+      'platform_audit_log_actor_identity_chk',
+      sql.raw(
+        `("actor_kind" = 'system' OR ("actor_user_id" IS NOT NULL AND "actor_role" IS NOT NULL))`,
+      ),
+    ),
+  ],
 )

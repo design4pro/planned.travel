@@ -287,12 +287,12 @@ const messages = {
   'billing.status.incomplete_expired': '만료됨',
   'billing.checkout.completeTitle': '결제를 받았어요',
   'billing.checkout.completeBody':
-    '새 플랜을 적용하고 있어요. Stripe가 확인하는 순간 여기에 나타나요. 보통 몇 초면 끝나요.',
+    '새 플랜을 적용하고 있어요. Polar가 확인하는 순간 여기에 나타나요. 보통 몇 초면 끝나요.',
   'billing.checkout.cancelledTitle': '결제를 취소했어요',
   'billing.checkout.cancelledBody': '청구된 것은 없고 플랜도 그대로예요.',
-  'billing.portal.backTitle': 'Stripe에서 돌아왔어요',
+  'billing.portal.backTitle': 'Polar에서 돌아왔어요',
   'billing.portal.backBody':
-    '거기서 바꾼 내용은 Stripe가 확인하는 대로 여기에 반영돼요.',
+    '거기서 바꾼 내용은 Polar가 확인하는 대로 여기에 반영돼요.',
   'billing.refresh': '새로 고침',
   'billing.readOnly.title': '이 워크스페이스의 멤버예요',
   'billing.readOnly.body':
@@ -307,9 +307,9 @@ const messages = {
   'billing.hero.paymentMethod': '결제 수단',
   'billing.hero.cancel': '플랜 해지',
   'billing.price.free': '무료',
-  'billing.stripe.opening': 'Stripe를 여는 중',
-  'billing.stripe.failed': 'Stripe에 닿지 못했어요',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Polar를 여는 중',
+  'billing.provider.failed': 'Polar에 닿지 못했어요',
+  'billing.provider.failedBody':
     '청구된 것은 없어요. 연결을 확인하고 잠시 뒤에 다시 시도해 주세요.',
   'billing.renewal.trialEndsToday':
     '체험이 오늘 끝나요. 카드를 등록하면 모든 모듈을 계속 쓸 수 있어요.',
@@ -329,7 +329,7 @@ const messages = {
   'billing.renewal.lapsed':
     '예약과 여행 일지, 오프라인 지도를 다시 쓰려면 아래에서 플랜을 골라 주세요.',
   'billing.renewal.incomplete':
-    'Stripe가 아직 이 결제의 확인을 기다리고 있어요.',
+    'Polar가 아직 이 결제의 확인을 기다리고 있어요.',
   'billing.renewal.free':
     '한 번에 두 개의 여행까지, 무료로. 부족해지면 언제든 올리면 돼요.',
   'billing.renewal.auto': '자동으로 갱신돼요.',
@@ -399,7 +399,7 @@ const messages = {
   'billing.invoices.portal': '결제 포털',
   'billing.invoices.unavailableTitle': '영수증을 불러오지 못하고 있어요',
   'billing.invoices.unavailableBody':
-    'Stripe가 기록을 제때 주지 못했어요. 위의 내용은 최신이에요. 전체 기록은 결제 포털에서 보거나 잠시 뒤에 다시 와 주세요.',
+    'Polar가 기록을 제때 주지 못했어요. 위의 내용은 최신이에요. 전체 기록은 결제 포털에서 보거나 잠시 뒤에 다시 와 주세요.',
   'billing.invoices.emptyTitle': '아직 청구서가 없어요',
   'billing.invoices.emptyCustomer':
     '첫 영수증은 결제 주기가 끝나는 대로 여기에 나타나요.',

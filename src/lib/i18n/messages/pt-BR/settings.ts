@@ -325,12 +325,12 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Pagamento recebido',
   'billing.checkout.completeBody':
-    'Seu plano novo está sendo aplicado. Ele aparece aqui assim que a Stripe confirmar — em geral em poucos segundos.',
+    'Seu plano novo está sendo aplicado. Ele aparece aqui assim que a Polar confirmar — em geral em poucos segundos.',
   'billing.checkout.cancelledTitle': 'Pagamento cancelado',
   'billing.checkout.cancelledBody': 'Nada foi cobrado e seu plano não mudou.',
-  'billing.portal.backTitle': 'De volta da Stripe',
+  'billing.portal.backTitle': 'De volta da Polar',
   'billing.portal.backBody':
-    'O que você mudou lá chega aqui assim que a Stripe confirmar.',
+    'O que você mudou lá chega aqui assim que a Polar confirmar.',
   'billing.refresh': 'Atualizar',
   'billing.readOnly.title': 'Você é membro deste espaço de trabalho',
   'billing.readOnly.body':
@@ -346,9 +346,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Forma de pagamento',
   'billing.hero.cancel': 'Cancelar o plano',
   'billing.price.free': 'Grátis',
-  'billing.stripe.opening': 'Abrindo a Stripe',
-  'billing.stripe.failed': 'Não deu para falar com a Stripe',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Abrindo a Polar',
+  'billing.provider.failed': 'Não deu para falar com a Polar',
+  'billing.provider.failedBody':
     'Nada foi cobrado. Confira sua conexão e tente de novo daqui a pouco.',
 
   'billing.renewal.trialEndsToday':
@@ -372,7 +372,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Escolha um plano abaixo para destravar de novo as reservas, o diário e os mapas offline.',
   'billing.renewal.incomplete':
-    'A Stripe ainda espera a confirmação deste pagamento.',
+    'A Polar ainda espera a confirmação deste pagamento.',
   'billing.renewal.free':
     'Duas viagens por vez, por nossa conta. Mude de plano quando ficar apertado.',
   'billing.renewal.auto': 'Renova sozinho.',
@@ -463,7 +463,7 @@ const messages = {
   'billing.invoices.portal': 'Portal de pagamento',
   'billing.invoices.unavailableTitle': 'Os recibos não estão carregando',
   'billing.invoices.unavailableBody':
-    'A Stripe não respondeu a tempo para o histórico. Tudo acima está ao vivo; abra o portal de pagamento para o registro completo, ou volte daqui a pouco.',
+    'A Polar não respondeu a tempo para o histórico. Tudo acima está ao vivo; abra o portal de pagamento para o registro completo, ou volte daqui a pouco.',
   'billing.invoices.emptyTitle': 'Ainda não há faturas',
   'billing.invoices.emptyCustomer':
     'O primeiro recibo aparece aqui assim que um período de cobrança fechar.',

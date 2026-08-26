@@ -28,6 +28,7 @@ import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core'
 import { Crosshair, Layers, ListTree, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { TRIP_SLICE_HEIGHT_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
 import {
   Button,
@@ -1068,9 +1069,13 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
         className={cn(
           'relative isolate w-full overflow-hidden',
           // The map owns the whole viewport slice below the two navigation bars,
-          // minus the mobile tab bar and the device's own safe areas.
-          'h-[calc(100svh-var(--safe-top)-var(--nav-h)-2.75rem-var(--subnav-h)-4rem-var(--safe-bottom))]',
-          'lg:h-[calc(100svh-var(--safe-top)-var(--nav-h)-var(--subnav-h))]',
+          // minus the mobile tab bar and the device's own safe areas. Both
+          // hairlines are terms in that list, which is why it is derived from
+          // `src/lib/atlas/layout.ts` rather than written out here: the hand
+          // written expression omitted them and the planner overflowed the
+          // viewport by exactly two pixels.
+          TRIP_SLICE_HEIGHT_CLASS.base,
+          TRIP_SLICE_HEIGHT_CLASS.lg,
         )}
       >
         <MapCanvas

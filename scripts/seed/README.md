@@ -8,21 +8,74 @@ them. Without it every screen renders an empty state and nothing can be judged a
 
 ## Run it
 
-The dev server must be running (`pnpm dev`). Then:
+The dev server must be running. Then:
 
 ```sh
-node scripts/seed/seed.mjs
+node scripts/seed/seed.mjs --url http://localhost:3010
 ```
+
+Every flag `seed.mjs` accepts; `--help` prints the same list and anything else is a hard error:
 
 | Flag | Effect |
 | --- | --- |
 | `--force`, `-f` | Rebuild the demo workspace even though it has already been seeded. |
 | `--email <address>`, `-e` | Workspace owner to seed. Defaults to `rafal@planned.travel`. |
-| `--url <origin>`, `-u` | Dev-server origin. Defaults to `$SEED_URL`, then `localhost:3000`–`3005`. |
+| `--url <origin>`, `-u` | Dev-server origin. Defaults to `$SEED_URL`, then the probe list below. |
+| `--password <secret>`, `-p` | Password the owner account should have. Defaults to `$DEMO_PASSWORD`, then `$E2E_PASSWORD`, then the committed fixture below. |
+| `--keep-password` | Never overwrite a password that is already set. |
+| `--today <YYYY-MM-DD>`, `-t` | Tell the Worker what day it is, for the duration of this one request. |
 | `--status`, `-s` | Report whether the workspace is seeded. Writes nothing. |
 
-`vite dev` moves to the next free port when its configured one is taken, so the script probes
-`3000`–`3005` rather than assuming `3000`. Pass `--url` if yours is elsewhere.
+### `--today` is a falsification tool, not a configuration knob
+
+The fixture is anchored: every date in it is an offset from `SEED_ANCHOR_DAY` in
+`src/routes/api/dev/-seed/dataset/anchor.ts`, and no clock reaches a written row — the only
+`Date.now()` under `-seed/` is the stopwatch that times the run for the report. The two column
+defaults that would otherwise smuggle one in are supplied by the fixture itself:
+`src/routes/api/dev/-seed/fixture-rows.ts` hands the seed a primary key and a row instant derived
+from the anchor, so the id a trip's cover drawing is hashed from is the same id on every run. That
+is a claim, and `--today` is how it gets tested instead of trusted. The flag sends the day as the
+`x-pt-server-today` header; `serverToday()` in `src/server/clock.ts` reads it, guarded by
+`import.meta.env.DEV` so the production build folds the whole path away.
+
+Seed the same dataset under three widely separated days and the rows written must be
+byte-identical:
+
+```sh
+node scripts/seed/seed.mjs --url http://localhost:3010 --force --today 2026-08-20
+node scripts/seed/seed.mjs --url http://localhost:3010 --force --today 2026-09-01
+node scripts/seed/seed.mjs --url http://localhost:3010 --force --today 2026-11-15
+```
+
+`--force` is not optional in that loop. The completion marker makes a second run a no-op, so a
+three-clock proof run without it writes nothing twice and proves nothing three times.
+
+### Always pass `--url`, and the reason is not tidiness
+
+**Ports 3010–3020 are reserved for automated rounds.** The reservation is enforced in
+`playwright.config.ts`, which throws rather than run the visual suite against a port outside that
+range — a rule added after four consecutive rounds photographed the wrong server, one of them a
+different worktree's application. That file also names the only sanctioned way to start a server
+for those rounds:
+
+```sh
+pnpm exec vite dev --port 3010 --strictPort
+```
+
+`pnpm dev` hardcodes `--port 3000` and `package.json` is frozen, so it cannot be corrected there.
+
+The seeder has no equivalent guard, and it cannot have one: it is an HTTP client, so every origin
+that answers `/api/dev/seed` looks alike to it. `DEFAULT_PORTS` in `seed.mjs` probes the developer
+range first and then part of the reserved one, and takes the first origin that answers — which on
+a machine running two checkouts is a **write** to whichever server replied, not necessarily yours.
+So:
+
+- **Pass `--url http://localhost:3010`** (or export `SEED_URL`) whenever a reserved server is what
+  you mean to seed. `-u` is not optional in that situation, and the reserved range is exactly the
+  one that is shared between worktrees.
+- `--status` is the cheap way to confirm you are talking to the right database before `--force`
+  rebuilds one.
+- Bare `node scripts/seed/seed.mjs` is only correct on a single-checkout machine.
 
 ## Verify it
 
@@ -200,9 +253,17 @@ configured — hand-rolling a hash would produce a row the login form rejects.
 The workspace is put on the **Crew** plan first — ten seats bought, four of them filled, billed
 monthly — because the Free plan seats one person and caps trips at two. Only the plan is declared in
 the dataset: the tier column, the seat and storage ceilings, the currency and the unit amount are all
-derived by `rowValuesFromRecord()`, the same translation the Stripe webhook uses, so the row cannot
-end up describing a plan it is not on. The ceiling is raised through the billing repository, so the
-membership writes that follow still pass through the same quota guard rather than around it.
+derived by `rowValuesFromRecord()`, the same translation the billing webhook uses, so the row cannot
+end up describing a plan it is not on.
+
+The three provider columns on that row — `provider_customer_id`, `provider_subscription_id` and
+`provider_product_id` — carry local placeholders and nothing real. The seed contacts no payment
+provider and mints no customer; the customer and subscription ids are fixed demo strings, and the
+product id is resolved from the catalogue in `src/lib/plans.ts` so the row agrees with whatever this
+build sells. That is what makes the seeded workspace exercise the same read path as a paid one —
+`resolveQuotas()` reads `provider_product_id` exactly as it does in production — without any
+credential being present. The ceiling is raised through the billing repository, so the membership
+writes that follow still pass through the same quota guard rather than around it.
 
 ## What gets written
 
@@ -247,22 +308,17 @@ extra bags), `shares` (2:1:2:1 on luggage hire), and one expense with `paid_by` 
 "outstanding" tile has a value. The other trips deliberately differ: Dolomites and Marrakech are
 settled to exactly zero, Lisbon is mid-trip and unsettled.
 
-## Known upstream issue
+## Resolved: `expenses.original_currency`
 
-`expenses.original_currency` **does not exist in the database.** In `src/server/db/schema.ts` the
-column is declared as:
+For a while the dataset supplied `originalCurrency` on seven foreign receipts and the database
+threw it away. The shared column builder in `src/server/db/schema.ts` hardcoded the SQL name, so
+`currency` and `originalCurrency` both mapped to one column and only the trip currency landed — no
+row was corrupted, but a receipt could never render as `£596.00 → ¥464,880`, which the reference
+demo's costs screen does show.
 
-```ts
-currency: currency(),          // → SQL column "currency"
-originalCurrency: currency(),  // → SQL column "currency"  ← same name
-```
-
-The shared `currency()` builder hardcodes the column name `'currency'`, so both properties map to one
-SQL column and the generated migration only ever created one. `original_amount_minor` and
-`exchange_rate` persist correctly; the source currency code is silently discarded (`currency` wins, so
-no row is corrupted — the trip currency is always what lands).
-
-This is why a foreign receipt currently cannot render as `£596.00 → ¥464,880`, which the reference
-demo's costs screen does show. The dataset already supplies `originalCurrency`, so the moment the
-schema is fixed the copy becomes correct with no change here. The fix is to give `currency()` a name
-parameter and regenerate the migration — both outside this task's file ownership.
+That is fixed. The builder now takes a name (`const currency = (name = 'currency') => …`),
+`originalCurrency` maps to `original_currency`, and migration `0001_aspiring_cargill` rebuilt the
+`expenses` table to add it. Nothing in this directory changed: the dataset was already correct,
+and the costs screen already reads the field (`src/components/costs/data.ts`), so the copy became
+correct the moment the column did. That migration is a table recreate rather than an
+`ADD COLUMN`, which is why it has a row in the register in `docs/DEPLOY.md` §12.

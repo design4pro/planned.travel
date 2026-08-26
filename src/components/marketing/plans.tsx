@@ -51,7 +51,15 @@ export function planPriceSuffix(
   return price.perSeat ? '/ member / month' : '/ month'
 }
 
-/** The quiet line under the price: what is actually billed, and when. */
+/**
+ * The quiet line under the price: what is actually billed, and when.
+ *
+ * The free plan genuinely asks for nothing, so it says so. A paid plan does
+ * not: Polar's checkout takes a payment method when the trial starts and
+ * charges it the day the trial ends. That is what the pricing FAQ and the
+ * terms already say, and a card the reader is not warned about is the one
+ * surprise a pricing page must never spring — so this line says it too.
+ */
 export function planPriceFootnote(
   plan: Plan,
   interval: BillingInterval,
@@ -64,7 +72,7 @@ export function planPriceFootnote(
       ? `${billed} a year per member, billed once`
       : `${billed} billed once a year`
   }
-  return `${plan.trialDays}-day free trial, no card needed`
+  return `${plan.trialDays}-day free trial, card up front, charged when it ends`
 }
 
 /** Seats and trips, as one line for the card's footer band. */

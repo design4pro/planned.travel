@@ -4,22 +4,32 @@ import {
   APP_ROUTES,
   BASELINE_DAY,
   CALENDAR_SELECTIONS,
+  CONSOLE_ACCOUNT_NAME,
+  CONSOLE_ROUTES,
   DEMO_EMAIL,
   DEV_TOOLBAR,
   DOM_QUIET_CAP_MS,
   DOM_QUIET_FLOOR_MS,
   DOM_QUIET_MS,
   FROZEN_NOW,
+  IMPERSONATION_BAR,
+  IMPERSONATION_TARGET_NAME,
+  IMPERSONATION_TIMER,
   PUBLIC_ROUTES,
   RELATIVE_TIME_SITES,
   SERVER_CLOCK_ROUTES,
   THEMES,
+  applyTheme,
   auditRelativeTime,
   auditServerClock,
+  beginImpersonation,
   captureMode,
   classifyConsoleMessage,
+  consoleAccountPath,
   crossedBoundaries,
+  endImpersonationFixture,
   fitViewportToDocument,
+  hasPlatformConsole,
   hasSession,
   holdsOn,
   pinRelativeTime,
@@ -2070,7 +2080,189 @@ const LOOPBACK_HOSTS: ReadonlyArray<string> = [
  * of them is invisible in a green run, which is the only reason they are asserted
  * rather than reviewed.
  */
+/**
+ * The platform console.
+ *
+ * Its own block rather than three more entries in `APP_ROUTES`, for the reasons written on
+ * `CONSOLE_ROUTES`: the account screen's path is minted by the database, and the whole tree is
+ * behind a platform role rather than merely behind a session. That second fact is why the skip below
+ * is measured by loading `/console` and reading the URL the browser ended on. A `user`-role session
+ * is redirected to `/dashboard`, and a suite that captured that would commit a photograph of the
+ * dashboard under the name `console-light-chromium.png` — a baseline that holds forever and proves
+ * the opposite of what its name says. `node scripts/seed/seed.mjs` is what provisions the role.
+ */
+test.describe('platform console', () => {
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+    test.skip(
+      !(await hasPlatformConsole(page)),
+      `${DEMO_EMAIL} holds no platform role, so /console redirects — run \`node scripts/seed/seed.mjs\` to provision it`,
+    )
+  })
+
+  test('no console screen carries the server clock', async ({ page }) => {
+    await auditServerClock(page, CONSOLE_ROUTES)
+  })
+
+  for (const route of CONSOLE_ROUTES) {
+    for (const theme of THEMES) {
+      test(`${route.name} renders in ${theme}`, async ({ page }) => {
+        await frame(page, route, theme)
+      })
+    }
+  }
+
+  for (const theme of THEMES) {
+    test(`console-user renders in ${theme}`, async ({ page }) => {
+      const path = await consoleAccountPath(page)
+      expect(
+        path,
+        `the accounts list has no row for ${CONSOLE_ACCOUNT_NAME} — the demo fixture has changed`,
+      ).not.toBeNull()
+      if (path === null) {
+        return
+      }
+      await frame(page, { name: 'console-user', path, ready: 'main' }, theme)
+    })
+  }
+})
+
+/**
+ * The impersonation warning bar, which until now had never appeared in a captured frame.
+ *
+ * `docs/ACCESS.md` §6.1 makes this the one piece of chrome that may never be missing, may never be
+ * dismissed and may never be covered, and a blind comparison of the shell around it is not a
+ * comparison of it. There was no baseline because there was no fixture: `/admin/impersonate-user`
+ * answers `404` (§2.6), so nothing outside the console could mint the session. The console can, so
+ * this drives it.
+ *
+ * **Chromium only, at two explicit widths.** The bar's copy degrades by breakpoint — the operator's
+ * name, the acted-on address and the "Ends in" label each have their own — so the interesting frames
+ * are the narrowest width the product claims to support and the desktop one, not whatever two
+ * viewports the projects happen to carry. Running it in both projects would photograph 393px twice
+ * and 360px never.
+ *
+ * **The element, not the page.** The capture is clipped to the bar, so the frame under review is the
+ * thing under review and a dashboard row moving underneath it can never fail this test or hide a
+ * regression in it. The countdown alone is masked: it is minted from the wall clock while the page's
+ * own clock is frozen, so it is the one figure in that bar no baseline can hold.
+ */
+test.describe('the impersonation warning bar', () => {
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  for (const width of [360, 1440]) {
+    for (const theme of THEMES) {
+      test(`is visible at ${width}px in ${theme}`, async ({
+        page,
+      }, testInfo) => {
+        test.skip(
+          testInfo.project.name !== 'chromium',
+          'captured once, at two explicit widths, rather than once per project viewport — ' +
+            'so four skips is this block\'s steady state, and "the impersonation bar has its four ' +
+            'committed baselines" in "the gate itself" is what tells the two apart',
+        )
+        await applyTheme(page, theme)
+        await page.clock.setFixedTime(new Date(FROZEN_NOW))
+        await page.setViewportSize({ width, height: 900 })
+
+        const started = await beginImpersonation(page)
+        test.skip(
+          !started,
+          `${DEMO_EMAIL} holds no platform role, so impersonation cannot be started — run \`node scripts/seed/seed.mjs\``,
+        )
+
+        try {
+          const bar = page.locator(IMPERSONATION_BAR)
+          await expect(bar).toBeVisible()
+          // §6.1 in three assertions: it says whose session this is, who is acting, and offers the
+          // way out — at both widths, which is the half the copy's own breakpoints could lose.
+          await expect(bar).toContainText(IMPERSONATION_TARGET_NAME)
+          await expect(bar).toContainText('Rafal Wolak')
+          await expect(
+            bar.getByRole('button', { name: 'End impersonation' }),
+          ).toBeEnabled()
+
+          await settleMutations(page)
+          await expect(bar).toHaveScreenshot(
+            `impersonation-bar-${String(width)}-${theme}.png`,
+            { mask: [page.locator(IMPERSONATION_TIMER)] },
+          )
+        } finally {
+          await endImpersonationFixture(page)
+        }
+      })
+    }
+  }
+
+  test('the console is closed to an impersonated session', async ({ page }) => {
+    const started = await beginImpersonation(page)
+    test.skip(
+      !started,
+      `${DEMO_EMAIL} holds no platform role — run \`node scripts/seed/seed.mjs\``,
+    )
+    try {
+      // docs/ACCESS.md §6.4: `requirePermission` denies every statement in the dictionary while
+      // `session.impersonatedBy` is set, so a console reachable in this state would be a page of
+      // controls whose server functions all answer 403.
+      //
+      // Asked of the server rather than by navigating, for the reason written on
+      // `hasPlatformConsole()`: the impersonated session has just been handed a client-side
+      // navigation of its own, and a `goto` racing it reports "interrupted by another navigation"
+      // instead of reporting the guard. The redirect is the guard's whole answer either way.
+      expect(
+        await hasPlatformConsole(page),
+        'an impersonated session must not reach the platform console',
+      ).toBe(false)
+    } finally {
+      await endImpersonationFixture(page)
+    }
+  })
+})
+
 test.describe('the gate itself', () => {
+  /**
+   * The impersonation bar's four frames exist on disk, named the way the capture names them.
+   *
+   * This test exists because a skip count was twice read as a regression. The bar's capture is
+   * chromium-only by design — two explicit widths rather than whatever viewport each project
+   * happens to carry — so a two-project run reports four skips, and *four skips* is also what a run
+   * would report if the fixture had silently stopped minting a session. Two very different states,
+   * one number, and a round already spent itself rewriting a fixture that worked.
+   *
+   * So the steady state is asserted rather than described. A green line here beside those four skips
+   * says the frames were recorded and are still committed; the skips beside a red line here would be
+   * the regression the number was mistaken for. It reads the directory rather than trusting a list:
+   * a baseline that was deleted, renamed or never written fails on the file it cannot find.
+   */
+  test('the impersonation bar has its four committed baselines', async () => {
+    const { readdir } = await import('node:fs/promises')
+    const { fileURLToPath } = await import('node:url')
+    const directory = fileURLToPath(
+      new URL('./__screenshots__/visual.spec.ts/', import.meta.url),
+    )
+    const present = new Set(await readdir(directory))
+
+    for (const width of [360, 1440]) {
+      for (const theme of THEMES) {
+        const name = `impersonation-bar-${String(width)}-${theme}-chromium.png`
+        expect(
+          present.has(name),
+          `${name} is missing: docs/ACCESS.md §6.1 makes this bar the one piece of chrome that may never be absent, dismissed or covered, and an unrecorded frame is one nothing compares`,
+        ).toBe(true)
+      }
+    }
+  })
+
   test('every relative-time pattern matches its own corpus', () => {
     expect(
       RELATIVE_TIME_SITES.length,

@@ -16,8 +16,8 @@ export const TASK_KINDS = [
   'booking-import',
   'thumbnail',
   'backup',
-  // Billing follow-ups. The Stripe webhook answers Stripe immediately and hands
-  // the slow part off here, so these travel the same queue as everything else.
+  // Billing follow-ups. The provider webhook answers the provider immediately and
+  // hands the slow part off here, so these travel the same queue as everything else.
   'billing.subscription.changed',
   'billing.invoice.paid',
   'billing.invoice.payment_failed',
@@ -110,12 +110,12 @@ export type BackupPayload = z.infer<typeof backupPayloadSchema>
 /**
  * Billing payloads mirror the `BillingTask` union in `../billing/types`. They
  * repeat their own `kind` because the webhook adapter enqueues the whole task
- * object as the payload, and `stripeEventId` is what makes the envelope id
- * deterministic across a Stripe redelivery.
+ * object as the payload, and `providerEventId` is what makes the envelope id
+ * deterministic across a provider redelivery.
  */
 const billingTaskBase = {
   organizationId: z.string().min(1).max(64),
-  stripeEventId: z.string().min(1).max(128),
+  providerEventId: z.string().min(1).max(128),
 }
 
 export const subscriptionChangedPayloadSchema = z.object({
@@ -131,8 +131,8 @@ export type SubscriptionChangedPayload = z.infer<typeof subscriptionChangedPaylo
 export const invoicePaidPayloadSchema = z.object({
   ...billingTaskBase,
   kind: z.literal('billing.invoice.paid'),
-  stripeInvoiceId: z.string().min(1).max(128),
-  /** Minor units, as Stripe reports it. */
+  providerOrderId: z.string().min(1).max(128),
+  /** Minor units, as the provider reports it. */
   amountPaid: z.number().int().nonnegative(),
   currency: z.string().min(3).max(8),
 })
@@ -142,9 +142,9 @@ export type InvoicePaidPayload = z.infer<typeof invoicePaidPayloadSchema>
 export const invoicePaymentFailedPayloadSchema = z.object({
   ...billingTaskBase,
   kind: z.literal('billing.invoice.payment_failed'),
-  stripeInvoiceId: z.string().min(1).max(128),
+  providerOrderId: z.string().min(1).max(128),
   attemptCount: z.number().int().nonnegative(),
-  /** ISO timestamp of Stripe's next retry, or null when it has given up. */
+  /** ISO timestamp of the provider's next retry, or null when it has given up. */
   nextAttemptAt: z.string().min(1).max(64).nullable(),
 })
 
@@ -164,8 +164,14 @@ export interface TaskPayloadMap {
 /* --------------------------------------------------------------- envelope -- */
 
 const envelopeBase = {
-  /** Idempotency key. Re-delivering the same id is a no-op after success. */
-  id: z.string().min(1).max(64),
+  /**
+   * Idempotency key. Re-delivering the same id is a no-op after success.
+   *
+   * Wide enough for the billing envelopes: their id is the provider event id — a
+   * 36-character UUID — joined to the task kind, and the longest of those pairs is 67
+   * characters.
+   */
+  id: z.string().min(1).max(128),
   /** Tenant the job belongs to. `system` for platform-wide jobs. */
   orgId: z.string().min(1).max(64),
   enqueuedAt: z.number().int().positive(),

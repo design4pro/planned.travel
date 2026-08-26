@@ -7,8 +7,8 @@
  *
  * **A plan's name is a word, not a mark.** `billing.plan.<id>.name` is
  * translated like any other noun here, because the id — `free`, `solo`, `crew`
- * — is what `src/lib/plans.ts`, Stripe and the invoice carry, and no reader ever
- * sees it. `Stripe`, `PDF` and `Face ID` stay as they are: a company, a format
+ * — is what `src/lib/plans.ts`, Polar and the invoice carry, and no reader ever
+ * sees it. `Polar`, `PDF` and `Face ID` stay as they are: a company, a format
  * and a trademark.
  *
  * **A language is never named in English**, and never named here either: all
@@ -322,13 +322,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'Η πληρωμή ελήφθη',
   'billing.checkout.completeBody':
-    'Το νέο σας πλάνο εφαρμόζεται. Εμφανίζεται εδώ τη στιγμή που το επιβεβαιώνει το Stripe — συνήθως σε δευτερόλεπτα.',
+    'Το νέο σας πλάνο εφαρμόζεται. Εμφανίζεται εδώ τη στιγμή που το επιβεβαιώνει το Polar — συνήθως σε δευτερόλεπτα.',
   'billing.checkout.cancelledTitle': 'Η πληρωμή ακυρώθηκε',
   'billing.checkout.cancelledBody':
     'Δεν χρεώθηκε τίποτα και το πλάνο σας δεν άλλαξε.',
-  'billing.portal.backTitle': 'Επιστροφή από το Stripe',
+  'billing.portal.backTitle': 'Επιστροφή από το Polar',
   'billing.portal.backBody':
-    'Ό,τι αλλάξατε εκεί φτάνει εδώ μόλις το επιβεβαιώσει το Stripe.',
+    'Ό,τι αλλάξατε εκεί φτάνει εδώ μόλις το επιβεβαιώσει το Polar.',
   'billing.refresh': 'Ανανέωση',
   'billing.readOnly.title': 'Είστε μέλος αυτού του χώρου εργασίας',
   'billing.readOnly.body':
@@ -344,9 +344,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Τρόπος πληρωμής',
   'billing.hero.cancel': 'Ακύρωση πλάνου',
   'billing.price.free': 'Δωρεάν',
-  'billing.stripe.opening': 'Ανοίγει το Stripe',
-  'billing.stripe.failed': 'Το Stripe δεν απάντησε',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Ανοίγει το Polar',
+  'billing.provider.failed': 'Το Polar δεν απάντησε',
+  'billing.provider.failedBody':
     'Δεν χρεώθηκε τίποτα. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά σε λίγο.',
 
   'billing.renewal.trialEndsToday':
@@ -370,7 +370,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Διαλέξτε πλάνο παρακάτω για να ξεκλειδώσετε ξανά κρατήσεις, χρονικό και χάρτες εκτός σύνδεσης.',
   'billing.renewal.incomplete':
-    'Το Stripe περιμένει ακόμη επιβεβαίωση αυτής της πληρωμής.',
+    'Το Polar περιμένει ακόμη επιβεβαίωση αυτής της πληρωμής.',
   'billing.renewal.free':
     'Δύο ταξίδια μαζί, κερασμένα. Αναβαθμίστε όποτε σας μικρύνει.',
   'billing.renewal.auto': 'Ανανεώνεται αυτόματα.',
@@ -462,7 +462,7 @@ const messages = {
   'billing.invoices.portal': 'Πύλη χρεώσεων',
   'billing.invoices.unavailableTitle': 'Οι αποδείξεις δεν φορτώνουν',
   'billing.invoices.unavailableBody':
-    'Το Stripe δεν απάντησε εγκαίρως για το ιστορικό. Όλα τα παραπάνω είναι ζωντανά· ανοίξτε την πύλη χρεώσεων για το πλήρες αρχείο, ή γυρίστε σε λίγο.',
+    'Το Polar δεν απάντησε εγκαίρως για το ιστορικό. Όλα τα παραπάνω είναι ζωντανά· ανοίξτε την πύλη χρεώσεων για το πλήρες αρχείο, ή γυρίστε σε λίγο.',
   'billing.invoices.emptyTitle': 'Κανένα τιμολόγιο ακόμη',
   'billing.invoices.emptyCustomer':
     'Η πρώτη απόδειξη εμφανίζεται εδώ μόλις κλείσει μια περίοδος χρέωσης.',

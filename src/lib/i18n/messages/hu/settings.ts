@@ -11,8 +11,8 @@
  *
  * **A plan's name is a word, not a mark.** `billing.plan.<id>.name` is
  * translated like any other noun, because the id — `free`, `solo`, `crew` — is
- * what `src/lib/plans.ts`, Stripe and the invoice carry, and no reader ever sees
- * it. `Stripe`, `PDF` and `Face ID` stay as they are: a company, a format and a
+ * what `src/lib/plans.ts`, Polar and the invoice carry, and no reader ever sees
+ * it. `Polar`, `PDF` and `Face ID` stay as they are: a company, a format and a
  * trademark.
  *
  * **A language is never named in English**, and never named here either: all
@@ -324,13 +324,13 @@ const messages = {
 
   'billing.checkout.completeTitle': 'A fizetés megérkezett',
   'billing.checkout.completeBody':
-    'Az új csomagja életbe lép. Abban a pillanatban megjelenik itt, amikor a Stripe visszaigazolja — általában néhány másodperc alatt.',
+    'Az új csomagja életbe lép. Abban a pillanatban megjelenik itt, amikor a Polar visszaigazolja — általában néhány másodperc alatt.',
   'billing.checkout.cancelledTitle': 'A fizetés megszakadt',
   'billing.checkout.cancelledBody':
     'Semmit nem vontunk le, és a csomagja sem változott.',
-  'billing.portal.backTitle': 'Vissza a Stripe-tól',
+  'billing.portal.backTitle': 'Vissza a Polar-tól',
   'billing.portal.backBody':
-    'Amit ott módosított, ide is megérkezik, amint a Stripe visszaigazolja.',
+    'Amit ott módosított, ide is megérkezik, amint a Polar visszaigazolja.',
   'billing.refresh': 'Frissítés',
   'billing.readOnly.title': 'Ön tagja ennek a munkaterületnek',
   'billing.readOnly.body':
@@ -346,9 +346,9 @@ const messages = {
   'billing.hero.paymentMethod': 'Fizetési mód',
   'billing.hero.cancel': 'Csomag lemondása',
   'billing.price.free': 'Ingyenes',
-  'billing.stripe.opening': 'A Stripe megnyitása',
-  'billing.stripe.failed': 'A Stripe nem elérhető',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'A Polar megnyitása',
+  'billing.provider.failed': 'A Polar nem elérhető',
+  'billing.provider.failedBody':
     'Semmit nem vontunk le. Ellenőrizze a kapcsolatot, és próbálja újra egy pillanat múlva.',
 
   'billing.renewal.trialEndsToday':
@@ -371,7 +371,7 @@ const messages = {
   'billing.renewal.lapsed':
     'Válasszon lentebb csomagot, és újra megnyílnak a foglalások, a napló és az offline térképek.',
   'billing.renewal.incomplete':
-    'A Stripe még várja ennek a fizetésnek a visszaigazolását.',
+    'A Polar még várja ennek a fizetésnek a visszaigazolását.',
   'billing.renewal.free':
     'Két utazás egyszerre, a mi vendégségünk. Váltson feljebb, amikor kinövi.',
   'billing.renewal.auto': 'Automatikusan megújul.',
@@ -459,7 +459,7 @@ const messages = {
   'billing.invoices.portal': 'Számlázási portál',
   'billing.invoices.unavailableTitle': 'A bizonylatok nem töltődnek be',
   'billing.invoices.unavailableBody':
-    'A Stripe nem válaszolt időben az előzményekhez. Minden, ami fentebb van, élő; a teljes nyilvántartáshoz nyissa meg a számlázási portált, vagy térjen vissza egy pillanat múlva.',
+    'A Polar nem válaszolt időben az előzményekhez. Minden, ami fentebb van, élő; a teljes nyilvántartáshoz nyissa meg a számlázási portált, vagy térjen vissza egy pillanat múlva.',
   'billing.invoices.emptyTitle': 'Még nincs számla',
   'billing.invoices.emptyCustomer':
     'Az első bizonylat itt jelenik meg, amint egy számlázási periódus lezárul.',

@@ -12,6 +12,13 @@ const src = fileURLToPath(new URL('./src/', import.meta.url))
  *   Node. Nothing there may import `cloudflare:workers`; bindings arrive as
  *   arguments, which is what makes them fake-able.
  *
+ * `server` collects `.tsx` as well as `.ts` because the transactional email
+ * templates under `src/server/email` are React components: they render to a
+ * string on the server and never reach a DOM, so they belong in the Node
+ * project rather than in jsdom. Vite's esbuild transform picks up
+ * `jsx: react-jsx` from `tsconfig.json`, which is all a server-rendered
+ * component needs — the React plugin exists for Fast Refresh, which no test has.
+ *
  * End-to-end and visual tests are Playwright's job (`playwright.config.ts`).
  */
 export default defineConfig({
@@ -46,7 +53,7 @@ export default defineConfig({
           globals: false,
           setupFiles: ['./vitest.setup.node.ts'],
           include: [
-            'src/server/**/*.test.ts',
+            'src/server/**/*.test.{ts,tsx}',
             'src/routes/**/*.test.ts',
             'src/styles/**/*.test.ts',
           ],

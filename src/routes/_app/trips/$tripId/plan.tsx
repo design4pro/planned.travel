@@ -3,6 +3,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { AppFrame } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { GlassPanel, SectionLabel, Skeleton } from '#/components/ui'
+import { TRIP_SLICE_HEIGHT_CLASS } from '#/lib/atlas/layout'
+import { cn } from '#/lib/cn'
 import { loadPlanBoard } from './-server/plan'
 import { PlanScreen } from './-ui/plan-screen'
 import { useTripHeader } from '../../-ui/trip-header'
@@ -50,11 +52,13 @@ function PlanPending() {
   return (
     <AppFrame bleed>
       <div
-        className={
-          'relative isolate w-full overflow-hidden bg-surface-inset ' +
-          'h-[calc(100svh-var(--safe-top)-var(--nav-h)-2.75rem-var(--subnav-h)-4rem-var(--safe-bottom))] ' +
-          'lg:h-[calc(100svh-var(--safe-top)-var(--nav-h)-var(--subnav-h))]'
-        }
+        className={cn(
+          'relative isolate w-full overflow-hidden bg-surface-inset',
+          // The same slice the real planner takes, from the one list that
+          // measures the chrome above it — see `src/lib/atlas/layout.ts`.
+          TRIP_SLICE_HEIGHT_CLASS.base,
+          TRIP_SLICE_HEIGHT_CLASS.lg,
+        )}
       >
         <GlassPanel
           radius="full"

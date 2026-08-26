@@ -5,7 +5,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import { PLANS, formatPlanAmount, yearlySavingPercent } from '#/lib/plans'
+import {
+  BILLING_INTERVALS,
+  PLANS,
+  PLAN_LIST,
+  formatPlanAmount,
+  yearlySavingPercent,
+} from '#/lib/plans'
 import {
   BillingIntervalToggle,
   PlanCard,
@@ -52,12 +58,29 @@ describe('plan copy helpers', () => {
   })
 
   it('explains what is actually billed in the footnote', () => {
-    expect(planPriceFootnote(PLANS.free, 'monthly')).toContain('No card')
-    expect(planPriceFootnote(PLANS.solo, 'monthly')).toContain(
-      `${PLANS.solo.trialDays}-day free trial`,
+    // Free asks for nothing, and only free may say so.
+    expect(planPriceFootnote(PLANS.free, 'monthly')).toBe(
+      'No card, no expiry, no countdown',
+    )
+    expect(planPriceFootnote(PLANS.solo, 'monthly')).toBe(
+      `${PLANS.solo.trialDays}-day free trial, card up front, charged when it ends`,
     )
     expect(planPriceFootnote(PLANS.solo, 'yearly')).toContain('once a year')
     expect(planPriceFootnote(PLANS.crew, 'yearly')).toContain('per member')
+  })
+
+  it('never tells a paid plan it starts without a card', () => {
+    // Polar's checkout collects a payment method when the trial starts — the
+    // pricing FAQ and the terms both say so, and no card on a paid plan would
+    // contradict them on the same page.
+    for (const plan of PLAN_LIST) {
+      for (const interval of BILLING_INTERVALS) {
+        if (plan.prices[interval] === null) continue
+        expect(planPriceFootnote(plan, interval).toLowerCase()).not.toContain(
+          'no card',
+        )
+      }
+    }
   })
 
   it('summarises seats and trips in one line', () => {

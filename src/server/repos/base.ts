@@ -410,7 +410,7 @@ export async function resolveQuotas(scope: TenantScope): Promise<ResolvedQuotas>
       plan: subscriptions.plan,
       status: subscriptions.status,
       seats: subscriptions.seats,
-      stripePriceId: subscriptions.stripePriceId,
+      providerProductId: subscriptions.providerProductId,
       quotaOverrides: subscriptions.quotaOverrides,
       seatLimit: subscriptions.seatLimit,
       storageLimitBytes: subscriptions.storageLimitBytes,

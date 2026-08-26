@@ -10,6 +10,35 @@ const externalBaseURL = process.env.PLAYWRIGHT_BASE_URL
 const baseURL = externalBaseURL ?? 'http://localhost:3000'
 
 /**
+ * Refuse to run against a server this workspace does not own.
+ *
+ * Ports 3010-3020 are reserved for an automated round; everything below is a
+ * developer's own process or another checkout's. Four consecutive rounds ran
+ * the suite against a port outside that range — twice against 3000, once
+ * against a server answering HTTP 500 to everything, and once against 3002,
+ * which belonged to a different worktree's run. Every one of those produced a
+ * page of failures that said nothing about the code under test, and the last
+ * one photographed another branch's application.
+ *
+ * A misdirected suite is worse than no suite: it looks like evidence. So this
+ * is a hard stop rather than a warning. Set PLAYWRIGHT_ALLOW_ANY_PORT=1 for a
+ * deliberate run against a preview deployment or a hand-started server.
+ */
+if (!isCI && process.env.PLAYWRIGHT_ALLOW_ANY_PORT !== '1') {
+  const port = Number(new URL(baseURL).port || '80')
+  if (port < 3010 || port > 3020) {
+    throw new Error(
+      `playwright: refusing to run against ${baseURL}.\n` +
+        `Ports 3010-3020 are reserved for automated rounds; ${port} is not one of them and may ` +
+        `belong to another checkout or to the developer.\n` +
+        `Start the server with \`pnpm exec vite dev --port 3010 --strictPort\` (never \`pnpm dev\`, ` +
+        `whose script hardcodes --port 3000) and pass PLAYWRIGHT_BASE_URL=http://localhost:3010.\n` +
+        `To target a preview deployment on purpose, set PLAYWRIGHT_ALLOW_ANY_PORT=1.`,
+    )
+  }
+}
+
+/**
  * The clock the Worker reads, pinned for the whole suite.
  *
  * The server picks *which rows* a screen shows by comparing a fixture date

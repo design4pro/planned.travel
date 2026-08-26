@@ -14,8 +14,9 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
+import type {
+  generateSQLiteDrizzleJson} from 'drizzle-kit/api';
 import {
-  generateSQLiteDrizzleJson,
   generateSQLiteMigration,
 } from 'drizzle-kit/api'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -27,8 +28,6 @@ import {
   regionalSettingsInput,
   workspaceDefaultsInput,
 } from '#/routes/_app/-server/settings'
-import { authSchema } from '#/server/db/auth-schema'
-import * as domainSchema from '#/server/db/schema'
 import { ForbiddenError } from '../context'
 import {
   ensureOrganizationSettings,
@@ -448,10 +447,16 @@ describe('locale persistence', () => {
           'utf8',
         ),
       ) as Awaited<ReturnType<typeof generateSQLiteDrizzleJson>>
-      const current = await generateSQLiteDrizzleJson({
-        ...authSchema,
-        ...domainSchema,
-      })
+      // The recorded state *after* this migration, not the live schema. Diffing against the live
+      // schema only produced this migration while it was the newest one; phases A and B now sit
+      // behind it, so a live diff would emit their DDL too and stall on their column rename. The
+      // claim under test is about this step, and 0002_snapshot.json is what this step produced.
+      const current = JSON.parse(
+        readFileSync(
+          path.join(process.cwd(), 'drizzle', 'meta', '0002_snapshot.json'),
+          'utf8',
+        ),
+      ) as Awaited<ReturnType<typeof generateSQLiteDrizzleJson>>
       const generated = (await generateSQLiteMigration(previous, current)).map(
         (statement) => statement.trim(),
       )
@@ -477,8 +482,14 @@ describe('locale persistence', () => {
         ),
       ) as { entries: ReadonlyArray<{ idx: number; tag: string }> }
 
-      expect(journal.entries.map((entry) => entry.idx)).toEqual([0, 1, 2])
-      expect(journal.entries.at(-1)?.tag).toBe('0002_locale_normalisation')
+      // The idx sequence has to be gapless and start at zero — that is what makes "applied in
+      // order" mean anything — but its length is not this test's business. It was [0, 1, 2] when
+      // this migration was the newest; phases A and B landed three more behind it in the merge, and
+      // pinning the count would have made every future migration fail a locale test.
+      expect(journal.entries.map((entry) => entry.idx)).toEqual(
+        journal.entries.map((_, i) => i),
+      )
+      expect(journal.entries[2]?.tag).toBe('0002_locale_normalisation')
 
       const snapshot = JSON.parse(
         readFileSync(

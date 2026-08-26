@@ -300,13 +300,13 @@ const messages = {
   'billing.status.incomplete_expired': '期限切れ',
   'billing.checkout.completeTitle': '支払いを受け取りました',
   'billing.checkout.completeBody':
-    '新しいプランを適用しています。Stripe が確認した時点でここに表示されます。ふつうは数秒です。',
+    '新しいプランを適用しています。Polar が確認した時点でここに表示されます。ふつうは数秒です。',
   'billing.checkout.cancelledTitle': '支払いを中止しました',
   'billing.checkout.cancelledBody':
     '請求は発生しておらず、プランも変わっていません。',
-  'billing.portal.backTitle': 'Stripe から戻りました',
+  'billing.portal.backTitle': 'Polar から戻りました',
   'billing.portal.backBody':
-    'あちらで変えた内容は、Stripe が確認するとすぐここに反映されます。',
+    'あちらで変えた内容は、Polar が確認するとすぐここに反映されます。',
   'billing.refresh': '更新',
   'billing.readOnly.title': 'あなたはこのワークスペースのメンバーです',
   'billing.readOnly.body':
@@ -325,9 +325,9 @@ const messages = {
   'billing.hero.paymentMethod': '支払い方法',
   'billing.hero.cancel': 'プランを解約',
   'billing.price.free': '無料',
-  'billing.stripe.opening': 'Stripe を開いています',
-  'billing.stripe.failed': 'Stripe に接続できませんでした',
-  'billing.stripe.failedBody':
+  'billing.provider.opening': 'Polar を開いています',
+  'billing.provider.failed': 'Polar に接続できませんでした',
+  'billing.provider.failedBody':
     '請求は発生していません。通信状況を確認して、少ししてからお試しください。',
   'billing.renewal.trialEndsToday':
     '試用は今日で終わります。カードを登録すれば、すべてのモジュールを使い続けられます。',
@@ -347,7 +347,7 @@ const messages = {
   'billing.renewal.lapsed':
     '予約、旅の記録、オフライン地図をまた使うには、下からプランを選んでください。',
   'billing.renewal.incomplete':
-    'Stripe はまだ、この支払いの確認を待っています。',
+    'Polar はまだ、この支払いの確認を待っています。',
   'billing.renewal.free':
     '同時に2件までの旅を、無料で。物足りなくなったらいつでもアップグレードできます。',
   'billing.renewal.auto': '自動で更新されます。',
@@ -421,7 +421,7 @@ const messages = {
   'billing.invoices.portal': '請求ポータル',
   'billing.invoices.unavailableTitle': '領収書を読み込めません',
   'billing.invoices.unavailableBody':
-    '履歴の取得に Stripe が間に合いませんでした。上の内容は最新です。全記録は請求ポータルで見るか、少ししてからお試しください。',
+    '履歴の取得に Polar が間に合いませんでした。上の内容は最新です。全記録は請求ポータルで見るか、少ししてからお試しください。',
   'billing.invoices.emptyTitle': 'まだ請求書はありません',
   'billing.invoices.emptyCustomer':
     '最初の領収書は、請求期間が終わるとここに出てきます。',

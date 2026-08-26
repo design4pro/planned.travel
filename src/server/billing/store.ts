@@ -10,14 +10,20 @@
  *
  * Every read and write goes through the `…Unscoped` billing repository functions, which
  * are the only repository functions permitted to run without a tenant scope precisely
- * because a Stripe webhook has no session. They touch billing rows and nothing else.
+ * because a billing webhook has no session. They touch billing rows and nothing else.
  */
 
-import { isSubscriptionStatus, planById, planForPriceId } from '#/lib/plans'
+import {
+  isBillingInterval,
+  isPlanId,
+  isSubscriptionStatus,
+  planById,
+  planForProductId,
+} from '#/lib/plans'
 import {
   findSubscriptionByOrganizationUnscoped,
-  findSubscriptionByStripeCustomerUnscoped,
-  findSubscriptionByStripeSubscriptionUnscoped,
+  findSubscriptionByProviderCustomerUnscoped,
+  findSubscriptionByProviderSubscriptionUnscoped,
   upsertSubscriptionUnscoped,
 } from '#/server/repos'
 import { ceilingsForPlan, planIdFromRow, storedCeilingsFromRow } from './limits'
@@ -25,7 +31,7 @@ import { ceilingsForPlan, planIdFromRow, storedCeilingsFromRow } from './limits'
 import type { UpsertSubscriptionInput } from '#/server/repos'
 import type { Database, Subscription } from '#/server/db/types'
 import type { StoredCeilings } from './limits'
-import type { SubscriptionRecord, SubscriptionStore } from './types'
+import type { PendingPlanChange, SubscriptionRecord, SubscriptionStore } from './types'
 
 /** Widen a persisted row into the shape the billing domain reasons about. */
 export function recordFromRow(row: Subscription): SubscriptionRecord {
@@ -33,17 +39,60 @@ export function recordFromRow(row: Subscription): SubscriptionRecord {
     organizationId: row.organizationId,
     planId: planIdFromRow(row),
     status: isSubscriptionStatus(row.status) ? row.status : 'incomplete',
-    interval: planForPriceId(row.stripePriceId)?.interval ?? null,
+    interval: planForProductId(row.providerProductId)?.interval ?? null,
     seats: Math.max(row.seats, 1),
-    stripeCustomerId: row.stripeCustomerId,
-    stripeSubscriptionId: row.stripeSubscriptionId,
-    stripePriceId: row.stripePriceId,
+    providerCustomerId: row.providerCustomerId,
+    providerSubscriptionId: row.providerSubscriptionId,
+    providerProductId: row.providerProductId,
     currentPeriodStart: row.currentPeriodStart,
     currentPeriodEnd: row.currentPeriodEnd,
     cancelAtPeriodEnd: row.cancelAtPeriodEnd,
     trialEndsAt: row.trialEndsAt,
     canceledAt: row.canceledAt,
+    pendingChange: pendingChangeFromRow(row),
     ceilings: storedCeilingsFromRow(row),
+  }
+}
+
+/**
+ * The scheduled change a row carries, or `null`.
+ *
+ * The three columns are nullable and carry no CHECK constraint, so this is where a
+ * partial or unrecognised triple is refused: a row naming a plan with no date, or a
+ * plan this deployment has stopped selling, reads as *no* scheduled change rather than
+ * as one dated `Invalid Date`. That matters because the value goes straight into KV
+ * through `cachedPendingChange()` and into the plan-changed email after that — a
+ * change we cannot date is a change we cannot describe.
+ */
+function pendingChangeFromRow(row: Subscription): PendingPlanChange | null {
+  const { pendingPlan, pendingInterval, pendingEffectiveAt } = row
+  if (pendingEffectiveAt === null) return null
+  if (!isPlanId(pendingPlan) || !isBillingInterval(pendingInterval)) return null
+  return {
+    planId: pendingPlan,
+    interval: pendingInterval,
+    effectiveAt: pendingEffectiveAt,
+  }
+}
+
+/**
+ * The columns a scheduled change occupies — the counterpart to {@link ceilingColumns}.
+ *
+ * Every value is an explicit `null` rather than `undefined` when there is nothing
+ * scheduled, because `definedOnly()` in the repository strips `undefined` and keeps
+ * `null`: emitting `undefined` would leave a superseded schedule sitting on the row
+ * for the rest of the period it was supposed to end.
+ */
+export function pendingChangeColumns(
+  pending: PendingPlanChange | null,
+): Pick<
+  UpsertSubscriptionInput,
+  'pendingPlan' | 'pendingInterval' | 'pendingEffectiveAt'
+> {
+  return {
+    pendingPlan: pending?.planId ?? null,
+    pendingInterval: pending?.interval ?? null,
+    pendingEffectiveAt: pending?.effectiveAt ?? null,
   }
 }
 
@@ -74,11 +123,12 @@ export function rowValuesFromRecord(record: SubscriptionRecord): UpsertSubscript
 
   return {
     ...ceilingColumns(record.ceilings),
+    ...pendingChangeColumns(record.pendingChange ?? null),
     status: record.status,
     seats: record.seats,
-    stripeCustomerId: record.stripeCustomerId,
-    stripeSubscriptionId: record.stripeSubscriptionId,
-    stripePriceId: record.stripePriceId,
+    providerCustomerId: record.providerCustomerId,
+    providerSubscriptionId: record.providerSubscriptionId,
+    providerProductId: record.providerProductId,
     currency: price === null ? null : price.currency.toUpperCase(),
     unitAmountMinor: price?.amount ?? null,
     currentPeriodStart: record.currentPeriodStart,
@@ -98,14 +148,14 @@ export function createSubscriptionStore(db: Database): SubscriptionStore {
       const row = await findSubscriptionByOrganizationUnscoped(db, organizationId)
       return row === null ? null : recordFromRow(row)
     },
-    async findByStripeCustomerId(stripeCustomerId) {
-      const row = await findSubscriptionByStripeCustomerUnscoped(db, stripeCustomerId)
+    async findByProviderCustomerId(providerCustomerId) {
+      const row = await findSubscriptionByProviderCustomerUnscoped(db, providerCustomerId)
       return row === null ? null : recordFromRow(row)
     },
-    async findByStripeSubscriptionId(stripeSubscriptionId) {
-      const row = await findSubscriptionByStripeSubscriptionUnscoped(
+    async findByProviderSubscriptionId(providerSubscriptionId) {
+      const row = await findSubscriptionByProviderSubscriptionUnscoped(
         db,
-        stripeSubscriptionId,
+        providerSubscriptionId,
       )
       return row === null ? null : recordFromRow(row)
     },
@@ -116,7 +166,7 @@ export function createSubscriptionStore(db: Database): SubscriptionStore {
         rowValuesFromRecord(record),
       )
     },
-    async attachCustomer(organizationId, stripeCustomerId) {
+    async attachCustomer(organizationId, providerCustomerId) {
       // A row created here predates the subscription it will carry, so it is stamped
       // with the Free plan's ceilings. Leaving the column defaults would have handed a
       // workspace ten seats for starting a checkout it never completed — and, now that
@@ -124,7 +174,7 @@ export function createSubscriptionStore(db: Database): SubscriptionStore {
       const existing = await findSubscriptionByOrganizationUnscoped(db, organizationId)
       await upsertSubscriptionUnscoped(db, organizationId, {
         ...(existing === null ? ceilingColumns(FREE_CEILINGS) : {}),
-        stripeCustomerId,
+        providerCustomerId,
       })
     },
     async updateStatus(organizationId, status, changedAt) {

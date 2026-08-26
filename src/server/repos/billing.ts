@@ -5,17 +5,22 @@
  *
  * - **In-app reads** go through {@link getSubscription} and the usage helpers, all tenant-scoped like
  *   every other repository. `assertQuota()` in `./base` resolves its ceilings from the same row.
- * - **Stripe webhooks** have no session and therefore no tenant context: they arrive with a Stripe
- *   customer or subscription id and have to *discover* which organization they belong to. Those three
- *   functions take a plain {@link Database}, are named `…Unscoped`, and are the only functions in
+ * - **Callers with no tenant context.** A billing webhook arrives with a provider customer or
+ *   subscription id and has to *discover* which organization it belongs to; the platform console
+ *   reads a workspace its operator is deliberately not a member of, which SPEC §5 forbids reaching
+ *   through {@link TenantScope} at all rather than through a fabricated one. Those four functions
+ *   take a plain {@link Database}, are named `…Unscoped`, and are the only functions in
  *   `src/server/repos/**` that may run without a {@link TenantScope}. They return billing rows only —
- *   never trip, place or traveller data — so a mis-signed webhook cannot read a tenant's content.
+ *   never trip, place or traveller data — so neither a mis-signed webhook nor a console screen can
+ *   read a tenant's content through them.
  */
 
-import { and, asc, desc, eq, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
+  BILLING_INTERVALS,
   ORGANIZATION_PLANS,
+  PLAN_CATALOGUE_IDS,
   SUBSCRIPTION_STATUSES,
   USAGE_METRICS,
   subscriptions,
@@ -39,6 +44,8 @@ export const usageRecordsRepository = createTenantRepository(usageRecords, 'usag
 const planSchema = z.enum(ORGANIZATION_PLANS)
 const statusSchema = z.enum(SUBSCRIPTION_STATUSES)
 const metricSchema = z.enum(USAGE_METRICS)
+const pendingPlanSchema = z.enum(PLAN_CATALOGUE_IDS)
+const pendingIntervalSchema = z.enum(BILLING_INTERVALS)
 
 /**
  * Overrides are sparse by definition — a metric with no entry falls back to the plan.
@@ -54,9 +61,9 @@ const quotaOverridesSchema: z.ZodType<QuotaOverrides> = z.partialRecord(
 export const upsertSubscriptionInput = z.object({
   plan: planSchema.optional(),
   status: statusSchema.optional(),
-  stripeCustomerId: z.string().trim().min(1).max(64).nullish(),
-  stripeSubscriptionId: z.string().trim().min(1).max(64).nullish(),
-  stripePriceId: z.string().trim().min(1).max(64).nullish(),
+  providerCustomerId: z.string().trim().min(1).max(64).nullish(),
+  providerSubscriptionId: z.string().trim().min(1).max(64).nullish(),
+  providerProductId: z.string().trim().min(1).max(64).nullish(),
   seats: nonNegativeIntSchema.max(10_000).optional(),
   currency: currencySchema.nullish(),
   unitAmountMinor: nonNegativeIntSchema.nullish(),
@@ -68,6 +75,17 @@ export const upsertSubscriptionInput = z.object({
   quotaOverrides: quotaOverridesSchema.nullish(),
   seatLimit: nonNegativeIntSchema.max(100_000).optional(),
   storageLimitBytes: nonNegativeIntSchema.optional(),
+  /**
+   * The plan change the provider has scheduled but not applied. The three move as one
+   * triple and they are the only enum columns on this table with no CHECK constraint
+   * behind them — SQLite cannot add one to a live table without rebuilding it — so
+   * these two `z.enum()`s are the whole enforcement, which is why they are spelled out
+   * rather than left as free text. `pendingPlan` is a *catalogue* id and not the coarse
+   * `plan` tier above it.
+   */
+  pendingPlan: pendingPlanSchema.nullish(),
+  pendingInterval: pendingIntervalSchema.nullish(),
+  pendingEffectiveAt: instantSchema.nullish(),
 })
 export type UpsertSubscriptionInput = z.infer<typeof upsertSubscriptionInput>
 
@@ -231,8 +249,9 @@ export async function getMonthlyUsage(
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Resolves the billing row for one organization without a tenant context. Only the Stripe webhook and
+ * Resolves the billing row for one organization without a tenant context. Only the billing webhook and
  * the checkout callback may call this; everything inside a request uses {@link getSubscription}.
+ * A caller with several organizations uses {@link listSubscriptionsByOrganizationsUnscoped} instead.
  */
 export async function findSubscriptionByOrganizationUnscoped(
   db: Database,
@@ -246,31 +265,67 @@ export async function findSubscriptionByOrganizationUnscoped(
   return rows[0] ?? null
 }
 
-/** Finds the organization a Stripe customer belongs to. Webhook-only. */
-export async function findSubscriptionByStripeCustomerUnscoped(
+/** How many organizations one unscoped billing lookup may name. */
+const SUBSCRIPTION_LOOKUP_LIMIT = 50
+
+/**
+ * Resolves the billing rows for a set of organizations in one statement, without a tenant context.
+ *
+ * The plural of {@link findSubscriptionByOrganizationUnscoped}, and it exists for the same reason
+ * that one takes a plain {@link Database}: the caller has no scope on these organizations and must
+ * not fabricate one (SPEC §5). It returns billing columns only — never trip, place or traveller data
+ * — and it is bounded, so no caller can turn it into a table scan.
+ *
+ * The bound is the point. Read one id at a time this answers `n` D1 queries for one request, which
+ * puts the cost of a page on how many workspaces the subject happens to have joined.
+ */
+export async function listSubscriptionsByOrganizationsUnscoped(
   db: Database,
-  stripeCustomerId: string,
-): Promise<Subscription | null> {
-  const rows = await db
+  organizationIds: ReadonlyArray<string>,
+): Promise<ReadonlyArray<Subscription>> {
+  const ids = z
+    .array(idSchema)
+    .min(1)
+    .max(SUBSCRIPTION_LOOKUP_LIMIT)
+    .parse([...new Set(organizationIds)])
+
+  return db
     .select()
     .from(subscriptions)
-    .where(eq(subscriptions.stripeCustomerId, z.string().trim().min(1).max(64).parse(stripeCustomerId)))
-    .limit(1)
-  return rows[0] ?? null
+    .where(inArray(subscriptions.organizationId, ids))
+    .limit(ids.length)
 }
 
-/** Finds the organization a Stripe subscription belongs to. Webhook-only. */
-export async function findSubscriptionByStripeSubscriptionUnscoped(
+/** Finds the organization a provider customer belongs to. Webhook-only. */
+export async function findSubscriptionByProviderCustomerUnscoped(
   db: Database,
-  stripeSubscriptionId: string,
+  providerCustomerId: string,
 ): Promise<Subscription | null> {
   const rows = await db
     .select()
     .from(subscriptions)
     .where(
       eq(
-        subscriptions.stripeSubscriptionId,
-        z.string().trim().min(1).max(64).parse(stripeSubscriptionId),
+        subscriptions.providerCustomerId,
+        z.string().trim().min(1).max(64).parse(providerCustomerId),
+      ),
+    )
+    .limit(1)
+  return rows[0] ?? null
+}
+
+/** Finds the organization a provider subscription belongs to. Webhook-only. */
+export async function findSubscriptionByProviderSubscriptionUnscoped(
+  db: Database,
+  providerSubscriptionId: string,
+): Promise<Subscription | null> {
+  const rows = await db
+    .select()
+    .from(subscriptions)
+    .where(
+      eq(
+        subscriptions.providerSubscriptionId,
+        z.string().trim().min(1).max(64).parse(providerSubscriptionId),
       ),
     )
     .limit(1)

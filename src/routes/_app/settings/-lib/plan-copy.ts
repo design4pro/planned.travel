@@ -4,8 +4,8 @@
  * `src/lib/plans.ts` is the single source of truth for what a subscription may
  * *do* — its prices, its seat range, its limits and its module switches — and it
  * ships English `name`, `tagline` and `features` strings alongside them, read by
- * the marketing pages and sent to Stripe as a product description. English is
- * right in both of those places: a Stripe invoice line is an operator's record.
+ * the marketing pages and sent to Polar as a product description. English is
+ * right in both of those places: a Polar invoice line is an operator's record.
  *
  * It is not right on a settings screen. `docs/SPEC.md` §8.6 admits no
  * untranslated string onto a screen, and the plan comparison put a plan's name,

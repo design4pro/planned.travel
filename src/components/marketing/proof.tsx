@@ -36,7 +36,7 @@ const PANELS: ReadonlyArray<Panel> = [
     icon: Cloud,
     label: 'Where your things live',
     heading: 'On Cloudflare, in your own workspace',
-    body: 'Trips sit in a database scoped to your workspace and files in our own object storage, both served from Cloudflare’s edge. Stripe runs the checkout, so your card number never reaches us.',
+    body: 'Trips sit in a database scoped to your workspace and files in our own object storage, both served from Cloudflare’s edge. Polar, our merchant of record, runs the checkout and issues the invoice, so your card number never reaches us.',
   },
 ]
 
@@ -76,7 +76,7 @@ export function HonestProof() {
     <Section
       id="honest"
       aria-labelledby="honest-heading"
-      className="scroll-mt-[var(--nav-h)]"
+      className="scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))]"
     >
       <SectionIntro
         headingId="honest-heading"
