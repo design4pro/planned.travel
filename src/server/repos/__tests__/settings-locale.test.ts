@@ -14,8 +14,9 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
+import type {
+  generateSQLiteDrizzleJson} from 'drizzle-kit/api';
 import {
-  generateSQLiteDrizzleJson,
   generateSQLiteMigration,
 } from 'drizzle-kit/api'
 import { beforeEach, describe, expect, it, vi } from 'vitest'

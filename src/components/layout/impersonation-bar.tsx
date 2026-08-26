@@ -392,7 +392,7 @@ function ImpersonatedSessionBar({
               remaining === null ? undefined : speakRemaining(remaining)
             }
             className={cn(
-              'numeral min-w-12 text-right text-label font-semibold tracking-tight',
+              'numeral min-w-12 text-end text-label font-semibold tracking-tight',
               expired ? 'text-danger' : 'text-ink',
             )}
           >

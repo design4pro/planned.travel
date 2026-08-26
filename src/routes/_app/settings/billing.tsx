@@ -498,7 +498,7 @@ function PlanHero({
         </div>
 
         <div className="flex shrink-0 flex-col items-start gap-4 lg:items-end">
-          <div className="lg:text-right">
+          <div className="lg:text-end">
             <p className="flex items-baseline gap-1.5 lg:justify-end">
               <span className="font-display text-display leading-none font-extrabold tracking-tighter tabular-nums text-inverse-on">
                 {price === null
@@ -535,7 +535,7 @@ function PlanHero({
                 size="sm"
                 shape="pill"
                 icon={<CreditCard />}
-                iconAfter={<ExternalLink />}
+                iconAfter={<ExternalLink data-mirror-rtl />}
                 disabled={!state.hasProviderCustomer}
                 loading={pending === PORTAL_KEY}
                 loadingLabel="Opening the billing portal"
@@ -546,7 +546,7 @@ function PlanHero({
               </Button>
               <p
                 id={hintId}
-                className="max-w-[40ch] text-caption leading-relaxed text-inverse-muted lg:text-right"
+                className="max-w-[40ch] text-caption leading-relaxed text-inverse-muted lg:text-end"
               >
                 {state.hasProviderCustomer
                   ? 'Cards, billing address, VAT number, receipts and cancellation live with Polar, who issues the invoice.'
@@ -555,7 +555,7 @@ function PlanHero({
               {failure === null ? null : (
                 <p
                   role="alert"
-                  className="max-w-[40ch] rounded-lg bg-danger-soft px-2.5 py-1.5 text-caption leading-relaxed text-danger lg:text-right"
+                  className="max-w-[40ch] rounded-lg bg-danger-soft px-2.5 py-1.5 text-caption leading-relaxed text-danger lg:text-end"
                 >
                   {failure}
                 </p>
@@ -862,7 +862,7 @@ function PlanOption({
           loading={busy}
           loadingLabel={isFree ? 'Opening the billing portal' : 'Opening Polar'}
           iconAfter={
-            isCurrent ? undefined : isFree ? <ExternalLink /> : <ArrowUpRight />
+            isCurrent ? undefined : isFree ? <ExternalLink data-mirror-rtl /> : <ArrowUpRight data-mirror-rtl />
           }
           onClick={isFree ? onOpenPortal : onChoose}
         >
@@ -1053,7 +1053,7 @@ function InvoiceHistory({
         size="sm"
         shape="pill"
         icon={<Receipt />}
-        iconAfter={<ExternalLink />}
+        iconAfter={<ExternalLink data-mirror-rtl />}
         loading={portalPending}
         loadingLabel="Opening the billing portal"
         onClick={onOpenPortal}
@@ -1226,7 +1226,7 @@ function BillingPending() {
           <Bar className="h-7 w-40 bg-inverse-surface" />
           <Bar className="h-3 w-64 bg-inverse-surface" />
         </div>
-        <div className="space-y-3 lg:text-right">
+        <div className="space-y-3 lg:text-end">
           <Bar className="h-10 w-32 bg-inverse-surface" />
           <Bar className="h-3 w-24 bg-inverse-surface" />
         </div>
