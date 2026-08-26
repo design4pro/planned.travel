@@ -4,15 +4,17 @@ The trip's paperwork: the bookings a traveller reads back to a stranger at a des
 them, the stay that covers a run of nights, and the confirmation file that could fill all three in
 without anybody retyping it.
 
-Ten rows of `.claude/ultrabuild/recon/gap-rows.json` carry the `BKG-` prefix. Two of them do not
-survive the hosted multi-tenant boundary and are disposed of in `11-boundaries-and-blockers.md`; one
-is blocked on a commercial decision nobody in this repository can take; the remaining seven are
-built here, in eight stages.
+Ten rows carry the `BKG-` prefix in the materialised wave table in `docs/plans/README.md` — the
+surviving record of the recon row store, which itself exists nowhere on disk or in git history. Two
+of them do not survive the hosted multi-tenant boundary and are disposed of in
+`11-boundaries-and-blockers.md`; one is blocked on a commercial decision nobody in this repository
+can take; the remaining seven are built here, in eight stages.
 
 ## What is on disk today
 
-Read `.claude/ultrabuild/recon/repo-data.md` and `repo-ui.md` for the whole inventory. What matters
-for this file, measured at HEAD:
+There is no inventory file to read: the wave table in `docs/plans/README.md` maps rows to stages,
+`docs/ARCHITECTURE.md` holds the platform shape, and every claim below is re-checkable with one
+`grep` at the executing run's own HEAD. What matters for this file, measured at HEAD:
 
 **Both screens exist and both are live against D1.** `src/routes/_app/trips/$tripId/book.tsx` (127
 lines) loads `loadBookingDeskFn` and renders four stat tiles plus
@@ -43,8 +45,8 @@ a calendar through `src/server/queue/ics.ts` or a JSON export through its own sc
 each row, extracts a reference code, stages the result in `KV` under `import:<jobId>` for 24 hours
 and pokes the trip's room so an open tab hears about it. It is registered in the consumer at
 `src/server/queue/consumer.ts:81`. `grep -rn "booking-import" src/` returns the type, the registry,
-the switch arm and the handler — and **no producer anywhere**, which is what `repo-platform.md` §4
-records. There is no UI that could reach it.
+the switch arm and the handler — and **no producer anywhere**; repeat that grep at your own HEAD
+rather than trusting this sentence. There is no UI that could reach it.
 
 **One dead export, found while reading and named rather than removed by surprise.**
 `src/routes/_app/-server/trip.ts:408` exports `loadTripBookings`, and `grep -rn loadTripBookings src/
@@ -82,12 +84,14 @@ exact shape `11-S1` refused.
 `BKG-08` has a stage — `03-S3` — because a row that is invisible is a row that gets rediscovered and
 half-built. That stage closes nothing, owns no repository file and builds no surface. It records what
 the capability needs, what it would cost and which decision in `11-S3` it waits on. **No stage in
-this plan is scheduled behind it.** Measured over `gap-rows.json`: no row anywhere in the 89 lists
-`BKG-08` in its `dependsOn`, so nothing is held up by leaving it where it is.
+this plan is scheduled behind it.** Re-measurable at any HEAD: `grep -rn "BKG-08" docs/plans/`
+returns only this plan, the `README.md` wave-table row that parks it in wave 2, and the
+`11-boundaries-and-blockers.md` decision record — no edge table or "Rows unblocked" line anywhere
+names `BKG-08` as a supplier, so nothing is held up by leaving it where it is.
 
 ## The order of the stages, and the dependency edges it satisfies
 
-`X → Y` reads "X depends on Y", the direction `gap-rows.json` uses.
+`X → Y` reads "X depends on Y", the direction the cut-edge table in `docs/plans/README.md` uses.
 
 | Edge              | Supplier                                       | Satisfied because |
 | ----------------- | ---------------------------------------------- | ----------------- |
@@ -151,18 +155,18 @@ The instruction that produced this file asks that "`BKG-07` is sequenced before 
 made and recorded, and it contradicts the criterion in the same list that says stage order must
 satisfy every `dependsOn` edge. Measured, three ways:
 
-1. `.claude/ultrabuild/recon/gap-rows.json` gives `BKG-07` a `dependsOn` of `["BKG-06"]`. `BKG-06`'s
-   own `dependsOn` is empty.
-2. `.claude/ultrabuild/recon/gap-cuts.json` records the removed edge as `BKG-06 → BKG-07` with the
-   reason "The transport record must exist before the airport picker and station-chain editor can
-   edit its endpoints." The surviving edge is the other one.
-3. `docs/plans/README.md` repeats that cut in its own table and places `BKG-06` in wave 1 and
-   `BKG-07` in wave 2, and states that any change to the edge set is a change to `gap-rows.json` and
-   `gap-cuts.json` **first**.
+1. The cut-edge table in `docs/plans/README.md` records the removed edge as `BKG-06 → BKG-07` with
+   the reason "The transport record must exist before its endpoint pickers can edit it." The
+   surviving edge is the other one: `BKG-07 → BKG-06`.
+2. The same file's wave table places `BKG-06` in wave 1 and `BKG-07` in wave 2 on this plan's rows,
+   which is that edge applied.
+3. The edge table above in this file materialises `BKG-07 → BKG-06` as an edge every stage order
+   here must satisfy.
 
 So this plan sequences `BKG-06` (`03-S1`, wave 1) before `BKG-07` (`03-S2`, wave 2), and `BKG-07`
 before `BKG-10` (`03-S5`, wave 4) — which is the half of the instruction that the edge set does
-support, and which `BKG-10`'s own `dependsOn` of `["TRP-08", "BKG-06", "BKG-07"]` requires. Reversing
+support, and which the three `BKG-10` edges in the table above (`BKG-10 → TRP-08`,
+`BKG-10 → BKG-06`, `BKG-10 → BKG-07`) require. Reversing
 the first pair would put the station-chain editor in front of the record it edits, and the stage that
 executed it would have nothing to open.
 
@@ -181,8 +185,10 @@ to match a count would break existing rows against a `CHECK` constraint for no p
 which is a floor and not a fixture. Two stages here sit one wave above their floor, each because the
 floor would have put two exclusive claims on one file in one wave — which
 `scripts/ultrabuild/check-plan-collisions.mjs` reports as a clobber, correctly, because that is what
-it is. Neither move violates an edge: **nothing in `gap-rows.json` depends on `BKG-03` or on
-`BKG-10`**, so no other plan slips by a single wave.
+it is. Neither move violates an edge: **no plan file names `BKG-03` or `BKG-10` as a supplier** —
+re-measurable with `grep -rn "BKG-03\|BKG-10" docs/plans/`, whose every cross-plan hit is a
+disposition, a host-and-seam note or an edge pointing the other way — so no other plan slips by a
+single wave.
 
 - **`03-S7` (`BKG-03`) states wave 5**, floor 4. `BKG-01` and `BKG-03` both land in wave 4 and both
   need the desk route `src/routes/_app/trips/$tripId/book.tsx`. The alternative — splitting the desk
@@ -420,10 +426,12 @@ spellings are introduced.
 read or write, on all five functions. Validation is shape; permission is the trip lookup inside the
 tenant scope.
 
-**Realtime.** The four writers keep their existing `mirrorToRoom` calls unchanged. The day reference
-travels in the mirrored patch as one more field on the `transport` entity, well inside the 32 KiB
-frame and the 40 msg/s ceiling in `src/server/do/protocol.ts`. Nothing here is slow, so nothing is
-enqueued.
+**Realtime.** The four writers keep their existing `mirrorToRoom` calls unchanged —
+`patch('route', …)` at `src/server/fns/transports.ts:138`, `:157` and `:180`,
+`tombstone('route', …)` at `:193` — because `route` is the kind `TRIP_ENTITY_KINDS` declares for a
+transport row (`src/server/do/protocol.ts:54`, in the list at `:50-60`). The day reference travels
+in the mirrored patch as one more field on the `route` entity, well inside the 32 KiB frame and the
+40 msg/s ceiling in `src/server/do/protocol.ts`. Nothing here is slow, so nothing is enqueued.
 
 ### UI (route, components)
 
@@ -763,9 +771,9 @@ stations: z.array(stationSchema).min(2).max(13), segments: z.array(segmentSchema
 the parent transport inside the same scope. A well-formed transport id from the client is not an
 authorised transport id, and the chain writer never trusts the one it was handed.
 
-**Nothing is enqueued and nothing is slow.** The mirror is one `transport` upsert carrying the segment
-count and the two outer endpoints — not the whole chain, because a patch is a notification here and
-D1 is the record.
+**Nothing is enqueued and nothing is slow.** The mirror is one `route` upsert — the kind the four
+writers in `src/server/fns/transports.ts` already patch — carrying the segment count and the two
+outer endpoints, not the whole chain, because a patch is a notification here and D1 is the record.
 
 ### UI (route, components)
 
@@ -958,8 +966,9 @@ describes the capability, the call pattern, the cache and the attribution, and p
 user, without naming a provider, assuming a free tier, writing a client for an unnamed service, or
 shipping a degraded version to avoid asking.
 
-**No stage is scheduled behind it.** Measured over `gap-rows.json`: no row lists `BKG-08` in its
-`dependsOn`. Nothing in this plan, and nothing in any sibling plan, waits on it.
+**No stage is scheduled behind it.** Re-measurable at any HEAD: `grep -rn "BKG-08" docs/plans/`
+names it only here, in the `README.md` wave table and in the `11-boundaries-and-blockers.md`
+decision record. Nothing in this plan, and nothing in any sibling plan, waits on it.
 
 ### Owned paths
 
@@ -1050,17 +1059,18 @@ for a stage that writes no code means they must be untouched.
 
 **No code runs, and there is no browser evidence** — no frame set at 360px, 1280px or 2560px, in
 either theme, because there is no surface to photograph. This stage is verified as a record, by the
-same checks `11-S1` uses on itself: the row id resolves in `.claude/ultrabuild/recon/gap-rows.json`, its
-wave matches the table in `docs/plans/README.md`, and the claim that nothing depends on it is
-re-derivable in one command:
+same checks `11-S1` uses on itself: the row id appears in the wave table in `docs/plans/README.md`
+against wave 2 of this plan, and the claim that nothing depends on it is re-derivable in one
+command:
 
 ```sh
-node -e 'const r=require("./.claude/ultrabuild/recon/gap-rows.json");
-console.log(r.filter(x=>(x.dependsOn||[]).includes("BKG-08")).map(x=>x.id))'
+grep -rn 'BKG-08' docs/plans/ | grep -v '^docs/plans/03-'
 ```
 
-It must print `[]`. If it ever prints anything else, this stage is no longer safely parked and the
-plan that added the edge owns the consequence.
+It must print lines from exactly two files and no third: the `README.md` wave-table row, and the
+`11-boundaries-and-blockers.md` decision-record rows (`11-S3`'s waiting table and its prose). If it
+ever prints an edge table or a "Rows unblocked" line naming `BKG-08` as a supplier, this stage is
+no longer safely parked and the plan that added the edge owns the consequence.
 
 **Console and layout shift** are not applicable: no surface is shipped. Stated rather than skipped, so
 the omission is a decision and not an oversight.
@@ -1594,7 +1604,9 @@ The consequence is one design decision and one honest trade-off, both under **Se
 **not** affected is the seam `01-S4` describes: one variant, one prefix, one renderer, exactly as
 promised.
 
-Rows unblocked: none. No row in `gap-rows.json` lists `BKG-10` in its `dependsOn`.
+Rows unblocked: none. No plan file names `BKG-10` as a supplier — every cross-plan mention
+(`grep -rn "BKG-10" docs/plans/`) is the opposite edge, `BKG-10 → TRP-08`, or a host-and-seam note
+about it.
 
 ### Owned paths
 
@@ -1682,8 +1694,9 @@ and performs no conversion.
   and the segment rows of one day from array index, in a single `scope.db.batch()`, which on D1 is a
   real transaction: statements run sequentially and a failure rolls the whole sequence back. It drops
   an incoming id that is not on that day rather than rejecting the whole call — a tab one delete
-  behind should still be able to reorder the rows that do exist, which is the rule
-  `-server/plan.ts:269-272` already states — and appends any known id the client omitted at its
+  behind should still be able to reorder the rows that do exist, which is the rule the jsdoc at
+  `-server/plan.ts:252-254` already states over `reorderPlanFn` — and appends any known id the
+  client omitted at its
   current relative position, so a partial list cannot silently delete a position.
 
 **Server function — `src/routes/_app/trips/$tripId/-server/plan-transports.ts`, a module of its own.**
@@ -2004,20 +2017,20 @@ wave-3 schema stage for this stage, `imported_at` on the wave-2 one for `03-S4` 
 function.**
 
 - `updateUserSettingsInput` gains `maskConfirmationCodes: z.boolean().optional()`, one line beside
-  `reduceMotion: z.boolean().optional()` at `:134`. Without it the key never survives the write:
-  `updateUserSettings` (`:211-222`) passes its input through `updateUserSettingsInput.parse`, and a
+  `reduceMotion: z.boolean().optional()` at `:141`. Without it the key never survives the write:
+  `updateUserSettings` (`:228-239`) passes its input through `updateUserSettingsInput.parse`, and a
   `z.object` **strips** an unknown key rather than refusing it, so the switch would report success and
   save nothing.
 - `EffectiveSettings` gains `readonly maskConfirmationCodes: boolean`, beside
-  `readonly reduceMotion: boolean` at `:249`.
+  `readonly reduceMotion: boolean` at `:266`.
 - The object literal `getEffectiveSettings` returns gains one more key,
   `maskConfirmationCodes: user?.maskConfirmationCodes ?? false`, in the idiom of
-  `reduceMotion: user?.reduceMotion ?? false` at `:283`.
+  `reduceMotion: user?.reduceMotion ?? false` at `:300`.
 
 **Why the third edit exists, stated because the sentence it replaces was false.** An earlier revision
 of this stage claimed `getEffectiveSettings` "already returns the whole row, so the new field arrives
 everywhere the old ones do". It does not, and the difference is the whole feature. Measured at
-`src/server/repos/settings.ts:254-287`: the function reads two rows under one `Promise.all` and then
+`src/server/repos/settings.ts:271-304`: the function reads two rows under one `Promise.all` and then
 **hand-builds an object literal, field by field** — twelve named keys, no spread of either row, so
 every value it exposes is a value someone wrote out. A column added to `user_settings` and to the
 write validator therefore reaches **no reader at all** until the interface and that literal both name
@@ -2025,10 +2038,10 @@ it, and this stage would have shipped a switch that writes a boolean nothing can
 masking feature that passes `pnpm typecheck`, `pnpm lint` and a row-level test.
 
 `reduce_motion` is the precedent for the whole chain and shows how many sites a display preference has
-to be named in — the column (`src/server/db/schema.ts:1842`), the write validator (`:134`), the
-interface (`:249`), the returned literal (`:283`), the appearance payload type
-(`src/routes/_app/-server/settings.ts:237`), the payload literal (`:253`), the writer's validator
-(`:265`) and the writer's pass-through (`:273`). Eight, and this preference needs the same eight plus
+to be named in — the column (`src/server/db/schema.ts:1847`), the write validator (`:141`), the
+interface (`:266`), the returned literal (`:300`), the appearance payload type
+(`src/routes/_app/-server/settings.ts:269`), the payload literal (`:285`), the writer's validator
+(`:297`) and the writer's pass-through (`:305`). Eight, and this preference needs the same eight plus
 the one reader below. The regression test is in **Tenant isolation test**, and it asserts through
 `getEffectiveSettings` rather than through the stored row for exactly this reason.
 
@@ -2038,7 +2051,7 @@ behalf whether their own screen is shoulder-safe — so `organization_settings` 
 rule.
 
 **Scoping, because this stage does write a row.** `user_settings` carries `organization_id NOT NULL`
-(`src/server/db/schema.ts:1831`, through `orgRef()`) and is reached only through
+(`src/server/db/schema.ts:1836`, through `orgRef()`) and is reached only through
 `userSettingsRepository`, built by `createTenantRepository(userSettings, 'user settings')`
 (`src/server/repos/settings.ts:57`). So `updateUserSettings` matches on
 `organization_id = scope.ctx.organizationId` before the row id can be considered, and the insert
@@ -2049,11 +2062,11 @@ anywhere — SQL stays in `src/server/repos`.
 
 **Server function — `src/routes/_app/-server/settings.ts`. Four edits and one new reader.**
 
-- `AppearancePayload` gains `readonly maskConfirmationCodes: boolean` (`:237` idiom) and
-  `loadAppearance` fills it from `userRow.maskConfirmationCodes` (`:253` idiom), which is what puts the
+- `AppearancePayload` gains `readonly maskConfirmationCodes: boolean` (`:269` idiom) and
+  `loadAppearance` fills it from `userRow.maskConfirmationCodes` (`:285` idiom), which is what puts the
   switch's current position on the appearance screen.
-- `saveAppearance`'s validator gains `maskConfirmationCodes: z.boolean().optional()` (`:265` idiom)
-  and its handler forwards it into `updateUserSettings` (`:273` idiom). Authorisation is unchanged and
+- `saveAppearance`'s validator gains `maskConfirmationCodes: z.boolean().optional()` (`:297` idiom)
+  and its handler forwards it into `updateUserSettings` (`:305` idiom). Authorisation is unchanged and
   is the point: the preference is written for the **session's own** user id through `appScope()`,
   never for a user id the client names.
 - `loadDisplayPreferences` is added — a `createServerFn({ method: 'GET' })` returning
@@ -2061,10 +2074,10 @@ anywhere — SQL stays in `src/server/repos`.
   is the single channel both trip tabs use, so the precedence rule stays in the repository and no
   screen re-derives it. Its cost is measured rather than assumed: `getEffectiveSettings` runs
   `ensureOrganizationSettings` and `getUserSettings` under one `Promise.all`
-  (`src/server/repos/settings.ts:258-261`), two single-row reads on indexes that already exist, and
+  (`src/server/repos/settings.ts:275-278`), two single-row reads on indexes that already exist, and
   `ensureOrganizationSettings` inserts the workspace settings row on a workspace that has never opened
-  the settings screen (`:163-164`) — idempotent, at most once ever, and the same ensure that
-  `-server/settings.ts:121` already makes.
+  the settings screen (`:171`) — idempotent, at most once ever, and the same ensure that
+  `-server/settings.ts:123` already makes.
 
 **Server function — `src/server/fns/reservations.ts`. The marker, and only the marker.**
 
@@ -2133,7 +2146,7 @@ store.**
   protects and what it does not — codes yes, prices no. It carries
   `data-part="mask-confirmation-codes"` so the capture can reach the preference the way a reader
   would, and it saves in the idiom the reduce-motion row already uses
-  (`src/routes/_app/settings/appearance.tsx:153-171`): local state moves first, `saveAppearance`
+  (`src/routes/_app/settings/appearance.tsx:178-194`): local state moves first, `saveAppearance`
   follows, and a failure leaves the switch where the reader put it with an inline retry rather than
   snapping back. It joins whichever section `09-S8` leaves behind when it rebuilds that screen one
   wave earlier — today the row would sit in `Motion and maps`, which is a section name this stage
@@ -2186,10 +2199,32 @@ no case and is not an owned path.
 Appended as one `describe` block, covering the one repository function this stage changes:
 `updateUserSettings`.
 
-The cases: A cannot update B's settings row by id — a `NotFoundError`, never a row re-scoped into A's
-organization; A's write does not create a settings row in B's organization; and a member id from B
-handed to A's own write is rejected rather than honoured. B's row is re-read afterwards and its
-`mask_confirmation_codes` must be exactly what it was. `loadBookingDeskFn`'s reservation reads, and
+**The case, respecified against what the repository actually does.** `updateUserSettings`
+(`src/server/repos/settings.ts:228-239`) takes no row id from the caller: it resolves its row
+through `ensureUserSettings` (`:219-226`), which looks the user id up inside the tenant scope —
+`getUserSettings` (`:211-217`) reads through `userSettingsRepository`, so only rows in the caller's
+organization are visible — and **inserts a fresh row stamped with the caller's `organization_id`
+when none exists**. A user id from B handed to A's write is therefore never rejected; it is ensured
+into A's own organization, and B's row is structurally unreachable. The test asserts exactly that,
+rather than a `NotFoundError` the function cannot throw:
+
+- B's `user_settings` row is snapshotted whole in `beta.tenant.scope`; then A calls
+  `updateUserSettings(alpha.tenant.scope, { maskConfirmationCodes: true }, <B's user id>)`.
+- The write lands **only in A's organization**: a `user_settings` row for that user id now exists in
+  A's organization and carries the flag.
+- B's own row, re-read in `beta.tenant.scope`, is **byte-identical** to the snapshot — a deep
+  equality over the whole row, never a single-field check.
+
+The other resolution — a membership guard in which `getMembership`
+(`src/server/repos/members.ts:144`) returning `null` maps to a `NotFoundError` before
+`ensureUserSettings` runs — was rejected because it would change the ensure-and-insert contract for
+every caller while defending a path no production code takes: measured at HEAD, all nine call sites
+of `ensureUserSettings` / `updateUserSettings` outside the repo module and its tests
+(`src/routes/api/dev/-seed/apply.ts:288-289`, `src/routes/_app/settings/-server/preferences.ts:87`,
+`:119`, and `src/routes/_app/-server/settings.ts:122`, `:232`, `:247`, `:279`, `:303`) omit the
+optional `userId` and write the session's own row.
+
+`loadBookingDeskFn`'s reservation reads, and
 `clearReservationImported` itself, are already covered by the block `03-S4` appends — this stage
 calls that function and does not define it — so neither is duplicated here.
 
@@ -2199,7 +2234,7 @@ file this stage owns.** A writes `maskConfirmationCodes: true` through `updateUs
 `(await getEffectiveSettings(beta.tenant.scope)).maskConfirmationCodes` must be `false`, in the
 `alpha.tenant.scope` / `beta.tenant.scope` idiom that file's settings block already uses. The assertion is
 deliberately made through the **merge** and not through the stored row: a column that reaches
-`user_settings` but never reaches the literal at `src/server/repos/settings.ts:268-286` passes a row
+`user_settings` but never reaches the literal at `src/server/repos/settings.ts:285-303` passes a row
 assertion and fails this one, which is precisely the defect an earlier revision of this stage was
 about to ship. The file already imports `getEffectiveSettings` (`:130`) and already asserts on it for
 locale (`:1163`, `:1176-1177`), so the case is one more `expect` in an established idiom rather than
@@ -2706,8 +2741,9 @@ two places.
 `confirmation_number`, `price_minor` and `currency` at `src/server/db/schema.ts:605-638` — that
 `src/server/repos/itinerary.ts` has a full repository for it (`createAccommodation`,
 `updateAccommodation`, `deleteAccommodation`, `listTripAccommodations`, `countAccommodationNights`),
-that `-server/plan.ts:218` surfaces only the name, and that `repo-data.md` §7.3 finds
-`createAccommodation` reachable from the seeder alone. **The gap is a write path and a surface, not a
+that `-server/plan.ts:218` surfaces only the name, and that `grep -rn createAccommodation src/`
+reaches the writer (`src/server/repos/itinerary.ts:389`) from the seeder
+(`src/routes/api/dev/-seed/apply-trip.ts:280`) alone. **The gap is a write path and a surface, not a
 model** — which is why this stage is `L` for its UI and trivial for its data.
 
 Rows unblocked: none. No row lists `BKG-05` in its `dependsOn`.
