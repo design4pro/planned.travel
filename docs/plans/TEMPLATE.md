@@ -12,8 +12,11 @@ does not restate them; it says where each of their requirements is answered.
 
 A plan file opens with a short **Area brief** — what this area is today on disk, what the 89-row
 matrix says is missing, and which rows the plan closes — and then runs stage blocks in wave order,
-lowest wave first. Nothing else. No appendices, no glossary, no status log; the status of a row lives
-in `.claude/ultrabuild/recon/gap-rows.json` and the wave order lives in `README.md`.
+lowest wave first. Nothing else. No appendices, no glossary, no status log; the wave order lives in
+`README.md`. (Row statuses used to live in `.claude/ultrabuild/recon/gap-rows.json`, a machine-local
+ultrabuild artifact that no longer exists anywhere — row ids like `MNY-07` survive in these plans as
+historical identifiers only. Do not go looking for the file; verify a row's real status against the
+code.)
 
 ## Rules that bind every stage
 
@@ -38,7 +41,7 @@ rows it closes.
 
 ### Reference rows
 
-The `gap-rows.json` ids this stage closes, one per line, each with the status it moves **from** and
+The matrix row ids this stage closes (historically from `gap-rows.json` — see above), one per line, each with the status it moves **from** and
 **to** — `MNY-07 partial → done`. A row is closed by exactly one stage. If a row is only partly
 addressed, say which behaviour is deferred and to which stage id, because "partial → partial" that
 nobody has to justify is how a matrix stops meaning anything.

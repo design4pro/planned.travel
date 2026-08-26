@@ -24,7 +24,12 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply planned-travel-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply planned-travel-db --remote",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "prepare": "husky",
+    "sandcastle": "tsx .sandcastle/main.ts"
+  },
+  "lint-staged": {
+    "*": "prettier --ignore-unknown --write"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -61,6 +66,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@ai-hero/sandcastle": "^0.12.0",
     "@cloudflare/vite-plugin": "^1.26.0",
     "@cloudflare/workers-types": "^5.20260818.1",
     "@playwright/test": "^1.62.1",
@@ -76,9 +82,12 @@
     "@vitest/coverage-v8": "^4.1.11",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.20.0",
+    "husky": "^9.1.7",
     "jsdom": "^30.0.1",
+    "lint-staged": "^17.3.0",
     "prettier": "^3.8.1",
     "react-email": "^6.9.2",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.2",
     "vite": "^8.0.0",
     "vite-plugin-pwa": "^1.3.0",
