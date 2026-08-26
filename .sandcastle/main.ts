@@ -51,11 +51,13 @@ const hooks = {
   },
 }
 
-// Copy node_modules from the host into the worktree before each sandbox
-// starts; the install hook above reconciles platform-specific binaries.
+// Deliberately NOT copying node_modules (the upstream template does): a fresh
+// linux install in the container is ~13 s measured, while installing OVER a
+// copied darwin node_modules means tearing ~100k wrong-platform files down
+// through the bind mount — which blew a 10-minute hook timeout.
 // .e2e-tiles carries the ~480 MB basemap cache so a sandbox that needs the
 // Playwright suite does not re-download it from R2 (see setup-e2e.sh).
-const copyToWorktree = ['node_modules', '.e2e-tiles']
+const copyToWorktree = ['.e2e-tiles']
 
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`)
