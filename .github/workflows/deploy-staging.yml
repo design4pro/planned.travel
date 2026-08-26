@@ -76,9 +76,11 @@ jobs:
 
       # The environment is chosen at BUILD time (docs/DEPLOY.md §7.5): the Vite
       # plugin flattens the selected env into dist/server/wrangler.json and
-      # writes a .wrangler/deploy/config.json redirect. Every wrangler command
-      # below runs without `--env` on purpose — the redirect already points at
-      # the staging config, and adding `--env` to a flattened config errors out.
+      # writes a .wrangler/deploy/config.json redirect. `wrangler deploy` below
+      # runs without `--env` on purpose — the redirect already points at the
+      # flattened staging config, which carries no env block. The d1 migrations
+      # step does NOT consume that redirect and reads wrangler.jsonc directly,
+      # so it is the one command that needs `--env staging`.
       - name: Build (staging environment)
         if: steps.gate.outputs.configured == 'true'
         run: CLOUDFLARE_ENV=staging pnpm build
@@ -112,7 +114,7 @@ jobs:
           packageManager: pnpm
           # Keep in step with the `wrangler` devDependency in package.json.
           wranglerVersion: '4.70.0'
-          command: d1 migrations apply planned-travel-db-staging --remote
+          command: d1 migrations apply planned-travel-db-staging --remote --env staging
 
       - name: Deploy Worker
         if: steps.gate.outputs.configured == 'true'
