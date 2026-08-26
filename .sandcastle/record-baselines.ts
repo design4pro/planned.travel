@@ -51,9 +51,12 @@ try {
   }
 
   await run('e2e environment', 'bash .sandcastle/setup-e2e.sh')
+  // Scoped to visual.spec.ts: that is the only file that owns baselines. The
+  // i18n runtime-parity spec is a functional cross-runtime assertion — a red
+  // there is a real finding, but it must not abort a baseline recording.
   await run(
     'record baselines (both projects, both themes)',
-    'PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm exec playwright test --update-snapshots --workers=1 --reporter=line',
+    'PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm exec playwright test visual.spec.ts --update-snapshots --workers=1 --reporter=line',
   )
   await run(
     'commit',
