@@ -102,5 +102,33 @@
     "title": "The structural exemption makes the inverted affix invisible instead of fixing it",
     "why": "Round 12 replaced the no-byte-identical rule with a structural exemption: a value with no letter in any script is never reported as untranslated. That is the right rule, but it also means the ten locales owned by items the round did not carry - ar, el, tr, hu, id, vi, cs, pl, ru, uk - now ship '+{max}' / '{hidden}+' with nothing red to show for it. de, nl and sv were repaired; the rest were not.",
     "decision": "Round 13 carries translations-rtl-hellenic, translations-slavic and translations-cjk, each restoring its own locales. Explicit work, because no test will surface it any more."
+  },
+  {
+    "id": "plans-cite-lost-gap-rows",
+    "title": "Plans 03 and 13 still cite .claude/ultrabuild/recon/gap-rows.json, which exists nowhere",
+    "why": "Round-7 measurement: grep -rln gap-rows docs/plans/ lists 00, 01, 02, 04, 06, 07, 09, 11, 12, 14, README.md and TEMPLATE.md (plans 03 and 13 are being cleaned by this run). The artifact was never committed and is unrecoverable; e.g. 09-account-and-settings.md:2697-2701 asserts a runnable command over the lost row store. Authored by the original planning run, registered here so an executing run treats those citations as historical.",
+    "decision": "Carried as minor findings on accepted items rather than reopening them; fix in the next round that legitimately touches each plan, or in a citation-hygiene item after conversion.",
+    "paths": [
+      "docs/plans/00-foundations.md",
+      "docs/plans/01-trips-core.md",
+      "docs/plans/02-places-and-maps.md",
+      "docs/plans/04-budget-and-currencies.md",
+      "docs/plans/06-documents-and-media.md",
+      "docs/plans/07-collaboration-and-sharing.md",
+      "docs/plans/09-account-and-settings.md",
+      "docs/plans/11-boundaries-and-blockers.md",
+      "docs/plans/12-verification-protocol.md",
+      "docs/plans/14-dashboard-mascot.md",
+      "docs/plans/README.md",
+      "docs/plans/TEMPLATE.md"
+    ]
+  },
+  {
+    "id": "vi-atlas-lan-toi-terminology",
+    "title": "vi atlas.ts uses 'lần tới' as the noun for a visit, colliding with its 'next time' sense elsewhere in the vi catalogue",
+    "why": "Round-5 auditor note on an accepted item; a terminology nit, not a parity or correctness failure. Fix in the next round that legitimately touches messages/vi/.",
+    "paths": [
+      "src/lib/i18n/messages/vi/atlas.ts"
+    ]
   }
 ]

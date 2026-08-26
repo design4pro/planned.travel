@@ -12,10 +12,13 @@ the same file. The stage shape is fixed by `TEMPLATE.md` and is not negotiable p
 
 ---
 
-## The fifteen files
+## The sixteen files
 
-Every file in this directory is listed here. There are no others, and nothing outside this list may
-be added without amending this table first.
+Every authored file in this directory is listed here. There are no others, and nothing outside this
+list may be added without amending this table first. One file sits beside the table rather than in
+it because it is generated, not authored: `OPEN-FINDINGS.md`, the per-plan findings register the
+/ultrabuild orchestrator writes from `.claude/ultrabuild/items.json`. It tracks the files below and
+never adds scope of its own, so it is exempt from this table and from the filename scheme.
 
 | File                               | Scope — one line each                                                                                                                                        |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -33,12 +36,14 @@ be added without amending this table first.
 | `10-administration.md`             | The workspace console: member and invitation administration, workspace-wide defaults, the audit write path and audit reading.                                |
 | `11-boundaries-and-blockers.md`    | The ten rows that do not port to hosted multi-tenant, their named hosted equivalents, and every row blocked by the SPEC §3 freeze.                           |
 | `12-verification-protocol.md`      | How a stage proves itself: the command gate, unit and isolation tests, the e2e/visual evidence format, viewports, themes and console rules.                  |
-| `13-content-studio.md`             | The operator content plane: Studio roles and audit, content stores with versioned translations, the block editor and media library, the public site as data, announcements, and managed legal documents with acceptance. Waves 7-11, above the matrix set. |
+| `13-community-gallery.md`          | The Trip Gallery — publish a trip as a reviewed snapshot, the curation queue, anonymous browse and detail served from KV, suggestions and saved trips.       |
+| `14-dashboard-mascot.md`           | Nomi, the original dashboard-hero character — a client-side state machine over days to departure, the flap countdown, the pause control, the static pose.    |
+| `15-content-studio.md`             | The operator content plane: Studio roles and audit, content stores with versioned translations, the block editor and media library, the public site as data, announcements, and managed legal documents with acceptance. Waves 7-11, above the matrix set. |
 
 ### Filename scheme
 
 `NN-kebab-area.md` — a two-digit ordinal that fixes reading order, then a lowercase kebab-case area
-name, then `.md`. `TEMPLATE.md` is the only file exempt from the ordinal. One plan per area; a plan
+name, then `.md`. `TEMPLATE.md` is the only authored file exempt from the ordinal. One plan per area; a plan
 never spawns a second file, it grows another stage.
 
 ---
@@ -46,7 +51,7 @@ never spawns a second file, it grows another stage.
 ## The naming rule that binds every plan file
 
 `docs/SPEC.md` §1 is a clean-room rule, and it binds documents in this directory exactly as it binds
-code. Every file this plan set creates — the fifteen above — obeys all five of these:
+code. Every file this plan set creates — the sixteen above — obeys all five of these:
 
 1. The upstream project is called **"the reference product"**. Its name, wordmark and logo appear in
    none of these files: not in prose, not in a heading, not in a filename, not in a URL. (`SPEC.md`
@@ -127,7 +132,7 @@ The `dependsOn` edges originally contained **nine mutual pairs** — A depends o
 with a reason in `.claude/ultrabuild/recon/gap-cuts.json`, and applied the result to
 `gap-rows.json`. **This file consumes that record.** It does not re-cut the graph, does not re-point
 an edge, and does not add a disposition of its own: the table below is a plain longest-path level
-over `gap-rows.json` exactly as it stands on disk, which is acyclic and sorts into six waves.
+over `gap-rows.json` as it stood when the table was materialised — acyclic, sorting into six waves.
 
 Each cut kept the edge pointing from the dependent surface to the record or host it needs, which is
 the only direction in which the earlier row is independently shippable.
@@ -144,13 +149,14 @@ the only direction in which the earlier row is independently shippable.
 | `TRP-06 → DOC-08` | `DOC-08 → TRP-06` | The planner workspace is the host surface; the per-day weather badge is placed into it.       |
 | `COL-02 → COL-09` | `COL-09 → COL-02` | The collab panel is the host surface; the upcoming-assignments widget is one of its children. |
 
-`X → Y` reads "X depends on Y". Any further change to the edge set is a change to `gap-rows.json`
-and `gap-cuts.json` first, and to this file second — never the other way round.
+`X → Y` reads "X depends on Y". The recon store that held the edge set no longer exists (see "The
+table is the surviving record" below), so any further change to an edge is made here: state the edge,
+the direction that survives and the reason, in this cut table — then update the affected plan.
 
 ### What leads, and on what measurement
 
-Both rankings below are counted over `gap-rows.json` as it stands, with the nine cuts already
-applied. Every claim that a row is high-leverage names one of them.
+Both rankings below were counted over `gap-rows.json` as it stood in round 3, with the nine cuts
+already applied. Every claim that a row is high-leverage names one of them.
 
 **Transitive in-degree** — how many of the 89 rows reach this row through any chain of `dependsOn`:
 
@@ -249,24 +255,58 @@ looking for a missing edge:
   multi-tenant boundary, so it is planned in `09-account-and-settings.md` alongside the other
   account-adjacent surfaces rather than with the three out-of-scope Extensibility rows.
 
-### Re-deriving the table
+### Plans 13 and 14 carry no gap row
 
-The table is mechanical. `gap-rows.json` already carries the nine cuts, so no disposition is applied
-here — this is a plain longest-path level:
+The 89-row matrix predates both plans: no `gap-rows.json` id names a community gallery or a
+dashboard mascot. Their scope was minted from a later task brief, after the matrix closed, so
+neither appears in the table above — the table is unchanged, no row moves, and no edge is re-cut.
+Their placement is derived instead from the dependencies their own stages cite:
 
-```sh
-node -e '
-const rows = require("./.claude/ultrabuild/recon/gap-rows.json")
-const by = Object.fromEntries(rows.map((r) => [r.id, r]))
-const deps = (id) => by[id].dependsOn ?? []
-const seen = {}
-const wave = (id) => (seen[id] ??= deps(id).length ? Math.max(...deps(id).map(wave)) + 1 : 1)
-rows.forEach((r) => console.log(wave(r.id), r.id))
-'
-```
+- `13-community-gallery.md` starts in **wave 3** (`13-S1`) and runs one stage per wave through
+  **wave 6** (`13-S4`). Wave 3 is the earliest wave open to it: its tables and its quota metric
+  are wave-0 foundations requirements filed to `00-S1`'s register (landing with the schema work
+  that closes before wave 3 opens), and its row-derived-scope read design leans on the share-link
+  infrastructure `07-S6` (row `COL-10`) ships in wave 2. `13-S2` sits in wave 4 rather than 3
+  because `07-S9` holds `src/routes/_app/trips/$tripId/collab.tsx` in wave 3.
+- `14-dashboard-mascot.md` is a single stage, `14-S1`, in **wave 3** — the earliest wave in which
+  `src/routes/_app/dashboard.tsx` is unclaimed (`01-S5` holds it in wave 2, `01-S7` in wave 5).
+  It needs nothing from wave 0 and closes no row.
 
-Any change to `gap-rows.json` that alters a wave is a change to this file first and to the affected
-plan second — never the other way round.
+### The table is the surviving record
+
+The table was derived mechanically in round 3 — a plain longest-path level over the recon edge set
+with the nine cuts applied. That derivation **cannot be re-run at HEAD**: the recon store that held
+the edge set (`.claude/ultrabuild/recon/gap-rows.json` and `gap-cuts.json`) was never committed and
+exists neither on disk nor anywhere in git history. The materialised table above, together with the
+cut table, is therefore the surviving record — the 89 row ids live only here and where a plan file
+quotes them. Citations of those recon paths elsewhere in this plan set are historical and are read
+against this table, not against a file.
+
+Any change to the wave order is consequently an edit to this table directly, stated with its reason
+in the accompanying prose, and to the affected plan second — never the other way round.
+
+---
+
+## Coverage
+
+With sixteen files, the register states its completeness claim once, here, so no plan has to
+carry it:
+
+- Plans `00`–`10` plan the **in-scope surface**, area by area, across the 89 matrix rows.
+- `11-boundaries-and-blockers.md` **bounds** the rows that do not port to hosted multi-tenant,
+  each with a recorded disposition.
+- `12-verification-protocol.md` is **protocol**: it owns how every stage proves itself and plans
+  no feature of its own.
+- `13-community-gallery.md` and `14-dashboard-mascot.md` deliver **first-party** the value of the
+  two plugins the reference product ships: the Trip Gallery and Nomi, the dashboard character.
+  The plugin **runtime** itself stays excluded exactly as `11-boundaries-and-blockers.md` records —
+  the plugin host under `EXT-01`, the provider hooks and plugin activity audit under `EXT-02`, the
+  agent-protocol server under `EXT-03` — while the two shipped plugins' value is now planned, not
+  bounded, in `13` and `14`.
+
+Every feature area of the reference product is therefore either **planned** (`00`–`10`,
+`13`–`14`), **consciously bounded** (`11`), or **protocol** (`12`). A feature that fits none of
+those three is a gap in this register and is filed by amending it, never by an unregistered file.
 
 ---
 
