@@ -17,6 +17,7 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 - `components/ui` never fetches data and never imports from `server/`.
 - Validate every server-function input with Zod. Named exports only (route modules excepted).
 - Definition of done for any task: docs/SPEC.md §7. Decomposition rule ("one concept, one owner"): docs/SPEC.md §8.
+- User-facing copy is never hardcoded — it lives in the 23-locale catalogue, and a new key lands in every locale in the same change (the parity test enforces this; procedure: the `i18n-messages` skill, contract: docs/SPEC.md §9).
 - Commits: Conventional Commits, in English.
 
 ## Domain
