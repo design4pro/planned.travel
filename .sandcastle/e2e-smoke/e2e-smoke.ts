@@ -13,6 +13,11 @@ import { docker } from '@ai-hero/sandcastle/sandboxes/docker'
 const result = await sandcastle.run({
   sandbox: docker(),
   name: 'e2e-smoke',
+  // A separate worktree, like the loop's per-issue sandboxes. The default
+  // 'head' strategy bind-mounts the host working directory, which forbids
+  // copyToWorktree — and would let the install hook rewrite the host's
+  // darwin node_modules with linux binaries.
+  branchStrategy: 'branch',
   maxIterations: 1,
   agent: sandcastle.claudeCode('claude-opus-5'),
   promptFile: './.sandcastle/e2e-smoke/prompt.md',
