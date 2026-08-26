@@ -35,7 +35,7 @@ pnpm generate-routes
 echo "==> local D1 migrations"
 pnpm db:migrate:local
 
-if [ ! -f .e2e-tiles/basemap.pmtiles ]; then
+if [ ! -s .e2e-tiles/basemap.pmtiles ]; then
   echo "==> basemap not in worktree cache — downloading from R2 (${TILES_KEY:?set TILES_KEY in .sandcastle/.env})"
   : "${CLOUDFLARE_API_TOKEN:?set CLOUDFLARE_API_TOKEN in .sandcastle/.env}"
   : "${CLOUDFLARE_ACCOUNT_ID:?set CLOUDFLARE_ACCOUNT_ID in .sandcastle/.env}"
