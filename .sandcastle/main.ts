@@ -125,10 +125,16 @@ function createLimiter(limit: number) {
 // documents that callers keep the base ref current.
 const { execSync } = await import('node:child_process')
 execSync('git fetch origin develop', { stdio: 'inherit' })
+// Local calendar date, like the manual `date +%Y%m%d` this replaces — a UTC
+// date would cut a fresh branch on a same-local-day rerun straddling UTC
+// midnight, stranding the accumulated progress it exists to resume.
+const pad = (n: number) => String(n).padStart(2, '0')
+const now = new Date()
+const today = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
 const integration = await sandcastle.createWorktree({
   branchStrategy: {
     type: 'branch',
-    branch: `sandcastle/run-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}`,
+    branch: `sandcastle/run-${today}`,
     baseBranch: 'origin/develop',
   },
   // Every run/createSandbox below anchors at this worktree, and the anchor
