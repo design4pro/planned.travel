@@ -22,8 +22,18 @@ import { cp, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import * as sandcastle from '@ai-hero/sandcastle'
-import { docker } from '@ai-hero/sandcastle/sandboxes/docker'
+import {
+  defaultImageName,
+  docker as dockerProvider,
+} from '@ai-hero/sandcastle/sandboxes/docker'
 import { z } from 'zod'
+
+// docker() derives its default image tag from the directory the sandbox
+// anchors at — since the createWorktree refactor that is the dated worktree
+// (`sandcastle:sandcastle-run-<date>`), not the repo root that `sandcastle
+// docker build-image` tagged. Pin the repo-root tag every sandbox should use.
+const imageName = defaultImageName(process.cwd())
+const docker = () => dockerProvider({ imageName })
 
 const planSchema = z.object({
   issues: z.array(
