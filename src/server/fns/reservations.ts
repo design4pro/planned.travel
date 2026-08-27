@@ -9,6 +9,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
+import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { RESERVATION_STATUSES, RESERVATION_TYPES } from '#/server/db/schema'
 import {
   countTripReservationsByStatus,
@@ -132,6 +133,29 @@ function payload(data: BookingInput) {
   }
 }
 
+/**
+ * What the audit entry says about a booking.
+ *
+ * Deliberately the four fields that identify it on a screen — the trail is read by a human deciding
+ * whether a change was expected, and `type`, `status` and `title` are what makes "a reservation was
+ * updated" answerable without opening the row. The confirmation number and the price stay out: an
+ * audit entry outlives the booking, is visible to every admin, and a payment reference is not
+ * something a retention window of 400 days should be holding a second copy of.
+ */
+function auditMetadata(data: {
+  tripId: string
+  type: string
+  status: string
+  title: string
+}) {
+  return {
+    tripId: data.tripId,
+    type: data.type,
+    status: data.status,
+    title: data.title,
+  }
+}
+
 /* ------------------------------------------------------------------ writes */
 
 export const createBookingFn = createServerFn({ method: 'POST' })
@@ -153,6 +177,13 @@ export const createBookingFn = createServerFn({ method: 'POST' })
         startDate: orNull(data.startDate),
       }),
     ])
+
+    await trail(scope, {
+      action: AUDIT_ACTIONS.RESERVATION_CREATED,
+      entityType: 'reservation',
+      entityId: reservation.id,
+      metadata: auditMetadata(data),
+    })
     return { reservationId: reservation.id }
   })
 
@@ -172,6 +203,13 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
         startDate: orNull(data.startDate),
       }),
     ])
+
+    await trail(scope, {
+      action: AUDIT_ACTIONS.RESERVATION_UPDATED,
+      entityType: 'reservation',
+      entityId: data.reservationId,
+      metadata: auditMetadata(data),
+    })
     return { reservationId: data.reservationId }
   })
 
@@ -196,6 +234,16 @@ export const setBookingStatusFn = createServerFn({ method: 'POST' })
     await mirrorToRoom(scope, data.tripId, [
       patch('reservation', data.reservationId, { status: data.status }),
     ])
+
+    // The same action key as the dialog's save, because it is the same event: a booking changed.
+    // The status pill is a second control on one write path, not a second concept — five clicks
+    // through the pill and five trips through the dialog must read alike on `/admin`.
+    await trail(scope, {
+      action: AUDIT_ACTIONS.RESERVATION_UPDATED,
+      entityType: 'reservation',
+      entityId: data.reservationId,
+      metadata: { tripId: data.tripId, status: data.status },
+    })
     return { status: data.status }
   })
 
@@ -209,6 +257,13 @@ export const deleteBookingFn = createServerFn({ method: 'POST' })
     await mirrorToRoom(scope, data.tripId, [
       tombstone('reservation', data.reservationId),
     ])
+
+    await trail(scope, {
+      action: AUDIT_ACTIONS.RESERVATION_DELETED,
+      entityType: 'reservation',
+      entityId: data.reservationId,
+      metadata: { tripId: data.tripId },
+    })
     return { deleted: true }
   })
 

@@ -10,6 +10,7 @@ import { z } from 'zod'
 
 import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
 import { resolveLocaleTag } from '#/lib/i18n/negotiate'
+import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { getSession } from '#/server/auth/session'
 import {
   DISTANCE_UNITS,
@@ -490,5 +491,23 @@ export const saveWorkspaceDefaults = createServerFn({ method: 'POST' })
     // The workspace language is the fallback every member without an override reads, so this write
     // changes what other travellers see. Nothing caches it — see the note in `saveRegionalSettings`.
     await updateOrganizationSettings(scope, data)
+
+    // Recorded after the write, so the role assertion inside `updateOrganizationSettings` has
+    // already refused anyone below `admin`: the trail holds changes that happened, not attempts.
+    // The entity is the workspace itself — there is one settings row and its id is an
+    // implementation detail, while the organization id is what every other entry already names.
+    await trail(scope, {
+      action: AUDIT_ACTIONS.WORKSPACE_DEFAULTS_CHANGED,
+      entityType: 'organization',
+      entityId: scope.ctx.organizationId,
+      metadata: {
+        defaultCurrency: data.defaultCurrency,
+        locale: data.locale,
+        timezone: data.timezone,
+        dateFormat: data.dateFormat,
+        weekStartsOn: data.weekStartsOn,
+        distanceUnit: data.distanceUnit,
+      },
+    })
     return { saved: true }
   })
