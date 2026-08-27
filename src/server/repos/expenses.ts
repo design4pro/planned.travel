@@ -147,28 +147,26 @@ export type UpdateExpenseInput = z.infer<typeof updateExpenseInput>
  *
  * `exchangeRate` is never taken from a client. The writing surface derives it with `impliedRate()`
  * from the two amounts, exactly as `toRepoInput` does for an expense (`src/server/fns/costs.ts`),
- * so the rate can never disagree with the figures printed beside it.
+ * so the rate can never disagree with the figures printed beside it. `impliedRate()` returns `null`
+ * for a source amount of zero, which is the one pair this rule refuses rather than half-records: a
+ * payment of nothing has no rate to freeze, and a settlement of nothing is not a payment.
+ *
+ * The object is strict so a misspelled field is a parse error rather than a silently dropped one.
  */
 export const createSettlementInput = z
-  .strictObject(
-    {
-      tripId: idSchema,
-      fromUserId: idSchema,
-      toUserId: idSchema,
-      amountMinor: minorAmountSchema,
-      currency: currencySchema.optional(),
-      originalAmountMinor: minorAmountSchema.nullish(),
-      originalCurrency: currencySchema.nullish(),
-      exchangeRate: z.number().finite().positive().nullish(),
-      method: z.enum(SETTLEMENT_METHODS).optional(),
-      settledOn: dateSchema,
-      note: shortTextSchema.nullish(),
-    },
-    {
-      error:
-        'A settlement is a trip, two people, an amount and the day it was paid.',
-    },
-  )
+  .strictObject({
+    tripId: idSchema,
+    fromUserId: idSchema,
+    toUserId: idSchema,
+    amountMinor: minorAmountSchema,
+    currency: currencySchema.optional(),
+    originalAmountMinor: minorAmountSchema.nullish(),
+    originalCurrency: currencySchema.nullish(),
+    exchangeRate: z.number().finite().positive().nullish(),
+    method: z.enum(SETTLEMENT_METHODS).optional(),
+    settledOn: dateSchema,
+    note: shortTextSchema.nullish(),
+  })
   .refine((values) => {
     const recorded = [
       values.originalAmountMinor,

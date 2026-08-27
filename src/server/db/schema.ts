@@ -642,16 +642,19 @@ export const trips = sqliteTable(
       .default(false),
     /**
      * Non-null while a `trip-copy` job for this trip is in flight; the handler clears it as its
-     * last statement. A timestamp rather than a sixth `status` value, because `trips_status_chk`
-     * would have to be rebuilt for that — and it records *when* the copy started, which tells a
-     * copy still running apart from one whose consumer died three days ago.
+     * last statement. That handler does not exist yet — it lands with `01-S1`
+     * (`docs/plans/01-trips-core.md`) and the column ships ahead of it, so nothing reads or writes
+     * it today. A timestamp rather than a sixth `status` value, because `trips_status_chk` would
+     * have to be rebuilt for that — and it records *when* the copy started, which tells a copy
+     * still running apart from one whose consumer died three days ago.
      */
     copyPendingAt: integer('copy_pending_at', { mode: 'timestamp_ms' }),
     /**
      * Which collaboration sub-features this trip shows, keyed by sub-feature id — the same JSON
      * idiom as `share_links.scopes`. Null means nothing has been decided for this trip, which
      * resolves to every sub-feature on, so a rolled-back Worker simply ignores the column. The key
-     * vocabulary is validated in `src/server/repos/collab.ts` rather than by a `CHECK`.
+     * vocabulary is validated in `src/server/repos/collab.ts` rather than by a `CHECK` — that
+     * validation lands with `07-S2`, and until it does nothing reads or writes the column.
      */
     collabModules: text('collab_modules', { mode: 'json' }).$type<
       Record<string, boolean>
@@ -1158,7 +1161,8 @@ export const expenses = sqliteTable(
      * deliberately: a database-level cascade that silently deleted money rows is not something a
      * confirmation dialog can undo. Null until a trip defines categories of its own, and the read
      * path falls back to the `category` enum — which is what keeps that column load-bearing and
-     * the rollback honest.
+     * the rollback honest. Both halves are later stages: `04-S2` ships the resolver, `04-S3` the
+     * expense writer that can first set the column, so it is `NULL` on every row today.
      */
     costCategoryId: text('cost_category_id').references(
       () => tripCostCategories.id,

@@ -45,6 +45,7 @@ import { listTripDays, syncTripDays } from '../days'
 import {
   createExpense,
   createSettlement,
+  createSettlementInput,
   getMemberBalances,
   listDailySpend,
   listSettlements,
@@ -458,6 +459,27 @@ describe('repositories', () => {
 
       const balances = await getMemberBalances(tenant.scope, trip.id)
       expect(balances.every((row) => row.balanceMinor === 0)).toBe(true)
+    })
+
+    it('names a misspelled settlement field instead of dropping it', () => {
+      const body = {
+        tripId: 'trip-1',
+        fromUserId: 'user-1',
+        toUserId: 'user-2',
+        amountMinor: 2_000,
+        settledOn: '2026-07-02',
+      }
+      expect(createSettlementInput.safeParse(body).success).toBe(true)
+
+      // The input is strict: `originalAmount` is not `originalAmountMinor`, and a source amount
+      // quietly discarded would leave a converted payment recorded as if it never converted.
+      const result = createSettlementInput.safeParse({
+        ...body,
+        originalAmount: 59_600,
+      })
+      expect(result.success).toBe(false)
+      expect(result.error?.issues[0]?.code).toBe('unrecognized_keys')
+      expect(result.error?.message).toContain('originalAmount')
     })
   })
 
