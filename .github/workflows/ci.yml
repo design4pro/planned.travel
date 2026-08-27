@@ -32,6 +32,11 @@ env:
 jobs:
   verify:
     name: lint · typecheck · test · build
+    # A develop→main (or main→develop) PR duplicates the push-triggered run on
+    # the same commits; the push run is canonical for the shared branches. The
+    # skip cascades: `e2e` needs this job and keeps its implicit success()
+    # requirement, so the PR-side e2e is deduplicated too.
+    if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
     runs-on: ubuntu-latest
     timeout-minutes: 20
 

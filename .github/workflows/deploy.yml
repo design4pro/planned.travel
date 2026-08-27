@@ -103,13 +103,22 @@ jobs:
 
       # Cheap proof that the new version is actually serving: the tile endpoint
       # exercises the Worker, the R2 binding and the Range path in one request.
+      # The hostname sits behind Cloudflare Access, so the requests carry an
+      # Access service token and assert exact status codes — a bare `curl
+      # --fail` would treat the Access 302 login redirect as green.
       - name: Smoke-check the deployment
         if: steps.gate.outputs.configured == 'true'
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --output /dev/null \
-            --write-out 'landing: %{http_code}\n' https://planned.travel/
-          curl --fail --silent --show-error --output /dev/null \
-            --header 'Range: bytes=0-15' \
-            --write-out 'tiles: %{http_code}\n' \
-            https://planned.travel/api/tiles/basemap.pmtiles
+          auth=(--header "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+                --header "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET")
+          code=$(curl --silent --show-error --output /dev/null \
+            --write-out '%{http_code}' "${auth[@]}" https://planned.travel/)
+          echo "landing: $code"; test "$code" = 200
+          code=$(curl --silent --show-error --output /dev/null \
+            --header 'Range: bytes=0-15' --write-out '%{http_code}' "${auth[@]}" \
+            https://planned.travel/api/tiles/basemap.pmtiles)
+          echo "tiles: $code"; test "$code" = 206
