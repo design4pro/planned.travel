@@ -30,10 +30,16 @@ import {
   listVisitedCountries,
 } from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
+import {
+  recomputeDelaySeconds,
+  travelStatsTaskId,
+} from '#/server/queue/handlers/travel-stats'
+import { taskEnvelopeSchema } from '#/server/queue/types'
 
 import type * as Repos from '#/server/repos'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { TenantScope } from '#/server/repos'
+import type { TaskEnvelope } from '#/server/queue/types'
 
 /* ------------------------------------------------------------------ mocking */
 
@@ -57,6 +63,10 @@ const stubs = vi.hoisted(() => ({
    */
   clashes: 0,
   clashLeavesRow: false,
+  /** Every body handed to the `TASKS` binding, with the options it was sent under. */
+  sent: [] as Array<{ body: unknown; options?: { delaySeconds?: number } }>,
+  /** When true, the queue refuses the send the way an unreachable binding would. */
+  queueRejects: false,
 }))
 
 /**
@@ -79,6 +89,25 @@ function uniqueIndexRefusal(): Error {
     { cause: inner },
   )
 }
+
+/**
+ * The `TASKS` binding. `#/server/auth/env` is the module that reads the Worker
+ * environment for it, and it imports `cloudflare:workers` at module scope, so
+ * it is replaced wholesale rather than partially: the server project runs in
+ * plain Node, where that specifier does not resolve.
+ */
+vi.mock('#/server/auth/env', () => ({
+  taskQueue: () => ({
+    send: async (body: unknown, options?: { delaySeconds?: number }) => {
+      if (stubs.queueRejects) {
+        throw new Error('TASKS binding is unreachable')
+      }
+      stubs.sent.push(options === undefined ? { body } : { body, options })
+      return undefined
+    },
+    sendBatch: async () => undefined,
+  }),
+}))
 
 vi.mock('../context', async () => {
   const { AuthRequirementError: AuthError } =
@@ -265,6 +294,8 @@ beforeEach(async () => {
   stubs.quota = null
   stubs.clashes = 0
   stubs.clashLeavesRow = false
+  stubs.sent = []
+  stubs.queueRejects = false
 })
 
 afterEach(() => {
@@ -872,6 +903,126 @@ describe('atlasCountryState', () => {
       visit: null,
       bucketGoal: null,
     })
+  })
+})
+
+/* --------------------------------------------------------- stats recompute */
+
+/**
+ * The write half of the statistics panel.
+ *
+ * `travel_stats` is a derived cache with no writer in production before this:
+ * marking a country visited repainted the map and left every number frozen. The
+ * assertions below are about the *envelope* — the queue is stubbed above, and
+ * what the handler then does with the message is
+ * `src/server/queue/handlers/__tests__/travel-stats.test.ts`.
+ */
+describe('travel-stats recompute enqueue', () => {
+  /**
+   * The clock is pinned, because the envelope id and the delay are both derived
+   * from the collapse window the write fell into: a real clock would put a test
+   * that crosses a window boundary in the flaky pile for no gain.
+   */
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-03-04T09:00:03.500Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  /** The envelopes this test's writes produced, newest last. */
+  function envelopes(): Array<TaskEnvelope> {
+    return stubs.sent.map((entry) => taskEnvelopeSchema.parse(entry.body))
+  }
+
+  function statYears(): Array<number> {
+    return envelopes().flatMap((envelope) =>
+      envelope.kind === 'travel-stats' ? [envelope.payload.statYear] : [],
+    )
+  }
+
+  it('enqueues the all-time roll-up for a mark with no date', async () => {
+    await markVisited({ countryCode: 'PE' })
+
+    const sent = envelopes()
+    expect(sent).toHaveLength(1)
+    expect(sent[0]).toMatchObject({
+      kind: 'travel-stats',
+      orgId: tenant.organizationId,
+      payload: { userId: tenant.ownerUserId, statYear: 0 },
+    })
+  })
+
+  it('adds the year the visit is dated to, with the deterministic ids', async () => {
+    const at = Date.now()
+    await markVisited({ countryCode: 'PE', visitedOn: '2026-03-04' })
+
+    expect(statYears()).toEqual([0, 2026])
+    // The id is what makes a burst collapse: the consumer acks a redelivery of
+    // an id it has already completed.
+    expect(envelopes().map((envelope) => envelope.id)).toEqual([
+      travelStatsTaskId(tenant.organizationId, tenant.ownerUserId, 0, at),
+      travelStatsTaskId(tenant.organizationId, tenant.ownerUserId, 2026, at),
+    ])
+  })
+
+  it('holds the message until the collapse window has closed', async () => {
+    await markVisited({ countryCode: 'PE' })
+
+    const delay = stubs.sent[0]?.options?.delaySeconds
+    expect(delay).toBe(recomputeDelaySeconds(Date.now()))
+    // Delivering before the window closes would recompute from a snapshot the
+    // rest of the burst is still being written into.
+    expect(delay).toBeGreaterThan(0)
+  })
+
+  it('collapses a burst of marks onto one envelope per year', async () => {
+    await markVisited({ countryCode: 'PE' })
+    await markVisited({ countryCode: 'CL' })
+    await markVisited({ countryCode: 'AR' })
+
+    expect(new Set(envelopes().map((envelope) => envelope.id)).size).toBe(1)
+  })
+
+  it('enqueues on an undo too, for the year the removed visit was dated to', async () => {
+    await markVisited({ countryCode: 'PE', visitedOn: '2026-03-04' })
+    stubs.sent = []
+
+    await unmarkVisited({ countryCode: 'PE' })
+
+    expect(statYears()).toEqual([0, 2026])
+  })
+
+  it('enqueues nothing when there was nothing to undo', async () => {
+    await unmarkVisited({ countryCode: 'PE' })
+    expect(stubs.sent).toEqual([])
+  })
+
+  it('enqueues nothing from the bucket list, which feeds no statistic', async () => {
+    await addToBucketList({ countryCode: 'PE', targetYear: 2028 })
+    const items = await listBucketList(tenant.scope, tenant.ownerUserId)
+    const item = items.at(0)
+    if (item === undefined) {
+      throw new Error('The bucket-list add must have written a row.')
+    }
+    await removeFromBucketList({ itemId: item.id })
+
+    expect(stubs.sent).toEqual([])
+  })
+
+  it('does not fail the traveller’s write when the queue refuses the message', async () => {
+    stubs.queueRejects = true
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    await markVisited({ countryCode: 'PE', visitedOn: '2026-03-04' })
+
+    // The row the traveller asked for is there; only the recompute was lost, and
+    // it was reported rather than swallowed.
+    expect(await visitedCodes(tenant.scope)).toEqual(['PE'])
+    expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
   })
 })
 

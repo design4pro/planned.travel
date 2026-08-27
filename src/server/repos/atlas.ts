@@ -29,6 +29,7 @@ import {
   days,
   expenses,
   places,
+  transports,
   travelStats,
   trips,
   visitedCountries,
@@ -62,9 +63,18 @@ export const visitedCountriesRepository = createTenantRepository(
   visitedCountries,
   'visited country',
 )
-export const visitedRegionsRepository = createTenantRepository(visitedRegions, 'visited region')
-export const travelStatsRepository = createTenantRepository(travelStats, 'travel stats')
-export const bucketListRepository = createTenantRepository(bucketListItems, 'bucket list item')
+export const visitedRegionsRepository = createTenantRepository(
+  visitedRegions,
+  'visited region',
+)
+export const travelStatsRepository = createTenantRepository(
+  travelStats,
+  'travel stats',
+)
+export const bucketListRepository = createTenantRepository(
+  bucketListItems,
+  'bucket list item',
+)
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -100,7 +110,9 @@ export const createBucketListItemInput = z.object({
   targetYear: yearSchema.nullish(),
   sortOrder: sortOrderSchema.optional(),
 })
-export type CreateBucketListItemInput = z.infer<typeof createBucketListItemInput>
+export type CreateBucketListItemInput = z.infer<
+  typeof createBucketListItemInput
+>
 
 export const updateBucketListItemInput = z.object({
   kind: z.enum(BUCKET_LIST_KINDS).optional(),
@@ -113,7 +125,9 @@ export const updateBucketListItemInput = z.object({
   targetYear: yearSchema.nullish(),
   sortOrder: sortOrderSchema.optional(),
 })
-export type UpdateBucketListItemInput = z.infer<typeof updateBucketListItemInput>
+export type UpdateBucketListItemInput = z.infer<
+  typeof updateBucketListItemInput
+>
 
 export const upsertTravelStatsInput = z.object({
   userId: idSchema.optional(),
@@ -227,7 +241,10 @@ export async function markRegionVisited(
 
   const existing = await visitedRegionsRepository.findOne(
     scope,
-    allOf(eq(visitedRegions.userId, userId), eq(visitedRegions.regionCode, values.regionCode)),
+    allOf(
+      eq(visitedRegions.userId, userId),
+      eq(visitedRegions.regionCode, values.regionCode),
+    ),
   )
   if (existing) {
     return existing
@@ -260,9 +277,15 @@ export async function listBucketList(
   return bucketListRepository.findMany(scope, {
     where: and(
       eq(bucketListItems.userId, userId),
-      options.achieved === undefined ? undefined : eq(bucketListItems.isAchieved, options.achieved),
+      options.achieved === undefined
+        ? undefined
+        : eq(bucketListItems.isAchieved, options.achieved),
     ),
-    orderBy: [asc(bucketListItems.isAchieved), asc(bucketListItems.sortOrder), asc(bucketListItems.id)],
+    orderBy: [
+      asc(bucketListItems.isAchieved),
+      asc(bucketListItems.sortOrder),
+      asc(bucketListItems.id),
+    ],
   })
 }
 
@@ -311,7 +334,10 @@ export async function achieveBucketListItem(
   return updated
 }
 
-export async function deleteBucketListItem(scope: TenantScope, itemId: string): Promise<void> {
+export async function deleteBucketListItem(
+  scope: TenantScope,
+  itemId: string,
+): Promise<void> {
   await bucketListRepository.requireRemove(scope, itemId)
 }
 
@@ -406,7 +432,12 @@ export async function countTripsByCountry(
       sql`${trips}, json_each(case when json_valid(${trips.countryCodes}) then ${trips.countryCodes} else '[]' end) as trip_country`,
     )
     .where(
-      tenantFilter(scope, trips, isNotNull(trips.startDate), lte(trips.startDate, until)),
+      tenantFilter(
+        scope,
+        trips,
+        isNotNull(trips.startDate),
+        lte(trips.startDate, until),
+      ),
     )
     .groupBy(countryCode)
     .orderBy(countryCode)
@@ -447,7 +478,12 @@ export async function countVisitedPlacesByCountry(
     .select({ countryCode: places.countryCode, value: count() })
     .from(places)
     .where(
-      tenantFilter(scope, places, isNotNull(places.countryCode), eq(places.isVisited, true)),
+      tenantFilter(
+        scope,
+        places,
+        isNotNull(places.countryCode),
+        eq(places.isVisited, true),
+      ),
     )
     .groupBy(places.countryCode)
     .orderBy(places.countryCode)
@@ -462,7 +498,10 @@ export async function countVisitedPlacesByCountry(
   }
 
   return [...tally]
-    .map(([countryCode, visitedPlaceCount]) => ({ countryCode, visitedPlaceCount }))
+    .map(([countryCode, visitedPlaceCount]) => ({
+      countryCode,
+      visitedPlaceCount,
+    }))
     .sort((left, right) => left.countryCode.localeCompare(right.countryCode))
 }
 
@@ -499,9 +538,15 @@ function countryTravelFactsLookup(
     lastTripOn: null,
   })
 
-  const upsert = (countryCode: string, patch: Partial<CountryTravelFacts>): void => {
+  const upsert = (
+    countryCode: string,
+    patch: Partial<CountryTravelFacts>,
+  ): void => {
     const code = countryCode.trim().toUpperCase()
-    byCode.set(code, { ...(byCode.get(code) ?? nothingRecorded(code)), ...patch })
+    byCode.set(code, {
+      ...(byCode.get(code) ?? nothingRecorded(code)),
+      ...patch,
+    })
   }
 
   for (const row of tripTallies) {
@@ -671,8 +716,14 @@ export interface AtlasSummary {
 }
 
 /** How many regions inside any country this traveller has recorded. One statement. */
-export async function countVisitedRegions(scope: TenantScope, userId: string): Promise<number> {
-  return visitedRegionsRepository.count(scope, eq(visitedRegions.userId, userId))
+export async function countVisitedRegions(
+  scope: TenantScope,
+  userId: string,
+): Promise<number> {
+  return visitedRegionsRepository.count(
+    scope,
+    eq(visitedRegions.userId, userId),
+  )
 }
 
 /**
@@ -692,12 +743,20 @@ export async function countCountriesByContinent(
   const rows = await scope.db
     .select({ continent: visitedCountries.continent, value: count() })
     .from(visitedCountries)
-    .where(tenantFilter(scope, visitedCountries, eq(visitedCountries.userId, userId)))
+    .where(
+      tenantFilter(
+        scope,
+        visitedCountries,
+        eq(visitedCountries.userId, userId),
+      ),
+    )
     .groupBy(visitedCountries.continent)
     .orderBy(desc(count()))
 
   return rows.flatMap((row) =>
-    row.continent === null ? [] : [{ continent: row.continent, countryCount: row.value }],
+    row.continent === null
+      ? []
+      : [{ continent: row.continent, countryCount: row.value }],
   )
 }
 
@@ -714,7 +773,10 @@ export async function getAtlasSummary(
       bucketListRepository.count(scope, eq(bucketListItems.userId, userId)),
       bucketListRepository.count(
         scope,
-        allOf(eq(bucketListItems.userId, userId), eq(bucketListItems.isAchieved, true)),
+        allOf(
+          eq(bucketListItems.userId, userId),
+          eq(bucketListItems.isAchieved, true),
+        ),
       ),
     ]),
   ])
@@ -786,8 +848,9 @@ export async function upsertTravelStats(
 
 /**
  * Rebuilds a traveller's stats row for one year (or all time, `statYear = 0`) from the trips they are
- * on: trip count, day count, place count, spend, country and continent spread. Cron and the queue
- * consumer call this; nothing reads it live, because on a busy tenant it is five aggregate queries.
+ * on: trip count, day count, place count, spend, distance, country and continent spread. Cron and the
+ * queue consumer call this; nothing reads it live, because on a busy tenant it is six aggregate
+ * queries.
  */
 export async function recomputeTravelStats(
   scope: TenantScope,
@@ -815,35 +878,65 @@ export async function recomputeTravelStats(
 
   const tripIds = tripRows.map((row) => row.id)
 
-  const [dayCount, placeCount, cityRows, spendRow, countries] = await Promise.all([
-    tripIds.length === 0
-      ? Promise.resolve(0)
-      : countRows(scope.db.select({ value: count() }).from(days).where(
-          tenantFilter(scope, days, inArray(days.tripId, tripIds)),
-        )),
-    tripIds.length === 0
-      ? Promise.resolve(0)
-      : countRows(
-          scope.db
-            .select({ value: count() })
+  /**
+   * Distance is the one aggregate that is *not* read through `tripIds`.
+   *
+   * A leg carries its own `departure_date`, and a trip that starts on 30 December has legs in two
+   * calendar years; filtering them by the trip's `start_date` would file January's flight under the
+   * previous year. So a year row sums the legs that departed in that year, tenant-wide, exactly as
+   * the other seven workspace figures are tenant-wide. A leg with no distance recorded contributes
+   * nothing, and a year with no distances at all writes `0` rather than leaving the column at
+   * whatever a fixture put there.
+   */
+  const legYearFilter =
+    statYear === 0
+      ? undefined
+      : allOf(
+          gte(transports.departureDate, `${statYear}-01-01`),
+          lte(transports.departureDate, `${statYear}-12-31`),
+        )
+
+  const [dayCount, placeCount, cityRows, spendRow, distanceRow, countries] =
+    await Promise.all([
+      tripIds.length === 0
+        ? Promise.resolve(0)
+        : countRows(
+            scope.db
+              .select({ value: count() })
+              .from(days)
+              .where(tenantFilter(scope, days, inArray(days.tripId, tripIds))),
+          ),
+      tripIds.length === 0
+        ? Promise.resolve(0)
+        : countRows(
+            scope.db
+              .select({ value: count() })
+              .from(places)
+              .where(
+                tenantFilter(scope, places, inArray(places.tripId, tripIds)),
+              ),
+          ),
+      tripIds.length === 0
+        ? Promise.resolve([])
+        : scope.db
+            .select({ city: places.city })
             .from(places)
-            .where(tenantFilter(scope, places, inArray(places.tripId, tripIds))),
-        ),
-    tripIds.length === 0
-      ? Promise.resolve([])
-      : scope.db
-          .select({ city: places.city })
-          .from(places)
-          .where(tenantFilter(scope, places, inArray(places.tripId, tripIds)))
-          .groupBy(places.city),
-    tripIds.length === 0
-      ? Promise.resolve([{ value: null }])
-      : scope.db
-          .select({ value: sum(expenses.amountMinor) })
-          .from(expenses)
-          .where(tenantFilter(scope, expenses, inArray(expenses.tripId, tripIds))),
-    listVisitedCountries(scope, userId),
-  ])
+            .where(tenantFilter(scope, places, inArray(places.tripId, tripIds)))
+            .groupBy(places.city),
+      tripIds.length === 0
+        ? Promise.resolve([{ value: null }])
+        : scope.db
+            .select({ value: sum(expenses.amountMinor) })
+            .from(expenses)
+            .where(
+              tenantFilter(scope, expenses, inArray(expenses.tripId, tripIds)),
+            ),
+      scope.db
+        .select({ value: sum(transports.distanceMetres) })
+        .from(transports)
+        .where(tenantFilter(scope, transports, legYearFilter)),
+      listVisitedCountries(scope, userId),
+    ])
 
   /**
    * A year row counts the countries *that year's trips* went to, not the
@@ -887,15 +980,21 @@ export async function recomputeTravelStats(
     placeCount,
     cityCount: cityRows.filter((row) => row.city !== null).length,
     countryCount: yearCodes === null ? countries.length : yearCodes.size,
-    regionCount: await visitedRegionsRepository.count(scope, eq(visitedRegions.userId, userId)),
+    regionCount: await visitedRegionsRepository.count(
+      scope,
+      eq(visitedRegions.userId, userId),
+    ),
     spendMinor: Number(spendRow[0]?.value ?? 0),
+    distanceMetres: Number(distanceRow[0]?.value ?? 0),
     currency: tripRows[0]?.currency,
     lastTripId: tripRows[0]?.id ?? null,
     byContinent,
   })
 }
 
-async function countRows(query: PromiseLike<Array<{ value: number }>>): Promise<number> {
+async function countRows(
+  query: PromiseLike<Array<{ value: number }>>,
+): Promise<number> {
   const rows = await query
   return rows[0]?.value ?? 0
 }

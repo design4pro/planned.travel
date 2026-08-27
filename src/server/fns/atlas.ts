@@ -83,6 +83,12 @@ import { z } from 'zod'
 
 import { continentOf } from '#/lib/atlas/continents'
 import { countryName } from '#/lib/atlas/country-names'
+import { createLogger, serializeError } from '#/server/observability'
+import { enqueueTask } from '#/server/queue/jobs'
+import {
+  recomputeDelaySeconds,
+  travelStatsTaskId,
+} from '#/server/queue/handlers/travel-stats'
 import {
   NotFoundError,
   QuotaExceededError,
@@ -96,6 +102,7 @@ import {
 import { appScope } from './context'
 
 import type { Continent } from '#/lib/atlas/continents'
+import type { Logger } from '#/server/observability'
 import type { BucketListItem, VisitedCountry } from '#/server/db/types'
 import type { TenantScope } from '#/server/repos'
 
@@ -413,6 +420,102 @@ export async function atlasCountryState(
   }
 }
 
+/* --------------------------------------------------------- stats recompute */
+
+/**
+ * Memoised per isolate: the logger holds no request state.
+ *
+ * Built here rather than taken from `./context` because that module's logger is
+ * private to it; the level is the default rather than `LOG_LEVEL`, which costs
+ * nothing — the only line this module emits is a `warn` that every level prints.
+ */
+let logger: Logger | undefined
+
+function log(): Logger {
+  logger ??= createLogger({
+    context: { component: 'server-fn', route: 'atlas' },
+  })
+  return logger
+}
+
+/**
+ * Asks the queue to rebuild this traveller's `travel_stats` rows.
+ *
+ * `travel_stats` is a derived cache — trip, day, place, city, country, region,
+ * spend, distance and continent aggregates — and rebuilding it is six aggregate
+ * queries over the workspace, which is the shape `ARCHITECTURE.md` §5 sends to
+ * `TASKS` rather than running on a request. The map still repaints optimistically
+ * from {@link AtlasCountryState}; the panel catches up on its next read.
+ *
+ * Three properties are deliberate:
+ *
+ * - **The envelope id collapses a burst.** Marking five countries in a row must
+ *   not buy five recomputes of the same rows. The id is derived from the tenant,
+ *   the traveller, the year and the ten-second window the write fell into, and
+ *   the consumer acks a redelivery of an id it has already completed. The message
+ *   is held back until that window closes, so the one recompute that survives the
+ *   collapse sees every write in it — see `travelStatsTaskId`.
+ * - **The binding is reached at call time, not at import time.** `#/server/auth/env` is
+ *   the module that reads the Worker environment for `TASKS`, and it imports
+ *   `cloudflare:workers` at module scope — a specifier that does not resolve
+ *   outside workerd. This module is imported by suites that run in plain Node to
+ *   exercise the read half of the atlas, so the door is opened inside the
+ *   function that walks through it rather than at the top of the file.
+ * - **A queue refusal never fails the traveller's write.** D1 is the durable
+ *   record and has already been written by the time this runs. A binding that is
+ *   unreachable costs a stale panel until the next write, which is strictly less
+ *   than turning a successful save into a 500. Same reasoning, and the same
+ *   shape, as `mirrorToRoom` in `./context`.
+ */
+async function enqueueTravelStatsRecompute(
+  scope: TenantScope,
+  years: ReadonlyArray<number>,
+): Promise<void> {
+  const orgId = scope.ctx.organizationId
+  const userId = scope.ctx.userId
+  const at = Date.now()
+
+  try {
+    const { taskQueue } = await import('#/server/auth/env')
+    const queue = taskQueue()
+    for (const statYear of [...new Set(years)]) {
+      await enqueueTask(queue, {
+        kind: 'travel-stats',
+        orgId,
+        id: travelStatsTaskId(orgId, userId, statYear, at),
+        payload: { userId, statYear },
+        delaySeconds: recomputeDelaySeconds(at),
+      })
+    }
+  } catch (cause) {
+    log().warn('travel stats recompute was not enqueued', {
+      organizationId: orgId,
+      ...serializeError(cause),
+    })
+  }
+}
+
+/**
+ * The years one visited-country write can have moved, all-time first.
+ *
+ * On the all-time row a visit moves `countryCount` and `byContinent`; on a year
+ * row it moves `byContinent` alone, because a year's country count is derived
+ * from that year's trips and not from the visited list. So the year is worth
+ * sending exactly when the write names one — and on an undo the date the write
+ * names is the one on the row being removed, which is the only date an undo has.
+ * A row spanning several years is folded onto its most recent one rather than
+ * fanned out across the range: `byContinent` on the intervening years is
+ * rebuilt by the all-time envelope's sibling writes, and a fan-out here would
+ * cost a consumer invocation per year for a country that was, at most, one trip.
+ */
+function affectedStatYears(
+  visitedOn: string | null | undefined,
+): Array<number> {
+  const year =
+    typeof visitedOn === 'string' ? Number(visitedOn.slice(0, 4)) : Number.NaN
+  return Number.isInteger(year) ? [0, year] : [0]
+}
+
 /* -------------------------------------------------------- visited countries */
 
 /**
@@ -459,6 +562,10 @@ export const markCountryVisitedFn = createServerFn({ method: 'POST' })
             note: optionalText(data.note),
           }),
         )
+        await enqueueTravelStatsRecompute(
+          scope,
+          affectedStatYears(data.visitedOn),
+        )
         return { ...current, visit: visitRecordOf(visit) }
       } catch (cause) {
         if (!isUniqueConstraintViolation(cause)) {
@@ -492,8 +599,12 @@ export const unmarkCountryVisitedFn = createServerFn({ method: 'POST' })
       return current
     }
 
-    const visitId = current.visit.id
-    await alreadyGone(() => unmarkCountryVisited(scope, visitId))
+    const visit = current.visit
+    await alreadyGone(() => unmarkCountryVisited(scope, visit.id))
+    await enqueueTravelStatsRecompute(
+      scope,
+      affectedStatYears(visit.lastVisitedOn ?? visit.firstVisitedOn),
+    )
     return { ...current, visit: null }
   })
 
