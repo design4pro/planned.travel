@@ -37,6 +37,17 @@ const auditSchema = z.object({
       reason: z.string(),
     }),
   ),
+  // Incidental findings OUTSIDE the audited DoDs — coverage gaps, adjacent
+  // debt. They become triage tickets (status: pending), never reopens.
+  followUps: z
+    .array(
+      z.object({
+        title: z.string(),
+        body: z.string(),
+        kind: z.enum(['bug', 'maintenance']),
+      }),
+    )
+    .default([]),
 })
 
 // Maximum number of plan→execute→merge→audit cycles before stopping.
@@ -384,6 +395,25 @@ async function runAuditor(closed: Issue[], iteration: number): Promise<void> {
           `gh issue edit ${finding.id} --add-label ready-for-agent`,
         )
       }
+    }
+    // Incidental findings become triage tickets — `status: pending`, never
+    // `ready-for-agent`: a human promotes them, so the loop cannot generate
+    // and consume its own work unsupervised. Capped and title-deduped.
+    for (const followUp of verdicts.followUps.slice(0, 3)) {
+      const existing = await sandbox.exec(
+        `gh issue list --state open --search ${JSON.stringify(followUp.title)} --json number --jq 'length'`,
+      )
+      if (existing.stdout.trim() !== '0') {
+        console.log(`  AUDIT FOLLOW-UP already filed: ${followUp.title}`)
+        continue
+      }
+      console.log(`  AUDIT FOLLOW-UP → issue: ${followUp.title}`)
+      await sandbox.exec(
+        `gh issue create --title ${JSON.stringify(followUp.title)} --label ${JSON.stringify(`type: ${followUp.kind}`)} --label "status: pending" --body-file -`,
+        {
+          stdin: `${followUp.body}\n\n---\n_Filed by the sandcastle auditor (run ${RUN_TS}, iteration ${iteration}) while auditing: ${closed.map((i) => `#${i.id}`).join(', ')}._`,
+        },
+      )
     }
     await collectArtifacts(
       sandbox,

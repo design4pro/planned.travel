@@ -24,12 +24,20 @@ TARGET_BRANCH={{TARGET_BRANCH}} bash .sandcastle/validate.sh --force-e2e --json-
 
 A red ladder refutes every issue whose change plausibly caused the failure.
 
+# FOLLOW-UPS — incidental findings
+
+While auditing you may notice things that do NOT defeat any DoD but deserve their own ticket: a coverage gap (a regression only one expensive gate would catch), adjacent debt, a benign-but-real ownership violation. Report at most 3, and only findings that are **concrete and checkable** — name the file, the command that proves the gap, the exact risk. "Could be cleaner" is not a follow-up.
+
+Before proposing one, check it is not already filed: `gh issue list --state open --search "<key words>"`. Skip anything an open issue already covers.
+
 # OUTPUT
 
 Output your verdicts as JSON wrapped in <audit> tags. `refuted` requires a concrete, checkable reason (a missing DoD clause, a failing command, a violated path) — "could be better" is not a refutation:
 
 <audit>
-{"issues": [{"id": "42", "verdict": "confirmed", "reason": "all DoD clauses verified"}, {"id": "43", "verdict": "refuted", "reason": "DoD requires X; grep/test Y proves it is absent"}]}
+{"issues": [{"id": "42", "verdict": "confirmed", "reason": "all DoD clauses verified"}, {"id": "43", "verdict": "refuted", "reason": "DoD requires X; grep/test Y proves it is absent"}], "followUps": [{"title": "<imperative, searchable title>", "body": "<what, where, the command that proves it, suggested fix direction>", "kind": "maintenance"}]}
 </audit>
 
-Do NOT reopen issues yourself — the orchestrator acts on your verdicts. Do not commit anything.
+`followUps` may be an empty array. `kind` is `bug` (incorrect behavior reachable today) or `maintenance` (debt, coverage, tooling).
+
+Do NOT reopen issues and do NOT create issues yourself — the orchestrator acts on your verdicts (follow-ups become `status: pending` tickets for human triage). Do not commit anything.
