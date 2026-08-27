@@ -1,9 +1,15 @@
 # planned.travel — implementation plans
 
+> **This directory is being retired** (docs/adr/0004): the backlog is migrating, area by area, to
+> GitHub Issues via grilling → `/to-spec-project` → `/to-tickets-project`. A migrated area's plan
+> file is deleted (history stays in git) and this note lists it. Areas migrated so far: _none yet_.
+> Until an area migrates, its plan file below remains the authority for that area.
+
 `docs/` is described in `docs/SPEC.md` §6 as "spec + architecture notes". This directory adds the
 third kind of document: **staged implementation plans**, one per product area, that carve the 89-row
-feature gap in `.claude/ultrabuild/recon/gap-rows.json` into stages small enough for one agent to own
-end to end.
+feature gap into stages small enough for one agent to own end to end. (The gap matrix lived in
+`.claude/ultrabuild/recon/gap-rows.json`, a machine-local artifact that no longer exists — row ids
+survive in these plans as historical identifiers; verify a row's real status against the code.)
 
 A plan is not a design document and not a backlog. It is a sequence of **stages**, each of which
 names its owned paths, its data change, its server functions, its UI, its quota, its tenant-isolation
@@ -20,24 +26,24 @@ it because it is generated, not authored: `OPEN-FINDINGS.md`, the per-plan findi
 /ultrabuild orchestrator writes from `.claude/ultrabuild/items.json`. It tracks the files below and
 never adds scope of its own, so it is exempt from this table and from the filename scheme.
 
-| File                               | Scope — one line each                                                                                                                                        |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `TEMPLATE.md`                      | The stage block every plan copies: eleven required headings in a fixed order, plus the definition of done every stage inherits unchanged.                    |
-| `00-foundations.md`                | The shared files no feature stage may claim — schema, worker entry, wrangler bindings, tokens, `components/ui`, generated route tree; its stages are wave 0. |
-| `01-trips-core.md`                 | Trip lifecycle, creation, membership and guests, day model, day notes, the merged day timeline and the planner workspace shell.                              |
-| `02-places-and-maps.md`            | Place creation and the place form, search and import paths, markers and clustering, map styles, layers and route overlays.                                   |
-| `03-reservations-and-transport.md` | Reservation records and the booking desk, transport records and legs, airport and station pickers, transit search, transport in the day.                     |
-| `04-budget-and-currencies.md`      | Budget entries, expense splitting and settlements, per-expense currency with frozen rates, display currency and budget reporting.                            |
-| `05-packing-and-todos.md`          | Packing lists and categories, quantity and check state, filters and progress, templates and the shared template library, todo lists.                         |
-| `06-documents-and-media.md`        | File upload and storage in R2, starring and the trash lifecycle, multi-target file links, PDF export, calendar output, per-day weather.                      |
-| `07-collaboration-and-sharing.md`  | Realtime trip sync and the wire contract, chat, notes, polls, presence, the collab panel, public share links and trip invite links.                          |
-| `08-product-modules.md`            | The optional product modules — world-map atlas, travel journal, leave planner, saved collections — and the entitlement gate that sells them.                 |
-| `09-account-and-settings.md`       | Account, security and passkeys, appearance, notification preferences and the notification write path, locale, PWA install, in-app help.                      |
-| `10-administration.md`             | The workspace console: member and invitation administration, workspace-wide defaults, the audit write path and audit reading.                                |
-| `11-boundaries-and-blockers.md`    | The ten rows that do not port to hosted multi-tenant, their named hosted equivalents, and every row blocked by the SPEC §3 freeze.                           |
-| `12-verification-protocol.md`      | How a stage proves itself: the command gate, unit and isolation tests, the e2e/visual evidence format, viewports, themes and console rules.                  |
-| `13-community-gallery.md`          | The Trip Gallery — publish a trip as a reviewed snapshot, the curation queue, anonymous browse and detail served from KV, suggestions and saved trips.       |
-| `14-dashboard-mascot.md`           | Nomi, the original dashboard-hero character — a client-side state machine over days to departure, the flap countdown, the pause control, the static pose.    |
+| File                               | Scope — one line each                                                                                                                                                                                                                                      |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TEMPLATE.md`                      | The stage block every plan copies: eleven required headings in a fixed order, plus the definition of done every stage inherits unchanged.                                                                                                                  |
+| `00-foundations.md`                | The shared files no feature stage may claim — schema, worker entry, wrangler bindings, tokens, `components/ui`, generated route tree; its stages are wave 0.                                                                                               |
+| `01-trips-core.md`                 | Trip lifecycle, creation, membership and guests, day model, day notes, the merged day timeline and the planner workspace shell.                                                                                                                            |
+| `02-places-and-maps.md`            | Place creation and the place form, search and import paths, markers and clustering, map styles, layers and route overlays.                                                                                                                                 |
+| `03-reservations-and-transport.md` | Reservation records and the booking desk, transport records and legs, airport and station pickers, transit search, transport in the day.                                                                                                                   |
+| `04-budget-and-currencies.md`      | Budget entries, expense splitting and settlements, per-expense currency with frozen rates, display currency and budget reporting.                                                                                                                          |
+| `05-packing-and-todos.md`          | Packing lists and categories, quantity and check state, filters and progress, templates and the shared template library, todo lists.                                                                                                                       |
+| `06-documents-and-media.md`        | File upload and storage in R2, starring and the trash lifecycle, multi-target file links, PDF export, calendar output, per-day weather.                                                                                                                    |
+| `07-collaboration-and-sharing.md`  | Realtime trip sync and the wire contract, chat, notes, polls, presence, the collab panel, public share links and trip invite links.                                                                                                                        |
+| `08-product-modules.md`            | The optional product modules — world-map atlas, travel journal, leave planner, saved collections — and the entitlement gate that sells them.                                                                                                               |
+| `09-account-and-settings.md`       | Account, security and passkeys, appearance, notification preferences and the notification write path, locale, PWA install, in-app help.                                                                                                                    |
+| `10-administration.md`             | The workspace console: member and invitation administration, workspace-wide defaults, the audit write path and audit reading.                                                                                                                              |
+| `11-boundaries-and-blockers.md`    | The ten rows that do not port to hosted multi-tenant, their named hosted equivalents, and every row blocked by the SPEC §3 freeze.                                                                                                                         |
+| `12-verification-protocol.md`      | How a stage proves itself: the command gate, unit and isolation tests, the e2e/visual evidence format, viewports, themes and console rules.                                                                                                                |
+| `13-community-gallery.md`          | The Trip Gallery — publish a trip as a reviewed snapshot, the curation queue, anonymous browse and detail served from KV, suggestions and saved trips.                                                                                                     |
+| `14-dashboard-mascot.md`           | Nomi, the original dashboard-hero character — a client-side state machine over days to departure, the flap countdown, the pause control, the static pose.                                                                                                  |
 | `15-content-studio.md`             | The operator content plane: Studio roles and audit, content stores with versioned translations, the block editor and media library, the public site as data, announcements, and managed legal documents with acceptance. Waves 7-11, above the matrix set. |
 
 ### Filename scheme

@@ -74,3 +74,11 @@ e2e/.auth
 
 # Tracked on purpose: a product screenshot, not a round capture.
 !billing-light.png
+
+# Sandcastle loop state: agent worktrees and logs live inside the repo by design.
+.sandcastle/worktrees/
+.sandcastle/logs/
+
+# Local basemap cache for e2e (pulled from R2; copied into sandcastle worktrees).
+.e2e-tiles/
+dev-server.log

@@ -3,8 +3,11 @@ name: CI
 on:
   pull_request:
     branches: [main, develop]
+    # `labeled` lets adding the `needs-e2e` label trigger the e2e job on a PR.
+    types: [opened, synchronize, reopened, labeled]
   push:
     branches: [main, develop]
+  workflow_dispatch:
 
 # One run per branch: a force-push supersedes the run it interrupted.
 concurrency:
@@ -29,6 +32,11 @@ env:
 jobs:
   verify:
     name: lint · typecheck · test · build
+    # A develop→main (or main→develop) PR duplicates the push-triggered run on
+    # the same commits; the push run is canonical for the shared branches. The
+    # skip cascades: `e2e` needs this job and keeps its implicit success()
+    # requirement, so the PR-side e2e is deduplicated too.
+    if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -84,9 +92,21 @@ jobs:
   #
   # Behind `verify`, because a run that cannot typecheck cannot produce a frame
   # worth photographing, and this job is the expensive one.
+  #
+  # Demoted from every-PR to a post-merge safety net: the sandcastle loop runs
+  # this exact suite, in this exact container image, per issue and again in the
+  # per-iteration audit — so a PR from the loop arrives already visually
+  # validated. The job still runs on every push to develop/main, on demand
+  # (workflow_dispatch), and on any PR carrying the `needs-e2e` label — the
+  # escape hatch for PRs with no local loop behind them (cloud agents, manual
+  # branches).
   e2e:
     name: e2e · visual regression
     needs: verify
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'needs-e2e')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Keep in step with the `@playwright/test` devDependency in package.json:

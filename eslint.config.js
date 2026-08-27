@@ -15,6 +15,66 @@ export default [
     },
   },
   {
+    // Layering law (docs/SPEC.md §6): all SQL lives in server/repos (catalog is
+    // the single stated exception). Client-side layers never see drizzle-orm.
+    files: ['src/components/**', 'src/lib/**', 'src/routes/**'],
+    ignores: ['src/routes/api/dev/-seed/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'drizzle-orm',
+              message:
+                'SQL lives in server/repos via the tenant base repository (docs/SPEC.md §6). Call a server function instead.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['drizzle-orm/*'],
+              message:
+                'SQL lives in server/repos via the tenant base repository (docs/SPEC.md §6). Call a server function instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Layering law (docs/SPEC.md §6): design-system primitives never reach the
+    // server layer. Last so it overrides (and therefore must repeat) the
+    // drizzle-orm restriction above — flat config replaces a rule's options
+    // wholesale, it does not merge them.
+    files: ['src/components/ui/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'drizzle-orm',
+              message:
+                'SQL lives in server/repos via the tenant base repository (docs/SPEC.md §6). Call a server function instead.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['#/server/*', '@/server/*', '**/server/*'],
+              message:
+                'components/ui never imports from server/ (docs/SPEC.md §6). Pass data in as props.',
+            },
+            {
+              group: ['drizzle-orm/*'],
+              message:
+                'SQL lives in server/repos via the tenant base repository (docs/SPEC.md §6). Call a server function instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // `.claude/workflows/*.js` are Claude Code orchestration scripts: plain JS
     // run against a bespoke global environment (`agent`, `args`, `budget`), not
     // part of the TypeScript project and not shipped.
@@ -28,6 +88,7 @@ export default [
       'eslint.config.js',
       'prettier.config.js',
       '.claude/**',
+      '.sandcastle/**',
       'dist/**',
       'playwright-report/**',
       'blob-report/**',

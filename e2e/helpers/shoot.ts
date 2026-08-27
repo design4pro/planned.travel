@@ -2196,11 +2196,29 @@ export async function visit(
  * nothing, and are captured exactly as they were before this existed.
  */
 function maskFor(page: Page, route: RouteCase): Array<Locator> {
-  if (route.relativeTime !== true) {
-    return []
+  const masks: Array<Locator> = []
+  if (route.relativeTime === true) {
+    const region = relativeTimeRegion(page)
+    if (region !== null) {
+      masks.push(region)
+    }
   }
-  const region = relativeTimeRegion(page)
-  return region === null ? [] : [region]
+  /**
+   * WebKit has no software-renderer switch, so on `mobile-safari` the live map
+   * canvas is rasterised by whatever GPU the host machine has — the same commit
+   * paints different pixels on CI and on another developer's laptop. Chromium is
+   * unaffected: headless Chromium already rasterises WebGL in software
+   * (SwiftShader), which is why its map baselines are stable and stay compared.
+   * Masking only the canvas keeps the atlas chrome, shelf and cards in the
+   * comparison; the map's own regressions remain covered by the chromium frames.
+   */
+  if (
+    route.map === true &&
+    page.context().browser()?.browserType().name() === 'webkit'
+  ) {
+    masks.push(page.locator('.maplibregl-canvas'))
+  }
+  return masks
 }
 
 /** How a route's frame is captured, and why the two differ. */
