@@ -52,6 +52,28 @@ const auditSchema = z.object({
     .default([]),
 })
 
+const captureSchema = z.object({
+  captured: z.boolean(),
+  pairs: z
+    .array(z.object({ viewport: z.string(), theme: z.string() }))
+    .default([]),
+  consoleErrors: z.array(z.string()).default([]),
+  skippedReason: z.string().default(''),
+})
+
+const visualSchema = z.object({
+  winner: z.enum(['A', 'B', 'tie']),
+  findings: z
+    .array(
+      z.object({
+        label: z.enum(['A', 'B']),
+        summary: z.string(),
+        severity: z.enum(['major', 'minor']),
+      }),
+    )
+    .default([]),
+})
+
 // Maximum number of plan→execute→merge→audit cycles before stopping.
 const MAX_ITERATIONS = 10
 
@@ -70,6 +92,7 @@ const PLANNER_MODEL = 'claude-opus-5'
 const IMPLEMENTER_MODEL = 'claude-opus-5'
 const REVIEWER_MODEL = 'claude-opus-5'
 const AUDITOR_MODEL = 'claude-opus-5'
+const CRITIC_MODEL = 'claude-opus-5'
 
 // Runs inside the sandbox before each agent starts. Fresh linux install is
 // ~13 s; never copy darwin node_modules (10+ min teardown through the mount).
@@ -177,6 +200,8 @@ async function collectArtifacts(
     'playwright-report',
     'test-results',
     '.sandcastle-validation.json',
+    '.sandcastle-visual.json',
+    '.sandcastle-shots',
     'dev-server.log',
   ]) {
     await cp(join(sandbox.worktreePath, name), join(dest, name), {
@@ -239,6 +264,103 @@ async function declaresVisualChange(
     /visual change expected/i.test(view.stdout) ||
     view.stdout.includes('visual-change-expected')
   )
+}
+
+/**
+ * Advisory pixel-critic pass, run only after a green validation of a
+ * UI-touching branch: a neutral capture agent photographs our screen (dev
+ * server on :3010, still warm from the e2e run) and the reference demo as a
+ * blind A/B pair, then a blind critic names the better-looking product. The
+ * verdict lands as an issue comment plus `.sandcastle-visual.json` in the
+ * artifacts — it NEVER blocks the merge, so every failure path here only logs.
+ */
+async function runPixelCritic(
+  sandbox: sandcastle.Sandbox,
+  issue: Issue,
+): Promise<void> {
+  try {
+    const shotsDir = `.sandcastle-shots/issue-${issue.id}`
+    // Deterministic blind order: the capture agent knows the mapping, the
+    // critic and its prompt never see it.
+    const oursLabel = Number.parseInt(issue.id, 10) % 2 === 0 ? 'A' : 'B'
+    const refLabel = oursLabel === 'A' ? 'B' : 'A'
+
+    const capture = await sandbox.run({
+      name: 'pixel-capture',
+      maxIterations: 1,
+      agent: sandcastle.claudeCode(CRITIC_MODEL),
+      promptFile: './.sandcastle/pixel-capture-prompt.md',
+      promptArgs: {
+        TASK_ID: issue.id,
+        ISSUE_TITLE: issue.title,
+        SHOTS_DIR: shotsDir,
+        OURS_LABEL: oursLabel,
+        REF_LABEL: refLabel,
+      },
+    })
+    const capRaw = capture.stdout.match(/<capture>([\s\S]*?)<\/capture>/)?.[1]
+    if (capRaw === undefined) {
+      console.log(`  [${issue.id}] pixel-critic: no <capture> block — skipped`)
+      return
+    }
+    const cap = captureSchema.parse(JSON.parse(capRaw))
+    if (!cap.captured || cap.pairs.length === 0) {
+      console.log(
+        `  [${issue.id}] pixel-critic: capture skipped — ${cap.skippedReason || 'no pairs'}`,
+      )
+      return
+    }
+
+    const critic = await sandbox.run({
+      name: 'pixel-critic',
+      maxIterations: 1,
+      agent: sandcastle.claudeCode(CRITIC_MODEL),
+      promptFile: './.sandcastle/pixel-critic-prompt.md',
+      promptArgs: {
+        TASK_ID: issue.id,
+        ISSUE_TITLE: issue.title,
+        SHOTS_DIR: shotsDir,
+      },
+    })
+    const visRaw = critic.stdout.match(/<visual>([\s\S]*?)<\/visual>/)?.[1]
+    if (visRaw === undefined) {
+      console.log(`  [${issue.id}] pixel-critic: no <visual> block — skipped`)
+      return
+    }
+    const verdict = visualSchema.parse(JSON.parse(visRaw))
+
+    const oursVerdict =
+      verdict.winner === 'tie'
+        ? 'tie'
+        : verdict.winner === oursLabel
+          ? 'won'
+          : 'lost'
+    const oursFindings = verdict.findings.filter((f) => f.label === oursLabel)
+    await sandbox.exec('cat > .sandcastle-visual.json', {
+      stdin: JSON.stringify({ oursLabel, oursVerdict, ...verdict }, null, 2),
+    })
+    console.log(
+      `  [${issue.id}] pixel-critic (advisory): ours ${oursVerdict}, ${oursFindings.length} finding(s) against us`,
+    )
+    await sandbox.exec(`gh issue comment ${issue.id} --body-file -`, {
+      stdin: [
+        `Sandcastle pixel-critic (advisory, blind A/B vs the reference): **ours ${oursVerdict}**.`,
+        '',
+        ...(oursFindings.length > 0
+          ? [
+              'Findings against our side:',
+              ...oursFindings.map((f) => `- [${f.severity}] ${f.summary}`),
+            ]
+          : ['No findings against our side.']),
+        '',
+        'Frames and full verdict are in the run artifacts (`.sandcastle-shots/`, `.sandcastle-visual.json`). This gate does not block the merge.',
+      ].join('\n'),
+    })
+  } catch (error) {
+    console.log(
+      `  [${issue.id}] pixel-critic: errored — ${error instanceof Error ? error.message : String(error)} (advisory, continuing)`,
+    )
+  }
 }
 
 async function markBlocked(
@@ -326,7 +448,14 @@ async function workIssue(
         lastArtifactPath = await collectArtifacts(sandbox, issue, attempt)
       }
 
-      if (verdict.ok) return { issue, ok: true, commits }
+      if (verdict.ok) {
+        if (verdict.uiTouched) {
+          await runPixelCritic(sandbox, issue)
+          // Re-collect: the critic added .sandcastle-shots and the verdict.
+          await collectArtifacts(sandbox, issue, attempt)
+        }
+        return { issue, ok: true, commits }
+      }
 
       if (attempt > FIX_BUDGET) {
         await markBlocked(
