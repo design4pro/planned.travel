@@ -19,3 +19,6 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Quota** — a numeric ceiling on an entitlement, enforced at the data-access boundary.
 - **Platform actor** — a privileged operator acting across organizations; every such action is audited.
 - **Guest** — a trip participant who is not an organization member.
+- **Reminder** — a pre-departure notice delivered to a trip's members ahead of the start date, honouring each member's channel preferences; its lead time is counted in days, and zero means off.
+- **System event** — a notification event with no acting user (a reminder, a billing follow-up); nobody is excluded from its recipients.
+- **Entity history** — the per-entity view of a tenant's audit trail.

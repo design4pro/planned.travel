@@ -412,14 +412,13 @@ repository function is the copy, and it is the only part of this stage that is n
 They are listed under **Reference rows** rather than buried in prose because a reader checking whether
 this plan carries what wave 0 handed it should find them in one place:
 
-1. **The reminder has to be cancelled as well as re-anchored.** `00-S5`'s **UI** heading says
-   `TRP-03` "must call `syncTripReminder` when `start_date` or `reminder_days` changes, and
-   `cancelReminder` when a trip is archived or deleted", passing the pre-write anchor as `previous`.
-   The re-anchoring on edit is `01-S10`'s, in wave 6, because it ships with the control whose
-   semantics it implements. **The cancel on archive and on delete is this stage's**, because this is
-   the stage that gives `archiveTrip` and `deleteTrip` their first caller — a reminder that outlives
-   the trip it points at is created the moment those paths become reachable, not six waves later. How
-   it is done is under **Server**.
+1. **The reminder obligation was withdrawn during the grilling of `00-foundations.md`.** `00-S5` was
+   redesigned from schedule-at-write to a scan model: the `*/15` sweep reads due trips directly
+   (`start_date IS NOT NULL AND reminder_days > 0 AND is_archived = 0`) and dispatches through
+   `00-S2` with recipients resolved at fire time. There is no KV index to keep in sync, so `TRP-03`
+   calls nothing on edit, archive, restore or delete — the next scan simply sees the row as it now
+   is, an archived trip never surfaces from the scan, and a deleted trip is absent. What was
+   obligation 1 is now a non-obligation, recorded so nobody re-adds a scheduler call by reflex.
 2. **A trip write moves every member's travel statistics.** `00-S4`'s **Server** heading records that
    `tripCount`, `dayCount`, `placeCount`, `cityCount` and `spendMinor` are workspace-wide, that a
    write changing `trips.country_codes` or `trips.start_date` also moves every member's year-row
@@ -443,16 +442,15 @@ Rows unblocked: `TRP-01` (`01-S7`) directly.
 
 - `src/routes/_app/-server/trip-lifecycle.ts` — new. Every trip-level write server function,
   including `createTripFn` moved here from `-server/overview.ts`.
-- `src/routes/_app/-server/overview.ts` — edit. `createTripFn` (`:556-568`) is **moved out**, not
-  copied; the module keeps its four loaders and its two notification writes. The move carries
-  `00-S5`'s reminder scheduling call intact — that wave-0 stage edits this same function, closes
-  before wave 1 opens, and its `syncTripReminder(…, { previous: null })` call travels with the
-  function rather than being re-derived. **Five stages touch this module across five waves and no two
-  share one**, which is what makes the shared claim legal: `00-S5` (`00-foundations.md`, wave 0), this
-  stage in wave 1, `09-S7` (`09-account-and-settings.md`, wave 2) for the unread-count answer, `10-S3`
-  (`10-administration.md`, wave 4) for the audit count inside `loadAdmin`, and `01-S7` in wave 5. Each
-  of the four siblings names this stage in return; the measurement is the check output at the foot of
-  this file.
+- `src/routes/_app/-server/overview.ts` — edit. `createTripFn` (`:641`) is **moved out**, not
+  copied; the module keeps its four loaders and its two notification writes. The move carries no
+  reminder call: after the grilling redesign of `00-S5`, trip creation runs no reminder code — the
+  scan sees the new trip on its own — and `00-S5` no longer edits this module at all. **Four stages
+  touch this module across four waves and no two share one**, which is what makes the shared claim
+  legal: this stage in wave 1, `09-S7` (`09-account-and-settings.md`, wave 2) for the unread-count
+  answer, `10-S3` (`10-administration.md`, wave 4) for the audit count inside `loadAdmin`, and
+  `01-S7` in wave 5. Each of the three siblings names this stage in return; the measurement is the
+  check output at the foot of this file.
 - `src/routes/_app/-ui/trip-actions.tsx` — new. The per-trip action menu, the destructive
   confirmations and the edit sheet.
 - `src/routes/_app/-ui/trip-card.tsx` — edit. Mounts the action menu on `TripTile`.
@@ -687,33 +685,16 @@ therefore enqueues the `travel-stats` envelopes `00-S4` defined, with `00-S4`'s 
   Better Auth's organization plugin is configured with is a configuration value and not a guarantee,
   so the chunk loop does not lean on it.
 - **A queue failure never fails the write.** It is caught, logged once with `serializeError`, and the
-  trip write still returns — the same isolation `00-S2` requires of dispatch and `00-S5` of the
-  reminder key. A stale statistics panel is a smaller harm than a save that appears to have failed.
+  trip write still returns — the same isolation `00-S2` requires of dispatch. A stale statistics
+  panel is a smaller harm than a save that appears to have failed.
 
-**The reminder, which is `00-S5`'s obligation on this stage.** `00-S5` gives `TRP-03` two duties and
-this stage carries the pair that belongs to the paths it makes reachable:
-
-- **`archiveTripFn` and `deleteTripFn` cancel.** Both read the trip through `requireTrip` before they
-  write — they already must, because that is what authorises the write — so the **pre-write** row is
-  the previous anchor and passing it costs no extra query. Each calls
-  `reminderDueAt({ startDate, reminderDays })` from `src/server/queue/reminder-sync.ts` and, when it
-  answers a number, `cancelReminder(kv, { dueAt, orgId, entity })` from
-  `src/server/queue/reminders.ts:66`. After the row is gone the key cannot be rebuilt:
-  `reminderKey` puts the due time **inside** the key ahead of the organization and the entity
-  (`:38-41`), so there is no prefix that finds it and only a full scan of the index would — the scan
-  the whole design exists to avoid. Cancel before the write, not after, so a failed delete does not
-  leave a cancelled reminder for a trip that still exists.
-- **`restoreTripFn` re-schedules**, through `syncTripReminder(scope, kv, { tripId, previous: null })`.
-  `previous: null` is the honest anchor: the archive cancelled the old key, so there is nothing to
-  cancel and `null` is a value the type demands rather than an argument the call site may omit.
-- **`updateTripFn` re-anchors, and that half is `01-S10`'s**, in wave 6, because it ships with the
-  control whose semantics it implements. Until then an edit leaves the reminder on the old anchor,
-  which is exactly today's behaviour and is not a regression this stage introduces.
-- **A KV failure never fails the write**, on the same rule as above. A trip that archives but keeps
-  its reminder is recoverable; a trip that refuses to archive is not.
-- **Neither `src/server/queue/reminders.ts` nor `src/server/queue/reminder-sync.ts` is an owned
-  path.** Both are `00-S5`'s and both close in wave 0; this stage calls them. A second scheduler
-  would be the defect.
+**The reminder: no obligation remains.** After the grilling redesign of `00-S5` (scan model — the
+sweep reads current rows and excludes archived trips in its predicate), `archiveTripFn`,
+`restoreTripFn`, `deleteTripFn` and `updateTripFn` call no reminder code at all: archiving stops
+future reminders because the scan skips archived trips, restoring resumes them the same way,
+deletion removes the row the scan would have read, and a date edit is simply what the next scan
+sees. `src/server/queue/reminders.ts` stays `00-S5`'s and is not an owned path here; a scheduler
+call added in this stage would be the defect, not the omission of one.
 
 **No Durable Object patch.** The trip room stays invalidation-only, which is how every write in
 `-server/plan.ts` already behaves, and `src/server/do/protocol.ts` is untouched.
@@ -885,18 +866,16 @@ driver `src/server/repos/__tests__/harness.ts` builds and a fake `TASKS`:
    the isolation block above.
 
 **Unit tests.** `src/routes/_app/-server/__tests__/trip-lifecycle-side-effects.test.ts`, new, against
-a fake KV and a fake `TASKS` that record their calls in order — the two cross-plan obligations, held
-as assertions rather than as prose:
+a fake `TASKS` that records its calls in order — the surviving cross-plan obligation, held as
+assertions rather than as prose:
 
-1. `archiveTripFn` and `deleteTripFn` each issue exactly one `delete` for the key the **pre-write**
-   anchor implies, and issue it before the D1 write, and issue none when `reminderDueAt` answers
-   `null`.
-2. `restoreTripFn` calls `syncTripReminder` with `previous: null` and writes one key.
-3. A KV rejection does not propagate: the archive still returns and the trip is archived.
-4. `createTripFn`, `updateTripFn`, `deleteTripFn` and the `trip-copy` handler each enqueue the
+1. `createTripFn`, `updateTripFn`, `deleteTripFn` and the `trip-copy` handler each enqueue the
    `travel-stats` envelopes for every workspace member, with `00-S4`'s deterministic ids, and a
    workspace of 250 members produces three `enqueueTasks` calls of at most 100 envelopes each.
-5. A queue rejection does not propagate either.
+2. A queue rejection does not propagate: the write still returns.
+3. No lifecycle function touches reminder code — the module imports nothing from
+   `src/server/queue/reminders.ts` or `src/server/catalog/reminders.ts`, asserted structurally,
+   because under `00-S5`'s scan model archive, restore, delete and edit need no reminder call.
 
 That file is a new owned path and is listed as one below; it lives beside the module it tests, which
 is the route-local `__tests__` convention `src/routes/(auth)/-lib/__tests__` already sets.
@@ -1002,9 +981,9 @@ another plan gates it.
 are named because a stage that consumes another stage's output owes the reader that list. `00-S1`
 generates the migration for `trips.copy_pending_at`. `00-S4` adds `DB` to `TaskBindings` in
 `src/server/queue/types.ts`, without which no queue handler can reach D1, and defines the
-`travel-stats` envelope this stage enqueues. `00-S5` supplies `reminderDueAt` and `syncTripReminder`
-in `src/server/queue/reminder-sync.ts`, which this stage calls and does not own. `00-S2`'s
-notification write path is used for the copy's completion message and is also wave 0.
+`travel-stats` envelope this stage enqueues. `00-S2`'s notification write path is used for the
+copy's completion message. `00-S5` is deliberately absent from this list: after its grilling
+redesign the lifecycle paths call no reminder code at all.
 
 ## Stage 01-S2 — A day note becomes something you can write
 
@@ -3198,10 +3177,9 @@ and the `trips_date_order_chk` constraint (`src/server/db/schema.ts:369-372`) is
 **Server functions — `src/routes/_app/-server/trip-lifecycle.ts`, edited.** `createTripFn`'s validator
 widens to the full field set plus `dayCount`, `coverImageKey`, `coverImageUrl`, `reminderDays` and
 `memberUserIds`. It then does, in order: create the trip; when a duration was given without dates,
-create that many days; when member ids were given, add each through `addTripMember`, which `01-S6`
-guarded to refuse a user outside the workspace; and finally schedule the reminder through
-`00-S5`'s `syncTripReminder(scope, kv, { tripId, previous: null })`, which the function already calls
-and which this stage must carry forward rather than drop while editing around it.
+create that many days; and when member ids were given, add each through `addTripMember`, which
+`01-S6` guarded to refuse a user outside the workspace. No reminder is scheduled — under `00-S5`'s
+scan model the next sweep sees the new trip on its own, and `reminderDays` is just a stored column.
 
 Members are added **after** the trip exists, because a membership needs a trip id, and each failure is
 reported per person rather than failing the creation — a trip that was created is not un-created
@@ -3706,8 +3684,9 @@ filling a declared seam, not a blocker on this one.
 
 ### Stage id
 
-`01-S10` · Wave 6 · effort **M**. The last stage of the plan, and the one that makes the `*/15`
-reminder sweep have something to sweep for a trip.
+`01-S10` · Wave 6 · effort **M**. The last stage of the plan: the sweep already fires (the scan
+model `00-S5` ships honours `reminder_days` from wave 0 on), and this stage gives the traveller the
+choice the sweep honours.
 
 ### Reference rows
 
@@ -3716,24 +3695,25 @@ reminder sweep have something to sweep for a trip.
 Sourced from `wiki: Creating-a-Trip` and its reminder sub-page for the preset choices, the custom
 range and the anchoring to the trip's departure.
 
-**What already exists, measured.** `trips.reminder_days` is `NOT NULL DEFAULT 3` with a non-negative
-`CHECK` (`src/server/db/schema.ts:354`, `:368`). `src/server/queue/reminders.ts` is complete: the KV
-key's 13-digit zero-padded due time sorts lexicographically, `sweepReminders` is wired to the
-`*/15 * * * *` cron in `src/server/worker.ts`, and the sweep turns due records into `email` tasks with
-a deterministic id so a double sweep sends one message. `00-S5` in wave 0 supplies
-`syncTripReminder(scope, kv, { tripId, previous })` and `reminderDueAt(anchor)`, fixes the sweep's
-unchunked enqueue, and wires creation. So the preference is stored, the transport exists, and the
-creation path already schedules.
+**What already exists, measured, as redecided during the grilling of `00-foundations.md`.**
+`trips.reminder_days` is `NOT NULL DEFAULT 3` with a non-negative `CHECK`
+(`src/server/db/schema.ts:547`, `:561`). `00-S5` ships the scan model in wave 0: the `*/15` sweep
+reads due, unarchived trips straight from D1, computes the 08:00 UTC anchor from the row it just
+read, and dispatches through `00-S2` — in-app rows and per-recipient e-mail under the traveller's
+own preferences — deduplicated by a self-expiring KV marker keyed by trip and due instant. There is
+no schedule-at-write step anywhere: creation, edit, archive and delete run no reminder code, and a
+changed date is simply what the next scan sees. So the preference is stored, the transport exists,
+and every trip with a future start date is already reminded at the stored default.
 
-**What is missing and lands here:** the reader can neither choose the value nor see it, and **editing a
-trip's dates does not move the reminder**. That second one is the defect this stage exists for.
+**What is missing and lands here:** the reader can neither choose the value nor see it. The control
+and its semantics are the whole stage.
 
 **A refinement of `00-S5`'s sentence, stated rather than assumed.** `00-S5` says `TRP-04` "owns the
 preference UI". `TRP-02`'s row text names reminder presets as a field of the creation dialog, and
 `01-S8` renders the control there because a form field belongs to the form. This stage owns the
-control's **semantics** — the preset vocabulary, the custom range, the meaning of zero — and the
-re-anchoring on edit, which is the part that cannot live in a form. The two do not overlap and the
-split is recorded here so neither stage assumes the other did it.
+control's **semantics** — the preset vocabulary, the custom range, the meaning of zero, the product
+bound of 30 days on the server validator. The two do not overlap and the split is recorded here so
+neither stage assumes the other did it.
 
 **The upstream kill switch is not ported.** Upstream, an administrator can disable reminders for the
 whole deployment, and the control is then rendered dimmed with an explanation rather than hidden. One
@@ -3748,31 +3728,35 @@ Rows unblocked: none. `TRP-04` is a leaf.
 ### Owned paths
 
 - `src/routes/_app/-ui/trip-form.tsx` — edit. The reminder control's presets, custom range and copy.
-- `src/routes/_app/-server/trip-lifecycle.ts` — edit. `updateTripFn` re-anchors the reminder.
-- `src/routes/_app/-server/__tests__/trip-reminder.test.ts` — new. The re-anchoring seam.
+- `src/routes/_app/-server/trip-lifecycle.ts` — edit. `updateTripFn`'s validator narrows
+  `reminderDays` to the product bound (`0..30`); no reminder code is called.
+- `src/routes/_app/-server/__tests__/trip-reminder.test.ts` — new. The validator bounds and the
+  absence-of-scheduler assertion.
 - `e2e/trips-core.visual.spec.ts` — append. One new `test.describe` block, named `01-S10` and this
   stage's title, in the plan's single spec file that `01-S1` creates. It declares its own route table
   and edits no other block.
 - `e2e/__screenshots__/trips-core.visual.spec.ts/` — append. Only the frames this stage's own block
   records; `--update-snapshots` is narrowed with `-g '01-S10'` so no other block is re-recorded.
 
-`src/server/queue/reminders.ts` and `src/server/queue/reminder-sync.ts` are **not** claimed: both are
-`00-S5`'s, both closed in wave 0, and this stage calls them. A second scheduler would be the defect.
+`src/server/queue/reminders.ts` and `src/server/catalog/reminders.ts` are **not** claimed: both are
+`00-S5`'s and both closed in wave 0. This stage calls neither — under the scan model there is
+nothing for a write path to call, and a scheduler call added here would be the defect.
 
 ### Data and migration
 
 **No schema change and no migration.** `trips.reminder_days` exists with its default and its `CHECK`,
-and the reminder index lives in KV rather than D1. This stage is wave 6, so its schema stage would be
-the wave-5 one; nothing is filed for it.
+and the sweep's only state outside D1 is `00-S5`'s self-expiring KV marker. This stage is wave 6, so
+its schema stage would be the wave-5 one; nothing is filed for it.
 
 **Zero is the off switch, and it needs no column.** `reminder_days = 0` means no reminder, which the
-non-negative `CHECK` already permits and `reminderDueAt` already answers `null` for. A separate
-`reminder_enabled` boolean would be a second way to say the same thing and the two would disagree.
+non-negative `CHECK` already permits and the scan's `reminder_days > 0` predicate already honours. A
+separate `reminder_enabled` boolean would be a second way to say the same thing and the two would
+disagree.
 
 **A trip with no start date has nothing to anchor to.** That is not an error and is not hidden: the
 control renders with an explanation that the reminder starts working once the trip has a departure
-date, and `reminderDueAt` returns `null`, so no key is written. When the date is later filled in, the
-edit path below schedules it — which is precisely why the re-anchoring is the substance of this stage.
+date, and the scan's `start_date IS NOT NULL` predicate skips the row. When the date is later filled
+in, the next sweep sees it — no code path in this stage schedules anything.
 
 ### Server (repo, server function, Zod)
 
@@ -3783,20 +3767,12 @@ repository's own and is unchanged: `tripsRepository` is a `createTenantRepositor
 starts from `tenantFilter()` on `trips.organization_id`, and `requireTrip` re-resolves the id inside
 the caller's scope before the update.
 
-**Server function — `src/routes/_app/-server/trip-lifecycle.ts`, edited.** `updateTripFn` reads the
-trip's **current** `startDate` and `reminderDays` **before** it writes, passes them to
-`syncTripReminder` as `previous`, and calls it after the write.
-
-**Why the previous anchor has to be read first, and what breaks without it.** `00-S5` measured this and
-this stage consumes the measurement rather than rediscovering it: `reminderKey`
-(`src/server/queue/reminders.ts:38-41`) builds `reminder:<due13>:<orgId>:<kind>:<id>`, so the due time
-is inside the key and is its leading variable segment, and `cancelReminder` (`:66-71`) rebuilds that
-same string from `{ dueAt, orgId, entity }`. Cancelling therefore needs the **old** due time. It cannot
-be read from the trip row, which by then holds the new dates, and it cannot be found by prefix either,
-because the due time sorts ahead of the organization and the entity — only a full scan would find it,
-which is the scan the design exists to avoid. A handler that writes first and syncs afterwards leaves
-an orphan that fires on the old date. Read, write, sync, in that order, and `previous` is a required
-property typed as nullable so an omitted one cannot compile into "cancel nothing".
+**Server function — `src/routes/_app/-server/trip-lifecycle.ts`, edited.** `updateTripFn` accepts
+`reminderDays` and writes it through `updateTrip`; it calls no reminder code, before or after the
+write. Under `00-S5`'s scan model an edited date or lead time is simply what the next sweep reads,
+a moved start date yields a new due instant and therefore a fresh reminder, and there is no key to
+cancel because there is no key at all — the orphaned-anchor hazard the retired design had to manage
+is not managed here, it is absent.
 
 **Zod v4.** The `reminderDays` input is an integer in `0..30`, with the `error` parameter carrying the
 message the field shows. The repository's own cap is 365 and stays there — the wider bound is the
@@ -3807,10 +3783,9 @@ means the decision can change without a migration.
 `owner` or `editor`. The reminder is not separately gated, because the people who can move a trip's
 dates are exactly the people whose reminder it is.
 
-**Delivery is already asynchronous.** The sweep enqueues an `email` task on `TASKS` with a
-deterministic id; nothing in this stage sends anything inline, and the chunking fix that keeps a tick
-with more than a hundred due reminders from throwing is `00-S5`'s, in `sweepReminders`. No Durable
-Object patch, no new task kind.
+**Delivery is already asynchronous.** The sweep dispatches through `00-S2` — in-app rows plus
+per-recipient `email` envelopes with deterministic ids, chunked under that stage's bounds; nothing
+in this stage sends anything inline. No Durable Object patch, no new task kind.
 
 ### UI (route, components)
 
@@ -3853,42 +3828,39 @@ no second visit to this control.
 creates no D1 row, so no metric applies; none is added to `resolveLimits()` and none to `PLAN_QUOTAS`,
 and `src/server/billing/__tests__/limits.test.ts` gains no case and is not an owned path.
 
-What has to be bounded here is not rows but fan-out, and it already is, in two places that are not this
-stage's: at most one key per trip, because the key is keyed by the trip's entity id and re-scheduling
-cancels the old one; and at most a hundred envelopes per `sendBatch`, because `00-S5` chunks the sweep
-against the platform's own limit and holds the bound in a unit test rather than in a comment.
+What has to be bounded here is not rows but fan-out, and it already is, in a place that is not this
+stage's: the sweep dispatches through `00-S2`, whose in-app and e-mail chunk bounds are held in unit
+tests, and its KV marker is one per fired reminder with a TTL, bounded by trips with a near-future
+start date.
 
 ### Tenant isolation test
 
 **No new `describe` block, and the reason is that the stage adds no repository function.**
 `src/server/repos/__tests__/tenant-isolation.test.ts` is not listed under **Owned paths** and is not
 edited. `updateTrip`'s isolation case already exists in the file's foreign-parent block, which asserts
-that `updateTrip(scope, beta.tripId, …)` raises, and `00-S5` appended the case covering
-`syncTripReminder` reading a foreign trip.
+that `updateTrip(scope, beta.tripId, …)` raises, and `00-S5` appended the case covering the sweep's
+per-trip scope construction.
 
-The tenant property this stage must not break is in the KV key rather than in SQL, and it is asserted in
-the unit test below: `reminderKey` embeds the organization id, so two tenants whose trips fall due at
-the same instant cannot collide on one key, and `cancelReminder` for one tenant's trip cannot delete
-another's.
+The tenant property this stage must not break lives entirely in `00-S5`'s sweep and is asserted
+there: the KV marker key embeds the organization id and can only suppress a reminder inside its own
+organization, and every member-shaped read runs in a real member's `tenantFilter()`-bound scope.
+This stage writes one tenant-scoped column and nothing else.
 
 ### Verification
 
 **The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
-**Unit tests.** `src/routes/_app/-server/__tests__/trip-reminder.test.ts`, against a fake KV that
-records its `put` and `delete` calls:
+**Unit tests.** `src/routes/_app/-server/__tests__/trip-reminder.test.ts`:
 
-1. Moving a trip's start date cancels the key for the old anchor and writes exactly one key for the new
-   one — the orphan case, and the reason `previous` exists.
-2. Changing `reminderDays` with the dates unchanged does the same.
-3. Setting `reminderDays` to zero cancels and writes nothing.
-4. Clearing the start date cancels and writes nothing.
-5. Setting a start date on a trip that had none writes a key with no cancel, and `previous` is the
-   honest `{ startDate: null, reminderDays }` rather than an omitted argument.
-6. A reminder whose computed due instant is already in the past writes no key, so editing a trip that
-   departs tomorrow does not enqueue a message for last week.
-7. Two organizations with the same due instant produce two distinct keys, and cancelling one leaves the
-   other.
+1. `updateTripFn` accepts `reminderDays` of 0, 1, 3, 9 and 30 and stores the value; 31 and −1 are
+   refused with the bound named — the product's `0..30` narrowing over the repository's own 365 cap.
+2. Setting `reminderDays` to zero stores zero, which the scan's `reminder_days > 0` predicate reads
+   as "off" — asserted by driving `00-S5`'s exported scan against the edited row.
+3. Moving a start date requires no reminder call: the module imports nothing from
+   `src/server/queue/reminders.ts` or `src/server/catalog/reminders.ts`, asserted structurally, and
+   the edited row surfaces from the scan under its new due instant.
+4. The resolved-date line's arithmetic — `start_date − reminder_days` at 08:00 UTC — matches
+   `00-S5`'s exported anchor function, so the copy and the sweep can never disagree about the date.
 
 **Browser evidence.** Port resolved with `scripts/ultrabuild/resolve-port.sh`, then the three
 `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` invocations `01-S1` writes

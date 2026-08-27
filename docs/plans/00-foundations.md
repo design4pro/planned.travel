@@ -94,11 +94,12 @@ The sequence, in this order, is the whole procedure:
 3. `pnpm db:migrate:local` — applies it to the local D1 through Miniflare. `pnpm db:migrate:remote`
    is a deploy step and belongs to `docs/DEPLOY.md`, never to a build stage.
 
-**The two existing migrations are frozen.** `drizzle/0000_bored_moon_knight.sql` creates all 66
-tables and `drizzle/0001_aspiring_cargill.sql` rebuilds `expenses`. Neither is edited, renamed or
-regenerated for any reason: they have been applied, and drizzle-kit's snapshots in `drizzle/meta/`
-are the only record of what they did. A mistake in them is repaired by a new migration, never by
-rewriting history.
+**Every applied migration is frozen.** Measured at HEAD, `drizzle/` holds six:
+`0000_bored_moon_knight.sql` creates all 66 tables, `0001_aspiring_cargill.sql` rebuilds `expenses`,
+and `0002_locale_normalisation.sql` through `0005_lucky_iron_man.sql` followed them. None is edited,
+renamed or regenerated for any reason: they have been applied, and drizzle-kit's snapshots in
+`drizzle/meta/` are the only record of what they did. A mistake in them is repaired by a new
+migration, never by rewriting history.
 
 ## The quota procedure
 
@@ -199,8 +200,8 @@ therefore safe only for a caller that already knows its input is short, and the 
 guarantee it does not make. Any stage whose producer scales with something — one message per
 recipient, per member, per file — chunks before it calls, declares the chunk size as a named constant
 next to the limit it was derived from, and holds the bound in a unit test rather than in a comment.
-Both wave-0 producers do this: `00-S2` for its per-recipient email envelopes, `00-S5` for the sweep it
-makes reachable for the first time.
+`00-S2` does this for its per-recipient email envelopes, and the rewritten `00-S5` sweep inherits
+the bound by dispatching through `00-S2`'s chunked path rather than enqueueing directly.
 
 Three measured facts about the background surface that a stage must not walk into blind:
 
@@ -215,19 +216,27 @@ Three measured facts about the background surface that a stage must not walk int
   producer** — a distinction worth 20 minutes to whoever assumes the third is like the first two. Wiring a producer to the two finished handlers is cheap movement for
   `06-documents-and-media.md` (DOC-06) and `03-reservations-and-transport.md` (BKG-03); writing a
   second exporter would be a defect.
-- The Stripe webhook really does enqueue `billing.subscription.changed`, `billing.invoice.paid` and
-  `billing.invoice.payment_failed`, and **none of the three has a handler, so every one of them
-  dead-letters today**. That is a billing correctness problem, not a plan-set problem; it is recorded
-  here so no stage assumes the billing follow-ups run.
+- The billing webhook really does enqueue `billing.subscription.changed`
+  (`src/server/billing/webhook.ts:394`, `:527`) and `billing.invoice.paid` (`:472`), and **neither
+  has a handler, so both dead-letter today**. `billing.invoice.payment_failed` is declared and
+  routed but never enqueued anywhere in `src/`, so it is dead in both directions. That is a billing
+  correctness problem, not a plan-set problem; it is recorded here so no stage assumes the billing
+  follow-ups run. The state-critical half is unaffected — the webhook upserts the subscription and
+  invalidates entitlements synchronously before it enqueues — so what dead-letters is tenant-facing
+  follow-up, not billing state. Disposition, decided: no wave-0 stage is minted for it. It is a
+  wave-1 candidate that becomes cheap once `00-S2` ships, because a `billing.*` handler is then one
+  `dispatch` call to the organization's admins.
 - **The unchunked enqueue has exactly one caller in `src/` today, and it is the sweep**
   (`src/server/queue/reminders.ts:144`; every other producer uses the single-message `enqueueTask`).
   `sweepReminders` (`:119-154`) reads up to `limit` due reminders — the default is 200,
-  and `src/server/worker.ts:58` calls it with the default — then hands all of them to `enqueueTasks`
+  and `src/server/worker.ts:65` calls it with the default — then hands all of them to `enqueueTasks`
   in one call. Past 100 due reminders in a single tick that batch exceeds the platform cap and the
   whole sweep throws, losing every reminder in the tick rather than the surplus. It has never fired,
-  because `scheduleReminder` has no caller and the index is empty. `00-S5` is the stage that fills the
-  index, so `00-S5` owns the fix and names the file: a defect becomes reachable in the wave that
-  removes the condition hiding it.
+  because `scheduleReminder` has no caller and the index is empty. Decided during grilling: `00-S5`
+  replaces the schedule-at-write design outright, so the index is never filled and the rewritten
+  sweep dispatches through `00-S2`'s chunked path instead. That leaves `enqueueTasks` with zero
+  callers in `src/`; the helper stays, and the chunking rule above binds whichever producer reaches
+  for it next.
 
 ## Bindings a later plan assumes and `wrangler.jsonc` does not declare
 
@@ -239,12 +248,18 @@ might assume beyond those.
 a binding changes the cost model and, for the first two, adds a per-request external dependency;
 that argument belongs to a human, and the report is the deliverable.
 
-| Assumed binding                           | Which plan would assume it                 | Measured state at HEAD                                                                                                                                                                                          | Disposition                                                                                                                      |
-| ----------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `BROWSER` (Browser Rendering)             | `06-documents-and-media.md`, DOC-06        | Not declared. `src/server/queue/handlers/pdf-export.ts:193` already renders through the REST API when `BROWSER_RENDERING_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set, and writes print HTML to R2 otherwise. | **Report only.** The REST path works without a binding; a binding is a later optimisation, priced against browser-hours.         |
-| `AI` (Workers AI)                         | `03-reservations-and-transport.md`, BKG-04 | Not declared, and BKG-04 is already out of scope in `11-boundaries-and-blockers.md`.                                                                                                                            | **Report only.** The deterministic `booking-import` handler already exists and is the sanctioned path.                           |
-| A consumer for `planned-travel-tasks-dlq` | any plan that cares whether a job was lost | The dead-letter queue is named as `dead_letter_queue` on the consumer, but no consumer is declared for it, so dead-lettered messages accumulate unread.                                                         | **Report only.** Naming it is an operations decision with its own alerting; `ARCHITECTURE.md` §9 already alerts on DLQ depth.    |
-| A fourth cron trigger for FX rates        | `04-budget-and-currencies.md`, MNY-07      | Three crons are declared; measured in `src/server/worker.ts`, only `*/15 * * * *` does work — `0 3 * * *` and `17 4 * * 1` hit a branch that logs `cron has no handler yet` and returns.                        | **Report only.** A rate refresh can ride the existing `*/15` sweep or a KV TTL; a fourth trigger is not required to ship MNY-07. |
+**Ratified during grilling: all four dispositions stand as report-only.** No binding, no DLQ
+consumer and no fourth cron is taken in wave 0. The one decision the table cannot close — which FX
+rate provider, under a licence that permits a paid product — stays open in
+`11-boundaries-and-blockers.md` and must be taken by a human before wave 2, because MNY-07 sits in
+wave 1.
+
+| Assumed binding                           | Which plan would assume it                 | Measured state at HEAD                                                                                                                                                                                                                                                         | Disposition                                                                                                                      |
+| ----------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `BROWSER` (Browser Rendering)             | `06-documents-and-media.md`, DOC-06        | Not declared. `src/server/queue/handlers/pdf-export.ts:193` already renders through the REST API when `BROWSER_RENDERING_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set, and writes print HTML to R2 otherwise.                                                                | **Report only.** The REST path works without a binding; a binding is a later optimisation, priced against browser-hours.         |
+| `AI` (Workers AI)                         | `03-reservations-and-transport.md`, BKG-04 | Not declared, and BKG-04 is already out of scope in `11-boundaries-and-blockers.md`.                                                                                                                                                                                           | **Report only.** The deterministic `booking-import` handler already exists and is the sanctioned path.                           |
+| A consumer for `planned-travel-tasks-dlq` | any plan that cares whether a job was lost | The dead-letter queue is named as `dead_letter_queue` on the consumer, but no consumer is declared for it, so dead-lettered messages accumulate unread.                                                                                                                        | **Report only.** Naming it is an operations decision with its own alerting; `ARCHITECTURE.md` §9 already alerts on DLQ depth.    |
+| A fourth cron trigger for FX rates        | `04-budget-and-currencies.md`, MNY-07      | Three crons are declared; measured in `src/server/worker.ts:63-101`, `*/15 * * * *` runs the sweep, `17 4 * * 1` already prunes `platform_audit_log` (and warns that its backup-retention half is unwritten), and only `0 3 * * *` is a pure `cron has no handler yet` branch. | **Report only.** A rate refresh can ride the existing `*/15` sweep or a KV TTL; a fourth trigger is not required to ship MNY-07. |
 
 Two related constraints that are not bindings but block the same plans, recorded here so they are
 reported once rather than rediscovered per stage:
@@ -287,7 +302,7 @@ container rule is fixed here, and every plan file in this directory follows it:
   eleven, which makes the rule checkable by eye and by `grep`. Prose sections use `##` and lean on
   tables and lists for their internal structure.
 
-## Stage 00-S1 — Wave-0 schema stage: the expense currency precondition and migration 0002
+## Stage 00-S1 — Wave-0 schema stage: the expense currency precondition and the settlements migration
 
 ### Stage id
 
@@ -316,8 +331,8 @@ This stage is the currency precondition, and it unblocks six rows in three plans
 **Contradiction with the matrix, stated with evidence.** `MNY-07`'s recorded evidence, and
 `scripts/seed/README.md` lines 252–267, both say `expenses.originalCurrency` and `expenses.currency`
 collide on one SQL column and discard the source currency on write. **Measured at HEAD, that
-collision is already repaired.** `src/server/db/schema.ts:85` defines the helper as
-`const currency = (name = 'currency') => text(name, { length: 3 })`, line 794 reads
+collision is already repaired.** `src/server/db/schema.ts:153` defines the helper as
+`const currency = (name = 'currency') => text(name, { length: 3 })`, line 987 reads
 `originalCurrency: currency('original_currency')`, and `drizzle/0001_aspiring_cargill.sql:14` creates
 `original_currency text(3)` on the rebuilt table. `expenses` therefore already holds
 `original_amount_minor`, `original_currency` and `exchange_rate`. The precondition survives, because
@@ -329,7 +344,8 @@ stale prose and is corrected by this stage.
 
 - `src/server/db/schema.ts` — edit. The shared schema module, held by this stage for all of wave 0.
 - `drizzle/` — new files only: the generated migration and its snapshot, plus the journal entry.
-  `0000_bored_moon_knight.sql` and `0001_aspiring_cargill.sql` are not touched.
+  The six applied migrations, `0000_bored_moon_knight.sql` through `0005_lucky_iron_man.sql`, are
+  not touched.
 - `src/server/repos/expenses.ts` — edit. The Zod input for the settlement writer gains the three
   optional source fields and the non-negative guard the schema deliberately does not add.
 - `scripts/seed/README.md` — edit. Replaces the stale collision note with the measurement above.
@@ -343,7 +359,7 @@ stale prose and is corrected by this stage.
 
 ### Data and migration
 
-One migration, `0002`, additive, generated not hand-written.
+One migration, at the next free number (`0006` at HEAD), additive, generated not hand-written.
 
 Adds to `settlements`, all nullable, no default, no new CHECK:
 
@@ -376,6 +392,15 @@ stage in plans 01–11, so that wave 1 opens against one migration rather than e
   `originalAmountMinor`, `originalCurrency` and `exchangeRate`, all optional; when any is present all
   three must be, and `originalAmountMinor` must be a non-negative integer. Built on the existing
   tenant-scoped access in that module; SQL stays here.
+- **Who computes the rate — decided, and binding on the writing surface.** The repository rule above
+  is the storage invariant only. The surface that writes these columns (MNY-03, and any later
+  writer) computes `exchangeRate` server-side with `impliedRate()` from `src/lib/money.ts`, exactly
+  as the expense path does in `src/server/fns/costs.ts:283-304`: the client supplies the amount
+  pair, a source currency equal to the settlement currency normalises the whole triple to `null`,
+  and a client-supplied rate is never trusted — an amount pair and a rate that disagree would put a
+  lie under the row. This is what keeps expenses and settlements "under the same rule", and it keeps
+  the frozen figure independent of the FX-provider decision that `11-boundaries-and-blockers.md`
+  still holds open. `04-budget-and-currencies.md` carries it under MNY-03's **Server** heading.
 - **Server function.** None. This stage exposes no new endpoint — the surfaces that will write these
   columns belong to MNY-03 and MNY-06.
 - **Zod.** v4 idiom, `z.strictObject()` with the `error` parameter, a refinement asserting the
@@ -414,11 +439,12 @@ builds.
 ### Verification
 
 - Gate, in order: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
-- Migration review is part of the gate and is not optional: read `drizzle/0002_*.sql` and confirm it
+- Migration review is part of the gate and is not optional: read the file `pnpm db:generate` just
+  wrote (the next free number — `0006` at HEAD) and confirm it
   is three `ALTER TABLE settlements ADD COLUMN` statements, that no `__new_settlements` rebuild
   appears, that no `DROP` appears, and that `drizzle/meta/_journal.json` gained exactly one entry.
-  Then `pnpm db:migrate:local` and confirm it applies against a database that already carries `0000`
-  and `0001`.
+  Then `pnpm db:migrate:local` and confirm it applies against a database that already carries every
+  previously applied migration (`0000`–`0005` at HEAD).
 - Unit tests, in `src/server/repos/__tests__/repositories.test.ts` inside its existing
   `describe('money')` block, against the same `createHarness`/`subscribeTenant` fixtures the block
   already uses: one case holding the all-three-or-none rule — a settlement carrying two of the three
@@ -473,7 +499,9 @@ accept/decline of an actionable notification are that row's work and are not don
 
 What this stage does is make the notification centre and its unread badge show rows that a real
 action produced. Measured: `notify()` and `notifyMany()` in `src/server/repos/notifications.ts` have
-no caller in `src/` outside the dev seeder, so every row on `/notifications` today was seeded.
+no caller in `src/` at all — even the dev seeder bypasses them, inserting through
+`notificationsRepository.insert` (`src/routes/api/dev/-seed/apply.ts:719`) — so every row on
+`/notifications` today was seeded.
 
 Rows unblocked, by id. Direct dependants of ACC-05: `TRP-04`, `LST-01`, `ADD-04`, `ADM-02`.
 Transitively, sixteen rows reach ACC-05 and inherit the unblock: `TRP-02`, `TRP-04`, `TRP-06`,
@@ -497,6 +525,15 @@ Transitively, sixteen rows reach ACC-05 and inherit the unblock: `TRP-02`, `TRP-
 Two callers, not one, deliberately: a single call site is indistinguishable from a fixture, and both
 of these write paths already ship end to end, so neither waits on a feature row.
 
+The pair was re-argued against the reference during grilling and stands. The trip-message event has
+direct reference parity (the reference ships a collaboration-message notification). The expense-split
+event is a deliberate extension beyond the reference, which ships no expense notification at all —
+per `docs/agents/reference.md`, a feature the reference lacks is not evidence we should lack it, and
+a charge landing on a member's share is notification-worthy on its face. The tempting third
+candidate, a reservation-change event with reference parity, is rejected for wave 0 on disjointness:
+its call site lives in `src/server/fns/reservations.ts`, which `00-S3` owns this wave; it joins as a
+wave-1+ caller once `00-S3` closes.
+
 ### Data and migration
 
 None. `notifications` and `notification_preferences` already exist in `src/server/db/schema.ts` with
@@ -516,6 +553,13 @@ No column, no index, no migration.
   recipients whose email channel is enabled enqueues `email` tasks through `enqueueTasks`
   (`src/server/queue/jobs.ts`). Both halves are chunked; the sizes and the reason are under **Quota**
   below, because bounding the fan-out is what this stage does instead of metering it.
+- **The actor is optional, and a system event excludes nobody.** Decided during grilling, for the
+  rewritten `00-S5`. A dispatch caused by a person names that person and never notifies them; a
+  system dispatch — the reminder sweep, a future billing follow-up — names no actor, and the
+  exclusion step is skipped. For a caller with no request principal the module documents the
+  `00-S4` pattern as its contract: resolve a real membership (`getMembership`, then `createScope`)
+  and dispatch under that scope with no actor, so no synthetic principal exists anywhere and every
+  repository contract holds unchanged.
 - **One email envelope per recipient, not one envelope carrying the recipient list.** The payload
   schema would allow the second — `emailPayloadSchema.to` is `z.array(...).min(1).max(50)`
   (`src/server/queue/types.ts:31`) — and it is the wrong shape twice over. Measured: `handleEmail`
@@ -545,6 +589,11 @@ No column, no index, no migration.
   `tripsRepository.requireById` and is documented at `:148-151` as rejecting an id belonging to
   another organization with `NotFoundError` — and only then reads the membership. Recipients are
   always derived server-side from that membership; no recipient list ever arrives from the browser.
+  One invariant recorded for the future: no guest representation exists today — `trip_members` roles
+  are `owner`/`editor`/`viewer` and a share-token viewer has no user row — so every resolvable
+  recipient has an inbox. If a guest membership shape ever lands, `dispatch`'s recipient derivation
+  is the single chokepoint where guests are filtered from every channel, and that filter belongs
+  here, never per call site.
 - Nothing slow runs inline: the only external call is the email provider, and it happens in the
   queue handler.
 
@@ -569,10 +618,10 @@ lean on. Measured: `notifyMany` (`src/server/repos/notifications.ts:140`) evalua
 That is a rejecting validator, not a cap — a 501st recipient throws a `ZodError` and writes no row
 at all, so on a large workspace it would turn a successful trip message into a failed one. Nor is
 there one member number to size against. Three exist and they disagree: `membershipLimit: 100` in
-the Better Auth organization plugin (`src/server/auth/index.ts:237`), which is the only one enforced
+the Better Auth organization plugin (`src/server/auth/index.ts:403`), which is the only one enforced
 at the point a membership is written; the fallback `SEAT_LIMIT_CEILING = 100_000`
-(`src/server/billing/limits.ts:82`), which applies when a plan sells no seat limit; and the largest
-published plan's `seats: 10` (`src/lib/plans.ts:335`). A dispatch sized against any one of them is
+(`src/server/billing/limits.ts:77`), which applies when a plan sells no seat limit; and the largest
+published plan's `seats: 10` (`src/lib/plans.ts:345`). A dispatch sized against any one of them is
 sized against a number the other two contradict.
 
 So `dispatch` bounds itself and depends on none of the three. It de-duplicates the resolved recipient
@@ -605,9 +654,9 @@ written against what the repository actually does rather than against what it ou
 - `dispatch` takes no recipient list, so "dispatch to one of B's users" is not an expressible input;
   the case is made one level down, against `notifyMany` directly. Measured:
   `notifications.recipient_user_id` is a `userRef()` text column with no foreign key
-  (`src/server/db/schema.ts:1727` — the convention every domain table follows so the domain schema
+  (`src/server/db/schema.ts:1920` — the convention every domain table follows so the domain schema
   never imports the auth schema), and `filterEnabledRecipients`
-  (`src/server/repos/notifications.ts:299-318`) is **opt-out** — it removes only users with an
+  (`src/server/repos/notifications.ts:299-321`) is **opt-out** — it removes only users with an
   explicit `is_enabled = false` row. A foreign user id handed to `notifyMany` is therefore written,
   under A's organization, not dropped. The test asserts exactly that, and the assertion is the reason
   the layer above must derive recipients from `listTripMembers` and never from a request body. It
@@ -687,7 +736,7 @@ and owns the reading surface, the paging and the filters.
 Measured: `recordAudit` and `recordAuditMany` in `src/server/repos/audit.ts` have no caller outside
 `src/server/repos/__tests__/`, so every `audit_log` row today comes from the dev seeder — and it does
 not even use them, inserting through `auditLogRepository.insert` directly at
-`src/routes/api/dev/-seed/apply.ts:672`. `loadAdmin` in `src/routes/_app/-server/overview.ts` renders
+`src/routes/api/dev/-seed/apply.ts:742`. `loadAdmin` in `src/routes/_app/-server/overview.ts` renders
 `listAuditLog` and `countAuditActions` on `/admin` against a trail no production write path appends
 to.
 
@@ -709,6 +758,20 @@ names ADM-04 in its `dependsOn`, so they are named as beneficiaries and not as d
 
 Three call-site files, chosen because all three write paths already ship end to end and none is owned
 by another wave-0 stage.
+
+The choice was re-argued against the reference during grilling and stands, with one split recorded
+so no later plan mistakes it for finished work. The reference keeps a single, security-first audit
+trail — sign-ins and failures, credential changes, role changes, invitations, trip lifecycle,
+settings. This product splits that catalogue in two: platform-security events already land in
+`platform_audit_log` (the ban tripwire in `src/server/auth/index.ts` and the platform console's
+self-auditing endpoints, retention-pruned by the weekly cron), while the tenant trail this stage
+feeds also serves `listEntityHistory`, a per-entity capability the reference does not have. The
+tenant-security events still missing — member role change, invitation, removal — cannot be audited
+here because `changeMemberRole`, `createInvitation` and `removeMember` have no production caller
+yet, measured; each gains its `trail()` call in the stage that ships its write path (the ADM/ACC
+rows), and trip lifecycle audits ride TRP-03. Of the three call sites below,
+`workspace.defaults_changed` has direct reference parity; the file and reservation events are the
+entity-history half.
 
 ### Data and migration
 
@@ -823,12 +886,17 @@ One constraint travels with the unblock, and `ADD-06` inherits it: most of the r
 workspace-wide rather than per-traveller, and _how many_ depends on which row is being read — seven
 of ten on the all-time row, eight of ten on a year row, because `countryCount` changes sides between
 them. The measurement and what it forces on the panel's labelling are under **Server** below, and the
-row's copy is bound by it.
+row's copy is bound by it. The distance figure — decided during grilling — is derived from transport
+legs and is workspace-scoped on both row kinds; its labelling is bound under **Server** below.
 
 ### Owned paths
 
 - `src/server/queue/handlers/travel-stats.ts` — new. Recomputes one traveller's rows.
 - `src/server/queue/handlers/__tests__/travel-stats.test.ts` — new.
+- `src/server/repos/atlas.ts` — edit. `recomputeTravelStats` gains the distance aggregate decided
+  during grilling: `SUM(transports.distance_metres)` under `tenantFilter()`, year rows filtered by
+  the year of `departure_date`. No other function in the module changes, and no other wave-0 stage
+  names this file.
 - `src/server/queue/types.ts` — edit. Adds the `travel-stats` kind, its payload schema, and `DB` to
   the handler binding surface.
 - `src/server/queue/consumer.ts` — edit. Registers the handler.
@@ -852,7 +920,7 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
 - **What the row actually aggregates, measured — the stage's premise depends on getting this
   right.** `recomputeTravelStats(scope, userId, statYear)` (`src/server/repos/atlas.ts:792-896`)
   writes one row keyed `(organization_id, user_id, stat_year)` — the unique index at
-  `src/server/db/schema.ts:1515` — but the row being per-traveller does not make its contents
+  `src/server/db/schema.ts:1708` — but the row being per-traveller does not make its contents
   per-traveller. Read the predicates: `tripCount` (`atlas.ts:813`), `dayCount` (`:821-823`),
   `placeCount` (`:827-831`), `cityCount` (`:834-838`), `spendMinor` (`:841-844`) and the
   `currency`/`lastTripId` lifted from `tripRows[0]` (`:892-893`) are bound by `tenantFilter()` and by
@@ -888,10 +956,10 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
   queries, and `upsertTravelStats` (`atlas.ts:764-786`) already writes it through `definedOnly`, so
   a field the recompute omits keeps its stored value instead of resetting to zero.
 - **Two columns the recompute cannot derive, and what happens to each.** `travel_stats.year_streak`
-  and `travel_stats.distance_metres` (`schema.ts:1509`, `:1505`) are accepted by
+  and `travel_stats.distance_metres` (`schema.ts:1702`, `:1698`) are accepted by
   `upsertTravelStatsInput` (`atlas.ts:130`, `:127`) and never passed by `recomputeTravelStats`. The
-  seeder states this in its own words at `src/routes/api/dev/-seed/dataset/workspace.ts:206` and
-  writes them in a second call (`src/routes/api/dev/-seed/apply.ts:536-537`). Because
+  seeder states this in its own words at `src/routes/api/dev/-seed/dataset/workspace.ts:216` and
+  writes them in a second call (`src/routes/api/dev/-seed/apply.ts:603-604`). Because
   `upsertTravelStats` uses `definedOnly`, both survive every recompute at their seeded value, which
   is exactly how a frozen number hides behind numbers that move. The streak is therefore derived in
   the handler: read the year rows with `listTravelStats(scope, userId)` (`atlas.ts:742-750`), count
@@ -899,16 +967,25 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
   `yearStreak` on the all-time upsert. That needs no repository edit, because the input already
   accepts the field. It is a **workspace** streak, and `ADD-06` labels it as one: a year row's
   `tripCount` is `tenantFilter()`-bound and identical for every member, so consecutive years of
-  travel are the workspace's consecutive years, not the traveller's. `distance_metres` has no source at all — no transport leg carries a distance
-  today — and the stage does **not** invent one. It is reported as a decision under **Blockers**;
-  `ADD-06` either omits the figure or files its own row for it, because a panel printing a permanent
-  zero is worse than a panel that omits the line.
+  travel are the workspace's consecutive years, not the traveller's. `distance_metres` — the
+  original draft reported it sourceless; re-measured during grilling, the source exists:
+  `transports.distance_metres` (`schema.ts:867`) is written by the leg form
+  (`src/server/fns/transports.ts:116`, `0` normalised to `null`) and `departure_date` supplies the
+  year predicate. The recompute therefore derives it: a sixth aggregate in `recomputeTravelStats`,
+  `SUM(transports.distance_metres)` bound by `tenantFilter()` and nothing else — a **workspace**
+  figure on both row kinds, like the seven above — with the year row summing legs whose
+  `departure_date` falls in that year, and a null sum written as `0`, so a seeded value is replaced
+  by truth rather than hiding behind it. The figure is the sum of distances travellers chose to
+  record, and `ADD-06`'s label is bound to say so — "distance recorded on transport legs", never
+  "distance travelled". Deriving a distance for legs that carry coordinates but no recorded figure
+  is deliberately not done here; that decision rides the MAP-08 routing choice, which will produce
+  segment distances anyway.
 - **Why a queue and not inline.** Five aggregate queries on a busy tenant is exactly the shape
   `ARCHITECTURE.md` §5 sends to `TASKS`. The atlas write functions enqueue one `travel-stats` task
   and return; the map updates optimistically as it does today, and the panel catches up on its next
   read. The envelope id is deterministic per user and year, so a burst of country toggles collapses
   rather than fanning out.
-- **Measured obstacle, and its fix.** `TaskBindings` in `src/server/queue/types.ts:228-241` declares
+- **Measured obstacle, and its fix.** `TaskBindings` in `src/server/queue/types.ts:234-281` declares
   `KV`, `FILES`, `TASKS` and an optional `TRIP_ROOM`, and **no `DB`**, so no queue handler can reach
   D1 today. The `DB` binding already exists on the Worker and the consumer runs in the same Worker,
   so this is a type-surface change in `types.ts`, not a `wrangler.jsonc` change. No binding stage is required, and none is
@@ -930,7 +1007,7 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
   two change an input of the stat row, and only through `visited_countries`: on the all-time row that
   moves `countryCount` and `byContinent`, and on a year row it moves `byContinent` alone, since a
   year's `countryCount` comes from `trips` and not from the visited list. `bucket_list_items` feeds
-  no column of `travel_stats` (`schema.ts:1491-1520`), so the two bucket-list functions enqueue
+  no column of `travel_stats` (`schema.ts:1684-1712`), so the two bucket-list functions enqueue
   nothing; enqueueing from them would buy a consumer invocation whose only measurable effect is cost.
   The two visited-country functions enqueue the all-time roll-up (`statYear = 0`) and, when the write
   carries a `visitedOn` date, that date's year — the year envelope is still worth sending, because
@@ -939,8 +1016,9 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
   hidden.** A trip, day, place or expense write changes `tripCount`, `dayCount`, `placeCount`,
   `cityCount` and `spendMinor` for _every_ member's row at once — and a trip write that changes
   `trips.country_codes` or `trips.start_date` also moves every member's year-row `countryCount`, by
-  the derivation at `atlas.ts:860-867`. Those write paths belong to
-  `01-trips-core.md` and `04-budget-and-currencies.md`. This stage does not reach into them. It ships
+  the derivation at `atlas.ts:860-867`. A transport-leg write moves the `distanceMetres` sum the
+  same way. Those write paths belong to `01-trips-core.md`, `04-budget-and-currencies.md` and
+  `03-reservations-and-transport.md`. This stage does not reach into them. It ships
   the task kind, the handler and the deterministic envelope id so that those plans enqueue one task
   per affected member and year, and it records the requirement here so neither plan invents a second
   recompute. The deterministic id is what keeps that fan-out affordable: repeated envelopes for the
@@ -986,10 +1064,11 @@ its first run, and because the per-traveller set is not the same on the two row 
   it is derived from `trips`, which is `tenantFilter()`-bound only. Asserting zero there is the
   assertion that cannot pass, and it is named here so that nobody writes it and then edits the
   repository to make it pass;
-- the seven always-workspace figures — `tripCount`, `dayCount`, `placeCount`, `cityCount`,
-  `spendMinor`, `currency`, `lastTripId` — equal A's own row for the same `statYear`, because they
-  are `tenantFilter()`-bound only. Asserting them equal to A's row rather than to zero is what makes
-  the test express the real boundary.
+- the eight always-workspace figures — `tripCount`, `dayCount`, `placeCount`, `cityCount`,
+  `spendMinor`, `currency`, `lastTripId`, and the `distanceMetres` sum decided during grilling —
+  equal A's own row for the same `statYear`, because they are `tenantFilter()`-bound only.
+  Asserting them equal to A's row rather than to zero is what makes the test express the real
+  boundary.
 
 Then read the row back from B's scope. `getTravelStats(scopeB, aUserId, 0)` returns `null`: measured,
 it is `travelStatsRepository.findOne` with return type `TravelStat | null`
@@ -1006,7 +1085,10 @@ is where `NotFoundError` actually comes from. Functions covered: `recomputeTrave
   the row for the year its own envelope names, and the all-time and year envelopes together leave two
   rows; the same message delivered twice leaves one row per year with the same numbers; the streak
   the handler computes matches a hand-built year history, including a gap year that ends the run; a
-  recompute leaves `distance_metres` at its stored value rather than zeroing it; a user who is no
+  recompute replaces a seeded `distance_metres` with the measured sum — legs with a recorded
+  distance sum into the all-time row and their `departure_date` year's row, a leg with no recorded
+  distance contributes nothing, and a workspace with none writes `0` rather than preserving
+  fiction; a user who is no
   longer a member fails permanently rather than retrying; the handler never reads outside the
   envelope's organization.
 - Unit tests appended to `src/server/fns/__tests__/atlas.test.ts`, with the `TASKS` binding stubbed
@@ -1042,17 +1124,20 @@ The `SPEC.md` §2 clauses are ticked against the atlas statistics panel:
 
 ### Blockers
 
-- **`travel_stats.distance_metres` has no source.** No transport leg records a distance, so the
-  recompute cannot derive the column and the seeder is the only thing that has ever filled it
-  (`src/routes/api/dev/-seed/dataset/workspace.ts:206`). Disposition: **report**. This stage invents
-  no distance model; `ADD-06` omits the figure until a row owns it, and
-  `11-boundaries-and-blockers.md` carries the disposition.
+- None. The distance blocker the original draft carried here is withdrawn: re-measured during
+  grilling, `transports.distance_metres` exists with a shipping write path, and the recompute now
+  derives the figure as described under **Server**. What remains deferred — deriving a distance for
+  legs whose coordinates are recorded but whose distance is not — is not a blocker of this stage; it
+  rides the MAP-08 routing decision that `11-boundaries-and-blockers.md` holds open.
 
 ## Stage 00-S5 — Reminder scheduling
 
 ### Stage id
 
-`00-S5` · Wave 0 · effort **M**. The fourth unwritten write path.
+`00-S5` · Wave 0 · effort **M**. The fourth unwritten write path. Within wave 0 it closes after
+`00-S2` (it dispatches through that stage's module) and after `00-S4` (whose `TaskBindings` edit
+gives the queue surface its `DB` handle) — recorded under **Blockers**, because wave-0 stages are
+otherwise unordered.
 
 ### Reference rows
 
@@ -1060,228 +1145,185 @@ Closes none. It supplies the write half of `TRP-04` (`01-trips-core.md`, wave 6)
 reminders with the 1/3/9-day presets and a custom 1–30-day choice anchored to the trip's start date —
 which keeps the row and owns the preference UI.
 
-Measured: `src/server/queue/reminders.ts` is complete. It builds a KV key whose 13-digit zero-padded
-due time sorts lexicographically, `sweepReminders` is wired to the `*/15 * * * *` cron in
-`src/server/worker.ts`, and the sweep turns due records into `email` tasks with a deterministic id so
-a double sweep sends one message. **`scheduleReminder` and `cancelReminder` have zero callers**, so
-the sweep runs every fifteen minutes over an empty index. `trips.reminder_days` exists at
-`src/server/db/schema.ts:354`, `NOT NULL DEFAULT 3`, with a non-negative CHECK — so the preference is
-already stored and already ignored.
+Measured, then re-decided during grilling. `src/server/queue/reminders.ts` ships a complete
+schedule-at-write design — a KV index keyed by a 13-digit due time, `scheduleReminder` and
+`cancelReminder`, and a sweep wired to the `*/15 * * * *` cron at `src/server/worker.ts:65` — and
+none of it has ever fired: `scheduleReminder` and `cancelReminder` have zero callers, so the sweep
+runs every fifteen minutes over an empty index. The original draft of this stage gave that design
+its callers. Grilling replaced the design, for three measured defects the draft had inherited rather
+than chosen:
+
+- the KV record froze its recipients' e-mail addresses at scheduling time (`reminderRecordSchema.to`,
+  `reminders.ts:25-34`), so a member added after the trip was created would never be reminded, a
+  member who left still would be, and a preference changed between scheduling and firing was ignored;
+- the sweep produced `email` tasks only — no in-app row, bypassing the dispatch module `00-S2`
+  builds and the preference matrix ACC-05 will ship, of which the trip reminder is a row;
+- the cancel/re-schedule machinery — orphaned-key hazards, a `previous` anchor threaded through
+  every future edit path, a standing cross-plan obligation on TRP-03 — existed only to avoid a
+  periodic D1 scan that is cheap.
+
+The reference product runs the scan model: a daily pass over trips whose start date is
+`reminder_days` ahead, delivered through the ordinary notification pipeline, where an edited trip
+needs no cancellation because the next pass simply sees the new dates. This stage ships that model.
+
+`trips.reminder_days` exists at `src/server/db/schema.ts:547`, `NOT NULL DEFAULT 3`, with a
+non-negative CHECK — the preference is already stored and already ignored. No new column is needed:
+sent-state lives in a self-expiring KV marker, decided during grilling and described under **Data
+and migration**.
 
 Rows unblocked: `TRP-04` directly.
 
 ### Owned paths
 
-- `src/server/queue/reminder-sync.ts` — new. Turns a trip into a scheduled reminder, or removes one.
-- `src/server/queue/__tests__/reminder-sync.test.ts` — new. Also carries the sweep seam test named
-  under **Verification**; no test file covers `src/server/queue/reminders.ts` today, measured.
-- `src/server/queue/reminders.ts` — edit, and the edit is one chunk loop and nothing else. Measured:
-  `sweepReminders` (`:119-154`) hands up to `limit` envelopes — default 200, and `src/server/worker.ts:58`
-  passes the default — to `enqueueTasks`, which does not chunk, so a tick with more than 100 due
-  reminders exceeds the 100-message `sendBatch` cap and throws away the whole tick. The bug is
-  unreachable today only because `scheduleReminder` has no caller. This stage is what gives it one,
-  so this stage fixes it rather than shipping a landmine and a note: the sweep enqueues in chunks of
-  at most 100, deletes only the keys whose chunk was accepted, and reports `enqueued` as the number
-  actually sent. Nothing else in the module changes; `scheduleReminder`, `cancelReminder`,
-  `reminderKey` and `dueReminders` are used as they stand.
-- `src/routes/_app/-server/overview.ts` — edit. `createTripFn` (`:556`) schedules on creation, with
-  `previous: null` — the only anchor a creation can honestly claim, and the reason `null` is a value
-  the type demands rather than an argument the call site may leave out.
+- `src/server/catalog/reminders.ts` — new. The cross-tenant scan for due trips. Raw SQL is
+  sanctioned here and only here: `server/catalog` is the single stated exception to the
+  scoped-repository rule, and the precedent is `prunePlatformAuditLog` in
+  `src/server/catalog/audit.ts`, the other cron-driven cross-tenant reader.
+- `src/server/queue/reminders.ts` — rewrite. `reminderKey`, `scheduleReminder`, `cancelReminder`,
+  `dueReminders` and the record schema are removed with the design that needed them — measured,
+  nothing in `src/` imports them. The module keeps its name and the one export the worker already
+  calls, `sweepReminders(bindings, logger, scheduledTime)`, rebuilt as described under **Server** —
+  so `src/server/worker.ts`, a shared file this stage may not own, needs no edit.
+- `src/server/queue/__tests__/reminders.test.ts` — new. No test file covers the module today,
+  measured.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. The case under **Tenant isolation
   test** below, as one new `describe` block, under the append-only exception in the tenant procedure
   above.
 
+Gone from the original draft, deliberately: `src/server/queue/reminder-sync.ts` (there is nothing to
+sync), the edit to `src/routes/_app/-server/overview.ts` (creation schedules nothing — the next scan
+sees the new trip on its own), and the TRP-03 cross-plan obligation (an edited, archived or deleted
+trip needs no cancellation; the next scan sees the row as it now is, and a deleted trip is simply
+absent).
+
 ### Data and migration
 
-None. The reminder index lives in KV, not D1, and `trips.reminder_days` already exists. No column, no
-index, no migration.
+None. The scan reads `trips` columns that already exist (`start_date`, `reminder_days`), and
+sent-state is a KV marker, not a column: `reminded:<orgId>:<tripId>:<dueInstant>`, written after a
+successful dispatch, with an `expirationTtl` of ~30 days. A moved start date yields a new due
+instant, hence a new key, hence a fresh reminder — the reference behaves the same way — while a
+re-tick inside the window finds the marker and skips. KV's eventual consistency (~60 s) against a
+15-minute tick is not a real double-send window, and the e-mail handler's deterministic idempotency
+key is the second layer. No column, no index, no migration.
 
 ### Server (repo, server function, Zod)
 
-- **Repository.** No new SQL, and the reader is named rather than left to the implementer's choice,
-  because the two candidates behave differently. The trip is resolved with
-  `requireTrip(scope, tripId)` (`src/server/repos/trips.ts:152`), which raises `NotFoundError` for an
-  id outside the tenant — **not** `getTrip` (`:223`), whose return type is `Trip | null`, and **not**
-  `listTripMembers` (`:403-411`), which returns `[]` for a foreign trip and would let a cross-tenant
-  id fall through as "a trip with no members". Membership then comes from `listTripMembers` and the
-  addresses from `listUserProfiles` in `src/server/repos/members.ts`.
-- **Why the signature carries the previous anchor, and what breaks without it.** Measured:
-  `reminderKey` (`src/server/queue/reminders.ts:38-41`) builds
-  `reminder:<due13>:<orgId>:<kind>:<id>`, so the due time is _inside_ the key and is its leading
-  variable segment, and `cancelReminder` (`:66-71`) takes `{ dueAt, orgId, entity }` and rebuilds
-  that same string. Cancelling therefore needs the **old** due time. It cannot be read back out of
-  the trip row, which by then holds the new dates, and it cannot be found in KV either: because the
-  due time sorts ahead of the org and the entity, there is no prefix that selects "the key for this
-  trip" — only a full scan of the index would find it, which is precisely the scan the whole design
-  exists to avoid. A sync function that receives only a trip id can create keys and can never remove
-  the one it replaced.
-- **The sync function.** `syncTripReminder(scope, kv, input)`, where `input` is
-  `{ tripId: string; previous: TripReminderAnchor | null }` and
-  `TripReminderAnchor` is `{ startDate: string | null; reminderDays: number }` — the two trip columns
-  the key depends on and nothing else. `previous` is a **required property typed as nullable**, never
-  an optional one: an omitted optional compiles and silently means "cancel nothing", which is the
-  orphaned-key bug wearing a default. `null` is the honest answer at creation and it has to be typed
-  out. The body then does exactly three things: read the trip through `requireTrip` in the caller's
-  scope; when `previous` yields a due instant, `cancelReminder` for the key that anchor implies; then
-  `scheduleReminder` for the new one, unless the new anchor yields nothing to schedule. Cancel before
-  schedule is required rather than defensive — the module's own header at `:52-56` says a re-register
-  under a new due time leaves the old key behind, and an orphan sends a second reminder on the old
-  date.
-- **One anchor function, used by both keys.** `reminderDueAt(anchor): number | null`, exported from
-  `src/server/queue/reminder-sync.ts` beside `syncTripReminder`, and pure: 08:00 UTC on
-  `startDate − reminderDays`, `null` when `startDate` is null
-  or `reminderDays` is `0`. It is deliberately **not** time-dependent — it does not return `null` for
-  an instant in the past, because the key being cancelled is usually in the past and must still be
-  reconstructible. Whether the new instant is already behind us is a separate decision made in
-  `syncTripReminder`, which skips the schedule and still performs the cancel. One function for both
-  sides is what guarantees the cancel and the schedule can never disagree about the anchor rule, and
-  it is what the unit tests assert the key against.
-- **The cancel is cheap and cannot fail on a key that was never written.** Workers KV documents
-  `delete()` on a non-existent key as a successful delete, so an anchor that never produced a key —
-  `reminderDays = 0`, a trip with no verified addresses — costs one delete operation and no error
-  path. When the previous key and the new key are byte-identical the delete is skipped and the put
-  alone re-registers the record, which saves a billed KV delete on the common case of an edit that
-  moved neither the start date nor the lead time.
-- **The alternative that was rejected, and why.** A pointer key — `reminder-ptr:<orgId>:trip:<id>`
-  holding the current reminder key — would make the previous key self-recoverable and take the
-  burden off every call site. It is not used: KV is eventually consistent, so a trip created and then
-  edited inside the propagation window could read a stale pointer or none at all and leave exactly
-  the orphan the pointer exists to prevent, at the cost of an extra read and an extra write on every
-  sync. The previous anchor read from D1 is strongly consistent and is already in the caller's hand —
-  an edit path resolves the trip through `requireTrip` before it updates, so the pre-update row _is_
-  the previous anchor and passing it costs nothing.
-- **Why the anchor is 08:00 UTC, stated rather than assumed.** `trips` carries no timezone column, so
-  a per-trip local anchor is not expressible today; 08:00 UTC is chosen because it lands in the
-  morning across Europe and before midday in the Americas, and because a reminder that arrives a few
-  hours early is harmless while one that arrives after departure is worthless. A new instant already
-  in the past schedules nothing — the next sweep would fire it immediately, which is a reminder
-  arriving after the traveller already knew. `reminder_days = 0` means no reminder and is a valid
-  stored value under the existing non-negative CHECK, which is why `reminderDueAt` answers `null` for
-  it rather than reading it as "the morning of departure".
-- **Recipients.** Every trip member with a verified address, resolved server-side.
-  `reminderRecordSchema` (`src/server/queue/reminders.ts:25-34`) declares `to` as
-  `z.array(z.string().email()).min(1).max(20)`, and both bounds matter. The upper one: a trip with
-  more than 20 addressable members sends to the first 20 and logs the truncation rather than letting
-  the schema throw. The lower one: with zero verified addresses the record cannot be constructed at
-  all, so `syncTripReminder` returns without writing a key instead of calling `scheduleReminder` and
-  catching its `ZodError`. Both are unit tests, not comments.
-- **Failure isolation.** A KV failure never fails trip creation. It is caught, logged once with
-  `serializeError`, and the trip is still created — a missing reminder is a smaller harm than a failed
-  save, and the next edit re-syncs.
-- **Zod.** `reminderRecordSchema` already validates the record. The sync function's own input is a
-  `z.strictObject({ tripId, previous })` with the `error` parameter, where `previous` is
-  `z.strictObject({ startDate: z.iso.date().nullable(), reminderDays: z.number().int().min(0) }).nullable()`
-  — nullable, not optional, so the validator refuses the same omission the type refuses. The due
-  time, the recipients and the body are all derived server-side and none of them is accepted from the
-  client. Validating the previous anchor is shape only: it is a server-supplied echo of a row the
-  caller just read, never a client value, and a call site that forged it could at worst delete a key
-  inside its own organization, because the org segment of the key comes from the scope.
-- **Authorisation.** The trip is re-read in the caller's scope; a foreign trip id is a `NotFoundError`
-  before any KV key is written, which matters more here than usual because KV is not tenant-scoped by
-  construction — the organization id is part of the key and the key is built from the scope, never
-  from the request.
-- Sending stays in the queue. The sync path enqueues nothing at all — it writes one KV key and
-  returns; the `*/15` sweep is the only producer, which is why a provider outage retries without
-  re-scanning the index, and it is the only reason the sweep's own batching is this stage's business.
+- **The scan, in `src/server/catalog/reminders.ts`.** `dueTripReminders(db, now)`: one query over
+  `trips` — `start_date IS NOT NULL AND reminder_days > 0 AND is_archived = 0`
+  (`src/server/db/schema.ts:548`; an archived trip is not reminded, which the retired design needed
+  a cancel call to achieve) with `start_date` in the `[date(now), date(now) + 31 days]` range, an
+  indexed range over the column TRP-04's 1–30-day ceiling bounds — then the due instant is computed
+  in code as 08:00 UTC on
+  `start_date − reminder_days` and filtered to `dueAt ≤ now < dueAt + 24h`. The 24-hour grace bound
+  means a dead cron loses at most reminders older than a day rather than re-sending history.
+  Returns `{ tripId, organizationId, dueAt }` rows only — no addresses, no member data, nothing a
+  stale copy could mis-send.
+- **Why the anchor is 08:00 UTC, restated.** `trips` carries no timezone column, so a per-trip local
+  anchor is not expressible; 08:00 UTC lands in the morning across Europe and before midday in the
+  Americas, and a reminder hours early is harmless while one after departure is worthless.
+  `reminder_days = 0` means no reminder, honoured by the scan's `reminder_days > 0` predicate. The
+  anchor function is exported from the catalog module, pure and deliberately not time-dependent, and
+  it is what every test asserts the due instant against.
+- **The sweep.** `sweepReminders` reads the due rows, and per trip: checks the KV marker and skips
+  when present; resolves the trip's **owner membership** and builds a scope from it — the `00-S4`
+  handler pattern, `getMembership` then `createScope`, a real member and never a synthetic
+  principal, so every repository contract holds unchanged; hands `00-S2`'s dispatch a system event —
+  no actor, so nobody is excluded — carrying the trip reference and the due instant; and writes the
+  marker only after dispatch returns. A trip whose owner membership is gone falls back to any
+  current member; a trip with no members is skipped, because there is nobody to remind. Recipients,
+  channels and preferences are wholly dispatch's business, resolved fresh at fire time: in-app rows
+  for everyone not opted out, one e-mail envelope per e-mail-enabled recipient, chunked under
+  `00-S2`'s bounds.
+- **Idempotency across the pair.** The dispatch envelope ids carry the due instant —
+  `notify:trip.reminder:<tripId>:<dueInstant>:<recipientUserId>` — so a reminder re-sent for a
+  postponed trip is a new id and a redelivered one is a no-op. The KV marker dedupes the tick; the
+  envelope id dedupes the queue.
+- **Failure isolation.** A failing trip logs once with `serializeError` and does not fail the sweep
+  for the remaining trips; its marker stays unwritten, so the next tick inside the grace window
+  retries it. A KV failure degrades to the queue-level idempotency rather than blocking the tick.
+- **Zod.** The catalog row and the system event are `z.strictObject()` with the `error` parameter.
+  Nothing here accepts client input at all: the scan is a cron, the event is server-built, and the
+  preference UI that writes `reminder_days` belongs to TRP-04.
+- **Authorisation.** The scan is the sanctioned catalog exception and reads only scheduling fields.
+  Everything member-shaped happens inside a real member's scope, `tenantFilter()`-bound; a forged
+  marker key could at worst suppress a reminder inside its own organization, never send one across
+  tenants.
 
 ### UI (route, components)
 
-None. The reminder preference control belongs to `TRP-04`, and the trip edit surface that would carry
-it belongs to `TRP-03`. No new route file, so `pnpm generate-routes` is not run. No new token, no new
-primitive.
-
-**Cross-plan obligation, stated here so it is not discovered late.** `TRP-03` (trip lifecycle: edit,
-archive, delete) must call `syncTripReminder` when `start_date` or `reminder_days` changes, and
-`cancelReminder` when a trip is archived or deleted. The edit path passes the **pre-update** row's
-`{ startDate, reminderDays }` as `previous`, which means it reads the trip before it writes it — it
-already does, through the `requireTrip` that authorises the update, so this is an argument to pass
-and not a query to add. The archive and delete paths pass that same pre-delete anchor to
-`cancelReminder`, for the same reason: after the row is gone the key cannot be rebuilt. Without this,
-an edited trip keeps the reminder its old dates implied and sends twice. `01-trips-core.md` carries
-it under TRP-03's **Server** heading.
+None. The reminder preference control belongs to `TRP-04`, and the trip edit surface that would
+carry it belongs to `TRP-03` — which, after the redesign, owes this stage nothing: no anchor
+threading, no cancel call. No new route file, so `pnpm generate-routes` is not run. No new token, no
+new primitive.
 
 ### Quota
 
-**Creates no quota-bearing row, explicitly.** A reminder is a KV key, not a domain row: it is not
-sold, not counted by any metric, and self-expiring — `scheduleReminder` sets an `expirationTtl` that
-outlives the due time by seven days so a missed sweep self-cleans. Cardinality is bounded by trips,
-which is already a metered metric, so metering reminders would meter the same thing twice. Nothing is
-added to `resolveLimits()`, nothing to `PLAN_QUOTAS`, no case to
-`src/server/billing/__tests__/limits.test.ts`.
+**Creates no quota-bearing row, explicitly.** A reminder is a dispatch through `00-S2`, whose
+fan-out bounds already govern it, plus one KV marker per fired reminder — self-expiring, and bounded
+by trips with a near-future start date; trips are already a metered metric, so metering reminders
+would meter the same thing twice. Nothing is added to `resolveLimits()`, nothing to `PLAN_QUOTAS`,
+no case to `src/server/billing/__tests__/limits.test.ts`.
 
-Cost, measured against `ARCHITECTURE.md` §8: one KV write per trip creation, and one delete plus one
-write per edit that moves the anchor — the delete is skipped when the anchor did not move, which is
-the common edit. At ten users that is a handful of operations a day; at ten thousand it is still far
-below any KV tier boundary, because the count follows trips and not requests.
+Cost, measured against `ARCHITECTURE.md` §8: one indexed D1 range scan per 15-minute tick —
+rows-read proportional to trips starting in the next month, not to tenants — plus one KV read and at
+most one KV write per due trip. At ten users that is nothing; at ten thousand it is still one query
+whose result set tracks near-future travel, which is the quantity the product exists to hold.
 
 ### Tenant isolation test
 
-Added to `src/server/repos/__tests__/tenant-isolation.test.ts`: in A's scope, call `syncTripReminder`
-for one of B's trips with `previous: null` — `NotFoundError`, and neither a `put` nor a `delete`
-reaches KV, because the `requireTrip` rejection precedes every KV operation. Repeat it with a forged
-`previous` anchor to show the same thing from the other side: a caller cannot use the previous anchor
-as a cross-tenant delete primitive, both because the call never reaches KV and because the key's org
-segment is taken from the scope rather than from the input. Then confirm that
-the key A's own trip produced contains A's organization id, so a sweep can attribute it, and that
-reading B's trip through the same path in A's scope never yields B's member addresses. Functions
-covered: `syncTripReminder`, and through it `requireTrip` and `listTripMembers` in
-`src/server/repos/trips.ts` and `listUserProfiles` in `src/server/repos/members.ts`. The
-`NotFoundError` in that case comes from `requireTrip`; asserting it against `listTripMembers` would
-be asserting a rejection that function does not make.
+Added to `src/server/repos/__tests__/tenant-isolation.test.ts`: seed a due trip in A and a due trip
+in B; run the sweep once. Every in-app row produced for A's trip carries A's organization id and is
+invisible from B's scope — `requireById` from B is `NotFoundError` — and symmetrically for B's. The
+scope the sweep builds for A's trip belongs to A's owner member, so `notifyMany` under it can only
+write under A, which is the assertion that the sweep's per-trip scope construction cannot leak.
+Functions covered: `sweepReminders`, `dueTripReminders`, and through dispatch `notifyMany`,
+`filterEnabledRecipients` and `getMembership`.
 
 ### Verification
 
 - Gate, in order: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
-- Unit tests in `src/server/queue/__tests__/reminder-sync.test.ts`, against an in-memory KV double
-  that records every `put` and `delete` in order, so "cancelled before written" is an assertion about
-  the sequence and not about the final state: `reminderDueAt` puts the key's due prefix at 08:00 UTC
-  on `start_date − reminder_days`, and returns a value for an anchor in the past rather than `null`,
-  which is what makes an old key reconstructible; a sync with `previous: null` writes one key and
-  issues no delete; **a re-sync after a date change, given the pre-edit anchor as `previous`, deletes
-  exactly the key that anchor implies and then writes the new one, leaving one key in the store** —
-  the test that could not be written against a trip-id-only signature, and the reason the signature
-  changed; a re-sync whose previous anchor equals the current one issues no delete and re-writes the
-  same key; `reminder_days = 0` writes nothing and cancels whatever `previous` implies; a new instant
-  already in the past writes nothing but still cancels; a trip with no verified addresses writes
-  nothing rather than throwing a `ZodError` out of `scheduleReminder`; a KV rejection does not
-  propagate to the caller; and the written record parses against `reminderRecordSchema`, so the sweep
-  needs no second parse.
-- Two tests across the sweep seam, in the same file. First, the seam itself: schedule a reminder due
-  in the past, run `sweepReminders`, assert exactly one `email` envelope with the deterministic id
-  and that the key is gone afterwards — the assertion that proves the empty index is no longer empty.
-  Second, the chunk bound this stage adds to `sweepReminders`: 250 due reminders in one tick produce
-  three `enqueueTasks` calls of at most 100 envelopes each, every key is deleted exactly once, and
-  the returned `enqueued` count equals 250. Written against today's unchunked sweep the second test
-  fails on the first assertion, which is the point of writing it.
-- Browser evidence: the trip creation dialog at 360px and 1440px in light and dark, photographed at
-  the moment of submission with the control in its loading state — the point of the stage is that the
-  save path grew work without growing its latency or losing its pending affordance.
+- Unit tests in `src/server/queue/__tests__/reminders.test.ts`, against an in-memory KV double and a
+  stubbed dispatch: the anchor function puts the due instant at 08:00 UTC on
+  `start_date − reminder_days`; a trip due in the window dispatches once and writes its marker; a
+  second tick in the same window dispatches nothing; moving the start date produces a new due
+  instant and a second dispatch under a new envelope id; `reminder_days = 0` and a null `start_date`
+  never surface from the scan; a due instant older than the 24-hour grace is skipped; a trip with no
+  members is skipped without a marker — deliberate: the next window re-evaluates it, and membership
+  arriving later revives it; an archived trip never surfaces from the scan; a dispatch failure
+  leaves the marker unwritten and does not fail the sweep for the next trip; a KV failure does not
+  fail the tick.
+- One test across the catalog seam: `dueTripReminders` against a database holding due trips in two
+  organizations returns both organizations' rows — it is the one sanctioned cross-tenant read — and
+  returns scheduling fields only.
+- Browser evidence: `/notifications` and the shell bell at 360px and 1440px, in light and dark,
+  photographed after a seeded due trip's sweep tick — the state that is the point is a reminder row
+  produced by the cron path through the same centre `00-S2` lights up. The trip creation dialog is
+  no longer part of this stage's evidence: creation runs no reminder code.
 - Console must be silent.
 
 ### Definition of done
 
 The six items from `docs/SPEC.md` §7 apply unchanged, as listed in `00-S1`.
 
-The `SPEC.md` §2 clauses are ticked against the trip creation dialog, the only surface whose behaviour
-this stage changes:
+The `SPEC.md` §2 clauses are ticked against the notification centre rendering a reminder row — the
+only surface whose content this stage changes:
 
 - [ ] Spacing on the 4px grid from `--space-*`.
-- [ ] Hover, focus-visible, active, disabled and loading on every interactive element; the submit
-      control stays disabled and labelled while the save and the schedule are in flight.
-- [ ] The dialog's lists keep their designed empty, skeleton and error states.
+- [ ] Hover, focus-visible, active, disabled and loading on every interactive element of the
+      reminder row, including its mark-read control mid-request.
+- [ ] Empty, skeleton and error states unchanged and still reachable.
 - [ ] Motion 150–260ms on `--ease-out-quint` or a sibling, transform and opacity only,
       `prefers-reduced-motion: reduce` honoured.
 - [ ] Light and dark parity with dark shadows re-declared.
-- [ ] 360px to 2560px, where the dialog is a sheet on a phone rather than a shrunken modal.
-- [ ] Keyboard reachable end to end, focus trapped in the dialog and returned to the trigger on
-      close, WCAG 2.2 AA in both themes.
+- [ ] 360px to 2560px, small designed rather than squeezed.
+- [ ] Keyboard reachable end to end, WCAG 2.2 AA in both themes.
 - [ ] Zero console errors or warnings, zero layout shift after paint.
 
 ### Blockers
 
-- **Email delivery needs `EMAIL_API_KEY`.** The `email` handler and the sweep are both written; without
-  the secret the handler declines loudly. Not a blocker for scheduling, which is what `TRP-04` needs
-  in place, but the row cannot be demonstrated end to end without it.
-- **No per-trip timezone column exists.** The 08:00 UTC anchor above is the stated consequence.
-  Changing it later is an additive column and a re-sync, not a rewrite, so it is not deferred work
-  hiding behind a default — it is a decision with a stated reason.
+- **E-mail delivery needs `EMAIL_API_KEY`.** The `email` handler is written; without the secret it
+  declines loudly. Not a blocker for the in-app half, which now fires for reminders too.
+- **No per-trip timezone column exists.** The 08:00 UTC anchor is the stated consequence. Changing
+  it later is an additive column and a changed anchor function, not a rewrite.
+- **Intra-wave ordering.** This stage lands after `00-S2` (its dispatch module and the
+  optional-actor event contract) and after `00-S4` (the `DB` handle on `TaskBindings`).
