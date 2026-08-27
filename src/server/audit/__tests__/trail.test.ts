@@ -167,8 +167,9 @@ describe('trail', () => {
 
     const rows = await entries(tenant.scope)
     expect(rows).toHaveLength(1)
-    expect(rows[0]?.userAgent).not.toBeNull()
-    expect(rows[0]?.userAgent?.startsWith('Mozilla/5.0 ')).toBe(true)
+    // Bounded to what `shortTextSchema` accepts, keeping the head of the value rather than losing
+    // the whole entry to a field nobody reads.
+    expect(rows[0]?.userAgent).toBe(userAgent.slice(0, 200))
   })
 
   /* ------------------------------------------------------------- swallowing */
@@ -236,22 +237,29 @@ describe('trail', () => {
    * later stage would not have to move. It is a weak check and a real one — it fails if a call site
    * is deleted, renamed away, or quietly left recording nothing, which is the regression that would
    * otherwise show up as an empty audit table on `/admin` and nowhere else.
+   *
+   * Matched by name rather than by literal line, so reformatting a call site never fails this.
    */
-  it.each([
+  /** This file sits four directories below the repository root. */
+  const repoRoot = new URL('../../../../', import.meta.url)
+
+  const callSites: ReadonlyArray<
+    readonly [path: string, actions: ReadonlyArray<keyof typeof AUDIT_ACTIONS>]
+  > = [
     ['src/server/fns/files.ts', ['FILE_UPLOADED', 'FILE_DELETED']],
     [
       'src/server/fns/reservations.ts',
       ['RESERVATION_CREATED', 'RESERVATION_UPDATED', 'RESERVATION_DELETED'],
     ],
     ['src/routes/_app/-server/settings.ts', ['WORKSPACE_DEFAULTS_CHANGED']],
-  ])('%s records through trail()', (path, actions) => {
-    const source = readFileSync(
-      fileURLToPath(new URL(`../../../../${path}`, import.meta.url)),
-      'utf8',
-    )
+  ]
+
+  it.each(callSites)('%s records through trail()', (path, actions) => {
+    const source = readFileSync(fileURLToPath(new URL(path, repoRoot)), 'utf8')
+
     expect(source).toContain("from '#/server/audit/trail'")
     for (const action of actions) {
-      expect(source).toContain(`action: AUDIT_ACTIONS.${action},`)
+      expect(source).toMatch(new RegExp(`\\bAUDIT_ACTIONS\\.${action}\\b`))
     }
   })
 

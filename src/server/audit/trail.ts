@@ -77,7 +77,7 @@ export type TrailInput = Omit<
  * ---------------------------------------------------------------------------------------------- */
 
 /** What the request contributes to a row. Both `null` when there is no request. */
-export interface RequestOrigin {
+interface RequestOrigin {
   readonly ip: string | null
   readonly userAgent: string | null
 }
@@ -93,17 +93,10 @@ export interface RequestOrigin {
  */
 const REQUEST_FIELD_MAX = 200
 
-function bound(value: string | null): string | null {
-  if (value === null) {
-    return null
-  }
-  const trimmed = value.trim()
-  if (trimmed.length === 0) {
-    return null
-  }
-  return trimmed.length > REQUEST_FIELD_MAX
-    ? trimmed.slice(0, REQUEST_FIELD_MAX)
-    : trimmed
+/** One header, trimmed and bounded. `null` when absent or blank — an empty string records nothing. */
+function boundedHeader(headers: Headers, name: string): string | null {
+  const value = headers.get(name)?.trim() ?? ''
+  return value.length === 0 ? null : value.slice(0, REQUEST_FIELD_MAX)
 }
 
 /**
@@ -113,7 +106,7 @@ function bound(value: string | null): string | null {
  * candidate is a header the client itself can write — the same reading
  * `src/server/fns/console/context.ts` takes for the platform log.
  */
-export function requestOrigin(): RequestOrigin {
+function requestOrigin(): RequestOrigin {
   let headers: Headers
   try {
     headers = getRequest().headers
@@ -123,8 +116,8 @@ export function requestOrigin(): RequestOrigin {
     return { ip: null, userAgent: null }
   }
   return {
-    ip: bound(headers.get('cf-connecting-ip')),
-    userAgent: bound(headers.get('user-agent')),
+    ip: boundedHeader(headers, 'cf-connecting-ip'),
+    userAgent: boundedHeader(headers, 'user-agent'),
   }
 }
 

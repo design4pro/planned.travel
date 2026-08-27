@@ -142,12 +142,9 @@ function payload(data: BookingInput) {
  * audit entry outlives the booking, is visible to every admin, and a payment reference is not
  * something a retention window of 400 days should be holding a second copy of.
  */
-function auditMetadata(data: {
-  tripId: string
-  type: string
-  status: string
-  title: string
-}) {
+function auditMetadata(
+  data: Pick<BookingInput, 'tripId' | 'type' | 'status' | 'title'>,
+) {
   return {
     tripId: data.tripId,
     type: data.type,

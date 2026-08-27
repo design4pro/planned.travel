@@ -10,6 +10,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
+import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import {
   assignmentParticipants,
   collabMessageReactions,
@@ -33,7 +34,6 @@ import {
   listEntityHistory,
   recordAudit,
 } from '../audit'
-import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import {
   getSubscription,
   setUsage,
@@ -1632,16 +1632,14 @@ describe('tenant isolation', () => {
      * been deleted still reads. That is exactly what makes it worth a case of its own — nothing in
      * the column stops A from writing B's identifiers into it, and the only thing that keeps the
      * entry inside A is `organization_id` on the row and `tenantFilter()` on every read.
+     *
+     * Returns the id of the entry A wrote about B's reservation.
      */
-    const foreignEntity = (): { entityType: string; entityId: string } => ({
-      entityType: 'reservation',
-      entityId: beta.reservationId,
-    })
-
     async function trailInAlpha(): Promise<string> {
       await trail(alpha.tenant.scope, {
         action: AUDIT_ACTIONS.RESERVATION_DELETED,
-        ...foreignEntity(),
+        entityType: 'reservation',
+        entityId: beta.reservationId,
         metadata: { tripId: beta.tripId },
       })
       const page = await listAuditLog(alpha.tenant.scope, {
