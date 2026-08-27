@@ -34,7 +34,10 @@ surfaces below. This file only routes you there and says which surface answers w
 - **Reference study belongs to the planning phase** — grilling and `/to-spec-project`, with a
   human in the loop. The AFK implementer and reviewer (sandcastle) never browse the reference;
   everything they need must already be in the ticket. This keeps the clean-room boundary out of
-  the hands of agents optimising for "make the test pass".
+  the hands of agents optimising for "make the test pass". One carve-out: the loop's neutral
+  pixel-capture step photographs the public demo (surface 1) so the blind `pixel-critic` can
+  judge an A/B pair — it takes pixels only, writes no notes, and neither it nor the critic ever
+  opens the reference source.
 - **Citations**: in specs, tickets and plans, cite reference behavior as `` `wiki: <Page-Name>` ``
   with no URL, and describe it in planned.travel's own vocabulary (CONTEXT.md).
 - **Captures land outside this repository** — an untracked screenshot in the repo root already

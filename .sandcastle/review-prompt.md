@@ -32,7 +32,7 @@ Review the code changes on branch `{{BRANCH}}` and improve code clarity, consist
 
 7. **Preserve functionality**: Never change what the code does - only how it does it.
 
-If the change touches UI (components, routes, styles), note in your commit message that the pull request needs a pixel-critic pass — the visual gate runs in CI.
+If the change touches UI (components, routes, styles), the loop runs an advisory pixel-critic pass after validation — you do not need to arrange it, and the deterministic visual gate (Playwright snapshots) runs in the validation ladder right after you.
 
 # EXECUTION
 
