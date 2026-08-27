@@ -363,9 +363,18 @@ async function runAuditor(closed: Issue[], iteration: number): Promise<void> {
       promptArgs: {
         ISSUES: closed.map((i) => `- ${i.id}: ${i.title}`).join('\n'),
       },
-      output: sandcastle.Output.object({ tag: 'audit', schema: auditSchema }),
     })
-    for (const finding of audit.output.issues) {
+    // sandbox.run() has no `output` option (only top-level run() does) —
+    // extract and validate the <audit> block from stdout by hand.
+    const raw = audit.stdout.match(/<audit>([\s\S]*?)<\/audit>/)?.[1]
+    if (raw === undefined) {
+      console.error(
+        '  AUDIT: no <audit> block in auditor output — treating as inconclusive, nothing reopened.',
+      )
+      return
+    }
+    const verdicts = auditSchema.parse(JSON.parse(raw))
+    for (const finding of verdicts.issues) {
       if (finding.verdict === 'refuted') {
         console.log(`  AUDIT REFUTED #${finding.id}: ${finding.reason}`)
         await sandbox.exec(
