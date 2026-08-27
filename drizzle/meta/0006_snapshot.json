@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ebfd8483-cebe-43af-9f14-758ee1fee48a",
+  "id": "ceca6fc1-df44-4f09-9dbb-6f1125235cd8",
   "prevId": "3af4ae0a-56be-4a49-ba41-c121f6b3084e",
   "tables": {
     "account": {
@@ -8717,6 +8717,20 @@
         "date_format": {
           "name": "date_format",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "time_format": {
+          "name": "time_format",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "text_scale": {
+          "name": "text_scale",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

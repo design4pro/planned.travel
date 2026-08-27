@@ -394,6 +394,8 @@ export const NOTIFICATION_CHANNELS = [
 
 export const THEME_PREFERENCES = ['system', 'light', 'dark'] as const
 export const DISTANCE_UNITS = ['metric', 'imperial'] as const
+/** Clock a reader wants times written in. Filed by `09-S8`; see `userSettings.timeFormat`. */
+export const TIME_FORMATS = ['12h', '24h'] as const
 
 /**
  * Who a `platform_audit_log` row is attributed to (docs/ACCESS.md §4.1). `human` is a signed-in
@@ -2395,6 +2397,31 @@ export const userSettings = sqliteTable(
     displayCurrency: currency('display_currency'),
     weekStartsOn: integer('week_starts_on'),
     dateFormat: text('date_format'),
+    /**
+     * Which clock this reader wants times written on — {@link TIME_FORMATS}. Filed by `09-S8`
+     * (`docs/plans/09-account-and-settings.md`) and shipped ahead of the regional form that sets
+     * it, so nothing reads or writes it today. Nullable with no default like every other override
+     * on this table: a default would make a reader who never chose indistinguishable from one who
+     * picked the default, and break `getEffectiveSettings`, which resolves the reader's value over
+     * the workspace's.
+     *
+     * **`09-S8` filed this column with an `enumCheck` and `text_scale` with a range `CHECK`, and
+     * neither is here.** Measured, not assumed: adding either rebuilds `user_settings` — the
+     * generated migration was a `__new_user_settings` create, an `INSERT … SELECT`, a
+     * `DROP TABLE user_settings` and a rename, which also swallowed `display_currency`'s own
+     * `ADD COLUMN`. That is the trade this stage refuses for `settlements` two tables up, for the
+     * same reason and on a table every signed-in reader has a row in. The vocabulary stays
+     * machine-readable as `TIME_FORMATS`, and the guard is `09-S8`'s to place in
+     * `src/server/repos/settings.ts` when it ships the control — exactly as
+     * `createSettlementInput` holds the settlement triple's rule.
+     */
+    timeFormat: text('time_format'),
+    /**
+     * Body-text scale as a whole percentage; `09-S8` bounds it to 90–125 in its own Zod, for the
+     * reason on `time_format` above. Unread until that stage ships its control. An integer
+     * percentage rather than a float multiplier, so the stored value is the one the reader picked.
+     */
+    textScale: integer('text_scale'),
     distanceUnit: text('distance_unit'),
     mapStyle: text('map_style'),
     accentColour: colour('accent_colour'),
