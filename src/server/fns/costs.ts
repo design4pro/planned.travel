@@ -37,9 +37,14 @@ import {
   updateExpense,
 } from '#/server/repos'
 import { impliedRate } from '#/lib/money'
-import { appUrl, taskQueue } from '#/server/auth/env'
 import { dispatchQuietly } from '#/server/notifications/dispatch'
-import { appScope, mirrorToRoom, patch, tombstone } from './context'
+import {
+  appScope,
+  mirrorToRoom,
+  notificationDeps,
+  patch,
+  tombstone,
+} from './context'
 
 import type { ExpenseShare, Trip } from '#/server/db/types'
 import type { TenantScope } from '#/server/repos'
@@ -284,7 +289,7 @@ async function notifyChargedMembers(
       bodyParams: { title: expense.title, tripTitle: trip.title },
       actionUrl: `/trips/${trip.id}/costs`,
     },
-    { queue: taskQueue(), appUrl: appUrl() },
+    notificationDeps(),
   )
 }
 

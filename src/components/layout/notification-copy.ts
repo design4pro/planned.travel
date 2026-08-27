@@ -8,6 +8,14 @@
  * path any surface uses: nothing in the product renders a notification through
  * anything else.
  *
+ * The primitives it renders through — the key spelling, the params coercion and
+ * the "a hole is a miss" rule — live in `#/lib/notification-copy`, because the
+ * email `src/server/notifications/dispatch.ts` sends renders the same key pair
+ * and `docs/SPEC.md` §6 keeps `src/components` on the browser side of the fence.
+ * What stays here is the one thing only a screen has an opinion about: which
+ * half of a row may fall back, and to what. They are re-exported so this module
+ * remains the single import any surface needs.
+ *
  * It is not, however, the only such table *in the tree*.
  * `src/routes/_app/-lib/notifications.ts` still holds the English catalogue this
  * module replaced, plus the `NOTIFICATION_EVENTS` and `CHANNEL_LABELS` lists the
@@ -24,91 +32,19 @@
  * session, a request or a browser.
  */
 
-import { formatNumber } from '#/lib/format'
+import { paramsFrom, renderStored, storedKey } from '#/lib/notification-copy'
 
-import type {
-  Locale,
-  MessageParams,
-  Translate,
-  TranslateStored,
-} from '#/lib/i18n'
+import type { Locale, Translate, TranslateStored } from '#/lib/i18n'
+import type { StoredParams } from '#/lib/notification-copy'
 
-/**
- * The stored `params` column, structurally.
- *
- * Declared here rather than imported from `#/server/db/schema`: this module is
- * application chrome, and `docs/SPEC.md` §6 keeps `src/components` on the
- * browser side of the fence. The shape is the one `jsonRecordSchema` in
- * `src/server/repos/notifications.ts` validates, so a row assigns to it.
- */
-export type StoredParams = Record<string, string | number | boolean | null>
-
-/** Where the `shell` namespace keeps the stored templates. */
-export const STORED_PREFIX = 'shell.notification.'
-
-/**
- * Params whose value selects a CLDR plural branch as well as being printed.
- *
- * Everything else is substituted verbatim, deliberately: a trip called "2026"
- * must not be regrouped into "2,026" because its title happens to parse as a
- * number. A JSON *number* is unambiguous and is always grouped for the locale,
- * which is §8's rule — a number a reader sees arrives already formatted,
- * because raw substitution prints `1234` with no separator in all twenty-three.
- */
-const COUNT_PARAMS = ['count', 'days']
-
-/** Rows written before the `.title`/`.body` suffix was dropped still carry it. */
-export function eventOf(key: string): string {
-  return key.replace(/\.(?:title|body)$/, '')
-}
-
-/**
- * The stored `params` record, in the shape the message layer wants.
- *
- * `null` and booleans are dropped rather than stringified: neither is a word in
- * any language, and a template that needed one then renders with its token still
- * visible — which {@link renderStored} treats as a miss instead of shipping
- * `{actorName}` to a screen.
- */
-export function paramsFrom(
-  params: StoredParams | null,
-  locale: Locale,
-): MessageParams {
-  const bag: Record<string, string | number> = {}
-  let count: number | null = null
-
-  for (const [name, value] of Object.entries(params ?? {})) {
-    if (typeof value === 'number') {
-      bag[name] = formatNumber(value, locale)
-      if (COUNT_PARAMS.includes(name)) count = value
-      continue
-    }
-    if (typeof value !== 'string' || value === '') continue
-    if (COUNT_PARAMS.includes(name)) {
-      const parsed = Number(value)
-      if (value.trim() !== '' && Number.isFinite(parsed)) {
-        bag[name] = formatNumber(parsed, locale)
-        count = parsed
-        continue
-      }
-    }
-    bag[name] = value
-  }
-
-  return count === null ? bag : { ...bag, count }
-}
-
-/** A resolved sentence, or `null` when the key or a placeholder is missing. */
-export function renderStored(
-  tStored: TranslateStored,
-  key: string,
-  params: MessageParams,
-): string | null {
-  const rendered = tStored(key, params)
-  // `interpolate` leaves an unknown token exactly as written, which is visible
-  // damage in a sentence. A row with a hole in it degrades to the fallback.
-  return rendered === null || rendered.includes('{') ? null : rendered
-}
+export {
+  STORED_PREFIX,
+  eventOf,
+  paramsFrom,
+  renderStored,
+  storedKey,
+} from '#/lib/notification-copy'
+export type { StoredParams } from '#/lib/notification-copy'
 
 /** The columns this module reads. Narrower than the inbox's own row type. */
 export interface StoredNotification {
@@ -142,12 +78,12 @@ export function notificationCopy(
   const { locale, t, tStored } = options
   const title = renderStored(
     tStored,
-    `${STORED_PREFIX}${eventOf(row.titleKey)}.title`,
+    storedKey(row.titleKey, 'title'),
     paramsFrom(row.titleParams ?? row.bodyParams, locale),
   )
   const body = renderStored(
     tStored,
-    `${STORED_PREFIX}${eventOf(row.bodyKey)}.body`,
+    storedKey(row.bodyKey, 'body'),
     paramsFrom(row.bodyParams ?? row.titleParams, locale),
   )
 

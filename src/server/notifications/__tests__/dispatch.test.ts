@@ -8,6 +8,7 @@
  * chunker. With `stubs.memberIds` unset every mocked function delegates to the
  * real implementation, so the behaviour tests are not fixtures.
  */
+import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createLogger, createMemorySink } from '#/server/observability'
@@ -25,7 +26,9 @@ const stubs = vi.hoisted(() => ({
   /** When set, membership, profiles and the in-app write are faked at this size. */
   memberIds: null as Array<string> | null,
   notifyManyCalls: [] as Array<Array<string>>,
+  notifyManyInputs: [] as Array<unknown>,
   profileCalls: [] as Array<Array<string>>,
+  preferenceCalls: [] as Array<Array<string>>,
 }))
 
 vi.mock('#/server/repos', async (importOriginal) => {
@@ -60,24 +63,29 @@ vi.mock('#/server/repos', async (importOriginal) => {
     },
     filterEnabledRecipients: async (
       ...args: Parameters<typeof actual.filterEnabledRecipients>
-    ): Promise<Array<string>> =>
-      stubs.memberIds === null
+    ): Promise<Array<string>> => {
+      stubs.preferenceCalls.push([...args[1]])
+      return stubs.memberIds === null
         ? actual.filterEnabledRecipients(...args)
-        : [...args[1]],
+        : [...args[1]]
+    },
     notifyMany: async (
       ...args: Parameters<typeof actual.notifyMany>
     ): Promise<Array<Notification>> => {
       stubs.notifyManyCalls.push([...args[1]])
+      stubs.notifyManyInputs.push(args[2])
       return stubs.memberIds === null ? actual.notifyMany(...args) : []
     },
   }
 })
 
 const {
+  D1_MAX_BOUND_PARAMETERS,
   EMAIL_BODY_BYTE_CAP,
   EMAIL_CHUNK_SIZE,
+  ID_FILTER_CHUNK_SIZE,
   IN_APP_CHUNK_SIZE,
-  PROFILE_CHUNK_SIZE,
+  NOTIFICATION_ROW_PARAMETERS,
   QUEUE_BATCH_BYTE_CAP,
   dispatch,
   dispatchQuietly,
@@ -185,7 +193,9 @@ describe('dispatch', () => {
   afterEach(() => {
     stubs.memberIds = null
     stubs.notifyManyCalls = []
+    stubs.notifyManyInputs = []
     stubs.profileCalls = []
+    stubs.preferenceCalls = []
     harness.close()
   })
 
@@ -432,11 +442,17 @@ describe('dispatch', () => {
 
   describe('fan-out bounds', () => {
     /**
-     * 501 is the number that matters: `notifyMany` parses its recipient array through
-     * `z.array(idSchema).max(500)` *before* de-duplicating, so the 501st recipient would throw a
-     * `ZodError` and write no row at all — turning a successful trip message into a failed one on
-     * a large workspace. Seeding 501 real users would measure the harness, so membership,
-     * profiles and the two writes are the doubles at the top of this file.
+     * A crowd larger than every limit downstream of dispatch, so each chunker has to be doing its
+     * job for the fan-out to land at all.
+     *
+     * The smallest of those limits is D1's, not a validator's: a `notifications` row binds sixteen
+     * parameters and D1 refuses a statement carrying more than a hundred, so an unchunked
+     * `notifyMany` writes no row at all for a trip with seven reachable members — and
+     * `dispatchQuietly` swallows the refusal, which is what makes it worth a test. 501 also clears
+     * the `z.array(idSchema).max(500)` `notifyMany` parses *before* de-duplicating, and the 200
+     * `listUserProfiles` validates. Seeding 501 real users would measure the harness, so
+     * membership, profiles, preferences and the in-app write are the doubles at the top of this
+     * file.
      */
     const CROWD = 501
 
@@ -450,10 +466,51 @@ describe('dispatch', () => {
       ]
     })
 
-    it('writes every in-app row across chunks that each respect the validator', async () => {
+    /**
+     * The chunk size, held against the statement it actually produces rather than against a
+     * comment — the rule `docs/plans/01-trips-core.md` states for every multi-row write.
+     *
+     * The payload is not written out here: it is the one the last real dispatch handed `notifyMany`,
+     * replayed against a Drizzle handle that answers nothing and only counts what was bound. A
+     * thirteenth column on the row therefore fails this test rather than production.
+     */
+    it('binds a statement D1 accepts for a full in-app chunk', async () => {
+      stubs.memberIds = null
+      await dispatch(alpha.scope, messageEvent(alpha), { queue: null })
+      const input = stubs.notifyManyInputs.at(0)
+      expect(input).toBeDefined()
+
+      const { createScope, notifyMany } =
+        await vi.importActual<typeof Repos>('#/server/repos')
+      const bound: Array<number> = []
+      const counting = createScope(
+        drizzle(async (_query, params) => {
+          bound.push(params.length)
+          return { rows: [] }
+        }),
+        { userId: alpha.ownerId, organizationId: 'org_probe', role: 'owner' },
+      )
+
+      await notifyMany(
+        counting,
+        Array.from({ length: IN_APP_CHUNK_SIZE }, (_, index) => `usr_${index}`),
+        input as Parameters<typeof notifyMany>[2],
+      )
+
+      expect(bound).toEqual([IN_APP_CHUNK_SIZE * NOTIFICATION_ROW_PARAMETERS])
+      expect(bound[0]).toBeLessThanOrEqual(D1_MAX_BOUND_PARAMETERS)
+      // And one more row would not fit, which is what makes this the largest safe chunk.
+      expect(
+        (IN_APP_CHUNK_SIZE + 1) * NOTIFICATION_ROW_PARAMETERS,
+      ).toBeGreaterThan(D1_MAX_BOUND_PARAMETERS)
+    })
+
+    it('writes every in-app row across chunks D1 will bind', async () => {
       await dispatch(alpha.scope, messageEvent(alpha), { queue: null })
 
-      expect(stubs.notifyManyCalls).toHaveLength(2)
+      expect(stubs.notifyManyCalls).toHaveLength(
+        Math.ceil(CROWD / IN_APP_CHUNK_SIZE),
+      )
       for (const call of stubs.notifyManyCalls) {
         expect(call.length).toBeLessThanOrEqual(IN_APP_CHUNK_SIZE)
       }
@@ -496,16 +553,25 @@ describe('dispatch', () => {
       }
     })
 
-    it('resolves addresses in chunks its own repository accepts', async () => {
+    it('reads addresses and preferences in id lists D1 will bind', async () => {
       await dispatch(alpha.scope, messageEvent(alpha), {
         queue: recordingQueue(),
       })
 
       expect(stubs.profileCalls).toHaveLength(
-        Math.ceil(CROWD / PROFILE_CHUNK_SIZE),
+        Math.ceil(CROWD / ID_FILTER_CHUNK_SIZE),
       )
       for (const call of stubs.profileCalls) {
-        expect(call.length).toBeLessThanOrEqual(PROFILE_CHUNK_SIZE)
+        expect(call.length).toBeLessThanOrEqual(ID_FILTER_CHUNK_SIZE)
+      }
+
+      // Both channels, each asked in chunks: an `IN (...)` list of 501 ids is a statement D1
+      // refuses just as surely as a 501-row insert.
+      expect(stubs.preferenceCalls).toHaveLength(
+        2 * Math.ceil(CROWD / ID_FILTER_CHUNK_SIZE),
+      )
+      for (const call of stubs.preferenceCalls) {
+        expect(call.length).toBeLessThanOrEqual(ID_FILTER_CHUNK_SIZE)
       }
     })
   })

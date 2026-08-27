@@ -25,8 +25,9 @@
  *
  * Fan-out is bounded here rather than metered: notification rows are not a quota-bearing
  * resource, and the three member ceilings in the codebase disagree with each other, so
- * both writes chunk against the limit that half actually has. See {@link IN_APP_CHUNK_SIZE}
- * and {@link EMAIL_CHUNK_SIZE}.
+ * every read and write chunks against the limit that stage actually has. Below D1's own
+ * ceiling those limits are the Zod validators the repositories carry; D1's is smaller than
+ * all of them. See {@link D1_MAX_BOUND_PARAMETERS}.
  */
 
 import { z } from 'zod'
@@ -38,6 +39,7 @@ import {
   loadCatalogue,
 } from '#/lib/i18n/catalogue'
 import { negotiate } from '#/lib/i18n/negotiate'
+import { paramsFrom, renderStored, storedKey } from '#/lib/notification-copy'
 import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
 import {
   NOTIFICATION_CHANNELS,
@@ -57,7 +59,7 @@ import {
   shortTextSchema,
 } from '#/server/repos'
 
-import type { Locale, MessageParams } from '#/lib/i18n'
+import type { Locale } from '#/lib/i18n'
 import type { JsonRecord } from '#/server/db/schema'
 import type { Logger } from '#/server/observability'
 import type { EnqueueInput } from '#/server/queue/jobs'
@@ -69,13 +71,46 @@ import type { TenantScope } from '#/server/repos'
  * ---------------------------------------------------------------------------------------------- */
 
 /**
+ * Bound parameters D1 accepts in one statement.
+ *
+ * The ceiling every chunk size below is derived from, and the one that binds first: it is smaller
+ * than each repository's own `z.array(idSchema).max(...)` validator, so chunking to satisfy a
+ * validator is not enough. `docs/plans/01-trips-core.md` reads it off Cloudflare's published D1
+ * limits and states the consequence for multi-row writes — `insertMany` sends `rows × columns`
+ * parameters in one statement and does not chunk, so a caller inserting many rows chunks at
+ * `floor(100 / columns)`.
+ */
+export const D1_MAX_BOUND_PARAMETERS = 100
+
+/**
+ * Bound parameters one `notifications` row costs `insertMany`.
+ *
+ * Twelve columns the write names — the nine {@link writeInApp} fills in, `recipient_user_id` and
+ * `sender_user_id` from `notifyMany`, and the tenant column `insertMany` stamps — plus the four
+ * Drizzle binds rather than leaving to SQL: `id`, `is_read`, `created_at` and `updated_at`, whose
+ * defaults are JavaScript values and so travel as parameters like any other.
+ *
+ * Measured, not counted by eye, and re-measured by a test — a thirteenth named column takes the
+ * chunk over {@link D1_MAX_BOUND_PARAMETERS} without changing a line of this file.
+ */
+export const NOTIFICATION_ROW_PARAMETERS = 16
+
+/**
  * In-app recipients per `notifyMany` call.
  *
- * Mirrors the `z.array(idSchema).max(500)` in `src/server/repos/notifications.ts`, which is a
- * *rejecting* validator rather than a cap: a 501st recipient throws and writes no row at all.
- * Chunking turns it into a cap without editing it.
+ * Six, because {@link NOTIFICATION_ROW_PARAMETERS} × 7 overruns
+ * {@link D1_MAX_BOUND_PARAMETERS} and D1 refuses the statement outright — so a trip with seven
+ * members reachable by one message would write no row at all, and {@link dispatchQuietly} would
+ * swallow the refusal. The `z.array(idSchema).max(500)` in `src/server/repos/notifications.ts` is
+ * the *other* limit this respects, and it never binds first.
+ *
+ * It makes a large fan-out many sequential statements. That is the honest cost of doing this in a
+ * request path: a fan-out with no product bound belongs in a queue consumer, which is `01-S1`'s
+ * shape and not this stage's.
  */
-export const IN_APP_CHUNK_SIZE = 500
+export const IN_APP_CHUNK_SIZE = Math.floor(
+  D1_MAX_BOUND_PARAMETERS / NOTIFICATION_ROW_PARAMETERS,
+)
 
 /**
  * Email envelopes per `enqueueTasks` call.
@@ -84,14 +119,21 @@ export const IN_APP_CHUNK_SIZE = 500
  * total; {@link EMAIL_BODY_BYTE_CAP} keeps a rendered body under 8 KiB, which with the envelope's
  * own fields is under 9 KiB per message, and 256 KB ÷ 9 KiB ≈ 28. So the byte limit is the one
  * that binds, and 25 clears it with margin while clearing the message cap four times over.
+ *
+ * Nothing to do with {@link D1_MAX_BOUND_PARAMETERS}: this batch goes to the queue, not to D1.
  */
 export const EMAIL_CHUNK_SIZE = 25
 
 /**
- * User ids per `listUserProfiles` call — its own `z.array(idSchema).max(200)` rejects above this,
- * the same shape of validator {@link IN_APP_CHUNK_SIZE} chunks against.
+ * User ids per `IN (...)` list this module hands a repository — `listUserProfiles` and
+ * `filterEnabledRecipients` both take one.
+ *
+ * A read binds one parameter per id plus the tenant predicate and whatever else the query
+ * compares, so ninety leaves {@link D1_MAX_BOUND_PARAMETERS} room for the handful of columns
+ * either query adds. Well under the `max(200)` `listUserProfiles` validates, which is the
+ * validator that would otherwise look like the limit.
  */
-export const PROFILE_CHUNK_SIZE = 200
+export const ID_FILTER_CHUNK_SIZE = 90
 
 /**
  * The rendered body an email envelope carries — `html` and `text` together — is held under this
@@ -278,39 +320,9 @@ function escapeHtml(value: string): string {
   )
 }
 
-/** Rows written before the `.title`/`.body` suffix was dropped still carry it. */
-function eventOf(key: string): string {
-  return key.replace(/\.(?:title|body)$/, '')
-}
-
-/**
- * The stored params record, in the shape the message layer wants.
- *
- * `null` and booleans are dropped rather than stringified: neither is a word in any language, and
- * a template that needed one would render with its token still visible. `count` and `days` also
- * select a CLDR plural branch, so they are carried as numbers.
- */
-function messageParams(params: JsonRecord | undefined): MessageParams {
-  const bag: Record<string, string | number> = {}
-  let count: number | null = null
-  for (const [name, value] of Object.entries(params ?? {})) {
-    if (typeof value === 'number') {
-      bag[name] = value
-      if (name === 'count' || name === 'days') count = value
-      continue
-    }
-    if (typeof value !== 'string' || value === '') continue
-    bag[name] = value
-  }
-  return count === null ? bag : { ...bag, count }
-}
-
 /* -------------------------------------------------------------------------------------------------
  * Email rendering
  * ---------------------------------------------------------------------------------------------- */
-
-/** Where the `shell` namespace keeps the stored notification templates. */
-const STORED_PREFIX = 'shell.notification.'
 
 interface RenderedNotification {
   readonly subject: string
@@ -323,9 +335,12 @@ interface RenderedNotification {
  *
  * The sentences come out of the shipped catalogue rather than being written here, because copy is
  * never hardcoded (`docs/SPEC.md` §9) — the same `shell.notification.<kind>.title` / `.body` pair
- * the inbox renders. It is rendered once, in the *workspace's* language: resolving each
- * recipient's own override would be one settings read per person, and the per-recipient
- * preference matrix is `ACC-05`'s row, not this stage's.
+ * the inbox renders, through the same primitives, so the two cannot drift. It is rendered once, in
+ * the *workspace's* language: resolving each recipient's own override would be one settings read
+ * per person, and the per-recipient preference matrix is `ACC-05`'s row, not this stage's.
+ *
+ * The fallback policy is this side's own, and it is not the inbox's: an email with no body is a
+ * blank page, so a missing body sentence degrades to the fallback line rather than to nothing.
  */
 async function renderNotificationEmail(
   locale: Locale,
@@ -336,29 +351,36 @@ async function renderNotificationEmail(
   const tStored = createStoredTranslator(locale, catalogue)
   const t = createTranslator(locale, catalogue)
 
-  // `interpolate` leaves an unknown token exactly as written, which is visible damage in a
-  // sentence. A template with a hole in it degrades to the designed fallback instead.
-  const resolve = (
-    key: string,
-    half: 'title' | 'body',
-    params: MessageParams,
-  ): string | null => {
-    const rendered = tStored(`${STORED_PREFIX}${eventOf(key)}.${half}`, params)
-    return rendered === null || rendered.includes('{') ? null : rendered
-  }
-
-  const titleParams = messageParams(event.titleParams ?? event.bodyParams)
-  const bodyParams = messageParams(event.bodyParams ?? event.titleParams)
+  const titleParams = paramsFrom(
+    event.titleParams ?? event.bodyParams ?? null,
+    locale,
+  )
+  const bodyParams = paramsFrom(
+    event.bodyParams ?? event.titleParams ?? null,
+    locale,
+  )
   const title =
-    resolve(event.titleKey ?? event.kind, 'title', titleParams) ??
-    t('shell.notification.fallback.title')
+    renderStored(
+      tStored,
+      storedKey(event.titleKey ?? event.kind, 'title'),
+      titleParams,
+    ) ?? t('shell.notification.fallback.title')
   const body =
-    resolve(event.bodyKey ?? event.kind, 'body', bodyParams) ??
-    t('shell.notification.fallback.body')
+    renderStored(
+      tStored,
+      storedKey(event.bodyKey ?? event.kind, 'body'),
+      bodyParams,
+    ) ?? t('shell.notification.fallback.body')
 
   const href = absoluteUrl(event.actionUrl, appUrl)
   return { subject: title.slice(0, 200), ...fitBody(title, body, href) }
 }
+
+/** Shrink passes before the body is dropped outright. Two is the measured cost; eight is slack. */
+const MAX_SHRINK_PASSES = 8
+
+/** Bytes a shrink pass leaves spare, so rounding never lands the next pass back over the cap. */
+const SHRINK_MARGIN_BYTES = 16
 
 /**
  * The two representations of one notification, shrunk until they fit {@link EMAIL_BODY_BYTE_CAP}
@@ -392,10 +414,12 @@ function fitBody(
     // one `&` into five bytes on the first of those. A proportional step converges in two passes
     // where subtracting the overshoot would undershoot to nothing.
     const room =
-      Math.floor(byteLength(candidate) * (EMAIL_BODY_BYTE_CAP / size)) - 16
+      Math.floor(byteLength(candidate) * (EMAIL_BODY_BYTE_CAP / size)) -
+      SHRINK_MARGIN_BYTES
     // The last pass drops the sentence outright rather than looping forever: the title and the
     // link are bounded, so an empty body always fits.
-    candidate = attempt >= 8 ? '' : truncateBytes(candidate, room)
+    candidate =
+      attempt >= MAX_SHRINK_PASSES ? '' : truncateBytes(candidate, room)
   }
 }
 
@@ -413,18 +437,39 @@ function absoluteUrl(
  * Dispatch
  * ---------------------------------------------------------------------------------------------- */
 
-/** Profiles for a recipient set, chunked against `listUserProfiles`' own `max(200)`. */
+/** Email addresses for a recipient set, asked in lists D1 will bind. */
 async function emailsFor(
   scope: TenantScope,
   userIds: ReadonlyArray<string>,
 ): Promise<Map<string, string>> {
   const byUser = new Map<string, string>()
-  for (const batch of chunk(userIds, PROFILE_CHUNK_SIZE)) {
+  for (const batch of chunk(userIds, ID_FILTER_CHUNK_SIZE)) {
     for (const profile of await listUserProfiles(scope, batch)) {
       if (profile.email !== '') byUser.set(profile.userId, profile.email)
     }
   }
   return byUser
+}
+
+/**
+ * The recipients who still accept this event on this channel, asked in lists D1 will bind.
+ *
+ * Order is the caller's, and it survives the chunking: `filterEnabledRecipients` returns its input
+ * filtered, so concatenating the answers concatenates the input.
+ */
+async function acceptingRecipients(
+  scope: TenantScope,
+  recipients: ReadonlyArray<string>,
+  eventType: string,
+  channel: NotificationChannel,
+): Promise<Array<string>> {
+  const accepting: Array<string> = []
+  for (const batch of chunk(recipients, ID_FILTER_CHUNK_SIZE)) {
+    accepting.push(
+      ...(await filterEnabledRecipients(scope, batch, eventType, channel)),
+    )
+  }
+  return accepting
 }
 
 /**
@@ -591,7 +636,7 @@ export async function dispatch(
 
   const named = await withActorName(scope, event)
 
-  const inAppRecipients = await filterEnabledRecipients(
+  const inAppRecipients = await acceptingRecipients(
     scope,
     recipients,
     event.kind,
@@ -602,7 +647,7 @@ export async function dispatch(
   let emailsEnqueued = 0
   if (requested.has('email')) {
     try {
-      const emailRecipients = await filterEnabledRecipients(
+      const emailRecipients = await acceptingRecipients(
         scope,
         recipients,
         event.kind,

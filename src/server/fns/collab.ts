@@ -15,7 +15,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
-import { appUrl, taskQueue } from '#/server/auth/env'
 import { dispatchQuietly } from '#/server/notifications/dispatch'
 import {
   castVote,
@@ -31,7 +30,14 @@ import {
   toggleReaction,
   updateCollabNote,
 } from '#/server/repos'
-import { appScope, mirrorToRoom, orNull, patch, tombstone } from './context'
+import {
+  appScope,
+  mirrorToRoom,
+  notificationDeps,
+  orNull,
+  patch,
+  tombstone,
+} from './context'
 
 import type { Trip } from '#/server/db/types'
 import type { TenantScope } from '#/server/repos'
@@ -114,7 +120,7 @@ async function notifyTripMessage(
       bodyParams: { preview: message.body.slice(0, PREVIEW_LENGTH) },
       actionUrl: `/trips/${trip.id}/collab`,
     },
-    { queue: taskQueue(), appUrl: appUrl() },
+    notificationDeps(),
   )
 }
 
