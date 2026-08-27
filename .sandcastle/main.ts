@@ -355,7 +355,10 @@ async function mergeBranches(passing: Array<{ issue: Issue }>): Promise<void> {
   })
 }
 
-async function runAuditor(closed: Issue[], iteration: number): Promise<void> {
+async function runAuditor(
+  closed: Issue[],
+  iteration: number,
+): Promise<{ refuted: number }> {
   // A throwaway branch off HEAD (post-merge state): git refuses to check the
   // integration branch out into a second worktree while this one holds it.
   // The audit is read-only, so the branch is never merged anywhere.
@@ -382,7 +385,8 @@ async function runAuditor(closed: Issue[], iteration: number): Promise<void> {
       console.error(
         '  AUDIT: no <audit> block in auditor output — treating as inconclusive, nothing reopened.',
       )
-      return
+      // Inconclusive blocks the auto-PR: an unverified merge is not clean.
+      return { refuted: 1 }
     }
     const verdicts = auditSchema.parse(JSON.parse(raw))
     for (const finding of verdicts.issues) {
@@ -420,9 +424,52 @@ async function runAuditor(closed: Issue[], iteration: number): Promise<void> {
       { id: 'audit', title: 'audit', branch: integrationBranch },
       1,
     )
+    return {
+      refuted: verdicts.issues.filter((f) => f.verdict === 'refuted').length,
+    }
   } finally {
     await sandbox.close()
   }
+}
+
+/**
+ * Open the human-review gate: push the integration branch and create a DRAFT
+ * PR to develop. Runs only when the run is clean — at least one merged issue
+ * and zero refuted verdicts in the final audit. Creating the PR is mechanical;
+ * reviewing and merging it stays human (ADR 0003).
+ */
+async function openIntegrationPr(merged: Issue[]): Promise<void> {
+  const { execSync } = await import('node:child_process')
+  const { writeFile } = await import('node:fs/promises')
+  execSync(`git push -u origin ${integrationBranch}`, { stdio: 'inherit' })
+  const existing = execSync(
+    `gh pr list --head ${integrationBranch} --state open --json number --jq 'length'`,
+    { encoding: 'utf8' },
+  ).trim()
+  if (existing !== '0') {
+    console.log(
+      `PR for ${integrationBranch} already open — pushed new commits to it.`,
+    )
+    return
+  }
+  const bodyPath = join(ARTIFACT_ROOT, 'pr-body.md')
+  await writeFile(
+    bodyPath,
+    [
+      `Sandcastle run \`${RUN_TS}\` completed cleanly: every issue below was implemented, reviewed, validated by the deterministic ladder (typecheck · lint · vitest · e2e when UI-touched) inside the CI-identical sandbox, merged, and confirmed by the adversarial auditor (full ladder incl. full e2e).`,
+      '',
+      '## Issues completed',
+      ...merged.map((i) => `- #${i.id} — ${i.title}`),
+      '',
+      `Artifacts (playwright reports, validation verdicts) on the operator host under \`${ARTIFACT_ROOT}\`.`,
+      '',
+      '_Draft on purpose: review, then mark ready and merge — the human gate of ADR 0003._',
+    ].join('\n'),
+  )
+  execSync(
+    `gh pr create --draft --base develop --head ${integrationBranch} --title ${JSON.stringify(`sandcastle: ${merged.map((i) => `#${i.id}`).join(', ')} — run ${RUN_TS}`)} --body-file ${JSON.stringify(bodyPath)}`,
+    { stdio: 'inherit' },
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -430,6 +477,8 @@ async function runAuditor(closed: Issue[], iteration: number): Promise<void> {
 // ---------------------------------------------------------------------------
 
 const limit = createLimiter(MAX_PARALLEL)
+const mergedAll: Issue[] = []
+let lastAuditRefuted = 0
 
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(
@@ -473,10 +522,23 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   }
 
   await mergeBranches(passing)
+  mergedAll.push(...passing.map((p) => p.issue))
   console.log('Branches merged. Running auditor…')
-  await runAuditor(
+  const audit = await runAuditor(
     passing.map((p) => p.issue),
     iteration,
+  )
+  lastAuditRefuted = audit.refuted
+}
+
+if (mergedAll.length > 0 && lastAuditRefuted === 0) {
+  console.log(
+    '\nRun is clean (merges present, final audit confirmed) — opening the draft PR to develop.',
+  )
+  await openIntegrationPr(mergedAll)
+} else if (mergedAll.length > 0) {
+  console.log(
+    `\nNOT opening a PR: the final audit left ${lastAuditRefuted} refuted verdict(s) unresolved (iteration cap reached). Review ${integrationBranch} by hand.`,
   )
 }
 
