@@ -24,6 +24,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply planned-travel-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply planned-travel-db --remote",
+    "db:migrate:remote:staging": "wrangler d1 migrations apply planned-travel-db-staging --remote --env staging",
     "cf-typegen": "wrangler types",
     "prepare": "husky",
     "sandcastle": "tsx .sandcastle/main.ts",

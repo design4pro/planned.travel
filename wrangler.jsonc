@@ -3,7 +3,7 @@
 
   // planned.travel — Cloudflare Workers configuration.
   //
-  // Placeholder ids below (D1 database_id, KV namespace ids) are filled in by the
+  // Resource ids below (D1 database_id, KV namespace ids) come from the
   // first-deploy runbook in docs/DEPLOY.md. Local development does not need real
   // ids: `vite dev` runs the bindings through Miniflare with local simulators.
   //
@@ -14,8 +14,16 @@
   "compatibility_date": "2026-08-15",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
-  "preview_urls": true,
+  // Version preview URLs live on workers.dev and would bypass Cloudflare Access.
+  "preview_urls": false,
   "upload_source_maps": true,
+
+  // Deploying attaches both custom domains, so deploy.yml's smoke check has a
+  // stable hostname without a manual dashboard step (docs/DEPLOY.md §8).
+  "routes": [
+    { "pattern": "planned.travel", "custom_domain": true },
+    { "pattern": "www.planned.travel", "custom_domain": true },
+  ],
 
   // Smart placement moves the Worker close to D1's primary region so that a
   // request that makes several sequential D1 round-trips pays the latency once
@@ -30,8 +38,8 @@
     "logs": {
       "enabled": true,
       "invocation_logs": true,
-      "head_sampling_rate": 1
-    }
+      "head_sampling_rate": 1,
+    },
   },
 
   "vars": {
@@ -49,34 +57,34 @@
     "EMAIL_FROM": "planned.travel <no-reply@planned.travel>",
     "EMAIL_API_URL": "https://api.resend.com/emails",
     "BACKUP_RETENTION_DAYS": 30,
-    "TASK_MAX_ATTEMPTS": 5
+    "TASK_MAX_ATTEMPTS": 5,
   },
 
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "planned-travel-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
-      "migrations_dir": "drizzle"
-    }
+      "database_id": "a9738748-8c2d-4e67-8e6d-8dc55171d219",
+      "migrations_dir": "drizzle",
+    },
   ],
 
   "kv_namespaces": [
     // Short-TTL read cache + queue idempotency + reminder index.
-    { "binding": "KV", "id": "0000000000000000000000000000000f" },
+    { "binding": "KV", "id": "3f473233842340f3ab9854c4b42e4495" },
     // Better Auth session store, read on nearly every authenticated request.
-    { "binding": "SESSIONS", "id": "0000000000000000000000000000000e" }
+    { "binding": "SESSIONS", "id": "bb185731c4474d85860a97e0d4cc35fa" },
   ],
 
   "r2_buckets": [
     // User uploads: journal photos, import files, generated exports.
     { "binding": "FILES", "bucket_name": "planned-travel-files" },
     // Protomaps `.pmtiles` archives, served by /api/tiles/*.
-    { "binding": "TILES", "bucket_name": "planned-travel-tiles" }
+    { "binding": "TILES", "bucket_name": "planned-travel-tiles" },
   ],
 
   "durable_objects": {
-    "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }]
+    "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }],
   },
 
   "migrations": [
@@ -84,8 +92,8 @@
       "tag": "v1",
       // SQLite-backed Durable Objects: cheaper, higher storage limits, and the
       // only class type available on the Workers Free plan.
-      "new_sqlite_classes": ["TripRoom"]
-    }
+      "new_sqlite_classes": ["TripRoom"],
+    },
   ],
 
   "queues": {
@@ -98,9 +106,9 @@
         "max_retries": 5,
         "max_concurrency": 4,
         "retry_delay": 10,
-        "dead_letter_queue": "planned-travel-tasks-dlq"
-      }
-    ]
+        "dead_letter_queue": "planned-travel-tasks-dlq",
+      },
+    ],
   },
 
   "triggers": {
@@ -110,22 +118,30 @@
       // Nightly D1 export to R2.
       "0 3 * * *",
       // Weekly retention prune of expired backups and export artifacts.
-      "17 4 * * 1"
-    ]
+      "17 4 * * 1",
+    ],
   },
 
   "env": {
     "staging": {
       "name": "planned-travel-staging",
-      "workers_dev": true,
+      // Both false: the workers.dev origin would bypass Cloudflare Access.
+      "workers_dev": false,
+      "preview_urls": false,
       // Deploying attaches the custom domain, so deploy-staging.yml's smoke
       // check has a stable hostname without a manual dashboard step.
-      "routes": [{ "pattern": "staging.planned.travel", "custom_domain": true }],
+      "routes": [
+        { "pattern": "staging.planned.travel", "custom_domain": true },
+      ],
       "placement": { "mode": "smart" },
       "observability": {
         "enabled": true,
         "head_sampling_rate": 1,
-        "logs": { "enabled": true, "invocation_logs": true, "head_sampling_rate": 1 }
+        "logs": {
+          "enabled": true,
+          "invocation_logs": true,
+          "head_sampling_rate": 1,
+        },
       },
       "vars": {
         "ENVIRONMENT": "staging",
@@ -138,30 +154,32 @@
         "EMAIL_FROM": "planned.travel staging <no-reply@staging.planned.travel>",
         "EMAIL_API_URL": "https://api.resend.com/emails",
         "BACKUP_RETENTION_DAYS": 7,
-        "TASK_MAX_ATTEMPTS": 3
+        "TASK_MAX_ATTEMPTS": 3,
       },
       "d1_databases": [
         {
           "binding": "DB",
           "database_name": "planned-travel-db-staging",
-          "database_id": "00000000-0000-0000-0000-000000000001",
-          "migrations_dir": "drizzle"
-        }
+          "database_id": "0a30dba4-6978-494c-b2f0-2d02ca9a153e",
+          "migrations_dir": "drizzle",
+        },
       ],
       "kv_namespaces": [
-        { "binding": "KV", "id": "0000000000000000000000000000000d" },
-        { "binding": "SESSIONS", "id": "0000000000000000000000000000000c" }
+        { "binding": "KV", "id": "f6926d91cf9b4a5687090bf89cb5a0b6" },
+        { "binding": "SESSIONS", "id": "487cdb7ce2364ca1a61bce537429799c" },
       ],
       "r2_buckets": [
         { "binding": "FILES", "bucket_name": "planned-travel-files-staging" },
-        { "binding": "TILES", "bucket_name": "planned-travel-tiles" }
+        { "binding": "TILES", "bucket_name": "planned-travel-tiles" },
       ],
       "durable_objects": {
-        "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }]
+        "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }],
       },
       "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TripRoom"] }],
       "queues": {
-        "producers": [{ "binding": "TASKS", "queue": "planned-travel-tasks-staging" }],
+        "producers": [
+          { "binding": "TASKS", "queue": "planned-travel-tasks-staging" },
+        ],
         "consumers": [
           {
             "queue": "planned-travel-tasks-staging",
@@ -170,11 +188,11 @@
             "max_retries": 3,
             "max_concurrency": 2,
             "retry_delay": 10,
-            "dead_letter_queue": "planned-travel-tasks-staging-dlq"
-          }
-        ]
+            "dead_letter_queue": "planned-travel-tasks-staging-dlq",
+          },
+        ],
       },
-      "triggers": { "crons": ["0 3 * * *"] }
-    }
-  }
+      "triggers": { "crons": ["0 3 * * *"] },
+    },
+  },
 }
