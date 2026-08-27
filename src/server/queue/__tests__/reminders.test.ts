@@ -28,10 +28,12 @@ import {
 import { createLogger, createMemorySink } from '#/server/observability'
 import { createHarness } from '#/server/repos/__tests__/harness'
 
+import type { ReminderScanOptions } from '#/server/catalog/reminders'
 import type { LogRecord } from '#/server/observability'
 import type * as Repos from '#/server/repos'
 import type { TenantContext } from '#/server/repos'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
+import type { ReminderSweepResult } from '../reminders'
 import type { TaskBindings } from '../types'
 
 /* ------------------------------------------------------------------ mocking */
@@ -41,6 +43,11 @@ const spies = vi.hoisted(() => ({
   scopes: [] as Array<TenantContext>,
   /** When set, reading this trip throws — one broken workspace inside a healthy tick. */
   failTripId: null as string | null,
+  /**
+   * Runs once inside the next read, before it delegates: the gap between the scan and the read,
+   * held open long enough for a test to move the row the scan answered with.
+   */
+  beforeRead: null as (() => Promise<void>) | null,
 }))
 
 vi.mock('#/server/repos', async (importOriginal) => {
@@ -53,6 +60,11 @@ vi.mock('#/server/repos', async (importOriginal) => {
       spies.scopes.push(args[0].ctx)
       if (spies.failTripId === args[1]) {
         throw new Error('the trip row could not be read')
+      }
+      const interleaved = spies.beforeRead
+      if (interleaved !== null) {
+        spies.beforeRead = null
+        await interleaved()
       }
       return actual.requireTrip(...args)
     },
@@ -236,15 +248,22 @@ function env(
   }
 }
 
+/** One cron tick over the doubles: what it returned, and what it wrote to the log. */
 async function sweep(
   kv: ReturnType<typeof memoryKv>,
   queue: ReturnType<typeof recordingQueue>,
   at: number = NOW,
-) {
-  const { logger } = memoryLogger()
-  return sweepReminders(env(kv, queue), logger, at, {
+  scan?: ReminderScanOptions,
+): Promise<{
+  result: ReminderSweepResult
+  sink: ReturnType<typeof createMemorySink>
+}> {
+  const { logger, sink } = memoryLogger()
+  const result = await sweepReminders(env(kv, queue), logger, at, {
     databaseFor: () => harness.db,
+    ...(scan === undefined ? {} : { scan }),
   })
+  return { result, sink }
 }
 
 /* ---------------------------------------------------------------- the anchor */
@@ -410,11 +429,10 @@ describe('sweepReminders', () => {
     beta = await seedWorld('beta')
     spies.scopes = []
     spies.failTripId = null
+    spies.beforeRead = null
   })
 
   afterEach(() => {
-    spies.scopes = []
-    spies.failTripId = null
     harness.close()
   })
 
@@ -424,7 +442,7 @@ describe('sweepReminders', () => {
     const queue = recordingQueue()
     const { listNotifications } = await import('#/server/repos')
 
-    const result = await sweep(kv, queue)
+    const { result } = await sweep(kv, queue)
 
     expect(result).toEqual({
       scanned: 1,
@@ -473,9 +491,9 @@ describe('sweepReminders', () => {
     const second = await sweep(kv, recordingQueue(), NOW + 15 * 60_000)
     const third = await sweep(kv, recordingQueue(), DUE_AT + DAY_MS - 1)
 
-    expect(first.notified).toBe(1)
-    expect(second).toMatchObject({ due: 1, notified: 0, skipped: 1 })
-    expect(third).toMatchObject({ due: 1, notified: 0, skipped: 1 })
+    expect(first.result.notified).toBe(1)
+    expect(second.result).toMatchObject({ due: 1, notified: 0, skipped: 1 })
+    expect(third.result).toMatchObject({ due: 1, notified: 0, skipped: 1 })
     expect(
       (await listNotifications(alpha.tenant.scope, alpha.ownerId)).items,
     ).toHaveLength(1)
@@ -505,12 +523,36 @@ describe('sweepReminders', () => {
     })
     const later = await sweep(kv, queue, DUE_AT + 7 * DAY_MS + 60_000)
 
-    expect(later.notified).toBe(1)
+    expect(later.result.notified).toBe(1)
     expect(queue.ids()).toEqual([
       `notify:${REMINDER_EVENT_KIND}:${tripId}:${DUE_AT}:${alpha.ownerId}`,
       `notify:${REMINDER_EVENT_KIND}:${tripId}:${DUE_AT + 7 * DAY_MS}:${alpha.ownerId}`,
     ])
     expect([...kv.store.keys()]).toHaveLength(2)
+  })
+
+  it('skips a trip whose anchor moved between the scan and the read', async () => {
+    const tripId = await seedTrip(alpha)
+    const kv = memoryKv()
+    const queue = recordingQueue()
+    const { updateTrip } = await import('#/server/repos')
+    // The scan and the read are two statements. Moving the row inside that gap is the race the
+    // re-derivation exists for: the sentence and the marker would otherwise describe an instant
+    // this trip no longer has.
+    spies.beforeRead = async () => {
+      await updateTrip(alpha.tenant.scope, tripId, {
+        startDate: dayString(NOW + 10 * DAY_MS),
+      })
+    }
+
+    const { result, sink } = await sweep(kv, queue)
+
+    expect(result).toMatchObject({ due: 1, notified: 0, skipped: 1, failed: 0 })
+    expect(queue.bodies).toEqual([])
+    // No marker and no message: the trip belongs to a later instant now, and the tick that finds
+    // it there must not be looking at a window this one closed.
+    expect([...kv.store.keys()]).toEqual([])
+    expect(messaged(sink, 'a due trip’s anchor moved')).toBe(1)
   })
 
   it('runs under the trip owner’s scope, at the role that member holds in the workspace', async () => {
@@ -536,7 +578,7 @@ describe('sweepReminders', () => {
     await changeMemberRole(alpha.tenant.scope, second?.id ?? '', 'admin')
     await dropTripMember(alpha, tripId, alpha.ownerId)
 
-    const result = await sweep(memoryKv(), recordingQueue())
+    const { result } = await sweep(memoryKv(), recordingQueue())
 
     expect(result.notified).toBe(1)
     // The role comes from `member`, never from the trip row: the fallback member is an `editor` on
@@ -550,7 +592,7 @@ describe('sweepReminders', () => {
     await dropTripMember(alpha, tripId, alpha.ownerId)
     const kv = memoryKv()
 
-    const result = await sweep(kv, recordingQueue())
+    const { result } = await sweep(kv, recordingQueue())
 
     expect(result).toMatchObject({ due: 1, notified: 0, skipped: 1, failed: 0 })
     expect([...kv.store.keys()]).toEqual([])
@@ -561,17 +603,9 @@ describe('sweepReminders', () => {
     await seedTrip(beta, { title: 'Porto in autumn' })
     spies.failTripId = failing
     const kv = memoryKv()
-    const { logger, sink } = memoryLogger()
     const { listNotifications } = await import('#/server/repos')
 
-    const result = await sweepReminders(
-      env(kv, recordingQueue()),
-      logger,
-      NOW,
-      {
-        databaseFor: () => harness.db,
-      },
-    )
+    const { result, sink } = await sweep(kv, recordingQueue())
 
     expect(result).toMatchObject({ due: 2, notified: 1, failed: 1 })
     expect(
@@ -586,44 +620,47 @@ describe('sweepReminders', () => {
     const tripId = await seedTrip(alpha)
     const kv = memoryKv({ get: true })
     const queue = recordingQueue()
-    const { logger, sink } = memoryLogger()
-    const bindings = env(kv, queue)
 
-    const first = await sweepReminders(bindings, logger, NOW, {
-      databaseFor: () => harness.db,
-    })
-    const second = await sweepReminders(bindings, logger, NOW + 15 * 60_000, {
-      databaseFor: () => harness.db,
-    })
+    const first = await sweep(kv, queue)
+    const second = await sweep(kv, queue, NOW + 15 * 60_000)
 
-    expect(first.notified).toBe(1)
-    expect(second.notified).toBe(1)
+    expect(first.result.notified).toBe(1)
+    expect(second.result.notified).toBe(1)
     // Two dispatches, one envelope id: the queue's own idempotency is the half that still holds
     // when the marker cannot be read, which is why an unreadable marker means "not yet sent".
     expect(new Set(queue.ids()).size).toBe(1)
     expect(queue.ids()[0]).toBe(
       `notify:${REMINDER_EVENT_KIND}:${tripId}:${DUE_AT}:${alpha.ownerId}`,
     )
-    expect(messaged(sink, 'reminder marker could not be read')).toBe(2)
+    expect(messaged(first.sink, 'reminder marker could not be read')).toBe(1)
+    expect(messaged(second.sink, 'reminder marker could not be read')).toBe(1)
   })
 
   it('reminds anyway when the marker cannot be written, and says so', async () => {
     await seedTrip(alpha)
     const kv = memoryKv({ put: true })
-    const { logger, sink } = memoryLogger()
 
-    const result = await sweepReminders(
-      env(kv, recordingQueue()),
-      logger,
-      NOW,
-      {
-        databaseFor: () => harness.db,
-      },
-    )
+    const { result, sink } = await sweep(kv, recordingQueue())
 
     expect(result.notified).toBe(1)
     expect(result.failed).toBe(0)
     expect(messaged(sink, 'reminder marker could not be written')).toBe(1)
+  })
+
+  it('says so when the scan’s row bound cut the tick short', async () => {
+    await seedTrip(alpha, { title: 'First' })
+    await seedTrip(alpha, { title: 'Second' })
+    const kv = memoryKv()
+
+    const { result, sink } = await sweep(kv, recordingQueue(), NOW, {
+      pageSize: 1,
+      maxRows: 1,
+    })
+
+    // One trip reminded, the other left for a later tick — and a line saying so, because a bound
+    // that truncates quietly reads exactly like a window with nothing else in it.
+    expect(result).toMatchObject({ scanned: 1, due: 1, notified: 1 })
+    expect(messaged(sink, 'reminder scan hit its row bound')).toBe(1)
   })
 
   it('reports a missing DB binding instead of throwing at the cron', async () => {
@@ -651,7 +688,7 @@ describe('sweepReminders', () => {
     const kv = memoryKv()
     const queue = recordingQueue()
 
-    expect(await sweep(kv, queue)).toEqual({
+    expect((await sweep(kv, queue)).result).toEqual({
       scanned: 0,
       due: 0,
       notified: 0,

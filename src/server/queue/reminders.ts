@@ -167,11 +167,10 @@ type ReminderStore = TaskBindings['KV']
 async function alreadyReminded(
   kv: ReminderStore,
   logger: Logger,
-  key: string,
   due: DueTripReminder,
 ): Promise<boolean> {
   try {
-    return (await kv.get(key)) !== null
+    return (await kv.get(reminderMarkerKey(due))) !== null
   } catch (cause) {
     logger.warn(
       'reminder marker could not be read; falling back to queue idempotency',
@@ -189,11 +188,10 @@ async function alreadyReminded(
 async function markReminded(
   kv: ReminderStore,
   logger: Logger,
-  key: string,
   due: DueTripReminder,
 ): Promise<void> {
   try {
-    await kv.put(key, String(due.dueAt), {
+    await kv.put(reminderMarkerKey(due), String(due.dueAt), {
       expirationTtl: REMINDER_MARKER_TTL_SECONDS,
     })
   } catch (cause) {
@@ -271,13 +269,12 @@ type Outcome = 'notified' | 'skipped'
 
 async function remindTrip(
   db: Database,
-  env: TaskBindings,
+  kv: ReminderStore,
   logger: Logger,
   due: DueTripReminder,
   deps: DispatchDeps,
 ): Promise<Outcome> {
-  const key = reminderMarkerKey(due)
-  if (await alreadyReminded(env.KV, logger, key, due)) {
+  if (await alreadyReminded(kv, logger, due)) {
     return 'skipped'
   }
 
@@ -323,7 +320,7 @@ async function remindTrip(
     deps,
   )
 
-  await markReminded(env.KV, logger, key, due)
+  await markReminded(kv, logger, due)
   return 'notified'
 }
 
@@ -355,7 +352,7 @@ export async function sweepReminders(
   const databaseFor =
     options.databaseFor ?? ((handle: D1Handle) => drizzle(handle))
   const db = databaseFor(binding)
-  const scan = await listDueTripReminders(db, scheduledTime, options.scan ?? {})
+  const scan = await listDueTripReminders(db, scheduledTime, options.scan)
 
   if (scan.truncated) {
     logger.warn(
@@ -377,7 +374,7 @@ export async function sweepReminders(
 
   for (const due of scan.due) {
     try {
-      if ((await remindTrip(db, env, logger, due, deps)) === 'notified') {
+      if ((await remindTrip(db, env.KV, logger, due, deps)) === 'notified') {
         notified += 1
       } else {
         skipped += 1
@@ -402,6 +399,8 @@ export async function sweepReminders(
     skipped,
     failed,
   }
+  // Only when there was something to do: a `*/15` cron with an empty window is the common case, and
+  // a line for every quiet tick is what makes the loud ones hard to find.
   if (scan.due.length > 0) {
     logger.info('reminder sweep finished', { ...result, scheduledTime })
   }

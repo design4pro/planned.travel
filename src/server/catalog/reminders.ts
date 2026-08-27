@@ -208,7 +208,7 @@ export async function listDueTripReminders(
   const pageSize = Math.max(1, options.pageSize ?? REMINDER_SCAN_PAGE_SIZE)
   const maxRows = Math.max(1, options.maxRows ?? REMINDER_SCAN_MAX_ROWS)
 
-  const window = and(
+  const scanWindow = and(
     isNotNull(trips.startDate),
     gt(trips.reminderDays, 0),
     eq(trips.isArchived, false),
@@ -219,7 +219,6 @@ export async function listDueTripReminders(
   const due: Array<DueTripReminder> = []
   let cursor: { startDate: string; id: string } | null = null
   let scanned = 0
-  let truncated = false
 
   while (scanned < maxRows) {
     const take = Math.min(pageSize, maxRows - scanned)
@@ -231,14 +230,15 @@ export async function listDueTripReminders(
         reminderDays: trips.reminderDays,
       })
       .from(trips)
-      .where(and(window, after(cursor)))
+      .where(and(scanWindow, after(cursor)))
       .orderBy(asc(trips.startDate), asc(trips.id))
       .limit(take)
 
     scanned += rows.length
     for (const row of rows) {
-      // Never null in practice — `isNotNull` is in the predicate — but the column's type says it
-      // can be, and a cursor that cannot advance would loop the page forever.
+      // Unreachable — `isNotNull` is in the predicate — but the column's type still admits null
+      // and a non-null assertion on a genuinely nullable column is not something this codebase
+      // writes, so the cursor falls back to a string the ordering can carry.
       const startDate = row.startDate ?? ''
       cursor = { startDate, id: row.tripId }
       const dueAt = reminderDueAt({
@@ -254,11 +254,14 @@ export async function listDueTripReminders(
       }
     }
 
+    // A short page is the end of the window: there is no next key to ask for.
     if (rows.length < take) {
       return { due, scanned, truncated: false }
     }
-    truncated = scanned >= maxRows
   }
 
-  return { due, scanned, truncated }
+  // The only other way out of the loop is `maxRows`, so reaching here is the bound biting. It
+  // reports truncation for a window that happens to hold exactly `maxRows` rows too — the cheap
+  // direction, since the alternative is one more statement per tick to prove there is nothing left.
+  return { due, scanned, truncated: true }
 }
