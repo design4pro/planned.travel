@@ -27,12 +27,17 @@
  * Hungarian forint*. They are all frozen in `./format-tables`, which documents
  * each divergence and where its value came from.
  *
- * Three fields stay live because all three were measured byte-identical in the
- * three runtimes across all twenty-three locales — decimal and percent grouping,
- * the narrow currency symbol, and the composed `{ month: 'long', year: 'numeric'
- * }` form. `e2e/i18n-runtime-parity.spec.ts` re-proves that on every run by
- * rendering this module's whole surface in WebKit and comparing it against what
- * the Worker produced, and fails the run on any difference.
+ * Three fields are still composed by `Intl` — the decimal and percent forms, the
+ * narrow currency symbol, and the composed `{ month: 'long', year: 'numeric' }`
+ * form — because their separators and digit widths were measured byte-identical
+ * in the three runtimes across all twenty-three locales. What is *not* left to
+ * the runtime is any default those calls would otherwise read out of ICU: every
+ * number formatter below is handed the frozen row's numbering system (through
+ * the `-u-nu-latn` tag) and its `useGrouping` rule, because the linux WebKit the
+ * CI container ships answers `arab` for `ar` and groups Italian's four digits
+ * where workerd does neither. `e2e/i18n-runtime-parity.spec.ts` re-proves the
+ * whole surface on every run by rendering it in WebKit and comparing it against
+ * what the Worker produced, and fails the run on any difference.
  *
  * `countryName` deliberately does *not* live here. It is the one helper in the
  * old module that reached for `Intl.DisplayNames`, whose region names also differ
@@ -128,7 +133,10 @@ function numberFormatter(locale: Locale): Intl.NumberFormat {
   if (cached !== undefined) {
     return cached
   }
-  const made = new Intl.NumberFormat(formatsFor(locale).intlLocale)
+  const formats = formatsFor(locale)
+  const made = new Intl.NumberFormat(formats.intlLocale, {
+    useGrouping: formats.grouping,
+  })
   numberFormatters.set(locale, made)
   return made
 }
@@ -138,9 +146,11 @@ function percentFormatter(locale: Locale): Intl.NumberFormat {
   if (cached !== undefined) {
     return cached
   }
-  const made = new Intl.NumberFormat(formatsFor(locale).intlLocale, {
+  const formats = formatsFor(locale)
+  const made = new Intl.NumberFormat(formats.intlLocale, {
     style: 'percent',
     maximumFractionDigits: 0,
+    useGrouping: formats.grouping,
   })
   percentFormatters.set(locale, made)
   return made
@@ -153,10 +163,12 @@ function fixedFormatter(locale: Locale, digits: number): Intl.NumberFormat {
   if (cached !== undefined) {
     return cached
   }
-  const made = new Intl.NumberFormat(formatsFor(locale).intlLocale, {
+  const formats = formatsFor(locale)
+  const made = new Intl.NumberFormat(formats.intlLocale, {
     style: 'decimal',
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
+    useGrouping: formats.grouping,
   })
   fixedFormatters.set(key, made)
   return made
