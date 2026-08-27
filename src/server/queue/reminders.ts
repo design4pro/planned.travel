@@ -1,156 +1,409 @@
 /**
- * Reminder index.
+ * The pre-departure reminder sweep — the quarter-hourly cron's only job.
  *
- * Reminders ("your flight to Lisbon is tomorrow") must fire without a cron job
- * scanning D1 every fifteen minutes. Instead the write path registers a reminder
- * in KV under a key whose prefix sorts by due time, and the cron sweep lists the
- * head of that range. KV returns keys in lexicographic order, so a zero-padded
- * epoch prefix gives a due-date queue for the cost of one list call.
+ * ADR 0005 chose a scan over a schedule. Nothing registers a reminder when a trip is written:
+ * `src/server/catalog/reminders.ts` asks D1 which trips are due right now, and this module turns
+ * each answer into a notification through the dispatch layer `00-S2` built. **A scheduler call
+ * added to a write path is a defect, not an optimisation** — the scan reads the current rows, so a
+ * moved start date is simply a different due instant on the next tick, and there is no stored copy
+ * of a date to cancel, rewrite or leak.
  *
- * Cost at 10 users is a handful of KV writes a day. Cost at 10 000 users is the
- * same shape: one `list` per cron tick per 1 000 due reminders.
+ * What the module before this one did instead, and why none of it survives: it built a KV key whose
+ * zero-padded due time sorted lexicographically, and `scheduleReminder`/`cancelReminder` had zero
+ * callers anywhere in `src/`. The sweep therefore ran every fifteen minutes over an empty index and
+ * had never delivered anything. Its unchunked `enqueueTasks` — the landmine
+ * `docs/plans/00-foundations.md` records — goes with it: dispatch owns the fan-out now and chunks
+ * against the limits each half actually has.
+ *
+ * ## The four decisions
+ *
+ * - **The marker is KV, and losing it is survivable.** `reminded:<orgId>:<tripId>:<dueInstant>` is
+ *   written only *after* dispatch returns, so a tick that dies mid-flight retries rather than
+ *   swallowing the reminder. KV is eventually consistent and can fail outright; when it does, the
+ *   sweep proceeds and the queue's own idempotency key — the envelope id — is what stops a second
+ *   email. The in-app row is the part that can duplicate, which is the cheaper of the two failures.
+ * - **The scope belongs to a real member, never to the sweep.** There is no session behind a cron,
+ *   so the identity is resolved from the trip: the owner membership if the trip has one, any member
+ *   otherwise, and a trip with no members is skipped rather than reminded as nobody. See
+ *   {@link scopeForTrip} for the one fabricated value in the path and what bounds it.
+ * - **The event carries no actor.** A reminder excludes nobody, and `dispatch` drops the actor from
+ *   the recipient set — an actor here would silently deny the trip's owner their own reminder.
+ * - **Failures isolate per trip.** One workspace whose membership rows are broken must not cost
+ *   every other workspace its morning.
  */
 
-import { z } from 'zod'
-import { SYSTEM_ORG_ID, enqueueTasks } from './jobs'
-import type { EnqueueInput } from './jobs'
-import type { TaskBindings, TaskKind } from './types'
-import type { Logger } from '../observability/logger'
+import { drizzle } from 'drizzle-orm/d1'
 
-export const REMINDER_PREFIX = 'reminder:'
+import { isOrganizationRole } from '#/server/auth/tenant'
+import { listDueTripReminders, reminderDueAt } from '#/server/catalog/reminders'
+import { dispatch } from '#/server/notifications/dispatch'
+import { serializeError } from '#/server/observability'
+import {
+  createScope,
+  getMembership,
+  listTripMembers,
+  requireTrip,
+} from '#/server/repos'
 
-/** 13 digits covers epoch milliseconds until the year 33658. */
-const DUE_WIDTH = 13
+import type {
+  DueTripReminder,
+  ReminderScanOptions,
+} from '#/server/catalog/reminders'
+import type { Database } from '#/server/db/types'
+import type { DispatchDeps } from '#/server/notifications/dispatch'
+import type { Logger } from '#/server/observability'
+import type { TenantScope } from '#/server/repos'
+import type { TaskBindings } from './types'
 
-export const reminderRecordSchema = z.object({
-  orgId: z.string().min(1).max(64),
-  tripId: z.string().min(1).max(64),
-  entity: z.object({ kind: z.string().min(1).max(32), id: z.string().min(1).max(64) }),
-  dueAt: z.number().int().positive(),
-  to: z.array(z.string().email()).min(1).max(20),
-  subject: z.string().min(1).max(200),
-  html: z.string().min(1).max(100_000),
-  text: z.string().max(100_000).optional(),
-})
+/* -------------------------------------------------------------------------------------------------
+ * Names
+ * ---------------------------------------------------------------------------------------------- */
 
-export type ReminderRecord = z.infer<typeof reminderRecordSchema>
+export const REMINDER_MARKER_PREFIX = 'reminded:'
 
-export function reminderKey(record: Pick<ReminderRecord, 'dueAt' | 'orgId' | 'entity'>): string {
-  const due = String(Math.trunc(record.dueAt)).padStart(DUE_WIDTH, '0')
-  return `${REMINDER_PREFIX}${due}:${record.orgId}:${record.entity.kind}:${record.entity.id}`
+/**
+ * How long a marker outlives the window it closes.
+ *
+ * The window itself is 24 hours, so anything past a day is only insurance against a clock or a
+ * redelivery far out of order. Thirty days is the same order as the queue's own dead-letter
+ * retention and costs one small KV value per reminder actually sent.
+ */
+export const REMINDER_MARKER_TTL_SECONDS = 30 * 24 * 60 * 60
+
+/**
+ * The notification kind, and therefore the row the preference table is keyed by: switching
+ * `trip.reminder` off in notification settings switches off exactly these.
+ */
+export const REMINDER_EVENT_KIND = 'trip.reminder'
+
+/**
+ * The catalogue key the sentence is rendered from — `shell.notification.trip.starting_soon.*`,
+ * which ships in all twenty-three locales and already takes `{tripTitle}` and a plural `{days}`.
+ *
+ * Deliberately *not* {@link REMINDER_EVENT_KIND}: `titleKey` defaults to the kind, and a
+ * `trip.reminder` key does not exist in the catalogue, so the default would render the fallback
+ * line ("Something changed in your workspace") on every reminder. Copy is never written here
+ * (`docs/SPEC.md` §9), so the event names the shipped template instead of inventing one.
+ */
+export const REMINDER_COPY_KEY = 'trip.starting_soon'
+
+/**
+ * The `entityId` the notification and its queue envelope are keyed by.
+ *
+ * The due instant is *inside* the id, and that is the whole re-fire story. `dispatch` builds its
+ * envelope as `notify:<kind>:<entityId>:<recipientUserId>` and the consumer acks a redelivery of an
+ * id it has already completed, so an id of the trip alone would collapse two genuinely different
+ * reminders — the one for the old start date and the one for the new — into a single delivery. A
+ * moved date is a new instant, therefore a new id, therefore a reminder that actually arrives.
+ *
+ * It costs the in-app row a compound `entity_id`, which is the honest trade: `notifications`
+ * carries no foreign key on that column, nothing in `src/` queries notifications by it, and
+ * `actionUrl` is what the reader actually follows.
+ */
+export function reminderEntityId(tripId: string, dueAt: number): string {
+  return `${tripId}:${dueAt}`
 }
 
-/** Parses the due timestamp back out of a key without reading the value. */
-export function reminderDueFromKey(key: string): number | null {
-  if (!key.startsWith(REMINDER_PREFIX)) return null
-  const due = Number.parseInt(key.slice(REMINDER_PREFIX.length, REMINDER_PREFIX.length + DUE_WIDTH), 10)
-  return Number.isFinite(due) ? due : null
+/** The once-per-window marker. Scoped by organization so two tenants can never share one. */
+export function reminderMarkerKey(due: DueTripReminder): string {
+  return `${REMINDER_MARKER_PREFIX}${due.organizationId}:${due.tripId}:${due.dueAt}`
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Ports
+ * ---------------------------------------------------------------------------------------------- */
+
+/** The D1 binding as `TaskBindings` declares it, without the `undefined`. */
+type D1Handle = NonNullable<TaskBindings['DB']>
+
+/**
+ * How a D1 binding becomes a Drizzle handle.
+ *
+ * Injectable for the same mechanical reason `queue/handlers/travel-stats.ts` states: `createDb`
+ * reads the ambient Worker environment at module scope, so importing it here would drag
+ * `cloudflare:workers` into a graph the `server` Vitest project runs in plain Node.
+ */
+export type DatabaseFor = (binding: D1Handle) => Database
+
+export interface ReminderSweepOptions {
+  readonly databaseFor?: DatabaseFor
+  readonly scan?: ReminderScanOptions
+}
+
+export interface ReminderSweepResult {
+  /** Rows the window returned, due or not. */
+  readonly scanned: number
+  /** Rows whose due instant fell inside this tick's window. */
+  readonly due: number
+  /** Trips that dispatched and got a marker. */
+  readonly notified: number
+  /** Already marked, no member to remind, or an anchor that moved under the scan. */
+  readonly skipped: number
+  /** Trips whose reminder threw. Counted, logged, and never propagated. */
+  readonly failed: number
+}
+
+const EMPTY_SWEEP: ReminderSweepResult = {
+  scanned: 0,
+  due: 0,
+  notified: 0,
+  skipped: 0,
+  failed: 0,
 }
 
 type ReminderStore = TaskBindings['KV']
 
-/**
- * Registers (or re-registers) a reminder. Writing the same entity twice with a
- * new due time leaves the old key behind, so callers cancel first — the repos
- * that own reservations do exactly that when a date changes.
- */
-export async function scheduleReminder(kv: ReminderStore, record: ReminderRecord): Promise<string> {
-  const parsed = reminderRecordSchema.parse(record)
-  const key = reminderKey(parsed)
-  // The key expires shortly after its due time so a missed sweep self-cleans.
-  const ttlSeconds = Math.max(60, Math.ceil((parsed.dueAt - Date.now()) / 1000) + 7 * 24 * 60 * 60)
-  await kv.put(key, JSON.stringify(parsed), { expirationTtl: ttlSeconds })
-  return key
-}
-
-export async function cancelReminder(
-  kv: ReminderStore,
-  record: Pick<ReminderRecord, 'dueAt' | 'orgId' | 'entity'>,
-): Promise<void> {
-  await kv.delete(reminderKey(record))
-}
-
-export interface DueReminder {
-  key: string
-  record: ReminderRecord
-}
+/* -------------------------------------------------------------------------------------------------
+ * The marker
+ * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Reads reminders whose due time has passed. Stops at the first key that is not
- * yet due — the ordering guarantees everything after it is in the future too.
+ * Has this trip already been reminded for this instant?
+ *
+ * A KV read that fails answers "no". That is the deliberate direction: the alternative — treating an
+ * unreadable marker as "probably sent" — turns a KV outage into a silently skipped morning for every
+ * workspace, and the envelope id already stops the email half from going twice.
  */
-export async function dueReminders(
+async function alreadyReminded(
   kv: ReminderStore,
-  now: number,
-  limit = 200,
-): Promise<Array<DueReminder>> {
-  const listed = await kv.list({ prefix: REMINDER_PREFIX, limit: Math.min(limit, 1000) })
-  const due: Array<DueReminder> = []
-  for (const key of listed.keys) {
-    const dueAt = reminderDueFromKey(key.name)
-    if (dueAt === null) continue
-    if (dueAt > now) break
-    const raw = await kv.get(key.name)
-    if (raw === null) continue
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(raw)
-    } catch {
-      continue
-    }
-    const record = reminderRecordSchema.safeParse(parsed)
-    if (!record.success) continue
-    due.push({ key: key.name, record: record.data })
-    if (due.length >= limit) break
+  logger: Logger,
+  key: string,
+  due: DueTripReminder,
+): Promise<boolean> {
+  try {
+    return (await kv.get(key)) !== null
+  } catch (cause) {
+    logger.warn(
+      'reminder marker could not be read; falling back to queue idempotency',
+      {
+        tripId: due.tripId,
+        organizationId: due.organizationId,
+        ...serializeError(cause),
+      },
+    )
+    return false
   }
-  return due
 }
 
-export interface ReminderSweepResult {
-  scanned: number
-  enqueued: number
-  discarded: number
+/** Closes the window. A failure here costs a possible duplicate in-app row, never the reminder. */
+async function markReminded(
+  kv: ReminderStore,
+  logger: Logger,
+  key: string,
+  due: DueTripReminder,
+): Promise<void> {
+  try {
+    await kv.put(key, String(due.dueAt), {
+      expirationTtl: REMINDER_MARKER_TTL_SECONDS,
+    })
+  } catch (cause) {
+    logger.warn(
+      'reminder marker could not be written; the next tick may repeat the inbox row',
+      {
+        tripId: due.tripId,
+        organizationId: due.organizationId,
+        ...serializeError(cause),
+      },
+    )
+  }
 }
+
+/* -------------------------------------------------------------------------------------------------
+ * The scope
+ * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Cron entry point: turns due reminders into `email` jobs and clears their keys.
- * Sending is the queue's job, so a provider outage retries without re-scanning.
+ * The user a probe read acts as before a real member is known.
+ *
+ * The one fabricated value in this path, and what bounds it is that both reads made through the
+ * probe — `listTripMembers` and `getMembership` — are `tenantFilter()`-bound on `organization_id`
+ * and compare no user id at all, so the probe can see exactly the rows the organization already
+ * owns and nothing that depends on who is asking. The scope every subsequent read runs under is
+ * built from a member the probe found, at the role that member actually holds. It is never used to
+ * write.
+ */
+const PROBE_USER_ID = 'system'
+
+/**
+ * The tenant scope one due trip's reminder runs under, or `null` when nobody can receive it.
+ *
+ * Owner first, then any member, because a reminder should be attributed to the person who owns the
+ * trip when there is one — and because "any member" is the only honest fallback for a trip whose
+ * owner has since left the workspace. `getMembership` is the least-privilege read there is: a
+ * tenant-filtered `findOne` that asserts no role, so the probe can only ever see the row that
+ * decides the real one. A trip member with no workspace membership is skipped rather than trusted.
+ */
+async function scopeForTrip(
+  db: Database,
+  due: DueTripReminder,
+): Promise<TenantScope | null> {
+  const probe = createScope(db, {
+    userId: PROBE_USER_ID,
+    organizationId: due.organizationId,
+    role: 'member',
+  })
+
+  const members = await listTripMembers(probe, due.tripId)
+  const candidates = [
+    ...members.filter((row) => row.role === 'owner'),
+    ...members.filter((row) => row.role !== 'owner'),
+  ]
+
+  for (const candidate of candidates) {
+    const membership = await getMembership(probe, candidate.userId)
+    if (membership === null) continue
+    return createScope(db, {
+      userId: candidate.userId,
+      organizationId: due.organizationId,
+      // An unrecognised value in the column resolves to the least privilege, never to
+      // "unset, therefore permissive".
+      role: isOrganizationRole(membership.role) ? membership.role : 'member',
+    })
+  }
+  return null
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * One trip
+ * ---------------------------------------------------------------------------------------------- */
+
+type Outcome = 'notified' | 'skipped'
+
+async function remindTrip(
+  db: Database,
+  env: TaskBindings,
+  logger: Logger,
+  due: DueTripReminder,
+  deps: DispatchDeps,
+): Promise<Outcome> {
+  const key = reminderMarkerKey(due)
+  if (await alreadyReminded(env.KV, logger, key, due)) {
+    return 'skipped'
+  }
+
+  const scope = await scopeForTrip(db, due)
+  if (scope === null) {
+    logger.info('a due trip has no member to remind', {
+      tripId: due.tripId,
+      organizationId: due.organizationId,
+    })
+    return 'skipped'
+  }
+
+  const trip = await requireTrip(scope, due.tripId)
+  // The scan and this read are two statements, so the row can move between them. Re-deriving the
+  // anchor is what keeps the sentence and the marker describing the same row: a trip whose dates
+  // changed in that gap belongs to a different due instant, and the next tick will find it there.
+  if (reminderDueAt(trip) !== due.dueAt) {
+    logger.info('a due trip’s anchor moved between the scan and the read', {
+      tripId: due.tripId,
+      organizationId: due.organizationId,
+      dueAt: due.dueAt,
+    })
+    return 'skipped'
+  }
+
+  const params = { tripTitle: trip.title, days: trip.reminderDays }
+  await dispatch(
+    scope,
+    {
+      kind: REMINDER_EVENT_KIND,
+      tripId: due.tripId,
+      entityType: 'trip',
+      entityId: reminderEntityId(due.tripId, due.dueAt),
+      // No `actorUserId`: a reminder excludes nobody, and dispatch drops the actor — naming one
+      // would deny that person the reminder for their own trip.
+      scope: 'trip',
+      titleKey: REMINDER_COPY_KEY,
+      bodyKey: REMINDER_COPY_KEY,
+      titleParams: params,
+      bodyParams: params,
+      actionUrl: `/trips/${due.tripId}`,
+    },
+    deps,
+  )
+
+  await markReminded(env.KV, logger, key, due)
+  return 'notified'
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The sweep
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Cron entry point. `src/server/worker.ts` calls it with the tick's `scheduledTime`, which is also
+ * the instant every window test and every enqueue timestamp is taken from — a sweep is a pure
+ * function of the tick it was scheduled for, so a replayed tick behaves identically.
  */
 export async function sweepReminders(
   env: TaskBindings,
   logger: Logger,
-  now: number,
-  limit = 200,
+  scheduledTime: number,
+  options: ReminderSweepOptions = {},
 ): Promise<ReminderSweepResult> {
-  const due = await dueReminders(env.KV, now, limit)
-  if (due.length === 0) {
-    return { scanned: 0, enqueued: 0, discarded: 0 }
+  const binding = env.DB
+  if (binding === undefined) {
+    // Not a throw: the cron has no retry and a missing binding is an operator problem, so the tick
+    // reports it and ends rather than filling the log with a stack every fifteen minutes.
+    logger.warn('reminder sweep has no DB binding; no trip can be read', {
+      scheduledTime,
+    })
+    return EMPTY_SWEEP
   }
 
-  const inputs: Array<EnqueueInput<TaskKind>> = due.map(({ record }) => ({
-    kind: 'email' as const,
-    orgId: record.orgId,
-    // Deterministic id: a redelivered sweep cannot send the same reminder twice.
-    id: `reminder:${record.entity.kind}:${record.entity.id}:${record.dueAt}`,
-    payload: {
-      to: record.to,
-      subject: record.subject,
-      html: record.html,
-      ...(record.text === undefined ? {} : { text: record.text }),
-      tag: 'trip-reminder',
-    },
-  }))
+  const databaseFor =
+    options.databaseFor ?? ((handle: D1Handle) => drizzle(handle))
+  const db = databaseFor(binding)
+  const scan = await listDueTripReminders(db, scheduledTime, options.scan ?? {})
 
-  await enqueueTasks(env.TASKS, inputs, () => now)
-  await Promise.all(due.map(({ key }) => env.KV.delete(key)))
+  if (scan.truncated) {
+    logger.warn(
+      'reminder scan hit its row bound; trips beyond it were not read this tick',
+      { scanned: scan.scanned, due: scan.due.length },
+    )
+  }
 
-  logger.info('reminder sweep enqueued notifications', {
-    scanned: due.length,
-    enqueued: inputs.length,
-    orgs: new Set(due.map((entry) => entry.record.orgId)).size,
-  })
+  const deps: DispatchDeps = {
+    queue: env.TASKS,
+    logger,
+    appUrl: env.APP_URL,
+    now: () => scheduledTime,
+  }
 
-  return { scanned: due.length, enqueued: inputs.length, discarded: 0 }
+  let notified = 0
+  let skipped = 0
+  let failed = 0
+
+  for (const due of scan.due) {
+    try {
+      if ((await remindTrip(db, env, logger, due, deps)) === 'notified') {
+        notified += 1
+      } else {
+        skipped += 1
+      }
+    } catch (cause) {
+      // Per trip, deliberately. A workspace whose rows are broken must not cost every other
+      // workspace its morning, and the cron has no retry that would come back for the rest.
+      failed += 1
+      logger.warn('a reminder failed for one trip', {
+        tripId: due.tripId,
+        organizationId: due.organizationId,
+        dueAt: due.dueAt,
+        ...serializeError(cause),
+      })
+    }
+  }
+
+  const result: ReminderSweepResult = {
+    scanned: scan.scanned,
+    due: scan.due.length,
+    notified,
+    skipped,
+    failed,
+  }
+  if (scan.due.length > 0) {
+    logger.info('reminder sweep finished', { ...result, scheduledTime })
+  }
+  return result
 }
-
-export { SYSTEM_ORG_ID }

@@ -181,6 +181,8 @@ import {
   vacayYearsRepository,
 } from '../vacay'
 import { dispatch } from '#/server/notifications/dispatch'
+import { createLogger, createMemorySink } from '#/server/observability'
+import { sweepReminders } from '#/server/queue/reminders'
 import { captureError, createHarness } from './harness'
 import type {
   KeyedTenantTable,
@@ -188,6 +190,7 @@ import type {
   TenantRepository,
   TenantScope,
 } from '../base'
+import type { TaskBindings } from '#/server/queue/types'
 import type { Harness, SeededTenant } from './harness'
 
 /* -------------------------------------------------------------------------------------------------
@@ -2006,6 +2009,170 @@ describe('tenant isolation', () => {
         1,
       )
       expect(inAlpha.map((row) => row.action)).not.toContain('trip.archived')
+    })
+  })
+
+  /**
+   * The reminder sweep — the one production path that reads across every tenant in a single query.
+   *
+   * `src/server/catalog/reminders.ts` answers with rows from every organization at once, which is
+   * exactly the shape the tenant layer exists to make unexpressible, so what has to be asserted is
+   * the seam *after* the scan: each due trip is reminded under a scope built from that trip's own
+   * organization and its own owner, and the inbox rows one tenant's reminder produced are invisible
+   * to the other. A single mis-attributed scope here would put B's travellers in A's inbox with no
+   * repository call ever having crossed a boundary.
+   */
+  describe('reminder sweep', () => {
+    /** 09:00 UTC on the day a trip starting three days later, with a 3-day lead time, is due. */
+    const NOW = Date.UTC(2026, 2, 10, 9)
+    const DUE_AT = Date.UTC(2026, 2, 10, 8)
+    const REMINDER_KEY = 'trip.starting_soon'
+
+    function kvDouble() {
+      const store = new Map<string, string>()
+      return {
+        store,
+        get: async (key: string) => store.get(key) ?? null,
+        put: async (key: string, value: string) => {
+          store.set(key, value)
+        },
+        delete: async (key: string) => {
+          store.delete(key)
+        },
+        list: async () => ({
+          keys: [...store.keys()].map((name) => ({ name })),
+          list_complete: true,
+        }),
+      }
+    }
+
+    function bindings(kv: ReturnType<typeof kvDouble>): TaskBindings {
+      return {
+        KV: kv,
+        FILES: {
+          get: async () => null,
+          put: async () => undefined,
+          head: async () => null,
+          delete: async () => undefined,
+          list: async () => ({ objects: [], truncated: false }),
+        },
+        TASKS: {
+          send: async () => undefined,
+          sendBatch: async () => undefined,
+        },
+        DB: {} as TaskBindings['DB'],
+      }
+    }
+
+    async function dueTrip(world: World, title: string): Promise<string> {
+      const trip = await createTrip(world.tenant.scope, {
+        title,
+        currency: 'EUR',
+        startDate: '2026-03-13',
+        reminderDays: 3,
+      })
+      return trip.id
+    }
+
+    /** Runs one tick over both tenants and returns the KV markers it wrote. */
+    async function sweepBoth(): Promise<ReturnType<typeof kvDouble>> {
+      const kv = kvDouble()
+      const result = await sweepReminders(
+        bindings(kv),
+        createLogger({ level: 'error', sink: createMemorySink() }),
+        NOW,
+        { databaseFor: () => harness.db },
+      )
+      expect(result).toMatchObject({ due: 2, notified: 2, failed: 0 })
+      return kv
+    }
+
+    function reminders<TRow extends { readonly titleKey: string }>(
+      rows: ReadonlyArray<TRow>,
+    ): Array<TRow> {
+      return rows.filter((row) => row.titleKey === REMINDER_KEY)
+    }
+
+    it('reminds each tenant under its own trip’s owner, and never the other’s', async () => {
+      const alphaTripId = await dueTrip(alpha, 'Lisbon in spring')
+      const betaTripId = await dueTrip(beta, 'Porto in autumn')
+
+      const kv = await sweepBoth()
+
+      const inAlpha = reminders(
+        (await listNotifications(alpha.tenant.scope, alpha.tenant.ownerUserId))
+          .items,
+      )
+      const inBeta = reminders(
+        (await listNotifications(beta.tenant.scope, beta.tenant.ownerUserId))
+          .items,
+      )
+      expect(inAlpha).toHaveLength(1)
+      expect(inBeta).toHaveLength(1)
+
+      // The scope each reminder ran under, read off the row it wrote: `notifyMany` stamps
+      // `senderUserId` from `scope.ctx.userId`, so this is the sweep's per-trip identity and it is
+      // the owner membership of *that* trip, never the other tenant's.
+      expect(inAlpha[0]?.senderUserId).toBe(alpha.tenant.ownerUserId)
+      expect(inAlpha[0]?.organizationId).toBe(alpha.tenant.organizationId)
+      expect(inAlpha[0]?.entityId).toBe(`${alphaTripId}:${DUE_AT}`)
+      expect(inBeta[0]?.senderUserId).toBe(beta.tenant.ownerUserId)
+      expect(inBeta[0]?.organizationId).toBe(beta.tenant.organizationId)
+      expect(inBeta[0]?.entityId).toBe(`${betaTripId}:${DUE_AT}`)
+
+      // The markers are keyed by organization, so one tenant's sweep can never close another's
+      // window — the failure that would silently cost a workspace its reminders.
+      expect([...kv.store.keys()].sort()).toEqual(
+        [
+          `reminded:${alpha.tenant.organizationId}:${alphaTripId}:${DUE_AT}`,
+          `reminded:${beta.tenant.organizationId}:${betaTripId}:${DUE_AT}`,
+        ].sort(),
+      )
+    })
+
+    it('refuses to read either tenant’s reminder rows from the other', async () => {
+      await dueTrip(alpha, 'Lisbon in spring')
+      await dueTrip(beta, 'Porto in autumn')
+
+      await sweepBoth()
+
+      const alphaRow = reminders(
+        (await listNotifications(alpha.tenant.scope, alpha.tenant.ownerUserId))
+          .items,
+      )[0]
+      const betaRow = reminders(
+        (await listNotifications(beta.tenant.scope, beta.tenant.ownerUserId))
+          .items,
+      )[0]
+      const alphaId = alphaRow.id
+      const betaId = betaRow.id
+
+      expect(
+        await notificationsRepository.findById(beta.tenant.scope, alphaId),
+      ).toBeNull()
+      expect(
+        await captureError(() =>
+          notificationsRepository.requireById(beta.tenant.scope, alphaId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await notificationsRepository.findById(alpha.tenant.scope, betaId),
+      ).toBeNull()
+      expect(
+        await captureError(() =>
+          notificationsRepository.requireById(alpha.tenant.scope, betaId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // And neither tenant can reach the other's traveller by asking for their inbox.
+      expect(
+        (await listNotifications(beta.tenant.scope, alpha.tenant.ownerUserId))
+          .items,
+      ).toHaveLength(0)
+      expect(
+        (await listNotifications(alpha.tenant.scope, beta.tenant.ownerUserId))
+          .items,
+      ).toHaveLength(0)
     })
   })
 })
