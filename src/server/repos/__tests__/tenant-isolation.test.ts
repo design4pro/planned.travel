@@ -19,8 +19,11 @@ import {
 import { NotFoundError, QuotaExceededError } from '../context'
 import {
   bucketListRepository,
+  getTravelStats,
+  listTravelStats,
   markCountryVisited,
   markRegionVisited,
+  recomputeTravelStats,
   travelStatsRepository,
   upsertTravelStats,
   visitedCountriesRepository,
@@ -1687,6 +1690,187 @@ describe('tenant isolation', () => {
         (await listNotifications(beta.tenant.scope, alpha.tenant.ownerUserId))
           .items,
       ).toHaveLength(0)
+    })
+  })
+
+  /**
+   * The recompute behind the atlas statistics panel, run from the wrong side of the boundary.
+   *
+   * Asserted against the measured split rather than the intuitive one, because most of what a
+   * `travel_stats` row holds is workspace-wide rather than per-traveller — and *how many* figures
+   * that is depends on which row is being read, since `countryCount` changes sides between the
+   * all-time row and a year row. A blanket "every count is zero" assertion is unsatisfiable here and
+   * would be made to pass only by breaking the repository.
+   */
+  describe('travel stats recomputed for a foreign traveller', () => {
+    const STAT_YEAR = 2026
+    /** A's own trip for the year, so the year row has country codes of its own to count. */
+    let alphaYearTripId: string
+
+    beforeEach(async () => {
+      const trip = await createTrip(alpha.tenant.scope, {
+        title: 'Two countries in one week',
+        startDate: `${STAT_YEAR}-06-01`,
+        endDate: `${STAT_YEAR}-06-08`,
+        countryCodes: ['PT', 'ES'],
+        currency: 'EUR',
+      })
+      alphaYearTripId = trip.id
+    })
+
+    /** The eight figures that are `tenantFilter()`-bound and nothing else. */
+    function workspaceFigures(row: {
+      tripCount: number
+      dayCount: number
+      placeCount: number
+      cityCount: number
+      distanceMetres: number
+      spendMinor: number
+      currency: string
+      lastTripId: string | null
+    }): Record<string, unknown> {
+      return {
+        tripCount: row.tripCount,
+        dayCount: row.dayCount,
+        placeCount: row.placeCount,
+        cityCount: row.cityCount,
+        distanceMetres: row.distanceMetres,
+        spendMinor: row.spendMinor,
+        currency: row.currency,
+        lastTripId: row.lastTripId,
+      }
+    }
+
+    it('writes the rows under the caller’s organization and never under the other', async () => {
+      const betaBefore = await listTravelStats(
+        beta.tenant.scope,
+        beta.tenant.ownerUserId,
+      )
+
+      const allTime = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        0,
+      )
+      const yearRow = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        STAT_YEAR,
+      )
+
+      expect(allTime.organizationId).toBe(alpha.tenant.organizationId)
+      expect(yearRow.organizationId).toBe(alpha.tenant.organizationId)
+      expect(
+        await listTravelStats(beta.tenant.scope, beta.tenant.ownerUserId),
+      ).toEqual(betaBefore)
+    })
+
+    it('leaves the per-traveller figures empty, because B’s atlas is invisible from A', async () => {
+      const allTime = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        0,
+      )
+      const yearRow = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        STAT_YEAR,
+      )
+
+      // `visited_countries` and `visited_regions` are filtered by organization *and* user.
+      expect(allTime.regionCount).toBe(0)
+      expect(yearRow.regionCount).toBe(0)
+      expect(allTime.byContinent).toEqual({})
+      expect(yearRow.byContinent).toEqual({})
+    })
+
+    it('counts no countries all-time and the year’s own trips on the year row', async () => {
+      const allTime = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        0,
+      )
+      const yearRow = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        STAT_YEAR,
+      )
+
+      // All-time reads the traveller's own visited list, which A cannot see.
+      expect(allTime.countryCount).toBe(0)
+      // A year row reads `trips.country_codes`, which is tenant-bound only — so it is A's own
+      // count, non-zero by construction, and asserting zero here is the assertion that cannot pass.
+      expect(yearRow.countryCount).toBe(2)
+    })
+
+    it('repeats A’s own workspace figures on the foreign traveller’s rows', async () => {
+      const foreignAllTime = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        0,
+      )
+      const foreignYear = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        STAT_YEAR,
+      )
+      const ownAllTime = await recomputeTravelStats(
+        alpha.tenant.scope,
+        alpha.tenant.ownerUserId,
+        0,
+      )
+      const ownYear = await recomputeTravelStats(
+        alpha.tenant.scope,
+        alpha.tenant.ownerUserId,
+        STAT_YEAR,
+      )
+
+      // Equal to A's own row rather than to zero: that is where the real boundary is.
+      expect(workspaceFigures(foreignAllTime)).toEqual(
+        workspaceFigures(ownAllTime),
+      )
+      expect(workspaceFigures(foreignYear)).toEqual(workspaceFigures(ownYear))
+      expect(foreignAllTime.tripCount).toBeGreaterThan(0)
+      expect(foreignYear.lastTripId).toBe(alphaYearTripId)
+      // The distance aggregate is workspace-wide too: A's own leg, on both row kinds.
+      expect(foreignAllTime.distanceMetres).toBe(1_720_000)
+    })
+
+    it('hides the rows it wrote from the organization the traveller belongs to', async () => {
+      const betaBefore = await listTravelStats(
+        beta.tenant.scope,
+        beta.tenant.ownerUserId,
+      )
+      const written = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        0,
+      )
+
+      // B's own traveller, read from B: the all-time row A just wrote is not there, and the row B
+      // did have is untouched.
+      expect(
+        await getTravelStats(beta.tenant.scope, beta.tenant.ownerUserId, 0),
+      ).toBeNull()
+      expect(
+        await listTravelStats(beta.tenant.scope, beta.tenant.ownerUserId),
+      ).toEqual(betaBefore)
+      // And A's own traveller is invisible from B in either direction.
+      expect(
+        await getTravelStats(beta.tenant.scope, alpha.tenant.ownerUserId, 0),
+      ).toBeNull()
+      expect(
+        await listTravelStats(beta.tenant.scope, alpha.tenant.ownerUserId),
+      ).toEqual([])
+
+      const error = await captureError(() =>
+        travelStatsRepository.requireById(beta.tenant.scope, written.id),
+      )
+      expect(error).toBeInstanceOf(NotFoundError)
+      // The same id resolves inside the organization that wrote it.
+      expect(
+        await travelStatsRepository.findById(alpha.tenant.scope, written.id),
+      ).not.toBeNull()
     })
   })
 
