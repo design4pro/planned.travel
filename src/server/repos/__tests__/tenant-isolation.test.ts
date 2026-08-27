@@ -1619,7 +1619,7 @@ describe('tenant isolation', () => {
   })
 
   describe('a settlement paid in another currency', () => {
-    const sourceFields = {
+    const payment = {
       amountMinor: 46_488,
       currency: 'JPY',
       settledOn: '2026-04-14',
@@ -1636,7 +1636,7 @@ describe('tenant isolation', () => {
           tripId: beta.tripId,
           fromUserId: beta.secondUserId,
           toUserId: beta.tenant.ownerUserId,
-          ...sourceFields,
+          ...payment,
         }),
       )
       expect(error).toBeInstanceOf(NotFoundError)
@@ -1653,7 +1653,7 @@ describe('tenant isolation', () => {
         tripId: alpha.tripId,
         fromUserId: alpha.secondUserId,
         toUserId: alpha.tenant.ownerUserId,
-        ...sourceFields,
+        ...payment,
       })
       expect(own.originalAmountMinor).toBe(59_600)
       expect(own.originalCurrency).toBe('GBP')

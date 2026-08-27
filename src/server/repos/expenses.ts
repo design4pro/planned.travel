@@ -152,11 +152,12 @@ export type UpdateExpenseInput = z.infer<typeof updateExpenseInput>
  * invariants are here: all three together or none of them, and a source amount that is a
  * non-negative integer in minor units, which is what {@link minorAmountSchema} already means.
  *
- * `exchangeRate` is never taken from a client. The writing surface derives it with `impliedRate()`
- * from the two amounts, exactly as `toRepoInput` does for an expense (`src/server/fns/costs.ts`),
+ * `exchangeRate` is not a client's to send. The writing surface derives it with `impliedRate()`
+ * from the two amounts, as `toRepoInput` already does for an expense (`src/server/fns/costs.ts`),
  * so the rate can never disagree with the figures printed beside it. `impliedRate()` returns `null`
  * for a source amount of zero, which is the one pair this rule refuses rather than half-records: a
  * payment of nothing has no rate to freeze, and a settlement of nothing is not a payment.
+ * `recordPaymentFn` sends none of the three today, so every settlement is still trip-currency.
  *
  * The object is strict so a misspelled field is a parse error rather than a silently dropped one.
  */
