@@ -9,8 +9,9 @@
 // runs the full suite (including full e2e) once — the post-merge safety net
 // that lets CI's e2e job run only on develop/main pushes.
 //
-// Run from an integration branch cut from `develop` (never develop itself):
-//   git switch -c sandcastle/run-$(date +%Y%m%d) develop
+// Run from `develop` (today's integration branch `sandcastle/run-<date>` is
+// cut — or resumed — automatically) or from an integration branch you cut
+// yourself; `main` is refused (ADR 0003):
 //   pnpm sandcastle
 //
 // Requires: Docker running, `sandcastle docker build-image` executed once,
@@ -112,9 +113,34 @@ function createLimiter(limit: number) {
   }
 }
 
-const integrationBranch = (await import('node:child_process'))
-  .execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' })
-  .trim()
+// Never run the loop on `develop` itself — every iteration merges into HEAD.
+// Started there, cut (or resume, on a same-day rerun) the integration branch
+// the header documents, so `pnpm sandcastle` is the whole start procedure.
+// `main` is refused: integration runs are cut from develop (ADR 0003). Any
+// other branch is taken as a deliberately chosen integration branch, as-is.
+const { execSync } = await import('node:child_process')
+const integrationBranch = (() => {
+  const head = execSync('git rev-parse --abbrev-ref HEAD', {
+    encoding: 'utf8',
+  }).trim()
+  if (head === 'main') {
+    throw new Error(
+      'sandcastle: refusing to run on `main` — start from `develop` or an integration branch (ADR 0003).',
+    )
+  }
+  if (head !== 'develop') return head
+  const today = new Date().toISOString().slice(0, 10).replaceAll('-', '')
+  const branch = `sandcastle/run-${today}`
+  const exists =
+    execSync(`git branch --list ${branch}`, { encoding: 'utf8' }).trim() !== ''
+  execSync(exists ? `git switch ${branch}` : `git switch -c ${branch}`, {
+    stdio: 'inherit',
+  })
+  console.log(
+    `sandcastle: ${exists ? 'resumed' : 'cut'} integration branch ${branch} from develop`,
+  )
+  return branch
+})()
 
 async function runPlanner(): Promise<Issue[]> {
   const plan = await sandcastle.run({
