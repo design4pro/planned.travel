@@ -369,29 +369,27 @@ describe('repositories', () => {
         title: 'Tokyo',
         currency: 'JPY',
       })
+      const payment = {
+        tripId: trip.id,
+        fromUserId: other,
+        toUserId: tenant.ownerUserId,
+        amountMinor: 46_488,
+        currency: 'JPY',
+        settledOn: '2026-10-12',
+      } as const
 
       // Two of the three source fields is a half-recorded conversion, and the repository refuses
       // it rather than storing an amount whose rate nobody can reproduce.
       await expect(
         createSettlement(tenant.scope, {
-          tripId: trip.id,
-          fromUserId: other,
-          toUserId: tenant.ownerUserId,
-          amountMinor: 46_488,
-          currency: 'JPY',
-          settledOn: '2026-10-12',
+          ...payment,
           originalAmountMinor: 59_600,
           originalCurrency: 'GBP',
         }),
       ).rejects.toThrow(/together/)
       await expect(
         createSettlement(tenant.scope, {
-          tripId: trip.id,
-          fromUserId: other,
-          toUserId: tenant.ownerUserId,
-          amountMinor: 46_488,
-          currency: 'JPY',
-          settledOn: '2026-10-12',
+          ...payment,
           originalCurrency: 'GBP',
           exchangeRate: 195,
         }),
@@ -400,12 +398,7 @@ describe('repositories', () => {
       // The table deliberately carries no CHECK for this, so the guard is the input's.
       await expect(
         createSettlement(tenant.scope, {
-          tripId: trip.id,
-          fromUserId: other,
-          toUserId: tenant.ownerUserId,
-          amountMinor: 46_488,
-          currency: 'JPY',
-          settledOn: '2026-10-12',
+          ...payment,
           originalAmountMinor: -1,
           originalCurrency: 'GBP',
           exchangeRate: 195,
@@ -413,12 +406,7 @@ describe('repositories', () => {
       ).rejects.toThrow()
 
       const converted = await createSettlement(tenant.scope, {
-        tripId: trip.id,
-        fromUserId: other,
-        toUserId: tenant.ownerUserId,
-        amountMinor: 46_488,
-        currency: 'JPY',
-        settledOn: '2026-10-12',
+        ...payment,
         originalAmountMinor: 59_600,
         originalCurrency: 'GBP',
         exchangeRate: 195,

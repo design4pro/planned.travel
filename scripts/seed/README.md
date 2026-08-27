@@ -323,7 +323,7 @@ source currency was discarded on write; the builder now takes a name
 (`const currency = (name = 'currency') => …`) and migration `0001_aspiring_cargill` rebuilt the
 `expenses` table to add the columns. No row was ever corrupted. That migration is a table recreate
 rather than an `ADD COLUMN`, which is why it has a row in the register in `docs/DEPLOY.md` §12 — and
-why `0006_faulty_scream`, which gave `settlements` the same three columns, is `ADD COLUMN` only.
+why `0006_windy_tana_nile`, which gave `settlements` the same three columns, is `ADD COLUMN` only.
 
 `settlements` in this dataset is still trip-currency only, so its three columns are `NULL` on every
 seeded row. That is the reading the repository fixes: a settlement with none of the three was paid

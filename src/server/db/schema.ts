@@ -981,7 +981,15 @@ export const transports = sqliteTable(
       .references(() => trips.id, { onDelete: 'cascade' }),
     /** The day this leg *departs*. The name is kept for the rows already written. */
     dayId: text('day_id').references(() => days.id, { onDelete: 'set null' }),
-    /** The day it lands, when that is a different one. Null on every leg written before it. */
+    /**
+     * The day it lands, when that is a different one. Null on every leg written before it.
+     *
+     * The `set null` here is the schema's, and the test database — built from this file — has it.
+     * The deployed one does not: SQLite's `ADD COLUMN` takes no `ON DELETE` clause, so
+     * `0006_windy_tana_nile` left the constraint at `NO ACTION`, where deleting a day a leg names
+     * fails rather than nulling the column. Harmless while every row is null; the stage that
+     * first writes it has to clear the column itself, or rebuild the table.
+     */
     arrivalDayId: text('arrival_day_id').references(() => days.id, {
       onDelete: 'set null',
     }),
@@ -1165,6 +1173,11 @@ export const expenses = sqliteTable(
      * path falls back to the `category` enum — which is what keeps that column load-bearing and
      * the rollback honest. Both halves are later stages: `04-S2` ships the resolver, `04-S3` the
      * expense writer that can first set the column, so it is `NULL` on every row today.
+     *
+     * As with `transports.arrival_day_id`, the deployed constraint is `NO ACTION` rather than
+     * `set null` — `0006_windy_tana_nile` added the column, and SQLite's `ADD COLUMN` carries no
+     * `ON DELETE` clause. `04-S2` is the stage that first deletes a category, so it is the stage
+     * that has to null this column itself.
      */
     costCategoryId: text('cost_category_id').references(
       () => tripCostCategories.id,
@@ -2405,13 +2418,12 @@ export const userSettings = sqliteTable(
      * picked the default, and break `getEffectiveSettings`, which resolves the reader's value over
      * the workspace's.
      *
-     * **`09-S8` filed this column with an `enumCheck` and `text_scale` with a range `CHECK`, and
-     * neither is here.** Measured, not assumed: adding either rebuilds `user_settings` — the
-     * generated migration was a `__new_user_settings` create, an `INSERT … SELECT`, a
-     * `DROP TABLE user_settings` and a rename, which also swallowed `display_currency`'s own
-     * `ADD COLUMN`. That is the trade this stage refuses for `settlements` two tables up, for the
-     * same reason and on a table every signed-in reader has a row in. The vocabulary stays
-     * machine-readable as `TIME_FORMATS`, and the guard is `09-S8`'s to place in
+     * It carries no `enumCheck`, and `text_scale` below no range `CHECK`, for the reason the
+     * settlement triple two tables up carries neither — measured, not assumed: adding either
+     * rebuilt `user_settings` in the generated migration (a `__new_user_settings` create, an
+     * `INSERT … SELECT`, a `DROP TABLE` and a rename), which also swallowed `display_currency`'s
+     * own `ADD COLUMN`, and every signed-in reader has a row on this table. The vocabulary stays
+     * machine-readable as {@link TIME_FORMATS}, and the guard is `09-S8`'s to place in
      * `src/server/repos/settings.ts` when it ships the control — exactly as
      * `createSettlementInput` holds the settlement triple's rule.
      */

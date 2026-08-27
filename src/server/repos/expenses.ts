@@ -101,6 +101,17 @@ export const updateBudgetItemInput = z.object({
 })
 export type UpdateBudgetItemInput = z.infer<typeof updateBudgetItemInput>
 
+/**
+ * What a payment made in a currency other than the trip's own keeps beside the converted amount:
+ * the sum that actually left the account, the currency it was in, and the rate frozen at the
+ * moment it was recorded. An expense and a settlement carry the same three.
+ */
+const sourceAmountFields = {
+  originalAmountMinor: minorAmountSchema.nullish(),
+  originalCurrency: currencySchema.nullish(),
+  exchangeRate: z.number().finite().positive().nullish(),
+}
+
 const expenseFields = {
   dayId: idSchema.nullish(),
   placeId: idSchema.nullish(),
@@ -109,9 +120,7 @@ const expenseFields = {
   title: titleSchema,
   amountMinor: minorAmountSchema,
   currency: currencySchema.optional(),
-  originalAmountMinor: minorAmountSchema.nullish(),
-  originalCurrency: currencySchema.nullish(),
-  exchangeRate: z.number().finite().positive().nullish(),
+  ...sourceAmountFields,
   spentOn: dateSchema,
   paidBy: idSchema.nullish(),
   splitMethod: splitMethodSchema.optional(),
@@ -138,12 +147,10 @@ export type UpdateExpenseInput = z.infer<typeof updateExpenseInput>
 /**
  * A payment recorded against a trip.
  *
- * The three source fields are the settlement half of the rule `expenses` already keeps: a payment
- * made in a currency other than the trip's own keeps the amount that actually left the payer's
- * account, the currency it was in, and the rate frozen at the moment it was recorded. The database
- * holds no `CHECK` for any of it — one would rebuild the table on SQLite — so the invariants are
- * here: all three together or none of them, and a source amount that is a non-negative integer in
- * minor units, which is what {@link minorAmountSchema} already means.
+ * {@link sourceAmountFields} is the settlement half of the rule `expenses` already keeps. The
+ * database holds no `CHECK` for any of it — one would rebuild the table on SQLite — so the
+ * invariants are here: all three together or none of them, and a source amount that is a
+ * non-negative integer in minor units, which is what {@link minorAmountSchema} already means.
  *
  * `exchangeRate` is never taken from a client. The writing surface derives it with `impliedRate()`
  * from the two amounts, exactly as `toRepoInput` does for an expense (`src/server/fns/costs.ts`),
@@ -160,9 +167,7 @@ export const createSettlementInput = z
     toUserId: idSchema,
     amountMinor: minorAmountSchema,
     currency: currencySchema.optional(),
-    originalAmountMinor: minorAmountSchema.nullish(),
-    originalCurrency: currencySchema.nullish(),
-    exchangeRate: z.number().finite().positive().nullish(),
+    ...sourceAmountFields,
     method: z.enum(SETTLEMENT_METHODS).optional(),
     settledOn: dateSchema,
     note: shortTextSchema.nullish(),
