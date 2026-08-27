@@ -7,10 +7,16 @@
  * notification into the room, so a viewer who is not the author sees the change
  * without polling, and a room that is momentarily unreachable costs a save
  * nothing (see `mirrorToRoom`).
+ *
+ * A posted message goes one step further and reaches the members who are not
+ * looking at the trip at all, through `dispatchQuietly` — the inbox row and the
+ * email, on the same never-fail-the-save terms as the room mirror.
  */
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
+import { appUrl, taskQueue } from '#/server/auth/env'
+import { dispatchQuietly } from '#/server/notifications/dispatch'
 import {
   castVote,
   closePoll,
@@ -26,6 +32,9 @@ import {
   updateCollabNote,
 } from '#/server/repos'
 import { appScope, mirrorToRoom, orNull, patch, tombstone } from './context'
+
+import type { Trip } from '#/server/db/types'
+import type { TenantScope } from '#/server/repos'
 
 /* ------------------------------------------------------------------ inputs */
 
@@ -75,13 +84,47 @@ export const pollInputSchema = z.object({
   allowMultiple: z.boolean(),
 })
 
+/* ------------------------------------------------------------ notification */
+
+/** As much of a message as reads sensibly as a one-line preview in an inbox row. */
+const PREVIEW_LENGTH = 140
+
+/**
+ * Tells the trip's other members that a message landed.
+ *
+ * The same bargain `mirrorToRoom` strikes one line above: D1 already holds the message, so a
+ * notification that cannot be delivered must not turn a successful post into a failed one.
+ * `dispatchQuietly` is the wrapper that keeps that promise, so this returns nothing to check.
+ */
+async function notifyTripMessage(
+  scope: TenantScope,
+  trip: Trip,
+  message: { readonly id: string; readonly body: string },
+): Promise<void> {
+  await dispatchQuietly(
+    scope,
+    {
+      kind: 'collab.message',
+      tripId: trip.id,
+      entityType: 'collab_message',
+      entityId: message.id,
+      actorUserId: scope.ctx.userId,
+      scope: 'trip',
+      titleParams: { tripTitle: trip.title },
+      bodyParams: { preview: message.body.slice(0, PREVIEW_LENGTH) },
+      actionUrl: `/trips/${trip.id}/collab`,
+    },
+    { queue: taskQueue(), appUrl: appUrl() },
+  )
+}
+
 /* ---------------------------------------------------------------- messages */
 
 export const postMessageFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId, body, replyToId: z.string().trim().max(64) }))
   .handler(async ({ data }): Promise<{ readonly messageId: string }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
+    const trip = await requireTrip(scope, data.tripId)
 
     const message = await postMessage(scope, {
       tripId: data.tripId,
@@ -95,6 +138,7 @@ export const postMessageFn = createServerFn({ method: 'POST' })
         chatLastMessageId: message.id,
       }),
     ])
+    await notifyTripMessage(scope, trip, message)
     return { messageId: message.id }
   })
 
