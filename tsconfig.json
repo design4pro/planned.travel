@@ -15,6 +15,8 @@
       "#/*": ["./src/*"],
       "@/*": ["./src/*"]
     },
+    /* `ES2023.Intl` is type-only: it declares the string form of `useGrouping`,
+       which `src/lib/format-tables.ts` freezes per locale. */
     "lib": ["ES2022", "ES2023.Intl", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
 

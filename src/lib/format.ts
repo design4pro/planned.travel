@@ -31,13 +31,14 @@
  * narrow currency symbol, and the composed `{ month: 'long', year: 'numeric' }`
  * form — because their separators and digit widths were measured byte-identical
  * in the three runtimes across all twenty-three locales. What is *not* left to
- * the runtime is any default those calls would otherwise read out of ICU: every
- * number formatter below is handed the frozen row's numbering system (through
- * the `-u-nu-latn` tag) and its `useGrouping` rule, because the linux WebKit the
- * CI container ships answers `arab` for `ar` and groups Italian's four digits
- * where workerd does neither. `e2e/i18n-runtime-parity.spec.ts` re-proves the
- * whole surface on every run by rendering it in WebKit and comparing it against
- * what the Worker produced, and fails the run on any difference.
+ * the runtime is any default those calls would otherwise read out of ICU: one
+ * helper builds every number formatter below and hands it the frozen row's
+ * numbering system (through the `-u-nu-latn` tag) and its `useGrouping` rule,
+ * because the linux WebKit the CI container ships answers `arab` for `ar` and
+ * groups Italian's four digits where workerd does neither.
+ * `e2e/i18n-runtime-parity.spec.ts` re-proves the whole surface on every run by
+ * rendering it in WebKit and comparing it against what the Worker produced, and
+ * fails the run on any difference.
  *
  * `countryName` deliberately does *not* live here. It is the one helper in the
  * old module that reached for `Intl.DisplayNames`, whose region names also differ
@@ -128,15 +129,33 @@ function monthYearFormatter(locale: Locale): Intl.DateTimeFormat {
   return made
 }
 
+/**
+ * Every `Intl.NumberFormat` this module builds is built here.
+ *
+ * Both fields a number formatter would otherwise read out of the runtime's own
+ * ICU are handed to it from the frozen row: the numbering system, carried by
+ * the `-u-nu-latn` tag, and the CLDR grouping rule. Stating them at one place
+ * rather than at each call site is the point — the divergence this closes was a
+ * default nobody had written down, and a fourth formatter added later inherits
+ * the answer instead of having to remember it.
+ */
+function makeNumberFormat(
+  locale: Locale,
+  options: Omit<Intl.NumberFormatOptions, 'useGrouping'> = {},
+): Intl.NumberFormat {
+  const formats = formatsFor(locale)
+  return new Intl.NumberFormat(formats.intlLocale, {
+    ...options,
+    useGrouping: formats.grouping,
+  })
+}
+
 function numberFormatter(locale: Locale): Intl.NumberFormat {
   const cached = numberFormatters.get(locale)
   if (cached !== undefined) {
     return cached
   }
-  const formats = formatsFor(locale)
-  const made = new Intl.NumberFormat(formats.intlLocale, {
-    useGrouping: formats.grouping,
-  })
+  const made = makeNumberFormat(locale)
   numberFormatters.set(locale, made)
   return made
 }
@@ -146,11 +165,9 @@ function percentFormatter(locale: Locale): Intl.NumberFormat {
   if (cached !== undefined) {
     return cached
   }
-  const formats = formatsFor(locale)
-  const made = new Intl.NumberFormat(formats.intlLocale, {
+  const made = makeNumberFormat(locale, {
     style: 'percent',
     maximumFractionDigits: 0,
-    useGrouping: formats.grouping,
   })
   percentFormatters.set(locale, made)
   return made
@@ -163,12 +180,10 @@ function fixedFormatter(locale: Locale, digits: number): Intl.NumberFormat {
   if (cached !== undefined) {
     return cached
   }
-  const formats = formatsFor(locale)
-  const made = new Intl.NumberFormat(formats.intlLocale, {
+  const made = makeNumberFormat(locale, {
     style: 'decimal',
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
-    useGrouping: formats.grouping,
   })
   fixedFormatters.set(key, made)
   return made
@@ -194,7 +209,7 @@ function narrowSymbol(locale: Locale, code: string): string {
   if (cached !== undefined) {
     return cached
   }
-  const parts = new Intl.NumberFormat(formatsFor(locale).intlLocale, {
+  const parts = makeNumberFormat(locale, {
     style: 'currency',
     currency: code,
     currencyDisplay: 'narrowSymbol',

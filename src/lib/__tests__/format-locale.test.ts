@@ -210,6 +210,15 @@ describe('the frozen tables', () => {
         tag,
       ).toBe('latn')
       expect(['always', 'min2'], tag).toContain(row.grouping)
+      // V8 is workerd's ICU for practical purposes, so asking it with neither
+      // the extension nor the rule is the standing drift check on both: naming
+      // them explicitly must not move a byte of what the runtime that renders
+      // first would have written on its own.
+      const platform = new Intl.NumberFormat(
+        row.intlLocale.replace('-u-nu-latn', ''),
+      )
+      expect(formatNumber(1000, tag), tag).toBe(platform.format(1000))
+      expect(formatNumber(1_234_567, tag), tag).toBe(platform.format(1_234_567))
     }
     // The four locales CLDR gives `minimumGroupingDigits=2`, measured in
     // workerd 1.20260815.1. Every other locale groups from four digits up, so
@@ -219,7 +228,7 @@ describe('the frozen tables', () => {
     const min2 = LOCALE_TAGS.filter(
       (tag) => LOCALE_FORMATS[tag].grouping === 'min2',
     )
-    expect([...min2].sort()).toEqual(['es', 'hu', 'it', 'pl'])
+    expect(min2.sort()).toEqual(['es', 'hu', 'it', 'pl'])
   })
 
   it('keep the two Greek month forms apart', () => {
@@ -569,17 +578,23 @@ describe('the shipped source under src/lib', () => {
     expect(files.length).toBeGreaterThan(10)
   })
 
-  it('never hands a bare locale tag to Intl', () => {
+  it('never hands a bare locale tag to Intl in the formatter', () => {
     // `Intl` reads its numbering system and its grouping rule out of whichever
     // ICU the runtime was built against, and the two runtimes answer
     // differently for `ar` and `it`. The frozen `intlLocale` carries the
     // `-u-nu-latn` extension that settles the first; passing a bare `locale`
     // instead quietly reopens the divergence, and only in Safari.
-    const offenders = readFileSync(join(LIB, 'format.ts'), 'utf8')
+    //
+    // The locale argument is read off the joined source rather than line by
+    // line, so that a call prettier wraps across two lines is still checked
+    // rather than silently excused.
+    const source = readFileSync(join(LIB, 'format.ts'), 'utf8')
       .split('\n')
       .filter((line) => !COMMENT.test(line))
-      .filter((line) => /new Intl\.\w+\(/.test(line))
-      .filter((line) => !line.includes('intlLocale'))
+      .join(' ')
+    const offenders = [...source.matchAll(/new Intl\.\w+\(([^,]*)/g)]
+      .filter((call) => !call[1].includes('intlLocale'))
+      .map((call) => call[0])
     expect(
       offenders,
       'every Intl instance takes the frozen tag from LOCALE_FORMATS, never the Locale itself',
