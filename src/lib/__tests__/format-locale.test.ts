@@ -195,6 +195,42 @@ describe('the frozen tables', () => {
     expect(minorUnitDigits('nonsense')).toBe(DEFAULT_MINOR_DIGITS)
   })
 
+  it('pin the numbering system and the grouping rule to workerd', () => {
+    // Two more fields the runtimes answer differently, and neither shows up on
+    // a macOS laptop. The Playwright container's linux WebKit resolves `ar` to
+    // the `arab` numbering system — `١٠١` where workerd writes `101` — and
+    // ignores the CLDR `minimumGroupingDigits=2` that makes Italian write
+    // `1234,56` rather than `1.234,56`. Both are pinned to what workerd
+    // renders, because the server's bytes are the ones a browser hydrates.
+    for (const tag of LOCALE_TAGS) {
+      const row = LOCALE_FORMATS[tag]
+      expect(row.intlLocale, tag).toMatch(/-u-nu-latn$/)
+      expect(
+        new Intl.NumberFormat(row.intlLocale).resolvedOptions().numberingSystem,
+        tag,
+      ).toBe('latn')
+      expect(['always', 'min2'], tag).toContain(row.grouping)
+      // V8 is workerd's ICU for practical purposes, so asking it with neither
+      // the extension nor the rule is the standing drift check on both: naming
+      // them explicitly must not move a byte of what the runtime that renders
+      // first would have written on its own.
+      const platform = new Intl.NumberFormat(
+        row.intlLocale.replace('-u-nu-latn', ''),
+      )
+      expect(formatNumber(1000, tag), tag).toBe(platform.format(1000))
+      expect(formatNumber(1_234_567, tag), tag).toBe(platform.format(1_234_567))
+    }
+    // The four locales CLDR gives `minimumGroupingDigits=2`, measured in
+    // workerd 1.20260815.1. Every other locale groups from four digits up, so
+    // `always` and its locale default are the same string — asked for
+    // explicitly all the same, because a default is precisely what the two
+    // runtimes disagreed about.
+    const min2 = LOCALE_TAGS.filter(
+      (tag) => LOCALE_FORMATS[tag].grouping === 'min2',
+    )
+    expect(min2.sort()).toEqual(['es', 'hu', 'it', 'pl'])
+  })
+
   it('keep the two Greek month forms apart', () => {
     // A bare month label is nominative; the same month inside a date is
     // genitive, and workerd and WebKit disagree about which one a lone
@@ -391,6 +427,36 @@ describe('money, lists and counts in twenty-three languages', () => {
     expect(formatPercent(0.42, 'tr')).toBe('%42')
     expect(formatDistance(12_500, 'metric', 'de')).toBe('13 km')
   })
+
+  it('groups a four-digit number by the frozen rule, not the runtime default', () => {
+    // Italian, Spanish, Hungarian and Polish leave four digits ungrouped and
+    // group from five up; linux WebKit groups the Italian four. These are the
+    // bytes workerd renders.
+    expect(formatNumber(1000, 'it')).toBe('1000')
+    expect(formatNumber(12_345, 'it')).toBe('12.345')
+    expect(formatMoneyMinor(123_456, 'EUR', 'it')).toBe(`1234,56${NBSP}€`)
+    expect(formatMoneyMinorPlain(123_456, 'EUR', 'it')).toBe('1234,56')
+    expect(formatNumber(1000, 'es')).toBe('1000')
+    expect(formatNumber(1000, 'hu')).toBe('1000')
+    expect(formatNumber(1000, 'pl')).toBe('1000')
+    // Everyone else groups from four, and now says so explicitly.
+    expect(formatNumber(1000, 'de')).toBe('1.000')
+    expect(formatNumber(1000, 'en')).toBe('1,000')
+    expect(formatNumber(1000, 'ar')).toBe('1,000')
+  })
+
+  it('writes every locale in Latin digits, Arabic included', () => {
+    // `ar` is the one shipped locale whose CLDR default numbering system is not
+    // `latn`; linux WebKit honours that default and workerd does not.
+    expect(formatNumber(101, 'ar')).toBe('101')
+    expect(pluralise(101, 'ar', { other: 'other' })).toBe('101 other')
+    expect(formatMonthYear('2026-06-01', 'ar')).toContain('2026')
+    for (const tag of LOCALE_TAGS) {
+      expect(formatNumber(1_234_567, tag).replace(/\D/g, ''), tag).toBe(
+        '1234567',
+      )
+    }
+  })
 })
 
 describe('the frozen month names against the platform that supplied them', () => {
@@ -510,6 +576,29 @@ describe('the shipped source under src/lib', () => {
     expect(files).toContain(join(LIB, 'format.ts'))
     expect(files).toContain(join(LIB, 'format-tables.ts'))
     expect(files.length).toBeGreaterThan(10)
+  })
+
+  it('never hands a bare locale tag to Intl in the formatter', () => {
+    // `Intl` reads its numbering system and its grouping rule out of whichever
+    // ICU the runtime was built against, and the two runtimes answer
+    // differently for `ar` and `it`. The frozen `intlLocale` carries the
+    // `-u-nu-latn` extension that settles the first; passing a bare `locale`
+    // instead quietly reopens the divergence, and only in Safari.
+    //
+    // The locale argument is read off the joined source rather than line by
+    // line, so that a call prettier wraps across two lines is still checked
+    // rather than silently excused.
+    const source = readFileSync(join(LIB, 'format.ts'), 'utf8')
+      .split('\n')
+      .filter((line) => !COMMENT.test(line))
+      .join(' ')
+    const offenders = [...source.matchAll(/new Intl\.\w+\(([^,]*)/g)]
+      .filter((call) => !call[1].includes('intlLocale'))
+      .map((call) => call[0])
+    expect(
+      offenders,
+      'every Intl instance takes the frozen tag from LOCALE_FORMATS, never the Locale itself',
+    ).toEqual([])
   })
 
   it('never calls Intl.DisplayNames', () => {

@@ -41,16 +41,25 @@
  *   symbol from the amount in workerd and not in WebKit.
  * - The minor units of `HUF` and `IDR`: workerd says zero digits and WebKit says
  *   two, so the same stored integer renders as two different *amounts*.
+ * - The default numbering system of `ar`, and the grouping of a four-digit
+ *   number in `it`. Both were found later, and only in the linux WebKit the
+ *   Playwright container ships: the WebKit on a macOS laptop agrees with
+ *   workerd about both, which is why the parity spec was green on every
+ *   developer machine and red in CI. `intlLocale` now carries `-u-nu-latn` and
+ *   `grouping` states the CLDR `minimumGroupingDigits` rule outright.
  *
  * Chromium agreed with workerd on every one of those fields, which is why a
  * Chromium-only check catches none of them and `e2e/i18n-runtime-parity.spec.ts`
  * runs its comparison in WebKit.
  *
- * Three things are deliberately *not* frozen, because all three were measured
- * byte-identical in the three runtimes for all twenty-three locales: decimal and
- * percent grouping, the currency symbol itself, and the composed
+ * Three things are still *composed* by `Intl` rather than by a table: the
+ * decimal and percent forms, the currency symbol itself, and the composed
  * `{ month: 'long', year: 'numeric' }` form. They stay live `Intl` calls in
- * `format.ts` and the parity spec re-proves them on every run.
+ * `format.ts` and the parity spec re-proves them on every run — but none of
+ * them is left to a runtime default any more. The separators and digit widths
+ * were measured byte-identical everywhere; the numbering system and the
+ * grouping rule were not, so `format.ts` hands both to every number formatter
+ * it builds.
  *
  * Nothing here is translated. These are CLDR facts; the connector words in the
  * open-ended range patterns are the single exception, and English is the only
@@ -137,8 +146,34 @@ export interface LocaleFormats {
    * The tag handed to `Intl` for the fields that stay live. `en` resolves to
    * `en-GB`, which is what the product has always pinned and what every current
    * caller's output depends on.
+   *
+   * Every tag carries `-u-nu-latn`. Only `ar` needs it — CLDR's default
+   * numbering system for Arabic is `arab`, workerd answers `latn` anyway and
+   * the linux WebKit in the Playwright container answers `arab`, so an amount
+   * rendered `101` on the server hydrated as `١٠١` in Safari. Spelling the
+   * extension on all twenty-three keeps the next locale that changes its CLDR
+   * default from reopening the same bug.
    */
   readonly intlLocale: string
+  /**
+   * How this locale groups an integer, spelled as an `Intl.NumberFormat`
+   * `useGrouping` value rather than left to the runtime's locale data.
+   *
+   * `min2` is CLDR's `minimumGroupingDigits=2`: four digits stay bare and
+   * grouping starts at five, so Italian writes `1234,56` and `12.345`. Four of
+   * the twenty-three locales have it, and linux WebKit honours it for three of
+   * them and groups the Italian four — the divergence this field exists to
+   * close. `always` is what every other locale does anyway; it is stated rather
+   * than defaulted because a default is exactly what the two runtimes
+   * disagreed about.
+   *
+   * The string form of `useGrouping` is ECMA-402 NumberFormat v3, which
+   * TypeScript only declares under `ES2023.Intl` — hence that one type-only
+   * entry in `tsconfig.json`'s `lib`. workerd, WebKit and Chromium have all
+   * shipped it for years, and all three were measured with it before this was
+   * written.
+   */
+  readonly grouping: 'always' | 'min2'
   /** Abbreviated month names, standalone, indexed by `getUTCMonth()`. */
   readonly monthsShort: ReadonlyArray<string>
   /** Wide month names, standalone and nominative, indexed by `getUTCMonth()`. */
@@ -163,7 +198,8 @@ export interface LocaleFormats {
 /** The table: one row per shipped locale, keyed by its BCP-47 tag. */
 export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
   ar: {
-    intlLocale: 'ar',
+    intlLocale: 'ar-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'يناير',
       'فبراير',
@@ -260,7 +296,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     },
   },
   ca: {
-    intlLocale: 'ca',
+    intlLocale: 'ca-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'gen.',
       'febr.',
@@ -338,7 +375,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '-{n}\u00a0{s}' },
   },
   cs: {
-    intlLocale: 'cs',
+    intlLocale: 'cs-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'led',
       'úno',
@@ -418,7 +456,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '-{n}\u00a0{s}' },
   },
   de: {
-    intlLocale: 'de',
+    intlLocale: 'de-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'Jan',
       'Feb',
@@ -496,7 +535,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '-{n}\u00a0{s}' },
   },
   el: {
-    intlLocale: 'el',
+    intlLocale: 'el-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'Ιαν',
       'Φεβ',
@@ -561,7 +601,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '-{n}\u00a0{s}' },
   },
   en: {
-    intlLocale: 'en-GB',
+    intlLocale: 'en-GB-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'Jan',
       'Feb',
@@ -626,7 +667,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{s}{g}{n}', negative: '-{s}{g}{n}' },
   },
   es: {
-    intlLocale: 'es',
+    intlLocale: 'es-u-nu-latn',
+    grouping: 'min2',
     monthsShort: [
       'ene',
       'feb',
@@ -691,7 +733,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '-{n}\u00a0{s}' },
   },
   fr: {
-    intlLocale: 'fr',
+    intlLocale: 'fr-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'janv.',
       'févr.',
@@ -756,7 +799,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '-{n}\u00a0{s}' },
   },
   hu: {
-    intlLocale: 'hu',
+    intlLocale: 'hu-u-nu-latn',
+    grouping: 'min2',
     monthsShort: [
       'jan.',
       'febr.',
@@ -821,7 +865,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '-{n}\u00a0{s}' },
   },
   id: {
-    intlLocale: 'id',
+    intlLocale: 'id-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'Jan',
       'Feb',
@@ -886,7 +931,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{s}{g}{n}', negative: '-{s}{g}{n}' },
   },
   it: {
-    intlLocale: 'it',
+    intlLocale: 'it-u-nu-latn',
+    grouping: 'min2',
     monthsShort: [
       'gen',
       'feb',
@@ -951,7 +997,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '-{n}\u00a0{s}' },
   },
   ja: {
-    intlLocale: 'ja',
+    intlLocale: 'ja-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       '1月',
       '2月',
@@ -1016,7 +1063,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{s}{g}{n}', negative: '-{s}{g}{n}' },
   },
   ko: {
-    intlLocale: 'ko',
+    intlLocale: 'ko-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       '1월',
       '2월',
@@ -1081,7 +1129,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{s}{g}{n}', negative: '-{s}{g}{n}' },
   },
   nl: {
-    intlLocale: 'nl',
+    intlLocale: 'nl-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'jan',
       'feb',
@@ -1146,7 +1195,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{s}\u00a0{n}', negative: '{s}\u00a0-{n}' },
   },
   pl: {
-    intlLocale: 'pl',
+    intlLocale: 'pl-u-nu-latn',
+    grouping: 'min2',
     monthsShort: [
       'sty',
       'lut',
@@ -1226,7 +1276,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '-{n}\u00a0{s}' },
   },
   'pt-BR': {
-    intlLocale: 'pt-BR',
+    intlLocale: 'pt-BR-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'jan.',
       'fev.',
@@ -1291,7 +1342,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{s}\u00a0{n}', negative: '-{s}\u00a0{n}' },
   },
   ru: {
-    intlLocale: 'ru',
+    intlLocale: 'ru-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'янв.',
       'февр.',
@@ -1384,7 +1436,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '-{n}\u00a0{s}' },
   },
   sv: {
-    intlLocale: 'sv',
+    intlLocale: 'sv-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'jan.',
       'feb.',
@@ -1449,7 +1502,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '\u2212{n}\u00a0{s}' },
   },
   tr: {
-    intlLocale: 'tr',
+    intlLocale: 'tr-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'Oca',
       'Şub',
@@ -1514,7 +1568,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{s}{g}{n}', negative: '-{s}{g}{n}' },
   },
   uk: {
-    intlLocale: 'uk',
+    intlLocale: 'uk-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'січ.',
       'лют.',
@@ -1594,7 +1649,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '-{n}\u00a0{s}' },
   },
   vi: {
-    intlLocale: 'vi',
+    intlLocale: 'vi-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       'Tháng 1',
       'Tháng 2',
@@ -1672,7 +1728,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{n}\u00a0{s}', negative: '-{n}\u00a0{s}' },
   },
   'zh-Hans': {
-    intlLocale: 'zh-Hans',
+    intlLocale: 'zh-Hans-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       '1月',
       '2月',
@@ -1737,7 +1794,8 @@ export const LOCALE_FORMATS: Readonly<Record<Locale, LocaleFormats>> = {
     currency: { positive: '{s}{g}{n}', negative: '-{s}{g}{n}' },
   },
   'zh-Hant': {
-    intlLocale: 'zh-Hant',
+    intlLocale: 'zh-Hant-u-nu-latn',
+    grouping: 'always',
     monthsShort: [
       '1月',
       '2月',

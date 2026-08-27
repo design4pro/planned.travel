@@ -37,6 +37,17 @@ const auditSchema = z.object({
       reason: z.string(),
     }),
   ),
+  // Incidental findings OUTSIDE the audited DoDs — coverage gaps, adjacent
+  // debt. They become triage tickets (status: pending), never reopens.
+  followUps: z
+    .array(
+      z.object({
+        title: z.string(),
+        body: z.string(),
+        kind: z.enum(['bug', 'maintenance']),
+      }),
+    )
+    .default([]),
 })
 
 // Maximum number of plan→execute→merge→audit cycles before stopping.
@@ -107,8 +118,12 @@ const integrationBranch = (await import('node:child_process'))
 
 async function runPlanner(): Promise<Issue[]> {
   const plan = await sandcastle.run({
-    hooks,
+    // No install hook: the planner only reads issues via gh. And NEVER the
+    // default 'head' strategy — it bind-mounts the host working directory,
+    // where an install hook would grind through the darwin node_modules
+    // (measured: 10+ min vs 13 s fresh) and could corrupt them.
     sandbox: docker(),
+    branchStrategy: { type: 'merge-to-head' },
     name: 'planner',
     maxIterations: 1,
     agent: sandcastle.claudeCode(PLANNER_MODEL),
@@ -323,6 +338,10 @@ async function mergeBranches(passing: Array<{ issue: Issue }>): Promise<void> {
   await sandcastle.run({
     hooks,
     sandbox: docker(),
+    // Temp branch off HEAD; the agent merges issue branches into it, then
+    // sandcastle merges the temp branch back to HEAD. Same net effect as
+    // 'head', but the container never installs over the host node_modules.
+    branchStrategy: { type: 'merge-to-head' },
     name: 'merger',
     maxIterations: 1,
     agent: sandcastle.claudeCode(REVIEWER_MODEL),
@@ -336,9 +355,15 @@ async function mergeBranches(passing: Array<{ issue: Issue }>): Promise<void> {
   })
 }
 
-async function runAuditor(closed: Issue[]): Promise<void> {
+async function runAuditor(
+  closed: Issue[],
+  iteration: number,
+): Promise<{ refuted: number }> {
+  // A throwaway branch off HEAD (post-merge state): git refuses to check the
+  // integration branch out into a second worktree while this one holds it.
+  // The audit is read-only, so the branch is never merged anywhere.
   const sandbox = await sandcastle.createSandbox({
-    branch: integrationBranch,
+    branch: `sandcastle/audit-${RUN_TS}-i${iteration}`,
     sandbox: docker(),
     hooks,
     copyToWorktree,
@@ -352,9 +377,19 @@ async function runAuditor(closed: Issue[]): Promise<void> {
       promptArgs: {
         ISSUES: closed.map((i) => `- ${i.id}: ${i.title}`).join('\n'),
       },
-      output: sandcastle.Output.object({ tag: 'audit', schema: auditSchema }),
     })
-    for (const finding of audit.output.issues) {
+    // sandbox.run() has no `output` option (only top-level run() does) —
+    // extract and validate the <audit> block from stdout by hand.
+    const raw = audit.stdout.match(/<audit>([\s\S]*?)<\/audit>/)?.[1]
+    if (raw === undefined) {
+      console.error(
+        '  AUDIT: no <audit> block in auditor output — treating as inconclusive, nothing reopened.',
+      )
+      // Inconclusive blocks the auto-PR: an unverified merge is not clean.
+      return { refuted: 1 }
+    }
+    const verdicts = auditSchema.parse(JSON.parse(raw))
+    for (const finding of verdicts.issues) {
       if (finding.verdict === 'refuted') {
         console.log(`  AUDIT REFUTED #${finding.id}: ${finding.reason}`)
         await sandbox.exec(
@@ -365,14 +400,76 @@ async function runAuditor(closed: Issue[]): Promise<void> {
         )
       }
     }
+    // Incidental findings become triage tickets — `status: pending`, never
+    // `ready-for-agent`: a human promotes them, so the loop cannot generate
+    // and consume its own work unsupervised. Capped and title-deduped.
+    for (const followUp of verdicts.followUps.slice(0, 3)) {
+      const existing = await sandbox.exec(
+        `gh issue list --state open --search ${JSON.stringify(followUp.title)} --json number --jq 'length'`,
+      )
+      if (existing.stdout.trim() !== '0') {
+        console.log(`  AUDIT FOLLOW-UP already filed: ${followUp.title}`)
+        continue
+      }
+      console.log(`  AUDIT FOLLOW-UP → issue: ${followUp.title}`)
+      await sandbox.exec(
+        `gh issue create --title ${JSON.stringify(followUp.title)} --label ${JSON.stringify(`type: ${followUp.kind}`)} --label "status: pending" --body-file -`,
+        {
+          stdin: `${followUp.body}\n\n---\n_Filed by the sandcastle auditor (run ${RUN_TS}, iteration ${iteration}) while auditing: ${closed.map((i) => `#${i.id}`).join(', ')}._`,
+        },
+      )
+    }
     await collectArtifacts(
       sandbox,
       { id: 'audit', title: 'audit', branch: integrationBranch },
       1,
     )
+    return {
+      refuted: verdicts.issues.filter((f) => f.verdict === 'refuted').length,
+    }
   } finally {
     await sandbox.close()
   }
+}
+
+/**
+ * Open the human-review gate: push the integration branch and create a DRAFT
+ * PR to develop. Runs only when the run is clean — at least one merged issue
+ * and zero refuted verdicts in the final audit. Creating the PR is mechanical;
+ * reviewing and merging it stays human (ADR 0003).
+ */
+async function openIntegrationPr(merged: Issue[]): Promise<void> {
+  const { execSync } = await import('node:child_process')
+  const { writeFile } = await import('node:fs/promises')
+  execSync(`git push -u origin ${integrationBranch}`, { stdio: 'inherit' })
+  const existing = execSync(
+    `gh pr list --head ${integrationBranch} --state open --json number --jq 'length'`,
+    { encoding: 'utf8' },
+  ).trim()
+  if (existing !== '0') {
+    console.log(
+      `PR for ${integrationBranch} already open — pushed new commits to it.`,
+    )
+    return
+  }
+  const bodyPath = join(ARTIFACT_ROOT, 'pr-body.md')
+  await writeFile(
+    bodyPath,
+    [
+      `Sandcastle run \`${RUN_TS}\` completed cleanly: every issue below was implemented, reviewed, validated by the deterministic ladder (typecheck · lint · vitest · e2e when UI-touched) inside the CI-identical sandbox, merged, and confirmed by the adversarial auditor (full ladder incl. full e2e).`,
+      '',
+      '## Issues completed',
+      ...merged.map((i) => `- #${i.id} — ${i.title}`),
+      '',
+      `Artifacts (playwright reports, validation verdicts) on the operator host under \`${ARTIFACT_ROOT}\`.`,
+      '',
+      '_Draft on purpose: review, then mark ready and merge — the human gate of ADR 0003._',
+    ].join('\n'),
+  )
+  execSync(
+    `gh pr create --draft --base develop --head ${integrationBranch} --title ${JSON.stringify(`sandcastle: ${merged.map((i) => `#${i.id}`).join(', ')} — run ${RUN_TS}`)} --body-file ${JSON.stringify(bodyPath)}`,
+    { stdio: 'inherit' },
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -380,6 +477,8 @@ async function runAuditor(closed: Issue[]): Promise<void> {
 // ---------------------------------------------------------------------------
 
 const limit = createLimiter(MAX_PARALLEL)
+const mergedAll: Issue[] = []
+let lastAuditRefuted = 0
 
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(
@@ -423,8 +522,24 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   }
 
   await mergeBranches(passing)
+  mergedAll.push(...passing.map((p) => p.issue))
   console.log('Branches merged. Running auditor…')
-  await runAuditor(passing.map((p) => p.issue))
+  const audit = await runAuditor(
+    passing.map((p) => p.issue),
+    iteration,
+  )
+  lastAuditRefuted = audit.refuted
+}
+
+if (mergedAll.length > 0 && lastAuditRefuted === 0) {
+  console.log(
+    '\nRun is clean (merges present, final audit confirmed) — opening the draft PR to develop.',
+  )
+  await openIntegrationPr(mergedAll)
+} else if (mergedAll.length > 0) {
+  console.log(
+    `\nNOT opening a PR: the final audit left ${lastAuditRefuted} refuted verdict(s) unresolved (iteration cap reached). Review ${integrationBranch} by hand.`,
+  )
 }
 
 console.log(`\nAll done. Artifacts under ${ARTIFACT_ROOT}`)
