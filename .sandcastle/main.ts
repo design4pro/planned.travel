@@ -9,9 +9,10 @@
 // runs the full suite (including full e2e) once — the post-merge safety net
 // that lets CI's e2e job run only on develop/main pushes.
 //
-// Run from `develop` (today's integration branch `sandcastle/run-<date>` is
-// cut — or resumed — automatically) or from an integration branch you cut
-// yourself; `main` is refused (ADR 0003):
+// Run from anywhere: the integration branch `sandcastle/run-<date>` is cut
+// from `origin/develop` (or resumed, on a same-day rerun) inside its own git
+// worktree under `.sandcastle/worktrees/` — the operator's checkout is never
+// switched and stays usable while the loop runs:
 //   pnpm sandcastle
 //
 // Requires: Docker running, `sandcastle docker build-image` executed once,
@@ -113,34 +114,33 @@ function createLimiter(limit: number) {
   }
 }
 
-// Never run the loop on `develop` itself — every iteration merges into HEAD.
-// Started there, cut (or resume, on a same-day rerun) the integration branch
-// the header documents, so `pnpm sandcastle` is the whole start procedure.
-// `main` is refused: integration runs are cut from develop (ADR 0003). Any
-// other branch is taken as a deliberately chosen integration branch, as-is.
+// The integration branch lives in its own git worktree (sandcastle's
+// createWorktree), so nothing here ever switches the operator's checkout —
+// which is also what keeps ADR 0003 honoured mechanically: the branch is
+// always cut from `origin/develop`, whatever the operator happens to have
+// checked out. On a same-day rerun the branch already exists, `baseBranch`
+// is ignored (the lib's contract) and the existing worktree is reused, so
+// accumulated issue-branch progress survives. The lib refuses cleanly if
+// the branch is checked out elsewhere. The fetch is ours: createWorktree
+// documents that callers keep the base ref current.
 const { execSync } = await import('node:child_process')
-const integrationBranch = (() => {
-  const head = execSync('git rev-parse --abbrev-ref HEAD', {
-    encoding: 'utf8',
-  }).trim()
-  if (head === 'main') {
-    throw new Error(
-      'sandcastle: refusing to run on `main` — start from `develop` or an integration branch (ADR 0003).',
-    )
-  }
-  if (head !== 'develop') return head
-  const today = new Date().toISOString().slice(0, 10).replaceAll('-', '')
-  const branch = `sandcastle/run-${today}`
-  const exists =
-    execSync(`git branch --list ${branch}`, { encoding: 'utf8' }).trim() !== ''
-  execSync(exists ? `git switch ${branch}` : `git switch -c ${branch}`, {
-    stdio: 'inherit',
-  })
-  console.log(
-    `sandcastle: ${exists ? 'resumed' : 'cut'} integration branch ${branch} from develop`,
-  )
-  return branch
-})()
+execSync('git fetch origin develop', { stdio: 'inherit' })
+const integration = await sandcastle.createWorktree({
+  branchStrategy: {
+    type: 'branch',
+    branch: `sandcastle/run-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}`,
+    baseBranch: 'origin/develop',
+  },
+  // Every run/createSandbox below anchors at this worktree, and the anchor
+  // resolves `.sandcastle/.env` and `copyToWorktree` sources against it — so
+  // the two gitignored inputs must travel into the worktree at creation.
+  copyToWorktree: ['.sandcastle/.env', ...copyToWorktree],
+})
+const integrationBranch = integration.branch
+const integrationCwd = integration.worktreePath
+console.log(
+  `sandcastle: integration branch ${integrationBranch} in worktree ${integrationCwd}`,
+)
 
 async function runPlanner(): Promise<Issue[]> {
   const plan = await sandcastle.run({
@@ -149,6 +149,7 @@ async function runPlanner(): Promise<Issue[]> {
     // where an install hook would grind through the darwin node_modules
     // (measured: 10+ min vs 13 s fresh) and could corrupt them.
     sandbox: docker(),
+    cwd: integrationCwd,
     branchStrategy: { type: 'merge-to-head' },
     name: 'planner',
     maxIterations: 1,
@@ -262,6 +263,7 @@ async function workIssue(
   const sandbox = await sandcastle.createSandbox({
     branch: issue.branch,
     sandbox: docker(),
+    cwd: integrationCwd,
     hooks,
     copyToWorktree,
   })
@@ -364,6 +366,7 @@ async function mergeBranches(passing: Array<{ issue: Issue }>): Promise<void> {
   await sandcastle.run({
     hooks,
     sandbox: docker(),
+    cwd: integrationCwd,
     // Temp branch off HEAD; the agent merges issue branches into it, then
     // sandcastle merges the temp branch back to HEAD. Same net effect as
     // 'head', but the container never installs over the host node_modules.
@@ -391,6 +394,7 @@ async function runAuditor(
   const sandbox = await sandcastle.createSandbox({
     branch: `sandcastle/audit-${RUN_TS}-i${iteration}`,
     sandbox: docker(),
+    cwd: integrationCwd,
     hooks,
     copyToWorktree,
   })
@@ -567,5 +571,11 @@ if (mergedAll.length > 0 && lastAuditRefuted === 0) {
     `\nNOT opening a PR: the final audit left ${lastAuditRefuted} refuted verdict(s) unresolved (iteration cap reached). Review ${integrationBranch} by hand.`,
   )
 }
+
+// Remove the integration worktree; the branch (and any open PR on it)
+// survives. close() preserves a dirty worktree, and a crashed run leaves one
+// behind — either way the next run reuses it (measured: createWorktree logs
+// "Reusing existing worktree" for a matching branch).
+await integration.close()
 
 console.log(`\nAll done. Artifacts under ${ARTIFACT_ROOT}`)
