@@ -36,13 +36,27 @@ import {
   sortOrderSchema,
   titleSchema,
 } from './validation'
-import type { BudgetItem, Expense, ExpenseShare, Settlement } from '#/server/db/types'
+import type {
+  BudgetItem,
+  Expense,
+  ExpenseShare,
+  Settlement,
+} from '#/server/db/types'
 import type { TenantScope } from './base'
 
-export const budgetItemsRepository = createTenantRepository(budgetItems, 'budget item')
+export const budgetItemsRepository = createTenantRepository(
+  budgetItems,
+  'budget item',
+)
 export const expensesRepository = createTenantRepository(expenses, 'expense')
-export const expenseSharesRepository = createTenantRepository(expenseShares, 'expense share')
-export const settlementsRepository = createTenantRepository(settlements, 'settlement')
+export const expenseSharesRepository = createTenantRepository(
+  expenseShares,
+  'expense share',
+)
+export const settlementsRepository = createTenantRepository(
+  settlements,
+  'settlement',
+)
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -121,16 +135,48 @@ export const updateExpenseInput = z.object({
 })
 export type UpdateExpenseInput = z.infer<typeof updateExpenseInput>
 
-export const createSettlementInput = z.object({
-  tripId: idSchema,
-  fromUserId: idSchema,
-  toUserId: idSchema,
-  amountMinor: minorAmountSchema,
-  currency: currencySchema.optional(),
-  method: z.enum(SETTLEMENT_METHODS).optional(),
-  settledOn: dateSchema,
-  note: shortTextSchema.nullish(),
-})
+/**
+ * A payment recorded against a trip.
+ *
+ * The three source fields are the settlement half of the rule `expenses` already keeps: a payment
+ * made in a currency other than the trip's own keeps the amount that actually left the payer's
+ * account, the currency it was in, and the rate frozen at the moment it was recorded. The database
+ * holds no `CHECK` for any of it — one would rebuild the table on SQLite — so the invariants are
+ * here: all three together or none of them, and a source amount that is a non-negative integer in
+ * minor units, which is what {@link minorAmountSchema} already means.
+ *
+ * `exchangeRate` is never taken from a client. The writing surface derives it with `impliedRate()`
+ * from the two amounts, exactly as `toRepoInput` does for an expense (`src/server/fns/costs.ts`),
+ * so the rate can never disagree with the figures printed beside it.
+ */
+export const createSettlementInput = z
+  .strictObject(
+    {
+      tripId: idSchema,
+      fromUserId: idSchema,
+      toUserId: idSchema,
+      amountMinor: minorAmountSchema,
+      currency: currencySchema.optional(),
+      originalAmountMinor: minorAmountSchema.nullish(),
+      originalCurrency: currencySchema.nullish(),
+      exchangeRate: z.number().finite().positive().nullish(),
+      method: z.enum(SETTLEMENT_METHODS).optional(),
+      settledOn: dateSchema,
+      note: shortTextSchema.nullish(),
+    },
+    {
+      error:
+        'A settlement is a trip, two people, an amount and the day it was paid.',
+    },
+  )
+  .refine((values) => {
+    const recorded = [
+      values.originalAmountMinor,
+      values.originalCurrency,
+      values.exchangeRate,
+    ].filter((field) => field !== undefined && field !== null).length
+    return recorded === 0 || recorded === 3
+  }, 'a settlement records its source amount, source currency and rate together, or none of them')
 export type CreateSettlementInput = z.infer<typeof createSettlementInput>
 
 /* -------------------------------------------------------------------------------------------------
@@ -158,7 +204,10 @@ export function computeShares(
   }
 
   if (method === 'exact') {
-    const total = participants.reduce((sumSoFar, part) => sumSoFar + (part.shareMinor ?? 0), 0)
+    const total = participants.reduce(
+      (sumSoFar, part) => sumSoFar + (part.shareMinor ?? 0),
+      0,
+    )
     if (total !== amountMinor) {
       throw new RepositoryError(
         `Exact shares must add up to the expense total (${total} vs ${amountMinor}).`,
@@ -184,14 +233,23 @@ export function computeShares(
 
   const weightTotal = weights.reduce((sumSoFar, weight) => sumSoFar + weight, 0)
   if (weightTotal <= 0) {
-    throw new RepositoryError('A split needs at least one positive weight.', 'SPLIT_MISMATCH')
+    throw new RepositoryError(
+      'A split needs at least one positive weight.',
+      'SPLIT_MISMATCH',
+    )
   }
   if (method === 'percentage' && Math.abs(weightTotal - 100) > 0.001) {
-    throw new RepositoryError('Percentage shares must add up to 100.', 'SPLIT_MISMATCH')
+    throw new RepositoryError(
+      'Percentage shares must add up to 100.',
+      'SPLIT_MISMATCH',
+    )
   }
 
-  const raw = weights.map((weight) => Math.floor((amountMinor * weight) / weightTotal))
-  let remainder = amountMinor - raw.reduce((sumSoFar, value) => sumSoFar + value, 0)
+  const raw = weights.map((weight) =>
+    Math.floor((amountMinor * weight) / weightTotal),
+  )
+  let remainder =
+    amountMinor - raw.reduce((sumSoFar, value) => sumSoFar + value, 0)
 
   return participants.map((part, index) => {
     const extra = remainder > 0 ? 1 : 0
@@ -239,7 +297,10 @@ export async function updateBudgetItem(
   )
 }
 
-export async function deleteBudgetItem(scope: TenantScope, budgetItemId: string): Promise<void> {
+export async function deleteBudgetItem(
+  scope: TenantScope,
+  budgetItemId: string,
+): Promise<void> {
   await budgetItemsRepository.requireRemove(scope, budgetItemId)
 }
 
@@ -250,7 +311,10 @@ export async function deleteBudgetItem(scope: TenantScope, budgetItemId: string)
 export async function listTripExpenses(
   scope: TenantScope,
   tripId: string,
-  options: { readonly category?: (typeof EXPENSE_CATEGORIES)[number]; readonly limit?: number } = {},
+  options: {
+    readonly category?: (typeof EXPENSE_CATEGORIES)[number]
+    readonly limit?: number
+  } = {},
 ): Promise<Array<Expense>> {
   return expensesRepository.findMany(scope, {
     where: and(
@@ -262,7 +326,10 @@ export async function listTripExpenses(
   })
 }
 
-export async function getExpense(scope: TenantScope, expenseId: string): Promise<Expense | null> {
+export async function getExpense(
+  scope: TenantScope,
+  expenseId: string,
+): Promise<Expense | null> {
   return expensesRepository.findById(scope, expenseId)
 }
 
@@ -325,7 +392,11 @@ export async function updateExpense(
   if (patch.dayId) {
     await requireTripDay(scope, existing.tripId, patch.dayId)
   }
-  const expense = await expensesRepository.requireUpdate(scope, expenseId, definedOnly(patch))
+  const expense = await expensesRepository.requireUpdate(
+    scope,
+    expenseId,
+    definedOnly(patch),
+  )
 
   if (participants === undefined) {
     const shares = await expenseSharesRepository.findMany(scope, {
@@ -351,7 +422,10 @@ export async function setExpenseShares(
   method?: (typeof SPLIT_METHODS)[number],
 ): Promise<Array<ExpenseShare>> {
   const expense = await expensesRepository.requireById(scope, expenseId)
-  const parsed = z.array(splitParticipantInput).max(100).parse([...participants])
+  const parsed = z
+    .array(splitParticipantInput)
+    .max(100)
+    .parse([...participants])
   return writeShares(scope, expense, parsed, method ?? expense.splitMethod)
 }
 
@@ -361,7 +435,10 @@ async function writeShares(
   participants: ReadonlyArray<SplitParticipantInput>,
   method: string,
 ): Promise<Array<ExpenseShare>> {
-  await expenseSharesRepository.removeWhere(scope, eq(expenseShares.expenseId, expense.id))
+  await expenseSharesRepository.removeWhere(
+    scope,
+    eq(expenseShares.expenseId, expense.id),
+  )
   if (participants.length === 0) {
     return []
   }
@@ -382,9 +459,12 @@ async function writeShares(
   )
 
   // `RETURNING` has no defined row order, so the rows are handed back in participant order.
-  const position = new Map(computed.map((share, index) => [share.userId, index]))
+  const position = new Map(
+    computed.map((share, index) => [share.userId, index]),
+  )
   return [...rows].sort(
-    (left, right) => (position.get(left.userId) ?? 0) - (position.get(right.userId) ?? 0),
+    (left, right) =>
+      (position.get(left.userId) ?? 0) - (position.get(right.userId) ?? 0),
   )
 }
 
@@ -396,7 +476,10 @@ export async function markShareSettled(
   return expenseSharesRepository.requireUpdate(scope, shareId, { isSettled })
 }
 
-export async function deleteExpense(scope: TenantScope, expenseId: string): Promise<void> {
+export async function deleteExpense(
+  scope: TenantScope,
+  expenseId: string,
+): Promise<void> {
   await expensesRepository.requireRemove(scope, expenseId)
 }
 
@@ -420,13 +503,22 @@ export async function createSettlement(
 ): Promise<Settlement> {
   const values = createSettlementInput.parse(input)
   if (values.fromUserId === values.toUserId) {
-    throw new RepositoryError('A settlement needs two different people.', 'INVALID_SETTLEMENT')
+    throw new RepositoryError(
+      'A settlement needs two different people.',
+      'INVALID_SETTLEMENT',
+    )
   }
   await requireTrip(scope, values.tripId)
-  return settlementsRepository.insert(scope, { ...values, createdBy: scope.ctx.userId })
+  return settlementsRepository.insert(scope, {
+    ...values,
+    createdBy: scope.ctx.userId,
+  })
 }
 
-export async function deleteSettlement(scope: TenantScope, settlementId: string): Promise<void> {
+export async function deleteSettlement(
+  scope: TenantScope,
+  settlementId: string,
+): Promise<void> {
   await settlementsRepository.requireRemove(scope, settlementId)
 }
 
@@ -459,7 +551,10 @@ export async function getTripSpendSummary(
 
   const [plannedRows, spentRows] = await Promise.all([
     scope.db
-      .select({ category: budgetItems.category, planned: sum(budgetItems.plannedAmountMinor) })
+      .select({
+        category: budgetItems.category,
+        planned: sum(budgetItems.plannedAmountMinor),
+      })
       .from(budgetItems)
       .where(tenantFilter(scope, budgetItems, eq(budgetItems.tripId, tripId)))
       .groupBy(budgetItems.category),
@@ -474,9 +569,15 @@ export async function getTripSpendSummary(
       .groupBy(expenses.category),
   ])
 
-  const planned = new Map(plannedRows.map((row) => [row.category, Number(row.planned ?? 0)]))
-  const spent = new Map(spentRows.map((row) => [row.category, Number(row.spent ?? 0)]))
-  const counts = new Map(spentRows.map((row) => [row.category, row.expenseCount]))
+  const planned = new Map(
+    plannedRows.map((row) => [row.category, Number(row.planned ?? 0)]),
+  )
+  const spent = new Map(
+    spentRows.map((row) => [row.category, Number(row.spent ?? 0)]),
+  )
+  const counts = new Map(
+    spentRows.map((row) => [row.category, row.expenseCount]),
+  )
 
   const byCategory = EXPENSE_CATEGORIES.map((category) => ({
     category,
@@ -487,10 +588,16 @@ export async function getTripSpendSummary(
 
   return {
     currency: trip.currency,
-    plannedMinor: byCategory.reduce((total, row) => total + row.plannedMinor, 0),
+    plannedMinor: byCategory.reduce(
+      (total, row) => total + row.plannedMinor,
+      0,
+    ),
     spentMinor: byCategory.reduce((total, row) => total + row.spentMinor, 0),
     budgetTargetMinor: trip.budgetTargetMinor,
-    expenseCount: byCategory.reduce((total, row) => total + row.expenseCount, 0),
+    expenseCount: byCategory.reduce(
+      (total, row) => total + row.expenseCount,
+      0,
+    ),
     byCategory,
   }
 }
@@ -525,17 +632,28 @@ export async function getMemberBalances(
       .where(tenantFilter(scope, expenses, eq(expenses.tripId, tripId)))
       .groupBy(expenses.paidBy),
     scope.db
-      .select({ userId: expenseShares.userId, total: sum(expenseShares.shareMinor) })
+      .select({
+        userId: expenseShares.userId,
+        total: sum(expenseShares.shareMinor),
+      })
       .from(expenseShares)
-      .where(tenantFilter(scope, expenseShares, eq(expenseShares.tripId, tripId)))
+      .where(
+        tenantFilter(scope, expenseShares, eq(expenseShares.tripId, tripId)),
+      )
       .groupBy(expenseShares.userId),
     scope.db
-      .select({ userId: settlements.fromUserId, total: sum(settlements.amountMinor) })
+      .select({
+        userId: settlements.fromUserId,
+        total: sum(settlements.amountMinor),
+      })
       .from(settlements)
       .where(tenantFilter(scope, settlements, eq(settlements.tripId, tripId)))
       .groupBy(settlements.fromUserId),
     scope.db
-      .select({ userId: settlements.toUserId, total: sum(settlements.amountMinor) })
+      .select({
+        userId: settlements.toUserId,
+        total: sum(settlements.amountMinor),
+      })
       .from(settlements)
       .where(tenantFilter(scope, settlements, eq(settlements.tripId, tripId)))
       .groupBy(settlements.toUserId),
@@ -547,7 +665,12 @@ export async function getMemberBalances(
   const received = toTotals(receivedRows)
 
   const userIds = [
-    ...new Set([...paid.keys(), ...share.keys(), ...sent.keys(), ...received.keys()]),
+    ...new Set([
+      ...paid.keys(),
+      ...share.keys(),
+      ...sent.keys(),
+      ...received.keys(),
+    ]),
   ]
 
   return userIds
@@ -576,7 +699,10 @@ function toTotals(
     if (row.userId === null) {
       continue
     }
-    totals.set(row.userId, (totals.get(row.userId) ?? 0) + Number(row.total ?? 0))
+    totals.set(
+      row.userId,
+      (totals.get(row.userId) ?? 0) + Number(row.total ?? 0),
+    )
   }
   return totals
 }
@@ -615,7 +741,11 @@ export async function suggestSettlements(
     }
     const amountMinor = Math.min(creditor.amount, debtor.amount)
     if (amountMinor > 0) {
-      suggestions.push({ fromUserId: debtor.userId, toUserId: creditor.userId, amountMinor })
+      suggestions.push({
+        fromUserId: debtor.userId,
+        toUserId: creditor.userId,
+        amountMinor,
+      })
     }
     creditor.amount -= amountMinor
     debtor.amount -= amountMinor
@@ -641,5 +771,8 @@ export async function listDailySpend(
     .where(tenantFilter(scope, expenses, eq(expenses.tripId, tripId)))
     .groupBy(expenses.spentOn)
     .orderBy(asc(expenses.spentOn))
-  return rows.map((row) => ({ spentOn: row.spentOn, spentMinor: Number(row.total ?? 0) }))
+  return rows.map((row) => ({
+    spentOn: row.spentOn,
+    spentMinor: Number(row.total ?? 0),
+  }))
 }
