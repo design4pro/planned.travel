@@ -1924,6 +1924,61 @@ describe('tenant isolation', () => {
     })
   })
 
+  describe('a settlement paid in another currency', () => {
+    const payment = {
+      amountMinor: 46_488,
+      currency: 'JPY',
+      settledOn: '2026-04-14',
+      originalAmountMinor: 59_600,
+      originalCurrency: 'GBP',
+      exchangeRate: 195,
+    } as const
+
+    it('cannot be recorded onto a foreign trip', async () => {
+      const before = await settlementsRepository.findMany(beta.tenant.scope)
+
+      const error = await captureError(() =>
+        createSettlement(alpha.tenant.scope, {
+          tripId: beta.tripId,
+          fromUserId: beta.secondUserId,
+          toUserId: beta.tenant.ownerUserId,
+          ...payment,
+        }),
+      )
+      expect(error).toBeInstanceOf(NotFoundError)
+
+      // Byte-identical, not merely the same length: a re-scoped write would show up here as a new
+      // row, and a re-scoped update as a changed one.
+      expect(await settlementsRepository.findMany(beta.tenant.scope)).toEqual(
+        before,
+      )
+    })
+
+    it('is invisible to the other tenant once recorded', async () => {
+      const own = await createSettlement(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        fromUserId: alpha.secondUserId,
+        toUserId: alpha.tenant.ownerUserId,
+        ...payment,
+      })
+      expect(own.originalAmountMinor).toBe(59_600)
+      expect(own.originalCurrency).toBe('GBP')
+      expect(own.exchangeRate).toBe(195)
+
+      expect(
+        await settlementsRepository.findById(beta.tenant.scope, own.id),
+      ).toBeNull()
+      expect(
+        await captureError(() =>
+          settlementsRepository.requireById(beta.tenant.scope, own.id),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await settlementsRepository.findById(alpha.tenant.scope, own.id),
+      ).not.toBeNull()
+    })
+  })
+
   describe('audit recording', () => {
     /**
      * The trail is the one table whose rows deliberately *name* ids from elsewhere: an entry's

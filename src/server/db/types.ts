@@ -45,7 +45,10 @@ export type TierMetric = Exclude<UsageMetric, CatalogueMetric>
  * layers the catalogue and the row's own ceilings on top and is what `assertQuota()` enforces —
  * per `docs/SPEC.md` §5 and `docs/ARCHITECTURE.md` §6.
  */
-export const PLAN_QUOTAS: Record<OrganizationPlan, Record<TierMetric, number>> = {
+export const PLAN_QUOTAS: Record<
+  OrganizationPlan,
+  Record<TierMetric, number>
+> = {
   free: {
     places: 150,
     files: 50,
@@ -117,8 +120,10 @@ export type PlaceTag = typeof schema.placeTags.$inferSelect
 export type NewPlaceTag = typeof schema.placeTags.$inferInsert
 export type DayAssignment = typeof schema.dayAssignments.$inferSelect
 export type NewDayAssignment = typeof schema.dayAssignments.$inferInsert
-export type AssignmentParticipant = typeof schema.assignmentParticipants.$inferSelect
-export type NewAssignmentParticipant = typeof schema.assignmentParticipants.$inferInsert
+export type AssignmentParticipant =
+  typeof schema.assignmentParticipants.$inferSelect
+export type NewAssignmentParticipant =
+  typeof schema.assignmentParticipants.$inferInsert
 export type DayNote = typeof schema.dayNotes.$inferSelect
 export type NewDayNote = typeof schema.dayNotes.$inferInsert
 export type DayAccommodation = typeof schema.dayAccommodations.$inferSelect
@@ -131,6 +136,8 @@ export type NewReservation = typeof schema.reservations.$inferInsert
 
 export type BudgetItem = typeof schema.budgetItems.$inferSelect
 export type NewBudgetItem = typeof schema.budgetItems.$inferInsert
+export type TripCostCategory = typeof schema.tripCostCategories.$inferSelect
+export type NewTripCostCategory = typeof schema.tripCostCategories.$inferInsert
 export type Expense = typeof schema.expenses.$inferSelect
 export type NewExpense = typeof schema.expenses.$inferInsert
 export type ExpenseShare = typeof schema.expenseShares.$inferSelect
@@ -144,8 +151,10 @@ export type PackingItem = typeof schema.packingItems.$inferSelect
 export type NewPackingItem = typeof schema.packingItems.$inferInsert
 export type PackingTemplate = typeof schema.packingTemplates.$inferSelect
 export type NewPackingTemplate = typeof schema.packingTemplates.$inferInsert
-export type PackingTemplateItem = typeof schema.packingTemplateItems.$inferSelect
-export type NewPackingTemplateItem = typeof schema.packingTemplateItems.$inferInsert
+export type PackingTemplateItem =
+  typeof schema.packingTemplateItems.$inferSelect
+export type NewPackingTemplateItem =
+  typeof schema.packingTemplateItems.$inferInsert
 
 export type TripFile = typeof schema.tripFiles.$inferSelect
 export type NewTripFile = typeof schema.tripFiles.$inferInsert
@@ -154,8 +163,10 @@ export type NewShareLink = typeof schema.shareLinks.$inferInsert
 
 export type CollabMessage = typeof schema.collabMessages.$inferSelect
 export type NewCollabMessage = typeof schema.collabMessages.$inferInsert
-export type CollabMessageReaction = typeof schema.collabMessageReactions.$inferSelect
-export type NewCollabMessageReaction = typeof schema.collabMessageReactions.$inferInsert
+export type CollabMessageReaction =
+  typeof schema.collabMessageReactions.$inferSelect
+export type NewCollabMessageReaction =
+  typeof schema.collabMessageReactions.$inferInsert
 export type CollabNote = typeof schema.collabNotes.$inferSelect
 export type NewCollabNote = typeof schema.collabNotes.$inferInsert
 export type CollabPoll = typeof schema.collabPolls.$inferSelect
@@ -171,8 +182,10 @@ export type CollectionPlace = typeof schema.collectionPlaces.$inferSelect
 export type NewCollectionPlace = typeof schema.collectionPlaces.$inferInsert
 export type CollectionLabel = typeof schema.collectionLabels.$inferSelect
 export type NewCollectionLabel = typeof schema.collectionLabels.$inferInsert
-export type CollectionPlaceLabel = typeof schema.collectionPlaceLabels.$inferSelect
-export type NewCollectionPlaceLabel = typeof schema.collectionPlaceLabels.$inferInsert
+export type CollectionPlaceLabel =
+  typeof schema.collectionPlaceLabels.$inferSelect
+export type NewCollectionPlaceLabel =
+  typeof schema.collectionPlaceLabels.$inferInsert
 
 export type Journey = typeof schema.journeys.$inferSelect
 export type NewJourney = typeof schema.journeys.$inferInsert
@@ -202,21 +215,29 @@ export type VacayUserYear = typeof schema.vacayUserYears.$inferSelect
 export type NewVacayUserYear = typeof schema.vacayUserYears.$inferInsert
 export type VacayEntry = typeof schema.vacayEntries.$inferSelect
 export type NewVacayEntry = typeof schema.vacayEntries.$inferInsert
-export type VacayCompanyHoliday = typeof schema.vacayCompanyHolidays.$inferSelect
-export type NewVacayCompanyHoliday = typeof schema.vacayCompanyHolidays.$inferInsert
-export type VacayHolidayCalendar = typeof schema.vacayHolidayCalendars.$inferSelect
-export type NewVacayHolidayCalendar = typeof schema.vacayHolidayCalendars.$inferInsert
+export type VacayCompanyHoliday =
+  typeof schema.vacayCompanyHolidays.$inferSelect
+export type NewVacayCompanyHoliday =
+  typeof schema.vacayCompanyHolidays.$inferInsert
+export type VacayHolidayCalendar =
+  typeof schema.vacayHolidayCalendars.$inferSelect
+export type NewVacayHolidayCalendar =
+  typeof schema.vacayHolidayCalendars.$inferInsert
 export type VacayUserColour = typeof schema.vacayUserColours.$inferSelect
 export type NewVacayUserColour = typeof schema.vacayUserColours.$inferInsert
 
 export type Notification = typeof schema.notifications.$inferSelect
 export type NewNotification = typeof schema.notifications.$inferInsert
-export type NotificationPreference = typeof schema.notificationPreferences.$inferSelect
-export type NewNotificationPreference = typeof schema.notificationPreferences.$inferInsert
+export type NotificationPreference =
+  typeof schema.notificationPreferences.$inferSelect
+export type NewNotificationPreference =
+  typeof schema.notificationPreferences.$inferInsert
 export type AuditLogEntry = typeof schema.auditLog.$inferSelect
 export type NewAuditLogEntry = typeof schema.auditLog.$inferInsert
-export type OrganizationSettings = typeof schema.organizationSettings.$inferSelect
-export type NewOrganizationSettings = typeof schema.organizationSettings.$inferInsert
+export type OrganizationSettings =
+  typeof schema.organizationSettings.$inferSelect
+export type NewOrganizationSettings =
+  typeof schema.organizationSettings.$inferInsert
 export type UserSettings = typeof schema.userSettings.$inferSelect
 export type NewUserSettings = typeof schema.userSettings.$inferInsert
 export type AppSetting = typeof schema.appSettings.$inferSelect
@@ -230,7 +251,8 @@ export type NewAppSetting = typeof schema.appSettings.$inferInsert
 export type StaffApiToken = typeof schema.staffApiTokens.$inferSelect
 export type NewStaffApiToken = typeof schema.staffApiTokens.$inferInsert
 export type PlatformAuditLogEntry = typeof schema.platformAuditLog.$inferSelect
-export type NewPlatformAuditLogEntry = typeof schema.platformAuditLog.$inferInsert
+export type NewPlatformAuditLogEntry =
+  typeof schema.platformAuditLog.$inferInsert
 
 export type { PlatformAuditChanges } from './schema'
 
@@ -242,5 +264,6 @@ export type { PlatformAuditChanges } from './schema'
  */
 export type PlatformActorKind = (typeof PLATFORM_ACTOR_KINDS)[number]
 export type PlatformActorRole = (typeof PLATFORM_ACTOR_ROLES)[number]
-export type PlatformAuditEntityType = (typeof PLATFORM_AUDIT_ENTITY_TYPES)[number]
+export type PlatformAuditEntityType =
+  (typeof PLATFORM_AUDIT_ENTITY_TYPES)[number]
 export type PlatformAuditAction = (typeof PLATFORM_AUDIT_ACTIONS)[number]

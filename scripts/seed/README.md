@@ -16,15 +16,15 @@ node scripts/seed/seed.mjs --url http://localhost:3010
 
 Every flag `seed.mjs` accepts; `--help` prints the same list and anything else is a hard error:
 
-| Flag | Effect |
-| --- | --- |
-| `--force`, `-f` | Rebuild the demo workspace even though it has already been seeded. |
-| `--email <address>`, `-e` | Workspace owner to seed. Defaults to `rafal@planned.travel`. |
-| `--url <origin>`, `-u` | Dev-server origin. Defaults to `$SEED_URL`, then the probe list below. |
-| `--password <secret>`, `-p` | Password the owner account should have. Defaults to `$DEMO_PASSWORD`, then `$E2E_PASSWORD`, then the committed fixture below. |
-| `--keep-password` | Never overwrite a password that is already set. |
-| `--today <YYYY-MM-DD>`, `-t` | Tell the Worker what day it is, for the duration of this one request. |
-| `--status`, `-s` | Report whether the workspace is seeded. Writes nothing. |
+| Flag                         | Effect                                                                                                                        |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `--force`, `-f`              | Rebuild the demo workspace even though it has already been seeded.                                                            |
+| `--email <address>`, `-e`    | Workspace owner to seed. Defaults to `rafal@planned.travel`.                                                                  |
+| `--url <origin>`, `-u`       | Dev-server origin. Defaults to `$SEED_URL`, then the probe list below.                                                        |
+| `--password <secret>`, `-p`  | Password the owner account should have. Defaults to `$DEMO_PASSWORD`, then `$E2E_PASSWORD`, then the committed fixture below. |
+| `--keep-password`            | Never overwrite a password that is already set.                                                                               |
+| `--today <YYYY-MM-DD>`, `-t` | Tell the Worker what day it is, for the duration of this one request.                                                         |
+| `--status`, `-s`             | Report whether the workspace is seeded. Writes nothing.                                                                       |
 
 ### `--today` is a falsification tool, not a configuration knob
 
@@ -133,7 +133,7 @@ Directories prefixed with `-` are ignored by the router, so nothing under `-seed
 Both handlers on the route check `import.meta.env.DEV` before anything else and return the same plain
 404 an unmatched URL returns. Vite replaces that flag with a literal at build time, so in a production
 bundle the guard is `if (true) return notFound()`, and the seed is reached through a dynamic `import()`
-inside the *other* branch — which means the dataset and the applier are never pulled into the deployed
+inside the _other_ branch — which means the dataset and the applier are never pulled into the deployed
 Worker at all. There is no configuration under which a production request reaches a write path.
 
 ### Idempotence
@@ -143,7 +143,7 @@ Running it twice does not duplicate rows. Three mechanisms, in order of how ofte
 1. **A completion marker.** `app_settings['demo.seed']` records the dataset version, and it is written
    only after a run finishes completely. A second run sees it and returns in a couple of milliseconds
    having touched nothing.
-2. **Rebuild by slug.** A run that *is* going to write addresses each trip, journey and collection by
+2. **Rebuild by slug.** A run that _is_ going to write addresses each trip, journey and collection by
    its slug and deletes a stale one first, cascading its children away. So a run that crashed half way
    leaves no marker and the next run repairs rather than duplicates. Notifications and audit entries
    are keyed by message key and action and rebuilt the same way, because a rebuilt journey or
@@ -167,7 +167,7 @@ demo-trip-04-marrakech-riad-week
 demo-trip-05-patagonia-traverse
 ```
 
-**Why.** A trip's cover art is a *pure hash of its id* — the contour landform and the colour wash are
+**Why.** A trip's cover art is a _pure hash of its id_ — the contour landform and the colour wash are
 both derived from it, and the wash walks forward on a collision, so one changed id can recolour cards
 whose own id never moved. Left to the schema's generator, `--force` mints a fresh key for every trip
 and silently repaints the whole grid. That is what broke the recorded screenshots of `/trips` and
@@ -179,7 +179,7 @@ seeds from scratch renders the same cards the baselines were photographed agains
 
 - The ids ascend in the order the applier writes them. `order by id` is the cursor a paginated list
   pages on, so renumbering one means renumbering the rest.
-- `createTrip` in `src/server/repos/trips.ts` takes the key as an *optional*, Zod-validated input.
+- `createTrip` in `src/server/repos/trips.ts` takes the key as an _optional_, Zod-validated input.
   Omit it — as `createTripFn` and therefore every real user does — and the column's own
   `$defaultFn` mints a time-sortable random key exactly as before. Nothing about a user's rows
   changed, and no request body can reach the field.
@@ -209,12 +209,12 @@ Each run prints the ids it wrote, under each trip's slug, so two runs can be com
 The seed creates the account when it is absent, and reconciles its password when it is present. Three
 collaborators are created so splits, assignments, votes and chat have real names behind them:
 
-| | Name | Email | Role |
-| --- | --- | --- | --- |
-| owner | Rafal Wolak | `rafal@planned.travel` | owner |
-| | Mika Tanaka | `mika@planned.travel` | admin |
-| | Jonas Berg | `jonas@planned.travel` | member |
-| | Priya Raman | `priya@planned.travel` | member |
+|       | Name        | Email                  | Role   |
+| ----- | ----------- | ---------------------- | ------ |
+| owner | Rafal Wolak | `rafal@planned.travel` | owner  |
+|       | Mika Tanaka | `mika@planned.travel`  | admin  |
+|       | Jonas Berg  | `jonas@planned.travel` | member |
+|       | Priya Raman | `priya@planned.travel` | member |
 
 The three collaborators are created **without a credential account**, so they exist as people in the
 workspace but cannot sign in. A demo fixture has no business minting passwords for four people. Only
@@ -225,10 +225,10 @@ workspace but cannot sign in. A demo fixture has no business minting passwords f
 The owner is the one exception, because without a signable account the entire product behind the
 login page is unreachable — to you on a fresh clone, and to the Playwright suite.
 
-| | |
-| --- | --- |
-| Email | `rafal@planned.travel` |
-| Password | `planned-demo-2026` |
+|          |                        |
+| -------- | ---------------------- |
+| Email    | `rafal@planned.travel` |
+| Password | `planned-demo-2026`    |
 
 That password is a **fixture for a local database, not a secret**: it is written down on purpose so
 `node scripts/seed/seed.mjs` is the only step between cloning and reaching `/dashboard`. Override it
@@ -236,11 +236,11 @@ with `--password`, `$DEMO_PASSWORD` or `$E2E_PASSWORD`.
 
 What the seed does with it:
 
-| State | Result |
-| --- | --- |
-| No account | Created through Better Auth's own sign-up API, so the hash matches what the login form verifies and the `user.create` hook provisions the personal organization. Marked email-verified. |
-| Account exists, password already matches | Left untouched. The stored hash is verified first, so re-running the seed is free. |
-| Account exists, different password | Reset to the seed password, and reported as `reset`. Pass `--keep-password` to keep yours instead. |
+| State                                    | Result                                                                                                                                                                                  |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No account                               | Created through Better Auth's own sign-up API, so the hash matches what the login form verifies and the `user.create` hook provisions the personal organization. Marked email-verified. |
+| Account exists, password already matches | Left untouched. The stored hash is verified first, so re-running the seed is free.                                                                                                      |
+| Account exists, different password       | Reset to the seed password, and reported as `reset`. Pass `--keep-password` to keep yours instead.                                                                                      |
 
 This reconciliation happens **before** the `demo.seed` marker check, so a run that writes no data
 still fixes the password — which is the run you will make most often.
@@ -267,13 +267,13 @@ writes that follow still pass through the same quota guard rather than around it
 
 ## What gets written
 
-| Trip | Status | Dates | Currency | Travellers |
-| --- | --- | --- | --- | --- |
-| Tokyo & Kyoto | `booked` | 9–20 Oct 2026 | JPY | 4 |
-| Lisbon, slowly | `active` | 17–23 Aug 2026 | EUR | 2 |
-| Dolomites, hut to hut | `completed` | 13–20 Jun 2026 | EUR | 3 |
-| Marrakech riad week | `archived` | 8–15 Nov 2025 | MAD | 2 |
-| Patagonia traverse | `draft` | — | USD | 1 |
+| Trip                  | Status      | Dates          | Currency | Travellers |
+| --------------------- | ----------- | -------------- | -------- | ---------- |
+| Tokyo & Kyoto         | `booked`    | 9–20 Oct 2026  | JPY      | 4          |
+| Lisbon, slowly        | `active`    | 17–23 Aug 2026 | EUR      | 2          |
+| Dolomites, hut to hut | `completed` | 13–20 Jun 2026 | EUR      | 3          |
+| Marrakech riad week   | `archived`  | 8–15 Nov 2025  | MAD      | 2          |
+| Patagonia traverse    | `draft`     | —              | USD      | 1          |
 
 The flagship carries 12 days (each with a title, notes and an accommodation covering it), 38 places
 across nine categories with real coordinates, addresses, opening hours and ratings, 38 stops in
@@ -308,17 +308,23 @@ extra bags), `shares` (2:1:2:1 on luggage hire), and one expense with `paid_by` 
 "outstanding" tile has a value. The other trips deliberately differ: Dolomites and Marrakech are
 settled to exactly zero, Lisbon is mid-trip and unsettled.
 
-## Resolved: `expenses.original_currency`
+## Source currency, as measured
 
-For a while the dataset supplied `originalCurrency` on seven foreign receipts and the database
-threw it away. The shared column builder in `src/server/db/schema.ts` hardcoded the SQL name, so
-`currency` and `originalCurrency` both mapped to one column and only the trip currency landed — no
-row was corrupted, but a receipt could never render as `£596.00 → ¥464,880`, which the reference
-demo's costs screen does show.
+A foreign receipt keeps three things beside the trip-currency amount, and `expenses` carries all
+three today: `original_amount_minor`, `original_currency` and `exchange_rate`
+(`src/server/db/schema.ts`). Nothing in this directory has to compensate for anything — the dataset
+supplies `originalCurrency` on seven receipts, the costs screen reads the field
+(`src/components/costs/data.ts`), and a receipt renders as `£596.00 → ¥464,880` the way the
+reference demo's does.
 
-That is fixed. The builder now takes a name (`const currency = (name = 'currency') => …`),
-`originalCurrency` maps to `original_currency`, and migration `0001_aspiring_cargill` rebuilt the
-`expenses` table to add it. Nothing in this directory changed: the dataset was already correct,
-and the costs screen already reads the field (`src/components/costs/data.ts`), so the copy became
-correct the moment the column did. That migration is a table recreate rather than an
-`ADD COLUMN`, which is why it has a row in the register in `docs/DEPLOY.md` §12.
+The collision this section used to report is repaired and stays repaired. The shared column builder
+once hardcoded its SQL name, so `currency` and `originalCurrency` mapped to one column and the
+source currency was discarded on write; the builder now takes a name
+(`const currency = (name = 'currency') => …`) and migration `0001_aspiring_cargill` rebuilt the
+`expenses` table to add the columns. No row was ever corrupted. That migration is a table recreate
+rather than an `ADD COLUMN`, which is why it has a row in the register in `docs/DEPLOY.md` §12 — and
+why `0006_mighty_nehzno`, which gave `settlements` the same three columns, is `ADD COLUMN` only.
+
+`settlements` in this dataset is still trip-currency only, so its three columns are `NULL` on every
+seeded row. That is the reading the repository fixes: a settlement with none of the three was paid
+in the accounting currency and its implied rate is 1.

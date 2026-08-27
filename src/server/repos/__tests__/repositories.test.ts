@@ -15,7 +15,12 @@ import {
   markCountryVisited,
   recomputeTravelStats,
 } from '../atlas'
-import { countAuditActions, listAuditLog, recordAudit, recordAuditMany } from '../audit'
+import {
+  countAuditActions,
+  listAuditLog,
+  recordAudit,
+  recordAuditMany,
+} from '../audit'
 import { bumpUsage, getMonthlyUsage, getPlanSummary } from '../billing'
 import { ensureDefaultCategories, listCategoriesWithUsage } from '../categories'
 import {
@@ -40,12 +45,18 @@ import { listTripDays, syncTripDays } from '../days'
 import {
   createExpense,
   createSettlement,
+  createSettlementInput,
   getMemberBalances,
   listDailySpend,
+  listSettlements,
   setExpenseShares,
   suggestSettlements,
 } from '../expenses'
-import { createAssignment, getTripItinerary, reorderAssignments } from '../itinerary'
+import {
+  createAssignment,
+  getTripItinerary,
+  reorderAssignments,
+} from '../itinerary'
 import {
   addPhoto,
   createEntry,
@@ -75,9 +86,18 @@ import {
   notifyMany,
   setPreference,
 } from '../notifications'
-import { createPlace, listTripPlacesWithTags, listUnscheduledPlaces, reorderPlaces } from '../places'
+import {
+  createPlace,
+  listTripPlacesWithTags,
+  listUnscheduledPlaces,
+  reorderPlaces,
+} from '../places'
 import { resolveTags } from '../tags'
-import { createTransport, summariseTripTransports, totalTripDistanceMetres } from '../transports'
+import {
+  createTransport,
+  summariseTripTransports,
+  totalTripDistanceMetres,
+} from '../transports'
 import { createTrip, getTripBySlug, listTrips, updateTrip } from '../trips'
 import {
   countUsedDays,
@@ -101,12 +121,18 @@ describe('repositories', () => {
 
   describe('trips and days', () => {
     it('derives a unique slug per tenant and keeps the day run contiguous', async () => {
-      const first = await createTrip(tenant.scope, { title: 'Lisbon in spring' })
-      const second = await createTrip(tenant.scope, { title: 'Lisbon in spring' })
+      const first = await createTrip(tenant.scope, {
+        title: 'Lisbon in spring',
+      })
+      const second = await createTrip(tenant.scope, {
+        title: 'Lisbon in spring',
+      })
 
       expect(first.slug).toBe('lisbon-in-spring')
       expect(second.slug).toBe('lisbon-in-spring-2')
-      expect((await getTripBySlug(tenant.scope, 'lisbon-in-spring-2'))?.id).toBe(second.id)
+      expect(
+        (await getTripBySlug(tenant.scope, 'lisbon-in-spring-2'))?.id,
+      ).toBe(second.id)
       expect((await listTrips(tenant.scope)).length).toBe(2)
     })
 
@@ -116,13 +142,14 @@ describe('repositories', () => {
         startDate: '2026-06-01',
         endDate: '2026-06-03',
       })
-      expect((await listTripDays(tenant.scope, trip.id)).map((day) => day.date)).toEqual([
-        '2026-06-01',
-        '2026-06-02',
-        '2026-06-03',
-      ])
+      expect(
+        (await listTripDays(tenant.scope, trip.id)).map((day) => day.date),
+      ).toEqual(['2026-06-01', '2026-06-02', '2026-06-03'])
 
-      await updateTrip(tenant.scope, trip.id, { startDate: '2026-06-02', endDate: '2026-06-06' })
+      await updateTrip(tenant.scope, trip.id, {
+        startDate: '2026-06-02',
+        endDate: '2026-06-06',
+      })
       const grown = await listTripDays(tenant.scope, trip.id)
       expect(grown).toHaveLength(5)
       expect(grown.map((day) => day.dayNumber)).toEqual([1, 2, 3, 4, 5])
@@ -167,9 +194,18 @@ describe('repositories', () => {
         throw new Error('The trip must have two days.')
       }
 
-      const bridge = await createPlace(tenant.scope, { tripId: trip.id, name: 'Dom Luís bridge' })
-      const cellar = await createPlace(tenant.scope, { tripId: trip.id, name: 'Wine cellar' })
-      const idea = await createPlace(tenant.scope, { tripId: trip.id, name: 'Bookshop' })
+      const bridge = await createPlace(tenant.scope, {
+        tripId: trip.id,
+        name: 'Dom Luís bridge',
+      })
+      const cellar = await createPlace(tenant.scope, {
+        tripId: trip.id,
+        name: 'Wine cellar',
+      })
+      const idea = await createPlace(tenant.scope, {
+        tripId: trip.id,
+        name: 'Bookshop',
+      })
 
       const second = await createAssignment(tenant.scope, {
         tripId: trip.id,
@@ -209,10 +245,20 @@ describe('repositories', () => {
 
     it('reorders places in one batch and attaches resolved tags', async () => {
       const trip = await createTrip(tenant.scope, { title: 'Madeira' })
-      const levada = await createPlace(tenant.scope, { tripId: trip.id, name: 'Levada walk' })
-      const market = await createPlace(tenant.scope, { tripId: trip.id, name: 'Farmers market' })
+      const levada = await createPlace(tenant.scope, {
+        tripId: trip.id,
+        name: 'Levada walk',
+      })
+      const market = await createPlace(tenant.scope, {
+        tripId: trip.id,
+        name: 'Farmers market',
+      })
 
-      const tags = await resolveTags(tenant.scope, ['Must see', 'must-see', 'Rainy day'])
+      const tags = await resolveTags(tenant.scope, [
+        'Must see',
+        'must-see',
+        'Rainy day',
+      ])
       expect(tags.map((tag) => tag.slug)).toEqual(['must-see', 'rainy-day'])
 
       await reorderPlaces(tenant.scope, [
@@ -221,7 +267,10 @@ describe('repositories', () => {
       ])
 
       const withTags = await listTripPlacesWithTags(tenant.scope, trip.id)
-      expect(withTags.map((place) => place.name)).toEqual(['Farmers market', 'Levada walk'])
+      expect(withTags.map((place) => place.name)).toEqual([
+        'Farmers market',
+        'Levada walk',
+      ])
       expect(withTags.every((place) => place.tags.length === 0)).toBe(true)
     })
 
@@ -230,7 +279,9 @@ describe('repositories', () => {
       expect(categories.length).toBeGreaterThanOrEqual(8)
 
       // Seeding twice must not duplicate the starter taxonomy.
-      expect((await ensureDefaultCategories(tenant.scope)).length).toBe(categories.length)
+      expect((await ensureDefaultCategories(tenant.scope)).length).toBe(
+        categories.length,
+      )
 
       const stays = categories.find((row) => row.slug === 'stays')
       if (!stays) {
@@ -266,7 +317,9 @@ describe('repositories', () => {
         paidBy: tenant.ownerUserId,
         participants: [{ userId: tenant.ownerUserId }, { userId: other }],
       })
-      expect(dinner.shares.map((share) => share.shareMinor)).toEqual([2_501, 2_500])
+      expect(dinner.shares.map((share) => share.shareMinor)).toEqual([
+        2_501, 2_500,
+      ])
 
       const balances = await getMemberBalances(tenant.scope, trip.id)
       expect(balances[0]?.userId).toBe(tenant.ownerUserId)
@@ -285,9 +338,11 @@ describe('repositories', () => {
         amountMinor: 2_500,
         settledOn: '2026-07-02',
       })
-      expect((await getMemberBalances(tenant.scope, trip.id)).every((row) => row.balanceMinor === 0)).toBe(
-        true,
-      )
+      expect(
+        (await getMemberBalances(tenant.scope, trip.id)).every(
+          (row) => row.balanceMinor === 0,
+        ),
+      ).toBe(true)
 
       // Re-splitting replaces the old rows rather than adding to them.
       const reshared = await setExpenseShares(
@@ -300,35 +355,159 @@ describe('repositories', () => {
         'shares',
       )
       expect(reshared).toHaveLength(2)
-      expect(reshared.reduce((total, row) => total + row.shareMinor, 0)).toBe(5_001)
+      expect(reshared.reduce((total, row) => total + row.shareMinor, 0)).toBe(
+        5_001,
+      )
 
       const daily = await listDailySpend(tenant.scope, trip.id)
       expect(daily).toEqual([{ spentOn: '2026-07-01', spentMinor: 5_001 }])
+    })
+
+    it('records a settlement paid in another currency, or none of it at all', async () => {
+      const other = await tenant.addUser('Payer')
+      const trip = await createTrip(tenant.scope, {
+        title: 'Tokyo',
+        currency: 'JPY',
+      })
+      const payment = {
+        tripId: trip.id,
+        fromUserId: other,
+        toUserId: tenant.ownerUserId,
+        amountMinor: 46_488,
+        currency: 'JPY',
+        settledOn: '2026-10-12',
+      } as const
+
+      // Two of the three source fields is a half-recorded conversion, and the repository refuses
+      // it rather than storing an amount whose rate nobody can reproduce.
+      await expect(
+        createSettlement(tenant.scope, {
+          ...payment,
+          originalAmountMinor: 59_600,
+          originalCurrency: 'GBP',
+        }),
+      ).rejects.toThrow(/together/)
+      await expect(
+        createSettlement(tenant.scope, {
+          ...payment,
+          originalCurrency: 'GBP',
+          exchangeRate: 195,
+        }),
+      ).rejects.toThrow(/together/)
+
+      // The table deliberately carries no CHECK for this, so the guard is the input's.
+      await expect(
+        createSettlement(tenant.scope, {
+          ...payment,
+          originalAmountMinor: -1,
+          originalCurrency: 'GBP',
+          exchangeRate: 195,
+        }),
+      ).rejects.toThrow()
+
+      const converted = await createSettlement(tenant.scope, {
+        ...payment,
+        originalAmountMinor: 59_600,
+        originalCurrency: 'GBP',
+        exchangeRate: 195,
+      })
+
+      const stored = (await listSettlements(tenant.scope, trip.id)).find(
+        (row) => row.id === converted.id,
+      )
+      expect(stored?.originalAmountMinor).toBe(59_600)
+      expect(stored?.originalCurrency).toBe('GBP')
+      expect(stored?.exchangeRate).toBe(195)
+    })
+
+    it('leaves the three source columns null when the payment is in the trip currency', async () => {
+      const other = await tenant.addUser('Third traveller')
+      const trip = await createTrip(tenant.scope, { title: 'Porto again' })
+
+      await createExpense(tenant.scope, {
+        tripId: trip.id,
+        title: 'Taxi',
+        amountMinor: 4_000,
+        spentOn: '2026-07-01',
+        paidBy: tenant.ownerUserId,
+        participants: [{ userId: tenant.ownerUserId }, { userId: other }],
+      })
+
+      const settlement = await createSettlement(tenant.scope, {
+        tripId: trip.id,
+        fromUserId: other,
+        toUserId: tenant.ownerUserId,
+        amountMinor: 2_000,
+        settledOn: '2026-07-02',
+      })
+
+      expect(settlement.originalAmountMinor).toBeNull()
+      expect(settlement.originalCurrency).toBeNull()
+      expect(settlement.exchangeRate).toBeNull()
+
+      const balances = await getMemberBalances(tenant.scope, trip.id)
+      expect(balances.every((row) => row.balanceMinor === 0)).toBe(true)
+    })
+
+    it('names a misspelled settlement field instead of dropping it', () => {
+      const body = {
+        tripId: 'trip-1',
+        fromUserId: 'user-1',
+        toUserId: 'user-2',
+        amountMinor: 2_000,
+        settledOn: '2026-07-02',
+      }
+      expect(createSettlementInput.safeParse(body).success).toBe(true)
+
+      // The input is strict: `originalAmount` is not `originalAmountMinor`, and a source amount
+      // quietly discarded would leave a converted payment recorded as if it never converted.
+      const result = createSettlementInput.safeParse({
+        ...body,
+        originalAmount: 59_600,
+      })
+      expect(result.success).toBe(false)
+      expect(result.error?.issues[0]?.code).toBe('unrecognized_keys')
+      expect(result.error?.message).toContain('originalAmount')
     })
   })
 
   describe('lists', () => {
     it('tracks progress, applies a template and resets', async () => {
       const trip = await createTrip(tenant.scope, { title: 'Weekend' })
-      const list = await createList(tenant.scope, { tripId: trip.id, name: 'Bag' })
+      const list = await createList(tenant.scope, {
+        tripId: trip.id,
+        name: 'Bag',
+      })
       const boots = await createListItem(tenant.scope, {
         listId: list.id,
         name: 'Boots',
         weightGrams: 900,
       })
-      await createListItem(tenant.scope, { listId: list.id, name: 'Socks', weightGrams: 100 })
+      await createListItem(tenant.scope, {
+        listId: list.id,
+        name: 'Socks',
+        weightGrams: 100,
+      })
 
       await setListItemDone(tenant.scope, boots.id, true)
-      const progress = (await listTripListsWithProgress(tenant.scope, trip.id)).at(0)
+      const progress = (
+        await listTripListsWithProgress(tenant.scope, trip.id)
+      ).at(0)
       expect(progress?.itemCount).toBe(2)
       expect(progress?.doneCount).toBe(1)
       expect(progress?.weightGrams).toBe(1_000)
 
       expect(await resetList(tenant.scope, list.id)).toBe(1)
-      const afterReset = (await listTripListsWithProgress(tenant.scope, trip.id)).at(0)
+      const afterReset = (
+        await listTripListsWithProgress(tenant.scope, trip.id)
+      ).at(0)
       expect(afterReset?.doneCount).toBe(0)
 
-      const template = await createTemplateFromList(tenant.scope, list.id, 'Weekend bag')
+      const template = await createTemplateFromList(
+        tenant.scope,
+        list.id,
+        'Weekend bag',
+      )
       const applied = await applyTemplateToTrip(tenant.scope, {
         templateId: template.id,
         tripId: trip.id,
@@ -353,19 +532,32 @@ describe('repositories', () => {
   describe('collaboration', () => {
     it('hides soft-deleted messages and tallies polls', async () => {
       const trip = await createTrip(tenant.scope, { title: 'Group trip' })
-      const kept = await postMessage(tenant.scope, { tripId: trip.id, body: 'Morning' })
-      const removed = await postMessage(tenant.scope, { tripId: trip.id, body: 'Oops' })
+      const kept = await postMessage(tenant.scope, {
+        tripId: trip.id,
+        body: 'Morning',
+      })
+      const removed = await postMessage(tenant.scope, {
+        tripId: trip.id,
+        body: 'Oops',
+      })
       await deleteMessage(tenant.scope, removed.id)
 
       const page = await listMessages(tenant.scope, trip.id)
       expect(page.items.map((row) => row.id)).toEqual([kept.id])
 
-      await createCollabNote(tenant.scope, { tripId: trip.id, title: 'Loose', isPinned: false })
-      await createCollabNote(tenant.scope, { tripId: trip.id, title: 'Pinned', isPinned: true })
-      expect((await listNotes(tenant.scope, trip.id)).map((note) => note.title)).toEqual([
-        'Pinned',
-        'Loose',
-      ])
+      await createCollabNote(tenant.scope, {
+        tripId: trip.id,
+        title: 'Loose',
+        isPinned: false,
+      })
+      await createCollabNote(tenant.scope, {
+        tripId: trip.id,
+        title: 'Pinned',
+        isPinned: true,
+      })
+      expect(
+        (await listNotes(tenant.scope, trip.id)).map((note) => note.title),
+      ).toEqual(['Pinned', 'Loose'])
 
       const poll = await createPoll(tenant.scope, {
         tripId: trip.id,
@@ -389,13 +581,21 @@ describe('repositories', () => {
     })
 
     it('filters collection places by label', async () => {
-      const collection = await createCollection(tenant.scope, { name: 'Lisbon ideas' })
+      const collection = await createCollection(tenant.scope, {
+        name: 'Lisbon ideas',
+      })
       const bakery = await addCollectionPlace(tenant.scope, {
         collectionId: collection.id,
         name: 'Pastelaria',
       })
-      await addCollectionPlace(tenant.scope, { collectionId: collection.id, name: 'Viewpoint' })
-      const food = await createLabel(tenant.scope, { collectionId: collection.id, name: 'Food' })
+      await addCollectionPlace(tenant.scope, {
+        collectionId: collection.id,
+        name: 'Viewpoint',
+      })
+      const food = await createLabel(tenant.scope, {
+        collectionId: collection.id,
+        name: 'Food',
+      })
 
       await setCollectionPlaceLabels(tenant.scope, bakery.id, [food.id])
 
@@ -405,8 +605,13 @@ describe('repositories', () => {
       })
       expect(filtered.map((row) => row.name)).toEqual(['Pastelaria'])
 
-      const withLabels = await listCollectionPlacesWithLabels(tenant.scope, collection.id)
-      expect(withLabels.find((row) => row.id === bakery.id)?.labelIds).toEqual([food.id])
+      const withLabels = await listCollectionPlacesWithLabels(
+        tenant.scope,
+        collection.id,
+      )
+      expect(withLabels.find((row) => row.id === bakery.id)?.labelIds).toEqual([
+        food.id,
+      ])
     })
   })
 
@@ -425,9 +630,14 @@ describe('repositories', () => {
       expect(second.visitCount).toBe(2)
       expect(second.firstVisitedOn).toBe('2024-05-01')
       expect(second.lastVisitedOn).toBe('2026-04-10')
-      expect(await listVisitedCountries(tenant.scope, tenant.ownerUserId)).toHaveLength(1)
+      expect(
+        await listVisitedCountries(tenant.scope, tenant.ownerUserId),
+      ).toHaveLength(1)
 
-      await markCountryVisited(tenant.scope, { countryCode: 'JP', continent: 'Asia' })
+      await markCountryVisited(tenant.scope, {
+        countryCode: 'JP',
+        continent: 'Asia',
+      })
       const goal = await createBucketListItem(tenant.scope, {
         name: 'Iceland',
         kind: 'country',
@@ -439,7 +649,9 @@ describe('repositories', () => {
       expect(summary.countryCount).toBe(3)
       expect(summary.bucketList).toEqual({ total: 1, achieved: 1 })
       // Countries recorded without a continent are simply absent from the roll-up.
-      expect(summary.byContinent.map((entry) => entry.continent).sort()).toEqual(['Asia', 'Europe'])
+      expect(
+        summary.byContinent.map((entry) => entry.continent).sort(),
+      ).toEqual(['Asia', 'Europe'])
 
       const trip = await createTrip(tenant.scope, {
         title: 'Tokyo',
@@ -447,8 +659,16 @@ describe('repositories', () => {
         endDate: '2026-03-04',
         countryCodes: ['JP'],
       })
-      await createPlace(tenant.scope, { tripId: trip.id, name: 'Shibuya', city: 'Tokyo' })
-      const stats = await recomputeTravelStats(tenant.scope, tenant.ownerUserId, 2026)
+      await createPlace(tenant.scope, {
+        tripId: trip.id,
+        name: 'Shibuya',
+        city: 'Tokyo',
+      })
+      const stats = await recomputeTravelStats(
+        tenant.scope,
+        tenant.ownerUserId,
+        2026,
+      )
       expect(stats.tripCount).toBe(1)
       expect(stats.dayCount).toBe(4)
       expect(stats.placeCount).toBe(1)
@@ -458,7 +678,10 @@ describe('repositories', () => {
       expect(stats.countryCount).toBe(1)
       expect(stats.lastTripId).toBe(trip.id)
 
-      const allTime = await recomputeTravelStats(tenant.scope, tenant.ownerUserId)
+      const allTime = await recomputeTravelStats(
+        tenant.scope,
+        tenant.ownerUserId,
+      )
       expect(allTime.countryCount).toBe(3)
     })
   })
@@ -466,7 +689,11 @@ describe('repositories', () => {
   describe('vacay', () => {
     it('marks a range in one batch and subtracts it from the allowance', async () => {
       const plan = await ensurePlan(tenant.scope)
-      await setEntitlement(tenant.scope, { planId: plan.id, year: 2026, entitlementDays: 25 })
+      await setEntitlement(tenant.scope, {
+        planId: plan.id,
+        year: 2026,
+        entitlementDays: 25,
+      })
 
       await setEntryRange(tenant.scope, {
         planId: plan.id,
@@ -474,21 +701,39 @@ describe('repositories', () => {
         to: '2026-08-07',
         kind: 'vacation',
       })
-      await setEntry(tenant.scope, { planId: plan.id, date: '2026-08-10', kind: 'half_day' })
-      await setEntry(tenant.scope, { planId: plan.id, date: '2026-08-11', kind: 'sick' })
+      await setEntry(tenant.scope, {
+        planId: plan.id,
+        date: '2026-08-10',
+        kind: 'half_day',
+      })
+      await setEntry(tenant.scope, {
+        planId: plan.id,
+        date: '2026-08-11',
+        kind: 'sick',
+      })
 
-      expect(await countUsedDays(tenant.scope, plan.id, tenant.ownerUserId, 2026)).toBe(5.5)
+      expect(
+        await countUsedDays(tenant.scope, plan.id, tenant.ownerUserId, 2026),
+      ).toBe(5.5)
 
       const overview = await getPlanOverview(tenant.scope, plan.id, 2026)
       expect(overview.entries).toHaveLength(7)
-      const balance = overview.balances.find((row) => row.userId === tenant.ownerUserId)
+      const balance = overview.balances.find(
+        (row) => row.userId === tenant.ownerUserId,
+      )
       expect(balance?.entitlementDays).toBe(25)
       expect(balance?.usedDays).toBe(5.5)
       expect(balance?.remainingDays).toBe(19.5)
 
       // Re-marking a day replaces its kind instead of adding a second row.
-      await setEntry(tenant.scope, { planId: plan.id, date: '2026-08-10', kind: 'vacation' })
-      expect(await countUsedDays(tenant.scope, plan.id, tenant.ownerUserId, 2026)).toBe(6)
+      await setEntry(tenant.scope, {
+        planId: plan.id,
+        date: '2026-08-10',
+        kind: 'vacation',
+      })
+      expect(
+        await countUsedDays(tenant.scope, plan.id, tenant.ownerUserId, 2026),
+      ).toBe(6)
     })
   })
 
@@ -510,7 +755,9 @@ describe('repositories', () => {
       expect(await countUnread(tenant.scope, tenant.ownerUserId)).toBe(2)
       expect(await countUnread(tenant.scope, other)).toBe(1)
 
-      const page = await listNotifications(tenant.scope, tenant.ownerUserId, { limit: 1 })
+      const page = await listNotifications(tenant.scope, tenant.ownerUserId, {
+        limit: 1,
+      })
       expect(page.items).toHaveLength(1)
       expect(page.nextCursor).not.toBeNull()
 
@@ -534,7 +781,11 @@ describe('repositories', () => {
     })
 
     it('appends an audit trail and groups it by action', async () => {
-      await recordAudit(tenant.scope, { action: 'trip.created', entityType: 'trip', entityId: 't1' })
+      await recordAudit(tenant.scope, {
+        action: 'trip.created',
+        entityType: 'trip',
+        entityId: 't1',
+      })
       await recordAuditMany(tenant.scope, [
         { action: 'place.created', entityType: 'place', entityId: 'p1' },
         { action: 'place.created', entityType: 'place', entityId: 'p2' },
@@ -554,11 +805,15 @@ describe('repositories', () => {
         bumpUsage(tenant.scope, 'exports', 1, month),
         bumpUsage(tenant.scope, 'exports', 1, month),
       ])
-      expect((await getMonthlyUsage(tenant.scope, month)).get('exports')).toBe(3)
+      expect((await getMonthlyUsage(tenant.scope, month)).get('exports')).toBe(
+        3,
+      )
 
       // Clamped at zero rather than going negative.
       await bumpUsage(tenant.scope, 'exports', -10, month)
-      expect((await getMonthlyUsage(tenant.scope, month)).get('exports')).toBe(0)
+      expect((await getMonthlyUsage(tenant.scope, month)).get('exports')).toBe(
+        0,
+      )
     })
 
     it('reports the free plan and its ceilings when there is no subscription', async () => {
@@ -600,8 +855,14 @@ describe('repositories', () => {
       })
 
       const summary = await summariseTripTransports(tenant.scope, trip.id)
-      expect(summary[0]).toEqual({ mode: 'flight', legs: 2, distanceMetres: 4_000_000 })
-      expect(await totalTripDistanceMetres(tenant.scope, trip.id)).toBe(4_040_000)
+      expect(summary[0]).toEqual({
+        mode: 'flight',
+        legs: 2,
+        distanceMetres: 4_000_000,
+      })
+      expect(await totalTripDistanceMetres(tenant.scope, trip.id)).toBe(
+        4_040_000,
+      )
     })
   })
   describe('the travel journal', () => {
@@ -683,7 +944,10 @@ describe('repositories', () => {
         ['Weary', 1],
       ])
 
-      expect(await journalCoverage(tenant.scope)).toEqual({ trips: 3, written: 1 })
+      expect(await journalCoverage(tenant.scope)).toEqual({
+        trips: 3,
+        written: 1,
+      })
 
       // Ranked, not merely date-ordered: the trip under way comes before the one
       // still ahead, and the trip already written up is absent altogether.
@@ -720,7 +984,10 @@ describe('repositories', () => {
     it('reports an empty journal without inventing anything', async () => {
       expect(await listRecentEntries(tenant.scope)).toEqual([])
       expect(await tallyMoods(tenant.scope)).toEqual([])
-      expect(await journalCoverage(tenant.scope)).toEqual({ trips: 0, written: 0 })
+      expect(await journalCoverage(tenant.scope)).toEqual({
+        trips: 0,
+        written: 0,
+      })
       expect(await listTripsWithoutJourney(tenant.scope)).toEqual([])
     })
   })
