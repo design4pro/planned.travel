@@ -10,6 +10,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
+import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import {
   assignmentParticipants,
   collabMessageReactions,
@@ -29,7 +30,13 @@ import {
   visitedCountriesRepository,
   visitedRegionsRepository,
 } from '../atlas'
-import { auditLogRepository, recordAudit } from '../audit'
+import {
+  auditLogRepository,
+  countAuditActions,
+  listAuditLog,
+  listEntityHistory,
+  recordAudit,
+} from '../audit'
 import {
   getSubscription,
   setUsage,
@@ -1911,6 +1918,94 @@ describe('tenant isolation', () => {
           { userId: 'b', shareMinor: 200 },
         ]),
       ).toThrow(/add up/)
+    })
+  })
+
+  describe('audit recording', () => {
+    /**
+     * The trail is the one table whose rows deliberately *name* ids from elsewhere: an entry's
+     * `entity_id` is free text with no foreign key, so an action against a resource that has since
+     * been deleted still reads. That is exactly what makes it worth a case of its own — nothing in
+     * the column stops A from writing B's identifiers into it, and the only thing that keeps the
+     * entry inside A is `organization_id` on the row and `tenantFilter()` on every read.
+     *
+     * Returns the id of the entry A wrote about B's reservation.
+     */
+    async function trailInAlpha(): Promise<string> {
+      await trail(alpha.tenant.scope, {
+        action: AUDIT_ACTIONS.RESERVATION_DELETED,
+        entityType: 'reservation',
+        entityId: beta.reservationId,
+        metadata: { tripId: beta.tripId },
+      })
+      const page = await listAuditLog(alpha.tenant.scope, {
+        action: AUDIT_ACTIONS.RESERVATION_DELETED,
+      })
+      expect(page.items).toHaveLength(1)
+      return page.items[0].id
+    }
+
+    it('keeps an entry naming another tenant’s entity inside the tenant that wrote it', async () => {
+      const entryId = await trailInAlpha()
+
+      const inAlpha = await auditLogRepository.requireById(
+        alpha.tenant.scope,
+        entryId,
+      )
+      expect(inAlpha.organizationId).toBe(alpha.tenant.organizationId)
+      expect(inAlpha.actorUserId).toBe(alpha.tenant.ownerUserId)
+      expect(inAlpha.entityId).toBe(beta.reservationId)
+
+      const listedInBeta = await listAuditLog(beta.tenant.scope, { limit: 100 })
+      expect(listedInBeta.items.map((row) => row.id)).not.toContain(entryId)
+
+      // The entity id is B's own, so this is the query most likely to leak: B asks for the history
+      // of B's reservation and must not be shown A's entry about it.
+      const historyInBeta = await listEntityHistory(
+        beta.tenant.scope,
+        'reservation',
+        beta.reservationId,
+      )
+      expect(historyInBeta.map((row) => row.id)).not.toContain(entryId)
+
+      const historyInAlpha = await listEntityHistory(
+        alpha.tenant.scope,
+        'reservation',
+        beta.reservationId,
+      )
+      expect(historyInAlpha.map((row) => row.id)).toContain(entryId)
+    })
+
+    it('refuses to read that entry by id from the other tenant', async () => {
+      const entryId = await trailInAlpha()
+
+      expect(
+        await auditLogRepository.findById(beta.tenant.scope, entryId),
+      ).toBeNull()
+      const error = await captureError(() =>
+        auditLogRepository.requireById(beta.tenant.scope, entryId),
+      )
+      expect(error).toBeInstanceOf(NotFoundError)
+    })
+
+    it('counts only the reading tenant’s actions', async () => {
+      await trailInAlpha()
+      await recordAudit(beta.tenant.scope, { action: 'trip.archived' })
+
+      const inAlpha = await countAuditActions(alpha.tenant.scope)
+      const inBeta = await countAuditActions(beta.tenant.scope)
+
+      expect(
+        inAlpha.find((row) => row.action === AUDIT_ACTIONS.RESERVATION_DELETED)
+          ?.value,
+      ).toBe(1)
+      expect(inBeta.map((row) => row.action)).not.toContain(
+        AUDIT_ACTIONS.RESERVATION_DELETED,
+      )
+      expect(inBeta.find((row) => row.action === 'trip.archived')?.value).toBe(
+        1,
+      )
+      expect(inAlpha.map((row) => row.action)).not.toContain('trip.archived')
     })
   })
 })

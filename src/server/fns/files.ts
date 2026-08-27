@@ -15,6 +15,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
+import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { newId } from '#/server/db/schema'
 import {
   deleteFile,
@@ -182,6 +183,22 @@ export const uploadTripFileFn = createServerFn({ method: 'POST' })
         patch('trip', trip.id, { filesChangedAt: Date.now() }),
       ])
 
+      // After the row, never before it: an entry describing an upload the quota then refused would
+      // be a lie the trail has no way to retract. `trail` resolves whatever happens, so nothing
+      // below this line can turn a stored file into a failed request.
+      await trail(scope, {
+        action: AUDIT_ACTIONS.FILE_UPLOADED,
+        entityType: 'file',
+        entityId: row.id,
+        metadata: {
+          tripId: trip.id,
+          filename: row.filename,
+          contentType: row.contentType,
+          sizeBytes: row.sizeBytes,
+          kind: row.kind,
+        },
+      })
+
       return Response.json(
         {
           ok: true,
@@ -251,12 +268,27 @@ export const deleteTripFileFn = createServerFn({ method: 'POST' })
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
 
+    const row = await getFile(scope, data.fileId)
     const storageKey = await deleteFile(scope, data.fileId)
     await filesBucket().delete(storageKey)
 
     await mirrorToRoom(scope, data.tripId, [
       patch('trip', data.tripId, { filesChangedAt: Date.now() }),
     ])
+
+    // The row is read before `deleteFile` removes it, purely so the entry can name the attachment
+    // rather than an id nobody can resolve once the row is gone. `deleteFile` is still what proves
+    // the file belonged to this tenant — a foreign id never reaches the bucket.
+    await trail(scope, {
+      action: AUDIT_ACTIONS.FILE_DELETED,
+      entityType: 'file',
+      entityId: data.fileId,
+      metadata: {
+        tripId: data.tripId,
+        filename: row?.filename ?? null,
+        sizeBytes: row?.sizeBytes ?? null,
+      },
+    })
     return { deleted: true }
   })
 
