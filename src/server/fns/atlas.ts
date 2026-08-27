@@ -89,6 +89,7 @@ import {
   recomputeDelaySeconds,
   travelStatsTaskId,
 } from '#/server/queue/handlers/travel-stats'
+import { ALL_TIME_STAT_YEAR, isCalendarStatYear } from '#/server/queue/types'
 import {
   NotFoundError,
   QuotaExceededError,
@@ -466,6 +467,9 @@ function log(): Logger {
  *   unreachable costs a stale panel until the next write, which is strictly less
  *   than turning a successful save into a 500. Same reasoning, and the same
  *   shape, as `mirrorToRoom` in `./context`.
+ *
+ * `years` is what {@link affectedStatYears} returns: distinct, and every one of
+ * them a value the queue's payload schema accepts.
  */
 async function enqueueTravelStatsRecompute(
   scope: TenantScope,
@@ -478,7 +482,7 @@ async function enqueueTravelStatsRecompute(
   try {
     const { taskQueue } = await import('#/server/auth/env')
     const queue = taskQueue()
-    for (const statYear of [...new Set(years)]) {
+    for (const statYear of years) {
       await enqueueTask(queue, {
         kind: 'travel-stats',
         orgId,
@@ -507,13 +511,19 @@ async function enqueueTravelStatsRecompute(
  * fanned out across the range: `byContinent` on the intervening years is
  * rebuilt by the all-time envelope's sibling writes, and a fan-out here would
  * cost a consumer invocation per year for a country that was, at most, one trip.
+ *
+ * A date whose year is not one the payload schema accepts — `0000-01-01` is
+ * still a `YYYY-MM-DD` the validator lets through — contributes no year row
+ * rather than an envelope the consumer would refuse.
  */
 function affectedStatYears(
   visitedOn: string | null | undefined,
 ): Array<number> {
   const year =
     typeof visitedOn === 'string' ? Number(visitedOn.slice(0, 4)) : Number.NaN
-  return Number.isInteger(year) ? [0, year] : [0]
+  return isCalendarStatYear(year)
+    ? [ALL_TIME_STAT_YEAR, year]
+    : [ALL_TIME_STAT_YEAR]
 }
 
 /* -------------------------------------------------------- visited countries */

@@ -32,8 +32,10 @@ import {
   travelStatsPayloadSchema,
 } from '../../types'
 import {
+  RECOMPUTE_WINDOW_MS,
   createTravelStatsHandler,
   handleTravelStats,
+  recomputeDelaySeconds,
   travelStatsTaskId,
 } from '../travel-stats'
 
@@ -61,7 +63,8 @@ function fakeEnv(overrides: Partial<TaskBindings> = {}): TaskBindings {
       list: async () => ({ objects: [], truncated: false }),
     },
     TASKS: { send: async () => undefined, sendBatch: async () => undefined },
-    // Never dereferenced: `createDb` is mocked above.
+    // Present but never dereferenced: the handlers under test build their
+    // Drizzle handle through the injected seam, so only the guard reads this.
     DB: {} as TaskBindings['DB'],
     ...overrides,
   }
@@ -358,14 +361,11 @@ describe('handleTravelStats', () => {
   })
 
   it('refuses to run without the D1 binding rather than half-recomputing', async () => {
-    const env = fakeEnv()
-    delete (env as { DB?: unknown }).DB
-
     // The shipped handler, so the guard is asserted on the value the consumer
     // actually registers rather than on a test-built one.
     const failure = await handleTravelStats(
       { userId: alpha.ownerUserId, statYear: 0 },
-      context(alpha.organizationId, env),
+      context(alpha.organizationId, fakeEnv({ DB: undefined })),
     ).catch((cause: unknown) => cause)
 
     expect(failure).toBeInstanceOf(TaskConfigurationError)
@@ -433,5 +433,28 @@ describe('travelStatsTaskId', () => {
     const first = travelStatsTaskId('org_1', 'user_1', 0, NOW)
     const later = travelStatsTaskId('org_1', 'user_1', 0, NOW + 60_000)
     expect(later).not.toBe(first)
+  })
+})
+
+describe('recomputeDelaySeconds', () => {
+  /** The instant a window opens; `NOW` is a round minute, so it opens one. */
+  const windowStart = NOW
+
+  it('holds the message for the rest of the window it was written in', () => {
+    expect(recomputeDelaySeconds(windowStart)).toBe(RECOMPUTE_WINDOW_MS / 1_000)
+    expect(recomputeDelaySeconds(windowStart + 9_500)).toBe(1)
+  })
+
+  it('never delivers before the window it collapses closes', () => {
+    // Every millisecond of a window, sampled: a delay that lands short of the
+    // window's end would recompute from a snapshot the burst is still filling.
+    for (let offset = 0; offset < RECOMPUTE_WINDOW_MS; offset += 250) {
+      const at = windowStart + offset
+      const delay = recomputeDelaySeconds(at)
+      expect(delay).toBeGreaterThan(0)
+      expect(at + delay * 1_000).toBeGreaterThanOrEqual(
+        windowStart + RECOMPUTE_WINDOW_MS,
+      )
+    }
   })
 })

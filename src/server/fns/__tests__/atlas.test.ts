@@ -968,6 +968,14 @@ describe('travel-stats recompute enqueue', () => {
     ])
   })
 
+  it('sends only the all-time roll-up for a year the envelope cannot carry', async () => {
+    // `0999-03-04` clears the input validator's `YYYY-MM-DD` but is not a year
+    // the payload schema accepts, so no year envelope is built for it.
+    await markVisited({ countryCode: 'PE', visitedOn: '0999-03-04' })
+
+    expect(statYears()).toEqual([0])
+  })
+
   it('holds the message until the collapse window has closed', async () => {
     await markVisited({ countryCode: 'PE' })
 

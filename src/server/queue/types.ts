@@ -110,6 +110,19 @@ export const backupPayloadSchema = z.object({
 
 export type BackupPayload = z.infer<typeof backupPayloadSchema>
 
+/** The `statYear` that means "every year the traveller has recorded". */
+export const ALL_TIME_STAT_YEAR = 0
+
+/**
+ * The other value `statYear` may take: a four-digit calendar year.
+ *
+ * Exported so the producer can decide what to enqueue against the same rule the
+ * consumer's schema enforces, rather than against a copy of it that can drift.
+ */
+export function isCalendarStatYear(value: number): boolean {
+  return Number.isInteger(value) && value >= 1000 && value <= 9999
+}
+
 /**
  * One traveller's roll-up, for one year or for all time.
  *
@@ -121,13 +134,13 @@ export type BackupPayload = z.infer<typeof backupPayloadSchema>
  */
 export const travelStatsPayloadSchema = z.strictObject({
   userId: z.string().min(1).max(64),
-  /** `0` is the all-time roll-up; anything else is a four-digit calendar year. */
   statYear: z
     .number()
     .int()
-    .refine((value) => value === 0 || (value >= 1000 && value <= 9999), {
-      error: 'statYear must be 0 (all time) or a four-digit year.',
-    }),
+    .refine(
+      (value) => value === ALL_TIME_STAT_YEAR || isCalendarStatYear(value),
+      { error: 'statYear must be 0 (all time) or a four-digit year.' },
+    ),
 })
 
 export type TravelStatsPayload = z.infer<typeof travelStatsPayloadSchema>

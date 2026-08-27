@@ -31,9 +31,14 @@ import {
   recomputeTravelStats,
   upsertTravelStats,
 } from '#/server/repos'
-import { TaskConfigurationError, TaskPermanentError } from '../types'
+import {
+  ALL_TIME_STAT_YEAR,
+  TaskConfigurationError,
+  TaskPermanentError,
+} from '../types'
 
 import type { Database, TravelStat } from '#/server/db/types'
+import type { TenantScope } from '#/server/repos'
 import type {
   TaskBindings,
   TaskContext,
@@ -73,6 +78,11 @@ export type DatabaseFor = (binding: D1Handle) => Database
  */
 export const RECOMPUTE_WINDOW_MS = 10_000
 
+/** Which collapse window an instant falls into. The id and the delay share it. */
+function windowOf(at: number): number {
+  return Math.floor(at / RECOMPUTE_WINDOW_MS)
+}
+
 /**
  * The envelope id for one traveller's year, and the producer's whole idempotency
  * story. Exported because `src/server/fns/atlas.ts` is the only producer and its
@@ -84,8 +94,7 @@ export function travelStatsTaskId(
   statYear: number,
   at: number,
 ): string {
-  const window = Math.floor(at / RECOMPUTE_WINDOW_MS)
-  return `travel-stats:${orgId}:${userId}:${statYear}:${window}`
+  return `travel-stats:${orgId}:${userId}:${statYear}:${windowOf(at)}`
 }
 
 /**
@@ -96,8 +105,7 @@ export function travelStatsTaskId(
  * collapse would not be reflected until the next one.
  */
 export function recomputeDelaySeconds(at: number): number {
-  const windowEnd =
-    (Math.floor(at / RECOMPUTE_WINDOW_MS) + 1) * RECOMPUTE_WINDOW_MS
+  const windowEnd = (windowOf(at) + 1) * RECOMPUTE_WINDOW_MS
   return Math.ceil((windowEnd - at) / 1000)
 }
 
@@ -132,6 +140,64 @@ export function yearStreakFrom(rows: ReadonlyArray<TravelStat>): number {
 }
 
 /**
+ * The scope a recompute runs under: the envelope's organization, the envelope's
+ * traveller, and the role that traveller actually holds in that organization.
+ *
+ * The role is never taken from the message. Reading it needs a scope of its own,
+ * so the membership read is made at the lowest privilege there is: `getMembership`
+ * is a tenant-filtered `findOne` that asserts no role, so the probe can only ever
+ * see the row that decides the real one. A message whose user is no longer a
+ * member is a permanent failure rather than five retries against a membership
+ * that is not coming back.
+ */
+async function scopeForTraveller(
+  db: Database,
+  organizationId: string,
+  userId: string,
+): Promise<TenantScope> {
+  const probe = createScope(db, { userId, organizationId, role: 'member' })
+  const membership = await getMembership(probe, userId)
+  if (membership === null) {
+    throw new TaskPermanentError(
+      `User ${userId} is no longer a member of ${organizationId}; travel stats will not be recomputed`,
+    )
+  }
+
+  return createScope(db, {
+    userId,
+    organizationId,
+    // An unrecognised value in the column resolves to the least privilege,
+    // never to "unset, therefore permissive".
+    role: isOrganizationRole(membership.role) ? membership.role : 'member',
+  })
+}
+
+/**
+ * Brings the all-time row's streak up to date and answers with it.
+ *
+ * The streak is not derivable from a single row, so `recomputeTravelStats`
+ * cannot write it: it is a property of the year rows read together, and it
+ * belongs on the all-time roll-up. `upsertTravelStats` writes through
+ * `definedOnly`, so this second call moves that one column and leaves the
+ * numbers the recompute just wrote exactly as they are.
+ */
+async function syncYearStreak(
+  scope: TenantScope,
+  userId: string,
+  allTimeRow: TravelStat,
+): Promise<number> {
+  const yearStreak = yearStreakFrom(await listTravelStats(scope, userId))
+  if (yearStreak !== allTimeRow.yearStreak) {
+    await upsertTravelStats(scope, {
+      userId,
+      statYear: ALL_TIME_STAT_YEAR,
+      yearStreak,
+    })
+  }
+  return yearStreak
+}
+
+/**
  * Builds the handler over a database seam. {@link handleTravelStats} is the one
  * the consumer registers; a test builds its own against the harness.
  */
@@ -149,48 +215,18 @@ export function createTravelStatsHandler(
       )
     }
 
-    const db = databaseFor(binding)
-    const organizationId = context.orgId
     const { userId, statYear } = payload
-
-    /**
-     * A membership read needs a scope, and a scope needs a role — so the read is
-     * made at the lowest privilege there is. `getMembership` is a tenant-filtered
-     * `findOne` that asserts no role, so the probe can only ever see the row that
-     * decides the real one.
-     */
-    const probe = createScope(db, { userId, organizationId, role: 'member' })
-    const membership = await getMembership(probe, userId)
-    if (membership === null) {
-      throw new TaskPermanentError(
-        `User ${userId} is no longer a member of ${organizationId}; travel stats will not be recomputed`,
-      )
-    }
-
-    const scope = createScope(db, {
+    const scope = await scopeForTraveller(
+      databaseFor(binding),
+      context.orgId,
       userId,
-      organizationId,
-      // An unrecognised value in the column resolves to the least privilege,
-      // never to "unset, therefore permissive".
-      role: isOrganizationRole(membership.role) ? membership.role : 'member',
-    })
+    )
 
     const row = await recomputeTravelStats(scope, userId, statYear)
-
-    /**
-     * The streak is not derivable from a single row, so `recomputeTravelStats`
-     * cannot write it: it is a property of the year rows read together, and it
-     * belongs on the all-time roll-up. `upsertTravelStats` writes through
-     * `definedOnly`, so this second call moves that one column and leaves the
-     * numbers the recompute just wrote exactly as they are.
-     */
     const yearStreak =
-      statYear === 0
-        ? yearStreakFrom(await listTravelStats(scope, userId))
+      statYear === ALL_TIME_STAT_YEAR
+        ? await syncYearStreak(scope, userId, row)
         : row.yearStreak
-    if (statYear === 0 && yearStreak !== row.yearStreak) {
-      await upsertTravelStats(scope, { userId, statYear: 0, yearStreak })
-    }
 
     context.logger.debug('travel stats recomputed', {
       userId,
