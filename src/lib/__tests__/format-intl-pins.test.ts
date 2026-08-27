@@ -44,19 +44,38 @@ const NBSP = '\u00a0'
 /** Arabic-Indic and extended Arabic-Indic digits — the `arab` numbering system. */
 const ARABIC_INDIC = /[٠-٩۰-۹]/
 
+/**
+ * Swaps one `Intl` constructor for another. `writable` is restated because
+ * `defineProperty` defaults it to `false`, and the same helper puts the real
+ * constructor back: a suite that left `Intl.NumberFormat` read-only would be
+ * changing the realm it borrowed.
+ *
+ * The substitutes are classes, which are new-only and so not assignable to
+ * `typeof Intl.NumberFormat` — that type is callable without `new` as well.
+ */
 function substitute(
   name: 'NumberFormat' | 'DateTimeFormat',
   value: unknown,
 ): void {
-  Object.defineProperty(Intl, name, { configurable: true, value })
+  Object.defineProperty(Intl, name, {
+    configurable: true,
+    writable: true,
+    value,
+  })
 }
 
 /**
- * A copy of the formatter with its module-scope `Intl` caches empty, so the
- * instances it builds are built against whichever constructors are installed
- * now rather than reused from an earlier test.
+ * Installs a pair of substitute constructors and returns a copy of the
+ * formatter with its module-scope `Intl` caches empty, so every instance it
+ * builds is built against those constructors rather than reused from an
+ * earlier test.
  */
-async function freshFormatter(): Promise<Formatter> {
+async function formatterBuiltWith(
+  numberFormat: unknown,
+  dateTimeFormat: unknown,
+): Promise<Formatter> {
+  substitute('NumberFormat', numberFormat)
+  substitute('DateTimeFormat', dateTimeFormat)
   vi.resetModules()
   return import('../format')
 }
@@ -80,19 +99,17 @@ afterEach(() => {
   substitute('NumberFormat', REAL_NUMBER_FORMAT)
   substitute('DateTimeFormat', REAL_DATE_TIME_FORMAT)
   vi.resetModules()
-  expect(Intl.NumberFormat).toBe(REAL_NUMBER_FORMAT)
-  expect(Intl.DateTimeFormat).toBe(REAL_DATE_TIME_FORMAT)
 })
 
 describe('the options every Intl instance the formatter builds is given', () => {
   type Construction = {
-    readonly locales: unknown
+    readonly locales: Intl.LocalesArgument
     readonly options: Intl.NumberFormatOptions | undefined
     readonly resolved: Intl.ResolvedNumberFormatOptions
   }
 
   const numbers: Array<Construction> = []
-  const dates: Array<unknown> = []
+  const dates: Array<Intl.LocalesArgument> = []
 
   class RecordingNumberFormat extends REAL_NUMBER_FORMAT {
     constructor(
@@ -117,9 +134,10 @@ describe('the options every Intl instance the formatter builds is given', () => 
   async function record(tag: Locale): Promise<void> {
     numbers.length = 0
     dates.length = 0
-    substitute('NumberFormat', RecordingNumberFormat)
-    substitute('DateTimeFormat', RecordingDateTimeFormat)
-    const format = await freshFormatter()
+    const format = await formatterBuiltWith(
+      RecordingNumberFormat,
+      RecordingDateTimeFormat,
+    )
     probe(format, tag)
   }
 
@@ -200,10 +218,8 @@ describe('a runtime that reads its own ICU, the way linux WebKit does', () => {
     }
   }
 
-  async function divergentFormatter(): Promise<Formatter> {
-    substitute('NumberFormat', DivergentNumberFormat)
-    substitute('DateTimeFormat', DivergentDateTimeFormat)
-    return freshFormatter()
+  function divergentFormatter(): Promise<Formatter> {
+    return formatterBuiltWith(DivergentNumberFormat, DivergentDateTimeFormat)
   }
 
   it('renders every locale byte-for-byte as this runtime does', async () => {
