@@ -107,8 +107,12 @@ const integrationBranch = (await import('node:child_process'))
 
 async function runPlanner(): Promise<Issue[]> {
   const plan = await sandcastle.run({
-    hooks,
+    // No install hook: the planner only reads issues via gh. And NEVER the
+    // default 'head' strategy — it bind-mounts the host working directory,
+    // where an install hook would grind through the darwin node_modules
+    // (measured: 10+ min vs 13 s fresh) and could corrupt them.
     sandbox: docker(),
+    branchStrategy: { type: 'merge-to-head' },
     name: 'planner',
     maxIterations: 1,
     agent: sandcastle.claudeCode(PLANNER_MODEL),
@@ -323,6 +327,10 @@ async function mergeBranches(passing: Array<{ issue: Issue }>): Promise<void> {
   await sandcastle.run({
     hooks,
     sandbox: docker(),
+    // Temp branch off HEAD; the agent merges issue branches into it, then
+    // sandcastle merges the temp branch back to HEAD. Same net effect as
+    // 'head', but the container never installs over the host node_modules.
+    branchStrategy: { type: 'merge-to-head' },
     name: 'merger',
     maxIterations: 1,
     agent: sandcastle.claudeCode(REVIEWER_MODEL),
@@ -336,9 +344,12 @@ async function mergeBranches(passing: Array<{ issue: Issue }>): Promise<void> {
   })
 }
 
-async function runAuditor(closed: Issue[]): Promise<void> {
+async function runAuditor(closed: Issue[], iteration: number): Promise<void> {
+  // A throwaway branch off HEAD (post-merge state): git refuses to check the
+  // integration branch out into a second worktree while this one holds it.
+  // The audit is read-only, so the branch is never merged anywhere.
   const sandbox = await sandcastle.createSandbox({
-    branch: integrationBranch,
+    branch: `sandcastle/audit-${RUN_TS}-i${iteration}`,
     sandbox: docker(),
     hooks,
     copyToWorktree,
@@ -424,7 +435,10 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
 
   await mergeBranches(passing)
   console.log('Branches merged. Running auditor…')
-  await runAuditor(passing.map((p) => p.issue))
+  await runAuditor(
+    passing.map((p) => p.issue),
+    iteration,
+  )
 }
 
 console.log(`\nAll done. Artifacts under ${ARTIFACT_ROOT}`)
