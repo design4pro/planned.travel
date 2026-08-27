@@ -394,8 +394,6 @@ export const NOTIFICATION_CHANNELS = [
 
 export const THEME_PREFERENCES = ['system', 'light', 'dark'] as const
 export const DISTANCE_UNITS = ['metric', 'imperial'] as const
-/** Clock a reader wants times written in. Filed by `09-S8`; see `userSettings.timeFormat`. */
-export const TIME_FORMATS = ['12h', '24h'] as const
 
 /**
  * Who a `platform_audit_log` row is attributed to (docs/ACCESS.md §4.1). `human` is a signed-in
@@ -986,7 +984,7 @@ export const transports = sqliteTable(
      *
      * The `set null` here is the schema's, and the test database — built from this file — has it.
      * The deployed one does not: SQLite's `ADD COLUMN` takes no `ON DELETE` clause, so
-     * `0006_windy_tana_nile` left the constraint at `NO ACTION`, where deleting a day a leg names
+     * `0006_mighty_nehzno` left the constraint at `NO ACTION`, where deleting a day a leg names
      * fails rather than nulling the column. Harmless while every row is null; the stage that
      * first writes it has to clear the column itself, or rebuild the table.
      */
@@ -1175,7 +1173,7 @@ export const expenses = sqliteTable(
      * expense writer that can first set the column, so it is `NULL` on every row today.
      *
      * As with `transports.arrival_day_id`, the deployed constraint is `NO ACTION` rather than
-     * `set null` — `0006_windy_tana_nile` added the column, and SQLite's `ADD COLUMN` carries no
+     * `set null` — `0006_mighty_nehzno` added the column, and SQLite's `ADD COLUMN` carries no
      * `ON DELETE` clause. `04-S2` is the stage that first deletes a category, so it is the stage
      * that has to null this column itself.
      */
@@ -2410,30 +2408,6 @@ export const userSettings = sqliteTable(
     displayCurrency: currency('display_currency'),
     weekStartsOn: integer('week_starts_on'),
     dateFormat: text('date_format'),
-    /**
-     * Which clock this reader wants times written on — {@link TIME_FORMATS}. Filed by `09-S8`
-     * (`docs/plans/09-account-and-settings.md`) and shipped ahead of the regional form that sets
-     * it, so nothing reads or writes it today. Nullable with no default like every other override
-     * on this table: a default would make a reader who never chose indistinguishable from one who
-     * picked the default, and break `getEffectiveSettings`, which resolves the reader's value over
-     * the workspace's.
-     *
-     * It carries no `enumCheck`, and `text_scale` below no range `CHECK`, for the reason the
-     * settlement triple two tables up carries neither — measured, not assumed: adding either
-     * rebuilt `user_settings` in the generated migration (a `__new_user_settings` create, an
-     * `INSERT … SELECT`, a `DROP TABLE` and a rename), which also swallowed `display_currency`'s
-     * own `ADD COLUMN`, and every signed-in reader has a row on this table. The vocabulary stays
-     * machine-readable as {@link TIME_FORMATS}, and the guard is `09-S8`'s to place in
-     * `src/server/repos/settings.ts` when it ships the control — exactly as
-     * `createSettlementInput` holds the settlement triple's rule.
-     */
-    timeFormat: text('time_format'),
-    /**
-     * Body-text scale as a whole percentage; `09-S8` bounds it to 90–125 in its own Zod, for the
-     * reason on `time_format` above. Unread until that stage ships its control. An integer
-     * percentage rather than a float multiplier, so the stored value is the one the reader picked.
-     */
-    textScale: integer('text_scale'),
     distanceUnit: text('distance_unit'),
     mapStyle: text('map_style'),
     accentColour: colour('accent_colour'),

@@ -24,6 +24,4 @@ ALTER TABLE `transports` ADD `arrival_day_id` text REFERENCES days(id);--> state
 CREATE INDEX `transports_arrival_day_idx` ON `transports` (`arrival_day_id`);--> statement-breakpoint
 ALTER TABLE `trips` ADD `copy_pending_at` integer;--> statement-breakpoint
 ALTER TABLE `trips` ADD `collab_modules` text;--> statement-breakpoint
-ALTER TABLE `user_settings` ADD `display_currency` text(3);--> statement-breakpoint
-ALTER TABLE `user_settings` ADD `time_format` text;--> statement-breakpoint
-ALTER TABLE `user_settings` ADD `text_scale` integer;
+ALTER TABLE `user_settings` ADD `display_currency` text(3);
