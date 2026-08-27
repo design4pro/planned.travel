@@ -9,8 +9,10 @@
 // runs the full suite (including full e2e) once — the post-merge safety net
 // that lets CI's e2e job run only on develop/main pushes.
 //
-// Run from an integration branch cut from `develop` (never develop itself):
-//   git switch -c sandcastle/run-$(date +%Y%m%d) develop
+// Run from anywhere: the integration branch `sandcastle/run-<date>` is cut
+// from `origin/develop` (or resumed, on a same-day rerun) inside its own git
+// worktree under `.sandcastle/worktrees/` — the operator's checkout is never
+// switched and stays usable while the loop runs:
 //   pnpm sandcastle
 //
 // Requires: Docker running, `sandcastle docker build-image` executed once,
@@ -112,9 +114,39 @@ function createLimiter(limit: number) {
   }
 }
 
-const integrationBranch = (await import('node:child_process'))
-  .execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' })
-  .trim()
+// The integration branch lives in its own git worktree (sandcastle's
+// createWorktree), so nothing here ever switches the operator's checkout —
+// which is also what keeps ADR 0003 honoured mechanically: the branch is
+// always cut from `origin/develop`, whatever the operator happens to have
+// checked out. On a same-day rerun the branch already exists, `baseBranch`
+// is ignored (the lib's contract) and the existing worktree is reused, so
+// accumulated issue-branch progress survives. The lib refuses cleanly if
+// the branch is checked out elsewhere. The fetch is ours: createWorktree
+// documents that callers keep the base ref current.
+const { execSync } = await import('node:child_process')
+execSync('git fetch origin develop', { stdio: 'inherit' })
+// Local calendar date, like the manual `date +%Y%m%d` this replaces — a UTC
+// date would cut a fresh branch on a same-local-day rerun straddling UTC
+// midnight, stranding the accumulated progress it exists to resume.
+const pad = (n: number) => String(n).padStart(2, '0')
+const now = new Date()
+const today = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
+const integration = await sandcastle.createWorktree({
+  branchStrategy: {
+    type: 'branch',
+    branch: `sandcastle/run-${today}`,
+    baseBranch: 'origin/develop',
+  },
+  // Every run/createSandbox below anchors at this worktree, and the anchor
+  // resolves `.sandcastle/.env` and `copyToWorktree` sources against it — so
+  // the two gitignored inputs must travel into the worktree at creation.
+  copyToWorktree: ['.sandcastle/.env', ...copyToWorktree],
+})
+const integrationBranch = integration.branch
+const integrationCwd = integration.worktreePath
+console.log(
+  `sandcastle: integration branch ${integrationBranch} in worktree ${integrationCwd}`,
+)
 
 async function runPlanner(): Promise<Issue[]> {
   const plan = await sandcastle.run({
@@ -123,6 +155,7 @@ async function runPlanner(): Promise<Issue[]> {
     // where an install hook would grind through the darwin node_modules
     // (measured: 10+ min vs 13 s fresh) and could corrupt them.
     sandbox: docker(),
+    cwd: integrationCwd,
     branchStrategy: { type: 'merge-to-head' },
     name: 'planner',
     maxIterations: 1,
@@ -236,6 +269,7 @@ async function workIssue(
   const sandbox = await sandcastle.createSandbox({
     branch: issue.branch,
     sandbox: docker(),
+    cwd: integrationCwd,
     hooks,
     copyToWorktree,
   })
@@ -338,6 +372,7 @@ async function mergeBranches(passing: Array<{ issue: Issue }>): Promise<void> {
   await sandcastle.run({
     hooks,
     sandbox: docker(),
+    cwd: integrationCwd,
     // Temp branch off HEAD; the agent merges issue branches into it, then
     // sandcastle merges the temp branch back to HEAD. Same net effect as
     // 'head', but the container never installs over the host node_modules.
@@ -365,6 +400,7 @@ async function runAuditor(
   const sandbox = await sandcastle.createSandbox({
     branch: `sandcastle/audit-${RUN_TS}-i${iteration}`,
     sandbox: docker(),
+    cwd: integrationCwd,
     hooks,
     copyToWorktree,
   })
@@ -541,5 +577,11 @@ if (mergedAll.length > 0 && lastAuditRefuted === 0) {
     `\nNOT opening a PR: the final audit left ${lastAuditRefuted} refuted verdict(s) unresolved (iteration cap reached). Review ${integrationBranch} by hand.`,
   )
 }
+
+// Remove the integration worktree; the branch (and any open PR on it)
+// survives. close() preserves a dirty worktree, and a crashed run leaves one
+// behind — either way the next run reuses it (measured: createWorktree logs
+// "Reusing existing worktree" for a matching branch).
+await integration.close()
 
 console.log(`\nAll done. Artifacts under ${ARTIFACT_ROOT}`)
