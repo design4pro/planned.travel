@@ -136,9 +136,10 @@ const consoleMessages = []
 /**
  * The verdict a console message earns, and the reason to print beside it.
  *
- * `toolchain-broken` is checked first on purpose: a stale-optimiser 504 is served from a Vite
- * namespace that `NOT_THE_APP` would otherwise excuse, and excusing it files frames of the error
- * boundary as a clean result.
+ * `toolchain-broken` is checked first because it is the stricter verdict: it invalidates the whole
+ * capture, where `not-the-app` only excuses one message. Should a message ever match both lists, the
+ * order is what stops a stale-optimiser 504 being excused and its error-boundary frames filed as a
+ * clean result.
  */
 function classify(from, text) {
   const broken = TOOLCHAIN_BROKEN.find(

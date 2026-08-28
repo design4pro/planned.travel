@@ -806,13 +806,13 @@ schema.
   Browser evidence at **360px and 2560px**, both themes: the queue with seeded submissions, the
   queue's empty state (seed cleared through the route's own test hooks), the review panel, the
   decline dialog with its note validation state, and the locked state under a non-curator
-  session. Frames via `scripts/visual/capture.mjs` under
+  session. Frames via `scripts/ultrabuild/capture.mjs` under
   `.claude/ultrabuild/shots/<slug>/round-<n>/13-S2/`. The verdict buttons' loading states are
   photographed with a delayed `page.route` on the serverFn URL.
 - The mounted publish dialog — the in-app evidence `13-S1` deferred here: the Collab tab with
   the trigger, then the dialog in faces 1, 2 and 4 (face 2 by submitting against the seeded
   trip; face 4 by approving it through this stage's own queue), reached with
-  `scripts/visual/capture.mjs --click '[data-part="gallery-publish-trigger"]'`, at 360px
+  `scripts/ultrabuild/capture.mjs --click '[data-part="gallery-publish-trigger"]'`, at 360px
   and 2560px in both themes; the submit button's loading state via a delayed `page.route`,
   because the local round trip is otherwise too fast to photograph.
 - The notification lands: a unit test on the verdict function asserts a `notifications` row per
@@ -1023,7 +1023,7 @@ ceiling.
   (`src/components/map/map-canvas.tsx:756`), re-waited after every resize and theme change —
   detail gone state, detail no-coordinates state, and the card **hover** state captured
   explicitly (a resting frame is not evidence about a hover affordance). Frames via
-  `scripts/visual/capture.mjs` under `.claude/ultrabuild/shots/<slug>/round-<n>/13-S3/`,
+  `scripts/ultrabuild/capture.mjs` under `.claude/ultrabuild/shots/<slug>/round-<n>/13-S3/`,
   captured **without** `--auth`.
 - RTL: one detail frame under `ar` at 1440 confirming the mirrored composition.
 - Console silent; the map route's tolerated rasteriser advisory is the single named exception,
@@ -1315,7 +1315,7 @@ a re-delivery after success no-ops.
   the thread empty state, the composer's posting and refused states (rate bucket forced by the
   test), the saved rail with two entries, and the save affordance in all three phases. The
   interaction states are the point of this stage, so each is photographed in the state itself
-  via `scripts/visual/capture.mjs --click` sequences, not at rest. Frames under
+  via `scripts/ultrabuild/capture.mjs --click` sequences, not at rest. Frames under
   `.claude/ultrabuild/shots/<slug>/round-<n>/13-S4/`.
 - One `ar` frame of the thread at 1440 confirming mirrored rows and logical-property layout.
 - Console silent in both contexts and both themes.

@@ -127,12 +127,12 @@ reports the login screen as the product. `--project=setup` is the whole fix and 
 
 ### The interaction frames
 
-`scripts/visual/capture.mjs` takes the frames a human or a blind critic looks at. It is a real
+`scripts/ultrabuild/capture.mjs` takes the frames a human or a blind critic looks at. It is a real
 file in this repository, it drives Chromium through `@playwright/test`, and it deliberately writes
 **nothing** under `e2e/__screenshots__`:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/<route>" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/<stage-id>" \
   --label B \
@@ -154,7 +154,7 @@ refused rather than filed; and `--auth` refuses to file a frame that landed on `
 The clock pin is the one seam `capture.mjs` does **not** apply on its own, and the environment
 variable in the command above is not decoration. Measured in the script: the header is read from
 `process.env.PT_SERVER_TODAY` and the `context.route()` interceptor that attaches it is installed
-only `if (serverToday)` (`scripts/visual/capture.mjs:168-178`). Unset, no request carries
+only `if (serverToday)` (`scripts/ultrabuild/capture.mjs:168-178`). Unset, no request carries
 `x-pt-server-today`, the Worker answers from its own wall clock, and the frames show whichever rows
 today selects — next to baselines recorded on `BASELINE_DAY`. What the script fixes is the
 _scoping_, not the setting: when the value is present it is attached per request and only to the

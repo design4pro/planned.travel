@@ -532,7 +532,7 @@ PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
   e2e/reservations-and-transport.visual.spec.ts
-PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/demo-trip-01-tokyo-and-kyoto/transports" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/03-S1" \
   --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth

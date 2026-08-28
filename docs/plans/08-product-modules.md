@@ -494,7 +494,7 @@ Functions covered: `ensurePlan`, `updatePlan`, `ensureYear`, `setEntitlement`, `
 - Frames, per `12-verification-protocol.md` §3 — light and dark at 360, 1280 and 2560:
 
   ```sh
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/vacay?year=2026" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/08-S1" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth
@@ -800,7 +800,7 @@ Functions covered: `listVisitedRegions`, `markRegionVisited`, `unmarkRegionVisit
   stage — the country panel open with its regions section, which the resting screen never shows:
 
   ```sh
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/atlas" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/08-S2" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
@@ -1138,7 +1138,7 @@ Functions covered: `getJourney`, `updateJourney`, `publishJourney`, `unpublishJo
 - Frames, per `12-verification-protocol.md` §3, with the declared state that is the point:
 
   ```sh
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/journey" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/08-S3" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -1441,7 +1441,7 @@ Functions covered: `getCollection`, `listCollectionPlaces`, `listLabels`, `updat
 - Frames, per `12-verification-protocol.md` §3, with the two declared states that are the point:
 
   ```sh
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/collections" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/08-S4" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth
@@ -1766,7 +1766,7 @@ Functions covered: `setEntry`, `setEntryRange`, `removeEntry`, `listVacayEntries
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/visual.spec.ts -g vacay --update-snapshots
 
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/vacay?year=2026" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/08-S5" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -2022,7 +2022,7 @@ than that workspace's figures, exercised through the same `createScope()` fixtur
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/visual.spec.ts -g atlas --update-snapshots
 
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/atlas" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/08-S6" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
@@ -2408,7 +2408,7 @@ Functions covered: `createEntry`, `updateEntry`, `deleteEntry`, `listJourneyEntr
   state and the public page:
 
   ```sh
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/journey" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/08-S7" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
@@ -2709,7 +2709,7 @@ Functions covered: `listPlanMembers`, `invitePlanMember`, `setPlanMemberStatus`,
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/visual.spec.ts -g vacay --update-snapshots
 
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/vacay?year=2026" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/08-S8" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -3054,7 +3054,7 @@ Functions covered: `listCollectionPlaces`, `listCollectionPlacesWithLabels`,
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
 
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/collections" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/08-S9" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
@@ -3356,7 +3356,7 @@ refactor.
   gated routes for the entitled case:
 
   ```sh
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/atlas" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/08-S10" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map

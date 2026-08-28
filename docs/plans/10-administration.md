@@ -465,7 +465,7 @@ Functions covered: `listMemberProfiles`, `listInvitationsWithInviter`, `getInvit
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/administration.visual.spec.ts
 
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/admin" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/10-S1" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -850,7 +850,7 @@ Functions covered: `listAuditLog`, `listAuditActors`, `countAuditActions`, `coun
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/administration.visual.spec.ts
 
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/admin" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/10-S2" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -1220,7 +1220,7 @@ case that would restate another stage's.
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/administration.visual.spec.ts
 
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/admin/members" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/10-S3" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth
@@ -1736,7 +1736,7 @@ Functions covered: `getPermissionMatrix`, `savePermissionMatrix`, `resetPermissi
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
   PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/administration.visual.spec.ts
 
-  PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+  PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/admin/permissions" \
     --out ".claude/ultrabuild/shots/<slug>/round-<n>/10-S4" \
     --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \

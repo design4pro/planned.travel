@@ -504,7 +504,7 @@ Every selector is a `data-part` attribute this stage publishes, not a class name
 verifies each with `page.locator(sel).count() === 1` against a running dev server **before** it files
 a frame; a selector that resolves to nothing makes `capture.mjs` throw at `--click` and costs a round.
 
-Frames are taken by `scripts/visual/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` — the value is
+Frames are taken by `scripts/ultrabuild/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` — the value is
 `BASELINE_DAY` in `e2e/helpers/shoot.ts:1014` and not a free choice — with `--auth`, and land under
 `.claude/ultrabuild/shots/<slug>/round-<n>/09-S1/`.
 
@@ -831,7 +831,7 @@ screens and the stage ships both. Declared non-resting states:
 Every selector is a `data-part` attribute this stage publishes, verified with
 `page.locator(sel).count() === 1` against a running dev server before any frame is filed.
 
-Frames come from `scripts/visual/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` and `--auth`, and
+Frames come from `scripts/ultrabuild/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` and `--auth`, and
 land under `.claude/ultrabuild/shots/<slug>/round-<n>/09-S2/`.
 
 **The spec file.** Appends a `test.describe('09-S2 — Turning two-factor on…')` block to
@@ -1283,7 +1283,7 @@ outcomes are dialogs or inline forms that a resting frame cannot show:
 
 Every selector is a `data-part` attribute this stage publishes, verified with
 `page.locator(sel).count() === 1` against a running dev server before any frame is filed. Frames come
-from `scripts/visual/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` and `--auth`, under
+from `scripts/ultrabuild/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` and `--auth`, under
 `.claude/ultrabuild/shots/<slug>/round-<n>/09-S3/`.
 
 **The spec file.** Appends a `test.describe` block named for this stage to
@@ -1583,7 +1583,7 @@ has asserted `link[rel="manifest"]` resolves with `200` and `application/manifes
 and the assertion describe the same load.
 
 Selectors are verified with `page.locator(sel).count() === 1` against a running dev server before any
-frame is filed. Frames come from `scripts/visual/capture.mjs` with `PT_SERVER_TODAY=2026-08-20`
+frame is filed. Frames come from `scripts/ultrabuild/capture.mjs` with `PT_SERVER_TODAY=2026-08-20`
 and `--auth`, under `.claude/ultrabuild/shots/<slug>/round-<n>/09-S4/`.
 
 **The spec file.** Appends a `test.describe` block named for this stage, importing shared helpers
@@ -2126,7 +2126,7 @@ states:
 
 Every selector is a `data-part` attribute this stage publishes, verified with
 `page.locator(sel).count() === 1` against a running dev server before any frame is filed. Frames come
-from `scripts/visual/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` and `--auth`, under
+from `scripts/ultrabuild/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` and `--auth`, under
 `.claude/ultrabuild/shots/<slug>/round-<n>/09-S6/`.
 
 **The spec file.** Appends a `test.describe` block named for this stage to
@@ -2456,7 +2456,7 @@ each carrying its channel switches, not a horizontally scrolled grid. Declared n
 
 Every selector is a `data-part` attribute this stage publishes, verified with
 `page.locator(sel).count() === 1` against a running dev server before any frame is filed. Frames come
-from `scripts/visual/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` and `--auth`, under
+from `scripts/ultrabuild/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` and `--auth`, under
 `.claude/ultrabuild/shots/<slug>/round-<n>/09-S7/`.
 
 **The spec file, and the clock string it has to hold still.** Appends a `test.describe` block named
@@ -3005,7 +3005,7 @@ this is the cheapest way to prove it did not.
 
 Every selector is a `data-part` attribute this stage publishes, verified with
 `page.locator(sel).count() === 1` against a running dev server before any frame is filed. Frames come
-from `scripts/visual/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` and `--auth`, under
+from `scripts/ultrabuild/capture.mjs` with `PT_SERVER_TODAY=2026-08-20` and `--auth`, under
 `.claude/ultrabuild/shots/<slug>/round-<n>/09-S8/`.
 
 **The spec file.** Appends a `test.describe` block named for this stage. Both routes are clock-free
