@@ -875,7 +875,7 @@ the card whose accessible name is the flagship trip's title, and appending `/lis
 the two states that are this stage's point:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/lists" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/05-S1" \
   --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth
@@ -883,7 +883,7 @@ PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
 
 and again with `--state collapsed --click '[data-part="category-collapse"]'` and with
 `--state assignees --click '[data-part="category-people"]'`. `PT_SERVER_TODAY` is not decoration: the
-header is attached only when it is set (`scripts/visual/capture.mjs:168-178`), and `2026-08-20` is
+header is attached only when it is set (`scripts/ultrabuild/capture.mjs:168-178`), and `2026-08-20` is
 `BASELINE_DAY` from `e2e/helpers/shoot.ts:1014`, the same value the gate sends. A stage that pins the
 capture to one day and the gate to another has photographed two products.
 
@@ -1343,7 +1343,7 @@ asserted empty in every test in the block, including the frame-only ones.
 _and_ five declared sets are:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/lists" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/05-S2" \
   --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -1772,7 +1772,7 @@ scrolling are exactly what behaves differently on WebKit.
 the row picker open:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/lists" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/05-S3" \
   --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -2111,7 +2111,7 @@ not just this spec, and the pass/fail count of both is reported.
 here is a declared one:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/lists?view=todo" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/05-S4" \
   --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --state todo
@@ -2513,7 +2513,7 @@ table's declarations are unchanged, and `auditServerClock()` still runs once.
 **Frames.** The resting board set, plus three declared sets:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/lists" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/05-S5" \
   --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
