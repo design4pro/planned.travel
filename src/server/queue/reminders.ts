@@ -71,14 +71,15 @@ export const REMINDER_MARKER_PREFIX = 'reminded:'
 export const REMINDER_MARKER_TTL_SECONDS = 30 * 24 * 60 * 60
 
 /**
- * The notification kind — one name doing all four of this event's jobs at once.
+ * The notification kind — one name doing every job this event has.
  *
  * It is the `eventType` the preference table is keyed by, so switching "Departure reminders" off
- * in notification settings switches off exactly these; it is the catalogue key the sentence
- * renders from (`shell.notification.trip.starting_soon.*`, shipped in all twenty-three locales
- * and already taking `{tripTitle}` and a plural `{days}`), so `titleKey`/`bodyKey` are simply left
- * to default to it; and it is the switch the settings matrix draws. `docs/SPEC.md` §8: one
- * concept, one owner.
+ * in notification settings — the row `NOTIFICATION_EVENTS` draws that switch from — switches off
+ * exactly these; it is the catalogue key the sentence renders from
+ * (`shell.notification.trip.starting_soon.*`, shipped in all twenty-three locales and already
+ * taking `{tripTitle}` and a plural `{days}`), so `titleKey`/`bodyKey` are simply left to default
+ * to it; and it is the `<kind>` segment of the envelope id dispatch keys the email by.
+ * `docs/SPEC.md` §8: one concept, one owner.
  *
  * What this replaced, and why none of it survives: a separate `trip.reminder` kind, with a second
  * constant overriding the copy key back to this one. No screen, no bulk write and no seed has ever

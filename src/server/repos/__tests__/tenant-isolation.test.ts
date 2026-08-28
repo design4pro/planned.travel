@@ -2142,10 +2142,25 @@ describe('tenant isolation', () => {
       return kv
     }
 
-    function reminders<TRow extends { readonly titleKey: string }>(
-      rows: ReadonlyArray<TRow>,
-    ): Array<TRow> {
-      return rows.filter((row) => row.titleKey === REMINDER_KEY)
+    /** The reminder rows one tenant's owner can see, read under that tenant's own scope. */
+    async function remindersFor(
+      world: World,
+    ): Promise<Awaited<ReturnType<typeof listNotifications>>['items']> {
+      const { items } = await listNotifications(
+        world.tenant.scope,
+        world.tenant.ownerUserId,
+      )
+      return items.filter((row) => row.titleKey === REMINDER_KEY)
+    }
+
+    /** Switches "Departure reminders" off in one tenant's own preference table. */
+    async function optOutInApp(world: World, userId: string): Promise<void> {
+      await setPreference(world.tenant.scope, {
+        userId,
+        eventType: REMINDER_KEY,
+        channel: 'in_app',
+        isEnabled: false,
+      })
     }
 
     it('reminds each tenant under its own trip’s owner, and never the other’s', async () => {
@@ -2154,14 +2169,8 @@ describe('tenant isolation', () => {
 
       const kv = await sweepBoth()
 
-      const inAlpha = reminders(
-        (await listNotifications(alpha.tenant.scope, alpha.tenant.ownerUserId))
-          .items,
-      )
-      const inBeta = reminders(
-        (await listNotifications(beta.tenant.scope, beta.tenant.ownerUserId))
-          .items,
-      )
+      const inAlpha = await remindersFor(alpha)
+      const inBeta = await remindersFor(beta)
       expect(inAlpha).toHaveLength(1)
       expect(inBeta).toHaveLength(1)
 
@@ -2193,40 +2202,16 @@ describe('tenant isolation', () => {
       // under: one for B's own owner, and one naming *A's* owner — `notification_preferences.user_id`
       // is a `userRef()` with no foreign key, so B can write that row, and only the tenant filter on
       // the read stops it from reaching across.
-      await setPreference(beta.tenant.scope, {
-        userId: beta.tenant.ownerUserId,
-        eventType: REMINDER_KEY,
-        channel: 'in_app',
-        isEnabled: false,
-      })
-      await setPreference(beta.tenant.scope, {
-        userId: alpha.tenant.ownerUserId,
-        eventType: REMINDER_KEY,
-        channel: 'in_app',
-        isEnabled: false,
-      })
+      await optOutInApp(beta, beta.tenant.ownerUserId)
+      await optOutInApp(beta, alpha.tenant.ownerUserId)
 
       const kv = await sweepBoth()
 
       // One tick, two answers: B's traveller is suppressed, A's is reminded. `sweepBoth` has
       // already asserted both trips counted `notified` — an opt-out filters recipients and never
       // reopens the window.
-      expect(
-        reminders(
-          (
-            await listNotifications(
-              alpha.tenant.scope,
-              alpha.tenant.ownerUserId,
-            )
-          ).items,
-        ),
-      ).toHaveLength(1)
-      expect(
-        reminders(
-          (await listNotifications(beta.tenant.scope, beta.tenant.ownerUserId))
-            .items,
-        ),
-      ).toEqual([])
+      expect(await remindersFor(alpha)).toHaveLength(1)
+      expect(await remindersFor(beta)).toEqual([])
       expect([...kv.store.keys()].sort()).toEqual(
         [
           `reminded:${alpha.tenant.organizationId}:${alphaTripId}:${DUE_AT}`,
@@ -2241,14 +2226,8 @@ describe('tenant isolation', () => {
 
       await sweepBoth()
 
-      const alphaRow = reminders(
-        (await listNotifications(alpha.tenant.scope, alpha.tenant.ownerUserId))
-          .items,
-      )[0]
-      const betaRow = reminders(
-        (await listNotifications(beta.tenant.scope, beta.tenant.ownerUserId))
-          .items,
-      )[0]
+      const alphaRow = (await remindersFor(alpha))[0]
+      const betaRow = (await remindersFor(beta))[0]
       const alphaId = alphaRow.id
       const betaId = betaRow.id
 

@@ -19,6 +19,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { createStoredTranslator, loadCatalogue } from '#/lib/i18n/catalogue'
+import { paramsFrom, renderStored, storedKey } from '#/lib/notification-copy'
 import {
   DAY_MS,
   REMINDER_SCAN_DAYS,
@@ -27,6 +29,8 @@ import {
 } from '#/server/catalog/reminders'
 import { createLogger, createMemorySink } from '#/server/observability'
 import { createHarness } from '#/server/repos/__tests__/harness'
+
+import { taskEnvelopeSchema } from '../types'
 
 import type { ReminderScanOptions } from '#/server/catalog/reminders'
 import type { LogRecord } from '#/server/observability'
@@ -91,9 +95,8 @@ const DUE_AT = Date.UTC(2026, 2, 10, 8)
  * `trip.starting_soon` row of `NOTIFICATION_EVENTS` in `src/routes/_app/-lib/notifications.ts`.
  *
  * Spelled out rather than imported from {@link REMINDER_EVENT_KIND}, because the property under
- * test is precisely that the two are the same string: the sweep once dispatched under a
- * `trip.reminder` kind that no screen, no bulk write and no seed has ever written a preference row
- * for, so the switch suppressed nothing at all.
+ * test is precisely that the two are the same string: a sweep dispatching under a kind no screen
+ * writes a preference row for is a switch that suppresses nothing.
  */
 const SETTINGS_EVENT_TYPE = 'trip.starting_soon'
 
@@ -234,6 +237,15 @@ async function dropTripMember(
   const members = await listTripMembers(world.tenant.scope, tripId)
   const row = members.find((member) => member.userId === userId)
   await removeTripMember(world.tenant.scope, row?.id ?? '')
+}
+
+/** The in-app half of a reminder: the rows one member can see in their own inbox. */
+async function inbox(
+  world: World,
+  userId: string,
+): Promise<Awaited<ReturnType<typeof Repos.listNotifications>>['items']> {
+  const { listNotifications } = await import('#/server/repos')
+  return (await listNotifications(world.tenant.scope, userId)).items
 }
 
 /** Switches "Departure reminders" off for one member on one channel, as the settings screen does. */
@@ -465,7 +477,6 @@ describe('sweepReminders', () => {
     const tripId = await seedTrip(alpha, { withSecondMember: true })
     const kv = memoryKv()
     const queue = recordingQueue()
-    const { listNotifications } = await import('#/server/repos')
 
     const { result } = await sweep(kv, queue)
 
@@ -478,23 +489,23 @@ describe('sweepReminders', () => {
     })
     // No actor, so the trip's owner is a recipient as well as the second member — a reminder that
     // excluded the person who owns the trip would be the obvious way to get this wrong.
-    const owner = await listNotifications(alpha.tenant.scope, alpha.ownerId)
-    const other = await listNotifications(alpha.tenant.scope, alpha.otherId)
-    expect(owner.items).toHaveLength(1)
-    expect(other.items).toHaveLength(1)
+    const owner = await inbox(alpha, alpha.ownerId)
+    const other = await inbox(alpha, alpha.otherId)
+    expect(owner).toHaveLength(1)
+    expect(other).toHaveLength(1)
     // The kind *is* the catalogue key, so `titleKey` is simply left to default to it.
-    expect(owner.items[0]?.titleKey).toBe(REMINDER_EVENT_KIND)
-    expect(owner.items[0]?.bodyKey).toBe(REMINDER_EVENT_KIND)
-    expect(owner.items[0]?.titleParams).toEqual({
+    expect(owner[0]?.titleKey).toBe(REMINDER_EVENT_KIND)
+    expect(owner[0]?.bodyKey).toBe(REMINDER_EVENT_KIND)
+    expect(owner[0]?.titleParams).toEqual({
       tripTitle: 'Lisbon in spring',
       days: 3,
     })
-    expect(owner.items[0]?.actionUrl).toBe(`/trips/${tripId}`)
+    expect(owner[0]?.actionUrl).toBe(`/trips/${tripId}`)
     // Measured, not desired: the event names no actor, but `notifyMany` stamps
     // `senderUserId` from the scope unconditionally, so the row records the member the sweep
     // resolved. Nothing renders the column today; changing it means editing
     // `src/server/repos/notifications.ts`, which this stage does not own.
-    expect(owner.items[0]?.senderUserId).toBe(alpha.ownerId)
+    expect(owner[0]?.senderUserId).toBe(alpha.ownerId)
 
     expect(queue.ids().sort()).toEqual(
       [
@@ -513,18 +524,13 @@ describe('sweepReminders', () => {
     await optOut(alpha, alpha.ownerId, 'email')
     const kv = memoryKv()
     const queue = recordingQueue()
-    const { listNotifications } = await import('#/server/repos')
 
     const { result } = await sweep(kv, queue)
 
     // Both halves, from the one row the switch writes. The other member never touched the switch
     // and is reminded in the same tick.
-    expect(
-      (await listNotifications(alpha.tenant.scope, alpha.ownerId)).items,
-    ).toEqual([])
-    expect(
-      (await listNotifications(alpha.tenant.scope, alpha.otherId)).items,
-    ).toHaveLength(1)
+    expect(await inbox(alpha, alpha.ownerId)).toEqual([])
+    expect(await inbox(alpha, alpha.otherId)).toHaveLength(1)
     expect(queue.ids()).toEqual([
       `notify:${REMINDER_EVENT_KIND}:${tripId}:${DUE_AT}:${alpha.otherId}`,
     ])
@@ -539,18 +545,13 @@ describe('sweepReminders', () => {
     await optOut(alpha, alpha.ownerId, 'in_app')
     await optOut(alpha, alpha.otherId, 'email')
     const queue = recordingQueue()
-    const { listNotifications } = await import('#/server/repos')
 
     await sweep(memoryKv(), queue)
 
     // The two channels are independent rows and the sweep asks about each separately: the owner
     // keeps the letter without the inbox row, the second member keeps the row without the letter.
-    expect(
-      (await listNotifications(alpha.tenant.scope, alpha.ownerId)).items,
-    ).toEqual([])
-    expect(
-      (await listNotifications(alpha.tenant.scope, alpha.otherId)).items,
-    ).toHaveLength(1)
+    expect(await inbox(alpha, alpha.ownerId)).toEqual([])
+    expect(await inbox(alpha, alpha.otherId)).toHaveLength(1)
     expect(queue.ids()).toEqual([
       `notify:${REMINDER_EVENT_KIND}:${tripId}:${DUE_AT}:${alpha.ownerId}`,
     ])
@@ -582,16 +583,10 @@ describe('sweepReminders', () => {
 
   it('renders the shipped Departure reminder sentence, never the fallback line', async () => {
     await seedTrip(alpha)
-    const { listNotifications } = await import('#/server/repos')
-    const { createStoredTranslator, loadCatalogue } =
-      await import('#/lib/i18n/catalogue')
-    const { paramsFrom, renderStored, storedKey } =
-      await import('#/lib/notification-copy')
 
     await sweep(memoryKv(), recordingQueue())
 
-    const row = (await listNotifications(alpha.tenant.scope, alpha.ownerId))
-      .items[0]
+    const row = (await inbox(alpha, alpha.ownerId))[0]
     expect(row.titleParams).toEqual({ tripTitle: 'Lisbon in spring', days: 3 })
 
     // Unifying the kind with the preference row only works because the kind is itself a shipped
@@ -611,7 +606,6 @@ describe('sweepReminders', () => {
   it('keeps the envelope id inside the bound the queue validates', async () => {
     const tripId = await seedTrip(alpha)
     const queue = recordingQueue()
-    const { taskEnvelopeSchema } = await import('../types')
 
     await sweep(memoryKv(), queue)
 
@@ -630,7 +624,6 @@ describe('sweepReminders', () => {
   it('reminds once per window, however many ticks fall inside it', async () => {
     const tripId = await seedTrip(alpha)
     const kv = memoryKv()
-    const { listNotifications } = await import('#/server/repos')
 
     const first = await sweep(kv, recordingQueue())
     const second = await sweep(kv, recordingQueue(), NOW + 15 * 60_000)
@@ -639,9 +632,7 @@ describe('sweepReminders', () => {
     expect(first.result.notified).toBe(1)
     expect(second.result).toMatchObject({ due: 1, notified: 0, skipped: 1 })
     expect(third.result).toMatchObject({ due: 1, notified: 0, skipped: 1 })
-    expect(
-      (await listNotifications(alpha.tenant.scope, alpha.ownerId)).items,
-    ).toHaveLength(1)
+    expect(await inbox(alpha, alpha.ownerId)).toHaveLength(1)
     expect([...kv.store.keys()]).toEqual([
       reminderMarkerKey({
         tripId,
@@ -748,14 +739,11 @@ describe('sweepReminders', () => {
     await seedTrip(beta, { title: 'Porto in autumn' })
     spies.failTripId = failing
     const kv = memoryKv()
-    const { listNotifications } = await import('#/server/repos')
 
     const { result, sink } = await sweep(kv, recordingQueue())
 
     expect(result).toMatchObject({ due: 2, notified: 1, failed: 1 })
-    expect(
-      (await listNotifications(beta.tenant.scope, beta.ownerId)).items,
-    ).toHaveLength(1)
+    expect(await inbox(beta, beta.ownerId)).toHaveLength(1)
     expect(messaged(sink, 'a reminder failed for one trip')).toBe(1)
     // The failure left no marker, so the next tick tries again inside the same window.
     expect([...kv.store.keys()]).toHaveLength(1)
