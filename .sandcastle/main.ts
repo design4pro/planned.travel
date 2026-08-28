@@ -580,8 +580,10 @@ async function runAuditor(
       }
     }
     // Incidental findings become triage tickets — `status: pending`, never
-    // `ready-for-agent`: a human promotes them, so the loop cannot generate
-    // and consume its own work unsupervised. Capped and title-deduped.
+    // `ready-for-agent` from here. Pre-triage (.github/workflows/triage.yml on
+    // the `opened` event, or `pnpm sandcastle:triage`) reproduces each one at
+    // HEAD and promotes only a confirmed, unambiguous finding — ADR 0006; the
+    // rest waits for a human. Capped and title-deduped.
     for (const followUp of verdicts.followUps.slice(0, 3)) {
       const existing = await sandbox.exec(
         `gh issue list --state open --search ${JSON.stringify(followUp.title)} --json number --jq 'length'`,

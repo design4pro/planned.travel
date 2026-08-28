@@ -28,7 +28,8 @@
     "cf-typegen": "wrangler types",
     "prepare": "husky",
     "sandcastle": "tsx .sandcastle/main.ts",
-    "sandcastle:baselines": "tsx .sandcastle/record-baselines.ts"
+    "sandcastle:baselines": "tsx .sandcastle/record-baselines.ts",
+    "sandcastle:triage": "tsx .sandcastle/triage.ts"
   },
   "lint-staged": {
     "*": "prettier --ignore-unknown --write"

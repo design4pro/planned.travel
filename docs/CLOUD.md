@@ -22,9 +22,11 @@ which is mostly a story about what the cloud VM cannot do.
 
 The distinction that matters most here: **routines have no `issues` trigger.**
 The supported GitHub events are pull requests and releases, and nothing else. So
-"open an issue and an agent picks it up" is `.github/workflows/claude.yml`, not a
-routine. Routines are for the things that happen _to_ a pull request - review it,
-port it, watch its CI.
+"open an issue and an agent picks it up" is a GitHub Action, not a routine:
+`.github/workflows/claude.yml` for `@claude` mentions, `.github/workflows/triage.yml`
+for the pre-triage of new `type: bug` / `type: maintenance` issues. Routines are
+for the things that happen _to_ a pull request - review it, port it, watch its
+CI.
 
 The second distinction: a cloud session runs on a machine Anthropic provisions,
 so it needs its own environment configuration (§2). The GitHub Action runs on a
