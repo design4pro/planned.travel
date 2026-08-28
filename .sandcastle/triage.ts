@@ -17,16 +17,9 @@
 import { execSync } from 'node:child_process'
 
 import * as sandcastle from '@ai-hero/sandcastle'
-import {
-  defaultImageName,
-  docker as dockerProvider,
-} from '@ai-hero/sandcastle/sandboxes/docker'
 import { z } from 'zod'
 
-// Same repo-root image tag pin as main.ts — docker() would otherwise derive
-// the tag from the worktree directory the sandbox anchors at.
-const imageName = defaultImageName(process.cwd())
-const docker = () => dockerProvider({ imageName })
+import { docker } from './sandbox'
 
 const TRIAGER_MODEL = 'claude-opus-5'
 

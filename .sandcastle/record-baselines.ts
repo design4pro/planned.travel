@@ -15,7 +15,8 @@
 import { execSync } from 'node:child_process'
 
 import * as sandcastle from '@ai-hero/sandcastle'
-import { docker } from '@ai-hero/sandcastle/sandboxes/docker'
+
+import { docker } from './sandbox'
 
 const hostBranch = execSync('git rev-parse --abbrev-ref HEAD', {
   encoding: 'utf8',
@@ -32,7 +33,6 @@ const sandbox = await sandcastle.createSandbox({
       ],
     },
   },
-  copyToWorktree: ['.e2e-tiles'],
 })
 
 let recordedSha = ''
