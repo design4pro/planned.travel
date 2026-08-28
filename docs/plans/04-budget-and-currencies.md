@@ -49,6 +49,30 @@ together and can only report that it could not check them — and `04-S7` claims
 checkable. `04-S7` is written now so that the deferral in `04-S1` points at a stage id rather than at
 an intention.
 
+## Obligations received from the grilling of `01-trips-core.md`
+
+Two decisions taken while grilling the trips plan (2026-08-28) land in this area's tables, and each is
+carried by the stage named here rather than by `01-*`, so that no file sits in two plans.
+
+- **The trip copy reproduces budget lines (decision 4b).** `01-S1` ships a copier registry —
+  `registerTripCopier(name, fn)` in `src/server/repos/trips.ts`, `fn` receiving the source and target
+  trip ids and the day and place id maps — and copies only its own aggregate. **`04-S3`** (wave 2, the
+  first stage here that opens `budget_items` after the registry exists in wave 1) registers the copier
+  for `budget_items` and `trip_cost_categories`: every line and every category of the source, amounts
+  and currency as stored, `sort_order` preserved, the category ids remapped, chunked at the same
+  `floor(100 / columns)` bound `01-S1` states, and a report of rows written so the copy's completion
+  notice can name them. Expenses, shares and settlements are the record and are never copied; a copier
+  that touched them would be the defect.
+- **A guest can be split onto, and a guest can be merged into a member (decision 7b).** `01-S6`
+  ships guests and `mergeTripGuest`, which runs every registered relinker —
+  `registerGuestRelinker(name, fn)`, `fn` rewriting one table's guest references to the member's user
+  id — and fixes the shape a guest reference takes: **a `user_id` xor a `guest_id`, never one
+  polymorphic id.** `04-S6`'s `participants` column is JSON, so the shape there is a discriminated
+  entry — `{ kind: 'member', userId }` or `{ kind: 'guest', guestId }` — validated against
+  `listTripParticipants`, and **`04-S6`** registers the relinker that rewrites a guest entry to the
+  member entry inside every affected expense and share in one batch. A guest in a split is settled like
+  a member; who pays the guest's share in cash is outside the ledger, as it is in the reference.
+
 ## Money conventions that bind every stage in this file
 
 Stated once here and not re-argued per stage, though each stage restates the part it uses:

@@ -4,8 +4,11 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 
 - **Organization (tenant)** — the unit of isolation and billing. Every product row belongs to exactly one organization; a user acts inside one organization at a time.
 - **Workspace console** — the administrative surface where an organization manages members, billing and settings.
-- **Trip** — the central planning object: a titled, dated journey owned by an organization, with members and guests.
-- **Day** — one calendar day inside a trip; the unit the itinerary timeline is built from.
+- **Trip** — the central planning object: a titled journey owned by an organization, with members and guests. It may be dated (a start and an end) or not yet: an undated trip still has a run of numbered days.
+- **Day** — one numbered day of a trip, the unit the itinerary timeline is built from. It carries a calendar date once the trip is dated; the run of days always numbers 1..n without gaps.
+- **Trip copy** — a new trip, owned by whoever copied it, that reproduces the source's plan (days, places and their tags, notes, budget lines, packing lists and to-dos with nothing ticked) and never its record (reservations, stays, transports, expenses, files, conversations, share tokens) or its people. Dates and title are chosen at copy time, defaulting to the source's.
+- **Favourite** — one person's bookmark on a trip they may read. It is private to that person, shows nothing to anyone else and grants nothing. _Avoid_: "starred", "pinned", a favourite trip as a property of the trip.
+- **Archive** — the reversible shelving of a trip: an archived trip leaves the default lists and the reminder scan but keeps everything, including its lifecycle status, and restoring it brings that status back unchanged. Archiving is not a status. _Avoid_: "archived" as a trip status.
 - **Place** — a geographic point attached to a trip: created by hand, search or import; rendered as a map marker.
 - **Reservation** — a booked commitment (lodging, activity, table) with dates, status and optional documents.
 - **Transport** — a movement between places, made of one or more **legs** (flight, train, drive), placeable in a day.
@@ -18,7 +21,9 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Entitlement** — a capability granted by the organization's billing plan.
 - **Quota** — a numeric ceiling on an entitlement, enforced at the data-access boundary.
 - **Platform actor** — a privileged operator acting across organizations; every such action is audited.
-- **Guest** — a trip participant who is not an organization member.
+- **Trip member** — a person with an account who is on a trip, holding one trip role: _owner_ (the trip's metadata, lifecycle and people; several are allowed), _editor_ (the plan's content), _viewer_ (reading only). Every member may copy, favourite and leave. Membership decides who sees a private trip, who is reminded before it, and who can be assigned to its costs, items and plans. Distinct from an organization member, who merely belongs to the workspace.
+- **Trip visibility** — who inside the organization may see a trip: _private_ (its members only, the default), _organization_ (every organization member), _public_ (reserved for session-less sharing). A trip a person may not see is indistinguishable to them from one that does not exist.
+- **Guest** — a trip participant who is not an organization member: a display name only, unique within the trip, never an account, never a recipient. A guest can be merged into a trip member, who then inherits everything that was assigned to the guest; the guest ceases to exist.
 - **Reminder** — a pre-departure notice delivered to a trip's members ahead of the start date, honouring each member's channel preferences; its lead time is counted in days, and zero means off.
 - **System event** — a notification event with no acting user (a reminder, a billing follow-up); nobody is excluded from its recipients.
 - **Entity history** — the per-entity view of a tenant's audit trail.

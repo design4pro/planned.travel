@@ -282,10 +282,19 @@ so that at any moment there is exactly one answer to "who owns the schema module
 | Wave | Schema stage               | Bindings + worker stage                                                                                                         | Token stage                                                      | Primitive stage                                                                          |
 | ---- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | 0    | `00-S1`                    | none required — no wave-1 plan has filed a binding requirement, and the table above says why none should be taken speculatively | none required — no wave-1 plan has filed a token requirement yet | none required — the 42 shipped primitive modules cover every wave-1 surface named so far |
+| 0    | `00-S6` (follow-up)        | none required                                                                                                                   | none required                                                    | none required                                                                            |
 | 1–6  | minted when the wave opens | minted when the wave opens                                                                                                      | minted when the wave opens                                       | minted when the wave opens                                                               |
 
 A wave with no filed requirement mints no stage. An empty stage is worse than a missing one: it
 invites an agent to invent work in the one file where invention is most expensive.
+
+**One requirement was filed after `00-S1` closed, and the register owes it a stage.** The grilling of
+`01-trips-core.md` (2026-08-28, decision 5) moved the trip favourite off the trip row and onto a
+per-person table, `trip_favourites`, after `00-S1`'s migration (`drizzle/0006_mighty_nehzno.sql`) had
+been generated. It is a wave-1 stage's requirement (`01-S1`) and therefore a wave-0 one to satisfy, so
+the register mints a **wave-0 follow-up schema stage** for it — `00-S6`, one additive table, nothing
+else — before wave 1 opens; `01-S1` does not open until it has landed. The table's shape is in
+`01-S1`'s **Data and migration** and repeated in `00-S6` below.
 
 ## How a stage block is delimited
 
@@ -917,6 +926,22 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
 
 ### Server (repo, server function, Zod)
 
+**Amended in the grilling of `01-trips-core.md` (2026-08-28, decision 9): the trip-derived figures
+are scoped by trip membership, not by the workspace.** That grilling made a trip private to its
+members unless it opts into workspace visibility (ADR 0007), and a private trip's places, days,
+countries and spend must not appear in the statistics of a person who cannot open the trip. So the
+`tripRows` predicate in `recomputeTravelStats` — and with it `tripCount`, `dayCount`, `placeCount`,
+`cityCount`, `spendMinor`, the year-row `countryCount`, `currency`/`lastTripId`, the year streak and
+the transport-leg distance — gains one `EXISTS` on `trip_members` for the row's `user_id`, so every
+figure on a person's row answers "the trips I am a member of", which is also what a traveller means
+by "my trips". The measurements in the bullets below describe the code as it stands at HEAD and are
+kept because they are true of HEAD; where a bullet says a figure is "workspace-wide" or "identical
+for every member", read it as the state this stage **changes**, and `ADD-06`'s labelling — "your
+trips", never "the workspace's" — follows the amended scope. Two consequences: the recipient set of a
+trip write's `travel-stats` envelopes is the **trip's members** (which `01-S1` sends), and a
+membership change (`01-S6`) is itself a statistics write and enqueues the envelope for the person
+added or removed.
+
 - **What the row actually aggregates, measured — the stage's premise depends on getting this
   right.** `recomputeTravelStats(scope, userId, statYear)` (`src/server/repos/atlas.ts:792-896`)
   writes one row keyed `(organization_id, user_id, stat_year)` — the unique index at
@@ -1020,8 +1045,8 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
   same way. Those write paths belong to `01-trips-core.md`, `04-budget-and-currencies.md` and
   `03-reservations-and-transport.md`. This stage does not reach into them. It ships
   the task kind, the handler and the deterministic envelope id so that those plans enqueue one task
-  per affected member and year, and it records the requirement here so neither plan invents a second
-  recompute. The deterministic id is what keeps that fan-out affordable: repeated envelopes for the
+  per affected **trip member** and year (decision 9 above), and it records the requirement here so
+  neither plan invents a second recompute. The deterministic id is what keeps that fan-out affordable: repeated envelopes for the
   same `(user, year)` collapse. Until those plans land, the workspace figures still refresh on the
   next visited-country write — a delay rather than a freeze, and strictly better than today, where
   nothing in production recomputes at all.
@@ -1327,3 +1352,128 @@ only surface whose content this stage changes:
   it later is an additive column and a changed anchor function, not a rewrite.
 - **Intra-wave ordering.** This stage lands after `00-S2` (its dispatch module and the
   optional-actor event contract) and after `00-S4` (the `DB` handle on `TaskBindings`).
+
+## Stage 00-S6 — Wave-0 follow-up schema stage: the per-person favourite
+
+### Stage id
+
+`00-S6` · Wave 0 · effort **S**. Minted by the stage register above after `00-S1` had closed, for the
+one requirement filed too late for it (decision 5 of the grilling of `01-trips-core.md`,
+2026-08-28). It owns `src/server/db/schema.ts` and `drizzle/` until it closes, and it is the last
+wave-0 stage: wave 1 does not open before it lands.
+
+### Reference rows
+
+Closes none. It supplies the table `01-S1` (`01-trips-core.md`, wave 1) writes and `01-S7` (wave 5)
+reads: a favourite is one person's bookmark on a trip they may read, private to that person
+(`CONTEXT.md`, **Favourite**). The reference product has no trip favourite at all; ours existed as
+`trips.is_favourite`, one flag shared by every member, which the grilling found to be the wrong shape
+and which this stage leaves in place, dead and documented, because dropping a column is a table
+rebuild on SQLite.
+
+Rows unblocked: `TRP-03` (`01-S1`) directly — it cannot open without this table.
+
+### Owned paths
+
+- `src/server/db/schema.ts` — append. One new table, `tripFavourites`, added at the end of the trips
+  cluster, and a doc comment on `trips.isFavourite` saying the favourite lives in `trip_favourites`
+  from `01-S1` on and that the column is written and read by nothing. Nothing existing is reshaped.
+- `drizzle/` — append. New files only: the generated migration (`0007` at HEAD) and its snapshot, plus
+  the journal entry. `0000` through `0006` are not touched.
+
+**Why `append` and not `edit`, stated so the checker's answer is read correctly.** `00-S1` claims both
+paths exclusively in wave 0 and has **closed** — its migration is `drizzle/0006_mighty_nehzno.sql` on
+`develop` — so the two stages never run together; `scripts/ultrabuild/check-plan-collisions.mjs` cannot
+see closure and would report the pair as a same-wave clobber. The claims are therefore written as the
+cooperative disposition, which is also what they are in fact: one table appended to a module nobody
+else has open, and new files in a directory nothing rewrites. The register's rule — one owner of the
+schema module per wave — holds in time: `00-S1` until it closed, `00-S6` from then until wave 1 opens.
+
+No repository module, no server function, no test file: the module that reads and writes the table is
+`src/server/repos/trip-favourites.ts`, owned by `01-S1`, and its isolation cases are `01-S1`'s. A
+table with no reader is exactly what a schema stage ships.
+
+### Data and migration
+
+One migration, at the next free number (`0007` at HEAD), additive, generated not hand-written.
+
+`trip_favourites`, following the conventions every existing domain table follows:
+
+| Column            | Type                   | Null     | Notes                                            |
+| ----------------- | ---------------------- | -------- | ------------------------------------------------ |
+| `id`              | `text` PK              | not null | `pk()`, `newId()` default                        |
+| `organization_id` | `text`                 | not null | `orgRef()`, `ON DELETE CASCADE`                  |
+| `trip_id`         | `text` → `trips.id`    | not null | `ON DELETE CASCADE`                              |
+| `user_id`         | `text`                 | not null | `userRef()`, no Drizzle FK, as every user column |
+| `created_at`      | `integer` timestamp_ms | not null | `timestamps()`                                   |
+
+Indexes: `trip_favourites_org_user_idx` on `(organization_id, user_id)` — leading `organization_id`,
+as every composite index in this schema does, and the read the trip list makes — and
+`trip_favourites_trip_user_unq`, unique on `(trip_id, user_id)`, so a double click cannot write two
+stars. No `CHECK`: there is no enum column. Backfills nothing: the shared flag was never a person's
+choice, so there is nothing true to copy from it. A rollback is safe because the previous Worker never
+reads the table.
+
+### Server (repo, server function, Zod)
+
+None. Stated rather than skipped: the writer, the reader and their Zod inputs are `01-S1`'s, in
+`src/server/repos/trip-favourites.ts`, and are specified there.
+
+### UI (route, components)
+
+None. No route, no component, no token; `pnpm generate-routes` is not run.
+
+### Quota
+
+Creates no countable row. A favourite is a bookmark on a trip the tenant already pays for; nothing is
+added to `resolveLimits()` or `PLAN_QUOTAS`, and no case to `src/server/billing/__tests__/limits.test.ts`.
+Its cardinality is bounded by members times trips, both of which are already bounded.
+
+### Tenant isolation test
+
+None in this stage, because it adds no repository function. `01-S1` appends the `describe` block that
+covers `trip-favourites.ts` to `src/server/repos/__tests__/tenant-isolation.test.ts` and the per-person
+cases to its `member-isolation.test.ts`, in the wave the functions exist.
+
+### Verification
+
+- Gate, in order: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+- Migration review is part of the gate and is not optional: read the file `pnpm db:generate` just
+  wrote (the next free number — `0007` at HEAD) and confirm it is one `CREATE TABLE trip_favourites`
+  and two `CREATE INDEX` statements, that no `__new_` rebuild of any table appears, that no `DROP`
+  appears, and that `drizzle/meta/_journal.json` gained exactly one entry. Then
+  `pnpm db:migrate:local` and confirm it applies against a database that already carries `0000`–`0006`.
+- Unit tests: none added — there is no logic. `pnpm test` must still pass in full, which is what proves
+  the schema module still typechecks against every existing repository.
+- Browser evidence: none, and the reason is that nothing renders differently. The trips index is
+  re-checked at 360px and 1440px in both themes only to prove the migration changed no existing
+  surface — a regression check, not evidence of a feature.
+- Console must be silent.
+
+### Definition of done
+
+The six repository-wide items from `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm
+lint` and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test`
+passes; the change is verified in a real browser in light and dark, desktop and mobile; nothing is
+left behind — no TODO, no placeholder copy, no `console.log`, no commented-out code; and no file
+outside **Owned paths** is touched.
+
+The `SPEC.md` §2 visual clauses are ticked per surface the stage ships. This stage ships no surface,
+so each is ticked against the regression check described above rather than against new UI:
+
+- [ ] Spacing on the 4px grid from `--space-*` — unchanged, verified by the regression check.
+- [ ] Hover, focus-visible, active, disabled and loading on every interactive element — unchanged.
+- [ ] Every list has a designed empty, skeleton and error state — unchanged.
+- [ ] Motion 150–260ms on `--ease-out-quint` or a sibling, transform and opacity only,
+      `prefers-reduced-motion: reduce` honoured — unchanged.
+- [ ] Light and dark parity with dark shadows re-declared — unchanged.
+- [ ] 360px to 2560px, small designed rather than squeezed — unchanged.
+- [ ] Keyboard reachable end to end, sensible focus order, accessible names, WCAG 2.2 AA in both
+      themes — unchanged.
+- [ ] Zero console errors or warnings, zero layout shift after paint.
+
+### Blockers
+
+None. No package, no binding, no third-party service. **Intra-wave ordering:** this stage opens after
+`00-S1` has closed (it has — `drizzle/0006_mighty_nehzno.sql`) and must close before wave 1 opens,
+because `01-S1` writes the table on its first day.

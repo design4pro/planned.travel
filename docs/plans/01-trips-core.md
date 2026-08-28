@@ -144,9 +144,9 @@ takes a third item kind without another change to `ordering.ts`. It ships no tra
 label and no day-header rental, and `BKG-10` closes those in wave 3. Splitting it any other way puts
 one file in two plans.
 
-## Four places where this plan contradicts `gap-rows.json`
+## Eight places where this plan contradicts `gap-rows.json` or the code
 
-The matrix is a round-3 measurement, and four of its `TRP-*` rows are wrong or stale at this HEAD.
+The matrix is a round-3 measurement, and four of its `TRP-*` rows are wrong or stale at this HEAD; the grilling of this plan (2026-08-28) found four more places where the code itself disagrees with what a stage would otherwise assume.
 Each is corrected here with the file and line that refutes it, because a stage written from the stale
 reading would build something that already exists or miss something that does not.
 
@@ -175,6 +175,55 @@ reading would build something that already exists or miss something that does no
    A that points at B's day. It is unreachable today only because no server function calls it. `01-S2`
    is the stage that gives it one, so `01-S2` fixes it and adds the isolation case that proves it —
    the same rule `00-S5` applies to the unchunked sweep it makes reachable.
+5. **`trips.status` has six values, not five, and archiving writes two columns.** `TRIP_STATUSES`
+   (`src/server/db/schema.ts:254-261`) is `draft, planning, booked, active, completed, archived`.
+   `archiveTrip` (`src/server/repos/trips.ts:369-371`) sets `is_archived = true` **and**
+   `status = 'archived'`; `restoreTrip` (`:373-375`) clears the flag **and resets `status` to
+   `'planning'`**, so a `completed` trip that is archived and restored comes back "in planning".
+   Decision 2 below makes `is_archived` the only truth and `01-S1` stops both writers touching
+   `status`.
+6. **Every organization member can read every trip, and `trips.visibility` is dead.** `requireTrip`
+   (`trips.ts:152-154`) is `requireById` under the tenant filter and nothing more; `listTrips`
+   (`:209`) has no membership predicate; the `visibility` column (`private` / `organization` /
+   `public`, default `private`, `schema.ts:631`) is read by nothing. Decision 1 below gives the
+   column its meaning and `01-S1` the predicate.
+7. **`deleteTrip` cascades in D1 and nowhere else.** The `files` rows go with the trip through the
+   foreign key, but the objects they name in R2 — and the cover image — are deleted only by the
+   per-file paths in `src/server/fns/files.ts:219,273`. A trip delete would orphan every object.
+   Decision 3 below adds the `trip-purge` task.
+8. **`is_favourite` is a column on `trips`, so one member's star is everyone's.** `schema.ts:640`,
+   read by `listFilter` and `countTripsByStatus`. Decision 5 below moves the favourite to a per-person
+   table and leaves the column dead and documented.
+
+## Decisions taken in the grilling of this plan
+
+Grilled on 2026-08-28 against the reference (`wiki: Trip-Members-and-Sharing`, `wiki:
+Admin-Permissions`, `wiki: My-Trips-Dashboard`, `wiki: Day-Plans-and-Notes`, `wiki: Creating-a-Trip`)
+and against the code at HEAD. Each decision is applied in the stage named; the glossary entries it
+produced are in `CONTEXT.md` and the one architectural record is `docs/adr/0007`. A stage that finds
+its own text disagreeing with this table follows the table.
+
+| #   | Decision                                                                                                                                                                                                                                                                                                                   | Lands in                                           |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| 1   | **A trip is private to its members** unless `visibility = 'organization'`, which opens it to the workspace; `public` grants nothing to a signed-in reader. A trip the caller may not read is `NotFoundError`, never `FORBIDDEN`. ADR 0007.                                                                                 | `01-S1` (predicate, tests), every later reader     |
+| 1b  | The visibility switch lives on the people screen, **owner only**.                                                                                                                                                                                                                                                          | `01-S6`                                            |
+| 2   | **Archive is a flag, not a status.** `archiveTrip`/`restoreTrip` stop writing `status`; a restored trip keeps the status it was archived with; `'archived'` stays in the CHECK, never written.                                                                                                                             | `01-S1`                                            |
+| 3   | Delete stays **terminal**; the R2 objects a trip owns (files, cover) are purged by a **`trip-purge`** queue task the delete enqueues; a **copy duplicates the cover object** under a new key; both tasks share one object helper.                                                                                          | `01-S1`                                            |
+| 4a  | Copy opens a **dialog** with title and date range prefilled from the source. Dated copy → `createTrip` builds the day run; undated → the source's run is copied numbered and dateless. Source days with no target day send their places to the ideas column and drop their notes, and the completion notice says so.       | `01-S1`                                            |
+| 4b  | A copy reproduces the **plan, never the record**: days, places **and their tags**, assignments, notes here; budget lines, packing and to-dos through a **copier registry** that plans `04` and `05` fill in their own stages. Never reservations, stays, transports, expenses, files, conversations, share tokens, people. | `01-S1` (registry, own copiers); `04-*`, `05-*`    |
+| 5   | **Favourite is per person**: `trip_favourites (organization_id, trip_id, user_id)`; `trips.is_favourite` stays, dead and documented. Any reader may favourite.                                                                                                                                                             | `01-S1` (table, writer), `01-S7` (filter)          |
+| 6   | Roles: **owner** = trip metadata (title, summary, dates, currency, cover, reminder, visibility), lifecycle (archive, restore, delete), people (members, roles, guests, share); **editor** = the plan's content; **viewer** = read. **Every reader** may copy, favourite and leave.                                         | `01-S1` table; `01-S2`, `01-S4`, `01-S6`, `01-S10` |
+| 7   | A guest name already on the trip is **refused inline**, not suffixed; `MAX_TRIP_GUESTS = 50` as a repository invariant.                                                                                                                                                                                                    | `01-S6`                                            |
+| 7b  | A guest can be **merged into a member** (owner action, irreversible): a relinker registry moves every `guest_id` reference the owning plans register, then the guest row goes. Link tables hold `user_id` **xor** `guest_id`.                                                                                              | `01-S6` (action, registry); `04-*`, `05-*`         |
+| 8   | A timed item dragged against clock order is not refused: the reader is **asked to drop its time**, and one batch clears the time and writes the order.                                                                                                                                                                     | `01-S4`                                            |
+| 9   | Travel statistics count **the trips a person is a member of**; `travel-stats` envelopes go to the trip's members, not the workspace.                                                                                                                                                                                       | `01-S1`; amendment in `00-S4`                      |
+| 10  | Delete confirmation is **graduated**: typing the title is required only when the trip carries a record (a reservation, transport, expense or file) or more than one member; the server decides, not the client.                                                                                                            | `01-S1`                                            |
+| 11  | The five browser preferences stay in the browser, as the plan argues.                                                                                                                                                                                                                                                      | `01-S3`, `01-S5`, `01-S7`, `01-S9`                 |
+
+Two obligations leave this plan: `00-S4`'s statistics scope (decision 9) and the copier and relinker
+registrations plus the `user_id` xor `guest_id` shape in `04-budget-and-currencies.md` and
+`05-packing-and-todos.md` (decisions 4b and 7b). Each is written into that plan in the same change as
+this table.
 
 ## The four planner core files
 
@@ -357,15 +406,19 @@ filed to the schema stage of its **own** wave would run against a column that do
 This plan therefore files as follows, and every **Data and migration** heading below names the same
 target:
 
-| Filing stage | Its wave | Files to                                              | What                              |
-| ------------ | -------- | ----------------------------------------------------- | --------------------------------- |
-| `01-S1`      | 1        | `00-S1` (`00-foundations.md`, wave 0)                 | `trips.copy_pending_at`, nullable |
-| `01-S2`      | 1        | `00-S1` (`00-foundations.md`, wave 0)                 | `day_notes.detail`, nullable      |
-| `01-S6`      | 4        | the wave-3 schema stage, minted by `00-S1`'s register | the `trip_guests` table           |
+| Filing stage | Its wave | Files to                                                                                                                     | What                              |
+| ------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `01-S1`      | 1        | `00-S1` (`00-foundations.md`, wave 0) — **landed**, `drizzle/0006_mighty_nehzno.sql`                                         | `trips.copy_pending_at`, nullable |
+| `01-S2`      | 1        | `00-S1` (`00-foundations.md`, wave 0) — **landed**, same migration                                                           | `day_notes.detail`, nullable      |
+| `01-S1`      | 1        | `00-S6` (`00-foundations.md`, wave 0) — the follow-up the register minted because `00-S1` closed before decision 5 was taken | the `trip_favourites` table       |
+| `01-S6`      | 4        | the wave-3 schema stage, minted by `00-S1`'s register                                                                        | the `trip_guests` table           |
 
 The wave-3 schema stage does not exist yet by id: `00-foundations.md`'s stage register mints the
 per-wave shared-file stages "when the wave opens", and a wave with no filed requirement mints none.
-`01-S6` files against that register rather than against an id, which is what the register is for. The
+`01-S6` files against that register rather than against an id, which is what the register is for.
+`trip_favourites` is the one exception with an id: `00-S1` had already generated its migration when
+the grilling moved the favourite off the trip row, so the register minted `00-S6`, a wave-0 follow-up
+carrying that one table, and `01-S1` does not open until it has landed. The
 seven stages that need no column say so under their own **Data and migration** heading and name the
 schema stage they would have filed to, so a reader can tell "nothing to file" from "forgot to ask".
 
@@ -429,12 +482,21 @@ this plan carries what wave 0 handed it should find them in one place:
 
 **Two deletes, and why we ship one.** The reference offers Delete on an active trip and Permanently
 delete on an archived one, which is two recoverable states plus a terminal one. We ship one terminal
-delete, because `trips.is_archived` (`src/server/db/schema.ts:355`) already **is** the recoverable
+delete, because `trips.is_archived` (`src/server/db/schema.ts:638`) already **is** the recoverable
 state and a second one would need a `deleted_at` column, a filter on every trip read in the
 repository, and a sweep to make the recovery window mean anything. The archive is the undo; delete is
 final from either place and says so, and the archived section labels it "Delete permanently" because
-from there it is the last copy. This is a smaller product decision than it looks, but it is a
-decision, and it is recorded so a later stage does not add the second state by reflex.
+from there it is the last copy. Confirmed in the grilling (decision 3), with two things the reference
+does not do and this stage does: **the objects the trip owns in R2 are purged** by a `trip-purge`
+queue task the delete enqueues — the reference leaves its uploads on disk — and **the confirmation is
+graduated** (decision 10): typing the trip's title is demanded only when the trip carries a record or
+more than one member, and the server, not the client, decides which case it is.
+
+**Archive is a flag, and this stage stops the two writers that say otherwise (decision 2).**
+`archiveTrip` writes `status = 'archived'` and `restoreTrip` resets `status` to `'planning'` at HEAD
+(`src/server/repos/trips.ts:369-375`); both lines go, so a trip comes back from the archive with the
+lifecycle status it went in with, and `'archived'` remains in `trips_status_chk` as a value nothing
+writes.
 
 Rows unblocked: `TRP-01` (`01-S7`) directly.
 
@@ -456,21 +518,42 @@ Rows unblocked: `TRP-01` (`01-S7`) directly.
 - `src/routes/_app/-ui/trip-card.tsx` — edit. Mounts the action menu on `TripTile`.
 - `src/routes/_app/-ui/new-trip-dialog.tsx` — edit, and the edit is one import specifier: it calls
   `createTripFn` from its new module.
-- `src/server/repos/trips.ts` — edit. Adds the copy's two halves — `startTripCopy` and
-  `copyTripContents` — and the trip-role guard the writers share.
+- `src/server/repos/trips.ts` — edit. Adds the read predicate decision 1 requires (`canReadTrip`,
+  folded into `requireTrip` and `listTrips`), the trip-role guard the writers share, the copy's two
+  halves — `startTripCopy` and `copyTripContents` — and the copier registry; removes the two `status`
+  writes from `archiveTrip`/`restoreTrip`; deletes `setTripFavourite`, whose replacement lives in
+  `trip-favourites.ts`.
   Three stages touch this module across three waves and no two share one: this stage in wave 1,
   `07-S6` (`07-collaboration-and-sharing.md`, wave 2) for the share-link writers, and `01-S6` in
   wave 4 for the membership guards. Each adds functions; none reshapes one the others call.
 - `src/server/queue/handlers/trip-copy.ts` — new. The consumer half of the copy: the inventory, in
   chunks, off the request path.
 - `src/server/queue/handlers/__tests__/trip-copy.test.ts` — new.
+- `src/server/queue/handlers/trip-purge.ts` — new. Deletes the R2 objects a deleted trip owned, in
+  chunks, off the request path (decision 3).
+- `src/server/queue/handlers/__tests__/trip-purge.test.ts` — new.
+- `src/server/storage/objects.ts` — new. The one R2 object helper both handlers use: copy an object to
+  a new key, delete a list of keys in bounded chunks. Reaches the bucket through `filesBucket()` in
+  `src/server/fns/context.ts` and nothing else; contains no SQL.
+- `src/server/storage/__tests__/objects.test.ts` — new.
+- `src/server/repos/trip-favourites.ts` — new. The per-person favourite (decision 5): `setFavourite`,
+  `listFavouriteTripIds`, `countFavourites`, all `tenantFilter()`-bound.
+- `src/server/repos/index.ts` — append. One export line for the favourites module. Sibling claims in
+  other waves — `06-S3` (wave 2), `06-S5` (wave 3), `01-S6` (wave 4), `07-S10` (wave 5) — and none in
+  wave 1.
+- `src/server/repos/__tests__/member-isolation.test.ts` — new. The sibling of the tenant-isolation
+  file for the boundary decision 1 draws **inside** one organization; see **Tenant isolation test**.
+- `src/routes/_app/-ui/trip-copy-dialog.tsx` — new. The copy dialog (decision 4a).
 - `src/server/queue/types.ts` — edit. Adds the `trip-copy` kind and its payload schema — one member
   on a union, not a reshape. **Shared across waves with `00-S4` (`00-foundations.md`, wave 0)**,
   which adds the `travel-stats` kind and the `DB` binding to `TaskBindings` in the same file, and
-  with `07-S8` (`07-collaboration-and-sharing.md`, wave 4), which adds the link-preview kind. Wave 0
-  closes before this wave opens and wave 4 opens after it closes, so no two of the three run together.
+  with `07-S8` (`07-collaboration-and-sharing.md`, wave 4), which adds the link-preview kind. Also with `13-S1`
+  (`13-community-gallery.md`, wave 3), `13-S4` (wave 6) and `13-S6` (`13-content-studio.md`, wave 10,
+  `append`). Wave 0 closes before this wave opens and every later claim opens after it closes, so no
+  two of them run together.
 - `src/server/queue/consumer.ts` — edit. Registers the handler and its `case`. **Shared across waves
-  with `00-S4` (wave 0) and `07-S8` (wave 4)**, for the same reason and in the same `switch`.
+  with `00-S4` (wave 0), `13-S1` (wave 3), `07-S8` (wave 4), `13-S4` (wave 6) and `13-S6` (wave 10)**,
+  for the same reason and in the same `switch`.
 - `src/server/repos/__tests__/trip-lifecycle.test.ts` — new. The stage's own repository tests, in a
   new file so that no wave-1 stage has to contend for `repositories.test.ts`.
 - `src/routes/_app/-server/__tests__/trip-lifecycle-side-effects.test.ts` — new. The reminder cancel
@@ -505,60 +588,110 @@ constraint change on SQLite makes drizzle-kit emit a full table rebuild (`drizzl
 is the precedent), and the column is never a filter — it is read on rows the trip list has already
 selected. The migration backfills nothing.
 
-**Why a column rather than a status value.** `trips.status` is CHECK-constrained to five values
-(`trips_status_chk`, `src/server/db/schema.ts:366`), so adding a sixth is exactly the table rebuild
+**Why a column rather than a status value.** `trips.status` is CHECK-constrained to six values
+(`trips_status_chk`, `src/server/db/schema.ts:671`), so adding a seventh is exactly the table rebuild
 the migration ritual tells a stage to avoid. A nullable timestamp is additive, and it carries more
 information than a flag: it says when the copy started, which is what lets the trip list distinguish
 "in flight" from "the consumer died three days ago" without a second column.
 
-Every other column this stage writes exists: `trips.is_archived`, `trips.is_favourite` and
-`trips.status` at `src/server/db/schema.ts:348-356`, each already carrying its `CHECK` or its boolean
-default.
+**One additive table, filed to `00-S6` (`00-foundations.md`, wave 0) — decision 5.** `00-S1` has
+closed — `drizzle/0006_mighty_nehzno.sql` carries `copy_pending_at` — so this table cannot ride it;
+the register minted `00-S6` for it, and this stage does not open until that stage has landed. The
+table is specified in both places identically.
+
+| Column            | Type                   | Null     | Notes                                            |
+| ----------------- | ---------------------- | -------- | ------------------------------------------------ |
+| `id`              | `text` PK              | not null | `pk()`, `newId()` default                        |
+| `organization_id` | `text`                 | not null | `orgRef()`, `ON DELETE CASCADE`                  |
+| `trip_id`         | `text` → `trips.id`    | not null | `ON DELETE CASCADE`                              |
+| `user_id`         | `text`                 | not null | `userRef()`, no Drizzle FK, as every user column |
+| `created_at`      | `integer` timestamp_ms | not null | `timestamps()`                                   |
+
+Indexes: `trip_favourites_org_user_idx` on `(organization_id, user_id)` — the read the trip list makes
+— and `trip_favourites_trip_user_unq`, unique on `(trip_id, user_id)`, so a double click cannot write
+two stars. Additive, backfills nothing; a rollback is safe because the previous Worker never reads the
+table. **`trips.is_favourite` stays in the schema, dead**: dropping a column is a table rebuild on
+SQLite, so it keeps its default of `false`, gains a doc comment saying the favourite lives in
+`trip_favourites`, and nothing writes or reads it after this stage. `trips.visibility` is read from
+this stage on (decision 1) and needs no change; `trips.status` keeps its six-value `CHECK` and this
+stage writes only five of them (decision 2).
+
+Every other column this stage writes exists: `trips.is_archived` and `trips.status` at
+`src/server/db/schema.ts:635-645`, each already carrying its `CHECK` or its boolean default.
 
 The copy writes only rows whose tables already exist: `trips`, `days`, `places`, `day_assignments`
 and `day_notes`. Ids come from `newId()` through each table's own `pk()` default; dates stay
 `YYYY-MM-DD` text and `order_index` stays `real`, so no second convention is introduced.
 
-**What a copy copies, and what it deliberately does not.** It copies the trip row, its day run, its
-place inventory, the day assignments that place those places, and the day notes. It does **not** copy
-expenses, settlements, files, reservations, transports, messages, share links or members other than
-the copying user's own owner row. The rule behind that line is one sentence: a copy reproduces the
-**plan**, never the **record of what happened**, and money and documents are the record. The copied
-trip is created with `status: 'planning'`, `is_archived: false`, `is_favourite: false` and **no
-dates**: a copy is a template for a journey that has not been booked yet, and inheriting last April's
-calendar would put every day of it in the past. The day run is copied by count and by title with
-`date: null` on every row, so the shape of the itinerary survives and the calendar does not — the
-reader sets the new dates in the edit sheet and `updateTrip`'s existing `syncTripDays` call
-(`src/server/repos/trips.ts:362-364`) redates the run in one write.
+**What a copy copies, and what it deliberately does not (decisions 4a, 4b).** It copies the trip
+row, its day run, its place inventory **with the places' tags**, the day assignments that place those
+places, and the day notes; through the copier registry described under **Server**, the owning plans
+add budget lines, packing lists and to-dos with nothing ticked. It does **not** copy expenses, expense
+shares, settlements, files, reservations, stays, transports, messages, share links or members other than
+the copying user's own owner row. The rule behind that line is one sentence and is now a glossary
+term (**Trip copy**): a copy reproduces the **plan**, never the **record of what happened**, and money
+paid, bookings made and documents received are the record. The copied trip is created with
+`status: 'planning'`, `is_archived: false`, `visibility: 'private'` and **the title and date range the
+reader confirmed in the copy dialog**, prefilled from the source. A dated copy gets its day run from
+`createTrip`'s existing `syncTripDays` call, exactly as a new trip does; an undated copy gets the
+source's run copied by count and by title with `date: null` on every row, so the shape of the itinerary
+survives and the reader dates it later in the edit sheet. In both cases the handler maps the source's
+`day_number` onto the target's, and a source day with no target day — the reader shortened the range —
+sends its places to the ideas column and drops its notes, and the completion notification names how
+many of each. The cover image is **copied as a new R2 object** under a new key, never shared: a shared
+key would vanish with whichever trip is deleted first.
 
 ### Server (repo, server function, Zod)
 
 **Repository — `src/server/repos/trips.ts`.**
 
-- `startTripCopy(scope, tripId, input)` — new, and the **synchronous half** of the copy. Resolves the
-  source with `requireTrip`, calls `assertTripRole`, asserts both quotas (see **Quota**), reserves a
-  slug with the existing `reserveTripSlug`, inserts the new trip through `tripsRepository.insert` with
-  `copyPendingAt` set to `Date.now()`, and inserts the caller's `owner` membership. It returns the new
-  trip's id. **It writes exactly two rows**, both O(1) in the source's size — nothing here scales with
-  the day count, the place count or anything else the source happens to hold, which is the property
-  that lets it stay in a POST handler at all.
+- `canReadTrip(scope, tripId)` and the predicate inside `requireTrip` and `listTrips` — new, and
+  the whole of decision 1 at the repository. A trip is readable when the acting user has a
+  `trip_members` row on it **or** `trips.visibility = 'organization'`. `requireTrip` raises
+  `NotFoundError` for a trip that fails it — the same error a foreign tenant's id raises, so the two
+  cases are indistinguishable from outside — and `listTrips`, `countTripsByStatus` and every reader
+  in this module take the predicate as one `EXISTS` sub-select on `trip_members` bound by
+  `tenantFilter()`, never as a second query per row. `listTripsForUser` (`:414`) becomes a thin alias
+  and is kept for its callers. `visibility = 'public'` grants nothing here; it is the share plan's
+  concern.
+- `startTripCopy(scope, tripId, input)` — new, and the **synchronous half** of the copy. Input is
+  `{ title, startDate, endDate }` from the dialog. Resolves the source with `requireTrip` (which is now
+  the read check — any reader may copy, decision 6), asserts both quotas (see **Quota**), reserves a
+  slug with the existing `reserveTripSlug`, inserts the new trip through `createTrip`'s path so a dated
+  copy gets its day run from `syncTripDays` exactly as a new trip does, sets `copyPendingAt` to
+  `Date.now()`, and inserts the caller's `owner` membership. It returns the new trip's id. **It writes
+  the trip row, the owner row and — for a dated copy — the day run**, all O(1) in the source's size;
+  nothing here scales with the source's place count or note count, which is the property that lets
+  it stay in a POST handler at all.
 - `copyTripContents(scope, sourceTripId, targetTripId)` — new, and the **asynchronous half**, called
-  only by the queue handler. In this order: the day run, then the places, then the day assignments
-  remapped onto the new day ids and the new place ids, then the day notes remapped onto the new day
-  ids; and finally `copy_pending_at` is cleared. It writes through `daysRepository`
+  only by the queue handler. In this order: the day run when the target has none (the undated case),
+  then the day map from source `day_number` to target day id; the places and their `place_tags`; the
+  day assignments remapped onto the new day ids and the new place ids, with an assignment whose source
+  day has no target left unscheduled so its place sits in the ideas column; the day notes remapped
+  the same way, with the ones whose day has no target dropped and counted; then **every registered
+  copier** in registration order; then the cover object through `src/server/storage/objects.ts`; and
+  finally `copy_pending_at` is cleared. It writes through `daysRepository`
   (`src/server/repos/days.ts:26`), `placesRepository` (`src/server/repos/places.ts:43`),
   `dayAssignmentsRepository` (`src/server/repos/itinerary.ts:46`) and `dayNotesRepository`
   (`src/server/repos/days.ts:27`), all of which those modules already export — the same composition
   `01-S4`'s `reorderDayTimeline` uses to reach note rows from `itinerary.ts`, so the multi-table write
   still has exactly one home. SQL stays in `src/server/repos`.
-- **The day run is copied, not resynchronised, and that is a measurement rather than a preference.**
-  `syncTripDays` (`src/server/repos/days.ts:149-172`) derives the wanted run from the trip's date
-  range and, when either date is null, takes the `wanted.length === 0` branch that **creates no days
-  at all** — it only clears stale dates on days that already exist. A copy is deliberately dateless
-  (see **Data and migration**), so calling it would leave the copy with an empty itinerary and
-  nowhere to hang the assignments. `copyTripContents` therefore inserts the day rows itself:
-  `day_number` `1..n` from the source's own run, `date: null`, `title` and `notes` carried across,
-  and a map from source day id to target day id that the assignment and note passes then read.
+- **The copier registry (decision 4b).** `registerTripCopier(name, fn)` in `trips.ts`, where `fn` is
+  `(scope, sourceTripId, targetTripId, maps: { dayIds, placeIds }) => Promise<CopierReport>`. This
+  stage registers nothing beyond its own four passes; `04-budget-and-currencies.md` registers the
+  budget-line and cost-category copier and `05-packing-and-todos.md` the packing and to-do copiers, each
+  in the stage that owns the table, each obeying the same chunk bound below, each returning the row
+  count it wrote so the completion notification can name it. The registry is the seam that keeps a
+  table in one plan while the copy still reproduces the whole plan; until a copier is registered the
+  copy simply omits that module, which is what the reader is told.
+- **The undated run is copied, not resynchronised, and that is a measurement rather than a
+  preference.** `syncTripDays` (`src/server/repos/days.ts:149-172`) derives the wanted run from the
+  trip's date range and, when either date is null, takes the `wanted.length === 0` branch that
+  **creates no days at all** — it only clears stale dates on days that already exist. So for a copy
+  the reader left undated, `copyTripContents` inserts the day rows itself: `day_number` `1..n` from the
+  source's own run, `date: null`, `title` and `notes` carried across. For a dated copy the run already
+  exists from `startTripCopy`, and the same pass only builds the map from source day id to target day
+  id — by `day_number` in both cases — that the assignment and note passes then read.
 - **How the inventory is chunked, and where the number comes from.** Each table's rows go in through
   `insertMany`, which sends one statement carrying `rows × columns` bound parameters and does not
   chunk (`src/server/repos/base.ts:189-204`). D1 refuses a statement with more than **100 bound
@@ -576,34 +709,41 @@ reader sets the new dates in the edit sheet and `updateTrip`'s existing `syncTri
   paid tier, so a 20 000-place trip is a legal trip and a copy of it is an unbounded write. What the
   request path keeps is the part with a product bound on it, so the reader gets a trip id and a
   destination to navigate to inside one round trip.
-- `assertTripRole(scope, tripId, allowed)` — new, and the only new guard. Reads the acting user's
+- `assertTripRole(scope, tripId, allowed)` — new, and the one role guard. Reads the acting user's
   role through the existing `tripRoleFor` (`:460-470`) and raises `RepositoryError` with a
   `FORBIDDEN` code when it is not in `allowed`. It is called by `updateTrip`, `archiveTrip`,
-  `restoreTrip`, `setTripFavourite`, `deleteTrip` and `startTripCopy` **inside the repository**, after
-  `requireTrip` and before the write. `copyTripContents` does not call it: by the time the handler
-  runs, the target trip is the caller's own and the source has already been role-checked; re-checking
-  a role the acting member may have lost in the meantime would abandon a copy the product already
+  `restoreTrip` and `deleteTrip` **inside the repository**, after `requireTrip` and before the write.
+  `startTripCopy` and `setFavourite` do not call it: both are open to any reader (decision 6), and
+  `requireTrip` is their check. `copyTripContents` does not call it either: by the time the handler
+  runs, the target trip is the caller's own and the source has already been read-checked; re-checking
+  a membership the acting member may have lost in the meantime would abandon a copy the product already
   promised.
-- The five existing writers are otherwise unchanged in behaviour. `updateTrip` already reconciles the
-  day run through `syncTripDays` when the range moves (`:362-364`), which is why the edit path needs
-  no day handling of its own.
+- `archiveTrip` and `restoreTrip` lose one field each (decision 2): neither writes `status` any more,
+  so the lifecycle status survives the round trip. `updateTrip` and `deleteTrip` are otherwise unchanged
+  in behaviour. `updateTrip` already reconciles the day run through `syncTripDays` when the range
+  moves (`:362-364`), which is why the edit path needs no day handling of its own.
+- `setTripFavourite` is **deleted** from this module; its replacement is `setFavourite(scope, tripId,
+isFavourite)` in `src/server/repos/trip-favourites.ts`, which upserts or removes the caller's own
+  `trip_favourites` row after `requireTrip`. `listFavouriteTripIds(scope)` and `countFavourites(scope)`
+  are the reads `01-S7` and the existing `favourites` scope use, both `tenantFilter()`-bound and
+  keyed by `scope.ctx.userId`.
 
 **Why the role guard is in the repository and not in the handler.** `TRIP_MEMBER_ROLES` is
-`['owner', 'editor', 'viewer']` (`src/server/db/schema.ts:157`), and `createTrip` already writes an
+`['owner', 'editor', 'viewer']` (`src/server/db/schema.ts:263`), and `createTrip` already writes an
 `owner` membership for the creator (`src/server/repos/trips.ts:325-330`), so every trip in the
-database has exactly one. Today `requireTrip` admits any member of the organization to any trip in
-it, which is correct for a read and too generous for a delete. Putting the check in the repository
-means it holds for the queue consumer and for a future server route as well as for these six server
-functions, which is the same argument `ARCHITECTURE.md` §6 makes about quota.
+database has at least one. Putting the check in the repository means it holds for the queue consumer
+and for a future server route as well as for these server functions, which is the same argument
+`ARCHITECTURE.md` §6 makes about quota. The matrix is decision 6 of the grilling, and it follows the
+reference's defaults rather than the earlier draft of this plan, which let an editor archive a trip
+and change its dates:
 
-The role each write requires:
-
-| Write                            | Role required     | Why                                                                      |
-| -------------------------------- | ----------------- | ------------------------------------------------------------------------ |
-| `updateTrip`, `setTripFavourite` | `owner`, `editor` | Editing the plan is what an editor is for.                               |
-| `archiveTrip`, `restoreTrip`     | `owner`, `editor` | Archiving is reversible, so it does not need the stricter role.          |
-| `deleteTrip`                     | `owner`           | Terminal and cascading; `days`, `places` and every child row go with it. |
-| `startTripCopy`                  | `owner`, `editor` | Reads the source, writes a new trip the caller then owns.                |
+| Write                                                                       | Role required     | Why                                                                          |
+| --------------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------- |
+| `updateTrip` (title, summary, dates, currency, cover, reminder, visibility) | `owner`           | The trip's metadata; moving the dates moves every member's day run.          |
+| `archiveTrip`, `restoreTrip`, `deleteTrip`                                  | `owner`           | The trip's lifecycle; delete is terminal and cascading.                      |
+| `startTripCopy`                                                             | any reader        | Reads the source, writes a new trip the caller then owns.                    |
+| `setFavourite`                                                              | any reader        | A bookmark on the caller's own row; it changes nothing on the trip.          |
+| the plan's content — places, days, notes, assignments                       | `owner`, `editor` | What an editor is for; enforced where those writers live (`01-S2`, `01-S4`). |
 
 **Server functions — `src/routes/_app/-server/trip-lifecycle.ts`.** Seven, each
 `createServerFn({ method: 'POST' })` except where noted, each resolving its tenant through the
@@ -613,22 +753,31 @@ existing `appScope()` in `-server/context.ts`:
 | -------------------- | ----------------------------------------------------------------------------- | ------------------------------- |
 | `createTripFn`       | moved unchanged from `-server/overview.ts:556`                                | `{ tripId }`                    |
 | `updateTripFn`       | `{ tripId, title?, destination?, startDate?, endDate?, currency?, summary? }` | `{ tripId }`                    |
-| `copyTripFn`         | `{ tripId, title? }`                                                          | `{ tripId, copyPending: true }` |
+| `copyTripFn`         | `{ tripId, title, startDate, endDate }` — dates both present or both absent   | `{ tripId, copyPending: true }` |
 | `archiveTripFn`      | `{ tripId }`                                                                  | `{ tripId, isArchived: true }`  |
 | `restoreTripFn`      | `{ tripId }`                                                                  | `{ tripId, isArchived: false }` |
-| `setTripFavouriteFn` | `{ tripId, isFavourite }`                                                     | `{ tripId, isFavourite }`       |
-| `deleteTripFn`       | `{ tripId, confirmTitle }`                                                    | `{ deleted: true }`             |
+| `setTripFavouriteFn` | `{ tripId, isFavourite }` — the caller's own favourite                        | `{ tripId, isFavourite }`       |
+| `deleteTripFn`       | `{ tripId, confirmTitle? }` — required when the server says so, see below     | `{ deleted: true }`             |
 
 **Zod v4.** `z.strictObject()` for every input with the `error` parameter carrying the message the
 form shows; `z.iso.date()` for `startDate` and `endDate`; a trimmed non-empty `title`; a
 `z.literal`-free confirmation field compared to the trip's own title **on the server**, not in the
-browser. Blank string means "clear it", `undefined` means "unchanged" — the convention
+browser — and **whether it is required at all is the server's call**
+(decision 10): `deleteTripFn` counts the trip's reservations, transports, expenses, files and members,
+and demands a matching `confirmTitle` when any of the first four is non-zero or the member count
+exceeds one; below that threshold an absent field is accepted. `DELETE_CONFIRM_THRESHOLD` is a named
+constant beside that rule with a unit test, so the client can render the lighter dialog but can never
+skip the ceremony for a trip that earns it. Blank string means "clear it", `undefined` means "unchanged" — the convention
 `-server/plan.ts:70-81` already established, reused rather than reinvented.
 
-**Authorisation.** Decided in the repository through `assertTripRole`, as tabulated above. The
-server function contributes nothing but the tenant scope; a well-formed `tripId` from the browser is
-re-resolved by `requireTrip` inside that scope and is a `NotFoundError` when it belongs to another
-organization. `beforeLoad` guards nothing here and none of these functions relies on one.
+**Authorisation.** Decided in the repository, twice over. **Who may read** is `canReadTrip`
+(decision 1): a well-formed `tripId` from the browser is re-resolved by `requireTrip` inside the
+tenant scope and is a `NotFoundError` when it belongs to another organization **or** to a private trip
+the caller is not a member of — the same error, deliberately, so the answer never reveals that a trip
+exists. **Who may write** is `assertTripRole`, as tabulated above, and its refusal is `FORBIDDEN`,
+distinguishable from not-found because the caller has already proved they may see the trip. The
+server function contributes nothing but the tenant scope. `beforeLoad` guards nothing here and none
+of these functions relies on one.
 
 **The `trip-copy` task, and the handler that runs it.** `copyTripFn` calls `startTripCopy`, then
 enqueues one envelope through the single-message `enqueueTask` (`src/server/queue/jobs.ts:66`) — one
@@ -663,17 +812,32 @@ second Copy click on the same source is a different trip and a different envelop
   `titleKey`/`bodyKey` pair and a params record — never a rendered sentence, which is the contract
   that module's own docstring states. The notification write path is `00-S2`'s, in wave 0.
 
+**The `trip-purge` task (decision 3), which is the delete's second half.** `deleteTripFn`, after
+`assertTripRole` and before the cascading `deleteTrip`, reads the trip's `files.storage_key` list and
+its `cover_image_key` through the tenant-scoped repositories, then deletes the rows, then enqueues one
+envelope `{ kind: 'trip-purge', orgId, id: 'trip-purge:<tripId>', payload: { keys } }`. The D1 delete
+is the record and never waits for R2: a queue failure is caught and logged once, and the trip is still
+gone. The handler deletes the keys through `deleteObjects` in `src/server/storage/objects.ts`, which
+chunks at R2's per-call ceiling (a named constant beside the limit it came from, held by a unit test)
+and is idempotent — a key already gone is not an error — so a redelivery finishes rather than fails.
+`copyTripContents` reaches the same module for `copyObject`, so the two handlers share one R2 surface
+and neither opens the bucket itself. The `files.ts` per-file delete path is untouched. Storage usage
+is computed from `files` rows (`src/server/repos/files.ts:171`), so the tenant's meter drops with the
+cascade and the purge only reconciles what we pay for.
+
 **The travel-statistics envelopes, which are `00-S4`'s obligation on this stage.** `createTripFn`,
 `updateTripFn`, `deleteTripFn` and the `trip-copy` handler each change `tripCount`, `dayCount`,
-`placeCount` and `cityCount` for **every** member of the workspace, and `updateTripFn` also moves the
+`placeCount` and `cityCount` for **every member of the trip**, and `updateTripFn` also moves the
 year-row `countryCount` when it moves `start_date` or `country_codes`. Each of those four paths
 therefore enqueues the `travel-stats` envelopes `00-S4` defined, with `00-S4`'s deterministic
 `(user, year)` ids so repeats collapse:
 
-- **The recipient set** is the workspace's members, read with `listMembers`
-  (`src/server/repos/members.ts:99`) in the caller's scope — not the trip's members, because the
-  figures are `tenantFilter()`-bound and identical for every member of the organization. `getMembership`
-  (`:144`) is the sibling the handler uses to rebuild its own scope.
+- **The recipient set is the trip's members** (decision 9), read with `listTripMembers`
+  (`src/server/repos/trips.ts:403`) in the caller's scope — not the workspace, because after decision
+  1 a private trip is invisible to a non-member and its statistics must be too. `00-S4` is amended in
+  the same change to count a person's trips by membership; this stage only sends to the people that
+  count applies to. `getMembership` (`src/server/repos/members.ts:144`) is the sibling the handler uses
+  to rebuild its own scope.
 - **The years** are the all-time roll-up (`statYear = 0`) always, plus the year of the trip's
   `start_date` when it has one, plus the **previous** `start_date`'s year on an edit that moved it.
 - **The fan-out is chunked before it is enqueued, and the bound is not a comment.** This producer
@@ -705,7 +869,7 @@ call added in this stage would be the defect, not the omission of one.
 does not appear in **Owned paths**.
 
 **Components.** `src/routes/_app/-ui/trip-actions.tsx` exports `TripActionsMenu`, `TripEditSheet` and
-`TripDeleteDialog`. Every primitive it needs already ships in `src/components/ui` and is reused by
+`TripDeleteDialog`; `-ui/trip-copy-dialog.tsx` exports `TripCopyDialog`. Every primitive it needs already ships in `src/components/ui` and is reused by
 name, because a second implementation of one is a defect: `DropdownMenu` with its items and
 separators, `IconButton` for the trigger, `Dialog` for the destructive confirmation, `Sheet` for the
 edit form, `Field` + `Input` + `SimpleSelect` for the fields, `Button` with its `loading` prop,
@@ -715,9 +879,12 @@ required and none is proposed.
 **How the menu behaves.** The trigger is an `IconButton` in the tile's top-right corner. Above the
 `md` breakpoint it is transparent at rest and becomes opaque on `group-hover` **and** on
 `group-focus-within`, so it is reachable by keyboard at every width; below `md` it is always opaque,
-because a hover-revealed control on a touch screen is an invisible control. The menu items are
-Edit, Copy, Favourite/Unfavourite, Archive/Restore and Delete; `aria-label` on the trigger names the
-trip, so a screen reader hears "Actions for Lisbon in April" and not five identical buttons.
+because a hover-revealed control on a touch screen is an invisible control. The items are Copy and
+Favourite/Unfavourite for every reader, then — for an `owner` only — Edit, Archive/Restore and
+Delete. The payload already carries the caller's role, so items the role cannot exercise are **not
+rendered** rather than disabled: the repository's refusal is the control, the menu is a courtesy, and
+a viewer's menu is two items long. `aria-label` on the trigger names the trip, so a screen reader
+hears "Actions for Lisbon in April" and not five identical buttons.
 
 **States, named rather than asserted.**
 
@@ -725,9 +892,19 @@ trip, so a screen reader hears "Actions for Lisbon in April" and not five identi
   `outline-none`), active, disabled while a write for that trip is in flight, and a `Spinner` in the
   item that is running. The destructive item carries `--color-danger` text and a `--color-danger-soft`
   hover.
-- _Delete dialog._ The trip's title must be typed to arm the button; the button is disabled until it
-  matches and shows `loading` while the write is in the air. The copy names what goes with the trip —
-  days, places, bookings, money and files — as a count read from the payload, not as a vague warning.
+- _Delete dialog._ Graduated (decision 10). The dialog names what goes with the trip — days, places,
+  bookings, money, files and people — as counts read from the payload, not as a vague warning. When
+  the server's threshold is met (any reservation, transport, expense or file, or more than one
+  member) the trip's title must be typed to arm the button; below it the button is armed at once and
+  the dialog is one paragraph and two buttons. The button is disabled until armed and shows `loading`
+  while the write is in the air. The threshold rule is the server's; the client reads a `requiresTitle`
+  flag from the payload and never computes it.
+- _Copy dialog._ `TripCopyDialog` in `-ui/trip-copy-dialog.tsx` (decision 4a): a `Dialog` with the
+  title `Input` and the shipped `DateRangePicker`, both prefilled from the source, a clear-dates
+  control that turns the copy into an undated template, and a one-line note when the chosen range is
+  shorter than the source's run saying that the extra days' places will land in ideas and their notes
+  will be dropped. Submit shows `loading`, cannot be dismissed mid-flight, and navigates to the new
+  trip's tile on success.
 - _Edit sheet._ Per-field inline errors from the Zod message; a form-level `Alert` on
   `--color-surface-2` for a server error, with a Retry that re-submits; the sheet cannot be dismissed
   while a save is in flight.
@@ -800,12 +977,12 @@ One new `describe('trip lifecycle')` block appended to
 `src/server/repos/__tests__/tenant-isolation.test.ts`, built on the `createHarness` / `seedWorld`
 fixtures the file already constructs for `alpha` and `beta`.
 
-In A's scope, against B's trip id: `updateTrip`, `archiveTrip`, `restoreTrip`, `setTripFavourite`,
+In A's scope, against B's trip id: `updateTrip`, `archiveTrip`, `restoreTrip`, `setFavourite`,
 `deleteTrip` and `startTripCopy` each raise `NotFoundError`, and B's trip row, day run, places and
 assignments are byte-identical afterwards. Then, in A's scope with A's own trip: the acting user is
-demoted to `viewer` through `updateTripMember` and `deleteTrip` raises the `FORBIDDEN`
+demoted to `editor` through `updateTripMember` and `deleteTrip` raises the `FORBIDDEN`
 `RepositoryError` rather than a `NotFoundError` — the two failures must stay distinguishable, because
-one means "not yours" and the other means "not allowed", and collapsing them tells an attacker
+one means "not yours to see" and the other "not yours to do", and collapsing them tells an attacker
 whether a trip exists.
 
 Then the asynchronous half, which is where a two-phase copy could leak across a boundary and a
@@ -816,10 +993,25 @@ cross-tenant read primitive. Then the mirror: `copyTripContents(scopeA, aSourceT
 raises `NotFoundError` on the target, so a forged envelope cannot graft A's inventory onto B's trip.
 Both are run again with the scope built the way the handler builds it — `createScope()` from the
 envelope's organization id — to show that the rejection comes from the tenant filter and not from the
-server function that is absent in a consumer.
+server function that is absent in a consumer. And the purge: a `trip-purge` envelope carrying B's keys
+under A's organization deletes nothing, because the handler re-reads the keys it may delete through
+`filesRepository` in A's scope and ignores the envelope's list where the two disagree.
 
 Functions covered: `startTripCopy`, `copyTripContents`, `assertTripRole`, `updateTrip`,
-`archiveTrip`, `restoreTrip`, `setTripFavourite`, `deleteTrip`.
+`archiveTrip`, `restoreTrip`, `setFavourite`, `deleteTrip`, the `trip-purge` handler.
+
+**Member isolation — the boundary decision 1 draws inside one organization.** A new file,
+`src/server/repos/__tests__/member-isolation.test.ts`, on the same `createHarness`/`seedWorld`
+fixtures with a third user `alpha-2` who is a member of `alpha`'s organization and of none of its
+trips. In `alpha-2`'s scope against `alpha`'s private trip: `requireTrip`, `updateTrip`, `startTripCopy`,
+`setFavourite` and `deleteTrip` each raise `NotFoundError` — not `FORBIDDEN` — and `listTrips`,
+`countTripsByStatus` and `listFavouriteTripIds` return no row, no count and no id for it. Then the
+trip's `visibility` is set to `organization` and the same reads succeed while `updateTrip` and
+`deleteTrip` now raise `FORBIDDEN`, because the caller can see the trip and is not its owner. Then
+`alpha-2` is added as `viewer` and `requireTrip` succeeds on the private trip again. Every later stage
+of every plan that adds a trip-scoped reader appends a case here, under the same append-only rule as
+the tenant file; the two files are the two halves of one question — "may this scope see this row?" —
+and a repository function is done when both say yes only where they should.
 
 ### Verification
 
@@ -849,6 +1041,24 @@ Functions covered: `startTripCopy`, `copyTripContents`, `assertTripRole`, `updat
    refusal is a `RepositoryError`, not a `NotFoundError`.
 7. `deleteTrip` cascades — after it, `days`, `places`, `day_assignments` and `day_notes` for that trip
    return zero rows in the same scope.
+8. **Archiving does not touch `status`** (decision 2): a `completed` trip archived and restored is
+   `completed` afterwards, `is_archived` toggles, and no row in the table ever carries
+   `status = 'archived'` after the round trip.
+9. **The favourite is the caller's** (decision 5): `setFavourite` in A-user-1's scope is invisible to
+   A-user-2's `listFavouriteTripIds`; setting it twice writes one row; unsetting removes it; the
+   `favourites` count on the trips index is per caller.
+10. **The copier registry runs in order and reports** (decision 4b): two fake copiers registered in a
+    test are called once each with the day and place maps, their reports are summed into the
+    completion notification's params, and an unregistered module leaves the target without its rows
+    rather than throwing.
+11. **A shortened copy sends the overflow to ideas** (decision 4a): a five-day source copied into a
+    three-day range yields three days, every place of days four and five present and unscheduled, and
+    the notes of those days absent and counted in the report; a dated copy has its run from
+    `syncTripDays` and an undated one from `copyTripContents`, asserted by the day rows' `date`.
+12. **A trip with no record confirms lightly, one with a record does not** (decision 10):
+    `deleteTripFn` on a trip with one member and no reservation, transport, expense or file accepts
+    an absent `confirmTitle`; adding one expense makes the same call refuse until the title matches;
+    the threshold constant is what the two cases read.
 
 **Unit tests.** `src/server/queue/handlers/__tests__/trip-copy.test.ts`, new, against the in-memory
 driver `src/server/repos/__tests__/harness.ts` builds and a fake `TASKS`:
@@ -864,14 +1074,29 @@ driver `src/server/repos/__tests__/harness.ts` builds and a fake `TASKS`:
    transient D1 rejection **throws** so the queue retries, and the target trip is still there.
 5. The handler never reads outside the envelope's organization, which is the unit-level companion to
    the isolation block above.
+6. **The cover object is copied, not shared**: a source with a `cover_image_key` yields a target
+   whose key differs and whose object exists in the fake bucket, and deleting the source afterwards
+   leaves the target's object in place.
+
+**Unit tests.** `src/server/queue/handlers/__tests__/trip-purge.test.ts` and
+`src/server/storage/__tests__/objects.test.ts`, new, against a fake `R2Bucket`:
+
+1. A handled purge deletes every key in the envelope that the repositories confirm, in chunks of the
+   named constant — 2 500 keys produce the expected number of `delete` calls — and returns.
+2. A key already absent is not a failure; the same envelope delivered twice ends in the same state.
+3. A key the organization does not own is skipped, not deleted — the handler's list is the
+   intersection of the envelope and what `filesRepository` still knows in that scope.
+4. `deleteTripFn` enqueues exactly one `trip-purge` envelope with the trip's file keys and cover key,
+   and a rejected enqueue does not fail the delete.
 
 **Unit tests.** `src/routes/_app/-server/__tests__/trip-lifecycle-side-effects.test.ts`, new, against
 a fake `TASKS` that records its calls in order — the surviving cross-plan obligation, held as
 assertions rather than as prose:
 
 1. `createTripFn`, `updateTripFn`, `deleteTripFn` and the `trip-copy` handler each enqueue the
-   `travel-stats` envelopes for every workspace member, with `00-S4`'s deterministic ids, and a
-   workspace of 250 members produces three `enqueueTasks` calls of at most 100 envelopes each.
+   `travel-stats` envelopes for every **trip member** (decision 9), with `00-S4`'s deterministic ids,
+   and a trip of 250 members produces three `enqueueTasks` calls of at most 100 envelopes each; a
+   workspace member who is not on the trip receives none.
 2. A queue rejection does not propagate: the write still returns.
 3. No lifecycle function touches reminder code — the module imports nothing from
    `src/server/queue/reminders.ts` or `src/server/catalog/reminders.ts`, asserted structurally,
@@ -923,7 +1148,9 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --state menu-open --click '[data-part="trip-actions-trigger"]'
 ```
 
-and a second run with `--state delete-confirm` clicking through to the confirmation, and a third with
+and a second run with `--state delete-confirm` clicking through to the confirmation (against a seeded
+trip that carries a record, so the frame shows the typed confirmation), a third with
+`--state copy-dialog --click '[data-part="trip-copy-trigger"]'`, and a fourth with
 `--state copy-pending`, which is the state the queue split creates and which a resting frame would
 never show: the fixture seeds one trip with a non-null `copy_pending_at`, so the tile renders its
 "Copying" chip, its skeletonised counts and its single-item menu. The three selectors are stable
@@ -979,7 +1206,8 @@ another plan gates it.
 
 **Three wave-0 stages gate it and all three close before wave 1 opens**, so none is a blocker; they
 are named because a stage that consumes another stage's output owes the reader that list. `00-S1`
-generates the migration for `trips.copy_pending_at`. `00-S4` adds `DB` to `TaskBindings` in
+generated the migration for `trips.copy_pending_at` (landed, `drizzle/0006_mighty_nehzno.sql`);
+`00-S6` generates the one for `trip_favourites` (decision 5) and this stage does not open before it. `00-S4` adds `DB` to `TaskBindings` in
 `src/server/queue/types.ts`, without which no queue handler can reach D1, and defines the
 `travel-stats` envelope this stage enqueues. `00-S2`'s notification write path is used for the
 copy's completion message. `00-S5` is deliberately absent from this list: after its grilling
@@ -1129,7 +1357,9 @@ no renumbering pass. No second convention is introduced.
   module-private `writableTrip` (`:97-106`) which is **not exported**, and exporting it would mean
   editing a file `07-S1` holds in wave 1. So the same policy gets a repository-level home instead:
   one function that calls `requireTrip`, refuses `trip.isArchived` with the same message the planner
-  already shows, then calls `requireTripDay`, and returns both rows. It is where the policy belonged
+  already shows, calls `assertTripRole(scope, tripId, ['owner', 'editor'])` — the guard `01-S1` adds;
+  a note is the plan's content and a `viewer` reads it and writes none (decision 6) — then calls
+  `requireTripDay`, and returns both rows. It is where the policy belonged
   anyway — every other authorisation decision in this product is taken in a repository, not in a
   server function. `-server/plan.ts` is left exactly as it is; `01-S4` owns both modules in wave 2
   and may fold the private guard into this one, and this stage does not require it to.
@@ -1917,15 +2147,18 @@ writes no value either column could not already hold.
 **Repository — `src/server/repos/itinerary.ts`.**
 
 `reorderDayTimeline(scope, input)` where `input` is
-`{ tripId, dayId, items: ReadonlyArray<{ kind: 'stop' | 'note'; id: string }> }`. It resolves the
-trip with `requireTrip` and the day with `requireTripDay` (`src/server/repos/days.ts:104-115`, which
+`{ tripId, dayId, items: ReadonlyArray<{ kind: 'stop' | 'note'; id: string }>, clearTime?: ReadonlyArray<{ kind; id }> }`.
+It resolves the trip with `requireTrip`, the role with `assertTripRole(scope, tripId, ['owner', 'editor'])`
+(decision 6) and the day with `requireTripDay` (`src/server/repos/days.ts:104-115`, which
 already rejects a day belonging to another trip), reads the day's current stop ids and note ids,
 **drops** any incoming id that is not in either set rather than rejecting the whole call — a stale tab
 one delete behind should still be able to reorder the rows that do exist, which is the rule
 `-server/plan.ts:269-272` already states — appends any known id the client omitted at its current
 relative position so a partial list cannot silently delete an item's position, and then writes
-positions `0..n-1` into the two tables through **one `runBatch(scope, statements)` call**
-(`src/server/repos/batch.ts:35`).
+positions `0..n-1` into the two tables — and `time = NULL` (`assignment_time` for a stop,
+`day_notes.time` for a note) for every id in `clearTime`, which must also be in `items` — through
+**one `runBatch(scope, statements)` call** (`src/server/repos/batch.ts:35`), so decision 8's
+"drop the time and move" is one transaction.
 
 `runBatch` is the repository layer's only batching helper, and it is the reason this stage does not
 write `scope.db.batch(...)`: `TenantScope['db']` is the abstract Drizzle handle and carries no
@@ -1966,12 +2199,13 @@ one field and gains nothing — a narrowing of a payload type, so the compiler n
 
 **Zod v4.** `z.strictObject()` with the `error` parameter; the item is
 `z.strictObject({ kind: z.enum(['stop', 'note']), id })` reusing the module's existing `id` schema
-(`:69`); the per-day array is capped, as the existing validator already caps its own, so one request
+(`:69`), and `clearTime` is an optional array of the same item shape whose every entry must also
+appear in `items` — refined, not assumed; the per-day array is capped, as the existing validator already caps its own, so one request
 cannot ask for an unbounded batch.
 
-**Authorisation.** Unchanged in shape and decided in the repository: `writableTrip` (`:97-106`)
-refuses an archived trip, `requireTrip` refuses a trip outside the caller's tenant, and
-`requireTripDay` refuses a day outside the trip. A well-formed `dayId` from the browser is not an
+**Authorisation.** Decided in the repository: `writableTrip` (`:97-106`) refuses an archived trip,
+`requireTrip` refuses a trip outside the caller's tenant or outside the caller's sight (decision 1),
+`assertTripRole` refuses a `viewer` (decision 6), and `requireTripDay` refuses a day outside the trip. A well-formed `dayId` from the browser is not an
 authorised `dayId`.
 
 Nothing enqueued and no Durable Object patch. `src/server/do/protocol.ts` already declares a `day`
@@ -1997,11 +2231,16 @@ unchanged; `movePlanItem` gains the two rules below and nothing else.
    column is the trip's unscheduled place inventory and a note has no meaning outside a day, so the
    refusal is a product statement, not a limitation. It reuses the existing `'unknown'` refusal path's
    shape and gets its own reason, `'not-in-ideas'`.
-2. **A timed row is moved by its time.** `PlanMoveRefusal` gains `'timed'`. Dropping an item that
-   carries a time into a position that contradicts that time — before an item with an earlier time, or
-   after one with a later time — is refused, and the screen says how to move it instead. Without this
-   the reader drags a row, the sort puts it back, and the product looks broken; with it, the one
-   affordance that moves a timed row is the one that is actually authoritative.
+2. **A timed row is moved by its time, and the reader is asked before that changes (decision 8).**
+   `PlanMoveRefusal` gains `'timed'`, but for this one reason the refusal is a **question**, not an
+   end: dropping an item that carries a time into a position that contradicts that time — before an
+   item with an earlier time, or after one with a later time — opens a `Dialog` reading "Move Café
+   Sacher and drop its 14:30?". Confirming issues **one** `reorderPlanFn` call whose entry carries the
+   item in `clearTime` as well as in `items`, so the time is cleared and the order written in one
+   batch and there is never a moment in which the row has a time and the wrong position; declining
+   leaves the board untouched. This is the reference's behaviour and it finishes the reader's gesture
+   instead of sending them to the editor to remove the time by hand. The invariant survives — a time
+   is authoritative for as long as the item has one.
 
 **The sort contract, stated as a pure function.** For one day: read the items in ascending position.
 Walk them once, carrying the last time seen; an item without a time inherits the carried time, and
@@ -2039,7 +2278,8 @@ two.
   item with a write in flight keeps the `pendingItemIds` treatment `DaySection` already takes
   (`:20`, `:158`), which now covers notes as well as stops.
 - _Error._ A refused move never mutates the board and states its reason inline in a toast:
-  a duplicate place, a note dragged to the ideas column, a timed row dragged out of clock order. A
+  a duplicate place, a note dragged to the ideas column. A timed row dragged out of clock order is
+  not an error but a question — the `Dialog` above — and declining it is the same no-op as a refusal. A
   **failed** write rolls the optimistic `PlanOrder` back to the previous arrangement, which is the
   contract `plan-screen.tsx` already implements and this stage must not weaken.
 - _Every control._ Rest, hover, focus-visible, active, disabled and loading on the row, its drag
@@ -2048,7 +2288,9 @@ two.
 **Keyboard.** The merged list is keyboard-draggable, not mouse-only. `src/lib/dnd-keyboard.ts`
 already supplies the sensor behaviour and `__tests__/keyboard-drag.test.tsx` already holds it for
 stops; this stage extends both to notes and adds the refusal announcements to the same live region,
-so a keyboard user hears why a move was refused rather than watching nothing happen.
+so a keyboard user hears why a move was refused rather than watching nothing happen. The
+"drop its time?" dialog opens on a keyboard drop exactly as on a pointer drop, with focus on its
+confirm button and `Escape` declining.
 
 **Motion.** Reordering animates transform only, 220 ms on `--ease-out-quint`, with the drag overlay
 already provided by `DragPreview`. Reduced motion collapses to no movement, which `@dnd-kit` respects
@@ -2094,7 +2336,8 @@ Functions covered: `reorderDayTimeline`.
   is kept and must still pass — that is the `TRP-10` no-regression obligation, stated as a mechanical
   one. New cases: a note moves within a day; a note refused into the ideas column returns
   `'not-in-ideas'` and the unchanged order; a timed row into a contradicting position returns
-  `'timed'`; a place dropped onto a day that already holds it still returns `'duplicate'`.
+  `'timed'` and the unchanged order — the screen turns that into the question, the engine never
+  moves it on its own; a place dropped onto a day that already holds it still returns `'duplicate'`.
 - `src/components/planner/__tests__/keyboard-drag.test.tsx` — extended. A note is pickable, movable and
   droppable by keyboard, and a refusal is announced.
 - `src/components/planner/__tests__/rails.test.tsx` — extended. A day renders one list, notes and stops
@@ -2104,8 +2347,10 @@ Functions covered: `reorderDayTimeline`.
   inheritance obligation above. Driven the way `src/server/fns/__tests__/atlas.test.ts` drives a
   server function: an `AsyncLocalStorage` installed under the framework's global symbol before the
   module is imported dynamically, `#/routes/_app/-server/context` mocked for the scope, and
-  `#/server/fns/context` mocked so `mirrorToRoom` is a spy. Three cases: a merged reorder writes the
-  merged order through `reorderDayTimeline`; **the same call still mirrors one `day` upsert per
+  `#/server/fns/context` mocked so `mirrorToRoom` is a spy. Four cases: a merged reorder writes the
+  merged order through `reorderDayTimeline`; a reorder carrying `clearTime` nulls the time and writes
+  the order in one batch, and an entry in `clearTime` that is not in `items` is refused by the
+  validator; **the same call still mirrors one `day` upsert per
   touched day**, which is the `07-S1` behaviour this stage must not drop; and a mirror that rejects
   does not fail the save, because D1 is the record and the room is a signal.
 
@@ -2222,7 +2467,8 @@ Rows unblocked: none.
 ### Owned paths
 
 - `src/routes/_app/dashboard.tsx` — edit. Mounts the column and the sheet; the existing hero, stat
-  row, trip mix, bookings and storage meter are untouched.
+  row, trip mix, bookings and storage meter are untouched. Shared across waves with `14-S1`
+  (`14-dashboard-mascot.md`, wave 3) and `01-S7` (wave 5); no other wave-2 stage names it.
 - `src/routes/_app/-ui/dashboard-widgets.tsx` — new. The column, the sheet, the visibility control.
 - `src/routes/_app/-ui/timezone-clock.tsx` — new. The clock widget.
 - `src/lib/clock-zones.ts` — new. Pure: zone validation, the label, the offset line, the ordering,
@@ -2499,7 +2745,8 @@ Rows unblocked: `TRP-02` (`01-S8`) and `TRP-06` (`01-S9`) directly.
 
 ### Owned paths
 
-- `src/server/repos/trip-guests.ts` — new. The guest record and the participant read model.
+- `src/server/repos/trip-guests.ts` — new. The guest record, the participant read model, the
+  guest-into-member merge and its relinker registry (decision 7b).
 - `src/server/repos/index.ts` — edit. Two export lines; no other repository module is touched. Three
   sibling stages touch the same barrel in three other waves and none in wave 4: `06-S3`
   (`06-documents-and-media.md`, wave 2) and `06-S5` (wave 3), both as `append`, which is the
@@ -2510,12 +2757,15 @@ Rows unblocked: `TRP-02` (`01-S8`) and `TRP-06` (`01-S9`) directly.
   and `07-S6` (`07-…`, wave 2), both earlier; this stage adds to what they left.
 - `src/routes/_app/trips/$tripId/-server/people.ts` — new. The stage's server functions.
 - `src/routes/_app/trips/$tripId/people.tsx` — new. The route.
-- `src/routes/_app/trips/$tripId/-ui/people-screen.tsx` — new. The screen.
+- `src/routes/_app/trips/$tripId/-ui/people-screen.tsx` — new. The screen, including the trip's
+  visibility switch (decision 1b).
 - `src/components/layout/trip-sub-nav.tsx` — edit, and the edit is the Share button's destination:
   today it links to `/trips/$tripId/collab` (`:98-121`), which is the chat tab and not a people
   surface.
 - `src/server/repos/__tests__/trip-guests.test.ts` — new.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
+- `src/server/repos/__tests__/member-isolation.test.ts` — append. One new `describe` block, under
+  the same append-only rule; the file is `01-S1`'s.
 - `e2e/trips-core.visual.spec.ts` — append. One new `test.describe` block, named `01-S6` and this
   stage's title, in the plan's single spec file that `01-S1` creates. It declares its own route table
   and edits no other block.
@@ -2554,27 +2804,39 @@ hopeful. No `CHECK` constraint: there is no enum column.
 
 Additive, backfills nothing, and a rollback is safe because the previous Worker never reads the table.
 
-**Deliberately not in this stage: guest participation in other modules.** A guest has to be a valid
-assignee in expense splits, packing items and day-plan participants, and none of those links is added
-here. The reason is measured rather than aesthetic: `assignment_participants`
-(`src/server/db/schema.ts:564-579`) has a composite primary key of `(assignment_id, user_id)`, so it
-cannot hold a guest without a primary-key change, and drizzle-kit emits a full table rebuild for that
-on SQLite — which is not additive and is exactly what the migration ritual forbids. The additive shape
-is a **second join table per link**, and each one belongs to the plan that owns the surface reading
-it: `04-budget-and-currencies.md` for expense shares, `05-packing-and-todos.md` for packing, and
-`BKG-10`/`TRP-08`'s successor for day-plan participants. This stage gives all three the one read model
-they should build against — `listTripParticipants` — so the shape is decided once here and not four
-times there.
+**Guest participation in other modules: the shape is decided here, the columns land there, and the
+merge is built here (decisions 7b, 4b).** A guest has to be a valid assignee in expense splits,
+packing items and day-plan participants, and none of those links is added in this stage. The reason
+is measured rather than aesthetic: `assignment_participants` (`src/server/db/schema.ts:564-579`) has
+a composite primary key of `(assignment_id, user_id)`, so it cannot hold a guest without a primary-key
+change, and drizzle-kit emits a full table rebuild for that on SQLite — which is not additive and is
+exactly what the migration ritual forbids. The additive shape is fixed here for every plan that links a
+guest: **one nullable `guest_id` column beside the existing `user_id`, with a repository rule that
+exactly one of the two is set** — never a single polymorphic participant id — because that is the
+shape a merge can walk with one `UPDATE` per table. Each column belongs to the plan that owns the
+surface reading it: `04-budget-and-currencies.md` for expense shares, `05-packing-and-todos.md` for
+packing and to-dos (which already files `assigned_guest_id` in that shape), and `BKG-10`/`TRP-08`'s
+successor for day-plan participants. This stage gives all three the one read model they build
+against — `listTripParticipants` — and the one write they register into: `registerGuestRelinker(name,
+fn)`, where `fn` is `(scope, tripId, guestId, userId) => Promise<number>` and rewrites that plan's
+`guest_id` rows to `user_id`. The stage that adds a `guest_id` column registers its relinker in the
+same change, so a guest merged after that stage lands loses nothing.
 
 ### Server (repo, server function, Zod)
 
 **Repository — `src/server/repos/trip-guests.ts`, new.**
 
 - `listTripGuests(scope, tripId)` — ordered by `display_name`.
-- `createTripGuest(scope, { tripId, displayName, colour })` — `requireTrip` first, then the
-  disambiguation below, then insert through `createTenantRepository(tripGuests, 'trip guest')`.
-- `renameTripGuest(scope, guestId, displayName)` — `requireUpdate`, disambiguating against the same
-  trip.
+- `createTripGuest(scope, { tripId, displayName, colour })` — `requireTrip`, `assertTripRole(['owner'])`,
+  the uniqueness rule and the `MAX_TRIP_GUESTS` bound below, then insert through
+  `createTenantRepository(tripGuests, 'trip guest')`.
+- `renameTripGuest(scope, guestId, displayName)` — `requireUpdate`, refusing a name already on the
+  same trip.
+- `mergeTripGuest(scope, tripId, guestId, userId)` — decision 7b. `requireTrip`,
+  `assertTripRole(['owner'])`, the target must hold a `trip_members` row on this trip; then every
+  registered relinker runs in registration order inside one `runBatch`, then the guest row is removed,
+  and the per-relinker counts are returned so the screen can say what moved. Irreversible, and the
+  dialog says so.
 - `removeTripGuest(scope, guestId)` — `requireRemove`.
 - `listTripParticipants(scope, tripId)` — the read model every later participant picker consumes.
   Returns one array of a discriminated union: `{ kind: 'member', userId, role, colour }` from
@@ -2583,12 +2845,14 @@ times there.
   module. One shape, one place, so a picker never has to merge two lists itself and never has to
   decide what a participant is.
 
-**Duplicate names.** A second guest with a name already on the trip is stored with an appended
-ordinal, and the ordinal climbs until the unique index accepts it. The mechanism is the one this
-repository already uses for a colliding trip slug — `reserveTripSlug`
-(`src/server/repos/trips.ts:163-180`), a bounded attempt loop against a `count`, falling back to a
-time-suffixed value rather than looping forever. The point is not tidiness: two identical names in a
-participant picker is how a cost gets split onto the wrong person.
+**Duplicate names are refused, not suffixed (decision 7).** A second guest with a name already on
+the trip — case-insensitively, after trimming — is refused with a message the field shows inline
+("A guest named Anna is already on this trip"), and the reader chooses the distinguishing word. The
+reference appends an ordinal instead; we do not, because the server cannot tell a second Anna from the
+same Anna typed twice, and a silent "Anna 2" is how a cost gets split onto a person who does not exist.
+`trip_guests_trip_name_unq` stays as the backstop the rule is written against, and there is no attempt
+loop. The point is the same as the reference's: two identical names in a participant picker is how a
+cost gets split onto the wrong person.
 
 **Repository — `src/server/repos/trips.ts`, edited.** Three guards on the membership writers, each
 inside the repository so they hold for every caller:
@@ -2606,19 +2870,24 @@ inside the repository so they hold for every caller:
 **Server functions — `src/routes/_app/trips/$tripId/-server/people.ts`, new.** One `GET` loader and
 six `POST` writes:
 
-| Function             | Method | Input                              | Returns                                                    |
-| -------------------- | ------ | ---------------------------------- | ---------------------------------------------------------- |
-| `loadTripPeople`     | GET    | `{ tripId }`                       | members, guests, invitable profiles, the caller's own role |
-| `addTripMemberFn`    | POST   | `{ tripId, userId, role }`         | `{ memberId }`                                             |
-| `setTripRoleFn`      | POST   | `{ tripId, memberId, role }`       | `{ memberId, role }`                                       |
-| `removeTripMemberFn` | POST   | `{ tripId, memberId }`             | `{ removed: true }`                                        |
-| `leaveTripFn`        | POST   | `{ tripId }`                       | `{ removed: true }`                                        |
-| `addTripGuestFn`     | POST   | `{ tripId, displayName }`          | `{ guestId, displayName }`                                 |
-| `renameTripGuestFn`  | POST   | `{ tripId, guestId, displayName }` | `{ guestId, displayName }`                                 |
-| `removeTripGuestFn`  | POST   | `{ tripId, guestId }`              | `{ removed: true }`                                        |
+| Function              | Method | Input                              | Returns                                                         |
+| --------------------- | ------ | ---------------------------------- | --------------------------------------------------------------- |
+| `loadTripPeople`      | GET    | `{ tripId }`                       | members, guests, invitable profiles, the caller's own role      |
+| `addTripMemberFn`     | POST   | `{ tripId, userId, role }`         | `{ memberId }`                                                  |
+| `setTripRoleFn`       | POST   | `{ tripId, memberId, role }`       | `{ memberId, role }`                                            |
+| `removeTripMemberFn`  | POST   | `{ tripId, memberId }`             | `{ removed: true }`                                             |
+| `leaveTripFn`         | POST   | `{ tripId }`                       | `{ removed: true }`                                             |
+| `addTripGuestFn`      | POST   | `{ tripId, displayName }`          | `{ guestId, displayName }`                                      |
+| `renameTripGuestFn`   | POST   | `{ tripId, guestId, displayName }` | `{ guestId, displayName }`                                      |
+| `removeTripGuestFn`   | POST   | `{ tripId, guestId }`              | `{ removed: true }`                                             |
+| `mergeTripGuestFn`    | POST   | `{ tripId, guestId, memberId }`    | `{ memberId, relinked: Record<string, number> }`                |
+| `setTripVisibilityFn` | POST   | `{ tripId, visibility }`           | `{ tripId, visibility }` — `'private'` or `'organization'` only |
 
 `loadTripPeople` returns the invitable set **already filtered** to workspace members who are not yet
-on the trip, so the client never receives a directory it then has to subtract from.
+on the trip, so the client never receives a directory it then has to subtract from, plus the trip's
+`visibility` and the caller's role. `setTripVisibilityFn` writes through `updateTrip`, whose
+`assertTripRole` is `owner` (decision 6); `'public'` is not accepted here — it is the share plan's
+value and this switch has two positions.
 
 **Zod v4.** `z.strictObject()` with the `error` parameter; `z.enum(TRIP_MEMBER_ROLES)` for the role,
 reading the tuple the schema already exports (`src/server/db/schema.ts:157`) rather than restating it;
@@ -2628,9 +2897,10 @@ wire as an identifier.
 
 **Authorisation, said explicitly.** Every decision is in the repository, through `assertTripRole` and
 the three guards above. The server function contributes the tenant scope and nothing else. Adding,
-promoting and removing another member, and every guest write, require the trip `owner` role; leaving
-requires only that the membership being removed is the caller's own; reading requires membership,
-which `requireTrip` inside the caller's scope already establishes. `beforeLoad` on the new route is UX
+promoting and removing another member, every guest write including the merge, and the visibility
+switch require the trip `owner` role; leaving requires only that the membership being removed is the
+caller's own; reading requires membership or `visibility = 'organization'`, which `requireTrip` inside
+the caller's scope establishes from `01-S1` on (decision 1). `beforeLoad` on the new route is UX
 — it makes the page 404 gracefully — and is never the boundary.
 
 **The invited person is told.** `addTripMemberFn` calls `notify()`
@@ -2655,10 +2925,13 @@ route rather than a modal buys three things a panel does not: a shareable addres
 mobile layout to be a full page instead of a squeezed sheet, and a URL the capture script can point
 at.
 
-**Screen.** Above `lg`, two columns: people on the left, and on the right the invite control above a
-card that will hold this trip's link sharing when `COL-10` and `COL-11`
-(`07-collaboration-and-sharing.md`) land — the column is present with the invite control alone until
-then, and is not a placeholder for a feature that does not exist. Below `lg` the columns stack, invite
+**Screen.** Above `lg`, two columns: people on the left, and on the right the invite control, then
+the **visibility card** (decision 1b) — a `Card` with one `Switch` reading "Visible to everyone in
+the workspace", its current state in words beneath ("Only the people listed here can see this trip"
+or "Anyone in the workspace can open this trip"), rendered for the `owner` and rendered read-only as
+a sentence for everyone else — and beneath that the card that will hold this trip's link sharing when
+`COL-10` and `COL-11` (`07-collaboration-and-sharing.md`) land. The column is not a placeholder for a
+feature that does not exist: the invite control and the visibility card are real from this stage. Below `lg` the columns stack, invite
 first, because on a phone the reason you opened this page is to add somebody.
 
 **The two lists.** Members carry an `Avatar`, a name, the workspace handle, a role `Badge`, and a
@@ -2666,7 +2939,8 @@ marking on the trip's owner; the caller's own row is labelled as theirs. Non-own
 `IconButton`; the caller's own row carries a leave affordance instead, which is a different verb and a
 different icon because it has a different consequence — leaving redirects to the trips index, removing
 does not move you anywhere. Guests are a second list beneath, each row a name, a guest `Badge`, a
-rename control and a remove control, all `owner`-only.
+rename control, a remove control and a **merge** control ("This is now…", a `Combobox` over the trip's
+members, decision 7b), all `owner`-only.
 
 **Components reused, not rebuilt.** `Card`, `SectionLabel`, `Avatar`, `AvatarStack`, `Badge`,
 `Button`, `IconButton`, `Combobox`, `Input`, `Field`, `Dialog`, `Alert`, `EmptyState`, `Skeleton`,
@@ -2686,8 +2960,10 @@ required and none is proposed.
   A failed write leaves its own row in an error state with the server's message and a Retry, and never
   clears the list.
 - _Destructive confirmation._ Removing a guest states what goes with them; leaving a trip states that
-  you will lose access until somebody re-adds you. Both are `Dialog`s with a `loading` button, not a
-  browser `confirm`.
+  you will lose access until somebody re-adds you; merging a guest names the member who will inherit
+  their assignments and says it cannot be undone. All three are `Dialog`s with a `loading` button, not
+  a browser `confirm`. Switching visibility to `organization` is a plain toggle — it is reversible —
+  but its label changes to the sentence above so the consequence is read, not inferred.
 - _Every control._ Rest, hover, focus-visible, active, disabled and loading — including the invite
   button, which is disabled until a person is chosen and shows `loading` while the write is in flight.
 
@@ -2713,8 +2989,8 @@ argued rather than assumed.**
   not mean. Nothing is added to `resolveLimits()` or to `PLAN_QUOTAS`, and
   `src/server/billing/__tests__/limits.test.ts` gains no case and is not an owned path.
 - **What bounds guests instead is structural, and it is not a quota.** `createTripGuest` refuses past
-  a named constant, `MAX_TRIP_GUESTS`, declared in `src/server/repos/trip-guests.ts` next to the
-  reason it exists: the participant pickers and the split arithmetic every later plan builds on this
+  a named constant, `MAX_TRIP_GUESTS = 50` (decision 7), declared in `src/server/repos/trip-guests.ts`
+  next to the reason it exists: the participant pickers and the split arithmetic every later plan builds on this
   read model degrade badly past a few dozen names, and an unbounded per-trip list is a noisy-neighbour
   surface with no meter behind it. It is a repository invariant with a unit test, not a plan ceiling,
   it is not published on the pricing page, and it is deliberately not routed through `assertQuota`,
@@ -2735,10 +3011,17 @@ id returns an empty participant set rather than a member list — the specific t
 trip rather than raising, so a participant reader that does not call `requireTrip` first would report
 "a trip with no people" instead of refusing. `listTripParticipants` therefore calls `requireTrip`
 first, and this case is what proves it. Finally, `addTripMember` with a `userId` belonging to B's
-organization raises rather than writing a membership naming a stranger.
+organization raises rather than writing a membership naming a stranger, and `mergeTripGuest` with
+B's guest id or B's member id raises `NotFoundError` and relinks nothing.
 
-Functions covered: `createTripGuest`, `renameTripGuest`, `removeTripGuest`, `listTripGuests`,
-`listTripParticipants`, `addTripMember`, `updateTripMember`, `removeTripMember`.
+Functions covered: `createTripGuest`, `renameTripGuest`, `removeTripGuest`, `mergeTripGuest`,
+`listTripGuests`, `listTripParticipants`, `addTripMember`, `updateTripMember`, `removeTripMember`.
+
+One `describe` block appended to `member-isolation.test.ts` (`01-S1`'s file): a non-member of a
+private trip gets `NotFoundError` from `loadTripPeople`'s repository calls and from
+`setTripVisibility`; an `editor` gets `FORBIDDEN` from `setTripVisibility`, `createTripGuest` and
+`mergeTripGuest`; and flipping `visibility` to `organization` makes `listTripParticipants` readable to
+the non-member without making any guest write possible.
 
 ### Verification
 
@@ -2747,9 +3030,11 @@ Functions covered: `createTripGuest`, `renameTripGuest`, `removeTripGuest`, `lis
 fails `pnpm typecheck` rather than the browser.
 
 **Unit tests.** `src/server/repos/__tests__/trip-guests.test.ts` — a second guest with an existing
-name is stored disambiguated and the unique index is never violated; disambiguation is bounded and
-falls back rather than looping; `MAX_TRIP_GUESTS` is enforced at the boundary and the refusal names
-the limit; `listTripParticipants` returns members and guests in one array with the discriminant
+name, in any letter case and with surrounding spaces, is refused with the inline message and the
+unique index is never reached; renaming onto an existing name is refused the same way;
+`MAX_TRIP_GUESTS` is enforced at the boundary at 50 and the refusal names the limit; a merge runs
+two fake relinkers in order inside one batch, removes the guest, returns both counts, refuses a
+`memberId` that is not on the trip, and leaves everything in place when a relinker throws; `listTripParticipants` returns members and guests in one array with the discriminant
 intact and the trip's owner first; removing the last owner is refused; and a member removed from the
 workspace no longer appears as an invitable profile.
 
@@ -2773,7 +3058,8 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --state invite-open --click '[data-part="trip-invite-trigger"]'
 ```
 
-and a second run at `--state guest-remove` reaching the destructive dialog. Both selectors are stable
+a second run at `--state guest-remove` reaching the destructive dialog, and a third at
+`--state guest-merge --click '[data-part="trip-guest-merge"]'`. All three selectors are stable
 published attributes, each verified with a `page.locator(sel).count()` of 1 against the running server
 before the capture runs. `e2e/helpers/shoot.ts` is not claimed: the screen prints no clock-derived
 string — a joined date is rendered as an absolute date, deliberately, so that this page is stable on
@@ -2848,7 +3134,8 @@ Rows unblocked: none. No row in `gap-rows.json` names `TRP-01`.
 ### Owned paths
 
 - `src/routes/_app/trips/index.tsx` — edit.
-- `src/routes/_app/dashboard.tsx` — edit.
+- `src/routes/_app/dashboard.tsx` — edit. Shared across waves with `01-S5` (wave 2) and `14-S1`
+  (`14-dashboard-mascot.md`, wave 3); this stage is the last of the three and edits the hero only.
 - `src/routes/_app/-ui/trip-card.tsx` — edit.
 - `src/routes/_app/-ui/trip-list-row.tsx` — new. The list mode's row.
 - `src/routes/_app/-lib/view-mode.ts` — new. The view-mode vocabulary, the `planned.trips-view`
@@ -2874,9 +3161,10 @@ and a second implementation of it would be the defect this list is meant to prev
 
 ### Data and migration
 
-**No schema change and no migration.** Every column is present: `trips.is_archived` and
-`trips.is_favourite` (`src/server/db/schema.ts:355-356`), `trips.start_date`/`end_date` for the
-progress figure, and `trip_guests` from `01-S6`. The view mode and the archived fold are one
+**No schema change and no migration.** Every column and table is present: `trips.is_archived`
+(`src/server/db/schema.ts:635`), `trips.start_date`/`end_date` for the progress figure,
+`trip_favourites` from `01-S1` (decision 5 — `trips.is_favourite` is dead and this stage never reads
+it), and `trip_guests` from `01-S6`. The view mode and the archived fold are one
 per-browser record through `src/lib/local-preference.ts` — `planned.trips-view`, **`area: 'local'`**
 — and not a column, for the reasons `01-S3` and `01-S5` already argued. The area is not a detail
 here: `TRP-01` asks for "grid/list view modes **persisted** client-side", so a session lifetime would
@@ -2902,7 +3190,11 @@ a `Map<string, number>` of members plus guests per trip, in two grouped queries 
 payloads grow:
 
 - `loadTrips` (`:259`) returns the archived trips as their own array beside the active list, so the
-  archived section is a fold rather than a second request, and adds the companion count per card.
+  archived section is a fold rather than a second request, adds the companion count per card, and
+  marks each card with the **caller's** favourite from `listFavouriteTripIds` (`01-S1`); the
+  `favourites` scope and its pill count read the same table. Every list it returns is already
+  narrowed by `01-S1`'s read predicate — a private trip the caller is not on is not in the payload
+  (decision 1).
   Its existing `archived` search filter is kept, because the archived **scope** and the archived
   **section** are different readings and a URL that names the scope must keep working.
 - `loadDashboard` (`:181`) adds the companion count and the elapsed fraction for the trip in the hero.
@@ -2955,8 +3247,9 @@ is what the `StatCard` pattern in `docs/DESIGN.md` is for and what `HeroStat` (`
 second field of the same `planned.trips-view` record, so it outlives the session with the mode. It is
 below the fold of every viewport this plan photographs, so resolving it after hydration moves nothing
 that is on screen. Its
-rows carry Copy, Restore and Delete permanently, which are `01-S1`'s `copyTripFn`, `restoreTripFn` and
-`deleteTripFn`; no new write is added.
+rows carry Copy for every reader and, for an `owner`, Restore and Delete permanently — `01-S1`'s
+`copyTripFn`, `restoreTripFn` and `deleteTripFn` behind `01-S1`'s role-filtered menu; no new write is
+added.
 
 **Components reused, not rebuilt.** `Card`, `Progress`, `AvatarStack`, `Badge`, `Chip`, `Button`,
 `IconButton`, `SectionLabel`, `Skeleton`, `EmptyState`, `Alert`, `Separator`, `Tooltip`, and
@@ -3177,8 +3470,9 @@ and the `trips_date_order_chk` constraint (`src/server/db/schema.ts:369-372`) is
 **Server functions — `src/routes/_app/-server/trip-lifecycle.ts`, edited.** `createTripFn`'s validator
 widens to the full field set plus `dayCount`, `coverImageKey`, `coverImageUrl`, `reminderDays` and
 `memberUserIds`. It then does, in order: create the trip; when a duration was given without dates,
-create that many days; and when member ids were given, add each through `addTripMember`, which
-`01-S6` guarded to refuse a user outside the workspace. No reminder is scheduled — under `00-S5`'s
+create that many days; and when member ids were given, add each through `addTripMember` as `editor` — the role the
+reference gives a member by default and the one the form offers, with a per-person role control for
+`viewer` — which `01-S6` guarded to refuse a user outside the workspace. No reminder is scheduled — under `00-S5`'s
 scan model the next sweep sees the new trip on its own, and `reminderDays` is just a stored column.
 
 Members are added **after** the trip exists, because a membership needs a trip id, and each failure is
@@ -3200,11 +3494,15 @@ bounded array of ids.
 
 **Authorisation.** `createTripFn` needs only a tenant scope — creating a trip inside your own workspace
 is what a member does — and the `trips` quota assertion inside `createTrip` is what bounds it. Editing
-goes through `updateTripFn`, whose `assertTripRole` check `01-S1` put in the repository. A member id
+goes through `updateTripFn`, whose `assertTripRole` check `01-S1` put in the repository — `owner`
+only (decision 6), so the edit sheet opens for an owner and the form's owner-only fields (cover,
+reminder) are rendered only when the payload's role says `owner`. A member id
 arriving from the browser is re-resolved against the caller's workspace before it becomes a
 membership.
 
-Nothing enqueued beyond the reminder key `00-S5` already writes; no Durable Object patch.
+Nothing enqueued — under `00-S5`'s scan model there is no reminder key to write — and no Durable
+Object patch. `visibility` is **not** a field of this form: decision 1b puts the switch on the people
+screen (`01-S6`), and a new trip is `private` until its owner says otherwise.
 
 ### UI (route, components)
 
@@ -3780,8 +4078,9 @@ column's, the narrower one is the product's, and narrowing at the boundary rathe
 means the decision can change without a migration.
 
 **Authorisation.** In the repository, through the `assertTripRole` guard `01-S1` added to `updateTrip`:
-`owner` or `editor`. The reminder is not separately gated, because the people who can move a trip's
-dates are exactly the people whose reminder it is.
+`owner` (decision 6). The reminder is not separately gated, because the person who can move a trip's
+dates is the person who sets its reminder — and the reference shows the control on edit to the owner
+alone, which `01-S8`'s form already does with its owner-only fields.
 
 **Delivery is already asynchronous.** The sweep dispatches through `00-S2` — in-app rows plus
 per-recipient `email` envelopes with deterministic ids, chunked under that stage's bounds; nothing
@@ -3824,8 +4123,8 @@ no second visit to this control.
 
 ### Quota
 
-**No countable row.** A reminder is a KV key with a TTL and, when it comes due, one queue envelope. It
-creates no D1 row, so no metric applies; none is added to `resolveLimits()` and none to `PLAN_QUOTAS`,
+**No countable row.** A reminder is a scan hit and, when it comes due, one queue envelope and one
+self-expiring KV marker. It creates no D1 row, so no metric applies; none is added to `resolveLimits()` and none to `PLAN_QUOTAS`,
 and `src/server/billing/__tests__/limits.test.ts` gains no case and is not an owned path.
 
 What has to be bounded here is not rows but fan-out, and it already is, in a place that is not this
@@ -3946,35 +4245,42 @@ The command and its output, verbatim, run against the full plan set — thirteen
 five area plans that did not exist when this one was first drafted. Sibling plans are rewritten
 **while this file is being written**, and the drift is watched rather than assumed: within one hour
 the plan count moved 8 → 13, the stage count 48 → 91, and the owned-path total 284 → 554 → 553 → 535
-→ 541. The two moves that are this plan's own are worth naming. The twenty per-stage spec and baseline
+→ 541; at the grilling revision of 2026-08-28 it read 16 · 105 · 682, three more plans (`13-community-gallery.md`,
+`13-content-studio.md`, `14-dashboard-mascot.md`) having arrived and this revision having added its
+own files. The two moves that are this plan's own are worth naming. The twenty per-stage spec and baseline
 paths an earlier draft claimed became the two shared ones `12-verification-protocol.md` §4 fixes, so
 eighteen owned paths left this file; and this revision added six back — the `trip-copy` handler, its
 test, `src/server/queue/types.ts`, `src/server/queue/consumer.ts`, the reminder-and-statistics
 side-effect test, and nothing else — when `01-S1`'s copy moved out of the request path. The rest of
 the drift is other plans' edits. So the first line and the seventh are a timestamp, not a claim; the
 two lines that carry this plan's obligation and must not move are the fifth — **no same-wave exclusive
-collision** — and the eighteen stanzas under the seventh, every one of which is answered in the table
+collision** — and the nineteen stanzas under the seventh, every one of which is answered in the table
 below.
 
 ```text
 $ node scripts/ultrabuild/check-plan-collisions.mjs 01
-plans 13 · stages 91 · owned paths 541
+plans 16 · stages 105 · owned paths 682
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
 no same-wave exclusive collisions
 
-touched by more than one plan in different waves (18) — legal; each plan must name the other:
+touched by more than one plan in different waves (19) — legal; each plan must name the other:
   src/server/queue/types.ts
       00-foundations.md  00-S4  wave 0  (edit)
       01-trips-core.md  01-S1  wave 1  (edit)
       07-collaboration-and-sharing.md  07-S8  wave 4  (edit)
+      13-community-gallery.md  13-S1  wave 3  (edit)
+      13-community-gallery.md  13-S4  wave 6  (edit)
+      13-content-studio.md  13-S6  wave 10  (append)
   src/server/queue/consumer.ts
       00-foundations.md  00-S4  wave 0  (edit)
       01-trips-core.md  01-S1  wave 1  (edit)
       07-collaboration-and-sharing.md  07-S8  wave 4  (edit)
+      13-community-gallery.md  13-S1  wave 3  (edit)
+      13-community-gallery.md  13-S4  wave 6  (edit)
+      13-content-studio.md  13-S6  wave 10  (append)
   src/routes/_app/-server/overview.ts
-      00-foundations.md  00-S5  wave 0  (edit)
       01-trips-core.md  01-S1  wave 1  (edit)
       01-trips-core.md  01-S7  wave 5  (edit)
       09-account-and-settings.md  09-S7  wave 2  (edit)
@@ -3983,6 +4289,19 @@ touched by more than one plan in different waves (18) — legal; each plan must 
       01-trips-core.md  01-S1  wave 1  (edit)
       01-trips-core.md  01-S6  wave 4  (edit)
       07-collaboration-and-sharing.md  07-S6  wave 2  (edit)
+  src/server/repos/index.ts
+      01-trips-core.md  01-S1  wave 1  (append)
+      01-trips-core.md  01-S6  wave 4  (edit)
+      06-documents-and-media.md  06-S3  wave 2  (append)
+      06-documents-and-media.md  06-S5  wave 3  (append)
+      07-collaboration-and-sharing.md  07-S10  wave 5  (edit)
+      13-community-gallery.md  13-S1  wave 3  (append)
+      13-content-studio.md  13-S1  wave 7  (append)
+      13-content-studio.md  13-S2  wave 8  (append)
+      13-content-studio.md  13-S4  wave 9  (append)
+      13-content-studio.md  13-S5  wave 9  (append)
+      13-content-studio.md  13-S6  wave 10  (append)
+      13-content-studio.md  13-S7  wave 11  (append)
   src/routes/_app/trips/$tripId/plan.tsx
       01-trips-core.md  01-S2  wave 1  (edit)
       03-reservations-and-transport.md  03-S5  wave 4  (edit)
@@ -4039,22 +4358,19 @@ touched by more than one plan in different waves (18) — legal; each plan must 
       02-places-and-maps.md  02-S5  wave 3  (edit)
       02-places-and-maps.md  02-S10  wave 5  (edit)
       02-places-and-maps.md  02-S11  wave 6  (edit)
+  src/routes/_app/dashboard.tsx
+      01-trips-core.md  01-S5  wave 2  (edit)
+      01-trips-core.md  01-S7  wave 5  (edit)
+      14-dashboard-mascot.md  14-S1  wave 3  (edit)
   e2e/helpers/shoot.ts
       01-trips-core.md  01-S5  wave 2  (edit)
       10-administration.md  10-S2  wave 1  (edit)
-  src/server/repos/index.ts
-      01-trips-core.md  01-S6  wave 4  (edit)
-      06-documents-and-media.md  06-S3  wave 2  (append)
-      06-documents-and-media.md  06-S5  wave 3  (append)
-      07-collaboration-and-sharing.md  07-S10  wave 5  (edit)
 $ echo $?
 0
 ```
 
 ```text
 $ node scripts/ultrabuild/check-plan-refs.mjs 01
-
-
 plan 01: 0 dangling stage reference(s), 0 plan(s) missing a Playwright invocation
 $ echo $?
 0
@@ -4077,45 +4393,49 @@ plan yielding the file, and the resolution is argued in full under **The four pl
 closed by then.
 
 **Every cross-wave path the check lists is named in its owning stage, with the sibling stage id.** All
-eighteen, in the order the check prints them:
+nineteen, in the order the check prints them:
 
-| Path                                                 | This plan's stages        | Sibling stages, with wave                                                 | Where this plan names them                                    |
-| ---------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `src/server/queue/types.ts`                          | `01-S1`                   | `00-S4` (wave 0), `07-S8` (wave 4)                                        | **Owned paths** of `01-S1`                                    |
-| `src/server/queue/consumer.ts`                       | `01-S1`                   | `00-S4` (wave 0), `07-S8` (wave 4)                                        | **Owned paths** of `01-S1`                                    |
-| `src/routes/_app/-server/overview.ts`                | `01-S1`, `01-S7`          | `00-S5` (wave 0), `09-S7` (wave 2), `10-S3` (wave 4)                      | **Owned paths** of `01-S1` and of `01-S7`                     |
-| `src/server/repos/trips.ts`                          | `01-S1`, `01-S6`          | `07-S6` (wave 2)                                                          | **Owned paths** of `01-S1` and of `01-S6`                     |
-| `src/routes/_app/trips/$tripId/plan.tsx`             | `01-S2`                   | `03-S5` (wave 4)                                                          | **Owned paths** of `01-S2`, shared-path table                 |
-| `src/routes/_app/trips/$tripId/-ui/plan-model.ts`    | `01-S2`, `01-S4`          | `02-S7` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6)                      | Both stages' shared-path tables, and the four-file schedule   |
-| `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx`  | `01-S2`, `01-S4`, `01-S9` | `02-S4` (wave 3), `03-S5` (wave 4)                                        | All three stages' **Owned paths**, and the four-file schedule |
-| `src/components/planner/day-section.tsx`             | `01-S2`, `01-S4`          | `02-S4` (wave 3), `03-S5` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6)    | Both stages' shared-path tables                               |
-| `src/components/planner/types.ts`                    | `01-S2`, `01-S4`          | `03-S5` (wave 4), `03-S8` (wave 6)                                        | Both stages' shared-path tables                               |
-| `src/components/planner/index.ts`                    | `01-S2`, `01-S4`          | `03-S5` (wave 4)                                                          | Both stages' shared-path tables                               |
-| `src/components/planner/ordering.ts`                 | `01-S4`                   | `03-S5` (wave 4)                                                          | `01-S4`'s shared-path table                                   |
-| `src/components/planner/plan-dnd.ts`                 | `01-S4`                   | `03-S5` (wave 4)                                                          | `01-S4`'s shared-path table                                   |
-| `src/components/planner/__tests__/ordering.test.ts`  | `01-S4`                   | `03-S5` (wave 4)                                                          | `01-S4`'s shared-path table                                   |
-| `src/server/repos/itinerary.ts`                      | `01-S4`                   | `07-S9` (wave 3), `02-S9` (wave 5)                                        | **Owned paths** of `01-S4`, shared-path table                 |
-| `src/routes/_app/trips/$tripId/-server/plan.ts`      | `01-S4`                   | `07-S1` (wave 1), `02-S7` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6)    | **Owned paths** of `01-S4`, the brief, the four-file schedule |
-| `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` | `01-S4`                   | `02-S5` (wave 3), `02-S10` (wave 5), `02-S11` (wave 6)                    | `01-S4`'s shared-path table, and the four-file schedule       |
-| `e2e/helpers/shoot.ts`                               | `01-S5`                   | `10-S2` (wave 1)                                                          | **Owned paths** of `01-S5`                                    |
-| `src/server/repos/index.ts`                          | `01-S6`                   | `06-S3` (wave 2, `append`), `06-S5` (wave 3, `append`), `07-S10` (wave 5) | **Owned paths** of `01-S6`                                    |
+| Path                                                 | This plan's stages          | Sibling stages, with wave                                                                                                                                  | Where this plan names them                                    |
+| ---------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `src/server/queue/types.ts`                          | `01-S1`                     | `00-S4` (wave 0), `13-S1` (wave 3), `07-S8` (wave 4), `13-S4` (wave 6), `13-S6` (wave 10, `append`)                                                        | **Owned paths** of `01-S1`                                    |
+| `src/server/queue/consumer.ts`                       | `01-S1`                     | `00-S4` (wave 0), `13-S1` (wave 3), `07-S8` (wave 4), `13-S4` (wave 6), `13-S6` (wave 10, `append`)                                                        | **Owned paths** of `01-S1`                                    |
+| `src/routes/_app/-server/overview.ts`                | `01-S1`, `01-S7`            | `00-S5` (wave 0), `09-S7` (wave 2), `10-S3` (wave 4)                                                                                                       | **Owned paths** of `01-S1` and of `01-S7`                     |
+| `src/server/repos/trips.ts`                          | `01-S1`, `01-S6`            | `07-S6` (wave 2)                                                                                                                                           | **Owned paths** of `01-S1` and of `01-S6`                     |
+| `src/routes/_app/trips/$tripId/plan.tsx`             | `01-S2`                     | `03-S5` (wave 4)                                                                                                                                           | **Owned paths** of `01-S2`, shared-path table                 |
+| `src/routes/_app/trips/$tripId/-ui/plan-model.ts`    | `01-S2`, `01-S4`            | `02-S7` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6)                                                                                                       | Both stages' shared-path tables, and the four-file schedule   |
+| `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx`  | `01-S2`, `01-S4`, `01-S9`   | `02-S4` (wave 3), `03-S5` (wave 4)                                                                                                                         | All three stages' **Owned paths**, and the four-file schedule |
+| `src/components/planner/day-section.tsx`             | `01-S2`, `01-S4`            | `02-S4` (wave 3), `03-S5` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6)                                                                                     | Both stages' shared-path tables                               |
+| `src/components/planner/types.ts`                    | `01-S2`, `01-S4`            | `03-S5` (wave 4), `03-S8` (wave 6)                                                                                                                         | Both stages' shared-path tables                               |
+| `src/components/planner/index.ts`                    | `01-S2`, `01-S4`            | `03-S5` (wave 4)                                                                                                                                           | Both stages' shared-path tables                               |
+| `src/components/planner/ordering.ts`                 | `01-S4`                     | `03-S5` (wave 4)                                                                                                                                           | `01-S4`'s shared-path table                                   |
+| `src/components/planner/plan-dnd.ts`                 | `01-S4`                     | `03-S5` (wave 4)                                                                                                                                           | `01-S4`'s shared-path table                                   |
+| `src/components/planner/__tests__/ordering.test.ts`  | `01-S4`                     | `03-S5` (wave 4)                                                                                                                                           | `01-S4`'s shared-path table                                   |
+| `src/server/repos/itinerary.ts`                      | `01-S4`                     | `07-S9` (wave 3), `02-S9` (wave 5)                                                                                                                         | **Owned paths** of `01-S4`, shared-path table                 |
+| `src/routes/_app/trips/$tripId/-server/plan.ts`      | `01-S4`                     | `07-S1` (wave 1), `02-S7` (wave 4), `02-S9` (wave 5), `03-S8` (wave 6)                                                                                     | **Owned paths** of `01-S4`, the brief, the four-file schedule |
+| `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` | `01-S4`                     | `02-S5` (wave 3), `02-S10` (wave 5), `02-S11` (wave 6)                                                                                                     | `01-S4`'s shared-path table, and the four-file schedule       |
+| `e2e/helpers/shoot.ts`                               | `01-S5`                     | `10-S2` (wave 1)                                                                                                                                           | **Owned paths** of `01-S5`                                    |
+| `src/routes/_app/dashboard.tsx`                      | `01-S5`, `01-S7`            | `14-S1` (wave 3)                                                                                                                                           | **Owned paths** of `01-S5` and of `01-S7`                     |
+| `src/server/repos/index.ts`                          | `01-S1` (`append`), `01-S6` | `06-S3` (wave 2, `append`), `06-S5` (wave 3, `append`), `13-S1` (wave 3, `append`), `07-S10` (wave 5), `13-*` content-studio stages (waves 7–11, `append`) | **Owned paths** of `01-S1` and of `01-S6`                     |
 
 Sibling plans are named by file the first time each appears above: `00-foundations.md`,
 `02-places-and-maps.md`, `03-reservations-and-transport.md`, `06-documents-and-media.md`,
-`07-collaboration-and-sharing.md`, `09-account-and-settings.md` and `10-administration.md`.
+`07-collaboration-and-sharing.md`, `09-account-and-settings.md`, `10-administration.md`,
+`13-community-gallery.md`, `13-content-studio.md` and `14-dashboard-mascot.md`.
 
-Ten of the eighteen paths are new to this section since this plan's first draft, and all ten are the
-planner cluster claimed by `02-…` and `03-…`; two more arrived with this revision, the queue registry
-pair `01-S1` now claims; three of the six that were already here gained further siblings, among them
-the two `append` claims on the repository barrel from `06-…`. None is a collision. In every one of the
-eighteen, no two claims share a wave, and the two `06-…` claims are `append`, which is cooperative by
-construction. The naming obligation is met from this side for all eighteen; where a sibling also names
-this plan — `00-S5`, `09-S7`, `10-S3`, `07-S1`, `07-S6`, `07-S9`, `07-S10` and `10-S2` do — it is met
-from both.
+Ten of the nineteen paths are new to this section since this plan's first draft, and all ten are the
+planner cluster claimed by `02-…` and `03-…`; two more arrived with the queue revision, the registry
+pair `01-S1` claims; the grilling revision added one — `src/routes/_app/dashboard.tsx`, which
+`14-S1` now also edits in wave 3, between this plan's wave-2 and wave-5 claims — and put `01-S1`'s
+`append` on the repository barrel beside the `13-*` appends that arrived with the two newest plans.
+None is a collision. In every one of the nineteen, no two exclusive claims share a wave, and every
+`append` is cooperative by construction. The naming obligation is met from this side for all nineteen;
+where a sibling also names this plan — `00-S5`, `09-S7`, `10-S3`, `07-S1`, `07-S6`, `07-S9`, `07-S10`
+and `10-S2` do — it is met from both.
 
-**Two of the eighteen are named from one side only, and that is stated rather than glossed.**
-`src/server/queue/types.ts` and `src/server/queue/consumer.ts` are claimed by `00-S4` in wave 0 and by
-`07-S8` in wave 4, and neither of those two stages names `01-S1` — they were written before this
+**Three of the nineteen are named from one side only, and that is stated rather than glossed.**
+`src/server/queue/types.ts` and `src/server/queue/consumer.ts` are claimed by `00-S4` in wave 0, by
+`07-S8` in wave 4 and by the `13-*` stages listed above, and `src/routes/_app/dashboard.tsx` by `14-S1`
+in wave 3; none of those stages names this plan — they were written before this
 revision existed and neither file is this plan's to edit. The obligation the acceptance criterion
 places on this plan is met: both paths are named in `01-S1`'s **Owned paths** with both sibling stage
 ids and both waves. The reciprocal note is filed as a contract extension. Nothing about the schedule
@@ -4131,7 +4451,9 @@ contract extension rather than made here.
 
 `src/lib/markdown/**`, `src/routes/_app/trips/$tripId/-server/day-notes.ts`, `src/lib/local-preference.ts`,
 `src/lib/trip-tab.ts`, `src/lib/clock-zones.ts`, `src/routes/_app/-lib/view-mode.ts`,
-`src/server/queue/handlers/trip-copy.ts`,
+`src/server/queue/handlers/trip-copy.ts`, `src/server/queue/handlers/trip-purge.ts`,
+`src/server/storage/objects.ts`, `src/server/repos/trip-favourites.ts`,
+`src/server/repos/__tests__/member-isolation.test.ts`, `src/routes/_app/-ui/trip-copy-dialog.tsx`,
 `src/routes/_app/-server/__tests__/trip-lifecycle-side-effects.test.ts` and
 `src/routes/_app/trips/$tripId/-ui/plan-layout.ts` are new claims of this plan and appear nowhere else
 in the plan set, in any wave — which is what makes the browser-preference module a single home for
