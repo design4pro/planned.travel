@@ -52,7 +52,7 @@ run_step() { # name command...
   fi
 }
 
-route_tree_gate() { pnpm generate-routes && git diff --exit-code src/routeTree.gen.ts; }
+route_tree_gate() { pnpm generate-routes && git diff --exit-code -- src/routeTree.gen.ts; }
 
 run_step "route-tree" route_tree_gate
 run_step "typecheck" pnpm typecheck
@@ -83,6 +83,13 @@ fi
 E2E_FAILED_JSON="[]"
 if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
   run_step "e2e-env" bash .sandcastle/setup-e2e.sh --if-needed
+  # setup-e2e.sh returns only once the dev server answers, and starting it runs
+  # the vite plugin's route generator over the same file `tsr generate` wrote in
+  # the gate above. The two agree because tsr.config.json carries the plugin's
+  # Start footer; if they ever drift apart again, the rewrite lands here as a
+  # named step failure rather than as a mid-suite module reload that fails two
+  # unrelated specs on `[vite] Failed to reload`. See issue #82.
+  run_step "route-tree-after-dev" git diff --exit-code -- src/routeTree.gen.ts
   if [ "$OVERALL_OK" -eq 1 ]; then
     # Four workers per container by default: two containers run at once
     # (MAX_PARALLEL in main.ts), and 8 browsers + 2 Vite servers is well inside
