@@ -325,8 +325,8 @@ source currency was discarded on write; the builder now takes a name
 which is why it has a row in the register in `docs/DEPLOY.md` §12 — and why `0006_mighty_nehzno`,
 which gave `settlements` the same three columns, is `ADD COLUMN` only.
 
-No row carries the corruption that recreate could have written, which is measured rather than
-assumed. `0001`'s copy statement selects `"original_currency"` out of a table that did not have the
+No row carries the corruption that the recreate could have written, and that is measured rather
+than assumed. `0001`'s copy statement selects `"original_currency"` out of a table that did not have the
 column yet, and SQLite's double-quoted-string fallback — on in D1 — resolves an identifier it cannot
 bind as a text literal instead of failing, so every row that predated the migration would have been
 given the 17-character string `'original_currency'`. Both deployed databases were counted on
@@ -344,8 +344,8 @@ planned-travel-db-staging  [{"total":0,"corrupted":null}]
 ```
 
 `corrupted` is `null` because it is a `sum()` over an empty set: `expenses` holds no rows at all in
-either database. None can appear later either: `0000` and `0001` land in the same commit, so every
-database built from this repository applies them back-to-back into an empty table. The guard against
+either database. No corrupted row can appear later either: `0000` and `0001` land in the same
+commit, so every database built from this repository applies them back-to-back into an empty table. The guard against
 a _later_ migration repeating the mistake is
 `src/server/db/__tests__/migration-quoted-identifiers.test.ts`.
 
