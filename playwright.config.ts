@@ -111,9 +111,9 @@ export default defineConfig({
   // ci.yml; locally Playwright's default (half the cores) applies.
   workers: isCI ? 1 : undefined,
   timeout: 30_000,
-  // Per CI shard (ci.yml splits the suite six ways): ~2 min of tests at two
-  // workers, sized generously so a retry-heavy shard still reports instead of
-  // being cut off — the report is what tells load from regression.
+  // Per CI shard (ci.yml splits the suite six ways): 2-4 min of tests, sized
+  // generously so a retry-heavy shard still reports instead of being cut off —
+  // the report is what tells load from regression.
   globalTimeout: isCI ? 10 * 60_000 : undefined,
   reporter: isCI
     ? [
