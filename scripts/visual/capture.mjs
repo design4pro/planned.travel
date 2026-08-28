@@ -25,7 +25,7 @@
  * into the shot directory it is given, for a blind critic to look at.
  *
  * Usage:
- *   node scripts/ultrabuild/capture.mjs \
+ *   node scripts/visual/capture.mjs \
  *     --url http://localhost:3010/atlas \
  *     --out .sandcastle-shots/issue-<n> \
  *     --label A \

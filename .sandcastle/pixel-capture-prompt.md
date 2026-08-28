@@ -21,7 +21,7 @@ is worse than no pair.
 ## Our side — run the script, do not reinvent the procedure
 
     mkdir -p {{SHOTS_DIR}}
-    node scripts/ultrabuild/capture.mjs \
+    node scripts/visual/capture.mjs \
       --url http://localhost:3010/<path> \
       --out {{SHOTS_DIR}} \
       --label {{OURS_LABEL}} \
@@ -40,7 +40,7 @@ handed it as evidence. If `--auth` fails because `e2e/.auth/demo.json` is missin
 
 Photograph the reference with the same script — it is generic Playwright underneath:
 
-    node scripts/ultrabuild/capture.mjs \
+    node scripts/visual/capture.mjs \
       --url https://demo.liketrek.com/<path> \
       --out {{SHOTS_DIR}} \
       --label {{REF_LABEL}} \
