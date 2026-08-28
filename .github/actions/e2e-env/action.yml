@@ -67,9 +67,16 @@ runs:
 
     # The archive is ~480 MB and immutable under its dated key, so a hit here is
     # the normal case and the download below runs once per new basemap.
+    #
+    # Restore and save are separate steps on purpose. `actions/cache` saves in a
+    # post step that is skipped when the job fails, so a red run after a miss
+    # left the next run missing again — measured: four consecutive misses on
+    # `main`. Saving right after the download makes the entry independent of
+    # the suite's verdict. Six shards missing at once all try to save the same
+    # key; the first wins and the rest log a reservation warning, not an error.
     - name: Restore the basemap archive
       id: tiles-cache
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
         path: .e2e-tiles/basemap.pmtiles
         key: pmtiles-${{ inputs.tiles-key }}
@@ -86,6 +93,13 @@ runs:
         pnpm exec wrangler r2 object get \
           "planned-travel-tiles/${{ inputs.tiles-key }}" \
           --remote --file .e2e-tiles/basemap.pmtiles
+
+    - name: Save the basemap archive to the cache
+      if: steps.tiles-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: .e2e-tiles/basemap.pmtiles
+        key: pmtiles-${{ inputs.tiles-key }}
 
     # Into the Miniflare bucket under the key .dev.vars names, so /api/tiles/*
     # resolves the same way it does on your machine.

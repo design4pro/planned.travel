@@ -335,12 +335,29 @@ export async function useSession(
   }
   // Deliberately not `cacheSession()`: this runs from a `beforeEach`, and the
   // language pin that function performs is a write to the shared fixture that
-  // belongs to the setup project alone.
-  return storeSession(page, baseURL)
+  // belongs to the setup project alone. And not `storeSession()` either: that
+  // one writes the cache file, and with several workers each discovering the
+  // missing cache at once they would race to overwrite the same file — the
+  // cookies land in this context through `page.request` regardless.
+  return signIn(page, baseURL)
 }
 
-/** True when the browser context currently holds a usable session. */
+/**
+ * True once this worker has seen a usable session in the browser context.
+ *
+ * Remembered per worker process: every authenticated `beforeEach` installs the
+ * same cached cookies, so one positive probe answers for the rest of the run.
+ * The probe is `/api/auth/get-session`, which shares the auth rate limiter's
+ * single per-path bucket (100 a minute) — asked once per test, 94 tests a run
+ * compressed into a few minutes by parallel workers would trip it and turn the
+ * whole authenticated suite into false skips.
+ */
+let sessionSeen = false
+
 export async function hasSession(page: Page): Promise<boolean> {
+  if (sessionSeen) {
+    return true
+  }
   const response = await page.request.get('/api/auth/get-session', {
     failOnStatusCode: false,
   })
@@ -348,7 +365,8 @@ export async function hasSession(page: Page): Promise<boolean> {
     return false
   }
   const body: unknown = await response.json().catch(() => null)
-  return typeof body === 'object' && body !== null && 'user' in body
+  sessionSeen = typeof body === 'object' && body !== null && 'user' in body
+  return sessionSeen
 }
 
 export const THEMES: ReadonlyArray<Theme> = ['light', 'dark']

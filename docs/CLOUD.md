@@ -14,16 +14,16 @@ which is mostly a story about what the cloud VM cannot do.
 
 ## 1. Three mechanisms
 
-| | Where it runs | What starts it |
-| --- | --- | --- |
-| **Cloud session** (`claude --cloud`, claude.ai/code) | Anthropic VM: Ubuntu 24.04 x86_64, 4 vCPU, 16 GB RAM, 30 GB disk | You, from the CLI, the web, or the phone |
-| **Routine** | The same VM, unattended | cron, an authenticated `POST`, or a GitHub `pull_request` / `release` event |
-| **`@claude` GitHub Action** | A GitHub-hosted runner | `@claude` in an issue or a review |
+|                                                      | Where it runs                                                    | What starts it                                                              |
+| ---------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Cloud session** (`claude --cloud`, claude.ai/code) | Anthropic VM: Ubuntu 24.04 x86_64, 4 vCPU, 16 GB RAM, 30 GB disk | You, from the CLI, the web, or the phone                                    |
+| **Routine**                                          | The same VM, unattended                                          | cron, an authenticated `POST`, or a GitHub `pull_request` / `release` event |
+| **`@claude` GitHub Action**                          | A GitHub-hosted runner                                           | `@claude` in an issue or a review                                           |
 
 The distinction that matters most here: **routines have no `issues` trigger.**
 The supported GitHub events are pull requests and releases, and nothing else. So
 "open an issue and an agent picks it up" is `.github/workflows/claude.yml`, not a
-routine. Routines are for the things that happen *to* a pull request - review it,
+routine. Routines are for the things that happen _to_ a pull request - review it,
 port it, watch its CI.
 
 The second distinction: a cloud session runs on a machine Anthropic provisions,
@@ -43,12 +43,12 @@ box. Every cloud session and every routine runs in one.
 Two things provision a session, and putting a step in the wrong one is the usual
 reason a session starts slowly or starts broken:
 
-- **The setup script** provisions the *VM*: toolchains and browsers. It runs once
+- **The setup script** provisions the _VM_: toolchains and browsers. It runs once
   and the filesystem is then snapshotted, so later sessions start with its work
   already on disk. It must exit zero and finish inside about five minutes, or the
   snapshot never builds and every session pays for it again.
 - **The SessionStart hook** (`.claude/settings.json` →
-  `scripts/cloud/session-start.sh`, both committed) does the *project* setup that
+  `scripts/cloud/session-start.sh`, both committed) does the _project_ setup that
   has to match the commit that was just cloned: install, route tree, `.dev.vars`,
   D1 migrations, the basemap. It runs on every start and resume, and each step
   skips itself when its result is already there.
@@ -79,7 +79,7 @@ outright, and an intermittent registry hiccup is not a reason to lose a session.
 ### 2.2 Network access
 
 **`Trusted` is not enough for this project.** Set **Network access** to
-**Custom**, tick *Also include default list of common package managers*, and add:
+**Custom**, tick _Also include default list of common package managers_, and add:
 
 ```
 cdn.playwright.dev
@@ -120,7 +120,7 @@ fresh by the SessionStart hook, and a Stripe key, a Resend key or a deploy token
 would be sitting in plaintext in a shared configuration for the sake of a session
 that has no business making live calls anyway.
 
-`E2E_TILES_KEY` is a repository *variable* on GitHub as well, for the same reason
+`E2E_TILES_KEY` is a repository _variable_ on GitHub as well, for the same reason
 the Stripe price ids are: it is public information, and CI needs it to name the
 object it pulls.
 
@@ -128,7 +128,7 @@ object it pulls.
 
 Committed files reach a cloud session; your machine does not. In particular
 **`.mcp.json` is gitignored**, so the Polar and Expo servers declared there are
-*absent* from every cloud session and routine. To use them there, add them as
+_absent_ from every cloud session and routine. To use them there, add them as
 connectors at [claude.ai/customize/connectors](https://claude.ai/customize/connectors),
 which is also what makes them available to routines.
 
@@ -168,7 +168,7 @@ claude setup-token
 and the Claude GitHub App installed on the repository (`/install-github-app`
 from a local session does both, if you would rather not do it by hand).
 
-Note what this *is not*: it runs on a GitHub runner, so it does not touch the
+Note what this _is not_: it runs on a GitHub runner, so it does not touch the
 cloud environment from §2 at all. The basemap is not there, which means Claude
 cannot run the visual gate from inside that job - it pushes a branch, and CI runs
 the gate on that branch like it would for anyone else.
@@ -176,7 +176,7 @@ the gate on that branch like it would for anyone else.
 **Routines, for the pull request side.** A `pull_request.opened` trigger for a
 review against your own checklist; **Auto-fix** on a specific pull request to have
 a session watch its CI and its review comments and push fixes. Auto-fix is worth
-knowing about before you turn it on: Claude replies to review threads *as you*,
+knowing about before you turn it on: Claude replies to review threads _as you_,
 so any automation keyed on `issue_comment` in this repository would be triggered
 by it.
 
@@ -227,6 +227,17 @@ immutable key and cached on that key, so the download happens once per new
 basemap and every run after that is a cache hit. Both jobs skip themselves with a
 warning when `CLOUDFLARE_API_TOKEN` is absent, matching the gate already at the
 top of `deploy.yml`.
+
+The gate is six jobs, not one. The suite is ~1100 s of CPU-bound test execution
+on the standard 2-vCPU runner, and every job carries ~3 min of fixed cost (image
+pull, install, migrations, basemap, seed) that no worker count shortens - so one
+job could never answer inside five minutes, and neither could anything queued
+behind `verify`. `ci.yml` therefore runs `playwright test --shard=k/6` in six
+containers started alongside `verify`, each with two workers and its own D1, and
+an `e2e-report` job merges the six blob reports into the single HTML report the
+one job used to upload. The cache entry for the basemap is saved right after the
+download rather than in a post step, so a red shard still leaves the next run a
+hit.
 
 ---
 
