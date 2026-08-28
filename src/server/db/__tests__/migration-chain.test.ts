@@ -15,10 +15,10 @@
  * validator asks whether a parent is claimed twice, never whether it exists — but it is
  * the same break in the same chain, so this test rejects both.
  *
- * It refuses with exit code 0: the collision is a line on stdout and nothing else, so
- * `pnpm db:generate` looks successful to any shell that checks `$?`, and the generator
- * writes no file to notice missing either. That is why the guard is this test and not
- * an exit-code step in the ladder.
+ * That refusal comes with exit code 0: the collision is a line on stdout and nothing
+ * else, so the run looks successful to any shell that checks `$?`, and no migration
+ * file is written whose absence would give the failure away. That is why the guard is
+ * this test and not an exit-code step in the verification ladder.
  *
  * The checks live in `chainViolations`, a pure function over the links, so every way
  * the chain can break can be put to it directly as a fixture. A guard on a file that is
