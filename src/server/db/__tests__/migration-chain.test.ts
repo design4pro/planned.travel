@@ -15,9 +15,9 @@
  * validator asks whether a parent is claimed twice, never whether it exists — but it is
  * the same break in the same chain, so this test rejects both.
  *
- * The checks live in `chainViolations`, a pure function over the links, so the three
- * defects can be put to it directly as fixtures. A guard on a file that is correct at
- * rest proves nothing unless it is shown to fire.
+ * The checks live in `chainViolations`, a pure function over the links, so every way
+ * the chain can break can be put to it directly as a fixture. A guard on a file that is
+ * correct at rest proves nothing unless it is shown to fire.
  */
 
 import { readFileSync, readdirSync } from 'node:fs'
@@ -49,7 +49,7 @@ function chainViolations(links: ReadonlyArray<ChainLink>): Array<string> {
 
   links.forEach((link, index) => {
     const previous = index === 0 ? null : links[index - 1]
-    const expected = previous ? previous.id : ROOT_PREV_ID
+    const expected = previous?.id ?? ROOT_PREV_ID
     if (link.prevId !== expected) {
       const predecessor = previous ? previous.file : 'the all-zero root'
       violations.push(
@@ -61,10 +61,12 @@ function chainViolations(links: ReadonlyArray<ChainLink>): Array<string> {
         `${link.file} has prevId ${link.prevId}, which is no snapshot's id`,
       )
     }
-    parentToFiles.set(link.prevId, [
-      ...(parentToFiles.get(link.prevId) ?? []),
-      link.file,
-    ])
+    const claimants = parentToFiles.get(link.prevId)
+    if (claimants) {
+      claimants.push(link.file)
+    } else {
+      parentToFiles.set(link.prevId, [link.file])
+    }
   })
 
   for (const [parent, files] of parentToFiles) {
@@ -97,6 +99,11 @@ function journalIndices(): Array<number> {
     .sort((a, b) => a - b)
 }
 
+/** The name drizzle-kit gives the snapshot for journal entry `idx`. */
+function snapshotFileName(idx: number): string {
+  return `${String(idx).padStart(4, '0')}_snapshot.json`
+}
+
 function linkFor(file: string): ChainLink {
   const raw: unknown = JSON.parse(readFileSync(join(META_DIR, file), 'utf8'))
   if (
@@ -118,7 +125,7 @@ function snapshotFilesOnDisk(): Array<string> {
     .sort()
 }
 
-/** Two links chained correctly, to be bent one way per fixture. */
+/** Three links chained correctly, to be bent one way per fixture. */
 const FIXTURE: ReadonlyArray<ChainLink> = [
   { file: 'a', id: 'id-a', prevId: ROOT_PREV_ID },
   { file: 'b', id: 'id-b', prevId: 'id-a' },
@@ -128,16 +135,12 @@ const FIXTURE: ReadonlyArray<ChainLink> = [
 describe('the migration snapshot chain', () => {
   it('has one snapshot per journal entry', () => {
     expect(snapshotFilesOnDisk()).toEqual(
-      journalIndices().map(
-        (idx) => `${String(idx).padStart(4, '0')}_snapshot.json`,
-      ),
+      journalIndices().map(snapshotFileName),
     )
   })
 
   it('is a single line from the all-zero root', () => {
-    const links = journalIndices().map((idx) =>
-      linkFor(`${String(idx).padStart(4, '0')}_snapshot.json`),
-    )
+    const links = journalIndices().map((idx) => linkFor(snapshotFileName(idx)))
 
     expect(chainViolations(links)).toEqual([])
   })
