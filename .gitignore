@@ -36,19 +36,6 @@ playwright/.cache
 __unconfig*
 todos.json
 
-# /ultrabuild run state: contract pointer, item statuses, findings and the blind
-# A/B screenshot pairs. The command definitions in .claude/ are tracked; only the
-# per-run scratch is not.
-#
-# `knowledge/` is the exception and is tracked on purpose. It holds what the loop
-# MEASURED rather than what it produced — the settled environment facts, the
-# claims already refuted, and the deferred backlog — and it is the only thing that
-# survives a run being archived. Ignoring it is how the same port, theme and
-# capture mistakes were rediscovered in two consecutive runs at a cost of roughly
-# a hundred findings. Everything else here is derived and disposable.
-.claude/ultrabuild/*
-!.claude/ultrabuild/knowledge/
-
 # One cached demo session per e2e run, written by e2e/auth.setup.ts.
 e2e/.auth
 
@@ -59,20 +46,18 @@ e2e/.auth
 .mcp.json
 
 # Scratch a browser agent drops in the working directory. The repo's own images
-# live under e2e/__screenshots__ and .claude/ultrabuild/shots, and its own
-# scripts live under scripts/, so nothing legitimate is a bare image or a bare
-# .mjs at the root. Ignoring them is the backstop; the rule that they belong in
-# .claude/ultrabuild/shots is in BROWSER_POLICY in .claude/workflows/ultrabuild.js.
+# live under e2e/__screenshots__, the visual gate's blind pairs under
+# .sandcastle-shots/, and its own scripts under scripts/, so nothing legitimate
+# is a bare image or a bare .mjs at the root. Ignoring them is the backstop; an
+# untracked screenshot in the repo root has already broken the clean-room
+# boundary once (docs/SPEC.md §2, "capture hygiene").
 /*.png
 /*.jpg
 /*.jpeg
 /*.webp
 /*.mjs
 
-# /ultrabuild: generated per-round wrapper, rebuilt by scripts/ultrabuild/build-round.mjs
-.claude/ultrabuild/round.js
-
-# Tracked on purpose: a product screenshot, not a round capture.
+# Tracked on purpose: a product screenshot, not a capture artefact.
 !billing-light.png
 
 # Sandcastle loop state: agent worktrees and logs live inside the repo by design.

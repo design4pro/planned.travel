@@ -41,11 +41,11 @@ confusing them cost this phase a malformed decision and three agents blocked by 
 classifier.
 
 1. **The public demo, `https://demo.liketrek.com/dashboard`** - populated with sample data, and
-   the default `referenceUrl` hardcoded in `.claude/workflows/ultrabuild.js` whenever an item
-   does not name its own. This is what the blind critic has compared against since the first
-   visual round, whether or not anyone said so out loud. Its content **resets every hour**, so it
-   is a pristine read-only exhibit: nothing you create there sticks, and nothing you created a
-   moment ago is guaranteed to still exist.
+   the surface a ticket means when it names no other. It is what the blind critic has compared
+   against since the first visual round, whether or not anyone said so out loud. The URL and the
+   rules of engagement for all three surfaces are recorded in docs/agents/reference.md. Its content
+   **resets every hour**, so it is a pristine read-only exhibit: nothing you create there sticks,
+   and nothing you created a moment ago is guaranteed to still exist.
 2. **A clean local instance with administrator access** - see below. Use it for the authenticated
    surfaces the public demo cannot show, above all the admin console.
 3. **The source clone** - use it to see _which_ solution the reference reached for and _where_,
