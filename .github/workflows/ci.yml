@@ -117,7 +117,7 @@ jobs:
       (contains(github.event.pull_request.labels.*.name, 'needs-e2e') &&
        !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))
     runs-on: ubuntu-latest
-    # ~3 min fixed cost + ~2 min of tests; the config's 10 min globalTimeout
+    # ~2.5 min fixed cost + 2-4 min of tests; the config's 10 min globalTimeout
     # fires first, so a slow shard still uploads a report instead of vanishing.
     timeout-minutes: 15
     strategy:

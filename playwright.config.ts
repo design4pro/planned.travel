@@ -103,9 +103,13 @@ export default defineConfig({
   // lives in its own test's cookie jar and whose audit rows no photographed
   // console screen renders. The real contention is the auth rate limiter's
   // single per-path bucket, which `hasSession()` now asks once per worker.
-  // Two in CI because a shard runs on a 2-vCPU runner and browsers plus Vite
-  // SSR are CPU-bound; locally Playwright's default (half the cores) applies.
-  workers: isCI ? 2 : undefined,
+  // One per CI shard, measured: two workers on the 2-vCPU runner starved the
+  // atlas tests — MapLibre renders through software WebGL there, and with two
+  // browsers plus Vite SSR competing, React hydration outran the 10 s action
+  // timeout on 17 tests and left 12 flaky, all timeouts, no pixel diffs
+  // (PR #84, run 33155138232). Parallelism in CI comes from the six shards in
+  // ci.yml; locally Playwright's default (half the cores) applies.
+  workers: isCI ? 1 : undefined,
   timeout: 30_000,
   // Per CI shard (ci.yml splits the suite six ways): ~2 min of tests at two
   // workers, sized generously so a retry-heavy shard still reports instead of
