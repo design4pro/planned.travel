@@ -14,6 +14,8 @@ Supporting vocabulary already present and in use: `priority: critical/high/mediu
 
 QA findings from staging are filed as new issues with `qa-failed` (bugs) or `type: enhancement` (taste).
 
+Labels the automation itself reads and writes: `agent-blocked` (sandcastle swaps it in for `ready-for-agent` when an issue exhausts its fix budget - `markBlocked()` in `.sandcastle/main.ts`; a human re-queues it), `visual-change-expected` (declares an intended pixel change so the loop re-records baselines instead of failing the diff - equivalent to a `## Visual change expected` section in the body), and `needs-e2e` (a PR label: runs the CI e2e job on that PR, the escape hatch in `ci.yml`).
+
 ## Automated pre-triage
 
 An open issue that carries `type: bug` or `type: maintenance` and not `ready-for-agent` is pre-triaged by Claude following `.sandcastle/triage-prompt.md` — once per issue, marked by `<!-- sandcastle-triage -->` in the comment (and in the body when promoted):
