@@ -1,9 +1,10 @@
 /**
- * Take the frames an /ultrabuild blind A/B pair is made of.
+ * Take the frames a blind A/B pair is made of.
  *
- * This script exists because the capture procedure used to be two kilobytes of prose in the
- * workflow's capture prompt, and every capture agent re-derived it. The bill, measured across two
- * runs: five findings about a theme the capture had switched wrongly, frames photographed with the
+ * The sandcastle loop's neutral capture step runs this — see .sandcastle/pixel-capture-prompt.md,
+ * which is its only caller. The script exists because the capture procedure used to be two
+ * kilobytes of prose in that prompt and every capture agent re-derived it. The bill, measured
+ * across two runs: five findings about a theme the capture had switched wrongly, frames photographed with the
  * screen at rest when the item under judgement was a hover state, flat-colour frames filed from a
  * WebGL canvas shot before its first idle, and thirty-six findings about scratch PNGs left at the
  * repository root. Every one of those is a defect of the capture, and every one was reported to the
@@ -21,12 +22,12 @@
  *
  * It deliberately does NOT record anything under e2e/__screenshots__. Those baselines are compared
  * pixel for pixel across machines and belong to Playwright's own projects; this script writes only
- * into the round's shot directory, for a critic to look at.
+ * into the shot directory it is given, for a blind critic to look at.
  *
  * Usage:
  *   node scripts/ultrabuild/capture.mjs \
  *     --url http://localhost:3003/atlas \
- *     --out .claude/ultrabuild/shots/<slug>/round-<n>/<item-id> \
+ *     --out .sandcastle-shots/issue-<n> \
  *     --label A \
  *     --viewports 1440x900,360x800 \
  *     --themes light,dark \

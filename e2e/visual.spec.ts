@@ -224,7 +224,7 @@ test.describe('public routes', () => {
  *
  * When that account cannot sign in the block skips with a reason rather than failing: an unseeded
  * database is a missing fixture, not a design regression, and turning it into a red gate would block
- * the /ultrabuild loop on something no builder can fix.
+ * the sandcastle loop on something no change to the product can fix.
  */
 test.describe('authenticated routes', () => {
   test.beforeEach(async ({ context, page, baseURL }) => {
