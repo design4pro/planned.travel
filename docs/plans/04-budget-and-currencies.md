@@ -199,15 +199,15 @@ lists that directory under **Owned paths**. `maxDiffPixelRatio` stays at `0.002`
 `0.2`: `12-verification-protocol.md` §5 forbids raising either, globally, per project or per call,
 and no stage here does.
 
-**The frames a blind critic looks at.** `scripts/ultrabuild/capture.mjs` takes those and deliberately
+**The frames a blind critic looks at.** `scripts/visual/capture.mjs` takes those and deliberately
 writes nothing under `e2e/__screenshots__`. The clock pin is not a default — the header interceptor
-is installed only `if (serverToday)` (`scripts/ultrabuild/capture.mjs:168-169`) — and `2026-08-20` is
+is installed only `if (serverToday)` (`scripts/visual/capture.mjs:168-169`) — and `2026-08-20` is
 not a free choice: it is `BASELINE_DAY` in `e2e/helpers/shoot.ts` and the same string
 `playwright.config.ts` sends, so a stage that omits it photographs one day next to baselines recorded
 on another.
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S1" \
   --label B --auth \
@@ -231,7 +231,7 @@ marker, and `settleMap()` fails a route that declares one and renders none.
 
 **One measured limit, which decides how each declared state is reached.** `capture.mjs` applies at
 most one `--hover` and then at most one `--click` per invocation, in that order
-(`scripts/ultrabuild/capture.mjs:218-224`); it has no `--press`, no keyboard driver and no request
+(`scripts/visual/capture.mjs:218-224`); it has no `--press`, no keyboard driver and no request
 interception. `12-verification-protocol.md` §3 sanctions two routes to a declared state, and this
 file uses both by that measurement rather than by preference:
 
@@ -798,7 +798,7 @@ records a stated skip rather than a false pass, and the value is reported either
 **The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
 here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
 `capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
-(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+(`scripts/visual/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
 compares.
 
 ```sh
@@ -810,7 +810,7 @@ PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
   e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S1'
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S1" \
   --label B --auth \
@@ -820,7 +820,7 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
 **The two non-resting sets are the spec's, not `capture.mjs`'s, and the reason is measured.**
 `foreign-payment` is two clicks from rest — the settle-up panel's `Settle` button, then
 `[data-part="payment-currency"]` — and `capture.mjs` applies at most one `--click` per invocation
-(`scripts/ultrabuild/capture.mjs:218-224`). The fallback-notice set needs `page.route()` to fail the
+(`scripts/visual/capture.mjs:218-224`). The fallback-notice set needs `page.route()` to fail the
 rate lookup, which no capture flag reaches. Both are therefore driven inside this plan's spec, the
 route `12-verification-protocol.md` §3 sanctions alongside the flags, and each frame is written with
 `page.screenshot({ path: testInfo.outputPath(name) })` — `name` being `foreign-payment-<width>-<theme>.png`
@@ -1232,7 +1232,7 @@ the WebKit skip stated rather than presented as a pass.
 **The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
 here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
 `capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
-(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+(`scripts/visual/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
 compares.
 
 ```sh
@@ -1244,20 +1244,20 @@ PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
   e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S2'
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S2" \
   --label B --auth \
   --viewports 360x800,1280x900,2560x1440 --themes light,dark
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S2" \
   --label B --auth --state rename \
   --viewports 360x800,1280x900,2560x1440 --themes light,dark \
   --click '[data-part="category-rename"]' --settle 800
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S2" \
   --label B --auth --state delete-confirm \
@@ -1268,7 +1268,7 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
 Both declared states are one click from rest, so both are `capture.mjs`'s to take and both selectors
 appear in the invocation above. Two frame sets this stage still owes are not: the empty state needs a
 trip with no categories, and the keyboard reorder needs `@dnd-kit`'s keyboard sensor, which
-`capture.mjs` cannot drive (`scripts/ultrabuild/capture.mjs:218-224` — one hover, one click, no key
+`capture.mjs` cannot drive (`scripts/visual/capture.mjs:218-224` — one hover, one click, no key
 presses). Both are reached in the spec and their frames copied into the same stage directory.
 
 ### Definition of done
@@ -1555,7 +1555,7 @@ committed, asserted `0` after the mark, gated on `supportedEntryTypes` with the 
 **The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
 here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
 `capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
-(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+(`scripts/visual/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
 compares.
 
 ```sh
@@ -1567,20 +1567,20 @@ PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
   e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S3'
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S3" \
   --label B --auth \
   --viewports 360x800,1280x900,2560x1440 --themes light,dark
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S3" \
   --label B --auth --state field-edit \
   --viewports 360x800,1280x900,2560x1440 --themes light,dark \
   --click '[data-part="expense-field-amount"]' --settle 800
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S3" \
   --label B --auth --state add-row \
@@ -1808,7 +1808,7 @@ assert `0` after the mark, gated on `supportedEntryTypes` with the WebKit skip s
 **The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
 here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
 `capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
-(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+(`scripts/visual/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
 compares.
 
 ```sh
@@ -1820,13 +1820,13 @@ PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
   e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S4'
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S4" \
   --label B --auth \
   --viewports 360x800,1280x900,2560x1440 --themes light,dark
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S4" \
   --label B --auth --state legend-hover \
@@ -2179,7 +2179,7 @@ after the mark — the skeleton is sized to its result precisely so this passes 
 **The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
 here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
 `capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
-(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+(`scripts/visual/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
 compares.
 
 ```sh
@@ -2191,13 +2191,13 @@ PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
   e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S5'
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S5" \
   --label B --auth \
   --viewports 360x800,1280x900,2560x1440 --themes light,dark
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S5" \
   --label B --auth --state rebase-preview \
@@ -2661,7 +2661,7 @@ the WebKit skip stated.
 **The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
 here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
 `capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
-(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+(`scripts/visual/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
 compares.
 
 ```sh
@@ -2673,7 +2673,7 @@ PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
   e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S6'
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S6" \
   --label B --auth \
@@ -2684,7 +2684,7 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
 lives inside the expense dialog, so `ticket` needs the dialog opened and then
 `[data-part="split-mode-ticket"]` clicked, and `chip-paid` needs the dialog, a participant chip and
 then `[data-part="share-paid-toggle"]`; `capture.mjs` applies one `--click` per invocation
-(`scripts/ultrabuild/capture.mjs:218-224`). Both are driven in this plan's spec and their frames
+(`scripts/visual/capture.mjs:218-224`). Both are driven in this plan's spec and their frames
 written with `page.screenshot({ path: testInfo.outputPath(name) })` into `test-results/`
 (`playwright.config.ts:51`) and copied into the same round and stage directory as the resting set —
 six frames each, three widths, both themes. The unbalanced-split error frame is reached the same way,
@@ -2886,7 +2886,7 @@ stated.
 **The harness, quoted in full**, so the port, the session refresh and the clock pin are visible
 here rather than inherited from a sentence elsewhere. `2026-08-20` is `BASELINE_DAY`, and
 `capture.mjs` installs its header interceptor only when `PT_SERVER_TODAY` is set
-(`scripts/ultrabuild/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
+(`scripts/visual/capture.mjs:168-169`), so an unset pin shoots a different day than the gate
 compares.
 
 ```sh
@@ -2898,13 +2898,13 @@ PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
   e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S7'
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S7" \
   --label B --auth \
   --viewports 360x800,1280x900,2560x1440 --themes light,dark
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
   --out ".claude/ultrabuild/shots/04-budget-and-currencies/round-<n>/04-S7" \
   --label B --auth --state display-menu \

@@ -248,7 +248,7 @@ time, which the **Owned paths** tables already record.
 
 ### What `capture.mjs` can reach, and what this plan's own spec reaches instead
 
-Measured in `scripts/ultrabuild/capture.mjs`, because an earlier draft of this file wrote capture
+Measured in `scripts/visual/capture.mjs`, because an earlier draft of this file wrote capture
 commands that could not reach the states they labelled:
 
 - The argument parser (`:64-80`) builds a **flat `--key value` map**. A second `--click` overwrites
@@ -770,7 +770,7 @@ Browser evidence, per `docs/plans/12-verification-protocol.md`:
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/settings/appearance" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S2" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map
@@ -1022,7 +1022,7 @@ Browser evidence:
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S3" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map
@@ -1310,7 +1310,7 @@ Browser evidence:
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S4" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
@@ -1324,7 +1324,7 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   in its own right, because it is the surface `02-S6` and `02-S8` extend.
 - **The two states this stage is actually about are out of `capture.mjs`'s reach, and the Area brief
   says why:** the parser is a flat key map and the script applies one hover and one click, once
-  (`scripts/ultrabuild/capture.mjs:64-80`, `:218-225`). `armed` needs two clicks — the menu trigger,
+  (`scripts/visual/capture.mjs:64-80`, `:218-225`). `armed` needs two clicks — the menu trigger,
   then its map entry — and `dropped` needs a context-click at a canvas offset, which no flag
   expresses. Both are therefore taken **in this plan's own spec**, in this stage's `test.describe`,
   with `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
@@ -1510,7 +1510,7 @@ Browser evidence:
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S5" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map
@@ -1746,7 +1746,7 @@ Browser evidence:
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S6" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map
@@ -1756,7 +1756,7 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   frames, and that is everything `capture.mjs` takes here. **No state of this stage is one gesture
   from the loaded route** — reaching the preview is three clicks, the add menu, then the collection
   entry, then a collection — and the script applies one hover and one click, once
-  (`scripts/ultrabuild/capture.mjs:64-80`, `:218-225`), with a second `--click` overwriting the
+  (`scripts/visual/capture.mjs:64-80`, `:218-225`), with a second `--click` overwriting the
   first rather than queueing.
 - **The three declared states are taken in this plan's own spec**, in this stage's `test.describe`,
   with `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
@@ -2014,7 +2014,7 @@ Browser evidence:
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S7" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
@@ -2030,7 +2030,7 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   prove nothing.
 - **The two states this stage is actually about are out of `capture.mjs`'s reach**, and the Area
   brief gives the measurement: one hover and one click, once, per frame
-  (`scripts/ultrabuild/capture.mjs:218-225`). Both are taken **in this plan's own spec**, in this
+  (`scripts/visual/capture.mjs:218-225`). Both are taken **in this plan's own spec**, in this
   stage's `test.describe`, with
   `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
   `.claude/ultrabuild/shots/<slug>/round-<n>/02-S7/`, six frames each, light and dark at 360, 1280
@@ -2246,7 +2246,7 @@ Browser evidence:
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S8" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map
@@ -2258,7 +2258,7 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   overlay is raised by a `dragenter` carrying a file payload, and `--hover` dispatches a pointer
   move. A hover over the canvas raises nothing, so a frame labelled `drop-overlay` and reached by
   `--hover` would have been a picture of the resting screen under a name that says otherwise. The
-  script has no drag flag at all (`scripts/ultrabuild/capture.mjs:64-80`, `:218-225`).
+  script has no drag flag at all (`scripts/visual/capture.mjs:64-80`, `:218-225`).
 - **All three declared states are taken in this plan's own spec**, in this stage's `test.describe`,
   with `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
   `.claude/ultrabuild/shots/<slug>/round-<n>/02-S8/`, six frames each, light and dark at 360, 1280
@@ -2548,7 +2548,7 @@ Browser evidence:
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S9" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map
@@ -2817,7 +2817,7 @@ Browser evidence:
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/settings/places" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S10" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth
@@ -2833,7 +2833,7 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   naming how many places it will orphan, which is the copy most likely to be got wrong and is
   therefore the frame worth having. Two invocations, not one command: a second `--click` on the same
   line would overwrite the first, because the script's argument parser is a flat key map
-  (`scripts/ultrabuild/capture.mjs:64-80`).
+  (`scripts/visual/capture.mjs:64-80`).
 - **Two states are not, and are taken in this plan's own spec**, in this stage's `test.describe`,
   with `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
   `.claude/ultrabuild/shots/<slug>/round-<n>/02-S10/`, six frames each, light and dark at 360, 1280
@@ -3054,7 +3054,7 @@ Browser evidence:
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S11" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map
@@ -3065,7 +3065,7 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   no `--click`: **reaching the form in edit mode is two clicks** — the stop row's
   `Actions for <name>` trigger, then `[data-part="stop-edit"]` inside the menu it opens — and the
   script applies one click, once, with a second `--click` overwriting the first
-  (`scripts/ultrabuild/capture.mjs:64-80`, `:218-225`).
+  (`scripts/visual/capture.mjs:64-80`, `:218-225`).
 - **All four declared states are taken in this plan's own spec**, in this stage's `test.describe`,
   with `page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' })` into
   `.claude/ultrabuild/shots/<slug>/round-<n>/02-S11/`, six frames each, light and dark at 360, 1280
@@ -3317,7 +3317,7 @@ Browser evidence:
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S12" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
@@ -3508,7 +3508,7 @@ them rather than re-deriving them. **The hooks are its own to publish**, in the 
 the search field, and they go into the register when it is unblocked — no selector in this plan
 points at a file this stage does not own. **The results list is not one gesture from a loaded route**
 — it needs a field focused and a query typed, and `capture.mjs` has no `--type` flag
-(`scripts/ultrabuild/capture.mjs:64-80`, `:218-225`) — so its declared states are taken in this
+(`scripts/visual/capture.mjs:64-80`, `:218-225`) — so its declared states are taken in this
 plan's own spec with `page.screenshot({ path, … })`, exactly as `02-S5` and `02-S11` take theirs.
 `capture.mjs` takes its resting set and nothing else.
 
