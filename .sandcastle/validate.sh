@@ -84,7 +84,11 @@ E2E_FAILED_JSON="[]"
 if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
   run_step "e2e-env" bash .sandcastle/setup-e2e.sh --if-needed
   if [ "$OVERALL_OK" -eq 1 ]; then
-    PW_ARGS=(--workers=1 --reporter=line --reporter=json --reporter=html)
+    # Four workers per container by default: two containers run at once
+    # (MAX_PARALLEL in main.ts), and 8 browsers + 2 Vite servers is well inside
+    # what one VM sustains without the machine-load TIMEOUT flakes. Override
+    # with E2E_WORKERS to measure a different knee.
+    PW_ARGS=(--workers="${E2E_WORKERS:-4}" --reporter=line --reporter=json --reporter=html)
     [ "$UPDATE_SNAPSHOTS" -eq 1 ] && PW_ARGS+=(--update-snapshots)
     start=$(date +%s%3N 2>/dev/null || date +%s000)
     if PLAYWRIGHT_BASE_URL=http://localhost:3010 PLAYWRIGHT_JSON_OUTPUT_NAME=test-results/results.json \
