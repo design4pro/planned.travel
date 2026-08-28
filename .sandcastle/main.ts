@@ -22,18 +22,9 @@ import { cp, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import * as sandcastle from '@ai-hero/sandcastle'
-import {
-  defaultImageName,
-  docker as dockerProvider,
-} from '@ai-hero/sandcastle/sandboxes/docker'
 import { z } from 'zod'
 
-// docker() derives its default image tag from the directory the sandbox
-// anchors at — since the createWorktree refactor that is the dated worktree
-// (`sandcastle:sandcastle-run-<date>`), not the repo root that `sandcastle
-// docker build-image` tagged. Pin the repo-root tag every sandbox should use.
-const imageName = defaultImageName(process.cwd())
-const docker = () => dockerProvider({ imageName })
+import { docker } from './sandbox'
 
 const planSchema = z.object({
   issues: z.array(
@@ -114,10 +105,6 @@ const hooks = {
   },
 }
 
-// .e2e-tiles carries the ~480 MB basemap cache so a sandbox that needs the
-// Playwright suite does not re-download it from R2 (see setup-e2e.sh).
-const copyToWorktree = ['.e2e-tiles']
-
 const RUN_TS = process.env.SANDCASTLE_RUN_TS ?? String(process.pid)
 const ARTIFACT_ROOT = join('.sandcastle', 'logs', `run-${RUN_TS}`)
 
@@ -171,9 +158,10 @@ const integration = await sandcastle.createWorktree({
     baseBranch: 'origin/develop',
   },
   // Every run/createSandbox below anchors at this worktree, and the anchor
-  // resolves `.sandcastle/.env` and `copyToWorktree` sources against it — so
-  // the two gitignored inputs must travel into the worktree at creation.
-  copyToWorktree: ['.sandcastle/.env', ...copyToWorktree],
+  // resolves `copyToWorktree` sources against it — so this gitignored input
+  // must travel into the worktree at creation. The ~480 MB e2e basemap used to
+  // ride along here; it is a bind-mount from .sandcastle/sandbox now.
+  copyToWorktree: ['.sandcastle/.env'],
 })
 const integrationBranch = integration.branch
 const integrationCwd = integration.worktreePath
@@ -403,7 +391,6 @@ async function workIssue(
     sandbox: docker(),
     cwd: integrationCwd,
     hooks,
-    copyToWorktree,
   })
 
   const commits: Array<{ sha: string }> = []
@@ -545,7 +532,6 @@ async function runAuditor(
     sandbox: docker(),
     cwd: integrationCwd,
     hooks,
-    copyToWorktree,
   })
   try {
     const audit = await sandbox.run({
