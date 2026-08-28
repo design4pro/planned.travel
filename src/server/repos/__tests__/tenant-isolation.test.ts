@@ -10,6 +10,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
+import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import {
   assignmentParticipants,
   collabMessageReactions,
@@ -19,14 +20,23 @@ import {
 import { NotFoundError, QuotaExceededError } from '../context'
 import {
   bucketListRepository,
+  getTravelStats,
+  listTravelStats,
   markCountryVisited,
   markRegionVisited,
+  recomputeTravelStats,
   travelStatsRepository,
   upsertTravelStats,
   visitedCountriesRepository,
   visitedRegionsRepository,
 } from '../atlas'
-import { auditLogRepository, recordAudit } from '../audit'
+import {
+  auditLogRepository,
+  countAuditActions,
+  listAuditLog,
+  listEntityHistory,
+  recordAudit,
+} from '../audit'
 import {
   getSubscription,
   setUsage,
@@ -64,7 +74,12 @@ import {
   setCollectionPlaceLabels,
 } from '../collections'
 import { getDashboardSummary } from '../dashboard'
-import { createDayNote, dayNotesRepository, daysRepository, listTripDays } from '../days'
+import {
+  createDayNote,
+  dayNotesRepository,
+  daysRepository,
+  listTripDays,
+} from '../days'
 import {
   budgetItemsRepository,
   computeShares,
@@ -116,10 +131,13 @@ import {
   updateOrganization,
 } from '../members'
 import {
+  filterEnabledRecipients,
+  listNotifications,
   markRead,
   notificationPreferencesRepository,
   notificationsRepository,
   notify,
+  notifyMany,
   setPreference,
 } from '../notifications'
 import { createPlace, placesRepository, setPlaceTags } from '../places'
@@ -162,8 +180,17 @@ import {
   vacayUserYearsRepository,
   vacayYearsRepository,
 } from '../vacay'
+import { dispatch } from '#/server/notifications/dispatch'
+import { createLogger, createMemorySink } from '#/server/observability'
+import { sweepReminders } from '#/server/queue/reminders'
 import { captureError, createHarness } from './harness'
-import type { KeyedTenantTable, TenantPatch, TenantRepository, TenantScope } from '../base'
+import type {
+  KeyedTenantTable,
+  TenantPatch,
+  TenantRepository,
+  TenantScope,
+} from '../base'
+import type { TaskBindings } from '#/server/queue/types'
 import type { Harness, SeededTenant } from './harness'
 
 /* -------------------------------------------------------------------------------------------------
@@ -243,7 +270,11 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
   // single seat would refuse. Written as a tier-only row on purpose — that is what a subscription
   // predating the price catalogue looks like, and the resolver has to keep reading it. The quota
   // guards themselves are exercised in their own test.
-  const subscription = await upsertSubscription(scope, { plan: 'pro', status: 'active', seats: 5 })
+  const subscription = await upsertSubscription(scope, {
+    plan: 'pro',
+    status: 'active',
+    seats: 5,
+  })
   const secondUserId = await tenant.addUser('Second traveller')
 
   const trip = await createTrip(scope, {
@@ -283,7 +314,10 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     placeId: place.id,
     startTime: '09:30',
   })
-  await setAssignmentParticipants(scope, assignment.id, [tenant.ownerUserId, secondUserId])
+  await setAssignmentParticipants(scope, assignment.id, [
+    tenant.ownerUserId,
+    secondUserId,
+  ])
 
   const accommodation = await createAccommodation(scope, {
     tripId: trip.id,
@@ -342,8 +376,15 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     settledOn: '2026-04-13',
   })
 
-  const list = await createList(scope, { tripId: trip.id, name: 'Carry-on', kind: 'packing' })
-  const listItem = await createListItem(scope, { listId: list.id, name: 'Adapter' })
+  const list = await createList(scope, {
+    tripId: trip.id,
+    name: 'Carry-on',
+    kind: 'packing',
+  })
+  const listItem = await createListItem(scope, {
+    listId: list.id,
+    name: 'Adapter',
+  })
   const template = await createTemplate(scope, {
     name: 'City break',
     items: [{ name: 'Passport' }, { name: 'Charger' }],
@@ -382,7 +423,10 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     throw new Error('Creating a trip must create its owner membership.')
   }
 
-  const message = await postMessage(scope, { tripId: trip.id, body: 'Landed, heading in.' })
+  const message = await postMessage(scope, {
+    tripId: trip.id,
+    body: 'Landed, heading in.',
+  })
   await toggleReaction(scope, message.id, '🎉')
   const collabNote = await createCollabNote(scope, {
     tripId: trip.id,
@@ -412,11 +456,21 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     name: 'Time Out Market',
     countryCode: 'PT',
   })
-  const label = await createLabel(scope, { collectionId: collection.id, name: 'Food' })
+  const label = await createLabel(scope, {
+    collectionId: collection.id,
+    name: 'Food',
+  })
   await setCollectionPlaceLabels(scope, collectionPlace.id, [label.id])
 
-  const mood = await createMood(scope, { key: 'sunny', label: 'Sunny', emoji: '☀️' })
-  const journey = await createJourney(scope, { title: 'Lisbon notebook', tripId: trip.id })
+  const mood = await createMood(scope, {
+    key: 'sunny',
+    label: 'Sunny',
+    emoji: '☀️',
+  })
+  const journey = await createJourney(scope, {
+    title: 'Lisbon notebook',
+    tripId: trip.id,
+  })
   const journeyEntry = await createEntry(scope, {
     journeyId: journey.id,
     entryDate: '2026-04-10',
@@ -442,7 +496,10 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     regionCode: 'PT-11',
     regionName: 'Lisboa',
   })
-  const travelStat = await upsertTravelStats(scope, { statYear: 2026, tripCount: 1 })
+  const travelStat = await upsertTravelStats(scope, {
+    statYear: 2026,
+    tripCount: 1,
+  })
   const bucketItem = await bucketListRepository.insert(scope, {
     userId: tenant.ownerUserId,
     name: 'Azores',
@@ -457,15 +514,31 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     throw new Error('Creating a plan must create its owner membership.')
   }
   const vacayYear = await ensureYear(scope, plan.id, 2026)
-  const userYear = await setEntitlement(scope, { planId: plan.id, year: 2026, entitlementDays: 28 })
-  const vacayEntry = await setEntry(scope, { planId: plan.id, date: '2026-04-10', kind: 'vacation' })
+  const userYear = await setEntitlement(scope, {
+    planId: plan.id,
+    year: 2026,
+    entitlementDays: 28,
+  })
+  const vacayEntry = await setEntry(scope, {
+    planId: plan.id,
+    date: '2026-04-10',
+    kind: 'vacation',
+  })
   const companyHoliday = await addCompanyHoliday(scope, {
     planId: plan.id,
     date: '2026-12-24',
     label: 'Office closed',
   })
-  const holidayCalendar = await addHolidayCalendar(scope, { planId: plan.id, region: 'PT' })
-  const userColour = await setUserColour(scope, plan.id, tenant.ownerUserId, '#2F6F5E')
+  const holidayCalendar = await addHolidayCalendar(scope, {
+    planId: plan.id,
+    region: 'PT',
+  })
+  const userColour = await setUserColour(
+    scope,
+    plan.id,
+    tenant.ownerUserId,
+    '#2F6F5E',
+  )
 
   const notification = await notify(scope, {
     recipientUserId: tenant.ownerUserId,
@@ -598,106 +671,275 @@ function isolationCase<TTable extends KeyedTenantTable>(
 }
 
 const cases: ReadonlyArray<IsolationCase> = [
-  isolationCase('trips', tripsRepository, (w) => w.tripId, { title: 'hijacked' }),
-  isolationCase('trip members', tripMembersRepository, (w) => w.tripMemberId, { role: 'viewer' }),
-  isolationCase('share links', shareLinksRepository, (w) => w.shareLinkId, { viewCount: 99 }),
-  isolationCase('days', daysRepository, (w) => w.dayId, { title: 'hijacked' }),
-  isolationCase('day notes', dayNotesRepository, (w) => w.dayNoteId, { body: 'hijacked' }),
-  isolationCase('categories', categoriesRepository, (w) => w.categoryId, { name: 'hijacked' }),
-  isolationCase('tags', tagsRepository, (w) => w.tagId, { name: 'hijacked' }),
-  isolationCase('places', placesRepository, (w) => w.placeId, { name: 'hijacked' }),
-  isolationCase('day assignments', dayAssignmentsRepository, (w) => w.assignmentId, {
-    notes: 'hijacked',
-  }),
-  isolationCase('accommodations', dayAccommodationsRepository, (w) => w.accommodationId, {
-    name: 'hijacked',
-  }),
-  isolationCase('transports', transportsRepository, (w) => w.transportId, { title: 'hijacked' }),
-  isolationCase('reservations', reservationsRepository, (w) => w.reservationId, {
+  isolationCase('trips', tripsRepository, (w) => w.tripId, {
     title: 'hijacked',
   }),
-  isolationCase('budget items', budgetItemsRepository, (w) => w.budgetItemId, { name: 'hijacked' }),
-  isolationCase('expenses', expensesRepository, (w) => w.expenseId, { title: 'hijacked' }),
-  isolationCase('expense shares', expenseSharesRepository, (w) => w.expenseShareId, {
-    isSettled: true,
+  isolationCase('trip members', tripMembersRepository, (w) => w.tripMemberId, {
+    role: 'viewer',
   }),
-  isolationCase('settlements', settlementsRepository, (w) => w.settlementId, { note: 'hijacked' }),
-  isolationCase('lists', packingListsRepository, (w) => w.listId, { name: 'hijacked' }),
-  isolationCase('list items', packingItemsRepository, (w) => w.listItemId, { name: 'hijacked' }),
-  isolationCase('templates', packingTemplatesRepository, (w) => w.templateId, { name: 'hijacked' }),
-  isolationCase('template items', packingTemplateItemsRepository, (w) => w.templateItemId, {
+  isolationCase('share links', shareLinksRepository, (w) => w.shareLinkId, {
+    viewCount: 99,
+  }),
+  isolationCase('days', daysRepository, (w) => w.dayId, { title: 'hijacked' }),
+  isolationCase('day notes', dayNotesRepository, (w) => w.dayNoteId, {
+    body: 'hijacked',
+  }),
+  isolationCase('categories', categoriesRepository, (w) => w.categoryId, {
     name: 'hijacked',
   }),
-  isolationCase('files', tripFilesRepository, (w) => w.fileId, { filename: 'hijacked.pdf' }),
-  isolationCase('messages', collabMessagesRepository, (w) => w.messageId, { body: 'hijacked' }),
+  isolationCase('tags', tagsRepository, (w) => w.tagId, { name: 'hijacked' }),
+  isolationCase('places', placesRepository, (w) => w.placeId, {
+    name: 'hijacked',
+  }),
+  isolationCase(
+    'day assignments',
+    dayAssignmentsRepository,
+    (w) => w.assignmentId,
+    {
+      notes: 'hijacked',
+    },
+  ),
+  isolationCase(
+    'accommodations',
+    dayAccommodationsRepository,
+    (w) => w.accommodationId,
+    {
+      name: 'hijacked',
+    },
+  ),
+  isolationCase('transports', transportsRepository, (w) => w.transportId, {
+    title: 'hijacked',
+  }),
+  isolationCase(
+    'reservations',
+    reservationsRepository,
+    (w) => w.reservationId,
+    {
+      title: 'hijacked',
+    },
+  ),
+  isolationCase('budget items', budgetItemsRepository, (w) => w.budgetItemId, {
+    name: 'hijacked',
+  }),
+  isolationCase('expenses', expensesRepository, (w) => w.expenseId, {
+    title: 'hijacked',
+  }),
+  isolationCase(
+    'expense shares',
+    expenseSharesRepository,
+    (w) => w.expenseShareId,
+    {
+      isSettled: true,
+    },
+  ),
+  isolationCase('settlements', settlementsRepository, (w) => w.settlementId, {
+    note: 'hijacked',
+  }),
+  isolationCase('lists', packingListsRepository, (w) => w.listId, {
+    name: 'hijacked',
+  }),
+  isolationCase('list items', packingItemsRepository, (w) => w.listItemId, {
+    name: 'hijacked',
+  }),
+  isolationCase('templates', packingTemplatesRepository, (w) => w.templateId, {
+    name: 'hijacked',
+  }),
+  isolationCase(
+    'template items',
+    packingTemplateItemsRepository,
+    (w) => w.templateItemId,
+    {
+      name: 'hijacked',
+    },
+  ),
+  isolationCase('files', tripFilesRepository, (w) => w.fileId, {
+    filename: 'hijacked.pdf',
+  }),
+  isolationCase('messages', collabMessagesRepository, (w) => w.messageId, {
+    body: 'hijacked',
+  }),
   isolationCase('collab notes', collabNotesRepository, (w) => w.collabNoteId, {
     title: 'hijacked',
   }),
-  isolationCase('polls', collabPollsRepository, (w) => w.pollId, { question: 'hijacked?' }),
-  isolationCase('poll votes', collabPollVotesRepository, (w) => w.voteId, { optionId: 'market' }),
-  isolationCase('check-ins', checkInsRepository, (w) => w.checkInId, { name: 'hijacked' }),
-  isolationCase('collections', collectionsRepository, (w) => w.collectionId, { name: 'hijacked' }),
-  isolationCase('collection places', collectionPlacesRepository, (w) => w.collectionPlaceId, {
+  isolationCase('polls', collabPollsRepository, (w) => w.pollId, {
+    question: 'hijacked?',
+  }),
+  isolationCase('poll votes', collabPollVotesRepository, (w) => w.voteId, {
+    optionId: 'market',
+  }),
+  isolationCase('check-ins', checkInsRepository, (w) => w.checkInId, {
     name: 'hijacked',
   }),
-  isolationCase('collection labels', collectionLabelsRepository, (w) => w.labelId, {
+  isolationCase('collections', collectionsRepository, (w) => w.collectionId, {
     name: 'hijacked',
   }),
-  isolationCase('moods', journeyMoodsRepository, (w) => w.moodId, { label: 'hijacked' }),
-  isolationCase('journeys', journeysRepository, (w) => w.journeyId, { title: 'hijacked' }),
-  isolationCase('journey entries', journeyEntriesRepository, (w) => w.journeyEntryId, {
-    body: 'hijacked',
-  }),
-  isolationCase('journey photos', journeyPhotosRepository, (w) => w.journeyPhotoId, {
-    caption: 'hijacked',
-  }),
-  isolationCase('visited countries', visitedCountriesRepository, (w) => w.visitedCountryId, {
-    note: 'hijacked',
-  }),
-  isolationCase('visited regions', visitedRegionsRepository, (w) => w.visitedRegionId, {
-    regionName: 'hijacked',
-  }),
-  isolationCase('travel stats', travelStatsRepository, (w) => w.travelStatsId, { tripCount: 99 }),
-  isolationCase('bucket list', bucketListRepository, (w) => w.bucketItemId, { name: 'hijacked' }),
-  isolationCase('vacay plans', vacayPlansRepository, (w) => w.planId, { name: 'hijacked' }),
-  isolationCase('vacay plan members', vacayPlanMembersRepository, (w) => w.planMemberId, {
-    status: 'declined',
-  }),
-  isolationCase('vacay years', vacayYearsRepository, (w) => w.vacayYearId, { year: 2031 }),
-  isolationCase('vacay entitlements', vacayUserYearsRepository, (w) => w.userYearId, {
-    entitlementDays: 1,
-  }),
-  isolationCase('vacay entries', vacayEntriesRepository, (w) => w.vacayEntryId, {
-    note: 'hijacked',
-  }),
-  isolationCase('company holidays', vacayCompanyHolidaysRepository, (w) => w.companyHolidayId, {
+  isolationCase(
+    'collection places',
+    collectionPlacesRepository,
+    (w) => w.collectionPlaceId,
+    {
+      name: 'hijacked',
+    },
+  ),
+  isolationCase(
+    'collection labels',
+    collectionLabelsRepository,
+    (w) => w.labelId,
+    {
+      name: 'hijacked',
+    },
+  ),
+  isolationCase('moods', journeyMoodsRepository, (w) => w.moodId, {
     label: 'hijacked',
   }),
-  isolationCase('holiday calendars', vacayHolidayCalendarsRepository, (w) => w.holidayCalendarId, {
-    label: 'hijacked',
+  isolationCase('journeys', journeysRepository, (w) => w.journeyId, {
+    title: 'hijacked',
   }),
-  isolationCase('vacay colours', vacayUserColoursRepository, (w) => w.userColourId, {
-    colour: '#000000',
+  isolationCase(
+    'journey entries',
+    journeyEntriesRepository,
+    (w) => w.journeyEntryId,
+    {
+      body: 'hijacked',
+    },
+  ),
+  isolationCase(
+    'journey photos',
+    journeyPhotosRepository,
+    (w) => w.journeyPhotoId,
+    {
+      caption: 'hijacked',
+    },
+  ),
+  isolationCase(
+    'visited countries',
+    visitedCountriesRepository,
+    (w) => w.visitedCountryId,
+    {
+      note: 'hijacked',
+    },
+  ),
+  isolationCase(
+    'visited regions',
+    visitedRegionsRepository,
+    (w) => w.visitedRegionId,
+    {
+      regionName: 'hijacked',
+    },
+  ),
+  isolationCase('travel stats', travelStatsRepository, (w) => w.travelStatsId, {
+    tripCount: 99,
   }),
-  isolationCase('notifications', notificationsRepository, (w) => w.notificationId, {
-    isRead: true,
+  isolationCase('bucket list', bucketListRepository, (w) => w.bucketItemId, {
+    name: 'hijacked',
   }),
-  isolationCase('notification preferences', notificationPreferencesRepository, (w) => w.preferenceId, {
-    isEnabled: true,
+  isolationCase('vacay plans', vacayPlansRepository, (w) => w.planId, {
+    name: 'hijacked',
   }),
-  isolationCase('audit log', auditLogRepository, (w) => w.auditId, { action: 'trip.hijacked' }),
-  isolationCase('members', membersRepository, (w) => w.memberId, { role: 'admin' }),
+  isolationCase(
+    'vacay plan members',
+    vacayPlanMembersRepository,
+    (w) => w.planMemberId,
+    {
+      status: 'declined',
+    },
+  ),
+  isolationCase('vacay years', vacayYearsRepository, (w) => w.vacayYearId, {
+    year: 2031,
+  }),
+  isolationCase(
+    'vacay entitlements',
+    vacayUserYearsRepository,
+    (w) => w.userYearId,
+    {
+      entitlementDays: 1,
+    },
+  ),
+  isolationCase(
+    'vacay entries',
+    vacayEntriesRepository,
+    (w) => w.vacayEntryId,
+    {
+      note: 'hijacked',
+    },
+  ),
+  isolationCase(
+    'company holidays',
+    vacayCompanyHolidaysRepository,
+    (w) => w.companyHolidayId,
+    {
+      label: 'hijacked',
+    },
+  ),
+  isolationCase(
+    'holiday calendars',
+    vacayHolidayCalendarsRepository,
+    (w) => w.holidayCalendarId,
+    {
+      label: 'hijacked',
+    },
+  ),
+  isolationCase(
+    'vacay colours',
+    vacayUserColoursRepository,
+    (w) => w.userColourId,
+    {
+      colour: '#000000',
+    },
+  ),
+  isolationCase(
+    'notifications',
+    notificationsRepository,
+    (w) => w.notificationId,
+    {
+      isRead: true,
+    },
+  ),
+  isolationCase(
+    'notification preferences',
+    notificationPreferencesRepository,
+    (w) => w.preferenceId,
+    {
+      isEnabled: true,
+    },
+  ),
+  isolationCase('audit log', auditLogRepository, (w) => w.auditId, {
+    action: 'trip.hijacked',
+  }),
+  isolationCase('members', membersRepository, (w) => w.memberId, {
+    role: 'admin',
+  }),
   isolationCase('invitations', invitationsRepository, (w) => w.invitationId, {
     status: 'canceled',
   }),
-  isolationCase('subscriptions', subscriptionsRepository, (w) => w.subscriptionId, { seats: 99 }),
-  isolationCase('usage records', usageRecordsRepository, (w) => w.usageRecordId, { value: 99 }),
-  isolationCase('workspace settings', organizationSettingsRepository, (w) => w.organizationSettingsId, {
-    locale: 'de',
-  }),
-  isolationCase('user settings', userSettingsRepository, (w) => w.userSettingsId, {
-    theme: 'light',
-  }),
+  isolationCase(
+    'subscriptions',
+    subscriptionsRepository,
+    (w) => w.subscriptionId,
+    { seats: 99 },
+  ),
+  isolationCase(
+    'usage records',
+    usageRecordsRepository,
+    (w) => w.usageRecordId,
+    { value: 99 },
+  ),
+  isolationCase(
+    'workspace settings',
+    organizationSettingsRepository,
+    (w) => w.organizationSettingsId,
+    {
+      locale: 'de',
+    },
+  ),
+  isolationCase(
+    'user settings',
+    userSettingsRepository,
+    (w) => w.userSettingsId,
+    {
+      theme: 'light',
+    },
+  ),
 ]
 
 /* -------------------------------------------------------------------------------------------------
@@ -721,49 +963,60 @@ describe('tenant isolation', () => {
     expect(cases.length).toBeGreaterThanOrEqual(50)
   })
 
-  describe.each(cases.map((entry) => [entry.name, entry] as const))('%s', (_name, entry) => {
-    it('cannot be read by id across the boundary', async () => {
-      const foreignId = entry.pick(beta)
-      expect(await entry.findById(alpha.tenant.scope, foreignId)).toBeNull()
+  describe.each(cases.map((entry) => [entry.name, entry] as const))(
+    '%s',
+    (_name, entry) => {
+      it('cannot be read by id across the boundary', async () => {
+        const foreignId = entry.pick(beta)
+        expect(await entry.findById(alpha.tenant.scope, foreignId)).toBeNull()
 
-      const error = await captureError(() => entry.requireById(alpha.tenant.scope, foreignId))
-      expect(error).toBeInstanceOf(NotFoundError)
+        const error = await captureError(() =>
+          entry.requireById(alpha.tenant.scope, foreignId),
+        )
+        expect(error).toBeInstanceOf(NotFoundError)
 
-      // The same id resolves for its own tenant, proving the row exists and only scoping hid it.
-      expect(await entry.findById(beta.tenant.scope, foreignId)).not.toBeNull()
-    })
+        // The same id resolves for its own tenant, proving the row exists and only scoping hid it.
+        expect(
+          await entry.findById(beta.tenant.scope, foreignId),
+        ).not.toBeNull()
+      })
 
-    it('is never listed across the boundary', async () => {
-      const ids = await entry.listIds(alpha.tenant.scope)
-      expect(ids).not.toContain(entry.pick(beta))
-      expect(ids).toContain(entry.pick(alpha))
-    })
+      it('is never listed across the boundary', async () => {
+        const ids = await entry.listIds(alpha.tenant.scope)
+        expect(ids).not.toContain(entry.pick(beta))
+        expect(ids).toContain(entry.pick(alpha))
+      })
 
-    it('cannot be updated across the boundary', async () => {
-      const foreignId = entry.pick(beta)
-      const before = await entry.findById(beta.tenant.scope, foreignId)
+      it('cannot be updated across the boundary', async () => {
+        const foreignId = entry.pick(beta)
+        const before = await entry.findById(beta.tenant.scope, foreignId)
 
-      expect(await entry.update(alpha.tenant.scope, foreignId)).toBeNull()
-      expect(await entry.findById(beta.tenant.scope, foreignId)).toEqual(before)
-    })
+        expect(await entry.update(alpha.tenant.scope, foreignId)).toBeNull()
+        expect(await entry.findById(beta.tenant.scope, foreignId)).toEqual(
+          before,
+        )
+      })
 
-    it('cannot be deleted across the boundary', async () => {
-      const foreignId = entry.pick(beta)
-      expect(await entry.remove(alpha.tenant.scope, foreignId)).toBe(false)
-      expect(await entry.findById(beta.tenant.scope, foreignId)).not.toBeNull()
-    })
+      it('cannot be deleted across the boundary', async () => {
+        const foreignId = entry.pick(beta)
+        expect(await entry.remove(alpha.tenant.scope, foreignId)).toBe(false)
+        expect(
+          await entry.findById(beta.tenant.scope, foreignId),
+        ).not.toBeNull()
+      })
 
-    it('counts only the caller’s own rows', async () => {
-      const own = await entry.count(alpha.tenant.scope)
-      const foreign = await entry.count(beta.tenant.scope)
-      expect(own).toBeGreaterThan(0)
-      expect(foreign).toBeGreaterThan(0)
+      it('counts only the caller’s own rows', async () => {
+        const own = await entry.count(alpha.tenant.scope)
+        const foreign = await entry.count(beta.tenant.scope)
+        expect(own).toBeGreaterThan(0)
+        expect(foreign).toBeGreaterThan(0)
 
-      const alphaIds = new Set(await entry.listIds(alpha.tenant.scope))
-      const betaIds = await entry.listIds(beta.tenant.scope)
-      expect(betaIds.some((id) => alphaIds.has(id))).toBe(false)
-    })
-  })
+        const alphaIds = new Set(await entry.listIds(alpha.tenant.scope))
+        const betaIds = await entry.listIds(beta.tenant.scope)
+        expect(betaIds.some((id) => alphaIds.has(id))).toBe(false)
+      })
+    },
+  )
 
   describe('join tables', () => {
     it('keeps place tags inside their tenant', async () => {
@@ -782,7 +1035,9 @@ describe('tenant isolation', () => {
     })
 
     it('drops a foreign tag id instead of linking it', async () => {
-      const linked = await setPlaceTags(alpha.tenant.scope, alpha.placeId, [beta.tagId])
+      const linked = await setPlaceTags(alpha.tenant.scope, alpha.placeId, [
+        beta.tagId,
+      ])
       expect(linked).toEqual([])
 
       const links = await harness.db
@@ -803,7 +1058,9 @@ describe('tenant isolation', () => {
       const links = await harness.db
         .select()
         .from(collectionPlaceLabels)
-        .where(eq(collectionPlaceLabels.collectionPlaceId, alpha.collectionPlaceId))
+        .where(
+          eq(collectionPlaceLabels.collectionPlaceId, alpha.collectionPlaceId),
+        )
       expect(links).toHaveLength(0)
     })
 
@@ -820,11 +1077,15 @@ describe('tenant isolation', () => {
         .from(assignmentParticipants)
         .where(eq(assignmentParticipants.assignmentId, beta.assignmentId))
       expect(rows).toHaveLength(2)
-      expect(rows.every((row) => row.organizationId === beta.tenant.organizationId)).toBe(true)
+      expect(
+        rows.every((row) => row.organizationId === beta.tenant.organizationId),
+      ).toBe(true)
     })
 
     it('scopes reactions to the tenant that made them', async () => {
-      const own = await collabMessageReactionsAccess.findMany(alpha.tenant.scope)
+      const own = await collabMessageReactionsAccess.findMany(
+        alpha.tenant.scope,
+      )
       expect(own).toHaveLength(1)
       expect(own[0]?.messageId).toBe(alpha.messageId)
 
@@ -850,9 +1111,21 @@ describe('tenant isolation', () => {
       const attempts: ReadonlyArray<() => Promise<unknown>> = [
         () => createPlace(scope, { tripId: beta.tripId, name: 'Stolen place' }),
         () =>
-          createTransport(scope, { tripId: beta.tripId, title: 'Stolen leg', mode: 'train' }),
-        () => createReservation(scope, { tripId: beta.tripId, title: 'Stolen booking' }),
-        () => createBudgetItem(scope, { tripId: beta.tripId, name: 'Stolen budget' }),
+          createTransport(scope, {
+            tripId: beta.tripId,
+            title: 'Stolen leg',
+            mode: 'train',
+          }),
+        () =>
+          createReservation(scope, {
+            tripId: beta.tripId,
+            title: 'Stolen booking',
+          }),
+        () =>
+          createBudgetItem(scope, {
+            tripId: beta.tripId,
+            name: 'Stolen budget',
+          }),
         () =>
           createExpense(scope, {
             tripId: beta.tripId,
@@ -869,16 +1142,29 @@ describe('tenant isolation', () => {
             contentType: 'application/pdf',
             sizeBytes: 10,
           }),
-        () => postMessage(scope, { tripId: beta.tripId, body: 'Stolen message' }),
-        () => createCollabNote(scope, { tripId: beta.tripId, title: 'Stolen note' }),
+        () =>
+          postMessage(scope, { tripId: beta.tripId, body: 'Stolen message' }),
+        () =>
+          createCollabNote(scope, {
+            tripId: beta.tripId,
+            title: 'Stolen note',
+          }),
         () =>
           createPoll(scope, {
             tripId: beta.tripId,
             question: 'Stolen?',
             options: POLL_OPTIONS,
           }),
-        () => createCheckIn(scope, { tripId: beta.tripId, name: 'Stolen check-in' }),
-        () => createJourney(scope, { tripId: beta.tripId, title: 'Stolen journey' }),
+        () =>
+          createCheckIn(scope, {
+            tripId: beta.tripId,
+            name: 'Stolen check-in',
+          }),
+        () =>
+          createJourney(scope, {
+            tripId: beta.tripId,
+            title: 'Stolen journey',
+          }),
         () =>
           createShareLink(scope, {
             tripId: beta.tripId,
@@ -906,7 +1192,10 @@ describe('tenant isolation', () => {
       // Nothing landed in either tenant.
       expect(await placesRepository.count(alpha.tenant.scope)).toBe(1)
       expect(await placesRepository.count(beta.tenant.scope)).toBe(1)
-      const betaTrip = await tripsRepository.requireById(beta.tenant.scope, beta.tripId)
+      const betaTrip = await tripsRepository.requireById(
+        beta.tenant.scope,
+        beta.tripId,
+      )
       expect(betaTrip.title).toBe('Lisbon in spring')
     })
 
@@ -982,7 +1271,10 @@ describe('tenant isolation', () => {
 
       expect(
         await captureError(() =>
-          addCollectionPlace(scope, { collectionId: beta.collectionId, name: 'Stolen save' }),
+          addCollectionPlace(scope, {
+            collectionId: beta.collectionId,
+            name: 'Stolen save',
+          }),
         ),
       ).toBeInstanceOf(NotFoundError)
 
@@ -996,12 +1288,17 @@ describe('tenant isolation', () => {
       ).toBeInstanceOf(NotFoundError)
 
       expect(
-        await captureError(() => createLabel(scope, { collectionId: beta.collectionId, name: 'X' })),
+        await captureError(() =>
+          createLabel(scope, { collectionId: beta.collectionId, name: 'X' }),
+        ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(
         await captureError(() =>
-          createEntry(scope, { journeyId: beta.journeyId, entryDate: '2026-04-11' }),
+          createEntry(scope, {
+            journeyId: beta.journeyId,
+            entryDate: '2026-04-11',
+          }),
         ),
       ).toBeInstanceOf(NotFoundError)
 
@@ -1028,22 +1325,32 @@ describe('tenant isolation', () => {
 
       expect(
         await captureError(() =>
-          applyTemplateToTrip(scope, { templateId: beta.templateId, tripId: alpha.tripId }),
+          applyTemplateToTrip(scope, {
+            templateId: beta.templateId,
+            tripId: alpha.tripId,
+          }),
         ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(
         await captureError(() =>
-          applyTemplateToTrip(scope, { templateId: alpha.templateId, tripId: beta.tripId }),
+          applyTemplateToTrip(scope, {
+            templateId: alpha.templateId,
+            tripId: beta.tripId,
+          }),
         ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(
-        await captureError(() => createListItem(scope, { listId: beta.listId, name: 'Stolen item' })),
+        await captureError(() =>
+          createListItem(scope, { listId: beta.listId, name: 'Stolen item' }),
+        ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(
-        await captureError(() => setEntry(scope, { planId: beta.planId, date: '2026-05-01' })),
+        await captureError(() =>
+          setEntry(scope, { planId: beta.planId, date: '2026-05-01' }),
+        ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(
@@ -1051,11 +1358,20 @@ describe('tenant isolation', () => {
       ).toBeInstanceOf(NotFoundError)
 
       expect(
-        await captureError(() => addCompanyHoliday(scope, { planId: beta.planId, date: '2027-01-01' })),
+        await captureError(() =>
+          addCompanyHoliday(scope, { planId: beta.planId, date: '2027-01-01' }),
+        ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(
-        await captureError(() => setUserColour(scope, beta.planId, alpha.tenant.ownerUserId, '#111111')),
+        await captureError(() =>
+          setUserColour(
+            scope,
+            beta.planId,
+            alpha.tenant.ownerUserId,
+            '#111111',
+          ),
+        ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(await vacayEntriesRepository.count(beta.tenant.scope)).toBe(1)
@@ -1065,7 +1381,9 @@ describe('tenant isolation', () => {
       const scope = alpha.tenant.scope
 
       expect(
-        await captureError(() => editMessage(scope, beta.messageId, 'Rewritten')),
+        await captureError(() =>
+          editMessage(scope, beta.messageId, 'Rewritten'),
+        ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(
@@ -1082,15 +1400,19 @@ describe('tenant isolation', () => {
         ),
       ).toBeInstanceOf(NotFoundError)
 
-      expect(await captureError(() => markRead(scope, beta.notificationId))).toBeInstanceOf(
-        NotFoundError,
-      )
-
       expect(
-        await captureError(() => changeMemberRole(alpha.tenant.scope, beta.memberId, 'member')),
+        await captureError(() => markRead(scope, beta.notificationId)),
       ).toBeInstanceOf(NotFoundError)
 
-      const betaVotes = await collabPollVotesRepository.findMany(beta.tenant.scope)
+      expect(
+        await captureError(() =>
+          changeMemberRole(alpha.tenant.scope, beta.memberId, 'member'),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      const betaVotes = await collabPollVotesRepository.findMany(
+        beta.tenant.scope,
+      )
       expect(betaVotes).toHaveLength(1)
       expect(betaVotes[0]?.optionId).toBe('sunrise')
     })
@@ -1116,7 +1438,10 @@ describe('tenant isolation', () => {
     })
 
     it('keeps the spend summary inside the tenant', async () => {
-      const summary = await getTripSpendSummary(alpha.tenant.scope, alpha.tripId)
+      const summary = await getTripSpendSummary(
+        alpha.tenant.scope,
+        alpha.tripId,
+      )
       expect(summary.spentMinor).toBe(9_000)
       expect(summary.plannedMinor).toBe(30_000)
       expect(summary.currency).toBe('EUR')
@@ -1135,19 +1460,25 @@ describe('tenant isolation', () => {
     })
 
     it('keeps the dashboard summary inside the tenant', async () => {
-      const dashboard = await getDashboardSummary(alpha.tenant.scope, { today: '2026-04-01' })
+      const dashboard = await getDashboardSummary(alpha.tenant.scope, {
+        today: '2026-04-01',
+      })
       expect(dashboard.trips.total).toBe(1)
       expect(dashboard.counts.places).toBe(1)
       expect(dashboard.counts.files).toBe(1)
       expect(dashboard.counts.members).toBe(2)
       expect(dashboard.counts.visitedCountries).toBe(1)
-      expect(dashboard.upcomingTrips.map((trip) => trip.id)).toEqual([alpha.tripId])
+      expect(dashboard.upcomingTrips.map((trip) => trip.id)).toEqual([
+        alpha.tripId,
+      ])
     })
 
     it('keeps the member directory inside the tenant', async () => {
       const profiles = await listMemberProfiles(alpha.tenant.scope)
       expect(profiles).toHaveLength(2)
-      expect(profiles.map((row) => row.userId)).not.toContain(beta.tenant.ownerUserId)
+      expect(profiles.map((row) => row.userId)).not.toContain(
+        beta.tenant.ownerUserId,
+      )
     })
 
     it('reads the caller’s own workspace row only', async () => {
@@ -1155,7 +1486,9 @@ describe('tenant isolation', () => {
       expect(organization.id).toBe(alpha.tenant.organizationId)
 
       await updateOrganization(alpha.tenant.scope, { name: 'Renamed alpha' })
-      expect((await getOrganization(beta.tenant.scope)).name).toBe('Workspace beta')
+      expect((await getOrganization(beta.tenant.scope)).name).toBe(
+        'Workspace beta',
+      )
     })
 
     it('keeps effective settings inside the tenant', async () => {
@@ -1171,8 +1504,12 @@ describe('tenant isolation', () => {
       await updateOrganizationSettings(alpha.tenant.scope, { locale: 'ja' })
       await updateUserSettings(alpha.tenant.scope, { locale: 'ko' })
 
-      expect((await ensureOrganizationSettings(beta.tenant.scope)).locale).toBe('en')
-      expect((await getUserSettings(beta.tenant.scope))?.locale ?? null).toBeNull()
+      expect((await ensureOrganizationSettings(beta.tenant.scope)).locale).toBe(
+        'en',
+      )
+      expect(
+        (await getUserSettings(beta.tenant.scope))?.locale ?? null,
+      ).toBeNull()
       expect((await getEffectiveSettings(beta.tenant.scope)).locale).toBe('en')
       expect((await getEffectiveSettings(alpha.tenant.scope)).locale).toBe('ko')
     })
@@ -1189,7 +1526,9 @@ describe('tenant isolation', () => {
     })
 
     it('pages trip chat within the tenant', async () => {
-      const page = await listMessages(alpha.tenant.scope, alpha.tripId, { limit: 10 })
+      const page = await listMessages(alpha.tenant.scope, alpha.tripId, {
+        limit: 10,
+      })
       expect(page.items.map((row) => row.id)).toEqual([alpha.messageId])
       expect(page.nextCursor).toBeNull()
     })
@@ -1203,7 +1542,9 @@ describe('tenant isolation', () => {
     })
 
     it('writes only the organization a webhook addressed', async () => {
-      await upsertSubscriptionUnscoped(harness.db, beta.tenant.organizationId, { seats: 12 })
+      await upsertSubscriptionUnscoped(harness.db, beta.tenant.organizationId, {
+        seats: 12,
+      })
 
       expect((await getSubscription(beta.tenant.scope))?.seats).toBe(12)
       expect((await getSubscription(alpha.tenant.scope))?.seats).toBe(5)
@@ -1216,7 +1557,9 @@ describe('tenant isolation', () => {
       await createTrip(free.scope, { title: 'One' })
       await createTrip(free.scope, { title: 'Two' })
 
-      const error = await captureError(() => createTrip(free.scope, { title: 'Three' }))
+      const error = await captureError(() =>
+        createTrip(free.scope, { title: 'Three' }),
+      )
       expect(error).toBeInstanceOf(QuotaExceededError)
       expect(await tripsRepository.count(free.scope)).toBe(2)
       expect(await tripsRepository.count(alpha.tenant.scope)).toBe(1)
@@ -1238,7 +1581,12 @@ describe('tenant isolation', () => {
     })
 
     it('shares app settings across the deployment by design', async () => {
-      await appSettingsStore.set(harness.db, 'tiles.pack', { version: 3 }, 'Published tile pack')
+      await appSettingsStore.set(
+        harness.db,
+        'tiles.pack',
+        { version: 3 },
+        'Published tile pack',
+      )
 
       const row = await appSettingsStore.get(harness.db, 'tiles.pack')
       expect(row?.value).toEqual({ version: 3 })
@@ -1247,9 +1595,302 @@ describe('tenant isolation', () => {
     })
   })
 
+  /**
+   * Notification dispatch, the first production write path onto these tables.
+   *
+   * The middle case is written against what the repository actually does rather than against what
+   * it ought to do, and it is the reason the layer above derives its recipients from
+   * `listTripMembers` and never from a request body.
+   */
+  describe('notification dispatch', () => {
+    const event = (tripId: string) => ({
+      kind: 'trip.updated',
+      tripId,
+      entityType: 'trip',
+      entityId: tripId,
+      // No actor: a system event excludes nobody, so the trip's owner is a recipient without the
+      // seed having to grow a second trip member.
+      titleParams: {
+        tripTitle: 'Lisbon in spring',
+        actorName: 'The workspace',
+      },
+    })
+
+    it('refuses a foreign trip through requireTrip, not through an empty membership', async () => {
+      const before = await notificationsRepository.count(beta.tenant.scope)
+
+      const error = await captureError(() =>
+        dispatch(alpha.tenant.scope, event(beta.tripId), { queue: null }),
+      )
+
+      // `listTripMembers` would have answered `[]` here and the fan-out would have succeeded
+      // silently — indistinguishable on screen from a trip whose only member is the actor.
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(await notificationsRepository.count(beta.tenant.scope)).toBe(
+        before,
+      )
+    })
+
+    it('writes a foreign user id handed straight to notifyMany under the caller’s own tenant', async () => {
+      // `notifications.recipient_user_id` is a `userRef()` text column with no foreign key, so the
+      // repository cannot refuse this and does not pretend to. Dispatch is the chokepoint.
+      const rows = await notifyMany(alpha.tenant.scope, [beta.secondUserId], {
+        titleKey: 'trip.updated',
+        bodyKey: 'trip.updated',
+        entityType: 'trip',
+        entityId: alpha.tripId,
+      })
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0]?.organizationId).toBe(alpha.tenant.organizationId)
+      expect(
+        (await listNotifications(beta.tenant.scope, beta.secondUserId)).items,
+      ).toHaveLength(0)
+
+      // The half that *is* isolated: B's own opt-out is recorded in B and invisible from A, so it
+      // cannot suppress A's row either.
+      await setPreference(beta.tenant.scope, {
+        userId: beta.secondUserId,
+        eventType: 'trip.updated',
+        channel: 'in_app',
+        isEnabled: false,
+      })
+      expect(
+        await filterEnabledRecipients(
+          alpha.tenant.scope,
+          [beta.secondUserId],
+          'trip.updated',
+          'in_app',
+        ),
+      ).toEqual([beta.secondUserId])
+      expect(
+        await filterEnabledRecipients(
+          beta.tenant.scope,
+          [beta.secondUserId],
+          'trip.updated',
+          'in_app',
+        ),
+      ).toEqual([])
+    })
+
+    it('keeps the rows one tenant’s dispatch produced out of the other’s scope', async () => {
+      const result = await dispatch(alpha.tenant.scope, event(alpha.tripId), {
+        queue: null,
+      })
+      expect(result.inAppWritten).toBeGreaterThan(0)
+
+      const written = await listNotifications(
+        alpha.tenant.scope,
+        alpha.tenant.ownerUserId,
+      )
+      const fresh = written.items.filter(
+        (row) => row.titleKey === 'trip.updated',
+      )
+      expect(fresh).toHaveLength(1)
+      const id = fresh[0]?.id ?? ''
+
+      expect(
+        await notificationsRepository.findById(beta.tenant.scope, id),
+      ).toBeNull()
+      const error = await captureError(() =>
+        notificationsRepository.requireById(beta.tenant.scope, id),
+      )
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(
+        (await listNotifications(beta.tenant.scope, alpha.tenant.ownerUserId))
+          .items,
+      ).toHaveLength(0)
+    })
+  })
+
+  /**
+   * The recompute behind the atlas statistics panel, run from the wrong side of the boundary.
+   *
+   * Asserted against the measured split rather than the intuitive one, because most of what a
+   * `travel_stats` row holds is workspace-wide rather than per-traveller — and *how many* figures
+   * that is depends on which row is being read, since `countryCount` changes sides between the
+   * all-time row and a year row. A blanket "every count is zero" assertion is unsatisfiable here and
+   * would be made to pass only by breaking the repository.
+   */
+  describe('travel stats recomputed for a foreign traveller', () => {
+    const STAT_YEAR = 2026
+    /** A's own trip for the year, so the year row has country codes of its own to count. */
+    let alphaYearTripId: string
+
+    beforeEach(async () => {
+      const trip = await createTrip(alpha.tenant.scope, {
+        title: 'Two countries in one week',
+        startDate: `${STAT_YEAR}-06-01`,
+        endDate: `${STAT_YEAR}-06-08`,
+        countryCodes: ['PT', 'ES'],
+        currency: 'EUR',
+      })
+      alphaYearTripId = trip.id
+    })
+
+    /** The eight figures that are `tenantFilter()`-bound and nothing else. */
+    function workspaceFigures(row: {
+      tripCount: number
+      dayCount: number
+      placeCount: number
+      cityCount: number
+      distanceMetres: number
+      spendMinor: number
+      currency: string
+      lastTripId: string | null
+    }): Record<string, unknown> {
+      return {
+        tripCount: row.tripCount,
+        dayCount: row.dayCount,
+        placeCount: row.placeCount,
+        cityCount: row.cityCount,
+        distanceMetres: row.distanceMetres,
+        spendMinor: row.spendMinor,
+        currency: row.currency,
+        lastTripId: row.lastTripId,
+      }
+    }
+
+    it('writes the rows under the caller’s organization and never under the other', async () => {
+      const betaBefore = await listTravelStats(
+        beta.tenant.scope,
+        beta.tenant.ownerUserId,
+      )
+
+      const allTime = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        0,
+      )
+      const yearRow = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        STAT_YEAR,
+      )
+
+      expect(allTime.organizationId).toBe(alpha.tenant.organizationId)
+      expect(yearRow.organizationId).toBe(alpha.tenant.organizationId)
+      expect(
+        await listTravelStats(beta.tenant.scope, beta.tenant.ownerUserId),
+      ).toEqual(betaBefore)
+    })
+
+    it('leaves the per-traveller figures empty, because B’s atlas is invisible from A', async () => {
+      const allTime = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        0,
+      )
+      const yearRow = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        STAT_YEAR,
+      )
+
+      // `visited_countries` and `visited_regions` are filtered by organization *and* user.
+      expect(allTime.regionCount).toBe(0)
+      expect(yearRow.regionCount).toBe(0)
+      expect(allTime.byContinent).toEqual({})
+      expect(yearRow.byContinent).toEqual({})
+    })
+
+    it('counts no countries all-time and the year’s own trips on the year row', async () => {
+      const allTime = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        0,
+      )
+      const yearRow = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        STAT_YEAR,
+      )
+
+      // All-time reads the traveller's own visited list, which A cannot see.
+      expect(allTime.countryCount).toBe(0)
+      // A year row reads `trips.country_codes`, which is tenant-bound only — so it is A's own
+      // count, non-zero by construction, and asserting zero here is the assertion that cannot pass.
+      expect(yearRow.countryCount).toBe(2)
+    })
+
+    it('repeats A’s own workspace figures on the foreign traveller’s rows', async () => {
+      const foreignAllTime = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        0,
+      )
+      const foreignYear = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        STAT_YEAR,
+      )
+      const ownAllTime = await recomputeTravelStats(
+        alpha.tenant.scope,
+        alpha.tenant.ownerUserId,
+        0,
+      )
+      const ownYear = await recomputeTravelStats(
+        alpha.tenant.scope,
+        alpha.tenant.ownerUserId,
+        STAT_YEAR,
+      )
+
+      // Equal to A's own row rather than to zero: that is where the real boundary is.
+      expect(workspaceFigures(foreignAllTime)).toEqual(
+        workspaceFigures(ownAllTime),
+      )
+      expect(workspaceFigures(foreignYear)).toEqual(workspaceFigures(ownYear))
+      expect(foreignAllTime.tripCount).toBeGreaterThan(0)
+      expect(foreignYear.lastTripId).toBe(alphaYearTripId)
+      // The distance aggregate is workspace-wide too: A's own leg, on both row kinds.
+      expect(foreignAllTime.distanceMetres).toBe(1_720_000)
+    })
+
+    it('hides the rows it wrote from the organization the traveller belongs to', async () => {
+      const betaBefore = await listTravelStats(
+        beta.tenant.scope,
+        beta.tenant.ownerUserId,
+      )
+      const written = await recomputeTravelStats(
+        alpha.tenant.scope,
+        beta.tenant.ownerUserId,
+        0,
+      )
+
+      // B's own traveller, read from B: the all-time row A just wrote is not there, and the row B
+      // did have is untouched.
+      expect(
+        await getTravelStats(beta.tenant.scope, beta.tenant.ownerUserId, 0),
+      ).toBeNull()
+      expect(
+        await listTravelStats(beta.tenant.scope, beta.tenant.ownerUserId),
+      ).toEqual(betaBefore)
+      // And A's own traveller is invisible from B in either direction.
+      expect(
+        await getTravelStats(beta.tenant.scope, alpha.tenant.ownerUserId, 0),
+      ).toBeNull()
+      expect(
+        await listTravelStats(beta.tenant.scope, alpha.tenant.ownerUserId),
+      ).toEqual([])
+
+      const error = await captureError(() =>
+        travelStatsRepository.requireById(beta.tenant.scope, written.id),
+      )
+      expect(error).toBeInstanceOf(NotFoundError)
+      // The same id resolves inside the organization that wrote it.
+      expect(
+        await travelStatsRepository.findById(alpha.tenant.scope, written.id),
+      ).not.toBeNull()
+    })
+  })
+
   describe('split arithmetic', () => {
     it('always sums back to the expense total', () => {
-      const equal = computeShares(100, 'equal', [{ userId: 'a' }, { userId: 'b' }, { userId: 'c' }])
+      const equal = computeShares(100, 'equal', [
+        { userId: 'a' },
+        { userId: 'b' },
+        { userId: 'c' },
+      ])
       expect(equal.map((row) => row.shareMinor)).toEqual([34, 33, 33])
 
       const shares = computeShares(1000, 'shares', [
@@ -1262,7 +1903,9 @@ describe('tenant isolation', () => {
         { userId: 'a', percentage: 70 },
         { userId: 'b', percentage: 30 },
       ])
-      expect(percentage.reduce((total, row) => total + row.shareMinor, 0)).toBe(999)
+      expect(percentage.reduce((total, row) => total + row.shareMinor, 0)).toBe(
+        999,
+      )
 
       const exact = computeShares(500, 'exact', [
         { userId: 'a', shareMinor: 200 },
@@ -1278,6 +1921,313 @@ describe('tenant isolation', () => {
           { userId: 'b', shareMinor: 200 },
         ]),
       ).toThrow(/add up/)
+    })
+  })
+
+  describe('a settlement paid in another currency', () => {
+    const payment = {
+      amountMinor: 46_488,
+      currency: 'JPY',
+      settledOn: '2026-04-14',
+      originalAmountMinor: 59_600,
+      originalCurrency: 'GBP',
+      exchangeRate: 195,
+    } as const
+
+    it('cannot be recorded onto a foreign trip', async () => {
+      const before = await settlementsRepository.findMany(beta.tenant.scope)
+
+      const error = await captureError(() =>
+        createSettlement(alpha.tenant.scope, {
+          tripId: beta.tripId,
+          fromUserId: beta.secondUserId,
+          toUserId: beta.tenant.ownerUserId,
+          ...payment,
+        }),
+      )
+      expect(error).toBeInstanceOf(NotFoundError)
+
+      // Byte-identical, not merely the same length: a re-scoped write would show up here as a new
+      // row, and a re-scoped update as a changed one.
+      expect(await settlementsRepository.findMany(beta.tenant.scope)).toEqual(
+        before,
+      )
+    })
+
+    it('is invisible to the other tenant once recorded', async () => {
+      const own = await createSettlement(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        fromUserId: alpha.secondUserId,
+        toUserId: alpha.tenant.ownerUserId,
+        ...payment,
+      })
+      expect(own.originalAmountMinor).toBe(59_600)
+      expect(own.originalCurrency).toBe('GBP')
+      expect(own.exchangeRate).toBe(195)
+
+      expect(
+        await settlementsRepository.findById(beta.tenant.scope, own.id),
+      ).toBeNull()
+      expect(
+        await captureError(() =>
+          settlementsRepository.requireById(beta.tenant.scope, own.id),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await settlementsRepository.findById(alpha.tenant.scope, own.id),
+      ).not.toBeNull()
+    })
+  })
+
+  describe('audit recording', () => {
+    /**
+     * The trail is the one table whose rows deliberately *name* ids from elsewhere: an entry's
+     * `entity_id` is free text with no foreign key, so an action against a resource that has since
+     * been deleted still reads. That is exactly what makes it worth a case of its own — nothing in
+     * the column stops A from writing B's identifiers into it, and the only thing that keeps the
+     * entry inside A is `organization_id` on the row and `tenantFilter()` on every read.
+     *
+     * Returns the id of the entry A wrote about B's reservation.
+     */
+    async function trailInAlpha(): Promise<string> {
+      await trail(alpha.tenant.scope, {
+        action: AUDIT_ACTIONS.RESERVATION_DELETED,
+        entityType: 'reservation',
+        entityId: beta.reservationId,
+        metadata: { tripId: beta.tripId },
+      })
+      const page = await listAuditLog(alpha.tenant.scope, {
+        action: AUDIT_ACTIONS.RESERVATION_DELETED,
+      })
+      expect(page.items).toHaveLength(1)
+      return page.items[0].id
+    }
+
+    it('keeps an entry naming another tenant’s entity inside the tenant that wrote it', async () => {
+      const entryId = await trailInAlpha()
+
+      const inAlpha = await auditLogRepository.requireById(
+        alpha.tenant.scope,
+        entryId,
+      )
+      expect(inAlpha.organizationId).toBe(alpha.tenant.organizationId)
+      expect(inAlpha.actorUserId).toBe(alpha.tenant.ownerUserId)
+      expect(inAlpha.entityId).toBe(beta.reservationId)
+
+      const listedInBeta = await listAuditLog(beta.tenant.scope, { limit: 100 })
+      expect(listedInBeta.items.map((row) => row.id)).not.toContain(entryId)
+
+      // The entity id is B's own, so this is the query most likely to leak: B asks for the history
+      // of B's reservation and must not be shown A's entry about it.
+      const historyInBeta = await listEntityHistory(
+        beta.tenant.scope,
+        'reservation',
+        beta.reservationId,
+      )
+      expect(historyInBeta.map((row) => row.id)).not.toContain(entryId)
+
+      const historyInAlpha = await listEntityHistory(
+        alpha.tenant.scope,
+        'reservation',
+        beta.reservationId,
+      )
+      expect(historyInAlpha.map((row) => row.id)).toContain(entryId)
+    })
+
+    it('refuses to read that entry by id from the other tenant', async () => {
+      const entryId = await trailInAlpha()
+
+      expect(
+        await auditLogRepository.findById(beta.tenant.scope, entryId),
+      ).toBeNull()
+      const error = await captureError(() =>
+        auditLogRepository.requireById(beta.tenant.scope, entryId),
+      )
+      expect(error).toBeInstanceOf(NotFoundError)
+    })
+
+    it('counts only the reading tenant’s actions', async () => {
+      await trailInAlpha()
+      await recordAudit(beta.tenant.scope, { action: 'trip.archived' })
+
+      const inAlpha = await countAuditActions(alpha.tenant.scope)
+      const inBeta = await countAuditActions(beta.tenant.scope)
+
+      expect(
+        inAlpha.find((row) => row.action === AUDIT_ACTIONS.RESERVATION_DELETED)
+          ?.value,
+      ).toBe(1)
+      expect(inBeta.map((row) => row.action)).not.toContain(
+        AUDIT_ACTIONS.RESERVATION_DELETED,
+      )
+      expect(inBeta.find((row) => row.action === 'trip.archived')?.value).toBe(
+        1,
+      )
+      expect(inAlpha.map((row) => row.action)).not.toContain('trip.archived')
+    })
+  })
+
+  /**
+   * The reminder sweep — the one production path that reads across every tenant in a single query.
+   *
+   * `src/server/catalog/reminders.ts` answers with rows from every organization at once, which is
+   * exactly the shape the tenant layer exists to make unexpressible, so what has to be asserted is
+   * the seam *after* the scan: each due trip is reminded under a scope built from that trip's own
+   * organization and its own owner, and the inbox rows one tenant's reminder produced are invisible
+   * to the other. A single mis-attributed scope here would put B's travellers in A's inbox with no
+   * repository call ever having crossed a boundary.
+   */
+  describe('reminder sweep', () => {
+    /** 09:00 UTC on the day a trip starting three days later, with a 3-day lead time, is due. */
+    const NOW = Date.UTC(2026, 2, 10, 9)
+    const DUE_AT = Date.UTC(2026, 2, 10, 8)
+    const REMINDER_KEY = 'trip.starting_soon'
+
+    function kvDouble() {
+      const store = new Map<string, string>()
+      return {
+        store,
+        get: async (key: string) => store.get(key) ?? null,
+        put: async (key: string, value: string) => {
+          store.set(key, value)
+        },
+        delete: async (key: string) => {
+          store.delete(key)
+        },
+        list: async () => ({
+          keys: [...store.keys()].map((name) => ({ name })),
+          list_complete: true,
+        }),
+      }
+    }
+
+    function bindings(kv: ReturnType<typeof kvDouble>): TaskBindings {
+      return {
+        KV: kv,
+        FILES: {
+          get: async () => null,
+          put: async () => undefined,
+          head: async () => null,
+          delete: async () => undefined,
+          list: async () => ({ objects: [], truncated: false }),
+        },
+        TASKS: {
+          send: async () => undefined,
+          sendBatch: async () => undefined,
+        },
+        DB: {} as TaskBindings['DB'],
+      }
+    }
+
+    async function dueTrip(world: World, title: string): Promise<string> {
+      const trip = await createTrip(world.tenant.scope, {
+        title,
+        currency: 'EUR',
+        startDate: '2026-03-13',
+        reminderDays: 3,
+      })
+      return trip.id
+    }
+
+    /** Runs one tick over both tenants and returns the KV markers it wrote. */
+    async function sweepBoth(): Promise<ReturnType<typeof kvDouble>> {
+      const kv = kvDouble()
+      const result = await sweepReminders(
+        bindings(kv),
+        createLogger({ level: 'error', sink: createMemorySink() }),
+        NOW,
+        { databaseFor: () => harness.db },
+      )
+      expect(result).toMatchObject({ due: 2, notified: 2, failed: 0 })
+      return kv
+    }
+
+    function reminders<TRow extends { readonly titleKey: string }>(
+      rows: ReadonlyArray<TRow>,
+    ): Array<TRow> {
+      return rows.filter((row) => row.titleKey === REMINDER_KEY)
+    }
+
+    it('reminds each tenant under its own trip’s owner, and never the other’s', async () => {
+      const alphaTripId = await dueTrip(alpha, 'Lisbon in spring')
+      const betaTripId = await dueTrip(beta, 'Porto in autumn')
+
+      const kv = await sweepBoth()
+
+      const inAlpha = reminders(
+        (await listNotifications(alpha.tenant.scope, alpha.tenant.ownerUserId))
+          .items,
+      )
+      const inBeta = reminders(
+        (await listNotifications(beta.tenant.scope, beta.tenant.ownerUserId))
+          .items,
+      )
+      expect(inAlpha).toHaveLength(1)
+      expect(inBeta).toHaveLength(1)
+
+      // The scope each reminder ran under, read off the row it wrote: `notifyMany` stamps
+      // `senderUserId` from `scope.ctx.userId`, so this is the sweep's per-trip identity and it is
+      // the owner membership of *that* trip, never the other tenant's.
+      expect(inAlpha[0]?.senderUserId).toBe(alpha.tenant.ownerUserId)
+      expect(inAlpha[0]?.organizationId).toBe(alpha.tenant.organizationId)
+      expect(inAlpha[0]?.entityId).toBe(`${alphaTripId}:${DUE_AT}`)
+      expect(inBeta[0]?.senderUserId).toBe(beta.tenant.ownerUserId)
+      expect(inBeta[0]?.organizationId).toBe(beta.tenant.organizationId)
+      expect(inBeta[0]?.entityId).toBe(`${betaTripId}:${DUE_AT}`)
+
+      // The markers are keyed by organization, so one tenant's sweep can never close another's
+      // window — the failure that would silently cost a workspace its reminders.
+      expect([...kv.store.keys()].sort()).toEqual(
+        [
+          `reminded:${alpha.tenant.organizationId}:${alphaTripId}:${DUE_AT}`,
+          `reminded:${beta.tenant.organizationId}:${betaTripId}:${DUE_AT}`,
+        ].sort(),
+      )
+    })
+
+    it('refuses to read either tenant’s reminder rows from the other', async () => {
+      await dueTrip(alpha, 'Lisbon in spring')
+      await dueTrip(beta, 'Porto in autumn')
+
+      await sweepBoth()
+
+      const alphaRow = reminders(
+        (await listNotifications(alpha.tenant.scope, alpha.tenant.ownerUserId))
+          .items,
+      )[0]
+      const betaRow = reminders(
+        (await listNotifications(beta.tenant.scope, beta.tenant.ownerUserId))
+          .items,
+      )[0]
+      const alphaId = alphaRow.id
+      const betaId = betaRow.id
+
+      expect(
+        await notificationsRepository.findById(beta.tenant.scope, alphaId),
+      ).toBeNull()
+      expect(
+        await captureError(() =>
+          notificationsRepository.requireById(beta.tenant.scope, alphaId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await notificationsRepository.findById(alpha.tenant.scope, betaId),
+      ).toBeNull()
+      expect(
+        await captureError(() =>
+          notificationsRepository.requireById(alpha.tenant.scope, betaId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // And neither tenant can reach the other's traveller by asking for their inbox.
+      expect(
+        (await listNotifications(beta.tenant.scope, alpha.tenant.ownerUserId))
+          .items,
+      ).toHaveLength(0)
+      expect(
+        (await listNotifications(alpha.tenant.scope, beta.tenant.ownerUserId))
+          .items,
+      ).toHaveLength(0)
     })
   })
 })

@@ -16,6 +16,9 @@ export const TASK_KINDS = [
   'booking-import',
   'thumbnail',
   'backup',
+  // Derived-cache rebuild. Six aggregate queries per row, so it is queued
+  // rather than run on the write path that invalidates it.
+  'travel-stats',
   // Billing follow-ups. The provider webhook answers the provider immediately and
   // hands the slow part off here, so these travel the same queue as everything else.
   'billing.subscription.changed',
@@ -107,6 +110,41 @@ export const backupPayloadSchema = z.object({
 
 export type BackupPayload = z.infer<typeof backupPayloadSchema>
 
+/** The `statYear` that means "every year the traveller has recorded". */
+export const ALL_TIME_STAT_YEAR = 0
+
+/**
+ * The other value `statYear` may take: a four-digit calendar year.
+ *
+ * Exported so the producer can decide what to enqueue against the same rule the
+ * consumer's schema enforces, rather than against a copy of it that can drift.
+ */
+export function isCalendarStatYear(value: number): boolean {
+  return Number.isInteger(value) && value >= 1000 && value <= 9999
+}
+
+/**
+ * One traveller's roll-up, for one year or for all time.
+ *
+ * `strictObject` because the envelope names the tenant and nothing else about
+ * the recompute may be smuggled in beside these two fields: the organization is
+ * read from the envelope and every query the handler then runs is
+ * `tenantFilter()`-bound to it, so a forged message can only rebuild rows the
+ * tenant already owns.
+ */
+export const travelStatsPayloadSchema = z.strictObject({
+  userId: z.string().min(1).max(64),
+  statYear: z
+    .number()
+    .int()
+    .refine(
+      (value) => value === ALL_TIME_STAT_YEAR || isCalendarStatYear(value),
+      { error: 'statYear must be 0 (all time) or a four-digit year.' },
+    ),
+})
+
+export type TravelStatsPayload = z.infer<typeof travelStatsPayloadSchema>
+
 /**
  * Billing payloads mirror the `BillingTask` union in `../billing/types`. They
  * repeat their own `kind` because the webhook adapter enqueues the whole task
@@ -126,7 +164,9 @@ export const subscriptionChangedPayloadSchema = z.object({
   status: z.enum(SUBSCRIPTION_STATUSES),
 })
 
-export type SubscriptionChangedPayload = z.infer<typeof subscriptionChangedPayloadSchema>
+export type SubscriptionChangedPayload = z.infer<
+  typeof subscriptionChangedPayloadSchema
+>
 
 export const invoicePaidPayloadSchema = z.object({
   ...billingTaskBase,
@@ -148,7 +188,9 @@ export const invoicePaymentFailedPayloadSchema = z.object({
   nextAttemptAt: z.string().min(1).max(64).nullable(),
 })
 
-export type InvoicePaymentFailedPayload = z.infer<typeof invoicePaymentFailedPayloadSchema>
+export type InvoicePaymentFailedPayload = z.infer<
+  typeof invoicePaymentFailedPayloadSchema
+>
 
 export interface TaskPayloadMap {
   email: EmailPayload
@@ -156,6 +198,7 @@ export interface TaskPayloadMap {
   'booking-import': BookingImportPayload
   thumbnail: ThumbnailPayload
   backup: BackupPayload
+  'travel-stats': TravelStatsPayload
   'billing.subscription.changed': SubscriptionChangedPayload
   'billing.invoice.paid': InvoicePaidPayload
   'billing.invoice.payment_failed': InvoicePaymentFailedPayload
@@ -180,15 +223,36 @@ const envelopeBase = {
 }
 
 export const taskEnvelopeSchema = z.discriminatedUnion('kind', [
-  z.object({ ...envelopeBase, kind: z.literal('email'), payload: emailPayloadSchema }),
-  z.object({ ...envelopeBase, kind: z.literal('pdf-export'), payload: pdfExportPayloadSchema }),
+  z.object({
+    ...envelopeBase,
+    kind: z.literal('email'),
+    payload: emailPayloadSchema,
+  }),
+  z.object({
+    ...envelopeBase,
+    kind: z.literal('pdf-export'),
+    payload: pdfExportPayloadSchema,
+  }),
   z.object({
     ...envelopeBase,
     kind: z.literal('booking-import'),
     payload: bookingImportPayloadSchema,
   }),
-  z.object({ ...envelopeBase, kind: z.literal('thumbnail'), payload: thumbnailPayloadSchema }),
-  z.object({ ...envelopeBase, kind: z.literal('backup'), payload: backupPayloadSchema }),
+  z.object({
+    ...envelopeBase,
+    kind: z.literal('thumbnail'),
+    payload: thumbnailPayloadSchema,
+  }),
+  z.object({
+    ...envelopeBase,
+    kind: z.literal('backup'),
+    payload: backupPayloadSchema,
+  }),
+  z.object({
+    ...envelopeBase,
+    kind: z.literal('travel-stats'),
+    payload: travelStatsPayloadSchema,
+  }),
   z.object({
     ...envelopeBase,
     kind: z.literal('billing.subscription.changed'),
@@ -208,7 +272,10 @@ export const taskEnvelopeSchema = z.discriminatedUnion('kind', [
 
 export type TaskEnvelope = z.infer<typeof taskEnvelopeSchema>
 
-export type TaskEnvelopeOf<TKind extends TaskKind> = Extract<TaskEnvelope, { kind: TKind }>
+export type TaskEnvelopeOf<TKind extends TaskKind> = Extract<
+  TaskEnvelope,
+  { kind: TKind }
+>
 
 /* ------------------------------------------------------------------- ports -- */
 
@@ -234,7 +301,11 @@ export interface TaskSecrets {
 export interface TaskBindings extends TaskSecrets {
   KV: {
     get: (key: string) => Promise<string | null>
-    put: (key: string, value: string, options?: { expirationTtl?: number }) => Promise<void>
+    put: (
+      key: string,
+      value: string,
+      options?: { expirationTtl?: number },
+    ) => Promise<void>
     delete: (key: string) => Promise<void>
     list: (options?: {
       prefix?: string
@@ -247,11 +318,15 @@ export interface TaskBindings extends TaskSecrets {
     }>
   }
   FILES: {
-    get: (key: string) => Promise<{ body: ReadableStream | null; size: number } | null>
+    get: (
+      key: string,
+    ) => Promise<{ body: ReadableStream | null; size: number } | null>
     put: (
       key: string,
       value: ReadableStream | ArrayBuffer | string,
-      options?: { httpMetadata?: { contentType?: string; cacheControl?: string } },
+      options?: {
+        httpMetadata?: { contentType?: string; cacheControl?: string }
+      },
     ) => Promise<unknown>
     head: (key: string) => Promise<{ size: number; uploaded: Date } | null>
     delete: (keys: string | Array<string>) => Promise<void>
@@ -266,9 +341,22 @@ export interface TaskBindings extends TaskSecrets {
     }>
   }
   TASKS: TaskQueue
+  /**
+   * The D1 binding, for the handlers that rebuild a derived table.
+   *
+   * Optional for the same reason `TRIP_ROOM` is: `TaskBindings` is the
+   * structural port every fake in a test satisfies, and a handler that never
+   * touches D1 must not have to carry a database stub to be exercised. The
+   * binding is declared on the Worker and the consumer runs inside it, so in
+   * production it is always present — a handler that needs it says so by
+   * raising {@link TaskConfigurationError} when it is not.
+   */
+  DB?: D1Database
   TRIP_ROOM?: {
     idFromName: (name: string) => DurableObjectId
-    get: (id: DurableObjectId) => { fetch: (request: Request) => Promise<Response> }
+    get: (id: DurableObjectId) => {
+      fetch: (request: Request) => Promise<Response>
+    }
   }
   ENVIRONMENT?: string
   LOG_LEVEL?: string
@@ -338,18 +426,26 @@ export class TaskConfigurationError extends TaskPermanentError {
 /** A transient failure: upstream 5xx, rate limit, or an artifact not ready yet. */
 export class TaskRetryableError extends Error {
   readonly retryAfterSeconds?: number
-  constructor(message: string, options?: { cause?: unknown; retryAfterSeconds?: number }) {
+  constructor(
+    message: string,
+    options?: { cause?: unknown; retryAfterSeconds?: number },
+  ) {
     super(message, options)
     this.name = 'TaskRetryableError'
     this.retryAfterSeconds = options?.retryAfterSeconds
   }
 }
 
-export function isPermanentFailure(error: unknown): error is TaskPermanentError {
+export function isPermanentFailure(
+  error: unknown,
+): error is TaskPermanentError {
   return error instanceof TaskPermanentError
 }
 
-export function numberFromEnv(value: number | string | undefined, fallback: number): number {
+export function numberFromEnv(
+  value: number | string | undefined,
+  fallback: number,
+): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string') {
     const parsed = Number.parseInt(value, 10)
