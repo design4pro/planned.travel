@@ -369,6 +369,10 @@ async function workIssue(
           .replaceAll('{{FAILURE_DIGEST}}', failureDigest(verdict, attempt))
           .replaceAll('{{ATTEMPT}}', String(attempt))
           .replaceAll('{{BUDGET}}', String(FIX_BUDGET)),
+        // sandcastle 0.12.0 bug: resume() spreads the original run options and
+        // clears promptFile but NOT promptArgs, and an inline prompt with
+        // promptArgs is rejected (PromptError). Empty override passes.
+        { promptArgs: {} },
       )
       commits.push(...implement.commits)
     }
