@@ -4,11 +4,11 @@
  * The sandcastle loop's neutral capture step runs this — see .sandcastle/pixel-capture-prompt.md,
  * which is its only caller. The script exists because the capture procedure used to be two
  * kilobytes of prose in that prompt and every capture agent re-derived it. The bill, measured
- * across two runs: five findings about a theme the capture had switched wrongly, frames photographed with the
- * screen at rest when the item under judgement was a hover state, flat-colour frames filed from a
- * WebGL canvas shot before its first idle, and thirty-six findings about scratch PNGs left at the
- * repository root. Every one of those is a defect of the capture, and every one was reported to the
- * critic as a defect of the product.
+ * across two runs: five findings about a theme the capture had switched wrongly, frames
+ * photographed with the screen at rest when the item under judgement was a hover state,
+ * flat-colour frames filed from a WebGL canvas shot before its first idle, and thirty-six findings
+ * about scratch PNGs left at the repository root. Every one of those is a defect of the capture,
+ * and every one was reported to the critic as a defect of the product.
  *
  * The seams this closes are the ones e2e/helpers/shoot.ts closes for the gate, and where the two
  * overlap this file follows shoot.ts rather than inventing a second answer:
@@ -26,7 +26,7 @@
  *
  * Usage:
  *   node scripts/ultrabuild/capture.mjs \
- *     --url http://localhost:3003/atlas \
+ *     --url http://localhost:3010/atlas \
  *     --out .sandcastle-shots/issue-<n> \
  *     --label A \
  *     --viewports 1440x900,360x800 \
