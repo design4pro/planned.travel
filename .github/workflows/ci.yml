@@ -79,13 +79,14 @@ jobs:
 
       # The TanStack Start vite plugin generates the same file `tsr generate`
       # does, and appends the Start `Register` footer to it. `tsr.config.json`
-      # carries that footer verbatim (as a single `routeTreeFileFooter` entry,
-      # so the CLI joins it with single newlines the way the plugin does), which
-      # is what keeps the two byte-identical. Should they ever drift again — a
-      # Start upgrade that changes the footer, a `src/router.tsx` rename, a
-      # generator version bump — the build dirties the committed tree and this
-      # step says so, instead of every later build and dev server silently
-      # doing it. See issue #82.
+      # carries that footer verbatim, as one `routeTreeFileFooter` entry with
+      # embedded newlines — the generator puts a blank line between entries, so
+      # splitting the footer across them would emit blank lines the plugin does
+      # not. That is what keeps the two byte-identical. Should they ever drift
+      # again — a Start upgrade that changes the footer, a `src/router.tsx`
+      # rename, a generator version bump — the build dirties the committed tree
+      # and this step says so, instead of every later build and dev server
+      # silently doing it. See issue #82.
       - name: Check the build left the route tree alone
         run: git diff --exit-code -- src/routeTree.gen.ts
 

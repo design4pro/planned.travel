@@ -52,7 +52,7 @@ run_step() { # name command...
   fi
 }
 
-route_tree_gate() { pnpm generate-routes && git diff --exit-code src/routeTree.gen.ts; }
+route_tree_gate() { pnpm generate-routes && git diff --exit-code -- src/routeTree.gen.ts; }
 
 run_step "route-tree" route_tree_gate
 run_step "typecheck" pnpm typecheck
