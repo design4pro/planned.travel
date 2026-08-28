@@ -916,7 +916,7 @@ stage's outcome is a state the screen is not in when it loads, so it owes three 
 with their selectors:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S1" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -1372,18 +1372,18 @@ Frames: the planner at 360, 1280 and 2560 in both themes for the resting screen,
 non-resting sets, because the two states this stage exists to add are both invisible at rest — the
 editor with its live preview, and a note's expanded detail in the day rail:
 
-`scripts/ultrabuild/capture.mjs` takes **one** `--state` and one `--click` per run — `opt.state` is a
+`scripts/visual/capture.mjs` takes **one** `--state` and one `--click` per run — `opt.state` is a
 single string at `:102` and `opt.click` a single selector at `:222` — so this is two invocations and
 not one with two flags, and each writes its own `<state>-` prefixed frames into the same directory:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<seeded-trip-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S2" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
   --state note-editor --click '[data-part="day-add-note"]'
 
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<seeded-trip-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S2" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
@@ -1740,7 +1740,7 @@ outside the code. It then takes its frames of the strip in its non-default state
 of the stage and is not visible at rest:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<seeded-trip-id>/costs" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S3" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -2121,7 +2121,7 @@ Frames: the planner resting at 360, 1280 and 2560 in both themes, plus a declare
 a drag is the state the stage exists to change and a resting rail is not evidence about it:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<seeded-trip-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S4" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
@@ -2401,7 +2401,7 @@ Frames: `/dashboard` at 360, 1280 and 2560 in both themes for the resting screen
 non-resting set for the sheet, which is the only way the widgets are reachable at 360:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/dashboard" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S5" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -2766,7 +2766,7 @@ Frames: `/trips/<id>/people` at 360, 1280 and 2560 in both themes, plus a declar
 the invite picker, which is the affordance the stage is about:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<seeded-trip-id>/people" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S6" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -3040,7 +3040,7 @@ surfaces — plus two declared states, because list mode and the opened archive 
 loads into:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S7" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -3310,7 +3310,7 @@ Frames: the dialog open is the stage, so the resting `/trips` set is owed and th
 declared:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S8" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \
@@ -3620,7 +3620,7 @@ Frames: the workspace resting at 360, 1280 and 2560 in both themes, plus three d
 every one of this stage's four outcomes is a state the screen is not in when it loads:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips/<seeded-trip-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S9" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map \
@@ -3879,7 +3879,7 @@ what avoids the mask.
 Frames: the reminder control is inside a dialog, so the state is declared:
 
 ```sh
-PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
+PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs \
   --url "http://localhost:$PORT/trips" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/01-S10" \
   --label A --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth \

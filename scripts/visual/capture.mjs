@@ -1,14 +1,15 @@
 /**
  * Take the frames a blind A/B pair is made of.
  *
- * The sandcastle loop's neutral capture step runs this — see .sandcastle/pixel-capture-prompt.md,
- * which is its only caller. The script exists because the capture procedure used to be two
- * kilobytes of prose in that prompt and every capture agent re-derived it. The bill, measured
- * across two runs: five findings about a theme the capture had switched wrongly, frames
- * photographed with the screen at rest when the item under judgement was a hover state,
- * flat-colour frames filed from a WebGL canvas shot before its first idle, and thirty-six findings
- * about scratch PNGs left at the repository root. Every one of those is a defect of the capture,
- * and every one was reported to the critic as a defect of the product.
+ * The sandcastle loop's neutral capture step runs this — see .sandcastle/pixel-capture-prompt.md —
+ * and so does anyone checking a change by hand, which the `verifying-changes` skill points here for.
+ * The script exists because the capture procedure used to be two kilobytes of prose in that prompt
+ * and every capture agent re-derived it. The bill, measured across two runs: five findings about a
+ * theme the capture had switched wrongly, frames photographed with the screen at rest when the item
+ * under judgement was a hover state, flat-colour frames filed from a WebGL canvas shot before its
+ * first idle, and thirty-six findings about scratch PNGs left at the repository root. Every one of
+ * those is a defect of the capture, and every one was reported to the critic as a defect of the
+ * product.
  *
  * The seams this closes are the ones e2e/helpers/shoot.ts closes for the gate, and where the two
  * overlap this file follows shoot.ts rather than inventing a second answer:
@@ -25,7 +26,7 @@
  * into the shot directory it is given, for a blind critic to look at.
  *
  * Usage:
- *   node scripts/ultrabuild/capture.mjs \
+ *   node scripts/visual/capture.mjs \
  *     --url http://localhost:3010/atlas \
  *     --out .sandcastle-shots/issue-<n> \
  *     --label A \
@@ -34,7 +35,8 @@
  *     [--auth] [--map] [--state hover-visited] \
  *     [--hover 'selector'] [--click 'selector'] [--settle 800]
  *
- * Prints one JSON object on stdout: { files, console, warnings }. Copy it into your result.
+ * Prints one JSON object on stdout: { files, console, warnings, captureValid }. Copy it into
+ * your result.
  */
 
 import { mkdir, stat } from 'node:fs/promises'
@@ -110,6 +112,8 @@ const need = (k) => {
   }
   return v
 }
+/** A bare `--flag` parses as `true`, an explicit `--flag true` as the string. Both mean yes. */
+const flag = (k) => opt[k] === true || opt[k] === 'true'
 
 const url = need('url')
 const outDir = resolve(need('out'))
@@ -128,6 +132,25 @@ const settleMs = Number(opt.settle ?? 600)
 
 const warnings = []
 const consoleMessages = []
+
+/**
+ * The verdict a console message earns, and the reason to print beside it.
+ *
+ * `toolchain-broken` is checked first on purpose: a stale-optimiser 504 is served from a Vite
+ * namespace that `NOT_THE_APP` would otherwise excuse, and excusing it files frames of the error
+ * boundary as a clean result.
+ */
+function classify(from, text) {
+  const broken = TOOLCHAIN_BROKEN.find(
+    (rule) => rule.url.test(from) && rule.text.test(text),
+  )
+  if (broken) return { verdict: 'toolchain-broken', why: broken.why }
+
+  const excused = NOT_THE_APP.find((rule) => rule.url.test(from))
+  if (excused) return { verdict: 'not-the-app', why: excused.why }
+
+  return { verdict: 'fatal', why: undefined }
+}
 
 /** Stop entrance motion, and hide tooling that is not the product. */
 async function quiesce(page) {
@@ -169,7 +192,7 @@ async function settle(page, { map }) {
 async function main() {
   await mkdir(outDir, { recursive: true })
 
-  const wantsAuth = opt.auth === true || opt.auth === 'true'
+  const wantsAuth = flag('auth')
   if (wantsAuth && !existsSync(AUTH_STATE)) {
     console.error(
       `capture: --auth was asked for but ${AUTH_STATE} does not exist. ` +
@@ -210,23 +233,11 @@ async function main() {
     if (type !== 'error' && type !== 'warning') return
     const from = msg.location()?.url ?? ''
     const text = msg.text().slice(0, 400)
-    const broken = TOOLCHAIN_BROKEN.find(
-      (rule) => rule.url.test(from) && rule.text.test(text),
-    )
-    const excused = broken
-      ? undefined
-      : NOT_THE_APP.find((rule) => rule.url.test(from))
-    consoleMessages.push({
-      type,
-      text,
-      from,
-      verdict: broken ? 'toolchain-broken' : excused ? 'not-the-app' : 'fatal',
-      why: broken?.why ?? excused?.why,
-    })
+    consoleMessages.push({ type, text, from, ...classify(from, text) })
   })
 
   const files = []
-  const hasMap = opt.map === true || opt.map === 'true'
+  const hasMap = flag('map')
 
   for (const vp of viewports) {
     await page.setViewportSize({ width: vp.w, height: vp.h })
@@ -270,7 +281,8 @@ async function main() {
         continue
       }
 
-      const path = `${outDir}/${statePrefix}${vp.name}-${theme}-${label}.png`
+      const name = `${statePrefix}${vp.name}-${theme}-${label}.png`
+      const path = `${outDir}/${name}`
       await page.screenshot({
         path,
         fullPage: true,
@@ -283,7 +295,7 @@ async function main() {
       // finish drawing" and it has caught exactly the failure it was written for.
       if (size < 15_000 && vp.w >= 768) {
         warnings.push(
-          `${statePrefix}${vp.name}-${theme}-${label}.png is ${Math.round(size / 1024)}KB — ` +
+          `${name} is ${Math.round(size / 1024)}KB — ` +
             `suspiciously flat for a ${vp.w}px frame, likely shot before the page finished painting`,
         )
       }
@@ -297,6 +309,7 @@ async function main() {
   const fatal = consoleMessages.filter((m) => m.verdict === 'fatal')
   const excused = consoleMessages.filter((m) => m.verdict === 'not-the-app')
   const broken = consoleMessages.filter((m) => m.verdict === 'toolchain-broken')
+  const brokenReasons = [...new Set(broken.map((m) => m.why))]
   console.log(
     JSON.stringify(
       {
@@ -306,7 +319,7 @@ async function main() {
             (m) => `${m.type}: ${m.text}${m.from ? ` — at ${m.from}` : ''}`,
           ),
           notTheApp: excused.map((m) => `${m.text.slice(0, 120)} (${m.why})`),
-          toolchainBroken: [...new Set(broken.map((m) => m.why))],
+          toolchainBroken: brokenReasons,
         },
         warnings,
         captureValid: broken.length === 0,
@@ -317,7 +330,7 @@ async function main() {
   )
   if (broken.length) {
     console.error(
-      `capture: THESE FRAMES ARE INVALID — ${[...new Set(broken.map((m) => m.why))].join(' ')}`,
+      `capture: THESE FRAMES ARE INVALID — ${brokenReasons.join(' ')}`,
     )
     process.exit(2)
   }
