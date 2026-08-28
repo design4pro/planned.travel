@@ -406,20 +406,19 @@ filed to the schema stage of its **own** wave would run against a column that do
 This plan therefore files as follows, and every **Data and migration** heading below names the same
 target:
 
-| Filing stage | Its wave | Files to                                                                                                                   | What                              |
-| ------------ | -------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `01-S1`      | 1        | `00-S1` (`00-foundations.md`, wave 0) — **landed**, `drizzle/0006_mighty_nehzno.sql`                                       | `trips.copy_pending_at`, nullable |
-| `01-S2`      | 1        | `00-S1` (`00-foundations.md`, wave 0) — **landed**, same migration                                                         | `day_notes.detail`, nullable      |
-| `01-S1`      | 1        | the stage register in `00-foundations.md`, as a wave-0 follow-up schema stage — `00-S1` closed before decision 5 was taken | the `trip_favourites` table       |
-| `01-S6`      | 4        | the wave-3 schema stage, minted by `00-S1`'s register                                                                      | the `trip_guests` table           |
+| Filing stage | Its wave | Files to                                                                                                                     | What                              |
+| ------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `01-S1`      | 1        | `00-S1` (`00-foundations.md`, wave 0) — **landed**, `drizzle/0006_mighty_nehzno.sql`                                         | `trips.copy_pending_at`, nullable |
+| `01-S2`      | 1        | `00-S1` (`00-foundations.md`, wave 0) — **landed**, same migration                                                           | `day_notes.detail`, nullable      |
+| `01-S1`      | 1        | `00-S6` (`00-foundations.md`, wave 0) — the follow-up the register minted because `00-S1` closed before decision 5 was taken | the `trip_favourites` table       |
+| `01-S6`      | 4        | the wave-3 schema stage, minted by `00-S1`'s register                                                                        | the `trip_guests` table           |
 
 The wave-3 schema stage does not exist yet by id: `00-foundations.md`'s stage register mints the
 per-wave shared-file stages "when the wave opens", and a wave with no filed requirement mints none.
 `01-S6` files against that register rather than against an id, which is what the register is for.
-`trip_favourites` files the same way for a different reason: `00-S1` had already generated its
-migration when the grilling moved the favourite off the trip row, so the table rides a wave-0
-follow-up that the register mints before wave 1 opens. `01-S1` does not open until it has landed; if
-the register declines, `01-S1`'s wave moves, its **Owned paths** do not. The
+`trip_favourites` is the one exception with an id: `00-S1` had already generated its migration when
+the grilling moved the favourite off the trip row, so the register minted `00-S6`, a wave-0 follow-up
+carrying that one table, and `01-S1` does not open until it has landed. The
 seven stages that need no column say so under their own **Data and migration** heading and name the
 schema stage they would have filed to, so a reader can tell "nothing to file" from "forgot to ask".
 
@@ -595,10 +594,10 @@ the migration ritual tells a stage to avoid. A nullable timestamp is additive, a
 information than a flag: it says when the copy started, which is what lets the trip list distinguish
 "in flight" from "the consumer died three days ago" without a second column.
 
-**One additive table, filed to the stage register as a wave-0 follow-up (decision 5).** `00-S1` has
-closed — `drizzle/0006_mighty_nehzno.sql` carries `copy_pending_at` — so this table cannot ride it
-and is filed the way `01-S6` files `trip_guests`: against `00-foundations.md`'s register, which mints
-the stage. This stage does not open until the table exists.
+**One additive table, filed to `00-S6` (`00-foundations.md`, wave 0) — decision 5.** `00-S1` has
+closed — `drizzle/0006_mighty_nehzno.sql` carries `copy_pending_at` — so this table cannot ride it;
+the register minted `00-S6` for it, and this stage does not open until that stage has landed. The
+table is specified in both places identically.
 
 | Column            | Type                   | Null     | Notes                                            |
 | ----------------- | ---------------------- | -------- | ------------------------------------------------ |
@@ -1207,9 +1206,8 @@ another plan gates it.
 
 **Three wave-0 stages gate it and all three close before wave 1 opens**, so none is a blocker; they
 are named because a stage that consumes another stage's output owes the reader that list. `00-S1`
-generated the migration for `trips.copy_pending_at` (landed, `drizzle/0006_mighty_nehzno.sql`); the
-wave-0 follow-up schema stage the register mints for `trip_favourites` (decision 5) has not, and this
-stage does not open before it. `00-S4` adds `DB` to `TaskBindings` in
+generated the migration for `trips.copy_pending_at` (landed, `drizzle/0006_mighty_nehzno.sql`);
+`00-S6` generates the one for `trip_favourites` (decision 5) and this stage does not open before it. `00-S4` adds `DB` to `TaskBindings` in
 `src/server/queue/types.ts`, without which no queue handler can reach D1, and defines the
 `travel-stats` envelope this stage enqueues. `00-S2`'s notification write path is used for the
 copy's completion message. `00-S5` is deliberately absent from this list: after its grilling
@@ -4247,7 +4245,7 @@ The command and its output, verbatim, run against the full plan set — thirteen
 five area plans that did not exist when this one was first drafted. Sibling plans are rewritten
 **while this file is being written**, and the drift is watched rather than assumed: within one hour
 the plan count moved 8 → 13, the stage count 48 → 91, and the owned-path total 284 → 554 → 553 → 535
-→ 541; at the grilling revision of 2026-08-28 it read 16 · 104 · 682, three more plans (`13-community-gallery.md`,
+→ 541; at the grilling revision of 2026-08-28 it read 16 · 105 · 682, three more plans (`13-community-gallery.md`,
 `13-content-studio.md`, `14-dashboard-mascot.md`) having arrived and this revision having added its
 own files. The two moves that are this plan's own are worth naming. The twenty per-stage spec and baseline
 paths an earlier draft claimed became the two shared ones `12-verification-protocol.md` §4 fixes, so
@@ -4261,7 +4259,7 @@ below.
 
 ```text
 $ node scripts/ultrabuild/check-plan-collisions.mjs 01
-plans 16 · stages 104 · owned paths 682
+plans 16 · stages 105 · owned paths 682
 
 4 stage(s) state no parseable wave and cannot be checked: 11-S1 11-S2 11-S3 04-S2
 
