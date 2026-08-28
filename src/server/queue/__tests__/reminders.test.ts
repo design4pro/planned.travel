@@ -5,10 +5,14 @@
  * real tenant scoping, the real notification dispatch. Only the two bindings a cron cannot have in
  * Node are doubles — `KV` is a map that can be told to fail, and `TASKS` records what it was handed.
  *
- * The one module mock is `requireTrip`, and it earns its place twice: it is where the resolved
- * scope and the *role* it carries become observable — the row the sweep writes records the scope's
- * user but not its role — and it is the cheapest way to make exactly one trip in a tick throw.
- * With `spies.failTripId` unset it delegates, so nothing else here is a fixture.
+ * Two module mocks, both pass-throughs that delegate whenever their spy is unset, so nothing else
+ * here is a fixture. `requireTrip` earns its place twice: it is where the resolved scope and the
+ * *role* it carries become observable — the row the sweep writes records the scope's user but not
+ * its role — and it is the cheapest way to make exactly one trip's read throw. `dispatch` earns
+ * its place once, and only it can: it is the sole seam at which a trip fails *after* its row has
+ * been read, which is what pins the marker to the far side of the dispatch call. A rejecting queue
+ * cannot stand in for it — dispatch swallows that and still returns, because D1 already holds the
+ * inbox rows.
  *
  * The stage this file covers replaced a schedule-at-write index with a scan (ADR 0005), so the
  * properties worth pinning are the ones that model makes possible and the old one could not keep:
@@ -33,6 +37,7 @@ import { createHarness } from '#/server/repos/__tests__/harness'
 import { taskEnvelopeSchema } from '../types'
 
 import type { ReminderScanOptions } from '#/server/catalog/reminders'
+import type * as Dispatch from '#/server/notifications/dispatch'
 import type { LogRecord } from '#/server/observability'
 import type * as Repos from '#/server/repos'
 import type { TenantContext } from '#/server/repos'
@@ -52,6 +57,11 @@ const spies = vi.hoisted(() => ({
    * held open long enough for a test to move the row the scan answered with.
    */
   beforeRead: null as (() => Promise<void>) | null,
+  /**
+   * When set, dispatching this trip's reminder throws — the hand-off failing *after* its row has
+   * been read, which is the only point at which the marker's position becomes observable.
+   */
+  failDispatchTripId: null as string | null,
 }))
 
 vi.mock('#/server/repos', async (importOriginal) => {
@@ -71,6 +81,21 @@ vi.mock('#/server/repos', async (importOriginal) => {
         await interleaved()
       }
       return actual.requireTrip(...args)
+    },
+  }
+})
+
+vi.mock('#/server/notifications/dispatch', async (importOriginal) => {
+  const actual = await importOriginal<typeof Dispatch>()
+  return {
+    ...actual,
+    dispatch: async (
+      ...args: Parameters<typeof actual.dispatch>
+    ): ReturnType<typeof actual.dispatch> => {
+      if (spies.failDispatchTripId === args[1].tripId) {
+        throw new Error('the notification could not be dispatched')
+      }
+      return actual.dispatch(...args)
     },
   }
 })
@@ -467,6 +492,7 @@ describe('sweepReminders', () => {
     spies.scopes = []
     spies.failTripId = null
     spies.beforeRead = null
+    spies.failDispatchTripId = null
   })
 
   afterEach(() => {
@@ -747,6 +773,41 @@ describe('sweepReminders', () => {
     expect(messaged(sink, 'a reminder failed for one trip')).toBe(1)
     // The failure left no marker, so the next tick tries again inside the same window.
     expect([...kv.store.keys()]).toHaveLength(1)
+  })
+
+  it('leaves no marker when the dispatch fails, so the next tick retries it', async () => {
+    const tripId = await seedTrip(alpha, { title: 'Undeliverable' })
+    spies.failDispatchTripId = tripId
+    const kv = memoryKv()
+    const queue = recordingQueue()
+
+    const failed = await sweep(kv, queue)
+
+    // The marker closes the window, so it is written only after dispatch returns: a hand-off that
+    // threw must leave the window open rather than record a reminder nobody received.
+    expect(failed.result).toMatchObject({
+      due: 1,
+      notified: 0,
+      skipped: 0,
+      failed: 1,
+    })
+    expect([...kv.store.keys()]).toEqual([])
+    expect(await inbox(alpha, alpha.ownerId)).toEqual([])
+    expect(messaged(failed.sink, 'a reminder failed for one trip')).toBe(1)
+
+    // And the consequence that ordering buys: the same window, a quarter of an hour later.
+    spies.failDispatchTripId = null
+    const retried = await sweep(kv, queue, NOW + 15 * 60_000)
+
+    expect(retried.result).toMatchObject({ due: 1, notified: 1, failed: 0 })
+    expect(await inbox(alpha, alpha.ownerId)).toHaveLength(1)
+    expect([...kv.store.keys()]).toEqual([
+      reminderMarkerKey({
+        organizationId: alpha.tenant.organizationId,
+        tripId,
+        dueAt: DUE_AT,
+      }),
+    ])
   })
 
   it('still reminds when KV cannot be read, and never sends twice on the queue', async () => {
