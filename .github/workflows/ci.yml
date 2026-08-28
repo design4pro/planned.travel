@@ -90,14 +90,20 @@ jobs:
   # platform the `-linux` baselines under e2e/__screenshots__ were recorded on;
   # a macOS run compares against its own `-darwin` set. See docs/CLOUD.md §4.
   #
-  # Six shards on the standard 2-vCPU runner, two Playwright workers each,
-  # started alongside `verify` rather than behind it: the suite is ~1100 s of
-  # CPU-bound test execution at one worker, and every job pays ~3 min of fixed
-  # cost (image pull, install, migrations, basemap, seed) that no worker count
-  # shortens — so a single job can never answer inside five minutes, and a
-  # `needs: verify` in front of it (5-7 min of vitest coverage) cannot either.
-  # Each shard is its own container with its own D1, so shards never share
-  # state; `e2e-report` below merges the six blob reports into one HTML.
+  # Twelve shards on the standard 2-vCPU runner, one Playwright worker each
+  # (two starved the map tests into timeouts — see `workers` in
+  # playwright.config), started alongside `verify` rather than behind it: the
+  # suite is ~1250 s of CPU-bound test execution at one worker, and every job
+  # pays ~2.5 min of fixed cost (image pull, install, migrations, basemap,
+  # seed) that no worker count shortens — so a single job can never answer
+  # inside five minutes, and a `needs: verify` in front of it (5-7 min of
+  # vitest coverage) cannot either. Twelve rather than six because Playwright
+  # cuts shards as contiguous runs of the test list, and the sixteen atlas
+  # interaction tests sit side by side in visual.spec.ts: at six shards the two
+  # carrying them ran 8.5 min while others ran 4 (PR #84); at twelve the block
+  # spans two shards of ~2.5 min each. Each shard is its own container with
+  # its own D1, so shards never share state; `e2e-report` below merges the
+  # blob reports into one HTML.
   # The price of not waiting on `verify` is a wasted e2e run when a typecheck
   # fails, which is rare and cheap next to the 20 minutes this used to take.
   #
@@ -110,20 +116,21 @@ jobs:
   # branches). A labelled develop→main PR still defers to the push run, as
   # `verify` does.
   e2e:
-    name: e2e · visual regression (${{ matrix.shard }}/6)
+    name: e2e · visual regression (${{ matrix.shard }}/12)
     if: >
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
       (contains(github.event.pull_request.labels.*.name, 'needs-e2e') &&
        !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))
     runs-on: ubuntu-latest
-    # ~2.5 min fixed cost + 2-4 min of tests; the config's 10 min globalTimeout
-    # fires first, so a slow shard still uploads a report instead of vanishing.
+    # ~2.5 min fixed cost + ~2.5 min of tests; the config's 10 min
+    # globalTimeout fires first, so a slow shard still uploads a report instead
+    # of vanishing.
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     # Keep in step with the `@playwright/test` devDependency in package.json:
     # the image carries the browsers that version expects, and a mismatch is
     # reported as a missing executable rather than as a wrong one.
@@ -159,6 +166,9 @@ jobs:
           cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           cloudflare-account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           tiles-key: ${{ vars.E2E_TILES_KEY }}
+          # Twelve shards seed twelve identical databases; auditing the seed
+          # once is proof enough, and 25 s off every other shard's critical path.
+          verify-seed: ${{ matrix.shard == 1 }}
 
       # `PLAYWRIGHT_BASE_URL` points the suite at the server the composite
       # action already started and seeded, so the config starts none of its own.
@@ -180,7 +190,7 @@ jobs:
           retention-days: 1
           if-no-files-found: ignore
 
-  # One report for the six shards: the GitHub annotations and the HTML report
+  # One report for the twelve shards: the GitHub annotations and the HTML report
   # (with the failing frames' diffs and traces) that a single job used to give.
   e2e-report:
     name: e2e · merged report

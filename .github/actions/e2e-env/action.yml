@@ -27,6 +27,13 @@ inputs:
       Dated and immutable by policy (docs/DEPLOY.md 7.4), which is what makes it
       a sound cache key.
     required: true
+  verify-seed:
+    description: >
+      Run scripts/seed/verify.mjs after seeding. On by default; the sharded gate
+      turns it off on all but one shard, since every shard seeds the same
+      fixture and the audit costs ~25 s of wrangler subprocesses.
+    required: false
+    default: 'true'
 
 runs:
   using: composite
@@ -141,5 +148,6 @@ runs:
       run: node scripts/seed/seed.mjs
 
     - name: Verify the seed
+      if: inputs.verify-seed == 'true'
       shell: bash
       run: node scripts/seed/verify.mjs

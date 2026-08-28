@@ -228,16 +228,20 @@ basemap and every run after that is a cache hit. Both jobs skip themselves with 
 warning when `CLOUDFLARE_API_TOKEN` is absent, matching the gate already at the
 top of `deploy.yml`.
 
-The gate is six jobs, not one. The suite is ~1100 s of CPU-bound test execution
-on the standard 2-vCPU runner, and every job carries ~3 min of fixed cost (image
-pull, install, migrations, basemap, seed) that no worker count shortens - so one
-job could never answer inside five minutes, and neither could anything queued
-behind `verify`. `ci.yml` therefore runs `playwright test --shard=k/6` in six
-containers started alongside `verify`, each with two workers and its own D1, and
-an `e2e-report` job merges the six blob reports into the single HTML report the
-one job used to upload. The cache entry for the basemap is saved right after the
-download rather than in a post step, so a red shard still leaves the next run a
-hit.
+The gate is twelve jobs, not one. The suite is ~1250 s of CPU-bound test
+execution on the standard 2-vCPU runner, and every job carries ~2.5 min of fixed
+cost (image pull, install, migrations, basemap, seed) that no worker count
+shortens - so one job could never answer inside five minutes, and neither could
+anything queued behind `verify`. `ci.yml` therefore runs `playwright test
+--shard=k/12` in twelve containers started alongside `verify`, each with one
+worker (two starved the software-WebGL map tests into timeouts on 2 vCPU) and its
+own D1, and an `e2e-report` job merges the blob reports into the single HTML
+report the one job used to upload. Twelve because Playwright cuts shards as
+contiguous runs of the test list and the atlas interaction tests sit together in
+`visual.spec.ts`; six left two shards at 8.5 min. The seed is audited
+(`verify.mjs`) on shard 1 only, and the basemap cache entry is saved right after
+the download rather than in a post step, so a red shard still leaves the next run
+a hit.
 
 ---
 
