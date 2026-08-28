@@ -63,6 +63,27 @@ Every stage states its wave in its `### Stage id` line in the form
 `` `<id>` · Wave <n> · effort **S|M|L** ``, because `scripts/ultrabuild/check-plan-collisions.mjs`
 parses exactly that and buckets every wave-less stage into one uncheckable pile.
 
+## Obligations received from the grilling of `01-trips-core.md`
+
+Two decisions taken while grilling the trips plan (2026-08-28) land in this area's tables, and each is
+carried by the stage named here rather than by `01-*`, so that no file sits in two plans.
+
+- **The trip copy reproduces packing lists and to-dos with nothing ticked (decision 4b).** `01-S1`
+  ships a copier registry — `registerTripCopier(name, fn)` in `src/server/repos/trips.ts`, `fn`
+  receiving the source and target trip ids and the day and place id maps — and copies only its own
+  aggregate. **`05-S1`** (wave 3, the stage that owns the list row and `src/server/repos/lists.ts`)
+  registers the packing copier: every list, category, bag and item of the source, with `checked` reset
+  and the bringer and audience left empty — a copy is a plan for a journey nobody has packed for — and
+  **`05-S4`** registers the to-do copier on the same terms, with due dates dropped because they belonged
+  to the source's calendar. Both chunk at the `floor(100 / columns)` bound `01-S1` states and return
+  the rows written so the copy's completion notice can name them.
+- **A guest can be merged into a member (decision 7b).** `01-S6` ships `mergeTripGuest`, which runs
+  every registered relinker — `registerGuestRelinker(name, fn)`, `fn` rewriting one table's guest
+  references to the member's user id — and fixes the shape a guest reference takes: **a `user_id` xor a
+  `guest_id`, never one polymorphic id**, which is exactly the `assigned_to` / `assigned_guest_id` pair
+  `05-S5` already describes. The stage that lands `assigned_guest_id` (the follow-up `05-S5` files)
+  registers the relinker in the same change, so a guest merged after it lands loses no assignment.
+
 ## Conventions that bind every stage in this file
 
 Stated once here; each stage restates the part it uses.

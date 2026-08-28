@@ -287,6 +287,14 @@ so that at any moment there is exactly one answer to "who owns the schema module
 A wave with no filed requirement mints no stage. An empty stage is worse than a missing one: it
 invites an agent to invent work in the one file where invention is most expensive.
 
+**One requirement was filed after `00-S1` closed, and the register owes it a stage.** The grilling of
+`01-trips-core.md` (2026-08-28, decision 5) moved the trip favourite off the trip row and onto a
+per-person table, `trip_favourites`, after `00-S1`'s migration (`drizzle/0006_mighty_nehzno.sql`) had
+been generated. It is a wave-1 stage's requirement (`01-S1`) and therefore a wave-0 one to satisfy, so
+the register mints a **wave-0 follow-up schema stage** for it — the next free `00-S<k>` id, one
+additive table, nothing else — before wave 1 opens; `01-S1` does not open until it has landed. The
+table's shape is in `01-S1`'s **Data and migration**.
+
 ## How a stage block is delimited
 
 Three separate audits of `TEMPLATE.md` found that it fixes the eleven headings but never says what
@@ -917,6 +925,22 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
 
 ### Server (repo, server function, Zod)
 
+**Amended in the grilling of `01-trips-core.md` (2026-08-28, decision 9): the trip-derived figures
+are scoped by trip membership, not by the workspace.** That grilling made a trip private to its
+members unless it opts into workspace visibility (ADR 0007), and a private trip's places, days,
+countries and spend must not appear in the statistics of a person who cannot open the trip. So the
+`tripRows` predicate in `recomputeTravelStats` — and with it `tripCount`, `dayCount`, `placeCount`,
+`cityCount`, `spendMinor`, the year-row `countryCount`, `currency`/`lastTripId`, the year streak and
+the transport-leg distance — gains one `EXISTS` on `trip_members` for the row's `user_id`, so every
+figure on a person's row answers "the trips I am a member of", which is also what a traveller means
+by "my trips". The measurements in the bullets below describe the code as it stands at HEAD and are
+kept because they are true of HEAD; where a bullet says a figure is "workspace-wide" or "identical
+for every member", read it as the state this stage **changes**, and `ADD-06`'s labelling — "your
+trips", never "the workspace's" — follows the amended scope. Two consequences: the recipient set of a
+trip write's `travel-stats` envelopes is the **trip's members** (which `01-S1` sends), and a
+membership change (`01-S6`) is itself a statistics write and enqueues the envelope for the person
+added or removed.
+
 - **What the row actually aggregates, measured — the stage's premise depends on getting this
   right.** `recomputeTravelStats(scope, userId, statYear)` (`src/server/repos/atlas.ts:792-896`)
   writes one row keyed `(organization_id, user_id, stat_year)` — the unique index at
@@ -1020,8 +1044,8 @@ where `stat_year = 0` is the all-time roll-up. No column, no index, no migration
   same way. Those write paths belong to `01-trips-core.md`, `04-budget-and-currencies.md` and
   `03-reservations-and-transport.md`. This stage does not reach into them. It ships
   the task kind, the handler and the deterministic envelope id so that those plans enqueue one task
-  per affected member and year, and it records the requirement here so neither plan invents a second
-  recompute. The deterministic id is what keeps that fan-out affordable: repeated envelopes for the
+  per affected **trip member** and year (decision 9 above), and it records the requirement here so
+  neither plan invents a second recompute. The deterministic id is what keeps that fan-out affordable: repeated envelopes for the
   same `(user, year)` collapse. Until those plans land, the workspace figures still refresh on the
   next visited-country write — a delay rather than a freeze, and strictly better than today, where
   nothing in production recomputes at all.
