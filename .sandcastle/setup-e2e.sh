@@ -11,8 +11,10 @@
 #   CLOUDFLARE_API_TOKEN   R2:read on planned-travel-tiles (basemap download)
 #   CLOUDFLARE_ACCOUNT_ID  account that owns the bucket
 #   TILES_KEY              dated archive key, e.g. basemaps/planet-20260818.pmtiles
-# The download is skipped when .e2e-tiles/basemap.pmtiles already exists
-# (main.ts copies the host's .e2e-tiles cache into every worktree).
+# The download is skipped when .e2e-tiles/basemap.pmtiles already exists.
+# .e2e-tiles is a bind-mount of .sandcastle/sandbox/data/e2e-tiles — shared by
+# every sandbox and outliving the worktree — so the first run to miss the cache
+# fills it for all the others (see .sandcastle/sandbox/index.ts).
 #
 # The dev server runs on :3010 — the reserved automation range playwright.config.ts
 # insists on outside CI — and inside the container's own network namespace, so
@@ -43,15 +45,25 @@ echo "==> local D1 migrations"
 pnpm db:migrate:local
 
 if [ ! -s .e2e-tiles/basemap.pmtiles ]; then
-  echo "==> basemap not in worktree cache — downloading from R2 (${TILES_KEY:?set TILES_KEY in .sandcastle/.env})"
+  echo "==> basemap not in the shared cache — downloading from R2 (${TILES_KEY:?set TILES_KEY in .sandcastle/.env})"
   : "${CLOUDFLARE_API_TOKEN:?set CLOUDFLARE_API_TOKEN in .sandcastle/.env}"
   : "${CLOUDFLARE_ACCOUNT_ID:?set CLOUDFLARE_ACCOUNT_ID in .sandcastle/.env}"
   mkdir -p .e2e-tiles
+  # The cache is shared and survives this worktree, so a half-written file here
+  # would poison every later run — the -s test above only checks non-empty —
+  # and two parallel sandboxes can miss the cache at the same time. Download to
+  # a per-process temp file and move it into place: mv within one filesystem is
+  # atomic, so basemap.pmtiles is either absent or complete, and a race costs
+  # one wasted transfer instead of a corrupt basemap.
+  tmp=".e2e-tiles/basemap.pmtiles.$$.part"
+  trap 'rm -f "$tmp"' EXIT
   pnpm exec wrangler r2 object get \
     "planned-travel-tiles/${TILES_KEY}" \
-    --remote --file .e2e-tiles/basemap.pmtiles
+    --remote --file "$tmp"
+  mv -f "$tmp" .e2e-tiles/basemap.pmtiles
+  trap - EXIT
 else
-  echo "==> basemap present in .e2e-tiles (worktree cache) — skipping download"
+  echo "==> basemap present in .e2e-tiles (shared cache) — skipping download"
 fi
 
 echo "==> loading the archive into the local R2 simulator"
