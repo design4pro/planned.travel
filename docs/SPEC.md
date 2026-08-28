@@ -301,8 +301,11 @@ Tenant isolation is enforced in the repository layer and covered by tests.
 
 #### Global-catalogue carve-out
 
-"Every domain row is scoped by `organization_id`" has exactly one exception, and this is it.
-Nine tables are platform content rather than tenant data and carry no `organization_id`:
+"Every domain row is scoped by `organization_id`" and "every query goes through a scoped
+repository" have a carve-out with exactly two members, and this section is both. The first is a set
+of tables and is stated immediately below. The second is a single query, admitted by amendment at
+the end of this section. Nine tables are platform content rather than tenant data and carry no
+`organization_id`:
 
 `catalog_sources` · `catalog_runs` · `catalog_ingest` · `catalog_places` ·
 `catalog_place_sources` · `place_packs` · `place_pack_places` · `staff_api_tokens` ·
@@ -345,6 +348,37 @@ act outside its statements, and an unaudited mutation is a failing test.
 `pack_entitlements` is **not** in that list. Which workspace bought which pack is tenant data:
 it is scoped by `organization_id`, lives in `src/server/repos/packs.ts`, and stays on the
 existing `createTenantRepository()`. The pack is global; the right to use it is not.
+
+One session-less cron discovery read joined this carve-out by amendment, the way
+`platform_audit_log` joined the nine-name list in Faza B. ADR 0005 replaced the schedule-at-write
+reminder index with a scan, and a scan asks a question no tenant scope can ask: which of _every_
+workspace's trips has a reminder falling due at this tick. `listDueTripReminders` in
+`src/server/catalog/reminders.ts` is that query, and it is the whole of the second member — one
+function, in one module, reached only from the quarter-hourly cron.
+
+It satisfies neither clause the nine tables are held to, and this paragraph says so rather than
+reading those clauses loosely. `trips` carries an `organization_id` and is tenant data: the scan
+adds no name to the list above, which is still nine names and still closed. There is no session
+behind a cron, so there is no platform actor to authorise with and `requirePermission` has no
+subject; the read mutates nothing, so there is no `platform_audit_log` row to write. Both clauses
+are _inapplicable_ to this read, which is a different statement from waived — every `server/catalog`
+path that mutates or serves platform content is bound by them exactly as before, and an unaudited
+mutation is still a failing test.
+
+What guards it instead is the shape of its answer. The scan projects scheduling coordinates only —
+trip id, organization id, due instant — so no tenant-readable field crosses the boundary and a
+cross-tenant read cannot become a cross-tenant read _of a trip_. Every field a reminder says out
+loud is read afterwards by `src/server/queue/reminders.ts` through a `TenantScope` bound to that
+one organization, under a real member of that trip. The read is bounded by a `start_date` window
+(`REMINDER_SCAN_DAYS`) and walked by keyset pages, so a tick costs rows proportional to trips
+departing soon rather than to trips ever created. Session-less, projection-only, windowed,
+keyset-paged: those four properties are the guard, and dropping any of them is a change to this
+contract rather than a refactor.
+
+Two members, and that list is closed as firmly as the nine names are. A third exception — another
+cross-tenant read, another module handed a plain `Database` — is an amendment to this section, not
+something a builder takes on the way past. ADR 0005 records the decision and defers this
+reconciliation to an amendment; this is that amendment.
 
 ### Platform roles
 
@@ -468,11 +502,16 @@ Rules:
 - `routeTree.gen.ts` is **generated**. Never hand-edit. Run `pnpm generate-routes`.
 - Components in `components/ui` never fetch data and never import from `server/`.
 - All SQL lives in `server/repos`. Routes call server functions; server functions call repos.
-- The single stated exception is `server/catalog`, and it exists only because the nine global
-  tables in §5 carry no `organization_id` and therefore cannot pass through the tenant
-  repository at all. It is the one exception; a second one is a change to this contract. Its
-  SQL is guarded instead by an explicit platform actor, `requirePermission`, and a
-  `platform_audit_log` write in the same call.
+- The single stated exception is `server/catalog`, and §5 states it as a closed list of two. Nine
+  global tables carry no `organization_id` and therefore cannot pass through the tenant repository
+  at all; every path that mutates or serves that platform content is guarded instead by an explicit
+  platform actor, `requirePermission`, and a `platform_audit_log` write in the same call, and that
+  clause is unchanged and mandatory. Beside it sits one session-less cron discovery read over
+  tenant rows — `listDueTripReminders` in `src/server/catalog/reminders.ts` — which has no session
+  behind it to authorise and no mutation to audit, and is guarded by its projection instead:
+  scheduling coordinates only, no tenant-readable field, a `start_date` window, keyset pages, and
+  every readable field fetched afterwards through a `TenantScope` (ADR 0005, amended into §5).
+  Two, and closed; a third one is a change to this contract.
 - `server/public` is the only path that reads without a session, and it holds no SQL of its own.
   Every response is a named read-only projection - an explicit column whitelist of what a
   stranger may see, so leaking a field is unexpressible - executed through `server/repos` for
