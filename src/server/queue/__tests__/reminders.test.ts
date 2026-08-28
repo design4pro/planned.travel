@@ -51,7 +51,7 @@ const spies = vi.hoisted(() => ({
   /** The tenant context every `requireTrip` in the tick ran under, in order. */
   scopes: [] as Array<TenantContext>,
   /** When set, reading this trip throws — one broken workspace inside a healthy tick. */
-  failTripId: null as string | null,
+  failReadTripId: null as string | null,
   /**
    * Runs once inside the next read, before it delegates: the gap between the scan and the read,
    * held open long enough for a test to move the row the scan answered with.
@@ -72,7 +72,7 @@ vi.mock('#/server/repos', async (importOriginal) => {
       ...args: Parameters<typeof actual.requireTrip>
     ): ReturnType<typeof actual.requireTrip> => {
       spies.scopes.push(args[0].ctx)
-      if (spies.failTripId === args[1]) {
+      if (spies.failReadTripId === args[1]) {
         throw new Error('the trip row could not be read')
       }
       const interleaved = spies.beforeRead
@@ -490,7 +490,7 @@ describe('sweepReminders', () => {
     alpha = await seedWorld('alpha')
     beta = await seedWorld('beta')
     spies.scopes = []
-    spies.failTripId = null
+    spies.failReadTripId = null
     spies.beforeRead = null
     spies.failDispatchTripId = null
   })
@@ -763,7 +763,7 @@ describe('sweepReminders', () => {
   it('isolates a failing trip from the rest of the tick', async () => {
     const failing = await seedTrip(alpha, { title: 'Broken' })
     await seedTrip(beta, { title: 'Porto in autumn' })
-    spies.failTripId = failing
+    spies.failReadTripId = failing
     const kv = memoryKv()
 
     const { result, sink } = await sweep(kv, recordingQueue())
@@ -793,6 +793,7 @@ describe('sweepReminders', () => {
     })
     expect([...kv.store.keys()]).toEqual([])
     expect(await inbox(alpha, alpha.ownerId)).toEqual([])
+    expect(queue.bodies).toEqual([])
     expect(messaged(failed.sink, 'a reminder failed for one trip')).toBe(1)
 
     // And the consequence that ordering buys: the same window, a quarter of an hour later.
@@ -801,6 +802,11 @@ describe('sweepReminders', () => {
 
     expect(retried.result).toMatchObject({ due: 1, notified: 1, failed: 0 })
     expect(await inbox(alpha, alpha.ownerId)).toHaveLength(1)
+    // One envelope across both ticks: the reminder the first tick never handed off, not a second
+    // copy of one it did.
+    expect(queue.ids()).toEqual([
+      `notify:${REMINDER_EVENT_KIND}:${tripId}:${DUE_AT}:${alpha.ownerId}`,
+    ])
     expect([...kv.store.keys()]).toEqual([
       reminderMarkerKey({
         organizationId: alpha.tenant.organizationId,
