@@ -9,6 +9,9 @@
  * No SQL lives here. Reads and writes both go through `src/server/repos/expenses`,
  * which owns the split arithmetic, the balance aggregates and the settlement
  * suggestions. This module's only job is validation, shaping and serialisation.
+ *
+ * One exception to "shaping only": a new expense notifies the travellers it
+ * charged, through `dispatchQuietly`, which cannot fail the save.
  */
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
@@ -34,9 +37,16 @@ import {
   updateExpense,
 } from '#/server/repos'
 import { impliedRate } from '#/lib/money'
-import { appScope, mirrorToRoom, patch, tombstone } from './context'
+import { dispatchQuietly } from '#/server/notifications/dispatch'
+import {
+  appScope,
+  mirrorToRoom,
+  notificationDeps,
+  patch,
+  tombstone,
+} from './context'
 
-import type { ExpenseShare } from '#/server/db/types'
+import type { ExpenseShare, Trip } from '#/server/db/types'
 import type { TenantScope } from '#/server/repos'
 
 /* -------------------------------------------------------------------------- */
@@ -244,6 +254,45 @@ async function loadPeople(
   })
 }
 
+/**
+ * Tells the travellers an expense actually charged that it exists.
+ *
+ * The audience is the split, not the trip: a member with no share owes nothing and has no reason
+ * to hear about it. It still narrows rather than names — `dispatch` intersects it with the trip's
+ * membership, so a participant id that is not a member of this trip reaches nobody.
+ *
+ * Wrapped like `mirrorToRoom`: the expense is already in D1 by the time this runs, so a
+ * notification that cannot be delivered must not turn a successful save into a failed one.
+ */
+async function notifyChargedMembers(
+  scope: TenantScope,
+  trip: Trip,
+  expense: { readonly id: string; readonly title: string },
+  shares: ReadonlyArray<ExpenseShare>,
+): Promise<void> {
+  const charged = shares
+    .filter((row) => row.shareMinor > 0)
+    .map((row) => row.userId)
+  if (charged.length === 0) {
+    return
+  }
+  await dispatchQuietly(
+    scope,
+    {
+      kind: 'expense.added',
+      tripId: trip.id,
+      entityType: 'expense',
+      entityId: expense.id,
+      actorUserId: scope.ctx.userId,
+      scope: 'trip',
+      audienceUserIds: charged,
+      bodyParams: { title: expense.title, tripTitle: trip.title },
+      actionUrl: `/trips/${trip.id}/costs`,
+    },
+    notificationDeps(),
+  )
+}
+
 function toShare(row: ExpenseShare): CostsShare {
   return {
     userId: row.userId,
@@ -410,7 +459,7 @@ export const createExpenseFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<{ readonly expenseId: string }> => {
     const scope = await appScope()
     const trip = await requireTrip(scope, data.tripId)
-    const { expense } = await createExpense(scope, {
+    const { expense, shares } = await createExpense(scope, {
       tripId: trip.id,
       ...toRepoInput(data.expense, trip.currency),
     })
@@ -422,6 +471,7 @@ export const createExpenseFn = createServerFn({ method: 'POST' })
         spentOn: expense.spentOn,
       }),
     ])
+    await notifyChargedMembers(scope, trip, expense, shares)
     return { expenseId: expense.id }
   })
 

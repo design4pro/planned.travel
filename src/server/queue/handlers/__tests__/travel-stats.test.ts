@@ -1,0 +1,460 @@
+/**
+ * The `travel-stats` handler, driven the way the consumer drives it.
+ *
+ * Everything below the handler is real: a fully migrated SQLite database from
+ * the Drizzle schema, two real tenants, the real repositories, the real
+ * aggregates and the real unique index on `(organization_id, user_id,
+ * stat_year)`. The one seam that is not real is the D1 handle: the handler is
+ * built through {@link createTravelStatsHandler} over the harness's database
+ * instead of over a binding, which is the seam that exists so a recompute can be
+ * exercised at all outside a Worker.
+ */
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
+import {
+  createPlace,
+  createTransport,
+  createTrip,
+  listTravelStats,
+  markCountryVisited,
+  upsertTravelStats,
+} from '#/server/repos'
+import {
+  createHarness,
+  subscribeTenant,
+} from '#/server/repos/__tests__/harness'
+import { createLogger, createMemorySink } from '#/server/observability/logger'
+import { taskHandlers } from '../../consumer'
+import { buildTaskEnvelope } from '../../jobs'
+import {
+  TaskConfigurationError,
+  TaskPermanentError,
+  travelStatsPayloadSchema,
+} from '../../types'
+import {
+  RECOMPUTE_WINDOW_MS,
+  createTravelStatsHandler,
+  handleTravelStats,
+  recomputeDelaySeconds,
+  travelStatsTaskId,
+} from '../travel-stats'
+
+import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
+import type { TaskBindings, TaskContext } from '../../types'
+
+/* -------------------------------------------------------------------- setup */
+
+const NOW = Date.parse('2026-08-27T09:00:00.000Z')
+
+/** A binding surface with nothing on it a recompute can reach for by accident. */
+function fakeEnv(overrides: Partial<TaskBindings> = {}): TaskBindings {
+  return {
+    KV: {
+      get: async () => null,
+      put: async () => undefined,
+      delete: async () => undefined,
+      list: async () => ({ keys: [], list_complete: true }),
+    },
+    FILES: {
+      get: async () => null,
+      put: async () => undefined,
+      head: async () => null,
+      delete: async () => undefined,
+      list: async () => ({ objects: [], truncated: false }),
+    },
+    TASKS: { send: async () => undefined, sendBatch: async () => undefined },
+    // Present but never dereferenced: the handlers under test build their
+    // Drizzle handle through the injected seam, so only the guard reads this.
+    DB: {} as TaskBindings['DB'],
+    ...overrides,
+  }
+}
+
+function context(orgId: string, env: TaskBindings = fakeEnv()): TaskContext {
+  return {
+    env,
+    logger: createLogger({ level: 'error', sink: createMemorySink() }),
+    now: () => NOW,
+    attempt: 1,
+    taskId: 'task-under-test',
+    orgId,
+  }
+}
+
+let harness: Harness
+let alpha: SeededTenant
+let beta: SeededTenant
+
+/** The shipped handler, over the harness database rather than a D1 binding. */
+const recompute = (
+  payload: { userId: string; statYear: number },
+  ctx: TaskContext,
+) => createTravelStatsHandler(() => harness.db)(payload, ctx)
+
+beforeEach(async () => {
+  harness = await createHarness()
+  alpha = await harness.seedTenant('alpha')
+  beta = await harness.seedTenant('beta')
+  await subscribeTenant(alpha.scope, 'crew', 5)
+  await subscribeTenant(beta.scope, 'crew', 5)
+})
+
+afterEach(() => {
+  harness.close()
+})
+
+/** Numbers only: `computedAt` and `updatedAt` move with the wall clock. */
+async function figures(
+  tenant: SeededTenant,
+  userId: string,
+): Promise<Array<Record<string, unknown>>> {
+  const rows = await listTravelStats(tenant.scope, userId)
+  return rows.map((row) => ({
+    statYear: row.statYear,
+    tripCount: row.tripCount,
+    dayCount: row.dayCount,
+    placeCount: row.placeCount,
+    cityCount: row.cityCount,
+    countryCount: row.countryCount,
+    regionCount: row.regionCount,
+    distanceMetres: row.distanceMetres,
+    spendMinor: row.spendMinor,
+    yearStreak: row.yearStreak,
+    byContinent: row.byContinent,
+  }))
+}
+
+/** One trip in 2026 with a place, a country and one dated flight leg. */
+async function seedTravel(tenant: SeededTenant): Promise<void> {
+  const trip = await createTrip(tenant.scope, {
+    title: 'Lisbon in spring',
+    startDate: '2026-04-10',
+    endDate: '2026-04-12',
+    countryCodes: ['PT'],
+    currency: 'EUR',
+  })
+  await createPlace(tenant.scope, {
+    tripId: trip.id,
+    name: 'Miradouro da Senhora do Monte',
+    city: 'Lisbon',
+  })
+  await createTransport(tenant.scope, {
+    tripId: trip.id,
+    title: 'Flight to Lisbon',
+    mode: 'flight',
+    departureDate: '2026-04-10',
+    distanceMetres: 1_720_000,
+  })
+  await markCountryVisited(tenant.scope, {
+    userId: tenant.ownerUserId,
+    countryCode: 'PT',
+    continent: 'Europe',
+    visitedOn: '2026-04-10',
+  })
+}
+
+/* ------------------------------------------------------------------- tests */
+
+describe('handleTravelStats', () => {
+  it('writes the row for the year its own envelope names', async () => {
+    await seedTravel(alpha)
+
+    const metrics = await recompute(
+      { userId: alpha.ownerUserId, statYear: 2026 },
+      context(alpha.organizationId),
+    )
+
+    expect(metrics).toMatchObject({ statYear: 2026, tripCount: 1 })
+    expect(await figures(alpha, alpha.ownerUserId)).toEqual([
+      {
+        statYear: 2026,
+        tripCount: 1,
+        dayCount: 3,
+        placeCount: 1,
+        cityCount: 1,
+        countryCount: 1,
+        regionCount: 0,
+        distanceMetres: 1_720_000,
+        spendMinor: 0,
+        yearStreak: 0,
+        byContinent: { Europe: 1 },
+      },
+    ])
+  })
+
+  it('leaves two rows when the all-time and year envelopes are both handled', async () => {
+    await seedTravel(alpha)
+
+    await recompute(
+      { userId: alpha.ownerUserId, statYear: 0 },
+      context(alpha.organizationId),
+    )
+    await recompute(
+      { userId: alpha.ownerUserId, statYear: 2026 },
+      context(alpha.organizationId),
+    )
+
+    const rows = await figures(alpha, alpha.ownerUserId)
+    expect(rows.map((row) => row.statYear)).toEqual([2026, 0])
+  })
+
+  it('leaves the same numbers when the same message is delivered twice', async () => {
+    await seedTravel(alpha)
+    const envelope = { userId: alpha.ownerUserId, statYear: 2026 }
+
+    await recompute(envelope, context(alpha.organizationId))
+    const once = await figures(alpha, alpha.ownerUserId)
+    await recompute(envelope, context(alpha.organizationId))
+
+    expect(await figures(alpha, alpha.ownerUserId)).toEqual(once)
+    expect(once).toHaveLength(1)
+  })
+
+  it('derives the streak from the year rows and stops at a gap year', async () => {
+    // A history built by hand: 2026 and 2025 travelled, 2024 did not, 2023 did.
+    await upsertTravelStats(alpha.scope, {
+      userId: alpha.ownerUserId,
+      statYear: 2026,
+      tripCount: 2,
+    })
+    await upsertTravelStats(alpha.scope, {
+      userId: alpha.ownerUserId,
+      statYear: 2025,
+      tripCount: 1,
+    })
+    await upsertTravelStats(alpha.scope, {
+      userId: alpha.ownerUserId,
+      statYear: 2024,
+      tripCount: 0,
+    })
+    await upsertTravelStats(alpha.scope, {
+      userId: alpha.ownerUserId,
+      statYear: 2023,
+      tripCount: 3,
+    })
+
+    const metrics = await recompute(
+      { userId: alpha.ownerUserId, statYear: 0 },
+      context(alpha.organizationId),
+    )
+
+    expect(metrics.yearStreak).toBe(2)
+    const allTime = (
+      await listTravelStats(alpha.scope, alpha.ownerUserId)
+    ).find((row) => row.statYear === 0)
+    expect(allTime?.yearStreak).toBe(2)
+  })
+
+  it('breaks the streak on a missing year as well as on an empty one', async () => {
+    await upsertTravelStats(alpha.scope, {
+      userId: alpha.ownerUserId,
+      statYear: 2026,
+      tripCount: 1,
+    })
+    // No 2025 row at all: the traveller's run is one year, not two.
+    await upsertTravelStats(alpha.scope, {
+      userId: alpha.ownerUserId,
+      statYear: 2024,
+      tripCount: 1,
+    })
+
+    const metrics = await recompute(
+      { userId: alpha.ownerUserId, statYear: 0 },
+      context(alpha.organizationId),
+    )
+
+    expect(metrics.yearStreak).toBe(1)
+  })
+
+  it('sums transport distance, filters a year row by the leg’s departure date', async () => {
+    const trip = await createTrip(alpha.scope, {
+      title: 'Two calendars, one trip',
+      startDate: '2026-04-10',
+      endDate: '2026-04-12',
+      currency: 'EUR',
+    })
+    await createTransport(alpha.scope, {
+      tripId: trip.id,
+      title: 'Flight out',
+      mode: 'flight',
+      departureDate: '2026-04-10',
+      distanceMetres: 1_720_000,
+    })
+    // A leg with no recorded distance must not turn the sum into null.
+    await createTransport(alpha.scope, {
+      tripId: trip.id,
+      title: 'Tram, distance never entered',
+      mode: 'train',
+      departureDate: '2026-04-11',
+    })
+    // Dated into the previous year on purpose: the year row filters on the
+    // leg's own departure date, not on the trip it hangs off.
+    await createTransport(alpha.scope, {
+      tripId: trip.id,
+      title: 'Positioning drive, last December',
+      mode: 'car',
+      departureDate: '2025-12-30',
+      distanceMetres: 300_000,
+    })
+
+    await recompute(
+      { userId: alpha.ownerUserId, statYear: 2026 },
+      context(alpha.organizationId),
+    )
+    await recompute(
+      { userId: alpha.ownerUserId, statYear: 0 },
+      context(alpha.organizationId),
+    )
+
+    const rows = await listTravelStats(alpha.scope, alpha.ownerUserId)
+    expect(rows.find((row) => row.statYear === 2026)?.distanceMetres).toBe(
+      1_720_000,
+    )
+    expect(rows.find((row) => row.statYear === 0)?.distanceMetres).toBe(
+      2_020_000,
+    )
+  })
+
+  it('writes a zero distance over a stored figure the trips cannot account for', async () => {
+    // What the dev seeder leaves behind: a distance no transport leg supports.
+    await upsertTravelStats(alpha.scope, {
+      userId: alpha.ownerUserId,
+      statYear: 0,
+      distanceMetres: 128_400_000,
+    })
+
+    await recompute(
+      { userId: alpha.ownerUserId, statYear: 0 },
+      context(alpha.organizationId),
+    )
+
+    const allTime = (
+      await listTravelStats(alpha.scope, alpha.ownerUserId)
+    ).find((row) => row.statYear === 0)
+    expect(allTime?.distanceMetres).toBe(0)
+  })
+
+  it('fails permanently for a user who is no longer a member', async () => {
+    const failure = await recompute(
+      { userId: beta.ownerUserId, statYear: 0 },
+      context(alpha.organizationId),
+    ).catch((cause: unknown) => cause)
+
+    expect(failure).toBeInstanceOf(TaskPermanentError)
+    expect((failure as Error).message).toContain('no longer a member')
+    // Nothing was written for the stranger under the envelope's organization.
+    expect(await listTravelStats(alpha.scope, beta.ownerUserId)).toEqual([])
+  })
+
+  it('never reads or writes outside the envelope’s organization', async () => {
+    await seedTravel(alpha)
+    await seedTravel(beta)
+    const before = await figures(beta, beta.ownerUserId)
+
+    await recompute(
+      { userId: alpha.ownerUserId, statYear: 0 },
+      context(alpha.organizationId),
+    )
+
+    expect(await figures(beta, beta.ownerUserId)).toEqual(before)
+    expect(await listTravelStats(beta.scope, alpha.ownerUserId)).toEqual([])
+  })
+
+  it('refuses to run without the D1 binding rather than half-recomputing', async () => {
+    // The shipped handler, so the guard is asserted on the value the consumer
+    // actually registers rather than on a test-built one.
+    const failure = await handleTravelStats(
+      { userId: alpha.ownerUserId, statYear: 0 },
+      context(alpha.organizationId, fakeEnv({ DB: undefined })),
+    ).catch((cause: unknown) => cause)
+
+    expect(failure).toBeInstanceOf(TaskConfigurationError)
+  })
+})
+
+describe('the task kind on the queue', () => {
+  it('is registered, so a message is not dead-lettered as unhandled', () => {
+    expect(taskHandlers['travel-stats']).toBe(handleTravelStats)
+  })
+
+  it('accepts the envelope the producer builds', () => {
+    const envelope = buildTaskEnvelope(
+      {
+        kind: 'travel-stats',
+        orgId: 'org_1',
+        id: travelStatsTaskId('org_1', 'user_1', 2026, NOW),
+        payload: { userId: 'user_1', statYear: 2026 },
+      },
+      () => NOW,
+    )
+    expect(envelope).toMatchObject({
+      kind: 'travel-stats',
+      payload: { userId: 'user_1', statYear: 2026 },
+    })
+  })
+
+  it('refuses a year that is not a year, and anything beside the two fields', () => {
+    for (const statYear of [12, -2026, 2026.5, 20_260]) {
+      expect(
+        travelStatsPayloadSchema.safeParse({ userId: 'user_1', statYear })
+          .success,
+      ).toBe(false)
+    }
+    expect(
+      travelStatsPayloadSchema.safeParse({ userId: 'user_1', statYear: 0 })
+        .success,
+    ).toBe(true)
+    // `strictObject`: an organization id on the payload would be a second, forgeable tenant.
+    expect(
+      travelStatsPayloadSchema.safeParse({
+        userId: 'user_1',
+        statYear: 0,
+        organizationId: 'org_2',
+      }).success,
+    ).toBe(false)
+  })
+})
+
+describe('travelStatsTaskId', () => {
+  it('collapses a burst for the same traveller and year onto one id', () => {
+    const first = travelStatsTaskId('org_1', 'user_1', 2026, NOW)
+    const second = travelStatsTaskId('org_1', 'user_1', 2026, NOW + 3_000)
+    expect(second).toBe(first)
+  })
+
+  it('separates the years, the travellers and the tenants', () => {
+    const base = travelStatsTaskId('org_1', 'user_1', 0, NOW)
+    expect(travelStatsTaskId('org_1', 'user_1', 2026, NOW)).not.toBe(base)
+    expect(travelStatsTaskId('org_1', 'user_2', 0, NOW)).not.toBe(base)
+    expect(travelStatsTaskId('org_2', 'user_1', 0, NOW)).not.toBe(base)
+  })
+
+  it('starts a new id once the collapse window has passed', () => {
+    const first = travelStatsTaskId('org_1', 'user_1', 0, NOW)
+    const later = travelStatsTaskId('org_1', 'user_1', 0, NOW + 60_000)
+    expect(later).not.toBe(first)
+  })
+})
+
+describe('recomputeDelaySeconds', () => {
+  /** The instant a window opens; `NOW` is a round minute, so it opens one. */
+  const windowStart = NOW
+
+  it('holds the message for the rest of the window it was written in', () => {
+    expect(recomputeDelaySeconds(windowStart)).toBe(RECOMPUTE_WINDOW_MS / 1_000)
+    expect(recomputeDelaySeconds(windowStart + 9_500)).toBe(1)
+  })
+
+  it('never delivers before the window it collapses closes', () => {
+    // Every millisecond of a window, sampled: a delay that lands short of the
+    // window's end would recompute from a snapshot the burst is still filling.
+    for (let offset = 0; offset < RECOMPUTE_WINDOW_MS; offset += 250) {
+      const at = windowStart + offset
+      const delay = recomputeDelaySeconds(at)
+      expect(delay).toBeGreaterThan(0)
+      expect(at + delay * 1_000).toBeGreaterThanOrEqual(
+        windowStart + RECOMPUTE_WINDOW_MS,
+      )
+    }
+  })
+})

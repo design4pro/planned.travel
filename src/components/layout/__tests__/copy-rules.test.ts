@@ -183,14 +183,17 @@ describe('the app shell ships no English literal', () => {
   const JSX_PHRASE = />\s*([A-Z][A-Za-z'’]*(?:[ ,.'’-]+[A-Za-z'’]+)+)\s*</g
   const JSX_WORD = />\s*([A-Z][a-z]{2,})\s*</g
 
-  it.each(COPY_CASES)('%s renders no English in a JSX text node', (_name, source) => {
-    const text = withoutComments(source.text)
-    const found = [
-      ...[...text.matchAll(JSX_PHRASE)].map((match) => match[1]),
-      ...[...text.matchAll(JSX_WORD)].map((match) => match[1]),
-    ]
-    expect(found).toEqual([])
-  })
+  it.each(COPY_CASES)(
+    '%s renders no English in a JSX text node',
+    (_name, source) => {
+      const text = withoutComments(source.text)
+      const found = [
+        ...[...text.matchAll(JSX_PHRASE)].map((match) => match[1]),
+        ...[...text.matchAll(JSX_WORD)].map((match) => match[1]),
+      ]
+      expect(found).toEqual([])
+    },
+  )
 })
 
 describe('the shell reads correctly in Arabic', () => {
@@ -198,12 +201,15 @@ describe('the shell reads correctly in Arabic', () => {
   const PHYSICAL =
     /\b(?:m[lr]-|p[lr]-|text-(?:left|right)\b|border-[lr]\b|rounded-[lr]-|inset-x-|left-\d|right-\d|float-(?:left|right)|origin-(?:left|right))/g
 
-  it.each(CASES)('%s uses logical direction utilities only', (_name, source) => {
-    const found = [...withoutComments(source.text).matchAll(PHYSICAL)].map(
-      (match) => match[0],
-    )
-    expect(found).toEqual([])
-  })
+  it.each(CASES)(
+    '%s uses logical direction utilities only',
+    (_name, source) => {
+      const found = [...withoutComments(source.text).matchAll(PHYSICAL)].map(
+        (match) => match[0],
+      )
+      expect(found).toEqual([])
+    },
+  )
 
   /**
    * Every glyph whose meaning is "the direction reading travels" carries the
@@ -286,8 +292,18 @@ describe('the catalogue and the shell agree', () => {
       used.add(match[1])
     }
   }
-  // The prefix is not a key; it is the first half of one.
-  const composesStoredKeys = used.delete(STORED_PREFIX)
+  // The prefix is not a key; it is the first half of one — and it is spelled in exactly one place.
+  // That place is no longer necessarily a shell file: the email `src/server/notifications/dispatch.ts`
+  // sends renders the same stored pair, and the primitives both halves compose it through moved to
+  // `#/lib/notification-copy` so the two cannot drift. Either home satisfies the rule; a second
+  // spelling of the prefix would not.
+  const sharedCopy = readFileSync(
+    join(process.cwd(), 'src', 'lib', 'notification-copy.ts'),
+    'utf8',
+  )
+  const composesStoredKeys =
+    used.delete(STORED_PREFIX) ||
+    sharedCopy.includes(`'shell.${STORED_PREFIX}'`)
 
   it('finds the keys the shell reads', () => {
     // A floor rather than an exact count: the assertions below are what matter,
@@ -384,6 +400,8 @@ describe('the catalogue and the shell agree', () => {
           : Object.values(message as Record<string, string>),
       )
     const uiValues = values(ui)
-    expect(values(shell).filter((value) => uiValues.includes(value))).toEqual([])
+    expect(values(shell).filter((value) => uiValues.includes(value))).toEqual(
+      [],
+    )
   })
 })

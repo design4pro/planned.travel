@@ -56,7 +56,7 @@ try {
   // there is a real finding, but it must not abort a baseline recording.
   await run(
     'record baselines (both projects, both themes)',
-    'PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm exec playwright test visual.spec.ts --update-snapshots --workers=1 --reporter=line',
+    `PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm exec playwright test visual.spec.ts --update-snapshots --workers=${process.env.E2E_WORKERS ?? '4'} --reporter=line`,
   )
   await run(
     'commit',

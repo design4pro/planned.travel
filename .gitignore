@@ -79,6 +79,11 @@ e2e/.auth
 .sandcastle/worktrees/
 .sandcastle/logs/
 
+# Sandcastle pixel-critic scratch: blind A/B frames and the advisory verdict,
+# written in the sandbox worktree and copied to .sandcastle/logs as artifacts.
+.sandcastle-shots/
+.sandcastle-visual.json
+
 # Local basemap cache for e2e (pulled from R2; copied into sandcastle worktrees).
 .e2e-tiles/
 dev-server.log

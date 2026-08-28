@@ -10,6 +10,7 @@
  */
 import { env } from 'cloudflare:workers'
 
+import { appUrl, taskQueue } from '#/server/auth/env'
 import { requireOrg } from '#/server/auth/session'
 import { getDb } from '#/server/db/client'
 import { commitToTripRoom } from '#/server/do'
@@ -17,6 +18,7 @@ import { loggerFromEnv, serializeError } from '#/server/observability'
 import { createScope } from '#/server/repos'
 
 import type { TripPatch, TripRoomNamespace } from '#/server/do'
+import type { DispatchDeps } from '#/server/notifications/dispatch'
 import type { Logger } from '#/server/observability'
 import type { TenantScope } from '#/server/repos'
 
@@ -70,6 +72,17 @@ export async function mirrorToRoom(
       ...serializeError(cause),
     })
   }
+}
+
+/**
+ * What `dispatchQuietly` needs from the runtime: the queue that carries the email, and the origin
+ * its links are built from.
+ *
+ * A function rather than a constant, and read at the call site rather than at module load: both
+ * come from the Worker environment, which a module evaluated at build time has no access to.
+ */
+export function notificationDeps(): DispatchDeps {
+  return { queue: taskQueue(), appUrl: appUrl() }
 }
 
 /** A one-field `upsert` patch, the shape almost every mirror needs. */

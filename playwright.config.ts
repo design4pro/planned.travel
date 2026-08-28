@@ -96,11 +96,25 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
-  // Serialised in CI: a single dev server backed by one D1 file is the
-  // bottleneck, and parallel writers would make failures irreproducible.
+  // Parallel workers share one dev server and one D1 file, and that is safe
+  // because the suite writes to the fixture from exactly three places: the
+  // sign-in and the language pin (setup project only, which finishes before
+  // the browser projects start), and the impersonation fixture — whose session
+  // lives in its own test's cookie jar and whose audit rows no photographed
+  // console screen renders. The real contention is the auth rate limiter's
+  // single per-path bucket, which `hasSession()` now asks once per worker.
+  // One per CI shard, measured: two workers on the 2-vCPU runner starved the
+  // atlas tests — MapLibre renders through software WebGL there, and with two
+  // browsers plus Vite SSR competing, React hydration outran the 10 s action
+  // timeout on 17 tests and left 12 flaky, all timeouts, no pixel diffs
+  // (PR #84, run 33155138232). Parallelism in CI comes from the shards in
+  // ci.yml; locally Playwright's default (half the cores) applies.
   workers: isCI ? 1 : undefined,
   timeout: 30_000,
-  globalTimeout: isCI ? 20 * 60_000 : undefined,
+  // Per CI shard (ci.yml splits the suite twelve ways): ~2.5 min of tests, sized
+  // generously so a retry-heavy shard still reports instead of being cut off —
+  // the report is what tells load from regression.
+  globalTimeout: isCI ? 10 * 60_000 : undefined,
   reporter: isCI
     ? [
         ['github'],

@@ -37,6 +37,7 @@ import {
 import { handleBookingImport } from './handlers/booking-import'
 import { handleEmail } from './handlers/email'
 import { handlePdfExport } from './handlers/pdf-export'
+import { handleTravelStats } from './handlers/travel-stats'
 import { serializeError } from '../observability/logger'
 
 import type { Logger } from '../observability/logger'
@@ -79,10 +80,13 @@ export const taskHandlers: TaskHandlerRegistry = {
   email: handleEmail,
   'pdf-export': handlePdfExport,
   'booking-import': handleBookingImport,
+  'travel-stats': handleTravelStats,
 }
 
 function unhandled(kind: TaskKind): never {
-  throw new TaskPermanentError(`No handler is registered for task kind "${kind}"`)
+  throw new TaskPermanentError(
+    `No handler is registered for task kind "${kind}"`,
+  )
 }
 
 /**
@@ -97,30 +101,48 @@ function runHandler(
 ): Promise<TaskMetrics> {
   switch (envelope.kind) {
     case 'email':
-      return (registry.email ?? unhandled(envelope.kind))(envelope.payload, context)
-    case 'pdf-export':
-      return (registry['pdf-export'] ?? unhandled(envelope.kind))(envelope.payload, context)
-    case 'booking-import':
-      return (registry['booking-import'] ?? unhandled(envelope.kind))(envelope.payload, context)
-    case 'thumbnail':
-      return (registry.thumbnail ?? unhandled(envelope.kind))(envelope.payload, context)
-    case 'backup':
-      return (registry.backup ?? unhandled(envelope.kind))(envelope.payload, context)
-    case 'billing.subscription.changed':
-      return (registry['billing.subscription.changed'] ?? unhandled(envelope.kind))(
+      return (registry.email ?? unhandled(envelope.kind))(
         envelope.payload,
         context,
       )
+    case 'pdf-export':
+      return (registry['pdf-export'] ?? unhandled(envelope.kind))(
+        envelope.payload,
+        context,
+      )
+    case 'booking-import':
+      return (registry['booking-import'] ?? unhandled(envelope.kind))(
+        envelope.payload,
+        context,
+      )
+    case 'thumbnail':
+      return (registry.thumbnail ?? unhandled(envelope.kind))(
+        envelope.payload,
+        context,
+      )
+    case 'backup':
+      return (registry.backup ?? unhandled(envelope.kind))(
+        envelope.payload,
+        context,
+      )
+    case 'travel-stats':
+      return (registry['travel-stats'] ?? unhandled(envelope.kind))(
+        envelope.payload,
+        context,
+      )
+    case 'billing.subscription.changed':
+      return (
+        registry['billing.subscription.changed'] ?? unhandled(envelope.kind)
+      )(envelope.payload, context)
     case 'billing.invoice.paid':
       return (registry['billing.invoice.paid'] ?? unhandled(envelope.kind))(
         envelope.payload,
         context,
       )
     case 'billing.invoice.payment_failed':
-      return (registry['billing.invoice.payment_failed'] ?? unhandled(envelope.kind))(
-        envelope.payload,
-        context,
-      )
+      return (
+        registry['billing.invoice.payment_failed'] ?? unhandled(envelope.kind)
+      )(envelope.payload, context)
   }
 }
 
@@ -146,7 +168,14 @@ async function deadLetter(
   env: TaskBindings,
   logger: Logger,
   at: number,
-  detail: { id: string; kind: string; orgId: string; attempts: number; error: unknown; body: unknown },
+  detail: {
+    id: string
+    kind: string
+    orgId: string
+    attempts: number
+    error: unknown
+    body: unknown
+  },
 ): Promise<void> {
   const record = {
     id: detail.id,
@@ -186,7 +215,12 @@ export async function consumeTaskBatch(
   const registry = options.registry ?? taskHandlers
   const now = options.now ?? (() => Date.now())
   const maxAttempts = numberFromEnv(env.TASK_MAX_ATTEMPTS, 5)
-  const result: ConsumeResult = { acked: 0, retried: 0, deadLettered: 0, duplicates: 0 }
+  const result: ConsumeResult = {
+    acked: 0,
+    retried: 0,
+    deadLettered: 0,
+    duplicates: 0,
+  }
 
   for (const message of batch.messages) {
     const parsed = taskEnvelopeSchema.safeParse(message.body)
@@ -213,7 +247,9 @@ export async function consumeTaskBatch(
       orgId: envelope.orgId,
       taskId: envelope.id,
       attempt: message.attempts,
-      ...(envelope.traceId === undefined ? {} : { requestId: envelope.traceId }),
+      ...(envelope.traceId === undefined
+        ? {}
+        : { requestId: envelope.traceId }),
     })
 
     const done = await env.KV.get(taskDoneKey(envelope.id))
@@ -239,9 +275,13 @@ export async function consumeTaskBatch(
       const metrics = await jobLogger.track('task completed', () =>
         runHandler(envelope, registry, context),
       )
-      await env.KV.put(taskDoneKey(envelope.id), JSON.stringify({ at: now(), ...metrics }), {
-        expirationTtl: TASK_DONE_TTL_SECONDS,
-      })
+      await env.KV.put(
+        taskDoneKey(envelope.id),
+        JSON.stringify({ at: now(), ...metrics }),
+        {
+          expirationTtl: TASK_DONE_TTL_SECONDS,
+        },
+      )
       message.ack()
       result.acked += 1
     } catch (error) {
@@ -262,7 +302,9 @@ export async function consumeTaskBatch(
       }
       // An upstream that told us when to come back knows better than our curve.
       const retryAfter =
-        error instanceof TaskRetryableError ? error.retryAfterSeconds : undefined
+        error instanceof TaskRetryableError
+          ? error.retryAfterSeconds
+          : undefined
       const delaySeconds =
         retryAfter ??
         retryDelaySeconds(message.attempts, {

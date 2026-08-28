@@ -1,5 +1,11 @@
 import { test as setup } from '@playwright/test'
-import { DEMO_EMAIL, cacheSession } from './helpers/shoot.ts'
+import {
+  APP_ROUTES,
+  CONSOLE_ROUTES,
+  DEMO_EMAIL,
+  PUBLIC_ROUTES,
+  cacheSession,
+} from './helpers/shoot.ts'
 
 /**
  * Signs the demo account in once per run and caches the session for every other spec.
@@ -18,5 +24,16 @@ setup('cache the demo session', async ({ page, baseURL }) => {
       `[auth.setup] ${DEMO_EMAIL} could not sign in — authenticated specs will skip. ` +
         `Run: node scripts/seed/seed.mjs`,
     )
+  }
+
+  // Warm the dev server before the browser projects fan out. Vite transforms a
+  // route's modules on its first request, and a cold server hit by several
+  // workers at once answers 500 on routes it has not transformed yet — a page of
+  // retries that says nothing about the code under test. One sequential pass
+  // here, with the session already in the cookie jar, and every later request
+  // finds the module graph ready. Status codes are irrelevant: an anonymous
+  // console redirect transforms the same modules a 200 would.
+  for (const route of [...PUBLIC_ROUTES, ...APP_ROUTES, ...CONSOLE_ROUTES]) {
+    await page.request.get(route.path, { failOnStatusCode: false })
   }
 })
