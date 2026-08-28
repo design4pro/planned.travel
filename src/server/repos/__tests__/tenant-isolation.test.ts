@@ -2185,6 +2185,56 @@ describe('tenant isolation', () => {
       )
     })
 
+    it('lets a Departure reminders opt-out govern its own tenant and no other', async () => {
+      const alphaTripId = await dueTrip(alpha, 'Lisbon in spring')
+      const betaTripId = await dueTrip(beta, 'Porto in autumn')
+
+      // Two opt-out rows in B, both carrying the event type and channel A's reminder is dispatched
+      // under: one for B's own owner, and one naming *A's* owner — `notification_preferences.user_id`
+      // is a `userRef()` with no foreign key, so B can write that row, and only the tenant filter on
+      // the read stops it from reaching across.
+      await setPreference(beta.tenant.scope, {
+        userId: beta.tenant.ownerUserId,
+        eventType: REMINDER_KEY,
+        channel: 'in_app',
+        isEnabled: false,
+      })
+      await setPreference(beta.tenant.scope, {
+        userId: alpha.tenant.ownerUserId,
+        eventType: REMINDER_KEY,
+        channel: 'in_app',
+        isEnabled: false,
+      })
+
+      const kv = await sweepBoth()
+
+      // One tick, two answers: B's traveller is suppressed, A's is reminded. `sweepBoth` has
+      // already asserted both trips counted `notified` — an opt-out filters recipients and never
+      // reopens the window.
+      expect(
+        reminders(
+          (
+            await listNotifications(
+              alpha.tenant.scope,
+              alpha.tenant.ownerUserId,
+            )
+          ).items,
+        ),
+      ).toHaveLength(1)
+      expect(
+        reminders(
+          (await listNotifications(beta.tenant.scope, beta.tenant.ownerUserId))
+            .items,
+        ),
+      ).toEqual([])
+      expect([...kv.store.keys()].sort()).toEqual(
+        [
+          `reminded:${alpha.tenant.organizationId}:${alphaTripId}:${DUE_AT}`,
+          `reminded:${beta.tenant.organizationId}:${betaTripId}:${DUE_AT}`,
+        ].sort(),
+      )
+    })
+
     it('refuses to read either tenant’s reminder rows from the other', async () => {
       await dueTrip(alpha, 'Lisbon in spring')
       await dueTrip(beta, 'Porto in autumn')
