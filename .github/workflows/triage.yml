@@ -1,0 +1,117 @@
+name: Triage
+
+# Pre-triage for issues that enter the backlog untriaged: the sandcastle
+# auditor's follow-ups (`type: bug|maintenance` + `status: pending`, see
+# runAuditor in .sandcastle/main.ts) and hand-filed reports of the same kinds.
+# Claude follows .sandcastle/triage-prompt.md: it verifies the claim against
+# HEAD, promotes a reproduced, unambiguous issue to `ready-for-agent` with an
+# agent brief in the body, and leaves everything else as a recommendation for
+# the maintainer. The same prompt drives the local batch sweep,
+# `pnpm sandcastle:triage`; this workflow handles one issue as it appears.
+#
+# It fires on `opened` when a qualifying label is already present, and on
+# `labeled` when one is added later. `gh issue create --label ...` emits both
+# events back to back, so the concurrency group lets the newer run cancel the
+# older one - they would do identical work. Issues that already carry the
+# triage marker are skipped before anything is installed.
+#
+# No overlap with claude.yml: that one answers only `@claude` mentions. Vitest
+# needs nothing beyond the install (same as the `verify` job in ci.yml); the
+# visual gate is out of reach here and out of scope for triage.
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: 'Issue number to triage (for a backlog sweep run pnpm sandcastle:triage locally)'
+        required: true
+        type: string
+
+concurrency:
+  group: triage-${{ github.event.issue.number || inputs.issue }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        !contains(github.event.issue.labels.*.name, 'ready-for-agent') &&
+        (
+          (github.event.action == 'opened' &&
+            (contains(github.event.issue.labels.*.name, 'type: bug') ||
+             contains(github.event.issue.labels.*.name, 'type: maintenance'))) ||
+          (github.event.action == 'labeled' &&
+            (github.event.label.name == 'type: bug' ||
+             github.event.label.name == 'type: maintenance'))
+        )
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      issues: write
+      # Required by the action's default GitHub App authentication.
+      id-token: write
+
+    env:
+      ISSUE: ${{ github.event.issue.number || inputs.issue }}
+
+    steps:
+      - name: Skip when already triaged
+        id: marker
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh issue view "$ISSUE" --json body,comments --jq '.body, .comments[].body' | grep -q '<!-- sandcastle-triage -->'; then
+            echo "Issue #$ISSUE already carries the triage marker - nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out
+        if: steps.marker.outputs.skip != 'true'
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Set up pnpm
+        if: steps.marker.outputs.skip != 'true'
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        if: steps.marker.outputs.skip != 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.x
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.marker.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+
+      # The prompt file is shared with .sandcastle/triage.ts, which substitutes
+      # {{TASK_ID}} through sandcastle's promptArgs; here sed does the same.
+      - name: Render the prompt
+        if: steps.marker.outputs.skip != 'true'
+        id: render
+        run: |
+          {
+            echo 'prompt<<PROMPT_EOF'
+            sed "s/{{TASK_ID}}/$ISSUE/g" .sandcastle/triage-prompt.md
+            echo 'PROMPT_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Triage
+        if: steps.marker.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: ${{ steps.render.outputs.prompt }}
+          # Bash carries `gh` (labels, comments, the body edit) and the
+          # reproduction commands; nothing is ever committed or pushed.
+          claude_args: |
+            --max-turns 60
+            --allowedTools "Bash,Read,Edit,Write,Glob,Grep"
