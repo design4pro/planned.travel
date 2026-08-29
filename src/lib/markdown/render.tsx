@@ -67,10 +67,9 @@ const headings = {
  * The focus ring is stated rather than imported. `src/components/ui/shared.ts`
  * owns the same three classes, and every component takes them from there, but
  * this module sits under `src/lib/` — below the component layer, which imports
- * `src/lib/` freely — and reaching upward would close that loop. That leaves one
- * copy of the product's single focus treatment outside the file that documents
- * why `outline-solid` in it is load-bearing: the fix belongs at a layer both
- * sides can import, and that file is outside this slice's owned paths.
+ * `src/lib/` freely — and reaching upward would close that loop. `focusRing`
+ * there carries the reason `outline-solid` is load-bearing; a change to one copy
+ * belongs in the other.
  */
 export function Markdown({
   text,

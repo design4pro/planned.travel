@@ -106,8 +106,10 @@ export interface MarkdownThematicBreak {
   readonly type: 'thematicBreak'
 }
 
+/** One cell's inline content. A cell holds no blocks in this subset. */
 export type MarkdownTableCell = ReadonlyArray<MarkdownInline>
 
+/** Always the header's width: short rows are padded, long ones truncated. */
 export type MarkdownTableRow = ReadonlyArray<MarkdownTableCell>
 
 export interface MarkdownTable {
@@ -211,11 +213,12 @@ function parseBlocks(
  * list item running into this line has to stop short of it. A form added here is
  * therefore never one that parses but fails to end the paragraph above it.
  *
- * The predicate pays for a block it then discards, and the bound on that is the
- * shape of the subset: a reader whose opening line does not match returns before
- * reading anything, a reader that does match ends the enclosing run immediately,
- * and nothing nests deeper than quote → paragraph. So a boundary block is read
- * at most twice.
+ * {@link startsBlock} pays for a block it then discards, and the shape of the
+ * subset bounds that to a constant: a reader whose opening line does not match
+ * returns before reading anything, one that does match ends the enclosing run at
+ * once — so a run discards at most one block — and a quote is the only block
+ * holding blocks, which caps the nesting at two. A block is read at most four
+ * times, never once per line of it.
  *
  * @param quotable - false inside a quote, which is what keeps `> > x` from
  *   nesting: the inner `>` is read as text.
@@ -385,7 +388,7 @@ function readTable(
   while (index < lines.length) {
     const line = lines[index]
     if (BLANK.test(line) || !line.includes('|')) break
-    rows.push(toCells(fitRow(splitRow(line), headerCells.length)))
+    rows.push(toRow(fitRow(splitRow(line), headerCells.length)))
     index += 1
   }
 
@@ -393,7 +396,7 @@ function readTable(
     block: {
       type: 'table',
       align: delimiterCells.map(alignOf),
-      header: toCells(headerCells),
+      header: toRow(headerCells),
       rows,
     },
     next: index,
@@ -407,7 +410,7 @@ function fitRow(cells: Array<string>, width: number): Array<string> {
   return fitted
 }
 
-function toCells(cells: ReadonlyArray<string>): MarkdownTableRow {
+function toRow(cells: ReadonlyArray<string>): MarkdownTableRow {
   return cells.map((cell) => parseInline(cell, true))
 }
 
