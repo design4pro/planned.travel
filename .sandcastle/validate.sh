@@ -37,16 +37,25 @@ record_step() { # name ok durationMs
   [ "$2" -eq 1 ] || OVERALL_OK=0
 }
 
+# How many lines of a failed step's log reach stderr. Overridden per call with an assignment
+# prefix (`STEP_TAIL_LINES=60 run_step ...`), which bash scopes to that one invocation.
+STEP_TAIL_LINES=40
+# The outcome of the most recent run_step, for the one caller that needs to look at it after the
+# step is already recorded.
+LAST_STEP_OK=1
+
 run_step() { # name command...
   local name="$1"; shift
-  local start end ok
+  local start end ok log
+  log="/tmp/validate-${name//[^a-zA-Z0-9]/-}.log"
   start=$(date +%s%3N 2>/dev/null || date +%s000)
-  if "$@" > >(tail -c 200000 >"/tmp/validate-${name//[^a-zA-Z0-9]/-}.log") 2>&1; then ok=1; else ok=0; fi
+  if "$@" > >(tail -c 200000 >"$log") 2>&1; then ok=1; else ok=0; fi
   end=$(date +%s%3N 2>/dev/null || date +%s000)
+  LAST_STEP_OK="$ok"
   record_step "$name" "$ok" $((end - start))
   if [ "$ok" -eq 0 ]; then
     echo "==> STEP FAILED: $name (log tail follows)" >&2
-    tail -40 "/tmp/validate-${name//[^a-zA-Z0-9]/-}.log" >&2
+    tail -n "$STEP_TAIL_LINES" "$log" >&2
   else
     echo "==> $name OK" >&2
   fi
@@ -111,22 +120,24 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # it fires would otherwise leave the previous iteration's failures standing
     # in for this one's — and hide the absence the warning below reports.
     rm -f "$E2E_RESULTS_FILE"
-    start=$(date +%s%3N 2>/dev/null || date +%s000)
-    if PLAYWRIGHT_BASE_URL=http://localhost:3010 PLAYWRIGHT_JSON_OUTPUT_NAME="$E2E_RESULTS_FILE" \
-      pnpm exec playwright test "${PW_ARGS[@]}" > >(tail -c 200000 >/tmp/validate-e2e.log) 2>&1; then ok=1; else ok=0; fi
-    end=$(date +%s%3N 2>/dev/null || date +%s000)
-    record_step "e2e" "$ok" $((end - start))
+    # Through run_step like every other rung — same timing, same /tmp/validate-e2e.log, same
+    # record_step, same failure header. Only the tail is deeper: the line reporter's failure
+    # summary runs longer than a compiler's. `env` carries the two variables Playwright reads,
+    # since run_step forwards "$@" as a command rather than evaluating a prefix.
+    STEP_TAIL_LINES=60 run_step "e2e" \
+      env PLAYWRIGHT_BASE_URL=http://localhost:3010 PLAYWRIGHT_JSON_OUTPUT_NAME="$E2E_RESULTS_FILE" \
+      pnpm exec playwright test "${PW_ARGS[@]}"
     if [ -f "$E2E_RESULTS_FILE" ]; then
       # Failed test titles + first error line + snapshot-diff flag, capped at
       # 40. Playwright nests suites recursively — walk the whole tree.
       E2E_FAILED_JSON=$(jq -c '[.. | objects | select(has("specs")) | .specs[] | select(.ok == false) | {title: .title, error: ((.tests[0].results[0].error.message // "") | split("\n")[0] | .[0:300]), snapshotDiff: ((.tests[0].results[0].error.message // "") | test("toHaveScreenshot|screenshot comparison"))}] | .[0:40]' "$E2E_RESULTS_FILE" 2>/dev/null || echo '[]')
-    elif [ "$ok" -eq 0 ]; then
-      # Not a step of its own: the ladder is already red and the log tail below
-      # still carries the line reporter. What this says is that the *verdict*
-      # will name no specs, so nobody reads `failed: []` as "no spec failed".
-      echo "==> WARN: e2e is red but $E2E_RESULTS_FILE was not written — the verdict will name no failing specs, so read the log tail below rather than the verdict. Check that PW_ARGS still declares one --reporter list including json." >&2
+    elif [ "$LAST_STEP_OK" -eq 0 ]; then
+      # Not a step of its own: the ladder is already red and run_step has just
+      # printed the tail, which still carries the line reporter. What this says
+      # is that the *verdict* will name no specs, so nobody reads `failed: []`
+      # as "no spec failed".
+      echo "==> WARN: e2e is red but $E2E_RESULTS_FILE was not written — the verdict will name no failing specs, so read the log tail above rather than the verdict." >&2
     fi
-    [ "$ok" -eq 0 ] && { echo "==> e2e FAILED (log tail follows)" >&2; tail -60 /tmp/validate-e2e.log >&2; }
   fi
 fi
 
