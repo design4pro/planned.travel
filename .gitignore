@@ -80,10 +80,14 @@ e2e/.auth
 # Kept as the backstop now that .sandcastle/sandbox mounts a real store.
 .pnpm-store/
 
-# Sandcastle pixel-critic scratch: blind A/B frames and the advisory verdict,
-# written in the sandbox worktree and copied to .sandcastle/logs as artifacts.
+# Sandcastle advisory-pass scratch: the pixel-critic's blind A/B frames and
+# verdict, and the deep review's structural report — all written in the sandbox
+# worktree and copied to .sandcastle/logs as artifacts. Untracked files left in
+# the worktree are what stops sandcastle from removing it, so every advisory
+# artifact belongs here.
 .sandcastle-shots/
 .sandcastle-visual.json
+.sandcastle-deep-review.json
 
 # Local basemap cache for e2e (pulled from R2; copied into sandcastle worktrees).
 .e2e-tiles/

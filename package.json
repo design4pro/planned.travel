@@ -29,7 +29,9 @@
     "prepare": "husky",
     "sandcastle": "tsx .sandcastle/main.ts",
     "sandcastle:baselines": "tsx .sandcastle/record-baselines.ts",
-    "sandcastle:triage": "tsx .sandcastle/triage.ts"
+    "sandcastle:triage": "tsx .sandcastle/triage.ts",
+    "sandcastle:architecture": "tsx .sandcastle/architecture-review/architecture-review.ts",
+    "sandcastle:e2e-smoke": "tsx .sandcastle/e2e-smoke/e2e-smoke.ts"
   },
   "lint-staged": {
     "*": "prettier --ignore-unknown --write"
