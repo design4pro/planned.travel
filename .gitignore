@@ -85,7 +85,10 @@ e2e/.auth
 # main.ts asks for on every run with `validate.sh --json-out`, and the advisory
 # pass's scratch — the pixel-critic's blind A/B frames and verdict, and the
 # deep review's structural report. Untracked files left in the worktree are
-# what stops sandcastle from removing it, so every run artifact belongs here.
+# what stops sandcastle from removing it, so every artifact a run leaves behind
+# has to be ignored somewhere in this file; the three that carry no
+# `.sandcastle-` prefix — playwright-report, test-results and dev-server.log —
+# already have entries of their own.
 .sandcastle-validation.json
 .sandcastle-shots/
 .sandcastle-visual.json
