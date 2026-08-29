@@ -12,11 +12,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { readPublicFailure } from '#/lib/errors'
 
 const captureException = vi.hoisted(() => vi.fn(() => 'sentry-event-id'))
+const count = vi.hoisted(() => vi.fn())
 const logged = vi.hoisted(() => [] as Array<{ msg: string; cause: unknown }>)
 const dsn = vi.hoisted(() => ({ configured: undefined as string | undefined }))
 
 vi.mock('cloudflare:workers', () => ({ env: {} }))
-vi.mock('@sentry/cloudflare', () => ({ captureException }))
+vi.mock('@sentry/cloudflare', () => ({ captureException, metrics: { count } }))
 vi.mock('#/server/observability/sentry', () => ({
   sentryDsn: () => dsn.configured,
   workerLogger: () => ({
@@ -114,6 +115,23 @@ describe('authored copy crosses intact', () => {
 
     expect(failure.message).toBe('shell.session.noWorkspace')
     expect(captureException).not.toHaveBeenCalled()
+  })
+})
+
+describe('the failure counter', () => {
+  it('counts every failure by kind, refusals included', async () => {
+    dsn.configured = 'https://k@o.ingest.sentry.io/1'
+    count.mockClear()
+
+    await throughBoundary(D1_FAILURE)
+    const refusal = new Error('This account is suspended.')
+    refusal.name = 'ConsoleActionError'
+    await throughBoundary(refusal)
+
+    expect(count.mock.calls.map((call) => call[2]?.attributes?.kind)).toEqual([
+      'unexpected',
+      'refusal',
+    ])
   })
 })
 

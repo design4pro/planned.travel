@@ -1921,6 +1921,27 @@ so one deploy is one Sentry release rather than two halves nothing relates.
 Leaving all of this unset is a supported state. The Worker runs unchanged and reports nothing, and
 the SDK is tree-shaken out of the client bundle entirely.
 
+### 17.2b What is switched on, and what it costs
+
+| Product             | Where                           | Note                                                                                                            |
+| ------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Error monitoring    | Worker, Durable Object, browser | Issues come from `captureException` only, so one failure is one issue                                           |
+| Logs                | both                            | `enableLogs`; every structured log line the Worker already emits is mirrored, at its own level                  |
+| Tracing             | both                            | 10% on production, 100% on staging. Routing spans come from the TanStack Router integration in `src/router.tsx` |
+| Application metrics | Worker                          | `server_fn.failure` counted by kind, and `operation.duration` from anything timed with `Logger.track()`         |
+| Session replay      | browser                         | 10% of sessions, 100% of sessions that hit an error                                                             |
+
+**Session replay masks everything by default and that is deliberate.** A replay records the DOM,
+and this DOM holds trip contents, member lists and billing state. `maskAllText`, `maskAllInputs` and
+`blockAllMedia` are set in `src/lib/sentry-replay.ts`, so what is recorded is layout, timing and
+interaction — what somebody _did_ before it broke, not what they wrote. Unmasking a particular
+element is a deliberate act (`data-sentry-unmask`); nothing does it today, and adding one should be
+reviewed as a privacy change rather than a debugging convenience.
+
+The recorder is ~124 kB and is loaded _after_ hydration, from its own chunk. Registering it inline
+in the client entry put it on the critical path, where every visitor paid for it before first paint
+to record a session that had not happened yet.
+
 ### 17.3 The source-map token
 
 Without source maps every frame in a Sentry issue points at a bundled chunk offset instead of a

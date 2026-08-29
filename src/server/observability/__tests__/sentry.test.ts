@@ -25,9 +25,20 @@ import {
 
 import type { LogRecord } from '../logger'
 
-const captureMessage = vi.hoisted(() => vi.fn())
+const sentryLogger = vi.hoisted(() => ({
+  trace: vi.fn(),
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  fatal: vi.fn(),
+}))
+const distribution = vi.hoisted(() => vi.fn())
 
-vi.mock('@sentry/cloudflare', () => ({ captureMessage }))
+vi.mock('@sentry/cloudflare', () => ({
+  logger: sentryLogger,
+  metrics: { distribution },
+}))
 
 function record(level: LogRecord['level'], msg = 'boom'): LogRecord {
   return {
@@ -81,23 +92,57 @@ describe('sentryOptions', () => {
 })
 
 describe('sentrySink', () => {
-  it('reports an error record', () => {
-    captureMessage.mockClear()
+  it('mirrors a record into Sentry at its own level', () => {
+    sentryLogger.error.mockClear()
     sentrySink().write(record('error', 'task dead-lettered'))
 
-    expect(captureMessage).toHaveBeenCalledTimes(1)
-    expect(captureMessage.mock.calls[0][0]).toBe('task dead-lettered')
-    expect(captureMessage.mock.calls[0][1]).toMatchObject({ level: 'error' })
+    expect(sentryLogger.error).toHaveBeenCalledTimes(1)
+    expect(sentryLogger.error.mock.calls[0][0]).toBe('task dead-lettered')
   })
 
-  it('ignores everything below error, so a handled warning is not an issue', () => {
-    captureMessage.mockClear()
+  it('mirrors every level, because context is the point of a log stream', () => {
+    for (const fn of Object.values(sentryLogger)) fn.mockClear()
     const sink = sentrySink()
     sink.write(record('debug'))
     sink.write(record('info'))
     sink.write(record('warn'))
 
-    expect(captureMessage).not.toHaveBeenCalled()
+    expect(sentryLogger.debug).toHaveBeenCalledTimes(1)
+    expect(sentryLogger.info).toHaveBeenCalledTimes(1)
+    expect(sentryLogger.warn).toHaveBeenCalledTimes(1)
+  })
+
+  it('raises no issue of its own', () => {
+    // Issues come from `captureException` at the point an error is caught, and from nowhere else.
+    // Reporting here as well made one server-function failure look like two unrelated problems.
+    const sentry = sentryLogger as unknown as Record<string, unknown>
+    expect(sentry.captureMessage).toBeUndefined()
+    expect(sentry.captureException).toBeUndefined()
+  })
+
+  it('records a timed operation as a distribution, from data the record already carries', () => {
+    distribution.mockClear()
+    sentrySink().write({
+      ...record('info', 'pdf export'),
+      durationMs: 412,
+      outcome: 'ok',
+    })
+
+    expect(distribution).toHaveBeenCalledTimes(1)
+    const [name, value, options] = distribution.mock.calls[0]
+    expect(name).toBe('operation.duration')
+    expect(value).toBe(412)
+    expect(options).toMatchObject({
+      unit: 'millisecond',
+      attributes: { operation: 'pdf export', outcome: 'ok' },
+    })
+  })
+
+  it('records nothing for a line that timed nothing', () => {
+    distribution.mockClear()
+    sentrySink().write(record('info'))
+
+    expect(distribution).not.toHaveBeenCalled()
   })
 })
 
@@ -112,9 +157,9 @@ describe('workerSink', () => {
   })
 
   it('does not reach for Sentry when there is no DSN to reach it with', () => {
-    captureMessage.mockClear()
+    sentryLogger.error.mockClear()
     workerSink({}).write(record('error'))
 
-    expect(captureMessage).not.toHaveBeenCalled()
+    expect(sentryLogger.error).not.toHaveBeenCalled()
   })
 })

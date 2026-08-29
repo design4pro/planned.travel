@@ -9,6 +9,10 @@
  * Until this file existed, a crash in the browser was invisible. `RootErrorBoundary` rendered a
  * panel and told nobody, and nothing listened for an unhandled rejection - so the only failures the
  * project could see were the ones that happened on the server.
+ *
+ * Everything here is inside the DSN guard, and the guard is a build-time constant - so a build
+ * without a DSN drops the whole block, and with it Replay and the tracing machinery, rather than
+ * shipping a few hundred kilobytes that would never send anything.
  */
 
 import * as Sentry from '@sentry/react'
@@ -34,9 +38,25 @@ if (typeof dsn === 'string' && dsn.length > 0) {
     release: import.meta.env.VITE_SENTRY_RELEASE,
     sendDefaultPii: false,
     beforeSend: scrubEvent,
-    // Errors only, for now. Tracing on the client needs the router instance to name routes, which
-    // this entry does not hold, and untagged spans would cost quota to say "some URL was slow".
-    tracesSampleRate: 0,
+    enableLogs: true,
+    // A tenth of sessions, and every session that hit an error - the second is the one that pays
+    // for itself, because it is the recording somebody will actually want to watch.
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1,
+    // Routing spans are added in `src/router.tsx`, which is the only place holding the router.
+    tracesSampleRate:
+      import.meta.env.VITE_ENVIRONMENT === 'production' ? 0.1 : 1,
+  })
+}
+
+/**
+ * After the entry, never inside it: the recorder is ~38 kB gzipped and nothing it records has
+ * happened yet at this point. `replaysOnErrorSampleRate` still captures the session that hit an
+ * error, because the buffer starts as soon as this resolves.
+ */
+if (typeof dsn === 'string' && dsn.length > 0) {
+  void import('#/lib/sentry-replay').then((replay) => {
+    replay.startSessionReplay()
   })
 }
 

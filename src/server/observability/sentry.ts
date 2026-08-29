@@ -85,6 +85,10 @@ export function sentryOptions(env: SentryEnvLike): CloudflareOptions {
     // working copy is not a release.
     release: readString(import.meta.env.VITE_SENTRY_RELEASE),
     sendDefaultPii: false,
+    // Structured logs as logs, not as issues. Every line the Worker already emits becomes
+    // searchable beside the errors, which is what makes a stack trace legible a week later - the
+    // three lines before a throw are usually more use than the throw.
+    enableLogs: true,
     tracesSampleRate:
       environment === 'production' ? PRODUCTION_TRACES_SAMPLE_RATE : 1,
     beforeSend: scrubEvent,
@@ -97,27 +101,57 @@ export function sentryOptions(env: SentryEnvLike): CloudflareOptions {
   }
 }
 
+/** Our four levels onto Sentry's. */
+const SENTRY_LOG_LEVEL = {
+  debug: 'debug',
+  info: 'info',
+  warn: 'warn',
+  error: 'error',
+} as const
+
 /**
- * A sink that forwards `error` records to Sentry and drops everything else.
+ * A sink that mirrors every record into Sentry's log stream.
  *
- * Only `error`: a `warn` is a thing the code expected and handled, and a Sentry issue for every
- * one of them is how an issue stream stops being read.
+ * Logs, deliberately, and not issues. An earlier version of this called `captureMessage` for every
+ * error record, which had two faults: it made an issue out of a line the code had already handled,
+ * and - because `src/server/errors/middleware.ts` also captures the exception it is reporting - a
+ * single server-function failure raised *two* Sentry events for the same cause, an exception and a
+ * message that looked like an unrelated second problem.
  *
- * The record's own fields become the Sentry context. `serializeError` has already flattened the
- * cause into `errorName` / `errorMessage` / `errorStack` by the time a record reaches a sink, so
- * what is reported is a message plus that context, not a reconstructed `Error` with a fabricated
- * stack - inventing a stack that points at this file would be worse than having none.
+ * So issues come from exactly one place, `captureException` at the point the error is caught, and
+ * everything else here is context around it. `serializeError` has already flattened any cause into
+ * `errorName` / `errorMessage` / `errorStack` by the time a record reaches a sink, so the fields
+ * travel as log attributes rather than as a reconstructed `Error` with a fabricated stack.
+ *
+ * A record carrying `durationMs` came from `Logger.track()`, which times an operation and names its
+ * outcome. Those are recorded as a distribution as well, because the data is already here and the
+ * alternative is a second instrumentation call at every timed call site.
  */
 export function sentrySink(): LogSink {
   return {
     write(record) {
-      if (record.level !== 'error') {
-        return
-      }
-      Sentry.captureMessage(record.msg, {
-        level: 'error',
-        contexts: { log: { ...record } },
+      const { ts, level, msg, service, durationMs, ...attributes } = record
+
+      Sentry.logger[SENTRY_LOG_LEVEL[level]](msg, {
+        service,
+        ...attributes,
+        ...(durationMs === undefined ? {} : { durationMs }),
       })
+
+      if (typeof durationMs === 'number') {
+        Sentry.metrics.distribution('operation.duration', durationMs, {
+          unit: 'millisecond',
+          attributes: {
+            operation: msg,
+            ...(typeof attributes.outcome === 'string'
+              ? { outcome: attributes.outcome }
+              : {}),
+            ...(typeof attributes.component === 'string'
+              ? { component: attributes.component }
+              : {}),
+          },
+        })
+      }
     },
   }
 }
@@ -134,7 +168,8 @@ export function teeSink(...sinks: ReadonlyArray<LogSink>): LogSink {
 }
 
 /**
- * The sink a Worker logger should use: the console always, and Sentry when a DSN is configured.
+ * The sink a Worker logger should use: the console always, and Sentry's log stream when a DSN is
+ * configured.
  *
  * Composed here rather than in `createLogger` so that factory stays runtime-agnostic and testable
  * with `createMemorySink()`.

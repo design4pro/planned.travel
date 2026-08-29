@@ -57,7 +57,7 @@ const ORG = process.env.SENTRY_ORG_SLUG ?? process.env.SENTRY_ORG ?? ''
 const PROJECTS =
   process.env.SENTRY_PROJECT_SLUGS ??
   process.env.SENTRY_PROJECT ??
-  'plannedtravel'
+  'planned-travel'
 
 const argv = process.argv.slice(2)
 const fileIssues = argv.includes('--file-issues')

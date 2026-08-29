@@ -67,6 +67,13 @@ export const failureRedactionMiddleware = createMiddleware({
   } catch (cause) {
     const failure = classifyFailure(cause)
 
+    // One counter at the one place every server-function failure passes through. It answers the
+    // question a stack trace cannot - how often this happens, and how much of it is the product
+    // refusing on purpose rather than breaking.
+    Sentry.metrics.count('server_fn.failure', 1, {
+      attributes: { kind: failure.kind },
+    })
+
     if (failure.kind !== 'unexpected') {
       // Authored copy: it was written for this moment, so it travels intact and is not an
       // incident. A refused action is the product working.
