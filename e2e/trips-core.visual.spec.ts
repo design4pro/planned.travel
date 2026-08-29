@@ -3,7 +3,6 @@ import type { Page } from '@playwright/test'
 import {
   DEMO_EMAIL,
   hasSession,
-  settle,
   useSession,
   visit,
   watchConsole,
@@ -138,29 +137,35 @@ test.describe('01-S3 — A trip reopens on the tab you left it on', () => {
   /**
    * The other half of the same contract, and the reason the redirect is guarded
    * on `typeof window`: `beforeLoad` runs on the Worker for a cold load, where
-   * no storage exists. A cold load therefore lands on the plan however loudly
-   * the browser remembers the costs tab — the honest behaviour, asserted rather
-   * than assumed, because the alternative is a hydration mismatch dressed as a
-   * feature.
+   * neither storage object exists. A cold load therefore lands on the plan
+   * however loudly this browser remembers the costs tab — the honest behaviour,
+   * asserted rather than assumed, because the alternative is a hydration
+   * mismatch dressed as a feature.
+   *
+   * Asked of the Worker as a request rather than as a navigation. That is the
+   * whole claim — what the *server* answers for an address it has no memory of
+   * — and it is measured without opening the planner, whose live map is the
+   * most expensive document in the app and has nothing to do with this.
    */
-  test('a cold load of a trip address lands on the plan', async ({ page }) => {
+  test('the Worker answers a trip address with the plan', async ({ page }) => {
     const tripId = await journalTripToWalk(page)
     await openTab(page, tripId, 'costs')
 
-    /**
-     * `map` is declared rather than sniffed, and the planner is the one tab this
-     * block opens that carries one: `settle()` refuses a route that mounts a
-     * live canvas without saying so.
-     */
-    const route: RouteCase = { ...tripSection(tripId, 'plan'), map: true }
-    const report = watchConsole(page, route)
-    await page.goto(`/trips/${tripId}`, { waitUntil: 'domcontentloaded' })
-    await expect(page).toHaveURL(new RegExp(`/trips/${tripId}/plan$`))
-    await settle(page, route)
-    await expect(page.locator(ACTIVE_TAB)).toHaveAttribute('href', route.path)
+    // Without this the assertion below is vacuous: it would also hold for a
+    // browser that had remembered nothing at all.
+    const remembered = await page.evaluate(() =>
+      window.localStorage.getItem('planned.trip-tab'),
+    )
+    expect(
+      remembered,
+      'the browser has to have remembered the costs tab for the next line to mean anything',
+    ).toContain('costs')
 
-    const verdict = report()
-    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+    const response = await page.request.get(`/trips/${tripId}`, {
+      maxRedirects: 0,
+    })
+    expect(response.status()).toBe(307)
+    expect(response.headers()['location']).toBe(`/trips/${tripId}/plan`)
   })
 
   /**
