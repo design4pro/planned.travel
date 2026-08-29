@@ -902,6 +902,14 @@ function memberOfTrip(
  *
  * "The trips they are on" is literal, and {@link memberOfTrip} is where it is enforced: two members
  * of one workspace who travel separately get two different rows.
+ *
+ * ## The one figure the rule does not reach
+ *
+ * `regionCount` is not trip-derived. It is a lifetime count of this traveller's `visited_regions`,
+ * written unchanged onto every year row, so 2026, 2025 and all-time all print the same number — the
+ * shape the `yearCodes` comment below rejects for countries. It is already per-traveller, so the
+ * `00-S4` amendment leaves it alone; year-scoping it through `visited_regions.first_visited_on` moves
+ * a figure this amendment did not set out to move, and is a ticket of its own.
  */
 export async function recomputeTravelStats(
   scope: TenantScope,

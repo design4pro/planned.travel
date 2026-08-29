@@ -480,6 +480,57 @@ describe('two members of one workspace, two trip memberships', () => {
     expect(row?.distanceMetres).toBe(9_500_000)
   })
 
+  it('gives each traveller a streak of their own travelling years', async () => {
+    // The amendment's one derived figure. Three trips in three consecutive
+    // years in one workspace, split between two travellers: the owner is on
+    // 2026 and 2025, the second traveller on 2024 alone. When the year rows
+    // were the workspace's, both all-time rows read a streak of three - the
+    // same run of years, held by two people who did not travel together.
+    const second = await alpha.addUser('Travels alone')
+    const secondScope = alpha.scopeFor(second)
+
+    await createTrip(alpha.scope, {
+      title: 'Lisbon in spring',
+      startDate: '2026-04-10',
+      endDate: '2026-04-12',
+      currency: 'EUR',
+    })
+    await createTrip(alpha.scope, {
+      title: 'Porto the year before',
+      startDate: '2025-05-01',
+      endDate: '2025-05-03',
+      currency: 'EUR',
+    })
+    await createTrip(secondScope, {
+      title: 'Kyoto in autumn',
+      startDate: '2024-10-02',
+      endDate: '2024-10-04',
+      currency: 'JPY',
+    })
+
+    // Every year either of them could have travelled in, then the all-time row
+    // the streak is written onto - which is the order the producer enqueues in.
+    for (const statYear of [2026, 2025, 2024, 0]) {
+      await recompute(
+        { userId: alpha.ownerUserId, statYear },
+        context(alpha.organizationId),
+      )
+      await recompute(
+        { userId: second, statYear },
+        context(alpha.organizationId),
+      )
+    }
+
+    const owner = await getTravelStats(alpha.scope, alpha.ownerUserId, 0)
+    const traveller = await getTravelStats(alpha.scope, second, 0)
+    expect(owner?.yearStreak).toBe(2)
+    expect(traveller?.yearStreak).toBe(1)
+    // The 2024 row the owner is on no trip in ends their run rather than
+    // extending it: a year row exists, and its `tripCount` is zero.
+    const ownerYears = await figures(alpha, alpha.ownerUserId)
+    expect(ownerYears.find((row) => row.statYear === 2024)?.tripCount).toBe(0)
+  })
+
   it('recomputes to nothing for a workspace member on no trip at all', async () => {
     await seedTravel(alpha)
     const bystander = await alpha.addUser('Never travels')
