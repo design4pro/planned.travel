@@ -48,8 +48,16 @@ const DEFAULT_MAX_FILED = 3
  */
 const BACKLOG_PRESSURE_LIMIT = 10
 
-const ORG = process.env.SENTRY_ORG_SLUG ?? ''
-const PROJECTS = process.env.SENTRY_PROJECT_SLUGS ?? 'planned-travel'
+// `SENTRY_ORG` / `SENTRY_PROJECT` are the conventional names, and the ones @sentry/vite-plugin and
+// sentry-cli already read from the environment for the source-map upload. The `_SLUG` variants exist
+// because the MCP server takes an `--organization-slug` flag and this routine can sweep more than
+// one project; both are accepted so a machine that configured the build does not have to configure
+// a second, near-identical pair of names to run the sweep.
+const ORG = process.env.SENTRY_ORG_SLUG ?? process.env.SENTRY_ORG ?? ''
+const PROJECTS =
+  process.env.SENTRY_PROJECT_SLUGS ??
+  process.env.SENTRY_PROJECT ??
+  'plannedtravel'
 
 const argv = process.argv.slice(2)
 const fileIssues = argv.includes('--file-issues')
