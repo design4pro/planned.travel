@@ -154,11 +154,11 @@ function Block({ node }: { node: MarkdownBlock }): React.JSX.Element {
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-caption">
             <thead>
-              <Row cells={node.header} align={node.align} head />
+              <Row row={node.header} align={node.align} head />
             </thead>
             <tbody>
               {node.rows.map((row, index) => (
-                <Row key={index} cells={row} align={node.align} />
+                <Row key={index} row={row} align={node.align} />
               ))}
             </tbody>
           </table>
@@ -171,17 +171,17 @@ function Block({ node }: { node: MarkdownBlock }): React.JSX.Element {
 }
 
 function Row({
-  cells,
+  row,
   align,
   head = false,
 }: {
-  cells: MarkdownTableRow
+  row: MarkdownTableRow
   align: ReadonlyArray<MarkdownAlign>
   head?: boolean
 }): React.JSX.Element {
   return (
     <tr>
-      {cells.cells.map((cell, index) => {
+      {row.cells.map((cell, index) => {
         const alignment = align[index]
         const classes = cn(
           'px-2 py-1.5 text-start',

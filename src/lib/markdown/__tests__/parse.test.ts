@@ -136,6 +136,39 @@ describe('parse — blocks', () => {
     })
   })
 
+  it('fits a ragged row to the width the header declared', () => {
+    expect(only('| a | b |\n| --- | --- |\n| 1 |\n| 1 | 2 | 3 |')).toEqual({
+      type: 'table',
+      align: [null, null],
+      header: { cells: [{ children: [text('a')] }, { children: [text('b')] }] },
+      rows: [
+        { cells: [{ children: [text('1')] }, { children: [] }] },
+        { cells: [{ children: [text('1')] }, { children: [text('2')] }] },
+      ],
+    })
+  })
+
+  it('keeps an escaped pipe inside its cell rather than splitting on it', () => {
+    expect(only('| a | b |\n| --- | --- |\n| x \\| y | 2 |')).toEqual({
+      type: 'table',
+      align: [null, null],
+      header: { cells: [{ children: [text('a')] }, { children: [text('b')] }] },
+      rows: [
+        {
+          cells: [{ children: [text('x | y')] }, { children: [text('2')] }],
+        },
+      ],
+    })
+  })
+
+  it('reads a tilde fence, whose info string may hold a backtick', () => {
+    expect(only('~~~ ts\ncode `x`\n~~~')).toEqual({
+      type: 'code',
+      language: 'ts',
+      value: 'code `x`\n',
+    })
+  })
+
   it('returns nothing for an empty or blank body', () => {
     expect(parse('')).toEqual([])
     expect(parse('   \n\n\t\n')).toEqual([])
@@ -237,6 +270,15 @@ describe('parse — inline', () => {
     ])
   })
 
+  it('reads a link written with a title, and keeps the title out of the tree', () => {
+    expect(inline('[a](https://example.com "the title")')).toEqual([
+      { type: 'link', href: 'https://example.com', children: [text('a')] },
+    ])
+    expect(inline("[b](<https://example.com> 'the title')")).toEqual([
+      { type: 'link', href: 'https://example.com', children: [text('b')] },
+    ])
+  })
+
   it('unescapes a backslash-escaped punctuation character', () => {
     expect(inline('a \\*not emphasis\\* b')).toEqual([
       text('a *not emphasis* b'),
@@ -320,7 +362,7 @@ describe('parse — outside the subset', () => {
     })
   })
 
-  it('throws on nothing a person can type', () => {
+  it('never throws on a fragment somebody stopped halfway through', () => {
     for (const source of [
       '[',
       '](',

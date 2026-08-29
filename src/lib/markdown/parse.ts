@@ -132,7 +132,11 @@ export type MarkdownBlock =
   | MarkdownTable
 
 /** The schemes a link may carry. Everything else stays text. */
-export const MARKDOWN_LINK_SCHEMES = ['http:', 'https:', 'mailto:'] as const
+export const MARKDOWN_LINK_SCHEMES: ReadonlyArray<string> = [
+  'http:',
+  'https:',
+  'mailto:',
+]
 
 const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+|$)([^\n]*?)[ \t]*$/
 const CLOSING_HASHES = /(?:^|[ \t])#+$/
@@ -171,6 +175,33 @@ function splitLines(source: string): Array<string> {
   return source.replace(/\r\n?/g, '\n').split('\n')
 }
 
+/** One block, and the index of the first line after the ones it consumed. */
+interface BlockRead {
+  readonly block: MarkdownBlock
+  readonly next: number
+}
+
+/**
+ * What a line opens, for the lines that open a block at all.
+ *
+ * The set is stated once because two callers ask the same question of it:
+ * {@link parseBlocks}, which goes on to read the block, and
+ * {@link startsBlock}, which only needs to know that the paragraph or list item
+ * running into this line has to stop short of it.
+ */
+type BlockOpener =
+  | { readonly kind: 'fence'; readonly marker: string; readonly info: string }
+  | { readonly kind: 'thematicBreak' }
+  | {
+      readonly kind: 'heading'
+      readonly level: 1 | 2 | 3
+      readonly text: string
+    }
+  | { readonly kind: 'quote' }
+  | { readonly kind: 'list' }
+  /** Carried whole, because a table is recognised only by reading it. */
+  | { readonly kind: 'table'; readonly read: BlockRead }
+
 /**
  * @param quotable - false inside a quote, which is what keeps `> > x` from
  *   nesting: the inner `>` is read as text.
@@ -183,61 +214,94 @@ function parseBlocks(
   let index = 0
 
   while (index < lines.length) {
-    const line = lines[index]
-
-    if (BLANK.test(line)) {
+    if (BLANK.test(lines[index])) {
       index += 1
       continue
     }
 
-    const fence = FENCE.exec(line)
-    if (fence !== null && isValidInfo(fence[1], fence[2])) {
-      index = readFence(lines, index, fence[1], fence[2], blocks)
-      continue
-    }
+    const opener = openerAt(lines, index, quotable)
+    // A line that opens nothing opens a paragraph, which is the block every
+    // other reader declines.
+    const read =
+      opener === null
+        ? readParagraph(lines, index, quotable)
+        : readOpener(lines, index, opener, quotable)
 
-    if (THEMATIC_BREAK.test(line)) {
-      blocks.push({ type: 'thematicBreak' })
-      index += 1
-      continue
-    }
-
-    const heading = HEADING.exec(line)
-    const level = heading === null ? null : headingLevel(heading[1])
-    if (heading !== null && level !== null) {
-      blocks.push({
-        type: 'heading',
-        level,
-        children: parseInline(
-          heading[2].replace(CLOSING_HASHES, '').trim(),
-          true,
-        ),
-      })
-      index += 1
-      continue
-    }
-
-    if (quotable && QUOTE.test(line)) {
-      index = readQuote(lines, index, blocks)
-      continue
-    }
-
-    if (BULLET.test(line) || ORDERED.test(line)) {
-      index = readList(lines, index, quotable, blocks)
-      continue
-    }
-
-    const table = readTable(lines, index)
-    if (table !== null) {
-      blocks.push(table.block)
-      index = table.next
-      continue
-    }
-
-    index = readParagraph(lines, index, quotable, blocks)
+    blocks.push(read.block)
+    index = read.next
   }
 
   return blocks
+}
+
+/** The opener the line at `index` carries, or `null` when it carries none. */
+function openerAt(
+  lines: ReadonlyArray<string>,
+  index: number,
+  quotable: boolean,
+): BlockOpener | null {
+  const line = lines[index]
+
+  const fence = FENCE.exec(line)
+  if (fence !== null && isValidInfo(fence[1], fence[2])) {
+    return { kind: 'fence', marker: fence[1], info: fence[2] }
+  }
+
+  if (THEMATIC_BREAK.test(line)) return { kind: 'thematicBreak' }
+
+  const heading = HEADING.exec(line)
+  if (heading !== null) {
+    // A run of four or more hashes is outside the subset, and falls through to
+    // be read as whatever the rest of this function makes of it.
+    const level = headingLevel(heading[1])
+    if (level !== null) {
+      return {
+        kind: 'heading',
+        level,
+        text: heading[2].replace(CLOSING_HASHES, '').trim(),
+      }
+    }
+  }
+
+  if (quotable && QUOTE.test(line)) return { kind: 'quote' }
+  if (BULLET.test(line) || ORDERED.test(line)) return { kind: 'list' }
+
+  const table = readTable(lines, index)
+  return table === null ? null : { kind: 'table', read: table }
+}
+
+function readOpener(
+  lines: ReadonlyArray<string>,
+  start: number,
+  opener: BlockOpener,
+  quotable: boolean,
+): BlockRead {
+  switch (opener.kind) {
+    case 'fence':
+      return readFence(lines, start, opener.marker, opener.info)
+
+    case 'thematicBreak':
+      return { block: { type: 'thematicBreak' }, next: start + 1 }
+
+    case 'heading':
+      return {
+        block: {
+          type: 'heading',
+          level: opener.level,
+          children: parseInline(opener.text, true),
+        },
+        next: start + 1,
+      }
+
+    case 'quote':
+      return readQuote(lines, start)
+
+    case 'list':
+      return readList(lines, start, quotable)
+
+    case 'table':
+      return opener.read
+  }
 }
 
 /** The subset stops at three: a deeper run of hashes is literal text. */
@@ -258,8 +322,7 @@ function readFence(
   start: number,
   marker: string,
   info: string,
-  blocks: Array<MarkdownBlock>,
-): number {
+): BlockRead {
   const body: Array<string> = []
   let index = start + 1
 
@@ -280,19 +343,17 @@ function readFence(
 
   // An unclosed fence runs to the end of the body rather than failing: the
   // author is mid-sentence, not mistaken.
-  blocks.push({
-    type: 'code',
-    language: info.trim().split(/\s+/)[0] || null,
-    value: body.length === 0 ? '' : `${body.join('\n')}\n`,
-  })
-  return index
+  return {
+    block: {
+      type: 'code',
+      language: info.trim().split(/\s+/)[0] || null,
+      value: body.length === 0 ? '' : `${body.join('\n')}\n`,
+    },
+    next: index,
+  }
 }
 
-function readQuote(
-  lines: ReadonlyArray<string>,
-  start: number,
-  blocks: Array<MarkdownBlock>,
-): number {
+function readQuote(lines: ReadonlyArray<string>, start: number): BlockRead {
   const body: Array<string> = []
   let index = start
 
@@ -301,16 +362,17 @@ function readQuote(
     index += 1
   }
 
-  blocks.push({ type: 'quote', children: parseBlocks(body, false) })
-  return index
+  return {
+    block: { type: 'quote', children: parseBlocks(body, false) },
+    next: index,
+  }
 }
 
 function readList(
   lines: ReadonlyArray<string>,
   start: number,
   quotable: boolean,
-  blocks: Array<MarkdownBlock>,
-): number {
+): BlockRead {
   const first = ORDERED.exec(lines[start])
   const ordered = first !== null
   const items: Array<Array<string>> = []
@@ -335,21 +397,23 @@ function readList(
     index += 1
   }
 
-  blocks.push({
-    type: 'list',
-    ordered,
-    start: ordered ? Number(first[1]) : 1,
-    items: items.map((item) => ({
-      children: parseInline(item.join('\n'), true),
-    })),
-  })
-  return index
+  return {
+    block: {
+      type: 'list',
+      ordered,
+      start: ordered ? Number(first[1]) : 1,
+      items: items.map((item) => ({
+        children: parseInline(item.join('\n'), true),
+      })),
+    },
+    next: index,
+  }
 }
 
 function readTable(
   lines: ReadonlyArray<string>,
   start: number,
-): { block: MarkdownTable; next: number } | null {
+): BlockRead | null {
   const header = lines[start]
   if (!header.includes('|')) return null
 
@@ -434,8 +498,7 @@ function readParagraph(
   lines: ReadonlyArray<string>,
   start: number,
   quotable: boolean,
-  blocks: Array<MarkdownBlock>,
-): number {
+): BlockRead {
   const body: Array<string> = [lines[start]]
   let index = start + 1
 
@@ -446,11 +509,13 @@ function readParagraph(
     index += 1
   }
 
-  blocks.push({
-    type: 'paragraph',
-    children: parseInline(body.join('\n').trim(), true),
-  })
-  return index
+  return {
+    block: {
+      type: 'paragraph',
+      children: parseInline(body.join('\n').trim(), true),
+    },
+    next: index,
+  }
 }
 
 /** Whether the line at `index` opens a block, and therefore ends the run before it. */
@@ -459,16 +524,7 @@ function startsBlock(
   index: number,
   quotable: boolean,
 ): boolean {
-  const line = lines[index]
-  const fence = FENCE.exec(line)
-  if (fence !== null && isValidInfo(fence[1], fence[2])) return true
-  if (THEMATIC_BREAK.test(line)) return true
-
-  const heading = HEADING.exec(line)
-  if (heading !== null && headingLevel(heading[1]) !== null) return true
-  if (quotable && QUOTE.test(line)) return true
-  if (BULLET.test(line) || ORDERED.test(line)) return true
-  return readTable(lines, index) !== null
+  return openerAt(lines, index, quotable) !== null
 }
 
 /* -------------------------------------------------------------------- inline */
@@ -626,21 +682,23 @@ function matchCodeSpan(
     const run = runLengthAt(source, next, '`')
     if (run === open) {
       const raw = source.slice(start + open, next).replace(/\n/g, ' ')
-      // CommonMark strips one space from each end when both are there, which is
-      // how a backtick is written as a code span of its own.
-      const stripped =
-        raw.length > 2 &&
-        raw.startsWith(' ') &&
-        raw.endsWith(' ') &&
-        raw.trim() !== ''
-          ? raw.slice(1, -1)
-          : raw
-      return { value: stripped, end: next + run }
+      return { value: stripPadding(raw), end: next + run }
     }
     index = next + run
   }
 
   return null
+}
+
+/**
+ * CommonMark strips one space from each end of a code span when both are there
+ * and something is left between them, which is how a backtick is written as a
+ * code span of its own.
+ */
+function stripPadding(value: string): string {
+  const padded =
+    value.startsWith(' ') && value.endsWith(' ') && value.trim() !== ''
+  return padded ? value.slice(1, -1) : value
 }
 
 /**
@@ -795,6 +853,5 @@ export function safeHref(destination: string): string | null {
   if (colon === -1) return null
 
   const scheme = cleaned.slice(0, colon + 1).toLowerCase()
-  const allowed: ReadonlyArray<string> = MARKDOWN_LINK_SCHEMES
-  return allowed.includes(scheme) ? cleaned : null
+  return MARKDOWN_LINK_SCHEMES.includes(scheme) ? cleaned : null
 }
