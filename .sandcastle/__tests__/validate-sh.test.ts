@@ -180,8 +180,9 @@ function readEnvFile(path: string): Record<string, string> {
  * Runs the real script inside a scratch repo. `pwExit` is what the Playwright stub exits with,
  * `results` is what that stub writes to `test-results/results.json`, and `staleResults` is a file
  * left behind by an earlier run before this one starts. `touch` commits those paths on a branch
- * off `main` so the UI-touched heuristic has a real diff to read, and `flags` replaces the default
- * `--force-e2e` for the tests that want that heuristic to decide for itself.
+ * off `main` so the UI-touched heuristic has a real diff to read; `forceE2e` defaults to true so
+ * that every other test reaches the Playwright step whatever it touched, and the heuristic's own
+ * tests set it false to let it decide.
  */
 function runValidate(
   opts: {
@@ -189,9 +190,10 @@ function runValidate(
     results?: string
     staleResults?: string
     touch?: string[]
-    flags?: string[]
+    forceE2e?: boolean
   } = {},
 ): Run {
+  const { forceE2e = true } = opts
   const dir = mkdtempSync(join(tmpdir(), 'validate-sh-'))
   scratchDirs.push(dir)
   // Loudly, because a git call that silently fails here leaves every later assertion reading a
@@ -251,7 +253,7 @@ function runValidate(
       '.sandcastle/validate.sh',
       '--json-out',
       '.sandcastle-validation.json',
-      ...(opts.flags ?? ['--force-e2e']),
+      ...(forceE2e ? ['--force-e2e'] : []),
     ],
     {
       cwd: dir,
@@ -369,7 +371,7 @@ describe('a green e2e step', () => {
 })
 
 describe('the e2e rung', () => {
-  it('is timed, logged and announced by the same machinery as every other step', () => {
+  it('is announced, and tails its log when red, like every other step', () => {
     // It used to be a hand-copy of run_step: its own `date` pair, its own tail redirect, its own
     // record_step call and its own failure header. Two copies of how a step is run is how they
     // drift, so this pins the observable half of the shared path — the announcement on both sides
@@ -391,18 +393,21 @@ describe('the UI-touched heuristic', () => {
   it('runs the suite for a change under src/components', () => {
     const run = runValidate({
       touch: ['src/components/trip-card.tsx'],
-      flags: [],
+      forceE2e: false,
     })
 
     expect(run.verdict.uiTouched).toBe(true)
     expect(run.verdict.steps.map((s) => s.name)).toContain('e2e')
-    expect(run.pwArgs).not.toEqual([])
+    expect(run.pwArgs).toContain('--workers=4')
   })
 
   it('skips it for a server-only change', () => {
     // Deliberate: server-only issues get vitest here and the full suite once per iteration from
     // the Auditor. See the heuristic's own comment.
-    const run = runValidate({ touch: ['src/server/repos/trips.ts'], flags: [] })
+    const run = runValidate({
+      touch: ['src/server/repos/trips.ts'],
+      forceE2e: false,
+    })
 
     expect(run.verdict.uiTouched).toBe(false)
     expect(run.verdict.steps.map((s) => s.name)).toEqual([

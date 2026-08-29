@@ -40,9 +40,6 @@ record_step() { # name ok durationMs
 # How many lines of a failed step's log reach stderr. Overridden per call with an assignment
 # prefix (`STEP_TAIL_LINES=60 run_step ...`), which bash scopes to that one invocation.
 STEP_TAIL_LINES=40
-# The outcome of the most recent run_step, for the one caller that needs to look at it after the
-# step is already recorded.
-LAST_STEP_OK=1
 
 run_step() { # name command...
   local name="$1"; shift
@@ -51,7 +48,6 @@ run_step() { # name command...
   start=$(date +%s%3N 2>/dev/null || date +%s000)
   if "$@" > >(tail -c 200000 >"$log") 2>&1; then ok=1; else ok=0; fi
   end=$(date +%s%3N 2>/dev/null || date +%s000)
-  LAST_STEP_OK="$ok"
   record_step "$name" "$ok" $((end - start))
   if [ "$ok" -eq 0 ]; then
     echo "==> STEP FAILED: $name (log tail follows)" >&2
@@ -59,6 +55,8 @@ run_step() { # name command...
   else
     echo "==> $name OK" >&2
   fi
+  # The step's own verdict, so a caller that has more to say about a red step can branch on it.
+  [ "$ok" -eq 1 ]
 }
 
 route_tree_gate() { pnpm generate-routes && git diff --exit-code -- src/routeTree.gen.ts; }
@@ -127,16 +125,17 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     STEP_TAIL_LINES=60 run_step "e2e" \
       env PLAYWRIGHT_BASE_URL=http://localhost:3010 PLAYWRIGHT_JSON_OUTPUT_NAME="$E2E_RESULTS_FILE" \
       pnpm exec playwright test "${PW_ARGS[@]}"
+    E2E_OK=$? # read before the `-f` test below overwrites $?
     if [ -f "$E2E_RESULTS_FILE" ]; then
       # Failed test titles + first error line + snapshot-diff flag, capped at
       # 40. Playwright nests suites recursively — walk the whole tree.
       E2E_FAILED_JSON=$(jq -c '[.. | objects | select(has("specs")) | .specs[] | select(.ok == false) | {title: .title, error: ((.tests[0].results[0].error.message // "") | split("\n")[0] | .[0:300]), snapshotDiff: ((.tests[0].results[0].error.message // "") | test("toHaveScreenshot|screenshot comparison"))}] | .[0:40]' "$E2E_RESULTS_FILE" 2>/dev/null || echo '[]')
-    elif [ "$LAST_STEP_OK" -eq 0 ]; then
+    elif [ "$E2E_OK" -ne 0 ]; then
       # Not a step of its own: the ladder is already red and run_step has just
       # printed the tail, which still carries the line reporter. What this says
       # is that the *verdict* will name no specs, so nobody reads `failed: []`
       # as "no spec failed".
-      echo "==> WARN: e2e is red but $E2E_RESULTS_FILE was not written — the verdict will name no failing specs, so read the log tail above rather than the verdict." >&2
+      echo "==> WARN: e2e is red but $E2E_RESULTS_FILE was not written — the verdict will name no failing specs, so read the log tail above rather than the verdict. Check that PW_ARGS still declares one --reporter list including json." >&2
     fi
   fi
 fi
