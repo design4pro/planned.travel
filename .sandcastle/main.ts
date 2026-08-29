@@ -1,5 +1,6 @@
 // planned.travel AFK loop, pipeline v2:
-//   plan → per issue [implement → review → VALIDATE → fix loop] → merge → AUDIT
+//   plan → per issue [implement → review → VALIDATE → fix loop → DEEP-REVIEW]
+//        → merge → AUDIT
 //
 // The green validation path costs zero tokens: validate.sh is a deterministic
 // ladder run via sandbox.exec(). The LLM enters only on failure — as the
@@ -8,6 +9,11 @@
 // Auditor adversarially re-checks every closed issue's Definition of Done and
 // runs the full suite (including full e2e) once — the post-merge safety net
 // that lets CI's e2e job run only on develop/main pushes.
+//
+// Two advisory passes run after a green validation and never block a merge: the
+// deep review (structural code quality — read-only, so it cannot break the
+// parallel-branch or Owned-paths model) and, on UI diffs, the blind A/B
+// pixel-critic. SANDCASTLE_DEEP_REVIEW=0 skips the former.
 //
 // Run from anywhere: the integration branch `sandcastle/run-<date>` is cut
 // from `origin/develop` (or resumed, on a same-day rerun) inside its own git
@@ -62,6 +68,23 @@ const captureSchema = z.object({
   skippedReason: z.string().default(''),
 })
 
+// Structural findings from the advisory deep-review stage. Report-only: the
+// stage never edits, so a finding may name code outside the issue's Owned paths.
+const deepReviewSchema = z.object({
+  verdict: z.enum(['clean', 'concerns']),
+  findings: z
+    .array(
+      z.object({
+        severity: z.enum(['blocker', 'strong', 'minor']),
+        title: z.string(),
+        summary: z.string(),
+        files: z.array(z.string()).default([]),
+        remedy: z.string().default(''),
+      }),
+    )
+    .default([]),
+})
+
 const visualSchema = z.object({
   winner: z.enum(['A', 'B', 'tie']),
   findings: z
@@ -94,6 +117,11 @@ const IMPLEMENTER_MODEL = 'claude-opus-5'
 const REVIEWER_MODEL = 'claude-opus-5'
 const AUDITOR_MODEL = 'claude-opus-5'
 const CRITIC_MODEL = 'claude-opus-5'
+const DEEP_REVIEW_MODEL = 'claude-opus-5'
+
+// The deep review is one extra agent run per issue on top of implementer,
+// reviewer and the fix budget. Set SANDCASTLE_DEEP_REVIEW=0 to skip it.
+const DEEP_REVIEW = process.env.SANDCASTLE_DEEP_REVIEW !== '0'
 
 // Runs inside the sandbox before each agent starts. Fresh linux install is
 // ~13 s; never copy darwin node_modules (10+ min teardown through the mount).
@@ -262,6 +290,115 @@ async function declaresVisualChange(
     /visual change expected/i.test(view.stdout) ||
     view.stdout.includes('visual-change-expected')
   )
+}
+
+/**
+ * Advisory deep-review pass, run after a green validation: a fresh agent judges
+ * how the change is STRUCTURED (code judo, file-size crossings, spaghetti
+ * growth, canonical layer, type boundaries, thin abstractions, seams) rather
+ * than whether it works — the ladder settled that. Read-only by construction:
+ * the loop merges two issue branches in parallel and the auditor treats work
+ * outside an issue's Owned paths as a violation, so this stage reports and
+ * never edits. The findings land as an issue comment plus
+ * `.sandcastle-deep-review.json` in the artifacts, and a single `blocker`
+ * becomes a `status: pending` ticket so it does not evaporate. It NEVER blocks
+ * the merge, so every failure path here only logs.
+ */
+async function runDeepReview(
+  sandbox: sandcastle.Sandbox,
+  issue: Issue,
+): Promise<void> {
+  try {
+    const run = await sandbox.run({
+      name: 'deep-reviewer',
+      maxIterations: 1,
+      agent: sandcastle.claudeCode(DEEP_REVIEW_MODEL),
+      promptFile: './.sandcastle/deep-review-prompt.md',
+      promptArgs: { BRANCH: issue.branch },
+    })
+    const raw = run.stdout.match(/<deep-review>([\s\S]*?)<\/deep-review>/)?.[1]
+    if (raw === undefined) {
+      console.log(
+        `  [${issue.id}] deep-review: no <deep-review> block — skipped`,
+      )
+      return
+    }
+    const report = deepReviewSchema.parse(JSON.parse(raw))
+    await sandbox.exec('cat > .sandcastle-deep-review.json', {
+      stdin: JSON.stringify(report, null, 2),
+    })
+
+    const bySeverity = (s: string) =>
+      report.findings.filter((f) => f.severity === s)
+    console.log(
+      `  [${issue.id}] deep-review (advisory): ${report.verdict} — ${bySeverity('blocker').length} blocker, ${bySeverity('strong').length} strong, ${bySeverity('minor').length} minor`,
+    )
+
+    await sandbox.exec(`gh issue comment ${issue.id} --body-file -`, {
+      stdin: [
+        `Sandcastle deep-review (advisory, structural): **${report.verdict}**.`,
+        '',
+        ...(report.findings.length > 0
+          ? report.findings.map((f) =>
+              [
+                `- **[${f.severity}] ${f.title}**`,
+                `  ${f.summary}`,
+                ...(f.files.length > 0
+                  ? [`  Files: ${f.files.map((p) => `\`${p}\``).join(', ')}`]
+                  : []),
+                ...(f.remedy ? [`  Remedy: ${f.remedy}`] : []),
+              ].join('\n'),
+            )
+          : ['No structural findings.']),
+        '',
+        'Full report is in the run artifacts (`.sandcastle-deep-review.json`). This gate does not block the merge.',
+      ].join('\n'),
+    })
+
+    // One blocker becomes a ticket so the highest-conviction structural finding
+    // survives past the comment. Same channel as the auditor's follow-ups:
+    // `status: pending` for human triage (ADR 0006), never `ready-for-agent`.
+    // Capped at one per issue — the backlog is the scarce resource here.
+    const blocker = bySeverity('blocker')[0]
+    if (blocker !== undefined) {
+      const existing = await sandbox.exec(
+        `gh issue list --state open --search ${JSON.stringify(blocker.title)} --json number --jq 'length'`,
+      )
+      if (existing.stdout.trim() !== '0') {
+        console.log(
+          `  [${issue.id}] deep-review blocker already filed: ${blocker.title}`,
+        )
+        return
+      }
+      console.log(
+        `  [${issue.id}] deep-review blocker → issue: ${blocker.title}`,
+      )
+      await sandbox.exec(
+        `gh issue create --title ${JSON.stringify(blocker.title)} --label "type: maintenance" --label "status: pending" --body-file -`,
+        {
+          stdin: [
+            blocker.summary,
+            '',
+            ...(blocker.files.length > 0
+              ? [
+                  `Files: ${blocker.files.map((p) => `\`${p}\``).join(', ')}`,
+                  '',
+                ]
+              : []),
+            ...(blocker.remedy
+              ? [`Suggested direction: ${blocker.remedy}`, '']
+              : []),
+            '---',
+            `_Filed by the sandcastle deep-review (run ${RUN_TS}) while reviewing #${issue.id}._`,
+          ].join('\n'),
+        },
+      )
+    }
+  } catch (error) {
+    console.log(
+      `  [${issue.id}] deep-review: errored — ${error instanceof Error ? error.message : String(error)} (advisory, continuing)`,
+    )
+  }
 }
 
 /**
@@ -446,9 +583,11 @@ async function workIssue(
       }
 
       if (verdict.ok) {
-        if (verdict.uiTouched) {
-          await runPixelCritic(sandbox, issue)
-          // Re-collect: the critic added .sandcastle-shots and the verdict.
+        if (DEEP_REVIEW) await runDeepReview(sandbox, issue)
+        if (verdict.uiTouched) await runPixelCritic(sandbox, issue)
+        if (DEEP_REVIEW || verdict.uiTouched) {
+          // Re-collect: the advisory passes added .sandcastle-deep-review.json,
+          // .sandcastle-shots and the visual verdict.
           await collectArtifacts(sandbox, issue, attempt)
         }
         return { issue, ok: true, commits }
