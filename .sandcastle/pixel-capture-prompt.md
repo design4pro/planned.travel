@@ -36,6 +36,12 @@ every `warnings` entry in `skippedReason` — a warned frame is suspect and the 
 handed it as evidence. If `--auth` fails because `e2e/.auth/demo.json` is missing, refresh it:
 `PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm exec playwright test --project=setup`.
 
+Drop `--auth` when the screen is one only a signed-out visitor sees — `/login` and `/register`.
+Those routes bounce a signed-in visitor to the dashboard, so with `--auth` you would file the
+dashboard under the sign-in screen's filename; the script refuses this outright (exit 2, no frame)
+and names the fix. Every other screen, including `/accept-invitation/<id>` and `/verify-email`,
+keeps `--auth`.
+
 ## The reference side
 
 Photograph the reference with the same script — it is generic Playwright underneath:

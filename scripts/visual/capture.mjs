@@ -21,6 +21,10 @@
  *     whole style document through setStyle and the marker goes back to false;
  *   - entrance motion is stopped before the shutter, so text is never caught at 20% opacity.
  *
+ * `--auth` is refused, rather than warned about, for a screen only a signed-out visitor can see:
+ * `/login` and `/register` bounce an authenticated visitor to the dashboard, so the frame would be
+ * of the wrong screen under the right filename. See ./anonymous-only.mjs.
+ *
  * It deliberately does NOT record anything under e2e/__screenshots__. Those baselines are compared
  * pixel for pixel across machines and belong to Playwright's own projects; this script writes only
  * into the shot directory it is given, for a blind critic to look at.
@@ -43,6 +47,7 @@ import { mkdir, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { chromium } from '@playwright/test'
+import { anonymousOnlyRefusal } from './anonymous-only.mjs'
 
 const AUTH_STATE = 'e2e/.auth/demo.json'
 const DEV_TOOLBAR = '[data-testid="tanstack_devtools"]'
@@ -194,6 +199,17 @@ async function main() {
   await mkdir(outDir, { recursive: true })
 
   const wantsAuth = flag('auth')
+
+  // Asked for a screen only a signed-out visitor ever sees, holding a signed-in session. The route
+  // answers 302 and the frame filed is the redirect target under the requested screen's name — see
+  // ./anonymous-only.mjs. Refused before any frame exists, because downstream there is nothing left
+  // to tell it apart from the product.
+  const refusal = anonymousOnlyRefusal(url, { auth: wantsAuth })
+  if (refusal) {
+    console.error(`capture: ${refusal}`)
+    process.exit(2)
+  }
+
   if (wantsAuth && !existsSync(AUTH_STATE)) {
     console.error(
       `capture: --auth was asked for but ${AUTH_STATE} does not exist. ` +

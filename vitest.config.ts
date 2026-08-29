@@ -24,6 +24,11 @@ const src = fileURLToPath(new URL('./src/', import.meta.url))
  * index, the issue body) and its failure mode is silence: a parsing bug files a duplicate every
  * week, or stops filing anything, and says nothing either way. `pnpm typecheck` already covers that
  * directory; this is the part typecheck cannot see.
+ *
+ * A fourth, `scripts`, covers `scripts/**` for the same reason and one more. Those files are plain
+ * `.mjs` run by `node`, so they are in no tsconfig and typecheck cannot see them at all - and the
+ * policy they carry (which screens `capture.mjs` refuses to photograph signed in) is a claim about
+ * `src/routes/`, which drifts. Tests are the only gate they have.
  */
 export default defineConfig({
   resolve: {
@@ -62,6 +67,16 @@ export default defineConfig({
            * Collecting them would run every one of these tests once per worktree.
            */
           exclude: ['.sandcastle/worktrees/**', '.sandcastle/logs/**'],
+          restoreMocks: true,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'scripts',
+          environment: 'node',
+          globals: false,
+          include: ['scripts/**/__tests__/*.test.mjs'],
           restoreMocks: true,
         },
       },
