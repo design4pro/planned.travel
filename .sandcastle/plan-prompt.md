@@ -8,6 +8,10 @@ Here are the open issues in the repo:
 
 </issues-json>
 
+# SCOPE
+
+{{SCOPE}}
+
 # TASK
 
 Analyze the open issues and build a dependency graph. For each issue, determine whether it **blocks** or **is blocked by** any other open issue.
@@ -22,7 +26,7 @@ An issue is **unblocked** if it has zero blocking dependencies on other open iss
 
 A PRD (an issue that has sub-issues linking to it) is never workable — only its sub-issues are. Exclude PRDs from the plan.
 
-For each unblocked issue, assign a branch name using the exact format `sandcastle/issue-{id}` (no slug or other suffix). This must be deterministic so that re-planning the same issue always produces the same branch name and accumulated progress is preserved.
+For each unblocked issue, assign a branch name using the exact format `sandcastle/issue-{id}-{{RUN_ID}}` (no slug or other suffix). This must be deterministic so that re-planning the same issue **within this run** always produces the same branch name and accumulated progress is preserved. The run suffix is what lets two runs work the backlog side by side: git refuses to check one branch out in two worktrees, and each run is cut from its own `origin/develop` snapshot, so an unsuffixed name would either collide outright or drag another run's differently-based history into this run's merge.
 
 Prioritize: critical bug fixes, then development infrastructure, then tracer-bullet feature slices, then polish and refactors.
 
@@ -31,7 +35,7 @@ Prioritize: critical bug fixes, then development infrastructure, then tracer-bul
 Output your plan as a JSON object wrapped in `<plan>` tags:
 
 <plan>
-{"issues": [{"id": "42", "title": "Fix auth bug", "branch": "sandcastle/issue-42"}]}
+{"issues": [{"id": "42", "title": "Fix auth bug", "branch": "sandcastle/issue-42-{{RUN_ID}}"}]}
 </plan>
 
 Include only unblocked issues. If every issue is blocked, include the single highest-priority candidate (the one with the fewest or weakest dependencies).

@@ -39,7 +39,7 @@ for (const dir of [PNPM_STORE, E2E_TILES]) mkdirSync(dir, { recursive: true })
 
 // docker() derives its default image tag from the directory the sandbox
 // anchors at — since the createWorktree refactor that is the dated worktree
-// (`sandcastle:sandcastle-run-<date>`), not the repo root that `sandcastle
+// (`sandcastle:sandcastle-run-<date>-<n>`), not the repo root that `sandcastle
 // docker build-image` tagged. Pin the repo-root tag every sandbox should use.
 const imageName = defaultImageName(process.cwd())
 
