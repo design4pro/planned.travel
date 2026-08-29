@@ -1,0 +1,352 @@
+/**
+ * The ladder script's own regression test. It exists because the failure mode it guards is silent:
+ * `validate.sh` declared `--reporter` three times, Playwright kept only the last one (`html`),
+ * `test-results/results.json` was never written, and every red e2e run produced
+ * `"e2e":{"failed":[]}`. Nothing complained — the fix agent was simply handed no spec names, and the
+ * intended-visual-change branch in `main.ts`, which needs a non-empty `failed`, could never fire.
+ *
+ * So the script is driven for real: a scratch git repo, a `pnpm` stub on PATH that records the
+ * argument vector Playwright would have been given and can be told to fail with or without writing
+ * a results file, and the verdict JSON read back off disk. Only the flag-form assertion is static.
+ */
+import { spawnSync } from 'node:child_process'
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+import { afterEach, describe, expect, it } from 'vitest'
+
+const VALIDATE_SH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'validate.sh',
+)
+const SCRIPT = readFileSync(VALIDATE_SH, 'utf8')
+
+/** The shape `main.ts` parses out of `.sandcastle-validation.json`. Do not widen. */
+type Validation = {
+  uiTouched: boolean
+  steps: Array<{ name: string; ok: boolean; durationMs: number }>
+  e2e: {
+    failed: Array<{ title: string; error: string; snapshotDiff: boolean }>
+  }
+  ok: boolean
+}
+
+type Run = {
+  status: number
+  stderr: string
+  verdict: Validation
+  /** What `pnpm exec …` was called with, minus the `exec`; empty when Playwright never ran. */
+  pwArgs: string[]
+  pwEnv: Record<string, string>
+}
+
+const scratchDirs: string[] = []
+afterEach(() => {
+  for (const dir of scratchDirs.splice(0))
+    rmSync(dir, { recursive: true, force: true })
+})
+
+/** A results.json in the shape the Playwright JSON reporter writes: suites nested inside suites. */
+const RESULTS_FIXTURE = JSON.stringify({
+  config: { version: '1.62.1' },
+  suites: [
+    {
+      title: 'e2e/visual.spec.ts',
+      file: 'e2e/visual.spec.ts',
+      specs: [],
+      suites: [
+        {
+          title: 'planner',
+          specs: [
+            {
+              title: 'passes',
+              ok: true,
+              tests: [{ results: [{ status: 'passed' }] }],
+            },
+            {
+              title:
+                'the hover card never lands on the panel it would hide behind',
+              ok: false,
+              tests: [
+                {
+                  results: [
+                    {
+                      status: 'failed',
+                      error: {
+                        message:
+                          'Error: expect(page).toHaveScreenshot(planner.png)\n\n  12345 pixels differ',
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              title: 'the trip tab is remembered',
+              ok: false,
+              tests: [
+                {
+                  results: [
+                    {
+                      status: 'failed',
+                      error: {
+                        message:
+                          'Error: expect(received).toBe(expected)\n\n  at e2e/trips-core.visual.spec.ts:41',
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+})
+
+const PNPM_STUB = `#!/usr/bin/env bash
+# Every ladder step is \`pnpm <script>\` and succeeds silently; only the Playwright invocation is
+# interesting, so it records its own argv and the two variables the script exports for it.
+if [ "$1" = "exec" ]; then
+  shift
+  printf '%s\\n' "$@" > "$PW_ARGV_FILE"
+  printf '%s\\n' "$PLAYWRIGHT_JSON_OUTPUT_NAME" "$PLAYWRIGHT_BASE_URL" > "$PW_ENV_FILE"
+  if [ -n "\${PW_RESULTS:-}" ]; then mkdir -p test-results; cp "$PW_RESULTS" test-results/results.json; fi
+  echo "Running 169 tests using 4 workers"
+  exit "\${PW_EXIT:-0}"
+fi
+exit 0
+`
+
+/**
+ * The ambient environment with git neutralised, so the scratch repo cannot reach this one. A git
+ * hook exports `GIT_DIR` and `GIT_INDEX_FILE`: under husky's pre-commit run the scratch `git init`
+ * would otherwise land on *this* checkout's git directory — which is how `core.bare = true` gets
+ * written into a repo that has a working tree. The two `GIT_CONFIG_*` overrides keep `git init`
+ * and the commit off the user's global config as well.
+ */
+const BASE_ENV: NodeJS.ProcessEnv = {
+  ...Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+  ),
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  GIT_CONFIG_SYSTEM: '/dev/null',
+}
+
+function readLines(path: string): string[] {
+  try {
+    return readFileSync(path, 'utf8').split('\n').filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Runs the real script inside a scratch repo. `pwExit` is what the Playwright stub exits with,
+ * `results` is what that stub writes to `test-results/results.json`, and `staleResults` is a file
+ * left behind by an earlier run before this one starts.
+ */
+function runValidate(
+  opts: { pwExit?: number; results?: string; staleResults?: string } = {},
+): Run {
+  const dir = mkdtempSync(join(tmpdir(), 'validate-sh-'))
+  scratchDirs.push(dir)
+  // Loudly, because a git call that silently fails here leaves every later assertion reading a
+  // verdict produced by a script that never got past its first step.
+  const git = (...args: string[]) => {
+    const out = spawnSync('git', args, {
+      cwd: dir,
+      encoding: 'utf8',
+      env: BASE_ENV,
+    })
+    if (out.status !== 0)
+      throw new Error(
+        `git ${args.join(' ')} failed in the scratch repo: ${out.stderr}`,
+      )
+  }
+  git('init', '-q', '-b', 'main')
+  // `-c` rather than `git config`: identity for this one commit, written nowhere.
+  git(
+    '-c',
+    'user.email=ralph@example.com',
+    '-c',
+    'user.name=Ralph',
+    'commit',
+    '-q',
+    '--allow-empty',
+    '-m',
+    'base',
+  )
+
+  mkdirSync(join(dir, '.sandcastle'))
+  writeFileSync(join(dir, '.sandcastle', 'validate.sh'), SCRIPT)
+  writeFileSync(
+    join(dir, '.sandcastle', 'setup-e2e.sh'),
+    '#!/usr/bin/env bash\nexit 0\n',
+  )
+
+  const bin = join(dir, 'bin')
+  mkdirSync(bin)
+  const stub = join(bin, 'pnpm')
+  writeFileSync(stub, PNPM_STUB)
+  chmodSync(stub, 0o755)
+
+  const argvFile = join(dir, 'pw-argv.txt')
+  const envFile = join(dir, 'pw-env.txt')
+  let resultsFile = ''
+  if (opts.results !== undefined) {
+    resultsFile = join(dir, 'results-fixture.json')
+    writeFileSync(resultsFile, opts.results)
+  }
+  if (opts.staleResults !== undefined) {
+    mkdirSync(join(dir, 'test-results'))
+    writeFileSync(join(dir, 'test-results', 'results.json'), opts.staleResults)
+  }
+
+  const run = spawnSync(
+    'bash',
+    [
+      '.sandcastle/validate.sh',
+      '--json-out',
+      '.sandcastle-validation.json',
+      '--force-e2e',
+    ],
+    {
+      cwd: dir,
+      encoding: 'utf8',
+      env: {
+        ...BASE_ENV,
+        PATH: `${bin}:${BASE_ENV.PATH ?? ''}`,
+        TARGET_BRANCH: 'main',
+        PW_ARGV_FILE: argvFile,
+        PW_ENV_FILE: envFile,
+        PW_EXIT: String(opts.pwExit ?? 0),
+        PW_RESULTS: resultsFile,
+      },
+    },
+  )
+
+  const env = readLines(envFile)
+  return {
+    status: run.status ?? -1,
+    stderr: run.stderr,
+    verdict: JSON.parse(
+      readFileSync(join(dir, '.sandcastle-validation.json'), 'utf8'),
+    ) as Validation,
+    pwArgs: readLines(argvFile),
+    pwEnv: {
+      PLAYWRIGHT_JSON_OUTPUT_NAME: env[0] ?? '',
+      PLAYWRIGHT_BASE_URL: env[1] ?? '',
+    },
+  }
+}
+
+describe('the Playwright reporter declaration', () => {
+  it('is declared exactly once, comma-separated, and includes json', () => {
+    // Playwright's CLI takes `--reporter <reporter>` as one comma-separated value, so a repeated
+    // flag is not a list: the last occurrence wins and the others are dropped.
+    const pwArgs = SCRIPT.match(/^\s*PW_ARGS=\((.*)\)\s*$/m)?.[1] ?? ''
+    expect(pwArgs).toContain('--workers=') // the array itself still parses
+    expect(pwArgs.match(/--reporter\S*/g)).toEqual([
+      '--reporter=line,json,html',
+    ])
+    // ...and nowhere else either: a second declaration further down would win over this one.
+    expect(SCRIPT.match(/--reporter=[^\s)]+/g)).toEqual([
+      '--reporter=line,json,html',
+    ])
+  })
+
+  it('reaches the runner as a single argument, alongside the JSON output path', () => {
+    const run = runValidate()
+    expect(run.pwArgs.filter((a) => a.startsWith('--reporter'))).toEqual([
+      '--reporter=line,json,html',
+    ])
+    expect(run.pwArgs).toContain('--workers=4')
+    expect(run.pwEnv).toEqual({
+      PLAYWRIGHT_JSON_OUTPUT_NAME: 'test-results/results.json',
+      PLAYWRIGHT_BASE_URL: 'http://localhost:3010',
+    })
+  })
+})
+
+describe('the verdict of a red e2e step', () => {
+  it('names every failing spec with its first error line and a snapshot flag', () => {
+    const run = runValidate({ pwExit: 1, results: RESULTS_FIXTURE })
+
+    expect(run.verdict.e2e.failed).toEqual([
+      {
+        title: 'the hover card never lands on the panel it would hide behind',
+        error: 'Error: expect(page).toHaveScreenshot(planner.png)',
+        snapshotDiff: true,
+      },
+      {
+        title: 'the trip tab is remembered',
+        error: 'Error: expect(received).toBe(expected)',
+        snapshotDiff: false,
+      },
+    ])
+    expect(run.verdict.ok).toBe(false)
+    expect(run.status).toBe(1)
+    expect(run.stderr).not.toMatch(/WARN: e2e/)
+  })
+
+  it('keeps the shape main.ts parses, and mirrors the verdict in its exit code', () => {
+    const run = runValidate({ pwExit: 1, results: RESULTS_FIXTURE })
+
+    expect(run.verdict.uiTouched).toBe(true)
+    expect(run.verdict.steps.map((s) => s.name)).toEqual([
+      'route-tree',
+      'typecheck',
+      'lint',
+      'vitest',
+      'e2e-env',
+      'route-tree-after-dev',
+      'e2e',
+    ])
+    expect(run.verdict.steps.filter((s) => !s.ok).map((s) => s.name)).toEqual([
+      'e2e',
+    ])
+    for (const step of run.verdict.steps)
+      expect(typeof step.durationMs).toBe('number')
+  })
+
+  it('warns on stderr, naming the file, when no results.json was written', () => {
+    const run = runValidate({ pwExit: 1 })
+
+    expect(run.stderr).toContain('test-results/results.json')
+    expect(run.stderr).toMatch(/WARN/)
+    expect(run.verdict.e2e.failed).toEqual([])
+    expect(run.verdict.ok).toBe(false)
+    expect(run.status).toBe(1)
+  })
+
+  it('ignores a results.json left behind by an earlier run', () => {
+    // Playwright writes the file at the end of a run, so a crash before the reporter fires would
+    // otherwise leave the previous iteration's failures standing in for this one's.
+    const run = runValidate({ pwExit: 1, staleResults: RESULTS_FIXTURE })
+
+    expect(run.verdict.e2e.failed).toEqual([])
+    expect(run.stderr).toContain('test-results/results.json')
+  })
+})
+
+describe('a green e2e step', () => {
+  it('says nothing extra and exits zero', () => {
+    const run = runValidate({ pwExit: 0 })
+
+    expect(run.stderr).not.toMatch(/WARN/)
+    expect(run.verdict).toMatchObject({ ok: true, e2e: { failed: [] } })
+    expect(run.status).toBe(0)
+  })
+})

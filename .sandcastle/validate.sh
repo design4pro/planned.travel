@@ -95,8 +95,18 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
     # (MAX_PARALLEL in main.ts), and 8 browsers + 2 Vite servers is well inside
     # what one VM sustains without the machine-load TIMEOUT flakes. Override
     # with E2E_WORKERS to measure a different knee.
-    PW_ARGS=(--workers="${E2E_WORKERS:-4}" --reporter=line --reporter=json --reporter=html)
+    #
+    # One `--reporter`, comma-separated: Playwright declares the option as
+    # `--reporter <reporter>` ("Reporter to use, comma-separated"), so a
+    # repeated flag is not a list — the last occurrence wins and the rest are
+    # dropped. Written as three flags this run kept only `html`, never wrote
+    # results.json, and reported `failed: []` for every red suite. See issue #97.
+    PW_ARGS=(--workers="${E2E_WORKERS:-4}" --reporter=line,json,html)
     [ "$UPDATE_SNAPSHOTS" -eq 1 ] && PW_ARGS+=(--update-snapshots)
+    # The JSON reporter writes at the end of a run, so a suite that dies before
+    # it fires would otherwise leave the previous iteration's failures standing
+    # in for this one's — and hide the absence the warning below reports.
+    rm -f test-results/results.json
     start=$(date +%s%3N 2>/dev/null || date +%s000)
     if PLAYWRIGHT_BASE_URL=http://localhost:3010 PLAYWRIGHT_JSON_OUTPUT_NAME=test-results/results.json \
       pnpm exec playwright test "${PW_ARGS[@]}" > >(tail -c 200000 >/tmp/validate-e2e.log) 2>&1; then ok=1; else ok=0; fi
@@ -106,6 +116,11 @@ if [ "$UI_TOUCHED" -eq 1 ] && [ "$OVERALL_OK" -eq 1 ]; then
       # Failed test titles + first error line + snapshot-diff flag, capped at
       # 40. Playwright nests suites recursively — walk the whole tree.
       E2E_FAILED_JSON=$(jq -c '[.. | objects | select(has("specs")) | .specs[] | select(.ok == false) | {title: .title, error: ((.tests[0].results[0].error.message // "") | split("\n")[0] | .[0:300]), snapshotDiff: ((.tests[0].results[0].error.message // "") | test("toHaveScreenshot|screenshot comparison"))}] | .[0:40]' test-results/results.json 2>/dev/null || echo '[]')
+    elif [ "$ok" -eq 0 ]; then
+      # Not a step of its own: the ladder is already red and the log tail below
+      # still carries the line reporter. What this says is that the *verdict*
+      # will name no specs, so nobody reads `failed: []` as "no spec failed".
+      echo "==> WARN: e2e is red but test-results/results.json was not written — the verdict will name no failing specs. Check that PW_ARGS declares one --reporter list including json, and that PLAYWRIGHT_JSON_OUTPUT_NAME points at test-results/results.json." >&2
     fi
     [ "$ok" -eq 0 ] && { echo "==> e2e FAILED (log tail follows)" >&2; tail -60 /tmp/validate-e2e.log >&2; }
   fi
