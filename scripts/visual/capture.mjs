@@ -200,10 +200,9 @@ async function main() {
 
   const wantsAuth = flag('auth')
 
-  // Asked for a screen only a signed-out visitor ever sees, holding a signed-in session. The route
-  // answers 302 and the frame filed is the redirect target under the requested screen's name — see
-  // ./anonymous-only.mjs. Refused before any frame exists, because downstream there is nothing left
-  // to tell it apart from the product.
+  // Refused before the browser is even launched: once the frame exists there is nothing left
+  // downstream to tell a redirect target apart from the product. Which screens, and why that list
+  // is short: ./anonymous-only.mjs.
   const refusal = anonymousOnlyRefusal(url, { auth: wantsAuth })
   if (refusal) {
     console.error(`capture: ${refusal}`)

@@ -8,7 +8,6 @@
  */
 
 import { readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -17,7 +16,7 @@ import {
   anonymousOnlyRoute,
 } from '../anonymous-only.mjs'
 
-const AUTH = { auth: true }
+const WITH_AUTH = { auth: true }
 
 describe('anonymousOnlyRoute', () => {
   it('names the route behind an anonymous-only pathname', () => {
@@ -62,7 +61,10 @@ describe('anonymousOnlyRoute', () => {
 
 describe('anonymousOnlyRefusal', () => {
   it('refuses an anonymous-only screen and names the fix', () => {
-    const refusal = anonymousOnlyRefusal('http://localhost:3010/login', AUTH)
+    const refusal = anonymousOnlyRefusal(
+      'http://localhost:3010/login',
+      WITH_AUTH,
+    )
     expect(refusal).toBeTypeOf('string')
     expect(refusal).toContain('--auth')
     expect(refusal).toContain('http://localhost:3010/login')
@@ -81,10 +83,10 @@ describe('anonymousOnlyRefusal', () => {
   it('says nothing about a route that legitimately redirects', () => {
     // `/trips/<id>` sends an authenticated visitor to `/trips/<id>/plan`, which is not this trap.
     expect(
-      anonymousOnlyRefusal('http://localhost:3010/trips/1', AUTH),
+      anonymousOnlyRefusal('http://localhost:3010/trips/1', WITH_AUTH),
     ).toBeUndefined()
     expect(
-      anonymousOnlyRefusal('http://localhost:3010/dashboard', AUTH),
+      anonymousOnlyRefusal('http://localhost:3010/dashboard', WITH_AUTH),
     ).toBeUndefined()
   })
 })
@@ -97,9 +99,17 @@ const AUTH_ROUTES_DIR = 'src/routes/(auth)'
 const SIGNED_IN_REDIRECT =
   /if\s*\(\s*[\w.]*\bsignedIn\s*\)\s*\{?\s*throw\s+redirect\s*\(/
 
+/**
+ * Every routable `.tsx` under `dir`, as a repository-relative path — the same form
+ * `ANONYMOUS_ONLY_ROUTES` records it in, so the two lists compare directly.
+ *
+ * `-lib`, `-ui` and `-server` are skipped: TanStack excludes a leading `-` from routing, so nothing
+ * under them is a route and none of it can carry the redirect that makes the trap.
+ */
 function routeFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name)
+    if (entry.name.startsWith('-')) return []
+    const path = `${dir}/${entry.name}`
     if (entry.isDirectory()) return routeFiles(path)
     return entry.name.endsWith('.tsx') ? [path] : []
   })
@@ -111,23 +121,26 @@ function declaredPathname(source) {
   return match?.[1].replace('/(auth)', '') ?? undefined
 }
 
+/** Both sides are sorted before comparing, so file order alone is never reported as drift. */
+function byRoute(a, b) {
+  return a.route.localeCompare(b.route)
+}
+
 describe('drift against the routes', () => {
   it('lists exactly the (auth) routes that redirect a signed-in visitor', () => {
     const guarded = routeFiles(AUTH_ROUTES_DIR)
-      .map((path) => ({ path, source: readFileSync(path, 'utf8') }))
+      .map((route) => ({ route, source: readFileSync(route, 'utf8') }))
       .filter(({ source }) => SIGNED_IN_REDIRECT.test(source))
-      .map(({ path, source }) => ({
+      .map(({ route, source }) => ({
         pathname: declaredPathname(source),
-        route: path,
+        route,
       }))
 
+    // A regex that matched nothing, or a directory that moved, would otherwise agree with an empty
+    // list and report no drift at all.
     expect(guarded.length).toBeGreaterThan(0)
-    expect([...ANONYMOUS_ONLY_ROUTES].sort(byPathname)).toEqual(
-      guarded.sort(byPathname),
+    expect([...ANONYMOUS_ONLY_ROUTES].sort(byRoute)).toEqual(
+      guarded.sort(byRoute),
     )
   })
 })
-
-function byPathname(a, b) {
-  return a.pathname < b.pathname ? -1 : 1
-}
