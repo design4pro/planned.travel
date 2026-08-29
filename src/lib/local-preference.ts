@@ -96,8 +96,32 @@ function writeRaw(area: PreferenceArea, key: string, raw: string): void {
   try {
     storage.setItem(key, raw)
   } catch {
-    // Quota, private browsing, a blocked origin: the preference simply will not
-    // survive the reload. The session still updates.
+    // Quota, private browsing, a blocked origin: the write is simply lost. Every
+    // read goes back to the store, so the next one answers with whatever is
+    // still there — a preference is not worth a white screen.
+  }
+}
+
+/**
+ * A value derived from the stored string, recomputed only when that string
+ * changes.
+ *
+ * `useSyncExternalStore` compares snapshots by identity and re-renders in a loop
+ * when a fresh object comes back from an unchanged store, so a read has to
+ * answer with the same value until storage actually moves.
+ */
+function memoiseByRaw<T>(
+  area: PreferenceArea,
+  key: string,
+  decode: (raw: string | null) => T,
+): () => T {
+  let memo: { readonly raw: string | null; readonly value: T } | null = null
+
+  return () => {
+    const raw = readRaw(area, key)
+    if (memo !== null && memo.raw === raw) return memo.value
+    memo = { raw, value: decode(raw) }
+    return memo.value
   }
 }
 
@@ -148,31 +172,16 @@ export function definePreference<T>(spec: PreferenceSpec<T>): Preference<T> {
   const { key, area, fallback, parse } = spec
   const notifier = createNotifier(area, key)
 
-  /**
-   * `useSyncExternalStore` compares snapshots by identity and re-renders in a
-   * loop when a fresh object comes back from an unchanged store, so the parsed
-   * value is memoised against the exact string it was parsed from.
-   */
-  let cachedRaw: string | null = null
-  let cachedValue: T = fallback
-  let cached = false
-
-  function read(): T {
-    const raw = readRaw(area, key)
-    if (cached && raw === cachedRaw) return cachedValue
-    cachedRaw = raw
-    cached = true
-    cachedValue = fallback
-    if (raw !== null) {
-      try {
-        const parsed = parse(raw)
-        if (parsed !== undefined) cachedValue = parsed
-      } catch {
-        // A guard that throws is a refusal like any other.
-      }
+  const read = memoiseByRaw(area, key, (raw) => {
+    if (raw === null) return fallback
+    try {
+      const parsed = parse(raw)
+      return parsed === undefined ? fallback : parsed
+    } catch {
+      // A guard that throws is a refusal like any other.
+      return fallback
     }
-    return cachedValue
-  }
+  })
 
   function write(next: T): void {
     writeRaw(area, key, JSON.stringify(next))
@@ -228,43 +237,37 @@ export function defineKeyedPreference<T>(
   const { key, area, fallback, limit, parse } = spec
   const notifier = createNotifier(area, key)
 
-  let cachedRaw: string | null = null
-  let cachedEntries: Array<StoredEntry> = []
-  let cachedValues = new Map<string, T>()
-  let cached = false
-
-  /** Re-decode only when the stored string is not the one already decoded. */
-  function sync(): void {
-    const raw = readRaw(area, key)
-    if (cached && raw === cachedRaw) return
-    cachedRaw = raw
-    cached = true
-    cachedEntries = raw === null ? [] : (decodeEntries(raw) ?? [])
-    cachedValues = new Map()
-    for (const [ownerId, value] of cachedEntries) {
+  /**
+   * The decoded record: `entries` exactly as stored, so a write can put back the
+   * ones it did not touch, and `values` the subset that survived the guard.
+   */
+  const snapshot = memoiseByRaw(area, key, (raw) => {
+    const entries = raw === null ? [] : (decodeEntries(raw) ?? [])
+    const values = new Map<string, T>()
+    for (const [ownerId, value] of entries) {
       try {
         const parsed = parse(JSON.stringify(value))
-        if (parsed !== undefined) cachedValues.set(ownerId, parsed)
+        if (parsed !== undefined) values.set(ownerId, parsed)
       } catch {
         // A guard that throws is a refusal like any other.
       }
     }
-  }
+    return { entries, values }
+  })
 
   function read(ownerId: string): T {
-    sync()
-    const hit = cachedValues.get(ownerId)
+    const hit = snapshot().values.get(ownerId)
     return hit === undefined ? fallback : hit
   }
 
   function write(ownerId: string, next: T): void {
-    sync()
     // Most recently touched first, truncated at the limit, so what the ceiling
     // drops is always the entry nobody has come back to — never the one this
     // call just wrote.
-    const entries: Array<StoredEntry> = [
-      [ownerId, next] as StoredEntry,
-      ...cachedEntries.filter(([id]) => id !== ownerId),
+    const touched: StoredEntry = [ownerId, next]
+    const entries = [
+      touched,
+      ...snapshot().entries.filter(([id]) => id !== ownerId),
     ].slice(0, limit)
     writeRaw(area, key, JSON.stringify({ v: RECORD_VERSION, entries }))
     notifier.emit()

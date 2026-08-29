@@ -43,16 +43,10 @@ test.describe('01-S3 — A trip reopens on the tab you left it on', () => {
   const costsUrl = (tripId: string): RegExp =>
     new RegExp(`/trips/${tripId}/costs(\\?|$)`)
 
-  /**
-   * `map` is declared rather than sniffed, and the planner is the one tab in
-   * this table that carries one: `settle()` refuses a route that mounts a live
-   * canvas without saying so.
-   */
-  const tripSection = (tripId: string, tab: string, map?: true): RouteCase => ({
+  const tripSection = (tripId: string, tab: string): RouteCase => ({
     name: `trip-${tab}`,
     path: `/trips/${tripId}/${tab}`,
     ready: TRIP_SECTIONS,
-    ...(map === true ? { map } : {}),
   })
 
   test.beforeEach(async ({ context, page, baseURL }) => {
@@ -64,7 +58,7 @@ test.describe('01-S3 — A trip reopens on the tab you left it on', () => {
   })
 
   /** The id behind the journal's first link to a trip rather than to a tab. */
-  async function unwrittenTripId(page: Page): Promise<string | null> {
+  async function linkedTripId(page: Page): Promise<string | null> {
     return page.evaluate(() => {
       for (const anchor of document.querySelectorAll('a[href^="/trips/"]')) {
         const match = /^\/trips\/([^/?#]+)$/.exec(
@@ -76,6 +70,23 @@ test.describe('01-S3 — A trip reopens on the tab you left it on', () => {
     })
   }
 
+  /**
+   * Open the journal and take the trip this block walks, or skip — a workspace
+   * whose journal links to no trip address leaves this block nothing to measure.
+   */
+  async function journalTripToWalk(page: Page): Promise<string> {
+    await visit(page, JOURNAL, 'light')
+    const tripId = await linkedTripId(page)
+    test.skip(
+      tripId === null,
+      'the journal lists no trip of its own, so there is no link to a trip address to walk',
+    )
+    // `test.skip()` above ends the test when the id is missing; this only keeps
+    // the type honest for the callers.
+    if (tripId === null) throw new Error('unreachable: the test was skipped')
+    return tripId
+  }
+
   /** Open a tab of a trip the long way round, and prove the strip is on it. */
   async function openTab(
     page: Page,
@@ -83,28 +94,13 @@ test.describe('01-S3 — A trip reopens on the tab you left it on', () => {
     tab: string,
   ): Promise<void> {
     const route = tripSection(tripId, tab)
-    const response = await page.goto(route.path, {
-      waitUntil: 'domcontentloaded',
-    })
-    expect(
-      response?.status() ?? 0,
-      `${route.path} should not be an error response`,
-    ).toBeLessThan(400)
-    await settle(page, route)
+    await visit(page, route, 'light')
     await expect(page.locator(ACTIVE_TAB)).toHaveCount(1)
     await expect(page.locator(ACTIVE_TAB)).toHaveAttribute('href', route.path)
   }
 
   test('a trip reopens on the tab it was left on', async ({ page }) => {
-    await visit(page, JOURNAL, 'light')
-
-    const tripId = await unwrittenTripId(page)
-    test.skip(
-      tripId === null,
-      'the journal lists no trip of its own, so there is no link to a trip address to walk',
-    )
-    if (tripId === null) return
-
+    const tripId = await journalTripToWalk(page)
     await openTab(page, tripId, 'costs')
 
     /**
@@ -148,17 +144,15 @@ test.describe('01-S3 — A trip reopens on the tab you left it on', () => {
    * feature.
    */
   test('a cold load of a trip address lands on the plan', async ({ page }) => {
-    await visit(page, JOURNAL, 'light')
-    const tripId = await unwrittenTripId(page)
-    test.skip(
-      tripId === null,
-      'the journal lists no trip of its own, so there is no link to a trip address to walk',
-    )
-    if (tripId === null) return
-
+    const tripId = await journalTripToWalk(page)
     await openTab(page, tripId, 'costs')
 
-    const route = tripSection(tripId, 'plan', true)
+    /**
+     * `map` is declared rather than sniffed, and the planner is the one tab this
+     * block opens that carries one: `settle()` refuses a route that mounts a
+     * live canvas without saying so.
+     */
+    const route: RouteCase = { ...tripSection(tripId, 'plan'), map: true }
     const report = watchConsole(page, route)
     await page.goto(`/trips/${tripId}`, { waitUntil: 'domcontentloaded' })
     await expect(page).toHaveURL(new RegExp(`/trips/${tripId}/plan$`))
@@ -179,14 +173,7 @@ test.describe('01-S3 — A trip reopens on the tab you left it on', () => {
     context,
     page,
   }) => {
-    await visit(page, JOURNAL, 'light')
-    const tripId = await unwrittenTripId(page)
-    test.skip(
-      tripId === null,
-      'the journal lists no trip of its own, so there is no link to a trip address to walk',
-    )
-    if (tripId === null) return
-
+    const tripId = await journalTripToWalk(page)
     await openTab(page, tripId, 'costs')
 
     const second = await context.newPage()

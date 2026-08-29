@@ -4,7 +4,7 @@ import { defineKeyedPreference } from './local-preference'
  * Which section of a trip a reader left open, remembered per trip.
  *
  * Isomorphic and free of storage access of its own: the vocabulary below is a
- * plain tuple and every read and write goes through the browser-preference
+ * plain record and every read and write goes through the browser-preference
  * module, which is the one place that knows a `Storage` object exists.
  *
  * The tab ids and their routes are declared here rather than derived from
@@ -12,21 +12,6 @@ import { defineKeyedPreference } from './local-preference'
  * message keys; the two are held in step by `src/lib/__tests__/trip-tab.test.ts`,
  * which fails the day an eighth tab arrives without a decision being taken here.
  */
-export const TRIP_TAB_IDS = [
-  'plan',
-  'transports',
-  'book',
-  'lists',
-  'costs',
-  'files',
-  'collab',
-] as const
-
-export type TripTabId = (typeof TRIP_TAB_IDS)[number]
-
-/** The plan *is* the trip: it is where a trip opens when nothing says otherwise. */
-export const DEFAULT_TRIP_TAB: TripTabId = 'plan'
-
 export const TRIP_TAB_ROUTES = {
   plan: '/trips/$tripId/plan',
   transports: '/trips/$tripId/transports',
@@ -35,10 +20,23 @@ export const TRIP_TAB_ROUTES = {
   costs: '/trips/$tripId/costs',
   files: '/trips/$tripId/files',
   collab: '/trips/$tripId/collab',
-} as const satisfies Record<TripTabId, `/trips/$tripId/${string}`>
+} as const satisfies Record<string, `/trips/$tripId/${string}`>
+
+export type TripTabId = keyof typeof TRIP_TAB_ROUTES
+
+/**
+ * Every tab id, in the order the strip renders them — the record's own keys, so
+ * a tab cannot be added to one and forgotten in the other.
+ */
+export const TRIP_TAB_IDS: ReadonlyArray<TripTabId> = Object.keys(
+  TRIP_TAB_ROUTES,
+) as Array<TripTabId>
+
+/** The plan *is* the trip: it is where a trip opens when nothing says otherwise. */
+export const DEFAULT_TRIP_TAB: TripTabId = 'plan'
 
 export function isTripTabId(value: unknown): value is TripTabId {
-  return (TRIP_TAB_IDS as ReadonlyArray<unknown>).includes(value)
+  return typeof value === 'string' && Object.hasOwn(TRIP_TAB_ROUTES, value)
 }
 
 /**

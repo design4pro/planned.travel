@@ -10,9 +10,16 @@ import { TRIP_TABS } from './nav-model'
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const
 
-/** A deep page inside a tab keeps that tab lit, and remembered. */
-function isTabActive(href: string, pathname: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`)
+/**
+ * The tab this path sits in, or `undefined` off the strip entirely. A deep page
+ * inside a tab keeps that tab lit, and remembered. No tab's path is a prefix of
+ * another's, so at most one ever answers.
+ */
+function activeTabIdOf(tripId: string, pathname: string): string | undefined {
+  return TRIP_TABS.find((tab) => {
+    const href = tab.to.replace('$tripId', tripId)
+    return pathname === href || pathname.startsWith(`${href}/`)
+  })?.id
 }
 
 export interface TripSubNavProps {
@@ -35,9 +42,7 @@ export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
   const transition = reduceMotion
     ? { duration: 0 }
     : { duration: 0.26, ease: EASE_OUT_QUINT }
-  const activeTabId = TRIP_TABS.find((tab) =>
-    isTabActive(tab.to.replace('$tripId', tripId), pathname),
-  )?.id
+  const activeTabId = activeTabIdOf(tripId, pathname)
 
   /**
    * The memory this strip owes the reader: whichever tab is active is the one
@@ -81,8 +86,7 @@ export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
         <nav aria-label={t('shell.trip.nav.label')} className="min-w-0 flex-1">
           <ul className="scrollbar-none flex h-subnav items-center gap-1 overflow-x-auto">
             {TRIP_TABS.map((tab) => {
-              const href = tab.to.replace('$tripId', tripId)
-              const active = isTabActive(href, pathname)
+              const active = tab.id === activeTabId
               return (
                 <li key={tab.id} className="shrink-0">
                   <Link
