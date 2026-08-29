@@ -5,12 +5,14 @@ import viteReact from '@vitejs/plugin-react'
 const src = fileURLToPath(new URL('./src/', import.meta.url))
 
 /**
- * Two projects, because the code under test needs two different worlds:
+ * Three projects, because the code under test needs different worlds:
  *
  * - `ui` runs component tests in jsdom with the React plugin.
  * - `server` runs repositories, queue handlers and route handlers in plain
  *   Node. Nothing there may import `cloudflare:workers`; bindings arrive as
  *   arguments, which is what makes them fake-able.
+ * - `tooling` runs the agent tooling in plain Node as well, but over
+ *   `.sandcastle/**` and `scripts/**` rather than `src/**`.
  *
  * `server` collects `.tsx` as well as `.ts` because the transactional email
  * templates under `src/server/email` are React components: they render to a
@@ -19,16 +21,13 @@ const src = fileURLToPath(new URL('./src/', import.meta.url))
  * `jsx: react-jsx` from `tsconfig.json`, which is all a server-rendered
  * component needs — the React plugin exists for Fast Refresh, which no test has.
  *
- * A third project, `sandcastle`, covers `.sandcastle/**` - the agent tooling, which had no tests at
- * all before the Sentry sweep. That routine carries real policy (selection thresholds, the dedup
- * index, the issue body) and its failure mode is silence: a parsing bug files a duplicate every
- * week, or stops filing anything, and says nothing either way. `pnpm typecheck` already covers that
- * directory; this is the part typecheck cannot see.
- *
- * A fourth, `scripts`, covers `scripts/**` for the same reason and one more. Those files are plain
- * `.mjs` run by `node`, so they are in no tsconfig and typecheck cannot see them at all - and the
- * policy they carry (which screens `capture.mjs` refuses to photograph signed in) is a claim about
- * `src/routes/`, which drifts. Tests are the only gate they have.
+ * `tooling` is one project for two directories because it is one world. None of that code was
+ * tested at all before the Sentry sweep, it carries real policy - selection thresholds, the dedup
+ * index, the issue body, which screens `capture.mjs` refuses to photograph signed in - and its
+ * failure mode is silence: a parsing bug files a duplicate every week, or stops filing anything,
+ * and says nothing either way. `pnpm typecheck` sees `.sandcastle` but not `scripts`, whose files
+ * are plain `.mjs` run by `node` and so in no tsconfig, while the claim they make about
+ * `src/routes/` drifts. Tests are the only gate that reaches all of it.
  */
 export default defineConfig({
   resolve: {
@@ -57,26 +56,19 @@ export default defineConfig({
       {
         extends: true,
         test: {
-          name: 'sandcastle',
+          name: 'tooling',
           environment: 'node',
           globals: false,
-          include: ['.sandcastle/**/__tests__/*.test.ts'],
+          include: [
+            '.sandcastle/**/__tests__/*.test.ts',
+            'scripts/**/__tests__/*.test.mjs',
+          ],
           /**
            * The loop creates full git worktrees under `.sandcastle/worktrees/`, each a copy of this
            * checkout - the same hazard `vite.config.ts` describes for the dev server's watcher.
            * Collecting them would run every one of these tests once per worktree.
            */
           exclude: ['.sandcastle/worktrees/**', '.sandcastle/logs/**'],
-          restoreMocks: true,
-        },
-      },
-      {
-        extends: true,
-        test: {
-          name: 'scripts',
-          environment: 'node',
-          globals: false,
-          include: ['scripts/**/__tests__/*.test.mjs'],
           restoreMocks: true,
         },
       },

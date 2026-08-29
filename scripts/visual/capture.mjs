@@ -21,9 +21,8 @@
  *     whole style document through setStyle and the marker goes back to false;
  *   - entrance motion is stopped before the shutter, so text is never caught at 20% opacity.
  *
- * `--auth` is refused, rather than warned about, for a screen only a signed-out visitor can see:
- * `/login` and `/register` bounce an authenticated visitor to the dashboard, so the frame would be
- * of the wrong screen under the right filename. See ./anonymous-only.mjs.
+ * `--auth` is refused outright for a screen only a signed-out visitor can see, because the frame
+ * would be of the wrong screen under the right filename — which screens and why: ./anonymous-only.mjs.
  *
  * It deliberately does NOT record anything under e2e/__screenshots__. Those baselines are compared
  * pixel for pixel across machines and belong to Playwright's own projects; this script writes only
@@ -39,8 +38,10 @@
  *     [--auth] [--map] [--state hover-visited] \
  *     [--hover 'selector'] [--click 'selector'] [--settle 800]
  *
- * Prints one JSON object on stdout: { files, console, warnings, captureValid }. Copy it into
- * your result.
+ * Prints one JSON object on stdout: { requestedUrl, files, console, warnings, captureValid }. Each
+ * file records the URL the browser actually landed on, so a redirect the refusal list does not know
+ * about — a role-gated route, a screen not yet written — is still visible to whoever reads this.
+ * Copy it into your result.
  */
 
 import { mkdir, stat } from 'node:fs/promises'
@@ -203,7 +204,7 @@ async function main() {
   // Refused before the browser is even launched: once the frame exists there is nothing left
   // downstream to tell a redirect target apart from the product. Which screens, and why that list
   // is short: ./anonymous-only.mjs.
-  const refusal = anonymousOnlyRefusal(url, { auth: wantsAuth })
+  const refusal = wantsAuth ? anonymousOnlyRefusal(url) : undefined
   if (refusal) {
     console.error(`capture: ${refusal}`)
     process.exit(2)
@@ -260,13 +261,14 @@ async function main() {
     for (const theme of themes) {
       await page.emulateMedia({ colorScheme: theme })
       await page.goto(url, { waitUntil: 'commit', timeout: 45_000 })
+      const landedUrl = page.url()
 
       // A cached session that has expired does not fail — it redirects, and the frame filed is the
       // login screen. A critic handed that reports the product as having no content at all. Refuse
       // it here, where the fix is one command, rather than downstream where it is a wasted round.
-      if (wantsAuth && new URL(page.url()).pathname.startsWith('/login')) {
+      if (wantsAuth && new URL(landedUrl).pathname.startsWith('/login')) {
         throw new Error(
-          `--auth was asked for but ${url} redirected to ${page.url()}. The cached session in ` +
+          `--auth was asked for but ${url} redirected to ${landedUrl}. The cached session in ` +
             `${AUTH_STATE} is stale or the workspace is unseeded. Refresh it with: ` +
             `PLAYWRIGHT_BASE_URL=${new URL(url).origin} pnpm exec playwright test --project=setup`,
         )
@@ -315,7 +317,7 @@ async function main() {
             `suspiciously flat for a ${vp.w}px frame, likely shot before the page finished painting`,
         )
       }
-      files.push({ viewport: vp.name, theme, path, bytes: size })
+      files.push({ viewport: vp.name, theme, landedUrl, path, bytes: size })
     }
   }
 
@@ -329,6 +331,7 @@ async function main() {
   console.log(
     JSON.stringify(
       {
+        requestedUrl: url,
         files,
         console: {
           fatal: fatal.map(

@@ -13,36 +13,37 @@ import { describe, expect, it } from 'vitest'
 import {
   ANONYMOUS_ONLY_ROUTES,
   anonymousOnlyRefusal,
-  anonymousOnlyRoute,
 } from '../anonymous-only.mjs'
 
-const WITH_AUTH = { auth: true }
-
-describe('anonymousOnlyRoute', () => {
-  it('names the route behind an anonymous-only pathname', () => {
-    expect(anonymousOnlyRoute('http://localhost:3010/login')?.route).toBe(
-      'src/routes/(auth)/login.tsx',
-    )
-    expect(anonymousOnlyRoute('http://localhost:3010/register')?.route).toBe(
+describe('anonymousOnlyRefusal', () => {
+  it('refuses an anonymous-only screen and names the fix', () => {
+    const refusal = anonymousOnlyRefusal('http://localhost:3010/login')
+    expect(refusal).toBeTypeOf('string')
+    expect(refusal).toContain('--auth')
+    expect(refusal).toContain('http://localhost:3010/login')
+    expect(refusal).toContain('src/routes/(auth)/login.tsx')
+    // The fix, spelled out: this URL is captured without the flag.
+    expect(refusal).toMatch(/drop `?--auth`?/i)
+    expect(anonymousOnlyRefusal('http://localhost:3010/register')).toContain(
       'src/routes/(auth)/register.tsx',
     )
   })
 
   it('keys on the pathname, so query, trailing slash and origin do not defeat it', () => {
     for (const url of [
-      '/login',
-      '/login/',
+      'http://localhost:3010/login/',
       'http://localhost:3010/login?redirect=/trips/1',
       'http://127.0.0.1:3010/login/?redirect=%2Ftrips%2F1#top',
       'https://demo.liketrek.com/register',
     ]) {
-      expect(anonymousOnlyRoute(url), url).toBeDefined()
+      expect(anonymousOnlyRefusal(url), url).toBeTypeOf('string')
     }
   })
 
-  it('leaves every screen a signed-in visitor can legitimately reach', () => {
+  it('says nothing about a screen a signed-in visitor can legitimately reach', () => {
     for (const url of [
       'http://localhost:3010/dashboard',
+      // Redirects to `/trips/1/plan`, which is not this trap.
       'http://localhost:3010/trips/1',
       'http://localhost:3010/accept-invitation/inv_123',
       'http://localhost:3010/verify-email',
@@ -54,40 +55,8 @@ describe('anonymousOnlyRoute', () => {
       'http://localhost:3010/login/extra',
       'http://localhost:3010/settings/register-device',
     ]) {
-      expect(anonymousOnlyRoute(url), url).toBeUndefined()
+      expect(anonymousOnlyRefusal(url), url).toBeUndefined()
     }
-  })
-})
-
-describe('anonymousOnlyRefusal', () => {
-  it('refuses an anonymous-only screen and names the fix', () => {
-    const refusal = anonymousOnlyRefusal(
-      'http://localhost:3010/login',
-      WITH_AUTH,
-    )
-    expect(refusal).toBeTypeOf('string')
-    expect(refusal).toContain('--auth')
-    expect(refusal).toContain('http://localhost:3010/login')
-    expect(refusal).toContain('src/routes/(auth)/login.tsx')
-    // The fix, spelled out: this URL is captured without the flag.
-    expect(refusal).toMatch(/drop `?--auth`?/i)
-  })
-
-  it('says nothing when --auth was not asked for', () => {
-    expect(anonymousOnlyRefusal('http://localhost:3010/login')).toBeUndefined()
-    expect(
-      anonymousOnlyRefusal('http://localhost:3010/register', { auth: false }),
-    ).toBeUndefined()
-  })
-
-  it('says nothing about a route that legitimately redirects', () => {
-    // `/trips/<id>` sends an authenticated visitor to `/trips/<id>/plan`, which is not this trap.
-    expect(
-      anonymousOnlyRefusal('http://localhost:3010/trips/1', WITH_AUTH),
-    ).toBeUndefined()
-    expect(
-      anonymousOnlyRefusal('http://localhost:3010/dashboard', WITH_AUTH),
-    ).toBeUndefined()
   })
 })
 
@@ -137,8 +106,12 @@ describe('drift against the routes', () => {
       }))
 
     // A regex that matched nothing, or a directory that moved, would otherwise agree with an empty
-    // list and report no drift at all.
-    expect(guarded.length).toBeGreaterThan(0)
+    // list and report no drift at all. If the guard was extracted into a shared helper, this is the
+    // assertion that fires: teach SIGNED_IN_REDIRECT the new shape rather than deleting the check.
+    expect(
+      guarded.length,
+      `no route under ${AUTH_ROUTES_DIR} matches ${SIGNED_IN_REDIRECT} — the guard moved, so this test can no longer see the trap`,
+    ).toBeGreaterThan(0)
     expect([...ANONYMOUS_ONLY_ROUTES].sort(byRoute)).toEqual(
       guarded.sort(byRoute),
     )

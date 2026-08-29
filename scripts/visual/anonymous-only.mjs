@@ -12,7 +12,9 @@
  * `accept-invitation/<id>` and `verify-email` are `(auth)` routes that legitimately render for a
  * signed-in visitor, and `forgot-password`, `reset-password` and `two-factor` carry no signed-in
  * redirect at all. Scoped by pathname rather than "landed somewhere else", because a legitimate
- * redirect exists: `/trips/<id>` sends an authenticated visitor to `/trips/<id>/plan`.
+ * redirect exists: `/trips/<id>` sends an authenticated visitor to `/trips/<id>/plan`, and refusing
+ * that would cost a capture round. Every landed URL is reported instead, so a redirect this list
+ * does not know about is still visible downstream.
  *
  * The list is a claim about `src/routes/(auth)/`, so it drifts. `__tests__/anonymous-only.test.mjs`
  * re-derives it from the routes themselves and fails if a guard is added or removed without this
@@ -26,38 +28,20 @@ export const ANONYMOUS_ONLY_ROUTES = [
 ]
 
 /**
- * The pathname of a URL, tolerating a bare pathname.
+ * Why capturing this URL with `--auth` must be refused, or `undefined` to proceed.
  *
- * A trailing slash is dropped so `/login/` and `/login` are one screen; the query string and the
- * origin are discarded, which is what makes `/login?redirect=/trips/1` and the reference host's
- * `/login` both reachable by this check.
+ * The caller gates on its own `--auth` flag: without it, photographing `/login` is the normal and
+ * correct thing to do. Keyed on the pathname of an absolute URL — the only kind `page.goto` takes —
+ * so `/login?redirect=/trips/1`, a trailing slash and the reference host are all caught.
  */
-function pathnameOf(target) {
-  const raw = URL.canParse(target)
-    ? new URL(target).pathname
-    : String(target).split(/[?#]/)[0]
-  return raw.length > 1 ? raw.replace(/\/+$/, '') : raw
-}
-
-/** The anonymous-only route a URL points at, or `undefined` for every other screen. */
-export function anonymousOnlyRoute(target) {
-  const pathname = pathnameOf(target)
-  return ANONYMOUS_ONLY_ROUTES.find((entry) => entry.pathname === pathname)
-}
-
-/**
- * Why this capture must be refused, or `undefined` to proceed.
- *
- * `auth` is the caller's `--auth` flag: without it, photographing `/login` is the normal and correct
- * thing to do and this says nothing.
- */
-export function anonymousOnlyRefusal(target, { auth = false } = {}) {
-  if (!auth) return undefined
-  const entry = anonymousOnlyRoute(target)
+export function anonymousOnlyRefusal(url) {
+  const { pathname } = new URL(url)
+  const screen = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  const entry = ANONYMOUS_ONLY_ROUTES.find((r) => r.pathname === screen)
   if (!entry) return undefined
 
   return (
-    `--auth was asked for but ${target} only ever renders for a signed-out visitor. ` +
+    `--auth was asked for but ${url} only ever renders for a signed-out visitor. ` +
     `${entry.route} throws a 302 from beforeLoad when the session is signed in, so the frame ` +
     `filed would be of wherever it sends you — the dashboard, unless ?redirect= says otherwise — ` +
     `under the name of ${entry.pathname}, and nothing downstream could tell. Drop --auth for this ` +
