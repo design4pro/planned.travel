@@ -409,24 +409,24 @@ describe('handleTravelStats', () => {
   })
 })
 
+/**
+ * The `00-S4` amendment (PRD #104, decision 11): a trip is private to its members
+ * (ADR 0007), so every trip-derived figure on a person's row counts the trips
+ * that person is on. Before the amendment both travellers below carried the same
+ * eight workspace-wide numbers, and a private trip a traveller could not open
+ * still moved their statistics.
+ */
 describe('two members of one workspace, two trip memberships', () => {
-  /**
-   * The `00-S4` amendment (PRD #104, decision 11): a trip is private to its
-   * members (ADR 0007), so every trip-derived figure on a person's row counts
-   * the trips that person is on. Before the amendment both rows below carried
-   * the same eight workspace-wide numbers, and a private trip a traveller
-   * could not open still moved their statistics.
-   */
   it('gives each traveller their own trip’s figures and none of the other’s', async () => {
     await seedTravel(alpha)
-    const second = await seedSecondTraveller(alpha)
+    const secondTraveller = await seedSecondTraveller(alpha)
 
     await recompute(
       { userId: alpha.ownerUserId, statYear: 2026 },
       context(alpha.organizationId),
     )
     await recompute(
-      { userId: second.userId, statYear: 2026 },
+      { userId: secondTraveller.userId, statYear: 2026 },
       context(alpha.organizationId),
     )
 
@@ -445,7 +445,7 @@ describe('two members of one workspace, two trip memberships', () => {
         byContinent: { Europe: 1 },
       },
     ])
-    expect(await figures(alpha, second.userId)).toEqual([
+    expect(await figures(alpha, secondTraveller.userId)).toEqual([
       {
         statYear: 2026,
         tripCount: 1,
@@ -466,15 +466,15 @@ describe('two members of one workspace, two trip memberships', () => {
 
   it('takes the currency and the last trip from the traveller’s own trips', async () => {
     await seedTravel(alpha)
-    const second = await seedSecondTraveller(alpha)
+    const secondTraveller = await seedSecondTraveller(alpha)
 
     await recompute(
-      { userId: second.userId, statYear: 0 },
+      { userId: secondTraveller.userId, statYear: 0 },
       context(alpha.organizationId),
     )
 
-    const row = await getTravelStats(alpha.scope, second.userId, 0)
-    expect(row?.lastTripId).toBe(second.tripId)
+    const row = await getTravelStats(alpha.scope, secondTraveller.userId, 0)
+    expect(row?.lastTripId).toBe(secondTraveller.tripId)
     expect(row?.currency).toBe('JPY')
     // The owner's Lisbon leg is in the same workspace and is not counted.
     expect(row?.distanceMetres).toBe(9_500_000)
@@ -486,8 +486,8 @@ describe('two members of one workspace, two trip memberships', () => {
     // 2026 and 2025, the second traveller on 2024 alone. When the year rows
     // were the workspace's, both all-time rows read a streak of three - the
     // same run of years, held by two people who did not travel together.
-    const second = await alpha.addUser('Travels alone')
-    const secondScope = alpha.scopeFor(second)
+    const soloTravellerId = await alpha.addUser('Travels alone')
+    const soloScope = alpha.scopeFor(soloTravellerId)
 
     await createTrip(alpha.scope, {
       title: 'Lisbon in spring',
@@ -501,7 +501,7 @@ describe('two members of one workspace, two trip memberships', () => {
       endDate: '2025-05-03',
       currency: 'EUR',
     })
-    await createTrip(secondScope, {
+    await createTrip(soloScope, {
       title: 'Kyoto in autumn',
       startDate: '2024-10-02',
       endDate: '2024-10-04',
@@ -516,15 +516,15 @@ describe('two members of one workspace, two trip memberships', () => {
         context(alpha.organizationId),
       )
       await recompute(
-        { userId: second, statYear },
+        { userId: soloTravellerId, statYear },
         context(alpha.organizationId),
       )
     }
 
     const owner = await getTravelStats(alpha.scope, alpha.ownerUserId, 0)
-    const traveller = await getTravelStats(alpha.scope, second, 0)
+    const soloTraveller = await getTravelStats(alpha.scope, soloTravellerId, 0)
     expect(owner?.yearStreak).toBe(2)
-    expect(traveller?.yearStreak).toBe(1)
+    expect(soloTraveller?.yearStreak).toBe(1)
     // The 2024 row the owner is on no trip in ends their run rather than
     // extending it: a year row exists, and its `tripCount` is zero.
     const ownerYears = await figures(alpha, alpha.ownerUserId)

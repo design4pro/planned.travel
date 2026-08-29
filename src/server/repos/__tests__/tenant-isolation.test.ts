@@ -159,7 +159,6 @@ import {
   countTripsByStatus,
   createShareLink,
   createTrip,
-  listTripMembers,
   removeTripMember,
   shareLinksRepository,
   tripMembersRepository,
@@ -1706,6 +1705,9 @@ describe('tenant isolation', () => {
     })
   })
 
+  /** The calendar year both travel-stats blocks below seed into and recompute for. */
+  const STAT_YEAR = 2026
+
   /**
    * The recompute behind the atlas statistics panel, run from the wrong side of the boundary.
    *
@@ -1716,8 +1718,11 @@ describe('tenant isolation', () => {
    * zero — because the predicate was `tenantFilter()` and nothing else.
    */
   describe('travel stats recomputed for a foreign traveller', () => {
-    const STAT_YEAR = 2026
-    /** A's own trip for the year, so the year row has country codes of its own to count. */
+    /**
+     * A's own trip for the year, so the year row has country codes of its own to count. Its
+     * currency is deliberately not `travel_stats.currency`'s `'EUR'` default: that is the only way
+     * an assertion below can tell a column A never wrote from a column A wrote its own value into.
+     */
     let alphaYearTripId: string
 
     beforeEach(async () => {
@@ -1725,8 +1730,8 @@ describe('tenant isolation', () => {
         title: 'Two countries in one week',
         startDate: `${STAT_YEAR}-06-01`,
         endDate: `${STAT_YEAR}-06-08`,
-        countryCodes: ['PT', 'ES'],
-        currency: 'EUR',
+        countryCodes: ['JP', 'KR'],
+        currency: 'JPY',
       })
       alphaYearTripId = trip.id
     })
@@ -1854,7 +1859,8 @@ describe('tenant isolation', () => {
         cityCount: 0,
         distanceMetres: 0,
         spendMinor: 0,
-        // Never written, so the column keeps its default rather than A's currency.
+        // Never written, so the column keeps its `'EUR'` default — and A's own trips are in `JPY`,
+        // so this really is the untouched column rather than A's currency copied across.
         currency: 'EUR',
         lastTripId: null,
       }
@@ -1866,6 +1872,7 @@ describe('tenant isolation', () => {
       expect(ownAllTime.tripCount).toBe(2)
       expect(ownYear.lastTripId).toBe(alphaYearTripId)
       expect(ownAllTime.distanceMetres).toBe(1_720_000)
+      expect(ownAllTime.currency).toBe('JPY')
     })
 
     it('hides the rows it wrote from the organization the traveller belongs to', async () => {
@@ -1915,8 +1922,6 @@ describe('tenant isolation', () => {
    * A's owner, over the same rows, does not.
    */
   describe('travel stats for a workspace member who is on no trip', () => {
-    const STAT_YEAR = 2026
-
     it('counts none of A’s trips for a non-member, and none of B’s for either', async () => {
       // `seedWorld` adds the second traveller to the organization and to nothing else: the only
       // `trip_members` row on A's trip is the owner's, written by `createTrip`.
@@ -1977,7 +1982,7 @@ describe('tenant isolation', () => {
     })
 
     it('empties a year row a membership no longer supports', async () => {
-      await addTripMember(alpha.tenant.scope, {
+      const membership = await addTripMember(alpha.tenant.scope, {
         tripId: alpha.tripId,
         userId: alpha.secondUserId,
         role: 'viewer',
@@ -1990,12 +1995,6 @@ describe('tenant isolation', () => {
       expect(joined.tripCount).toBe(1)
       expect(joined.lastTripId).toBe(alpha.tripId)
 
-      const membership = (
-        await listTripMembers(alpha.tenant.scope, alpha.tripId)
-      ).find((row) => row.userId === alpha.secondUserId)
-      if (membership === undefined) {
-        throw new Error('The membership just written must be readable.')
-      }
       await removeTripMember(alpha.tenant.scope, membership.id)
 
       const left = await recomputeTravelStats(
