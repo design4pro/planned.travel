@@ -1862,3 +1862,105 @@ or the last one; there is no third outcome.
 
 - [ ] All eight smoke checks pass, `wrangler tail` is clean, and the DLQ is empty. None of the
       eight says anything about billing — that is the click-through in the billing block above.
+
+**Error reporting** (§17)
+
+- [ ] `SENTRY_DSN` is set for both environments, or the deploy knowingly reports nothing and that
+      decision is in the deploy log. Half-configured is the bad outcome: a DSN on the Worker and
+      none in the browser reports the server's failures and silently drops every client crash.
+- [ ] A deliberate error on staging appears in Sentry within a minute, tagged
+      `environment: staging`, and **its top frame names a `src/` file at a real line**. A minified
+      frame means the source-map upload did not happen, and every report from that release is worth
+      much less than it looks.
+
+## 17. Sentry — error monitoring
+
+Everything above makes the application run. This section is how anyone finds out when it stops.
+
+The Worker's structured logs (§13) go to Workers Observability, which is a live tail: it answers
+"what is happening now" for somebody already watching. Sentry answers the other question — "what
+has been failing, to how many people, since when" — and it is the question a backlog is built from.
+
+One Sentry **project**, not two. Both environments send to the same DSN and are told apart by the
+`environment` tag, which the Worker reads from the `ENVIRONMENT` var in `wrangler.jsonc` and the
+browser from `VITE_ENVIRONMENT`. Two projects would split one bug into two unrelated issues the
+first time something reached production through staging.
+
+### 17.1 Create the project and get the DSN
+
+1. Create the Sentry organization if there is not one already, and note its slug — that is
+   `SENTRY_ORG`.
+2. Create **one** project. Platform: _Cloudflare Workers_. Note its slug — that is
+   `SENTRY_PROJECT`.
+3. **Settings → Projects → \<project\> → Client Keys (DSN)** — copy the DSN. It looks like
+   `https://<key>@<org>.ingest.sentry.io/<project-id>`.
+
+A DSN is public by design: the browser half of the reporting ships it in the client bundle, where
+anyone can read it. It is not a credential and does not need to be treated as one.
+
+### 17.2 Set it on both environments
+
+```bash
+pnpm exec wrangler secret put SENTRY_DSN                 # production
+pnpm exec wrangler secret put SENTRY_DSN --env staging   # staging
+```
+
+Then, as **repository variables** (Settings → Secrets and variables → Actions → Variables), the
+public half that Vite inlines into both bundles:
+
+```
+VITE_SENTRY_DSN   = <the same DSN>
+SENTRY_ORG        = <org slug>
+SENTRY_PROJECT    = <project slug>
+```
+
+`VITE_ENVIRONMENT` and `VITE_SENTRY_RELEASE` are not configured by hand — both deploy workflows set
+them, to the environment being deployed and to `github.sha`. The release is read by _both_ bundles,
+so one deploy is one Sentry release rather than two halves nothing relates.
+
+Leaving all of this unset is a supported state. The Worker runs unchanged and reports nothing, and
+the SDK is tree-shaken out of the client bundle entirely.
+
+### 17.3 The source-map token
+
+Without source maps every frame in a Sentry issue points at a bundled chunk offset instead of a
+`src/` file, which is most of what makes a report actionable. Cloudflare's own `upload_source_maps`
+does not help here — it feeds the Cloudflare dashboard, not Sentry.
+
+Create an **organization auth token**: **Settings → Auth Tokens → Create New Token**, with
+`project:releases` and `org:read`. Store it as the repository **secret** `SENTRY_AUTH_TOKEN`.
+
+What the build does with it, and what it does without it:
+
+| `SENTRY_AUTH_TOKEN`   | Source maps                                          | Upload                                  |
+| --------------------- | ---------------------------------------------------- | --------------------------------------- |
+| unset (local, a fork) | not generated                                        | nothing attempted                       |
+| set                   | generated `hidden`, client maps deleted after upload | uploaded; **a failure fails the build** |
+
+The build failing on a bad token is deliberate. The expected failure is an expired or mis-scoped
+token, which is permanent and otherwise silent — it would ship a release whose every future stack
+trace is unreadable while the deploy stays green. If a Sentry outage ever blocks an urgent deploy,
+unset the secret for that run; `vite.config.ts` says so at the `errorHandler`.
+
+Client maps are deleted after upload because `dist/client` is served as static assets and a map
+left there is the front end's source published to anyone who asks. Server maps are kept — that half
+is the Worker bundle, is not served, and wrangler uploads it to Cloudflare for its own traces.
+
+### 17.4 Verify
+
+Deploy staging, then reach a route that throws. Within a minute the issue should be in Sentry with:
+
+- `environment: staging` and a `release` equal to the deployed commit sha;
+- a `cf_version` tag naming the Cloudflare version that served the request;
+- **a top stack frame naming a file under `src/`, at a plausible line.** This is the check that
+  matters. A minified frame means §17.3 did not happen.
+
+Then trigger a client-side error and confirm a second issue arrives from the browser. The two halves
+fail independently and only one of them is exercised by a server-side test.
+
+### 17.5 What the reports are for
+
+Sentry is not only a dashboard. Recurring, high-impact issues are turned into triaged GitHub tickets
+by `pnpm sandcastle:sentry` — see `docs/agents/triage-labels.md`. That routine needs a **separate**,
+read-only Sentry token from the one in §17.3: different scopes, different blast radius, rotated
+independently.

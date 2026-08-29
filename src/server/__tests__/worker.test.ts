@@ -54,8 +54,15 @@ vi.mock('../observability/logger', async (importOriginal) => {
   const actual = await importOriginal<typeof Observability>()
   return {
     ...actual,
-    loggerFromEnv: (_env: unknown, options?: { context?: LogContext & LogFields }) =>
-      actual.createLogger({ level: 'debug', sink: harness.sink, context: options?.context }),
+    loggerFromEnv: (
+      _env: unknown,
+      options?: { context?: LogContext & LogFields },
+    ) =>
+      actual.createLogger({
+        level: 'debug',
+        sink: harness.sink,
+        context: options?.context,
+      }),
   }
 })
 
@@ -65,22 +72,45 @@ const worker = (await import('../worker')).default
 const RETENTION_CRON = '17 4 * * 1'
 const SCHEDULED_AT = Date.UTC(2026, 7, 24, 4, 17)
 
-const env = { DB: { binding: 'DB' }, BACKUP_RETENTION_DAYS: 30 } as unknown as Cloudflare.Env
+const env = {
+  DB: { binding: 'DB' },
+  BACKUP_RETENTION_DAYS: 30,
+} as unknown as Cloudflare.Env
 
 function controller(cron: string): ScheduledController {
   return { cron, scheduledTime: SCHEDULED_AT, noRetry: () => undefined }
 }
 
+/**
+ * The third argument the runtime always passes and this test used to omit.
+ *
+ * It became load-bearing when the entry was wrapped in `Sentry.withSentry`: the wrapper flushes
+ * pending events through `ctx.waitUntil`, because a Worker isolate can be torn down the moment a
+ * handler resolves and an unflushed report is a lost one. Omitting it never described how the
+ * handler is really called.
+ */
+function executionContext(): ExecutionContext {
+  return {
+    waitUntil: () => undefined,
+    passThroughOnException: () => undefined,
+    props: {},
+  } as unknown as ExecutionContext
+}
+
 function pendingWarnings(): Array<LogRecord> {
-  return harness.records.filter((record) => record.msg === 'cron half has no handler yet')
+  return harness.records.filter(
+    (record) => record.msg === 'cron half has no handler yet',
+  )
 }
 
 describe('the weekly retention slot', () => {
   it('runs the audit prune as the platform itself, at the tick it was scheduled for', async () => {
     harness.records.length = 0
-    harness.prune.mockReset().mockResolvedValue({ deleted: 12, batches: 1, drained: true })
+    harness.prune
+      .mockReset()
+      .mockResolvedValue({ deleted: 12, batches: 1, drained: true })
 
-    await worker.scheduled(controller(RETENTION_CRON), env)
+    await worker.scheduled(controller(RETENTION_CRON), env, executionContext())
 
     expect(harness.prune).toHaveBeenCalledTimes(1)
     const [db, actor, logger, options] = harness.prune.mock.calls[0]
@@ -89,16 +119,20 @@ describe('the weekly retention slot', () => {
     expect(logger).toBeDefined()
     expect(options).toEqual({ now: new Date(SCHEDULED_AT) })
     // The prune reports its own row count; the branch adds nothing about it.
-    expect(harness.records.filter((record) => record.msg.includes('retention prune'))).toEqual(
-      [],
-    )
+    expect(
+      harness.records.filter((record) =>
+        record.msg.includes('retention prune'),
+      ),
+    ).toEqual([])
   })
 
   it('names the half of the slot that is still unwritten', async () => {
     harness.records.length = 0
-    harness.prune.mockReset().mockResolvedValue({ deleted: 0, batches: 1, drained: true })
+    harness.prune
+      .mockReset()
+      .mockResolvedValue({ deleted: 0, batches: 1, drained: true })
 
-    await worker.scheduled(controller(RETENTION_CRON), env)
+    await worker.scheduled(controller(RETENTION_CRON), env, executionContext())
 
     const warnings = pendingWarnings()
     expect(warnings).toHaveLength(1)
@@ -115,7 +149,9 @@ describe('the weekly retention slot', () => {
     harness.records.length = 0
     harness.prune.mockReset().mockRejectedValue(new Error('D1 unavailable'))
 
-    await expect(worker.scheduled(controller(RETENTION_CRON), env)).rejects.toThrow('D1 unavailable')
+    await expect(
+      worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
+    ).rejects.toThrow('D1 unavailable')
 
     expect(harness.prune).toHaveBeenCalledTimes(1)
     expect(pendingWarnings()).toHaveLength(1)
@@ -126,8 +162,8 @@ describe('the weekly retention slot', () => {
     harness.prune.mockReset()
     harness.sweep.mockReset().mockResolvedValue(undefined)
 
-    await worker.scheduled(controller('*/15 * * * *'), env)
-    await worker.scheduled(controller('0 0 31 2 *'), env)
+    await worker.scheduled(controller('*/15 * * * *'), env, executionContext())
+    await worker.scheduled(controller('0 0 31 2 *'), env, executionContext())
 
     expect(harness.sweep).toHaveBeenCalledTimes(1)
     expect(harness.prune).not.toHaveBeenCalled()
