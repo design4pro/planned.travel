@@ -2657,7 +2657,7 @@ not a stage at all. The corrected form of each, with the citation that decides i
   `grep -rn 'data-density' src/` returns nothing, and `grep -rlni 'density' docs/plans/` matches this
   file and no other, so no stage anywhere in the thirteen plans is waiting to obey such a switch. What
   density needs is not a stage but two amendments — a second spacing scale in `src/styles/tokens.css`
-  beside the strict 4px grid at `:503-521`, and a `docs/DESIGN.md` amendment permitting one — and both
+  beside the strict 4px grid at `:503-521`, and a `DESIGN.md` amendment permitting one — and both
   are argued in full under **UI**. It is recorded here as a display decision for whoever next amends
   `docs/plans/11-boundaries-and-blockers.md`, in the same shape `09-S7` uses for the push and webhook
   channels, and this stage ships no control, no column and no "coming soon".
@@ -2835,7 +2835,7 @@ index that the grid at `route.tsx:38` places in a `15.5rem` column above the `lg
 stacks below it. Stacked, six full-width cards push the section itself below the fold on a 360px
 screen, which is a squeezed desktop by another name. Below `lg` the index becomes a horizontally
 scrollable `PillNav` pinned under the page header — the segmented control on a tinted track that
-`docs/DESIGN.md` names as one of the product's signature patterns — with the active section's pill
+`DESIGN.md` names as one of the product's signature patterns — with the active section's pill
 scrolled into view on mount and the scroll container keyboard-scrollable. Above `lg` nothing changes.
 The literal-union typing of each entry's `to` (`:26-40`) is preserved exactly; it is what makes the
 index type-check against the generated route tree.
@@ -2862,12 +2862,12 @@ label. The sample uses `src/lib/format.ts` and no second formatter is introduced
   one line of CSS. `src/styles/tokens.css:503-521` declares a **strict** 4px grid —
   `--space-N === N * 4px`, with the comment at `:503-504` recording that Tailwind's own step is
   aligned to it — so a compact density is either a second spacing scale in the token contract or a
-  per-component override layer, and both are amendments to `docs/DESIGN.md`'s grid rather than uses
+  per-component override layer, and both are amendments to `DESIGN.md`'s grid rather than uses
   of it. `00-foundations.md:44-51` reserves `src/styles/tokens.css` to one token stage per wave and
   says exactly what a feature stage does when it needs one: state the requirement under its own
   heading and stop. So, stated: **a density scale wants (1) a `--density-*` step set in
-  `src/styles/tokens.css`, declared in all three places `docs/DESIGN.md` requires, and (2) a
-  `docs/DESIGN.md` amendment permitting a second scale beside the 4px grid; the switch, its
+  `src/styles/tokens.css`, declared in all three places `DESIGN.md` requires, and (2) a
+  `DESIGN.md` amendment permitting a second scale beside the 4px grid; the switch, its
   `user_settings.density` column and its `data-density` attribute then ship in one later stage
   together with them.** Until that stage exists there is no density control on this screen — not a
   disabled one, not a "coming soon" one, and no column in the schema pretending otherwise.
@@ -2904,7 +2904,7 @@ definition of done forbids. The script keeps its `try/catch`, because private br
   uses.
 
 **Motion.** The text-scale change is the only one that moves layout, and it is applied without a
-transition on purpose: animating a reflow is the one thing `docs/DESIGN.md`'s motion rules forbid
+transition on purpose: animating a reflow is the one thing `DESIGN.md`'s motion rules forbid
 outright. The accent change cross-fades the preview swatch at 150ms on `--ease-out-quint`.
 `prefers-reduced-motion: reduce` collapses it to none, and the reduce-motion switch already on this
 screen keeps its meaning.
@@ -3074,7 +3074,7 @@ each is one nullable column and one control, shipped by the stage that owns the 
 so the switch and its effect are never separated by a wave.
 
 Density is the one of the four whose owning stage does **not** yet exist, so it is the one to watch.
-Its requirement — a `--density-*` step set in `src/styles/tokens.css` and the `docs/DESIGN.md`
+Its requirement — a `--density-*` step set in `src/styles/tokens.css` and the `DESIGN.md`
 amendment that permits a second scale beside the strict 4px grid — is written out under **UI** in the
 form `00-foundations.md:44-51` prescribes, and it is a genuine blocker on the behaviour rather than
 on this stage: `ACC-04` therefore closes at `partial`, which is what the row ledger in the area brief

@@ -7,7 +7,7 @@ message in the repository hangs off one. This plan owns the eleven `TRP-*` rows 
 `.claude/ultrabuild/recon/gap-rows.json` — the trip list and its lifecycle, trip creation, membership
 and guests, the planner workspace shell, the day model and the merged day timeline.
 
-Read `docs/SPEC.md`, `docs/DESIGN.md` and `docs/ARCHITECTURE.md` first, then `TEMPLATE.md` for the
+Read `docs/SPEC.md`, `DESIGN.md` and `docs/ARCHITECTURE.md` first, then `TEMPLATE.md` for the
 stage shape, `README.md` for the shared-file protocol and the wave table, and
 `12-verification-protocol.md` for what a **Verification** heading has to contain. This file does not
 restate them.
@@ -3240,7 +3240,7 @@ which `docs/SPEC.md` §2 rules out by name.
 **The prominent card.** The hero at `dashboard.tsx:91` gains a `Progress` bar — only while a trip is
 under way, because a percentage on a trip that has not started is noise — and a three-figure strip:
 nights, places, travelling companions. All three are display-face numerals with `tabular-nums`, which
-is what the `StatCard` pattern in `docs/DESIGN.md` is for and what `HeroStat` (`:235`) already renders.
+is what the `StatCard` pattern in `DESIGN.md` is for and what `HeroStat` (`:235`) already renders.
 
 **The archived section** sits at the foot of the trips index as a `disclosure` — a real button with
 `aria-expanded` and a `Chip` carrying the count — collapsed by default, and its open state is the
@@ -3859,7 +3859,7 @@ and none is proposed.
 **Motion.** The day detail enters at 220 ms on `--ease-out-quint` and minimises at 150 ms, transform
 and opacity only. The overlays use `--ease-drawer`. The splash cross-fades. Resizing is **not**
 animated: a handle that lags the pointer feels broken, and a width change is a layout property, which
-`docs/DESIGN.md` forbids animating anyway. Reduced motion collapses every one of these to opacity or
+`DESIGN.md` forbids animating anyway. Reduced motion collapses every one of these to opacity or
 to nothing, and the splash to a plain hold.
 
 **Tokens.** None missing, none filed for a wave-5 token stage. Every figure the day detail prints —

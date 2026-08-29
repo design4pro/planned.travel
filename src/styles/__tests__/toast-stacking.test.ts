@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
  * that actually paints the layer it outranks.
  *
  * `docs/ACCESS.md` §6.1: nothing may cover the control that ends an impersonated
- * session, and a toast is the layer most likely to try. `docs/DESIGN.md` states
+ * session, and a toast is the layer most likely to try. `DESIGN.md` states
  * that as a band — `--z-impersonation` one step above `--z-toast` — and a band is
  * only true of the product if the code that paints toasts is inside it. Ours is
  * `sonner`, whose own stylesheet pins its container at `z-index: 999999999`.

@@ -66,18 +66,26 @@ interface FontFamilyRequest {
  * `family` parameter is answered with 400 rather than a stylesheet.
  *
  * The two pinned faces keep their explicit weight lists — those are the weights
- * `docs/DESIGN.md` names. The Noto companions use the variable `400..700` axis
+ * `DESIGN.md` names. The Noto companions use the variable `400..700` axis
  * instead, which serves the same four weights from one file per slice and cuts
  * the generated stylesheet from 1.4 MB to 466 KB.
  */
 const FONT_FAMILIES: readonly FontFamilyRequest[] = [
-  { family: 'Geist', weights: '400;500;600;700', covers: 'UI — Latin, Cyrillic, Vietnamese' },
+  {
+    family: 'Geist',
+    weights: '400;500;600;700',
+    covers: 'UI — Latin, Cyrillic, Vietnamese',
+  },
   {
     family: 'MuseoModerno',
     weights: '400;500;700;800',
     covers: 'Display — Latin, Vietnamese',
   },
-  { family: 'Noto Sans', weights: '400..700', covers: 'Greek, and Cyrillic for display' },
+  {
+    family: 'Noto Sans',
+    weights: '400..700',
+    covers: 'Greek, and Cyrillic for display',
+  },
   { family: 'Noto Sans Arabic', weights: '400..700', covers: 'Arabic' },
   { family: 'Noto Sans JP', weights: '400..700', covers: 'Kana' },
   { family: 'Noto Sans KR', weights: '400..700', covers: 'Hangul' },
@@ -91,7 +99,8 @@ const FONT_FAMILIES: readonly FontFamilyRequest[] = [
  * can silently ship with a blocking period the others do not have.
  */
 export const FONT_STYLESHEET_HREF = `https://fonts.googleapis.com/css2?${FONT_FAMILIES.map(
-  ({ family, weights }) => `family=${family.replaceAll(' ', '+')}:wght@${weights}`,
+  ({ family, weights }) =>
+    `family=${family.replaceAll(' ', '+')}:wght@${weights}`,
 ).join('&')}&display=swap`
 
 /** A `<link rel="preconnect">` the document shell renders in `<head>`. */

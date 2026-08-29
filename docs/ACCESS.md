@@ -558,7 +558,7 @@ the retention rather than restating them, so there is one list and it is this on
 | `actor_user_id` | `userRef('actor_user_id')`                             | yes  | The human, or the owner of the MCP token. `NULL` only when `actor_kind = 'system'`                                                                               |
 | `actor_kind`    | text, `enumCheck()`                                    | no   | `human` · `agent` · `system`                                                                                                                                     |
 | `actor_role`    | text                                                   | yes  | The platform role held **at the moment of the action**: `admin`, `curator` or `user`. `NULL` only when `actor_kind = 'system'`                                   |
-| `token_id`      | text, FK → `staff_api_tokens.id`, `on delete restrict`  | yes  | The credential the call arrived on. Non-`NULL` exactly when `actor_kind = 'agent'`, and `NULL` for every other kind                                              |
+| `token_id`      | text, FK → `staff_api_tokens.id`, `on delete restrict` | yes  | The credential the call arrived on. Non-`NULL` exactly when `actor_kind = 'agent'`, and `NULL` for every other kind                                              |
 | `action`        | text                                                   | no   | Lowercase dotted verb from the closed list in §4.2                                                                                                               |
 | `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link`. The mapping to `action` is in §4.2 |
 | `entity_id`     | text                                                   | yes  | The row the action touched. `NULL` only for an action whose entity does not exist yet or no longer does                                                          |
@@ -768,7 +768,7 @@ they are marked "here" in the last column.
 | `platform.user.password_set`          | An administrator sets a password; the value is never in `changes`    | here (`user:set-password`)    |
 | `platform.user.email_set`             | An administrator changes an address                                  | here (`user:set-email`)       |
 | `platform.user.impersonation_started` | Impersonation begins; `entity_id` is the target                      | here (§6)                     |
-| `platform.user.impersonation_ended`   | Impersonation ends by the **End impersonation** action                | here (§6)                     |
+| `platform.user.impersonation_ended`   | Impersonation ends by the **End impersonation** action               | here (§6)                     |
 | `platform.session.revoked`            | One session of one account is revoked                                | here (`session:revoke`)       |
 | `platform.session.revoked_all`        | Every session of one account is revoked                              | here (`session:revoke`)       |
 | `platform.token.issued`               | An MCP token is minted; the token itself is never in `changes`       | here (§5)                     |
@@ -826,7 +826,7 @@ in code and not in this table fails it; so does a name in this table that nothin
   the append is rejected for one of these four, it is retried once and then raised at the highest
   severity the logger has - the action still stands, because reversing a completed ban because a
   log write failed is the worse of the two failures. **Two stated exceptions, both found in Faza B
-  by reading the plugin rather than by trusting this sentence.** First, a *temporary* ban lifts
+  by reading the plugin rather than by trusting this sentence.** First, a _temporary_ ban lifts
   itself: `admin()`'s `session.create.before` hook writes
   `{ banned: false, banReason: null, banExpires: null }` on the next ordinary sign-in once
   `banExpires` has passed, with no console call to hang an append on. That path is audited from a
@@ -892,6 +892,7 @@ The rest follows from that sentence:
   vacuously satisfied rather than unimplemented. Faza B's console role-change function carries a
   header note pointing here, so the gap is a stated deferral instead of something a later reader
   has to discover. A Faza E round that ships issuance without this revocation ships a real hole.
+
 - Tokens are stored hashed with `MCP_TOKEN_PEPPER` and shown once. Rotating the pepper invalidates
   every issued token at once, which is the break-glass control.
 - Every token has an `expires_at`. A token without an expiry is not issuable.
@@ -909,6 +910,7 @@ The rest follows from that sentence:
   happening; naming it is the difference between a rule and an accident. The attribution this
   protects rests on the sentence above, that a token row is never hard-deleted, rather than on a
   fallback that cannot run.
+
 - A token belongs in user-scope MCP configuration, never in a file that gets committed. The
   operational detail lives in `docs/DEPLOY.md` and `docs/CATALOG.md`; the rule that it is
   `curator`-only lives here.
@@ -999,13 +1001,13 @@ Entering and leaving impersonation are both audited (§4.3), with the impersonat
 
 ## 7. Named follow-ups
 
-**FU-1 - the warning bar has no visual token contract yet.** `docs/DESIGN.md`'s layout token line
+**FU-1 - the warning bar has no visual token contract yet.** `DESIGN.md`'s layout token line
 names `--z-nav|dropdown|overlay|modal|toast`, `--nav-h`, `--safe-top`, `--safe-bottom`. There is no
 band above `--z-toast`, and there is no nav-offset companion to `--nav-h`. The bar in §6.1 has to
 sit above every layer including toasts - a toast that covers the one control ending an impersonated
 session is the failure this document exists to prevent - and it has to push the entire shell down
 rather than overlap it. Both needs are unrepresentable in the current token set. The phase that
-ships the bar adds the two tokens to `src/styles/tokens.css` and records them in `docs/DESIGN.md`,
+ships the bar adds the two tokens to `src/styles/tokens.css` and records them in `DESIGN.md`,
 in the same commit, under whatever names that round's owner chooses. This document does not invent
 token names for a file it does not own, and it does not let the phase-B builder assume a contract
 that is not there.

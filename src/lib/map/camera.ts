@@ -1,7 +1,7 @@
 /**
  * Camera motion policy.
  *
- * `docs/DESIGN.md` caps motion at 400ms and demands that
+ * `DESIGN.md` caps motion at 400ms and demands that
  * `prefers-reduced-motion: reduce` collapses it. A map flight is the one place
  * in the product where a longer move is legitimate — the reader needs to keep
  * their bearings while the world scrolls under them — so the durations here are
