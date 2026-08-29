@@ -19,7 +19,11 @@ const src = fileURLToPath(new URL('./src/', import.meta.url))
  * `jsx: react-jsx` from `tsconfig.json`, which is all a server-rendered
  * component needs — the React plugin exists for Fast Refresh, which no test has.
  *
- * End-to-end and visual tests are Playwright's job (`playwright.config.ts`).
+ * A third project, `sandcastle`, covers `.sandcastle/**` - the agent tooling, which had no tests at
+ * all before the Sentry sweep. That routine carries real policy (selection thresholds, the dedup
+ * index, the issue body) and its failure mode is silence: a parsing bug files a duplicate every
+ * week, or stops filing anything, and says nothing either way. `pnpm typecheck` already covers that
+ * directory; this is the part typecheck cannot see.
  */
 export default defineConfig({
   resolve: {
@@ -42,6 +46,22 @@ export default defineConfig({
             'src/components/**/*.test.{ts,tsx}',
             'src/lib/**/*.test.{ts,tsx}',
           ],
+          restoreMocks: true,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'sandcastle',
+          environment: 'node',
+          globals: false,
+          include: ['.sandcastle/**/__tests__/*.test.ts'],
+          /**
+           * The loop creates full git worktrees under `.sandcastle/worktrees/`, each a copy of this
+           * checkout - the same hazard `vite.config.ts` describes for the dev server's watcher.
+           * Collecting them would run every one of these tests once per worktree.
+           */
+          exclude: ['.sandcastle/worktrees/**', '.sandcastle/logs/**'],
           restoreMocks: true,
         },
       },
