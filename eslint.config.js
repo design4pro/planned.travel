@@ -88,6 +88,11 @@ export default [
       'eslint.config.js',
       'prettier.config.js',
       '.claude/**',
+      // Agent tooling that GitHub's own surfaces read - skills, agent definitions, hooks. Same
+      // reason `.claude/**` is here: it is vendored configuration for tools around the project,
+      // not application source, and it is not written against this project's tsconfig - so the
+      // typed linter cannot parse it and reports every file as a project-membership error.
+      '.github/**',
       '.sandcastle/**',
       'dist/**',
       'playwright-report/**',
