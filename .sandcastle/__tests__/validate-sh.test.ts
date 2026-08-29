@@ -47,6 +47,7 @@ type Run = {
   verdict: Validation
   /** What `pnpm exec …` was called with, minus the `exec`; empty when Playwright never ran. */
   pwArgs: string[]
+  /** The variables the script exported for Playwright, as the stub saw them. */
   pwEnv: Record<string, string>
 }
 
@@ -118,13 +119,16 @@ const RESULTS_FIXTURE = JSON.stringify({
 const PNPM_STUB = `#!/usr/bin/env bash
 # Every ladder step is \`pnpm <script>\` and succeeds silently; only the Playwright invocation is
 # interesting, so it records its own argv and the two variables the script exports for it.
+# Every PW_* variable is set unconditionally by runValidate below, so this stub needs no shell
+# defaults — which also keeps \`\${…}\` out of the JS template literal that carries it.
 if [ "$1" = "exec" ]; then
   shift
   printf '%s\\n' "$@" > "$PW_ARGV_FILE"
-  printf '%s\\n' "$PLAYWRIGHT_JSON_OUTPUT_NAME" "$PLAYWRIGHT_BASE_URL" > "$PW_ENV_FILE"
-  if [ -n "\${PW_RESULTS:-}" ]; then mkdir -p test-results; cp "$PW_RESULTS" test-results/results.json; fi
+  printf '%s\\n' "PLAYWRIGHT_JSON_OUTPUT_NAME=$PLAYWRIGHT_JSON_OUTPUT_NAME" \\
+    "PLAYWRIGHT_BASE_URL=$PLAYWRIGHT_BASE_URL" > "$PW_ENV_FILE"
+  if [ -n "$PW_RESULTS" ]; then mkdir -p test-results; cp "$PW_RESULTS" test-results/results.json; fi
   echo "Running 169 tests using 4 workers"
-  exit "\${PW_EXIT:-0}"
+  exit "$PW_EXIT"
 fi
 exit 0
 `
@@ -134,7 +138,8 @@ exit 0
  * hook exports `GIT_DIR` and `GIT_INDEX_FILE`: under husky's pre-commit run the scratch `git init`
  * would otherwise land on *this* checkout's git directory — which is how `core.bare = true` gets
  * written into a repo that has a working tree. The two `GIT_CONFIG_*` overrides keep `git init`
- * and the commit off the user's global config as well.
+ * and the commit off the user's global config as well, and the identity below is supplied here
+ * rather than by `git config` so that the scratch commit writes nothing anywhere.
  */
 const BASE_ENV: NodeJS.ProcessEnv = {
   ...Object.fromEntries(
@@ -142,6 +147,10 @@ const BASE_ENV: NodeJS.ProcessEnv = {
   ),
   GIT_CONFIG_GLOBAL: '/dev/null',
   GIT_CONFIG_SYSTEM: '/dev/null',
+  GIT_AUTHOR_NAME: 'Ralph',
+  GIT_AUTHOR_EMAIL: 'ralph@example.com',
+  GIT_COMMITTER_NAME: 'Ralph',
+  GIT_COMMITTER_EMAIL: 'ralph@example.com',
 }
 
 function readLines(path: string): string[] {
@@ -150,6 +159,19 @@ function readLines(path: string): string[] {
   } catch {
     return []
   }
+}
+
+/**
+ * The `KEY=value` lines the stub recorded, keyed by name — so a variable the script forgot to
+ * export reads back as absent rather than shunting the next one into its place.
+ */
+function readEnvFile(path: string): Record<string, string> {
+  return Object.fromEntries(
+    readLines(path).map((line) => {
+      const eq = line.indexOf('=')
+      return [line.slice(0, eq), line.slice(eq + 1)]
+    }),
+  )
 }
 
 /**
@@ -176,18 +198,7 @@ function runValidate(
       )
   }
   git('init', '-q', '-b', 'main')
-  // `-c` rather than `git config`: identity for this one commit, written nowhere.
-  git(
-    '-c',
-    'user.email=ralph@example.com',
-    '-c',
-    'user.name=Ralph',
-    'commit',
-    '-q',
-    '--allow-empty',
-    '-m',
-    'base',
-  )
+  git('commit', '-q', '--allow-empty', '-m', 'base')
 
   mkdirSync(join(dir, '.sandcastle'))
   writeFileSync(join(dir, '.sandcastle', 'validate.sh'), SCRIPT)
@@ -237,7 +248,6 @@ function runValidate(
     },
   )
 
-  const env = readLines(envFile)
   return {
     status: run.status ?? -1,
     stderr: run.stderr,
@@ -245,10 +255,7 @@ function runValidate(
       readFileSync(join(dir, '.sandcastle-validation.json'), 'utf8'),
     ) as Validation,
     pwArgs: readLines(argvFile),
-    pwEnv: {
-      PLAYWRIGHT_JSON_OUTPUT_NAME: env[0] ?? '',
-      PLAYWRIGHT_BASE_URL: env[1] ?? '',
-    },
+    pwEnv: readEnvFile(envFile),
   }
 }
 
