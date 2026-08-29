@@ -76,9 +76,8 @@ export interface MarkdownHeading {
   readonly children: ReadonlyArray<MarkdownInline>
 }
 
-export interface MarkdownListItem {
-  readonly children: ReadonlyArray<MarkdownInline>
-}
+/** One item's inline content. A list item holds no blocks in this subset. */
+export type MarkdownListItem = ReadonlyArray<MarkdownInline>
 
 export interface MarkdownList {
   readonly type: 'list'
@@ -107,13 +106,11 @@ export interface MarkdownThematicBreak {
   readonly type: 'thematicBreak'
 }
 
-export interface MarkdownTableCell {
-  readonly children: ReadonlyArray<MarkdownInline>
-}
+/** One cell's inline content. A cell holds no blocks in this subset. */
+export type MarkdownTableCell = ReadonlyArray<MarkdownInline>
 
-export interface MarkdownTableRow {
-  readonly cells: ReadonlyArray<MarkdownTableCell>
-}
+/** Always the header's width: short rows are padded, long ones truncated. */
+export type MarkdownTableRow = ReadonlyArray<MarkdownTableCell>
 
 export interface MarkdownTable {
   readonly type: 'table'
@@ -132,11 +129,7 @@ export type MarkdownBlock =
   | MarkdownTable
 
 /** The schemes a link may carry. Everything else stays text. */
-export const MARKDOWN_LINK_SCHEMES: ReadonlyArray<string> = [
-  'http:',
-  'https:',
-  'mailto:',
-]
+const LINK_SCHEMES: ReadonlyArray<string> = ['http:', 'https:', 'mailto:']
 
 const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+|$)([^\n]*?)[ \t]*$/
 const CLOSING_HASHES = /(?:^|[ \t])#+$/
@@ -182,27 +175,6 @@ interface BlockRead {
 }
 
 /**
- * What a line opens, for the lines that open a block at all.
- *
- * The set is stated once because two callers ask the same question of it:
- * {@link parseBlocks}, which goes on to read the block, and
- * {@link startsBlock}, which only needs to know that the paragraph or list item
- * running into this line has to stop short of it.
- */
-type BlockOpener =
-  | { readonly kind: 'fence'; readonly marker: string; readonly info: string }
-  | { readonly kind: 'thematicBreak' }
-  | {
-      readonly kind: 'heading'
-      readonly level: 1 | 2 | 3
-      readonly text: string
-    }
-  | { readonly kind: 'quote' }
-  | { readonly kind: 'list' }
-  /** Carried whole, because a table is recognised only by reading it. */
-  | { readonly kind: 'table'; readonly read: BlockRead }
-
-/**
  * @param quotable - false inside a quote, which is what keeps `> > x` from
  *   nesting: the inner `>` is read as text.
  */
@@ -219,13 +191,11 @@ function parseBlocks(
       continue
     }
 
-    const opener = openerAt(lines, index, quotable)
     // A line that opens nothing opens a paragraph, which is the block every
     // other reader declines.
     const read =
-      opener === null
-        ? readParagraph(lines, index, quotable)
-        : readOpener(lines, index, opener, quotable)
+      readBlockAt(lines, index, quotable) ??
+      readParagraph(lines, index, quotable)
 
     blocks.push(read.block)
     index = read.next
@@ -234,20 +204,40 @@ function parseBlocks(
   return blocks
 }
 
-/** The opener the line at `index` carries, or `null` when it carries none. */
-function openerAt(
+/**
+ * Read the block the line at `start` opens, or `null` when it opens none.
+ *
+ * The order of the branches is the grammar, and it is stated once because two
+ * callers ask the same question of it: {@link parseBlocks}, which keeps the
+ * block, and {@link startsBlock}, which only needs to know that the paragraph or
+ * list item running into this line has to stop short of it. A form added here is
+ * therefore never one that parses but fails to end the paragraph above it.
+ *
+ * {@link startsBlock} pays for a block it then discards, and the shape of the
+ * subset bounds that to a constant: a reader whose opening line does not match
+ * returns before reading anything, one that does match ends the enclosing run at
+ * once — so a run discards at most one block — and a quote is the only block
+ * holding blocks, which caps the nesting at two. A block is read at most four
+ * times, never once per line of it.
+ *
+ * @param quotable - false inside a quote, which is what keeps `> > x` from
+ *   nesting: the inner `>` is read as text.
+ */
+function readBlockAt(
   lines: ReadonlyArray<string>,
-  index: number,
+  start: number,
   quotable: boolean,
-): BlockOpener | null {
-  const line = lines[index]
+): BlockRead | null {
+  const line = lines[start]
 
   const fence = FENCE.exec(line)
   if (fence !== null && isValidInfo(fence[1], fence[2])) {
-    return { kind: 'fence', marker: fence[1], info: fence[2] }
+    return readFence(lines, start, fence[1], fence[2])
   }
 
-  if (THEMATIC_BREAK.test(line)) return { kind: 'thematicBreak' }
+  if (THEMATIC_BREAK.test(line)) {
+    return { block: { type: 'thematicBreak' }, next: start + 1 }
+  }
 
   const heading = HEADING.exec(line)
   if (heading !== null) {
@@ -255,53 +245,21 @@ function openerAt(
     // be read as whatever the rest of this function makes of it.
     const level = headingLevel(heading[1])
     if (level !== null) {
+      const text = heading[2].replace(CLOSING_HASHES, '').trim()
       return {
-        kind: 'heading',
-        level,
-        text: heading[2].replace(CLOSING_HASHES, '').trim(),
+        block: { type: 'heading', level, children: parseInline(text, true) },
+        next: start + 1,
       }
     }
   }
 
-  if (quotable && QUOTE.test(line)) return { kind: 'quote' }
-  if (BULLET.test(line) || ORDERED.test(line)) return { kind: 'list' }
-
-  const table = readTable(lines, index)
-  return table === null ? null : { kind: 'table', read: table }
-}
-
-function readOpener(
-  lines: ReadonlyArray<string>,
-  start: number,
-  opener: BlockOpener,
-  quotable: boolean,
-): BlockRead {
-  switch (opener.kind) {
-    case 'fence':
-      return readFence(lines, start, opener.marker, opener.info)
-
-    case 'thematicBreak':
-      return { block: { type: 'thematicBreak' }, next: start + 1 }
-
-    case 'heading':
-      return {
-        block: {
-          type: 'heading',
-          level: opener.level,
-          children: parseInline(opener.text, true),
-        },
-        next: start + 1,
-      }
-
-    case 'quote':
-      return readQuote(lines, start)
-
-    case 'list':
-      return readList(lines, start, quotable)
-
-    case 'table':
-      return opener.read
+  if (quotable && QUOTE.test(line)) return readQuote(lines, start)
+  if (BULLET.test(line) || ORDERED.test(line)) {
+    return readList(lines, start, quotable)
   }
+
+  // A table is the one form recognised only by reading it.
+  return readTable(lines, start)
 }
 
 /** The subset stops at three: a deeper run of hashes is literal text. */
@@ -402,9 +360,7 @@ function readList(
       type: 'list',
       ordered,
       start: ordered ? Number(first[1]) : 1,
-      items: items.map((item) => ({
-        children: parseInline(item.join('\n'), true),
-      })),
+      items: items.map((item) => parseInline(item.join('\n'), true)),
     },
     next: index,
   }
@@ -432,7 +388,7 @@ function readTable(
   while (index < lines.length) {
     const line = lines[index]
     if (BLANK.test(line) || !line.includes('|')) break
-    rows.push({ cells: toCells(fitRow(splitRow(line), headerCells.length)) })
+    rows.push(toRow(fitRow(splitRow(line), headerCells.length)))
     index += 1
   }
 
@@ -440,7 +396,7 @@ function readTable(
     block: {
       type: 'table',
       align: delimiterCells.map(alignOf),
-      header: { cells: toCells(headerCells) },
+      header: toRow(headerCells),
       rows,
     },
     next: index,
@@ -454,8 +410,8 @@ function fitRow(cells: Array<string>, width: number): Array<string> {
   return fitted
 }
 
-function toCells(cells: ReadonlyArray<string>): Array<MarkdownTableCell> {
-  return cells.map((cell) => ({ children: parseInline(cell, true) }))
+function toRow(cells: ReadonlyArray<string>): MarkdownTableRow {
+  return cells.map((cell) => parseInline(cell, true))
 }
 
 function alignOf(cell: string): MarkdownAlign {
@@ -524,7 +480,7 @@ function startsBlock(
   index: number,
   quotable: boolean,
 ): boolean {
-  return openerAt(lines, index, quotable) !== null
+  return readBlockAt(lines, index, quotable) !== null
 }
 
 /* -------------------------------------------------------------------- inline */
@@ -847,11 +803,11 @@ function matchLink(
  * refused for the same reason the allow-list exists: the subset only ever
  * links out.
  */
-export function safeHref(destination: string): string | null {
+function safeHref(destination: string): string | null {
   const cleaned = destination.replace(NON_PRINTABLE, '')
   const colon = cleaned.indexOf(':')
   if (colon === -1) return null
 
   const scheme = cleaned.slice(0, colon + 1).toLowerCase()
-  return MARKDOWN_LINK_SCHEMES.includes(scheme) ? cleaned : null
+  return LINK_SCHEMES.includes(scheme) ? cleaned : null
 }

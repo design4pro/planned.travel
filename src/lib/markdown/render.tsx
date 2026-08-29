@@ -67,7 +67,9 @@ const headings = {
  * The focus ring is stated rather than imported. `src/components/ui/shared.ts`
  * owns the same three classes, and every component takes them from there, but
  * this module sits under `src/lib/` — below the component layer, which imports
- * `src/lib/` freely — and reaching upward would close that loop.
+ * `src/lib/` freely — and reaching upward would close that loop. `focusRing`
+ * there carries the reason `outline-solid` is load-bearing; a change to one copy
+ * belongs in the other.
  */
 export function Markdown({
   text,
@@ -113,7 +115,7 @@ function Block({ node }: { node: MarkdownBlock }): React.JSX.Element {
     case 'list': {
       const items = node.items.map((item, index) => (
         <li key={index}>
-          <Inlines nodes={item.children} />
+          <Inlines nodes={item} />
         </li>
       ))
       return node.ordered ? (
@@ -164,9 +166,6 @@ function Block({ node }: { node: MarkdownBlock }): React.JSX.Element {
           </table>
         </div>
       )
-
-    default:
-      return unreachable(node)
   }
 }
 
@@ -181,7 +180,7 @@ function Row({
 }): React.JSX.Element {
   return (
     <tr>
-      {row.cells.map((cell, index) => {
+      {row.map((cell, index) => {
         const alignment = align[index]
         const classes = cn(
           'px-2 py-1.5 text-start',
@@ -192,11 +191,11 @@ function Row({
         )
         return head ? (
           <th key={index} className={classes} scope="col">
-            <Inlines nodes={cell.children} />
+            <Inlines nodes={cell} />
           </th>
         ) : (
           <td key={index} className={classes}>
-            <Inlines nodes={cell.children} />
+            <Inlines nodes={cell} />
           </td>
         )
       })}
@@ -258,16 +257,5 @@ function Inline({ node }: { node: MarkdownInline }): React.JSX.Element {
           <Inlines nodes={node.children} />
         </a>
       )
-
-    default:
-      return unreachable(node)
   }
-}
-
-/**
- * Statically unreachable: both switches above cover their union, and this is
- * what makes the compiler say so when a node type is added without a branch.
- */
-function unreachable(_node: never): React.JSX.Element {
-  return <></>
 }

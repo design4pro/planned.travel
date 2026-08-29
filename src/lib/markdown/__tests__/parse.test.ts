@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parse, safeHref } from '../parse'
+import { parse } from '../parse'
 
 import type { MarkdownBlock, MarkdownInline } from '../parse'
 
@@ -47,11 +47,7 @@ describe('parse — blocks', () => {
       type: 'list',
       ordered: false,
       start: 1,
-      items: [
-        { children: [text('a')] },
-        { children: [text('b')] },
-        { children: [text('c')] },
-      ],
+      items: [[text('a')], [text('b')], [text('c')]],
     })
   })
 
@@ -60,7 +56,7 @@ describe('parse — blocks', () => {
       type: 'list',
       ordered: true,
       start: 3,
-      items: [{ children: [text('three')] }, { children: [text('four')] }],
+      items: [[text('three')], [text('four')]],
     })
   })
 
@@ -108,22 +104,8 @@ describe('parse — blocks', () => {
     expect(only('| a | b | c |\n| :-- | :-: | --: |\n| 1 | 2 | 3 |')).toEqual({
       type: 'table',
       align: ['left', 'center', 'right'],
-      header: {
-        cells: [
-          { children: [text('a')] },
-          { children: [text('b')] },
-          { children: [text('c')] },
-        ],
-      },
-      rows: [
-        {
-          cells: [
-            { children: [text('1')] },
-            { children: [text('2')] },
-            { children: [text('3')] },
-          ],
-        },
-      ],
+      header: [[text('a')], [text('b')], [text('c')]],
+      rows: [[[text('1')], [text('2')], [text('3')]]],
     })
   })
 
@@ -131,8 +113,8 @@ describe('parse — blocks', () => {
     expect(only('a | b\n--- | ---\n1 | 2')).toEqual({
       type: 'table',
       align: [null, null],
-      header: { cells: [{ children: [text('a')] }, { children: [text('b')] }] },
-      rows: [{ cells: [{ children: [text('1')] }, { children: [text('2')] }] }],
+      header: [[text('a')], [text('b')]],
+      rows: [[[text('1')], [text('2')]]],
     })
   })
 
@@ -140,10 +122,10 @@ describe('parse — blocks', () => {
     expect(only('| a | b |\n| --- | --- |\n| 1 |\n| 1 | 2 | 3 |')).toEqual({
       type: 'table',
       align: [null, null],
-      header: { cells: [{ children: [text('a')] }, { children: [text('b')] }] },
+      header: [[text('a')], [text('b')]],
       rows: [
-        { cells: [{ children: [text('1')] }, { children: [] }] },
-        { cells: [{ children: [text('1')] }, { children: [text('2')] }] },
+        [[text('1')], []],
+        [[text('1')], [text('2')]],
       ],
     })
   })
@@ -152,12 +134,8 @@ describe('parse — blocks', () => {
     expect(only('| a | b |\n| --- | --- |\n| x \\| y | 2 |')).toEqual({
       type: 'table',
       align: [null, null],
-      header: { cells: [{ children: [text('a')] }, { children: [text('b')] }] },
-      rows: [
-        {
-          cells: [{ children: [text('x | y')] }, { children: [text('2')] }],
-        },
-      ],
+      header: [[text('a')], [text('b')]],
+      rows: [[[text('x | y')], [text('2')]]],
     })
   })
 
@@ -303,14 +281,24 @@ describe('parse — outside the subset', () => {
   it('sees through the tricks that hide a scheme from a naive check', () => {
     for (const destination of [
       'JaVaScRiPt:alert(1)',
-      ' javascript:alert(1)',
-      'java\tscript:alert(1)',
+      '< javascript:alert(1)>',
+      '<java\tscript:alert(1)>',
+      '<java\u0000script:alert(1)>',
       'vbscript:msgbox(1)',
       '/relative/path',
       '#anchor',
     ]) {
-      expect(safeHref(destination)).toBeNull()
+      const nodes = inline(`[click](${destination})`)
+      expect(nodes.some(isLink)).toBe(false)
     }
+  })
+
+  it('reads a destination the way a browser reads one, controls dropped first', () => {
+    // The strip runs before the scheme is read, so the allow-list sees what the
+    // navigator would see rather than the bytes around it.
+    expect(inline('[a](<\u0001https://example.com/x>)')).toEqual([
+      { type: 'link', href: 'https://example.com/x', children: [text('a')] },
+    ])
   })
 
   it('keeps raw HTML as text rather than as a node', () => {
@@ -396,6 +384,18 @@ describe('parse — outside the subset', () => {
 
     const blocks = parse(source)
     expect(blocks.length).toBeGreaterThan(1)
+  })
+
+  /**
+   * The lookahead that ends a paragraph reads the block that ends it and then
+   * throws it away, so a boundary block is read a constant number of times —
+   * not once per line of it. A body that alternates between the three readers
+   * consuming more than one line would blow the default timeout if that ever
+   * stopped holding.
+   */
+  it('reads a boundary block a bounded number of times', () => {
+    const source = 'text before\n> quoted\n```\ncode\n```\n- item\n'.repeat(400)
+    expect(parse(source).length).toBeGreaterThan(1_000)
   })
 
   it('does not degrade into quadratic scanning on unmatched delimiters', () => {
