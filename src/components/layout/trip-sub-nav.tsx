@@ -1,12 +1,19 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { ChevronLeft, Share2 } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
+import { useEffect } from 'react'
 import { APP_HEADER_TOP_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
+import { isTripTabId, rememberTripTab } from '#/lib/trip-tab'
 import { TRIP_TABS } from './nav-model'
 
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const
+
+/** A deep page inside a tab keeps that tab lit, and remembered. */
+function isTabActive(href: string, pathname: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
 
 export interface TripSubNavProps {
   tripId: string
@@ -20,10 +27,29 @@ export interface TripSubNavProps {
  * to nothing.
  */
 export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
   const reduceMotion = useReducedMotion()
   const t = useTranslate()
-  const transition = reduceMotion ? { duration: 0 } : { duration: 0.26, ease: EASE_OUT_QUINT }
+  const transition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.26, ease: EASE_OUT_QUINT }
+  const activeTabId = TRIP_TABS.find((tab) =>
+    isTabActive(tab.to.replace('$tripId', tripId), pathname),
+  )?.id
+
+  /**
+   * The memory this strip owes the reader: whichever tab is active is the one
+   * this trip reopens on. Recorded on activation rather than on click, because
+   * arriving at `/trips/<id>/costs` from a link, a redirect or a bookmark is the
+   * same statement about where the reader is working. `src/lib/trip-tab.ts` says
+   * where it goes and how long it lives; the trip index reads it back.
+   */
+  useEffect(() => {
+    if (!isTripTabId(activeTabId)) return
+    rememberTripTab(tripId, activeTabId)
+  }, [tripId, activeTabId])
 
   return (
     <div
@@ -37,7 +63,9 @@ export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
       {/* Narrow viewports get the trip context on its own line. */}
       <div className="mx-auto flex h-11 max-w-content items-center gap-2 px-4 sm:px-6 lg:hidden">
         <BackToTrips />
-        <p className="min-w-0 flex-1 truncate font-display text-label font-bold">{tripName}</p>
+        <p className="min-w-0 flex-1 truncate font-display text-label font-bold">
+          {tripName}
+        </p>
         <ShareLink tripId={tripId} compact />
       </div>
 
@@ -45,14 +73,16 @@ export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
         <div className="hidden shrink-0 items-center gap-3 lg:flex">
           <BackToTrips />
           <span aria-hidden className="h-4 w-px bg-inverse-edge" />
-          <p className="max-w-56 truncate font-display text-label font-bold">{tripName}</p>
+          <p className="max-w-56 truncate font-display text-label font-bold">
+            {tripName}
+          </p>
         </div>
 
         <nav aria-label={t('shell.trip.nav.label')} className="min-w-0 flex-1">
           <ul className="scrollbar-none flex h-subnav items-center gap-1 overflow-x-auto">
             {TRIP_TABS.map((tab) => {
               const href = tab.to.replace('$tripId', tripId)
-              const active = pathname === href || pathname.startsWith(`${href}/`)
+              const active = isTabActive(href, pathname)
               return (
                 <li key={tab.id} className="shrink-0">
                   <Link
