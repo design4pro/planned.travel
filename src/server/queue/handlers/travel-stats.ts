@@ -7,7 +7,7 @@
  * number frozen at whatever the fixture had put there.
  *
  * It runs here rather than inline because a recompute is six aggregate queries
- * over the workspace's trips, days, places, expenses and transport legs, and D1
+ * over the traveller's trips, days, places, expenses and transport legs, and D1
  * bills on rows scanned (`ARCHITECTURE.md` §5). The write path enqueues and
  * returns; the panel catches up on its next read.
  *
@@ -112,10 +112,10 @@ export function recomputeDelaySeconds(at: number): number {
 /**
  * Consecutive years of travel, newest first, from the rows the recompute writes.
  *
- * A **workspace** streak, and `ADD-06` labels it as one: a year row's
- * `tripCount` is `tenantFilter()`-bound and carries no user predicate, so it is
- * byte-identical for every member and "years of travel" is the workspace's, not
- * the traveller's.
+ * A **traveller's** streak, since the `00-S4` amendment (PRD #104, decision 11):
+ * a year row's `tripCount` counts the trips that row's `user_id` is a member of,
+ * so consecutive years of travel are that person's own and two members of one
+ * workspace who travel separately hold two different streaks.
  *
  * Two things end a run, and both have to, because a year without travel can be
  * recorded either way: a row whose `tripCount` is zero, and a year with no row

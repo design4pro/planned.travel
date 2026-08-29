@@ -15,16 +15,25 @@
 // parallel-branch or Owned-paths model) and, on UI diffs, the blind A/B
 // pixel-critic. SANDCASTLE_DEEP_REVIEW=0 skips the former.
 //
-// Run from anywhere: the integration branch `sandcastle/run-<date>` is cut
-// from `origin/develop` (or resumed, on a same-day rerun) inside its own git
-// worktree under `.sandcastle/worktrees/` — the operator's checkout is never
-// switched and stays usable while the loop runs:
-//   pnpm sandcastle
+// Run from anywhere: the integration branch `sandcastle/run-<date>-<n>` is cut
+// from `origin/develop` (or resumed, when the same run number is given again)
+// inside its own git worktree under `.sandcastle/worktrees/` — the operator's
+// checkout is never switched and stays usable while the loop runs:
+//   pnpm sandcastle                            # the next free run for today
+//   pnpm sandcastle --run 2 --issues 101,102   # resume run 2, only those issues
+//
+// The run number is what makes two loops concurrent: it scopes the integration
+// branch, the issue branches (`sandcastle/issue-<id>-<date>-<n>`), the artifact
+// directory and the lock, so nothing is shared but the repo. `--issues` is how
+// the operator partitions the backlog — both planners otherwise pick the same
+// `ready-for-agent` issues and implement them twice. Same number = same run =
+// resume; a new number is a run that shares nothing.
 //
 // Requires: Docker running, `sandcastle docker build-image` executed once,
 // and the env vars from .env.example.
 
-import { cp, mkdir } from 'node:fs/promises'
+import { execSync } from 'node:child_process'
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import * as sandcastle from '@ai-hero/sandcastle'
@@ -133,8 +142,115 @@ const hooks = {
   },
 }
 
-const RUN_TS = process.env.SANDCASTLE_RUN_TS ?? String(process.pid)
-const ARTIFACT_ROOT = join('.sandcastle', 'logs', `run-${RUN_TS}`)
+const argv = process.argv.slice(2)
+
+/** `--name value`, the flag idiom this repo already uses (sentry-triage.ts). */
+function flag(name: string, fallback: string): string {
+  const at = argv.indexOf(`--${name}`)
+  return at === -1 ? fallback : (argv[at + 1] ?? fallback)
+}
+
+// Local calendar date, like the manual `date +%Y%m%d` this replaces — a UTC
+// date would cut a fresh branch on a same-local-day rerun straddling UTC
+// midnight, stranding the accumulated progress it exists to resume.
+const pad = (n: number) => String(n).padStart(2, '0')
+const now = new Date()
+const today = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
+
+/**
+ * Run numbers already cut today. `integration.close()` deliberately keeps the
+ * branch behind, so this is a record of what has EXISTED today, not of what is
+ * running — which is exactly what "give me a number nobody has used" needs.
+ */
+function runNumbersToday(): number[] {
+  const listed = execSync(
+    `git branch --list 'sandcastle/run-${today}-*' --format='%(refname:short)'`,
+    { encoding: 'utf8' },
+  )
+  return listed
+    .split('\n')
+    .map((branch) => /-(\d+)$/.exec(branch.trim())?.[1])
+    .filter((n): n is string => n !== undefined)
+    .map(Number)
+    .sort((a, b) => a - b)
+}
+
+// The run number partitions a day into independent runs, so two loops can work
+// the backlog side by side without sharing a branch, a worktree or an artifact
+// directory. With no `--run` one is allocated: a bare `pnpm sandcastle` is
+// always a NEW run that shares nothing. Resuming is therefore always deliberate
+// (`--run N`), which is why the banner below prints the numbers already on disk
+// — that is where the operator reads them off. Empty means "allocate one".
+const REQUESTED_RUN = flag('run', process.env.SANDCASTLE_RUN ?? '')
+if (REQUESTED_RUN !== '' && !/^[1-9][0-9]*$/.test(REQUESTED_RUN)) {
+  throw new Error(
+    `--run takes a positive integer (got ${JSON.stringify(REQUESTED_RUN)}). Example: pnpm sandcastle --run 2`,
+  )
+}
+
+/** Is that pid still alive? Signal 0 delivers nothing; it only asks. */
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Claiming the run number and locking it is one step, because the lock is the
+// only thing that distinguishes a run to resume from a run already in flight:
+// the lib reuses a managed worktree whose branch matches — that is what makes a
+// resume work — and never asks whether another process is still inside it. Two
+// fleets in one worktree would commit over each other in silence.
+//
+// The lock lives under the gitignored artifact root, so it can never dirty a
+// worktree and trigger the lib's preserve-on-dirty path. A crashed run leaves
+// its pid behind; a dead pid is not a conflict, so a crash costs the operator
+// nothing — the next run takes the lock and resumes.
+const takenToday = runNumbersToday()
+let candidate =
+  REQUESTED_RUN === '' ? String((takenToday.at(-1) ?? 0) + 1) : REQUESTED_RUN
+let runId = ''
+let lockPath = ''
+for (;;) {
+  runId = `${today}-${candidate}`
+  lockPath = join('.sandcastle', 'logs', `run-${runId}`, 'run.lock')
+  const holder = await readFile(lockPath, 'utf8').catch(() => '')
+  if (holder === '' || !isAlive(Number(holder))) break
+  if (REQUESTED_RUN !== '') {
+    throw new Error(
+      `sandcastle run ${runId} is already live in process ${holder}. Start an ` +
+        `independent run with \`pnpm sandcastle\`, or delete ${lockPath} if you are ` +
+        `certain that process is gone.`,
+    )
+  }
+  // Auto-allocated: two runs launched together read the same free number before
+  // either takes its lock, so walk to the next one rather than making the
+  // operator stagger the launches.
+  candidate = String(Number(candidate) + 1)
+}
+const RUN_NUMBER = candidate
+// Everything a run owns is keyed on this: its integration branch, its issue
+// branches, its artifacts and its lock. Same id = same run = resume; a new id is
+// a run that shares nothing with the others.
+const RUN_ID = runId
+
+// How the operator partitions the backlog between concurrent runs. Without it
+// both planners read the same `ready-for-agent` list and two fleets implement
+// the same issues twice — the filter is what makes "independent runs" true.
+const ONLY_ISSUES = flag('issues', '')
+  .split(',')
+  .map((id) => id.trim())
+  .filter(Boolean)
+
+// Keyed on the run, not the process: a resumed run writes into the same tree and
+// overwrites the `issue-<id>/attempt-<n>` slots it re-runs (cp with force). That
+// is the right trade — the slot describes an attempt this invocation superseded
+// — and it keeps one directory per run to hand to a PR reader.
+const ARTIFACT_ROOT = join('.sandcastle', 'logs', `run-${RUN_ID}`)
+await mkdir(ARTIFACT_ROOT, { recursive: true })
+await writeFile(lockPath, String(process.pid))
 
 type Issue = z.infer<typeof planSchema>['issues'][number]
 type Validation = {
@@ -166,23 +282,27 @@ function createLimiter(limit: number) {
 // createWorktree), so nothing here ever switches the operator's checkout —
 // which is also what keeps ADR 0003 honoured mechanically: the branch is
 // always cut from `origin/develop`, whatever the operator happens to have
-// checked out. On a same-day rerun the branch already exists, `baseBranch`
-// is ignored (the lib's contract) and the existing worktree is reused, so
-// accumulated issue-branch progress survives. The lib refuses cleanly if
-// the branch is checked out elsewhere. The fetch is ours: createWorktree
-// documents that callers keep the base ref current.
-const { execSync } = await import('node:child_process')
-execSync('git fetch origin develop', { stdio: 'inherit' })
-// Local calendar date, like the manual `date +%Y%m%d` this replaces — a UTC
-// date would cut a fresh branch on a same-local-day rerun straddling UTC
-// midnight, stranding the accumulated progress it exists to resume.
-const pad = (n: number) => String(n).padStart(2, '0')
-const now = new Date()
-const today = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
+// checked out. On a rerun with the SAME `--run` number the branch already
+// exists, `baseBranch` is ignored (the lib's contract) and the existing
+// worktree is reused, so accumulated issue-branch progress survives. The lib
+// only refuses when the branch is checked out in a worktree OUTSIDE
+// `.sandcastle/worktrees/`; inside it, it reuses silently — hence the lock
+// above. The fetch is ours: createWorktree documents that callers keep the
+// base ref current.
+try {
+  execSync('git fetch origin develop', { stdio: 'inherit' })
+} catch {
+  // `refs/remotes/origin/develop` is the one piece of operator-repo state two
+  // concurrent runs both write, and losing its lock for a few ms would abort a
+  // run at startup. One retry covers that; a second failure is a real problem
+  // and should surface.
+  execSync('git fetch origin develop', { stdio: 'inherit' })
+}
+
 const integration = await sandcastle.createWorktree({
   branchStrategy: {
     type: 'branch',
-    branch: `sandcastle/run-${today}`,
+    branch: `sandcastle/run-${RUN_ID}`,
     baseBranch: 'origin/develop',
   },
   // Every run/createSandbox below anchors at this worktree, and the anchor
@@ -194,8 +314,28 @@ const integration = await sandcastle.createWorktree({
 const integrationBranch = integration.branch
 const integrationCwd = integration.worktreePath
 console.log(
-  `sandcastle: integration branch ${integrationBranch} in worktree ${integrationCwd}`,
+  `sandcastle: run ${RUN_ID} — integration branch ${integrationBranch} in worktree ${integrationCwd}`,
 )
+// The only place the operator learns which runs exist, and so the only way
+// `--run N` is discoverable at the moment it is needed: to resume a run rather
+// than start yet another one.
+const otherRuns = takenToday.filter((n) => String(n) !== RUN_NUMBER)
+if (otherRuns.length > 0) {
+  console.log(
+    `  today's other runs: ${otherRuns.join(', ')} — resume one with \`pnpm sandcastle --run ${otherRuns[0]}\``,
+  )
+}
+
+/**
+ * What the planner is allowed to look at. Concurrent runs read the same
+ * `ready-for-agent` list, so partitioning the backlog is the operator's job and
+ * this is the only place it is expressed — the planner is told, never guesses.
+ */
+function planScope(): string {
+  return ONLY_ISSUES.length === 0
+    ? 'Consider every issue listed above.'
+    : `Consider ONLY these issues: ${ONLY_ISSUES.map((id) => `#${id}`).join(', ')}. Ignore every other issue, even an unblocked one — another sandcastle run owns it.`
+}
 
 async function runPlanner(): Promise<Issue[]> {
   const plan = await sandcastle.run({
@@ -210,6 +350,7 @@ async function runPlanner(): Promise<Issue[]> {
     maxIterations: 1,
     agent: sandcastle.claudeCode(PLANNER_MODEL),
     promptFile: './.sandcastle/plan-prompt.md',
+    promptArgs: { RUN_ID, SCOPE: planScope() },
     output: sandcastle.Output.object({ tag: 'plan', schema: planSchema }),
   })
   return plan.output.issues
@@ -397,7 +538,7 @@ async function runDeepReview(
               ? [`Suggested direction: ${blocker.remedy}`, '']
               : []),
             '---',
-            `_Filed by the sandcastle deep-review (run ${RUN_TS}) while reviewing #${issue.id}._`,
+            `_Filed by the sandcastle deep-review (run ${RUN_ID}) while reviewing #${issue.id}._`,
           ].join('\n'),
         },
       )
@@ -623,10 +764,7 @@ async function workIssue(
         )
         return { issue, ok: false, commits }
       }
-      const fixPrompt = (await import('node:fs/promises')).readFile(
-        './.sandcastle/fix-prompt.md',
-        'utf8',
-      )
+      const fixPrompt = readFile('./.sandcastle/fix-prompt.md', 'utf8')
       implement = await implement.resume(
         (await fixPrompt)
           .replaceAll('{{FAILURE_DIGEST}}', failureDigest(verdict, attempt))
@@ -674,8 +812,15 @@ async function runAuditor(
   // A throwaway branch off HEAD (post-merge state): git refuses to check the
   // integration branch out into a second worktree while this one holds it.
   // The audit is read-only, so the branch is never merged anywhere.
+  //
+  // Keyed on the PID rather than the run id, and that is deliberate:
+  // createSandbox checks an EXISTING branch out at its own tip instead of
+  // re-cutting it, so a run-id-keyed audit branch would, on a resumed run, audit
+  // the tree the previous invocation left rather than this HEAD — silently
+  // gutting the one adversarial gate. Uniqueness per INVOCATION is what this
+  // name needs.
   const sandbox = await sandcastle.createSandbox({
-    branch: `sandcastle/audit-${RUN_TS}-i${iteration}`,
+    branch: `sandcastle/audit-${process.pid}-i${iteration}`,
     sandbox: docker(),
     cwd: integrationCwd,
     hooks,
@@ -729,7 +874,7 @@ async function runAuditor(
       await sandbox.exec(
         `gh issue create --title ${JSON.stringify(followUp.title)} --label ${JSON.stringify(`type: ${followUp.kind}`)} --label "status: pending" --body-file -`,
         {
-          stdin: `${followUp.body}\n\n---\n_Filed by the sandcastle auditor (run ${RUN_TS}, iteration ${iteration}) while auditing: ${closed.map((i) => `#${i.id}`).join(', ')}._`,
+          stdin: `${followUp.body}\n\n---\n_Filed by the sandcastle auditor (run ${RUN_ID}, iteration ${iteration}) while auditing: ${closed.map((i) => `#${i.id}`).join(', ')}._`,
         },
       )
     }
@@ -753,8 +898,6 @@ async function runAuditor(
  * reviewing and merging it stays human (ADR 0003).
  */
 async function openIntegrationPr(merged: Issue[]): Promise<void> {
-  const { execSync } = await import('node:child_process')
-  const { writeFile } = await import('node:fs/promises')
   execSync(`git push -u origin ${integrationBranch}`, { stdio: 'inherit' })
   const existing = execSync(
     `gh pr list --head ${integrationBranch} --state open --json number --jq 'length'`,
@@ -770,7 +913,7 @@ async function openIntegrationPr(merged: Issue[]): Promise<void> {
   await writeFile(
     bodyPath,
     [
-      `Sandcastle run \`${RUN_TS}\` completed cleanly: every issue below was implemented, reviewed, validated by the deterministic ladder (typecheck · lint · vitest · e2e when UI-touched) inside the CI-identical sandbox, merged, and confirmed by the adversarial auditor (full ladder incl. full e2e).`,
+      `Sandcastle run \`${RUN_ID}\` completed cleanly: every issue below was implemented, reviewed, validated by the deterministic ladder (typecheck · lint · vitest · e2e when UI-touched) inside the CI-identical sandbox, merged, and confirmed by the adversarial auditor (full ladder incl. full e2e).`,
       '',
       '## Issues completed',
       ...merged.map((i) => `- #${i.id} — ${i.title}`),
@@ -781,7 +924,7 @@ async function openIntegrationPr(merged: Issue[]): Promise<void> {
     ].join('\n'),
   )
   execSync(
-    `gh pr create --draft --base develop --head ${integrationBranch} --title ${JSON.stringify(`sandcastle: ${merged.map((i) => `#${i.id}`).join(', ')} — run ${RUN_TS}`)} --body-file ${JSON.stringify(bodyPath)}`,
+    `gh pr create --draft --base develop --head ${integrationBranch} --title ${JSON.stringify(`sandcastle: ${merged.map((i) => `#${i.id}`).join(', ')} — run ${RUN_ID}`)} --body-file ${JSON.stringify(bodyPath)}`,
     { stdio: 'inherit' },
   )
 }
@@ -861,5 +1004,6 @@ if (mergedAll.length > 0 && lastAuditRefuted === 0) {
 // behind — either way the next run reuses it (measured: createWorktree logs
 // "Reusing existing worktree" for a matching branch).
 await integration.close()
+await rm(lockPath, { force: true })
 
 console.log(`\nAll done. Artifacts under ${ARTIFACT_ROOT}`)
