@@ -326,7 +326,14 @@ const messages = {
     'Không mất gì cả. Hãy thử lại, và nếu vẫn vậy thì phần chi tiết bên dưới là thứ cần gửi cho chúng tôi.',
   'error.retry': 'Thử lại',
   'error.dashboard': 'Về bảng điều khiển',
-  'error.unknown': 'Yêu cầu hỏng trước khi kịp hoàn tất.',
+  'error.reported': 'Chúng tôi đã nhận được thông báo và đang kiểm tra.',
+  'error.reference': 'Mã tham chiếu',
+  'error.feedback.open': 'Cho chúng tôi biết chuyện gì đã xảy ra',
+  'error.feedback.label': 'Bạn đang làm gì khi việc này xảy ra?',
+  'error.feedback.send': 'Gửi',
+  'error.feedback.sent': 'Cảm ơn bạn — điều này rất hữu ích.',
+  'error.feedback.failed':
+    'Chưa gửi được. Mã tham chiếu ở trên vẫn đến được với chúng tôi.',
   'error.root': 'Có gì đó lệch đường',
   'error.session': 'Quyền vào không gian của bạn đã đổi',
 

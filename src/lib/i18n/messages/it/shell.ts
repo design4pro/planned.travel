@@ -377,7 +377,14 @@ const messages = {
     'Non è andato perso niente. Riprova e, se continua, mandaci il dettaglio qui sotto.',
   'error.retry': 'Riprova',
   'error.dashboard': 'Torna al pannello',
-  'error.unknown': 'La richiesta è fallita prima di concludersi.',
+  'error.reported': 'Siamo stati avvisati e stiamo controllando.',
+  'error.reference': 'Riferimento',
+  'error.feedback.open': 'Raccontaci che cosa è successo',
+  'error.feedback.label': 'Che cosa stavi facendo quando è successo?',
+  'error.feedback.send': 'Invia',
+  'error.feedback.sent': 'Grazie, ci è di grande aiuto.',
+  'error.feedback.failed':
+    'Non è stato inviato. Il riferimento qui sopra ci arriva comunque.',
   'error.root': 'Siamo usciti di rotta',
   'error.session': 'Il tuo accesso allo spazio di lavoro è cambiato',
 

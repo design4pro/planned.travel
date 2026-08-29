@@ -364,7 +364,14 @@ const messages = {
     'Er is niets verloren gegaan. Probeer het opnieuw, en als het blijft gebeuren is de melding hieronder wat je ons stuurt.',
   'error.retry': 'Opnieuw proberen',
   'error.dashboard': 'Terug naar overzicht',
-  'error.unknown': 'Het verzoek liep vast voordat het klaar was.',
+  'error.reported': 'We hebben een melding gekregen en kijken ernaar.',
+  'error.reference': 'Referentie',
+  'error.feedback.open': 'Vertel ons wat er gebeurde',
+  'error.feedback.label': 'Wat was u aan het doen toen dit gebeurde?',
+  'error.feedback.send': 'Versturen',
+  'error.feedback.sent': 'Dank u — daar hebben we veel aan.',
+  'error.feedback.failed':
+    'Versturen is niet gelukt. De referentie hierboven bereikt ons wel.',
   'error.root': 'Hier zijn we van de route geraakt',
   'error.session': 'Je toegang tot de werkruimte is veranderd',
 

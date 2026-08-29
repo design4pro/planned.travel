@@ -353,7 +353,14 @@ const messages = {
     'Hiçbir şey kaybolmadı. Yeniden deneyin; sürerse aşağıdaki ayrıntıyı bize gönderin.',
   'error.retry': 'Yeniden dene',
   'error.dashboard': 'Panoya geri dön',
-  'error.unknown': 'İstek tamamlanamadan başarısız oldu.',
+  'error.reported': 'Bize bildirildi ve konuya bakıyoruz.',
+  'error.reference': 'Referans numarası',
+  'error.feedback.open': 'Ne olduğunu bize anlatın',
+  'error.feedback.label': 'Bu olduğunda ne yapıyordunuz?',
+  'error.feedback.send': 'Gönder',
+  'error.feedback.sent': 'Teşekkürler — bu bize çok yardımcı oluyor.',
+  'error.feedback.failed':
+    'Gönderilemedi. Yukarıdaki referans yine de bize ulaşıyor.',
   'error.root': 'Rotadan çıktık',
   'error.session': 'Çalışma alanı erişiminiz değişti',
 

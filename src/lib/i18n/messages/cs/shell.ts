@@ -397,7 +397,14 @@ const messages = {
     'Nic se neztratilo. Zkuste to znovu, a pokud se to bude opakovat, pošlete nám podrobnosti níže.',
   'error.retry': 'Zkusit znovu',
   'error.dashboard': 'Zpět na přehled',
-  'error.unknown': 'Požadavek nedošel do konce.',
+  'error.reported': 'Dostali jsme upozornění a už se na to díváme.',
+  'error.reference': 'Referenční číslo',
+  'error.feedback.open': 'Napište nám, co se stalo',
+  'error.feedback.label': 'Co jste dělali, když se to stalo?',
+  'error.feedback.send': 'Odeslat',
+  'error.feedback.sent': 'Děkujeme — moc nám to pomůže.',
+  'error.feedback.failed':
+    'Nepodařilo se odeslat. Referenční číslo výše k nám stále dorazí.',
   'error.root': 'Sjeli jsme z cesty',
   'error.session': 'Váš přístup do prostoru se změnil',
 
