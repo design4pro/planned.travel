@@ -80,11 +80,16 @@ e2e/.auth
 # Kept as the backstop now that .sandcastle/sandbox mounts a real store.
 .pnpm-store/
 
-# Sandcastle advisory-pass scratch: the pixel-critic's blind A/B frames and
-# verdict, and the deep review's structural report — all written in the sandbox
-# worktree and copied to .sandcastle/logs as artifacts. Untracked files left in
-# the worktree are what stops sandcastle from removing it, so every advisory
-# artifact belongs here.
+# Sandcastle run artifacts, all written into the sandbox worktree root and
+# copied to .sandcastle/logs: the validation ladder's JSON verdict, which
+# main.ts asks for on every run with `validate.sh --json-out`, and the advisory
+# pass's scratch — the pixel-critic's blind A/B frames and verdict, and the
+# deep review's structural report. Untracked files left in the worktree are
+# what stops sandcastle from removing it, so every artifact a run leaves behind
+# has to be ignored somewhere in this file; the three that carry no
+# `.sandcastle-` prefix — playwright-report, test-results and dev-server.log —
+# already have entries of their own.
+.sandcastle-validation.json
 .sandcastle-shots/
 .sandcastle-visual.json
 .sandcastle-deep-review.json
