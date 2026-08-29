@@ -6,11 +6,11 @@ import type { BrowserContext, Locator, Page } from '@playwright/test'
 /**
  * Screenshot helpers for the visual gate.
  *
- * The gate that `/ultrabuild` runs needs frames that only change when the design
- * changes. Seven things otherwise make a baseline flap, and each one has its own
- * seam so that a regression in one can never be hidden by another. Six of those
- * seams close inside this file; the fourth is closed in the Worker and audited
- * here, for reasons written out under "What this file could not pin".
+ * The gate needs frames that only change when the design changes. Seven things
+ * otherwise make a baseline flap, and each one has its own seam so that a
+ * regression in one can never be hidden by another. Six of those seams close
+ * inside this file; the fourth is closed in the Worker and audited here, for
+ * reasons written out under "What this file could not pin".
  *
  * 1. **Paint timing** — fonts, hydration, entrance motion, in-flight images.
  *    `settle()`, which ends on the frame a reader actually sees. Read the note on
