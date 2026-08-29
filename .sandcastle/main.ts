@@ -227,6 +227,7 @@ async function collectArtifacts(
     'test-results',
     '.sandcastle-validation.json',
     '.sandcastle-visual.json',
+    '.sandcastle-deep-review.json',
     '.sandcastle-shots',
     'dev-server.log',
   ]) {
@@ -356,9 +357,16 @@ async function runDeepReview(
     })
 
     // One blocker becomes a ticket so the highest-conviction structural finding
-    // survives past the comment. Same channel as the auditor's follow-ups:
-    // `status: pending` for human triage (ADR 0006), never `ready-for-agent`.
-    // Capped at one per issue — the backlog is the scarce resource here.
+    // survives past the comment. Capped at one per issue — the backlog is the
+    // scarce resource here.
+    //
+    // `type: enhancement`, NOT the auditor's `type: maintenance`: pre-triage
+    // sweeps `type: bug` and `type: maintenance` (TRIGGER_LABELS in triage.ts)
+    // and can promote a confirmed finding straight to `ready-for-agent`. That
+    // is right for an auditor's reproducible defect and wrong for a structural
+    // opinion, which no grep can confirm. `type: enhancement` is the label this
+    // repo already uses for taste findings (docs/agents/triage-labels.md), so
+    // these wait for a human running `/triage`.
     const blocker = bySeverity('blocker')[0]
     if (blocker !== undefined) {
       const existing = await sandbox.exec(
@@ -374,7 +382,7 @@ async function runDeepReview(
         `  [${issue.id}] deep-review blocker → issue: ${blocker.title}`,
       )
       await sandbox.exec(
-        `gh issue create --title ${JSON.stringify(blocker.title)} --label "type: maintenance" --label "status: pending" --body-file -`,
+        `gh issue create --title ${JSON.stringify(blocker.title)} --label "type: enhancement" --label "status: pending" --body-file -`,
         {
           stdin: [
             blocker.summary,

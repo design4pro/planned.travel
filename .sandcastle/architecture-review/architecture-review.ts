@@ -5,11 +5,18 @@
 //
 // Runs a single agent over a fresh worktree, prints the <report> block and
 // writes it to .sandcastle/logs/. With --file-issues it also files the `Strong`
-// candidates as `status: pending` tickets for human triage (ADR 0006) — never
-// `ready-for-agent`, and never the `Worth exploring` / `Speculative` ones: an
-// architecture opinion is not reproducible the way a bug is, so pre-triage can
-// only park these for a human. Default is report-only, so a manual run never
-// surprises the operator by writing to the backlog.
+// candidates — never the `Worth exploring` / `Speculative` ones — as
+// `type: enhancement` + `status: pending`.
+//
+// The label matters. Pre-triage sweeps `type: bug` and `type: maintenance`
+// (TRIGGER_LABELS in triage.ts) and can promote a confirmed finding straight to
+// `ready-for-agent`. An architecture candidate is not reproducible the way a bug
+// is, so it must not enter that queue; `type: enhancement` is the label this
+// repo already uses for taste findings (docs/agents/triage-labels.md) and these
+// wait for a human running `/triage`.
+//
+// Default is report-only, so a manual run never surprises the operator by
+// writing to the backlog.
 //
 // Sandbox: docker() — auth comes from .sandcastle/.env (CLAUDE_CODE_OAUTH_TOKEN,
 // GH_TOKEN), which sandcastle's env resolver loads and injects itself.
@@ -115,7 +122,7 @@ for (const candidate of strong.slice(0, MAX_FILED)) {
       '--title',
       title,
       '--label',
-      'type: maintenance',
+      'type: enhancement',
       '--label',
       'status: pending',
       '--body-file',
