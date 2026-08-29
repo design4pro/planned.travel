@@ -13,17 +13,45 @@
  * handler and exports it alongside the class, the consumer and the scheduler.
  */
 
-import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server'
+import * as Sentry from '@sentry/cloudflare'
+import {
+  createStartHandler,
+  defaultStreamHandler,
+} from '@tanstack/react-start/server'
 import { PLATFORM_SYSTEM_ACTOR, prunePlatformAuditLog } from './catalog/audit'
 import { createDb } from './db/client'
 import { consumeTaskBatch } from './queue/consumer'
+import { TripRoom as UninstrumentedTripRoom } from './do'
 import { sweepReminders } from './queue/reminders'
-import { loggerFromEnv } from './observability/logger'
+import { sentryOptions, workerLogger } from './observability/sentry'
 
+// Type-only, so nothing resolves `cloudflare:workers` at runtime - the node test project cannot.
+// The branded class from that module is what Sentry's wrapper is declared against; the global
+// `DurableObject` from `@cloudflare/workers-types` is a different, unbranded description.
+import type { DurableObject as BrandedDurableObject } from 'cloudflare:workers'
 import type { TaskBindings } from './queue/types'
 
-/** Re-exported so `durable_objects.bindings[].class_name` resolves. */
-export { TripRoom } from './do'
+/**
+ * Re-exported so `durable_objects.bindings[].class_name` resolves.
+ *
+ * Wrapped, because a Durable Object is its own isolate: `withSentry` below covers the Worker's
+ * handlers and sees nothing that happens inside the room. Without this, a throw in the collaborative
+ * editing path - the one place in this application where several people share state - is the one
+ * class of failure Sentry would never hear about.
+ */
+export const TripRoom = Sentry.instrumentDurableObjectWithSentry(
+  (env: Cloudflare.Env) => sentryOptions(env),
+  // The same structural bridge `taskEnv` below performs, in the other direction and for the same
+  // reason. `TripRoom` is declared against narrow views of its own inputs - `TripRoomState`,
+  // `TripRoomEnv`, `TripRoomSocket` - which is what lets it be constructed with fakes in a plain
+  // Node test. Sentry's wrapper is declared against the real `DurableObjectState` and `Env`. Both
+  // descriptions are of the same runtime object, and the runtime satisfies each; only the two
+  // static descriptions cannot see that about each other. This assertion is the one place they meet.
+  UninstrumentedTripRoom as unknown as new (
+    state: DurableObjectState,
+    env: Cloudflare.Env,
+  ) => BrandedDurableObject<Cloudflare.Env>,
+)
 
 const fetchHandler = createStartHandler(defaultStreamHandler)
 
@@ -46,16 +74,31 @@ const REMINDER_CRON = '*/15 * * * *'
 const BACKUP_CRON = '0 3 * * *'
 const RETENTION_CRON = '17 4 * * 1'
 
-export default {
-  fetch: fetchHandler,
+export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
+  /**
+   * `fetchHandler` is Start's, and its second parameter is its own `RequestOptions` - not the
+   * Worker `env` the runtime passes there. Naming only `request` keeps the two apart; handing the
+   * environment to a parameter that expects request options was never intended and is not what
+   * wrapping this handler is supposed to preserve.
+   */
+  fetch: (request: Request): Response | Promise<Response> =>
+    fetchHandler(request),
 
-  async queue(batch: MessageBatch<unknown>, env: Cloudflare.Env): Promise<void> {
-    const logger = loggerFromEnv(env, { context: { component: 'queue' } })
+  async queue(
+    batch: MessageBatch<unknown>,
+    env: Cloudflare.Env,
+    _ctx: ExecutionContext,
+  ): Promise<void> {
+    const logger = workerLogger(env, { context: { component: 'queue' } })
     await consumeTaskBatch(batch, taskEnv(env), logger)
   },
 
-  async scheduled(controller: ScheduledController, env: Cloudflare.Env): Promise<void> {
-    const logger = loggerFromEnv(env, {
+  async scheduled(
+    controller: ScheduledController,
+    env: Cloudflare.Env,
+    _ctx: ExecutionContext,
+  ): Promise<void> {
+    const logger = workerLogger(env, {
       context: { component: 'scheduled', route: `cron:${controller.cron}` },
     })
     const bindings = taskEnv(env)
@@ -85,9 +128,14 @@ export default {
         // delete path that table has, it selects by `created_at` alone, it acts as an explicit
         // `system` actor, and it logs its own row count — so there is nothing to report here that
         // the writer has not already emitted.
-        await prunePlatformAuditLog(createDb(env.DB), PLATFORM_SYSTEM_ACTOR, logger, {
-          now: new Date(controller.scheduledTime),
-        })
+        await prunePlatformAuditLog(
+          createDb(env.DB),
+          PLATFORM_SYSTEM_ACTOR,
+          logger,
+          {
+            now: new Date(controller.scheduledTime),
+          },
+        )
         return
       case BACKUP_CRON:
         // The `backup` task kind is declared but its handler is not written yet,
@@ -100,4 +148,4 @@ export default {
         return
     }
   },
-}
+})

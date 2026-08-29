@@ -42,6 +42,11 @@
     },
   },
 
+  // The deployed version's id, read by src/server/observability/sentry.ts as the Sentry `release`.
+  // Without it every event is attributed to "unknown" and a regression cannot be tied to the deploy
+  // that introduced it - which is most of what makes a stack trace actionable a week later.
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+
   "vars": {
     "ENVIRONMENT": "production",
     "APP_NAME": "planned.travel",
@@ -143,6 +148,10 @@
           "head_sampling_rate": 1,
         },
       },
+      // Same reason as production: staging events need a release too, or the pre-production
+      // signal cannot be told apart from the release it was supposed to gate.
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
+
       "vars": {
         "ENVIRONMENT": "staging",
         "APP_NAME": "planned.travel (staging)",

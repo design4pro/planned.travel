@@ -371,7 +371,14 @@ const messages = {
     'Nichts ist verloren. Versuch es noch einmal, und wenn es weiter passiert, schick uns die Angabe von unten.',
   'error.retry': 'Noch einmal versuchen',
   'error.dashboard': 'Zurück zur Übersicht',
-  'error.unknown': 'Die Anfrage brach ab, bevor sie fertig war.',
+  'error.reported': 'Wir wurden benachrichtigt und sehen uns das an.',
+  'error.reference': 'Referenz',
+  'error.feedback.open': 'Sagen Sie uns, was passiert ist',
+  'error.feedback.label': 'Was haben Sie gerade getan, als das passierte?',
+  'error.feedback.send': 'Senden',
+  'error.feedback.sent': 'Danke — das hilft uns weiter.',
+  'error.feedback.failed':
+    'Das ging nicht raus. Die Referenz oben erreicht uns trotzdem.',
   'error.root': 'Da ist etwas vom Weg abgekommen',
   'error.session': 'Dein Zugang zum Arbeitsbereich hat sich geändert',
 

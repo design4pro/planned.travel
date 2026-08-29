@@ -324,7 +324,14 @@ const messages = {
     'Tidak ada yang hilang. Coba lagi, dan kalau terus terjadi, rincian di bawah inilah yang perlu Anda kirimkan ke kami.',
   'error.retry': 'Coba lagi',
   'error.dashboard': 'Kembali ke dasbor',
-  'error.unknown': 'Permintaannya gagal sebelum sempat selesai.',
+  'error.reported': 'Kami sudah menerima laporannya dan sedang memeriksanya.',
+  'error.reference': 'Nomor referensi',
+  'error.feedback.open': 'Ceritakan apa yang terjadi',
+  'error.feedback.label': 'Apa yang sedang Anda lakukan saat ini terjadi?',
+  'error.feedback.send': 'Kirim',
+  'error.feedback.sent': 'Terima kasih — ini sangat membantu.',
+  'error.feedback.failed':
+    'Gagal terkirim. Nomor referensi di atas tetap sampai ke kami.',
   'error.root': 'Ada yang keluar jalur',
   'error.session': 'Akses ruang kerja Anda berubah',
 

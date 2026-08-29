@@ -408,7 +408,14 @@ const messages = {
     'Nic nie zginęło. Spróbuj ponownie, a jeśli będzie się powtarzać — prześlij nam szczegóły z dołu strony.',
   'error.retry': 'Spróbuj ponownie',
   'error.dashboard': 'Powrót do pulpitu',
-  'error.unknown': 'Żądanie nie doszło do końca.',
+  'error.reported': 'Wiemy o tym i już się temu przyglądamy.',
+  'error.reference': 'Numer zgłoszenia',
+  'error.feedback.open': 'Napisz nam, co się stało',
+  'error.feedback.label': 'Co robiłeś, kiedy to się stało?',
+  'error.feedback.send': 'Wyślij',
+  'error.feedback.sent': 'Dziękujemy — to nam bardzo pomaga.',
+  'error.feedback.failed':
+    'Nie udało się wysłać. Numer zgłoszenia powyżej i tak do nas trafia.',
   'error.root': 'Zjechaliśmy z trasy',
   'error.session': 'Twój dostęp do przestrzeni się zmienił',
 

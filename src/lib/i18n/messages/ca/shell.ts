@@ -383,7 +383,14 @@ const messages = {
     'No s’ha perdut res. Torna-ho a provar i, si continua passant, envia’ns el detall de sota.',
   'error.retry': 'Torna-ho a provar',
   'error.dashboard': 'Torna al tauler',
-  'error.unknown': 'La petició ha fallat abans d’acabar.',
+  'error.reported': 'Ens n’han avisat i ho estem mirant.',
+  'error.reference': 'Referència',
+  'error.feedback.open': 'Explica’ns què ha passat',
+  'error.feedback.label': 'Què estaves fent quan ha passat?',
+  'error.feedback.send': 'Envia',
+  'error.feedback.sent': 'Gràcies — ens ajuda molt.',
+  'error.feedback.failed':
+    'No s’ha pogut enviar. La referència de dalt encara ens arriba.',
   'error.root': 'Ens hem sortit de la ruta',
   'error.session': 'El teu accés a l’espai de treball ha canviat',
 

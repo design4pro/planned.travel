@@ -43,6 +43,8 @@ Before committing, run `pnpm typecheck`, `pnpm lint` and `pnpm test` and make th
 
 You do NOT need to run the Playwright suite yourself: after you finish, the orchestrator runs the full deterministic ladder (`validate.sh`) in this sandbox — including e2e against the `-linux` baselines when your diff touches UI — and resumes your session with a failure digest if it is red. If you want an early e2e signal anyway: `bash .sandcastle/setup-e2e.sh --if-needed`, then `PLAYWRIGHT_BASE_URL=http://localhost:3010 pnpm e2e`.
 
+**Billing tickets.** That same setup wires the Polar **sandbox** organization when the operator supplied its credentials, so `/pricing` and the Upgrade buttons reach a real checkout. Two halves of the flow, and only one is reachable from here: pressing Upgrade calls Polar and returns a hosted checkout URL, which you can assert on; the webhook that applies the subscription cannot be, because Polar has no route back into this container. Test that half by posting a signed payload at `/api/polar/webhook` — `src/server/billing/__tests__/webhook.test.ts` already does it with a captured one. If `requirePrice()` refuses with a message about a missing `VITE_POLAR_PRODUCT_*`, that is an unconfigured sandbox rather than a bug in your ticket; say so in your result instead of working around it.
+
 Never run `--update-snapshots` and never edit `e2e/__screenshots__`. If your change intentionally moves pixels, the ISSUE must declare it (a `## Visual change expected` section or the `visual-change-expected` label) — the orchestrator then re-records baselines; an undeclared pixel diff is treated as a regression.
 
 # COMMIT

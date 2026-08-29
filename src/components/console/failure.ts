@@ -24,6 +24,8 @@
  * becomes an unrecognisable one.
  */
 
+import { readPublicFailure } from '#/lib/errors'
+
 /** The fallback when a rejection carries nothing readable at all. */
 export const CONSOLE_ACTION_FALLBACK =
   'The action did not go through. Try again in a moment.'
@@ -48,8 +50,26 @@ function issueMessages(payload: unknown): ReadonlyArray<string> | null {
   return messages
 }
 
-/** The sentence a console dialog shows when its action was rejected. */
+/**
+ * The sentence a console dialog shows when its action was rejected.
+ *
+ * Two routes reach here now. A rejection raised inside a server function arrives having already
+ * been classified on the server (`src/server/errors/public.ts`) and wrapped by the redaction
+ * middleware, so the envelope is read first: authored copy is shown, and a diagnostic - which no
+ * longer carries its text at all - becomes the fallback rather than a SQLite error in a dialog.
+ *
+ * Anything thrown on the client never passes that boundary, so the original reading below is still
+ * the path for those and is left exactly as it was.
+ */
 export function readConsoleFailure(cause: unknown): string {
+  const failure = readPublicFailure(cause)
+  if (failure.kind !== 'unexpected') {
+    return failure.message ?? CONSOLE_ACTION_FALLBACK
+  }
+  if (failure.reference !== undefined) {
+    return CONSOLE_ACTION_FALLBACK
+  }
+
   const raw =
     cause instanceof Error && cause.message.trim().length > 0
       ? cause.message.trim()

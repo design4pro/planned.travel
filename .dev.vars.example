@@ -130,6 +130,27 @@ FIRECRAWL_WEBHOOK_SECRET=
 MCP_TOKEN_PEPPER=
 
 
+# ── Error reporting (optional; the Worker reports nothing without it) ────────
+
+# Sentry DSN for the Worker half of the reporting. One Sentry project serves
+# both environments and they are told apart by the `environment` tag, which is
+# read from the ENVIRONMENT var in wrangler.jsonc — so this is the *same* value
+# in staging and production, and setting two different ones splits one bug into
+# two unrelated issues.
+#
+# A DSN is not really a secret: the browser half of the same reporting ships it
+# in the client bundle, where anyone can read it. It is here because the Worker
+# reads it from `env` like every other name in this file, and because the file
+# promises to list every such name. The public half is a repository variable —
+# see the next section.
+#
+# Unset is a supported state, not a broken one. `sentryOptions()` in
+# `src/server/observability/sentry.ts` returns options with no DSN, Sentry's
+# client is inert without one, and the Worker runs and serves exactly as before.
+# That is what lets `pnpm dev` and a fork's CI work unconfigured.
+SENTRY_DSN=
+
+
 # ── Build-time public values — NOT part of this file ─────────────────────────
 #
 # Polar product ids are inlined into both bundles by Vite, so they are read
@@ -163,6 +184,21 @@ MCP_TOKEN_PEPPER=
 # `.env.local`: while a `.dev.vars` file exists, Cloudflare loads no `.env`
 # file into the Worker's `env`, so the secret would be silently undefined at
 # runtime with no error.
+#
+# Sentry's public half is the same kind of value and follows the same rule.
+# Three names, inlined into both bundles by Vite:
+#
+#   VITE_SENTRY_DSN=https://<key>@<org>.ingest.sentry.io/<project>
+#   VITE_ENVIRONMENT=staging
+#   VITE_SENTRY_RELEASE=<commit sha>
+#
+# VITE_SENTRY_DSN is the same DSN as SENTRY_DSN above and is public by
+# construction. VITE_ENVIRONMENT mirrors the ENVIRONMENT var the Worker reads,
+# because the browser cannot read a Worker var. VITE_SENTRY_RELEASE is set by
+# CI to the commit being deployed and is read by BOTH halves — Vite inlines it
+# into the Worker bundle as well as the client one — so that one deploy is one
+# release in Sentry instead of two that cannot be told apart. Leave it unset
+# locally: a working copy is not a release.
 
 
 # ── Local non-secret overrides (optional; wrangler.jsonc vars win otherwise) ─

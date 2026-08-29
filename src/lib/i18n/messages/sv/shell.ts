@@ -354,7 +354,14 @@ const messages = {
     'Ingenting gick förlorat. Försök igen, och om det fortsätter hända är uppgiften nedanför det du skickar till oss.',
   'error.retry': 'Försök igen',
   'error.dashboard': 'Tillbaka till översikten',
-  'error.unknown': 'Förfrågan avbröts innan den hann bli klar.',
+  'error.reported': 'Vi har fått en avisering och tittar på det.',
+  'error.reference': 'Referens',
+  'error.feedback.open': 'Berätta vad som hände',
+  'error.feedback.label': 'Vad höll du på med när det hände?',
+  'error.feedback.send': 'Skicka',
+  'error.feedback.sent': 'Tack — det hjälper oss.',
+  'error.feedback.failed':
+    'Det gick inte att skicka. Referensen ovan når oss ändå.',
   'error.root': 'Något kom bort från rutten',
   'error.session': 'Din åtkomst till arbetsytan har ändrats',
 

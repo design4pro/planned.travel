@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { createQueryClient } from './lib/query'
@@ -28,6 +29,23 @@ export function getRouter() {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     ),
   })
+
+  /**
+   * Routing spans, added here because this is the only place that holds the router.
+   *
+   * Guarded on `import.meta.env.SSR` rather than on `router.isServer`: both are correct at runtime,
+   * but only the build-time constant lets Rollup drop the branch *and* the import from the Worker
+   * bundle. `@sentry/react` is a browser SDK - it has no business being evaluated in workerd, where
+   * the Worker already runs `@sentry/cloudflare`.
+   *
+   * `addIntegration` rather than an `integrations` entry in `Sentry.init`, because the router does
+   * not exist yet when the client entry initialises. It is a no-op when no client was configured.
+   */
+  if (!import.meta.env.SSR) {
+    Sentry.addIntegration(
+      Sentry.tanstackRouterBrowserTracingIntegration(router),
+    )
+  }
 
   return router
 }

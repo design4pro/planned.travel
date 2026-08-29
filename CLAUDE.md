@@ -33,4 +33,6 @@ Configuration for the mattpocock-skills plugin and project skills:
 - **Domain docs**: see docs/agents/domain.md
 - **Reference product** (feature and quality benchmark; clean-room rule applies): see docs/agents/reference.md
 
+Sentry findings enter the backlog through `pnpm sandcastle:sentry` (report-only; `--file-issues` writes) as `type: bug` + `status: pending`, and are then pre-triaged like any other bug.
+
 New work flows: grilling → `/to-spec-project` (PRD issue) → `/to-tickets-project` (vertical-slice sub-issues) → `/implement-project` per ticket in a fresh context. Verification ladder: see the `verifying-changes` skill.
