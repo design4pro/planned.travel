@@ -13,6 +13,13 @@ For each branch:
 
 After all branches are merged, make a single commit summarizing the merge (Conventional Commits, English — the `RALPH:` prefix is only for in-loop commits).
 
+# RULES
+
+- NEVER resolve a conflict by deleting, skipping or weakening a test, and never take a side wholesale without reading both. The test is the spec.
+- NEVER run `--update-snapshots` or edit `e2e/__screenshots__`. A conflict there is resolved by taking the baseline the issue that declared the visual change produced.
+- NEVER force-push, rebase, reset or amend anything already on the integration branch.
+- If a branch cannot be merged cleanly and you cannot resolve it correctly, STOP on that branch and leave it unmerged — do not close its issue. Report it and move to the next branch. A half-merged branch is worse than an unmerged one.
+
 # CLOSE ISSUES
 
 For each branch that was merged, close its issue using:
