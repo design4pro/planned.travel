@@ -19,11 +19,11 @@ Those two sentences generate most of the rules below.
 
 ## 1. Scope and status
 
-|                |                                                                                                                                                                                                                                                                             |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                |                                                                                                                                                                                                                                                                                                 |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Owns           | The eight catalogue-and-token global tables, the tenant-scoped `pack_entitlements`, the catalogue field dictionary, provenance, dedupe, lifecycle, the MCP tool and transport contract, the Firecrawl request contract, catalogue retention, the thirteen catalogue audit action names of §8.4. |
-| Does not own   | Platform role definitions, permission statements, impersonation, and the `platform_audit_log` columns, indexes and retention - those are `docs/ACCESS.md`. Secrets, cron registration and vendor runbooks - those are `docs/DEPLOY.md`. Visual tokens - `docs/DESIGN.md`.   |
-| Implemented in | Phase C (model + curator console), phase D (scrape pipeline), phase E (MCP server), phase F (public surface), phase G (sale). Nothing in this document exists on disk yet; it is written so that each of those phases has one answer to build against instead of five.      |
+| Does not own   | Platform role definitions, permission statements, impersonation, and the `platform_audit_log` columns, indexes and retention - those are `docs/ACCESS.md`. Secrets, cron registration and vendor runbooks - those are `docs/DEPLOY.md`. Visual tokens - `DESIGN.md`.                            |
+| Implemented in | Phase C (model + curator console), phase D (scrape pipeline), phase E (MCP server), phase F (public surface), phase G (sale). Nothing in this document exists on disk yet; it is written so that each of those phases has one answer to build against instead of five.                          |
 
 **Clean room.** Every table, column, enum value, amenity key and tool name in this document is
 ours. The reference product informed _what a catalogue of camping places has to record_; not one

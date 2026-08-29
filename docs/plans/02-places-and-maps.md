@@ -3006,7 +3006,7 @@ second file-linking model, which would be exactly the duplicate `README.md` call
   lives in this file, so the hook that opens the form and the form itself travel in one diff.
 - **Tokens.** None missing. The counter and both warnings use existing tone tokens; the counter is
   `tabular-nums` because it changes on every keystroke, which is exactly the case
-  `docs/DESIGN.md` names.
+  `DESIGN.md` names.
 
 ### Quota
 

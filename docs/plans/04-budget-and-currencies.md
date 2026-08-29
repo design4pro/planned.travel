@@ -87,7 +87,7 @@ Stated once here and not re-argued per stage, though each stage restates the par
   exactly once, at that boundary. This is the arithmetic that silently produces hundred-fold errors
   when a zero-decimal currency meets a two-decimal one, and it is tested rather than trusted.
 - **Every number that can change is rendered with `font-variant-numeric: tabular-nums`**, per
-  `docs/DESIGN.md`. Every amount, every rate, every percentage, every count on every surface any
+  `DESIGN.md`. Every amount, every rate, every percentage, every count on every surface any
   stage in this file ships. There is no exception, and "the figure is inside a `StatCard` already"
   is not one — the stage checks the rendered element, not the ancestor.
 - **A row's two denominations never mix, and a column name says which one it is in.** A money row in

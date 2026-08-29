@@ -3,7 +3,7 @@
 The workspace console: who is in a workspace and how they got there, what the workspace has done, and
 which role is allowed to do what.
 
-Read `docs/SPEC.md`, `docs/DESIGN.md` and `docs/ARCHITECTURE.md` first. The stage shape is fixed by
+Read `docs/SPEC.md`, `DESIGN.md` and `docs/ARCHITECTURE.md` first. The stage shape is fixed by
 `TEMPLATE.md`, the container rule by `12-verification-protocol.md` §1, and the clean-room rule and
 shared-file protocol by `README.md`. Nothing below restates them.
 

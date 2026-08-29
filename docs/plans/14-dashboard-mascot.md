@@ -34,7 +34,7 @@ here. This plan commissions our own:
   plan and in source comments; the UI shows the character, not the name).
 - **Silhouette: a young Arctic tern** — the bird that travels farther than any animal on Earth,
   which is the planned.travel joke. A compact teardrop body, a long forked tail, a small scarf in
-  `--color-brand`, drawn as inline SVG in the editorial-modern language of `docs/DESIGN.md`: soft
+  `--color-brand`, drawn as inline SVG in the editorial-modern language of `DESIGN.md`: soft
   rounded forms, token colours only, confident and quiet rather than cartoon-loud.
 - **Personality: an unhurried flight-planner.** Studies the horizon when departure is far, allows
   itself a nap only when there is plenty of time, perks up through the final month, hops with
@@ -45,7 +45,7 @@ here. This plan commissions our own:
 
 #### The motion-rule reconciliation, stated as a design decision rather than slipped past
 
-`docs/DESIGN.md`'s motion rules say 150–260ms on `--ease-out-quint`, nothing over 400ms. An
+`DESIGN.md`'s motion rules say 150–260ms on `--ease-out-quint`, nothing over 400ms. An
 ambient character necessarily loops for longer than 400ms — a bob cycle or a blink cadence lives
 in seconds. This plan does not pretend otherwise, and it does not quietly break the rule. The
 decision, recorded here for the auditor and the executing run alike:

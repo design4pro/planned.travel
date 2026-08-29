@@ -26,13 +26,13 @@ Wykonana w Fazie A: dostawcą jest Polar, a po Stripie nie ma w `src/` ani jedne
 
 ## Decyzje przyjęte
 
-| Obszar | Decyzja |
-|---|---|
-| Billing | Polar.sh **zastąpił** Stripe (Faza A) - subskrypcje i pakiety u jednego dostawcy |
-| Źródła danych | Scrapujemy wszystkie trzy serwisy; provenance zapisywana przy każdym rekordzie |
-| MCP | Własna implementacja JSON-RPC 2.0 / Streamable HTTP, bez nowych zależności |
-| Role i administracja | Plugin `admin` Better Auth + konsola platformy `/_app/console` |
-| Treści publiczne | Uogólnione `share_links` + publiczne strony pakietów, moderowane z konsoli |
+| Obszar               | Decyzja                                                                          |
+| -------------------- | -------------------------------------------------------------------------------- |
+| Billing              | Polar.sh **zastąpił** Stripe (Faza A) - subskrypcje i pakiety u jednego dostawcy |
+| Źródła danych        | Scrapujemy wszystkie trzy serwisy; provenance zapisywana przy każdym rekordzie   |
+| MCP                  | Własna implementacja JSON-RPC 2.0 / Streamable HTTP, bez nowych zależności       |
+| Role i administracja | Plugin `admin` Better Auth + konsola platformy `/_app/console`                   |
+| Treści publiczne     | Uogólnione `share_links` + publiczne strony pakietów, moderowane z konsoli       |
 
 **Ryzyko prawne (odnotowane, zaakceptowane).** Pobieranie istotnej części cudzej bazy i jej
 odsprzedaż jest sporne w świetle prawa sui generis (ustawa o ochronie baz danych) i regulaminów
@@ -116,24 +116,24 @@ więc nie padło ani jedno żywe wywołanie i nie przyszła ani jedna żywa dost
 Sprawdzone na żywym OpenAPI Polara (`info.version` 2026-04) i w sandboxie DESIGN4PRO - **nie
 z pamięci**, bo pierwsza wersja tego planu miała tu cztery błędy:
 
-| Twierdzenie z pierwszej wersji planu | Jak jest naprawdę |
-|---|---|
-| `POST /v1/checkout-sessions` | nie istnieje; są `POST /v1/checkouts/` i `POST /v1/customer-sessions/` |
-| `incomplete*` nie istnieje w Polarze, zawęź krotkę | **istnieje**; osiem wartości Polara = osiem w krotce `SUBSCRIPTION_STATUSES` (`src/lib/plans.ts`), **nie ruszamy krotki** |
-| `subscription.cycled\|paused\|resumed` nie istnieją | **istnieją**; enum ma 41 wartości. Okrojoną listę 35 niesie schemat narzędzia MCP, nie API |
-| rename kolumn to osobna decyzja | rename **robimy**, razem z usunięciem Stripe'a |
+| Twierdzenie z pierwszej wersji planu                | Jak jest naprawdę                                                                                                         |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `POST /v1/checkout-sessions`                        | nie istnieje; są `POST /v1/checkouts/` i `POST /v1/customer-sessions/`                                                    |
+| `incomplete*` nie istnieje w Polarze, zawęź krotkę  | **istnieje**; osiem wartości Polara = osiem w krotce `SUBSCRIPTION_STATUSES` (`src/lib/plans.ts`), **nie ruszamy krotki** |
+| `subscription.cycled\|paused\|resumed` nie istnieją | **istnieją**; enum ma 41 wartości. Okrojoną listę 35 niesie schemat narzędzia MCP, nie API                                |
+| rename kolumn to osobna decyzja                     | rename **robimy**, razem z usunięciem Stripe'a                                                                            |
 
 ### Produkty w sandboxie - już utworzone
 
 Organizacja DESIGN4PRO (`0cad0d45-3b92-4144-ad4c-1438ec9cd6d3`), cztery produkty gotowe,
 identyfikatory w `.env.local` (plik ignorowany przez git):
 
-| plan | interwał | kształt ceny | kwota |
-|---|---|---|---|
-| Solo | monthly | fixed | 900 |
-| Solo | yearly | fixed | 9000 |
-| Crew | monthly | **seat_based**, volume, 2-10 miejsc | 700 za miejsce |
-| Crew | yearly | **seat_based**, volume, 2-10 miejsc | 7000 za miejsce |
+| plan | interwał | kształt ceny                        | kwota           |
+| ---- | -------- | ----------------------------------- | --------------- |
+| Solo | monthly  | fixed                               | 900             |
+| Solo | yearly   | fixed                               | 9000            |
+| Crew | monthly  | **seat_based**, volume, 2-10 miejsc | 700 za miejsce  |
+| Crew | yearly   | **seat_based**, volume, 2-10 miejsc | 7000 za miejsce |
 
 Wszystkie z `trial_interval: day` × 14, zgodnie z `trialDays: 14` w `plans.ts`. Każdy produkt niesie
 cenę w EUR **i** USD, bo Polar wymaga obecności domyślnej waluty prezentacyjnej organizacji (EUR),
@@ -176,14 +176,14 @@ Sześć itemów, własność rysowana tak, żeby pliki, które muszą się zgadz
 właściciela, a testy należały do właściciela kodu, który testują. Poniżej to, co faktycznie
 wylądowało - plan zamieniony na opis stanu.
 
-| # | Item | Co jest na dysku |
-| --- | --- | --- |
-| 1 | katalog produktów | `src/lib/plans.ts` rozwiązuje cztery identyfikatory z `VITE_POLAR_PRODUCT_SOLO_MONTHLY`, `…_SOLO_YEARLY`, `…_CREW_MONTHLY`, `…_CREW_YEARLY`; `PlanPrice.priceId` → `productId`, `PRICE_IDS` → `PRODUCT_IDS`, `planForPriceId` → `planForProductId`. Oba workflow'y CI i `.dev.vars.example` niosą ten sam zestaw i żaden inny. Pierwsze testy, jakie ten plik kiedykolwiek miał. |
-| 2 | klient REST | `src/server/billing/polar.ts` - cienki `fetch` (base URL wg `POLAR_SERVER`, `Authorization: Bearer`, retry, timeout) plus weryfikacja podpisu Standard Webhooks na WebCrypto. Brak sekretu → `BillingConfigError` z dokładną komendą `wrangler secret put`. Zero `@polar-sh/sdk`. |
-| 3 | rdzeń zakupowy | `checkout.ts` (`POST /v1/checkouts/`, `POST /v1/customer-sessions/`, `PATCH /v1/subscriptions/{id}`), `types.ts`, `mapping.ts` - statusy Polara na `SUBSCRIPTION_STATUSES` jeden do jednego, krotka ośmiu wartości nietknięta. |
-| 4 | webhook | `src/routes/api/polar/webhook.ts` (trasa przeniesiona, `routeTree.gen.ts` **regenerowany**), `src/server/billing/webhook.ts` - podpis → claim `webhook-id` w KV → jeden mały zapis do D1 → unieważnienie klucza planu → reszta na `TASKS`. |
-| 5 | React Email | **dziewięć** szablonów w `src/server/email/templates/`, nie cztery: pięć istniejących maili konta przepisanych na komponenty (`verify-email`, `reset-password`, `email-changed`, `delete-account`, `organization-invitation`) plus cztery billingowe (`subscription-confirmed`, `plan-changed`, `payment-failed`, `pack-purchased`). Każdy ma wersję tekstową, wyprowadzaną z HTML-a przez `toPlainText()`, więc URL nie może istnieć w jednej wersji i zniknąć z drugiej. |
-| 6 | powierzchnie widoczne | `billing.tsx`, `pricing.tsx`, `terms.tsx` - poprawka Merchant-of-Record i alert `?plan=changed`, który rozróżnia zmianę natychmiastową od zaplanowanej na koniec okresu. |
+| #   | Item                  | Co jest na dysku                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| --- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | katalog produktów     | `src/lib/plans.ts` rozwiązuje cztery identyfikatory z `VITE_POLAR_PRODUCT_SOLO_MONTHLY`, `…_SOLO_YEARLY`, `…_CREW_MONTHLY`, `…_CREW_YEARLY`; `PlanPrice.priceId` → `productId`, `PRICE_IDS` → `PRODUCT_IDS`, `planForPriceId` → `planForProductId`. Oba workflow'y CI i `.dev.vars.example` niosą ten sam zestaw i żaden inny. Pierwsze testy, jakie ten plik kiedykolwiek miał.                                                                                           |
+| 2   | klient REST           | `src/server/billing/polar.ts` - cienki `fetch` (base URL wg `POLAR_SERVER`, `Authorization: Bearer`, retry, timeout) plus weryfikacja podpisu Standard Webhooks na WebCrypto. Brak sekretu → `BillingConfigError` z dokładną komendą `wrangler secret put`. Zero `@polar-sh/sdk`.                                                                                                                                                                                          |
+| 3   | rdzeń zakupowy        | `checkout.ts` (`POST /v1/checkouts/`, `POST /v1/customer-sessions/`, `PATCH /v1/subscriptions/{id}`), `types.ts`, `mapping.ts` - statusy Polara na `SUBSCRIPTION_STATUSES` jeden do jednego, krotka ośmiu wartości nietknięta.                                                                                                                                                                                                                                             |
+| 4   | webhook               | `src/routes/api/polar/webhook.ts` (trasa przeniesiona, `routeTree.gen.ts` **regenerowany**), `src/server/billing/webhook.ts` - podpis → claim `webhook-id` w KV → jeden mały zapis do D1 → unieważnienie klucza planu → reszta na `TASKS`.                                                                                                                                                                                                                                 |
+| 5   | React Email           | **dziewięć** szablonów w `src/server/email/templates/`, nie cztery: pięć istniejących maili konta przepisanych na komponenty (`verify-email`, `reset-password`, `email-changed`, `delete-account`, `organization-invitation`) plus cztery billingowe (`subscription-confirmed`, `plan-changed`, `payment-failed`, `pack-purchased`). Każdy ma wersję tekstową, wyprowadzaną z HTML-a przez `toPlainText()`, więc URL nie może istnieć w jednej wersji i zniknąć z drugiej. |
+| 6   | powierzchnie widoczne | `billing.tsx`, `pricing.tsx`, `terms.tsx` - poprawka Merchant-of-Record i alert `?plan=changed`, który rozróżnia zmianę natychmiastową od zaplanowanej na koniec okresu.                                                                                                                                                                                                                                                                                                   |
 
 **Cztery rzeczy, których pierwotny plan nie przewidział, a które kosztowały rundy.** Wszystkie
 cztery są teraz zapisane jako reguła w `docs/SPEC.md` §8 („jedno pojęcie, jeden właściciel"),
@@ -225,7 +225,7 @@ do końca opłaconego okresu.
   `polarSubscriptionSchema.parse(raw)` i zwraca `PolarSubscription`. Surowa odpowiedź nie jest
   parsowana drugi raz - ani tam, ani nigdzie indziej. Wcześniejszy projekt zakładał odwrotnie
   (osobny parse przy jednym wywołaniu) i został **porzucony**: `z.object()` w Zod 4 obcina klucze,
-  których nie nazywa, więc schemat pomijający `pending_update` zmuszałby *każdego* czytelnika do
+  których nie nazywa, więc schemat pomijający `pending_update` zmuszałby _każdego_ czytelnika do
   drugiego parse'a - a webhook, który jest reconcilerem, nigdy go nie robił i dlatego gubił
   zaplanowaną zmianę.
 - `polarPendingUpdateSchema` nazywa dwa z sześciu pól - `applies_at` i `product_id` - bo tyle
@@ -294,16 +294,16 @@ o naszym handlerze, nie o Polarze.
 
 Każdy wiersz do przejścia ręcznie w sandboxie i pokryty testem tam, gdzie da się to zrobić bez sieci:
 
-| # | Scenariusz | Oczekiwany wynik |
-|---|---|---|
-| 1 | Subskrypcja Solo, miesięcznie i rocznie | checkout → webhook → wiersz w `subscriptions` → moduły odblokowane |
-| 2 | Podwyższenie Solo → Crew | proracja po stronie Polara, uprawnienia zmieniają się natychmiast |
-| 3 | Obniżenie Crew → Solo | zmiana na koniec okresu, uprawnienia trzymają do `current_period_end` |
-| 4 | Anulowanie | `cancel_at_period_end`, dostęp do końca okresu, potem Free |
-| 5 | Wznowienie przed końcem okresu | subskrypcja wraca, bez nowego checkoutu |
-| 6 | Nieudana płatność | `past_due` utrzymuje dostęp (dunning), `unpaid` odcina |
-| 7 | Faktury | read-only lista zamówień w `/settings/billing` (Orders API) + pobranie PDF |
-| 8 | Portal klienta | „Zarządzaj płatnościami" → `customer-sessions` → edycja danych faktury i metody płatności |
+| #   | Scenariusz                              | Oczekiwany wynik                                                                          |
+| --- | --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 1   | Subskrypcja Solo, miesięcznie i rocznie | checkout → webhook → wiersz w `subscriptions` → moduły odblokowane                        |
+| 2   | Podwyższenie Solo → Crew                | proracja po stronie Polara, uprawnienia zmieniają się natychmiast                         |
+| 3   | Obniżenie Crew → Solo                   | zmiana na koniec okresu, uprawnienia trzymają do `current_period_end`                     |
+| 4   | Anulowanie                              | `cancel_at_period_end`, dostęp do końca okresu, potem Free                                |
+| 5   | Wznowienie przed końcem okresu          | subskrypcja wraca, bez nowego checkoutu                                                   |
+| 6   | Nieudana płatność                       | `past_due` utrzymuje dostęp (dunning), `unpaid` odcina                                    |
+| 7   | Faktury                                 | read-only lista zamówień w `/settings/billing` (Orders API) + pobranie PDF                |
+| 8   | Portal klienta                          | „Zarządzaj płatnościami" → `customer-sessions` → edycja danych faktury i metody płatności |
 
 `docs/DEPLOY.md` niesie setup każdego wiersza: produkty, ceny, karty testowe.
 
@@ -374,12 +374,12 @@ i nie przeszła własnej poprzeczki. Poniżej rozdzielone jest to, co **zmierzon
 
 ### Co jest zrobione i udowodnione
 
-| Item | Co dowozi | Czym udowodnione |
-|---|---|---|
-| B1 schemat + sesja | pięć kolumn pluginu, `platform_audit_log` (12 kolumn, 4 CHECK-i międzykolumnowe, 5 indeksów), `staff_api_tokens`, poszerzona biała lista sesji | migracja `0004` w pełni addytywna, zero `__new_*`, zero `DROP TABLE`; CHECK-i sprawdzone wstawkami do wyemitowanego SQL w `node:sqlite` |
-| B2 słownik + guard | zamknięty słownik sześciu zasobów, trzy role, `requirePermission` jako jedyny autoryzator | macierz 72 komórek w testach; test grafu importów pilnujący, że moduł jest liściowy |
-| B3 rejestracja pluginu | `admin()` w `betterAuth()`, `impersonationSessionDuration: 900`, top-level `disabledPaths` | test dryfu: 15 ścieżek pluginu równa się `DISABLED_ADMIN_PATHS`; test integracyjny dowozi 404 z każdej z nich przy żywej sesji admina |
-| B4 writer audytu | `src/server/catalog/audit.ts` jako jedyny pisarz, prune 400-dniowy, wspólny regex akcji w module liściowym | spacer po grafie modułów zastąpił grepa, który dwukrotnie przepuścił naruszenie; sondy wstawek na wszystkich CHECK-ach |
+| Item                   | Co dowozi                                                                                                                                      | Czym udowodnione                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| B1 schemat + sesja     | pięć kolumn pluginu, `platform_audit_log` (12 kolumn, 4 CHECK-i międzykolumnowe, 5 indeksów), `staff_api_tokens`, poszerzona biała lista sesji | migracja `0004` w pełni addytywna, zero `__new_*`, zero `DROP TABLE`; CHECK-i sprawdzone wstawkami do wyemitowanego SQL w `node:sqlite` |
+| B2 słownik + guard     | zamknięty słownik sześciu zasobów, trzy role, `requirePermission` jako jedyny autoryzator                                                      | macierz 72 komórek w testach; test grafu importów pilnujący, że moduł jest liściowy                                                     |
+| B3 rejestracja pluginu | `admin()` w `betterAuth()`, `impersonationSessionDuration: 900`, top-level `disabledPaths`                                                     | test dryfu: 15 ścieżek pluginu równa się `DISABLED_ADMIN_PATHS`; test integracyjny dowozi 404 z każdej z nich przy żywej sesji admina   |
+| B4 writer audytu       | `src/server/catalog/audit.ts` jako jedyny pisarz, prune 400-dniowy, wspólny regex akcji w module liściowym                                     | spacer po grafie modułów zastąpił grepa, który dwukrotnie przepuścił naruszenie; sondy wstawek na wszystkich CHECK-ach                  |
 
 ### Co jest otwarte
 
@@ -436,8 +436,6 @@ KV na każde uwierzytelnione żądanie.
    równolegle z tymi ścieżkami u różnych właścicieli. Naprawa relokująca kod między itemami wymaga,
    żeby `ownedPaths` jechały razem z kodem albo żeby itemy scaliły się na tę rundę.
 
-
-
 > **Specyfikacją tej fazy jest `docs/ACCESS.md`, a nie ta sekcja.** Sekcja poniżej to indeks:
 > mówi, co faza obejmuje i jakie decyzje zapadły, a szczegóły wiążące - słownik uprawnień co do
 > komórki, dwanaście kolumn audytu, zamknięty słownik 31 akcji, cztery obowiązkowe testy drift,
@@ -449,13 +447,13 @@ KV na każde uwierzytelnione żądanie.
 Pierwsza wersja tej sekcji miała pięć błędów blokujących. Sprawdzone w `node_modules`
 (`better-auth@1.7.1`, ta sama kopia, którą zbuduje runda), **nie z pamięci**:
 
-| Twierdzenie z pierwszej wersji planu | Jak jest naprawdę |
-|---|---|
-| Kolumny to `user.ban_reason`, `user.ban_expires`, `session.impersonated_by` | To nazwy SQL. Adapter Drizzle nigdy ich nie widzi: rozwiązuje pole jako `schemaModel[getFieldName(...)]`, a `getFieldName` nie robi żadnej transformacji wielkości liter, więc indeksuje **klucz właściwości JS**. Plugin deklaruje `role`, `banned`, `banReason`, `banExpires`, `impersonatedBy` (`plugins/admin/schema.mjs`). Literalne wdrożenie planu wywala `BetterAuthError` przy pierwszym banie. Argumenty tekstowe (nazwy SQL) zostają snake_case wg konwencji repo |
-| `admin({ ac, roles, ... })` - `ac` niesie autoryzację | `ac` jest **martwe po stronie serwera**: jedyny odczyt `options?.ac` w całym pluginie to `plugins/admin/client.mjs:20`. Autoryzacja czyta `input.options?.roles \|\| defaultRoles` (`has-permission.mjs:7`). Nośną opcją jest `roles` i musi zawierać komplet `admin`/`curator`/`user`; bez tego `curator` jest `undefined` i dostaje odmowę na wszystkim |
-| Cztery opcje wystarczą | Brakują dwie. `impersonationSessionDuration` pominięte cichcem daje 3600 s zamiast wymaganych przez `ACCESS.md` §6.2 **900 s**. `disabledPaths` **nie jest argumentem `admin()`** tylko opcją top-level `betterAuth` (rodzeństwo `plugins`), egzekwowaną w `onRequest` routera przez `return new Response("Not Found", { status: 404 })` |
-| Akcje konsoli wołają `/api/auth/admin/*` klientem Better Auth | Klient jest bezwarunkowo HTTP, a `ACCESS.md` §2.6 wymaga, by wszystkie 15 ścieżek zwracało 404, i zakazuje rejestrowania `adminClient()`. Mechanizmem jest `auth.api.<endpoint>({ body, headers })` **w procesie**: `api` buduje `getEndpoints()` i nie przechodzi przez router, więc `disabledPaths` go nie dotyka. Dla impersonacji to nie jest detal stylu - jej **całym efektem** są nagłówki `Set-Cookie`, które wrapper HTTP zjada, więc wołanie zgłosiłoby sukces i nie zmieniło nic. Stąd `returnHeaders: true` i wmieszanie nagłówków w odpowiedź funkcji serwerowej |
-| `platform_audit_log` ma dziewięć kolumn | Ma **dwanaście** i `ACCESS.md` §4.1 mówi wprost „this is the whole list". Brakowały `actor_role` (rola w chwili akcji, wartość a nie join, bo `user.role` jest zmienne) i `token_id` (FK → `staff_api_tokens`). Do tego dwa CHECK-i międzykolumnowe i pięć indeksów. W SQLite dodanie FK albo CHECK później to recreate tabeli, a `docs/DEPLOY.md` §register liczy recreate jako niedodatkowy |
+| Twierdzenie z pierwszej wersji planu                                        | Jak jest naprawdę                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kolumny to `user.ban_reason`, `user.ban_expires`, `session.impersonated_by` | To nazwy SQL. Adapter Drizzle nigdy ich nie widzi: rozwiązuje pole jako `schemaModel[getFieldName(...)]`, a `getFieldName` nie robi żadnej transformacji wielkości liter, więc indeksuje **klucz właściwości JS**. Plugin deklaruje `role`, `banned`, `banReason`, `banExpires`, `impersonatedBy` (`plugins/admin/schema.mjs`). Literalne wdrożenie planu wywala `BetterAuthError` przy pierwszym banie. Argumenty tekstowe (nazwy SQL) zostają snake_case wg konwencji repo                                                                                                  |
+| `admin({ ac, roles, ... })` - `ac` niesie autoryzację                       | `ac` jest **martwe po stronie serwera**: jedyny odczyt `options?.ac` w całym pluginie to `plugins/admin/client.mjs:20`. Autoryzacja czyta `input.options?.roles \|\| defaultRoles` (`has-permission.mjs:7`). Nośną opcją jest `roles` i musi zawierać komplet `admin`/`curator`/`user`; bez tego `curator` jest `undefined` i dostaje odmowę na wszystkim                                                                                                                                                                                                                     |
+| Cztery opcje wystarczą                                                      | Brakują dwie. `impersonationSessionDuration` pominięte cichcem daje 3600 s zamiast wymaganych przez `ACCESS.md` §6.2 **900 s**. `disabledPaths` **nie jest argumentem `admin()`** tylko opcją top-level `betterAuth` (rodzeństwo `plugins`), egzekwowaną w `onRequest` routera przez `return new Response("Not Found", { status: 404 })`                                                                                                                                                                                                                                      |
+| Akcje konsoli wołają `/api/auth/admin/*` klientem Better Auth               | Klient jest bezwarunkowo HTTP, a `ACCESS.md` §2.6 wymaga, by wszystkie 15 ścieżek zwracało 404, i zakazuje rejestrowania `adminClient()`. Mechanizmem jest `auth.api.<endpoint>({ body, headers })` **w procesie**: `api` buduje `getEndpoints()` i nie przechodzi przez router, więc `disabledPaths` go nie dotyka. Dla impersonacji to nie jest detal stylu - jej **całym efektem** są nagłówki `Set-Cookie`, które wrapper HTTP zjada, więc wołanie zgłosiłoby sukces i nie zmieniło nic. Stąd `returnHeaders: true` i wmieszanie nagłówków w odpowiedź funkcji serwerowej |
+| `platform_audit_log` ma dziewięć kolumn                                     | Ma **dwanaście** i `ACCESS.md` §4.1 mówi wprost „this is the whole list". Brakowały `actor_role` (rola w chwili akcji, wartość a nie join, bo `user.role` jest zmienne) i `token_id` (FK → `staff_api_tokens`). Do tego dwa CHECK-i międzykolumnowe i pięć indeksów. W SQLite dodanie FK albo CHECK później to recreate tabeli, a `docs/DEPLOY.md` §register liczy recreate jako niedodatkowy                                                                                                                                                                                 |
 
 Szósta poprawka jest kontraktowa, nie faktograficzna: `docs/SPEC.md` §5 zamykał listę tabel
 globalnych na ośmiu nazwach, jednocześnie nakazując zapis do `platform_audit_log`. `ACCESS.md`
@@ -465,13 +463,13 @@ osiągany. FU-2 zamknięte.
 
 ### Decyzje użytkownika z 23.08
 
-| Pytanie | Decyzja | Konsekwencja |
-|---|---|---|
+| Pytanie                                      | Decyzja                                                                                                      | Konsekwencja                                                                                                                                                                                                                                                                                                                                                                                                              |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Ban a 300-sekundowy cache sesji w ciasteczku | **Zabić cache.** `disableCookieCache` w `src/server/auth/session.ts` i usunięcie bloku `session.cookieCache` | Kryterium „natychmiastowe wylogowanie" zostaje prawdziwe. Koszt: jeden odczyt KV na każde uwierzytelnione żądanie w całej aplikacji, na stałe. Świadomie kasujemy optymalizację, bo ban jest kontrolą bezpieczeństwa i okno opóźnienia było na niej nie do obronienia. Osobno: funkcja banująca **enumeruje tokeny sesji celu z D1**, a nie ufa indeksowi KV `active-sessions-<userId>`, który jest eventually consistent |
-| Czy Faza B tworzy `staff_api_tokens` | **Tak, samą tabelę.** UI wydawania tokenów zostaje w Fazie E | `platform_audit_log` dostaje prawdziwy FK `token_id` i CHECK dla `actor_kind='agent'` od razu, w jednym `CREATE TABLE`. Płacimy recreate zero razy zamiast raz |
-| Moderacja `share_links` | **Tylko wpis w słowniku.** `repos/shares.ts`, `fns/console/shares.ts` i ekran czekają na Fazę F | Słownik jest zamknięty i nie urośnie później bez zmiany `ACCESS.md`, więc zasób `share` musi wejść teraz. Powierzchnia czeka na migrację, która da `share_links` dyskryminator (FU-4) |
-| Zakres paska impersonacji | **Tylko `/_app`** | `AppShell` to jedyny wrapper z sesją w zasięgu. Wciągnięcie sesji do `__root.tsx` postawiłoby odczyt auth przed każdą publiczną stroną marketingową. Zapisane w `ACCESS.md` §6.1 jako świadome ograniczenie |
-| „Ban i impersonacja audytowane bez wyjątku" | **Dwa nazwane wyjątki** | Auto-unban wygasłego bana dzieje się w `session.create.before` pluginu, bez wywołania konsoli; audytowany z tripwire `databaseHooks.user.update.after` jako `actor_kind='system'`. Impersonacja **przez wygaśnięcie** nie produkuje żadnego zdarzenia serwerowego, więc `ACCESS.md` §4.2 zawęża wpis do akcji. Oba zapisane, bo milczenie czyniło „without exception" fałszem |
+| Czy Faza B tworzy `staff_api_tokens`         | **Tak, samą tabelę.** UI wydawania tokenów zostaje w Fazie E                                                 | `platform_audit_log` dostaje prawdziwy FK `token_id` i CHECK dla `actor_kind='agent'` od razu, w jednym `CREATE TABLE`. Płacimy recreate zero razy zamiast raz                                                                                                                                                                                                                                                            |
+| Moderacja `share_links`                      | **Tylko wpis w słowniku.** `repos/shares.ts`, `fns/console/shares.ts` i ekran czekają na Fazę F              | Słownik jest zamknięty i nie urośnie później bez zmiany `ACCESS.md`, więc zasób `share` musi wejść teraz. Powierzchnia czeka na migrację, która da `share_links` dyskryminator (FU-4)                                                                                                                                                                                                                                     |
+| Zakres paska impersonacji                    | **Tylko `/_app`**                                                                                            | `AppShell` to jedyny wrapper z sesją w zasięgu. Wciągnięcie sesji do `__root.tsx` postawiłoby odczyt auth przed każdą publiczną stroną marketingową. Zapisane w `ACCESS.md` §6.1 jako świadome ograniczenie                                                                                                                                                                                                               |
+| „Ban i impersonacja audytowane bez wyjątku"  | **Dwa nazwane wyjątki**                                                                                      | Auto-unban wygasłego bana dzieje się w `session.create.before` pluginu, bez wywołania konsoli; audytowany z tripwire `databaseHooks.user.update.after` jako `actor_kind='system'`. Impersonacja **przez wygaśnięcie** nie produkuje żadnego zdarzenia serwerowego, więc `ACCESS.md` §4.2 zawęża wpis do akcji. Oba zapisane, bo milczenie czyniło „without exception" fałszem                                             |
 
 ### Konfiguracja
 
@@ -479,11 +477,11 @@ osiągany. FU-2 zamknięte.
 
 ```ts
 const statement = {
-  ...defaultStatements,                       // user: [...], session: [...]
+  ...defaultStatements, // user: [...], session: [...]
   catalog: ['read', 'write', 'publish'],
-  pack:    ['read', 'write', 'publish'],
-  source:  ['read', 'run'],
-  share:   ['read', 'revoke'],
+  pack: ['read', 'write', 'publish'],
+  source: ['read', 'run'],
+  share: ['read', 'revoke'],
 } as const
 ```
 
@@ -563,7 +561,7 @@ platformowych.
   impersonowana, z odliczaniem i akcją „zakończ" jako pierwszym stopem tabulacji. Bez tego funkcja
   jest niebezpieczna. Pasek przesuwa początek viewportu, więc jest jednym itemem razem z
   kontraktem `--nav-h` i wszystkim, co się do niego przypina (FU-1: dwa nowe tokeny lądują
-  w `src/styles/tokens.css` i w `docs/DESIGN.md` w tym samym commicie).
+  w `src/styles/tokens.css` i w `DESIGN.md` w tym samym commicie).
 
 Wszystkie akcje idą przez `src/server/fns/console/*`, które wołają `auth.api.<endpoint>` **w
 procesie**, nigdy klientem Better Auth i nigdy bezpośrednim `fetch` z komponentu. Dla
@@ -582,6 +580,7 @@ w odpowiedź funkcji serwerowej.
   pisane przez Fazę C. W Fazie B test asercjonuje podzbiór `platform.*` (15 nazw) i jest
   rozszerzany w Fazie C; obie sprawdzalne maszynowo połowy - zgodność z regexem i prefiks
   z tablicy §4.2 - wchodzą już teraz.
+
 ---
 
 ## Faza C - katalog miejsc i panel kuratora
@@ -590,16 +589,16 @@ w odpowiedź funkcji serwerowej.
 
 Tabele **globalne** (bez `organization_id` - to treść platformy, nie tenanta):
 
-| Tabela | Rola |
-|---|---|
-| `catalog_sources` | źródło (`slug`, `name`, `homepage`, `adapter`, `enabled`, `licence_note`, `last_run_at`) |
-| `catalog_runs` | przebieg scrapingu (`source_id`, `status`, liczniki `discovered/created/updated/failed`, `error`, czasy) |
-| `catalog_ingest` | surowy rekord (`run_id`, `source_id`, `external_id`, `source_url`, `payload` JSON, `checksum`, `status` `pending/promoted/rejected/duplicate`, `matched_place_id`) |
-| `catalog_places` | rekord katalogu - patrz niżej |
-| `catalog_place_sources` | N:N miejsce ↔ źródło (`external_id`, `source_url`, `last_seen_at`) - jedno miejsce bywa w kilku serwisach |
-| `place_packs` | pakiet (`slug`, `name`, `description`, `cover_image_url`, `country_codes`, `status` `draft/published/retired`, `price_minor`, `currency`, `polar_product_id`, `place_count`, `published_at`) |
-| `place_pack_places` | N:N pakiet ↔ miejsce (`sort_order`) |
-| `staff_api_tokens` | tokeny MCP (`user_id`, `name`, `token_hash`, `last_used_at`, `expires_at`, `revoked_at`) - uprawnienia biorą się z roli właściciela, nie z osobnych scope'ów |
+| Tabela                  | Rola                                                                                                                                                                                         |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `catalog_sources`       | źródło (`slug`, `name`, `homepage`, `adapter`, `enabled`, `licence_note`, `last_run_at`)                                                                                                     |
+| `catalog_runs`          | przebieg scrapingu (`source_id`, `status`, liczniki `discovered/created/updated/failed`, `error`, czasy)                                                                                     |
+| `catalog_ingest`        | surowy rekord (`run_id`, `source_id`, `external_id`, `source_url`, `payload` JSON, `checksum`, `status` `pending/promoted/rejected/duplicate`, `matched_place_id`)                           |
+| `catalog_places`        | rekord katalogu - patrz niżej                                                                                                                                                                |
+| `catalog_place_sources` | N:N miejsce ↔ źródło (`external_id`, `source_url`, `last_seen_at`) - jedno miejsce bywa w kilku serwisach                                                                                    |
+| `place_packs`           | pakiet (`slug`, `name`, `description`, `cover_image_url`, `country_codes`, `status` `draft/published/retired`, `price_minor`, `currency`, `polar_product_id`, `place_count`, `published_at`) |
+| `place_pack_places`     | N:N pakiet ↔ miejsce (`sort_order`)                                                                                                                                                          |
+| `staff_api_tokens`      | tokeny MCP (`user_id`, `name`, `token_hash`, `last_used_at`, `expires_at`, `revoked_at`) - uprawnienia biorą się z roli właściciela, nie z osobnych scope'ów                                 |
 
 Tabela **tenantowa**: `pack_entitlements` (`organization_id`, `pack_id`, `polar_order_id`,
 `granted_at`, `revoked_at`).
@@ -698,15 +697,15 @@ normalizacja adapterów na utrwalonych fixture'ach, odrzucenie rekordu bez wspó
 - **Narzędzia** (schematy wejścia z Zod, każdy zapis dopisuje `platform_audit_log`
   z `actor_kind: 'agent'`):
 
-  | Narzędzie | Działanie |
-  |---|---|
-  | `catalog_search_places` | filtry: tekst, kraj, rodzaj, status, bbox; kursor |
-  | `catalog_get_place` | pełny rekord + provenance + historia |
-  | `catalog_upsert_place` | tworzy/aktualizuje, wymusza `dedupe_key` |
-  | `catalog_set_place_status` | `review` / `published` / `retired` |
-  | `catalog_list_ingest` / `catalog_promote_ingest` | kolejka surowych rekordów, promocja lub scalenie |
-  | `packs_list` / `packs_create` / `packs_set_places` / `packs_publish` | zarządzanie pakietami |
-  | `sources_list` / `sources_run` | podgląd źródeł i ręczne uruchomienie przebiegu |
+  | Narzędzie                                                            | Działanie                                         |
+  | -------------------------------------------------------------------- | ------------------------------------------------- |
+  | `catalog_search_places`                                              | filtry: tekst, kraj, rodzaj, status, bbox; kursor |
+  | `catalog_get_place`                                                  | pełny rekord + provenance + historia              |
+  | `catalog_upsert_place`                                               | tworzy/aktualizuje, wymusza `dedupe_key`          |
+  | `catalog_set_place_status`                                           | `review` / `published` / `retired`                |
+  | `catalog_list_ingest` / `catalog_promote_ingest`                     | kolejka surowych rekordów, promocja lub scalenie  |
+  | `packs_list` / `packs_create` / `packs_set_places` / `packs_publish` | zarządzanie pakietami                             |
+  | `sources_list` / `sources_run`                                       | podgląd źródeł i ręczne uruchomienie przebiegu    |
 
 - Limit 200 rekordów na odpowiedź, twarde odcięcie rozmiaru payloadu.
 - Wydawanie i odwoływanie tokenów: `console/tokens.tsx` (tylko rola `admin`), token pokazywany raz.
@@ -763,7 +762,7 @@ jednym kliknięciem (uprawnienie `share:revoke`), lista opublikowanych pakietów
 - `src/server/billing/checkout.ts` - `createPackCheckout(packId)`: produkt jednorazowy Polara,
   `metadata: { packId, organizationId }`.
 - `src/server/billing/webhook.ts` - `order.paid` z `metadata.packId` → wpis do `pack_entitlements`
-  + inwalidacja cache uprawnień.
+  - inwalidacja cache uprawnień.
 - `src/server/billing/entitlements.ts` - `resolvePackEntitlements(organizationId)` obok resolvera
   planu, ten sam wzorzec cache w KV.
 - `src/routes/_app/packs.tsx` - pakiety posiadane i dostępne; `src/routes/pricing.tsx` - sekcja
@@ -835,9 +834,11 @@ odblokowane w `/settings/billing`. Powtórzone doręczenie zdarzenia nie zmienia
 z podmienionym `product_id` odrzucone.
 
 **Faza B**
+
 ```bash
 pnpm db:generate && pnpm db:migrate:local
 ```
+
 Przeczytaj wygenerowany SQL, zanim go zacommitujesz: ma zawierać `ALTER TABLE ... ADD` dla pięciu
 kolumn pluginu i `CREATE TABLE platform_audit_log`, a **nie** `__new_user`, `__new_session` ani
 `DROP TABLE`. Recreate wymaga wpisu w `docs/DEPLOY.md` §register, zanim gdziekolwiek zostanie
@@ -864,11 +865,13 @@ zmian po stronie serwisu → `created = 0`, rosną tylko `last_seen_at`. Punkt o
 serwisach → jeden `catalog_places`, dwa `catalog_place_sources`.
 
 **Faza E**
+
 ```bash
 curl -s -X POST http://localhost:3000/api/mcp \
   -H 'authorization: Bearer <token>' -H 'content-type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
+
 Następnie podłącz serwer w Claude Code i przejdź pełną ścieżkę: wyszukaj → popraw → opublikuj →
 sprawdź wpis audytu z `actor_kind='agent'`.
 

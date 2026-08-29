@@ -1,0 +1,472 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-29T00:00:00.000Z",
+  "title": "Design System: planned.travel",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink Black",
+        "dark": "#f8f7f4",
+        "tonalRamp": [
+          "#16150f",
+          "#2c2a22",
+          "#403e36",
+          "#5b5951",
+          "#6c6a61",
+          "#89877f",
+          "#c8c5bc",
+          "#edebe6"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Warm Paper",
+        "dark": "#121211",
+        "tonalRamp": [
+          "#121211",
+          "#1a1a18",
+          "#212120",
+          "#292926",
+          "#33332f",
+          "#89877f",
+          "#edebe6",
+          "#faf9f7"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Sheet",
+        "dark": "#1a1a18"
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Recessed Sheet",
+        "dark": "#212120"
+      },
+      "surface-inset": {
+        "role": "neutral",
+        "displayName": "Inset Sheet",
+        "dark": "#292926"
+      },
+      "edge": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "dark": "#33332f"
+      },
+      "edge-strong": {
+        "role": "neutral",
+        "displayName": "Control Boundary",
+        "dark": "#74726d",
+        "purpose": "Holds 3:1 on every surface in both themes (WCAG 2.2 1.4.11). The border of anything pressable."
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Ink Black",
+        "dark": "#f8f7f4",
+        "purpose": "Primary buttons, FAB, inverse slabs. The one loud voice."
+      },
+      "brand": {
+        "role": "secondary",
+        "displayName": "Deep Pine",
+        "dark": "#5fbba0",
+        "tonalRamp": [
+          "#0d2a24",
+          "#12382f",
+          "#19423a",
+          "#1c4e45",
+          "#256256",
+          "#2b7365",
+          "#5fbba0",
+          "#e3efeb"
+        ]
+      },
+      "brand-subtle": {
+        "role": "secondary",
+        "displayName": "Pine Wash",
+        "dark": "#12261f"
+      },
+      "inverse-brand": {
+        "role": "secondary",
+        "displayName": "Lifted Pine",
+        "dark": "#5fbba0",
+        "purpose": "Deep Pine as seen on a near-black slab. One value in both themes: the ground it sits on barely moves."
+      },
+      "success": {
+        "role": "tertiary",
+        "displayName": "Field Green",
+        "dark": "#4cc38a"
+      },
+      "warning": {
+        "role": "tertiary",
+        "displayName": "Amber Warning",
+        "dark": "#e0a32e"
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Signal Red",
+        "dark": "#f0776a"
+      },
+      "info": {
+        "role": "tertiary",
+        "displayName": "Reference Blue",
+        "dark": "#8aacf9"
+      },
+      "country-visited": {
+        "role": "primary",
+        "displayName": "Visited (base)",
+        "dark": "#54a990",
+        "purpose": "The Atlas recency ramp: one hue, lightness only. Steps sit 6.1-6.4 CIE L* apart and each clears 3:1 against land and against basemap water.",
+        "tonalRamp": [
+          "#19423a",
+          "#1f5248",
+          "#256256",
+          "#2b7365",
+          "#328474",
+          "#5fbba0",
+          "#93dbc6",
+          "#e9f3ef"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "hero": {
+        "displayName": "Hero",
+        "purpose": "Marketing headline. One per page, only where the headline is the argument."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "One step below Hero, for a page whose headline is not the point (pricing)."
+      },
+      "display": {
+        "displayName": "Display numeral",
+        "purpose": "The stat numeral. Fluid because it also carries formatted money."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card and panel headings."
+      },
+      "subtitle": {
+        "displayName": "Subtitle",
+        "purpose": "The lead line under a title; section intros."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text. Measure held to 65-75ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Controls, table cells, menu rows. The default size of the app."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Metadata, timestamps, helper text."
+      },
+      "micro": {
+        "displayName": "Micro / SectionLabel",
+        "purpose": "Uppercase whisper that opens every panel. The quietest type, used the most."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "0 1px 2px rgb(22 21 15 / 0.04), 0 1px 3px -1px rgb(22 21 15 / 0.05)",
+        "purpose": "The resting sheet. Keeps white from dissolving into warm paper; does not lift it."
+      },
+      {
+        "name": "elevated",
+        "value": "0 1px 2px rgb(22 21 15 / 0.05), 0 10px 24px -8px rgb(22 21 15 / 0.12)",
+        "purpose": "Hover state of an interactive card; resting state of the FAB."
+      },
+      {
+        "name": "dropdown",
+        "value": "0 2px 6px -1px rgb(22 21 15 / 0.06), 0 12px 32px -10px rgb(22 21 15 / 0.18)",
+        "purpose": "Menus and select popovers."
+      },
+      {
+        "name": "popover",
+        "value": "0 2px 8px -2px rgb(22 21 15 / 0.07), 0 16px 44px -12px rgb(22 21 15 / 0.2)",
+        "purpose": "Free popovers and the map fact card."
+      },
+      {
+        "name": "modal",
+        "value": "0 2px 8px -2px rgb(22 21 15 / 0.1), 0 32px 72px -16px rgb(22 21 15 / 0.28)",
+        "purpose": "Dialogs and sheets over a scrim; FAB hover."
+      },
+      {
+        "name": "glass",
+        "value": "0 1px 0 rgb(255 255 255 / 0.6) inset, 0 8px 32px -10px rgb(22 21 15 / 0.2), 0 2px 6px -2px rgb(22 21 15 / 0.08)",
+        "purpose": "Translucent panel over the map, paired with a 20px backdrop blur."
+      },
+      {
+        "name": "focus",
+        "value": "0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-ring)",
+        "purpose": "Offset focus ring drawn outside the control on a canvas-coloured gap, so it survives against any fill."
+      },
+      {
+        "name": "card-dark",
+        "value": "0 1px 2px rgb(0 0 0 / 0.5), 0 1px 1px rgb(0 0 0 / 0.3)",
+        "purpose": "The dark counterpart of card. Re-declared, never inherited: an order of magnitude more opaque, because it works against charcoal."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-quint",
+        "value": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "purpose": "Default entrance and state easing."
+      },
+      {
+        "name": "ease-in-quint",
+        "value": "cubic-bezier(0.755, 0.05, 0.855, 0.06)",
+        "purpose": "Exits."
+      },
+      {
+        "name": "ease-drawer",
+        "value": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "purpose": "Sheets and drawers."
+      },
+      {
+        "name": "ease-spring",
+        "value": "cubic-bezier(0.34, 1.4, 0.64, 1)",
+        "purpose": "The one easing allowed to overshoot. Used sparingly."
+      },
+      {
+        "name": "duration-fast",
+        "value": "150ms",
+        "purpose": "Exits and hover state changes."
+      },
+      { "name": "duration", "value": "220ms", "purpose": "Entrances." },
+      {
+        "name": "duration-slow",
+        "value": "320ms",
+        "purpose": "Drawers and large layer transitions. Nothing exceeds 400ms."
+      }
+    ],
+    "breakpoints": [
+      { "name": "min", "value": "360px" },
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "content-max", "value": "1440px" },
+      { "name": "max", "value": "2560px" }
+    ],
+    "layout": [
+      {
+        "name": "space grid",
+        "value": "--space-N === N * 4px, N in 1..16",
+        "purpose": "Strict. Tailwind pinned to the same grid via --spacing: 0.25rem."
+      },
+      { "name": "--nav-h", "value": "4rem" },
+      { "name": "--subnav-h", "value": "3rem" },
+      {
+        "name": "--impersonation-h",
+        "value": "0rem, raised to 3.5rem only on the shell subtree that renders the bar"
+      },
+      {
+        "name": "z bands",
+        "value": "map-overlay 30 · map-surface 35 · nav 40 · dropdown 50 · overlay 60 · modal 70 · toast 80 · impersonation 90"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one loud button on a screen. Ink Black fill, 1px press, shadow steps down with it.",
+      "html": "<button class=\"ds-btn-primary\">Plan a trip</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 16px; gap: 8px; border: none; border-radius: var(--radius-md, 12px); background: var(--color-accent, #16150f); color: var(--color-accent-on, #ffffff); font-family: var(--font-ui, Geist, system-ui, sans-serif); font-size: 13px; font-weight: 600; line-height: 1.4; box-shadow: 0 1px 2px rgb(22 21 15 / 0.04), 0 1px 3px -1px rgb(22 21 15 / 0.05); transition: background-color 150ms cubic-bezier(0.23,1,0.32,1), box-shadow 150ms cubic-bezier(0.23,1,0.32,1), translate 150ms cubic-bezier(0.23,1,0.32,1); cursor: pointer; } .ds-btn-primary:hover { background: var(--color-accent-hover, #2c2a22); box-shadow: 0 1px 2px rgb(22 21 15 / 0.05), 0 10px 24px -8px rgb(22 21 15 / 0.12); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-ring, #256256); outline-offset: 2px; } .ds-btn-primary:active { translate: 0 1px; box-shadow: 0 1px 2px rgb(22 21 15 / 0.04), 0 1px 3px -1px rgb(22 21 15 / 0.05); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "The default. A 3:1 control boundary on a white sheet; hover deepens the border rather than filling it.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 16px; gap: 8px; border: 1px solid var(--color-edge-strong, #89877f); border-radius: var(--radius-md, 12px); background: var(--color-surface, #ffffff); color: var(--color-ink, #16150f); font-family: var(--font-ui, Geist, system-ui, sans-serif); font-size: 13px; font-weight: 600; box-shadow: 0 1px 2px rgb(22 21 15 / 0.04); transition: background-color 150ms cubic-bezier(0.23,1,0.32,1), border-color 150ms cubic-bezier(0.23,1,0.32,1), translate 150ms cubic-bezier(0.23,1,0.32,1); cursor: pointer; } .ds-btn-secondary:hover { border-color: var(--color-ink-4, #6c6a61); background: var(--color-surface-2, #f3f1ed); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--color-ring, #256256); outline-offset: 2px; } .ds-btn-secondary:active { translate: 0 1px; background: var(--color-surface-inset, #edebe6); box-shadow: none; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "No chrome until touched. Toolbars, table rows, card affordances.",
+      "html": "<button class=\"ds-btn-ghost\">More</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 16px; gap: 8px; border: none; border-radius: var(--radius-md, 12px); background: transparent; color: var(--color-ink-2, #403e36); font-family: var(--font-ui, Geist, system-ui, sans-serif); font-size: 13px; font-weight: 600; transition: background-color 150ms cubic-bezier(0.23,1,0.32,1), color 150ms cubic-bezier(0.23,1,0.32,1); cursor: pointer; } .ds-btn-ghost:hover { background: rgb(22 21 15 / 0.045); color: var(--color-ink, #16150f); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--color-ring, #256256); outline-offset: 2px; } .ds-btn-ghost:active { background: rgb(22 21 15 / 0.085); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "The unit of composition: a soft-cornered white sheet on warm paper, hairline edge, flat at rest.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-label\">Total budget</p><p class=\"ds-card-value\">£4,280</p></div>",
+      "css": ".ds-card { border-radius: var(--radius-xl, 20px); border: 1px solid rgb(22 21 15 / 0.07); background: var(--color-surface, #ffffff); color: var(--color-ink, #16150f); padding: 20px; box-shadow: 0 1px 2px rgb(22 21 15 / 0.04), 0 1px 3px -1px rgb(22 21 15 / 0.05); transition: box-shadow 220ms cubic-bezier(0.23,1,0.32,1), translate 220ms cubic-bezier(0.23,1,0.32,1); } .ds-card-label { margin: 0 0 12px; font-family: var(--font-ui, Geist, system-ui, sans-serif); font-size: 11px; font-weight: 600; line-height: 1.2; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-ink-3, #5b5951); } .ds-card-value { margin: 0; font-family: var(--font-display, MuseoModerno, ui-rounded, sans-serif); font-size: 48px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Inverse Card",
+      "kind": "card",
+      "refersTo": "card-inverse",
+      "description": "The near-black slab. At most one per screen. Brand reads through Lifted Pine here, never the paper-going pine.",
+      "html": "<div class=\"ds-card-inverse\"><p class=\"ds-card-inverse-label\">Countries visited</p><p class=\"ds-card-inverse-value\">27</p></div>",
+      "css": ".ds-card-inverse { border-radius: var(--radius-xl, 20px); border: 1px solid rgb(255 255 255 / 0.12); background: var(--color-inverse, #16150f); color: var(--color-inverse-on, #f8f7f4); padding: 20px; box-shadow: 0 1px 2px rgb(22 21 15 / 0.05), 0 10px 24px -8px rgb(22 21 15 / 0.12); } .ds-card-inverse-label { margin: 0 0 12px; font-family: var(--font-ui, Geist, system-ui, sans-serif); font-size: 11px; font-weight: 600; line-height: 1.2; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-inverse-muted, #b6b4a9); } .ds-card-inverse-value { margin: 0; font-family: var(--font-display, MuseoModerno, ui-rounded, sans-serif); font-size: 48px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--color-inverse-brand, #5fbba0); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Focus shifts the border to Deep Pine and draws a 2px ring at zero offset, so it reads as focused even on a tinted panel.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Where to?\" aria-label=\"Destination\" />",
+      "css": ".ds-input { width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--color-edge-strong, #89877f); border-radius: var(--radius-md, 12px); background: var(--color-surface, #ffffff); color: var(--color-ink, #16150f); font-family: var(--font-ui, Geist, system-ui, sans-serif); font-size: 13px; line-height: 1.4; transition: border-color 150ms cubic-bezier(0.23,1,0.32,1), outline-color 150ms cubic-bezier(0.23,1,0.32,1); } .ds-input::placeholder { color: var(--color-ink-4, #6c6a61); } .ds-input:hover { border-color: var(--color-ink-4, #6c6a61); } .ds-input:focus-visible { border-color: var(--color-brand, #256256); outline: 2px solid var(--color-ring, #256256); outline-offset: 0; } .ds-input[aria-invalid=\"true\"] { border-color: var(--color-danger, #b22f22); outline-color: var(--color-danger, #b22f22); }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip-selected",
+      "description": "Full radius means pickable. Unselected carries the tone as text on a sheet; selected takes the solid fill.",
+      "html": "<span class=\"ds-chip\">Museums</span><span class=\"ds-chip ds-chip-selected\">Food<span class=\"ds-chip-count\">12</span></span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; margin-right: 8px; border: 1px solid var(--color-edge-strong, #89877f); border-radius: 9999px; background: var(--color-surface, #ffffff); color: var(--color-ink-2, #403e36); font-family: var(--font-ui, Geist, system-ui, sans-serif); font-size: 13px; font-weight: 500; transition: background-color 150ms cubic-bezier(0.23,1,0.32,1), border-color 150ms cubic-bezier(0.23,1,0.32,1), color 150ms cubic-bezier(0.23,1,0.32,1); cursor: pointer; } .ds-chip:hover { border-color: var(--color-ink-4, #6c6a61); background: var(--color-surface-2, #f3f1ed); color: var(--color-ink, #16150f); } .ds-chip:focus-visible { outline: 2px solid var(--color-ring, #256256); outline-offset: 2px; } .ds-chip-selected { border-color: transparent; background: var(--color-brand, #256256); color: var(--color-brand-on, #ffffff); } .ds-chip-selected:hover { border-color: transparent; background: var(--color-brand-hover, #1c4e45); color: var(--color-brand-on, #ffffff); } .ds-chip-count { margin-left: 2px; padding: 0 6px; border-radius: 9999px; background: rgb(255 255 255 / 0.2); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "PillNav",
+      "kind": "nav",
+      "refersTo": "nav-segmented",
+      "description": "Segmented control on a tinted trough. The thumb slides with translateX alone, so it behaves identically in RTL and animates on the compositor.",
+      "html": "<div class=\"ds-pillnav\"><span class=\"ds-pillnav-thumb\"></span><button class=\"ds-pillnav-item ds-pillnav-item-active\">Itinerary</button><button class=\"ds-pillnav-item\">Map</button><button class=\"ds-pillnav-item\">Budget</button></div>",
+      "css": ".ds-pillnav { position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 4px; border-radius: 9999px; background: var(--color-track, #f0eee9); } .ds-pillnav-thumb { position: absolute; inset-block: 4px; inset-inline-start: 4px; width: calc((100% - 8px) / 3); border-radius: 9999px; background: var(--color-track-thumb, #ffffff); box-shadow: 0 1px 2px rgb(22 21 15 / 0.04), 0 1px 3px -1px rgb(22 21 15 / 0.05); transition: translate 220ms cubic-bezier(0.23,1,0.32,1); pointer-events: none; } .ds-pillnav-item { position: relative; z-index: 1; height: 32px; padding: 0 16px; border: none; background: transparent; border-radius: 9999px; color: var(--color-ink-3, #5b5951); font-family: var(--font-ui, Geist, system-ui, sans-serif); font-size: 13px; font-weight: 500; transition: color 150ms cubic-bezier(0.23,1,0.32,1); cursor: pointer; } .ds-pillnav-item:hover { color: var(--color-ink, #16150f); } .ds-pillnav-item:focus-visible { outline: 2px solid var(--color-ring, #256256); outline-offset: 2px; } .ds-pillnav-item-active { color: var(--color-ink, #16150f); font-weight: 600; }"
+    },
+    {
+      "name": "SectionLabel",
+      "kind": "custom",
+      "refersTo": "section-label",
+      "description": "11px / 600 / +0.08em uppercase. Opens every panel in the product. The quietest type in the system and the most used.",
+      "html": "<p class=\"ds-section-label\">Upcoming trips</p>",
+      "css": ".ds-section-label { margin: 0; display: flex; align-items: center; gap: 6px; font-family: var(--font-ui, Geist, system-ui, sans-serif); font-size: 11px; font-weight: 600; line-height: 1.2; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-ink-3, #5b5951); }"
+    },
+    {
+      "name": "FAB",
+      "kind": "custom",
+      "refersTo": "fab",
+      "description": "Floating near-black action, anchored at the reading-end corner and clearing both the mobile tab bar and the safe-area inset.",
+      "html": "<button class=\"ds-fab\" aria-label=\"Add a place\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></button>",
+      "css": ".ds-fab { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: none; border-radius: 9999px; background: var(--color-accent, #16150f); color: var(--color-accent-on, #ffffff); box-shadow: 0 1px 2px rgb(22 21 15 / 0.05), 0 10px 24px -8px rgb(22 21 15 / 0.12); transition: background-color 150ms cubic-bezier(0.23,1,0.32,1), box-shadow 150ms cubic-bezier(0.23,1,0.32,1), translate 150ms cubic-bezier(0.23,1,0.32,1); cursor: pointer; } .ds-fab:hover { background: var(--color-accent-hover, #2c2a22); translate: 0 -2px; box-shadow: 0 2px 8px -2px rgb(22 21 15 / 0.1), 0 32px 72px -16px rgb(22 21 15 / 0.28); } .ds-fab:focus-visible { outline: 2px solid var(--color-ring, #256256); outline-offset: 2px; } .ds-fab:active { translate: 0; box-shadow: 0 1px 2px rgb(22 21 15 / 0.05), 0 10px 24px -8px rgb(22 21 15 / 0.12); } @media (prefers-reduced-motion: reduce) { .ds-fab:hover { translate: 0; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Instrument",
+    "overview": "planned.travel is a precision tool that happens to be about holidays. It is drawn in near-black and deep pine on warm paper, and it holds itself still: surfaces are flat at rest, controls show no chrome until you approach them, and nothing moves further than a pixel or longer than 220ms. The confidence comes from exactness rather than from volume. An oversized display numeral and an 11px uppercase label sitting three lines apart do more work than any amount of colour would.\n\nRestraint here is a budget, not an absence. Because the page is quiet, the one loud element on it carries real weight: a near-black slab, a single pine call to action, a numeral set at 96px. Those are rationed deliberately. At most one inverse card per screen, one primary button per decision, one accent per moment. The moment a second thing shouts, both stop being heard.\n\nThe instrument metaphor also sets the standard of proof. Every text-on-surface pair in the system carries its measured contrast ratio as a comment beside the token that produced it; the Atlas country ramp was tuned against basemap water because water, not land, was the binding constraint; the font stack is ordered face-then-compensator across 23 locales because a heading measured 8px taller before its web face landed. This is a system that states its tolerances.",
+    "keyCharacteristics": [
+      "Warm paper canvas (#faf9f7), never clinical white, and never pure black in dark.",
+      "One near-black accent and one deep pine brand. No third voice.",
+      "Flat at rest; shadow is an answer to interaction, not a resting property.",
+      "Oversized display numerals against 11px uppercase whisper labels: extreme scale contrast, no intermediate steps to soften it.",
+      "Strict 4px grid, everywhere, with no eyeballed exceptions.",
+      "Colour carries data on exactly one surface (the Atlas map) and decorates everywhere else.",
+      "Light and dark are two designed systems, not one system and its inversion."
+    ],
+    "rules": [
+      {
+        "name": "The One Voice Rule",
+        "body": "Ink Black and Deep Pine are the only two saturated voices. A screen gets at most one inverse slab and one primary button. If a design needs a third colour to make its hierarchy legible, the hierarchy is wrong, not the palette.",
+        "section": "colors"
+      },
+      {
+        "name": "The Data Colour Rule",
+        "body": "Colour carries meaning on exactly one surface: the Atlas world map, where a single pine hue varies only in lightness to encode recency. Everywhere else colour is decoration and must never be the sole channel of information. And even on the Atlas, adjacent recency steps sit about 1.25:1 apart, which is a difference you can see but not read, so any surface painting with that ramp owes the reader a legend or a per-country label (WCAG 1.4.1).",
+        "section": "colors"
+      },
+      {
+        "name": "The Measured Pair Rule",
+        "body": "Every colour token that can meet text carries its measured contrast ratio as a trailing comment beside its declaration. A token added without one is not finished. The ratio is stated against every ground the value can actually land on, not against a convenient one.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Systems Rule",
+        "body": "Dark is designed, not derived. Its surfaces are warm charcoal rather than inverted paper, its shadows are re-declared darker and tighter rather than reused, and its semantic hues are lifted rather than flipped. A dark value that was computed from a light one is a defect.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Any number that can change is set in tabular-nums. No exceptions. It is what stops a re-rendering total from shifting the row it sits in.",
+        "section": "typography"
+      },
+      {
+        "name": "The Two-Step Rule",
+        "body": "Scale contrast is extreme and deliberate: a Micro label sits directly above a Display numeral with nothing in between. Do not soften that jump with an intermediate size. The gap is the composition.",
+        "section": "typography"
+      },
+      {
+        "name": "The Compensator Pairing Rule",
+        "body": "In a font stack, a web face is followed immediately by its own metric-compensated local fallback, never by another web face first, and each compensator's unicode-range is confined to the scripts of the face it stands in for. A second web face slipped into that gap redraws the text with wrong metrics for as long as the first face is in flight.",
+        "section": "typography"
+      },
+      {
+        "name": "The Own-Script Rule",
+        "body": "A language is always named in its own language and its own script, and it carries its own lang attribute so it reaches its own face. Ordering alone cannot route Korean to Noto Sans KR: that face claims all 11,172 Hangul syllables, but moving it up the stack would hand it every ideograph as well.",
+        "section": "typography"
+      },
+      {
+        "name": "The 4px Rule",
+        "body": "Every dimension in the product is a multiple of 4px and comes from the space scale. A one-off value in a component is a defect, not a judgement call.",
+        "section": "layout"
+      },
+      {
+        "name": "The Composed Offset Rule",
+        "body": "Every piece of chrome geometry composes var(--impersonation-h) unconditionally. With no bar the term resolves to 0rem and the geometry is exactly what it was; with the bar present, no consumer can account for half of it.",
+        "section": "layout"
+      },
+      {
+        "name": "The Single Reservation Rule",
+        "body": "Exactly one thing clears each fixed edge. The content well pads for the mobile tab bar; a full-bleed slice stops at its top edge by arithmetic. A second reservation stacks on the first and opens a gap the size of the bar.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat-At-Rest Rule",
+        "body": "A resting surface gets a hairline and a tone, not a shadow step. If a card needs a shadow to be findable, its surface value is wrong.",
+        "section": "elevation"
+      },
+      {
+        "name": "The One-Pixel Rule",
+        "body": "The hover lift is 1px of translate plus one shadow step; the press is 1px down with the shadow stepping back with it, so a control reads as pushed into the page rather than as shrinking. A card that bounces reads as a toy.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Re-declared Dark Rule",
+        "body": "Dark shadows are written out again, darker and tighter, never inherited from light.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Pill Means Pickable Rule",
+        "body": "border-radius: full on a rectangle-sized element declares it a discrete, selectable token. Do not use it to soften a panel.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Hairline Honesty Rule",
+        "body": "If a box can be clicked, its border is edge-strong. If it cannot, its border is edge-faint. The user reads that difference before they read the label.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do take every colour, space, radius, shadow, easing and z-index from src/styles/tokens.css. If a value is missing, add it to the token file rather than writing it into a component.",
+      "Do declare a new colour token in all three places: bare :root, the @media (prefers-color-scheme: dark) block guarded by :root:not([data-theme=\"light\"]), and :root[data-theme=\"dark\"]. An explicit toggle must win in both directions.",
+      "Do state the measured contrast ratio beside any token that can meet text, against every ground it can land on.",
+      "Do set tabular-nums on any number that can change.",
+      "Do ship every state - rest, hover, focus-visible, active, disabled, loading - and a designed empty, skeleton and error state for every list.",
+      "Do animate transform and opacity only, at 150ms out / 220ms in on --ease-out-quint, and collapse to opacity or nothing under prefers-reduced-motion: reduce.",
+      "Do stagger list entrances by 20-30ms, capped at about eight items.",
+      "Do use logical properties (start/end, ms/me) so Arabic is a layout rather than a flip.",
+      "Do repaint a disabled control to ink-4, and reserve opacity for controls that carry no label of their own."
+    ],
+    "donts": [
+      "Don't hardcode a hex, a px radius, or a shadow in a component.",
+      "Don't derive a dark value from a light one, or reuse a light shadow in dark.",
+      "Don't introduce a third saturated voice beside Ink Black and Deep Pine, or put more than one inverse slab or one primary button on a screen.",
+      "Don't use colour as the only channel for information anywhere, including the Atlas: a ramp owes the reader a legend or a per-country label.",
+      "Don't animate a layout-affecting property. Height, width, left, top and margin are all reflows, and a reflow cannot be animated honestly at 60fps.",
+      "Don't exceed 400ms, and don't use a linear easing.",
+      "Don't put border-radius: full on a panel, or an edge-faint border on something clickable.",
+      "Don't ship a bare <div> acting as a button, or a custom control that loses keyboard or screen-reader behaviour.",
+      "Don't add a second reservation for a fixed edge that something already clears.",
+      "Don't invent a spacing value outside the 4px scale."
+    ]
+  }
+}

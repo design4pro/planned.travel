@@ -533,7 +533,7 @@ export const SERVER_CLOCK_ROUTES: ReadonlyArray<RouteCase> = APP_ROUTES.filter(
 /**
  * Select the theme by emulating the media feature, and nothing else.
  *
- * docs/DESIGN.md guarantees the media-query path works with no attribute set —
+ * DESIGN.md guarantees the media-query path works with no attribute set —
  * dark values live in `@media (prefers-color-scheme: dark)` guarded as
  * `:root:not([data-theme="light"])` — so emulation is the whole job. Writing
  * `data-theme` from the test would only fight the app's own theme script, and
@@ -1622,7 +1622,7 @@ export async function settle(page: Page, route: RouteCase): Promise<void> {
  *
  * `DOM_QUIET_MS` is the pause with no mutation anywhere in the document that
  * counts as "finished". It sits at the bottom of the 150–260 ms band
- * docs/DESIGN.md gives entrance motion, which is enough for a staggered list that
+ * DESIGN.md gives entrance motion, which is enough for a staggered list that
  * is still arriving to keep resetting it, and it is many animation frames longer
  * than the reflow it is really there to wait out. `DOM_QUIET_CAP_MS` stops the
  * wait dead if something on the page mutates forever — a dev-server heartbeat, a
