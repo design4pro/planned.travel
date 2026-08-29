@@ -71,21 +71,23 @@ export const REMINDER_MARKER_PREFIX = 'reminded:'
 export const REMINDER_MARKER_TTL_SECONDS = 30 * 24 * 60 * 60
 
 /**
- * The notification kind, and therefore the row the preference table is keyed by: switching
- * `trip.reminder` off in notification settings switches off exactly these.
- */
-export const REMINDER_EVENT_KIND = 'trip.reminder'
-
-/**
- * The catalogue key the sentence is rendered from — `shell.notification.trip.starting_soon.*`,
- * which ships in all twenty-three locales and already takes `{tripTitle}` and a plural `{days}`.
+ * The notification kind — one name doing every job this event has.
  *
- * Deliberately *not* {@link REMINDER_EVENT_KIND}: `titleKey` defaults to the kind, and a
- * `trip.reminder` key does not exist in the catalogue, so the default would render the fallback
- * line ("Something changed in your workspace") on every reminder. Copy is never written here
- * (`docs/SPEC.md` §9), so the event names the shipped template instead of inventing one.
+ * It is the `eventType` the preference table is keyed by, so switching "Departure reminders" off
+ * in notification settings — the row `NOTIFICATION_EVENTS` draws that switch from — switches off
+ * exactly these; it is the catalogue key the sentence renders from
+ * (`shell.notification.trip.starting_soon.*`, shipped in all twenty-three locales and already
+ * taking `{tripTitle}` and a plural `{days}`), so `titleKey`/`bodyKey` are simply left to default
+ * to it; and it is the `<kind>` segment of the envelope id dispatch keys the email by.
+ * `docs/SPEC.md` §8: one concept, one owner.
+ *
+ * What this replaced, and why none of it survives: a separate `trip.reminder` kind, with a second
+ * constant overriding the copy key back to this one. No screen, no bulk write and no seed has ever
+ * written a `trip.reminder` preference row, so the opt-out was looked up under a name nothing
+ * could set and suppressed nothing — the override was working around that, not the catalogue gap
+ * it named.
  */
-export const REMINDER_COPY_KEY = 'trip.starting_soon'
+export const REMINDER_EVENT_KIND = 'trip.starting_soon'
 
 /**
  * The `entityId` the notification and its queue envelope are keyed by.
@@ -311,8 +313,7 @@ async function remindTrip(
       // No `actorUserId`: a reminder excludes nobody, and dispatch drops the actor — naming one
       // would deny that person the reminder for their own trip.
       scope: 'trip',
-      titleKey: REMINDER_COPY_KEY,
-      bodyKey: REMINDER_COPY_KEY,
+      // No `titleKey`/`bodyKey`: both default to the kind, which is the shipped catalogue key.
       titleParams: params,
       bodyParams: params,
       actionUrl: `/trips/${due.tripId}`,

@@ -321,9 +321,33 @@ The collision this section used to report is repaired and stays repaired. The sh
 once hardcoded its SQL name, so `currency` and `originalCurrency` mapped to one column and the
 source currency was discarded on write; the builder now takes a name
 (`const currency = (name = 'currency') => …`) and migration `0001_aspiring_cargill` rebuilt the
-`expenses` table to add the columns. No row was ever corrupted. That migration is a table recreate
-rather than an `ADD COLUMN`, which is why it has a row in the register in `docs/DEPLOY.md` §12 — and
-why `0006_mighty_nehzno`, which gave `settlements` the same three columns, is `ADD COLUMN` only.
+`expenses` table to add the columns. That migration is a table recreate rather than an `ADD COLUMN`,
+which is why it has a row in the register in `docs/DEPLOY.md` §12 — and why `0006_mighty_nehzno`,
+which gave `settlements` the same three columns, is `ADD COLUMN` only.
+
+No row carries the corruption that the recreate could have written, and that is measured rather
+than assumed. `0001`'s copy statement selects `"original_currency"` out of a table that did not have the
+column yet, and SQLite's double-quoted-string fallback — on in D1 — resolves an identifier it cannot
+bind as a text literal instead of failing, so every row that predated the migration would have been
+given the 17-character string `'original_currency'`. Both deployed databases were counted on
+2026-08-28:
+
+```sh
+# and the same again with `--env staging` against planned-travel-db-staging
+pnpm exec wrangler d1 execute planned-travel-db --remote --command \
+  "select count(*) as total,
+          sum(case when original_currency = 'original_currency' then 1 else 0 end) as corrupted
+   from expenses;"
+
+planned-travel-db          [{"total":0,"corrupted":null}]
+planned-travel-db-staging  [{"total":0,"corrupted":null}]
+```
+
+`corrupted` is `null` because it is a `sum()` over an empty set: `expenses` holds no rows at all in
+either database. No corrupted row can appear later either: `0000` and `0001` land in the same
+commit, so every database built from this repository applies them back-to-back into an empty table. The guard against
+a _later_ migration repeating the mistake is
+`src/server/db/__tests__/migration-quoted-identifiers.test.ts`.
 
 `settlements` in this dataset is still trip-currency only, so its three columns are `NULL` on every
 seeded row. That is the reading the repository fixes: a settlement with none of the three was paid
