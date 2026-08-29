@@ -8,6 +8,7 @@
  */
 
 import { readFileSync, readdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -64,6 +65,9 @@ describe('anonymousOnlyRefusal', () => {
 
 const AUTH_ROUTES_DIR = 'src/routes/(auth)'
 
+/** Anchored on this file, so the paths below do not depend on where the runner was started. */
+const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url))
+
 /** The shape that creates the trap: a route that throws a redirect at a signed-in visitor. */
 const SIGNED_IN_REDIRECT =
   /if\s*\(\s*[\w.]*\bsignedIn\s*\)\s*\{?\s*throw\s+redirect\s*\(/
@@ -76,18 +80,20 @@ const SIGNED_IN_REDIRECT =
  * under them is a route and none of it can carry the redirect that makes the trap.
  */
 function routeFiles(dir) {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    if (entry.name.startsWith('-')) return []
-    const path = `${dir}/${entry.name}`
-    if (entry.isDirectory()) return routeFiles(path)
-    return entry.name.endsWith('.tsx') ? [path] : []
-  })
+  return readdirSync(`${REPO_ROOT}${dir}`, { withFileTypes: true }).flatMap(
+    (entry) => {
+      if (entry.name.startsWith('-')) return []
+      const path = `${dir}/${entry.name}`
+      if (entry.isDirectory()) return routeFiles(path)
+      return entry.name.endsWith('.tsx') ? [path] : []
+    },
+  )
 }
 
 /** `createFileRoute('/(auth)/login')` is the route's own statement of its pathname. */
 function declaredPathname(source) {
   const match = /createFileRoute\(\s*['"]([^'"]+)['"]\s*\)/.exec(source)
-  return match?.[1].replace('/(auth)', '') ?? undefined
+  return match?.[1].replace('/(auth)', '')
 }
 
 /** Both sides are sorted before comparing, so file order alone is never reported as drift. */
@@ -98,7 +104,10 @@ function byRoute(a, b) {
 describe('drift against the routes', () => {
   it('lists exactly the (auth) routes that redirect a signed-in visitor', () => {
     const guarded = routeFiles(AUTH_ROUTES_DIR)
-      .map((route) => ({ route, source: readFileSync(route, 'utf8') }))
+      .map((route) => ({
+        route,
+        source: readFileSync(`${REPO_ROOT}${route}`, 'utf8'),
+      }))
       .filter(({ source }) => SIGNED_IN_REDIRECT.test(source))
       .map(({ route, source }) => ({
         pathname: declaredPathname(source),

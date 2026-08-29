@@ -36,7 +36,7 @@ export const ANONYMOUS_ONLY_ROUTES = [
  */
 export function anonymousOnlyRefusal(url) {
   const { pathname } = new URL(url)
-  const screen = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  const screen = pathname.replace(/\/+$/, '') || '/'
   const entry = ANONYMOUS_ONLY_ROUTES.find((r) => r.pathname === screen)
   if (!entry) return undefined
 

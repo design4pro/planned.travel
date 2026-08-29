@@ -197,13 +197,11 @@ async function settle(page, { map }) {
 }
 
 async function main() {
-  await mkdir(outDir, { recursive: true })
-
   const wantsAuth = flag('auth')
 
-  // Refused before the browser is even launched: once the frame exists there is nothing left
-  // downstream to tell a redirect target apart from the product. Which screens, and why that list
-  // is short: ./anonymous-only.mjs.
+  // Both refusals come before anything is created or launched: once a frame exists there is
+  // nothing left downstream to tell a redirect target apart from the product. Which screens are
+  // anonymous-only, and why that list is short: ./anonymous-only.mjs.
   const refusal = wantsAuth ? anonymousOnlyRefusal(url) : undefined
   if (refusal) {
     console.error(`capture: ${refusal}`)
@@ -217,6 +215,8 @@ async function main() {
     )
     process.exit(2)
   }
+
+  await mkdir(outDir, { recursive: true })
 
   const browser = await chromium.launch()
   const context = await browser.newContext({
@@ -261,14 +261,13 @@ async function main() {
     for (const theme of themes) {
       await page.emulateMedia({ colorScheme: theme })
       await page.goto(url, { waitUntil: 'commit', timeout: 45_000 })
-      const landedUrl = page.url()
 
       // A cached session that has expired does not fail — it redirects, and the frame filed is the
       // login screen. A critic handed that reports the product as having no content at all. Refuse
       // it here, where the fix is one command, rather than downstream where it is a wasted round.
-      if (wantsAuth && new URL(landedUrl).pathname.startsWith('/login')) {
+      if (wantsAuth && new URL(page.url()).pathname.startsWith('/login')) {
         throw new Error(
-          `--auth was asked for but ${url} redirected to ${landedUrl}. The cached session in ` +
+          `--auth was asked for but ${url} redirected to ${page.url()}. The cached session in ` +
             `${AUTH_STATE} is stale or the workspace is unseeded. Refresh it with: ` +
             `PLAYWRIGHT_BASE_URL=${new URL(url).origin} pnpm exec playwright test --project=setup`,
         )
@@ -317,7 +316,15 @@ async function main() {
             `suspiciously flat for a ${vp.w}px frame, likely shot before the page finished painting`,
         )
       }
-      files.push({ viewport: vp.name, theme, landedUrl, path, bytes: size })
+      // Read back at the shutter rather than at the response, so a redirect the app makes after
+      // hydration — and a `--click` that navigates — is the URL reported for this frame.
+      files.push({
+        viewport: vp.name,
+        theme,
+        landedUrl: page.url(),
+        path,
+        bytes: size,
+      })
     }
   }
 
