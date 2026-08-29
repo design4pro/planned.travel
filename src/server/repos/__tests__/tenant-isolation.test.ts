@@ -1808,6 +1808,11 @@ describe('tenant isolation', () => {
         beta.tenant.ownerUserId,
         STAT_YEAR,
       )
+      const ownYear = await recomputeTravelStats(
+        alpha.tenant.scope,
+        alpha.tenant.ownerUserId,
+        STAT_YEAR,
+      )
 
       // All-time reads the traveller's own visited list, which A cannot see.
       expect(allTime.countryCount).toBe(0)
@@ -1815,15 +1820,9 @@ describe('tenant isolation', () => {
       // two-country trip is in A's organization and B's owner is on none of it, so the set is empty
       // — where before the amendment this row printed A's own count of 2.
       expect(yearRow.countryCount).toBe(0)
-      expect(
-        (
-          await recomputeTravelStats(
-            alpha.tenant.scope,
-            alpha.tenant.ownerUserId,
-            STAT_YEAR,
-          )
-        ).countryCount,
-      ).toBe(2)
+      // A's owner is on that trip, so the two codes are there to be counted and the zero above is
+      // the membership predicate rather than an unreadable column.
+      expect(ownYear.countryCount).toBe(2)
     })
 
     it('leaves A’s own trip figures off the foreign traveller’s rows', async () => {
@@ -1944,6 +1943,37 @@ describe('tenant isolation', () => {
       expect(owner.tripCount).toBe(1)
       expect(owner.lastTripId).toBe(alpha.tripId)
       expect(owner.spendMinor).toBeGreaterThan(0)
+    })
+
+    it('counts an organization-visible trip no more than a private one', async () => {
+      // Membership, never readability: `visibility: 'organization'` makes the trip one A's second
+      // traveller may open, which is not the same as one they are travelling on.
+      await createTrip(alpha.tenant.scope, {
+        title: 'Open to the workspace',
+        startDate: `${STAT_YEAR}-09-01`,
+        endDate: `${STAT_YEAR}-09-04`,
+        countryCodes: ['IT'],
+        currency: 'EUR',
+        visibility: 'organization',
+      })
+
+      const outsider = await recomputeTravelStats(
+        alpha.tenant.scope,
+        alpha.secondUserId,
+        STAT_YEAR,
+      )
+      const owner = await recomputeTravelStats(
+        alpha.tenant.scope,
+        alpha.tenant.ownerUserId,
+        STAT_YEAR,
+      )
+
+      expect(outsider.tripCount).toBe(0)
+      expect(outsider.countryCount).toBe(0)
+      expect(outsider.lastTripId).toBeNull()
+      // The trip is there, and on the owner's row it is counted: the zeros above are the membership
+      // predicate and not a missing trip.
+      expect(owner.tripCount).toBe(2)
     })
 
     it('empties a year row a membership no longer supports', async () => {

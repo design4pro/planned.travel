@@ -871,7 +871,8 @@ export async function upsertTravelStats(
  * statement that is already reading the rows rather than becoming one membership query per trip.
  * The trip column is a parameter because the two callers correlate against different tables:
  * `trips.id` for the trip rows themselves, and `transports.trip_id` for the leg distances, which are
- * selected by the leg's own departure date rather than through the trip ids.
+ * selected by the leg's own departure date rather than through the trip ids. Either correlation is an
+ * index probe rather than a scan: `trip_members_trip_user_unq` covers exactly `(trip_id, user_id)`.
  */
 function memberOfTrip(
   scope: TenantScope,
