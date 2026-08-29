@@ -7,7 +7,9 @@
  *
  * So the script is driven for real: a scratch git repo, a `pnpm` stub on PATH that records the
  * argument vector Playwright would have been given and can be told to fail with or without writing
- * a results file, and the verdict JSON read back off disk. Only the flag-form assertion is static.
+ * a results file, and the verdict JSON read back off disk. The script's text is copied, never
+ * asserted on: an assertion over the source goes red on a reformat and stays green on a behaviour
+ * change, which is the wrong way round for a guard against silence.
  */
 import { spawnSync } from 'node:child_process'
 import {
@@ -177,11 +179,21 @@ function readEnvFile(path: string): Record<string, string> {
 /**
  * Runs the real script inside a scratch repo. `pwExit` is what the Playwright stub exits with,
  * `results` is what that stub writes to `test-results/results.json`, and `staleResults` is a file
- * left behind by an earlier run before this one starts.
+ * left behind by an earlier run before this one starts. `touch` commits those paths on a branch
+ * off `main` so the UI-touched heuristic has a real diff to read; `forceE2e` defaults to true so
+ * that every other test reaches the Playwright step whatever it touched, and the heuristic's own
+ * tests set it false to let it decide.
  */
 function runValidate(
-  opts: { pwExit?: number; results?: string; staleResults?: string } = {},
+  opts: {
+    pwExit?: number
+    results?: string
+    staleResults?: string
+    touch?: string[]
+    forceE2e?: boolean
+  } = {},
 ): Run {
+  const { forceE2e = true } = opts
   const dir = mkdtempSync(join(tmpdir(), 'validate-sh-'))
   scratchDirs.push(dir)
   // Loudly, because a git call that silently fails here leaves every later assertion reading a
@@ -199,6 +211,16 @@ function runValidate(
   }
   git('init', '-q', '-b', 'main')
   git('commit', '-q', '--allow-empty', '-m', 'base')
+  // Before the harness writes its own files, so the committed diff is exactly what was asked for.
+  if (opts.touch?.length) {
+    git('checkout', '-q', '-b', 'work')
+    for (const path of opts.touch) {
+      mkdirSync(join(dir, dirname(path)), { recursive: true })
+      writeFileSync(join(dir, path), '// touched\n')
+    }
+    git('add', '-A')
+    git('commit', '-q', '-m', 'touch')
+  }
 
   mkdirSync(join(dir, '.sandcastle'))
   writeFileSync(join(dir, '.sandcastle', 'validate.sh'), SCRIPT)
@@ -231,7 +253,7 @@ function runValidate(
       '.sandcastle/validate.sh',
       '--json-out',
       '.sandcastle-validation.json',
-      '--force-e2e',
+      ...(forceE2e ? ['--force-e2e'] : []),
     ],
     {
       cwd: dir,
@@ -260,21 +282,11 @@ function runValidate(
 }
 
 describe('the Playwright reporter declaration', () => {
-  it('is declared exactly once, comma-separated, and includes json', () => {
-    // Playwright's CLI takes `--reporter <reporter>` as one comma-separated value, so a repeated
-    // flag is not a list: the last occurrence wins and the others are dropped.
-    const pwArgs = SCRIPT.match(/^\s*PW_ARGS=\((.*)\)\s*$/m)?.[1] ?? ''
-    expect(pwArgs).toContain('--workers=') // the array itself still parses
-    expect(pwArgs.match(/--reporter\S*/g)).toEqual([
-      '--reporter=line,json,html',
-    ])
-    // ...and nowhere else either: a second declaration further down would win over this one.
-    expect(SCRIPT.match(/--reporter=[^\s)]+/g)).toEqual([
-      '--reporter=line,json,html',
-    ])
-  })
-
   it('reaches the runner as a single argument, alongside the JSON output path', () => {
+    // Playwright's CLI takes `--reporter <reporter>` as one comma-separated value, so a repeated
+    // flag is not a list: the last occurrence wins and the others are dropped. Asserted on the
+    // argv the runner was handed, which is the thing that decides whether results.json is written
+    // — a second declaration anywhere in the script would show up here as a second element.
     const run = runValidate()
     expect(run.pwArgs.filter((a) => a.startsWith('--reporter'))).toEqual([
       '--reporter=line,json,html',
@@ -354,6 +366,57 @@ describe('a green e2e step', () => {
 
     expect(run.stderr).not.toMatch(/WARN/)
     expect(run.verdict).toMatchObject({ ok: true, e2e: { failed: [] } })
+    expect(run.status).toBe(0)
+  })
+})
+
+describe('the e2e rung', () => {
+  it('is announced, and tails its log when red, like every other step', () => {
+    // It used to be a hand-copy of run_step: its own `date` pair, its own tail redirect, its own
+    // record_step call and its own failure header. Two copies of how a step is run is how they
+    // drift, so this pins the observable half of the shared path — the announcement on both sides
+    // and the log tail on the red one.
+    const green = runValidate({ pwExit: 0 })
+    expect(green.stderr).toContain('==> e2e OK')
+
+    const red = runValidate({ pwExit: 1, results: RESULTS_FIXTURE })
+    expect(red.stderr).toContain('==> STEP FAILED: e2e')
+    // The tail is the line reporter's own output, which is what the warning points at when the
+    // verdict can name nothing.
+    expect(red.stderr).toContain('Running 169 tests using 4 workers')
+  })
+})
+
+describe('the UI-touched heuristic', () => {
+  // Untested until now, and its failure mode is the same silence #97 was: a path drops out of the
+  // glob, e2e quietly stops running for a whole class of change, and the verdict is green.
+  it('runs the suite for a change under src/components', () => {
+    const run = runValidate({
+      touch: ['src/components/trip-card.tsx'],
+      forceE2e: false,
+    })
+
+    expect(run.verdict.uiTouched).toBe(true)
+    expect(run.verdict.steps.map((s) => s.name)).toContain('e2e')
+    expect(run.pwArgs).toContain('--workers=4')
+  })
+
+  it('skips it for a server-only change', () => {
+    // Deliberate: server-only issues get vitest here and the full suite once per iteration from
+    // the Auditor. See the heuristic's own comment.
+    const run = runValidate({
+      touch: ['src/server/repos/trips.ts'],
+      forceE2e: false,
+    })
+
+    expect(run.verdict.uiTouched).toBe(false)
+    expect(run.verdict.steps.map((s) => s.name)).toEqual([
+      'route-tree',
+      'typecheck',
+      'lint',
+      'vitest',
+    ])
+    expect(run.pwArgs).toEqual([])
     expect(run.status).toBe(0)
   })
 })
