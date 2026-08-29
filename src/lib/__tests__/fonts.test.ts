@@ -19,7 +19,7 @@ const read = (relative: string) =>
 
 /**
  * Every family in the request, and the script each one is there to draw. Geist
- * and MuseoModerno are the two faces `docs/DESIGN.md` pins; the six Noto cuts
+ * and MuseoModerno are the two faces `DESIGN.md` pins; the six Noto cuts
  * are the scripts neither of them serves.
  */
 const REQUESTED_FAMILIES = [

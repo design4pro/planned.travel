@@ -5,7 +5,7 @@ the end of this file, fill every heading, delete nothing. The headings are the c
 plan and the agent that executes it: an orchestrator reads **Owned paths** to fan out without
 collisions, and an auditor reads **Definition of done** to decide whether the stage closed.
 
-Read `docs/SPEC.md`, `docs/DESIGN.md` and `docs/ARCHITECTURE.md` before writing a stage. This file
+Read `docs/SPEC.md`, `DESIGN.md` and `docs/ARCHITECTURE.md` before writing a stage. This file
 does not restate them; it says where each of their requirements is answered.
 
 ## How a plan file is shaped

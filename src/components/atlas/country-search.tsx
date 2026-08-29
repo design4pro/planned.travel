@@ -75,7 +75,7 @@ import type {
 /**
  * How long the camera takes to reach a search result.
  *
- * `docs/DESIGN.md` puts motion between 150 and 260ms, and a search result is UI
+ * `DESIGN.md` puts motion between 150 and 260ms, and a search result is UI
  * motion: it is the answer to a keystroke, and the reader still has their hands
  * on the keyboard. That is a different act from `MAP_FIT_DURATION`'s deliberate
  * 620ms tour of a whole trip, which is why this move is assembled here from the

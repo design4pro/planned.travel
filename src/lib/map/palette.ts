@@ -8,7 +8,7 @@
  * by a stated rule. `tokens.css` remains the source of truth — when a token
  * moves, change it there first and then mirror it here.
  *
- * Two full palettes, light and dark, built to the intent in `docs/DESIGN.md`:
+ * Two full palettes, light and dark, built to the intent in `DESIGN.md`:
  * warm paper land, muted water, restrained road hierarchy, ink-tier labels.
  * Dark is a warm charcoal cartography in its own right, never an inverted copy
  * of the light one.

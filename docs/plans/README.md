@@ -84,14 +84,14 @@ does is sanctioned; carrying its text into this repository is not.
 
 These six paths are **never claimed by a feature stage**, in any plan, in any wave:
 
-| Path                      | Why it is shared                                                                              |
-| ------------------------- | --------------------------------------------------------------------------------------------- |
-| `src/server/db/schema.ts` | Every table lives in one module; two stages adding columns in parallel corrupt each other.    |
-| `src/server/worker.ts`    | The Worker entry re-exports the Durable Object, the queue consumer and the cron handler.      |
-| `wrangler.jsonc`          | Bindings, migrations, limits and triggers — one file, one deployment, one owner.              |
-| `src/styles/tokens.css`   | The whole token contract of `docs/DESIGN.md`. A second writer produces a silent visual drift. |
-| `src/components/ui/**`    | The design-system primitives. A duplicate primitive is a defect, not a merge conflict.        |
-| `src/routeTree.gen.ts`    | Generated. Never hand-edited; produced by `pnpm generate-routes` after a route file lands.    |
+| Path                      | Why it is shared                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| `src/server/db/schema.ts` | Every table lives in one module; two stages adding columns in parallel corrupt each other. |
+| `src/server/worker.ts`    | The Worker entry re-exports the Durable Object, the queue consumer and the cron handler.   |
+| `wrangler.jsonc`          | Bindings, migrations, limits and triggers — one file, one deployment, one owner.           |
+| `src/styles/tokens.css`   | The whole token contract of `DESIGN.md`. A second writer produces a silent visual drift.   |
+| `src/components/ui/**`    | The design-system primitives. A duplicate primitive is a defect, not a merge conflict.     |
+| `src/routeTree.gen.ts`    | Generated. Never hand-edited; produced by `pnpm generate-routes` after a route file lands. |
 
 **`00-foundations.md` governs all six, and its stages are wave 0.** A feature stage that needs a new
 column, a new binding, a new token or a new primitive does not write it — it states the requirement

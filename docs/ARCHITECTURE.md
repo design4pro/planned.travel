@@ -1,6 +1,6 @@
 # planned.travel — Architecture
 
-Engineering companion to `docs/SPEC.md` (product contract) and `docs/DESIGN.md` (visual
+Engineering companion to `docs/SPEC.md` (product contract) and `DESIGN.md` (visual
 contract). This document describes what is actually deployed: one Cloudflare Worker, the
 bindings it holds, where every millisecond and every cent goes, and the specific levers that
 take the system from the 10-user first release to five figures of users without a rewrite.
@@ -138,7 +138,7 @@ slices that matter.
   conditions, and neither implies the other** — the difference is deliberate rather than an
   oversight, and neither of them is "every delivery".
   `invalidateEntitlements()` has six call sites in `src/server/billing/webhook.ts`, and the rule
-  they follow is *every branch that could have changed what this tenant may do*. That includes the
+  they follow is _every branch that could have changed what this tenant may do_. That includes the
   two branches that write no row at all — a refund, and a subscription for a product this
   deployment does not sell — because both mean the cached answer may now be stale. It excludes two
   branches that resolve an organization and deliberately leave the key warm: `order.paid` against a
@@ -166,7 +166,7 @@ slices that matter.
   `prettier/standalone`, `prettier/plugins/html` and `html-to-text`, and this module is reachable
   from Better Auth and therefore from every authenticated request.
   **Known departure from the inline rule, recorded rather than implied:** `queueAuthEmail()`
-  awaits the render *before* it enqueues, so React's streaming renderer runs inside the request
+  awaits the render _before_ it enqueues, so React's streaming renderer runs inside the request
   that triggered the mail. Only delivery is queued today. `docs/SPEC.md` §3 carries this as
   follow-up **F1**, with the reason it is not a one-line move, alongside **F2** — `queueAuthEmail()`
   has three callers, all Better Auth hooks in `src/server/auth/index.ts`, so **six** of the nine
@@ -231,16 +231,16 @@ complete list, with what each one is for, is `.dev.vars.example`.
 Four caches, each with an explicit owner and an explicit invalidation trigger. Nothing relies
 on a TTL alone to become correct.
 
-| Layer                         | Key                          | TTL                               | Invalidated by                                                                                                         |
-| ----------------------------- | ---------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Browser, immutable assets     | hashed `/assets/*` filename  | 1 year, `immutable`               | a new build (new filename)                                                                                             |
-| Browser, tile archive by name | `/api/tiles/<key>`           | 1 year, `immutable`               | never — keys are published, not overwritten                                                                            |
-| Browser, tile alias           | `/api/tiles/basemap.pmtiles` | `max-age=3600, s-maxage=31536000` | 1 h in the browser; instantly at the edge when `TILES_ARCHIVE_KEY` changes, because the edge key is the _resolved_ key |
-| Cache API, tile slices        | `…/<key>?__bytes=<ranges>`   | follows `Cache-Control` above     | entity-tag mismatch on read (entry dropped), or repointing the alias                                                   |
-| Cache API, tile metadata      | `…/<key>?__meta=1`           | 24 h                              | entity-tag mismatch, or a 404 on the object (entry dropped)                                                            |
+| Layer                         | Key                              | TTL                               | Invalidated by                                                                                                                              |
+| ----------------------------- | -------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Browser, immutable assets     | hashed `/assets/*` filename      | 1 year, `immutable`               | a new build (new filename)                                                                                                                  |
+| Browser, tile archive by name | `/api/tiles/<key>`               | 1 year, `immutable`               | never — keys are published, not overwritten                                                                                                 |
+| Browser, tile alias           | `/api/tiles/basemap.pmtiles`     | `max-age=3600, s-maxage=31536000` | 1 h in the browser; instantly at the edge when `TILES_ARCHIVE_KEY` changes, because the edge key is the _resolved_ key                      |
+| Cache API, tile slices        | `…/<key>?__bytes=<ranges>`       | follows `Cache-Control` above     | entity-tag mismatch on read (entry dropped), or repointing the alias                                                                        |
+| Cache API, tile metadata      | `…/<key>?__meta=1`               | 24 h                              | entity-tag mismatch, or a 404 on the object (entry dropped)                                                                                 |
 | KV, plan state                | `billing:plan:<version>:<orgId>` | 60 s                              | **two writers, both explicit** — the Polar webhook on every subscription event, and `changePlan()` in the same request that made the change |
-| KV, session                   | Better Auth session id       | session lifetime, 60 s floor      | logout, password change, session revocation                                                                            |
-| KV, queue idempotency         | `task:done:<id>`             | 24 h                              | not invalidated — expiry _is_ the semantics                                                                            |
+| KV, session                   | Better Auth session id           | session lifetime, 60 s floor      | logout, password change, session revocation                                                                                                 |
+| KV, queue idempotency         | `task:done:<id>`                 | 24 h                              | not invalidated — expiry _is_ the semantics                                                                                                 |
 
 Three rules that are not negotiable:
 
@@ -275,14 +275,14 @@ assembled.
 Only one function deletes the key — `invalidateEntitlements()`, also in `entitlements.ts` — and
 exactly two paths call it:
 
-| Writer | Where | When |
-| --- | --- | --- |
+| Writer            | Where                                                                                                | When                                                                                                                                                                                                                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The Polar webhook | `src/server/billing/webhook.ts`, six call sites across its subscription, order and checkout branches | Asynchronously, on every delivery that could have changed what the tenant may do — including the two branches that write no row, and excluding the two that resolve an organization and change nothing (§2.4). This is the reconciler and it runs on its own schedule, not ours. |
-| `changePlan()` | `src/server/billing/checkout.ts`, through the local `evictPlanState()` helper, in a `finally` | Synchronously, inside the request that made the change — an in-app upgrade, downgrade or seat resize, which we apply with `PATCH /v1/subscriptions/{id}` rather than through a hosted flow. |
+| `changePlan()`    | `src/server/billing/checkout.ts`, through the local `evictPlanState()` helper, in a `finally`        | Synchronously, inside the request that made the change — an in-app upgrade, downgrade or seat resize, which we apply with `PATCH /v1/subscriptions/{id}` rather than through a hosted flow.                                                                                      |
 
 The second writer is not a duplicate of the first, and rule 2 above is why. `changePlan()` mutates
 entitlement state inside our own request, so it owes the whole write shape §2.2 sets out: write D1
-from the provider's answer, *then* delete the key that answer makes stale. Two failure modes were
+from the provider's answer, _then_ delete the key that answer makes stale. Two failure modes were
 walked to get here and both are worth keeping written down:
 
 - **Evicting without writing is inert.** The next read misses, re-reads the same unchanged row and
@@ -525,27 +525,27 @@ Starter's $950, which carries no plan fee because Starter is free.
 All fourteen rows describe code that is on disk right now, rows 8 and 9 included: phase A
 replaced the superseded provider integration wholesale, so the Polar handler those two rows
 describe is the mounted one. Every row is present tense and can be checked against the file it
-names. What rows 8 and 9 cannot yet claim is a *walk* — `docs/DEPLOY.md` §9.11's eight-row sandbox
+names. What rows 8 and 9 cannot yet claim is a _walk_ — `docs/DEPLOY.md` §9.11's eight-row sandbox
 matrix is unwalked and no credential has been issued, so their evidence is our tests, not Polar's
 agreement. The note under the table says which of their properties is a design target the code
 still owes.
 
-| #   | Failure                                           | Blast radius                              | Detection                                                                                          | Mitigation in the code today (rows 8 and 9: phase A)                                                                                                                                         |
-| --- | ------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | D1 unavailable or timing out                      | all authenticated reads and writes        | `checkReadiness` probe (`src/server/observability/health.ts`); error-rate spike on `outcome=error` | read-only queries are auto-retried by D1 (up to 2); writes are wrapped in explicit idempotent retries; the marketing pages never touch D1 so the front door stays up                         |
-| 2   | KV read returns stale data                        | one tenant sees a stale plan for ≤ 60 s   | plan mismatch between webhook log and quota decision                                               | 60 s TTL plus explicit invalidation from the webhook; usage never cached; entitlement downgrades take effect on the next check, never mid-request                                            |
-| 3   | R2 object missing or replaced under a live key    | map degrades to no basemap                | `x-tiles-cache` miss rate; 204 rate on the alias, 404 rate on a named key                          | metadata is dropped when a read finds the object gone; slices are dropped on entity-tag mismatch, so a replaced archive can never be served half-old, half-new       |
-| 4   | Cache API `put`/`match` failure                   | one uncached read, higher R2 op count     | `tile cache operation failed` warning line                                                         | every cache call is wrapped; a fault degrades to an R2 read and never fails the request                                                                                                      |
-| 5   | A trip room gets hot (many editors, huge patches) | one trip                                  | DO CPU/duration metrics; client-visible rate-limit errors                                          | 32 KiB frames, 40 msg/s per connection, bounded patch log and tombstone TTL; the object is the only thing that slows down                                                                    |
-| 6   | Durable Object evicted mid-session                | one trip's clients reconnect              | reconnect rate                                                                                     | clients re-handshake and resnapshot via `partysocket`; D1 holds the durable record, so the worst case is replaying recent patches                                                            |
-| 7   | Queue consumer failing on a poison message        | one job kind                              | retry count, then DLQ depth                                                                        | 5 retries with 10 s delay, then the dead-letter queue; envelopes carry idempotency keys, so redelivery is safe; DLQ diagnostics are kept 14 days                                             |
-| 8   | Third-party outage (Polar, email provider)        | billing changes and notifications delayed | job failure logs, DLQ depth                                                                        | Third-party calls happen in queue handlers rather than inline; webhooks are idempotent by event id; Polar retries on its side, up to ten times with exponential backoff, and we retry on ours. One inline provider read survives on the plan-change path and the note below names it |
-| 9   | Polar webhook replay or forgery                   | billing state                             | signature failures in logs                                                                         | The `{webhook-id}.{webhook-timestamp}.{raw body}` signature is verified with WebCrypto (HMAC-SHA256) inside a 300 s tolerance; the event id is claimed in KV before any state change, and released again if a handler throws so the provider's retry is free to try once more |
-| 10  | Runaway range request (huge or many-part)         | one request's CPU and memory              | 400/416 rate on `/api/tiles/*`                                                                     | ≤ 8 range specs, ≤ 8 MiB assembled multipart, ≤ 24 MiB cached per entry, everything above streams without buffering                                                                          |
-| 11  | Quota bypass attempt via a new code path          | one tenant over its ceiling               | quota-exceeded counters versus plan                                                                | quotas live at the repository boundary, so a new route or job cannot skip them                                                                                                               |
+| #   | Failure                                           | Blast radius                              | Detection                                                                                          | Mitigation in the code today (rows 8 and 9: phase A)                                                                                                                                                                                                                                                                                                       |
+| --- | ------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | D1 unavailable or timing out                      | all authenticated reads and writes        | `checkReadiness` probe (`src/server/observability/health.ts`); error-rate spike on `outcome=error` | read-only queries are auto-retried by D1 (up to 2); writes are wrapped in explicit idempotent retries; the marketing pages never touch D1 so the front door stays up                                                                                                                                                                                       |
+| 2   | KV read returns stale data                        | one tenant sees a stale plan for ≤ 60 s   | plan mismatch between webhook log and quota decision                                               | 60 s TTL plus explicit invalidation from the webhook; usage never cached; entitlement downgrades take effect on the next check, never mid-request                                                                                                                                                                                                          |
+| 3   | R2 object missing or replaced under a live key    | map degrades to no basemap                | `x-tiles-cache` miss rate; 204 rate on the alias, 404 rate on a named key                          | metadata is dropped when a read finds the object gone; slices are dropped on entity-tag mismatch, so a replaced archive can never be served half-old, half-new                                                                                                                                                                                             |
+| 4   | Cache API `put`/`match` failure                   | one uncached read, higher R2 op count     | `tile cache operation failed` warning line                                                         | every cache call is wrapped; a fault degrades to an R2 read and never fails the request                                                                                                                                                                                                                                                                    |
+| 5   | A trip room gets hot (many editors, huge patches) | one trip                                  | DO CPU/duration metrics; client-visible rate-limit errors                                          | 32 KiB frames, 40 msg/s per connection, bounded patch log and tombstone TTL; the object is the only thing that slows down                                                                                                                                                                                                                                  |
+| 6   | Durable Object evicted mid-session                | one trip's clients reconnect              | reconnect rate                                                                                     | clients re-handshake and resnapshot via `partysocket`; D1 holds the durable record, so the worst case is replaying recent patches                                                                                                                                                                                                                          |
+| 7   | Queue consumer failing on a poison message        | one job kind                              | retry count, then DLQ depth                                                                        | 5 retries with 10 s delay, then the dead-letter queue; envelopes carry idempotency keys, so redelivery is safe; DLQ diagnostics are kept 14 days                                                                                                                                                                                                           |
+| 8   | Third-party outage (Polar, email provider)        | billing changes and notifications delayed | job failure logs, DLQ depth                                                                        | Third-party calls happen in queue handlers rather than inline; webhooks are idempotent by event id; Polar retries on its side, up to ten times with exponential backoff, and we retry on ours. One inline provider read survives on the plan-change path and the note below names it                                                                       |
+| 9   | Polar webhook replay or forgery                   | billing state                             | signature failures in logs                                                                         | The `{webhook-id}.{webhook-timestamp}.{raw body}` signature is verified with WebCrypto (HMAC-SHA256) inside a 300 s tolerance; the event id is claimed in KV before any state change, and released again if a handler throws so the provider's retry is free to try once more                                                                              |
+| 10  | Runaway range request (huge or many-part)         | one request's CPU and memory              | 400/416 rate on `/api/tiles/*`                                                                     | ≤ 8 range specs, ≤ 8 MiB assembled multipart, ≤ 24 MiB cached per entry, everything above streams without buffering                                                                                                                                                                                                                                        |
+| 11  | Quota bypass attempt via a new code path          | one tenant over its ceiling               | quota-exceeded counters versus plan                                                                | quotas live at the repository boundary, so a new route or job cannot skip them                                                                                                                                                                                                                                                                             |
 | 12  | Bad deploy                                        | everything                                | smoke check in `deploy.yml`; error rate in Observability                                           | `wrangler rollback` (`docs/DEPLOY.md` §12). Migrations are additive, so the previous version keeps working against the new schema — **with the named exceptions §12 registers.** Migration `0002` renamed three columns, so a rollback past the phase-A release needs the schema moved back first; the register in §12 is what says which windows are safe |
-| 13  | Secret missing or rotated wrongly                 | the feature that needs it                 | first request throws a named error                                                                 | every secret is read through an accessor that fails loudly with the exact `wrangler secret put` command to run                                                                               |
-| 14  | Cron trigger missed or overlapping                | reminders late by one tick                | reminder lag in logs                                                                               | the reminder index is idempotent: the sweep enqueues by due-time prefix with deterministic ids, so a double sweep sends one email                                                            |
+| 13  | Secret missing or rotated wrongly                 | the feature that needs it                 | first request throws a named error                                                                 | every secret is read through an accessor that fails loudly with the exact `wrangler secret put` command to run                                                                                                                                                                                                                                             |
+| 14  | Cron trigger missed or overlapping                | reminders late by one tick                | reminder lag in logs                                                                               | the reminder index is idempotent: the sweep enqueues by due-time prefix with deterministic ids, so a double sweep sends one email                                                                                                                                                                                                                          |
 
 **The one property row 9 still owes, and where it lives.** §2.4 states the inline rule: nothing
 that calls a third party or writes more than one row happens inline. The mounted Polar handler
@@ -553,7 +553,7 @@ keeps it — every branch makes at most one small D1 write, deletes the plan-sta
 tenant may do could have changed, and hands whatever follows to `TASKS`, which for the subscription
 branches means a `billing.*` task when `movedState()` says the row moved and nothing when it did
 not (§2.4). The exception is not in the webhook at all; it is `changePlan()` in
-`src/server/billing/checkout.ts`, which is a *request* path rather than a webhook one and calls
+`src/server/billing/checkout.ts`, which is a _request_ path rather than a webhook one and calls
 `PATCH /v1/subscriptions/{id}` inline on purpose, so the billing screen is already correct when the
 customer is redirected back. That trade is deliberate and bounded: one provider call, one D1 write
 from the answer, one KV delete, no fan-out (§4).
@@ -564,6 +564,7 @@ tolerance and the KV claim on the event id are covered by
 computed out of band so that both halves of the check are not our own implementation. That is the
 strongest evidence available without a credential, and `docs/DEPLOY.md` §9.11 is explicit that it
 is still not a green row.
+
 ### Numbers worth alerting on
 
 - Worker error rate > 0.5% over 5 minutes.
@@ -578,3 +579,57 @@ is still not a green row.
   400-day window for ever. `drained: false` is the signal that the bound has stopped being a safety
   margin and started being a leak; unalerted, it is a line in a log nobody reads until the table is
   the largest thing in D1.
+
+## 10. Chrome geometry and stacking order
+
+Moved here from the former `docs/DESIGN.md` when that file became a descriptive design record. These are
+engineering invariants about layers, offsets and a third-party stylesheet, not visual language:
+`DESIGN.md` keeps the token contract and the two rules a designer needs (The Composed Offset Rule
+and The Single Reservation Rule), and the reasoning that produced them lives here.
+
+The bands are `--z-map-overlay 30`, `--z-map-surface 35`, `--z-nav 40`, `--z-dropdown 50`,
+`--z-overlay 60`, `--z-modal 70`, `--z-toast 80`, `--z-impersonation 90`. `--z-impersonation` is
+the top of the stack, one band above `--z-toast`: `docs/ACCESS.md` §6.1 requires that nothing can
+cover the control which ends an impersonated session, and a toast is the layer most likely to try.
+
+**A band binds nothing until the library inside it is bound.** Our toasts are `sonner`'s, and
+`sonner` pins its own container at `z-index: 999999999` — so for as long as `--z-toast` was
+merely declared, the tier above it described a layer nothing occupied while the real toast
+layer sat over the End impersonation control. `src/styles/styles.css` therefore carries
+`:root [data-sonner-toaster] { z-index: var(--z-toast) }`: one specificity step above the
+library's own selector, so it wins without `!important` and without depending on which
+stylesheet the browser saw last. `src/styles/__tests__/toast-stacking.test.ts` reads both files
+and fails if `sonner` restacks itself. A z token that a third-party stylesheet ignores is
+decoration, and this is the one band where that is a safety property rather than a nicety.
+
+**The top edge of the viewport is the shell's. The bottom edge is not, and reserving it there a
+second time is a regression.** `--impersonation-h` is the top one, and it has to be the shell's
+because nothing below the shell knows the bar exists. Below `lg` the mobile tab bar is `fixed`,
+so it displaces nothing and covers the last row of whatever is behind it — but the two things
+that clear it already exist, one per kind of screen: the content well pads for it
+(`AppFrame` ships `pb-[calc(var(--safe-bottom)+6rem)] lg:pb-16` and says so in its own
+docblock), and a full-bleed slice stops at its top edge by arithmetic, out of `MOBILE_TAB_BAR`.
+A third reservation around `<Outlet />` stacks on both: a second 65px box beneath the 96px the
+content well already pads leaves 31 + 65 = 96px of canvas visible below the bar instead of the
+31px gutter that was designed, on every non-bleed authenticated screen at 360 and 768. It
+shipped once, and every full-page mobile baseline in the suite was re-recorded around it before
+it was caught.
+
+What the shell does own at that edge is scroll geometry, which no padding on an ancestor can
+supply: `html:has([data-app-shell])` carries `scroll-padding-bottom` of the bar's whole box, so
+the browser stops short of it when it scrolls a focused field or an anchor into view. The
+selector is scoped because only this document has a tab bar — the marketing tree and the auth
+tree have no bottom chrome to clear.
+
+It shipped because a full-height screenshot composites a `position: fixed` element into the
+middle of a tall page, so a correctly-cleared bar photographs as if it were covering cards. That
+frame is not evidence about a fixed element in a scrolling viewport, and a capture artefact read
+as a defect produced a real one.
+
+Every chrome expression in the product is assembled from the inset lists in
+`src/lib/atlas/layout.ts` for the same reason `--impersonation-h` is a token: a hand-written
+`calc()` that forgets a hairline is a screen that overflows its own viewport by a pixel per
+term, and it does it silently. `documentHeight()` and `tripDocumentHeight()` sum the header, the
+slice and the row the slice leaves the fixed bar — which the shell's `min-h-svh` stretches over
+rather than pads for — and the tests beside that file assert both land on exactly one viewport
+at both breakpoints, with the impersonation bar present and absent.

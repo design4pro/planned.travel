@@ -829,7 +829,7 @@ it, and it holds no table of its own, so it cannot go stale the way a checked-in
   field and the save button. The add and remove buttons are real `IconButton`s with accessible names
   ("Add a stop after Nagoya"), never bare glyphs.
 
-**Motion, and the property it deliberately does not touch.** `docs/DESIGN.md` — "Transform and
+**Motion, and the property it deliberately does not touch.** `DESIGN.md` — "Transform and
 opacity only. Never animate layout-affecting properties." — rules out the obvious implementation
 here, which is to transition the chain's height as a row is inserted or removed. This stage does not
 do that, and the rule is restated in the stage because a chain editor is exactly the surface on which
@@ -2169,7 +2169,7 @@ store.**
   `button` with an accessible name that says what it does, not a `div` with a mouse handler.
 
 **Motion, and the property it deliberately does not touch.** A collapsing group is the second place
-in this plan where the reflex implementation is a height transition, and `docs/DESIGN.md` — "Transform
+in this plan where the reflex implementation is a height transition, and `DESIGN.md` — "Transform
 and opacity only. Never animate layout-affecting properties." — forbids it. The group body is mounted
 and unmounted rather than transitioned open: on expand the rows enter from `opacity: 0` /
 `translateY(-4px)` to their rest values over `--duration` on `--ease-out-quint`, staggered 24ms and
