@@ -15,6 +15,7 @@ import {
   createPlace,
   createTransport,
   createTrip,
+  getTravelStats,
   listTravelStats,
   markCountryVisited,
   upsertTravelStats,
@@ -124,7 +125,10 @@ async function figures(
   }))
 }
 
-/** One trip in 2026 with a place, a country and one dated flight leg. */
+/**
+ * One trip in 2026 with a place, a country and one dated flight leg, owned by the
+ * tenant's owner — who is therefore its only `trip_members` row.
+ */
 async function seedTravel(tenant: SeededTenant): Promise<void> {
   const trip = await createTrip(tenant.scope, {
     title: 'Lisbon in spring',
@@ -151,6 +155,39 @@ async function seedTravel(tenant: SeededTenant): Promise<void> {
     continent: 'Europe',
     visitedOn: '2026-04-10',
   })
+}
+
+/**
+ * A second traveller in the same workspace, with a trip of their own in the same
+ * year that the owner is not a member of.
+ */
+async function seedSecondTraveller(
+  tenant: SeededTenant,
+): Promise<{ userId: string; tripId: string }> {
+  const userId = await tenant.addUser('Second traveller')
+  const scope = tenant.scopeFor(userId)
+
+  const trip = await createTrip(scope, {
+    title: 'Kyoto in autumn',
+    startDate: '2026-10-02',
+    endDate: '2026-10-03',
+    countryCodes: ['JP'],
+    currency: 'JPY',
+  })
+  await createPlace(scope, {
+    tripId: trip.id,
+    name: 'Fushimi Inari',
+    city: 'Kyoto',
+  })
+  await createTransport(scope, {
+    tripId: trip.id,
+    title: 'Flight to Osaka',
+    mode: 'flight',
+    departureDate: '2026-10-02',
+    distanceMetres: 9_500_000,
+  })
+
+  return { userId, tripId: trip.id }
 }
 
 /* ------------------------------------------------------------------- tests */
@@ -369,6 +406,156 @@ describe('handleTravelStats', () => {
     ).catch((cause: unknown) => cause)
 
     expect(failure).toBeInstanceOf(TaskConfigurationError)
+  })
+})
+
+/**
+ * The `00-S4` amendment (PRD #104, decision 11): a trip is private to its members
+ * (ADR 0007), so every trip-derived figure on a person's row counts the trips
+ * that person is on. Before the amendment both travellers below carried the same
+ * eight workspace-wide numbers, and a private trip a traveller could not open
+ * still moved their statistics.
+ */
+describe('two members of one workspace, two trip memberships', () => {
+  it('gives each traveller their own trip’s figures and none of the other’s', async () => {
+    await seedTravel(alpha)
+    const secondTraveller = await seedSecondTraveller(alpha)
+
+    await recompute(
+      { userId: alpha.ownerUserId, statYear: 2026 },
+      context(alpha.organizationId),
+    )
+    await recompute(
+      { userId: secondTraveller.userId, statYear: 2026 },
+      context(alpha.organizationId),
+    )
+
+    expect(await figures(alpha, alpha.ownerUserId)).toEqual([
+      {
+        statYear: 2026,
+        tripCount: 1,
+        dayCount: 3,
+        placeCount: 1,
+        cityCount: 1,
+        countryCount: 1,
+        regionCount: 0,
+        distanceMetres: 1_720_000,
+        spendMinor: 0,
+        yearStreak: 0,
+        byContinent: { Europe: 1 },
+      },
+    ])
+    expect(await figures(alpha, secondTraveller.userId)).toEqual([
+      {
+        statYear: 2026,
+        tripCount: 1,
+        dayCount: 2,
+        placeCount: 1,
+        cityCount: 1,
+        countryCount: 1,
+        regionCount: 0,
+        distanceMetres: 9_500_000,
+        spendMinor: 0,
+        yearStreak: 0,
+        // The second traveller has visited nothing: `visited_countries` was
+        // already per-traveller and stays that way.
+        byContinent: {},
+      },
+    ])
+  })
+
+  it('takes the currency and the last trip from the traveller’s own trips', async () => {
+    await seedTravel(alpha)
+    const secondTraveller = await seedSecondTraveller(alpha)
+
+    await recompute(
+      { userId: secondTraveller.userId, statYear: 0 },
+      context(alpha.organizationId),
+    )
+
+    const row = await getTravelStats(alpha.scope, secondTraveller.userId, 0)
+    expect(row?.lastTripId).toBe(secondTraveller.tripId)
+    expect(row?.currency).toBe('JPY')
+    // The owner's Lisbon leg is in the same workspace and is not counted.
+    expect(row?.distanceMetres).toBe(9_500_000)
+  })
+
+  it('gives each traveller a streak of their own travelling years', async () => {
+    // The amendment's one derived figure. Three trips in three consecutive
+    // years in one workspace, split between two travellers: the owner is on
+    // 2026 and 2025, the second traveller on 2024 alone. When the year rows
+    // were the workspace's, both all-time rows read a streak of three - the
+    // same run of years, held by two people who did not travel together.
+    const soloTravellerId = await alpha.addUser('Travels alone')
+    const soloScope = alpha.scopeFor(soloTravellerId)
+
+    await createTrip(alpha.scope, {
+      title: 'Lisbon in spring',
+      startDate: '2026-04-10',
+      endDate: '2026-04-12',
+      currency: 'EUR',
+    })
+    await createTrip(alpha.scope, {
+      title: 'Porto the year before',
+      startDate: '2025-05-01',
+      endDate: '2025-05-03',
+      currency: 'EUR',
+    })
+    await createTrip(soloScope, {
+      title: 'Kyoto in autumn',
+      startDate: '2024-10-02',
+      endDate: '2024-10-04',
+      currency: 'JPY',
+    })
+
+    // Every year either of them could have travelled in, then the all-time row
+    // the streak is written onto - which is the order the producer enqueues in.
+    for (const statYear of [2026, 2025, 2024, 0]) {
+      await recompute(
+        { userId: alpha.ownerUserId, statYear },
+        context(alpha.organizationId),
+      )
+      await recompute(
+        { userId: soloTravellerId, statYear },
+        context(alpha.organizationId),
+      )
+    }
+
+    const owner = await getTravelStats(alpha.scope, alpha.ownerUserId, 0)
+    const soloTraveller = await getTravelStats(alpha.scope, soloTravellerId, 0)
+    expect(owner?.yearStreak).toBe(2)
+    expect(soloTraveller?.yearStreak).toBe(1)
+    // The 2024 row the owner is on no trip in ends their run rather than
+    // extending it: a year row exists, and its `tripCount` is zero.
+    const ownerYears = await figures(alpha, alpha.ownerUserId)
+    expect(ownerYears.find((row) => row.statYear === 2024)?.tripCount).toBe(0)
+  })
+
+  it('recomputes to nothing for a workspace member on no trip at all', async () => {
+    await seedTravel(alpha)
+    const bystander = await alpha.addUser('Never travels')
+
+    const metrics = await recompute(
+      { userId: bystander, statYear: 0 },
+      context(alpha.organizationId),
+    )
+
+    expect(metrics).toMatchObject({ tripCount: 0, distanceMetres: 0 })
+    expect(await figures(alpha, bystander)).toEqual([
+      {
+        statYear: 0,
+        tripCount: 0,
+        dayCount: 0,
+        placeCount: 0,
+        cityCount: 0,
+        countryCount: 0,
+        regionCount: 0,
+        distanceMetres: 0,
+        spendMinor: 0,
+        yearStreak: 0,
+        byContinent: {},
+      },
+    ])
   })
 })
 
