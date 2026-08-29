@@ -14,6 +14,7 @@ import {
   count,
   desc,
   eq,
+  exists,
   getTableName,
   gte,
   inArray,
@@ -31,6 +32,7 @@ import {
   places,
   transports,
   travelStats,
+  tripMembers,
   trips,
   visitedCountries,
   visitedRegions,
@@ -50,6 +52,8 @@ import {
   titleSchema,
   yearSchema,
 } from './validation'
+import type { SQL } from 'drizzle-orm'
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { ContinentCounts } from '#/server/db/schema'
 import type {
   BucketListItem,
@@ -389,11 +393,13 @@ export interface CountryTripTallyOptions {
  *
  * ## The workspace's trips, not the member's
  *
- * `trips` is organisation-scoped and {@link recomputeTravelStats} already counts every one of them
- * for a traveller's stat row. A per-country figure filtered by trip membership would not sum to
- * the trip count the same screen prints above the map, and two figures on one panel that disagree
- * read as a bug rather than as a distinction. So this counts the workspace's trips, and the
- * traveller-scoped half of the atlas stays where it already is, in `visited_countries`.
+ * `trips` is organisation-scoped and this tally keeps it that way: a country card is a record of
+ * where the workspace has been, and the traveller-scoped half of the atlas stays where it already
+ * is, in `visited_countries`. The stat panel above the map does *not* agree with it any more —
+ * {@link recomputeTravelStats} counts only the trips the reader is a member of (ADR 0007), so the
+ * trip counts on the two halves of the screen are different figures answering different questions.
+ * Whichever surface prints both owes the reader that distinction in words; the labelling is
+ * `ADD-06`'s, not this function's.
  *
  * ## One pass over `trips`
  *
@@ -847,10 +853,54 @@ export async function upsertTravelStats(
 }
 
 /**
+ * "The trips this person is a member of" — the population every trip-derived figure on a stats row
+ * is computed over.
+ *
+ * ADR 0007 makes a trip private to its members, and a figure that counts a trip the row's owner
+ * cannot open states something they have no way to check: a place count that moves when a colleague
+ * saves a restaurant on a trip that was never theirs, and a spend total they cannot reconcile
+ * against anything on screen. So the population is the `trip_members` rows for the **stat row's**
+ * `user_id` — never `scope.ctx.userId`, because cron and the queue consumer recompute for someone
+ * other than themselves.
+ *
+ * Membership alone, not the readability predicate: an organization-visible trip is one a person
+ * *may* open, not one they are travelling on, and "trips I am a member of" is also what a traveller
+ * means by "my trips".
+ *
+ * One correlated `EXISTS`, tenant-filtered on both sides, so the whole predicate stays inside the
+ * statement that is already reading the rows rather than becoming one membership query per trip.
+ * The trip column is a parameter because the two callers correlate against different tables:
+ * `trips.id` for the trip rows themselves, and `transports.trip_id` for the leg distances, which are
+ * selected by the leg's own departure date rather than through the trip ids.
+ */
+function memberOfTrip(
+  scope: TenantScope,
+  userId: string,
+  tripId: SQLiteColumn,
+): SQL {
+  return exists(
+    scope.db
+      .select({ member: sql`1` })
+      .from(tripMembers)
+      .where(
+        tenantFilter(
+          scope,
+          tripMembers,
+          eq(tripMembers.tripId, tripId),
+          eq(tripMembers.userId, userId),
+        ),
+      ),
+  )
+}
+
+/**
  * Rebuilds a traveller's stats row for one year (or all time, `statYear = 0`) from the trips they are
  * on: trip count, day count, place count, spend, distance, country and continent spread. Cron and the
  * queue consumer call this; nothing reads it live, because on a busy tenant it is six aggregate
  * queries.
+ *
+ * "The trips they are on" is literal, and {@link memberOfTrip} is where it is enforced: two members
+ * of one workspace who travel separately get two different rows.
  */
 export async function recomputeTravelStats(
   scope: TenantScope,
@@ -873,7 +923,14 @@ export async function recomputeTravelStats(
       countryCodes: trips.countryCodes,
     })
     .from(trips)
-    .where(tenantFilter(scope, trips, yearFilter))
+    .where(
+      tenantFilter(
+        scope,
+        trips,
+        yearFilter,
+        memberOfTrip(scope, userId, trips.id),
+      ),
+    )
     .orderBy(desc(trips.startDate))
 
   const tripIds = tripRows.map((row) => row.id)
@@ -883,10 +940,11 @@ export async function recomputeTravelStats(
    *
    * A leg carries its own `departure_date`, and a trip that starts on 30 December has legs in two
    * calendar years; filtering them by the trip's `start_date` would file January's flight under the
-   * previous year. So a year row sums the legs that departed in that year, tenant-wide, exactly as
-   * the other seven workspace figures are tenant-wide. A leg with no distance recorded contributes
-   * nothing, and a year with no distances at all writes `0` rather than leaving the column at
-   * whatever a fixture put there.
+   * previous year. So a year row sums the legs that departed in that year, over the same population
+   * the trip rows come from — {@link memberOfTrip} against `transports.trip_id`, because the leg is
+   * reached by its own date rather than through `tripIds`. A leg with no distance recorded
+   * contributes nothing, and a year with no distances at all writes `0` rather than leaving the
+   * column at whatever a fixture put there.
    */
   const legYearFilter =
     statYear === 0
@@ -934,7 +992,14 @@ export async function recomputeTravelStats(
       scope.db
         .select({ value: sum(transports.distanceMetres) })
         .from(transports)
-        .where(tenantFilter(scope, transports, legYearFilter)),
+        .where(
+          tenantFilter(
+            scope,
+            transports,
+            legYearFilter,
+            memberOfTrip(scope, userId, transports.tripId),
+          ),
+        ),
       listVisitedCountries(scope, userId),
     ])
 

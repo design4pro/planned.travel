@@ -155,9 +155,12 @@ import {
 import { createTag, tagsRepository } from '../tags'
 import { createTransport, transportsRepository } from '../transports'
 import {
+  addTripMember,
   countTripsByStatus,
   createShareLink,
   createTrip,
+  listTripMembers,
+  removeTripMember,
   shareLinksRepository,
   tripMembersRepository,
   tripsRepository,
@@ -1706,11 +1709,11 @@ describe('tenant isolation', () => {
   /**
    * The recompute behind the atlas statistics panel, run from the wrong side of the boundary.
    *
-   * Asserted against the measured split rather than the intuitive one, because most of what a
-   * `travel_stats` row holds is workspace-wide rather than per-traveller — and *how many* figures
-   * that is depends on which row is being read, since `countryCount` changes sides between the
-   * all-time row and a year row. A blanket "every count is zero" assertion is unsatisfiable here and
-   * would be made to pass only by breaking the repository.
+   * Since the `00-S4` amendment (PRD #104, decision 11) every trip-derived figure is computed over
+   * the trips the row's `user_id` is a member of, so the boundary here is finally the plain one:
+   * B's owner is a member of no trip of A's, and every figure on the row A writes for them is zero.
+   * The assertions below used to read the other way round — equal to A's own row rather than to
+   * zero — because the predicate was `tenantFilter()` and nothing else.
    */
   describe('travel stats recomputed for a foreign traveller', () => {
     const STAT_YEAR = 2026
@@ -1728,8 +1731,8 @@ describe('tenant isolation', () => {
       alphaYearTripId = trip.id
     })
 
-    /** The eight figures that are `tenantFilter()`-bound and nothing else. */
-    function workspaceFigures(row: {
+    /** The eight figures the trip rows carry, whoever the row belongs to. */
+    function tripFigures(row: {
       tripCount: number
       dayCount: number
       placeCount: number
@@ -1794,7 +1797,7 @@ describe('tenant isolation', () => {
       expect(yearRow.byContinent).toEqual({})
     })
 
-    it('counts no countries all-time and the year’s own trips on the year row', async () => {
+    it('counts no countries on either row kind', async () => {
       const allTime = await recomputeTravelStats(
         alpha.tenant.scope,
         beta.tenant.ownerUserId,
@@ -1808,12 +1811,22 @@ describe('tenant isolation', () => {
 
       // All-time reads the traveller's own visited list, which A cannot see.
       expect(allTime.countryCount).toBe(0)
-      // A year row reads `trips.country_codes`, which is tenant-bound only — so it is A's own
-      // count, non-zero by construction, and asserting zero here is the assertion that cannot pass.
-      expect(yearRow.countryCount).toBe(2)
+      // A year row reads `trips.country_codes` over the trips the traveller is a member of. A's
+      // two-country trip is in A's organization and B's owner is on none of it, so the set is empty
+      // — where before the amendment this row printed A's own count of 2.
+      expect(yearRow.countryCount).toBe(0)
+      expect(
+        (
+          await recomputeTravelStats(
+            alpha.tenant.scope,
+            alpha.tenant.ownerUserId,
+            STAT_YEAR,
+          )
+        ).countryCount,
+      ).toBe(2)
     })
 
-    it('repeats A’s own workspace figures on the foreign traveller’s rows', async () => {
+    it('leaves A’s own trip figures off the foreign traveller’s rows', async () => {
       const foreignAllTime = await recomputeTravelStats(
         alpha.tenant.scope,
         beta.tenant.ownerUserId,
@@ -1835,15 +1848,25 @@ describe('tenant isolation', () => {
         STAT_YEAR,
       )
 
-      // Equal to A's own row rather than to zero: that is where the real boundary is.
-      expect(workspaceFigures(foreignAllTime)).toEqual(
-        workspaceFigures(ownAllTime),
-      )
-      expect(workspaceFigures(foreignYear)).toEqual(workspaceFigures(ownYear))
-      expect(foreignAllTime.tripCount).toBeGreaterThan(0)
-      expect(foreignYear.lastTripId).toBe(alphaYearTripId)
-      // The distance aggregate is workspace-wide too: A's own leg, on both row kinds.
-      expect(foreignAllTime.distanceMetres).toBe(1_720_000)
+      const empty = {
+        tripCount: 0,
+        dayCount: 0,
+        placeCount: 0,
+        cityCount: 0,
+        distanceMetres: 0,
+        spendMinor: 0,
+        // Never written, so the column keeps its default rather than A's currency.
+        currency: 'EUR',
+        lastTripId: null,
+      }
+      expect(tripFigures(foreignAllTime)).toEqual(empty)
+      expect(tripFigures(foreignYear)).toEqual(empty)
+
+      // A's own row over the same rows, so the zeros above are the membership predicate rather
+      // than an empty workspace.
+      expect(ownAllTime.tripCount).toBe(2)
+      expect(ownYear.lastTripId).toBe(alphaYearTripId)
+      expect(ownAllTime.distanceMetres).toBe(1_720_000)
     })
 
     it('hides the rows it wrote from the organization the traveller belongs to', async () => {
@@ -1881,6 +1904,78 @@ describe('tenant isolation', () => {
       expect(
         await travelStatsRepository.findById(alpha.tenant.scope, written.id),
       ).not.toBeNull()
+    })
+  })
+
+  /**
+   * The `00-S4` amendment's own case, and the half a tenant filter cannot cover.
+   *
+   * The block above proves a foreign traveller's row is empty, but a tenant filter already made
+   * most of that true. The predicate this stage adds is the one asserted here: A's own workspace
+   * member, on none of A's trips, gets an empty row inside the organization they belong to — while
+   * A's owner, over the same rows, does not.
+   */
+  describe('travel stats for a workspace member who is on no trip', () => {
+    const STAT_YEAR = 2026
+
+    it('counts none of A’s trips for a non-member, and none of B’s for either', async () => {
+      // `seedWorld` adds the second traveller to the organization and to nothing else: the only
+      // `trip_members` row on A's trip is the owner's, written by `createTrip`.
+      const outsider = await recomputeTravelStats(
+        alpha.tenant.scope,
+        alpha.secondUserId,
+        0,
+      )
+      const owner = await recomputeTravelStats(
+        alpha.tenant.scope,
+        alpha.tenant.ownerUserId,
+        0,
+      )
+
+      expect(outsider.tripCount).toBe(0)
+      expect(outsider.dayCount).toBe(0)
+      expect(outsider.placeCount).toBe(0)
+      expect(outsider.cityCount).toBe(0)
+      expect(outsider.spendMinor).toBe(0)
+      expect(outsider.distanceMetres).toBe(0)
+      expect(outsider.lastTripId).toBeNull()
+
+      // The same statement, one trip membership apart. B's identical world is absent from both.
+      expect(owner.tripCount).toBe(1)
+      expect(owner.lastTripId).toBe(alpha.tripId)
+      expect(owner.spendMinor).toBeGreaterThan(0)
+    })
+
+    it('empties a year row a membership no longer supports', async () => {
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: alpha.secondUserId,
+        role: 'viewer',
+      })
+      const joined = await recomputeTravelStats(
+        alpha.tenant.scope,
+        alpha.secondUserId,
+        STAT_YEAR,
+      )
+      expect(joined.tripCount).toBe(1)
+      expect(joined.lastTripId).toBe(alpha.tripId)
+
+      const membership = (
+        await listTripMembers(alpha.tenant.scope, alpha.tripId)
+      ).find((row) => row.userId === alpha.secondUserId)
+      if (membership === undefined) {
+        throw new Error('The membership just written must be readable.')
+      }
+      await removeTripMember(alpha.tenant.scope, membership.id)
+
+      const left = await recomputeTravelStats(
+        alpha.tenant.scope,
+        alpha.secondUserId,
+        STAT_YEAR,
+      )
+      expect(left.tripCount).toBe(0)
+      expect(left.dayCount).toBe(0)
+      expect(left.lastTripId).toBeNull()
     })
   })
 
