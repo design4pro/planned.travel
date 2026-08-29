@@ -6,6 +6,8 @@
  * touches exactly one file instead of every navigation component.
  */
 
+import { readPublicFailure } from '#/lib/errors'
+
 import type { MessageKey } from '#/lib/i18n'
 
 /**
@@ -139,6 +141,12 @@ export type ShellStateKey = (typeof SHELL_STATE_KEYS)[number]
 
 /** The key a thrown shell state carries, or `null` for anything else. */
 export function shellStateOf(error: unknown): MessageKey | null {
-  const message = error instanceof Error ? error.message : error
+  // Two shapes reach here and both have to work. A shell state thrown on the client arrives as
+  // itself. One thrown inside `loadShell` crosses the server-function boundary through the
+  // redaction middleware, which re-encodes authored copy into an envelope - so the key is read back
+  // out of that first, and the raw message is the fallback rather than the only case.
+  const message =
+    readPublicFailure(error).message ??
+    (error instanceof Error ? error.message : error)
   return SHELL_STATE_KEYS.find((key) => key === message) ?? null
 }

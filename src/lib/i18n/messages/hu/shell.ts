@@ -362,7 +362,14 @@ const messages = {
     'Semmi nem veszett el. Próbálja újra, és ha továbbra is előfordul, az alábbi részletet küldje el nekünk.',
   'error.retry': 'Újrapróbálkozás',
   'error.dashboard': 'Vissza az irányítópulthoz',
-  'error.unknown': 'A kérés még befejezés előtt elbukott.',
+  'error.reported': 'Értesültünk róla, és már vizsgáljuk.',
+  'error.reference': 'Hivatkozási szám',
+  'error.feedback.open': 'Írja meg, mi történt',
+  'error.feedback.label': 'Mit csinált, amikor ez történt?',
+  'error.feedback.send': 'Küldés',
+  'error.feedback.sent': 'Köszönjük — sokat segít.',
+  'error.feedback.failed':
+    'Nem sikerült elküldeni. A fenti hivatkozás így is eljut hozzánk.',
   'error.root': 'Letértünk az útról',
   'error.session': 'Megváltozott a munkaterülethez való hozzáférése',
 

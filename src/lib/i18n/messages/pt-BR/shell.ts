@@ -379,7 +379,14 @@ const messages = {
     'Nada foi perdido. Tente de novo e, se continuar acontecendo, mande para a gente o detalhe abaixo.',
   'error.retry': 'Tentar de novo',
   'error.dashboard': 'Voltar ao painel',
-  'error.unknown': 'A solicitação falhou antes de terminar.',
+  'error.reported': 'Fomos avisados e já estamos verificando.',
+  'error.reference': 'Referência',
+  'error.feedback.open': 'Conte o que aconteceu',
+  'error.feedback.label': 'O que você estava fazendo quando isso aconteceu?',
+  'error.feedback.send': 'Enviar',
+  'error.feedback.sent': 'Obrigado — isso ajuda muito.',
+  'error.feedback.failed':
+    'Não foi enviado. A referência acima chega até nós mesmo assim.',
   'error.root': 'Saímos da rota',
   'error.session': 'Seu acesso ao espaço de trabalho mudou',
 

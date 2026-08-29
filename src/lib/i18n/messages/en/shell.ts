@@ -425,7 +425,14 @@ const messages = {
     'Nothing was lost. Try again, and if it keeps happening the detail below is what to send us.',
   'error.retry': 'Try again',
   'error.dashboard': 'Back to dashboard',
-  'error.unknown': 'The request failed before it could finish.',
+  'error.reported': 'We have been notified and are looking into it.',
+  'error.reference': 'Reference',
+  'error.feedback.open': 'Tell us what happened',
+  'error.feedback.label': 'What were you doing when this happened?',
+  'error.feedback.send': 'Send',
+  'error.feedback.sent': 'Thank you — that helps.',
+  'error.feedback.failed':
+    'That did not send. The reference above still reaches us.',
   'error.root': 'Something went off route',
   /**
    * The heading over a *named* shell state rather than over a thrown

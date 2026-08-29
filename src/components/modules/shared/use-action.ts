@@ -12,9 +12,28 @@ import { useCallback, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 
 import { toast } from '#/components/ui'
+import { readPublicFailure } from '#/lib/errors'
 
-/** Pulls a human-readable line out of whatever the server threw. */
+/**
+ * Pulls a line the reader is allowed to see out of whatever the server threw.
+ *
+ * It used to return `error.message` verbatim, which meant a failed statement put the query in a
+ * toast. The server now decides which messages are authored copy - a refusal, or a validation
+ * message naming the field to fix - and only those are shown. A diagnostic becomes the caller's
+ * fallback; the reference it was recorded under is on the error panel, which is where somebody
+ * reporting a problem is looking.
+ */
 export function messageOf(error: unknown, fallback: string): string {
+  const failure = readPublicFailure(error)
+  if (failure.kind !== 'unexpected' && failure.message !== undefined) {
+    return failure.message
+  }
+  if (failure.reference !== undefined) {
+    return fallback
+  }
+
+  // Not from a server function: a client-side throw never crosses the redaction boundary. Its
+  // message is ours by construction - `use-action` is only ever given our own rejections here.
   if (error instanceof Error && error.message.length > 0) {
     return error.message
   }

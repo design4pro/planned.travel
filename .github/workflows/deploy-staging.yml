@@ -34,6 +34,22 @@ jobs:
       VITE_POLAR_PRODUCT_CREW_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_MONTHLY }}
       VITE_POLAR_PRODUCT_CREW_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_YEARLY }}
 
+      # Sentry. The DSN is public by construction - it ships in the client bundle - so it is a
+      # repository variable, while the token that uploads source maps is a secret. VITE_ENVIRONMENT
+      # mirrors the ENVIRONMENT var the Worker reads from wrangler.jsonc, because the browser cannot
+      # read a Worker var. VITE_SENTRY_RELEASE is read by BOTH bundles, so one deploy is one Sentry
+      # release rather than two halves nothing relates.
+      #
+      # All of these may be empty. Without SENTRY_AUTH_TOKEN the build generates no source maps and
+      # uploads nothing; without the DSN the SDK is tree-shaken out of the bundle entirely. A fork
+      # therefore builds and deploys exactly as before.
+      VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+      VITE_ENVIRONMENT: staging
+      VITE_SENTRY_RELEASE: ${{ github.sha }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+
     steps:
       # The `secrets` context is not available in a job-level `if`, so the gate
       # is a first step: a fork or a freshly cloned repo without Cloudflare

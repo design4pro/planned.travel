@@ -379,7 +379,15 @@ const messages = {
     'Rien n’est perdu. Réessayez, et si cela se répète, le détail ci-dessous est ce qu’il faut nous envoyer.',
   'error.retry': 'Réessayer',
   'error.dashboard': 'Retour au tableau de bord',
-  'error.unknown': 'La requête a échoué avant d’aboutir.',
+  'error.reported':
+    'Nous avons été prévenus et nous regardons ce qui s’est passé.',
+  'error.reference': 'Référence',
+  'error.feedback.open': 'Dites-nous ce qui s’est passé',
+  'error.feedback.label': 'Que faisiez-vous au moment du problème ?',
+  'error.feedback.send': 'Envoyer',
+  'error.feedback.sent': 'Merci — cela nous aide.',
+  'error.feedback.failed':
+    'L’envoi n’a pas abouti. La référence ci-dessus nous parvient quand même.',
   'error.root': 'Nous voilà hors piste',
   'error.session': 'Votre accès à l’espace de travail a changé',
 

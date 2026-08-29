@@ -1,26 +1,34 @@
 import { Link, useRouter } from '@tanstack/react-router'
 import { RotateCw, TriangleAlert } from 'lucide-react'
 import { cn } from '#/lib/cn'
+import { readPublicFailure } from '#/lib/errors'
 import { useTranslate } from '#/lib/i18n'
 import { Wordmark } from './brand'
 import { ActionButton, Panel, buttonClass } from './kit'
+import { FailureFeedback } from './failure-feedback'
 import { shellStateOf } from './session'
 
-import type { Translate } from '#/lib/i18n'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 
 /**
- * The technical detail, which is deliberately *not* translated.
+ * What a reader is told about a failure, beyond the heading.
  *
- * A thrown message is a diagnostic, and the person who reads it next is
- * whoever the reporter forwards it to. What is translated is the sentence
- * around it and the fallback for a throw that carried no message at all.
+ * This used to return `error.message` - the thrown text, verbatim, in a monospace chip - on the
+ * reasoning that a diagnostic is for whoever the reporter forwards it to. That was wrong in the
+ * only case it mattered. The messages that actually reach here are not written for anybody: when
+ * D1 failed, the reader was shown the query, and with it the shape of the database.
+ *
+ * So the split is now by *authorship*, decided on the server where the thrown value still has its
+ * class (`src/server/errors/public.ts`). Copy written for this moment - a refusal, a validation
+ * message naming the field to fix - is shown as itself. A diagnostic is withheld, and what takes
+ * its place is the reference the server recorded it under, which is the part somebody reporting a
+ * problem actually needs.
  */
-function detailOf(error: unknown, t: Translate): string {
-  if (error instanceof Error && error.message.length > 0) return error.message
-  if (typeof error === 'string' && error.length > 0) return error
-  return t('shell.error.unknown')
-}
+
+/** Whether the browser half of the reporting was configured at build time. */
+const REPORTING_ENABLED =
+  typeof import.meta.env.VITE_SENTRY_DSN === 'string' &&
+  import.meta.env.VITE_SENTRY_DSN.length > 0
 
 export interface ErrorPanelProps {
   error: unknown
@@ -35,21 +43,34 @@ export interface ErrorPanelProps {
  * The recoverable error surface. It always offers a way forward — retry the
  * same route, or leave for a page that is known to work.
  *
- * Two kinds of failure land here and they are not shown the same way. An
- * unexpected throw gets the generic sentence plus the real message in the
- * monospace detail chip, because a person reporting a bug needs it. A *named*
- * shell state — the two `SHELL_STATE_KEYS` the authenticated shell throws when
- * a session has no workspace or a membership has just been revoked — is authored
- * copy that already explains itself, so it is printed as prose and the detail
- * chip is dropped entirely. Setting a translated sentence in the diagnostic
- * face, under a heading that says something went off route and beside a line
- * telling the reader to forward what is below, described the product's own
- * message as a fault.
+ * Three kinds of failure land here. A *named* shell state — the two `SHELL_STATE_KEYS` the
+ * authenticated shell throws when a session has no workspace or a membership has just been revoked
+ * — and a *refusal or validation message* from the server are both authored copy that already
+ * explains itself, so each is printed as prose and nothing else is offered. Setting a translated
+ * sentence in a diagnostic face, beside a line telling the reader to forward what is below,
+ * describes the product's own message as a fault.
+ *
+ * An *unexpected* throw gets the generic sentence, a line saying it has been reported, and the
+ * reference it was reported under — never the thrown text, which is a diagnostic written for us.
  */
-export function ErrorPanel({ error, onRetry, title, className }: ErrorPanelProps) {
+export function ErrorPanel({
+  error,
+  onRetry,
+  title,
+  className,
+}: ErrorPanelProps) {
   const router = useRouter()
   const t = useTranslate()
   const state = shellStateOf(error)
+  const failure = readPublicFailure(error)
+
+  /** Authored copy explains itself, so it is set as prose and no reference is offered. */
+  const authored =
+    state !== null
+      ? t(state)
+      : failure.kind === 'unexpected'
+        ? null
+        : failure.message
 
   function retry(): void {
     if (onRetry) {
@@ -60,25 +81,40 @@ export function ErrorPanel({ error, onRetry, title, className }: ErrorPanelProps
   }
 
   return (
-    <Panel className={cn('flex flex-col items-center gap-4 px-6 py-12 text-center', className)}>
+    <Panel
+      className={cn(
+        'flex flex-col items-center gap-4 px-6 py-12 text-center',
+        className,
+      )}
+    >
       <span className="flex size-12 items-center justify-center rounded-full bg-danger-soft text-danger">
         <TriangleAlert aria-hidden className="size-5" />
       </span>
       <div className="space-y-1.5">
         <h2 className="font-display text-subtitle text-ink">
-          {state === null ? (title ?? t('shell.error.title')) : t('shell.error.session')}
+          {state === null
+            ? (title ?? t('shell.error.title'))
+            : t('shell.error.session')}
         </h2>
         <p className="mx-auto max-w-md text-label leading-relaxed text-ink-3">
-          {state === null ? t('shell.error.body') : t(state)}
+          {authored ?? t('shell.error.body')}
         </p>
+        {authored === null ? (
+          <p className="mx-auto max-w-md text-label leading-relaxed text-ink-3">
+            {t('shell.error.reported')}
+          </p>
+        ) : null}
       </div>
-      {state === null ? (
-        /* `code` keeps the detail left-to-right inside Arabic prose: the
-           direction layer in `src/styles/styles.css` pins the run so a stack
-           frame does not reorder around its punctuation. */
-        <code className="max-w-lg break-words rounded-md bg-surface-2 px-3 py-2 font-mono text-caption text-ink-2">
-          {detailOf(error, t)}
-        </code>
+      {authored === null && failure.reference !== undefined ? (
+        /* `code` keeps the reference left-to-right inside Arabic prose: the
+           direction layer in `src/styles/styles.css` pins the run so an
+           identifier does not reorder around its punctuation. */
+        <p className="text-caption text-ink-3">
+          {t('shell.error.reference')}{' '}
+          <code className="rounded-md bg-surface-2 px-2 py-1 font-mono text-ink-2">
+            {failure.reference}
+          </code>
+        </p>
       ) : null}
       <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
         <ActionButton onClick={retry}>
@@ -89,6 +125,13 @@ export function ErrorPanel({ error, onRetry, title, className }: ErrorPanelProps
           {t('shell.error.dashboard')}
         </Link>
       </div>
+      {/* Only where the reference points at a real Sentry event: without a DSN it is a request id,
+          and feedback would attach to nothing. */}
+      {authored === null &&
+      failure.reference !== undefined &&
+      REPORTING_ENABLED ? (
+        <FailureFeedback reference={failure.reference} />
+      ) : null}
     </Panel>
   )
 }

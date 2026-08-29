@@ -99,29 +99,30 @@ Specifically:
 
 ## 3. Stack (pinned — do not change, do not add deps)
 
-| Concern           | Choice                                                                                                                                                                                                                                                      |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework         | TanStack Start (React 19, file-based routing, server functions)                                                                                                                                                                                             |
-| Build             | Vite 8 + `@cloudflare/vite-plugin` (`viteEnvironment.name = 'ssr'`)                                                                                                                                                                                         |
-| Runtime           | Cloudflare Workers (`nodejs_compat`)                                                                                                                                                                                                                        |
-| Styling           | Tailwind CSS v4 (CSS-first `@theme`), tokens in `src/styles/tokens.css`                                                                                                                                                                                     |
-| Primitives        | `radix-ui` (unified pkg) + our own wrappers in `src/components/ui`                                                                                                                                                                                          |
-| Data (relational) | Cloudflare D1 + Drizzle ORM                                                                                                                                                                                                                                 |
-| Cache / sessions  | Workers KV                                                                                                                                                                                                                                                  |
-| Files / tiles     | R2                                                                                                                                                                                                                                                          |
-| Realtime          | Durable Objects + WebSockets (`partysocket` client)                                                                                                                                                                                                         |
-| Background work   | Queues + Cron Triggers                                                                                                                                                                                                                                      |
-| Auth              | Better Auth on D1 (email+password, social, passkeys, TOTP)                                                                                                                                                                                                  |
-| Billing           | Polar.sh (Checkout + Customer Portal + webhooks)                                                                                                                                                                                                            |
-| Email             | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret. Nine React Email templates in `src/server/email/templates/**`, the message contract and subject lines in `src/server/auth/email.ts`, delivery in `src/server/queue/handlers/email.ts` |
-| Maps              | MapLibre GL + Protomaps `.pmtiles` from R2                                                                                                                                                                                                                  |
-| Server state      | TanStack Query + Start server functions                                                                                                                                                                                                                     |
-| Forms             | TanStack Form + Zod v4                                                                                                                                                                                                                                      |
-| Icons             | `lucide-react`                                                                                                                                                                                                                                              |
-| Motion            | `motion`                                                                                                                                                                                                                                                    |
-| Drag & drop       | `@dnd-kit`                                                                                                                                                                                                                                                  |
-| Toasts            | `sonner`                                                                                                                                                                                                                                                    |
-| Tests             | Vitest (unit) + Playwright (e2e/visual)                                                                                                                                                                                                                     |
+| Concern           | Choice                                                                                                                                                                                                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework         | TanStack Start (React 19, file-based routing, server functions)                                                                                                                                                                                                              |
+| Build             | Vite 8 + `@cloudflare/vite-plugin` (`viteEnvironment.name = 'ssr'`)                                                                                                                                                                                                          |
+| Runtime           | Cloudflare Workers (`nodejs_compat`)                                                                                                                                                                                                                                         |
+| Styling           | Tailwind CSS v4 (CSS-first `@theme`), tokens in `src/styles/tokens.css`                                                                                                                                                                                                      |
+| Primitives        | `radix-ui` (unified pkg) + our own wrappers in `src/components/ui`                                                                                                                                                                                                           |
+| Data (relational) | Cloudflare D1 + Drizzle ORM                                                                                                                                                                                                                                                  |
+| Cache / sessions  | Workers KV                                                                                                                                                                                                                                                                   |
+| Files / tiles     | R2                                                                                                                                                                                                                                                                           |
+| Realtime          | Durable Objects + WebSockets (`partysocket` client)                                                                                                                                                                                                                          |
+| Background work   | Queues + Cron Triggers                                                                                                                                                                                                                                                       |
+| Auth              | Better Auth on D1 (email+password, social, passkeys, TOTP)                                                                                                                                                                                                                   |
+| Billing           | Polar.sh (Checkout + Customer Portal + webhooks)                                                                                                                                                                                                                             |
+| Email             | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret. Nine React Email templates in `src/server/email/templates/**`, the message contract and subject lines in `src/server/auth/email.ts`, delivery in `src/server/queue/handlers/email.ts`                  |
+| Maps              | MapLibre GL + Protomaps `.pmtiles` from R2                                                                                                                                                                                                                                   |
+| Server state      | TanStack Query + Start server functions                                                                                                                                                                                                                                      |
+| Forms             | TanStack Form + Zod v4                                                                                                                                                                                                                                                       |
+| Icons             | `lucide-react`                                                                                                                                                                                                                                                               |
+| Motion            | `motion`                                                                                                                                                                                                                                                                     |
+| Drag & drop       | `@dnd-kit`                                                                                                                                                                                                                                                                   |
+| Toasts            | `sonner`                                                                                                                                                                                                                                                                     |
+| Observability     | Structured logs to Workers Observability (`src/server/observability`) + Sentry (`@sentry/cloudflare` in the Worker, `@sentry/react` in the browser): errors, logs, tracing, metrics and masked session replay. One project, environments told apart by the `environment` tag |
+| Tests             | Vitest (unit) + Playwright (e2e/visual)                                                                                                                                                                                                                                      |
 
 **Dependency freeze.** The dependency set is complete. Do **not** run `pnpm add`, and do not
 edit `package.json` or `pnpm-lock.yaml`. If you genuinely need a package that is absent, stop
@@ -140,6 +141,30 @@ pulls the CLI into the Worker bundle, which is a defect. This was a list of two 
 policy: any package outside these two is still a finding you report in your result and never a
 `pnpm add`, and nothing here grants a precedent, a category, or a "while we are in there"
 install.
+
+**Second named exception: three packages, once — spent.** `@sentry/cloudflare` and `@sentry/react`
+are **dependencies**; `@sentry/vite-plugin` is a **devDependency**. `@sentry/cli` is added to
+`pnpm.onlyBuiltDependencies` because the plugin's binary arrives through its postinstall, and
+without that approval the upload silently has nothing to run. No fifth name went in beside them.
+
+They exist because the application had no way to learn that it was failing. Workers Observability
+carries the structured logs `src/server/observability/logger.ts` emits, and that is a live tail: it
+answers "what is happening now" for somebody already looking, and nothing at all for a recurring
+error at 3am. A browser-side crash was invisible outright — `RootErrorBoundary` rendered a panel and
+told nobody. The stack is otherwise complete, and no package already in it reports errors.
+
+The same two-halves rule as `react-email` applies and for the same reason: `@sentry/vite-plugin`
+uploads source maps at build time and must never reach the Worker bundle. Its `errorHandler` is set
+to rethrow, so a bad token fails the build instead of shipping a release whose every future stack
+trace is unreadable. Source maps are generated only when there is a token to upload them with, are
+emitted `hidden`, and the client half is deleted after upload — a map that ships is this
+application's source published to anyone who asks.
+
+This is again a list of names and not a policy. Any package outside these three and the two above is
+still a finding you report in your result and never a `pnpm add`, and nothing here grants a
+precedent, a category, or a "while we are in there" install. That the freeze has now been reopened
+twice is not evidence that it reopens easily; both times it was reopened for a capability the stack
+could not express at all, by an explicit decision recorded here.
 
 **Email path, as built.** Transactional mail is wired end to end and needs no new integration.
 Phase A rewrote the bodies as React components and left the transport untouched, so the pipeline
