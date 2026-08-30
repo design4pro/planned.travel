@@ -46,6 +46,7 @@ import { Route as AppTripsTripIdRouteRouteImport } from './routes/_app/trips/$tr
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiDevSeedRouteImport } from './routes/api/dev/seed'
 import { Route as ApiPolarWebhookRouteImport } from './routes/api/polar/webhook'
+import { Route as ApiSandcastleSplatRouteImport } from './routes/api/sandcastle/$'
 import { Route as ApiTilesSplatRouteImport } from './routes/api/tiles/$'
 import { Route as ApiTripRoomTripIdRouteImport } from './routes/api/trip-room/$tripId'
 import { Route as AppConsoleUsersIndexRouteImport } from './routes/_app/console/users.index'
@@ -246,6 +247,11 @@ const ApiPolarWebhookRoute = ApiPolarWebhookRouteImport.update({
   path: '/api/polar/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSandcastleSplatRoute = ApiSandcastleSplatRouteImport.update({
+  id: '/api/sandcastle/$',
+  path: '/api/sandcastle/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTilesSplatRoute = ApiTilesSplatRouteImport.update({
   id: '/api/tiles/$',
   path: '/api/tiles/$',
@@ -340,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
   '/api/polar/webhook': typeof ApiPolarWebhookRoute
+  '/api/sandcastle/$': typeof ApiSandcastleSplatRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
   '/api/trip-room/$tripId': typeof ApiTripRoomTripIdRoute
   '/collections/': typeof AppCollectionsIndexRoute
@@ -386,6 +393,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
   '/api/polar/webhook': typeof ApiPolarWebhookRoute
+  '/api/sandcastle/$': typeof ApiSandcastleSplatRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
   '/api/trip-room/$tripId': typeof ApiTripRoomTripIdRoute
   '/collections': typeof AppCollectionsIndexRoute
@@ -438,6 +446,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
   '/api/polar/webhook': typeof ApiPolarWebhookRoute
+  '/api/sandcastle/$': typeof ApiSandcastleSplatRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
   '/api/trip-room/$tripId': typeof ApiTripRoomTripIdRoute
   '/_app/collections/': typeof AppCollectionsIndexRoute
@@ -490,6 +499,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/dev/seed'
     | '/api/polar/webhook'
+    | '/api/sandcastle/$'
     | '/api/tiles/$'
     | '/api/trip-room/$tripId'
     | '/collections/'
@@ -536,6 +546,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/dev/seed'
     | '/api/polar/webhook'
+    | '/api/sandcastle/$'
     | '/api/tiles/$'
     | '/api/trip-room/$tripId'
     | '/collections'
@@ -587,6 +598,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/dev/seed'
     | '/api/polar/webhook'
+    | '/api/sandcastle/$'
     | '/api/tiles/$'
     | '/api/trip-room/$tripId'
     | '/_app/collections/'
@@ -622,6 +634,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiDevSeedRoute: typeof ApiDevSeedRoute
   ApiPolarWebhookRoute: typeof ApiPolarWebhookRoute
+  ApiSandcastleSplatRoute: typeof ApiSandcastleSplatRoute
   ApiTilesSplatRoute: typeof ApiTilesSplatRoute
   ApiTripRoomTripIdRoute: typeof ApiTripRoomTripIdRoute
 }
@@ -887,6 +900,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPolarWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/sandcastle/$': {
+      id: '/api/sandcastle/$'
+      path: '/api/sandcastle/$'
+      fullPath: '/api/sandcastle/$'
+      preLoaderRoute: typeof ApiSandcastleSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/tiles/$': {
       id: '/api/tiles/$'
       path: '/api/tiles/$'
@@ -1102,6 +1122,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiDevSeedRoute: ApiDevSeedRoute,
   ApiPolarWebhookRoute: ApiPolarWebhookRoute,
+  ApiSandcastleSplatRoute: ApiSandcastleSplatRoute,
   ApiTilesSplatRoute: ApiTilesSplatRoute,
   ApiTripRoomTripIdRoute: ApiTripRoomTripIdRoute,
 }
