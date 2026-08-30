@@ -16,6 +16,18 @@ QA findings from staging are filed as new issues with `qa-failed` (bugs) or `typ
 
 Labels the automation itself reads and writes: `agent-blocked` (sandcastle swaps it in for `ready-for-agent` when an issue exhausts its fix budget - `markBlocked()` in `.sandcastle/main.ts`; a human re-queues it), `visual-change-expected` (declares an intended pixel change so the loop re-records baselines instead of failing the diff - equivalent to a `## Visual change expected` section in the body), and `needs-e2e` (a PR label: runs the CI e2e job on that PR, the escape hatch in `ci.yml`).
 
+Two rules govern where `ready-for-agent` may sit:
+
+- **It is a per-slice gate, never a PRD label.** A PRD is an issue with open sub-issues and is never
+  workable on its own; `resolveOnlyIssues` in `.sandcastle/main.ts` expands `--issues <PRD>` to its
+  open children and filters those by this label. On a parent the label is not merely inert: it puts
+  the PRD into `readyForAgentIds()`, so a bare `pnpm sandcastle` claims and plans the PRD itself.
+  `/to-tickets-project` applies it to every ticket it publishes and verifies the wave afterwards.
+- **It is orthogonal to `status: blocked`.** `ready-for-agent` says a human specified and cleared the
+  slice; `status: blocked` is a human's note that some other issue must land first. Execution order
+  comes from the dependency graph the planner builds, not from either label, and the loop never reads
+  `status: blocked`. A cleared slice with an open blocker keeps both.
+
 ## Automated pre-triage
 
 An open issue that carries `type: bug` or `type: maintenance` and not `ready-for-agent` is pre-triaged by Claude following `.sandcastle/triage-prompt.md` — once per issue, marked by `<!-- sandcastle-triage -->` in the comment (and in the body when promoted):
