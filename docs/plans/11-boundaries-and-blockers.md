@@ -775,12 +775,15 @@ exactly those seven. **`BROWSER` and `AI` are absent from both environments**, a
 image-transformation binding. **`AI` is absent but no longer undecided**: ADR 0012 adopts it, and the
 row for it below now records a decision taken rather than a question open. It is added by the
 wave-4 bindings stage of `00-foundations.md`, filed there by `03-S7` under its own **Blockers**, in
-the form the paragraph below requires — which is also why that file's own bindings table, which still
-carries `AI` as **report only** on the strength of BKG-04 being out of scope, needs correcting by
-whoever owns it. Adding one is an **infrastructure and cost decision for the user**, not
-a build step, and no feature stage may add one: `wrangler.jsonc` is one of the six shared paths, the
-change lands in `00-foundations.md` at wave 0 together with its re-export from `src/server/worker.ts`
-where one is needed, and `README.md` requires a new binding to be argued as a cost-model change.
+the form the paragraph below requires. That file's bindings table used to carry `AI` as **report
+only** on the strength of BKG-04 being out of scope; it has since been corrected, and its stage
+register records that the requirement left with the area — `03-reservations-and-transport.md`
+migrated to the tracker before wave 4 opened, so the binding ships as issue #177 and the register
+mints no stage for it. Adding one is an **infrastructure and cost decision for the user**, not a
+build step, and no feature stage may add one: `wrangler.jsonc` is one of the six shared paths, the
+change lands together with its re-export from `src/server/worker.ts` where one is needed, and
+`README.md` requires a new binding to be argued as a cost-model change — which `ARCHITECTURE.md` §8
+now does, under **Metered outbound calls**, with the rate and the arithmetic at two scales.
 
 | Binding                       | Absent from            | Would unblock                                                                                                                                                                                                             | What exists instead today                                                                                                                                                                                                                                                                                                |
 | ----------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

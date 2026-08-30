@@ -21,3 +21,15 @@ Considered and deferred: a GitHub Actions label state machine (`agent:queued` �
 ## Consequences
 
 One orchestrator (sandcastle) instead of two; the backlog is shared, dependency-aware and visible; planning quality is enforced by skills rather than by a fixed protocol. The 8-phase ultrabuild pipeline, its adversarial auditor and its cross-run knowledge store are given up — CI, code review skills and the review stage of the loop must carry that weight.
+
+### Amendment, 2026-08-30 — a migrated plan file is frozen, not deleted
+
+The Decision above says "each migrated plan file is deleted (history stays in git)". After two areas migrated — trips core as PRD #104 and reservations and transport as PRD #167 — that half of the decision is **suspended**, and neither file was deleted. The migration itself stands; only the deletion does not.
+
+What was measured. Deleting `01-trips-core.md` would orphan **~112 references across 15 files**; deleting `03-reservations-and-transport.md`, **~86 across 10**. They are not decorative. `docs/plans/README.md` fixes exclusive file ownership per wave, so a stage proves it may write a file by naming the sibling stages that hold it in other waves — and those siblings live in other plans. `06-documents-and-media.md:2659` is an ownership table citing `01-S6` to justify its own claim on `src/server/repos/index.ts`; `09-account-and-settings.md:2649` reads `03-S6`'s stated wave to establish that it does not collide on `appearance.tsx`. Deleting the referent does not make those claims wrong, it makes them **uncheckable** — which is worse, because an agent executing the surviving plan cannot then tell a safe claim from a stale one.
+
+This repository has already paid that price once, at smaller scale: `scripts/ultrabuild/check-plan-*.mjs` were deleted while 117 citations of their output remained, and issue #99 exists to clean up after it. Repeating it deliberately, across two of the most heavily cited files in the directory, is not a tidy-up.
+
+So: **a migrated plan file is frozen.** It carries a banner naming its PRD, it takes no further edits, the tracker is the authority for its area, and it is kept as the evidence its un-migrated siblings cite. `docs/plans/README.md` lists which areas are in that state.
+
+Deletion becomes safe again for a given file when **no un-migrated plan cites it** — either because every remaining area has migrated, or because the citations have been rewritten to name tickets instead of stages. The second is real work with its own risk and is not assumed here; if it is ever done it is its own change with its own review, not a side effect of migrating the next area.

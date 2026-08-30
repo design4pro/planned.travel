@@ -248,18 +248,27 @@ might assume beyond those.
 a binding changes the cost model and, for the first two, adds a per-request external dependency;
 that argument belongs to a human, and the report is the deliverable.
 
-**Ratified during grilling: all four dispositions stand as report-only.** No binding, no DLQ
-consumer and no fourth cron is taken in wave 0. The one decision the table cannot close — which FX
-rate provider, under a licence that permits a paid product — stays open in
+**Ratified during grilling: all four dispositions stood as report-only, and three still do.** No
+binding, no DLQ consumer and no fourth cron is taken in wave 0 — that part is unchanged, and none of
+the four was ever a wave-0 requirement. The one decision the table cannot close — which FX rate
+provider, under a licence that permits a paid product — stays open in
 `11-boundaries-and-blockers.md` and must be taken by a human before wave 2, because MNY-07 sits in
 wave 1.
 
-| Assumed binding                           | Which plan would assume it                 | Measured state at HEAD                                                                                                                                                                                                                                                         | Disposition                                                                                                                      |
-| ----------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| `BROWSER` (Browser Rendering)             | `06-documents-and-media.md`, DOC-06        | Not declared. `src/server/queue/handlers/pdf-export.ts:193` already renders through the REST API when `BROWSER_RENDERING_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set, and writes print HTML to R2 otherwise.                                                                | **Report only.** The REST path works without a binding; a binding is a later optimisation, priced against browser-hours.         |
-| `AI` (Workers AI)                         | `03-reservations-and-transport.md`, BKG-04 | Not declared, and BKG-04 is already out of scope in `11-boundaries-and-blockers.md`.                                                                                                                                                                                           | **Report only.** The deterministic `booking-import` handler already exists and is the sanctioned path.                           |
-| A consumer for `planned-travel-tasks-dlq` | any plan that cares whether a job was lost | The dead-letter queue is named as `dead_letter_queue` on the consumer, but no consumer is declared for it, so dead-lettered messages accumulate unread.                                                                                                                        | **Report only.** Naming it is an operations decision with its own alerting; `ARCHITECTURE.md` §9 already alerts on DLQ depth.    |
-| A fourth cron trigger for FX rates        | `04-budget-and-currencies.md`, MNY-07      | Three crons are declared; measured in `src/server/worker.ts:63-101`, `*/15 * * * *` runs the sweep, `17 4 * * 1` already prunes `platform_audit_log` (and warns that its backup-retention half is unwritten), and only `0 3 * * *` is a pure `cron has no handler yet` branch. | **Report only.** A rate refresh can ride the existing `*/15` sweep or a KV TTL; a fourth trigger is not required to ship MNY-07. |
+**The `AI` row has since been decided the other way, and the row below says so rather than being
+quietly left standing.** ADR 0012 (2026-08-30) binds Workers AI for confirmation extraction and
+supersedes the `BKG-04` disposition in `11-S1` that this table's own justification rested on. It
+changes nothing about wave 0: the filer is `03-S7` in wave 5, so the supplier is a wave-4 bindings
+stage, and the report-only reasoning above was always about what wave 0 takes speculatively rather
+than about what a later wave may decide on evidence. What it does change is that the argument this
+table asked a human for has been made, and where.
+
+| Assumed binding                           | Which plan would assume it                 | Measured state at HEAD                                                                                                                                                                                                                                                         | Disposition                                                                                                                                                                                                |
+| ----------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BROWSER` (Browser Rendering)             | `06-documents-and-media.md`, DOC-06        | Not declared. `src/server/queue/handlers/pdf-export.ts:193` already renders through the REST API when `BROWSER_RENDERING_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set, and writes print HTML to R2 otherwise.                                                                | **Report only.** The REST path works without a binding; a binding is a later optimisation, priced against browser-hours.                                                                                   |
+| `AI` (Workers AI)                         | `03-reservations-and-transport.md`, BKG-04 | Not declared. BKG-04's out-of-scope disposition in `11-S1` was **superseded by ADR 0012** on 2026-08-30. The deterministic `booking-import` handler still exists and is still tried first, but it is now the first branch rather than the whole path.                          | **Taken, and filed.** ADR 0012 binds Workers AI. `03-S7` (wave 5) filed the requirement onto a wave-4 bindings stage; that area has since migrated, so it ships as issue #177, not as a stage minted here. |
+| A consumer for `planned-travel-tasks-dlq` | any plan that cares whether a job was lost | The dead-letter queue is named as `dead_letter_queue` on the consumer, but no consumer is declared for it, so dead-lettered messages accumulate unread.                                                                                                                        | **Report only.** Naming it is an operations decision with its own alerting; `ARCHITECTURE.md` §9 already alerts on DLQ depth.                                                                              |
+| A fourth cron trigger for FX rates        | `04-budget-and-currencies.md`, MNY-07      | Three crons are declared; measured in `src/server/worker.ts:63-101`, `*/15 * * * *` runs the sweep, `17 4 * * 1` already prunes `platform_audit_log` (and warns that its backup-retention half is unwritten), and only `0 3 * * *` is a pure `cron has no handler yet` branch. | **Report only.** A rate refresh can ride the existing `*/15` sweep or a KV TTL; a fourth trigger is not required to ship MNY-07.                                                                           |
 
 Two related constraints that are not bindings but block the same plans, recorded here so they are
 reported once rather than rediscovered per stage:
@@ -295,6 +304,20 @@ been generated. It is a wave-1 stage's requirement (`01-S1`) and therefore a wav
 the register mints a **wave-0 follow-up schema stage** for it — `00-S6`, one additive table, nothing
 else — before wave 1 opens; `01-S1` does not open until it has landed. The table's shape is in
 `01-S1`'s **Data and migration** and repeated in `00-S6` below.
+
+**A second requirement was filed after that, and the register deliberately mints nothing for it.**
+The grilling of `03-reservations-and-transport.md` (2026-08-30) took ADR 0012 and `03-S7` filed the
+`AI` binding onto the **wave-4 bindings stage** of this file, in the ritual the shared-file table
+prescribes. Before that wave could open, the area migrated to the tracker as PRD #167, and its
+foundations filings were minted there instead: the binding, the extraction ceiling and one additive
+column ship as issue **#177**, and the two schema bands that area needs as **#168** and **#172**.
+
+The register therefore records the requirement and mints **no** wave-4 bindings stage for it. That is
+the rule above applied rather than bent — a wave with no filed requirement mints no stage, and this
+wave no longer has one, because the filer left. It is written down because the alternative is a
+reader opening wave 4, finding a binding requirement in this file's history and minting a stage that
+would collide with #177 in `wrangler.jsonc`, which is the one file where a collision is most
+expensive. A migrated area files onto the tracker, not onto this register.
 
 ## How a stage block is delimited
 

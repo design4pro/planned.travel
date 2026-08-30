@@ -1,5 +1,11 @@
 # 03 — Reservations and transport
 
+> **Migrated — frozen.** This area's backlog now lives on the tracker as **PRD #167**, and the
+> tracker is its authority. This file takes no further edits: it is kept because un-migrated plans
+> cite its stages to establish which stage holds a file in which wave, and deleting it would make
+> those claims uncheckable. See `docs/adr/0004-sandcastle-replaces-ultrabuild.md`, the amendment of
+> 2026-08-30, for the measurement and for the condition under which it can be deleted.
+
 The trip's paperwork: the bookings a traveller reads back to a stranger at a desk, the legs between
 them, the stay that covers a run of nights, and the confirmation file that could fill all three in
 without anybody retyping it.

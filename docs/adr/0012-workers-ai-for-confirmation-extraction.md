@@ -60,3 +60,15 @@ written unreviewed and an unparseable amount is dropped rather than rounded.
 This is the product's second metered outbound cost after ADR 0011, and it arrives with the same
 shape: our credential, our proxy, our ceiling in `resolveLimits()`. The published number is the
 enforced number, for a model call exactly as for a row.
+
+**The price, because a cost decision with no price in it is not finished.** Workers AI gives 10,000
+Neurons a day at no charge on both the Free and Paid plans and charges $0.011 per 1,000 Neurons above
+it; `toMarkdown()` is "free for most format conversions", with image conversion the exception that
+may invoke a model. Taken from `developers.cloudflare.com/workers-ai/platform/pricing` and
+`/workers-ai/features/markdown-conversion` in August 2026, on the same re-check terms as the rest of
+this repository's rates. At ~3,000 input and ~500 output tokens against `@cf/meta/llama-3.1-8b-instruct`
+one confirmation costs roughly 115 Neurons, so the free daily allowance covers about 2,600 files a
+day before anything is billed. `ARCHITECTURE.md` §8 carries the arithmetic at scale, and the finding
+worth reading there is that this is the only one of the three metered dependencies with **no cache** —
+each file is unique — so it is the line that grows strictly linearly with use, which is what makes
+its per-tenant ceiling load-bearing rather than defensive.
