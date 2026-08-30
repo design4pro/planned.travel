@@ -31,7 +31,7 @@ env:
 
 jobs:
   verify:
-    name: lint · typecheck · test · build
+    name: lint · typecheck · build
     # A develop→main (or main→develop) PR duplicates the push-triggered run on
     # the same commits; the push run is canonical for the shared branches. The
     # `e2e` job carries the same clause in its own `if`, since it no longer
@@ -65,14 +65,42 @@ jobs:
       - name: Check the committed route tree is current
         run: git diff --exit-code -- src/routeTree.gen.ts
 
+      # ESLint spends its time building a typed program and then walking it, and
+      # on a pull request almost none of that work is new. `--cache` skips a file
+      # whose bytes have not changed since the last run: measured on this repo,
+      # 10.7 s cold against 0.6 s with nothing to redo.
+      #
+      # Pull requests only, and that restriction is the point. The typed rules
+      # mean a change to one file can change another file's verdict, and the
+      # cache cannot know that - it keys on each file's own content, so a lint
+      # can come back green over an error it simply did not look at. The
+      # uncached run on a push to `develop` or `main` is the canonical one, and
+      # it is the one that guards the shared branch.
+      - name: Restore the ESLint cache
+        if: github.event_name == 'pull_request'
+        uses: actions/cache@v4
+        with:
+          path: .eslintcache
+          # `github.sha` never hits, so every run saves a fresh entry and the
+          # `restore-keys` prefix picks up the most recent one. Changing the
+          # config, the tsconfig or a dependency starts a new lineage, because a
+          # cache from before any of those describes a different lint.
+          key: eslint-${{ runner.os }}-${{ hashFiles('eslint.config.js', 'tsconfig.json', 'pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            eslint-${{ runner.os }}-${{ hashFiles('eslint.config.js', 'tsconfig.json', 'pnpm-lock.yaml') }}-
+
+      # `--cache-strategy content` and not the default. ESLint decides a file is
+      # unchanged by size and mtime unless told otherwise, and a fresh checkout
+      # stamps every file with a new mtime - so the default strategy restored a
+      # perfectly good cache and then ignored all of it. Measured after touching
+      # every source file: 10.5 s on metadata, 0.7 s on content.
       - name: Lint
-        run: pnpm lint
+        run: >-
+          pnpm lint ${{ github.event_name == 'pull_request'
+          && '--cache --cache-strategy content' || '' }}
 
       - name: Typecheck
         run: pnpm typecheck
-
-      - name: Unit tests
-        run: pnpm exec vitest run --coverage
 
       - name: Build
         run: pnpm build
@@ -89,6 +117,135 @@ jobs:
       # silently doing it. See issue #82.
       - name: Check the build left the route tree alone
         run: git diff --exit-code -- src/routeTree.gen.ts
+
+  # The unit suite, sharded the way the visual gate is, and for the same reason:
+  # the runner has two vCPUs, vitest already fills both, and the suite is
+  # CPU-bound - so the only way left to make it finish sooner is to give it more
+  # machines. As one job it was 361 s, 74% of a 486 s gate.
+  #
+  # Three rather than more. Vitest cuts shards by file, and the files are not
+  # equal: measured, three shards carry 27% / 34% / 39% of the work and four
+  # carry 24% / 19% / 32% / 25%, so a fourth shard takes about 26 s off the wall
+  # clock and adds a whole job's fixed cost to the bill. Three is where that
+  # trade stops being worth it.
+  #
+  # Each shard writes a blob report instead of its own verdict, because a shard
+  # only ever sees a third of the picture: per-glob coverage thresholds are
+  # meaningless on a third of the files, and three separate "50 passed" lines
+  # are not a result anybody can read. `test-report` below merges them.
+  test:
+    name: unit tests (${{ matrix.shard }}/3)
+    if: github.event_name != 'pull_request' || !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `--coverage` on every shard because v8 has to instrument the run that
+      # executes the code; the merge step cannot invent coverage for files a
+      # shard never loaded. The blob carries it, and the numbers add up exactly
+      # - verified against an unsharded run, 10280/19069 statements either way.
+      - name: Run this shard of the suite
+        # `VITEST_SHARDED` turns off the per-glob coverage thresholds for this
+        # run; `test-report` applies them to the merged whole. A shard executes
+        # a third of the files, so what it measures for any one glob is a third
+        # of the truth - the first sharded run failed exactly this way, every
+        # shard red on a tiles threshold that the merged coverage meets, and no
+        # blob written because the process was already exiting.
+        env:
+          VITEST_SHARDED: '1'
+        run: >-
+          pnpm exec vitest run --coverage
+          --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          --reporter=blob
+          --outputFile=unit-blob-reports/blob-${{ matrix.shard }}.json
+
+      # `always()`: a shard that fails still has a report, and that report is
+      # the only place its failures are legible.
+      #
+      # The directory is not vitest's own `.vitest-reports`, and the dot is the
+      # whole reason: `upload-artifact` treats a dot-prefixed path as hidden and
+      # silently uploads nothing, which it did - the blob was written, the log
+      # said so, and the artifact was empty. `e2e` above writes to `blob-report`
+      # for the same reason.
+      - name: Upload the blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-blob-${{ matrix.shard }}
+          path: unit-blob-reports
+          retention-days: 1
+          if-no-files-found: error
+
+  # One verdict for the three shards, and the only place the coverage thresholds
+  # can be judged: they are per-glob, and no single shard holds a whole glob.
+  test-report:
+    name: unit tests · merged report
+    needs: test
+    if: ${{ !cancelled() && needs.test.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download the blob reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: unit-blob-*
+          path: all-blob-reports
+          merge-multiple: true
+
+      # Counted, not assumed. A shard that dies before writing its blob - an OOM,
+      # a runner evicted - would otherwise merge into a green report over a third
+      # of the suite nobody ran, which is worse than a red one.
+      - name: Check every shard reported
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=$(find all-blob-reports -name '*.json' -type f | wc -l | tr -d ' ')
+          if [ "$found" -ne 3 ]; then
+            echo "::error title=Missing shard report::expected 3 blob reports, found $found - a shard produced none, so this run has not tested the whole suite."
+            exit 1
+          fi
+
+      # Merging replays the recorded results rather than re-running anything, so
+      # this is seconds. The exit code is the suite's, and the coverage
+      # thresholds are applied here - verified by raising one and watching the
+      # merge go red.
+      - name: Merge the shard reports
+        run: pnpm exec vitest --mergeReports=all-blob-reports --coverage --reporter=default --reporter=github-actions
 
       - name: Upload coverage report
         if: always()
