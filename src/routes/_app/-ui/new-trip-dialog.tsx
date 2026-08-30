@@ -25,7 +25,7 @@ import {
   Input,
   SimpleSelect,
 } from '#/components/ui'
-import { createTripFn } from '../-server/overview'
+import { createTripFn } from '../-server/trip-lifecycle'
 
 /** The currencies a trip is most often budgeted in, plus the workspace default. */
 const CURRENCIES: ReadonlyArray<{ value: string; label: string }> = [

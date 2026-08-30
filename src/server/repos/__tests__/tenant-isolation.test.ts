@@ -16,8 +16,9 @@ import {
   collabMessageReactions,
   collectionPlaceLabels,
   placeTags,
+  places,
 } from '#/server/db/schema'
-import { NotFoundError, QuotaExceededError } from '../context'
+import { NotFoundError, QuotaExceededError, RepositoryError } from '../context'
 import {
   bucketListRepository,
   getTravelStats,
@@ -156,14 +157,23 @@ import { createTag, tagsRepository } from '../tags'
 import { createTransport, transportsRepository } from '../transports'
 import {
   addTripMember,
+  archiveTrip,
+  canReadTrip,
   countTripsByStatus,
   createShareLink,
   createTrip,
+  deleteTrip,
+  listTripMembers,
+  listTrips,
   removeTripMember,
+  requireTrip,
+  restoreTrip,
   shareLinksRepository,
   tripMembersRepository,
+  tripRolesFor,
   tripsRepository,
   updateTrip,
+  updateTripMember,
 } from '../trips'
 import {
   addCompanyHoliday,
@@ -2381,6 +2391,75 @@ describe('tenant isolation', () => {
         (await listNotifications(alpha.tenant.scope, beta.tenant.ownerUserId))
           .items,
       ).toHaveLength(0)
+    })
+  })
+  /**
+   * The trip lifecycle (`01-S1`, PRD #104 decisions 1, 2 and 6).
+   *
+   * Two refusals that must never collapse into one. Across the boundary every lifecycle write is a
+   * `NotFoundError`, identical to the one a trip that does not exist raises — so B's trip ids stay
+   * unguessable from A. Inside A's own organization the refusal is `FORBIDDEN`, and that is safe
+   * precisely because the caller has already proved they may see the trip.
+   */
+  describe('trip lifecycle', () => {
+    it('refuses every lifecycle write across the boundary, leaving B untouched', async () => {
+      const scope = alpha.tenant.scope
+      const before = await tripsRepository.findById(
+        beta.tenant.scope,
+        beta.tripId,
+      )
+
+      for (const attempt of [
+        () => updateTrip(scope, beta.tripId, { title: 'Hijacked' }),
+        () => archiveTrip(scope, beta.tripId),
+        () => restoreTrip(scope, beta.tripId),
+        () => deleteTrip(scope, beta.tripId),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(
+        await tripsRepository.findById(beta.tenant.scope, beta.tripId),
+      ).toEqual(before)
+      expect(
+        (await listTripDays(beta.tenant.scope, beta.tripId)).length,
+      ).toBeGreaterThan(0)
+      expect(
+        await placesRepository.count(
+          beta.tenant.scope,
+          eq(places.tripId, beta.tripId),
+        ),
+      ).toBe(1)
+    })
+
+    it('answers a demoted owner with FORBIDDEN, not NOT_FOUND', async () => {
+      const scope = alpha.tenant.scope
+      const membership = (await listTripMembers(scope, alpha.tripId)).find(
+        (row) => row.userId === alpha.tenant.ownerUserId,
+      )
+      expect(membership).toBeDefined()
+      if (membership === undefined) return
+
+      await updateTripMember(scope, membership.id, { role: 'editor' })
+
+      const refusal = await captureError(() => archiveTrip(scope, alpha.tripId))
+      expect(refusal).toBeInstanceOf(RepositoryError)
+      expect(refusal).not.toBeInstanceOf(NotFoundError)
+      expect((refusal as RepositoryError).code).toBe('FORBIDDEN')
+
+      // Still readable, which is what makes the two failures different questions.
+      expect((await requireTrip(scope, alpha.tripId)).id).toBe(alpha.tripId)
+    })
+
+    it('never lets a foreign trip into a list, a count or a role map', async () => {
+      const scope = alpha.tenant.scope
+
+      expect((await listTrips(scope)).map((row) => row.id)).toEqual([
+        alpha.tripId,
+      ])
+      expect((await countTripsByStatus(scope)).total).toBe(1)
+      expect((await tripRolesFor(scope, [beta.tripId])).size).toBe(0)
+      expect(await canReadTrip(scope, beta.tripId)).toBe(false)
     })
   })
 })

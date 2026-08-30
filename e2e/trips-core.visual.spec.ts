@@ -195,3 +195,101 @@ test.describe('01-S3 — A trip reopens on the tab you left it on', () => {
     }
   })
 })
+
+test.describe('01-S1 — Who may see a trip and who may change it', () => {
+  /**
+   * This block's route table. One route, because one is what the claim needs: the trip index is
+   * where every tile the demo owner owns is rendered, and the action menu is a property of the tile
+   * rather than of the screen around it.
+   */
+  const TRIPS: RouteCase = {
+    name: 'trips',
+    path: '/trips',
+    ready: 'main',
+    relativeTime: true,
+  }
+
+  const TRIGGER = '[data-part="trip-actions-trigger"]'
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /**
+   * The name of the first tile on the index, read from its heading — the string the trigger's
+   * accessible name has to contain, so the assertion below is measured against the page rather than
+   * against a fixture this spec restates.
+   */
+  async function firstTripTitle(page: Page): Promise<string> {
+    const heading = page.locator('[data-part="trip-tile"] h3').first()
+    await expect(heading).toHaveCount(1)
+    return (await heading.innerText()).trim()
+  }
+
+  test('the trigger on an owned tile names its own trip', async ({ page }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    const title = await firstTripTitle(page)
+    const trigger = page.locator(TRIGGER).first()
+
+    // The demo owner owns every trip in the fixture, so a tile with no trigger at all would mean the
+    // role never reached the payload — the failure mode a menu that renders unconditionally hides.
+    await expect(trigger).toBeVisible()
+    await expect(trigger).toHaveAccessibleName(`Actions for ${title}`)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  test('the menu offers the owner Edit and Archive, and the sheet opens on the trip', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    const title = await firstTripTitle(page)
+    await page.locator(TRIGGER).first().click()
+
+    const menu = page.getByRole('menu')
+    await expect(menu).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: 'Edit' })).toBeVisible()
+    await expect(
+      menu.getByRole('menuitem', { name: /^(Archive|Restore)$/ }),
+    ).toBeVisible()
+    // Delete, Copy and Favourite arrive in `01-S1b`/`c`/`d`; a menu that already carried them here
+    // would be a menu whose items have no server function behind them.
+    await expect(menu.getByRole('menuitem')).toHaveCount(2)
+
+    await menu.getByRole('menuitem', { name: 'Edit' }).click()
+
+    const sheet = page.locator('[data-part="trip-edit-sheet"]')
+    await expect(sheet).toBeVisible()
+    await expect(sheet.getByLabel('Trip name')).toHaveValue(title)
+
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The trigger is a real tab stop, not a hover-only affordance. Above `md` it rests at zero opacity
+   * and is revealed by `group-focus-within` as well as by hover, which is exactly the property a
+   * CSS-only reveal loses the day somebody swaps the selector for `group-hover` alone — and losing
+   * it makes every trip's actions unreachable without a pointer.
+   */
+  test('the trigger is reachable by keyboard', async ({ page }) => {
+    await visit(page, TRIPS, 'light')
+
+    const trigger = page.locator(TRIGGER).first()
+    await trigger.focus()
+    await expect(trigger).toBeFocused()
+    await expect(trigger).toBeVisible()
+  })
+})

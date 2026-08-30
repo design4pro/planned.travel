@@ -7,7 +7,22 @@
  * re-parented into the caller's own tenant.
  */
 
-import { and, asc, count, desc, eq, gte, inArray, isNull, like, lte, ne, or } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  gte,
+  inArray,
+  isNull,
+  like,
+  lte,
+  ne,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { z } from 'zod'
 import {
   TRIP_MEMBER_ROLES,
@@ -17,7 +32,12 @@ import {
   tripMembers,
   trips,
 } from '#/server/db/schema'
-import { assertQuota, createTenantRepository, tenantFilter } from './base'
+import {
+  allOf,
+  assertQuota,
+  createTenantRepository,
+  tenantFilter,
+} from './base'
 import { NotFoundError, RepositoryError } from './context'
 import { syncTripDays } from './days'
 import {
@@ -43,8 +63,14 @@ import type { ShareLink, Trip, TripMember } from '#/server/db/types'
 import type { TenantScope } from './base'
 
 export const tripsRepository = createTenantRepository(trips, 'trip')
-export const tripMembersRepository = createTenantRepository(tripMembers, 'trip member')
-export const shareLinksRepository = createTenantRepository(shareLinks, 'share link')
+export const tripMembersRepository = createTenantRepository(
+  tripMembers,
+  'trip member',
+)
+export const shareLinksRepository = createTenantRepository(
+  shareLinks,
+  'share link',
+)
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -88,11 +114,17 @@ const tripFields = {
  * It is validated like any other id and it is never reachable from a client: `createTripFn`
  * builds its repository input field by field, so no request body can reach this key.
  */
-export const createTripInput = z.object({ ...tripFields, id: idSchema.optional() })
+export const createTripInput = z.object({
+  ...tripFields,
+  id: idSchema.optional(),
+})
 export type CreateTripInput = z.infer<typeof createTripInput>
 
 /** Deliberately without `id`: a primary key is chosen once, at creation, and never patched. */
-export const updateTripInput = z.object({ ...tripFields, title: titleSchema.optional() })
+export const updateTripInput = z.object({
+  ...tripFields,
+  title: titleSchema.optional(),
+})
 export type UpdateTripInput = z.infer<typeof updateTripInput>
 
 export const listTripsInput = z.object({
@@ -145,12 +177,102 @@ export type CreateShareLinkInput = z.infer<typeof createShareLinkInput>
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Resolves a trip inside the caller's tenant or throws {@link NotFoundError}. Every repository that
- * writes a trip-scoped row calls this first, so an id belonging to another organization is rejected
- * rather than quietly adopted.
+ * Who may see a trip, as one `EXISTS` sub-select (ADR 0007, PRD #104 decision 1).
+ *
+ * A trip is readable by the acting user when they hold a `trip_members` row on it, or when its
+ * `visibility` is `organization` — every member of the workspace may then read it. `public` grants a
+ * signed-in reader nothing on its own: it is the share plan's value, for session-less access, and
+ * treating it as a second organization-wide door here would silently publish a trip to the workspace
+ * the moment a share link was minted.
+ *
+ * A sub-select rather than a join or a second query, because every trip reader in this module is a
+ * list: one query per row is the shape this predicate exists to avoid, and a join would multiply the
+ * trip row by its membership. Both sides are `tenantFilter()`-bound, so the membership half can no
+ * more cross an organization boundary than the trip half can.
  */
-export async function requireTrip(scope: TenantScope, tripId: string): Promise<Trip> {
-  return tripsRepository.requireById(scope, tripId)
+function readableTrips(scope: TenantScope): SQL {
+  const isMember = exists(
+    scope.db
+      .select({ present: sql`1` })
+      .from(tripMembers)
+      .where(
+        tenantFilter(
+          scope,
+          tripMembers,
+          eq(tripMembers.tripId, trips.id),
+          eq(tripMembers.userId, scope.ctx.userId),
+        ),
+      ),
+  )
+  // `or()` widens to `SQL | undefined` and only returns `undefined` for an empty argument list,
+  // which this is not — the same narrowing `allOf` performs for `and()`, done here rather than cast.
+  return or(eq(trips.visibility, 'organization'), isMember) ?? isMember
+}
+
+/**
+ * Whether the acting user may see this trip at all. The question every trip-scoped reader asks
+ * before it answers anything else; {@link requireTrip} is the same question with a throw on it.
+ */
+export async function canReadTrip(
+  scope: TenantScope,
+  tripId: string,
+): Promise<boolean> {
+  return (
+    (await tripsRepository.count(
+      scope,
+      allOf(eq(trips.id, tripId), readableTrips(scope)),
+    )) > 0
+  )
+}
+
+/**
+ * Resolves a trip the acting user may see, or throws {@link NotFoundError}. Every repository that
+ * writes a trip-scoped row calls this first, so an id belonging to another organization is rejected
+ * rather than quietly adopted — and, since ADR 0007, so is an id belonging to a private trip in the
+ * caller's own organization that they are not a member of.
+ *
+ * The two cases raise the same error deliberately. "Not yours to see" and "not there" must be
+ * indistinguishable from outside, or the error itself tells a reader which trip ids exist.
+ */
+export async function requireTrip(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Trip> {
+  const trip = await tripsRepository.findOne(
+    scope,
+    allOf(eq(trips.id, tripId), readableTrips(scope)),
+  )
+  if (trip === null) {
+    throw new NotFoundError('trip', tripId)
+  }
+  return trip
+}
+
+/**
+ * The acting user's role on a trip they may already see, or a `FORBIDDEN` {@link RepositoryError}.
+ *
+ * Distinguishable from {@link NotFoundError} on purpose, and the distinction is safe precisely
+ * because it is reached only after {@link requireTrip}: the caller has already proved they may see
+ * the trip, so "you may not do that" tells them nothing they did not know. The guard lives in the
+ * repository rather than in a handler so it holds for a queue consumer and a future route as well
+ * as for a server function — the same argument `ARCHITECTURE.md` §6 makes about quota.
+ *
+ * A reader of an organization-visible trip holds no membership row at all; that is a refusal, not a
+ * crash, so the missing role is reported as `none`.
+ */
+export async function assertTripRole(
+  scope: TenantScope,
+  tripId: string,
+  allowed: ReadonlyArray<TripMember['role']>,
+): Promise<TripMember['role']> {
+  const role = await tripRoleFor(scope, tripId, scope.ctx.userId)
+  if (role === null || !allowed.includes(role)) {
+    throw new RepositoryError(
+      `Trip role ${role ?? 'none'} is not permitted here; requires one of: ${allowed.join(', ')}.`,
+      'FORBIDDEN',
+    )
+  }
+  return role
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -170,7 +292,10 @@ async function reserveTripSlug(
     const candidate = attempt === 1 ? base : `${base.slice(0, 74)}-${attempt}`
     const clashes = await tripsRepository.count(
       scope,
-      and(eq(trips.slug, candidate), excludeTripId ? ne(trips.id, excludeTripId) : undefined),
+      and(
+        eq(trips.slug, candidate),
+        excludeTripId ? ne(trips.id, excludeTripId) : undefined,
+      ),
     )
     if (clashes === 0) {
       return candidate
@@ -200,44 +325,72 @@ function listFilter(input: ListTripsInput): SQL | undefined {
   if (input.search) {
     const needle = `%${input.search.toLowerCase()}%`
     parts.push(
-      or(like(trips.title, needle), like(trips.destination, needle), like(trips.summary, needle)),
+      or(
+        like(trips.title, needle),
+        like(trips.destination, needle),
+        like(trips.summary, needle),
+      ),
     )
   }
   return and(...parts)
 }
 
-/** Trips for the tenant, most recently touched first. */
+/**
+ * Trips the acting user may see, most recently touched first.
+ *
+ * The read predicate is ANDed into the same statement as the caller's filters rather than applied to
+ * its result, so a `limit` counts readable trips and never fills a page with rows that are then
+ * dropped.
+ */
 export async function listTrips(
   scope: TenantScope,
   input: ListTripsInput = {},
 ): Promise<Array<Trip>> {
   const options = listTripsInput.parse(input)
   return tripsRepository.findMany(scope, {
-    where: listFilter(options),
+    where: allOf(readableTrips(scope), listFilter(options)),
     orderBy: [desc(trips.updatedAt)],
     limit: options.limit,
     offset: options.offset,
   })
 }
 
-export async function getTrip(scope: TenantScope, tripId: string): Promise<Trip | null> {
-  return tripsRepository.findById(scope, tripId)
+export async function getTrip(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Trip | null> {
+  return tripsRepository.findOne(
+    scope,
+    allOf(eq(trips.id, tripId), readableTrips(scope)),
+  )
 }
 
-export async function getTripBySlug(scope: TenantScope, slug: string): Promise<Trip | null> {
-  return tripsRepository.findOne(scope, eq(trips.slug, slug))
+export async function getTripBySlug(
+  scope: TenantScope,
+  slug: string,
+): Promise<Trip | null> {
+  return tripsRepository.findOne(
+    scope,
+    allOf(eq(trips.slug, slug), readableTrips(scope)),
+  )
 }
 
 /** Trips that have not finished yet, soonest first — the dashboard's "next up" rail. */
 export async function listUpcomingTrips(
   scope: TenantScope,
-  options: { readonly today: string; readonly limit?: number } = { today: todayIso() },
+  options: { readonly today: string; readonly limit?: number } = {
+    today: todayIso(),
+  },
 ): Promise<Array<Trip>> {
   const today = dateSchema.parse(options.today)
   return tripsRepository.findMany(scope, {
-    where: and(
+    where: allOf(
+      readableTrips(scope),
       eq(trips.isArchived, false),
-      or(gte(trips.endDate, today), and(isNull(trips.endDate), gte(trips.startDate, today))),
+      or(
+        gte(trips.endDate, today),
+        and(isNull(trips.endDate), gte(trips.startDate, today)),
+      ),
     ),
     orderBy: [asc(trips.startDate), asc(trips.id)],
     limit: options.limit ?? 5,
@@ -251,7 +404,7 @@ export async function listPastTrips(
 ): Promise<Array<Trip>> {
   const today = dateSchema.parse(options.today ?? todayIso())
   return tripsRepository.findMany(scope, {
-    where: lte(trips.endDate, today),
+    where: allOf(readableTrips(scope), lte(trips.endDate, today)),
     orderBy: [desc(trips.endDate)],
     limit: options.limit ?? 20,
   })
@@ -264,18 +417,25 @@ export interface TripStatusCounts {
   readonly favourites: number
 }
 
-/** One grouped read behind the dashboard's status chips. */
-export async function countTripsByStatus(scope: TenantScope): Promise<TripStatusCounts> {
+/**
+ * One grouped read behind the dashboard's status chips, over the trips the acting user may see.
+ *
+ * Every figure here carries the predicate, including the two below: a count that included a private
+ * trip the reader cannot open would be the same leak as listing it, spread over three numbers instead
+ * of one row.
+ */
+export async function countTripsByStatus(
+  scope: TenantScope,
+): Promise<TripStatusCounts> {
   const rows = await scope.db
     .select({ status: trips.status, value: count() })
     .from(trips)
-    .where(tenantFilter(scope, trips))
+    .where(tenantFilter(scope, trips, readableTrips(scope)))
     .groupBy(trips.status)
 
-  const byStatus = Object.fromEntries(TRIP_STATUSES.map((status) => [status, 0])) as Record<
-    (typeof TRIP_STATUSES)[number],
-    number
-  >
+  const byStatus = Object.fromEntries(
+    TRIP_STATUSES.map((status) => [status, 0]),
+  ) as Record<(typeof TRIP_STATUSES)[number], number>
   let total = 0
   for (const row of rows) {
     total += row.value
@@ -285,8 +445,14 @@ export async function countTripsByStatus(scope: TenantScope): Promise<TripStatus
   }
 
   const [archived, favourites] = await Promise.all([
-    tripsRepository.count(scope, eq(trips.isArchived, true)),
-    tripsRepository.count(scope, eq(trips.isFavourite, true)),
+    tripsRepository.count(
+      scope,
+      allOf(readableTrips(scope), eq(trips.isArchived, true)),
+    ),
+    tripsRepository.count(
+      scope,
+      allOf(readableTrips(scope), eq(trips.isFavourite, true)),
+    ),
   ])
 
   return { total, byStatus, archived, favourites }
@@ -308,7 +474,10 @@ function todayIso(): string {
  * fires exactly as it does for every real user rather than being handed an `undefined` to fall
  * back from.
  */
-export async function createTrip(scope: TenantScope, input: CreateTripInput): Promise<Trip> {
+export async function createTrip(
+  scope: TenantScope,
+  input: CreateTripInput,
+): Promise<Trip> {
   const { id, ...values } = createTripInput.parse(input)
   assertDateOrder(values.startDate, values.endDate)
 
@@ -330,23 +499,34 @@ export async function createTrip(scope: TenantScope, input: CreateTripInput): Pr
   })
 
   if (trip.startDate && trip.endDate) {
-    await syncTripDays(scope, trip.id, { startDate: trip.startDate, endDate: trip.endDate })
+    await syncTripDays(scope, trip.id, {
+      startDate: trip.startDate,
+      endDate: trip.endDate,
+    })
   }
 
   return trip
 }
 
-/** Applies a patch and, when the date range moved, reconciles the trip's day run with it. */
+/**
+ * Applies a patch and, when the date range moved, reconciles the trip's day run with it.
+ *
+ * A trip's metadata is its owner's (PRD #104 decision 6): moving the dates moves every member's day
+ * run, so an editor — who owns the plan's *content* — is refused here.
+ */
 export async function updateTrip(
   scope: TenantScope,
   tripId: string,
   input: UpdateTripInput,
 ): Promise<Trip> {
   const existing = await requireTrip(scope, tripId)
+  await assertTripRole(scope, tripId, ['owner'])
   const values = definedOnly(updateTripInput.parse(input))
 
-  const startDate = values.startDate === undefined ? existing.startDate : values.startDate
-  const endDate = values.endDate === undefined ? existing.endDate : values.endDate
+  const startDate =
+    values.startDate === undefined ? existing.startDate : values.startDate
+  const endDate =
+    values.endDate === undefined ? existing.endDate : values.endDate
   assertDateOrder(startDate, endDate)
 
   const slug =
@@ -366,12 +546,33 @@ export async function updateTrip(
   return trip
 }
 
-export async function archiveTrip(scope: TenantScope, tripId: string): Promise<Trip> {
-  return tripsRepository.requireUpdate(scope, tripId, { isArchived: true, status: 'archived' })
+/**
+ * Shelves a trip. **Archive is a flag, not a status** (PRD #104 decision 2): this used to write
+ * `status = 'archived'` alongside the flag, and `restoreTrip` used to reset the status to
+ * `'planning'`, so a completed trip came back from the archive "in planning". Neither writes the
+ * column any more, and the `'archived'` value stays in `trips_status_chk` as one nothing writes —
+ * removing it from the constraint is a table rebuild on SQLite.
+ *
+ * Nothing is scheduled or cancelled here. Reminders are a scan (ADR 0005) whose predicate excludes
+ * archived trips, so the archive *is* the switch and a scheduler call added here would be the defect.
+ */
+export async function archiveTrip(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Trip> {
+  await requireTrip(scope, tripId)
+  await assertTripRole(scope, tripId, ['owner'])
+  return tripsRepository.requireUpdate(scope, tripId, { isArchived: true })
 }
 
-export async function restoreTrip(scope: TenantScope, tripId: string): Promise<Trip> {
-  return tripsRepository.requireUpdate(scope, tripId, { isArchived: false, status: 'planning' })
+/** Brings a trip back with the lifecycle status it went in with. See {@link archiveTrip}. */
+export async function restoreTrip(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Trip> {
+  await requireTrip(scope, tripId)
+  await assertTripRole(scope, tripId, ['owner'])
+  return tripsRepository.requireUpdate(scope, tripId, { isArchived: false })
 }
 
 export async function setTripFavourite(
@@ -383,11 +584,19 @@ export async function setTripFavourite(
 }
 
 /** Deletes the trip; every child row goes with it through `ON DELETE CASCADE`. */
-export async function deleteTrip(scope: TenantScope, tripId: string): Promise<void> {
+export async function deleteTrip(
+  scope: TenantScope,
+  tripId: string,
+): Promise<void> {
+  await requireTrip(scope, tripId)
+  await assertTripRole(scope, tripId, ['owner'])
   await tripsRepository.requireRemove(scope, tripId)
 }
 
-function assertDateOrder(startDate: string | null | undefined, endDate: string | null | undefined) {
+function assertDateOrder(
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+) {
   if (startDate && endDate && endDate < startDate) {
     throw new RepositoryError(
       'A trip cannot end before it starts.',
@@ -410,25 +619,29 @@ export async function listTripMembers(
   })
 }
 
-/** Trips the given user collaborates on, newest first. */
+/**
+ * Trips the given user collaborates on, newest first — now a thin alias for {@link listTrips}.
+ *
+ * Since ADR 0007 `listTrips` already answers "the trips this scope may see", which is the question
+ * this function used to answer with a membership query of its own. It is kept for its callers rather
+ * than removed, and it keeps its `userId` argument because the dashboard's summary still takes one.
+ *
+ * A `userId` that is not the acting user's returns nothing. A tenant-scoped read may answer for its
+ * own principal and no other — "which trips is my colleague on" is precisely the question decision 1
+ * closes — and an empty list refuses it without disclosing whether there was anything to refuse.
+ */
 export async function listTripsForUser(
   scope: TenantScope,
   userId: string,
   options: { readonly limit?: number } = {},
 ): Promise<Array<Trip>> {
-  const rows = await scope.db
-    .select({ tripId: tripMembers.tripId })
-    .from(tripMembers)
-    .where(tenantFilter(scope, tripMembers, eq(tripMembers.userId, userId)))
-  const ids = rows.map((row) => row.tripId)
-  if (ids.length === 0) {
+  if (userId !== scope.ctx.userId) {
     return []
   }
-  return tripsRepository.findMany(scope, {
-    where: inArray(trips.id, ids),
-    orderBy: [desc(trips.updatedAt)],
-    limit: options.limit,
-  })
+  return listTrips(
+    scope,
+    options.limit === undefined ? {} : { limit: options.limit },
+  )
 }
 
 export async function addTripMember(
@@ -437,7 +650,10 @@ export async function addTripMember(
 ): Promise<TripMember> {
   const values = addTripMemberInput.parse(input)
   await requireTrip(scope, values.tripId)
-  return tripMembersRepository.insert(scope, { ...values, invitedBy: scope.ctx.userId })
+  return tripMembersRepository.insert(scope, {
+    ...values,
+    invitedBy: scope.ctx.userId,
+  })
 }
 
 export async function updateTripMember(
@@ -452,8 +668,39 @@ export async function updateTripMember(
   )
 }
 
-export async function removeTripMember(scope: TenantScope, memberId: string): Promise<void> {
+export async function removeTripMember(
+  scope: TenantScope,
+  memberId: string,
+): Promise<void> {
   await tripMembersRepository.requireRemove(scope, memberId)
+}
+
+/**
+ * The acting user's role on each of the given trips, keyed by trip id.
+ *
+ * One statement for the whole list, because its caller is a grid: the trip index and the dashboard
+ * render a menu per tile whose items depend on the role, and a query per tile is the shape ADR 0007's
+ * predicate exists to avoid. A trip the user is not a member of — an organization-visible one they
+ * may read — simply has no entry, which is what "no role" is.
+ */
+export async function tripRolesFor(
+  scope: TenantScope,
+  tripIds: ReadonlyArray<string>,
+): Promise<Map<string, TripMember['role']>> {
+  const roles = new Map<string, TripMember['role']>()
+  if (tripIds.length === 0) {
+    return roles
+  }
+  const rows = await tripMembersRepository.findMany(scope, {
+    where: allOf(
+      inArray(tripMembers.tripId, [...tripIds]),
+      eq(tripMembers.userId, scope.ctx.userId),
+    ),
+  })
+  for (const row of rows) {
+    roles.set(row.tripId, row.role)
+  }
+  return roles
 }
 
 /** The acting user's role on a trip, or `null` when they are not a collaborator. */
@@ -489,14 +736,19 @@ export async function createShareLink(
 ): Promise<ShareLink> {
   const values = createShareLinkInput.parse(input)
   await requireTrip(scope, values.tripId)
-  return shareLinksRepository.insert(scope, { ...values, createdBy: scope.ctx.userId })
+  return shareLinksRepository.insert(scope, {
+    ...values,
+    createdBy: scope.ctx.userId,
+  })
 }
 
 export async function revokeShareLink(
   scope: TenantScope,
   shareLinkId: string,
 ): Promise<ShareLink> {
-  return shareLinksRepository.requireUpdate(scope, shareLinkId, { revokedAt: new Date() })
+  return shareLinksRepository.requireUpdate(scope, shareLinkId, {
+    revokedAt: new Date(),
+  })
 }
 
 /**
@@ -510,7 +762,10 @@ export async function touchShareLink(
   shareLinkId: string,
 ): Promise<ShareLink> {
   const link = await shareLinksRepository.requireById(scope, shareLinkId)
-  if (link.revokedAt !== null || (link.expiresAt !== null && link.expiresAt.getTime() < Date.now())) {
+  if (
+    link.revokedAt !== null ||
+    (link.expiresAt !== null && link.expiresAt.getTime() < Date.now())
+  ) {
     throw new NotFoundError('share link', shareLinkId)
   }
   return shareLinksRepository.requireUpdate(scope, shareLinkId, {
