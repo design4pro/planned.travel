@@ -725,17 +725,23 @@ The layout is therefore part of the contract, not a builder's choice:
 src/lib/i18n/messages/<locale>/<namespace>.ts     one flat object of keys, default-exported
 ```
 
-**Namespaces — exactly these ten**, and a new one is a contract change, not an edit:
+**Namespaces — exactly these eleven**, and a new one is a contract change, not an edit:
 
 `shell` · `auth` · `trips` · `modules` · `costs` · `atlas` · `journal` · `marketing` ·
-`settings` · `ui`
+`settings` · `console` · `ui`
+
+`console` was the eleventh, added when the platform console landed. It is separate from `settings`
+because the two speak different role vocabularies and §5 forbids conflating them: `settings` is one
+workspace administering itself in `owner`/`admin`/`member`, `console` is the platform administering
+its accounts in `admin`/`curator`/`user`. A shared namespace is precisely where that conflation
+would start, in a file holding both scales with nothing to say which `admin` is which.
 
 - `src/lib/i18n/catalogue.ts` aggregates with `import.meta.glob('./messages/*/*.ts')`, so a new
   namespace file is picked up with no shared index for fifteen items to fight over. Measured in
   round 1: an explicit per-locale importer emits 23 separate chunks and inlines none of them into
   the entry — the glob must keep that property.
-- `src/lib/i18n/types.ts` derives the key union from `import type` of the ten **`en`** namespace
-  files. English is the only source of truth for what a key is.
+- `src/lib/i18n/types.ts` derives the key union from `import type` of the eleven **`en`**
+  namespace files. English is the only source of truth for what a key is.
 - The parity test globs `messages/*/*.ts`. It fails on a key in `en` and missing elsewhere, a key
   present only outside `en`, and a non-`en` value byte-identical to `en` outside a proper-noun
   allow-list.

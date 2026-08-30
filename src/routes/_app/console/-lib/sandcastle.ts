@@ -12,6 +12,7 @@
  * skew at the last step, and would make the page disagree with the runs it describes.
  */
 
+import type { Translate } from '#/lib/i18n'
 import type { RegistryState, WipView } from '#/server/do'
 
 /** The three numbers at the top of the screen. */
@@ -72,6 +73,12 @@ export function formatElapsed(milliseconds: number): string {
  * before it is swept. Saying `expired` is more honest than a negative number and more useful than
  * hiding the row.
  */
-export function formatLease(expiresAt: number, now: number): string {
-  return expiresAt <= now ? 'expired' : `${formatElapsed(expiresAt - now)} left`
+export function formatLease(
+  t: Translate,
+  expiresAt: number,
+  now: number,
+): string {
+  return expiresAt <= now
+    ? t('console.runs.lease.expired')
+    : t('console.runs.lease.left', { elapsed: formatElapsed(expiresAt - now) })
 }

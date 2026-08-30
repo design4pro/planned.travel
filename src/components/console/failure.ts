@@ -26,7 +26,13 @@
 
 import { readPublicFailure } from '#/lib/errors'
 
-/** The fallback when a rejection carries nothing readable at all. */
+/**
+ * The fallback when a rejection carries nothing readable at all.
+ *
+ * Kept as a literal *and* taken as a parameter below. A screen with a translator passes
+ * `t('console.failure.fallback')`; this one is what a caller outside a component gets, and what the
+ * tests read, so the function has an answer even where no locale is in scope.
+ */
 export const CONSOLE_ACTION_FALLBACK =
   'The action did not go through. Try again in a moment.'
 
@@ -61,13 +67,16 @@ function issueMessages(payload: unknown): ReadonlyArray<string> | null {
  * Anything thrown on the client never passes that boundary, so the original reading below is still
  * the path for those and is left exactly as it was.
  */
-export function readConsoleFailure(cause: unknown): string {
+export function readConsoleFailure(
+  cause: unknown,
+  fallback: string = CONSOLE_ACTION_FALLBACK,
+): string {
   const failure = readPublicFailure(cause)
   if (failure.kind !== 'unexpected') {
-    return failure.message ?? CONSOLE_ACTION_FALLBACK
+    return failure.message ?? fallback
   }
   if (failure.reference !== undefined) {
-    return CONSOLE_ACTION_FALLBACK
+    return fallback
   }
 
   const raw =
@@ -78,7 +87,7 @@ export function readConsoleFailure(cause: unknown): string {
         : null
 
   if (raw === null) {
-    return CONSOLE_ACTION_FALLBACK
+    return fallback
   }
   // Cheap gate before the parse: a refusal sentence never starts with a bracket, and `JSON.parse`
   // on every error message would be a try/catch on the common path.

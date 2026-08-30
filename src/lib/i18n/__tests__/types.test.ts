@@ -6,7 +6,7 @@ import type { MessageKey, Namespace, TranslationOf } from '../types'
 
 /**
  * The two things about `../types` that a screen depends on and no other test
- * covers: the ten namespaces are the ten `docs/SPEC.md` §8 fixes, and the key
+ * covers: the eleven namespaces are the eleven `docs/SPEC.md` §9 fixes, and the key
  * union derived from the English files is *closed*.
  *
  * Closed is the whole point. §8.2 forbids a runtime fallback to English, which
@@ -20,7 +20,7 @@ import type { MessageKey, Namespace, TranslationOf } from '../types'
  */
 
 /**
- * The ten namespaces, written out as a type rather than read back from
+ * The eleven namespaces, written out as a type rather than read back from
  * `NAMESPACES`. `satisfies` fails on a namespace this object forgets, and
  * excess-property checking fails on one it invents, so the object and the
  * `Namespace` union prove each other — and the assertion below then ties the
@@ -36,15 +36,16 @@ const SPEC_NAMESPACES = {
   journal: true,
   marketing: true,
   settings: true,
+  console: true,
   ui: true,
 } as const satisfies Record<Namespace, true>
 
-describe('the ten namespaces', () => {
-  it('are exactly the ones docs/SPEC.md §8 fixes', () => {
+describe('the eleven namespaces', () => {
+  it('are exactly the ones docs/SPEC.md §9 fixes', () => {
     expect([...NAMESPACES].sort()).toEqual(Object.keys(SPEC_NAMESPACES).sort())
   })
 
-  it('keep the order §8 lists them in, so a catalogue reads in that order', () => {
+  it('keep the order §9 lists them in, so a catalogue reads in that order', () => {
     expect(NAMESPACES).toEqual([
       'shell',
       'auth',
@@ -55,6 +56,7 @@ describe('the ten namespaces', () => {
       'journal',
       'marketing',
       'settings',
+      'console',
       'ui',
     ])
   })
@@ -63,7 +65,7 @@ describe('the ten namespaces', () => {
     expect(new Set(NAMESPACES).size).toBe(NAMESPACES.length)
   })
 
-  it('cannot be extended at run time — an eleventh is a contract change', () => {
+  it('cannot be extended at run time — a twelfth is a contract change', () => {
     expect(Object.isFrozen(NAMESPACES)).toBe(true)
   })
 })

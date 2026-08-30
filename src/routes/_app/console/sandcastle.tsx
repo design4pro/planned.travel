@@ -16,12 +16,15 @@ import {
   orderWip,
   summariseFleet,
 } from './-lib/sandcastle'
+import { useTranslate } from '#/lib/i18n'
 import { loadSandcastleRegistry } from './-server/sandcastle'
 import { formatNumber } from '../-lib/format'
 import { Panel, PanelRow, RowsSkeleton, StatsSkeleton } from '../-ui/scaffold'
 
 import type { SandcastleRegistryView } from './-server/sandcastle'
+import type { ErrorComponentProps } from '@tanstack/react-router'
 import type { BadgeTone } from '#/components/ui'
+import type { MessageKey } from '#/lib/i18n'
 import type {
   RegistryState,
   RunView,
@@ -57,19 +60,33 @@ export const Route = createFileRoute('/_app/console/sandcastle')({
   loader: async (): Promise<SandcastleRegistryView> =>
     await loadSandcastleRegistry(),
   pendingComponent: SandcastlePending,
-  errorComponent: ({ error }) => (
-    <ErrorPanel
-      className="bg-surface-2"
-      error={error}
-      title="The run registry did not answer"
-    />
-  ),
+  errorComponent: SandcastleError,
   component: SandcastlePage,
 })
 
-const ORIGIN_LABEL: Record<SandcastleOrigin, string> = {
-  local: 'Local',
-  'github-actions': 'GitHub Actions',
+function SandcastleError({ error }: ErrorComponentProps) {
+  const t = useTranslate()
+  return (
+    <ErrorPanel
+      className="bg-surface-2"
+      error={error}
+      title={t('console.runs.error.title')}
+    />
+  )
+}
+
+/**
+ * Where a run is executing, as a word.
+ *
+ * The only registry field on this screen that is translated. `kind`, `stage` and `status` beside it
+ * are printed as the registry stores them, next to the run id, the host and the branch name — they
+ * are data being read out, and a dashboard that renames half its columns' values and not the other
+ * half is harder to reconcile with the wire than one that renames none. `origin` was already a
+ * hand-written display map when it arrived, so it stays one.
+ */
+const ORIGIN_KEY: Record<SandcastleOrigin, MessageKey> = {
+  local: 'console.runs.origin.local',
+  'github-actions': 'console.runs.origin.githubActions',
 }
 
 const STATUS_TONE: Record<SandcastleRunStatus, BadgeTone> = {
@@ -89,6 +106,7 @@ function SandcastlePage() {
 }
 
 function Fleet({ state }: { state: RegistryState }) {
+  const t = useTranslate()
   const summary = summariseFleet(state)
 
   return (
@@ -97,29 +115,29 @@ function Fleet({ state }: { state: RegistryState }) {
         <StatCard
           tone="inverse"
           icon={<Radio />}
-          label="Live runs"
+          label={t('console.runs.stat.live')}
           value={formatNumber(summary.liveRuns)}
           caption={
             summary.liveRuns === 0
-              ? 'Nothing is building right now'
-              : 'Heartbeating against a five-minute lease'
+              ? t('console.runs.stat.live.none')
+              : t('console.runs.stat.live.some')
           }
         />
         <StatCard
           icon={<ListChecks />}
-          label="Issues held"
+          label={t('console.runs.stat.issues')}
           value={formatNumber(summary.issuesHeld)}
-          caption="Leased to one run each, ancestors and sub-issues included"
+          caption={t('console.runs.stat.issues.caption')}
         />
         <StatCard
           icon={<GitBranch />}
-          label="Orphaned branches"
+          label={t('console.runs.stat.orphans')}
           value={formatNumber(summary.orphanedBranches)}
           valueTone={summary.orphanedBranches === 0 ? 'default' : 'warning'}
           caption={
             summary.orphanedBranches === 0
-              ? 'No work is sitting unclaimed'
-              : 'Commits from a run that stopped, waiting to be adopted'
+              ? t('console.runs.stat.orphans.none')
+              : t('console.runs.stat.orphans.some')
           }
         />
       </div>
@@ -141,16 +159,21 @@ function LiveRuns({
   runs: ReadonlyArray<RunView>
   now: number
 }) {
+  const t = useTranslate()
   return (
-    <Panel label="Live runs" count={formatNumber(runs.length)} flush>
+    <Panel
+      label={t('console.runs.stat.live')}
+      count={formatNumber(runs.length)}
+      flush
+    >
       {runs.length === 0 ? (
         <div className="p-5">
           <EmptyState
             variant="filled"
             size="sm"
             icon={<Castle />}
-            title="No run is registered"
-            description="A run appears here the moment it registers — from this machine, from another, or from a GitHub Actions runner — with the issues it has claimed."
+            title={t('console.runs.live.empty.title')}
+            description={t('console.runs.live.empty.body')}
           />
         </div>
       ) : (
@@ -170,7 +193,7 @@ function LiveRuns({
                       tone={run.origin === 'local' ? 'neutral' : 'info'}
                       size="sm"
                     >
-                      {ORIGIN_LABEL[run.origin]}
+                      {t(ORIGIN_KEY[run.origin])}
                     </Badge>
                   </span>
                   <span className="mt-0.5 block truncate text-caption text-ink-3">
@@ -187,13 +210,17 @@ function LiveRuns({
 
                 <span className="min-w-0 text-caption text-ink-3">
                   {run.issues.length === 0
-                    ? 'holds nothing'
-                    : `holds ${run.issues.map((id) => `#${id}`).join(', ')}`}
+                    ? t('console.runs.holds.nothing')
+                    : t('console.runs.holds', {
+                        issues: run.issues.map((id) => `#${id}`).join(', '),
+                      })}
                 </span>
 
                 <span className="ml-auto shrink-0 text-caption tabular-nums text-ink-4">
-                  {formatElapsed(now - run.startedAt)} up ·{' '}
-                  {formatLease(run.expiresAt, now)}
+                  {t('console.runs.uptime', {
+                    elapsed: formatElapsed(now - run.startedAt),
+                    lease: formatLease(t, run.expiresAt, now),
+                  })}
                 </span>
               </PanelRow>
             </li>
@@ -211,18 +238,23 @@ function WorkInProgress({
   wip: ReadonlyArray<WipView>
   now: number
 }) {
+  const t = useTranslate()
   const ordered = orderWip(wip)
 
   return (
-    <Panel label="Work in progress" count={formatNumber(ordered.length)} flush>
+    <Panel
+      label={t('console.runs.wip.label')}
+      count={formatNumber(ordered.length)}
+      flush
+    >
       {ordered.length === 0 ? (
         <div className="p-5">
           <EmptyState
             variant="filled"
             size="sm"
             icon={<GitBranch />}
-            title="No branch is carrying work"
-            description="A run records its branch as soon as it has commits on it, so that if the run dies the next one to claim the issue is offered the work instead of starting it again."
+            title={t('console.runs.wip.empty.title')}
+            description={t('console.runs.wip.empty.body')}
           />
         </div>
       ) : (
@@ -237,7 +269,7 @@ function WorkInProgress({
                     </span>
                     {entry.orphaned ? (
                       <Badge tone="warning" size="sm" dot>
-                        Orphaned
+                        {t('console.runs.wip.orphaned')}
                       </Badge>
                     ) : null}
                   </span>
@@ -246,9 +278,11 @@ function WorkInProgress({
                   </span>
                 </span>
                 <span className="ml-auto shrink-0 text-caption tabular-nums text-ink-4">
-                  {formatNumber(entry.commits)} commit
-                  {entry.commits === 1 ? '' : 's'} ·{' '}
-                  {formatElapsed(now - entry.updatedAt)} ago
+                  {t('console.runs.wip.meta', {
+                    count: entry.commits,
+                    commits: formatNumber(entry.commits),
+                    elapsed: formatElapsed(now - entry.updatedAt),
+                  })}
                 </span>
               </PanelRow>
             </li>
@@ -266,16 +300,21 @@ function RecentRuns({
   runs: ReadonlyArray<RunView>
   now: number
 }) {
+  const t = useTranslate()
   return (
-    <Panel label="Recently finished" count={formatNumber(runs.length)} flush>
+    <Panel
+      label={t('console.runs.recent.label')}
+      count={formatNumber(runs.length)}
+      flush
+    >
       {runs.length === 0 ? (
         <div className="p-5">
           <EmptyState
             variant="filled"
             size="sm"
             icon={<History />}
-            title="No run has finished yet"
-            description="The last fifty runs are kept here with how each one ended."
+            title={t('console.runs.recent.empty.title')}
+            description={t('console.runs.recent.empty.body')}
           />
         </div>
       ) : (
@@ -299,7 +338,9 @@ function RecentRuns({
                   )}
                 </span>
                 <span className="ml-auto shrink-0 text-caption tabular-nums text-ink-4">
-                  {formatElapsed(now - run.lastHeartbeatAt)} ago
+                  {t('console.runs.ago', {
+                    elapsed: formatElapsed(now - run.lastHeartbeatAt),
+                  })}
                 </span>
               </PanelRow>
             </li>
@@ -318,12 +359,13 @@ function RecentRuns({
  * from "you are looking in the wrong place".
  */
 function NotTheCoordinator() {
+  const t = useTranslate()
   return (
     <Card className="bg-surface-2">
       <EmptyState
         icon={<CloudOff />}
-        title="This deployment does not coordinate the fleet"
-        description="The run registry is bound on staging alone, and deliberately: a second registry would let two fleets each believe they hold the backlog, which is the one thing it exists to prevent. Read the fleet on staging."
+        title={t('console.runs.notCoordinator.title')}
+        description={t('console.runs.notCoordinator.body')}
       />
     </Card>
   )

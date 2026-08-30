@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { resolvePlatformRole } from '#/server/auth/access'
+import { consoleTranslate as t } from '#/lib/i18n/__tests__/console-translate'
 import {
   PLATFORM_ROLE_ORDER,
   PLATFORM_ROLE_VOCABULARY,
@@ -76,7 +77,9 @@ describe('the role vocabulary', () => {
   it('says what every role may do and what it may not', () => {
     for (const role of PLATFORM_ROLE_ORDER) {
       const descriptor = PLATFORM_ROLE_VOCABULARY[role]
-      expect(descriptor.summary.length).toBeGreaterThan(0)
+      // The summary is a catalogue key now, so what is checked is that the key resolves to a
+      // sentence — a key nobody authored would render as the key itself.
+      expect(t(descriptor.summaryKey)).not.toBe(descriptor.summaryKey)
       // A `user` holds nothing, so its `holds` list is empty by design - but every role has to be
       // explicit about at least one thing it cannot do, or the account screen answers only the half
       // of the question nobody came with.

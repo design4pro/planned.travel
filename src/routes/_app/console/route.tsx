@@ -6,8 +6,11 @@ import { ErrorPanel } from '#/components/layout/error-state'
 import { PageHeader } from '#/components/layout/page-header'
 import { PlatformRoleBadge, readConsoleFailure } from '#/components/console'
 import { Button, Card, EmptyState } from '#/components/ui'
+import { useTranslate } from '#/lib/i18n'
 import { loadConsoleAccess } from './-server/access'
 import { ConsoleNav } from './-ui/console-nav'
+
+import type { ErrorComponentProps } from '@tanstack/react-router'
 
 /**
  * The platform console's shell: one persistent index of sections on the left, the section itself on
@@ -41,30 +44,38 @@ export const Route = createFileRoute('/_app/console')({
     return { consoleAccess: result.access }
   },
   notFoundComponent: ConsoleNotFound,
-  errorComponent: ({ error }) => (
-    <AppFrame>
-      <ErrorPanel
-        error={readConsoleFailure(error)}
-        title="The console did not load"
-      />
-    </AppFrame>
-  ),
+  // A named component rather than an inline arrow, here and on every screen below it: the sentence
+  // and the fallback both come from `t()`, and a hook needs a component to be called from.
+  errorComponent: ConsoleError,
   component: ConsoleLayout,
 })
 
+function ConsoleError({ error }: ErrorComponentProps) {
+  const t = useTranslate()
+  return (
+    <AppFrame>
+      <ErrorPanel
+        error={readConsoleFailure(error, t('console.failure.fallback'))}
+        title={t('console.shell.error.title')}
+      />
+    </AppFrame>
+  )
+}
+
 function ConsoleLayout() {
+  const t = useTranslate()
   const { consoleAccess } = Route.useRouteContext()
 
   return (
     <AppFrame>
       <AppSections>
         <PageHeader
-          eyebrow="Platform"
-          title="Console"
-          description="The product itself — accounts, standing and the global catalogue"
+          eyebrow={t('console.shell.eyebrow')}
+          title={t('console.shell.title')}
+          description={t('console.shell.description')}
           actions={
             <span className="flex items-center gap-2 text-caption text-ink-3">
-              <span>Signed in as</span>
+              <span>{t('console.shell.signedInAs')}</span>
               <PlatformRoleBadge role={consoleAccess.role} />
             </span>
           }
@@ -95,22 +106,25 @@ function ConsoleLayout() {
  * this configuration existed and nothing could get to it.
  */
 function ConsoleNotFound() {
+  const t = useTranslate()
   return (
     <AppFrame>
       <AppSections>
         <Card className="bg-surface-2">
           <EmptyState
             icon={<UserRoundSearch />}
-            title="No such account"
-            description="Nothing on the platform carries that id. It may have been deleted since the link was made, or the address may have been mistyped."
+            title={t('console.shell.notFound.title')}
+            description={t('console.shell.notFound.body')}
             action={
               <Button asChild variant="primary">
-                <Link to="/console/users">All accounts</Link>
+                <Link to="/console/users">
+                  {t('console.shell.allAccounts')}
+                </Link>
               </Button>
             }
             secondaryAction={
               <Button asChild variant="secondary">
-                <Link to="/console">Console overview</Link>
+                <Link to="/console">{t('console.shell.overview')}</Link>
               </Button>
             }
           />

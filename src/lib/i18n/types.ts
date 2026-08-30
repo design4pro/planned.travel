@@ -1,5 +1,5 @@
 /**
- * The message format, the ten namespaces, and the types that make `t()` safe.
+ * The message format, the eleven namespaces, and the types that make `t()` safe.
  *
  * There is no i18n package here and none is coming (`docs/SPEC.md` §3, §8.1),
  * so the format is deliberately the smallest thing that covers the product:
@@ -9,15 +9,15 @@
  *   chosen by `Intl.PluralRules` from the `count` parameter.
  *
  * **English is the schema.** §8 fixes the catalogue layout as
- * `messages/<locale>/<namespace>.ts` over ten namespaces, and this module
- * derives the key union from `import type` of the ten **`en`** files — nothing
- * else decides what a key is. A key that does not exist is a compile error
+ * `messages/<locale>/<namespace>.ts` over eleven namespaces, and this module
+ * derives the key union from `import type` of the eleven **`en`** files —
+ * nothing else decides what a key is. A key that does not exist is a compile error
  * rather than a runtime fallback to English, which §8.2 forbids outright, and
  * the parameter names are read straight out of the English string's literal
  * type, so a message with a `{name}` cannot be rendered without one.
  *
- * **A key is `<namespace>.<key in the file>`.** Ten namespace files are written
- * by nine different items in parallel, so two of them will eventually both want
+ * **A key is `<namespace>.<key in the file>`.** Eleven namespace files are
+ * written by different items in parallel, so two of them will eventually both want
  * `title` or `empty.body`; unprefixed, the second one to merge would silently
  * win and one screen would render another screen's copy. Qualifying the key
  * with its namespace makes that collision impossible by construction rather
@@ -47,6 +47,7 @@
 
 import type Atlas from './messages/en/atlas'
 import type Auth from './messages/en/auth'
+import type Console from './messages/en/console'
 import type Costs from './messages/en/costs'
 import type Journal from './messages/en/journal'
 import type Marketing from './messages/en/marketing'
@@ -88,8 +89,8 @@ export type TranslationOf<TSource extends NamespaceMessages> = {
 }
 
 /**
- * The ten `en` namespace files. Adding an eleventh is a change to
- * `docs/SPEC.md` §8, not an edit to this interface.
+ * The eleven `en` namespace files. Adding a twelfth is a change to
+ * `docs/SPEC.md` §9, not an edit to this interface.
  */
 interface EnNamespaces {
   readonly shell: typeof Shell
@@ -101,14 +102,15 @@ interface EnNamespaces {
   readonly journal: typeof Journal
   readonly marketing: typeof Marketing
   readonly settings: typeof Settings
+  readonly console: typeof Console
   readonly ui: typeof Ui
 }
 
-/** One of the ten namespaces §8 fixes. */
+/** One of the eleven namespaces §9 fixes. */
 export type Namespace = keyof EnNamespaces
 
 /**
- * The same ten, as data, for the loader and the parity gate. Declared against
+ * The same eleven, as data, for the loader and the parity gate. Declared against
  * `Namespace`, so a typo here is a compile error and a namespace that exists
  * only in this list is caught by `__tests__/types.test.ts`.
  */
@@ -122,6 +124,7 @@ export const NAMESPACES: ReadonlyArray<Namespace> = Object.freeze([
   'journal',
   'marketing',
   'settings',
+  'console',
   'ui',
 ])
 

@@ -14,6 +14,7 @@ import { LogOut } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { IconButton } from '#/components/ui'
+import { useTranslate } from '#/lib/i18n'
 import { revokePlatformSessionFn } from '#/server/fns/console/sessions'
 import { ConsoleActionDialog } from './action-dialog'
 
@@ -31,21 +32,22 @@ export function RevokeSessionButton({
   describedAs,
   onRevoked,
 }: RevokeSessionButtonProps) {
+  const t = useTranslate()
   const [open, setOpen] = useState(false)
 
   const revoke = useCallback(async (): Promise<void> => {
     await revokePlatformSessionFn({ data: { userId, sessionId } })
     await onRevoked()
-    toast.success('Session ended', {
-      description: 'The device has to sign in again on its next request.',
+    toast.success(t('console.session.revoke.done'), {
+      description: t('console.session.revoke.done.body'),
     })
-  }, [onRevoked, sessionId, userId])
+  }, [onRevoked, sessionId, t, userId])
 
   return (
     <>
       <IconButton
         icon={<LogOut />}
-        label={`End the session on ${describedAs}`}
+        label={t('console.session.revoke.label', { device: describedAs })}
         variant="danger"
         size="sm"
         onClick={() => {
@@ -55,9 +57,9 @@ export function RevokeSessionButton({
       <ConsoleActionDialog
         open={open}
         onOpenChange={setOpen}
-        title="End this session"
-        description={`${describedAs} has to sign in again on its next request. If it is the session you are reading this in, you are signed out with it.`}
-        confirmLabel="End session"
+        title={t('console.session.revoke.title')}
+        description={t('console.session.revoke.body', { device: describedAs })}
+        confirmLabel={t('console.session.revoke.confirm')}
         confirmVariant="danger"
         onConfirm={revoke}
       />
