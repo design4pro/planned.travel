@@ -47,6 +47,18 @@
  *   operator who has left a session on a machine they no longer control wants exactly this - and
  *   neither removes a way back in.
  *
+ * **Plain `async` functions, never `createServerFn`, and that is load-bearing.** Every caller is a
+ * server function in `src/routes/_app/console/-server/`, and a `createServerFn` called from inside
+ * another one's handler does not survive the production build. The Start plugin splits and registers
+ * a server function only where the client graph reaches it; a wrapper's handler is stripped on the
+ * client, so its import of this module is tree-shaken and none of these ten is ever registered. They
+ * were still compiled to RPC stubs, so each nested call resolved `getServerFnById` against a
+ * manifest it was absent from and threw `Server function info not found` — every console screen
+ * down in the deployed Worker, with typecheck, lint and vitest all green. That is what
+ * `scripts/check-server-fn-manifest.mjs` now fails the build on. The wire boundary is the wrapper's
+ * `.validator`; each function below re-parses its own schema on entry, so the defaults and the
+ * refusals here hold whoever calls them.
+ *
  * Reads are not audited, here or over MCP (docs/ACCESS.md §4.2). `platform.user.get` does not exist,
  * and neither does a log field shaped like one — see `ConsoleRead` in `./context`.
  *
@@ -62,7 +74,6 @@
  * item rather than half-built here.
  */
 
-import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '#/server/auth'
@@ -207,133 +218,137 @@ const SECONDS_PER_DAY = 86_400
  *
  * Not audited: reads never are (docs/ACCESS.md §4.2).
  */
-export const listPlatformUsersFn = createServerFn({ method: 'GET' })
-  .validator(listPlatformUsersInputSchema)
-  .handler(
-    async ({
-      data,
-    }): Promise<{
-      users: ReadonlyArray<ConsoleUser>
-      total: number
-      limit: number
-      offset: number
-    }> => {
-      const call = await openConsoleCall({ user: ['list'] })
+export async function listPlatformUsers(
+  input: z.input<typeof listPlatformUsersInputSchema>,
+): Promise<{
+  users: ReadonlyArray<ConsoleUser>
+  total: number
+  limit: number
+  offset: number
+}> {
+  const data = listPlatformUsersInputSchema.parse(input)
 
-      const filter =
-        data.role !== undefined
-          ? // `contains`, not `eq`: `user.role` is a comma-joined string for a multi-role account
-            // and Better Auth splits it the same way, so an exact match would miss `curator,user`.
-            {
-              filterField: 'role',
-              filterOperator: 'contains' as const,
-              filterValue: data.role,
-            }
-          : data.banned !== undefined
-            ? {
-                filterField: 'banned',
-                filterOperator: 'eq' as const,
-                filterValue: data.banned,
-              }
-            : {}
+  const call = await openConsoleCall({ user: ['list'] })
 
-      const result = await platformApi().listUsers({
-        query: {
-          ...(data.search
-            ? {
-                searchValue: data.search,
-                searchField: data.searchField,
-                searchOperator: 'contains' as const,
-              }
-            : {}),
-          ...filter,
-          sortBy: data.sortBy,
-          sortDirection: data.sortDirection,
-          limit: data.limit,
-          offset: data.offset,
-        },
-        headers: call.headers,
-      })
+  const filter =
+    data.role !== undefined
+      ? // `contains`, not `eq`: `user.role` is a comma-joined string for a multi-role account
+        // and Better Auth splits it the same way, so an exact match would miss `curator,user`.
+        {
+          filterField: 'role',
+          filterOperator: 'contains' as const,
+          filterValue: data.role,
+        }
+      : data.banned !== undefined
+        ? {
+            filterField: 'banned',
+            filterOperator: 'eq' as const,
+            filterValue: data.banned,
+          }
+        : {}
 
-      const rows = z.array(platformUserSchema).parse(result.users)
-      recordConsoleRead(call, 'users', {
-        returned: rows.length,
-        total: result.total,
-      })
-
-      return {
-        users: rows.map(toConsoleUser),
-        total: result.total,
-        limit: data.limit,
-        offset: data.offset,
-      }
+  const result = await platformApi().listUsers({
+    query: {
+      ...(data.search
+        ? {
+            searchValue: data.search,
+            searchField: data.searchField,
+            searchOperator: 'contains' as const,
+          }
+        : {}),
+      ...filter,
+      sortBy: data.sortBy,
+      sortDirection: data.sortDirection,
+      limit: data.limit,
+      offset: data.offset,
     },
-  )
+    headers: call.headers,
+  })
+
+  const rows = z.array(platformUserSchema).parse(result.users)
+  recordConsoleRead(call, 'users', {
+    returned: rows.length,
+    total: result.total,
+  })
+
+  return {
+    users: rows.map(toConsoleUser),
+    total: result.total,
+    limit: data.limit,
+    offset: data.offset,
+  }
+}
 
 /** One account. Not audited, and logged like every other function here. */
-export const getPlatformUserFn = createServerFn({ method: 'GET' })
-  .validator(getPlatformUserInputSchema)
-  .handler(async ({ data }): Promise<ConsoleUser> => {
-    const call = await openConsoleCall({ user: ['get'] })
-    const row = await readTargetUser(call, data.userId)
+export async function getPlatformUser(
+  input: z.input<typeof getPlatformUserInputSchema>,
+): Promise<ConsoleUser> {
+  const data = getPlatformUserInputSchema.parse(input)
 
-    recordConsoleRead(call, 'user', { entityId: row.id })
+  const call = await openConsoleCall({ user: ['get'] })
+  const row = await readTargetUser(call, data.userId)
 
-    return toConsoleUser(row)
-  })
+  recordConsoleRead(call, 'user', { entityId: row.id })
+
+  return toConsoleUser(row)
+}
 
 /* --------------------------------------------------------------- mutations */
 
 /** Creates an account with a platform role. `platform.user.created`. */
-export const createPlatformUserFn = createServerFn({ method: 'POST' })
-  .validator(createPlatformUserInputSchema)
-  .handler(async ({ data }): Promise<ConsoleUser> => {
-    const call = await openConsoleCall({ user: ['create', 'set-role'] })
+export async function createPlatformUser(
+  input: z.input<typeof createPlatformUserInputSchema>,
+): Promise<ConsoleUser> {
+  const data = createPlatformUserInputSchema.parse(input)
 
-    const created = await platformApi().createUser({
-      body: {
-        email: data.email,
-        name: data.name,
-        password: data.password,
-        role: data.role,
-      },
-      headers: call.headers,
-    })
-    const row = platformUserSchema.parse(created.user)
+  const call = await openConsoleCall({ user: ['create', 'set-role'] })
 
-    await recordConsoleAction(call, {
-      action: PLATFORM_ACTIONS.USER_CREATED,
-      entityId: row.id,
-      // `before` is null because the account did not exist. The password is not in `after` and
-      // never can be: `auditUserState` has no key for it.
-      changes: { before: null, after: auditUserState(row) },
-    })
-
-    return toConsoleUser(row)
+  const created = await platformApi().createUser({
+    body: {
+      email: data.email,
+      name: data.name,
+      password: data.password,
+      role: data.role,
+    },
+    headers: call.headers,
   })
+  const row = platformUserSchema.parse(created.user)
+
+  await recordConsoleAction(call, {
+    action: PLATFORM_ACTIONS.USER_CREATED,
+    entityId: row.id,
+    // `before` is null because the account did not exist. The password is not in `after` and
+    // never can be: `auditUserState` has no key for it.
+    changes: { before: null, after: auditUserState(row) },
+  })
+
+  return toConsoleUser(row)
+}
 
 /** Changes an account's display name. `platform.user.updated`. */
-export const updatePlatformUserFn = createServerFn({ method: 'POST' })
-  .validator(updatePlatformUserInputSchema)
-  .handler(async ({ data }): Promise<ConsoleUser> => {
-    const call = await openConsoleCall({ user: ['update'] })
-    const before = await readTargetUser(call, data.userId)
+export async function updatePlatformUser(
+  input: z.input<typeof updatePlatformUserInputSchema>,
+): Promise<ConsoleUser> {
+  const data = updatePlatformUserInputSchema.parse(input)
 
-    const updated = await platformApi().adminUpdateUser({
-      body: { userId: data.userId, data: { name: data.name } },
-      headers: call.headers,
-    })
-    const row = platformUserSchema.parse(updated)
+  const call = await openConsoleCall({ user: ['update'] })
+  const before = await readTargetUser(call, data.userId)
 
-    await dropSessionSnapshots(call, data.userId, PLATFORM_ACTIONS.USER_UPDATED)
-    await recordConsoleAction(call, {
-      action: PLATFORM_ACTIONS.USER_UPDATED,
-      entityId: row.id,
-      changes: { before: auditUserState(before), after: auditUserState(row) },
-    })
-
-    return toConsoleUser(row)
+  const updated = await platformApi().adminUpdateUser({
+    body: { userId: data.userId, data: { name: data.name } },
+    headers: call.headers,
   })
+  const row = platformUserSchema.parse(updated)
+
+  await dropSessionSnapshots(call, data.userId, PLATFORM_ACTIONS.USER_UPDATED)
+  await recordConsoleAction(call, {
+    action: PLATFORM_ACTIONS.USER_UPDATED,
+    entityId: row.id,
+    changes: { before: auditUserState(before), after: auditUserState(row) },
+  })
+
+  return toConsoleUser(row)
+}
 
 /**
  * Changes an account's address. `platform.user.email_set`.
@@ -342,34 +357,32 @@ export const updatePlatformUserFn = createServerFn({ method: 'POST' })
  * receive mail there, and `emailVerified` is what the product's own recovery and notification paths
  * read; carrying the old flag across would assert something nobody checked.
  */
-export const setPlatformUserEmailFn = createServerFn({ method: 'POST' })
-  .validator(setPlatformUserEmailInputSchema)
-  .handler(async ({ data }): Promise<ConsoleUser> => {
-    const call = await openConsoleCall({ user: ['set-email'] })
-    const before = await readTargetUser(call, data.userId)
+export async function setPlatformUserEmail(
+  input: z.input<typeof setPlatformUserEmailInputSchema>,
+): Promise<ConsoleUser> {
+  const data = setPlatformUserEmailInputSchema.parse(input)
 
-    const updated = await platformApi().adminUpdateUser({
-      body: {
-        userId: data.userId,
-        data: { email: data.email, emailVerified: false },
-      },
-      headers: call.headers,
-    })
-    const row = platformUserSchema.parse(updated)
+  const call = await openConsoleCall({ user: ['set-email'] })
+  const before = await readTargetUser(call, data.userId)
 
-    await dropSessionSnapshots(
-      call,
-      data.userId,
-      PLATFORM_ACTIONS.USER_EMAIL_SET,
-    )
-    await recordConsoleAction(call, {
-      action: PLATFORM_ACTIONS.USER_EMAIL_SET,
-      entityId: row.id,
-      changes: { before: auditUserState(before), after: auditUserState(row) },
-    })
-
-    return toConsoleUser(row)
+  const updated = await platformApi().adminUpdateUser({
+    body: {
+      userId: data.userId,
+      data: { email: data.email, emailVerified: false },
+    },
+    headers: call.headers,
   })
+  const row = platformUserSchema.parse(updated)
+
+  await dropSessionSnapshots(call, data.userId, PLATFORM_ACTIONS.USER_EMAIL_SET)
+  await recordConsoleAction(call, {
+    action: PLATFORM_ACTIONS.USER_EMAIL_SET,
+    entityId: row.id,
+    changes: { before: auditUserState(before), after: auditUserState(row) },
+  })
+
+  return toConsoleUser(row)
+}
 
 /**
  * Sets an account's platform role, and takes the MCP credentials that role justified with it.
@@ -384,36 +397,38 @@ export const setPlatformUserEmailFn = createServerFn({ method: 'POST' })
  * revoke the account's MCP credentials, which would add `session:revoke` - see this file's header
  * for why that half is Faza E's rather than absent by oversight.
  */
-export const setPlatformUserRoleFn = createServerFn({ method: 'POST' })
-  .validator(setPlatformUserRoleInputSchema)
-  .handler(async ({ data }): Promise<ConsoleUser> => {
-    const call = await openConsoleCall({ user: ['set-role'] })
-    refuseSelfTarget(
-      call,
-      data.userId,
-      'You cannot change your own platform role. Ask another admin to do it.',
-    )
-    const before = await readTargetUser(call, data.userId)
+export async function setPlatformUserRole(
+  input: z.input<typeof setPlatformUserRoleInputSchema>,
+): Promise<ConsoleUser> {
+  const data = setPlatformUserRoleInputSchema.parse(input)
 
-    const result = await platformApi().setRole({
-      body: { userId: data.userId, role: data.role },
-      headers: call.headers,
-    })
-    const row = platformUserSchema.parse(result.user)
+  const call = await openConsoleCall({ user: ['set-role'] })
+  refuseSelfTarget(
+    call,
+    data.userId,
+    'You cannot change your own platform role. Ask another admin to do it.',
+  )
+  const before = await readTargetUser(call, data.userId)
 
-    await dropSessionSnapshots(
-      call,
-      data.userId,
-      PLATFORM_ACTIONS.USER_ROLE_CHANGED,
-    )
-    await recordConsoleAction(call, {
-      action: PLATFORM_ACTIONS.USER_ROLE_CHANGED,
-      entityId: row.id,
-      changes: { before: auditUserState(before), after: auditUserState(row) },
-    })
-
-    return toConsoleUser(row)
+  const result = await platformApi().setRole({
+    body: { userId: data.userId, role: data.role },
+    headers: call.headers,
   })
+  const row = platformUserSchema.parse(result.user)
+
+  await dropSessionSnapshots(
+    call,
+    data.userId,
+    PLATFORM_ACTIONS.USER_ROLE_CHANGED,
+  )
+  await recordConsoleAction(call, {
+    action: PLATFORM_ACTIONS.USER_ROLE_CHANGED,
+    entityId: row.id,
+    changes: { before: auditUserState(before), after: auditUserState(row) },
+  })
+
+  return toConsoleUser(row)
+}
 
 /**
  * Ends every session an account holds **and then** sets its password.
@@ -473,74 +488,76 @@ export const setPlatformUserRoleFn = createServerFn({ method: 'POST' })
  * `auditUserState`, which has no password key, and the value never leaves the argument it arrived
  * in. A log that keeps rows for 400 days is the last place a credential belongs.
  */
-export const setPlatformUserPasswordFn = createServerFn({ method: 'POST' })
-  .validator(setPlatformUserPasswordInputSchema)
-  .handler(async ({ data }): Promise<{ userId: string; revoked: number }> => {
-    const call = await openConsoleCall({
-      user: ['set-password'],
-      session: ['revoke'],
-    })
-    const before = await readTargetUser(call, data.userId)
+export async function setPlatformUserPassword(
+  input: z.input<typeof setPlatformUserPasswordInputSchema>,
+): Promise<{ userId: string; revoked: number }> {
+  const data = setPlatformUserPasswordInputSchema.parse(input)
 
-    /** Ends every session the account holds, and writes the row that says so. */
-    const revokeEverySession = async (): Promise<number> => {
-      // Before the plugin call, so a purge that cannot finish leaves the account exactly as it was
-      // found rather than half-remediated. See `clearSessionCache`.
-      const purge = await clearSessionCache(
-        call,
-        before.id,
-        PLATFORM_ACTIONS.USER_PASSWORD_SET,
-      )
-
-      await platformApi().revokeUserSessions({
-        body: { userId: before.id },
-        headers: call.headers,
-      })
-      await endSessionIndex(call, before.id, PLATFORM_ACTIONS.USER_PASSWORD_SET)
-      await recordConsoleAction(call, {
-        action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
-        // `entity_type` is `session` under this prefix and no single session was touched, so no
-        // session id is claimed. The account and the count live in `changes`.
-        entityId: null,
-        changes: {
-          before: { userId: before.id, sessions: purge.enumerated },
-          after: { userId: before.id, sessions: 0 },
-        },
-      })
-
-      return purge.enumerated
-    }
-
-    /** Writes the credential, and the row that records it as its next statement. */
-    const setCredential = async (): Promise<void> => {
-      await platformApi().setUserPassword({
-        body: { userId: before.id, newPassword: data.newPassword },
-        headers: call.headers,
-      })
-      await recordConsoleAction(call, {
-        action: PLATFORM_ACTIONS.USER_PASSWORD_SET,
-        entityId: before.id,
-        changes: {
-          before: auditUserState(before),
-          after: auditUserState(before),
-        },
-      })
-    }
-
-    // Aimed at the operator's own account the credential goes first, because the revocation deletes
-    // the caller's own session and `adminMiddleware` re-resolves it: revoke-first answers
-    // `UNAUTHORIZED` and changes nothing. Aimed at anyone else the revocation goes first, so every
-    // step that can reject runs while the account still holds the credential it arrived with.
-    if (call.actor.userId === before.id) {
-      await setCredential()
-      return { userId: before.id, revoked: await revokeEverySession() }
-    }
-
-    const revoked = await revokeEverySession()
-    await setCredential()
-
-    return { userId: before.id, revoked }
+  const call = await openConsoleCall({
+    user: ['set-password'],
+    session: ['revoke'],
   })
+  const before = await readTargetUser(call, data.userId)
+
+  /** Ends every session the account holds, and writes the row that says so. */
+  const revokeEverySession = async (): Promise<number> => {
+    // Before the plugin call, so a purge that cannot finish leaves the account exactly as it was
+    // found rather than half-remediated. See `clearSessionCache`.
+    const purge = await clearSessionCache(
+      call,
+      before.id,
+      PLATFORM_ACTIONS.USER_PASSWORD_SET,
+    )
+
+    await platformApi().revokeUserSessions({
+      body: { userId: before.id },
+      headers: call.headers,
+    })
+    await endSessionIndex(call, before.id, PLATFORM_ACTIONS.USER_PASSWORD_SET)
+    await recordConsoleAction(call, {
+      action: PLATFORM_ACTIONS.SESSION_REVOKED_ALL,
+      // `entity_type` is `session` under this prefix and no single session was touched, so no
+      // session id is claimed. The account and the count live in `changes`.
+      entityId: null,
+      changes: {
+        before: { userId: before.id, sessions: purge.enumerated },
+        after: { userId: before.id, sessions: 0 },
+      },
+    })
+
+    return purge.enumerated
+  }
+
+  /** Writes the credential, and the row that records it as its next statement. */
+  const setCredential = async (): Promise<void> => {
+    await platformApi().setUserPassword({
+      body: { userId: before.id, newPassword: data.newPassword },
+      headers: call.headers,
+    })
+    await recordConsoleAction(call, {
+      action: PLATFORM_ACTIONS.USER_PASSWORD_SET,
+      entityId: before.id,
+      changes: {
+        before: auditUserState(before),
+        after: auditUserState(before),
+      },
+    })
+  }
+
+  // Aimed at the operator's own account the credential goes first, because the revocation deletes
+  // the caller's own session and `adminMiddleware` re-resolves it: revoke-first answers
+  // `UNAUTHORIZED` and changes nothing. Aimed at anyone else the revocation goes first, so every
+  // step that can reject runs while the account still holds the credential it arrived with.
+  if (call.actor.userId === before.id) {
+    await setCredential()
+    return { userId: before.id, revoked: await revokeEverySession() }
+  }
+
+  const revoked = await revokeEverySession()
+  await setCredential()
+
+  return { userId: before.id, revoked }
+}
 
 /**
  * Deletes an account and everything Better Auth hangs off it. `platform.user.deleted`.
@@ -549,46 +566,48 @@ export const setPlatformUserPasswordFn = createServerFn({ method: 'POST' })
  * `platform.user.deleted` row whose `changes` says nothing about who was deleted is a row that
  * answers no question thirteen months later.
  */
-export const deletePlatformUserFn = createServerFn({ method: 'POST' })
-  .validator(deletePlatformUserInputSchema)
-  .handler(async ({ data }): Promise<{ userId: string }> => {
-    const call = await openConsoleCall({ user: ['delete'] })
-    refuseSelfTarget(
-      call,
-      data.userId,
-      'You cannot delete your own account from the console.',
-    )
-    const before = await readTargetUser(call, data.userId)
+export async function deletePlatformUser(
+  input: z.input<typeof deletePlatformUserInputSchema>,
+): Promise<{ userId: string }> {
+  const data = deletePlatformUserInputSchema.parse(input)
 
-    // Before `removeUser`, which deletes the `session` rows the token names live in. Afterwards
-    // there is nothing left to read them from, and a blob nobody can name keeps resolving through
-    // `findSession` for a deleted account.
-    const purge = await clearSessionCache(
-      call,
-      data.userId,
-      PLATFORM_ACTIONS.USER_DELETED,
-    )
+  const call = await openConsoleCall({ user: ['delete'] })
+  refuseSelfTarget(
+    call,
+    data.userId,
+    'You cannot delete your own account from the console.',
+  )
+  const before = await readTargetUser(call, data.userId)
 
-    await platformApi().removeUser({
-      body: { userId: data.userId },
-      headers: call.headers,
-    })
-    await endSessionIndex(call, data.userId, PLATFORM_ACTIONS.USER_DELETED)
+  // Before `removeUser`, which deletes the `session` rows the token names live in. Afterwards
+  // there is nothing left to read them from, and a blob nobody can name keeps resolving through
+  // `findSession` for a deleted account.
+  const purge = await clearSessionCache(
+    call,
+    data.userId,
+    PLATFORM_ACTIONS.USER_DELETED,
+  )
 
-    await recordConsoleAction(call, {
-      action: PLATFORM_ACTIONS.USER_DELETED,
-      entityId: before.id,
-      changes: { before: auditUserState(before), after: null },
-    })
-    call.logger.info('console purged session keys', {
-      action: PLATFORM_ACTIONS.USER_DELETED,
-      entityId: before.id,
-      enumerated: purge.enumerated,
-      deleted: purge.deleted,
-    })
-
-    return { userId: before.id }
+  await platformApi().removeUser({
+    body: { userId: data.userId },
+    headers: call.headers,
   })
+  await endSessionIndex(call, data.userId, PLATFORM_ACTIONS.USER_DELETED)
+
+  await recordConsoleAction(call, {
+    action: PLATFORM_ACTIONS.USER_DELETED,
+    entityId: before.id,
+    changes: { before: auditUserState(before), after: null },
+  })
+  call.logger.info('console purged session keys', {
+    action: PLATFORM_ACTIONS.USER_DELETED,
+    entityId: before.id,
+    enumerated: purge.enumerated,
+    deleted: purge.deleted,
+  })
+
+  return { userId: before.id }
+}
 
 /**
  * Applies the ban itself, in whichever of the two shapes the target's current state needs.
@@ -745,63 +764,67 @@ async function applyBan(
  * beat the ban by milliseconds, and that session is necessarily in the index it just wrote, so
  * `deleteUserSessions` reaches it. The two halves cover each other's case.
  */
-export const banPlatformUserFn = createServerFn({ method: 'POST' })
-  .validator(banPlatformUserInputSchema)
-  .handler(async ({ data }): Promise<ConsoleUser> => {
-    const call = await openConsoleCall({ user: ['ban'] })
-    refuseSelfTarget(call, data.userId, 'You cannot ban your own account.')
-    const before = await readTargetUser(call, data.userId)
+export async function banPlatformUser(
+  input: z.input<typeof banPlatformUserInputSchema>,
+): Promise<ConsoleUser> {
+  const data = banPlatformUserInputSchema.parse(input)
 
-    const purge = await clearSessionCache(
-      call,
-      data.userId,
-      PLATFORM_ACTIONS.USER_BANNED,
-    )
+  const call = await openConsoleCall({ user: ['ban'] })
+  refuseSelfTarget(call, data.userId, 'You cannot ban your own account.')
+  const before = await readTargetUser(call, data.userId)
 
-    const row = await applyBan(
-      call,
-      data.userId,
-      data.reason,
-      data.expiresInDays,
-      before,
-    )
+  const purge = await clearSessionCache(
+    call,
+    data.userId,
+    PLATFORM_ACTIONS.USER_BANNED,
+  )
 
-    await endSessionIndex(call, data.userId, PLATFORM_ACTIONS.USER_BANNED)
+  const row = await applyBan(
+    call,
+    data.userId,
+    data.reason,
+    data.expiresInDays,
+    before,
+  )
 
-    await recordConsoleAction(call, {
-      action: PLATFORM_ACTIONS.USER_BANNED,
-      entityId: row.id,
-      changes: { before: auditUserState(before), after: auditUserState(row) },
-    })
+  await endSessionIndex(call, data.userId, PLATFORM_ACTIONS.USER_BANNED)
 
-    call.logger.info('console purged session keys', {
-      action: PLATFORM_ACTIONS.USER_BANNED,
-      entityId: row.id,
-      enumerated: purge.enumerated,
-      deleted: purge.deleted,
-    })
-
-    return toConsoleUser(row)
+  await recordConsoleAction(call, {
+    action: PLATFORM_ACTIONS.USER_BANNED,
+    entityId: row.id,
+    changes: { before: auditUserState(before), after: auditUserState(row) },
   })
+
+  call.logger.info('console purged session keys', {
+    action: PLATFORM_ACTIONS.USER_BANNED,
+    entityId: row.id,
+    enumerated: purge.enumerated,
+    deleted: purge.deleted,
+  })
+
+  return toConsoleUser(row)
+}
 
 /** Lifts a ban. `platform.user.unbanned`. The account signs in again; no session is restored. */
-export const unbanPlatformUserFn = createServerFn({ method: 'POST' })
-  .validator(unbanPlatformUserInputSchema)
-  .handler(async ({ data }): Promise<ConsoleUser> => {
-    const call = await openConsoleCall({ user: ['ban'] })
-    const before = await readTargetUser(call, data.userId)
+export async function unbanPlatformUser(
+  input: z.input<typeof unbanPlatformUserInputSchema>,
+): Promise<ConsoleUser> {
+  const data = unbanPlatformUserInputSchema.parse(input)
 
-    const result = await platformApi().unbanUser({
-      body: { userId: data.userId },
-      headers: call.headers,
-    })
-    const row = platformUserSchema.parse(result.user)
+  const call = await openConsoleCall({ user: ['ban'] })
+  const before = await readTargetUser(call, data.userId)
 
-    await recordConsoleAction(call, {
-      action: PLATFORM_ACTIONS.USER_UNBANNED,
-      entityId: row.id,
-      changes: { before: auditUserState(before), after: auditUserState(row) },
-    })
-
-    return toConsoleUser(row)
+  const result = await platformApi().unbanUser({
+    body: { userId: data.userId },
+    headers: call.headers,
   })
+  const row = platformUserSchema.parse(result.user)
+
+  await recordConsoleAction(call, {
+    action: PLATFORM_ACTIONS.USER_UNBANNED,
+    entityId: row.id,
+    changes: { before: auditUserState(before), after: auditUserState(row) },
+  })
+
+  return toConsoleUser(row)
+}

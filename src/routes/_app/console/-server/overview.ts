@@ -1,13 +1,13 @@
 /**
  * The four counts and the six newest accounts the console overview opens with.
  *
- * **Every one of the five reads goes through `listPlatformUsersFn`**, and none of them composes a
+ * **Every one of the five reads goes through `listPlatformUsers`**, and none of them composes a
  * platform-API query here. That is the layering `docs/SPEC.md` §6 states — routes call server
  * functions, server functions own the query — and this file used to break it: it opened its own
  * console call, took the `auth.api` handle out of `#/server/fns/console/bindings` and wrote five
  * `listUsers` queries in a route directory, one filter clause at a time. The saving was one KV
  * session read; the cost was a second place where the accounts query is spelled, in a tree whose
- * whole point is that there is one. `listPlatformUsersFn` already carries the search, sort, filter,
+ * whole point is that there is one. `listPlatformUsers` already carries the search, sort, filter,
  * role and ban vocabulary this needs, already calls `requirePermission` before it reads a row, and
  * already projects what it returns — so the five calls below are the same five questions asked of
  * the function that owns them, concurrently.
@@ -26,7 +26,7 @@
 
 import { createServerFn } from '@tanstack/react-start'
 
-import { listPlatformUsersFn } from '#/server/fns/console/users'
+import { listPlatformUsers } from '#/server/fns/console/users'
 
 import type { ConsoleUser } from '#/server/fns/console/projections'
 
@@ -49,16 +49,14 @@ export interface ConsoleOverview {
 export const loadConsoleOverview = createServerFn({ method: 'GET' }).handler(
   async (): Promise<ConsoleOverview> => {
     const [total, admins, curators, suspended, newest] = await Promise.all([
-      listPlatformUsersFn({ data: { limit: 1 } }),
-      listPlatformUsersFn({ data: { limit: 1, role: 'admin' } }),
-      listPlatformUsersFn({ data: { limit: 1, role: 'curator' } }),
-      listPlatformUsersFn({ data: { limit: 1, banned: true } }),
-      listPlatformUsersFn({
-        data: {
-          limit: NEWEST_LIMIT,
-          sortBy: 'createdAt',
-          sortDirection: 'desc',
-        },
+      listPlatformUsers({ limit: 1 }),
+      listPlatformUsers({ limit: 1, role: 'admin' }),
+      listPlatformUsers({ limit: 1, role: 'curator' }),
+      listPlatformUsers({ limit: 1, banned: true }),
+      listPlatformUsers({
+        limit: NEWEST_LIMIT,
+        sortBy: 'createdAt',
+        sortDirection: 'desc',
       }),
     ])
 

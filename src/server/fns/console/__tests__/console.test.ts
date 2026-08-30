@@ -233,25 +233,25 @@ const {
   revokePlatformUserSessionsInputSchema,
 } = await import('../sessions')
 const {
-  banPlatformUserFn,
+  banPlatformUser,
   banPlatformUserInputSchema,
-  createPlatformUserFn,
+  createPlatformUser,
   createPlatformUserInputSchema,
-  deletePlatformUserFn,
+  deletePlatformUser,
   deletePlatformUserInputSchema,
-  getPlatformUserFn,
+  getPlatformUser,
   getPlatformUserInputSchema,
-  listPlatformUsersFn,
+  listPlatformUsers,
   listPlatformUsersInputSchema,
-  setPlatformUserEmailFn,
+  setPlatformUserEmail,
   setPlatformUserEmailInputSchema,
-  setPlatformUserPasswordFn,
+  setPlatformUserPassword,
   setPlatformUserPasswordInputSchema,
-  setPlatformUserRoleFn,
+  setPlatformUserRole,
   setPlatformUserRoleInputSchema,
-  unbanPlatformUserFn,
+  unbanPlatformUser,
   unbanPlatformUserInputSchema,
-  updatePlatformUserFn,
+  updatePlatformUser,
   updatePlatformUserInputSchema,
 } = await import('../users')
 
@@ -676,22 +676,38 @@ function boundary<TSchema extends z.ZodType>(
   }
 }
 
-const setRole = boundary(setPlatformUserRoleInputSchema, setPlatformUserRoleFn)
-const ban = boundary(banPlatformUserInputSchema, banPlatformUserFn)
-const unban = boundary(unbanPlatformUserInputSchema, unbanPlatformUserFn)
-const setPassword = boundary(
+/**
+ * The same sequencing for `../users`, whose ten functions are plain `async` functions rather than
+ * server functions and so take their input directly (see that file's header for why they must stay
+ * that way). The parse here is the *wrapper's* — `src/routes/_app/console/-server/users.ts` — kept
+ * so an invalid payload is refused before `duringRequest` exactly as it is on the wire; each
+ * function re-parses its own schema on entry, which is what the runtime does too.
+ */
+function plain<TSchema extends z.ZodType>(
+  schema: TSchema,
+  fn: (input: z.output<TSchema>) => Promise<unknown>,
+): (data: unknown) => Promise<Response> {
+  return async (data: unknown) => {
+    const validated = schema.parse(data)
+    return duringRequest(async () => {
+      await fn(validated)
+    })
+  }
+}
+
+const setRole = plain(setPlatformUserRoleInputSchema, setPlatformUserRole)
+const ban = plain(banPlatformUserInputSchema, banPlatformUser)
+const unban = plain(unbanPlatformUserInputSchema, unbanPlatformUser)
+const setPassword = plain(
   setPlatformUserPasswordInputSchema,
-  setPlatformUserPasswordFn,
+  setPlatformUserPassword,
 )
-const setEmail = boundary(
-  setPlatformUserEmailInputSchema,
-  setPlatformUserEmailFn,
-)
-const updateUser = boundary(updatePlatformUserInputSchema, updatePlatformUserFn)
-const createUser = boundary(createPlatformUserInputSchema, createPlatformUserFn)
-const deleteUser = boundary(deletePlatformUserInputSchema, deletePlatformUserFn)
-const listUsers = boundary(listPlatformUsersInputSchema, listPlatformUsersFn)
-const getUser = boundary(getPlatformUserInputSchema, getPlatformUserFn)
+const setEmail = plain(setPlatformUserEmailInputSchema, setPlatformUserEmail)
+const updateUser = plain(updatePlatformUserInputSchema, updatePlatformUser)
+const createUser = plain(createPlatformUserInputSchema, createPlatformUser)
+const deleteUser = plain(deletePlatformUserInputSchema, deletePlatformUser)
+const listUsers = plain(listPlatformUsersInputSchema, listPlatformUsers)
+const getUser = plain(getPlatformUserInputSchema, getPlatformUser)
 const listSessions = boundary(
   listPlatformSessionsInputSchema,
   listPlatformSessionsFn,
@@ -2348,9 +2364,10 @@ describe('impersonation', () => {
         // Two casts through `unknown`, once each way, because the endpoint's declared return type
         // is the bare body: `returnHeaders: true` is resolved at runtime from the argument, not in
         // the type, so the shape the handler actually receives is unrepresentable here.
-        return { headers, response: { ...response, session: null } } as unknown as Awaited<
-          ReturnType<typeof real>
-        >
+        return {
+          headers,
+          response: { ...response, session: null },
+        } as unknown as Awaited<ReturnType<typeof real>>
       },
     )
 
