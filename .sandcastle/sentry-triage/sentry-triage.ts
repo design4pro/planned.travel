@@ -70,6 +70,26 @@ function flag(name: string, fallback: string): string {
 
 const windowArg = flag('window', '7d')
 const maxFiled = Number(flag('max', String(DEFAULT_MAX_FILED)))
+/**
+ * A Sentry short id to file even though the policy rejected it.
+ *
+ * It overrides `selectionVerdict` and nothing else. The agent's veto, the frame-exists check, the
+ * dedup index and both caps still apply, because those answer questions of fact - is this a
+ * duplicate, does that file exist - that a human naming a ticket has not answered. The thresholds
+ * are the only judgement call here, and naming the ticket is how you make it yourself.
+ */
+const forceAt = argv.indexOf('--force')
+const forcedRaw = forceAt === -1 ? '' : (argv[forceAt + 1] ?? '')
+// Not `flag()`: its `?? fallback` would turn a bare `--force` into no force at all, and this run
+// would sweep as though the flag had never been typed. A malformed override has to be refused, not
+// interpreted.
+if (forceAt !== -1 && (forcedRaw === '' || forcedRaw.startsWith('--'))) {
+  console.error(
+    '--force needs a Sentry short id, e.g. --force PLANNED-TRAVEL-1.',
+  )
+  process.exit(1)
+}
+const forced = forcedRaw === '' ? undefined : forcedRaw
 const runLabel = new Date().toISOString().replace(/[:.]/g, '-')
 
 const gh = (args: ReadonlyArray<string>, input?: string): string =>
@@ -223,12 +243,43 @@ console.log(
 for (const skip of report.skipped)
   console.log(`  skipped ${skip.shortId}: ${skip.reason}`)
 
+const forcedCandidate =
+  forced === undefined
+    ? undefined
+    : report.candidates.find((c) => c.shortId === forced)
+
+// Loudly, and before the report-only exit: a --force that quietly files nothing is the failure this
+// flag exists to avoid. `--force` reaches only into the population the two fixed searches returned,
+// so a miss means the ticket is outside --window, is not `is:unresolved`, or is not at error level.
+if (forced !== undefined && forcedCandidate === undefined) {
+  console.error(
+    `\n--force ${forced}: not among this run's candidates. It is only possible to force a ticket the sweep already returned - check --window, and that the issue is unresolved and at error level in Sentry.`,
+  )
+  process.exit(1)
+}
+
 if (report.status === 'no-data') {
   console.log('Sentry reported nothing in the window.')
   process.exit(0)
 }
 
 if (!fileIssues) {
+  if (forcedCandidate !== undefined) {
+    const gate = selectionVerdict(forcedCandidate, Date.now())
+    console.log(
+      `\n--force ${forcedCandidate.shortId}: ${gate.ok ? 'clears the policy on its own; --force changes nothing for it' : `would be forced past - ${gate.reason}`}`,
+    )
+    console.log(`\n${renderTitle(forcedCandidate, false)}\n`)
+    console.log(
+      renderIssueBody({
+        candidate: forcedCandidate,
+        sequence: 1,
+        runLabel,
+        reportPath,
+        ...(gate.ok ? {} : { forcedReason: gate.reason }),
+      }),
+    )
+  }
   console.log(
     '\nReport-only. Pass --file-issues to file the qualifying candidates for triage.',
   )
@@ -246,7 +297,7 @@ if (pressure >= BACKLOG_PRESSURE_LIMIT) {
 const now = Date.now()
 let filed = 0
 
-for (const candidate of filingOrder(report.candidates)) {
+for (const candidate of filingOrder(report.candidates, forced)) {
   if (filed >= maxFiled) {
     console.log(
       `\nCap of ${String(maxFiled)} reached; the rest are in the report.`,
@@ -254,10 +305,16 @@ for (const candidate of filingOrder(report.candidates)) {
     break
   }
 
+  const isForced = candidate.shortId === forced
   const gate = selectionVerdict(candidate, now)
-  if (!gate.ok) {
+  if (!gate.ok && !isForced) {
     console.log(`  ${candidate.shortId}: below the bar — ${gate.reason}`)
     continue
+  }
+  if (!gate.ok) {
+    console.log(
+      `  ${candidate.shortId}: forced past the policy — ${gate.reason}`,
+    )
   }
   // The agent may only veto. It cannot promote what the gate rejected.
   if (candidate.judgement === 'noise') {
@@ -302,6 +359,9 @@ for (const candidate of filingOrder(report.candidates)) {
       ...(isRegression ? { previous: verdict.previous } : {}),
       runLabel,
       reportPath,
+      // Only when the gate actually rejected it. A forced id that clears the bar on its own earned
+      // its place, and saying otherwise on the ticket would misinform the triager.
+      ...(gate.ok ? {} : { forcedReason: gate.reason }),
     }),
   )
   filed += 1
