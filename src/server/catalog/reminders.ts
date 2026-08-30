@@ -19,9 +19,9 @@
  * `TenantScope`, no reach into `src/server/repos/**` — a property of the module graph that
  * `src/server/catalog/__tests__/isolation.test.ts` walks from every module in this directory.
  *
- * It is a *stretch* of that carve-out and worth naming: §5 writes the exception in terms of the
- * nine global tables that carry no `organization_id`, and `trips` is not one of them — it is tenant
- * data. What keeps the boundary honest is the shape of what leaves here. This module answers with
+ * It is a *stretch* of that carve-out and worth naming: §5 writes the exception in terms of eleven
+ * global tables, ten of which carry no `organization_id` and the eleventh of which carries one only
+ * as attribution. `trips` is not among them — it is tenant data. What keeps the boundary honest is the shape of what leaves here. This module answers with
  * scheduling coordinates and nothing else — {@link DueTripReminder} is a trip id, the organization
  * that owns it and an instant — so the cross-tenant read cannot become a cross-tenant *read of a
  * trip*. Every field a reminder actually says out loud (the title, the lead time, the members) is

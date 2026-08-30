@@ -23,7 +23,7 @@ import { createAccessControl } from 'better-auth/plugins/access'
 import { defaultStatements } from 'better-auth/plugins/admin/access'
 
 /**
- * Seven resources, twenty-five statements, closed (docs/ACCESS.md §1.1). An eighth resource or a
+ * Eight resources, twenty-seven statements, closed (docs/ACCESS.md §1.1). A ninth resource or a
  * new action on an existing one is an amendment to that document and to the grid in its §2, in the
  * same commit — not a line added here on the way past.
  *
@@ -32,6 +32,13 @@ import { defaultStatements } from 'better-auth/plugins/admin/access'
  * (docs/ACCESS.md §2.3a). It exists as a statement of its own rather than borrowing `user:list`,
  * because a page that shows which machines are building which tickets is not a claim about
  * accounts, and gating it on one would say it was.
+ *
+ * `provider` is there for the same reason and was added the same way (docs/ACCESS.md §2.3b). What
+ * this deployment owes a third-party vendor, and the ceiling above which its calls are refused, is
+ * an operational fact about the platform's own bill; it is not a claim about accounts and not a
+ * piece of catalogue content, so borrowing `user:list` or `catalog:read` to gate it would say it
+ * was one of those. It carries two actions rather than one because reading a meter and moving a
+ * ceiling are genuinely different authorities: the second can stop transactional email.
  */
 export const statement = {
   ...defaultStatements,
@@ -40,13 +47,14 @@ export const statement = {
   source: ['read', 'run'],
   share: ['read', 'revoke'],
   sandcastle: ['read'],
+  provider: ['read', 'configure'],
 } as const
 
 export const ac = createAccessControl(statement)
 
 export type PlatformStatement = typeof statement
 
-/** One of the seven resource names in {@link statement}. */
+/** One of the eight resource names in {@link statement}. */
 export type PlatformResource = keyof PlatformStatement
 
 /**
@@ -90,13 +98,14 @@ export const adminRole = ac.newRole({
   source: ['read', 'run'],
   share: ['read', 'revoke'],
   sandcastle: ['read'],
+  provider: ['read', 'configure'],
 })
 
 /**
  * The catalogue, packs, sources and share moderation. Nothing that touches users or sessions.
  *
- * `user`, `session` and `sandcastle` are declared empty rather than omitted so that the denial is a
- * statement this file makes, and so the subset test has something to check on both halves of the
+ * `user`, `session`, `sandcastle` and `provider` are declared empty rather than omitted so that the
+ * denial is a statement this file makes, and so the subset test has something to check on both halves of the
  * grid.
  */
 export const curatorRole = ac.newRole({
@@ -107,9 +116,10 @@ export const curatorRole = ac.newRole({
   source: ['read', 'run'],
   share: ['read', 'revoke'],
   sandcastle: [],
+  provider: [],
 })
 
-/** Everyone else, which is nearly everyone. No platform surface at all — all twenty-five denied. */
+/** Everyone else, which is nearly everyone. No platform surface at all — all twenty-seven denied. */
 export const userRole = ac.newRole({
   user: [],
   session: [],
@@ -118,6 +128,7 @@ export const userRole = ac.newRole({
   source: [],
   share: [],
   sandcastle: [],
+  provider: [],
 })
 
 /**

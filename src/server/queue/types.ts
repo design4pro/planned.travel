@@ -8,6 +8,7 @@
 
 import { z } from 'zod'
 import { PLAN_IDS, SUBSCRIPTION_STATUSES } from '#/lib/plans'
+import type { ProviderCallLabel } from '#/server/metering/outbound'
 import type { LogValue, Logger } from '../observability/logger'
 
 export const TASK_KINDS = [
@@ -396,6 +397,20 @@ export interface TaskContext {
   /** Tenant the job belongs to, or `system` for platform jobs. */
   orgId: string
   traceId?: string
+  /**
+   * Wraps an outbound third-party call: counts the attempt, and refuses it when the provider's
+   * gate is shut (`src/server/metering/outbound.ts`).
+   *
+   * Required rather than optional, unlike the bindings above, and that asymmetry is the point. An
+   * optional meter is a meter a new handler forgets, and the failure is silent — the calls still
+   * go out and the console simply under-reports what the vendor will bill for. A test fake is one
+   * line (`(_label, send) => send()`), which is a much smaller cost than a counter nobody can
+   * trust.
+   */
+  callProvider: <T>(
+    label: ProviderCallLabel,
+    send: () => Promise<T>,
+  ) => Promise<T>
 }
 
 export type TaskHandler<TKind extends TaskKind> = (

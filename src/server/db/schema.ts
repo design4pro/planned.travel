@@ -403,6 +403,49 @@ export const DISTANCE_UNITS = ['metric', 'imperial'] as const
 export const PLATFORM_ACTOR_KINDS = ['human', 'agent', 'system'] as const
 
 /**
+ * Providers whose outbound calls this repository actually makes, and can therefore count.
+ *
+ * Three, because three clients exist: `src/server/queue/handlers/email.ts`,
+ * `src/server/queue/handlers/pdf-export.ts` and the injected `fetch` of
+ * `src/server/billing/polar.ts`. A slug earns a place here when a call site can name it, never
+ * before — {@link PLANNED_PROVIDERS} is where an intention lives.
+ */
+export const METERED_PROVIDERS = [
+  'resend',
+  'browser-rendering',
+  'polar',
+] as const
+
+/**
+ * Providers the console lists with no client behind them, so that a screen of counters can say
+ * "not integrated yet" instead of `0`. The two readings are opposite facts and a bare zero cannot
+ * tell them apart.
+ *
+ * `d1-export` is the backup cron's unwritten half: `readCloudflareApi` in
+ * `src/server/queue/http.ts` has no caller and the `BACKUP_CRON` branch of
+ * `src/server/worker.ts` logs that it has no handler. `here` and `geoapify` are candidates for the
+ * geocoding decision `docs/plans/11-boundaries-and-blockers.md` `11-S3` keeps open — named here so
+ * a ceiling can be agreed before the first call, and deliberately carrying **no allowance figure**,
+ * because writing a free tier into the repository is the assumption that stage forbids.
+ *
+ * Moving a slug from here to {@link METERED_PROVIDERS} is what adopting a provider looks like.
+ */
+export const PLANNED_PROVIDERS = ['d1-export', 'here', 'geoapify'] as const
+
+/**
+ * The two resolutions `provider_usage` stores. `hour` is the write shape; `month` is the archive
+ * the weekly rollup folds it into, so usage stays countable for ever without keeping an hourly row
+ * for ever.
+ */
+export const PROVIDER_USAGE_GRAINS = ['hour', 'month'] as const
+
+/** What happens at a provider's ceiling: bill through it, or refuse the call. */
+export const PROVIDER_LIMIT_POLICIES = ['allow', 'block'] as const
+
+/** The windows a `provider_registry` ceiling can be expressed over. */
+export const PROVIDER_LIMIT_WINDOWS = ['day', 'month'] as const
+
+/**
  * The platform role an audit row records its actor as holding **at the moment of the action**
  * (docs/ACCESS.md §4.1). `user.role` is mutable and this column is not, which is the whole reason
  * the role is stored rather than joined.
@@ -2454,10 +2497,15 @@ export const appSettings = sqliteTable(
 /* -------------------------------------------------------------------------------------------------
  * Platform tables — global, never tenant-scoped
  *
- * Two of the nine tables docs/SPEC.md §5 carves out of "every domain row is scoped by
- * organization_id". They carry no `organization_id`, they are never reachable through
- * `createTenantRepository()` or `src/server/repos/base.ts`, and every mutation that touches them
- * takes an explicit platform actor instead of a tenant context.
+ * Four of the eleven tables docs/SPEC.md §5 carves out of "every domain row is scoped by
+ * organization_id". None is ever reachable through `createTenantRepository()` or
+ * `src/server/repos/base.ts`, and every mutation that touches one takes an explicit platform actor
+ * instead of a tenant context.
+ *
+ * Three of the four carry no `organization_id` at all. `provider_usage` is the exception §5's
+ * amendment argues: its column is attribution — which workspace a metered call was made *for* —
+ * rather than a tenant discriminator, it is nullable because a cron belongs to no workspace, and it
+ * carries no foreign key so that deleting a workspace cannot delete the platform's own accounting.
  * ---------------------------------------------------------------------------------------------- */
 
 /**
@@ -2630,5 +2678,159 @@ export const platformAuditLog = sqliteTable(
         `("actor_kind" = 'system' OR ("actor_user_id" IS NOT NULL AND "actor_role" IS NOT NULL))`,
       ),
     ),
+  ],
+)
+
+/**
+ * The per-provider ceiling and what happens when it is reached (the plan's `provider_registry`).
+ *
+ * Configuration, not measurement: the counters live in {@link providerUsage} and nothing here is
+ * derived from them. Its single writer is `src/server/catalog/provider-usage.ts`, where every
+ * mutation takes an explicit platform actor, passes `requirePermission({ provider: ['configure'] })`
+ * and appends a `platform_audit_log` row in the same call — the full clause set docs/SPEC.md §5
+ * holds a global table to.
+ *
+ * **A missing row is the open state**, not a broken one. Absence reads as
+ * `{ policy: 'allow', callLimit: null }`, so the day this table ships empty every existing call
+ * still goes through, no seed step has to run, and `drizzle/` stays free of inserted data. Saving a
+ * ceiling in the console is what creates the row.
+ *
+ * **`slug` carries no `CHECK`**, unlike almost every other vocabulary column in this file. An
+ * operator agrees a ceiling with a vendor before we write the client — that is the whole point of
+ * naming `here` and `geoapify` in {@link PLANNED_PROVIDERS} — and a constraint generated from a
+ * tuple in this file would make the configuration step wait on a deploy.
+ *
+ * **`blockable` is a safety interlock, not a preference.** A provider whose feature has no fallback
+ * must not be stoppable by a control on a settings screen: blocking `polar` would stop checkout, so
+ * it would stop revenue in order to save a metering line. The refusal is enforced server-side in
+ * `updateProviderLimit`, so it holds however the mutation is reached, and this column is what makes
+ * the refusal a fact about the provider rather than a rule someone has to remember.
+ */
+export const providerRegistry = sqliteTable(
+  'provider_registry',
+  {
+    id: pk(),
+    slug: text('slug').notNull(),
+    label: text('label').notNull(),
+    // `limit_window`, never `window`: SQLite reserves `WINDOW` as a keyword, and a bare column of
+    // that name has to be quoted in every statement that touches it for ever.
+    limitWindow: text('limit_window')
+      .notNull()
+      .default('month')
+      .$type<(typeof PROVIDER_LIMIT_WINDOWS)[number]>(),
+    /** `NULL` is "no ceiling agreed", which is different from a ceiling of zero. */
+    callLimit: integer('call_limit'),
+    policy: text('policy')
+      .notNull()
+      .default('allow')
+      .$type<(typeof PROVIDER_LIMIT_POLICIES)[number]>(),
+    warnPercent: integer('warn_percent').notNull().default(70),
+    criticalPercent: integer('critical_percent').notNull().default(90),
+    /** `false` forbids `policy = 'block'` on this provider. See the note above. */
+    blockable: integer('blockable', { mode: 'boolean' })
+      .notNull()
+      .default(true),
+    notes: text('notes'),
+    updatedBy: userRef('updated_by'),
+    ...timestamps(),
+  },
+  (t) => [
+    uniqueIndex('provider_registry_slug_unq').on(t.slug),
+    enumCheck(
+      'provider_registry_policy_chk',
+      t.policy,
+      PROVIDER_LIMIT_POLICIES,
+    ),
+    enumCheck(
+      'provider_registry_window_chk',
+      t.limitWindow,
+      PROVIDER_LIMIT_WINDOWS,
+    ),
+    nonNegativeCheck('provider_registry_call_limit_chk', t.callLimit),
+    // Thresholds inside the scale and in order, or the meters on screen lie about themselves: a
+    // warn step above the critical one paints a bar green on its way past the ceiling.
+    check(
+      'provider_registry_thresholds_chk',
+      sql.raw(
+        `("warn_percent" BETWEEN 1 AND 100 AND "critical_percent" BETWEEN 1 AND 100 AND "warn_percent" <= "critical_percent")`,
+      ),
+    ),
+  ],
+)
+
+/**
+ * One counter per provider, operation, time bucket and — where there is one — workspace.
+ *
+ * The one table in this file whose writer holds neither of docs/SPEC.md §5's two clauses, and the
+ * amendment there says why rather than reading them loosely: a meter tick records a call the
+ * platform has *already made*, so there is no session to authorise and nothing a "who changed
+ * what" row could describe, and one audit row per outbound call would put a request-rate stream
+ * into a 400-day ledger. What guards it instead is the shape of what it writes — single-writer
+ * (`src/server/catalog/provider-usage.ts`), system-actor-only, monotonic, and carrying no
+ * tenant-readable field: a slug, an operation name, a bucket and three integers.
+ *
+ * **`organization_id` is attribution, not a tenant discriminator**, which is why it is a bare
+ * `text` column in the {@link userRef} style rather than {@link orgRef}. Neither half of `orgRef`
+ * fits. `NULL` is the ordinary case — a cron backup and a platform email belong to no workspace,
+ * and inventing one to fill the column would be the fabricated tenant context §5 forbids. And a
+ * cascade would delete the platform's own accounting when a workspace is deleted, though the calls
+ * were made and the money was spent; `SET NULL` would be worse still, collapsing a deleted
+ * workspace's rows onto the platform bucket and failing the delete on a unique index the caller
+ * never mentioned.
+ *
+ * **Two partial unique indexes rather than one**, and this is the reason they exist: SQLite treats
+ * `NULL`s as distinct inside a `UNIQUE` index, so a single index spanning the nullable column
+ * would accept unlimited duplicate platform rows and the upsert would quietly stop being an
+ * upsert. The counter would keep looking plausible while being wrong, which is the failure a
+ * counter has no way of reporting.
+ */
+export const providerUsage = sqliteTable(
+  'provider_usage',
+  {
+    id: pk(),
+    // `$type`-narrowed rather than `CHECK`-constrained, for the reason `platform_audit_log.action`
+    // gives: the vocabulary grows by amendment, and a `CHECK` prices each one at a table recreate.
+    provider: text('provider')
+      .notNull()
+      .$type<(typeof METERED_PROVIDERS)[number]>(),
+    operation: text('operation').notNull(),
+    grain: text('grain')
+      .notNull()
+      .default('hour')
+      .$type<(typeof PROVIDER_USAGE_GRAINS)[number]>(),
+    /** `YYYY-MM-DDTHH` at `hour`, `YYYY-MM` at `month`. UTC, so lexicographic is chronological. */
+    bucket: text('bucket').notNull(),
+    organizationId: text('organization_id'),
+    /** Calls that reached the provider, whatever they answered. */
+    calls: integer('calls').notNull().default(0),
+    /** The subset of `calls` that failed. Never counted twice — an error is a call. */
+    errors: integer('errors').notNull().default(0),
+    /** Calls refused at our own gate. Demand that was turned away, so not part of `calls`. */
+    blocked: integer('blocked').notNull().default(0),
+    ...timestamps(),
+  },
+  (t) => [
+    uniqueIndex('provider_usage_tenant_unq')
+      .on(t.grain, t.provider, t.operation, t.bucket, t.organizationId)
+      .where(sql`"organization_id" IS NOT NULL`),
+    uniqueIndex('provider_usage_platform_unq')
+      .on(t.grain, t.provider, t.operation, t.bucket)
+      .where(sql`"organization_id" IS NULL`),
+    // The console's two reads: one provider across a window, and one workspace's share of it.
+    index('provider_usage_window_idx').on(t.grain, t.provider, t.bucket),
+    index('provider_usage_org_idx').on(t.organizationId, t.grain, t.bucket),
+    enumCheck('provider_usage_grain_chk', t.grain, PROVIDER_USAGE_GRAINS),
+    // A bucket whose shape disagrees with its grain makes every window query silently wrong: the
+    // string still sorts, still compares, and selects the wrong rows. 13 = `YYYY-MM-DDTHH`, 7 =
+    // `YYYY-MM`.
+    check(
+      'provider_usage_bucket_grain_chk',
+      sql.raw(
+        `(("grain" = 'hour' AND length("bucket") = 13) OR ("grain" = 'month' AND length("bucket") = 7))`,
+      ),
+    ),
+    nonNegativeCheck('provider_usage_calls_chk', t.calls),
+    nonNegativeCheck('provider_usage_errors_chk', t.errors),
+    nonNegativeCheck('provider_usage_blocked_chk', t.blocked),
   ],
 )

@@ -442,6 +442,11 @@ Order of operations if it happens: (1) move the hottest write path to DO SQLite,
 
 ## 8. Cost model
 
+The per-user figures below are _assumptions_, and since the provider meter landed they have a
+measured counterpart for the third-party half of the bill: `/console/providers` reports calls per
+active workspace per month from `provider_usage`, which is the same arithmetic this section does by
+hand. Where the two disagree about a metered vendor, the meter is the one that has seen the traffic.
+
 **Workload assumed per active user per month** — the model's inputs, so they can be argued with:
 2 000 Worker requests (250 SSR documents, 750 server-function calls, 1 000 tile ranges),
 7.5 s CPU total, 30 000 D1 rows read, 600 D1 rows written, 1 000 KV reads, 60 KV writes,
@@ -579,6 +584,15 @@ is still not a green row.
   400-day window for ever. `drained: false` is the signal that the bound has stopped being a safety
   margin and started being a leak; unalerted, it is a line in a log nobody reads until the table is
   the largest thing in D1.
+- `provider_usage` weekly rollup reporting `drained: false`, for the same reason and with the same
+  shape: hourly rows that stop being folded into their month rows accumulate fastest in exactly the
+  weeks nobody is watching.
+- Any metered provider at or above 90% of a published ceiling, and any `blocked` count above zero.
+  The first is the warning; the second is money or mail already refused, and it should never be the
+  console that tells you first.
+- `provider gate unavailable; allowing the call` in the logs. The gate fails open on purpose — a
+  metering read must not stop transactional email — so this line is the only evidence that a
+  ceiling is not being enforced while it is not being enforced.
 
 ## 10. Chrome geometry and stacking order
 

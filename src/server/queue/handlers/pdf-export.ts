@@ -9,10 +9,16 @@
  * so the feature works on day one and gets better when the token is added.
  */
 
+import { isProviderBlockedError } from '#/server/metering/errors'
 import { assertUpstreamOk } from '../http'
 import { enqueueTask } from '../jobs'
 import { TaskConfigurationError } from '../types'
-import type { ExportDocument, PdfExportPayload, TaskContext, TaskMetrics } from '../types'
+import type {
+  ExportDocument,
+  PdfExportPayload,
+  TaskContext,
+  TaskMetrics,
+} from '../types'
 
 /** Export artifacts are kept for a week; the KV pointer expires with them. */
 export const EXPORT_TTL_SECONDS = 7 * 24 * 60 * 60
@@ -49,7 +55,10 @@ const HTML_ESCAPES: Record<string, string> = {
 }
 
 export function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => HTML_ESCAPES[character] ?? character)
+  return value.replace(
+    /[&<>"']/g,
+    (character) => HTML_ESCAPES[character] ?? character,
+  )
 }
 
 /**
@@ -102,13 +111,18 @@ export function renderExportDocument(
             )}</td><td class="meta">${escapeHtml(row.meta ?? '')}</td></tr>`,
         )
         .join('')
-      const note = section.note === undefined ? '' : `<p class="note">${escapeHtml(section.note)}</p>`
+      const note =
+        section.note === undefined
+          ? ''
+          : `<p class="note">${escapeHtml(section.note)}</p>`
       return `<section><h2>${escapeHtml(section.heading)}</h2>${note}<table>${rows}</table></section>`
     })
     .join('')
 
   const subtitle =
-    document.subtitle === undefined ? '' : `<p class="subtitle">${escapeHtml(document.subtitle)}</p>`
+    document.subtitle === undefined
+      ? ''
+      : `<p class="subtitle">${escapeHtml(document.subtitle)}</p>`
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(document.title)}</title>
@@ -130,9 +144,17 @@ export async function handlePdfExport(
     generatedAt,
   })
 
-  const htmlKey = exportObjectKey(context.orgId, payload.tripId, context.taskId, 'html')
+  const htmlKey = exportObjectKey(
+    context.orgId,
+    payload.tripId,
+    context.taskId,
+    'html',
+  )
   await context.env.FILES.put(htmlKey, html, {
-    httpMetadata: { contentType: 'text/html; charset=utf-8', cacheControl: 'private, max-age=0' },
+    httpMetadata: {
+      contentType: 'text/html; charset=utf-8',
+      cacheControl: 'private, max-age=0',
+    },
   })
 
   let pointer: ExportPointer = {
@@ -147,16 +169,28 @@ export async function handlePdfExport(
 
   const pdf = await renderPdf(html, context)
   if (pdf !== null) {
-    const pdfKey = exportObjectKey(context.orgId, payload.tripId, context.taskId, 'pdf')
+    const pdfKey = exportObjectKey(
+      context.orgId,
+      payload.tripId,
+      context.taskId,
+      'pdf',
+    )
     await context.env.FILES.put(pdfKey, pdf, {
-      httpMetadata: { contentType: 'application/pdf', cacheControl: 'private, max-age=0' },
+      httpMetadata: {
+        contentType: 'application/pdf',
+        cacheControl: 'private, max-age=0',
+      },
     })
     pointer = { ...pointer, key: pdfKey, format: 'pdf', bytes: pdf.byteLength }
   }
 
-  await context.env.KV.put(exportPointerKey(context.taskId), JSON.stringify(pointer), {
-    expirationTtl: EXPORT_TTL_SECONDS,
-  })
+  await context.env.KV.put(
+    exportPointerKey(context.taskId),
+    JSON.stringify(pointer),
+    {
+      expirationTtl: EXPORT_TTL_SECONDS,
+    },
+  )
 
   if (payload.notify !== undefined) {
     const url = `${context.env.APP_URL ?? ''}/app/trips/${encodeURIComponent(payload.tripId)}/exports/${encodeURIComponent(context.taskId)}`
@@ -181,15 +215,29 @@ export async function handlePdfExport(
     bytes: pointer.bytes,
   })
 
-  return { format: pointer.format, bytes: pointer.bytes, sections: payload.document.sections.length }
+  return {
+    format: pointer.format,
+    bytes: pointer.bytes,
+    sections: payload.document.sections.length,
+  }
 }
 
 /**
  * Renders the document with Cloudflare Browser Rendering when the token exists.
  * Returns `null` when rendering is not configured — the HTML artifact stands on
  * its own, and the caller records `format: 'html'`.
+ *
+ * It also returns `null` when the provider's metering ceiling has been reached and its policy is
+ * to block. That is deliberately the *same* answer as "not configured" rather than a new failure
+ * mode: this function has had a designed fallback since before it was metered, so a capped export
+ * degrades to the print-ready HTML the caller already knows how to write, and nobody's export
+ * fails. Of the three metered providers this is the only one where blocking costs the user nothing
+ * but fidelity, which is what makes it the safe one to cap.
  */
-async function renderPdf(html: string, context: TaskContext): Promise<ArrayBuffer | null> {
+async function renderPdf(
+  html: string,
+  context: TaskContext,
+): Promise<ArrayBuffer | null> {
   const token = context.env.BROWSER_RENDERING_API_TOKEN
   const accountId = context.env.CLOUDFLARE_ACCOUNT_ID
   if (token === undefined || token.length === 0) return null
@@ -199,17 +247,38 @@ async function renderPdf(html: string, context: TaskContext): Promise<ArrayBuffe
     )
   }
 
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/browser-rendering/pdf`,
-    {
-      method: 'POST',
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        html,
-        pdfOptions: { format: 'A4', printBackground: true },
-      }),
-    },
-  )
+  let response: Response
+  try {
+    response = await context.callProvider(
+      { provider: 'browser-rendering', operation: 'pdf.render' },
+      () =>
+        fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${accountId}/browser-rendering/pdf`,
+          {
+            method: 'POST',
+            headers: {
+              authorization: `Bearer ${token}`,
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+              html,
+              pdfOptions: { format: 'A4', printBackground: true },
+            }),
+          },
+        ),
+    )
+  } catch (cause) {
+    if (isProviderBlockedError(cause)) {
+      context.logger.warn('pdf rendering skipped: provider over its ceiling', {
+        provider: cause.provider,
+        callLimit: cause.callLimit,
+        used: cause.used,
+      })
+      return null
+    }
+    throw cause
+  }
+
   await assertUpstreamOk(response, 'Browser Rendering PDF')
   return response.arrayBuffer()
 }

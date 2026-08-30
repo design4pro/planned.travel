@@ -79,6 +79,8 @@ function context(orgId: string, env: TaskBindings = fakeEnv()): TaskContext {
     attempt: 1,
     taskId: 'task-under-test',
     orgId,
+    // This handler makes no outbound call; a pass-through is the whole of what it needs.
+    callProvider: (_label, send) => send(),
   }
 }
 

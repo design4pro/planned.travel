@@ -88,7 +88,8 @@ export const PLATFORM_ACTIONS = Object.freeze({
 } as const satisfies Readonly<Record<string, PlatformAuditAction>>)
 
 /** One of the fifteen names in {@link PLATFORM_ACTIONS}. */
-export type PlatformActionName = (typeof PLATFORM_ACTIONS)[keyof typeof PLATFORM_ACTIONS]
+export type PlatformActionName =
+  (typeof PLATFORM_ACTIONS)[keyof typeof PLATFORM_ACTIONS]
 
 /**
  * docs/ACCESS.md §4.2's prefix table: everything before the verb fixes the `entity_type` written
@@ -152,8 +153,9 @@ const DAY_MS = 24 * 60 * 60 * 1000
  * implicit index signature and this widening needs no cast. Reading through it is how a prefix that
  * the table does not declare becomes `undefined` at runtime rather than a lie at compile time.
  */
-const entityTypeByPrefix: Readonly<Record<string, PlatformAuditEntityType | undefined>> =
-  PLATFORM_AUDIT_ENTITY_BY_PREFIX
+const entityTypeByPrefix: Readonly<
+  Record<string, PlatformAuditEntityType | undefined>
+> = PLATFORM_AUDIT_ENTITY_BY_PREFIX
 
 /**
  * The `entity_type` docs/ACCESS.md §4.2 pairs with an action.
@@ -163,9 +165,12 @@ const entityTypeByPrefix: Readonly<Record<string, PlatformAuditEntityType | unde
  * split — they occur inside an entity name (`catalog_place`) and inside a compound verb
  * (`role_changed`) — so the segment count decides, never the underscore.
  */
-export function entityTypeForAction(action: PlatformAuditAction): PlatformAuditEntityType {
+export function entityTypeForAction(
+  action: PlatformAuditAction,
+): PlatformAuditEntityType {
   const segments = action.split('.')
-  const prefix = segments[0] === 'platform' ? `${segments[0]}.${segments[1]}` : segments[0]
+  const prefix =
+    segments[0] === 'platform' ? `${segments[0]}.${segments[1]}` : segments[0]
   const entityType = entityTypeByPrefix[prefix]
   if (entityType === undefined) {
     throw new Error(`no entity_type is declared for action prefix "${prefix}"`)
@@ -236,7 +241,9 @@ function truncationMark(measured: number): string {
 
 /** Marks a value this module could not keep at all, written in place of the value. */
 function refusalMark(reason: string, measured: number | null): string {
-  return measured === null ? `[refused: ${reason}]` : `[refused: ${reason}, ${measured} characters]`
+  return measured === null
+    ? `[refused: ${reason}]`
+    : `[refused: ${reason}, ${measured} characters]`
 }
 
 /** `value` cut to fit `limit` *including* the mark, so the bound holds on what is actually written. */
@@ -420,13 +427,17 @@ function boundSide(which: string, side: Record<string, unknown>): BoundedSide {
  * most likely to be a diff, and every replacement leaves the key behind with a mark on it. Each pass
  * marks one previously-unmarked key, so the loop is bounded by the key count and terminates.
  */
-function fitSerialisedBound(changes: PlatformAuditChanges): Bounded<PlatformAuditChanges> {
+function fitSerialisedBound(
+  changes: PlatformAuditChanges,
+): Bounded<PlatformAuditChanges> {
   const measured = serialisedLength(changes)
   if (measured >= 0 && measured <= CHANGES_MAX_SERIALISED_LENGTH) {
     return { value: changes, refusal: null }
   }
 
-  const sides: ReadonlyArray<readonly [string, Record<string, unknown> | null]> = [
+  const sides: ReadonlyArray<
+    readonly [string, Record<string, unknown> | null]
+  > = [
     ['before', changes.before],
     ['after', changes.after],
   ]
@@ -439,8 +450,12 @@ function fitSerialisedBound(changes: PlatformAuditChanges): Bounded<PlatformAudi
       break
     }
 
-    let biggest: { which: string; side: Record<string, unknown>; key: string; size: number } | null =
-      null
+    let biggest: {
+      which: string
+      side: Record<string, unknown>
+      key: string
+      size: number
+    } | null = null
     for (const [which, side] of sides) {
       if (side === null) {
         continue
@@ -496,8 +511,10 @@ function boundChanges(changes: PlatformAuditChanges | null): BoundedChanges {
     return { value: null, refusals: [] }
   }
 
-  const before = changes.before === null ? null : boundSide('before', changes.before)
-  const after = changes.after === null ? null : boundSide('after', changes.after)
+  const before =
+    changes.before === null ? null : boundSide('before', changes.before)
+  const after =
+    changes.after === null ? null : boundSide('after', changes.after)
   const fitted = fitSerialisedBound({
     before: before === null ? null : before.value,
     after: after === null ? null : after.value,
@@ -613,7 +630,10 @@ const platformAuditEntrySchema = z.object({
  * Faza C's `repo.ts` widens this union to the sixteen catalogue names in the commit that writes them;
  * {@link actionSchema} already accepts them, so that is one line here and no change to the validator.
  */
-export type PlatformAuditEntryInput = Omit<z.input<typeof platformAuditEntrySchema>, 'action'> & {
+export type PlatformAuditEntryInput = Omit<
+  z.input<typeof platformAuditEntrySchema>,
+  'action'
+> & {
   readonly action: PlatformActionName
 }
 
@@ -627,19 +647,29 @@ interface BuiltRow {
   readonly refusals: ReadonlyArray<FieldRefusal>
 }
 
-function buildRow(actor: PlatformActor, entry: PlatformAuditEntryInput): BuiltRow {
+function buildRow(
+  actor: PlatformActor,
+  entry: PlatformAuditEntryInput,
+): BuiltRow {
   const parsedActor = platformActorSchema.parse(actor)
   const parsed = platformAuditEntrySchema.parse(entry)
 
   const ip = boundRequestField('ip', parsed.ip, IP_MAX_LENGTH)
-  const userAgent = boundRequestField('userAgent', parsed.userAgent, USER_AGENT_MAX_LENGTH)
+  const userAgent = boundRequestField(
+    'userAgent',
+    parsed.userAgent,
+    USER_AGENT_MAX_LENGTH,
+  )
   const changes = boundChanges(parsed.changes ?? null)
 
   return {
     row: {
       actorUserId: parsedActor.userId,
       actorKind: parsedActor.actorKind,
-      actorRole: parsedActor.actorKind === 'system' ? null : resolvePlatformRole(parsedActor.role),
+      actorRole:
+        parsedActor.actorKind === 'system'
+          ? null
+          : resolvePlatformRole(parsedActor.role),
       tokenId: parsedActor.tokenId,
       action: parsed.action,
       entityType: entityTypeForAction(parsed.action),
@@ -679,7 +709,10 @@ function emitSafely(write: () => void): void {
 }
 
 /** The action and the actor, on every failure line, so the gap in the ledger is identifiable. */
-function failureFields(actor: PlatformActor, entry: PlatformAuditEntryInput): LogFields {
+function failureFields(
+  actor: PlatformActor,
+  entry: PlatformAuditEntryInput,
+): LogFields {
   return {
     action: entry.action,
     entityId: entry.entityId,
@@ -717,12 +750,21 @@ export async function appendPlatformAudit(
   logger: Logger,
 ): Promise<void> {
   const critical = isAlwaysAudited(entry.action)
-  const report = (message: string, fields: LogFields, cause?: unknown): void => {
+  const report = (
+    message: string,
+    fields: LogFields,
+    cause?: unknown,
+  ): void => {
     emitSafely(() => {
       if (critical) {
         logger.error(message, cause, fields)
       } else {
-        logger.warn(message, cause === undefined ? fields : { ...fields, ...serializeError(cause) })
+        logger.warn(
+          message,
+          cause === undefined
+            ? fields
+            : { ...fields, ...serializeError(cause) },
+        )
       }
     })
   }
@@ -731,7 +773,11 @@ export async function appendPlatformAudit(
   try {
     built = buildRow(actor, entry)
   } catch (cause) {
-    report('platform audit entry rejected', { ...failureFields(actor, entry), attempts: 0 }, cause)
+    report(
+      'platform audit entry rejected',
+      { ...failureFields(actor, entry), attempts: 0 },
+      cause,
+    )
     return
   }
 
@@ -825,7 +871,7 @@ const auditEntityQuerySchema = z.object({
  *
  * One `select`, one table, no join: `platform_audit_log` filtered by `(entity_type, entity_id)` and
  * ordered newest first, which is precisely what `platform_audit_log_entity_idx` was created to
- * serve. It lives here because SPEC §6 puts every statement against the nine global tables in this
+ * serve. It lives here because SPEC §6 puts every statement against the eleven global tables in this
  * directory and nowhere else, beside {@link appendPlatformAudit} — the append and the timeline are
  * two halves of one table's contract, and splitting them across layers is how the ordering below
  * ends up restated somewhere it can drift.
@@ -939,7 +985,9 @@ export async function prunePlatformAuditLog(
 ): Promise<PrunePlatformAuditLogResult> {
   const parsedActor = systemActorSchema.parse(actor)
   const now = options.now ?? new Date()
-  const cutoff = new Date(now.getTime() - PLATFORM_AUDIT_RETENTION_DAYS * DAY_MS)
+  const cutoff = new Date(
+    now.getTime() - PLATFORM_AUDIT_RETENTION_DAYS * DAY_MS,
+  )
   const batchSize = options.batchSize ?? PLATFORM_AUDIT_PRUNE_BATCH_SIZE
   const maxBatches = options.maxBatches ?? PLATFORM_AUDIT_PRUNE_MAX_BATCHES
 
@@ -993,7 +1041,11 @@ export async function prunePlatformAuditLog(
     // safety margin and started being a leak — the table is now growing past its retention window
     // and every following week will look the same. Raised at `error` so it is an alertable line
     // rather than a field inside a routine weekly `info`.
-    logger.error('platform audit retention prune did not drain', undefined, fields)
+    logger.error(
+      'platform audit retention prune did not drain',
+      undefined,
+      fields,
+    )
   })
 
   return { deleted, batches, drained }

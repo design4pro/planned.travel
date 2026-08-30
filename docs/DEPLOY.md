@@ -181,11 +181,16 @@ pnpm exec wrangler d1 execute planned-travel-db --remote \
   --command "select name from sqlite_master where type='table' order by name;"
 ```
 
-You should see **59 domain tables + 9 Better Auth tables** (`user`, `session`, `account`,
+You should see **62 domain tables + 9 Better Auth tables** (`user`, `session`, `account`,
 `verification`, `organization`, `member`, `invitation`, `passkey`, `two_factor`). Both numbers are
 read off the schema rather than remembered: `grep -c 'sqliteTable(' src/server/db/schema.ts` prints
 the first and the same command over `auth-schema.ts` prints the second. Migration `0004` moved the
-domain count from 57 by adding `staff_api_tokens` and `platform_audit_log`.
+domain count from 57 by adding `staff_api_tokens` and `platform_audit_log`; `0007` moved it from 60
+by adding `provider_registry` and `provider_usage`, both purely `CREATE TABLE` + `CREATE INDEX`.
+
+The figure above had already drifted before `0007`: it read 59 while the schema declared 60, which
+is the failure mode a remembered number has and the reason this paragraph names the command instead.
+Run the `grep` rather than trusting the sentence, and correct the sentence when the two disagree.
 
 **Migration policy: migrations are additive.** Add a column or a table; never rename or drop in
 the same release that stops using it. Both the old and the new Worker version must be able to

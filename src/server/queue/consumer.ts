@@ -38,8 +38,10 @@ import { handleBookingImport } from './handlers/booking-import'
 import { handleEmail } from './handlers/email'
 import { handlePdfExport } from './handlers/pdf-export'
 import { handleTravelStats } from './handlers/travel-stats'
+import { callProvider } from '#/server/metering/outbound'
 import { serializeError } from '../observability/logger'
 
+import type { Database } from '#/server/db/types'
 import type { Logger } from '../observability/logger'
 import type {
   TaskBindings,
@@ -151,6 +153,26 @@ export interface ConsumeOptions {
   now?: () => number
   /** Injectable so backoff jitter is deterministic under test. */
   random?: () => number
+  /**
+   * The batch's `ExecutionContext.waitUntil`, passed down from `src/server/worker.ts`.
+   *
+   * It matters that this is the *batch's* one rather than the ambient `waitUntil` of
+   * `cloudflare:workers`: a queue invocation is not a request, and the context that keeps the
+   * isolate alive long enough for a deferred counter write to land is the one the runtime handed
+   * `queue()`. Absent — in a test, or in a caller that has none — the metering write runs detached
+   * with its own terminal catch, which is what an unawaited promise does anyway.
+   */
+  waitUntil?: (promise: Promise<unknown>) => void
+  /**
+   * The D1 handle the provider meter records through, built by the caller.
+   *
+   * Built by the caller and not from `env.DB` here, because `createDb` reaches
+   * `cloudflare:workers` and this module has to stay loadable in the `server` Vitest project —
+   * the same constraint that gives `src/server/fns/console/bindings.ts` and
+   * `src/server/metering/bindings.ts` their reason to exist. Absent, the meter no-ops and every
+   * call still goes out: metering is never a reason a job does not run.
+   */
+  meterDb?: Database | null
 }
 
 export interface ConsumeResult {
@@ -222,6 +244,20 @@ export async function consumeTaskBatch(
     duplicates: 0,
   }
 
+  /**
+   * `provider_usage.organization_id` is nullable and the envelope's is a string, so the queue's
+   * `system` sentinel is translated once, here, rather than in three handlers. This is the only
+   * place the two conventions meet.
+   */
+  const orgIdAttribution = (orgId: string): string | null =>
+    orgId === 'system' || orgId === 'unknown' ? null : orgId
+
+  const deferMetering =
+    options.waitUntil ??
+    ((promise: Promise<unknown>) => {
+      void promise.catch(() => undefined)
+    })
+
   for (const message of batch.messages) {
     const parsed = taskEnvelopeSchema.safeParse(message.body)
     if (!parsed.success) {
@@ -261,6 +297,15 @@ export async function consumeTaskBatch(
       continue
     }
 
+    // Built here rather than in each handler so that the workspace a call is attributed to comes
+    // from the envelope the queue already validated, not from whatever a handler remembers to pass.
+    const meteringRuntime = {
+      db: options.meterDb ?? null,
+      waitUntil: deferMetering,
+      logger: jobLogger,
+      now: () => new Date(now()),
+    }
+
     const context: TaskContext = {
       env,
       logger: jobLogger,
@@ -269,6 +314,12 @@ export async function consumeTaskBatch(
       taskId: envelope.id,
       orgId: envelope.orgId,
       ...(envelope.traceId === undefined ? {} : { traceId: envelope.traceId }),
+      callProvider: (label, send) =>
+        callProvider(
+          meteringRuntime,
+          { organizationId: orgIdAttribution(envelope.orgId), ...label },
+          send,
+        ),
     }
 
     try {

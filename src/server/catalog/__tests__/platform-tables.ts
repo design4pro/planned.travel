@@ -1,5 +1,5 @@
 /**
- * The two global tables of SPEC §5's carve-out, in an in-memory SQLite database.
+ * Four of the global tables of SPEC §5's carve-out, in an in-memory SQLite database.
  *
  * `src/server/repos/__tests__/harness.ts` builds the whole relational model the same way and is the
  * right tool for a tenant repository test. It cannot be the tool here: it imports `../base` and
@@ -18,9 +18,17 @@
  */
 
 import { DatabaseSync } from 'node:sqlite'
-import { generateSQLiteDrizzleJson, generateSQLiteMigration } from 'drizzle-kit/api'
+import {
+  generateSQLiteDrizzleJson,
+  generateSQLiteMigration,
+} from 'drizzle-kit/api'
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
-import { platformAuditLog, staffApiTokens } from '#/server/db/schema'
+import {
+  platformAuditLog,
+  providerRegistry,
+  providerUsage,
+  staffApiTokens,
+} from '#/server/db/schema'
 import type { Database } from '#/server/db/types'
 
 /** The value types `node:sqlite` accepts as a bound parameter. */
@@ -34,7 +42,12 @@ let ddl: Promise<Array<string>> | undefined
 function schemaStatements(): Promise<Array<string>> {
   ddl ??= (async () => {
     const empty = await generateSQLiteDrizzleJson({})
-    const current = await generateSQLiteDrizzleJson({ platformAuditLog, staffApiTokens })
+    const current = await generateSQLiteDrizzleJson({
+      platformAuditLog,
+      providerRegistry,
+      providerUsage,
+      staffApiTokens,
+    })
     return generateSQLiteMigration(empty, current)
   })()
   return ddl
@@ -103,9 +116,12 @@ export async function createPlatformTables(): Promise<PlatformTables> {
   }
 
   const db: Database = drizzle(
-    async (query, params, method) => runStatement(sqlite, query, params, method),
+    async (query, params, method) =>
+      runStatement(sqlite, query, params, method),
     async (queries) =>
-      queries.map((entry) => runStatement(sqlite, entry.sql, entry.params, entry.method)),
+      queries.map((entry) =>
+        runStatement(sqlite, entry.sql, entry.params, entry.method),
+      ),
   )
 
   return {
