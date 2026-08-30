@@ -125,3 +125,8 @@ src/impeccable/
 # file content to that file's last result, so an unchanged file is skipped -
 # per checkout, and meaningless in another one.
 .eslintcache
+
+# Blob reports, written by the sharded unit job in CI (`--reporter=blob`) and by
+# anyone reproducing that locally. Merged into a verdict by `test-report` and
+# never worth keeping afterwards.
+.vitest-reports/

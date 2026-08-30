@@ -89,8 +89,15 @@ jobs:
           restore-keys: |
             eslint-${{ runner.os }}-${{ hashFiles('eslint.config.js', 'tsconfig.json', 'pnpm-lock.yaml') }}-
 
+      # `--cache-strategy content` and not the default. ESLint decides a file is
+      # unchanged by size and mtime unless told otherwise, and a fresh checkout
+      # stamps every file with a new mtime - so the default strategy restored a
+      # perfectly good cache and then ignored all of it. Measured after touching
+      # every source file: 10.5 s on metadata, 0.7 s on content.
       - name: Lint
-        run: pnpm lint ${{ github.event_name == 'pull_request' && '--cache' || '' }}
+        run: >-
+          pnpm lint ${{ github.event_name == 'pull_request'
+          && '--cache --cache-strategy content' || '' }}
 
       - name: Typecheck
         run: pnpm typecheck
@@ -157,6 +164,14 @@ jobs:
       # shard never loaded. The blob carries it, and the numbers add up exactly
       # - verified against an unsharded run, 10280/19069 statements either way.
       - name: Run this shard of the suite
+        # `VITEST_SHARDED` turns off the per-glob coverage thresholds for this
+        # run; `test-report` applies them to the merged whole. A shard executes
+        # a third of the files, so what it measures for any one glob is a third
+        # of the truth - the first sharded run failed exactly this way, every
+        # shard red on a tiles threshold that the merged coverage meets, and no
+        # blob written because the process was already exiting.
+        env:
+          VITEST_SHARDED: '1'
         run: >-
           pnpm exec vitest run --coverage
           --shard=${{ matrix.shard }}/${{ strategy.job-total }}
