@@ -88,6 +88,11 @@
     { "binding": "TILES", "bucket_name": "planned-travel-tiles" },
   ],
 
+  // No SANDCASTLE_REGISTRY here, and that is the point: the sandcastle run
+  // coordinator is deployed to staging alone (see env.staging below and
+  // docs/adr/0009). A coordinator is only worth having if there is exactly one
+  // of it - a second registry would let two fleets each believe they hold the
+  // backlog, which is the failure it exists to prevent.
   "durable_objects": {
     "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }],
   },
@@ -182,9 +187,22 @@
         { "binding": "TILES", "bucket_name": "planned-travel-tiles" },
       ],
       "durable_objects": {
-        "bindings": [{ "name": "TRIP_ROOM", "class_name": "TripRoom" }],
+        "bindings": [
+          { "name": "TRIP_ROOM", "class_name": "TripRoom" },
+          // Staging alone carries the sandcastle run coordinator: one object per
+          // repository, so every claim for a backlog is decided in one thread.
+          // The hostname is behind Cloudflare Access for good, which production
+          // will not be once it launches.
+          { "name": "SANDCASTLE_REGISTRY", "class_name": "SandcastleRegistry" },
+        ],
       },
-      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TripRoom"] }],
+      // Append-only, per environment: a published tag is a fact about what this
+      // worker already ran, so editing one re-runs history against a class that
+      // has moved on.
+      "migrations": [
+        { "tag": "v1", "new_sqlite_classes": ["TripRoom"] },
+        { "tag": "v2", "new_sqlite_classes": ["SandcastleRegistry"] },
+      ],
       "queues": {
         "producers": [
           { "binding": "TASKS", "queue": "planned-travel-tasks-staging" },
