@@ -194,8 +194,12 @@ export class SandcastleRegistry implements DurableObject {
           return await this.serialised(() => this.handleRelease(request, runId))
         case 'finish':
           return await this.serialised(() => this.handleFinish(request, runId))
+        // Serialised like the mutating routes, because it is one: `handleState` calls `expire()`,
+        // which deletes leases and archives runs. Unserialised, a dashboard read could land in a
+        // claim's `await` gap, reap the run out from under it, and leave the claim writing a lease
+        // for a run that no longer exists - an orphan nothing can renew or release.
         case 'state':
-          return await this.handleState()
+          return await this.serialised(() => this.handleState())
         default:
           return json(
             { error: `Unknown sandcastle registry route: ${route}` },
@@ -230,6 +234,26 @@ export class SandcastleRegistry implements DurableObject {
     await this.expire(now)
 
     const existing = await this.readRun(input.runId)
+    // A resume re-registers the same id from the same machine. A *different* machine presenting an
+    // id that is already live is a collision, not a resume, and treating it as one would hand it
+    // every lease the first run holds - reproducing "two fleets, one issue" through the very
+    // mechanism meant to prevent it. The local id is `<date>-<n>` allocated by scanning local
+    // branches, so two operators starting on the same day genuinely can collide.
+    if (existing && existing.host !== input.host) {
+      this.logger.warn('sandcastle run id collision', {
+        runId: input.runId,
+        held: existing.host,
+        presented: input.host,
+      })
+      return json(
+        {
+          error:
+            `run ${input.runId} is already live on ${existing.host}. This is a run id collision, ` +
+            `not a resume: pick another id with --run, or wait for that run to finish.`,
+        },
+        409,
+      )
+    }
     const run: RunRecord = {
       runId: input.runId,
       repo: input.repo,
@@ -416,6 +440,23 @@ export class SandcastleRegistry implements DurableObject {
     if (!parsed.success) return json({ error: parsed.error.message }, 400)
     const now = this.now()
 
+    // The only handler that used to write without checking the lease, and the write it makes is the
+    // one the next claimant is handed as `adopt`. A lapsed run that kept working would otherwise
+    // overwrite the current holder's branch pointer with its own abandoned one, and last-write-wins
+    // means nothing would notice. The client records WIP while it still holds the lease, so a
+    // healthy run never sees this refusal.
+    await this.expire(now)
+    const held = await this.readLeases()
+    const lease = held.get(parsed.data.issueId)
+    if (!lease || lease.runId !== runId) {
+      return json(
+        {
+          error: `run ${runId} does not hold a lease on issue ${parsed.data.issueId}`,
+        },
+        409,
+      )
+    }
+
     const record: WipRecord = {
       issueId: parsed.data.issueId,
       branch: parsed.data.branch,
@@ -564,6 +605,13 @@ export class SandcastleRegistry implements DurableObject {
     if (staleRuns.length > 0) {
       await this.state.storage.put(archived)
       await this.state.storage.delete(staleRuns)
+      // A lease claimed after the run's last heartbeat expires later than the run record does, so
+      // reaping the run alone leaves its leases behind under an id with no run: `findConflict`
+      // would then deny a fresh claim as "held by" a run that is provably dead, and the dashboard
+      // would not mark the branch orphaned. Hand them back with the run they belonged to.
+      for (const key of staleRuns) {
+        await this.releaseAllOf(key.slice(RUN_PREFIX.length))
+      }
       this.logger.warn('sandcastle runs expired', {
         runIds: staleRuns.map((key) => key.slice(RUN_PREFIX.length)).join(', '),
       })

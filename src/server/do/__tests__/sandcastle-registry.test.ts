@@ -114,17 +114,22 @@ class Harness {
     )
   }
 
-  async register(runId: string): Promise<{ resumed: boolean }> {
-    const response = await this.post('/runs/register', {
+  async register(runId: string, host = 'test'): Promise<{ resumed: boolean }> {
+    const response = await this.registerRaw(runId, host)
+    expect(response.status).toBe(200)
+    return response.json()
+  }
+
+  /** For the paths where registering is expected to be refused. */
+  registerRaw(runId: string, host = 'test'): Promise<Response> {
+    return this.post('/runs/register', {
       runId,
       repo: REPO,
       origin: 'local',
       kind: 'afk-loop',
-      host: 'test',
+      host,
       integrationBranch: `sandcastle/run-${runId}`,
     })
-    expect(response.status).toBe(200)
-    return response.json()
   }
 
   async claim(
@@ -159,12 +164,17 @@ class Harness {
     branch: string,
     commits: number,
   ): Promise<void> {
-    const response = await this.post(`/runs/${runId}/wip`, {
-      issueId,
-      branch,
-      commits,
-    })
+    const response = await this.wipRaw(runId, issueId, branch, commits)
     expect(response.status).toBe(200)
+  }
+
+  wipRaw(
+    runId: string,
+    issueId: string,
+    branch: string,
+    commits: number,
+  ): Promise<Response> {
+    return this.post(`/runs/${runId}/wip`, { issueId, branch, commits })
   }
 
   async release(runId: string, ids?: Array<string>): Promise<void> {
@@ -404,6 +414,40 @@ describe('leases and liveness', () => {
     )
   })
 
+  it("gives back a reaped run's leases along with the run", async () => {
+    const h = new Harness()
+    await h.register('20260829-1')
+    // Claimed just before the run's own record was due to lapse, so the lease outlives it: claims
+    // stamp `now + TTL` without touching the run. Without the sweep releasing them, the lease
+    // survived as an orphan under a dead run id for a further TTL, and the next claimant was told
+    // the issue was "held by" a run that could no longer renew or release it.
+    h.advance(SANDCASTLE_LEASE_TTL_MS - 1_000)
+    await h.claim('20260829-1', ['106'])
+
+    h.advance(2_000)
+    await h.alarm()
+
+    const state = await h.state()
+    expect(state.active).toEqual([])
+    await h.register('20260829-2')
+    expect(await h.claim('20260829-2', ['106'])).toMatchObject({
+      granted: ['106'],
+      denied: [],
+    })
+  })
+
+  it('refuses a run id already live on another machine', async () => {
+    const h = new Harness()
+    await h.register('20260830-1', 'laptop')
+
+    // The local id is `<date>-<n>` allocated by scanning local branches, so a second operator
+    // starting the same day computes the same one. Treated as a resume it would inherit every
+    // lease the first run holds - two fleets on one issue, through the coordinator itself.
+    const collision = await h.registerRaw('20260830-1', 'desktop')
+    expect(collision.status).toBe(409)
+    expect(await collision.text()).toMatch(/collision/)
+  })
+
   it('reclaims a resumed run its own leases rather than making it fight for them', async () => {
     const h = new Harness()
     await h.register('20260829-1')
@@ -453,6 +497,24 @@ describe('work in progress', () => {
     h.advance(SANDCASTLE_LEASE_TTL_MS + 1)
     await h.register('20260829-2')
     expect(await h.claim('20260829-2', ['108'])).toMatchObject({ adopt: {} })
+  })
+
+  it('refuses to record work against an issue the run does not hold', async () => {
+    const h = new Harness()
+    await h.register('20260829-1')
+    await h.claim('20260829-1', ['106'])
+    await h.register('20260829-2')
+
+    // The adopt map is built from these records, so an unchecked write lets a stale run point the
+    // next claimant at its own abandoned branch instead of the holder's.
+    const refused = await h.wipRaw(
+      '20260829-2',
+      '106',
+      'sandcastle/issue-106-20260829-2',
+      1,
+    )
+    expect(refused.status).toBe(409)
+    expect((await h.state()).wip).toEqual([])
   })
 
   it('marks a branch orphaned once nobody holds its issue', async () => {

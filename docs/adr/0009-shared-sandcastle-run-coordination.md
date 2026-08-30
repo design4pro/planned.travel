@@ -45,15 +45,24 @@ blocks anyone from taking #104 whole, while leaving sibling #108 free to run in 
 narrower is wrong in a way that reproduces the incident: the second run's plan was derived from the
 PRD, so a per-issue lock would have let it take the PRD and every leaf under it in one breath.
 
+**A run id is an identity, not a label.** Re-registering an id that is already live is a resume only
+when it comes from the same host; from a different one it is a collision and is refused. The local id
+is `<date>-<n>`, allocated by scanning local branches, so two operators starting on the same day
+genuinely can compute the same one - and treating that as a resume would hand the second machine
+every lease the first holds, reproducing "two fleets, one issue" through the coordinator itself.
+
 **Liveness is a server-computed lease, not a process id.** A pid means nothing to a run on another
 machine, and the expiry is stamped by the registry so clock skew between a laptop and an Actions
 runner is irrelevant. A run holds its leases by heartbeating every 60 seconds against a five-minute
 TTL; a run that stops heartbeating loses them, whether it crashed, was killed or lost the network.
-A heartbeat answers with `revoked`, and a run whose lease lapsed while it was working aborts those
-pipelines rather than finishing work it no longer owns.
+The sweep takes a run and its leases together, so a lapsed run is not told _which_ issues it lost -
+it is told it no longer exists, which is the same news about all of them at once. Either answer
+aborts the pipelines rather than finishing work the run no longer owns.
 
 **Work in progress outlives the lease.** A dead run's commits are still on disk, so `wip:<issueId>`
-survives lease expiry and the next claimant is told which branch to look at. Adoption is gated on
+survives lease expiry and the next claimant is told which branch to look at. Only the lease holder
+may write one: the record is what the next claimant is handed as `adopt`, and it is last-write-wins,
+so an unchecked write would let a stale run point the next run at its own abandoned branch. Adoption is gated on
 history rather than hope: the branch is taken only if it fast-forwards onto this run's integration
 base or `git merge-tree` reports a clean merge against it, otherwise the slice starts fresh and the
 reason is logged. Nothing is ever forced, reset or rewritten - `main.ts`'s own header warns that each

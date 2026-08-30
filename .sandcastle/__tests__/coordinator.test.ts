@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { Coordinator, CoordinatorError } from '../coordinator'
+import { SANDCASTLE_HEARTBEAT_INTERVAL_MS } from '../../src/server/do/sandcastle-protocol'
 
 const RUN = {
   repo: 'design4pro/planned.travel',
@@ -231,6 +232,50 @@ describe('losing a lease', () => {
     const run = coordinator([[200, { revoked: [], leaseExpiresAt: 1 }]], [])
 
     expect(run.isRevoked('999')).toBe(false)
+  })
+
+  /**
+   * The `revoked` list can never carry this news. The registry reaps a run and its leases in one
+   * sweep, so a run that lapsed no longer exists there and every heartbeat after gets 409 - the
+   * branch that computes `revoked` needs a run record that survived losing a lease, and there is no
+   * such state. Swallowing the 409 as "retry next interval" is what let a lapsed run keep building
+   * and merge onto an issue another fleet already held.
+   */
+  it('gives up every issue when the registry no longer knows the run', async () => {
+    vi.useFakeTimers()
+    try {
+      const run = coordinator(
+        [[409, { error: 'run 20260830-1 is not registered' }]],
+        [],
+      )
+      const one = run.signalFor('106')
+      const two = run.signalFor('108')
+
+      run.startHeartbeat()
+      await vi.advanceTimersByTimeAsync(SANDCASTLE_HEARTBEAT_INTERVAL_MS)
+
+      expect(one.aborted).toBe(true)
+      expect(two.aborted).toBe(true)
+      expect(run.isRevoked('106')).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('survives a 5xx heartbeat instead of tearing the run down', async () => {
+    vi.useFakeTimers()
+    const run = coordinator([[503, { error: 'no' }]], [])
+    try {
+      const one = run.signalFor('106')
+
+      run.startHeartbeat()
+      await vi.advanceTimersByTimeAsync(SANDCASTLE_HEARTBEAT_INTERVAL_MS * 2)
+
+      expect(one.aborted).toBe(false)
+    } finally {
+      run.stopHeartbeat()
+      vi.useRealTimers()
+    }
   })
 })
 

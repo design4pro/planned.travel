@@ -280,6 +280,25 @@ export class Coordinator {
     return this.inFlight.get(issueId)?.signal.aborted ?? false
   }
 
+  /**
+   * Gives up every issue this run was working, and says why.
+   *
+   * The registry reaps a run and its leases together, so a run that lapses does not get told which
+   * issues it lost - it gets a 409 saying it is not registered, which is the same news about all of
+   * them at once.
+   */
+  private revokeEverything(reason: string): void {
+    for (const [id, controller] of this.inFlight) {
+      if (controller.signal.aborted) continue
+      this.log(
+        `Coordinator: LOST the lease on #${id} - ${reason}. Aborting that pipeline.`,
+      )
+      controller.abort(
+        new Error(`The coordinator revoked this run's lease on #${id}.`),
+      )
+    }
+  }
+
   /** One heartbeat. Separate from the timer so a test can drive it without a clock. */
   async heartbeatOnce(): Promise<HeartbeatResult> {
     const result = heartbeatResultSchema.parse(
@@ -289,15 +308,15 @@ export class Coordinator {
       ),
     )
     for (const id of result.revoked) {
+      const controller = this.inFlight.get(id)
+      if (controller === undefined || controller.signal.aborted) continue
       this.log(
         `Coordinator: LOST the lease on #${id} - this run stopped heartbeating long enough for ` +
           `another to take it. Aborting that pipeline.`,
       )
-      this.inFlight
-        .get(id)
-        ?.abort(
-          new Error(`The coordinator revoked this run's lease on #${id}.`),
-        )
+      controller.abort(
+        new Error(`The coordinator revoked this run's lease on #${id}.`),
+      )
     }
     return result
   }
@@ -314,8 +333,20 @@ export class Coordinator {
     if (this.timer !== undefined) return
     this.timer = setInterval(() => {
       void this.heartbeatOnce().catch((cause: unknown) => {
-        // A missed heartbeat is survivable - the TTL is several intervals wide - so this warns and
-        // waits for the next one instead of tearing the run down.
+        // A 409 is not a blip. The registry reaps a run and its leases in one pass, so a run that
+        // lapsed no longer exists there and every later heartbeat gets the same answer forever.
+        // Treating that as "retry next interval" is what let a lapsed run keep building and merge
+        // onto an issue another fleet already held - the `revoked` list can never carry that news,
+        // because the run record is gone before a lease can outlive it.
+        if (cause instanceof CoordinatorError && cause.status === 409) {
+          this.revokeEverything(
+            'the registry no longer knows this run, so its leases are gone',
+          )
+          this.stopHeartbeat()
+          return
+        }
+        // Anything else is survivable - the TTL is several intervals wide - so this warns and waits
+        // for the next one instead of tearing the run down.
         this.log(
           `Coordinator: heartbeat failed (${cause instanceof Error ? cause.message : String(cause)}). Retrying next interval.`,
         )

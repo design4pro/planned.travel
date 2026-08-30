@@ -56,6 +56,7 @@ import * as sandcastle from '@ai-hero/sandcastle'
 import { z } from 'zod'
 
 import { adoptWipBranches } from './adopt'
+import { EDGE_COMMAND, parseEdgeLines } from './issue-edges'
 import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
 import { docker } from './sandbox'
 
@@ -375,16 +376,8 @@ const REPO = 'design4pro/planned.travel'
  * a closure, which is the one direction that lets two runs collide.
  */
 function openIssueEdges(): Array<SandcastleEdge> {
-  const listed = execSync(
-    'gh issue list --state open --limit 500 --json number,parent ' +
-      '--jq \'.[] | select(.parent != null) | "\(.number) \(.parent.number)"\'',
-    { encoding: 'utf8' },
-  )
-  return listed
-    .split('\n')
-    .map((line) => line.trim().split(' '))
-    .filter((pair): pair is [string, string] => pair.length === 2)
-    .map(([child, parent]) => ({ child, parent }))
+  const listed = execSync(EDGE_COMMAND, { encoding: 'utf8' })
+  return parseEdgeLines(listed)
 }
 
 /**
