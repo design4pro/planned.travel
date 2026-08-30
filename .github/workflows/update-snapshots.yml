@@ -10,6 +10,10 @@ on:
         description: What changed in the design that makes the current baselines wrong?
         required: true
         type: string
+      filter:
+        description: Re-record only the frames whose title matches this (empty = the whole suite)
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -52,10 +56,28 @@ jobs:
       # A frame that fails for a reason other than a moved pixel — a dirty
       # console, an unpinned clock — still fails here, and the run stops before
       # it can write a baseline of a broken screen.
+      #
+      # `--global-timeout` overrides the config's ten minutes, which is a *per
+      # shard* budget: the gate splits the suite across shards and this job does
+      # not, so the whole suite on one worker ran out of clock with 121 frames
+      # never started. Thirty-five minutes sits inside the job's forty.
+      #
+      # `filter` narrows it to the frames a change actually moved. A design
+      # change that touches one screen has no business re-recording the other
+      # hundred and seventy — and a narrow run is the one that finishes.
       - name: Re-record
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
-        run: pnpm exec playwright test --update-snapshots
+          FILTER: ${{ inputs.filter }}
+        run: |
+          set -euo pipefail
+          if [ -n "$FILTER" ]; then
+            pnpm exec playwright test --update-snapshots \
+              --global-timeout=2100000 --grep "$FILTER"
+          else
+            pnpm exec playwright test --update-snapshots \
+              --global-timeout=2100000
+          fi
 
       - name: Open a pull request
         env:
@@ -77,6 +99,9 @@ jobs:
 
           $REASON"
           git push origin "$branch"
+          # Based on the ref this ran from, not on develop: frames recorded from a
+          # feature branch describe that branch's screens, and merging them into
+          # develop ahead of the code would leave the gate red on both sides.
           gh pr create \
             --title 'test(e2e): re-record Linux baselines' \
             --body "Recorded by \`update-snapshots\` run ${GITHUB_RUN_ID}.
@@ -84,4 +109,4 @@ jobs:
           **Reason given:** ${REASON}
 
           Review every changed image: an accepted baseline is an accepted design." \
-            --base develop --head "$branch"
+            --base "$GITHUB_REF_NAME" --head "$branch"
