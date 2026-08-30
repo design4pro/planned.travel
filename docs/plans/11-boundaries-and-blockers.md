@@ -21,9 +21,13 @@ Three registers, three stages:
   deployment serving every tenant, and either a hosted equivalent named by its own row id or an
   explicit "none".
 - **`11-S2`** — the blocked register: every in-scope capability that would need a package absent
-  from the dependencies in `package.json`, with the §3 verdict and one chosen fallback each.
-- **`11-S3`** — the absent bindings and the open commercial decisions: geocoding and place search,
-  weather, and foreign-exchange rates.
+  from the dependencies in `package.json`, with the §3 verdict and one chosen fallback each. Two of
+  its ten entries — mail-message parsing and document text extraction — are now **closed** rather
+  than deferred, by a platform binding rather than by a package, so `SPEC` §3 is untouched.
+- **`11-S3`** — the absent bindings and the open commercial decisions: routing, weather, and
+  foreign-exchange rates. Geocoding and place search stood here too until `docs/adr/0013-geoapify-for-geocoding.md`
+  took it; the register keeps the closed entries, struck through and cited, because a reader needs to
+  see that a decision was taken and where, not to find it silently gone.
 
 **How an area plan uses this file.** A stage that runs into one of these boundaries writes one line
 under its own **Blockers** heading naming the entry here, and plans the rest of the row around it.
@@ -96,8 +100,29 @@ long-lived host, neither of which a Worker has. The remaining part, a background
 sequential review, is shaped correctly for us and belongs to BKG-03.
 
 **Hosted equivalent: BKG-03**, the deterministic extractor, which already exists as a complete queue
-handler. Anything beyond deterministic extraction waits on the `AI` binding decision recorded in
-`11-S3`; it is an infrastructure and cost decision, not a build step.
+handler.
+
+**Superseded in part by ADR 0012 — model-assisted parsing is in scope; the two operator constructs
+are not.** When this entry was written, anything beyond deterministic extraction waited on the `AI`
+binding decision recorded in `11-S3`. `docs/adr/0012-workers-ai-for-confirmation-extraction.md` takes that
+decision: the `AI` binding is declared and `env.AI.toMarkdown()` plus a model call turn a document
+into a draft booking. That changes this row's disposition from **excluded** to **excluded in its
+reference shape, closed in ours**, and the distinction is the whole of the argument:
+
+- The **instance-level provider credential** stays excluded. What lands is not a credential a tenant
+  supplies or an operator overrides — it is a platform binding on our own account, spent by us, with
+  a per-tenant ceiling in `resolveLimits()` and a KV counter in front of it so one tenant cannot
+  drain the pool. There is no per-tenant key to store, proxy or be blamed for, which is exactly why
+  the reference's construct does not survive and ours does.
+- **Local model management** stays excluded, unconditionally and for the reason above: a Worker has
+  no filesystem and no long-lived host, and no ADR changes that.
+- The **background parse job with sequential review** was already shaped correctly for us; it is
+  built by `03-S7` (`03-reservations-and-transport.md`, wave 5), which owns the producer, the queue
+  branch, the staged draft and the confirm.
+
+So `BKG-04` is closed by `03-S7` rather than by this register. The row's own line in
+`03-reservations-and-transport.md` reads `absent → done`, and this entry stands as the record of
+**which two thirds of it never came back**.
 
 #### BKG-09 — External flight-log two-way sync and connecting-flight joining
 
@@ -487,12 +512,24 @@ subset is rejected at the boundary with a designed error that says which part wa
 
 **Verdict.** `SPEC` §3: stop and report, do not install.
 
-**Fallback: hand-roll a restricted subset.** Headers plus a single level of multipart, choosing the
-plain-text part when one exists; quoted-printable and base64 transfer decoding, both of which the
-platform supports directly; no nested multipart beyond one level, no attachment extraction, no
-character sets beyond UTF-8 and Latin-1. The calendar attachment is the high-value case and is
-already handled: `src/server/queue/ics.ts` reads iCalendar today, so the parser's job is to find that
-part and hand it over, not to understand the mail.
+**Fallback, as this entry originally stood: hand-roll a restricted subset.** Headers plus a single
+level of multipart, choosing the plain-text part when one exists; quoted-printable and base64
+transfer decoding, both of which the platform supports directly; no nested multipart beyond one
+level, no attachment extraction, no character sets beyond UTF-8 and Latin-1. The calendar attachment
+is the high-value case and is already handled: `src/server/queue/ics.ts` reads iCalendar today, so
+the parser's job is to find that part and hand it over, not to understand the mail.
+
+**Closed by ADR 0012, and by dropping the requirement rather than meeting it.** `03-S7`
+(`03-reservations-and-transport.md`, wave 5) accepts `.eml` and **writes no MIME parser at all**. A
+saved confirmation email is read as raw text and handed to the model, which is what
+`docs/adr/0012-workers-ai-for-confirmation-extraction.md` makes possible: the headers, the boundary markers
+and the base64 blocks are noise the model reads past, and the booking details are in the text part
+either way. The subset above is therefore not built. The one thing that is lost is the calendar
+attachment shortcut — a base64 `text/calendar` part is not readable as text — and `03-S7` states
+that limitation rather than hiding it: an `.eml` whose only booking data is inside an encoded
+attachment comes back with fields the reader has to fill in, which is the same "recorded, needs
+review" outcome any thin document already gets. `src/server/queue/ics.ts` keeps reading iCalendar for
+the paths that hand it one directly.
 
 #### 9. Document text extraction — BKG-03
 
@@ -502,10 +539,22 @@ plausible nonsense, which is worse than refusing the file.
 
 **Verdict.** `SPEC` §3: stop and report, do not install.
 
-**Fallback: defer.** It waits on the `AI` binding decision in `11-S3`, which offers a
-document-to-markdown conversion as a platform capability rather than a package. Until that decision
-is taken, BKG-03 ships the formats it can read and rejects this one at upload with a designed
-message naming the formats that work. No stage plans as though the extraction existed.
+**Fallback, as this entry originally stood: defer.** It waited on the `AI` binding decision in
+`11-S3`, which offers a document-to-markdown conversion as a platform capability rather than a
+package.
+
+**Closed by ADR 0012.** That decision has been taken:
+`docs/adr/0012-workers-ai-for-confirmation-extraction.md` declares the `AI` binding and `env.AI.toMarkdown()`
+is the extraction, as a platform capability and not as a package — so `SPEC` §3 is untouched and
+nothing is installed. `03-S7` (`03-reservations-and-transport.md`, wave 5) builds it and reads PDF,
+HTML, the common image formats and plain text through it. The deferral's own condition is met, so
+this entry is **closed**, not softened: the reason it was deferred was that a hand-rolled subset
+produces plausible nonsense, and nothing here asks anyone to hand-roll one.
+
+Two limits survive the closure and are named by `03-S7` rather than here: the conversion has a
+published list of accepted formats and `.pkpass` is not on it, so that format stays rejected at the
+upload boundary with the designed message this entry always called for; and a document that converts
+to too little text is treated as unreadable rather than as an empty booking.
 
 #### 10. Camera-format image decoding — ADD-08
 
@@ -602,27 +651,49 @@ decision it records is the user's, and carries a cost rather than an effort.
 each of them stops at the decision instead of picking a provider inside a feature stage. The rows
 and the plan that owns each:
 
-| Row    | Owning plan                        | Wave | Waiting on                                          |
-| ------ | ---------------------------------- | ---- | --------------------------------------------------- |
-| MAP-01 | `02-places-and-maps.md`            | 1    | geocoding — reverse lookup for a map-click place    |
-| MAP-02 | `02-places-and-maps.md`            | 2    | place search — type-ahead and share-link resolution |
-| MAP-03 | `02-places-and-maps.md`            | 5    | geocoding — address completion on the place form    |
-| MAP-08 | `02-places-and-maps.md`            | 3    | routing — segment times and totals                  |
-| MAP-09 | `02-places-and-maps.md`            | 4    | routing — road lines behind the overlay             |
-| BKG-07 | `03-reservations-and-transport.md` | 2    | an airport and station reference dataset            |
-| BKG-08 | `03-reservations-and-transport.md` | 2    | public-transit routing                              |
-| BKG-03 | `03-reservations-and-transport.md` | 4    | the `AI` binding (document text extraction)         |
-| MNY-06 | `04-budget-and-currencies.md`      | 2    | foreign-exchange rates                              |
-| MNY-07 | `04-budget-and-currencies.md`      | 1    | foreign-exchange rates                              |
-| TRP-05 | `01-trips-core.md`                 | 2    | foreign-exchange rates                              |
-| COL-10 | `07-collaboration-and-sharing.md`  | 2    | foreign-exchange rates                              |
-| DOC-06 | `06-documents-and-media.md`        | 2    | the `BROWSER` binding or its equivalent credentials |
-| DOC-08 | `06-documents-and-media.md`        | 6    | weather                                             |
-| ADD-08 | `08-product-modules.md`            | 2    | the image-transformation binding                    |
+| Row    | Owning plan                        | Wave | Waiting on                                                         |
+| ------ | ---------------------------------- | ---- | ------------------------------------------------------------------ |
+| MAP-01 | `02-places-and-maps.md`            | 1    | ~~geocoding — reverse lookup for a map-click place~~ — ADR 0013    |
+| MAP-02 | `02-places-and-maps.md`            | 2    | ~~place search — type-ahead and share-link resolution~~ — ADR 0013 |
+| MAP-03 | `02-places-and-maps.md`            | 5    | ~~geocoding — address completion on the place form~~ — ADR 0013    |
+| MAP-08 | `02-places-and-maps.md`            | 3    | routing — segment times and totals                                 |
+| MAP-09 | `02-places-and-maps.md`            | 4    | routing — road lines behind the overlay                            |
+| BKG-07 | `03-reservations-and-transport.md` | 2    | ~~an airport and station reference dataset~~ — ADR 0010            |
+| BKG-08 | `03-reservations-and-transport.md` | 3    | ~~public-transit routing~~ — ADR 0011                              |
+| BKG-03 | `03-reservations-and-transport.md` | 4    | ~~the `AI` binding~~ — ADR 0012                                    |
+| MNY-06 | `04-budget-and-currencies.md`      | 2    | foreign-exchange rates                                             |
+| MNY-07 | `04-budget-and-currencies.md`      | 1    | foreign-exchange rates                                             |
+| TRP-05 | `01-trips-core.md`                 | 2    | foreign-exchange rates                                             |
+| COL-10 | `07-collaboration-and-sharing.md`  | 2    | foreign-exchange rates                                             |
+| DOC-06 | `06-documents-and-media.md`        | 2    | the `BROWSER` binding or its equivalent credentials                |
+| DOC-08 | `06-documents-and-media.md`        | 6    | weather                                                            |
+| ADD-08 | `08-product-modules.md`            | 2    | the image-transformation binding                                   |
 
 MNY-07 in wave 1 and MAP-01 in wave 1 are the two that make this stage urgent rather than tidy: both
 are wave-1 rows whose central behaviour — a rate frozen at save time, an address on a map-click
 place — cannot be built at all until a decision that is not a build decision has been taken.
+
+**Six of the fifteen have since had their decision taken, and the strikethroughs above say which.**
+This stage records what a row is waiting on; when the waiting ends, the row leaves the register
+rather than the register quietly keeping it. Four ADRs did it, and each is the argument this file
+deliberately does not make itself:
+
+| Row                    | Closed by                                                    | Now built by                                         |
+| ---------------------- | ------------------------------------------------------------ | ---------------------------------------------------- |
+| BKG-07                 | `docs/adr/0010-airport-catalogue-from-public-domain-data.md` | `03-S2`, wave 2                                      |
+| BKG-08                 | `docs/adr/0011-here-for-public-transit-routing.md`           | `03-S3`, wave 3                                      |
+| BKG-03, and BKG-04     | `docs/adr/0012-workers-ai-for-confirmation-extraction.md`    | `03-S7`, wave 5                                      |
+| MAP-01, MAP-02, MAP-03 | `docs/adr/0013-geoapify-for-geocoding.md`                    | `02-S4` w3 mints the proxy; `02-S13` w4, `02-S11` w6 |
+
+BKG-08's wave moved from 2 to 3 when `03-S3` was rewritten around a real provider; the table above
+now states 3, and `03-reservations-and-transport.md` is the authority. BKG-04 is not one of the
+fifteen — it is an `11-S1` exclusion — and it is listed here because the same ADR that closed BKG-03
+changed its disposition too; its own entry says exactly which parts of it stayed excluded.
+
+**Nine rows still wait**, and the two registers below are still the record for them: routing
+(MAP-08, MAP-09) is the half of the geocoding decision that stayed open, weather (DOC-08) and
+foreign-exchange rates (MNY-06, MNY-07, TRP-05, COL-10) are untouched, and the `BROWSER` (DOC-06) and
+image-transformation (ADD-08) bindings are still absent from `wrangler.jsonc`.
 
 ### Owned paths
 
@@ -683,10 +754,12 @@ The six items of `docs/SPEC.md` §7 are read as under `11-S1` — unchanged gate
 ownership beyond the register — and the §2 visual clauses are not ticked because the stage ships
 nothing to look at.
 
-The condition specific to this stage: it is done only if each of the three provider decisions below
-is left **open with its constraint stated**, and none of them is silently resolved by naming a
-provider. Choosing one here would be the worst outcome available: a plan is not the place a
-commercial commitment gets made.
+The condition specific to this stage: it is done only if each provider decision below that is still
+open is left **open with its constraint stated**, and none of them is silently resolved by naming a
+provider inside this file. Choosing one here would be the worst outcome available: a plan is not the
+place a commercial commitment gets made. **A decision that has since been taken elsewhere satisfies
+that condition rather than breaking it**, provided the register names the ADR that took it and does
+not restate the reasoning — which is why the four closures above are one line each and a citation.
 
 ### Blockers
 
@@ -699,16 +772,21 @@ service whose terms do not permit a paid, subscription-funded product.
 `wrangler.jsonc` declares seven bindings — `DB`, `KV`, `SESSIONS`, `FILES`, `TILES`, `TRIP_ROOM`,
 `TASKS` — in both the production and the staging environment, and `ARCHITECTURE.md` §3 documents
 exactly those seven. **`BROWSER` and `AI` are absent from both environments**, as is the
-image-transformation binding. Adding one is an **infrastructure and cost decision for the user**, not
+image-transformation binding. **`AI` is absent but no longer undecided**: ADR 0012 adopts it, and the
+row for it below now records a decision taken rather than a question open. It is added by the
+wave-4 bindings stage of `00-foundations.md`, filed there by `03-S7` under its own **Blockers**, in
+the form the paragraph below requires — which is also why that file's own bindings table, which still
+carries `AI` as **report only** on the strength of BKG-04 being out of scope, needs correcting by
+whoever owns it. Adding one is an **infrastructure and cost decision for the user**, not
 a build step, and no feature stage may add one: `wrangler.jsonc` is one of the six shared paths, the
 change lands in `00-foundations.md` at wave 0 together with its re-export from `src/server/worker.ts`
 where one is needed, and `README.md` requires a new binding to be argued as a cost-model change.
 
-| Binding                       | Absent from            | Would unblock                                                                                                                                                                                                 | What exists instead today                                                                                                                                                                                                                                                                                                |
-| ----------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `BROWSER` (browser rendering) | production and staging | DOC-06, the document export, at its highest fidelity                                                                                                                                                          | `src/server/queue/handlers/pdf-export.ts` already renders through the same service's REST interface when a token and an account id are configured as secrets, and writes self-contained print markup when they are not. The capability is wired; what is absent is the binding form of it and the account configuration. |
-| `AI` (model inference)        | production and staging | the document text extraction deferred as entry 9 of `11-S2`, and therefore the last unread format of BKG-03                                                                                                   | nothing. BKG-03 reads calendar attachments deterministically and rejects the rest.                                                                                                                                                                                                                                       |
-| image transformation          | production and staging | the camera-format decoding deferred as entry 10 of `11-S2`, for ADD-08; and the `thumbnail` task kind, which `src/server/queue/types.ts` declares and `src/server/queue/consumer.ts` leaves without a handler | nothing. Uploads are stored as received.                                                                                                                                                                                                                                                                                 |
+| Binding                       | Absent from            | Would unblock                                                                                                                                                                                                             | What exists instead today                                                                                                                                                                                                                                                                                                |
+| ----------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `BROWSER` (browser rendering) | production and staging | DOC-06, the document export, at its highest fidelity                                                                                                                                                                      | `src/server/queue/handlers/pdf-export.ts` already renders through the same service's REST interface when a token and an account id are configured as secrets, and writes self-contained print markup when they are not. The capability is wired; what is absent is the binding form of it and the account configuration. |
+| `AI` (model inference)        | production and staging | **decided — ADR 0012.** It unblocks entries 8 and 9 of `11-S2` and BKG-03, and changes BKG-04's disposition; `03-S7` (wave 5) builds against it and files the binding on the wave-4 bindings stage of `00-foundations.md` | nothing. BKG-03 reads calendar attachments deterministically and rejects the rest — which is what `03-S7` replaces.                                                                                                                                                                                                      |
+| image transformation          | production and staging | the camera-format decoding deferred as entry 10 of `11-S2`, for ADD-08; and the `thumbnail` task kind, which `src/server/queue/types.ts` declares and `src/server/queue/consumer.ts` leaves without a handler             | nothing. Uploads are stored as received.                                                                                                                                                                                                                                                                                 |
 
 What the user is actually being asked, for each:
 
@@ -717,10 +795,15 @@ What the user is actually being asked, for each:
   per concurrent browser above the included concurrency. Exports are seconds each, so the allowance
   is generous at our scale; the decision is about enabling a billed product on the account and about
   the free plan's much smaller daily allowance, not about a large bill.
-- **`AI`.** This is the one that changes the **shape** of the bill rather than its size:
+- **`AI`.** This was the one that changes the **shape** of the bill rather than its size:
   `ARCHITECTURE.md` §8 models storage, requests, CPU, rows, operations and object storage, and has no
   line for per-inference pricing at all. Adopting it means the cost model gains a term whose driver
-  is user behaviour on a feature we would be inviting people to use.
+  is user behaviour on a feature we would be inviting people to use. **That question has been
+  answered — ADR 0012 adopts it — and the answer carries the mitigation with it:** the driver is
+  bounded per tenant by a ceiling in `resolveLimits()` with a KV counter in front of the outbound
+  call, because there is no row to `COUNT(*)` for an inference and `assertQuota` therefore cannot be
+  the enforcement. `ARCHITECTURE.md` §8 still owes the new term, and that is a foundations edit
+  rather than a decision.
 - **Image transformation.** The transformation binding accepts the camera format as an input, with a
   stated maximum input size per call, and can emit a web format. Its cost is per transformation, and
   its natural pairing is the unimplemented thumbnail job, so the decision is best taken once for
@@ -731,19 +814,38 @@ month at ten users and under nine at a thousand, with storage as the driver. Any
 therefore a larger proportional change to this product's economics than its unit price suggests,
 which is precisely why it is the user's decision and not a stage's.
 
-#### The provider decisions, all three open
+#### The provider decisions — two still open, and one taken in four parts
 
-Three capabilities have **no provider chosen and no budget agreed**, and this file deliberately does
-not choose one. Each is an open commercial decision:
+Three capabilities stood here with **no provider chosen and no budget agreed**. Two of them still do,
+and this file deliberately does not choose for them:
 
-1. **Geocoding and place search** — reverse lookup for MAP-01, type-ahead and share-link resolution
-   for MAP-02, address completion for MAP-03. Routing (MAP-08, MAP-09), transit routing (BKG-08) and
-   the airport and station reference dataset (BKG-07) are adjacent decisions of the same kind and are
-   taken with it or immediately after it.
-2. **Weather** — the per-day forecast, the historical read for a past trip and the climatological
+1. **Weather** — the per-day forecast, the historical read for a past trip and the climatological
    estimate beyond the forecast window, for DOC-08.
-3. **Foreign-exchange rates** — the rate frozen at save time for MNY-07, the re-basing in MNY-06, the
+2. **Foreign-exchange rates** — the rate frozen at save time for MNY-07, the re-basing in MNY-06, the
    converter widget in TRP-05 and the guest currency resolution in COL-10.
+
+**The third — geocoding and place search, with its adjacent decisions — has been taken, and not as
+one decision.** It was recorded here as a single question with four parts hanging off it: reverse
+lookup for MAP-01, type-ahead and share-link resolution for MAP-02, address completion for MAP-03,
+plus routing (MAP-08, MAP-09), transit routing (BKG-08) and the airport and station reference dataset
+(BKG-07) as adjacent decisions "taken with it or immediately after it". They were taken separately,
+by four ADRs, and the separation is the interesting part:
+
+- **BKG-07** turned out not to be a provider decision at all. `docs/adr/0010-airport-catalogue-from-public-domain-data.md`
+  buys nothing: a public dataset is fetched at **build time** by a pinned script, committed as a
+  deterministic artefact and read from our own D1. No runtime call, no meter, no terms to honour on
+  the request path.
+- **BKG-08** is a bought service — `docs/adr/0011-here-for-public-transit-routing.md` — and it is
+  the one that proves the constraint below is not theoretical: the obvious free option was refused
+  after its terms were read rather than skimmed.
+- **MAP-01, MAP-02 and MAP-03** are `docs/adr/0013-geoapify-for-geocoding.md`, and the property that
+  decided it was not price but **the right to keep the coordinate**, which is the "cache and for how
+  long" term named two paragraphs below. The provider we had already contracted for BKG-08 could not
+  be reused, for exactly that reason.
+- **MAP-08 and MAP-09 — routing — stay open**, and are now their own decision rather than an
+  appendix to a closed one. `02-places-and-maps.md` keeps them as its Gate B.
+
+The two conditions below therefore still bind, unchanged, for weather, for rates and for routing.
 
 **The binding constraint, which no plan may plan around.** A free tier is not evidence that a
 capability is free to us. Two conditions rule out the options that look cheapest, and both must be

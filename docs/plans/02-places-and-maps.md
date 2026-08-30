@@ -109,37 +109,60 @@ delivered by four stages, three of which ship on their own and one of which cann
 | `02-S5`  | 3    | Paste a position in any of four notations and both coordinate fields fill                      | The place dialog's coordinate pair        |
 | `02-S6`  | 4    | Bring places from a saved collection into a trip, de-duplicated, with a quota preflight        | The import sheet on `/trips/$tripId/plan` |
 | `02-S8`  | 5    | Drop a `.gpx`, `.kml` or `.kmz` file on the ideas rail and review what it found before writing | The drop state and the review sheet       |
-| `02-S13` | 6    | **Nothing — BLOCKED.** Search-as-you-type and share-link resolution, behind Gate A             | Named, not built                          |
+| `02-S13` | 4    | Search-as-you-type and share-link resolution, against the geocoder ADR 0013 chose              | The results list on the place form        |
 
-Each of the three has its own owned paths, its own definition of done and its own verifiable screen,
+Each of the four has its own owned paths, its own definition of done and its own verifiable screen,
 and each is releasable without the others. `02-S13` is the stage that **closes** the row, because the
 row is not closed until search works; the other three declare `MAP-02 absent → absent` and name
 `02-S13` as the closer, so nothing in the matrix moves on partial delivery.
 
-### The two gates, and the one stage that is BLOCKED rather than scheduled
+**`02-S13` was BLOCKED and is not any more, and its wave moved when it was unblocked.**
+`docs/adr/0013-geoapify-for-geocoding.md` closes Gate A, so the stage that was written out in full
+precisely so it could be executed the day the gate closed is now scheduled. It moved from wave 6 to
+**wave 4**, and the reason is the file-ownership rule rather than a change of mind about the
+feature: it edits `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx`, which `01-S4` holds in
+wave 2, `02-S5` in wave 3, `02-S10` in wave 5 and `02-S11` in **wave 6** — the very wave `02-S13`
+used to state. Two exclusive claims on one file in one wave is a clobber, and wave 4 is the one wave
+in which that file is free. Wave 4 also sits above MAP-02's floor and after `02-S4` in wave 3, which
+is the stage that mints the geocoding proxy this one calls.
 
-`docs/plans/11-boundaries-and-blockers.md` (`11-S3`) records three open commercial decisions. Two of
-them reach into this area, and neither is resolved here — **a plan is not the place a commercial
-commitment gets made.**
+### The two gates: A is closed, B is not
 
-- **Gate A — geocoding and place search.** Reverse lookup for MAP-01, type-ahead and share-link
-  resolution for MAP-02, address completion for MAP-03.
-- **Gate B — routing.** Segment times and day travel totals for MAP-08, road-following lines for
-  MAP-09. `11-S3` records Gate B as an adjacent decision of the same kind, taken with Gate A or
-  immediately after it.
+`docs/plans/11-boundaries-and-blockers.md` (`11-S3`) recorded three open commercial decisions. Two of
+them reach into this area, and this file resolves neither by itself — **a plan is not the place a
+commercial commitment gets made.** One of the two has since been resolved where such things belong,
+in an ADR:
 
-`02-S1` is the first stage of this plan and it is that gate. The rule it imposes, in one sentence so
-no stage has to re-derive it: **a stage whose entire outcome sits behind a gate is marked BLOCKED and
-is not scheduled; a stage with a gated behaviour inside an ungated outcome ships the ungated outcome,
-records the gated behaviour under its own Blockers with the gate letter, and no stage in this file
-names a provider, writes a client for an unnamed service, assumes a free tier, or ships a feature
-degraded into uselessness in order to avoid asking.**
+- **Gate A — geocoding and place search. CLOSED by `docs/adr/0013-geoapify-for-geocoding.md`.**
+  Reverse lookup for MAP-01, type-ahead and share-link resolution for MAP-02, address completion for
+  MAP-03. The ADR carries the argument; this file carries only what follows from it, which is three
+  stages that build and three constraints they inherit.
+- **Gate B — routing. STILL OPEN.** Segment times and day travel totals for MAP-08, road-following
+  lines for MAP-09. `11-S3` recorded Gate B as an adjacent decision taken with Gate A or immediately
+  after it; it was not. ADR 0013 says so explicitly and declines to take it, because a route is
+  consumed rather than stored and the retention term that decided Gate A does not obviously bite on
+  it — which makes it its own decision on its own evidence, and this plan's to put to the user.
 
-Exactly one stage here is wholly downstream of a gate: **`02-S13` is BLOCKED and is not scheduled.**
-Four others carry a gated behaviour inside an ungated outcome and say so — `02-S4` (Gate A, the
-reverse-geocoded address on a dropped pin), `02-S11` (Gate A, address completion on the form),
-`02-S9` (Gate B, routed segment times) and `02-S12` (Gate B, road-following lines). Each ships the
-rest of its row.
+`02-S1` is the first stage of this plan and it is that gate. The rule it imposes has not changed and
+is not weakened by one gate closing: **a stage whose entire outcome sits behind an open gate is
+marked BLOCKED and is not scheduled; a stage with a gated behaviour inside an ungated outcome ships
+the ungated outcome, records the gated behaviour under its own Blockers with the gate letter, and no
+stage in this file chooses a provider, writes a client for an unnamed service, assumes a free tier,
+or ships a feature degraded into uselessness in order to avoid asking.** What changed is which
+stages the rule still binds.
+
+**Behind Gate A, nothing is BLOCKED any more.** `02-S13` is scheduled, in wave 4; `02-S4` builds the
+reverse-geocoded address on a dropped pin and mints the proxy the other two call; `02-S11` builds
+address completion on the form. **Behind Gate B, two stages still carry a gated behaviour inside an
+ungated outcome and say so** — `02-S9` (routed segment times) and `02-S12` (road-following lines) —
+and each ships the rest of its row exactly as before.
+
+**One thing ADR 0013 adds to this plan that no stage would otherwise own: attribution.** The free
+subscription plan makes the provider's credit mandatory, and OSM attribution is required regardless.
+That is a surface obligation, not a server one, and this plan owns the surface. It is `02-S4`'s, on
+the map, in the same attribution line the basemap already needs — one line for both sources rather
+than a second badge — and every later stage that shows a geocoded result inherits it rather than
+adding its own.
 
 ### `src/components/map` has one owner per wave
 
@@ -229,6 +252,8 @@ Verification block.
 | `[data-part="place-tags"]`                                                                   | same file                                                 | `02-S10` | `02-S10`                  |
 | `[data-part="stop-edit"]`                                                                    | same file, on `StopMenu`'s **Edit place** item (`:175`)   | `02-S11` | `02-S11`                  |
 | `[data-part="place-notes"]`, `[data-part="time-warning"]`                                    | same file                                                 | `02-S11` | `02-S11`                  |
+| `[data-part="place-search"]`                                                                 | `src/components/modules/places/place-search.tsx`          | `02-S13` | `02-S13`, `02-S11`        |
+| `[data-part="address-suggestions"]`                                                          | `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx`      | `02-S11` | `02-S11`                  |
 | `[data-part="import-collection"]`, `[data-part="import-row"]`, `[data-part="import-commit"]` | `src/routes/_app/trips/$tripId/-ui/import-sheet.tsx`      | `02-S6`  | `02-S6`, `02-S8`          |
 | `[data-part="place-pin"]` with `data-days="<count>"`, `[data-part="cluster-pin"]`            | `src/components/map/place-marker.tsx`                     | `02-S7`  | `02-S7`                   |
 | `[data-part="locate-control"]`                                                               | `src/components/map/locate-control.tsx`                   | `02-S7`  | `02-S7`                   |
@@ -315,7 +340,7 @@ Which stage falls on which side is not left to the reader:
 | `02-S10` | resting; `category-editing` and `delete-confirm` (one click each)     | `tags-empty`, `tag-picker`                                      |
 | `02-S11` | resting                                                               | `form-edit`, `overlap-warning`, `inline-category`, `save-error` |
 | `02-S12` | resting; `overlay-on` (one click); `overlay-empty` (a second `--url`) | —                                                               |
-| `02-S13` | nothing — BLOCKED                                                     | nothing — BLOCKED                                               |
+| `02-S13` | resting                                                               | `results-open`, `no-results`                                    |
 
 ### The container rule for stage blocks, fixed here
 
@@ -357,6 +382,7 @@ parallel builder's work in a file neither of us could merge afterwards.
 | `02-S9`  | 3         | 5         | MAP-08 depends on MAP-07, which `02-S7` closes in wave 4                            |
 | `02-S10` | 1         | 5         | Owns `settings-nav.tsx`; waves 3 and 4 are taken by `09-S8` and `10-S3`             |
 | `02-S12` | 4         | 6         | MAP-09 depends on MAP-08, which `02-S9` closes in wave 5                            |
+| `02-S13` | 2         | 4         | Owns `plan-actions.tsx`; waves 2, 3, 5 and 6 are taken, and it follows `02-S4`      |
 
 `docs/plans/03-reservations-and-transport.md` landed while this file was being written, and takes
 `plan-screen.tsx` in wave 4 (`03-S5`) and `plan-model.ts`, `-server/plan.ts` and `day-section.tsx` in
@@ -374,31 +400,51 @@ that touches `plan-screen.tsx` at all.**
 The full cross-plan consequence is listed under **Cross-plan collisions** at the end of this file,
 which is the checker's own output rather than a reading of the sibling plans.
 
-## Stage 02-S1 — The provider gate: no stage in this file picks a geocoder
+## Stage 02-S1 — The provider gate: one gate closed by an ADR, one still open
 
 ### Stage id
 
 `02-S1` · Wave 1 · effort **S**.
 
 The first stage of this plan is a gate rather than a build. Its effort is small and its consequence
-is not: it decides which four stages may ship an incomplete row honestly, and which one may not start
-at all.
+is not: it decides which stages may ship an incomplete row honestly, and which may not start at all.
+
+**One of the two gates has closed since this stage was written, and this stage is where that is
+recorded.** `docs/adr/0013-geoapify-for-geocoding.md` chooses a geocoder. The stage's own rule — that
+no stage in this file picks one — is unchanged and was not broken: the choice was made in an ADR,
+which is where a hard-to-reverse commercial commitment belongs, and this register now cites it rather
+than restating it. Gate B is untouched and still open.
 
 ### Reference rows
 
 **This stage closes no row.** It is the register that five other stages cite, so none of them
 re-argues the boundary or, worse, resolves it quietly by naming a service inside a feature stage.
 
-| Row    | Gate | Behaviour that waits                                      | Owning stage | Disposition                                  |
-| ------ | ---- | --------------------------------------------------------- | ------------ | -------------------------------------------- |
-| MAP-01 | A    | The address of a pin dropped on the map                   | `02-S4`      | ships without it; the field stays user-typed |
-| MAP-02 | A    | Search-as-you-type, and resolving a pasted map share link | `02-S13`     | **BLOCKED** — the whole stage                |
-| MAP-03 | A    | Address completion on the place form                      | `02-S11`     | ships without it                             |
-| MAP-08 | B    | Routed segment times, road distance, day travel totals    | `02-S9`      | ships with great-circle distance instead     |
-| MAP-09 | B    | Road-following lines for car, bus, taxi and bicycle       | `02-S12`     | ships with the geodesic arc instead          |
+| Row    | Gate | Behaviour that waited                                     | Owning stage | Disposition                                     |
+| ------ | ---- | --------------------------------------------------------- | ------------ | ----------------------------------------------- |
+| MAP-01 | A    | The address of a pin dropped on the map                   | `02-S4`      | **built** — ADR 0013; the stage mints the proxy |
+| MAP-02 | A    | Search-as-you-type, and resolving a pasted map share link | `02-S13`     | **built** — ADR 0013; scheduled, wave 4         |
+| MAP-03 | A    | Address completion on the place form                      | `02-S11`     | **built** — ADR 0013                            |
+| MAP-08 | B    | Routed segment times, road distance, day travel totals    | `02-S9`      | ships with great-circle distance instead        |
+| MAP-09 | B    | Road-following lines for car, bus, taxi and bicycle       | `02-S12`     | ships with the geodesic arc instead             |
 
-`docs/plans/11-boundaries-and-blockers.md` (`11-S3`) is the owner of both decisions. This stage does
-not restate its reasoning; it states what a stage in _this_ file may do while the decision is open.
+`docs/plans/11-boundaries-and-blockers.md` (`11-S3`) was the owner of both decisions and remains the
+owner of Gate B. Gate A's owner is now `docs/adr/0013-geoapify-for-geocoding.md`, and `11-S3` records
+the closure by citation. This stage does not restate either argument; it states what a stage in
+_this_ file may do while a decision is open, and what the closed one obliges.
+
+**The three obligations Gate A's closure hands to this file**, so that no stage discovers one of them
+on the day it builds:
+
+1. **One proxy, minted once.** The provider is reached from `02-S4` in wave 3 and from nowhere else;
+   `02-S11`, `02-S13` and `03-S7` (`03-reservations-and-transport.md`, wave 5) call what is already
+   there. Three clients for one provider would be three places to forget the cache, the ceiling and
+   the attribution.
+2. **The cache is cross-tenant and does not expire.** That is the property the ADR bought and the
+   reason it did not reuse the transit credential; it also means the cache key is the normalised
+   query and holds no tenant identifier, which is exactly the isolation rule stated below.
+3. **Attribution is a surface obligation and is `02-S4`'s.** Mandatory while we are on the free
+   plan, and the OSM credit is owed regardless.
 
 Cited as `wiki: Places-and-Search` and `wiki: Route-Optimization` for the behaviours. The licence
 constraints below are our own reading of provider terms against our own business model, not anything
@@ -414,10 +460,13 @@ A stage with no owned paths cannot collide with anything, which is why it is saf
 
 ### Data and migration
 
-No schema change, and one warning for whoever eventually implements a provider. What a provider
+No schema change, and one warning that turned out to be the whole of Gate A. What a provider
 licenses us to **retain** differs by provider and is usually the binding term, so a cache table
-shaped before the choice is a table shaped for the wrong contract. The columns that would hold a
-resolved result already exist and need nothing: `places.source` carries the vocabulary
+shaped before the choice is a table shaped for the wrong contract. That is not hindsight: ADR 0013
+was decided on exactly this term and on nothing else, and it is why the transit provider already
+under contract could not be reused. The answer it bought — permanent storage permitted — means the
+cache is a KV entry with **no** TTL and still no table, and the columns that would hold a resolved
+result already exist and need nothing: `places.source` carries the vocabulary
 (`manual`, `search`, `import`, `collection`, `osm` at `src/server/db/schema.ts:159`) and
 `places.external_id`, with its `places_external_idx` index, already holds a provider's own
 identifier. So the sequence is decision, then column, then feature — and today no column is needed at
@@ -471,8 +520,12 @@ Verified as a record. No code runs, no browser is driven and no frame is filed.
   in `.claude/ultrabuild/recon/gap-rows.json`; every owning stage id resolves to a `## Stage` heading
   in this file; and the wave in each of those headings matches the scheduling table in the Area
   brief.
-- **The falsifiable condition.** No provider name appears anywhere in this file. A named service
-  here is this stage having failed, and it is one `grep` away from being caught.
+- **The falsifiable condition, restated now that one gate has closed.** It was: no provider name
+  appears anywhere in this file. It is now the narrower claim that still catches the failure it was
+  written for — **no provider is named in this file except by citation to the ADR that chose it, and
+  no Gate B provider is named at all.** A geocoder appears below because an ADR chose it; a router
+  appearing anywhere in this file is this stage having failed, and both halves are one `grep` away
+  from being checked.
 - Console and layout shift: not applicable, because nothing renders.
 
 ### Definition of done
@@ -498,38 +551,56 @@ names:
 - keyboard navigable end to end, WCAG 2.2 AA contrast — `n/a`, nothing focusable.
 - zero console errors or warnings, zero layout shift after paint — `n/a`, nothing loads.
 
-The condition specific to this stage, and the only way it fails: it is done only if both gates are
-left **open with their constraints stated**, and neither is resolved by naming a service. Choosing a
-provider here would be the worst outcome available.
+The condition specific to this stage, and the only way it fails: it is done only if every gate still
+open is left **open with its constraints stated**, and none is resolved by naming a service inside
+this file. Choosing a provider here would be the worst outcome available. A gate closed **elsewhere**,
+in an ADR, satisfies that condition rather than breaking it — provided this register cites the ADR,
+states the obligations that follow and does not re-argue the choice.
 
 ### Blockers
 
-The two gates, in the form the five downstream stages copy into their own **Blockers** heading.
+One closed gate and one open one, in the form the downstream stages copy into their own **Blockers**
+heading.
 
-#### Gate A — geocoding and place search
+#### Gate A — geocoding and place search. CLOSED.
 
-**No provider chosen, no budget agreed.** Owner: `docs/plans/11-boundaries-and-blockers.md`, `11-S3`.
-Two conditions rule out the options that look cheapest, and both are read against a provider's actual
-terms before one is named:
+**Provider chosen: `docs/adr/0013-geoapify-for-geocoding.md`.** The two conditions below are kept
+rather than deleted, because they are what the choice was tested against and a later reader needs to
+see that they were tested rather than waived:
 
 - **A tier whose terms exclude a commercial, subscription-funded product is unusable to us at any
   traffic level.** We charge for subscriptions through Stripe. "Free for non-commercial use" is not a
   discount available to this product; adopting one would be a licence breach wearing a saving's
-  clothes.
+  clothes. The ADR clears this on the provider's own wording, quoted there rather than paraphrased
+  here.
 - **A policy that forbids automated per-keystroke querying is unusable for search.** Several open
   geocoding endpoints prohibit exactly that pattern, and several also require that a product whose
   core function is geocoding run its own instance rather than use theirs. MAP-02 is a
-  search-as-you-type feature by definition, so it is the precise case those policies exclude.
+  search-as-you-type feature by definition, so it was the precise case those policies exclude. The
+  chosen provider sells autocomplete as a product, so the policy bar is cleared — the **rate** bar is
+  not, and the debounce, the minimum query length and the cancel-on-supersede that `02-S13` owes are
+  now cost controls rather than politeness.
 
-Two further terms decide the cost more than the per-call price does, and are read at the same time:
-what may be **cached and for how long**, which our whole caching strategy depends on; and what
-**attribution** must appear on screen, which is a design constraint on a surface nobody has designed
-yet.
+The two terms that decide the cost more than the per-call price does are both answered, and both
+became obligations rather than open questions. What may be **cached and for how long**: permanently,
+so the cache is cross-tenant and unexpiring, and this is the single property the choice turned on.
+What **attribution** must appear on screen: the provider's credit while we are on the free plan, plus
+the OSM credit always — `02-S4` owns it, on the map, in the attribution line the basemap already
+carries.
 
-#### Gate B — routing
+One thing the closure does **not** hand out: a licence to call the provider from three places.
+`02-S4` mints one server-side proxy in wave 3 and `02-S11`, `02-S13` and
+`03-reservations-and-transport.md`'s `03-S7` call it.
 
-**No provider chosen, no budget agreed.** Owner: `11-S3`, which records routing as an adjacent
-decision to Gate A. The same two conditions apply unchanged.
+#### Gate B — routing. OPEN.
+
+**No provider chosen, no budget agreed.** Owner: `11-S3`, which recorded routing as an adjacent
+decision to Gate A, "taken with it or immediately after it". It was not taken with it, and ADR 0013
+says why in one line: a route is consumed rather than stored, so the retention term that decided
+Gate A does not obviously bite here, and the provider already contracted for transit sells ordinary
+routing under the same agreement. That makes Gate B a smaller and different question than Gate A was,
+and it is still a question. The same two conditions apply unchanged, and so does the rule that this
+file does not answer it.
 
 One note for the two stages it reaches, because it is what makes both of them shippable anyway: a
 router is not needed for a _distance_. Great-circle distance between two coordinates is arithmetic,
@@ -1106,7 +1177,10 @@ mid-run, which is what the heading is for.
 
 ### Stage id
 
-`02-S4` · Wave 3 · effort **M**.
+`02-S4` · Wave 3 · effort **L**. It was **M** while the address on a dropped pin was behind Gate A.
+Closing that gate added a server-side provider proxy, its cache, its ceiling and its attribution to a
+stage that was previously one gesture and one form, and the honest response is to re-state the effort
+rather than to keep the old letter over the new work.
 
 ### Reference rows
 
@@ -1128,9 +1202,13 @@ inherited:
   takes right-click for a camera gesture. We have one renderer, so the gesture is chosen for people
   instead of for engines: context-click on the desktop, long-press on touch, and a keyboard path that
   does not depend on a pointer at all.
-- The reverse-geocoded address is **Gate A** and is not built. The form opens with the coordinates
-  filled and the address empty and editable, which is the honest shape — not an apology banner and
-  not a disabled field.
+- The reverse-geocoded address **was Gate A and is now built**, because
+  `docs/adr/0013-geoapify-for-geocoding.md` closes that gate. The form opens with the coordinates
+  filled and the address filled from a reverse lookup, both editable. **The lookup failing is not the
+  drop failing**: on a timeout, a refusal or an empty result the form opens exactly as it would have
+  before the gate closed — coordinates filled, address empty and editable, no apology banner and no
+  disabled field. That degraded shape is not a leftover; it is the designed fallback, and it is the
+  reason this stage is releasable even if the provider is down.
 
 ### Owned paths
 
@@ -1146,6 +1224,15 @@ inherited:
 - `src/components/planner/day-section.tsx` — edit. One new optional render prop, `dayTools`,
   mirroring the `rowActions` prop the component already exposes (`day-section.tsx:25`).
 - `src/routes/_app/trips/$tripId/-ui/__tests__/planner-map-layer.test.tsx` — new.
+- `src/server/geo/geocode.ts` — new, and the one this stage mints for the rest of the plan set. The
+  provider proxy: forward and reverse lookup, the normalised cache key, the KV read-through, the
+  per-tenant ceiling and the response validation. **Nothing else in any plan calls the provider
+  directly.**
+- `src/server/geo/__tests__/geocode.test.ts` — new. Key normalisation, the ceiling, and the response
+  validator against a malformed payload.
+- `src/routes/_app/trips/$tripId/-server/geocode.ts` — new. The two server functions in front of the
+  proxy. A route-local `-server/` module rather than an addition to `-server/plan.ts`, which this
+  stage deliberately does not own and which four other stages queue for.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. The case under **Tenant isolation
   test**.
 
@@ -1170,7 +1257,23 @@ follow it into `plan-screen.tsx`, the edit is kept to the three additions listed
 described there line by line, so a later claimant can read what changed without reading a diff.
 
 `plan-model.ts`, `plan-actions.tsx` and `-server/plan.ts` are deliberately **not** owned here: this
-stage needs no view-model change, no form change and no new server function.
+stage needs no view-model change, no form change and no addition to the contended server module. It
+does need two new server functions, which is why it mints its own `-server/geocode.ts` instead.
+
+**Three of the new paths exist because Gate A closed, and none of them collides.** `src/server/geo/`
+does not exist at HEAD and no plan in the set claims a path under it — `grep -rn "server/geo"
+docs/plans/` returns only this file. `src/routes/_app/trips/$tripId/-server/geocode.ts` is likewise
+unclaimed. So the proxy can be minted in wave 3 without waiting for a free wave on a contended file,
+which is the reason it is minted here rather than in the stage that needs it most.
+
+**One duplication this creates, named rather than discovered.** `03-reservations-and-transport.md`'s
+`03-S3` mints `src/server/transit/meter.ts` — a KV counter in front of a metered outbound call — in
+**wave 3**, the same wave as this stage. Two stages in one wave cannot depend on each other, so this
+stage cannot import that file and does not try: the counter for geocoding lives inside `geocode.ts`
+itself, some thirty lines of increment-and-compare against a `resolveLimits()` ceiling. That is the
+same shape twice for two providers, and it is a consequence of the wave rule rather than a design
+preference. Folding the two into one helper is a `00-foundations.md` job in a later wave, not
+something either feature stage may do to the other's file.
 
 ### Data and migration
 
@@ -1202,6 +1305,36 @@ Nothing is backfilled. A rollback keeps working against unchanged columns.
   access who calls the server function directly still gets a rejection.
 - Nothing is slow, nothing is enqueued, and no `TripRoom` patch type is added: a created place is
   already a router invalidation away from every other viewer through the existing commit signal.
+
+**The geocoding proxy — `src/server/geo/geocode.ts` — and the four rules it exists to enforce once.**
+It exports `reverseGeocode(scope, { lat, lng })` and `searchPlaces(scope, { query, near })`, and it
+is the only module in the plan set that holds the provider's base URL. `02-S11`, `02-S13` and
+`03-reservations-and-transport.md`'s `03-S7` call these two functions.
+
+1. **The credential is a secret and is never per tenant**, read from the environment inside this
+   module, never reaching a bundle and never supplied by a workspace — the shape that put BKG-09 out
+   of scope in `11-S1`.
+2. **The cache answers before the provider does, and it never expires.** KV, keyed on the normalised
+   query alone — trimmed, case-folded, whitespace-collapsed, and for a reverse lookup the coordinate
+   rounded to five decimal places so that two drops a metre apart are one lookup. **No TTL**, because
+   ADR 0013's whole argument is the right to keep the answer permanently; a TTL here would repurchase
+   a public fact we already own. The key contains no organization id, no trip id and no place id, so
+   two workspaces asking the same question share one answer — which is correct, and is asserted
+   below.
+3. **The ceiling is per tenant and is checked before the outbound call.** A KV counter keyed on the
+   organization id and the current day, compared against a limit from `resolveLimits()`. It cannot be
+   `assertQuota`, because `assertQuota` counts rows and an outbound call leaves no row to count. A
+   cache hit does not spend the ceiling; only a call does.
+4. **The provider's response is untrusted input.** Parsed with a `z.object` that takes the three
+   fields we use and ignores the rest, with the coordinate re-checked against the same WGS-84 bounds
+   `places` enforces. A malformed payload raises rather than half-filling a form.
+
+**The two server functions — `-server/geocode.ts`.** `reverseGeocodeFn` and `searchPlacesFn`, both
+`createServerFn({ method: 'POST' })`, both validating with `z.strictObject`, and both authorising the
+same way: `appScope()`, then `requireTrip(scope, tripId)`. A lookup is a tenant-scoped action because
+it spends a metered resource on that tenant's behalf, so an unauthorised trip id is refused **before**
+the provider is called — spending money on a request we are going to reject is a defect even when the
+response is discarded.
 
 ### UI (route, components)
 
@@ -1243,6 +1376,22 @@ Nothing is backfilled. A rollback keeps working against unchanged columns.
 - **The provisional pin.** Between the drop and the save, a marker at the dropped point in the
   accent colour with a dashed ring, so the map answers "here" while the form is open. It is removed
   on cancel and replaced by the real pin on success.
+- **The address, and where it is filled from, given that this stage may not touch the form.**
+  `plan-actions.tsx` belongs to `02-S5` in this same wave, so the reverse lookup cannot live in
+  `PlaceDialog`. It does not need to: the drop already opens that dialog with initial values this
+  stage computes, so `planner-map-layer.tsx` calls `reverseGeocodeFn` between the drop and the open
+  and passes the address in the same object as the coordinates. **The form is unchanged and unaware.**
+  The lookup is awaited with a short ceiling — the dialog opens either way, and it opens with the
+  address field in its skeleton state for as long as the call is outstanding, then filled or left
+  empty. A reader who starts typing an address while the lookup is in flight keeps what they typed:
+  a late answer never overwrites a non-empty field.
+- **Attribution, which is this stage's because ADR 0013 made it a surface obligation.** The map's
+  existing attribution line gains the provider's credit alongside the OpenStreetMap credit the
+  basemap already owes — **one line, two sources**, not a second badge and not a floating overlay.
+  It is required for as long as we are on the free subscription plan and the OSM half is required
+  regardless, so it is rendered unconditionally rather than behind a flag nobody will remember to
+  flip. Every later stage that shows a geocoded result inherits this line and adds nothing of its
+  own.
 - **The hooks this stage publishes**, per the Area brief's register, because nothing under
   `src/routes/_app/trips/**` carries a `data-part` at HEAD. In `planner-add-place.tsx`:
   `data-part="add-place"` on the primary pill that opens an empty place form, and
@@ -1273,9 +1422,29 @@ Nothing is backfilled. A rollback keeps working against unchanged columns.
   `src/server/repos/places.ts:269`, inside `createPlace`, **before** the insert. This stage adds no
   second call site and introduces no path that reaches the table without passing it — which is the
   entire reason the drop reuses `createPlanPlaceFn` instead of getting its own server function.
-- Because the metric already exists in both the resolver and `PLAN_QUOTAS`, no case is added to
-  `src/server/billing/__tests__/limits.test.ts` and no foundations stage is required.
 - No R2 object is written, so the object-first ordering does not apply.
+
+**And it spends something no metric covers yet: a geocoding call.** `11-S3` states the rule and ADR
+0013 makes it this stage's to honour, so a second metric is added here — the first this plan adds:
+
+- Metric: `geocode_calls_per_day`, added to `resolveLimits()` in `src/server/billing/limits.ts`. It
+  is **not** added to `PLAN_QUOTAS`: `PLAN_QUOTAS` holds ceilings on rows a workspace owns, and an
+  outbound call is neither a row nor something a workspace owns. That distinction is the reason the
+  next bullet exists.
+- Enforcement is **not** `assertQuota`, and cannot be. `assertQuota` compares a live `COUNT(*)`
+  against a limit, and an outbound call leaves nothing to count. The check is a KV counter keyed on
+  the organization id and the current day, incremented inside `geocode.ts` **after** a cache miss and
+  **before** the outbound call, compared against the resolved limit. A cache hit spends nothing,
+  which is what makes an unexpiring shared cache a cost control and not just a latency one.
+- **This stage does not own `src/server/billing/limits.ts` and does not edit it.** `README.md` puts
+  quota metrics in wave 0 with schema and bindings, for the same reason: a stage cannot sit in the
+  same wave as the stage that supplies it. So the metric is **filed** onto the per-wave quota stage
+  of `00-foundations.md` exactly as a column is filed onto its schema stage — this stage is wave 3,
+  so the supplier is the **wave-2** instance — together with its case in
+  `src/server/billing/__tests__/limits.test.ts`. What lands there is one entry in `resolveLimits()`
+  and nothing in `PLAN_QUOTAS`.
+- The `places` metric itself is untouched: it already exists in both the resolver and `PLAN_QUOTAS`,
+  so nothing about it needs a foundations stage.
 
 ### Tenant isolation test
 
@@ -1379,12 +1548,18 @@ additions listed under **UI** and does not become a refactor of a file three oth
 
 ### Blockers
 
-- **Gate A — geocoding.** The address of a dropped pin is not filled, because no reverse-geocoding
-  provider has been chosen. Recorded in `02-S1` and owned by
-  `docs/plans/11-boundaries-and-blockers.md` (`11-S3`). Disposition: **defer**. The stage ships with
-  the address field empty and editable and does not name, call or write a client for any provider.
-  The row still moves to `done`, because the creation path is what the row is about and the address
-  is one field on a form the reader is already typing into.
+- **Gate A — geocoding. CLOSED, and this is the stage that spends the closure.**
+  `docs/adr/0013-geoapify-for-geocoding.md` chooses the provider; `02-S1` records the obligations
+  that follow and this stage carries all three — it mints the one proxy, it keeps the cross-tenant
+  unexpiring cache, and it renders the attribution. What was a blocker is now a dependency on a
+  decision that has been taken, which is not the same thing and is not listed as one.
+- **Two requirements filed elsewhere, and neither is this stage's to add.** The provider credential
+  is a **secret**, set on the account rather than declared in `wrangler.jsonc`, so this stage asks
+  for no binding — but it does need one to exist before it runs, and that is an operational step the
+  user takes, not a stage. And the `geocode_calls_per_day` ceiling is filed onto the **wave-2** quota
+  stage of `00-foundations.md`, per **Quota** above. If the secret is absent at runtime the proxy
+  refuses rather than calling, and the drop degrades to the coordinates-only shape described under
+  **Reference rows** — which is why a missing secret is a degraded feature and not a broken one.
 - **`12-verification-protocol.md` §7.2 — the seven abbreviated-month call sites.** This stage
   baselines a trip tab, so a September date on that screen can differ between `chromium` and
   `mobile-safari` for a reason that is not the design. Inherited, not fixed here: none of the seven
@@ -1805,8 +1980,8 @@ The six items of `docs/SPEC.md` §7 apply unchanged.
 
 ### Blockers
 
-**None.** No provider — this path reads our own rows, which is precisely why it can ship while Gate A
-is open. No package outside the pinned set, no binding.
+**None.** No provider — this path reads our own rows, which is why it never depended on either gate.
+No package outside the pinned set, no binding.
 
 Two dependencies, both already landed by the time this stage runs: `02-S4` supplies
 `planner-add-place.tsx` in wave 3, and `src/server/repos/collections.ts` needs nothing at all. The
@@ -2091,7 +2266,8 @@ binding.
 
 Two notes rather than blockers. The photo half of this row is already satisfied by
 `places.image_url`, and this stage adds **no image proxy route**: proxying a third party's photo is a
-Gate A concern and there is no third party in the picture until one is chosen. And
+separate concern from geocoding, and Gate A's closure does not license it — the geocoder returns
+coordinates and addresses, not photographs, so there is still no third party in this picture. And
 `12-verification-protocol.md` §7.2 applies to this stage's trip-tab frames.
 
 ## Stage 02-S8 — Drop a track or a waypoint file on the planner
@@ -2908,8 +3084,10 @@ and end time on the assignment. The `places` table already carries `description`
 a subset of them.
 
 What is missing: description and notes as two distinct fields rather than one; creating a category
-without leaving the form; attachments; and any warning when the times a reader types make no sense —
-neither an end before a start nor an overlap with another stop on the same day.
+without leaving the form; attachments; any warning when the times a reader types make no sense —
+neither an end before a start nor an overlap with another stop on the same day; and **address
+completion**, which was the half of this row behind Gate A and is in scope now that
+`docs/adr/0013-geoapify-for-geocoding.md` has closed it.
 
 Behaviour sourced as `wiki: Places-and-Search`. Two divergences stated rather than inherited:
 
@@ -2986,6 +3164,16 @@ second file-linking model, which would be exactly the duplicate `README.md` call
   as the last option in the category combobox; accepting it creates the category with the default
   colour and pin icon and selects it, without closing the form. For a member without the role, the
   option is not offered — an affordance that fails is worse than one that is absent.
+- **Address completion, and why it is not a second search box.** `02-S13` puts a **place search**
+  field at the top of this form in wave 4: the reader types _what_ they are looking for and choosing
+  a result fills the whole form. This stage adds something narrower and lower down — the existing
+  **address** input gains suggestions as it is typed, and choosing one replaces the address text and
+  fills the coordinates if they are still empty. One is "find me this place", the other is "finish
+  this line". They are two controls on purpose, they call the same `searchPlacesFn`, and **this stage
+  builds no second client, no second debounce policy and no second results component**: it reuses the
+  list `02-S13` owns, which is two waves earlier and therefore already there. The keyboard contract
+  is that list's — up, down, `Enter`, `Escape` — and the suggestions never overwrite a coordinate the
+  reader has already set.
 - **Times, and when they appear.** Start and end are offered only where they mean something: on a
   stop assigned to a day. An unscheduled idea has no times, and showing empty time fields on it would
   invite a reader to fill in something that cannot be stored. Two warnings appear inline as the times
@@ -2999,10 +3187,12 @@ second file-linking model, which would be exactly the duplicate `README.md` call
   the reason and a retry that resubmits the draft; a field-level rejection marks the field and moves
   focus to it. _Loading_ — the submit carries its `loading` state and the dialog cannot be dismissed
   mid-write.
-- **The hooks this stage publishes**, per the Area brief's register, all three in `plan-actions.tsx`,
+- **The hooks this stage publishes**, per the Area brief's register, all four in `plan-actions.tsx`,
   which it owns in wave 6: `data-part="stop-edit"` on `StopMenu`'s **Edit place** item (`:175`),
-  `data-part="place-notes"` on the notes textarea, and `data-part="time-warning"` on each of the two
-  inline warnings. All three are new. `StopMenu` is the right home for the first: the menu already
+  `data-part="place-notes"` on the notes textarea, `data-part="time-warning"` on each of the two
+  inline warnings, and `data-part="address-suggestions"` on the completion list under the address
+  input. All four are new, and the last is distinct from `02-S13`'s `data-part="place-search"` — two
+  controls, two hooks, no shared name. `StopMenu` is the right home for the first: the menu already
   lives in this file, so the hook that opens the form and the form itself travel in one diff.
 - **Tokens.** None missing. The counter and both warnings use existing tone tokens; the counter is
   `tabular-nums` because it changes on every keystroke, which is exactly the case
@@ -3023,6 +3213,14 @@ second file-linking model, which would be exactly the duplicate `README.md` call
   call site and reuses `02-S10`'s server function precisely so there is only one.
 - Editing an existing place consumes nothing, and `assertQuota` is correctly absent from
   `updatePlace`.
+
+**And address completion spends a ceiling this stage neither owns nor files.**
+`geocode_calls_per_day` is added to `resolveLimits()` by the **wave-2** quota stage of
+`00-foundations.md`, filed there by `02-S4`, and enforced inside `src/server/geo/geocode.ts` by the
+KV counter that stage builds. This stage adds no metric, no call site and no counter of its own — it
+calls `searchPlacesFn` and renders the refusal when the ceiling answers. That refusal is a designed
+state, worded as what it is: this workspace has used its lookups for the day, and the address can
+still be typed.
 
 ### Tenant isolation test
 
@@ -3112,9 +3310,18 @@ The six items of `docs/SPEC.md` §7 apply unchanged.
 
 ### Blockers
 
-- **Gate A — geocoding.** Address completion on the form is not built; the address stays typed.
-  Recorded in `02-S1`, owned by `docs/plans/11-boundaries-and-blockers.md` (`11-S3`). Disposition:
-  **defer**. No provider is named and no client is written.
+- **Gate A — geocoding. CLOSED.** `docs/adr/0013-geoapify-for-geocoding.md` chooses the provider,
+  and address completion on the form is therefore **built** rather than deferred. This stage writes
+  no client and names no provider: it calls `searchPlacesFn`
+  (`src/routes/_app/trips/$tripId/-server/geocode.ts`), which `02-S4` mints in wave 3 over the single
+  proxy in `src/server/geo/geocode.ts`. Three obligations travel with the call and are met here — the
+  debounce, the minimum query length and the cancel-on-supersede that keep a per-keystroke field from
+  spending the daily ceiling; the ceiling itself, which is `02-S4`'s to file and this stage's to
+  surface as a designed refusal rather than a generic error; and the attribution, which is already on
+  the map from `02-S4` and is **not** repeated on the form.
+  **A failed or refused lookup leaves the address typed**, which is exactly the shape this stage
+  would have shipped had the gate stayed open — so the degraded path is designed rather than
+  hypothetical.
 - **DOC-04, `docs/plans/06-documents-and-media.md`, wave 4 — multi-target file links.** Attachments
   on a place depend on it. If it has landed, this stage renders the attachment surface using its
   model; if it has not, this stage ships without attachments and the behaviour is recorded against
@@ -3385,15 +3592,25 @@ stage: it owns no contended file, so an edit to `plan-screen.tsx`, `plan-model.t
 - **`12-verification-protocol.md` §7.2** applies to this stage's trip-tab frames.
 - No package outside the pinned set — arcs are trigonometry and `maplibre-gl` draws them. No binding.
 
-## Stage 02-S13 — BLOCKED — Search as you type, and a link somebody pasted
+## Stage 02-S13 — Search as you type, and a link somebody pasted
 
 ### Stage id
 
-`02-S13` · Wave 6 · effort **L**.
+`02-S13` · Wave 4 · effort **L**.
 
-**This stage is BLOCKED and is not scheduled.** It is written out in full, with owned paths named and
-a definition of done, so that the day Gate A closes it can be executed rather than designed. Until
-then no agent starts it, and no other stage in this plan absorbs a piece of it.
+**This stage was BLOCKED and is not any more.** It was written out in full, with its paths named and
+a definition of done, so that the day Gate A closed it could be executed rather than designed.
+`docs/adr/0013-geoapify-for-geocoding.md` closed it, so this stage is scheduled and every "will owe"
+below has become an "owes".
+
+**Its wave moved from 6 to 4, and the reason is ownership rather than scope.** This stage edits
+`src/routes/_app/trips/$tripId/-ui/plan-actions.tsx`. That file is held by `01-S4` in wave 2, `02-S5`
+in wave 3, `02-S10` in wave 5 and `02-S11` in **wave 6** — the wave this stage used to state. Two
+exclusive claims on one file in one wave is a clobber, and wave 4 is the only wave in which it is
+free. Wave 4 also sits above MAP-02's floor and one wave after `02-S4`, which mints the geocoding
+proxy this stage calls, so the move satisfies the dependency instead of straining it. `02-S11` in
+wave 6 then builds address completion **on top of** this stage's results list rather than beside it,
+and says so under its own **UI**.
 
 ### Reference rows
 
@@ -3414,114 +3631,173 @@ Behaviour sourced as `wiki: Places-and-Search`. What the row asks for, in our ow
 
 ### Owned paths
 
-**None, because the stage is not scheduled.** When Gate A closes, the paths it will need are, so that
-its collision profile is knowable in advance rather than discovered on the day: a provider client
-module under `src/server/` reached only from a server function; a new server function file under
-`src/routes/_app/trips/$tripId/-server/`; an edit to
-`src/routes/_app/trips/$tripId/-ui/plan-actions.tsx`; an append to
-`src/server/repos/__tests__/tenant-isolation.test.ts`; and appends to
-`e2e/places-and-maps.visual.spec.ts` and its baseline directory. Whichever wave it eventually lands
-in, `plan-actions.tsx` must be free in that wave — `01-S4` holds wave 2, and this plan holds waves 3,
-5 and 6.
+The list this stage carried while it was blocked has become its claim, and it is **shorter** than
+that list, because two of the paths it expected to need are `02-S4`'s:
 
-**It will not need `src/server/db/schema.ts`, `wrangler.jsonc` or any of the other shared paths**, on
-the evidence in **Data and migration** below.
+- `src/components/modules/places/place-search.tsx` — new. The search field, its results list and its
+  keyboard contract. A module component rather than a route-local one, because `02-S11` reuses it in
+  wave 6 for address completion and a route-local file is the wrong home for something two stages
+  render.
+- `src/components/modules/places/__tests__/place-search.test.tsx` — new. The debounce, the
+  cancel-on-supersede, the centroid bias and its skip threshold.
+- `src/components/modules/places/index.ts` — new. The barrel, created by this stage.
+- `src/routes/_app/trips/$tripId/-server/geocode.ts` — edit. One added server function,
+  `resolveShareLinkFn`, beside the two `02-S4` minted in wave 3. Same plan, one wave later, and no
+  other stage in any plan claims the file.
+- `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` — edit. The field goes at the top of
+  `PlaceDialog`. `01-S4` (wave 2), `02-S5` (wave 3), `02-S10` (wave 5) and `02-S11` (wave 6) hold
+  this file in other waves; **wave 4 is the one wave in which it is free**, which is why this stage
+  states wave 4.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append.
+- `e2e/places-and-maps.visual.spec.ts` — append, one `test.describe` named for this stage.
+- `e2e/__screenshots__/places-and-maps.visual.spec.ts/` — append, this stage's frames only.
+
+**No provider client module of its own.** The list written while this stage was blocked expected one
+under `src/server/`; `02-S4` mints `src/server/geo/geocode.ts` in wave 3 and this stage calls it. A
+second client for one provider would be a second place to forget the cache, the ceiling and the
+attribution, which is the whole reason `02-S1` names the single-proxy obligation.
+
+**It needs none of the shared paths** — not `src/server/db/schema.ts`, not `wrangler.jsonc`, not any
+of the other four — on the evidence in **Data and migration** below. Nor
+`src/server/billing/limits.ts`: the one ceiling it spends is the metric `02-S4` files.
 
 ### Data and migration
 
-**No schema change is expected, and the one that might be needed cannot be designed yet.**
+**No schema change and no migration**, and the question that could not be answered while the gate
+was open now has an answer.
 
 What exists and is enough for the result itself: `places.source` already carries `search`
 (`src/server/db/schema.ts:159`) and `places.external_id` already holds a provider's own identifier,
-indexed by `places_external_idx`.
+indexed by `places_external_idx`. A place created from a search result is stamped `search` and
+carries the provider's id, which is what that column was for.
 
-What cannot be decided in advance is the **cache**. A provider's terms fix what may be retained and
-for how long, and that answer differs enough between providers to change whether the cache is a KV
-entry with a TTL, a table, or nothing at all. `11-S3` states the sequence and this stage obeys it:
-decision, then column, then feature. A schema shaped around an unchosen provider is a schema shaped
-for the wrong contract.
+The open question was the **cache**: a provider's terms fix what may be retained and for how long,
+and that answer differs enough between providers to change whether the cache is a KV entry with a
+TTL, a table, or nothing at all. ADR 0013 answers it — storage is permitted without a time limit —
+and the shape that follows is a **KV entry with no TTL**, built by `02-S4` in
+`src/server/geo/geocode.ts`. So no column is needed after all, and `11-S3`'s sequence held: decision,
+then column, then feature, with the column turning out to be none.
 
 ### Server (repo, server function, Zod)
 
-Not written, and constrained in advance so it cannot be written wrongly in a hurry:
+**No repository and no new provider client.** Four of the five constraints written here while the
+stage was blocked are met by `02-S4`'s proxy rather than by this stage, and they are restated as
+inherited so nobody re-implements one:
 
-- The provider is called **from the server only**, behind a server function, never from the browser,
-  so no credential reaches a bundle.
+- The provider is called **from the server only**, inside `src/server/geo/geocode.ts`, never from the
+  browser, so no credential reaches a bundle.
 - The credential is a secret and is never per tenant — the shape that put BKG-09 out of scope.
-- A cache answers before the provider does, per `docs/ARCHITECTURE.md` §4, and a cache key containing
-  a trip id, a place id or a member id is tenant data and is scoped like tenant data.
-- The query is validated with `z.strictObject` and a minimum length, and the result is validated on
-  the way back too: a provider's response is untrusted input exactly as a browser's request is.
-- Authorisation is decided in the handler. A search is a tenant-scoped action because it spends a
-  metered resource on that tenant's behalf, so it requires trip write access rather than merely a
-  session.
+- The cache answers before the provider does, per `docs/ARCHITECTURE.md` §4, keyed on the normalised
+  query alone. A key containing a trip id, a place id or a member id would be tenant data and would
+  be scoped like tenant data; this one contains none.
+- The provider's response is validated on the way back: it is untrusted input exactly as a browser's
+  request is.
+
+**One server function is this stage's own: `resolveShareLinkFn`**, added to
+`src/routes/_app/trips/$tripId/-server/geocode.ts`. It takes a pasted URL, validated with
+`z.strictObject` against an allow-list of map hosts, follows a short link **server-side** because
+that is the only place it can be followed, and returns a name, an address and a coordinate pair for
+the form to fill. Two refusals rather than one, both stated because a URL from a reader is the most
+attacker-shaped input in this plan: a host not on the list is refused without a request being made,
+and a redirect chain longer than three hops is abandoned. It reaches the provider only to resolve a
+place the link names, through the same proxy as everything else.
+
+**Authorisation** is decided in the handler for both functions: `appScope()`, then
+`requireTrip(scope, tripId)`. A search is a tenant-scoped action because it spends a metered resource
+on that tenant's behalf, so an unauthorised trip id is refused before anything outbound happens.
 
 ### UI (route, components)
 
-Not built. The shape it must take, recorded so the eventual stage does not re-derive it:
+**Route.** No new route file, so no `pnpm generate-routes`.
 
-- A field at the top of the place form, with a debounce, a minimum query length, cancellation of a
-  superseded request, and a keyboard contract — up and down through results, `Enter` to take the
-  highlighted one, `Escape` to dismiss — because a search field that cannot be driven from the
-  keyboard is not a search field.
-- Choosing a result fills the form's fields and leaves the reader in the form.
-- Whatever **attribution** the chosen provider requires, in the place its terms require, designed
-  rather than bolted on. That is a design constraint nobody can satisfy before the provider is known,
-  and it is one of the reasons this stage cannot be part-built.
+**Components.** Reused from `src/components/ui`: `Field`, `Input`, `Spinner`, `Alert`, `Kbd`,
+`Badge`. New: `PlaceSearch` in `src/components/modules/places/place-search.tsx` — one component, and
+the reason it is a module component rather than a route-local one is that `02-S11` renders it again
+in wave 6.
+
+- A field at the top of the place form, with a **300 ms debounce**, a **minimum of three characters**
+  and cancellation of a superseded request, and a keyboard contract — up and down through results,
+  `Enter` to take the highlighted one, `Escape` to dismiss — because a search field that cannot be
+  driven from the keyboard is not a search field. Those three numbers are cost controls as much as
+  design ones now: every keystroke that gets past them spends the daily ceiling `02-S4` files.
+- Results are **biased towards where the trip already is** — the centroid of its existing places,
+  passed as `near` — and the bias is skipped entirely when the places are spread more than a
+  thousand kilometres apart, because a centre between two continents is a worse hint than none.
+- Choosing a result fills the form's fields and leaves the reader in the form. Nothing is written
+  until they save, which is the same review the other three MAP-02 paths get.
+- **A pasted link is recognised in the same field.** When what the reader typed parses as a URL, the
+  field stops searching and offers to resolve it instead, through `resolveShareLinkFn`. One field,
+  two behaviours, because a reader who pastes a link into a search box has done the obvious thing.
+- **Attribution is not repeated here.** ADR 0013's obligation is met by the map's attribution line,
+  which `02-S4` renders. A second credit on the form would be noise, and the requirement is that it
+  appears, not that it appears twice.
 - Empty, skeleton and error states on `--color-surface-2` as for every other list in this plan, plus
-  the state the other three paths do not have: a query that returned nothing, which must offer the
-  reader the manual and paste paths rather than being a dead end.
+  two this stage owns: a query that returned nothing, which offers the reader the manual and paste
+  paths rather than being a dead end; and the **ceiling refusal**, worded as what it is — this
+  workspace has used its lookups for the day — with the manual path still open beside it.
+- **The hook this stage publishes:** `data-part="place-search"` on the field, in the component it
+  owns. It is distinct from `02-S11`'s `data-part="address-suggestions"`, which is a different
+  control on the same form.
+- **Tokens.** None missing. The results list uses `--color-surface-2` and the existing focus ring;
+  the list fades in at `--duration-fast` on `--ease-out-quint`, opacity and transform only, collapsed
+  under `prefers-reduced-motion: reduce`.
 
 ### Quota
 
-**It will create countable rows: places, metric `places`**, already in `PLAN_QUOTAS`
+**It creates countable rows: places, metric `places`**, already in `PLAN_QUOTAS`
 (`src/server/db/types.ts:43`, `:50`, `:57`, `:64`) and asserted by
-`assertQuota(scope, 'places', …)` at `src/server/repos/places.ts:269` inside `createPlace`. Choosing a search result fills a form, and the form's existing save path
-consumes the ceiling exactly as it does today; no second call site is added.
+`assertQuota(scope, 'places', …)` at `src/server/repos/places.ts:269` inside `createPlace`. Choosing a
+search result fills a form, and the form's existing save path consumes the ceiling exactly as it does
+today; no second call site is added.
 
-**And it will consume something no metric covers yet: a provider call.** `11-S3` records the rule and
-this stage inherits it — when a provider is adopted, its call rate belongs in `resolveLimits()` in
-`src/server/billing/limits.ts` with every other ceiling, not in a constant inside a search module,
-because a metered outbound call made on one tenant's behalf is a cost every other tenant helps pay.
+**And it spends a provider call, against a ceiling this stage neither adds nor enforces.**
+`11-S3` recorded the rule — a metered outbound call made on one tenant's behalf is a cost every other
+tenant helps pay, so its rate belongs in `resolveLimits()` and never in a constant inside a search
+module. `02-S4` files `geocode_calls_per_day` onto the wave-2 quota stage of `00-foundations.md` and
+enforces it in `src/server/geo/geocode.ts`. This stage therefore adds **no** metric, **no** counter
+and **no** constant; what it owns is the three numbers that keep a per-keystroke field from reaching
+the ceiling in the first place — the debounce, the minimum length and the cancel-on-supersede — and
+the designed refusal for when it does.
 
 ### Tenant isolation test
 
-Not added. The case it will owe, so it is not forgotten: a cached provider result keyed on the query
-alone is shared across tenants, which is correct for a public fact; the assertion is that **no cache
-key derived from a trip, a place or a member is ever shared**, and that a search made in
-organization A's scope for a trip belonging to B raises `NotFoundError` before any provider call is
-made — spending money on an unauthorised request is a defect even when the response is discarded.
+Appended as one `describe` block, and it asserts the two halves that pull in opposite directions.
+**Sharing is correct here and is asserted as such:** organization A and organization B issue the same
+query and must produce the **same** cache key, because an address resolving to a point is a public
+fact and the unexpiring shared cache is the thing ADR 0013 bought. **Scoping is still absolute:** a
+search made in A's scope for a trip belonging to B raises `NotFoundError` **before** any provider
+call is made — spending money on a request we are going to reject is a defect even when the response
+is discarded — and `resolveShareLinkFn` is asserted the same way. Repository functions covered:
+`requireTrip`, and `createPlace` when a chosen result is saved.
 
 ### Verification
 
-Not run. What it will owe is exactly what every other stage in this plan owes, and is written here so
-the blocked stage cannot later be closed on a lower bar: the command gate in order (`pnpm lint`,
-`pnpm typecheck`, `pnpm test`, `pnpm build`); unit tests for the debounce, the cancellation, the
-centroid bias and its skip threshold, and for the response validation; a six-frame resting set plus a
-declared-state set for the open results list and for the no-results state, at 360, 1280 and 2560 in
-both themes, under `.claude/ultrabuild/shots/<slug>/round-<n>/02-S13/`; a silent console; and a
-layout-shift reading of `0` after the settle mark, which a results list that pushes the form down
-would fail.
+The command gate, in order: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
-Two things it will owe that the Area brief already fixes, written here so the blocked stage inherits
-them rather than re-deriving them. **The hooks are its own to publish**, in the file it creates for
-the search field, and they go into the register when it is unblocked — no selector in this plan
-points at a file this stage does not own. **The results list is not one gesture from a loaded route**
-— it needs a field focused and a query typed, and `capture.mjs` has no `--type` flag
-(`scripts/ultrabuild/capture.mjs:64-80`, `:218-225`) — so its declared states are taken in this
-plan's own spec with `page.screenshot({ path, … })`, exactly as `02-S5` and `02-S11` take theirs.
-`capture.mjs` takes its resting set and nothing else.
+**Unit tests**, in `src/components/modules/places/__tests__/place-search.test.tsx`: the debounce
+fires once for a burst of keystrokes; a superseded request is cancelled and its late response is
+discarded rather than rendered; the centroid bias is computed from the trip's places and **skipped**
+above the spread threshold; a URL in the field switches the control to its resolve behaviour; and a
+host outside the allow-list is refused without a request. The provider response validator is
+`02-S4`'s and is tested there, not twice.
 
-The one thing that can be verified **today**, and is this stage's only current assertion: **no
-provider name and no provider client exists anywhere in this plan or in `src/`.** A grep that finds
-one means somebody started this stage while it was blocked.
+**Browser evidence.** The resting set and two declared states, at 360, 1280 and 2560 in both themes,
+under `.claude/ultrabuild/shots/<slug>/round-<n>/02-S13/`. **The results list is not one gesture from
+a loaded route** — it needs a field focused and a query typed, and `capture.mjs` has no `--type` flag
+(`scripts/ultrabuild/capture.mjs:64-80`, `:218-225`) — so `results-open` and `no-results` are taken
+in this plan's own spec with `page.screenshot({ path, … })`, exactly as `02-S5` and `02-S11` take
+theirs, and `capture.mjs` takes the resting set and nothing else. The provider is **not** called from
+a test: the two states are driven against a stubbed `searchPlacesFn`, because a baseline that depends
+on a third party's data is a baseline that changes when they reindex.
+
+**Console** silent and **layout shift** `0` after the settle mark — which a results list that pushes
+the form down would fail, and is the reason the list is an overlay rather than a block in flow.
 
 ### Definition of done
 
-The six items of `docs/SPEC.md` §7 apply unchanged when it runs, and so does every §2 visual clause.
-They are listed here **unticked and deferred**, not copied as an empty checklist, because a blocked
-stage carrying a checklist reads as done to a scanner and that is precisely the confusion this plan
-exists to avoid. What it will owe, clause by clause:
+The six items of `docs/SPEC.md` §7 apply unchanged, and so does every §2 visual clause. They were
+listed **unticked and deferred** while this stage was blocked; now that it is scheduled they are its
+checklist like any other stage's, clause by clause:
 
 - 4px grid spacing from `--space-*`, with no eyeballed one-off margins.
 - hover, focus-visible, active, disabled and loading on the search field, every result row and the
@@ -3536,31 +3812,36 @@ exists to avoid. What it will owe, clause by clause:
   themes.
 - zero console errors or warnings, and zero layout shift after paint.
 
-**Its definition of done today is one line: it has not started.** The row stays `absent`, this file
-does not pretend otherwise, and the three sibling stages that ship MAP-02's other paths do not claim
-it.
+**And the row moves only here.** `02-S5`, `02-S6` and `02-S8` each ship one of MAP-02's other import
+paths and each declares `absent → absent`; this stage is the one that writes `absent → done`, because
+the row is not closed until search works.
 
 ### Blockers
 
-**Gate A — geocoding and place search.** No provider chosen, no budget agreed. Owner:
-`docs/plans/11-boundaries-and-blockers.md`, `11-S3`. Recorded in full in `02-S1`, and this stage is
-the reason both of the conditions there matter:
+**Gate A — geocoding and place search. CLOSED**, by `docs/adr/0013-geoapify-for-geocoding.md`. This
+stage was the one wholly behind it, and it is the reason both of that gate's conditions mattered:
 
 - A tier whose terms exclude a commercial, subscription-funded product is unusable to us at any
-  traffic level, and we charge for subscriptions through Stripe.
-- A policy that forbids automated per-keystroke querying is unusable for search, and several open
-  geocoding endpoints prohibit exactly that pattern while also requiring a product whose core
-  function is geocoding to run its own instance. **This stage is search-as-you-type by definition**,
-  so it is the precise case those policies exclude.
+  traffic level, and we charge for subscriptions through Stripe. The ADR clears this on the
+  provider's own wording.
+- A policy that forbids automated per-keystroke querying is unusable for search. **This stage is
+  search-as-you-type by definition**, so it was the precise case such policies exclude; the chosen
+  provider sells autocomplete as a product, so what remains is a **rate** limit rather than a
+  prohibition — which is why the debounce, the minimum length and the cancel-on-supersede above are
+  this stage's obligations and not its manners.
 
-Two further terms decide the cost more than the per-call price does and must be read before a
-provider is named: what may be cached and for how long, which decides whether this stage needs a
-schema change at all; and what attribution must appear on screen, which decides part of its design.
+Both of the terms that decide cost more than the per-call price are answered and neither lands here:
+what may be cached and for how long is permanent, so this stage needs no schema change at all; and
+the attribution is on the map, rendered by `02-S4`.
 
-Disposition: **defer.** Not substitute — there is no platform capability that geocodes. Not
-hand-roll — a geocoder is a dataset and an index, not an afternoon. Not drop — the row is real and
-the product is worse without it. It waits for a decision, and saying so plainly is the whole of this
-stage's current job.
+**One real dependency, and it is inside this plan.** `02-S4` mints `src/server/geo/geocode.ts` and
+`-server/geocode.ts` in wave 3. This stage is wave 4 and adds one function to the second of those.
+If `02-S4` has not landed, this stage does not start — that is an ordinary wave dependency, not a
+gate, and it is satisfied by the schedule rather than by a decision.
+
+No package outside the pinned set. No binding — the provider credential is a secret, not a
+`wrangler.jsonc` entry. `12-verification-protocol.md` §7.2 applies to this stage's trip-tab frames as
+it does to every stage here that baselines that route.
 
 ## Cross-plan collisions
 
@@ -3573,6 +3854,22 @@ criterion about it — it is measured.
 node scripts/ultrabuild/check-plan-collisions.mjs 02
 node scripts/ultrabuild/check-plan-refs.mjs 02
 ```
+
+**Neither script exists at `HEAD`.** There is no `scripts/ultrabuild/` directory and `package.json`
+declares nothing that would run one, so the two blocks below are a **record of a past measurement,
+not a reproducible one**. They are kept because their findings are the argument for how this plan's
+ownership is arranged; nobody should read them as a check they can re-run. Where a claim in this file
+says "wave _n_ is the first wave in which this file is free", it now means a reading of the sibling
+stages' own **Owned paths** lists, and that is how the claims added when Gate A closed were
+established.
+
+**Four claims post-date the output below**, all from closing Gate A, and each was verified that way.
+`src/server/geo/geocode.ts`, its test and `src/routes/_app/trips/$tripId/-server/geocode.ts` are new
+files that **no plan in the set claims** — `grep -rn "server/geo\|-server/geocode" docs/plans/`
+returns only this file. `src/components/modules/places/**` is likewise unclaimed. And `02-S13`'s
+wave-4 claim on `src/routes/_app/trips/$tripId/-ui/plan-actions.tsx` is the reason that stage moved
+from wave 6: `01-S4` holds wave 2, `02-S5` wave 3, `02-S10` wave 5 and `02-S11` wave 6, so wave 4 is
+the only free one. None of the four adds a same-wave exclusive collision.
 
 Both outputs, pasted in full, at the point this plan was finished. First the collision report:
 
