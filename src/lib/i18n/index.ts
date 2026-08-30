@@ -14,9 +14,10 @@
  * // …render inside <I18nProvider locale={locale} messages={messages}>
  * ```
  *
- * Copy lives in `messages/<locale>/<namespace>.ts` across the ten namespaces
- * §8 fixes — `shell`, `auth`, `trips`, `modules`, `costs`, `atlas`, `journal`,
- * `marketing`, `settings`, `ui` — and a key is `<namespace>.<key in the file>`,
+ * Copy lives in `messages/<locale>/<namespace>.ts` across the eleven namespaces
+ * §9 fixes — `shell`, `auth`, `trips`, `modules`, `costs`, `atlas`, `journal`,
+ * `marketing`, `settings`, `console`, `ui` — and a key is
+ * `<namespace>.<key in the file>`,
  * so a screen calls `t('shell.nav.trips')` for the `'nav.trips'` written in
  * `messages/en/shell.ts`. English is the schema: a key that does not exist
  * there is a compile error, never a runtime fallback to English.

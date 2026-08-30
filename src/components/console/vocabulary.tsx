@@ -17,18 +17,27 @@ import { CircleSlash, ShieldCheck, UserRound, Wrench } from 'lucide-react'
 import { Badge } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { formatDate } from '#/lib/format'
+import { useTranslate } from '#/lib/i18n'
 
 import type { ShellPlatformRole } from '#/components/layout/session'
 import type { BadgeProps, BadgeTone } from '#/components/ui'
+import type { MessageKey } from '#/lib/i18n'
 import type { LucideIcon } from 'lucide-react'
 
-/** Everything the console says about one platform role, in one place. */
+/**
+ * Everything the console says about one platform role, in one place.
+ *
+ * The words are catalogue *keys* rather than sentences, because this table is module-level data and
+ * a translator is a hook. Resolving them here would mean either calling a hook outside a component
+ * or keeping twenty-three copies of the table; naming the keys lets the one table stay one table and
+ * puts `t()` at the render site, which is where the reader's locale is known.
+ */
 export interface PlatformRoleDescriptor {
-  readonly label: string
+  readonly labelKey: MessageKey
   readonly tone: BadgeTone
   readonly icon: LucideIcon
   /** One sentence, used in the role picker and in the account screen. */
-  readonly summary: string
+  readonly summaryKey: MessageKey
   /**
    * What the role holds and what it does not, in the reader's words.
    *
@@ -39,52 +48,50 @@ export interface PlatformRoleDescriptor {
    * is usually the other one - "can this curator ban somebody?" is the question, and a permission
    * list that only ever says yes leaves it to be inferred from an absence.
    */
-  readonly holds: ReadonlyArray<string>
-  readonly withheld: ReadonlyArray<string>
+  readonly holds: ReadonlyArray<MessageKey>
+  readonly withheld: ReadonlyArray<MessageKey>
 }
 
 export const PLATFORM_ROLE_VOCABULARY: Readonly<
   Record<ShellPlatformRole, PlatformRoleDescriptor>
 > = {
   admin: {
-    label: 'Admin',
+    labelKey: 'console.role.admin',
     tone: 'accent',
     icon: ShieldCheck,
-    summary:
-      'Full platform authority: accounts, roles, bans, sessions and impersonation.',
+    summaryKey: 'console.role.admin.summary',
     holds: [
-      'Create accounts and set platform roles',
-      'Suspend accounts and lift suspensions',
-      'Revoke sessions and set passwords',
-      'Impersonate an account for fifteen minutes',
-      'Everything a curator may do',
+      'console.role.admin.holds.accounts',
+      'console.role.admin.holds.bans',
+      'console.role.admin.holds.sessions',
+      'console.role.admin.holds.impersonate',
+      'console.role.admin.holds.curation',
     ],
-    withheld: ['Impersonate another platform admin'],
+    withheld: ['console.role.admin.withheld.admins'],
   },
   curator: {
-    label: 'Curator',
+    labelKey: 'console.role.curator',
     tone: 'outline',
     icon: Wrench,
-    summary:
-      'The catalogue, packs, sources and share moderation. Nothing that touches accounts.',
+    summaryKey: 'console.role.curator.summary',
     holds: [
-      'Read, write and publish catalogue places',
-      'Read, write and publish place packs',
-      'Read and run catalogue sources',
-      'Review and revoke shared links',
+      'console.role.curator.holds.places',
+      'console.role.curator.holds.packs',
+      'console.role.curator.holds.sources',
+      'console.role.curator.holds.shares',
     ],
     withheld: [
-      'Anything that touches an account or a session',
-      'Issuing or revoking machine credentials',
+      'console.role.curator.withheld.accounts',
+      'console.role.curator.withheld.tokens',
     ],
   },
   user: {
-    label: 'User',
+    labelKey: 'console.role.user',
     tone: 'neutral',
     icon: UserRound,
-    summary: 'No platform surface at all. This is nearly everybody.',
+    summaryKey: 'console.role.user.summary',
     holds: [],
-    withheld: ['Every platform statement, without exception'],
+    withheld: ['console.role.user.withheld.everything'],
   },
 }
 
@@ -131,12 +138,13 @@ export function PlatformRoleBadge({
   size = 'md',
   className,
 }: PlatformRoleBadgeProps) {
+  const t = useTranslate()
   const descriptor = PLATFORM_ROLE_VOCABULARY[role]
   const Icon = descriptor.icon
   return (
     <Badge tone={descriptor.tone} size={size} className={className}>
       <Icon aria-hidden className={size === 'sm' ? 'size-3' : 'size-3.5'} />
-      {descriptor.label}
+      {t(descriptor.labelKey)}
     </Badge>
   )
 }
@@ -161,6 +169,7 @@ export function AccountStatus({
   banExpiresAt,
   className,
 }: AccountStatusProps) {
+  const t = useTranslate()
   if (!banned) {
     return (
       <span className={cn('flex items-center gap-1.5 text-ink-3', className)}>
@@ -168,7 +177,7 @@ export function AccountStatus({
           aria-hidden
           className="size-1.5 shrink-0 rounded-full bg-success"
         />
-        <span className="text-caption">Active</span>
+        <span className="text-caption">{t('console.status.active')}</span>
       </span>
     )
   }
@@ -177,10 +186,12 @@ export function AccountStatus({
   return (
     <span className={cn('flex flex-col items-start gap-1', className)}>
       <Badge tone="danger" size="sm" dot>
-        Suspended
+        {t('console.status.suspended')}
       </Badge>
       <span className="text-micro tabular-nums text-ink-4">
-        {until === null ? 'Permanent' : `Until ${until}`}
+        {until === null
+          ? t('console.status.permanent')
+          : t('console.status.until', { date: until })}
       </span>
     </span>
   )
@@ -192,14 +203,18 @@ export interface VerificationMarkProps {
 }
 
 /** A quiet warning chip on an unverified address, and nothing at all on a verified one. */
-export function VerificationMark({ verified, className }: VerificationMarkProps) {
+export function VerificationMark({
+  verified,
+  className,
+}: VerificationMarkProps) {
+  const t = useTranslate()
   if (verified) {
     return null
   }
   return (
     <Badge tone="warning" size="sm" className={className}>
       <CircleSlash aria-hidden className="size-3" />
-      Unverified
+      {t('console.status.unverified')}
     </Badge>
   )
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { consoleTranslate as t } from '#/lib/i18n/__tests__/console-translate'
 import {
   formatElapsed,
   formatLease,
@@ -111,12 +112,12 @@ describe('formatElapsed', () => {
 
 describe('formatLease', () => {
   it('counts down from the registry’s clock, never the browser’s', () => {
-    expect(formatLease(NOW + 4 * MINUTE, NOW)).toBe('4m left')
+    expect(formatLease(t, NOW + 4 * MINUTE, NOW)).toBe('4m left')
   })
 
   it('says a lapsed lease has lapsed', () => {
     // The sweep runs on a one-minute alarm, so a run can be visibly past its lease for up to a
     // minute before it is reaped. That is a state to show, not a number to negate.
-    expect(formatLease(NOW - 1000, NOW)).toBe('expired')
+    expect(formatLease(t, NOW - 1000, NOW)).toBe('expired')
   })
 })

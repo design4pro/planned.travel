@@ -1,11 +1,11 @@
 /**
- * Fallback declarations for the ten English namespace files.
+ * Fallback declarations for the eleven English namespace files.
  *
  * `docs/SPEC.md` §8 fixes the catalogue layout as
- * `messages/<locale>/<namespace>.ts`, gives the ten namespaces by name, and
+ * `messages/<locale>/<namespace>.ts`, gives the eleven namespaces by name, and
  * assigns each `messages/en/<namespace>.ts` to the item that owns the screens
- * it serves. `../types.ts` derives the key union from `import type` of all ten,
- * which means all ten must resolve — including before the item that owns one
+ * it serves. `../types.ts` derives the key union from `import type` of all eleven,
+ * which means all eleven must resolve — including before the item that owns one
  * has written it.
  *
  * A wildcard ambient module declaration is exactly the tool for that, and it is
@@ -17,7 +17,7 @@
  * failing.
  *
  * The shape below is the empty record on purpose. An absent namespace
- * contributes no keys, so `MessageKey` grows monotonically as the nine content
+ * contributes no keys, so `MessageKey` grows monotonically as the content
  * items land their files and never widens to `string` in the meantime — a
  * `t()` call for a key nobody has authored stays a compile error that names the
  * key. Declaring the modules `any` would have been the same amount of code and
@@ -27,7 +27,7 @@
  * flat object of keys, default-exported*, so a file that exports it under some
  * other name fails to typecheck instead of quietly contributing nothing.
  *
- * Delete this file once all ten exist. Until then it is the only thing standing
+ * Delete this file once all eleven exist. Until then it is the only thing standing
  * between a half-landed catalogue and a red `pnpm typecheck` for every item in
  * the round.
  */
@@ -73,6 +73,11 @@ declare module '*/messages/en/marketing' {
 }
 
 declare module '*/messages/en/settings' {
+  const messages: Record<never, never>
+  export default messages
+}
+
+declare module '*/messages/en/console' {
   const messages: Record<never, never>
   export default messages
 }

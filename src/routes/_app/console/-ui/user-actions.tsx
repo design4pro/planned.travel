@@ -69,6 +69,7 @@ import {
   PLATFORM_ROLE_VOCABULARY,
   displayPlatformRole,
 } from '#/components/console'
+import { useTranslate } from '#/lib/i18n'
 import {
   deleteConsoleAccount,
   restoreConsoleAccount,
@@ -79,6 +80,7 @@ import {
 import { ConsoleActionDialog } from './action-dialog'
 
 import type { ShellPlatformRole } from '#/components/layout/session'
+import type { MessageKey } from '#/lib/i18n'
 import type { ConsoleUser } from '#/server/fns/console/projections'
 import type { ReactNode } from 'react'
 
@@ -102,27 +104,33 @@ type OpenAction =
  */
 const BAN_DURATIONS: ReadonlyArray<{
   value: string
-  label: string
-  description: string
+  labelKey: MessageKey
+  descriptionKey: MessageKey
 }> = [
   {
     value: 'permanent',
-    label: 'Permanent',
-    description: 'Stays in force until an admin lifts it deliberately.',
+    labelKey: 'console.status.permanent',
+    descriptionKey: 'console.action.ban.duration.permanent.body',
   },
   {
     value: '1',
-    label: '24 hours',
-    description:
-      'Long enough to interrupt, short enough to be an intervention.',
+    labelKey: 'console.action.ban.duration.day',
+    descriptionKey: 'console.action.ban.duration.day.body',
   },
-  { value: '7', label: '7 days', description: 'A week to answer a complaint.' },
-  { value: '30', label: '30 days', description: 'A month of enforced quiet.' },
+  {
+    value: '7',
+    labelKey: 'console.action.ban.duration.week',
+    descriptionKey: 'console.action.ban.duration.week.body',
+  },
+  {
+    value: '30',
+    labelKey: 'console.action.ban.duration.month',
+    descriptionKey: 'console.action.ban.duration.month.body',
+  },
   {
     value: '90',
-    label: '90 days',
-    description:
-      'The longest the console offers. Beyond it, suspend permanently.',
+    labelKey: 'console.action.ban.duration.quarter',
+    descriptionKey: 'console.action.ban.duration.quarter.body',
   },
 ]
 
@@ -152,6 +160,7 @@ export function UserActions({
   onDeleted,
   align = 'end',
 }: UserActionsProps) {
+  const t = useTranslate()
   const router = useRouter()
   const [open, setOpen] = useState<OpenAction>(null)
   const currentRole = displayPlatformRole(user.role)
@@ -168,11 +177,11 @@ export function UserActions({
    * `requirePermission` and by `impersonateUser` as well; this only decides what the reader is told.
    */
   const impersonationBlock: string | null = self
-    ? 'There is nobody to become — this is your own account.'
+    ? t('console.action.impersonate.self')
     : user.banned
-      ? 'The account is suspended, so it holds no session to wear.'
+      ? t('console.action.impersonate.banned')
       : currentRole === 'admin'
-        ? 'No role on the platform may impersonate an admin, including yours.'
+        ? t('console.action.impersonate.admin')
         : null
 
   const close = useCallback(() => {
@@ -189,11 +198,17 @@ export function UserActions({
 
   const changeRole = useCallback(async (): Promise<void> => {
     await setConsoleAccountRole({ data: { userId: user.id, role } })
+    // The role name is passed in as a word rather than lower-cased into the sentence: German
+    // capitalises its nouns and Turkish dots its i, so `toLowerCase()` on a translated label is a
+    // typo in some locales and a different word in others.
     await settle(
-      'Platform role updated',
-      `${user.name} is now ${PLATFORM_ROLE_VOCABULARY[role].label.toLowerCase()} on the platform.`,
+      t('console.action.role.done'),
+      t('console.action.role.done.body', {
+        name: user.name,
+        role: t(PLATFORM_ROLE_VOCABULARY[role].labelKey),
+      }),
     )
-  }, [role, settle, user.id, user.name])
+  }, [role, settle, t, user.id, user.name])
 
   const ban = useCallback(async (): Promise<void> => {
     await suspendConsoleAccount({
@@ -208,30 +223,31 @@ export function UserActions({
     setReason('')
     setDuration('permanent')
     await settle(
-      'Account suspended',
-      `${user.name} has been signed out everywhere and cannot sign in again.`,
+      t('console.action.ban.done'),
+      t('console.action.ban.done.body', { name: user.name }),
     )
-  }, [duration, reason, settle, user.id, user.name])
+  }, [duration, reason, settle, t, user.id, user.name])
 
   const unban = useCallback(async (): Promise<void> => {
     await restoreConsoleAccount({ data: { userId: user.id } })
     await settle(
-      'Suspension lifted',
-      `${user.name} can sign in again. No session was restored.`,
+      t('console.action.unban.done'),
+      t('console.action.unban.done.body', { name: user.name }),
     )
-  }, [settle, user.id, user.name])
+  }, [settle, t, user.id, user.name])
 
   const revokeSessions = useCallback(async (): Promise<void> => {
     const result = await revokePlatformUserSessionsFn({
       data: { userId: user.id },
     })
     await settle(
-      'Sessions revoked',
-      result.revoked === 1
-        ? 'One session was ended.'
-        : `${result.revoked} sessions were ended.`,
+      t('console.action.sessions.done'),
+      t('console.action.sessions.done.body', {
+        count: result.revoked,
+        revoked: result.revoked,
+      }),
     )
-  }, [settle, user.id])
+  }, [settle, t, user.id])
 
   const setNewPassword = useCallback(async (): Promise<void> => {
     await setConsoleAccountPassword({
@@ -239,10 +255,10 @@ export function UserActions({
     })
     setPassword('')
     await settle(
-      'Password set',
-      `${user.name} has been signed out of every device.`,
+      t('console.action.password.done'),
+      t('console.action.password.done.body', { name: user.name }),
     )
-  }, [password, settle, user.id, user.name])
+  }, [password, settle, t, user.id, user.name])
 
   const impersonate = useCallback(async (): Promise<void> => {
     await startImpersonationFn({ data: { userId: user.id } })
@@ -257,10 +273,10 @@ export function UserActions({
     // Never `settle` here: on the account screen `onChanged` re-runs a loader for the id that no
     // longer exists. The caller that has somewhere to go says so.
     await (onDeleted ?? onChanged)()
-    toast.success('Account deleted', {
-      description: `${user.name} and everything attached to the account are gone.`,
+    toast.success(t('console.action.delete.done'), {
+      description: t('console.action.delete.done.body', { name: user.name }),
     })
-  }, [onChanged, onDeleted, user.id, user.name])
+  }, [onChanged, onDeleted, t, user.id, user.name])
 
   return (
     <>
@@ -268,7 +284,7 @@ export function UserActions({
         <DropdownMenuTrigger asChild>
           <IconButton
             icon={<EllipsisVertical />}
-            label={`Actions for ${user.name}`}
+            label={t('console.action.menu.label', { name: user.name })}
             variant="ghost"
             size="sm"
           />
@@ -278,12 +294,14 @@ export function UserActions({
             1440 viewport, which is a third of the screen for a row menu. Bounded, the sentence wraps
             to two lines and the menu keeps a menu's proportions. */}
         <DropdownMenuContent align={align} className="min-w-64 max-w-80">
-          <DropdownMenuLabel>Account</DropdownMenuLabel>
+          <DropdownMenuLabel>
+            {t('console.action.group.account')}
+          </DropdownMenuLabel>
           {self ? (
             <UnavailableAction
               icon={<ShieldCheck />}
-              label="Change platform role"
-              reason="Not on your own account — a self-demotion can leave the platform with no admin."
+              label={t('console.action.role.item')}
+              reason={t('console.action.role.self')}
             />
           ) : (
             <DropdownMenuItem
@@ -293,7 +311,7 @@ export function UserActions({
                 setOpen('role')
               }}
             >
-              Change platform role
+              {t('console.action.role.item')}
             </DropdownMenuItem>
           )}
           {impersonationBlock === null ? (
@@ -303,18 +321,20 @@ export function UserActions({
                 setOpen('impersonate')
               }}
             >
-              Impersonate
+              {t('console.action.impersonate.item')}
             </DropdownMenuItem>
           ) : (
             <UnavailableAction
               icon={<ArrowRightLeft />}
-              label="Impersonate"
+              label={t('console.action.impersonate.item')}
               reason={impersonationBlock}
             />
           )}
 
           <DropdownMenuSeparator />
-          <DropdownMenuLabel>Credentials</DropdownMenuLabel>
+          <DropdownMenuLabel>
+            {t('console.action.group.credentials')}
+          </DropdownMenuLabel>
           <DropdownMenuItem
             icon={<KeyRound />}
             onSelect={() => {
@@ -322,7 +342,7 @@ export function UserActions({
               setOpen('password')
             }}
           >
-            Set a password
+            {t('console.action.password.item')}
           </DropdownMenuItem>
           <DropdownMenuItem
             icon={<MonitorSmartphone />}
@@ -331,7 +351,7 @@ export function UserActions({
               setOpen('sessions')
             }}
           >
-            Revoke every session
+            {t('console.action.sessions.item')}
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
@@ -342,13 +362,13 @@ export function UserActions({
                 setOpen('unban')
               }}
             >
-              Lift the suspension
+              {t('console.action.unban.item')}
             </DropdownMenuItem>
           ) : self ? (
             <UnavailableAction
               icon={<Ban />}
-              label="Suspend the account"
-              reason="Not on your own account — a self-suspension takes away your own way back in."
+              label={t('console.action.ban.item')}
+              reason={t('console.action.ban.self')}
             />
           ) : (
             <DropdownMenuItem
@@ -360,14 +380,14 @@ export function UserActions({
                 setOpen('ban')
               }}
             >
-              Suspend the account
+              {t('console.action.ban.item')}
             </DropdownMenuItem>
           )}
           {self ? (
             <UnavailableAction
               icon={<Trash2 />}
-              label="Delete the account"
-              reason="Not on your own account — there is no way back from it."
+              label={t('console.action.delete.item')}
+              reason={t('console.action.delete.self')}
             />
           ) : (
             <DropdownMenuItem
@@ -377,7 +397,7 @@ export function UserActions({
                 setOpen('delete')
               }}
             >
-              Delete the account
+              {t('console.action.delete.item')}
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -388,9 +408,9 @@ export function UserActions({
         onOpenChange={(next) => {
           if (!next) close()
         }}
-        title="Change platform role"
-        description={`What ${user.name} may do on the platform itself. Workspace membership is a separate vocabulary and does not move.`}
-        confirmLabel="Save role"
+        title={t('console.action.role.item')}
+        description={t('console.action.role.body', { name: user.name })}
+        confirmLabel={t('console.action.role.confirm')}
         confirmDisabled={role === currentRole}
         onConfirm={changeRole}
       >
@@ -400,9 +420,9 @@ export function UserActions({
             that dialog's own scrim and cannot be clicked at all. Measured on this panel. The
             layering is `src/components/ui/select.tsx`'s to fix and is reported with this item;
             what belongs here is a control that needs no layer of its own. */}
-        <Field label="Platform role">
+        <Field label={t('console.users.column.role')}>
           <RadioGroup
-            aria-label="Platform role"
+            aria-label={t('console.users.column.role')}
             value={role}
             onValueChange={(next) => {
               setRole(next as ShellPlatformRole)
@@ -416,12 +436,12 @@ export function UserActions({
                   key={name}
                   value={name}
                   icon={<Icon className="size-4" />}
-                  label={descriptor.label}
-                  description={descriptor.summary}
+                  label={t(descriptor.labelKey)}
+                  description={t(descriptor.summaryKey)}
                   meta={
                     name === currentRole ? (
                       <span className="text-caption font-medium text-ink-3">
-                        Current
+                        {t('console.action.role.current')}
                       </span>
                     ) : undefined
                   }
@@ -437,31 +457,31 @@ export function UserActions({
         onOpenChange={(next) => {
           if (!next) close()
         }}
-        title={`Suspend ${user.name}`}
-        description="Every session ends immediately and the account cannot sign in again until the suspension is lifted or expires."
-        confirmLabel="Suspend account"
+        title={t('console.action.ban.title', { name: user.name })}
+        description={t('console.action.ban.body')}
+        confirmLabel={t('console.action.ban.confirm')}
         confirmVariant="danger"
         confirmDisabled={reason.trim().length === 0}
         onConfirm={ban}
       >
         <Field
-          label="Reason"
+          label={t('console.action.ban.reason')}
           required
-          hint="Kept on the platform audit trail for thirteen months, and shown to nobody but an admin."
+          hint={t('console.action.ban.reason.hint')}
         >
           <Input
             value={reason}
             maxLength={280}
             autoComplete="off"
-            placeholder="Repeated abuse reports from three workspaces"
+            placeholder={t('console.action.ban.reason.placeholder')}
             onChange={(event) => {
               setReason(event.currentTarget.value)
             }}
           />
         </Field>
-        <Field label="Duration">
+        <Field label={t('console.action.ban.duration')}>
           <RadioGroup
-            aria-label="Suspension duration"
+            aria-label={t('console.action.ban.duration.label')}
             value={duration}
             onValueChange={setDuration}
           >
@@ -469,8 +489,8 @@ export function UserActions({
               <RadioGroupItem
                 key={option.value}
                 value={option.value}
-                label={option.label}
-                description={option.description}
+                label={t(option.labelKey)}
+                description={t(option.descriptionKey)}
               />
             ))}
           </RadioGroup>
@@ -482,9 +502,9 @@ export function UserActions({
         onOpenChange={(next) => {
           if (!next) close()
         }}
-        title={`Lift the suspension on ${user.name}`}
-        description="The account can sign in again from its next attempt. No previous session is restored."
-        confirmLabel="Lift suspension"
+        title={t('console.action.unban.title', { name: user.name })}
+        description={t('console.action.unban.body')}
+        confirmLabel={t('console.action.unban.confirm')}
         onConfirm={unban}
       />
 
@@ -493,13 +513,13 @@ export function UserActions({
         onOpenChange={(next) => {
           if (!next) close()
         }}
-        title="Revoke every session"
+        title={t('console.action.sessions.item')}
         description={
           self
-            ? 'This signs you out of every device, including the one you are reading this on.'
-            : `${user.name} is signed out of every device and has to sign in again.`
+            ? t('console.action.sessions.body.self')
+            : t('console.action.sessions.body', { name: user.name })
         }
-        confirmLabel="Revoke sessions"
+        confirmLabel={t('console.action.sessions.confirm')}
         confirmVariant="danger"
         onConfirm={revokeSessions}
       />
@@ -509,19 +529,19 @@ export function UserActions({
         onOpenChange={(next) => {
           if (!next) close()
         }}
-        title={`Set a password for ${user.name}`}
-        description="Use this to recover a locked-out account or to shut an attacker out of a compromised one."
-        confirmLabel="Set password"
+        title={t('console.action.password.title', { name: user.name })}
+        description={t('console.action.password.body')}
+        confirmLabel={t('console.action.password.confirm')}
         confirmDisabled={password.length === 0}
         onConfirm={setNewPassword}
       >
         <Field
-          label="New password"
+          label={t('console.action.password.field')}
           required
           hint={
             self
-              ? 'Every session ends when this is set — including yours.'
-              : 'Every session the account holds ends when this is set.'
+              ? t('console.action.password.hint.self')
+              : t('console.action.password.hint')
           }
         >
           <Input
@@ -540,24 +560,15 @@ export function UserActions({
         onOpenChange={(next) => {
           if (!next) close()
         }}
-        title={`Act as ${user.name}`}
-        description="You will see the product exactly as this account does, for fifteen minutes."
-        confirmLabel="Start impersonating"
+        title={t('console.action.impersonate.title', { name: user.name })}
+        description={t('console.action.impersonate.body')}
+        confirmLabel={t('console.action.impersonate.confirm')}
         onConfirm={impersonate}
       >
         <ul className="flex flex-col gap-2 text-caption leading-relaxed text-ink-2">
-          <li>
-            A warning bar stays on every screen until you end it, and it cannot
-            be dismissed.
-          </li>
-          <li>
-            Platform actions are unavailable while you are acting as somebody
-            else — the console included.
-          </li>
-          <li>
-            Starting and ending are both written to the platform audit trail,
-            with your name on them.
-          </li>
+          <li>{t('console.action.impersonate.note.bar')}</li>
+          <li>{t('console.action.impersonate.note.platform')}</li>
+          <li>{t('console.action.impersonate.note.audit')}</li>
         </ul>
       </ConsoleActionDialog>
 
@@ -566,16 +577,14 @@ export function UserActions({
         onOpenChange={(next) => {
           if (!next) close()
         }}
-        title={`Delete ${user.name}`}
-        description="The account, its sessions and every credential attached to it are removed. This cannot be undone."
-        confirmLabel="Delete account"
+        title={t('console.action.delete.title', { name: user.name })}
+        description={t('console.action.delete.body')}
+        confirmLabel={t('console.action.delete.confirm')}
         confirmVariant="danger"
         onConfirm={remove}
       >
         <p className="text-caption leading-relaxed text-ink-2">
-          Workspace content this person created stays with the workspace that
-          owns it. Suspending the account instead keeps the record and takes
-          away the access.
+          {t('console.action.delete.note')}
         </p>
       </ConsoleActionDialog>
     </>

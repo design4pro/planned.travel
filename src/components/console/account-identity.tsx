@@ -11,6 +11,7 @@
 
 import { Avatar, Badge } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { VerificationMark } from './vocabulary'
 
 import type { AvatarSize } from '#/components/ui'
@@ -47,6 +48,7 @@ export function AccountIdentity({
   emailClassName,
   className,
 }: AccountIdentityProps) {
+  const t = useTranslate()
   const label = <span className="truncate">{name}</span>
 
   return (
@@ -76,13 +78,11 @@ export function AccountIdentity({
           </span>
           {self ? (
             <Badge tone="outline" size="sm">
-              You
+              {t('console.identity.you')}
             </Badge>
           ) : null}
         </span>
-        <span
-          className={cn('flex min-w-0 items-center gap-2', emailClassName)}
-        >
+        <span className={cn('flex min-w-0 items-center gap-2', emailClassName)}>
           <span className="min-w-0 truncate text-caption text-ink-3">
             {email}
           </span>
