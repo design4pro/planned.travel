@@ -113,14 +113,40 @@ jobs:
 
           $REASON"
           git push origin "$branch"
-          # Based on the ref this ran from, not on develop: frames recorded from a
-          # feature branch describe that branch's screens, and merging them into
-          # develop ahead of the code would leave the gate red on both sides.
-          gh pr create \
-            --title 'test(e2e): re-record Linux baselines' \
-            --body "Recorded by \`update-snapshots\` run ${GITHUB_RUN_ID}.
+          export BRANCH="$branch"
+          # The REST API rather than `gh`, which the Playwright image does not ship: the
+          # CLI is what a runner has, not what a container has, and the step found that
+          # out at exit 127 with the frames already pushed and no PR to review them in.
+          #
+          # `base` is the ref this ran from, not develop: frames recorded from a feature
+          # branch describe that branch's screens, and merging them into develop ahead
+          # of the code would leave the gate red on both sides.
+          node --input-type=module -e '
+            const body = `Recorded by \`update-snapshots\` run ${process.env.GITHUB_RUN_ID}.
 
-          **Reason given:** ${REASON}
+          **Reason given:** ${process.env.REASON}
 
-          Review every changed image: an accepted baseline is an accepted design." \
-            --base "$GITHUB_REF_NAME" --head "$branch"
+          Review every changed image: an accepted baseline is an accepted design.`
+            const res = await fetch(
+              `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/pulls`,
+              {
+                method: "POST",
+                headers: {
+                  authorization: `Bearer ${process.env.GH_TOKEN}`,
+                  accept: "application/vnd.github+json",
+                  "content-type": "application/json",
+                },
+                body: JSON.stringify({
+                  title: "test(e2e): re-record Linux baselines",
+                  body,
+                  head: process.env.BRANCH,
+                  base: process.env.GITHUB_REF_NAME,
+                }),
+              },
+            )
+            if (!res.ok) {
+              console.error(`${res.status}: ${await res.text()}`)
+              process.exit(1)
+            }
+            console.log(`Opened ${(await res.json()).html_url}`)
+          '
