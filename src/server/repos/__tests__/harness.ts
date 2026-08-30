@@ -226,3 +226,15 @@ export async function captureError(run: () => Promise<unknown>): Promise<Error> 
   }
   throw new Error('Expected the call to reject, but it resolved.')
 }
+
+/**
+ * The constraint a rejected write tripped, for pairing with {@link captureError}.
+ *
+ * Drizzle's own message repeats the SQL and the parameters; SQLite's name for the constraint is on
+ * the `cause`. Asserting on that name rather than on "it threw" is what tells one `CHECK` from
+ * another, and either from the `NOT NULL` that happened to fire first.
+ */
+export function constraintName(error: Error): string {
+  const cause: unknown = error.cause
+  return cause instanceof Error ? cause.message : error.message
+}

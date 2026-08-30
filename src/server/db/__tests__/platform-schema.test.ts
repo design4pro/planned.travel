@@ -41,7 +41,7 @@ import {
   staffApiTokens,
 } from '#/server/db/schema'
 import { PLATFORM_ROLES_BY_PRECEDENCE } from '#/server/auth/access'
-import { captureError, createHarness } from '#/server/repos/__tests__/harness'
+import { captureError, constraintName, createHarness } from '#/server/repos/__tests__/harness'
 import type { Harness } from '#/server/repos/__tests__/harness'
 import type { PlatformRole } from '#/server/auth/access'
 import type {
@@ -53,18 +53,6 @@ import type {
   PlatformAuditEntityType,
   PlatformAuditLogEntry,
 } from '#/server/db/types'
-
-/**
- * The constraint a rejected write tripped.
- *
- * Drizzle's own message repeats the SQL and the parameters; SQLite's name for the constraint is on
- * the `cause`. Asserting on the name rather than on "it threw" is what distinguishes the two
- * cross-column rules from each other and from a `NOT NULL` that happened to fire first.
- */
-function constraintName(error: Error): string {
-  const cause: unknown = error.cause
-  return cause instanceof Error ? cause.message : error.message
-}
 
 function sqlNames(table: typeof user | typeof session): Array<string> {
   return getTableConfig(table).columns.map((column) => column.name)

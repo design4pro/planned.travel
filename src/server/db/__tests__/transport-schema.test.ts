@@ -35,38 +35,29 @@ import {
   transports,
   trips,
 } from '#/server/db/schema'
-import { captureError, createHarness } from '#/server/repos/__tests__/harness'
+import {
+  captureError,
+  constraintName,
+  createHarness,
+} from '#/server/repos/__tests__/harness'
 import {
   openReplayDatabase,
   shippedMigrations,
   statementsOf,
 } from './migration-files'
+import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import type { DatabaseSync } from 'node:sqlite'
 import type { Harness } from '#/server/repos/__tests__/harness'
 
-/**
- * The constraint a rejected write tripped.
- *
- * Drizzle's own message repeats the SQL and the parameters; SQLite's name for the constraint is on
- * the `cause`. Asserting on that name rather than on "it threw" is what tells a `CHECK` apart from
- * the `NOT NULL` that happened to fire first, as `platform-schema.test.ts` does on the same seam.
- */
-function constraintName(error: Error): string {
-  const cause: unknown = error.cause
-  return cause instanceof Error ? cause.message : error.message
-}
-
-type AnyTable = typeof transports | typeof transportLegs | typeof airports
-
-function columnNames(table: AnyTable): Array<string> {
+function columnNames(table: SQLiteTable): Array<string> {
   return getTableConfig(table).columns.map((column) => column.name)
 }
 
-function indexNames(table: AnyTable): Array<string> {
+function indexNames(table: SQLiteTable): Array<string> {
   return getTableConfig(table).indexes.map((entry) => entry.config.name)
 }
 
-function indexColumns(table: AnyTable, name: string): Array<string> {
+function indexColumns(table: SQLiteTable, name: string): Array<string> {
   const entry = getTableConfig(table).indexes.find(
     (candidate) => candidate.config.name === name,
   )
@@ -76,7 +67,7 @@ function indexColumns(table: AnyTable, name: string): Array<string> {
 }
 
 /** Every foreign key of `table` as `column -> target.column (onDelete)`, sorted for stability. */
-function foreignKeys(table: AnyTable): Array<string> {
+function foreignKeys(table: SQLiteTable): Array<string> {
   return getTableConfig(table)
     .foreignKeys.map((key) => {
       const reference = key.reference()
@@ -384,7 +375,7 @@ describe('the transport chain and airport catalogue schema', () => {
       }
     })
 
-    it('add both tables in one migration and rebuild nothing that exists', () => {
+    it('adds both tables in one migration and rebuilds nothing that exists', () => {
       // The whole compatibility answer for this stage: two `CREATE TABLE`s and one `CREATE INDEX`,
       // in a single journal entry. A `__new_*` copy-and-swap is what drizzle-kit answers a changed
       // constraint with, and on D1 it runs without the `PRAGMA foreign_keys=OFF` it emits.

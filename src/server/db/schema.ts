@@ -2591,20 +2591,20 @@ export const appSettings = sqliteTable(
 /* -------------------------------------------------------------------------------------------------
  * Platform tables — global, never tenant-scoped
  *
- * Five of the tables docs/SPEC.md §5 carves out of "every domain row is scoped by
- * organization_id". None is ever reachable through `createTenantRepository()` or
- * `src/server/repos/base.ts`, and every mutation that touches one takes an explicit platform actor
- * instead of a tenant context.
+ * The five global tables declared in this file. None is ever reachable through
+ * `createTenantRepository()` or `src/server/repos/base.ts`, and every mutation that touches one
+ * takes an explicit platform actor instead of a tenant context.
  *
  * Four of the five carry no `organization_id` at all. `provider_usage` is the exception §5's
  * amendment argues: its column is attribution — which workspace a metered call was made *for* —
  * rather than a tenant discriminator, it is nullable because a cron belongs to no workspace, and it
  * carries no foreign key so that deleting a workspace cannot delete the platform's own accounting.
  *
- * `airports` is the newest of them and the one §5 has still to name: its list is closed at eleven
- * and this is a twelfth, which that section says is an amendment rather than a schema decision
- * taken on the way past. Issue #168 owns this file and not `docs/SPEC.md`, so the amendment is
- * reported there rather than written here.
+ * Four of the five are also names docs/SPEC.md §5 carves out of "every domain row is scoped by
+ * organization_id". `airports` is the fifth and the one §5 has still to name: that list is eleven
+ * names and closed, and this is a twelfth, which the section says is an amendment rather than a
+ * schema decision taken on the way past. Issue #168 owns this file and not `docs/SPEC.md`, so the
+ * amendment is reported there rather than written here.
  * ---------------------------------------------------------------------------------------------- */
 
 /**
