@@ -136,6 +136,8 @@ export type NewDayAccommodation = typeof schema.dayAccommodations.$inferInsert
 
 export type Transport = typeof schema.transports.$inferSelect
 export type NewTransport = typeof schema.transports.$inferInsert
+export type TransportLeg = typeof schema.transportLegs.$inferSelect
+export type NewTransportLeg = typeof schema.transportLegs.$inferInsert
 export type Reservation = typeof schema.reservations.$inferSelect
 export type NewReservation = typeof schema.reservations.$inferInsert
 
@@ -265,6 +267,9 @@ export type ProviderRegistryRow = typeof schema.providerRegistry.$inferSelect
 export type NewProviderRegistryRow = typeof schema.providerRegistry.$inferInsert
 export type ProviderUsageRow = typeof schema.providerUsage.$inferSelect
 export type NewProviderUsageRow = typeof schema.providerUsage.$inferInsert
+
+export type Airport = typeof schema.airports.$inferSelect
+export type NewAirport = typeof schema.airports.$inferInsert
 
 /**
  * The provider-metering vocabularies. {@link MeteredProvider} is the narrow one — a slug a call
