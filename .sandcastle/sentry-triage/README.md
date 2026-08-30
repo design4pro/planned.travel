@@ -34,6 +34,35 @@ run is reproducible. The agent's own `judgement` field is ANDed with the gate, n
 veto a candidate the numbers cannot see through ("a load test is hammering staging") and it cannot
 promote one the gate rejected.
 
+## `--force`, and the four things it does not do
+
+`--force <SHORT-ID>` files a ticket the policy rejected. It exists because the thresholds are tuned
+for production traffic and staging has one user: a defect that fires once there is invisible to
+`minimumSpanMs` and to the event counts, and no amount of waiting will change that.
+
+It overrides `selectionVerdict` and nothing else. The agent's veto, the frame-exists check, the
+dedup index and both caps still apply. The split is not squeamishness - the thresholds are the only
+_judgement_ in that list, and naming a ticket is how a human makes that judgement instead. The rest
+answer questions of fact that naming a ticket does not settle: whether this is a duplicate, whether
+the file the agent pointed at exists at HEAD. A human who wants past those is asking for a ticket
+that is wrong, not for one that is small.
+
+Two consequences worth knowing:
+
+- **It reaches only into the population the two fixed searches returned.** A short id outside
+  `--window`, resolved in Sentry, or below error level is not forceable; the run says so and exits
+  non-zero rather than filing nothing quietly.
+- **A forced candidate sorts first.** It is small by definition, so `filingOrder` would otherwise
+  put it last and `--max` would spend itself before reaching it.
+
+The ticket records the override: a `Policy: FORCED - <reason>` line and a footer naming the flag.
+`triage.yml` reproduces the claim at HEAD and decides whether to promote it (ADR 0006), and it has
+to know the thresholds were bypassed - a single burst presented as a recurring defect puts that
+decision on a false premise.
+
+Without `--file-issues`, `--force` prints the gate's verdict and the ticket it would file, and
+writes nothing.
+
 ## Why the workflow runs this script rather than `claude-code-action`
 
 `.github/workflows/triage.yml` can use the action because its prompt _is_ the whole routine. Here it
