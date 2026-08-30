@@ -332,13 +332,16 @@ set of tables, excepted from both rules and stated immediately below. The second
 over rows that do carry an `organization_id`, excepted from the repository rule alone and admitted
 by amendment at the end of this section.
 
-Nine tables are platform content rather than tenant data and carry no `organization_id`:
+Eleven tables are platform content rather than tenant data:
 
 `catalog_sources` · `catalog_runs` · `catalog_ingest` · `catalog_places` ·
 `catalog_place_sources` · `place_packs` · `place_pack_places` · `staff_api_tokens` ·
-`platform_audit_log`
+`platform_audit_log` · `provider_registry` · `provider_usage`
 
-That list is closed. A tenth global table is a change to this contract, not a schema decision a
+Ten of them carry no `organization_id` at all. `provider_usage` is the exception and the paragraph
+below argues it, because the column there is attribution rather than a tenant discriminator.
+
+That list is closed. A twelfth global table is a change to this contract, not a schema decision a
 builder makes on the way past.
 
 `platform_audit_log` joined the list in Faza B, by amendment rather than on the way past. The
@@ -351,6 +354,48 @@ cross-column `CHECK` constraints, its five indexes and its retention prune live 
 converses are what stop a `human` row carrying an MCP credential and a `human` or `agent` row
 carrying no actor at all. Constraining the shipped table more tightly than the prose was read to
 mean is an extension of that contract and never a relaxation of it.
+
+`provider_registry` and `provider_usage` joined the list the same way, and the argument has three
+parts because the pair stretches this section in two directions at once.
+
+**Why they are platform content.** A provider ceiling is a fact about this deployment's contract
+with a third-party vendor, and a usage bucket records a call the _platform_ made. Neither belongs
+to a workspace, so neither can pass through `createTenantRepository()`, and handing that layer a
+fabricated tenant context to reach them would destroy the single guarantee it exists to give.
+
+**Why `provider_usage.organization_id` exists at all, and is nullable.** It is an attribution
+column, not a tenant discriminator, and nothing about it behaves like one: no read is scoped by it,
+no authorisation consults it, and `NULL` is the ordinary case rather than an edge — a cron backup
+and a platform email belong to no workspace, and inventing one to fill the column would be exactly
+the fabricated context forbidden above. It is therefore a bare `text` column in the `userRef()`
+style, with no foreign key and no cascade: a cascade would delete the platform's own accounting
+when a workspace is deleted, though the calls were made and the money was spent, and `SET NULL`
+would be worse still, collapsing a deleted workspace's rows onto the platform bucket and failing
+the delete on a unique index the caller never mentioned. The row is platform-owned whatever
+happens to the workspace named on it, which is the whole of why it is in this list rather than in
+the tenant model.
+
+**Why the metering writer satisfies neither clause below, and what stands in.** The _configuration_
+half is held to both in full: `updateProviderLimit` in `src/server/catalog/provider-usage.ts` takes
+an explicit platform actor, passes `requirePermission({ provider: ['configure'] })` before it
+touches a row, and its caller writes a `platform_audit_log` entry in the same call. The meter tick
+does not, and both clauses are _inapplicable_ rather than waived — the distinction ADR 0005 drew
+for the reminder scan. There is no session behind a queue handler or a cron, so `requirePermission`
+has no subject; and a tick records a call the platform has already made, so there is no change to
+platform content for an audit row to describe. One audit row per outbound call would also put a
+request-rate stream into a 400-day ledger, making that log a second and worse copy of this table.
+
+What guards it instead is the shape of what it writes, stated as four properties the way the
+reminder scan's four are, and changing any of them is a change to this contract rather than a
+refactor: **single-writer** — `src/server/catalog/provider-usage.ts` is the only module that writes
+either table; **system-actor-only** — `recordProviderCall` refuses any actor that is not
+`actor_kind: 'system'`, as `prunePlatformAuditLog` does on its own delete path;
+**monotonic** — the only write is a clamped SQL increment, and no path lowers a counter or changes
+a bucket's identity once written; and **unattributable by construction** — a row is a provider
+slug, an operation name, a bucket, an organization id and three integers, so no tenant-readable
+field crosses the boundary and a cross-tenant count cannot become a cross-tenant read.
+
+Eleven names, and a twelfth is an amendment.
 
 These tables must **never** be reached through `src/server/repos/base.ts` or
 `createTenantRepository()`. That layer exists so that forgetting the tenant filter is not
@@ -377,7 +422,7 @@ it is scoped by `organization_id`, lives in `src/server/repos/packs.ts`, and sta
 existing `createTenantRepository()`. The pack is global; the right to use it is not.
 
 The second member is one session-less cron discovery read, joining this carve-out by amendment the
-way `platform_audit_log` joined the nine-name list in Faza B. ADR 0005 replaced the
+way `platform_audit_log` joined what was then the nine-name list in Faza B. ADR 0005 replaced the
 schedule-at-write reminder index with a scan, recorded that this section had still to be reconciled
 with it, and left that reconciliation as an amendment rather than taking it on the way past; this
 is that amendment. A scan asks a question no tenant scope can ask: which of _every_ workspace's
@@ -385,9 +430,9 @@ trips has a reminder falling due at this tick. `listDueTripReminders` in
 `src/server/catalog/reminders.ts` is that query, and it is the whole of the member — one function,
 in one module, reached only from the quarter-hourly cron.
 
-It satisfies neither clause the nine tables are held to, and this paragraph says so rather than
+It satisfies neither clause the tables above are held to, and this paragraph says so rather than
 reading those clauses loosely. `trips` carries an `organization_id` and is tenant data: the scan
-adds no name to the list above, which is still nine names and still closed. There is no session
+adds no name to the list above, which is eleven names and still closed. There is no session
 behind a cron, so there is no platform actor to authorise with and `requirePermission` has no
 subject; the read mutates nothing, so there is no `platform_audit_log` row to write. Both clauses
 are _inapplicable_ to this read, which is a different statement from waived — every `server/catalog`
@@ -404,7 +449,7 @@ departing soon rather than to trips ever created. Session-less, projection-only,
 keyset-paged: those four properties are what stands in for the two clauses above, and changing any
 of them is a change to this contract rather than a refactor.
 
-Two members, and that list is closed as firmly as the nine names are. A third exception — another
+Two members, and that list is closed as firmly as the eleven names are. A third exception — another
 cross-tenant read, another module handed a plain `Database` — is an amendment to this section, not
 something a builder takes on the way past.
 
@@ -531,10 +576,11 @@ Rules:
 - Components in `components/ui` never fetch data and never import from `server/`.
 - All SQL lives in `server/repos`. Routes call server functions; server functions call repos.
 - The single stated exception is `server/catalog`, and §5 states it as a closed list of two. The
-  first member is the nine global tables: they carry no `organization_id` and therefore cannot pass
-  through the tenant repository at all, so every path that mutates or serves that platform content
-  is guarded instead by an explicit platform actor, `requirePermission`, and a `platform_audit_log`
-  write in the same call — unchanged and mandatory. The second is one cron discovery read over
+  first member is the eleven global tables: ten carry no `organization_id` at all and the eleventh,
+  `provider_usage`, carries one only as attribution, so none of them can pass through the tenant
+  repository, and every path that mutates or serves that platform content is guarded instead by an
+  explicit platform actor, `requirePermission`, and a `platform_audit_log` write in the same call —
+  unchanged and mandatory, save for the metering tick §5 argues as guarded by its shape instead. The second is one cron discovery read over
   tenant rows, `listDueTripReminders` in `src/server/catalog/reminders.ts`, which has no session
   behind it to authorise and no mutation to audit and is guarded by its shape instead:
   session-less, projection-only (scheduling coordinates, no tenant-readable field), windowed on

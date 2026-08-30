@@ -36,9 +36,9 @@ import type { ErrorComponentProps } from '@tanstack/react-router'
  *
  * Two halves with two different reasons to exist. The accounts half is live and is `admin`-only —
  * `user:list` sits in the `admin` column alone (`docs/ACCESS.md` §2.1), so a `curator` never asks
- * for it and the loader does not call for it. The catalogue half is not built yet: the nine global
- * tables of `docs/SPEC.md` §5 land with the ingestion pipeline, and until they do these panels have
- * nothing to count.
+ * for it and the loader does not call for it. The catalogue half is not built yet: the eight
+ * catalogue tables of `docs/SPEC.md` §5 land with the ingestion pipeline, and until they do these
+ * panels have nothing to count.
  *
  * **They are still designed, and they are not zeros.** A tile reading `0 places` is a claim that the
  * catalogue is empty, which is a different statement from "the catalogue does not exist yet", and it

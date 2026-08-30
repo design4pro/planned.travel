@@ -45,6 +45,22 @@ export default defineConfig({
           name: 'ui',
           environment: 'jsdom',
           globals: false,
+          /**
+           * Node's own Web Storage, off, so jsdom's survives.
+           *
+           * From Node 26 `localStorage` and `sessionStorage` are globals by default, and without
+           * `--localstorage-file` both read as `undefined`. Vitest's `populateGlobal` skips any key
+           * already present on the global unless it is in its own hard-coded window-key list, which
+           * these two are not - so jsdom's real `Storage` objects were never copied and every
+           * `window.localStorage.clear()` in `src/lib` and `src/components` threw. CI runs Node 24,
+           * where the API is flag-gated and off, so this was red on a developer machine only.
+           *
+           * The flag rather than a hand-rolled polyfill because the storage has to be jsdom's: the
+           * preference tests construct `new StorageEvent('storage', { storageArea: … })`, whose
+           * WebIDL conversion refuses anything that is not a jsdom `Storage`. Accepted and inert on
+           * Node 22 and 24.
+           */
+          execArgv: ['--no-experimental-webstorage'],
           setupFiles: ['./vitest.setup.dom.ts'],
           include: [
             'src/components/**/*.test.{ts,tsx}',

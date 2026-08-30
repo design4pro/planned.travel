@@ -15,6 +15,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import type * as CatalogAudit from '../catalog/audit'
+import type * as CatalogProviderUsage from '../catalog/provider-usage'
 import type * as Observability from '../observability/logger'
 import type { LogContext, LogFields, LogRecord } from '#/server/observability'
 
@@ -28,6 +29,7 @@ const harness = vi.hoisted(() => {
       },
     },
     prune: vi.fn(),
+    rollUp: vi.fn(),
     sweep: vi.fn(),
   }
 })
@@ -53,6 +55,11 @@ vi.mock('../queue/reminders', () => ({ sweepReminders: harness.sweep }))
 vi.mock('../catalog/audit', async (importOriginal) => {
   const actual = await importOriginal<typeof CatalogAudit>()
   return { ...actual, prunePlatformAuditLog: harness.prune }
+})
+
+vi.mock('../catalog/provider-usage', async (importOriginal) => {
+  const actual = await importOriginal<typeof CatalogProviderUsage>()
+  return { ...actual, rollUpProviderUsage: harness.rollUp }
 })
 
 vi.mock('../observability/logger', async (importOriginal) => {
@@ -114,6 +121,9 @@ describe('the weekly retention slot', () => {
     harness.prune
       .mockReset()
       .mockResolvedValue({ deleted: 12, batches: 1, drained: true })
+    harness.rollUp
+      .mockReset()
+      .mockResolvedValue({ folded: 0, batches: 1, drained: true })
 
     await worker.scheduled(controller(RETENTION_CRON), env, executionContext())
 
@@ -136,6 +146,9 @@ describe('the weekly retention slot', () => {
     harness.prune
       .mockReset()
       .mockResolvedValue({ deleted: 0, batches: 1, drained: true })
+    harness.rollUp
+      .mockReset()
+      .mockResolvedValue({ folded: 0, batches: 1, drained: true })
 
     await worker.scheduled(controller(RETENTION_CRON), env, executionContext())
 
@@ -153,6 +166,9 @@ describe('the weekly retention slot', () => {
     // present only while everything else works is not a signal.
     harness.records.length = 0
     harness.prune.mockReset().mockRejectedValue(new Error('D1 unavailable'))
+    harness.rollUp
+      .mockReset()
+      .mockResolvedValue({ folded: 0, batches: 1, drained: true })
 
     await expect(
       worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
@@ -162,9 +178,61 @@ describe('the weekly retention slot', () => {
     expect(pendingWarnings()).toHaveLength(1)
   })
 
+  it('runs the provider rollup as the platform itself, at the same tick', async () => {
+    harness.records.length = 0
+    harness.prune
+      .mockReset()
+      .mockResolvedValue({ deleted: 0, batches: 1, drained: true })
+    harness.rollUp
+      .mockReset()
+      .mockResolvedValue({ folded: 3, batches: 1, drained: true })
+
+    await worker.scheduled(controller(RETENTION_CRON), env, executionContext())
+
+    expect(harness.rollUp).toHaveBeenCalledTimes(1)
+    const [db, actor, logger, options] = harness.rollUp.mock.calls[0]
+    expect(db).toEqual({ name: 'platform-db' })
+    expect(actor).toBe(PLATFORM_SYSTEM_ACTOR)
+    expect(logger).toBeDefined()
+    expect(options).toEqual({ now: new Date(SCHEDULED_AT) })
+  })
+
+  it('still runs the rollup when the audit prune rejects, which is the week it matters', async () => {
+    // The reason the two jobs are `allSettled` rather than awaited in sequence. The prune is the
+    // one documented as able to reject, so a chain would drop the rollup in exactly the week the
+    // slot is unhealthy — and an hourly table that stops being folded only for the bad weeks grows
+    // fastest precisely when nobody is looking at it.
+    harness.records.length = 0
+    harness.prune.mockReset().mockRejectedValue(new Error('D1 unavailable'))
+    harness.rollUp
+      .mockReset()
+      .mockResolvedValue({ folded: 1, batches: 1, drained: true })
+
+    await expect(
+      worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
+    ).rejects.toThrow('D1 unavailable')
+
+    expect(harness.rollUp).toHaveBeenCalledTimes(1)
+  })
+
+  it('rethrows a rollup failure even when the prune succeeded', async () => {
+    harness.records.length = 0
+    harness.prune
+      .mockReset()
+      .mockResolvedValue({ deleted: 0, batches: 1, drained: true })
+    harness.rollUp.mockReset().mockRejectedValue(new Error('rollup exploded'))
+
+    await expect(
+      worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
+    ).rejects.toThrow('rollup exploded')
+
+    expect(harness.prune).toHaveBeenCalledTimes(1)
+  })
+
   it('leaves the other expressions alone', async () => {
     harness.records.length = 0
     harness.prune.mockReset()
+    harness.rollUp.mockReset()
     harness.sweep.mockReset().mockResolvedValue(undefined)
 
     await worker.scheduled(controller('*/15 * * * *'), env, executionContext())
@@ -172,6 +240,7 @@ describe('the weekly retention slot', () => {
 
     expect(harness.sweep).toHaveBeenCalledTimes(1)
     expect(harness.prune).not.toHaveBeenCalled()
+    expect(harness.rollUp).not.toHaveBeenCalled()
     expect(pendingWarnings()).toEqual([])
     expect(harness.records.map((record) => record.msg)).toContain(
       'unrecognised cron expression',

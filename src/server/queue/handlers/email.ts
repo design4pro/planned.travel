@@ -17,34 +17,47 @@ export async function handleEmail(
 ): Promise<TaskMetrics> {
   const apiKey = context.env.EMAIL_API_KEY
   if (apiKey === undefined || apiKey.length === 0) {
-    throw new TaskConfigurationError('EMAIL_API_KEY is not set; run `wrangler secret put EMAIL_API_KEY`')
+    throw new TaskConfigurationError(
+      'EMAIL_API_KEY is not set; run `wrangler secret put EMAIL_API_KEY`',
+    )
   }
   const from = context.env.EMAIL_FROM
   if (from === undefined || from.length === 0) {
-    throw new TaskConfigurationError('EMAIL_FROM var is not set in wrangler.jsonc')
+    throw new TaskConfigurationError(
+      'EMAIL_FROM var is not set in wrangler.jsonc',
+    )
   }
 
-  const response = await fetch(context.env.EMAIL_API_URL ?? DEFAULT_API_URL, {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      'content-type': 'application/json',
-      // Provider-side idempotency: a queue redelivery cannot double-send.
-      'idempotency-key': `${payload.tag ?? 'email'}:${payload.subject}:${payload.to.join(',')}`.slice(
-        0,
-        256,
-      ),
-    },
-    body: JSON.stringify({
-      from,
-      to: payload.to,
-      subject: payload.subject,
-      html: payload.html,
-      ...(payload.text === undefined ? {} : { text: payload.text }),
-      ...(payload.replyTo === undefined ? {} : { reply_to: payload.replyTo }),
-      ...(payload.tag === undefined ? {} : { tags: [{ name: 'category', value: payload.tag }] }),
-    }),
-  })
+  const response = await context.callProvider(
+    { provider: 'resend', operation: 'email.send' },
+    () =>
+      fetch(context.env.EMAIL_API_URL ?? DEFAULT_API_URL, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${apiKey}`,
+          'content-type': 'application/json',
+          // Provider-side idempotency: a queue redelivery cannot double-send.
+          'idempotency-key':
+            `${payload.tag ?? 'email'}:${payload.subject}:${payload.to.join(',')}`.slice(
+              0,
+              256,
+            ),
+        },
+        body: JSON.stringify({
+          from,
+          to: payload.to,
+          subject: payload.subject,
+          html: payload.html,
+          ...(payload.text === undefined ? {} : { text: payload.text }),
+          ...(payload.replyTo === undefined
+            ? {}
+            : { reply_to: payload.replyTo }),
+          ...(payload.tag === undefined
+            ? {}
+            : { tags: [{ name: 'category', value: payload.tag }] }),
+        }),
+      }),
+  )
 
   await assertUpstreamOk(response, 'Email provider send')
 

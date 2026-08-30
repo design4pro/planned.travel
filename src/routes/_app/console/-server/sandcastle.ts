@@ -9,16 +9,21 @@
  *
  * Nothing is shaped here. The screen renders the registry's own view types, and the two derivations
  * it needs are pure and live in `../-lib/sandcastle.ts`, where they are tested.
+ *
+ * **This is the only `createServerFn` on the path, and the function it forwards to is a plain
+ * `async function` for that reason.** A `createServerFn` nested inside another one's handler is
+ * compiled to an RPC stub that the build never registers, and throws `Server function info not
+ * found` in the deployed Worker — see the header of `#/server/fns/sandcastle`.
  */
 
 import { createServerFn } from '@tanstack/react-start'
 
-import { readSandcastleRegistryFn } from '#/server/fns/sandcastle'
+import { readSandcastleRegistry } from '#/server/fns/sandcastle'
 
 import type { SandcastleRegistryView } from '#/server/fns/sandcastle'
 
 export type { SandcastleRegistryView }
 
 export const loadSandcastleRegistry = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<SandcastleRegistryView> => readSandcastleRegistryFn(),
+  async (): Promise<SandcastleRegistryView> => readSandcastleRegistry(),
 )

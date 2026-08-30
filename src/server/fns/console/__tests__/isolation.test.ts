@@ -162,7 +162,7 @@ describe('Set-Cookie is read the only way that survives six values', () => {
   })
 })
 
-describe('every server function validates its input', () => {
+describe('every console verb validates its input', () => {
   it('pairs every createServerFn with a validator', () => {
     // The acceptance says "every function under this directory validates its input with Zod". A
     // handler with no `.validator()` type-checks, runs, and trusts the wire.
@@ -178,13 +178,110 @@ describe('every server function validates its input', () => {
     }
   })
 
-  it('declares the fifteen the console needs and no sixteenth', () => {
-    const total = productionCode.reduce(
-      (sum, { code }) => sum + (code.split('createServerFn(').length - 1),
-      0,
+  /**
+   * And every one of those validators is a *named* schema, which is what keeps the census below
+   * honest rather than merely tidy.
+   *
+   * `createServerFn(…).validator(z.object({ … }))` is perfectly legal and declares a verb that
+   * contributes nothing to `declaredSchemas` — so a sixteenth verb written that way would slip past
+   * "no sixteenth" without a word. Refusing the inline form here is the cheaper half of the pair:
+   * it leaves exactly one way to declare a verb, and the count is then a count of verbs.
+   */
+  it('takes only a named input schema as a validator', () => {
+    const inline = productionCode.flatMap(({ file, code }) =>
+      [...code.matchAll(/\.validator\(([^)]*)/g)]
+        .map((match) => match[1].trim())
+        .filter((argument) => !/^\w+InputSchema$/.test(argument))
+        .map((argument) => ({ file, argument })),
     )
+    expect(inline).toEqual([])
+  })
+
+  /**
+   * The verbs come in two kinds now, and the count below cannot be `createServerFn(` any more.
+   *
+   * Four are server functions: the two session revokes and the two impersonation verbs, each one
+   * imported by name from a component under `src/routes/_app/console/-ui/` and called from a
+   * button. The other eleven — the ten account verbs and the session read — are plain `async`
+   * functions reached only through `src/routes/_app/console/-server/`: a `createServerFn` called
+   * from inside another one's handler is compiled to an RPC stub the build never registers, and
+   * throws `Server function info not found` in the deployed Worker (see `../users`).
+   *
+   * What both kinds still share is the thing the acceptance is actually about — one exported input
+   * schema per verb, consumed at that verb's own boundary. So that is what is counted, and a verb
+   * that declares a schema and then forgets to apply it fails here whichever kind it is. The test
+   * above is what stops a verb from being declared without a schema to count.
+   */
+  const declaredSchemas = productionCode.flatMap(({ file, code }) =>
+    [...code.matchAll(/export const (\w+InputSchema)\b/g)].map((match) => ({
+      file,
+      code,
+      schema: match[1],
+    })),
+  )
+
+  it('consumes every declared input schema exactly once', () => {
+    expect(declaredSchemas.length).toBeGreaterThan(0)
+
+    // Tallied by captured name rather than by substring: `unbanPlatformUserInputSchema` ends with
+    // `banPlatformUserInputSchema`, so counting occurrences of the shorter name finds the longer
+    // one too and reports two consumers of a schema that has one.
+    for (const { file, code, schema } of declaredSchemas) {
+      const consumers = [
+        ...code.matchAll(/\.validator\((\w+InputSchema)\)/g),
+        ...code.matchAll(/\b(\w+InputSchema)\.parse\(input\)/g),
+      ].filter((match) => match[1] === schema)
+
+      expect({ file, schema, consumed: consumers.length }).toEqual({
+        file,
+        schema,
+        consumed: 1,
+      })
+    }
+  })
+
+  it('declares the fifteen the console needs and no sixteenth', () => {
     // Ten account verbs, three session verbs, two impersonation verbs. A sixteenth is a new
     // capability and belongs in docs/ACCESS.md §4.2 before it belongs here.
-    expect(total).toBe(15)
+    expect(declaredSchemas.length).toBe(15)
+  })
+
+  /**
+   * The same boundary read from the other side, and the half that a build failure taught us.
+   *
+   * A module holding a `createServerFn` is in the *client* graph — that is what the declaration is
+   * for — and a plain `async` export beside it is not stripped the way a handler body is. Its
+   * imports travel: putting the session read next to the two revokes in `./sessions` reached
+   * `./context`, and the import-protection plugin denied `@tanstack/react-start/server` for the
+   * whole client build, console or not. So the two kinds fail in opposite directions —
+   * `scripts/check-server-fn-manifest.mjs` catches one at the end of `pnpm build`, rolldown catches
+   * the other — and neither is visible here, which is why this cheap version exists: a module that
+   * declares a server function exports server functions, schemas and types, and nothing else.
+   */
+  it('keeps a client-reachable module free of plain exports', () => {
+    const strays = productionCode
+      .filter(({ code }) => code.includes('createServerFn('))
+      .flatMap(({ file, code }) =>
+        [...code.matchAll(/^export (?!type |interface )(.*)$/gm)]
+          .map((match) => match[1])
+          .filter(
+            (declaration) =>
+              !/^const \w+Fn = createServerFn\(/.test(declaration) &&
+              !/^const \w+InputSchema\b/.test(declaration),
+          )
+          .map((declaration) => ({ file, declaration })),
+      )
+    expect(strays).toEqual([])
+  })
+
+  it('leaves no server function outside that count', () => {
+    // The other direction of the same census: every `createServerFn` in this directory reaches it
+    // through a named schema, so the fifteen above cannot be fifteen schemas beside a verb that
+    // declared none. Four of the fifteen are server functions; the rest are plain functions.
+    const serverFns = productionCode.reduce(
+      (total, { code }) => total + code.split('createServerFn(').length - 1,
+      0,
+    )
+    expect(serverFns).toBe(4)
   })
 })

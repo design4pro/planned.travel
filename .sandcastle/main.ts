@@ -449,7 +449,8 @@ function resolveOnlyIssues(eligible: Set<string>): string[] {
       throw new Error(
         `#${id} is a PRD and none of its ${subs.length} open sub-issues carries \`ready-for-agent\`: ` +
           `${subs.map((sub) => `#${sub}`).join(', ')}. Label the slices you want worked — ` +
-          `the loop must never pick its own work out of a PRD tree.`,
+          `the loop must never pick its own work out of a PRD tree. To clear them all: ` +
+          `gh issue edit ${subs.join(' ')} --add-label ready-for-agent`,
       )
     }
     resolved.push(...cleared)

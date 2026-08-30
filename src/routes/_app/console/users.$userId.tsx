@@ -76,7 +76,7 @@ import type { ConsoleSession } from '#/server/fns/console/projections'
  * to be listed, and there is no address for "this person" to send anybody to.
  *
  * **Four panels, from one loader call.** `loadConsoleAccount` runs `getPlatformUserFn`,
- * `listPlatformSessionsFn` and `readAccountContext` together, then one billing statement over the
+ * `listPlatformSessions` and `readAccountContext` together, then one billing statement over the
  * organization ids they returned: each passes `requirePermission` and each projects its rows before
  * they leave the server — a `session` row's `token` is the live credential and never crosses the
  * wire. None of them is audited: `docs/ACCESS.md` §4.2 closes the vocabulary at thirty-one mutations

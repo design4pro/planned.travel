@@ -9,11 +9,16 @@
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
 import type * as schema from './schema'
 import type {
+  METERED_PROVIDERS,
   ORGANIZATION_PLANS,
+  PLANNED_PROVIDERS,
   PLATFORM_ACTOR_KINDS,
   PLATFORM_ACTOR_ROLES,
   PLATFORM_AUDIT_ACTIONS,
   PLATFORM_AUDIT_ENTITY_TYPES,
+  PROVIDER_LIMIT_POLICIES,
+  PROVIDER_LIMIT_WINDOWS,
+  PROVIDER_USAGE_GRAINS,
   USAGE_METRICS,
 } from './schema'
 
@@ -255,6 +260,23 @@ export type NewPlatformAuditLogEntry =
   typeof schema.platformAuditLog.$inferInsert
 
 export type { PlatformAuditChanges } from './schema'
+
+export type ProviderRegistryRow = typeof schema.providerRegistry.$inferSelect
+export type NewProviderRegistryRow = typeof schema.providerRegistry.$inferInsert
+export type ProviderUsageRow = typeof schema.providerUsage.$inferSelect
+export type NewProviderUsageRow = typeof schema.providerUsage.$inferInsert
+
+/**
+ * The provider-metering vocabularies. {@link MeteredProvider} is the narrow one — a slug a call
+ * site in this repository can name — and is what `provider_usage.provider` is `$type`d to;
+ * {@link PlannedProvider} names a provider the console lists with no client behind it, so that a
+ * screen can tell an unintegrated provider apart from one that simply made no calls.
+ */
+export type MeteredProvider = (typeof METERED_PROVIDERS)[number]
+export type PlannedProvider = (typeof PLANNED_PROVIDERS)[number]
+export type ProviderUsageGrain = (typeof PROVIDER_USAGE_GRAINS)[number]
+export type ProviderLimitPolicy = (typeof PROVIDER_LIMIT_POLICIES)[number]
+export type ProviderLimitWindow = (typeof PROVIDER_LIMIT_WINDOWS)[number]
 
 /**
  * The four closed vocabularies `platform_audit_log` stores, and the four the columns are narrowed

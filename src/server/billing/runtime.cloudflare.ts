@@ -31,6 +31,8 @@ import {
   tripsRepository,
 } from '#/server/repos'
 import type { TenantScope } from '#/server/repos'
+import { requestOutboundRuntime } from '#/server/metering/bindings'
+import { callProvider } from '#/server/metering/outbound'
 import { createPolarClient } from './polar'
 import { createSubscriptionStore } from './store'
 import { BillingConfigError } from './types'
@@ -248,6 +250,32 @@ export function billingRuntime(
       polar ??= createPolarClient({
         accessToken: polarAccessToken(),
         server: polarServer(),
+        /**
+         * Metering, injected through the seam this client already had.
+         *
+         * `polar.ts` is not edited for it: `createPolarClient` has always accepted a `fetch`, so
+         * the meter goes in as one argument and not one line of the retry or timeout policy moves.
+         *
+         * Wrapping `doFetch` rather than the client's `request` means each *attempt* is counted,
+         * so a call that Polar retries twice is three rows' worth of one. That is the right unit:
+         * a vendor meters the requests it received, not the intentions behind them, and a count
+         * that disagreed with the invoice would be worse than no count.
+         *
+         * `polar` is the one provider that may never be blocked — `UNBLOCKABLE_PROVIDERS` in
+         * `src/server/catalog/provider-usage.ts` refuses the policy server-side — so this wrapper
+         * only ever counts. Refusing checkout to save a metering line would stop revenue to
+         * protect a number about revenue.
+         */
+        fetch: (input, init) =>
+          callProvider(
+            requestOutboundRuntime(),
+            {
+              provider: 'polar',
+              operation: 'api.request',
+              organizationId: options.scope?.ctx.organizationId ?? null,
+            },
+            () => fetch(input, init),
+          ),
       })
       return polar
     },

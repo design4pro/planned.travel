@@ -19,7 +19,7 @@
  *   catch is `user: ['ban']` on `curator`: `ban` *is* a member of `statement.user`, so a
  *   membership check passes it. That mistake is a grid violation rather than a dictionary
  *   violation, and it is caught twice elsewhere — by the per-role assertions below, which pin
- *   `curatorRole.statements.user` to `[]`, and by the seventy-five-cell matrix in `guard.test.ts`.
+ *   `curatorRole.statements.user` to `[]`, and by the eighty-one-cell matrix in `guard.test.ts`.
  */
 
 import { isBuiltin } from 'node:module'
@@ -79,7 +79,7 @@ describe('statement — the upstream half', () => {
 })
 
 describe('statement — our half', () => {
-  it('is closed at seven resources', () => {
+  it('is closed at eight resources', () => {
     expect(Object.keys(statement)).toEqual([
       'user',
       'session',
@@ -88,23 +88,25 @@ describe('statement — our half', () => {
       'source',
       'share',
       'sandcastle',
+      'provider',
     ])
   })
 
-  it('carries the five resources docs/ACCESS.md §1.1 declares', () => {
+  it('carries the six resources docs/ACCESS.md §1.1 declares', () => {
     expect(statement.catalog).toEqual(['read', 'write', 'publish'])
     expect(statement.pack).toEqual(['read', 'write', 'publish'])
     expect(statement.source).toEqual(['read', 'run'])
     expect(statement.share).toEqual(['read', 'revoke'])
     expect(statement.sandcastle).toEqual(['read'])
+    expect(statement.provider).toEqual(['read', 'configure'])
   })
 
-  it('totals twenty-five statements, the grid docs/ACCESS.md §2 enumerates', () => {
+  it('totals twenty-seven statements, the grid docs/ACCESS.md §2 enumerates', () => {
     const total = Object.values(statement).reduce(
       (sum, actions) => sum + actions.length,
       0,
     )
-    expect(total).toBe(25)
+    expect(total).toBe(27)
   })
 
   it('is the object the access controller was built from', () => {

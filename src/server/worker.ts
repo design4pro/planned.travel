@@ -19,6 +19,7 @@ import {
   defaultStreamHandler,
 } from '@tanstack/react-start/server'
 import { PLATFORM_SYSTEM_ACTOR, prunePlatformAuditLog } from './catalog/audit'
+import { rollUpProviderUsage } from './catalog/provider-usage'
 import { createDb } from './db/client'
 import { consumeTaskBatch } from './queue/consumer'
 import {
@@ -104,10 +105,16 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
   async queue(
     batch: MessageBatch<unknown>,
     env: Cloudflare.Env,
-    _ctx: ExecutionContext,
+    ctx: ExecutionContext,
   ): Promise<void> {
     const logger = workerLogger(env, { context: { component: 'queue' } })
-    await consumeTaskBatch(batch, taskEnv(env), logger)
+    // `ctx` is handed down rather than ignored so the provider meter's deferred writes are kept
+    // alive by the context that owns this batch. A queue invocation is not a request, so the
+    // ambient `waitUntil` of `cloudflare:workers` is not the one that governs its lifetime.
+    await consumeTaskBatch(batch, taskEnv(env), logger, {
+      waitUntil: ctx.waitUntil.bind(ctx),
+      meterDb: createDb(env.DB),
+    })
   },
 
   async scheduled(
@@ -125,7 +132,7 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
         await sweepReminders(bindings, logger, controller.scheduledTime)
         return
       case RETENTION_CRON:
-        // This slot has two jobs, and only one of them is written.
+        // This slot has three jobs, and one of them is still not written.
         //
         // Not written: the R2 half this expression was registered for. `wrangler.jsonc` documents
         // `17 4 * * 1` as the weekly retention prune of expired backups and export artifacts, and
@@ -141,18 +148,34 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
           pending: 'backup and export artifact retention',
           retentionDays: env.BACKUP_RETENTION_DAYS,
         })
-        // Written: the 400-day prune of `platform_audit_log` (docs/ACCESS.md §4.3). It is the only
-        // delete path that table has, it selects by `created_at` alone, it acts as an explicit
-        // `system` actor, and it logs its own row count — so there is nothing to report here that
-        // the writer has not already emitted.
-        await prunePlatformAuditLog(
-          createDb(env.DB),
-          PLATFORM_SYSTEM_ACTOR,
-          logger,
-          {
-            now: new Date(controller.scheduledTime),
-          },
-        )
+        // Written: the 400-day prune of `platform_audit_log` (docs/ACCESS.md §4.3), and the weekly
+        // fold of hourly `provider_usage` rows into their month rows. Each acts as an explicit
+        // `system` actor and logs its own row count and `drained` flag, so there is nothing to
+        // report here that the two writers have not already emitted.
+        //
+        // They run together rather than in sequence, and that is not a micro-optimisation. The
+        // audit prune is documented as able to reject, so an `await` chain would silently skip
+        // whatever followed it in exactly the week this slot is unhealthy — the same argument the
+        // warn above is emitted first for. `allSettled` runs both and then rethrows the first
+        // rejection, so neither job can hide the other and a failure is still the slot's failure.
+        //
+        // A fourth cron expression for the rollup was available and refused: this file and
+        // `wrangler.jsonc` both state there are exactly three on production, and a new one would
+        // have falsified that count to save sharing a slot that already shares.
+        {
+          const db = createDb(env.DB)
+          const now = new Date(controller.scheduledTime)
+          const outcomes = await Promise.allSettled([
+            prunePlatformAuditLog(db, PLATFORM_SYSTEM_ACTOR, logger, { now }),
+            rollUpProviderUsage(db, PLATFORM_SYSTEM_ACTOR, logger, { now }),
+          ])
+          const failed = outcomes.find(
+            (outcome) => outcome.status === 'rejected',
+          )
+          if (failed !== undefined) {
+            throw failed.reason
+          }
+        }
         return
       case BACKUP_CRON:
         // The `backup` task kind is declared but its handler is not written yet,

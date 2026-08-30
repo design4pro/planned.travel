@@ -286,7 +286,7 @@ through `createTenantRepository()`, which ANDs `organization_id = ?` onto every 
 supplies. A curator moderating a stranger's link holds no tenant context for that stranger's
 workspace and may not invent one: §3.7 rule 2 and SPEC §5 both forbid exactly that, and it is the
 single thing `src/server/repos/base.ts` exists to make inexpressible. Nor is the table reachable
-through `src/server/catalog/repo.ts`: that door serves eight of the nine global tables of SPEC §5's
+through `src/server/catalog/repo.ts`: that door serves eight of the eleven global tables of SPEC §5's
 carve-out, and `share_links` is not one of them. So the surface is built the way the one existing
 session-less path in this codebase is already built, and named the same way:
 
