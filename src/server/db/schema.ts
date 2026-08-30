@@ -684,13 +684,17 @@ export const trips = sqliteTable(
      * The trip's favourite flag as wave 0 shipped it: one boolean shared by every member, which
      * is the wrong shape for a bookmark that is private to one person (`CONTEXT.md`,
      * **Favourite**). From `01-S1` (`docs/plans/01-trips-core.md`) the favourite lives in
-     * `trip_favourites` ({@link tripFavourites}), one row per person and trip, and this column is
-     * read and written by nothing. It stays because dropping a column is a table rebuild on SQLite, which
-     * docs/DEPLOY.md §5 does not allow on a live table.
+     * `trip_favourites` ({@link tripFavourites}), one row per person and trip, and this column
+     * goes dead: nothing reads it and nothing writes it. It stays rather than being dropped
+     * because dropping a column is a table rebuild on SQLite, which docs/DEPLOY.md §5 admits
+     * only through the register in its §12.
      *
-     * Until `01-S1` lands, the pre-wave-1 trips surfaces still read it: the filter and dashboard
-     * count in `src/server/repos/trips.ts`, the two route loaders under `src/routes/_app/-server/`
-     * and the star in `-ui/trip-card.tsx`. That is what `01-S1` moves; nothing new may join them.
+     * Until `01-S1` lands the pre-wave-1 trips surfaces still touch it, and they are the whole
+     * of what `01-S1` moves — nothing new may join them. Read by `listFilter` and
+     * `countTripsByStatus` in `src/server/repos/trips.ts`, by the two route loaders under
+     * `src/routes/_app/-server/` and by the star in `-ui/trip-card.tsx`. Written by
+     * `setTripFavourite` in that same repository, and — through the `isFavourite` write field
+     * beside it — by the dev seed under `src/routes/api/dev/-seed/`.
      */
     isFavourite: integer('is_favourite', { mode: 'boolean' })
       .notNull()
