@@ -66,6 +66,9 @@ jobs:
       # change that touches one screen has no business re-recording the other
       # hundred and seventy — and a narrow run is the one that finishes.
       - name: Re-record
+        # The Playwright image's `sh` is dash, and `set -o pipefail` is a
+        # bashism it exits 2 on. Both scripts here ask for bash by name.
+        shell: bash
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           FILTER: ${{ inputs.filter }}
@@ -80,6 +83,7 @@ jobs:
           fi
 
       - name: Open a pull request
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           REASON: ${{ inputs.reason }}
