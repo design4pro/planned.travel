@@ -33,6 +33,7 @@ import {
   registerSandcastleRun,
   releaseInputSchema,
   releaseSandcastleIssues,
+  SANDCASTLE_COORDINATOR_REPO,
 } from '#/server/do'
 
 import type { SandcastleRegistryNamespace } from '#/server/do'
@@ -49,9 +50,6 @@ export interface SandcastleCoordinatorBindings {
   SANDCASTLE_REGISTRY?: SandcastleRegistryNamespace
   SANDCASTLE_COORDINATOR_TOKEN?: string
 }
-
-/** The one repository this coordinator serves. */
-export const SANDCASTLE_COORDINATOR_REPO = 'design4pro/planned.travel'
 
 function json(payload: unknown, status: number): Response {
   return new Response(JSON.stringify(payload), {

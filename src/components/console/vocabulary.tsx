@@ -32,7 +32,7 @@ export interface PlatformRoleDescriptor {
   /**
    * What the role holds and what it does not, in the reader's words.
    *
-   * A rendering of `docs/ACCESS.md` §2's grid rather than a second copy of it: seventy-two literal
+   * A rendering of `docs/ACCESS.md` §2's grid rather than a second copy of it: seventy-five literal
    * cells is a table nobody reads on a screen about one person, and `requirePermission` remains the
    * only thing that decides any of it. Both halves are listed on purpose. A list of what an account
    * *may* do answers half the question an operator has in front of them, and the half they came for

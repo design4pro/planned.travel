@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  SANDCASTLE_COORDINATOR_REPO,
-  serveSandcastleCoordinator,
-} from '../-lib/coordinator'
+import { serveSandcastleCoordinator } from '../-lib/coordinator'
+import { SANDCASTLE_COORDINATOR_REPO } from '#/server/do'
 
 import type { SandcastleCoordinatorBindings } from '../-lib/coordinator'
 import type { SandcastleRegistryNamespace } from '#/server/do'

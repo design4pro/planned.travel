@@ -18,7 +18,7 @@
  */
 
 import { Link } from '@tanstack/react-router'
-import { LayoutDashboard, Users } from 'lucide-react'
+import { Castle, LayoutDashboard, Users } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 
@@ -27,14 +27,18 @@ import type { LucideIcon } from 'lucide-react'
 
 /** `to` is a param-free literal from the router's own path union. */
 interface ConsoleSectionLink {
-  readonly to: '/console' | '/console/users'
+  readonly to: '/console' | '/console/users' | '/console/sandcastle'
   readonly label: string
   readonly description: string
   readonly icon: LucideIcon
   /** Only the index entry must match exactly; the rest own their subtrees. */
   readonly exact?: boolean
-  /** Which standing this section needs. */
-  readonly needs: 'curate' | 'users'
+  /**
+   * Which standing this section needs, named as the capability flag itself rather than as a word
+   * this file would then have to map onto one. A third section is what made that mapping a liability
+   * — a two-way ternary silently sends every unrecognised value down its else branch.
+   */
+  readonly needs: keyof Omit<ConsoleAccess, 'role'>
 }
 
 const SECTIONS: ReadonlyArray<ConsoleSectionLink> = [
@@ -44,14 +48,21 @@ const SECTIONS: ReadonlyArray<ConsoleSectionLink> = [
     description: 'The platform at a glance',
     icon: LayoutDashboard,
     exact: true,
-    needs: 'curate',
+    needs: 'canCurate',
   },
   {
     to: '/console/users',
     label: 'Accounts',
     description: 'Roles, suspensions and sessions',
     icon: Users,
-    needs: 'users',
+    needs: 'canManageUsers',
+  },
+  {
+    to: '/console/sandcastle',
+    label: 'Agent runs',
+    description: 'What the sandcastle fleet is building',
+    icon: Castle,
+    needs: 'canSeeRuns',
   },
 ]
 
@@ -67,9 +78,7 @@ const ICON_CLASS =
   'size-4 shrink-0 text-ink-4 transition-colors duration-base ease-out-quint group-data-[status=active]:text-brand'
 
 export function ConsoleNav({ access }: { access: ConsoleAccess }) {
-  const visible = SECTIONS.filter((section) =>
-    section.needs === 'users' ? access.canManageUsers : access.canCurate,
-  )
+  const visible = SECTIONS.filter((section) => access[section.needs])
 
   return (
     <nav aria-label="Console sections" className="min-w-0">

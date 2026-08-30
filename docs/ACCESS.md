@@ -20,7 +20,7 @@ product itself. This document is about platform roles only.
 
 The dictionary lives in `src/server/auth/access.ts` - isomorphic, no server imports, so the
 console, the guard and the MCP server all read the same object. It is Better Auth's
-`defaultStatements` from the pinned `better-auth@1.7.1` `admin` plugin, extended with four
+`defaultStatements` from the pinned `better-auth@1.7.1` `admin` plugin, extended with five
 resources of ours.
 
 ### 1.1 Printed in full
@@ -36,6 +36,7 @@ export const statement = {
   pack: ['read', 'write', 'publish'],
   source: ['read', 'run'],
   share: ['read', 'revoke'],
+  sandcastle: ['read'],
 } as const
 
 export const ac = createAccessControl(statement)
@@ -62,18 +63,19 @@ user: [
 session: ['list', 'revoke', 'delete']
 ```
 
-Together with our four resources, the complete dictionary is:
+Together with our five resources, the complete dictionary is:
 
-| Resource  | Actions                                                                                                                                    |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `user`    | `create` · `list` · `set-role` · `ban` · `impersonate` · `impersonate-admins` · `delete` · `set-password` · `set-email` · `get` · `update` |
-| `session` | `list` · `revoke` · `delete`                                                                                                               |
-| `catalog` | `read` · `write` · `publish`                                                                                                               |
-| `pack`    | `read` · `write` · `publish`                                                                                                               |
-| `source`  | `read` · `run`                                                                                                                             |
-| `share`   | `read` · `revoke`                                                                                                                          |
+| Resource     | Actions                                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `user`       | `create` · `list` · `set-role` · `ban` · `impersonate` · `impersonate-admins` · `delete` · `set-password` · `set-email` · `get` · `update` |
+| `session`    | `list` · `revoke` · `delete`                                                                                                               |
+| `catalog`    | `read` · `write` · `publish`                                                                                                               |
+| `pack`       | `read` · `write` · `publish`                                                                                                               |
+| `source`     | `read` · `run`                                                                                                                             |
+| `share`      | `read` · `revoke`                                                                                                                          |
+| `sandcastle` | `read`                                                                                                                                     |
 
-**The dictionary is closed at six resources.** A seventh resource, or a new action on an existing
+**The dictionary is closed at seven resources.** An eighth resource, or a new action on an existing
 one, is an edit to this document and to the grid in §2 in the same commit. Authority that has no
 statement of its own is expressed with the statements above - see §2.4 for MCP tokens.
 
@@ -84,14 +86,15 @@ whichever roles enumerate `user` actions by spread. So a unit test deep-equals
 changes the upstream dictionary fails that test and forces a decision here, rather than shipping a
 statement nobody in this document has ruled on.
 
-### 1.2 What our four resources cover
+### 1.2 What our five resources cover
 
-| Resource  | Tables it governs                                                   | `read`                                                                                     | `write`                                                                      | `publish` / `run` / `revoke`                                    |
-| --------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `catalog` | `catalog_places`, `catalog_ingest`, `catalog_place_sources`         | See rows that are not `published` - the review queue, retired records, raw ingest payloads | Create and update a catalogue record; promote, merge or reject an ingest row | `publish`: move a record's `status` to `published` or `retired` |
-| `pack`    | `place_packs`, `place_pack_places`                                  | See packs that are not `published`                                                         | Create and update a pack, set its places and their order                     | `publish`: publish or retire a pack                             |
-| `source`  | `catalog_sources`, `catalog_runs`                                   | See sources and their run history                                                          | -                                                                            | `run`: enable or disable a source, and start a run now          |
-| `share`   | `share_links` (every tenant's), through the moderation surface only | The moderation list defined in §3.4, reached the one legal way §2.4 specifies              | -                                                                            | `revoke`: stamp `revoked_at` on a share link                    |
+| Resource     | Tables it governs                                                    | `read`                                                                                                                              | `write`                                                                      | `publish` / `run` / `revoke`                                    |
+| ------------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `catalog`    | `catalog_places`, `catalog_ingest`, `catalog_place_sources`          | See rows that are not `published` - the review queue, retired records, raw ingest payloads                                          | Create and update a catalogue record; promote, merge or reject an ingest row | `publish`: move a record's `status` to `published` or `retired` |
+| `pack`       | `place_packs`, `place_pack_places`                                   | See packs that are not `published`                                                                                                  | Create and update a pack, set its places and their order                     | `publish`: publish or retire a pack                             |
+| `source`     | `catalog_sources`, `catalog_runs`                                    | See sources and their run history                                                                                                   | -                                                                            | `run`: enable or disable a source, and start a run now          |
+| `share`      | `share_links` (every tenant's), through the moderation surface only  | The moderation list defined in §3.4, reached the one legal way §2.4 specifies                                                       | -                                                                            | `revoke`: stamp `revoked_at` on a share link                    |
+| `sandcastle` | No table at all - the `SandcastleRegistry` Durable Object (ADR 0009) | The run registry as `/console/sandcastle` shows it: live runs, the issues each holds, orphaned WIP branches, recently finished runs | -                                                                            | -                                                               |
 
 A `published` catalogue or pack row needs **no** statement: it is readable by an entitled tenant
 through `src/server/catalog`, and readable without a session only through the whitelisted
@@ -223,15 +226,47 @@ no conditional cell and no footnote that turns a no into a yes.
 | `share:read`      | yes     | yes       | no     |
 | `share:revoke`    | yes     | yes       | no     |
 
-Twenty-four statements, three roles, seventy-two literal cells. The `user` column is `no` in every
+Twenty-five statements, three roles, seventy-five literal cells. The `user` column is `no` in every
 one of them: **`user` holds nothing platform-level.** It is not a reduced console; there is no
 console. The console route tree denies a `user` session at its own guard before a statement is
 ever consulted, and the entry point in the user menu is not rendered for that role.
 
-Those seventy-two cells are the **whole** authorisation surface, and they are the whole surface
-because §1.4 keeps the plugin's `adminUserIds` list empty. One id in that list is a seventy-third
+Those seventy-five cells are the **whole** authorisation surface, and they are the whole surface
+because §1.4 keeps the plugin's `adminUserIds` list empty. One id in that list is a seventy-sixth
 position that this table cannot express: every cell `yes`, in no column, under no role name. The
 grid and that rule are read together or neither is true.
+
+### 2.3a `sandcastle`
+
+| Statement         | `admin` | `curator` | `user` |
+| ----------------- | ------- | --------- | ------ |
+| `sandcastle:read` | yes     | **no**    | no     |
+
+The one statement in the grid that is `no` for a curator and `yes` for an admin without being about
+accounts or sessions, so it is stated on its own rather than folded into §2.3.
+
+**What it gates.** `/console/sandcastle` and the server function behind it: the read of the
+`SandcastleRegistry` Durable Object (ADR 0009) that keeps two agent fleets off one issue. Which runs
+are live, on which machine, in which stage, holding which issues; which branches were left behind by
+a run that died. It gates a **read and nothing else** - the registry is written by the agent loop
+through `/api/sandcastle/*` under a bearer token, never by a console session, so there is no
+`sandcastle:write` to grant and none to withhold.
+
+**Why a curator is refused.** The curator role is the catalogue: places, packs, sources, share
+moderation. Which machine is building which ticket is an operational fact about how this repository
+is developed, and it names hosts, branches and run ids. A curator has no call on it, and there is no
+half of it worth showing them.
+
+**Why it is not folded into `user:list`.** That was the cheaper option and it was rejected: gating a
+page about agent runs on "may list accounts" makes the console's authorisation model say something
+untrue about the page, and the untrue thing is the part a later reader would rely on. The dictionary
+is closed (§1.1) precisely so that widening it is a decision recorded here.
+
+**On a deployment that is not the coordinator, the statement still holds and the page still opens.**
+The registry binding exists on staging alone - one coordinator is the whole point - so on production
+the page renders "this deployment is not the coordinator" rather than an empty fleet. Authority and
+availability are different questions, and answering the second with a permission error would tell an
+admin they lack a statement they hold.
 
 ### 2.4 The cases the plan left open, closed by name
 

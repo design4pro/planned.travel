@@ -20,7 +20,7 @@ import { ConsoleNav } from './-ui/console-nav'
  * **The guard is in `beforeLoad`, and it throws.** A child route's `beforeLoad` and `loader` run
  * only once this one has resolved, so an account with no platform standing is turned away before a
  * single console server function is reached. `docs/ACCESS.md` §2.3 decides the refusal from the
- * resolved platform role rather than from a statement — a `user` holds none of the twenty-four, so
+ * resolved platform role rather than from a statement — a `user` holds none of the twenty-five, so
  * probing one would only choose an arbitrary statement to be denied by — and §6.4 closes the console
  * to an impersonated session whatever the worn account holds.
  *

@@ -23,6 +23,16 @@ import { z } from 'zod'
 export const SANDCASTLE_PROTOCOL_VERSION = 1
 
 /**
+ * The one repository this coordinator serves, and the registry's shard key.
+ *
+ * Here rather than beside either caller because the API route and the console read have to name the
+ * same object to be talking about the same backlog: `idFromName(repo)` is what makes every claim for
+ * it land in one thread, so two spellings of this string would be two registries that cannot see
+ * each other - the exact failure the coordinator exists to prevent.
+ */
+export const SANDCASTLE_COORDINATOR_REPO = 'design4pro/planned.travel'
+
+/**
  * How long a lease survives without a heartbeat. Long enough that a slow stage cannot lose its
  * work to a GC pause or a retried request, short enough that a crashed run does not park the
  * backlog for an appreciable part of an AFK session.
