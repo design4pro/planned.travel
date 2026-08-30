@@ -24,10 +24,17 @@
 //
 // The run number is what makes two loops concurrent: it scopes the integration
 // branch, the issue branches (`sandcastle/issue-<id>-<date>-<n>`), the artifact
-// directory and the lock, so nothing is shared but the repo. `--issues` is how
-// the operator partitions the backlog — both planners otherwise pick the same
-// `ready-for-agent` issues and implement them twice. Same number = same run =
-// resume; a new number is a run that shares nothing.
+// directory and the lock, so nothing is shared but the repo. Same number = same
+// run = resume; a new number is a run that shares nothing.
+//
+// Two runs never work the same issue, whether or not the operator partitions
+// the backlog with `--issues`: each run publishes the ids it holds next to its
+// pid lock, and every planner's scope is the `ready-for-agent` set minus what a
+// live run already claims. `--issues` is now only a preference, not the thing
+// standing between two fleets and building the same ticket twice. Naming a PRD
+// there means "the cleared slices under it" — they are expanded here rather
+// than left for the planner to discover, because an agent that walks a
+// sub-issue tree on its own picks up work no human has cleared.
 //
 // Requires: Docker running, `sandcastle docker build-image` executed once,
 // and the env vars from .env.example.
@@ -39,6 +46,7 @@ import { join } from 'node:path'
 import * as sandcastle from '@ai-hero/sandcastle'
 import { z } from 'zod'
 
+import { claim, claimedElsewhere, claimsPath, isAlive } from './claims'
 import { docker } from './sandbox'
 
 const planSchema = z.object({
@@ -150,6 +158,36 @@ function flag(name: string, fallback: string): string {
   return at === -1 ? fallback : (argv[at + 1] ?? fallback)
 }
 
+// Every flag this script understands, checked before anything else runs. An
+// unrecognised `--foo` used to be swallowed in silence, which is the worst
+// possible failure for a flag whose whole job is to NARROW the run: `--issue
+// 104` for `--issues 104` left the run unscoped, so its planner read the whole
+// backlog and a second fleet re-implemented the tickets the first one was
+// already building. A typo must cost a startup error, never a duplicated run.
+const KNOWN_FLAGS = ['run', 'issues']
+for (let at = 0; at < argv.length; at++) {
+  const token = argv[at]!
+  if (!token.startsWith('--')) {
+    throw new Error(
+      `Unexpected argument ${JSON.stringify(token)}. Every input is a flag: ` +
+        `${KNOWN_FLAGS.map((k) => `--${k} <value>`).join(', ')}.`,
+    )
+  }
+  const name = token.slice(2)
+  if (!KNOWN_FLAGS.includes(name)) {
+    // Singular/plural and prefix slips are the ones that actually happen, so
+    // name the intended flag rather than only listing the alphabet.
+    const near = KNOWN_FLAGS.find(
+      (known) => known.startsWith(name) || name.startsWith(known),
+    )
+    throw new Error(
+      `Unknown flag ${token}${near === undefined ? '' : ` — did you mean --${near}?`} ` +
+        `Known flags: ${KNOWN_FLAGS.map((k) => `--${k}`).join(', ')}.`,
+    )
+  }
+  at++ // the value belongs to this flag; do not test it as a flag itself
+}
+
 // Local calendar date, like the manual `date +%Y%m%d` this replaces — a UTC
 // date would cut a fresh branch on a same-local-day rerun straddling UTC
 // midnight, stranding the accumulated progress it exists to resume.
@@ -186,16 +224,6 @@ if (REQUESTED_RUN !== '' && !/^[1-9][0-9]*$/.test(REQUESTED_RUN)) {
   throw new Error(
     `--run takes a positive integer (got ${JSON.stringify(REQUESTED_RUN)}). Example: pnpm sandcastle --run 2`,
   )
-}
-
-/** Is that pid still alive? Signal 0 delivers nothing; it only asks. */
-function isAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch {
-    return false
-  }
 }
 
 // Claiming the run number and locking it is one step, because the lock is the
@@ -243,6 +271,79 @@ const ONLY_ISSUES = flag('issues', '')
   .split(',')
   .map((id) => id.trim())
   .filter(Boolean)
+if (ONLY_ISSUES.some((id) => !/^[1-9][0-9]*$/.test(id))) {
+  throw new Error(
+    `--issues takes a comma-separated list of issue numbers (got ${JSON.stringify(flag('issues', ''))}). Example: pnpm sandcastle --issues 106,108`,
+  )
+}
+
+/**
+ * The issues a human has cleared for the loop. The label IS the gate — see
+ * docs/agents/triage-labels.md, "remove the label to hold it" — so this list,
+ * not a `gh` query the planner improvises, is the whole universe of workable
+ * ids. Everything downstream is a subset of it.
+ */
+function readyForAgentIds(): string[] {
+  const listed = execSync(
+    'gh issue list --state open --label ready-for-agent --json number --jq ".[].number"',
+    { encoding: 'utf8' },
+  )
+  return listed
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
+/** Open sub-issues of `id`; empty when it has none, i.e. when it is not a PRD. */
+function openSubIssueIds(id: string): string[] {
+  const { owner, name } = JSON.parse(
+    execSync('gh repo view --json owner,name', { encoding: 'utf8' }),
+  ) as { owner: { login: string }; name: string }
+  const query = `{repository(owner:"${owner.login}",name:"${name}"){issue(number:${id}){subIssues(first:100){nodes{number state}}}}}`
+  const listed = execSync(
+    `gh api graphql -f query='${query}' --jq '.data.repository.issue.subIssues.nodes[] | select(.state=="OPEN") | .number'`,
+    { encoding: 'utf8' },
+  )
+  return listed
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
+/**
+ * Resolve `--issues` against the label gate. A PRD is never workable itself
+ * (plan-prompt.md excludes it), so naming one can only mean "the slices under
+ * it" — expanded here, deterministically, instead of leaving the planner to
+ * walk the sub-issue tree on its own and pick up work no human has cleared.
+ * The expansion is still gated: a slice without `ready-for-agent` is held.
+ */
+function resolveOnlyIssues(eligible: Set<string>): string[] {
+  const resolved: string[] = []
+  for (const id of ONLY_ISSUES) {
+    const subs = openSubIssueIds(id)
+    if (subs.length === 0) {
+      // A leaf ticket: workable exactly when a human cleared it.
+      if (!eligible.has(id)) {
+        throw new Error(
+          `Issue #${id} does not carry \`ready-for-agent\`, so it is not cleared for the loop. ` +
+            `Label it (see docs/agents/triage-labels.md) or drop it from --issues.`,
+        )
+      }
+      resolved.push(id)
+      continue
+    }
+    const cleared = subs.filter((sub) => eligible.has(sub))
+    if (cleared.length === 0) {
+      throw new Error(
+        `#${id} is a PRD and none of its ${subs.length} open sub-issues carries \`ready-for-agent\`: ` +
+          `${subs.map((sub) => `#${sub}`).join(', ')}. Label the slices you want worked — ` +
+          `the loop must never pick its own work out of a PRD tree.`,
+      )
+    }
+    resolved.push(...cleared)
+  }
+  return [...new Set(resolved)]
+}
 
 // Keyed on the run, not the process: a resumed run writes into the same tree and
 // overwrites the `issue-<id>/attempt-<n>` slots it re-runs (cp with force). That
@@ -251,6 +352,13 @@ const ONLY_ISSUES = flag('issues', '')
 const ARTIFACT_ROOT = join('.sandcastle', 'logs', `run-${RUN_ID}`)
 await mkdir(ARTIFACT_ROOT, { recursive: true })
 await writeFile(lockPath, String(process.pid))
+
+// Where this run publishes the issue ids it owns, next to its pid lock so
+// concurrent runs can see them (./claims.ts). `--issues` partitions the backlog
+// only when the operator gets it right; claims are the mechanical backstop that
+// makes two loops safe by default rather than by discipline.
+const LOGS_ROOT = join('.sandcastle', 'logs')
+const CLAIMS_PATH = claimsPath(LOGS_ROOT, RUN_ID)
 
 type Issue = z.infer<typeof planSchema>['issues'][number]
 type Validation = {
@@ -327,17 +435,21 @@ if (otherRuns.length > 0) {
 }
 
 /**
- * What the planner is allowed to look at. Concurrent runs read the same
- * `ready-for-agent` list, so partitioning the backlog is the operator's job and
- * this is the only place it is expressed — the planner is told, never guesses.
+ * What the planner is allowed to look at: the exact ids, never a rule it has to
+ * apply itself. The list is already `ready-for-agent`, already narrowed by
+ * `--issues`, and already minus what a concurrent run holds — so the planner's
+ * only remaining job is the dependency graph. Naming the ids matters because a
+ * planner told merely to "consider the issues above" will happily run its own
+ * `gh` queries and plan work no human has cleared; one did, twice, in parallel.
  */
-function planScope(): string {
-  return ONLY_ISSUES.length === 0
-    ? 'Consider every issue listed above.'
-    : `Consider ONLY these issues: ${ONLY_ISSUES.map((id) => `#${id}`).join(', ')}. Ignore every other issue, even an unblocked one — another sandcastle run owns it.`
+function planScope(scopeIds: string[]): string {
+  return [
+    `Consider ONLY these issues: ${scopeIds.map((id) => `#${id}`).join(', ')}.`,
+    'This list is the complete set of workable issues. Do NOT plan any issue outside it — not a sub-issue you discover, not an unblocked one you find with a `gh` query, however ready it looks. `ready-for-agent` is what clears an issue for this loop and the list above is already filtered by it; anything missing is either held by a human or owned by another sandcastle run right now.',
+  ].join('\n\n')
 }
 
-async function runPlanner(): Promise<Issue[]> {
+async function runPlanner(scopeIds: string[]): Promise<Issue[]> {
   const plan = await sandcastle.run({
     // No install hook: the planner only reads issues via gh. And NEVER the
     // default 'head' strategy — it bind-mounts the host working directory,
@@ -350,10 +462,20 @@ async function runPlanner(): Promise<Issue[]> {
     maxIterations: 1,
     agent: sandcastle.claudeCode(PLANNER_MODEL),
     promptFile: './.sandcastle/plan-prompt.md',
-    promptArgs: { RUN_ID, SCOPE: planScope() },
+    promptArgs: { RUN_ID, SCOPE: planScope(scopeIds) },
     output: sandcastle.Output.object({ tag: 'plan', schema: planSchema }),
   })
-  return plan.output.issues
+  // The prompt is an instruction; this is the enforcement. A planned id outside
+  // the scope is dropped, loudly — it means the agent went looking, and what it
+  // finds that way is by definition work nobody cleared.
+  const allowed = new Set(scopeIds)
+  return plan.output.issues.filter((issue) => {
+    if (allowed.has(issue.id)) return true
+    console.warn(
+      `  ! planner returned #${issue.id} which is outside this run's scope — dropped.`,
+    )
+    return false
+  })
 }
 
 async function collectArtifacts(
@@ -942,7 +1064,39 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     `\n=== Iteration ${iteration}/${MAX_ITERATIONS} (target: ${integrationBranch}) ===\n`,
   )
 
-  const issues = await runPlanner()
+  // Recomputed every iteration, because both inputs move while the run is
+  // alive: a human labels or holds an issue, and a concurrent run takes or
+  // releases one. The planner never sees anything this does not hand it.
+  const eligible = new Set(readyForAgentIds())
+  const requested =
+    ONLY_ISSUES.length === 0 ? [...eligible] : resolveOnlyIssues(eligible)
+  const heldElsewhere = await claimedElsewhere(LOGS_ROOT, RUN_ID)
+  const scopeIds = requested.filter((id) => !heldElsewhere.has(id))
+  if (scopeIds.length < requested.length) {
+    const taken = requested
+      .filter((id) => heldElsewhere.has(id))
+      .map((id) => `#${id} (run ${heldElsewhere.get(id)})`)
+    console.log(`Held by another live run, skipping: ${taken.join(', ')}.`)
+  }
+  if (scopeIds.length === 0) {
+    console.log(
+      eligible.size === 0
+        ? 'No issue carries `ready-for-agent`. Nothing is cleared for the loop — exiting.'
+        : 'Every issue in scope is already held by another live run. Exiting.',
+    )
+    break
+  }
+  console.log(`In scope: ${scopeIds.map((id) => `#${id}`).join(', ')}`)
+
+  const planned = await runPlanner(scopeIds)
+  // Claim before a single container starts, so a run planning alongside this
+  // one sees the ids taken rather than re-planning them.
+  const claimedIds = await claim(
+    LOGS_ROOT,
+    RUN_ID,
+    planned.map((issue) => issue.id),
+  )
+  const issues = planned.filter((issue) => claimedIds.includes(issue.id))
   if (issues.length === 0) {
     console.log('No unblocked issues to work on. Exiting.')
     break
@@ -1005,5 +1159,9 @@ if (mergedAll.length > 0 && lastAuditRefuted === 0) {
 // "Reusing existing worktree" for a matching branch).
 await integration.close()
 await rm(lockPath, { force: true })
+// Each iteration's claim() already replaces the previous claims, so this only
+// releases the last iteration's. A crash skips it, and that is fine: claims
+// next to a dead pid are ignored, exactly as a stale run lock is.
+await rm(CLAIMS_PATH, { force: true })
 
 console.log(`\nAll done. Artifacts under ${ARTIFACT_ROOT}`)

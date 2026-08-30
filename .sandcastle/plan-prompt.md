@@ -24,7 +24,7 @@ An issue B is **blocked by** issue A if:
 
 An issue is **unblocked** if it has zero blocking dependencies on other open issues.
 
-A PRD (an issue that has sub-issues linking to it) is never workable — only its sub-issues are. Exclude PRDs from the plan.
+A PRD (an issue that has sub-issues linking to it) is never workable — only its sub-issues are. Exclude PRDs from the plan. Do NOT then go and plan its sub-issues either, unless the SCOPE list above already names them: a sub-issue that is missing from that list is missing on purpose.
 
 For each unblocked issue, assign a branch name using the exact format `sandcastle/issue-{id}-{{RUN_ID}}` (no slug or other suffix). This must be deterministic so that re-planning the same issue **within this run** always produces the same branch name and accumulated progress is preserved. The run suffix is what lets two runs work the backlog side by side: git refuses to check one branch out in two worktrees, and each run is cut from its own `origin/develop` snapshot, so an unsuffixed name would either collide outright or drag another run's differently-based history into this run's merge.
 
