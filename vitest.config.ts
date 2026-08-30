@@ -44,6 +44,29 @@ export default defineConfig({
         test: {
           name: 'ui',
           environment: 'jsdom',
+          /**
+           * A shared worker, and a jsdom built once inside it rather than once per file.
+           *
+           * This project is two thirds of the suite's CPU, and almost none of that is the
+           * assertions: a hundred and nine files each stood up a fresh jsdom, and on the two-vCPU
+           * runner the gate is CPU-bound, so that fixed cost *is* the wall clock. Measured over
+           * the whole project: 137 CPU-seconds as it was, 117 on `threads` alone, 53 with both -
+           * a 61% cut, and the same 106 passing files either way.
+           *
+           * `threads` is set here and not in the other two projects because it is not a general
+           * improvement: `server` measured *worse* on threads (65 CPU-seconds against 86), and
+           * `tooling` is small enough that neither shows.
+           *
+           * `isolate: false` is the half with a price, and it is a standing one. Files in this
+           * project now share a module registry and a DOM, so a test that leaves `document`,
+           * `window` or a module-level singleton dirty can fail its neighbour instead of itself.
+           * `restoreMocks` handles spies and nothing else. It is switched on here only because
+           * this project measured clean; `server` did not - `isolate: false` there fails eleven
+           * assertions in `src/server/billing/__tests__/mapping.test.ts`, which is real leakage
+           * and the reason this is a per-project setting rather than a top-level one.
+           */
+          pool: 'threads',
+          isolate: false,
           globals: false,
           setupFiles: ['./vitest.setup.dom.ts'],
           include: [
