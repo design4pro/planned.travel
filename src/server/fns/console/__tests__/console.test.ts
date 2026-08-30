@@ -224,9 +224,9 @@ const {
   startImpersonationFn,
   startImpersonationInputSchema,
 } = await import('../impersonation')
+const { listPlatformSessions, listPlatformSessionsInputSchema } =
+  await import('../session-listing')
 const {
-  listPlatformSessionsFn,
-  listPlatformSessionsInputSchema,
   revokePlatformSessionFn,
   revokePlatformSessionInputSchema,
   revokePlatformUserSessionsFn,
@@ -677,11 +677,12 @@ function boundary<TSchema extends z.ZodType>(
 }
 
 /**
- * The same sequencing for `../users`, whose ten functions are plain `async` functions rather than
- * server functions and so take their input directly (see that file's header for why they must stay
- * that way). The parse here is the *wrapper's* — `src/routes/_app/console/-server/users.ts` — kept
- * so an invalid payload is refused before `duringRequest` exactly as it is on the wire; each
- * function re-parses its own schema on entry, which is what the runtime does too.
+ * The same sequencing for the eleven verbs that are plain `async` functions rather than server
+ * functions — the ten in `../users` and the session read in `../session-listing` — and so take their input
+ * directly (see those files' headers for why they must stay that way). The parse here is the
+ * *wrapper's* — `src/routes/_app/console/-server/users.ts` — kept so an invalid payload is refused
+ * before `duringRequest` exactly as it is on the wire; each function re-parses its own schema on
+ * entry, which is what the runtime does too.
  */
 function plain<TSchema extends z.ZodType>(
   schema: TSchema,
@@ -708,9 +709,9 @@ const createUser = plain(createPlatformUserInputSchema, createPlatformUser)
 const deleteUser = plain(deletePlatformUserInputSchema, deletePlatformUser)
 const listUsers = plain(listPlatformUsersInputSchema, listPlatformUsers)
 const getUser = plain(getPlatformUserInputSchema, getPlatformUser)
-const listSessions = boundary(
+const listSessions = plain(
   listPlatformSessionsInputSchema,
-  listPlatformSessionsFn,
+  listPlatformSessions,
 )
 const revokeSession = boundary(
   revokePlatformSessionInputSchema,

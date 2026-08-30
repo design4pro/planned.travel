@@ -15,7 +15,8 @@ gh api "repos/$GH_REPO/issues/<n>/sub_issues" --jq '.[].number'   # children, in
 ## Writing
 
 ```bash
-gh issue create --title "<title>" --label "ready-for-agent" --body-file <file>
+gh issue create --title "PRD: <title>" --label "type: feature" --body-file <file>   # parent: never `ready-for-agent`
+gh issue create --title "<ticket>" --label "ready-for-agent" --body-file <file>     # sub-issue: the label IS the gate
 gh issue comment <n> --body "<text>"
 gh issue edit <n> --add-label "<label>" --remove-label "<label>"
 gh issue close <n>
@@ -32,4 +33,4 @@ Check `gh api "repos/$GH_REPO/issues/<parent>/sub_issues" --jq 'length'` before 
 
 ## Dependencies
 
-Blocking relationships use native GitHub issue dependencies (GraphQL `blockedBy` / `blocking`). A ticket is workable only when it has zero open blockers and is not itself a PRD with sub-issues. Ticket bodies must NOT contain `Closes #n` directives — closing is the merger's job.
+Blocking relationships use native GitHub issue dependencies (GraphQL `blockedBy` / `blocking`). A ticket is workable only when it has zero open blockers and is not itself a PRD with sub-issues. Because a PRD is never workable, `ready-for-agent` lives on sub-issues only: `resolveOnlyIssues` in `.sandcastle/main.ts` expands `--issues <PRD>` to its open children and filters those by the label, so a label on the parent would only offer the PRD itself as work. Ticket bodies must NOT contain `Closes #n` directives — closing is the merger's job.

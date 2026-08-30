@@ -41,13 +41,29 @@ record_step() { # name ok durationMs
 # prefix (`STEP_TAIL_LINES=60 run_step ...`), which bash scopes to that one invocation.
 STEP_TAIL_LINES=40
 
+# Milliseconds since the epoch, on GNU date and on BSD date.
+#
+# The fallback is chosen from the *value* and not from the exit status, because BSD `date` has no
+# `%N`: it prints the format's literal tail ("17881169293N") and succeeds, so a `||` fallback never
+# fires. The bogus value then reached `$((end - start))`, which errored, which left `record_step`
+# with two arguments, which `set -u` turned into an exit - the whole ladder reporting `steps: []`
+# on macOS. Second resolution there is fine; the ladder's home is the Linux container.
+now_ms() {
+  local stamp
+  stamp=$(date +%s%3N 2>/dev/null)
+  case "$stamp" in
+    '' | *[!0-9]*) date +%s000 ;;
+    *) printf '%s\n' "$stamp" ;;
+  esac
+}
+
 run_step() { # name command...
   local name="$1"; shift
   local start end ok log
   log="/tmp/validate-${name//[^a-zA-Z0-9]/-}.log"
-  start=$(date +%s%3N 2>/dev/null || date +%s000)
+  start=$(now_ms)
   if "$@" > >(tail -c 200000 >"$log") 2>&1; then ok=1; else ok=0; fi
-  end=$(date +%s%3N 2>/dev/null || date +%s000)
+  end=$(now_ms)
   record_step "$name" "$ok" $((end - start))
   if [ "$ok" -eq 0 ]; then
     echo "==> STEP FAILED: $name (log tail follows)" >&2

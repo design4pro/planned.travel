@@ -42,7 +42,7 @@ import { z } from 'zod'
 
 import { readAccountContext } from '#/server/fns/console/account'
 import { ConsoleActionError } from '#/server/fns/console/errors'
-import { listPlatformSessionsFn } from '#/server/fns/console/sessions'
+import { listPlatformSessions } from '#/server/fns/console/session-listing'
 import { readAccountBilling } from './account-billing'
 import {
   banPlatformUser,
@@ -216,7 +216,7 @@ export const loadConsoleAccount = createServerFn({ method: 'GET' })
     try {
       ;[account, sessions, context] = await Promise.all([
         getPlatformUser({ userId: data.userId }),
-        listPlatformSessionsFn({ data: { userId: data.userId } }),
+        listPlatformSessions({ userId: data.userId }),
         readAccountContext(data.userId),
       ])
     } catch (cause) {

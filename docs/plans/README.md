@@ -1,9 +1,17 @@
 # planned.travel — implementation plans
 
 > **This directory is being retired** (docs/adr/0004): the backlog is migrating, area by area, to
-> GitHub Issues via grilling → `/to-spec-project` → `/to-tickets-project`. A migrated area's plan
-> file is deleted (history stays in git) and this note lists it. Areas migrated so far: _none yet_.
-> Until an area migrates, its plan file below remains the authority for that area.
+> GitHub Issues via grilling → `/to-spec-project` → `/to-tickets-project`. Until an area migrates,
+> its plan file below remains the authority for that area.
+>
+> **Areas migrated so far:** `01-trips-core.md` → PRD #104 · `03-reservations-and-transport.md` →
+> PRD #167. For those two the **tracker is the authority** and the plan file is frozen: it takes no
+> further edits and is kept only as the evidence un-migrated siblings cite when they establish which
+> stage holds a file in which wave.
+>
+> **A migrated plan file is frozen, not deleted** — ADR 0004 originally said deleted, and its
+> Consequences record why that was suspended and the condition under which deletion becomes safe
+> again.
 
 `docs/` is described in `docs/SPEC.md` §6 as "spec + architecture notes". This directory adds the
 third kind of document: **staged implementation plans**, one per product area, that carve the 89-row
@@ -30,9 +38,9 @@ never adds scope of its own, so it is exempt from this table and from the filena
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `TEMPLATE.md`                      | The stage block every plan copies: eleven required headings in a fixed order, plus the definition of done every stage inherits unchanged.                                                                                                                  |
 | `00-foundations.md`                | The shared files no feature stage may claim — schema, worker entry, wrangler bindings, tokens, `components/ui`, generated route tree; its stages are wave 0.                                                                                               |
-| `01-trips-core.md`                 | Trip lifecycle, creation, membership and guests, day model, day notes, the merged day timeline and the planner workspace shell.                                                                                                                            |
+| `01-trips-core.md`                 | **Migrated → PRD #104; frozen.** Trip lifecycle, creation, membership and guests, day model, day notes, the merged day timeline and the planner workspace shell.                                                                                           |
 | `02-places-and-maps.md`            | Place creation and the place form, search and import paths, markers and clustering, map styles, layers and route overlays.                                                                                                                                 |
-| `03-reservations-and-transport.md` | Reservation records and the booking desk, transport records and legs, airport and station pickers, transit search, transport in the day.                                                                                                                   |
+| `03-reservations-and-transport.md` | **Migrated → PRD #167; frozen.** Reservation records and the booking desk, transport records and legs, airport and station pickers, transit search, transport in the day.                                                                                  |
 | `04-budget-and-currencies.md`      | Budget entries, expense splitting and settlements, per-expense currency with frozen rates, display currency and budget reporting.                                                                                                                          |
 | `05-packing-and-todos.md`          | Packing lists and categories, quantity and check state, filters and progress, templates and the shared template library, todo lists.                                                                                                                       |
 | `06-documents-and-media.md`        | File upload and storage in R2, starring and the trash lifecycle, multi-target file links, PDF export, calendar output, per-day weather.                                                                                                                    |
@@ -205,58 +213,62 @@ once, and no row sits in a wave earlier than or equal to a row it depends on. Ro
 status, evidence, effort — stays in `gap-rows.json`; it is deliberately not duplicated here, both to
 keep one source of truth and because those summaries are recon prose about the reference product.
 
-| Wave | Plan                               | Rows                                                                  | n   |
-| ---- | ---------------------------------- | --------------------------------------------------------------------- | --- |
-| 0    | `00-foundations.md`                | no gap row — the five wave-0 concerns above                           | —   |
-| 1    | `01-trips-core.md`                 | TRP-03 TRP-07 TRP-09 TRP-10                                           | 4   |
-| 1    | `02-places-and-maps.md`            | MAP-01 MAP-05 MAP-06 MAP-10                                           | 4   |
-| 1    | `03-reservations-and-transport.md` | BKG-06                                                                | 1   |
-| 1    | `04-budget-and-currencies.md`      | MNY-01 MNY-05 MNY-07                                                  | 3   |
-| 1    | `06-documents-and-media.md`        | DOC-01                                                                | 1   |
-| 1    | `07-collaboration-and-sharing.md`  | COL-01 COL-02 COL-06                                                  | 3   |
-| 1    | `08-product-modules.md`            | ADD-02 ADD-05 ADD-07 ADD-09                                           | 4   |
-| 1    | `09-account-and-settings.md`       | ACC-01 ACC-02 ACC-03 ACC-06 ACC-07 EXT-04                             | 6   |
-| 1    | `10-administration.md`             | ADM-04                                                                | 1   |
-| 1    | `11-boundaries-and-blockers.md`    | ACC-08 ADD-01 ADM-05 BKG-04 BKG-09 DOC-05 EXT-01 EXT-02 EXT-03 MAP-04 | 10  |
-| 2    | `01-trips-core.md`                 | TRP-01 TRP-05 TRP-08                                                  | 3   |
-| 2    | `02-places-and-maps.md`            | MAP-02 MAP-07                                                         | 2   |
-| 2    | `03-reservations-and-transport.md` | BKG-07 BKG-08                                                         | 2   |
-| 2    | `04-budget-and-currencies.md`      | MNY-02 MNY-04 MNY-06                                                  | 3   |
-| 2    | `06-documents-and-media.md`        | DOC-03 DOC-06                                                         | 2   |
-| 2    | `07-collaboration-and-sharing.md`  | COL-03 COL-07 COL-08 COL-10                                           | 4   |
-| 2    | `08-product-modules.md`            | ADD-03 ADD-06 ADD-08                                                  | 3   |
-| 2    | `09-account-and-settings.md`       | ACC-05                                                                | 1   |
-| 3    | `02-places-and-maps.md`            | MAP-08                                                                | 1   |
-| 3    | `03-reservations-and-transport.md` | BKG-02 BKG-10                                                         | 2   |
-| 3    | `04-budget-and-currencies.md`      | MNY-03                                                                | 1   |
-| 3    | `05-packing-and-todos.md`          | LST-01                                                                | 1   |
-| 3    | `06-documents-and-media.md`        | DOC-02 DOC-07                                                         | 2   |
-| 3    | `07-collaboration-and-sharing.md`  | COL-04 COL-05 COL-09                                                  | 3   |
-| 3    | `08-product-modules.md`            | ADD-04 ADD-10                                                         | 2   |
-| 3    | `09-account-and-settings.md`       | ACC-04                                                                | 1   |
-| 3    | `10-administration.md`             | ADM-02                                                                | 1   |
-| 4    | `01-trips-core.md`                 | TRP-11                                                                | 1   |
-| 4    | `02-places-and-maps.md`            | MAP-09                                                                | 1   |
-| 4    | `03-reservations-and-transport.md` | BKG-01 BKG-03                                                         | 2   |
-| 4    | `05-packing-and-todos.md`          | LST-03 LST-04 LST-05                                                  | 3   |
-| 4    | `06-documents-and-media.md`        | DOC-04                                                                | 1   |
-| 4    | `10-administration.md`             | ADM-01                                                                | 1   |
-| 5    | `01-trips-core.md`                 | TRP-02 TRP-06                                                         | 2   |
-| 5    | `02-places-and-maps.md`            | MAP-03                                                                | 1   |
-| 5    | `05-packing-and-todos.md`          | LST-02                                                                | 1   |
-| 5    | `07-collaboration-and-sharing.md`  | COL-11                                                                | 1   |
-| 5    | `10-administration.md`             | ADM-03                                                                | 1   |
-| 6    | `01-trips-core.md`                 | TRP-04                                                                | 1   |
-| 6    | `03-reservations-and-transport.md` | BKG-05                                                                | 1   |
-| 6    | `06-documents-and-media.md`        | DOC-08                                                                | 1   |
+| Wave | Plan                               | Rows                                                           | n   |
+| ---- | ---------------------------------- | -------------------------------------------------------------- | --- |
+| 0    | `00-foundations.md`                | no gap row — the five wave-0 concerns above                    | —   |
+| 1    | `01-trips-core.md`                 | TRP-03 TRP-07 TRP-09 TRP-10                                    | 4   |
+| 1    | `02-places-and-maps.md`            | MAP-01 MAP-05 MAP-06 MAP-10                                    | 4   |
+| 1    | `03-reservations-and-transport.md` | BKG-06                                                         | 1   |
+| 1    | `04-budget-and-currencies.md`      | MNY-01 MNY-05 MNY-07                                           | 3   |
+| 1    | `06-documents-and-media.md`        | DOC-01                                                         | 1   |
+| 1    | `07-collaboration-and-sharing.md`  | COL-01 COL-02 COL-06                                           | 3   |
+| 1    | `08-product-modules.md`            | ADD-02 ADD-05 ADD-07 ADD-09                                    | 4   |
+| 1    | `09-account-and-settings.md`       | ACC-01 ACC-02 ACC-03 ACC-06 ACC-07 EXT-04                      | 6   |
+| 1    | `10-administration.md`             | ADM-04                                                         | 1   |
+| 1    | `11-boundaries-and-blockers.md`    | ACC-08 ADD-01 ADM-05 BKG-09 DOC-05 EXT-01 EXT-02 EXT-03 MAP-04 | 9   |
+| 2    | `01-trips-core.md`                 | TRP-01 TRP-05 TRP-08                                           | 3   |
+| 2    | `02-places-and-maps.md`            | MAP-02 MAP-07                                                  | 2   |
+| 2    | `03-reservations-and-transport.md` | BKG-07                                                         | 1   |
+| 2    | `04-budget-and-currencies.md`      | MNY-02 MNY-04 MNY-06                                           | 3   |
+| 2    | `06-documents-and-media.md`        | DOC-03 DOC-06                                                  | 2   |
+| 2    | `07-collaboration-and-sharing.md`  | COL-03 COL-07 COL-08 COL-10                                    | 4   |
+| 2    | `08-product-modules.md`            | ADD-03 ADD-06 ADD-08                                           | 3   |
+| 2    | `09-account-and-settings.md`       | ACC-05                                                         | 1   |
+| 3    | `02-places-and-maps.md`            | MAP-08                                                         | 1   |
+| 3    | `03-reservations-and-transport.md` | BKG-02 BKG-08                                                  | 2   |
+| 3    | `04-budget-and-currencies.md`      | MNY-03                                                         | 1   |
+| 3    | `05-packing-and-todos.md`          | LST-01                                                         | 1   |
+| 3    | `06-documents-and-media.md`        | DOC-02 DOC-07                                                  | 2   |
+| 3    | `07-collaboration-and-sharing.md`  | COL-04 COL-05 COL-09                                           | 3   |
+| 3    | `08-product-modules.md`            | ADD-04 ADD-10                                                  | 2   |
+| 3    | `09-account-and-settings.md`       | ACC-04                                                         | 1   |
+| 3    | `10-administration.md`             | ADM-02                                                         | 1   |
+| 4    | `01-trips-core.md`                 | TRP-11                                                         | 1   |
+| 4    | `02-places-and-maps.md`            | MAP-09                                                         | 1   |
+| 4    | `03-reservations-and-transport.md` | BKG-01 BKG-10                                                  | 2   |
+| 4    | `05-packing-and-todos.md`          | LST-03 LST-04 LST-05                                           | 3   |
+| 4    | `06-documents-and-media.md`        | DOC-04                                                         | 1   |
+| 4    | `10-administration.md`             | ADM-01                                                         | 1   |
+| 5    | `01-trips-core.md`                 | TRP-02 TRP-06                                                  | 2   |
+| 5    | `02-places-and-maps.md`            | MAP-03                                                         | 1   |
+| 5    | `03-reservations-and-transport.md` | BKG-03 BKG-04                                                  | 2   |
+| 5    | `05-packing-and-todos.md`          | LST-02                                                         | 1   |
+| 5    | `07-collaboration-and-sharing.md`  | COL-11                                                         | 1   |
+| 5    | `10-administration.md`             | ADM-03                                                         | 1   |
+| 6    | `01-trips-core.md`                 | TRP-04                                                         | 1   |
+| 6    | `03-reservations-and-transport.md` | BKG-05                                                         | 1   |
+| 6    | `06-documents-and-media.md`        | DOC-08                                                         | 1   |
 
-Wave totals: **37 · 20 · 14 · 9 · 6 · 3 = 89**.
+Wave totals: **36 · 19 · 14 · 9 · 8 · 3 = 89**.
 
 Two placements are editorial rather than mechanical, and both are stated so a reader does not go
 looking for a missing edge:
 
-- The ten out-of-scope rows are gathered in `11-boundaries-and-blockers.md`. They carry no build
-  work; the wave is where the _argument_ lands, and it is wave 1 because nothing gates it.
+- The out-of-scope rows are gathered in `11-boundaries-and-blockers.md`. They carry no build work;
+  the wave is where the _argument_ lands, and it is wave 1 because nothing gates it. **Nine, not
+  ten:** ADR 0012 returned `BKG-04` in a hosted shape, so it is planned in
+  `03-reservations-and-transport.md` at wave 5 and its `11-S1` entry now stands as the record of
+  which two thirds of it never came back.
 - `EXT-04` (the in-app help browser) is the one Extensibility row that survives the hosted
   multi-tenant boundary, so it is planned in `09-account-and-settings.md` alongside the other
   account-adjacent surfaces rather than with the three out-of-scope Extensibility rows.

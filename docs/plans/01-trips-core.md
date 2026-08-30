@@ -1,5 +1,11 @@
 # 01 — Trips core
 
+> **Migrated — frozen.** This area's backlog now lives on the tracker as **PRD #104**, and the
+> tracker is its authority. This file takes no further edits: it is kept because un-migrated plans
+> cite its stages to establish which stage holds a file in which wave, and deleting it would make
+> those claims uncheckable. See `docs/adr/0004-sandcastle-replaces-ultrabuild.md`, the amendment of
+> 2026-08-30, for the measurement and for the condition under which it can be deleted.
+
 ## Area brief
 
 A trip is the aggregate root of this product: every place, day, booking, expense, list, file and

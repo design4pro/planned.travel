@@ -19,28 +19,34 @@
  * reason. `revokeUserSessions` deletes every D1 `session` row by predicate, so a blob still cached
  * after it has run is one nothing anywhere can name again; a purge that cannot finish therefore
  * refuses the revocation rather than half-performing it.
+ *
+ * **Reading the list is not here, and that is a bundling boundary rather than a taxonomy.** This
+ * module is imported by `-ui/session-actions.tsx` and `-ui/user-actions.tsx`, so it is in the
+ * client graph, so every export in it must be a `createServerFn` — a plain server-only function's
+ * body is not stripped from the client twin, and its reach into `./context` takes the whole client
+ * build down on `@tanstack/react-start/server`. The read has no client caller and so must *not* be
+ * one, for the opposite reason: a `createServerFn` called only from another handler is never
+ * registered and throws `Server function info not found` in the deployed Worker. It lives in
+ * `./session-listing`, whose header carries both halves of that argument; `readSessions` is shared
+ * from there, reached from inside a handler and therefore dropped on the client.
  */
 
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import { PLATFORM_ACTIONS } from '#/server/catalog/audit'
-import { platformApi, readSessionRows } from './bindings'
+import { platformApi } from './bindings'
 import {
   clearSessionCache,
   endSessionIndex,
   openConsoleCall,
   recordConsoleAction,
-  recordConsoleRead,
 } from './context'
 import { ConsoleActionError } from './errors'
-import { platformSessionSchema, toConsoleSession } from './projections'
-
-import type { ConsoleSession, PlatformSessionRow } from './projections'
+import { readSessions } from './session-listing'
 
 const userId = z.string().trim().min(1).max(64)
 
-export const listPlatformSessionsInputSchema = z.object({ userId })
 export const revokePlatformSessionInputSchema = z.object({
   userId,
   /**
@@ -54,68 +60,6 @@ export const revokePlatformSessionInputSchema = z.object({
   sessionId: z.string().trim().min(1).max(64),
 })
 export const revokePlatformUserSessionsInputSchema = z.object({ userId })
-
-/** What one account holds, and whether the enumeration reached the end of it. */
-interface SessionListing {
-  readonly sessions: ReadonlyArray<PlatformSessionRow>
-  readonly truncated: boolean
-}
-
-/**
- * The account's live sessions, newest first. Reads are not audited (docs/ACCESS.md §4.2).
- *
- * "Live" is a predicate and not a manner of speaking: `./bindings` excludes rows whose `expiresAt`
- * has passed. With `storeSessionInDatabase` a row is deleted only lazily, on the next `findSession`
- * that resolves it, so an account accumulates one for every device it never comes back to — and
- * without the predicate the console would render sessions that ended weeks ago as current, and
- * `revokePlatformSessionFn` would happily write `platform.session.revoked` for one of them.
- *
- * The enumeration is ordered by `id` so that offset paging is stable; the display order is applied
- * here, afterwards, in memory. Two orders because they answer different questions - one has to be a
- * total order over a paged read, the other has to put the session an operator is looking for at the
- * top - and conflating them is what makes a paged read lose rows.
- */
-async function readSessions(id: string): Promise<SessionListing> {
-  const enumeration = await readSessionRows(id)
-  const sessions = z
-    .array(platformSessionSchema)
-    .parse(enumeration.rows)
-    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
-  return { sessions, truncated: enumeration.truncated }
-}
-
-/**
- * One account's sessions. Not audited.
- *
- * `truncated` leaves with the page rather than being swallowed: a screen that showed six hundred
- * sessions as though they were all of them would be making the same claim a silent `LIMIT` makes,
- * and the operator deciding whether to revoke one session or all of them is exactly the reader who
- * needs to know the difference.
- */
-export const listPlatformSessionsFn = createServerFn({ method: 'GET' })
-  .validator(listPlatformSessionsInputSchema)
-  .handler(
-    async ({
-      data,
-    }): Promise<{
-      sessions: ReadonlyArray<ConsoleSession>
-      truncated: boolean
-    }> => {
-      const call = await openConsoleCall({ session: ['list'] })
-      const listing = await readSessions(data.userId)
-
-      recordConsoleRead(call, 'sessions', {
-        entityId: data.userId,
-        returned: listing.sessions.length,
-        truncated: listing.truncated,
-      })
-
-      return {
-        sessions: listing.sessions.map(toConsoleSession),
-        truncated: listing.truncated,
-      }
-    },
-  )
 
 /** Revokes one session of one account. `platform.session.revoked`. */
 export const revokePlatformSessionFn = createServerFn({ method: 'POST' })
