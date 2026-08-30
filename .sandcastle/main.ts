@@ -350,8 +350,12 @@ if (ONLY_ISSUES.some((id) => !/^[1-9][0-9]*$/.test(id))) {
  * ids. Everything downstream is a subset of it.
  */
 function readyForAgentIds(): string[] {
+  // `--limit 500`, matching `issue-edges.ts`, because `gh issue list` defaults to thirty and says
+  // nothing when it truncates. Silently capping "the whole universe of workable ids" at the thirty
+  // most recently updated would drop cleared work on the floor, and `resolveOnlyIssues` would go
+  // on to reject a `--issues 104` for "not carrying `ready-for-agent`" when it plainly does.
   const listed = execSync(
-    'gh issue list --state open --label ready-for-agent --json number --jq ".[].number"',
+    'gh issue list --state open --label ready-for-agent --limit 500 --json number --jq ".[].number"',
     { encoding: 'utf8' },
   )
   return listed

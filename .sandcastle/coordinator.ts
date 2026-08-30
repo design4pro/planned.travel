@@ -87,6 +87,27 @@ export class Coordinator {
   /** One controller per issue this run holds, so a revoked lease can stop the work in flight. */
   private readonly inFlight = new Map<string, AbortController>()
 
+  /**
+   * Every issue this run has lost, whether or not its pipeline had started.
+   *
+   * Kept apart from `inFlight` because the two fill up at different moments. An issue is claimed
+   * before planning, but `signalFor` does not mint its controller until the implementer stage
+   * actually starts that issue - and behind `MAX_PARALLEL` that is minutes later, or never.
+   * Recording a revocation only against a controller therefore dropped the news for every issue
+   * still queued, and the controller `signalFor` minted afterwards was a fresh, unaborted one, so
+   * the merge-time `isRevoked` guard read clean: the run went on to merge work on an issue another
+   * fleet legitimately held. That is the one failure this whole mechanism exists to prevent.
+   */
+  private readonly revoked = new Set<string>()
+
+  /**
+   * True once the registry has said this run no longer exists.
+   *
+   * A lease cannot outlive its run - they are reaped in one pass - so this is news about every
+   * issue at once, including the ones this run claimed and has not named to `signalFor` yet.
+   */
+  private lapsed = false
+
   private stage: SandcastleStage = 'starting'
   private timer: ReturnType<typeof setInterval> | undefined
 
@@ -271,13 +292,36 @@ export class Coordinator {
     if (controller === undefined) {
       controller = new AbortController()
       this.inFlight.set(issueId, controller)
+      // The lease was already lost while this issue sat in the queue: the pipeline is handed a
+      // signal that is aborted before it runs a step, rather than a clean one.
+      if (this.isRevoked(issueId)) {
+        controller.abort(
+          new Error(`The coordinator revoked this run's lease on #${issueId}.`),
+        )
+      }
     }
     return controller.signal
   }
 
-  /** True once this run has lost `issueId`, whatever stage it had reached. */
+  /** True once this run has lost `issueId`, whatever stage it had reached - or had not. */
   isRevoked(issueId: string): boolean {
-    return this.inFlight.get(issueId)?.signal.aborted ?? false
+    return this.lapsed || this.revoked.has(issueId)
+  }
+
+  /** Marks one issue lost, and stops its pipeline if one had started. */
+  private revoke(issueId: string, reason: string): void {
+    if (this.revoked.has(issueId)) return
+    this.revoked.add(issueId)
+    const controller = this.inFlight.get(issueId)
+    this.log(
+      `Coordinator: LOST the lease on #${issueId} - ${reason}. ` +
+        (controller === undefined
+          ? 'Nothing had started on it yet; it will not be started.'
+          : 'Aborting that pipeline.'),
+    )
+    controller?.abort(
+      new Error(`The coordinator revoked this run's lease on #${issueId}.`),
+    )
   }
 
   /**
@@ -288,15 +332,10 @@ export class Coordinator {
    * them at once.
    */
   private revokeEverything(reason: string): void {
-    for (const [id, controller] of this.inFlight) {
-      if (controller.signal.aborted) continue
-      this.log(
-        `Coordinator: LOST the lease on #${id} - ${reason}. Aborting that pipeline.`,
-      )
-      controller.abort(
-        new Error(`The coordinator revoked this run's lease on #${id}.`),
-      )
-    }
+    // The flag first, and it is what does the work: the loop can only reach issues whose pipeline
+    // has started, and a run that lapses during planning has none.
+    this.lapsed = true
+    for (const id of this.inFlight.keys()) this.revoke(id, reason)
   }
 
   /** One heartbeat. Separate from the timer so a test can drive it without a clock. */
@@ -308,14 +347,9 @@ export class Coordinator {
       ),
     )
     for (const id of result.revoked) {
-      const controller = this.inFlight.get(id)
-      if (controller === undefined || controller.signal.aborted) continue
-      this.log(
-        `Coordinator: LOST the lease on #${id} - this run stopped heartbeating long enough for ` +
-          `another to take it. Aborting that pipeline.`,
-      )
-      controller.abort(
-        new Error(`The coordinator revoked this run's lease on #${id}.`),
+      this.revoke(
+        id,
+        'this run stopped heartbeating long enough for another to take it',
       )
     }
     return result
@@ -379,24 +413,46 @@ export class Coordinator {
     })
   }
 
-  /** Gives back some issues, or all of them. */
+  /**
+   * Gives back some issues, or all of them.
+   *
+   * A 409 is success here, for the reason set out on `finish` below.
+   */
   async release(ids?: Array<string>): Promise<void> {
-    await this.request(
-      `runs/${encodeURIComponent(this.options.runId)}/release`,
-      ids === undefined ? {} : { ids },
-    )
+    await this.giveBack('release', ids === undefined ? {} : { ids })
   }
 
-  /** Ends the run and releases everything it holds. */
+  /**
+   * Ends the run and releases everything it holds.
+   *
+   * A 409 is success. It means the registry reaped this run before it got to say goodbye, which is
+   * the state this call was asking for - and both of these are cleanup verbs, called from a
+   * `finally` or from a signal handler at the end of a run that has already done its work.
+   * Throwing there fails a job over the one outcome that is not a failure, and in a `finally` it
+   * replaces whatever exception was already on its way out.
+   */
   async finish(
     status: 'finished' | 'failed',
     summary: string = '',
   ): Promise<void> {
     this.stopHeartbeat()
-    await this.request(
-      `runs/${encodeURIComponent(this.options.runId)}/finish`,
-      { status, summary },
-    )
+    await this.giveBack('finish', { status, summary })
+  }
+
+  /** `release` and `finish` share a path because they share the 409 rule. */
+  private async giveBack(verb: 'release' | 'finish', body: unknown) {
+    try {
+      await this.request(
+        `runs/${encodeURIComponent(this.options.runId)}/${verb}`,
+        body,
+      )
+    } catch (cause) {
+      if (!(cause instanceof CoordinatorError && cause.status === 409))
+        throw cause
+      this.log(
+        `Coordinator: run ${this.options.runId} was already reaped - nothing to ${verb}.`,
+      )
+    }
   }
 }
 

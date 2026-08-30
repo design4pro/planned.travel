@@ -32,7 +32,7 @@
 import { hostname } from 'node:os'
 import { pathToFileURL } from 'node:url'
 
-import { Coordinator, CoordinatorError } from './coordinator'
+import { Coordinator } from './coordinator'
 import { SANDCASTLE_COORDINATOR_REPO } from '../src/server/do/sandcastle-protocol'
 
 import type { SandcastleKind } from '../src/server/do/sandcastle-protocol'
@@ -194,18 +194,10 @@ export async function runCoordinatorCli(
     }
     return EXIT_OK
   } catch (cause) {
-    // A cleanup step must not fail a job because the registry got there first: `409` to `finish`
-    // means the run is already gone, which is the outcome it was asking for.
-    if (
-      options.verb === 'finish' &&
-      cause instanceof CoordinatorError &&
-      cause.status === 409
-    ) {
-      deps.log(
-        `Coordinator: run ${options.runId} was already reaped — nothing to finish.`,
-      )
-      return EXIT_OK
-    }
+    // No 409 special case here. `Coordinator.finish` and `.release` already treat "the registry
+    // got there first" as the outcome they were asking for, so a cleanup verb cannot fail a job
+    // over it, and the same rule then holds for `main.ts` and `triage.ts` rather than only for the
+    // callers that remembered. Everything reaching this line is a real failure.
     deps.log(cause instanceof Error ? cause.message : String(cause))
     return EXIT_FAILED
   }

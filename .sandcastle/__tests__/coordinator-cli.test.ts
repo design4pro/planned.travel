@@ -208,20 +208,9 @@ describe('finish', () => {
     expect(calls.finished).toEqual([['finished', 'promoted']])
   })
 
-  it('treats a run the registry already reaped as finished', async () => {
-    // A cleanup step must not fail a job because the registry got there first: `409` is the very
-    // outcome it was asking for.
-    const { deps } = harness({
-      finish: new CoordinatorError('no such run', 409),
-    })
-
-    const code = await runCoordinatorCli(
-      ['finish', '--run', 'r', '--kind', 'triage'],
-      deps,
-    )
-
-    expect(code).toBe(EXIT_OK)
-  })
+  // "the registry got there first" is no longer the CLI's business: `Coordinator.finish` swallows
+  // that 409 itself, so every caller gets the rule and not just this one. Covered in
+  // `coordinator.test.ts`.
 
   it('still fails on a refusal that is not that', async () => {
     const { deps } = harness({

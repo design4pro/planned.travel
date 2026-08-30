@@ -262,6 +262,53 @@ describe('losing a lease', () => {
     }
   })
 
+  /**
+   * The bug this covers: revocation used to be recorded only by aborting a controller in
+   * `inFlight`, and `signalFor` does not create one until the implementer stage actually starts
+   * that issue - behind `MAX_PARALLEL`, minutes after the claim. A revocation arriving while the
+   * issue was still planning or queued hit an empty map and was dropped, and the controller minted
+   * later read clean, so the merge-time guard let the run merge work on an issue another fleet
+   * held.
+   */
+  it('remembers a revocation that arrives before the pipeline starts', async () => {
+    vi.useFakeTimers()
+    try {
+      const run = coordinator(
+        [[200, { revoked: ['106'], leaseExpiresAt: 1 }]],
+        [],
+      )
+
+      // Claimed, not yet started: no controller exists for #106 at this point.
+      await run.heartbeatOnce()
+
+      expect(run.isRevoked('106')).toBe(true)
+      // And the pipeline, when it finally gets its turn, is handed a signal that is already spent.
+      expect(run.signalFor('106').aborted).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('gives up an issue it never started when the run itself lapses', async () => {
+    vi.useFakeTimers()
+    try {
+      const run = coordinator(
+        [[409, { error: 'run 20260830-1 is not registered' }]],
+        [],
+      )
+
+      run.startHeartbeat()
+      await vi.advanceTimersByTimeAsync(SANDCASTLE_HEARTBEAT_INTERVAL_MS)
+
+      // Nothing was ever in flight, and the 409 names no ids - leases are reaped with the run, so
+      // it is news about every issue this run claimed, including ones still queued.
+      expect(run.isRevoked('106')).toBe(true)
+      expect(run.signalFor('106').aborted).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('survives a 5xx heartbeat instead of tearing the run down', async () => {
     vi.useFakeTimers()
     const run = coordinator([[503, { error: 'no' }]], [])
@@ -316,6 +363,30 @@ describe('the run lifecycle', () => {
 
     expect(calls[0].body).toEqual({ ids: ['106'] })
     expect(calls[1].body).toEqual({})
+  })
+
+  /**
+   * Both are cleanup verbs, and both are called where an exception is at its most destructive: from
+   * a `finally` in `triage.ts`, from a signal handler, and from the last line of `main.ts` after
+   * every merge is already done. A 409 there says the registry reaped the run first - which is
+   * what the call was asking for - so failing a job over it, or replacing the error already on its
+   * way out of a `finally`, is the wrong answer to good news.
+   */
+  it('treats a run the registry already reaped as released and finished', async () => {
+    const run = coordinator(
+      [[409, { error: 'run 20260830-1 is not registered' }]],
+      [],
+    )
+
+    await expect(run.finish('finished')).resolves.toBeUndefined()
+    await expect(run.release(['106'])).resolves.toBeUndefined()
+  })
+
+  it('still throws on a refusal that is not that', async () => {
+    const run = coordinator([[403, { error: 'bad token' }]], [])
+
+    await expect(run.finish('finished')).rejects.toThrow(CoordinatorError)
+    await expect(run.release()).rejects.toThrow(CoordinatorError)
   })
 
   it('records work in progress against the branch that carries it', async () => {
