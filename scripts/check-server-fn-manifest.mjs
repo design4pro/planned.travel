@@ -20,13 +20,21 @@
  * 1. every id a `createSsrRpc` stub names is present in the manifest;
  * 2. every id a `createServerRpc` handler declares is present in the manifest.
  *
- * Run by `pnpm build`, after `vite build`.
+ * And two guards against passing vacuously, because both sides of those assertions read shapes
+ * nobody here owns: the manifest's, and the two the Start plugin emits. Parsing zero ids out of the
+ * resolver, or matching zero occurrences of either pattern across the whole build, is reported as a
+ * broken check rather than as a clean one.
+ *
+ * Run by `pnpm build`, after `vite build`. Takes the directory to scan as an optional argument,
+ * which is how its own test drives it.
  */
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const SERVER_DIR = 'dist/server'
+// Overridable so the script's own test can drive it over a fixture tree. `pnpm build` passes
+// nothing and reads the real build.
+const SERVER_DIR = process.argv[2] ?? 'dist/server'
 const ID = '[0-9a-f]{64}'
 
 /** Every `.js` in the server build, path and text. */
@@ -88,15 +96,24 @@ const patterns = [
   },
   {
     kind: 'unroutable handler (createServerRpc)',
-    regex: new RegExp(`createServerRpc\\(\\s*\\{\\s*id:\\s*"(${ID})"`, 'g'),
+    // `id` is matched wherever it sits in the object literal rather than only as its first
+    // property: the emitted order is the plugin's to change, and a pattern that survives only one
+    // of the orders is a pattern that stops matching without saying so.
+    regex: new RegExp(
+      `createServerRpc\\(\\s*\\{[^}]*?\\bid:\\s*"(${ID})"`,
+      'g',
+    ),
   },
 ]
 
 const unresolved = []
+/** Per-pattern totals, matched or not, for the vacuous-pass guard below. */
+const seen = new Map(patterns.map(({ kind }) => [kind, 0]))
 for (const chunk of chunks) {
   if (chunk === resolver) continue
   for (const { kind, regex } of patterns) {
     for (const match of chunk.text.matchAll(regex)) {
+      seen.set(kind, seen.get(kind) + 1)
       if (registered.has(match[1])) continue
       unresolved.push({
         kind,
@@ -106,6 +123,25 @@ for (const chunk of chunks) {
       })
     }
   }
+}
+
+/**
+ * The detection side's half of the `registered.size === 0` guard above.
+ *
+ * Both patterns read an emitted call shape that belongs to the Start plugin, not to us. Rename
+ * `createSsrRpc`, or move the id out of that object literal, and every pattern matches nothing,
+ * `unresolved` stays empty, and this script prints success — a silent no-op for the exact failure
+ * it exists to catch. A healthy build carries hundreds of each, so zero is never a build that is
+ * merely clean.
+ */
+const blind = [...seen].filter(([, count]) => count === 0).map(([kind]) => kind)
+if (blind.length > 0) {
+  console.error(
+    `[server-fn-manifest] matched 0 occurrences of: ${blind.join(', ')}.\n` +
+      'The emitted call shape changed; this check would pass on anything. ' +
+      'Fix the check, do not delete it.',
+  )
+  process.exit(1)
 }
 
 if (unresolved.length > 0) {
