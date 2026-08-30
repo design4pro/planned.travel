@@ -17,6 +17,17 @@
  * through `/api/sandcastle/*` under a bearer token, never by a console session — so `sandcastle`
  * holds one action in the dictionary (docs/ACCESS.md §2.3a) and this file holds one function.
  *
+ * **A plain `async function`, never a `createServerFn`, and that is load-bearing.** Its only caller
+ * is `src/routes/_app/console/-server/sandcastle.ts`, which *is* a server function — and a
+ * `createServerFn` called from inside another one's handler does not survive the production build.
+ * The Start plugin splits and registers a server function only where the client graph reaches it; a
+ * wrapper's handler is stripped on the client, so its import of this module is tree-shaken and this
+ * module is never registered. It is still compiled to an RPC stub, so the nested call resolved
+ * `getServerFnById` against a manifest it was absent from and threw `Server function info not
+ * found` on every render of `/console/sandcastle` — in the built Worker only, invisible to
+ * typecheck, lint and vitest alike. `scripts/check-server-fn-manifest.mjs` runs after `vite build`
+ * and fails the build if it ever comes back.
+ *
  * **A deployment without the binding is not an error.** It is production, where the binding is
  * deliberately absent (`wrangler.jsonc`) because a second registry would let two fleets each believe
  * they hold the backlog. `coordinator: false` says so, and the screen says it in words; a thrown
@@ -24,7 +35,6 @@
  * coordinated".
  */
 import { env } from 'cloudflare:workers'
-import { createServerFn } from '@tanstack/react-start'
 
 import { requirePermission } from '#/server/auth/guard'
 import { getSession } from '#/server/auth/session'
@@ -58,9 +68,7 @@ function sandcastleRegistry(): SandcastleRegistryNamespace | undefined {
     .SANDCASTLE_REGISTRY
 }
 
-export const readSandcastleRegistryFn = createServerFn({
-  method: 'GET',
-}).handler(async (): Promise<SandcastleRegistryView> => {
+export async function readSandcastleRegistry(): Promise<SandcastleRegistryView> {
   requirePermission(await getSession(), { sandcastle: ['read'] })
 
   const registry = sandcastleRegistry()
@@ -83,4 +91,4 @@ export const readSandcastleRegistryFn = createServerFn({
     coordinator: true,
     state: registryStateSchema.parse(await response.json()),
   }
-})
+}

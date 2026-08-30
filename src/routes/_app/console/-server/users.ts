@@ -29,6 +29,12 @@
  * `platform_audit_log` after it writes one (`docs/ACCESS.md` §2.5, §4.3). Nothing here decides
  * anything, and the Zod schemas below are the wire boundary for this surface — each one is at most
  * as permissive as the schema on the function it forwards to, which validates again.
+ *
+ * **The functions behind this file are plain `async` functions, and every one on this path has to
+ * stay plain.** A `createServerFn` called from inside another one's handler is compiled to an RPC
+ * stub the build never registers, and throws `Server function info not found` in the deployed Worker
+ * — see the header of `#/server/fns/console/users`. This layer is where the boundary is declared;
+ * the layer below it is ordinary code.
  */
 
 import { createServerFn } from '@tanstack/react-start'
@@ -39,14 +45,14 @@ import { ConsoleActionError } from '#/server/fns/console/errors'
 import { listPlatformSessionsFn } from '#/server/fns/console/sessions'
 import { readAccountBilling } from './account-billing'
 import {
-  banPlatformUserFn,
-  createPlatformUserFn,
-  deletePlatformUserFn,
-  getPlatformUserFn,
-  listPlatformUsersFn,
-  setPlatformUserPasswordFn,
-  setPlatformUserRoleFn,
-  unbanPlatformUserFn,
+  banPlatformUser,
+  createPlatformUser,
+  deletePlatformUser,
+  getPlatformUser,
+  listPlatformUsers,
+  setPlatformUserPassword,
+  setPlatformUserRole,
+  unbanPlatformUser,
 } from '#/server/fns/console/users'
 
 import type { ConsoleAuditEntry } from '#/server/fns/console/account'
@@ -84,7 +90,9 @@ export const consoleUsersQuerySchema = z
     field: z.enum(['email', 'name']).default('email'),
     role: z.enum(['admin', 'curator']).optional(),
     status: z.enum(['active', 'suspended']).optional(),
-    sortBy: z.enum(['createdAt', 'updatedAt', 'name', 'email']).default('createdAt'),
+    sortBy: z
+      .enum(['createdAt', 'updatedAt', 'name', 'email'])
+      .default('createdAt'),
     sortDirection: z.enum(['asc', 'desc']).default('desc'),
     page: z.number().int().min(1).max(4_000).default(1),
   })
@@ -103,19 +111,19 @@ export interface ConsoleUsersPage {
 export const loadConsoleUsers = createServerFn({ method: 'GET' })
   .validator(consoleUsersQuerySchema)
   .handler(async ({ data }): Promise<ConsoleUsersPage> => {
-    const result = await listPlatformUsersFn({
-      data: {
-        ...(data.q === undefined || data.q.length === 0 ? {} : { search: data.q }),
-        searchField: data.field,
-        ...(data.role === undefined ? {} : { role: data.role }),
-        ...(data.status === undefined
-          ? {}
-          : { banned: data.status === 'suspended' }),
-        sortBy: data.sortBy,
-        sortDirection: data.sortDirection,
-        limit: CONSOLE_USERS_PAGE_SIZE,
-        offset: (data.page - 1) * CONSOLE_USERS_PAGE_SIZE,
-      },
+    const result = await listPlatformUsers({
+      ...(data.q === undefined || data.q.length === 0
+        ? {}
+        : { search: data.q }),
+      searchField: data.field,
+      ...(data.role === undefined ? {} : { role: data.role }),
+      ...(data.status === undefined
+        ? {}
+        : { banned: data.status === 'suspended' }),
+      sortBy: data.sortBy,
+      sortDirection: data.sortDirection,
+      limit: CONSOLE_USERS_PAGE_SIZE,
+      offset: (data.page - 1) * CONSOLE_USERS_PAGE_SIZE,
     })
 
     /**
@@ -207,7 +215,7 @@ export const loadConsoleAccount = createServerFn({ method: 'GET' })
     let context
     try {
       ;[account, sessions, context] = await Promise.all([
-        getPlatformUserFn({ data: { userId: data.userId } }),
+        getPlatformUser({ userId: data.userId }),
         listPlatformSessionsFn({ data: { userId: data.userId } }),
         readAccountContext(data.userId),
       ])
@@ -258,22 +266,20 @@ export const createConsoleAccount = createServerFn({ method: 'POST' })
     }),
   )
   .handler(
-    async ({ data }): Promise<ConsoleUser> =>
-      await createPlatformUserFn({ data }),
+    async ({ data }): Promise<ConsoleUser> => await createPlatformUser(data),
   )
 
 export const setConsoleAccountRole = createServerFn({ method: 'POST' })
   .validator(z.object({ userId, role: platformRole }))
   .handler(
-    async ({ data }): Promise<ConsoleUser> =>
-      await setPlatformUserRoleFn({ data }),
+    async ({ data }): Promise<ConsoleUser> => await setPlatformUserRole(data),
   )
 
 export const setConsoleAccountPassword = createServerFn({ method: 'POST' })
   .validator(z.object({ userId, newPassword: z.string().min(1) }))
   .handler(
     async ({ data }): Promise<{ userId: string; revoked: number }> =>
-      await setPlatformUserPasswordFn({ data }),
+      await setPlatformUserPassword(data),
   )
 
 export const suspendConsoleAccount = createServerFn({ method: 'POST' })
@@ -286,19 +292,18 @@ export const suspendConsoleAccount = createServerFn({ method: 'POST' })
     }),
   )
   .handler(
-    async ({ data }): Promise<ConsoleUser> => await banPlatformUserFn({ data }),
+    async ({ data }): Promise<ConsoleUser> => await banPlatformUser(data),
   )
 
 export const restoreConsoleAccount = createServerFn({ method: 'POST' })
   .validator(z.object({ userId }))
   .handler(
-    async ({ data }): Promise<ConsoleUser> =>
-      await unbanPlatformUserFn({ data }),
+    async ({ data }): Promise<ConsoleUser> => await unbanPlatformUser(data),
   )
 
 export const deleteConsoleAccount = createServerFn({ method: 'POST' })
   .validator(z.object({ userId }))
   .handler(
     async ({ data }): Promise<{ userId: string }> =>
-      await deletePlatformUserFn({ data }),
+      await deletePlatformUser(data),
   )
