@@ -64,56 +64,60 @@ export const QUEUE_BATCH_MAX = 100
  * Inputs
  * ---------------------------------------------------------------------------------------------- */
 
-const tripId = z.string().trim().min(1).max(64)
+const tripIdSchema = z.string().trim().min(1).max(64)
 
 /** A required, trimmed name. */
-const title = z
+const titleSchema = z
   .string()
   .trim()
   .min(1, { error: 'A trip needs a name.' })
   .max(120, { error: 'That name is too long — 120 characters at most.' })
 
 /** `YYYY-MM-DD`, or the empty string meaning "clear it". */
-const dateOrBlank = z.union([z.literal(''), z.iso.date()], {
+const dateOrBlankSchema = z.union([z.literal(''), z.iso.date()], {
   error: 'Use a calendar date, or leave it empty.',
 })
 
-const currency = z
+const currencySchema = z
   .string()
   .trim()
   .length(3, { error: 'A currency is a three-letter ISO code.' })
   .toUpperCase()
 
 /**
- * The rule both trip forms share: a range that ends before it starts is refused at the boundary.
+ * The rule both trip forms share: a range that ends before it starts is refused at the boundary. A
+ * field the patch left out, or left blank, orders against nothing and so passes.
  *
  * Defence in depth — the dialog and the edit sheet each disable their own save button and name the
  * problem on the Return field — so this is what stops a hand-rolled request, never a sentence a
  * reader sees.
  */
-const datesInOrder = {
-  check: (value: { startDate?: string; endDate?: string }): boolean =>
-    value.startDate === undefined ||
-    value.endDate === undefined ||
-    value.startDate === '' ||
-    value.endDate === '' ||
-    value.endDate >= value.startDate,
+function datesInOrder(value: {
+  startDate?: string
+  endDate?: string
+}): boolean {
+  const { startDate, endDate } = value
+  if (startDate === undefined || endDate === undefined) {
+    return true
+  }
+  return startDate === '' || endDate === '' || endDate >= startDate
+}
+
+/** Where the refusal above lands, shared by both schemas that carry it. */
+const datesOutOfOrder = {
   error: 'The return date cannot be before the departure date.',
-  path: ['endDate'] as const,
+  path: ['endDate'],
 }
 
 export const createTripInputSchema = z
   .strictObject({
-    title,
+    title: titleSchema,
     destination: z.string().trim().max(160),
-    startDate: dateOrBlank,
-    endDate: dateOrBlank,
-    currency,
+    startDate: dateOrBlankSchema,
+    endDate: dateOrBlankSchema,
+    currency: currencySchema,
   })
-  .refine(datesInOrder.check, {
-    error: datesInOrder.error,
-    path: [...datesInOrder.path],
-  })
+  .refine(datesInOrder, datesOutOfOrder)
 
 /**
  * The edit patch. **Blank clears, `undefined` leaves** — the convention `-server/plan.ts` established
@@ -122,21 +126,18 @@ export const createTripInputSchema = z
  */
 export const updateTripInputSchema = z
   .strictObject({
-    tripId,
-    title: title.optional(),
+    tripId: tripIdSchema,
+    title: titleSchema.optional(),
     destination: z.string().trim().max(160).optional(),
     summary: z.string().trim().max(280).optional(),
-    startDate: dateOrBlank.optional(),
-    endDate: dateOrBlank.optional(),
-    currency: currency.optional(),
+    startDate: dateOrBlankSchema.optional(),
+    endDate: dateOrBlankSchema.optional(),
+    currency: currencySchema.optional(),
   })
-  .refine(datesInOrder.check, {
-    error: datesInOrder.error,
-    path: [...datesInOrder.path],
-  })
+  .refine(datesInOrder, datesOutOfOrder)
 
-export const archiveTripInputSchema = z.strictObject({ tripId })
-export const restoreTripInputSchema = z.strictObject({ tripId })
+export const archiveTripInputSchema = z.strictObject({ tripId: tripIdSchema })
+export const restoreTripInputSchema = z.strictObject({ tripId: tripIdSchema })
 
 /* -------------------------------------------------------------------------------------------------
  * Travel statistics — `00-S4`'s obligation on this stage
@@ -195,14 +196,14 @@ export function affectedStatYears(
  */
 async function enqueueTravelStats(
   scope: TenantScope,
-  tripIdentifier: string,
+  tripId: string,
   years: ReadonlyArray<number>,
 ): Promise<void> {
   const orgId = scope.ctx.organizationId
   const at = Date.now()
 
   try {
-    const members = await listTripMembers(scope, tripIdentifier)
+    const members = await listTripMembers(scope, tripId)
     const userIds = [...new Set(members.map((member) => member.userId))]
     const envelopes: Array<EnqueueInput<'travel-stats'>> = []
     for (const userId of userIds) {
@@ -228,7 +229,7 @@ async function enqueueTravelStats(
   } catch (cause) {
     log().warn('travel statistics were not enqueued for a trip write', {
       organizationId: orgId,
-      tripId: tripIdentifier,
+      tripId,
       ...serializeError(cause),
     })
   }
@@ -241,6 +242,14 @@ async function enqueueTravelStats(
 /** Normalises `''` from a form control into the `null` a nullable column wants. */
 function blankToNull(value: string): string | null {
   return value === '' ? null : value
+}
+
+/**
+ * The same normalisation over a patch field, where a third state exists: a field the form never sent
+ * stays `undefined` and the repository leaves the column alone.
+ */
+function patched(value: string | undefined): string | null | undefined {
+  return value === undefined ? undefined : blankToNull(value)
 }
 
 /**
@@ -276,26 +285,18 @@ export const updateTripFn = createServerFn({ method: 'POST' })
   .validator(updateTripInputSchema)
   .handler(async ({ data }): Promise<{ readonly tripId: string }> => {
     const scope = await appScope()
-    const { tripId: id, ...patch } = data
+    const { tripId, ...patch } = data
 
     // Read before the write, for one reason: the year a trip *leaves* has to be recomputed as well as
     // the one it arrives in, and only the row as it stood knows which year that was.
-    const before = await requireTrip(scope, id)
-    const trip = await updateTrip(scope, id, {
-      ...(patch.title === undefined ? {} : { title: patch.title }),
-      ...(patch.destination === undefined
-        ? {}
-        : { destination: blankToNull(patch.destination) }),
-      ...(patch.summary === undefined
-        ? {}
-        : { summary: blankToNull(patch.summary) }),
-      ...(patch.startDate === undefined
-        ? {}
-        : { startDate: blankToNull(patch.startDate) }),
-      ...(patch.endDate === undefined
-        ? {}
-        : { endDate: blankToNull(patch.endDate) }),
-      ...(patch.currency === undefined ? {} : { currency: patch.currency }),
+    const before = await requireTrip(scope, tripId)
+    const trip = await updateTrip(scope, tripId, {
+      title: patch.title,
+      destination: patched(patch.destination),
+      summary: patched(patch.summary),
+      startDate: patched(patch.startDate),
+      endDate: patched(patch.endDate),
+      currency: patch.currency,
     })
 
     await enqueueTravelStats(

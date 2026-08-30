@@ -26,19 +26,7 @@ import {
   SimpleSelect,
 } from '#/components/ui'
 import { createTripFn } from '../-server/trip-lifecycle'
-
-/** The currencies a trip is most often budgeted in, plus the workspace default. */
-const CURRENCIES: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'EUR', label: 'EUR — Euro' },
-  { value: 'GBP', label: 'GBP — Pound sterling' },
-  { value: 'USD', label: 'USD — US dollar' },
-  { value: 'CHF', label: 'CHF — Swiss franc' },
-  { value: 'PLN', label: 'PLN — Polish złoty' },
-  { value: 'SEK', label: 'SEK — Swedish krona' },
-  { value: 'JPY', label: 'JPY — Japanese yen' },
-  { value: 'AUD', label: 'AUD — Australian dollar' },
-  { value: 'CAD', label: 'CAD — Canadian dollar' },
-]
+import { TRIP_CURRENCIES } from './trip-currencies'
 
 function messageOf(error: unknown): string {
   if (error instanceof Error && error.message.length > 0) {
@@ -209,7 +197,7 @@ export function NewTripDialog({
               hint="Every expense on this trip is totalled in it."
             >
               <SimpleSelect
-                options={[...CURRENCIES]}
+                options={[...TRIP_CURRENCIES]}
                 value={currency}
                 onValueChange={setCurrency}
                 ariaLabel="Budget currency"

@@ -35,6 +35,7 @@ import { serverToday } from '#/server/clock'
 import { appScope } from './context'
 import { isoOfRequired } from './serialise'
 
+import type { TenantScope } from '#/server/repos'
 import type { JsonRecord } from '#/server/db/schema'
 import type {
   Notification,
@@ -152,6 +153,23 @@ export interface DashboardPayload {
   }
 }
 
+/**
+ * A card maker for one list of trips: the two per-tile facts a card needs beyond the row itself —
+ * the place count and the reader's own role — read for the whole list in two statements rather than
+ * two per tile, then applied one tile at a time.
+ */
+async function tripCardsFor(
+  scope: TenantScope,
+  tripIds: ReadonlyArray<string>,
+): Promise<(trip: Trip) => TripCard> {
+  const [placeCounts, roles] = await Promise.all([
+    countPlacesPerTrip(scope, tripIds),
+    tripRolesFor(scope, tripIds),
+  ])
+  return (trip) =>
+    toTripCard(trip, placeCounts.get(trip.id) ?? 0, roles.get(trip.id) ?? null)
+}
+
 export function toTripCard(
   trip: Trip,
   placeCount: number,
@@ -214,18 +232,9 @@ export const loadDashboard = createServerFn({ method: 'GET' }).handler(
     ])
 
     const shown = [...summary.upcomingTrips, ...summary.myTrips]
-    const shownIds = [...new Set(shown.map((trip) => trip.id))]
-    const [placeCounts, roles] = await Promise.all([
-      countPlacesPerTrip(scope, shownIds),
-      tripRolesFor(scope, shownIds),
+    const card = await tripCardsFor(scope, [
+      ...new Set(shown.map((trip) => trip.id)),
     ])
-
-    const card = (trip: Trip): TripCard =>
-      toTripCard(
-        trip,
-        placeCounts.get(trip.id) ?? 0,
-        roles.get(trip.id) ?? null,
-      )
     const first = summary.upcomingTrips.at(0)
 
     return {
@@ -304,21 +313,14 @@ export const loadTrips = createServerFn({ method: 'GET' })
       resolveQuotas(scope),
     ])
 
-    const tripIds = rows.map((trip) => trip.id)
-    const [placeCounts, roles] = await Promise.all([
-      countPlacesPerTrip(scope, tripIds),
-      tripRolesFor(scope, tripIds),
-    ])
+    const card = await tripCardsFor(
+      scope,
+      rows.map((trip) => trip.id),
+    )
 
     return {
       today,
-      trips: rows.map((trip) =>
-        toTripCard(
-          trip,
-          placeCounts.get(trip.id) ?? 0,
-          roles.get(trip.id) ?? null,
-        ),
-      ),
+      trips: rows.map((trip) => card(trip)),
       totals: {
         total: summary.trips.total,
         archived: summary.trips.archived,

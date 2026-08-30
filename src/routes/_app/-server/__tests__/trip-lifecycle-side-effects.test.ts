@@ -19,9 +19,9 @@
  * on that path, so what a write *did* is read back through the repository rather than off the call.
  */
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { addTripMember, listTrips, requireTrip } from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
@@ -30,7 +30,7 @@ import { travelStatsTaskId } from '#/server/queue/handlers/travel-stats'
 
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { TenantScope } from '#/server/repos'
-import type { TaskEnvelope } from '#/server/queue/types'
+import type { TaskEnvelope, TaskEnvelopeOf } from '#/server/queue/types'
 
 /* ------------------------------------------------------------------ mocking */
 
@@ -176,16 +176,19 @@ function sent(): Array<TaskEnvelope> {
   return stubs.batches.flat().map((body) => taskEnvelopeSchema.parse(body))
 }
 
+/** The `travel-stats` envelopes among a batch, narrowed so their payload can be read as itself. */
+function travelStats(
+  envelopes: ReadonlyArray<TaskEnvelope>,
+): Array<TaskEnvelopeOf<'travel-stats'>> {
+  return envelopes.filter((envelope) => envelope.kind === 'travel-stats')
+}
+
 function statYears(envelopes: ReadonlyArray<TaskEnvelope>): Array<number> {
-  return envelopes.map(
-    (envelope) => (envelope.payload as { statYear: number }).statYear,
-  )
+  return travelStats(envelopes).map((envelope) => envelope.payload.statYear)
 }
 
 function statsRecipients(): Array<string> {
-  return sent()
-    .filter((envelope) => envelope.kind === 'travel-stats')
-    .map((envelope) => envelope.payload.userId)
+  return travelStats(sent()).map((envelope) => envelope.payload.userId)
 }
 
 /* ---------------------------------------------------------------- the fan-out */
@@ -219,18 +222,20 @@ describe('the travel-statistics fan-out', () => {
     })
 
     const envelopes = sent()
+    expect(envelopes.map((envelope) => envelope.kind)).toEqual([
+      'travel-stats',
+      'travel-stats',
+    ])
     expect(statYears(envelopes)).toEqual([ALL_TIME_STAT_YEAR, 2026])
 
     // `00-S4` owns the id and this stage reuses it rather than composing a second string that could
     // drift: `travel-stats:<org>:<user>:<year>:<collapse window>`.
-    for (const envelope of envelopes) {
+    for (const envelope of travelStats(envelopes)) {
       const [kind, orgId, userId, statYear] = envelope.id.split(':')
       expect(kind).toBe('travel-stats')
       expect(orgId).toBe(tenant.organizationId)
       expect(userId).toBe(tenant.ownerUserId)
-      expect(Number(statYear)).toBe(
-        (envelope.payload as { statYear: number }).statYear,
-      )
+      expect(Number(statYear)).toBe(envelope.payload.statYear)
     }
   })
 

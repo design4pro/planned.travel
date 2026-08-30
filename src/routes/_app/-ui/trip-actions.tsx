@@ -40,28 +40,9 @@ import {
   restoreTripFn,
   updateTripFn,
 } from '../-server/trip-lifecycle'
+import { TRIP_CURRENCIES } from './trip-currencies'
 
 import type { TripCard } from '../-server/overview'
-
-/**
- * The currencies a trip is most often budgeted in.
- *
- * The same nine the creation dialog offers, restated rather than shared: `01-S8` replaces both with
- * one field set over the full ISO-4217 list, and a helper extracted here now would be a third place
- * to delete then. Until then the edit sheet and the dialog must offer the same choices, which is what
- * `__tests__` on neither can prove and a reader would notice immediately.
- */
-const CURRENCIES: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'EUR', label: 'EUR — Euro' },
-  { value: 'GBP', label: 'GBP — Pound sterling' },
-  { value: 'USD', label: 'USD — US dollar' },
-  { value: 'CHF', label: 'CHF — Swiss franc' },
-  { value: 'PLN', label: 'PLN — Polish złoty' },
-  { value: 'SEK', label: 'SEK — Swedish krona' },
-  { value: 'JPY', label: 'JPY — Japanese yen' },
-  { value: 'AUD', label: 'AUD — Australian dollar' },
-  { value: 'CAD', label: 'CAD — Canadian dollar' },
-]
 
 function messageOf(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.length > 0) {
@@ -239,7 +220,7 @@ export function TripEditSheet({
               hint="Every expense on this trip is totalled in it."
             >
               <SimpleSelect
-                options={[...CURRENCIES]}
+                options={[...TRIP_CURRENCIES]}
                 value={currency}
                 onValueChange={setCurrency}
                 ariaLabel="Budget currency"
@@ -295,8 +276,7 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
 
-  const isOwner = trip.role === 'owner'
-  if (!isOwner) {
+  if (trip.role !== 'owner') {
     return null
   }
 

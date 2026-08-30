@@ -34,6 +34,7 @@ import {
 } from '#/server/db/schema'
 import {
   allOf,
+  anyOf,
   assertQuota,
   createTenantRepository,
   tenantFilter,
@@ -204,9 +205,7 @@ function readableTrips(scope: TenantScope): SQL {
         ),
       ),
   )
-  // `or()` widens to `SQL | undefined` and only returns `undefined` for an empty argument list,
-  // which this is not — the same narrowing `allOf` performs for `and()`, done here rather than cast.
-  return or(eq(trips.visibility, 'organization'), isMember) ?? isMember
+  return anyOf(eq(trips.visibility, 'organization'), isMember)
 }
 
 /**
@@ -273,6 +272,24 @@ export async function assertTripRole(
     )
   }
   return role
+}
+
+/**
+ * Resolves a trip the acting user both may see and may change, or throws.
+ *
+ * The two guards in the order every trip write needs them: {@link requireTrip} first, so a caller who
+ * may not see the trip is answered with {@link NotFoundError} and learns nothing, and only then
+ * {@link assertTripRole}, whose `FORBIDDEN` is safe because by that point they have proved they may.
+ * Owner is the whole of the matrix so far (PRD #104 decision 6); a verb that admits an editor takes
+ * the pair itself rather than widening this.
+ */
+async function requireOwnedTrip(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Trip> {
+  const trip = await requireTrip(scope, tripId)
+  await assertTripRole(scope, tripId, ['owner'])
+  return trip
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -519,8 +536,7 @@ export async function updateTrip(
   tripId: string,
   input: UpdateTripInput,
 ): Promise<Trip> {
-  const existing = await requireTrip(scope, tripId)
-  await assertTripRole(scope, tripId, ['owner'])
+  const existing = await requireOwnedTrip(scope, tripId)
   const values = definedOnly(updateTripInput.parse(input))
 
   const startDate =
@@ -560,8 +576,7 @@ export async function archiveTrip(
   scope: TenantScope,
   tripId: string,
 ): Promise<Trip> {
-  await requireTrip(scope, tripId)
-  await assertTripRole(scope, tripId, ['owner'])
+  await requireOwnedTrip(scope, tripId)
   return tripsRepository.requireUpdate(scope, tripId, { isArchived: true })
 }
 
@@ -570,8 +585,7 @@ export async function restoreTrip(
   scope: TenantScope,
   tripId: string,
 ): Promise<Trip> {
-  await requireTrip(scope, tripId)
-  await assertTripRole(scope, tripId, ['owner'])
+  await requireOwnedTrip(scope, tripId)
   return tripsRepository.requireUpdate(scope, tripId, { isArchived: false })
 }
 
@@ -588,8 +602,7 @@ export async function deleteTrip(
   scope: TenantScope,
   tripId: string,
 ): Promise<void> {
-  await requireTrip(scope, tripId)
-  await assertTripRole(scope, tripId, ['owner'])
+  await requireOwnedTrip(scope, tripId)
   await tripsRepository.requireRemove(scope, tripId)
 }
 
@@ -620,11 +633,13 @@ export async function listTripMembers(
 }
 
 /**
- * Trips the given user collaborates on, newest first — now a thin alias for {@link listTrips}.
+ * The trips on a user's own dashboard, newest first — since ADR 0007 a thin alias for
+ * {@link listTrips}.
  *
- * Since ADR 0007 `listTrips` already answers "the trips this scope may see", which is the question
- * this function used to answer with a membership query of its own. It is kept for its callers rather
- * than removed, and it keeps its `userId` argument because the dashboard's summary still takes one.
+ * The membership query this used to run is now folded into `listTrips`'s read predicate, which is
+ * the wider of the two: it also admits an organization-visible trip the caller holds no membership
+ * row on. That is the set this rail wants — the dashboard merges it with `listUpcomingTrips`, which
+ * has always been that same wider set — and the narrower per-trip answer is {@link tripRolesFor}.
  *
  * A `userId` that is not the acting user's returns nothing. A tenant-scoped read may answer for its
  * own principal and no other — "which trips is my colleague on" is precisely the question decision 1
