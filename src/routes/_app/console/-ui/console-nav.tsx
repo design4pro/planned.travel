@@ -18,40 +18,53 @@
  */
 
 import { Link } from '@tanstack/react-router'
-import { LayoutDashboard, Users } from 'lucide-react'
+import { Castle, LayoutDashboard, Users } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 
 import type { ConsoleAccess } from '../-server/access'
+import type { MessageKey } from '#/lib/i18n'
 import type { LucideIcon } from 'lucide-react'
 
 /** `to` is a param-free literal from the router's own path union. */
 interface ConsoleSectionLink {
-  readonly to: '/console' | '/console/users'
-  readonly label: string
-  readonly description: string
+  readonly to: '/console' | '/console/users' | '/console/sandcastle'
+  readonly labelKey: MessageKey
+  readonly descriptionKey: MessageKey
   readonly icon: LucideIcon
   /** Only the index entry must match exactly; the rest own their subtrees. */
   readonly exact?: boolean
-  /** Which standing this section needs. */
-  readonly needs: 'curate' | 'users'
+  /**
+   * Which standing this section needs, named as the capability flag itself rather than as a word
+   * this file would then have to map onto one. A third section is what made that mapping a liability
+   * — a two-way ternary silently sends every unrecognised value down its else branch.
+   */
+  readonly needs: keyof Omit<ConsoleAccess, 'role'>
 }
 
 const SECTIONS: ReadonlyArray<ConsoleSectionLink> = [
   {
     to: '/console',
-    label: 'Overview',
-    description: 'The platform at a glance',
+    labelKey: 'console.nav.overview',
+    descriptionKey: 'console.nav.overview.description',
     icon: LayoutDashboard,
     exact: true,
-    needs: 'curate',
+    needs: 'canCurate',
   },
   {
     to: '/console/users',
-    label: 'Accounts',
-    description: 'Roles, suspensions and sessions',
+    labelKey: 'console.nav.accounts',
+    descriptionKey: 'console.nav.accounts.description',
     icon: Users,
-    needs: 'users',
+    needs: 'canManageUsers',
+  },
+  {
+    to: '/console/sandcastle',
+    labelKey: 'console.nav.runs',
+    descriptionKey: 'console.nav.runs.description',
+    icon: Castle,
+    needs: 'canSeeRuns',
   },
 ]
 
@@ -67,12 +80,11 @@ const ICON_CLASS =
   'size-4 shrink-0 text-ink-4 transition-colors duration-base ease-out-quint group-data-[status=active]:text-brand'
 
 export function ConsoleNav({ access }: { access: ConsoleAccess }) {
-  const visible = SECTIONS.filter((section) =>
-    section.needs === 'users' ? access.canManageUsers : access.canCurate,
-  )
+  const t = useTranslate()
+  const visible = SECTIONS.filter((section) => access[section.needs])
 
   return (
-    <nav aria-label="Console sections" className="min-w-0">
+    <nav aria-label={t('console.nav.label')} className="min-w-0">
       <ul className="scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0">
         {visible.map((section) => (
           <li key={section.to} className="shrink-0 lg:min-w-0 lg:shrink">
@@ -84,10 +96,10 @@ export function ConsoleNav({ access }: { access: ConsoleAccess }) {
               <section.icon aria-hidden className={ICON_CLASS} />
               <span className="min-w-0">
                 <span className="block truncate text-label font-semibold">
-                  {section.label}
+                  {t(section.labelKey)}
                 </span>
                 <span className="hidden truncate text-caption text-ink-3 lg:block">
-                  {section.description}
+                  {t(section.descriptionKey)}
                 </span>
               </span>
             </Link>

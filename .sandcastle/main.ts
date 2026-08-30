@@ -24,26 +24,70 @@
 //
 // The run number is what makes two loops concurrent: it scopes the integration
 // branch, the issue branches (`sandcastle/issue-<id>-<date>-<n>`), the artifact
-// directory and the lock, so nothing is shared but the repo. `--issues` is how
-// the operator partitions the backlog — both planners otherwise pick the same
-// `ready-for-agent` issues and implement them twice. Same number = same run =
-// resume; a new number is a run that shares nothing.
+// directory and the lock, so nothing is shared but the repo. Same number = same
+// run = resume; a new number is a run that shares nothing.
+//
+// Two runs never work the same issue, whether or not the operator partitions
+// the backlog with `--issues`, and whether they are on this machine, another
+// one, or a GitHub Actions runner: every run claims its issues from a shared
+// registry (./coordinator.ts) before a single container starts, and holds them
+// by heartbeating. A claim covers an issue's whole closure — itself, its
+// ancestors and its descendants — so holding a PRD holds every slice under it,
+// holding one slice stops anyone taking the PRD whole, and sibling slices stay
+// parallel. `--issues` is now only a preference, not the thing standing between
+// two fleets and building the same ticket twice. Naming a PRD there means "the
+// cleared slices under it" — they are expanded here rather than left for the
+// planner to discover, because an agent that walks a sub-issue tree on its own
+// picks up work no human has cleared.
+//
+// `--no-coordinator` opts out, loudly. Anything else that stops the registry
+// answering stops the run: a loop that cannot see what another run holds must
+// not start rather than start blind.
 //
 // Requires: Docker running, `sandcastle docker build-image` executed once,
 // and the env vars from .env.example.
 
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { hostname } from 'node:os'
 import { join } from 'node:path'
 
 import * as sandcastle from '@ai-hero/sandcastle'
 import { z } from 'zod'
 
+import { adoptWipBranches } from './adopt'
+import { EDGE_COMMAND, parseEdgeLines } from './issue-edges'
+import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
 import { docker } from './sandbox'
+
+import type { GitOutput } from './adopt'
+import type {
+  ClaimResult,
+  SandcastleEdge,
+} from '../src/server/do/sandcastle-protocol'
+
+/**
+ * The branch shape `plan-prompt.md` asks the planner for: `sandcastle/issue-<id>-<runId>`.
+ *
+ * Checked because the name is not decoration. The run suffix is what lets two runs work the backlog
+ * side by side - git refuses one branch in two worktrees - and it is what a claim's `adopt` map is
+ * matched against. This catches a value that is not an issue branch at all; `runPlanner` then holds
+ * the planner to the exact name owed to each issue.
+ */
+const ISSUE_BRANCH_PATTERN = /^sandcastle\/issue-[1-9][0-9]*-[0-9]{8}-[0-9]+$/
 
 const planSchema = z.object({
   issues: z.array(
-    z.object({ id: z.string(), title: z.string(), branch: z.string() }),
+    z.object({
+      id: z.string(),
+      title: z.string(),
+      branch: z
+        .string()
+        .regex(
+          ISSUE_BRANCH_PATTERN,
+          'branch must be sandcastle/issue-<id>-<runId>',
+        ),
+    }),
   ),
 })
 
@@ -144,10 +188,70 @@ const hooks = {
 
 const argv = process.argv.slice(2)
 
+// The coordinator runs host-side, not in the sandbox, so it reads this process's environment
+// rather than the one sandcastle assembles for a container. `.sandcastle/.env` is where the
+// operator already keeps this run's secrets, so read it here too. An existing shell variable wins
+// (node does not overwrite), which is the precedence an operator expects from `FOO=… pnpm
+// sandcastle`.
+try {
+  process.loadEnvFile('.sandcastle/.env')
+} catch {
+  // No file, or an unreadable one. Every name it would have supplied is checked where it is used,
+  // with a message naming what is missing — an absent file is not itself an error.
+}
+
 /** `--name value`, the flag idiom this repo already uses (sentry-triage.ts). */
 function flag(name: string, fallback: string): string {
   const at = argv.indexOf(`--${name}`)
   return at === -1 ? fallback : (argv[at + 1] ?? fallback)
+}
+
+/** `--name`, present or not. */
+function boolFlag(name: string): boolean {
+  return argv.includes(`--${name}`)
+}
+
+/** Is that pid still alive? Signal 0 delivers nothing; it only asks. */
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Every flag this script understands, checked before anything else runs. An
+// unrecognised `--foo` used to be swallowed in silence, which is the worst
+// possible failure for a flag whose whole job is to NARROW the run: `--issue
+// 104` for `--issues 104` left the run unscoped, so its planner read the whole
+// backlog and a second fleet re-implemented the tickets the first one was
+// already building. A typo must cost a startup error, never a duplicated run.
+const VALUE_FLAGS = ['run', 'issues']
+const BOOLEAN_FLAGS = ['no-coordinator']
+const KNOWN_FLAGS = [...VALUE_FLAGS, ...BOOLEAN_FLAGS]
+for (let at = 0; at < argv.length; at++) {
+  const token = argv[at]!
+  if (!token.startsWith('--')) {
+    throw new Error(
+      `Unexpected argument ${JSON.stringify(token)}. Every input is a flag: ` +
+        `${KNOWN_FLAGS.map((k) => `--${k} <value>`).join(', ')}.`,
+    )
+  }
+  const name = token.slice(2)
+  if (!KNOWN_FLAGS.includes(name)) {
+    // Singular/plural and prefix slips are the ones that actually happen, so
+    // name the intended flag rather than only listing the alphabet.
+    const near = KNOWN_FLAGS.find(
+      (known) => known.startsWith(name) || name.startsWith(known),
+    )
+    throw new Error(
+      `Unknown flag ${token}${near === undefined ? '' : ` — did you mean --${near}?`} ` +
+        `Known flags: ${KNOWN_FLAGS.map((k) => `--${k}`).join(', ')}.`,
+    )
+  }
+  // A value flag owns the next token; a boolean one owns nothing.
+  if (VALUE_FLAGS.includes(name)) at++
 }
 
 // Local calendar date, like the manual `date +%Y%m%d` this replaces — a UTC
@@ -186,16 +290,6 @@ if (REQUESTED_RUN !== '' && !/^[1-9][0-9]*$/.test(REQUESTED_RUN)) {
   throw new Error(
     `--run takes a positive integer (got ${JSON.stringify(REQUESTED_RUN)}). Example: pnpm sandcastle --run 2`,
   )
-}
-
-/** Is that pid still alive? Signal 0 delivers nothing; it only asks. */
-function isAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch {
-    return false
-  }
 }
 
 // Claiming the run number and locking it is one step, because the lock is the
@@ -243,6 +337,125 @@ const ONLY_ISSUES = flag('issues', '')
   .split(',')
   .map((id) => id.trim())
   .filter(Boolean)
+if (ONLY_ISSUES.some((id) => !/^[1-9][0-9]*$/.test(id))) {
+  throw new Error(
+    `--issues takes a comma-separated list of issue numbers (got ${JSON.stringify(flag('issues', ''))}). Example: pnpm sandcastle --issues 106,108`,
+  )
+}
+
+/**
+ * The issues a human has cleared for the loop. The label IS the gate — see
+ * docs/agents/triage-labels.md, "remove the label to hold it" — so this list,
+ * not a `gh` query the planner improvises, is the whole universe of workable
+ * ids. Everything downstream is a subset of it.
+ */
+function readyForAgentIds(): string[] {
+  // `--limit 500`, matching `issue-edges.ts`, because `gh issue list` defaults to thirty and says
+  // nothing when it truncates. Silently capping "the whole universe of workable ids" at the thirty
+  // most recently updated would drop cleared work on the floor, and `resolveOnlyIssues` would go
+  // on to reject a `--issues 104` for "not carrying `ready-for-agent`" when it plainly does.
+  const listed = execSync(
+    'gh issue list --state open --label ready-for-agent --limit 500 --json number --jq ".[].number"',
+    { encoding: 'utf8' },
+  )
+  return listed
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
+/**
+ * The backlog this run works, and the registry's shard key. It must match
+ * `SANDCASTLE_COORDINATOR_REPO` in `src/routes/api/sandcastle/-lib/coordinator.ts`: the coordinator
+ * refuses a registration for any other repository rather than filing it under this one's object.
+ */
+const REPO = 'design4pro/planned.travel'
+
+/**
+ * Every open `child → parent` sub-issue edge, in one call.
+ *
+ * The registry leases an issue's whole closure, so it needs the tree — and it takes it from the
+ * client because GitHub is the source of truth for it and the registry only caches it. Read whole
+ * rather than per issue: one request describes the backlog, and a partial tree would under-report
+ * a closure, which is the one direction that lets two runs collide.
+ */
+function openIssueEdges(): Array<SandcastleEdge> {
+  const listed = execSync(EDGE_COMMAND, { encoding: 'utf8' })
+  return parseEdgeLines(listed)
+}
+
+/**
+ * One git command in the operator's repository, without a shell.
+ *
+ * `execFileSync` rather than `execSync`: the branch names adoption asks about come out of the
+ * registry, which is to say out of whatever holds the coordinator token, and a string of that
+ * provenance must never be handed to a shell to interpret. A non-zero exit is an answer here rather
+ * than an error - "no such ref", "does not merge" - so it comes back as `ok: false`.
+ */
+function git(args: Array<string>): GitOutput {
+  try {
+    return {
+      ok: true,
+      stdout: execFileSync('git', args, {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }).trim(),
+    }
+  } catch {
+    return { ok: false, stdout: '' }
+  }
+}
+
+/** Open sub-issues of `id`; empty when it has none, i.e. when it is not a PRD. */
+function openSubIssueIds(id: string): string[] {
+  const { owner, name } = JSON.parse(
+    execSync('gh repo view --json owner,name', { encoding: 'utf8' }),
+  ) as { owner: { login: string }; name: string }
+  const query = `{repository(owner:"${owner.login}",name:"${name}"){issue(number:${id}){subIssues(first:100){nodes{number state}}}}}`
+  const listed = execSync(
+    `gh api graphql -f query='${query}' --jq '.data.repository.issue.subIssues.nodes[] | select(.state=="OPEN") | .number'`,
+    { encoding: 'utf8' },
+  )
+  return listed
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
+/**
+ * Resolve `--issues` against the label gate. A PRD is never workable itself
+ * (plan-prompt.md excludes it), so naming one can only mean "the slices under
+ * it" — expanded here, deterministically, instead of leaving the planner to
+ * walk the sub-issue tree on its own and pick up work no human has cleared.
+ * The expansion is still gated: a slice without `ready-for-agent` is held.
+ */
+function resolveOnlyIssues(eligible: Set<string>): string[] {
+  const resolved: string[] = []
+  for (const id of ONLY_ISSUES) {
+    const subs = openSubIssueIds(id)
+    if (subs.length === 0) {
+      // A leaf ticket: workable exactly when a human cleared it.
+      if (!eligible.has(id)) {
+        throw new Error(
+          `Issue #${id} does not carry \`ready-for-agent\`, so it is not cleared for the loop. ` +
+            `Label it (see docs/agents/triage-labels.md) or drop it from --issues.`,
+        )
+      }
+      resolved.push(id)
+      continue
+    }
+    const cleared = subs.filter((sub) => eligible.has(sub))
+    if (cleared.length === 0) {
+      throw new Error(
+        `#${id} is a PRD and none of its ${subs.length} open sub-issues carries \`ready-for-agent\`: ` +
+          `${subs.map((sub) => `#${sub}`).join(', ')}. Label the slices you want worked — ` +
+          `the loop must never pick its own work out of a PRD tree.`,
+      )
+    }
+    resolved.push(...cleared)
+  }
+  return [...new Set(resolved)]
+}
 
 // Keyed on the run, not the process: a resumed run writes into the same tree and
 // overwrites the `issue-<id>/attempt-<n>` slots it re-runs (cp with force). That
@@ -251,6 +464,45 @@ const ONLY_ISSUES = flag('issues', '')
 const ARTIFACT_ROOT = join('.sandcastle', 'logs', `run-${RUN_ID}`)
 await mkdir(ARTIFACT_ROOT, { recursive: true })
 await writeFile(lockPath, String(process.pid))
+
+// Whether this run claims its issues from the shared registry. `--issues` partitions the backlog
+// only when the operator gets it right; the registry is the mechanical backstop that makes two
+// loops safe by default rather than by discipline, so opting out is deliberate and loud.
+const COORDINATED = !boolFlag('no-coordinator')
+if (!COORDINATED) console.log(NO_COORDINATOR_BANNER)
+
+// Built before the worktree is cut, so a run that cannot reach the registry stops before it has
+// created anything to clean up. `fromEnv` throws when the registry is not configured: an
+// unconfigured coordinator is indistinguishable from one that is down, and both mean this run
+// cannot know what another run is holding.
+const coordinator = COORDINATED
+  ? Coordinator.fromEnv(process.env, {
+      repo: REPO,
+      runId: RUN_ID,
+      origin:
+        process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
+      kind: 'afk-loop',
+      host: hostname(),
+    })
+  : undefined
+
+// Ctrl-C releases this run's issues now rather than leaving them parked for the lease's five
+// minutes. A crash or a `kill -9` skips this, and that is the whole reason the lease has a TTL —
+// but the common case is an operator changing their mind, and making them wait is needless.
+let releasing = false
+for (const stopping of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(stopping, () => {
+    if (releasing) process.exit(130)
+    releasing = true
+    console.log(`\nReceived ${stopping} — releasing this run's issues…`)
+    void (
+      coordinator?.finish('failed', `interrupted by ${stopping}`) ??
+      Promise.resolve()
+    )
+      .catch(() => {})
+      .finally(() => process.exit(130))
+  })
+}
 
 type Issue = z.infer<typeof planSchema>['issues'][number]
 type Validation = {
@@ -326,18 +578,33 @@ if (otherRuns.length > 0) {
   )
 }
 
-/**
- * What the planner is allowed to look at. Concurrent runs read the same
- * `ready-for-agent` list, so partitioning the backlog is the operator's job and
- * this is the only place it is expressed — the planner is told, never guesses.
- */
-function planScope(): string {
-  return ONLY_ISSUES.length === 0
-    ? 'Consider every issue listed above.'
-    : `Consider ONLY these issues: ${ONLY_ISSUES.map((id) => `#${id}`).join(', ')}. Ignore every other issue, even an unblocked one — another sandcastle run owns it.`
+// Announced now the branch exists, so the dashboard can name it, and before any issue is claimed.
+if (coordinator !== undefined) {
+  await coordinator.register(integrationBranch)
+  coordinator.startHeartbeat()
 }
 
-async function runPlanner(): Promise<Issue[]> {
+/**
+ * What the planner is allowed to look at: the exact ids, never a rule it has to
+ * apply itself. The list is already `ready-for-agent`, already narrowed by
+ * `--issues`, and already minus what a concurrent run holds — so the planner's
+ * only remaining job is the dependency graph. Naming the ids matters because a
+ * planner told merely to "consider the issues above" will happily run its own
+ * `gh` queries and plan work no human has cleared; one did, twice, in parallel.
+ */
+function planScope(scopeIds: string[]): string {
+  return [
+    `Consider ONLY these issues: ${scopeIds.map((id) => `#${id}`).join(', ')}.`,
+    'This list is the complete set of workable issues. Do NOT plan any issue outside it — not a sub-issue you discover, not an unblocked one you find with a `gh` query, however ready it looks. `ready-for-agent` is what clears an issue for this loop and the list above is already filtered by it; anything missing is either held by a human or owned by another sandcastle run right now.',
+  ].join('\n\n')
+}
+
+/** The one branch an issue may be worked on in this run. A function of the issue and the run, and of nothing else. */
+function issueBranch(id: string): string {
+  return `sandcastle/issue-${id}-${RUN_ID}`
+}
+
+async function runPlanner(scopeIds: string[]): Promise<Issue[]> {
   const plan = await sandcastle.run({
     // No install hook: the planner only reads issues via gh. And NEVER the
     // default 'head' strategy — it bind-mounts the host working directory,
@@ -350,10 +617,35 @@ async function runPlanner(): Promise<Issue[]> {
     maxIterations: 1,
     agent: sandcastle.claudeCode(PLANNER_MODEL),
     promptFile: './.sandcastle/plan-prompt.md',
-    promptArgs: { RUN_ID, SCOPE: planScope() },
+    promptArgs: { RUN_ID, SCOPE: planScope(scopeIds) },
     output: sandcastle.Output.object({ tag: 'plan', schema: planSchema }),
   })
-  return plan.output.issues
+  // The prompt is an instruction; this is the enforcement. A planned id outside
+  // the scope is dropped, loudly — it means the agent went looking, and what it
+  // finds that way is by definition work nobody cleared.
+  const allowed = new Set(scopeIds)
+  return (
+    plan.output.issues
+      .filter((issue) => {
+        if (allowed.has(issue.id)) return true
+        console.warn(
+          `  ! planner returned #${issue.id} which is outside this run's scope — dropped.`,
+        )
+        return false
+      })
+      // Corrected rather than dropped: the issue is cleared work either way, only its branch name
+      // is the planner's to get wrong — and a name carrying another run's id would collide with
+      // that run's worktree and defeat the adoption match below.
+      .map((issue) => {
+        const branch = issueBranch(issue.id)
+        if (issue.branch !== branch) {
+          console.warn(
+            `  ! planner named #${issue.id}'s branch ${issue.branch} — using ${branch}.`,
+          )
+        }
+        return { ...issue, branch }
+      })
+  )
 }
 
 async function collectArtifacts(
@@ -449,9 +741,11 @@ async function declaresVisualChange(
 async function runDeepReview(
   sandbox: sandcastle.Sandbox,
   issue: Issue,
+  signal?: AbortSignal,
 ): Promise<void> {
   try {
     const run = await sandbox.run({
+      signal,
       name: 'deep-reviewer',
       maxIterations: 1,
       agent: sandcastle.claudeCode(DEEP_REVIEW_MODEL),
@@ -561,6 +855,7 @@ async function runDeepReview(
 async function runPixelCritic(
   sandbox: sandcastle.Sandbox,
   issue: Issue,
+  signal?: AbortSignal,
 ): Promise<void> {
   try {
     const shotsDir = `.sandcastle-shots/issue-${issue.id}`
@@ -570,6 +865,7 @@ async function runPixelCritic(
     const refLabel = oursLabel === 'A' ? 'B' : 'A'
 
     const capture = await sandbox.run({
+      signal,
       name: 'pixel-capture',
       maxIterations: 1,
       agent: sandcastle.claudeCode(CRITIC_MODEL),
@@ -596,6 +892,7 @@ async function runPixelCritic(
     }
 
     const critic = await sandbox.run({
+      signal,
       name: 'pixel-critic',
       maxIterations: 1,
       agent: sandcastle.claudeCode(CRITIC_MODEL),
@@ -669,8 +966,20 @@ async function markBlocked(
   })
 }
 
+/**
+ * `signal` aborts every agent in this issue's pipeline if the run loses the issue's lease — it
+ * stopped heartbeating for the whole TTL and another run took the ticket. Carrying on would put two
+ * fleets back on one issue, which is the failure the registry exists to prevent, so the work stops
+ * rather than finishing into a branch this run no longer owns. Undefined under `--no-coordinator`.
+ *
+ * `adopted` is the work already on the branch when this run inherited it from a dead one. It counts
+ * as this issue's commits from the first line, because it is: without it a slice that was finished
+ * before the old run died would look like an implementer that produced nothing, and be dropped.
+ */
 async function workIssue(
   issue: Issue,
+  signal?: AbortSignal,
+  adopted: Array<{ sha: string }> = [],
 ): Promise<{ issue: Issue; ok: boolean; commits: Array<{ sha: string }> }> {
   const sandbox = await sandcastle.createSandbox({
     branch: issue.branch,
@@ -679,10 +988,34 @@ async function workIssue(
     hooks,
   })
 
-  const commits: Array<{ sha: string }> = []
+  const commits: Array<{ sha: string }> = [...adopted]
   let lastArtifactPath = ''
+
+  /**
+   * Tells the registry where this issue's work is, so that if this run dies the next one to claim
+   * the ticket is offered the branch instead of starting it again.
+   *
+   * Best-effort and never awaited into the pipeline: losing the record costs some future run an
+   * adoption, whereas failing the issue over it would cost this one an implementation.
+   */
+  const noteWip = (): void => {
+    // Nothing to point at, or the issue is no longer this run's to describe: the `wip:` record is
+    // last-write-wins, so a run whose lease was revoked would otherwise overwrite the new holder's
+    // branch with its own abandoned one.
+    if (commits.length === 0 || coordinator?.isRevoked(issue.id) === true)
+      return
+    void coordinator
+      ?.recordWip(issue.id, issue.branch, commits.length)
+      .catch((cause: unknown) => {
+        console.warn(
+          `  ! could not record WIP for #${issue.id}: ${cause instanceof Error ? cause.message : String(cause)}`,
+        )
+      })
+  }
+
   try {
     let implement = await sandbox.run({
+      signal,
       name: 'implementer',
       maxIterations: 100,
       agent: sandcastle.claudeCode(IMPLEMENTER_MODEL),
@@ -694,10 +1027,12 @@ async function workIssue(
       },
     })
     commits.push(...implement.commits)
+    noteWip()
 
     if (commits.length === 0) return { issue, ok: false, commits }
 
     const review = await sandbox.run({
+      signal,
       name: 'reviewer',
       maxIterations: 1,
       agent: sandcastle.claudeCode(REVIEWER_MODEL),
@@ -732,8 +1067,8 @@ async function workIssue(
       }
 
       if (verdict.ok) {
-        if (DEEP_REVIEW) await runDeepReview(sandbox, issue)
-        if (verdict.uiTouched) await runPixelCritic(sandbox, issue)
+        if (DEEP_REVIEW) await runDeepReview(sandbox, issue, signal)
+        if (verdict.uiTouched) await runPixelCritic(sandbox, issue, signal)
         if (DEEP_REVIEW || verdict.uiTouched) {
           // Re-collect: the advisory passes added .sandcastle-deep-review.json,
           // .sandcastle-shots and the visual verdict.
@@ -773,12 +1108,13 @@ async function workIssue(
         // sandcastle 0.12.0 bug: resume() spreads the original run options and
         // clears promptFile but NOT promptArgs, and an inline prompt with
         // promptArgs is rejected (PromptError). Empty override passes.
-        { promptArgs: {} },
+        { promptArgs: {}, signal },
       )
       commits.push(...implement.commits)
     }
     return { issue, ok: false, commits }
   } finally {
+    noteWip()
     await sandbox.close()
   }
 }
@@ -942,7 +1278,41 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     `\n=== Iteration ${iteration}/${MAX_ITERATIONS} (target: ${integrationBranch}) ===\n`,
   )
 
-  const issues = await runPlanner()
+  // Recomputed every iteration, because both inputs move while the run is
+  // alive: a human labels or holds an issue, and a concurrent run takes or
+  // releases one. The planner never sees anything this does not hand it.
+  const eligible = new Set(readyForAgentIds())
+  const requested =
+    ONLY_ISSUES.length === 0 ? [...eligible] : resolveOnlyIssues(eligible)
+
+  // Claim BEFORE planning, not after. The old order — read what looked free, plan, then claim —
+  // left a window the width of a planner run, and two planners in that window is exactly what put
+  // two fleets on #106 and #108. A claim is atomic, so taking the whole candidate list first and
+  // handing back what the planner does not want has no window at all.
+  coordinator?.setStage('planning')
+  const claimed: ClaimResult =
+    coordinator === undefined
+      ? { granted: requested, denied: [], adopt: {} }
+      : await coordinator.claim(requested, openIssueEdges())
+  const scopeIds = claimed.granted
+  if (scopeIds.length === 0) {
+    console.log(
+      eligible.size === 0
+        ? 'No issue carries `ready-for-agent`. Nothing is cleared for the loop — exiting.'
+        : 'Every issue in scope is already held by another run. Exiting.',
+    )
+    break
+  }
+  console.log(`In scope: ${scopeIds.map((id) => `#${id}`).join(', ')}`)
+
+  const planned = await runPlanner(scopeIds)
+  // Give back what the planner did not choose — blocked by a dependency, or simply beyond this
+  // iteration. Holding them would park work this run has no intention of doing.
+  const chosen = new Set(planned.map((issue) => issue.id))
+  const unused = scopeIds.filter((id) => !chosen.has(id))
+  if (unused.length > 0) await coordinator?.release(unused)
+
+  const issues = planned
   if (issues.length === 0) {
     console.log('No unblocked issues to work on. Exiting.')
     break
@@ -951,8 +1321,36 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   for (const issue of issues)
     console.log(`  ${issue.id}: ${issue.title} → ${issue.branch}`)
 
+  // Pick up where a run that died left off, where its history allows it. Refusals are logged
+  // rather than swallowed: each one says which slice is being redone from scratch and why.
+  const adoptedCommits = new Map<string, Array<{ sha: string }>>()
+  for (const outcome of adoptWipBranches(
+    git,
+    issues,
+    claimed.adopt,
+    integrationBranch,
+  )) {
+    if (outcome.adopted) {
+      adoptedCommits.set(outcome.issueId, outcome.commits)
+      console.log(
+        `  ↳ #${outcome.issueId}: adopted ${outcome.commits.length} commit(s) from ${outcome.from}`,
+      )
+    } else {
+      console.log(`  ↳ #${outcome.issueId}: starting fresh — ${outcome.reason}`)
+    }
+  }
+
+  coordinator?.setStage('implementing')
   const settled = await Promise.allSettled(
-    issues.map((issue) => limit(() => workIssue(issue))),
+    issues.map((issue) =>
+      limit(() =>
+        workIssue(
+          issue,
+          coordinator?.signalFor(issue.id),
+          adoptedCommits.get(issue.id),
+        ),
+      ),
+    ),
   )
 
   for (const [i, outcome] of settled.entries()) {
@@ -969,6 +1367,17 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         o.status === 'fulfilled' && o.value.ok && o.value.commits.length > 0,
     )
     .map((o) => o.value)
+    // The backstop, and the one check that has to hold: a lease this run lost belongs to whoever
+    // took it, and merging its branch anyway would put two runs' work on one issue — the exact
+    // failure the registry exists to prevent. The abort above usually gets there first; this
+    // catches the issue that finished in the same window the lease lapsed.
+    .filter((result) => {
+      if (coordinator?.isRevoked(result.issue.id) !== true) return true
+      console.warn(
+        `  ! #${result.issue.id} finished but its lease was revoked — NOT merging ${result.issue.branch}.`,
+      )
+      return false
+    })
 
   console.log(
     `\nValidation passed on ${passing.length}/${issues.length} branch(es).`,
@@ -978,9 +1387,11 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     continue
   }
 
+  coordinator?.setStage('merging')
   await mergeBranches(passing)
   mergedAll.push(...passing.map((p) => p.issue))
   console.log('Branches merged. Running auditor…')
+  coordinator?.setStage('auditing')
   const audit = await runAuditor(
     passing.map((p) => p.issue),
     iteration,
@@ -1003,7 +1414,14 @@ if (mergedAll.length > 0 && lastAuditRefuted === 0) {
 // survives. close() preserves a dirty worktree, and a crashed run leaves one
 // behind — either way the next run reuses it (measured: createWorktree logs
 // "Reusing existing worktree" for a matching branch).
+coordinator?.setStage('finishing')
 await integration.close()
 await rm(lockPath, { force: true })
+// Hands every remaining lease back at once. A crash skips it, and that is fine: the lease has a
+// TTL precisely so that a run which never got to say goodbye still releases its work.
+await coordinator?.finish(
+  lastAuditRefuted === 0 ? 'finished' : 'failed',
+  mergedAll.map((issue) => `#${issue.id}`).join(', '),
+)
 
 console.log(`\nAll done. Artifacts under ${ARTIFACT_ROOT}`)

@@ -10,6 +10,10 @@ on:
         description: What changed in the design that makes the current baselines wrong?
         required: true
         type: string
+      filter:
+        description: Re-record only the frames whose title matches this (empty = the whole suite)
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -52,18 +56,45 @@ jobs:
       # A frame that fails for a reason other than a moved pixel — a dirty
       # console, an unpinned clock — still fails here, and the run stops before
       # it can write a baseline of a broken screen.
+      #
+      # `--global-timeout` overrides the config's ten minutes, which is a *per
+      # shard* budget: the gate splits the suite across shards and this job does
+      # not, so the whole suite on one worker ran out of clock with 121 frames
+      # never started. Thirty-five minutes sits inside the job's forty.
+      #
+      # `filter` narrows it to the frames a change actually moved. A design
+      # change that touches one screen has no business re-recording the other
+      # hundred and seventy — and a narrow run is the one that finishes.
       - name: Re-record
+        # The Playwright image's `sh` is dash, and `set -o pipefail` is a
+        # bashism it exits 2 on. Both scripts here ask for bash by name.
+        shell: bash
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
-        run: pnpm exec playwright test --update-snapshots
+          FILTER: ${{ inputs.filter }}
+        run: |
+          set -euo pipefail
+          if [ -n "$FILTER" ]; then
+            pnpm exec playwright test --update-snapshots \
+              --global-timeout=2100000 --grep "$FILTER"
+          else
+            pnpm exec playwright test --update-snapshots \
+              --global-timeout=2100000
+          fi
 
       - name: Open a pull request
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           REASON: ${{ inputs.reason }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- e2e/__screenshots__; then
+          # Staged first, asked second. `git diff` alone reads tracked files
+          # only, and a screen that never had a baseline arrives as an
+          # untracked one — so the first run for a new screen wrote four PNGs
+          # and then reported "no change" over the top of them.
+          git add -A e2e/__screenshots__
+          if git diff --cached --quiet -- e2e/__screenshots__; then
             echo '::notice title=No change::the re-recorded frames are identical to the committed ones'
             exit 0
           fi
@@ -71,17 +102,51 @@ jobs:
           branch="claude/e2e-baselines-${GITHUB_RUN_ID}"
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
+          # Carries the staged frames onto the new branch.
           git checkout -b "$branch"
-          git add e2e/__screenshots__
-          git commit -m "test(e2e): re-record Linux baselines
+          # `--no-verify`: the pre-commit hook runs the whole unit suite, which
+          # this container has no business being judged by — it re-records
+          # pictures and touches no source. It also carries failures that are
+          # already red on `develop`, so the hook fails every run of this job
+          # and threw away a successful re-record before it could be committed.
+          git commit --no-verify -m "test(e2e): re-record Linux baselines
 
           $REASON"
           git push origin "$branch"
-          gh pr create \
-            --title 'test(e2e): re-record Linux baselines' \
-            --body "Recorded by \`update-snapshots\` run ${GITHUB_RUN_ID}.
+          export BRANCH="$branch"
+          # The REST API rather than `gh`, which the Playwright image does not ship: the
+          # CLI is what a runner has, not what a container has, and the step found that
+          # out at exit 127 with the frames already pushed and no PR to review them in.
+          #
+          # `base` is the ref this ran from, not develop: frames recorded from a feature
+          # branch describe that branch's screens, and merging them into develop ahead
+          # of the code would leave the gate red on both sides.
+          node --input-type=module -e '
+            const body = `Recorded by \`update-snapshots\` run ${process.env.GITHUB_RUN_ID}.
 
-          **Reason given:** ${REASON}
+          **Reason given:** ${process.env.REASON}
 
-          Review every changed image: an accepted baseline is an accepted design." \
-            --base develop --head "$branch"
+          Review every changed image: an accepted baseline is an accepted design.`
+            const res = await fetch(
+              `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/pulls`,
+              {
+                method: "POST",
+                headers: {
+                  authorization: `Bearer ${process.env.GH_TOKEN}`,
+                  accept: "application/vnd.github+json",
+                  "content-type": "application/json",
+                },
+                body: JSON.stringify({
+                  title: "test(e2e): re-record Linux baselines",
+                  body,
+                  head: process.env.BRANCH,
+                  base: process.env.GITHUB_REF_NAME,
+                }),
+              },
+            )
+            if (!res.ok) {
+              console.error(`${res.status}: ${await res.text()}`)
+              process.exit(1)
+            }
+            console.log(`Opened ${(await res.json()).html_url}`)
+          '

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { PLATFORM_AUDIT_ACTIONS } from '#/server/db/schema'
+import { consoleTranslate as t } from '#/lib/i18n/__tests__/console-translate'
 import {
   auditChanges,
   describeAuditActor,
@@ -35,7 +36,7 @@ describe('describePlatformAction', () => {
   it('names every action an account timeline can carry', () => {
     for (const action of ACCOUNT_ACTIONS) {
       expect(
-        describePlatformAction(action),
+        describePlatformAction(t, action),
         `${action} has no sentence, so the timeline would print the raw name`,
       ).not.toBe(action)
     }
@@ -52,7 +53,7 @@ describe('describePlatformAction', () => {
   })
 
   it('prints an action it does not know rather than swallowing the row', () => {
-    expect(describePlatformAction('catalog_place.published')).toBe(
+    expect(describePlatformAction(t, 'catalog_place.published')).toBe(
       'catalog_place.published',
     )
   })
@@ -105,18 +106,22 @@ describe('describeAuditActor', () => {
   it('names the platform itself for a system row rather than an em dash', () => {
     // docs/ACCESS.md §4.3: a temporary ban lifts itself inside the plugin's own hook, audited as
     // `actor_kind: system` with no operator anywhere near it. That is an actor, not an absence.
-    const actor = describeAuditActor('system', null)
+    const actor = describeAuditActor(t, 'system', null)
     expect(actor.name).toBe('The platform itself')
     expect(actor.detail).toBe('automatic')
   })
 
   it('says a human row whose account has since been deleted is exactly that', () => {
-    expect(describeAuditActor('human', null).name).toBe('A deleted account')
-    expect(describeAuditActor('human', 'Mika Tanaka').name).toBe('Mika Tanaka')
+    expect(describeAuditActor(t, 'human', null).name).toBe('A deleted account')
+    expect(describeAuditActor(t, 'human', 'Mika Tanaka').name).toBe(
+      'Mika Tanaka',
+    )
   })
 
   it('marks an agent row as arriving on a credential', () => {
-    expect(describeAuditActor('agent', 'Import bot').detail).toBe('MCP token')
+    expect(describeAuditActor(t, 'agent', 'Import bot').detail).toBe(
+      'MCP token',
+    )
   })
 })
 
@@ -131,28 +136,26 @@ describe('describeAuditField', () => {
       'banReason',
       'banExpiresAt',
     ]) {
-      expect(describeAuditField(field)).not.toBe(field)
+      expect(describeAuditField(t, field)).not.toBe(field)
     }
   })
 
   it('prints a field it does not know as it was stored', () => {
-    expect(describeAuditField('somethingNew')).toBe('somethingNew')
+    expect(describeAuditField(t, 'somethingNew')).toBe('somethingNew')
   })
 })
 
 describe('auditChanges', () => {
   it('lists only the fields that moved', () => {
-    const changes = auditChanges({
+    const changes = auditChanges(t, {
       before: { name: 'Jonas Berg', role: null, banned: false },
       after: { name: 'Jonas Berg', role: 'curator', banned: false },
     })
-    expect(changes).toEqual([
-      { field: 'role', before: '—', after: 'curator' },
-    ])
+    expect(changes).toEqual([{ field: 'role', before: '—', after: 'curator' }])
   })
 
   it('renders booleans as words and nulls as an em dash', () => {
-    const changes = auditChanges({
+    const changes = auditChanges(t, {
       before: { banned: false, banReason: null },
       after: { banned: true, banReason: 'Repeated abuse reports' },
     })
@@ -163,7 +166,7 @@ describe('auditChanges', () => {
   })
 
   it('orders the fields the way the account screen reads them', () => {
-    const changes = auditChanges({
+    const changes = auditChanges(t, {
       before: { banned: false, name: 'Old', role: null, unknownKey: 1 },
       after: { banned: true, name: 'New', role: 'admin', unknownKey: 2 },
     })
@@ -176,21 +179,21 @@ describe('auditChanges', () => {
   })
 
   it('treats a missing side as nothing rather than as a deletion of everything', () => {
-    expect(auditChanges({ before: null, after: { role: 'admin' } })).toEqual([
-      { field: 'role', before: '—', after: 'admin' },
-    ])
+    expect(auditChanges(t, { before: null, after: { role: 'admin' } })).toEqual(
+      [{ field: 'role', before: '—', after: 'admin' }],
+    )
   })
 
   it('produces no rows for a payload it cannot read, and never throws', () => {
     for (const payload of [null, undefined, 'a string', 42, [], {}]) {
-      expect(auditChanges(payload)).toEqual([])
+      expect(auditChanges(t, payload)).toEqual([])
     }
   })
 
   it('reads an instant the way the rest of the console reads instants', () => {
     // The ledger stores `banExpiresAt` as a full ISO-8601 string. Printing it raw would put
     // `2026-10-04T00:00:00.000Z` next to `4 Oct 2026, 00:00 UTC` in the same panel.
-    const changes = auditChanges({
+    const changes = auditChanges(t, {
       before: { banExpiresAt: null },
       after: { banExpiresAt: '2026-10-04T00:00:00.000Z' },
     })
@@ -200,7 +203,7 @@ describe('auditChanges', () => {
   })
 
   it('leaves a string that only looks date-ish alone', () => {
-    const changes = auditChanges({
+    const changes = auditChanges(t, {
       before: { banReason: null },
       after: { banReason: '2026 is the year of the incident' },
     })
@@ -208,7 +211,7 @@ describe('auditChanges', () => {
   })
 
   it('renders a nested value once rather than dropping it', () => {
-    const changes = auditChanges({
+    const changes = auditChanges(t, {
       before: { quota: { seats: 1 } },
       after: { quota: { seats: 5 } },
     })
@@ -217,7 +220,6 @@ describe('auditChanges', () => {
     ])
   })
 })
-
 
 /**
  * The impersonation verbs are the one pair whose payload is not `auditUserState`'s key set.
@@ -231,7 +233,7 @@ describe('auditChanges', () => {
  */
 describe('an impersonation entry', () => {
   it('names all three of its fields in words', () => {
-    const changes = auditChanges({
+    const changes = auditChanges(t, {
       before: { impersonating: null },
       after: {
         impersonating: 'acct_9',
@@ -240,15 +242,13 @@ describe('an impersonation entry', () => {
       },
     })
 
-    expect(changes.map((change) => describeAuditField(change.field))).toEqual([
-      'Session expires',
-      'Acting as',
-      'Their platform role',
-    ])
+    expect(
+      changes.map((change) => describeAuditField(t, change.field)),
+    ).toEqual(['Session expires', 'Acting as', 'Their platform role'])
   })
 
   it('reads the session expiry as an instant rather than as a serialisation', () => {
-    const changes = auditChanges({
+    const changes = auditChanges(t, {
       before: { impersonating: null },
       after: { impersonating: 'acct_9', expiresAt: '2026-08-18T12:56:00.000Z' },
     })
@@ -259,7 +259,7 @@ describe('an impersonation entry', () => {
   })
 
   it('shows the exit as a value cleared rather than as a diff of an absence', () => {
-    const changes = auditChanges({
+    const changes = auditChanges(t, {
       before: { impersonating: 'acct_9' },
       after: { impersonating: null },
     })

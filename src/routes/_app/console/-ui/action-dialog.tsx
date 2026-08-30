@@ -35,6 +35,7 @@ import {
 } from '#/components/ui'
 import { readConsoleFailure } from '#/components/console'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 
 import type { ButtonVariant } from '#/components/ui'
 import type { ReactNode } from 'react'
@@ -67,6 +68,7 @@ export function ConsoleActionDialog({
   onConfirm,
   className,
 }: ConsoleActionDialogProps) {
+  const t = useTranslate()
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
 
@@ -85,11 +87,11 @@ export function ConsoleActionDialog({
       await onConfirm()
       onOpenChange(false)
     } catch (cause) {
-      setFailure(readConsoleFailure(cause))
+      setFailure(readConsoleFailure(cause, t('console.failure.fallback')))
     } finally {
       setBusy(false)
     }
-  }, [onConfirm, onOpenChange])
+  }, [onConfirm, onOpenChange, t])
 
   return (
     <Dialog
@@ -132,7 +134,7 @@ export function ConsoleActionDialog({
               onOpenChange(false)
             }}
           >
-            Cancel
+            {t('console.dialog.cancel')}
           </Button>
           <Button
             type="button"

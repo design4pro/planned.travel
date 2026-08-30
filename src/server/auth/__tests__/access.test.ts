@@ -19,7 +19,7 @@
  *   catch is `user: ['ban']` on `curator`: `ban` *is* a member of `statement.user`, so a
  *   membership check passes it. That mistake is a grid violation rather than a dictionary
  *   violation, and it is caught twice elsewhere — by the per-role assertions below, which pin
- *   `curatorRole.statements.user` to `[]`, and by the seventy-two-cell matrix in `guard.test.ts`.
+ *   `curatorRole.statements.user` to `[]`, and by the seventy-five-cell matrix in `guard.test.ts`.
  */
 
 import { isBuiltin } from 'node:module'
@@ -79,7 +79,7 @@ describe('statement — the upstream half', () => {
 })
 
 describe('statement — our half', () => {
-  it('is closed at six resources', () => {
+  it('is closed at seven resources', () => {
     expect(Object.keys(statement)).toEqual([
       'user',
       'session',
@@ -87,22 +87,24 @@ describe('statement — our half', () => {
       'pack',
       'source',
       'share',
+      'sandcastle',
     ])
   })
 
-  it('carries the four resources docs/ACCESS.md §1.1 declares', () => {
+  it('carries the five resources docs/ACCESS.md §1.1 declares', () => {
     expect(statement.catalog).toEqual(['read', 'write', 'publish'])
     expect(statement.pack).toEqual(['read', 'write', 'publish'])
     expect(statement.source).toEqual(['read', 'run'])
     expect(statement.share).toEqual(['read', 'revoke'])
+    expect(statement.sandcastle).toEqual(['read'])
   })
 
-  it('totals twenty-four statements, the grid docs/ACCESS.md §2 enumerates', () => {
+  it('totals twenty-five statements, the grid docs/ACCESS.md §2 enumerates', () => {
     const total = Object.values(statement).reduce(
       (sum, actions) => sum + actions.length,
       0,
     )
-    expect(total).toBe(24)
+    expect(total).toBe(25)
   })
 
   it('is the object the access controller was built from', () => {
@@ -137,6 +139,7 @@ describe('roles', () => {
     expect(adminRole.statements.pack).toEqual(['read', 'write', 'publish'])
     expect(adminRole.statements.source).toEqual(['read', 'run'])
     expect(adminRole.statements.share).toEqual(['read', 'revoke'])
+    expect(adminRole.statements.sandcastle).toEqual(['read'])
   })
 
   it('gives `curator` the four content resources and nothing on users or sessions', () => {
@@ -146,9 +149,13 @@ describe('roles', () => {
     expect(curatorRole.statements.pack).toEqual(['read', 'write', 'publish'])
     expect(curatorRole.statements.source).toEqual(['read', 'run'])
     expect(curatorRole.statements.share).toEqual(['read', 'revoke'])
+    // The run registry is an operational surface, not a content one: a curator curates the
+    // catalogue and has no business knowing which machine is building which ticket
+    // (docs/ACCESS.md §2.3a).
+    expect(curatorRole.statements.sandcastle).toEqual([])
   })
 
-  it('gives `user` nothing at all, on every one of the six resources', () => {
+  it('gives `user` nothing at all, on every one of the seven resources', () => {
     const granted: Record<string, ReadonlyArray<string>> = userRole.statements
 
     for (const resource of Object.keys(statement)) {
@@ -166,7 +173,7 @@ describe('roles', () => {
     expect(Object.keys(adminRole.statements)).toEqual(Object.keys(statement))
   })
 
-  it('declares every one of the six resources on every role', () => {
+  it('declares every one of the seven resources on every role', () => {
     // An omitted resource key denies too, but by falling through Better Auth's unknown-resource
     // branch rather than by a decision this repository made.
     for (const role of Object.values(roles)) {

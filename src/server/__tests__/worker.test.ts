@@ -32,7 +32,12 @@ const harness = vi.hoisted(() => {
   }
 })
 
-vi.mock('../do', () => ({ TripRoom: class TripRoom {} }))
+// Both Durable Objects, because `../worker` re-exports both: a mock that names only one fails the
+// whole file at import time rather than in an assertion.
+vi.mock('../do', () => ({
+  TripRoom: class TripRoom {},
+  SandcastleRegistry: class SandcastleRegistry {},
+}))
 
 vi.mock('@tanstack/react-start/server', () => ({
   createStartHandler: () => (): Response => new Response(null),

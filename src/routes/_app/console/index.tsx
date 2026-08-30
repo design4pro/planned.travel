@@ -23,11 +23,13 @@ import {
   Skeleton,
   StatCard,
 } from '#/components/ui'
+import { useTranslate } from '#/lib/i18n'
 import { loadConsoleOverview } from './-server/overview'
 import { formatDate, formatNumber } from '../-lib/format'
 import { Panel, PanelRow, RowsSkeleton, StatsSkeleton } from '../-ui/scaffold'
 
 import type { ConsoleOverview } from './-server/overview'
+import type { ErrorComponentProps } from '@tanstack/react-router'
 
 /**
  * What the platform looks like from above.
@@ -48,17 +50,23 @@ export const Route = createFileRoute('/_app/console/')({
   loader: async ({ context }): Promise<ConsoleOverview | null> =>
     context.consoleAccess.canManageUsers ? await loadConsoleOverview() : null,
   pendingComponent: OverviewPending,
-  errorComponent: ({ error }) => (
-    <ErrorPanel
-      className="bg-surface-2"
-      error={error}
-      title="The overview did not load"
-    />
-  ),
+  errorComponent: OverviewError,
   component: ConsoleOverviewPage,
 })
 
+function OverviewError({ error }: ErrorComponentProps) {
+  const t = useTranslate()
+  return (
+    <ErrorPanel
+      className="bg-surface-2"
+      error={error}
+      title={t('console.overview.error.title')}
+    />
+  )
+}
+
 function ConsoleOverviewPage() {
+  const t = useTranslate()
   const data = Route.useLoaderData()
   const { consoleAccess } = Route.useRouteContext()
 
@@ -74,24 +82,24 @@ function ConsoleOverviewPage() {
       )}
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <Panel label="Catalogue by status">
+        <Panel label={t('console.overview.catalogue.label')}>
           <EmptyState
             variant="filled"
             size="sm"
             icon={<Library />}
             tone="brand"
-            title="The global catalogue is not open yet"
-            description="Once the ingestion pipeline lands, this panel counts every place in the shared catalogue as draft, in review or published — and each count opens the list behind it."
+            title={t('console.overview.catalogue.empty.title')}
+            description={t('console.overview.catalogue.empty.body')}
           />
         </Panel>
 
-        <Panel label="Scraping runs">
+        <Panel label={t('console.overview.scraping.label')}>
           <EmptyState
             variant="filled"
             size="sm"
             icon={<Radar />}
-            title="No source has been run"
-            description="Sources are scraped on a weekly schedule. When the first run finishes, the last five appear here with what each one ingested, changed and rejected."
+            title={t('console.overview.scraping.empty.title')}
+            description={t('console.overview.scraping.empty.body')}
           />
         </Panel>
       </div>
@@ -101,24 +109,25 @@ function ConsoleOverviewPage() {
 
 /** The standing a curator holds, said plainly, since the accounts half is not theirs. */
 function CuratorStanding({ role }: { role: 'admin' | 'curator' | 'user' }) {
+  const t = useTranslate()
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2.5">
         <PlatformRoleBadge role={role} />
         <p className="text-label font-semibold text-ink">
-          Your standing on the platform
+          {t('console.overview.standing.title')}
         </p>
       </div>
       <p className="max-w-prose text-label leading-relaxed text-ink-3">
-        {PLATFORM_ROLE_VOCABULARY[role].summary} Accounts, sessions and
-        impersonation belong to a platform admin, so the console shows you the
-        catalogue and nothing else.
+        {t(PLATFORM_ROLE_VOCABULARY[role].summaryKey)}{' '}
+        {t('console.overview.standing.body')}
       </p>
     </Card>
   )
 }
 
 function AccountStats({ overview }: { overview: ConsoleOverview }) {
+  const t = useTranslate()
   const { counts } = overview
   const staff = counts.admins + counts.curators
 
@@ -127,35 +136,34 @@ function AccountStats({ overview }: { overview: ConsoleOverview }) {
       <StatCard
         tone="inverse"
         icon={<Users />}
-        label="Accounts"
+        label={t('console.overview.stat.accounts')}
         value={formatNumber(counts.total)}
-        caption={
-          staff === 1
-            ? 'One of them holds a platform role'
-            : `${formatNumber(staff)} of them hold a platform role`
-        }
+        caption={t('console.overview.stat.accounts.caption', {
+          count: staff,
+          staff: formatNumber(staff),
+        })}
       />
       <StatCard
         icon={<ShieldCheck />}
-        label="Admins"
+        label={t('console.overview.stat.admins')}
         value={formatNumber(counts.admins)}
-        caption="Full authority over accounts and sessions"
+        caption={t('console.overview.stat.admins.caption')}
       />
       <StatCard
         icon={<Wrench />}
-        label="Curators"
+        label={t('console.overview.stat.curators')}
         value={formatNumber(counts.curators)}
-        caption="The catalogue only — never accounts"
+        caption={t('console.overview.stat.curators.caption')}
       />
       <StatCard
         icon={<UserRoundX />}
-        label="Suspended"
+        label={t('console.overview.stat.suspended')}
         value={formatNumber(counts.suspended)}
         valueTone={counts.suspended === 0 ? 'default' : 'danger'}
         caption={
           counts.suspended === 0
-            ? 'Nobody is locked out'
-            : 'Signed out everywhere until a ban is lifted'
+            ? t('console.overview.stat.suspended.none')
+            : t('console.overview.stat.suspended.some')
         }
         footer={
           counts.suspended === 0 ? undefined : (
@@ -167,7 +175,7 @@ function AccountStats({ overview }: { overview: ConsoleOverview }) {
               className="-ml-3"
             >
               <Link to="/console/users" search={{ status: 'suspended' }}>
-                Review them
+                {t('console.overview.stat.suspended.review')}
               </Link>
             </Button>
           )
@@ -178,14 +186,15 @@ function AccountStats({ overview }: { overview: ConsoleOverview }) {
 }
 
 function NewestAccounts({ overview }: { overview: ConsoleOverview }) {
+  const t = useTranslate()
   return (
     <Panel
-      label="Newest accounts"
+      label={t('console.overview.newest.label')}
       count={formatNumber(overview.newest.length)}
       flush
       action={
         <Button asChild variant="secondary" size="sm" shape="pill">
-          <Link to="/console/users">All accounts</Link>
+          <Link to="/console/users">{t('console.shell.allAccounts')}</Link>
         </Button>
       }
     >
@@ -195,8 +204,8 @@ function NewestAccounts({ overview }: { overview: ConsoleOverview }) {
             variant="filled"
             size="sm"
             icon={<Users />}
-            title="No accounts yet"
-            description="The first person to register appears here."
+            title={t('console.overview.newest.empty.title')}
+            description={t('console.overview.newest.empty.body')}
           />
         </div>
       ) : (
@@ -230,7 +239,7 @@ function NewestAccounts({ overview }: { overview: ConsoleOverview }) {
                 />
                 {account.banned ? (
                   <Badge tone="danger" size="sm" dot>
-                    Suspended
+                    {t('console.status.suspended')}
                   </Badge>
                 ) : null}
                 <span className="ml-auto shrink-0 text-caption tabular-nums text-ink-4">

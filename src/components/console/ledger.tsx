@@ -20,7 +20,10 @@
 
 import { Badge } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { formatConsoleInstant } from './instant'
+
+import type { MessageKey, Translate } from '#/lib/i18n'
 
 /**
  * What each platform action is called.
@@ -29,19 +32,21 @@ import { formatConsoleInstant } from './instant'
  * name an account as their entity are here: the sixteen catalogue actions belong to screens that
  * land in Faza C and the two `platform.token.*` names to one that lands in Faza E.
  */
-const ACTION_LABELS: Readonly<Record<string, string>> = {
-  'platform.user.created': 'Account created',
-  'platform.user.updated': 'Account details changed',
-  'platform.user.role_changed': 'Platform role changed',
-  'platform.user.banned': 'Account suspended',
-  'platform.user.unbanned': 'Suspension lifted',
-  'platform.user.deleted': 'Account deleted',
-  'platform.user.password_set': 'Password set by an admin',
-  'platform.user.email_set': 'Email address changed',
-  'platform.user.impersonation_started': 'Impersonation started',
-  'platform.user.impersonation_ended': 'Impersonation ended',
-  'platform.session.revoked': 'A session was revoked',
-  'platform.session.revoked_all': 'Every session was revoked',
+const ACTION_KEYS: Readonly<Record<string, MessageKey | undefined>> = {
+  'platform.user.created': 'console.audit.action.created',
+  'platform.user.updated': 'console.audit.action.updated',
+  'platform.user.role_changed': 'console.audit.action.roleChanged',
+  'platform.user.banned': 'console.audit.action.banned',
+  'platform.user.unbanned': 'console.audit.action.unbanned',
+  'platform.user.deleted': 'console.audit.action.deleted',
+  'platform.user.password_set': 'console.audit.action.passwordSet',
+  'platform.user.email_set': 'console.audit.action.emailSet',
+  'platform.user.impersonation_started':
+    'console.audit.action.impersonationStarted',
+  'platform.user.impersonation_ended':
+    'console.audit.action.impersonationEnded',
+  'platform.session.revoked': 'console.audit.action.sessionRevoked',
+  'platform.session.revoked_all': 'console.audit.action.sessionRevokedAll',
 }
 
 const ACTION_TONES: Readonly<Record<string, 'danger' | 'warning'>> = {
@@ -56,8 +61,9 @@ const ACTION_TONES: Readonly<Record<string, 'danger' | 'warning'>> = {
 export type AuditTone = 'danger' | 'warning' | 'neutral'
 
 /** The sentence an audit row is titled with. An unknown action prints verbatim. */
-export function describePlatformAction(action: string): string {
-  return ACTION_LABELS[action] ?? action
+export function describePlatformAction(t: Translate, action: string): string {
+  const key = ACTION_KEYS[action]
+  return key === undefined ? action : t(key)
 }
 
 /** How loudly a row reads — see the note on colour at the top of this file. */
@@ -73,16 +79,23 @@ export function platformActionTone(action: string): AuditTone {
  * An em dash there would read as a missing name rather than as the platform's own hand.
  */
 export function describeAuditActor(
+  t: Translate,
   kind: string,
   name: string | null,
 ): { readonly name: string; readonly detail: string | null } {
   if (kind === 'system') {
-    return { name: 'The platform itself', detail: 'automatic' }
+    return {
+      name: t('console.audit.actor.system'),
+      detail: t('console.audit.actor.system.detail'),
+    }
   }
   if (kind === 'agent') {
-    return { name: name ?? 'A machine credential', detail: 'MCP token' }
+    return {
+      name: name ?? t('console.audit.actor.agent'),
+      detail: t('console.audit.actor.agent.detail'),
+    }
   }
-  return { name: name ?? 'A deleted account', detail: null }
+  return { name: name ?? t('console.audit.actor.deleted'), detail: null }
 }
 
 /**
@@ -92,25 +105,26 @@ export function describeAuditActor(
  * session verbs record, and they are here because an unlabelled key is printed as the column stored
  * it — `EXPIRESAT` in tracked capitals, which is a variable name where a reader expected English.
  */
-const FIELD_LABELS: Readonly<Record<string, string>> = {
-  name: 'Name',
-  email: 'Email address',
-  emailVerified: 'Email verified',
-  role: 'Platform role',
-  banned: 'Suspended',
-  banReason: 'Reason',
-  banExpiresAt: 'Suspension ends',
-  revoked: 'Sessions ended',
-  impersonating: 'Acting as',
-  impersonatedBy: 'Acted by',
-  expiresAt: 'Session expires',
-  targetRole: 'Their platform role',
-  sessionId: 'Session',
+const FIELD_KEYS: Readonly<Record<string, MessageKey | undefined>> = {
+  name: 'console.audit.field.name',
+  email: 'console.audit.field.email',
+  emailVerified: 'console.audit.field.emailVerified',
+  role: 'console.audit.field.role',
+  banned: 'console.audit.field.banned',
+  banReason: 'console.audit.field.banReason',
+  banExpiresAt: 'console.audit.field.banExpiresAt',
+  revoked: 'console.audit.field.revoked',
+  impersonating: 'console.audit.field.impersonating',
+  impersonatedBy: 'console.audit.field.impersonatedBy',
+  expiresAt: 'console.audit.field.expiresAt',
+  targetRole: 'console.audit.field.targetRole',
+  sessionId: 'console.audit.field.sessionId',
 }
 
 /** A ledger field's label. An unknown key is printed as it was stored. */
-export function describeAuditField(field: string): string {
-  return FIELD_LABELS[field] ?? field
+export function describeAuditField(t: Translate, field: string): string {
+  const key = FIELD_KEYS[field]
+  return key === undefined ? field : t(key)
 }
 
 const DOT_TONES: Readonly<Record<AuditTone, string>> = {
@@ -172,9 +186,11 @@ const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/
  * date beside it in the same panel is already `25 Aug 2026, 13:44 UTC`; two spellings of the same
  * kind of thing on one screen is how a reader stops trusting either.
  */
-function renderValue(value: unknown): string {
+function renderValue(t: Translate, value: unknown): string {
   if (value === null || value === undefined) return EMPTY
-  if (typeof value === 'boolean') return value ? 'yes' : 'no'
+  if (typeof value === 'boolean') {
+    return value ? t('console.audit.value.yes') : t('console.audit.value.no')
+  }
   if (typeof value === 'number') return String(value)
   if (typeof value === 'string') {
     if (value.length === 0) return EMPTY
@@ -204,7 +220,10 @@ function asRecord(value: unknown): Record<string, unknown> {
  * append-only and four hundred days deep, so a row written by an older shape of the code has to
  * render as *something*, and "this action moved nothing we can name" is the truthful something.
  */
-export function auditChanges(payload: unknown): ReadonlyArray<AuditChange> {
+export function auditChanges(
+  t: Translate,
+  payload: unknown,
+): ReadonlyArray<AuditChange> {
   if (typeof payload !== 'object' || payload === null) return []
   const { before, after } = payload as { before?: unknown; after?: unknown }
   const left = asRecord(before)
@@ -223,8 +242,8 @@ export function auditChanges(payload: unknown): ReadonlyArray<AuditChange> {
 
   const changes: Array<AuditChange> = []
   for (const key of keys) {
-    const from = renderValue(left[key])
-    const to = renderValue(right[key])
+    const from = renderValue(t, left[key])
+    const to = renderValue(t, right[key])
     if (from === to) continue
     changes.push({ field: key, before: from, after: to })
   }
@@ -244,7 +263,8 @@ export interface AuditChangeListProps {
  * and a two-column table at 360px would put four characters in each cell.
  */
 export function AuditChangeList({ payload, className }: AuditChangeListProps) {
-  const changes = auditChanges(payload)
+  const t = useTranslate()
+  const changes = auditChanges(t, payload)
   if (changes.length === 0) {
     return null
   }
@@ -256,7 +276,7 @@ export function AuditChangeList({ payload, className }: AuditChangeListProps) {
           className="flex flex-wrap items-baseline gap-x-2 gap-y-1"
         >
           <dt className="text-micro font-semibold uppercase tracking-label text-ink-4">
-            {describeAuditField(change.field)}
+            {describeAuditField(t, change.field)}
           </dt>
           {/*
             A field that had no value before is not a change *from* anything, so it is printed as
@@ -273,7 +293,7 @@ export function AuditChangeList({ payload, className }: AuditChangeListProps) {
                 <span aria-hidden className="text-ink-4">
                   &rarr;
                 </span>
-                <span className="sr-only">became</span>
+                <span className="sr-only">{t('console.audit.became')}</span>
               </>
             )}
             <span
@@ -282,7 +302,9 @@ export function AuditChangeList({ payload, className }: AuditChangeListProps) {
                 change.after === EMPTY ? 'text-ink-4' : 'text-ink-2',
               )}
             >
-              {change.after === EMPTY ? 'cleared' : change.after}
+              {change.after === EMPTY
+                ? t('console.audit.value.cleared')
+                : change.after}
             </span>
           </dd>
         </div>
@@ -309,13 +331,21 @@ export function AuditActorBadge({
   role,
   className,
 }: AuditActorBadgeProps) {
+  const t = useTranslate()
   if (kind === 'system' || role === null) {
     return null
   }
   return (
     <Badge tone="neutral" size="sm" className={className}>
-      {role === 'admin' ? 'Admin' : role === 'curator' ? 'Curator' : 'User'} at
-      the time
+      {t('console.audit.actorBadge', {
+        role: t(
+          role === 'admin'
+            ? 'console.role.admin'
+            : role === 'curator'
+              ? 'console.role.curator'
+              : 'console.role.user',
+        ),
+      })}
     </Badge>
   )
 }

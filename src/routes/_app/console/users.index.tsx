@@ -26,6 +26,7 @@ import {
   TableRow,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import {
   CONSOLE_USERS_DEFAULT_DIRECTION,
   CONSOLE_USERS_DEFAULT_SORT,
@@ -38,6 +39,8 @@ import { formatDate, formatNumber } from '../-lib/format'
 import { Panel, RowsSkeleton } from '../-ui/scaffold'
 
 import type { ConsoleUsersSearch } from './-lib/search'
+import type { ErrorComponentProps } from '@tanstack/react-router'
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type { ConsoleUser } from '#/server/fns/console/projections'
 
 /** The address this screen reads and writes. See `./-lib/search`. */
@@ -74,32 +77,45 @@ export const Route = createFileRoute('/_app/console/users/')({
       },
     }),
   pendingComponent: UsersPending,
-  errorComponent: ({ error }) => (
-    <ErrorPanel
-      className="bg-surface-2"
-      error={readConsoleFailure(error)}
-      title="The accounts list did not load"
-    />
-  ),
+  errorComponent: UsersError,
   component: ConsoleUsersPage,
 })
 
-const ROLE_OPTIONS = [
-  { value: 'any', label: 'Any role' },
-  { value: 'admin', label: 'Admins' },
-  { value: 'curator', label: 'Curators' },
+function UsersError({ error }: ErrorComponentProps) {
+  const t = useTranslate()
+  return (
+    <ErrorPanel
+      className="bg-surface-2"
+      error={readConsoleFailure(error, t('console.failure.fallback'))}
+      title={t('console.users.error.title')}
+    />
+  )
+}
+
+/** The three filter vocabularies, as catalogue keys resolved at render time. */
+const ROLE_OPTIONS: ReadonlyArray<{ value: string; key: MessageKey }> = [
+  { value: 'any', key: 'console.users.filter.role.any' },
+  { value: 'admin', key: 'console.users.filter.role.admin' },
+  { value: 'curator', key: 'console.users.filter.role.curator' },
 ]
 
-const STATUS_OPTIONS = [
-  { value: 'any', label: 'Any status' },
-  { value: 'active', label: 'Active' },
-  { value: 'suspended', label: 'Suspended' },
+const STATUS_OPTIONS: ReadonlyArray<{ value: string; key: MessageKey }> = [
+  { value: 'any', key: 'console.users.filter.status.any' },
+  { value: 'active', key: 'console.status.active' },
+  { value: 'suspended', key: 'console.status.suspended' },
 ]
 
-const FIELD_OPTIONS = [
-  { value: 'email', label: 'Email' },
-  { value: 'name', label: 'Name' },
+const FIELD_OPTIONS: ReadonlyArray<{ value: string; key: MessageKey }> = [
+  { value: 'email', key: 'console.users.field.email' },
+  { value: 'name', key: 'console.users.field.name' },
 ]
+
+function options(
+  t: Translate,
+  from: ReadonlyArray<{ value: string; key: MessageKey }>,
+): Array<{ value: string; label: string }> {
+  return from.map((option) => ({ value: option.value, label: t(option.key) }))
+}
 
 /* -------------------------------------------------------------------------------------------------
  * Which of the two row layouts is mounted
@@ -159,14 +175,11 @@ function serverRowLayout(): RowLayout {
 }
 
 function useRowLayout(): RowLayout {
-  return useSyncExternalStore(
-    subscribeToWidth,
-    readRowLayout,
-    serverRowLayout,
-  )
+  return useSyncExternalStore(subscribeToWidth, readRowLayout, serverRowLayout)
 }
 
 function ConsoleUsersPage() {
+  const t = useTranslate()
   const data = Route.useLoaderData()
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
@@ -227,8 +240,8 @@ function ConsoleUsersPage() {
   return (
     <div className="flex flex-col gap-6">
       <Panel
-        label="Accounts"
-        count={`${formatNumber(data.total)} total`}
+        label={t('console.nav.accounts')}
+        count={t('console.users.total', { total: formatNumber(data.total) })}
         flush
         action={<CreateAccountButton onCreated={refresh} />}
         toolbar={
@@ -246,11 +259,11 @@ function ConsoleUsersPage() {
                 size="sm"
                 type="text"
                 value={query}
-                aria-label="Search accounts"
+                aria-label={t('console.users.search.label')}
                 placeholder={
                   (search.in ?? 'email') === 'email'
-                    ? 'Search email addresses'
-                    : 'Search names'
+                    ? t('console.users.search.email')
+                    : t('console.users.search.name')
                 }
                 leading={<Search className="size-4" />}
                 onChange={(event) => {
@@ -264,15 +277,15 @@ function ConsoleUsersPage() {
               <SimpleSelect
                 size="sm"
                 className="w-28"
-                ariaLabel="Search which column"
+                ariaLabel={t('console.users.search.column')}
                 value={search.in ?? 'email'}
                 onValueChange={(value) => {
                   apply({ in: value === 'email' ? undefined : 'name' })
                 }}
-                options={FIELD_OPTIONS.map((option) => ({ ...option }))}
+                options={options(t, FIELD_OPTIONS)}
               />
               <Button type="submit" variant="secondary" size="sm">
-                Search
+                {t('console.users.search.submit')}
               </Button>
             </form>
 
@@ -280,7 +293,7 @@ function ConsoleUsersPage() {
               <SimpleSelect
                 size="sm"
                 className="w-36"
-                ariaLabel="Filter by platform role"
+                ariaLabel={t('console.users.filter.role.label')}
                 disabled={search.status !== undefined}
                 value={search.role ?? 'any'}
                 onValueChange={(value) => {
@@ -294,12 +307,12 @@ function ConsoleUsersPage() {
                     status: undefined,
                   })
                 }}
-                options={ROLE_OPTIONS.map((option) => ({ ...option }))}
+                options={options(t, ROLE_OPTIONS)}
               />
               <SimpleSelect
                 size="sm"
                 className="w-36"
-                ariaLabel="Filter by account status"
+                ariaLabel={t('console.users.filter.status.label')}
                 disabled={search.role !== undefined}
                 value={search.status ?? 'any'}
                 onValueChange={(value) => {
@@ -313,7 +326,7 @@ function ConsoleUsersPage() {
                     role: undefined,
                   })
                 }}
-                options={STATUS_OPTIONS.map((option) => ({ ...option }))}
+                options={options(t, STATUS_OPTIONS)}
               />
               {filtered ? (
                 <Button
@@ -323,11 +336,11 @@ function ConsoleUsersPage() {
                     apply({ q: undefined, role: undefined, status: undefined })
                   }}
                 >
-                  Clear filters
+                  {t('console.users.filter.clear')}
                 </Button>
               ) : null}
               <p className="w-full text-caption text-ink-3 sm:w-auto sm:pl-1">
-                Narrow by role or by status — one at a time.
+                {t('console.users.filter.hint')}
               </p>
             </div>
           </div>
@@ -391,12 +404,16 @@ function ConsoleUsersPage() {
             <EmptyState
               variant="filled"
               icon={<FileQuestion />}
-              title="That page is past the end"
-              description={
-                data.total === 1
-                  ? 'There is one account in this view, and page 1 is the only page it has.'
-                  : `There are ${formatNumber(data.total)} accounts in this view, which is ${pageCount === 1 ? 'a single page' : `${formatNumber(pageCount)} pages`}. Page ${formatNumber(data.page)} is beyond it.`
-              }
+              title={t('console.users.pastEnd.title')}
+              description={t('console.users.pastEnd.body', {
+                count: data.total,
+                total: formatNumber(data.total),
+                pages: t('console.users.pastEnd.pages', {
+                  count: pageCount,
+                  pages: formatNumber(pageCount),
+                }),
+                page: formatNumber(data.page),
+              })}
               action={
                 <Button
                   variant="primary"
@@ -406,7 +423,7 @@ function ConsoleUsersPage() {
                     void navigate({ search: { ...search, page: undefined } })
                   }}
                 >
-                  Back to the first page
+                  {t('console.users.pastEnd.back')}
                 </Button>
               }
             />
@@ -418,13 +435,13 @@ function ConsoleUsersPage() {
               icon={<SearchX />}
               title={
                 filtered
-                  ? 'Nothing matches those filters'
-                  : 'No accounts to show'
+                  ? t('console.users.empty.filtered.title')
+                  : t('console.users.empty.title')
               }
               description={
                 filtered
-                  ? 'No account on the platform answers this search. Widen it, or clear the filters to see everybody.'
-                  : 'This view is empty. Nothing is filtered, so there is nothing here to widen.'
+                  ? t('console.users.empty.filtered.body')
+                  : t('console.users.empty.body')
               }
               action={
                 filtered ? (
@@ -440,7 +457,7 @@ function ConsoleUsersPage() {
                       })
                     }}
                   >
-                    Clear filters
+                    {t('console.users.filter.clear')}
                   </Button>
                 ) : undefined
               }
@@ -458,9 +475,7 @@ interface TableProps {
   readonly directionOf: (
     field: 'createdAt' | 'updatedAt' | 'name' | 'email',
   ) => 'asc' | 'desc' | null
-  readonly onSort: (
-    field: 'createdAt' | 'updatedAt' | 'name' | 'email',
-  ) => void
+  readonly onSort: (field: 'createdAt' | 'updatedAt' | 'name' | 'email') => void
   readonly onChanged: () => Promise<void>
 }
 
@@ -477,9 +492,10 @@ function UsersTable({
   onSort,
   onChanged,
 }: TableProps) {
+  const t = useTranslate()
   return (
     <div className="hidden md:block">
-      <Table label="Platform accounts" fixed>
+      <Table label={t('console.users.table.label')} fixed>
         <TableHeader>
           <TableRow>
             <TableHead
@@ -489,7 +505,7 @@ function UsersTable({
                 onSort('name')
               }}
             >
-              Account
+              {t('console.users.column.account')}
             </TableHead>
             <TableHead
               className="hidden w-[26%] lg:table-cell"
@@ -499,10 +515,14 @@ function UsersTable({
                 onSort('email')
               }}
             >
-              Email
+              {t('console.users.field.email')}
             </TableHead>
-            <TableHead className="w-30">Platform role</TableHead>
-            <TableHead className="w-32">Status</TableHead>
+            <TableHead className="w-30">
+              {t('console.users.column.role')}
+            </TableHead>
+            <TableHead className="w-32">
+              {t('console.users.column.status')}
+            </TableHead>
             <TableHead
               className="w-30"
               sortable
@@ -511,10 +531,12 @@ function UsersTable({
                 onSort('createdAt')
               }}
             >
-              Joined
+              {t('console.users.column.joined')}
             </TableHead>
             <TableHead className="w-12">
-              <span className="sr-only">Actions</span>
+              <span className="sr-only">
+                {t('console.users.column.actions')}
+              </span>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -594,6 +616,7 @@ function UsersCards({
   readonly selfId: string
   readonly onChanged: () => Promise<void>
 }) {
+  const t = useTranslate()
   return (
     <ul className="flex flex-col md:hidden">
       {users.map((account) => (
@@ -635,7 +658,9 @@ function UsersCards({
               banExpiresAt={account.banExpiresAt}
             />
             <span className="ml-auto text-caption tabular-nums text-ink-4">
-              Joined {formatDate(account.createdAt) ?? '—'}
+              {t('console.users.joined', {
+                date: formatDate(account.createdAt) ?? '—',
+              })}
             </span>
           </div>
         </li>
@@ -652,15 +677,16 @@ function UsersCards({
  * way.
  */
 function UsersPending() {
+  const t = useTranslate()
   return (
     <div className="flex flex-col gap-6">
       <Card padding="none" className="overflow-hidden bg-surface-2">
         <div className="flex items-center gap-3 border-b border-edge-faint px-5 py-4">
           <Users aria-hidden className="size-4 text-ink-4" />
           <span className="text-micro font-semibold uppercase tracking-label text-ink-3">
-            Accounts
+            {t('console.nav.accounts')}
           </span>
-          <span className="sr-only">Loading accounts</span>
+          <span className="sr-only">{t('console.users.loading')}</span>
         </div>
         <RowsSkeleton rows={8} />
       </Card>

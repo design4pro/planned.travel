@@ -28,8 +28,8 @@ import type { Catalogue, Message } from '../types'
  * untranslated copy on a screen and §7.5 calls it placeholder copy; either way
  * it is not done.
  *
- * **It grows with the catalogue.** The ten `en` namespace files and the
- * twenty-two translated directories are written by fifteen other items. Until
+ * **It grows with the catalogue.** The eleven `en` namespace files and
+ * the twenty-two translated directories are written by fifteen other items. Until
  * one lands, there is nothing of its to check, and this file must not invent
  * something. What is checked unconditionally is the machinery itself, against
  * fixtures, so the gate is provably live rather than vacuously green.
@@ -355,7 +355,7 @@ describe('the comparison this gate makes', () => {
 })
 
 describe('the shipped catalogues', () => {
-  it('live under a shipped locale tag and one of the ten namespaces', () => {
+  it('live under a shipped locale tag and one of the eleven namespaces', () => {
     const strayLocales = new Set<string>()
     const strayNamespaces = new Set<string>()
     for (const path of Object.keys(modules)) {
@@ -369,11 +369,11 @@ describe('the shipped catalogues', () => {
     }
     expect(
       [...strayLocales],
-      'a directory under messages/ that is not one of the twenty-three tags in docs/SPEC.md §8',
+      'a directory under messages/ that is not one of the twenty-three tags in docs/SPEC.md §9',
     ).toEqual([])
     expect(
       [...strayNamespaces],
-      'a namespace outside the ten docs/SPEC.md §8 fixes — adding one is a contract change',
+      'a namespace outside the eleven docs/SPEC.md §9 fixes — adding one is a contract change',
     ).toEqual([])
   })
 

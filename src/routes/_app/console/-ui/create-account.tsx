@@ -23,6 +23,7 @@ import {
   PLATFORM_ROLE_ORDER,
   PLATFORM_ROLE_VOCABULARY,
 } from '#/components/console'
+import { useTranslate } from '#/lib/i18n'
 import { createConsoleAccount } from '../-server/users'
 import { ConsoleActionDialog } from './action-dialog'
 
@@ -34,6 +35,7 @@ export interface CreateAccountButtonProps {
 }
 
 export function CreateAccountButton({ onCreated }: CreateAccountButtonProps) {
+  const t = useTranslate()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -54,10 +56,10 @@ export function CreateAccountButton({ onCreated }: CreateAccountButtonProps) {
     setPassword('')
     setRole('user')
     await onCreated()
-    toast.success('Account created', {
-      description: `${created.email} can sign in with the password you set.`,
+    toast.success(t('console.create.done'), {
+      description: t('console.create.done.body', { email: created.email }),
     })
-  }, [email, name, onCreated, password, role])
+  }, [email, name, onCreated, password, role, t])
 
   return (
     <>
@@ -70,15 +72,15 @@ export function CreateAccountButton({ onCreated }: CreateAccountButtonProps) {
           setOpen(true)
         }}
       >
-        New account
+        {t('console.create.button')}
       </Button>
 
       <ConsoleActionDialog
         open={open}
         onOpenChange={setOpen}
-        title="Create an account"
-        description="The address is not verified and no mail is sent — hand the password over yourself."
-        confirmLabel="Create account"
+        title={t('console.create.title')}
+        description={t('console.create.body')}
+        confirmLabel={t('console.create.confirm')}
         confirmDisabled={
           name.trim().length === 0 ||
           email.trim().length === 0 ||
@@ -86,33 +88,33 @@ export function CreateAccountButton({ onCreated }: CreateAccountButtonProps) {
         }
         onConfirm={create}
       >
-        <Field label="Name" required>
+        <Field label={t('console.users.field.name')} required>
           <Input
             value={name}
             maxLength={120}
             autoComplete="off"
-            placeholder="Mika Tanaka"
+            placeholder={t('console.create.name.placeholder')}
             onChange={(event) => {
               setName(event.currentTarget.value)
             }}
           />
         </Field>
-        <Field label="Email address" required>
+        <Field label={t('console.create.email')} required>
           <Input
             type="email"
             value={email}
             maxLength={320}
             autoComplete="off"
-            placeholder="mika@planned.travel"
+            placeholder={t('console.create.email.placeholder')}
             onChange={(event) => {
               setEmail(event.currentTarget.value)
             }}
           />
         </Field>
         <Field
-          label="Password"
+          label={t('console.create.password')}
           required
-          hint="Long enough to be a passphrase. The account can change it afterwards."
+          hint={t('console.create.password.hint')}
         >
           <Input
             type="password"
@@ -126,9 +128,9 @@ export function CreateAccountButton({ onCreated }: CreateAccountButtonProps) {
         {/* A radio set rather than a select: a Radix select popover carries `--z-dropdown`, which
             is below `--z-overlay`, so one opened inside a dialog renders behind that dialog's own
             scrim. Reported with this item; the control that needs no layer is the one used here. */}
-        <Field label="Platform role">
+        <Field label={t('console.users.column.role')}>
           <RadioGroup
-            aria-label="Platform role"
+            aria-label={t('console.users.column.role')}
             value={role}
             onValueChange={(next) => {
               setRole(next as ShellPlatformRole)
@@ -142,8 +144,8 @@ export function CreateAccountButton({ onCreated }: CreateAccountButtonProps) {
                   key={option}
                   value={option}
                   icon={<Icon className="size-4" />}
-                  label={descriptor.label}
-                  description={descriptor.summary}
+                  label={t(descriptor.labelKey)}
+                  description={t(descriptor.summaryKey)}
                 />
               )
             })}

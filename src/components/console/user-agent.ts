@@ -11,7 +11,13 @@
  * specificity is the whole of what the job needs, and a token nobody recognises is reported as
  * unknown instead of guessed at. The order matters twice over — every Chromium browser also says
  * `Chrome`, and every WebKit browser also says `Safari`, so the narrower names are tested first.
+ *
+ * The two names are proper nouns and stay as they are in every locale; the word joining them is not,
+ * so it comes from the catalogue and the translator is a parameter — this is a pure function called
+ * from table cells and from tests, and neither can call a hook.
  */
+
+import type { Translate } from '#/lib/i18n'
 
 const BROWSERS: ReadonlyArray<readonly [token: string, name: string]> = [
   ['Edg/', 'Edge'],
@@ -44,15 +50,20 @@ function firstMatch(
 }
 
 /** `"Safari on iPhone"`, `"Chrome"`, or `"Unrecognised device"` when nothing matched. */
-export function describeUserAgent(userAgent: string | null): string {
+export function describeUserAgent(
+  t: Translate,
+  userAgent: string | null,
+): string {
   if (userAgent === null || userAgent.trim().length === 0) {
-    return 'Unrecognised device'
+    return t('console.device.unrecognised')
   }
   const browser = firstMatch(userAgent, BROWSERS)
   const platform = firstMatch(userAgent, PLATFORMS)
 
-  if (browser !== null && platform !== null) return `${browser} on ${platform}`
+  if (browser !== null && platform !== null) {
+    return t('console.device.on', { browser, platform })
+  }
   if (browser !== null) return browser
   if (platform !== null) return platform
-  return 'Unrecognised device'
+  return t('console.device.unrecognised')
 }
