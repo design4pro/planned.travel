@@ -28,26 +28,37 @@
 // run = resume; a new number is a run that shares nothing.
 //
 // Two runs never work the same issue, whether or not the operator partitions
-// the backlog with `--issues`: each run publishes the ids it holds next to its
-// pid lock, and every planner's scope is the `ready-for-agent` set minus what a
-// live run already claims. `--issues` is now only a preference, not the thing
-// standing between two fleets and building the same ticket twice. Naming a PRD
-// there means "the cleared slices under it" — they are expanded here rather
-// than left for the planner to discover, because an agent that walks a
-// sub-issue tree on its own picks up work no human has cleared.
+// the backlog with `--issues`, and whether they are on this machine, another
+// one, or a GitHub Actions runner: every run claims its issues from a shared
+// registry (./coordinator.ts) before a single container starts, and holds them
+// by heartbeating. A claim covers an issue's whole closure — itself, its
+// ancestors and its descendants — so holding a PRD holds every slice under it,
+// holding one slice stops anyone taking the PRD whole, and sibling slices stay
+// parallel. `--issues` is now only a preference, not the thing standing between
+// two fleets and building the same ticket twice. Naming a PRD there means "the
+// cleared slices under it" — they are expanded here rather than left for the
+// planner to discover, because an agent that walks a sub-issue tree on its own
+// picks up work no human has cleared.
+//
+// `--no-coordinator` opts out, loudly. Anything else that stops the registry
+// answering stops the run: a loop that cannot see what another run holds must
+// not start rather than start blind.
 //
 // Requires: Docker running, `sandcastle docker build-image` executed once,
 // and the env vars from .env.example.
 
 import { execSync } from 'node:child_process'
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { hostname } from 'node:os'
 import { join } from 'node:path'
 
 import * as sandcastle from '@ai-hero/sandcastle'
 import { z } from 'zod'
 
-import { claim, claimedElsewhere, claimsPath, isAlive } from './claims'
+import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
 import { docker } from './sandbox'
+
+import type { SandcastleEdge } from '../src/server/do/sandcastle-protocol'
 
 const planSchema = z.object({
   issues: z.array(
@@ -152,10 +163,37 @@ const hooks = {
 
 const argv = process.argv.slice(2)
 
+// The coordinator runs host-side, not in the sandbox, so it reads this process's environment
+// rather than the one sandcastle assembles for a container. `.sandcastle/.env` is where the
+// operator already keeps this run's secrets, so read it here too. An existing shell variable wins
+// (node does not overwrite), which is the precedence an operator expects from `FOO=… pnpm
+// sandcastle`.
+try {
+  process.loadEnvFile('.sandcastle/.env')
+} catch {
+  // No file, or an unreadable one. Every name it would have supplied is checked where it is used,
+  // with a message naming what is missing — an absent file is not itself an error.
+}
+
 /** `--name value`, the flag idiom this repo already uses (sentry-triage.ts). */
 function flag(name: string, fallback: string): string {
   const at = argv.indexOf(`--${name}`)
   return at === -1 ? fallback : (argv[at + 1] ?? fallback)
+}
+
+/** `--name`, present or not. */
+function boolFlag(name: string): boolean {
+  return argv.includes(`--${name}`)
+}
+
+/** Is that pid still alive? Signal 0 delivers nothing; it only asks. */
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
 }
 
 // Every flag this script understands, checked before anything else runs. An
@@ -164,7 +202,9 @@ function flag(name: string, fallback: string): string {
 // 104` for `--issues 104` left the run unscoped, so its planner read the whole
 // backlog and a second fleet re-implemented the tickets the first one was
 // already building. A typo must cost a startup error, never a duplicated run.
-const KNOWN_FLAGS = ['run', 'issues']
+const VALUE_FLAGS = ['run', 'issues']
+const BOOLEAN_FLAGS = ['no-coordinator']
+const KNOWN_FLAGS = [...VALUE_FLAGS, ...BOOLEAN_FLAGS]
 for (let at = 0; at < argv.length; at++) {
   const token = argv[at]!
   if (!token.startsWith('--')) {
@@ -185,7 +225,8 @@ for (let at = 0; at < argv.length; at++) {
         `Known flags: ${KNOWN_FLAGS.map((k) => `--${k}`).join(', ')}.`,
     )
   }
-  at++ // the value belongs to this flag; do not test it as a flag itself
+  // A value flag owns the next token; a boolean one owns nothing.
+  if (VALUE_FLAGS.includes(name)) at++
 }
 
 // Local calendar date, like the manual `date +%Y%m%d` this replaces — a UTC
@@ -294,6 +335,34 @@ function readyForAgentIds(): string[] {
     .filter(Boolean)
 }
 
+/**
+ * The backlog this run works, and the registry's shard key. It must match
+ * `SANDCASTLE_COORDINATOR_REPO` in `src/routes/api/sandcastle/-lib/coordinator.ts`: the coordinator
+ * refuses a registration for any other repository rather than filing it under this one's object.
+ */
+const REPO = 'design4pro/planned.travel'
+
+/**
+ * Every open `child → parent` sub-issue edge, in one call.
+ *
+ * The registry leases an issue's whole closure, so it needs the tree — and it takes it from the
+ * client because GitHub is the source of truth for it and the registry only caches it. Read whole
+ * rather than per issue: one request describes the backlog, and a partial tree would under-report
+ * a closure, which is the one direction that lets two runs collide.
+ */
+function openIssueEdges(): Array<SandcastleEdge> {
+  const listed = execSync(
+    'gh issue list --state open --limit 500 --json number,parent ' +
+      '--jq \'.[] | select(.parent != null) | "\(.number) \(.parent.number)"\'',
+    { encoding: 'utf8' },
+  )
+  return listed
+    .split('\n')
+    .map((line) => line.trim().split(' '))
+    .filter((pair): pair is [string, string] => pair.length === 2)
+    .map(([child, parent]) => ({ child, parent }))
+}
+
 /** Open sub-issues of `id`; empty when it has none, i.e. when it is not a PRD. */
 function openSubIssueIds(id: string): string[] {
   const { owner, name } = JSON.parse(
@@ -353,12 +422,44 @@ const ARTIFACT_ROOT = join('.sandcastle', 'logs', `run-${RUN_ID}`)
 await mkdir(ARTIFACT_ROOT, { recursive: true })
 await writeFile(lockPath, String(process.pid))
 
-// Where this run publishes the issue ids it owns, next to its pid lock so
-// concurrent runs can see them (./claims.ts). `--issues` partitions the backlog
-// only when the operator gets it right; claims are the mechanical backstop that
-// makes two loops safe by default rather than by discipline.
-const LOGS_ROOT = join('.sandcastle', 'logs')
-const CLAIMS_PATH = claimsPath(LOGS_ROOT, RUN_ID)
+// Whether this run claims its issues from the shared registry. `--issues` partitions the backlog
+// only when the operator gets it right; the registry is the mechanical backstop that makes two
+// loops safe by default rather than by discipline, so opting out is deliberate and loud.
+const COORDINATED = !boolFlag('no-coordinator')
+if (!COORDINATED) console.log(NO_COORDINATOR_BANNER)
+
+// Built before the worktree is cut, so a run that cannot reach the registry stops before it has
+// created anything to clean up. `fromEnv` throws when the registry is not configured: an
+// unconfigured coordinator is indistinguishable from one that is down, and both mean this run
+// cannot know what another run is holding.
+const coordinator = COORDINATED
+  ? Coordinator.fromEnv(process.env, {
+      repo: REPO,
+      runId: RUN_ID,
+      origin:
+        process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
+      kind: 'afk-loop',
+      host: hostname(),
+    })
+  : undefined
+
+// Ctrl-C releases this run's issues now rather than leaving them parked for the lease's five
+// minutes. A crash or a `kill -9` skips this, and that is the whole reason the lease has a TTL —
+// but the common case is an operator changing their mind, and making them wait is needless.
+let releasing = false
+for (const stopping of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(stopping, () => {
+    if (releasing) process.exit(130)
+    releasing = true
+    console.log(`\nReceived ${stopping} — releasing this run's issues…`)
+    void (
+      coordinator?.finish('failed', `interrupted by ${stopping}`) ??
+      Promise.resolve()
+    )
+      .catch(() => {})
+      .finally(() => process.exit(130))
+  })
+}
 
 type Issue = z.infer<typeof planSchema>['issues'][number]
 type Validation = {
@@ -432,6 +533,12 @@ if (otherRuns.length > 0) {
   console.log(
     `  today's other runs: ${otherRuns.join(', ')} — resume one with \`pnpm sandcastle --run ${otherRuns[0]}\``,
   )
+}
+
+// Announced now the branch exists, so the dashboard can name it, and before any issue is claimed.
+if (coordinator !== undefined) {
+  await coordinator.register(integrationBranch)
+  coordinator.startHeartbeat()
 }
 
 /**
@@ -571,9 +678,11 @@ async function declaresVisualChange(
 async function runDeepReview(
   sandbox: sandcastle.Sandbox,
   issue: Issue,
+  signal?: AbortSignal,
 ): Promise<void> {
   try {
     const run = await sandbox.run({
+      signal,
       name: 'deep-reviewer',
       maxIterations: 1,
       agent: sandcastle.claudeCode(DEEP_REVIEW_MODEL),
@@ -683,6 +792,7 @@ async function runDeepReview(
 async function runPixelCritic(
   sandbox: sandcastle.Sandbox,
   issue: Issue,
+  signal?: AbortSignal,
 ): Promise<void> {
   try {
     const shotsDir = `.sandcastle-shots/issue-${issue.id}`
@@ -692,6 +802,7 @@ async function runPixelCritic(
     const refLabel = oursLabel === 'A' ? 'B' : 'A'
 
     const capture = await sandbox.run({
+      signal,
       name: 'pixel-capture',
       maxIterations: 1,
       agent: sandcastle.claudeCode(CRITIC_MODEL),
@@ -718,6 +829,7 @@ async function runPixelCritic(
     }
 
     const critic = await sandbox.run({
+      signal,
       name: 'pixel-critic',
       maxIterations: 1,
       agent: sandcastle.claudeCode(CRITIC_MODEL),
@@ -791,8 +903,15 @@ async function markBlocked(
   })
 }
 
+/**
+ * `signal` aborts every agent in this issue's pipeline if the run loses the issue's lease — it
+ * stopped heartbeating for the whole TTL and another run took the ticket. Carrying on would put two
+ * fleets back on one issue, which is the failure the registry exists to prevent, so the work stops
+ * rather than finishing into a branch this run no longer owns. Undefined under `--no-coordinator`.
+ */
 async function workIssue(
   issue: Issue,
+  signal?: AbortSignal,
 ): Promise<{ issue: Issue; ok: boolean; commits: Array<{ sha: string }> }> {
   const sandbox = await sandcastle.createSandbox({
     branch: issue.branch,
@@ -805,6 +924,7 @@ async function workIssue(
   let lastArtifactPath = ''
   try {
     let implement = await sandbox.run({
+      signal,
       name: 'implementer',
       maxIterations: 100,
       agent: sandcastle.claudeCode(IMPLEMENTER_MODEL),
@@ -820,6 +940,7 @@ async function workIssue(
     if (commits.length === 0) return { issue, ok: false, commits }
 
     const review = await sandbox.run({
+      signal,
       name: 'reviewer',
       maxIterations: 1,
       agent: sandcastle.claudeCode(REVIEWER_MODEL),
@@ -854,8 +975,8 @@ async function workIssue(
       }
 
       if (verdict.ok) {
-        if (DEEP_REVIEW) await runDeepReview(sandbox, issue)
-        if (verdict.uiTouched) await runPixelCritic(sandbox, issue)
+        if (DEEP_REVIEW) await runDeepReview(sandbox, issue, signal)
+        if (verdict.uiTouched) await runPixelCritic(sandbox, issue, signal)
         if (DEEP_REVIEW || verdict.uiTouched) {
           // Re-collect: the advisory passes added .sandcastle-deep-review.json,
           // .sandcastle-shots and the visual verdict.
@@ -895,7 +1016,7 @@ async function workIssue(
         // sandcastle 0.12.0 bug: resume() spreads the original run options and
         // clears promptFile but NOT promptArgs, and an inline prompt with
         // promptArgs is rejected (PromptError). Empty override passes.
-        { promptArgs: {} },
+        { promptArgs: {}, signal },
       )
       commits.push(...implement.commits)
     }
@@ -1070,33 +1191,35 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   const eligible = new Set(readyForAgentIds())
   const requested =
     ONLY_ISSUES.length === 0 ? [...eligible] : resolveOnlyIssues(eligible)
-  const heldElsewhere = await claimedElsewhere(LOGS_ROOT, RUN_ID)
-  const scopeIds = requested.filter((id) => !heldElsewhere.has(id))
-  if (scopeIds.length < requested.length) {
-    const taken = requested
-      .filter((id) => heldElsewhere.has(id))
-      .map((id) => `#${id} (run ${heldElsewhere.get(id)})`)
-    console.log(`Held by another live run, skipping: ${taken.join(', ')}.`)
-  }
+
+  // Claim BEFORE planning, not after. The old order — read what looked free, plan, then claim —
+  // left a window the width of a planner run, and two planners in that window is exactly what put
+  // two fleets on #106 and #108. A claim is atomic, so taking the whole candidate list first and
+  // handing back what the planner does not want has no window at all.
+  coordinator?.setStage('planning')
+  const claimed =
+    coordinator === undefined
+      ? { granted: requested, denied: [], adopt: {} }
+      : await coordinator.claim(requested, openIssueEdges())
+  const scopeIds = claimed.granted
   if (scopeIds.length === 0) {
     console.log(
       eligible.size === 0
         ? 'No issue carries `ready-for-agent`. Nothing is cleared for the loop — exiting.'
-        : 'Every issue in scope is already held by another live run. Exiting.',
+        : 'Every issue in scope is already held by another run. Exiting.',
     )
     break
   }
   console.log(`In scope: ${scopeIds.map((id) => `#${id}`).join(', ')}`)
 
   const planned = await runPlanner(scopeIds)
-  // Claim before a single container starts, so a run planning alongside this
-  // one sees the ids taken rather than re-planning them.
-  const claimedIds = await claim(
-    LOGS_ROOT,
-    RUN_ID,
-    planned.map((issue) => issue.id),
-  )
-  const issues = planned.filter((issue) => claimedIds.includes(issue.id))
+  // Give back what the planner did not choose — blocked by a dependency, or simply beyond this
+  // iteration. Holding them would park work this run has no intention of doing.
+  const chosen = new Set(planned.map((issue) => issue.id))
+  const unused = scopeIds.filter((id) => !chosen.has(id))
+  if (unused.length > 0) await coordinator?.release(unused)
+
+  const issues = planned
   if (issues.length === 0) {
     console.log('No unblocked issues to work on. Exiting.')
     break
@@ -1105,8 +1228,11 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   for (const issue of issues)
     console.log(`  ${issue.id}: ${issue.title} → ${issue.branch}`)
 
+  coordinator?.setStage('implementing')
   const settled = await Promise.allSettled(
-    issues.map((issue) => limit(() => workIssue(issue))),
+    issues.map((issue) =>
+      limit(() => workIssue(issue, coordinator?.signalFor(issue.id))),
+    ),
   )
 
   for (const [i, outcome] of settled.entries()) {
@@ -1123,6 +1249,17 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
         o.status === 'fulfilled' && o.value.ok && o.value.commits.length > 0,
     )
     .map((o) => o.value)
+    // The backstop, and the one check that has to hold: a lease this run lost belongs to whoever
+    // took it, and merging its branch anyway would put two runs' work on one issue — the exact
+    // failure the registry exists to prevent. The abort above usually gets there first; this
+    // catches the issue that finished in the same window the lease lapsed.
+    .filter((result) => {
+      if (coordinator?.isRevoked(result.issue.id) !== true) return true
+      console.warn(
+        `  ! #${result.issue.id} finished but its lease was revoked — NOT merging ${result.issue.branch}.`,
+      )
+      return false
+    })
 
   console.log(
     `\nValidation passed on ${passing.length}/${issues.length} branch(es).`,
@@ -1132,9 +1269,11 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     continue
   }
 
+  coordinator?.setStage('merging')
   await mergeBranches(passing)
   mergedAll.push(...passing.map((p) => p.issue))
   console.log('Branches merged. Running auditor…')
+  coordinator?.setStage('auditing')
   const audit = await runAuditor(
     passing.map((p) => p.issue),
     iteration,
@@ -1157,11 +1296,14 @@ if (mergedAll.length > 0 && lastAuditRefuted === 0) {
 // survives. close() preserves a dirty worktree, and a crashed run leaves one
 // behind — either way the next run reuses it (measured: createWorktree logs
 // "Reusing existing worktree" for a matching branch).
+coordinator?.setStage('finishing')
 await integration.close()
 await rm(lockPath, { force: true })
-// Each iteration's claim() already replaces the previous claims, so this only
-// releases the last iteration's. A crash skips it, and that is fine: claims
-// next to a dead pid are ignored, exactly as a stale run lock is.
-await rm(CLAIMS_PATH, { force: true })
+// Hands every remaining lease back at once. A crash skips it, and that is fine: the lease has a
+// TTL precisely so that a run which never got to say goodbye still releases its work.
+await coordinator?.finish(
+  lastAuditRefuted === 0 ? 'finished' : 'failed',
+  mergedAll.map((issue) => `#${issue.id}`).join(', '),
+)
 
 console.log(`\nAll done. Artifacts under ${ARTIFACT_ROOT}`)
