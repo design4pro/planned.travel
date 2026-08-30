@@ -68,3 +68,73 @@ export type {
   TripRoomErrorCode,
   TripRoomIdentity,
 } from './protocol'
+
+export { SandcastleRegistry, closureOf } from './sandcastle-registry'
+export type {
+  SandcastleRegistryEnv,
+  SandcastleRegistryOptions,
+  SandcastleRegistryState,
+  SandcastleRegistryStorage,
+} from './sandcastle-registry'
+
+export {
+  claimSandcastleIssues,
+  finishSandcastleRun,
+  heartbeatSandcastleRun,
+  readSandcastleState,
+  recordSandcastleWip,
+  registerSandcastleRun,
+  releaseSandcastleIssues,
+} from './sandcastle-registry-client'
+export type {
+  SandcastleRegistryNamespace,
+  SandcastleRegistryStub,
+} from './sandcastle-registry-client'
+
+export {
+  SANDCASTLE_ALARM_INTERVAL_MS,
+  SANDCASTLE_HEARTBEAT_INTERVAL_MS,
+  SANDCASTLE_HISTORY_LIMIT,
+  SANDCASTLE_LEASE_TTL_MS,
+  SANDCASTLE_MAX_CANDIDATES,
+  SANDCASTLE_MAX_EDGES,
+  SANDCASTLE_PROTOCOL_VERSION,
+  claimDenialSchema,
+  claimInputSchema,
+  claimResultSchema,
+  finishInputSchema,
+  heartbeatInputSchema,
+  heartbeatResultSchema,
+  recordWipInputSchema,
+  registerRunInputSchema,
+  registerRunResultSchema,
+  registryStateSchema,
+  releaseInputSchema,
+  runViewSchema,
+  sandcastleEdgeSchema,
+  sandcastleKindSchema,
+  sandcastleOriginSchema,
+  sandcastleRunStatusSchema,
+  sandcastleStageSchema,
+  wipViewSchema,
+} from './sandcastle-protocol'
+export type {
+  ClaimDenial,
+  ClaimInput,
+  ClaimResult,
+  FinishInput,
+  HeartbeatInput,
+  HeartbeatResult,
+  RecordWipInput,
+  RegisterRunInput,
+  RegisterRunResult,
+  RegistryState,
+  ReleaseInput,
+  RunView,
+  SandcastleEdge,
+  SandcastleKind,
+  SandcastleOrigin,
+  SandcastleRunStatus,
+  SandcastleStage,
+  WipView,
+} from './sandcastle-protocol'
