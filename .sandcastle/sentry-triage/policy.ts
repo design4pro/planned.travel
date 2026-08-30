@@ -281,12 +281,15 @@ export function selectionVerdict(
   if (candidate.level !== 'error' && candidate.level !== 'fatal') {
     return { ok: false, reason: `level ${candidate.level}` }
   }
-  if (!candidate.unhandled) {
-    return {
-      ok: false,
-      reason: 'handled - the code caught this and carried on',
-    }
-  }
+  // No `unhandled` gate, deliberately. It reads as a proxy for "the app coped", and in this
+  // codebase it is not one: `recordDiagnostic` in src/server/errors/middleware.ts is the error
+  // path for EVERY server function, so it calls `captureException` from a catch block and every
+  // request that fails cleanly arrives here tagged handled. Gating on it hid the whole server
+  // surface - src/server/observability/sentry.ts calls that half "often the more interesting
+  // one" - and left only what leaked past the middleware. What remains below still has to be
+  // unresolved, at error level, recurring, over threshold and owned by a frame under src/, and
+  // whatever clears all of that is filed `status: pending` for triage.yml to reproduce at HEAD
+  // and promote or reject (ADR 0006). A handled error that clears those bars is a defect.
 
   const haystack = `${candidate.errorType} ${candidate.errorValue}`
   const denied = DENYLIST.find((entry) => haystack.includes(entry))

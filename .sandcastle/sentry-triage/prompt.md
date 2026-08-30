@@ -38,8 +38,8 @@ Do not call `analyze_issue_with_seer` even if it is offered. It is slow, it cost
 
 1. For each project in `{{PROJECTS}}`, run these two searches, `sort='freq'`, `limit=25`, `statsPeriod='{{WINDOW}}'`:
 
-   - `is:unresolved environment:production level:error error.unhandled:true`
-   - `is:unresolved environment:staging level:error error.unhandled:true`
+   - `is:unresolved environment:production level:error`
+   - `is:unresolved environment:staging level:error`
 
    Record how many issues each returned — that is `scanned`.
 

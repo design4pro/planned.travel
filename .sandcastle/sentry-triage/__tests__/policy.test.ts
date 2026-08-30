@@ -216,10 +216,13 @@ describe('selection', () => {
     }
   })
 
-  it('rejects a handled error, a warning, and one with no frame in src/', () => {
-    expect(selectionVerdict(candidate({ unhandled: false }), NOW).ok).toBe(
-      false,
-    )
+  it('accepts a handled error, which is how every server function fails', () => {
+    expect(selectionVerdict(candidate({ unhandled: false }), NOW)).toEqual({
+      ok: true,
+    })
+  })
+
+  it('rejects a warning, and one with no frame in src/', () => {
     expect(selectionVerdict(candidate({ level: 'warning' }), NOW).ok).toBe(
       false,
     )
