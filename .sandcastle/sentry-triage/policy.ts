@@ -281,12 +281,15 @@ export function selectionVerdict(
   if (candidate.level !== 'error' && candidate.level !== 'fatal') {
     return { ok: false, reason: `level ${candidate.level}` }
   }
-  if (!candidate.unhandled) {
-    return {
-      ok: false,
-      reason: 'handled - the code caught this and carried on',
-    }
-  }
+  // No `unhandled` gate, deliberately. It reads as a proxy for "the app coped", and in this
+  // codebase it is not one: `recordDiagnostic` in src/server/errors/middleware.ts is the error
+  // path for EVERY server function, so it calls `captureException` from a catch block and every
+  // request that fails cleanly arrives here tagged handled. Gating on it hid the whole server
+  // surface - src/server/observability/sentry.ts calls that half "often the more interesting
+  // one" - and left only what leaked past the middleware. What remains below still has to be
+  // unresolved, at error level, recurring, over threshold and owned by a frame under src/, and
+  // whatever clears all of that is filed `status: pending` for triage.yml to reproduce at HEAD
+  // and promote or reject (ADR 0006). A handled error that clears those bars is a defect.
 
   const haystack = `${candidate.errorType} ${candidate.errorValue}`
   const denied = DENYLIST.find((entry) => haystack.includes(entry))
@@ -349,8 +352,17 @@ export function selectionVerdict(
  */
 export function filingOrder(
   candidates: ReadonlyArray<Candidate>,
+  /** A short id named with `--force`, which sorts ahead of everything else. */
+  forced?: string,
 ): ReadonlyArray<Candidate> {
   return [...candidates].sort((a, b) => {
+    // Ahead of environment and scale, because a forced candidate is small by definition - that is
+    // why it needed forcing - and would otherwise sort last and be dropped by `--max` without a
+    // word. The cap still holds; only the priority changes.
+    if (forced !== undefined && a.shortId !== b.shortId) {
+      if (a.shortId === forced) return -1
+      if (b.shortId === forced) return 1
+    }
     if (a.primaryEnvironment !== b.primaryEnvironment) {
       return a.primaryEnvironment === 'production' ? -1 : 1
     }
@@ -377,6 +389,11 @@ export interface RenderBodyOptions {
   readonly previous?: number
   readonly runLabel: string
   readonly reportPath: string
+  /**
+   * Why `selectionVerdict` rejected this candidate, when it was filed anyway with `--force`.
+   * Absent on a ticket that cleared the gate on its own.
+   */
+  readonly forcedReason?: string
 }
 
 /**
@@ -388,7 +405,8 @@ export interface RenderBodyOptions {
  * reproduction. A confident guess here would be read as evidence and would corrupt that judgement.
  */
 export function renderIssueBody(options: RenderBodyOptions): string {
-  const { candidate, sequence, previous, runLabel, reportPath } = options
+  const { candidate, sequence, previous, runLabel, reportPath, forcedReason } =
+    options
   const frame =
     candidate.inAppFrame === null
       ? 'none in src/'
@@ -409,6 +427,9 @@ export function renderIssueBody(options: RenderBodyOptions): string {
     `Sentry issue:   ${candidate.shortId}  ${candidate.issueUrl}`,
     `Culprit:        ${candidate.culprit}`,
     `Level:          ${candidate.level}${candidate.unhandled ? ' (unhandled)' : ''}`,
+    ...(forcedReason === undefined
+      ? []
+      : [`Policy:         FORCED - ${forcedReason}`]),
     `In-app frame:   ${frame}`,
     `Environments:   ${candidate.environments.join(', ')}`,
     `Events / users: ${String(candidate.eventCount)} / ${String(candidate.userCount)}`,
@@ -431,6 +452,8 @@ export function renderIssueBody(options: RenderBodyOptions): string {
     `reproduce at HEAD from ${frame} and the sequence above before any brief is written.`,
     '',
     '---',
-    `_Filed by \`pnpm sandcastle:sentry --file-issues\` (run ${runLabel}) from Sentry issue ${candidate.shortId}. Full report: ${reportPath}_`,
+    forcedReason === undefined
+      ? `_Filed by \`pnpm sandcastle:sentry --file-issues\` (run ${runLabel}) from Sentry issue ${candidate.shortId}. Full report: ${reportPath}_`
+      : `_Filed by hand with \`pnpm sandcastle:sentry --force ${candidate.shortId} --file-issues\` (run ${runLabel}), against the policy - see the FORCED line above. Full report: ${reportPath}_`,
   ].join('\n')
 }

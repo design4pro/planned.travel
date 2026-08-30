@@ -14,7 +14,8 @@
 # Requires in the environment (injected from .sandcastle/.env by sandcastle):
 #   CLOUDFLARE_API_TOKEN   R2:read on planned-travel-tiles (basemap download)
 #   CLOUDFLARE_ACCOUNT_ID  account that owns the bucket
-#   TILES_KEY              dated archive key, e.g. basemaps/planet-20260818.pmtiles
+#   E2E_TILES_KEY          dated archive key, e.g. basemaps/planet-20260818.pmtiles
+#                          Same name CI and the cloud environment use for the same object.
 #
 # Optional, and only for a ticket that touches billing (all seven or none):
 #   POLAR_ACCESS_TOKEN POLAR_WEBHOOK_SECRET POLAR_SERVER
@@ -113,7 +114,7 @@ echo "==> local D1 migrations"
 pnpm db:migrate:local
 
 if [ ! -s .e2e-tiles/basemap.pmtiles ]; then
-  echo "==> basemap not in the shared cache — downloading from R2 (${TILES_KEY:?set TILES_KEY in .sandcastle/.env})"
+  echo "==> basemap not in the shared cache — downloading from R2 (${E2E_TILES_KEY:?set E2E_TILES_KEY in .sandcastle/.env})"
   : "${CLOUDFLARE_API_TOKEN:?set CLOUDFLARE_API_TOKEN in .sandcastle/.env}"
   : "${CLOUDFLARE_ACCOUNT_ID:?set CLOUDFLARE_ACCOUNT_ID in .sandcastle/.env}"
   mkdir -p .e2e-tiles
@@ -126,7 +127,7 @@ if [ ! -s .e2e-tiles/basemap.pmtiles ]; then
   tmp=".e2e-tiles/basemap.pmtiles.$$.part"
   trap 'rm -f "$tmp"' EXIT
   pnpm exec wrangler r2 object get \
-    "planned-travel-tiles/${TILES_KEY}" \
+    "planned-travel-tiles/${E2E_TILES_KEY}" \
     --remote --file "$tmp"
   mv -f "$tmp" .e2e-tiles/basemap.pmtiles
   trap - EXIT

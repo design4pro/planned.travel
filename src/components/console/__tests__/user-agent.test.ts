@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { consoleTranslate as t } from '#/lib/i18n/__tests__/console-translate'
 import { describeUserAgent } from '../user-agent'
 
 /**
@@ -46,25 +47,27 @@ describe('describeUserAgent', () => {
 
   it('names the browser and the platform for the agents this product actually sees', () => {
     for (const [agent, expected] of agents) {
-      expect(describeUserAgent(agent), agent).toBe(expected)
+      expect(describeUserAgent(t, agent), agent).toBe(expected)
     }
   })
 
   it('prefers the narrower browser name over the one every browser also claims', () => {
     // Edge says `Chrome` and `Safari` as well; Android's Chrome says `Safari` too. A wrong order
     // here labels every device in the list "Safari" and the column stops distinguishing anything.
-    expect(describeUserAgent('Edg/131 Chrome/131 Safari/537.36')).toBe('Edge')
-    expect(describeUserAgent('Chrome/131 Safari/537.36')).toBe('Chrome')
+    expect(describeUserAgent(t, 'Edg/131 Chrome/131 Safari/537.36')).toBe(
+      'Edge',
+    )
+    expect(describeUserAgent(t, 'Chrome/131 Safari/537.36')).toBe('Chrome')
   })
 
   it('reports what it could not read rather than guessing', () => {
-    expect(describeUserAgent(null)).toBe('Unrecognised device')
-    expect(describeUserAgent('   ')).toBe('Unrecognised device')
-    expect(describeUserAgent('curl/8.4.0')).toBe('Unrecognised device')
+    expect(describeUserAgent(t, null)).toBe('Unrecognised device')
+    expect(describeUserAgent(t, '   ')).toBe('Unrecognised device')
+    expect(describeUserAgent(t, 'curl/8.4.0')).toBe('Unrecognised device')
   })
 
   it('answers with whichever half it could read', () => {
-    expect(describeUserAgent('something (iPhone)')).toBe('iPhone')
-    expect(describeUserAgent('Firefox/133.0')).toBe('Firefox')
+    expect(describeUserAgent(t, 'something (iPhone)')).toBe('iPhone')
+    expect(describeUserAgent(t, 'Firefox/133.0')).toBe('Firefox')
   })
 })

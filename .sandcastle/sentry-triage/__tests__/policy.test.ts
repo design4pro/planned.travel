@@ -216,10 +216,13 @@ describe('selection', () => {
     }
   })
 
-  it('rejects a handled error, a warning, and one with no frame in src/', () => {
-    expect(selectionVerdict(candidate({ unhandled: false }), NOW).ok).toBe(
-      false,
-    )
+  it('accepts a handled error, which is how every server function fails', () => {
+    expect(selectionVerdict(candidate({ unhandled: false }), NOW)).toEqual({
+      ok: true,
+    })
+  })
+
+  it('rejects a warning, and one with no frame in src/', () => {
     expect(selectionVerdict(candidate({ level: 'warning' }), NOW).ok).toBe(
       false,
     )
@@ -324,6 +327,31 @@ describe('filing order', () => {
       filingOrder([staging, smallProd, bigProd]).map((c) => c.shortId),
     ).toEqual(['PT-B', 'PT-A', 'PT-S'])
   })
+
+  it('puts a forced candidate first, however small it is', () => {
+    // Without this, `--max` spends itself on the qualifying candidates before the loop ever
+    // reaches the one a human named, and --force silently files nothing.
+    const staging = candidate({
+      shortId: 'PT-S',
+      primaryEnvironment: 'staging',
+      userCount: 1,
+      eventCount: 1,
+    })
+    const bigProd = candidate({ shortId: 'PT-B', userCount: 40 })
+
+    expect(
+      filingOrder([bigProd, staging], 'PT-S').map((c) => c.shortId),
+    ).toEqual(['PT-S', 'PT-B'])
+  })
+
+  it('leaves the order alone when the forced id is not among them', () => {
+    const smallProd = candidate({ shortId: 'PT-A', userCount: 2 })
+    const bigProd = candidate({ shortId: 'PT-B', userCount: 40 })
+
+    expect(
+      filingOrder([smallProd, bigProd], 'PT-ABSENT').map((c) => c.shortId),
+    ).toEqual(['PT-B', 'PT-A'])
+  })
 })
 
 describe('the ticket', () => {
@@ -367,6 +395,26 @@ describe('the ticket', () => {
     expect(parseMarkers(regression)).toEqual([
       { shortId: 'PLANNED-TRAVEL-4KQ', sequence: 2 },
     ])
+  })
+
+  it('records that a forced ticket did not clear the policy', () => {
+    // triage.yml reproduces this at HEAD and decides whether to promote it (ADR 0006). Filing a
+    // single burst as though it had cleared the thresholds would put that decision on a false
+    // premise, so the ticket carries the reason it was let through.
+    const forced = renderIssueBody({
+      candidate: candidate(),
+      sequence: 1,
+      runLabel: '41207',
+      reportPath: 'x.md',
+      forcedReason: 'a single burst rather than a recurring defect',
+    })
+
+    expect(forced).toContain('FORCED')
+    expect(forced).toContain('a single burst rather than a recurring defect')
+  })
+
+  it('claims no override on a ticket that earned its place', () => {
+    expect(body).not.toContain('FORCED')
   })
 
   it('titles a regression as one', () => {

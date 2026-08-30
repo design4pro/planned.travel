@@ -50,12 +50,15 @@ import {
   TableRow,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { useTranslate } from '#/lib/i18n'
 import { loadConsoleAccount } from './-server/users'
 import { RevokeSessionButton } from './-ui/session-actions'
 import { UserActions } from './-ui/user-actions'
 import { formatDate, formatNumber, trimmedOrNull } from '../-lib/format'
 import { MetaGrid, MetaStrip, Panel, RowsSkeleton } from '../-ui/scaffold'
 
+import type { ErrorComponentProps } from '@tanstack/react-router'
+import type { MessageKey } from '#/lib/i18n'
 import type { ConsoleAuditEntry } from '#/server/fns/console/account'
 import type {
   ConsoleSubscription,
@@ -112,17 +115,23 @@ export const Route = createFileRoute('/_app/console/users/$userId')({
     return result.detail
   },
   pendingComponent: AccountPending,
-  errorComponent: ({ error }) => (
-    <ErrorPanel
-      className="bg-surface-2"
-      error={readConsoleFailure(error)}
-      title="That account did not load"
-    />
-  ),
+  errorComponent: AccountError,
   component: ConsoleAccountPage,
 })
 
+function AccountError({ error }: ErrorComponentProps) {
+  const t = useTranslate()
+  return (
+    <ErrorPanel
+      className="bg-surface-2"
+      error={readConsoleFailure(error, t('console.failure.fallback'))}
+      title={t('console.account.error.title')}
+    />
+  )
+}
+
 function ConsoleAccountPage() {
+  const t = useTranslate()
   const { account, sessions, truncated, context } = Route.useLoaderData()
   const { shell } = Route.useRouteContext()
   const router = useRouter()
@@ -155,7 +164,7 @@ function ConsoleAccountPage() {
         icon={<ArrowLeft />}
         className="-ml-3 self-start"
       >
-        <Link to="/console/users">All accounts</Link>
+        <Link to="/console/users">{t('console.shell.allAccounts')}</Link>
       </Button>
 
       <Card className="flex flex-col gap-5">
@@ -184,14 +193,14 @@ function ConsoleAccountPage() {
         </div>
 
         <p className="max-w-prose text-label leading-relaxed text-ink-3">
-          {PLATFORM_ROLE_VOCABULARY[role].summary}
+          {t(PLATFORM_ROLE_VOCABULARY[role].summaryKey)}
         </p>
 
         <MetaGrid
           columns={4}
           items={[
             {
-              label: 'Status',
+              label: t('console.users.column.status'),
               value: (
                 <AccountStatus
                   banned={account.banned}
@@ -200,7 +209,7 @@ function ConsoleAccountPage() {
               ),
             },
             {
-              label: 'Joined',
+              label: t('console.users.column.joined'),
               value: (
                 <span className="tabular-nums">
                   {formatDate(account.createdAt) ?? '—'}
@@ -208,7 +217,7 @@ function ConsoleAccountPage() {
               ),
             },
             {
-              label: 'Last change',
+              label: t('console.account.meta.lastChange'),
               value: (
                 <span className="tabular-nums">
                   {formatDate(account.updatedAt) ?? '—'}
@@ -216,7 +225,7 @@ function ConsoleAccountPage() {
               ),
             },
             {
-              label: 'Account id',
+              label: t('console.account.meta.id'),
               value: (
                 <span className="block truncate font-mono text-caption">
                   {account.id}
@@ -231,14 +240,18 @@ function ConsoleAccountPage() {
         <Alert
           tone="danger"
           icon={<TriangleAlert />}
-          title="This account is suspended"
+          title={t('console.account.banned.title')}
         >
           {account.banReason === null
-            ? 'No reason was recorded with the suspension.'
+            ? t('console.account.banned.noReason')
             : account.banReason}
           {account.banExpiresAt === null
-            ? ' It stays in force until an admin lifts it.'
-            : ` It lifts itself on ${formatDate(account.banExpiresAt) ?? 'its expiry date'}.`}
+            ? t('console.account.banned.permanent')
+            : t('console.account.banned.until', {
+                date:
+                  formatDate(account.banExpiresAt) ??
+                  t('console.account.banned.untilUnknown'),
+              })}
         </Alert>
       ) : null}
 
@@ -287,17 +300,19 @@ function WorkspacesPanel({
   readonly memberships: ReadonlyArray<ConsoleWorkspace>
   readonly truncated: boolean
 }) {
+  const t = useTranslate()
   return (
     <Panel
-      label="Workspaces"
+      label={t('console.account.workspaces.label')}
       count={
         memberships.length === 0 ? undefined : formatNumber(memberships.length)
       }
       toolbar={
         truncated ? (
           <p className="rounded-md bg-surface-2 px-3 py-2 text-caption text-ink-3">
-            This account belongs to more workspaces than the{' '}
-            {formatNumber(memberships.length)} listed here.
+            {t('console.account.workspaces.truncated', {
+              listed: formatNumber(memberships.length),
+            })}
           </p>
         ) : undefined
       }
@@ -309,20 +324,28 @@ function WorkspacesPanel({
             variant="filled"
             size="sm"
             icon={<Building2 />}
-            title="In no workspace"
-            description="This account belongs to no workspace yet. One is provisioned the first time it signs in, and any it is invited to appear here."
+            title={t('console.account.workspaces.empty.title')}
+            description={t('console.account.workspaces.empty.body')}
           />
         </div>
       ) : (
         <>
           <div className="hidden sm:block">
-            <Table label="Workspaces" fixed>
+            <Table label={t('console.account.workspaces.label')} fixed>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Workspace</TableHead>
-                  <TableHead className="w-28">Role</TableHead>
-                  <TableHead className="w-28">Plan</TableHead>
-                  <TableHead className="w-32">Joined</TableHead>
+                  <TableHead>
+                    {t('console.account.workspaces.column.workspace')}
+                  </TableHead>
+                  <TableHead className="w-28">
+                    {t('console.account.workspaces.column.role')}
+                  </TableHead>
+                  <TableHead className="w-28">
+                    {t('console.account.workspaces.column.plan')}
+                  </TableHead>
+                  <TableHead className="w-32">
+                    {t('console.users.column.joined')}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -345,10 +368,12 @@ function WorkspacesPanel({
                         }
                         size="sm"
                       >
-                        {describeWorkspaceRole(membership.role)}
+                        {describeWorkspaceRole(t, membership.role)}
                       </Badge>
                     </TableCell>
-                    <TableCell muted>{describePlan(membership.plan)}</TableCell>
+                    <TableCell muted>
+                      {describePlan(t, membership.plan)}
+                    </TableCell>
                     <TableCell muted className="tabular-nums">
                       {formatDate(membership.joinedAt) ?? '—'}
                     </TableCell>
@@ -377,13 +402,15 @@ function WorkspacesPanel({
                     tone={membership.role === 'owner' ? 'outline' : 'neutral'}
                     size="sm"
                   >
-                    {describeWorkspaceRole(membership.role)}
+                    {describeWorkspaceRole(t, membership.role)}
                   </Badge>
                   <span className="text-caption text-ink-3">
-                    {describePlan(membership.plan)}
+                    {describePlan(t, membership.plan)}
                   </span>
                   <span className="ml-auto text-caption tabular-nums text-ink-4">
-                    Joined {formatDate(membership.joinedAt) ?? '—'}
+                    {t('console.users.joined', {
+                      date: formatDate(membership.joinedAt) ?? '—',
+                    })}
                   </span>
                 </div>
               </li>
@@ -411,18 +438,26 @@ function SubscriptionPanel({
   readonly subscriptions: ReadonlyArray<ConsoleSubscription>
   readonly owns: boolean
 }) {
+  const t = useTranslate()
   return (
-    <Panel label="Subscription" bodyClassName="flex flex-col gap-5">
+    <Panel
+      label={t('console.account.subscription.label')}
+      bodyClassName="flex flex-col gap-5"
+    >
       {subscriptions.length === 0 ? (
         <EmptyState
           variant="filled"
           size="sm"
           icon={<CreditCard />}
-          title={owns ? 'On the free plan' : 'Nothing bills to this account'}
+          title={
+            owns
+              ? t('console.account.subscription.free.title')
+              : t('console.account.subscription.none.title')
+          }
           description={
             owns
-              ? 'The workspace this account owns has never been through checkout, so it carries no subscription record and runs on the free plan’s quotas.'
-              : 'This account owns no workspace. A member of somebody else’s workspace is not who that workspace bills, so there is nothing here to collect.'
+              ? t('console.account.subscription.free.body')
+              : t('console.account.subscription.none.body')
           }
         />
       ) : (
@@ -436,26 +471,29 @@ function SubscriptionPanel({
                 {subscription.organizationName}
               </p>
               <Badge tone="outline" size="sm">
-                {describePlan(subscription.plan)}
+                {describePlan(t, subscription.plan)}
               </Badge>
               <SubscriptionStatusBadge status={subscription.status} />
               {subscription.cancelAtPeriodEnd ? (
                 <Badge tone="warning" size="sm">
-                  Ends at period close
+                  {t('console.account.subscription.endsAtClose')}
                 </Badge>
               ) : null}
             </div>
             <MetaStrip
               items={[
                 {
-                  label: 'Seats',
-                  value: `${formatNumber(subscription.seats)} of ${formatNumber(subscription.seatLimit)}`,
+                  label: t('console.account.subscription.seats'),
+                  value: t('console.account.subscription.seatsValue', {
+                    used: formatNumber(subscription.seats),
+                    limit: formatNumber(subscription.seatLimit),
+                  }),
                 },
                 {
                   label:
                     subscription.cancelAtPeriodEnd || subscription.trialEndsAt
-                      ? 'Ends'
-                      : 'Renews',
+                      ? t('console.account.subscription.ends')
+                      : t('console.account.subscription.renews'),
                   value:
                     formatDate(
                       subscription.trialEndsAt ?? subscription.currentPeriodEnd,
@@ -490,15 +528,15 @@ function AuditPanel({
   readonly entries: ReadonlyArray<ConsoleAuditEntry>
   readonly truncated: boolean
 }) {
+  const t = useTranslate()
   return (
     <Panel
-      label="Audit history"
+      label={t('console.account.audit.label')}
       count={entries.length === 0 ? undefined : formatNumber(entries.length)}
       toolbar={
         truncated ? (
           <p className="rounded-md bg-surface-2 px-3 py-2 text-caption text-ink-3">
-            The ledger holds more entries than this. The platform audit trail is
-            append-only and kept for four hundred days.
+            {t('console.account.audit.truncated')}
           </p>
         ) : undefined
       }
@@ -508,8 +546,8 @@ function AuditPanel({
           variant="filled"
           size="sm"
           icon={<History />}
-          title="Nothing has been done to this account"
-          description="Every role change, suspension, password reset, session revocation and impersonation is written here with the operator’s name on it. Nobody has touched this one."
+          title={t('console.account.audit.empty.title')}
+          description={t('console.account.audit.empty.body')}
         />
       ) : (
         <ol className="relative flex flex-col gap-5">
@@ -520,14 +558,18 @@ function AuditPanel({
             className="absolute top-2 bottom-2 left-1 w-px bg-edge-faint"
           />
           {entries.map((entry) => {
-            const actor = describeAuditActor(entry.actorKind, entry.actorName)
+            const actor = describeAuditActor(
+              t,
+              entry.actorKind,
+              entry.actorName,
+            )
             return (
               <li key={entry.id} className="flex min-w-0 gap-3.5">
                 <AuditDot tone={platformActionTone(entry.action)} />
                 <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
                     <p className="text-label font-semibold text-ink">
-                      {describePlatformAction(entry.action)}
+                      {describePlatformAction(t, entry.action)}
                     </p>
                     <p className="text-caption tabular-nums text-ink-4">
                       {formatConsoleInstant(entry.at)}
@@ -563,17 +605,22 @@ function AuditPanel({
  * account on screen, in both directions.
  */
 function AuthorityPanel({ role }: { role: 'admin' | 'curator' | 'user' }) {
+  const t = useTranslate()
   const { holds, withheld } = PLATFORM_ROLE_VOCABULARY[role]
   return (
-    <Panel label="Platform authority">
+    <Panel label={t('console.account.authority.label')}>
       <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
         <AuthorityList
-          heading="May"
+          heading={t('console.account.authority.may')}
           items={holds}
-          empty="Nothing on the platform."
+          empty={t('console.account.authority.none')}
           granted
         />
-        <AuthorityList heading="May not" items={withheld} empty="" />
+        <AuthorityList
+          heading={t('console.account.authority.mayNot')}
+          items={withheld}
+          empty=""
+        />
       </div>
     </Panel>
   )
@@ -586,10 +633,11 @@ function AuthorityList({
   granted = false,
 }: {
   readonly heading: string
-  readonly items: ReadonlyArray<string>
+  readonly items: ReadonlyArray<MessageKey>
   readonly empty: string
   readonly granted?: boolean
 }) {
+  const t = useTranslate()
   if (items.length === 0 && empty.length === 0) {
     return null
   }
@@ -613,10 +661,14 @@ function AuthorityList({
                     : 'bg-surface-inset text-ink-4',
                 )}
               >
-                {granted ? <Check strokeWidth={3} /> : <Minus strokeWidth={3} />}
+                {granted ? (
+                  <Check strokeWidth={3} />
+                ) : (
+                  <Minus strokeWidth={3} />
+                )}
               </span>
               <span className="min-w-0 text-label leading-relaxed text-ink-2">
-                {item}
+                {t(item)}
               </span>
             </li>
           ))}
@@ -637,16 +689,16 @@ function SessionsPanel({
   readonly truncated: boolean
   readonly onChanged: () => Promise<void>
 }) {
+  const t = useTranslate()
   return (
     <Panel
-      label="Live sessions"
+      label={t('console.account.sessions.label')}
       count={sessions.length === 0 ? undefined : formatNumber(sessions.length)}
       flush
       toolbar={
         truncated ? (
           <p className="rounded-md bg-warning-soft px-3 py-2 text-caption text-warning">
-            This account holds more sessions than one call lists. Revoke every
-            session from the actions menu to be sure none is left behind.
+            {t('console.account.sessions.truncated')}
           </p>
         ) : undefined
       }
@@ -657,22 +709,32 @@ function SessionsPanel({
             variant="filled"
             size="sm"
             icon={<MonitorSmartphone />}
-            title="Signed out everywhere"
-            description="This account holds no session that has not expired. It will appear here the moment it signs in again."
+            title={t('console.account.sessions.empty.title')}
+            description={t('console.account.sessions.empty.body')}
           />
         </div>
       ) : (
         <>
           <div className="hidden sm:block">
-            <Table label="Live sessions" fixed>
+            <Table label={t('console.account.sessions.label')} fixed>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Device</TableHead>
-                  <TableHead className="w-36">Address</TableHead>
-                  <TableHead className="w-36">Started</TableHead>
-                  <TableHead className="w-36">Expires</TableHead>
+                  <TableHead>
+                    {t('console.account.sessions.column.device')}
+                  </TableHead>
+                  <TableHead className="w-36">
+                    {t('console.account.sessions.column.address')}
+                  </TableHead>
+                  <TableHead className="w-36">
+                    {t('console.account.sessions.column.started')}
+                  </TableHead>
+                  <TableHead className="w-36">
+                    {t('console.account.sessions.column.expires')}
+                  </TableHead>
                   <TableHead className="w-12">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">
+                      {t('console.users.column.actions')}
+                    </span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -682,17 +744,22 @@ function SessionsPanel({
                     <TableCell truncate>
                       <span className="flex min-w-0 flex-col gap-0.5">
                         <span className="truncate font-medium text-ink">
-                          {describeUserAgent(session.userAgent)}
+                          {describeUserAgent(t, session.userAgent)}
                         </span>
                         {session.impersonatedBy === null ? null : (
                           <span className="truncate text-caption text-warning">
-                            Minted by impersonation
+                            {t('console.account.sessions.impersonated')}
                           </span>
                         )}
                       </span>
                     </TableCell>
-                    <TableCell muted truncate className="font-mono text-caption">
-                      {trimmedOrNull(session.ipAddress) ?? 'Not recorded'}
+                    <TableCell
+                      muted
+                      truncate
+                      className="font-mono text-caption"
+                    >
+                      {trimmedOrNull(session.ipAddress) ??
+                        t('console.account.sessions.noAddress')}
                     </TableCell>
                     <TableCell muted className="tabular-nums">
                       {formatConsoleInstant(session.createdAt)}
@@ -704,7 +771,7 @@ function SessionsPanel({
                       <RevokeSessionButton
                         userId={userId}
                         sessionId={session.id}
-                        describedAs={describeUserAgent(session.userAgent)}
+                        describedAs={describeUserAgent(t, session.userAgent)}
                         onRevoked={onChanged}
                       />
                     </TableCell>
@@ -722,20 +789,23 @@ function SessionsPanel({
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-label font-medium text-ink">
-                    {describeUserAgent(session.userAgent)}
+                    {describeUserAgent(t, session.userAgent)}
                   </p>
                   <p className="truncate font-mono text-caption text-ink-3">
-                    {trimmedOrNull(session.ipAddress) ?? 'Address not recorded'}
+                    {trimmedOrNull(session.ipAddress) ??
+                      t('console.account.sessions.noAddressLong')}
                   </p>
                   <p className="mt-1 text-caption tabular-nums text-ink-4">
-                    Started {formatConsoleInstant(session.createdAt)} · expires{' '}
-                    {formatConsoleInstant(session.expiresAt)}
+                    {t('console.account.sessions.when', {
+                      started: formatConsoleInstant(session.createdAt),
+                      expires: formatConsoleInstant(session.expiresAt),
+                    })}
                   </p>
                 </div>
                 <RevokeSessionButton
                   userId={userId}
                   sessionId={session.id}
-                  describedAs={describeUserAgent(session.userAgent)}
+                  describedAs={describeUserAgent(t, session.userAgent)}
                   onRevoked={onChanged}
                 />
               </li>
@@ -748,10 +818,11 @@ function SessionsPanel({
 }
 
 function AccountPending() {
+  const t = useTranslate()
   return (
     <div className="flex flex-col gap-6">
       <Card className="flex flex-col gap-5 bg-surface-2">
-        <span className="sr-only">Loading the account</span>
+        <span className="sr-only">{t('console.account.loading')}</span>
         <div className="flex items-center gap-4">
           <Skeleton className="size-14 shrink-0" radius="full" />
           <div className="min-w-0 flex-1 space-y-2">

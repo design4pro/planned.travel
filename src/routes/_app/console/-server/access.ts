@@ -3,7 +3,7 @@
  *
  * `docs/ACCESS.md` §2.3 says it in one sentence: "The console route tree denies a `user` session at
  * its own guard **before a statement is ever consulted**." That wording is the whole design of this
- * file. Standing is decided from the resolved platform role, not from a probe of the twenty-four
+ * file. Standing is decided from the resolved platform role, not from a probe of the twenty-five
  * statements, because a `user` holds none of them and asking about one would only pick an arbitrary
  * statement to be refused by. `requirePermission` still decides every *action*: it runs again inside
  * every console server function, and nothing rendered from what this returns is trusted by anything
@@ -49,6 +49,8 @@ export interface ConsoleAccess {
   readonly canManageUsers: boolean
   /** The catalogue, packs and sources — `admin` and `curator` alike (§2.3). */
   readonly canCurate: boolean
+  /** The sandcastle run registry — `admin` only, and about no account at all (§2.3a). */
+  readonly canSeeRuns: boolean
 }
 
 export type ConsoleAccessResult =
@@ -101,6 +103,7 @@ export const loadConsoleAccess = createServerFn({ method: 'GET' }).handler(
         role,
         canManageUsers: permits(session, { user: ['list'] }),
         canCurate: permits(session, { catalog: ['read'] }),
+        canSeeRuns: permits(session, { sandcastle: ['read'] }),
       },
     }
   },

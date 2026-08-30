@@ -67,7 +67,7 @@ function splitPath(path: string): readonly [locale: string, namespace: string] {
  * Merges the namespace files of one locale into the flat, qualified-key bag a
  * screen reads.
  *
- * Nothing here demands that all ten namespaces exist. The catalogue grows
+ * Nothing here demands that all eleven namespaces exist. The catalogue grows
  * monotonically as the content items land theirs, and a hole is the parity
  * gate's business (`__tests__/parity.test.ts`), not a reason to fail a render.
  */

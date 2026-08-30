@@ -23,9 +23,15 @@ import { createAccessControl } from 'better-auth/plugins/access'
 import { defaultStatements } from 'better-auth/plugins/admin/access'
 
 /**
- * Six resources, twenty-four statements, closed (docs/ACCESS.md §1.1). A seventh resource or a new
- * action on an existing one is an amendment to that document and to the grid in its §2, in the
+ * Seven resources, twenty-five statements, closed (docs/ACCESS.md §1.1). An eighth resource or a
+ * new action on an existing one is an amendment to that document and to the grid in its §2, in the
  * same commit — not a line added here on the way past.
+ *
+ * `sandcastle` is the odd one and is deliberately narrow: it governs no table and no product
+ * content, only the read of the run registry that keeps two agent fleets off one issue
+ * (docs/ACCESS.md §2.3a). It exists as a statement of its own rather than borrowing `user:list`,
+ * because a page that shows which machines are building which tickets is not a claim about
+ * accounts, and gating it on one would say it was.
  */
 export const statement = {
   ...defaultStatements,
@@ -33,13 +39,14 @@ export const statement = {
   pack: ['read', 'write', 'publish'],
   source: ['read', 'run'],
   share: ['read', 'revoke'],
+  sandcastle: ['read'],
 } as const
 
 export const ac = createAccessControl(statement)
 
 export type PlatformStatement = typeof statement
 
-/** One of the six resource names in {@link statement}. */
+/** One of the seven resource names in {@link statement}. */
 export type PlatformResource = keyof PlatformStatement
 
 /**
@@ -82,13 +89,15 @@ export const adminRole = ac.newRole({
   pack: ['read', 'write', 'publish'],
   source: ['read', 'run'],
   share: ['read', 'revoke'],
+  sandcastle: ['read'],
 })
 
 /**
  * The catalogue, packs, sources and share moderation. Nothing that touches users or sessions.
  *
- * `user` and `session` are declared empty rather than omitted so that the denial is a statement
- * this file makes, and so the subset test has something to check on both halves of the grid.
+ * `user`, `session` and `sandcastle` are declared empty rather than omitted so that the denial is a
+ * statement this file makes, and so the subset test has something to check on both halves of the
+ * grid.
  */
 export const curatorRole = ac.newRole({
   user: [],
@@ -97,9 +106,10 @@ export const curatorRole = ac.newRole({
   pack: ['read', 'write', 'publish'],
   source: ['read', 'run'],
   share: ['read', 'revoke'],
+  sandcastle: [],
 })
 
-/** Everyone else, which is nearly everyone. No platform surface at all — all twenty-four denied. */
+/** Everyone else, which is nearly everyone. No platform surface at all — all twenty-five denied. */
 export const userRole = ac.newRole({
   user: [],
   session: [],
@@ -107,6 +117,7 @@ export const userRole = ac.newRole({
   pack: [],
   source: [],
   share: [],
+  sandcastle: [],
 })
 
 /**

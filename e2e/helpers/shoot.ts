@@ -2375,9 +2375,26 @@ export const CONSOLE_ACCOUNTS_ROUTE: RouteCase = {
   ready: 'main',
 }
 
+/**
+ * The agent-run registry (`docs/adr/0009`), and the one console screen whose baseline is stable
+ * *because* of what this deployment is not.
+ *
+ * The registry binding is declared on `env.staging` alone - a second registry would let two fleets
+ * each believe they hold the backlog - so a local or CI Worker has none, and the screen draws its
+ * "this deployment does not coordinate the fleet" state. That frame holds no run id, no host, no
+ * uptime and no lease countdown, which is the only reason this screen can be photographed at all:
+ * the fleet view is made of durations that move between two captures by construction.
+ */
+const CONSOLE_SANDCASTLE_ROUTE: RouteCase = {
+  name: 'console-sandcastle',
+  path: '/console/sandcastle',
+  ready: 'main',
+}
+
 export const CONSOLE_ROUTES: ReadonlyArray<RouteCase> = [
   CONSOLE_OVERVIEW_ROUTE,
   CONSOLE_ACCOUNTS_ROUTE,
+  CONSOLE_SANDCASTLE_ROUTE,
 ]
 
 /**

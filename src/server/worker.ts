@@ -21,7 +21,10 @@ import {
 import { PLATFORM_SYSTEM_ACTOR, prunePlatformAuditLog } from './catalog/audit'
 import { createDb } from './db/client'
 import { consumeTaskBatch } from './queue/consumer'
-import { TripRoom as UninstrumentedTripRoom } from './do'
+import {
+  SandcastleRegistry as UninstrumentedSandcastleRegistry,
+  TripRoom as UninstrumentedTripRoom,
+} from './do'
 import { sweepReminders } from './queue/reminders'
 import { sentryOptions, workerLogger } from './observability/sentry'
 
@@ -48,6 +51,20 @@ export const TripRoom = Sentry.instrumentDurableObjectWithSentry(
   // descriptions are of the same runtime object, and the runtime satisfies each; only the two
   // static descriptions cannot see that about each other. This assertion is the one place they meet.
   UninstrumentedTripRoom as unknown as new (
+    state: DurableObjectState,
+    env: Cloudflare.Env,
+  ) => BrandedDurableObject<Cloudflare.Env>,
+)
+
+/**
+ * Re-exported for the same reason as `TripRoom`, and wrapped for a sharper one: the registry is
+ * the only thing standing between two sandcastle fleets and the same issue. A silent throw in its
+ * claim path degrades into exactly the concurrent double-build it exists to prevent, and an AFK
+ * loop by definition has nobody watching the terminal it would have printed to.
+ */
+export const SandcastleRegistry = Sentry.instrumentDurableObjectWithSentry(
+  (env: Cloudflare.Env) => sentryOptions(env),
+  UninstrumentedSandcastleRegistry as unknown as new (
     state: DurableObjectState,
     env: Cloudflare.Env,
   ) => BrandedDurableObject<Cloudflare.Env>,

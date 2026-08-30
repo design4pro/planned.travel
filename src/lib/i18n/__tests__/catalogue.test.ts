@@ -125,7 +125,7 @@ describe('the catalogue loader', () => {
 })
 
 describe('the namespace list', () => {
-  it('is exactly the ten namespaces the spec fixes, in its order', () => {
+  it('is exactly the eleven namespaces the spec fixes, in its order', () => {
     expect(NAMESPACES).toEqual([
       'shell',
       'auth',
@@ -136,11 +136,12 @@ describe('the namespace list', () => {
       'journal',
       'marketing',
       'settings',
+      'console',
       'ui',
     ])
   })
 
-  it('is the same ten the key type is derived from', () => {
+  it('is the same eleven the key type is derived from', () => {
     expectTypeOf<Namespace>().toEqualTypeOf<
       | 'shell'
       | 'auth'
@@ -151,6 +152,7 @@ describe('the namespace list', () => {
       | 'journal'
       | 'marketing'
       | 'settings'
+      | 'console'
       | 'ui'
     >()
   })
