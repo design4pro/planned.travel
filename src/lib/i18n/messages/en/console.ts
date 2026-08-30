@@ -461,6 +461,60 @@ const messages = {
   'runs.notCoordinator.title': 'This deployment does not coordinate the fleet',
   'runs.notCoordinator.body':
     'The run registry is bound on staging alone, and deliberately: a second registry would let two fleets each believe they hold the backlog, which is the one thing it exists to prevent. Read the fleet on staging.',
+  'nav.providers': 'Providers',
+  'nav.providers.description': 'Outbound calls and their ceilings',
+  'providers.error.title': 'The provider meters could not be read',
+  'providers.list.label': 'Services',
+  'providers.status.planned': 'Not integrated',
+  'providers.status.planned.description':
+    'Nothing calls this service yet, so there is nothing to count. It is listed so a ceiling can be agreed before the first call rather than after the first invoice.',
+  'providers.policy.allow': 'Bills through',
+  'providers.policy.block': 'Refuses at the ceiling',
+  'providers.badge.blocked': {
+    one: 'One call refused',
+    other: '{calls} calls refused',
+  },
+  'providers.limit.none': 'No ceiling agreed · {used} this month',
+  'providers.limit.value': '{used} of {limit}',
+  'providers.limit.window.day': 'Today',
+  'providers.limit.window.month': 'This month',
+  'providers.measuring.none': 'Nothing measured yet',
+  'providers.measuring.since': 'Measuring since {date}',
+  'providers.stat.calls': 'Calls this month',
+  'providers.stat.calls.caption': 'Across every integrated service',
+  'providers.stat.errors': 'Failed calls',
+  'providers.stat.errors.caption':
+    'Counted as calls as well, because most vendors bill them',
+  'providers.stat.nearLimit': 'Near a ceiling',
+  'providers.stat.nearLimit.caption': 'Services past their warning threshold',
+  'providers.stat.blocked': 'Refused calls',
+  'providers.stat.blocked.none': 'Nothing has been turned away',
+  'providers.stat.blocked.some': 'Demand a ceiling turned away',
+  'providers.forecast.label': 'Forecast',
+  'providers.forecast.provider': 'Service',
+  'providers.forecast.monthEnd': 'By month end',
+  'providers.forecast.runRate': 'Per month at this rate',
+  'providers.forecast.perWorkspace': 'Per workspace, per month',
+  'providers.forecast.noWorkspaceTraffic': 'No workspace traffic to average',
+  'providers.forecast.window': {
+    one: 'Projected from one hour of measurement.',
+    other: 'Projected from {hours} hours of measurement.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Only one hour measured so far — not enough to project from. Extrapolating a month from less than a day would be arithmetic rather than a forecast.',
+    other:
+      'Only {hours} hours measured so far — not enough to project from. Extrapolating a month from less than a day would be arithmetic rather than a forecast.',
+  },
+  'providers.forecast.atWorkspaces': 'At how many workspaces',
+  'providers.forecast.callsEach': 'Calls each per month',
+  'providers.forecast.projected': 'About {calls} calls a month.',
+  'providers.workspaces.label': 'Busiest workspaces',
+  'providers.workspaces.platform': 'Platform (no workspace)',
+  'providers.workspaces.empty.title': 'No calls attributed yet',
+  'providers.workspaces.empty.description':
+    'A call made for a workspace is recorded against it. Cron work and platform mail belong to no workspace and are counted apart.',
+  'providers.readOnly':
+    'You can read these meters but not move a ceiling. Changing a limit or its policy needs the provider:configure statement.',
 } as const satisfies NamespaceMessages
 
 export default messages

@@ -459,6 +459,68 @@ const messages = {
   'runs.notCoordinator.title': 'Это развёртывание не координирует флот',
   'runs.notCoordinator.body':
     'Реестр запусков привязан только к промежуточной среде, и намеренно: второй реестр заставил бы оба флота считать, что очередь держит именно он, — а это ровно то, ради предотвращения чего он и существует. Читайте флот в промежуточной среде.',
+  'nav.providers': 'Поставщики',
+  'nav.providers.description': 'Исходящие вызовы и их потолки',
+  'providers.error.title': 'Не удалось прочитать счётчики поставщиков',
+  'providers.list.label': 'Сервисы',
+  'providers.status.planned': 'Не подключён',
+  'providers.status.planned.description':
+    'Этот сервис пока никто не вызывает, так что считать нечего. Он в списке, чтобы потолок согласовали до первого вызова, а не после первого счёта.',
+  'providers.policy.allow': 'Пропускает сверх потолка',
+  'providers.policy.block': 'Отказывает на потолке',
+  'providers.badge.blocked': {
+    one: 'Один вызов отклонён',
+    few: '{calls} вызова отклонено',
+    many: '{calls} вызовов отклонено',
+    other: '{calls} вызова отклонено',
+  },
+  'providers.limit.none': 'Потолок не согласован · {used} в этом месяце',
+  'providers.limit.value': '{used} из {limit}',
+  'providers.limit.window.day': 'Сегодня',
+  'providers.limit.window.month': 'В этом месяце',
+  'providers.measuring.none': 'Пока ничего не измерено',
+  'providers.measuring.since': 'Измеряем с {date}',
+  'providers.stat.calls': 'Вызовы за месяц',
+  'providers.stat.calls.caption': 'По всем подключённым сервисам',
+  'providers.stat.errors': 'Неудачные вызовы',
+  'providers.stat.errors.caption':
+    'Считаются и как вызовы: большинство поставщиков их тарифицирует',
+  'providers.stat.nearLimit': 'Близко к потолку',
+  'providers.stat.nearLimit.caption':
+    'Сервисы выше своего порога предупреждения',
+  'providers.stat.blocked': 'Отклонённые вызовы',
+  'providers.stat.blocked.none': 'Ничего не отклонено',
+  'providers.stat.blocked.some': 'Спрос, отклонённый потолком',
+  'providers.forecast.label': 'Прогноз',
+  'providers.forecast.provider': 'Сервис',
+  'providers.forecast.monthEnd': 'К концу месяца',
+  'providers.forecast.runRate': 'В месяц при этом темпе',
+  'providers.forecast.perWorkspace': 'На рабочее пространство в месяц',
+  'providers.forecast.noWorkspaceTraffic':
+    'Нет трафика рабочих пространств для усреднения',
+  'providers.forecast.window': {
+    one: 'Прогноз по одному часу измерений.',
+    few: 'Прогноз по {hours} ч измерений.',
+    many: 'Прогноз по {hours} ч измерений.',
+    other: 'Прогноз по {hours} ч измерений.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Измерен пока лишь один час — для прогноза мало. Растянуть неполные сутки на месяц — это арифметика, а не прогноз.',
+    few: 'Измерено пока {hours} ч — для прогноза мало. Растянуть неполные сутки на месяц — это арифметика, а не прогноз.',
+    many: 'Измерено пока {hours} ч — для прогноза мало. Растянуть неполные сутки на месяц — это арифметика, а не прогноз.',
+    other:
+      'Измерено пока {hours} ч — для прогноза мало. Растянуть неполные сутки на месяц — это арифметика, а не прогноз.',
+  },
+  'providers.forecast.atWorkspaces': 'При скольких рабочих пространствах',
+  'providers.forecast.callsEach': 'Вызовов на каждое в месяц',
+  'providers.forecast.projected': 'Около {calls} вызовов в месяц.',
+  'providers.workspaces.label': 'Самые активные пространства',
+  'providers.workspaces.platform': 'Платформа (без пространства)',
+  'providers.workspaces.empty.title': 'Пока ничего не отнесено',
+  'providers.workspaces.empty.description':
+    'Вызов, сделанный для рабочего пространства, записывается на него. Работа по расписанию и почта платформы не принадлежат ни одному и считаются отдельно.',
+  'providers.readOnly':
+    'Эти счётчики можно читать, но не двигать потолок. Изменение лимита или политики требует права provider:configure.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

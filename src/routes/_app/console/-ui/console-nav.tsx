@@ -18,7 +18,7 @@
  */
 
 import { Link } from '@tanstack/react-router'
-import { Castle, LayoutDashboard, Users } from 'lucide-react'
+import { Castle, Gauge, LayoutDashboard, Users } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
@@ -29,7 +29,8 @@ import type { LucideIcon } from 'lucide-react'
 
 /** `to` is a param-free literal from the router's own path union. */
 interface ConsoleSectionLink {
-  readonly to: '/console' | '/console/users' | '/console/sandcastle'
+  readonly to:
+    '/console' | '/console/users' | '/console/sandcastle' | '/console/providers'
   readonly labelKey: MessageKey
   readonly descriptionKey: MessageKey
   readonly icon: LucideIcon
@@ -39,6 +40,10 @@ interface ConsoleSectionLink {
    * Which standing this section needs, named as the capability flag itself rather than as a word
    * this file would then have to map onto one. A third section is what made that mapping a liability
    * — a two-way ternary silently sends every unrecognised value down its else branch.
+   *
+   * `Omit<ConsoleAccess, 'role'>` widens with every flag added there, which is why a fourth section
+   * needed no change here beyond its own entry: a flag that exists is nameable, and one that does
+   * not fails `tsc`.
    */
   readonly needs: keyof Omit<ConsoleAccess, 'role'>
 }
@@ -65,6 +70,13 @@ const SECTIONS: ReadonlyArray<ConsoleSectionLink> = [
     descriptionKey: 'console.nav.runs.description',
     icon: Castle,
     needs: 'canSeeRuns',
+  },
+  {
+    to: '/console/providers',
+    labelKey: 'console.nav.providers',
+    descriptionKey: 'console.nav.providers.description',
+    icon: Gauge,
+    needs: 'canSeeProviders',
   },
 ]
 

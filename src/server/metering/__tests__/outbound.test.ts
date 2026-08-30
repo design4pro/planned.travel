@@ -153,6 +153,53 @@ describe('counting', () => {
     expect(rows[0]).toMatchObject({ calls: 1, errors: 1, blocked: 0 })
   })
 
+  it('counts a non-2xx response as a failed call, not a successful one', async () => {
+    // `fetch` resolves a 401 rather than throwing, so without the returned-result check a provider
+    // answering 401 all day would read as a day of healthy traffic.
+    await callProvider(
+      runtimeOver(tables.db),
+      LABEL,
+      async () => new Response('nope', { status: 401 }),
+    )
+    await settleDeferred()
+
+    const rows = await tables.db.select().from(providerUsage)
+    expect(rows[0]).toMatchObject({ calls: 1, errors: 1, blocked: 0 })
+  })
+
+  it('still counts a 2xx response as a clean call', async () => {
+    await callProvider(
+      runtimeOver(tables.db),
+      LABEL,
+      async () => new Response('{}', { status: 200 }),
+    )
+    await settleDeferred()
+
+    const rows = await tables.db.select().from(providerUsage)
+    expect(rows[0]).toMatchObject({ calls: 1, errors: 0 })
+  })
+
+  it('lets a caller classify a result that is not a Response', async () => {
+    await callProvider(
+      runtimeOver(tables.db),
+      LABEL,
+      async () => ({ verdict: 'rejected' }),
+      (result) => result.verdict === 'rejected',
+    )
+    await settleDeferred()
+
+    const rows = await tables.db.select().from(providerUsage)
+    expect(rows[0]).toMatchObject({ calls: 1, errors: 1 })
+  })
+
+  it('treats a result with no notion of failure as clean', async () => {
+    await callProvider(runtimeOver(tables.db), LABEL, async () => 'sent')
+    await settleDeferred()
+
+    const rows = await tables.db.select().from(providerUsage)
+    expect(rows[0]).toMatchObject({ calls: 1, errors: 0 })
+  })
+
   it('hands exactly one promise to waitUntil per call', async () => {
     await callProvider(runtimeOver(tables.db), LABEL, async () => 'ok')
     expect(deferred).toHaveLength(1)

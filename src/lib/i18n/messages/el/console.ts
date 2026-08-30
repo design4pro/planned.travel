@@ -459,6 +459,63 @@ const messages = {
   'runs.notCoordinator.title': 'Αυτή η εγκατάσταση δεν συντονίζει τον στόλο',
   'runs.notCoordinator.body':
     'Το μητρώο εκτελέσεων είναι δεμένο μόνο στο δοκιμαστικό περιβάλλον, και επίτηδες: ένα δεύτερο μητρώο θα άφηνε δύο στόλους να πιστεύουν ο καθένας ότι κρατά την ουρά, που είναι ακριβώς αυτό που υπάρχει για να εμποδίσει. Διαβάστε τον στόλο στο δοκιμαστικό περιβάλλον.',
+  'nav.providers': 'Πάροχοι',
+  'nav.providers.description': 'Εξερχόμενες κλήσεις και τα όριά τους',
+  'providers.error.title':
+    'Δεν ήταν δυνατή η ανάγνωση των μετρητών των παρόχων',
+  'providers.list.label': 'Υπηρεσίες',
+  'providers.status.planned': 'Χωρίς ενσωμάτωση',
+  'providers.status.planned.description':
+    'Τίποτα δεν καλεί ακόμη αυτή την υπηρεσία, οπότε δεν υπάρχει τι να μετρηθεί. Αναφέρεται εδώ ώστε να συμφωνηθεί όριο πριν από την πρώτη κλήση και όχι μετά το πρώτο τιμολόγιο.',
+  'providers.policy.allow': 'Χρεώνει και πάνω από το όριο',
+  'providers.policy.block': 'Αρνείται στο όριο',
+  'providers.badge.blocked': {
+    one: 'Μία κλήση απορρίφθηκε',
+    other: '{calls} κλήσεις απορρίφθηκαν',
+  },
+  'providers.limit.none': 'Δεν συμφωνήθηκε όριο · {used} αυτόν τον μήνα',
+  'providers.limit.value': '{used} από {limit}',
+  'providers.limit.window.day': 'Σήμερα',
+  'providers.limit.window.month': 'Αυτόν τον μήνα',
+  'providers.measuring.none': 'Δεν έχει μετρηθεί τίποτα ακόμη',
+  'providers.measuring.since': 'Μέτρηση από {date}',
+  'providers.stat.calls': 'Κλήσεις αυτόν τον μήνα',
+  'providers.stat.calls.caption': 'Σε όλες τις ενσωματωμένες υπηρεσίες',
+  'providers.stat.errors': 'Αποτυχημένες κλήσεις',
+  'providers.stat.errors.caption':
+    'Μετρούν και ως κλήσεις, γιατί οι περισσότεροι πάροχοι τις χρεώνουν',
+  'providers.stat.nearLimit': 'Κοντά σε όριο',
+  'providers.stat.nearLimit.caption':
+    'Υπηρεσίες πάνω από το κατώφλι προειδοποίησης',
+  'providers.stat.blocked': 'Απορριφθείσες κλήσεις',
+  'providers.stat.blocked.none': 'Δεν απορρίφθηκε τίποτα',
+  'providers.stat.blocked.some': 'Ζήτηση που απέρριψε ένα όριο',
+  'providers.forecast.label': 'Πρόβλεψη',
+  'providers.forecast.provider': 'Υπηρεσία',
+  'providers.forecast.monthEnd': 'Έως το τέλος του μήνα',
+  'providers.forecast.runRate': 'Ανά μήνα με αυτόν τον ρυθμό',
+  'providers.forecast.perWorkspace': 'Ανά χώρο εργασίας τον μήνα',
+  'providers.forecast.noWorkspaceTraffic':
+    'Δεν υπάρχει κίνηση χώρων εργασίας για μέσο όρο',
+  'providers.forecast.window': {
+    one: 'Προβολή από μία ώρα μέτρησης.',
+    other: 'Προβολή από {hours} ώρες μέτρησης.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Έχει μετρηθεί μόλις μία ώρα — πολύ λίγο για πρόβλεψη. Να τεντώσεις λιγότερο από μία μέρα σε έναν μήνα είναι αριθμητική, όχι πρόβλεψη.',
+    other:
+      'Έχουν μετρηθεί μόλις {hours} ώρες — πολύ λίγο για πρόβλεψη. Να τεντώσεις λιγότερο από μία μέρα σε έναν μήνα είναι αριθμητική, όχι πρόβλεψη.',
+  },
+  'providers.forecast.atWorkspaces': 'Με πόσους χώρους εργασίας',
+  'providers.forecast.callsEach': 'Κλήσεις ανά χώρο τον μήνα',
+  'providers.forecast.projected': 'Περίπου {calls} κλήσεις τον μήνα.',
+  'providers.workspaces.label': 'Πιο ενεργοί χώροι εργασίας',
+  'providers.workspaces.platform': 'Πλατφόρμα (χωρίς χώρο εργασίας)',
+  'providers.workspaces.empty.title': 'Δεν έχει αποδοθεί τίποτα ακόμη',
+  'providers.workspaces.empty.description':
+    'Μια κλήση που γίνεται για έναν χώρο εργασίας καταγράφεται σε αυτόν. Οι προγραμματισμένες εργασίες και η αλληλογραφία της πλατφόρμας δεν ανήκουν σε κανέναν και μετρούν χωριστά.',
+  'providers.readOnly':
+    'Μπορείς να διαβάσεις αυτούς τους μετρητές αλλά όχι να μετακινήσεις όριο. Η αλλαγή ορίου ή πολιτικής απαιτεί το δικαίωμα provider:configure.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

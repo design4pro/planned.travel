@@ -469,6 +469,65 @@ const messages = {
   'runs.notCoordinator.title': 'Questo rilascio non coordina la flotta',
   'runs.notCoordinator.body':
     'Il registro delle esecuzioni è agganciato solo all’ambiente di prova, e di proposito: un secondo registro lascerebbe due flotte credere ciascuna di tenere l’arretrato, che è la cosa che esiste per impedire. Leggi la flotta sull’ambiente di prova.',
+  'nav.providers': 'Fornitori',
+  'nav.providers.description': 'Chiamate in uscita e i loro tetti',
+  'providers.error.title':
+    'Non è stato possibile leggere i contatori dei fornitori',
+  'providers.list.label': 'Servizi',
+  'providers.status.planned': 'Non integrato',
+  'providers.status.planned.description':
+    'Nulla chiama ancora questo servizio, quindi non c’è niente da contare. È elencato perché un tetto si concordi prima della prima chiamata e non dopo la prima fattura.',
+  'providers.policy.allow': 'Fattura oltre il tetto',
+  'providers.policy.block': 'Rifiuta al tetto',
+  'providers.badge.blocked': {
+    one: 'Una chiamata rifiutata',
+    many: '{calls} chiamate rifiutate',
+    other: '{calls} chiamate rifiutate',
+  },
+  'providers.limit.none': 'Nessun tetto concordato · {used} questo mese',
+  'providers.limit.value': '{used} su {limit}',
+  'providers.limit.window.day': 'Oggi',
+  'providers.limit.window.month': 'Questo mese',
+  'providers.measuring.none': 'Non è stato ancora misurato nulla',
+  'providers.measuring.since': 'Misurazione dal {date}',
+  'providers.stat.calls': 'Chiamate questo mese',
+  'providers.stat.calls.caption': 'Su tutti i servizi integrati',
+  'providers.stat.errors': 'Chiamate fallite',
+  'providers.stat.errors.caption':
+    'Contate anche come chiamate, perché quasi tutti i fornitori le addebitano',
+  'providers.stat.nearLimit': 'Vicino a un tetto',
+  'providers.stat.nearLimit.caption': 'Servizi oltre la soglia di avviso',
+  'providers.stat.blocked': 'Chiamate rifiutate',
+  'providers.stat.blocked.none': 'Non è stato rifiutato nulla',
+  'providers.stat.blocked.some': 'Domanda rifiutata da un tetto',
+  'providers.forecast.label': 'Previsione',
+  'providers.forecast.provider': 'Servizio',
+  'providers.forecast.monthEnd': 'A fine mese',
+  'providers.forecast.runRate': 'Al mese con questo ritmo',
+  'providers.forecast.perWorkspace': 'Per spazio di lavoro al mese',
+  'providers.forecast.noWorkspaceTraffic':
+    'Nessun traffico degli spazi da mediare',
+  'providers.forecast.window': {
+    one: 'Proiettato da un’ora di misurazione.',
+    many: 'Proiettato da {hours} ore di misurazione.',
+    other: 'Proiettato da {hours} ore di misurazione.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Finora è stata misurata una sola ora: troppo poco per proiettare. Estendere meno di un giorno a un mese sarebbe aritmetica, non una previsione.',
+    many: 'Finora sono state misurate {hours} ore: troppo poco per proiettare. Estendere meno di un giorno a un mese sarebbe aritmetica, non una previsione.',
+    other:
+      'Finora sono state misurate {hours} ore: troppo poco per proiettare. Estendere meno di un giorno a un mese sarebbe aritmetica, non una previsione.',
+  },
+  'providers.forecast.atWorkspaces': 'Con quanti spazi di lavoro',
+  'providers.forecast.callsEach': 'Chiamate per spazio al mese',
+  'providers.forecast.projected': 'Circa {calls} chiamate al mese.',
+  'providers.workspaces.label': 'Spazi più attivi',
+  'providers.workspaces.platform': 'Piattaforma (nessuno spazio)',
+  'providers.workspaces.empty.title': 'Ancora nulla di attribuito',
+  'providers.workspaces.empty.description':
+    'Una chiamata fatta per uno spazio di lavoro viene addebitata a quello. Il lavoro pianificato e la posta della piattaforma non appartengono a nessuno e si contano a parte.',
+  'providers.readOnly':
+    'Puoi leggere questi contatori ma non spostare un tetto. Cambiare un limite o la sua politica richiede il permesso provider:configure.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

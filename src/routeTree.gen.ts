@@ -31,6 +31,7 @@ import { Route as authAcceptInvitationInvitationIdRouteImport } from './routes/(
 import { Route as AppCollectionsIndexRouteImport } from './routes/_app/collections/index'
 import { Route as AppCollectionsCollectionIdRouteImport } from './routes/_app/collections/$collectionId'
 import { Route as AppConsoleIndexRouteImport } from './routes/_app/console/index'
+import { Route as AppConsoleProvidersRouteImport } from './routes/_app/console/providers'
 import { Route as AppConsoleSandcastleRouteImport } from './routes/_app/console/sandcastle'
 import { Route as AppConsoleUsersRouteImport } from './routes/_app/console/users'
 import { Route as AppJourneyIndexRouteImport } from './routes/_app/journey/index'
@@ -170,6 +171,11 @@ const AppCollectionsCollectionIdRoute =
 const AppConsoleIndexRoute = AppConsoleIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppConsoleRouteRoute,
+} as any)
+const AppConsoleProvidersRoute = AppConsoleProvidersRouteImport.update({
+  id: '/providers',
+  path: '/providers',
   getParentRoute: () => AppConsoleRouteRoute,
 } as any)
 const AppConsoleSandcastleRoute = AppConsoleSandcastleRouteImport.update({
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/trips/$tripId': typeof AppTripsTripIdRouteRouteWithChildren
   '/accept-invitation/$invitationId': typeof authAcceptInvitationInvitationIdRoute
   '/collections/$collectionId': typeof AppCollectionsCollectionIdRoute
+  '/console/providers': typeof AppConsoleProvidersRoute
   '/console/sandcastle': typeof AppConsoleSandcastleRoute
   '/console/users': typeof AppConsoleUsersRouteWithChildren
   '/journey/$journeyId': typeof AppJourneyJourneyIdRoute
@@ -390,6 +397,7 @@ export interface FileRoutesByTo {
   '/legal/terms': typeof LegalTermsRoute
   '/accept-invitation/$invitationId': typeof authAcceptInvitationInvitationIdRoute
   '/collections/$collectionId': typeof AppCollectionsCollectionIdRoute
+  '/console/providers': typeof AppConsoleProvidersRoute
   '/console/sandcastle': typeof AppConsoleSandcastleRoute
   '/journey/$journeyId': typeof AppJourneyJourneyIdRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -443,6 +451,7 @@ export interface FileRoutesById {
   '/_app/trips/$tripId': typeof AppTripsTripIdRouteRouteWithChildren
   '/(auth)/accept-invitation/$invitationId': typeof authAcceptInvitationInvitationIdRoute
   '/_app/collections/$collectionId': typeof AppCollectionsCollectionIdRoute
+  '/_app/console/providers': typeof AppConsoleProvidersRoute
   '/_app/console/sandcastle': typeof AppConsoleSandcastleRoute
   '/_app/console/users': typeof AppConsoleUsersRouteWithChildren
   '/_app/journey/$journeyId': typeof AppJourneyJourneyIdRoute
@@ -497,6 +506,7 @@ export interface FileRouteTypes {
     | '/trips/$tripId'
     | '/accept-invitation/$invitationId'
     | '/collections/$collectionId'
+    | '/console/providers'
     | '/console/sandcastle'
     | '/console/users'
     | '/journey/$journeyId'
@@ -546,6 +556,7 @@ export interface FileRouteTypes {
     | '/legal/terms'
     | '/accept-invitation/$invitationId'
     | '/collections/$collectionId'
+    | '/console/providers'
     | '/console/sandcastle'
     | '/journey/$journeyId'
     | '/settings/appearance'
@@ -598,6 +609,7 @@ export interface FileRouteTypes {
     | '/_app/trips/$tripId'
     | '/(auth)/accept-invitation/$invitationId'
     | '/_app/collections/$collectionId'
+    | '/_app/console/providers'
     | '/_app/console/sandcastle'
     | '/_app/console/users'
     | '/_app/journey/$journeyId'
@@ -805,6 +817,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/console/'
       preLoaderRoute: typeof AppConsoleIndexRouteImport
+      parentRoute: typeof AppConsoleRouteRoute
+    }
+    '/_app/console/providers': {
+      id: '/_app/console/providers'
+      path: '/providers'
+      fullPath: '/console/providers'
+      preLoaderRoute: typeof AppConsoleProvidersRouteImport
       parentRoute: typeof AppConsoleRouteRoute
     }
     '/_app/console/sandcastle': {
@@ -1028,12 +1047,14 @@ const AppConsoleUsersRouteWithChildren = AppConsoleUsersRoute._addFileChildren(
 )
 
 interface AppConsoleRouteRouteChildren {
+  AppConsoleProvidersRoute: typeof AppConsoleProvidersRoute
   AppConsoleSandcastleRoute: typeof AppConsoleSandcastleRoute
   AppConsoleUsersRoute: typeof AppConsoleUsersRouteWithChildren
   AppConsoleIndexRoute: typeof AppConsoleIndexRoute
 }
 
 const AppConsoleRouteRouteChildren: AppConsoleRouteRouteChildren = {
+  AppConsoleProvidersRoute: AppConsoleProvidersRoute,
   AppConsoleSandcastleRoute: AppConsoleSandcastleRoute,
   AppConsoleUsersRoute: AppConsoleUsersRouteWithChildren,
   AppConsoleIndexRoute: AppConsoleIndexRoute,

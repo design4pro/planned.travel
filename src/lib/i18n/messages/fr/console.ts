@@ -468,6 +468,64 @@ const messages = {
   'runs.notCoordinator.title': 'Ce déploiement ne coordonne pas la flotte',
   'runs.notCoordinator.body':
     'Le registre des exécutions n’est branché que sur la préproduction, et délibérément : un second registre laisserait deux flottes croire chacune qu’elle détient le reliquat, ce qu’il existe précisément pour empêcher. Lisez la flotte sur la préproduction.',
+  'nav.providers': 'Fournisseurs',
+  'nav.providers.description': 'Appels sortants et leurs plafonds',
+  'providers.error.title': 'Impossible de lire les compteurs des fournisseurs',
+  'providers.list.label': 'Services externes',
+  'providers.status.planned': 'Non intégré',
+  'providers.status.planned.description':
+    'Rien n’appelle encore ce service, il n’y a donc rien à compter. Il figure ici pour qu’un plafond soit convenu avant le premier appel plutôt qu’après la première facture.',
+  'providers.policy.allow': 'Facture au-delà',
+  'providers.policy.block': 'Refuse au plafond',
+  'providers.badge.blocked': {
+    one: 'Un appel refusé',
+    many: '{calls} appels refusés',
+    other: '{calls} appels refusés',
+  },
+  'providers.limit.none': 'Aucun plafond convenu · {used} ce mois-ci',
+  'providers.limit.value': '{used} sur {limit}',
+  'providers.limit.window.day': 'Aujourd’hui',
+  'providers.limit.window.month': 'Ce mois-ci',
+  'providers.measuring.none': 'Rien encore mesuré',
+  'providers.measuring.since': 'Mesure depuis le {date}',
+  'providers.stat.calls': 'Appels ce mois-ci',
+  'providers.stat.calls.caption': 'Sur tous les services intégrés',
+  'providers.stat.errors': 'Appels en échec',
+  'providers.stat.errors.caption':
+    'Comptés aussi comme appels, car la plupart des fournisseurs les facturent',
+  'providers.stat.nearLimit': 'Près d’un plafond',
+  'providers.stat.nearLimit.caption': 'Services au-delà de leur seuil d’alerte',
+  'providers.stat.blocked': 'Appels refusés',
+  'providers.stat.blocked.none': 'Rien n’a été refusé',
+  'providers.stat.blocked.some': 'Demande refusée par un plafond',
+  'providers.forecast.label': 'Prévision',
+  'providers.forecast.provider': 'Service concerné',
+  'providers.forecast.monthEnd': 'D’ici la fin du mois',
+  'providers.forecast.runRate': 'Par mois à ce rythme',
+  'providers.forecast.perWorkspace': 'Par espace de travail et par mois',
+  'providers.forecast.noWorkspaceTraffic':
+    'Aucun trafic d’espace de travail à moyenner',
+  'providers.forecast.window': {
+    one: 'Projeté à partir d’une heure de mesure.',
+    many: 'Projeté à partir de {hours} heures de mesure.',
+    other: 'Projeté à partir de {hours} heures de mesure.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Une seule heure mesurée pour l’instant : trop peu pour projeter. Étendre moins d’une journée à un mois relèverait du calcul, pas de la prévision.',
+    many: '{hours} heures mesurées pour l’instant : trop peu pour projeter. Étendre moins d’une journée à un mois relèverait du calcul, pas de la prévision.',
+    other:
+      '{hours} heures mesurées pour l’instant : trop peu pour projeter. Étendre moins d’une journée à un mois relèverait du calcul, pas de la prévision.',
+  },
+  'providers.forecast.atWorkspaces': 'Pour combien d’espaces de travail',
+  'providers.forecast.callsEach': 'Appels par espace et par mois',
+  'providers.forecast.projected': 'Environ {calls} appels par mois.',
+  'providers.workspaces.label': 'Espaces les plus actifs',
+  'providers.workspaces.platform': 'Plateforme (hors espace)',
+  'providers.workspaces.empty.title': 'Rien encore attribué',
+  'providers.workspaces.empty.description':
+    'Un appel fait pour un espace de travail lui est imputé. Les tâches planifiées et le courrier de la plateforme n’appartiennent à aucun et comptent à part.',
+  'providers.readOnly':
+    'Vous pouvez lire ces compteurs mais pas déplacer un plafond. Modifier une limite ou sa politique demande l’autorisation provider:configure.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -37,10 +37,7 @@ import type { AuthSession } from '#/server/auth/tenant'
 
 /** Why the console refused to open. Rendered nowhere: every one of them redirects. */
 export type ConsoleDenial =
-  | 'unauthenticated'
-  | 'banned'
-  | 'impersonated'
-  | 'no-platform-role'
+  'unauthenticated' | 'banned' | 'impersonated' | 'no-platform-role'
 
 /** What the console chrome may show, once standing has been decided. */
 export interface ConsoleAccess {
@@ -51,6 +48,17 @@ export interface ConsoleAccess {
   readonly canCurate: boolean
   /** The sandcastle run registry — `admin` only, and about no account at all (§2.3a). */
   readonly canSeeRuns: boolean
+  /** Third-party call counters and their ceilings — `admin` only (§2.3b). */
+  readonly canSeeProviders: boolean
+  /**
+   * Moving a ceiling or its policy — `admin` only, and separate from reading it on purpose.
+   *
+   * Reading a meter and being able to stop a vendor being called are different authorities: the
+   * second can stop transactional email. They are one role apart today and the split still earns
+   * its place, because the screen's read half and its edit half are then gated by the statement
+   * each actually needs rather than by the stronger of the two.
+   */
+  readonly canConfigureProviders: boolean
 }
 
 export type ConsoleAccessResult =
@@ -104,6 +112,8 @@ export const loadConsoleAccess = createServerFn({ method: 'GET' }).handler(
         canManageUsers: permits(session, { user: ['list'] }),
         canCurate: permits(session, { catalog: ['read'] }),
         canSeeRuns: permits(session, { sandcastle: ['read'] }),
+        canSeeProviders: permits(session, { provider: ['read'] }),
+        canConfigureProviders: permits(session, { provider: ['configure'] }),
       },
     }
   },

@@ -460,6 +460,68 @@ const messages = {
   'runs.notCoordinator.title': 'Це розгортання не координує флот',
   'runs.notCoordinator.body':
     'Реєстр запусків прив’язаний лише до проміжного середовища, і навмисне: другий реєстр змусив би обидва флоти вважати, що чергу тримає саме він, — а це рівно те, задля чого він і існує. Читайте флот у проміжному середовищі.',
+  'nav.providers': 'Постачальники',
+  'nav.providers.description': 'Вихідні виклики та їхні стелі',
+  'providers.error.title': 'Не вдалося прочитати лічильники постачальників',
+  'providers.list.label': 'Сервіси',
+  'providers.status.planned': 'Не підключено',
+  'providers.status.planned.description':
+    'Цей сервіс поки ніщо не викликає, тож нема чого рахувати. Він у списку, щоб стелю погодили до першого виклику, а не після першого рахунку.',
+  'providers.policy.allow': 'Пропускає понад стелю',
+  'providers.policy.block': 'Відмовляє на стелі',
+  'providers.badge.blocked': {
+    one: 'Один виклик відхилено',
+    few: '{calls} виклики відхилено',
+    many: '{calls} викликів відхилено',
+    other: '{calls} виклику відхилено',
+  },
+  'providers.limit.none': 'Стелю не погоджено · {used} цього місяця',
+  'providers.limit.value': '{used} з {limit}',
+  'providers.limit.window.day': 'Сьогодні',
+  'providers.limit.window.month': 'Цього місяця',
+  'providers.measuring.none': 'Поки нічого не виміряно',
+  'providers.measuring.since': 'Вимірюємо з {date}',
+  'providers.stat.calls': 'Виклики цього місяця',
+  'providers.stat.calls.caption': 'По всіх підключених сервісах',
+  'providers.stat.errors': 'Невдалі виклики',
+  'providers.stat.errors.caption':
+    'Рахуються і як виклики, бо більшість постачальників їх тарифікує',
+  'providers.stat.nearLimit': 'Близько до стелі',
+  'providers.stat.nearLimit.caption':
+    'Сервіси понад своїм порогом попередження',
+  'providers.stat.blocked': 'Відхилені виклики',
+  'providers.stat.blocked.none': 'Нічого не відхилено',
+  'providers.stat.blocked.some': 'Попит, відхилений стелею',
+  'providers.forecast.label': 'Прогноз',
+  'providers.forecast.provider': 'Сервіс',
+  'providers.forecast.monthEnd': 'До кінця місяця',
+  'providers.forecast.runRate': 'На місяць за цим темпом',
+  'providers.forecast.perWorkspace': 'На робочий простір за місяць',
+  'providers.forecast.noWorkspaceTraffic':
+    'Немає трафіку робочих просторів для усереднення',
+  'providers.forecast.window': {
+    one: 'Прогноз з однієї години вимірювання.',
+    few: 'Прогноз з {hours} год вимірювання.',
+    many: 'Прогноз з {hours} год вимірювання.',
+    other: 'Прогноз з {hours} год вимірювання.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Виміряно поки лише одну годину — для прогнозу замало. Розтягнути неповну добу на місяць — це арифметика, а не прогноз.',
+    few: 'Виміряно поки {hours} год — для прогнозу замало. Розтягнути неповну добу на місяць — це арифметика, а не прогноз.',
+    many: 'Виміряно поки {hours} год — для прогнозу замало. Розтягнути неповну добу на місяць — це арифметика, а не прогноз.',
+    other:
+      'Виміряно поки {hours} год — для прогнозу замало. Розтягнути неповну добу на місяць — це арифметика, а не прогноз.',
+  },
+  'providers.forecast.atWorkspaces': 'За скількох робочих просторів',
+  'providers.forecast.callsEach': 'Викликів на кожен за місяць',
+  'providers.forecast.projected': 'Близько {calls} викликів на місяць.',
+  'providers.workspaces.label': 'Найактивніші простори',
+  'providers.workspaces.platform': 'Платформа (без простору)',
+  'providers.workspaces.empty.title': 'Поки нічого не віднесено',
+  'providers.workspaces.empty.description':
+    'Виклик, зроблений для робочого простору, записується на нього. Робота за розкладом і пошта платформи не належать жодному й рахуються окремо.',
+  'providers.readOnly':
+    'Ці лічильники можна читати, але не рухати стелю. Зміна ліміту чи політики потребує права provider:configure.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

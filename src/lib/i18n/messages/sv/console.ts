@@ -450,6 +450,61 @@ const messages = {
   'runs.notCoordinator.title': 'Den här driftsättningen styr inte flottan',
   'runs.notCoordinator.body':
     'Körningsregistret är bundet bara i testmiljön, och det med avsikt: ett andra register skulle låta två flottor var för sig tro att de håller kön, vilket är just vad det finns till för att hindra. Läs flottan i testmiljön.',
+  'nav.providers': 'Leverantörer',
+  'nav.providers.description': 'Utgående anrop och deras tak',
+  'providers.error.title': 'Leverantörsmätarna kunde inte läsas',
+  'providers.list.label': 'Tjänster',
+  'providers.status.planned': 'Inte inkopplad',
+  'providers.status.planned.description':
+    'Ingenting anropar den här tjänsten ännu, så det finns inget att räkna. Den står här för att ett tak ska avtalas före första anropet i stället för efter första fakturan.',
+  'providers.policy.allow': 'Fakturerar över taket',
+  'providers.policy.block': 'Nekar vid taket',
+  'providers.badge.blocked': {
+    one: 'Ett anrop nekat',
+    other: '{calls} anrop nekade',
+  },
+  'providers.limit.none': 'Inget avtalat tak · {used} den här månaden',
+  'providers.limit.value': '{used} av {limit}',
+  'providers.limit.window.day': 'I dag',
+  'providers.limit.window.month': 'Den här månaden',
+  'providers.measuring.none': 'Inget har mätts ännu',
+  'providers.measuring.since': 'Mäter sedan {date}',
+  'providers.stat.calls': 'Anrop den här månaden',
+  'providers.stat.calls.caption': 'Över alla inkopplade tjänster',
+  'providers.stat.errors': 'Misslyckade anrop',
+  'providers.stat.errors.caption':
+    'Räknas också som anrop, eftersom de flesta leverantörer tar betalt för dem',
+  'providers.stat.nearLimit': 'Nära ett tak',
+  'providers.stat.nearLimit.caption': 'Tjänster över sin varningströskel',
+  'providers.stat.blocked': 'Nekade anrop',
+  'providers.stat.blocked.none': 'Ingenting har nekats',
+  'providers.stat.blocked.some': 'Efterfrågan som ett tak nekade',
+  'providers.forecast.label': 'Prognos',
+  'providers.forecast.provider': 'Tjänst',
+  'providers.forecast.monthEnd': 'Till månadens slut',
+  'providers.forecast.runRate': 'Per månad i den här takten',
+  'providers.forecast.perWorkspace': 'Per arbetsyta och månad',
+  'providers.forecast.noWorkspaceTraffic':
+    'Ingen arbetsytetrafik att beräkna snitt på',
+  'providers.forecast.window': {
+    one: 'Framskrivet från en timmes mätning.',
+    other: 'Framskrivet från {hours} timmars mätning.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Bara en timme uppmätt hittills — för lite för att skriva fram. Att sträcka mindre än ett dygn till en månad vore räkning, inte prognos.',
+    other:
+      'Bara {hours} timmar uppmätta hittills — för lite för att skriva fram. Att sträcka mindre än ett dygn till en månad vore räkning, inte prognos.',
+  },
+  'providers.forecast.atWorkspaces': 'Vid hur många arbetsytor',
+  'providers.forecast.callsEach': 'Anrop per arbetsyta och månad',
+  'providers.forecast.projected': 'Ungefär {calls} anrop i månaden.',
+  'providers.workspaces.label': 'Mest aktiva arbetsytor',
+  'providers.workspaces.platform': 'Plattformen (ingen arbetsyta)',
+  'providers.workspaces.empty.title': 'Inget har tillskrivits ännu',
+  'providers.workspaces.empty.description':
+    'Ett anrop som görs för en arbetsyta bokförs på den. Schemalagt arbete och plattformens post hör inte till någon och räknas för sig.',
+  'providers.readOnly':
+    'Du kan läsa de här mätarna men inte flytta ett tak. Att ändra en gräns eller dess policy kräver rättigheten provider:configure.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

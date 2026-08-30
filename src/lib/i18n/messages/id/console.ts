@@ -455,6 +455,58 @@ const messages = {
   'runs.notCoordinator.title': 'Penyebaran ini tidak mengoordinasi armada',
   'runs.notCoordinator.body':
     'Daftar jalan hanya terikat pada lingkungan pementasan, dan itu disengaja: daftar kedua akan membuat kedua armada percaya bahwa antrean ada di tangannya — persis satu-satunya hal yang keberadaannya dimaksudkan untuk dicegah. Bacalah armada di lingkungan pementasan.',
+  'nav.providers': 'Penyedia',
+  'nav.providers.description': 'Panggilan keluar dan batas atasnya',
+  'providers.error.title': 'Meteran penyedia tidak dapat dibaca',
+  'providers.list.label': 'Layanan',
+  'providers.status.planned': 'Belum tersambung',
+  'providers.status.planned.description':
+    'Belum ada yang memanggil layanan ini, jadi tidak ada yang dihitung. Ia dicantumkan agar batas atas disepakati sebelum panggilan pertama, bukan setelah tagihan pertama.',
+  'providers.policy.allow': 'Tetap ditagih di atas batas',
+  'providers.policy.block': 'Menolak di batas atas',
+  'providers.badge.blocked': {
+    other: '{calls} panggilan ditolak',
+  },
+  'providers.limit.none': 'Belum ada batas yang disepakati · {used} bulan ini',
+  'providers.limit.value': '{used} dari {limit}',
+  'providers.limit.window.day': 'Hari ini',
+  'providers.limit.window.month': 'Bulan ini',
+  'providers.measuring.none': 'Belum ada yang terukur',
+  'providers.measuring.since': 'Diukur sejak {date}',
+  'providers.stat.calls': 'Panggilan bulan ini',
+  'providers.stat.calls.caption': 'Di seluruh layanan yang tersambung',
+  'providers.stat.errors': 'Panggilan gagal',
+  'providers.stat.errors.caption':
+    'Dihitung sebagai panggilan juga, karena kebanyakan penyedia tetap menagihnya',
+  'providers.stat.nearLimit': 'Dekat batas atas',
+  'providers.stat.nearLimit.caption': 'Layanan yang melewati ambang peringatan',
+  'providers.stat.blocked': 'Panggilan ditolak',
+  'providers.stat.blocked.none': 'Tidak ada yang ditolak',
+  'providers.stat.blocked.some': 'Permintaan yang ditolak oleh batas atas',
+  'providers.forecast.label': 'Perkiraan',
+  'providers.forecast.provider': 'Layanan',
+  'providers.forecast.monthEnd': 'Sampai akhir bulan',
+  'providers.forecast.runRate': 'Per bulan pada laju ini',
+  'providers.forecast.perWorkspace': 'Per ruang kerja per bulan',
+  'providers.forecast.noWorkspaceTraffic':
+    'Tidak ada lalu lintas ruang kerja untuk dirata-rata',
+  'providers.forecast.window': {
+    other: 'Diproyeksikan dari {hours} jam pengukuran.',
+  },
+  'providers.forecast.tooEarly': {
+    other:
+      'Baru {hours} jam yang terukur — belum cukup untuk memproyeksikan. Menarik kurang dari sehari menjadi sebulan itu aritmetika, bukan perkiraan.',
+  },
+  'providers.forecast.atWorkspaces': 'Pada berapa ruang kerja',
+  'providers.forecast.callsEach': 'Panggilan per ruang kerja per bulan',
+  'providers.forecast.projected': 'Sekitar {calls} panggilan sebulan.',
+  'providers.workspaces.label': 'Ruang kerja tersibuk',
+  'providers.workspaces.platform': 'Platform (tanpa ruang kerja)',
+  'providers.workspaces.empty.title': 'Belum ada yang diatribusikan',
+  'providers.workspaces.empty.description':
+    'Panggilan yang dibuat untuk sebuah ruang kerja dicatat atas namanya. Pekerjaan terjadwal dan surat platform bukan milik siapa pun dan dihitung terpisah.',
+  'providers.readOnly':
+    'Kamu bisa membaca meteran ini tetapi tidak menggeser batas atas. Mengubah limit atau kebijakannya memerlukan izin provider:configure.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

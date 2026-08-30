@@ -446,6 +446,61 @@ const messages = {
   'runs.notCoordinator.title': 'Bu dağıtım filoyu eşgüdümlemiyor',
   'runs.notCoordinator.body':
     'Koşu kütüğü yalnızca hazırlık ortamına bağlıdır, hem de bilerek: ikinci bir kütük, iki filonun da kuyruğu kendisinin tuttuğuna inanmasına yol açardı — ki engellemek için var olduğu tek şey budur. Filoyu hazırlık ortamında okuyun.',
+  'nav.providers': 'Sağlayıcılar',
+  'nav.providers.description': 'Dışa giden çağrılar ve tavanları',
+  'providers.error.title': 'Sağlayıcı sayaçları okunamadı',
+  'providers.list.label': 'Servisler',
+  'providers.status.planned': 'Bağlanmadı',
+  'providers.status.planned.description':
+    'Bu servisi henüz hiçbir şey çağırmıyor, dolayısıyla sayılacak bir şey yok. İlk faturadan sonra değil ilk çağrıdan önce bir tavan üzerinde anlaşılabilsin diye burada duruyor.',
+  'providers.policy.allow': 'Tavanın üstünde de faturalar',
+  'providers.policy.block': 'Tavanda reddeder',
+  'providers.badge.blocked': {
+    one: '{calls} çağrı reddedildi',
+    other: '{calls} çağrı reddedildi',
+  },
+  'providers.limit.none': 'Anlaşılmış tavan yok · bu ay {used}',
+  'providers.limit.value': '{limit} içinde {used}',
+  'providers.limit.window.day': 'Bugün',
+  'providers.limit.window.month': 'Bu ay',
+  'providers.measuring.none': 'Henüz hiçbir ölçüm yok',
+  'providers.measuring.since': '{date} tarihinden beri ölçülüyor',
+  'providers.stat.calls': 'Bu ayki çağrılar',
+  'providers.stat.calls.caption': 'Bağlı bütün servisler boyunca',
+  'providers.stat.errors': 'Başarısız çağrılar',
+  'providers.stat.errors.caption':
+    'Çağrı olarak da sayılır, çünkü sağlayıcıların çoğu bunları faturalandırır',
+  'providers.stat.nearLimit': 'Tavana yakın',
+  'providers.stat.nearLimit.caption': 'Uyarı eşiğini geçmiş servisler',
+  'providers.stat.blocked': 'Reddedilen çağrılar',
+  'providers.stat.blocked.none': 'Hiçbir şey geri çevrilmedi',
+  'providers.stat.blocked.some': 'Bir tavanın geri çevirdiği talep',
+  'providers.forecast.label': 'Öngörü',
+  'providers.forecast.provider': 'Servis',
+  'providers.forecast.monthEnd': 'Ay sonuna kadar',
+  'providers.forecast.runRate': 'Bu hızla ayda',
+  'providers.forecast.perWorkspace': 'Çalışma alanı başına, ayda',
+  'providers.forecast.noWorkspaceTraffic':
+    'Ortalaması alınacak çalışma alanı trafiği yok',
+  'providers.forecast.window': {
+    one: 'Bir saatlik ölçümden yansıtıldı.',
+    other: '{hours} saatlik ölçümden yansıtıldı.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Şimdilik yalnızca bir saat ölçüldü; öngörü için az. Bir günden azını bir aya yaymak aritmetik olur, öngörü değil.',
+    other:
+      'Şimdilik yalnızca {hours} saat ölçüldü; öngörü için az. Bir günden azını bir aya yaymak aritmetik olur, öngörü değil.',
+  },
+  'providers.forecast.atWorkspaces': 'Kaç çalışma alanında',
+  'providers.forecast.callsEach': 'Alan başına aylık çağrı',
+  'providers.forecast.projected': 'Ayda yaklaşık {calls} çağrı.',
+  'providers.workspaces.label': 'En yoğun çalışma alanları',
+  'providers.workspaces.platform': 'Platform (çalışma alanı yok)',
+  'providers.workspaces.empty.title': 'Henüz hiçbir şey atfedilmedi',
+  'providers.workspaces.empty.description':
+    'Bir çalışma alanı için yapılan çağrı o alana yazılır. Zamanlanmış işler ve platform postası hiçbirine ait değildir, ayrı sayılır.',
+  'providers.readOnly':
+    'Bu sayaçları okuyabilirsin ama tavanı oynatamazsın. Bir limiti ya da politikasını değiştirmek provider:configure yetkisini ister.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -446,6 +446,58 @@ const messages = {
   'runs.notCoordinator.title': 'このデプロイは艦隊を調整していません',
   'runs.notCoordinator.body':
     '実行レジストリはステージング環境だけに結び付いています。これは意図したものです。レジストリが二つあれば、双方の艦隊が「列を握っているのは自分だ」と信じてしまい、それこそがレジストリの防ごうとしている唯一のことだからです。艦隊はステージング環境で確認してください。',
+  'nav.providers': 'プロバイダー',
+  'nav.providers.description': '外部への呼び出しとその上限',
+  'providers.error.title': 'プロバイダーの計測値を読み込めませんでした',
+  'providers.list.label': 'サービス',
+  'providers.status.planned': '未接続',
+  'providers.status.planned.description':
+    'このサービスをまだ何も呼んでいないため、数えるものがありません。最初の請求書のあとではなく最初の呼び出しの前に上限を決められるよう、ここに並べています。',
+  'providers.policy.allow': '上限を超えても課金',
+  'providers.policy.block': '上限で拒否',
+  'providers.badge.blocked': {
+    other: '{calls} 件の呼び出しを拒否',
+  },
+  'providers.limit.none': '上限の取り決めなし · 今月 {used} 件',
+  'providers.limit.value': '{limit} 件中 {used} 件',
+  'providers.limit.window.day': '本日',
+  'providers.limit.window.month': '今月',
+  'providers.measuring.none': 'まだ計測がありません',
+  'providers.measuring.since': '{date} から計測',
+  'providers.stat.calls': '今月の呼び出し',
+  'providers.stat.calls.caption': '接続済みの全サービス合計',
+  'providers.stat.errors': '失敗した呼び出し',
+  'providers.stat.errors.caption':
+    '多くの事業者が課金するため、呼び出しとしても数えます',
+  'providers.stat.nearLimit': '上限が近い',
+  'providers.stat.nearLimit.caption': '警告のしきい値を超えたサービス',
+  'providers.stat.blocked': '拒否した呼び出し',
+  'providers.stat.blocked.none': '何も拒否していません',
+  'providers.stat.blocked.some': '上限が退けた需要',
+  'providers.forecast.label': '予測',
+  'providers.forecast.provider': 'サービス',
+  'providers.forecast.monthEnd': '月末まで',
+  'providers.forecast.runRate': 'この調子なら月あたり',
+  'providers.forecast.perWorkspace': 'ワークスペースあたり月間',
+  'providers.forecast.noWorkspaceTraffic':
+    '平均を取るワークスペースの通信がありません',
+  'providers.forecast.window': {
+    other: '{hours} 時間の計測からの予測です。',
+  },
+  'providers.forecast.tooEarly': {
+    other:
+      'まだ {hours} 時間しか計測していないため、予測できません。丸一日に満たない値を一か月に伸ばすのは計算であって予測ではありません。',
+  },
+  'providers.forecast.atWorkspaces': 'ワークスペース数',
+  'providers.forecast.callsEach': '1つあたりの月間呼び出し数',
+  'providers.forecast.projected': '月におよそ {calls} 件です。',
+  'providers.workspaces.label': '呼び出しの多いワークスペース',
+  'providers.workspaces.platform': 'プラットフォーム（ワークスペースなし）',
+  'providers.workspaces.empty.title': 'まだ割り当てがありません',
+  'providers.workspaces.empty.description':
+    'ワークスペースのために行った呼び出しはそのワークスペースに記録されます。定期実行とプラットフォームのメールはどこにも属さず、別に数えます。',
+  'providers.readOnly':
+    'この計測値は読めますが、上限は動かせません。上限やその方針の変更には provider:configure の権限が要ります。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

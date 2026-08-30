@@ -459,6 +459,62 @@ const messages = {
   'runs.notCoordinator.title': 'Diese Umgebung koordiniert die Flotte nicht',
   'runs.notCoordinator.body':
     'Das Laufregister hängt allein auf Staging, und das mit Absicht: ein zweites Register ließe zwei Flotten je glauben, sie hielten den Rückstand — genau das, was es verhindern soll. Lies die Flotte auf Staging.',
+  'nav.providers': 'Anbieter',
+  'nav.providers.description': 'Ausgehende Aufrufe und ihre Obergrenzen',
+  'providers.error.title': 'Die Anbieterzähler konnten nicht gelesen werden',
+  'providers.list.label': 'Dienste',
+  'providers.status.planned': 'Nicht angebunden',
+  'providers.status.planned.description':
+    'Noch ruft nichts diesen Dienst auf, es gibt also nichts zu zählen. Er steht hier, damit eine Obergrenze vor dem ersten Aufruf vereinbart wird statt nach der ersten Rechnung.',
+  'providers.policy.allow': 'Rechnet darüber hinaus ab',
+  'providers.policy.block': 'Verweigert ab der Obergrenze',
+  'providers.badge.blocked': {
+    one: 'Ein Aufruf abgewiesen',
+    other: '{calls} Aufrufe abgewiesen',
+  },
+  'providers.limit.none':
+    'Keine Obergrenze vereinbart · {used} in diesem Monat',
+  'providers.limit.value': '{used} von {limit}',
+  'providers.limit.window.day': 'Heute',
+  'providers.limit.window.month': 'Diesen Monat',
+  'providers.measuring.none': 'Noch nichts gemessen',
+  'providers.measuring.since': 'Messung seit {date}',
+  'providers.stat.calls': 'Aufrufe diesen Monat',
+  'providers.stat.calls.caption': 'Über alle angebundenen Dienste',
+  'providers.stat.errors': 'Fehlgeschlagene Aufrufe',
+  'providers.stat.errors.caption':
+    'Zählen auch als Aufrufe, weil die meisten Anbieter sie berechnen',
+  'providers.stat.nearLimit': 'Nahe der Obergrenze',
+  'providers.stat.nearLimit.caption': 'Dienste über ihrer Warnschwelle',
+  'providers.stat.blocked': 'Abgewiesene Aufrufe',
+  'providers.stat.blocked.none': 'Es wurde nichts abgewiesen',
+  'providers.stat.blocked.some': 'Von einer Obergrenze abgewiesener Bedarf',
+  'providers.forecast.label': 'Prognose',
+  'providers.forecast.provider': 'Dienst',
+  'providers.forecast.monthEnd': 'Bis Monatsende',
+  'providers.forecast.runRate': 'Pro Monat bei diesem Tempo',
+  'providers.forecast.perWorkspace': 'Pro Arbeitsbereich und Monat',
+  'providers.forecast.noWorkspaceTraffic':
+    'Kein Arbeitsbereichsverkehr zum Mitteln',
+  'providers.forecast.window': {
+    one: 'Hochgerechnet aus einer Stunde Messung.',
+    other: 'Hochgerechnet aus {hours} Stunden Messung.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Bisher nur eine Stunde gemessen — zu wenig für eine Hochrechnung. Aus weniger als einem Tag einen Monat hochzurechnen wäre Rechnen, keine Prognose.',
+    other:
+      'Bisher nur {hours} Stunden gemessen — zu wenig für eine Hochrechnung. Aus weniger als einem Tag einen Monat hochzurechnen wäre Rechnen, keine Prognose.',
+  },
+  'providers.forecast.atWorkspaces': 'Bei wie vielen Arbeitsbereichen',
+  'providers.forecast.callsEach': 'Aufrufe je Bereich und Monat',
+  'providers.forecast.projected': 'Etwa {calls} Aufrufe im Monat.',
+  'providers.workspaces.label': 'Aktivste Arbeitsbereiche',
+  'providers.workspaces.platform': 'Plattform (kein Arbeitsbereich)',
+  'providers.workspaces.empty.title': 'Noch nichts zugeordnet',
+  'providers.workspaces.empty.description':
+    'Ein Aufruf für einen Arbeitsbereich wird ihm zugerechnet. Cron-Läufe und Plattformpost gehören zu keinem und zählen getrennt.',
+  'providers.readOnly':
+    'Sie können diese Zähler lesen, aber keine Obergrenze verschieben. Limit oder Richtlinie zu ändern erfordert die Berechtigung provider:configure.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

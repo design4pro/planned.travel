@@ -418,6 +418,56 @@ const messages = {
   'runs.notCoordinator.title': '這次部署不負責協調機隊',
   'runs.notCoordinator.body':
     '執行登錄表只綁在預備環境上，這是刻意為之：若存在第二份登錄表，兩支機隊都會以為佇列在自己手上 —— 而這恰恰是它存在的唯一目的所要阻止的事。請到預備環境去看機隊。',
+  'nav.providers': '服務商',
+  'nav.providers.description': '對外呼叫及其上限',
+  'providers.error.title': '無法讀取服務商計數',
+  'providers.list.label': '服務',
+  'providers.status.planned': '尚未接入',
+  'providers.status.planned.description':
+    '目前還沒有程式呼叫這個服務，所以無從計數。把它列在這裡，是為了在第一次呼叫之前就談好上限，而不是等第一張帳單之後。',
+  'providers.policy.allow': '超出仍計費',
+  'providers.policy.block': '到達上限即拒絕',
+  'providers.badge.blocked': {
+    other: '已拒絕 {calls} 次呼叫',
+  },
+  'providers.limit.none': '尚未約定上限 · 本月 {used} 次',
+  'providers.limit.value': '{limit} 次中的 {used} 次',
+  'providers.limit.window.day': '今天',
+  'providers.limit.window.month': '本月',
+  'providers.measuring.none': '還沒有任何測量',
+  'providers.measuring.since': '自 {date} 起測量',
+  'providers.stat.calls': '本月呼叫',
+  'providers.stat.calls.caption': '涵蓋所有已接入的服務',
+  'providers.stat.errors': '失敗的呼叫',
+  'providers.stat.errors.caption': '同樣計為呼叫，因為多數服務商照樣收費',
+  'providers.stat.nearLimit': '接近上限',
+  'providers.stat.nearLimit.caption': '已越過告警門檻的服務',
+  'providers.stat.blocked': '被拒絕的呼叫',
+  'providers.stat.blocked.none': '沒有任何呼叫被拒絕',
+  'providers.stat.blocked.some': '被上限擋下的需求',
+  'providers.forecast.label': '預測',
+  'providers.forecast.provider': '服務',
+  'providers.forecast.monthEnd': '到月底',
+  'providers.forecast.runRate': '按此速度每月',
+  'providers.forecast.perWorkspace': '每個工作區每月',
+  'providers.forecast.noWorkspaceTraffic': '沒有工作區流量可供平均',
+  'providers.forecast.window': {
+    other: '根據 {hours} 小時的測量推算。',
+  },
+  'providers.forecast.tooEarly': {
+    other:
+      '目前只測量了 {hours} 小時，還不足以推算。把不到一天的資料拉成一個月是算術，不是預測。',
+  },
+  'providers.forecast.atWorkspaces': '按多少個工作區',
+  'providers.forecast.callsEach': '每個工作區每月呼叫數',
+  'providers.forecast.projected': '每月約 {calls} 次。',
+  'providers.workspaces.label': '呼叫最多的工作區',
+  'providers.workspaces.platform': '平台（不屬於工作區）',
+  'providers.workspaces.empty.title': '尚未歸屬任何呼叫',
+  'providers.workspaces.empty.description':
+    '為某個工作區發起的呼叫會記在它名下。排程工作與平台郵件不屬於任何工作區，單獨計數。',
+  'providers.readOnly':
+    '你可以查看這些計數，但不能調整上限。修改額度或其政策需要 provider:configure 權限。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

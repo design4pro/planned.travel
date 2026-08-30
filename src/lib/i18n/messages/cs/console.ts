@@ -455,6 +455,67 @@ const messages = {
   'runs.notCoordinator.title': 'Tohle nasazení flotilu neřídí',
   'runs.notCoordinator.body':
     'Registr běhů je napojený jen na testovací prostředí, a to schválně: druhý registr by nechal dvě flotily věřit, že každá drží frontu — a přesně tomu má bránit. Flotilu čti na testovacím prostředí.',
+  'nav.providers': 'Poskytovatelé',
+  'nav.providers.description': 'Odchozí volání a jejich stropy',
+  'providers.error.title': 'Měřidla poskytovatelů se nepodařilo načíst',
+  'providers.list.label': 'Služby',
+  'providers.status.planned': 'Nezapojeno',
+  'providers.status.planned.description':
+    'Tuhle službu zatím nic nevolá, takže není co počítat. Je tu proto, aby se strop dohodl před prvním voláním, a ne až po první faktuře.',
+  'providers.policy.allow': 'Účtuje i nad strop',
+  'providers.policy.block': 'Odmítá po dosažení stropu',
+  'providers.badge.blocked': {
+    one: 'Jedno volání odmítnuto',
+    few: '{calls} volání odmítnuta',
+    many: '{calls} volání odmítnuto',
+    other: '{calls} volání odmítnuto',
+  },
+  'providers.limit.none': 'Žádný dohodnutý strop · {used} tento měsíc',
+  'providers.limit.value': '{used} z {limit}',
+  'providers.limit.window.day': 'Dnes',
+  'providers.limit.window.month': 'Tento měsíc',
+  'providers.measuring.none': 'Zatím nic naměřeno',
+  'providers.measuring.since': 'Měříme od {date}',
+  'providers.stat.calls': 'Volání tento měsíc',
+  'providers.stat.calls.caption': 'Napříč všemi zapojenými službami',
+  'providers.stat.errors': 'Neúspěšná volání',
+  'providers.stat.errors.caption':
+    'Počítají se také jako volání, protože je většina poskytovatelů účtuje',
+  'providers.stat.nearLimit': 'Blízko stropu',
+  'providers.stat.nearLimit.caption': 'Služby nad svým varovným prahem',
+  'providers.stat.blocked': 'Odmítnutá volání',
+  'providers.stat.blocked.none': 'Nic nebylo odmítnuto',
+  'providers.stat.blocked.some': 'Poptávka odmítnutá stropem',
+  'providers.forecast.label': 'Předpověď',
+  'providers.forecast.provider': 'Služba',
+  'providers.forecast.monthEnd': 'Do konce měsíce',
+  'providers.forecast.runRate': 'Měsíčně při tomto tempu',
+  'providers.forecast.perWorkspace': 'Na pracovní prostor za měsíc',
+  'providers.forecast.noWorkspaceTraffic':
+    'Není provoz pracovních prostorů, ze kterého počítat průměr',
+  'providers.forecast.window': {
+    one: 'Odhad z jedné hodiny měření.',
+    few: 'Odhad z {hours} h měření.',
+    many: 'Odhad z {hours} h měření.',
+    other: 'Odhad z {hours} h měření.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Zatím naměřena jediná hodina — na odhad málo. Roztáhnout necelý den na měsíc by byla aritmetika, ne předpověď.',
+    few: 'Zatím naměřeno {hours} h — na odhad málo. Roztáhnout necelý den na měsíc by byla aritmetika, ne předpověď.',
+    many: 'Zatím naměřeno {hours} h — na odhad málo. Roztáhnout necelý den na měsíc by byla aritmetika, ne předpověď.',
+    other:
+      'Zatím naměřeno {hours} h — na odhad málo. Roztáhnout necelý den na měsíc by byla aritmetika, ne předpověď.',
+  },
+  'providers.forecast.atWorkspaces': 'Při kolika pracovních prostorech',
+  'providers.forecast.callsEach': 'Volání na prostor za měsíc',
+  'providers.forecast.projected': 'Asi {calls} volání měsíčně.',
+  'providers.workspaces.label': 'Nejvytíženější prostory',
+  'providers.workspaces.platform': 'Platforma (bez prostoru)',
+  'providers.workspaces.empty.title': 'Zatím nic nepřiřazeno',
+  'providers.workspaces.empty.description':
+    'Volání provedené pro pracovní prostor se připíše jemu. Naplánované úlohy a pošta platformy nepatří žádnému a počítají se zvlášť.',
+  'providers.readOnly':
+    'Tato měřidla můžeš číst, ale strop neposuneš. Změna limitu nebo jeho politiky vyžaduje oprávnění provider:configure.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

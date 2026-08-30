@@ -2391,10 +2391,31 @@ const CONSOLE_SANDCASTLE_ROUTE: RouteCase = {
   ready: 'main',
 }
 
+/**
+ * The provider meters, and a frame that is stable for the same reason the registry's is: what the
+ * demo fixture does not have.
+ *
+ * Nothing in the seed makes an outbound call, so `provider_usage` is empty and every panel draws
+ * its designed empty state — which is the state worth photographing anyway, because it is the one
+ * every deployment starts in. A populated frame would move on every run: the counters are live and
+ * the forecast is anchored to the current month.
+ *
+ * The screen renders no clock-derived string at all, which `auditServerClock` below asserts for
+ * every route in this list. That is a constraint on the page rather than an accident of the
+ * fixture: durations are whole-window words and instants are dates computed from the loader's own
+ * `asOf`, never from the browser.
+ */
+const CONSOLE_PROVIDERS_ROUTE: RouteCase = {
+  name: 'console-providers',
+  path: '/console/providers',
+  ready: 'main',
+}
+
 export const CONSOLE_ROUTES: ReadonlyArray<RouteCase> = [
   CONSOLE_OVERVIEW_ROUTE,
   CONSOLE_ACCOUNTS_ROUTE,
   CONSOLE_SANDCASTLE_ROUTE,
+  CONSOLE_PROVIDERS_ROUTE,
 ]
 
 /**

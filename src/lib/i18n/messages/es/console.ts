@@ -466,6 +466,65 @@ const messages = {
   'runs.notCoordinator.title': 'Este despliegue no coordina la flota',
   'runs.notCoordinator.body':
     'El registro de ejecuciones está enganchado solo en preproducción, y a propósito: un segundo registro dejaría que dos flotas creyeran cada una que tiene la lista pendiente, que es justo lo que existe para impedir. Lee la flota en preproducción.',
+  'nav.providers': 'Proveedores',
+  'nav.providers.description': 'Llamadas salientes y sus topes',
+  'providers.error.title': 'No se pudieron leer los medidores de proveedores',
+  'providers.list.label': 'Servicios',
+  'providers.status.planned': 'Sin integrar',
+  'providers.status.planned.description':
+    'Nada llama todavía a este servicio, así que no hay nada que contar. Aparece aquí para poder acordar un tope antes de la primera llamada y no después de la primera factura.',
+  'providers.policy.allow': 'Factura por encima',
+  'providers.policy.block': 'Rechaza al llegar al tope',
+  'providers.badge.blocked': {
+    one: 'Una llamada rechazada',
+    many: '{calls} llamadas rechazadas',
+    other: '{calls} llamadas rechazadas',
+  },
+  'providers.limit.none': 'Sin tope acordado · {used} este mes',
+  'providers.limit.value': '{used} de {limit}',
+  'providers.limit.window.day': 'Hoy',
+  'providers.limit.window.month': 'Este mes',
+  'providers.measuring.none': 'Todavía no se ha medido nada',
+  'providers.measuring.since': 'Midiendo desde el {date}',
+  'providers.stat.calls': 'Llamadas este mes',
+  'providers.stat.calls.caption': 'En todos los servicios integrados',
+  'providers.stat.errors': 'Llamadas fallidas',
+  'providers.stat.errors.caption':
+    'Cuentan también como llamadas, porque casi todos los proveedores las cobran',
+  'providers.stat.nearLimit': 'Cerca de un tope',
+  'providers.stat.nearLimit.caption':
+    'Servicios por encima de su umbral de aviso',
+  'providers.stat.blocked': 'Llamadas rechazadas',
+  'providers.stat.blocked.none': 'No se ha rechazado nada',
+  'providers.stat.blocked.some': 'Demanda rechazada por un tope',
+  'providers.forecast.label': 'Previsión',
+  'providers.forecast.provider': 'Servicio',
+  'providers.forecast.monthEnd': 'A fin de mes',
+  'providers.forecast.runRate': 'Al mes a este ritmo',
+  'providers.forecast.perWorkspace': 'Por espacio de trabajo y mes',
+  'providers.forecast.noWorkspaceTraffic':
+    'No hay tráfico de espacios que promediar',
+  'providers.forecast.window': {
+    one: 'Proyectado a partir de una hora de medición.',
+    many: 'Proyectado a partir de {hours} horas de medición.',
+    other: 'Proyectado a partir de {hours} horas de medición.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Solo una hora medida por ahora: insuficiente para proyectar. Extender menos de un día a un mes sería aritmética, no una previsión.',
+    many: 'Solo {hours} horas medidas por ahora: insuficiente para proyectar. Extender menos de un día a un mes sería aritmética, no una previsión.',
+    other:
+      'Solo {hours} horas medidas por ahora: insuficiente para proyectar. Extender menos de un día a un mes sería aritmética, no una previsión.',
+  },
+  'providers.forecast.atWorkspaces': 'Con cuántos espacios de trabajo',
+  'providers.forecast.callsEach': 'Llamadas por espacio al mes',
+  'providers.forecast.projected': 'Unas {calls} llamadas al mes.',
+  'providers.workspaces.label': 'Espacios más activos',
+  'providers.workspaces.platform': 'Plataforma (sin espacio)',
+  'providers.workspaces.empty.title': 'Nada atribuido todavía',
+  'providers.workspaces.empty.description':
+    'Una llamada hecha para un espacio de trabajo se le imputa. Las tareas programadas y el correo de la plataforma no son de ninguno y se cuentan aparte.',
+  'providers.readOnly':
+    'Puedes leer estos medidores pero no mover un tope. Cambiar un límite o su política requiere el permiso provider:configure.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

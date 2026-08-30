@@ -460,10 +460,10 @@ export const PROVIDER_LIMIT_WINDOWS = ['day', 'month'] as const
 export const PLATFORM_ACTOR_ROLES = ['admin', 'curator', 'user'] as const
 
 /**
- * The eight entities a platform action can touch (docs/ACCESS.md §4.2).
+ * The nine entities a platform action can touch (docs/ACCESS.md §4.2).
  *
  * A TypeScript vocabulary, not a database constraint: `entity_type` is plain `text` in §4.1's
- * column table, so a ninth entity costs an amendment to §4.2's mapping rather than a recreate of
+ * column table, so a tenth entity costs an amendment to §4.2's mapping rather than a recreate of
  * an append-only log.
  */
 export const PLATFORM_AUDIT_ENTITY_TYPES = [
@@ -475,17 +475,21 @@ export const PLATFORM_AUDIT_ENTITY_TYPES = [
   'session',
   'staff_api_token',
   'share_link',
+  'provider',
 ] as const
 
 /**
- * The thirty-one actions a `platform_audit_log` row can carry, in the order docs/ACCESS.md §4.2
+ * The thirty-three actions a `platform_audit_log` row can carry, in the order docs/ACCESS.md §4.2
  * tables them. The list is closed there and closed here: a new action is an amendment to that
  * table, made in the commit that adds the code writing it.
  *
- * Sixteen take the two-segment `<entity_type>.<verb>` form, and fifteen take the three-segment
+
+ * Eighteen take the two-segment `<entity_type>.<verb>` form, and fifteen take the three-segment
  * `platform.<entity>.<verb>` form because their entities — user, session, credential, share — are
  * named identically in the tenant audit log of §4.5, where a bare `user.created` read out of a
- * view spanning both tables would be attributable to neither.
+ * view spanning both tables would be attributable to neither. The two `provider.*` actions take the
+ * short form for the converse reason: no tenant log has a provider, so there is nothing for a bare
+ * name to be confused with, and the three-segment form would claim a collision that does not exist.
  *
  * Like {@link PLATFORM_AUDIT_ENTITY_TYPES} this is a TypeScript vocabulary rather than a SQL
  * `CHECK`, for the reason §4.1 gives: the list grows by amendment, and a `CHECK` would price each
@@ -523,6 +527,8 @@ export const PLATFORM_AUDIT_ACTIONS = [
   'platform.token.issued',
   'platform.token.revoked',
   'platform.share.revoked',
+  'provider.limit_changed',
+  'provider.policy_changed',
 ] as const
 
 /** JSON payload shapes stored in `text({ mode: 'json' })` columns. */

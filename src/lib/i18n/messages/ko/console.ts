@@ -438,6 +438,58 @@ const messages = {
   'runs.notCoordinator.title': '이 배포는 함대를 조율하지 않습니다',
   'runs.notCoordinator.body':
     '실행 레지스트리는 스테이징 환경에만 묶여 있으며, 이는 의도한 것입니다. 레지스트리가 둘이면 두 함대가 모두 자기가 줄을 쥐고 있다고 믿게 되는데, 그것이야말로 레지스트리가 막으려고 존재하는 단 하나의 일이기 때문입니다. 함대는 스테이징 환경에서 확인하세요.',
+  'nav.providers': '공급자',
+  'nav.providers.description': '외부 호출과 그 상한',
+  'providers.error.title': '공급자 계측값을 읽지 못했습니다',
+  'providers.list.label': '서비스',
+  'providers.status.planned': '연동 안 됨',
+  'providers.status.planned.description':
+    '아직 이 서비스를 부르는 곳이 없어 셀 것이 없습니다. 첫 청구서 뒤가 아니라 첫 호출 전에 상한을 정할 수 있도록 여기에 적어 둡니다.',
+  'providers.policy.allow': '상한을 넘겨도 과금',
+  'providers.policy.block': '상한에서 거부',
+  'providers.badge.blocked': {
+    other: '호출 {calls}건 거부',
+  },
+  'providers.limit.none': '합의된 상한 없음 · 이번 달 {used}건',
+  'providers.limit.value': '{limit}건 중 {used}건',
+  'providers.limit.window.day': '오늘',
+  'providers.limit.window.month': '이번 달',
+  'providers.measuring.none': '아직 측정된 것이 없습니다',
+  'providers.measuring.since': '{date}부터 측정',
+  'providers.stat.calls': '이번 달 호출',
+  'providers.stat.calls.caption': '연동된 모든 서비스 합계',
+  'providers.stat.errors': '실패한 호출',
+  'providers.stat.errors.caption':
+    '대부분의 공급자가 과금하므로 호출로도 셉니다',
+  'providers.stat.nearLimit': '상한에 근접',
+  'providers.stat.nearLimit.caption': '경고 임계값을 넘은 서비스',
+  'providers.stat.blocked': '거부된 호출',
+  'providers.stat.blocked.none': '거부된 것이 없습니다',
+  'providers.stat.blocked.some': '상한이 돌려보낸 수요',
+  'providers.forecast.label': '예측',
+  'providers.forecast.provider': '서비스',
+  'providers.forecast.monthEnd': '월말까지',
+  'providers.forecast.runRate': '이 속도라면 월간',
+  'providers.forecast.perWorkspace': '작업 공간당 월간',
+  'providers.forecast.noWorkspaceTraffic':
+    '평균을 낼 작업 공간 트래픽이 없습니다',
+  'providers.forecast.window': {
+    other: '{hours}시간의 측정에서 산출했습니다.',
+  },
+  'providers.forecast.tooEarly': {
+    other:
+      '아직 {hours}시간만 측정되어 예측하기에 부족합니다. 하루도 안 되는 값을 한 달로 늘리는 것은 산수이지 예측이 아닙니다.',
+  },
+  'providers.forecast.atWorkspaces': '작업 공간 수',
+  'providers.forecast.callsEach': '공간당 월간 호출 수',
+  'providers.forecast.projected': '월 약 {calls}건입니다.',
+  'providers.workspaces.label': '호출이 많은 작업 공간',
+  'providers.workspaces.platform': '플랫폼(작업 공간 없음)',
+  'providers.workspaces.empty.title': '아직 귀속된 것이 없습니다',
+  'providers.workspaces.empty.description':
+    '작업 공간을 위해 한 호출은 그 공간에 기록됩니다. 예약 작업과 플랫폼 메일은 어디에도 속하지 않아 따로 셉니다.',
+  'providers.readOnly':
+    '이 계측값은 읽을 수 있지만 상한은 옮길 수 없습니다. 한도나 정책을 바꾸려면 provider:configure 권한이 필요합니다.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

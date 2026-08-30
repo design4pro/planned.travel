@@ -102,6 +102,37 @@ export interface ProviderCallLabel {
   readonly organizationId?: string | null
 }
 
+/**
+ * Whether a *returned* result counts as a failed call.
+ *
+ * It has to be asked, because `fetch` does not throw on a 4xx or a 5xx: without this, a provider
+ * answering 401 all day would be recorded as a day of successful calls, and the console's "failed
+ * calls" tile would read zero while nothing worked. That is the one failure mode a meter must not
+ * have — a wrong number that looks like a healthy one.
+ *
+ * The default recognises a `Response` by shape rather than by `instanceof`, so a call site cannot
+ * forget to classify one. `instanceof Response` is unreliable here: the `server` Vitest project and
+ * workerd do not always share a constructor, and a mismatch would silently disable the check in
+ * exactly the place the tests run. A call site whose result is not a `Response` can pass its own
+ * predicate; one that returns something with no notion of failure gets `false`, and only a throw
+ * counts.
+ */
+type FailureCheck<T> = (result: T) => boolean
+
+function looksFailed(result: unknown): boolean {
+  // No casts anywhere below: each `in` narrows the value for the clauses after it, which is also
+  // what makes the order load-bearing — read as a chain, not as a set of independent conditions.
+  return (
+    typeof result === 'object' &&
+    result !== null &&
+    'ok' in result &&
+    typeof result.ok === 'boolean' &&
+    'status' in result &&
+    typeof result.status === 'number' &&
+    !result.ok
+  )
+}
+
 interface MemoEntry {
   readonly row: ProviderRegistryRow | null
   readonly readAt: number
@@ -218,11 +249,15 @@ function record(
  * Throws {@link ProviderBlockedError} before `send` is called when a blocking ceiling is spent —
  * before, so a refused call costs the vendor nothing and is recorded as demand rather than usage.
  * It never throws for any metering reason of its own.
+ *
+ * A returned `Response` with a non-2xx status is counted as a failed call as well as a call, which
+ * is why {@link FailureCheck} exists: `fetch` resolves such a response rather than throwing.
  */
 export async function callProvider<T>(
   runtime: OutboundRuntime,
   label: ProviderCallLabel,
   send: () => Promise<T>,
+  isFailure: FailureCheck<T> = looksFailed,
 ): Promise<T> {
   const at = runtime.now()
 
@@ -234,7 +269,9 @@ export async function callProvider<T>(
 
   try {
     const result = await send()
-    record(runtime, label, 'ok', at)
+    // Either way it is a call the vendor received and will bill for; `errors` narrows `calls`, it
+    // never replaces it.
+    record(runtime, label, isFailure(result) ? 'error' : 'ok', at)
     return result
   } catch (cause) {
     // A throw still reached the vendor often enough to be billable — a timeout is the ordinary
