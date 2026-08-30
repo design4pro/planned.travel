@@ -59,7 +59,22 @@ export interface CoordinatorOptions {
 const ATTEMPTS = 3
 const RETRY_BASE_MS = 500
 
-export class CoordinatorError extends Error {}
+export class CoordinatorError extends Error {
+  /**
+   * The status that settled it, or `undefined` when nothing ever answered.
+   *
+   * Carried because one status is routinely not a failure: a `409` to `finish` or `release` means
+   * the registry has already reaped this run, which is exactly what a cleanup step is trying to
+   * bring about. A caller that cannot tell that apart from a wrong token has to treat both as
+   * fatal.
+   */
+  readonly status: number | undefined
+
+  constructor(message: string, status?: number) {
+    super(message)
+    this.status = status
+  }
+}
 
 export class Coordinator {
   /** Where the registry lives, with any trailing slash already off. */
@@ -151,6 +166,7 @@ export class Coordinator {
   ): Promise<Record<string, unknown>> {
     const url = `${this.baseUrl}/api/sandcastle/${path}`
     let lastError = ''
+    let lastStatus: number | undefined
     for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
       try {
         const response = await this.doFetch(url, {
@@ -163,11 +179,13 @@ export class Coordinator {
         }
         const detail = (await response.text()).slice(0, 300)
         lastError = `${response.status} ${detail}`
+        lastStatus = response.status
         // 4xx is a verdict, not a blip: the token is wrong, the body is wrong, or this deployment
         // is not the coordinator. Retrying cannot change any of those.
         if (response.status < 500) break
       } catch (cause) {
         lastError = cause instanceof Error ? cause.message : String(cause)
+        lastStatus = undefined
       }
       if (attempt < ATTEMPTS) {
         await new Promise((resolve) =>
@@ -179,6 +197,7 @@ export class Coordinator {
       `The sandcastle coordinator at ${url} did not answer (${lastError}). This run cannot tell ` +
         `what another run is already building, so it is stopping rather than starting blind. ` +
         `Check the deployment, or pass --no-coordinator to accept that risk.`,
+      lastStatus,
     )
   }
 

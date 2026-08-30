@@ -18,6 +18,17 @@ name: Triage
 # No overlap with claude.yml: that one answers only `@claude` mentions. Vitest
 # needs nothing beyond the install (same as the `verify` job in ci.yml); the
 # visual gate is out of reach here and out of scope for triage.
+#
+# The issue is claimed from the run registry (docs/adr/0009) before it is
+# triaged, and given back afterwards. The window that matters is narrower than
+# it looks: triage works issues that do NOT carry `ready-for-agent` and the AFK
+# loop works only ones that do, so the two contend over exactly one moment - the
+# one where this workflow promotes an issue while a loop is planning.
+#
+# Nothing heartbeats between the claim and the release, so a job that outruns
+# the five-minute lease loses it. That is accepted rather than papered over: the
+# claim exists to cover the hand-off, not to lock a thirty-minute job, and the
+# only entry point that must hold a lease properly is the one that builds.
 on:
   issues:
     types: [opened, labeled]
@@ -50,6 +61,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    # For the Cloudflare Access service token alone. The registry is bound on staging and staging
+    # sits behind Access, so a request without those two headers is answered by a login page rather
+    # than by the Worker - and the token is an environment secret, reachable only from a job that
+    # declares the environment. This job deploys nothing.
+    environment: staging
+
     permissions:
       contents: read
       issues: write
@@ -58,6 +75,9 @@ jobs:
 
     env:
       ISSUE: ${{ github.event.issue.number || inputs.issue }}
+      # Unique per attempt, so a re-run registers a run of its own rather than resuming one the
+      # registry has already reaped.
+      RUN_ID: triage-${{ github.event.issue.number || inputs.issue }}-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - name: Skip when already triaged
@@ -92,10 +112,54 @@ jobs:
         if: steps.marker.outputs.skip != 'true'
         run: pnpm install --frozen-lockfile
 
+      # Gated rather than fail-closed, and only here. `main.ts` refuses to start without a
+      # coordinator because the cost of two loops on one ticket is an hour of duplicated building;
+      # the cost here is a promotion racing a planner for a few seconds. Refusing to triage at all
+      # because a secret is unset would be a self-inflicted outage on a path that builds nothing.
+      - name: Check the coordinator is configured
+        if: steps.marker.outputs.skip != 'true'
+        id: coordinator
+        env:
+          SANDCASTLE_COORDINATOR_URL: ${{ secrets.SANDCASTLE_COORDINATOR_URL }}
+          SANDCASTLE_COORDINATOR_TOKEN: ${{ secrets.SANDCASTLE_COORDINATOR_TOKEN }}
+        run: |
+          if [ -n "$SANDCASTLE_COORDINATOR_URL" ] && [ -n "$SANDCASTLE_COORDINATOR_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No run coordinator configured - triaging uncoordinated."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Exit 3 is "another run holds it", which is a normal outcome to stand down on. Anything else
+      # non-zero is a broken deployment and fails the job, because a workflow that treats the two
+      # alike stops triaging the day a secret expires.
+      - name: Claim the issue
+        if: steps.marker.outputs.skip != 'true' && steps.coordinator.outputs.configured == 'true'
+        id: claim
+        env:
+          SANDCASTLE_COORDINATOR_URL: ${{ secrets.SANDCASTLE_COORDINATOR_URL }}
+          SANDCASTLE_COORDINATOR_TOKEN: ${{ secrets.SANDCASTLE_COORDINATOR_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          set +e
+          pnpm exec tsx .sandcastle/coordinator-cli.ts start \
+            --run "$RUN_ID" --kind triage --issues "$ISSUE"
+          status=$?
+          set -e
+          case "$status" in
+            0) echo "claimed=true" >> "$GITHUB_OUTPUT" ;;
+            3)
+              echo "::notice::Issue #$ISSUE is held by another sandcastle run - standing down."
+              echo "claimed=false" >> "$GITHUB_OUTPUT"
+              ;;
+            *) exit "$status" ;;
+          esac
+
       # The prompt file is shared with .sandcastle/triage.ts, which substitutes
       # {{TASK_ID}} through sandcastle's promptArgs; here sed does the same.
       - name: Render the prompt
-        if: steps.marker.outputs.skip != 'true'
+        if: steps.marker.outputs.skip != 'true' && steps.claim.outputs.claimed != 'false'
         id: render
         run: |
           {
@@ -105,7 +169,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Triage
-        if: steps.marker.outputs.skip != 'true'
+        if: steps.marker.outputs.skip != 'true' && steps.claim.outputs.claimed != 'false'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -115,3 +179,19 @@ jobs:
           claude_args: |
             --max-turns 60
             --allowedTools "Bash,Read,Edit,Write,Glob,Grep"
+
+      # `always()`, because a lease outlives the step that failed. A `409` here means the registry
+      # reaped the run first, which is the outcome this step is asking for, and the CLI reports it
+      # as success.
+      - name: Release the issue
+        if: always() && steps.claim.outputs.claimed == 'true'
+        env:
+          SANDCASTLE_COORDINATOR_URL: ${{ secrets.SANDCASTLE_COORDINATOR_URL }}
+          SANDCASTLE_COORDINATOR_TOKEN: ${{ secrets.SANDCASTLE_COORDINATOR_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          pnpm exec tsx .sandcastle/coordinator-cli.ts finish \
+            --run "$RUN_ID" --kind triage \
+            --status "${{ job.status == 'success' && 'finished' || 'failed' }}" \
+            --summary "triaged #$ISSUE"

@@ -14,6 +14,11 @@ name: Sentry triage
 # The first `schedule:` trigger in this repository. ADR 0004 deliberately deferred running
 # sandcastle in CI, so this stays narrow: one sweep a week, at most three issues, and a report
 # artifact either way.
+#
+# The sweep registers itself with the run registry (docs/adr/0009) but claims nothing, on purpose:
+# it files issues that do not exist yet, so there is no id another run could be holding and nothing
+# to contend over. The registration buys dashboard visibility alone - "a sentry sweep is running on
+# a runner right now" is the answer to why a fresh batch of `status: pending` bugs just appeared.
 on:
   schedule:
     # Tuesdays 06:00 UTC — after Monday's deploys have soaked for a day, and early enough that the
@@ -47,11 +52,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    # For the Cloudflare Access service token alone - staging fronts the registry, and that token is
+    # an environment secret. Nothing here deploys, and the environment carries no protection rules.
+    environment: staging
+
     permissions:
       contents: read
       # Retained so a debugging run can fall back to github.token, though it must not file with it
       # — see GH_TOKEN below.
       issues: write
+
+    env:
+      # Per attempt, so a re-run is its own row rather than a resume of a reaped one.
+      RUN_ID: sentry-triage-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - name: Check the Sentry credentials are configured
@@ -96,6 +109,36 @@ jobs:
         run: |
           curl -fsSL https://claude.ai/install.sh | bash
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # Visibility is a nice-to-have here, so an unset secret is a notice and not a failure. There is
+      # no claim to lose: the sweep would run identically either way.
+      - name: Check the coordinator is configured
+        if: steps.gate.outputs.configured == 'true'
+        id: coordinator
+        env:
+          SANDCASTLE_COORDINATOR_URL: ${{ secrets.SANDCASTLE_COORDINATOR_URL }}
+          SANDCASTLE_COORDINATOR_TOKEN: ${{ secrets.SANDCASTLE_COORDINATOR_TOKEN }}
+        run: |
+          if [ -n "$SANDCASTLE_COORDINATOR_URL" ] && [ -n "$SANDCASTLE_COORDINATOR_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No run coordinator configured - the sweep will not appear on the dashboard."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # `continue-on-error`, because a sweep must not be lost to a dashboard being down. The claim
+      # step in triage.yml is strict for the opposite reason: there, the coordinator's answer decides
+      # whether the job may touch the issue at all.
+      - name: Register the run
+        if: steps.coordinator.outputs.configured == 'true'
+        id: register
+        continue-on-error: true
+        env:
+          SANDCASTLE_COORDINATOR_URL: ${{ secrets.SANDCASTLE_COORDINATOR_URL }}
+          SANDCASTLE_COORDINATOR_TOKEN: ${{ secrets.SANDCASTLE_COORDINATOR_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: pnpm exec tsx .sandcastle/coordinator-cli.ts start --run "$RUN_ID" --kind sentry-triage
 
       # sandcastle's env resolver forwards only the keys that APPEAR in .sandcastle/.env, taking
       # `sandcastleEnv[key] || process.env[key]`. Empty values here name the keys; the real values
@@ -143,3 +186,19 @@ jobs:
           name: sentry-triage-report
           path: .sandcastle/logs/sentry-triage-*.md
           if-no-files-found: warn
+
+      # Only when the registration actually landed - finishing a run the registry never saw is a 409
+      # and a confusing log line. `always()`, so a failed sweep still closes its row.
+      - name: Finish the run
+        if: always() && steps.register.outcome == 'success'
+        continue-on-error: true
+        env:
+          SANDCASTLE_COORDINATOR_URL: ${{ secrets.SANDCASTLE_COORDINATOR_URL }}
+          SANDCASTLE_COORDINATOR_TOKEN: ${{ secrets.SANDCASTLE_COORDINATOR_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          pnpm exec tsx .sandcastle/coordinator-cli.ts finish \
+            --run "$RUN_ID" --kind sentry-triage \
+            --status "${{ job.status == 'success' && 'finished' || 'failed' }}" \
+            --summary "swept sentry"

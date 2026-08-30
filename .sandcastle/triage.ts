@@ -10,16 +10,36 @@
 //   pnpm sandcastle:triage          # every open `type: bug|maintenance` issue
 //                                   # without `ready-for-agent` and not yet marked
 //   pnpm sandcastle:triage 77 80    # only these issues
+//   pnpm sandcastle:triage --no-coordinator
+//
+// Each issue is claimed from the run registry before it is triaged and given
+// back afterwards, for a window narrower than it looks: triage works issues
+// that do NOT carry `ready-for-agent` and the loop works only ones that do, so
+// the two contend over exactly one moment - the one where triage promotes an
+// issue while a loop is planning. Claiming closes it.
 //
 // Requires: Docker running, `sandcastle docker build-image` executed once,
 // and the env vars from .env.example (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN).
 
 import { execSync } from 'node:child_process'
+import { hostname } from 'node:os'
 
 import * as sandcastle from '@ai-hero/sandcastle'
 import { z } from 'zod'
 
+import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
 import { docker } from './sandbox'
+
+import { SANDCASTLE_COORDINATOR_REPO } from '../src/server/do/sandcastle-protocol'
+
+try {
+  // Host-side configuration for the coordinator. `.env` still travels into the
+  // sandbox separately; this is the copy this process reads. It never
+  // overwrites a value already in the environment, so CI is unaffected.
+  process.loadEnvFile('.sandcastle/.env')
+} catch {
+  // Absent in CI, where every value arrives from the workflow step.
+}
 
 const TRIAGER_MODEL = 'claude-opus-5'
 
@@ -111,7 +131,30 @@ async function triage(id: string) {
 
 execSync('git fetch origin develop', { stdio: 'inherit' })
 
-const requested = process.argv.slice(2)
+const argv = process.argv.slice(2)
+const COORDINATED = !argv.includes('--no-coordinator')
+if (!COORDINATED) console.warn(NO_COORDINATOR_BANNER)
+
+const pad = (n: number) => String(n).padStart(2, '0')
+const today = new Date()
+const RUN_ID = `triage-${today.getFullYear()}${pad(today.getMonth() + 1)}${pad(
+  today.getDate(),
+)}-${process.pid}`
+
+// Built before anything is installed or fetched: a misconfigured coordinator
+// should stop this run at the first line, not after a container is up.
+const coordinator = COORDINATED
+  ? Coordinator.fromEnv(process.env, {
+      repo: SANDCASTLE_COORDINATOR_REPO,
+      runId: RUN_ID,
+      origin:
+        process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
+      kind: 'triage',
+      host: hostname(),
+    })
+  : undefined
+
+const requested = argv.filter((value) => !value.startsWith('--'))
 const candidates = requested.length > 0 ? requested : untriagedIssues()
 const queue = candidates.filter((id) => {
   if (!alreadyMarked(id)) return true
@@ -127,19 +170,42 @@ console.log(
   `Triaging ${queue.length} issue(s): ${queue.map((id) => `#${id}`).join(', ')}`,
 )
 
+await coordinator?.register()
+coordinator?.startHeartbeat()
+
 const summary: string[] = []
 let failed = 0
-for (const id of queue) {
-  console.log(`\n=== Triage #${id} ===\n`)
-  try {
-    const { output } = await triage(id)
-    summary.push(`  #${id}: ${output.verdict} — ${output.reason}`)
-  } catch (error) {
-    failed++
-    summary.push(
-      `  #${id}: ERROR — ${error instanceof Error ? error.message : String(error)}`,
-    )
+try {
+  for (const id of queue) {
+    // One at a time rather than the whole queue up front: a triage run is a
+    // sequence of independent verdicts, and holding the tail of it for however
+    // long the head takes would park issues nothing is looking at yet.
+    const claimed = await coordinator?.claim([id], [])
+    if (claimed !== undefined && !claimed.granted.includes(id)) {
+      summary.push(`  #${id}: skipped — another run holds it`)
+      continue
+    }
+
+    console.log(`\n=== Triage #${id} ===\n`)
+    try {
+      const { output } = await triage(id)
+      summary.push(`  #${id}: ${output.verdict} — ${output.reason}`)
+    } catch (error) {
+      failed++
+      summary.push(
+        `  #${id}: ERROR — ${error instanceof Error ? error.message : String(error)}`,
+      )
+    } finally {
+      // Released as soon as the verdict is in. The triager never commits, so
+      // there is no work in progress to record and nothing to adopt later.
+      await coordinator?.release([id])
+    }
   }
+} finally {
+  await coordinator?.finish(
+    failed > 0 ? 'failed' : 'finished',
+    `${queue.length} issue(s), ${failed} error(s)`,
+  )
 }
 
 console.log('\nTriage summary:')
