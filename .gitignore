@@ -128,5 +128,6 @@ src/impeccable/
 
 # Blob reports, written by the sharded unit job in CI (`--reporter=blob`) and by
 # anyone reproducing that locally. Merged into a verdict by `test-report` and
-# never worth keeping afterwards.
-.vitest-reports/
+# never worth keeping afterwards. Not vitest's default `.vitest-reports`,
+# because `upload-artifact` skips a dot-prefixed path as hidden.
+unit-blob-reports/

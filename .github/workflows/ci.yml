@@ -176,16 +176,22 @@ jobs:
           pnpm exec vitest run --coverage
           --shard=${{ matrix.shard }}/${{ strategy.job-total }}
           --reporter=blob
-          --outputFile=.vitest-reports/blob-${{ matrix.shard }}.json
+          --outputFile=unit-blob-reports/blob-${{ matrix.shard }}.json
 
       # `always()`: a shard that fails still has a report, and that report is
       # the only place its failures are legible.
+      #
+      # The directory is not vitest's own `.vitest-reports`, and the dot is the
+      # whole reason: `upload-artifact` treats a dot-prefixed path as hidden and
+      # silently uploads nothing, which it did - the blob was written, the log
+      # said so, and the artifact was empty. `e2e` above writes to `blob-report`
+      # for the same reason.
       - name: Upload the blob report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: unit-blob-${{ matrix.shard }}
-          path: .vitest-reports
+          path: unit-blob-reports
           retention-days: 1
           if-no-files-found: error
 
