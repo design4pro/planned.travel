@@ -89,7 +89,12 @@ jobs:
           REASON: ${{ inputs.reason }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- e2e/__screenshots__; then
+          # Staged first, asked second. `git diff` alone reads tracked files
+          # only, and a screen that never had a baseline arrives as an
+          # untracked one — so the first run for a new screen wrote four PNGs
+          # and then reported "no change" over the top of them.
+          git add -A e2e/__screenshots__
+          if git diff --cached --quiet -- e2e/__screenshots__; then
             echo '::notice title=No change::the re-recorded frames are identical to the committed ones'
             exit 0
           fi
@@ -97,8 +102,8 @@ jobs:
           branch="claude/e2e-baselines-${GITHUB_RUN_ID}"
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
+          # Carries the staged frames onto the new branch.
           git checkout -b "$branch"
-          git add e2e/__screenshots__
           git commit -m "test(e2e): re-record Linux baselines
 
           $REASON"
