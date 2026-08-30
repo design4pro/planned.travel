@@ -86,7 +86,16 @@ jobs:
 
       - name: Install the Claude Code CLI
         if: steps.gate.outputs.configured == 'true'
-        run: curl -fsSL https://claude.ai/install.sh | bash
+        # The installer drops the binary in ~/.local/bin, which is not on the runner's PATH.
+        # It goes on through $GITHUB_PATH, which APPENDS for every later step. The step below
+        # used to set `PATH:` in its own `env:` block instead, and that silently broke it: the
+        # `env` context holds only what a workflow/job/step `env:` declared, never the runner's
+        # environment, so `${{ env.PATH }}` expanded to nothing and the step ran with a PATH of
+        # `/home/runner/.local/bin:` alone - no /usr/bin, so no `uname`, `dirname` or `sed`, and
+        # pnpm's sh wrapper resolved itself to a `/pnpm/bin/pnpm.cjs` that does not exist.
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       # sandcastle's env resolver forwards only the keys that APPEAR in .sandcastle/.env, taking
       # `sandcastleEnv[key] || process.env[key]`. Empty values here name the keys; the real values
@@ -104,7 +113,6 @@ jobs:
       - name: Sweep Sentry
         if: steps.gate.outputs.configured == 'true'
         env:
-          PATH: /home/runner/.local/bin:${{ env.PATH }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # A PAT, not github.token, and this is load-bearing rather than fussy: GitHub does not
           # emit workflow-triggering events for actions taken with GITHUB_TOKEN, so issues filed
