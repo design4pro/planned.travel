@@ -1,5 +1,11 @@
 # 03 — Reservations and transport
 
+> **Migrated — frozen.** This area's backlog now lives on the tracker as **PRD #167**, and the
+> tracker is its authority. This file takes no further edits: it is kept because un-migrated plans
+> cite its stages to establish which stage holds a file in which wave, and deleting it would make
+> those claims uncheckable. See `docs/adr/0004-sandcastle-replaces-ultrabuild.md`, the amendment of
+> 2026-08-30, for the measurement and for the condition under which it can be deleted.
+
 The trip's paperwork: the bookings a traveller reads back to a stranger at a desk, the legs between
 them, the stay that covers a run of nights, and the confirmation file that could fill all three in
 without anybody retyping it.
@@ -31,7 +37,7 @@ Neither screen is a skeleton, and no stage here rewrites one.
 and `deleteLegFn`. Both validate with Zod, both resolve a tenant scope through `appScope()` and both
 mirror into the trip's Durable Object.
 
-**The tables are richer than the screens.** `reservations` (`src/server/db/schema.ts:694-742`)
+**The tables are richer than the screens.** `reservations` (`src/server/db/schema.ts`)
 already carries `day_id`, `end_day_id`, `place_id`, `assignment_id` and `transport_id`, and only the
 first is ever set from the product. `transports` (`:644-692`) already carries a departure and an
 arrival endpoint each with a code, a coordinate pair and an IANA zone, and the form writes them as
@@ -59,35 +65,52 @@ says so under **Owned paths** rather than leaving two unreachable server functio
 | Row      | Stage           | Wave | Effort | Status move                              |
 | -------- | --------------- | ---- | ------ | ---------------------------------------- |
 | `BKG-06` | `03-S1`         | 1    | M      | partial → done                           |
-| `BKG-07` | `03-S2`         | 2    | L      | absent → partial                         |
-| `BKG-08` | `03-S3`         | 2    | S      | absent → absent (**blocked**)            |
+| `BKG-07` | `03-S2`         | 2    | L      | absent → done                            |
+| `BKG-08` | `03-S3`         | 3    | L      | absent → done                            |
 | `BKG-02` | `03-S4`         | 3    | M      | partial → done                           |
 | `BKG-10` | `03-S5`         | 4    | M      | absent → done                            |
 | `BKG-01` | `03-S6`         | 4    | M      | partial → done                           |
-| `BKG-03` | `03-S7`         | 5    | L      | partial → partial                        |
+| `BKG-03` | `03-S7`         | 5    | L      | partial → done                           |
 | `BKG-05` | `03-S8`         | 6    | L      | partial → done                           |
-| `BKG-04` | none — excluded | —    | —      | `11-boundaries-and-blockers.md`, `11-S1` |
+| `BKG-04` | `03-S7`         | 5    | —      | absent → done (hosted shape, ADR 0012)   |
 | `BKG-09` | none — excluded | —    | —      | `11-boundaries-and-blockers.md`, `11-S1` |
 
-### The two exclusions, and where the argument lives
+### The one exclusion, and the one that came back
 
-`BKG-04` and `BKG-09` are **not planned here and carry no stage**. Both are disposed of in
-`docs/plans/11-boundaries-and-blockers.md`, stage `11-S1`, which names the hosted equivalent for each
-and argues why the shape does not survive one deployment serving every tenant. `BKG-04`'s hosted
-equivalent is `BKG-03`, the deterministic extractor this file builds in `03-S7`; `BKG-09` has no
-equivalent, and `11-S1` says so in those words. Nothing in this file plans around either of them, and
-no stage below may quietly re-import one: a per-tenant credential for a third-party account is the
-exact shape `11-S1` refused.
+`BKG-09` is **not planned here and carries no stage**. It is disposed of in
+`docs/plans/11-boundaries-and-blockers.md`, stage `11-S1`, which argues why the shape does not survive
+one deployment serving every tenant, and records that it has no hosted equivalent. Nothing in this
+file plans around it, and no stage below may quietly re-import it: a per-tenant credential for a
+third-party account is the exact shape `11-S1` refused.
 
-### The blocked row
+`BKG-04` was excluded on the same argument and **is not any more**. `11-S1` refused it because the
+reference implements it with a model credential each tenant supplies, and a per-tenant third-party
+credential is the shape that does not survive hosting. ADR 0012 supersedes that disposition without
+disturbing the rule behind it: the extraction runs on the platform's own Workers AI binding, so there
+is no tenant credential to hold, and the cost is metered per tenant in `resolveLimits()` like every
+other ceiling. What `11-S1` refused is still refused. What returns is the capability, in the only
+shape a hosted product can carry it, and it is built in `03-S7` beside the deterministic extractor
+rather than in a stage of its own — one import, with a second reader behind it, is one concept.
 
-`BKG-08` has a stage — `03-S3` — because a row that is invisible is a row that gets rediscovered and
-half-built. That stage closes nothing, owns no repository file and builds no surface. It records what
-the capability needs, what it would cost and which decision in `11-S3` it waits on. **No stage in
-this plan is scheduled behind it.** Re-measurable at any HEAD: `grep -rn "BKG-08" docs/plans/`
-returns only this plan, the `README.md` wave-table row that parks it in wave 2, and the
-`11-boundaries-and-blockers.md` decision record — no edge table or "Rows unblocked" line anywhere
-names `BKG-08` as a supplier, so nothing is held up by leaving it where it is.
+### The row that was blocked, and the three decisions that unblocked this file
+
+**No row in this plan is blocked any more.** Three of the open decisions `11-S3` was holding have been
+taken, and each has an ADR that carries the argument so no stage below has to repeat it:
+
+- **ADR 0011** buys public-transit routing from HERE, behind our own proxy, with a cross-tenant cache
+  and a per-tenant ceiling. `BKG-08` stops being a record and becomes a build: `03-S3` moves from wave
+  2 to **wave 3**, because a found connection is saved as the station chain `03-S2` builds in wave 2,
+  and two stages in the same wave may not depend on each other.
+- **ADR 0010** settles the airport reference dataset. It is not a provider decision at all: the source
+  is public-domain, the artefact is built at build time into the catalogue, and there is no runtime
+  call to license. `BKG-07` therefore reaches **done** in `03-S2` rather than stopping at `partial`.
+- **ADR 0012** binds Workers AI for confirmation extraction, which is what brings `BKG-04` back and
+  carries `BKG-03` to **done**.
+
+The `11-S3` register still holds decisions this plan does not touch. ADR 0013 takes a fourth one —
+geocoding, from Geoapify — because `03-S7` needs a pin for the address it extracts; but that decision
+belongs to `02-places-and-maps.md`, whose Gate A it closes, and `03-S7` calls the proxy that plan
+mints in `02-S4`, its wave 3, rather than minting one of its own.
 
 ## The order of the stages, and the dependency edges it satisfies
 
@@ -96,7 +119,8 @@ names `BKG-08` as a supplier, so nothing is held up by leaving it where it is.
 | Edge              | Supplier                                       | Satisfied because |
 | ----------------- | ---------------------------------------------- | ----------------- |
 | `BKG-07 → BKG-06` | `03-S1`, wave 1                                | `03-S2` is wave 2 |
-| `BKG-08 → BKG-06` | `03-S1`, wave 1                                | `03-S3` is wave 2 |
+| `BKG-08 → BKG-06` | `03-S1`, wave 1                                | `03-S3` is wave 3 |
+| `BKG-08 → BKG-07` | `03-S2`, wave 2                                | `03-S3` is wave 3 |
 | `BKG-02 → MNY-02` | `04-budget-and-currencies.md`, `04-S3`, wave 2 | `03-S4` is wave 3 |
 | `BKG-10 → TRP-08` | `01-trips-core.md`, `01-S4`, wave 2            | `03-S5` is wave 4 |
 | `BKG-10 → BKG-06` | `03-S1`, wave 1                                | `03-S5` is wave 4 |
@@ -172,9 +196,9 @@ executed it would have nothing to open.
 
 ### 2. `BKG-06` names nine transport types; we already ship twelve
 
-The row asks for nine. `TRANSPORT_MODES` (`src/server/db/schema.ts:160-173`) already declares twelve
+The row asks for nine. `TRANSPORT_MODES` (`src/server/db/schema.ts`) already declares twelve
 — walk, bike, car, taxi, transit, bus, train, tram, metro, ferry, flight, other — each backed by a
-generated `CHECK` constraint (`:687`) and each already labelled and icon-mapped in
+generated `CHECK` constraint and each already labelled and icon-mapped in
 `src/components/modules/transports/leg-form.ts:11-24` and `mode-icon.ts`. **`03-S1` narrows nothing.**
 Where the row's nine and our twelve differ, ours is a superset, and a stage that removed three modes
 to match a count would break existing rows against a `CHECK` constraint for no product reason.
@@ -184,8 +208,10 @@ to match a count would break existing rows against a `CHECK` constraint for no p
 `README.md` reads its own table as "**this stage may start once every wave above it is closed**",
 which is a floor and not a fixture. Two stages here sit one wave above their floor, each because the
 floor would have put two exclusive claims on one file in one wave — which
-`scripts/ultrabuild/check-plan-collisions.mjs` reports as a clobber, correctly, because that is what
-it is. Neither move violates an edge: **no plan file names `BKG-03` or `BKG-10` as a supplier** —
+`scripts/ultrabuild/check-plan-collisions.mjs` was written to report as a clobber, correctly, because
+that is what it is. That script is **absent at `HEAD`** and the **Cross-plan collisions** section at
+the foot of this file says so and says what replaces it; where this file names the check, it is naming
+the rule, not a command a reader can run. Neither move violates an edge: **no plan file names `BKG-03` or `BKG-10` as a supplier** —
 re-measurable with `grep -rn "BKG-03\|BKG-10" docs/plans/`, whose every cross-plan hit is a
 disposition, a host-and-seam note or an edge pointing the other way — so no other plan slips by a
 single wave.
@@ -210,7 +236,7 @@ single wave.
 
 - **Money is integer minor units plus a `text(3)` ISO-4217 currency, never a float.** Every column
   this plan reads or asks for follows the `minor()` and `currency()` helpers already in
-  `src/server/db/schema.ts:85-89`: `reservations.price_minor` + `reservations.currency`,
+  `src/server/db/schema.ts`: `reservations.price_minor` + `reservations.currency`,
   `transports.price_minor` + `currency`, `day_accommodations.price_minor` + `currency`,
   `expenses.amount_minor` + `currency`. No stage introduces a second money convention, and no stage
   divides before it stores. On screen every one of them is rendered by `formatMoneyMinor`
@@ -233,6 +259,18 @@ single wave.
 - **Every stage states its wave in the form the collision check parses**, `` `<id>` · Wave <n> ·
 effort **S|M|L**. `` on the line under `### Stage id`, because a stage with no parseable wave is
   invisible to `check-plan-collisions.mjs` and cannot be cleared.
+- **`src/server/db/schema.ts` is cited by symbol, never by line.** Every other file in this plan may
+  carry a line number and does, because those files are stable and the numbers verify. The schema is
+  the one file every plan in the set files columns onto, so it grows continuously and a line number
+  into it rots for everybody at once — an earlier draft cited `TRANSPORT_MODES` at a line that now
+  holds a comment about sort keys and `EXPENSE_CATEGORIES` at one that now holds a coordinate check.
+  A table name, a column name or an exported tuple is unique under `grep` and survives the growth.
+- **The vocabulary is `CONTEXT.md`'s, and three words in it are easy to get wrong.** A **leg** is the
+  part of a transport between two consecutive stations, never a whole transport and never a
+  "leg"; a **stay** is the lodging across a run of nights, and "accommodation" names the table
+  rather than the concept; a **stop** is a place put on a day at a position in that day's order, and
+  a booking is linked to one. A **reservation** is the record; "booking desk" is the screen it is read
+  on, not a second name for it.
 
 ### The six shared paths, and what this plan asks of them
 
@@ -255,10 +293,25 @@ a later wave that names `00-S1` names a stage that has already closed and will n
 | --------------------------------------- | ----------------- | -------------------------------------------------- | --------------- |
 | `transports.arrival_day_id`             | `03-S1`, wave 1   | `00-S1`, wave 0 — named, and inside its own clause | additive column |
 | `transport_legs` table                  | `03-S2`, wave 2   | the **wave-1** schema stage of the register        | additive table  |
+| `airports` table (no `organization_id`) | `03-S2`, wave 2   | the **wave-1** schema stage of the register        | additive table  |
 | `reservations.expense_id`               | `03-S4`, wave 3   | the **wave-2** schema stage of the register        | additive column |
 | `reservations.imported_at`              | `03-S4`, wave 3   | the **wave-2** schema stage of the register        | additive column |
 | `user_settings.mask_confirmation_codes` | `03-S6`, wave 4   | the **wave-3** schema stage of the register        | additive column |
 | `day_accommodations.reservation_id`     | `03-S8`, wave 6   | the **wave-5** schema stage of the register        | additive column |
+
+Three requirements are filed on different registers in the same file, and are named here so that no
+reader has to find them inside a stage:
+
+| Requirement                         | Asking stage    | Supplier                                                         |
+| ----------------------------------- | --------------- | ---------------------------------------------------------------- |
+| the **`AI` binding**                | `03-S7`, wave 5 | the **wave-4** bindings stage of `00-foundations.md`             |
+| metric `transit_searches_per_month` | `03-S3`, wave 3 | the **wave-2** quota stage of `00-foundations.md`, with its test |
+| metric for the extraction calls     | `03-S7`, wave 5 | the **wave-4** quota stage of `00-foundations.md`, with its test |
+
+Neither `wrangler.jsonc` nor `src/server/billing/limits.ts` nor
+`src/server/billing/__tests__/limits.test.ts` appears in any stage's **Owned paths** in this plan.
+Quota metrics are a wave-0 concern in `README.md`'s own table, for the same reason schema is: a stage
+cannot sit in the same wave as the stage that supplies it.
 
 The wave-1, wave-2, wave-3 and wave-5 stages have no id yet, because the register mints ids as waves
 open; they are cited by wave, which is the only stable name they have, and the filing stage restates
@@ -283,8 +336,10 @@ or creates the table outright (`03-S2`).
 Every one is additive: nullable or defaulted, nothing dropped, nothing renamed, nothing narrowed, so
 a rollback keeps working against the new schema (`ARCHITECTURE.md` §9). No stage needs a token that
 `src/styles/tokens.css` does not already carry, no stage needs a primitive
-`src/components/ui/index.ts` does not already export, and no stage needs a binding
-`wrangler.jsonc` does not already declare.
+`src/components/ui/index.ts` does not already export. **One stage needs a binding `wrangler.jsonc`
+does not declare** — `03-S7` needs `AI`, per ADR 0012 — and it is filed onto the wave-4 bindings stage
+of `00-foundations.md` under that stage's **Blockers**, in the same way the schema requirements below
+are filed. No stage claims `wrangler.jsonc`.
 
 ## Clean-room
 
@@ -299,7 +354,7 @@ is `mask_confirmation_codes` in the idiom of the `reduce_motion` column beside i
 
 ---
 
-## Stage 03-S1 — A leg that knows which day it leaves and which day it lands
+## Stage 03-S1 — A transport that knows which day it leaves and which day it lands
 
 ### Stage id
 
@@ -341,10 +396,11 @@ complete first.
   `endpointLabels` gains the hire-car case; `validateLegDraft` gains the day-order rule.
 - `src/components/modules/transports/leg-dialog.tsx` — edit. Two day selects, and the relabelled
   legend.
-- `src/components/modules/transports/legs-timeline.tsx` — edit. The card shows which day it belongs
-  to, and its date formatter is replaced by the shared one — see **Verification**.
-- `src/components/modules/transports/types.ts` — edit. `LegData` gains `departureDayId`,
-  `arrivalDayId`.
+- `src/components/modules/transports/legs-timeline.tsx` → `transports-timeline.tsx` — edit **and
+  rename**. The card shows which day it belongs to, and its date formatter is replaced by the shared
+  one — see **Verification**. The rename is the vocabulary fix below, not a tidy-up.
+- `src/components/modules/transports/types.ts` — edit. `LegData` is renamed `TransportData` and gains
+  `departureDayId`, `arrivalDayId`.
 - `src/components/modules/transports/index.ts` — edit. The two new exports.
 - `src/components/modules/transports/__tests__/leg-form.test.ts` — edit. Extended, never rewritten.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
@@ -372,7 +428,7 @@ says which.
 
 - `transports.arrival_day_id` — `text`, **nullable**, `REFERENCES days(id) ON DELETE SET NULL`, with
   `index('transports_arrival_day_idx').on(t.arrivalDayId)`. It sits beside the existing
-  `day_id` (`src/server/db/schema.ts:652`), which from this stage forward is read as the **departure**
+  `day_id` (`transports` in `src/server/db/schema.ts`), which from this stage forward is read as the **departure**
   day. No column is renamed: `day_id` keeps its name, its index (`transports_day_idx`, `:686`) and its
   meaning for every row already written, and the new column is simply the second end of the same
   journey. A rollback reads `day_id` exactly as it does today and ignores a column it does not know.
@@ -385,7 +441,7 @@ Nothing else. `transports` already holds the carrier, the service number, the bo
 both endpoint names and codes, both coordinate pairs, both zones, both dates and both times
 (`:644-692`). Its money is already this repository's one convention and this stage does not touch it:
 `price_minor` is an **integer count of minor units** and `currency` is a `text(3)` ISO-4217 code
-(through the shared `minor()` and `currency()` helpers at `src/server/db/schema.ts:85-89`). No float
+(through the shared `minor()` and `currency()` helpers in `src/server/db/schema.ts`). No float
 is written, no float is read, and no amount is divided before it is stored. Every read and write in
 this stage goes through `transportsRepository`, whose statements begin at `tenantFilter()` on
 `organization_id`, the leading column of `transports_org_trip_idx`.
@@ -414,7 +470,8 @@ title }`. The last of those is why it exists: an editable screen cannot offer "w
   the same split `loadBookingDeskFn` already makes for the booking desk, whose own docstring gives
   the same reason — so this stage follows a pattern already in the repository rather than inventing
   a second one.
-- `createLegFn` / `updateLegFn` — their existing Zod objects gain `arrivalDayId` as the same
+- `createTransportFn` / `updateTransportFn` — renamed from `createLegFn` / `updateLegFn`, and their
+  existing Zod objects gain `arrivalDayId` as the same
   `''`-means-unset trimmed string the other optional fields use, normalised with `orNull` before it
   reaches the repository.
 
@@ -422,9 +479,27 @@ title }`. The last of those is why it exists: an editable screen cannot offer "w
 mode and status, the `error` parameter for a message a person reads. No `z.string().email()`-era
 spellings are introduced.
 
-**Authorisation.** In the handler: `appScope()` then `requireTrip(scope, data.tripId)` before any
-read or write, on all five functions. Validation is shape; permission is the trip lookup inside the
-tenant scope.
+**Authorisation, and the gap this stage names rather than closes.** In the handler: `appScope()`
+then `requireTrip(scope, data.tripId)` before any read or write, on all five functions. Validation is
+shape; permission is the trip lookup inside the tenant scope.
+
+That is membership, and membership is not a role. `requireTrip` (`src/server/repos/trips.ts:152`)
+takes no role argument and never has, so **a `viewer` who is on the trip can write a transport
+today** — the Durable Object already refuses them (`src/server/do/trip-room.ts:358` compares
+`session.identity.role !== 'editor'`), which is exactly the asymmetry that makes the hole easy to
+miss: the collaborative surface says no and the server function says yes. The guard that closes it is
+`assertTripRole(scope, tripId, allowed)`, and `01-S1` (`01-trips-core.md`) mints it in **wave 1** —
+this stage's own wave. Two stages in one wave may not depend on each other, so this stage cannot call
+it, and inventing a second guard here to fill one wave is how a repository ends up with two
+authorisation helpers that disagree.
+
+So the hole is named here and closed one wave later: **`03-S2` puts `assertTripRole` into the
+transports repository in wave 2**, where the helper exists and where that file is claimed again
+anyway. `03-S4` does the same for reservations in wave 3 and `03-S8` for accommodations in wave 6 —
+in the repositories rather than in the handlers, so the rule holds for the queue consumer and for any
+future route as well as for these server functions, which is the placement argument `01-S1` makes for
+the guard itself. Whoever implements this stage must not quietly add a role check of their own: the
+gap is one wave long, it is written down, and the stage that closes it is named.
 
 **Realtime.** The four writers keep their existing `mirrorToRoom` calls unchanged —
 `patch('route', …)` at `src/server/fns/transports.ts:138`, `:157` and `:180`,
@@ -491,7 +566,7 @@ through the shared primitive.
 child of a trip. `assertQuota` is called in exactly eight places today —
 `trips.createTrip`, `journey.createJourney`, `collections.createCollection`, `places.createPlace`,
 `members` twice and `files.recordFile` twice — and `USAGE_METRICS`
-(`src/server/db/schema.ts:137-146`) has no metric for a leg or a booking. The sold ceiling that bounds
+(`src/server/db/schema.ts`) has no metric for a leg or a booking. The sold ceiling that bounds
 this table is `trips`, which is enforced at the moment the trip is created, and the published number
 is the enforced number.
 
@@ -548,7 +623,7 @@ leg dialog, open, on the hire-car branch where the relabelling is visible. Reach
 `--click '[data-part="new-leg"]'` followed by selecting the mode, and captured as
 `--state leg-dialog-car`. **The selector is verified to exist by the stage's own spec** — a
 `page.locator('[data-part="new-leg"]').count()` of 1 before the frame is filed — and the attribute is
-added to the existing action button in `legs-timeline.tsx` precisely so the selector survives a
+added to the existing action button in `transports-timeline.tsx` precisely so the selector survives a
 restyle. The resting set is still owed; a dialog is judged against the screen it opens over.
 
 **Console** must be silent: the spec attaches `watchConsole(page, route)` before navigating and
@@ -596,14 +671,14 @@ abbreviated-month call sites that build their own `Intl.DateTimeFormat` with `mo
 workerd and WebKit resolve from different ICU builds, and states the defect is "latent today and
 active the moment a trip tab is baselined". **This stage is the first in the repository to baseline a
 trip tab**, and two of the seven are in files it owns:
-`src/components/modules/transports/legs-timeline.tsx:83` and
+`src/components/modules/transports/legs-timeline.tsx:83` — the file this stage renames — and
 `src/components/modules/book/bookings-timeline.tsx:89` (the latter is `03-S6`'s to fix, and is named
 here so the inheritance is recorded once).
 
 Disposition: **substitute**, inside this stage's own file only. `src/lib/format.ts` already closed
 this for itself by answering from a CLDR table instead of asking the platform, and it exports
 `formatWeekday(value, locale)` at `:328`, which produces exactly the `Tue 23 Jun` shape the
-module-local formatter produces. `legs-timeline.tsx` calls it and deletes its own formatter.
+module-local formatter produces. `transports-timeline.tsx` calls it and deletes its own formatter.
 `src/lib/format.ts` itself is **not** edited and is not an owned path. No package, no binding, no
 third-party service, no dependency on an unlanded row.
 
@@ -613,31 +688,43 @@ third-party service, no dependency on an unlanded row.
 
 ### Stage id
 
-`03-S2` · Wave 2 · effort **L**. The largest stage in the first half of this plan, and the one that
-adds this file's only new table.
+`03-S2` · Wave 2 · effort **XL**. The largest stage in this plan, and the one that adds its two new
+tables.
+
+**It carries two concepts, and that is a deliberate exception argued rather than assumed.**
+`docs/SPEC.md` §8 asks for one concept per owner, and the station chain and the airport catalogue are
+two. They are joined here because the catalogue exists for exactly one consumer — the chain editor's
+endpoint type-ahead, which this stage owns — and because splitting it out would mean a new stage id
+and a new row in the wave table of `docs/plans/README.md`, a file this plan does not own. A reader who
+prefers the split can lift the three catalogue paths and the `airports` table into a wave-1 stage of
+their own without touching anything else here: the catalogue has no dependency on this plan, only a
+consumer in it.
 
 ### Reference rows
 
-- `BKG-07` absent → **partial**. What closes here: the station chain, its per-leg detail, and
-  timezone-aware times. What does not, with the reason and the decision it waits on: the **airport
-  reference dataset**, deferred to the provider decision recorded in `11-boundaries-and-blockers.md`,
-  `11-S3`, which already lists this row by id and by wave in its own table. This is the one row in
-  this plan that does not reach **done**, and the residue is sized below rather than left as an
-  unexplained "partial → partial".
+- `BKG-07` absent → **done**. The station chain, its per-leg detail, timezone-aware times, and the
+  airport reference dataset behind the endpoint type-ahead.
+
+**The residue this row used to carry is gone, and it was never a provider decision.** An earlier draft
+stopped this row at `partial` and deferred the airport dataset to `11-S3`'s register of open
+commercial decisions. ADR 0010 records why that filing was wrong: the dataset is **public domain**,
+there is no licence to negotiate, no tier to buy and no runtime call to make. It is a build-time
+artefact in the idiom `scripts/build-country-outlines.mjs` already establishes in this repository —
+a pinned public source, a deterministic build, a committed artefact and a `--check` mode that fails
+when the artefact drifts from the source. What was filed as a cost decision was a build step.
 
 Sourced from `wiki: Transport-Flights-Trains-Cars` for the behaviour that a long-distance rail
-journey is a chain of stations rather than a pair, that the segment between two consecutive stations
+journey is a chain of stations rather than a pair, that the leg between two consecutive stations
 carries its own service number, platform, seat and times, and that a journey recorded before the
 chain existed must keep reading correctly; and for the behaviour that a departure time is understood
 against the clock at the place it departs from.
 
-**What "partial" means precisely here, so nobody has to guess.** Shipped: N stations, N−1 segments,
-per-segment service number / platform / seat / day / time, an explicit zone per endpoint chosen from
-the platform's own list, and a local-clock label beside every time input. Not shipped: type-ahead
-over a dataset of airports and stations that would fill a name, a city, a country and a zone from a
-three-letter code. Until that decision is taken, a code is a code the traveller types and the zone is
-one they pick — which is honest, and which is a strictly smaller surface than a picker wired to a
-provider we have not chosen.
+**What ships, so nobody has to guess.** N stations, N−1 legs, per-leg service number / platform /
+seat / day / time, an explicit zone per endpoint, a local-clock label beside every time input, and the
+endpoint type-ahead that fills a name, a city, a country and a zone from a three-letter code. A
+traveller may still type a code the catalogue does not know and pick the zone themselves; the
+type-ahead is a shortcut over free text, never a gate in front of it, because an airport that opened
+after our last build must not be an airport a person cannot record.
 
 Rows unblocked: `BKG-10` (`03-S5`, wave 4).
 
@@ -647,17 +734,28 @@ Rows unblocked: `BKG-10` (`03-S5`, wave 4).
   they belong to; wave 2, and `03-S1` holds this file in wave 1, so the two never run together.
 - `src/server/fns/transports.ts` — edit. One writer for the whole chain, and the desk loader carries
   it.
-- `src/components/modules/transports/chain-editor.tsx` — new. The station chain and its segment rows.
+- `src/components/modules/transports/chain-editor.tsx` — new. The station chain and its leg rows.
 - `src/components/modules/transports/leg-dialog.tsx` — edit. Mounts the chain editor for the two modes
   that use it.
 - `src/components/modules/transports/leg-form.ts` — edit. The chain's draft shape and its validation.
-- `src/components/modules/transports/legs-timeline.tsx` — edit. A chained leg reads as a chain on the
+- `src/components/modules/transports/transports-timeline.tsx` — edit. A chained transport reads as a chain on the
   card.
-- `src/components/modules/transports/types.ts` — edit. `LegData` gains `segments`.
+- `src/components/modules/transports/types.ts` — edit. `TransportData` gains `legs`.
 - `src/components/modules/transports/index.ts` — edit.
 - `src/components/modules/transports/__tests__/chain.test.ts` — new. The chain invariant, on its own.
 - `src/lib/timezones.ts` — new. The zone list and the local-clock label.
 - `src/lib/__tests__/timezones.test.ts` — new.
+- `scripts/build-airports.mjs` — new. The build-time artefact, in the idiom
+  `scripts/build-country-outlines.mjs` already establishes: a pinned public-domain source, a
+  deterministic cut, a committed artefact and a `--check` mode that fails when the two drift. It is
+  not run at request time and it is not run at deploy time; it is run when the dataset is refreshed,
+  and its output is reviewed like any other change.
+- `src/server/catalog/airports.ts` — new. The prefix read over the catalogue table. It lives in
+  `src/server/catalog` and not in `src/server/repos` because an airport belongs to no tenant, which is
+  the single stated exception to the tenant-scoped repository rule in `CLAUDE.md` and `docs/SPEC.md`
+  §6 — and stating which exception is being used is the price of using it.
+- `src/server/catalog/__tests__/airports.test.ts` — new. The prefix query, the cap, and the case that
+  matters most: a code the catalogue does not carry resolves to nothing and blocks no write.
 - `src/routes/_app/-server/trip.ts` — edit. Deletes `loadTripTransports` (`:354`), which `03-S1`
   orphaned, and `loadTripBookings` (`:408`), which was already unreachable at HEAD, together with the
   two payload interfaces that exist only to type them. Three sibling stages share this file, all in
@@ -678,7 +776,7 @@ closing clause absorbs wave-1 filers only and which has already closed by the ti
 The requirement is filed under this heading, which is the ritual `00-foundations.md` prescribes, and
 it is restated in this plan's shared-paths table with its supplier named.
 
-`transport_legs` — the segments of one transport record, ordered.
+`transport_legs` — the legs of one transport record, ordered.
 
 | Column                               | Type                         | Notes                                                    |
 | ------------------------------------ | ---------------------------- | -------------------------------------------------------- |
@@ -709,25 +807,59 @@ Indexes, **`organization_id` leading on the composite one**, as every other tabl
 `transport_legs_arrival_day_idx (arrival_day_id)`.
 
 Constraints: `nonNegativeCheck('transport_legs_position_chk', t.position)`, and
-`latLngChecks` for each coordinate pair — the helper at `src/server/db/schema.ts:110` that every other
+`latLngChecks` for each coordinate pair — the helper in `src/server/db/schema.ts` that every other
 geocoded table already uses.
 
-**No enum column, so no `enumCheck`.** The mode is the parent record's; a segment does not have one.
+**No enum column, so no `enumCheck`.** The mode is the parent record's; a leg does not have one.
 
 **No money column either, and that is a decision rather than an omission.** A ticket is priced once,
-on the record, not once per segment: splitting a fare across four legs would invent four numbers
+on the record, not once per leg: splitting a fare across four legs would invent four numbers
 nobody was charged. The price stays on `transports.price_minor` — an **integer count of minor units**
-beside a `text(3)` ISO-4217 `currency` — and this table carries neither. Should a per-segment fare
+beside a `text(3)` ISO-4217 `currency` — and this table carries neither. Should a per-leg fare
 ever be wanted it arrives as one more additive column in that same convention, never as a float.
 
 **Migration and backfill.** The next ordinal in the `drizzle/` series, generated by `pnpm db:generate`.
 It **backfills nothing, deliberately**, and that is the whole of the compatibility answer: a transport
-with zero rows in this table is read as a one-segment chain whose endpoints are the record's own
+with zero rows in this table is read as a one-leg chain whose endpoints are the record's own
 `departure_*` and `arrival_*` columns. Every leg written before this stage therefore keeps rendering
 exactly as it does today with no data migration, and a rollback to the previous Worker reads those
 same columns and ignores a table it does not know. No column is dropped, renamed or narrowed, and the
 record's flat endpoint columns keep being written for the first and last station of a chain so that a
-reader which knows nothing about segments still sees where the journey starts and ends.
+reader which knows nothing about legs still sees where the journey starts and ends.
+
+**A second additive table, filed onto the same wave-1 schema stage: `airports`.** It is the one table
+in this plan that belongs to **no tenant**, and so the one that carries no `organization_id`. That is
+the whole reason its reads live in `src/server/catalog` rather than `src/server/repos`: the
+tenant-scoped base repository starts every statement from
+`eq(table.organizationId, scope.ctx.organizationId)`, and a table with no such column cannot be read
+through it. Naming the exception is required by `docs/SPEC.md` §6, and this is the naming.
+
+| Column         | Type               | Notes                                                           |
+| -------------- | ------------------ | --------------------------------------------------------------- |
+| `iata`         | `text(3)` PK       | The code a traveller types. Upper case, exactly three.          |
+| `icao`         | `text(4)`          | Nullable; not every entry has one.                              |
+| `name`         | `text NOT NULL`    | The airport's own name.                                         |
+| `city`         | `text`             | Nullable in the source, so nullable here.                       |
+| `country_code` | `text(2) NOT NULL` | ISO-3166-1 alpha-2, the same shape `places.country_code` uses.  |
+| `lat`, `lng`   | `real NOT NULL`    | Both required: an airport without a position is not usable.     |
+| `timezone`     | `text NOT NULL`    | IANA name, which is the field the chain editor is really after. |
+
+One index and it is the only access path: `airports_name_idx (name)`, alongside the primary key on
+`iata`. The type-ahead matches a code exactly or a name by prefix, caps the result at ten rows and
+orders by name, so the query is answerable from an index and never from a scan.
+
+**Where the rows come from, and why the answer is short.** ADR 0010 records it: OurAirports, which
+places its data in the **public domain**, cut at build time by `scripts/build-airports.mjs` into the
+migration that seeds this table. There is no runtime provider, no key, no quota and no attribution
+obligation, which is why this stage names none. The source is pinned by revision in the script, the
+same way `scripts/build-country-outlines.mjs` pins its own, so two builds of one revision produce
+byte-identical output and a drift is a failing `--check` rather than a silent difference.
+
+**Refreshing it is a change like any other.** A new airport does not reach a tenant until someone runs
+the script and lands the migration, and that is acceptable precisely because the type-ahead is a
+shortcut over free text rather than a gate in front of it. The alternative — fetching a live dataset
+at request time — would put a third-party dependency in the path of typing a station name, which is
+the shape this plan set refuses everywhere else.
 
 ### Server (repo, server function, Zod)
 
@@ -737,42 +869,67 @@ it hangs off, rather than in a new module: `src/server/repos/index.ts` maps one 
 homes for no gain. A `transportLegsRepository = createTenantRepository(transportLegs, 'transport leg')`
 is added, and:
 
-- `listTransportSegments(scope, transportId)` — ordered by `position` then `id`.
-- `listTripSegments(scope, tripId)` — every segment of the trip, for the desk and for `03-S5`.
-- `replaceTransportChain(scope, transportId, segments)` — the only writer. It resolves the parent with
+- `listTransportLegs(scope, transportId)` — ordered by `position` then `id`.
+- `listTripLegs(scope, tripId)` — every leg of the trip, for the desk and for `03-S5`.
+- `replaceTransportChain(scope, transportId, legs)` — the only writer. It resolves the parent with
   `transportsRepository.requireById`, resolves every referenced day with `requireTripDay` against the
-  parent's own trip, deletes the record's existing segments and inserts the new ones with `position`
+  parent's own trip, deletes the record's existing legs and inserts the new ones with `position`
   assigned from array index, **in one `scope.db.batch()`**. `db.batch()` on D1 is a real transaction —
   statements run sequentially and a failure rolls the whole sequence back — which is the property a
   chain needs, because a half-replaced chain is a journey with two station threes.
-- The parent's flat `departure_*` / `arrival_*` columns are rewritten from the first and last segment
+- The parent's flat `departure_*` / `arrival_*` columns are rewritten from the first and last leg
   in the same batch, so the two representations cannot disagree.
 
 Every statement is `tenantFilter()`-scoped on both sides of the delete-and-insert, and
 `organization_id` is stamped by the repository rather than accepted from the caller.
 
 **The invariant, enforced in the repository and not only in the form.** A chain is either empty or has
-at least one segment; consecutive segments must agree at the join, so segment _i_'s arrival endpoint
-is written from segment _i+1_'s departure endpoint rather than accepted twice; and a chain is capped
-at 12 segments, which is a bound on the write rather than a product opinion — it keeps the mirrored
-patch inside the 32 KiB frame `src/server/do/protocol.ts` fixes.
+at least one leg; consecutive legs must agree at the join, so leg _i_'s arrival endpoint
+is written from leg _i+1_'s departure endpoint rather than accepted twice; and a chain is capped
+at 12 legs, which is a bound on the write rather than a product opinion.
+
+**And the reason for that bound is not the one an earlier draft gave.** It said the cap keeps the
+mirrored patch inside the 32 KiB frame `src/server/do/protocol.ts` fixes. It does not, because the
+patch this stage sends carries the leg count and the two outer endpoints rather than the chain — see
+**Realtime** below — so its size does not grow with the chain and no chain length could breach that
+frame. The cap survives on its own footing: it is the `.max(12)` in the validator, and it exists so a
+malformed or hostile payload cannot ask the repository to delete and re-insert an unbounded number of
+rows inside one `db.batch()`. Twelve is generous for a journey a person actually takes, and a bound
+on a write is a bound whether or not anything downstream needed it.
 
 **Server function — `src/server/fns/transports.ts`.**
 
 - `saveLegChainFn` — `createServerFn({ method: 'POST' })`. Validator: `z.object({ tripId, transportId,
-stations: z.array(stationSchema).min(2).max(13), segments: z.array(segmentSchema).max(12) })`, where
+stations: z.array(stationSchema).min(2).max(13), legs: z.array(legSchema).max(12) })`, where
   `stationSchema` carries a name, an optional code bounded to 8 characters, an optional coordinate pair
   bounded to WGS-84 and an optional zone validated with a refinement that asks `Intl` whether it
-  accepts the name. A `.superRefine` enforces `segments.length === stations.length - 1`, so a chain
+  accepts the name. A `.superRefine` enforces `legs.length === stations.length - 1`, so a chain
   that does not describe a journey is refused at the boundary and never reaches the repository.
-- `loadTransportDeskFn` — widened to carry each leg's segments.
+- `loadTransportDeskFn` — widened to carry each leg's legs.
 
-**Authorisation.** `appScope()` then `requireTrip(scope, data.tripId)`, then the repository re-resolves
-the parent transport inside the same scope. A well-formed transport id from the client is not an
-authorised transport id, and the chain writer never trusts the one it was handed.
+**Authorisation, and the guard `03-S1` could not reach.** `appScope()` then
+`requireTrip(scope, data.tripId)`, then the repository re-resolves the parent transport inside the
+same scope. A well-formed transport id from the client is not an authorised transport id, and the
+chain writer never trusts the one it was handed.
+
+**This stage also closes the role gap `03-S1` named one wave ago.** `assertTripRole(scope, tripId,
+['owner', 'editor'])` — minted by `01-S1` (`01-trips-core.md`, wave 1), which is closed by the time
+this stage opens — is called **inside `src/server/repos/transports.ts`**, on every writer in it, this
+stage's chain writer included. In the repository and not in the handler, for the reason `01-S1` gives
+when it argues the guard's placement: a rule that lives in the handler holds for the handlers that
+exist today, and a rule that lives in the repository holds for the queue consumer and for any route
+added later as well. A `viewer` on a trip can write a transport at HEAD; after this stage they cannot,
+and the Durable Object's refusal at `src/server/do/trip-room.ts:358` stops being the only thing
+standing in their way.
+
+The catalogue read is the one call in this stage that takes **no** role and no trip: an airport is a
+public fact, `src/server/catalog/airports.ts` reads a table with no `organization_id`, and there is
+nothing there to scope. It still requires a session, because an unauthenticated type-ahead over any
+dataset is an open endpoint someone else can bill us for — the ceiling on it is stated under
+**Quota**.
 
 **Nothing is enqueued and nothing is slow.** The mirror is one `route` upsert — the kind the four
-writers in `src/server/fns/transports.ts` already patch — carrying the segment count and the two
+writers in `src/server/fns/transports.ts` already patch — carrying the leg count and the two
 outer endpoints, not the whole chain, because a patch is a notification here and D1 is the record.
 
 ### UI (route, components)
@@ -788,23 +945,23 @@ grouped by region needs, so no second implementation of a filtered listbox is wr
 
 **The editor, described as behaviour.**
 
-- A vertical chain: station, segment, station, segment, station. The stations are the rail; the
-  segments hang between them, which is the same visual grammar
+- A vertical chain: station, leg, station, leg, station. The stations are the rail; the
+  legs hang between them, which is the same visual grammar
   `src/components/modules/book/bookings-timeline.tsx` already uses for dates and which makes the two
   screens read as one product.
-- **Add stop** inserts a station between two existing ones and splits the segment it landed on,
+- **Add stop** inserts a station between two existing ones and splits the leg it landed on,
   carrying the service number and seat down to the second half rather than blanking both — the
   traveller is adding a change of train, not retyping their ticket.
-- **Remove stop** joins the two segments either side and states what it merged, with an undo in the
+- **Remove stop** joins the two legs either side and states what it merged, with an undo in the
   toast for the length of the toast.
-- Each segment row holds service number, platform, seat, a day select and a time input for each end.
+- Each leg row holds service number, platform, seat, a day select and a time input for each end.
 - **The zone is beside the time it governs**, not in a settings panel: each station carries a zone
-  combobox, and the segment's time inputs render the resolved local-clock label — `14:05 · Asia/Tokyo
-(UTC+9)` — under the field. When the two ends of a segment sit in different zones, the segment
+  combobox, and the leg's time inputs render the resolved local-clock label — `14:05 · Asia/Tokyo
+(UTC+9)` — under the field. When the two ends of a leg sit in different zones, the leg
   shows the elapsed duration as well as both wall clocks, because that is the number that stops being
   obvious the moment a journey crosses a boundary.
-- On a **360px** viewport the chain is a single column with the segment fields stacked in a disclosure
-  that opens on the segment being edited; the rail stays, because losing it loses the one thing that
+- On a **360px** viewport the chain is a single column with the leg fields stacked in a disclosure
+  that opens on the leg being edited; the rail stays, because losing it loses the one thing that
   makes a chain legible. This is a designed narrow layout, not the desktop grid at a smaller width.
 
 **The zone list — `src/lib/timezones.ts`, and why it is not a duplicate.** `src/lib/time.ts` already
@@ -850,23 +1007,23 @@ mount and unmount with no transition at all. Nothing exceeds 260ms and nothing i
 
 ### Quota
 
-**No countable row.** A segment is a child of a transport, which is a child of a trip; `USAGE_METRICS`
-has no metric for either, and the sold ceiling is `trips`. The 12-segment cap is a frame-size bound,
+**No countable row.** A leg is a child of a transport, which is a child of a trip; `USAGE_METRICS`
+has no metric for either, and the sold ceiling is `trips`. The 12-leg cap is a frame-size bound,
 not a plan entitlement, and it is enforced in the repository rather than in the catalogue. Nothing is
 added to `resolveLimits()` or `PLAN_QUOTAS`, and
 `src/server/billing/__tests__/limits.test.ts` gains no case.
 
 ### Tenant isolation test
 
-Appended as one `describe` block. Covered: `listTransportSegments`, `listTripSegments`,
+Appended as one `describe` block. Covered: `listTransportLegs`, `listTripLegs`,
 `replaceTransportChain`.
 
-The cases: A cannot list B's segments by transport id or by trip id; A cannot replace the chain of B's
-transport; A cannot write a segment whose `departure_day_id` or `arrival_day_id` is one of B's days,
+The cases: A cannot list B's legs by transport id or by trip id; A cannot replace the chain of B's
+transport; A cannot write a leg whose `departure_day_id` or `arrival_day_id` is one of B's days,
 even when the parent transport is A's own — that one is the parenting case, and it is a
 `NotFoundError` from `requireTripDay`, not a silently dropped reference. Because `replaceTransportChain`
 deletes before it inserts, the block also asserts the **destructive** direction explicitly: a
-cross-tenant call must delete nothing, so B's segment rows are counted before and after and must be
+cross-tenant call must delete nothing, so B's leg rows are counted before and after and must be
 identical.
 
 ### Verification
@@ -876,8 +1033,8 @@ identical.
 **Unit tests.**
 
 - `src/components/modules/transports/__tests__/chain.test.ts` — N stations produce exactly N−1
-  segments after an insert, after a removal and after both; inserting carries the service number to
-  the second half and leaves the first intact; a one-segment chain built from a record with no rows
+  legs after an insert, after a removal and after both; inserting carries the service number to
+  the second half and leaves the first intact; a one-leg chain built from a record with no rows
   reproduces that record's flat endpoints exactly, which is the compatibility claim above turned into
   an assertion.
 - `src/lib/__tests__/timezones.test.ts` — every enumerated zone is accepted by `resolveTimeZone`; the
@@ -929,7 +1086,7 @@ Per surface:
   row by id, by owning plan and by wave, and puts it in the same family as the geocoding, place-search
   and routing decisions: "adjacent decisions of the same kind, taken with it or immediately after it".
   Disposition: **defer**. What is deferred is precisely the lookup — code to name, city, country and
-  zone — and nothing else; the editor, the chain, the per-segment fields and the zone selection all
+  zone — and nothing else; the editor, the chain, the per-leg fields and the zone selection all
   ship without it. What the follow-on work is, so it can be sized when the decision is taken: one
   server function over a cached dataset, one `Combobox` swap in `chain-editor.tsx`, and a fill of four
   fields from one selection. No package is required for any of it, so this is not a
@@ -940,172 +1097,284 @@ Per surface:
 
 ---
 
-## Stage 03-S3 — Automated transit search stops at the provider decision
+## Stage 03-S3 — A connection the traveller did not have to look up
 
 ### Stage id
 
-`03-S3` · Wave 2 · effort **S**. A record, not a build. Its effort is the cost of writing it down;
-the capability behind it is `XL` and is not scheduled.
+`03-S3` · Wave 3 · effort **L**. The stage that stopped being a record.
 
 ### Reference rows
 
-- `BKG-08` absent → **absent**. **BLOCKED.** This stage closes no row and ships no code. It exists so
-  that the largest unbuilt thing in this area is visible, argued and costed in the plan set rather
-  than rediscovered by whoever opens the transport dialog next and finds half a search box.
+- `BKG-08` absent → **done**.
 
-Sourced from `wiki: Transport-Flights-Trains-Cars` for the behaviour: a second mode of the add-transport
-dialog that searches public-transport connections between two stops on a given date, filters them by
-mode of transport, ranks them by a stated preference, expands one into its stop-by-stop detail, and
+Sourced from `wiki: Transport-Flights-Trains-Cars` for the behaviour: a second mode of the
+add-transport dialog that searches public-transport connections between two stops on a given date,
+filters them by mode, ranks them by a stated preference, expands one into its stop-by-stop detail, and
 saves the chosen connection as a first-class record that can later have its route re-searched and
 replaced in place while keeping its identity and its booking fields.
 
-**Why it is blocked, in one sentence with its citation.** `11-boundaries-and-blockers.md`, `11-S3`
-lists `BKG-08` in its table of fifteen rows waiting on a decision, against "public-transit routing",
-and states the rule this stage obeys: "the plan that needs a provider stops at the decision" — it
-describes the capability, the call pattern, the cache and the attribution, and puts the choice to the
-user, without naming a provider, assuming a free tier, writing a client for an unnamed service, or
-shipping a degraded version to avoid asking.
+**Why this stage was blocked, and what unblocked it.** An earlier draft of this file made `03-S3` a
+record rather than a build: it owned no path, shipped no surface, and existed so the largest unbuilt
+thing in the area would be visible instead of half-rediscovered. Its blocker was a commercial
+decision, and the rule it obeyed — "the plan that needs a provider stops at the decision" — was
+right. The decision has since been taken. **ADR 0011** records it: public-transit routing is bought
+from HERE, behind our own proxy, and the two terms that decide the real cost are settled there rather
+than here.
 
-**No stage is scheduled behind it.** Re-measurable at any HEAD: `grep -rn "BKG-08" docs/plans/`
-names it only here, in the `README.md` wave table and in the `11-boundaries-and-blockers.md`
-decision record. Nothing in this plan, and nothing in any sibling plan, waits on it.
+The reference product answers the same need with a community instance that asks for no key. That
+route is closed to us in its own operator's words — commercial use is not allowed, and eligibility
+requires the calling project to be open-source and non-commercial — and ADR 0011 quotes it, because a
+free endpoint whose terms exclude us is not a cheaper option, it is not an option.
+
+**Why wave 3, one wave later than the row's floor.** A found connection is saved as a station chain,
+and the station chain is `03-S2`'s, in wave 2. Two stages in one wave may not depend on each other,
+so this stage takes the first wave in which the thing it writes into exists. The edge is materialised
+in this file's edge table as `BKG-08 → BKG-07`.
+
+Rows unblocked: none. Nothing in this plan or any sibling names `BKG-08` as a supplier, which was true
+when it was blocked and is still true now that it is not.
 
 ### Owned paths
 
-**None.** This stage creates and edits no repository file. Its output is the record below, inside the
-document `03-S1` and its siblings already own. It claims no spec file and records no baseline, because
-there is nothing to photograph.
+- `src/server/transit/here.ts` — new. The provider client and nothing else: it builds one request,
+  parses one response into our own shape, and knows nothing about trips, tenants or D1. A module with
+  one provider's name in it is a module that can be replaced by another provider's without a search
+  through the codebase, which is the only reason the file is named for the vendor.
+- `src/server/transit/search.ts` — new. The proxy proper: the cache read, the meter, the client call,
+  the cache write. Every caller goes through this and none reaches `here.ts` directly.
+- `src/server/transit/meter.ts` — new. The per-tenant ceiling on outbound calls, minted here because
+  this is the first stage in the plan set that needs one and `03-S7` needs the same one two waves
+  later — see **Quota**, which explains why it cannot be `assertQuota`.
+- `src/server/transit/__tests__/search.test.ts` — new. The cache key, the cache hit, the meter's
+  refusal, and a provider error surfacing as a typed failure rather than a thrown fetch.
+- `src/server/fns/transports.ts` — edit. Two server functions: the search and the save. Wave 3, and
+  this plan's other claims on the file are `03-S1` (wave 1) and `03-S2` (wave 2), so no two run
+  together.
+- `src/server/repos/transports.ts` — edit. One function: saving a searched connection as a transport
+  with its legs, in one batch. Wave 3; `03-S1` holds this file in wave 1 and `03-S2` in wave 2.
+- `src/components/modules/transports/connection-search.tsx` — new. The second mode of the dialog: the
+  two stops, the date, the mode filter, the ranked results and the one that expands.
+- `src/components/modules/transports/leg-dialog.tsx` — edit. Mounts the second mode. Wave 3;
+  `03-S1` holds it in wave 1 and `03-S2` in wave 2.
+- `src/components/modules/transports/index.ts` — edit.
+- `src/server/repos/__tests__/tenant-isolation.test.ts` — append.
+- `e2e/reservations-and-transport.visual.spec.ts` — append. This stage's own `describe` block.
+- `e2e/__screenshots__/reservations-and-transport.visual.spec.ts/` — append. Its own baselines only.
+
+**One binding, and it is a secret rather than a `wrangler.jsonc` entry.** The HERE credential is set
+with `wrangler secret`, so this stage adds no binding to `wrangler.jsonc` and does not claim that
+shared file. A per-tenant provider credential is not offered and would not be accepted: that is the
+exact shape `11-S1` refused for a neighbouring row, and buying the capability centrally is what makes
+it refusable here.
 
 ### Data and migration
 
-**No schema change, and one warning for whoever picks this up after the decision.** A saved connection
-is a stored itinerary — an ordered set of segments, each with a line, a colour, a set of intermediate
-stops and two wall-clock times — and what a provider **licenses us to retain** differs from provider
-to provider and is frequently the binding term. So the sequence is decision, then columns, then
-feature. A schema shaped around a provider we have not chosen is a migration we would have to write
-twice, and `ARCHITECTURE.md` §9's additive rule makes the second one expensive.
+**No schema change at all, and that is the point of waiting for `03-S2`.** A saved connection is a
+`transports` row whose mode is already in `TRANSPORT_MODES` — `transit`, `train`, `bus`, `tram`,
+`metro` and `ferry` are all there — with its stop-by-stop detail in the `transport_legs` rows `03-S2`
+created. The row is not blocked on a data model and never was; it was blocked on where the itinerary
+came from.
 
-One convention it must not break when it does arrive: a saved connection that carries a fare stores it
-as an **integer count of minor units** beside a `text(3)` ISO-4217 currency, like every other priced
-row in this plan, and never as a float.
+**A fare, when the provider returns one, is an integer count of minor units beside a `text(3)`
+ISO-4217 currency**, on `transports.price_minor` and `transports.currency`, like every other priced
+row in this plan and never as a float. When the provider returns no fare, nothing is written: a
+guessed price on a money column is worse than an empty one, which is the rule `03-S4` states for the
+ledger and this stage does not weaken.
 
-Two things are worth recording now because they are properties of our own model, not of any provider:
-a saved connection would be a `transports` row with a mode already in `TRANSPORT_MODES` (`transit`,
-`train`, `bus`, `tram`, `metro`, `ferry` are all there), and its stop-by-stop detail is the shape
-`transport_legs` (`03-S2`) already stores. The row is not blocked on a data model. It is blocked on
-where the itinerary comes from.
+**The cache is not a table.** It is `KV`, already bound, keyed on the normalised query — origin stop,
+destination stop, date, mode filter — and on nothing else. It holds no trip id, no day id and no
+member id, so it is **shared across tenants by construction rather than by permission**: that two
+stops connect on a date is a public fact about a timetable, not a fact about anybody's trip. The
+isolation consequence is stated under **Tenant isolation test**, because a cache key is exactly where
+that rule is broken by accident.
 
 ### Server (repo, server function, Zod)
 
-**None.** No repository function under `src/server/repos`, no server function, no Zod schema, no SQL,
-and therefore no `organization_id` scoping to state — a stage that writes no row has nothing to scope.
-Three contracts for whoever builds this once a provider exists, all of them restatements of rules that
-already bind this repository:
+**Repository — `src/server/repos/transports.ts`.** One function, and it writes through the machinery
+`03-S2` already built rather than beside it:
 
-1. **An outbound call is never made from the request path when a cache can answer it.**
-   `ARCHITECTURE.md` §4 fixes the caching layer; a search is a slow, metered, failure-prone call and
-   belongs behind it.
-2. **A provider credential is a secret** set with `wrangler secret`, never a checked-in variable and
-   never a value a tenant supplies. A per-tenant third-party credential is the shape that made a
-   neighbouring row out-of-scope in `11-S1`, and it does not become acceptable here.
-3. **A search box that queries per keystroke is a cost decision**, not a UI choice, and is planned
-   with a debounce, a minimum query length and a cache — after the provider is chosen, because the
-   provider's own policy may forbid the pattern outright.
+- `saveSearchedConnection(scope, tripId, connection)` — creates the `transports` row and its
+  `transport_legs` in one `scope.db.batch()`, by calling `03-S2`'s `replaceTransportChain` for the
+  legs rather than inserting them itself. Re-searching an existing connection replaces the chain on
+  the **same** `transports` row, so the record keeps its id, its booking fields and its day
+  assignment — which is the behaviour the row asks for, and it falls out of reusing the chain writer
+  instead of writing a second one.
+
+`assertTripRole(scope, tripId, ['owner', 'editor'])` runs inside the repository, as `03-S2`
+established for this file one wave earlier. This stage adds no second guard and no exception to the
+first: a search is a read, and a save is a write like any other.
+
+**Server functions — `src/server/fns/transports.ts`.**
+
+- `searchConnectionsFn` — `createServerFn({ method: 'POST' })`. Validator:
+  `z.object({ tripId, from: stopSchema, to: stopSchema, date: dateSchema, modes: z.array(z.enum(TRANSPORT_MODES)).max(12).optional() })`,
+  with `stopSchema` a bounded trimmed string or a coordinate pair. `appScope()`, then `requireTrip` —
+  a search is metered and billed, so it is not an endpoint anyone with a URL may call. Then the meter,
+  then `search.ts`. **It writes nothing.** A search that is never saved leaves no row, which is why
+  this function is a `POST` that reads: the method is about the body it carries, not about a write.
+- `saveConnectionFn` — `createServerFn({ method: 'POST' })`. Validator: the trip, the optional
+  existing transport id for a re-search, and the chosen connection as its own bounded shape —
+  `z.array(legSchema).min(1).max(12)`, the same cap and the same reason `03-S2` gives for it. It does
+  **not** trust the search result the client hands back: the connection is re-validated in full, and
+  every day id in it is resolved with `requireTripDay` against the trip, because a payload that came
+  from us a minute ago is still a payload from the client.
+
+**Zod, in v4 idiom** throughout, `z.object` with explicit bounds on every string, `z.enum` for the
+modes, and the `error` parameter wherever a person reads the message.
+
+**Three contracts on the outbound call, all of them restatements of rules that already bind this
+repository.**
+
+1. **The cache answers before the provider does.** `ARCHITECTURE.md` §4 fixes the caching layer, and a
+   search is slow, metered and failure-prone. `search.ts` reads `KV` first and calls `here.ts` only on
+   a miss.
+2. **The credential is a secret**, set with `wrangler secret`, never a checked-in variable and never a
+   value a tenant supplies.
+3. **The search does not fire per keystroke.** The two stop fields are free text with a submit; there
+   is no type-ahead here and this stage adds none. That is a cost decision rather than a UI one, and
+   the endpoint type-ahead a person does get is `03-S2`'s, which reads our own catalogue table and
+   costs nothing per call.
+
+**Failure is a value, not an exception.** A provider timeout, a 429 and a malformed response are all
+returned as a typed failure the dialog renders, because the one thing this surface must never do is
+turn a provider's bad afternoon into a stack trace in front of a traveller.
 
 ### UI (route, components)
 
-**None.** No route, no component, no dialog mode, no disabled control. The product must not grow a
-switch that promises a search and then explains that it cannot do one: a disabled affordance for an
-unavailable feature is worse than its absence, because it is a promise the reader can see.
+**Route.** None added or moved; `pnpm generate-routes` is not run and `src/routeTree.gen.ts` is not an
+owned path. The surface is a second mode inside the dialog `03-S1` and `03-S2` already own.
 
-The one design consequence worth recording before anyone designs around it: the reference behaviour
-makes the second mode appear only when the trip has real dates. That precondition is sound and should
-survive into whatever we build, because a connection search without a date is a search against
-today's timetable for a journey next spring.
+**The second mode appears only when the trip has real dates**, which is the reference behaviour and is
+kept for a reason of our own: a connection search without a date is a search against today's timetable
+for a journey next spring. On an undated trip the mode is absent rather than disabled — a disabled
+affordance for something the reader cannot make available is a promise they can see and cannot take.
 
-**No route file is added or moved, so `pnpm generate-routes` is not run and `src/routeTree.gen.ts` is
-not an owned path.** No token is needed from `src/styles/tokens.css` and none is filed.
+- **The search form.** Origin and destination, each the endpoint field `03-S2` built, so the catalogue
+  type-ahead is reused rather than rebuilt. A date, defaulted to the day the dialog was opened from.
+  A mode filter as the same multi-select chip row `03-S6` uses on the desk, showing only the transit
+  modes.
+- **The results.** A ranked list, each row carrying departure and arrival in the **local clock of the
+  stop it happens at** — `03-S2`'s rule, and the reason this stage did not need to invent one —
+  the duration, the number of changes and the fare when there is one. One row expands to its
+  stop-by-stop detail; only one is expanded at a time.
+- **_Empty._** A search that returns nothing says so in the words of the thing that failed: no
+  connection on that date, which is different from no service between those stops, and different
+  again from a provider we could not reach. Three sentences, three states, no shared "something went
+  wrong".
+- **_Loading._** A skeleton in the results area, on `--color-surface-2`, because an outbound call is
+  slow enough that a spinner over the whole dialog would hide the form the reader may want to correct.
+- **_Error._** The typed failure above, with a retry. A 429 from the provider and a refusal from our
+  own meter read differently and say so: one is "try again shortly", the other is "this workspace has
+  used its searches for the month", and telling a person to retry something that will refuse them
+  again is worse than telling them the truth.
+- **_Every control._** Rest, hover, focus-visible, active, disabled and loading on the submit, the
+  chips, the result rows and the expander.
 
-**The visual clauses, and why none of them is ticked below.** There is no list, so there is no empty
-state, no skeleton and no error surface to design on `--color-surface-2`; there is no interactive
-element, so there is no hover, focus-visible, active, disabled or loading state; there is nothing to
-render, so there is no light and dark parity to check and no layout to design at 360px, 1280px or
-2560px; and there is no motion, so `--ease-out-quint` and `prefers-reduced-motion: reduce` govern
-nothing here. Each is stated rather than omitted, because an omitted clause and a clause that does not
-apply look identical from outside and only one of them is honest.
+**Motion.** The result list fades in at `--duration-fast` on `--ease-out-quint`; the expander animates
+its disclosure and nothing else, because a list that reflows while a person is reading it is a list
+they lose their place in. Both collapse under `prefers-reduced-motion: reduce`.
+
+**Layout** is designed at 360px, 1280px and 2560px, in both themes. At 360px the result row stacks its
+times above its duration rather than shrinking the type.
+
+**No token is needed from `src/styles/tokens.css` and none is filed.** No component is added to
+`src/components/ui`.
 
 ### Quota
 
-**No countable row.** But the moment this is built, every search is a metered outbound call made on
-behalf of a tenant, and a metered call a noisy tenant can make in a loop is a cost inflicted on every
-other tenant. Its rate belongs in `resolveLimits()` (`src/server/billing/limits.ts`) with every other
-ceiling, not in a constant inside a feature module — the published number is the enforced number, and
-that applies to a provider call as much as to a row.
+**One ceiling, and it cannot be `assertQuota`.** The four-step quota procedure in `00-foundations.md`
+counts rows: step 3 calls `assertQuota(scope, metric, currentUsage)` with usage as a live `COUNT(*)`.
+A transit search creates no row on a miss and no row on a hit, so there is nothing to count, and a
+metric added to `PLAN_QUOTAS` whose usage is always zero would be a published number that enforces
+nothing — the exact drift that procedure exists to prevent.
+
+So the ceiling is a **counter**, not a count: `src/server/transit/meter.ts` keeps a per-organization,
+per-calendar-month tally in `KV` and refuses when the tally reaches the limit. The limit itself still
+comes from `resolveLimits()` in `src/server/billing/limits.ts`, with every other ceiling, because the
+published number must be the enforced number whether the thing being limited is a row or a call.
+
+**And the metric is filed, not edited in.** `README.md` puts quota metrics in wave 0 alongside schema
+and bindings, for the reason that governs both: a stage cannot sit in the same wave as the stage that
+supplies it. So this stage **files** `transit_searches_per_month` onto the per-wave quota stage of
+`00-foundations.md` — this stage is wave 3, so the supplier is the **wave-2** instance — together
+with its case in `src/server/billing/__tests__/limits.test.ts`. Neither file appears in this stage's
+**Owned paths**, and the meter reads the resolved limit rather than declaring one. In the terms of
+that file's own quota procedure: steps 1 and 4 are filed, step 2 does not apply, and step 3 is
+replaced by the meter — saying which steps were skipped and which were handed to someone else is the
+difference between an exception and an oversight.
+
+**The meter is minted here and used twice.** `03-S7` (wave 5) needs exactly the same thing for its
+extraction calls, and a second per-tenant counter written two waves later would be two
+implementations of one rule. This stage builds it general enough to take a metric name and no more
+general than that.
+
+**The cost this protects against is real and shared.** A metered outbound call a noisy tenant can make
+in a loop is a cost inflicted on every other tenant, and the cross-tenant cache makes that better
+rather than worse: one workspace's search for a common pair warms the answer for everybody, which is
+sound precisely because the answer is a public fact.
 
 ### Tenant isolation test
 
-**No case is added to `src/server/repos/__tests__/tenant-isolation.test.ts`**, because no repository
-function is added and no row is written. One isolation rule to carry into the build, stated now
-because it is the kind that is discovered late: a cached search result keyed only by
-its query — two stop names and a date — is a public fact and is correctly shared across tenants. A
-cache key that contains a trip id, a day id or a member id is tenant data and must be scoped like
-tenant data.
+**Two cases appended to `src/server/repos/__tests__/tenant-isolation.test.ts`**, in the
+`alpha.tenant.scope` / `beta.tenant.scope` idiom that file already uses:
+
+1. `saveSearchedConnection` under β's scope against α's trip id is a `NotFoundError`, and no
+   `transports` row and no `transport_legs` row is written.
+2. Re-searching an existing connection under β's scope against α's transport id is a `NotFoundError`,
+   and α's chain is byte-identical afterwards. This is the case that exists because a re-search
+   _replaces_ rows, so a missing scope check would not fail loudly — it would quietly rewrite another
+   tenant's journey.
+
+**And one case that belongs to the cache rather than the repository**, in
+`src/server/transit/__tests__/search.test.ts`: the key built for α's search and the key built for β's
+identical search are **the same string**. That is asserted rather than assumed, because the failure it
+guards against is the opposite of the usual one — here a key that accidentally carried a tenant id
+would not leak anything, it would silently multiply our provider bill by the number of workspaces.
 
 ### Verification
 
-**The command gate is unchanged by this stage and is still named, in this order:** `pnpm lint`,
-`pnpm typecheck`, `pnpm test`, `pnpm build`. All four must be as green after it as before it, which
-for a stage that writes no code means they must be untouched.
+**The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
-**No code runs, and there is no browser evidence** — no frame set at 360px, 1280px or 2560px, in
-either theme, because there is no surface to photograph. This stage is verified as a record, by the
-same checks `11-S1` uses on itself: the row id appears in the wave table in `docs/plans/README.md`
-against wave 2 of this plan, and the claim that nothing depends on it is re-derivable in one
-command:
+**Unit tests** cover the cache key, the cache hit path with the provider stubbed, the meter's refusal
+at the ceiling, and each of the three failure shapes. The provider client is never called for real in
+a test; `here.ts` exists as its own module partly so it can be replaced by a stub at the seam rather
+than intercepted at `fetch`.
 
-```sh
-grep -rn 'BKG-08' docs/plans/ | grep -v '^docs/plans/03-'
-```
+**Browser evidence.** `/trips/<seeded-trip>/transports`, twelve frames: the resting desk, the dialog's
+second mode empty, a ranked result list, one result expanded, the empty state and the meter refusal —
+each at 360px, 1280px and 2560px is more than twelve, so the set is the six states at 1280px in both
+themes. The result list is filled from a **recorded** provider response committed as a fixture, never
+from a live call: a baseline that depends on a timetable is a baseline that fails on a Tuesday.
 
-It must print lines from exactly two files and no third: the `README.md` wave-table row, and the
-`11-boundaries-and-blockers.md` decision-record rows (`11-S3`'s waiting table and its prose). If it
-ever prints an edge table or a "Rows unblocked" line naming `BKG-08` as a supplier, this stage is
-no longer safely parked and the plan that added the edge owns the consequence.
-
-**Console and layout shift** are not applicable: no surface is shipped. Stated rather than skipped, so
-the omission is a decision and not an oversight.
+**Console** must be silent, with `watchConsole(page, route)` attached before navigating, and there
+must be no layout shift after paint — the result list reserves its height from the skeleton.
 
 ### Definition of done
 
-The six items from `docs/SPEC.md` §7 apply, and five of them are satisfied vacuously because this
-stage ships no code:
+The six items from `docs/SPEC.md` §7, none of them vacuous this time:
 
-1. `pnpm build` succeeds — unchanged by this stage.
-2. `pnpm lint` and `pnpm typecheck` are clean — unchanged by this stage.
-3. New logic has tests; `pnpm test` passes — there is no new logic.
-4. The feature is visually verified in a real browser — **not applicable; no surface ships.**
-5. No TODOs, no placeholder copy, no `console.log`, no commented-out code left behind — including no
-   commented-out search box.
-6. You did not touch files outside your assigned ownership — this stage owns no path at all.
+1. `pnpm build` succeeds.
+2. `pnpm lint` and `pnpm typecheck` are clean.
+3. New logic has tests; `pnpm test` passes.
+4. The feature is visually verified in a real browser, against the fixture above.
+5. No TODOs, no placeholder copy, no `console.log`, no commented-out code.
+6. No file outside **Owned paths** is touched.
 
-The visual checklist is not ticked and must not be: there is nothing to tick it against, and a ticked
-box on an unbuilt surface is exactly the false claim this plan set exists to prevent.
+Every string a person reads is a key in the 23-locale catalogue and lands in all 23 in this change,
+per `docs/SPEC.md` §9 — including the three distinct failure sentences, which is where a stage under
+time pressure is most tempted to ship one English string and a `TODO`.
 
 ### Blockers
 
-**The whole stage is one.**
+**None.** The commercial decision this stage waited on is taken and recorded in ADR 0011, with the
+free tier, the price beyond it, the cache term and the attribution obligation all named there rather
+than assumed here. No package outside the pinned set is needed: the client is `fetch` and a Zod parse.
+No binding is missing from `wrangler.jsonc`; the credential is a secret, not a binding.
 
-- **A public-transit routing provider, with no provider chosen and no budget agreed.** Recorded in
-  `11-boundaries-and-blockers.md`, `11-S3`, under the first of its three open decisions. Disposition:
-  **defer**, until that decision is taken. Two constraints from that register bind whoever takes it,
-  and neither may be planned around: a tier whose terms exclude a commercial, subscription-funded
-  product is unusable to us at any traffic level, because we charge for subscriptions through Stripe;
-  and the terms that decide the real cost are what we may **cache and for how long**, and what
-  **attribution** must appear on screen — the second of which is a design constraint on a surface
-  nobody has designed.
-- No package outside the pinned set is implicated, and no binding is missing. This is not a
-  `docs/SPEC.md` §3 freeze problem. It is a commercial decision, and saying so plainly is the whole of
-  this stage's job.
+One thing is worth carrying forward rather than leaving implicit: the cross-tenant cache is legal
+because ADR 0011 checked the provider's terms for it, and the same question must be asked of any
+replacement provider before `here.ts` is swapped. A cache that is fine under one contract is a breach
+under another, and this file is the only place a future reader will think to look.
 
 ---
 
@@ -1113,7 +1382,9 @@ box on an unbuilt surface is exactly the false claim this plan set exists to pre
 
 ### Stage id
 
-`03-S4` · Wave 3 · effort **M**. The only wave-3 stage in this plan.
+`03-S4` · Wave 3 · effort **M**. One of the two wave-3 stages in this plan; `03-S3` is the other, and
+the only paths the two have in common are the tenant-isolation test and the e2e spec, which every
+stage here appends to rather than owns exclusively.
 
 ### Reference rows
 
@@ -1127,7 +1398,7 @@ trip's ledger without a second confirmation.
 **Agreement with the row, and the behaviour deferred by name.** The row is right that the write path
 is complete (`createBookingFn`, `updateBookingFn`, `setBookingStatusFn`, `deleteBookingFn`), that
 `src/components/modules/book/booking-form.ts` (487 lines) already carries a per-type field shape and
-its validation, and that `reservations.assignment_id` (`src/server/db/schema.ts:705-707`) exists with
+its validation, and that `reservations.assignment_id` (`src/server/db/schema.ts`) exists with
 no UI behind it. It is more finished than the row says: the column is **already** carried by
 `reservationFields` (`src/server/repos/reservations.ts:49`) and **already** guarded against the
 booking's own trip inside the caller's own tenant (`:204-213`), so the gap is the server function and
@@ -1207,7 +1478,7 @@ three writers below compilable the moment this stage opens.
 
 - `reservations.expense_id` — `text`, **nullable**, `REFERENCES expenses(id) ON DELETE SET NULL`, with
   `index('reservations_expense_idx').on(t.expenseId)`, declared beside the eight indexes the table
-  already carries (`src/server/db/schema.ts:728-736`). It is the back-link that makes the side effect
+  already carries (`reservations` in `src/server/db/schema.ts`). It is the back-link that makes the side effect
   idempotent: without it, editing a booking's price three times leaves three ledger lines and the
   trip's total is wrong in a way the reader cannot even see the cause of.
 - **`ON DELETE SET NULL` is load-bearing in this direction, and it removes code rather than adding
@@ -1340,9 +1611,24 @@ placeName, startTime }`, read through `getTripItinerary` — a function that alr
   `src/server/repos/itinerary.ts` and is already called by the planner, so this stage adds no
   repository function to that module and does not claim it. That matters twice over: `itinerary.ts` is
   claimed by `07-S9` in wave 3, this stage's own wave.
-- **The ledger side effect**, in `createBookingFn` and `updateBookingFn`, after the reservation write
-  succeeds and inside the same handler. `reservation.expenseId` is the idempotency key for every
-  branch, and it is read from the row that was just written rather than from the request:
+- **The ledger side effect**, minted here as one exported helper —
+  `syncReservationExpense(scope, reservation)` — and **not** written inline in two handlers. It lives
+  in this file, beside the writers that call it, and it is exported because three of its four callers
+  are in stages that have not started yet: `createBookingFn` and `updateBookingFn` here in wave 3,
+  `confirmBookingImportFn` in `03-S7` (wave 5) and `createStayFn` in `03-S8` (wave 6).
+
+  **This is the defect that made it a helper.** An earlier draft described the side effect as two
+  paragraphs of handler code, and both later stages then wrote their reservation by calling
+  `createReservation` directly — as the dev seeder already does at
+  `src/routes/api/dev/-seed/apply-trip.ts:335` — which is exactly how a booking imported from a
+  confirmation, or a hotel saved as a stay, would have landed on the desk with a price and left no
+  line in the trip's costs. Pushing the side effect down into the repository was considered and
+  rejected for that same seeder: `createReservation` has a caller that must **not** produce ledger
+  lines, so a repository that always produced them would be wrong for it. One helper, four named
+  callers, and a seeder that deliberately does not call it.
+
+  `reservation.expenseId` is the idempotency key for every branch, and it is read from the row that
+  was just written rather than from the request:
   - `priceMinor > 0` and `expenseId === null` → `createExpense(scope, { tripId, title, amountMinor:
 priceMinor, currency, spentOn, category })`, then `linkReservationExpense(scope, reservation.id,
 expense.id)`. Two writes, and the second is what makes the third save of the same booking an update
@@ -1363,15 +1649,24 @@ reservation.id, null)` and **nothing else**. The ledger line is not deleted: del
       line in yen, and turning that into the trip's accounting currency is `04-S5`'s subject and not
       this stage's.
     - `spentOn` — `dateSchema` and **required**. The chain is the booking's `start_date`, then the
-      linked day's `date` (`days.date`, `schema.ts:408`), then the trip's `start_date`. All three are
+      linked day's `date` (`days.date`), then the trip's `start_date`. All three are
       nullable, so when every one of them is null **no ledger line is written at all** and the dialog
       says why in the notice under the price: "Give this booking a date and its cost will be added to
       the trip's costs." A guessed date on a money row is worse than no row.
     - `category` — a total mapping over `RESERVATION_TYPES` landing inside `EXPENSE_CATEGORIES`
-      (`src/server/db/schema.ts:192`), which the column's `CHECK` constraint enforces anyway. Total,
+      (`src/server/db/schema.ts`), which the column's `CHECK` constraint enforces anyway. Total,
       so a type added later is a compile error rather than a silent `other`.
+
+      **It is a default and not a lock, and the plan says so because the word "total" reads like
+      one.** The reference product asks the reader to choose the category as they save. This stage
+      does not add that field, for a measured reason rather than a stylistic one: `updateExpense`
+      already accepts `category` (`src/server/repos/expenses.ts`), so the reader can recategorise the
+      line on the costs screen where the rest of their budget is. A second control for one value, on a
+      dialog that is already the longest in this plan, would be a second way to say the same thing —
+      and the mapping is right in the ordinary case, which is what a default is for.
   - **No arithmetic anywhere in the side effect.** `price_minor` is assigned to `amount_minor` as one
     integer to another, per the money rule stated under **Data and migration** above.
+
 - **The failure rule.** A ledger write that fails must not turn a saved booking into an error the
   reader will retry, producing two bookings. The reservation write is the transaction; the ledger
   write is attempted after it and, on failure, is logged and reported to the client as a
@@ -1388,6 +1683,21 @@ Three layers, and the last one is the only one that can see whether the id the c
 caller's to use. The two marker writers add no fourth layer and need none: one resolves through
 `requireUpdate` and the other through a `tenantFilter()`ed `updateWhere`, so both are inside the
 same scope.
+
+**And a fourth layer that is new here, in the repository rather than the handler.**
+`assertTripRole(scope, tripId, ['owner', 'editor'])` guards every writer in
+`src/server/repos/reservations.ts`, the same way `03-S2` guarded the transports repository one wave
+earlier and for the same reason: `requireTrip` proves membership and membership is not a role, so at
+HEAD a `viewer` on a trip can create, edit and delete bookings while the Durable Object refuses them
+the collaborative equivalent. `01-S1` (`01-trips-core.md`, wave 1) mints the guard; this stage, in
+wave 3, is the first claim on this file and therefore the only place it can be added.
+
+The two marker writers are the deliberate exception and it is worth stating why, because an
+exception discovered later reads as an oversight. `markReservationsImported` is called by the queue
+consumer `03-S7` builds, which acts on no member's behalf and has no role to assert;
+`clearReservationImported` is called from a booking save that has already passed the guard on the way
+in. Both stay inside `tenantFilter()`, so neither can reach another tenant's row — what they skip is
+the role check, not the scope.
 
 **Nothing is enqueued.** Both writes are single-row and fast; the room mirror is the existing
 `patch('reservation', …)` call, unchanged in shape.
@@ -1558,9 +1868,10 @@ and **no** change to `src/server/fns/costs.ts`. It does not need `createExpenseI
 `04-S3` to reverse the deferral it states in its own prose. Both schema requirements,
 `reservations.expense_id` and `reservations.imported_at`, are on a table this stage's own repository
 owns, and both are filed onto the wave-2 schema stage of `00-foundations.md` — the supplier this
-plan's shared-paths table names for a wave-3 filer. Verified with
-`node scripts/ultrabuild/check-plan-collisions.mjs 03`, whose output is pasted at the foot of this
-file: `src/server/repos/expenses.ts` appears under no stage of this plan, in any wave.
+plan's shared-paths table names for a wave-3 filer. Verified by reading every stage of this file:
+`src/server/repos/expenses.ts` appears under no stage of this plan, in any wave — re-measurable with
+`grep -n "repos/expenses" docs/plans/03-reservations-and-transport.md`, whose every hit is prose
+explaining that absence and none of which is an **Owned paths** bullet.
 
 No package outside the pinned set, no binding absent from `wrangler.jsonc`, no third-party service.
 The abbreviated-month defect of `12-verification-protocol.md` §7.2 is inherited by every stage that
@@ -1582,8 +1893,8 @@ third disagreement gives; its owned paths and `03-S6`'s, the other wave-4 stage,
 
 Sourced from `wiki: Transport-Flights-Trains-Cars` for the behaviours: a movement that belongs to a
 day appears in that day's sequence between the places it connects; a movement spanning several days
-is labelled by the part of it that each day sees; and a journey broken into segments contributes one
-row per segment, each in its own day at its own time.
+is labelled by the part of it that each day sees; and a journey broken into legs contributes one
+row per leg, each in its own day at its own time.
 
 **Agreement with the row, and the host it plugs into.** The row is right that
 `src/routes/_app/trips/$tripId/-server/plan.ts` loads stops and stays only and that
@@ -1626,7 +1937,7 @@ about it.
 - `src/components/planner/index.ts` — edit. Shared with `01-S2` (wave 1) and `01-S4` (wave 2).
 - `src/components/planner/__tests__/ordering.test.ts` — edit. Extended, never rewritten. Shared with
   `01-S4` (wave 2).
-- `src/components/planner/__tests__/transport-rows.test.ts` — new. The phase labels and the segment
+- `src/components/planner/__tests__/transport-rows.test.ts` — new. The phase labels and the leg
   expansion, on their own.
 - `src/routes/_app/trips/$tripId/-server/plan-transports.ts` — new. This stage's own loader and its
   own reorder writer, in a route-local `-server/` module rather than inside `-server/plan.ts`. The
@@ -1661,8 +1972,8 @@ stated there rather than left for whoever executes this to discover.
 ### Data and migration
 
 **No schema change and no migration.** Every column this stage reads exists: `transports.day_id`
-(`src/server/db/schema.ts:652`) and `transports.arrival_day_id` (`03-S1`) for a whole-record row;
-`transport_legs.departure_day_id`, `arrival_day_id` and `sort_order` (`03-S2`) for a segment row;
+(`transports` in `src/server/db/schema.ts`) and `transports.arrival_day_id` (`03-S1`) for a whole-record row;
+`transport_legs.departure_day_id`, `arrival_day_id` and `sort_order` (`03-S2`) for a leg row;
 `transports.sort_order` (`:679`, through the shared `sortOrder()` helper) for the record's own
 position. **Nothing is filed for any schema stage on this stage's account**, so the register in
 `00-foundations.md` mints nothing for wave 3 because of this stage.
@@ -1687,11 +1998,11 @@ and performs no conversion.
 
 **Repository — `src/server/repos/transports.ts`.**
 
-- `listTripDayTransports(scope, tripId)` — every transport and every segment of the trip that carries
+- `listTripDayTransports(scope, tripId)` — every transport and every leg of the trip that carries
   a day reference, with both ends, so the caller can compute what each day sees. One query per table,
   both `tenantFilter()`-scoped, both ordered by `sort_order` then `id`.
 - `reorderDayTransports(scope, { tripId, dayId, items })` — writes `sort_order` for the transport rows
-  and the segment rows of one day from array index, in a single `scope.db.batch()`, which on D1 is a
+  and the leg rows of one day from array index, in a single `scope.db.batch()`, which on D1 is a
   real transaction: statements run sequentially and a failure rolls the whole sequence back. It drops
   an incoming id that is not on that day rather than rejecting the whole call — a tab one delete
   behind should still be able to reorder the rows that do exist, which is the rule the jsdoc at
@@ -1702,11 +2013,11 @@ and performs no conversion.
 **Server function — `src/routes/_app/trips/$tripId/-server/plan-transports.ts`, a module of its own.**
 
 - `loadPlanTransportsFn` — `createServerFn({ method: 'GET' })`, validator `z.object({ tripId })`,
-  returning one entry per covered day: the record or segment id, the mode, the status, the two
+  returning one entry per covered day: the record or leg id, the mode, the status, the two
   endpoint names, the two times, the two day ids and the position. The plan route calls it beside
   `loadPlanBoard` rather than inside it.
 - `reorderDayTransportsFn` — `createServerFn({ method: 'POST' })`, validator
-  `z.object({ tripId, dayId, items: z.array(z.object({ kind: z.enum(['transport', 'segment']), id })).max(200) })`.
+  `z.object({ tripId, dayId, items: z.array(z.object({ kind: z.enum(['transport', 'leg']), id })).max(200) })`.
   It resolves the scope, the trip and the day, calls `reorderDayTransports`, then mirrors one `day`
   upsert into the trip's room so other tabs see the move — the same mirror shape every other writer in
   this plan uses.
@@ -1774,7 +2085,7 @@ journey is one symbol wherever the reader meets it. **No new primitive is propos
   _Departs / In the air / Lands_; a hire car reads _Pick-up / On hire / Drop-off_; everything else
   reads _Starts / Under way / Ends_. The mapping is a pure function over `TRANSPORT_MODES`, total by
   construction, and it is the thing `transport-rows.test.ts` proves.
-- A **segmented** journey does not render as one spanning row. Each segment renders in its own day at
+- A journey of more than one leg does not render as one spanning row. Each leg renders in its own day at
   its own time, independently positioned and independently draggable, which is the structural
   difference between a two-station journey and a five-station one and is the reason `transport_legs`
   carries its own `sort_order`.
@@ -1824,7 +2135,7 @@ Appended as one `describe` block. Covered: `listTripDayTransports` and `reorderD
 
 The cases: A cannot list B's day transports by trip id; A cannot reorder a day belonging to B's trip,
 which is a `NotFoundError` from `requireTripDay` and not an empty success; and A passing B's transport
-ids or B's segment ids inside a reorder of A's **own** day must move nothing at all — the ids are
+ids or B's leg ids inside a reorder of A's **own** day must move nothing at all — the ids are
 dropped as unknown, and B's `sort_order` values on both tables are re-read afterwards and must be
 identical. That last case is the one this stage genuinely adds, because a reorder is the one write
 shaped like a bulk update over ids the client chose.
@@ -1838,7 +2149,7 @@ shaped like a bulk update over ids the client chose.
 - `src/components/planner/__tests__/transport-rows.test.ts` — the phase vocabulary is total over
   `TRANSPORT_MODES` and picks the right triple for a flight, a hire car and everything else; a
   three-day transport produces exactly three rows with the first, middle and last labels; a
-  four-segment journey produces four rows and no spanning row; a stay produces none.
+  four-leg journey produces four rows and no spanning row; a stay produces none.
 - `src/components/planner/__tests__/ordering.test.ts` — the `leg:` prefix round-trips; a transport row
   dropped into the ideas column is refused with `'not-in-ideas'`; a timed transport row dropped out of
   clock order is refused with `'timed'`.
@@ -1924,7 +2235,7 @@ boolean the reference keeps. See **Data and migration**.
 **One deliberate divergence, stated because a critic will notice it.** The reference surfaces a
 transport record inside the bookings list as well as on its own tab. We do not duplicate a journey
 into two lists: the desk lists `reservations`, the transports tab lists `transports`, and a
-reservation of type `transport` that carries a `transport_id` (`src/server/db/schema.ts:708`) shows a
+reservation of type `transport` that carries a `transport_id` (`reservations` in `src/server/db/schema.ts`) shows a
 quiet link to the leg it belongs to. One record, one home, one place to edit it — and the reader can
 still walk between them in one click.
 
@@ -1936,11 +2247,11 @@ Rows unblocked: none. No row lists `BKG-01` in its `dependsOn`.
   masked code.
 - `src/components/modules/book/grouping.ts` — edit. A second grouping beside the one it already has.
 - `src/components/modules/book/__tests__/grouping.test.ts` — edit. Extended, never rewritten.
-- `src/components/modules/transports/legs-timeline.tsx` — edit. The leg card's booking code obeys the
+- `src/components/modules/transports/transports-timeline.tsx` — edit. The transport card's booking code obeys the
   same preference, taking it as a prop; a `components/modules` component never fetches. This plan's
   fourth claim on that file, at wave 4; `03-S1` holds it in wave 1 and `03-S2` in wave 2.
 - `src/routes/_app/trips/$tripId/transports.tsx` — edit. The loader reads the preference beside the
-  transport desk and hands it to `LegsTimeline`. Owned here because without it the leg card's mask has
+  transport desk and hands it to `TransportsTimeline`. Owned here because without it the card's mask has
   no channel: `src/server/fns/transports.ts` and `src/routes/_app/-server/trip.ts` are both held by
   earlier waves of this plan and neither is claimable at wave 4, so the preference reaches the
   transports tab through the route or not at all. This plan's third claim on that file, at wave 4;
@@ -2038,7 +2349,8 @@ it, and this stage would have shipped a switch that writes a boolean nothing can
 masking feature that passes `pnpm typecheck`, `pnpm lint` and a row-level test.
 
 `reduce_motion` is the precedent for the whole chain and shows how many sites a display preference has
-to be named in — the column (`src/server/db/schema.ts:1847`), the write validator (`:141`), the
+to be named in — the column (`reduce_motion` in `src/server/db/schema.ts`), the write validator
+(`src/server/repos/settings.ts:141`), the
 interface (`:266`), the returned literal (`:300`), the appearance payload type
 (`src/routes/_app/-server/settings.ts:269`), the payload literal (`:285`), the writer's validator
 (`:297`) and the writer's pass-through (`:305`). Eight, and this preference needs the same eight plus
@@ -2051,7 +2363,7 @@ behalf whether their own screen is shoulder-safe — so `organization_settings` 
 rule.
 
 **Scoping, because this stage does write a row.** `user_settings` carries `organization_id NOT NULL`
-(`src/server/db/schema.ts:1836`, through `orgRef()`) and is reached only through
+(`src/server/db/schema.ts`, through `orgRef()`) and is reached only through
 `userSettingsRepository`, built by `createTenantRepository(userSettings, 'user settings')`
 (`src/server/repos/settings.ts:57`). So `updateUserSettings` matches on
 `organization_id = scope.ctx.organizationId` before the row id can be considered, and the insert
@@ -2133,14 +2445,42 @@ store.**
   marker means "a machine wrote this and no person has looked at it yet".
 - **The masked confirmation code.** When the preference is on, the code renders as a fixed-width
   masked run of the same character count, revealed on hover, on focus and on tap, and never copied
-  into the DOM as plain text before the reveal. It stays selectable and stays copyable through the
-  existing `CopyValue` control, because masking is about a shoulder, not about the reader's own
-  clipboard. The same rule applies to a leg's booking code on the transports tab, and the flag gets
-  there the same way it gets to the desk: `legs-timeline.tsx` takes `maskCodes` as a required prop —
+  into the DOM as plain text before the reveal. It stays copyable through the existing `CopyValue`
+  control, which writes from the value the component was handed rather than from the selection,
+  because masking is about a shoulder and not about the reader's own clipboard.
+
+  **What it is not is selectable, and an earlier draft claimed both.** A value that is not in the DOM
+  cannot be selected out of it; dragging across a masked code selects the mask. That is the cost of
+  replacing the characters rather than blurring them, and it is the right cost: the reference blurs,
+  which is CSS over text that is still in the document, so the code is still in devtools, still in the
+  accessibility tree and still in a screenshot. Replacement means a reader who wants the code presses
+  the copy control or reveals it, and a reader who is standing behind them gets neither.
+
+  The same rule applies to a transport's booking code on the transports tab, and the flag gets
+  there the same way it gets to the desk: `transports-timeline.tsx` takes `maskCodes` as a required prop —
   a `components/modules` component never fetches and never imports from `server/` — and
   `transports.tsx` supplies it from `loadDisplayPreferences`, called in the same `Promise.all` as the
   transport desk loader so the tab still settles in one round trip. That is why both files, and the
   route, are owned here.
+
+- **What a transport booking says about itself.** A booking of type `transport` carries a
+  `transport_id`, and behind it sit the legs `03-S2` writes — each with its own service number,
+  platform, seat and times. The desk shows none of that today, so a flight booking on our desk says
+  less than the reference's does while the record underneath it says more: the reference models four
+  transport reservation types with a fixed field set each, and we model one type pointing at a record
+  with twelve modes and a chain. This stage renders the difference. A card whose booking resolves to a
+  transport shows, from the **first** leg and the **last**, the service number, the platform and the
+  seat where each exists, and nothing where they do not — an empty platform renders as absent, never
+  as a label with a dash after it. A chain of more than one leg shows the count and the two outer
+  stations rather than every stop; the whole chain is one click away on the transports tab, and the
+  desk is a list rather than a second timeline.
+- **The source file, where an import left one.** `03-S7` links the confirmation it read to the
+  booking it created, on `trip_files.reservation_id` — a column that already exists — and this card is
+  where that link becomes visible: a single quiet row naming the file, opening it through the download
+  path `06-S6` (`06-documents-and-media.md`, wave 4) owns. Wave 4 closes before `03-S7` runs in wave
+  5, so the mechanism is there before anything writes to it; a booking with no linked file shows no
+  row at all rather than an empty one. The card renders what the link resolves to and never lists
+  files by trip, which is `DOC-04`'s surface and not this one.
 - **The switch that turns it on**, on the appearance screen, as a `SettingsRow` whose control is a
   `Switch` labelled "Hide confirmation codes until I ask", with a one-line hint that says what it
   protects and what it does not — codes yes, prices no. It carries
@@ -2339,11 +2679,18 @@ file.
 
 ### Reference rows
 
-- `BKG-03` partial → **partial**. What closes here: a producer, an entry point, a review step and a
-  bulk confirm, for the formats the engine can actually read. What does not, with the register entry
-  each waits on: **mail-message parsing** and **document text extraction**, deferred as entries 8 and
-  9 of `11-S2` in `11-boundaries-and-blockers.md`, which is where the disposition for each is already
-  recorded.
+- `BKG-03` partial → **done**. A producer, an entry point, a review step and a bulk confirm, over
+  every format a person actually has.
+- `BKG-04` absent → **done**, in the hosted shape ADR 0012 defines. The Area brief's exclusion section
+  explains why a row `11-S1` refused comes back here rather than in a stage of its own.
+
+**Two deferrals this stage used to carry are closed, and neither closed by being reconsidered.**
+Entries 8 and 9 of `11-S2` — mail-message parsing and document text extraction — parked the formats a
+traveller actually holds, because reading a PDF or an email meant either a package the dependency
+freeze forbids or a service nobody had chosen. ADR 0012 binds Workers AI, and `env.AI.toMarkdown()`
+turns a PDF, an HTML page, an image or an Office document into text on the platform we already run
+on: no package, no third-party account, no per-tenant credential. The one format it does not know is
+the mail message, and that one is answered below without a MIME parser.
 
 Sourced from `wiki: AI-Booking-Import` and `wiki: Reservations-and-Bookings` for the behaviours: a
 traveller hands the product a confirmation file rather than retyping it; what was read is shown back
@@ -2370,16 +2717,22 @@ must not build a second one:
 - **The missing UI entry point.** No route, dialog, button or drop target in `src/routes` or
   `src/components` mentions an import. There is nothing a reader could click.
 
-**What is reused verbatim, and must not be reimplemented.**
+**What is reused, and the one part of it that this stage does extend.**
 `handleBookingImport` (`src/server/queue/handlers/booking-import.ts:157`) — the R2 read, the 5 MiB
 refusal, the calendar parse through `src/server/queue/ics.ts`, the JSON parse, the classification, the
 reference extraction, the 500-row cap, the KV staging under `stagedImportKey(jobId)` for
-`STAGED_IMPORT_TTL_SECONDS`, and the room notification — is the whole of the engine and is **not
-edited by this stage**. Its Zod payload schema, `bookingImportPayloadSchema`
-(`src/server/queue/types.ts:77-85`, `{ tripId, requestedBy, sourceKey, format: 'ics' | 'json' }`), is
-the contract the producer satisfies; the producer builds that object and does not define a second one.
-`StagedImport`, `StagedReservation` and `stagedImportKey` are imported from the handler module rather
-than re-declared, so the staged shape has exactly one definition.
+`STAGED_IMPORT_TTL_SECONDS`, and the room notification — is the whole of the engine, and **every one
+of those parts is reused rather than rewritten**. `StagedImport`, `StagedReservation` and
+`stagedImportKey` are imported from the handler module rather than re-declared, so the staged shape
+has exactly one definition.
+
+What this stage adds to the handler is **one branch in front of the parse**, and nothing else: when
+the format is not `ics` or `json`, the bytes become text first and the extractor reads the text. The
+staged output is the same `StagedImport` either way, so the review list, the confirm, the cap and the
+TTL are untouched and untested-again. `bookingImportPayloadSchema`
+(`src/server/queue/types.ts:77-85`) widens its `format` union to carry the new formats, which is why
+`src/server/queue/types.ts` is an owned path here — claimed in waves 0, 1, 3, 4 and 6 by four sibling
+plans, and free in wave 5, which is this stage's.
 
 **The producer half is reused too, and this is the second thing the stage must not reimplement.** The
 enqueue is written as `enqueueTask(taskQueue(), …)`, importing `enqueueTask` from
@@ -2403,6 +2756,28 @@ Rows unblocked: none. No row lists `BKG-03` in its `dependsOn`.
   draft, and the selection reducer — separate from the component that renders it, because that is the
   part worth testing and it should not need a Worker runtime to do so.
 - `src/components/modules/book/__tests__/import-drafts.test.ts` — new.
+- `src/server/queue/handlers/booking-import.ts` — edit. The one branch in front of the parse: bytes to
+  text, then extraction. Claimed by **no other stage in any plan**, so this is its only claim.
+- `src/server/queue/types.ts` — edit. The `format` union widens. Four sibling plans hold this file in
+  waves 0, 1, 3, 4 and 6; wave 5 is free.
+- `src/server/extract/document.ts` — new. Bytes to text: `env.AI.toMarkdown()` for the formats it
+  knows, a direct UTF-8 read for plain text, and the mail-message case below. It returns text and
+  never a reservation, so the thing that reads a file and the thing that understands a booking are two
+  modules and can be tested apart.
+- `src/server/extract/booking.ts` — new. Text to a `StagedReservation[]` through `env.AI.run()`, with
+  the field rules under **Server** — including the one about money, which is the rule this module
+  exists to enforce rather than to apply loosely.
+- `src/server/extract/__tests__/` — new. Fixtures for each accepted format and, most of all, for the
+  refusals: an unparseable amount, a date the model invented, a file that yielded no text at all.
+- `src/server/fns/file-policy.ts` — edit. The accepted-format table gains the import formats. `06-S1`
+  (`06-documents-and-media.md`) holds this file in wave 1 and reshapes that table there; this stage
+  extends the shape `06-S1` leaves behind rather than the one at HEAD, which is the ordering wave 5
+  guarantees.
+- `src/components/layout/app-frame.tsx` — edit. Mounts the import widget, which outlives the dialog
+  that started the job. Claimed by **no other stage in any plan** — measured across
+  `docs/plans/*.md`, where every other file in `src/components/layout/` is claimed and this one is
+  not. `impersonation-bar.tsx` is the precedent for a persistent element mounted there.
+- `src/components/modules/book/import-widget.tsx` — new. The widget itself.
 - `src/components/modules/book/index.ts` — edit. The new exports. `03-S4` holds this file in wave 3
   and `03-S6` needs no change to it; wave 5 is this plan's third and last claim.
 - `src/routes/_app/trips/$tripId/book.tsx` — edit. Mounts the action beside the existing
@@ -2412,8 +2787,7 @@ Rows unblocked: none. No row lists `BKG-03` in its `dependsOn`.
 - `e2e/reservations-and-transport.visual.spec.ts` — append.
 - `e2e/__screenshots__/reservations-and-transport.visual.spec.ts/` — append.
 
-`src/server/queue/handlers/booking-import.ts`, `src/server/queue/consumer.ts`,
-`src/server/queue/types.ts`, `src/server/queue/jobs.ts`, `src/server/auth/env.ts` and
+`src/server/queue/consumer.ts`, `src/server/queue/jobs.ts`, `src/server/auth/env.ts` and
 `src/server/fns/context.ts` are **not** owned paths and are not edited. The engine is complete and so
 is the producer helper; this stage attaches to both. In particular `src/server/fns/context.ts` gains
 nothing: `appScope()` is imported from it exactly as every other module in `src/server/fns` imports
@@ -2492,14 +2866,21 @@ format: z.enum(['ics', 'json']) })`.
   })
   ```
 
-  **The idempotency key is `booking-import:<fileId>`**, and it is deterministic on purpose. Three
-  properties follow from that one choice: a double-submit — two clicks, a retried fetch, a flaky
+  **The idempotency key is `booking-import:<tripId>:<fileId>`**, and it is deterministic on purpose.
+  Three properties follow from that one choice: a double-submit — two clicks, a retried fetch, a flaky
   connection — is one job, because the envelope id is the idempotency key and a completed job's marker
   lives in KV under `task:done:<id>` for 24 hours; a re-import of a **corrected** file is a different
   job, because a corrected file is a new upload with a new id; and the staged result is findable
   without a second identifier, because the handler stages under `stagedImportKey(context.taskId)` and
-  `context.taskId` is that same envelope id. The key is 38 characters against the envelope's 64-character
-  bound: `booking-import:` is 15 and a `newId()` is 25.
+  `context.taskId` is that same envelope id.
+
+  **The trip id is in the key, and an earlier draft left it out.** Keyed on the file alone, one
+  uploaded confirmation could be imported into exactly one trip ever: a traveller who uploads the same
+  hotel booking to their own trip and then to the trip they are planning with friends would hit a
+  completed job's marker on the second attempt and be told, with no explanation available anywhere in
+  the product, that nothing happened. A file belongs to a trip, so the job that reads it is identified
+  by both. The key stays inside the envelope's 64-character bound: `booking-import:` is 15, two
+  `newId()`s are 50, and the separator is one.
 
   Returns `{ jobId }` so the client knows what to ask about.
 
@@ -2518,8 +2899,47 @@ format: z.enum(['ics', 'json']) })`.
   list. It asserts the returned count equals the number of rows it wrote; a shortfall means an id it
   had just created did not resolve inside its own scope, which is a bug rather than a user error and
   is logged as one. It then mirrors one `trip` patch into the room so other tabs refresh once rather
-  than five hundred times, and **deletes the KV entry** so a confirm cannot be replayed. Rows the
-  reader deselected are simply never written.
+  than five hundred times. Rows the reader deselected are simply never written.
+
+  **The KV entry is deleted only when every accepted row was written**, and an earlier draft deleted
+  it unconditionally. That draft also promised the reader a partial retry in its Error state, and the
+  two cannot both be true: once the staged record is gone there is nothing left to retry from, so the
+  reader is offered a button that can only fail. On a partial failure the staged entry **survives**,
+  with the ids it did write recorded on it, and a retry writes only the rest. The entry's own TTL
+  still expires it, so nothing is kept forever; what changes is that it is not thrown away at the
+  exact moment it becomes useful.
+
+  **What the confirm wires up beyond the reservation row**, each through machinery that already
+  exists rather than through anything this stage invents:
+
+  - **The ledger line**, through `syncReservationExpense(scope, reservation)` — the helper `03-S4`
+    mints in wave 3 for exactly this. Without it a booking imported with a price would sit on the desk
+    costing money that never reached the trip's costs, which is what an earlier draft of this stage
+    did by calling `createReservation` directly.
+  - **The source file**, through `updateFile(scope, fileId, { reservationId })`. The column
+    `trip_files.reservation_id` and the `reservationId` field on `updateFileInput` both exist at HEAD,
+    so this is one call to an exported function and no schema change at all. `03-S6` renders the
+    resulting link on the card; `06-S6` (`06-documents-and-media.md`, wave 4) owns the download path
+    it opens, and closes one wave before this stage runs.
+  - **The place**, when the extraction produced a name and an address — a hotel, a restaurant, a
+    venue. `createPlace` with the name, the address and the trip, and the reservation's `place_id`
+    pointing at it. A place is created only when there is no existing place on the trip with that
+    name, so importing three nights at one hotel does not produce three pins.
+  - **The pin on that place**, through the geocoding proxy `02-places-and-maps.md` mints in `02-S4`,
+    its **wave 3**, for `MAP-01` — `src/server/geo/geocode.ts` behind
+    `src/routes/_app/trips/$tripId/-server/geocode.ts`. ADR 0013 records the provider and, more to the point here, records the property that
+    lets us keep the answer: the data is open, so a coordinate may be stored permanently and a
+    resolved address never has to be bought twice. This stage calls that proxy and does not mint one.
+    **A failed lookup is not a failed import**: the place is written without coordinates, which the
+    schema allows and the map already tolerates by filtering those rows, and the reader can place the
+    pin by hand later.
+
+  **A money field is never guessed**, which is ADR 0012's third constraint and the one this stage is
+  most likely to be tempted out of. An amount the extractor cannot parse with confidence is **dropped**
+  and the row is marked for review — never rounded, never inferred from a currency symbol it half
+  recognised, never carried across from another line on the page. A wrong number in a shared trip's
+  costs is settled between real people with real money, and a blank the reader fills in is strictly
+  better than a plausible number they never checked.
 
 **The mapping, which is where an import becomes our data.** A staged row carries a title, a kind, a
 start, an end, an all-day flag, a floating flag, a location, notes and a reference. Our
@@ -2548,33 +2968,84 @@ to `uploadTripFileFn` over `XMLHttpRequest` and therefore reports **real** bytes
 rather than animating a promise. This stage writes no second uploader.
 
 **The formats it accepts, measured rather than assumed.** `src/server/fns/file-policy.ts` already
-accepts `.ics` as `text/calendar` (`:80`, `:104`) and `.json` as `application/json` (`:86`, `:108`),
-which are exactly the two the engine reads. **No change to the upload policy is required**, and the
-file lands in `FILES` with a row in `trip_files` that `recordFile` has already counted against the
-plan's `files` and `storage_bytes` ceilings.
+accepts `.ics` as `text/calendar` (`:80`, `:104`) and `.json` as `application/json` (`:86`, `:108`).
+Those are the two the deterministic engine reads, and they are the two a **machine** exports. The
+formats a **person** has are a PDF they saved and an email they were sent, and this stage adds them,
+each with the reason it is cheap:
+
+| Format                                         | How the bytes become text                                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `.pdf`                                         | `env.AI.toMarkdown()`, which lists `application/pdf`.                                             |
+| `.html`, `.htm`                                | `env.AI.toMarkdown()`, which lists `text/html`.                                                   |
+| `.jpeg`, `.png`, `.webp`, `.heic` → re-encoded | `env.AI.toMarkdown()`, which lists the raster image types.                                        |
+| `.txt`                                         | Read as UTF-8. It is already text and needs no conversion.                                        |
+| `.eml`                                         | The mail case below.                                                                              |
+| `.ics`, `.json`                                | Unchanged: the deterministic engine, which is better than a model at a format that has a grammar. |
+
+**Images are a capability the reference does not have**, and they are the case worth having: a
+photograph of a printed confirmation is what a traveller in a hotel lobby actually holds. It costs
+nothing extra, because it is one more row in a table `toMarkdown` already serves.
+
+**The mail message is the one that needed a decision, and it is answered without a MIME parser.** An
+`.eml` is a MIME envelope; `toMarkdown` does not list `message/rfc822`, and a parser for it is a
+package `docs/SPEC.md` §3 forbids us to add — the freeze says a needed package is a finding to report
+and never a `pnpm add`. Writing one by hand is a real cost and a classic source of bugs: quoted
+printable, nested multipart, boundary handling. So the stage does none of that. An `.eml` is **mostly
+readable text already** — headers and body — and the extractor is not looking for a correct structural
+parse, it is looking for a confirmation number, two dates and a place. `document.ts` strips the long
+base64 runs with a bounded regex, caps what is left, and hands the remainder to the extractor as text.
+What that gives up is an attachment inside the mail, which is stated rather than hidden: a
+confirmation that lives only in an attached PDF is imported by uploading that PDF, which is a format
+this stage now accepts anyway.
+
+**`.pkpass` is deliberately not accepted.** It is a zip, so it needs central-directory reading and an
+inflate before there is anything to look at — our own code, for a format rarer than either the PDF or
+the mail this stage does add. It is named here so its absence is a decision rather than a gap.
+
+**The upload policy is edited, and by this stage.** The list above is longer than the two formats
+`file-policy.ts` accepts today, so the claim on that file is real. The per-object ceiling is not
+raised: 5 MiB is the engine's existing refusal and it stays, because a confirmation that does not fit
+in 5 MiB is a scan at a resolution nobody needs. Each file lands in `FILES` with a row in `trip_files`
+that `recordFile` has already counted against the plan's `files` and `storage_bytes` ceilings.
 
 **The flow, as behaviour.**
 
 1. **Import** beside **New booking** in the desk header. It is always visible: an entry point that
    appears and disappears based on a server capability is a single-tenant idea, and here the engine is
    always present.
-2. A drop target with a click-to-browse fallback, stating the two formats it reads **and** naming what
-   it does not: "Email and PDF confirmations are not read yet." A refusal a reader understands beats a
-   silent rejection.
-3. Upload with a real progress bar, then "Reading your file…" while the queue works.
-4. **The review list.** One row per detected booking: type, title, dates, location, reference — each
+2. A drop target with a click-to-browse fallback, stating the formats it reads and the one it does
+   not: a `.pkpass` is refused by name rather than by silence, because a refusal a reader understands
+   beats a rejection they have to guess at.
+3. **Up to five files at once**, each up to the 5 MiB ceiling, uploaded with a real progress bar and
+   then parsed **one at a time** rather than in parallel. Five concurrent model calls from one reader
+   is five times the meter for no gain in wall-clock they would notice; a queue of five is one job
+   after another and a count that goes down.
+4. **The dialog can be closed at this point and the work continues**, which is the reason
+   `app-frame.tsx` is an owned path. Progress moves to a widget in the corner of the application
+   frame, showing how many files are left. It survives closing the dialog, navigating to another trip
+   and reloading the page — the job ids live in `localStorage` under `planned.book-imports`, and the
+   widget re-subscribes on mount. A reader who uploads four confirmations should not have to sit and
+   watch them, and a modal that must stay open is a modal that will be closed by accident.
+5. **The review list**, reached from the widget or from the dialog if it was never closed. One row
+   per detected booking, grouped by the file it came from when there is more than one: type, title,
+   dates, location, reference — each
    deselectable with a checkbox, with select-all and select-none, and a live count in the confirm
    button ("Add 7 bookings"). A row the parser filled only partially is marked in the list before it
    is written, not after.
-5. **Confirm** writes the selected rows, closes the dialog, and lands the reader back on the desk with
+6. **Confirm** writes the selected rows, closes the dialog, and lands the reader back on the desk with
    the new rows carrying `03-S6`'s "Unchecked import" marker.
 
 **How the client learns the parse is done, without polling forever.** The handler already pokes the
-trip's Durable Object with an `importJobId` on the trip entity; the dialog subscribes through the
+trip's Durable Object with an `importJobId` on the trip entity; the **widget** subscribes through the
 trip-room subscription `07-S1` (`07-collaboration-and-sharing.md`, wave 1) generalises, and calls
-`getBookingImportFn` when it hears its own job id. If nothing arrives within 20 seconds it stops
-waiting and shows an explicit "Check again" — a bounded wait with a manual escape, never an unbounded
-poll against a queue.
+`getBookingImportFn` when it hears one of its own job ids. The subscription lives on the widget rather
+than on the dialog precisely because the dialog is allowed to close. If nothing arrives within 20
+seconds per file it stops waiting and offers an explicit "Check again" — a bounded wait with a manual
+escape, never an unbounded poll against a queue.
+
+**A model reads more slowly than a calendar parser**, so the 20-second bound is per file and the
+widget says which file it is still on. An extraction that exceeds the handler's own timeout fails that
+file and no other: one unreadable scan in a batch of five must not cost the reader the other four.
 
 **States.**
 
@@ -2588,7 +3059,11 @@ poll against a queue.
 - _Error._ Three, each distinct and each recoverable: an upload that failed (retry the upload), a
   parse that failed permanently (the message from the handler, and a way to pick another file), and a
   confirm that partially failed (the rows that were written are listed, the rows that were not are
-  kept selected, and the retry writes only those). Nothing is silently dropped.
+  kept selected, and the retry writes only those — which works because the staged entry is **not**
+  deleted on a partial failure, as **Server** states). Nothing is silently dropped.
+- _The widget's own states._ Working, with a count; done, which lingers long enough to be clicked and
+  then dismisses itself; and failed, which does not dismiss itself at all, because a failure nobody
+  saw is a failure that will be reported as data loss.
 - _Every control._ Rest, hover, focus-visible, active, disabled and loading on the drop target, every
   checkbox, select-all, the confirm and the cancel. The confirm is disabled with a reason while
   nothing is selected, and shows its spinner without changing width while it writes.
@@ -2617,10 +3092,25 @@ argument.**
   (`booking-import.ts:52`) caps what can ever be staged, `MAX_IMPORT_BYTES = 5 * 1024 * 1024` (`:50`)
   caps what can be read, the confirm validator caps the accepted list at 500, and the staged entry
   expires after `STAGED_IMPORT_TTL_SECONDS` whether it is confirmed or not.
-- No metric is added to `resolveLimits()` and none to `PLAN_QUOTAS`, so
-  `src/server/billing/__tests__/limits.test.ts` gains no case and is not an owned path. Adding one
-  would publish a ceiling the plan catalogue does not sell, and the published number is the enforced
-  number.
+- **The extraction calls are metered, and this is the metric this stage does add.** A model call is
+  not a row, so it is not an `assertQuota` and not a `PLAN_QUOTAS` entry — the same argument `03-S3`
+  makes at length under its own **Quota**, and the same mechanism: `src/server/transit/meter.ts`,
+  minted there in wave 3, keeps a per-organization monthly tally in `KV` and refuses at the ceiling.
+  This stage passes a different metric name to the same meter and writes no second one. The ceiling
+  itself belongs in `resolveLimits()` with every other ceiling, because the published number must be
+  the enforced number whether the thing being bounded is a row or a call — and, as with `03-S3`, it
+  is **filed** onto the per-wave quota stage of `00-foundations.md` rather than edited in here. This
+  stage is wave 5, so the supplier is the **wave-4** instance, which is also where its `AI` binding
+  is filed. `src/server/billing/limits.ts` and its test appear in no stage's **Owned paths** in this
+  plan.
+
+  ADR 0012's first constraint is what makes this obligatory rather than prudent: the extraction runs on
+  **our** Workers AI binding, not on a credential the tenant supplied, so an unmetered import is a
+  workspace spending our money in a loop. The refusal is a first-class state in the widget, worded as
+  what it is — this workspace has used its imports for the month — and never as a generic failure.
+
+- **No metric is added for the reservations themselves.** Adding one would publish a ceiling the plan
+  catalogue does not sell, and the published number is the enforced number.
 
 ### Tenant isolation test
 
@@ -2698,25 +3188,39 @@ Per surface:
 
 ### Blockers
 
-**Two deferred formats, each with its register entry, and neither planned around.**
+**No blocker, and one requirement filed on another plan.**
 
-- **Mail-message parsing** — entry 8 of `11-S2` in `11-boundaries-and-blockers.md`, whose recorded
-  disposition is to **hand-roll a restricted subset**. Nothing is hand-rolled here: this stage ships
-  the formats the engine reads today and refuses the rest at the picker with a sentence that says so.
-- **Document text extraction** — entry 9 of `11-S2`, disposition **defer**, and `11-S3` records that
-  the `AI` binding it would need is absent from both the production and the staging environment and
-  that adding one is an infrastructure and cost decision for the user, not a build step. `11-S3` is
-  explicit that adopting it changes the _shape_ of the cost model rather than its size, because
-  `ARCHITECTURE.md` §8 has no line for per-inference pricing at all.
+The two deferrals this stage used to carry — entries 8 and 9 of `11-S2`, mail-message parsing and
+document text extraction — are closed by ADR 0012 and by the mail decision under **Data and
+migration**. Neither is planned around and neither is hand-rolled beyond the base64 strip, which is a
+regex rather than a parser.
+
+**The `AI` binding is required and is not this stage's to add.** `wrangler.jsonc` is on
+`README.md`'s list of shared paths no feature stage may claim, and `00-foundations.md` gives it to
+"one bindings stage per wave". This stage is wave 5, so its supplier is the **wave-4** bindings stage
+of that register, and the requirement is filed there in the same ritual the schema requirements use:
+the `AI` binding, in production and in staging.
+
+Two things about that filing are worth stating rather than leaving to be rediscovered. First,
+`00-foundations.md` currently carries an `AI` row in its bindings table with a disposition of **report
+only**, justified by `BKG-04` being out of scope — **that justification is superseded by ADR 0012**
+and the row needs updating by whoever owns that file; this plan does not edit it. Second, the cost
+model genuinely changes shape rather than size: `ARCHITECTURE.md` §8 has no line for per-inference
+pricing, which is exactly why the meter under **Quota** is part of this stage rather than a follow-up.
 
 **One dependency on another plan, satisfied by the wave order.** `DOC-01` (`06-documents-and-media.md`,
 wave 1) owns the file library. This stage depends only on behaviour already on disk — `uploadTripFileFn`,
-`recordFile`, the storage key — so it is not blocked on that plan being written; the row edge is
-recorded, and the entry point uses the upload path that exists today.
+`recordFile`, `updateFile`, the storage key — so it is not blocked on that plan being written; the row
+edge is recorded, and the entry point uses the upload path that exists today.
 
-No package outside the pinned set is required for anything this stage ships, and no binding absent
-from `wrangler.jsonc`: `TASKS`, `FILES`, `KV` and `TRIP_ROOM` are all declared and all already read by
-non-test code.
+**One dependency on a plan that must land first, and it is real rather than nominal.** The geocoding
+proxy this stage calls when it creates a place is minted by `02-places-and-maps.md`'s `02-S4` in its
+**wave 3**, two waves before this stage runs. If that plan ships without it, this stage still ships: a place with
+no coordinates is legal and is the stated fallback, so the dependency degrades rather than blocks.
+
+No package outside the pinned set is required for anything this stage ships. `TASKS`, `FILES`, `KV`
+and `TRIP_ROOM` are all declared and all already read by non-test code; `AI` is the one addition and
+it is filed above.
 
 ---
 
@@ -2738,7 +3242,7 @@ two places.
 
 **Agreement with the row.** It is right that `day_accommodations` is complete —
 `start_day_id`, `end_day_id`, `check_in_time`, `check_in_end_time`, `check_out_time`,
-`confirmation_number`, `price_minor` and `currency` at `src/server/db/schema.ts:605-638` — that
+`confirmation_number`, `price_minor` and `currency` on `day_accommodations` in `src/server/db/schema.ts` — that
 `src/server/repos/itinerary.ts` has a full repository for it (`createAccommodation`,
 `updateAccommodation`, `deleteAccommodation`, `listTripAccommodations`, `countAccommodationNights`),
 that `-server/plan.ts:218` surfaces only the name, and that `grep -rn createAccommodation src/`
@@ -2764,6 +3268,15 @@ Rows unblocked: none. No row lists `BKG-05` in its `dependsOn`.
 - `src/components/modules/book/index.ts` — edit.
 - `src/components/modules/book/__tests__/stays.test.ts` — new. The night arithmetic and the per-day
   labels.
+- `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` — edit. The day panel's **Add a stay** entry
+  point, which opens the same dialog the booking desk opens. `01-S2` (wave 1), `01-S4` (wave 2),
+  `02-S4` (`02-places-and-maps.md`, wave 3), `03-S5` (wave 4) and `01-S9` (`01-trips-core.md`,
+  wave 5) hold this file in earlier waves; **wave 6 is the first in which it is free**, which is where
+  this stage already sits.
+- `src/server/fns/booking-import.ts` — edit, and only to add one branch. `03-S7` (wave 5) mints this
+  file and owns its confirm path; this stage adds the accommodation branch of that confirm, described
+  under **Server** below. No sibling plan claims the path in any wave, so the two claims are this
+  file's own and sit two waves apart.
 - `src/components/planner/day-section.tsx` — edit. The day header's stay badge. `01-S2` (wave 1),
   `01-S4` (wave 2), `02-S4` (`02-places-and-maps.md`, wave 3), `03-S5` (wave 4) and `02-S9` (wave 5)
   hold this file in earlier waves; six stages, six waves, and this is the last of them.
@@ -2786,8 +3299,10 @@ Rows unblocked: none. No row lists `BKG-05` in its `dependsOn`.
   second `createAccommodation` beside a working one would be a defect, not a plan. `01-S4` (wave 2),
   `07-S9` (`07-collaboration-and-sharing.md`, wave 3) and `02-S9` (`02-places-and-maps.md`, wave 5)
   hold this file in earlier waves; **wave 6 is the first in which it is free**, which is where this
-  stage already sits, and `node scripts/ultrabuild/check-plan-collisions.mjs 03` is what proves it
-  rather than a reading of those three files.
+  stage already sits — established by reading those three stages' **Owned paths** lists, since the
+  collision script this file used to cite is not present at `HEAD` (see **Cross-plan collisions**).
+  The same claim also carries this plan's third and last `assertTripRole` call, described under
+  **Server** below; it is one guard in one file, not a second concern.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append.
 - `e2e/reservations-and-transport.visual.spec.ts` — append.
 - `e2e/__screenshots__/reservations-and-transport.visual.spec.ts/` — append.
@@ -2878,6 +3393,35 @@ trip on the same terms. The stay's `reservationId` is never taken from the clien
 it is only ever cleared, never re-pointed, so the guard exists for the repository's own contract
 rather than for a path this stage exercises.
 
+**And the role guard, which is this plan's third and last.** `assertTripRole(scope, tripId,
+['owner', 'editor'])` goes into `createAccommodation`, `updateAccommodation` and `deleteAccommodation`
+in `src/server/repos/itinerary.ts`, the same shape `03-S2` put into the transports repository in
+wave 2 and `03-S4` into the reservations repository in wave 3, and for the same reason those two
+state: `requireTrip` proves membership, membership is not a role, and at HEAD a `viewer` can write a
+stay while `trip-room.ts` refuses them the collaborative equivalent. `01-S1` (`01-trips-core.md`,
+wave 1) mints the guard. Wave 6 is the first wave in which this file is free, so this stage is the
+only place it can be added, and with it the three write surfaces this plan touches are guarded
+uniformly rather than two out of three.
+
+**The accommodation branch of the import confirm.** `03-S7` builds the confirm that turns a parsed
+document into records, and its engine already recognises a hotel: `RESERVATION_TYPES` contains
+`accommodation` and the extraction returns it like any other type. What `03-S7` does with it is write
+a reservation, which is right and incomplete — a hotel confirmation names nights, and nights are a
+stay. This stage adds the one branch that closes that: when the confirmed type is `accommodation` and
+the parsed dates resolve to two days of the trip, the confirm writes the reservation as it already
+does, then calls `createAccommodation` with `reservationId` set, so the reader gets both records from
+one confirmation instead of a booking with no nights on the board. The ledger line is unchanged — it
+is `syncReservationExpense`'s, minted by `03-S4`, called once for the reservation and never for the
+stay, because the stay is not a second thing anybody paid for.
+
+Three refusals keep that branch small. If the parsed dates do not resolve to two days of the trip the
+stay is **not** written and the reservation is, with the same "recorded, needs review" reading a
+missing field already gets — a stay hung on the wrong nights is worse than no stay. If the type is
+anything other than `accommodation` the branch does not run. And the branch adds no new server
+function, no new validator and no new queue message: it is a conditional inside the confirm handler
+`03-S7` owns, reached two waves later, which is why this stage claims that file for an edit rather
+than filing a request on `03-S7`.
+
 **Realtime.** One `mirrorToRoom` patch per action, on the `trip` entity, carrying the stay id and its
 day range — not the whole record, because the room is a notification channel and D1 is the store.
 
@@ -2912,6 +3456,14 @@ trip does not have.
   the property's name alone. On the first day the badge also carries the check-in window when one is
   set, because that is the day the reader needs it. Clicking the badge opens the linked place when
   there is one.
+- **A stay is started from the day, not only from the desk.** The day panel gains an **Add a stay**
+  action beside the ones that add a place and a transport, and it opens the same dialog the desk
+  opens, with that day pre-selected as the first night and the last night left for the reader to
+  choose. The reference product offers the same entry point from the day view (`wiki: Accommodations`),
+  and the reason it is worth copying is that the reader who is looking at Friday and thinking about
+  where they sleep on Friday should not have to leave the board to say so. It is one action opening
+  one dialog: no second form, no second write path, and the pre-selection is a default the reader can
+  change like any other.
 - **A stay never appears in the day's sequence**, which is the rule `03-S5` states from the other side.
   One representation per fact.
 - **The desk card** for a stay shows nights and the check-in window rather than a start time, and shows
@@ -2928,7 +3480,8 @@ trip does not have.
 - _Error._ A failed co-creation states which half failed and what was rolled back, in the dialog's
   `Alert`, and keeps the draft. A failed delete leaves both records and says so.
 - _Every control._ Rest, hover, focus-visible, active, disabled and loading on every field, the badge
-  (which is a link and looks like one on focus), the save and the delete.
+  (which is a link and looks like one on focus), the day panel's **Add a stay** action, the save and
+  the delete.
 
 **Motion.** The badge row fades and rises 2px at `--duration-fast` on `--ease-out-quint` when the board
 settles; the dialog's branch swap cross-fades at `--duration-fast` rather than animating height, so
@@ -2950,6 +3503,11 @@ and `src/server/billing/__tests__/limits.test.ts` gains no case and is not an ow
 
 Appended as one `describe` block. Covered: `createAccommodation`, `updateAccommodation`,
 `deleteAccommodation`, `listTripAccommodations`, `countAccommodationNights`.
+
+The role guard is asserted here too, on the same terms `03-S2` and `03-S4` state: a `viewer` on their
+**own** trip is refused by `createAccommodation`, `updateAccommodation` and `deleteAccommodation`, and
+an `editor` on the same trip is allowed — one case each way, so the guard is proven to discriminate
+rather than merely to throw.
 
 The cases: A cannot read, list, update or delete B's stays by id; A cannot create a stay whose
 `startDayId` or `endDayId` is one of B's days, nor whose `placeId` is one of B's places — both are
@@ -3014,6 +3572,14 @@ Per surface:
 (`01-trips-core.md`, wave 5), which is the planner workspace this stage puts a badge into; `BKG-02` is
 closed by `03-S4` (wave 3) inside this file. Wave 6 sits after both.
 
+**Two more inside this file, and one of them is soft.** `assertTripRole` comes from `01-S1`
+(`01-trips-core.md`, wave 1), five waves earlier. And `src/server/fns/booking-import.ts` must exist
+before this stage can add a branch to it, which `03-S7` does in wave 5 — but the dependency degrades
+rather than blocks: if that stage has not landed, this one ships everything except the accommodation
+branch of the confirm, and the branch is then filed as the first thing `03-S7` adds when it does. The
+stay dialog, the day-panel entry point, the badge and the column do not depend on the importer at
+all.
+
 No package outside the pinned set, no binding absent from `wrangler.jsonc`, no third-party service, and
 no schema change beyond the one nullable column above.
 
@@ -3021,12 +3587,32 @@ no schema change beyond the one nullable column above.
 
 ## Cross-plan collisions
 
-Required by this plan's acceptance criteria. Two scripts, both run for plan `03` and both pasted
-verbatim so a reader can re-run them and get the same findings. Together they replace reading twelve
-sibling plans by hand, which is the method that produced two real collisions and four dangling
-references in earlier rounds. This is the one heading in this file that is neither a stage block nor
-part of the Area brief; `TEMPLATE.md` asks for no appendix and no status log, and this is neither — it
-is a measurement.
+Required by this plan's acceptance criteria. This is the one heading in this file that is neither a
+stage block nor part of the Area brief; `TEMPLATE.md` asks for no appendix and no status log, and this
+is neither.
+
+**Read the first sentence of this section before the output below it.** Both scripts were real when
+this section was first written and their output was pasted verbatim so a reader could re-run them and
+get the same findings. **Neither script exists at `HEAD`.** There is no `scripts/ultrabuild/`
+directory, `find . -name 'check-plan-*.mjs'` returns nothing, and `package.json` declares no script
+that would run one. So the two fenced blocks below are a **record of a past measurement, not a
+reproducible one** — they are kept because their findings are still the argument for how this plan's
+ownership is arranged, and deleting them would delete the reasoning with them, but nobody should read
+them as a check they can re-run.
+
+That has one practical consequence, stated here and honoured everywhere else in this file: **every
+ownership claim in this plan is established by reading the sibling stages' own Owned paths lists**, and
+where a stage says "wave _n_ is the first wave in which this file is free" it means that reading and
+not a script's verdict. Where an earlier revision cited the script as the proof, the citation has been
+replaced by the reading. An agent executing a stage of this file does the same — it reads the plans it
+shares a path with, in the waves at or below its own — and treats a same-wave exclusive overlap it
+finds there as a blocker. If either script is restored, that reading becomes a cross-check rather than
+the only evidence.
+
+The findings themselves were last measured against a plan set that has moved since: the numbers below
+are a snapshot, the two claims this file's final revision added (`plan-screen.tsx` and
+`src/server/fns/booking-import.ts`, both `03-S8`, both wave 6) post-date it, and both are named in the
+table that follows rather than in the fence.
 
 ### `node scripts/ultrabuild/check-plan-collisions.mjs 03`
 
@@ -3159,7 +3745,7 @@ paths** list.
 | `src/routes/_app/-server/settings.ts`               | `03-S6` w4             | `00-S3` w0, `02-S2` w1, `09-S7` w2, `09-S8` w3 |
 | `src/routes/_app/trips/$tripId/plan.tsx`            | `03-S5` w4             | `01-S2` w1                                     |
 | `src/routes/_app/trips/$tripId/-ui/plan-model.ts`   | `03-S8` w6             | `01-S2` w1, `01-S4` w2, `02-S7` w4, `02-S9` w5 |
-| `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` | `03-S5` w4             | `01-S2` w1, `01-S4` w2, `02-S4` w3, `01-S9` w5 |
+| `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` | `03-S5` w4, `03-S8` w6 | `01-S2` w1, `01-S4` w2, `02-S4` w3, `01-S9` w5 |
 | `src/components/planner/day-section.tsx`            | `03-S5` w4, `03-S8` w6 | `01-S2` w1, `01-S4` w2, `02-S4` w3, `02-S9` w5 |
 | `src/components/planner/types.ts`                   | `03-S5` w4, `03-S8` w6 | `01-S2` w1, `01-S4` w2                         |
 | `src/components/planner/index.ts`                   | `03-S5` w4             | `01-S2` w1, `01-S4` w2                         |
@@ -3173,18 +3759,27 @@ paths** list.
 | `src/routes/_app/-server/trip.ts`                   | `03-S2` w2             | `07-S2` w1, `05-S1` w3, `05-S5` w5             |
 | `src/components/modules/book/booking-dialog.tsx`    | `03-S4` w3, `03-S8` w6 | `06-S6` w4                                     |
 
-Two entries appeared in that table only in the final pass and are worth naming as such, because both
-arrived from outside this file. `src/server/repos/itinerary.ts` is claimed by `03-S8` for the two
+Two rows of that table post-date the fenced output above and were verified by reading, in the way this
+section's opening paragraph describes. `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` is claimed
+by `03-S8` in wave 6 for the day panel's stay entry point; the five earlier claims on it — `01-S2` w1,
+`01-S4` w2, `02-S4` w3, `03-S5` w4, `01-S9` w5 — occupy waves 1 through 5 and leave wave 6 free, which
+is where `03-S8` already sat. `src/server/fns/booking-import.ts` is claimed twice, both times by this
+file — `03-S7` mints it in wave 5, `03-S8` adds one branch in wave 6 — and by no sibling plan in any
+wave, so it belongs in the "no sibling claims them at all" group below rather than in the table.
+
+Two further entries appeared in that table only in the final pass and are worth naming as such,
+because both arrived from outside this file. `src/server/repos/itinerary.ts` is claimed by `03-S8` for the two
 lines that let `day_accommodations.reservation_id` through `createAccommodationInput` and
 `updateAccommodationInput`; wave 6 is the first wave in which that file is free, which is where the
 stage already sat. And `src/components/modules/book/booking-dialog.tsx` became a cross-plan path when
 `06-documents-and-media.md` claimed it for `06-S6` in wave 4 while this file was being revised — the
 three claims are in three different waves, so it is legal, and all three now name the other two.
 
-Three paths this plan claims are absent from the list because **no sibling plan claims them at all**:
+Four paths this plan claims are absent from the list because **no sibling plan claims them at all**:
 `src/server/repos/transports.ts` (`03-S1` w1, `03-S2` w2, `03-S5` w4),
-`src/routes/_app/trips/$tripId/transports.tsx` (`03-S1` w1, `03-S2` w2, `03-S6` w4) and
-`src/server/repos/reservations.ts` (`03-S4` w3). The second of those is worth reading twice, because
+`src/routes/_app/trips/$tripId/transports.tsx` (`03-S1` w1, `03-S2` w2, `03-S6` w4),
+`src/server/repos/reservations.ts` (`03-S4` w3) and `src/server/fns/booking-import.ts` (`03-S7` w5,
+`03-S8` w6). The second of those is worth reading twice, because
 its absence from the collision list is also a **constraint**: `03-S4` is the only stage in the plan
 set that may edit it, in any wave, so every write to a `reservations` column that any later stage of
 this file needs — `expense_id` for `03-S4` itself, `imported_at` for `03-S6` and `03-S7` — has to be
@@ -3212,8 +3807,8 @@ All eight stages of this file state their wave in the parsed form, so none is in
 | Stage   | Wave | Effort |
 | ------- | ---- | ------ |
 | `03-S1` | 1    | M      |
-| `03-S2` | 2    | L      |
-| `03-S3` | 2    | S      |
+| `03-S2` | 2    | XL     |
+| `03-S3` | 3    | L      |
 | `03-S4` | 3    | M      |
 | `03-S5` | 4    | M      |
 | `03-S6` | 4    | M      |
@@ -3250,8 +3845,9 @@ new file or a new export, grep for the helper, not only for the feature**. Grepp
 found the accessor that made half the producer unnecessary.
 So the header will not reproduce, and it is not the part that matters. The findings under it are
 properties of **this** file's ownership and hold only until a sibling changes what it claims. Any
-agent executing a stage of this file therefore **re-runs both scripts before it writes a line**, reads
-the same findings, and treats a new same-wave line or a new dangling reference as a blocker rather
-than as a note. That re-run is part of this plan's gate, not a courtesy — and this section is the
-evidence that the failure mode it guards against is real, because it happened four times during the
-writing of this one file.
+agent executing a stage of this file therefore **re-checks its own owned paths against the sibling
+plans before it writes a line** — by hand while the scripts are absent, with them if they are restored
+— and treats a same-wave exclusive overlap or a dangling stage reference as a blocker rather than as a
+note. That re-check is part of this plan's gate, not a courtesy, and this section is the evidence that
+the failure mode it guards against is real, because it happened four times during the writing of this
+one file.

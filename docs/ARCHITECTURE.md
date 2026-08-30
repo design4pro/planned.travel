@@ -454,6 +454,14 @@ hand. Where the two disagree about a metered vendor, the meter is the one that h
 jobs, 150 MB of files in R2, 2 MB of relational data. Fixed overhead: one ~100 GB planet
 `.pmtiles` archive and the $5 Workers Paid minimum.
 
+**Three of those inputs are calls to somebody else's meter**, and they are listed separately
+because they behave differently from everything above: 100 geocoding lookups (address
+completion debounces per keystroke, and dropping a pin reverse-geocodes), 20 public-transit
+connection searches, and 5 confirmation files handed to the importer — one document conversion
+and one model call each. They are argued in ADR 0011, 0012 and 0013, and priced under
+**Metered outbound calls** below rather than in the table, because their cost does not scale
+with users the way every Cloudflare line does.
+
 | Users  | Worker requests | CPU       | D1 rows r/w  | Billable extras                                                                       | **Total / month** |
 | ------ | --------------- | --------- | ------------ | ------------------------------------------------------------------------------------- | ----------------- |
 | 10     | 0.02 M          | 0.08 M ms | 0.3 M / 6 K  | R2 storage $1.37                                                                      | **≈ $6.40**       |
@@ -466,6 +474,15 @@ read over 25 B, $1.00/M rows written over 50 M, $0.75/GB-mo over 5 GB · KV $0.5
 10 M, $5.00/M writes over 1 M, $0.50/GB-mo over 1 GB · DO $0.15/M requests over 1 M, $12.50/M
 GB-s over 400 000 · Queues $0.40/M operations over 1 M (a message costs 3: write, read, delete)
 · R2 $0.015/GB-mo over 10 GB, $4.50/M Class A over 1 M, $0.36/M Class B over 10 M.
+
+Outbound rates, on the same terms and to be re-checked the same way: **Workers AI** 10 000
+Neurons/day free on both the Free and Paid plans, then $0.011 per 1 000 Neurons, and
+`toMarkdown()` is "free for most format conversions" — image conversion is the exception and
+may invoke a model — taken from `developers.cloudflare.com/workers-ai/platform/pricing` and
+`/workers-ai/features/markdown-conversion` in **August 2026**. **HERE** Public Transit v8:
+30 000 requests/month free, then $0.75 per 1 000 (ADR 0011). **Geoapify**: 3 000 credits/day
+free with commercial production use permitted under attribution, first paid tier $59/month for
+10 000/day (ADR 0013).
 
 What the model actually says:
 
@@ -484,6 +501,52 @@ What the model actually says:
   the first thousand users. But "infrastructure is negligible against the merchant-of-record
   fee" is a claim with a scale attached, and the scale changes the answer by two orders of
   magnitude — so it is set out below rather than asserted.
+
+**Metered outbound calls, and what the shared caches are worth.** Everything above is
+Cloudflare's own meter, where the marginal request is a fraction of a cent and the bill is
+dominated by storage. ADR 0011, 0012 and 0013 added three dependencies that are not: each one
+is a call to a third party at a published per-call rate, and the ceilings that bound them live
+in `resolveLimits()` beside every other ceiling — §6 — rather than as constants inside a
+feature module.
+
+Two columns, because the caches are the argument. **Cold** is every user-initiated call
+reaching the provider, which is the ceiling. **Cached** applies an assumed hit rate — 70% for
+geocoding, 40% for transit, 0% for extraction — and those three numbers are assumptions to
+argue with, not measurements. They differ because the keys differ: a geocoding key is an
+address string, shared across every tenant and stored permanently under ADR 0013's storage
+right, so it accumulates; a transit key carries a **date**, so it is shared only among people
+searching the same route on the same day and goes stale by construction; and a confirmation
+file is unique to the traveller who uploaded it, so there is nothing to cache at all.
+
+| Dependency         | Calls / user / mo | Free allowance / mo | Rate above it    | 1 000 users, cached | 10 000 users, cached | 10 000 users, cold |
+| ------------------ | ----------------- | ------------------- | ---------------- | ------------------- | -------------------- | ------------------ |
+| Geoapify geocoding | 100               | 90 000 credits      | $59/mo per tier  | $0                  | $59.00               | beyond tier 1      |
+| HERE transit       | 20                | 30 000 requests     | $0.75 / 1 000    | $0                  | $67.50               | $127.50            |
+| Workers AI         | 5 files ≈ 575 N   | 300 000 Neurons     | $0.011 / 1 000 N | $3.03               | $59.95               | $59.95             |
+| **Total**          |                   |                     |                  | **$3.03**           | **$186.45**          | **> $187**         |
+
+One extraction is taken as ~3 000 input and ~500 output tokens against
+`@cf/meta/llama-3.1-8b-instruct` (25 608 and 75 147 Neurons per million), so ~115 Neurons a
+file and ~575 a user; a cheaper quantised model roughly halves it. Geoapify's cold row has no
+figure because ADR 0013 records only the **first** paid tier — a million lookups a month needs
+a larger one, and its price is a number to fetch before it is needed, not to guess here.
+
+What that table says, and it is the reason this section exists:
+
+- **Below about a thousand users the outbound bill is still nothing**, exactly like the
+  Cloudflare bill. Under 100 users all three sit inside their free allowances.
+- **At ten thousand users the outbound calls are roughly four times the entire Cloudflare
+  bill** — $186 against $46 — and the Workers AI line alone ($59.95) exceeds it. This is what
+  "a per-use binding is a larger change to the economics than its unit price suggests" means
+  in numbers: it inverts which meter matters.
+- **The caches are worth real money on exactly one line.** Transit halves, $127.50 to $67.50.
+  Geocoding's cache is what keeps the tier from escalating. Extraction has none and never
+  will, so it is the line that grows purely linearly and the one whose per-tenant ceiling is
+  therefore load-bearing rather than defensive.
+- **Two of the three are elastic under a ceiling and one is not.** A noisy tenant can be
+  refused a search or an extraction; the refusal is a designed state, not a failure. That is
+  why ADR 0011 and 0012 both put the limit in `resolveLimits()` — the published number is the
+  enforced number, for an outbound call exactly as for a row.
 
 **Infrastructure against the Polar fee, at four mixes.** The entry paid plan is Solo at $9/month
 (`src/lib/plans.ts`). Polar's Starter rate takes 5% + 50¢ per transaction, so 95¢ of that $9 —
