@@ -47,7 +47,7 @@
 // Requires: Docker running, `sandcastle docker build-image` executed once,
 // and the env vars from .env.example.
 
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { hostname } from 'node:os'
 import { join } from 'node:path'
@@ -55,14 +55,38 @@ import { join } from 'node:path'
 import * as sandcastle from '@ai-hero/sandcastle'
 import { z } from 'zod'
 
+import { adoptWipBranches } from './adopt'
 import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
 import { docker } from './sandbox'
 
-import type { SandcastleEdge } from '../src/server/do/sandcastle-protocol'
+import type { GitOutput } from './adopt'
+import type {
+  ClaimResult,
+  SandcastleEdge,
+} from '../src/server/do/sandcastle-protocol'
+
+/**
+ * The branch shape `plan-prompt.md` asks the planner for: `sandcastle/issue-<id>-<runId>`.
+ *
+ * Checked because the name is not decoration. The run suffix is what lets two runs work the backlog
+ * side by side - git refuses one branch in two worktrees - and it is what a claim's `adopt` map is
+ * matched against. This catches a value that is not an issue branch at all; `runPlanner` then holds
+ * the planner to the exact name owed to each issue.
+ */
+const ISSUE_BRANCH_PATTERN = /^sandcastle\/issue-[1-9][0-9]*-[0-9]{8}-[0-9]+$/
 
 const planSchema = z.object({
   issues: z.array(
-    z.object({ id: z.string(), title: z.string(), branch: z.string() }),
+    z.object({
+      id: z.string(),
+      title: z.string(),
+      branch: z
+        .string()
+        .regex(
+          ISSUE_BRANCH_PATTERN,
+          'branch must be sandcastle/issue-<id>-<runId>',
+        ),
+    }),
   ),
 })
 
@@ -363,6 +387,28 @@ function openIssueEdges(): Array<SandcastleEdge> {
     .map(([child, parent]) => ({ child, parent }))
 }
 
+/**
+ * One git command in the operator's repository, without a shell.
+ *
+ * `execFileSync` rather than `execSync`: the branch names adoption asks about come out of the
+ * registry, which is to say out of whatever holds the coordinator token, and a string of that
+ * provenance must never be handed to a shell to interpret. A non-zero exit is an answer here rather
+ * than an error - "no such ref", "does not merge" - so it comes back as `ok: false`.
+ */
+function git(args: Array<string>): GitOutput {
+  try {
+    return {
+      ok: true,
+      stdout: execFileSync('git', args, {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }).trim(),
+    }
+  } catch {
+    return { ok: false, stdout: '' }
+  }
+}
+
 /** Open sub-issues of `id`; empty when it has none, i.e. when it is not a PRD. */
 function openSubIssueIds(id: string): string[] {
   const { owner, name } = JSON.parse(
@@ -556,6 +602,11 @@ function planScope(scopeIds: string[]): string {
   ].join('\n\n')
 }
 
+/** The one branch an issue may be worked on in this run. A function of the issue and the run, and of nothing else. */
+function issueBranch(id: string): string {
+  return `sandcastle/issue-${id}-${RUN_ID}`
+}
+
 async function runPlanner(scopeIds: string[]): Promise<Issue[]> {
   const plan = await sandcastle.run({
     // No install hook: the planner only reads issues via gh. And NEVER the
@@ -576,13 +627,28 @@ async function runPlanner(scopeIds: string[]): Promise<Issue[]> {
   // the scope is dropped, loudly — it means the agent went looking, and what it
   // finds that way is by definition work nobody cleared.
   const allowed = new Set(scopeIds)
-  return plan.output.issues.filter((issue) => {
-    if (allowed.has(issue.id)) return true
-    console.warn(
-      `  ! planner returned #${issue.id} which is outside this run's scope — dropped.`,
-    )
-    return false
-  })
+  return (
+    plan.output.issues
+      .filter((issue) => {
+        if (allowed.has(issue.id)) return true
+        console.warn(
+          `  ! planner returned #${issue.id} which is outside this run's scope — dropped.`,
+        )
+        return false
+      })
+      // Corrected rather than dropped: the issue is cleared work either way, only its branch name
+      // is the planner's to get wrong — and a name carrying another run's id would collide with
+      // that run's worktree and defeat the adoption match below.
+      .map((issue) => {
+        const branch = issueBranch(issue.id)
+        if (issue.branch !== branch) {
+          console.warn(
+            `  ! planner named #${issue.id}'s branch ${issue.branch} — using ${branch}.`,
+          )
+        }
+        return { ...issue, branch }
+      })
+  )
 }
 
 async function collectArtifacts(
@@ -908,10 +974,15 @@ async function markBlocked(
  * stopped heartbeating for the whole TTL and another run took the ticket. Carrying on would put two
  * fleets back on one issue, which is the failure the registry exists to prevent, so the work stops
  * rather than finishing into a branch this run no longer owns. Undefined under `--no-coordinator`.
+ *
+ * `adopted` is the work already on the branch when this run inherited it from a dead one. It counts
+ * as this issue's commits from the first line, because it is: without it a slice that was finished
+ * before the old run died would look like an implementer that produced nothing, and be dropped.
  */
 async function workIssue(
   issue: Issue,
   signal?: AbortSignal,
+  adopted: Array<{ sha: string }> = [],
 ): Promise<{ issue: Issue; ok: boolean; commits: Array<{ sha: string }> }> {
   const sandbox = await sandcastle.createSandbox({
     branch: issue.branch,
@@ -920,8 +991,31 @@ async function workIssue(
     hooks,
   })
 
-  const commits: Array<{ sha: string }> = []
+  const commits: Array<{ sha: string }> = [...adopted]
   let lastArtifactPath = ''
+
+  /**
+   * Tells the registry where this issue's work is, so that if this run dies the next one to claim
+   * the ticket is offered the branch instead of starting it again.
+   *
+   * Best-effort and never awaited into the pipeline: losing the record costs some future run an
+   * adoption, whereas failing the issue over it would cost this one an implementation.
+   */
+  const noteWip = (): void => {
+    // Nothing to point at, or the issue is no longer this run's to describe: the `wip:` record is
+    // last-write-wins, so a run whose lease was revoked would otherwise overwrite the new holder's
+    // branch with its own abandoned one.
+    if (commits.length === 0 || coordinator?.isRevoked(issue.id) === true)
+      return
+    void coordinator
+      ?.recordWip(issue.id, issue.branch, commits.length)
+      .catch((cause: unknown) => {
+        console.warn(
+          `  ! could not record WIP for #${issue.id}: ${cause instanceof Error ? cause.message : String(cause)}`,
+        )
+      })
+  }
+
   try {
     let implement = await sandbox.run({
       signal,
@@ -936,6 +1030,7 @@ async function workIssue(
       },
     })
     commits.push(...implement.commits)
+    noteWip()
 
     if (commits.length === 0) return { issue, ok: false, commits }
 
@@ -1022,6 +1117,7 @@ async function workIssue(
     }
     return { issue, ok: false, commits }
   } finally {
+    noteWip()
     await sandbox.close()
   }
 }
@@ -1197,7 +1293,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   // two fleets on #106 and #108. A claim is atomic, so taking the whole candidate list first and
   // handing back what the planner does not want has no window at all.
   coordinator?.setStage('planning')
-  const claimed =
+  const claimed: ClaimResult =
     coordinator === undefined
       ? { granted: requested, denied: [], adopt: {} }
       : await coordinator.claim(requested, openIssueEdges())
@@ -1228,10 +1324,35 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   for (const issue of issues)
     console.log(`  ${issue.id}: ${issue.title} → ${issue.branch}`)
 
+  // Pick up where a run that died left off, where its history allows it. Refusals are logged
+  // rather than swallowed: each one says which slice is being redone from scratch and why.
+  const adoptedCommits = new Map<string, Array<{ sha: string }>>()
+  for (const outcome of adoptWipBranches(
+    git,
+    issues,
+    claimed.adopt,
+    integrationBranch,
+  )) {
+    if (outcome.adopted) {
+      adoptedCommits.set(outcome.issueId, outcome.commits)
+      console.log(
+        `  ↳ #${outcome.issueId}: adopted ${outcome.commits.length} commit(s) from ${outcome.from}`,
+      )
+    } else {
+      console.log(`  ↳ #${outcome.issueId}: starting fresh — ${outcome.reason}`)
+    }
+  }
+
   coordinator?.setStage('implementing')
   const settled = await Promise.allSettled(
     issues.map((issue) =>
-      limit(() => workIssue(issue, coordinator?.signalFor(issue.id))),
+      limit(() =>
+        workIssue(
+          issue,
+          coordinator?.signalFor(issue.id),
+          adoptedCommits.get(issue.id),
+        ),
+      ),
     ),
   )
 
