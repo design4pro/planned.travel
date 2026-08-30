@@ -41,9 +41,10 @@
  *
  * ## Where a Durable Object would go
  *
- * Nowhere yet: today's outbound traffic is queue-paced, at most a handful of writes an hour. If a
- * per-keystroke path ever lands — `docs/plans/11-boundaries-and-blockers.md` `11-S3` names
- * search-as-you-type as exactly that shape — the change is confined to the two helpers below.
+ * Nowhere yet: today's outbound traffic is queue-paced, at most a handful of writes an hour. The
+ * per-keystroke path is scheduled rather than hypothetical — ADR 0013 buys geocoding from Geoapify
+ * and names address completion as its real consumer, on a **daily** allowance — so this is a note
+ * with a date on it. When that lands, the change is confined to the two helpers below.
  * `record` becomes a call to a Durable Object that accumulates in memory and flushes to
  * `provider_usage` on an alarm, and the gate reads that object's running total instead of D1.
  * {@link callProvider}'s signature, every call site and both tables are unchanged, which is why

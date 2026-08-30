@@ -421,16 +421,32 @@ export const METERED_PROVIDERS = [
  * "not integrated yet" instead of `0`. The two readings are opposite facts and a bare zero cannot
  * tell them apart.
  *
- * `d1-export` is the backup cron's unwritten half: `readCloudflareApi` in
- * `src/server/queue/http.ts` has no caller and the `BACKUP_CRON` branch of
- * `src/server/worker.ts` logs that it has no handler. `here` and `geoapify` are candidates for the
- * geocoding decision `docs/plans/11-boundaries-and-blockers.md` `11-S3` keeps open — named here so
- * a ceiling can be agreed before the first call, and deliberately carrying **no allowance figure**,
- * because writing a free tier into the repository is the assumption that stage forbids.
+ * These are **decided but unwritten**, which is a different state from undecided and is why they
+ * are named rather than omitted:
  *
- * Moving a slug from here to {@link METERED_PROVIDERS} is what adopting a provider looks like.
+ * - `d1-export` — the backup cron's unwritten half. `readCloudflareApi` in
+ *   `src/server/queue/http.ts` has no caller and the `BACKUP_CRON` branch of `src/server/worker.ts`
+ *   logs that it has no handler.
+ * - `here` — public-transit routing, bought under ADR 0011 (30,000 requests a month included).
+ * - `geoapify` — geocoding, bought under ADR 0013 (3,000 credits a **day** included, which is why
+ *   `provider_registry.limit_window` accepts `day` and not only `month`).
+ * - `workers-ai` — confirmation extraction, bound under ADR 0012, whose decision text asks for a
+ *   per-tenant ceiling in the same breath.
+ *
+ * **No allowance figure is stored in code**, and the reason has changed since these slugs first
+ * appeared here. It was that the provider decision was open. It is now that an allowance is a term
+ * of a contract that an operator renegotiates without a deploy: the figures above are context for a
+ * reader, and the enforced number is the one typed into `provider_registry`.
+ *
+ * Moving a slug from here to {@link METERED_PROVIDERS} is what adopting a provider looks like; all
+ * four are waiting on a client rather than on a decision.
  */
-export const PLANNED_PROVIDERS = ['d1-export', 'here', 'geoapify'] as const
+export const PLANNED_PROVIDERS = [
+  'd1-export',
+  'here',
+  'geoapify',
+  'workers-ai',
+] as const
 
 /**
  * The two resolutions `provider_usage` stores. `hour` is the write shape; `month` is the archive
