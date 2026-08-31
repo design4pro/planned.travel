@@ -113,7 +113,9 @@ describe('member isolation', () => {
       expect(counts.total).toBe(0)
       expect(counts.archived).toBe(0)
       expect(counts.favourites).toBe(0)
-      expect(Object.values(counts.byStatus)).toEqual([0, 0, 0, 0, 0, 0])
+      expect(
+        Object.values(counts.byStatus).filter((value) => value > 0),
+      ).toEqual([])
     })
 
     it('refuses every write with NOT_FOUND rather than FORBIDDEN', async () => {

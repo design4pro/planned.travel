@@ -22,13 +22,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '#/components/ui'
+import { messageOf } from '#/components/modules/shared'
 import { createTripFn } from '../-server/trip-lifecycle'
-import {
-  TripFormFields,
-  messageOf,
-  tripFormPayload,
-  useTripForm,
-} from './trip-form'
+import { TripFormFields, tripFormPayload, useTripForm } from './trip-form'
 
 export interface NewTripDialogProps {
   /** The workspace default currency, pre-selected for a new trip. */

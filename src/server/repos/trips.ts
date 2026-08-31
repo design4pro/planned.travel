@@ -120,8 +120,9 @@ const tripFields = {
  * time. That matters because a trip's cover art is a pure hash of its id, so a regenerated key
  * silently repaints the card and moves any screenshot that photographs it.
  *
- * It is validated like any other id and it is never reachable from a client: `createTripFn`
- * builds its repository input field by field, so no request body can reach this key.
+ * It is validated like any other id and it is never reachable from a client: the boundary schema
+ * `createTripInputSchema` (`src/routes/_app/-server/trip-lifecycle.ts`) is a `z.strictObject`, so a
+ * request body carrying this key is refused rather than forwarded.
  */
 export const createTripInput = z.object({
   ...tripFields,

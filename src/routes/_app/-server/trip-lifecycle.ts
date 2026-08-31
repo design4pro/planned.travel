@@ -183,7 +183,7 @@ function yearOf(date: string | null | undefined): number | null {
  * in when it has one, and — on an edit that moved the range — the year it *used* to start in, whose
  * row would otherwise keep counting a trip that has left it.
  */
-export function affectedStatYears(
+function affectedStatYears(
   startDate: string | null | undefined,
   previousStartDate?: string | null,
 ): Array<number> {

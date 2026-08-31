@@ -32,17 +32,13 @@ import {
   SheetTitle,
   useSheetDirection,
 } from '#/components/ui'
+import { messageOf } from '#/components/modules/shared'
 import {
   archiveTripFn,
   restoreTripFn,
   updateTripFn,
 } from '../-server/trip-lifecycle'
-import {
-  TripFormFields,
-  messageOf,
-  tripFormPayload,
-  useTripForm,
-} from './trip-form'
+import { TripFormFields, tripFormPayload, useTripForm } from './trip-form'
 
 import type { TripCard } from '../-server/overview'
 

@@ -183,21 +183,3 @@ export function TripFormFields({ form, placeholders }: TripFormFieldsProps) {
     </>
   )
 }
-
-/* -------------------------------------------------------------------------------------------------
- * Failure
- * ---------------------------------------------------------------------------------------------- */
-
-/**
- * What to show the reader when a save is refused.
- *
- * A `RepositoryError` arrives with a sentence written for a person — "A trip cannot end before it
- * starts." — and that sentence is better than anything this layer could compose. Anything else (a
- * dropped connection, a thrown string) gets the caller's fallback.
- */
-export function messageOf(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message.length > 0) {
-    return error.message
-  }
-  return fallback
-}

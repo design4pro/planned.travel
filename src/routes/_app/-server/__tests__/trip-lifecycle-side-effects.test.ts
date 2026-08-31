@@ -20,7 +20,6 @@
  */
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { addTripMember, listTrips, requireTrip } from '#/server/repos'
@@ -252,7 +251,7 @@ describe('the travel-statistics fan-out', () => {
     }
   })
 
-  it('collapses repeats of one (user, year) onto one id inside a window', async () => {
+  it('collapses repeats of one (user, year) onto one id inside a window', () => {
     const at = Date.now()
     expect(
       travelStatsTaskId(tenant.organizationId, tenant.ownerUserId, 2026, at),
@@ -443,7 +442,7 @@ describe('the lifecycle verbs', () => {
     })
   })
 
-  it('refuses a backwards date range at the boundary, before any write', async () => {
+  it('refuses a backwards date range at the boundary, before any write', () => {
     expect(() =>
       updateTripInputSchema.parse({
         tripId: 'x',
@@ -453,7 +452,7 @@ describe('the lifecycle verbs', () => {
     ).toThrow()
   })
 
-  it('refuses an unknown field rather than dropping it', async () => {
+  it('refuses an unknown field rather than dropping it', () => {
     expect(() =>
       archiveTripInputSchema.parse({ tripId: 'x', isArchived: false }),
     ).toThrow()
@@ -481,15 +480,10 @@ describe('the lifecycle verbs', () => {
 
 describe('the pre-departure-notice obligation, which no longer exists', () => {
   it('imports nothing from either notice module', () => {
+    // Resolved from this file rather than from `process.cwd()`: the module under test is the one
+    // next door whatever directory the runner was started in.
     const source = readFileSync(
-      join(
-        process.cwd(),
-        'src',
-        'routes',
-        '_app',
-        '-server',
-        'trip-lifecycle.ts',
-      ),
+      new URL('../trip-lifecycle.ts', import.meta.url),
       'utf8',
     )
 

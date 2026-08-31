@@ -320,7 +320,7 @@ export const loadTrips = createServerFn({ method: 'GET' })
 
     return {
       today,
-      trips: rows.map((trip) => card(trip)),
+      trips: rows.map(card),
       totals: {
         total: summary.trips.total,
         archived: summary.trips.archived,
