@@ -101,10 +101,6 @@ function parseJsonc(source: string): unknown {
   return JSON.parse(out)
 }
 
-interface AiBinding {
-  readonly binding?: unknown
-}
-
 /** The value at a key path, or `undefined` if any step of it is absent. */
 function nodeAt(config: unknown, path: ReadonlyArray<string>): unknown {
   let node: unknown = config
@@ -117,47 +113,53 @@ function nodeAt(config: unknown, path: ReadonlyArray<string>): unknown {
   return node
 }
 
-/** The `ai` block of one environment of the config, or `undefined` if it declares none. */
-function aiBlockOf(
+/** The binding name the `ai` block of one environment declares, or `undefined` for none. */
+function aiBindingNameIn(
   config: unknown,
   path: ReadonlyArray<string>,
-): AiBinding | undefined {
-  return nodeAt(config, [...path, 'ai']) as AiBinding | undefined
+): unknown {
+  return nodeAt(config, [...path, 'ai', 'binding'])
+}
+
+/** The `key` of every entry of a list of declarations, skipping anything that is not a string. */
+function namesUnder(value: unknown, key: 'binding' | 'name'): Array<string> {
+  if (!Array.isArray(value)) return []
+  return (value as ReadonlyArray<unknown>).flatMap((entry) => {
+    const name = nodeAt(entry, [key])
+    return typeof name === 'string' ? [name] : []
+  })
 }
 
 /**
- * Every binding one environment declares, other than `AI`, sorted.
+ * Where a binding name lives, per resource kind.
  *
- * The config spells a binding's name four different ways depending on the resource — `binding` for
- * D1, KV, R2 and queue producers, `name` for a Durable Object — which is why this walks the shapes
- * rather than one key.
+ * The config spells it two ways — `binding` for D1, KV, R2 and queue producers, `name` for a
+ * Durable Object — under five different paths, which is why this is a table rather than one key.
+ */
+const BINDING_SOURCES: ReadonlyArray<{
+  path: ReadonlyArray<string>
+  key: 'binding' | 'name'
+}> = [
+  { path: ['d1_databases'], key: 'binding' },
+  { path: ['kv_namespaces'], key: 'binding' },
+  { path: ['r2_buckets'], key: 'binding' },
+  { path: ['queues', 'producers'], key: 'binding' },
+  { path: ['durable_objects', 'bindings'], key: 'name' },
+]
+
+/**
+ * Every binding one environment declares, sorted.
+ *
+ * The `ai` block is a lone object rather than a list and so appears in none of the shapes above;
+ * it is asserted on its own, by the cases that are the point of this suite.
  */
 function bindingNamesIn(
   config: unknown,
   path: ReadonlyArray<string>,
 ): Array<string> {
-  const scope = nodeAt(config, path)
-  if (typeof scope !== 'object' || scope === null) return []
-  const environment = scope as Record<string, unknown>
-
-  const listed = ['d1_databases', 'kv_namespaces', 'r2_buckets'].flatMap(
-    (key) =>
-      Array.isArray(environment[key])
-        ? (environment[key] as Array<{ binding?: unknown }>).map((entry) =>
-            String(entry.binding),
-          )
-        : [],
-  )
-  const producers = (
-    nodeAt(environment, ['queues', 'producers']) as
-      Array<{ binding?: unknown }> | undefined
-  )?.map((entry) => String(entry.binding))
-  const objects = (
-    nodeAt(environment, ['durable_objects', 'bindings']) as
-      Array<{ name?: unknown }> | undefined
-  )?.map((entry) => String(entry.name))
-
-  return [...listed, ...(producers ?? []), ...(objects ?? [])].sort()
+  return BINDING_SOURCES.flatMap((source) =>
+    namesUnder(nodeAt(config, [...path, ...source.path]), source.key),
+  ).sort()
 }
 
 /** Both environments the repository deploys, named as they are in the file. */
@@ -175,7 +177,7 @@ describe('the AI binding in wrangler.jsonc', () => {
   it.each(ENVIRONMENTS)(
     'declares AI for $name, because a named environment inherits no binding',
     ({ path }) => {
-      expect(aiBlockOf(config, path)?.binding).toBe('AI')
+      expect(aiBindingNameIn(config, path)).toBe('AI')
     },
   )
 
@@ -184,8 +186,7 @@ describe('the AI binding in wrangler.jsonc', () => {
     // name have been in `wrangler.jsonc` since before this ticket and are asserted here only
     // because recovering all of them from both environments is something a comment-stripper with a
     // string bug cannot do — it would drop a key, swallow a brace, or fail to parse at all.
-    const production = config as Record<string, unknown>
-    expect(production.name).toBe('planned-travel')
+    expect(nodeAt(config, ['name'])).toBe('planned-travel')
     expect(bindingNamesIn(config, [])).toEqual([
       'DB',
       'FILES',
@@ -212,7 +213,7 @@ describe('the AI binding in wrangler.jsonc', () => {
     // `../cloudflare-env.d.ts` declares one member. A config that named it differently in one
     // environment would compile, deploy, and fail only there.
     const names = new Set(
-      ENVIRONMENTS.map(({ path }) => aiBlockOf(config, path)?.binding),
+      ENVIRONMENTS.map(({ path }) => aiBindingNameIn(config, path)),
     )
 
     expect([...names]).toEqual(['AI'])

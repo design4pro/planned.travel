@@ -115,3 +115,27 @@ export function physicalIndexNames(
     .all(table)
     .map((row) => String(row.name))
 }
+
+/**
+ * Where one column of `table` physically points and what the engine does when the target goes,
+ * or `undefined` if the column references nothing.
+ *
+ * The declared disposition and the deployed one can differ — drizzle-kit's `ALTER TABLE … ADD
+ * COLUMN` emits a `REFERENCES` clause with no `ON DELETE` one, so a column added that way is
+ * `NO ACTION` on D1 whatever `schema.ts` says. The schema suites pin both halves, which is why
+ * this read is here rather than copied into each of them.
+ */
+export function physicalForeignKey(
+  sqlite: DatabaseSync,
+  table: string,
+  column: string,
+): { table: string; onDelete: string } | undefined {
+  const row = sqlite
+    .prepare('SELECT * FROM pragma_foreign_key_list(?)')
+    .all(table)
+    .find((entry) => String(entry.from) === column)
+
+  return row === undefined
+    ? undefined
+    : { table: String(row.table), onDelete: String(row.on_delete) }
+}

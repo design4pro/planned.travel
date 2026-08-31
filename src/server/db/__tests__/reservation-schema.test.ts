@@ -43,6 +43,7 @@ import {
 import { createHarness } from '#/server/repos/__tests__/harness'
 import {
   physicalColumns,
+  physicalForeignKey,
   physicalIndexNames,
   replayMigrations,
   shippedMigrations,
@@ -227,14 +228,9 @@ describe('the reservation ledger link, import marker and masking switch', () => 
       // as a generated directory, or a table rebuild, which this additive stage forbids.
       const sqlite = replayMigrations()
       try {
-        const key = sqlite
-          .prepare('SELECT * FROM pragma_foreign_key_list(?)')
-          .all('reservations')
-          .find((row) => String(row.from) === 'expense_id')
-
-        expect(key).toBeDefined()
-        expect(String(key?.table)).toBe('expenses')
-        expect(String(key?.on_delete)).toBe('NO ACTION')
+        expect(
+          physicalForeignKey(sqlite, 'reservations', 'expense_id'),
+        ).toEqual({ table: 'expenses', onDelete: 'NO ACTION' })
       } finally {
         sqlite.close()
       }

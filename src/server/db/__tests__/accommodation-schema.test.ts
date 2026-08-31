@@ -40,6 +40,7 @@ import {
 import { createHarness } from '#/server/repos/__tests__/harness'
 import {
   physicalColumns,
+  physicalForeignKey,
   physicalIndexNames,
   replayMigrations,
   shippedMigrations,
@@ -203,14 +204,9 @@ describe("the stay's reservation link", () => {
       // table rebuild, which this additive stage forbids.
       const sqlite = replayMigrations()
       try {
-        const key = sqlite
-          .prepare('SELECT * FROM pragma_foreign_key_list(?)')
-          .all('day_accommodations')
-          .find((row) => String(row.from) === 'reservation_id')
-
-        expect(key).toBeDefined()
-        expect(String(key?.table)).toBe('reservations')
-        expect(String(key?.on_delete)).toBe('NO ACTION')
+        expect(
+          physicalForeignKey(sqlite, 'day_accommodations', 'reservation_id'),
+        ).toEqual({ table: 'reservations', onDelete: 'NO ACTION' })
       } finally {
         sqlite.close()
       }
