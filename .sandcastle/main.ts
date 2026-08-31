@@ -133,6 +133,18 @@ const deepReviewSchema = z.object({
     .array(
       z.object({
         severity: z.enum(['blocker', 'strong', 'minor']),
+        // The same five axes review-prompt.md walks, so the two review stages of one
+        // issue can be read together. Defaulted rather than required: the axis groups
+        // findings, it does not decide whether one is worth reporting.
+        axis: z
+          .enum([
+            'correctness',
+            'readability',
+            'architecture',
+            'security',
+            'performance',
+          ])
+          .optional(),
         title: z.string(),
         summary: z.string(),
         files: z.array(z.string()).default([]),
@@ -886,7 +898,7 @@ async function runDeepReview(
         ...(report.findings.length > 0
           ? report.findings.map((f) =>
               [
-                `- **[${f.severity}] ${f.title}**`,
+                `- **[${f.severity}${f.axis === undefined ? '' : ` · ${f.axis}`}] ${f.title}**`,
                 `  ${f.summary}`,
                 ...(f.files.length > 0
                   ? [`  Files: ${f.files.map((p) => `\`${p}\``).join(', ')}`]
