@@ -1,6 +1,6 @@
 /** The transports module's public surface. */
-export { ConnectionsBadge, LegsTimeline } from './legs-timeline'
-export type { LegsTimelineProps } from './legs-timeline'
+export { ConnectionsBadge, TransportsTimeline } from './transports-timeline'
+export type { TransportsTimelineProps } from './transports-timeline'
 
 export { LegDialog, NewLegAction } from './leg-dialog'
 
@@ -42,6 +42,8 @@ export {
   validateLegDraft,
 } from './leg-form'
 export type {
+  DayChoice,
+  EndpointLabels,
   LegDraft,
   LegErrors,
   TransportMode,
@@ -50,4 +52,4 @@ export type {
 
 export { MODE_ICON, modeIcon } from './mode-icon'
 export { legDurationMinutes } from './leg-timing'
-export type { LegData } from './types'
+export type { TransportData, TransportDayData } from './types'

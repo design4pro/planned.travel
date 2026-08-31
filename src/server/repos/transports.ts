@@ -8,8 +8,13 @@
 
 import { and, asc, count, desc, eq, gte, isNotNull, sum } from 'drizzle-orm'
 import { z } from 'zod'
-import { TRANSPORT_MODES, TRANSPORT_STATUSES, transports } from '#/server/db/schema'
+import {
+  TRANSPORT_MODES,
+  TRANSPORT_STATUSES,
+  transports,
+} from '#/server/db/schema'
 import { createTenantRepository, tenantFilter } from './base'
+import { RepositoryError } from './context'
 import { requireTripDay } from './days'
 import { requireTrip } from './trips'
 import {
@@ -30,7 +35,10 @@ import {
 import type { Transport } from '#/server/db/types'
 import type { TenantScope } from './base'
 
-export const transportsRepository = createTenantRepository(transports, 'transport')
+export const transportsRepository = createTenantRepository(
+  transports,
+  'transport',
+)
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -39,7 +47,13 @@ export const transportsRepository = createTenantRepository(transports, 'transpor
 const codeSchema = z.string().trim().min(1).max(8).toUpperCase()
 
 const transportFields = {
+  /** The day the journey *departs*. The column keeps its name for the rows already written. */
   dayId: idSchema.nullish(),
+  /**
+   * The day it lands on, which may be a different one and is never derived from
+   * the first: only the traveller knows that the night flight arrives tomorrow.
+   */
+  arrivalDayId: idSchema.nullish(),
   mode: z.enum(TRANSPORT_MODES).optional(),
   status: z.enum(TRANSPORT_STATUSES).optional(),
   title: titleSchema,
@@ -68,7 +82,10 @@ const transportFields = {
   sortOrder: sortOrderSchema.optional(),
 }
 
-export const createTransportInput = z.object({ tripId: idSchema, ...transportFields })
+export const createTransportInput = z.object({
+  tripId: idSchema,
+  ...transportFields,
+})
 export type CreateTransportInput = z.infer<typeof createTransportInput>
 
 export const updateTransportInput = z.object({
@@ -85,7 +102,10 @@ export type UpdateTransportInput = z.infer<typeof updateTransportInput>
 export async function listTripTransports(
   scope: TenantScope,
   tripId: string,
-  options: { readonly mode?: (typeof TRANSPORT_MODES)[number]; readonly status?: (typeof TRANSPORT_STATUSES)[number] } = {},
+  options: {
+    readonly mode?: (typeof TRANSPORT_MODES)[number]
+    readonly status?: (typeof TRANSPORT_STATUSES)[number]
+  } = {},
 ): Promise<Array<Transport>> {
   return transportsRepository.findMany(scope, {
     where: and(
@@ -124,9 +144,14 @@ export async function nextDeparture(
   scope: TenantScope,
   options: { readonly from?: string } = {},
 ): Promise<Transport | null> {
-  const from = dateSchema.parse(options.from ?? new Date().toISOString().slice(0, 10))
+  const from = dateSchema.parse(
+    options.from ?? new Date().toISOString().slice(0, 10),
+  )
   const rows = await transportsRepository.findMany(scope, {
-    where: and(gte(transports.departureDate, from), eq(transports.status, 'confirmed')),
+    where: and(
+      gte(transports.departureDate, from),
+      eq(transports.status, 'confirmed'),
+    ),
     orderBy: [asc(transports.departureDate), asc(transports.departureTime)],
     limit: 1,
   })
@@ -184,15 +209,54 @@ export async function totalTripDistanceMetres(
  * Writes
  * ---------------------------------------------------------------------------------------------- */
 
+/**
+ * Resolves both ends of a journey against the trip's own day run and refuses a
+ * pair that runs backwards.
+ *
+ * `requireTripDay` is what makes a day id from the browser a day of *this* trip
+ * rather than of any trip the caller can reach — the same guard `dayId` has
+ * always had, now applied to both references. The ordering rule is here and not
+ * only in the form because the form is a convenience and the repository is the
+ * rule; a null on either end is no order to break.
+ */
+async function requireDayPair(
+  scope: TenantScope,
+  tripId: string,
+  departureDayId: string | null,
+  arrivalDayId: string | null,
+): Promise<void> {
+  const departure =
+    departureDayId === null
+      ? null
+      : await requireTripDay(scope, tripId, departureDayId)
+  const arrival =
+    arrivalDayId === null
+      ? null
+      : await requireTripDay(scope, tripId, arrivalDayId)
+  if (
+    departure !== null &&
+    arrival !== null &&
+    arrival.dayNumber < departure.dayNumber
+  ) {
+    throw new RepositoryError(
+      `A transport cannot arrive on day ${arrival.dayNumber} and depart on day ${departure.dayNumber}.`,
+      'DAY_ORDER',
+    )
+  }
+}
+
 export async function createTransport(
   scope: TenantScope,
   input: CreateTransportInput,
 ): Promise<Transport> {
   const values = createTransportInput.parse(input)
   await requireTrip(scope, values.tripId)
-  if (values.dayId) {
-    await requireTripDay(scope, values.tripId, values.dayId)
-  }
+  await requireDayPair(
+    scope,
+    values.tripId,
+    values.dayId ?? null,
+    values.arrivalDayId ?? null,
+  )
   return transportsRepository.insert(scope, values)
 }
 
@@ -203,9 +267,15 @@ export async function updateTransport(
 ): Promise<Transport> {
   const values = definedOnly(updateTransportInput.parse(input))
   const existing = await transportsRepository.requireById(scope, transportId)
-  if (values.dayId) {
-    await requireTripDay(scope, existing.tripId, values.dayId)
-  }
+  // The rule holds over the row that results, not over the fields that arrived: moving one end
+  // alone is ordered against the end already stored, or a two-step edit walks past the guard.
+  const departureDayId =
+    'dayId' in values ? (values.dayId ?? null) : existing.dayId
+  const arrivalDayId =
+    'arrivalDayId' in values
+      ? (values.arrivalDayId ?? null)
+      : existing.arrivalDayId
+  await requireDayPair(scope, existing.tripId, departureDayId, arrivalDayId)
   return transportsRepository.requireUpdate(scope, transportId, values)
 }
 
@@ -219,6 +289,9 @@ export async function setTransportStatus(
   })
 }
 
-export async function deleteTransport(scope: TenantScope, transportId: string): Promise<void> {
+export async function deleteTransport(
+  scope: TenantScope,
+  transportId: string,
+): Promise<void> {
   await transportsRepository.requireRemove(scope, transportId)
 }

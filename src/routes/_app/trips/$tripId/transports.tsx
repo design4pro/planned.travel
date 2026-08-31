@@ -6,13 +6,13 @@ import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import {
   ConnectionsBadge,
-  LegsTimeline,
   NewLegAction,
+  TransportsTimeline,
   analyseConnections,
   summariseConnections,
 } from '#/components/modules/transports'
-import { StatCard } from '#/components/ui'
-import { loadTripTransports } from '../../-server/trip'
+import { Card, StatCard } from '#/components/ui'
+import { loadTransportDeskFn } from '#/server/fns/transports'
 import {
   formatDistance,
   formatMoneyMinor,
@@ -20,12 +20,12 @@ import {
   humaniseToken,
   pluralise,
 } from '../../-lib/format'
-import { HeaderSkeleton, StatsSkeleton } from '../../-ui/scaffold'
+import { HeaderSkeleton, RowsSkeleton, StatsSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
 
 export const Route = createFileRoute('/_app/trips/$tripId/transports')({
   loader: ({ params }) =>
-    loadTripTransports({ data: { tripId: params.tripId } }),
+    loadTransportDeskFn({ data: { tripId: params.tripId } }),
   pendingComponent: TransportsPending,
   errorComponent: ({ error }) => (
     <AppFrame>
@@ -43,12 +43,20 @@ function TransportsPage() {
   const busiest = [...data.byMode]
     .sort((left, right) => right.legs - left.legs)
     .at(0)
-  const priced = data.legs.filter((leg) => leg.priceMinor !== null)
+  const priced = data.transports.filter(
+    (transport) => transport.priceMinor !== null,
+  )
   const totalPriced = priced.reduce(
-    (sum, leg) => sum + (leg.priceMinor ?? 0),
+    (sum, transport) => sum + (transport.priceMinor ?? 0),
     0,
   )
-  const summary = summariseConnections(analyseConnections(data.legs))
+  const confirmed = data.transports.filter(
+    (transport) => transport.status === 'confirmed',
+  ).length
+  const pending = data.transports.filter(
+    (transport) => transport.status === 'pending',
+  ).length
+  const summary = summariseConnections(analyseConnections(data.transports))
 
   return (
     <AppFrame>
@@ -56,9 +64,9 @@ function TransportsPage() {
         <TripModuleHeader
           title="Transports"
           description={
-            data.legs.length === 0
-              ? 'No legs recorded yet'
-              : `${pluralise(data.legs.length, 'leg')} · ${formatDistance(data.totalDistanceMetres, data.distanceUnit)}`
+            data.transports.length === 0
+              ? 'Nothing recorded yet'
+              : `${pluralise(data.transports.length, 'transport')} · ${formatDistance(data.totalDistanceMetres, data.distanceUnit)}`
           }
           actions={<NewLegAction onClick={() => setNewLegOpen(true)} />}
         >
@@ -70,7 +78,7 @@ function TransportsPage() {
           )}
         </TripModuleHeader>
 
-        {data.legs.length === 0 ? null : (
+        {data.transports.length === 0 ? null : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               tone="inverse"
@@ -81,8 +89,8 @@ function TransportsPage() {
               caption={`≈ ${(data.totalDistanceMetres / 40_075_000).toFixed(2)}× around the equator`}
             />
             <StatCard
-              label="Legs"
-              value={data.legs.length}
+              label="Transports"
+              value={data.transports.length}
               caption={
                 busiest === undefined
                   ? 'Nothing grouped yet'
@@ -91,10 +99,8 @@ function TransportsPage() {
             />
             <StatCard
               label="Confirmed"
-              value={
-                data.legs.filter((leg) => leg.status === 'confirmed').length
-              }
-              caption={`${formatNumber(data.legs.filter((leg) => leg.status === 'pending').length)} still pending`}
+              value={confirmed}
+              caption={`${formatNumber(pending)} still pending`}
             />
             <StatCard
               label="Spent on travel"
@@ -102,15 +108,16 @@ function TransportsPage() {
               caption={
                 priced.length === 0
                   ? 'No prices recorded'
-                  : `across ${pluralise(priced.length, 'priced leg')}`
+                  : `across ${pluralise(priced.length, 'priced transport')}`
               }
             />
           </div>
         )}
 
-        <LegsTimeline
+        <TransportsTimeline
           tripId={tripId}
-          legs={data.legs}
+          transports={data.transports}
+          days={data.days}
           currency={data.currency}
           newLegOpen={newLegOpen}
           onNewLegOpenChange={setNewLegOpen}
@@ -120,12 +127,20 @@ function TransportsPage() {
   )
 }
 
+/**
+ * The header and the stats already settled while the list was still arriving, so
+ * the list gets its own rows: without them the timeline pops in under a header
+ * that has stopped moving, which reads as a layout shift rather than as a load.
+ */
 function TransportsPending() {
   return (
     <AppFrame>
       <AppSections>
         <HeaderSkeleton />
         <StatsSkeleton />
+        <Card padding="none">
+          <RowsSkeleton rows={5} />
+        </Card>
       </AppSections>
     </AppFrame>
   )

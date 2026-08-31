@@ -1,11 +1,17 @@
 /**
- * Add or edit one travel leg.
+ * Add or edit one transport.
  *
  * The mode picker at the top decides what the rest of the form asks for: a flight
  * wants airports and a service number, a taxi wants neither. The two endpoints are
  * laid out as they read on a ticket — from on the left, to on the right — and the
- * timing rule is checked live, so a leg that arrives before it departs is caught
- * while it is being typed rather than after a round trip.
+ * timing rule is checked live, so a journey that arrives before it departs is
+ * caught while it is being typed rather than after a round trip.
+ *
+ * Each end also names the itinerary day it happens on, and the two are separate
+ * answers rather than one and a derivation: the night flight leaves on day 3 and
+ * lands on day 4, and only the traveller knows that. Which words the pair is asked
+ * in comes from `endpointLabels`, so the legend over an endpoint and the label over
+ * its day cannot drift apart — a hire car is picked up and returned.
  */
 import { useEffect, useId, useMemo, useState } from 'react'
 import { ArrowRight, Plus } from 'lucide-react'
@@ -27,12 +33,13 @@ import {
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { createLegFn, updateLegFn } from '#/server/fns/transports'
-import { useAction } from '../shared'
+import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
 import { formatGap, legTimingError } from './connections'
 import {
   STATUS_LABELS,
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
+  dayLabel,
   emptyLegDraft,
   endpointLabels,
   hasLegErrors,
@@ -51,51 +58,59 @@ import { MODE_ICON } from './mode-icon'
 import { legDurationMinutes } from './leg-timing'
 
 import type { LegDraft } from './leg-form'
-import type { LegData } from './types'
+import type { TransportData, TransportDayData } from './types'
 
-function draftFrom(leg: LegData, fallbackCurrency: string): LegDraft {
-  const currency = leg.currency ?? fallbackCurrency
+function draftFrom(
+  transport: TransportData,
+  fallbackCurrency: string,
+): LegDraft {
+  const currency = transport.currency ?? fallbackCurrency
   return {
-    mode: isTransportMode(leg.mode) ? leg.mode : 'other',
-    status: isTransportStatus(leg.status) ? leg.status : 'pending',
-    title: leg.title,
-    carrier: leg.carrier ?? '',
-    serviceNumber: leg.serviceNumber ?? '',
-    bookingCode: leg.bookingCode ?? '',
-    seat: leg.seat ?? '',
-    departureName: leg.departureName ?? '',
-    departureCode: leg.departureCode ?? '',
-    departureDate: leg.departureDate ?? '',
-    departureTime: leg.departureTime ?? '',
-    arrivalName: leg.arrivalName ?? '',
-    arrivalCode: leg.arrivalCode ?? '',
-    arrivalDate: leg.arrivalDate ?? '',
-    arrivalTime: leg.arrivalTime ?? '',
-    distanceKm: metresToKilometres(leg.distanceMetres),
+    mode: isTransportMode(transport.mode) ? transport.mode : 'other',
+    status: isTransportStatus(transport.status) ? transport.status : 'pending',
+    title: transport.title,
+    departureDayId: transport.departureDayId ?? '',
+    arrivalDayId: transport.arrivalDayId ?? '',
+    carrier: transport.carrier ?? '',
+    serviceNumber: transport.serviceNumber ?? '',
+    bookingCode: transport.bookingCode ?? '',
+    seat: transport.seat ?? '',
+    departureName: transport.departureName ?? '',
+    departureCode: transport.departureCode ?? '',
+    departureDate: transport.departureDate ?? '',
+    departureTime: transport.departureTime ?? '',
+    arrivalName: transport.arrivalName ?? '',
+    arrivalCode: transport.arrivalCode ?? '',
+    arrivalDate: transport.arrivalDate ?? '',
+    arrivalTime: transport.arrivalTime ?? '',
+    distanceKm: metresToKilometres(transport.distanceMetres),
     price:
-      leg.priceMinor === null || leg.priceMinor === 0
+      transport.priceMinor === null || transport.priceMinor === 0
         ? ''
-        : String(leg.priceMinor / 100),
+        : String(transport.priceMinor / 100),
     currency,
-    notes: leg.notes ?? '',
+    notes: transport.notes ?? '',
   }
 }
 
 export function LegDialog({
   tripId,
-  leg,
+  transport,
+  days,
   currency,
   open,
   onOpenChange,
 }: {
   tripId: string
-  /** Absent for a new leg. */
-  leg?: LegData
+  /** Absent for a new transport. */
+  transport?: TransportData
+  /** The trip's days, in order. Empty while the trip has none. */
+  days: ReadonlyArray<TransportDayData>
   currency: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const editing = leg !== undefined
+  const editing = transport !== undefined
   const formId = useId()
 
   const [draft, setDraft] = useState<LegDraft>(() => emptyLegDraft(currency))
@@ -106,28 +121,37 @@ export function LegDialog({
       return
     }
     setDraft(
-      leg === undefined ? emptyLegDraft(currency) : draftFrom(leg, currency),
+      transport === undefined
+        ? emptyLegDraft(currency)
+        : draftFrom(transport, currency),
     )
     setTouched(false)
-  }, [open, leg, currency])
+  }, [open, transport, currency])
 
   const create = useAction(createLegFn, {
-    success: 'Leg added',
+    success: 'Transport added',
     description: 'It is in the travel order now.',
-    failure: 'The leg was not added',
+    failure: 'The transport was not added',
   })
   const update = useAction(updateLegFn, {
-    success: 'Leg updated',
-    failure: 'The leg was not updated',
+    success: 'Transport updated',
+    failure: 'The transport was not updated',
   })
   const action = editing ? update : create
 
-  const errors = useMemo(() => validateLegDraft(draft), [draft])
+  const errors = useMemo(() => validateLegDraft(draft, days), [draft, days])
+  const dayOptions = useMemo(
+    () => [
+      { value: NOT_SET, label: 'No day yet' },
+      ...days.map((day) => ({ value: day.id, label: dayLabel(day) })),
+    ],
+    [days],
+  )
   const invalid = hasLegErrors(errors)
   const labels = endpointLabels(draft.mode)
   const suggestion = suggestLegTitle(draft)
 
-  /** Live, not on submit: the one rule that makes a leg impossible. */
+  /** Live, not on submit: the one rule that makes a transport impossible. */
   const timing = legTimingError({
     departureDate: draft.departureDate,
     departureTime: draft.departureTime,
@@ -172,6 +196,8 @@ export function LegDialog({
       arrivalCode: draft.arrivalCode,
       arrivalDate: draft.arrivalDate,
       arrivalTime: draft.arrivalTime,
+      departureDayId: draft.departureDayId,
+      arrivalDayId: draft.arrivalDayId,
       distanceMetres: kilometresToMetres(draft.distanceKm),
       priceMinor:
         Number.isFinite(priceMinor) && priceMinor > 0 ? priceMinor : 0,
@@ -180,7 +206,7 @@ export function LegDialog({
       notes: draft.notes,
     }
     const result = editing
-      ? await update.run({ data: { ...payload, transportId: leg.id } })
+      ? await update.run({ data: { ...payload, transportId: transport.id } })
       : await create.run({ data: payload })
     if (result !== null) {
       onOpenChange(false)
@@ -191,7 +217,9 @@ export function LegDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit this leg' : 'Add a leg'}</DialogTitle>
+          <DialogTitle>
+            {editing ? 'Edit this transport' : 'Add a transport'}
+          </DialogTitle>
           <DialogDescription>
             Flights, trains, ferries and the drive from the airport. Times are
             the local ones printed on the ticket.
@@ -321,6 +349,18 @@ export function LegDialog({
                     />
                   </Field>
                 </div>
+                {days.length === 0 ? null : (
+                  <Field label={labels.fromDay}>
+                    <SimpleSelect
+                      options={dayOptions}
+                      value={toSelectValue(draft.departureDayId)}
+                      onValueChange={(next) =>
+                        set('departureDayId', fromSelectValue(next))
+                      }
+                      ariaLabel={labels.fromDay}
+                    />
+                  </Field>
+                )}
               </fieldset>
 
               <div className="hidden self-center pt-8 sm:block">
@@ -380,12 +420,29 @@ export function LegDialog({
                     />
                   </Field>
                 </div>
+                {days.length === 0 ? null : (
+                  <Field
+                    label={labels.toDay}
+                    error={errorFor('arrivalDayId')}
+                    hint="A journey that lands the next morning says so here."
+                  >
+                    <SimpleSelect
+                      options={dayOptions}
+                      value={toSelectValue(draft.arrivalDayId)}
+                      onValueChange={(next) =>
+                        set('arrivalDayId', fromSelectValue(next))
+                      }
+                      ariaLabel={labels.toDay}
+                    />
+                  </Field>
+                )}
               </fieldset>
             </div>
 
             {timing !== null ? (
               <Alert tone="danger" title="Check the times">
-                {timing} Move one of them so the leg can actually be caught.
+                {timing} Move one of them so the transport can actually be
+                caught.
               </Alert>
             ) : duration === null ? null : (
               <p className="text-caption text-ink-3">
@@ -524,9 +581,9 @@ export function LegDialog({
             shape="pill"
             disabled={touched && invalid}
             loading={action.pending}
-            loadingLabel="Saving the leg"
+            loadingLabel="Saving the transport"
           >
-            {editing ? 'Save leg' : 'Add leg'}
+            {editing ? 'Save transport' : 'Add transport'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -534,12 +591,23 @@ export function LegDialog({
   )
 }
 
-/** The screen's primary action, for the module header. */
+/**
+ * The screen's primary action, for the module header.
+ *
+ * `data-part` rather than a class name: the visual gate opens this dialog to
+ * photograph a state that does not exist at rest, and a selector picked off the
+ * styling would break the evidence the next time the button is restyled.
+ */
 export function NewLegAction({ onClick }: { onClick: () => void }) {
   return (
-    <Button variant="primary" shape="pill" onClick={onClick}>
+    <Button
+      data-part="new-transport"
+      variant="primary"
+      shape="pill"
+      onClick={onClick}
+    >
       <Plus aria-hidden strokeWidth={2.5} />
-      Add leg
+      Add transport
     </Button>
   )
 }
