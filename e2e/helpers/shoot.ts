@@ -2014,9 +2014,12 @@ export type ToleratedConsoleWarning = {
  * Message types the gate has never read — `log`, `info`, `debug`, `trace` and
  * the rest — stay ignored, as before.
  *
- * Neither entry is an app warning, and neither can become one: both patterns are
- * anchored at the start of the message, so a warning the app writes itself is
- * fatal even when it quotes one of these word for word. A React hydration report
+ * No entry can be reached by a warning the app writes itself: every pattern is
+ * anchored at the start of the message, so a warning the app writes is fatal even
+ * when it quotes one of these word for word. Two of the three are the browser
+ * talking about itself; the third is the *Worker's* console bridged into a page by
+ * `vite dev`, which is a different thing again from a page warning and is argued
+ * for on its own below. A React hydration report
  * cannot reach this list at all — React 19 surfaces a mismatch as an uncaught
  * error through `window.reportError` and, in development, as a `console.error`,
  * and `classifyConsoleMessage()` answers `fatal` for both before it is ever
@@ -2041,6 +2044,29 @@ export type ToleratedConsoleWarning = {
  * has an appropriate `as` value and it is preloaded intentionally.", so the
  * pattern stops at the sentence they share.
  *
+ * **The forwarded CSRF advisory.** The one entry here that is about the application
+ * rather than about the browser, and it earns its place on a different property: it
+ * is not a warning any *page* wrote. `vite dev` bridges the Worker's console into
+ * whatever browser is connected — the message arrives prefixed `%c[Server]%c` with
+ * the framework's own styling arguments — and the deployed Worker has no such
+ * bridge, so this string cannot exist outside `vite dev`. TanStack Start prints it
+ * once per fresh workerd isolate on the first server-function request that isolate
+ * handles, which makes the *page it lands on* a race: measured, the request came
+ * from the platform-console specs and the message failed `the hover card never
+ * lands on the panel it would hide behind`, four workers away, on a page that had
+ * called no server function of its own. Grading a page on a message another
+ * worker's request produced is a category error, and it is the one this entry
+ * corrects.
+ *
+ * It does **not** make the advisory go away, and it must not be read as agreeing
+ * with it. `src/start.ts` registers no CSRF middleware, the warning is right that
+ * it should, and it is still printed in full to `dev-server.log` on every run. That
+ * is a change to the Start instance and to every one of the 117 server functions
+ * behind it — reported on #174 rather than made from a stage that owns neither.
+ * The pattern is anchored on the forwarding prefix, so an app-authored warning
+ * quoting the sentence word for word stays fatal, and so does the same sentence
+ * without the bridge in front of it.
+ *
  * Its scope is the URL, and the URL is what makes the tolerance narrow rather
  * than convenient. The resource has to be served by a development server —
  * `localhost` or a loopback address with a port — under a path only `vite dev`
@@ -2064,6 +2090,12 @@ export const TOLERATED_CONSOLE_WARNINGS: ReadonlyArray<ToleratedConsoleWarning> 
       why: "the browser's resource loader reporting that a Vite dev-server URL was speculatively preloaded and not used — a path that exists only under `vite dev`, and a warning whose arrival depends on how long the page stayed open rather than on what the page rendered",
       match:
         /^The resource https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]):\d+\/(?:src\/|node_modules\/|@)\S* was preloaded using link preload but not used within a few seconds from the window's load event\./,
+      onlyWithLiveMap: false,
+    },
+    {
+      why: "the Worker's own console, bridged into whatever browser `vite dev` had connected, telling the developer that TanStack Start's server functions carry no CSRF middleware — a message no page wrote, on a page that made no server-function request",
+      match:
+        /^%c\[Server\]%c [^\n]*TanStack Start server functions are not protected by the CSRF middleware\./,
       onlyWithLiveMap: false,
     },
   ]
