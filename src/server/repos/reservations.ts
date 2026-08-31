@@ -5,7 +5,17 @@
  * one of those references is verified against the same trip before it is stored.
  */
 
-import { and, asc, count, desc, eq, gte, inArray, isNull, lte } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lte,
+} from 'drizzle-orm'
 import { z } from 'zod'
 import {
   RESERVATION_STATUSES,
@@ -15,10 +25,11 @@ import {
   transports,
 } from '#/server/db/schema'
 import { createTenantRepository, tenantFilter } from './base'
-import { NotFoundError } from './context'
+import { NotFoundError, RepositoryError } from './context'
 import { requireTripDay } from './days'
+import { getExpense } from './expenses'
 import { placesRepository } from './places'
-import { requireTrip } from './trips'
+import { requireTrip, tripRoleFor } from './trips'
 import {
   currencySchema,
   dateSchema,
@@ -33,10 +44,13 @@ import {
   titleSchema,
   urlSchema,
 } from './validation'
-import type { Reservation } from '#/server/db/types'
+import type { Reservation, TripMember } from '#/server/db/types'
 import type { TenantScope } from './base'
 
-export const reservationsRepository = createTenantRepository(reservations, 'reservation')
+export const reservationsRepository = createTenantRepository(
+  reservations,
+  'reservation',
+)
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -66,7 +80,10 @@ const reservationFields = {
   sortOrder: sortOrderSchema.optional(),
 }
 
-export const createReservationInput = z.object({ tripId: idSchema, ...reservationFields })
+export const createReservationInput = z.object({
+  tripId: idSchema,
+  ...reservationFields,
+})
 export type CreateReservationInput = z.infer<typeof createReservationInput>
 
 export const updateReservationInput = z.object({
@@ -129,13 +146,21 @@ export async function listDayReservations(
 /** Bookings coming up across every trip — the dashboard's reservation rail. */
 export async function listUpcomingReservations(
   scope: TenantScope,
-  options: { readonly from?: string; readonly to?: string; readonly limit?: number } = {},
+  options: {
+    readonly from?: string
+    readonly to?: string
+    readonly limit?: number
+  } = {},
 ): Promise<Array<Reservation>> {
-  const from = dateSchema.parse(options.from ?? new Date().toISOString().slice(0, 10))
+  const from = dateSchema.parse(
+    options.from ?? new Date().toISOString().slice(0, 10),
+  )
   return reservationsRepository.findMany(scope, {
     where: and(
       gte(reservations.startDate, from),
-      options.to ? lte(reservations.startDate, dateSchema.parse(options.to)) : undefined,
+      options.to
+        ? lte(reservations.startDate, dateSchema.parse(options.to))
+        : undefined,
       inArray(reservations.status, ['pending', 'confirmed']),
     ),
     orderBy: [asc(reservations.startDate), asc(reservations.startTime)],
@@ -162,7 +187,12 @@ export async function countTripReservationsByStatus(
 
   return rows.flatMap((row) =>
     (RESERVATION_STATUSES as ReadonlyArray<string>).includes(row.status)
-      ? [{ status: row.status as (typeof RESERVATION_STATUSES)[number], value: row.value }]
+      ? [
+          {
+            status: row.status as (typeof RESERVATION_STATUSES)[number],
+            value: row.value,
+          },
+        ]
       : [],
   )
 }
@@ -175,13 +205,69 @@ export async function totalTripReservationsMinor(
   return reservationsRepository.sumOf(
     scope,
     reservations.priceMinor,
-    and(eq(reservations.tripId, tripId), inArray(reservations.status, ['pending', 'confirmed'])),
+    and(
+      eq(reservations.tripId, tripId),
+      inArray(reservations.status, ['pending', 'confirmed']),
+    ),
   )
 }
 
 /* -------------------------------------------------------------------------------------------------
  * Writes
  * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Trip roles that may change a trip's bookings. A `viewer` reads the desk and writes nothing.
+ *
+ * The refusal is raised as {@link RepositoryError} under the `FORBIDDEN` code rather than as
+ * `ForbiddenError`, whose `required` list is typed to the *organization* roles — `owner`, `admin`,
+ * `member`. A trip role is a different vocabulary and `editor` is not in it, and widening that
+ * constructor means editing `context.ts`, which this change does not own. `FORBIDDEN` is the code
+ * every caller maps to a 403, so nothing downstream can tell the difference.
+ */
+const BOOKING_WRITE_ROLES: ReadonlyArray<TripMember['role']> = [
+  'owner',
+  'editor',
+]
+
+/**
+ * The third layer, after the tenant filter and after `requireTrip`.
+ *
+ * It is the only one that can see whether the caller is allowed to *change* this trip rather than
+ * merely reach it: a member of the workspace who is a `viewer` on the trip passes both of the
+ * others. Every writer in this file resolves its trip first, so the id handed here is always one
+ * the caller could already read.
+ */
+async function assertBookingRole(
+  scope: TenantScope,
+  tripId: string,
+): Promise<void> {
+  const role = await tripRoleFor(scope, tripId, scope.ctx.userId)
+  if (role === null || !BOOKING_WRITE_ROLES.includes(role)) {
+    throw new RepositoryError(
+      `Trip role ${role ?? 'none'} may not change this trip’s bookings; requires one of: ${BOOKING_WRITE_ROLES.join(', ')}.`,
+      'FORBIDDEN',
+    )
+  }
+}
+
+/**
+ * The booking a writer is about to change, once the caller has been shown to be allowed to change
+ * it: `NotFoundError` when the row is not theirs, `FORBIDDEN` when it is theirs to read and not to
+ * edit. Every writer below that starts from a booking id starts here, so the two refusals cannot
+ * drift apart between them.
+ */
+async function requireWritableReservation(
+  scope: TenantScope,
+  reservationId: string,
+): Promise<Reservation> {
+  const existing = await reservationsRepository.requireById(
+    scope,
+    reservationId,
+  )
+  await assertBookingRole(scope, existing.tripId)
+  return existing
+}
 
 /** Verifies every optional reference points at a row of the same trip inside the same tenant. */
 async function assertReferences(
@@ -205,7 +291,13 @@ async function assertReferences(
     const rows = await scope.db
       .select({ tripId: dayAssignments.tripId })
       .from(dayAssignments)
-      .where(tenantFilter(scope, dayAssignments, eq(dayAssignments.id, values.assignmentId)))
+      .where(
+        tenantFilter(
+          scope,
+          dayAssignments,
+          eq(dayAssignments.id, values.assignmentId),
+        ),
+      )
       .limit(1)
     if (rows[0]?.tripId !== tripId) {
       throw new NotFoundError('day assignment', values.assignmentId)
@@ -215,7 +307,9 @@ async function assertReferences(
     const rows = await scope.db
       .select({ tripId: transports.tripId })
       .from(transports)
-      .where(tenantFilter(scope, transports, eq(transports.id, values.transportId)))
+      .where(
+        tenantFilter(scope, transports, eq(transports.id, values.transportId)),
+      )
       .limit(1)
     if (rows[0]?.tripId !== tripId) {
       throw new NotFoundError('transport', values.transportId)
@@ -229,6 +323,7 @@ export async function createReservation(
 ): Promise<Reservation> {
   const values = createReservationInput.parse(input)
   await requireTrip(scope, values.tripId)
+  await assertBookingRole(scope, values.tripId)
   await assertReferences(scope, values.tripId, values)
   return reservationsRepository.insert(scope, values)
 }
@@ -239,7 +334,7 @@ export async function updateReservation(
   input: UpdateReservationInput,
 ): Promise<Reservation> {
   const values = definedOnly(updateReservationInput.parse(input))
-  const existing = await reservationsRepository.requireById(scope, reservationId)
+  const existing = await requireWritableReservation(scope, reservationId)
   await assertReferences(scope, existing.tripId, values)
   return reservationsRepository.requireUpdate(scope, reservationId, values)
 }
@@ -249,6 +344,7 @@ export async function setReservationStatus(
   reservationId: string,
   status: (typeof RESERVATION_STATUSES)[number],
 ): Promise<Reservation> {
+  await requireWritableReservation(scope, reservationId)
   return reservationsRepository.requireUpdate(scope, reservationId, {
     status: z.enum(RESERVATION_STATUSES).parse(status),
   })
@@ -258,5 +354,92 @@ export async function deleteReservation(
   scope: TenantScope,
   reservationId: string,
 ): Promise<void> {
+  await requireWritableReservation(scope, reservationId)
   await reservationsRepository.requireRemove(scope, reservationId)
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The two columns no payload may set
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The only way `reservations.expense_id` is ever written.
+ *
+ * `expenseId` is deliberately absent from {@link reservationFields}, so no client payload can set
+ * it: the link is a consequence of the server's own ledger side effect, never a field a caller
+ * supplies. Both ends are resolved inside the caller's scope before anything is written — the
+ * booking through `requireById`, the expense through `getExpense` — so an id that resolves in
+ * another organization does not resolve here at all, and an expense of another *trip* is refused
+ * even inside the right tenant.
+ *
+ * Passing `null` unlinks, which is what a price that was cleared means: the ledger line stays and
+ * simply stops saying which booking it came from.
+ */
+export async function linkReservationExpense(
+  scope: TenantScope,
+  reservationId: string,
+  expenseId: string | null,
+): Promise<Reservation> {
+  const reservation = await requireWritableReservation(scope, reservationId)
+
+  if (expenseId === null) {
+    return reservationsRepository.requireUpdate(scope, reservationId, {
+      expenseId: null,
+    })
+  }
+
+  const id = idSchema.parse(expenseId)
+  const expense = await getExpense(scope, id)
+  if (expense === null || expense.tripId !== reservation.tripId) {
+    throw new NotFoundError('expense', id)
+  }
+  return reservationsRepository.requireUpdate(scope, reservationId, {
+    expenseId: id,
+  })
+}
+
+/** The id list one import may mark in a single statement — the engine's own ceiling, not a second opinion. */
+const IMPORT_BATCH_LIMIT = 500
+
+const importedIdsSchema = z.array(idSchema).min(1).max(IMPORT_BATCH_LIMIT)
+
+/**
+ * Marks a batch of bookings as machine-written and unchecked, returning how many rows it marked.
+ *
+ * One statement for the whole batch, and its `where` begins at `tenantFilter()` like every other
+ * statement in this file — so an id belonging to another organization matches no row rather than
+ * raising, and the count is the number of rows that were genuinely the caller's. That count is the
+ * reason this returns a number and not `void`: without it a silent no-op on a foreign id is
+ * indistinguishable from success.
+ *
+ * The clock is read once, so every row of one import carries the same instant.
+ */
+export async function markReservationsImported(
+  scope: TenantScope,
+  reservationIds: ReadonlyArray<string>,
+): Promise<number> {
+  const ids = importedIdsSchema.parse([...reservationIds])
+  const markedAt = new Date()
+  const rows = await reservationsRepository.updateWhere(
+    scope,
+    inArray(reservations.id, ids),
+    { importedAt: markedAt },
+  )
+  return rows.length
+}
+
+/**
+ * Clears the import marker — the first time a person opens an imported booking and saves it.
+ *
+ * Idempotent by construction: clearing a marker that is already null writes null again and returns
+ * the row, so the desk never has to ask first. A booking id that is not the caller's is a
+ * `NotFoundError` from the same scoped read every other writer here uses.
+ */
+export async function clearReservationImported(
+  scope: TenantScope,
+  reservationId: string,
+): Promise<Reservation> {
+  return reservationsRepository.requireUpdate(scope, reservationId, {
+    importedAt: null,
+  })
 }

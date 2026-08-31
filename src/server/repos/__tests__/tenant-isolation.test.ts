@@ -17,7 +17,7 @@ import {
   collectionPlaceLabels,
   placeTags,
 } from '#/server/db/schema'
-import { NotFoundError, QuotaExceededError } from '../context'
+import { NotFoundError, QuotaExceededError, RepositoryError } from '../context'
 import {
   bucketListRepository,
   getTravelStats,
@@ -88,6 +88,7 @@ import {
   createSettlement,
   expenseSharesRepository,
   expensesRepository,
+  getExpense,
   getMemberBalances,
   getTripSpendSummary,
   settlementsRepository,
@@ -141,7 +142,18 @@ import {
   setPreference,
 } from '../notifications'
 import { createPlace, placesRepository, setPlaceTags } from '../places'
-import { createReservation, reservationsRepository } from '../reservations'
+import {
+  clearReservationImported,
+  createReservation,
+  deleteReservation,
+  getReservation,
+  linkReservationExpense,
+  listTripReservations,
+  markReservationsImported,
+  reservationsRepository,
+  setReservationStatus,
+  updateReservation,
+} from '../reservations'
 import {
   appSettingsStore,
   ensureOrganizationSettings,
@@ -2701,6 +2713,264 @@ describe('tenant isolation', () => {
           { stations: [{ name: 'Lisbon' }, { name: 'Porto' }], legs: [{}] },
         ),
       ).toHaveLength(1)
+    })
+  })
+  /**
+   * 03-S4 — a booking that knows which stop it is for, and what it cost.
+   *
+   * Three surfaces cross the boundary here and each is asserted from the side
+   * that can be fooled. The **stop link** is a reference into another workspace's
+   * itinerary. The **cost link** is a reference the server writes on the caller's
+   * behalf, which is exactly the kind an attacker would rather supply than earn —
+   * so it is resolved through a scoped read on both ends rather than trusted. The
+   * **import marker** is written in bulk over a list of ids, which is the one
+   * write in this file whose `where` is not a single primary key.
+   *
+   * The role guard is asserted in the same block because it is the layer above
+   * all three: a `viewer` on their own trip is inside the tenant, inside the trip,
+   * and still may not write.
+   */
+  describe('a booking, the stop it is for, and the cost line it wrote', () => {
+    it('answers nothing when asked, from A, about B rows', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(await getReservation(scope, beta.reservationId)).toBeNull()
+      expect(
+        await listTripReservations(scope, { tripId: beta.tripId }),
+      ).toEqual([])
+
+      // The same ids resolve for their own tenant, so it is scoping that hid them.
+      expect(
+        await getReservation(beta.tenant.scope, beta.reservationId),
+      ).not.toBeNull()
+      expect(
+        await listTripReservations(beta.tenant.scope, { tripId: beta.tripId }),
+      ).toHaveLength(1)
+    })
+
+    it('refuses every write against a B booking from A’s scope', async () => {
+      const scope = alpha.tenant.scope
+      const before = await getReservation(beta.tenant.scope, beta.reservationId)
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () =>
+          updateReservation(scope, beta.reservationId, { title: 'Hijacked' }),
+        () => setReservationStatus(scope, beta.reservationId, 'cancelled'),
+        () => deleteReservation(scope, beta.reservationId),
+        () =>
+          linkReservationExpense(scope, beta.reservationId, alpha.expenseId),
+        () => clearReservationImported(scope, beta.reservationId),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(
+        await getReservation(beta.tenant.scope, beta.reservationId),
+      ).toEqual(before)
+    })
+
+    it('refuses to move an A booking onto a B stop', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() =>
+          updateReservation(scope, alpha.reservationId, {
+            assignmentId: beta.assignmentId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      const own = await getReservation(scope, alpha.reservationId)
+      expect(own?.assignmentId).toBeNull()
+    })
+
+    /**
+     * The case that proves the cost link cannot be used to reach across tenants.
+     * A owns the booking, so `requireById` lets it through; the expense is B's,
+     * and the scoped read behind it returns null rather than a row.
+     */
+    it('refuses to link A’s booking to B’s cost line', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() =>
+          linkReservationExpense(scope, alpha.reservationId, beta.expenseId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(
+        (await getReservation(scope, alpha.reservationId))?.expenseId,
+      ).toBeNull()
+    })
+
+    it('links a booking to a cost line of its own trip, and unlinks it again', async () => {
+      const scope = alpha.tenant.scope
+
+      const linked = await linkReservationExpense(
+        scope,
+        alpha.reservationId,
+        alpha.expenseId,
+      )
+      expect(linked.expenseId).toBe(alpha.expenseId)
+
+      const unlinked = await linkReservationExpense(
+        scope,
+        alpha.reservationId,
+        null,
+      )
+      expect(unlinked.expenseId).toBeNull()
+    })
+
+    it('never writes a ledger row into B, whatever combination of ids it is given', async () => {
+      const scope = alpha.tenant.scope
+      const before = await expensesRepository.count(beta.tenant.scope)
+      const bookingsBefore = await listTripReservations(beta.tenant.scope, {
+        tripId: beta.tripId,
+      })
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () =>
+          createExpense(scope, {
+            tripId: beta.tripId,
+            title: 'Stolen cost line',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+          }),
+        () => linkReservationExpense(scope, beta.reservationId, beta.expenseId),
+        () =>
+          linkReservationExpense(scope, alpha.reservationId, beta.expenseId),
+        () =>
+          linkReservationExpense(scope, beta.reservationId, alpha.expenseId),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await expensesRepository.count(beta.tenant.scope)).toBe(before)
+      expect(
+        await listTripReservations(beta.tenant.scope, { tripId: beta.tripId }),
+      ).toEqual(bookingsBefore)
+      expect(
+        (await getExpense(beta.tenant.scope, beta.expenseId))?.tripId,
+      ).toBe(beta.tripId)
+    })
+
+    /**
+     * The bulk writer's `where` is an id list, so it is the one place a foreign
+     * id could be marked by being named rather than by being owned. The count it
+     * returns is what makes that visible: without it, a silent no-op on B's id is
+     * indistinguishable from success.
+     */
+    it('marks only the rows the caller owns, and says how many', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await markReservationsImported(scope, [
+          alpha.reservationId,
+          beta.reservationId,
+        ]),
+      ).toBe(1)
+
+      expect(
+        (await getReservation(scope, alpha.reservationId))?.importedAt,
+      ).toBeInstanceOf(Date)
+      expect(
+        (await getReservation(beta.tenant.scope, beta.reservationId))
+          ?.importedAt,
+      ).toBeNull()
+    })
+
+    it('clears its own marker twice without complaining', async () => {
+      const scope = alpha.tenant.scope
+      await markReservationsImported(scope, [alpha.reservationId])
+
+      expect(
+        (await clearReservationImported(scope, alpha.reservationId)).importedAt,
+      ).toBeNull()
+      expect(
+        (await clearReservationImported(scope, alpha.reservationId)).importedAt,
+      ).toBeNull()
+    })
+
+    /**
+     * The strip defect this stage exists to close, asserted from the outside:
+     * `createReservationInput` and `updateReservationInput` are `z.object`s, so an
+     * `importedAt` handed to either is dropped rather than refused. If it were
+     * ever declared there, a hand-typed booking could claim to be machine-written.
+     */
+    it('cannot be marked as imported through a booking payload', async () => {
+      const scope = alpha.tenant.scope
+
+      // Declared as variables rather than inline, so the extra key reaches the
+      // validator instead of being caught by the compiler's excess-property check —
+      // a request off the wire is exactly that: a wider object than the schema.
+      const creation = {
+        tripId: alpha.tripId,
+        title: 'Typed by a person',
+        importedAt: new Date(),
+      }
+      const created = await createReservation(scope, creation)
+      expect(created.importedAt).toBeNull()
+
+      const edit = { title: 'Still typed by a person', importedAt: new Date() }
+      const updated = await updateReservation(scope, alpha.reservationId, edit)
+      expect(updated.title).toBe('Still typed by a person')
+      expect(updated.importedAt).toBeNull()
+    })
+
+    it('lets an editor write and refuses a viewer, on their own trip', async () => {
+      const editorId = await alpha.tenant.addUser('Editor')
+      const viewerId = await alpha.tenant.addUser('Viewer')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: editorId,
+        role: 'editor',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+
+      const editor = alpha.tenant.scopeFor(editorId)
+      const viewer = alpha.tenant.scopeFor(viewerId)
+
+      const written = await createReservation(editor, {
+        tripId: alpha.tripId,
+        title: 'Added by the editor',
+      })
+      expect(written.tripId).toBe(alpha.tripId)
+
+      // `FORBIDDEN` is the code every caller maps to a 403, so it is the code that
+      // is asserted rather than the class or the sentence.
+      const refusalCode = async (
+        run: () => Promise<unknown>,
+      ): Promise<string> => {
+        const error = await captureError(run)
+        return error instanceof RepositoryError ? error.code : error.name
+      }
+
+      expect(
+        await refusalCode(() =>
+          createReservation(viewer, {
+            tripId: alpha.tripId,
+            title: 'Added by the viewer',
+          }),
+        ),
+      ).toBe('FORBIDDEN')
+
+      // And the same refusal on every other writer this file owns.
+      for (const attempt of [
+        () =>
+          updateReservation(viewer, alpha.reservationId, { title: 'Hijacked' }),
+        () => setReservationStatus(viewer, alpha.reservationId, 'cancelled'),
+        () => deleteReservation(viewer, alpha.reservationId),
+        () =>
+          linkReservationExpense(viewer, alpha.reservationId, alpha.expenseId),
+      ]) {
+        expect(await refusalCode(attempt)).toBe('FORBIDDEN')
+      }
     })
   })
 })

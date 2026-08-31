@@ -2064,6 +2064,23 @@ function preloadAdvisory(url: string, tail = WEBKIT_PRELOAD_TAIL): string {
   return `The resource ${url} was preloaded using link preload but not used within a few seconds from the window's load event.${tail}`
 }
 
+/**
+ * The CSRF advisory as a page receives it, verbatim.
+ *
+ * Transcribed from the run it failed: `vite dev` bridges the Worker's console into
+ * the browser, and Playwright renders the bridged call by joining the format string
+ * to its arguments — which is why the CSS the framework passes for `%c` is sitting
+ * in the middle of the sentence. The styling is the framework's and could change,
+ * so the tolerance spans it rather than quoting it, and this builder takes it as a
+ * parameter to prove that.
+ */
+function csrfAdvisory(
+  style = 'color: #9333ea; font-weight: bold; color: inherit;',
+  prefix = '%c[Server]%c ',
+): string {
+  return `${prefix}${style} TanStack Start server functions are not protected by the CSRF middleware.\n\nServer functions are same-origin RPC endpoints and should be protected from cross-site requests.`
+}
+
 /** The hosts a development server answers on, and the only ones the tolerance covers. */
 const LOOPBACK_HOSTS: ReadonlyArray<string> = [
   'localhost',
@@ -2437,6 +2454,47 @@ test.describe('the gate itself', () => {
         what: 'an app warning that merely quotes the preload advisory',
         type: 'warning',
         text: `The theme script bailed out. ${preloadAdvisory('http://localhost:3003/src/styles/styles.css')}`,
+        liveMap: false,
+        verdict: 'fatal',
+      },
+      {
+        // The message that failed `the hover card never lands on the panel it
+        // would hide behind` on chromium, from a server-function request four
+        // workers away on the platform-console specs. No page wrote it.
+        what: "the Worker's CSRF advisory, bridged into a page by `vite dev`",
+        type: 'warning',
+        text: csrfAdvisory(),
+        liveMap: false,
+        verdict: 'tolerated',
+      },
+      {
+        what: 'the same advisory after the framework restyles its prefix',
+        type: 'warning',
+        text: csrfAdvisory('color: #0ea5e9; font-weight: bold;'),
+        liveMap: false,
+        verdict: 'tolerated',
+      },
+      {
+        // The direction that keeps this narrow. Without the bridge in front of
+        // it the sentence is something running in the page said, and a page has
+        // no business saying it.
+        what: 'the same sentence with no forwarding prefix in front of it',
+        type: 'warning',
+        text: csrfAdvisory('', ''),
+        liveMap: false,
+        verdict: 'fatal',
+      },
+      {
+        what: 'an app warning that merely quotes the CSRF advisory',
+        type: 'warning',
+        text: `The booking did not save. ${csrfAdvisory()}`,
+        liveMap: false,
+        verdict: 'fatal',
+      },
+      {
+        what: 'a different server message riding the same bridge',
+        type: 'warning',
+        text: '%c[Server]%c color: #9333ea; a tenant scope was resolved without an organization.',
         liveMap: false,
         verdict: 'fatal',
       },

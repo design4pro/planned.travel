@@ -4,11 +4,13 @@ import {
   BOOKING_TYPES,
   bookingShape,
   bookingTypeLabel,
+  chooseStop,
   emptyBookingDraft,
   formatMinorForInput,
   hasBookingErrors,
   isBookingStatus,
   isBookingType,
+  ledgerNotice,
   minorUnitDigits,
   parseMoneyToMinor,
   showsField,
@@ -306,5 +308,214 @@ describe('validateBookingDraft', () => {
       'title',
       'url',
     ])
+  })
+})
+
+describe('the stop a booking is for', () => {
+  it('is offered for every kind of booking except the stay', () => {
+    for (const type of BOOKING_TYPES) {
+      // A stay covers a run of nights and does not belong to one stop on one day.
+      expect(showsField(type, 'assignmentId')).toBe(type !== 'accommodation')
+    }
+  })
+
+  it('is never something a booking cannot be saved without', () => {
+    for (const type of BOOKING_TYPES) {
+      expect(bookingShape(type).required).not.toContain('assignmentId')
+    }
+  })
+
+  it('pins the booking to the stop and to the day the stop sits on', () => {
+    const next = chooseStop(draft({ type: 'restaurant' }), {
+      assignmentId: 'stop-7',
+      dayId: 'day-3',
+      date: '2026-04-18',
+    })
+
+    expect(next.assignmentId).toBe('stop-7')
+    expect(next.dayId).toBe('day-3')
+  })
+
+  it('fills an empty date from the stop’s day', () => {
+    const next = chooseStop(draft({ type: 'restaurant', startDate: '' }), {
+      assignmentId: 'stop-7',
+      dayId: 'day-3',
+      date: '2026-04-18',
+    })
+
+    expect(next.startDate).toBe('2026-04-18')
+  })
+
+  it('never overwrites a date the traveller typed themselves', () => {
+    const next = chooseStop(
+      draft({ type: 'restaurant', startDate: '2026-04-16' }),
+      { assignmentId: 'stop-7', dayId: 'day-3', date: '2026-04-18' },
+    )
+
+    expect(next.startDate).toBe('2026-04-16')
+  })
+
+  it('leaves the date alone when the trip is not dated yet', () => {
+    const next = chooseStop(draft({ type: 'restaurant' }), {
+      assignmentId: 'stop-7',
+      dayId: 'day-3',
+      date: null,
+    })
+
+    expect(next.startDate).toBe('')
+    expect(next.dayId).toBe('day-3')
+  })
+
+  it('clears the stop without disturbing the day it filled in', () => {
+    const pinned = chooseStop(draft({ type: 'restaurant' }), {
+      assignmentId: 'stop-7',
+      dayId: 'day-3',
+      date: '2026-04-18',
+    })
+    const cleared = chooseStop(pinned, null)
+
+    expect(cleared.assignmentId).toBe('')
+    expect(cleared.dayId).toBe('day-3')
+    expect(cleared.startDate).toBe('2026-04-18')
+  })
+
+  it('refuses a stop the trip does not have', () => {
+    const errors = validateBookingDraft(
+      draft({
+        type: 'restaurant',
+        startDate: '2026-04-16',
+        startTime: '19:00',
+        assignmentId: 'stop-from-another-trip',
+      }),
+      { stopIds: ['stop-7', 'stop-8'] },
+    )
+
+    expect(errors.assignmentId).toBeDefined()
+  })
+
+  it('accepts a stop the trip does have', () => {
+    const errors = validateBookingDraft(
+      draft({
+        type: 'restaurant',
+        startDate: '2026-04-16',
+        startTime: '19:00',
+        assignmentId: 'stop-7',
+      }),
+      { stopIds: ['stop-7', 'stop-8'] },
+    )
+
+    expect(hasBookingErrors(errors)).toBe(false)
+  })
+
+  it('says nothing about a stop when the caller has no list to check against', () => {
+    const errors = validateBookingDraft(
+      draft({
+        type: 'restaurant',
+        startDate: '2026-04-16',
+        startTime: '19:00',
+        assignmentId: 'stop-7',
+      }),
+    )
+
+    expect(errors.assignmentId).toBeUndefined()
+  })
+})
+
+/**
+ * The four sentences under the price, one per branch of the ledger side effect.
+ *
+ * They state the effect *before* the save, because a side effect the reader finds
+ * out about afterwards is one they never agreed to.
+ */
+describe('ledgerNotice', () => {
+  /** No date anywhere but the draft's own, and no cost line yet. */
+  const undated = { linked: false, dayDate: null, tripStartDate: null }
+
+  it('says a line will be added when there is a price and no line yet', () => {
+    const notice = ledgerNotice(
+      draft({ price: '42', currency: 'GBP', startDate: '2026-04-16' }),
+      undated,
+    )
+
+    expect(notice?.tone).toBe('info')
+    expect(notice?.message).toBe(
+      'A £42.00 line will be added to this trip’s costs.',
+    )
+  })
+
+  it('says the existing line will be updated when one is already linked', () => {
+    const notice = ledgerNotice(
+      draft({ price: '48', currency: 'GBP', startDate: '2026-04-16' }),
+      { ...undated, linked: true },
+    )
+
+    expect(notice?.message).toBe(
+      'This booking’s cost line will be updated to £48.00.',
+    )
+  })
+
+  it('says the line survives, unlinked, when the price is cleared', () => {
+    const notice = ledgerNotice(draft({ price: '', startDate: '2026-04-16' }), {
+      ...undated,
+      linked: true,
+    })
+
+    expect(notice?.message).toBe(
+      'This booking’s cost line will stay in the trip’s costs, no longer linked to this booking.',
+    )
+  })
+
+  it('asks for a date when there is none anywhere in the chain', () => {
+    const notice = ledgerNotice(
+      draft({ price: '42', currency: 'GBP', startDate: '' }),
+      undated,
+    )
+
+    expect(notice?.tone).toBe('warning')
+    expect(notice?.message).toBe(
+      'Give this booking a date and its cost will be added to the trip’s costs.',
+    )
+  })
+
+  it('takes the date from the linked day when the booking has none', () => {
+    const notice = ledgerNotice(
+      draft({ price: '42', currency: 'GBP', startDate: '' }),
+      { ...undated, dayDate: '2026-04-18' },
+    )
+
+    expect(notice?.tone).toBe('info')
+  })
+
+  it('takes the date from the trip when neither the booking nor the day has one', () => {
+    const notice = ledgerNotice(
+      draft({ price: '42', currency: 'GBP', startDate: '' }),
+      { ...undated, tripStartDate: '2026-04-10' },
+    )
+
+    expect(notice?.tone).toBe('info')
+  })
+
+  it('says nothing at all when there is no price and no line', () => {
+    expect(
+      ledgerNotice(draft({ price: '', startDate: '2026-04-16' }), undated),
+    ).toBeNull()
+  })
+
+  it('says nothing about a price it cannot read', () => {
+    expect(
+      ledgerNotice(
+        draft({ price: 'about a hundred', startDate: '2026-04-16' }),
+        undated,
+      ),
+    ).toBeNull()
+  })
+
+  it('prices the notice in the booking’s own currency', () => {
+    const notice = ledgerNotice(
+      draft({ price: '7490', currency: 'JPY', startDate: '2026-04-16' }),
+      undated,
+    )
+
+    expect(notice?.message).toContain('¥7,490')
   })
 })

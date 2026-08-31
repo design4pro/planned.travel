@@ -11,18 +11,29 @@ import { z } from 'zod'
 
 import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { RESERVATION_STATUSES, RESERVATION_TYPES } from '#/server/db/schema'
+import { createLogger, serializeError } from '#/server/observability'
 import {
   countTripReservationsByStatus,
+  createExpense,
   createReservation,
   deleteReservation,
-  listTripDays,
+  getDay,
+  getReservation,
+  getTripItinerary,
+  linkReservationExpense,
   listTripReservations,
   requireTrip,
   setReservationStatus,
   totalTripReservationsMinor,
+  updateExpense,
   updateReservation,
 } from '#/server/repos'
 import { appScope, mirrorToRoom, orNull, patch, tombstone } from './context'
+
+import type { EXPENSE_CATEGORIES } from '#/server/db/schema'
+import type { Logger } from '#/server/observability'
+import type { Reservation, Trip } from '#/server/db/types'
+import type { TenantScope } from '#/server/repos'
 
 /* ------------------------------------------------------------------ inputs */
 
@@ -79,6 +90,14 @@ const bookingFields = {
     ),
   /** `''` leaves the booking off the itinerary. */
   dayId: z.string().trim().max(64),
+  /**
+   * The stop on a day this booking is for — `''` for none.
+   *
+   * Declared on both write validators, never on one: these are `z.object`s, and an object schema
+   * strips a key it has not been told about. A stop the screen chooses and a validator has never
+   * heard of is a column written null with every unit test still green.
+   */
+  assignmentId: z.string().trim().max(64),
   notes: optionalNotes,
 }
 
@@ -129,6 +148,7 @@ function payload(data: BookingInput) {
     priceMinor: data.priceMinor === 0 ? null : data.priceMinor,
     currency: orNull(data.currency),
     dayId: orNull(data.dayId),
+    assignmentId: orNull(data.assignmentId),
     notes: orNull(data.notes),
   }
 }
@@ -153,19 +173,201 @@ function auditMetadata(
   }
 }
 
+/* ------------------------------------------------------------------ ledger */
+
+/**
+ * Memoised per isolate, and built without `env` for the reason `src/server/audit/trail.ts` gives:
+ * this module is imported by the `server` Vitest project, where `cloudflare:workers` does not
+ * resolve, and the only line emitted here is a `warn`.
+ */
+let logger: Logger | undefined
+
+function log(): Logger {
+  logger ??= createLogger({ context: { component: 'booking-ledger' } })
+  return logger
+}
+
+/**
+ * The cost category each kind of booking implies.
+ *
+ * A **default**, not a fixed mapping: `updateExpense` already accepts a category, so recategorising
+ * a line afterwards needs no new work here and no picker anywhere. Written as a mapped type over
+ * `RESERVATION_TYPES`, so a type added later is a compile error rather than a silent `other`, and
+ * every value is inside `EXPENSE_CATEGORIES`, which the column's own `CHECK` enforces anyway.
+ */
+const BOOKING_EXPENSE_CATEGORY: {
+  readonly [
+    K in (typeof RESERVATION_TYPES)[number]
+  ]: (typeof EXPENSE_CATEGORIES)[number]
+} = {
+  accommodation: 'accommodation',
+  restaurant: 'food',
+  activity: 'activities',
+  tour: 'activities',
+  ticket: 'activities',
+  transport: 'transport',
+  other: 'other',
+}
+
+/** `reservations.type` is a `text` column, so the row is read back as a string. */
+function categoryFor(type: string): (typeof EXPENSE_CATEGORIES)[number] {
+  return (RESERVATION_TYPES as ReadonlyArray<string>).includes(type)
+    ? BOOKING_EXPENSE_CATEGORY[type as (typeof RESERVATION_TYPES)[number]]
+    : 'other'
+}
+
+/**
+ * What became of a booking's cost line, reported back to the screen that saved it.
+ *
+ * `failed` is the one the dialog acts on: the booking is saved and the ledger is not, which is a
+ * partial success rather than an error, and the reader is told exactly which half did not happen.
+ */
+export type LedgerOutcome =
+  'created' | 'updated' | 'unlinked' | 'undated' | 'kept' | 'none' | 'failed'
+
+export interface LedgerSubject {
+  /** The row as it now stands — read back from the write, never from the request. */
+  readonly reservation: Reservation
+  /** The trip, for the last fallback of both the currency and the date. */
+  readonly trip: Trip
+  /** True when the booking is on its way out, so nothing may be written against it. */
+  readonly discarded?: boolean
+}
+
+/**
+ * The date a booking's cost line is spent on: the booking's own start date, then the date of the
+ * day it is pinned to, then the trip's start date.
+ *
+ * All three are nullable, and when every one of them is null the answer is `null` and no line is
+ * written at all. A guessed date on a money row is worse than no row.
+ */
+async function spentOnFor(
+  scope: TenantScope,
+  reservation: Reservation,
+  trip: Trip,
+): Promise<string | null> {
+  if (reservation.startDate !== null) {
+    return reservation.startDate
+  }
+  if (reservation.dayId !== null) {
+    const day = await getDay(scope, reservation.dayId)
+    if (day !== null && day.date !== null) {
+      return day.date
+    }
+  }
+  return trip.startDate
+}
+
+/**
+ * The single place a booking's price meets the trip's ledger.
+ *
+ * It lives beside the server functions rather than inside `reservationsRepository` for a measured
+ * reason: the development seeder (`src/routes/api/dev/-seed/apply-trip.ts`) writes reservations
+ * straight through the repository, and a repository-level hook would make the seeded trip carry
+ * costs nobody entered. One helper, called by every write path that can change a price, is what
+ * keeps the four branches from drifting apart across those call sites.
+ *
+ * `reservation.expenseId` is the idempotency key for every branch, and it is read off the row that
+ * was just written rather than off the request — which is what makes the third save of the same
+ * booking an update rather than a fourth ledger line.
+ *
+ * Nothing here can fail the save. D1 has already committed the booking by the time this runs, so a
+ * refused ledger write is logged and reported as `failed`; turning it into a thrown error would
+ * invite a retry that produces a second booking.
+ */
+export async function syncReservationExpense(
+  scope: TenantScope,
+  subject: LedgerSubject,
+): Promise<LedgerOutcome> {
+  const { reservation, trip } = subject
+  try {
+    if (subject.discarded === true) {
+      /*
+       * Deleting a booking deletes no cost line, for the same reason clearing a price does not:
+       * the line may have been split with three other people, and destroying their record because
+       * somebody tidied a booking is not a tidy-up. The link goes with the row; the ledger keeps a
+       * line that no longer says which booking it came from, which is what the reader would have
+       * had if they had typed it by hand.
+       *
+       * This branch writes nothing, and it is a branch rather than a missing call so that the
+       * policy is stated once, in the function that owns it, instead of being an omission spread
+       * across three call sites.
+       */
+      return reservation.expenseId === null ? 'none' : 'kept'
+    }
+
+    const amountMinor = reservation.priceMinor ?? 0
+    if (amountMinor <= 0) {
+      if (reservation.expenseId === null) {
+        return 'none'
+      }
+      await linkReservationExpense(scope, reservation.id, null)
+      return 'unlinked'
+    }
+
+    // No arithmetic: `price_minor` is assigned to `amount_minor` as one integer to another, so the
+    // booking and its cost line cannot disagree by a cent. A booking priced in yen produces a
+    // ledger line in yen; converting it to the trip's accounting currency is another stage's.
+    const currency = reservation.currency ?? trip.currency
+
+    if (reservation.expenseId !== null) {
+      await updateExpense(scope, reservation.expenseId, {
+        title: reservation.title,
+        amountMinor,
+        currency,
+      })
+      return 'updated'
+    }
+
+    const spentOn = await spentOnFor(scope, reservation, trip)
+    if (spentOn === null) {
+      return 'undated'
+    }
+
+    const { expense } = await createExpense(scope, {
+      tripId: reservation.tripId,
+      title: reservation.title,
+      amountMinor,
+      currency,
+      category: categoryFor(reservation.type),
+      dayId: reservation.dayId,
+      placeId: reservation.placeId,
+      spentOn,
+    })
+    // Two writes, and the second is what makes the next save an update rather than a second line.
+    await linkReservationExpense(scope, reservation.id, expense.id)
+    return 'created'
+  } catch (cause) {
+    log().warn('booking ledger sync failed', {
+      reservationId: reservation.id,
+      tripId: reservation.tripId,
+      organizationId: scope.ctx.organizationId,
+      ...serializeError(cause),
+    })
+    return 'failed'
+  }
+}
+
 /* ------------------------------------------------------------------ writes */
+
+/** What a booking write answers with: the row, and what the ledger did about it. */
+export interface BookingWriteResult {
+  readonly reservationId: string
+  readonly ledger: LedgerOutcome
+}
 
 export const createBookingFn = createServerFn({ method: 'POST' })
   .validator(bookingInputSchema)
-  .handler(async ({ data }): Promise<{ readonly reservationId: string }> => {
+  .handler(async ({ data }): Promise<BookingWriteResult> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
+    const trip = await requireTrip(scope, data.tripId)
     assertOrder(data)
 
     const reservation = await createReservation(scope, {
       tripId: data.tripId,
       ...payload(data),
     })
+    const ledger = await syncReservationExpense(scope, { reservation, trip })
 
     await mirrorToRoom(scope, data.tripId, [
       patch('reservation', reservation.id, {
@@ -181,17 +383,22 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       entityId: reservation.id,
       metadata: auditMetadata(data),
     })
-    return { reservationId: reservation.id }
+    return { reservationId: reservation.id, ledger }
   })
 
 export const updateBookingFn = createServerFn({ method: 'POST' })
   .validator(bookingUpdateSchema)
-  .handler(async ({ data }): Promise<{ readonly reservationId: string }> => {
+  .handler(async ({ data }): Promise<BookingWriteResult> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
+    const trip = await requireTrip(scope, data.tripId)
     assertOrder(data)
 
-    await updateReservation(scope, data.reservationId, payload(data))
+    const reservation = await updateReservation(
+      scope,
+      data.reservationId,
+      payload(data),
+    )
+    const ledger = await syncReservationExpense(scope, { reservation, trip })
 
     await mirrorToRoom(scope, data.tripId, [
       patch('reservation', data.reservationId, {
@@ -207,7 +414,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
       entityId: data.reservationId,
       metadata: auditMetadata(data),
     })
-    return { reservationId: data.reservationId }
+    return { reservationId: data.reservationId, ledger }
   })
 
 /**
@@ -248,7 +455,18 @@ export const deleteBookingFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId, reservationId: rowId }))
   .handler(async ({ data }): Promise<{ readonly deleted: true }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
+    const trip = await requireTrip(scope, data.tripId)
+
+    // Read before the delete, because the row is what says whether it had a cost line — and the
+    // decision about that line belongs in one function, not in an `if` here.
+    const reservation = await getReservation(scope, data.reservationId)
+    if (reservation !== null) {
+      await syncReservationExpense(scope, {
+        reservation,
+        trip,
+        discarded: true,
+      })
+    }
     await deleteReservation(scope, data.reservationId)
 
     await mirrorToRoom(scope, data.tripId, [
@@ -285,6 +503,23 @@ export interface BookingRow {
   readonly notes: string | null
   /** The itinerary day this booking is pinned to, if any. */
   readonly dayId: string | null
+  /** The stop on that day this booking is for, if any. */
+  readonly assignmentId: string | null
+  /**
+   * Whether this booking already has a line in the trip's ledger.
+   *
+   * A boolean and not the id: the link is the server's own statement about its own side effect, so
+   * the screen is told *that* there is a line — which is all four sentences of the notice need —
+   * without being handed a handle it could send back.
+   */
+  readonly hasLedgerLine: boolean
+}
+
+/** One planned stop, offered under the day it sits on. */
+export interface BookingStopOption {
+  readonly assignmentId: string
+  readonly placeName: string
+  readonly startTime: string | null
 }
 
 export interface BookingDayOption {
@@ -292,6 +527,16 @@ export interface BookingDayOption {
   readonly dayNumber: number
   readonly date: string | null
   readonly title: string | null
+  /**
+   * The stops planned on this day.
+   *
+   * Nested under the day rather than sent as a flat list beside it, because the day list is what
+   * the route already hands the timeline and the timeline already hands the dialog: a stop that
+   * travels inside the day it belongs to reaches the picker without a single edit to either file,
+   * and the grouping the picker renders is then a property of the payload rather than a join the
+   * screen has to make.
+   */
+  readonly stops: ReadonlyArray<BookingStopOption>
 }
 
 export interface BookingDeskPayload {
@@ -315,45 +560,68 @@ export interface BookingDeskPayload {
  */
 export const loadBookingDeskFn = createServerFn({ method: 'GET' })
   .validator(z.object({ tripId }))
-  .handler(async ({ data }): Promise<BookingDeskPayload> => {
-    const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
+  .handler(async ({ data }): Promise<BookingDeskPayload> =>
+    bookingDeskPayload(await appScope(), data.tripId),
+  )
 
-    const [rows, days, byStatus, committedMinor] = await Promise.all([
-      listTripReservations(scope, { tripId: trip.id }),
-      listTripDays(scope, trip.id),
-      countTripReservationsByStatus(scope, trip.id),
-      totalTripReservationsMinor(scope, trip.id),
-    ])
+/**
+ * What {@link loadBookingDeskFn} answers, as a plain function.
+ *
+ * Split out because a server function's return value only survives across a Start build's RPC
+ * pair — outside one the handler runs and its answer is discarded — so this is the half a test can
+ * hold. `fns/atlas.ts` makes the same split, for the same reason.
+ */
+export async function bookingDeskPayload(
+  scope: TenantScope,
+  requestedTripId: string,
+): Promise<BookingDeskPayload> {
+  const trip = await requireTrip(scope, requestedTripId)
 
-    return {
-      currency: trip.currency,
-      byStatus,
-      committedMinor,
-      days: days.map((day) => ({
-        id: day.id,
-        dayNumber: day.dayNumber,
-        date: day.date,
-        title: day.title,
+  const [rows, itinerary, byStatus, committedMinor] = await Promise.all([
+    listTripReservations(scope, { tripId: trip.id }),
+    // The itinerary rather than the day list: an editable screen needs the stops as well as the
+    // days, and this read already assembles both in one pass. No repository function is added to
+    // `itinerary.ts`, which this change does not own.
+    getTripItinerary(scope, trip.id),
+    countTripReservationsByStatus(scope, trip.id),
+    totalTripReservationsMinor(scope, trip.id),
+  ])
+
+  return {
+    currency: trip.currency,
+    byStatus,
+    committedMinor,
+    days: itinerary.map(({ day, stops }) => ({
+      id: day.id,
+      dayNumber: day.dayNumber,
+      date: day.date,
+      title: day.title,
+      stops: stops.map((stop) => ({
+        assignmentId: stop.assignment.id,
+        placeName: stop.place.name,
+        startTime: stop.assignment.startTime,
       })),
-      bookings: rows.map((row) => ({
-        id: row.id,
-        type: row.type,
-        status: row.status,
-        title: row.title,
-        provider: row.provider,
-        location: row.location,
-        confirmationNumber: row.confirmationNumber,
-        url: row.url,
-        startDate: row.startDate,
-        startTime: row.startTime,
-        endDate: row.endDate,
-        endTime: row.endTime,
-        guests: row.guests,
-        priceMinor: row.priceMinor,
-        currency: row.currency,
-        notes: row.notes,
-        dayId: row.dayId,
-      })),
-    }
-  })
+    })),
+    bookings: rows.map((row) => ({
+      id: row.id,
+      type: row.type,
+      status: row.status,
+      title: row.title,
+      provider: row.provider,
+      location: row.location,
+      confirmationNumber: row.confirmationNumber,
+      url: row.url,
+      startDate: row.startDate,
+      startTime: row.startTime,
+      endDate: row.endDate,
+      endTime: row.endTime,
+      guests: row.guests,
+      priceMinor: row.priceMinor,
+      currency: row.currency,
+      notes: row.notes,
+      dayId: row.dayId,
+      assignmentId: row.assignmentId,
+      hasLedgerLine: row.expenseId !== null,
+    })),
+  }
+}

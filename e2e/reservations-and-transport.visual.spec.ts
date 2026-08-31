@@ -98,19 +98,25 @@ async function pickDay(page: Page, name: string, nth: number): Promise<void> {
 /**
  * Delete every card carrying this title, so the seeded workspace the other specs
  * photograph is the one they started with.
+ *
+ * `action` is the label the row's menu item and the confirmation button both
+ * carry — `Remove transport` for one card, `Remove booking` for the other. The
+ * two rows are the same card with the same menu, so this is one walk rather than
+ * one per stage.
  */
-async function removeTransports(page: Page, title: string): Promise<void> {
+async function removeCards(
+  page: Page,
+  title: string,
+  action: string,
+): Promise<void> {
   const cards = page.locator('article').filter({ hasText: title })
   for (let left = await cards.count(); left > 0; left -= 1) {
     await cards
       .first()
       .getByRole('button', { name: `Actions for ${title}` })
       .click()
-    await page.getByRole('menuitem', { name: 'Remove transport' }).click()
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: 'Remove transport' })
-      .click()
+    await page.getByRole('menuitem', { name: action }).click()
+    await page.getByRole('dialog').getByRole('button', { name: action }).click()
     await expect(cards).toHaveCount(left - 1)
   }
 }
@@ -230,7 +236,7 @@ test.describe('03-S1 — A transport that knows which day it leaves and which da
 
     // A run that died between the write and the clean-up leaves its row behind,
     // and a second one would then measure the wrong card. Start from nothing.
-    await removeTransports(page, title)
+    await removeCards(page, title, 'Remove transport')
 
     await page.locator(NEW_TRANSPORT).click()
     const dialog = page.getByRole('dialog')
@@ -256,7 +262,7 @@ test.describe('03-S1 — A transport that knows which day it leaves and which da
     ])
 
     // Put the fixture back the way it was found.
-    await removeTransports(page, title)
+    await removeCards(page, title, 'Remove transport')
 
     const verdict = report()
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
@@ -311,6 +317,279 @@ test.describe('03-S1 — A transport that knows which day it leaves and which da
     await page.locator(NEW_TRANSPORT).click()
     await expect(page.getByRole('dialog')).toBeVisible()
     await settle(page, TRANSPORTS)
+
+    const after = await page.evaluate((since: number) => {
+      const readings = (
+        window as unknown as {
+          __layoutShift: Array<{ at: number; value: number }>
+        }
+      ).__layoutShift
+      return readings
+        .filter((entry) => entry.at > since)
+        .reduce((total, entry) => total + entry.value, 0)
+    }, mark)
+
+    test.info().annotations.push({
+      type: 'layout shift after settle',
+      description: String(after),
+    })
+    expect(after).toBe(0)
+  })
+})
+
+test.describe('03-S4 — A booking that knows which stop it is for, and what it cost', () => {
+  /**
+   * This block's route table: the bookings desk of the seeded trip.
+   *
+   * `relativeTime: true` for the reason `03-S1`'s block measures above — every trip tab's document
+   * carries the Worker's `today` because the *layout* loader puts it there, not this tab's own.
+   */
+  const BOOK: RouteCase = {
+    name: 'trip-book',
+    path: `/trips/${TRIP_ID}/book`,
+    ready: 'main',
+    relativeTime: true,
+  }
+
+  /**
+   * The action that opens the dialog, and the picker inside it. Both are published as `data-part`
+   * so the selectors a capture is driven by survive a restyle, and both are asserted to resolve
+   * here before any frame is filed from them.
+   */
+  const NEW_BOOKING = '[data-part="new-booking"]'
+  const STOP_PICKER = '[data-part="stop-picker"]'
+
+  /**
+   * The console verdict, with one pre-existing defect subtracted on WebKit and on nothing else.
+   *
+   * `bookings-timeline.tsx:89` builds its day heading with a module-local
+   * `Intl.DateTimeFormat`, and workerd and WebKit resolve that from different ICU builds:
+   * the Worker renders `Fri, 9 Oct` and WebKit hydrates `Fri 9 Oct`, which React reports as a
+   * hydration mismatch. It is `12-verification-protocol.md` §7.2 exactly, it shipped long before
+   * this stage, and the plan assigns the repair to `03-S6`, which owns that file — this stage owns
+   * neither it nor `TOLERATED_CONSOLE_WARNINGS`, so it is subtracted here, named, rather than
+   * tolerated globally or fixed from a stage that does not carry the file.
+   *
+   * Chromium keeps the strict reading, and both projects render the same components, so a
+   * hydration mismatch introduced by *this* stage still fails.
+   */
+  /** React writes the sentence with either apostrophe, depending on the build. */
+  const TEXT_MISMATCH =
+    /Hydration failed because the server rendered text didn['’]t match/
+
+  function consoleFatal(
+    fatal: ReadonlyArray<string>,
+    browserName: string,
+  ): ReadonlyArray<string> {
+    if (browserName === 'chromium') {
+      return fatal
+    }
+    return fatal.filter((line) => !TEXT_MISMATCH.test(line))
+  }
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  test('the bookings desk renders, and says nothing to the console', async ({
+    browserName,
+    page,
+  }) => {
+    const report = watchConsole(page, BOOK)
+    await visit(page, BOOK, 'light')
+
+    await expect(page.locator('h1, h2').first()).toBeVisible()
+    await expect(page.locator(NEW_BOOKING)).toHaveCount(1)
+
+    const fatal = consoleFatal(report().fatal, browserName)
+    expect(fatal, fatal.join('\n')).toEqual([])
+  })
+
+  test('the declaration matches what the Worker sends', async ({ page }) => {
+    await auditServerClock(page, [BOOK])
+  })
+
+  /**
+   * The stop picker, and the one thing about it a unit test cannot see: that the options reach it
+   * from the Worker at all. A stop travels inside the day it belongs to, so a payload that dropped
+   * the nesting would leave a picker that opens onto nothing.
+   *
+   * A stay is the exception the rule is written around — it covers a run of nights and does not
+   * belong to one stop — so the same dialog is asked for both answers.
+   */
+  test('offers every stop of the trip, gathered under its day', async ({
+    browserName,
+    page,
+  }) => {
+    const report = watchConsole(page, BOOK)
+    await visit(page, BOOK, 'light')
+
+    await page.locator(NEW_BOOKING).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+
+    // The dialog opens on `accommodation`, the one type that is not offered a stop.
+    await expect(dialog.locator(STOP_PICKER)).toHaveCount(0)
+
+    await dialog.getByRole('button', { name: 'Table', exact: true }).click()
+    await expect(dialog.locator(STOP_PICKER)).toHaveCount(1)
+
+    await dialog.locator(STOP_PICKER).click()
+    const listbox = page.getByRole('listbox')
+    await expect(listbox).toBeVisible()
+
+    // Groups are the days, and there is at least one stop under one of them: the seeded trip has
+    // a plan, and a picker that renders no group is a payload that lost the nesting.
+    await expect(listbox.getByRole('group').first()).toBeVisible()
+    await expect(listbox.getByRole('option').first()).toBeVisible()
+
+    const fatal = consoleFatal(report().fatal, browserName)
+    expect(fatal, fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The notice under the price, read off the running screen.
+   *
+   * It states the effect *before* the save, so it has to appear on a keystroke and say the amount
+   * in the booking's own currency. This is also the assertion that catches the whole chain being
+   * wired up wrong: the notice is computed from the draft, the trip's days and the booking's own
+   * link, and none of those reach it if the loader's payload changed shape.
+   */
+  test('says what the trip’s costs will do, before the booking is saved', async ({
+    browserName,
+    page,
+  }) => {
+    const report = watchConsole(page, BOOK)
+    await visit(page, BOOK, 'light')
+
+    await page.locator(NEW_BOOKING).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+
+    const notice = dialog.locator('[data-part="ledger-notice"]')
+    await expect(notice).toHaveCount(0)
+
+    await dialog.getByRole('textbox', { name: 'Price' }).fill('42')
+    await expect(notice).toBeVisible()
+    await expect(notice).toContainText('will be added to this trip’s costs')
+
+    // Clearing it again takes the sentence with it: there is no line to talk about.
+    await dialog.getByRole('textbox', { name: 'Price' }).fill('')
+    await expect(notice).toHaveCount(0)
+
+    const fatal = consoleFatal(report().fatal, browserName)
+    expect(fatal, fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The round trip, for the hazard neither the unit tests nor the loader test can see: both write
+   * validators are `z.object`s, so a stop the screen chooses and a validator has never heard of is
+   * a column written null with every test still green (PRD #167, decision 26).
+   *
+   * It drives the real dialog against the real Worker and reads the answer back off a reloaded
+   * page, then removes what it wrote, so the fixture the other specs photograph is the one they
+   * started with. One project rather than two: the claim is about what the Worker stored.
+   */
+  test('the stop and the cost line survive the round trip', async ({
+    browserName,
+    page,
+  }) => {
+    test.skip(
+      browserName !== 'chromium',
+      'the claim is about what the Worker stored, not about how a browser renders it',
+    )
+    const title = `Dinner at Den ${test.info().project.name}`
+    const report = watchConsole(page, BOOK)
+    await visit(page, BOOK, 'light')
+
+    await removeCards(page, title, 'Remove booking')
+
+    await page.locator(NEW_BOOKING).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+
+    // `Other` asks for nothing beyond a name, so what this test drives is the stop and the price
+    // rather than a type's own required fields.
+    await dialog.getByRole('button', { name: 'Other', exact: true }).click()
+    await dialog.getByRole('textbox', { name: 'Name' }).fill(title)
+    await dialog.getByRole('textbox', { name: 'Price' }).fill('42')
+
+    // The stop picker is a real combobox: focus stays in the search box and the arrow keys move
+    // the highlight, which is also the keyboard path WCAG 2.2 requires to work.
+    await dialog.locator(STOP_PICKER).click()
+    await expect(page.getByRole('listbox')).toBeVisible()
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('listbox')).toHaveCount(0)
+
+    // Choosing a stop fills the empty date from the day it sits on, so the booking is now dated
+    // and the notice has stopped asking for one.
+    await expect(dialog.locator('[data-part="ledger-notice"]')).toContainText(
+      'will be added to this trip’s costs',
+    )
+
+    await dialog.getByRole('button', { name: 'Add booking' }).click()
+    await expect(dialog).toBeHidden()
+
+    // Read back from the Worker, not from the client's optimistic copy.
+    await visit(page, BOOK, 'light')
+    const card = page.locator('article').filter({ hasText: title })
+    await expect(card).toHaveCount(1)
+
+    await removeCards(page, title, 'Remove booking')
+
+    const fatal = consoleFatal(report().fatal, browserName)
+    expect(fatal, fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * `12-verification-protocol.md` §6: zero layout shift *after the settle*. The notice appears on a
+   * keystroke, which is `hadRecentInput` and therefore excluded by the observer below — so this is
+   * the assertion about the resting screen it is meant to be.
+   */
+  test('nothing moves after the screen has settled', async ({
+    browserName,
+    page,
+  }) => {
+    test.skip(
+      browserName !== 'chromium',
+      'layout-shift is a Chromium-only entry type; observe() records nothing here, so a score of 0 would prove nothing',
+    )
+    await page.addInitScript(() => {
+      const readings: Array<{ at: number; value: number }> = []
+      Object.defineProperty(window, '__layoutShift', { value: readings })
+      if (!PerformanceObserver.supportedEntryTypes.includes('layout-shift')) {
+        return
+      }
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const shift = entry as PerformanceEntry & {
+            value: number
+            hadRecentInput: boolean
+          }
+          if (!shift.hadRecentInput) {
+            readings.push({ at: shift.startTime, value: shift.value })
+          }
+        }
+      }).observe({ type: 'layout-shift', buffered: true })
+    })
+
+    await visit(page, BOOK, 'light')
+    expect(
+      await page.evaluate(() =>
+        PerformanceObserver.supportedEntryTypes.includes('layout-shift'),
+      ),
+    ).toBe(true)
+
+    const mark = await page.evaluate(() => performance.now())
+
+    await page.locator(NEW_BOOKING).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await settle(page, BOOK)
 
     const after = await page.evaluate((since: number) => {
       const readings = (
@@ -414,7 +693,7 @@ test.describe('03-S2b — A journey with more than two stations, and times that 
     await visit(page, TRANSPORTS, 'light')
 
     // A run that died between the write and the clean-up leaves its row behind.
-    await removeTransports(page, title)
+    await removeCards(page, title, 'Remove transport')
 
     await page.locator(NEW_TRANSPORT).click()
     const dialog = page.getByRole('dialog')
@@ -457,7 +736,7 @@ test.describe('03-S2b — A journey with more than two stations, and times that 
     await expect(chain.getByText('Nozomi 24')).toHaveCount(1)
 
     // Put the fixture back the way it was found.
-    await removeTransports(page, title)
+    await removeCards(page, title, 'Remove transport')
 
     const verdict = report()
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
