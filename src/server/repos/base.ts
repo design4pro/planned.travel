@@ -13,7 +13,7 @@
  * through a generic*, they are confined to this file, and each one is annotated.
  */
 
-import { and, asc, count, desc, eq, inArray, lt, sum } from 'drizzle-orm'
+import { and, asc, count, desc, eq, inArray, lt, or, sum } from 'drizzle-orm'
 import { subscriptions } from '#/server/db/schema'
 import { UNLIMITED } from '#/server/db/types'
 import { resolveLimitsFromRow } from '#/server/billing/limits'
@@ -57,7 +57,9 @@ export function createScope(db: Database, context: unknown): TenantScope {
  * ---------------------------------------------------------------------------------------------- */
 
 /** Any table carrying the tenant discriminator. */
-export type TenantTable = SQLiteTable & { readonly organizationId: SQLiteColumn }
+export type TenantTable = SQLiteTable & {
+  readonly organizationId: SQLiteColumn
+}
 
 /** A tenant table with a single-column text primary key, i.e. everything but the join tables. */
 export type KeyedTenantTable = TenantTable & { readonly id: SQLiteColumn }
@@ -101,8 +103,19 @@ export function tenantFilter(
  * `SQL | undefined`, which repositories cannot pass to APIs that require a predicate; this keeps the
  * narrowing in one place instead of sprinkling fallbacks through the query code.
  */
-export function allOf(first: SQL, ...rest: ReadonlyArray<SQL | undefined>): SQL {
+export function allOf(
+  first: SQL,
+  ...rest: ReadonlyArray<SQL | undefined>
+): SQL {
   return and(first, ...rest) ?? first
+}
+
+/** The `or()` half of {@link allOf}, narrowed the same way and for the same reason. */
+export function anyOf(
+  first: SQL,
+  ...rest: ReadonlyArray<SQL | undefined>
+): SQL {
+  return or(first, ...rest) ?? first
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -112,10 +125,20 @@ export function allOf(first: SQL, ...rest: ReadonlyArray<SQL | undefined>): SQL 
 export interface TenantTableAccess<TTable extends TenantTable> {
   readonly table: TTable
   readonly entityName: string
-  findMany: (scope: TenantScope, options?: ListOptions) => Promise<Array<TTable['$inferSelect']>>
-  findOne: (scope: TenantScope, where: SQL) => Promise<TTable['$inferSelect'] | null>
+  findMany: (
+    scope: TenantScope,
+    options?: ListOptions,
+  ) => Promise<Array<TTable['$inferSelect']>>
+  findOne: (
+    scope: TenantScope,
+    where: SQL,
+  ) => Promise<TTable['$inferSelect'] | null>
   count: (scope: TenantScope, where?: SQL) => Promise<number>
-  sumOf: (scope: TenantScope, column: SQLiteColumn, where?: SQL) => Promise<number>
+  sumOf: (
+    scope: TenantScope,
+    column: SQLiteColumn,
+    where?: SQL,
+  ) => Promise<number>
   insert: (
     scope: TenantScope,
     values: Omit<TTable['$inferInsert'], 'organizationId'>,
@@ -143,7 +166,10 @@ export function createTenantTableAccess<TTable extends TenantTable>(
 ): TenantTableAccess<TTable> {
   type Row = TTable['$inferSelect']
 
-  async function findMany(scope: TenantScope, options: ListOptions = {}): Promise<Array<Row>> {
+  async function findMany(
+    scope: TenantScope,
+    options: ListOptions = {},
+  ): Promise<Array<Row>> {
     const query = scope.db
       .select()
       .from(table)
@@ -161,7 +187,7 @@ export function createTenantTableAccess<TTable extends TenantTable>(
     }
 
     // `select()` with no field list selects every column of `table`, so the rows are `Row`.
-    return (await query)
+    return await query
   }
 
   async function findOne(scope: TenantScope, where: SQL): Promise<Row | null> {
@@ -177,7 +203,11 @@ export function createTenantTableAccess<TTable extends TenantTable>(
     return rows[0]?.value ?? 0
   }
 
-  async function sumOf(scope: TenantScope, column: SQLiteColumn, where?: SQL): Promise<number> {
+  async function sumOf(
+    scope: TenantScope,
+    column: SQLiteColumn,
+    where?: SQL,
+  ): Promise<number> {
     const rows = await scope.db
       .select({ value: sum(column) })
       .from(table)
@@ -196,7 +226,10 @@ export function createTenantTableAccess<TTable extends TenantTable>(
     // The tenant column is stamped here and cannot be overridden by the caller's payload.
     const records = values.map(
       (value) =>
-        ({ ...value, organizationId: scope.ctx.organizationId }) as SQLiteInsertValue<TTable>,
+        ({
+          ...value,
+          organizationId: scope.ctx.organizationId,
+        }) as SQLiteInsertValue<TTable>,
     )
     const rows = await scope.db.insert(table).values(records).returning()
     return rows
@@ -209,7 +242,10 @@ export function createTenantTableAccess<TTable extends TenantTable>(
     const rows = await insertMany(scope, [values])
     const row = rows.at(0)
     if (row === undefined) {
-      throw new RepositoryError(`Insert into ${entityName} returned no row.`, 'INSERT_FAILED')
+      throw new RepositoryError(
+        `Insert into ${entityName} returned no row.`,
+        'INSERT_FAILED',
+      )
     }
     return row
   }
@@ -256,11 +292,21 @@ export function createTenantTableAccess<TTable extends TenantTable>(
  * Generic access for tables keyed by a single `id` column
  * ---------------------------------------------------------------------------------------------- */
 
-export interface TenantRepository<TTable extends KeyedTenantTable>
-  extends TenantTableAccess<TTable> {
-  findById: (scope: TenantScope, id: string) => Promise<TTable['$inferSelect'] | null>
-  requireById: (scope: TenantScope, id: string) => Promise<TTable['$inferSelect']>
-  findByIds: (scope: TenantScope, ids: ReadonlyArray<string>) => Promise<Array<TTable['$inferSelect']>>
+export interface TenantRepository<
+  TTable extends KeyedTenantTable,
+> extends TenantTableAccess<TTable> {
+  findById: (
+    scope: TenantScope,
+    id: string,
+  ) => Promise<TTable['$inferSelect'] | null>
+  requireById: (
+    scope: TenantScope,
+    id: string,
+  ) => Promise<TTable['$inferSelect']>
+  findByIds: (
+    scope: TenantScope,
+    ids: ReadonlyArray<string>,
+  ) => Promise<Array<TTable['$inferSelect']>>
   exists: (scope: TenantScope, id: string) => Promise<boolean>
   update: (
     scope: TenantScope,
@@ -277,7 +323,11 @@ export interface TenantRepository<TTable extends KeyedTenantTable>
   /** Keyset pagination on the time-sortable primary key, newest first. */
   page: (
     scope: TenantScope,
-    options?: { readonly where?: SQL; readonly limit?: number; readonly cursor?: string | null },
+    options?: {
+      readonly where?: SQL
+      readonly limit?: number
+      readonly cursor?: string | null
+    },
   ) => Promise<CursorPage<TTable['$inferSelect']>>
 }
 
@@ -314,10 +364,19 @@ export function createTenantRepository<TTable extends KeyedTenantTable>(
 
   async function page(
     scope: TenantScope,
-    options: { readonly where?: SQL; readonly limit?: number; readonly cursor?: string | null } = {},
+    options: {
+      readonly where?: SQL
+      readonly limit?: number
+      readonly cursor?: string | null
+    } = {},
   ): Promise<CursorPage<Row>> {
-    const limit = Math.min(Math.max(options.limit ?? DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE)
-    const cursorFilter = options.cursor ? lt(table.id, options.cursor) : undefined
+    const limit = Math.min(
+      Math.max(options.limit ?? DEFAULT_PAGE_SIZE, 1),
+      MAX_PAGE_SIZE,
+    )
+    const cursorFilter = options.cursor
+      ? lt(table.id, options.cursor)
+      : undefined
     const where = and(options.where, cursorFilter)
     const items = await access.findMany(scope, {
       where,
@@ -328,7 +387,8 @@ export function createTenantRepository<TTable extends KeyedTenantTable>(
     const pageItems = hasMore ? items.slice(0, limit) : items
     const last = pageItems.at(-1)
     // Every keyed tenant table has a text `id`; reading it off the generic row needs a widening.
-    const lastId = last === undefined ? undefined : (last as Record<string, unknown>).id
+    const lastId =
+      last === undefined ? undefined : (last as Record<string, unknown>).id
     return {
       items: pageItems,
       nextCursor: hasMore && typeof lastId === 'string' ? lastId : null,
@@ -376,7 +436,10 @@ export function createTenantRepository<TTable extends KeyedTenantTable>(
  * `IN (...)` over a readonly list. Drizzle renders an empty list as `false`, so an empty filter
  * returns no rows rather than producing invalid SQL.
  */
-export function inIds(column: SQLiteColumn, values: ReadonlyArray<string>): SQL {
+export function inIds(
+  column: SQLiteColumn,
+  values: ReadonlyArray<string>,
+): SQL {
   return inArray(column, [...values])
 }
 
@@ -404,7 +467,9 @@ export interface ResolvedQuotas {
  * the column-shaped half of its answer. There is no arithmetic here to drift out of step with the
  * billing screen — see `src/server/billing/limits.ts` for the authority order.
  */
-export async function resolveQuotas(scope: TenantScope): Promise<ResolvedQuotas> {
+export async function resolveQuotas(
+  scope: TenantScope,
+): Promise<ResolvedQuotas> {
   const rows = await scope.db
     .select({
       plan: subscriptions.plan,
@@ -420,7 +485,11 @@ export async function resolveQuotas(scope: TenantScope): Promise<ResolvedQuotas>
     .limit(1)
 
   const resolved = resolveLimitsFromRow(rows.at(0) ?? null)
-  return { plan: resolved.tier, planId: resolved.planId, limits: resolved.metrics }
+  return {
+    plan: resolved.tier,
+    planId: resolved.planId,
+    limits: resolved.metrics,
+  }
 }
 
 /**

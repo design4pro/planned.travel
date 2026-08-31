@@ -14,7 +14,6 @@ import {
   countAuditActions,
   countPlacesPerTrip,
   countUnread,
-  createTrip,
   getAtlasSummary,
   getDashboardSummary,
   getOrganization,
@@ -29,14 +28,24 @@ import {
   markRead,
   notificationsRepository,
   resolveQuotas,
+  tripRolesFor,
 } from '#/server/repos'
 import { roleSatisfies } from '#/server/auth/tenant'
 import { serverToday } from '#/server/clock'
 import { appScope } from './context'
 import { isoOfRequired } from './serialise'
 
+import type { TenantScope } from '#/server/repos'
 import type { JsonRecord } from '#/server/db/schema'
-import type { Notification, Reservation, Trip } from '#/server/db/types'
+import type {
+  Notification,
+  Reservation,
+  Trip,
+  TripMember,
+} from '#/server/db/types'
+
+/** The three trip roles, as the payload spells them. */
+type TripMemberRole = TripMember['role']
 
 /* ------------------------------------------------------------------- shapes */
 
@@ -69,6 +78,15 @@ export interface TripCard {
   readonly isArchived: boolean
   readonly placeCount: number
   readonly updatedAt: string
+  /**
+   * The caller's own role on this trip, or `null` when they hold none — which after ADR 0007 means
+   * they are reading it because its `visibility` is `organization`.
+   *
+   * Carried on the payload so a tile can render only the actions the reader can actually exercise.
+   * The menu is a courtesy; the repository's `assertTripRole` is the control, so a stale payload
+   * costs a refused write rather than an unauthorised one.
+   */
+  readonly role: TripMemberRole | null
 }
 
 export interface ReservationCard {
@@ -135,7 +153,28 @@ export interface DashboardPayload {
   }
 }
 
-export function toTripCard(trip: Trip, placeCount: number): TripCard {
+/**
+ * A card maker for one list of trips: the two per-tile facts a card needs beyond the row itself —
+ * the place count and the reader's own role — read for the whole list in two statements rather than
+ * two per tile, then applied one tile at a time.
+ */
+async function tripCardsFor(
+  scope: TenantScope,
+  tripIds: ReadonlyArray<string>,
+): Promise<(trip: Trip) => TripCard> {
+  const [placeCounts, roles] = await Promise.all([
+    countPlacesPerTrip(scope, tripIds),
+    tripRolesFor(scope, tripIds),
+  ])
+  return (trip) =>
+    toTripCard(trip, placeCounts.get(trip.id) ?? 0, roles.get(trip.id) ?? null)
+}
+
+export function toTripCard(
+  trip: Trip,
+  placeCount: number,
+  role: TripMemberRole | null,
+): TripCard {
   return {
     id: trip.id,
     title: trip.title,
@@ -153,6 +192,7 @@ export function toTripCard(trip: Trip, placeCount: number): TripCard {
     isArchived: trip.isArchived,
     placeCount,
     updatedAt: isoOfRequired(trip.updatedAt),
+    role,
   }
 }
 
@@ -192,12 +232,9 @@ export const loadDashboard = createServerFn({ method: 'GET' }).handler(
     ])
 
     const shown = [...summary.upcomingTrips, ...summary.myTrips]
-    const placeCounts = await countPlacesPerTrip(scope, [
+    const card = await tripCardsFor(scope, [
       ...new Set(shown.map((trip) => trip.id)),
     ])
-
-    const card = (trip: Trip): TripCard =>
-      toTripCard(trip, placeCounts.get(trip.id) ?? 0)
     const first = summary.upcomingTrips.at(0)
 
     return {
@@ -276,16 +313,14 @@ export const loadTrips = createServerFn({ method: 'GET' })
       resolveQuotas(scope),
     ])
 
-    const placeCounts = await countPlacesPerTrip(
+    const card = await tripCardsFor(
       scope,
       rows.map((trip) => trip.id),
     )
 
     return {
       today,
-      trips: rows.map((trip) =>
-        toTripCard(trip, placeCounts.get(trip.id) ?? 0),
-      ),
+      trips: rows.map(card),
       totals: {
         total: summary.trips.total,
         archived: summary.trips.archived,
@@ -595,59 +630,3 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
     }
   },
 )
-
-/* ------------------------------------------------------------ trip creation */
-
-const createTripSchema = z
-  .object({
-    title: z.string().trim().min(1).max(120),
-    destination: z.string().trim().max(160),
-    startDate: z
-      .string()
-      .trim()
-      .regex(/^(\d{4}-\d{2}-\d{2})?$/),
-    endDate: z
-      .string()
-      .trim()
-      .regex(/^(\d{4}-\d{2}-\d{2})?$/),
-    currency: z.string().trim().length(3).toUpperCase(),
-  })
-  .refine(
-    (value) =>
-      value.startDate === '' ||
-      value.endDate === '' ||
-      value.endDate >= value.startDate,
-    {
-      /**
-       * Defence in depth, and the one English string in this module.
-       *
-       * `-ui/new-trip-dialog.tsx` computes `datesOutOfOrder` and both disables
-       * the save button and names the problem on the Return field, so this
-       * refinement is never the sentence a reader sees — it is what stops a
-       * hand-rolled request from writing a backwards range. A key here would
-       * render as `shell.…` in whatever surfaced it, which is worse than a
-       * diagnostic in the source language.
-       */
-      message: 'The return date cannot be before the departure date.',
-      path: ['endDate'],
-    },
-  )
-
-/**
- * Creates a trip and hands back its id so the caller can navigate straight into
- * the planner. Quota, slug reservation, the owner membership and the day run are
- * all the repository's job — this only validates and forwards.
- */
-export const createTripFn = createServerFn({ method: 'POST' })
-  .validator(createTripSchema)
-  .handler(async ({ data }): Promise<{ readonly tripId: string }> => {
-    const scope = await appScope()
-    const trip = await createTrip(scope, {
-      title: data.title,
-      destination: data.destination === '' ? null : data.destination,
-      startDate: data.startDate === '' ? null : data.startDate,
-      endDate: data.endDate === '' ? null : data.endDate,
-      currency: data.currency,
-    })
-    return { tripId: trip.id }
-  })

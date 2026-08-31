@@ -11,6 +11,7 @@ import { CalendarDays, MapPin, Star } from 'lucide-react'
 import { Badge, Card } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { CoverArt, seedFrom } from './cover-art'
+import { TripActionsMenu } from './trip-actions'
 import {
   countryFlag,
   daysBetween,
@@ -107,11 +108,23 @@ export function TripTile({
   const startsIn = daysUntil(trip.startDate, today)
 
   return (
-    <Card asChild interactive padding="none" className="overflow-hidden">
+    /**
+     * The card is its own element and the link sits inside it, rather than the link *being* the card.
+     * The action menu is a button, and a button inside an anchor is neither valid HTML nor operable:
+     * the anchor swallows the click. Keeping the card as the outer element lets the two be siblings
+     * while the hover lift still belongs to the whole tile, so the menu does not sit still while the
+     * card underneath it moves.
+     */
+    <Card
+      interactive
+      padding="none"
+      className="group flex h-full flex-col overflow-hidden"
+      data-part="trip-tile"
+    >
       <Link
         to="/trips/$tripId/plan"
         params={{ tripId: trip.id }}
-        className="flex flex-col focus-ring"
+        className="flex h-full flex-col focus-ring"
       >
         <div className="relative h-28 shrink-0 overflow-hidden bg-surface-2">
           {trip.coverImageUrl === null ? (
@@ -124,18 +137,10 @@ export function TripTile({
             />
           )}
 
-          <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
+          <div className="absolute start-3 top-3 flex items-start gap-2">
             <Badge tone={toneFor(TRIP_STATUS_TONE, trip.status)} size="sm">
               {humaniseToken(trip.status)}
             </Badge>
-            {trip.isFavourite ? (
-              <span
-                aria-label="Favourite"
-                className="flex size-6 items-center justify-center rounded-full bg-surface/85 text-warning backdrop-blur-sm"
-              >
-                <Star aria-hidden className="size-3.5 fill-current" />
-              </span>
-            ) : null}
           </div>
 
           {trip.countryCodes.length === 0 ? null : (
@@ -175,6 +180,24 @@ export function TripTile({
           </div>
         </div>
       </Link>
+
+      {/*
+        The corner cluster: the favourite mark and the action menu, side by side and outside the
+        link. The mark used to sit inside it, in the same absolute row as the status badge, which
+        put it exactly where the menu trigger now goes — two controls stacked on one another. Both
+        live here so the trip's own chrome is one row that can never overlap itself.
+      */}
+      <div className="absolute end-3 top-3 z-10 flex items-start gap-1.5">
+        {trip.isFavourite ? (
+          <span
+            aria-label="Favourite"
+            className="flex size-6 items-center justify-center rounded-full bg-surface/85 text-warning backdrop-blur-sm"
+          >
+            <Star aria-hidden className="size-3.5 fill-current" />
+          </span>
+        ) : null}
+        <TripActionsMenu trip={trip} />
+      </div>
     </Card>
   )
 }
