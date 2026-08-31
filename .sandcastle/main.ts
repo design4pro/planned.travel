@@ -59,6 +59,7 @@ import { adoptWipBranches } from './adopt'
 import { EDGE_COMMAND, parseEdgeLines } from './issue-edges'
 import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
 import { resolveRun } from './run-id'
+import { openStageLog, recordStage } from './stage-log'
 import { withUsageLimit } from './usage-limit'
 import { docker } from './sandbox'
 
@@ -466,6 +467,11 @@ const ARTIFACT_ROOT = join('.sandcastle', 'logs', `run-${RUN_ID}`)
 await mkdir(ARTIFACT_ROOT, { recursive: true })
 await writeFile(lockPath, String(process.pid))
 
+// Opened as soon as there is a directory to write into, and before the first agent runs. Until this
+// call every `recordStage` is a no-op, which is what keeps the unit tests free of it.
+openStageLog(RUN_ID, ARTIFACT_ROOT)
+recordStage({ kind: 'run', at: Date.now(), maxParallel: MAX_PARALLEL })
+
 // Whether this run claims its issues from the shared registry. `--issues` partitions the backlog
 // only when the operator gets it right; the registry is the mechanical backstop that makes two
 // loops safe by default rather than by discipline, so opting out is deliberate and loud.
@@ -608,22 +614,25 @@ function issueBranch(id: string): string {
 }
 
 async function runPlanner(scopeIds: string[]): Promise<Issue[]> {
-  const plan = await withUsageLimit('planner', () =>
-    sandcastle.run({
-      // No install hook: the planner only reads issues via gh. And NEVER the
-      // default 'head' strategy — it bind-mounts the host working directory,
-      // where an install hook would grind through the darwin node_modules
-      // (measured: 10+ min vs 13 s fresh) and could corrupt them.
-      sandbox: docker(),
-      cwd: integrationCwd,
-      branchStrategy: { type: 'merge-to-head' },
-      name: 'planner',
-      maxIterations: 1,
-      agent: sandcastle.claudeCode(PLANNER_MODEL),
-      promptFile: './.sandcastle/plan-prompt.md',
-      promptArgs: { RUN_ID, SCOPE: planScope(scopeIds) },
-      output: sandcastle.Output.object({ tag: 'plan', schema: planSchema }),
-    }),
+  const plan = await withUsageLimit(
+    'planner',
+    () =>
+      sandcastle.run({
+        // No install hook: the planner only reads issues via gh. And NEVER the
+        // default 'head' strategy — it bind-mounts the host working directory,
+        // where an install hook would grind through the darwin node_modules
+        // (measured: 10+ min vs 13 s fresh) and could corrupt them.
+        sandbox: docker(),
+        cwd: integrationCwd,
+        branchStrategy: { type: 'merge-to-head' },
+        name: 'planner',
+        maxIterations: 1,
+        agent: sandcastle.claudeCode(PLANNER_MODEL),
+        promptFile: './.sandcastle/plan-prompt.md',
+        promptArgs: { RUN_ID, SCOPE: planScope(scopeIds) },
+        output: sandcastle.Output.object({ tag: 'plan', schema: planSchema }),
+      }),
+    { meta: {} },
   )
   // The prompt is an instruction; this is the enforcement. A planned id outside
   // the scope is dropped, loudly — it means the agent went looking, and what it
@@ -679,24 +688,66 @@ async function collectArtifacts(
 
 async function validate(
   sandbox: sandcastle.Sandbox,
-  opts: { updateSnapshots?: boolean } = {},
+  opts: { updateSnapshots?: boolean; issue?: string; attempt?: number } = {},
 ): Promise<Validation> {
   const flags = ['--json-out .sandcastle-validation.json']
   if (opts.updateSnapshots) flags.push('--update-snapshots')
-  const result = await sandbox.exec(
-    `TARGET_BRANCH=${integrationBranch} bash .sandcastle/validate.sh ${flags.join(' ')}`,
-  )
-  const read = await sandbox.exec('cat .sandcastle-validation.json')
+  // The ladder is the one stage `withUsageLimit` does not wrap — it runs no agent, so it can hit no
+  // usage limit — and it is also the only container-heavy one. It records itself so the timeline
+  // covers the whole pipeline rather than only its agents, and so `validate` rows in the report can
+  // be cross-checked against the `steps[]` the verdict already carries.
+  const startedAt = Date.now()
+  let verdict: Validation
   try {
-    return JSON.parse(read.stdout) as Validation
-  } catch {
-    return {
-      uiTouched: true,
-      steps: [{ name: 'validate.sh', ok: false, durationMs: 0 }],
-      e2e: { failed: [] },
-      ok: result.exitCode === 0,
+    const result = await sandbox.exec(
+      `TARGET_BRANCH=${integrationBranch} bash .sandcastle/validate.sh ${flags.join(' ')}`,
+    )
+    const read = await sandbox.exec('cat .sandcastle-validation.json')
+    try {
+      verdict = JSON.parse(read.stdout) as Validation
+    } catch {
+      verdict = {
+        uiTouched: true,
+        steps: [{ name: 'validate.sh', ok: false, durationMs: 0 }],
+        e2e: { failed: [] },
+        ok: result.exitCode === 0,
+      }
     }
+  } catch (error) {
+    recordValidateStage(startedAt, opts, 'error', error)
+    throw error
   }
+  recordValidateStage(startedAt, opts, verdict.ok ? 'ok' : 'error')
+  return verdict
+}
+
+function recordValidateStage(
+  startedAt: number,
+  opts: { updateSnapshots?: boolean; issue?: string; attempt?: number },
+  outcome: 'ok' | 'error',
+  error?: unknown,
+): void {
+  const endedAt = Date.now()
+  recordStage({
+    kind: 'stage',
+    label: opts.updateSnapshots ? 'validate (baselines)' : 'validate',
+    issue: opts.issue,
+    attempt: opts.attempt,
+    startedAt,
+    endedAt,
+    wallMs: endedAt - startedAt,
+    // No agent, so no limit to wait out: every millisecond here is work.
+    waitMs: 0,
+    workMs: endedAt - startedAt,
+    waits: 0,
+    outcome,
+    error:
+      error === undefined
+        ? undefined
+        : (error instanceof Error ? error.message : String(error))
+            .split('\n')[0]
+            ?.slice(0, 300),
+  })
 }
 
 function failureDigest(v: Validation, attempt: number): string {
@@ -746,6 +797,7 @@ async function declaresVisualChange(
 async function runDeepReview(
   sandbox: sandcastle.Sandbox,
   issue: Issue,
+  attempt: number,
   signal?: AbortSignal,
 ): Promise<void> {
   try {
@@ -760,7 +812,7 @@ async function runDeepReview(
           promptFile: './.sandcastle/deep-review-prompt.md',
           promptArgs: { BRANCH: issue.branch },
         }),
-      { signal },
+      { signal, meta: { issue: issue.id, attempt } },
     )
     const raw = run.stdout.match(/<deep-review>([\s\S]*?)<\/deep-review>/)?.[1]
     if (raw === undefined) {
@@ -865,6 +917,7 @@ async function runDeepReview(
 async function runPixelCritic(
   sandbox: sandcastle.Sandbox,
   issue: Issue,
+  attempt: number,
   signal?: AbortSignal,
 ): Promise<void> {
   try {
@@ -891,7 +944,7 @@ async function runPixelCritic(
             REF_LABEL: refLabel,
           },
         }),
-      { signal },
+      { signal, meta: { issue: issue.id, attempt } },
     )
     const capRaw = capture.stdout.match(/<capture>([\s\S]*?)<\/capture>/)?.[1]
     if (capRaw === undefined) {
@@ -921,7 +974,7 @@ async function runPixelCritic(
             SHOTS_DIR: shotsDir,
           },
         }),
-      { signal },
+      { signal, meta: { issue: issue.id, attempt } },
     )
     const visRaw = critic.stdout.match(/<visual>([\s\S]*?)<\/visual>/)?.[1]
     if (visRaw === undefined) {
@@ -1049,7 +1102,7 @@ async function workIssue(
             BRANCH: issue.branch,
           },
         }),
-      { signal },
+      { signal, meta: { issue: issue.id, attempt: 0 } },
     )
     commits.push(...implement.commits)
     noteWip()
@@ -1067,12 +1120,12 @@ async function workIssue(
           promptFile: './.sandcastle/review-prompt.md',
           promptArgs: { BRANCH: issue.branch },
         }),
-      { signal },
+      { signal, meta: { issue: issue.id, attempt: 0 } },
     )
     commits.push(...review.commits)
 
     for (let attempt = 1; attempt <= FIX_BUDGET + 1; attempt++) {
-      let verdict = await validate(sandbox)
+      let verdict = await validate(sandbox, { issue: issue.id, attempt })
       lastArtifactPath = await collectArtifacts(sandbox, issue, attempt)
 
       if (
@@ -1087,18 +1140,23 @@ async function workIssue(
         console.log(
           `  [${issue.id}] intended visual change — re-recording baselines`,
         )
-        await validate(sandbox, { updateSnapshots: true })
+        await validate(sandbox, {
+          updateSnapshots: true,
+          issue: issue.id,
+          attempt,
+        })
         await sandbox.exec(
           `git add e2e/__screenshots__ && git commit -m "RALPH: re-record linux baselines — intended per issue #${issue.id}"`,
         )
         commits.push({ sha: 'baselines' })
-        verdict = await validate(sandbox)
+        verdict = await validate(sandbox, { issue: issue.id, attempt })
         lastArtifactPath = await collectArtifacts(sandbox, issue, attempt)
       }
 
       if (verdict.ok) {
-        if (DEEP_REVIEW) await runDeepReview(sandbox, issue, signal)
-        if (verdict.uiTouched) await runPixelCritic(sandbox, issue, signal)
+        if (DEEP_REVIEW) await runDeepReview(sandbox, issue, attempt, signal)
+        if (verdict.uiTouched)
+          await runPixelCritic(sandbox, issue, attempt, signal)
         if (DEEP_REVIEW || verdict.uiTouched) {
           // Re-collect: the advisory passes added .sandcastle-deep-review.json,
           // .sandcastle-shots and the visual verdict.
@@ -1147,7 +1205,7 @@ async function workIssue(
             // promptArgs is rejected (PromptError). Empty override passes.
             { promptArgs: {}, signal },
           ),
-        { signal },
+        { signal, meta: { issue: issue.id, attempt } },
       )
       commits.push(...implement.commits)
     }
@@ -1159,26 +1217,29 @@ async function workIssue(
 }
 
 async function mergeBranches(passing: Array<{ issue: Issue }>): Promise<void> {
-  await withUsageLimit('merger', () =>
-    sandcastle.run({
-      hooks,
-      sandbox: docker(),
-      cwd: integrationCwd,
-      // Temp branch off HEAD; the agent merges issue branches into it, then
-      // sandcastle merges the temp branch back to HEAD. Same net effect as
-      // 'head', but the container never installs over the host node_modules.
-      branchStrategy: { type: 'merge-to-head' },
-      name: 'merger',
-      maxIterations: 1,
-      agent: sandcastle.claudeCode(REVIEWER_MODEL),
-      promptFile: './.sandcastle/merge-prompt.md',
-      promptArgs: {
-        BRANCHES: passing.map((p) => `- ${p.issue.branch}`).join('\n'),
-        ISSUES: passing
-          .map((p) => `- ${p.issue.id}: ${p.issue.title}`)
-          .join('\n'),
-      },
-    }),
+  await withUsageLimit(
+    'merger',
+    () =>
+      sandcastle.run({
+        hooks,
+        sandbox: docker(),
+        cwd: integrationCwd,
+        // Temp branch off HEAD; the agent merges issue branches into it, then
+        // sandcastle merges the temp branch back to HEAD. Same net effect as
+        // 'head', but the container never installs over the host node_modules.
+        branchStrategy: { type: 'merge-to-head' },
+        name: 'merger',
+        maxIterations: 1,
+        agent: sandcastle.claudeCode(REVIEWER_MODEL),
+        promptFile: './.sandcastle/merge-prompt.md',
+        promptArgs: {
+          BRANCHES: passing.map((p) => `- ${p.issue.branch}`).join('\n'),
+          ISSUES: passing
+            .map((p) => `- ${p.issue.id}: ${p.issue.title}`)
+            .join('\n'),
+        },
+      }),
+    { meta: {} },
   )
 }
 
@@ -1203,16 +1264,19 @@ async function runAuditor(
     hooks,
   })
   try {
-    const audit = await withUsageLimit('auditor', () =>
-      sandbox.run({
-        name: 'auditor',
-        maxIterations: 1,
-        agent: sandcastle.claudeCode(AUDITOR_MODEL),
-        promptFile: './.sandcastle/audit-prompt.md',
-        promptArgs: {
-          ISSUES: closed.map((i) => `- ${i.id}: ${i.title}`).join('\n'),
-        },
-      }),
+    const audit = await withUsageLimit(
+      'auditor',
+      () =>
+        sandbox.run({
+          name: 'auditor',
+          maxIterations: 1,
+          agent: sandcastle.claudeCode(AUDITOR_MODEL),
+          promptFile: './.sandcastle/audit-prompt.md',
+          promptArgs: {
+            ISSUES: closed.map((i) => `- ${i.id}: ${i.title}`).join('\n'),
+          },
+        }),
+      { meta: {} },
     )
     // sandbox.run() has no `output` option (only top-level run() does) —
     // extract and validate the <audit> block from stdout by hand.
@@ -1327,6 +1391,12 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   const eligible = new Set(readyForAgentIds())
   const requested =
     ONLY_ISSUES.length === 0 ? [...eligible] : resolveOnlyIssues(eligible)
+  recordStage({
+    kind: 'iteration',
+    at: Date.now(),
+    iteration,
+    issues: requested,
+  })
 
   // Claim BEFORE planning, not after. The old order — read what looked free, plan, then claim —
   // left a window the width of a planner run, and two planners in that window is exactly what put
