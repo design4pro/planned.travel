@@ -21,19 +21,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  Field,
-  Input,
-  SimpleSelect,
 } from '#/components/ui'
 import { createTripFn } from '../-server/trip-lifecycle'
-import { TRIP_CURRENCIES } from './trip-currencies'
-
-function messageOf(error: unknown): string {
-  if (error instanceof Error && error.message.length > 0) {
-    return error.message
-  }
-  return 'The trip could not be created. Try again in a moment.'
-}
+import {
+  TripFormFields,
+  messageOf,
+  tripFormPayload,
+  useTripForm,
+} from './trip-form'
 
 export interface NewTripDialogProps {
   /** The workspace default currency, pre-selected for a new trip. */
@@ -54,22 +49,19 @@ export function NewTripDialog({
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
-  const [destination, setDestination] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [currency, setCurrency] = useState(defaultCurrency)
-
-  const datesOutOfOrder =
-    startDate !== '' && endDate !== '' && endDate < startDate
-  const canSave = title.trim().length > 0 && !datesOutOfOrder && !saving
+  const form = useTripForm(
+    {
+      title: '',
+      destination: '',
+      startDate: '',
+      endDate: '',
+      currency: defaultCurrency,
+    },
+    saving,
+  )
 
   function reset(): void {
-    setTitle('')
-    setDestination('')
-    setStartDate('')
-    setEndDate('')
-    setCurrency(defaultCurrency)
+    form.reset()
     setError(null)
   }
 
@@ -77,15 +69,7 @@ export function NewTripDialog({
     setSaving(true)
     setError(null)
     try {
-      const { tripId } = await createTripFn({
-        data: {
-          title: title.trim(),
-          destination: destination.trim(),
-          startDate,
-          endDate,
-          currency,
-        },
-      })
+      const { tripId } = await createTripFn({ data: tripFormPayload(form) })
       await router.invalidate()
       setOpen(false)
       reset()
@@ -94,7 +78,12 @@ export function NewTripDialog({
       })
       await navigate({ to: '/trips/$tripId/plan', params: { tripId } })
     } catch (cause) {
-      setError(messageOf(cause))
+      setError(
+        messageOf(
+          cause,
+          'The trip could not be created. Try again in a moment.',
+        ),
+      )
     } finally {
       setSaving(false)
     }
@@ -132,7 +121,7 @@ export function NewTripDialog({
             className="flex flex-col gap-4"
             onSubmit={(event) => {
               event.preventDefault()
-              if (canSave) {
+              if (form.canSave) {
                 void submit()
               }
             }}
@@ -143,66 +132,13 @@ export function NewTripDialog({
               </Alert>
             )}
 
-            <Field label="Trip name" required>
-              <Input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Kyoto in cherry-blossom season"
-                maxLength={120}
-                autoComplete="off"
-                required
-              />
-            </Field>
-
-            <Field
-              label="Destination"
-              hint="A city, a region, or the whole route."
-            >
-              <Input
-                value={destination}
-                onChange={(event) => setDestination(event.target.value)}
-                placeholder="Kyoto, Japan"
-                maxLength={160}
-                autoComplete="off"
-              />
-            </Field>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Departure">
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
-                />
-              </Field>
-              <Field
-                label="Return"
-                error={
-                  datesOutOfOrder
-                    ? 'The return date is before departure.'
-                    : undefined
-                }
-              >
-                <Input
-                  type="date"
-                  value={endDate}
-                  min={startDate === '' ? undefined : startDate}
-                  onChange={(event) => setEndDate(event.target.value)}
-                />
-              </Field>
-            </div>
-
-            <Field
-              label="Budget currency"
-              hint="Every expense on this trip is totalled in it."
-            >
-              <SimpleSelect
-                options={[...TRIP_CURRENCIES]}
-                value={currency}
-                onValueChange={setCurrency}
-                ariaLabel="Budget currency"
-              />
-            </Field>
+            <TripFormFields
+              form={form}
+              placeholders={{
+                title: 'Kyoto in cherry-blossom season',
+                destination: 'Kyoto, Japan',
+              }}
+            />
           </form>
         </DialogBody>
 
@@ -222,7 +158,7 @@ export function NewTripDialog({
             form="new-trip-form"
             variant="primary"
             shape="pill"
-            disabled={!canSave}
+            disabled={!form.canSave}
             loading={saving}
             loadingLabel="Creating the trip"
           >

@@ -31,6 +31,7 @@ import {
   listUpcomingTrips,
   requireTrip,
   restoreTrip,
+  setTripFavourite,
   updateTrip,
 } from '../trips'
 import { captureError, createHarness, subscribeTenant } from './harness'
@@ -131,6 +132,20 @@ describe('member isolation', () => {
       const trip = await requireTrip(alpha.scope, fixture.tripId)
       expect(trip.title).toBe('Lisbon in spring')
       expect(trip.isArchived).toBe(false)
+    })
+
+    it('refuses to be flagged by a reader who cannot see it', async () => {
+      // `isFavourite` is a column on the trip, so writing it is a write to someone else's trip. It
+      // has no caller yet — the star is `01-S1b`'s — but an unguarded writer in a module whose every
+      // other writer is guarded is the one that gets reached for next.
+      expect(
+        await captureError(() =>
+          setTripFavourite(stranger, fixture.tripId, true),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect((await requireTrip(alpha.scope, fixture.tripId)).isFavourite).toBe(
+        false,
+      )
     })
 
     it('refuses a child write parented onto it', async () => {

@@ -61,8 +61,16 @@ import {
 import type { SQL } from 'drizzle-orm'
 import type { ShareScopes } from '#/server/db/schema'
 import type { ShareLink, Trip, TripMember } from '#/server/db/types'
-import type { TenantScope } from './base'
+import type { ListOptions, TenantScope } from './base'
 
+/**
+ * Every trip in the tenant, readable or not.
+ *
+ * Tenant-filtered and nothing more, so it answers the questions that are asked *about the workspace*
+ * rather than on a reader's behalf: the quota count, the slug reservation, the plan-usage figure, and
+ * the writes, which are gated by {@link requireTrip} before they get here. A read that answers a
+ * person goes through {@link readableTrips} instead.
+ */
 export const tripsRepository = createTenantRepository(trips, 'trip')
 export const tripMembersRepository = createTenantRepository(
   tripMembers,
@@ -190,8 +198,12 @@ export type CreateShareLinkInput = z.infer<typeof createShareLinkInput>
  * list: one query per row is the shape this predicate exists to avoid, and a join would multiply the
  * trip row by its membership. Both sides are `tenantFilter()`-bound, so the membership half can no
  * more cross an organization boundary than the trip half can.
+ *
+ * Exported for {@link readableTrips}, which is how a reader should reach it; a query that needs the
+ * bare `SQL` — one grouped aggregate here, and the two `journey.ts` readers that do not carry it yet
+ * — takes it directly and is visibly doing something the handle could not do for it.
  */
-function readableTrips(scope: TenantScope): SQL {
+export function readableTripFilter(scope: TenantScope): SQL {
   const isMember = exists(
     scope.db
       .select({ present: sql`1` })
@@ -208,6 +220,40 @@ function readableTrips(scope: TenantScope): SQL {
   return anyOf(eq(trips.visibility, 'organization'), isMember)
 }
 
+/** The three reads a trip reader needs, with {@link readableTripFilter} already inside them. */
+export interface ReadableTrips {
+  findOne: (where: SQL) => Promise<Trip | null>
+  findMany: (options?: ListOptions) => Promise<Array<Trip>>
+  count: (where?: SQL) => Promise<number>
+}
+
+/**
+ * The trips the acting user may see, as a handle rather than as a predicate to remember.
+ *
+ * ADR 0002's archetype for the tenant filter is that it cannot be removed — it is not something a
+ * query says, it is something the handle does — and after ADR 0007 the read predicate carries the
+ * same weight and deserves the same treatment. `tripsRepository` answers for *every* trip in the
+ * tenant, which is right for the quota count in {@link createTrip}, for the slug reservation, and for
+ * the plan-usage figure in `billing/runtime.cloudflare.ts`, and wrong for every reader. While both
+ * were spelled `tripsRepository.findMany`, nothing but memory told them apart, and memory has already
+ * missed two: `listTripsWithoutJourney` and `journalCoverage` in `journey.ts` still offer a workspace
+ * member the titles and counts of private trips they cannot open. Fixing those is a ticket of its own
+ * — `journey.ts` is not this slice's to edit — but the seam they will be fixed against is this one,
+ * and it belongs on the branch that created the two-tier world.
+ */
+export function readableTrips(scope: TenantScope): ReadableTrips {
+  const readable = readableTripFilter(scope)
+  return {
+    findOne: (where) => tripsRepository.findOne(scope, allOf(readable, where)),
+    findMany: (options = {}) =>
+      tripsRepository.findMany(scope, {
+        ...options,
+        where: allOf(readable, options.where),
+      }),
+    count: (where) => tripsRepository.count(scope, allOf(readable, where)),
+  }
+}
+
 /**
  * Whether the acting user may see this trip at all. The question every trip-scoped reader asks
  * before it answers anything else; {@link requireTrip} is the same question with a throw on it.
@@ -216,12 +262,7 @@ export async function canReadTrip(
   scope: TenantScope,
   tripId: string,
 ): Promise<boolean> {
-  return (
-    (await tripsRepository.count(
-      scope,
-      allOf(eq(trips.id, tripId), readableTrips(scope)),
-    )) > 0
-  )
+  return (await readableTrips(scope).count(eq(trips.id, tripId))) > 0
 }
 
 /**
@@ -237,10 +278,7 @@ export async function requireTrip(
   scope: TenantScope,
   tripId: string,
 ): Promise<Trip> {
-  const trip = await tripsRepository.findOne(
-    scope,
-    allOf(eq(trips.id, tripId), readableTrips(scope)),
-  )
+  const trip = await readableTrips(scope).findOne(eq(trips.id, tripId))
   if (trip === null) {
     throw new NotFoundError('trip', tripId)
   }
@@ -364,8 +402,8 @@ export async function listTrips(
   input: ListTripsInput = {},
 ): Promise<Array<Trip>> {
   const options = listTripsInput.parse(input)
-  return tripsRepository.findMany(scope, {
-    where: allOf(readableTrips(scope), listFilter(options)),
+  return readableTrips(scope).findMany({
+    where: listFilter(options),
     orderBy: [desc(trips.updatedAt)],
     limit: options.limit,
     offset: options.offset,
@@ -376,20 +414,14 @@ export async function getTrip(
   scope: TenantScope,
   tripId: string,
 ): Promise<Trip | null> {
-  return tripsRepository.findOne(
-    scope,
-    allOf(eq(trips.id, tripId), readableTrips(scope)),
-  )
+  return readableTrips(scope).findOne(eq(trips.id, tripId))
 }
 
 export async function getTripBySlug(
   scope: TenantScope,
   slug: string,
 ): Promise<Trip | null> {
-  return tripsRepository.findOne(
-    scope,
-    allOf(eq(trips.slug, slug), readableTrips(scope)),
-  )
+  return readableTrips(scope).findOne(eq(trips.slug, slug))
 }
 
 /** Trips that have not finished yet, soonest first — the dashboard's "next up" rail. */
@@ -400,9 +432,8 @@ export async function listUpcomingTrips(
   },
 ): Promise<Array<Trip>> {
   const today = dateSchema.parse(options.today)
-  return tripsRepository.findMany(scope, {
+  return readableTrips(scope).findMany({
     where: allOf(
-      readableTrips(scope),
       eq(trips.isArchived, false),
       or(
         gte(trips.endDate, today),
@@ -420,8 +451,8 @@ export async function listPastTrips(
   options: { readonly today?: string; readonly limit?: number } = {},
 ): Promise<Array<Trip>> {
   const today = dateSchema.parse(options.today ?? todayIso())
-  return tripsRepository.findMany(scope, {
-    where: allOf(readableTrips(scope), lte(trips.endDate, today)),
+  return readableTrips(scope).findMany({
+    where: lte(trips.endDate, today),
     orderBy: [desc(trips.endDate)],
     limit: options.limit ?? 20,
   })
@@ -444,10 +475,12 @@ export interface TripStatusCounts {
 export async function countTripsByStatus(
   scope: TenantScope,
 ): Promise<TripStatusCounts> {
+  // The one reader that cannot go through `readableTrips`: a grouped aggregate is not one of its
+  // three shapes, so it carries the predicate itself and says so.
   const rows = await scope.db
     .select({ status: trips.status, value: count() })
     .from(trips)
-    .where(tenantFilter(scope, trips, readableTrips(scope)))
+    .where(tenantFilter(scope, trips, readableTripFilter(scope)))
     .groupBy(trips.status)
 
   const byStatus = Object.fromEntries(
@@ -461,15 +494,10 @@ export async function countTripsByStatus(
     }
   }
 
+  const readable = readableTrips(scope)
   const [archived, favourites] = await Promise.all([
-    tripsRepository.count(
-      scope,
-      allOf(readableTrips(scope), eq(trips.isArchived, true)),
-    ),
-    tripsRepository.count(
-      scope,
-      allOf(readableTrips(scope), eq(trips.isFavourite, true)),
-    ),
+    readable.count(eq(trips.isArchived, true)),
+    readable.count(eq(trips.isFavourite, true)),
   ])
 
   return { total, byStatus, archived, favourites }
@@ -589,11 +617,21 @@ export async function restoreTrip(
   return tripsRepository.requireUpdate(scope, tripId, { isArchived: false })
 }
 
+/**
+ * Flags a trip the acting user may see.
+ *
+ * `requireTrip` rather than {@link requireOwnedTrip}: the star says "keep this one in front of me",
+ * which is a reader's verb, not an owner's. It is guarded at all because `is_favourite` is a column
+ * on the trip row — a write to a trip, whatever it means — and after ADR 0007 a trip a caller may
+ * not see must not be one they can touch. `01-S1b`, which gives this its first caller, is where the
+ * flag becomes per-member; the guard is not waiting for that to be true.
+ */
 export async function setTripFavourite(
   scope: TenantScope,
   tripId: string,
   isFavourite: boolean,
 ): Promise<Trip> {
+  await requireTrip(scope, tripId)
   return tripsRepository.requireUpdate(scope, tripId, { isFavourite })
 }
 

@@ -8,8 +8,10 @@
  *   refusal is a `NotFoundError` identical to a foreign tenant's (ADR 0007); who may *change* it is
  *   `assertTripRole`, whose refusal is `FORBIDDEN`. Neither is re-implemented here — these handlers
  *   contribute the tenant scope and a validator, and nothing else. `beforeLoad` guards nothing.
- * - **Every write moves someone's travel statistics**, so every write fans `travel-stats` envelopes
- *   out to the trip's members. See {@link enqueueTravelStats}.
+ * - **A write that moves someone's travel statistics fans `travel-stats` envelopes out to the trip's
+ *   members** — which is create and edit, and deliberately not archive and restore: `00-S4` counts a
+ *   person's trips by membership, and neither shelving a trip nor bringing it back moves a membership
+ *   row. See {@link enqueueTravelStats}, whose doc holds the three properties of the fan-out.
  *
  * **No pre-departure-notice code is reachable from this module, and that is deliberate rather than
  * forgotten.** Under `00-S5`'s scan model (ADR 0005) the quarter-hourly sweep reads current rows —
@@ -73,10 +75,29 @@ const titleSchema = z
   .min(1, { error: 'A trip needs a name.' })
   .max(120, { error: 'That name is too long — 120 characters at most.' })
 
+/**
+ * Normalises `''` from a form control into the `null` a nullable column wants.
+ *
+ * On the schema rather than in the handlers, so a validated input *is* the repository's input and
+ * no handler re-spells its fields on the way through. A field added to a strict object below then
+ * reaches the repository by existing, instead of by a second line being remembered — which would
+ * have been a silent omission, every repository field being optional.
+ */
+function blankToNull(value: string): string | null {
+  return value === '' ? null : value
+}
+
+/** A trimmed, bounded free-text field. Blank clears the column. */
+function textOrBlankSchema(max: number) {
+  return z.string().trim().max(max).transform(blankToNull)
+}
+
 /** `YYYY-MM-DD`, or the empty string meaning "clear it". */
-const dateOrBlankSchema = z.union([z.literal(''), z.iso.date()], {
-  error: 'Use a calendar date, or leave it empty.',
-})
+const dateOrBlankSchema = z
+  .union([z.literal(''), z.iso.date()], {
+    error: 'Use a calendar date, or leave it empty.',
+  })
+  .transform(blankToNull)
 
 const currencySchema = z
   .string()
@@ -93,14 +114,14 @@ const currencySchema = z
  * reader sees.
  */
 function datesInOrder(value: {
-  startDate?: string
-  endDate?: string
+  startDate?: string | null
+  endDate?: string | null
 }): boolean {
   const { startDate, endDate } = value
-  if (startDate === undefined || endDate === undefined) {
+  if (!startDate || !endDate) {
     return true
   }
-  return startDate === '' || endDate === '' || endDate >= startDate
+  return endDate >= startDate
 }
 
 /** Where the refusal above lands, shared by both schemas that carry it. */
@@ -112,7 +133,7 @@ const datesOutOfOrder = {
 export const createTripInputSchema = z
   .strictObject({
     title: titleSchema,
-    destination: z.string().trim().max(160),
+    destination: textOrBlankSchema(160),
     startDate: dateOrBlankSchema,
     endDate: dateOrBlankSchema,
     currency: currencySchema,
@@ -128,8 +149,8 @@ export const updateTripInputSchema = z
   .strictObject({
     tripId: tripIdSchema,
     title: titleSchema.optional(),
-    destination: z.string().trim().max(160).optional(),
-    summary: z.string().trim().max(280).optional(),
+    destination: textOrBlankSchema(160).optional(),
+    summary: textOrBlankSchema(280).optional(),
     startDate: dateOrBlankSchema.optional(),
     endDate: dateOrBlankSchema.optional(),
     currency: currencySchema.optional(),
@@ -239,19 +260,6 @@ async function enqueueTravelStats(
  * Server functions
  * ---------------------------------------------------------------------------------------------- */
 
-/** Normalises `''` from a form control into the `null` a nullable column wants. */
-function blankToNull(value: string): string | null {
-  return value === '' ? null : value
-}
-
-/**
- * The same normalisation over a patch field, where a third state exists: a field the form never sent
- * stays `undefined` and the repository leaves the column alone.
- */
-function patched(value: string | undefined): string | null | undefined {
-  return value === undefined ? undefined : blankToNull(value)
-}
-
 /**
  * Creates a trip and hands back its id so the caller can navigate straight into the planner.
  *
@@ -263,13 +271,7 @@ export const createTripFn = createServerFn({ method: 'POST' })
   .validator(createTripInputSchema)
   .handler(async ({ data }): Promise<{ readonly tripId: string }> => {
     const scope = await appScope()
-    const trip = await createTrip(scope, {
-      title: data.title,
-      destination: blankToNull(data.destination),
-      startDate: blankToNull(data.startDate),
-      endDate: blankToNull(data.endDate),
-      currency: data.currency,
-    })
+    const trip = await createTrip(scope, data)
     await enqueueTravelStats(scope, trip.id, affectedStatYears(trip.startDate))
     return { tripId: trip.id }
   })
@@ -290,14 +292,7 @@ export const updateTripFn = createServerFn({ method: 'POST' })
     // Read before the write, for one reason: the year a trip *leaves* has to be recomputed as well as
     // the one it arrives in, and only the row as it stood knows which year that was.
     const before = await requireTrip(scope, tripId)
-    const trip = await updateTrip(scope, tripId, {
-      title: patch.title,
-      destination: patched(patch.destination),
-      summary: patched(patch.summary),
-      startDate: patched(patch.startDate),
-      endDate: patched(patch.endDate),
-      currency: patch.currency,
-    })
+    const trip = await updateTrip(scope, tripId, patch)
 
     await enqueueTravelStats(
       scope,

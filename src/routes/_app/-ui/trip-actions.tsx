@@ -23,16 +23,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Field,
   IconButton,
-  Input,
   Sheet,
   SheetBody,
   SheetContent,
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SimpleSelect,
   useSheetDirection,
 } from '#/components/ui'
 import {
@@ -40,16 +37,14 @@ import {
   restoreTripFn,
   updateTripFn,
 } from '../-server/trip-lifecycle'
-import { TRIP_CURRENCIES } from './trip-currencies'
+import {
+  TripFormFields,
+  messageOf,
+  tripFormPayload,
+  useTripForm,
+} from './trip-form'
 
 import type { TripCard } from '../-server/overview'
-
-function messageOf(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message.length > 0) {
-    return error.message
-  }
-  return fallback
-}
 
 /* -------------------------------------------------------------------------------------------------
  * Edit sheet
@@ -62,12 +57,13 @@ export interface TripEditSheetProps {
 }
 
 /**
- * The five fields a trip is created with, offered again for editing.
+ * The trip's own field set, in a sheet, over the trip it was opened from.
  *
- * Blank clears and an untouched field is left alone — but this form shows all five, so it sends all
- * five: "untouched" is a property of the *patch*, not of the form, and a sheet that omitted an empty
- * field could never clear a destination. `01-S8` replaces this with the full field set the creation
- * dialog will also render.
+ * The fields are `./trip-form`'s — the same ones the creation dialog asks for, because they are the
+ * same questions — and this contributes the chrome, the patch and where the answer lands. Blank
+ * clears and an untouched field is left alone, but the sheet shows all five and so sends all five:
+ * "untouched" is a property of the *patch*, not of the form, and a sheet that omitted an empty field
+ * could never clear a destination.
  */
 export function TripEditSheet({
   trip,
@@ -79,29 +75,23 @@ export function TripEditSheet({
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [title, setTitle] = useState(trip.title)
-  const [destination, setDestination] = useState(trip.destination ?? '')
-  const [startDate, setStartDate] = useState(trip.startDate ?? '')
-  const [endDate, setEndDate] = useState(trip.endDate ?? '')
-  const [currency, setCurrency] = useState(trip.currency)
-
-  const datesOutOfOrder =
-    startDate !== '' && endDate !== '' && endDate < startDate
-  const canSave = title.trim().length > 0 && !datesOutOfOrder && !saving
+  const form = useTripForm(
+    {
+      title: trip.title,
+      destination: trip.destination ?? '',
+      startDate: trip.startDate ?? '',
+      endDate: trip.endDate ?? '',
+      currency: trip.currency,
+    },
+    saving,
+  )
 
   async function submit(): Promise<void> {
     setSaving(true)
     setError(null)
     try {
       await updateTripFn({
-        data: {
-          tripId: trip.id,
-          title: title.trim(),
-          destination: destination.trim(),
-          startDate,
-          endDate,
-          currency,
-        },
+        data: { tripId: trip.id, ...tripFormPayload(form) },
       })
       await router.invalidate()
       onOpenChange(false)
@@ -141,7 +131,7 @@ export function TripEditSheet({
             className="flex flex-col gap-4"
             onSubmit={(event) => {
               event.preventDefault()
-              if (canSave) {
+              if (form.canSave) {
                 void submit()
               }
             }}
@@ -157,7 +147,7 @@ export function TripEditSheet({
                     size="sm"
                     shape="pill"
                     onClick={() => {
-                      if (canSave) void submit()
+                      if (form.canSave) void submit()
                     }}
                   >
                     Try again
@@ -168,64 +158,7 @@ export function TripEditSheet({
               </Alert>
             )}
 
-            <Field label="Trip name" required>
-              <Input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                maxLength={120}
-                autoComplete="off"
-                required
-              />
-            </Field>
-
-            <Field
-              label="Destination"
-              hint="A city, a region, or the whole route."
-            >
-              <Input
-                value={destination}
-                onChange={(event) => setDestination(event.target.value)}
-                maxLength={160}
-                autoComplete="off"
-              />
-            </Field>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Departure">
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
-                />
-              </Field>
-              <Field
-                label="Return"
-                error={
-                  datesOutOfOrder
-                    ? 'The return date is before departure.'
-                    : undefined
-                }
-              >
-                <Input
-                  type="date"
-                  value={endDate}
-                  min={startDate === '' ? undefined : startDate}
-                  onChange={(event) => setEndDate(event.target.value)}
-                />
-              </Field>
-            </div>
-
-            <Field
-              label="Budget currency"
-              hint="Every expense on this trip is totalled in it."
-            >
-              <SimpleSelect
-                options={[...TRIP_CURRENCIES]}
-                value={currency}
-                onValueChange={setCurrency}
-                ariaLabel="Budget currency"
-              />
-            </Field>
+            <TripFormFields form={form} />
           </form>
         </SheetBody>
 
@@ -244,7 +177,7 @@ export function TripEditSheet({
             form={`trip-edit-${trip.id}`}
             variant="primary"
             shape="pill"
-            disabled={!canSave}
+            disabled={!form.canSave}
             loading={saving}
             loadingLabel="Saving the trip"
           >

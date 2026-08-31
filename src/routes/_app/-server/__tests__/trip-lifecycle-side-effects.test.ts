@@ -28,6 +28,7 @@ import { createHarness } from '#/server/repos/__tests__/harness'
 import { ALL_TIME_STAT_YEAR, taskEnvelopeSchema } from '#/server/queue/types'
 import { travelStatsTaskId } from '#/server/queue/handlers/travel-stats'
 
+import type { z } from 'zod'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { TenantScope } from '#/server/repos'
 import type { TaskEnvelope, TaskEnvelopeOf } from '#/server/queue/types'
@@ -111,10 +112,25 @@ const {
   updateTripInputSchema,
 } = await import('../trip-lifecycle')
 
+/**
+ * Applies a boundary validator the way a Start build applies it, and hands the result to the call
+ * site as the type that call site asks for.
+ *
+ * `.validator(schema)` types `createTripFn({ data })` with the schema's *input*, because in a real
+ * build the boundary parses on the way in: a caller passes `''` and the handler sees `null`. Here the
+ * parse happens on this side of the call, so what is passed already *is* the output — the same object
+ * the handler receives either way — and this is the one place the two spellings of it meet.
+ */
+function atBoundary<TSchema extends z.ZodType>(
+  schema: TSchema,
+  data: unknown,
+): z.input<TSchema> {
+  return schema.parse(data) as z.input<TSchema>
+}
+
 const createTrip = async (data: unknown): Promise<void> => {
-  const validated = createTripInputSchema.parse(data)
   await startStorage.run(startContext(), () =>
-    createTripFn({ data: validated }),
+    createTripFn({ data: atBoundary(createTripInputSchema, data) }),
   )
 }
 
@@ -134,23 +150,20 @@ async function newestTripId(): Promise<string> {
 }
 
 const updateTrip = async (data: unknown): Promise<void> => {
-  const validated = updateTripInputSchema.parse(data)
   await startStorage.run(startContext(), () =>
-    updateTripFn({ data: validated }),
+    updateTripFn({ data: atBoundary(updateTripInputSchema, data) }),
   )
 }
 
 const archiveTrip = async (data: unknown): Promise<void> => {
-  const validated = archiveTripInputSchema.parse(data)
   await startStorage.run(startContext(), () =>
-    archiveTripFn({ data: validated }),
+    archiveTripFn({ data: atBoundary(archiveTripInputSchema, data) }),
   )
 }
 
 const restoreTrip = async (data: unknown): Promise<void> => {
-  const validated = restoreTripInputSchema.parse(data)
   await startStorage.run(startContext(), () =>
-    restoreTripFn({ data: validated }),
+    restoreTripFn({ data: atBoundary(restoreTripInputSchema, data) }),
   )
 }
 
@@ -392,6 +405,44 @@ describe('the lifecycle verbs', () => {
     expect(restored.status).toBe(archived.status)
   })
 
+  it('hands the repository the shape it stores, so no field is copied by hand', () => {
+    // The normalisation is the schema's, not the handler's. A field the strict object accepts is
+    // therefore a field the repository receives — there is no second, hand-written map for a sixth
+    // field to be forgotten from, and forgetting it would be silent because every repository field
+    // is optional.
+    expect(
+      createTripInputSchema.parse({
+        title: '  Lisbon  ',
+        destination: '',
+        startDate: '',
+        endDate: '',
+        currency: 'eur',
+      }),
+    ).toEqual({
+      title: 'Lisbon',
+      destination: null,
+      startDate: null,
+      endDate: null,
+      currency: 'EUR',
+    })
+
+    expect(
+      updateTripInputSchema.parse({
+        tripId: 'trip-1',
+        destination: '',
+        summary: '',
+        startDate: '',
+        endDate: '',
+      }),
+    ).toEqual({
+      tripId: 'trip-1',
+      destination: null,
+      summary: null,
+      startDate: null,
+      endDate: null,
+    })
+  })
+
   it('refuses a backwards date range at the boundary, before any write', async () => {
     expect(() =>
       updateTripInputSchema.parse({
@@ -445,14 +496,12 @@ describe('the pre-departure-notice obligation, which no longer exists', () => {
     // Read off the shipped source rather than asserted behaviourally: under `00-S5`'s scan model the
     // *absence* of a call has no observable effect, so the only honest gate is the import list.
     //
-    // The two module specifiers are composed rather than written out, and that is not decoration:
-    // `src/server/queue/__tests__/reminders.test.ts` walks `src/**` for the literal and asserts the
-    // exact set of files that carry it, so spelling it here would make this file an importer and
-    // redden that case instead of this one.
-    const notices = 'reminders'
+    // A pattern rather than the two specifiers spelled out, because the sweep's own suite walks
+    // `src/**` for that literal and asserts the exact set of files carrying it — writing it here
+    // would make this file an importer of the module it is checking nobody imports. The pattern also
+    // covers the catalogue half, which that walk does not reach.
+    expect(source).not.toMatch(/['"][^'"]*\/(?:queue|catalog)\/reminders['"]/)
     for (const banned of [
-      `#/server/queue/${notices}`,
-      `#/server/catalog/${notices}`,
       'sweepReminders',
       'scheduleReminder',
       'cancelReminder',
