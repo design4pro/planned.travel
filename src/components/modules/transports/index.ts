@@ -4,6 +4,9 @@ export type { TransportsTimelineProps } from './transports-timeline'
 
 export { LegDialog, NewLegAction } from './leg-dialog'
 
+export { ChainEditor } from './chain-editor'
+export type { ChainEditorProps } from './chain-editor'
+
 export {
   analyseConnections,
   formatGap,
@@ -22,34 +25,60 @@ export type {
 } from './connections'
 
 export {
+  CHAIN_MAX_LEGS,
   MODE_LABELS,
   STATUS_LABELS as TRANSPORT_STATUS_LABELS,
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
+  applyStationMatch,
+  breakIntoLegs,
+  chainFromTransport,
+  chainLegCount,
+  chainPayload,
+  emptyChain,
+  emptyChainLeg,
   emptyLegDraft,
+  emptyStation,
   endpointLabels,
+  fillStationFromCode,
+  hasChainErrors,
   hasLegErrors,
+  isLookupCode,
   isTransportMode,
   isTransportStatus,
   kilometresToMetres,
   metresToKilometres,
   modeLabel,
+  removeStationAt,
+  splitLegAt,
+  stationLabel,
   suggestLegTitle,
   transportStatusLabel,
   usesCodes,
   usesSeat,
   usesService,
+  validateChain,
   validateLegDraft,
 } from './leg-form'
 export type {
+  ChainDraft,
+  ChainErrors,
+  ChainLegDraft,
+  ChainLegErrors,
+  ChainLegPayload,
+  ChainPayload,
+  ChainStationPayload,
   DayChoice,
   EndpointLabels,
   LegDraft,
   LegErrors,
+  StationDraft,
+  StationErrors,
+  StationLookup,
   TransportMode,
   TransportStatus,
 } from './leg-form'
 
 export { MODE_ICON, modeIcon } from './mode-icon'
 export { legDurationMinutes } from './leg-timing'
-export type { TransportData, TransportDayData } from './types'
+export type { TransportData, TransportDayData, TransportLegData } from './types'

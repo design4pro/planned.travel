@@ -154,15 +154,20 @@ import {
 } from '../settings'
 import { createTag, tagsRepository } from '../tags'
 import {
+  TripRoleError,
   createTransport,
   deleteTransport,
   getTransport,
   listDayTransports,
+  listTransportLegs,
+  listTripLegs,
   listTripTransports,
   nextDeparture,
+  replaceTransportChain,
   setTransportStatus,
   summariseTripTransports,
   totalTripDistanceMetres,
+  transportLegsRepository,
   transportsRepository,
   updateTransport,
 } from '../transports'
@@ -2549,6 +2554,153 @@ describe('tenant isolation', () => {
       expect(await listTripDays(beta.tenant.scope, beta.tripId)).toEqual(
         daysBefore,
       )
+    })
+  })
+  /**
+   * 03-S2b — the station chain, and who may replace it.
+   *
+   * Two boundaries meet on this writer and they are asserted apart. The first is
+   * the tenant one, which every other block here states: B's legs are invisible
+   * from A by transport id and by trip id, and a leg may not be parented onto B's
+   * day even when the parent transport is A's own.
+   *
+   * The second is destructive and belongs to this writer alone. `replaceTransportChain`
+   * **deletes before it inserts**, so "refused" is not enough: a call that threw
+   * after the delete and before the insert would leave B's journey with no legs
+   * and every other assertion in this file still green. B's rows are therefore
+   * counted before and after and must be identical.
+   *
+   * The third is not a tenant boundary at all. A trip role is a role *inside* one
+   * workspace, so it is asserted in both directions on one trip: a viewer on
+   * their own trip is refused and an editor on that same trip is allowed, which
+   * proves the guard discriminates rather than merely throws.
+   */
+  describe('a transport’s station chain', () => {
+    /** Three stations, so a refusal that dropped one leg would still be visible. */
+    const CHAIN = {
+      stations: [
+        { name: 'Shin-Osaka', code: 'OSA', timezone: 'Asia/Tokyo' },
+        { name: 'Nagoya', code: 'NGO', timezone: 'Asia/Tokyo' },
+        { name: 'Tokyo', code: 'TYO', timezone: 'Asia/Tokyo' },
+      ],
+      legs: [{ serviceNumber: 'Hikari 500' }, { serviceNumber: 'Nozomi 24' }],
+    }
+
+    beforeEach(async () => {
+      await replaceTransportChain(beta.tenant.scope, beta.transportId, CHAIN)
+    })
+
+    it('answers nothing when asked, from A, about B’s legs', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(await listTransportLegs(scope, beta.transportId)).toEqual([])
+      expect(await listTripLegs(scope, beta.tripId)).toEqual([])
+
+      // The same ids resolve for their own tenant, so it is scoping that hid them.
+      expect(
+        await listTransportLegs(beta.tenant.scope, beta.transportId),
+      ).toHaveLength(2)
+      expect(await listTripLegs(beta.tenant.scope, beta.tripId)).toHaveLength(2)
+    })
+
+    it('refuses to replace the chain of a B transport from A’s scope', async () => {
+      expect(
+        await captureError(() =>
+          replaceTransportChain(alpha.tenant.scope, beta.transportId, {
+            stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
+            legs: [{}],
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('refuses a leg parented onto a B day even on A’s own transport', async () => {
+      const scope = alpha.tenant.scope
+
+      for (const leg of [
+        { departureDayId: beta.dayId },
+        { arrivalDayId: beta.lastDayId },
+      ]) {
+        expect(
+          await captureError(() =>
+            replaceTransportChain(scope, alpha.transportId, {
+              stations: [{ name: 'Lisbon' }, { name: 'Porto' }],
+              legs: [leg],
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+
+      // Not one row landed: a dropped reference would have written a leg anyway.
+      expect(await listTransportLegs(scope, alpha.transportId)).toEqual([])
+    })
+
+    it('deletes nothing of B’s while refusing', async () => {
+      const scope = alpha.tenant.scope
+      const before = await listTripLegs(beta.tenant.scope, beta.tripId)
+      expect(before).toHaveLength(2)
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () =>
+          replaceTransportChain(scope, beta.transportId, {
+            stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
+            legs: [{}],
+          }),
+        () =>
+          replaceTransportChain(scope, beta.transportId, {
+            stations: [],
+            legs: [],
+          }),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await listTripLegs(beta.tenant.scope, beta.tripId)).toEqual(before)
+      expect(await transportLegsRepository.count(beta.tenant.scope)).toBe(
+        before.length,
+      )
+    })
+
+    /**
+     * Not a tenant boundary: one workspace, one trip, two roles. Membership is
+     * not a role, and the collaborative session already refuses a viewer the
+     * equivalent edit (`src/server/do/trip-room.ts:358`).
+     */
+    it('refuses a viewer and admits an editor on the same trip', async () => {
+      const viewerId = await alpha.tenant.addUser('Viewer of A')
+      const editorId = await alpha.tenant.addUser('Editor of A')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: editorId,
+        role: 'editor',
+      })
+
+      expect(
+        await captureError(() =>
+          replaceTransportChain(
+            alpha.tenant.scopeFor(viewerId),
+            alpha.transportId,
+            { stations: [{ name: 'Lisbon' }, { name: 'Porto' }], legs: [{}] },
+          ),
+        ),
+      ).toBeInstanceOf(TripRoleError)
+      expect(
+        await listTransportLegs(alpha.tenant.scope, alpha.transportId),
+      ).toEqual([])
+
+      expect(
+        await replaceTransportChain(
+          alpha.tenant.scopeFor(editorId),
+          alpha.transportId,
+          { stations: [{ name: 'Lisbon' }, { name: 'Porto' }], legs: [{}] },
+        ),
+      ).toHaveLength(1)
     })
   })
 })

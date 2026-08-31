@@ -11,6 +11,12 @@
  * journey spans two — the overnight train that leaves on day 3 and lands on day 4
  * is the case the whole second reference exists for.
  *
+ * A journey with more than two stations reads as the chain it is: the stations
+ * down the rail with their own clocks, and the service number, platform and seat
+ * of each leg between them. A journey with no legs recorded keeps the two-endpoint
+ * row it has always had, which is the compatibility claim of `03-S2b` seen from
+ * the reading side.
+ *
  * Stored values are typeset as facts. A previous round of this screen presented
  * them as filled grey rounded rectangles, which reads as a form full of disabled
  * inputs; every value here is set in the card's own ink with a whisper-quiet label
@@ -31,6 +37,7 @@ import {
 import { Alert, Badge, Button, EmptyState } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { formatWeekday } from '#/lib/format'
+import { timeZoneOffsetLabel } from '#/lib/timezones'
 import { deleteLegFn, setLegStatusFn } from '#/server/fns/transports'
 import {
   ConfirmDialog,
@@ -62,7 +69,7 @@ import type { BadgeTone } from '#/components/ui'
 import type { ConfirmRequest, FactItem, StatusOption } from '../shared'
 import type { Connection } from './connections'
 import type { TransportStatus } from './leg-form'
-import type { TransportData, TransportDayData } from './types'
+import type { TransportData, TransportDayData, TransportLegData } from './types'
 
 /* ------------------------------------------------------------------- labels */
 
@@ -593,27 +600,31 @@ function TransportCard({
       </div>
 
       <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-5">
-        <div className="flex min-w-0 items-start gap-3">
-          <Endpoint
-            code={transport.departureCode}
-            name={transport.departureName}
-            date={transport.departureDate}
-            time={transport.departureTime}
-            dayNumber={departureDay}
-          />
-          <ArrowRight
-            aria-hidden
-            className="mt-1.5 size-4 shrink-0 text-ink-4"
-          />
-          <Endpoint
-            code={transport.arrivalCode}
-            name={transport.arrivalName}
-            date={transport.arrivalDate}
-            time={transport.arrivalTime}
-            dayNumber={arrivalDay}
-            align="right"
-          />
-        </div>
+        {transport.legs.length > 1 ? (
+          <Chain legs={transport.legs} />
+        ) : (
+          <div className="flex min-w-0 items-start gap-3">
+            <Endpoint
+              code={transport.departureCode}
+              name={transport.departureName}
+              date={transport.departureDate}
+              time={transport.departureTime}
+              dayNumber={departureDay}
+            />
+            <ArrowRight
+              aria-hidden
+              className="mt-1.5 size-4 shrink-0 text-ink-4"
+            />
+            <Endpoint
+              code={transport.arrivalCode}
+              name={transport.arrivalName}
+              date={transport.arrivalDate}
+              time={transport.arrivalTime}
+              dayNumber={arrivalDay}
+              align="right"
+            />
+          </div>
+        )}
 
         {facts.length === 0 ? null : (
           <FactList items={facts} columns={facts.length > 3 ? 4 : 3} />
@@ -624,6 +635,122 @@ function TransportCard({
         )}
       </div>
     </article>
+  )
+}
+
+/* -------------------------------------------------------------- the chain */
+
+/** One stop on the rail: its name or code, and the clock it is read on. */
+function Stop({
+  code,
+  name,
+  timezone,
+  time,
+  showZone,
+}: {
+  code: string | null
+  name: string
+  timezone: string | null
+  time: string | null
+  /** Only when the journey crosses zones; otherwise it is noise on every row. */
+  showZone: boolean
+}) {
+  const clock = formatClock(time)
+  const zone =
+    showZone && timezone !== null && timezone !== ''
+      ? timeZoneOffsetLabel(timezone)
+      : null
+
+  return (
+    <div className="flex min-w-0 flex-1 items-baseline gap-2">
+      <p className="min-w-0 truncate text-label font-semibold text-ink">
+        {code === null || code === '' ? name : code}
+      </p>
+      {code === null || code === '' ? null : (
+        <p className="min-w-0 truncate text-caption text-ink-3">{name}</p>
+      )}
+      <span className="flex-1" />
+      <span className="shrink-0 text-caption tabular-nums text-ink-3">
+        {clock ?? '—'}
+        {zone === null ? null : <span className="ps-1 text-ink-4">{zone}</span>}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * A journey with more than two stations, read as the chain it is.
+ *
+ * The stations are the rail and the ticket facts hang between them, which is the
+ * same grammar the editor uses — so what a traveller typed and what they read
+ * back are the same shape. The zone is printed beside a clock **only when the
+ * journey crosses one**: on a chain that stays inside Japan it says nothing, and
+ * on one that leaves it, it is the difference between a ninety-minute flight and
+ * an apparent journey backwards in time.
+ */
+function Chain({ legs }: { legs: ReadonlyArray<TransportLegData> }) {
+  const ordered = [...legs].sort(
+    (left, right) => left.position - right.position,
+  )
+  const first = ordered[0]
+  const zones = new Set(
+    ordered
+      .flatMap((leg) => [leg.fromTimezone, leg.toTimezone])
+      .filter((zone): zone is string => zone !== null && zone !== ''),
+  )
+  const showZone = zones.size > 1
+
+  return (
+    <ol data-part="chain" className="flex min-w-0 flex-col">
+      <li className="flex min-w-0 items-start gap-3">
+        <span
+          aria-hidden
+          className="mt-1.5 size-2 shrink-0 rounded-full bg-brand"
+        />
+        <Stop
+          code={first.fromCode}
+          name={first.fromName}
+          timezone={first.fromTimezone}
+          time={first.departureTime}
+          showZone={showZone}
+        />
+      </li>
+      {ordered.map((leg, index) => (
+        <li key={leg.id} className="flex min-w-0 flex-col">
+          <div className="flex min-w-0 items-stretch gap-3">
+            <span
+              aria-hidden
+              className="ms-[0.1875rem] w-px shrink-0 bg-edge"
+            />
+            <p className="min-w-0 truncate py-1 text-caption text-ink-4">
+              {[
+                leg.serviceNumber,
+                leg.platform === null ? null : `Platform ${leg.platform}`,
+                leg.seat === null ? null : `Seat ${leg.seat}`,
+              ]
+                .filter(Boolean)
+                .join(' · ') || `Leg ${index + 1}`}
+            </p>
+          </div>
+          <div className="flex min-w-0 items-start gap-3">
+            <span
+              aria-hidden
+              className={cn(
+                'mt-1.5 size-2 shrink-0 rounded-full',
+                index === ordered.length - 1 ? 'bg-brand' : 'bg-edge-strong',
+              )}
+            />
+            <Stop
+              code={leg.toCode}
+              name={leg.toName}
+              timezone={leg.toTimezone}
+              time={leg.arrivalTime}
+              showZone={showZone}
+            />
+          </div>
+        </li>
+      ))}
+    </ol>
   )
 }
 
