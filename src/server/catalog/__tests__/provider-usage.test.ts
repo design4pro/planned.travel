@@ -21,18 +21,21 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { providerUsage } from '#/server/db/schema'
+import { providerRegistry, providerUsage } from '#/server/db/schema'
 import {
   PLATFORM_SYSTEM_ACTOR,
+  ProviderNotBlockableError,
   readProviderGate,
   readProviderLimit,
   recordProviderCall,
   rollUpProviderUsage,
+  updateProviderLimit,
   usageBucket,
 } from '../provider-usage'
 import { createPlatformTables } from './platform-tables'
 import type { PlatformTables } from './platform-tables'
 import type { Logger } from '#/server/observability'
+import type { AuthSession } from '#/server/auth/tenant'
 
 const AT = new Date('2026-08-30T18:55:12.345Z')
 
@@ -546,6 +549,165 @@ describe('rollUpProviderUsage', () => {
         logger,
         { now: AT },
       ),
+    ).rejects.toThrow()
+  })
+})
+
+/**
+ * A signed-in operator, built here rather than imported: `requirePermission` is pure and
+ * synchronous, so the whole authorisation half of these functions is exercisable without a request,
+ * a cookie or a Better Auth instance.
+ */
+function operator(role: string | null): AuthSession {
+  return {
+    user: {
+      id: 'usr_ops',
+      email: 'ops@planned.travel',
+      name: 'Ops',
+      emailVerified: true,
+      image: null,
+      twoFactorEnabled: true,
+      role,
+      banned: false,
+      banReason: null,
+      banExpires: null,
+    },
+    session: {
+      id: 'ses_1',
+      token: 'tok_1',
+      userId: 'usr_ops',
+      activeOrganizationId: 'org_1',
+      expiresAt: new Date('2026-09-30T10:00:00.000Z'),
+      impersonatedBy: null,
+    },
+  }
+}
+
+const LIMIT_INPUT = {
+  label: 'Resend',
+  limitWindow: 'month',
+  callLimit: 1000,
+  policy: 'allow',
+  warnPercent: 70,
+  criticalPercent: 90,
+  notes: null,
+} as const
+
+describe('updateProviderLimit', () => {
+  it('refuses an operator without the configure statement, before touching a row', async () => {
+    await expect(
+      updateProviderLimit(tables.db, operator('curator'), {
+        ...LIMIT_INPUT,
+        slug: 'resend',
+      }),
+    ).rejects.toThrow()
+
+    expect(await tables.db.select().from(providerRegistry)).toHaveLength(0)
+  })
+
+  it('creates the row on a first save and reports no before', async () => {
+    const { before, after } = await updateProviderLimit(
+      tables.db,
+      operator('admin'),
+      { ...LIMIT_INPUT, slug: 'resend' },
+    )
+
+    expect(before).toBeNull()
+    expect(after).toMatchObject({
+      slug: 'resend',
+      callLimit: 1000,
+      policy: 'allow',
+      limitWindow: 'month',
+    })
+  })
+
+  it('moves an existing ceiling and hands back both sides of the change', async () => {
+    await updateProviderLimit(tables.db, operator('admin'), {
+      ...LIMIT_INPUT,
+      slug: 'resend',
+    })
+
+    const { before, after } = await updateProviderLimit(
+      tables.db,
+      operator('admin'),
+      { ...LIMIT_INPUT, slug: 'resend', callLimit: 2000, policy: 'block' },
+    )
+
+    expect(before?.callLimit).toBe(1000)
+    expect(after.callLimit).toBe(2000)
+    expect(after.policy).toBe('block')
+    // One row, not two: the save is an upsert on the slug.
+    expect(await tables.db.select().from(providerRegistry)).toHaveLength(1)
+  })
+
+  /**
+   * The regression this pair exists for. A ceiling for a provider with no client is the whole reason
+   * the planned slugs are listed — ADR 0013 gives Geoapify 3,000 credits a day — and the path used
+   * to cast the slug to a metered one, which sent it into a `z.enum(METERED_PROVIDERS)` parse.
+   */
+  it('accepts a ceiling for a provider that has no client yet', async () => {
+    const { after } = await updateProviderLimit(tables.db, operator('admin'), {
+      ...LIMIT_INPUT,
+      slug: 'geoapify',
+      label: 'Geoapify',
+      limitWindow: 'day',
+      callLimit: 3000,
+    })
+
+    expect(after).toMatchObject({
+      slug: 'geoapify',
+      limitWindow: 'day',
+      callLimit: 3000,
+    })
+  })
+
+  it('reads that ceiling back through the same door a metered one uses', async () => {
+    await updateProviderLimit(tables.db, operator('admin'), {
+      ...LIMIT_INPUT,
+      slug: 'geoapify',
+      limitWindow: 'day',
+      callLimit: 3000,
+    })
+
+    expect(await readProviderLimit(tables.db, 'geoapify')).toMatchObject({
+      callLimit: 3000,
+    })
+  })
+
+  it('refuses to block a provider whose feature has no fallback', async () => {
+    await expect(
+      updateProviderLimit(tables.db, operator('admin'), {
+        ...LIMIT_INPUT,
+        slug: 'polar',
+        label: 'Polar',
+        policy: 'block',
+      }),
+    ).rejects.toBeInstanceOf(ProviderNotBlockableError)
+
+    // Refused before the write, so the row is not left half-configured.
+    expect(await tables.db.select().from(providerRegistry)).toHaveLength(0)
+  })
+
+  it('still lets that provider carry a ceiling it only warns about', async () => {
+    const { after } = await updateProviderLimit(tables.db, operator('admin'), {
+      ...LIMIT_INPUT,
+      slug: 'polar',
+      label: 'Polar',
+      policy: 'allow',
+    })
+
+    expect(after).toMatchObject({ slug: 'polar', policy: 'allow' })
+    expect(after.blockable).toBe(false)
+  })
+
+  it('rejects thresholds that would paint a bar green past its ceiling', async () => {
+    await expect(
+      updateProviderLimit(tables.db, operator('admin'), {
+        ...LIMIT_INPUT,
+        slug: 'resend',
+        warnPercent: 95,
+        criticalPercent: 80,
+      }),
     ).rejects.toThrow()
   })
 })

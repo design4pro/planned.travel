@@ -460,6 +460,99 @@ const messages = {
   'runs.notCoordinator.title': 'Aquest desplegament no coordina la flota',
   'runs.notCoordinator.body':
     'El registre d’execucions està enganxat només a la preproducció, i a posta: un segon registre deixaria que dues flotes es pensessin cadascuna que té la llista pendent, que és justament el que existeix per impedir. Llegeix la flota a la preproducció.',
+  'nav.providers': 'Proveïdors',
+  'nav.providers.description': 'Crides sortints i els seus sostres',
+  'providers.error.title':
+    'No s’han pogut llegir els comptadors dels proveïdors',
+  'providers.list.label': 'Serveis',
+  'providers.status.planned': 'Sense integrar',
+  'providers.status.planned.description':
+    'Encara no hi ha res que cridi aquest servei, així que no hi ha res per comptar. Hi surt perquè el sostre s’acordi abans de la primera crida i no després de la primera factura.',
+  'providers.policy.allow': 'Factura per sobre',
+  'providers.policy.block': 'Rebutja en arribar al sostre',
+  'providers.badge.blocked': {
+    one: 'Una crida rebutjada',
+    many: '{calls} crides rebutjades',
+    other: '{calls} crides rebutjades',
+  },
+  'providers.limit.none': 'Cap sostre acordat · {used} aquest mes',
+  'providers.limit.value': '{used} de {limit}',
+  'providers.limit.window.day': 'Avui',
+  'providers.limit.window.month': 'Aquest mes',
+  'providers.measuring.none': 'Encara no s’ha mesurat res',
+  'providers.measuring.since': 'Mesurant des del {date}',
+  'providers.stat.calls': 'Crides aquest mes',
+  'providers.stat.calls.caption': 'A tots els serveis integrats',
+  'providers.stat.errors': 'Crides fallides',
+  'providers.stat.errors.caption':
+    'Compten també com a crides, perquè gairebé tots els proveïdors les cobren',
+  'providers.stat.nearLimit': 'A prop d’un sostre',
+  'providers.stat.nearLimit.caption': 'Serveis per sobre del llindar d’avís',
+  'providers.stat.blocked': 'Crides rebutjades',
+  'providers.stat.blocked.none': 'No s’ha rebutjat res',
+  'providers.stat.blocked.some': 'Demanda rebutjada per un sostre',
+  'providers.forecast.label': 'Previsió',
+  'providers.forecast.provider': 'Servei',
+  'providers.forecast.monthEnd': 'A final de mes',
+  'providers.forecast.runRate': 'Al mes a aquest ritme',
+  'providers.forecast.perWorkspace': 'Per espai de treball i mes',
+  'providers.forecast.noWorkspaceTraffic':
+    'No hi ha trànsit d’espais per fer la mitjana',
+  'providers.forecast.window': {
+    one: 'Projectat a partir d’una hora de mesura.',
+    many: 'Projectat a partir de {hours} hores de mesura.',
+    other: 'Projectat a partir de {hours} hores de mesura.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Només s’ha mesurat una hora: massa poc per projectar. Estirar menys d’un dia fins a un mes seria aritmètica, no una previsió.',
+    many: 'Només s’han mesurat {hours} hores: massa poc per projectar. Estirar menys d’un dia fins a un mes seria aritmètica, no una previsió.',
+    other:
+      'Només s’han mesurat {hours} hores: massa poc per projectar. Estirar menys d’un dia fins a un mes seria aritmètica, no una previsió.',
+  },
+  'providers.forecast.atWorkspaces': 'Amb quants espais de treball',
+  'providers.forecast.callsEach': 'Crides per espai i mes',
+  'providers.forecast.projected': 'Unes {calls} crides al mes.',
+  'providers.workspaces.label': 'Espais més actius',
+  'providers.workspaces.platform': 'Plataforma (cap espai)',
+  'providers.workspaces.empty.title': 'Encara no s’ha atribuït res',
+  'providers.workspaces.empty.description':
+    'Una crida feta per a un espai de treball se li imputa. Les tasques programades i el correu de la plataforma no són de cap i es compten a part.',
+  'providers.readOnly':
+    'Pots llegir aquests comptadors però no moure un sostre. Canviar un límit o la seva política requereix el permís provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Sostre acordat: {limit} al mes. S’aplica des de la primera crida, quan hi hagi un client.',
+  'providers.status.planned.agreed.day':
+    'Sostre acordat: {limit} al dia. S’aplica des de la primera crida, quan hi hagi un client.',
+  'providers.edit.button': 'Edita',
+  'providers.edit.title': 'Sostre de {provider}',
+  'providers.edit.body':
+    'Què ha acordat gastar aquest desplegament amb el proveïdor, i què passa quan s’exhaureix.',
+  'providers.edit.confirm': 'Desa el sostre',
+  'providers.edit.done': 'Sostre desat per a {provider}',
+  'providers.edit.label': 'Nom',
+  'providers.edit.ceiling': 'Crides incloses',
+  'providers.edit.ceiling.hint':
+    'Deixa-ho buit si no hi ha sostre acordat. Buit i zero no són el mateix: zero amb «rebutja» aparta totes les crides.',
+  'providers.edit.ceiling.placeholder': 'Sense sostre',
+  'providers.edit.window': 'Mesurat en',
+  'providers.edit.window.month': 'Un mes natural',
+  'providers.edit.window.month.body': 'La forma habitual d’una quota inclosa.',
+  'providers.edit.window.day': 'Un dia',
+  'providers.edit.window.day.body':
+    'Alguns proveïdors mesuren per dia: el pla gratuït de Geoapify són 3.000 crèdits diaris.',
+  'providers.edit.policy': 'En arribar al sostre',
+  'providers.edit.policy.allow': 'Continua cridant i paga',
+  'providers.edit.policy.allow.body':
+    'Les crides continuen per sobre del sostre i la consola avisa. No deixa de funcionar res.',
+  'providers.edit.policy.block': 'Rebutja les crides següents',
+  'providers.edit.policy.block.body':
+    'Les crides es rebutgen fins que la finestra es reinicia. El que depèn d’aquest proveïdor deixa de funcionar: tria-ho només on aquesta fallada surti més barata.',
+  'providers.edit.policy.block.refused':
+    '{provider} no es pot rebutjar: no té alternativa, així que apartar-ne les crides aturaria la funció en comptes d’acotar-ne el cost. Un sostre que només avisa continua sent possible.',
+  'providers.edit.warn': 'Avisa al (%)',
+  'providers.edit.critical': 'Alarma al (%)',
+  'providers.edit.thresholds.hint':
+    'On l’indicador es torna ambre i vermell. L’avís no pot ser per sobre de l’alarma.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -455,6 +455,92 @@ const messages = {
   'runs.notCoordinator.title': 'Penyebaran ini tidak mengoordinasi armada',
   'runs.notCoordinator.body':
     'Daftar jalan hanya terikat pada lingkungan pementasan, dan itu disengaja: daftar kedua akan membuat kedua armada percaya bahwa antrean ada di tangannya — persis satu-satunya hal yang keberadaannya dimaksudkan untuk dicegah. Bacalah armada di lingkungan pementasan.',
+  'nav.providers': 'Penyedia',
+  'nav.providers.description': 'Panggilan keluar dan batas atasnya',
+  'providers.error.title': 'Meteran penyedia tidak dapat dibaca',
+  'providers.list.label': 'Layanan',
+  'providers.status.planned': 'Belum tersambung',
+  'providers.status.planned.description':
+    'Belum ada yang memanggil layanan ini, jadi tidak ada yang dihitung. Ia dicantumkan agar batas atas disepakati sebelum panggilan pertama, bukan setelah tagihan pertama.',
+  'providers.policy.allow': 'Tetap ditagih di atas batas',
+  'providers.policy.block': 'Menolak di batas atas',
+  'providers.badge.blocked': {
+    other: '{calls} panggilan ditolak',
+  },
+  'providers.limit.none': 'Belum ada batas yang disepakati · {used} bulan ini',
+  'providers.limit.value': '{used} dari {limit}',
+  'providers.limit.window.day': 'Hari ini',
+  'providers.limit.window.month': 'Bulan ini',
+  'providers.measuring.none': 'Belum ada yang terukur',
+  'providers.measuring.since': 'Diukur sejak {date}',
+  'providers.stat.calls': 'Panggilan bulan ini',
+  'providers.stat.calls.caption': 'Di seluruh layanan yang tersambung',
+  'providers.stat.errors': 'Panggilan gagal',
+  'providers.stat.errors.caption':
+    'Dihitung sebagai panggilan juga, karena kebanyakan penyedia tetap menagihnya',
+  'providers.stat.nearLimit': 'Dekat batas atas',
+  'providers.stat.nearLimit.caption': 'Layanan yang melewati ambang peringatan',
+  'providers.stat.blocked': 'Panggilan ditolak',
+  'providers.stat.blocked.none': 'Tidak ada yang ditolak',
+  'providers.stat.blocked.some': 'Permintaan yang ditolak oleh batas atas',
+  'providers.forecast.label': 'Perkiraan',
+  'providers.forecast.provider': 'Layanan',
+  'providers.forecast.monthEnd': 'Sampai akhir bulan',
+  'providers.forecast.runRate': 'Per bulan pada laju ini',
+  'providers.forecast.perWorkspace': 'Per ruang kerja per bulan',
+  'providers.forecast.noWorkspaceTraffic':
+    'Tidak ada lalu lintas ruang kerja untuk dirata-rata',
+  'providers.forecast.window': {
+    other: 'Diproyeksikan dari {hours} jam pengukuran.',
+  },
+  'providers.forecast.tooEarly': {
+    other:
+      'Baru {hours} jam yang terukur — belum cukup untuk memproyeksikan. Menarik kurang dari sehari menjadi sebulan itu aritmetika, bukan perkiraan.',
+  },
+  'providers.forecast.atWorkspaces': 'Pada berapa ruang kerja',
+  'providers.forecast.callsEach': 'Panggilan per ruang kerja per bulan',
+  'providers.forecast.projected': 'Sekitar {calls} panggilan sebulan.',
+  'providers.workspaces.label': 'Ruang kerja tersibuk',
+  'providers.workspaces.platform': 'Platform (tanpa ruang kerja)',
+  'providers.workspaces.empty.title': 'Belum ada yang diatribusikan',
+  'providers.workspaces.empty.description':
+    'Panggilan yang dibuat untuk sebuah ruang kerja dicatat atas namanya. Pekerjaan terjadwal dan surat platform bukan milik siapa pun dan dihitung terpisah.',
+  'providers.readOnly':
+    'Kamu bisa membaca meteran ini tetapi tidak menggeser batas atas. Mengubah limit atau kebijakannya memerlukan izin provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Batas yang disepakati: {limit} per bulan. Berlaku sejak panggilan pertama, begitu ada klien.',
+  'providers.status.planned.agreed.day':
+    'Batas yang disepakati: {limit} per hari. Berlaku sejak panggilan pertama, begitu ada klien.',
+  'providers.edit.button': 'Ubah',
+  'providers.edit.title': 'Batas untuk {provider}',
+  'providers.edit.body':
+    'Berapa yang disepakati instalasi ini untuk dibelanjakan pada penyedia, dan apa yang terjadi saat habis.',
+  'providers.edit.confirm': 'Simpan batas',
+  'providers.edit.done': 'Batas untuk {provider} disimpan',
+  'providers.edit.label': 'Nama',
+  'providers.edit.ceiling': 'Panggilan termasuk',
+  'providers.edit.ceiling.hint':
+    'Kosongkan bila tidak ada batas yang disepakati. Kosong dan nol berbeda: nol dengan “tolak” menampik setiap panggilan.',
+  'providers.edit.ceiling.placeholder': 'Tanpa batas',
+  'providers.edit.window': 'Diukur per',
+  'providers.edit.window.month': 'Satu bulan kalender',
+  'providers.edit.window.month.body': 'Bentuk lazim sebuah kuota bawaan.',
+  'providers.edit.window.day': 'Satu hari',
+  'providers.edit.window.day.body':
+    'Sebagian penyedia mengukur harian — paket gratis Geoapify adalah 3.000 kredit per hari.',
+  'providers.edit.policy': 'Saat mencapai batas',
+  'providers.edit.policy.allow': 'Terus memanggil dan membayar',
+  'providers.edit.policy.allow.body':
+    'Panggilan berlanjut melewati batas dan konsol memberi peringatan. Tidak ada yang berhenti.',
+  'providers.edit.policy.block': 'Tolak panggilan berikutnya',
+  'providers.edit.policy.block.body':
+    'Panggilan ditolak sampai jendela diatur ulang. Apa pun yang bergantung pada penyedia ini berhenti bekerja — pilih hanya bila kegagalan itu lebih murah.',
+  'providers.edit.policy.block.refused':
+    '{provider} tidak bisa ditolak: tidak ada jalan cadangan, jadi menampik panggilannya akan menghentikan fitur, bukan membatasi biayanya. Batas yang hanya memberi peringatan tetap tersedia.',
+  'providers.edit.warn': 'Peringatan di (%)',
+  'providers.edit.critical': 'Alarm di (%)',
+  'providers.edit.thresholds.hint':
+    'Tempat meter berubah kuning lalu merah. Peringatan tidak boleh di atas alarm.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

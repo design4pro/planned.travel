@@ -446,6 +446,92 @@ const messages = {
   'runs.notCoordinator.title': 'このデプロイは艦隊を調整していません',
   'runs.notCoordinator.body':
     '実行レジストリはステージング環境だけに結び付いています。これは意図したものです。レジストリが二つあれば、双方の艦隊が「列を握っているのは自分だ」と信じてしまい、それこそがレジストリの防ごうとしている唯一のことだからです。艦隊はステージング環境で確認してください。',
+  'nav.providers': 'プロバイダー',
+  'nav.providers.description': '外部への呼び出しとその上限',
+  'providers.error.title': 'プロバイダーの計測値を読み込めませんでした',
+  'providers.list.label': 'サービス',
+  'providers.status.planned': '未接続',
+  'providers.status.planned.description':
+    'このサービスをまだ何も呼んでいないため、数えるものがありません。最初の請求書のあとではなく最初の呼び出しの前に上限を決められるよう、ここに並べています。',
+  'providers.policy.allow': '上限を超えても課金',
+  'providers.policy.block': '上限で拒否',
+  'providers.badge.blocked': {
+    other: '{calls} 件の呼び出しを拒否',
+  },
+  'providers.limit.none': '上限の取り決めなし · 今月 {used} 件',
+  'providers.limit.value': '{limit} 件中 {used} 件',
+  'providers.limit.window.day': '本日',
+  'providers.limit.window.month': '今月',
+  'providers.measuring.none': 'まだ計測がありません',
+  'providers.measuring.since': '{date} から計測',
+  'providers.stat.calls': '今月の呼び出し',
+  'providers.stat.calls.caption': '接続済みの全サービス合計',
+  'providers.stat.errors': '失敗した呼び出し',
+  'providers.stat.errors.caption':
+    '多くの事業者が課金するため、呼び出しとしても数えます',
+  'providers.stat.nearLimit': '上限が近い',
+  'providers.stat.nearLimit.caption': '警告のしきい値を超えたサービス',
+  'providers.stat.blocked': '拒否した呼び出し',
+  'providers.stat.blocked.none': '何も拒否していません',
+  'providers.stat.blocked.some': '上限が退けた需要',
+  'providers.forecast.label': '予測',
+  'providers.forecast.provider': 'サービス',
+  'providers.forecast.monthEnd': '月末まで',
+  'providers.forecast.runRate': 'この調子なら月あたり',
+  'providers.forecast.perWorkspace': 'ワークスペースあたり月間',
+  'providers.forecast.noWorkspaceTraffic':
+    '平均を取るワークスペースの通信がありません',
+  'providers.forecast.window': {
+    other: '{hours} 時間の計測からの予測です。',
+  },
+  'providers.forecast.tooEarly': {
+    other:
+      'まだ {hours} 時間しか計測していないため、予測できません。丸一日に満たない値を一か月に伸ばすのは計算であって予測ではありません。',
+  },
+  'providers.forecast.atWorkspaces': 'ワークスペース数',
+  'providers.forecast.callsEach': '1つあたりの月間呼び出し数',
+  'providers.forecast.projected': '月におよそ {calls} 件です。',
+  'providers.workspaces.label': '呼び出しの多いワークスペース',
+  'providers.workspaces.platform': 'プラットフォーム（ワークスペースなし）',
+  'providers.workspaces.empty.title': 'まだ割り当てがありません',
+  'providers.workspaces.empty.description':
+    'ワークスペースのために行った呼び出しはそのワークスペースに記録されます。定期実行とプラットフォームのメールはどこにも属さず、別に数えます。',
+  'providers.readOnly':
+    'この計測値は読めますが、上限は動かせません。上限やその方針の変更には provider:configure の権限が要ります。',
+  'providers.status.planned.agreed.month':
+    '取り決めた上限: 月 {limit}。クライアントができ次第、最初の呼び出しから効きます。',
+  'providers.status.planned.agreed.day':
+    '取り決めた上限: 1日 {limit}。クライアントができ次第、最初の呼び出しから効きます。',
+  'providers.edit.button': '編集',
+  'providers.edit.title': '{provider} の上限',
+  'providers.edit.body':
+    'この配備が事業者と取り決めた支出額と、使い切ったときに何が起きるか。',
+  'providers.edit.confirm': '上限を保存',
+  'providers.edit.done': '{provider} の上限を保存しました',
+  'providers.edit.label': '名称',
+  'providers.edit.ceiling': '含まれる呼び出し数',
+  'providers.edit.ceiling.hint':
+    '上限の取り決めがなければ空のままに。空とゼロは別物です。「拒否」でのゼロはすべての呼び出しを退けます。',
+  'providers.edit.ceiling.placeholder': '上限なし',
+  'providers.edit.window': '測定単位',
+  'providers.edit.window.month': '暦月',
+  'providers.edit.window.month.body': '付属枠のふつうの形です。',
+  'providers.edit.window.day': '1日',
+  'providers.edit.window.day.body':
+    '日単位で計る事業者もあります。Geoapify の無料プランは1日3,000クレジットです。',
+  'providers.edit.policy': '上限に達したら',
+  'providers.edit.policy.allow': '呼び出しを続けて支払う',
+  'providers.edit.policy.allow.body':
+    '上限を超えても呼び出しは続き、コンソールが警告します。止まるものはありません。',
+  'providers.edit.policy.block': 'それ以降を拒否する',
+  'providers.edit.policy.block.body':
+    '期間がリセットされるまで呼び出しを退けます。この事業者に依存する機能は止まるので、その停止のほうが安く済む場合にだけ選んでください。',
+  'providers.edit.policy.block.refused':
+    '{provider} は拒否できません。代替経路がないため、呼び出しを退けると費用を抑えるのではなく機能が止まります。警告だけの上限なら設定できます。',
+  'providers.edit.warn': '警告 (%)',
+  'providers.edit.critical': '重警告 (%)',
+  'providers.edit.thresholds.hint':
+    'メーターが黄色と赤に変わる位置です。警告は重警告を上回れません。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

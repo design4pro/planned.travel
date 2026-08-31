@@ -59,9 +59,10 @@ import type { LogFields, Logger } from '#/server/observability'
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * The fifteen three-segment `platform.<entity>.<verb>` actions of docs/ACCESS.md §4.2, frozen.
+ * The console's own actions of docs/ACCESS.md §4.2, frozen: the fifteen three-segment
+ * `platform.<entity>.<verb>` names, and the two `provider.*` names the metering screen writes.
  *
- * The list is closed: a sixteenth platform action is an amendment to §4.2's table, made in the
+ * The list is closed: an eighteenth action here is an amendment to §4.2's table, made in the
  * commit that adds the code writing it. `platform.share.revoked` is here now even though the
  * moderation screen that writes it is Faza F, because the §1.1 statement dictionary is closed in
  * this phase and a name that arrives later cannot be added without amending the document.
@@ -85,9 +86,11 @@ export const PLATFORM_ACTIONS = Object.freeze({
   TOKEN_ISSUED: 'platform.token.issued',
   TOKEN_REVOKED: 'platform.token.revoked',
   SHARE_REVOKED: 'platform.share.revoked',
+  PROVIDER_LIMIT_CHANGED: 'provider.limit_changed',
+  PROVIDER_POLICY_CHANGED: 'provider.policy_changed',
 } as const satisfies Readonly<Record<string, PlatformAuditAction>>)
 
-/** One of the fifteen names in {@link PLATFORM_ACTIONS}. */
+/** One of the seventeen names in {@link PLATFORM_ACTIONS}. */
 export type PlatformActionName =
   (typeof PLATFORM_ACTIONS)[keyof typeof PLATFORM_ACTIONS]
 
@@ -95,7 +98,7 @@ export type PlatformActionName =
  * docs/ACCESS.md §4.2's prefix table: everything before the verb fixes the `entity_type` written
  * beside it, so §4.4's timeline query never has to guess which prefix belongs to which table.
  *
- * Eight rows, and the reason there are eight rather than thirty-one is that the mapping is a
+ * Nine rows, and the reason there are nine rather than thirty-three is that the mapping is a
  * property of the *prefix*: `catalog_place.published` and `catalog_place.retired` are the same
  * entity seen twice. Callers never pass an `entity_type` — {@link entityTypeForAction} derives it,
  * which is what makes "the prefix names the entity" true of the rows and not only of the document.
@@ -109,6 +112,7 @@ export const PLATFORM_AUDIT_ENTITY_BY_PREFIX = Object.freeze({
   'platform.session': 'session',
   'platform.token': 'staff_api_token',
   'platform.share': 'share_link',
+  provider: 'provider',
 } as const satisfies Readonly<Record<string, PlatformAuditEntityType>>)
 
 /**

@@ -30,7 +30,15 @@
 
 import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  vi,
+} from 'vitest'
 import { eq } from 'drizzle-orm'
 import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
 import { newId, platformAuditLog } from '#/server/db/schema'
@@ -50,7 +58,11 @@ import {
   readPlatformAuditByEntity,
 } from '../audit'
 import { createPlatformTables } from './platform-tables'
-import type { PlatformActionName, PlatformAuditEntryInput, PlatformSystemActor } from '../audit'
+import type {
+  PlatformActionName,
+  PlatformAuditEntryInput,
+  PlatformSystemActor,
+} from '../audit'
 import type { PlatformTables } from './platform-tables'
 import type { PlatformActor } from '#/server/auth/guard'
 import type { LogRecord, LogSink, Logger } from '#/server/observability'
@@ -79,9 +91,11 @@ const ACCESS_PLATFORM_ACTIONS = [
   'platform.token.issued',
   'platform.token.revoked',
   'platform.share.revoked',
+  'provider.limit_changed',
+  'provider.policy_changed',
 ] as const
 
-/** docs/ACCESS.md §4.2's prefix table, all eight rows, transcribed from the document. */
+/** docs/ACCESS.md §4.2's prefix table, all nine rows, transcribed from the document. */
 const ACCESS_PREFIX_TABLE: Record<string, string> = {
   catalog_place: 'catalog_place',
   catalog_ingest: 'catalog_ingest',
@@ -91,6 +105,7 @@ const ACCESS_PREFIX_TABLE: Record<string, string> = {
   'platform.session': 'session',
   'platform.token': 'staff_api_token',
   'platform.share': 'share_link',
+  provider: 'provider',
 }
 
 const OPERATOR: PlatformActor = {
@@ -121,7 +136,7 @@ function throwingLogger(): { logger: Logger; calls: Array<string> } {
 }
 
 describe('the platform action vocabulary', () => {
-  it('exports exactly the fifteen platform.* names docs/ACCESS.md §4.2 declares', () => {
+  it('exports exactly the seventeen console-written names docs/ACCESS.md §4.2 declares', () => {
     // Both halves of §4.2's union test, at the level this phase can close them. A name in code and
     // not in the table fails the first expectation; a name in the table that this module does not
     // export fails the second. The document's stronger form — "a name in this table that nothing
@@ -131,7 +146,7 @@ describe('the platform action vocabulary', () => {
     // docs/ACCESS.md. Widen this to call-site parity when the last of those writers lands.
     const exported = Object.values(PLATFORM_ACTIONS)
     expect([...exported].sort()).toEqual([...ACCESS_PLATFORM_ACTIONS].sort())
-    expect(exported).toHaveLength(15)
+    expect(exported).toHaveLength(17)
   })
 
   it('exports platform.share.revoked now, ahead of the Faza F writer', () => {
@@ -184,16 +199,19 @@ describe('the platform action vocabulary', () => {
     // *other* file appearing here is the drift §4.2 forbids and fails this assertion.
     const reported = `${sourceRoot}server/db/__tests__/platform-schema.test.ts`
     for (const entry of occurrences) {
-      expect([declaration, reported], `${entry.file} re-declares the character class`).toContain(
-        entry.file,
-      )
+      expect(
+        [declaration, reported],
+        `${entry.file} re-declares the character class`,
+      ).toContain(entry.file)
     }
   })
 
   it('begins every constant with a prefix listed in the §4.2 prefix table', () => {
     const prefixes = Object.keys(PLATFORM_AUDIT_ENTITY_BY_PREFIX)
     for (const action of Object.values(PLATFORM_ACTIONS)) {
-      expect(prefixes.some((prefix) => action.startsWith(`${prefix}.`))).toBe(true)
+      expect(prefixes.some((prefix) => action.startsWith(`${prefix}.`))).toBe(
+        true,
+      )
     }
   })
 
@@ -215,22 +233,33 @@ describe('the platform action vocabulary', () => {
 })
 
 describe('the prefix table', () => {
-  it('equals the eight rows of docs/ACCESS.md §4.2 exactly', () => {
+  it('equals the nine rows of docs/ACCESS.md §4.2 exactly', () => {
     // §4.4's timeline query filters on (entity_type, entity_id), so it never has to guess which
     // prefix belongs to which table — this mapping is the reason it does not have to.
     expect({ ...PLATFORM_AUDIT_ENTITY_BY_PREFIX }).toEqual(ACCESS_PREFIX_TABLE)
-    expect(Object.keys(PLATFORM_AUDIT_ENTITY_BY_PREFIX)).toHaveLength(8)
+    expect(Object.keys(PLATFORM_AUDIT_ENTITY_BY_PREFIX)).toHaveLength(9)
   })
 
   it('resolves each action to the entity_type its prefix names', () => {
     expect(entityTypeForAction(PLATFORM_ACTIONS.USER_ROLE_CHANGED)).toBe('user')
-    expect(entityTypeForAction(PLATFORM_ACTIONS.SESSION_REVOKED_ALL)).toBe('session')
-    expect(entityTypeForAction(PLATFORM_ACTIONS.TOKEN_ISSUED)).toBe('staff_api_token')
-    expect(entityTypeForAction(PLATFORM_ACTIONS.SHARE_REVOKED)).toBe('share_link')
+    expect(entityTypeForAction(PLATFORM_ACTIONS.SESSION_REVOKED_ALL)).toBe(
+      'session',
+    )
+    expect(entityTypeForAction(PLATFORM_ACTIONS.TOKEN_ISSUED)).toBe(
+      'staff_api_token',
+    )
+    expect(entityTypeForAction(PLATFORM_ACTIONS.SHARE_REVOKED)).toBe(
+      'share_link',
+    )
+    expect(entityTypeForAction(PLATFORM_ACTIONS.PROVIDER_LIMIT_CHANGED)).toBe(
+      'provider',
+    )
     // A compound verb keeps its underscore on the verb side of the split: the segment count
     // decides which prefix form an action takes, never the underscore.
     expect(entityTypeForAction('place_pack.places_set')).toBe('place_pack')
-    expect(entityTypeForAction('catalog_place.licence_escalated')).toBe('catalog_place')
+    expect(entityTypeForAction('catalog_place.licence_escalated')).toBe(
+      'catalog_place',
+    )
   })
 })
 
@@ -245,18 +274,32 @@ describe('the writer boundary', () => {
     // logger, and the caller — whose ban already committed — returns success with no row behind it.
     // The compiler is the only layer that can fail loudly, which is what makes the frozen constants
     // load-bearing at the call site instead of advisory.
-    expectTypeOf<PlatformAuditEntryInput['action']>().toEqualTypeOf<PlatformActionName>()
-    expectTypeOf<'platform.user.bannd'>().not.toExtend<PlatformAuditEntryInput['action']>()
-    expectTypeOf<'platform.user.banned'>().toExtend<PlatformAuditEntryInput['action']>()
+    expectTypeOf<
+      PlatformAuditEntryInput['action']
+    >().toEqualTypeOf<PlatformActionName>()
+    expectTypeOf<'platform.user.bannd'>().not.toExtend<
+      PlatformAuditEntryInput['action']
+    >()
+    expectTypeOf<'platform.user.banned'>().toExtend<
+      PlatformAuditEntryInput['action']
+    >()
     expectTypeOf<string>().not.toExtend<PlatformAuditEntryInput['action']>()
     // Faza C widens this union to the sixteen catalogue names; today it does not carry them.
-    expectTypeOf<'catalog_place.published'>().not.toExtend<PlatformAuditEntryInput['action']>()
+    expectTypeOf<'catalog_place.published'>().not.toExtend<
+      PlatformAuditEntryInput['action']
+    >()
   })
 
   it('keeps every other field derived from the schema, so the two cannot drift', () => {
-    expectTypeOf<PlatformAuditEntryInput['entityId']>().toEqualTypeOf<string | null>()
-    expectTypeOf<PlatformAuditEntryInput['ip']>().toEqualTypeOf<string | null | undefined>()
-    expectTypeOf<PlatformAuditEntryInput['userAgent']>().toEqualTypeOf<string | null | undefined>()
+    expectTypeOf<PlatformAuditEntryInput['entityId']>().toEqualTypeOf<
+      string | null
+    >()
+    expectTypeOf<PlatformAuditEntryInput['ip']>().toEqualTypeOf<
+      string | null | undefined
+    >()
+    expectTypeOf<PlatformAuditEntryInput['userAgent']>().toEqualTypeOf<
+      string | null | undefined
+    >()
   })
 })
 
@@ -400,10 +443,15 @@ describe('appendPlatformAudit', () => {
     expect(row.ip?.startsWith('203.0.113.7')).toBe(true)
     expect(row.ip?.endsWith('…[truncated from 511 characters]')).toBe(true)
     expect(row.userAgent?.startsWith('AAAA')).toBe(true)
-    expect(row.userAgent?.endsWith('…[truncated from 4096 characters]')).toBe(true)
+    expect(row.userAgent?.endsWith('…[truncated from 4096 characters]')).toBe(
+      true,
+    )
 
     // One line per bounded field, at the severity the action itself would be reported at.
-    expect(records.map((record) => record.boundedField)).toEqual(['ip', 'userAgent'])
+    expect(records.map((record) => record.boundedField)).toEqual([
+      'ip',
+      'userAgent',
+    ])
     expect(records.every((record) => record.level === 'error')).toBe(true)
     expect(records[0]?.measured).toBe(511)
     expect(records[0]?.limit).toBe(64)
@@ -445,7 +493,9 @@ describe('appendPlatformAudit', () => {
     expect(before?.email).toBe('old@example.com')
     expect(changes?.after).toEqual({ name: 'Ada', email: 'new@example.com' })
     expect(before?.name).toHaveLength(512)
-    expect(String(before?.name).endsWith('…[truncated from 2000 characters]')).toBe(true)
+    expect(
+      String(before?.name).endsWith('…[truncated from 2000 characters]'),
+    ).toBe(true)
 
     expect(records).toHaveLength(1)
     expect(records[0]?.boundedField).toBe('changes')
@@ -466,7 +516,10 @@ describe('appendPlatformAudit', () => {
       {
         action: PLATFORM_ACTIONS.USER_UPDATED,
         entityId,
-        changes: { before: null, after: { profile: { note: 'x'.repeat(1_000) }, role: 'curator' } },
+        changes: {
+          before: null,
+          after: { profile: { note: 'x'.repeat(1_000) }, role: 'curator' },
+        },
       },
       logger,
     )
@@ -497,7 +550,10 @@ describe('appendPlatformAudit', () => {
       {
         action: PLATFORM_ACTIONS.USER_UPDATED,
         entityId,
-        changes: { before: null, after: { self: cyclic, email: 'new@example.com' } },
+        changes: {
+          before: null,
+          after: { self: cyclic, email: 'new@example.com' },
+        },
       },
       logger,
     )
@@ -529,7 +585,10 @@ describe('appendPlatformAudit', () => {
         changes: {
           before: null,
           after: Object.fromEntries(
-            Array.from({ length: 65 }, (_value, index) => [`field${index}`, index]),
+            Array.from({ length: 65 }, (_value, index) => [
+              `field${index}`,
+              index,
+            ]),
           ),
         },
       },
@@ -562,7 +621,10 @@ describe('appendPlatformAudit', () => {
       {
         action: PLATFORM_ACTIONS.USER_UPDATED,
         entityId,
-        changes: { before: null, after: { ['k'.repeat(65)]: 1, email: 'new@example.com' } },
+        changes: {
+          before: null,
+          after: { ['k'.repeat(65)]: 1, email: 'new@example.com' },
+        },
       },
       logger,
     )
@@ -585,7 +647,10 @@ describe('appendPlatformAudit', () => {
     const entityId = newId()
     const side = (fill: string): Record<string, unknown> =>
       Object.fromEntries(
-        Array.from({ length: 32 }, (_value, index) => [`field${index}`, fill.repeat(500)]),
+        Array.from({ length: 32 }, (_value, index) => [
+          `field${index}`,
+          fill.repeat(500),
+        ]),
       )
 
     await appendPlatformAudit(
@@ -610,11 +675,15 @@ describe('appendPlatformAudit', () => {
     expect(Object.keys(changes?.after ?? {})).toHaveLength(32)
 
     const marked = Object.values(changes?.before ?? {}).filter(
-      (value) => typeof value === 'string' && value.startsWith('[refused: payload bound'),
+      (value) =>
+        typeof value === 'string' &&
+        value.startsWith('[refused: payload bound'),
     )
     expect(marked.length).toBeGreaterThan(0)
 
-    const line = records.find((record) => record.reason === 'payload-longer-than-bound')
+    const line = records.find(
+      (record) => record.reason === 'payload-longer-than-bound',
+    )
     expect(line?.boundedField).toBe('changes')
     expect(Number(line?.replaced)).toBeGreaterThan(0)
   })
@@ -766,7 +835,12 @@ describe('appendPlatformAudit', () => {
 
     for (const action of ALWAYS_AUDITED_ACTIONS) {
       insert.mockClear()
-      await appendPlatformAudit(tables.db, OPERATOR, { action, entityId: 'usr_target' }, logger)
+      await appendPlatformAudit(
+        tables.db,
+        OPERATOR,
+        { action, entityId: 'usr_target' },
+        logger,
+      )
       expect(insert, action).toHaveBeenCalledTimes(2)
     }
 
@@ -838,9 +912,14 @@ describe('prunePlatformAuditLog', () => {
     await seedRow(399, 'newer')
 
     const { logger } = memoryLogger()
-    const result = await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, {
-      now: NOW,
-    })
+    const result = await prunePlatformAuditLog(
+      tables.db,
+      PLATFORM_SYSTEM_ACTOR,
+      logger,
+      {
+        now: NOW,
+      },
+    )
 
     expect(result.deleted).toBe(1)
     expect(result.drained).toBe(true)
@@ -877,9 +956,14 @@ describe('prunePlatformAuditLog', () => {
     await seedRow(10, 'fresh')
     const { logger, records } = memoryLogger()
 
-    const result = await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, {
-      now: NOW,
-    })
+    const result = await prunePlatformAuditLog(
+      tables.db,
+      PLATFORM_SYSTEM_ACTOR,
+      logger,
+      {
+        now: NOW,
+      },
+    )
     expect(result.deleted).toBe(0)
     expect(records).toHaveLength(1)
     expect(records[0]?.deleted).toBe(0)
@@ -893,10 +977,15 @@ describe('prunePlatformAuditLog', () => {
     }
     const { logger, records } = memoryLogger()
 
-    const result = await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, {
-      now: NOW,
-      batchSize: 2,
-    })
+    const result = await prunePlatformAuditLog(
+      tables.db,
+      PLATFORM_SYSTEM_ACTOR,
+      logger,
+      {
+        now: NOW,
+        batchSize: 2,
+      },
+    )
 
     expect(result).toEqual({ deleted: 5, batches: 3, drained: true })
     expect(records[0]?.batchSize).toBe(2)
@@ -909,11 +998,16 @@ describe('prunePlatformAuditLog', () => {
     }
     const { logger, records } = memoryLogger()
 
-    const result = await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, {
-      now: NOW,
-      batchSize: 2,
-      maxBatches: 2,
-    })
+    const result = await prunePlatformAuditLog(
+      tables.db,
+      PLATFORM_SYSTEM_ACTOR,
+      logger,
+      {
+        now: NOW,
+        batchSize: 2,
+        maxBatches: 2,
+      },
+    )
 
     expect(result).toEqual({ deleted: 4, batches: 2, drained: false })
     // docs/ARCHITECTURE.md §9 names `drained: false` as a number worth alerting on: it means the
@@ -989,9 +1083,14 @@ describe('prunePlatformAuditLog', () => {
     await seedRow(500, 'ancient')
     const { logger, calls } = throwingLogger()
 
-    const result = await prunePlatformAuditLog(tables.db, PLATFORM_SYSTEM_ACTOR, logger, {
-      now: NOW,
-    })
+    const result = await prunePlatformAuditLog(
+      tables.db,
+      PLATFORM_SYSTEM_ACTOR,
+      logger,
+      {
+        now: NOW,
+      },
+    )
 
     expect(result.deleted).toBe(1)
     expect(calls).toEqual(['info'])

@@ -421,16 +421,32 @@ export const METERED_PROVIDERS = [
  * "not integrated yet" instead of `0`. The two readings are opposite facts and a bare zero cannot
  * tell them apart.
  *
- * `d1-export` is the backup cron's unwritten half: `readCloudflareApi` in
- * `src/server/queue/http.ts` has no caller and the `BACKUP_CRON` branch of
- * `src/server/worker.ts` logs that it has no handler. `here` and `geoapify` are candidates for the
- * geocoding decision `docs/plans/11-boundaries-and-blockers.md` `11-S3` keeps open — named here so
- * a ceiling can be agreed before the first call, and deliberately carrying **no allowance figure**,
- * because writing a free tier into the repository is the assumption that stage forbids.
+ * These are **decided but unwritten**, which is a different state from undecided and is why they
+ * are named rather than omitted:
  *
- * Moving a slug from here to {@link METERED_PROVIDERS} is what adopting a provider looks like.
+ * - `d1-export` — the backup cron's unwritten half. `readCloudflareApi` in
+ *   `src/server/queue/http.ts` has no caller and the `BACKUP_CRON` branch of `src/server/worker.ts`
+ *   logs that it has no handler.
+ * - `here` — public-transit routing, bought under ADR 0011 (30,000 requests a month included).
+ * - `geoapify` — geocoding, bought under ADR 0013 (3,000 credits a **day** included, which is why
+ *   `provider_registry.limit_window` accepts `day` and not only `month`).
+ * - `workers-ai` — confirmation extraction, bound under ADR 0012, whose decision text asks for a
+ *   per-tenant ceiling in the same breath.
+ *
+ * **No allowance figure is stored in code**, and the reason has changed since these slugs first
+ * appeared here. It was that the provider decision was open. It is now that an allowance is a term
+ * of a contract that an operator renegotiates without a deploy: the figures above are context for a
+ * reader, and the enforced number is the one typed into `provider_registry`.
+ *
+ * Moving a slug from here to {@link METERED_PROVIDERS} is what adopting a provider looks like; all
+ * four are waiting on a client rather than on a decision.
  */
-export const PLANNED_PROVIDERS = ['d1-export', 'here', 'geoapify'] as const
+export const PLANNED_PROVIDERS = [
+  'd1-export',
+  'here',
+  'geoapify',
+  'workers-ai',
+] as const
 
 /**
  * The two resolutions `provider_usage` stores. `hour` is the write shape; `month` is the archive
@@ -460,10 +476,10 @@ export const PROVIDER_LIMIT_WINDOWS = ['day', 'month'] as const
 export const PLATFORM_ACTOR_ROLES = ['admin', 'curator', 'user'] as const
 
 /**
- * The eight entities a platform action can touch (docs/ACCESS.md §4.2).
+ * The nine entities a platform action can touch (docs/ACCESS.md §4.2).
  *
  * A TypeScript vocabulary, not a database constraint: `entity_type` is plain `text` in §4.1's
- * column table, so a ninth entity costs an amendment to §4.2's mapping rather than a recreate of
+ * column table, so a tenth entity costs an amendment to §4.2's mapping rather than a recreate of
  * an append-only log.
  */
 export const PLATFORM_AUDIT_ENTITY_TYPES = [
@@ -475,17 +491,21 @@ export const PLATFORM_AUDIT_ENTITY_TYPES = [
   'session',
   'staff_api_token',
   'share_link',
+  'provider',
 ] as const
 
 /**
- * The thirty-one actions a `platform_audit_log` row can carry, in the order docs/ACCESS.md §4.2
+ * The thirty-three actions a `platform_audit_log` row can carry, in the order docs/ACCESS.md §4.2
  * tables them. The list is closed there and closed here: a new action is an amendment to that
  * table, made in the commit that adds the code writing it.
  *
- * Sixteen take the two-segment `<entity_type>.<verb>` form, and fifteen take the three-segment
+
+ * Eighteen take the two-segment `<entity_type>.<verb>` form, and fifteen take the three-segment
  * `platform.<entity>.<verb>` form because their entities — user, session, credential, share — are
  * named identically in the tenant audit log of §4.5, where a bare `user.created` read out of a
- * view spanning both tables would be attributable to neither.
+ * view spanning both tables would be attributable to neither. The two `provider.*` actions take the
+ * short form for the converse reason: no tenant log has a provider, so there is nothing for a bare
+ * name to be confused with, and the three-segment form would claim a collision that does not exist.
  *
  * Like {@link PLATFORM_AUDIT_ENTITY_TYPES} this is a TypeScript vocabulary rather than a SQL
  * `CHECK`, for the reason §4.1 gives: the list grows by amendment, and a `CHECK` would price each
@@ -523,6 +543,8 @@ export const PLATFORM_AUDIT_ACTIONS = [
   'platform.token.issued',
   'platform.token.revoked',
   'platform.share.revoked',
+  'provider.limit_changed',
+  'provider.policy_changed',
 ] as const
 
 /** JSON payload shapes stored in `text({ mode: 'json' })` columns. */

@@ -451,6 +451,107 @@ const messages = {
   'runs.notCoordinator.title': 'هذا النشر لا ينسّق الأسطول',
   'runs.notCoordinator.body':
     'سجل التشغيلات مربوط ببيئة التجهيز وحدها، وذلك عن قصد: سجل ثانٍ يجعل كلا الأسطولين يظنّ أنه هو من يمسك الطابور — وهذا بالضبط ما وُجد ليمنعه. اقرأ الأسطول في بيئة التجهيز.',
+  'nav.providers': 'المزوّدون',
+  'nav.providers.description': 'الاستدعاءات الصادرة وسقوفها',
+  'providers.error.title': 'تعذّرت قراءة عدّادات المزوّدين',
+  'providers.list.label': 'الخدمات',
+  'providers.status.planned': 'غير مُدمجة',
+  'providers.status.planned.description':
+    'لا شيء يستدعي هذه الخدمة بعد، فلا شيء يُعدّ. وهي مذكورة هنا كي يُتَّفق على سقف قبل أول استدعاء لا بعد أول فاتورة.',
+  'providers.policy.allow': 'يُحاسب فوق السقف',
+  'providers.policy.block': 'يرفض عند السقف',
+  'providers.badge.blocked': {
+    zero: 'لا استدعاءات مرفوضة',
+    one: 'استدعاء واحد مرفوض',
+    two: 'استدعاءان مرفوضان',
+    few: '{calls} استدعاءات مرفوضة',
+    many: '{calls} استدعاءً مرفوضًا',
+    other: '{calls} استدعاء مرفوض',
+  },
+  'providers.limit.none': 'لا سقف متَّفق عليه · {used} هذا الشهر',
+  'providers.limit.value': '{used} من {limit}',
+  'providers.limit.window.day': 'اليوم',
+  'providers.limit.window.month': 'هذا الشهر',
+  'providers.measuring.none': 'لم يُقَس شيء بعد',
+  'providers.measuring.since': 'القياس منذ {date}',
+  'providers.stat.calls': 'الاستدعاءات هذا الشهر',
+  'providers.stat.calls.caption': 'عبر كل الخدمات المُدمجة',
+  'providers.stat.errors': 'استدعاءات فاشلة',
+  'providers.stat.errors.caption':
+    'تُعدّ استدعاءات أيضًا، لأن معظم المزوّدين يحاسبون عليها',
+  'providers.stat.nearLimit': 'قرب السقف',
+  'providers.stat.nearLimit.caption': 'خدمات تجاوزت عتبة التنبيه',
+  'providers.stat.blocked': 'استدعاءات مرفوضة',
+  'providers.stat.blocked.none': 'لم يُرفض شيء',
+  'providers.stat.blocked.some': 'طلب رفضه سقف',
+  'providers.forecast.label': 'التوقّع',
+  'providers.forecast.provider': 'الخدمة',
+  'providers.forecast.monthEnd': 'بحلول نهاية الشهر',
+  'providers.forecast.runRate': 'شهريًا بهذه الوتيرة',
+  'providers.forecast.perWorkspace': 'لكل مساحة عمل شهريًا',
+  'providers.forecast.noWorkspaceTraffic':
+    'لا حركة من مساحات العمل لحساب المتوسط',
+  'providers.forecast.window': {
+    zero: 'توقّع من ساعة واحدة من القياس.',
+    one: 'توقّع من ساعة واحدة من القياس.',
+    two: 'توقّع من ساعة واحدة من القياس.',
+    few: 'توقّع من {hours} ساعة من القياس.',
+    many: 'توقّع من {hours} ساعة من القياس.',
+    other: 'توقّع من {hours} ساعة من القياس.',
+  },
+  'providers.forecast.tooEarly': {
+    zero: 'لم تُقَس سوى ساعة واحدة حتى الآن، وهي أقل من أن يُتوقَّع منها. مدّ أقل من يوم إلى شهر حساب لا توقّع.',
+    one: 'لم تُقَس سوى ساعة واحدة حتى الآن، وهي أقل من أن يُتوقَّع منها. مدّ أقل من يوم إلى شهر حساب لا توقّع.',
+    two: 'لم تُقَس سوى ساعة واحدة حتى الآن، وهي أقل من أن يُتوقَّع منها. مدّ أقل من يوم إلى شهر حساب لا توقّع.',
+    few: 'لم يُقَس سوى {hours} ساعة حتى الآن، وهي أقل من أن يُتوقَّع منها. مدّ أقل من يوم إلى شهر حساب لا توقّع.',
+    many: 'لم يُقَس سوى {hours} ساعة حتى الآن، وهي أقل من أن يُتوقَّع منها. مدّ أقل من يوم إلى شهر حساب لا توقّع.',
+    other:
+      'لم يُقَس سوى {hours} ساعة حتى الآن، وهي أقل من أن يُتوقَّع منها. مدّ أقل من يوم إلى شهر حساب لا توقّع.',
+  },
+  'providers.forecast.atWorkspaces': 'عند كم مساحة عمل',
+  'providers.forecast.callsEach': 'استدعاءات لكل مساحة شهريًا',
+  'providers.forecast.projected': 'نحو {calls} استدعاء شهريًا.',
+  'providers.workspaces.label': 'أنشط مساحات العمل',
+  'providers.workspaces.platform': 'المنصّة (بلا مساحة عمل)',
+  'providers.workspaces.empty.title': 'لم يُنسب شيء بعد',
+  'providers.workspaces.empty.description':
+    'الاستدعاء الذي يجري لمساحة عمل يُقيَّد عليها. أعمال الجدولة وبريد المنصّة لا تخصّ أي مساحة وتُعدّ على حدة.',
+  'providers.readOnly':
+    'يمكنك قراءة هذه العدّادات لا تحريك سقف. تغيير حدّ أو سياسته يتطلّب صلاحية provider:configure.',
+  'providers.status.planned.agreed.month':
+    'السقف المتَّفق عليه: {limit} شهريًا. يسري من أول استدعاء، حالما يوجد عميل برمجي.',
+  'providers.status.planned.agreed.day':
+    'السقف المتَّفق عليه: {limit} يوميًا. يسري من أول استدعاء، حالما يوجد عميل برمجي.',
+  'providers.edit.button': 'تحرير',
+  'providers.edit.title': 'سقف {provider}',
+  'providers.edit.body':
+    'ما اتَّفق هذا النشر على إنفاقه لدى المزوّد، وما يحدث عند نفاده.',
+  'providers.edit.confirm': 'حفظ السقف',
+  'providers.edit.done': 'حُفظ سقف {provider}',
+  'providers.edit.label': 'الاسم',
+  'providers.edit.ceiling': 'الاستدعاءات المشمولة',
+  'providers.edit.ceiling.hint':
+    'اتركه فارغًا إن لم يُتَّفق على سقف. الفارغ والصفر مختلفان: الصفر مع «الرفض» يردّ كل استدعاء.',
+  'providers.edit.ceiling.placeholder': 'بلا سقف',
+  'providers.edit.window': 'يُقاس على',
+  'providers.edit.window.month': 'شهر تقويمي',
+  'providers.edit.window.month.body': 'الشكل المعتاد للحصة المشمولة.',
+  'providers.edit.window.day': 'يوم',
+  'providers.edit.window.day.body':
+    'بعض المزوّدين يحاسبون يوميًا — خطة Geoapify المجانية 3٬000 رصيد في اليوم.',
+  'providers.edit.policy': 'عند السقف',
+  'providers.edit.policy.allow': 'واصِل الاستدعاء وادفع',
+  'providers.edit.policy.allow.body':
+    'تستمر الاستدعاءات فوق السقف وتنبّه لوحة التحكّم. لا شيء يتوقّف.',
+  'providers.edit.policy.block': 'ارفض الاستدعاءات التالية',
+  'providers.edit.policy.block.body':
+    'تُردّ الاستدعاءات حتى تُصفَّر النافذة. ما يعتمد على هذا المزوّد يتوقّف — فاخترها حيث يكون هذا العطل هو الأرخص فقط.',
+  'providers.edit.policy.block.refused':
+    'لا يمكن رفض {provider}: لا بديل له، فردّ استدعاءاته يوقف الميزة بدل أن يحدّ كلفتها. ويبقى السقف الذي ينبّه فقط متاحًا.',
+  'providers.edit.warn': 'التنبيه عند (%)',
+  'providers.edit.critical': 'الإنذار عند (%)',
+  'providers.edit.thresholds.hint':
+    'حيث يتحوّل المؤشّر إلى الكهرماني ثم الأحمر. لا يجوز أن يعلو التنبيه على الإنذار.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

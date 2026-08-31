@@ -463,6 +463,101 @@ const messages = {
   'runs.notCoordinator.title': 'To wdrożenie nie koordynuje floty',
   'runs.notCoordinator.body':
     'Rejestr przebiegów jest podpięty wyłącznie na staging, i to celowo: drugi rejestr pozwoliłby dwóm flotom sądzić, że każda trzyma zaległości — a temu właśnie ma zapobiegać. Flotę czytaj na staging.',
+  'nav.providers': 'Dostawcy',
+  'nav.providers.description': 'Wywołania na zewnątrz i ich pułapy',
+  'providers.error.title': 'Nie udało się odczytać liczników dostawców',
+  'providers.list.label': 'Usługi',
+  'providers.status.planned': 'Niepodpięta',
+  'providers.status.planned.description':
+    'Nic jeszcze nie woła tej usługi, więc nie ma czego liczyć. Jest na liście po to, by pułap uzgodnić przed pierwszym wywołaniem, a nie po pierwszej fakturze.',
+  'providers.policy.allow': 'Przepuszcza ponad pułap',
+  'providers.policy.block': 'Odmawia po przekroczeniu',
+  'providers.badge.blocked': {
+    one: 'Jedno wywołanie odrzucone',
+    few: '{calls} wywołania odrzucone',
+    many: '{calls} wywołań odrzuconych',
+    other: '{calls} wywołania odrzucone',
+  },
+  'providers.limit.none': 'Brak uzgodnionego pułapu · {used} w tym miesiącu',
+  'providers.limit.value': '{used} z {limit}',
+  'providers.limit.window.day': 'Dzisiaj',
+  'providers.limit.window.month': 'W tym miesiącu',
+  'providers.measuring.none': 'Nic jeszcze nie zmierzono',
+  'providers.measuring.since': 'Mierzymy od {date}',
+  'providers.stat.calls': 'Wywołania w tym miesiącu',
+  'providers.stat.calls.caption': 'We wszystkich podpiętych usługach',
+  'providers.stat.errors': 'Nieudane wywołania',
+  'providers.stat.errors.caption':
+    'Liczone także jako wywołania, bo większość dostawców je nalicza',
+  'providers.stat.nearLimit': 'Blisko pułapu',
+  'providers.stat.nearLimit.caption': 'Usługi powyżej progu ostrzegawczego',
+  'providers.stat.blocked': 'Odrzucone wywołania',
+  'providers.stat.blocked.none': 'Nic nie zostało odrzucone',
+  'providers.stat.blocked.some': 'Zapotrzebowanie odrzucone przez pułap',
+  'providers.forecast.label': 'Prognoza',
+  'providers.forecast.provider': 'Usługa',
+  'providers.forecast.monthEnd': 'Do końca miesiąca',
+  'providers.forecast.runRate': 'Miesięcznie przy tym tempie',
+  'providers.forecast.perWorkspace': 'Na przestrzeń roboczą, miesięcznie',
+  'providers.forecast.noWorkspaceTraffic':
+    'Brak ruchu z przestrzeni roboczych do uśrednienia',
+  'providers.forecast.window': {
+    one: 'Prognoza z jednej godziny pomiaru.',
+    few: 'Prognoza z {hours} godz. pomiaru.',
+    many: 'Prognoza z {hours} godz. pomiaru.',
+    other: 'Prognoza z {hours} godz. pomiaru.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Zmierzona dopiero jedna godzina — za mało, by prognozować. Rozciąganie niecałej doby na cały miesiąc byłoby arytmetyką, nie prognozą.',
+    few: 'Zmierzone dopiero {hours} godz. — za mało, by prognozować. Rozciąganie niecałej doby na cały miesiąc byłoby arytmetyką, nie prognozą.',
+    many: 'Zmierzone dopiero {hours} godz. — za mało, by prognozować. Rozciąganie niecałej doby na cały miesiąc byłoby arytmetyką, nie prognozą.',
+    other:
+      'Zmierzone dopiero {hours} godz. — za mało, by prognozować. Rozciąganie niecałej doby na cały miesiąc byłoby arytmetyką, nie prognozą.',
+  },
+  'providers.forecast.atWorkspaces': 'Przy ilu przestrzeniach roboczych',
+  'providers.forecast.callsEach': 'Wywołań na każdą, miesięcznie',
+  'providers.forecast.projected': 'Około {calls} wywołań miesięcznie.',
+  'providers.workspaces.label': 'Najbardziej obciążone przestrzenie',
+  'providers.workspaces.platform': 'Platforma (poza przestrzeniami)',
+  'providers.workspaces.empty.title': 'Nic jeszcze nie przypisano',
+  'providers.workspaces.empty.description':
+    'Wywołanie wykonane dla przestrzeni roboczej zapisuje się na jej koncie. Zadania cykliczne i poczta platformy nie należą do żadnej i liczą się osobno.',
+  'providers.readOnly':
+    'Możesz czytać te liczniki, ale nie zmieniać pułapu. Zmiana limitu lub polityki wymaga uprawnienia provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Uzgodniony pułap: {limit} miesięcznie. Zadziała od pierwszego wywołania, gdy powstanie klient.',
+  'providers.status.planned.agreed.day':
+    'Uzgodniony pułap: {limit} dziennie. Zadziała od pierwszego wywołania, gdy powstanie klient.',
+  'providers.edit.button': 'Edytuj',
+  'providers.edit.title': 'Pułap dla {provider}',
+  'providers.edit.body':
+    'Ile ta instalacja umówiła się wydać u dostawcy i co się dzieje, gdy pula się skończy.',
+  'providers.edit.confirm': 'Zapisz pułap',
+  'providers.edit.done': 'Zapisano pułap dla {provider}',
+  'providers.edit.label': 'Nazwa',
+  'providers.edit.ceiling': 'Wywołania w pakiecie',
+  'providers.edit.ceiling.hint':
+    'Zostaw puste, jeśli pułapu nie uzgodniono. Puste i zero to co innego: zero przy „odmawiaj” odrzuca każde wywołanie.',
+  'providers.edit.ceiling.placeholder': 'Bez pułapu',
+  'providers.edit.window': 'Mierzone przez',
+  'providers.edit.window.month': 'Miesiąc kalendarzowy',
+  'providers.edit.window.month.body': 'Zwykły kształt pakietu w abonamencie.',
+  'providers.edit.window.day': 'Dobę',
+  'providers.edit.window.day.body':
+    'Część dostawców rozlicza dziennie — darmowy plan Geoapify to 3 000 kredytów na dobę.',
+  'providers.edit.policy': 'Po osiągnięciu pułapu',
+  'providers.edit.policy.allow': 'Wołaj dalej i płać',
+  'providers.edit.policy.allow.body':
+    'Wywołania idą ponad pułap, a konsola ostrzega. Nic nie przestaje działać.',
+  'providers.edit.policy.block': 'Odmawiaj kolejnych wywołań',
+  'providers.edit.policy.block.body':
+    'Wywołania są odrzucane do końca okna. To, co zależy od tego dostawcy, przestaje działać — wybieraj tylko tam, gdzie taka awaria jest tańsza.',
+  'providers.edit.policy.block.refused':
+    '{provider} nie może być odrzucany: nie ma zapasowej drogi, więc odcięcie wywołań zatrzymałoby funkcję, a nie ograniczyło koszt. Pułap, który tylko ostrzega, jest nadal dostępny.',
+  'providers.edit.warn': 'Ostrzegaj przy (%)',
+  'providers.edit.critical': 'Alarmuj przy (%)',
+  'providers.edit.thresholds.hint':
+    'Gdzie miernik robi się bursztynowy i czerwony. Ostrzeżenie nie może być powyżej alarmu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

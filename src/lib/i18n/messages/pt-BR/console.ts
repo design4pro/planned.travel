@@ -455,6 +455,98 @@ const messages = {
   'runs.notCoordinator.title': 'Esta implantação não coordena a frota',
   'runs.notCoordinator.body':
     'O registro de execuções está ligado só no ambiente de homologação, e de propósito: um segundo registro deixaria duas frotas acreditarem cada uma que segura a fila, que é justamente o que ele existe para impedir. Leia a frota na homologação.',
+  'nav.providers': 'Provedores',
+  'nav.providers.description': 'Chamadas externas e seus tetos',
+  'providers.error.title': 'Não foi possível ler os medidores dos provedores',
+  'providers.list.label': 'Serviços',
+  'providers.status.planned': 'Não integrado',
+  'providers.status.planned.description':
+    'Nada chama esse serviço ainda, então não há o que contar. Ele aparece aqui para que um teto seja acordado antes da primeira chamada, e não depois da primeira fatura.',
+  'providers.policy.allow': 'Cobra acima do teto',
+  'providers.policy.block': 'Recusa ao atingir o teto',
+  'providers.badge.blocked': {
+    one: 'Uma chamada recusada',
+    many: '{calls} chamadas recusadas',
+    other: '{calls} chamadas recusadas',
+  },
+  'providers.limit.none': 'Sem teto acordado · {used} neste mês',
+  'providers.limit.value': '{used} de {limit}',
+  'providers.limit.window.day': 'Hoje',
+  'providers.limit.window.month': 'Neste mês',
+  'providers.measuring.none': 'Nada medido ainda',
+  'providers.measuring.since': 'Medindo desde {date}',
+  'providers.stat.calls': 'Chamadas neste mês',
+  'providers.stat.calls.caption': 'Em todos os serviços integrados',
+  'providers.stat.errors': 'Chamadas com falha',
+  'providers.stat.errors.caption':
+    'Também contam como chamadas, porque a maioria dos provedores as cobra',
+  'providers.stat.nearLimit': 'Perto de um teto',
+  'providers.stat.nearLimit.caption': 'Serviços acima do limiar de aviso',
+  'providers.stat.blocked': 'Chamadas recusadas',
+  'providers.stat.blocked.none': 'Nada foi recusado',
+  'providers.stat.blocked.some': 'Demanda recusada por um teto',
+  'providers.forecast.label': 'Previsão',
+  'providers.forecast.provider': 'Serviço',
+  'providers.forecast.monthEnd': 'Até o fim do mês',
+  'providers.forecast.runRate': 'Por mês neste ritmo',
+  'providers.forecast.perWorkspace': 'Por espaço de trabalho, por mês',
+  'providers.forecast.noWorkspaceTraffic':
+    'Sem tráfego de espaços para calcular a média',
+  'providers.forecast.window': {
+    one: 'Projetado a partir de uma hora de medição.',
+    many: 'Projetado a partir de {hours} horas de medição.',
+    other: 'Projetado a partir de {hours} horas de medição.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Apenas uma hora medida até agora: pouco para projetar. Esticar menos de um dia para um mês seria aritmética, não previsão.',
+    many: 'Apenas {hours} horas medidas até agora: pouco para projetar. Esticar menos de um dia para um mês seria aritmética, não previsão.',
+    other:
+      'Apenas {hours} horas medidas até agora: pouco para projetar. Esticar menos de um dia para um mês seria aritmética, não previsão.',
+  },
+  'providers.forecast.atWorkspaces': 'Com quantos espaços de trabalho',
+  'providers.forecast.callsEach': 'Chamadas por espaço, por mês',
+  'providers.forecast.projected': 'Cerca de {calls} chamadas por mês.',
+  'providers.workspaces.label': 'Espaços mais ativos',
+  'providers.workspaces.platform': 'Plataforma (sem espaço)',
+  'providers.workspaces.empty.title': 'Nada atribuído ainda',
+  'providers.workspaces.empty.description':
+    'Uma chamada feita para um espaço de trabalho é registrada nele. Tarefas agendadas e e-mails da plataforma não pertencem a nenhum e são contados à parte.',
+  'providers.readOnly':
+    'Você pode ler estes medidores, mas não mover um teto. Alterar um limite ou sua política exige a permissão provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Teto acordado: {limit} por mês. Vale a partir da primeira chamada, assim que houver um cliente.',
+  'providers.status.planned.agreed.day':
+    'Teto acordado: {limit} por dia. Vale a partir da primeira chamada, assim que houver um cliente.',
+  'providers.edit.button': 'Editar',
+  'providers.edit.title': 'Teto de {provider}',
+  'providers.edit.body':
+    'O que esta instalação combinou gastar com o fornecedor, e o que acontece quando acaba.',
+  'providers.edit.confirm': 'Salvar teto',
+  'providers.edit.done': 'Teto salvo para {provider}',
+  'providers.edit.label': 'Nome',
+  'providers.edit.ceiling': 'Chamadas incluídas',
+  'providers.edit.ceiling.hint':
+    'Deixe vazio se não houver teto acordado. Vazio e zero são coisas diferentes: zero com “recusar” barra toda chamada.',
+  'providers.edit.ceiling.placeholder': 'Sem teto',
+  'providers.edit.window': 'Medido em',
+  'providers.edit.window.month': 'Um mês do calendário',
+  'providers.edit.window.month.body': 'O formato comum de uma cota incluída.',
+  'providers.edit.window.day': 'Um dia',
+  'providers.edit.window.day.body':
+    'Alguns fornecedores medem por dia — o plano gratuito da Geoapify são 3.000 créditos diários.',
+  'providers.edit.policy': 'Ao atingir o teto',
+  'providers.edit.policy.allow': 'Continuar chamando e pagar',
+  'providers.edit.policy.allow.body':
+    'As chamadas seguem acima do teto e o console avisa. Nada deixa de funcionar.',
+  'providers.edit.policy.block': 'Recusar as próximas chamadas',
+  'providers.edit.policy.block.body':
+    'As chamadas são recusadas até a janela reiniciar. O que depende deste fornecedor para de funcionar — escolha só onde essa falha for a mais barata.',
+  'providers.edit.policy.block.refused':
+    '{provider} não pode ser recusado: não há alternativa, então barrar suas chamadas pararia o recurso em vez de limitar o custo. Um teto que apenas avisa continua disponível.',
+  'providers.edit.warn': 'Avisar em (%)',
+  'providers.edit.critical': 'Alarme em (%)',
+  'providers.edit.thresholds.hint':
+    'Onde o medidor fica âmbar e vermelho. O aviso não pode passar do alarme.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

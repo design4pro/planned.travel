@@ -7,9 +7,14 @@
  * target cannot receive it. They are separated because they answer different questions and lead to
  * different copy: a 403 tells an operator to stop, a 409 tells them to pick a different target.
  *
- * Each code exists because Better Auth's own refusal for the same case is unusable at the console.
- * The sharpest is {@link ConsoleActionError.code} `target-banned`: impersonating a banned account
- * otherwise throws the `admin` plugin's `FORBIDDEN` carrying `bannedUserMessage`, which is copy
+ * Most of these codes exist because Better Auth's own refusal for the same case is unusable at the
+ * console. `provider-not-blockable` is the first that does not: it refuses a configuration this
+ * deployment will not enforce, and no dependency has an opinion about it. The shared property is
+ * the shape rather than the origin — a 409 whose message names the way forward.
+ *
+ * The sharpest of the Better Auth ones is {@link ConsoleActionError.code} `target-banned`:
+ * impersonating a banned account otherwise throws the `admin` plugin's `FORBIDDEN` carrying
+ * `bannedUserMessage`, which is copy
  * written *for the banned user* ("This account is suspended…") and would be shown to the operator
  * as though it described them. The others are pre-empted for the same reason — the plugin's
  * `YOU_CANNOT_BAN_YOURSELF` and `USER_NOT_FOUND` arrive as `APIError` instances that a screen would
@@ -56,6 +61,21 @@ export type ConsoleRefusalCode =
    * token still named in D1, so the operator can simply try again.
    */
   | 'sessions-still-cached'
+  /**
+   * The provider may not be set to refuse its own calls, whatever the form sent.
+   *
+   * `provider_registry.blockable` is an interlock rather than a preference, and this code is how it
+   * reaches a reader. Blocking a provider whose feature has no fallback does not cap a cost, it
+   * stops the feature: blocking `polar` stops checkout, so it stops revenue in order to protect a
+   * number *about* revenue. The refusal lives in the mutation rather than in a greyed control, so
+   * it holds however the mutation is reached — a stale tab, a replayed request, a second operator —
+   * and the screen renders this beside the control that produced it.
+   *
+   * The way forward the message names is a ceiling with `allow`: the console will still warn at the
+   * thresholds and the meter still counts, which is the whole of what an unblockable provider can
+   * be given.
+   */
+  | 'provider-not-blockable'
 
 /**
  * A console action refusing its target.

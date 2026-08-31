@@ -457,6 +457,96 @@ const messages = {
   'runs.notCoordinator.title': 'Ez a telepítés nem hangolja össze a flottát',
   'runs.notCoordinator.body':
     'A futtatásnyilvántartás kizárólag a próbakörnyezethez van kötve, és ez szándékos: egy második nyilvántartás azt eredményezné, hogy két flotta is azt hiszi, ő tartja a várólistát — épp azt, aminek megakadályozására létezik. A flottát a próbakörnyezetben olvassa.',
+  'nav.providers': 'Szolgáltatók',
+  'nav.providers.description': 'Kimenő hívások és a plafonjaik',
+  'providers.error.title': 'A szolgáltatói mérőket nem sikerült beolvasni',
+  'providers.list.label': 'Szolgáltatások',
+  'providers.status.planned': 'Nincs bekötve',
+  'providers.status.planned.description':
+    'Ezt a szolgáltatást még semmi sem hívja, így nincs mit számolni. Azért szerepel itt, hogy a plafon az első hívás előtt szülessen meg, ne az első számla után.',
+  'providers.policy.allow': 'A plafon fölött is számláz',
+  'providers.policy.block': 'A plafonnál elutasít',
+  'providers.badge.blocked': {
+    one: 'Egy hívás elutasítva',
+    other: '{calls} hívás elutasítva',
+  },
+  'providers.limit.none': 'Nincs megbeszélt plafon · {used} ebben a hónapban',
+  'providers.limit.value': '{used} / {limit}',
+  'providers.limit.window.day': 'Ma',
+  'providers.limit.window.month': 'Ebben a hónapban',
+  'providers.measuring.none': 'Még nincs mérés',
+  'providers.measuring.since': 'Mérés {date} óta',
+  'providers.stat.calls': 'Hívások ebben a hónapban',
+  'providers.stat.calls.caption': 'Az összes bekötött szolgáltatásban',
+  'providers.stat.errors': 'Sikertelen hívások',
+  'providers.stat.errors.caption':
+    'Hívásnak is számítanak, mert a legtöbb szolgáltató kiszámlázza őket',
+  'providers.stat.nearLimit': 'Plafon közelében',
+  'providers.stat.nearLimit.caption':
+    'A figyelmeztetési küszöb fölötti szolgáltatások',
+  'providers.stat.blocked': 'Elutasított hívások',
+  'providers.stat.blocked.none': 'Semmit sem utasítottunk el',
+  'providers.stat.blocked.some': 'Plafon által visszautasított igény',
+  'providers.forecast.label': 'Előrejelzés',
+  'providers.forecast.provider': 'Szolgáltatás',
+  'providers.forecast.monthEnd': 'Hónap végéig',
+  'providers.forecast.runRate': 'Havonta ezzel a tempóval',
+  'providers.forecast.perWorkspace': 'Munkaterületenként havonta',
+  'providers.forecast.noWorkspaceTraffic':
+    'Nincs munkaterületi forgalom, amiből átlagot lehetne venni',
+  'providers.forecast.window': {
+    one: 'Egy óra mérésből vetítve.',
+    other: '{hours} óra mérésből vetítve.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Eddig csak egy óra mérés van — kevés az előrejelzéshez. Egy napnál kevesebbet egy hónapra nyújtani számtan, nem előrejelzés.',
+    other:
+      'Eddig csak {hours} óra mérés van — kevés az előrejelzéshez. Egy napnál kevesebbet egy hónapra nyújtani számtan, nem előrejelzés.',
+  },
+  'providers.forecast.atWorkspaces': 'Hány munkaterületnél',
+  'providers.forecast.callsEach': 'Hívás munkaterületenként havonta',
+  'providers.forecast.projected': 'Körülbelül {calls} hívás havonta.',
+  'providers.workspaces.label': 'Legaktívabb munkaterületek',
+  'providers.workspaces.platform': 'Platform (munkaterület nélkül)',
+  'providers.workspaces.empty.title': 'Még semmi sincs hozzárendelve',
+  'providers.workspaces.empty.description':
+    'A munkaterületért indított hívás arra a munkaterületre kerül. Az ütemezett munka és a platform levelei egyikhez sem tartoznak, azokat külön számoljuk.',
+  'providers.readOnly':
+    'Ezeket a mérőket olvashatod, de plafont nem mozgathatsz. A korlát vagy a hozzá tartozó szabály módosításához provider:configure jogosultság kell.',
+  'providers.status.planned.agreed.month':
+    'Megbeszélt plafon: havi {limit}. Az első hívástól él, amint van kliens.',
+  'providers.status.planned.agreed.day':
+    'Megbeszélt plafon: napi {limit}. Az első hívástól él, amint van kliens.',
+  'providers.edit.button': 'Szerkesztés',
+  'providers.edit.title': '{provider} plafonja',
+  'providers.edit.body':
+    'Mennyit vállalt ez a telepítés a szolgáltatónál, és mi történik, ha elfogy.',
+  'providers.edit.confirm': 'Plafon mentése',
+  'providers.edit.done': '{provider} plafonja elmentve',
+  'providers.edit.label': 'Név',
+  'providers.edit.ceiling': 'Benne foglalt hívások',
+  'providers.edit.ceiling.hint':
+    'Hagyd üresen, ha nincs megbeszélt plafon. Az üres és a nulla nem ugyanaz: a nulla „elutasítás” mellett minden hívást elzár.',
+  'providers.edit.ceiling.placeholder': 'Nincs plafon',
+  'providers.edit.window': 'Mérve',
+  'providers.edit.window.month': 'Naptári hónapra',
+  'providers.edit.window.month.body': 'A benne foglalt keret szokásos alakja.',
+  'providers.edit.window.day': 'Napra',
+  'providers.edit.window.day.body':
+    'Egyes szolgáltatók naponta mérnek — a Geoapify ingyenes csomagja napi 3000 kredit.',
+  'providers.edit.policy': 'A plafonnál',
+  'providers.edit.policy.allow': 'Hívj tovább és fizess',
+  'providers.edit.policy.allow.body':
+    'A hívások a plafon fölött is mennek, a konzol pedig figyelmeztet. Semmi nem áll le.',
+  'providers.edit.policy.block': 'Utasítsd el a további hívásokat',
+  'providers.edit.policy.block.body':
+    'A hívásokat elutasítjuk az ablak újraindulásáig. Ami ettől a szolgáltatótól függ, leáll — csak ott válaszd, ahol ez az olcsóbb hiba.',
+  'providers.edit.policy.block.refused':
+    'A {provider} nem utasítható el: nincs tartalék útja, így a hívások elzárása a funkciót állítaná le, nem a költséget fogná vissza. A csak figyelmeztető plafon továbbra is elérhető.',
+  'providers.edit.warn': 'Figyelmeztetés (%)',
+  'providers.edit.critical': 'Riasztás (%)',
+  'providers.edit.thresholds.hint':
+    'Hol vált a mérő borostyánra és pirosra. A figyelmeztetés nem lehet a riasztás fölött.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

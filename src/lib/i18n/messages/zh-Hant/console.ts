@@ -418,6 +418,89 @@ const messages = {
   'runs.notCoordinator.title': '這次部署不負責協調機隊',
   'runs.notCoordinator.body':
     '執行登錄表只綁在預備環境上，這是刻意為之：若存在第二份登錄表，兩支機隊都會以為佇列在自己手上 —— 而這恰恰是它存在的唯一目的所要阻止的事。請到預備環境去看機隊。',
+  'nav.providers': '服務商',
+  'nav.providers.description': '對外呼叫及其上限',
+  'providers.error.title': '無法讀取服務商計數',
+  'providers.list.label': '服務',
+  'providers.status.planned': '尚未接入',
+  'providers.status.planned.description':
+    '目前還沒有程式呼叫這個服務，所以無從計數。把它列在這裡，是為了在第一次呼叫之前就談好上限，而不是等第一張帳單之後。',
+  'providers.policy.allow': '超出仍計費',
+  'providers.policy.block': '到達上限即拒絕',
+  'providers.badge.blocked': {
+    other: '已拒絕 {calls} 次呼叫',
+  },
+  'providers.limit.none': '尚未約定上限 · 本月 {used} 次',
+  'providers.limit.value': '{limit} 次中的 {used} 次',
+  'providers.limit.window.day': '今天',
+  'providers.limit.window.month': '本月',
+  'providers.measuring.none': '還沒有任何測量',
+  'providers.measuring.since': '自 {date} 起測量',
+  'providers.stat.calls': '本月呼叫',
+  'providers.stat.calls.caption': '涵蓋所有已接入的服務',
+  'providers.stat.errors': '失敗的呼叫',
+  'providers.stat.errors.caption': '同樣計為呼叫，因為多數服務商照樣收費',
+  'providers.stat.nearLimit': '接近上限',
+  'providers.stat.nearLimit.caption': '已越過告警門檻的服務',
+  'providers.stat.blocked': '被拒絕的呼叫',
+  'providers.stat.blocked.none': '沒有任何呼叫被拒絕',
+  'providers.stat.blocked.some': '被上限擋下的需求',
+  'providers.forecast.label': '預測',
+  'providers.forecast.provider': '服務',
+  'providers.forecast.monthEnd': '到月底',
+  'providers.forecast.runRate': '按此速度每月',
+  'providers.forecast.perWorkspace': '每個工作區每月',
+  'providers.forecast.noWorkspaceTraffic': '沒有工作區流量可供平均',
+  'providers.forecast.window': {
+    other: '根據 {hours} 小時的測量推算。',
+  },
+  'providers.forecast.tooEarly': {
+    other:
+      '目前只測量了 {hours} 小時，還不足以推算。把不到一天的資料拉成一個月是算術，不是預測。',
+  },
+  'providers.forecast.atWorkspaces': '按多少個工作區',
+  'providers.forecast.callsEach': '每個工作區每月呼叫數',
+  'providers.forecast.projected': '每月約 {calls} 次。',
+  'providers.workspaces.label': '呼叫最多的工作區',
+  'providers.workspaces.platform': '平台（不屬於工作區）',
+  'providers.workspaces.empty.title': '尚未歸屬任何呼叫',
+  'providers.workspaces.empty.description':
+    '為某個工作區發起的呼叫會記在它名下。排程工作與平台郵件不屬於任何工作區，單獨計數。',
+  'providers.readOnly':
+    '你可以查看這些計數，但不能調整上限。修改額度或其政策需要 provider:configure 權限。',
+  'providers.status.planned.agreed.month':
+    '已約定上限：每月 {limit}。一旦有了用戶端，自第一次呼叫起生效。',
+  'providers.status.planned.agreed.day':
+    '已約定上限：每天 {limit}。一旦有了用戶端，自第一次呼叫起生效。',
+  'providers.edit.button': '編輯',
+  'providers.edit.title': '{provider} 的上限',
+  'providers.edit.body': '本部署與服務商約定的花費，以及用完之後會發生什麼。',
+  'providers.edit.confirm': '儲存上限',
+  'providers.edit.done': '已儲存 {provider} 的上限',
+  'providers.edit.label': '名稱',
+  'providers.edit.ceiling': '包含的呼叫數',
+  'providers.edit.ceiling.hint':
+    '沒有約定上限就留空。留空和零不是同一回事：搭配「拒絕」的零會擋下每一次呼叫。',
+  'providers.edit.ceiling.placeholder': '無上限',
+  'providers.edit.window': '計量週期',
+  'providers.edit.window.month': '一個日曆月',
+  'providers.edit.window.month.body': '方案額度通常的形態。',
+  'providers.edit.window.day': '一天',
+  'providers.edit.window.day.body':
+    '有些服務商按日計量——Geoapify 的免費方案是每天 3,000 點。',
+  'providers.edit.policy': '到達上限時',
+  'providers.edit.policy.allow': '繼續呼叫並付費',
+  'providers.edit.policy.allow.body':
+    '呼叫會越過上限繼續，主控台發出警告。沒有東西會停。',
+  'providers.edit.policy.block': '拒絕後續呼叫',
+  'providers.edit.policy.block.body':
+    '在週期重設前呼叫會被擋下。依賴這個服務商的功能會停擺——只在這種失敗更划算的地方選它。',
+  'providers.edit.policy.block.refused':
+    '{provider} 不能被拒絕：它沒有退路，擋下呼叫只會讓功能停擺，而不是控制成本。僅警告的上限仍然可以設。',
+  'providers.edit.warn': '警告門檻（%）',
+  'providers.edit.critical': '嚴重門檻（%）',
+  'providers.edit.thresholds.hint':
+    '進度條轉黃與轉紅的位置。警告不能高於嚴重。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

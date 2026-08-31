@@ -173,8 +173,13 @@ const result = await sandcastle.run({
   sandbox: ci ? noSandbox() : docker(),
   // Never the default 'head' strategy off CI: it bind-mounts the host checkout and the install hook
   // would grind through a darwin node_modules. On the runner the checkout is already disposable.
+  //
+  // `{ type: 'head' }`, not the bare `'head'` this used to pass: a string has no `.type`, so the
+  // library never recognised head mode and cut a worktree on a generated temp branch instead —
+  // the opposite of what the line above says. Harmless in practice, since this run files GitHub
+  // issues rather than committing, but it was a worktree per CI run for nothing.
   branchStrategy: ci
-    ? 'head'
+    ? { type: 'head' as const }
     : {
         type: 'branch',
         branch: `sandcastle/sentry-${runLabel}`,

@@ -743,7 +743,7 @@ prefix-equals-`entity_type` rule is declared by the table below rather than inhe
 An action on a user, a session, a credential or a share takes the three-segment
 `platform.<entity>.<verb>`, because those entities are named identically in the tenant log of §4.5
 and a bare `user.created` read out of an operational view spanning both tables would be
-attributable to neither. Sixteen of the thirty-one actions below take the first form and fifteen
+attributable to neither. Eighteen of the thirty-three actions below take the first form and fifteen
 take the second; no third form exists.
 
 Everything before the verb fixes the `entity_type` written beside it, so §4.4's query never has to
@@ -759,6 +759,7 @@ guess which prefix belongs to which table:
 | `platform.session.*` | `session`         |
 | `platform.token.*`   | `staff_api_token` |
 | `platform.share.*`   | `share_link`      |
+| `provider.*`         | `provider`        |
 
 **The list is closed.** Every action this platform can ever write is below. A new action is an
 edit to this table, in the commit that adds the code that writes it.
@@ -776,41 +777,43 @@ are reachable only from the console, no MCP tool can produce them, and they are 
 here and are legal here. Those three and every `platform.*` action are what this section owns, and
 they are marked "here" in the last column.
 
-| Action                                | Written when                                                         | Declared in                   |
-| ------------------------------------- | -------------------------------------------------------------------- | ----------------------------- |
-| `catalog_place.created`               | A catalogue record is created                                        | `docs/CATALOG.md` §8.4        |
-| `catalog_place.updated`               | A catalogue record's fields change                                   | `docs/CATALOG.md` §8.4        |
-| `catalog_place.published`             | A record moves to `published`                                        | `docs/CATALOG.md` §8.4        |
-| `catalog_place.retired`               | A record moves to `retired`                                          | `docs/CATALOG.md` §8.4, §7.2  |
-| `catalog_place.status_changed`        | Any other status transition                                          | `docs/CATALOG.md` §8.4, §7.2  |
-| `catalog_place.licence_escalated`     | A new source forces a stricter licence and unpublishes the record    | `docs/CATALOG.md` §5.4 rule 3 |
-| `catalog_ingest.promoted`             | An ingest row becomes a new catalogue record                         | `docs/CATALOG.md` §8.4        |
-| `catalog_ingest.merged`               | An ingest row is merged into an existing record                      | `docs/CATALOG.md` §8.4        |
-| `catalog_ingest.rejected`             | An ingest row is rejected with a reason                              | `docs/CATALOG.md` §8.4        |
-| `place_pack.created`                  | A pack is created                                                    | `docs/CATALOG.md` §8.4        |
-| `place_pack.places_set`               | A pack's member places or their order change                         | `docs/CATALOG.md` §8.4        |
-| `place_pack.published`                | A pack moves to `published`                                          | `docs/CATALOG.md` §8.4        |
-| `catalog_source.run_started`          | A source run is started, by a curator or by the weekly cron          | `docs/CATALOG.md` §8.4        |
-| `place_pack.retired`                  | A pack moves to `retired` - console-only; no MCP tool retires a pack | here (`pack:publish`, §1.2)   |
-| `catalog_source.enabled`              | A source is enabled - console-only                                   | here (`source:run`, §1.2)     |
-| `catalog_source.disabled`             | A source is disabled - console-only                                  | here (`source:run`, §1.2)     |
-| `platform.user.created`               | An account is created from the console                               | here (`user:create`)          |
-| `platform.user.updated`               | An account's profile fields are changed from the console             | here (`user:update`)          |
-| `platform.user.role_changed`          | A platform role is set; `changes` carries before and after           | here (`user:set-role`)        |
-| `platform.user.banned`                | An account is banned; `changes` carries reason and expiry            | here (`user:ban`)             |
-| `platform.user.unbanned`              | A ban is lifted                                                      | here (`user:ban`)             |
-| `platform.user.deleted`               | An account is deleted                                                | here (`user:delete`)          |
-| `platform.user.password_set`          | An administrator sets a password; the value is never in `changes`    | here (`user:set-password`)    |
-| `platform.user.email_set`             | An administrator changes an address                                  | here (`user:set-email`)       |
-| `platform.user.impersonation_started` | Impersonation begins; `entity_id` is the target                      | here (§6)                     |
-| `platform.user.impersonation_ended`   | Impersonation ends by the **End impersonation** action               | here (§6)                     |
-| `platform.session.revoked`            | One session of one account is revoked                                | here (`session:revoke`)       |
-| `platform.session.revoked_all`        | Every session of one account is revoked                              | here (`session:revoke`)       |
-| `platform.token.issued`               | An MCP token is minted; the token itself is never in `changes`       | here (§5)                     |
-| `platform.token.revoked`              | An MCP token is revoked, by hand or by a role change                 | here (§5)                     |
-| `platform.share.revoked`              | A moderator revokes a share link                                     | here (`share:revoke`, §2.4)   |
+| Action                                | Written when                                                                        | Declared in                        |
+| ------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------- |
+| `catalog_place.created`               | A catalogue record is created                                                       | `docs/CATALOG.md` §8.4             |
+| `catalog_place.updated`               | A catalogue record's fields change                                                  | `docs/CATALOG.md` §8.4             |
+| `catalog_place.published`             | A record moves to `published`                                                       | `docs/CATALOG.md` §8.4             |
+| `catalog_place.retired`               | A record moves to `retired`                                                         | `docs/CATALOG.md` §8.4, §7.2       |
+| `catalog_place.status_changed`        | Any other status transition                                                         | `docs/CATALOG.md` §8.4, §7.2       |
+| `catalog_place.licence_escalated`     | A new source forces a stricter licence and unpublishes the record                   | `docs/CATALOG.md` §5.4 rule 3      |
+| `catalog_ingest.promoted`             | An ingest row becomes a new catalogue record                                        | `docs/CATALOG.md` §8.4             |
+| `catalog_ingest.merged`               | An ingest row is merged into an existing record                                     | `docs/CATALOG.md` §8.4             |
+| `catalog_ingest.rejected`             | An ingest row is rejected with a reason                                             | `docs/CATALOG.md` §8.4             |
+| `place_pack.created`                  | A pack is created                                                                   | `docs/CATALOG.md` §8.4             |
+| `place_pack.places_set`               | A pack's member places or their order change                                        | `docs/CATALOG.md` §8.4             |
+| `place_pack.published`                | A pack moves to `published`                                                         | `docs/CATALOG.md` §8.4             |
+| `catalog_source.run_started`          | A source run is started, by a curator or by the weekly cron                         | `docs/CATALOG.md` §8.4             |
+| `place_pack.retired`                  | A pack moves to `retired` - console-only; no MCP tool retires a pack                | here (`pack:publish`, §1.2)        |
+| `catalog_source.enabled`              | A source is enabled - console-only                                                  | here (`source:run`, §1.2)          |
+| `catalog_source.disabled`             | A source is disabled - console-only                                                 | here (`source:run`, §1.2)          |
+| `platform.user.created`               | An account is created from the console                                              | here (`user:create`)               |
+| `platform.user.updated`               | An account's profile fields are changed from the console                            | here (`user:update`)               |
+| `platform.user.role_changed`          | A platform role is set; `changes` carries before and after                          | here (`user:set-role`)             |
+| `platform.user.banned`                | An account is banned; `changes` carries reason and expiry                           | here (`user:ban`)                  |
+| `platform.user.unbanned`              | A ban is lifted                                                                     | here (`user:ban`)                  |
+| `platform.user.deleted`               | An account is deleted                                                               | here (`user:delete`)               |
+| `platform.user.password_set`          | An administrator sets a password; the value is never in `changes`                   | here (`user:set-password`)         |
+| `platform.user.email_set`             | An administrator changes an address                                                 | here (`user:set-email`)            |
+| `platform.user.impersonation_started` | Impersonation begins; `entity_id` is the target                                     | here (§6)                          |
+| `platform.user.impersonation_ended`   | Impersonation ends by the **End impersonation** action                              | here (§6)                          |
+| `platform.session.revoked`            | One session of one account is revoked                                               | here (`session:revoke`)            |
+| `platform.session.revoked_all`        | Every session of one account is revoked                                             | here (`session:revoke`)            |
+| `platform.token.issued`               | An MCP token is minted; the token itself is never in `changes`                      | here (§5)                          |
+| `platform.token.revoked`              | An MCP token is revoked, by hand or by a role change                                | here (§5)                          |
+| `platform.share.revoked`              | A moderator revokes a share link                                                    | here (`share:revoke`, §2.4)        |
+| `provider.limit_changed`              | A third-party call ceiling or its window is set; `changes` carries before and after | here (`provider:configure`, §2.3b) |
+| `provider.policy_changed`             | A provider's over-ceiling policy moves between `allow` and `block`                  | here (`provider:configure`, §2.3b) |
 
-Thirty-one actions. Three notes so the list cannot be miscounted or misread:
+Thirty-three actions. Four notes so the list cannot be miscounted or misread:
 
 - `catalog.run.poll` appears in `docs/CATALOG.md` §2.4 and is **not** in this list on purpose. It is
   the name of a queue task on `TASKS`, not an audit action, and nothing writes a

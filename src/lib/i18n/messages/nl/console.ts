@@ -455,6 +455,97 @@ const messages = {
   'runs.notCoordinator.title': 'Deze omgeving stuurt de vloot niet aan',
   'runs.notCoordinator.body':
     'Het runregister hangt alleen aan de testomgeving, en dat met opzet: een tweede register zou twee vloten allebei laten geloven dat zij de wachtrij vasthouden, en juist dat moet het voorkomen. Lees de vloot op de testomgeving.',
+  'nav.providers': 'Aanbieders',
+  'nav.providers.description': 'Uitgaande aanroepen en hun plafonds',
+  'providers.error.title': 'De aanbiedermeters konden niet worden gelezen',
+  'providers.list.label': 'Diensten',
+  'providers.status.planned': 'Niet gekoppeld',
+  'providers.status.planned.description':
+    'Nog niets roept deze dienst aan, dus er valt niets te tellen. Hij staat hier zodat een plafond wordt afgesproken vóór de eerste aanroep in plaats van na de eerste factuur.',
+  'providers.policy.allow': 'Rekent door boven het plafond',
+  'providers.policy.block': 'Weigert bij het plafond',
+  'providers.badge.blocked': {
+    one: 'Eén aanroep geweigerd',
+    other: '{calls} aanroepen geweigerd',
+  },
+  'providers.limit.none': 'Geen plafond afgesproken · {used} deze maand',
+  'providers.limit.value': '{used} van {limit}',
+  'providers.limit.window.day': 'Vandaag',
+  'providers.limit.window.month': 'Deze maand',
+  'providers.measuring.none': 'Nog niets gemeten',
+  'providers.measuring.since': 'Meting sinds {date}',
+  'providers.stat.calls': 'Aanroepen deze maand',
+  'providers.stat.calls.caption': 'Over alle gekoppelde diensten',
+  'providers.stat.errors': 'Mislukte aanroepen',
+  'providers.stat.errors.caption':
+    'Tellen ook als aanroep, want de meeste aanbieders rekenen ze door',
+  'providers.stat.nearLimit': 'Dicht bij een plafond',
+  'providers.stat.nearLimit.caption':
+    'Diensten voorbij hun waarschuwingsdrempel',
+  'providers.stat.blocked': 'Geweigerde aanroepen',
+  'providers.stat.blocked.none': 'Er is niets geweigerd',
+  'providers.stat.blocked.some': 'Vraag die een plafond heeft geweigerd',
+  'providers.forecast.label': 'Prognose',
+  'providers.forecast.provider': 'Dienst',
+  'providers.forecast.monthEnd': 'Tegen het eind van de maand',
+  'providers.forecast.runRate': 'Per maand in dit tempo',
+  'providers.forecast.perWorkspace': 'Per werkruimte per maand',
+  'providers.forecast.noWorkspaceTraffic':
+    'Geen werkruimteverkeer om te middelen',
+  'providers.forecast.window': {
+    one: 'Geprojecteerd uit één uur meting.',
+    other: 'Geprojecteerd uit {hours} uur meting.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Nog maar één uur gemeten — te weinig om te projecteren. Minder dan een dag uitrekken tot een maand zou rekenwerk zijn, geen prognose.',
+    other:
+      'Nog maar {hours} uur gemeten — te weinig om te projecteren. Minder dan een dag uitrekken tot een maand zou rekenwerk zijn, geen prognose.',
+  },
+  'providers.forecast.atWorkspaces': 'Bij hoeveel werkruimtes',
+  'providers.forecast.callsEach': 'Aanroepen per werkruimte per maand',
+  'providers.forecast.projected': 'Ongeveer {calls} aanroepen per maand.',
+  'providers.workspaces.label': 'Drukste werkruimtes',
+  'providers.workspaces.platform': 'Platform (geen werkruimte)',
+  'providers.workspaces.empty.title': 'Nog niets toegerekend',
+  'providers.workspaces.empty.description':
+    'Een aanroep voor een werkruimte wordt daaraan toegerekend. Cronwerk en platformpost horen bij geen enkele en tellen apart.',
+  'providers.readOnly':
+    'Je kunt deze meters lezen maar geen plafond verzetten. Een limiet of beleid wijzigen vraagt het recht provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Afgesproken plafond: {limit} per maand. Het geldt vanaf de eerste aanroep, zodra er een client is.',
+  'providers.status.planned.agreed.day':
+    'Afgesproken plafond: {limit} per dag. Het geldt vanaf de eerste aanroep, zodra er een client is.',
+  'providers.edit.button': 'Bewerken',
+  'providers.edit.title': 'Plafond voor {provider}',
+  'providers.edit.body':
+    'Wat deze installatie met de aanbieder heeft afgesproken uit te geven, en wat er gebeurt als het op is.',
+  'providers.edit.confirm': 'Plafond opslaan',
+  'providers.edit.done': 'Plafond opgeslagen voor {provider}',
+  'providers.edit.label': 'Naam',
+  'providers.edit.ceiling': 'Inbegrepen aanroepen',
+  'providers.edit.ceiling.hint':
+    'Laat leeg als er geen plafond is afgesproken. Leeg en nul zijn niet hetzelfde: nul bij “weigeren” wijst elke aanroep af.',
+  'providers.edit.ceiling.placeholder': 'Geen plafond',
+  'providers.edit.window': 'Gemeten over',
+  'providers.edit.window.month': 'Een kalendermaand',
+  'providers.edit.window.month.body':
+    'De gebruikelijke vorm van een inbegrepen tegoed.',
+  'providers.edit.window.day': 'Een dag',
+  'providers.edit.window.day.body':
+    'Sommige aanbieders rekenen per dag — het gratis plan van Geoapify is 3.000 credits per dag.',
+  'providers.edit.policy': 'Bij het plafond',
+  'providers.edit.policy.allow': 'Doorgaan en betalen',
+  'providers.edit.policy.allow.body':
+    'Aanroepen gaan door boven het plafond en de console waarschuwt. Er stopt niets.',
+  'providers.edit.policy.block': 'Verdere aanroepen weigeren',
+  'providers.edit.policy.block.body':
+    'Aanroepen worden geweigerd tot het venster opnieuw begint. Wat van deze aanbieder afhangt stopt — kies dit alleen waar dat de goedkopere storing is.',
+  'providers.edit.policy.block.refused':
+    '{provider} kan niet geweigerd worden: er is geen terugvalweg, dus aanroepen weigeren zou de functie stoppen in plaats van de kosten begrenzen. Een plafond dat alleen waarschuwt kan wel.',
+  'providers.edit.warn': 'Waarschuwen bij (%)',
+  'providers.edit.critical': 'Alarm bij (%)',
+  'providers.edit.thresholds.hint':
+    'Waar de meter oranje en rood wordt. De waarschuwing mag niet boven het alarm liggen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

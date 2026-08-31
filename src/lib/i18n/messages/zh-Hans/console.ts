@@ -415,6 +415,89 @@ const messages = {
   'runs.notCoordinator.title': '这次部署不负责协调机队',
   'runs.notCoordinator.body':
     '运行注册表只绑定在预发布环境上，这是有意为之：若存在第二份注册表，两支机队都会以为队列在自己手里 —— 而这恰恰是它存在的唯一目的所要阻止的事。请到预发布环境去看机队。',
+  'nav.providers': '服务商',
+  'nav.providers.description': '对外调用及其上限',
+  'providers.error.title': '无法读取服务商计数',
+  'providers.list.label': '服务',
+  'providers.status.planned': '尚未接入',
+  'providers.status.planned.description':
+    '目前还没有代码调用这个服务，所以无从计数。把它列在这里，是为了在第一次调用之前就谈好上限，而不是等第一张账单之后。',
+  'providers.policy.allow': '超出仍计费',
+  'providers.policy.block': '到达上限即拒绝',
+  'providers.badge.blocked': {
+    other: '已拒绝 {calls} 次调用',
+  },
+  'providers.limit.none': '尚未约定上限 · 本月 {used} 次',
+  'providers.limit.value': '{limit} 次中的 {used} 次',
+  'providers.limit.window.day': '今天',
+  'providers.limit.window.month': '本月',
+  'providers.measuring.none': '还没有任何测量',
+  'providers.measuring.since': '自 {date} 起测量',
+  'providers.stat.calls': '本月调用',
+  'providers.stat.calls.caption': '涵盖所有已接入的服务',
+  'providers.stat.errors': '失败的调用',
+  'providers.stat.errors.caption': '同样计为调用，因为多数服务商照样收费',
+  'providers.stat.nearLimit': '接近上限',
+  'providers.stat.nearLimit.caption': '已越过告警阈值的服务',
+  'providers.stat.blocked': '被拒绝的调用',
+  'providers.stat.blocked.none': '没有任何调用被拒绝',
+  'providers.stat.blocked.some': '被上限挡下的需求',
+  'providers.forecast.label': '预测',
+  'providers.forecast.provider': '服务',
+  'providers.forecast.monthEnd': '到月底',
+  'providers.forecast.runRate': '按此速度每月',
+  'providers.forecast.perWorkspace': '每个工作区每月',
+  'providers.forecast.noWorkspaceTraffic': '没有工作区流量可供平均',
+  'providers.forecast.window': {
+    other: '基于 {hours} 小时的测量推算。',
+  },
+  'providers.forecast.tooEarly': {
+    other:
+      '目前只测量了 {hours} 小时，还不足以推算。把不到一天的数据拉成一个月是算术，不是预测。',
+  },
+  'providers.forecast.atWorkspaces': '按多少个工作区',
+  'providers.forecast.callsEach': '每个工作区每月调用数',
+  'providers.forecast.projected': '每月约 {calls} 次。',
+  'providers.workspaces.label': '调用最多的工作区',
+  'providers.workspaces.platform': '平台（不属于工作区）',
+  'providers.workspaces.empty.title': '尚未归属任何调用',
+  'providers.workspaces.empty.description':
+    '为某个工作区发起的调用会记在它名下。定时任务和平台邮件不属于任何工作区，单独计数。',
+  'providers.readOnly':
+    '你可以查看这些计数，但不能调整上限。修改限额或其策略需要 provider:configure 权限。',
+  'providers.status.planned.agreed.month':
+    '已约定上限：每月 {limit}。一旦有了客户端，从第一次调用起生效。',
+  'providers.status.planned.agreed.day':
+    '已约定上限：每天 {limit}。一旦有了客户端，从第一次调用起生效。',
+  'providers.edit.button': '编辑',
+  'providers.edit.title': '{provider} 的上限',
+  'providers.edit.body': '本部署与服务商约定的花费，以及用完之后会发生什么。',
+  'providers.edit.confirm': '保存上限',
+  'providers.edit.done': '已保存 {provider} 的上限',
+  'providers.edit.label': '名称',
+  'providers.edit.ceiling': '包含的调用数',
+  'providers.edit.ceiling.hint':
+    '没有约定上限就留空。留空和零不是一回事：搭配“拒绝”的零会挡下每一次调用。',
+  'providers.edit.ceiling.placeholder': '无上限',
+  'providers.edit.window': '计量周期',
+  'providers.edit.window.month': '一个自然月',
+  'providers.edit.window.month.body': '套餐额度通常的形态。',
+  'providers.edit.window.day': '一天',
+  'providers.edit.window.day.body':
+    '有些服务商按天计量——Geoapify 的免费方案是每天 3,000 点。',
+  'providers.edit.policy': '到达上限时',
+  'providers.edit.policy.allow': '继续调用并付费',
+  'providers.edit.policy.allow.body':
+    '调用会越过上限继续，控制台发出告警。没有东西会停。',
+  'providers.edit.policy.block': '拒绝后续调用',
+  'providers.edit.policy.block.body':
+    '在周期重置前调用会被挡下。依赖这个服务商的功能会停摆——只在这种失败更划算的地方选它。',
+  'providers.edit.policy.block.refused':
+    '{provider} 不能被拒绝：它没有退路，挡下调用只会让功能停摆，而不是控制成本。仅告警的上限仍然可以设。',
+  'providers.edit.warn': '告警阈值（%）',
+  'providers.edit.critical': '严重阈值（%）',
+  'providers.edit.thresholds.hint':
+    '进度条转黄和转红的位置。告警不能高于严重。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -25,7 +25,9 @@ const src = fileURLToPath(new URL('./src/', import.meta.url))
  * tested at all before the Sentry sweep, it carries real policy - selection thresholds, the dedup
  * index, the issue body, which screens `capture.mjs` refuses to photograph signed in - and its
  * failure mode is silence: a parsing bug files a duplicate every week, or stops filing anything,
- * and says nothing either way. `pnpm typecheck` sees `.sandcastle` but not `scripts`, whose files
+ * and says nothing either way. `pnpm typecheck` reaches `.sandcastle` only because tsconfig.json
+ * names it explicitly - TypeScript's wildcard globs skip dot-directories, and for a long time it
+ * did not, so none of this was type-checked at all. It still does not reach `scripts`, whose files
  * are plain `.mjs` run by `node` and so in no tsconfig, while the claim they make about
  * `src/routes/` drifts. Tests are the only gate that reaches all of it.
  */

@@ -469,6 +469,99 @@ const messages = {
   'runs.notCoordinator.title': 'Questo rilascio non coordina la flotta',
   'runs.notCoordinator.body':
     'Il registro delle esecuzioni è agganciato solo all’ambiente di prova, e di proposito: un secondo registro lascerebbe due flotte credere ciascuna di tenere l’arretrato, che è la cosa che esiste per impedire. Leggi la flotta sull’ambiente di prova.',
+  'nav.providers': 'Fornitori',
+  'nav.providers.description': 'Chiamate in uscita e i loro tetti',
+  'providers.error.title':
+    'Non è stato possibile leggere i contatori dei fornitori',
+  'providers.list.label': 'Servizi',
+  'providers.status.planned': 'Non integrato',
+  'providers.status.planned.description':
+    'Nulla chiama ancora questo servizio, quindi non c’è niente da contare. È elencato perché un tetto si concordi prima della prima chiamata e non dopo la prima fattura.',
+  'providers.policy.allow': 'Fattura oltre il tetto',
+  'providers.policy.block': 'Rifiuta al tetto',
+  'providers.badge.blocked': {
+    one: 'Una chiamata rifiutata',
+    many: '{calls} chiamate rifiutate',
+    other: '{calls} chiamate rifiutate',
+  },
+  'providers.limit.none': 'Nessun tetto concordato · {used} questo mese',
+  'providers.limit.value': '{used} su {limit}',
+  'providers.limit.window.day': 'Oggi',
+  'providers.limit.window.month': 'Questo mese',
+  'providers.measuring.none': 'Non è stato ancora misurato nulla',
+  'providers.measuring.since': 'Misurazione dal {date}',
+  'providers.stat.calls': 'Chiamate questo mese',
+  'providers.stat.calls.caption': 'Su tutti i servizi integrati',
+  'providers.stat.errors': 'Chiamate fallite',
+  'providers.stat.errors.caption':
+    'Contate anche come chiamate, perché quasi tutti i fornitori le addebitano',
+  'providers.stat.nearLimit': 'Vicino a un tetto',
+  'providers.stat.nearLimit.caption': 'Servizi oltre la soglia di avviso',
+  'providers.stat.blocked': 'Chiamate rifiutate',
+  'providers.stat.blocked.none': 'Non è stato rifiutato nulla',
+  'providers.stat.blocked.some': 'Domanda rifiutata da un tetto',
+  'providers.forecast.label': 'Previsione',
+  'providers.forecast.provider': 'Servizio',
+  'providers.forecast.monthEnd': 'A fine mese',
+  'providers.forecast.runRate': 'Al mese con questo ritmo',
+  'providers.forecast.perWorkspace': 'Per spazio di lavoro al mese',
+  'providers.forecast.noWorkspaceTraffic':
+    'Nessun traffico degli spazi da mediare',
+  'providers.forecast.window': {
+    one: 'Proiettato da un’ora di misurazione.',
+    many: 'Proiettato da {hours} ore di misurazione.',
+    other: 'Proiettato da {hours} ore di misurazione.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Finora è stata misurata una sola ora: troppo poco per proiettare. Estendere meno di un giorno a un mese sarebbe aritmetica, non una previsione.',
+    many: 'Finora sono state misurate {hours} ore: troppo poco per proiettare. Estendere meno di un giorno a un mese sarebbe aritmetica, non una previsione.',
+    other:
+      'Finora sono state misurate {hours} ore: troppo poco per proiettare. Estendere meno di un giorno a un mese sarebbe aritmetica, non una previsione.',
+  },
+  'providers.forecast.atWorkspaces': 'Con quanti spazi di lavoro',
+  'providers.forecast.callsEach': 'Chiamate per spazio al mese',
+  'providers.forecast.projected': 'Circa {calls} chiamate al mese.',
+  'providers.workspaces.label': 'Spazi più attivi',
+  'providers.workspaces.platform': 'Piattaforma (nessuno spazio)',
+  'providers.workspaces.empty.title': 'Ancora nulla di attribuito',
+  'providers.workspaces.empty.description':
+    'Una chiamata fatta per uno spazio di lavoro viene addebitata a quello. Il lavoro pianificato e la posta della piattaforma non appartengono a nessuno e si contano a parte.',
+  'providers.readOnly':
+    'Puoi leggere questi contatori ma non spostare un tetto. Cambiare un limite o la sua politica richiede il permesso provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Tetto concordato: {limit} al mese. Vale dalla prima chiamata, appena esiste un client.',
+  'providers.status.planned.agreed.day':
+    'Tetto concordato: {limit} al giorno. Vale dalla prima chiamata, appena esiste un client.',
+  'providers.edit.button': 'Modifica',
+  'providers.edit.title': 'Tetto per {provider}',
+  'providers.edit.body':
+    'Quanto questa installazione ha concordato di spendere dal fornitore, e cosa accade quando si esaurisce.',
+  'providers.edit.confirm': 'Salva il tetto',
+  'providers.edit.done': 'Tetto salvato per {provider}',
+  'providers.edit.label': 'Nome',
+  'providers.edit.ceiling': 'Chiamate incluse',
+  'providers.edit.ceiling.hint':
+    'Lascia vuoto se non c’è un tetto concordato. Vuoto e zero sono cose diverse: zero con «rifiuta» respinge ogni chiamata.',
+  'providers.edit.ceiling.placeholder': 'Nessun tetto',
+  'providers.edit.window': 'Misurato su',
+  'providers.edit.window.month': 'Un mese solare',
+  'providers.edit.window.month.body': 'La forma consueta di una quota inclusa.',
+  'providers.edit.window.day': 'Un giorno',
+  'providers.edit.window.day.body':
+    'Alcuni fornitori contano al giorno: il piano gratuito di Geoapify è 3.000 crediti al giorno.',
+  'providers.edit.policy': 'Al tetto',
+  'providers.edit.policy.allow': 'Continua a chiamare e paga',
+  'providers.edit.policy.allow.body':
+    'Le chiamate proseguono oltre il tetto e la console avvisa. Niente smette di funzionare.',
+  'providers.edit.policy.block': 'Rifiuta le chiamate successive',
+  'providers.edit.policy.block.body':
+    'Le chiamate vengono respinte fino al reset della finestra. Ciò che dipende da questo fornitore smette di funzionare: scegli questa opzione solo dove è il guasto più economico.',
+  'providers.edit.policy.block.refused':
+    '{provider} non può essere rifiutato: non ha alternative, quindi respingere le sue chiamate fermerebbe la funzione invece di limitarne il costo. Resta possibile un tetto che si limita ad avvisare.',
+  'providers.edit.warn': 'Avvisa al (%)',
+  'providers.edit.critical': 'Allarme al (%)',
+  'providers.edit.thresholds.hint':
+    'Dove l’indicatore diventa ambra e rosso. L’avviso non può stare sopra l’allarme.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

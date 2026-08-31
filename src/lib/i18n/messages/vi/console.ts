@@ -453,6 +453,93 @@ const messages = {
   'runs.notCoordinator.title': 'Bản triển khai này không điều phối đội',
   'runs.notCoordinator.body':
     'Sổ đăng ký lượt chạy chỉ gắn với môi trường dàn dựng, và đó là cố ý: một sổ thứ hai sẽ khiến cả hai đội đều tin rằng hàng đợi nằm trong tay mình — đúng cái điều duy nhất mà nó sinh ra để ngăn lại. Hãy xem đội ở môi trường dàn dựng.',
+  'nav.providers': 'Nhà cung cấp',
+  'nav.providers.description': 'Lệnh gọi ra ngoài và trần của chúng',
+  'providers.error.title': 'Không đọc được số đo của nhà cung cấp',
+  'providers.list.label': 'Dịch vụ',
+  'providers.status.planned': 'Chưa tích hợp',
+  'providers.status.planned.description':
+    'Chưa có gì gọi dịch vụ này nên không có gì để đếm. Nó có mặt ở đây để trần được thống nhất trước lệnh gọi đầu tiên, chứ không phải sau hoá đơn đầu tiên.',
+  'providers.policy.allow': 'Vẫn tính phí khi vượt',
+  'providers.policy.block': 'Từ chối khi chạm trần',
+  'providers.badge.blocked': {
+    other: 'Đã từ chối {calls} lệnh gọi',
+  },
+  'providers.limit.none': 'Chưa thống nhất trần · {used} trong tháng này',
+  'providers.limit.value': '{used} trên {limit}',
+  'providers.limit.window.day': 'Hôm nay',
+  'providers.limit.window.month': 'Tháng này',
+  'providers.measuring.none': 'Chưa đo được gì',
+  'providers.measuring.since': 'Đo từ {date}',
+  'providers.stat.calls': 'Lệnh gọi tháng này',
+  'providers.stat.calls.caption': 'Trên mọi dịch vụ đã tích hợp',
+  'providers.stat.errors': 'Lệnh gọi thất bại',
+  'providers.stat.errors.caption':
+    'Cũng tính là lệnh gọi, vì phần lớn nhà cung cấp vẫn tính phí',
+  'providers.stat.nearLimit': 'Gần chạm trần',
+  'providers.stat.nearLimit.caption': 'Dịch vụ đã vượt ngưỡng cảnh báo',
+  'providers.stat.blocked': 'Lệnh gọi bị từ chối',
+  'providers.stat.blocked.none': 'Chưa có gì bị từ chối',
+  'providers.stat.blocked.some': 'Nhu cầu bị trần chặn lại',
+  'providers.forecast.label': 'Dự báo',
+  'providers.forecast.provider': 'Dịch vụ',
+  'providers.forecast.monthEnd': 'Đến cuối tháng',
+  'providers.forecast.runRate': 'Mỗi tháng với nhịp này',
+  'providers.forecast.perWorkspace': 'Mỗi không gian làm việc, mỗi tháng',
+  'providers.forecast.noWorkspaceTraffic':
+    'Không có lưu lượng không gian làm việc để lấy trung bình',
+  'providers.forecast.window': {
+    other: 'Dự báo từ {hours} giờ đo.',
+  },
+  'providers.forecast.tooEarly': {
+    other:
+      'Mới đo được {hours} giờ — chưa đủ để dự báo. Kéo chưa đầy một ngày thành một tháng là phép tính, không phải dự báo.',
+  },
+  'providers.forecast.atWorkspaces': 'Với bao nhiêu không gian làm việc',
+  'providers.forecast.callsEach': 'Lệnh gọi mỗi không gian, mỗi tháng',
+  'providers.forecast.projected': 'Khoảng {calls} lệnh gọi mỗi tháng.',
+  'providers.workspaces.label': 'Không gian bận nhất',
+  'providers.workspaces.platform': 'Nền tảng (không thuộc không gian nào)',
+  'providers.workspaces.empty.title': 'Chưa quy được cho ai',
+  'providers.workspaces.empty.description':
+    'Lệnh gọi thực hiện cho một không gian làm việc được ghi cho không gian đó. Công việc theo lịch và thư của nền tảng không thuộc về ai và được đếm riêng.',
+  'providers.readOnly':
+    'Bạn đọc được các số đo này nhưng không dời được trần. Đổi hạn mức hay chính sách của nó cần quyền provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Trần đã thống nhất: {limit} mỗi tháng. Có hiệu lực từ lệnh gọi đầu tiên, ngay khi có client.',
+  'providers.status.planned.agreed.day':
+    'Trần đã thống nhất: {limit} mỗi ngày. Có hiệu lực từ lệnh gọi đầu tiên, ngay khi có client.',
+  'providers.edit.button': 'Sửa',
+  'providers.edit.title': 'Trần cho {provider}',
+  'providers.edit.body':
+    'Mức bản triển khai này đã thống nhất chi với nhà cung cấp, và điều gì xảy ra khi hết.',
+  'providers.edit.confirm': 'Lưu trần',
+  'providers.edit.done': 'Đã lưu trần cho {provider}',
+  'providers.edit.label': 'Tên',
+  'providers.edit.ceiling': 'Lệnh gọi bao gồm',
+  'providers.edit.ceiling.hint':
+    'Để trống nếu chưa thống nhất trần. Trống và 0 khác nhau: 0 kèm “từ chối” sẽ chặn mọi lệnh gọi.',
+  'providers.edit.ceiling.placeholder': 'Không có trần',
+  'providers.edit.window': 'Đo theo',
+  'providers.edit.window.month': 'Một tháng dương lịch',
+  'providers.edit.window.month.body':
+    'Hình thức thường thấy của hạn mức đi kèm.',
+  'providers.edit.window.day': 'Một ngày',
+  'providers.edit.window.day.body':
+    'Một số nhà cung cấp đo theo ngày — gói miễn phí của Geoapify là 3.000 tín dụng mỗi ngày.',
+  'providers.edit.policy': 'Khi chạm trần',
+  'providers.edit.policy.allow': 'Tiếp tục gọi và trả tiền',
+  'providers.edit.policy.allow.body':
+    'Lệnh gọi vẫn vượt trần và bảng điều khiển cảnh báo. Không có gì ngừng hoạt động.',
+  'providers.edit.policy.block': 'Từ chối các lệnh gọi tiếp theo',
+  'providers.edit.policy.block.body':
+    'Lệnh gọi bị chặn cho tới khi cửa sổ đặt lại. Thứ gì phụ thuộc nhà cung cấp này sẽ ngừng chạy — chỉ chọn khi đó là hỏng hóc rẻ hơn.',
+  'providers.edit.policy.block.refused':
+    'Không thể từ chối {provider}: nó không có đường dự phòng, nên chặn lệnh gọi sẽ làm ngừng tính năng chứ không giới hạn chi phí. Trần chỉ cảnh báo thì vẫn dùng được.',
+  'providers.edit.warn': 'Cảnh báo ở (%)',
+  'providers.edit.critical': 'Báo động ở (%)',
+  'providers.edit.thresholds.hint':
+    'Nơi thước đo chuyển vàng rồi đỏ. Cảnh báo không được cao hơn báo động.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

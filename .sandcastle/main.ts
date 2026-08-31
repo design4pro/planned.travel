@@ -58,6 +58,8 @@ import { z } from 'zod'
 import { adoptWipBranches } from './adopt'
 import { EDGE_COMMAND, parseEdgeLines } from './issue-edges'
 import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
+import { resolveRun } from './run-id'
+import { withUsageLimit } from './usage-limit'
 import { docker } from './sandbox'
 
 import type { GitOutput } from './adopt'
@@ -283,14 +285,15 @@ function runNumbersToday(): number[] {
 // the backlog side by side without sharing a branch, a worktree or an artifact
 // directory. With no `--run` one is allocated: a bare `pnpm sandcastle` is
 // always a NEW run that shares nothing. Resuming is therefore always deliberate
-// (`--run N`), which is why the banner below prints the numbers already on disk
-// — that is where the operator reads them off. Empty means "allocate one".
-const REQUESTED_RUN = flag('run', process.env.SANDCASTLE_RUN ?? '')
-if (REQUESTED_RUN !== '' && !/^[1-9][0-9]*$/.test(REQUESTED_RUN)) {
-  throw new Error(
-    `--run takes a positive integer (got ${JSON.stringify(REQUESTED_RUN)}). Example: pnpm sandcastle --run 2`,
-  )
-}
+// (`--run N`, or `--run <day>-N` for a run that started on an earlier day),
+// which is why the banner below prints the ids already on disk — that is where
+// the operator reads them off. `resolveRun` owns both shapes.
+const takenToday = runNumbersToday()
+const requestedRun = resolveRun(
+  flag('run', process.env.SANDCASTLE_RUN ?? ''),
+  today,
+  takenToday,
+)
 
 // Claiming the run number and locking it is one step, because the lock is the
 // only thing that distinguishes a run to resume from a run already in flight:
@@ -302,17 +305,15 @@ if (REQUESTED_RUN !== '' && !/^[1-9][0-9]*$/.test(REQUESTED_RUN)) {
 // worktree and trigger the lib's preserve-on-dirty path. A crashed run leaves
 // its pid behind; a dead pid is not a conflict, so a crash costs the operator
 // nothing — the next run takes the lock and resumes.
-const takenToday = runNumbersToday()
-let candidate =
-  REQUESTED_RUN === '' ? String((takenToday.at(-1) ?? 0) + 1) : REQUESTED_RUN
+let candidate = requestedRun.number
 let runId = ''
 let lockPath = ''
 for (;;) {
-  runId = `${today}-${candidate}`
+  runId = `${requestedRun.day}-${candidate}`
   lockPath = join('.sandcastle', 'logs', `run-${runId}`, 'run.lock')
   const holder = await readFile(lockPath, 'utf8').catch(() => '')
   if (holder === '' || !isAlive(Number(holder))) break
-  if (REQUESTED_RUN !== '') {
+  if (requestedRun.explicit) {
     throw new Error(
       `sandcastle run ${runId} is already live in process ${holder}. Start an ` +
         `independent run with \`pnpm sandcastle\`, or delete ${lockPath} if you are ` +
@@ -324,7 +325,6 @@ for (;;) {
   // operator stagger the launches.
   candidate = String(Number(candidate) + 1)
 }
-const RUN_NUMBER = candidate
 // Everything a run owns is keyed on this: its integration branch, its issue
 // branches, its artifacts and its lock. Same id = same run = resume; a new id is
 // a run that shares nothing with the others.
@@ -570,12 +570,14 @@ console.log(
   `sandcastle: run ${RUN_ID} — integration branch ${integrationBranch} in worktree ${integrationCwd}`,
 )
 // The only place the operator learns which runs exist, and so the only way
-// `--run N` is discoverable at the moment it is needed: to resume a run rather
-// than start yet another one.
-const otherRuns = takenToday.filter((n) => String(n) !== RUN_NUMBER)
+// `--run` is discoverable at the moment it is needed: to resume a run rather
+// than start yet another one. Compared on the full id, because a resumed run
+// from an earlier day may carry a number today has also used.
+const otherRuns = takenToday.filter((n) => `${today}-${n}` !== RUN_ID)
 if (otherRuns.length > 0) {
   console.log(
-    `  today's other runs: ${otherRuns.join(', ')} — resume one with \`pnpm sandcastle --run ${otherRuns[0]}\``,
+    `  today's other runs: ${otherRuns.join(', ')} — resume one with \`pnpm sandcastle --run ${otherRuns[0]}\`, ` +
+      `or an earlier day's with its full id (\`--run 20260830-4\`; \`git branch --list 'sandcastle/run-*'\` lists them)`,
   )
 }
 
@@ -606,21 +608,23 @@ function issueBranch(id: string): string {
 }
 
 async function runPlanner(scopeIds: string[]): Promise<Issue[]> {
-  const plan = await sandcastle.run({
-    // No install hook: the planner only reads issues via gh. And NEVER the
-    // default 'head' strategy — it bind-mounts the host working directory,
-    // where an install hook would grind through the darwin node_modules
-    // (measured: 10+ min vs 13 s fresh) and could corrupt them.
-    sandbox: docker(),
-    cwd: integrationCwd,
-    branchStrategy: { type: 'merge-to-head' },
-    name: 'planner',
-    maxIterations: 1,
-    agent: sandcastle.claudeCode(PLANNER_MODEL),
-    promptFile: './.sandcastle/plan-prompt.md',
-    promptArgs: { RUN_ID, SCOPE: planScope(scopeIds) },
-    output: sandcastle.Output.object({ tag: 'plan', schema: planSchema }),
-  })
+  const plan = await withUsageLimit('planner', () =>
+    sandcastle.run({
+      // No install hook: the planner only reads issues via gh. And NEVER the
+      // default 'head' strategy — it bind-mounts the host working directory,
+      // where an install hook would grind through the darwin node_modules
+      // (measured: 10+ min vs 13 s fresh) and could corrupt them.
+      sandbox: docker(),
+      cwd: integrationCwd,
+      branchStrategy: { type: 'merge-to-head' },
+      name: 'planner',
+      maxIterations: 1,
+      agent: sandcastle.claudeCode(PLANNER_MODEL),
+      promptFile: './.sandcastle/plan-prompt.md',
+      promptArgs: { RUN_ID, SCOPE: planScope(scopeIds) },
+      output: sandcastle.Output.object({ tag: 'plan', schema: planSchema }),
+    }),
+  )
   // The prompt is an instruction; this is the enforcement. A planned id outside
   // the scope is dropped, loudly — it means the agent went looking, and what it
   // finds that way is by definition work nobody cleared.
@@ -745,14 +749,19 @@ async function runDeepReview(
   signal?: AbortSignal,
 ): Promise<void> {
   try {
-    const run = await sandbox.run({
-      signal,
-      name: 'deep-reviewer',
-      maxIterations: 1,
-      agent: sandcastle.claudeCode(DEEP_REVIEW_MODEL),
-      promptFile: './.sandcastle/deep-review-prompt.md',
-      promptArgs: { BRANCH: issue.branch },
-    })
+    const run = await withUsageLimit(
+      'deep-reviewer',
+      () =>
+        sandbox.run({
+          signal,
+          name: 'deep-reviewer',
+          maxIterations: 1,
+          agent: sandcastle.claudeCode(DEEP_REVIEW_MODEL),
+          promptFile: './.sandcastle/deep-review-prompt.md',
+          promptArgs: { BRANCH: issue.branch },
+        }),
+      { signal },
+    )
     const raw = run.stdout.match(/<deep-review>([\s\S]*?)<\/deep-review>/)?.[1]
     if (raw === undefined) {
       console.log(
@@ -865,20 +874,25 @@ async function runPixelCritic(
     const oursLabel = Number.parseInt(issue.id, 10) % 2 === 0 ? 'A' : 'B'
     const refLabel = oursLabel === 'A' ? 'B' : 'A'
 
-    const capture = await sandbox.run({
-      signal,
-      name: 'pixel-capture',
-      maxIterations: 1,
-      agent: sandcastle.claudeCode(CRITIC_MODEL),
-      promptFile: './.sandcastle/pixel-capture-prompt.md',
-      promptArgs: {
-        TASK_ID: issue.id,
-        ISSUE_TITLE: issue.title,
-        SHOTS_DIR: shotsDir,
-        OURS_LABEL: oursLabel,
-        REF_LABEL: refLabel,
-      },
-    })
+    const capture = await withUsageLimit(
+      'pixel-capture',
+      () =>
+        sandbox.run({
+          signal,
+          name: 'pixel-capture',
+          maxIterations: 1,
+          agent: sandcastle.claudeCode(CRITIC_MODEL),
+          promptFile: './.sandcastle/pixel-capture-prompt.md',
+          promptArgs: {
+            TASK_ID: issue.id,
+            ISSUE_TITLE: issue.title,
+            SHOTS_DIR: shotsDir,
+            OURS_LABEL: oursLabel,
+            REF_LABEL: refLabel,
+          },
+        }),
+      { signal },
+    )
     const capRaw = capture.stdout.match(/<capture>([\s\S]*?)<\/capture>/)?.[1]
     if (capRaw === undefined) {
       console.log(`  [${issue.id}] pixel-critic: no <capture> block — skipped`)
@@ -892,18 +906,23 @@ async function runPixelCritic(
       return
     }
 
-    const critic = await sandbox.run({
-      signal,
-      name: 'pixel-critic',
-      maxIterations: 1,
-      agent: sandcastle.claudeCode(CRITIC_MODEL),
-      promptFile: './.sandcastle/pixel-critic-prompt.md',
-      promptArgs: {
-        TASK_ID: issue.id,
-        ISSUE_TITLE: issue.title,
-        SHOTS_DIR: shotsDir,
-      },
-    })
+    const critic = await withUsageLimit(
+      'pixel-critic',
+      () =>
+        sandbox.run({
+          signal,
+          name: 'pixel-critic',
+          maxIterations: 1,
+          agent: sandcastle.claudeCode(CRITIC_MODEL),
+          promptFile: './.sandcastle/pixel-critic-prompt.md',
+          promptArgs: {
+            TASK_ID: issue.id,
+            ISSUE_TITLE: issue.title,
+            SHOTS_DIR: shotsDir,
+          },
+        }),
+      { signal },
+    )
     const visRaw = critic.stdout.match(/<visual>([\s\S]*?)<\/visual>/)?.[1]
     if (visRaw === undefined) {
       console.log(`  [${issue.id}] pixel-critic: no <visual> block — skipped`)
@@ -1015,31 +1034,41 @@ async function workIssue(
   }
 
   try {
-    let implement = await sandbox.run({
-      signal,
-      name: 'implementer',
-      maxIterations: 100,
-      agent: sandcastle.claudeCode(IMPLEMENTER_MODEL),
-      promptFile: './.sandcastle/implement-prompt.md',
-      promptArgs: {
-        TASK_ID: issue.id,
-        ISSUE_TITLE: issue.title,
-        BRANCH: issue.branch,
-      },
-    })
+    let implement = await withUsageLimit(
+      'implementer',
+      () =>
+        sandbox.run({
+          signal,
+          name: 'implementer',
+          maxIterations: 100,
+          agent: sandcastle.claudeCode(IMPLEMENTER_MODEL),
+          promptFile: './.sandcastle/implement-prompt.md',
+          promptArgs: {
+            TASK_ID: issue.id,
+            ISSUE_TITLE: issue.title,
+            BRANCH: issue.branch,
+          },
+        }),
+      { signal },
+    )
     commits.push(...implement.commits)
     noteWip()
 
     if (commits.length === 0) return { issue, ok: false, commits }
 
-    const review = await sandbox.run({
-      signal,
-      name: 'reviewer',
-      maxIterations: 1,
-      agent: sandcastle.claudeCode(REVIEWER_MODEL),
-      promptFile: './.sandcastle/review-prompt.md',
-      promptArgs: { BRANCH: issue.branch },
-    })
+    const review = await withUsageLimit(
+      'reviewer',
+      () =>
+        sandbox.run({
+          signal,
+          name: 'reviewer',
+          maxIterations: 1,
+          agent: sandcastle.claudeCode(REVIEWER_MODEL),
+          promptFile: './.sandcastle/review-prompt.md',
+          promptArgs: { BRANCH: issue.branch },
+        }),
+      { signal },
+    )
     commits.push(...review.commits)
 
     for (let attempt = 1; attempt <= FIX_BUDGET + 1; attempt++) {
@@ -1091,7 +1120,11 @@ async function workIssue(
       console.log(
         `  [${issue.id}] validation failed — resume fix ${attempt}/${FIX_BUDGET}`,
       )
-      if (implement.resume === undefined) {
+      // Destructured, not read through `implement` at call time: `implement` is a `let` the line
+      // below reassigns, so a closure over it loses this narrowing. `resume` is a closure the lib
+      // builds per result and takes no `this`, so detaching it changes nothing about the call.
+      const { resume } = implement
+      if (resume === undefined) {
         await markBlocked(
           sandbox,
           issue,
@@ -1100,16 +1133,21 @@ async function workIssue(
         )
         return { issue, ok: false, commits }
       }
-      const fixPrompt = readFile('./.sandcastle/fix-prompt.md', 'utf8')
-      implement = await implement.resume(
-        (await fixPrompt)
-          .replaceAll('{{FAILURE_DIGEST}}', failureDigest(verdict, attempt))
-          .replaceAll('{{ATTEMPT}}', String(attempt))
-          .replaceAll('{{BUDGET}}', String(FIX_BUDGET)),
-        // sandcastle 0.12.0 bug: resume() spreads the original run options and
-        // clears promptFile but NOT promptArgs, and an inline prompt with
-        // promptArgs is rejected (PromptError). Empty override passes.
-        { promptArgs: {}, signal },
+      const fixPrompt = await readFile('./.sandcastle/fix-prompt.md', 'utf8')
+      implement = await withUsageLimit(
+        'implementer (fix)',
+        () =>
+          resume(
+            fixPrompt
+              .replaceAll('{{FAILURE_DIGEST}}', failureDigest(verdict, attempt))
+              .replaceAll('{{ATTEMPT}}', String(attempt))
+              .replaceAll('{{BUDGET}}', String(FIX_BUDGET)),
+            // sandcastle 0.12.0 bug: resume() spreads the original run options and
+            // clears promptFile but NOT promptArgs, and an inline prompt with
+            // promptArgs is rejected (PromptError). Empty override passes.
+            { promptArgs: {}, signal },
+          ),
+        { signal },
       )
       commits.push(...implement.commits)
     }
@@ -1121,25 +1159,27 @@ async function workIssue(
 }
 
 async function mergeBranches(passing: Array<{ issue: Issue }>): Promise<void> {
-  await sandcastle.run({
-    hooks,
-    sandbox: docker(),
-    cwd: integrationCwd,
-    // Temp branch off HEAD; the agent merges issue branches into it, then
-    // sandcastle merges the temp branch back to HEAD. Same net effect as
-    // 'head', but the container never installs over the host node_modules.
-    branchStrategy: { type: 'merge-to-head' },
-    name: 'merger',
-    maxIterations: 1,
-    agent: sandcastle.claudeCode(REVIEWER_MODEL),
-    promptFile: './.sandcastle/merge-prompt.md',
-    promptArgs: {
-      BRANCHES: passing.map((p) => `- ${p.issue.branch}`).join('\n'),
-      ISSUES: passing
-        .map((p) => `- ${p.issue.id}: ${p.issue.title}`)
-        .join('\n'),
-    },
-  })
+  await withUsageLimit('merger', () =>
+    sandcastle.run({
+      hooks,
+      sandbox: docker(),
+      cwd: integrationCwd,
+      // Temp branch off HEAD; the agent merges issue branches into it, then
+      // sandcastle merges the temp branch back to HEAD. Same net effect as
+      // 'head', but the container never installs over the host node_modules.
+      branchStrategy: { type: 'merge-to-head' },
+      name: 'merger',
+      maxIterations: 1,
+      agent: sandcastle.claudeCode(REVIEWER_MODEL),
+      promptFile: './.sandcastle/merge-prompt.md',
+      promptArgs: {
+        BRANCHES: passing.map((p) => `- ${p.issue.branch}`).join('\n'),
+        ISSUES: passing
+          .map((p) => `- ${p.issue.id}: ${p.issue.title}`)
+          .join('\n'),
+      },
+    }),
+  )
 }
 
 async function runAuditor(
@@ -1163,15 +1203,17 @@ async function runAuditor(
     hooks,
   })
   try {
-    const audit = await sandbox.run({
-      name: 'auditor',
-      maxIterations: 1,
-      agent: sandcastle.claudeCode(AUDITOR_MODEL),
-      promptFile: './.sandcastle/audit-prompt.md',
-      promptArgs: {
-        ISSUES: closed.map((i) => `- ${i.id}: ${i.title}`).join('\n'),
-      },
-    })
+    const audit = await withUsageLimit('auditor', () =>
+      sandbox.run({
+        name: 'auditor',
+        maxIterations: 1,
+        agent: sandcastle.claudeCode(AUDITOR_MODEL),
+        promptFile: './.sandcastle/audit-prompt.md',
+        promptArgs: {
+          ISSUES: closed.map((i) => `- ${i.id}: ${i.title}`).join('\n'),
+        },
+      }),
+    )
     // sandbox.run() has no `output` option (only top-level run() does) —
     // extract and validate the <audit> block from stdout by hand.
     const raw = audit.stdout.match(/<audit>([\s\S]*?)<\/audit>/)?.[1]

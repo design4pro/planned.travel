@@ -461,6 +461,95 @@ const messages = {
   'runs.notCoordinator.title': 'This deployment does not coordinate the fleet',
   'runs.notCoordinator.body':
     'The run registry is bound on staging alone, and deliberately: a second registry would let two fleets each believe they hold the backlog, which is the one thing it exists to prevent. Read the fleet on staging.',
+  'nav.providers': 'Providers',
+  'nav.providers.description': 'Outbound calls and their ceilings',
+  'providers.error.title': 'The provider meters could not be read',
+  'providers.list.label': 'Services',
+  'providers.status.planned': 'Not integrated',
+  'providers.status.planned.description':
+    'Nothing calls this service yet, so there is nothing to count. It is listed so a ceiling can be agreed before the first call rather than after the first invoice.',
+  'providers.policy.allow': 'Bills through',
+  'providers.policy.block': 'Refuses at the ceiling',
+  'providers.badge.blocked': {
+    one: 'One call refused',
+    other: '{calls} calls refused',
+  },
+  'providers.limit.none': 'No ceiling agreed · {used} this month',
+  'providers.limit.value': '{used} of {limit}',
+  'providers.limit.window.day': 'Today',
+  'providers.limit.window.month': 'This month',
+  'providers.measuring.none': 'Nothing measured yet',
+  'providers.measuring.since': 'Measuring since {date}',
+  'providers.stat.calls': 'Calls this month',
+  'providers.stat.calls.caption': 'Across every integrated service',
+  'providers.stat.errors': 'Failed calls',
+  'providers.stat.errors.caption':
+    'Counted as calls as well, because most vendors bill them',
+  'providers.stat.nearLimit': 'Near a ceiling',
+  'providers.stat.nearLimit.caption': 'Services past their warning threshold',
+  'providers.stat.blocked': 'Refused calls',
+  'providers.stat.blocked.none': 'Nothing has been turned away',
+  'providers.stat.blocked.some': 'Demand a ceiling turned away',
+  'providers.forecast.label': 'Forecast',
+  'providers.forecast.provider': 'Service',
+  'providers.forecast.monthEnd': 'By month end',
+  'providers.forecast.runRate': 'Per month at this rate',
+  'providers.forecast.perWorkspace': 'Per workspace, per month',
+  'providers.forecast.noWorkspaceTraffic': 'No workspace traffic to average',
+  'providers.forecast.window': {
+    one: 'Projected from one hour of measurement.',
+    other: 'Projected from {hours} hours of measurement.',
+  },
+  'providers.forecast.tooEarly': {
+    one: 'Only one hour measured so far — not enough to project from. Extrapolating a month from less than a day would be arithmetic rather than a forecast.',
+    other:
+      'Only {hours} hours measured so far — not enough to project from. Extrapolating a month from less than a day would be arithmetic rather than a forecast.',
+  },
+  'providers.forecast.atWorkspaces': 'At how many workspaces',
+  'providers.forecast.callsEach': 'Calls each per month',
+  'providers.forecast.projected': 'About {calls} calls a month.',
+  'providers.workspaces.label': 'Busiest workspaces',
+  'providers.workspaces.platform': 'Platform (no workspace)',
+  'providers.workspaces.empty.title': 'No calls attributed yet',
+  'providers.workspaces.empty.description':
+    'A call made for a workspace is recorded against it. Cron work and platform mail belong to no workspace and are counted apart.',
+  'providers.readOnly':
+    'You can read these meters but not move a ceiling. Changing a limit or its policy needs the provider:configure statement.',
+  'providers.status.planned.agreed.month':
+    'Ceiling agreed: {limit} a month. It applies from the first call, once a client exists.',
+  'providers.status.planned.agreed.day':
+    'Ceiling agreed: {limit} a day. It applies from the first call, once a client exists.',
+  'providers.edit.button': 'Edit',
+  'providers.edit.title': 'Ceiling for {provider}',
+  'providers.edit.body':
+    'What this deployment has agreed to spend with the vendor, and what happens when it runs out.',
+  'providers.edit.confirm': 'Save ceiling',
+  'providers.edit.done': 'Ceiling saved for {provider}',
+  'providers.edit.label': 'Name',
+  'providers.edit.ceiling': 'Calls included',
+  'providers.edit.ceiling.hint':
+    'Leave empty for no agreed ceiling. Empty and zero are different: zero under “refuse” turns every call away.',
+  'providers.edit.ceiling.placeholder': 'No ceiling',
+  'providers.edit.window': 'Measured over',
+  'providers.edit.window.month': 'A calendar month',
+  'providers.edit.window.month.body':
+    'The usual shape of an included allowance.',
+  'providers.edit.window.day': 'A day',
+  'providers.edit.window.day.body':
+    'Some vendors meter daily instead — Geoapify’s free plan is 3,000 credits a day.',
+  'providers.edit.policy': 'At the ceiling',
+  'providers.edit.policy.allow': 'Keep calling, and pay',
+  'providers.edit.policy.allow.body':
+    'Calls carry on past the ceiling and the console warns. Nothing stops working.',
+  'providers.edit.policy.block': 'Refuse further calls',
+  'providers.edit.policy.block.body':
+    'Calls are turned away until the window resets. Whatever depends on this vendor stops working, so choose it only where that is the cheaper failure.',
+  'providers.edit.policy.block.refused':
+    '{provider} cannot be refused: it has no fallback, so turning its calls away would stop the feature rather than cap its cost. A ceiling that only warns is still available.',
+  'providers.edit.warn': 'Warn at (%)',
+  'providers.edit.critical': 'Alarm at (%)',
+  'providers.edit.thresholds.hint':
+    'Where the meter turns amber and red. Warn must not be above alarm.',
 } as const satisfies NamespaceMessages
 
 export default messages

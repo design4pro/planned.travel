@@ -27,7 +27,14 @@
  *    as by vitest.
  */
 
-import { beforeEach, afterEach, describe, expect, expectTypeOf, it } from 'vitest'
+import {
+  beforeEach,
+  afterEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+} from 'vitest'
 import { eq } from 'drizzle-orm'
 import { getTableConfig } from 'drizzle-orm/sqlite-core'
 import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
@@ -91,7 +98,9 @@ describe('the admin plugin columns on user and session', () => {
     expect(Object.keys(user)).toEqual(
       expect.arrayContaining(['role', 'banned', 'banReason', 'banExpires']),
     )
-    expect(Object.keys(session)).toEqual(expect.arrayContaining(['impersonatedBy']))
+    expect(Object.keys(session)).toEqual(
+      expect.arrayContaining(['impersonatedBy']),
+    )
 
     // The SQL spellings are not keys. A key named this way is the runtime failure described above.
     for (const wrong of ['ban_reason', 'ban_expires']) {
@@ -122,7 +131,9 @@ describe('the admin plugin columns on user and session', () => {
 
 describe('platform_audit_log declaration', () => {
   it('carries the twelve columns of docs/ACCESS.md §4.1 and no thirteenth', () => {
-    expect(getTableConfig(platformAuditLog).columns.map((column) => column.name)).toEqual([
+    expect(
+      getTableConfig(platformAuditLog).columns.map((column) => column.name),
+    ).toEqual([
       'id',
       'actor_user_id',
       'actor_kind',
@@ -139,14 +150,18 @@ describe('platform_audit_log declaration', () => {
   })
 
   it('carries no organization_id, because a platform action belongs to no tenant', () => {
-    const names = getTableConfig(platformAuditLog).columns.map((column) => column.name)
+    const names = getTableConfig(platformAuditLog).columns.map(
+      (column) => column.name,
+    )
     expect(names).not.toContain('organization_id')
   })
 
   it('declares all five indexes and no two-column entity index beside the three-column one', () => {
     const indexes = getTableConfig(platformAuditLog).indexes.map((entry) => ({
       name: entry.config.name,
-      columns: entry.config.columns.map((column) => ('name' in column ? column.name : '')),
+      columns: entry.config.columns.map((column) =>
+        'name' in column ? column.name : '',
+      ),
     }))
 
     expect(indexes).toEqual([
@@ -154,8 +169,14 @@ describe('platform_audit_log declaration', () => {
         name: 'platform_audit_log_entity_idx',
         columns: ['entity_type', 'entity_id', 'created_at'],
       },
-      { name: 'platform_audit_log_actor_idx', columns: ['actor_user_id', 'created_at'] },
-      { name: 'platform_audit_log_action_idx', columns: ['action', 'created_at'] },
+      {
+        name: 'platform_audit_log_actor_idx',
+        columns: ['actor_user_id', 'created_at'],
+      },
+      {
+        name: 'platform_audit_log_action_idx',
+        columns: ['action', 'created_at'],
+      },
       { name: 'platform_audit_log_token_idx', columns: ['token_id'] },
       { name: 'platform_audit_log_created_at_idx', columns: ['created_at'] },
     ])
@@ -165,7 +186,9 @@ describe('platform_audit_log declaration', () => {
     // The order is load-bearing: SQLite reports the first constraint a row violates in declaration
     // order, so a `system` row naming a token is reported against the kind it claimed to be rather
     // than against the converse rule it also broke. The behavioural half is asserted further down.
-    expect(getTableConfig(platformAuditLog).checks.map((entry) => entry.name)).toEqual([
+    expect(
+      getTableConfig(platformAuditLog).checks.map((entry) => entry.name),
+    ).toEqual([
       'platform_audit_log_actor_kind_chk',
       'platform_audit_log_agent_token_chk',
       'platform_audit_log_system_actor_chk',
@@ -179,8 +202,12 @@ describe('platform_audit_log declaration', () => {
     const references = config.foreignKeys.map((key) => key.reference())
 
     expect(references).toHaveLength(1)
-    expect(references[0]?.columns.map((column) => column.name)).toEqual(['token_id'])
-    expect(references[0]?.foreignColumns.map((column) => column.name)).toEqual(['id'])
+    expect(references[0]?.columns.map((column) => column.name)).toEqual([
+      'token_id',
+    ])
+    expect(references[0]?.foreignColumns.map((column) => column.name)).toEqual([
+      'id',
+    ])
     // `restrict`, which is what docs/ACCESS.md §4.1's type column says. `SET NULL` — the wording
     // it replaced — is unreachable here: it violates the agent CHECK on the only rows able to name
     // a token, so the DELETE was always refused. The two tests further down pin the behaviour.
@@ -202,27 +229,39 @@ describe('platform_audit_log declaration', () => {
  * `tsc --noEmit` as well as run by vitest.
  */
 describe('the four vocabulary columns, narrowed in TypeScript', () => {
-  it('types entity_type as the eight entities of docs/ACCESS.md §4.2', () => {
-    expectTypeOf<NewPlatformAuditLogEntry['entityType']>().toEqualTypeOf<PlatformAuditEntityType>()
-    expectTypeOf<PlatformAuditLogEntry['entityType']>().toEqualTypeOf<PlatformAuditEntityType>()
+  it('types entity_type as the nine entities of docs/ACCESS.md §4.2', () => {
+    expectTypeOf<
+      NewPlatformAuditLogEntry['entityType']
+    >().toEqualTypeOf<PlatformAuditEntityType>()
+    expectTypeOf<
+      PlatformAuditLogEntry['entityType']
+    >().toEqualTypeOf<PlatformAuditEntityType>()
     expectTypeOf<'trip'>().not.toExtend<PlatformAuditEntityType>()
   })
 
-  it('types action as the thirty-one actions of docs/ACCESS.md §4.2', () => {
-    expectTypeOf<NewPlatformAuditLogEntry['action']>().toEqualTypeOf<PlatformAuditAction>()
-    expectTypeOf<PlatformAuditLogEntry['action']>().toEqualTypeOf<PlatformAuditAction>()
+  it('types action as the thirty-three actions of docs/ACCESS.md §4.2', () => {
+    expectTypeOf<
+      NewPlatformAuditLogEntry['action']
+    >().toEqualTypeOf<PlatformAuditAction>()
+    expectTypeOf<
+      PlatformAuditLogEntry['action']
+    >().toEqualTypeOf<PlatformAuditAction>()
     expectTypeOf<'NOT A DOTTED ACTION'>().not.toExtend<PlatformAuditAction>()
     expectTypeOf<'trip.hijacked'>().not.toExtend<PlatformAuditAction>()
 
-    expect(PLATFORM_AUDIT_ACTIONS).toHaveLength(31)
-    // §4.2: sixteen two-segment catalogue actions and fifteen three-segment platform ones.
-    const platform = PLATFORM_AUDIT_ACTIONS.filter((action) => action.startsWith('platform.'))
+    expect(PLATFORM_AUDIT_ACTIONS).toHaveLength(33)
+    // §4.2: eighteen two-segment actions and fifteen three-segment platform ones.
+    const platform = PLATFORM_AUDIT_ACTIONS.filter((action) =>
+      action.startsWith('platform.'),
+    )
     expect(platform).toHaveLength(15)
-    expect(platform.every((action) => action.split('.').length === 3)).toBe(true)
+    expect(platform.every((action) => action.split('.').length === 3)).toBe(
+      true,
+    )
     expect(
-      PLATFORM_AUDIT_ACTIONS.filter((action) => !action.startsWith('platform.')).every(
-        (action) => action.split('.').length === 2,
-      ),
+      PLATFORM_AUDIT_ACTIONS.filter(
+        (action) => !action.startsWith('platform.'),
+      ).every((action) => action.split('.').length === 2),
     ).toBe(true)
   })
 
@@ -240,10 +279,12 @@ describe('the four vocabulary columns, narrowed in TypeScript', () => {
   })
 
   it('types actor_kind and actor_role as their three names each', () => {
-    expectTypeOf<NewPlatformAuditLogEntry['actorKind']>().toEqualTypeOf<PlatformActorKind>()
-    expectTypeOf<NonNullable<NewPlatformAuditLogEntry['actorRole']>>().toEqualTypeOf<
-      PlatformActorRole
-    >()
+    expectTypeOf<
+      NewPlatformAuditLogEntry['actorKind']
+    >().toEqualTypeOf<PlatformActorKind>()
+    expectTypeOf<
+      NonNullable<NewPlatformAuditLogEntry['actorRole']>
+    >().toEqualTypeOf<PlatformActorRole>()
     expectTypeOf<'robot'>().not.toExtend<PlatformActorKind>()
     expectTypeOf<'wizard'>().not.toExtend<PlatformActorRole>()
   })
@@ -255,19 +296,23 @@ describe('the four vocabulary columns, narrowed in TypeScript', () => {
     // fourth role added to either side without the other fails here, at the type level and at
     // runtime both.
     expectTypeOf<PlatformActorRole>().toEqualTypeOf<PlatformRole>()
-    expect([...PLATFORM_ACTOR_ROLES].sort()).toEqual([...PLATFORM_ROLES_BY_PRECEDENCE].sort())
+    expect([...PLATFORM_ACTOR_ROLES].sort()).toEqual(
+      [...PLATFORM_ROLES_BY_PRECEDENCE].sort(),
+    )
   })
 
   it('narrows the nested changes payload rather than reusing the flat tenant one', () => {
-    expectTypeOf<NonNullable<NewPlatformAuditLogEntry['changes']>>().toEqualTypeOf<
-      PlatformAuditChanges
-    >()
+    expectTypeOf<
+      NonNullable<NewPlatformAuditLogEntry['changes']>
+    >().toEqualTypeOf<PlatformAuditChanges>()
   })
 })
 
 describe('staff_api_tokens declaration', () => {
   it('matches docs/CATALOG.md §2.10 column for column', () => {
-    expect(getTableConfig(staffApiTokens).columns.map((column) => column.name)).toEqual([
+    expect(
+      getTableConfig(staffApiTokens).columns.map((column) => column.name),
+    ).toEqual([
       'id',
       'user_id',
       'name',
@@ -292,18 +337,32 @@ describe('staff_api_tokens declaration', () => {
     const indexes = getTableConfig(staffApiTokens).indexes.map((entry) => ({
       name: entry.config.name,
       unique: entry.config.unique,
-      columns: entry.config.columns.map((column) => ('name' in column ? column.name : '')),
+      columns: entry.config.columns.map((column) =>
+        'name' in column ? column.name : '',
+      ),
     }))
 
     expect(indexes).toEqual([
-      { name: 'staff_api_tokens_token_hash_unq', unique: true, columns: ['token_hash'] },
+      {
+        name: 'staff_api_tokens_token_hash_unq',
+        unique: true,
+        columns: ['token_hash'],
+      },
       {
         name: 'staff_api_tokens_user_revoked_idx',
         unique: false,
         columns: ['user_id', 'revoked_at'],
       },
-      { name: 'staff_api_tokens_expires_at_idx', unique: false, columns: ['expires_at'] },
-      { name: 'staff_api_tokens_created_by_idx', unique: false, columns: ['created_by'] },
+      {
+        name: 'staff_api_tokens_expires_at_idx',
+        unique: false,
+        columns: ['expires_at'],
+      },
+      {
+        name: 'staff_api_tokens_created_by_idx',
+        unique: false,
+        columns: ['created_by'],
+      },
     ])
   })
 })
@@ -324,7 +383,9 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
    * The default actor is a `human` with both identity columns filled, which is what
    * `platform_audit_log_actor_identity_chk` requires of every kind but `system`.
    */
-  function entry(overrides: Partial<NewPlatformAuditLogEntry>): NewPlatformAuditLogEntry {
+  function entry(
+    overrides: Partial<NewPlatformAuditLogEntry>,
+  ): NewPlatformAuditLogEntry {
     return {
       actorKind: 'human',
       actorUserId: newId(),
@@ -349,7 +410,9 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
     }
   }
 
-  async function append(overrides: Partial<NewPlatformAuditLogEntry>): Promise<void> {
+  async function append(
+    overrides: Partial<NewPlatformAuditLogEntry>,
+  ): Promise<void> {
     await harness.db.insert(platformAuditLog).values(entry(overrides))
   }
 
@@ -369,7 +432,11 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
   }
 
   it('accepts a human row carrying an actor and a role', async () => {
-    await append({ actorKind: 'human', actorUserId: newId(), actorRole: 'admin' })
+    await append({
+      actorKind: 'human',
+      actorUserId: newId(),
+      actorRole: 'admin',
+    })
 
     const rows = await harness.db.select().from(platformAuditLog)
     expect(rows).toHaveLength(1)
@@ -379,14 +446,26 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
 
   it('rejects an agent row with no token', async () => {
     const error = await captureError(() =>
-      append({ actorKind: 'agent', actorUserId: newId(), actorRole: 'curator', tokenId: null }),
+      append({
+        actorKind: 'agent',
+        actorUserId: newId(),
+        actorRole: 'curator',
+        tokenId: null,
+      }),
     )
-    expect(constraintName(error)).toContain('platform_audit_log_agent_token_chk')
+    expect(constraintName(error)).toContain(
+      'platform_audit_log_agent_token_chk',
+    )
   })
 
   it('accepts an agent row that names its credential', async () => {
     const tokenId = await seedToken()
-    await append({ actorKind: 'agent', actorUserId: newId(), actorRole: 'curator', tokenId })
+    await append({
+      actorKind: 'agent',
+      actorUserId: newId(),
+      actorRole: 'curator',
+      tokenId,
+    })
 
     const rows = await harness.db.select().from(platformAuditLog)
     expect(rows[0]?.tokenId).toBe(tokenId)
@@ -394,42 +473,71 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
 
   it('rejects a human row carrying a token, because only an agent arrives on one', async () => {
     const tokenId = await seedToken()
-    const error = await captureError(() => append({ actorKind: 'human', tokenId }))
-    expect(constraintName(error)).toContain('platform_audit_log_token_agent_only_chk')
+    const error = await captureError(() =>
+      append({ actorKind: 'human', tokenId }),
+    )
+    expect(constraintName(error)).toContain(
+      'platform_audit_log_token_agent_only_chk',
+    )
   })
 
   it('rejects a human row with no actor', async () => {
-    const error = await captureError(() => append({ actorKind: 'human', actorUserId: null }))
-    expect(constraintName(error)).toContain('platform_audit_log_actor_identity_chk')
+    const error = await captureError(() =>
+      append({ actorKind: 'human', actorUserId: null }),
+    )
+    expect(constraintName(error)).toContain(
+      'platform_audit_log_actor_identity_chk',
+    )
   })
 
   it('rejects a human row with no role', async () => {
-    const error = await captureError(() => append({ actorKind: 'human', actorRole: null }))
-    expect(constraintName(error)).toContain('platform_audit_log_actor_identity_chk')
+    const error = await captureError(() =>
+      append({ actorKind: 'human', actorRole: null }),
+    )
+    expect(constraintName(error)).toContain(
+      'platform_audit_log_actor_identity_chk',
+    )
   })
 
   it('rejects an agent row with no actor, even though it names a token', async () => {
     const tokenId = await seedToken()
     const error = await captureError(() =>
-      append({ actorKind: 'agent', actorUserId: null, actorRole: 'curator', tokenId }),
+      append({
+        actorKind: 'agent',
+        actorUserId: null,
+        actorRole: 'curator',
+        tokenId,
+      }),
     )
-    expect(constraintName(error)).toContain('platform_audit_log_actor_identity_chk')
+    expect(constraintName(error)).toContain(
+      'platform_audit_log_actor_identity_chk',
+    )
   })
 
   it('rejects a system row that names an actor', async () => {
-    const error = await captureError(() => append(systemEntry({ actorUserId: newId() })))
-    expect(constraintName(error)).toContain('platform_audit_log_system_actor_chk')
+    const error = await captureError(() =>
+      append(systemEntry({ actorUserId: newId() })),
+    )
+    expect(constraintName(error)).toContain(
+      'platform_audit_log_system_actor_chk',
+    )
   })
 
   it('rejects a system row that names a role', async () => {
-    const error = await captureError(() => append(systemEntry({ actorRole: 'admin' })))
-    expect(constraintName(error)).toContain('platform_audit_log_system_actor_chk')
+    const error = await captureError(() =>
+      append(systemEntry({ actorRole: 'admin' })),
+    )
+    expect(constraintName(error)).toContain(
+      'platform_audit_log_system_actor_chk',
+    )
   })
 
   it('rejects a system row that names a token', async () => {
     const tokenId = await seedToken()
     const error = await captureError(() => append(systemEntry({ tokenId })))
-    expect(constraintName(error)).toContain('platform_audit_log_system_actor_chk')
+    expect(constraintName(error)).toContain(
+      'platform_audit_log_system_actor_chk',
+    )
   })
 
   it('accepts a system row with no actor, no role and no token', async () => {
@@ -452,17 +560,18 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
 
   it('leaves entity_type unconstrained in SQL, which is what docs/ACCESS.md §4.1 asks for', async () => {
     // §4.1's type column marks `actor_kind` as text + enumCheck() and `entity_type` as plain text,
-    // with the eight values in the Notes column; `action` is closed the same way in §4.2 and is
-    // plain text too. A ninth entity type therefore costs an amendment to §4.2's mapping table and
+    // with the nine values in the Notes column; `action` is closed the same way in §4.2 and is
+    // plain text too. A tenth entity type therefore costs an amendment to §4.2's mapping table and
     // not a recreate of a table that may not be recreated. This test pins the *absence* of the
     // CHECK, so a future round cannot quietly add one; the narrowing that does the work is the
-    // `$type` asserted in the block below, which is why the ninth value needs a cast to get here.
+    // `$type` asserted in the block below, which is why an undeclared value needs a cast to get
+    // here.
     await append({ entityType: pastTheTypeSystem<'entityType'>('trip') })
 
     const rows = await harness.db.select().from(platformAuditLog)
     expect(rows[0]?.entityType).toBe('trip')
     expect(PLATFORM_AUDIT_ENTITY_TYPES).not.toContain('trip')
-    expect(PLATFORM_AUDIT_ENTITY_TYPES).toHaveLength(8)
+    expect(PLATFORM_AUDIT_ENTITY_TYPES).toHaveLength(9)
   })
 
   it('leaves action unconstrained in SQL for the same reason', async () => {
@@ -480,7 +589,12 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
     // `restrict` produces the same outcome and names it: the history keeps its attribution, and
     // the refusal reads as one.
     const tokenId = await seedToken()
-    await append({ actorKind: 'agent', actorUserId: newId(), actorRole: 'curator', tokenId })
+    await append({
+      actorKind: 'agent',
+      actorUserId: newId(),
+      actorRole: 'curator',
+      tokenId,
+    })
 
     const error = await captureError(() =>
       harness.db.delete(staffApiTokens).where(eq(staffApiTokens.id, tokenId)),
@@ -494,7 +608,9 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
   it('still deletes a credential no audit row names', async () => {
     const tokenId = await seedToken()
 
-    await harness.db.delete(staffApiTokens).where(eq(staffApiTokens.id, tokenId))
+    await harness.db
+      .delete(staffApiTokens)
+      .where(eq(staffApiTokens.id, tokenId))
 
     expect(await harness.db.select().from(staffApiTokens)).toHaveLength(0)
   })
@@ -507,6 +623,9 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
     })
 
     const rows = await harness.db.select().from(platformAuditLog)
-    expect(rows[0]?.changes).toEqual({ before: { role: null }, after: { role: 'curator' } })
+    expect(rows[0]?.changes).toEqual({
+      before: { role: null },
+      after: { role: 'curator' },
+    })
   })
 })
