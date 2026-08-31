@@ -153,7 +153,19 @@ import {
   userSettingsRepository,
 } from '../settings'
 import { createTag, tagsRepository } from '../tags'
-import { createTransport, transportsRepository } from '../transports'
+import {
+  createTransport,
+  deleteTransport,
+  getTransport,
+  listDayTransports,
+  listTripTransports,
+  nextDeparture,
+  setTransportStatus,
+  summariseTripTransports,
+  totalTripDistanceMetres,
+  transportsRepository,
+  updateTransport,
+} from '../transports'
 import {
   addTripMember,
   countTripsByStatus,
@@ -2381,6 +2393,162 @@ describe('tenant isolation', () => {
         (await listNotifications(alpha.tenant.scope, beta.tenant.ownerUserId))
           .items,
       ).toHaveLength(0)
+    })
+  })
+  /**
+   * 03-S1 — a transport anchored to a departure day and an arrival day.
+   *
+   * The new surface is a second day reference, and a reference is exactly what a
+   * tenant boundary is crossed by: a row parented onto a foreign day would be a
+   * dangling pointer into another workspace's itinerary, invisible in every list
+   * because the list is scoped and the pointer is not.
+   *
+   * The read half is asserted as what it is rather than as what a writer does.
+   * `listTripTransports`, `listDayTransports`, `summariseTripTransports`,
+   * `totalTripDistanceMetres` and `getTransport` take an id and filter on
+   * `organization_id`; handed B's id from A's scope they answer *empty*, which is
+   * the same isolation stated in the shape a `WHERE` clause can state it. Only the
+   * calls that resolve a row before acting on it — the four writers — can raise,
+   * and they do.
+   */
+  describe('a transport and both of its day references', () => {
+    it('answers nothing when asked, from A, about B rows', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(await getTransport(scope, beta.transportId)).toBeNull()
+      expect(await listTripTransports(scope, beta.tripId)).toEqual([])
+      expect(await listDayTransports(scope, beta.dayId)).toEqual([])
+      expect(await summariseTripTransports(scope, beta.tripId)).toEqual([])
+      expect(await totalTripDistanceMetres(scope, beta.tripId)).toBe(0)
+
+      // The same ids resolve for their own tenant, so it is scoping that hid them.
+      expect(
+        await getTransport(beta.tenant.scope, beta.transportId),
+      ).not.toBeNull()
+      expect(
+        await listTripTransports(beta.tenant.scope, beta.tripId),
+      ).toHaveLength(1)
+      expect(
+        await totalTripDistanceMetres(beta.tenant.scope, beta.tripId),
+      ).toBe(1_720_000)
+    })
+
+    it('never catches the other tenant’s next departure', async () => {
+      // Both worlds seed one flight on 2026-04-10. Confirming B's makes it the only
+      // candidate in the whole database, so a read that leaked would return it.
+      await setTransportStatus(beta.tenant.scope, beta.transportId, 'confirmed')
+
+      expect(
+        await nextDeparture(alpha.tenant.scope, { from: '2026-01-01' }),
+      ).toBeNull()
+      expect(
+        (await nextDeparture(beta.tenant.scope, { from: '2026-01-01' }))?.id,
+      ).toBe(beta.transportId)
+    })
+
+    it('refuses every write against a B row from A’s scope', async () => {
+      const scope = alpha.tenant.scope
+      const before = await getTransport(beta.tenant.scope, beta.transportId)
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () => updateTransport(scope, beta.transportId, { title: 'Hijacked' }),
+        () => setTransportStatus(scope, beta.transportId, 'cancelled'),
+        () => deleteTransport(scope, beta.transportId),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await getTransport(beta.tenant.scope, beta.transportId)).toEqual(
+        before,
+      )
+    })
+
+    it('refuses a departure day or an arrival day belonging to B', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() =>
+          createTransport(scope, {
+            tripId: alpha.tripId,
+            title: 'Cross-parented departure',
+            mode: 'flight',
+            dayId: beta.dayId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(
+        await captureError(() =>
+          createTransport(scope, {
+            tripId: alpha.tripId,
+            title: 'Cross-parented arrival',
+            mode: 'flight',
+            dayId: alpha.dayId,
+            arrivalDayId: beta.lastDayId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      // Not one row landed: A's own transport count is still the single seeded one.
+      expect(await transportsRepository.count(scope)).toBe(1)
+    })
+
+    it('refuses to move an A row onto a B day', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() =>
+          updateTransport(scope, alpha.transportId, { dayId: beta.dayId }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(
+        await captureError(() =>
+          updateTransport(scope, alpha.transportId, {
+            arrivalDayId: beta.lastDayId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      const own = await getTransport(scope, alpha.transportId)
+      expect(own?.dayId).toBe(alpha.dayId)
+      expect(own?.arrivalDayId).toBeNull()
+    })
+
+    it('leaves B byte-identical after every refusal', async () => {
+      const scope = alpha.tenant.scope
+      const before = await listTripTransports(beta.tenant.scope, beta.tripId)
+      const daysBefore = await listTripDays(beta.tenant.scope, beta.tripId)
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () =>
+          createTransport(scope, {
+            tripId: beta.tripId,
+            title: 'Stolen journey',
+            mode: 'train',
+          }),
+        () =>
+          createTransport(scope, {
+            tripId: alpha.tripId,
+            title: 'Cross-parented',
+            mode: 'train',
+            arrivalDayId: beta.dayId,
+          }),
+        () => updateTransport(scope, beta.transportId, { title: 'Hijacked' }),
+        () => setTransportStatus(scope, beta.transportId, 'cancelled'),
+        () => deleteTransport(scope, beta.transportId),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await listTripTransports(beta.tenant.scope, beta.tripId)).toEqual(
+        before,
+      )
+      expect(await listTripDays(beta.tenant.scope, beta.tripId)).toEqual(
+        daysBefore,
+      )
     })
   })
 })

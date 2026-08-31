@@ -6,6 +6,7 @@
  * keep those exact, and to refuse the two things that make a leg nonsense: no name,
  * and an arrival before its departure.
  */
+import { formatWeekday } from '#/lib/format'
 import { legTimingError } from './connections'
 
 export const TRANSPORT_MODES = [
@@ -111,21 +112,79 @@ export function usesSeat(mode: string): boolean {
   return isTransportMode(mode) && SEATED_MODES.includes(mode)
 }
 
-/** What each end of a leg is called, per mode. */
-export function endpointLabels(mode: string): {
+export interface EndpointLabels {
   readonly from: string
   readonly to: string
-} {
+  readonly fromDay: string
+  readonly toDay: string
+}
+
+/**
+ * The part of an itinerary day this form needs: which day it is, and where it
+ * sits in the run. The whole day is not the form's business.
+ */
+export interface DayChoice {
+  readonly id: string
+  readonly dayNumber: number
+}
+
+/**
+ * A day of the trip, named the way a person refers to a day of their own trip:
+ * the number first, then whatever tells two days apart.
+ *
+ * The date is written `Fri 9 Oct` rather than `2026-10-09`, through the shared
+ * formatter the timeline already uses — it answers from a CLDR table instead of
+ * asking the platform for `month: 'short'`, which workerd and WebKit resolve from
+ * different ICU builds (`12-verification-protocol.md` §7.2). A date it cannot
+ * read is printed as stored, because a label is better than a gap.
+ *
+ * The parameter is structural rather than the loader's own type, for the reason
+ * `types.ts` gives: these components depend on the data they need, not on one
+ * screen's wire format.
+ */
+export function dayLabel(day: {
+  readonly dayNumber: number
+  readonly date: string | null
+  readonly title: string | null
+}): string {
+  const parts = [`Day ${day.dayNumber}`]
+  if (day.title !== null && day.title.length > 0) {
+    parts.push(day.title)
+  } else if (day.date !== null) {
+    parts.push(formatWeekday(day.date) ?? day.date)
+  }
+  return parts.join(' · ')
+}
+
+/**
+ * What each end of a transport is called, per mode — the endpoint legend and the
+ * day beside it, from one function.
+ *
+ * A hire car is the case worth naming: nobody says a car departs and arrives,
+ * they say it is picked up and returned. All four strings are decided here
+ * together so the legend over the endpoint and the label over its day select
+ * cannot drift apart.
+ */
+export function endpointLabels(mode: string): EndpointLabels {
+  if (mode === 'car') {
+    return {
+      from: 'Pick-up',
+      to: 'Drop-off',
+      fromDay: 'Pick-up day',
+      toDay: 'Return day',
+    }
+  }
+  const days = { fromDay: 'Departure day', toDay: 'Arrival day' } as const
   if (mode === 'flight') {
-    return { from: 'From airport', to: 'To airport' }
+    return { from: 'From airport', to: 'To airport', ...days }
   }
   if (mode === 'ferry') {
-    return { from: 'From port', to: 'To port' }
+    return { from: 'From port', to: 'To port', ...days }
   }
   if (mode === 'train' || mode === 'metro' || mode === 'tram') {
-    return { from: 'From station', to: 'To station' }
+    return { from: 'From station', to: 'To station', ...days }
   }
-  return { from: 'From', to: 'To' }
+  return { from: 'From', to: 'To', ...days }
 }
 
 /* ------------------------------------------------------------------- draft */
@@ -134,6 +193,15 @@ export interface LegDraft {
   readonly mode: TransportMode
   readonly status: TransportStatus
   readonly title: string
+  /**
+   * The day the journey leaves on and the day it lands on, as ids or `''`.
+   *
+   * Two references and not one derived from the other: a night flight leaves on
+   * Tuesday and lands on Wednesday, and only the traveller knows that. `''` on
+   * both is a legal draft — an idea has no day.
+   */
+  readonly departureDayId: string
+  readonly arrivalDayId: string
   readonly carrier: string
   readonly serviceNumber: string
   readonly bookingCode: string
@@ -158,6 +226,8 @@ export function emptyLegDraft(currency: string): LegDraft {
     mode: 'flight',
     status: 'pending',
     title: '',
+    departureDayId: '',
+    arrivalDayId: '',
     carrier: '',
     serviceNumber: '',
     bookingCode: '',
@@ -213,7 +283,10 @@ export type LegErrors = Partial<Record<keyof LegDraft | 'form', string>>
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/u
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u
 
-export function validateLegDraft(draft: LegDraft): LegErrors {
+export function validateLegDraft(
+  draft: LegDraft,
+  days: ReadonlyArray<DayChoice> = [],
+): LegErrors {
   const errors: LegErrors = {}
 
   if (draft.title.trim().length === 0) {
@@ -270,7 +343,39 @@ export function validateLegDraft(draft: LegDraft): LegErrors {
     errors.price = 'That is not an amount we can read.'
   }
 
+  const dayOrder = dayOrderError(draft, days)
+  if (dayOrder !== null) {
+    errors.arrivalDayId = dayOrder
+  }
+
   return errors
+}
+
+/**
+ * Landing on a day earlier than the one you left on, said in the words the mode
+ * uses.
+ *
+ * Silent about a day the list does not carry: an id that resolves to nothing
+ * cannot be ordered against anything, and refusing it would refuse a draft the
+ * reader has no way to repair. The repository re-runs this rule against the
+ * trip's real days, because the form is a convenience and the repository is the
+ * rule.
+ */
+function dayOrderError(
+  draft: LegDraft,
+  days: ReadonlyArray<DayChoice>,
+): string | null {
+  const from = days.find((day) => day.id === draft.departureDayId)
+  const to = days.find((day) => day.id === draft.arrivalDayId)
+  if (
+    from === undefined ||
+    to === undefined ||
+    to.dayNumber >= from.dayNumber
+  ) {
+    return null
+  }
+  const labels = endpointLabels(draft.mode)
+  return `The ${labels.toDay.toLowerCase()} comes before the ${labels.fromDay.toLowerCase()}.`
 }
 
 export function hasLegErrors(errors: LegErrors): boolean {

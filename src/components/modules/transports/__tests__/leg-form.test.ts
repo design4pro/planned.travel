@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
+  dayLabel,
   emptyLegDraft,
   endpointLabels,
   hasLegErrors,
@@ -60,13 +61,126 @@ describe('mode and status vocabulary', () => {
   })
 
   it('names each end of a leg the way the mode does', () => {
-    expect(endpointLabels('flight')).toEqual({
-      from: 'From airport',
-      to: 'To airport',
-    })
+    expect(endpointLabels('flight').from).toBe('From airport')
+    expect(endpointLabels('flight').to).toBe('To airport')
     expect(endpointLabels('ferry').from).toContain('port')
     expect(endpointLabels('train').from).toContain('station')
-    expect(endpointLabels('car')).toEqual({ from: 'From', to: 'To' })
+  })
+
+  /**
+   * The hire-car case, which is the whole point of the relabelling: nobody says
+   * a car departs. All four strings come from the one function, so the endpoint
+   * legend and the day select can never drift apart.
+   */
+  it('describes a hire car as picked up and returned', () => {
+    expect(endpointLabels('car')).toEqual({
+      from: 'Pick-up',
+      to: 'Drop-off',
+      fromDay: 'Pick-up day',
+      toDay: 'Return day',
+    })
+  })
+
+  it('leaves every other mode on departure and arrival', () => {
+    for (const mode of TRANSPORT_MODES) {
+      if (mode === 'car') {
+        continue
+      }
+      const labels = endpointLabels(mode)
+      expect(labels.fromDay).toBe('Departure day')
+      expect(labels.toDay).toBe('Arrival day')
+      expect(labels.from).not.toContain('Pick-up')
+      expect(labels.to).not.toContain('Drop-off')
+    }
+    expect(endpointLabels('hovercraft')).toEqual({
+      from: 'From',
+      to: 'To',
+      fromDay: 'Departure day',
+      toDay: 'Arrival day',
+    })
+  })
+})
+
+/**
+ * The two day references, which are what this form gained: a journey leaves on
+ * one day and lands on another, and nothing derives the second from the first.
+ */
+describe('the days a transport covers', () => {
+  const DAYS = [
+    { id: 'day-1', dayNumber: 1 },
+    { id: 'day-2', dayNumber: 2 },
+    { id: 'day-3', dayNumber: 3 },
+  ]
+
+  it('starts a draft with neither day chosen', () => {
+    expect(emptyLegDraft('EUR').departureDayId).toBe('')
+    expect(emptyLegDraft('EUR').arrivalDayId).toBe('')
+  })
+
+  it('accepts a draft with no day at all, because an idea has no day', () => {
+    expect(hasLegErrors(validateLegDraft(draft(), DAYS))).toBe(false)
+    expect(hasLegErrors(validateLegDraft(draft()))).toBe(false)
+  })
+
+  it('accepts a night flight that lands the next day', () => {
+    expect(
+      validateLegDraft(
+        draft({ departureDayId: 'day-2', arrivalDayId: 'day-3' }),
+        DAYS,
+      ).arrivalDayId,
+    ).toBeUndefined()
+  })
+
+  it('accepts both ends on the same day', () => {
+    expect(
+      validateLegDraft(
+        draft({ departureDayId: 'day-2', arrivalDayId: 'day-2' }),
+        DAYS,
+      ).arrivalDayId,
+    ).toBeUndefined()
+  })
+
+  it('refuses an arrival day earlier than the departure day', () => {
+    expect(
+      validateLegDraft(
+        draft({ departureDayId: 'day-3', arrivalDayId: 'day-1' }),
+        DAYS,
+      ).arrivalDayId,
+    ).toBe('The arrival day comes before the departure day.')
+  })
+
+  it('says it in the words the mode uses', () => {
+    expect(
+      validateLegDraft(
+        draft({ mode: 'car', departureDayId: 'day-3', arrivalDayId: 'day-1' }),
+        DAYS,
+      ).arrivalDayId,
+    ).toBe('The return day comes before the pick-up day.')
+  })
+
+  it('says nothing about one end chosen without the other', () => {
+    expect(
+      hasLegErrors(validateLegDraft(draft({ departureDayId: 'day-3' }), DAYS)),
+    ).toBe(false)
+    expect(
+      hasLegErrors(validateLegDraft(draft({ arrivalDayId: 'day-1' }), DAYS)),
+    ).toBe(false)
+  })
+
+  /**
+   * A day id the list does not carry cannot be ordered against anything, and a
+   * form that refused it would refuse a draft the reader cannot repair. The
+   * repository is the rule; this is the convenience.
+   */
+  it('ignores a day the list does not know', () => {
+    expect(
+      hasLegErrors(
+        validateLegDraft(
+          draft({ departureDayId: 'day-3', arrivalDayId: 'gone' }),
+          DAYS,
+        ),
+      ),
+    ).toBe(false)
   })
 })
 
@@ -252,5 +366,42 @@ describe('distance conversion', () => {
   it('shows nothing for an unrecorded distance', () => {
     expect(metresToKilometres(null)).toBe('')
     expect(metresToKilometres(0)).toBe('')
+  })
+})
+
+/**
+ * What a day is called in the two selects. The day number leads, because that is
+ * how a person refers to a day of their own trip; what follows disambiguates it.
+ */
+describe('naming a day of the trip', () => {
+  it('leads with the day number and disambiguates with the title', () => {
+    expect(
+      dayLabel({ dayNumber: 3, date: '2026-10-09', title: 'Arashiyama' }),
+    ).toBe('Day 3 · Arashiyama')
+  })
+
+  /**
+   * `Fri 9 Oct`, not `2026-10-09`. A stored date is a machine's spelling of a day
+   * and this is a label a person reads, so it goes through the same shared
+   * formatter the timeline uses — which answers from a CLDR table rather than
+   * from the platform's ICU build (`12-verification-protocol.md` §7.2).
+   */
+  it('writes the date the way a person reads one when a day has no title', () => {
+    expect(dayLabel({ dayNumber: 3, date: '2026-10-09', title: null })).toBe(
+      'Day 3 · Fri 9 Oct',
+    )
+    expect(dayLabel({ dayNumber: 3, date: '2026-10-09', title: '' })).toBe(
+      'Day 3 · Fri 9 Oct',
+    )
+  })
+
+  it('says the number alone when there is nothing to disambiguate with', () => {
+    expect(dayLabel({ dayNumber: 7, date: null, title: null })).toBe('Day 7')
+  })
+
+  it('falls back to the stored date rather than dropping an unreadable one', () => {
+    expect(dayLabel({ dayNumber: 2, date: 'not-a-date', title: null })).toBe(
+      'Day 2 · not-a-date',
+    )
   })
 })

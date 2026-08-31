@@ -1,11 +1,15 @@
 /**
  * The transports screen, laid out as a journey rather than a list.
  *
- * Legs are shown in departure order with the *hand-over between* them drawn as a
- * junction on the rail: how long there is, whether that is enough for the mode
- * being caught, and whether the two ends even name the same place. A leg that
- * cannot be caught after the one before it is a real, named warning — not a
+ * Transports are shown in departure order with the *hand-over between* them drawn
+ * as a junction on the rail: how long there is, whether that is enough for the
+ * mode being caught, and whether the two ends even name the same place. A journey
+ * that cannot be caught after the one before it is a real, named warning — not a
  * silently wrong plan.
+ *
+ * Each card says which day of the trip it belongs to, and says both when the
+ * journey spans two — the overnight train that leaves on day 3 and lands on day 4
+ * is the case the whole second reference exists for.
  *
  * Stored values are typeset as facts. A previous round of this screen presented
  * them as filled grey rounded rectangles, which reads as a form full of disabled
@@ -26,6 +30,7 @@ import {
 
 import { Alert, Badge, Button, EmptyState } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { formatWeekday } from '#/lib/format'
 import { deleteLegFn, setLegStatusFn } from '#/server/fns/transports'
 import {
   ConfirmDialog,
@@ -55,9 +60,10 @@ import { modeIcon } from './mode-icon'
 import type { ReactNode } from 'react'
 import type { BadgeTone } from '#/components/ui'
 import type { ConfirmRequest, FactItem, StatusOption } from '../shared'
+import type { TransportDayOption } from '#/server/fns/transports'
 import type { Connection } from './connections'
 import type { TransportStatus } from './leg-form'
-import type { LegData } from './types'
+import type { TransportData } from './types'
 
 /* ------------------------------------------------------------------- labels */
 
@@ -80,19 +86,18 @@ function statusOption(status: string): StatusOption {
 
 const LOCALE = 'en-GB'
 
-const weekdayFormatter = new Intl.DateTimeFormat(LOCALE, {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-})
-
+/**
+ * `2026-06-23` → `Tue 23 Jun`, from the shared CLDR table rather than from a
+ * module-local `Intl.DateTimeFormat`.
+ *
+ * `12-verification-protocol.md` §7.2 defers seven abbreviated-month call sites
+ * that ask the platform for `month: 'short'`, which workerd and WebKit resolve
+ * from different ICU builds — latent until a trip tab is baselined, which this
+ * area is the first to do. `src/lib/format.ts` already answers from a table, so
+ * this file asks it instead of asking the runtime.
+ */
 function formatDay(date: string | null): string | null {
-  if (date === null || date.length < 10) {
-    return null
-  }
-  const parsed = new Date(`${date}T00:00:00.000Z`)
-  return Number.isNaN(parsed.getTime()) ? date : weekdayFormatter.format(parsed)
+  return formatWeekday(date)
 }
 
 function formatClock(time: string | null): string | null {
@@ -116,9 +121,11 @@ function formatDistance(metres: number): string {
 
 /* ------------------------------------------------------------------ screen */
 
-export interface LegsTimelineProps {
+export interface TransportsTimelineProps {
   readonly tripId: string
-  readonly legs: ReadonlyArray<LegData>
+  readonly transports: ReadonlyArray<TransportData>
+  /** The trip's days: what the two day selects offer, and what a day chip reads. */
+  readonly days: ReadonlyArray<TransportDayOption>
   readonly currency: string
   readonly newLegOpen: boolean
   readonly onNewLegOpenChange: (open: boolean) => void
@@ -126,40 +133,43 @@ export interface LegsTimelineProps {
 
 type ModeFilter = 'all' | string
 
-export function LegsTimeline({
+export function TransportsTimeline({
   tripId,
-  legs,
+  transports,
+  days,
   currency,
   newLegOpen,
   onNewLegOpenChange,
-}: LegsTimelineProps) {
+}: TransportsTimelineProps) {
   const [filter, setFilter] = useState<ModeFilter>('all')
-  const [editing, setEditing] = useState<LegData | null>(null)
+  const [editing, setEditing] = useState<TransportData | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
 
   const statuses = useOptimistic<TransportStatus>()
 
   const setStatus = useAction(setLegStatusFn, {
     failure: 'The status did not change',
-    fallback: 'The leg is still in its previous state.',
+    fallback: 'The transport is still in its previous state.',
   })
   const remove = useAction(deleteLegFn, {
-    success: 'Leg removed',
-    failure: 'The leg was not removed',
+    success: 'Transport removed',
+    failure: 'The transport was not removed',
     onSuccess: () => setConfirm(null),
   })
 
-  const rendered = useMemo<Array<LegData>>(
+  const rendered = useMemo<Array<TransportData>>(
     () =>
-      legs.map((leg) => {
-        const claimed = statuses.get(leg.id)
-        return claimed === undefined ? leg : { ...leg, status: claimed }
+      transports.map((transport) => {
+        const claimed = statuses.get(transport.id)
+        return claimed === undefined
+          ? transport
+          : { ...transport, status: claimed }
       }),
-    [legs, statuses],
+    [transports, statuses],
   )
 
   /**
-   * Connections are analysed over *every* leg, not the filtered set: hiding the
+   * Connections are analysed over *every* transport, not the filtered set: hiding the
    * ferry does not make the flight after it catchable, so the warnings must not
    * disappear with the filter.
    */
@@ -173,29 +183,37 @@ export function LegsTimeline({
     [connections],
   )
 
+  /** Day id → the number a person refers to that day by. */
+  const dayNumbers = useMemo(
+    () => new Map(days.map((day) => [day.id, day.dayNumber])),
+    [days],
+  )
+
   const modes = useMemo(() => {
     const tally = new Map<string, number>()
-    for (const leg of rendered) {
-      tally.set(leg.mode, (tally.get(leg.mode) ?? 0) + 1)
+    for (const transport of rendered) {
+      tally.set(transport.mode, (tally.get(transport.mode) ?? 0) + 1)
     }
     return [...tally.entries()].sort((left, right) => right[1] - left[1])
   }, [rendered])
 
   const ordered = useMemo(() => sortLegsByDeparture(rendered), [rendered])
   const visible = ordered.filter(
-    (leg) => filter === 'all' || leg.mode === filter,
+    (transport) => filter === 'all' || transport.mode === filter,
   )
 
-  function changeStatus(leg: LegData, next: string): void {
-    if (!isTransportStatus(next) || next === leg.status) {
+  function changeStatus(transport: TransportData, next: string): void {
+    if (!isTransportStatus(next) || next === transport.status) {
       return
     }
-    void statuses.claim([[leg.id, next]], () =>
-      setStatus.run({ data: { tripId, transportId: leg.id, status: next } }),
+    void statuses.claim([[transport.id, next]], () =>
+      setStatus.run({
+        data: { tripId, transportId: transport.id, status: next },
+      }),
     )
   }
 
-  if (legs.length === 0) {
+  if (transports.length === 0) {
     return (
       <>
         <EmptyState
@@ -203,20 +221,21 @@ export function LegsTimeline({
           size="lg"
           tone="brand"
           icon={<PlaneTakeoff />}
-          title="No travel legs yet"
-          description="Flights, trains, ferries and the drive from the airport all live here, with their booking codes and seat numbers to hand on the day — and each hand-over checked against the one before it."
+          title="No transports yet"
+          description="Add the flight, the train or the hire car and the days it covers — with the booking code and the seat to hand on the day, and each hand-over checked against the one before it."
           action={
             <Button
               variant="primary"
               shape="pill"
               onClick={() => onNewLegOpenChange(true)}
             >
-              Add the first leg
+              Add the first transport
             </Button>
           }
         />
         <LegDialog
           tripId={tripId}
+          days={days}
           currency={currency}
           open={newLegOpen}
           onOpenChange={onNewLegOpenChange}
@@ -236,8 +255,8 @@ export function LegsTimeline({
               : `${summary.impossible} hand-overs cannot be made`
           }
         >
-          A leg departs before the one before it arrives. The junctions below
-          say which, and by how much.
+          A transport departs before the one before it arrives. The junctions
+          below say which, and by how much.
         </Alert>
       )}
       {summary.impossible === 0 && summary.tight > 0 ? (
@@ -261,7 +280,7 @@ export function LegsTimeline({
             count={rendered.length}
             onClick={() => setFilter('all')}
           >
-            Every leg
+            Every transport
           </ModeChip>
           {modes.map(([mode, count]) => {
             const Icon = modeIcon(mode)
@@ -285,44 +304,52 @@ export function LegsTimeline({
           variant="filled"
           size="md"
           icon={<PlaneTakeoff />}
-          title="No legs of that kind"
-          description="Every leg on this trip travels a different way. Switch back to “Every leg” to see them all."
+          title="No transports of that kind"
+          description="Every transport on this trip travels a different way. Switch back to “Every transport” to see them all."
           action={
             <Button
               variant="secondary"
               shape="pill"
               onClick={() => setFilter('all')}
             >
-              Show every leg
+              Show every transport
             </Button>
           }
         />
       ) : (
         <ol className="flex min-w-0 flex-col gap-0">
-          {visible.map((leg, index) => {
-            const connection = byFromId.get(leg.id)
+          {visible.map((transport, index) => {
+            const connection = byFromId.get(transport.id)
             const nextVisible =
               index + 1 < visible.length ? visible[index + 1] : null
             return (
-              <li key={leg.id} className="min-w-0">
-                <LegCard
-                  leg={leg}
+              <li key={transport.id} className="min-w-0">
+                <TransportCard
+                  transport={transport}
                   currency={currency}
-                  onEdit={() => setEditing(leg)}
-                  onStatus={(next) => changeStatus(leg, next)}
+                  departureDay={
+                    dayNumbers.get(transport.departureDayId ?? '') ?? null
+                  }
+                  arrivalDay={
+                    dayNumbers.get(transport.arrivalDayId ?? '') ?? null
+                  }
+                  onEdit={() => setEditing(transport)}
+                  onStatus={(next) => changeStatus(transport, next)}
                   onDelete={() =>
                     setConfirm({
-                      title: `Remove “${leg.title}”?`,
+                      title: `Remove “${transport.title}”?`,
                       description:
-                        'The leg comes off this trip for good, along with its booking reference and seat. If it is only cancelled, set its status to Cancelled instead.',
-                      confirmLabel: 'Remove leg',
+                        'The transport comes off this trip for good, along with its booking reference and seat. If it is only cancelled, set its status to Cancelled instead.',
+                      confirmLabel: 'Remove transport',
                       onConfirm: () =>
-                        remove.run({ data: { tripId, transportId: leg.id } }),
+                        remove.run({
+                          data: { tripId, transportId: transport.id },
+                        }),
                     })
                   }
                 />
-                {/* The junction is only drawn when the leg it describes is the one
-                  actually shown next — a filter that hides the middle leg must not
+                {/* The junction is only drawn when the transport it describes is the one
+                  actually shown next — a filter that hides the middle transport must not
                   claim the two remaining ones connect. */}
                 {connection !== undefined &&
                 nextVisible !== null &&
@@ -339,7 +366,8 @@ export function LegsTimeline({
 
       <LegDialog
         tripId={tripId}
-        leg={editing ?? undefined}
+        transport={editing ?? undefined}
+        days={days}
         currency={currency}
         open={newLegOpen || editing !== null}
         onOpenChange={(next) => {
@@ -402,7 +430,7 @@ function ModeChip({
 
 /* --------------------------------------------------------------- junction */
 
-/** The hand-over between two legs, drawn on the rail between their cards. */
+/** The hand-over between two transports, drawn on the rail between their cards. */
 function Junction({ connection }: { connection: Connection }) {
   const tone =
     connection.severity === 'impossible'
@@ -462,32 +490,39 @@ function Junction({ connection }: { connection: Connection }) {
 
 /* ---------------------------------------------------------------- one card */
 
-function LegCard({
-  leg,
+function TransportCard({
+  transport,
   currency,
+  departureDay,
+  arrivalDay,
   onEdit,
   onStatus,
   onDelete,
 }: {
-  leg: LegData
+  transport: TransportData
   currency: string
+  /** The day numbers this journey is anchored to, or `null` where it names none. */
+  departureDay: number | null
+  arrivalDay: number | null
   onEdit: () => void
   onStatus: (next: string) => void
   onDelete: () => void
 }) {
-  const Icon = modeIcon(leg.mode)
-  const cancelled = leg.status === 'cancelled'
+  const Icon = modeIcon(transport.mode)
+  const cancelled = transport.status === 'cancelled'
 
   const facts: Array<FactItem> = [
-    ...(leg.carrier === null && leg.serviceNumber === null
+    ...(transport.carrier === null && transport.serviceNumber === null
       ? []
       : [
           {
             label: 'Service',
-            value: [leg.carrier, leg.serviceNumber].filter(Boolean).join(' '),
+            value: [transport.carrier, transport.serviceNumber]
+              .filter(Boolean)
+              .join(' '),
           },
         ]),
-    ...(leg.bookingCode === null
+    ...(transport.bookingCode === null
       ? []
       : [
           {
@@ -495,24 +530,32 @@ function LegCard({
             mono: true,
             value: (
               <CopyValue
-                value={leg.bookingCode}
-                label={`the booking reference for ${leg.title}`}
+                value={transport.bookingCode}
+                label={`the booking reference for ${transport.title}`}
               />
             ),
           },
         ]),
-    ...(leg.seat === null
+    ...(transport.seat === null
       ? []
-      : [{ label: 'Seat', mono: true, value: leg.seat }]),
-    ...(leg.distanceMetres === null || leg.distanceMetres === 0
+      : [{ label: 'Seat', mono: true, value: transport.seat }]),
+    ...(transport.distanceMetres === null || transport.distanceMetres === 0
       ? []
-      : [{ label: 'Distance', value: formatDistance(leg.distanceMetres) }]),
-    ...(leg.priceMinor === null || leg.priceMinor === 0
+      : [
+          {
+            label: 'Distance',
+            value: formatDistance(transport.distanceMetres),
+          },
+        ]),
+    ...(transport.priceMinor === null || transport.priceMinor === 0
       ? []
       : [
           {
             label: 'Price',
-            value: formatMoney(leg.priceMinor, leg.currency ?? currency),
+            value: formatMoney(
+              transport.priceMinor,
+              transport.currency ?? currency,
+            ),
           },
         ]),
   ]
@@ -528,7 +571,7 @@ function LegCard({
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-edge-faint px-4 py-3 sm:px-5">
         <span className="inline-flex shrink-0 items-center gap-1.5 text-caption font-medium text-ink-3">
           <Icon aria-hidden className="size-3.5" />
-          {modeLabel(leg.mode)}
+          {modeLabel(transport.mode)}
         </span>
         <h4
           className={cn(
@@ -536,24 +579,24 @@ function LegCard({
             cancelled && 'line-through',
           )}
         >
-          {leg.title}
+          {transport.title}
         </h4>
         <StatusMenu
-          current={statusOption(leg.status)}
+          current={statusOption(transport.status)}
           options={STATUS_OPTIONS}
-          label={`Status of ${leg.title}`}
+          label={`Status of ${transport.title}`}
           onSelect={onStatus}
         />
         <RowMenu
-          label={`Actions for ${leg.title}`}
+          label={`Actions for ${transport.title}`}
           items={[
             {
-              label: 'Edit leg…',
+              label: 'Edit transport…',
               icon: <Pencil aria-hidden />,
               onSelect: onEdit,
             },
             {
-              label: 'Remove leg',
+              label: 'Remove transport',
               icon: <Trash2 aria-hidden />,
               tone: 'danger',
               separated: true,
@@ -566,20 +609,22 @@ function LegCard({
       <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-5">
         <div className="flex min-w-0 items-start gap-3">
           <Endpoint
-            code={leg.departureCode}
-            name={leg.departureName}
-            date={leg.departureDate}
-            time={leg.departureTime}
+            code={transport.departureCode}
+            name={transport.departureName}
+            date={transport.departureDate}
+            time={transport.departureTime}
+            dayNumber={departureDay}
           />
           <ArrowRight
             aria-hidden
             className="mt-1.5 size-4 shrink-0 text-ink-4"
           />
           <Endpoint
-            code={leg.arrivalCode}
-            name={leg.arrivalName}
-            date={leg.arrivalDate}
-            time={leg.arrivalTime}
+            code={transport.arrivalCode}
+            name={transport.arrivalName}
+            date={transport.arrivalDate}
+            time={transport.arrivalTime}
+            dayNumber={arrivalDay}
             align="right"
           />
         </div>
@@ -588,8 +633,8 @@ function LegCard({
           <FactList items={facts} columns={facts.length > 3 ? 4 : 3} />
         )}
 
-        {leg.notes === null ? null : (
-          <FactNote label="Notes">{leg.notes}</FactNote>
+        {transport.notes === null ? null : (
+          <FactNote label="Notes">{transport.notes}</FactNote>
         )}
       </div>
     </article>
@@ -597,7 +642,7 @@ function LegCard({
 }
 
 /**
- * One end of a leg.
+ * One end of a transport.
  *
  * Both ends are identifiers a traveller reads back at a desk, so both are set in
  * the UI face rather than the rounded display face: at this size the display face
@@ -609,12 +654,15 @@ function Endpoint({
   name,
   date,
   time,
+  dayNumber,
   align = 'left',
 }: {
   code: string | null
   name: string | null
   date: string | null
   time: string | null
+  /** The trip day this end is anchored to, or `null` when it names none. */
+  dayNumber: number | null
   align?: 'left' | 'right'
 }) {
   const day = formatDay(date)
@@ -636,9 +684,24 @@ function Endpoint({
       {code === null || name === null ? null : (
         <p className="truncate text-caption text-ink-3">{name}</p>
       )}
-      <p className="truncate text-caption tabular-nums text-ink-4">
-        {when === '' ? 'No time yet' : when}
-      </p>
+      <div
+        className={cn(
+          'flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1',
+          align === 'right' && 'justify-end',
+        )}
+      >
+        <span className="truncate text-caption tabular-nums text-ink-4">
+          {when === '' ? 'No time yet' : when}
+        </span>
+        {dayNumber === null ? null : (
+          <span
+            data-part="day-chip"
+            className="shrink-0 rounded-full bg-surface-2 px-1.5 text-[0.6875rem] leading-4 font-semibold tabular-nums text-ink-3"
+          >
+            Day {dayNumber}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
