@@ -164,6 +164,19 @@ const MAX_ITERATIONS = 10
 // documents as false evidence.
 const MAX_PARALLEL = 2
 
+// The e2e matrix, split.
+//
+// Measured over the runs on disk, a UI attempt spends ~220 s in `e2e` against ~52 s in the whole
+// rest of the ladder, and mobile-safari is the larger half of that: 3646 s of test time against
+// chromium's 3153 s. Half of the recorded `e2e` steps were red, so the loop pays that twice or
+// three times for an issue it eventually fixes.
+//
+// So the fix loop re-validates on chromium alone and mobile-safari gates once, after chromium is
+// green and before the issue is called done. Nothing reaches the merge without the full matrix
+// having passed on the final tree, and CI still runs all twelve shards on the PR.
+const LOOP_E2E_PROJECTS = ['chromium'] as const
+const GATE_E2E_PROJECTS = ['mobile-safari'] as const
+
 // Fix-loop budget: resumes of the implementer session after a validator FAIL.
 // Exhausted → the issue is labelled agent-blocked and excluded from the merge.
 const FIX_BUDGET = 2
@@ -522,6 +535,8 @@ for (const stopping of ['SIGINT', 'SIGTERM'] as const) {
 type Issue = z.infer<typeof planSchema>['issues'][number]
 type Validation = {
   uiTouched: boolean
+  /** Which playwright projects the e2e step covered; empty means the whole matrix. */
+  e2eProjects?: string[]
   steps: Array<{ name: string; ok: boolean; durationMs: number }>
   e2e: {
     failed: Array<{ title: string; error: string; snapshotDiff: boolean }>
@@ -696,10 +711,19 @@ async function collectArtifacts(
 
 async function validate(
   sandbox: sandcastle.Sandbox,
-  opts: { updateSnapshots?: boolean; issue?: string; attempt?: number } = {},
+  opts: {
+    updateSnapshots?: boolean
+    issue?: string
+    attempt?: number
+    /** playwright.config.ts project names; omitted means the whole matrix. */
+    e2eProjects?: readonly string[]
+  } = {},
 ): Promise<Validation> {
   const flags = ['--json-out .sandcastle-validation.json']
   if (opts.updateSnapshots) flags.push('--update-snapshots')
+  if (opts.e2eProjects !== undefined) {
+    flags.push(`--e2e-projects ${opts.e2eProjects.join(',')}`)
+  }
   // The ladder is the one stage `withUsageLimit` does not wrap — it runs no agent, so it can hit no
   // usage limit — and it is also the only container-heavy one. It records itself so the timeline
   // covers the whole pipeline rather than only its agents, and so `validate` rows in the report can
@@ -716,6 +740,7 @@ async function validate(
     } catch {
       verdict = {
         uiTouched: true,
+        e2eProjects: [],
         steps: [{ name: 'validate.sh', ok: false, durationMs: 0 }],
         e2e: { failed: [] },
         ok: result.exitCode === 0,
@@ -731,14 +756,23 @@ async function validate(
 
 function recordValidateStage(
   startedAt: number,
-  opts: { updateSnapshots?: boolean; issue?: string; attempt?: number },
+  opts: {
+    updateSnapshots?: boolean
+    issue?: string
+    attempt?: number
+    e2eProjects?: readonly string[]
+  },
   outcome: 'ok' | 'error',
   error?: unknown,
 ): void {
   const endedAt = Date.now()
   recordStage({
     kind: 'stage',
-    label: opts.updateSnapshots ? 'validate (baselines)' : 'validate',
+    label: opts.updateSnapshots
+      ? 'validate (baselines)'
+      : opts.e2eProjects === undefined
+        ? 'validate'
+        : `validate:${opts.e2eProjects.join(',')}`,
     issue: opts.issue,
     attempt: opts.attempt,
     startedAt,
@@ -756,6 +790,11 @@ function recordValidateStage(
             .split('\n')[0]
             ?.slice(0, 300),
   })
+}
+
+/** `e2e`, or the `e2e:<projects>` a narrowed run writes. Never `e2e-env`, which is setup. */
+function isE2eStep(name: string): boolean {
+  return name === 'e2e' || name.startsWith('e2e:')
 }
 
 function failureDigest(v: Validation, attempt: number): string {
@@ -1133,18 +1172,28 @@ async function workIssue(
     commits.push(...review.commits)
 
     for (let attempt = 1; attempt <= FIX_BUDGET + 1; attempt++) {
-      let verdict = await validate(sandbox, { issue: issue.id, attempt })
+      let verdict = await validate(sandbox, {
+        issue: issue.id,
+        attempt,
+        e2eProjects: LOOP_E2E_PROJECTS,
+      })
       lastArtifactPath = await collectArtifacts(sandbox, issue, attempt)
+      // Whether the tree standing behind `verdict` has been through every browser. The gate below
+      // is skipped when it has, so the re-record path does not pay for mobile-safari twice.
+      let fullMatrix = false
 
       if (
         !verdict.ok &&
         verdict.e2e.failed.length > 0 &&
         verdict.e2e.failed.every((f) => f.snapshotDiff) &&
-        verdict.steps.filter((s) => !s.ok).every((s) => s.name === 'e2e') &&
+        verdict.steps.filter((s) => !s.ok).every((s) => isE2eStep(s.name)) &&
         (await declaresVisualChange(sandbox, issue))
       ) {
         // Every failure is a snapshot diff and the issue declares the change:
         // re-record the -linux baselines instead of "fixing" intended pixels.
+        // The whole matrix, both here and on the confirming pass: a baseline
+        // exists per project, so re-recording chromium's alone would leave
+        // mobile-safari red against pixels the issue already declared.
         console.log(
           `  [${issue.id}] intended visual change — re-recording baselines`,
         )
@@ -1159,6 +1208,25 @@ async function workIssue(
         commits.push({ sha: 'baselines' })
         verdict = await validate(sandbox, { issue: issue.id, attempt })
         lastArtifactPath = await collectArtifacts(sandbox, issue, attempt)
+        fullMatrix = true
+      }
+
+      // The gate. chromium is green and the change is visible, so the browser the loop skipped
+      // gets its one run before this issue counts as done. A failure here is an ordinary FAIL: it
+      // feeds the fix loop like any other, and the next attempt is back on chromium.
+      if (verdict.ok && verdict.uiTouched && !fullMatrix) {
+        const gate = await validate(sandbox, {
+          issue: issue.id,
+          attempt,
+          e2eProjects: GATE_E2E_PROJECTS,
+        })
+        lastArtifactPath = await collectArtifacts(sandbox, issue, attempt)
+        if (!gate.ok) {
+          console.log(
+            `  [${issue.id}] chromium green, ${GATE_E2E_PROJECTS.join(', ')} red — back to the fix loop`,
+          )
+          verdict = gate
+        }
       }
 
       if (verdict.ok) {
