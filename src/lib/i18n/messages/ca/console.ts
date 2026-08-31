@@ -519,6 +519,40 @@ const messages = {
     'Una crida feta per a un espai de treball se li imputa. Les tasques programades i el correu de la plataforma no són de cap i es compten a part.',
   'providers.readOnly':
     'Pots llegir aquests comptadors però no moure un sostre. Canviar un límit o la seva política requereix el permís provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Sostre acordat: {limit} al mes. S’aplica des de la primera crida, quan hi hagi un client.',
+  'providers.status.planned.agreed.day':
+    'Sostre acordat: {limit} al dia. S’aplica des de la primera crida, quan hi hagi un client.',
+  'providers.edit.button': 'Edita',
+  'providers.edit.title': 'Sostre de {provider}',
+  'providers.edit.body':
+    'Què ha acordat gastar aquest desplegament amb el proveïdor, i què passa quan s’exhaureix.',
+  'providers.edit.confirm': 'Desa el sostre',
+  'providers.edit.done': 'Sostre desat per a {provider}',
+  'providers.edit.label': 'Nom',
+  'providers.edit.ceiling': 'Crides incloses',
+  'providers.edit.ceiling.hint':
+    'Deixa-ho buit si no hi ha sostre acordat. Buit i zero no són el mateix: zero amb «rebutja» aparta totes les crides.',
+  'providers.edit.ceiling.placeholder': 'Sense sostre',
+  'providers.edit.window': 'Mesurat en',
+  'providers.edit.window.month': 'Un mes natural',
+  'providers.edit.window.month.body': 'La forma habitual d’una quota inclosa.',
+  'providers.edit.window.day': 'Un dia',
+  'providers.edit.window.day.body':
+    'Alguns proveïdors mesuren per dia: el pla gratuït de Geoapify són 3.000 crèdits diaris.',
+  'providers.edit.policy': 'En arribar al sostre',
+  'providers.edit.policy.allow': 'Continua cridant i paga',
+  'providers.edit.policy.allow.body':
+    'Les crides continuen per sobre del sostre i la consola avisa. No deixa de funcionar res.',
+  'providers.edit.policy.block': 'Rebutja les crides següents',
+  'providers.edit.policy.block.body':
+    'Les crides es rebutgen fins que la finestra es reinicia. El que depèn d’aquest proveïdor deixa de funcionar: tria-ho només on aquesta fallada surti més barata.',
+  'providers.edit.policy.block.refused':
+    '{provider} no es pot rebutjar: no té alternativa, així que apartar-ne les crides aturaria la funció en comptes d’acotar-ne el cost. Un sostre que només avisa continua sent possible.',
+  'providers.edit.warn': 'Avisa al (%)',
+  'providers.edit.critical': 'Alarma al (%)',
+  'providers.edit.thresholds.hint':
+    'On l’indicador es torna ambre i vermell. L’avís no pot ser per sobre de l’alarma.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

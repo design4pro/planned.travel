@@ -505,6 +505,41 @@ const messages = {
     'Lệnh gọi thực hiện cho một không gian làm việc được ghi cho không gian đó. Công việc theo lịch và thư của nền tảng không thuộc về ai và được đếm riêng.',
   'providers.readOnly':
     'Bạn đọc được các số đo này nhưng không dời được trần. Đổi hạn mức hay chính sách của nó cần quyền provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Trần đã thống nhất: {limit} mỗi tháng. Có hiệu lực từ lệnh gọi đầu tiên, ngay khi có client.',
+  'providers.status.planned.agreed.day':
+    'Trần đã thống nhất: {limit} mỗi ngày. Có hiệu lực từ lệnh gọi đầu tiên, ngay khi có client.',
+  'providers.edit.button': 'Sửa',
+  'providers.edit.title': 'Trần cho {provider}',
+  'providers.edit.body':
+    'Mức bản triển khai này đã thống nhất chi với nhà cung cấp, và điều gì xảy ra khi hết.',
+  'providers.edit.confirm': 'Lưu trần',
+  'providers.edit.done': 'Đã lưu trần cho {provider}',
+  'providers.edit.label': 'Tên',
+  'providers.edit.ceiling': 'Lệnh gọi bao gồm',
+  'providers.edit.ceiling.hint':
+    'Để trống nếu chưa thống nhất trần. Trống và 0 khác nhau: 0 kèm “từ chối” sẽ chặn mọi lệnh gọi.',
+  'providers.edit.ceiling.placeholder': 'Không có trần',
+  'providers.edit.window': 'Đo theo',
+  'providers.edit.window.month': 'Một tháng dương lịch',
+  'providers.edit.window.month.body':
+    'Hình thức thường thấy của hạn mức đi kèm.',
+  'providers.edit.window.day': 'Một ngày',
+  'providers.edit.window.day.body':
+    'Một số nhà cung cấp đo theo ngày — gói miễn phí của Geoapify là 3.000 tín dụng mỗi ngày.',
+  'providers.edit.policy': 'Khi chạm trần',
+  'providers.edit.policy.allow': 'Tiếp tục gọi và trả tiền',
+  'providers.edit.policy.allow.body':
+    'Lệnh gọi vẫn vượt trần và bảng điều khiển cảnh báo. Không có gì ngừng hoạt động.',
+  'providers.edit.policy.block': 'Từ chối các lệnh gọi tiếp theo',
+  'providers.edit.policy.block.body':
+    'Lệnh gọi bị chặn cho tới khi cửa sổ đặt lại. Thứ gì phụ thuộc nhà cung cấp này sẽ ngừng chạy — chỉ chọn khi đó là hỏng hóc rẻ hơn.',
+  'providers.edit.policy.block.refused':
+    'Không thể từ chối {provider}: nó không có đường dự phòng, nên chặn lệnh gọi sẽ làm ngừng tính năng chứ không giới hạn chi phí. Trần chỉ cảnh báo thì vẫn dùng được.',
+  'providers.edit.warn': 'Cảnh báo ở (%)',
+  'providers.edit.critical': 'Báo động ở (%)',
+  'providers.edit.thresholds.hint':
+    'Nơi thước đo chuyển vàng rồi đỏ. Cảnh báo không được cao hơn báo động.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

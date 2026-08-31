@@ -468,6 +468,39 @@ const messages = {
     '為某個工作區發起的呼叫會記在它名下。排程工作與平台郵件不屬於任何工作區，單獨計數。',
   'providers.readOnly':
     '你可以查看這些計數，但不能調整上限。修改額度或其政策需要 provider:configure 權限。',
+  'providers.status.planned.agreed.month':
+    '已約定上限：每月 {limit}。一旦有了用戶端，自第一次呼叫起生效。',
+  'providers.status.planned.agreed.day':
+    '已約定上限：每天 {limit}。一旦有了用戶端，自第一次呼叫起生效。',
+  'providers.edit.button': '編輯',
+  'providers.edit.title': '{provider} 的上限',
+  'providers.edit.body': '本部署與服務商約定的花費，以及用完之後會發生什麼。',
+  'providers.edit.confirm': '儲存上限',
+  'providers.edit.done': '已儲存 {provider} 的上限',
+  'providers.edit.label': '名稱',
+  'providers.edit.ceiling': '包含的呼叫數',
+  'providers.edit.ceiling.hint':
+    '沒有約定上限就留空。留空和零不是同一回事：搭配「拒絕」的零會擋下每一次呼叫。',
+  'providers.edit.ceiling.placeholder': '無上限',
+  'providers.edit.window': '計量週期',
+  'providers.edit.window.month': '一個日曆月',
+  'providers.edit.window.month.body': '方案額度通常的形態。',
+  'providers.edit.window.day': '一天',
+  'providers.edit.window.day.body':
+    '有些服務商按日計量——Geoapify 的免費方案是每天 3,000 點。',
+  'providers.edit.policy': '到達上限時',
+  'providers.edit.policy.allow': '繼續呼叫並付費',
+  'providers.edit.policy.allow.body':
+    '呼叫會越過上限繼續，主控台發出警告。沒有東西會停。',
+  'providers.edit.policy.block': '拒絕後續呼叫',
+  'providers.edit.policy.block.body':
+    '在週期重設前呼叫會被擋下。依賴這個服務商的功能會停擺——只在這種失敗更划算的地方選它。',
+  'providers.edit.policy.block.refused':
+    '{provider} 不能被拒絕：它沒有退路，擋下呼叫只會讓功能停擺，而不是控制成本。僅警告的上限仍然可以設。',
+  'providers.edit.warn': '警告門檻（%）',
+  'providers.edit.critical': '嚴重門檻（%）',
+  'providers.edit.thresholds.hint':
+    '進度條轉黃與轉紅的位置。警告不能高於嚴重。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

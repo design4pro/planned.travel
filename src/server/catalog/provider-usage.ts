@@ -81,6 +81,7 @@ import type { AuthSession } from '#/server/auth/tenant'
 import type {
   Database,
   MeteredProvider,
+  ProviderSlug,
   ProviderLimitPolicy,
   ProviderLimitWindow,
   ProviderRegistryRow,
@@ -336,10 +337,14 @@ function windowFloor(at: Date, limitWindow: ProviderLimitWindow): string {
  * Reads the registry row for a provider. Absence is the open state, and that is the point: on the
  * day these tables ship empty every existing call still goes through, so no seed step has to run
  * and nothing in `drizzle/` inserts data.
+ *
+ * Takes a {@link ProviderSlug} rather than a {@link MeteredProvider}: this is an `eq()` on a text
+ * column, and a ceiling agreed before the client is written is precisely what the planned slugs
+ * are listed for.
  */
 export async function readProviderLimit(
   db: Database,
-  provider: MeteredProvider,
+  provider: ProviderSlug,
 ): Promise<ProviderRegistryRow | null> {
   const rows = await db
     .select()

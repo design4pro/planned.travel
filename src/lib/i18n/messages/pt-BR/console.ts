@@ -513,6 +513,40 @@ const messages = {
     'Uma chamada feita para um espaço de trabalho é registrada nele. Tarefas agendadas e e-mails da plataforma não pertencem a nenhum e são contados à parte.',
   'providers.readOnly':
     'Você pode ler estes medidores, mas não mover um teto. Alterar um limite ou sua política exige a permissão provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Teto acordado: {limit} por mês. Vale a partir da primeira chamada, assim que houver um cliente.',
+  'providers.status.planned.agreed.day':
+    'Teto acordado: {limit} por dia. Vale a partir da primeira chamada, assim que houver um cliente.',
+  'providers.edit.button': 'Editar',
+  'providers.edit.title': 'Teto de {provider}',
+  'providers.edit.body':
+    'O que esta instalação combinou gastar com o fornecedor, e o que acontece quando acaba.',
+  'providers.edit.confirm': 'Salvar teto',
+  'providers.edit.done': 'Teto salvo para {provider}',
+  'providers.edit.label': 'Nome',
+  'providers.edit.ceiling': 'Chamadas incluídas',
+  'providers.edit.ceiling.hint':
+    'Deixe vazio se não houver teto acordado. Vazio e zero são coisas diferentes: zero com “recusar” barra toda chamada.',
+  'providers.edit.ceiling.placeholder': 'Sem teto',
+  'providers.edit.window': 'Medido em',
+  'providers.edit.window.month': 'Um mês do calendário',
+  'providers.edit.window.month.body': 'O formato comum de uma cota incluída.',
+  'providers.edit.window.day': 'Um dia',
+  'providers.edit.window.day.body':
+    'Alguns fornecedores medem por dia — o plano gratuito da Geoapify são 3.000 créditos diários.',
+  'providers.edit.policy': 'Ao atingir o teto',
+  'providers.edit.policy.allow': 'Continuar chamando e pagar',
+  'providers.edit.policy.allow.body':
+    'As chamadas seguem acima do teto e o console avisa. Nada deixa de funcionar.',
+  'providers.edit.policy.block': 'Recusar as próximas chamadas',
+  'providers.edit.policy.block.body':
+    'As chamadas são recusadas até a janela reiniciar. O que depende deste fornecedor para de funcionar — escolha só onde essa falha for a mais barata.',
+  'providers.edit.policy.block.refused':
+    '{provider} não pode ser recusado: não há alternativa, então barrar suas chamadas pararia o recurso em vez de limitar o custo. Um teto que apenas avisa continua disponível.',
+  'providers.edit.warn': 'Avisar em (%)',
+  'providers.edit.critical': 'Alarme em (%)',
+  'providers.edit.thresholds.hint':
+    'Onde o medidor fica âmbar e vermelho. O aviso não pode passar do alarme.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -501,6 +501,40 @@ const messages = {
     'Bir çalışma alanı için yapılan çağrı o alana yazılır. Zamanlanmış işler ve platform postası hiçbirine ait değildir, ayrı sayılır.',
   'providers.readOnly':
     'Bu sayaçları okuyabilirsin ama tavanı oynatamazsın. Bir limiti ya da politikasını değiştirmek provider:configure yetkisini ister.',
+  'providers.status.planned.agreed.month':
+    'Anlaşılan tavan: ayda {limit}. Bir istemci olur olmaz ilk çağrıdan itibaren geçerlidir.',
+  'providers.status.planned.agreed.day':
+    'Anlaşılan tavan: günde {limit}. Bir istemci olur olmaz ilk çağrıdan itibaren geçerlidir.',
+  'providers.edit.button': 'Düzenle',
+  'providers.edit.title': '{provider} tavanı',
+  'providers.edit.body':
+    'Bu kurulumun sağlayıcıda harcamayı kabul ettiği miktar ve bittiğinde ne olacağı.',
+  'providers.edit.confirm': 'Tavanı kaydet',
+  'providers.edit.done': '{provider} için tavan kaydedildi',
+  'providers.edit.label': 'Ad',
+  'providers.edit.ceiling': 'Dahil çağrılar',
+  'providers.edit.ceiling.hint':
+    'Anlaşılmış bir tavan yoksa boş bırak. Boş ile sıfır aynı şey değil: “reddet” ile sıfır her çağrıyı geri çevirir.',
+  'providers.edit.ceiling.placeholder': 'Tavan yok',
+  'providers.edit.window': 'Şu süre üzerinden',
+  'providers.edit.window.month': 'Takvim ayı',
+  'providers.edit.window.month.body': 'Dahil kotanın alışıldık biçimi.',
+  'providers.edit.window.day': 'Gün',
+  'providers.edit.window.day.body':
+    'Bazı sağlayıcılar günlük ölçer — Geoapify’ın ücretsiz planı günde 3.000 kredidir.',
+  'providers.edit.policy': 'Tavanda',
+  'providers.edit.policy.allow': 'Çağırmayı sürdür ve öde',
+  'providers.edit.policy.allow.body':
+    'Çağrılar tavanın üstünde de sürer, konsol uyarır. Hiçbir şey durmaz.',
+  'providers.edit.policy.block': 'Sonraki çağrıları reddet',
+  'providers.edit.policy.block.body':
+    'Pencere sıfırlanana dek çağrılar geri çevrilir. Bu sağlayıcıya bağlı olan ne varsa durur — yalnızca bu arızanın daha ucuz olduğu yerde seç.',
+  'providers.edit.policy.block.refused':
+    '{provider} reddedilemez: yedek bir yolu yok, dolayısıyla çağrılarını geri çevirmek maliyeti sınırlamak yerine özelliği durdurur. Yalnızca uyaran bir tavan hâlâ mümkün.',
+  'providers.edit.warn': 'Uyarı eşiği (%)',
+  'providers.edit.critical': 'Alarm eşiği (%)',
+  'providers.edit.thresholds.hint':
+    'Göstergenin sarıya ve kırmızıya döndüğü yer. Uyarı, alarmın üstünde olamaz.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

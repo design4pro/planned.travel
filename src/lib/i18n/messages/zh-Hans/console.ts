@@ -465,6 +465,39 @@ const messages = {
     '为某个工作区发起的调用会记在它名下。定时任务和平台邮件不属于任何工作区，单独计数。',
   'providers.readOnly':
     '你可以查看这些计数，但不能调整上限。修改限额或其策略需要 provider:configure 权限。',
+  'providers.status.planned.agreed.month':
+    '已约定上限：每月 {limit}。一旦有了客户端，从第一次调用起生效。',
+  'providers.status.planned.agreed.day':
+    '已约定上限：每天 {limit}。一旦有了客户端，从第一次调用起生效。',
+  'providers.edit.button': '编辑',
+  'providers.edit.title': '{provider} 的上限',
+  'providers.edit.body': '本部署与服务商约定的花费，以及用完之后会发生什么。',
+  'providers.edit.confirm': '保存上限',
+  'providers.edit.done': '已保存 {provider} 的上限',
+  'providers.edit.label': '名称',
+  'providers.edit.ceiling': '包含的调用数',
+  'providers.edit.ceiling.hint':
+    '没有约定上限就留空。留空和零不是一回事：搭配“拒绝”的零会挡下每一次调用。',
+  'providers.edit.ceiling.placeholder': '无上限',
+  'providers.edit.window': '计量周期',
+  'providers.edit.window.month': '一个自然月',
+  'providers.edit.window.month.body': '套餐额度通常的形态。',
+  'providers.edit.window.day': '一天',
+  'providers.edit.window.day.body':
+    '有些服务商按天计量——Geoapify 的免费方案是每天 3,000 点。',
+  'providers.edit.policy': '到达上限时',
+  'providers.edit.policy.allow': '继续调用并付费',
+  'providers.edit.policy.allow.body':
+    '调用会越过上限继续，控制台发出告警。没有东西会停。',
+  'providers.edit.policy.block': '拒绝后续调用',
+  'providers.edit.policy.block.body':
+    '在周期重置前调用会被挡下。依赖这个服务商的功能会停摆——只在这种失败更划算的地方选它。',
+  'providers.edit.policy.block.refused':
+    '{provider} 不能被拒绝：它没有退路，挡下调用只会让功能停摆，而不是控制成本。仅告警的上限仍然可以设。',
+  'providers.edit.warn': '告警阈值（%）',
+  'providers.edit.critical': '严重阈值（%）',
+  'providers.edit.thresholds.hint':
+    '进度条转黄和转红的位置。告警不能高于严重。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

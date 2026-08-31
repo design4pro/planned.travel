@@ -505,6 +505,40 @@ const messages = {
     'Ett anrop som görs för en arbetsyta bokförs på den. Schemalagt arbete och plattformens post hör inte till någon och räknas för sig.',
   'providers.readOnly':
     'Du kan läsa de här mätarna men inte flytta ett tak. Att ändra en gräns eller dess policy kräver rättigheten provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Avtalat tak: {limit} i månaden. Det gäller från första anropet, så snart en klient finns.',
+  'providers.status.planned.agreed.day':
+    'Avtalat tak: {limit} om dagen. Det gäller från första anropet, så snart en klient finns.',
+  'providers.edit.button': 'Redigera',
+  'providers.edit.title': 'Tak för {provider}',
+  'providers.edit.body':
+    'Vad den här installationen har avtalat att spendera hos leverantören, och vad som händer när det tar slut.',
+  'providers.edit.confirm': 'Spara taket',
+  'providers.edit.done': 'Taket för {provider} sparat',
+  'providers.edit.label': 'Namn',
+  'providers.edit.ceiling': 'Anrop som ingår',
+  'providers.edit.ceiling.hint':
+    'Lämna tomt om inget tak är avtalat. Tomt och noll är inte samma sak: noll med ”neka” avvisar varje anrop.',
+  'providers.edit.ceiling.placeholder': 'Inget tak',
+  'providers.edit.window': 'Mäts över',
+  'providers.edit.window.month': 'En kalendermånad',
+  'providers.edit.window.month.body': 'Den vanliga formen på en ingående kvot.',
+  'providers.edit.window.day': 'Ett dygn',
+  'providers.edit.window.day.body':
+    'Vissa leverantörer mäter per dygn — Geoapifys gratisplan är 3 000 krediter om dagen.',
+  'providers.edit.policy': 'Vid taket',
+  'providers.edit.policy.allow': 'Fortsätt anropa och betala',
+  'providers.edit.policy.allow.body':
+    'Anropen fortsätter över taket och konsolen varnar. Ingenting slutar fungera.',
+  'providers.edit.policy.block': 'Neka fortsatta anrop',
+  'providers.edit.policy.block.body':
+    'Anrop avvisas tills fönstret börjar om. Det som beror på den här leverantören slutar fungera — välj det bara där det är det billigare felet.',
+  'providers.edit.policy.block.refused':
+    '{provider} kan inte nekas: den har ingen reservväg, så att avvisa dess anrop skulle stoppa funktionen i stället för att hålla nere kostnaden. Ett tak som bara varnar går fortfarande bra.',
+  'providers.edit.warn': 'Varna vid (%)',
+  'providers.edit.critical': 'Larma vid (%)',
+  'providers.edit.thresholds.hint':
+    'Där mätaren blir gul och röd. Varningen får inte ligga över larmet.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

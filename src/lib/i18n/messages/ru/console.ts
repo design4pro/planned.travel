@@ -521,6 +521,40 @@ const messages = {
     'Вызов, сделанный для рабочего пространства, записывается на него. Работа по расписанию и почта платформы не принадлежат ни одному и считаются отдельно.',
   'providers.readOnly':
     'Эти счётчики можно читать, но не двигать потолок. Изменение лимита или политики требует права provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Согласованный потолок: {limit} в месяц. Действует с первого вызова, как только появится клиент.',
+  'providers.status.planned.agreed.day':
+    'Согласованный потолок: {limit} в сутки. Действует с первого вызова, как только появится клиент.',
+  'providers.edit.button': 'Изменить',
+  'providers.edit.title': 'Потолок для {provider}',
+  'providers.edit.body':
+    'Сколько эта установка договорилась тратить у поставщика и что происходит, когда лимит исчерпан.',
+  'providers.edit.confirm': 'Сохранить потолок',
+  'providers.edit.done': 'Потолок для {provider} сохранён',
+  'providers.edit.label': 'Название',
+  'providers.edit.ceiling': 'Вызовов включено',
+  'providers.edit.ceiling.hint':
+    'Оставьте пустым, если потолок не согласован. Пусто и ноль — разное: ноль при «отказывать» отклоняет каждый вызов.',
+  'providers.edit.ceiling.placeholder': 'Без потолка',
+  'providers.edit.window': 'Измеряется за',
+  'providers.edit.window.month': 'Календарный месяц',
+  'providers.edit.window.month.body': 'Обычная форма включённой квоты.',
+  'providers.edit.window.day': 'Сутки',
+  'providers.edit.window.day.body':
+    'Часть поставщиков считает посуточно — бесплатный план Geoapify это 3 000 кредитов в сутки.',
+  'providers.edit.policy': 'На потолке',
+  'providers.edit.policy.allow': 'Звать дальше и платить',
+  'providers.edit.policy.allow.body':
+    'Вызовы идут сверх потолка, консоль предупреждает. Ничего не перестаёт работать.',
+  'providers.edit.policy.block': 'Отказывать в дальнейших вызовах',
+  'providers.edit.policy.block.body':
+    'Вызовы отклоняются до сброса окна. То, что зависит от этого поставщика, перестаёт работать — выбирайте только там, где такой отказ дешевле.',
+  'providers.edit.policy.block.refused':
+    '{provider} отклонять нельзя: у него нет запасного пути, так что отказ в вызовах остановил бы функцию, а не ограничил расход. Потолок, который только предупреждает, по-прежнему доступен.',
+  'providers.edit.warn': 'Предупреждать при (%)',
+  'providers.edit.critical': 'Тревога при (%)',
+  'providers.edit.thresholds.hint':
+    'Где индикатор становится жёлтым и красным. Предупреждение не должно быть выше тревоги.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

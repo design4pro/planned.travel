@@ -516,6 +516,40 @@ const messages = {
     'Volání provedené pro pracovní prostor se připíše jemu. Naplánované úlohy a pošta platformy nepatří žádnému a počítají se zvlášť.',
   'providers.readOnly':
     'Tato měřidla můžeš číst, ale strop neposuneš. Změna limitu nebo jeho politiky vyžaduje oprávnění provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Dohodnutý strop: {limit} měsíčně. Platí od prvního volání, jakmile bude klient.',
+  'providers.status.planned.agreed.day':
+    'Dohodnutý strop: {limit} denně. Platí od prvního volání, jakmile bude klient.',
+  'providers.edit.button': 'Upravit',
+  'providers.edit.title': 'Strop pro {provider}',
+  'providers.edit.body':
+    'Kolik se tato instalace zavázala u poskytovatele utratit a co se stane, až se to vyčerpá.',
+  'providers.edit.confirm': 'Uložit strop',
+  'providers.edit.done': 'Strop pro {provider} uložen',
+  'providers.edit.label': 'Název',
+  'providers.edit.ceiling': 'Zahrnutá volání',
+  'providers.edit.ceiling.hint':
+    'Nech prázdné, pokud strop není dohodnutý. Prázdné a nula nejsou totéž: nula při „odmítat“ odmítne každé volání.',
+  'providers.edit.ceiling.placeholder': 'Bez stropu',
+  'providers.edit.window': 'Měřeno za',
+  'providers.edit.window.month': 'Kalendářní měsíc',
+  'providers.edit.window.month.body': 'Obvyklý tvar zahrnuté kvóty.',
+  'providers.edit.window.day': 'Den',
+  'providers.edit.window.day.body':
+    'Někteří poskytovatelé měří po dnech — bezplatný plán Geoapify je 3 000 kreditů denně.',
+  'providers.edit.policy': 'Po dosažení stropu',
+  'providers.edit.policy.allow': 'Volat dál a platit',
+  'providers.edit.policy.allow.body':
+    'Volání pokračují nad strop a konzole varuje. Nic nepřestane fungovat.',
+  'providers.edit.policy.block': 'Odmítat další volání',
+  'providers.edit.policy.block.body':
+    'Volání se odmítají, dokud se okno neresetuje. Co na tomto poskytovateli závisí, přestane fungovat — vol to jen tam, kde je to levnější porucha.',
+  'providers.edit.policy.block.refused':
+    '{provider} odmítat nelze: nemá záložní cestu, takže odříznutí volání by funkci zastavilo, ne zlevnilo. Strop, který jen varuje, je stále k dispozici.',
+  'providers.edit.warn': 'Varovat při (%)',
+  'providers.edit.critical': 'Alarm při (%)',
+  'providers.edit.thresholds.hint':
+    'Kde ukazatel zežloutne a zčervená. Varování nesmí být nad alarmem.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

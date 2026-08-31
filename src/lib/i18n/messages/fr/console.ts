@@ -526,6 +526,40 @@ const messages = {
     'Un appel fait pour un espace de travail lui est imputé. Les tâches planifiées et le courrier de la plateforme n’appartiennent à aucun et comptent à part.',
   'providers.readOnly':
     'Vous pouvez lire ces compteurs mais pas déplacer un plafond. Modifier une limite ou sa politique demande l’autorisation provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Plafond convenu : {limit} par mois. Il s’applique dès le premier appel, une fois qu’un client existe.',
+  'providers.status.planned.agreed.day':
+    'Plafond convenu : {limit} par jour. Il s’applique dès le premier appel, une fois qu’un client existe.',
+  'providers.edit.button': 'Modifier',
+  'providers.edit.title': 'Plafond pour {provider}',
+  'providers.edit.body':
+    'Ce que ce déploiement s’est engagé à dépenser chez le fournisseur, et ce qui arrive une fois épuisé.',
+  'providers.edit.confirm': 'Enregistrer le plafond',
+  'providers.edit.done': 'Plafond enregistré pour {provider}',
+  'providers.edit.label': 'Nom',
+  'providers.edit.ceiling': 'Appels inclus',
+  'providers.edit.ceiling.hint':
+    'Laissez vide s’il n’y a aucun plafond convenu. Vide et zéro diffèrent : zéro sous « refuser » écarte chaque appel.',
+  'providers.edit.ceiling.placeholder': 'Aucun plafond',
+  'providers.edit.window': 'Mesuré sur',
+  'providers.edit.window.month': 'Un mois civil',
+  'providers.edit.window.month.body': 'La forme habituelle d’un quota inclus.',
+  'providers.edit.window.day': 'Une journée',
+  'providers.edit.window.day.body':
+    'Certains fournisseurs comptent par jour — le plan gratuit de Geoapify est de 3 000 crédits par jour.',
+  'providers.edit.policy': 'Au plafond',
+  'providers.edit.policy.allow': 'Continuer et payer',
+  'providers.edit.policy.allow.body':
+    'Les appels dépassent le plafond et la console avertit. Rien ne cesse de fonctionner.',
+  'providers.edit.policy.block': 'Refuser les appels suivants',
+  'providers.edit.policy.block.body':
+    'Les appels sont écartés jusqu’à la remise à zéro. Ce qui dépend de ce fournisseur cesse de fonctionner : ne le choisissez que là où c’est la panne la moins coûteuse.',
+  'providers.edit.policy.block.refused':
+    '{provider} ne peut pas être refusé : il n’a aucune solution de repli, donc écarter ses appels arrêterait la fonctionnalité au lieu d’en plafonner le coût. Un plafond qui se contente d’avertir reste possible.',
+  'providers.edit.warn': 'Avertir à (%)',
+  'providers.edit.critical': 'Alerter à (%)',
+  'providers.edit.thresholds.hint':
+    'Où la jauge passe à l’ambre puis au rouge. L’avertissement ne doit pas dépasser l’alerte.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

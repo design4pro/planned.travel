@@ -518,6 +518,40 @@ const messages = {
     'الاستدعاء الذي يجري لمساحة عمل يُقيَّد عليها. أعمال الجدولة وبريد المنصّة لا تخصّ أي مساحة وتُعدّ على حدة.',
   'providers.readOnly':
     'يمكنك قراءة هذه العدّادات لا تحريك سقف. تغيير حدّ أو سياسته يتطلّب صلاحية provider:configure.',
+  'providers.status.planned.agreed.month':
+    'السقف المتَّفق عليه: {limit} شهريًا. يسري من أول استدعاء، حالما يوجد عميل برمجي.',
+  'providers.status.planned.agreed.day':
+    'السقف المتَّفق عليه: {limit} يوميًا. يسري من أول استدعاء، حالما يوجد عميل برمجي.',
+  'providers.edit.button': 'تحرير',
+  'providers.edit.title': 'سقف {provider}',
+  'providers.edit.body':
+    'ما اتَّفق هذا النشر على إنفاقه لدى المزوّد، وما يحدث عند نفاده.',
+  'providers.edit.confirm': 'حفظ السقف',
+  'providers.edit.done': 'حُفظ سقف {provider}',
+  'providers.edit.label': 'الاسم',
+  'providers.edit.ceiling': 'الاستدعاءات المشمولة',
+  'providers.edit.ceiling.hint':
+    'اتركه فارغًا إن لم يُتَّفق على سقف. الفارغ والصفر مختلفان: الصفر مع «الرفض» يردّ كل استدعاء.',
+  'providers.edit.ceiling.placeholder': 'بلا سقف',
+  'providers.edit.window': 'يُقاس على',
+  'providers.edit.window.month': 'شهر تقويمي',
+  'providers.edit.window.month.body': 'الشكل المعتاد للحصة المشمولة.',
+  'providers.edit.window.day': 'يوم',
+  'providers.edit.window.day.body':
+    'بعض المزوّدين يحاسبون يوميًا — خطة Geoapify المجانية 3٬000 رصيد في اليوم.',
+  'providers.edit.policy': 'عند السقف',
+  'providers.edit.policy.allow': 'واصِل الاستدعاء وادفع',
+  'providers.edit.policy.allow.body':
+    'تستمر الاستدعاءات فوق السقف وتنبّه لوحة التحكّم. لا شيء يتوقّف.',
+  'providers.edit.policy.block': 'ارفض الاستدعاءات التالية',
+  'providers.edit.policy.block.body':
+    'تُردّ الاستدعاءات حتى تُصفَّر النافذة. ما يعتمد على هذا المزوّد يتوقّف — فاخترها حيث يكون هذا العطل هو الأرخص فقط.',
+  'providers.edit.policy.block.refused':
+    'لا يمكن رفض {provider}: لا بديل له، فردّ استدعاءاته يوقف الميزة بدل أن يحدّ كلفتها. ويبقى السقف الذي ينبّه فقط متاحًا.',
+  'providers.edit.warn': 'التنبيه عند (%)',
+  'providers.edit.critical': 'الإنذار عند (%)',
+  'providers.edit.thresholds.hint':
+    'حيث يتحوّل المؤشّر إلى الكهرماني ثم الأحمر. لا يجوز أن يعلو التنبيه على الإنذار.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -515,6 +515,41 @@ const messages = {
     'Ein Aufruf für einen Arbeitsbereich wird ihm zugerechnet. Cron-Läufe und Plattformpost gehören zu keinem und zählen getrennt.',
   'providers.readOnly':
     'Sie können diese Zähler lesen, aber keine Obergrenze verschieben. Limit oder Richtlinie zu ändern erfordert die Berechtigung provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Vereinbarte Obergrenze: {limit} im Monat. Sie gilt ab dem ersten Aufruf, sobald ein Client existiert.',
+  'providers.status.planned.agreed.day':
+    'Vereinbarte Obergrenze: {limit} am Tag. Sie gilt ab dem ersten Aufruf, sobald ein Client existiert.',
+  'providers.edit.button': 'Bearbeiten',
+  'providers.edit.title': 'Obergrenze für {provider}',
+  'providers.edit.body':
+    'Was dieses Deployment beim Anbieter auszugeben vereinbart hat, und was passiert, wenn es aufgebraucht ist.',
+  'providers.edit.confirm': 'Obergrenze speichern',
+  'providers.edit.done': 'Obergrenze für {provider} gespeichert',
+  'providers.edit.label': 'Bezeichnung',
+  'providers.edit.ceiling': 'Enthaltene Aufrufe',
+  'providers.edit.ceiling.hint':
+    'Leer lassen, wenn keine Obergrenze vereinbart ist. Leer und null sind verschieden: null bedeutet unter „verweigern“, dass jeder Aufruf abgewiesen wird.',
+  'providers.edit.ceiling.placeholder': 'Keine Obergrenze',
+  'providers.edit.window': 'Gemessen über',
+  'providers.edit.window.month': 'Einen Kalendermonat',
+  'providers.edit.window.month.body':
+    'Die übliche Form eines enthaltenen Kontingents.',
+  'providers.edit.window.day': 'Einen Tag',
+  'providers.edit.window.day.body':
+    'Manche Anbieter rechnen täglich ab — Geoapifys freier Plan sind 3.000 Credits am Tag.',
+  'providers.edit.policy': 'An der Obergrenze',
+  'providers.edit.policy.allow': 'Weiter aufrufen und zahlen',
+  'providers.edit.policy.allow.body':
+    'Aufrufe laufen über die Grenze hinaus und die Konsole warnt. Nichts hört auf zu funktionieren.',
+  'providers.edit.policy.block': 'Weitere Aufrufe verweigern',
+  'providers.edit.policy.block.body':
+    'Aufrufe werden bis zum Fensterwechsel abgewiesen. Was von diesem Anbieter abhängt, hört auf zu funktionieren — wählen Sie das nur dort, wo das der billigere Ausfall ist.',
+  'providers.edit.policy.block.refused':
+    '{provider} kann nicht verweigert werden: es gibt keinen Ersatzweg, also würde ein Abweisen die Funktion stoppen statt ihre Kosten zu deckeln. Eine Obergrenze, die nur warnt, steht weiterhin zur Verfügung.',
+  'providers.edit.warn': 'Warnen bei (%)',
+  'providers.edit.critical': 'Alarm bei (%)',
+  'providers.edit.thresholds.hint':
+    'Wo die Anzeige gelb und rot wird. Die Warnung darf nicht über dem Alarm liegen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

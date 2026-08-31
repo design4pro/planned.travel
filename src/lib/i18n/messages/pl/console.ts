@@ -524,6 +524,40 @@ const messages = {
     'Wywołanie wykonane dla przestrzeni roboczej zapisuje się na jej koncie. Zadania cykliczne i poczta platformy nie należą do żadnej i liczą się osobno.',
   'providers.readOnly':
     'Możesz czytać te liczniki, ale nie zmieniać pułapu. Zmiana limitu lub polityki wymaga uprawnienia provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Uzgodniony pułap: {limit} miesięcznie. Zadziała od pierwszego wywołania, gdy powstanie klient.',
+  'providers.status.planned.agreed.day':
+    'Uzgodniony pułap: {limit} dziennie. Zadziała od pierwszego wywołania, gdy powstanie klient.',
+  'providers.edit.button': 'Edytuj',
+  'providers.edit.title': 'Pułap dla {provider}',
+  'providers.edit.body':
+    'Ile ta instalacja umówiła się wydać u dostawcy i co się dzieje, gdy pula się skończy.',
+  'providers.edit.confirm': 'Zapisz pułap',
+  'providers.edit.done': 'Zapisano pułap dla {provider}',
+  'providers.edit.label': 'Nazwa',
+  'providers.edit.ceiling': 'Wywołania w pakiecie',
+  'providers.edit.ceiling.hint':
+    'Zostaw puste, jeśli pułapu nie uzgodniono. Puste i zero to co innego: zero przy „odmawiaj” odrzuca każde wywołanie.',
+  'providers.edit.ceiling.placeholder': 'Bez pułapu',
+  'providers.edit.window': 'Mierzone przez',
+  'providers.edit.window.month': 'Miesiąc kalendarzowy',
+  'providers.edit.window.month.body': 'Zwykły kształt pakietu w abonamencie.',
+  'providers.edit.window.day': 'Dobę',
+  'providers.edit.window.day.body':
+    'Część dostawców rozlicza dziennie — darmowy plan Geoapify to 3 000 kredytów na dobę.',
+  'providers.edit.policy': 'Po osiągnięciu pułapu',
+  'providers.edit.policy.allow': 'Wołaj dalej i płać',
+  'providers.edit.policy.allow.body':
+    'Wywołania idą ponad pułap, a konsola ostrzega. Nic nie przestaje działać.',
+  'providers.edit.policy.block': 'Odmawiaj kolejnych wywołań',
+  'providers.edit.policy.block.body':
+    'Wywołania są odrzucane do końca okna. To, co zależy od tego dostawcy, przestaje działać — wybieraj tylko tam, gdzie taka awaria jest tańsza.',
+  'providers.edit.policy.block.refused':
+    '{provider} nie może być odrzucany: nie ma zapasowej drogi, więc odcięcie wywołań zatrzymałoby funkcję, a nie ograniczyło koszt. Pułap, który tylko ostrzega, jest nadal dostępny.',
+  'providers.edit.warn': 'Ostrzegaj przy (%)',
+  'providers.edit.critical': 'Alarmuj przy (%)',
+  'providers.edit.thresholds.hint':
+    'Gdzie miernik robi się bursztynowy i czerwony. Ostrzeżenie nie może być powyżej alarmu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

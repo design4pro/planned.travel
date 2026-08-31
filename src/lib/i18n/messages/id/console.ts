@@ -507,6 +507,40 @@ const messages = {
     'Panggilan yang dibuat untuk sebuah ruang kerja dicatat atas namanya. Pekerjaan terjadwal dan surat platform bukan milik siapa pun dan dihitung terpisah.',
   'providers.readOnly':
     'Kamu bisa membaca meteran ini tetapi tidak menggeser batas atas. Mengubah limit atau kebijakannya memerlukan izin provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Batas yang disepakati: {limit} per bulan. Berlaku sejak panggilan pertama, begitu ada klien.',
+  'providers.status.planned.agreed.day':
+    'Batas yang disepakati: {limit} per hari. Berlaku sejak panggilan pertama, begitu ada klien.',
+  'providers.edit.button': 'Ubah',
+  'providers.edit.title': 'Batas untuk {provider}',
+  'providers.edit.body':
+    'Berapa yang disepakati instalasi ini untuk dibelanjakan pada penyedia, dan apa yang terjadi saat habis.',
+  'providers.edit.confirm': 'Simpan batas',
+  'providers.edit.done': 'Batas untuk {provider} disimpan',
+  'providers.edit.label': 'Nama',
+  'providers.edit.ceiling': 'Panggilan termasuk',
+  'providers.edit.ceiling.hint':
+    'Kosongkan bila tidak ada batas yang disepakati. Kosong dan nol berbeda: nol dengan “tolak” menampik setiap panggilan.',
+  'providers.edit.ceiling.placeholder': 'Tanpa batas',
+  'providers.edit.window': 'Diukur per',
+  'providers.edit.window.month': 'Satu bulan kalender',
+  'providers.edit.window.month.body': 'Bentuk lazim sebuah kuota bawaan.',
+  'providers.edit.window.day': 'Satu hari',
+  'providers.edit.window.day.body':
+    'Sebagian penyedia mengukur harian — paket gratis Geoapify adalah 3.000 kredit per hari.',
+  'providers.edit.policy': 'Saat mencapai batas',
+  'providers.edit.policy.allow': 'Terus memanggil dan membayar',
+  'providers.edit.policy.allow.body':
+    'Panggilan berlanjut melewati batas dan konsol memberi peringatan. Tidak ada yang berhenti.',
+  'providers.edit.policy.block': 'Tolak panggilan berikutnya',
+  'providers.edit.policy.block.body':
+    'Panggilan ditolak sampai jendela diatur ulang. Apa pun yang bergantung pada penyedia ini berhenti bekerja — pilih hanya bila kegagalan itu lebih murah.',
+  'providers.edit.policy.block.refused':
+    '{provider} tidak bisa ditolak: tidak ada jalan cadangan, jadi menampik panggilannya akan menghentikan fitur, bukan membatasi biayanya. Batas yang hanya memberi peringatan tetap tersedia.',
+  'providers.edit.warn': 'Peringatan di (%)',
+  'providers.edit.critical': 'Alarm di (%)',
+  'providers.edit.thresholds.hint':
+    'Tempat meter berubah kuning lalu merah. Peringatan tidak boleh di atas alarm.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

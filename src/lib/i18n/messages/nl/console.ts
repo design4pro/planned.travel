@@ -511,6 +511,41 @@ const messages = {
     'Een aanroep voor een werkruimte wordt daaraan toegerekend. Cronwerk en platformpost horen bij geen enkele en tellen apart.',
   'providers.readOnly':
     'Je kunt deze meters lezen maar geen plafond verzetten. Een limiet of beleid wijzigen vraagt het recht provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Afgesproken plafond: {limit} per maand. Het geldt vanaf de eerste aanroep, zodra er een client is.',
+  'providers.status.planned.agreed.day':
+    'Afgesproken plafond: {limit} per dag. Het geldt vanaf de eerste aanroep, zodra er een client is.',
+  'providers.edit.button': 'Bewerken',
+  'providers.edit.title': 'Plafond voor {provider}',
+  'providers.edit.body':
+    'Wat deze installatie met de aanbieder heeft afgesproken uit te geven, en wat er gebeurt als het op is.',
+  'providers.edit.confirm': 'Plafond opslaan',
+  'providers.edit.done': 'Plafond opgeslagen voor {provider}',
+  'providers.edit.label': 'Naam',
+  'providers.edit.ceiling': 'Inbegrepen aanroepen',
+  'providers.edit.ceiling.hint':
+    'Laat leeg als er geen plafond is afgesproken. Leeg en nul zijn niet hetzelfde: nul bij “weigeren” wijst elke aanroep af.',
+  'providers.edit.ceiling.placeholder': 'Geen plafond',
+  'providers.edit.window': 'Gemeten over',
+  'providers.edit.window.month': 'Een kalendermaand',
+  'providers.edit.window.month.body':
+    'De gebruikelijke vorm van een inbegrepen tegoed.',
+  'providers.edit.window.day': 'Een dag',
+  'providers.edit.window.day.body':
+    'Sommige aanbieders rekenen per dag — het gratis plan van Geoapify is 3.000 credits per dag.',
+  'providers.edit.policy': 'Bij het plafond',
+  'providers.edit.policy.allow': 'Doorgaan en betalen',
+  'providers.edit.policy.allow.body':
+    'Aanroepen gaan door boven het plafond en de console waarschuwt. Er stopt niets.',
+  'providers.edit.policy.block': 'Verdere aanroepen weigeren',
+  'providers.edit.policy.block.body':
+    'Aanroepen worden geweigerd tot het venster opnieuw begint. Wat van deze aanbieder afhangt stopt — kies dit alleen waar dat de goedkopere storing is.',
+  'providers.edit.policy.block.refused':
+    '{provider} kan niet geweigerd worden: er is geen terugvalweg, dus aanroepen weigeren zou de functie stoppen in plaats van de kosten begrenzen. Een plafond dat alleen waarschuwt kan wel.',
+  'providers.edit.warn': 'Waarschuwen bij (%)',
+  'providers.edit.critical': 'Alarm bij (%)',
+  'providers.edit.thresholds.hint':
+    'Waar de meter oranje en rood wordt. De waarschuwing mag niet boven het alarm liggen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

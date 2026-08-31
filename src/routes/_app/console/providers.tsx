@@ -1,6 +1,6 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
 import { Gauge, ShieldAlert, TrendingUp, Users } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { ErrorPanel } from '#/components/layout/error-state'
 import { readConsoleFailure } from '#/components/console'
@@ -15,6 +15,7 @@ import {
 import { useI18n, useTranslate } from '#/lib/i18n'
 import { forecast, meterTone, projectAtScale } from './-lib/providers'
 import { loadProviders } from './-server/providers'
+import { ProviderLimitDialog } from './-ui/provider-limit-dialog'
 import { formatNumber } from '../-lib/format'
 import { Panel, PanelRow, RowsSkeleton, StatsSkeleton } from '../-ui/scaffold'
 
@@ -95,21 +96,44 @@ function policyBadge(panel: ProviderPanel, t: Translate) {
   return <Badge tone="neutral">{t('console.providers.policy.allow')}</Badge>
 }
 
-function ProviderRow({ panel }: { panel: ProviderPanel }) {
+function ProviderRow({
+  panel,
+  canConfigure,
+  onSaved,
+}: {
+  panel: ProviderPanel
+  canConfigure: boolean
+  onSaved: () => Promise<void>
+}) {
   const t = useTranslate()
   const { locale } = useI18n()
+
+  const editor = canConfigure ? (
+    <ProviderLimitDialog panel={panel} onSaved={onSaved} />
+  ) : null
 
   if (!panel.integrated) {
     return (
       <PanelRow className="flex-col items-start gap-1">
-        <span className="flex items-center gap-2">
+        <span className="flex w-full items-center gap-2">
           <span className="text-label font-semibold text-ink">
             {panel.slug}
           </span>
           <Badge tone="neutral">{t('console.providers.status.planned')}</Badge>
+          <span className="ms-auto">{editor}</span>
         </span>
         <span className="text-caption text-ink-3">
-          {t('console.providers.status.planned.description')}
+          {/* Two whole sentences rather than one with an interpolated window label: the labels are
+              written for a progress bar ("Today"), and reusing one here read as "3,000 · Today". A
+              noun phrase assembled from fragments breaks differently in each of the 23 locales. */}
+          {panel.callLimit === null
+            ? t('console.providers.status.planned.description')
+            : t(
+                panel.limitWindow === 'day'
+                  ? 'console.providers.status.planned.agreed.day'
+                  : 'console.providers.status.planned.agreed.month',
+                { limit: formatNumber(panel.callLimit, locale) },
+              )}
         </span>
       </PanelRow>
     )
@@ -131,6 +155,7 @@ function ProviderRow({ panel }: { panel: ProviderPanel }) {
             })}
           </Badge>
         ) : null}
+        <span className="ms-auto">{editor}</span>
       </span>
 
       {limit === null ? (
@@ -346,6 +371,14 @@ function ProvidersPage() {
   const t = useTranslate()
   const { locale } = useI18n()
   const view = Route.useLoaderData()
+  const router = useRouter()
+
+  // The loader owns every number on this screen, so a save refreshes it rather than patching a copy
+  // in component state: a ceiling that moved changes the meters, the tones and the near-a-ceiling
+  // tile at once, and two of those are derived from rows this component never sees.
+  const reload = useCallback(async () => {
+    await router.invalidate()
+  }, [router])
 
   const integrated = view.providers.filter((panel) => panel.integrated)
   const monthTotal = integrated.reduce(
@@ -434,7 +467,12 @@ function ProvidersPage() {
             flush
           >
             {view.providers.map((panel) => (
-              <ProviderRow key={panel.slug} panel={panel} />
+              <ProviderRow
+                key={panel.slug}
+                panel={panel}
+                canConfigure={view.canConfigure}
+                onSaved={reload}
+              />
             ))}
           </Panel>
 

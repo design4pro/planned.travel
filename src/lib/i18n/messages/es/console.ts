@@ -525,6 +525,41 @@ const messages = {
     'Una llamada hecha para un espacio de trabajo se le imputa. Las tareas programadas y el correo de la plataforma no son de ninguno y se cuentan aparte.',
   'providers.readOnly':
     'Puedes leer estos medidores pero no mover un tope. Cambiar un límite o su política requiere el permiso provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Tope acordado: {limit} al mes. Se aplica desde la primera llamada, en cuanto exista un cliente.',
+  'providers.status.planned.agreed.day':
+    'Tope acordado: {limit} al día. Se aplica desde la primera llamada, en cuanto exista un cliente.',
+  'providers.edit.button': 'Editar',
+  'providers.edit.title': 'Tope de {provider}',
+  'providers.edit.body':
+    'Lo que este despliegue acordó gastar con el proveedor, y qué pasa cuando se agota.',
+  'providers.edit.confirm': 'Guardar tope',
+  'providers.edit.done': 'Tope guardado para {provider}',
+  'providers.edit.label': 'Nombre',
+  'providers.edit.ceiling': 'Llamadas incluidas',
+  'providers.edit.ceiling.hint':
+    'Déjalo vacío si no hay tope acordado. Vacío y cero no son lo mismo: cero con «rechazar» aparta todas las llamadas.',
+  'providers.edit.ceiling.placeholder': 'Sin tope',
+  'providers.edit.window': 'Medido en',
+  'providers.edit.window.month': 'Un mes natural',
+  'providers.edit.window.month.body':
+    'La forma habitual de una cuota incluida.',
+  'providers.edit.window.day': 'Un día',
+  'providers.edit.window.day.body':
+    'Algunos proveedores miden por día: el plan gratuito de Geoapify son 3.000 créditos diarios.',
+  'providers.edit.policy': 'Al llegar al tope',
+  'providers.edit.policy.allow': 'Seguir llamando y pagar',
+  'providers.edit.policy.allow.body':
+    'Las llamadas siguen por encima del tope y la consola avisa. Nada deja de funcionar.',
+  'providers.edit.policy.block': 'Rechazar más llamadas',
+  'providers.edit.policy.block.body':
+    'Las llamadas se rechazan hasta que la ventana se reinicie. Lo que dependa de este proveedor deja de funcionar: elígelo solo donde ese fallo salga más barato.',
+  'providers.edit.policy.block.refused':
+    '{provider} no se puede rechazar: no tiene alternativa, así que apartar sus llamadas pararía la función en vez de acotar su coste. Un tope que solo avisa sigue disponible.',
+  'providers.edit.warn': 'Avisar al (%)',
+  'providers.edit.critical': 'Alarma al (%)',
+  'providers.edit.thresholds.hint':
+    'Dónde el medidor pasa a ámbar y a rojo. El aviso no puede superar a la alarma.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

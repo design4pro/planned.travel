@@ -15,6 +15,7 @@
 import { z } from 'zod'
 import { PLATFORM_ACTIONS } from '#/server/catalog/audit'
 import {
+  ProviderNotBlockableError,
   UNBLOCKABLE_PROVIDERS,
   readProviderLimit,
   readProviderUsage,
@@ -27,12 +28,15 @@ import {
   PROVIDER_LIMIT_WINDOWS,
 } from '#/server/db/schema'
 import { openConsoleCall, recordConsoleAction } from './context'
+import { ConsoleActionError } from './errors'
 import { platformDb } from './bindings'
 import type { ProviderUsageReport } from '#/server/catalog/provider-usage'
 import type {
   MeteredProvider,
   ProviderLimitPolicy,
   ProviderLimitWindow,
+  ProviderRegistryRow,
+  ProviderSlug,
 } from '#/server/db/types'
 
 /** How much history the screen draws. Thirty days of hourly points. */
@@ -77,17 +81,29 @@ export interface ProvidersView {
   readonly canConfigure: boolean
 }
 
-function plannedPanel(slug: string): ProviderPanel {
+/**
+ * A provider with no client behind it, and its ceiling if one has been agreed.
+ *
+ * The counts are structurally zero rather than measured — nothing can have called a service nothing
+ * calls — which is what `integrated: false` tells the screen so it draws an empty state instead of
+ * a `0`. The *limit* is read like any other, because agreeing a ceiling before the first call is
+ * the whole reason these slugs are listed: ADR 0013 gives Geoapify 3,000 credits a day and ADR 0011
+ * gives HERE 30,000 a month, and an operator can enter either today.
+ */
+function plannedPanel(
+  slug: string,
+  limit: ProviderRegistryRow | null,
+): ProviderPanel {
   return {
     slug,
     integrated: false,
-    label: null,
-    callLimit: null,
-    limitWindow: 'month',
-    policy: 'allow',
-    warnPercent: 70,
-    criticalPercent: 90,
-    blockable: !UNBLOCKABLE_PROVIDERS.has(slug),
+    label: limit?.label ?? null,
+    callLimit: limit?.callLimit ?? null,
+    limitWindow: limit?.limitWindow ?? 'month',
+    policy: limit?.policy ?? 'allow',
+    warnPercent: limit?.warnPercent ?? 70,
+    criticalPercent: limit?.criticalPercent ?? 90,
+    blockable: limit?.blockable ?? !UNBLOCKABLE_PROVIDERS.has(slug),
     monthToDate: 0,
     series: [],
     errors: 0,
@@ -146,9 +162,15 @@ export async function readProviders(): Promise<ProvidersView> {
     ),
   )
 
+  const planned = await Promise.all(
+    PLANNED_PROVIDERS.map(async (slug) =>
+      plannedPanel(slug, await readProviderLimit(db, slug)),
+    ),
+  )
+
   return {
     asOf: now.getTime(),
-    providers: [...reports, ...PLANNED_PROVIDERS.map(plannedPanel)],
+    providers: [...reports, ...planned],
     // Asked as a question here so the screen renders the controls the caller may actually use;
     // every save re-asks it as an assertion, which is the boundary.
     canConfigure: await openConsoleCall({ provider: ['configure'] })
@@ -157,8 +179,23 @@ export async function readProviders(): Promise<ProvidersView> {
   }
 }
 
+/**
+ * The slugs a ceiling may be entered for: every one the console lists, integrated or not.
+ *
+ * An enum rather than the bare `z.string()` this used to carry, and that is the repair. The old
+ * shape let any string through and the function then *cast* it to `MeteredProvider` to get at the
+ * usage read — so a ceiling saved for `geoapify` would have reached a `z.enum(METERED_PROVIDERS)`
+ * parse and thrown, on the first save anybody made for the very providers the planned list exists
+ * to let them configure early.
+ */
+const configurableSlug = z.enum([...METERED_PROVIDERS, ...PLANNED_PROVIDERS])
+
+function isMetered(slug: ProviderSlug): slug is MeteredProvider {
+  return (METERED_PROVIDERS as ReadonlyArray<string>).includes(slug)
+}
+
 export const saveProviderLimitInput = z.object({
-  slug: z.string().min(1).max(64),
+  slug: configurableSlug,
   label: z.string().min(1).max(120),
   limitWindow: z.enum(PROVIDER_LIMIT_WINDOWS),
   callLimit: z.number().int().nonnegative().nullable(),
@@ -185,8 +222,21 @@ export async function saveProviderLimit(
   const values = saveProviderLimitInput.parse(input)
   const db = platformDb()
 
-  const before = await readProviderLimit(db, values.slug as MeteredProvider)
-  const { after } = await updateProviderLimit(db, call.session, values)
+  const before = await readProviderLimit(db, values.slug)
+
+  // The catalog raises its own domain error and knows nothing about the console's vocabulary; this
+  // is the layer whose job is to speak it, so the refusal reaches the dialog as advice rather than
+  // as a stack trace. `ConsoleActionDialog` renders a `ConsoleActionError` inline and stays open,
+  // which is the difference between telling an operator what to do instead and losing the sentence
+  // behind a toast.
+  const { after } = await updateProviderLimit(db, call.session, values).catch(
+    (cause: unknown) => {
+      if (cause instanceof ProviderNotBlockableError) {
+        throw new ConsoleActionError('provider-not-blockable', cause.message)
+      }
+      throw cause
+    },
+  )
 
   // A first-ever configuration counts as the limit moving: going from "no ceiling agreed" to a
   // number is the change most worth being able to find in the log a year later.
@@ -221,10 +271,16 @@ export async function saveProviderLimit(
     })
   }
 
+  // A planned provider has no usage to read, and asking for it is what used to throw. The branch is
+  // the honest shape: only a slug with a client behind it can have been called.
+  if (!isMetered(values.slug)) {
+    return plannedPanel(values.slug, after)
+  }
+
   const report = await readProviderUsage(db, call.session, {
-    provider: values.slug as MeteredProvider,
+    provider: values.slug,
     since: new Date(Date.now() - WINDOW_HOURS * 60 * 60 * 1000),
   })
 
-  return meteredPanel(values.slug as MeteredProvider, report)
+  return meteredPanel(values.slug, report)
 }

@@ -516,6 +516,41 @@ const messages = {
     'Μια κλήση που γίνεται για έναν χώρο εργασίας καταγράφεται σε αυτόν. Οι προγραμματισμένες εργασίες και η αλληλογραφία της πλατφόρμας δεν ανήκουν σε κανέναν και μετρούν χωριστά.',
   'providers.readOnly':
     'Μπορείς να διαβάσεις αυτούς τους μετρητές αλλά όχι να μετακινήσεις όριο. Η αλλαγή ορίου ή πολιτικής απαιτεί το δικαίωμα provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Συμφωνημένο όριο: {limit} τον μήνα. Ισχύει από την πρώτη κλήση, μόλις υπάρξει πελάτης.',
+  'providers.status.planned.agreed.day':
+    'Συμφωνημένο όριο: {limit} την ημέρα. Ισχύει από την πρώτη κλήση, μόλις υπάρξει πελάτης.',
+  'providers.edit.button': 'Επεξεργασία',
+  'providers.edit.title': 'Όριο για {provider}',
+  'providers.edit.body':
+    'Τι έχει συμφωνήσει να ξοδεύει αυτή η εγκατάσταση στον πάροχο, και τι γίνεται όταν εξαντληθεί.',
+  'providers.edit.confirm': 'Αποθήκευση ορίου',
+  'providers.edit.done': 'Το όριο για {provider} αποθηκεύτηκε',
+  'providers.edit.label': 'Όνομα',
+  'providers.edit.ceiling': 'Κλήσεις που περιλαμβάνονται',
+  'providers.edit.ceiling.hint':
+    'Άφησέ το κενό αν δεν έχει συμφωνηθεί όριο. Το κενό και το μηδέν διαφέρουν: το μηδέν με «άρνηση» απορρίπτει κάθε κλήση.',
+  'providers.edit.ceiling.placeholder': 'Χωρίς όριο',
+  'providers.edit.window': 'Μετριέται σε',
+  'providers.edit.window.month': 'Ημερολογιακό μήνα',
+  'providers.edit.window.month.body':
+    'Η συνήθης μορφή μιας συμπεριλαμβανόμενης ποσόστωσης.',
+  'providers.edit.window.day': 'Ημέρα',
+  'providers.edit.window.day.body':
+    'Ορισμένοι πάροχοι μετρούν ημερησίως — το δωρεάν πρόγραμμα της Geoapify είναι 3.000 μονάδες την ημέρα.',
+  'providers.edit.policy': 'Στο όριο',
+  'providers.edit.policy.allow': 'Συνέχισε και πλήρωσε',
+  'providers.edit.policy.allow.body':
+    'Οι κλήσεις συνεχίζονται πάνω από το όριο και η κονσόλα προειδοποιεί. Τίποτα δεν σταματά.',
+  'providers.edit.policy.block': 'Άρνηση επόμενων κλήσεων',
+  'providers.edit.policy.block.body':
+    'Οι κλήσεις απορρίπτονται μέχρι να μηδενιστεί το παράθυρο. Ό,τι εξαρτάται από αυτόν τον πάροχο σταματά — διάλεξέ το μόνο όπου αυτή είναι η φθηνότερη αστοχία.',
+  'providers.edit.policy.block.refused':
+    'Το {provider} δεν μπορεί να απορριφθεί: δεν έχει εναλλακτική, οπότε η άρνηση των κλήσεών του θα σταματούσε τη λειτουργία αντί να περιορίσει το κόστος. Ένα όριο που απλώς προειδοποιεί παραμένει διαθέσιμο.',
+  'providers.edit.warn': 'Προειδοποίηση στο (%)',
+  'providers.edit.critical': 'Συναγερμός στο (%)',
+  'providers.edit.thresholds.hint':
+    'Πού η ένδειξη γίνεται πορτοκαλί και κόκκινη. Η προειδοποίηση δεν πρέπει να ξεπερνά τον συναγερμό.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

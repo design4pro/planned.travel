@@ -274,6 +274,21 @@ export type NewProviderUsageRow = typeof schema.providerUsage.$inferInsert
  */
 export type MeteredProvider = (typeof METERED_PROVIDERS)[number]
 export type PlannedProvider = (typeof PLANNED_PROVIDERS)[number]
+
+/**
+ * Any slug the console lists, integrated or not.
+ *
+ * The distinction {@link MeteredProvider} draws is real and worth keeping: only a metered slug has
+ * usage to read, because only a metered slug has a client that could have called anything. But a
+ * *ceiling* belongs to either — agreeing one before the first call is the whole reason a planned
+ * provider is listed — so every path that merely names a provider takes this wider type, and only
+ * the paths that read `provider_usage` take the narrow one.
+ *
+ * Conflating the two with a cast is not hypothetical: `saveProviderLimit` did exactly that, and the
+ * cast let a planned slug reach a `z.enum(METERED_PROVIDERS)` parse that would have thrown on the
+ * first ceiling anybody entered for Geoapify.
+ */
+export type ProviderSlug = MeteredProvider | PlannedProvider
 export type ProviderUsageGrain = (typeof PROVIDER_USAGE_GRAINS)[number]
 export type ProviderLimitPolicy = (typeof PROVIDER_LIMIT_POLICIES)[number]
 export type ProviderLimitWindow = (typeof PROVIDER_LIMIT_WINDOWS)[number]

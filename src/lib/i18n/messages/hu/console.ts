@@ -513,6 +513,40 @@ const messages = {
     'A munkaterületért indított hívás arra a munkaterületre kerül. Az ütemezett munka és a platform levelei egyikhez sem tartoznak, azokat külön számoljuk.',
   'providers.readOnly':
     'Ezeket a mérőket olvashatod, de plafont nem mozgathatsz. A korlát vagy a hozzá tartozó szabály módosításához provider:configure jogosultság kell.',
+  'providers.status.planned.agreed.month':
+    'Megbeszélt plafon: havi {limit}. Az első hívástól él, amint van kliens.',
+  'providers.status.planned.agreed.day':
+    'Megbeszélt plafon: napi {limit}. Az első hívástól él, amint van kliens.',
+  'providers.edit.button': 'Szerkesztés',
+  'providers.edit.title': '{provider} plafonja',
+  'providers.edit.body':
+    'Mennyit vállalt ez a telepítés a szolgáltatónál, és mi történik, ha elfogy.',
+  'providers.edit.confirm': 'Plafon mentése',
+  'providers.edit.done': '{provider} plafonja elmentve',
+  'providers.edit.label': 'Név',
+  'providers.edit.ceiling': 'Benne foglalt hívások',
+  'providers.edit.ceiling.hint':
+    'Hagyd üresen, ha nincs megbeszélt plafon. Az üres és a nulla nem ugyanaz: a nulla „elutasítás” mellett minden hívást elzár.',
+  'providers.edit.ceiling.placeholder': 'Nincs plafon',
+  'providers.edit.window': 'Mérve',
+  'providers.edit.window.month': 'Naptári hónapra',
+  'providers.edit.window.month.body': 'A benne foglalt keret szokásos alakja.',
+  'providers.edit.window.day': 'Napra',
+  'providers.edit.window.day.body':
+    'Egyes szolgáltatók naponta mérnek — a Geoapify ingyenes csomagja napi 3000 kredit.',
+  'providers.edit.policy': 'A plafonnál',
+  'providers.edit.policy.allow': 'Hívj tovább és fizess',
+  'providers.edit.policy.allow.body':
+    'A hívások a plafon fölött is mennek, a konzol pedig figyelmeztet. Semmi nem áll le.',
+  'providers.edit.policy.block': 'Utasítsd el a további hívásokat',
+  'providers.edit.policy.block.body':
+    'A hívásokat elutasítjuk az ablak újraindulásáig. Ami ettől a szolgáltatótól függ, leáll — csak ott válaszd, ahol ez az olcsóbb hiba.',
+  'providers.edit.policy.block.refused':
+    'A {provider} nem utasítható el: nincs tartalék útja, így a hívások elzárása a funkciót állítaná le, nem a költséget fogná vissza. A csak figyelmeztető plafon továbbra is elérhető.',
+  'providers.edit.warn': 'Figyelmeztetés (%)',
+  'providers.edit.critical': 'Riasztás (%)',
+  'providers.edit.thresholds.hint':
+    'Hol vált a mérő borostyánra és pirosra. A figyelmeztetés nem lehet a riasztás fölött.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

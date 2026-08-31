@@ -528,6 +528,40 @@ const messages = {
     'Una chiamata fatta per uno spazio di lavoro viene addebitata a quello. Il lavoro pianificato e la posta della piattaforma non appartengono a nessuno e si contano a parte.',
   'providers.readOnly':
     'Puoi leggere questi contatori ma non spostare un tetto. Cambiare un limite o la sua politica richiede il permesso provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Tetto concordato: {limit} al mese. Vale dalla prima chiamata, appena esiste un client.',
+  'providers.status.planned.agreed.day':
+    'Tetto concordato: {limit} al giorno. Vale dalla prima chiamata, appena esiste un client.',
+  'providers.edit.button': 'Modifica',
+  'providers.edit.title': 'Tetto per {provider}',
+  'providers.edit.body':
+    'Quanto questa installazione ha concordato di spendere dal fornitore, e cosa accade quando si esaurisce.',
+  'providers.edit.confirm': 'Salva il tetto',
+  'providers.edit.done': 'Tetto salvato per {provider}',
+  'providers.edit.label': 'Nome',
+  'providers.edit.ceiling': 'Chiamate incluse',
+  'providers.edit.ceiling.hint':
+    'Lascia vuoto se non c’è un tetto concordato. Vuoto e zero sono cose diverse: zero con «rifiuta» respinge ogni chiamata.',
+  'providers.edit.ceiling.placeholder': 'Nessun tetto',
+  'providers.edit.window': 'Misurato su',
+  'providers.edit.window.month': 'Un mese solare',
+  'providers.edit.window.month.body': 'La forma consueta di una quota inclusa.',
+  'providers.edit.window.day': 'Un giorno',
+  'providers.edit.window.day.body':
+    'Alcuni fornitori contano al giorno: il piano gratuito di Geoapify è 3.000 crediti al giorno.',
+  'providers.edit.policy': 'Al tetto',
+  'providers.edit.policy.allow': 'Continua a chiamare e paga',
+  'providers.edit.policy.allow.body':
+    'Le chiamate proseguono oltre il tetto e la console avvisa. Niente smette di funzionare.',
+  'providers.edit.policy.block': 'Rifiuta le chiamate successive',
+  'providers.edit.policy.block.body':
+    'Le chiamate vengono respinte fino al reset della finestra. Ciò che dipende da questo fornitore smette di funzionare: scegli questa opzione solo dove è il guasto più economico.',
+  'providers.edit.policy.block.refused':
+    '{provider} non può essere rifiutato: non ha alternative, quindi respingere le sue chiamate fermerebbe la funzione invece di limitarne il costo. Resta possibile un tetto che si limita ad avvisare.',
+  'providers.edit.warn': 'Avvisa al (%)',
+  'providers.edit.critical': 'Allarme al (%)',
+  'providers.edit.thresholds.hint':
+    'Dove l’indicatore diventa ambra e rosso. L’avviso non può stare sopra l’allarme.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

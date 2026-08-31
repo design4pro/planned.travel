@@ -490,6 +490,40 @@ const messages = {
     '작업 공간을 위해 한 호출은 그 공간에 기록됩니다. 예약 작업과 플랫폼 메일은 어디에도 속하지 않아 따로 셉니다.',
   'providers.readOnly':
     '이 계측값은 읽을 수 있지만 상한은 옮길 수 없습니다. 한도나 정책을 바꾸려면 provider:configure 권한이 필요합니다.',
+  'providers.status.planned.agreed.month':
+    '합의된 상한: 월 {limit}. 클라이언트가 생기는 즉시 첫 호출부터 적용됩니다.',
+  'providers.status.planned.agreed.day':
+    '합의된 상한: 하루 {limit}. 클라이언트가 생기는 즉시 첫 호출부터 적용됩니다.',
+  'providers.edit.button': '편집',
+  'providers.edit.title': '{provider} 상한',
+  'providers.edit.body':
+    '이 배포가 공급자와 쓰기로 합의한 양, 그리고 다 썼을 때 무슨 일이 일어나는지.',
+  'providers.edit.confirm': '상한 저장',
+  'providers.edit.done': '{provider} 상한을 저장했습니다',
+  'providers.edit.label': '이름',
+  'providers.edit.ceiling': '포함된 호출 수',
+  'providers.edit.ceiling.hint':
+    '합의된 상한이 없으면 비워 두세요. 빈 값과 0은 다릅니다. “거부”에서의 0은 모든 호출을 돌려보냅니다.',
+  'providers.edit.ceiling.placeholder': '상한 없음',
+  'providers.edit.window': '측정 단위',
+  'providers.edit.window.month': '역월',
+  'providers.edit.window.month.body': '포함 할당량의 통상적인 형태입니다.',
+  'providers.edit.window.day': '하루',
+  'providers.edit.window.day.body':
+    '일 단위로 재는 공급자도 있습니다. Geoapify 무료 요금제는 하루 3,000크레딧입니다.',
+  'providers.edit.policy': '상한에 도달하면',
+  'providers.edit.policy.allow': '계속 호출하고 비용을 낸다',
+  'providers.edit.policy.allow.body':
+    '상한을 넘겨도 호출은 계속되고 콘솔이 경고합니다. 멈추는 것은 없습니다.',
+  'providers.edit.policy.block': '이후 호출을 거부한다',
+  'providers.edit.policy.block.body':
+    '기간이 초기화될 때까지 호출을 돌려보냅니다. 이 공급자에 의존하는 기능은 멈추므로, 그 멈춤이 더 값싼 실패일 때만 고르세요.',
+  'providers.edit.policy.block.refused':
+    '{provider}는 거부할 수 없습니다. 대체 경로가 없어 호출을 막으면 비용을 제한하는 대신 기능이 멈춥니다. 경고만 하는 상한은 그대로 쓸 수 있습니다.',
+  'providers.edit.warn': '경고 (%)',
+  'providers.edit.critical': '위험 (%)',
+  'providers.edit.thresholds.hint':
+    '계기가 주황과 빨강으로 바뀌는 지점입니다. 경고는 위험보다 높을 수 없습니다.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

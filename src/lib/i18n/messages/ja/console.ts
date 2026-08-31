@@ -498,6 +498,40 @@ const messages = {
     'ワークスペースのために行った呼び出しはそのワークスペースに記録されます。定期実行とプラットフォームのメールはどこにも属さず、別に数えます。',
   'providers.readOnly':
     'この計測値は読めますが、上限は動かせません。上限やその方針の変更には provider:configure の権限が要ります。',
+  'providers.status.planned.agreed.month':
+    '取り決めた上限: 月 {limit}。クライアントができ次第、最初の呼び出しから効きます。',
+  'providers.status.planned.agreed.day':
+    '取り決めた上限: 1日 {limit}。クライアントができ次第、最初の呼び出しから効きます。',
+  'providers.edit.button': '編集',
+  'providers.edit.title': '{provider} の上限',
+  'providers.edit.body':
+    'この配備が事業者と取り決めた支出額と、使い切ったときに何が起きるか。',
+  'providers.edit.confirm': '上限を保存',
+  'providers.edit.done': '{provider} の上限を保存しました',
+  'providers.edit.label': '名称',
+  'providers.edit.ceiling': '含まれる呼び出し数',
+  'providers.edit.ceiling.hint':
+    '上限の取り決めがなければ空のままに。空とゼロは別物です。「拒否」でのゼロはすべての呼び出しを退けます。',
+  'providers.edit.ceiling.placeholder': '上限なし',
+  'providers.edit.window': '測定単位',
+  'providers.edit.window.month': '暦月',
+  'providers.edit.window.month.body': '付属枠のふつうの形です。',
+  'providers.edit.window.day': '1日',
+  'providers.edit.window.day.body':
+    '日単位で計る事業者もあります。Geoapify の無料プランは1日3,000クレジットです。',
+  'providers.edit.policy': '上限に達したら',
+  'providers.edit.policy.allow': '呼び出しを続けて支払う',
+  'providers.edit.policy.allow.body':
+    '上限を超えても呼び出しは続き、コンソールが警告します。止まるものはありません。',
+  'providers.edit.policy.block': 'それ以降を拒否する',
+  'providers.edit.policy.block.body':
+    '期間がリセットされるまで呼び出しを退けます。この事業者に依存する機能は止まるので、その停止のほうが安く済む場合にだけ選んでください。',
+  'providers.edit.policy.block.refused':
+    '{provider} は拒否できません。代替経路がないため、呼び出しを退けると費用を抑えるのではなく機能が止まります。警告だけの上限なら設定できます。',
+  'providers.edit.warn': '警告 (%)',
+  'providers.edit.critical': '重警告 (%)',
+  'providers.edit.thresholds.hint':
+    'メーターが黄色と赤に変わる位置です。警告は重警告を上回れません。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

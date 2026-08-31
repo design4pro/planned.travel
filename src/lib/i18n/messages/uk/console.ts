@@ -522,6 +522,40 @@ const messages = {
     'Виклик, зроблений для робочого простору, записується на нього. Робота за розкладом і пошта платформи не належать жодному й рахуються окремо.',
   'providers.readOnly':
     'Ці лічильники можна читати, але не рухати стелю. Зміна ліміту чи політики потребує права provider:configure.',
+  'providers.status.planned.agreed.month':
+    'Погоджена стеля: {limit} на місяць. Діє з першого виклику, щойно з’явиться клієнт.',
+  'providers.status.planned.agreed.day':
+    'Погоджена стеля: {limit} на добу. Діє з першого виклику, щойно з’явиться клієнт.',
+  'providers.edit.button': 'Змінити',
+  'providers.edit.title': 'Стеля для {provider}',
+  'providers.edit.body':
+    'Скільки ця інсталяція домовилася витрачати в постачальника і що стається, коли ліміт вичерпано.',
+  'providers.edit.confirm': 'Зберегти стелю',
+  'providers.edit.done': 'Стелю для {provider} збережено',
+  'providers.edit.label': 'Назва',
+  'providers.edit.ceiling': 'Викликів включено',
+  'providers.edit.ceiling.hint':
+    'Залиште порожнім, якщо стелю не погоджено. Порожньо і нуль — різне: нуль при «відмовляти» відхиляє кожен виклик.',
+  'providers.edit.ceiling.placeholder': 'Без стелі',
+  'providers.edit.window': 'Вимірюється за',
+  'providers.edit.window.month': 'Календарний місяць',
+  'providers.edit.window.month.body': 'Звичайна форма включеної квоти.',
+  'providers.edit.window.day': 'Добу',
+  'providers.edit.window.day.body':
+    'Частина постачальників рахує щодня — безкоштовний план Geoapify це 3 000 кредитів на добу.',
+  'providers.edit.policy': 'На стелі',
+  'providers.edit.policy.allow': 'Кликати далі й платити',
+  'providers.edit.policy.allow.body':
+    'Виклики йдуть понад стелю, консоль попереджає. Ніщо не перестає працювати.',
+  'providers.edit.policy.block': 'Відмовляти в подальших викликах',
+  'providers.edit.policy.block.body':
+    'Виклики відхиляються до скидання вікна. Те, що залежить від цього постачальника, перестає працювати — обирайте лише там, де така відмова дешевша.',
+  'providers.edit.policy.block.refused':
+    '{provider} відхиляти не можна: у нього немає запасного шляху, тож відмова у викликах зупинила б функцію, а не обмежила витрати. Стеля, яка лише попереджає, залишається доступною.',
+  'providers.edit.warn': 'Попереджати при (%)',
+  'providers.edit.critical': 'Тривога при (%)',
+  'providers.edit.thresholds.hint':
+    'Де індикатор стає жовтим і червоним. Попередження не може бути вище тривоги.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
