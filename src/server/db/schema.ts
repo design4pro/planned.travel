@@ -688,11 +688,9 @@ export const trips = sqliteTable(
      * is a table rebuild on SQLite, which docs/DEPLOY.md §5 admits only through the register in
      * its §12.
      *
-     * The pre-wave-1 trips surfaces still read and write it until `01-S1`
-     * (`docs/plans/01-trips-core.md`) moves them onto the table, and moving them is the whole of
-     * what it has to move. Who they are is a `grep` for `isFavourite`, not a list kept here: an
-     * inventory of other modules' internals goes stale on the first rename, silently, with
-     * nothing in the ladder to catch it.
+     * The trips surfaces written before wave 1 still read and write it; moving them onto the
+     * table is the whole of what `01-S1` (`docs/plans/01-trips-core.md`) has to move. A `grep`
+     * for `isFavourite` names them, and a list kept here would go stale on the first rename.
      */
     isFavourite: integer('is_favourite', { mode: 'boolean' })
       .notNull()
@@ -788,15 +786,14 @@ export const days = sqliteTable(
  * unfavouriting is a delete and there is no column a writer could ever update — hence `createdAt()`
  * alone, as `place_tags` and the other immutable join rows in this file do, and not `timestamps()`.
  *
- * Keyed by `id` with the person's choice held unique on `(trip_id, user_id)`, as `trip_members` —
- * the other per-person trip row, with the same three columns and the same unique index — rather
- * than keyless on a composite `primaryKey()` like `place_tags`. The two per-person trip rows are
- * then reached the same way, through the keyed tenant repository.
+ * Keyed by `id`, with the person's choice held unique on `(trip_id, user_id)` exactly as
+ * `trip_members` — the other per-person trip row — holds it, rather than keyless on a composite
+ * `primaryKey()` like `place_tags`. The two per-person trip rows are then reached the same way,
+ * through the keyed tenant repository.
  *
- * Its reader and writer are `src/server/repos/trip-favourites.ts`; the table ships ahead of that
- * module, which is what a schema stage is for. Nothing was backfilled from
- * {@link trips.isFavourite} — a flag shared by every member records nobody's choice, so there is
- * nothing true to copy out of it.
+ * Its reader and writer are `src/server/repos/trip-favourites.ts`, which lands with `01-S1`
+ * (`docs/plans/01-trips-core.md`); the table ships ahead of it. Nothing was backfilled from the
+ * deprecated {@link trips.isFavourite}, which holds no person's choice to copy.
  */
 export const tripFavourites = sqliteTable(
   'trip_favourites',
