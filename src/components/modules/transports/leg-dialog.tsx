@@ -12,6 +12,18 @@
  * lands on day 4, and only the traveller knows that. Which words the pair is asked
  * in comes from `endpointLabels`, so the legend over an endpoint and the label over
  * its day cannot drift apart — a hire car is picked up and returned.
+ *
+ * A journey with more than two stations swaps that pair for the **chain editor**.
+ * There is no empty chain and no third state to design: a transport that nobody
+ * has broken up shows its two endpoints and one quiet action, and the first click
+ * produces a two-station chain seeded from what was already recorded. Going back
+ * is the same door in the other direction, and it says what it will cost.
+ *
+ * The save is two writes, in this order: the record, then its chain. They are
+ * separate because they are separate rules — a transport is a row and a chain is
+ * a set of rows with an invariant — and the second failing leaves the dialog open
+ * with the whole chain exactly as typed. A chain is expensive to retype and
+ * losing it to a network blip is unforgivable.
  */
 import { useEffect, useId, useMemo, useState } from 'react'
 import { ArrowRight, Plus } from 'lucide-react'
@@ -32,16 +44,28 @@ import {
   Textarea,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
-import { createLegFn, updateLegFn } from '#/server/fns/transports'
+import {
+  createLegFn,
+  saveLegChainFn,
+  updateLegFn,
+} from '#/server/fns/transports'
 import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
+import { ChainEditor } from './chain-editor'
 import { formatGap, legTimingError } from './connections'
 import {
   STATUS_LABELS,
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
+  blockingLegErrors,
+  breakIntoLegs,
+  chainFromTransport,
+  chainPayload,
   dayLabel,
+  emptyChain,
   emptyLegDraft,
   endpointLabels,
+  flatChain,
+  hasChainErrors,
   hasLegErrors,
   isTransportMode,
   isTransportStatus,
@@ -52,13 +76,35 @@ import {
   usesCodes,
   usesSeat,
   usesService,
+  validateChain,
   validateLegDraft,
 } from './leg-form'
 import { MODE_ICON } from './mode-icon'
 import { legDurationMinutes } from './leg-timing'
 
-import type { LegDraft } from './leg-form'
+import type { ChainDraft, ChainOwnedField, LegDraft } from './leg-form'
 import type { TransportData, TransportDayData } from './types'
+
+/**
+ * The chain a dialog opens on: the record's own, or two blank stations for a
+ * transport that does not exist yet.
+ */
+function chainFor(transport: TransportData | undefined): ChainDraft {
+  return transport === undefined ? emptyChain() : chainFromTransport(transport)
+}
+
+/**
+ * The same door in the other direction: the journey as one movement again.
+ *
+ * Deliberately not {@link chainFor}, which reads a journey that *has* rows back
+ * as the chain it is — asking it for the way out would hand back the very chain
+ * being put away. The record's own two endpoints are what a collapsed journey
+ * is, and an unbroken chain is saved as no rows at all, which removes the ones
+ * it used to have.
+ */
+function unbrokenChainFor(transport: TransportData | undefined): ChainDraft {
+  return transport === undefined ? emptyChain() : flatChain(transport)
+}
 
 function draftFrom(
   transport: TransportData,
@@ -114,6 +160,7 @@ export function LegDialog({
   const formId = useId()
 
   const [draft, setDraft] = useState<LegDraft>(() => emptyLegDraft(currency))
+  const [chain, setChain] = useState<ChainDraft>(() => chainFor(transport))
   const [touched, setTouched] = useState(false)
 
   useEffect(() => {
@@ -125,6 +172,7 @@ export function LegDialog({
         ? emptyLegDraft(currency)
         : draftFrom(transport, currency),
     )
+    setChain(chainFor(transport))
     setTouched(false)
   }, [open, transport, currency])
 
@@ -137,9 +185,17 @@ export function LegDialog({
     success: 'Transport updated',
     failure: 'The transport was not updated',
   })
+  const saveChain = useAction(saveLegChainFn, {
+    failure: 'The legs were not saved',
+    fallback: 'The transport was saved; its legs were not.',
+  })
   const action = editing ? update : create
 
   const errors = useMemo(() => validateLegDraft(draft, days), [draft, days])
+  const chainErrors = useMemo(
+    () => validateChain(chain, draft.mode, days),
+    [chain, draft.mode, days],
+  )
   const dayOptions = useMemo(
     () => [
       { value: NOT_SET, label: 'No day yet' },
@@ -147,7 +203,9 @@ export function LegDialog({
     ],
     [days],
   )
-  const invalid = hasLegErrors(errors)
+  const invalid =
+    hasLegErrors(blockingLegErrors(errors, chain)) ||
+    (chain.broken && hasChainErrors(chainErrors))
   const labels = endpointLabels(draft.mode)
   const suggestion = suggestLegTitle(draft)
 
@@ -171,6 +229,54 @@ export function LegDialog({
     return touched ? errors[key] : undefined
   }
 
+  /**
+   * The record's own endpoints and days, which a chain owns once there is one.
+   *
+   * The repository rewrites the endpoints from the outer stations in the same
+   * batch that writes the legs, so this is not the source of truth — it is what
+   * keeps the record correct for the moment between the two writes, and for a
+   * save whose second half never lands. The two day references have no such
+   * second writer, so this is the only place they are decided.
+   */
+  function recordEndpoints(): Pick<LegDraft, ChainOwnedField> {
+    const first = chain.stations.at(0)
+    const last = chain.stations.at(-1)
+    const firstLeg = chain.legs.at(0)
+    const lastLeg = chain.legs.at(-1)
+    if (
+      !chain.broken ||
+      first === undefined ||
+      last === undefined ||
+      firstLeg === undefined ||
+      lastLeg === undefined
+    ) {
+      return {
+        departureName: draft.departureName,
+        departureCode: draft.departureCode,
+        departureDate: draft.departureDate,
+        departureTime: draft.departureTime,
+        departureDayId: draft.departureDayId,
+        arrivalName: draft.arrivalName,
+        arrivalCode: draft.arrivalCode,
+        arrivalDate: draft.arrivalDate,
+        arrivalTime: draft.arrivalTime,
+        arrivalDayId: draft.arrivalDayId,
+      }
+    }
+    return {
+      departureName: first.name.trim(),
+      departureCode: first.code.trim(),
+      departureDate: firstLeg.departureDate,
+      departureTime: firstLeg.departureTime,
+      departureDayId: firstLeg.departureDayId,
+      arrivalName: last.name.trim(),
+      arrivalCode: last.code.trim(),
+      arrivalDate: lastLeg.arrivalDate,
+      arrivalTime: lastLeg.arrivalTime,
+      arrivalDayId: lastLeg.arrivalDayId,
+    }
+  }
+
   async function submit(): Promise<void> {
     setTouched(true)
     if (invalid) {
@@ -188,16 +294,7 @@ export function LegDialog({
       serviceNumber: draft.serviceNumber,
       bookingCode: draft.bookingCode,
       seat: draft.seat,
-      departureName: draft.departureName,
-      departureCode: draft.departureCode,
-      departureDate: draft.departureDate,
-      departureTime: draft.departureTime,
-      arrivalName: draft.arrivalName,
-      arrivalCode: draft.arrivalCode,
-      arrivalDate: draft.arrivalDate,
-      arrivalTime: draft.arrivalTime,
-      departureDayId: draft.departureDayId,
-      arrivalDayId: draft.arrivalDayId,
+      ...recordEndpoints(),
       distanceMetres: kilometresToMetres(draft.distanceKm),
       priceMinor:
         Number.isFinite(priceMinor) && priceMinor > 0 ? priceMinor : 0,
@@ -208,9 +305,25 @@ export function LegDialog({
     const result = editing
       ? await update.run({ data: { ...payload, transportId: transport.id } })
       : await create.run({ data: payload })
-    if (result !== null) {
-      onOpenChange(false)
+    if (result === null) {
+      return
     }
+
+    /*
+     * The chain is written after the record, because it needs the record's id
+     * and because a leg parented onto nothing is not a thing this model can
+     * express. An unbroken journey still posts — an empty chain is the statement
+     * "this transport has no legs", which is what removes the rows a journey
+     * used to have when the traveller puts it back together.
+     */
+    const transportId = editing ? transport.id : result.transportId
+    const chained = await saveChain.run({
+      data: { tripId, transportId, ...chainPayload(chain) },
+    })
+    if (chained === null) {
+      return
+    }
+    onOpenChange(false)
   }
 
   return (
@@ -297,161 +410,212 @@ export function LegDialog({
               />
             </Field>
 
-            {/* The two ends, side by side, in the order they happen. */}
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-start">
-              <fieldset className="flex min-w-0 flex-col gap-3">
-                <legend className="mb-1 text-micro font-semibold tracking-label text-ink-3 uppercase">
-                  {labels.from}
-                </legend>
-                <Field label="Place" error={errorFor('departureName')}>
-                  <Input
-                    value={draft.departureName}
-                    onChange={(event) =>
-                      set('departureName', event.target.value)
-                    }
-                    placeholder="London Heathrow"
-                    maxLength={200}
-                    autoComplete="off"
-                  />
-                </Field>
-                {usesCodes(draft.mode) ? (
-                  <Field label="Code" error={errorFor('departureCode')}>
-                    <Input
-                      value={draft.departureCode}
-                      onChange={(event) =>
-                        set('departureCode', event.target.value.toUpperCase())
-                      }
-                      placeholder="LHR"
-                      maxLength={8}
-                      autoComplete="off"
-                      className="font-mono tracking-wide uppercase"
-                    />
-                  </Field>
-                ) : null}
-                <div className="grid grid-cols-[1fr_auto] gap-3">
-                  <Field label="Date" error={errorFor('departureDate')}>
-                    <Input
-                      type="date"
-                      value={draft.departureDate}
-                      onChange={(event) =>
-                        set('departureDate', event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field label="Time" error={errorFor('departureTime')}>
-                    <Input
-                      type="time"
-                      value={draft.departureTime}
-                      onChange={(event) =>
-                        set('departureTime', event.target.value)
-                      }
-                      className="w-28"
-                    />
-                  </Field>
+            {chain.broken ? (
+              <>
+                <ChainEditor
+                  chain={chain}
+                  mode={draft.mode}
+                  days={days}
+                  errors={chainErrors}
+                  showErrors={touched}
+                  onChange={setChain}
+                />
+                <button
+                  type="button"
+                  data-part="unsplit-leg"
+                  className="self-start rounded-sm text-caption font-semibold text-ink-3 underline decoration-edge-strong underline-offset-2 focus-ring hover:text-ink hover:decoration-ink-4"
+                  onClick={() => setChain(unbrokenChainFor(transport))}
+                >
+                  Put it back as one journey
+                </button>
+              </>
+            ) : (
+              <>
+                {/* The two ends, side by side, in the order they happen. */}
+                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-start">
+                  <fieldset className="flex min-w-0 flex-col gap-3">
+                    <legend className="mb-1 text-micro font-semibold tracking-label text-ink-3 uppercase">
+                      {labels.from}
+                    </legend>
+                    <Field label="Place" error={errorFor('departureName')}>
+                      <Input
+                        value={draft.departureName}
+                        onChange={(event) =>
+                          set('departureName', event.target.value)
+                        }
+                        placeholder="London Heathrow"
+                        maxLength={200}
+                        autoComplete="off"
+                      />
+                    </Field>
+                    {usesCodes(draft.mode) ? (
+                      <Field label="Code" error={errorFor('departureCode')}>
+                        <Input
+                          value={draft.departureCode}
+                          onChange={(event) =>
+                            set(
+                              'departureCode',
+                              event.target.value.toUpperCase(),
+                            )
+                          }
+                          placeholder="LHR"
+                          maxLength={8}
+                          autoComplete="off"
+                          className="font-mono tracking-wide uppercase"
+                        />
+                      </Field>
+                    ) : null}
+                    <div className="grid grid-cols-[1fr_auto] gap-3">
+                      <Field label="Date" error={errorFor('departureDate')}>
+                        <Input
+                          type="date"
+                          value={draft.departureDate}
+                          onChange={(event) =>
+                            set('departureDate', event.target.value)
+                          }
+                        />
+                      </Field>
+                      <Field label="Time" error={errorFor('departureTime')}>
+                        <Input
+                          type="time"
+                          value={draft.departureTime}
+                          onChange={(event) =>
+                            set('departureTime', event.target.value)
+                          }
+                          className="w-28"
+                        />
+                      </Field>
+                    </div>
+                    {days.length === 0 ? null : (
+                      <Field label={labels.fromDay}>
+                        <SimpleSelect
+                          options={dayOptions}
+                          value={toSelectValue(draft.departureDayId)}
+                          onValueChange={(next) =>
+                            set('departureDayId', fromSelectValue(next))
+                          }
+                          ariaLabel={labels.fromDay}
+                        />
+                      </Field>
+                    )}
+                  </fieldset>
+
+                  <div className="hidden self-center pt-8 sm:block">
+                    <ArrowRight aria-hidden className="size-5 text-ink-4" />
+                  </div>
+
+                  <fieldset className="flex min-w-0 flex-col gap-3">
+                    <legend className="mb-1 text-micro font-semibold tracking-label text-ink-3 uppercase">
+                      {labels.to}
+                    </legend>
+                    <Field label="Place" error={errorFor('arrivalName')}>
+                      <Input
+                        value={draft.arrivalName}
+                        onChange={(event) =>
+                          set('arrivalName', event.target.value)
+                        }
+                        placeholder="Tokyo Haneda"
+                        maxLength={200}
+                        autoComplete="off"
+                      />
+                    </Field>
+                    {usesCodes(draft.mode) ? (
+                      <Field label="Code" error={errorFor('arrivalCode')}>
+                        <Input
+                          value={draft.arrivalCode}
+                          onChange={(event) =>
+                            set('arrivalCode', event.target.value.toUpperCase())
+                          }
+                          placeholder="HND"
+                          maxLength={8}
+                          autoComplete="off"
+                          className="font-mono tracking-wide uppercase"
+                        />
+                      </Field>
+                    ) : null}
+                    <div className="grid grid-cols-[1fr_auto] gap-3">
+                      <Field label="Date" error={errorFor('arrivalDate')}>
+                        <Input
+                          type="date"
+                          value={draft.arrivalDate}
+                          min={
+                            draft.departureDate === ''
+                              ? undefined
+                              : draft.departureDate
+                          }
+                          onChange={(event) =>
+                            set('arrivalDate', event.target.value)
+                          }
+                        />
+                      </Field>
+                      <Field label="Time" error={errorFor('arrivalTime')}>
+                        <Input
+                          type="time"
+                          value={draft.arrivalTime}
+                          onChange={(event) =>
+                            set('arrivalTime', event.target.value)
+                          }
+                          className="w-28"
+                        />
+                      </Field>
+                    </div>
+                    {days.length === 0 ? null : (
+                      <Field
+                        label={labels.toDay}
+                        error={errorFor('arrivalDayId')}
+                        hint="A journey that lands the next morning says so here."
+                      >
+                        <SimpleSelect
+                          options={dayOptions}
+                          value={toSelectValue(draft.arrivalDayId)}
+                          onValueChange={(next) =>
+                            set('arrivalDayId', fromSelectValue(next))
+                          }
+                          ariaLabel={labels.toDay}
+                        />
+                      </Field>
+                    )}
+                  </fieldset>
                 </div>
-                {days.length === 0 ? null : (
-                  <Field label={labels.fromDay}>
-                    <SimpleSelect
-                      options={dayOptions}
-                      value={toSelectValue(draft.departureDayId)}
-                      onValueChange={(next) =>
-                        set('departureDayId', fromSelectValue(next))
-                      }
-                      ariaLabel={labels.fromDay}
-                    />
-                  </Field>
+
+                {timing !== null ? (
+                  <Alert tone="danger" title="Check the times">
+                    {timing} Move one of them so the transport can actually be
+                    caught.
+                  </Alert>
+                ) : duration === null ? null : (
+                  <p className="text-caption text-ink-3">
+                    That is{' '}
+                    <span className="font-semibold tabular-nums text-ink">
+                      {formatGap(duration)}
+                    </span>{' '}
+                    door to door.
+                  </p>
                 )}
-              </fieldset>
 
-              <div className="hidden self-center pt-8 sm:block">
-                <ArrowRight aria-hidden className="size-5 text-ink-4" />
-              </div>
-
-              <fieldset className="flex min-w-0 flex-col gap-3">
-                <legend className="mb-1 text-micro font-semibold tracking-label text-ink-3 uppercase">
-                  {labels.to}
-                </legend>
-                <Field label="Place" error={errorFor('arrivalName')}>
-                  <Input
-                    value={draft.arrivalName}
-                    onChange={(event) => set('arrivalName', event.target.value)}
-                    placeholder="Tokyo Haneda"
-                    maxLength={200}
-                    autoComplete="off"
-                  />
-                </Field>
-                {usesCodes(draft.mode) ? (
-                  <Field label="Code" error={errorFor('arrivalCode')}>
-                    <Input
-                      value={draft.arrivalCode}
-                      onChange={(event) =>
-                        set('arrivalCode', event.target.value.toUpperCase())
-                      }
-                      placeholder="HND"
-                      maxLength={8}
-                      autoComplete="off"
-                      className="font-mono tracking-wide uppercase"
-                    />
-                  </Field>
-                ) : null}
-                <div className="grid grid-cols-[1fr_auto] gap-3">
-                  <Field label="Date" error={errorFor('arrivalDate')}>
-                    <Input
-                      type="date"
-                      value={draft.arrivalDate}
-                      min={
-                        draft.departureDate === ''
-                          ? undefined
-                          : draft.departureDate
-                      }
-                      onChange={(event) =>
-                        set('arrivalDate', event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field label="Time" error={errorFor('arrivalTime')}>
-                    <Input
-                      type="time"
-                      value={draft.arrivalTime}
-                      onChange={(event) =>
-                        set('arrivalTime', event.target.value)
-                      }
-                      className="w-28"
-                    />
-                  </Field>
-                </div>
-                {days.length === 0 ? null : (
-                  <Field
-                    label={labels.toDay}
-                    error={errorFor('arrivalDayId')}
-                    hint="A journey that lands the next morning says so here."
+                {/*
+                  The empty state of a chain, which is a real state and not a
+                  blank panel: the journey already has two endpoints, so the
+                  first click produces a two-station chain seeded from them
+                  rather than an empty editor asking to be filled.
+                */}
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg bg-surface-2 px-4 py-3">
+                  <p className="min-w-0 text-caption text-ink-3">
+                    Changing trains on the way? Record each part with its own
+                    service number, platform, seat and clock.
+                  </p>
+                  <Button
+                    type="button"
+                    data-part="split-leg"
+                    variant="secondary"
+                    size="sm"
+                    shape="pill"
+                    onClick={() => setChain(breakIntoLegs(chain))}
                   >
-                    <SimpleSelect
-                      options={dayOptions}
-                      value={toSelectValue(draft.arrivalDayId)}
-                      onValueChange={(next) =>
-                        set('arrivalDayId', fromSelectValue(next))
-                      }
-                      ariaLabel={labels.toDay}
-                    />
-                  </Field>
-                )}
-              </fieldset>
-            </div>
-
-            {timing !== null ? (
-              <Alert tone="danger" title="Check the times">
-                {timing} Move one of them so the transport can actually be
-                caught.
-              </Alert>
-            ) : duration === null ? null : (
-              <p className="text-caption text-ink-3">
-                That is{' '}
-                <span className="font-semibold tabular-nums text-ink">
-                  {formatGap(duration)}
-                </span>{' '}
-                door to door.
-              </p>
+                    Break this into legs
+                  </Button>
+                </div>
+              </>
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
