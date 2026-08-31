@@ -13,7 +13,14 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { tripFavourites, trips } from '#/server/db/schema'
+import {
+  dayAssignments,
+  dayNotes,
+  days,
+  places,
+  tripFavourites,
+  trips,
+} from '#/server/db/schema'
 import { NotFoundError, RepositoryError } from '../context'
 import {
   addTripMember,
@@ -36,6 +43,9 @@ import {
   listFavouriteTripIds,
   setFavourite,
 } from '../trip-favourites'
+import { createDayNote, listTripDays } from '../days'
+import { createAssignment } from '../itinerary'
+import { createPlace } from '../places'
 import { captureError, createHarness, subscribeTenant } from './harness'
 import type { Harness, SeededTenant } from './harness'
 import type { TenantScope } from '../base'
@@ -270,6 +280,94 @@ describe('trip lifecycle', () => {
       })
     })
   })
+  /* --------------------------------------------------------------- deleting */
+
+  /**
+   * Delete is terminal (PRD #104 decision 3): there is no `deleted_at` and no trash, because
+   * `is_archived` already *is* the recoverable state. What that makes worth asserting is the cascade
+   * — a trip that left one orphaned day, place, assignment or note behind would be a trip that was
+   * still half there, invisible to every reader and still counted by nothing.
+   */
+  describe('deleting', () => {
+    /** Rows read past every repository, so the tables are the witness rather than a scoped reader. */
+    async function childRowCounts(
+      tripId: string,
+    ): Promise<Record<string, number>> {
+      const [dayRows, placeRows, assignmentRows, noteRows] = await Promise.all([
+        harness.db
+          .select({ id: days.id })
+          .from(days)
+          .where(eq(days.tripId, tripId)),
+        harness.db
+          .select({ id: places.id })
+          .from(places)
+          .where(eq(places.tripId, tripId)),
+        harness.db
+          .select({ id: dayAssignments.id })
+          .from(dayAssignments)
+          .where(eq(dayAssignments.tripId, tripId)),
+        harness.db
+          .select({ id: dayNotes.id })
+          .from(dayNotes)
+          .where(eq(dayNotes.tripId, tripId)),
+      ])
+      return {
+        days: dayRows.length,
+        places: placeRows.length,
+        assignments: assignmentRows.length,
+        notes: noteRows.length,
+      }
+    }
+
+    it('takes every day, place, assignment and note with it', async () => {
+      const trip = await createTrip(tenant.scope, {
+        title: 'Lisbon',
+        startDate: '2026-04-10',
+        endDate: '2026-04-12',
+      })
+      const day = (await listTripDays(tenant.scope, trip.id)).at(0)
+      expect(day).toBeDefined()
+      if (day === undefined) return
+
+      const place = await createPlace(tenant.scope, {
+        tripId: trip.id,
+        name: 'Miradouro da Senhora do Monte',
+      })
+      await createAssignment(tenant.scope, {
+        tripId: trip.id,
+        dayId: day.id,
+        placeId: place.id,
+      })
+      await createDayNote(tenant.scope, {
+        tripId: trip.id,
+        dayId: day.id,
+        body: 'Buy the transit pass at the airport.',
+      })
+      await setFavourite(tenant.scope, trip.id, true)
+
+      expect(await childRowCounts(trip.id)).toEqual({
+        days: 3,
+        places: 1,
+        assignments: 1,
+        notes: 1,
+      })
+
+      await deleteTrip(tenant.scope, trip.id)
+
+      expect(await childRowCounts(trip.id)).toEqual({
+        days: 0,
+        places: 0,
+        assignments: 0,
+        notes: 0,
+      })
+      expect(
+        await captureError(() => requireTrip(tenant.scope, trip.id)),
+      ).toBeInstanceOf(NotFoundError)
+      // The star goes with the trip too, so a cleared favourites count is not a stale row's doing.
+      expect(await listFavouriteTripIds(tenant.scope)).toEqual([])
+    })
+  })
+
   /* ------------------------------------------------------------ favourites */
 
   /**

@@ -272,9 +272,12 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
     await expect(
       menu.getByRole('menuitem', { name: /^(Favourite|Unfavourite)$/ }),
     ).toBeVisible()
-    // Copy and Delete arrive in the remaining `01-S1` slices; a menu that already carried them here
-    // would be a menu whose items have no server function behind them.
-    await expect(menu.getByRole('menuitem')).toHaveCount(3)
+    // Copy arrives in the last `01-S1` slice; a menu that already carried it here would be a menu
+    // whose item has no server function behind it.
+    await expect(
+      menu.getByRole('menuitem', { name: /^Delete( permanently)?$/ }),
+    ).toBeVisible()
+    await expect(menu.getByRole('menuitem')).toHaveCount(4)
 
     await menu.getByRole('menuitem', { name: 'Edit' }).click()
 
@@ -322,6 +325,58 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
 
     await expect(page.getByRole('link', { name: 'Favourites 0' })).toBeVisible()
     await expect(page.locator('[data-part="trip-tile"]')).toHaveCount(0)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The graduated confirmation (PRD #104 decision 10), measured without deleting anything.
+   *
+   * The claim is not "this fixture's first trip is heavy" — that is the seed's business and it can
+   * change. It is that the **dialog and the server agree**: the confirmation field is rendered when
+   * and only when `requiresTitle` came back true, and the button is armed when and only when the
+   * ceremony that answer asked for has been met. Both branches are asserted, so the case is honest
+   * whichever kind of trip the fixture leads with.
+   *
+   * Nothing is submitted. The delete is terminal and the fixture is shared with every other worker.
+   */
+  test('the delete dialog asks as hard as the server says it must', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    const title = await firstTripTitle(page)
+    await page.locator(TRIGGER).first().click()
+    await page
+      .getByRole('menu')
+      .getByRole('menuitem', { name: /^Delete( permanently)?$/ })
+      .click()
+
+    const dialog = page.locator('[data-part="trip-delete-dialog"]')
+    await expect(dialog).toBeVisible()
+    await expect(dialog).toContainText(title)
+
+    const confirm = dialog.getByRole('button', { name: 'Delete permanently' })
+    const field = dialog.getByLabel(/Type the trip’s name/)
+
+    // The summary is fetched when the dialog opens, so the button's resting state is "not yet".
+    await expect(confirm).toBeDisabled()
+
+    if ((await field.count()) === 1) {
+      // The heavy branch: nothing arms it but the trip's own name, character for character.
+      await field.fill(`${title} `)
+      await expect(confirm).toBeDisabled()
+      await field.fill(title)
+      await expect(confirm).toBeEnabled()
+    } else {
+      // The light branch: the server said the trip carries nothing, so it arms on its own.
+      await expect(confirm).toBeEnabled()
+    }
+
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
 
     const verdict = report()
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])

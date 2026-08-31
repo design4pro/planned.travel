@@ -94,6 +94,7 @@ import {
   settlementsRepository,
 } from '../expenses'
 import { getStorageUsage, recordFile, tripFilesRepository } from '../files'
+import { handleTripPurge } from '#/server/queue/handlers/trip-purge'
 import {
   createAccommodation,
   createAssignment,
@@ -2467,6 +2468,21 @@ describe('tenant isolation', () => {
       expect(await canReadTrip(scope, beta.tripId)).toBe(false)
     })
 
+    it('refuses a delete to a demoted owner, and the trip survives it', async () => {
+      const scope = alpha.tenant.scope
+      const membership = (await listTripMembers(scope, alpha.tripId)).find(
+        (row) => row.userId === alpha.tenant.ownerUserId,
+      )
+      expect(membership).toBeDefined()
+      if (membership === undefined) return
+
+      await updateTripMember(scope, membership.id, { role: 'editor' })
+
+      const refusal = await captureError(() => deleteTrip(scope, alpha.tripId))
+      expect((refusal as RepositoryError).code).toBe('FORBIDDEN')
+      expect((await requireTrip(scope, alpha.tripId)).id).toBe(alpha.tripId)
+    })
+
     it('refuses a favourite on B’s trip and never lists B’s ids', async () => {
       const scope = alpha.tenant.scope
 
@@ -2483,6 +2499,84 @@ describe('tenant isolation', () => {
       expect(await listFavouriteTripIds(beta.tenant.scope)).toEqual([
         beta.tripId,
       ])
+    })
+  })
+  /**
+   * The purge is the one half of a delete that leaves the database entirely, so it is the one place
+   * a boundary could be crossed without a tenant filter to stop it (PRD #104 decision 3). R2 has no
+   * `organization_id`; what it has is a key namespace, and every key this product mints names its
+   * organization in the second path segment. The envelope's `orgId` is the authority and the keys are
+   * a request, so an envelope forged under A that names B's objects deletes nothing.
+   */
+  describe('the storage purge', () => {
+    interface FakeBucket {
+      readonly calls: Array<Array<string>>
+      readonly remaining: Set<string>
+      delete: (keys: string | Array<string>) => Promise<void>
+    }
+
+    function fakeBucket(present: ReadonlyArray<string>): FakeBucket {
+      const remaining = new Set(present)
+      const calls: Array<Array<string>> = []
+      return {
+        calls,
+        remaining,
+        delete: async (keys) => {
+          const list = typeof keys === 'string' ? [keys] : [...keys]
+          calls.push(list)
+          for (const key of list) remaining.delete(key)
+        },
+      }
+    }
+
+    async function purge(
+      orgId: string,
+      keys: ReadonlyArray<string>,
+      bucket: FakeBucket,
+    ): Promise<void> {
+      await handleTripPurge(
+        { keys: [...keys] },
+        {
+          env: { FILES: bucket } as unknown as TaskBindings,
+          logger: createLogger({ level: 'error', sink: createMemorySink() }),
+          now: () => 0,
+          attempt: 1,
+          taskId: 'trip-purge:under-test',
+          orgId,
+          callProvider: (_label, send) => send(),
+        },
+      )
+    }
+
+    /** The key `seedWorld` recorded for that tenant's one file. */
+    async function fileKey(world: World): Promise<string> {
+      const file = await tripFilesRepository.findById(
+        world.tenant.scope,
+        world.fileId,
+      )
+      expect(file).not.toBeNull()
+      return file?.storageKey ?? ''
+    }
+
+    it('deletes nothing when A’s envelope names B’s objects', async () => {
+      const key = await fileKey(beta)
+      const bucket = fakeBucket([key])
+
+      await purge(alpha.tenant.organizationId, [key], bucket)
+
+      expect(bucket.calls).toEqual([])
+      expect([...bucket.remaining]).toEqual([key])
+    })
+
+    it('deletes A’s own objects and drops B’s from the same envelope', async () => {
+      const mine = await fileKey(alpha)
+      const theirs = await fileKey(beta)
+      const bucket = fakeBucket([mine, theirs])
+
+      await purge(alpha.tenant.organizationId, [mine, theirs], bucket)
+
+      expect(bucket.calls).toEqual([[mine]])
+      expect([...bucket.remaining]).toEqual([theirs])
     })
   })
 })

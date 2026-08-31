@@ -24,12 +24,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   addTripMember,
+  canReadTrip,
+  createExpense,
+  createReservation,
+  createTransport,
   listFavouriteTripIds,
   listTrips,
+  recordFile,
   requireTrip,
+  updateTrip as writeTripRow,
 } from '#/server/repos'
-import { createHarness } from '#/server/repos/__tests__/harness'
-import { ALL_TIME_STAT_YEAR, taskEnvelopeSchema } from '#/server/queue/types'
+import {
+  createHarness,
+  subscribeTenant,
+} from '#/server/repos/__tests__/harness'
+import {
+  ALL_TIME_STAT_YEAR,
+  MAX_PURGE_KEYS,
+  taskEnvelopeSchema,
+} from '#/server/queue/types'
 import { travelStatsTaskId } from '#/server/queue/handlers/travel-stats'
 
 import type { z } from 'zod'
@@ -105,15 +118,19 @@ function startContext(): StartContext {
 }
 
 const {
+  DELETE_CONFIRM_THRESHOLD,
   QUEUE_BATCH_MAX,
   archiveTripFn,
   archiveTripInputSchema,
   createTripFn,
   createTripInputSchema,
+  deleteTripFn,
+  deleteTripInputSchema,
   restoreTripFn,
   restoreTripInputSchema,
   setTripFavouriteFn,
   setTripFavouriteInputSchema,
+  readTripForDelete,
   updateTripFn,
   updateTripInputSchema,
 } = await import('../trip-lifecycle')
@@ -178,6 +195,20 @@ const setTripFavourite = async (data: unknown): Promise<void> => {
     setTripFavouriteFn({ data: atBoundary(setTripFavouriteInputSchema, data) }),
   )
 }
+
+const deleteTrip = async (data: unknown): Promise<void> => {
+  await startStorage.run(startContext(), () =>
+    deleteTripFn({ data: atBoundary(deleteTripInputSchema, data) }),
+  )
+}
+
+/**
+ * The summary `tripDeleteSummaryFn` answers with, read through the seam it sits on: a handler's
+ * return value is discarded outside a Start build, so the boundary can only be asked what it
+ * *refuses*, and what it *says* is asked of the function underneath it.
+ */
+const deleteSummary = async ({ tripId }: { tripId: string }) =>
+  (await readTripForDelete(stubs.scope as TenantScope, tripId)).summary
 
 /* -------------------------------------------------------------------- setup */
 
@@ -509,6 +540,291 @@ describe('the lifecycle verbs', () => {
     ])
     const bystander = tenant.scopeFor(await tenant.addUser('Bystander'))
     expect(await listTrips(bystander)).toEqual([])
+  })
+})
+
+/* ------------------------------------------------------------- deleting */
+
+/**
+ * Delete is terminal and its ceremony is graduated (PRD #104 decisions 3 and 10).
+ *
+ * The threshold is the **server's**: the client renders whichever dialog the payload asks for, and a
+ * hand-rolled request that simply omits `confirmTitle` is refused by the same rule the dialog read.
+ * That is the property these cases are built around — every one of them calls the server function
+ * directly, which is exactly what a client skipping the ceremony would do.
+ */
+describe('the graduated delete confirmation', () => {
+  /** A trip with nothing on it and one member — the two-day sketch decision 10 lets go lightly. */
+  async function sketch(): Promise<string> {
+    await createTrip({
+      title: 'Weekend sketch',
+      destination: '',
+      startDate: '',
+      endDate: '',
+      currency: 'EUR',
+    })
+    return newestTripId()
+  }
+
+  it('accepts an absent confirmation for a trip with no record and one member', async () => {
+    const tripId = await sketch()
+
+    expect(await deleteSummary({ tripId })).toMatchObject({
+      requiresTitle: false,
+      reservations: 0,
+      transports: 0,
+      expenses: 0,
+      files: 0,
+      members: 1,
+    })
+
+    await deleteTrip({ tripId })
+    expect(await canReadTrip(tenant.scope, tripId)).toBe(false)
+  })
+
+  it.each([
+    [
+      'a booking',
+      async (tripId: string) => {
+        await createReservation(tenant.scope, { tripId, title: 'Hotel Lisboa' })
+      },
+    ],
+    [
+      'a leg',
+      async (tripId: string) => {
+        await createTransport(tenant.scope, { tripId, title: 'Flight out' })
+      },
+    ],
+    [
+      'an expense',
+      async (tripId: string) => {
+        await createExpense(tenant.scope, {
+          tripId,
+          title: 'Tram tickets',
+          amountMinor: 640,
+          spentOn: '2026-04-10',
+        })
+      },
+    ],
+    [
+      'a file',
+      async (tripId: string) => {
+        await recordFile(tenant.scope, {
+          tripId,
+          storageKey: `trips/${tenant.organizationId}/${tripId}/f1-booking.pdf`,
+          filename: 'booking.pdf',
+          contentType: 'application/pdf',
+          sizeBytes: 1024,
+        })
+      },
+    ],
+  ])(
+    'demands the title once the trip carries %s',
+    async (_label, addRecord) => {
+      const tripId = await sketch()
+      await addRecord(tripId)
+
+      expect(await deleteSummary({ tripId })).toMatchObject({
+        requiresTitle: true,
+        title: 'Weekend sketch',
+      })
+
+      // The refusal is a validation failure, so what crosses the boundary is the sentence naming what
+      // to type rather than a redacted diagnostic.
+      await expect(deleteTrip({ tripId })).rejects.toThrow()
+      await expect(
+        deleteTrip({ tripId, confirmTitle: 'wrong' }),
+      ).rejects.toThrow()
+      expect(await canReadTrip(tenant.scope, tripId)).toBe(true)
+
+      await deleteTrip({ tripId, confirmTitle: 'Weekend sketch' })
+      expect(await canReadTrip(tenant.scope, tripId)).toBe(false)
+    },
+  )
+
+  it('demands the title for a trip whose only weight is company', async () => {
+    const tripId = await sketch()
+    await addTripMember(tenant.scope, {
+      tripId,
+      userId: await tenant.addUser('Companion'),
+      role: 'editor',
+    })
+
+    expect(DELETE_CONFIRM_THRESHOLD).toEqual({ records: 0, members: 1 })
+    expect(await deleteSummary({ tripId })).toMatchObject({
+      requiresTitle: true,
+      members: 2,
+    })
+
+    await expect(deleteTrip({ tripId })).rejects.toThrow()
+    await deleteTrip({ tripId, confirmTitle: 'Weekend sketch' })
+    expect(await canReadTrip(tenant.scope, tripId)).toBe(false)
+  })
+
+  it('refuses a trip the caller may not see without saying whether it exists', async () => {
+    const tripId = await sketch()
+    const bystander = tenant.scopeFor(await tenant.addUser('Bystander'))
+    stubs.scope = bystander
+
+    await expect(deleteSummary({ tripId })).rejects.toThrow()
+    await expect(deleteTrip({ tripId })).rejects.toThrow()
+
+    stubs.scope = tenant.scope
+    expect(await canReadTrip(tenant.scope, tripId)).toBe(true)
+  })
+})
+
+/* --------------------------------------------------------------- the purge */
+
+/** The `trip-purge` envelopes among everything that was sent. */
+function purges(): Array<TaskEnvelopeOf<'trip-purge'>> {
+  return sent().filter((envelope) => envelope.kind === 'trip-purge')
+}
+
+describe('the storage purge a delete leaves behind', () => {
+  /** A trip carrying one file and a cover object, which is what a purge has to sweep. */
+  async function tripWithObjects(): Promise<{
+    tripId: string
+    fileKey: string
+    coverKey: string
+  }> {
+    await createTrip({
+      title: 'Lisbon in April',
+      destination: '',
+      startDate: '',
+      endDate: '',
+      currency: 'EUR',
+    })
+    const tripId = await newestTripId()
+    const fileKey = `trips/${tenant.organizationId}/${tripId}/f1-booking.pdf`
+    const coverKey = `trips/${tenant.organizationId}/${tripId}/cover.jpg`
+
+    await recordFile(tenant.scope, {
+      tripId,
+      storageKey: fileKey,
+      filename: 'booking.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 2048,
+    })
+    // No boundary schema carries the cover key yet (`01-S8` owns the form), so it is written through
+    // the repository — the purge has to sweep it the day one does, and that is what this asserts.
+    await writeTripRow(tenant.scope, tripId, { coverImageKey: coverKey })
+
+    return { tripId, fileKey, coverKey }
+  }
+
+  it('enqueues one envelope carrying the file keys and the cover key', async () => {
+    const { tripId, fileKey, coverKey } = await tripWithObjects()
+    stubs.batches = []
+
+    await deleteTrip({ tripId, confirmTitle: 'Lisbon in April' })
+
+    const enqueued = purges()
+    expect(enqueued).toHaveLength(1)
+    expect(enqueued[0]?.id).toBe(`trip-purge:${tripId}`)
+    expect(enqueued[0]?.orgId).toBe(tenant.organizationId)
+    expect(new Set(enqueued[0]?.payload.keys)).toEqual(
+      new Set([fileKey, coverKey]),
+    )
+  })
+
+  it('sends nothing to sweep for a trip that owns no object', async () => {
+    await createTrip({
+      title: 'Weekend sketch',
+      destination: '',
+      startDate: '',
+      endDate: '',
+      currency: 'EUR',
+    })
+    const tripId = await newestTripId()
+    stubs.batches = []
+
+    await deleteTrip({ tripId })
+    expect(purges()).toEqual([])
+  })
+
+  it('splits a trip with more objects than one message can carry', async () => {
+    await createTrip({
+      title: 'A very well documented expedition',
+      destination: '',
+      startDate: '',
+      endDate: '',
+      currency: 'EUR',
+    })
+    const tripId = await newestTripId()
+    await subscribeTenant(tenant.scope, 'crew', 5)
+
+    const keys = Array.from(
+      { length: MAX_PURGE_KEYS + 1 },
+      (_, index) =>
+        `trips/${tenant.organizationId}/${tripId}/f${index}-doc.pdf`,
+    )
+    for (const storageKey of keys) {
+      await recordFile(tenant.scope, {
+        tripId,
+        storageKey,
+        filename: 'doc.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: 16,
+      })
+    }
+    stubs.batches = []
+
+    await deleteTrip({
+      tripId,
+      confirmTitle: 'A very well documented expedition',
+    })
+
+    // Two envelopes, distinct ids, and every key carried exactly once: an id shared between chunks
+    // would see the second acked as a duplicate and its objects left in the bucket forever.
+    const enqueued = purges()
+    expect(enqueued.map((envelope) => envelope.payload.keys.length)).toEqual([
+      MAX_PURGE_KEYS,
+      1,
+    ])
+    expect(new Set(enqueued.map((envelope) => envelope.id)).size).toBe(2)
+    expect(
+      new Set(enqueued.flatMap((envelope) => envelope.payload.keys)),
+    ).toEqual(new Set(keys))
+  })
+
+  it('deletes the trip anyway when the queue refuses the sweep', async () => {
+    const { tripId } = await tripWithObjects()
+    stubs.queueRejects = true
+
+    await expect(
+      deleteTrip({ tripId, confirmTitle: 'Lisbon in April' }),
+    ).resolves.toBeUndefined()
+    expect(await canReadTrip(tenant.scope, tripId)).toBe(false)
+  })
+
+  it('fans the statistics out to the members the trip had, read before the cascade', async () => {
+    await createTrip({
+      title: 'Lisbon',
+      destination: '',
+      startDate: '2026-04-10',
+      endDate: '2026-04-12',
+      currency: 'EUR',
+    })
+    const tripId = await newestTripId()
+    const companion = await tenant.addUser('Companion')
+    await addTripMember(tenant.scope, {
+      tripId,
+      userId: companion,
+      role: 'viewer',
+    })
+    stubs.batches = []
+
+    await deleteTrip({ tripId, confirmTitle: 'Lisbon' })
+
+    // The membership rows go with the cascade, so a fan-out that read them afterwards would send
+    // nothing at all and every member's trip count would stay one too high until their next write.
+    expect(new Set(statsRecipients())).toEqual(
+      new Set([tenant.ownerUserId, companion]),
+    )
+    expect(new Set(statYears(sent()))).toEqual(
+      new Set([ALL_TIME_STAT_YEAR, 2026]),
+    )
   })
 })
 

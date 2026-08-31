@@ -13,9 +13,15 @@
  * offered to a viewer and to a colleague reading an organization-visible trip alike, and the menu
  * now renders for them where it used to render for nobody but the owner.
  *
- * Copy and Delete arrive in the later slices of `01-S1`.
+ * **Delete is the one item that asks before it acts, and how hard it asks is the server's call.**
+ * `TripDeleteDialog` reads a summary of what the trip carries and renders whichever ceremony that
+ * summary asks for (PRD #104 decision 10). It never derives the threshold itself: the same server
+ * function that hands it `requiresTitle` re-derives the rule on the write, so a browser that skipped
+ * the dialog gains nothing.
+ *
+ * Copy arrives in the last slice of `01-S1`.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import {
   Archive,
@@ -24,23 +30,35 @@ import {
   Pencil,
   Star,
   StarOff,
+  Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
   Alert,
   Button,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Field,
   IconButton,
+  Input,
   Sheet,
   SheetBody,
   SheetContent,
   SheetFooter,
   SheetHeader,
   SheetTitle,
+  SkeletonText,
   useSheetDirection,
 } from '#/components/ui'
 import {
@@ -50,13 +68,16 @@ import {
 } from '#/components/modules/shared'
 import {
   archiveTripFn,
+  deleteTripFn,
   restoreTripFn,
   setTripFavouriteFn,
+  tripDeleteSummaryFn,
   updateTripFn,
 } from '../-server/trip-lifecycle'
 import { TripFormFields, tripFormPayload, useTripForm } from './trip-form'
 
 import type { TripCard } from '../-server/overview'
+import type { TripDeleteSummary } from '../-server/trip-lifecycle'
 
 /* -------------------------------------------------------------------------------------------------
  * Edit sheet
@@ -202,6 +223,221 @@ export function TripEditSheet({
 }
 
 /* -------------------------------------------------------------------------------------------------
+ * Delete dialog
+ * ---------------------------------------------------------------------------------------------- */
+
+export interface TripDeleteDialogProps {
+  trip: TripCard
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+/** One line of the inventory, drawn only when there is something to count. */
+function Carried({
+  count,
+  one,
+  many,
+}: {
+  count: number
+  one: string
+  many: string
+}) {
+  if (count === 0) {
+    return null
+  }
+  return (
+    <li className="flex items-baseline gap-2">
+      <span className="tabular-nums font-medium text-ink">{count}</span>
+      <span className="text-ink-2">{count === 1 ? one : many}</span>
+    </li>
+  )
+}
+
+/**
+ * The confirmation, graduated by what the trip carries (PRD #104 decision 10).
+ *
+ * **The threshold is read, never computed.** The dialog asks the server what the trip holds and
+ * renders the ceremony that answer asks for: below it, one paragraph and an armed button; at or above
+ * it, the same paragraph plus a field that has to match the trip's name character for character. A
+ * copy of the rule in this file would be a copy that could drift, and the drift that matters is the
+ * one where the browser thinks a trip is empty and the server knows it is not — which is why
+ * `deleteTripFn` asks the same question again and refuses on its own answer.
+ *
+ * The inventory is named as counts rather than as a warning, because "12 bookings, 3 files and 2
+ * people" is a thing a reader can recognise as theirs, and "this cannot be undone" is not.
+ */
+export function TripDeleteDialog({
+  trip,
+  open,
+  onOpenChange,
+}: TripDeleteDialogProps) {
+  const [summary, setSummary] = useState<TripDeleteSummary | null>(null)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+  const [typed, setTyped] = useState('')
+
+  const remove = useAction(deleteTripFn, {
+    success: 'Trip deleted',
+    failure: 'The trip could not be deleted',
+    onSuccess: () => onOpenChange(false),
+  })
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    let live = true
+    setSummary(null)
+    setSummaryError(null)
+    setTyped('')
+
+    tripDeleteSummaryFn({ data: { tripId: trip.id } })
+      .then((answer) => {
+        if (live) setSummary(answer)
+      })
+      .catch((cause: unknown) => {
+        if (live) {
+          setSummaryError(
+            messageOf(cause, 'What this trip holds could not be read.'),
+          )
+        }
+      })
+
+    // The reader can close the dialog before the answer lands, and a `setState` after that is a
+    // warning in the console and a claim about a trip nobody is looking at any more.
+    return () => {
+      live = false
+    }
+  }, [open, trip.id])
+
+  /**
+   * Whether the button is live.
+   *
+   * Never before the summary lands: arming a terminal delete against an inventory nobody has read
+   * would make the light dialog the default, which is precisely backwards.
+   */
+  const armed =
+    summary !== null &&
+    (!summary.requiresTitle || typed.trim() === summary.title)
+
+  function submit(): void {
+    // `armed` is false until the summary lands, which is what narrows it here.
+    if (!armed) return
+    void remove.run({
+      data: {
+        tripId: trip.id,
+        ...(summary.requiresTitle ? { confirmTitle: typed.trim() } : {}),
+      },
+    })
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // A delete in flight owns the dialog: it is terminal, and a reader who dismissed it mid-write
+        // would be left unable to tell whether it happened.
+        if (remove.pending) return
+        onOpenChange(next)
+      }}
+    >
+      <DialogContent size="sm" data-part="trip-delete-dialog">
+        <DialogHeader>
+          <DialogTitle>Delete “{trip.title}” for good?</DialogTitle>
+          <DialogDescription>
+            There is no undo and no bin. Archiving keeps a trip out of the list
+            without losing it.
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogBody>
+          <form
+            id={`trip-delete-${trip.id}`}
+            className="flex flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              submit()
+            }}
+          >
+            {summaryError === null ? null : (
+              <Alert tone="danger" title="That did not load">
+                {summaryError}
+              </Alert>
+            )}
+
+            {summary === null ? (
+              summaryError === null ? (
+                <SkeletonText
+                  lines={3}
+                  role="status"
+                  aria-label="Reading what this trip holds"
+                />
+              ) : null
+            ) : (
+              <>
+                <ul className="flex flex-col gap-1 rounded-lg bg-surface-2 p-3 text-sm">
+                  <Carried
+                    count={summary.reservations}
+                    one="booking"
+                    many="bookings"
+                  />
+                  <Carried count={summary.transports} one="leg" many="legs" />
+                  <Carried
+                    count={summary.expenses}
+                    one="expense"
+                    many="expenses"
+                  />
+                  <Carried count={summary.files} one="file" many="files" />
+                  <Carried count={summary.members} one="person" many="people" />
+                </ul>
+
+                {summary.requiresTitle ? (
+                  <Field
+                    label="Type the trip’s name to confirm"
+                    hint={summary.title}
+                    required
+                  >
+                    <Input
+                      value={typed}
+                      onChange={(event) => setTyped(event.target.value)}
+                      autoComplete="off"
+                      maxLength={120}
+                      disabled={remove.pending}
+                    />
+                  </Field>
+                ) : null}
+              </>
+            )}
+          </form>
+        </DialogBody>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            shape="pill"
+            disabled={remove.pending}
+            onClick={() => onOpenChange(false)}
+          >
+            Keep it
+          </Button>
+          <Button
+            type="submit"
+            form={`trip-delete-${trip.id}`}
+            variant="danger"
+            shape="pill"
+            disabled={!armed}
+            loading={remove.pending}
+            loadingLabel="Deleting the trip"
+          >
+            Delete permanently
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/* -------------------------------------------------------------------------------------------------
  * Action menu
  * ---------------------------------------------------------------------------------------------- */
 
@@ -217,6 +453,7 @@ export interface TripActionsMenuProps {
  */
 export function TripActionsMenu({ trip }: TripActionsMenuProps) {
   const [editing, setEditing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   /**
    * The star as the reader has just left it, held only until the loader catches up.
@@ -313,6 +550,22 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
                   Archive
                 </DropdownMenuItem>
               )}
+
+              <DropdownMenuSeparator />
+
+              {/*
+                Terminal, and labelled differently from the archive it sits under: from an archived
+                row this is the last copy, so it says so. The confirmation is the dialog's, and how
+                much of one there is is the server's answer rather than this menu's guess.
+              */}
+              <DropdownMenuItem
+                icon={<Trash2 />}
+                destructive
+                onSelect={() => setDeleting(true)}
+                disabled={busy}
+              >
+                {trip.isArchived ? 'Delete permanently' : 'Delete'}
+              </DropdownMenuItem>
             </>
           ) : null}
         </DropdownMenuContent>
@@ -320,6 +573,10 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
 
       {editing ? (
         <TripEditSheet trip={trip} open onOpenChange={setEditing} />
+      ) : null}
+
+      {deleting ? (
+        <TripDeleteDialog trip={trip} open onOpenChange={setDeleting} />
       ) : null}
     </>
   )

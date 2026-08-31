@@ -1,5 +1,5 @@
 /**
- * Every write that acts on a trip *as a trip* — created, edited, archived, restored, starred.
+ * Every write that acts on a trip *as a trip* — created, edited, archived, restored, starred, deleted.
  *
  * One module rather than five handlers scattered across the read modules, because they share a
  * side effect and an authorisation story, and both are easier to keep honest in one place:
@@ -11,7 +11,7 @@
  *   star is the one write open to every reader (PRD #104 decision 6), and that too is decided in the
  *   repository: `setFavourite` calls `requireTrip` and no role guard.
  * - **A write that moves someone's travel statistics fans `travel-stats` envelopes out to the trip's
- *   members** — which is create and edit, and deliberately not archive, restore or favourite:
+ *   members** — which is create, edit and delete, and deliberately not archive, restore or favourite:
  *   `00-S4` counts a person's trips by membership, and neither shelving a trip, bringing it back, nor
  *   bookmarking it moves a membership row. See {@link enqueueTravelStats}, whose doc holds the three
  *   properties of the fan-out.
@@ -30,24 +30,36 @@ import { z } from 'zod'
 
 import {
   archiveTrip,
+  assertTripRole,
+  countTripReservationsByStatus,
   createTrip,
+  deleteTrip,
+  getTripSpendSummary,
   listTripMembers,
+  listTripStorageKeys,
   requireTrip,
   restoreTrip,
   setFavourite,
+  summariseTripTransports,
   updateTrip,
 } from '#/server/repos'
 import { createLogger, serializeError } from '#/server/observability'
 import { enqueueTasks } from '#/server/queue/jobs'
+import { tripPurgeTaskId } from '#/server/queue/handlers/trip-purge'
 import {
   recomputeDelaySeconds,
   travelStatsTaskId,
 } from '#/server/queue/handlers/travel-stats'
-import { ALL_TIME_STAT_YEAR, isCalendarStatYear } from '#/server/queue/types'
+import {
+  ALL_TIME_STAT_YEAR,
+  MAX_PURGE_KEYS,
+  isCalendarStatYear,
+} from '#/server/queue/types'
 import { appScope } from './context'
 
 import type { Logger } from '#/server/observability'
 import type { EnqueueInput } from '#/server/queue/jobs'
+import type { Trip } from '#/server/db/types'
 import type { TenantScope } from '#/server/repos'
 
 /* -------------------------------------------------------------------------------------------------
@@ -65,6 +77,25 @@ import type { TenantScope } from '#/server/repos'
  * operator raised it.
  */
 export const QUEUE_BATCH_MAX = 100
+
+/**
+ * Where the delete confirmation stops being a formality (PRD #104 decision 10).
+ *
+ * A trip past either of these has to have its name typed out; below both, an absent `confirmTitle` is
+ * accepted and the dialog is one paragraph and two buttons. The ceremony should match the loss, and
+ * the loss is what the trip *carries*: a two-day sketch nobody else is on is worth one click, a year
+ * of bookings and a shared plan is not.
+ *
+ * Named and exported so the rule has one spelling. The **server** applies it — {@link deleteTripFn}
+ * re-derives it from the trip's own counts on every call — so a client that skipped the dialog
+ * entirely still meets it.
+ */
+export const DELETE_CONFIRM_THRESHOLD = {
+  /** Any record at all: one booking, one leg, one expense or one file. */
+  records: 0,
+  /** More than the owner alone. A trip with company is somebody else's plan too. */
+  members: 1,
+} as const
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -161,6 +192,22 @@ export const updateTripInputSchema = z
   })
   .refine(datesInOrder, datesOutOfOrder)
 
+export const tripDeleteSummaryInputSchema = z.strictObject({
+  tripId: tripIdSchema,
+})
+
+/**
+ * The terminal delete. `confirmTitle` is **optional here and required by the handler**, because
+ * whether it is required is a property of the trip rather than of the request: a strict schema that
+ * demanded it always would make the light dialog a lie, and one that never did would put the
+ * threshold in the browser. It is compared to the trip's own title on the server, once the counts are
+ * in — see {@link deleteTripFn}.
+ */
+export const deleteTripInputSchema = z.strictObject({
+  tripId: tripIdSchema,
+  confirmTitle: z.string().trim().max(120).optional(),
+})
+
 export const archiveTripInputSchema = z.strictObject({ tripId: tripIdSchema })
 export const restoreTripInputSchema = z.strictObject({ tripId: tripIdSchema })
 
@@ -212,6 +259,15 @@ function affectedStatYears(
   return [...years]
 }
 
+/** Who is on a trip, deduplicated — the recipient set for a statistics fan-out. */
+async function tripMemberIds(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Array<string>> {
+  const members = await listTripMembers(scope, tripId)
+  return [...new Set(members.map((member) => member.userId))]
+}
+
 /**
  * Fans `travel-stats` envelopes out to **the trip's members** for each year the write moved.
  *
@@ -227,6 +283,10 @@ function affectedStatYears(
  *   by the time this runs; a stale statistics panel is a much smaller harm than a save that appears
  *   to have failed. Caught, logged once, and returned from — the same posture `mirrorToRoom` takes.
  *
+ * `recipients` exists for the one write that destroys its own recipient list: after `deleteTrip` the
+ * `trip_members` rows have gone with the cascade, so the delete reads them first and hands them in.
+ * Every other caller lets this read them.
+ *
  * The binding is reached inside the function rather than at module scope: `#/server/auth/env` imports
  * `cloudflare:workers`, a specifier that does not resolve outside workerd, and this module is
  * imported by a suite that runs in plain Node.
@@ -235,13 +295,14 @@ async function enqueueTravelStats(
   scope: TenantScope,
   tripId: string,
   years: ReadonlyArray<number>,
+  recipients?: ReadonlyArray<string>,
 ): Promise<void> {
   const orgId = scope.ctx.organizationId
   const at = Date.now()
 
   try {
-    const members = await listTripMembers(scope, tripId)
-    const userIds = [...new Set(members.map((member) => member.userId))]
+    const members = recipients ?? (await tripMemberIds(scope, tripId))
+    const userIds = [...new Set(members)]
     const envelopes: Array<EnqueueInput<'travel-stats'>> = []
     for (const userId of userIds) {
       for (const statYear of years) {
@@ -267,6 +328,164 @@ async function enqueueTravelStats(
     log().warn('travel statistics were not enqueued for a trip write', {
       organizationId: orgId,
       tripId,
+      ...serializeError(cause),
+    })
+  }
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Deleting a trip — what it carries, and what it leaves in the bucket
+ * ---------------------------------------------------------------------------------------------- */
+
+/** What the delete dialog names, and what {@link DELETE_CONFIRM_THRESHOLD} is applied to. */
+export interface TripDeleteSummary {
+  readonly tripId: string
+  /** The trip's own title — the string a confirmation has to match, character for character. */
+  readonly title: string
+  readonly reservations: number
+  readonly transports: number
+  readonly expenses: number
+  readonly files: number
+  readonly members: number
+  /**
+   * Whether the title has to be typed. **The server's answer**, carried on the payload so the client
+   * renders the rule rather than re-deriving it; {@link deleteTripFn} asks the same question again of
+   * the same counts, so a client that ignored this cannot skip the ceremony.
+   */
+  readonly requiresTitle: boolean
+}
+
+/**
+ * Everything the delete path needs about a trip, read once.
+ *
+ * Exported because it is the seam both server functions sit on and the one place `requiresTitle` is
+ * decided: a handler's return value is discarded outside a Start build, so this is where the
+ * threshold can be asserted against a real database rather than against a re-derivation of it.
+ *
+ * Both callers need the same reads, so there is one function: the summary function returns the
+ * counts, and the delete needs the counts *plus* the two things that stop existing the moment the
+ * cascade runs — the storage keys of the objects the trip owns, and who its members were.
+ *
+ * Every count is an aggregate rather than a list taken by its length: `countTripReservationsByStatus`,
+ * `summariseTripTransports` and `getTripSpendSummary` already group in SQL. The file count is the one
+ * exception and is free — the delete has to read those keys anyway.
+ */
+export async function readTripForDelete(
+  scope: TenantScope,
+  tripId: string,
+): Promise<{
+  readonly trip: Trip
+  readonly summary: TripDeleteSummary
+  readonly storageKeys: ReadonlyArray<string>
+  readonly memberIds: ReadonlyArray<string>
+}> {
+  // The two guards in the order every trip write needs them, before anything is counted: a caller who
+  // may not see the trip learns nothing, and only then is "not yours to do" safe to say.
+  const trip = await requireTrip(scope, tripId)
+  await assertTripRole(scope, tripId, ['owner'])
+
+  const [bookings, legs, spend, storageKeys, memberIds] = await Promise.all([
+    countTripReservationsByStatus(scope, tripId),
+    summariseTripTransports(scope, tripId),
+    getTripSpendSummary(scope, tripId),
+    listTripStorageKeys(scope, tripId),
+    tripMemberIds(scope, tripId),
+  ])
+
+  const reservations = bookings.reduce((total, row) => total + row.value, 0)
+  const transports = legs.reduce((total, row) => total + row.legs, 0)
+  const records =
+    reservations + transports + spend.expenseCount + storageKeys.length
+
+  return {
+    trip,
+    storageKeys,
+    memberIds,
+    summary: {
+      tripId,
+      title: trip.title,
+      reservations,
+      transports,
+      expenses: spend.expenseCount,
+      files: storageKeys.length,
+      members: memberIds.length,
+      requiresTitle:
+        records > DELETE_CONFIRM_THRESHOLD.records ||
+        memberIds.length > DELETE_CONFIRM_THRESHOLD.members,
+    },
+  }
+}
+
+/**
+ * Refuses the delete unless the reader typed the trip's name, when the trip has earned that.
+ *
+ * Thrown as a **Zod** failure rather than as a `RepositoryError`, and that is the difference between
+ * a sentence and a redaction envelope: `classifyFailure` (`src/server/errors/public.ts`) passes a
+ * validation message through to the browser intact and puts every `RepositoryError` in `unexpected`,
+ * where the message is logged and withheld. The reader has to be told what to type.
+ *
+ * No `z.literal` on the input schema — the title is not knowable when the schema is declared, and a
+ * comparison that lived in the browser would be a comparison an attacker could delete.
+ */
+function assertConfirmed(summary: TripDeleteSummary, confirmTitle?: string) {
+  if (!summary.requiresTitle) {
+    return
+  }
+  z.string()
+    .refine((value) => value === summary.title, {
+      error: `This trip carries bookings, money, files or other people. Type its name — ${summary.title} — to delete it.`,
+    })
+    .parse(confirmTitle ?? '')
+}
+
+/**
+ * Hands the objects a deleted trip owned to the `trip-purge` handler.
+ *
+ * Three properties:
+ *
+ * - **It never fails the delete.** D1 is the record and has already been written; a queue that is
+ *   unreachable leaves objects in the bucket, which is a sweep job, where a save that appears to have
+ *   failed is a reader deleting the same trip twice. Caught, logged once, returned from — the posture
+ *   the statistics fan-out already takes.
+ * - **It chunks.** `files` is `UNLIMITED` on the business tier, so the key list has no product bound,
+ *   and a Queues message body is capped at 128 KB. {@link MAX_PURGE_KEYS} keys per envelope,
+ *   {@link QUEUE_BATCH_MAX} envelopes per `sendBatch`.
+ * - **Each chunk's id is deterministic on it.** Two chunks sharing one id would see the second acked
+ *   as a duplicate of the first and its objects left in the bucket for good.
+ */
+async function enqueueTripPurge(
+  scope: TenantScope,
+  tripId: string,
+  keys: ReadonlyArray<string>,
+): Promise<void> {
+  const orgId = scope.ctx.organizationId
+  const unique = [...new Set(keys)]
+  if (unique.length === 0) {
+    return
+  }
+
+  try {
+    const envelopes: Array<EnqueueInput<'trip-purge'>> = []
+    for (let index = 0; index < unique.length; index += MAX_PURGE_KEYS) {
+      const chunk = index / MAX_PURGE_KEYS
+      envelopes.push({
+        kind: 'trip-purge',
+        orgId,
+        id: tripPurgeTaskId(tripId, chunk),
+        payload: { keys: unique.slice(index, index + MAX_PURGE_KEYS) },
+      })
+    }
+
+    const { taskQueue } = await import('#/server/auth/env')
+    const queue = taskQueue()
+    for (let index = 0; index < envelopes.length; index += QUEUE_BATCH_MAX) {
+      await enqueueTasks(queue, envelopes.slice(index, index + QUEUE_BATCH_MAX))
+    }
+  } catch (cause) {
+    log().warn('the storage purge for a deleted trip was not enqueued', {
+      organizationId: orgId,
+      tripId,
+      keys: unique.length,
       ...serializeError(cause),
     })
   }
@@ -370,3 +589,59 @@ export const setTripFavouriteFn = createServerFn({ method: 'POST' })
       return { tripId: data.tripId, isFavourite: data.isFavourite }
     },
   )
+
+/**
+ * What a delete would take, so the dialog can say so before it is pressed.
+ *
+ * A read, so `GET`. Owner-only like the delete itself — a reader who cannot delete the trip has no
+ * business being handed an inventory of it — and it is the same `readTripForDelete` the write runs,
+ * so the two can never disagree about the threshold.
+ */
+export const tripDeleteSummaryFn = createServerFn({ method: 'GET' })
+  .validator(tripDeleteSummaryInputSchema)
+  .handler(async ({ data }): Promise<TripDeleteSummary> => {
+    const scope = await appScope()
+    return (await readTripForDelete(scope, data.tripId)).summary
+  })
+
+/**
+ * Deletes a trip for good. Owner only, and there is no undo — the archive is the undo
+ * (PRD #104 decision 3).
+ *
+ * The order matters and every step of it is load-bearing:
+ *
+ * 1. **Read, then guard, then count.** `readTripForDelete` does all three, in that order.
+ * 2. **Apply the graduated confirmation** (decision 10) to the counts it just read, not to anything
+ *    the client claimed about them.
+ * 3. **Delete the rows.** D1 cascades, and that is the durable record of what happened.
+ * 4. **Enqueue the sweep.** R2 does not cascade, so the objects the trip owned are handed to
+ *    `trip-purge`. The delete never waits on it and a queue failure never surfaces.
+ * 5. **Fan the statistics out** to the members read in step 1 — after the cascade there is nobody
+ *    left to read.
+ */
+export const deleteTripFn = createServerFn({ method: 'POST' })
+  .validator(deleteTripInputSchema)
+  .handler(async ({ data }): Promise<{ readonly deleted: true }> => {
+    const scope = await appScope()
+    const { trip, summary, storageKeys, memberIds } = await readTripForDelete(
+      scope,
+      data.tripId,
+    )
+    assertConfirmed(summary, data.confirmTitle)
+
+    const keys = [
+      ...storageKeys,
+      ...(trip.coverImageKey === null ? [] : [trip.coverImageKey]),
+    ]
+
+    await deleteTrip(scope, trip.id)
+    await enqueueTripPurge(scope, trip.id, keys)
+    await enqueueTravelStats(
+      scope,
+      trip.id,
+      affectedStatYears(trip.startDate),
+      memberIds,
+    )
+
+    return { deleted: true }
+  })
