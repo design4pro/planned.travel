@@ -22,7 +22,12 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { addTripMember, listTrips, requireTrip } from '#/server/repos'
+import {
+  addTripMember,
+  listFavouriteTripIds,
+  listTrips,
+  requireTrip,
+} from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import { ALL_TIME_STAT_YEAR, taskEnvelopeSchema } from '#/server/queue/types'
 import { travelStatsTaskId } from '#/server/queue/handlers/travel-stats'
@@ -107,6 +112,8 @@ const {
   createTripInputSchema,
   restoreTripFn,
   restoreTripInputSchema,
+  setTripFavouriteFn,
+  setTripFavouriteInputSchema,
   updateTripFn,
   updateTripInputSchema,
 } = await import('../trip-lifecycle')
@@ -163,6 +170,12 @@ const archiveTrip = async (data: unknown): Promise<void> => {
 const restoreTrip = async (data: unknown): Promise<void> => {
   await startStorage.run(startContext(), () =>
     restoreTripFn({ data: atBoundary(restoreTripInputSchema, data) }),
+  )
+}
+
+const setTripFavourite = async (data: unknown): Promise<void> => {
+  await startStorage.run(startContext(), () =>
+    setTripFavouriteFn({ data: atBoundary(setTripFavouriteInputSchema, data) }),
   )
 }
 
@@ -339,6 +352,29 @@ describe('the travel-statistics fan-out', () => {
     expect(stubs.batches).toHaveLength(3)
     expect(stubs.batches.map((batch) => batch.length)).toEqual([100, 100, 50])
     expect(new Set(statsRecipients()).size).toBe(250)
+  })
+
+  it('stays silent when a trip is shelved, restored or starred', async () => {
+    await createTrip({
+      title: 'Lisbon',
+      destination: '',
+      startDate: '',
+      endDate: '',
+      currency: 'EUR',
+    })
+    const tripId = await newestTripId()
+    // The creation's own envelope is not what this case is about.
+    stubs.batches = []
+
+    await archiveTrip({ tripId })
+    await restoreTrip({ tripId })
+    await setTripFavourite({ tripId, isFavourite: true })
+
+    // `00-S4` counts a person's trips by membership, and none of the three moves a membership row:
+    // shelving a trip, bringing it back and bookmarking it all leave every member's statistics where
+    // they were. The star is read back so this is a silence over a write that happened.
+    expect(sent()).toEqual([])
+    expect(await listFavouriteTripIds(tenant.scope)).toEqual([tripId])
   })
 
   it('never fails the write when the queue refuses', async () => {

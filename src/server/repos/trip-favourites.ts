@@ -75,16 +75,6 @@ export async function setFavourite(
   })
 }
 
-/** Whether the acting user has starred this trip. */
-export async function isTripFavourite(
-  scope: TenantScope,
-  tripId: string,
-): Promise<boolean> {
-  return (
-    (await tripFavouritesRepository.count(scope, ownRow(scope, tripId))) > 0
-  )
-}
-
 /**
  * The ids of the trips the acting user has starred and may still read.
  *
