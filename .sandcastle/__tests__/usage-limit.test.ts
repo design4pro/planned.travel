@@ -252,4 +252,83 @@ describe('withUsageLimit', () => {
       ),
     ).rejects.toThrow(/SANDCASTLE_LIMIT_WAIT_MAX_MS[\s\S]*--run/)
   })
+  /**
+   * A wait that stays open until the test says otherwise, so an abort can land mid-window. It
+   * ignores its cancel signal on purpose: what these two tests assert is which caller the shared
+   * timer answers to, not how it is torn down.
+   */
+  function heldClock() {
+    const slept: Array<number> = []
+    let release = (): void => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    return {
+      slept,
+      release: () => {
+        release()
+      },
+      clock: {
+        now: () => LATE,
+        sleep: async (ms: number) => {
+          slept.push(ms)
+          await gate
+        },
+      },
+    }
+  }
+
+  /** Lets every microtask settle, so both stages are inside the wait before anything is aborted. */
+  const settle = () => new Promise((resolve) => setImmediate(resolve))
+
+  function limitedOnce(
+    label: string,
+    signal: AbortSignal,
+    clock: ReturnType<typeof heldClock>['clock'],
+  ) {
+    let calls = 0
+    return withUsageLimit(
+      label,
+      async () => {
+        calls++
+        if (calls === 1) throw new Error(OBSERVED)
+        return label
+      },
+      { clock, signal },
+    )
+  }
+
+  it('fails only the stage whose own lease was revoked, not the one it waits beside', async () => {
+    const { clock, release } = heldClock()
+    const revoked = new AbortController()
+    // The leader owns the timer; before the fix its signal was the timer's, so aborting it here
+    // rejected the shared promise and took the joiner down with an abort it never suffered.
+    const leader = limitedOnce('issue-a', revoked.signal, clock)
+    await settle()
+    const joiner = limitedOnce('issue-b', new AbortController().signal, clock)
+    await settle()
+
+    revoked.abort(new Error('lease revoked'))
+    await expect(leader).rejects.toThrow('lease revoked')
+
+    release()
+    await expect(joiner).resolves.toBe('issue-b')
+  })
+
+  it('wakes a joiner whose own lease is revoked instead of sleeping out the window', async () => {
+    const { clock, release } = heldClock()
+    const revoked = new AbortController()
+    const leader = limitedOnce('issue-a', new AbortController().signal, clock)
+    await settle()
+    const joiner = limitedOnce('issue-b', revoked.signal, clock)
+    await settle()
+
+    // A joiner used to await the leader's timer and nothing else, so its own revocation was not
+    // noticed until the window closed — hours later, on an issue another machine may hold by then.
+    revoked.abort(new Error('lease revoked'))
+    await expect(joiner).rejects.toThrow('lease revoked')
+
+    release()
+    await expect(leader).resolves.toBe('issue-a')
+  })
 })

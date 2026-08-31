@@ -127,8 +127,43 @@ export function parseUsageLimit(
  * Two issue pipelines run at once and both hit the same limit within seconds of each other. One
  * timer, one log line, one wake-up: the second caller joins the first one's wait rather than
  * starting its own and hammering the same closed door on its own schedule.
+ *
+ * The timer deliberately belongs to no caller. Each stage carries its own `AbortSignal` — the
+ * coordinator revokes a lease per issue, not per run — so binding the shared timer to whichever
+ * stage happened to arrive first would make one issue's revocation abort a wait that others are
+ * standing in. Callers watch their own signal against the shared timer instead, and the timer is
+ * cancelled once the last of them has left.
  */
-let pending: Promise<void> | undefined
+interface SharedWait {
+  /** Resolves when the window is over. Never rejects: cancelling is not a caller's failure. */
+  readonly done: Promise<void>
+  /** Stops the timer when the last waiter leaves, so an all-aborted run does not idle for hours. */
+  readonly cancel: AbortController
+  waiters: number
+}
+
+let pending: SharedWait | undefined
+
+/**
+ * `promise`, but losing a race against `signal` — with the signal's own reason, so the caller sees
+ * why its lease went rather than a timeout it never hit.
+ */
+function abortable<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (signal === undefined) return promise
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      reject(signal.reason)
+    }
+    if (signal.aborted) {
+      onAbort()
+      return
+    }
+    signal.addEventListener('abort', onAbort, { once: true })
+    promise.then(resolve, reject).finally(() => {
+      signal.removeEventListener('abort', onAbort)
+    })
+  })
+}
 
 interface Clock {
   readonly now: () => Date
@@ -180,42 +215,61 @@ async function waitForReset(
   clock: Clock,
   signal?: AbortSignal,
 ): Promise<void> {
-  if (pending !== undefined) {
+  // Nothing to wait for if this stage has already lost its issue: the retry would run an agent on
+  // work another machine may hold by the time we wake.
+  signal?.throwIfAborted()
+
+  let wait = pending
+  if (wait === undefined) {
+    const ms = limit.resetsAt.getTime() - clock.now().getTime() + WAKE_MARGIN_MS
+    if (ms > MAX_WAIT_MS) {
+      throw new Error(
+        `Usage limit resets at ${limit.resetsAt.toISOString()}, ${Math.round(ms / 60_000)} minutes away — ` +
+          `longer than SANDCASTLE_LIMIT_WAIT_MAX_MS (${Math.round(MAX_WAIT_MS / 60_000)} minutes). ` +
+          `Resume this run after the reset with \`pnpm sandcastle --run <run id>\`; its work is on its branches.`,
+      )
+    }
+
+    // Loud on purpose. A silent process is indistinguishable from a hung one, and this one also
+    // holds its coordinator leases for the whole wait — the heartbeat keeps ticking, so other
+    // machines stay locked out of these issues until it wakes. A resume needs that, visibly.
+    console.log(
+      `\n  ⏸ ${label}: usage limit. Waiting ${Math.max(1, Math.round(ms / 60_000))} min, until ` +
+        `${limit.resetsAt.toISOString()}${limit.precise ? '' : ' (guessed — no reset time in the message)'}. ` +
+        `This run keeps its issues claimed while it waits.`,
+    )
+
+    const cancel = new AbortController()
+    wait = {
+      waiters: 0,
+      cancel,
+      // Swallowed because the only thing that aborts this timer is the last waiter leaving, and
+      // that is a cancellation nobody is left to hear.
+      done: clock.sleep(Math.max(0, ms), cancel.signal).catch(() => {}),
+    }
+    pending = wait
+  } else {
     console.log(
       `  … ${label}: usage limit — joining the wait already in flight`,
     )
-    await pending
-    return
   }
 
-  const ms = limit.resetsAt.getTime() - clock.now().getTime() + WAKE_MARGIN_MS
-  if (ms > MAX_WAIT_MS) {
-    throw new Error(
-      `Usage limit resets at ${limit.resetsAt.toISOString()}, ${Math.round(ms / 60_000)} minutes away — ` +
-        `longer than SANDCASTLE_LIMIT_WAIT_MAX_MS (${Math.round(MAX_WAIT_MS / 60_000)} minutes). ` +
-        `Resume this run after the reset with \`pnpm sandcastle --run <run id>\`; its work is on its branches.`,
-    )
-  }
-
-  // Loud on purpose. A silent process is indistinguishable from a hung one, and this one also holds
-  // its coordinator leases for the whole wait — the heartbeat keeps ticking, so other machines stay
-  // locked out of these issues until it wakes. That is what a resume needs and it must be visible.
-  console.log(
-    `\n  ⏸ ${label}: usage limit. Waiting ${Math.max(1, Math.round(ms / 60_000))} min, until ` +
-      `${limit.resetsAt.toISOString()}${limit.precise ? '' : ' (guessed — no reset time in the message)'}. ` +
-      `This run keeps its issues claimed while it waits.`,
-  )
-
-  pending = clock.sleep(Math.max(0, ms), signal)
+  wait.waiters++
   try {
-    await pending
+    await abortable(wait.done, signal)
   } finally {
-    pending = undefined
+    wait.waiters--
+    if (wait.waiters === 0) {
+      if (pending === wait) pending = undefined
+      // A no-op once the timer has fired; what it stops is the case where every waiter walked away.
+      wait.cancel.abort()
+    }
   }
   console.log(`  ▶ ${label}: limit window over — retrying.`)
 }
 
-/** Test seam: the gate is module state, and each test needs it empty. */
+/** Test seam: the gate is module state, and each test needs it empty and its timer stopped. */
 export function resetUsageLimitGate(): void {
+  pending?.cancel.abort()
   pending = undefined
 }
