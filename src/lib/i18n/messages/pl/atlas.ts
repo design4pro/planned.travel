@@ -155,8 +155,9 @@ const messages = {
   'panel.stat.regionsCaption': 'Stany, prowincje, prefektury',
   'panel.stat.visits': 'Wizyty',
   'panel.stat.visitsCaption': 'Każdy zapisany przyjazd',
-  'panel.stat.trips': 'Wyjazdy',
-  'panel.stat.tripsCaption': 'Tylko zakończone wyjazdy',
+  'panel.stat.trips': 'Twoje wyjazdy',
+  'panel.stat.tripsCaption':
+    'Tylko zakończone wyjazdy, w których uczestniczysz',
   'panel.stat.cities': 'Miasta',
   'panel.stat.citiesCaption': 'Miejscowości, w których nocowano lub stawano',
   'panel.stat.days': 'Dni w podróży',
@@ -367,10 +368,10 @@ const messages = {
 
   /* ------------------------------------------------- the card over the map */
   'card.trips': {
-    one: 'Wyjazd',
-    few: 'Wyjazdy',
-    many: 'Wyjazdów',
-    other: 'Wyjazdu',
+    one: 'Wyjazd przestrzeni roboczej',
+    few: 'Wyjazdy przestrzeni roboczej',
+    many: 'Wyjazdów przestrzeni roboczej',
+    other: 'Wyjazdu przestrzeni roboczej',
   },
   'card.visits': {
     one: 'Wizyta',

@@ -138,8 +138,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Πολιτείες, επαρχίες, νομοί',
   'panel.stat.visits': 'Επισκέψεις',
   'panel.stat.visitsCaption': 'Κάθε καταγεγραμμένη άφιξη',
-  'panel.stat.trips': 'Ταξίδια',
-  'panel.stat.tripsCaption': 'Μόνο ολοκληρωμένα ταξίδια',
+  'panel.stat.trips': 'Τα ταξίδια σας',
+  'panel.stat.tripsCaption': 'Μόνο ολοκληρωμένα ταξίδια στα οποία συμμετέχετε',
   'panel.stat.cities': 'Πόλεις',
   'panel.stat.citiesCaption': 'Πόλεις όπου κοιμηθήκατε ή σταματήσατε',
   'panel.stat.days': 'Ημέρες μακριά',
@@ -334,7 +334,10 @@ const messages = {
     'Έχει ήδη διαγραφεί από τη λίστα, οπότε αφαιρείται και η καταχώριση ότι φτάσατε εκεί. Ο άτλαντας και τα ταξίδια σας δεν θίγονται.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { one: 'Ταξίδι', other: 'Ταξίδια' },
+  'card.trips': {
+    one: 'Ταξίδι του χώρου εργασίας',
+    other: 'Ταξίδια του χώρου εργασίας',
+  },
   'card.visits': { one: 'Επίσκεψη', other: 'Επισκέψεις' },
   'card.places': { one: 'Μέρος', other: 'Μέρη' },
   'card.firstTrip': 'Πρώτο ταξίδι',

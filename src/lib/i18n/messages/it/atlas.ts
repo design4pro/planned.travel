@@ -154,8 +154,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Stati, province, prefetture',
   'panel.stat.visits': 'Visite',
   'panel.stat.visitsCaption': 'Ogni arrivo registrato',
-  'panel.stat.trips': 'Viaggi',
-  'panel.stat.tripsCaption': 'Solo viaggi conclusi',
+  'panel.stat.trips': 'I tuoi viaggi',
+  'panel.stat.tripsCaption': 'Solo viaggi conclusi a cui partecipi',
   'panel.stat.cities': 'Città',
   'panel.stat.citiesCaption': 'Città dove hai dormito o fatto tappa',
   'panel.stat.days': 'Giorni in viaggio',
@@ -353,7 +353,11 @@ const messages = {
     'È già spuntato, quindi sparisce anche il ricordo che ci sei arrivato. La tua mappa del mondo e i tuoi viaggi non vengono toccati.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { one: 'Viaggio', many: 'Viaggi', other: 'Viaggi' },
+  'card.trips': {
+    one: 'Viaggio dello spazio di lavoro',
+    many: 'Viaggi dello spazio di lavoro',
+    other: 'Viaggi dello spazio di lavoro',
+  },
   'card.visits': { one: 'Visita', many: 'Visite', other: 'Visite' },
   'card.places': { one: 'Luogo', many: 'Luoghi', other: 'Luoghi' },
   'card.firstTrip': 'Primo viaggio',

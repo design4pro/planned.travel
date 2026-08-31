@@ -153,8 +153,8 @@ const messages = {
   'panel.stat.regionsCaption': 'États, provinces, préfectures',
   'panel.stat.visits': 'Visites',
   'panel.stat.visitsCaption': 'Chaque arrivée enregistrée',
-  'panel.stat.trips': 'Voyages',
-  'panel.stat.tripsCaption': 'Voyages terminés uniquement',
+  'panel.stat.trips': 'Vos voyages',
+  'panel.stat.tripsCaption': 'Voyages terminés auxquels vous participez',
   'panel.stat.cities': 'Villes',
   'panel.stat.citiesCaption': 'Villes où vous avez dormi ou fait étape',
   'panel.stat.days': 'Jours en voyage',
@@ -350,7 +350,11 @@ const messages = {
     'L’entrée est déjà cochée, ce retrait efface donc aussi la trace que vous y êtes arrivé. Votre carte du monde et vos voyages ne sont pas touchés.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { one: 'Voyage', many: 'Voyages', other: 'Voyages' },
+  'card.trips': {
+    one: 'Voyage de l’espace de travail',
+    many: 'Voyages de l’espace de travail',
+    other: 'Voyages de l’espace de travail',
+  },
   'card.visits': { one: 'Visite', many: 'Visites', other: 'Visites' },
   'card.places': { one: 'Lieu', many: 'Lieux', other: 'Lieux' },
   'card.firstTrip': 'Premier voyage',

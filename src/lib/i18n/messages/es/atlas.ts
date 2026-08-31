@@ -152,8 +152,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Estados, provincias, prefecturas',
   'panel.stat.visits': 'Visitas',
   'panel.stat.visitsCaption': 'Cada llegada registrada',
-  'panel.stat.trips': 'Viajes',
-  'panel.stat.tripsCaption': 'Solo viajes terminados',
+  'panel.stat.trips': 'Tus viajes',
+  'panel.stat.tripsCaption': 'Solo viajes terminados en los que participas',
   'panel.stat.cities': 'Ciudades',
   'panel.stat.citiesCaption': 'Ciudades donde dormiste o hiciste parada',
   'panel.stat.days': 'Días fuera',
@@ -350,7 +350,11 @@ const messages = {
     'Ya está tachado, así que esto también borra el recuerdo de que llegaste. Tu mapa del mundo y tus viajes no se tocan.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { one: 'Viaje', many: 'Viajes', other: 'Viajes' },
+  'card.trips': {
+    one: 'Viaje del espacio de trabajo',
+    many: 'Viajes del espacio de trabajo',
+    other: 'Viajes del espacio de trabajo',
+  },
   'card.visits': { one: 'Visita', many: 'Visitas', other: 'Visitas' },
   'card.places': { one: 'Lugar', many: 'Lugares', other: 'Lugares' },
   'card.firstTrip': 'Primer viaje',

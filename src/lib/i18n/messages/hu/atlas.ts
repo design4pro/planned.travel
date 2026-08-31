@@ -144,8 +144,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Államok, tartományok, prefektúrák',
   'panel.stat.visits': 'Látogatások',
   'panel.stat.visitsCaption': 'Minden rögzített megérkezés',
-  'panel.stat.trips': 'Utazások',
-  'panel.stat.tripsCaption': 'Csak a befejezett utazások',
+  'panel.stat.trips': 'Az utazásai',
+  'panel.stat.tripsCaption': 'Csak a befejezett utazásai',
   'panel.stat.cities': 'Városok',
   'panel.stat.citiesCaption': 'Települések, ahol megszállt vagy megállt',
   'panel.stat.days': 'Úton töltött napok',
@@ -336,7 +336,10 @@ const messages = {
     'Már ki van pipálva, így az a bejegyzés is törlődik, hogy eljutott oda. Az atlaszát és az utazásait ez nem érinti.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { one: 'Utazás', other: 'Utazás' },
+  'card.trips': {
+    one: 'A munkaterület utazása',
+    other: 'A munkaterület utazásai',
+  },
   'card.visits': { one: 'Látogatás', other: 'Látogatás' },
   'card.places': { one: 'Hely', other: 'Hely' },
   'card.firstTrip': 'Első utazás',

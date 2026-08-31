@@ -153,8 +153,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Estats, províncies, prefectures',
   'panel.stat.visits': 'Visites',
   'panel.stat.visitsCaption': 'Cada arribada registrada',
-  'panel.stat.trips': 'Viatges',
-  'panel.stat.tripsCaption': 'Només viatges acabats',
+  'panel.stat.trips': 'Els teus viatges',
+  'panel.stat.tripsCaption': 'Només viatges acabats en què participes',
   'panel.stat.cities': 'Ciutats',
   'panel.stat.citiesCaption': 'Ciutats on has dormit o has fet parada',
   'panel.stat.days': 'Dies fora',
@@ -352,7 +352,11 @@ const messages = {
     'Ja està marcat com a fet, així que això també esborra el record que hi vas arribar. El teu mapa del món i els teus viatges no es toquen.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { one: 'Viatge', many: 'Viatges', other: 'Viatges' },
+  'card.trips': {
+    one: 'Viatge de l’espai de treball',
+    many: 'Viatges de l’espai de treball',
+    other: 'Viatges de l’espai de treball',
+  },
   'card.visits': { one: 'Visita', many: 'Visites', other: 'Visites' },
   'card.places': { one: 'Lloc', many: 'Llocs', other: 'Llocs' },
   'card.firstTrip': 'Primer viatge',

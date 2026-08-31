@@ -721,7 +721,7 @@ describe('the stats section', () => {
       'Places',
       'Regions',
       'Visits',
-      'Trips',
+      'Your trips',
       'Cities',
       'Days away',
     ]) {
@@ -757,7 +757,7 @@ describe('the stats section', () => {
         distanceMetres: null,
       },
     })
-    expect(screen.getByText('Finished trips only')).toBeTruthy()
+    expect(screen.getByText('Finished trips you are on')).toBeTruthy()
     expect(screen.getByText('Nothing pinned on a trip yet')).toBeTruthy()
   })
 

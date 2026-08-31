@@ -146,8 +146,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Staten, provincies, prefecturen',
   'panel.stat.visits': 'Bezoeken',
   'panel.stat.visitsCaption': 'Elke vastgelegde aankomst',
-  'panel.stat.trips': 'Reizen',
-  'panel.stat.tripsCaption': 'Alleen afgeronde reizen',
+  'panel.stat.trips': 'Jouw reizen',
+  'panel.stat.tripsCaption': 'Alleen afgeronde reizen waar je bij bent',
   'panel.stat.cities': 'Steden',
   'panel.stat.citiesCaption': 'Plaatsen waar je sliep of stopte',
   'panel.stat.days': 'Dagen onderweg',
@@ -333,7 +333,10 @@ const messages = {
     'Het staat al afgevinkt, dus hiermee verdwijnt ook het bewijs dat je er bent geweest. Je wereldkaart en je reizen blijven onaangetast.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { one: 'Reis', other: 'Reizen' },
+  'card.trips': {
+    one: 'Reis van de werkruimte',
+    other: 'Reizen van de werkruimte',
+  },
   'card.visits': { one: 'Bezoek', other: 'Bezoeken' },
   'card.places': { one: 'Plek', other: 'Plekken' },
   'card.firstTrip': 'Eerste reis',

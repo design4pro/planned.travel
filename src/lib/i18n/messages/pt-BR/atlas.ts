@@ -151,8 +151,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Estados, províncias, prefeituras',
   'panel.stat.visits': 'Visitas',
   'panel.stat.visitsCaption': 'Cada chegada registrada',
-  'panel.stat.trips': 'Viagens',
-  'panel.stat.tripsCaption': 'Só viagens concluídas',
+  'panel.stat.trips': 'Suas viagens',
+  'panel.stat.tripsCaption': 'Só viagens concluídas das quais você participa',
   'panel.stat.cities': 'Cidades',
   'panel.stat.citiesCaption': 'Cidades onde você dormiu ou fez parada',
   'panel.stat.days': 'Dias fora',
@@ -347,7 +347,11 @@ const messages = {
     'Ele já está riscado, então isto também apaga o registro de que você chegou lá. Seu mapa-múndi e suas viagens não são tocados.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { one: 'Viagem', many: 'Viagens', other: 'Viagens' },
+  'card.trips': {
+    one: 'Viagem do espaço de trabalho',
+    many: 'Viagens do espaço de trabalho',
+    other: 'Viagens do espaço de trabalho',
+  },
   'card.visits': { one: 'Visita', many: 'Visitas', other: 'Visitas' },
   'card.places': { one: 'Lugar', many: 'Lugares', other: 'Lugares' },
   'card.firstTrip': 'Primeira viagem',

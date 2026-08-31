@@ -133,8 +133,8 @@ const messages = {
   'panel.stat.regionsCaption': '주, 도, 현 단위',
   'panel.stat.visits': '방문',
   'panel.stat.visitsCaption': '기록된 모든 도착',
-  'panel.stat.trips': '여행',
-  'panel.stat.tripsCaption': '끝난 여행만 셉니다',
+  'panel.stat.trips': '내 여행',
+  'panel.stat.tripsCaption': '참여한 끝난 여행만 셉니다',
   'panel.stat.cities': '도시',
   'panel.stat.citiesCaption': '묵거나 들른 도시',
   'panel.stat.days': '여행 일수',
@@ -310,7 +310,7 @@ const messages = {
     '이미 달성한 항목이라, 그곳에 도착했다는 기록도 함께 지워집니다. 아틀라스와 여행에는 영향이 없습니다.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { other: '여행' },
+  'card.trips': { other: '워크스페이스 여행' },
   'card.visits': { other: '방문' },
   'card.places': { other: '장소' },
   'card.firstTrip': '첫 여행',

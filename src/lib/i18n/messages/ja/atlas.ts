@@ -133,8 +133,8 @@ const messages = {
   'panel.stat.regionsCaption': '州・省・都道府県',
   'panel.stat.visits': '訪問',
   'panel.stat.visitsCaption': '記録されたすべての到着',
-  'panel.stat.trips': '旅行',
-  'panel.stat.tripsCaption': '完了した旅行のみ',
+  'panel.stat.trips': 'あなたの旅行',
+  'panel.stat.tripsCaption': '参加した完了済みの旅行のみ',
   'panel.stat.cities': '都市',
   'panel.stat.citiesCaption': '泊まった・立ち寄った街',
   'panel.stat.days': '旅の日数',
@@ -307,7 +307,7 @@ const messages = {
     'すでに達成済みのため、たどり着いたという記録も一緒に消えます。アトラスと旅行には影響しません。',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { other: '旅行' },
+  'card.trips': { other: 'ワークスペースの旅行' },
   'card.visits': { other: '訪問' },
   'card.places': { other: '場所' },
   'card.firstTrip': '最初の旅行',

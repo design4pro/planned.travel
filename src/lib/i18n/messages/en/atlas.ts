@@ -182,8 +182,21 @@ const messages = {
   'panel.stat.regionsCaption': 'States, provinces, prefectures',
   'panel.stat.visits': 'Visits',
   'panel.stat.visitsCaption': 'Every recorded arrival',
-  'panel.stat.trips': 'Trips',
-  'panel.stat.tripsCaption': 'Finished trips only',
+  /**
+   * Whose trips, said in the label, because the screen prints two counts.
+   *
+   * `recomputeTravelStats` counts the trips the reader is a member of (ADR 0007
+   * and the `00-S4` amendment); the per-country tally under `card.trips` counts
+   * the workspace's. Both are true, both are on `/atlas`, and in any workspace
+   * where somebody is not on every trip the country cards sum higher than this
+   * tile — which under a bare `Trips` reads as a broken aggregate rather than as
+   * two answers. So each label names its own population, and a translation that
+   * drops the qualifier puts that locale back where it started. The caption is
+   * not a second chance to say it: this tile prints the recorded distance there
+   * instead as soon as there is one.
+   */
+  'panel.stat.trips': 'Your trips',
+  'panel.stat.tripsCaption': 'Finished trips you are on',
   'panel.stat.cities': 'Cities',
   'panel.stat.citiesCaption': 'Towns you slept or stopped in',
   'panel.stat.days': 'Days away',
@@ -389,8 +402,15 @@ const messages = {
     'It is already ticked off, so this also removes the record that you got there. Your atlas and your trips are not touched.',
 
   /* ------------------------------------------------- the card over the map */
-  /** The unit over the leading numeral, agreeing with it. */
-  'card.trips': { one: 'Trip', other: 'Trips' },
+  /**
+   * The unit over the leading numeral, agreeing with it.
+   *
+   * The trips are the workspace's, not the reader's — see `panel.stat.trips`,
+   * the figure this one is allowed to disagree with. The qualifier belongs in
+   * every plural branch a locale needs, because the branch a reader sees is the
+   * one their count selects.
+   */
+  'card.trips': { one: 'Workspace trip', other: 'Workspace trips' },
   'card.visits': { one: 'Visit', other: 'Visits' },
   'card.places': { one: 'Place', other: 'Places' },
   'card.firstTrip': 'First trip',

@@ -153,8 +153,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Státy, provincie, prefektury',
   'panel.stat.visits': 'Návštěvy',
   'panel.stat.visitsCaption': 'Každý zaznamenaný příjezd',
-  'panel.stat.trips': 'Cesty',
-  'panel.stat.tripsCaption': 'Pouze dokončené cesty',
+  'panel.stat.trips': 'Vaše cesty',
+  'panel.stat.tripsCaption': 'Jen dokončené cesty, kterých se účastníte',
   'panel.stat.cities': 'Města',
   'panel.stat.citiesCaption': 'Města, kde jste přespali nebo zastavili',
   'panel.stat.days': 'Dny na cestách',
@@ -364,7 +364,12 @@ const messages = {
     'Položka už je odškrtnutá, takže se tím smaže i záznam o tom, že jste tam dorazili. Vaší mapy světa ani cest se to nedotkne.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { one: 'Cesta', few: 'Cesty', many: 'Cesty', other: 'Cest' },
+  'card.trips': {
+    one: 'Cesta pracovního prostoru',
+    few: 'Cesty pracovního prostoru',
+    many: 'Cesty pracovního prostoru',
+    other: 'Cest pracovního prostoru',
+  },
   'card.visits': {
     one: 'Návštěva',
     few: 'Návštěvy',

@@ -133,8 +133,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Negara bagian, provinsi, prefektur',
   'panel.stat.visits': 'Kunjungan',
   'panel.stat.visitsCaption': 'Setiap kedatangan yang tercatat',
-  'panel.stat.trips': 'Perjalanan',
-  'panel.stat.tripsCaption': 'Hanya perjalanan yang selesai',
+  'panel.stat.trips': 'Perjalanan Anda',
+  'panel.stat.tripsCaption': 'Hanya perjalanan selesai yang Anda ikuti',
   'panel.stat.cities': 'Kota',
   'panel.stat.citiesCaption': 'Kota tempat Anda menginap atau singgah',
   'panel.stat.days': 'Hari bepergian',
@@ -308,7 +308,7 @@ const messages = {
     'Entri ini sudah dicentang, jadi menghapusnya juga menghapus catatan bahwa Anda pernah sampai di sana. Peta dunia dan perjalanan Anda tidak tersentuh.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { other: 'Perjalanan' },
+  'card.trips': { other: 'Perjalanan ruang kerja' },
   'card.visits': { other: 'Kunjungan' },
   'card.places': { other: 'Tempat' },
   'card.firstTrip': 'Perjalanan pertama',

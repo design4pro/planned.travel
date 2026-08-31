@@ -145,8 +145,8 @@ const messages = {
   'panel.stat.regionsCaption': 'Eyaletler, iller, vilayetler',
   'panel.stat.visits': 'Ziyaretler',
   'panel.stat.visitsCaption': 'Kayıtlı her varış',
-  'panel.stat.trips': 'Geziler',
-  'panel.stat.tripsCaption': 'Yalnızca tamamlanan geziler',
+  'panel.stat.trips': 'Gezileriniz',
+  'panel.stat.tripsCaption': 'Yalnızca katıldığınız tamamlanan geziler',
   'panel.stat.cities': 'Şehirler',
   'panel.stat.citiesCaption': 'Konakladığınız veya durduğunuz şehirler',
   'panel.stat.days': 'Yolda geçen günler',
@@ -333,7 +333,10 @@ const messages = {
     'Zaten işaretlenmiş; bu yüzden oraya vardığınıza dair kayıt da silinir. Dünya haritanız ve gezileriniz olduğu gibi kalır.',
 
   /* ------------------------------------------------- the card over the map */
-  'card.trips': { one: 'Gezi', other: 'Gezi' },
+  'card.trips': {
+    one: 'Çalışma alanı gezisi',
+    other: 'Çalışma alanı gezileri',
+  },
   'card.visits': { one: 'Ziyaret', other: 'Ziyaret' },
   'card.places': { one: 'Yer', other: 'Yer' },
   'card.firstTrip': 'İlk gezi',
