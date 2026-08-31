@@ -351,7 +351,9 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
     initialSelection,
   )
   const [query, setQuery] = React.useState('')
-  const [categoryIds, setCategoryIds] = React.useState<ReadonlyArray<string>>([])
+  const [categoryIds, setCategoryIds] = React.useState<ReadonlyArray<string>>(
+    [],
+  )
   const [leftCollapsed, setLeftCollapsed] = React.useState(false)
   const [rightCollapsed, setRightCollapsed] = React.useState(false)
   const [pending, setPending] = React.useState<ReadonlySet<string>>(new Set())
@@ -380,7 +382,10 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
     [model.days],
   )
 
-  const filters = React.useMemo(() => ({ query, categoryIds }), [query, categoryIds])
+  const filters = React.useMemo(
+    () => ({ query, categoryIds }),
+    [query, categoryIds],
+  )
   const visibleIdeas = React.useMemo(
     () => filterRows(model.ideas, filters),
     [model.ideas, filters],
@@ -548,9 +553,14 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
           await reorderPlanFn({
             data: {
               tripId: payload.tripId,
+              // Every id the board can produce today is an assignment id; notes
+              // become draggable — and the second `kind` reachable — in `01-S4b`.
               days: change.days.map((day) => ({
                 dayId: day.dayId,
-                assignmentIds: [...day.assignmentIds],
+                items: day.assignmentIds.map((assignmentId) => ({
+                  kind: 'stop' as const,
+                  id: assignmentId,
+                })),
               })),
             },
           })
@@ -923,9 +933,7 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
           row={row}
           days={payload.days}
           disabled={pending.has(row.itemId)}
-          onEditPlace={() =>
-            setDialog({ kind: 'edit', placeId: row.placeId })
-          }
+          onEditPlace={() => setDialog({ kind: 'edit', placeId: row.placeId })}
           onEditTiming={() => {
             if (row.assignmentId !== null) {
               setDialog({ kind: 'timing', itemId: row.assignmentId })
@@ -966,8 +974,8 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
             No days yet
           </SectionLabel>
           <p className="mt-2 text-caption text-ink-3">
-            Give {tripTitle} a departure and a return date and one column per day
-            appears here, ready for the places you have collected.
+            Give {tripTitle} a departure and a return date and one column per
+            day appears here, ready for the places you have collected.
           </p>
         </div>
       ) : (
@@ -1370,7 +1378,10 @@ export function PlanScreen({ payload, tripTitle }: PlanScreenProps) {
 }
 
 /** The stored timing of one stop, for the dialog to open on. */
-function timingFor(payload: PlanBoardPayload, assignmentId: string): TimingDraft {
+function timingFor(
+  payload: PlanBoardPayload,
+  assignmentId: string,
+): TimingDraft {
   for (const day of payload.days) {
     for (const stop of day.stops) {
       if (stop.assignmentId !== assignmentId) continue
@@ -1415,7 +1426,8 @@ function PlanCoverage({
   // city. Capping the fit is what keeps the frame honest — and it is what makes
   // the notice's promise ("the coastlines … are all real") true rather than a
   // claim about an empty rectangle.
-  const unmapped = coverage.status === 'outside' || coverage.status === 'partial'
+  const unmapped =
+    coverage.status === 'outside' || coverage.status === 'partial'
 
   return (
     <>

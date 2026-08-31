@@ -15,7 +15,8 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { NotFoundError, RepositoryError } from '../context'
-import { createDayNote, listTripDays } from '../days'
+import { createDayNote, listDayNotes, listTripDays } from '../days'
+import { createAssignment, reorderDayTimeline } from '../itinerary'
 import { createPlace } from '../places'
 import {
   addTripMember,
@@ -48,6 +49,8 @@ interface Fixture {
   readonly slug: string
   readonly dayId: string
   readonly placeId: string
+  readonly assignmentId: string
+  readonly noteId: string
 }
 
 describe('member isolation', () => {
@@ -82,10 +85,15 @@ describe('member isolation', () => {
       tripId: trip.id,
       name: 'Miradouro da Senhora do Monte',
     })
-    await createDayNote(alpha.scope, {
+    const note = await createDayNote(alpha.scope, {
       tripId: trip.id,
       dayId: firstDay.id,
       body: 'Buy the transit pass at the airport.',
+    })
+    const assignment = await createAssignment(alpha.scope, {
+      tripId: trip.id,
+      dayId: firstDay.id,
+      placeId: place.id,
     })
 
     fixture = {
@@ -93,6 +101,8 @@ describe('member isolation', () => {
       slug: trip.slug,
       dayId: firstDay.id,
       placeId: place.id,
+      assignmentId: assignment.id,
+      noteId: note.id,
     }
   })
 
@@ -152,6 +162,20 @@ describe('member isolation', () => {
       expect(await countFavourites(stranger)).toBe(0)
     })
 
+    it('refuses to reorder a day of a trip it cannot see', async () => {
+      // `reorderDayTimeline` names a trip id and a day id, so it answers the same way
+      // every other trip-scoped writer does: not found, and nothing about the day.
+      expect(
+        await captureError(() =>
+          reorderDayTimeline(stranger, {
+            tripId: fixture.tripId,
+            dayId: fixture.dayId,
+            items: [{ kind: 'note', id: fixture.noteId }],
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
     it('refuses a child write parented onto it', async () => {
       expect(
         await captureError(() =>
@@ -203,6 +227,19 @@ describe('member isolation', () => {
       expect(await listTrips(alpha.scope, { favourite: true })).toEqual([])
     })
 
+    it('and the day timeline is FORBIDDEN, because reading is not editing', async () => {
+      const error = await captureError(() =>
+        reorderDayTimeline(stranger, {
+          tripId: fixture.tripId,
+          dayId: fixture.dayId,
+          items: [{ kind: 'note', id: fixture.noteId }],
+        }),
+      )
+      expect(error).toBeInstanceOf(RepositoryError)
+      expect(error).not.toBeInstanceOf(NotFoundError)
+      expect((error as RepositoryError).code).toBe('FORBIDDEN')
+    })
+
     it('but the writes are FORBIDDEN, because the reader is not its owner', async () => {
       for (const attempt of [
         () => updateTrip(stranger, fixture.tripId, { title: 'Hijacked' }),
@@ -246,6 +283,32 @@ describe('member isolation', () => {
         updateTrip(stranger, fixture.tripId, { title: 'Hijacked' }),
       )
       expect((error as RepositoryError).code).toBe('FORBIDDEN')
+    })
+
+    it('and may not reorder its day, which is the editor’s verb (decision 6)', async () => {
+      const before = (await listDayNotes(alpha.scope, fixture.dayId)).map(
+        (row) => row.sortOrder,
+      )
+
+      const error = await captureError(() =>
+        reorderDayTimeline(stranger, {
+          tripId: fixture.tripId,
+          dayId: fixture.dayId,
+          items: [
+            { kind: 'note', id: fixture.noteId },
+            { kind: 'stop', id: fixture.assignmentId },
+          ],
+        }),
+      )
+      expect(error).toBeInstanceOf(RepositoryError)
+      expect(error).not.toBeInstanceOf(NotFoundError)
+      expect((error as RepositoryError).code).toBe('FORBIDDEN')
+
+      expect(
+        (await listDayNotes(alpha.scope, fixture.dayId)).map(
+          (row) => row.sortOrder,
+        ),
+      ).toEqual(before)
     })
   })
 })

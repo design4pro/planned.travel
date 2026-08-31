@@ -21,6 +21,11 @@
  * - **The day run is never touched.** A move rewrites `day_id` and `order_index`
  *   and nothing else, so the trip's contiguous `1..n` day spine — which only
  *   `syncTripDays` is allowed to write — cannot be perturbed by a drag.
+ * - **A time outranks a position.** One day is one number line holding stops and
+ *   notes together (PRD #104 decision 9), and {@link mergeDayTimeline} is the whole
+ *   of how that line is read back: positions decide the sequence, times reorder it,
+ *   and an untimed row rides along with the timed row above it. A move that would
+ *   contradict a time is refused as a question rather than applied.
  */
 
 /** Container id of the ideas column. Days use their own row id. */
@@ -47,6 +52,31 @@ export function isIdeaItemId(itemId: string): boolean {
 /** The place behind an idea's draggable id. */
 export function placeIdOfIdeaItem(itemId: string): string {
   return itemId.slice(IDEA_PREFIX.length)
+}
+
+const NOTE_PREFIX = 'note:'
+
+/**
+ * Draggable id for a day note.
+ *
+ * The third id space, added by the same mechanism as the second and no other: a stop
+ * is its assignment row's bare id, an idea is a place behind {@link IDEA_PREFIX}, and
+ * a note is a `day_notes` row behind this one. Keeping notes prefixed is what lets a
+ * day hold one sequence of both without a lookup deciding, per id, which table it
+ * came from — and it is why nothing that already worked had to be re-keyed.
+ */
+export function noteItemId(noteId: string): string {
+  return NOTE_PREFIX + noteId
+}
+
+/** True for a draggable id produced by {@link noteItemId}. */
+export function isNoteItemId(itemId: string): boolean {
+  return itemId.startsWith(NOTE_PREFIX)
+}
+
+/** The note behind a note's draggable id. */
+export function noteIdOfNoteItem(itemId: string): string {
+  return itemId.slice(NOTE_PREFIX.length)
 }
 
 /** One day's stops, in visiting order, as assignment ids. */
@@ -108,6 +138,23 @@ export type PlanMoveRefusal =
   | 'unchanged'
   /** The target day already holds this place, which the schema forbids. */
   | 'duplicate'
+  /**
+   * A note was dropped into the ideas column. The ideas column is the trip's
+   * unscheduled *place* inventory and a note has no meaning outside a day, so this
+   * is a product statement rather than a limitation.
+   */
+  | 'not-in-ideas'
+  /**
+   * A timed item was dropped where its own time says it does not belong — before an
+   * item with an earlier time, or after one with a later one.
+   *
+   * The only refusal here that is a **question** rather than an end (PRD #104
+   * decision 9): the engine will not move a timed row against its clock on its own,
+   * because a time is authoritative for as long as the item has one. The screen turns
+   * it into "move this and drop its 14:30?", and agreeing re-issues the move with the
+   * time cleared in the same write. The board is unchanged either way.
+   */
+  | 'timed'
 
 export type PlanMoveResult =
   | {
@@ -159,6 +206,68 @@ export function scheduledCount(order: PlanOrder): number {
 }
 
 /* -------------------------------------------------------------------------------------------------
+ * One day, in the order it is read
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The least a row has to say about itself to take its place in a day.
+ *
+ * `position` is the stored number — `day_assignments.order_index` for a stop,
+ * `day_notes.sort_order` for a note, one number line across both — and `time` is the
+ * `HH:MM` the row carries, or `null`. Nothing else is read, which is what makes a
+ * third kind of item (a transport leg) one variant elsewhere and no change here.
+ */
+export interface TimelineItem {
+  readonly id: string
+  readonly position: number
+  readonly time: string | null
+}
+
+/**
+ * One day's items in the order a reader sees them (PRD #104 decision 9).
+ *
+ * Sort by position, then walk once carrying the last time seen: an item with a time
+ * sets the carry, an item without one inherits it, and anything before the first
+ * timed item inherits nothing. Then sort by inherited time — the inheritance-free
+ * head first — with position as the tiebreak.
+ *
+ * The three properties that fall out are the point of doing it this way:
+ *
+ * - A day with no times at all is exactly its position order, so nothing about the
+ *   board changes for a trip that never opens the time field.
+ * - An untimed row stays attached to the timed row above it instead of floating to
+ *   the top, because it inherits rather than sorting as "no time".
+ * - It is stable and idempotent. Positions decide every tie, so merging an
+ *   already-merged day is a fixed point and no reader ever watches a list settle.
+ *
+ * Pure, and generic over whatever the caller hangs off the item, so the screen can
+ * merge view models and the tests can merge three-field literals.
+ */
+export function mergeDayTimeline<TItem extends TimelineItem>(
+  items: ReadonlyArray<TItem>,
+): Array<TItem> {
+  const byPosition = items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => a.item.position - b.item.position || a.index - b.index)
+
+  let carried: string | null = null
+  const walked = byPosition.map((entry, order) => {
+    if (entry.item.time !== null) carried = entry.item.time
+    return { item: entry.item, order, inherited: carried }
+  })
+
+  return walked
+    .sort((a, b) => {
+      if (a.inherited === b.inherited) return a.order - b.order
+      // The head of the day — everything above the first time — sorts first.
+      if (a.inherited === null) return -1
+      if (b.inherited === null) return 1
+      return a.inherited < b.inherited ? -1 : 1
+    })
+    .map((entry) => entry.item)
+}
+
+/* -------------------------------------------------------------------------------------------------
  * Moving
  * ---------------------------------------------------------------------------------------------- */
 
@@ -183,10 +292,18 @@ function replaceDay(
  */
 export type PlaceOfItem = (itemId: string) => string | null
 
-function placeOf(itemId: string, lookup: PlaceOfItem | undefined): string | null {
+function placeOf(
+  itemId: string,
+  lookup: PlaceOfItem | undefined,
+): string | null {
   if (isIdeaItemId(itemId)) return placeIdOfIdeaItem(itemId)
+  // A note is not a visit to anywhere, so it can never collide with a place.
+  if (isNoteItemId(itemId)) return null
   return lookup?.(itemId) ?? null
 }
+
+/** Resolves the `HH:MM` a row carries, or `null` for a row that carries none. */
+export type TimeOfItem = (itemId: string) => string | null
 
 export interface MoveOptions {
   /**
@@ -194,6 +311,36 @@ export interface MoveOptions {
    * can be checked before the write instead of after it fails.
    */
   readonly placeOfItem?: PlaceOfItem
+  /**
+   * Resolves the time a row carries, so a move against the clock can be turned into
+   * the reader's question before the write instead of quietly reordering a day that
+   * {@link mergeDayTimeline} would then sort straight back.
+   *
+   * Absent, the `'timed'` rule never fires and every move behaves as it did before
+   * the merged day — which is what lets a caller that has no times adopt this module
+   * without adopting the question.
+   */
+  readonly timeOfItem?: TimeOfItem
+}
+
+/**
+ * True when dropping a row carrying `time` at `index` would put it after something
+ * later on the clock, or before something earlier.
+ *
+ * `remaining` is the destination without the moved row, so everything at a lower
+ * index lands above it and everything from `index` on lands below.
+ */
+function contradictsClock(
+  remaining: ReadonlyArray<string>,
+  index: number,
+  time: string,
+  timeOfItem: TimeOfItem,
+): boolean {
+  return remaining.some((id, at) => {
+    const other = timeOfItem(id)
+    if (other === null) return false
+    return at < index ? other > time : other < time
+  })
 }
 
 /**
@@ -220,11 +367,20 @@ export function movePlanItem(
   const source = itemsIn(order, from)
   if (source === null) return { ok: false, reason: 'unknown' }
 
+  // A note belongs to a day or to nothing. Checked before anything else about the
+  // move, because the answer does not depend on where in the column it was dropped.
+  if (target.container === IDEAS_CONTAINER && isNoteItemId(itemId)) {
+    return { ok: false, reason: 'not-in-ideas' }
+  }
+
   const sameContainer = from === target.container
   const remaining = sameContainer
     ? destination.filter((id) => id !== itemId)
     : destination
-  const index = Math.max(0, Math.min(Math.trunc(target.index), remaining.length))
+  const index = Math.max(
+    0,
+    Math.min(Math.trunc(target.index), remaining.length),
+  )
 
   if (sameContainer && source.indexOf(itemId) === index) {
     return { ok: false, reason: 'unchanged' }
@@ -239,6 +395,23 @@ export function movePlanItem(
         (id) => placeOf(id, options.placeOfItem) === place,
       )
       if (clash) return { ok: false, reason: 'duplicate' }
+    }
+  }
+
+  // A time outranks a position (PRD #104 decision 9). The engine will not move a
+  // timed row against its own clock; it says so, and the screen asks the reader
+  // whether to drop the time — which comes back as a fresh move on a row that no
+  // longer has one.
+  if (
+    target.container !== IDEAS_CONTAINER &&
+    options.timeOfItem !== undefined
+  ) {
+    const time = options.timeOfItem(itemId)
+    if (
+      time !== null &&
+      contradictsClock(remaining, index, time, options.timeOfItem)
+    ) {
+      return { ok: false, reason: 'timed' }
     }
   }
 
@@ -271,7 +444,9 @@ export function movePlanItem(
             : day,
         )
 
-    const touched = sameContainer ? [target.container] : [target.container, from]
+    const touched = sameContainer
+      ? [target.container]
+      : [target.container, from]
     return {
       ok: true,
       from,
@@ -346,7 +521,12 @@ export function movePlanItemToDay(
 ): PlanMoveResult {
   const items = itemsIn(order, dayId)
   if (items === null) return { ok: false, reason: 'unknown' }
-  return movePlanItem(order, itemId, { container: dayId, index: items.length }, options)
+  return movePlanItem(
+    order,
+    itemId,
+    { container: dayId, index: items.length },
+    options,
+  )
 }
 
 /** Removes an item from wherever it is — used after a delete is confirmed. */

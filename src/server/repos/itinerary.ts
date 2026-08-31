@@ -15,13 +15,23 @@ import {
   assignmentParticipants,
   dayAccommodations,
   dayAssignments,
+  dayNotes,
 } from '#/server/db/schema'
-import { createTenantRepository, createTenantTableAccess, tenantFilter } from './base'
+import {
+  createTenantRepository,
+  createTenantTableAccess,
+  tenantFilter,
+} from './base'
 import { runBatch } from './batch'
 import { NotFoundError } from './context'
-import { listTripDayNotes, listTripDays, requireTripDay } from './days'
+import {
+  listDayNotes,
+  listTripDayNotes,
+  listTripDays,
+  requireTripDay,
+} from './days'
 import { placesRepository } from './places'
-import { requireTrip } from './trips'
+import { assertTripRole, requireTrip } from './trips'
 import {
   currencySchema,
   definedOnly,
@@ -43,7 +53,10 @@ import type {
 } from '#/server/db/types'
 import type { TenantScope } from './base'
 
-export const dayAssignmentsRepository = createTenantRepository(dayAssignments, 'day assignment')
+export const dayAssignmentsRepository = createTenantRepository(
+  dayAssignments,
+  'day assignment',
+)
 export const assignmentParticipantsAccess = createTenantTableAccess(
   assignmentParticipants,
   'assignment participant',
@@ -89,6 +102,33 @@ export const reorderAssignmentsInput = z
   .min(1)
   .max(200)
 export type ReorderAssignmentsInput = z.infer<typeof reorderAssignmentsInput>
+
+/**
+ * One row of a day's sequence: which table it lives in, and which row.
+ *
+ * The kind is carried rather than inferred from the id, because the two tables mint
+ * ids from the same generator and a lookup that guessed would eventually guess
+ * wrong. `03-…`'s transport rows join this union as a third value and change nothing
+ * else here.
+ */
+export const timelineItemInput = z.object({
+  kind: z.enum(['stop', 'note']),
+  id: idSchema,
+})
+export type TimelineItemInput = z.infer<typeof timelineItemInput>
+
+export const reorderDayTimelineInput = z.object({
+  tripId: idSchema,
+  dayId: idSchema,
+  items: z.array(timelineItemInput).max(200),
+  /**
+   * Rows whose time is dropped as part of this move (PRD #104 decision 9). Every
+   * entry must also be in `items`: clearing a time is a consequence of a move, never
+   * a write of its own.
+   */
+  clearTime: z.array(timelineItemInput).max(200).optional(),
+})
+export type ReorderDayTimelineInput = z.infer<typeof reorderDayTimelineInput>
 
 export const createAccommodationInput = z.object({
   tripId: idSchema,
@@ -265,7 +305,12 @@ export async function getTripItinerary(
     accommodations: accommodations.filter((stay) => {
       const from = dayNumbers.get(stay.startDayId)
       const to = dayNumbers.get(stay.endDayId)
-      return from !== undefined && to !== undefined && day.dayNumber >= from && day.dayNumber <= to
+      return (
+        from !== undefined &&
+        to !== undefined &&
+        day.dayNumber >= from &&
+        day.dayNumber <= to
+      )
     }),
   }))
 }
@@ -284,11 +329,15 @@ export async function createAssignment(
   await requireTripDay(scope, values.tripId, values.dayId)
   await requirePlaceOfTrip(scope, values.tripId, values.placeId)
 
-  const orderIndex = values.orderIndex ?? (await nextOrderIndex(scope, values.dayId))
+  const orderIndex =
+    values.orderIndex ?? (await nextOrderIndex(scope, values.dayId))
   return dayAssignmentsRepository.insert(scope, { ...values, orderIndex })
 }
 
-async function nextOrderIndex(scope: TenantScope, dayId: string): Promise<number> {
+async function nextOrderIndex(
+  scope: TenantScope,
+  dayId: string,
+): Promise<number> {
   const rows = await dayAssignmentsRepository.findMany(scope, {
     where: eq(dayAssignments.dayId, dayId),
     orderBy: [asc(dayAssignments.orderIndex)],
@@ -316,7 +365,10 @@ export async function moveAssignment(
   input: MoveAssignmentInput,
 ): Promise<DayAssignment> {
   const values = moveAssignmentInput.parse(input)
-  const assignment = await dayAssignmentsRepository.requireById(scope, assignmentId)
+  const assignment = await dayAssignmentsRepository.requireById(
+    scope,
+    assignmentId,
+  )
   await requireTripDay(scope, assignment.tripId, values.dayId)
   return dayAssignmentsRepository.requireUpdate(scope, assignmentId, {
     dayId: values.dayId,
@@ -346,7 +398,13 @@ export async function reorderAssignments(
       scope.db
         .update(dayAssignments)
         .set({ orderIndex: move.orderIndex })
-        .where(tenantFilter(scope, dayAssignments, eq(dayAssignments.id, move.assignmentId))),
+        .where(
+          tenantFilter(
+            scope,
+            dayAssignments,
+            eq(dayAssignments.id, move.assignmentId),
+          ),
+        ),
     ),
   )
 
@@ -356,8 +414,154 @@ export async function reorderAssignments(
   )
 }
 
-export async function deleteAssignment(scope: TenantScope, assignmentId: string): Promise<void> {
+export async function deleteAssignment(
+  scope: TenantScope,
+  assignmentId: string,
+): Promise<void> {
   await dayAssignmentsRepository.requireRemove(scope, assignmentId)
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * One day, one number line
+ * ---------------------------------------------------------------------------------------------- */
+
+/** `kind/id`, so the two id spaces can share one `Set` without colliding. */
+function refKey(ref: TimelineItemInput): string {
+  return `${ref.kind}/${ref.id}`
+}
+
+/**
+ * Writes one day's stops and notes as a single sequence of positions `0..n-1`
+ * (PRD #104 decision 9).
+ *
+ * The merged position space is not a new column; it is the agreement that for one
+ * day `day_assignments.order_index` and `day_notes.sort_order` are read and written
+ * as one number line. Positions are derived from array index on every write, so the
+ * two columns cannot drift apart, no fractional value from a mid-list insert
+ * survives a move, and a client can only ever send a permutation of ids it can
+ * already see — never an index of its own choosing.
+ *
+ * Three rules about the list the client sends, each of which exists because a board
+ * can be stale:
+ *
+ * - **Unknown ids are dropped, not rejected.** A tab one delete behind should still
+ *   be able to reorder the rows that do exist, which is the rule
+ *   `reorderPlanFn` has always stated. A foreign tenant's id is unknown here for the
+ *   same reason it is unknown everywhere else: the two reads below are scoped.
+ * - **Known ids the client omitted are appended at their current relative
+ *   position**, so a partial list cannot silently unposition an item somebody else
+ *   added between the client's read and its write.
+ * - **`clearTime` must be a subset of `items`.** An entry outside it is dropped with
+ *   everything else that names a row this day does not hold.
+ *
+ * The statements are built against the tables directly rather than through the two
+ * repository handles, for the reason {@link reorderAssignments} beside it already
+ * does: a batch takes prepared builders, and a handle's write awaits. The scoping is
+ * the same either way — every `WHERE` starts from {@link tenantFilter}, which is the
+ * `organization_id` predicate a handle would have applied, and both tables carry the
+ * column and lead a composite index with it.
+ *
+ * All of it — every position and every `NULL` time — goes out as one {@link runBatch},
+ * which on D1 is one transaction: a half-applied reorder is a day whose two columns
+ * disagree about one number line, and there is no honest way to render that. The
+ * batch is bounded by one day at one `UPDATE` per row, so it stays inside D1's
+ * per-statement parameter ceiling and stays in the request path.
+ *
+ * Returns the sequence as written, which is what the caller mirrors to the trip room.
+ */
+export async function reorderDayTimeline(
+  scope: TenantScope,
+  input: ReorderDayTimelineInput,
+): Promise<Array<TimelineItemInput>> {
+  const values = reorderDayTimelineInput.parse(input)
+
+  // Read first, then role, then day: a caller who may not see the trip learns nothing
+  // beyond `NotFoundError`, and only a reader who has proved they may see it can be
+  // told `FORBIDDEN` (PRD #104 decisions 1 and 6).
+  await requireTrip(scope, values.tripId)
+  await assertTripRole(scope, values.tripId, ['owner', 'editor'])
+  await requireTripDay(scope, values.tripId, values.dayId)
+
+  const [stops, notes] = await Promise.all([
+    listDayAssignments(scope, values.dayId),
+    listDayNotes(scope, values.dayId),
+  ])
+
+  // The day as it stands, both tables on one line. Positions are the sort key because
+  // that is what the line *is*; the id breaks a tie two rows should never have.
+  const current: Array<{ ref: TimelineItemInput; position: number }> = [
+    ...stops.map((row) => ({
+      ref: { kind: 'stop' as const, id: row.id },
+      position: row.orderIndex,
+    })),
+    ...notes.map((row) => ({
+      ref: { kind: 'note' as const, id: row.id },
+      position: row.sortOrder,
+    })),
+  ].sort((a, b) => a.position - b.position || a.ref.id.localeCompare(b.ref.id))
+
+  const known = new Map(current.map((entry) => [refKey(entry.ref), entry.ref]))
+  const wanted: Array<TimelineItemInput> = []
+  const seen = new Set<string>()
+  for (const ref of values.items) {
+    const key = refKey(ref)
+    const row = known.get(key)
+    if (row === undefined || seen.has(key)) continue
+    seen.add(key)
+    wanted.push(row)
+  }
+  /** What the caller actually asked to move — the only rows `clearTime` may name. */
+  const requested = new Set(seen)
+
+  // Anything the client left out goes back in behind the neighbour it currently
+  // follows, so an omission moves nothing rather than sending a row to the end.
+  for (const [at, entry] of current.entries()) {
+    const key = refKey(entry.ref)
+    if (seen.has(key)) continue
+    let insertAt = 0
+    for (const earlier of current.slice(0, at).reverse()) {
+      const index = wanted.findIndex(
+        (ref) => refKey(ref) === refKey(earlier.ref),
+      )
+      if (index >= 0) {
+        insertAt = index + 1
+        break
+      }
+    }
+    seen.add(key)
+    wanted.splice(insertAt, 0, entry.ref)
+  }
+
+  const cleared = new Set(
+    values.clearTime?.map(refKey).filter((key) => requested.has(key)) ?? [],
+  )
+
+  const statements = wanted.map((ref, position) => {
+    const dropTime = cleared.has(refKey(ref))
+    if (ref.kind === 'stop') {
+      return scope.db
+        .update(dayAssignments)
+        .set(
+          dropTime
+            ? { orderIndex: position, startTime: null }
+            : { orderIndex: position },
+        )
+        .where(
+          tenantFilter(scope, dayAssignments, eq(dayAssignments.id, ref.id)),
+        )
+    }
+    return scope.db
+      .update(dayNotes)
+      .set(
+        dropTime
+          ? { sortOrder: position, time: null }
+          : { sortOrder: position },
+      )
+      .where(tenantFilter(scope, dayNotes, eq(dayNotes.id, ref.id)))
+  })
+
+  await runBatch(scope, statements)
+  return wanted
 }
 
 /** Replaces the participant set of one stop. */
@@ -367,7 +571,14 @@ export async function setAssignmentParticipants(
   userIds: ReadonlyArray<string>,
 ): Promise<Array<string>> {
   await dayAssignmentsRepository.requireById(scope, assignmentId)
-  const parsed = [...new Set(z.array(idSchema).max(50).parse([...userIds]))]
+  const parsed = [
+    ...new Set(
+      z
+        .array(idSchema)
+        .max(50)
+        .parse([...userIds]),
+    ),
+  ]
 
   await assignmentParticipantsAccess.removeWhere(
     scope,
@@ -409,7 +620,10 @@ export async function updateAccommodation(
   input: UpdateAccommodationInput,
 ): Promise<DayAccommodation> {
   const values = definedOnly(updateAccommodationInput.parse(input))
-  const existing = await dayAccommodationsRepository.requireById(scope, accommodationId)
+  const existing = await dayAccommodationsRepository.requireById(
+    scope,
+    accommodationId,
+  )
   if (values.startDayId) {
     await requireTripDay(scope, existing.tripId, values.startDayId)
   }
@@ -419,7 +633,11 @@ export async function updateAccommodation(
   if (values.placeId) {
     await requirePlaceOfTrip(scope, existing.tripId, values.placeId)
   }
-  return dayAccommodationsRepository.requireUpdate(scope, accommodationId, values)
+  return dayAccommodationsRepository.requireUpdate(
+    scope,
+    accommodationId,
+    values,
+  )
 }
 
 export async function deleteAccommodation(
@@ -434,7 +652,10 @@ export async function countAccommodationNights(
   scope: TenantScope,
   accommodationId: string,
 ): Promise<number> {
-  const stay = await dayAccommodationsRepository.requireById(scope, accommodationId)
+  const stay = await dayAccommodationsRepository.requireById(
+    scope,
+    accommodationId,
+  )
   const days = await listTripDays(scope, stay.tripId)
   const start = days.find((day) => day.id === stay.startDayId)?.dayNumber
   const end = days.find((day) => day.id === stay.endDayId)?.dayNumber
