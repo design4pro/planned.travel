@@ -110,33 +110,52 @@ export const SEAT_LIMIT_CEILING = 100_000
  *   row costs us storage we can see, a call costs money on somebody else's invoice, and
  *   an uncapped one has no ceiling to discover the loop by.
  *
- * The counting is not here either. It is a per-organization tally over KV, built by the
- * stage that makes the first search (`docs/plans/03-reservations-and-transport.md`,
- * `03-S3`); this module supplies the number that tally is measured against.
+ * The counting is not here either. It is a per-organization tally over KV, minted once by
+ * the stage that makes the first search (`docs/plans/03-reservations-and-transport.md`,
+ * `03-S3`) and reused under the second metric name by the stage that makes the first
+ * extraction (`03-S7`); this module supplies the numbers that tally is measured against.
  */
-export const RATE_METRICS = ['transit_searches_per_month'] as const
+export const RATE_METRICS = [
+  'transit_searches_per_month',
+  'extraction_calls_per_month',
+] as const
 export type RateMetric = (typeof RATE_METRICS)[number]
 
 /**
  * How many metered calls of each kind a plan may make per calendar month.
  *
- * `transit_searches_per_month` — Free is zero because Free cannot open the booking desk
- * at all (`reservations` is off in its catalogue entry), and an allowance nobody can
- * spend is a number that only ever misleads. The paid figures are sized against the work
- * rather than the seats: a fortnight abroad with a dozen journeys, searched and searched
- * again, is comfortably under a hundred, so Solo's 250 is a month of real planning with
- * head-room, and Crew's 1,000 is the same trip planned by up to ten people who are
- * mostly searching the *same* journeys — which is why it is four times Solo's and not
- * ten. Both are far below the point where the provider bill for one workspace is worth
- * noticing, and a workspace that reaches either is asking for a conversation, which is
- * what a ceiling is for.
+ * **Free is zero for both**, because Free cannot open the booking desk at all
+ * (`reservations` is off in its catalogue entry) and neither call is reachable from
+ * anywhere else. An allowance nobody can spend is a number that only ever misleads.
+ *
+ * `transit_searches_per_month` — the paid figures are sized against the work rather than
+ * the seats: a fortnight abroad with a dozen journeys, searched and searched again, is
+ * comfortably under a hundred, so Solo's 250 is a month of real planning with head-room,
+ * and Crew's 1,000 is the same trip planned by up to ten people who are mostly searching
+ * the *same* journeys — which is why it is four times Solo's and not ten.
+ *
+ * `extraction_calls_per_month` — a confirmation file turned into a draft booking, on our
+ * own `AI` binding (`docs/adr/0012-workers-ai-for-confirmation-extraction.md`). It is the
+ * dearer call of the two and its allowance is the tighter one: a transit search is a
+ * single request to a timetable, while an extraction converts a document to text and then
+ * runs a model over what it read. It is also the rarer act — a traveller imports the
+ * handful of confirmations they were sent, once each, rather than re-running a search
+ * every time a timetable might have moved. A month of real planning is a couple of dozen
+ * files, so Solo's 100 is several trips' worth; Crew's 400 keeps the same four-times step
+ * Solo-to-Crew already has, and for the sharper version of the same reason: a
+ * confirmation is imported once by whoever was sent it, so a workspace's volume grows
+ * with the trips it has in flight and not with the people planning them.
+ *
+ * Both are far below the point where the bill for one workspace is worth noticing, and a
+ * workspace that reaches either is asking for a conversation, which is what a ceiling is
+ * for.
  */
 export const PLAN_RATE_CEILINGS: {
   readonly [K in PlanId]: Readonly<Record<RateMetric, number>>
 } = {
-  free: { transit_searches_per_month: 0 },
-  solo: { transit_searches_per_month: 250 },
-  crew: { transit_searches_per_month: 1_000 },
+  free: { transit_searches_per_month: 0, extraction_calls_per_month: 0 },
+  solo: { transit_searches_per_month: 250, extraction_calls_per_month: 100 },
+  crew: { transit_searches_per_month: 1_000, extraction_calls_per_month: 400 },
 }
 
 export function tierOf(value: string | null | undefined): OrganizationPlan {

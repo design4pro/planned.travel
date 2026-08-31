@@ -556,12 +556,19 @@ describe('ceilingsForPlan', () => {
  * The second kind of ceiling, and the reason it is a second kind.
  *
  * Every metric above bounds a *row* a workspace owns: the guard counts what is in the table and
- * `assertQuota()` refuses the next insert. A transit search leaves no row — it is a metered call to
- * a provider, made on a tenant's behalf, and a tenant that makes it in a loop spends money that
- * every other tenant is paying for. So the number is resolved here, beside the ones it must never
- * contradict, and enforced by the per-organization tally `03-S3` builds over KV.
+ * `assertQuota()` refuses the next insert. Neither of the two below leaves a row. A transit search
+ * is a metered call to a routing provider; an extraction is a document turned into a draft booking
+ * by our own model binding. Both are made on a tenant's behalf and billed to us, and a tenant that
+ * makes either in a loop spends money every other tenant is paying for. So the numbers are resolved
+ * here, beside the ones they must never contradict, and enforced by the per-organization tally over
+ * KV that `03-S3` builds and `03-S7` reuses under the second name.
+ *
+ * The cases below are written over `RATE_METRICS` rather than over one metric, because everything
+ * that is true of the first is true of the second by construction: they resolve through the same
+ * step of the authority order, lapse with the same subscription and are refused the same escape
+ * hatch. A case naming one metric would leave the other asserted by nothing.
  */
-describe('transit searches, a ceiling on calls rather than on rows', () => {
+describe('metered provider calls, ceilings on calls rather than on rows', () => {
   it('resolves the plan its row is entitled to, for every plan', () => {
     for (const planId of PLAN_IDS) {
       const seats = planId === 'crew' ? 4 : 1
@@ -571,14 +578,16 @@ describe('transit searches, a ceiling on calls rather than on rows', () => {
         ceilings: ceilingsForPlan(planId, seats),
       })
 
-      expect(resolved.rates.transit_searches_per_month, planId).toBe(
-        PLAN_RATE_CEILINGS[planId].transit_searches_per_month,
-      )
+      for (const metric of RATE_METRICS) {
+        expect(resolved.rates[metric], `${planId}.${metric}`).toBe(
+          PLAN_RATE_CEILINGS[planId][metric],
+        )
+      }
     }
   })
 
   it('takes the allowance away with the plan when a subscription lapses', () => {
-    // Step 0 of the authority order reaches this ceiling too: a cancelled Crew workspace keeps
+    // Step 0 of the authority order reaches these ceilings too: a cancelled Crew workspace keeps
     // making provider calls at Crew's rate otherwise, on a subscription nobody is paying for.
     const lapsed = resolveLimitsFromRow(
       row({
@@ -590,9 +599,9 @@ describe('transit searches, a ceiling on calls rather than on rows', () => {
     )
 
     expect(lapsed.planId).toBe('free')
-    expect(lapsed.rates.transit_searches_per_month).toBe(
-      PLAN_RATE_CEILINGS.free.transit_searches_per_month,
-    )
+    for (const metric of RATE_METRICS) {
+      expect(lapsed.rates[metric], metric).toBe(PLAN_RATE_CEILINGS.free[metric])
+    }
   })
 
   it('sells no plan an unbounded number of provider calls', () => {
@@ -607,46 +616,65 @@ describe('transit searches, a ceiling on calls rather than on rows', () => {
     }
   })
 
-  it('gives an allowance to exactly the plans that can reach the search', () => {
-    // The search lives on the booking desk, which is the `reservations` module. A positive
-    // allowance on a plan that cannot open the desk would be a number nobody can spend; a zero one
-    // on a plan that can would be a screen that is on and refuses every press.
+  it('gives an allowance to exactly the plans that can reach the desk', () => {
+    // Both calls are reached from the booking desk — the search from the add-transport dialog, the
+    // extraction from the import beside New booking — and the desk is the `reservations` module. A
+    // positive allowance on a plan that cannot open it would be a number nobody can spend; a zero
+    // one on a plan that can would be a screen that is on and refuses every press.
     for (const planId of PLAN_IDS) {
       const resolved = resolveLimits({ planId, seats: 1, ceilings: null })
 
-      expect(resolved.rates.transit_searches_per_month > 0, planId).toBe(
-        resolved.limits.reservations,
+      for (const metric of RATE_METRICS) {
+        expect(resolved.rates[metric] > 0, `${planId}.${metric}`).toBe(
+          resolved.limits.reservations,
+        )
+      }
+    }
+  })
+
+  it('costs more per extraction than per lookup, and is sized accordingly', () => {
+    // A transit search is one request to a timetable. An extraction converts a document to text and
+    // then runs a model over it, so it is the dearer call of the two and its allowance is never the
+    // looser one. Stated as an ordering rather than as two literals, so the argument survives the
+    // next time either figure is re-sized.
+    for (const planId of PLAN_IDS) {
+      expect(
+        PLAN_RATE_CEILINGS[planId].extraction_calls_per_month,
+        planId,
+      ).toBeLessThanOrEqual(
+        PLAN_RATE_CEILINGS[planId].transit_searches_per_month,
       )
     }
   })
 
   it('is not raisable by the per-tenant escape hatch, which counts rows only', () => {
     // `quota_overrides` is `Partial<Record<UsageMetric, number>>` under a CHECK-constrained enum,
-    // and this metric is deliberately not a `UsageMetric`. An operator who writes the key gets it
+    // and neither of these metrics is a `UsageMetric`. An operator who writes the key gets it
     // ignored rather than applied — stated here so the next reader does not take the silence for
     // an override that worked.
+    const overrides = Object.fromEntries(
+      RATE_METRICS.map((metric) => [metric, 9_999]),
+    )
     const resolved = resolveLimitsFromRow(
       row({
         plan: 'pro',
         seats: 1,
-        quotaOverrides: {
-          transit_searches_per_month: 9_999,
-        } as unknown as QuotaOverrides,
+        quotaOverrides: overrides as unknown as QuotaOverrides,
       }),
     )
 
     expect(resolved.planId).toBe('solo')
-    expect(resolved.rates.transit_searches_per_month).toBe(
-      PLAN_RATE_CEILINGS.solo.transit_searches_per_month,
-    )
-    expect(Object.keys(resolved.metrics)).not.toContain(
-      'transit_searches_per_month',
-    )
+    for (const metric of RATE_METRICS) {
+      expect(resolved.rates[metric], metric).toBe(
+        PLAN_RATE_CEILINGS.solo[metric],
+      )
+      expect(Object.keys(resolved.metrics)).not.toContain(metric)
+    }
   })
 
   it('stays out of the published quota table, on both sides of it', () => {
-    // The published table sells ceilings on rows a workspace owns and is rendered as such. This
-    // one is neither sold nor counted there, and `assertQuota()` must never find it: a guard that
+    // The published table sells ceilings on rows a workspace owns and is rendered as such. Neither
+    // of these is sold or counted there, and `assertQuota()` must never find one: a guard that
     // half-applies a ceiling is worse than one that does not apply it at all.
     for (const metric of RATE_METRICS) {
       expect(USAGE_METRICS as ReadonlyArray<string>).not.toContain(metric)

@@ -988,6 +988,15 @@ export const dayAccommodations = sqliteTable(
     endDayId: text('end_day_id')
       .notNull()
       .references(() => days.id, { onDelete: 'cascade' }),
+    /**
+     * The booking this stay was made under, so the nights and the confirmation are one fact rather
+     * than two. `set null` and never `cascade`: a stay is the record of where somebody slept and
+     * outlives the reservation that held it — see
+     * `docs/plans/03-reservations-and-transport.md`, `03-S8`.
+     */
+    reservationId: text('reservation_id').references(() => reservations.id, {
+      onDelete: 'set null',
+    }),
     name: text('name').notNull(),
     address: text('address'),
     checkInTime: text('check_in_time'),
@@ -1004,6 +1013,7 @@ export const dayAccommodations = sqliteTable(
     index('day_accommodations_start_day_idx').on(t.startDayId),
     index('day_accommodations_end_day_idx').on(t.endDayId),
     index('day_accommodations_place_idx').on(t.placeId),
+    index('day_accommodations_reservation_idx').on(t.reservationId),
     nonNegativeCheck('day_accommodations_price_chk', t.priceMinor),
   ],
 )
