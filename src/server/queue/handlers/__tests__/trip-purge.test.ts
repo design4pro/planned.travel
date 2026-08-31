@@ -11,7 +11,6 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { createLogger, createMemorySink } from '#/server/observability/logger'
 import { taskHandlers } from '../../consumer'
 import { buildTaskEnvelope } from '../../jobs'
 import {
@@ -19,64 +18,12 @@ import {
   taskEnvelopeSchema,
   tripPurgePayloadSchema,
 } from '../../types'
+import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
+import { purgeContext } from './purge-context'
 import { handleTripPurge, tripPurgeTaskId } from '../trip-purge'
-
-import type { ObjectStore } from '#/server/storage/objects'
-import type { TaskBindings, TaskContext } from '../../types'
 
 const ALPHA = 'org-alpha'
 const BETA = 'org-beta'
-
-interface FakeBucket extends ObjectStore {
-  readonly calls: Array<Array<string>>
-  readonly remaining: Set<string>
-}
-
-function fakeBucket(present: ReadonlyArray<string>): FakeBucket {
-  const remaining = new Set(present)
-  const calls: Array<Array<string>> = []
-  return {
-    calls,
-    remaining,
-    delete: async (keys) => {
-      const list = typeof keys === 'string' ? [keys] : [...keys]
-      calls.push(list)
-      for (const key of list) remaining.delete(key)
-    },
-  }
-}
-
-/** A binding surface with nothing on it a purge can reach for by accident. */
-function fakeEnv(bucket: FakeBucket): TaskBindings {
-  return {
-    KV: {
-      get: async () => null,
-      put: async () => undefined,
-      delete: async () => undefined,
-      list: async () => ({ keys: [], list_complete: true }),
-    },
-    FILES: {
-      get: async () => null,
-      put: async () => undefined,
-      head: async () => null,
-      delete: bucket.delete,
-      list: async () => ({ objects: [], truncated: false }),
-    },
-    TASKS: { send: async () => undefined, sendBatch: async () => undefined },
-  }
-}
-
-function context(orgId: string, bucket: FakeBucket): TaskContext {
-  return {
-    env: fakeEnv(bucket),
-    logger: createLogger({ level: 'error', sink: createMemorySink() }),
-    now: () => Date.parse('2026-08-31T09:00:00.000Z'),
-    attempt: 1,
-    taskId: tripPurgeTaskId('trip-1', 0),
-    orgId,
-    callProvider: (_label, send) => send(),
-  }
-}
 
 const keyIn = (orgId: string, index: number): string =>
   `trips/${orgId}/trip-1/file-${index}-photo.jpg`
@@ -87,7 +34,7 @@ describe('handleTripPurge', () => {
     const bucket = fakeBucket(keys)
 
     await expect(
-      handleTripPurge({ keys }, context(ALPHA, bucket)),
+      handleTripPurge({ keys }, purgeContext(ALPHA, bucket)),
     ).resolves.toMatchObject({ requested: 2, deleted: 2, skipped: 0 })
     expect(bucket.remaining.size).toBe(0)
   })
@@ -97,7 +44,7 @@ describe('handleTripPurge', () => {
     const bucket = fakeBucket(foreign)
 
     await expect(
-      handleTripPurge({ keys: foreign }, context(ALPHA, bucket)),
+      handleTripPurge({ keys: foreign }, purgeContext(ALPHA, bucket)),
     ).resolves.toMatchObject({ requested: 2, deleted: 0, skipped: 2 })
     expect(bucket.calls).toEqual([])
     expect(bucket.remaining.size).toBe(2)
@@ -108,7 +55,7 @@ describe('handleTripPurge', () => {
     const theirs = keyIn(BETA, 1)
     const bucket = fakeBucket([mine, theirs])
 
-    await handleTripPurge({ keys: [mine, theirs] }, context(ALPHA, bucket))
+    await handleTripPurge({ keys: [mine, theirs] }, purgeContext(ALPHA, bucket))
 
     expect(bucket.calls).toEqual([[mine]])
     expect([...bucket.remaining]).toEqual([theirs])
@@ -120,7 +67,7 @@ describe('handleTripPurge', () => {
     )
     const bucket = fakeBucket(keys)
 
-    await handleTripPurge({ keys }, context(ALPHA, bucket))
+    await handleTripPurge({ keys }, purgeContext(ALPHA, bucket))
     expect(bucket.calls.map((call) => call.length)).toEqual([MAX_PURGE_KEYS])
 
     // The producer's chunk bound, held by the schema rather than by the producer's memory: a message
@@ -135,7 +82,7 @@ describe('handleTripPurge', () => {
   it('ends in the same state when the same envelope is delivered twice', async () => {
     const keys = [keyIn(ALPHA, 1)]
     const bucket = fakeBucket(keys)
-    const ctx = context(ALPHA, bucket)
+    const ctx = purgeContext(ALPHA, bucket)
 
     const first = await handleTripPurge({ keys }, ctx)
     const second = await handleTripPurge({ keys }, ctx)

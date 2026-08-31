@@ -10,27 +10,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { R2_DELETE_MAX_KEYS, deleteObjects } from '../objects'
-
-import type { ObjectStore } from '../objects'
-
-/** Records what each `delete` call carried, and forgets nothing. */
-function fakeBucket(present: ReadonlyArray<string> = []): ObjectStore & {
-  readonly calls: Array<Array<string>>
-  readonly remaining: Set<string>
-} {
-  const remaining = new Set(present)
-  const calls: Array<Array<string>> = []
-  return {
-    calls,
-    remaining,
-    delete: async (keys) => {
-      const list = typeof keys === 'string' ? [keys] : [...keys]
-      calls.push(list)
-      // R2 deletes what it has and says nothing about what it does not.
-      for (const key of list) remaining.delete(key)
-    },
-  }
-}
+import { fakeBucket } from './fake-bucket'
 
 describe('deleteObjects', () => {
   it('chunks at R2’s per-call ceiling', async () => {

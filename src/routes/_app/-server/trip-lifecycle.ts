@@ -285,7 +285,8 @@ async function tripMemberIds(
  *
  * `recipients` exists for the one write that destroys its own recipient list: after `deleteTrip` the
  * `trip_members` rows have gone with the cascade, so the delete reads them first and hands them in.
- * Every other caller lets this read them.
+ * Every other caller lets this read them. Either way the ids arrive deduplicated — both come from
+ * {@link tripMemberIds}.
  *
  * The binding is reached inside the function rather than at module scope: `#/server/auth/env` imports
  * `cloudflare:workers`, a specifier that does not resolve outside workerd, and this module is
@@ -301,8 +302,7 @@ async function enqueueTravelStats(
   const at = Date.now()
 
   try {
-    const members = recipients ?? (await tripMemberIds(scope, tripId))
-    const userIds = [...new Set(members)]
+    const userIds = recipients ?? (await tripMemberIds(scope, tripId))
     const envelopes: Array<EnqueueInput<'travel-stats'>> = []
     for (const userId of userIds) {
       for (const statYear of years) {
@@ -459,7 +459,9 @@ async function enqueueTripPurge(
   keys: ReadonlyArray<string>,
 ): Promise<void> {
   const orgId = scope.ctx.organizationId
-  const unique = [...new Set(keys)]
+  // A blank string names no object, and one would fail `tripPurgePayloadSchema` inside the `try`
+  // below — taking every real key of the same trip down with it, silently.
+  const unique = [...new Set(keys)].filter((key) => key !== '')
   if (unique.length === 0) {
     return
   }

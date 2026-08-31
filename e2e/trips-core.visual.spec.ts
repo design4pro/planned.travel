@@ -364,6 +364,11 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
     // The summary is fetched when the dialog opens, so the button's resting state is "not yet".
     await expect(confirm).toBeDisabled()
 
+    // The inventory is drawn only once that answer lands, and it always names at least the one
+    // member every trip has — so waiting for its first line is what makes the branch below a reading
+    // of the answer rather than a race with the skeleton it replaces.
+    await expect(dialog.getByRole('listitem').first()).toBeVisible()
+
     if ((await field.count()) === 1) {
       // The heavy branch: nothing arms it but the trip's own name, character for character.
       await field.fill(`${title} `)

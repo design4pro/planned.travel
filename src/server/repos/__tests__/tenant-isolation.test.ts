@@ -95,6 +95,8 @@ import {
 } from '../expenses'
 import { getStorageUsage, recordFile, tripFilesRepository } from '../files'
 import { handleTripPurge } from '#/server/queue/handlers/trip-purge'
+import { purgeContext } from '#/server/queue/handlers/__tests__/purge-context'
+import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import {
   createAccommodation,
   createAssignment,
@@ -209,6 +211,7 @@ import type {
   TenantScope,
 } from '../base'
 import type { TaskBindings } from '#/server/queue/types'
+import type { FakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import type { Harness, SeededTenant } from './harness'
 
 /* -------------------------------------------------------------------------------------------------
@@ -2509,43 +2512,12 @@ describe('tenant isolation', () => {
    * a request, so an envelope forged under A that names B's objects deletes nothing.
    */
   describe('the storage purge', () => {
-    interface FakeBucket {
-      readonly calls: Array<Array<string>>
-      readonly remaining: Set<string>
-      delete: (keys: string | Array<string>) => Promise<void>
-    }
-
-    function fakeBucket(present: ReadonlyArray<string>): FakeBucket {
-      const remaining = new Set(present)
-      const calls: Array<Array<string>> = []
-      return {
-        calls,
-        remaining,
-        delete: async (keys) => {
-          const list = typeof keys === 'string' ? [keys] : [...keys]
-          calls.push(list)
-          for (const key of list) remaining.delete(key)
-        },
-      }
-    }
-
     async function purge(
       orgId: string,
       keys: ReadonlyArray<string>,
       bucket: FakeBucket,
     ): Promise<void> {
-      await handleTripPurge(
-        { keys: [...keys] },
-        {
-          env: { FILES: bucket } as unknown as TaskBindings,
-          logger: createLogger({ level: 'error', sink: createMemorySink() }),
-          now: () => 0,
-          attempt: 1,
-          taskId: 'trip-purge:under-test',
-          orgId,
-          callProvider: (_label, send) => send(),
-        },
-      )
+      await handleTripPurge({ keys: [...keys] }, purgeContext(orgId, bucket))
     }
 
     /** The key `seedWorld` recorded for that tenant's one file. */

@@ -330,6 +330,9 @@ export function TripDeleteDialog({
     })
   }
 
+  /** The footer's button submits the body's form, so the two need one id between them. */
+  const formId = `trip-delete-${trip.id}`
+
   return (
     <Dialog
       open={open}
@@ -351,7 +354,7 @@ export function TripDeleteDialog({
 
         <DialogBody>
           <form
-            id={`trip-delete-${trip.id}`}
+            id={formId}
             className="flex flex-col gap-4"
             onSubmit={(event) => {
               event.preventDefault()
@@ -364,15 +367,15 @@ export function TripDeleteDialog({
               </Alert>
             )}
 
-            {summary === null ? (
-              summaryError === null ? (
-                <SkeletonText
-                  lines={3}
-                  role="status"
-                  aria-label="Reading what this trip holds"
-                />
-              ) : null
-            ) : (
+            {summary === null && summaryError === null ? (
+              <SkeletonText
+                lines={3}
+                role="status"
+                aria-label="Reading what this trip holds"
+              />
+            ) : null}
+
+            {summary === null ? null : (
               <>
                 <ul className="flex flex-col gap-1 rounded-lg bg-surface-2 p-3 text-sm">
                   <Carried
@@ -422,7 +425,7 @@ export function TripDeleteDialog({
           </Button>
           <Button
             type="submit"
-            form={`trip-delete-${trip.id}`}
+            form={formId}
             variant="danger"
             shape="pill"
             disabled={!armed}

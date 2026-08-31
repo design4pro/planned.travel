@@ -48,6 +48,7 @@ import { travelStatsTaskId } from '#/server/queue/handlers/travel-stats'
 import type { z } from 'zod'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { TenantScope } from '#/server/repos'
+import type { TripDeleteSummary } from '../trip-lifecycle'
 import type { TaskEnvelope, TaskEnvelopeOf } from '#/server/queue/types'
 
 /* ------------------------------------------------------------------ mocking */
@@ -128,9 +129,9 @@ const {
   deleteTripInputSchema,
   restoreTripFn,
   restoreTripInputSchema,
+  readTripForDelete,
   setTripFavouriteFn,
   setTripFavouriteInputSchema,
-  readTripForDelete,
   updateTripFn,
   updateTripInputSchema,
 } = await import('../trip-lifecycle')
@@ -202,13 +203,25 @@ const deleteTrip = async (data: unknown): Promise<void> => {
   )
 }
 
+/** The scope `appScope()` would resolve to, which every case sets before it asks anything. */
+function actingScope(): TenantScope {
+  if (stubs.scope === null) {
+    throw new Error('This case has no acting scope to read the trip with.')
+  }
+  return stubs.scope
+}
+
 /**
  * The summary `tripDeleteSummaryFn` answers with, read through the seam it sits on: a handler's
  * return value is discarded outside a Start build, so the boundary can only be asked what it
  * *refuses*, and what it *says* is asked of the function underneath it.
  */
-const deleteSummary = async ({ tripId }: { tripId: string }) =>
-  (await readTripForDelete(stubs.scope as TenantScope, tripId)).summary
+const deleteSummary = async ({
+  tripId,
+}: {
+  tripId: string
+}): Promise<TripDeleteSummary> =>
+  (await readTripForDelete(actingScope(), tripId)).summary
 
 /* -------------------------------------------------------------------- setup */
 
@@ -726,6 +739,21 @@ describe('the storage purge a delete leaves behind', () => {
     expect(new Set(enqueued[0]?.payload.keys)).toEqual(
       new Set([fileKey, coverKey]),
     )
+  })
+
+  it('sweeps the files of a trip whose cover column holds a blank key', async () => {
+    const { tripId, fileKey } = await tripWithObjects()
+    // A blank cover column names no object, and carried into the payload it would fail the envelope
+    // schema — taking the trip's real keys down with it, inside the catch that keeps a queue failure
+    // off the delete.
+    await writeTripRow(tenant.scope, tripId, { coverImageKey: '' })
+    stubs.batches = []
+
+    await deleteTrip({ tripId, confirmTitle: 'Lisbon in April' })
+
+    expect(purges().flatMap((envelope) => envelope.payload.keys)).toEqual([
+      fileKey,
+    ])
   })
 
   it('sends nothing to sweep for a trip that owns no object', async () => {
