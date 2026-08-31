@@ -144,9 +144,13 @@ exit 0
  * rather than by `git config` so that the scratch commit writes nothing anywhere.
  */
 const BASE_ENV: NodeJS.ProcessEnv = {
-  ...Object.fromEntries(
+  // `Object.fromEntries` types its result as a bare string map, which drops the
+  // worker keys `worker-configuration.d.ts` declares on `ProcessEnv`. Nothing
+  // is actually lost — the filter only removes `GIT_*` — so the assertion
+  // restores what the signature erased rather than claiming anything new.
+  ...(Object.fromEntries(
     Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
-  ),
+  ) as NodeJS.ProcessEnv),
   GIT_CONFIG_GLOBAL: '/dev/null',
   GIT_CONFIG_SYSTEM: '/dev/null',
   GIT_AUTHOR_NAME: 'Ralph',
