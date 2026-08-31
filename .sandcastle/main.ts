@@ -58,6 +58,7 @@ import { z } from 'zod'
 import { adoptWipBranches } from './adopt'
 import { EDGE_COMMAND, parseEdgeLines } from './issue-edges'
 import { Coordinator, NO_COORDINATOR_BANNER } from './coordinator'
+import { agentFor, describeRoles, resolveRole } from './roles'
 import { resolveRun } from './run-id'
 import { openStageLog, recordStage } from './stage-log'
 import { withUsageLimit } from './usage-limit'
@@ -167,13 +168,15 @@ const MAX_PARALLEL = 2
 // Exhausted → the issue is labelled agent-blocked and excluded from the merge.
 const FIX_BUDGET = 2
 
-// Models per role (validator has no model — it is a script).
-const PLANNER_MODEL = 'claude-opus-5'
-const IMPLEMENTER_MODEL = 'claude-opus-5'
-const REVIEWER_MODEL = 'claude-opus-5'
-const AUDITOR_MODEL = 'claude-opus-5'
-const CRITIC_MODEL = 'claude-opus-5'
-const DEEP_REVIEW_MODEL = 'claude-opus-5'
+// Model and effort per role live in ./roles (the validator has neither — it is a script).
+// `metaFor` puts the resolved pair on the stage's timeline row, so a report always says which
+// configuration produced the numbers it is showing.
+function metaFor(
+  role: Parameters<typeof agentFor>[0],
+  extra: { issue?: string; attempt?: number } = {},
+): { issue?: string; attempt?: number; model: string; effort?: string } {
+  return { ...extra, ...resolveRole(role) }
+}
 
 // The deep review is one extra agent run per issue on top of implementer,
 // reviewer and the fix budget. Set SANDCASTLE_DEEP_REVIEW=0 to skip it.
@@ -470,7 +473,12 @@ await writeFile(lockPath, String(process.pid))
 // Opened as soon as there is a directory to write into, and before the first agent runs. Until this
 // call every `recordStage` is a no-op, which is what keeps the unit tests free of it.
 openStageLog(RUN_ID, ARTIFACT_ROOT)
-recordStage({ kind: 'run', at: Date.now(), maxParallel: MAX_PARALLEL })
+recordStage({
+  kind: 'run',
+  at: Date.now(),
+  maxParallel: MAX_PARALLEL,
+  roles: describeRoles(),
+})
 
 // Whether this run claims its issues from the shared registry. `--issues` partitions the backlog
 // only when the operator gets it right; the registry is the mechanical backstop that makes two
@@ -627,12 +635,12 @@ async function runPlanner(scopeIds: string[]): Promise<Issue[]> {
         branchStrategy: { type: 'merge-to-head' },
         name: 'planner',
         maxIterations: 1,
-        agent: sandcastle.claudeCode(PLANNER_MODEL),
+        agent: agentFor('planner'),
         promptFile: './.sandcastle/plan-prompt.md',
         promptArgs: { RUN_ID, SCOPE: planScope(scopeIds) },
         output: sandcastle.Output.object({ tag: 'plan', schema: planSchema }),
       }),
-    { meta: {} },
+    { meta: metaFor('planner') },
   )
   // The prompt is an instruction; this is the enforcement. A planned id outside
   // the scope is dropped, loudly — it means the agent went looking, and what it
@@ -808,11 +816,11 @@ async function runDeepReview(
           signal,
           name: 'deep-reviewer',
           maxIterations: 1,
-          agent: sandcastle.claudeCode(DEEP_REVIEW_MODEL),
+          agent: agentFor('deepReview'),
           promptFile: './.sandcastle/deep-review-prompt.md',
           promptArgs: { BRANCH: issue.branch },
         }),
-      { signal, meta: { issue: issue.id, attempt } },
+      { signal, meta: metaFor('deepReview', { issue: issue.id, attempt }) },
     )
     const raw = run.stdout.match(/<deep-review>([\s\S]*?)<\/deep-review>/)?.[1]
     if (raw === undefined) {
@@ -934,7 +942,7 @@ async function runPixelCritic(
           signal,
           name: 'pixel-capture',
           maxIterations: 1,
-          agent: sandcastle.claudeCode(CRITIC_MODEL),
+          agent: agentFor('pixelCapture'),
           promptFile: './.sandcastle/pixel-capture-prompt.md',
           promptArgs: {
             TASK_ID: issue.id,
@@ -944,7 +952,7 @@ async function runPixelCritic(
             REF_LABEL: refLabel,
           },
         }),
-      { signal, meta: { issue: issue.id, attempt } },
+      { signal, meta: metaFor('pixelCapture', { issue: issue.id, attempt }) },
     )
     const capRaw = capture.stdout.match(/<capture>([\s\S]*?)<\/capture>/)?.[1]
     if (capRaw === undefined) {
@@ -966,7 +974,7 @@ async function runPixelCritic(
           signal,
           name: 'pixel-critic',
           maxIterations: 1,
-          agent: sandcastle.claudeCode(CRITIC_MODEL),
+          agent: agentFor('pixelCritic'),
           promptFile: './.sandcastle/pixel-critic-prompt.md',
           promptArgs: {
             TASK_ID: issue.id,
@@ -974,7 +982,7 @@ async function runPixelCritic(
             SHOTS_DIR: shotsDir,
           },
         }),
-      { signal, meta: { issue: issue.id, attempt } },
+      { signal, meta: metaFor('pixelCritic', { issue: issue.id, attempt }) },
     )
     const visRaw = critic.stdout.match(/<visual>([\s\S]*?)<\/visual>/)?.[1]
     if (visRaw === undefined) {
@@ -1094,7 +1102,7 @@ async function workIssue(
           signal,
           name: 'implementer',
           maxIterations: 100,
-          agent: sandcastle.claudeCode(IMPLEMENTER_MODEL),
+          agent: agentFor('implementer'),
           promptFile: './.sandcastle/implement-prompt.md',
           promptArgs: {
             TASK_ID: issue.id,
@@ -1102,7 +1110,7 @@ async function workIssue(
             BRANCH: issue.branch,
           },
         }),
-      { signal, meta: { issue: issue.id, attempt: 0 } },
+      { signal, meta: metaFor('implementer', { issue: issue.id, attempt: 0 }) },
     )
     commits.push(...implement.commits)
     noteWip()
@@ -1116,11 +1124,11 @@ async function workIssue(
           signal,
           name: 'reviewer',
           maxIterations: 1,
-          agent: sandcastle.claudeCode(REVIEWER_MODEL),
+          agent: agentFor('reviewer'),
           promptFile: './.sandcastle/review-prompt.md',
           promptArgs: { BRANCH: issue.branch },
         }),
-      { signal, meta: { issue: issue.id, attempt: 0 } },
+      { signal, meta: metaFor('reviewer', { issue: issue.id, attempt: 0 }) },
     )
     commits.push(...review.commits)
 
@@ -1205,7 +1213,7 @@ async function workIssue(
             // promptArgs is rejected (PromptError). Empty override passes.
             { promptArgs: {}, signal },
           ),
-        { signal, meta: { issue: issue.id, attempt } },
+        { signal, meta: metaFor('implementer', { issue: issue.id, attempt }) },
       )
       commits.push(...implement.commits)
     }
@@ -1230,7 +1238,7 @@ async function mergeBranches(passing: Array<{ issue: Issue }>): Promise<void> {
         branchStrategy: { type: 'merge-to-head' },
         name: 'merger',
         maxIterations: 1,
-        agent: sandcastle.claudeCode(REVIEWER_MODEL),
+        agent: agentFor('merger'),
         promptFile: './.sandcastle/merge-prompt.md',
         promptArgs: {
           BRANCHES: passing.map((p) => `- ${p.issue.branch}`).join('\n'),
@@ -1239,7 +1247,7 @@ async function mergeBranches(passing: Array<{ issue: Issue }>): Promise<void> {
             .join('\n'),
         },
       }),
-    { meta: {} },
+    { meta: metaFor('merger') },
   )
 }
 
@@ -1270,13 +1278,13 @@ async function runAuditor(
         sandbox.run({
           name: 'auditor',
           maxIterations: 1,
-          agent: sandcastle.claudeCode(AUDITOR_MODEL),
+          agent: agentFor('auditor'),
           promptFile: './.sandcastle/audit-prompt.md',
           promptArgs: {
             ISSUES: closed.map((i) => `- ${i.id}: ${i.title}`).join('\n'),
           },
         }),
-      { meta: {} },
+      { meta: metaFor('auditor') },
     )
     // sandbox.run() has no `output` option (only top-level run() does) —
     // extract and validate the <audit> block from stdout by hand.
