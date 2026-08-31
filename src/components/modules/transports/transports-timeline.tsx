@@ -660,15 +660,17 @@ function Stop({
     showZone && timezone !== null && timezone !== ''
       ? timeZoneOffsetLabel(timezone)
       : null
+  // A code leads and the name follows it; with no code the name leads alone.
+  const coded = code !== null && code !== ''
 
   return (
     <div className="flex min-w-0 flex-1 items-baseline gap-2">
       <p className="min-w-0 truncate text-label font-semibold text-ink">
-        {code === null || code === '' ? name : code}
+        {coded ? code : name}
       </p>
-      {code === null || code === '' ? null : (
+      {coded ? (
         <p className="min-w-0 truncate text-caption text-ink-3">{name}</p>
-      )}
+      ) : null}
       <span className="flex-1" />
       <span className="shrink-0 text-caption tabular-nums text-ink-3">
         {clock ?? '—'}
@@ -676,6 +678,21 @@ function Stop({
       </span>
     </div>
   )
+}
+
+/**
+ * What is read between two stops: the ticket, or nothing worth a line.
+ *
+ * `null` rather than `''` so the caller decides what an unrecorded leg is
+ * called, which is the only thing it can be called — its place in the chain.
+ */
+function ticketLine(leg: TransportLegData): string | null {
+  const parts = [
+    leg.serviceNumber,
+    leg.platform === null ? null : `Platform ${leg.platform}`,
+    leg.seat === null ? null : `Seat ${leg.seat}`,
+  ].filter(Boolean)
+  return parts.length === 0 ? null : parts.join(' · ')
 }
 
 /**
@@ -692,7 +709,12 @@ function Chain({ legs }: { legs: ReadonlyArray<TransportLegData> }) {
   const ordered = [...legs].sort(
     (left, right) => left.position - right.position,
   )
-  const first = ordered[0]
+  const first = ordered.at(0)
+  if (first === undefined) {
+    // Its one caller renders the flat endpoints instead; said here too so the
+    // component answers for itself rather than for what happens to call it.
+    return null
+  }
   const zones = new Set(
     ordered
       .flatMap((leg) => [leg.fromTimezone, leg.toTimezone])
@@ -723,13 +745,7 @@ function Chain({ legs }: { legs: ReadonlyArray<TransportLegData> }) {
               className="ms-[0.1875rem] w-px shrink-0 bg-edge"
             />
             <p className="min-w-0 truncate py-1 text-caption text-ink-4">
-              {[
-                leg.serviceNumber,
-                leg.platform === null ? null : `Platform ${leg.platform}`,
-                leg.seat === null ? null : `Seat ${leg.seat}`,
-              ]
-                .filter(Boolean)
-                .join(' · ') || `Leg ${index + 1}`}
+              {ticketLine(leg) ?? `Leg ${index + 1}`}
             </p>
           </div>
           <div className="flex min-w-0 items-start gap-3">

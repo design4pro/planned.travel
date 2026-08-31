@@ -18,12 +18,15 @@ import { describe, expect, it } from 'vitest'
 import {
   CHAIN_MAX_LEGS,
   applyStationMatch,
+  blockingLegErrors,
   chainFromTransport,
-  chainLegCount,
   chainPayload,
   emptyStation,
+  emptyLegDraft,
   fillStationFromCode,
+  flatChain,
   hasChainErrors,
+  hasLegErrors,
   isLookupCode,
   removeStationAt,
   splitLegAt,
@@ -31,7 +34,7 @@ import {
   validateChain,
 } from '../leg-form'
 
-import type { ChainDraft, StationLookup } from '../leg-form'
+import type { ChainDraft, LegErrors, StationLookup } from '../leg-form'
 import type { TransportData } from '../types'
 
 /** A transport as the loader hands it over, with only what the chain reads set. */
@@ -63,6 +66,56 @@ function transport(patch: Partial<TransportData> = {}): TransportData {
     ...patch,
   }
 }
+
+/** The two rows a saved Osaka–Nagoya–Tokyo journey is stored as. */
+const RECORDED_LEGS: TransportData['legs'] = [
+  {
+    id: 'leg-a',
+    position: 0,
+    fromName: 'Shin-Osaka',
+    fromCode: 'OSA',
+    fromLat: null,
+    fromLng: null,
+    fromTimezone: 'Asia/Tokyo',
+    toName: 'Nagoya',
+    toCode: 'NGO',
+    toLat: null,
+    toLng: null,
+    toTimezone: 'Asia/Tokyo',
+    serviceNumber: 'Hikari 500',
+    platform: '20',
+    seat: '7-11A',
+    departureDayId: 'day-1',
+    departureDate: '2026-04-10',
+    departureTime: '09:00',
+    arrivalDayId: 'day-1',
+    arrivalDate: '2026-04-10',
+    arrivalTime: '09:50',
+  },
+  {
+    id: 'leg-b',
+    position: 1,
+    fromName: 'Nagoya',
+    fromCode: 'NGO',
+    fromLat: null,
+    fromLng: null,
+    fromTimezone: 'Asia/Tokyo',
+    toName: 'Tokyo',
+    toCode: 'TYO',
+    toLat: null,
+    toLng: null,
+    toTimezone: 'Asia/Tokyo',
+    serviceNumber: 'Nozomi 24',
+    platform: '16',
+    seat: '3-2C',
+    departureDayId: 'day-1',
+    departureDate: '2026-04-10',
+    departureTime: '10:10',
+    arrivalDayId: 'day-1',
+    arrivalDate: '2026-04-10',
+    arrivalTime: '12:40',
+  },
+]
 
 /** A three-station chain, which is the smallest one that can lose a middle. */
 function threeStations(): ChainDraft {
@@ -116,59 +169,9 @@ describe('a chain built from a record that has no legs', () => {
   })
 
   it('prefers the rows once the record has them', () => {
-    const chain = chainFromTransport(
-      transport({
-        legs: [
-          {
-            id: 'leg-a',
-            position: 0,
-            fromName: 'Shin-Osaka',
-            fromCode: 'OSA',
-            fromLat: null,
-            fromLng: null,
-            fromTimezone: 'Asia/Tokyo',
-            toName: 'Nagoya',
-            toCode: 'NGO',
-            toLat: null,
-            toLng: null,
-            toTimezone: 'Asia/Tokyo',
-            serviceNumber: 'Hikari 500',
-            platform: '20',
-            seat: '7-11A',
-            departureDayId: 'day-1',
-            departureDate: '2026-04-10',
-            departureTime: '09:00',
-            arrivalDayId: 'day-1',
-            arrivalDate: '2026-04-10',
-            arrivalTime: '09:50',
-          },
-          {
-            id: 'leg-b',
-            position: 1,
-            fromName: 'Nagoya',
-            fromCode: 'NGO',
-            fromLat: null,
-            fromLng: null,
-            fromTimezone: 'Asia/Tokyo',
-            toName: 'Tokyo',
-            toCode: 'TYO',
-            toLat: null,
-            toLng: null,
-            toTimezone: 'Asia/Tokyo',
-            serviceNumber: 'Nozomi 24',
-            platform: '16',
-            seat: '3-2C',
-            departureDayId: 'day-1',
-            departureDate: '2026-04-10',
-            departureTime: '10:10',
-            arrivalDayId: 'day-1',
-            arrivalDate: '2026-04-10',
-            arrivalTime: '12:40',
-          },
-        ],
-      }),
-    )
+    const chain = chainFromTransport(transport({ legs: RECORDED_LEGS }))
 
+    expect(chain.broken).toBe(true)
     expect(chain.stations.map((station) => station.name)).toEqual([
       'Shin-Osaka',
       'Nagoya',
@@ -181,13 +184,132 @@ describe('a chain built from a record that has no legs', () => {
   })
 })
 
+/**
+ * Putting a journey back together, which is the door the traveller came in by,
+ * walked the other way.
+ *
+ * The way *in* reads a saved journey as the chain it is, so it cannot also be
+ * the way out — asked for the way out it hands back the very chain being put
+ * away, and the button does nothing. So the way back is stated separately: the
+ * record's own two endpoints, unbroken, which {@link chainPayload} then sends as
+ * no rows at all and the writer takes as "remove the ones it had".
+ */
+describe('putting a chained journey back as one', () => {
+  it('collapses a recorded chain to the record’s own endpoints', () => {
+    const record = transport({ legs: RECORDED_LEGS })
+
+    expect(chainFromTransport(record).broken).toBe(true)
+    const flat = flatChain(record)
+
+    expect(flat.broken).toBe(false)
+    expect(flat.stations).toHaveLength(2)
+    expect(flat.legs).toHaveLength(1)
+    expect(flat.stations.map((station) => station.name)).toEqual([
+      'Shin-Osaka',
+      'Tokyo',
+    ])
+  })
+
+  it('sends no rows once it is collapsed, which is what removes them', () => {
+    expect(chainPayload(flatChain(transport({ legs: RECORDED_LEGS })))).toEqual(
+      { stations: [], legs: [] },
+    )
+  })
+
+  it('is what a record with no rows already reads as', () => {
+    const record = transport()
+    const opened = chainFromTransport(record)
+    const collapsed = flatChain(record)
+
+    expect(opened.broken).toBe(false)
+    expect(opened.stations.map((station) => station.name)).toEqual(
+      collapsed.stations.map((station) => station.name),
+    )
+    expect(opened.legs[0].departureTime).toBe(collapsed.legs[0].departureTime)
+  })
+})
+
+/**
+ * Which of the flat form's own errors may still stop a save.
+ *
+ * Once a journey is broken into legs the dialog writes the record's endpoints
+ * and days from the outer stations and takes the flat pair of fieldsets off the
+ * screen. An error against one of those fields is then invisible and unreachable
+ * — a save button that will not fire with nothing on screen saying why — so the
+ * chain's own errors are what stand in the way instead.
+ */
+describe('the draft errors a broken chain no longer answers for', () => {
+  /** A time with no date beside it: the flat form's rule, on a hidden field. */
+  const HIDDEN: LegErrors = {
+    departureDate: 'A departure time needs the date it is on.',
+  }
+
+  it('keeps every error while the journey is one movement', () => {
+    const chain = chainFromTransport(transport())
+
+    expect(chain.broken).toBe(false)
+    expect(blockingLegErrors(HIDDEN, chain)).toEqual(HIDDEN)
+    expect(hasLegErrors(blockingLegErrors(HIDDEN, chain))).toBe(true)
+  })
+
+  it('drops it once the chain owns that field', () => {
+    const chain = threeStations()
+
+    expect(chain.broken).toBe(true)
+    expect(hasLegErrors(blockingLegErrors(HIDDEN, chain))).toBe(false)
+  })
+
+  it('keeps the errors on fields the flat form still asks about', () => {
+    const kept = blockingLegErrors(
+      {
+        ...HIDDEN,
+        title: 'Give this leg a name you will recognise in a list.',
+      },
+      threeStations(),
+    )
+
+    expect(kept).toEqual({
+      title: 'Give this leg a name you will recognise in a list.',
+    })
+  })
+
+  it('leaves the errors it was handed alone', () => {
+    const errors: LegErrors = { ...HIDDEN }
+    blockingLegErrors(errors, threeStations())
+
+    expect(errors).toEqual(HIDDEN)
+  })
+
+  it('drops exactly the fields the record is written from', () => {
+    const everything = Object.fromEntries(
+      Object.keys(emptyLegDraft('JPY')).map((key) => [key, 'wrong']),
+    ) as LegErrors
+    const kept = blockingLegErrors(everything, threeStations())
+
+    expect(Object.keys(kept).sort()).toEqual(
+      [
+        'carrier',
+        'bookingCode',
+        'currency',
+        'distanceKm',
+        'mode',
+        'notes',
+        'price',
+        'seat',
+        'serviceNumber',
+        'status',
+        'title',
+      ].sort(),
+    )
+  })
+})
+
 describe('the chain arithmetic', () => {
   it('holds N−1 legs after an insert', () => {
     const chain = splitLegAt(chainFromTransport(transport()), 0)
 
     expect(chain.stations).toHaveLength(3)
     expect(chain.legs).toHaveLength(2)
-    expect(chainLegCount(chain)).toBe(2)
   })
 
   it('holds N−1 legs after a removal', () => {

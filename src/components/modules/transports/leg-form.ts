@@ -526,13 +526,54 @@ function text(value: string | null | undefined): string {
 }
 
 /**
- * The chain to edit for a transport.
+ * The one-leg chain a transport's own columns already describe, **unbroken**.
  *
- * With rows, it is those rows. Without them it is the **one-leg chain the
- * record's own endpoints already describe** — the compatibility claim of this
- * whole stage, and the reason the migration backfills nothing: an old journey
- * opens on exactly the two endpoints and the one set of times it was recorded
- * with, and saves back as no rows unless the traveller breaks it up.
+ * The compatibility claim of this whole stage, and the reason the migration
+ * backfills nothing: an old journey opens on exactly the two endpoints and the
+ * one set of times it was recorded with, and saves back as no rows at all.
+ *
+ * It is also what "put it back as one journey" produces, which is the same
+ * statement read in the other direction — a chain the traveller has collapsed is
+ * a journey whose endpoints are the record's again.
+ */
+export function flatChain(transport: TransportData): ChainDraft {
+  return {
+    broken: false,
+    stations: [
+      {
+        ...emptyStation(),
+        name: text(transport.departureName),
+        code: text(transport.departureCode),
+      },
+      {
+        ...emptyStation(),
+        name: text(transport.arrivalName),
+        code: text(transport.arrivalCode),
+      },
+    ],
+    legs: [
+      {
+        ...emptyChainLeg(),
+        serviceNumber: text(transport.serviceNumber),
+        seat: text(transport.seat),
+        departureDayId: text(transport.departureDayId),
+        departureDate: text(transport.departureDate),
+        departureTime: text(transport.departureTime),
+        arrivalDayId: text(transport.arrivalDayId),
+        arrivalDate: text(transport.arrivalDate),
+        arrivalTime: text(transport.arrivalTime),
+      },
+    ],
+  }
+}
+
+/**
+ * The chain to edit for a transport: its own rows, or {@link flatChain} when it
+ * has none.
+ *
+ * Keys come from the row ids rather than from the session counter, so a station
+ * keeps its identity across a re-read and React does not remount a field the
+ * traveller is typing into.
  */
 export function chainFromTransport(transport: TransportData): ChainDraft {
   const rows = [...transport.legs].sort(
@@ -540,41 +581,7 @@ export function chainFromTransport(transport: TransportData): ChainDraft {
   )
   const first = rows.at(0)
   if (first === undefined) {
-    return {
-      broken: false,
-      stations: [
-        {
-          key: nextKey('station'),
-          name: text(transport.departureName),
-          code: text(transport.departureCode),
-          lat: null,
-          lng: null,
-          timezone: '',
-        },
-        {
-          key: nextKey('station'),
-          name: text(transport.arrivalName),
-          code: text(transport.arrivalCode),
-          lat: null,
-          lng: null,
-          timezone: '',
-        },
-      ],
-      legs: [
-        {
-          key: nextKey('leg'),
-          serviceNumber: text(transport.serviceNumber),
-          platform: '',
-          seat: text(transport.seat),
-          departureDayId: text(transport.departureDayId),
-          departureDate: text(transport.departureDate),
-          departureTime: text(transport.departureTime),
-          arrivalDayId: text(transport.arrivalDayId),
-          arrivalDate: text(transport.arrivalDate),
-          arrivalTime: text(transport.arrivalTime),
-        },
-      ],
-    }
+    return flatChain(transport)
   }
 
   return {
@@ -610,11 +617,6 @@ export function chainFromTransport(transport: TransportData): ChainDraft {
       arrivalTime: text(row.arrivalTime),
     })),
   }
-}
-
-/** How many legs the chain holds. N stations, N−1 legs, at every edit. */
-export function chainLegCount(chain: ChainDraft): number {
-  return chain.legs.length
 }
 
 /** Breaks a recorded journey into legs without changing anything about it. */
@@ -750,6 +752,17 @@ export interface ChainErrors {
   readonly form?: string
 }
 
+/**
+ * The same error record, still being filled in.
+ *
+ * Every error type here is read-only, because nothing downstream of validation
+ * may edit one. The two functions that *build* them need the fields writable for
+ * the few lines it takes, and taking the modifier off the declared type is what
+ * keeps the field list stated once instead of copied into a local literal that
+ * can silently fall behind it.
+ */
+type Building<TErrors> = { -readonly [K in keyof TErrors]: TErrors[K] }
+
 export function hasChainErrors(errors: ChainErrors): boolean {
   if (errors.form !== undefined) return true
   const rows = [...(errors.stations ?? []), ...(errors.legs ?? [])]
@@ -757,7 +770,7 @@ export function hasChainErrors(errors: ChainErrors): boolean {
 }
 
 function stationErrors(station: StationDraft): StationErrors {
-  const errors: { name?: string; code?: string; timezone?: string } = {}
+  const errors: Building<StationErrors> = {}
   if (station.name.trim() === '') {
     errors.name = 'Every stop needs a name — this is where you change.'
   } else if (station.name.trim().length > 200) {
@@ -779,13 +792,7 @@ function chainLegErrors(
   mode: string,
   days: ReadonlyArray<DayChoice>,
 ): ChainLegErrors {
-  const errors: {
-    departureDate?: string
-    departureTime?: string
-    arrivalDate?: string
-    arrivalTime?: string
-    arrivalDayId?: string
-  } = {}
+  const errors: Building<ChainLegErrors> = {}
 
   for (const field of ['departureDate', 'arrivalDate'] as const) {
     const value = leg[field].trim()
@@ -839,6 +846,53 @@ export function validateChain(
   return chain.legs.length > CHAIN_MAX_LEGS
     ? { ...errors, form: `A chain holds at most ${CHAIN_MAX_LEGS} legs.` }
     : errors
+}
+
+/**
+ * The record fields a broken chain owns, and which the flat form therefore no
+ * longer asks about.
+ *
+ * `LegDialog` writes all ten from the outer stations of the chain, and hides the
+ * pair of endpoint fieldsets that used to hold them. An error raised against one
+ * of those hidden fields is neither visible to the traveller nor theirs to
+ * repair, so it must not be what stops the save — a disabled button with no
+ * error on screen is the one failure a form can offer that has no way out.
+ */
+const CHAIN_OWNED_FIELDS = [
+  'departureName',
+  'departureCode',
+  'departureDate',
+  'departureTime',
+  'departureDayId',
+  'arrivalName',
+  'arrivalCode',
+  'arrivalDate',
+  'arrivalTime',
+  'arrivalDayId',
+] as const satisfies ReadonlyArray<keyof LegDraft>
+
+/** A record field written from the chain rather than typed into the flat form. */
+export type ChainOwnedField = (typeof CHAIN_OWNED_FIELDS)[number]
+
+/**
+ * The draft errors that still stand between a traveller and a save.
+ *
+ * Everything, until the chain owns the endpoints — {@link validateChain} then
+ * states the rules over the rows the traveller can actually see and edit, and
+ * the repository re-runs every one of them over what is sent.
+ */
+export function blockingLegErrors(
+  errors: LegErrors,
+  chain: ChainDraft,
+): LegErrors {
+  if (!chain.broken) {
+    return errors
+  }
+  const kept: LegErrors = { ...errors }
+  for (const field of CHAIN_OWNED_FIELDS) {
+    delete kept[field]
+  }
+  return kept
 }
 
 /* -------------------------------------------------------------- chain wire */

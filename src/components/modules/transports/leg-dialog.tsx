@@ -56,6 +56,7 @@ import {
   STATUS_LABELS,
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
+  blockingLegErrors,
   breakIntoLegs,
   chainFromTransport,
   chainPayload,
@@ -63,6 +64,7 @@ import {
   emptyChain,
   emptyLegDraft,
   endpointLabels,
+  flatChain,
   hasChainErrors,
   hasLegErrors,
   isTransportMode,
@@ -80,7 +82,7 @@ import {
 import { MODE_ICON } from './mode-icon'
 import { legDurationMinutes } from './leg-timing'
 
-import type { ChainDraft, LegDraft } from './leg-form'
+import type { ChainDraft, ChainOwnedField, LegDraft } from './leg-form'
 import type { TransportData, TransportDayData } from './types'
 
 /**
@@ -89,6 +91,19 @@ import type { TransportData, TransportDayData } from './types'
  */
 function chainFor(transport: TransportData | undefined): ChainDraft {
   return transport === undefined ? emptyChain() : chainFromTransport(transport)
+}
+
+/**
+ * The same door in the other direction: the journey as one movement again.
+ *
+ * Deliberately not {@link chainFor}, which reads a journey that *has* rows back
+ * as the chain it is — asking it for the way out would hand back the very chain
+ * being put away. The record's own two endpoints are what a collapsed journey
+ * is, and an unbroken chain is saved as no rows at all, which removes the ones
+ * it used to have.
+ */
+function unbrokenChainFor(transport: TransportData | undefined): ChainDraft {
+  return transport === undefined ? emptyChain() : flatChain(transport)
 }
 
 function draftFrom(
@@ -189,7 +204,8 @@ export function LegDialog({
     [days],
   )
   const invalid =
-    hasLegErrors(errors) || (chain.broken && hasChainErrors(chainErrors))
+    hasLegErrors(blockingLegErrors(errors, chain)) ||
+    (chain.broken && hasChainErrors(chainErrors))
   const labels = endpointLabels(draft.mode)
   const suggestion = suggestLegTitle(draft)
 
@@ -214,23 +230,15 @@ export function LegDialog({
   }
 
   /**
-   * The record's own endpoints, which a chain owns once there is one.
+   * The record's own endpoints and days, which a chain owns once there is one.
    *
-   * The repository rewrites these from the outer stations in the same batch that
-   * writes the legs, so this is not the source of truth — it is what keeps the
-   * record correct for the moment between the two writes, and for a save whose
-   * second half never lands.
+   * The repository rewrites the endpoints from the outer stations in the same
+   * batch that writes the legs, so this is not the source of truth — it is what
+   * keeps the record correct for the moment between the two writes, and for a
+   * save whose second half never lands. The two day references have no such
+   * second writer, so this is the only place they are decided.
    */
-  function endpointsOf(): {
-    departureName: string
-    departureCode: string
-    departureDate: string
-    departureTime: string
-    arrivalName: string
-    arrivalCode: string
-    arrivalDate: string
-    arrivalTime: string
-  } {
+  function recordEndpoints(): Pick<LegDraft, ChainOwnedField> {
     const first = chain.stations.at(0)
     const last = chain.stations.at(-1)
     const firstLeg = chain.legs.at(0)
@@ -247,10 +255,12 @@ export function LegDialog({
         departureCode: draft.departureCode,
         departureDate: draft.departureDate,
         departureTime: draft.departureTime,
+        departureDayId: draft.departureDayId,
         arrivalName: draft.arrivalName,
         arrivalCode: draft.arrivalCode,
         arrivalDate: draft.arrivalDate,
         arrivalTime: draft.arrivalTime,
+        arrivalDayId: draft.arrivalDayId,
       }
     }
     return {
@@ -258,10 +268,12 @@ export function LegDialog({
       departureCode: first.code.trim(),
       departureDate: firstLeg.departureDate,
       departureTime: firstLeg.departureTime,
+      departureDayId: firstLeg.departureDayId,
       arrivalName: last.name.trim(),
       arrivalCode: last.code.trim(),
       arrivalDate: lastLeg.arrivalDate,
       arrivalTime: lastLeg.arrivalTime,
+      arrivalDayId: lastLeg.arrivalDayId,
     }
   }
 
@@ -273,9 +285,6 @@ export function LegDialog({
     const priceMinor = Math.round(
       Number.parseFloat(draft.price.trim().replace(',', '.') || '0') * 100,
     )
-    const ends = endpointsOf()
-    const firstLeg = chain.legs.at(0)
-    const lastLeg = chain.legs.at(-1)
     const payload = {
       tripId,
       mode: draft.mode,
@@ -285,15 +294,7 @@ export function LegDialog({
       serviceNumber: draft.serviceNumber,
       bookingCode: draft.bookingCode,
       seat: draft.seat,
-      ...ends,
-      departureDayId:
-        chain.broken && firstLeg !== undefined
-          ? firstLeg.departureDayId
-          : draft.departureDayId,
-      arrivalDayId:
-        chain.broken && lastLeg !== undefined
-          ? lastLeg.arrivalDayId
-          : draft.arrivalDayId,
+      ...recordEndpoints(),
       distanceMetres: kilometresToMetres(draft.distanceKm),
       priceMinor:
         Number.isFinite(priceMinor) && priceMinor > 0 ? priceMinor : 0,
@@ -423,7 +424,7 @@ export function LegDialog({
                   type="button"
                   data-part="unsplit-leg"
                   className="self-start rounded-sm text-caption font-semibold text-ink-3 underline decoration-edge-strong underline-offset-2 focus-ring hover:text-ink hover:decoration-ink-4"
-                  onClick={() => setChain(chainFor(transport))}
+                  onClick={() => setChain(unbrokenChainFor(transport))}
                 >
                   Put it back as one journey
                 </button>
@@ -593,11 +594,11 @@ export function LegDialog({
                 )}
 
                 {/*
-              The empty state of a chain, which is a real state and not a blank
-              panel: the journey already has two endpoints, so the first click
-              produces a two-station chain seeded from them rather than an empty
-              editor asking to be filled.
-            */}
+                  The empty state of a chain, which is a real state and not a
+                  blank panel: the journey already has two endpoints, so the
+                  first click produces a two-station chain seeded from them
+                  rather than an empty editor asking to be filled.
+                */}
                 <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg bg-surface-2 px-4 py-3">
                   <p className="min-w-0 text-caption text-ink-3">
                     Changing trains on the way? Record each part with its own

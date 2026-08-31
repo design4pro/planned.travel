@@ -356,12 +356,9 @@ export const loadTransportDeskFn = createServerFn({ method: 'GET' })
 
     const legsByTransport = new Map<string, Array<TransportLegRow>>()
     for (const leg of legs) {
-      const bucket = legsByTransport.get(leg.transportId)
-      if (bucket === undefined) {
-        legsByTransport.set(leg.transportId, [toLegRow(leg)])
-      } else {
-        bucket.push(toLegRow(leg))
-      }
+      const chain = legsByTransport.get(leg.transportId) ?? []
+      chain.push(toLegRow(leg))
+      legsByTransport.set(leg.transportId, chain)
     }
 
     return {

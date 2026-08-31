@@ -83,7 +83,6 @@ export class TripRoleError extends RepositoryError {
 }
 
 const tripRoleSchema = z.enum(TRIP_MEMBER_ROLES)
-const tripRolesSchema = z.array(tripRoleSchema).min(1)
 
 /**
  * Refuses a writer whose **trip** role is not one of `required`.
@@ -104,16 +103,16 @@ export async function assertTripRole(
   tripId: string,
   required: ReadonlyArray<TripRole>,
 ): Promise<void> {
-  const roles = tripRolesSchema.parse(required)
   // The column is plain `text` behind a `CHECK`, so what comes back is a string.
   // Narrowing it through the enum rather than comparing raw text means a value
   // the enum does not carry is *no role* — a refusal — rather than a value that
-  // slipped past a `includes` on a widened type.
+  // slipped past a `includes` on a widened type. `required` needs no such parse:
+  // it is a constant of this module and never a value off the wire.
   const stored = tripRoleSchema.safeParse(
     await tripRoleFor(scope, tripId, scope.ctx.userId),
   )
-  if (!stored.success || !roles.includes(stored.data)) {
-    throw new TripRoleError(roles, stored.success ? stored.data : null)
+  if (!stored.success || !required.includes(stored.data)) {
+    throw new TripRoleError(required, stored.success ? stored.data : null)
   }
 }
 

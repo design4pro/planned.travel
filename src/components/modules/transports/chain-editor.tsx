@@ -77,7 +77,9 @@ import type {
   ChainDraft,
   ChainErrors,
   ChainLegDraft,
+  ChainLegErrors,
   StationDraft,
+  StationErrors,
 } from './leg-form'
 import type { TransportDayData } from './types'
 
@@ -93,6 +95,10 @@ import type { TransportDayData } from './types'
  * between `UTC+1` and `UTC+2` is a cost paid on every render for a number nobody
  * is reading in that moment. The label that has to be right — the one under the
  * time input, beside the time it governs — is computed against the real date.
+ *
+ * Copied row by row rather than handed over as they come: `TimeZoneOption` is
+ * read-only and `ComboboxOption` is not, and a spread is the honest way across
+ * that boundary where a cast would only silence it.
  */
 const ZONE_OPTIONS: Array<ComboboxOption> = timeZoneOptions(null).map(
   (zone) => ({ ...zone }),
@@ -172,6 +178,20 @@ function useStationSearch(): {
 
 /* ------------------------------------------------------------------ station */
 
+/**
+ * What a station is called above its fields: the two ends take the mode's own
+ * words, and everything between them is a change, numbered from the first.
+ */
+function stationHeading(mode: string, index: number, total: number): string {
+  if (index === 0) {
+    return endpointLabels(mode).from
+  }
+  if (index === total - 1) {
+    return endpointLabels(mode).to
+  }
+  return `Change ${index}`
+}
+
 function StationRow({
   station,
   index,
@@ -185,7 +205,7 @@ function StationRow({
   index: number
   total: number
   mode: string
-  errors: { name?: string; code?: string; timezone?: string } | undefined
+  errors: StationErrors | undefined
   onChange: (next: StationDraft) => void
   onRemove: () => void
 }) {
@@ -230,11 +250,7 @@ function StationRow({
       <div className="flex min-w-0 flex-col gap-2 pb-1">
         <div className="flex min-w-0 items-center gap-2">
           <p className="min-w-0 flex-1 truncate text-micro font-semibold tracking-label text-ink-3 uppercase">
-            {index === 0
-              ? endpointLabels(mode).from
-              : index === total - 1
-                ? endpointLabels(mode).to
-                : `Change ${index}`}
+            {stationHeading(mode, index, total)}
           </p>
           {total > 2 ? (
             <IconButton
@@ -352,15 +368,7 @@ function LegRow({
   mode: string
   days: ReadonlyArray<TransportDayData>
   dayOptions: Array<{ value: string; label: string }>
-  errors:
-    | {
-        departureDate?: string
-        departureTime?: string
-        arrivalDate?: string
-        arrivalTime?: string
-        arrivalDayId?: string
-      }
-    | undefined
+  errors: ChainLegErrors | undefined
   canSplit: boolean
   onChange: (next: ChainLegDraft) => void
   onSplit: () => void
