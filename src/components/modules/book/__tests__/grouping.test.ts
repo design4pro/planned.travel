@@ -22,6 +22,8 @@ function booking(overrides: Partial<BookingRow> & { id: string }): BookingRow {
     currency: null,
     notes: null,
     dayId: null,
+    assignmentId: null,
+    hasLedgerLine: false,
     ...overrides,
   }
 }
