@@ -681,20 +681,18 @@ export const trips = sqliteTable(
       .notNull()
       .default(false),
     /**
-     * The trip's favourite flag as wave 0 shipped it: one boolean shared by every member, which
-     * is the wrong shape for a bookmark that is private to one person (`CONTEXT.md`,
-     * **Favourite**). From `01-S1` (`docs/plans/01-trips-core.md`) the favourite lives in
-     * `trip_favourites` ({@link tripFavourites}), one row per person and trip, and this column
-     * goes dead: nothing reads it and nothing writes it. It stays rather than being dropped
-     * because dropping a column is a table rebuild on SQLite, which docs/DEPLOY.md §5 admits
-     * only through the register in its §12.
+     * @deprecated The favourite is one person's, and lives in `trip_favourites`
+     * ({@link tripFavourites}) — one row per person and trip. This column is a single boolean
+     * shared by every member, so it records nobody's choice (`CONTEXT.md`, **Favourite**) and no
+     * new code may read or write it. It stays rather than being dropped because dropping a column
+     * is a table rebuild on SQLite, which docs/DEPLOY.md §5 admits only through the register in
+     * its §12.
      *
-     * Until `01-S1` lands the pre-wave-1 trips surfaces still touch it, and they are the whole
-     * of what `01-S1` moves — nothing new may join them. Read by `listFilter` and
-     * `countTripsByStatus` in `src/server/repos/trips.ts`, by the two route loaders under
-     * `src/routes/_app/-server/` and by the star in `-ui/trip-card.tsx`. Written by
-     * `setTripFavourite` in that same repository, and — through the `isFavourite` write field
-     * beside it — by the dev seed under `src/routes/api/dev/-seed/`.
+     * The pre-wave-1 trips surfaces still read and write it until `01-S1`
+     * (`docs/plans/01-trips-core.md`) moves them onto the table, and moving them is the whole of
+     * what it has to move. Who they are is a `grep` for `isFavourite`, not a list kept here: an
+     * inventory of other modules' internals goes stale on the first rename, silently, with
+     * nothing in the ladder to catch it.
      */
     isFavourite: integer('is_favourite', { mode: 'boolean' })
       .notNull()
@@ -790,10 +788,15 @@ export const days = sqliteTable(
  * unfavouriting is a delete and there is no column a writer could ever update — hence `createdAt()`
  * alone, as `place_tags` and the other immutable join rows in this file do, and not `timestamps()`.
  *
- * Written and read from `01-S1` on, through `src/server/repos/trip-favourites.ts`. Nothing reaches
- * it today, which is what a schema stage ships: the table exists before the module that needs it, so
- * `01-S1` is one migration lighter. Nothing was backfilled from {@link trips.isFavourite} — a flag
- * shared by every member records nobody's choice, so there is nothing true to copy out of it.
+ * Keyed by `id` with the person's choice held unique on `(trip_id, user_id)`, as `trip_members` —
+ * the other per-person trip row, with the same three columns and the same unique index — rather
+ * than keyless on a composite `primaryKey()` like `place_tags`. The two per-person trip rows are
+ * then reached the same way, through the keyed tenant repository.
+ *
+ * Its reader and writer are `src/server/repos/trip-favourites.ts`; the table ships ahead of that
+ * module, which is what a schema stage is for. Nothing was backfilled from
+ * {@link trips.isFavourite} — a flag shared by every member records nobody's choice, so there is
+ * nothing true to copy out of it.
  */
 export const tripFavourites = sqliteTable(
   'trip_favourites',
