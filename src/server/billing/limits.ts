@@ -42,9 +42,18 @@
  * serialise to the browser) and `metrics` is column-shaped (`UNLIMITED`, keyed by
  * `USAGE_METRICS`). {@link METRIC_FOR_QUOTA} pairs them up, and the equivalence of the
  * three metrics they share is asserted in `__tests__/limits.test.ts`.
+ *
+ * A third field, `rates`, carries the ceilings that bound metered provider *calls*
+ * rather than rows — see {@link PLAN_RATE_CEILINGS} for why they cannot be either of the
+ * other two shapes.
  */
 
-import { catalogueLimits, isEntitlingStatus, planById, planForProductId } from '#/lib/plans'
+import {
+  catalogueLimits,
+  isEntitlingStatus,
+  planById,
+  planForProductId,
+} from '#/lib/plans'
 import { ORGANIZATION_PLANS, USAGE_METRICS } from '#/server/db/schema'
 import { PLAN_QUOTAS, UNLIMITED } from '#/server/db/types'
 
@@ -75,6 +84,60 @@ export const METRIC_FOR_QUOTA: { readonly [K in QuotaKey]: UsageMetric } = {
 
 /** Ceilings the catalogue leaves uncapped still need a finite integer column. */
 export const SEAT_LIMIT_CEILING = 100_000
+
+/* -------------------------------------------------------------- rate ceilings */
+
+/**
+ * Ceilings on metered **calls**, resolved here and nowhere else.
+ *
+ * Every metric in {@link PLAN_QUOTAS} bounds a row a workspace owns, which is why
+ * `assertQuota()` can enforce it: the guard counts the table and refuses the next
+ * insert. The metrics below bound something that leaves no row — an outbound call to a
+ * provider, made on a tenant's behalf and billed to us. A tenant that makes one in a
+ * loop spends money every other tenant is paying for, so the rate is a ceiling like any
+ * other and belongs beside them rather than as a constant inside a feature module: the
+ * published number and the enforced number are the same number, for a provider call as
+ * much as for a row.
+ *
+ * Three consequences follow, and each is asserted in `__tests__/limits.test.ts`:
+ *
+ * - **They are not {@link UsageMetric}s.** `usage_records.metric` is a CHECK-constrained
+ *   enum counting rows, and `assertQuota()` reads it; a call metric in that list would
+ *   be a ceiling the guard half-applies, against a counter nobody increments.
+ * - **`quota_overrides` cannot raise them.** That column is keyed by the same enum, so
+ *   an operator who writes one of these keys has it ignored, not applied.
+ * - **No plan is unlimited.** {@link UNLIMITED} is available and deliberately unused: a
+ *   row costs us storage we can see, a call costs money on somebody else's invoice, and
+ *   an uncapped one has no ceiling to discover the loop by.
+ *
+ * The counting is not here either. It is a per-organization tally over KV, built by the
+ * stage that makes the first search (`docs/plans/03-reservations-and-transport.md`,
+ * `03-S3`); this module supplies the number that tally is measured against.
+ */
+export const RATE_METRICS = ['transit_searches_per_month'] as const
+export type RateMetric = (typeof RATE_METRICS)[number]
+
+/**
+ * How many metered calls of each kind a plan may make per calendar month.
+ *
+ * `transit_searches_per_month` — Free is zero because Free cannot open the booking desk
+ * at all (`reservations` is off in its catalogue entry), and an allowance nobody can
+ * spend is a number that only ever misleads. The paid figures are sized against the work
+ * rather than the seats: a fortnight abroad with a dozen journeys, searched and searched
+ * again, is comfortably under a hundred, so Solo's 250 is a month of real planning with
+ * head-room, and Crew's 1,000 is the same trip planned by up to ten people who are
+ * mostly searching the *same* journeys — which is why it is four times Solo's and not
+ * ten. Both are far below the point where the provider bill for one workspace is worth
+ * noticing, and a workspace that reaches either is asking for a conversation, which is
+ * what a ceiling is for.
+ */
+export const PLAN_RATE_CEILINGS: {
+  readonly [K in PlanId]: Readonly<Record<RateMetric, number>>
+} = {
+  free: { transit_searches_per_month: 0 },
+  solo: { transit_searches_per_month: 250 },
+  crew: { transit_searches_per_month: 1_000 },
+}
 
 export function tierOf(value: string | null | undefined): OrganizationPlan {
   return typeof value === 'string' &&
@@ -142,7 +205,9 @@ export function planIdFromRow(
 }
 
 /** Read the stored ceilings off a row, with the tier column narrowed. */
-export function storedCeilingsFromRow(row: SubscriptionLimitsRow): StoredCeilings {
+export function storedCeilingsFromRow(
+  row: SubscriptionLimitsRow,
+): StoredCeilings {
   return {
     tier: tierOf(row.plan),
     seatLimit: row.seatLimit,
@@ -191,6 +256,11 @@ export interface EffectiveLimits {
   readonly limits: PlanLimits
   /** Column-shaped, {@link UNLIMITED} for unlimited. What the repositories enforce. */
   readonly metrics: Record<UsageMetric, number>
+  /**
+   * Ceilings on metered provider calls — see {@link PLAN_RATE_CEILINGS}. Plan-owned and
+   * finite: no stored ceiling raises one, because no column can name one.
+   */
+  readonly rates: Record<RateMetric, number>
 }
 
 /** `null` (unlimited, JSON-safe) into the infinite sentinel the columns count in. */
@@ -238,6 +308,9 @@ export function resolveLimits(input: ResolveLimitsInput): EffectiveLimits {
     planId: plan.id,
     tier,
     seats,
+    // Step 3 does not reach here on purpose: `quota_overrides` is keyed by `UsageMetric`
+    // and a call metric is not one, so the plan's own figure is the last word.
+    rates: { ...PLAN_RATE_CEILINGS[plan.id] },
     limits: {
       ...catalogue,
       seats: toQuota(metrics.members),
@@ -249,7 +322,11 @@ export function resolveLimits(input: ResolveLimitsInput): EffectiveLimits {
 }
 
 /** The Free plan with no escapes — every tenant without an entitling row. */
-const FREE_INPUT: ResolveLimitsInput = { planId: 'free', seats: 1, ceilings: null }
+const FREE_INPUT: ResolveLimitsInput = {
+  planId: 'free',
+  seats: 1,
+  ceilings: null,
+}
 
 /**
  * Reduce a persisted row to resolver input: step 0 (does this row entitle anything at

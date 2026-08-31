@@ -1191,6 +1191,20 @@ export const reservations = sqliteTable(
     transportId: text('transport_id').references(() => transports.id, {
       onDelete: 'set null',
     }),
+    /**
+     * The ledger line this booking paid for, so editing a price rewrites one expense instead of
+     * leaving a new one behind each time. The link lives on this side because a deleted cost line
+     * then unlinks the booking with no code of ours running — see `docs/plans/03-reservations-and-transport.md`, `03-S4`.
+     */
+    expenseId: text('expense_id').references(() => expenses.id, {
+      onDelete: 'set null',
+    }),
+    /**
+     * When a machine wrote this row and nobody has checked it yet — cleared by the first save a
+     * person makes. An instant rather than a flag, at the width `read_at` and `onboarded_at`
+     * already use, so "unchecked" keeps the date it became true on.
+     */
+    importedAt: integer('imported_at', { mode: 'timestamp_ms' }),
     type: text('type').notNull().default('other'),
     status: text('status').notNull().default('pending'),
     title: text('title').notNull(),
@@ -1219,6 +1233,13 @@ export const reservations = sqliteTable(
     index('reservations_place_idx').on(t.placeId),
     index('reservations_assignment_idx').on(t.assignmentId),
     index('reservations_transport_idx').on(t.transportId),
+    index('reservations_expense_idx').on(t.expenseId),
+    // `tenantFilter()` puts `organization_id` in every WHERE clause, so it leads: this is the
+    // index behind "which bookings on this desk has nobody checked yet".
+    index('reservations_org_imported_at_idx').on(
+      t.organizationId,
+      t.importedAt,
+    ),
     enumCheck('reservations_type_chk', t.type, RESERVATION_TYPES),
     enumCheck('reservations_status_chk', t.status, RESERVATION_STATUSES),
     nonNegativeCheck('reservations_price_chk', t.priceMinor),
@@ -2549,6 +2570,16 @@ export const userSettings = sqliteTable(
     mapStyle: text('map_style'),
     accentColour: colour('accent_colour'),
     reduceMotion: integer('reduce_motion', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    /**
+     * Hide confirmation codes on the booking desk until the reader asks for one. A display
+     * preference always has an answer, so it is `NOT NULL` with a default — off, because a product
+     * that hides the reader's own data on first sight has decided for them.
+     */
+    maskConfirmationCodes: integer('mask_confirmation_codes', {
+      mode: 'boolean',
+    })
       .notNull()
       .default(false),
     onboardingCompletedAt: integer('onboarding_completed_at', {
