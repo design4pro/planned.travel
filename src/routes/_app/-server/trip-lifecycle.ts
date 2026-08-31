@@ -1,17 +1,20 @@
 /**
- * Every write that acts on a trip *as a trip* — created, edited, archived, restored.
+ * Every write that acts on a trip *as a trip* — created, edited, archived, restored, starred.
  *
- * One module rather than four handlers scattered across the read modules, because the four share a
+ * One module rather than five handlers scattered across the read modules, because they share a
  * side effect and an authorisation story, and both are easier to keep honest in one place:
  *
  * - **Authorisation is the repository's, twice over.** Who may *see* the trip is `requireTrip`, whose
  *   refusal is a `NotFoundError` identical to a foreign tenant's (ADR 0007); who may *change* it is
  *   `assertTripRole`, whose refusal is `FORBIDDEN`. Neither is re-implemented here — these handlers
- *   contribute the tenant scope and a validator, and nothing else. `beforeLoad` guards nothing.
+ *   contribute the tenant scope and a validator, and nothing else. `beforeLoad` guards nothing. The
+ *   star is the one write open to every reader (PRD #104 decision 6), and that too is decided in the
+ *   repository: `setFavourite` calls `requireTrip` and no role guard.
  * - **A write that moves someone's travel statistics fans `travel-stats` envelopes out to the trip's
- *   members** — which is create and edit, and deliberately not archive and restore: `00-S4` counts a
- *   person's trips by membership, and neither shelving a trip nor bringing it back moves a membership
- *   row. See {@link enqueueTravelStats}, whose doc holds the three properties of the fan-out.
+ *   members** — which is create and edit, and deliberately not archive, restore or favourite:
+ *   `00-S4` counts a person's trips by membership, and neither shelving a trip, bringing it back, nor
+ *   bookmarking it moves a membership row. See {@link enqueueTravelStats}, whose doc holds the three
+ *   properties of the fan-out.
  *
  * **No pre-departure-notice code is reachable from this module, and that is deliberate rather than
  * forgotten.** Under `00-S5`'s scan model (ADR 0005) the quarter-hourly sweep reads current rows —
@@ -31,6 +34,7 @@ import {
   listTripMembers,
   requireTrip,
   restoreTrip,
+  setFavourite,
   updateTrip,
 } from '#/server/repos'
 import { createLogger, serializeError } from '#/server/observability'
@@ -159,6 +163,18 @@ export const updateTripInputSchema = z
 
 export const archiveTripInputSchema = z.strictObject({ tripId: tripIdSchema })
 export const restoreTripInputSchema = z.strictObject({ tripId: tripIdSchema })
+
+/**
+ * The state the reader is asking for, not a toggle.
+ *
+ * A `toggleFavourite` would read the current row and invert it, so a double click — or a retry of a
+ * request that in fact succeeded — would land back where it started. Sending the wanted state makes
+ * the write idempotent end to end, which is what an optimistic control needs.
+ */
+export const setTripFavouriteInputSchema = z.strictObject({
+  tripId: tripIdSchema,
+  isFavourite: z.boolean(),
+})
 
 /* -------------------------------------------------------------------------------------------------
  * Travel statistics — `00-S4`'s obligation on this stage
@@ -330,5 +346,27 @@ export const restoreTripFn = createServerFn({ method: 'POST' })
       const scope = await appScope()
       const trip = await restoreTrip(scope, data.tripId)
       return { tripId: trip.id, isArchived: false }
+    },
+  )
+
+/**
+ * Stars or unstars a trip for the caller, and nobody else (PRD #104 decision 5).
+ *
+ * Open to every reader of the trip, and no travel-statistics envelope: a bookmark moves no dates and
+ * no membership, so nothing `00-S4` computes has changed. Echoes the state back rather than reading
+ * the row again — the repository's write is idempotent, so the answer is the request.
+ */
+export const setTripFavouriteFn = createServerFn({ method: 'POST' })
+  .validator(setTripFavouriteInputSchema)
+  .handler(
+    async ({
+      data,
+    }): Promise<{
+      readonly tripId: string
+      readonly isFavourite: boolean
+    }> => {
+      const scope = await appScope()
+      await setFavourite(scope, data.tripId, data.isFavourite)
+      return { tripId: data.tripId, isFavourite: data.isFavourite }
     },
   )

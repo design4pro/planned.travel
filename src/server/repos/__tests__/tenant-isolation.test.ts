@@ -154,6 +154,11 @@ import {
   userSettingsRepository,
 } from '../settings'
 import { createTag, tagsRepository } from '../tags'
+import {
+  countFavourites,
+  listFavouriteTripIds,
+  setFavourite,
+} from '../trip-favourites'
 import { createTransport, transportsRepository } from '../transports'
 import {
   addTripMember,
@@ -2460,6 +2465,24 @@ describe('tenant isolation', () => {
       expect((await countTripsByStatus(scope)).total).toBe(1)
       expect((await tripRolesFor(scope, [beta.tripId])).size).toBe(0)
       expect(await canReadTrip(scope, beta.tripId)).toBe(false)
+    })
+
+    it('refuses a favourite on B’s trip and never lists B’s ids', async () => {
+      const scope = alpha.tenant.scope
+
+      expect(
+        await captureError(() => setFavourite(scope, beta.tripId, true)),
+      ).toBeInstanceOf(NotFoundError)
+
+      // A's own star, so the reads below have something to be wrong about.
+      await setFavourite(scope, alpha.tripId, true)
+      await setFavourite(beta.tenant.scope, beta.tripId, true)
+
+      expect(await listFavouriteTripIds(scope)).toEqual([alpha.tripId])
+      expect(await countFavourites(scope)).toBe(1)
+      expect(await listFavouriteTripIds(beta.tenant.scope)).toEqual([
+        beta.tripId,
+      ])
     })
   })
 })

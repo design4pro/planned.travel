@@ -13,7 +13,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { trips } from '#/server/db/schema'
+import { tripFavourites, trips } from '#/server/db/schema'
 import { NotFoundError, RepositoryError } from '../context'
 import {
   addTripMember,
@@ -31,6 +31,11 @@ import {
   updateTrip,
   updateTripMember,
 } from '../trips'
+import {
+  countFavourites,
+  listFavouriteTripIds,
+  setFavourite,
+} from '../trip-favourites'
 import { captureError, createHarness, subscribeTenant } from './harness'
 import type { Harness, SeededTenant } from './harness'
 import type { TenantScope } from '../base'
@@ -263,6 +268,100 @@ describe('trip lifecycle', () => {
       await expect(archiveTrip(outsider, trip.id)).resolves.toMatchObject({
         isArchived: true,
       })
+    })
+  })
+  /* ------------------------------------------------------------ favourites */
+
+  /**
+   * The favourite is one person's bookmark (PRD #104 decision 5). The row's existence *is* the
+   * star, so the invariants worth holding are about rows: one per person and trip however many
+   * times it is set, none once it is cleared, and a count that answers the caller and nobody else.
+   */
+  describe('the favourite', () => {
+    /** Rows in `trip_favourites`, read past every repository so the table is the witness. */
+    async function favouriteRows(): Promise<
+      Array<{ tripId: string; userId: string }>
+    > {
+      return harness.db
+        .select({
+          tripId: tripFavourites.tripId,
+          userId: tripFavourites.userId,
+        })
+        .from(tripFavourites)
+    }
+
+    it('writes one row however many times it is set, and none once it is cleared', async () => {
+      const trip = await createTrip(tenant.scope, { title: 'Lisbon' })
+
+      await setFavourite(tenant.scope, trip.id, true)
+      await setFavourite(tenant.scope, trip.id, true)
+      expect(await favouriteRows()).toEqual([
+        { tripId: trip.id, userId: tenant.ownerUserId },
+      ])
+
+      await setFavourite(tenant.scope, trip.id, false)
+      expect(await favouriteRows()).toEqual([])
+      // Clearing a star that was never set is the same answer, not a NotFoundError.
+      await expect(
+        setFavourite(tenant.scope, trip.id, false),
+      ).resolves.toBeUndefined()
+    })
+
+    it('counts and lists for the caller alone', async () => {
+      const mine = await createTrip(tenant.scope, {
+        title: 'Mine',
+        visibility: 'organization',
+      })
+      const theirs = await createTrip(tenant.scope, {
+        title: 'Theirs',
+        visibility: 'organization',
+      })
+
+      await setFavourite(tenant.scope, mine.id, true)
+      await setFavourite(outsider, theirs.id, true)
+
+      expect(await listFavouriteTripIds(tenant.scope)).toEqual([mine.id])
+      expect(await listFavouriteTripIds(outsider)).toEqual([theirs.id])
+      expect(await countFavourites(tenant.scope)).toBe(1)
+      expect(await countFavourites(outsider)).toBe(1)
+    })
+
+    it('filters the list on the caller’s own star, not on a flag the trip carries', async () => {
+      const starred = await createTrip(tenant.scope, {
+        title: 'Starred',
+        visibility: 'organization',
+      })
+      const plain = await createTrip(tenant.scope, {
+        title: 'Plain',
+        visibility: 'organization',
+      })
+      await setFavourite(tenant.scope, starred.id, true)
+
+      expect(
+        (await listTrips(tenant.scope, { favourite: true })).map(
+          (row) => row.id,
+        ),
+      ).toEqual([starred.id])
+      expect(
+        (await listTrips(tenant.scope, { favourite: false })).map(
+          (row) => row.id,
+        ),
+      ).toEqual([plain.id])
+      // The same two trips, read by the colleague who starred neither.
+      expect(await listTrips(outsider, { favourite: true })).toEqual([])
+    })
+
+    it('is a reader’s verb: a viewer may star a trip they may not change', async () => {
+      const trip = await createTrip(tenant.scope, { title: 'Lisbon' })
+      await addTripMember(tenant.scope, {
+        tripId: trip.id,
+        userId: outsiderId,
+        role: 'viewer',
+      })
+
+      await setFavourite(outsider, trip.id, true)
+      expect(await listFavouriteTripIds(outsider)).toEqual([trip.id])
+      expect(await countFavourites(tenant.scope)).toBe(0)
     })
   })
 })

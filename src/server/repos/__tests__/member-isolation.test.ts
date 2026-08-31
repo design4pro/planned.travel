@@ -31,9 +31,13 @@ import {
   listUpcomingTrips,
   requireTrip,
   restoreTrip,
-  setTripFavourite,
   updateTrip,
 } from '../trips'
+import {
+  countFavourites,
+  listFavouriteTripIds,
+  setFavourite,
+} from '../trip-favourites'
 import { captureError, createHarness, subscribeTenant } from './harness'
 import type { Harness, SeededTenant } from './harness'
 import type { TenantScope } from '../base'
@@ -112,7 +116,8 @@ describe('member isolation', () => {
       const counts = await countTripsByStatus(stranger)
       expect(counts.total).toBe(0)
       expect(counts.archived).toBe(0)
-      expect(counts.favourites).toBe(0)
+      expect(await countFavourites(stranger)).toBe(0)
+      expect(await listFavouriteTripIds(stranger)).toEqual([])
       expect(
         Object.values(counts.byStatus).filter((value) => value > 0),
       ).toEqual([])
@@ -136,18 +141,15 @@ describe('member isolation', () => {
       expect(trip.isArchived).toBe(false)
     })
 
-    it('refuses to be flagged by a reader who cannot see it', async () => {
-      // `isFavourite` is a column on the trip, so writing it is a write to someone else's trip. It
-      // has no caller yet — the star is `01-S1b`'s — but an unguarded writer in a module whose every
-      // other writer is guarded is the one that gets reached for next.
+    it('refuses to be starred by a reader who cannot see it', async () => {
+      // A bookmark is the mildest write in the product and still a write: it names a trip id. A
+      // non-member who could star this one would learn it exists, which is the single thing
+      // decision 1 exists to withhold.
       expect(
-        await captureError(() =>
-          setTripFavourite(stranger, fixture.tripId, true),
-        ),
+        await captureError(() => setFavourite(stranger, fixture.tripId, true)),
       ).toBeInstanceOf(NotFoundError)
-      expect((await requireTrip(alpha.scope, fixture.tripId)).isFavourite).toBe(
-        false,
-      )
+      expect(await listFavouriteTripIds(stranger)).toEqual([])
+      expect(await countFavourites(stranger)).toBe(0)
     })
 
     it('refuses a child write parented onto it', async () => {
@@ -187,6 +189,18 @@ describe('member isolation', () => {
         fixture.tripId,
       ])
       expect((await countTripsByStatus(stranger)).total).toBe(1)
+    })
+
+    it('and any reader may star it, privately to themselves', async () => {
+      await setFavourite(stranger, fixture.tripId, true)
+
+      expect(await listFavouriteTripIds(stranger)).toEqual([fixture.tripId])
+      expect(await countFavourites(stranger)).toBe(1)
+      // The owner's own shortlist is untouched: the star is one person's, and the trip row carries
+      // no trace of somebody else having made it.
+      expect(await listFavouriteTripIds(alpha.scope)).toEqual([])
+      expect(await countFavourites(alpha.scope)).toBe(0)
+      expect(await listTrips(alpha.scope, { favourite: true })).toEqual([])
     })
 
     it('but the writes are FORBIDDEN, because the reader is not its owner', async () => {

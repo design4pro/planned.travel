@@ -20,6 +20,7 @@ import {
   like,
   lte,
   ne,
+  not,
   or,
   sql,
 } from 'drizzle-orm'
@@ -29,6 +30,7 @@ import {
   TRIP_STATUSES,
   TRIP_VISIBILITIES,
   shareLinks,
+  tripFavourites,
   tripMembers,
   trips,
 } from '#/server/db/schema'
@@ -107,6 +109,13 @@ const tripFields = {
   accentColour: colourSchema.nullish(),
   budgetTargetMinor: minorAmountSchema.nullish(),
   reminderDays: nonNegativeIntSchema.max(365).optional(),
+  /**
+   * @deprecated The favourite is one person's row in `trip_favourites`; write it through
+   * `setFavourite` (`src/server/repos/trip-favourites.ts`). The column stays because dropping one
+   * is a table rebuild on SQLite — see its `@deprecated` note in `schema.ts` — and this field stays
+   * with it because the dev seed (`routes/api/dev/-seed/apply-trip.ts`) still sets it. Nothing
+   * reads it any more.
+   */
   isFavourite: z.boolean().optional(),
   isArchived: z.boolean().optional(),
 }
@@ -256,6 +265,35 @@ export function readableTrips(scope: TenantScope): ReadableTrips {
 }
 
 /**
+ * Which trips the acting user has starred, as one correlated `EXISTS` over `trip_favourites`
+ * (PRD #104 decision 5).
+ *
+ * A predicate over a *trip*, which is why it lives here beside {@link readableTripFilter} rather
+ * than with the rows it reads: the trip list needs it inside the same statement as the read
+ * predicate and the caller's other filters, so a `limit` counts starred trips instead of filling a
+ * page it then discards. `src/server/repos/trip-favourites.ts` owns the row — it is written,
+ * listed and counted there — and reads it back through this, so the star and the trip it marks can
+ * never disagree about who may see it.
+ *
+ * Keyed by `scope.ctx.userId`: a shared flag is exactly the shape this replaces.
+ */
+export function favouritedTripFilter(scope: TenantScope): SQL {
+  return exists(
+    scope.db
+      .select({ present: sql`1` })
+      .from(tripFavourites)
+      .where(
+        tenantFilter(
+          scope,
+          tripFavourites,
+          eq(tripFavourites.tripId, trips.id),
+          eq(tripFavourites.userId, scope.ctx.userId),
+        ),
+      ),
+  )
+}
+
+/**
  * Whether the acting user may see this trip at all. The question every trip-scoped reader asks
  * before it answers anything else; {@link requireTrip} is the same question with a throw on it.
  */
@@ -364,7 +402,15 @@ async function reserveTripSlug(
  * Queries
  * ---------------------------------------------------------------------------------------------- */
 
-function listFilter(input: ListTripsInput): SQL | undefined {
+/**
+ * The caller's own filters, ANDed. Takes the scope for one of them: after decision 5 the favourite
+ * is a row of the acting user's, so "starred" is a question about the reader as much as about the
+ * trip.
+ */
+function listFilter(
+  scope: TenantScope,
+  input: ListTripsInput,
+): SQL | undefined {
   const parts: Array<SQL | undefined> = []
   if (input.status) {
     parts.push(eq(trips.status, input.status))
@@ -376,7 +422,8 @@ function listFilter(input: ListTripsInput): SQL | undefined {
     parts.push(eq(trips.isArchived, input.archived))
   }
   if (input.favourite !== undefined) {
-    parts.push(eq(trips.isFavourite, input.favourite))
+    const starred = favouritedTripFilter(scope)
+    parts.push(input.favourite ? starred : not(starred))
   }
   if (input.search) {
     const needle = `%${input.search.toLowerCase()}%`
@@ -404,7 +451,7 @@ export async function listTrips(
 ): Promise<Array<Trip>> {
   const options = listTripsInput.parse(input)
   return readableTrips(scope).findMany({
-    where: listFilter(options),
+    where: listFilter(scope, options),
     orderBy: [desc(trips.updatedAt)],
     limit: options.limit,
     offset: options.offset,
@@ -463,15 +510,18 @@ export interface TripStatusCounts {
   readonly total: number
   readonly byStatus: Record<(typeof TRIP_STATUSES)[number], number>
   readonly archived: number
-  readonly favourites: number
 }
 
 /**
  * One grouped read behind the dashboard's status chips, over the trips the acting user may see.
  *
- * Every figure here carries the predicate, including the two below: a count that included a private
- * trip the reader cannot open would be the same leak as listing it, spread over three numbers instead
- * of one row.
+ * Every figure here carries the predicate, including the archived one below: a count that included
+ * a private trip the reader cannot open would be the same leak as listing it, spread over several
+ * numbers instead of one row.
+ *
+ * The Favourites figure used to be the fourth number here and is not a status: it is a count of the
+ * caller's own bookmarks, and it lives with them in `countFavourites`
+ * (`src/server/repos/trip-favourites.ts`).
  */
 export async function countTripsByStatus(
   scope: TenantScope,
@@ -495,13 +545,9 @@ export async function countTripsByStatus(
     }
   }
 
-  const readable = readableTrips(scope)
-  const [archived, favourites] = await Promise.all([
-    readable.count(eq(trips.isArchived, true)),
-    readable.count(eq(trips.isFavourite, true)),
-  ])
+  const archived = await readableTrips(scope).count(eq(trips.isArchived, true))
 
-  return { total, byStatus, archived, favourites }
+  return { total, byStatus, archived }
 }
 
 function todayIso(): string {
@@ -616,24 +662,6 @@ export async function restoreTrip(
 ): Promise<Trip> {
   await requireOwnedTrip(scope, tripId)
   return tripsRepository.requireUpdate(scope, tripId, { isArchived: false })
-}
-
-/**
- * Flags a trip the acting user may see.
- *
- * `requireTrip` rather than {@link requireOwnedTrip}: the star says "keep this one in front of me",
- * which is a reader's verb, not an owner's. It is guarded at all because `is_favourite` is a column
- * on the trip row — a write to a trip, whatever it means — and after ADR 0007 a trip a caller may
- * not see must not be one they can touch. `01-S1b`, which gives this its first caller, is where the
- * flag becomes per-member; the guard is not waiting for that to be true.
- */
-export async function setTripFavourite(
-  scope: TenantScope,
-  tripId: string,
-  isFavourite: boolean,
-): Promise<Trip> {
-  await requireTrip(scope, tripId)
-  return tripsRepository.requireUpdate(scope, tripId, { isFavourite })
 }
 
 /** Deletes the trip; every child row goes with it through `ON DELETE CASCADE`. */

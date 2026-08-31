@@ -209,6 +209,14 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
     relativeTime: true,
   }
 
+  /** The same screen with the favourites scope picked, which is a different read. */
+  const FAVOURITES: RouteCase = {
+    name: 'trips-favourites',
+    path: '/trips?scope=favourites',
+    ready: 'main',
+    relativeTime: true,
+  }
+
   const TRIGGER = '[data-part="trip-actions-trigger"]'
 
   test.beforeEach(async ({ context, page, baseURL }) => {
@@ -261,9 +269,12 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
     await expect(
       menu.getByRole('menuitem', { name: /^(Archive|Restore)$/ }),
     ).toBeVisible()
-    // Delete, Copy and Favourite arrive in `01-S1b`/`c`/`d`; a menu that already carried them here
+    await expect(
+      menu.getByRole('menuitem', { name: /^(Favourite|Unfavourite)$/ }),
+    ).toBeVisible()
+    // Copy and Delete arrive in the remaining `01-S1` slices; a menu that already carried them here
     // would be a menu whose items have no server function behind them.
-    await expect(menu.getByRole('menuitem')).toHaveCount(2)
+    await expect(menu.getByRole('menuitem')).toHaveCount(3)
 
     await menu.getByRole('menuitem', { name: 'Edit' }).click()
 
@@ -291,5 +302,49 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
     await trigger.focus()
     await expect(trigger).toBeFocused()
     await expect(trigger).toBeVisible()
+  })
+
+  /**
+   * The favourites scope, which after `01-S1b` is a read of `trip_favourites` for the acting user.
+   *
+   * Deliberately read-only, like every other case in this block. Two of the demo trips carry
+   * `trips.is_favourite = true` — the shared column decision 5 retires — so a scope that still read
+   * it would answer with those two tiles here. An empty list over a `0` pill is the only answer the
+   * per-person table can give a workspace where nobody has starred anything yet, and it is measured
+   * without writing a row, so this spec cannot leave a star behind for the frames another worker is
+   * capturing at the same moment.
+   */
+  test('the favourites scope answers from the reader’s own bookmarks, not the trip’s flag', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, FAVOURITES)
+    await visit(page, FAVOURITES, 'light')
+
+    await expect(page.getByRole('link', { name: 'Favourites 0' })).toBeVisible()
+    await expect(page.locator('[data-part="trip-tile"]')).toHaveCount(0)
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  /**
+   * The star is the one item a reader who owns nothing still gets (PRD #104 decision 6), so it is
+   * the item whose label has to be right: it names the state a press would move the trip *to*.
+   * Nothing is starred in the fixture, so every tile offers "Favourite".
+   */
+  test('every tile offers the star, labelled by what a press would do', async ({
+    page,
+  }) => {
+    await visit(page, TRIPS, 'light')
+
+    await page.locator(TRIGGER).first().click()
+    const menu = page.getByRole('menu')
+    await expect(menu).toBeVisible()
+    await expect(
+      menu.getByRole('menuitem', { name: 'Favourite', exact: true }),
+    ).toBeVisible()
+    await expect(
+      menu.getByRole('menuitem', { name: 'Unfavourite', exact: true }),
+    ).toHaveCount(0)
   })
 })

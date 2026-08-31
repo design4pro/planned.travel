@@ -8,12 +8,23 @@
  * where an absent one simply is not part of their product. A viewer's menu is short, and a stale
  * payload costs a refused write rather than an unauthorised one.
  *
- * Favourite, Copy and Delete arrive in the later slices of `01-S1`; this module's menu holds the
- * three owner verbs it has server functions for.
+ * **The one item every reader gets is the star.** A favourite is a row of the reader's own
+ * (PRD #104 decision 5) — it changes nothing on the trip and nobody else can see it — so it is
+ * offered to a viewer and to a colleague reading an organization-visible trip alike, and the menu
+ * now renders for them where it used to render for nobody but the owner.
+ *
+ * Copy and Delete arrive in the later slices of `01-S1`.
  */
 import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
-import { Archive, ArchiveRestore, MoreHorizontal, Pencil } from 'lucide-react'
+import {
+  Archive,
+  ArchiveRestore,
+  MoreHorizontal,
+  Pencil,
+  Star,
+  StarOff,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
@@ -32,10 +43,15 @@ import {
   SheetTitle,
   useSheetDirection,
 } from '#/components/ui'
-import { messageOf } from '#/components/modules/shared'
+import {
+  messageOf,
+  useAction,
+  useOptimistic,
+} from '#/components/modules/shared'
 import {
   archiveTripFn,
   restoreTripFn,
+  setTripFavouriteFn,
   updateTripFn,
 } from '../-server/trip-lifecycle'
 import { TripFormFields, tripFormPayload, useTripForm } from './trip-form'
@@ -194,43 +210,43 @@ export interface TripActionsMenuProps {
 }
 
 /**
- * The per-tile menu. Renders nothing at all for a reader who owns none of its items, so an
- * organization-visible trip a colleague is browsing carries no dead control.
+ * The per-tile menu, one item of which every reader of the trip can exercise.
  *
  * The trigger names the trip — "Actions for Lisbon in April" — because a grid of tiles otherwise
  * hands a screen-reader user a column of identically-named buttons.
  */
 export function TripActionsMenu({ trip }: TripActionsMenuProps) {
-  const router = useRouter()
   const [editing, setEditing] = useState(false)
-  const [busy, setBusy] = useState(false)
 
-  if (trip.role !== 'owner') {
-    return null
-  }
+  /**
+   * The star as the reader has just left it, held only until the loader catches up.
+   *
+   * `claim` withdraws after `useAction` has awaited the router invalidation, so the item's label
+   * goes from Favourite to Unfavourite once and stays there; a failed write withdraws it too, which
+   * is the rollback, and the reason arrives in the toast `useAction` raises.
+   */
+  const stars = useOptimistic<boolean>()
+  const favourite = useAction(setTripFavouriteFn, {
+    failure: 'That star did not save',
+    fallback: 'The trip has been put back the way it was.',
+  })
+  const archive = useAction(archiveTripFn, {
+    success: 'Trip archived',
+    failure: 'The trip could not be archived',
+  })
+  const restore = useAction(restoreTripFn, {
+    success: 'Trip restored',
+    failure: 'The trip could not be restored',
+  })
 
-  async function shelve(archived: boolean): Promise<void> {
-    setBusy(true)
-    try {
-      if (archived) {
-        await archiveTripFn({ data: { tripId: trip.id } })
-      } else {
-        await restoreTripFn({ data: { tripId: trip.id } })
-      }
-      await router.invalidate()
-      toast.success(archived ? 'Trip archived' : 'Trip restored')
-    } catch (cause) {
-      toast.error(
-        messageOf(
-          cause,
-          archived
-            ? 'The trip could not be archived.'
-            : 'The trip could not be restored.',
-        ),
-      )
-    } finally {
-      setBusy(false)
-    }
+  const starred = stars.get(trip.id) ?? trip.isFavourite
+  const busy = favourite.pending || archive.pending || restore.pending
+
+  async function toggleFavourite(): Promise<void> {
+    const next = !starred
+    await stars.claim([[trip.id, next]], () =>
+      favourite.run({ data: { tripId: trip.id, isFavourite: next } }),
+    )
   }
 
   return (
@@ -255,29 +271,50 @@ export function TripActionsMenu({ trip }: TripActionsMenuProps) {
 
         <DropdownMenuContent>
           <DropdownMenuItem
-            icon={<Pencil />}
-            onSelect={() => setEditing(true)}
+            icon={starred ? <StarOff /> : <Star />}
+            onSelect={() => void toggleFavourite()}
             disabled={busy}
           >
-            Edit
+            {starred ? 'Unfavourite' : 'Favourite'}
           </DropdownMenuItem>
-          {trip.isArchived ? (
-            <DropdownMenuItem
-              icon={<ArchiveRestore />}
-              onSelect={() => void shelve(false)}
-              disabled={busy}
-            >
-              Restore
-            </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem
-              icon={<Archive />}
-              onSelect={() => void shelve(true)}
-              disabled={busy}
-            >
-              Archive
-            </DropdownMenuItem>
-          )}
+
+          {/*
+            Items the role cannot exercise are absent rather than disabled: the repository is the
+            control, the menu the courtesy, and a reader who is not the owner simply has a shorter
+            product.
+          */}
+          {trip.role === 'owner' ? (
+            <>
+              <DropdownMenuItem
+                icon={<Pencil />}
+                onSelect={() => setEditing(true)}
+                disabled={busy}
+              >
+                Edit
+              </DropdownMenuItem>
+              {trip.isArchived ? (
+                <DropdownMenuItem
+                  icon={<ArchiveRestore />}
+                  onSelect={() =>
+                    void restore.run({ data: { tripId: trip.id } })
+                  }
+                  disabled={busy}
+                >
+                  Restore
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  icon={<Archive />}
+                  onSelect={() =>
+                    void archive.run({ data: { tripId: trip.id } })
+                  }
+                  disabled={busy}
+                >
+                  Archive
+                </DropdownMenuItem>
+              )}
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
 

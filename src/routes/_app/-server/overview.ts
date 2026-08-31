@@ -12,6 +12,7 @@ import { z } from 'zod'
 import {
   RepositoryError,
   countAuditActions,
+  countFavourites,
   countPlacesPerTrip,
   countUnread,
   getAtlasSummary,
@@ -19,6 +20,7 @@ import {
   getOrganization,
   listAuditLog,
   listCollectionsWithCounts,
+  listFavouriteTripIds,
   listJourneysWithCounts,
   listMemberProfiles,
   listNotifications,
@@ -74,6 +76,12 @@ export interface TripCard {
   readonly countryCodes: ReadonlyArray<string>
   readonly coverImageUrl: string | null
   readonly accentColour: string | null
+  /**
+   * Whether the *caller* has starred this trip (PRD #104 decision 5).
+   *
+   * Read from `trip_favourites` for the acting user, never from the deprecated `trips.is_favourite`
+   * column: that one boolean is shared by every member of the trip, so it records nobody's choice.
+   */
   readonly isFavourite: boolean
   readonly isArchived: boolean
   readonly placeCount: number
@@ -154,26 +162,34 @@ export interface DashboardPayload {
 }
 
 /**
- * A card maker for one list of trips: the two per-tile facts a card needs beyond the row itself —
- * the place count and the reader's own role — read for the whole list in two statements rather than
- * two per tile, then applied one tile at a time.
+ * A card maker for one list of trips: the three per-tile facts a card needs beyond the row itself —
+ * the place count, the reader's own role and the reader's own star — read for the whole list in
+ * three statements rather than three per tile, then applied one tile at a time.
  */
 async function tripCardsFor(
   scope: TenantScope,
   tripIds: ReadonlyArray<string>,
 ): Promise<(trip: Trip) => TripCard> {
-  const [placeCounts, roles] = await Promise.all([
+  const [placeCounts, roles, favourites] = await Promise.all([
     countPlacesPerTrip(scope, tripIds),
     tripRolesFor(scope, tripIds),
+    listFavouriteTripIds(scope),
   ])
+  const starred = new Set(favourites)
   return (trip) =>
-    toTripCard(trip, placeCounts.get(trip.id) ?? 0, roles.get(trip.id) ?? null)
+    toTripCard(
+      trip,
+      placeCounts.get(trip.id) ?? 0,
+      roles.get(trip.id) ?? null,
+      starred.has(trip.id),
+    )
 }
 
 export function toTripCard(
   trip: Trip,
   placeCount: number,
   role: TripMemberRole | null,
+  isFavourite: boolean,
 ): TripCard {
   return {
     id: trip.id,
@@ -188,7 +204,7 @@ export function toTripCard(
     countryCodes: trip.countryCodes ?? [],
     coverImageUrl: trip.coverImageUrl,
     accentColour: trip.accentColour,
-    isFavourite: trip.isFavourite,
+    isFavourite,
     isArchived: trip.isArchived,
     placeCount,
     updatedAt: isoOfRequired(trip.updatedAt),
@@ -225,10 +241,11 @@ export const loadDashboard = createServerFn({ method: 'GET' }).handler(
     const scope = await appScope()
     const today = serverToday()
 
-    const [summary, atlas, quotas] = await Promise.all([
+    const [summary, atlas, quotas, favourites] = await Promise.all([
       getDashboardSummary(scope, { today }),
       getAtlasSummary(scope, scope.ctx.userId),
       resolveQuotas(scope),
+      countFavourites(scope),
     ])
 
     const shown = [...summary.upcomingTrips, ...summary.myTrips]
@@ -246,7 +263,7 @@ export const loadDashboard = createServerFn({ method: 'GET' }).handler(
       tripTotals: {
         total: summary.trips.total,
         archived: summary.trips.archived,
-        favourites: summary.trips.favourites,
+        favourites,
         byStatus: Object.entries(summary.trips.byStatus).map(
           ([status, value]) => ({
             status,
@@ -301,7 +318,7 @@ export const loadTrips = createServerFn({ method: 'GET' })
     const scope = await appScope()
     const today = serverToday()
 
-    const [rows, summary, quotas] = await Promise.all([
+    const [rows, summary, quotas, favourites] = await Promise.all([
       listTrips(scope, {
         status: data.status,
         search: data.search,
@@ -311,6 +328,7 @@ export const loadTrips = createServerFn({ method: 'GET' })
       }),
       getDashboardSummary(scope, { today }),
       resolveQuotas(scope),
+      countFavourites(scope),
     ])
 
     const card = await tripCardsFor(
@@ -324,7 +342,7 @@ export const loadTrips = createServerFn({ method: 'GET' })
       totals: {
         total: summary.trips.total,
         archived: summary.trips.archived,
-        favourites: summary.trips.favourites,
+        favourites,
         byStatus: Object.entries(summary.trips.byStatus).map(
           ([status, value]) => ({
             status,
