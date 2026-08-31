@@ -279,10 +279,13 @@ describe('selection', () => {
       selectionVerdict(candidate({ eventCount: 25, userCount: 1 }), NOW).ok,
     ).toBe(true)
 
+    // Narrowed field by field rather than with a whole-object `as const`: that
+    // also freezes `environments` into a `readonly` tuple, which the candidate's
+    // mutable array will not take.
     const staging = {
-      primaryEnvironment: 'staging',
-      environments: ['staging'],
-    } as const
+      primaryEnvironment: 'staging' as const,
+      environments: ['staging' as const],
+    }
     expect(
       selectionVerdict(
         candidate({ ...staging, eventCount: 50, userCount: 1 }),

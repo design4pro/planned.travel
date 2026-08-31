@@ -144,7 +144,7 @@ describe('start', () => {
   })
 
   it('stands down with its own exit code when another run holds the issue', async () => {
-    const { calls, deps, said } = harness({
+    const { deps, said } = harness({
       claim: {
         granted: [],
         denied: [{ id: '106', heldBy: '20260830-1', via: '104' }],

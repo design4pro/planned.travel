@@ -17,7 +17,12 @@ const result = await sandcastle.run({
   // 'head' strategy bind-mounts the host working directory, which forbids
   // copyToWorktree — and would let the install hook rewrite the host's
   // darwin node_modules with linux binaries.
-  branchStrategy: 'branch',
+  //
+  // Named, not the bare string this used to pass: a string has no `.type`, so
+  // the library read `undefined` and fell through to a generated temp branch.
+  // It happened to give this file the worktree it wanted, by accident and
+  // under a different name every run.
+  branchStrategy: { type: 'branch', branch: 'sandcastle/e2e-smoke' },
   maxIterations: 1,
   agent: sandcastle.claudeCode('claude-opus-5'),
   promptFile: './.sandcastle/e2e-smoke/prompt.md',
