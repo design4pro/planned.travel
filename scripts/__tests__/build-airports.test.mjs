@@ -265,8 +265,11 @@ describe('the committed artefact', () => {
     for (const line of rows) {
       const fields = line.split(TAB)
       expect(fields, line).toHaveLength(8)
-      const [code, icaoCode, lat, lng, country, zone] = fields
+      const [code, icaoCode, lat, lng, country, zone, , name] = fields
       expect(code).toMatch(/^[A-Z0-9]{3}$/)
+      // `airports.name` is the one NOT NULL text column this artefact feeds, and the only field a
+      // picker has to render. An empty one loads without complaint and shows as a blank row.
+      expect(name.length, code).toBeGreaterThan(0)
       if (icaoCode.length > 0) expect(icaoCode).toMatch(/^[A-Z0-9]{4}$/)
       if (lat.length > 0) expect(lat).toMatch(/^-?\d+$/)
       if (lng.length > 0) expect(lng).toMatch(/^-?\d+$/)

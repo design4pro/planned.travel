@@ -164,7 +164,18 @@ const LODZ = airport({
   timezone: 'Europe/Warsaw',
 })
 
-const CATALOGUE = [HEATHROW, GATWICK, CHOPIN, LODZ]
+/** Non-ASCII letters, which 904 of the committed artefact's 9,057 rows carry. */
+const ALESUND = airport({
+  id: 'apt_aes',
+  iataCode: 'AES',
+  icaoCode: 'ENAL',
+  name: 'Ålesund Airport',
+  city: 'Ålesund',
+  countryCode: 'NO',
+  timezone: 'Europe/Berlin',
+})
+
+const CATALOGUE = [HEATHROW, GATWICK, CHOPIN, LODZ, ALESUND]
 
 const open: Array<Catalogue> = []
 afterEach(() => {
@@ -225,6 +236,22 @@ describe('searchAirports', () => {
       'apt_lgw',
       'apt_lhr',
       'apt_lcj',
+    ])
+  })
+
+  it('sorts a city-only match behind a name match', async () => {
+    // The rank's `else` arm, which no case over the shared catalogue reaches: every city there is
+    // also the start of its airport's name. So this needs a fixture where one row matches by name
+    // and another by city alone — and the city-only row is named to sort *first* alphabetically, so
+    // that if the two tiers ever collapsed into one the name tie-break would swap the answer.
+    const { db } = await catalogue([
+      airport({ id: 'apt_cty', name: 'Ardwell Field', city: 'Kirkwall' }),
+      airport({ id: 'apt_nam', name: 'Kirkwall Airport', city: 'Orkney' }),
+    ])
+
+    expect((await searchAirports(db, 'Kirk')).map((row) => row.id)).toEqual([
+      'apt_nam',
+      'apt_cty',
     ])
   })
 
@@ -298,6 +325,37 @@ describe('searchAirports', () => {
       await searchAirports(db, 'L'.repeat(AIRPORT_TERM_MAX_LENGTH + 1)),
     ).toEqual([])
     expect(queries).toEqual([])
+  })
+
+  it('still asks for a term of exactly the greatest length a row can carry', async () => {
+    // The other side of the same boundary. Without it a guard written `>=` passes the case above
+    // and silently refuses to search for the longest names the artefact actually holds — the
+    // longest it carries is 90 characters, six under this bound.
+    const { db, queries } = await catalogue()
+
+    expect(
+      await searchAirports(db, 'L'.repeat(AIRPORT_TERM_MAX_LENGTH)),
+    ).toEqual([])
+    expect(queries).toHaveLength(1)
+  })
+
+  it('folds case over ASCII and not beyond it', async () => {
+    // SQLite's LIKE folds A-Z and nothing else, and D1 carries no ICU to widen it. That is a
+    // property of the seam a traveller can hit — the artefact holds 904 rows with a non-ASCII
+    // letter — so it is pinned rather than left to be rediscovered as a bug report. A change to a
+    // folded search column should turn this case red and be made deliberately.
+    const { db } = await catalogue()
+
+    expect((await searchAirports(db, 'Ålesund')).map((row) => row.id)).toEqual([
+      'apt_aes',
+    ])
+    // Only the leading letter differs in case, and it is outside the range LIKE folds.
+    expect(await searchAirports(db, 'ålesund')).toEqual([])
+    // The ASCII half of the same term still folds, which is what makes the line above the boundary
+    // rather than "non-ASCII terms never match".
+    expect((await searchAirports(db, 'ÅLESUND')).map((row) => row.id)).toEqual([
+      'apt_aes',
+    ])
   })
 
   it('reads `airports` and no tenant table', async () => {

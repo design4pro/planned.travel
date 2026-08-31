@@ -49,9 +49,16 @@
  * The term is escaped before it reaches `LIKE`. `%` and `_` are pattern operators there, so a
  * traveller typing either would otherwise match rows they did not ask for — silently, since the
  * query succeeds and simply answers the wrong question.
+ *
+ * Case folds the way SQLite's `LIKE` folds, which is ASCII and nothing else: `lhr` finds `LHR`, and
+ * `ålesund` does not find `Ålesund`. Roughly nine hundred of the committed artefact's rows carry a
+ * non-ASCII letter, so that is a real edge and not a theoretical one. Closing it needs a folded
+ * column written at build time — neither `lower()` nor `LIKE` folds beyond ASCII without ICU, which
+ * D1 does not carry — so it is a schema change rather than something this seam can do, and the
+ * picker above it keeps working because a term that finds nothing is free text a traveller keeps.
  */
 
-import { sql } from 'drizzle-orm'
+import { eq, or, sql } from 'drizzle-orm'
 import { airports } from '#/server/db/schema'
 import type { SQL } from 'drizzle-orm'
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
@@ -149,11 +156,15 @@ export interface SearchAirportsOptions {
  * Airports whose code, name or city starts with `term`, best match first.
  *
  * The ordering is the one a type-ahead needs and is computed in SQL so it survives the cap: an
- * exact code first, then the two code prefixes, then a name, then a city — the last of these is
- * the `case`'s `else`, since the `where` admits nothing a city prefix has not matched — each tier
- * broken by name and then by id so two runs over the same rows answer in the same order. Without it `LIMIT` would
- * cut an arbitrary twenty rows out of an unordered scan and the exact code a traveller typed could
- * be the one left out.
+ * exact code first, then the two code prefixes, then a name, then a city — the last of these is the
+ * `case`'s `else`, since the `where` admits nothing a city prefix has not matched — each tier broken
+ * by name and then by id so two runs over the same rows answer in the same order. Without it
+ * `LIMIT` would cut an arbitrary twenty rows out of an unordered scan, and the exact code a
+ * traveller typed could be the one left out.
+ *
+ * The four prefix predicates are built once and used by both clauses, because the `case` is only a
+ * ranking of what the `where` admitted: a predicate that appeared in one and not the other would
+ * either sort rows into a tier they cannot be in or leave matched rows falling through to `else`.
  */
 export async function searchAirports(
   db: Database,
@@ -171,53 +182,65 @@ export async function searchAirports(
 
   const pattern = prefixPattern(trimmed)
   const code = trimmed.toUpperCase()
+  const byIata = startsWith(airports.iataCode, pattern)
+  const byIcao = startsWith(airports.icaoCode, pattern)
+  const byName = startsWith(airports.name, pattern)
+  const byCity = startsWith(airports.city, pattern)
 
   const rank = sql<number>`case
-    when ${airports.iataCode} = ${code} then 0
-    when ${airports.icaoCode} = ${code} then 1
-    when ${startsWith(airports.iataCode, pattern)} then 2
-    when ${startsWith(airports.icaoCode, pattern)} then 3
-    when ${startsWith(airports.name, pattern)} then 4
+    when ${eq(airports.iataCode, code)} then 0
+    when ${eq(airports.icaoCode, code)} then 1
+    when ${byIata} then 2
+    when ${byIcao} then 3
+    when ${byName} then 4
     else 5
   end`
 
   return db
     .select(MATCH_COLUMNS)
     .from(airports)
-    .where(
-      sql`${startsWith(airports.iataCode, pattern)}
-        or ${startsWith(airports.icaoCode, pattern)}
-        or ${startsWith(airports.name, pattern)}
-        or ${startsWith(airports.city, pattern)}`,
-    )
+    .where(or(byIata, byIcao, byName, byCity))
     .orderBy(rank, airports.name, airports.id)
     .limit(limit)
 }
 
 /**
- * The airport carrying exactly this code, or `null`.
+ * The column a code of this length is keyed on, or `null` when no length matches.
  *
  * Three characters are read as IATA and four as ICAO — the two lengths the source dataset carries,
- * both unique in the committed artefact. Anything else is not a code, and is answered without a
- * query rather than with an equality against a column that is `NULL` for most of the world.
+ * both unique in the committed artefact. Every other length is `null`, which is what lets the
+ * caller answer without a query rather than with an equality against a column that is `NULL` for
+ * most of the world.
+ */
+function codeColumn(code: string): AnySQLiteColumn | null {
+  switch (code.length) {
+    case IATA_CODE_LENGTH:
+      return airports.iataCode
+    case ICAO_CODE_LENGTH:
+      return airports.icaoCode
+    default:
+      return null
+  }
+}
+
+/**
+ * The airport carrying exactly this code, or `null`.
+ *
+ * The code is normalised and then held to {@link codeColumn} and to the alphabet the source
+ * dataset uses, so nothing that is not a code reaches the database at all.
  */
 export async function findAirportByCode(
   db: Database,
   code: string,
 ): Promise<AirportMatch | null> {
   const normalised = code.trim().toUpperCase()
-  const column =
-    normalised.length === IATA_CODE_LENGTH
-      ? airports.iataCode
-      : normalised.length === ICAO_CODE_LENGTH
-        ? airports.icaoCode
-        : null
+  const column = codeColumn(normalised)
   if (column === null || !/^[A-Z0-9]+$/.test(normalised)) return null
 
   const rows = await db
     .select(MATCH_COLUMNS)
     .from(airports)
-    .where(sql`${column} = ${normalised}`)
+    .where(eq(column, normalised))
     .limit(1)
 
   return rows[0] ?? null
