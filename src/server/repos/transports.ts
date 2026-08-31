@@ -225,12 +225,14 @@ async function requireDayPair(
   departureDayId: string | null,
   arrivalDayId: string | null,
 ): Promise<void> {
-  const departure = departureDayId
-    ? await requireTripDay(scope, tripId, departureDayId)
-    : null
-  const arrival = arrivalDayId
-    ? await requireTripDay(scope, tripId, arrivalDayId)
-    : null
+  const departure =
+    departureDayId === null
+      ? null
+      : await requireTripDay(scope, tripId, departureDayId)
+  const arrival =
+    arrivalDayId === null
+      ? null
+      : await requireTripDay(scope, tripId, arrivalDayId)
   if (
     departure !== null &&
     arrival !== null &&
@@ -267,14 +269,13 @@ export async function updateTransport(
   const existing = await transportsRepository.requireById(scope, transportId)
   // The rule holds over the row that results, not over the fields that arrived: moving one end
   // alone is ordered against the end already stored, or a two-step edit walks past the guard.
-  await requireDayPair(
-    scope,
-    existing.tripId,
-    'dayId' in values ? (values.dayId ?? null) : existing.dayId,
+  const departureDayId =
+    'dayId' in values ? (values.dayId ?? null) : existing.dayId
+  const arrivalDayId =
     'arrivalDayId' in values
       ? (values.arrivalDayId ?? null)
-      : existing.arrivalDayId,
-  )
+      : existing.arrivalDayId
+  await requireDayPair(scope, existing.tripId, departureDayId, arrivalDayId)
   return transportsRepository.requireUpdate(scope, transportId, values)
 }
 

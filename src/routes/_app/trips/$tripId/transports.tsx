@@ -50,6 +50,12 @@ function TransportsPage() {
     (sum, transport) => sum + (transport.priceMinor ?? 0),
     0,
   )
+  const confirmed = data.transports.filter(
+    (transport) => transport.status === 'confirmed',
+  ).length
+  const pending = data.transports.filter(
+    (transport) => transport.status === 'pending',
+  ).length
   const summary = summariseConnections(analyseConnections(data.transports))
 
   return (
@@ -93,12 +99,8 @@ function TransportsPage() {
             />
             <StatCard
               label="Confirmed"
-              value={
-                data.transports.filter(
-                  (transport) => transport.status === 'confirmed',
-                ).length
-              }
-              caption={`${formatNumber(data.transports.filter((transport) => transport.status === 'pending').length)} still pending`}
+              value={confirmed}
+              caption={`${formatNumber(pending)} still pending`}
             />
             <StatCard
               label="Spent on travel"

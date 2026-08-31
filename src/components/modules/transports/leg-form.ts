@@ -156,6 +156,12 @@ export function dayLabel(day: {
   return parts.join(' · ')
 }
 
+/** What the two days are called for everything that is not a hire car. */
+const DEPARTS_AND_ARRIVES = {
+  fromDay: 'Departure day',
+  toDay: 'Arrival day',
+} as const
+
 /**
  * What each end of a transport is called, per mode — the endpoint legend and the
  * day beside it, from one function.
@@ -174,17 +180,16 @@ export function endpointLabels(mode: string): EndpointLabels {
       toDay: 'Return day',
     }
   }
-  const days = { fromDay: 'Departure day', toDay: 'Arrival day' } as const
   if (mode === 'flight') {
-    return { from: 'From airport', to: 'To airport', ...days }
+    return { from: 'From airport', to: 'To airport', ...DEPARTS_AND_ARRIVES }
   }
   if (mode === 'ferry') {
-    return { from: 'From port', to: 'To port', ...days }
+    return { from: 'From port', to: 'To port', ...DEPARTS_AND_ARRIVES }
   }
   if (mode === 'train' || mode === 'metro' || mode === 'tram') {
-    return { from: 'From station', to: 'To station', ...days }
+    return { from: 'From station', to: 'To station', ...DEPARTS_AND_ARRIVES }
   }
-  return { from: 'From', to: 'To', ...days }
+  return { from: 'From', to: 'To', ...DEPARTS_AND_ARRIVES }
 }
 
 /* ------------------------------------------------------------------- draft */

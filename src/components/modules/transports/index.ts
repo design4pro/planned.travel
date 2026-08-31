@@ -52,4 +52,4 @@ export type {
 
 export { MODE_ICON, modeIcon } from './mode-icon'
 export { legDurationMinutes } from './leg-timing'
-export type { TransportData } from './types'
+export type { TransportData, TransportDayData } from './types'

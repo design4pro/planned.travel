@@ -60,10 +60,9 @@ import { modeIcon } from './mode-icon'
 import type { ReactNode } from 'react'
 import type { BadgeTone } from '#/components/ui'
 import type { ConfirmRequest, FactItem, StatusOption } from '../shared'
-import type { TransportDayOption } from '#/server/fns/transports'
 import type { Connection } from './connections'
 import type { TransportStatus } from './leg-form'
-import type { TransportData } from './types'
+import type { TransportData, TransportDayData } from './types'
 
 /* ------------------------------------------------------------------- labels */
 
@@ -85,20 +84,6 @@ function statusOption(status: string): StatusOption {
 }
 
 const LOCALE = 'en-GB'
-
-/**
- * `2026-06-23` → `Tue 23 Jun`, from the shared CLDR table rather than from a
- * module-local `Intl.DateTimeFormat`.
- *
- * `12-verification-protocol.md` §7.2 defers seven abbreviated-month call sites
- * that ask the platform for `month: 'short'`, which workerd and WebKit resolve
- * from different ICU builds — latent until a trip tab is baselined, which this
- * area is the first to do. `src/lib/format.ts` already answers from a table, so
- * this file asks it instead of asking the runtime.
- */
-function formatDay(date: string | null): string | null {
-  return formatWeekday(date)
-}
 
 function formatClock(time: string | null): string | null {
   return time === null || time.length < 4 ? null : time.slice(0, 5)
@@ -125,7 +110,7 @@ export interface TransportsTimelineProps {
   readonly tripId: string
   readonly transports: ReadonlyArray<TransportData>
   /** The trip's days: what the two day selects offer, and what a day chip reads. */
-  readonly days: ReadonlyArray<TransportDayOption>
+  readonly days: ReadonlyArray<TransportDayData>
   readonly currency: string
   readonly newLegOpen: boolean
   readonly onNewLegOpenChange: (open: boolean) => void
@@ -169,9 +154,9 @@ export function TransportsTimeline({
   )
 
   /**
-   * Connections are analysed over *every* transport, not the filtered set: hiding the
-   * ferry does not make the flight after it catchable, so the warnings must not
-   * disappear with the filter.
+   * Connections are analysed over *every* transport, not the filtered set:
+   * hiding the ferry does not make the flight after it catchable, so the
+   * warnings must not disappear with the filter.
    */
   const connections = useMemo(() => analyseConnections(rendered), [rendered])
   const summary = useMemo(
@@ -188,6 +173,11 @@ export function TransportsTimeline({
     () => new Map(days.map((day) => [day.id, day.dayNumber])),
     [days],
   )
+
+  /** The number behind a day reference, or `null` where the end names no day. */
+  function dayNumberOf(dayId: string | null): number | null {
+    return dayId === null ? null : (dayNumbers.get(dayId) ?? null)
+  }
 
   const modes = useMemo(() => {
     const tally = new Map<string, number>()
@@ -327,12 +317,8 @@ export function TransportsTimeline({
                 <TransportCard
                   transport={transport}
                   currency={currency}
-                  departureDay={
-                    dayNumbers.get(transport.departureDayId ?? '') ?? null
-                  }
-                  arrivalDay={
-                    dayNumbers.get(transport.arrivalDayId ?? '') ?? null
-                  }
+                  departureDay={dayNumberOf(transport.departureDayId)}
+                  arrivalDay={dayNumberOf(transport.arrivalDayId)}
                   onEdit={() => setEditing(transport)}
                   onStatus={(next) => changeStatus(transport, next)}
                   onDelete={() =>
@@ -348,9 +334,9 @@ export function TransportsTimeline({
                     })
                   }
                 />
-                {/* The junction is only drawn when the transport it describes is the one
-                  actually shown next — a filter that hides the middle transport must not
-                  claim the two remaining ones connect. */}
+                {/* The junction is only drawn when the transport it describes
+                  is the one actually shown next — a filter that hides the middle
+                  transport must not claim the two remaining ones connect. */}
                 {connection !== undefined &&
                 nextVisible !== null &&
                 connection.toId === nextVisible.id ? (
@@ -665,7 +651,16 @@ function Endpoint({
   dayNumber: number | null
   align?: 'left' | 'right'
 }) {
-  const day = formatDay(date)
+  /*
+   * `2026-06-23` → `Tue 23 Jun`, from the shared CLDR table rather than from a
+   * module-local `Intl.DateTimeFormat`. `12-verification-protocol.md` §7.2 defers
+   * seven abbreviated-month call sites that ask the platform for
+   * `month: 'short'`, which workerd and WebKit resolve from different ICU builds
+   * — latent until a trip tab is baselined, which this area is the first to do.
+   * `src/lib/format.ts` already answers from a table, so this file asks it
+   * instead of asking the runtime.
+   */
+  const day = formatWeekday(date)
   const clock = formatClock(time)
   const when = [day, clock].filter((part) => part !== null).join(' · ')
 

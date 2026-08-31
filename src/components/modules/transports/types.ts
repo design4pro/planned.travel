@@ -39,3 +39,17 @@ export interface TransportData {
   readonly currency: string | null
   readonly notes: string | null
 }
+
+/**
+ * A day of the trip, as the two day selects offer it and a day chip reads it.
+ *
+ * The loader's own `TransportDayOption` is this shape; it is restated here for
+ * the reason above, so the dialog and the timeline depend on the four fields
+ * they use rather than on the payload that happens to carry them.
+ */
+export interface TransportDayData {
+  readonly id: string
+  readonly dayNumber: number
+  readonly date: string | null
+  readonly title: string | null
+}

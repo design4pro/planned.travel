@@ -57,9 +57,8 @@ import {
 import { MODE_ICON } from './mode-icon'
 import { legDurationMinutes } from './leg-timing'
 
-import type { TransportDayOption } from '#/server/fns/transports'
 import type { LegDraft } from './leg-form'
-import type { TransportData } from './types'
+import type { TransportData, TransportDayData } from './types'
 
 function draftFrom(
   transport: TransportData,
@@ -106,7 +105,7 @@ export function LegDialog({
   /** Absent for a new transport. */
   transport?: TransportData
   /** The trip's days, in order. Empty while the trip has none. */
-  days: ReadonlyArray<TransportDayOption>
+  days: ReadonlyArray<TransportDayData>
   currency: string
   open: boolean
   onOpenChange: (open: boolean) => void
